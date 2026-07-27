@@ -1224,6 +1224,136 @@ function ensureXLSXLoaded(){
     document.head.appendChild(s);
   });
 }
+
+/* =================== hwpx(한글) 문항 자동 인식 =================== */
+function ensureJSZipLoaded(){
+  if(window.JSZip) return Promise.resolve();
+  return new Promise((resolve, reject)=>{
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js';
+    s.onload = () => resolve();
+    s.onerror = () => reject(new Error('압축 처리 라이브러리를 불러오지 못했습니다.'));
+    document.head.appendChild(s);
+  });
+}
+const HP_NS = 'http://www.hancom.co.kr/hwpml/2011/paragraph';
+function convertHwpEq(script){
+  let s = script || '';
+  s = s.replace(/\brm\s*/g, '');
+  const greek = {alpha:'α',beta:'β',gamma:'γ',delta:'δ',theta:'θ',pi:'π',lambda:'λ',mu:'μ',sigma:'σ',phi:'φ',omega:'ω'};
+  for(const k in greek) s = s.replace(new RegExp('\\b'+k+'\\b','g'), greek[k]);
+  s = s.replace(/LEFT\s*\(/g, '(').replace(/RIGHT\s*\)/g, ')');
+  for(let i=0;i<3;i++) s = s.replace(/\{([^{}]*)\}\s*over\s*\{([^{}]*)\}/g, '($1)/($2)');
+  s = s.replace(/sqrt\s*\{([^{}]*)\}/g, '√($1)');
+  s = s.replace(/\^\{([^{}]*)\}/g, '^($1)');
+  s = s.replace(/_\{([^{}]*)\}/g, '_($1)');
+  s = s.replace(/\s+/g, ' ').trim();
+  return s;
+}
+function hwpExtractRunContent(runEl, collectEndnotesArr){
+  let out = '';
+  for(const child of Array.from(runEl.childNodes)){
+    if(child.nodeType !== 1) continue;
+    const local = child.localName;
+    if(local === 't'){
+      out += child.textContent || '';
+    } else if(local === 'equation'){
+      const scriptEl = child.getElementsByTagNameNS(HP_NS,'script')[0];
+      out += convertHwpEq(scriptEl ? scriptEl.textContent : '');
+    } else if(local === 'ctrl' && collectEndnotesArr){
+      const endNoteEl = child.getElementsByTagNameNS(HP_NS,'endNote')[0];
+      if(endNoteEl){
+        const subList = endNoteEl.getElementsByTagNameNS(HP_NS,'subList')[0];
+        const ansText = hwpExtractParagraphsText(subList);
+        collectEndnotesArr.push(ansText.replace(/^\s*\[정답\]\s*/,'').trim());
+      }
+    }
+  }
+  return out;
+}
+function hwpExtractParagraphsText(container){
+  if(!container) return '';
+  let text = '';
+  for(const p of Array.from(container.childNodes)){
+    if(p.nodeType!==1 || p.localName!=='p') continue;
+    for(const runEl of Array.from(p.childNodes)){
+      if(runEl.nodeType===1 && runEl.localName==='run'){
+        text += hwpExtractRunContent(runEl, null);
+      }
+    }
+  }
+  return text;
+}
+async function parseHwpxToProblems(file){
+  await ensureJSZipLoaded();
+  const zip = await JSZip.loadAsync(file);
+  const sectionFile = zip.file('Contents/section0.xml');
+  if(!sectionFile) throw new Error('올바른 hwpx 파일이 아닙니다.');
+  const xmlText = await sectionFile.async('string');
+  const doc = new DOMParser().parseFromString(xmlText, 'text/xml');
+  const sec = doc.documentElement;
+  const topParas = Array.from(sec.childNodes).filter(n=>n.nodeType===1 && n.localName==='p');
+
+  // 문서 맨 뒤에는 "빠른정답" 요약, "해설" 같은 부록이 실제 hp:endNote가 아니라
+  // hp:autoNum(numType=ENDNOTE)만 단독으로 쓰인 평문 목록으로 반복돼 있다.
+  // 이 마커를 만나면(진짜 endNote에 감싸인 게 아니라면) 문항 구간이 끝난 것으로 보고 멈춘다.
+  const tokens = [];
+  outer:
+  for(const p of topParas){
+    for(const runEl of Array.from(p.childNodes)){
+      if(runEl.nodeType!==1 || runEl.localName!=='run') continue;
+      for(const child of Array.from(runEl.childNodes)){
+        if(child.nodeType !== 1) continue;
+        const local = child.localName;
+        if(local === 't') tokens.push({type:'text', v: child.textContent||''});
+        else if(local === 'equation'){
+          const scriptEl = child.getElementsByTagNameNS(HP_NS,'script')[0];
+          tokens.push({type:'eq', v: convertHwpEq(scriptEl?scriptEl.textContent:'')});
+        } else if(local === 'ctrl'){
+          const endNoteEl = child.getElementsByTagNameNS(HP_NS,'endNote')[0];
+          if(endNoteEl){
+            const subList = endNoteEl.getElementsByTagNameNS(HP_NS,'subList')[0];
+            const ans = hwpExtractParagraphsText(subList).replace(/^\s*\[정답\]\s*/,'').trim();
+            tokens.push({type:'endnote', v: ans});
+          } else if(child.getElementsByTagNameNS(HP_NS,'autoNum')[0]?.getAttribute('numType')==='ENDNOTE'){
+            break outer;
+          }
+        }
+      }
+    }
+    tokens.push({type:'break'});
+  }
+
+  const blocks = [];
+  let cur = { text:'', answer:null };
+  for(const tok of tokens){
+    if(tok.type === 'endnote'){
+      if(cur.text.trim()) blocks.push(cur);
+      cur = { text:'', answer: tok.v };
+    } else if(tok.type === 'text') cur.text += tok.v;
+    else if(tok.type === 'eq') cur.text += tok.v;
+    else if(tok.type === 'break') cur.text += '\n';
+  }
+  if(cur.text.trim()) blocks.push(cur);
+  return blocks.map(b => ({ content: b.text.trim(), answer: (b.answer||'').trim() }));
+}
+async function handleUnitBankHwpxFile(fileList){
+  const file = (fileList||[])[0];
+  if(!file) return;
+  const unit = document.getElementById('ub-hwpx-unit').value;
+  try{
+    showToast('hwpx 파일을 분석하는 중입니다...');
+    const problems = await parseHwpxToProblems(file);
+    if(problems.length === 0){ showToast('인식된 문항이 없습니다.'); return; }
+    state.unitImportPreview = problems.map(p => ({ unit, content: p.content, answer: p.answer }));
+    render();
+    const noAnswer = problems.filter(p=>!p.answer).length;
+    showToast(problems.length + '개 문항을 인식했습니다.' + (noAnswer>0 ? ` (정답 비어있는 ${noAnswer}개는 확인해주세요)` : ''));
+  }catch(e){
+    console.error('hwpx 처리 실패', e);
+    showToast('hwpx 파일을 처리하지 못했습니다: ' + e.message);
+  }
+}
 async function handleUnitBankExcelFile(fileList){
   const file = (fileList || [])[0];
   if(!file) return;
@@ -1249,7 +1379,20 @@ async function handleUnitBankExcelFile(fileList){
     showToast('엑셀 파일을 읽지 못했습니다.');
   }
 }
+function syncUnitImportPreviewFromDOM(){
+  const rows = state.unitImportPreview;
+  if(!rows) return;
+  rows.slice(0,30).forEach((r,i)=>{
+    const u = document.getElementById('uip-unit-'+i);
+    const c = document.getElementById('uip-content-'+i);
+    const a = document.getElementById('uip-answer-'+i);
+    if(u) r.unit = u.value;
+    if(c) r.content = c.value;
+    if(a) r.answer = a.value;
+  });
+}
 async function confirmUnitBankImport(){
+  syncUnitImportPreviewFromDOM();
   const rows = state.unitImportPreview;
   if(!rows || rows.length===0) return;
   const CONCURRENCY = 15;
@@ -2056,25 +2199,41 @@ function teacherUnitBankHTML(){
     <button class="btn btn-primary" onclick="addUnitBankEntry()">창고에 추가</button>
   </div>
   <div class="panel">
+    <h3>한글(hwpx) 파일로 자동 인식</h3>
+    <p style="font-size:12.5px;color:var(--ink-soft);margin-top:-8px;">문항이 정리된 .hwpx 파일을 올리면 문제·보기·정답을 자동으로 인식합니다. (.hwp 구버전은 지원 안 함) 파일 하나 = 한 단원으로 등록됩니다.</p>
+    <div class="inline-form">
+      <div class="field"><label>이 파일의 단원</label><select id="ub-hwpx-unit">${UNITS.map(u=>`<option value="${u}">${u}</option>`).join('')}</select></div>
+      <div class="field" style="flex:2;"><label>hwpx 파일</label><input type="file" accept=".hwpx" onchange="handleUnitBankHwpxFile(this.files)"></div>
+    </div>
+  </div>
+  <div class="panel">
     <h3>엑셀로 한꺼번에 올리기</h3>
     <p style="font-size:12.5px;color:var(--ink-soft);margin-top:-8px;">.xlsx 파일에 <b>단원 / 문제 / 정답</b> 열을 만들어서 올려주세요.</p>
     <input type="file" accept=".xlsx,.xls" onchange="handleUnitBankExcelFile(this.files)">
-    ${state.unitImportPreview ? `
-      <div style="margin-top:12px;font-size:13px;">미리보기: 총 ${state.unitImportPreview.length}개 문항 인식됨</div>
-      <div style="max-height:200px;overflow-y:auto;margin-top:8px;border:1px solid var(--card-border);border-radius:4px;padding:8px;">
-        ${state.unitImportPreview.slice(0,10).map(r=>`<div style="font-size:12px;padding:4px 0;border-bottom:1px solid #F0EEE7;"><b>[${r.unit||'미지정'}]</b> ${r.content.slice(0,40)}${r.content.length>40?'...':''}</div>`).join('')}
-        ${state.unitImportPreview.length>10?`<div style="font-size:12px;color:var(--ink-soft);">... 외 ${state.unitImportPreview.length-10}개</div>`:''}
-      </div>
-      <div style="margin-top:10px;display:flex;gap:8px;">
-        <button class="btn btn-primary" onclick="confirmUnitBankImport()">일괄 등록</button>
-        <button class="btn" onclick="cancelUnitBankImport()">취소</button>
-      </div>
-    ` : ''}
+  </div>
+  ${state.unitImportPreview ? `
+  <div class="panel">
+    <h3>업로드 미리보기 (총 ${state.unitImportPreview.length}개)</h3>
+    <p style="font-size:12.5px;color:var(--ink-soft);margin-top:-8px;">${state.unitImportPreview.length>30?'처음 30개만 미리 보이고, 나머지는 그대로 등록됩니다. ':''}정답이 비어있는 항목(<span style="color:var(--red-pen);font-weight:700;">빨간 표시</span>)은 등록 전에 채워주시면 좋아요.</p>
+    <div style="max-height:420px;overflow-y:auto;margin-top:8px;">
+      ${state.unitImportPreview.slice(0,30).map((r,i)=>`
+        <div class="review-card" style="margin-bottom:10px;">
+          <div class="inline-form" style="margin-bottom:6px;">
+            <div class="field"><label>단원</label><select id="uip-unit-${i}">${UNITS.map(u=>`<option value="${u}" ${r.unit===u?'selected':''}>${u}</option>`).join('')}</select></div>
+            <div class="field"><label>정답 ${!r.answer?'<span style="color:var(--red-pen);">(비어있음)</span>':''}</label><input id="uip-answer-${i}" value="${r.answer||''}" style="${!r.answer?'border-color:var(--red-pen);':''}"></div>
+          </div>
+          <textarea id="uip-content-${i}" style="width:100%;min-height:60px;">${r.content}</textarea>
+        </div>`).join('')}
+    </div>
+    <div style="margin-top:10px;display:flex;gap:8px;">
+      <button class="btn btn-primary" onclick="confirmUnitBankImport()">일괄 등록</button>
+      <button class="btn" onclick="cancelUnitBankImport()">취소</button>
+    </div>
     ${state.importProgress ? `
       <div style="margin-top:12px;font-size:13px;">업로드 중... ${state.importProgress.done} / ${state.importProgress.total}</div>
       <div class="progress-outer"><div class="progress-inner" style="width:${Math.round(state.importProgress.done/state.importProgress.total*100)}%;"></div></div>
     ` : ''}
-  </div>
+  </div>` : ''}
   <div class="panel">
     <h3>창고 목록 (${DATA.unitBank.length}건)</h3>
     <div class="tab-bar" style="margin-bottom:16px;">
