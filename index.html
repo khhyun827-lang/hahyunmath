@@ -358,6 +358,9 @@
   // 순수 HTTPS 요청/응답 방식인 REST가 훨씬 안정적으로 동작한다.)
   const FIRESTORE_ROOT = 'https://firestore.googleapis.com/v1/projects/' + firebaseConfig.projectId + '/databases/(default)/documents';
   const FIRESTORE_BASE = FIRESTORE_ROOT + '/kv';
+  const AI_WORKER_URL = 'https://hahyunmath-gemini-proxy.khhyun827.workers.dev';
+  const AI_SITE_TOKEN = 'qc7_CniNRFGnVnctFYoWUkx1SraOR_6M';
+  const AI_DAILY_LIMIT = 20;
   async function getAuthToken(){
     if(!fbAuth.currentUser){
       await new Promise(resolve=>{
@@ -410,6 +413,72 @@ async function dbDelete(key){
       headers: { Authorization: 'Bearer ' + token }
     }), 8000);
   }catch(e){ console.error('삭제 실패', key, e); }
+}
+
+/* =================== AI 쌍둥이 문제 생성 (일 20건 한도) =================== */
+function todayStr(){ return new Date().toISOString().slice(0,10); }
+async function getAIQuotaUsed(){
+  const q = await dbGet('ai-quota', { date: todayStr(), count: 0 });
+  if(q.date !== todayStr()) return 0;
+  return q.count;
+}
+async function bumpAIQuotaUsed(){
+  const used = await getAIQuotaUsed();
+  await dbSet('ai-quota', { date: todayStr(), count: used + 1 });
+}
+async function loadAIQuotaIfNeeded(){
+  if(state.aiQuotaUsed !== null) return;
+  state.aiQuotaUsed = await getAIQuotaUsed();
+  render();
+}
+async function processAIQueue(){
+  if(state.aiProcessing) return;
+  const needsAI = DATA.problemBank.filter(b=>!b.variantContent && !b.variantAnswer);
+  if(needsAI.length===0){ showToast('생성할 문항이 없습니다.'); return; }
+  const used = await getAIQuotaUsed();
+  const remaining = AI_DAILY_LIMIT - used;
+  if(remaining<=0){ showToast('오늘 AI 생성 한도(' + AI_DAILY_LIMIT + '건)를 모두 사용했습니다. 내일 다시 시도해주세요.'); return; }
+  const batch = needsAI.slice(0, remaining);
+  state.aiProcessing = true;
+  state.aiProgress = { done:0, total: batch.length };
+  render();
+  let ok = 0;
+  for(let i=0;i<batch.length;i++){
+    const b = batch[i];
+    const twin = await generateTwinViaAI(b.originalContent, b.originalAnswer);
+    if(twin){
+      b.variantContent = twin.content;
+      b.variantAnswer = twin.answer;
+      await bumpAIQuotaUsed();
+      ok++;
+    }
+    await dbSet('problem-bank', DATA.problemBank);
+    state.aiProgress = { done:i+1, total: batch.length };
+    render();
+    if(i < batch.length-1) await new Promise(r=>setTimeout(r, 13000));
+  }
+  state.aiProcessing = false;
+  state.aiProgress = null;
+  state.aiQuotaUsed = null;
+  const leftover = needsAI.length - batch.length;
+  showToast(ok + '개 쌍둥이 문제가 생성되었습니다. 검토 후 공개해주세요.' + (leftover>0 ? ` (남은 ${leftover}개는 내일 한도 초기화 후 처리해주세요)` : ''));
+  render();
+}
+async function generateTwinViaAI(content, answer){
+  try{
+    const res = await withTimeout(fetch(AI_WORKER_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Site-Token': AI_SITE_TOKEN },
+      body: JSON.stringify({ content, answer })
+    }), 25000);
+    if(!res.ok) throw new Error('worker http ' + res.status);
+    const data = await res.json();
+    if(!data.content || !data.answer) throw new Error('incomplete AI result');
+    return { content: data.content, answer: data.answer };
+  }catch(e){
+    console.error('AI 쌍둥이 생성 실패', e);
+    return null;
+  }
 }
 
 /* =================== Firestore 컬렉션(문서 여러 개) 헬퍼 =================== */
@@ -485,6 +554,9 @@ let state = {
   unitBankFilter: '',
   unitImportPreview: null,
   importProgress: null,
+  aiQuotaUsed: null,
+  aiProcessing: false,
+  aiProgress: null,
   toast: ''
 };
 let DATA = {
@@ -1042,8 +1114,16 @@ async function saveExam(){
   if(examDraft.pages.length>0){
     await dbSet('examfiles:'+examId, examDraft.pages);
   }
-  examDraft = { classId:'', title:'', date:'', questions:[{content:'', answer:''}], pages:[] };
-  showToast('시험지가 등록되었습니다.');
+  for(const q of questions){
+    DATA.problemBank.push({
+      id:'pb'+Date.now()+'_'+q.no, examId, questionNo:q.no,
+      originalContent:q.content, originalAnswer:q.answer,
+      variantContent:'', variantAnswer:'', status:'pending'
+    });
+  }
+  await dbSet('problem-bank', DATA.problemBank);
+  examDraft = { classId:'', title:'', date:'', questions:[{content:'', answer:'', unit:UNITS[0]}], pages:[] };
+  showToast('시험지가 등록되었습니다. 오답 문제 검토 탭에서 AI 쌍둥이 문제를 생성해보세요.');
   render();
 }
 async function deleteExam(examId){
@@ -2159,11 +2239,26 @@ function teacherExamsHTML(){
 
 /* ---------- 오답 문제 검토 ---------- */
 function teacherReviewHTML(){
+  loadAIQuotaIfNeeded();
   const pending = DATA.problemBank.filter(b=>b.status!=='approved');
+  const needsAI = DATA.problemBank.filter(b=>!b.variantContent && !b.variantAnswer);
+  const remaining = state.aiQuotaUsed===null ? null : Math.max(0, AI_DAILY_LIMIT - state.aiQuotaUsed);
   return `
+  ${needsAI.length>0 ? `
+  <div class="panel">
+    <h3>AI 쌍둥이 문제 생성</h3>
+    <p style="font-size:12.5px;color:var(--ink-soft);margin-top:-8px;">
+      아직 내용이 비어있는 문항 <b>${needsAI.length}개</b>가 있습니다.
+      ${remaining===null ? '(오늘 사용량 확인 중...)' : `오늘 남은 생성 가능 건수: <b>${remaining} / ${AI_DAILY_LIMIT}</b>`}
+    </p>
+    ${state.aiProgress ? `
+      <div style="font-size:13px;">생성 중... ${state.aiProgress.done} / ${state.aiProgress.total} (문항당 약 13초 소요)</div>
+      <div class="progress-outer"><div class="progress-inner" style="width:${Math.round(state.aiProgress.done/state.aiProgress.total*100)}%;"></div></div>
+    ` : `<button class="btn btn-primary" ${remaining===0?'disabled':''} onclick="processAIQueue()">AI로 채우기</button>`}
+  </div>` : ''}
   <div class="panel">
     <h3>검토 대기 중인 문제 (${pending.length}건)</h3>
-    <p style="font-size:12.5px;color:var(--ink-soft);margin-top:-8px;">학생이 틀린 문제를 제출하면 여기에 빈 항목이 자동 생성됩니다. 쌍둥이 문제 내용과 정답을 직접 입력하고, <b>1차·2차 검토를 모두 완료</b>해야 학생에게 공개됩니다.</p>
+    <p style="font-size:12.5px;color:var(--ink-soft);margin-top:-8px;">시험지를 등록하거나 학생이 틀린 문제를 제출하면 여기에 빈 항목이 자동 생성됩니다. AI로 채우거나 직접 입력한 뒤, <b>1차·2차 검토를 모두 완료</b>해야 학생에게 공개됩니다.</p>
     ${pending.length===0?'<div class="empty">검토할 문제가 없습니다.</div>':
     pending.map(b=>bankCardHTML(b, true)).join('')}
   </div>`;
