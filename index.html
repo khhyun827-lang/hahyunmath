@@ -598,6 +598,16 @@ async function doTeacherLogin(){
   state.currentUser = {type:'teacher'};
   goto('teacher');
 }
+async function changeTeacherPw(){
+  const current = document.getElementById('pw-current').value;
+  const next = document.getElementById('pw-new').value;
+  if(current !== DATA.teacherPw){ showToast('현재 비밀번호가 일치하지 않습니다.'); return; }
+  if(next.length < 4){ showToast('새 비밀번호는 4자 이상으로 설정해주세요.'); return; }
+  DATA.teacherPw = next;
+  await dbSet('teacher-pw', next);
+  showToast('비밀번호가 변경되었습니다.');
+  render();
+}
 
 function logout(){ state.currentUser = null; goto('home'); }
 
@@ -2108,6 +2118,12 @@ function teacherAssistantsHTML(){
 /* ---------- 관리자 설정 (상담신청 + 비밀번호) ---------- */
 function teacherSettingsHTML(){
   return `
+  <div class="panel">
+    <h3>관리자 비밀번호 변경</h3>
+    <div class="field"><label>현재 비밀번호</label><input id="pw-current" type="password"></div>
+    <div class="field"><label>새 비밀번호 (4자 이상)</label><input id="pw-new" type="password"></div>
+    <button class="btn btn-primary" onclick="changeTeacherPw()">비밀번호 변경</button>
+  </div>
   <div class="panel">
     <h3>상담 신청 목록 (${DATA.consults.length}건)</h3>
     ${DATA.consults.length===0?'<div class="empty">접수된 상담 신청이 없습니다.</div>':`
