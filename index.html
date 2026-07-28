@@ -1434,6 +1434,24 @@ async function handleUnitBankHwpxFile(fileList){
     showToast('hwpx 파일을 처리하지 못했습니다: ' + e.message);
   }
 }
+async function handleExamHwpxFile(fileList){
+  const file = (fileList||[])[0];
+  if(!file) return;
+  syncExamDraftFromDOM();
+  const unit = document.getElementById('exam-hwpx-unit').value;
+  try{
+    showToast('hwpx 파일을 분석하는 중입니다...');
+    const problems = await parseHwpxToProblems(file);
+    if(problems.length === 0){ showToast('인식된 문항이 없습니다.'); return; }
+    examDraft.questions = problems.map(p => ({ content: p.content, answer: p.answer, unit }));
+    render();
+    const noAnswer = problems.filter(p=>!p.answer).length;
+    showToast(problems.length + '개 문항을 인식했습니다.' + (noAnswer>0 ? ` (정답 비어있는 ${noAnswer}개는 아래에서 직접 채워주세요)` : ''));
+  }catch(e){
+    console.error('hwpx 처리 실패', e);
+    showToast('hwpx 파일을 처리하지 못했습니다: ' + e.message);
+  }
+}
 async function handleUnitBankExcelFile(fileList){
   const file = (fileList || [])[0];
   if(!file) return;
@@ -2194,6 +2212,14 @@ function teacherExamsHTML(){
       <div class="field"><label>대상 반</label><select id="exam-class">${classOptionsHTML(examDraft.classId)}</select></div>
       <div class="field" style="flex:2;"><label>시험명</label><input id="exam-title" value="${examDraft.title}" placeholder="예: 7월 내신 대비 모의고사"></div>
       <div class="field"><label>날짜</label><input id="exam-date" type="date" value="${examDraft.date}"></div>
+    </div>
+    <div class="field" style="margin-top:12px;background:#FBF3F2;border:1px solid var(--card-border);border-radius:4px;padding:14px;">
+      <label>hwpx 파일로 문항 자동 채우기 (선택)</label>
+      <p style="font-size:11.5px;color:var(--ink-soft);margin:2px 0 8px;">올리면 아래 문항 입력칸이 자동으로 채워집니다. 직접 타이핑 안 하셔도 돼요.</p>
+      <div class="inline-form">
+        <div class="field"><label>이 파일의 단원</label><select id="exam-hwpx-unit">${UNITS.map(u=>`<option value="${u}">${u}</option>`).join('')}</select></div>
+        <div class="field" style="flex:2;"><label>hwpx 파일</label><input type="file" accept=".hwpx" onchange="handleExamHwpxFile(this.files)"></div>
+      </div>
     </div>
     <div class="field" style="margin-top:12px;">
       <label>시험지 이미지 첨부 (선택, 사진/스캔본 — 자동 압축되어 저장됩니다)</label>
