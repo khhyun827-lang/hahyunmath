@@ -1360,6 +1360,10 @@ const HWP_WATERMARK_PATTERNS = [/족보닷컴/, /zocbo\.com/i];
 // 표(hp:tbl) 안에 들어있는 문항도 셀 하나하나를 재귀 호출로 처리해서 놓치지 않는다.
 // (표 안에 중첩 표가 또 있을 수 있어서, 바깥 표 처리 시 tr/tc는 반드시 "직계 자식"만
 //  본다 — getElementsByTagNameNS처럼 깊은 검색을 쓰면 중첩 표의 셀까지 중복으로 잡힌다.)
+// 문단 목록을 재귀적으로 순회하며 텍스트/수식/그림참조/미주를 평평한 토큰 스트림으로 만든다.
+// 표(hp:tbl) 안에 들어있는 문항도 셀 하나하나를 재귀 호출로 처리해서 놓치지 않는다.
+// (표 안에 중첩 표가 또 있을 수 있어서, 바깥 표 처리 시 tr/tc는 반드시 "직계 자식"만
+//  본다 — getElementsByTagNameNS처럼 깊은 검색을 쓰면 중첩 표의 셀까지 중복으로 잡힌다.)
 function hwpWalkParagraphs(paras, tokens){
   for(const p of paras){
     for(const runEl of Array.from(p.childNodes)){
@@ -1391,13 +1395,7 @@ function hwpWalkParagraphs(paras, tokens){
         } else if(local === 'ctrl'){
           const endNoteEl = child.getElementsByTagNameNS(HP_NS,'endNote')[0];
           if(endNoteEl){
-            const subList = endNoteEl.getElementsByTagNameNS(HP_NS,'subList')[0];
-            const innerParas = subList ? Array.from(subList.childNodes).filter(n=>n.nodeType===1 && n.localName==='p') : [];
-            const innerTokens = [];
-            hwpWalkParagraphs(innerParas, innerTokens);
-            let ans = '';
-            for(const it of innerTokens){ if(it.type==='text'||it.type==='eq') ans += it.v; }
-            tokens.push({type:'endnote', v: ans.replace(/^\s*\[정답\]\s*/,'').trim()});
+            tokens.push({type:'endnote', v: hwpEndnoteText(endNoteEl)});
           } else if(child.getElementsByTagNameNS(HP_NS,'autoNum')[0]?.getAttribute('numType')==='ENDNOTE'){
             // 문서 맨 뒤 "빠른정답" 요약처럼 진짜 hp:endNote가 아닌 평문 목록을 만나면
             // 문항 구간이 끝난 것으로 보고 멈춘다.
@@ -1409,6 +1407,82 @@ function hwpWalkParagraphs(paras, tokens){
     tokens.push({type:'break'});
   }
 }
+function hwpEndnoteText(endNoteEl){
+  const subList = endNoteEl.getElementsByTagNameNS(HP_NS,'subList')[0];
+  const innerParas = subList ? Array.from(subList.childNodes).filter(n=>n.nodeType===1 && n.localName==='p') : [];
+  const innerTokens = [];
+  hwpWalkParagraphs(innerParas, innerTokens);
+  let ans = '';
+  for(const it of innerTokens){ if(it.type==='text'||it.type==='eq') ans += it.v; }
+  // "[정답]" 라벨과, 일부 문서에서 수식 앞에 자동으로 붙는 "수식입니다." 안내 문구를 제거한다.
+  return ans.replace(/^\s*\[정답\]\s*/,'').replace(/수식입니다\.?/g,'').trim();
+}
+// 표의 셀 하나를 문제 하나로 취급해서 텍스트/그림/(있다면) 정답을 뽑는다.
+// 표 기반 시험지는 "번호 인식"을 미주 등장 시점에 의존하면 정답이 없는 문항에서
+// 여러 문제가 한 덩어리로 뭉쳐버리는 문제가 있어서, 셀 경계를 기준으로 삼는 게 훨씬 안정적이다.
+function hwpCellToBlock(cellParas){
+  const tokens = [];
+  hwpWalkParagraphs(cellParas, tokens);
+  let text = '', answer = null, pics = [];
+  for(const tok of tokens){
+    if(tok.type === 'endnote') answer = tok.v;
+    else if(tok.type === 'text' || tok.type === 'eq') text += tok.v;
+    else if(tok.type === 'pic') pics.push(tok.v);
+    else if(tok.type === 'break') text += '\n';
+  }
+  return { text, answer, pics };
+}
+function hwpParseBlocks(topParas){
+  const blocks = [];
+  let plainTokens = [];
+  let stopped = false;
+  function flushPlain(){
+    if(plainTokens.length===0) return;
+    let cur = { text:'', answer:null, pics:[] };
+    for(const tok of plainTokens){
+      if(tok.type === 'stop'){ stopped = true; break; }
+      if(tok.type === 'endnote'){
+        if(cur.text.trim()) blocks.push(cur);
+        cur = { text:'', answer: tok.v, pics:[] };
+      } else if(tok.type === 'text') cur.text += tok.v;
+      else if(tok.type === 'eq') cur.text += tok.v;
+      else if(tok.type === 'pic') cur.pics.push(tok.v);
+      else if(tok.type === 'break') cur.text += '\n';
+    }
+    if(cur.text.trim()) blocks.push(cur);
+    plainTokens = [];
+  }
+  for(const p of topParas){
+    if(stopped) break;
+    // 이 문단 바로 아래에 최상위 표(문항 박스 레이아웃)가 있는지 찾는다.
+    let foundTable = null;
+    for(const runEl of Array.from(p.childNodes)){
+      if(runEl.nodeType!==1 || runEl.localName!=='run') continue;
+      for(const child of Array.from(runEl.childNodes)){
+        if(child.nodeType===1 && child.localName==='tbl') foundTable = child;
+      }
+    }
+    if(foundTable){
+      flushPlain();
+      const trs = Array.from(foundTable.childNodes).filter(n=>n.nodeType===1 && n.localName==='tr');
+      for(const tr of trs){
+        const tcs = Array.from(tr.childNodes).filter(n=>n.nodeType===1 && n.localName==='tc');
+        for(const tc of tcs){
+          const subList = Array.from(tc.childNodes).find(n=>n.nodeType===1 && n.localName==='subList');
+          if(subList){
+            const cellParas = Array.from(subList.childNodes).filter(n=>n.nodeType===1 && n.localName==='p');
+            const b = hwpCellToBlock(cellParas);
+            if(b.text.trim()) blocks.push(b);
+          }
+        }
+      }
+    } else {
+      hwpWalkParagraphs([p], plainTokens);
+    }
+  }
+  flushPlain();
+  return blocks;
+}
 async function parseHwpxToProblems(file){
   await ensureJSZipLoaded();
   const zip = await JSZip.loadAsync(file);
@@ -1419,27 +1493,24 @@ async function parseHwpxToProblems(file){
   const sec = doc.documentElement;
   const topParas = Array.from(sec.childNodes).filter(n=>n.nodeType===1 && n.localName==='p');
 
-  const tokens = [];
-  hwpWalkParagraphs(topParas, tokens);
+  const blocks = hwpParseBlocks(topParas);
 
-  const blocks = [];
-  let cur = { text:'', answer:null, pics:[] };
-  for(const tok of tokens){
-    if(tok.type === 'stop') break;
-    if(tok.type === 'endnote'){
-      if(cur.text.trim()) blocks.push(cur);
-      cur = { text:'', answer: tok.v, pics:[] };
-    } else if(tok.type === 'text') cur.text += tok.v;
-    else if(tok.type === 'eq') cur.text += tok.v;
-    else if(tok.type === 'pic') cur.pics.push(tok.v);
-    else if(tok.type === 'break') cur.text += '\n';
+  // 문제 칸 안에서 정답을 못 찾은 문항이 있으면(정답이 문제와 분리된 별도 표에
+  // 순서대로 나열된 문서 양식), 문서 전체의 미주를 등장 순서대로 모아 같은 순번끼리 매칭한다.
+  const missingCount = blocks.filter(b=>!b.answer).length;
+  if(missingCount > 0){
+    const allEndnotes = Array.from(doc.getElementsByTagNameNS(HP_NS,'endNote'));
+    const orderedAnswers = allEndnotes.map(hwpEndnoteText);
+    if(orderedAnswers.length === blocks.length){
+      blocks.forEach((b,i)=>{ if(!b.answer) b.answer = orderedAnswers[i]; });
+    }
   }
-  if(cur.text.trim()) blocks.push(cur);
 
-  // 저작권 보호 워터마크(예: 족보닷컴)가 섞인 문항은 자동 인식에서 제외한다.
+  // 저작권 보호 워터마크(예: 족보닷컴)가 문제나 정답에 섞인 문항은 자동 인식에서 제외한다.
   let watermarked = 0;
   const clean = blocks.filter(b=>{
-    if(HWP_WATERMARK_PATTERNS.some(re=>re.test(b.text))){ watermarked++; return false; }
+    const hay = b.text + ' ' + (b.answer||'');
+    if(HWP_WATERMARK_PATTERNS.some(re=>re.test(hay))){ watermarked++; return false; }
     return true;
   });
 
