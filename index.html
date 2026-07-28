@@ -445,7 +445,8 @@ async function processAIQueue(){
   let ok = 0;
   for(let i=0;i<batch.length;i++){
     const b = batch[i];
-    const twin = await generateTwinViaAI(b.originalContent, b.originalAnswer);
+    const image = b.hasImage ? await dbGet('pbimg:'+b.id, null) : null;
+    const twin = await generateTwinViaAI(b.originalContent, b.originalAnswer, image);
     if(twin){
       b.variantContent = twin.content;
       b.variantAnswer = twin.answer;
@@ -464,13 +465,13 @@ async function processAIQueue(){
   showToast(ok + '개 쌍둥이 문제가 생성되었습니다. 검토 후 공개해주세요.' + (leftover>0 ? ` (남은 ${leftover}개는 내일 한도 초기화 후 처리해주세요)` : ''));
   render();
 }
-async function generateTwinViaAI(content, answer){
+async function generateTwinViaAI(content, answer, image){
   try{
     const res = await withTimeout(fetch(AI_WORKER_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-Site-Token': AI_SITE_TOKEN },
-      body: JSON.stringify({ content, answer })
-    }), 25000);
+      body: JSON.stringify({ content, answer, image: image || undefined })
+    }), 30000);
     if(!res.ok) throw new Error('worker http ' + res.status);
     const data = await res.json();
     if(!data.content || !data.answer) throw new Error('incomplete AI result');
@@ -554,6 +555,7 @@ let state = {
   unitBankFilter: '',
   unitImportPreview: null,
   importProgress: null,
+  pbImageCache: {},
   aiQuotaUsed: null,
   aiProcessing: false,
   aiProgress: null,
@@ -1107,6 +1109,9 @@ async function saveExam(){
     showToast('첨부한 이미지 용량이 너무 큽니다. 장수를 줄이거나 더 작은 사진으로 다시 첨부해주세요.');
     return;
   }
+  // exams/problem-bank는 계속 누적되는 단일 문서라 이미지를 그대로 넣으면 용량
+  // 제한에 걸릴 수 있다. 문항 이미지는 problem-bank 항목마다 별도 문서(pbimg:id)로 저장하고,
+  // 본 배열에는 hasImage 표시만 남긴다.
   const questions = validQuestions.map((q,i)=>({no:i+1, content:q.content.trim(), answer:q.answer.trim(), unit:q.unit||''}));
   const examId = 'ex'+Date.now();
   DATA.exams.unshift({id:examId, classId:examDraft.classId, title:examDraft.title, date:examDraft.date, questions, hasFiles:examDraft.pages.length>0});
@@ -1114,12 +1119,17 @@ async function saveExam(){
   if(examDraft.pages.length>0){
     await dbSet('examfiles:'+examId, examDraft.pages);
   }
-  for(const q of questions){
+  for(let i=0;i<questions.length;i++){
+    const q = questions[i];
+    const srcImage = validQuestions[i].image;
+    const bankId = 'pb'+Date.now()+'_'+q.no;
     DATA.problemBank.push({
-      id:'pb'+Date.now()+'_'+q.no, examId, questionNo:q.no,
+      id:bankId, examId, questionNo:q.no,
       originalContent:q.content, originalAnswer:q.answer,
-      variantContent:'', variantAnswer:'', status:'pending'
+      variantContent:'', variantAnswer:'', status:'pending',
+      hasImage: !!srcImage
     });
+    if(srcImage) await dbSet('pbimg:'+bankId, srcImage);
   }
   await dbSet('problem-bank', DATA.problemBank);
   examDraft = { classId:'', title:'', date:'', questions:[{content:'', answer:'', unit:UNITS[0]}], pages:[] };
@@ -1207,6 +1217,14 @@ async function submitHomeworkAnswer(bankId){
 }
 
 /* =================== 교사: 오답 문제 검토 =================== */
+async function togglePbImage(bankId){
+  if(state.pbImageCache[bankId]){ state.pbImageCache[bankId] = null; render(); return; }
+  state.pbImageCache[bankId] = 'loading';
+  render();
+  const img = await dbGet('pbimg:'+bankId, null);
+  state.pbImageCache[bankId] = img || 'empty';
+  render();
+}
 function bankCardHTML(b, editable){
   const exam = DATA.exams.find(e=>e.id===b.examId);
   const statusLabel = {pending:'생성됨 (검토 전)', review1:'1차 검토 완료', approved:'2차 검토 완료 · 공개'}[b.status];
@@ -1230,6 +1248,10 @@ function bankCardHTML(b, editable){
         <div class="colhead">원본 문제</div>
         <div style="font-size:13.5px;white-space:pre-wrap;">${b.originalContent}</div>
         <div class="mono" style="font-size:11px;color:var(--ink-soft);margin-top:8px;">정답: ${b.originalAnswer}</div>
+        ${b.hasImage ? `
+          <button class="btn btn-small" style="margin-top:8px;" onclick="togglePbImage('${b.id}')">그림 보기/숨기기</button>
+          ${state.pbImageCache[b.id] && state.pbImageCache[b.id]!=='empty' ? (state.pbImageCache[b.id]==='loading' ? '<div class="empty">불러오는 중...</div>' : `<img src="${state.pbImageCache[b.id]}" style="max-width:200px;max-height:200px;margin-top:8px;border:1px solid var(--card-border);border-radius:4px;display:block;">`) : ''}
+        ` : ''}
       </div>
       <div class="compare-col">
         <div class="colhead">쌍둥이 문제 ${editable?'(직접 입력/수정)':''}</div>
@@ -1263,8 +1285,10 @@ async function advanceBankStatus(bankId, newStatus){
 }
 async function deleteBankEntry(bankId){
   if(!confirm('이 문제를 DB에서 삭제할까요?')) return;
-  DATA.problemBank = DATA.problemBank.filter(b=>b.id!==bankId);
+  const b = DATA.problemBank.find(x=>x.id===bankId);
+  DATA.problemBank = DATA.problemBank.filter(x=>x.id!==bankId);
   await dbSet('problem-bank', DATA.problemBank);
+  if(b && b.hasImage) await dbDelete('pbimg:'+bankId);
   render();
 }
 
@@ -1330,39 +1354,60 @@ function convertHwpEq(script){
   s = s.replace(/\s+/g, ' ').trim();
   return s;
 }
-function hwpExtractRunContent(runEl, collectEndnotesArr){
-  let out = '';
-  for(const child of Array.from(runEl.childNodes)){
-    if(child.nodeType !== 1) continue;
-    const local = child.localName;
-    if(local === 't'){
-      out += child.textContent || '';
-    } else if(local === 'equation'){
-      const scriptEl = child.getElementsByTagNameNS(HP_NS,'script')[0];
-      out += convertHwpEq(scriptEl ? scriptEl.textContent : '');
-    } else if(local === 'ctrl' && collectEndnotesArr){
-      const endNoteEl = child.getElementsByTagNameNS(HP_NS,'endNote')[0];
-      if(endNoteEl){
-        const subList = endNoteEl.getElementsByTagNameNS(HP_NS,'subList')[0];
-        const ansText = hwpExtractParagraphsText(subList);
-        collectEndnotesArr.push(ansText.replace(/^\s*\[정답\]\s*/,'').trim());
-      }
-    }
-  }
-  return out;
-}
-function hwpExtractParagraphsText(container){
-  if(!container) return '';
-  let text = '';
-  for(const p of Array.from(container.childNodes)){
-    if(p.nodeType!==1 || p.localName!=='p') continue;
+const HWP_CORE_NS = 'http://www.hancom.co.kr/hwpml/2011/core';
+const HWP_WATERMARK_PATTERNS = [/족보닷컴/, /zocbo\.com/i];
+// 문단 목록을 재귀적으로 순회하며 텍스트/수식/그림참조/미주를 평평한 토큰 스트림으로 만든다.
+// 표(hp:tbl) 안에 들어있는 문항도 셀 하나하나를 재귀 호출로 처리해서 놓치지 않는다.
+// (표 안에 중첩 표가 또 있을 수 있어서, 바깥 표 처리 시 tr/tc는 반드시 "직계 자식"만
+//  본다 — getElementsByTagNameNS처럼 깊은 검색을 쓰면 중첩 표의 셀까지 중복으로 잡힌다.)
+function hwpWalkParagraphs(paras, tokens){
+  for(const p of paras){
     for(const runEl of Array.from(p.childNodes)){
-      if(runEl.nodeType===1 && runEl.localName==='run'){
-        text += hwpExtractRunContent(runEl, null);
+      if(runEl.nodeType!==1 || runEl.localName!=='run') continue;
+      for(const child of Array.from(runEl.childNodes)){
+        if(child.nodeType !== 1) continue;
+        const local = child.localName;
+        if(local === 't'){
+          tokens.push({type:'text', v: child.textContent||''});
+        } else if(local === 'equation'){
+          const scriptEl = child.getElementsByTagNameNS(HP_NS,'script')[0];
+          tokens.push({type:'eq', v: convertHwpEq(scriptEl?scriptEl.textContent:'')});
+        } else if(local === 'pic'){
+          const imgEl = child.getElementsByTagNameNS(HWP_CORE_NS,'img')[0];
+          const ref = imgEl ? imgEl.getAttribute('binaryItemIDRef') : null;
+          if(ref) tokens.push({type:'pic', v: ref});
+        } else if(local === 'tbl'){
+          const trs = Array.from(child.childNodes).filter(n=>n.nodeType===1 && n.localName==='tr');
+          for(const tr of trs){
+            const tcs = Array.from(tr.childNodes).filter(n=>n.nodeType===1 && n.localName==='tc');
+            for(const tc of tcs){
+              const subList = Array.from(tc.childNodes).find(n=>n.nodeType===1 && n.localName==='subList');
+              if(subList){
+                const cellParas = Array.from(subList.childNodes).filter(n=>n.nodeType===1 && n.localName==='p');
+                hwpWalkParagraphs(cellParas, tokens);
+              }
+            }
+          }
+        } else if(local === 'ctrl'){
+          const endNoteEl = child.getElementsByTagNameNS(HP_NS,'endNote')[0];
+          if(endNoteEl){
+            const subList = endNoteEl.getElementsByTagNameNS(HP_NS,'subList')[0];
+            const innerParas = subList ? Array.from(subList.childNodes).filter(n=>n.nodeType===1 && n.localName==='p') : [];
+            const innerTokens = [];
+            hwpWalkParagraphs(innerParas, innerTokens);
+            let ans = '';
+            for(const it of innerTokens){ if(it.type==='text'||it.type==='eq') ans += it.v; }
+            tokens.push({type:'endnote', v: ans.replace(/^\s*\[정답\]\s*/,'').trim()});
+          } else if(child.getElementsByTagNameNS(HP_NS,'autoNum')[0]?.getAttribute('numType')==='ENDNOTE'){
+            // 문서 맨 뒤 "빠른정답" 요약처럼 진짜 hp:endNote가 아닌 평문 목록을 만나면
+            // 문항 구간이 끝난 것으로 보고 멈춘다.
+            tokens.push({type:'stop'});
+          }
+        }
       }
     }
+    tokens.push({type:'break'});
   }
-  return text;
 }
 async function parseHwpxToProblems(file){
   await ensureJSZipLoaded();
@@ -1374,48 +1419,59 @@ async function parseHwpxToProblems(file){
   const sec = doc.documentElement;
   const topParas = Array.from(sec.childNodes).filter(n=>n.nodeType===1 && n.localName==='p');
 
-  // 문서 맨 뒤에는 "빠른정답" 요약, "해설" 같은 부록이 실제 hp:endNote가 아니라
-  // hp:autoNum(numType=ENDNOTE)만 단독으로 쓰인 평문 목록으로 반복돼 있다.
-  // 이 마커를 만나면(진짜 endNote에 감싸인 게 아니라면) 문항 구간이 끝난 것으로 보고 멈춘다.
   const tokens = [];
-  outer:
-  for(const p of topParas){
-    for(const runEl of Array.from(p.childNodes)){
-      if(runEl.nodeType!==1 || runEl.localName!=='run') continue;
-      for(const child of Array.from(runEl.childNodes)){
-        if(child.nodeType !== 1) continue;
-        const local = child.localName;
-        if(local === 't') tokens.push({type:'text', v: child.textContent||''});
-        else if(local === 'equation'){
-          const scriptEl = child.getElementsByTagNameNS(HP_NS,'script')[0];
-          tokens.push({type:'eq', v: convertHwpEq(scriptEl?scriptEl.textContent:'')});
-        } else if(local === 'ctrl'){
-          const endNoteEl = child.getElementsByTagNameNS(HP_NS,'endNote')[0];
-          if(endNoteEl){
-            const subList = endNoteEl.getElementsByTagNameNS(HP_NS,'subList')[0];
-            const ans = hwpExtractParagraphsText(subList).replace(/^\s*\[정답\]\s*/,'').trim();
-            tokens.push({type:'endnote', v: ans});
-          } else if(child.getElementsByTagNameNS(HP_NS,'autoNum')[0]?.getAttribute('numType')==='ENDNOTE'){
-            break outer;
-          }
-        }
-      }
-    }
-    tokens.push({type:'break'});
-  }
+  hwpWalkParagraphs(topParas, tokens);
 
   const blocks = [];
-  let cur = { text:'', answer:null };
+  let cur = { text:'', answer:null, pics:[] };
   for(const tok of tokens){
+    if(tok.type === 'stop') break;
     if(tok.type === 'endnote'){
       if(cur.text.trim()) blocks.push(cur);
-      cur = { text:'', answer: tok.v };
+      cur = { text:'', answer: tok.v, pics:[] };
     } else if(tok.type === 'text') cur.text += tok.v;
     else if(tok.type === 'eq') cur.text += tok.v;
+    else if(tok.type === 'pic') cur.pics.push(tok.v);
     else if(tok.type === 'break') cur.text += '\n';
   }
   if(cur.text.trim()) blocks.push(cur);
-  return blocks.map(b => ({ content: b.text.trim(), answer: (b.answer||'').trim() }));
+
+  // 저작권 보호 워터마크(예: 족보닷컴)가 섞인 문항은 자동 인식에서 제외한다.
+  let watermarked = 0;
+  const clean = blocks.filter(b=>{
+    if(HWP_WATERMARK_PATTERNS.some(re=>re.test(b.text))){ watermarked++; return false; }
+    return true;
+  });
+
+  // 문항에 딸린 그림이 있으면 hwpx 안의 실제 이미지 파일을 꺼내 압축해 첨부한다.
+  let idToHref = {};
+  const hpfFile = zip.file('Contents/content.hpf');
+  if(hpfFile){
+    const hpfText = await hpfFile.async('string');
+    const hpfDoc = new DOMParser().parseFromString(hpfText, 'text/xml');
+    const items = hpfDoc.getElementsByTagName('opf:item');
+    for(const it of Array.from(items)){
+      const id = it.getAttribute('id'), href = it.getAttribute('href');
+      if(id && href) idToHref[id] = href;
+    }
+  }
+  const problems = [];
+  for(const b of clean){
+    const problem = { content: b.text.trim(), answer: (b.answer||'').trim(), image: null };
+    const ref = b.pics[0];
+    if(ref && idToHref[ref]){
+      const imgFile = zip.file(idToHref[ref]);
+      if(imgFile){
+        try{
+          const blob = await imgFile.async('blob');
+          problem.image = await compressImageToBase64(blob, 1000, 0.6);
+        }catch(e){ console.error('그림 추출 실패', ref, e); }
+      }
+    }
+    problems.push(problem);
+  }
+  problems.watermarkedCount = watermarked;
+  return problems;
 }
 async function handleUnitBankHwpxFile(fileList){
   const file = (fileList||[])[0];
@@ -1425,10 +1481,13 @@ async function handleUnitBankHwpxFile(fileList){
     showToast('hwpx 파일을 분석하는 중입니다...');
     const problems = await parseHwpxToProblems(file);
     if(problems.length === 0){ showToast('인식된 문항이 없습니다.'); return; }
-    state.unitImportPreview = problems.map(p => ({ unit, content: p.content, answer: p.answer }));
+    state.unitImportPreview = problems.map(p => ({ unit, content: p.content, answer: p.answer, image: p.image }));
     render();
     const noAnswer = problems.filter(p=>!p.answer).length;
-    showToast(problems.length + '개 문항을 인식했습니다.' + (noAnswer>0 ? ` (정답 비어있는 ${noAnswer}개는 확인해주세요)` : ''));
+    const wm = problems.watermarkedCount || 0;
+    showToast(problems.length + '개 문항을 인식했습니다.'
+      + (noAnswer>0 ? ` (정답 비어있는 ${noAnswer}개는 확인해주세요)` : '')
+      + (wm>0 ? ` (저작권 보호 자료로 보이는 ${wm}개는 제외됨)` : ''));
   }catch(e){
     console.error('hwpx 처리 실패', e);
     showToast('hwpx 파일을 처리하지 못했습니다: ' + e.message);
@@ -1443,10 +1502,13 @@ async function handleExamHwpxFile(fileList){
     showToast('hwpx 파일을 분석하는 중입니다...');
     const problems = await parseHwpxToProblems(file);
     if(problems.length === 0){ showToast('인식된 문항이 없습니다.'); return; }
-    examDraft.questions = problems.map(p => ({ content: p.content, answer: p.answer, unit }));
+    examDraft.questions = problems.map(p => ({ content: p.content, answer: p.answer, unit, image: p.image }));
     render();
     const noAnswer = problems.filter(p=>!p.answer).length;
-    showToast(problems.length + '개 문항을 인식했습니다.' + (noAnswer>0 ? ` (정답 비어있는 ${noAnswer}개는 아래에서 직접 채워주세요)` : ''));
+    const wm = problems.watermarkedCount || 0;
+    showToast(problems.length + '개 문항을 인식했습니다.'
+      + (noAnswer>0 ? ` (정답 비어있는 ${noAnswer}개는 아래에서 직접 채워주세요)` : '')
+      + (wm>0 ? ` (저작권 보호 자료로 보이는 ${wm}개는 제외됨)` : ''));
   }catch(e){
     console.error('hwpx 처리 실패', e);
     showToast('hwpx 파일을 처리하지 못했습니다: ' + e.message);
@@ -2239,6 +2301,7 @@ function teacherExamsHTML(){
           <select id="eq-unit-${i}" style="margin-bottom:6px;">${UNITS.map(u=>`<option value="${u}" ${q.unit===u?'selected':''}>${u}</option>`).join('')}</select>
           <textarea id="eq-content-${i}" placeholder="문제 내용">${q.content}</textarea>
           <input id="eq-answer-${i}" placeholder="정답" value="${q.answer}">
+          ${q.image ? `<img src="${q.image}" style="max-width:120px;max-height:120px;margin-top:6px;border:1px solid var(--card-border);border-radius:4px;display:block;">` : ''}
           <button class="btn btn-red btn-small" onclick="removeExamQuestionRow(${i})">삭제</button>
         </div>
       </div>`).join('')}
@@ -2344,6 +2407,7 @@ function teacherUnitBankHTML(){
             <div class="field"><label>정답 ${!r.answer?'<span style="color:var(--red-pen);">(비어있음)</span>':''}</label><input id="uip-answer-${i}" value="${r.answer||''}" style="${!r.answer?'border-color:var(--red-pen);':''}"></div>
           </div>
           <textarea id="uip-content-${i}" style="width:100%;min-height:60px;">${r.content}</textarea>
+          ${r.image ? `<img src="${r.image}" style="max-width:160px;max-height:160px;margin-top:8px;border:1px solid var(--card-border);border-radius:4px;display:block;">` : ''}
         </div>`).join('')}
     </div>
     <div style="margin-top:10px;display:flex;gap:8px;">
@@ -2369,6 +2433,7 @@ function teacherUnitBankHTML(){
           <button class="btn btn-red btn-small" onclick="deleteUnitBankEntry('${b.id}')">삭제</button>
         </div>
         <div style="font-size:13.5px;white-space:pre-wrap;margin-top:8px;">${b.content}</div>
+        ${b.image ? `<img src="${b.image}" style="max-width:160px;max-height:160px;margin-top:8px;border:1px solid var(--card-border);border-radius:4px;display:block;">` : ''}
         <div class="mono" style="font-size:11px;color:var(--ink-soft);margin-top:8px;">정답: ${b.answer}</div>
       </div>`).join('')}
   </div>`;
