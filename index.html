@@ -1058,15 +1058,19 @@ function ensureYouTubeAPI(cb){
   tag.src = 'https://www.youtube.com/iframe_api';
   document.head.appendChild(tag);
 }
-async function noteVideoProgress(studentId, videoId, currentSeconds, duration){
+// 재생바 위치(getCurrentTime)가 아니라 "실제로 재생 상태였던 시간(벽시계 기준)"을 누적한다.
+// 재생바 위치만 보면 끝부분으로 스킵만 해도 시청 완료로 잡히기 때문에, PLAYING 상태로
+// 실제 흘러간 시간만 더하는 방식으로 바꿨다 — 스킵/탐색 자체는 시간을 늘리지 않는다.
+async function noteVideoWatchTime(studentId, videoId, addSeconds, duration, ended){
   if(!duration || duration<=0) return;
   const rec = await loadRecord(studentId);
-  const prev = rec.videoProgress[videoId] || {maxSeconds:0, duration:0, percent:0, completed:false};
-  const maxSeconds = Math.max(prev.maxSeconds, currentSeconds);
-  const percent = Math.min(100, Math.round(maxSeconds/duration*100));
+  const prev = rec.videoProgress[videoId] || {watchedSeconds:0, duration:0, percent:0, completed:false};
+  const prevWatched = prev.watchedSeconds!==undefined ? prev.watchedSeconds : (prev.maxSeconds||0);
+  const watchedSeconds = Math.min(duration, prevWatched + Math.max(0, addSeconds));
+  const percent = Math.min(100, Math.round(watchedSeconds/duration*100));
   rec.videoProgress[videoId] = {
-    maxSeconds, duration, percent,
-    completed: prev.completed || percent>=95,
+    watchedSeconds, duration, percent,
+    completed: prev.completed || ended || percent>=95,
     updatedAt: new Date().toISOString()
   };
   await saveRecord(studentId);
@@ -1077,7 +1081,18 @@ function videoProgressLabel(studentId, videoId){
   const rec = DATA.records[studentId];
   const p = rec && rec.videoProgress && rec.videoProgress[videoId];
   if(!p) return '아직 시청 기록이 없습니다.';
-  return (p.completed ? '시청 완료' : `시청 진도율 ${p.percent}%`) + ' · 최근 시청 ' + (p.updatedAt||'').slice(0,10);
+  return (p.completed ? '시청 완료' : `실제 시청 시간 기준 진도율 ${p.percent}%`) + ' · 최근 시청 ' + (p.updatedAt||'').slice(0,10);
+}
+// 재생 중이던 구간의 벽시계 경과 시간을 정산해서 누적한다(멈춤/종료/화면전환 시 남은 조각까지 반영).
+function flushWatchTick(entry, studentId, videoId, player, ended){
+  if(entry.lastTick==null) return;
+  const now = Date.now();
+  const elapsed = Math.min(20, Math.max(0, (now-entry.lastTick)/1000)); // 백그라운드 탭 등으로 타이머가 밀려도 과도하게 잡히지 않도록 상한
+  entry.lastTick = null;
+  try{
+    const dur = player.getDuration();
+    noteVideoWatchTime(studentId, videoId, elapsed, dur, ended);
+  }catch(err){}
 }
 // 학생이 '부교재 해설강의' 탭에 있을 때만 실제 유튜브 플레이어를 붙여서 재생 상태를 감시한다.
 function mountVideoTrackers(studentId){
@@ -1096,20 +1111,20 @@ function mountVideoTrackers(studentId){
               const entry = state.ytPlayers[videoId];
               if(!entry) return;
               if(e.data === YT.PlayerState.PLAYING){
+                entry.lastTick = Date.now();
                 if(entry.timer) clearInterval(entry.timer);
                 entry.timer = setInterval(() => {
+                  const now = Date.now();
+                  const elapsed = Math.min(10, Math.max(0, (now-entry.lastTick)/1000));
+                  entry.lastTick = now;
                   try{
-                    const cur = player.getCurrentTime(), dur = player.getDuration();
-                    noteVideoProgress(studentId, videoId, cur, dur);
+                    const dur = player.getDuration();
+                    noteVideoWatchTime(studentId, videoId, elapsed, dur, false);
                   }catch(err){}
-                }, 8000);
+                }, 5000);
               } else {
                 if(entry.timer){ clearInterval(entry.timer); entry.timer = null; }
-                try{
-                  const dur = player.getDuration();
-                  const cur = e.data === YT.PlayerState.ENDED ? dur : player.getCurrentTime();
-                  noteVideoProgress(studentId, videoId, cur, dur);
-                }catch(err){}
+                flushWatchTick(entry, studentId, videoId, player, e.data===YT.PlayerState.ENDED);
               }
             }
           }
