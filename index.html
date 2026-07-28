@@ -598,6 +598,8 @@ let state = {
   aiRegeneratingId: null,
   reviewFocusMode: false,
   reviewFocusIndex: 0,
+  videoProgressDetailId: null,
+  ytPlayers: null,
   toast: ''
 };
 let DATA = {
@@ -637,16 +639,17 @@ async function seedTestAccountIfEmpty(){
   const testStudent = {studentId:'test', name:'테스트학생', pw:'1234', grade:'고1', school:'', classId:testClass.id};
   DATA.students.push(testStudent);
   await dbSet('students', DATA.students);
-  DATA.records['test'] = {scores:[], attendance:[], assignments:[], progress:{unit:'', percent:0}, quizAnswers:{}, wrongHomework:[]};
+  DATA.records['test'] = {scores:[], attendance:[], assignments:[], progress:{unit:'', percent:0}, quizAnswers:{}, wrongHomework:[], videoProgress:{}};
   await saveRecord('test');
 }
 
 async function loadRecord(studentId){
   if(!DATA.records[studentId]){
-    DATA.records[studentId] = await dbGet('record:'+studentId, {scores:[], attendance:[], assignments:[], progress:{unit:'', percent:0}, quizAnswers:{}, wrongHomework:[]});
+    DATA.records[studentId] = await dbGet('record:'+studentId, {scores:[], attendance:[], assignments:[], progress:{unit:'', percent:0}, quizAnswers:{}, wrongHomework:[], videoProgress:{}});
   }
   if(!DATA.records[studentId].quizAnswers) DATA.records[studentId].quizAnswers = {};
   if(!DATA.records[studentId].wrongHomework) DATA.records[studentId].wrongHomework = [];
+  if(!DATA.records[studentId].videoProgress) DATA.records[studentId].videoProgress = {};
   return DATA.records[studentId];
 }
 async function saveRecord(studentId){
@@ -1014,17 +1017,107 @@ function extractYouTubeId(url){
   for(const p of patterns){ const m = url.match(p); if(m) return m[1]; }
   return null;
 }
-function videoEmbedHTML(v){
+// 유튜브 iframe에 sandbox를 걸어서(allow-popups/allow-top-navigation 없음) 제목표시줄/로고를
+// 눌러도 유튜브로 이동하지 못하게 막는다. enablejsapi=1을 켜서 시청 진도율 추적에도 쓴다.
+function videoEmbedHTML(v, forStudent){
   const vid = extractYouTubeId(v.url);
-  const player = vid
-    ? `<div class="video-embed-wrap"><iframe src="https://www.youtube-nocookie.com/embed/${vid}" title="${v.title}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></div>
-       <div style="margin-top:6px;"><a href="${v.url}" target="_blank" rel="noopener" style="font-size:12px;color:var(--ink-soft);">영상이 안 보이면 여기를 눌러 유튜브에서 바로 보기 →</a></div>`
-    : `<div class="video-embed-warn">유튜브 링크 형식을 인식하지 못했습니다. youtube.com 또는 youtu.be 링크인지 확인해주세요.</div>`;
+  const iframeId = 'yt-frame-' + v.id;
+  let player;
+  if(vid){
+    const src = 'https://www.youtube-nocookie.com/embed/' + vid +
+      '?enablejsapi=1&modestbranding=1&rel=0&iv_load_policy=3&origin=' + encodeURIComponent(location.origin);
+    player = `<div class="video-embed-wrap"><iframe id="${iframeId}" class="yt-tracked-frame" data-bank-vid="${v.id}" src="${src}" title="${escHtml(v.title)}"
+      sandbox="allow-scripts allow-same-origin allow-presentation allow-forms"
+      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></div>`;
+  } else {
+    player = `<div class="video-embed-warn">유튜브 링크 형식을 인식하지 못했습니다. youtube.com 또는 youtu.be 링크인지 확인해주세요.</div>`;
+  }
   return `<div class="video-embed-card">
-    <div class="vtitle">${v.title}</div>
-    <div class="vunit mono">${v.unit||''} · ${quizClassLabel(v.classId)}</div>
+    <div class="vtitle">${escHtml(v.title)}</div>
+    <div class="vunit mono">${escHtml(v.unit||'')} · ${quizClassLabel(v.classId)}</div>
     ${player}
+    ${forStudent && vid ? `<div class="mono" id="vprog-${v.id}" style="font-size:11px;color:var(--ink-soft);margin-top:6px;">${videoProgressLabel(forStudent, v.id)}</div>` : ''}
   </div>`;
+}
+/* ---------- 유튜브 시청 진도율 추적 ---------- */
+// render()가 app.innerHTML을 통째로 새로 그리기 때문에, 재생 중 다른 이유로 render()가
+// 다시 호출되면 iframe이 새로 만들어지면서 재생 위치가 초기화된다. 진도율 저장 자체는
+// render()를 부르지 않도록 해서(=재생 화면을 다시 그리지 않도록) 이 문제를 최대한 피한다.
+let ytApiLoading = false;
+function ensureYouTubeAPI(cb){
+  if(window.YT && window.YT.Player){ cb(); return; }
+  if(!state.ytReadyCallbacks) state.ytReadyCallbacks = [];
+  state.ytReadyCallbacks.push(cb);
+  if(ytApiLoading) return;
+  ytApiLoading = true;
+  window.onYouTubeIframeAPIReady = function(){
+    (state.ytReadyCallbacks||[]).forEach(fn=>fn());
+    state.ytReadyCallbacks = [];
+  };
+  const tag = document.createElement('script');
+  tag.src = 'https://www.youtube.com/iframe_api';
+  document.head.appendChild(tag);
+}
+async function noteVideoProgress(studentId, videoId, currentSeconds, duration){
+  if(!duration || duration<=0) return;
+  const rec = await loadRecord(studentId);
+  const prev = rec.videoProgress[videoId] || {maxSeconds:0, duration:0, percent:0, completed:false};
+  const maxSeconds = Math.max(prev.maxSeconds, currentSeconds);
+  const percent = Math.min(100, Math.round(maxSeconds/duration*100));
+  rec.videoProgress[videoId] = {
+    maxSeconds, duration, percent,
+    completed: prev.completed || percent>=95,
+    updatedAt: new Date().toISOString()
+  };
+  await saveRecord(studentId);
+  const label = document.getElementById('vprog-'+videoId);
+  if(label) label.textContent = videoProgressLabel(studentId, videoId);
+}
+function videoProgressLabel(studentId, videoId){
+  const rec = DATA.records[studentId];
+  const p = rec && rec.videoProgress && rec.videoProgress[videoId];
+  if(!p) return '아직 시청 기록이 없습니다.';
+  return (p.completed ? '시청 완료' : `시청 진도율 ${p.percent}%`) + ' · 최근 시청 ' + (p.updatedAt||'').slice(0,10);
+}
+// 학생이 '부교재 해설강의' 탭에 있을 때만 실제 유튜브 플레이어를 붙여서 재생 상태를 감시한다.
+function mountVideoTrackers(studentId){
+  const frames = document.querySelectorAll('.yt-tracked-frame[data-bank-vid]');
+  if(frames.length===0) return;
+  ensureYouTubeAPI(() => {
+    if(!state.ytPlayers) state.ytPlayers = {};
+    frames.forEach(frame => {
+      const videoId = frame.dataset.bankVid;
+      if(state.ytPlayers[videoId]) return; // 이미 이 화면에서 연결됨
+      let player;
+      try{
+        player = new YT.Player(frame.id, {
+          events: {
+            onStateChange: (e) => {
+              const entry = state.ytPlayers[videoId];
+              if(!entry) return;
+              if(e.data === YT.PlayerState.PLAYING){
+                if(entry.timer) clearInterval(entry.timer);
+                entry.timer = setInterval(() => {
+                  try{
+                    const cur = player.getCurrentTime(), dur = player.getDuration();
+                    noteVideoProgress(studentId, videoId, cur, dur);
+                  }catch(err){}
+                }, 8000);
+              } else {
+                if(entry.timer){ clearInterval(entry.timer); entry.timer = null; }
+                try{
+                  const dur = player.getDuration();
+                  const cur = e.data === YT.PlayerState.ENDED ? dur : player.getCurrentTime();
+                  noteVideoProgress(studentId, videoId, cur, dur);
+                }catch(err){}
+              }
+            }
+          }
+        });
+      }catch(err){ return; }
+      state.ytPlayers[videoId] = { player, timer: null };
+    });
+  });
 }
 async function addVideo(){
   const unit = document.getElementById('video-unit').value.trim();
@@ -1333,11 +1426,11 @@ function teacherSubmissionsHTML(){
             if(!bank) return '';
             const correct = h.done && h.studentAnswer.trim()===bank.variantAnswer.trim();
             return `<tr>
-              <td>${exam?exam.title:'-'}</td>
+              <td>${exam?escHtml(exam.title):'-'}</td>
               <td>${h.questionNo}번</td>
               <td>${!h.done?'<span class="badge badge-late">미제출</span>':`<span class="badge ${correct?'badge-ok':'badge-no'}">${correct?'정답':'오답'}</span>`}</td>
-              <td>${h.studentAnswer||'-'}</td>
-              <td>${bank.status==='approved' ? bank.variantAnswer : '(검토 전)'}</td>
+              <td>${escHtml(h.studentAnswer)||'-'}</td>
+              <td>${bank.status==='approved' ? escHtml(bank.variantAnswer) : '(검토 전)'}</td>
             </tr>`;
           }).join('')}
         </table>
@@ -1345,6 +1438,18 @@ function teacherSubmissionsHTML(){
       `).join('')}
     </table>`}
   </div>`;
+}
+// 문제/답안/후기 등 사용자가 입력한 텍스트를 그대로 innerHTML에 넣으면 "<", ">"가
+// 태그로 해석되어 레이아웃이 깨진다 (예: 부등식 "g(x)<f(x)<0"). HTML로 렌더링되기 전에
+// 항상 이 함수를 거쳐서 특수문자를 이스케이프한다.
+function escHtml(s){
+  if(s===null || s===undefined) return '';
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 function bankCardHTML(b, editable){
   const exam = DATA.exams.find(e=>e.id===b.examId);
@@ -1370,24 +1475,24 @@ function bankCardHTML(b, editable){
   ) : '';
   return `<div class="review-card">
     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;">
-      <div class="mono" style="font-size:12px;color:var(--ink-soft);">${exam?exam.title:'(삭제된 시험지)'} · ${b.questionNo}번${requesters>0?` · 요청자 ${requesters}명`:''}</div>
+      <div class="mono" style="font-size:12px;color:var(--ink-soft);">${exam?escHtml(exam.title):'(삭제된 시험지)'} · ${b.questionNo}번${requesters>0?` · 요청자 ${requesters}명`:''}</div>
       <span class="review-status review-status-${b.status}">${statusLabel}</span>
     </div>
     <div class="compare-grid">
       <div class="compare-col">
         <div class="colhead">원본 문제</div>
-        <div style="font-size:13.5px;white-space:pre-wrap;">${b.originalContent}</div>
-        <div class="mono" style="font-size:11px;color:var(--ink-soft);margin-top:8px;">정답: ${b.originalAnswer}</div>
+        <div style="font-size:13.5px;white-space:pre-wrap;">${escHtml(b.originalContent)}</div>
+        <div class="mono" style="font-size:11px;color:var(--ink-soft);margin-top:8px;">정답: ${escHtml(b.originalAnswer)}</div>
         ${imgHTML}
       </div>
       <div class="compare-col">
         <div class="colhead">쌍둥이 문제 ${editable?'(직접 입력/수정)':''}</div>
         ${editable
-          ? `<div style="font-size:13.5px;white-space:pre-wrap;background:#FBFAF8;border:1px solid var(--card-border);border-radius:4px;padding:8px;margin-bottom:8px;">${b.variantContent || '<span style=\"color:var(--ink-soft);\">(아직 내용 없음 — AI로 생성하거나 직접 입력해주세요)</span>'}</div>
-             <textarea id="bank-content-${b.id}" placeholder="여기에 입력/수정 후 '수정 내용 저장'을 누르면 위 미리보기가 갱신됩니다">${b.variantContent}</textarea>
-             <input id="bank-answer-${b.id}" class="mono" style="margin-top:8px;" value="${b.variantAnswer}" placeholder="정답">
+          ? `<div style="font-size:13.5px;white-space:pre-wrap;background:#FBFAF8;border:1px solid var(--card-border);border-radius:4px;padding:8px;margin-bottom:8px;">${b.variantContent ? escHtml(b.variantContent) : '<span style=\"color:var(--ink-soft);\">(아직 내용 없음 — AI로 생성하거나 직접 입력해주세요)</span>'}</div>
+             <textarea id="bank-content-${b.id}" placeholder="여기에 입력/수정 후 '수정 내용 저장'을 누르면 위 미리보기가 갱신됩니다">${escHtml(b.variantContent)}</textarea>
+             <input id="bank-answer-${b.id}" class="mono" style="margin-top:8px;" value="${escHtml(b.variantAnswer)}" placeholder="정답">
              ${imgHTML ? `<div class="mono" style="font-size:11px;color:var(--ink-soft);margin-top:8px;">↑ 왼쪽과 같은 그림을 그대로 사용합니다 (새로 생성하지 않음)</div>` : ''}`
-          : `<div style="font-size:13.5px;white-space:pre-wrap;">${b.variantContent}</div><div class="mono" style="font-size:11px;color:var(--ink-soft);margin-top:8px;">정답: ${b.variantAnswer}</div>${imgHTML}`
+          : `<div style="font-size:13.5px;white-space:pre-wrap;">${escHtml(b.variantContent)}</div><div class="mono" style="font-size:11px;color:var(--ink-soft);margin-top:8px;">정답: ${escHtml(b.variantAnswer)}</div>${imgHTML}`
         }
       </div>
     </div>
@@ -1942,6 +2047,9 @@ function render(){
       });
     }catch(e){ console.error('수식 렌더링 실패', e); }
   }
+  if(state.view==='student' && state.studentTab==='video' && state.currentUser){
+    mountVideoTrackers(state.currentUser.studentId);
+  }
 }
 
 function headerHTML(){
@@ -2078,7 +2186,7 @@ function homeHTML(){
     <h2>공지사항</h2>
     <div class="panel" style="padding:8px 26px;">
       ${DATA.notices.length===0?'<div class="empty">등록된 공지가 없습니다.</div>':
-      DATA.notices.slice(0,5).map(n=>`<div style="padding:14px 0;border-bottom:1px solid #F0EEE7;"><div style="font-weight:700;">${n.title} <span class="mono" style="font-size:11px;color:var(--ink-soft);font-weight:400;">${n.date}</span></div><div style="font-size:13px;color:var(--ink-soft);margin-top:4px;">${n.content}</div></div>`).join('')}
+      DATA.notices.slice(0,5).map(n=>`<div style="padding:14px 0;border-bottom:1px solid #F0EEE7;"><div style="font-weight:700;">${escHtml(n.title)} <span class="mono" style="font-size:11px;color:var(--ink-soft);font-weight:400;">${escHtml(n.date)}</span></div><div style="font-size:13px;color:var(--ink-soft);margin-top:4px;">${escHtml(n.content)}</div></div>`).join('')}
     </div>
   </section>
 
@@ -2165,7 +2273,7 @@ function studentHTML(){
   } else if(state.studentTab==='notice'){
     body = `<div class="panel"><h3>공지사항</h3>
       ${DATA.notices.length===0?'<div class="empty">등록된 공지가 없습니다.</div>':
-      DATA.notices.map(n=>`<div style="padding:12px 0;border-bottom:1px solid #F0EEE7;"><div style="font-weight:700;">${n.title} <span class="mono" style="font-size:11px;color:var(--ink-soft);font-weight:400;">${n.date}</span></div><div style="font-size:13px;color:var(--ink-soft);margin-top:4px;">${n.content}</div></div>`).join('')}
+      DATA.notices.map(n=>`<div style="padding:12px 0;border-bottom:1px solid #F0EEE7;"><div style="font-weight:700;">${escHtml(n.title)} <span class="mono" style="font-size:11px;color:var(--ink-soft);font-weight:400;">${escHtml(n.date)}</span></div><div style="font-size:13px;color:var(--ink-soft);margin-top:4px;">${escHtml(n.content)}</div></div>`).join('')}
     </div>`;
   } else if(state.studentTab==='quiz'){
     const myClassId = (DATA.students.find(s=>s.studentId===sid)||{}).classId;
@@ -2175,11 +2283,11 @@ function studentHTML(){
       myQuizzes.map(q=>{
         const done = rec.quizAnswers[q.id];
         return `<div class="quiz-card">
-          <div class="quiz-meta">${q.date} · ${quizClassLabel(q.classId)}</div>
-          <div class="quiz-title">${q.title}</div>
-          <div class="quiz-content">${q.content}</div>
+          <div class="quiz-meta">${escHtml(q.date)} · ${quizClassLabel(q.classId)}</div>
+          <div class="quiz-title">${escHtml(q.title)}</div>
+          <div class="quiz-content">${escHtml(q.content)}</div>
           <div class="quiz-answer-box">
-            ${done ? `<span class="badge badge-ok">제출완료</span> <span class="mono" style="font-size:11px;color:var(--ink-soft);">${done.answer} (${done.submittedAt})</span>`
+            ${done ? `<span class="badge badge-ok">제출완료</span> <span class="mono" style="font-size:11px;color:var(--ink-soft);">${escHtml(done.answer)} (${done.submittedAt})</span>`
             : `<div class="inline-form"><div class="field" style="flex:1;"><input id="qa-${q.id}" placeholder="답안 입력"></div><button class="btn btn-primary btn-small" onclick="submitQuizAnswer('${q.id}','${sid}')">제출</button></div>`}
           </div>
         </div>`;
@@ -2196,7 +2304,7 @@ function studentHTML(){
         <label>시험 선택</label>
         <select onchange="state.wrongExamId=this.value; state.wrongChecked={}; render()">
           <option value="">-- 선택 --</option>
-          ${myExams.map(e=>`<option value="${e.id}" ${state.wrongExamId===e.id?'selected':''}>${e.title} (${e.date||'-'})</option>`).join('')}
+          ${myExams.map(e=>`<option value="${e.id}" ${state.wrongExamId===e.id?'selected':''}>${escHtml(e.title)} (${e.date||'-'})</option>`).join('')}
         </select>
       </div>
       ${selectedExam ? `
@@ -2219,17 +2327,17 @@ function studentHTML(){
         const exam = DATA.exams.find(e=>e.id===hw.examId);
         if(!bank) return '';
         if(bank.status!=='approved'){
-          return `<div class="homework-card"><div class="mono" style="font-size:12px;color:var(--ink-soft);margin-bottom:8px;">${exam?exam.title:''} · ${hw.questionNo}번 오답</div><div class="homework-pending">선생님이 문제를 검토 중입니다. 검토가 끝나면 이곳에 문제가 표시됩니다.</div></div>`;
+          return `<div class="homework-card"><div class="mono" style="font-size:12px;color:var(--ink-soft);margin-bottom:8px;">${exam?escHtml(exam.title):''} · ${hw.questionNo}번 오답</div><div class="homework-pending">선생님이 문제를 검토 중입니다. 검토가 끝나면 이곳에 문제가 표시됩니다.</div></div>`;
         }
         if(bank.hasImage && state.pbImageCache[bank.id]===undefined) togglePbImage(bank.id);
         const correct = hw.done && hw.studentAnswer.trim()===bank.variantAnswer.trim();
         const img = bank.hasImage && state.pbImageCache[bank.id] && state.pbImageCache[bank.id]!=='empty' && state.pbImageCache[bank.id]!=='loading' ? state.pbImageCache[bank.id] : null;
         return `<div class="homework-card">
-          <div class="mono" style="font-size:12px;color:var(--ink-soft);margin-bottom:8px;">${exam?exam.title:''} · ${hw.questionNo}번 오답 · 쌍둥이 문제</div>
-          <div style="font-size:13.5px;white-space:pre-wrap;margin-bottom:10px;">${bank.variantContent}</div>
+          <div class="mono" style="font-size:12px;color:var(--ink-soft);margin-bottom:8px;">${exam?escHtml(exam.title):''} · ${hw.questionNo}번 오답 · 쌍둥이 문제</div>
+          <div style="font-size:13.5px;white-space:pre-wrap;margin-bottom:10px;">${escHtml(bank.variantContent)}</div>
           ${bank.hasImage ? (img ? `<img src="${img}" style="max-width:240px;max-height:240px;margin-bottom:10px;border:1px solid var(--card-border);border-radius:4px;display:block;">` : '<div class="empty">그림 불러오는 중...</div>') : ''}
           ${hw.done
-            ? `<span class="badge ${correct?'badge-ok':'badge-no'}">${correct?'정답':'오답'}</span> <span class="mono" style="font-size:12px;">내 답안: ${hw.studentAnswer}</span>`
+            ? `<span class="badge ${correct?'badge-ok':'badge-no'}">${correct?'정답':'오답'}</span> <span class="mono" style="font-size:12px;">내 답안: ${escHtml(hw.studentAnswer)}</span>`
             : `<div class="inline-form"><div class="field" style="flex:1;"><input id="hw-answer-${bank.id}" placeholder="답안 입력"></div><button class="btn btn-primary btn-small" onclick="submitHomeworkAnswer('${bank.id}')">제출</button></div>`}
         </div>`;
       }).join('')}
@@ -2256,9 +2364,9 @@ function studentHTML(){
     <div class="panel"><h3>질의응답 게시판</h3>
       ${DATA.qnas.length===0?'<div class="empty">등록된 질문이 없습니다.</div>':
       DATA.qnas.map(q=>`<div class="qna-card">
-        <div class="qna-meta">${q.date} · ${q.studentName}</div>
-        <div class="qna-q">Q. ${q.question}</div>
-        ${q.answer?`<div class="qna-answer"><div class="label">A. 답변</div>${q.answer}</div>`:'<div class="qna-noanswer">아직 답변이 등록되지 않았습니다.</div>'}
+        <div class="qna-meta">${q.date} · ${escHtml(q.studentName)}</div>
+        <div class="qna-q">Q. ${escHtml(q.question)}</div>
+        ${q.answer?`<div class="qna-answer"><div class="label">A. 답변</div>${escHtml(q.answer)}</div>`:'<div class="qna-noanswer">아직 답변이 등록되지 않았습니다.</div>'}
       </div>`).join('')}
     </div>`;
   } else if(state.studentTab==='video'){
@@ -2266,7 +2374,7 @@ function studentHTML(){
     const myVideos = DATA.videos.filter(v=>!v.classId || v.classId===myClassIdV);
     body = `<div class="panel"><h3>부교재 해설강의</h3>
       ${myVideos.length===0?'<div class="empty">등록된 영상이 없습니다.</div>':
-      myVideos.map(v=>videoEmbedHTML(v)).join('')}
+      myVideos.map(v=>videoEmbedHTML(v, sid)).join('')}
     </div>`;
   } else if(state.studentTab==='chat'){
     const chat = DATA.chats[sid] || [];
@@ -2274,7 +2382,7 @@ function studentHTML(){
     body = `<div class="panel"><h3>선생님과 채팅</h3>
       <div class="chat-window" id="chat-win-s">
         ${chat.length===0?'<div class="empty">대화 내역이 없습니다.</div>':
-        chat.map(m=>`<div class="chat-bubble from-${m.from}">${m.text}<span class="chat-time">${m.at}</span></div>`).join('')}
+        chat.map(m=>`<div class="chat-bubble from-${m.from}">${escHtml(m.text)}<span class="chat-time">${m.at}</span></div>`).join('')}
       </div>
       <div class="chat-input-row">
         <input id="chat-input-student" placeholder="메시지 입력" onkeydown="if(event.key==='Enter') sendChatMessage('${sid}','student')">
@@ -2484,8 +2592,8 @@ function teacherQuizHTML(){
     DATA.quizzes.map(q=>{
       return `<div class="quiz-card">
         <div class="quiz-meta">${q.date} · ${quizClassLabel(q.classId)}</div>
-        <div class="quiz-title">${q.title}</div>
-        <div class="quiz-content">${q.content}</div>
+        <div class="quiz-title">${escHtml(q.title)}</div>
+        <div class="quiz-content">${escHtml(q.content)}</div>
         <div class="quiz-answer-box"><button class="btn btn-red btn-small" onclick="deleteQuiz('${q.id}')">삭제</button></div>
       </div>`;
     }).join('')}
@@ -2520,9 +2628,9 @@ function teacherQnaHTML(){
     <h3>질의응답 관리 (${DATA.qnas.length}건)</h3>
     ${DATA.qnas.length===0?'<div class="empty">등록된 질문이 없습니다.</div>':
     DATA.qnas.map(q=>`<div class="qna-card">
-      <div class="qna-meta">${q.date} · ${q.studentName}</div>
-      <div class="qna-q">Q. ${q.question}</div>
-      ${q.answer?`<div class="qna-answer"><div class="label">A. 답변 완료</div>${q.answer}</div>`:
+      <div class="qna-meta">${q.date} · ${escHtml(q.studentName)}</div>
+      <div class="qna-q">Q. ${escHtml(q.question)}</div>
+      ${q.answer?`<div class="qna-answer"><div class="label">A. 답변 완료</div>${escHtml(q.answer)}</div>`:
       `<div class="inline-form" style="margin-top:10px;"><div class="field" style="flex:1;"><input id="answer-${q.id}" placeholder="답변 입력"></div><button class="btn btn-primary btn-small" onclick="submitAnswer('${q.id}')">등록</button></div>`}
       <div style="margin-top:8px;"><button class="btn btn-red btn-small" onclick="deleteQna('${q.id}')">삭제</button></div>
     </div>`).join('')}
@@ -2547,7 +2655,7 @@ function teacherChatHTML(){
     ${sid ? `
     <div class="chat-window" id="chat-win">
       ${chat.length===0?'<div class="empty">대화 내역이 없습니다.</div>':
-      chat.map(m=>`<div class="chat-bubble from-${m.from}">${m.text}<span class="chat-time">${m.at}</span></div>`).join('')}
+      chat.map(m=>`<div class="chat-bubble from-${m.from}">${escHtml(m.text)}<span class="chat-time">${m.at}</span></div>`).join('')}
     </div>
     <div class="chat-input-row">
       <input id="chat-input-teacher" placeholder="메시지 입력" onkeydown="if(event.key==='Enter') sendChatMessage('${sid}','teacher')">
@@ -2557,12 +2665,22 @@ function teacherChatHTML(){
 }
 
 /* ---------- 영상 (부교재 해설강의) ---------- */
+function videoWatcherRows(v){
+  return DATA.students
+    .filter(s => !v.classId || s.classId===v.classId)
+    .map(s => {
+      const rec = state.allRecords[s.studentId];
+      const p = rec && rec.videoProgress && rec.videoProgress[v.id];
+      return { student: s, p };
+    });
+}
 function teacherVideoHTML(){
+  loadAllRecordsIfNeeded();
   return `
   <div class="panel">
     <h3>영상 등록</h3>
     <div class="inline-form">
-      <div class="field"><label>대상 반</label><select id="video-class"><option value="">전체</option>${DATA.classes.map(c=>`<option value="${c.id}">${c.name}</option>`).join('')}</select></div>
+      <div class="field"><label>대상 반</label><select id="video-class"><option value="">전체</option>${DATA.classes.map(c=>`<option value="${c.id}">${escHtml(c.name)}</option>`).join('')}</select></div>
       <div class="field"><label>단원</label><input id="video-unit" placeholder="예: 수학Ⅱ 3단원"></div>
       <div class="field" style="flex:2;"><label>제목</label><input id="video-title" placeholder="영상 제목"></div>
       <div class="field" style="flex:2;"><label>유튜브 링크</label><input id="video-url" placeholder="https://youtube.com/watch?v=..."></div>
@@ -2572,7 +2690,32 @@ function teacherVideoHTML(){
   <div class="panel">
     <h3>영상 목록 (${DATA.videos.length}개)</h3>
     ${DATA.videos.length===0?'<div class="empty">등록된 영상이 없습니다.</div>':
-    DATA.videos.map(v=>videoEmbedHTML(v) + `<div style="margin:-8px 0 16px;"><button class="btn btn-red btn-small" onclick="deleteVideo('${v.id}')">삭제</button></div>`).join('')}
+    DATA.videos.map(v=>{
+      const rows = state.allRecordsLoaded ? videoWatcherRows(v) : [];
+      const watched = rows.filter(r=>r.p);
+      const completed = rows.filter(r=>r.p && r.p.completed);
+      const open = state.videoProgressDetailId===v.id;
+      return videoEmbedHTML(v) + `
+      <div style="margin:-8px 0 16px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+        <button class="btn btn-red btn-small" onclick="deleteVideo('${v.id}')">삭제</button>
+        <button class="btn btn-small" onclick="state.videoProgressDetailId = state.videoProgressDetailId==='${v.id}' ? null : '${v.id}'; render()">
+          ${open?'시청 현황 닫기':'시청 현황 보기'}${state.allRecordsLoaded?` (완료 ${completed.length} · 시청중 ${watched.length-completed.length} · 미시청 ${rows.length-watched.length})`:''}
+        </button>
+      </div>
+      ${open ? (
+        !state.allRecordsLoaded ? '<div class="empty" style="margin:-8px 0 16px;">불러오는 중...</div>' :
+        rows.length===0 ? '<div class="empty" style="margin:-8px 0 16px;">대상 학생이 없습니다.</div>' :
+        `<table style="margin:-4px 0 16px;">
+          <tr><th>학생</th><th>반</th><th>진도율</th><th>최근 시청</th></tr>
+          ${rows.map(r=>`<tr>
+            <td>${escHtml(r.student.name)}</td>
+            <td>${classNameOf(r.student.classId)}</td>
+            <td>${r.p ? `<span class="badge ${r.p.completed?'badge-ok':'badge-no'}">${r.p.completed?'완료':r.p.percent+'%'}</span>` : '<span class="badge badge-late">미시청</span>'}</td>
+            <td class="mono" style="font-size:12px;">${r.p ? (r.p.updatedAt||'').slice(0,16).replace('T',' ') : '-'}</td>
+          </tr>`).join('')}
+        </table>`
+      ) : ''}`;
+    }).join('')}
   </div>`;
 }
 
@@ -2611,8 +2754,8 @@ function teacherExamsHTML(){
         <div class="qno">${i+1}번</div>
         <div class="qfields">
           <select id="eq-unit-${i}" style="margin-bottom:6px;">${UNITS.map(u=>`<option value="${u}" ${q.unit===u?'selected':''}>${u}</option>`).join('')}</select>
-          <textarea id="eq-content-${i}" placeholder="문제 내용">${q.content}</textarea>
-          <input id="eq-answer-${i}" placeholder="정답" value="${q.answer}">
+          <textarea id="eq-content-${i}" placeholder="문제 내용">${escHtml(q.content)}</textarea>
+          <input id="eq-answer-${i}" placeholder="정답" value="${escHtml(q.answer)}">
           ${q.image ? `<img src="${q.image}" style="max-width:120px;max-height:120px;margin-top:6px;border:1px solid var(--card-border);border-radius:4px;display:block;">` : ''}
           <button class="btn btn-red btn-small" onclick="removeExamQuestionRow(${i})">삭제</button>
         </div>
@@ -2627,7 +2770,7 @@ function teacherExamsHTML(){
     <h3>등록된 시험지 (${DATA.exams.length}개)</h3>
     ${DATA.exams.length===0?'<div class="empty">등록된 시험지가 없습니다.</div>':
     DATA.exams.map(e=>`<div class="exam-card">
-      <div class="exam-title">${e.title}</div>
+      <div class="exam-title">${escHtml(e.title)}</div>
       <div class="exam-meta">${e.date||'-'} · ${classNameOf(e.classId)} · 문항 ${e.questions.length}개</div>
       <div class="row-actions">
         ${e.hasFiles ? `<button class="btn btn-small" onclick="toggleExamImages('${e.id}')">첨부 이미지 보기</button>` : ''}
@@ -2731,9 +2874,9 @@ function teacherUnitBankHTML(){
         <div class="review-card" style="margin-bottom:10px;">
           <div class="inline-form" style="margin-bottom:6px;">
             <div class="field"><label>단원</label><select id="uip-unit-${i}">${UNITS.map(u=>`<option value="${u}" ${r.unit===u?'selected':''}>${u}</option>`).join('')}</select></div>
-            <div class="field"><label>정답 ${!r.answer?'<span style="color:var(--red-pen);">(비어있음)</span>':''}</label><input id="uip-answer-${i}" value="${r.answer||''}" style="${!r.answer?'border-color:var(--red-pen);':''}"></div>
+            <div class="field"><label>정답 ${!r.answer?'<span style="color:var(--red-pen);">(비어있음)</span>':''}</label><input id="uip-answer-${i}" value="${escHtml(r.answer||'')}" style="${!r.answer?'border-color:var(--red-pen);':''}"></div>
           </div>
-          <textarea id="uip-content-${i}" style="width:100%;min-height:60px;">${r.content}</textarea>
+          <textarea id="uip-content-${i}" style="width:100%;min-height:60px;">${escHtml(r.content)}</textarea>
           ${r.image ? `<img src="${r.image}" style="max-width:160px;max-height:160px;margin-top:8px;border:1px solid var(--card-border);border-radius:4px;display:block;">` : ''}
         </div>`).join('')}
     </div>
@@ -2759,9 +2902,9 @@ function teacherUnitBankHTML(){
           <span class="mono" style="font-size:12px;color:var(--ink-soft);">[${b.unit||'미지정'}] · ${b.createdAt||''}</span>
           <button class="btn btn-red btn-small" onclick="deleteUnitBankEntry('${b.id}')">삭제</button>
         </div>
-        <div style="font-size:13.5px;white-space:pre-wrap;margin-top:8px;">${b.content}</div>
+        <div style="font-size:13.5px;white-space:pre-wrap;margin-top:8px;">${escHtml(b.content)}</div>
         ${b.image ? `<img src="${b.image}" style="max-width:160px;max-height:160px;margin-top:8px;border:1px solid var(--card-border);border-radius:4px;display:block;">` : ''}
-        <div class="mono" style="font-size:11px;color:var(--ink-soft);margin-top:8px;">정답: ${b.answer}</div>
+        <div class="mono" style="font-size:11px;color:var(--ink-soft);margin-top:8px;">정답: ${escHtml(b.answer)}</div>
       </div>`).join('')}
   </div>`;
 }
