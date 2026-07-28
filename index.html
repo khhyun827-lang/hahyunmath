@@ -340,6 +340,11 @@
   Firebase 설정: 아래 firebaseConfig 값을 본인의 Firebase 프로젝트 값으로
   교체해야 실제로 데이터가 저장됩니다. (설정 방법은 대화창에서 안내한 가이드 참고)
 ============================================================ -->
+<!-- 수식(LaTeX) 렌더링용 -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script>
@@ -429,6 +434,30 @@ async function bumpAIQuotaUsed(){
 async function loadAIQuotaIfNeeded(){
   if(state.aiQuotaUsed !== null) return;
   state.aiQuotaUsed = await getAIQuotaUsed();
+  render();
+}
+async function regenerateOneWithAI(bankId){
+  if(state.aiProcessing) return;
+  const b = DATA.problemBank.find(x=>x.id===bankId);
+  if(!b) return;
+  const used = await getAIQuotaUsed();
+  if(used >= AI_DAILY_LIMIT){ showToast('오늘 AI 생성 한도(' + AI_DAILY_LIMIT + '건)를 모두 사용했습니다. 내일 다시 시도해주세요.'); return; }
+  state.aiProcessing = true;
+  render();
+  const image = b.hasImage ? await dbGet('pbimg:'+b.id, null) : null;
+  const twin = await generateTwinViaAI(b.originalContent, b.originalAnswer, image);
+  if(twin){
+    b.variantContent = twin.content;
+    b.variantAnswer = twin.answer;
+    b.status = 'pending';
+    await dbSet('problem-bank', DATA.problemBank);
+    await bumpAIQuotaUsed();
+    state.aiQuotaUsed = null;
+    showToast('다시 생성했습니다. 검토 상태가 초기화됐어요.');
+  } else {
+    showToast('생성에 실패했습니다. 잠시 후 다시 시도해주세요.');
+  }
+  state.aiProcessing = false;
   render();
 }
 async function processAIQueue(){
@@ -556,6 +585,11 @@ let state = {
   unitImportPreview: null,
   importProgress: null,
   pbImageCache: {},
+  allRecordsLoaded: false,
+  allRecordsLoading: false,
+  allRecords: {},
+  submissionsFilter: '',
+  submissionDetailId: null,
   aiQuotaUsed: null,
   aiProcessing: false,
   aiProgress: null,
@@ -1225,6 +1259,88 @@ async function togglePbImage(bankId){
   state.pbImageCache[bankId] = img || 'empty';
   render();
 }
+async function loadAllRecordsIfNeeded(){
+  if(state.allRecordsLoaded || state.allRecordsLoading) return;
+  state.allRecordsLoading = true;
+  render();
+  const entries = await Promise.all(DATA.students.map(async s => [s.studentId, await dbGet('record:'+s.studentId, null)]));
+  state.allRecords = {};
+  entries.forEach(([sid, rec]) => { if(rec) state.allRecords[sid] = rec; });
+  state.allRecordsLoading = false;
+  state.allRecordsLoaded = true;
+  render();
+}
+// 문항 하나를 몇 명의 학생이 오답으로 제출했는지 센다 (제출 현황/검토 화면에서 재사용).
+function bankRequesterCount(bankId){
+  let n = 0;
+  for(const sid in state.allRecords){
+    if((state.allRecords[sid].wrongHomework||[]).some(h=>h.bankId===bankId)) n++;
+  }
+  return n;
+}
+function teacherSubmissionsHTML(){
+  loadAllRecordsIfNeeded();
+  if(state.allRecordsLoading || !state.allRecordsLoaded){
+    return `<div class="panel"><div class="empty">학생 제출 현황을 불러오는 중입니다...</div></div>`;
+  }
+  const filter = state.submissionsFilter;
+  const rows = DATA.students
+    .filter(s => !filter || s.classId===filter)
+    .map(s => {
+      const rec = state.allRecords[s.studentId];
+      const hw = rec ? (rec.wrongHomework||[]) : [];
+      const done = hw.filter(h=>h.done);
+      const correct = done.filter(h=>{
+        const bank = DATA.problemBank.find(b=>b.id===h.bankId);
+        return bank && h.studentAnswer.trim()===bank.variantAnswer.trim();
+      });
+      return { student: s, total: hw.length, done: done.length, correct: correct.length, hw };
+    })
+    .filter(r => r.total > 0);
+
+  return `
+  <div class="panel">
+    <h3>학생 오답숙제 제출 현황</h3>
+    <p style="font-size:12.5px;color:var(--ink-soft);margin-top:-8px;">학생별로 오답 숙제를 몇 개 받았고, 그중 몇 개를 풀었고, 몇 개를 맞았는지 보여줍니다. 이름을 누르면 문항별 상세를 볼 수 있어요.</p>
+    <div class="inline-form" style="margin-bottom:14px;">
+      <div class="field"><label>반 필터</label><select onchange="state.submissionsFilter=this.value; render()">
+        <option value="">전체</option>
+        ${DATA.classes.map(c=>`<option value="${c.id}" ${filter===c.id?'selected':''}>${c.name}</option>`).join('')}
+      </select></div>
+    </div>
+    ${rows.length===0 ? '<div class="empty">아직 오답 숙제를 제출한 학생이 없습니다.</div>' : `
+    <table>
+      <tr><th>학생</th><th>반</th><th>배정</th><th>제출</th><th>정답</th><th></th></tr>
+      ${rows.map(r=>`<tr>
+        <td>${r.student.name}</td>
+        <td>${classNameOf(r.student.classId)}</td>
+        <td>${r.total}</td>
+        <td>${r.done} / ${r.total}</td>
+        <td>${r.correct} / ${r.done}</td>
+        <td><button class="btn btn-small" onclick="state.submissionDetailId = state.submissionDetailId==='${r.student.studentId}' ? null : '${r.student.studentId}'; render()">${state.submissionDetailId===r.student.studentId?'닫기':'상세보기'}</button></td>
+      </tr>
+      ${state.submissionDetailId===r.student.studentId ? `<tr><td colspan="6">
+        <table style="margin-top:4px;">
+          <tr><th>시험</th><th>번호</th><th>상태</th><th>내 답안</th><th>정답</th></tr>
+          ${r.hw.map(h=>{
+            const bank = DATA.problemBank.find(b=>b.id===h.bankId);
+            const exam = bank ? DATA.exams.find(e=>e.id===bank.examId) : null;
+            if(!bank) return '';
+            const correct = h.done && h.studentAnswer.trim()===bank.variantAnswer.trim();
+            return `<tr>
+              <td>${exam?exam.title:'-'}</td>
+              <td>${h.questionNo}번</td>
+              <td>${!h.done?'<span class="badge badge-late">미제출</span>':`<span class="badge ${correct?'badge-ok':'badge-no'}">${correct?'정답':'오답'}</span>`}</td>
+              <td>${h.studentAnswer||'-'}</td>
+              <td>${bank.status==='approved' ? bank.variantAnswer : '(검토 전)'}</td>
+            </tr>`;
+          }).join('')}
+        </table>
+      </td></tr>` : ''}
+      `).join('')}
+    </table>`}
+  </div>`;
+}
 function bankCardHTML(b, editable){
   const exam = DATA.exams.find(e=>e.id===b.examId);
   const statusLabel = {pending:'생성됨 (검토 전)', review1:'1차 검토 완료', approved:'2차 검토 완료 · 공개'}[b.status];
@@ -1235,12 +1351,14 @@ function bankCardHTML(b, editable){
       ${b.status==='pending' ? `<button class="btn btn-primary btn-small" onclick="advanceBankStatus('${b.id}','review1')">1차 검토 완료</button>` : ''}
       ${b.status==='review1' ? `<button class="btn btn-primary btn-small" onclick="advanceBankStatus('${b.id}','approved')">2차 검토 완료 (학생 공개)</button>` : ''}
       ${b.status==='approved' ? `<button class="btn btn-small" onclick="advanceBankStatus('${b.id}','review1')">공개 취소(1차로 되돌리기)</button>` : ''}
+      <button class="btn btn-small" ${state.aiProcessing?'disabled':''} onclick="regenerateOneWithAI('${b.id}')">AI로 다시 생성</button>
       <button class="btn btn-red btn-small" onclick="deleteBankEntry('${b.id}')">삭제</button>
     </div>`;
   }
+  const requesters = editable ? bankRequesterCount(b.id) : 0;
   return `<div class="review-card">
     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;">
-      <div class="mono" style="font-size:12px;color:var(--ink-soft);">${exam?exam.title:'(삭제된 시험지)'} · ${b.questionNo}번</div>
+      <div class="mono" style="font-size:12px;color:var(--ink-soft);">${exam?exam.title:'(삭제된 시험지)'} · ${b.questionNo}번${requesters>0?` · 요청자 ${requesters}명`:''}</div>
       <span class="review-status review-status-${b.status}">${statusLabel}</span>
     </div>
     <div class="compare-grid">
@@ -1341,18 +1459,27 @@ function ensureJSZipLoaded(){
   });
 }
 const HP_NS = 'http://www.hancom.co.kr/hwpml/2011/paragraph';
+// 한글 수식 스크립트를 KaTeX가 그릴 수 있는 LaTeX로 변환하고 $..$ 로 감싼다.
+// (완벽한 변환기는 아니고, 고등수학에서 자주 쓰는 패턴 위주로 처리한다)
 function convertHwpEq(script){
   let s = script || '';
+  if(!s.trim()) return '';
+  s = s.replace(/`/g, '');
   s = s.replace(/\brm\s*/g, '');
-  const greek = {alpha:'α',beta:'β',gamma:'γ',delta:'δ',theta:'θ',pi:'π',lambda:'λ',mu:'μ',sigma:'σ',phi:'φ',omega:'ω'};
+  s = s.replace(/pmatrix\s*\{([\s\S]*?)\}/g, (m, inner) => '\\begin{pmatrix}' + inner.replace(/#/g,'\\\\') + '\\end{pmatrix}');
+  s = s.replace(/cases\s*\{([\s\S]*?)\}/g, (m, inner) => '\\begin{cases}' + inner.replace(/#/g,'\\\\') + '\\end{cases}');
+  const greek = {alpha:'\\alpha',beta:'\\beta',gamma:'\\gamma',delta:'\\delta',theta:'\\theta',pi:'\\pi',lambda:'\\lambda',mu:'\\mu',sigma:'\\sigma',phi:'\\phi',omega:'\\omega'};
   for(const k in greek) s = s.replace(new RegExp('\\b'+k+'\\b','g'), greek[k]);
-  s = s.replace(/LEFT\s*\(/g, '(').replace(/RIGHT\s*\)/g, ')');
-  for(let i=0;i<3;i++) s = s.replace(/\{([^{}]*)\}\s*over\s*\{([^{}]*)\}/g, '($1)/($2)');
-  s = s.replace(/sqrt\s*\{([^{}]*)\}/g, '√($1)');
-  s = s.replace(/\^\{([^{}]*)\}/g, '^($1)');
-  s = s.replace(/_\{([^{}]*)\}/g, '_($1)');
+  s = s.replace(/\bLEQ\b/gi, '\\leq').replace(/\bGEQ\b/gi, '\\geq').replace(/\bNEQ\b/gi, '\\neq');
+  s = s.replace(/\ble\b/g, '\\leq').replace(/\bge\b/g, '\\geq');
+  s = s.replace(/\bTIMES\b/gi, '\\times');
+  s = s.replace(/\bangle\b/g, '\\angle');
+  s = s.replace(/\bbar\s*\{([^{}]*)\}/g, '\\overline{$1}');
+  s = s.replace(/LEFT\s*\(/g, '\\left(').replace(/RIGHT\s*\)/g, '\\right)');
+  for(let i=0;i<3;i++) s = s.replace(/\{([^{}]*)\}\s*over\s*\{([^{}]*)\}/g, '\\frac{$1}{$2}');
+  s = s.replace(/sqrt\s*\{([^{}]*)\}/g, '\\sqrt{$1}');
   s = s.replace(/\s+/g, ' ').trim();
-  return s;
+  return s ? '$' + s + '$' : '';
 }
 const HWP_CORE_NS = 'http://www.hancom.co.kr/hwpml/2011/core';
 const HWP_WATERMARK_PATTERNS = [/족보닷컴/, /zocbo\.com/i];
@@ -1705,6 +1832,14 @@ function render(){
   html += footerHTML();
   if(state.toast) html += `<div style="position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1B1B1D;color:#fff;padding:12px 22px;border-radius:30px;font-size:13px;box-shadow:0 6px 20px rgba(0,0,0,.2);z-index:999;">${state.toast}</div>`;
   app.innerHTML = html;
+  if(window.renderMathInElement){
+    try{
+      renderMathInElement(app, {
+        delimiters: [{left:'$', right:'$', display:false}],
+        throwOnError: false
+      });
+    }catch(e){ console.error('수식 렌더링 실패', e); }
+  }
 }
 
 function headerHTML(){
@@ -1984,10 +2119,13 @@ function studentHTML(){
         if(bank.status!=='approved'){
           return `<div class="homework-card"><div class="mono" style="font-size:12px;color:var(--ink-soft);margin-bottom:8px;">${exam?exam.title:''} · ${hw.questionNo}번 오답</div><div class="homework-pending">선생님이 문제를 검토 중입니다. 검토가 끝나면 이곳에 문제가 표시됩니다.</div></div>`;
         }
+        if(bank.hasImage && state.pbImageCache[bank.id]===undefined) togglePbImage(bank.id);
         const correct = hw.done && hw.studentAnswer.trim()===bank.variantAnswer.trim();
+        const img = bank.hasImage && state.pbImageCache[bank.id] && state.pbImageCache[bank.id]!=='empty' && state.pbImageCache[bank.id]!=='loading' ? state.pbImageCache[bank.id] : null;
         return `<div class="homework-card">
           <div class="mono" style="font-size:12px;color:var(--ink-soft);margin-bottom:8px;">${exam?exam.title:''} · ${hw.questionNo}번 오답 · 쌍둥이 문제</div>
           <div style="font-size:13.5px;white-space:pre-wrap;margin-bottom:10px;">${bank.variantContent}</div>
+          ${bank.hasImage ? (img ? `<img src="${img}" style="max-width:240px;max-height:240px;margin-bottom:10px;border:1px solid var(--card-border);border-radius:4px;display:block;">` : '<div class="empty">그림 불러오는 중...</div>') : ''}
           ${hw.done
             ? `<span class="badge ${correct?'badge-ok':'badge-no'}">${correct?'정답':'오답'}</span> <span class="mono" style="font-size:12px;">내 답안: ${hw.studentAnswer}</span>`
             : `<div class="inline-form"><div class="field" style="flex:1;"><input id="hw-answer-${bank.id}" placeholder="답안 입력"></div><button class="btn btn-primary btn-small" onclick="submitHomeworkAnswer('${bank.id}')">제출</button></div>`}
@@ -2061,7 +2199,7 @@ function teacherHTML(){
   const groups = [
     ['운영', [['classes','반'],['students','학생']]],
     ['학습관리', [['quiz','데일리퀴즈'],['clinic','클리닉'],['notices','공지'],['qna','질의응답'],['chat','채팅'],['video','영상']]],
-    ['오답 시스템', [['exams','시험지'],['review','오답 문제 검토'],['bank','문제 DB'],['unitbank','단원 문항 창고']]],
+    ['오답 시스템', [['exams','시험지'],['review','오답 문제 검토'],['submissions','제출 현황'],['bank','문제 DB'],['unitbank','단원 문항 창고']]],
     ['기타', [['assistants','조교'],['settings','관리자']]],
   ];
   let body = '';
@@ -2075,6 +2213,7 @@ function teacherHTML(){
   else if(state.teacherTab==='video') body = teacherVideoHTML();
   else if(state.teacherTab==='exams') body = teacherExamsHTML();
   else if(state.teacherTab==='review') body = teacherReviewHTML();
+  else if(state.teacherTab==='submissions') body = teacherSubmissionsHTML();
   else if(state.teacherTab==='bank') body = teacherBankHTML();
   else if(state.teacherTab==='unitbank') body = teacherUnitBankHTML();
   else if(state.teacherTab==='assistants') body = teacherAssistantsHTML();
@@ -2400,6 +2539,7 @@ function teacherExamsHTML(){
 /* ---------- 오답 문제 검토 ---------- */
 function teacherReviewHTML(){
   loadAIQuotaIfNeeded();
+  loadAllRecordsIfNeeded();
   const pending = DATA.problemBank.filter(b=>b.status!=='approved');
   const needsAI = DATA.problemBank.filter(b=>!b.variantContent && !b.variantAnswer);
   const remaining = state.aiQuotaUsed===null ? null : Math.max(0, AI_DAILY_LIMIT - state.aiQuotaUsed);
@@ -2417,8 +2557,11 @@ function teacherReviewHTML(){
     ` : `<button class="btn btn-primary" ${remaining===0?'disabled':''} onclick="processAIQueue()">AI로 채우기</button>`}
   </div>` : ''}
   <div class="panel">
-    <h3>검토 대기 중인 문제 (${pending.length}건)</h3>
-    <p style="font-size:12.5px;color:var(--ink-soft);margin-top:-8px;">시험지를 등록하거나 학생이 틀린 문제를 제출하면 여기에 빈 항목이 자동 생성됩니다. AI로 채우거나 직접 입력한 뒤, <b>1차·2차 검토를 모두 완료</b>해야 학생에게 공개됩니다.</p>
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+      <h3 style="margin:0;">검토 대기 중인 문제</h3>
+      <span class="badge badge-no" style="font-size:12px;padding:4px 12px;">대기 중: ${pending.length}건</span>
+    </div>
+    <p style="font-size:12.5px;color:var(--ink-soft);margin-top:8px;">시험지를 등록하거나 학생이 틀린 문제를 제출하면 여기에 빈 항목이 자동 생성됩니다. AI로 채우거나 직접 입력한 뒤, <b>1차·2차 검토를 모두 완료</b>해야 학생에게 공개됩니다.</p>
     ${pending.length===0?'<div class="empty">검토할 문제가 없습니다.</div>':
     pending.map(b=>bankCardHTML(b, true)).join('')}
   </div>`;
