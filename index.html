@@ -437,12 +437,13 @@ async function loadAIQuotaIfNeeded(){
   render();
 }
 async function regenerateOneWithAI(bankId){
-  if(state.aiProcessing) return;
+  if(state.aiProcessing){ showToast('다른 AI 작업이 진행 중입니다. 끝난 뒤 다시 시도해주세요.'); return; }
   const b = DATA.problemBank.find(x=>x.id===bankId);
   if(!b) return;
   const used = await getAIQuotaUsed();
   if(used >= AI_DAILY_LIMIT){ showToast('오늘 AI 생성 한도(' + AI_DAILY_LIMIT + '건)를 모두 사용했습니다. 내일 다시 시도해주세요.'); return; }
   state.aiProcessing = true;
+  state.aiRegeneratingId = bankId;
   render();
   const image = b.hasImage ? await dbGet('pbimg:'+b.id, null) : null;
   const twin = await generateTwinViaAI(b.originalContent, b.originalAnswer, image);
@@ -458,6 +459,7 @@ async function regenerateOneWithAI(bankId){
     showToast('생성에 실패했습니다. 잠시 후 다시 시도해주세요.');
   }
   state.aiProcessing = false;
+  state.aiRegeneratingId = null;
   render();
 }
 async function processAIQueue(){
@@ -593,6 +595,9 @@ let state = {
   aiQuotaUsed: null,
   aiProcessing: false,
   aiProgress: null,
+  aiRegeneratingId: null,
+  reviewFocusMode: false,
+  reviewFocusIndex: 0,
   toast: ''
 };
 let DATA = {
@@ -1351,11 +1356,18 @@ function bankCardHTML(b, editable){
       ${b.status==='pending' ? `<button class="btn btn-primary btn-small" onclick="advanceBankStatus('${b.id}','review1')">1차 검토 완료</button>` : ''}
       ${b.status==='review1' ? `<button class="btn btn-primary btn-small" onclick="advanceBankStatus('${b.id}','approved')">2차 검토 완료 (학생 공개)</button>` : ''}
       ${b.status==='approved' ? `<button class="btn btn-small" onclick="advanceBankStatus('${b.id}','review1')">공개 취소(1차로 되돌리기)</button>` : ''}
-      <button class="btn btn-small" ${state.aiProcessing?'disabled':''} onclick="regenerateOneWithAI('${b.id}')">AI로 다시 생성</button>
+      <button class="btn btn-small" ${state.aiProcessing?'disabled':''} onclick="regenerateOneWithAI('${b.id}')">${state.aiRegeneratingId===b.id?'생성 중...':'AI로 다시 생성'}</button>
       <button class="btn btn-red btn-small" onclick="deleteBankEntry('${b.id}')">삭제</button>
     </div>`;
   }
   const requesters = editable ? bankRequesterCount(b.id) : 0;
+  if(b.hasImage && state.pbImageCache[b.id]===undefined) togglePbImage(b.id);
+  const imgVal = b.hasImage ? state.pbImageCache[b.id] : null;
+  const imgHTML = b.hasImage ? (
+    !imgVal || imgVal==='loading' ? '<div class="empty">그림 불러오는 중...</div>' :
+    imgVal==='empty' ? '' :
+    `<img src="${imgVal}" style="max-width:220px;max-height:220px;margin-top:8px;border:1px solid var(--card-border);border-radius:4px;display:block;">`
+  ) : '';
   return `<div class="review-card">
     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;">
       <div class="mono" style="font-size:12px;color:var(--ink-soft);">${exam?exam.title:'(삭제된 시험지)'} · ${b.questionNo}번${requesters>0?` · 요청자 ${requesters}명`:''}</div>
@@ -1366,16 +1378,16 @@ function bankCardHTML(b, editable){
         <div class="colhead">원본 문제</div>
         <div style="font-size:13.5px;white-space:pre-wrap;">${b.originalContent}</div>
         <div class="mono" style="font-size:11px;color:var(--ink-soft);margin-top:8px;">정답: ${b.originalAnswer}</div>
-        ${b.hasImage ? `
-          <button class="btn btn-small" style="margin-top:8px;" onclick="togglePbImage('${b.id}')">그림 보기/숨기기</button>
-          ${state.pbImageCache[b.id] && state.pbImageCache[b.id]!=='empty' ? (state.pbImageCache[b.id]==='loading' ? '<div class="empty">불러오는 중...</div>' : `<img src="${state.pbImageCache[b.id]}" style="max-width:200px;max-height:200px;margin-top:8px;border:1px solid var(--card-border);border-radius:4px;display:block;">`) : ''}
-        ` : ''}
+        ${imgHTML}
       </div>
       <div class="compare-col">
         <div class="colhead">쌍둥이 문제 ${editable?'(직접 입력/수정)':''}</div>
         ${editable
-          ? `<textarea id="bank-content-${b.id}">${b.variantContent}</textarea><input id="bank-answer-${b.id}" class="mono" style="margin-top:8px;" value="${b.variantAnswer}">`
-          : `<div style="font-size:13.5px;white-space:pre-wrap;">${b.variantContent}</div><div class="mono" style="font-size:11px;color:var(--ink-soft);margin-top:8px;">정답: ${b.variantAnswer}</div>`
+          ? `<div style="font-size:13.5px;white-space:pre-wrap;background:#FBFAF8;border:1px solid var(--card-border);border-radius:4px;padding:8px;margin-bottom:8px;">${b.variantContent || '<span style=\"color:var(--ink-soft);\">(아직 내용 없음 — AI로 생성하거나 직접 입력해주세요)</span>'}</div>
+             <textarea id="bank-content-${b.id}" placeholder="여기에 입력/수정 후 '수정 내용 저장'을 누르면 위 미리보기가 갱신됩니다">${b.variantContent}</textarea>
+             <input id="bank-answer-${b.id}" class="mono" style="margin-top:8px;" value="${b.variantAnswer}" placeholder="정답">
+             ${imgHTML ? `<div class="mono" style="font-size:11px;color:var(--ink-soft);margin-top:8px;">↑ 왼쪽과 같은 그림을 그대로 사용합니다 (새로 생성하지 않음)</div>` : ''}`
+          : `<div style="font-size:13.5px;white-space:pre-wrap;">${b.variantContent}</div><div class="mono" style="font-size:11px;color:var(--ink-soft);margin-top:8px;">정답: ${b.variantAnswer}</div>${imgHTML}`
         }
       </div>
     </div>
@@ -1461,25 +1473,106 @@ function ensureJSZipLoaded(){
 const HP_NS = 'http://www.hancom.co.kr/hwpml/2011/paragraph';
 // 한글 수식 스크립트를 KaTeX가 그릴 수 있는 LaTeX로 변환하고 $..$ 로 감싼다.
 // (완벽한 변환기는 아니고, 고등수학에서 자주 쓰는 패턴 위주로 처리한다)
+// 문자열에서 openIdx가 가리키는 '{'와 짝이 맞는 ')'를 중첩까지 고려해서 찾는다.
+// (예: sqrt{ ( x ^{2} ) ^{2} }처럼 안에 또 중괄호가 있는 경우 단순 정규식으론 못 잡음)
+function findMatchingBrace(s, openIdx){
+  let depth = 0;
+  for(let i=openIdx;i<s.length;i++){
+    if(s[i]==='{') depth++;
+    else if(s[i]==='}'){ depth--; if(depth===0) return i; }
+  }
+  return -1;
+}
+// keyword 뒤의 "{...}"를 중첩 중괄호까지 포함해서 통째로 찾아 wrap(inner)로 치환한다.
+function replaceBalancedKeyword(s, keyword, wrap){
+  const re = new RegExp('\\b'+keyword+'\\s*\\{','g');
+  let result = '', lastIndex = 0, m;
+  while((m = re.exec(s))){
+    const openIdx = m.index + m[0].length - 1;
+    const closeIdx = findMatchingBrace(s, openIdx);
+    if(closeIdx===-1) continue;
+    const inner = s.slice(openIdx+1, closeIdx);
+    result += s.slice(lastIndex, m.index) + wrap(inner);
+    lastIndex = closeIdx+1;
+    re.lastIndex = closeIdx+1;
+  }
+  result += s.slice(lastIndex);
+  return result;
+}
+// "{분자} over {분모}"를 \frac{}{}로 바꾼다. 분자/분모 안에 또 중괄호(예: 지수)가 있어도
+// 괄호 짝을 직접 세어가며 찾기 때문에 중첩된 경우도 정확히 처리되고, 재귀적으로 안쪽도 변환한다.
+function convertOverToFrac(s){
+  let result = '', i = 0;
+  while(i < s.length){
+    if(s[i]==='{'){
+      const close1 = findMatchingBrace(s, i);
+      if(close1!==-1){
+        let j = close1+1;
+        while(s[j]===' ') j++;
+        if(s.slice(j,j+4)==='over'){
+          let k = j+4;
+          while(s[k]===' ') k++;
+          if(s[k]==='{'){
+            const close2 = findMatchingBrace(s, k);
+            if(close2!==-1){
+              const num = convertOverToFrac(s.slice(i+1, close1));
+              const den = convertOverToFrac(s.slice(k+1, close2));
+              result += '\\frac{'+num+'}{'+den+'}';
+              i = close2+1;
+              continue;
+            }
+          }
+        }
+      }
+    }
+    result += s[i];
+    i++;
+  }
+  return result;
+}
 function convertHwpEq(script){
   let s = script || '';
   if(!s.trim()) return '';
   s = s.replace(/`/g, '');
   s = s.replace(/\brm\s*/g, '');
-  s = s.replace(/pmatrix\s*\{([\s\S]*?)\}/g, (m, inner) => '\\begin{pmatrix}' + inner.replace(/#/g,'\\\\') + '\\end{pmatrix}');
-  s = s.replace(/cases\s*\{([\s\S]*?)\}/g, (m, inner) => '\\begin{cases}' + inner.replace(/#/g,'\\\\') + '\\end{cases}');
+  // "it"(이탤릭 지정)은 rm과 같은 서체 지정 명령이라 내용만 남기고 지운다.
+  // "it2r+3"(공백 없음), "it r ^{2}"(공백 있음) 둘 다 나오므로 뒤 공백까지 함께 지운다.
+  s = s.replace(/\bit\s*(?=[0-9a-zA-Z(])/g, '');
+  s = replaceBalancedKeyword(s, 'pmatrix', inner => '\\begin{pmatrix}' + inner.replace(/#/g,'\\\\') + '\\end{pmatrix}');
+  s = replaceBalancedKeyword(s, 'cases', inner => '\\begin{cases}' + inner.replace(/#/g,'\\\\') + '\\end{cases}');
   const greek = {alpha:'\\alpha',beta:'\\beta',gamma:'\\gamma',delta:'\\delta',theta:'\\theta',pi:'\\pi',lambda:'\\lambda',mu:'\\mu',sigma:'\\sigma',phi:'\\phi',omega:'\\omega'};
   for(const k in greek) s = s.replace(new RegExp('\\b'+k+'\\b','g'), greek[k]);
-  s = s.replace(/\bLEQ\b/gi, '\\leq').replace(/\bGEQ\b/gi, '\\geq').replace(/\bNEQ\b/gi, '\\neq');
-  s = s.replace(/\ble\b/g, '\\leq').replace(/\bge\b/g, '\\geq');
+  // le/ge/LEQ 등은 it과 마찬가지로 뒤에 공백 없이 숫자가 바로 붙는 경우(le5)가 있어
+  // 뒤쪽 \b는 안 쓰고 시작 위치만 단어 경계로 확인한다. 방금 만든 "\leq"의 "le"를
+  // 다시 건드리지 않도록(무한 중복 방지) 바로 앞이 백슬래시가 아닐 때만 매치한다.
+  s = s.replace(/(?<!\\)\bLEQ/gi, '\\leq').replace(/(?<!\\)\bGEQ/gi, '\\geq').replace(/(?<!\\)\bNEQ/gi, '\\neq');
+  s = s.replace(/(?<!\\)\ble/g, '\\leq').replace(/(?<!\\)\bge/g, '\\geq');
   s = s.replace(/\bTIMES\b/gi, '\\times');
-  s = s.replace(/\bangle\b/g, '\\angle');
-  s = s.replace(/\bbar\s*\{([^{}]*)\}/g, '\\overline{$1}');
+  // angle/bar는 "angle{BAD}"(중괄호), "angle BAD"(공백), "angleBAD"(붙여쓰기) 세 가지 형태가
+  // 모두 나오므로 각각 처리한다. 방금 만든 "\angle"/"\overline"을 다시 건드리지 않도록
+  // (무한 중복 방지) 바로 앞이 백슬래시가 아닐 때만 매치한다.
+  s = replaceBalancedKeyword(s, 'angle', inner => '\\angle ' + inner);
+  s = s.replace(/(?<!\\)\bangle\s+([A-Za-z]+)\b/g, '\\angle $1');
+  s = s.replace(/(?<!\\)\bangle([A-Z]{1,3})\b/g, '\\angle $1');
+  s = s.replace(/(?<!\\)\bangle\b/g, '\\angle');
+  s = replaceBalancedKeyword(s, 'bar', inner => '\\overline{' + inner + '}');
+  s = s.replace(/(?<!\\)\bbar\s+([A-Za-z]+)\b/g, '\\overline{$1}');
+  s = s.replace(/(?<!\\)\bbar([A-Z]{1,3})\b/g, '\\overline{$1}');
   s = s.replace(/LEFT\s*\(/g, '\\left(').replace(/RIGHT\s*\)/g, '\\right)');
-  for(let i=0;i<3;i++) s = s.replace(/\{([^{}]*)\}\s*over\s*\{([^{}]*)\}/g, '\\frac{$1}{$2}');
-  s = s.replace(/sqrt\s*\{([^{}]*)\}/g, '\\sqrt{$1}');
+  s = convertOverToFrac(s);
+  s = replaceBalancedKeyword(s, 'sqrt', inner => '\\sqrt{' + inner + '}');
+  // 첨자가 여러 글자인데 중괄호 없이 붙어있으면(a_11 등) LaTeX에서 첫 글자만
+  // 첨자로 처리되어 깨지므로, 중괄호로 다시 감싸준다.
+  s = s.replace(/([_^])(?!\{)([0-9a-zA-Z]+)/g, '$1{$2}');
   s = s.replace(/\s+/g, ' ').trim();
   return s ? '$' + s + '$' : '';
+}
+// 수식 개체가 아니라 그냥 평문(<hp:t>)으로 "barAD", "angleBAD"처럼 붙여 쓴 경우를 정리한다.
+function cleanHwpPlainText(t){
+  if(!t) return t;
+  return t
+    .replace(/\bbar([A-Z]{1,3})\b/g, '$\\overline{$1}$')
+    .replace(/\bangle([A-Z]{1,3})\b/g, '$\\angle $1$');
 }
 const HWP_CORE_NS = 'http://www.hancom.co.kr/hwpml/2011/core';
 const HWP_WATERMARK_PATTERNS = [/족보닷컴/, /zocbo\.com/i];
@@ -1499,7 +1592,7 @@ function hwpWalkParagraphs(paras, tokens){
         if(child.nodeType !== 1) continue;
         const local = child.localName;
         if(local === 't'){
-          tokens.push({type:'text', v: child.textContent||''});
+          tokens.push({type:'text', v: cleanHwpPlainText(child.textContent||'')});
         } else if(local === 'equation'){
           const scriptEl = child.getElementsByTagNameNS(HP_NS,'script')[0];
           tokens.push({type:'eq', v: convertHwpEq(scriptEl?scriptEl.textContent:'')});
@@ -1508,6 +1601,8 @@ function hwpWalkParagraphs(paras, tokens){
           const ref = imgEl ? imgEl.getAttribute('binaryItemIDRef') : null;
           if(ref) tokens.push({type:'pic', v: ref});
         } else if(local === 'tbl'){
+          // 보기(①②③④⑤) 같은 작은 표는 같은 행 안에서는 줄바꿈 없이 공백으로만
+          // 구분해서, 세로로 한 줄씩 쌓이지 않고 가로로 나열되게 한다.
           const trs = Array.from(child.childNodes).filter(n=>n.nodeType===1 && n.localName==='tr');
           for(const tr of trs){
             const tcs = Array.from(tr.childNodes).filter(n=>n.nodeType===1 && n.localName==='tc');
@@ -1515,10 +1610,17 @@ function hwpWalkParagraphs(paras, tokens){
               const subList = Array.from(tc.childNodes).find(n=>n.nodeType===1 && n.localName==='subList');
               if(subList){
                 const cellParas = Array.from(subList.childNodes).filter(n=>n.nodeType===1 && n.localName==='p');
-                hwpWalkParagraphs(cellParas, tokens);
+                const cellTokens = [];
+                hwpWalkParagraphs(cellParas, cellTokens);
+                while(cellTokens.length && cellTokens[cellTokens.length-1].type==='break') cellTokens.pop();
+                if(cellTokens.length){
+                  tokens.push(...cellTokens);
+                  tokens.push({type:'text', v:' '});
+                }
               }
             }
           }
+          tokens.push({type:'break'});
         } else if(local === 'ctrl'){
           const endNoteEl = child.getElementsByTagNameNS(HP_NS,'endNote')[0];
           if(endNoteEl){
@@ -2559,11 +2661,22 @@ function teacherReviewHTML(){
   <div class="panel">
     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
       <h3 style="margin:0;">검토 대기 중인 문제</h3>
-      <span class="badge badge-no" style="font-size:12px;padding:4px 12px;">대기 중: ${pending.length}건</span>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span class="badge badge-no" style="font-size:12px;padding:4px 12px;">대기 중: ${pending.length}건</span>
+        ${pending.length>1 ? `<button class="btn btn-small" onclick="state.reviewFocusMode=!state.reviewFocusMode; state.reviewFocusIndex=0; render()">${state.reviewFocusMode?'전체 목록으로':'한 개씩 검토하기'}</button>` : ''}
+      </div>
     </div>
     <p style="font-size:12.5px;color:var(--ink-soft);margin-top:8px;">시험지를 등록하거나 학생이 틀린 문제를 제출하면 여기에 빈 항목이 자동 생성됩니다. AI로 채우거나 직접 입력한 뒤, <b>1차·2차 검토를 모두 완료</b>해야 학생에게 공개됩니다.</p>
     ${pending.length===0?'<div class="empty">검토할 문제가 없습니다.</div>':
-    pending.map(b=>bankCardHTML(b, true)).join('')}
+      state.reviewFocusMode ? (() => {
+        const idx = Math.min(state.reviewFocusIndex, pending.length-1);
+        return `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+          <button class="btn btn-small" ${idx<=0?'disabled':''} onclick="state.reviewFocusIndex=${idx-1}; render()">← 이전</button>
+          <span class="mono" style="font-size:12px;color:var(--ink-soft);">${idx+1} / ${pending.length}</span>
+          <button class="btn btn-small" ${idx>=pending.length-1?'disabled':''} onclick="state.reviewFocusIndex=${idx+1}; render()">다음 →</button>
+        </div>` + bankCardHTML(pending[idx], true);
+      })()
+      : pending.map(b=>bankCardHTML(b, true)).join('')}
   </div>`;
 }
 
