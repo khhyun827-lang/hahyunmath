@@ -323,6 +323,15 @@
   @media (max-width:640px){ .compare-grid{grid-template-columns:1fr;} }
   .homework-card{border:1px solid var(--card-border);border-radius:6px;padding:16px;margin-bottom:12px;}
   .homework-pending{color:var(--ink-soft);font-size:13px;font-style:italic;padding:10px;background:#FBFAF8;border-radius:4px;}
+  .home-todo-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
+  .home-todo-item{border:1px solid var(--card-border);border-radius:6px;padding:16px 10px;text-align:center;cursor:pointer;background:#FBFAF8;transition:background .15s;}
+  .home-todo-item:hover{background:#F3F0EA;}
+  .home-todo-item .num{font-size:26px;font-weight:700;font-family:'JetBrains Mono',monospace;color:var(--red-pen);line-height:1.2;}
+  .home-todo-item .label{font-size:12.5px;color:var(--ink-soft);margin-top:2px;}
+  @media (max-width:640px){ .home-todo-grid{grid-template-columns:repeat(2,1fr);} }
+  .home-icon-row{display:flex;gap:22px;justify-content:center;flex-wrap:wrap;}
+  .home-icon-link{background:none;border:none;cursor:pointer;font-size:12.5px;color:var(--ink-soft);text-align:center;padding:6px;}
+  .home-icon-link .emoji{display:block;font-size:22px;margin-bottom:4px;}
 
 
   @media (max-width:640px){
@@ -573,7 +582,7 @@ let state = {
   loginError: '',
   currentUser: null,        // {type:'student', studentId, name} | {type:'teacher'}
   pendingStudentTab: null,
-  studentTab: 'grades',
+  studentTab: 'home',
   teacherTab: 'classhub',
   teacherSelectedStudent: null,
   studentDetailId: null,
@@ -2266,9 +2275,46 @@ function loginHTML(){
 function studentHTML(){
   const sid = state.currentUser.studentId;
   const rec = DATA.records[sid] || {scores:[],attendance:[],assignments:[],progress:{unit:'',percent:0},quizAnswers:{},wrongHomework:[],videoProgress:{},assignmentsDone:{}};
-  const tabs = [['grades','성적'],['progress','진도/과제'],['attendance','출석'],['notice','공지사항'],['quiz','데일리퀴즈'],['wronghw','오답숙제'],['clinic','클리닉 신청'],['qna','질의응답'],['video','부교재 해설강의'],['chat','선생님과 채팅']];
+  const tabs = [['home','홈'],['quiz','데일리퀴즈'],['progress','진도/과제'],['wronghw','오답숙제'],['video','부교재 해설강의'],['clinic','클리닉 신청'],['chat','선생님과 채팅']];
   let body='';
-  if(state.studentTab==='grades'){
+  if(state.studentTab==='home'){
+    const myClassIdH = (DATA.students.find(s=>s.studentId===sid)||{}).classId;
+    const myQuizzesH = DATA.quizzes.filter(q=>!q.classId || q.classId===myClassIdH);
+    const myHomeworkH = DATA.assignments.filter(a=>!a.classId || a.classId===myClassIdH);
+    const myVideosH = DATA.videos.filter(v=>!v.classId || v.classId===myClassIdH);
+    const quizTodo = myQuizzesH.filter(q=>!rec.quizAnswers[q.id]).length;
+    const hwTodo = myHomeworkH.filter(a=>!rec.assignmentsDone[a.id]).length;
+    const wrongTodo = rec.wrongHomework.filter(h=>!h.done).length;
+    const videoTodo = myVideosH.filter(v=>!(rec.videoProgress[v.id] && rec.videoProgress[v.id].completed)).length;
+    body = `<div class="panel">
+      <h3>${classNameOf(myClassIdH)}</h3>
+      <p style="color:var(--ink-soft);font-size:13.5px;margin-top:-10px;">오늘도 화이팅! 아래에서 할 일을 확인하세요.</p>
+      <div class="home-todo-grid">
+        <div class="home-todo-item" onclick="state.studentTab='quiz'; render()"><div class="num">${quizTodo}</div><div class="label">데일리퀴즈</div></div>
+        <div class="home-todo-item" onclick="state.studentTab='progress'; render()"><div class="num">${hwTodo}</div><div class="label">과제</div></div>
+        <div class="home-todo-item" onclick="state.studentTab='wronghw'; render()"><div class="num">${wrongTodo}</div><div class="label">오답숙제</div></div>
+        <div class="home-todo-item" onclick="state.studentTab='video'; render()"><div class="num">${videoTodo}</div><div class="label">미완료 영상</div></div>
+      </div>
+    </div>
+    <div class="panel" style="display:flex;gap:12px;flex-wrap:wrap;">
+      <button class="btn btn-primary" style="flex:1;min-width:160px;" onclick="state.studentTab='clinic'; render()">클리닉 예약하기</button>
+      <button class="btn" style="flex:1;min-width:160px;" onclick="state.studentTab='chat'; render()">선생님과 채팅하기</button>
+    </div>
+    <div class="panel">
+      <h3>부교재 해설강의</h3>
+      ${myVideosH.length===0?'<div class="empty">등록된 영상이 없습니다.</div>':
+        myVideosH.slice(0,3).map(v=>videoEmbedHTML(v, sid)).join('')}
+      ${myVideosH.length>3?`<button class="btn btn-small" onclick="state.studentTab='video'; render()">영상 더보기</button>`:''}
+    </div>
+    <div class="panel">
+      <div class="home-icon-row">
+        <button class="home-icon-link" onclick="state.studentTab='grades'; render()"><span class="emoji">📊</span>성적</button>
+        <button class="home-icon-link" onclick="state.studentTab='attendance'; render()"><span class="emoji">🗓️</span>출석</button>
+        <button class="home-icon-link" onclick="state.studentTab='notice'; render()"><span class="emoji">📢</span>공지사항</button>
+        <button class="home-icon-link" onclick="state.studentTab='qna'; render()"><span class="emoji">💬</span>질의응답</button>
+      </div>
+    </div>`;
+  } else if(state.studentTab==='grades'){
     body = `<div class="panel"><h3>성적 추이</h3>${renderScoreChart(rec.scores)}</div>
     <div class="panel"><h3>시험 기록</h3>
       ${rec.scores.length===0?'<div class="empty">등록된 성적이 없습니다.</div>':`
