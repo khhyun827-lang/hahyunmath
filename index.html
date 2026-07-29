@@ -349,6 +349,41 @@
   .home-video-info{padding:20px 20px 20px 0;flex:1;}
   @media (max-width:640px){ .home-video-feature{flex-direction:column;} .home-video-thumb{border-radius:10px 10px 0 0;width:100%;} .home-video-info{padding:16px;} }
 
+  /* 관리자 홈 대시보드 */
+  .home-grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:16px;}
+  @media (max-width:900px){ .home-grid-4{grid-template-columns:repeat(2,1fr);} }
+  @media (max-width:480px){ .home-grid-4{grid-template-columns:1fr;} }
+  .home-stat-card{background:var(--white);border:1px solid var(--card-border);border-left-width:4px;border-radius:8px;padding:16px;display:flex;align-items:center;gap:12px;}
+  .home-stat-card.accent-purple{border-left-color:#6C3E9A;}
+  .home-stat-card.accent-red{border-left-color:var(--red-pen);}
+  .home-stat-card.accent-blue{border-left-color:#2F5D9A;}
+  .home-stat-card.accent-green{border-left-color:var(--green-ok);}
+  .home-stat-icon{width:40px;height:40px;border-radius:8px;background:#FBFAF8;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;}
+  .home-stat-num{font-size:22px;font-weight:700;font-family:'JetBrains Mono',monospace;line-height:1.2;}
+  .home-stat-label{font-size:12px;color:var(--ink-soft);}
+  .home-queue-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #F0EEE7;}
+  .home-queue-row:last-child{border-bottom:none;}
+  .home-classprogress-row{padding:12px 0;border-bottom:1px solid #F0EEE7;}
+  .home-classprogress-row:last-child{border-bottom:none;}
+  .home-bar-row{display:flex;align-items:center;gap:8px;margin-top:6px;font-size:12px;}
+  .home-bar-label{width:56px;color:var(--ink-soft);flex-shrink:0;}
+  .home-bar-outer{flex:1;background:#EDEBE3;border-radius:20px;height:10px;overflow:hidden;}
+  .home-bar-inner{height:100%;border-radius:20px;}
+  .home-bar-green{background:var(--green-ok);}
+  .home-bar-blue{background:#2F5D9A;}
+  .home-bar-pct{width:36px;text-align:right;font-family:'JetBrains Mono',monospace;color:var(--ink-soft);flex-shrink:0;}
+
+  /* 출석부: 버튼형 상태 선택 */
+  .att-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:10px 0;border-bottom:1px solid #F0EEE7;}
+  .att-row:last-child{border-bottom:none;}
+  .att-name{flex:1;min-width:120px;font-size:13.5px;}
+  .att-btn-group{display:flex;gap:6px;}
+  .att-status-btn{border:1px solid var(--card-border);background:var(--white);border-radius:6px;padding:6px 14px;font-size:12.5px;cursor:pointer;}
+  .att-status-btn.att-ok.active{background:var(--green-ok);color:#fff;border-color:var(--green-ok);}
+  .att-status-btn.att-late.active{background:#9A7000;color:#fff;border-color:#9A7000;}
+  .att-status-btn.att-no.active{background:var(--red-pen);color:#fff;border-color:var(--red-pen);}
+  .att-reason-input{flex-basis:100%;margin-top:4px;}
+  @media (max-width:640px){ .att-name{flex-basis:100%;} }
 
   @media (max-width:640px){
 
@@ -599,7 +634,7 @@ let state = {
   currentUser: null,        // {type:'student', studentId, name} | {type:'teacher'}
   pendingStudentTab: null,
   studentTab: 'home',
-  teacherTab: 'classhub',
+  teacherTab: 'home',
   teacherSelectedStudent: null,
   studentDetailId: null,
   studentDetailTab: 'grades',
@@ -628,6 +663,8 @@ let state = {
   ytPlayers: null,
   attendanceClassId: '',
   attendanceDate: '',
+  attDraft: {},
+  attDraftKey: null,
   homeworkDetailId: null,
   classHubId: null,
   classHubTab: 'students',
@@ -2379,8 +2416,8 @@ function studentHTML(){
         <p style="font-size:12.5px;color:var(--ink-soft);margin-top:10px;">${rec.progress.unit?escHtml(rec.progress.unit)+' 진행중':'아직 등록된 진도가 없습니다.'}</p>
       </div>
       <div class="home-card">
-        <h4>💬 선생님께 질문하기</h4>
-        <div class="field"><textarea id="qna-question" placeholder="수업 중 궁금한 점을 남겨주세요!" style="min-height:70px;"></textarea></div>
+        <h4>💬 무엇이든 물어보세요</h4>
+        <div class="field"><textarea id="qna-question" placeholder="문제 질문은 물론, 학습 상담 등 무엇이든 편하게 남겨주세요!" style="min-height:70px;"></textarea></div>
         <button class="btn btn-primary" style="width:100%;" onclick="submitQuestion()">질문 보내기</button>
       </div>
     </div>
@@ -2564,6 +2601,7 @@ function attBadge(status){
 /* ---------- 강사 대시보드 (사이드바) ---------- */
 function teacherHTML(){
   const groups = [
+    ['홈', [['home','홈']]],
     ['반 관리', [['classhub','반 목록 / 반별 관리']]],
     ['학생 관리', [['students','학생 목록']]],
     ['오답 시스템', [['exams','시험지'],['review','오답 문제 검토'],['submissions','제출 현황'],['bank','문제 DB'],['unitbank','단원 문항 창고']]],
@@ -2571,7 +2609,8 @@ function teacherHTML(){
     ['설정', [['assistants','조교'],['settings','관리자']]],
   ];
   let body = '';
-  if(state.teacherTab==='classhub') body = teacherClassHubHTML();
+  if(state.teacherTab==='home') body = teacherHomeHTML();
+  else if(state.teacherTab==='classhub') body = teacherClassHubHTML();
   else if(state.teacherTab==='students') body = teacherStudentsHTML();
   else if(state.teacherTab==='clinic') body = teacherClinicHTML();
   else if(state.teacherTab==='notices') body = teacherNoticesHTML();
@@ -2595,6 +2634,116 @@ function teacherHTML(){
     <div class="teacher-main">${body}</div>
   </div>
   `;
+}
+
+/* ---------- 홈 대시보드 ---------- */
+function teacherHomeHTML(){
+  loadAllRecordsIfNeeded();
+  loadAIQuotaIfNeeded();
+  const pending = DATA.problemBank.filter(b=>b.status!=='approved');
+  const weekAgo = new Date(Date.now() - 7*24*60*60*1000).toISOString().slice(0,10);
+  const weekQna = DATA.qnas.filter(q=>q.date >= weekAgo).length;
+
+  return `
+  <div class="home-header-row">
+    <div class="home-greeting">
+      <h2>통합 학습 관리 센터</h2>
+      <p>오늘도 완벽한 강의를 위한 시스템이 정상 가동 중입니다.</p>
+    </div>
+    <div class="home-user-badge">🎓 김하현T</div>
+  </div>
+  <div class="home-grid-4">
+    <div class="home-stat-card accent-purple">
+      <div class="home-stat-icon">👥</div>
+      <div><div class="home-stat-num">${DATA.students.length}명</div><div class="home-stat-label">총 수강생</div></div>
+    </div>
+    <div class="home-stat-card accent-red">
+      <div class="home-stat-icon">🔔</div>
+      <div><div class="home-stat-num">${pending.length}건</div><div class="home-stat-label">변형 문제 승인 대기</div></div>
+    </div>
+    <div class="home-stat-card accent-blue">
+      <div class="home-stat-icon">📺</div>
+      <div><div class="home-stat-num">${DATA.videos.length}개</div><div class="home-stat-label">배포된 강의 수</div></div>
+    </div>
+    <div class="home-stat-card accent-green">
+      <div class="home-stat-icon">📝</div>
+      <div><div class="home-stat-num">${weekQna}건</div><div class="home-stat-label">이번 주 질문/상담</div></div>
+    </div>
+  </div>
+  <div class="home-grid-2">
+    <div class="home-card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+        <h4 style="margin:0;">🚨 변형 문제 승인 대기열</h4>
+        <button class="btn btn-small" onclick="state.teacherTab='review'; render()">전체 보기 및 상세 검토 →</button>
+      </div>
+      ${pending.length===0 ? '<div class="empty">대기 중인 문제가 없습니다.</div>' :
+        pending.slice(0,4).map(b=>{
+          const exam = DATA.exams.find(e=>e.id===b.examId);
+          const next = b.status==='pending' ? 'review1' : 'approved';
+          const label = b.status==='pending' ? '1차 승인' : '2차 승인(공개)';
+          const requesters = bankRequesterCount(b.id);
+          return `<div class="home-queue-row">
+            <div>
+              <div style="font-weight:700;font-size:13.5px;">${exam?escHtml(exam.title):'(삭제된 시험지)'} ${b.questionNo}번</div>
+              <div class="mono" style="font-size:11.5px;color:var(--ink-soft);">요청자: ${requesters>0?requesters+'명':'-'} · 자동 변형 완료</div>
+            </div>
+            <button class="btn btn-primary btn-small" onclick="advanceBankStatus('${b.id}','${next}')">✓ ${label}</button>
+          </div>`;
+        }).join('')}
+    </div>
+    <div class="home-card">
+      <h4>📺 새 강의 업로드</h4>
+      <div class="field"><input id="video-url" placeholder="유튜브 링크 입력 (예: https://youtu.be/...)"></div>
+      <div class="field"><input id="video-title" placeholder="강의 제목 (예: 수학(상) 4강)"></div>
+      <div class="field" style="display:none;"><input id="video-unit" value=""></div>
+      <div class="field"><select id="video-class"><option value="">배포할 반 선택 (전체)</option>${DATA.classes.map(c=>`<option value="${c.id}">${escHtml(c.name)}</option>`).join('')}</select></div>
+      <button class="btn btn-primary" style="width:100%;" onclick="addVideo()">강의 등록 및 배포</button>
+    </div>
+  </div>
+  <div class="home-card" style="margin-bottom:16px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+      <h4 style="margin:0;">👥 반별 진도 및 과제 현황</h4>
+      <button class="btn btn-small" onclick="state.teacherTab='classhub'; render()">학생별 상세 관리 →</button>
+    </div>
+    ${DATA.classes.length===0 ? '<div class="empty">등록된 반이 없습니다.</div>' :
+      DATA.classes.map(c=>{
+        const roster = DATA.students.filter(s=>s.classId===c.id);
+        const hws = DATA.assignments.filter(a=>!a.classId || a.classId===c.id);
+        const vids = DATA.videos.filter(v=>!v.classId || v.classId===c.id);
+        let hwDone=0, hwTotal=0, vidDone=0, vidTotal=0;
+        roster.forEach(s=>{
+          const rec = state.allRecords[s.studentId];
+          hws.forEach(a=>{ hwTotal++; if(rec && rec.assignmentsDone && rec.assignmentsDone[a.id]) hwDone++; });
+          vids.forEach(v=>{ vidTotal++; if(rec && rec.videoProgress && rec.videoProgress[v.id] && rec.videoProgress[v.id].completed) vidDone++; });
+        });
+        const hwPct = hwTotal>0 ? Math.round(hwDone/hwTotal*100) : 0;
+        const vidPct = vidTotal>0 ? Math.round(vidDone/vidTotal*100) : 0;
+        return `<div class="home-classprogress-row">
+          <div style="display:flex;justify-content:space-between;font-size:13.5px;font-weight:700;margin-bottom:8px;">
+            <span>${escHtml(c.name)}</span><span class="mono" style="font-weight:400;color:var(--ink-soft);">총 ${roster.length}명</span>
+          </div>
+          <div class="home-bar-row"><span class="home-bar-label">과제 제출</span><div class="home-bar-outer"><div class="home-bar-inner home-bar-green" style="width:${hwPct}%;"></div></div><span class="home-bar-pct">${hwPct}%</span></div>
+          <div class="home-bar-row"><span class="home-bar-label">영상 시청</span><div class="home-bar-outer"><div class="home-bar-inner home-bar-blue" style="width:${vidPct}%;"></div></div><span class="home-bar-pct">${vidPct}%</span></div>
+        </div>`;
+      }).join('')}
+  </div>
+  <div class="home-grid-2">
+    <div class="home-card">
+      <h4>📝 시험지 빠른 등록</h4>
+      <div class="field"><label>대상 반</label><select id="exam-class">${classOptionsHTML(examDraft.classId)}</select></div>
+      <div class="field"><label>시험명</label><input id="exam-title" value="${escHtml(examDraft.title)}" placeholder="예: 7월 내신 대비 모의고사"></div>
+      <div class="field"><input id="exam-date" type="date" value="${examDraft.date}" style="display:none;"></div>
+      <div class="field" style="display:none;"><select id="exam-hwpx-unit">${UNITS.map(u=>`<option value="${u}">${u}</option>`).join('')}</select></div>
+      <div class="field"><label>hwpx 파일 (자동으로 문항 인식)</label><input type="file" accept=".hwpx" onchange="handleExamHwpxFile(this.files)"></div>
+      ${examDraft.questions.length>0 ? `<p style="font-size:12.5px;color:var(--green-ok);margin:8px 0;">${examDraft.questions.length}문항 인식됨 · [오답 시스템 &gt; 시험지]에서 확인하고 저장하세요.</p>
+      <button class="btn btn-primary" style="width:100%;" onclick="state.teacherTab='exams'; render()">문항 확인하러 가기 →</button>` : ''}
+    </div>
+    <div class="home-card">
+      <h4>🗓️ 출석부 바로가기</h4>
+      ${DATA.classes.length===0 ? '<div class="empty">등록된 반이 없습니다.</div>' :
+        DATA.classes.map(c=>`<button class="btn" style="width:100%;margin-bottom:8px;text-align:left;" onclick="state.teacherTab='classhub'; state.classHubId='${c.id}'; state.classHubTab='attendance'; render()">${escHtml(c.name)} 출석부 열기</button>`).join('')}
+    </div>
+  </div>`;
 }
 
 /* ---------- 반 관리 ---------- */
@@ -2759,11 +2908,36 @@ function teacherStudentDetailHTML(sid){
 }
 
 /* ---------- 출석부 (반별 일괄 입력) ---------- */
+// 반+날짜 조합이 바뀔 때만 draft를 저장된 값(또는 미입력 상태)으로 새로 채운다.
+// 같은 조합에 머무는 동안은 학생별로 누른 상태/입력 중인 사유를 그대로 유지한다.
+function ensureAttDraft(classId, date){
+  const key = classId + '|' + date;
+  if(state.attDraftKey === key) return;
+  state.attDraftKey = key;
+  state.attDraft = {};
+  DATA.students.filter(s=>s.classId===classId).forEach(s=>{
+    const rec = state.allRecords[s.studentId];
+    const existing = rec && (rec.attendance||[]).find(a=>a.date===date);
+    state.attDraft[s.studentId] = existing ? {status:existing.status, reason:existing.reason||''} : {status:null, reason:''};
+  });
+}
+function setAttStatus(studentId, status){
+  const cur = state.attDraft[studentId] || {reason:''};
+  state.attDraft[studentId] = {status, reason: status==='출석' ? '' : cur.reason};
+  render();
+}
+function setAllPresent(classId){
+  DATA.students.filter(s=>s.classId===classId).forEach(s=>{
+    state.attDraft[s.studentId] = {status:'출석', reason:''};
+  });
+  render();
+}
 function teacherAttendanceHTML(fixedClassId){
   loadAllRecordsIfNeeded();
   const classId = fixedClassId || state.attendanceClassId;
   const date = state.attendanceDate || todayStr();
   const roster = classId ? DATA.students.filter(s=>s.classId===classId) : [];
+  if(classId && state.allRecordsLoaded) ensureAttDraft(classId, date);
   return `
   <div class="panel">
     <h3>출석 입력</h3>
@@ -2777,19 +2951,18 @@ function teacherAttendanceHTML(fixedClassId){
     ${!classId ? '<div class="empty">반을 선택해주세요.</div>' :
       !state.allRecordsLoaded ? '<div class="empty">학생 기록을 불러오는 중입니다...</div>' :
       roster.length===0 ? '<div class="empty">이 반에 배정된 학생이 없습니다.</div>' : `
-      <table><tr><th>학생</th><th style="width:220px;">출결 상태</th></tr>
+      <button class="btn" style="margin-bottom:12px;" onclick="setAllPresent('${classId}')">전체 출석</button>
       ${roster.map(s=>{
-        const rec = state.allRecords[s.studentId];
-        const existing = rec && (rec.attendance||[]).find(a=>a.date===date);
-        const cur = existing ? existing.status : '출석';
-        return `<tr><td>${escHtml(s.name)} (${s.studentId})</td><td>
-          <select id="att-bulk-${s.studentId}">
-            ${['출석','지각','결석'].map(v=>`<option value="${v}" ${cur===v?'selected':''}>${v}</option>`).join('')}
-          </select>
-        </td></tr>`;
+        const d = state.attDraft[s.studentId] || {status:null, reason:''};
+        return `<div class="att-row">
+          <div class="att-name">${escHtml(s.name)} <span class="mono" style="font-size:11px;color:var(--ink-soft);">(${s.studentId})</span></div>
+          <div class="att-btn-group">
+            ${['출석','지각','결석'].map(st=>`<button class="att-status-btn att-${st==='출석'?'ok':st==='지각'?'late':'no'} ${d.status===st?'active':''}" onclick="setAttStatus('${s.studentId}','${st}')">${st}</button>`).join('')}
+          </div>
+          ${(d.status==='지각'||d.status==='결석') ? `<input class="att-reason-input" id="att-reason-${s.studentId}" placeholder="사유 입력 (선택)" value="${escHtml(d.reason)}" oninput="state.attDraft['${s.studentId}'].reason=this.value">` : ''}
+        </div>`;
       }).join('')}
-      </table>
-      <button class="btn btn-primary" style="margin-top:12px;" onclick="saveClassAttendance('${classId}','${date}')">이 날짜로 전체 저장</button>
+      <button class="btn btn-primary" style="margin-top:12px;" onclick="saveClassAttendance('${classId}','${date}')">저장</button>
     `}
   </div>
   ${classId && state.allRecordsLoaded && roster.length>0 ? `
@@ -2807,13 +2980,12 @@ function teacherAttendanceHTML(fixedClassId){
 async function saveClassAttendance(classId, date){
   const roster = DATA.students.filter(s=>s.classId===classId);
   await Promise.all(roster.map(async s => {
-    const sel = document.getElementById('att-bulk-'+s.studentId);
-    if(!sel) return;
-    const status = sel.value;
+    const d = state.attDraft[s.studentId];
+    if(!d || !d.status) return; // 아무도 안 건드린 학생은 건너뛴다
     const rec = await loadRecord(s.studentId);
     const idx = rec.attendance.findIndex(a=>a.date===date);
-    if(idx>=0) rec.attendance[idx].status = status;
-    else rec.attendance.push({date, status});
+    if(idx>=0) rec.attendance[idx] = {date, status:d.status, reason:d.reason||''};
+    else rec.attendance.push({date, status:d.status, reason:d.reason||''});
     rec.attendance.sort((a,b)=>a.date.localeCompare(b.date));
     await saveRecord(s.studentId);
     if(state.allRecords[s.studentId]) state.allRecords[s.studentId] = rec;
