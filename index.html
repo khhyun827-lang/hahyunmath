@@ -309,6 +309,9 @@
   .wrong-check-item{border:1px solid var(--card-border);border-radius:6px;padding:8px 4px;width:52px;text-align:center;font-size:12px;cursor:pointer;user-select:none;}
   .wrong-check-item.checked{background:var(--red-pen);color:#fff;border-color:var(--red-pen);}
   .wrong-check-item input{display:none;}
+  .mc-choice-group{display:flex;gap:8px;flex-wrap:wrap;}
+  .mc-choice-btn{border:1px solid var(--card-border);background:var(--white);border-radius:6px;width:44px;height:36px;font-size:15px;cursor:pointer;}
+  .mc-choice-btn.active{background:var(--red-pen);color:#fff;border-color:var(--red-pen);}
 
   /* ---------- 오답문제 검토 / DB ---------- */
   .review-card{border:1px solid var(--card-border);border-radius:6px;padding:16px;margin-bottom:14px;}
@@ -353,7 +356,8 @@
   .home-grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:16px;}
   @media (max-width:900px){ .home-grid-4{grid-template-columns:repeat(2,1fr);} }
   @media (max-width:480px){ .home-grid-4{grid-template-columns:1fr;} }
-  .home-stat-card{background:var(--white);border:1px solid var(--card-border);border-left-width:4px;border-radius:8px;padding:16px;display:flex;align-items:center;gap:12px;}
+  .home-stat-card{background:var(--white);border:1px solid var(--card-border);border-left-width:4px;border-radius:8px;padding:16px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:box-shadow .15s;}
+  .home-stat-card:hover{box-shadow:0 2px 10px rgba(0,0,0,.06);}
   .home-stat-card.accent-purple{border-left-color:#6C3E9A;}
   .home-stat-card.accent-red{border-left-color:var(--red-pen);}
   .home-stat-card.accent-blue{border-left-color:#2F5D9A;}
@@ -998,6 +1002,24 @@ async function deleteQuiz(qid){
   DATA.quizzes = DATA.quizzes.filter(q=>q.id!==qid);
   await dbSet('quizzes', DATA.quizzes);
   render();
+}
+// 객관식(①~⑤가 포함된) 문제인지 판별 — 맞으면 텍스트 입력 대신 보기 버튼을 보여준다.
+// 채점이 문자열 비교라서, 학생이 "3"이라고 타이핑하면 정답 "③"과 안 맞아 오답 처리되던 문제를 해결.
+function isMultipleChoice(content){
+  return /①/.test(content||'');
+}
+function answerInputHTML(inputId){
+  return `<input type="hidden" id="${inputId}">
+    <div class="mc-choice-group">
+      ${['①','②','③','④','⑤'].map(sym=>`<button type="button" class="mc-choice-btn" onclick="selectChoice('${inputId}','${sym}',this)">${sym}</button>`).join('')}
+    </div>`;
+}
+function selectChoice(inputId, symbol, btnEl){
+  const input = document.getElementById(inputId);
+  if(input) input.value = symbol;
+  const group = btnEl.parentElement;
+  group.querySelectorAll('.mc-choice-btn').forEach(b=>b.classList.remove('active'));
+  btnEl.classList.add('active');
 }
 async function submitQuizAnswer(qid, sid){
   const val = document.getElementById('qa-'+qid).value.trim();
@@ -2501,7 +2523,9 @@ function studentHTML(){
           <div class="quiz-content">${escHtml(q.content)}</div>
           <div class="quiz-answer-box">
             ${done ? `<span class="badge badge-ok">제출완료</span> <span class="mono" style="font-size:11px;color:var(--ink-soft);">${escHtml(done.answer)} (${done.submittedAt})</span>`
-            : `<div class="inline-form"><div class="field" style="flex:1;"><input id="qa-${q.id}" placeholder="답안 입력"></div><button class="btn btn-primary btn-small" onclick="submitQuizAnswer('${q.id}','${sid}')">제출</button></div>`}
+            : isMultipleChoice(q.content)
+              ? `<div class="inline-form">${answerInputHTML('qa-'+q.id)}<button class="btn btn-primary btn-small" onclick="submitQuizAnswer('${q.id}','${sid}')">제출</button></div>`
+              : `<div class="inline-form"><div class="field" style="flex:1;"><input id="qa-${q.id}" placeholder="답안 입력"></div><button class="btn btn-primary btn-small" onclick="submitQuizAnswer('${q.id}','${sid}')">제출</button></div>`}
           </div>
         </div>`;
       }).join('')}
@@ -2532,7 +2556,9 @@ function studentHTML(){
           ${bank.hasImage ? (img ? `<img src="${img}" style="max-width:240px;max-height:240px;margin-bottom:10px;border:1px solid var(--card-border);border-radius:4px;display:block;">` : '<div class="empty">그림 불러오는 중...</div>') : ''}
           ${hw.done
             ? `<span class="badge ${correct?'badge-ok':'badge-no'}">${correct?'정답':'오답'}</span> <span class="mono" style="font-size:12px;">내 답안: ${escHtml(hw.studentAnswer)}</span>`
-            : `<div class="inline-form"><div class="field" style="flex:1;"><input id="hw-answer-${bank.id}" placeholder="답안 입력"></div><button class="btn btn-primary btn-small" onclick="submitHomeworkAnswer('${bank.id}')">제출</button></div>`}
+            : isMultipleChoice(bank.variantContent)
+              ? `<div class="inline-form">${answerInputHTML('hw-answer-'+bank.id)}<button class="btn btn-primary btn-small" onclick="submitHomeworkAnswer('${bank.id}')">제출</button></div>`
+              : `<div class="inline-form"><div class="field" style="flex:1;"><input id="hw-answer-${bank.id}" placeholder="답안 입력"></div><button class="btn btn-primary btn-small" onclick="submitHomeworkAnswer('${bank.id}')">제출</button></div>`}
         </div>`;
       }).join('')}
     </div>`;
@@ -2641,8 +2667,7 @@ function teacherHomeHTML(){
   loadAllRecordsIfNeeded();
   loadAIQuotaIfNeeded();
   const pending = DATA.problemBank.filter(b=>b.status!=='approved');
-  const weekAgo = new Date(Date.now() - 7*24*60*60*1000).toISOString().slice(0,10);
-  const weekQna = DATA.qnas.filter(q=>q.date >= weekAgo).length;
+  const unansweredQna = DATA.qnas.filter(q=>!q.answer).length;
 
   return `
   <div class="home-header-row">
@@ -2653,21 +2678,21 @@ function teacherHomeHTML(){
     <div class="home-user-badge">🎓 김하현T</div>
   </div>
   <div class="home-grid-4">
-    <div class="home-stat-card accent-purple">
+    <div class="home-stat-card accent-purple" onclick="state.teacherTab='students'; render()">
       <div class="home-stat-icon">👥</div>
       <div><div class="home-stat-num">${DATA.students.length}명</div><div class="home-stat-label">총 수강생</div></div>
     </div>
-    <div class="home-stat-card accent-red">
+    <div class="home-stat-card accent-red" onclick="state.teacherTab='review'; render()">
       <div class="home-stat-icon">🔔</div>
       <div><div class="home-stat-num">${pending.length}건</div><div class="home-stat-label">변형 문제 승인 대기</div></div>
     </div>
-    <div class="home-stat-card accent-blue">
+    <div class="home-stat-card accent-blue" onclick="document.getElementById('home-classprogress').scrollIntoView({behavior:'smooth'})">
       <div class="home-stat-icon">📺</div>
       <div><div class="home-stat-num">${DATA.videos.length}개</div><div class="home-stat-label">배포된 강의 수</div></div>
     </div>
-    <div class="home-stat-card accent-green">
+    <div class="home-stat-card accent-green" onclick="state.teacherTab='qna'; render()">
       <div class="home-stat-icon">📝</div>
-      <div><div class="home-stat-num">${weekQna}건</div><div class="home-stat-label">이번 주 질문/상담</div></div>
+      <div><div class="home-stat-num">${unansweredQna}건</div><div class="home-stat-label">답변 대기 질문/상담</div></div>
     </div>
   </div>
   <div class="home-grid-2">
@@ -2700,7 +2725,7 @@ function teacherHomeHTML(){
       <button class="btn btn-primary" style="width:100%;" onclick="addVideo()">강의 등록 및 배포</button>
     </div>
   </div>
-  <div class="home-card" style="margin-bottom:16px;">
+  <div class="home-card" style="margin-bottom:16px;" id="home-classprogress">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
       <h4 style="margin:0;">👥 반별 진도 및 과제 현황</h4>
       <button class="btn btn-small" onclick="state.teacherTab='classhub'; render()">학생별 상세 관리 →</button>
