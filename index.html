@@ -660,7 +660,7 @@ let state = {
   teacherTab: 'home',
   teacherSelectedStudent: null,
   studentDetailId: null,
-  studentDetailTab: 'grades',
+  studentDetailTab: 'info',
   wrongExamId: null,
   wrongChecked: {},
   examImagesCache: {},
@@ -865,10 +865,11 @@ async function addStudent(){
   const pw = document.getElementById('new-spw').value.trim();
   const grade = document.getElementById('new-sgrade').value;
   const school = document.getElementById('new-sschool').value.trim();
+  const phone = document.getElementById('new-sphone').value.trim();
   const classId = document.getElementById('new-sclass').value;
   if(!sid || !name || !pw){ showToast('아이디, 이름, 비밀번호는 필수입니다.'); return; }
   if(DATA.students.some(s=>s.studentId===sid)){ showToast('이미 존재하는 아이디입니다.'); return; }
-  DATA.students.push({studentId:sid, name, pw, grade, school, classId});
+  DATA.students.push({studentId:sid, name, pw, grade, school, phone, classId});
   await dbSet('students', DATA.students);
   DATA.records[sid] = {scores:[], attendance:[], assignments:[], progress:{unit:'', percent:0}, quizAnswers:{}, wrongHomework:[], videoProgress:{}, assignmentsDone:{}};
   await saveRecord(sid);
@@ -880,6 +881,24 @@ async function deleteStudent(sid){
   DATA.students = DATA.students.filter(s=>s.studentId!==sid);
   await dbSet('students', DATA.students);
   showToast('삭제되었습니다.');
+  render();
+}
+// 반 이동 등으로 학생 정보가 바뀔 때, 삭제 후 재등록하지 않고 기존 학생 레코드(성적/출석/
+// 오답숙제 기록 등)를 그대로 유지한 채 이름/학년/학교/전화번호/반만 수정한다.
+async function updateStudentInfo(sid){
+  const s = DATA.students.find(x=>x.studentId===sid);
+  if(!s) return;
+  const name = document.getElementById('info-sname').value.trim();
+  const pw = document.getElementById('info-spw').value.trim();
+  const grade = document.getElementById('info-sgrade').value;
+  const school = document.getElementById('info-sschool').value.trim();
+  const phone = document.getElementById('info-sphone').value.trim();
+  const classId = document.getElementById('info-sclass').value;
+  if(!name){ showToast('이름은 필수입니다.'); return; }
+  s.name = name; s.grade = grade; s.school = school; s.phone = phone; s.classId = classId;
+  if(pw) s.pw = pw;
+  await dbSet('students', DATA.students);
+  showToast('학생 정보가 저장되었습니다.');
   render();
 }
 
@@ -2829,9 +2848,9 @@ function classRosterHTML(classId){
   return `<div class="panel">
     <h3>학생 명단 (${roster.length}명)</h3>
     ${roster.length===0 ? '<div class="empty">이 반에 배정된 학생이 없습니다.</div>' : `
-    <table><tr><th>아이디</th><th>이름</th><th>학년</th><th></th></tr>
-    ${roster.map(s=>`<tr><td>${s.studentId}</td><td>${escHtml(s.name)}</td><td>${escHtml(s.grade)}</td>
-      <td><button class="btn btn-small" onclick="state.teacherTab='students'; state.studentDetailId='${s.studentId}'; state.teacherSelectedStudent='${s.studentId}'; state.studentDetailTab='grades'; render()">상세보기</button></td></tr>`).join('')}
+    <table><tr><th>아이디</th><th>이름</th><th>학년</th><th>학교</th><th></th></tr>
+    ${roster.map(s=>`<tr><td>${s.studentId}</td><td>${escHtml(s.name)}</td><td>${escHtml(s.grade)}</td><td>${escHtml(s.school||'-')}</td>
+      <td><button class="btn btn-small" onclick="state.teacherTab='students'; state.studentDetailId='${s.studentId}'; state.teacherSelectedStudent='${s.studentId}'; state.studentDetailTab='info'; render()">상세보기</button></td></tr>`).join('')}
     </table>`}
   </div>`;
 }
@@ -2891,6 +2910,7 @@ function teacherStudentsHTML(){
         <select id="new-sgrade"><option>고1</option><option>고2</option><option>고3</option></select>
       </div>
       <div class="field"><label>학교</label><input id="new-sschool" placeholder="학교명 (선택)"></div>
+      <div class="field"><label>전화번호</label><input id="new-sphone" placeholder="010-0000-0000 (선택)"></div>
       <div class="field"><label>반</label><select id="new-sclass">${classOptionsHTML(null)}</select></div>
       <button class="btn btn-primary" onclick="addStudent()">추가</button>
     </div>
@@ -2898,8 +2918,8 @@ function teacherStudentsHTML(){
   <div class="panel">
     <h3>학생 목록 (${DATA.students.length}명)</h3>
     ${DATA.students.length===0?'<div class="empty">등록된 학생이 없습니다.</div>':`
-    <table><tr><th>아이디</th><th>이름</th><th>학년</th><th>반</th><th>비밀번호</th><th></th></tr>
-    ${DATA.students.map(s=>`<tr><td>${s.studentId}</td><td>${s.name}</td><td>${s.grade}</td><td>${classNameOf(s.classId)}</td><td class="mono">${s.pw}</td><td class="row-actions"><button class="btn btn-small" onclick="state.studentDetailId='${s.studentId}'; state.teacherSelectedStudent='${s.studentId}'; state.studentDetailTab='grades'; render()">상세보기</button><button class="btn btn-red btn-small" onclick="deleteStudent('${s.studentId}')">삭제</button></td></tr>`).join('')}
+    <table><tr><th>아이디</th><th>이름</th><th>학년</th><th>학교</th><th>반</th><th>비밀번호</th><th></th></tr>
+    ${DATA.students.map(s=>`<tr><td>${s.studentId}</td><td>${escHtml(s.name)}</td><td>${escHtml(s.grade)}</td><td>${escHtml(s.school||'-')}</td><td>${classNameOf(s.classId)}</td><td class="mono">${escHtml(s.pw)}</td><td class="row-actions"><button class="btn btn-small" onclick="state.studentDetailId='${s.studentId}'; state.teacherSelectedStudent='${s.studentId}'; state.studentDetailTab='info'; render()">상세보기</button><button class="btn btn-red btn-small" onclick="deleteStudent('${s.studentId}')">삭제</button></td></tr>`).join('')}
     </table>`}
   </div>`;
 }
@@ -2908,12 +2928,25 @@ function teacherStudentDetailHTML(sid){
   const s = DATA.students.find(s=>s.studentId===sid);
   if(!s){ state.studentDetailId=null; return teacherStudentsHTML(); }
   const rec = DATA.records[sid];
-  const subtabs = [['grades','성적'],['progress','진도/과제'],['attendance','출석']];
+  const subtabs = [['info','기본정보'],['grades','성적'],['progress','진도/과제'],['attendance','출석']];
   let sub = '';
   if(!rec){
     return `<div class="empty">불러오는 중...</div>`;
   }
-  if(state.studentDetailTab==='grades'){
+  if(state.studentDetailTab==='info'){
+    sub = `<div class="inline-form">
+      <div class="field"><label>이름</label><input id="info-sname" value="${escHtml(s.name)}"></div>
+      <div class="field"><label>비밀번호</label><input id="info-spw" placeholder="변경 시에만 입력"></div>
+      <div class="field"><label>학년</label>
+        <select id="info-sgrade">${['고1','고2','고3'].map(g=>`<option ${s.grade===g?'selected':''}>${g}</option>`).join('')}</select>
+      </div>
+      <div class="field"><label>학교</label><input id="info-sschool" value="${escHtml(s.school||'')}" placeholder="학교명 (선택)"></div>
+      <div class="field"><label>전화번호</label><input id="info-sphone" value="${escHtml(s.phone||'')}" placeholder="010-0000-0000 (선택)"></div>
+      <div class="field"><label>반</label><select id="info-sclass">${classOptionsHTML(s.classId)}</select></div>
+      <button class="btn btn-primary" onclick="updateStudentInfo('${sid}')">저장</button>
+    </div>
+    <p style="font-size:12.5px;color:var(--ink-soft);">반을 바꿔도 성적·출석·과제·오답숙제 기록은 그대로 유지됩니다. 학생이 반을 옮길 때는 삭제 후 재등록하지 말고 여기서 반만 바꿔주세요.</p>`;
+  } else if(state.studentDetailTab==='grades'){
     sub = `<div class="inline-form">
       <div class="field"><label>시험명</label><input id="score-name" placeholder="예: 3월 모의고사"></div>
       <div class="field"><label>날짜</label><input id="score-date" type="date"></div>
