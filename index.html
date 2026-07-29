@@ -599,15 +599,21 @@ let state = {
   reviewFocusMode: false,
   reviewFocusIndex: 0,
   videoProgressDetailId: null,
+  videoViewMode: 'list',
+  videoByClassId: '',
+  videoStudentDetailId: null,
   ytPlayers: null,
+  attendanceClassId: '',
+  attendanceDate: '',
+  homeworkDetailId: null,
   toast: ''
 };
 let DATA = {
   students: [], notices: [], consults: [], teacherPw: null, records: {},
   classes: [], quizzes: [], clinics: [], qnas: [], videos: [], assistants: [], chats: {},
-  exams: [], problemBank: [], unitBank: []
+  exams: [], problemBank: [], unitBank: [], assignments: []
 };
-const UNITS = ['공통수학', '수학Ⅰ', '수학Ⅱ', '미적분', '확률과통계', '기하'];
+const UNITS = ['공통수학1', '공통수학2', '대수', '미적분Ⅰ', '확률과통계', '기하', '미적분Ⅱ'];
 
 function showToast(msg){
   state.toast = msg;
@@ -620,11 +626,11 @@ async function loadAll(){
   [
     DATA.students, DATA.notices, DATA.consults, DATA.teacherPw,
     DATA.classes, DATA.quizzes, DATA.clinics, DATA.qnas,
-    DATA.videos, DATA.assistants, DATA.exams, DATA.problemBank
+    DATA.videos, DATA.assistants, DATA.exams, DATA.problemBank, DATA.assignments
   ] = await Promise.all([
     dbGet('students', []), dbGet('notices', []), dbGet('consults', []), dbGet('teacher-pw', null),
     dbGet('classes', []), dbGet('quizzes', []), dbGet('clinics', []), dbGet('qnas', []),
-    dbGet('videos', []), dbGet('assistants', []), dbGet('exams', []), dbGet('problem-bank', [])
+    dbGet('videos', []), dbGet('assistants', []), dbGet('exams', []), dbGet('problem-bank', []), dbGet('assignments', [])
   ]);
   await seedTestAccountIfEmpty();
   render();
@@ -639,17 +645,18 @@ async function seedTestAccountIfEmpty(){
   const testStudent = {studentId:'test', name:'테스트학생', pw:'1234', grade:'고1', school:'', classId:testClass.id};
   DATA.students.push(testStudent);
   await dbSet('students', DATA.students);
-  DATA.records['test'] = {scores:[], attendance:[], assignments:[], progress:{unit:'', percent:0}, quizAnswers:{}, wrongHomework:[], videoProgress:{}};
+  DATA.records['test'] = {scores:[], attendance:[], assignments:[], progress:{unit:'', percent:0}, quizAnswers:{}, wrongHomework:[], videoProgress:{}, assignmentsDone:{}};
   await saveRecord('test');
 }
 
 async function loadRecord(studentId){
   if(!DATA.records[studentId]){
-    DATA.records[studentId] = await dbGet('record:'+studentId, {scores:[], attendance:[], assignments:[], progress:{unit:'', percent:0}, quizAnswers:{}, wrongHomework:[], videoProgress:{}});
+    DATA.records[studentId] = await dbGet('record:'+studentId, {scores:[], attendance:[], assignments:[], progress:{unit:'', percent:0}, quizAnswers:{}, wrongHomework:[], videoProgress:{}, assignmentsDone:{}});
   }
   if(!DATA.records[studentId].quizAnswers) DATA.records[studentId].quizAnswers = {};
   if(!DATA.records[studentId].wrongHomework) DATA.records[studentId].wrongHomework = [];
   if(!DATA.records[studentId].videoProgress) DATA.records[studentId].videoProgress = {};
+  if(!DATA.records[studentId].assignmentsDone) DATA.records[studentId].assignmentsDone = {};
   return DATA.records[studentId];
 }
 async function saveRecord(studentId){
@@ -777,7 +784,7 @@ async function addStudent(){
   if(DATA.students.some(s=>s.studentId===sid)){ showToast('이미 존재하는 아이디입니다.'); return; }
   DATA.students.push({studentId:sid, name, pw, grade, school, classId});
   await dbSet('students', DATA.students);
-  DATA.records[sid] = {scores:[], attendance:[], assignments:[], progress:{unit:'', percent:0}, quizAnswers:{}};
+  DATA.records[sid] = {scores:[], attendance:[], assignments:[], progress:{unit:'', percent:0}, quizAnswers:{}, wrongHomework:[], videoProgress:{}, assignmentsDone:{}};
   await saveRecord(sid);
   showToast('학생이 추가되었습니다.');
   render();
@@ -825,28 +832,30 @@ async function updateProgress(){
   showToast('진도가 업데이트되었습니다.');
   render();
 }
-async function addAssignment(){
-  const sid = state.teacherSelectedStudent;
-  if(!sid){ showToast('학생을 선택해주세요.'); return; }
-  const title = document.getElementById('assign-title').value.trim();
-  const due = document.getElementById('assign-due').value;
+/* =================== 과제(숙제) — 반 단위 등록, 데일리퀴즈와 동일한 구조 =================== */
+async function addHomework(){
+  const classId = document.getElementById('hw-class').value;
+  const title = document.getElementById('hw-title').value.trim();
+  const description = document.getElementById('hw-desc').value.trim();
+  const dueDate = document.getElementById('hw-due').value;
   if(!title){ showToast('과제명을 입력해주세요.'); return; }
-  const rec = await loadRecord(sid);
-  rec.assignments.push({title, due, done:false});
-  await saveRecord(sid);
+  DATA.assignments.unshift({id:'hw'+Date.now(), classId, title, description, dueDate, createdAt:todayStr()});
+  await dbSet('assignments', DATA.assignments);
+  document.getElementById('hw-title').value='';
+  document.getElementById('hw-desc').value='';
+  document.getElementById('hw-due').value='';
   showToast('과제가 등록되었습니다.');
   render();
 }
-async function toggleAssignment(sid, idx){
-  const rec = await loadRecord(sid);
-  rec.assignments[idx].done = !rec.assignments[idx].done;
-  await saveRecord(sid);
+async function deleteHomework(hwId){
+  DATA.assignments = DATA.assignments.filter(a=>a.id!==hwId);
+  await dbSet('assignments', DATA.assignments);
   render();
 }
-async function deleteAssignment(sid, idx){
-  const rec = await loadRecord(sid);
-  rec.assignments.splice(idx,1);
-  await saveRecord(sid);
+async function toggleHomeworkDone(studentId, hwId){
+  const rec = await loadRecord(studentId);
+  rec.assignmentsDone[hwId] = !rec.assignmentsDone[hwId];
+  await saveRecord(studentId);
   render();
 }
 
@@ -2093,6 +2102,7 @@ function headerHTML(){
     <div class="header-actions">
       ${loggedIn
         ? `<span class="mono" style="font-size:12px;color:var(--ink-soft);align-self:center;margin-right:6px;">${loggedIn.type==='teacher'?'관리자':loggedIn.name+' 학생'}</span>
+           <button class="btn btn-small" onclick="goto('${loggedIn.type==='teacher'?'teacher':'student'}')">${loggedIn.type==='teacher'?'관리자 페이지로':'마이페이지로'}</button>
            <button class="btn btn-red btn-small" onclick="logout()">로그아웃</button>`
         : `<button class="btn btn-small" onclick="state.loginMode='student'; goto('login')">학생 로그인</button>
            <button class="btn btn-primary btn-small" onclick="state.loginMode='teacher'; goto('login')">강사 로그인</button>`
@@ -2158,9 +2168,9 @@ function homeHTML(){
     <div class="chapter-label"><span class="chapter-num">제2장</span><span class="chapter-title-en">CURRICULUM</span></div>
     <h2>커리큘럼</h2>
     <div class="curri-grid">
-      <div class="curri-card"><span class="tag">HIGH 1</span><h3>공통수학</h3><ul><li>다항식 · 방정식과 부등식</li><li>도형의 방정식</li><li>집합과 명제 / 함수</li></ul></div>
-      <div class="curri-card"><span class="tag">HIGH 2</span><h3>수학Ⅰ · 수학Ⅱ</h3><ul><li>지수/로그, 삼각함수</li><li>수열과 극한 기초</li><li>미분·적분 입문</li></ul></div>
-      <div class="curri-card"><span class="tag">HIGH 3</span><h3>미적분 · 확률과통계 · 기하</h3><ul><li>수능 실전 문제풀이</li><li>내신 기출 분석</li><li>약점 단원 집중 클리닉</li></ul></div>
+      <div class="curri-card"><span class="tag">HIGH 1</span><h3>공통수학1 · 공통수학2</h3><ul><li>다항식 · 방정식과 부등식</li><li>도형의 방정식</li><li>집합과 명제 / 함수</li></ul></div>
+      <div class="curri-card"><span class="tag">HIGH 2</span><h3>대수 · 미적분Ⅰ · 확률과통계</h3><ul><li>지수/로그, 삼각함수</li><li>수열과 극한 기초</li><li>미분·적분 입문, 경우의 수·확률</li></ul></div>
+      <div class="curri-card"><span class="tag">HIGH 3</span><h3>미적분Ⅱ · 기하</h3><ul><li>수능 실전 문제풀이</li><li>내신 기출 분석</li><li>약점 단원 집중 클리닉</li></ul></div>
     </div>
   </section>
 
@@ -2255,7 +2265,7 @@ function loginHTML(){
 /* ---------- 학생 대시보드 ---------- */
 function studentHTML(){
   const sid = state.currentUser.studentId;
-  const rec = DATA.records[sid] || {scores:[],attendance:[],assignments:[],progress:{unit:'',percent:0},quizAnswers:{}};
+  const rec = DATA.records[sid] || {scores:[],attendance:[],assignments:[],progress:{unit:'',percent:0},quizAnswers:{},wrongHomework:[],videoProgress:{},assignmentsDone:{}};
   const tabs = [['grades','성적'],['progress','진도/과제'],['attendance','출석'],['notice','공지사항'],['quiz','데일리퀴즈'],['wronghw','오답숙제'],['clinic','클리닉 신청'],['qna','질의응답'],['video','부교재 해설강의'],['chat','선생님과 채팅']];
   let body='';
   if(state.studentTab==='grades'){
@@ -2267,16 +2277,27 @@ function studentHTML(){
       </table>`}
     </div>`;
   } else if(state.studentTab==='progress'){
+    const myClassIdP = (DATA.students.find(s=>s.studentId===sid)||{}).classId;
+    const myHomework = DATA.assignments.filter(a=>!a.classId || a.classId===myClassIdP);
     body = `<div class="panel"><h3>현재 진도</h3>
-      <p>${rec.progress.unit || '아직 등록된 진도가 없습니다.'}</p>
+      <p>${escHtml(rec.progress.unit) || '아직 등록된 진도가 없습니다.'}</p>
       <div class="progress-outer"><div class="progress-inner" style="width:${rec.progress.percent}%;"></div></div>
       <div class="mono" style="font-size:12px;color:var(--ink-soft);">${rec.progress.percent}% 완료</div>
     </div>
     <div class="panel"><h3>과제</h3>
-      ${rec.assignments.length===0?'<div class="empty">등록된 과제가 없습니다.</div>':`
-      <table><tr><th>과제명</th><th>마감일</th><th>상태</th></tr>
-      ${rec.assignments.map(a=>`<tr><td>${a.title}</td><td>${a.due||'-'}</td><td>${a.done?'<span class="badge badge-ok">완료</span>':'<span class="badge badge-no">미완료</span>'}</td></tr>`).join('')}
-      </table>`}
+      ${myHomework.length===0?'<div class="empty">등록된 과제가 없습니다.</div>':
+      myHomework.map(a=>{
+        const done = !!rec.assignmentsDone[a.id];
+        return `<div class="homework-card">
+          <div class="mono" style="font-size:12px;color:var(--ink-soft);margin-bottom:4px;">${a.dueDate?'마감 '+a.dueDate:'마감일 없음'}</div>
+          <div style="font-weight:700;">${escHtml(a.title)}</div>
+          ${a.description ? `<div style="font-size:13px;white-space:pre-wrap;margin-top:4px;">${escHtml(a.description)}</div>` : ''}
+          <div style="margin-top:8px;">
+            <span class="badge ${done?'badge-ok':'badge-no'}">${done?'완료':'미완료'}</span>
+            <button class="btn btn-small" style="margin-left:8px;" onclick="toggleHomeworkDone('${sid}','${a.id}')">${done?'미완료로 표시':'완료로 표시'}</button>
+          </div>
+        </div>`;
+      }).join('')}
     </div>`;
   } else if(state.studentTab==='attendance'){
     body = `<div class="panel"><h3>출석 기록</h3>
@@ -2422,15 +2443,17 @@ function attBadge(status){
 /* ---------- 강사 대시보드 (사이드바) ---------- */
 function teacherHTML(){
   const groups = [
-    ['운영', [['classes','반'],['students','학생']]],
-    ['학습관리', [['quiz','데일리퀴즈'],['clinic','클리닉'],['notices','공지'],['qna','질의응답'],['chat','채팅'],['video','영상']]],
+    ['운영', [['classes','반'],['students','학생'],['attendance','출석부']]],
+    ['학습관리', [['quiz','데일리퀴즈'],['homework','과제'],['clinic','클리닉'],['notices','공지'],['qna','질의응답'],['chat','채팅'],['video','영상']]],
     ['오답 시스템', [['exams','시험지'],['review','오답 문제 검토'],['submissions','제출 현황'],['bank','문제 DB'],['unitbank','단원 문항 창고']]],
     ['기타', [['assistants','조교'],['settings','관리자']]],
   ];
   let body = '';
   if(state.teacherTab==='classes') body = teacherClassesHTML();
   else if(state.teacherTab==='students') body = teacherStudentsHTML();
+  else if(state.teacherTab==='attendance') body = teacherAttendanceHTML();
   else if(state.teacherTab==='quiz') body = teacherQuizHTML();
+  else if(state.teacherTab==='homework') body = teacherHomeworkHTML();
   else if(state.teacherTab==='clinic') body = teacherClinicHTML();
   else if(state.teacherTab==='notices') body = teacherNoticesHTML();
   else if(state.teacherTab==='qna') body = teacherQnaHTML();
@@ -2548,21 +2571,11 @@ function teacherStudentDetailHTML(sid){
     </table>`}`;
   } else if(state.studentDetailTab==='progress'){
     sub = `<div class="inline-form">
-      <div class="field" style="flex:2;"><label>현재 단원</label><input id="progress-unit" value="${rec.progress.unit||''}" placeholder="예: 수학Ⅱ - 미분법"></div>
+      <div class="field" style="flex:2;"><label>현재 단원</label><input id="progress-unit" value="${escHtml(rec.progress.unit||'')}" placeholder="예: 대수 - 지수함수"></div>
       <div class="field"><label>진도율(%)</label><input id="progress-percent" type="number" min="0" max="100" value="${rec.progress.percent||0}"></div>
       <button class="btn btn-primary" onclick="updateProgress()">저장</button>
     </div>
-    <h3 style="margin-top:22px;">과제</h3>
-    <div class="inline-form">
-      <div class="field"><label>과제명</label><input id="assign-title" placeholder="예: 3단원 오답노트"></div>
-      <div class="field"><label>마감일</label><input id="assign-due" type="date"></div>
-      <button class="btn btn-primary" onclick="addAssignment()">등록</button>
-    </div>
-    ${rec.assignments.length===0?'<div class="empty">등록된 과제가 없습니다.</div>':`
-    <table><tr><th>과제명</th><th>마감일</th><th>상태</th><th></th></tr>
-    ${rec.assignments.map((a,i)=>`<tr><td>${a.title}</td><td>${a.due||'-'}</td><td>${a.done?'<span class="badge badge-ok">완료</span>':'<span class="badge badge-no">미완료</span>'}</td>
-    <td class="row-actions"><button class="btn btn-small" onclick="toggleAssignment('${sid}',${i})">${a.done?'미완료로':'완료로'}</button><button class="btn btn-red btn-small" onclick="deleteAssignment('${sid}',${i})">삭제</button></td></tr>`).join('')}
-    </table>`}`;
+    <p style="font-size:12.5px;color:var(--ink-soft);margin-top:14px;">과제(숙제)는 이제 학생 개별이 아니라 [과제] 탭에서 반 단위로 한 번에 등록합니다.</p>`;
   } else if(state.studentDetailTab==='attendance'){
     sub = `<div class="inline-form">
       <div class="field"><label>날짜</label><input id="att-date" type="date"></div>
@@ -2587,6 +2600,70 @@ function teacherStudentDetailHTML(sid){
     </div>
     ${sub}
   </div>`;
+}
+
+/* ---------- 출석부 (반별 일괄 입력) ---------- */
+function teacherAttendanceHTML(){
+  loadAllRecordsIfNeeded();
+  const classId = state.attendanceClassId;
+  const date = state.attendanceDate || todayStr();
+  const roster = classId ? DATA.students.filter(s=>s.classId===classId) : [];
+  return `
+  <div class="panel">
+    <h3>출석 입력</h3>
+    <div class="inline-form">
+      <div class="field"><label>반</label><select onchange="state.attendanceClassId=this.value; render()">
+        <option value="">-- 반 선택 --</option>
+        ${DATA.classes.map(c=>`<option value="${c.id}" ${classId===c.id?'selected':''}>${escHtml(c.name)}</option>`).join('')}
+      </select></div>
+      <div class="field"><label>날짜</label><input type="date" value="${date}" onchange="state.attendanceDate=this.value; render()"></div>
+    </div>
+    ${!classId ? '<div class="empty">반을 선택해주세요.</div>' :
+      !state.allRecordsLoaded ? '<div class="empty">학생 기록을 불러오는 중입니다...</div>' :
+      roster.length===0 ? '<div class="empty">이 반에 배정된 학생이 없습니다.</div>' : `
+      <table><tr><th>학생</th><th style="width:220px;">출결 상태</th></tr>
+      ${roster.map(s=>{
+        const rec = state.allRecords[s.studentId];
+        const existing = rec && (rec.attendance||[]).find(a=>a.date===date);
+        const cur = existing ? existing.status : '출석';
+        return `<tr><td>${escHtml(s.name)} (${s.studentId})</td><td>
+          <select id="att-bulk-${s.studentId}">
+            ${['출석','지각','결석'].map(v=>`<option value="${v}" ${cur===v?'selected':''}>${v}</option>`).join('')}
+          </select>
+        </td></tr>`;
+      }).join('')}
+      </table>
+      <button class="btn btn-primary" style="margin-top:12px;" onclick="saveClassAttendance('${classId}','${date}')">이 날짜로 전체 저장</button>
+    `}
+  </div>
+  ${classId && state.allRecordsLoaded && roster.length>0 ? `
+  <div class="panel">
+    <h3>${classNameOf(classId)} 출결 누적 집계</h3>
+    <table><tr><th>학생</th><th>출석</th><th>지각</th><th>결석</th></tr>
+    ${roster.map(s=>{
+      const list = (state.allRecords[s.studentId] && state.allRecords[s.studentId].attendance) || [];
+      const count = st => list.filter(a=>a.status===st).length;
+      return `<tr><td>${escHtml(s.name)}</td><td>${count('출석')}</td><td>${count('지각')}</td><td>${count('결석')}</td></tr>`;
+    }).join('')}
+    </table>
+  </div>` : ''}`;
+}
+async function saveClassAttendance(classId, date){
+  const roster = DATA.students.filter(s=>s.classId===classId);
+  await Promise.all(roster.map(async s => {
+    const sel = document.getElementById('att-bulk-'+s.studentId);
+    if(!sel) return;
+    const status = sel.value;
+    const rec = await loadRecord(s.studentId);
+    const idx = rec.attendance.findIndex(a=>a.date===date);
+    if(idx>=0) rec.attendance[idx].status = status;
+    else rec.attendance.push({date, status});
+    rec.attendance.sort((a,b)=>a.date.localeCompare(b.date));
+    await saveRecord(s.studentId);
+    if(state.allRecords[s.studentId]) state.allRecords[s.studentId] = rec;
+  }));
+  showToast('출석이 저장되었습니다.');
+  render();
 }
 
 /* ---------- 데일리퀴즈 ---------- */
@@ -2615,6 +2692,53 @@ function teacherQuizHTML(){
   </div>`;
 }
 
+/* ---------- 과제(숙제) — 반 단위 등록, 학생별 완료 현황 ---------- */
+function teacherHomeworkHTML(){
+  loadAllRecordsIfNeeded();
+  return `
+  <div class="panel">
+    <h3>과제 등록</h3>
+    <div class="inline-form">
+      <div class="field"><label>대상 반</label><select id="hw-class"><option value="">전체</option>${DATA.classes.map(c=>`<option value="${c.id}">${escHtml(c.name)}</option>`).join('')}</select></div>
+      <div class="field" style="flex:2;"><label>과제명</label><input id="hw-title" placeholder="예: 3단원 오답노트 정리"></div>
+      <div class="field"><label>마감일</label><input id="hw-due" type="date"></div>
+    </div>
+    <div class="field"><label>설명 (선택)</label><textarea id="hw-desc" placeholder="과제 상세 내용을 입력하세요"></textarea></div>
+    <button class="btn btn-primary" onclick="addHomework()">등록</button>
+  </div>
+  <div class="panel">
+    <h3>등록된 과제 (${DATA.assignments.length}건)</h3>
+    ${DATA.assignments.length===0?'<div class="empty">등록된 과제가 없습니다.</div>':
+    DATA.assignments.map(a=>{
+      const roster = a.classId ? DATA.students.filter(s=>s.classId===a.classId) : DATA.students;
+      const doneCount = state.allRecordsLoaded ? roster.filter(s=>state.allRecords[s.studentId] && state.allRecords[s.studentId].assignmentsDone && state.allRecords[s.studentId].assignmentsDone[a.id]).length : null;
+      const open = state.homeworkDetailId===a.id;
+      return `<div class="review-card" style="margin-bottom:10px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;">
+          <div><b>${escHtml(a.title)}</b> <span class="mono" style="font-size:12px;color:var(--ink-soft);">· ${quizClassLabel(a.classId)}${a.dueDate?' · 마감 '+a.dueDate:''}</span></div>
+          <button class="btn btn-red btn-small" onclick="deleteHomework('${a.id}')">삭제</button>
+        </div>
+        ${a.description ? `<div style="font-size:13px;white-space:pre-wrap;margin-top:6px;">${escHtml(a.description)}</div>` : ''}
+        <div style="margin-top:8px;">
+          <button class="btn btn-small" onclick="state.homeworkDetailId = state.homeworkDetailId==='${a.id}' ? null : '${a.id}'; render()">
+            ${open?'닫기':`완료 현황 보기${doneCount!==null?` (완료 ${doneCount} / ${roster.length})`:''}`}
+          </button>
+        </div>
+        ${open ? (
+          !state.allRecordsLoaded ? '<div class="empty" style="margin-top:8px;">불러오는 중...</div>' :
+          roster.length===0 ? '<div class="empty" style="margin-top:8px;">대상 학생이 없습니다.</div>' :
+          `<table style="margin-top:8px;"><tr><th>학생</th><th>반</th><th>상태</th></tr>
+          ${roster.map(s=>{
+            const done = state.allRecords[s.studentId] && state.allRecords[s.studentId].assignmentsDone && state.allRecords[s.studentId].assignmentsDone[a.id];
+            return `<tr><td>${escHtml(s.name)}</td><td>${classNameOf(s.classId)}</td><td>${done?'<span class="badge badge-ok">완료</span>':'<span class="badge badge-no">미완료</span>'}</td></tr>`;
+          }).join('')}
+          </table>`
+        ) : ''}
+      </div>`;
+    }).join('')}
+  </div>`;
+}
+
 /* ---------- 클리닉 ---------- */
 function teacherClinicHTML(){
   return `
@@ -2632,6 +2756,28 @@ function teacherClinicHTML(){
         </select>
         <button class="btn btn-red btn-small" onclick="deleteClinic('${c.id}')">삭제</button>
       </div>
+    </div>`).join('')}
+  </div>`;
+}
+
+/* ---------- 공지사항 ---------- */
+function teacherNoticesHTML(){
+  return `
+  <div class="panel">
+    <h3>공지 등록</h3>
+    <div class="field"><label>제목</label><input id="notice-title" placeholder="공지 제목"></div>
+    <div class="field"><label>내용</label><textarea id="notice-content" placeholder="공지 내용을 입력하세요"></textarea></div>
+    <button class="btn btn-primary" onclick="addNotice()">등록</button>
+  </div>
+  <div class="panel">
+    <h3>등록된 공지 (${DATA.notices.length}건)</h3>
+    ${DATA.notices.length===0?'<div class="empty">등록된 공지가 없습니다.</div>':
+    DATA.notices.map(n=>`<div class="review-card" style="margin-bottom:10px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;">
+        <div><b>${escHtml(n.title)}</b> <span class="mono" style="font-size:12px;color:var(--ink-soft);">· ${n.date}</span></div>
+        <button class="btn btn-red btn-small" onclick="deleteNotice(${n.id})">삭제</button>
+      </div>
+      <div style="font-size:13px;white-space:pre-wrap;margin-top:6px;">${escHtml(n.content)}</div>
     </div>`).join('')}
   </div>`;
 }
@@ -2689,6 +2835,47 @@ function videoWatcherRows(v){
       return { student: s, p };
     });
 }
+// 학생 한 명이 자기 반에 해당하는 영상들을 얼마나 봤는지 집계 (반별 보기에서 사용).
+function studentVideoSummary(studentId, classId){
+  const relevantVideos = DATA.videos.filter(v => !v.classId || v.classId===classId);
+  const rec = state.allRecords[studentId];
+  let completed = 0, sumPercent = 0;
+  const details = relevantVideos.map(v => {
+    const p = rec && rec.videoProgress && rec.videoProgress[v.id];
+    if(p && p.completed) completed++;
+    sumPercent += (p ? p.percent : 0);
+    return { video: v, p };
+  });
+  const avg = relevantVideos.length ? Math.round(sumPercent/relevantVideos.length) : 0;
+  return { total: relevantVideos.length, completed, avg, details };
+}
+function videoByClassHTML(){
+  const classId = state.videoByClassId;
+  const roster = classId ? DATA.students.filter(s=>s.classId===classId) : [];
+  return `
+  <div class="field" style="max-width:280px;margin-bottom:14px;"><label>반 선택</label><select onchange="state.videoByClassId=this.value; render()">
+    <option value="">-- 반 선택 --</option>
+    ${DATA.classes.map(c=>`<option value="${c.id}" ${classId===c.id?'selected':''}>${escHtml(c.name)}</option>`).join('')}
+  </select></div>
+  ${!classId ? '<div class="empty">반을 선택해주세요.</div>' :
+    !state.allRecordsLoaded ? '<div class="empty">학생 기록을 불러오는 중입니다...</div>' :
+    roster.length===0 ? '<div class="empty">이 반에 배정된 학생이 없습니다.</div>' :
+    `<table><tr><th>학생</th><th>완료 영상</th><th>평균 진도율</th><th></th></tr>
+    ${roster.map(s=>{
+      const sum = studentVideoSummary(s.studentId, classId);
+      const open = state.videoStudentDetailId===s.studentId;
+      return `<tr><td>${escHtml(s.name)}</td><td>${sum.completed} / ${sum.total}</td><td>${sum.avg}%</td>
+      <td><button class="btn btn-small" onclick="state.videoStudentDetailId = state.videoStudentDetailId==='${s.studentId}' ? null : '${s.studentId}'; render()">${open?'닫기':'상세'}</button></td></tr>
+      ${open ? `<tr><td colspan="4">
+        ${sum.details.length===0 ? '<div class="empty">이 반에 등록된 영상이 없습니다.</div>' : `
+        <table style="margin:4px 0;"><tr><th>영상</th><th>진도율</th></tr>
+        ${sum.details.map(d=>`<tr><td>${escHtml(d.video.title)}</td><td>${d.p ? (d.p.completed?'완료':d.p.percent+'%') : '미시청'}</td></tr>`).join('')}
+        </table>`}
+      </td></tr>` : ''}`;
+    }).join('')}
+    </table>`
+  }`;
+}
 function teacherVideoHTML(){
   loadAllRecordsIfNeeded();
   return `
@@ -2696,41 +2883,48 @@ function teacherVideoHTML(){
     <h3>영상 등록</h3>
     <div class="inline-form">
       <div class="field"><label>대상 반</label><select id="video-class"><option value="">전체</option>${DATA.classes.map(c=>`<option value="${c.id}">${escHtml(c.name)}</option>`).join('')}</select></div>
-      <div class="field"><label>단원</label><input id="video-unit" placeholder="예: 수학Ⅱ 3단원"></div>
+      <div class="field"><label>단원</label><input id="video-unit" placeholder="예: 대수 3단원"></div>
       <div class="field" style="flex:2;"><label>제목</label><input id="video-title" placeholder="영상 제목"></div>
       <div class="field" style="flex:2;"><label>유튜브 링크</label><input id="video-url" placeholder="https://youtube.com/watch?v=..."></div>
       <button class="btn btn-primary" onclick="addVideo()">등록</button>
     </div>
   </div>
   <div class="panel">
-    <h3>영상 목록 (${DATA.videos.length}개)</h3>
-    ${DATA.videos.length===0?'<div class="empty">등록된 영상이 없습니다.</div>':
-    DATA.videos.map(v=>{
-      const rows = state.allRecordsLoaded ? videoWatcherRows(v) : [];
-      const watched = rows.filter(r=>r.p);
-      const completed = rows.filter(r=>r.p && r.p.completed);
-      const open = state.videoProgressDetailId===v.id;
-      return videoEmbedHTML(v) + `
-      <div style="margin:-8px 0 16px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-        <button class="btn btn-red btn-small" onclick="deleteVideo('${v.id}')">삭제</button>
-        <button class="btn btn-small" onclick="state.videoProgressDetailId = state.videoProgressDetailId==='${v.id}' ? null : '${v.id}'; render()">
-          ${open?'시청 현황 닫기':'시청 현황 보기'}${state.allRecordsLoaded?` (완료 ${completed.length} · 시청중 ${watched.length-completed.length} · 미시청 ${rows.length-watched.length})`:''}
-        </button>
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px;">
+      <h3 style="margin:0;">시청 현황</h3>
+      <div class="tab-bar">
+        <button class="tab-btn ${state.videoViewMode!=='byClass'?'active':''}" onclick="state.videoViewMode='list'; render()">영상별 목록</button>
+        <button class="tab-btn ${state.videoViewMode==='byClass'?'active':''}" onclick="state.videoViewMode='byClass'; render()">반별 보기</button>
       </div>
-      ${open ? (
-        !state.allRecordsLoaded ? '<div class="empty" style="margin:-8px 0 16px;">불러오는 중...</div>' :
-        rows.length===0 ? '<div class="empty" style="margin:-8px 0 16px;">대상 학생이 없습니다.</div>' :
-        `<table style="margin:-4px 0 16px;">
-          <tr><th>학생</th><th>반</th><th>진도율</th><th>최근 시청</th></tr>
-          ${rows.map(r=>`<tr>
-            <td>${escHtml(r.student.name)}</td>
-            <td>${classNameOf(r.student.classId)}</td>
-            <td>${r.p ? `<span class="badge ${r.p.completed?'badge-ok':'badge-no'}">${r.p.completed?'완료':r.p.percent+'%'}</span>` : '<span class="badge badge-late">미시청</span>'}</td>
-            <td class="mono" style="font-size:12px;">${r.p ? (r.p.updatedAt||'').slice(0,16).replace('T',' ') : '-'}</td>
-          </tr>`).join('')}
-        </table>`
-      ) : ''}`;
-    }).join('')}
+    </div>
+    ${state.videoViewMode==='byClass' ? videoByClassHTML() :
+      DATA.videos.length===0?'<div class="empty">등록된 영상이 없습니다.</div>':
+      DATA.videos.map(v=>{
+        const rows = state.allRecordsLoaded ? videoWatcherRows(v) : [];
+        const watched = rows.filter(r=>r.p);
+        const completed = rows.filter(r=>r.p && r.p.completed);
+        const open = state.videoProgressDetailId===v.id;
+        return videoEmbedHTML(v) + `
+        <div style="margin:-8px 0 16px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+          <button class="btn btn-red btn-small" onclick="deleteVideo('${v.id}')">삭제</button>
+          <button class="btn btn-small" onclick="state.videoProgressDetailId = state.videoProgressDetailId==='${v.id}' ? null : '${v.id}'; render()">
+            ${open?'시청 현황 닫기':'시청 현황 보기'}${state.allRecordsLoaded?` (완료 ${completed.length} · 시청중 ${watched.length-completed.length} · 미시청 ${rows.length-watched.length})`:''}
+          </button>
+        </div>
+        ${open ? (
+          !state.allRecordsLoaded ? '<div class="empty" style="margin:-8px 0 16px;">불러오는 중...</div>' :
+          rows.length===0 ? '<div class="empty" style="margin:-8px 0 16px;">대상 학생이 없습니다.</div>' :
+          `<table style="margin:-4px 0 16px;">
+            <tr><th>학생</th><th>반</th><th>진도율</th><th>최근 시청</th></tr>
+            ${rows.map(r=>`<tr>
+              <td>${escHtml(r.student.name)}</td>
+              <td>${classNameOf(r.student.classId)}</td>
+              <td>${r.p ? `<span class="badge ${r.p.completed?'badge-ok':'badge-no'}">${r.p.completed?'완료':r.p.percent+'%'}</span>` : '<span class="badge badge-late">미시청</span>'}</td>
+              <td class="mono" style="font-size:12px;">${r.p ? (r.p.updatedAt||'').slice(0,16).replace('T',' ') : '-'}</td>
+            </tr>`).join('')}
+          </table>`
+        ) : ''}`;
+      }).join('')}
   </div>`;
 }
 
