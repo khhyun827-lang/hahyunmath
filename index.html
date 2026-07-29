@@ -574,7 +574,7 @@ let state = {
   currentUser: null,        // {type:'student', studentId, name} | {type:'teacher'}
   pendingStudentTab: null,
   studentTab: 'grades',
-  teacherTab: 'classes',
+  teacherTab: 'classhub',
   teacherSelectedStudent: null,
   studentDetailId: null,
   studentDetailTab: 'grades',
@@ -598,14 +598,14 @@ let state = {
   aiRegeneratingId: null,
   reviewFocusMode: false,
   reviewFocusIndex: 0,
-  videoProgressDetailId: null,
-  videoViewMode: 'list',
   videoByClassId: '',
   videoStudentDetailId: null,
   ytPlayers: null,
   attendanceClassId: '',
   attendanceDate: '',
   homeworkDetailId: null,
+  classHubId: null,
+  classHubTab: 'students',
   toast: ''
 };
 let DATA = {
@@ -2443,22 +2443,19 @@ function attBadge(status){
 /* ---------- 강사 대시보드 (사이드바) ---------- */
 function teacherHTML(){
   const groups = [
-    ['운영', [['classes','반'],['students','학생'],['attendance','출석부']]],
-    ['학습관리', [['quiz','데일리퀴즈'],['homework','과제'],['clinic','클리닉'],['notices','공지'],['qna','질의응답'],['chat','채팅'],['video','영상']]],
+    ['반 관리', [['classhub','반 목록 / 반별 관리']]],
+    ['학생 관리', [['students','학생 목록']]],
     ['오답 시스템', [['exams','시험지'],['review','오답 문제 검토'],['submissions','제출 현황'],['bank','문제 DB'],['unitbank','단원 문항 창고']]],
-    ['기타', [['assistants','조교'],['settings','관리자']]],
+    ['소통', [['clinic','클리닉'],['notices','공지'],['qna','질의응답'],['chat','채팅']]],
+    ['설정', [['assistants','조교'],['settings','관리자']]],
   ];
   let body = '';
-  if(state.teacherTab==='classes') body = teacherClassesHTML();
+  if(state.teacherTab==='classhub') body = teacherClassHubHTML();
   else if(state.teacherTab==='students') body = teacherStudentsHTML();
-  else if(state.teacherTab==='attendance') body = teacherAttendanceHTML();
-  else if(state.teacherTab==='quiz') body = teacherQuizHTML();
-  else if(state.teacherTab==='homework') body = teacherHomeworkHTML();
   else if(state.teacherTab==='clinic') body = teacherClinicHTML();
   else if(state.teacherTab==='notices') body = teacherNoticesHTML();
   else if(state.teacherTab==='qna') body = teacherQnaHTML();
   else if(state.teacherTab==='chat') body = teacherChatHTML();
-  else if(state.teacherTab==='video') body = teacherVideoHTML();
   else if(state.teacherTab==='exams') body = teacherExamsHTML();
   else if(state.teacherTab==='review') body = teacherReviewHTML();
   else if(state.teacherTab==='submissions') body = teacherSubmissionsHTML();
@@ -2466,6 +2463,7 @@ function teacherHTML(){
   else if(state.teacherTab==='unitbank') body = teacherUnitBankHTML();
   else if(state.teacherTab==='assistants') body = teacherAssistantsHTML();
   else if(state.teacherTab==='settings') body = teacherSettingsHTML();
+  else body = teacherClassHubHTML();
 
   return `
   <div class="dash-header"><h2>관리자 페이지</h2></div>
@@ -2496,11 +2494,48 @@ function teacherClassesHTML(){
     <table><tr><th>반 이름</th><th>수강생 수</th><th>강의 시간</th><th>기간</th><th>상태</th><th></th></tr>
     ${DATA.classes.map(c=>{
       const count = DATA.students.filter(s=>s.classId===c.id).length;
-      return `<tr><td>${c.name}</td><td>${count}</td><td>${c.schedule||'-'}</td><td>${c.period||'-'}</td><td>${c.status==='진행중'?'<span class="badge badge-ok">진행중</span>':'<span class="badge badge-no">종료</span>'}</td>
-      <td class="row-actions"><button class="btn btn-small" onclick="toggleClassStatus('${c.id}')">${c.status==='진행중'?'종료':'재개'}</button><button class="btn btn-red btn-small" onclick="deleteClass('${c.id}')">삭제</button></td></tr>`;
+      return `<tr><td>${escHtml(c.name)}</td><td>${count}</td><td>${escHtml(c.schedule||'-')}</td><td>${escHtml(c.period||'-')}</td><td>${c.status==='진행중'?'<span class="badge badge-ok">진행중</span>':'<span class="badge badge-no">종료</span>'}</td>
+      <td class="row-actions"><button class="btn btn-primary btn-small" onclick="state.classHubId='${c.id}'; state.classHubTab='students'; render()">관리</button><button class="btn btn-small" onclick="toggleClassStatus('${c.id}')">${c.status==='진행중'?'종료':'재개'}</button><button class="btn btn-red btn-small" onclick="deleteClass('${c.id}')">삭제</button></td></tr>`;
     }).join('')}
     </table>`}
   </div>`;
+}
+
+/* ---------- 반 관리 허브: 반을 고르면 그 반의 학생명단/출석부/과제/데일리퀴즈/영상을 한 화면에서 ---------- */
+function classRosterHTML(classId){
+  const roster = DATA.students.filter(s=>s.classId===classId);
+  return `<div class="panel">
+    <h3>학생 명단 (${roster.length}명)</h3>
+    ${roster.length===0 ? '<div class="empty">이 반에 배정된 학생이 없습니다.</div>' : `
+    <table><tr><th>아이디</th><th>이름</th><th>학년</th><th></th></tr>
+    ${roster.map(s=>`<tr><td>${s.studentId}</td><td>${escHtml(s.name)}</td><td>${escHtml(s.grade)}</td>
+      <td><button class="btn btn-small" onclick="state.teacherTab='students'; state.studentDetailId='${s.studentId}'; state.teacherSelectedStudent='${s.studentId}'; state.studentDetailTab='grades'; render()">상세보기</button></td></tr>`).join('')}
+    </table>`}
+  </div>`;
+}
+function teacherClassHubHTML(){
+  if(!state.classHubId) return teacherClassesHTML();
+  const c = DATA.classes.find(x=>x.id===state.classHubId);
+  if(!c){ state.classHubId=null; return teacherClassHubHTML(); }
+  const subtabs = [['students','학생 명단'],['attendance','출석부'],['homework','과제'],['quiz','데일리퀴즈'],['video','영상']];
+  const tab = state.classHubTab || 'students';
+  let sub;
+  if(tab==='attendance') sub = teacherAttendanceHTML(c.id);
+  else if(tab==='homework') sub = teacherHomeworkHTML(c.id);
+  else if(tab==='quiz') sub = teacherQuizHTML(c.id);
+  else if(tab==='video') sub = videoByClassHTML(c.id);
+  else sub = classRosterHTML(c.id);
+  return `
+  <div class="panel">
+    <div class="student-detail-header">
+      <h3 style="margin:0;">${escHtml(c.name)} 관리</h3>
+      <button class="btn btn-small" onclick="state.classHubId=null; render()">← 반 목록으로</button>
+    </div>
+    <div class="subtab-bar">
+      ${subtabs.map(t=>`<button class="subtab-btn ${tab===t[0]?'active':''}" onclick="state.classHubTab='${t[0]}'; render()">${t[1]}</button>`).join('')}
+    </div>
+  </div>
+  ${sub}`;
 }
 
 function studentSelectorHTML(){
@@ -2603,19 +2638,19 @@ function teacherStudentDetailHTML(sid){
 }
 
 /* ---------- 출석부 (반별 일괄 입력) ---------- */
-function teacherAttendanceHTML(){
+function teacherAttendanceHTML(fixedClassId){
   loadAllRecordsIfNeeded();
-  const classId = state.attendanceClassId;
+  const classId = fixedClassId || state.attendanceClassId;
   const date = state.attendanceDate || todayStr();
   const roster = classId ? DATA.students.filter(s=>s.classId===classId) : [];
   return `
   <div class="panel">
     <h3>출석 입력</h3>
     <div class="inline-form">
-      <div class="field"><label>반</label><select onchange="state.attendanceClassId=this.value; render()">
+      ${fixedClassId ? '' : `<div class="field"><label>반</label><select onchange="state.attendanceClassId=this.value; render()">
         <option value="">-- 반 선택 --</option>
         ${DATA.classes.map(c=>`<option value="${c.id}" ${classId===c.id?'selected':''}>${escHtml(c.name)}</option>`).join('')}
-      </select></div>
+      </select></div>`}
       <div class="field"><label>날짜</label><input type="date" value="${date}" onchange="state.attendanceDate=this.value; render()"></div>
     </div>
     ${!classId ? '<div class="empty">반을 선택해주세요.</div>' :
@@ -2667,12 +2702,16 @@ async function saveClassAttendance(classId, date){
 }
 
 /* ---------- 데일리퀴즈 ---------- */
-function teacherQuizHTML(){
+function teacherQuizHTML(fixedClassId){
+  const visible = fixedClassId ? DATA.quizzes.filter(q=>!q.classId || q.classId===fixedClassId) : DATA.quizzes;
   return `
   <div class="panel">
     <h3>데일리퀴즈 등록</h3>
     <div class="inline-form">
-      <div class="field"><label>대상 반</label><select id="quiz-class"><option value="">전체</option>${DATA.classes.map(c=>`<option value="${c.id}">${c.name}</option>`).join('')}</select></div>
+      <div class="field"><label>대상 반</label><select id="quiz-class">
+        <option value="" ${!fixedClassId?'selected':''}>전체</option>
+        ${DATA.classes.map(c=>`<option value="${c.id}" ${fixedClassId===c.id?'selected':''}>${escHtml(c.name)}</option>`).join('')}
+      </select></div>
       <div class="field" style="flex:2;"><label>제목</label><input id="quiz-title" placeholder="예: 7/27 데일리퀴즈"></div>
     </div>
     <div class="field"><label>문제 내용</label><textarea id="quiz-content" placeholder="문제를 입력하세요"></textarea></div>
@@ -2680,8 +2719,8 @@ function teacherQuizHTML(){
   </div>
   <div class="panel">
     <h3>등록된 퀴즈</h3>
-    ${DATA.quizzes.length===0?'<div class="empty">등록된 퀴즈가 없습니다.</div>':
-    DATA.quizzes.map(q=>{
+    ${visible.length===0?'<div class="empty">등록된 퀴즈가 없습니다.</div>':
+    visible.map(q=>{
       return `<div class="quiz-card">
         <div class="quiz-meta">${q.date} · ${quizClassLabel(q.classId)}</div>
         <div class="quiz-title">${escHtml(q.title)}</div>
@@ -2693,13 +2732,17 @@ function teacherQuizHTML(){
 }
 
 /* ---------- 과제(숙제) — 반 단위 등록, 학생별 완료 현황 ---------- */
-function teacherHomeworkHTML(){
+function teacherHomeworkHTML(fixedClassId){
   loadAllRecordsIfNeeded();
+  const visible = fixedClassId ? DATA.assignments.filter(a=>!a.classId || a.classId===fixedClassId) : DATA.assignments;
   return `
   <div class="panel">
     <h3>과제 등록</h3>
     <div class="inline-form">
-      <div class="field"><label>대상 반</label><select id="hw-class"><option value="">전체</option>${DATA.classes.map(c=>`<option value="${c.id}">${escHtml(c.name)}</option>`).join('')}</select></div>
+      <div class="field"><label>대상 반</label><select id="hw-class">
+        <option value="" ${!fixedClassId?'selected':''}>전체</option>
+        ${DATA.classes.map(c=>`<option value="${c.id}" ${fixedClassId===c.id?'selected':''}>${escHtml(c.name)}</option>`).join('')}
+      </select></div>
       <div class="field" style="flex:2;"><label>과제명</label><input id="hw-title" placeholder="예: 3단원 오답노트 정리"></div>
       <div class="field"><label>마감일</label><input id="hw-due" type="date"></div>
     </div>
@@ -2707,10 +2750,10 @@ function teacherHomeworkHTML(){
     <button class="btn btn-primary" onclick="addHomework()">등록</button>
   </div>
   <div class="panel">
-    <h3>등록된 과제 (${DATA.assignments.length}건)</h3>
-    ${DATA.assignments.length===0?'<div class="empty">등록된 과제가 없습니다.</div>':
-    DATA.assignments.map(a=>{
-      const roster = a.classId ? DATA.students.filter(s=>s.classId===a.classId) : DATA.students;
+    <h3>등록된 과제 (${visible.length}건)</h3>
+    ${visible.length===0?'<div class="empty">등록된 과제가 없습니다.</div>':
+    visible.map(a=>{
+      const roster = fixedClassId ? DATA.students.filter(s=>s.classId===fixedClassId) : (a.classId ? DATA.students.filter(s=>s.classId===a.classId) : DATA.students);
       const doneCount = state.allRecordsLoaded ? roster.filter(s=>state.allRecords[s.studentId] && state.allRecords[s.studentId].assignmentsDone && state.allRecords[s.studentId].assignmentsDone[a.id]).length : null;
       const open = state.homeworkDetailId===a.id;
       return `<div class="review-card" style="margin-bottom:10px;">
@@ -2826,16 +2869,7 @@ function teacherChatHTML(){
 }
 
 /* ---------- 영상 (부교재 해설강의) ---------- */
-function videoWatcherRows(v){
-  return DATA.students
-    .filter(s => !v.classId || s.classId===v.classId)
-    .map(s => {
-      const rec = state.allRecords[s.studentId];
-      const p = rec && rec.videoProgress && rec.videoProgress[v.id];
-      return { student: s, p };
-    });
-}
-// 학생 한 명이 자기 반에 해당하는 영상들을 얼마나 봤는지 집계 (반별 보기에서 사용).
+// 학생 한 명이 자기 반에 해당하는 영상들을 얼마나 봤는지 집계 (반 관리 허브의 영상 서브탭에서 사용).
 function studentVideoSummary(studentId, classId){
   const relevantVideos = DATA.videos.filter(v => !v.classId || v.classId===classId);
   const rec = state.allRecords[studentId];
@@ -2849,83 +2883,57 @@ function studentVideoSummary(studentId, classId){
   const avg = relevantVideos.length ? Math.round(sumPercent/relevantVideos.length) : 0;
   return { total: relevantVideos.length, completed, avg, details };
 }
-function videoByClassHTML(){
-  const classId = state.videoByClassId;
+// 반 상세("영상" 서브탭)에서는 fixedClassId가 오고, 등록 폼+그 반 영상 목록+학생별 시청현황을
+// 한 화면에서 전부 처리한다 (예전엔 등록/목록/반별현황이 각각 다른 화면에 흩어져 있었음).
+function videoByClassHTML(fixedClassId){
+  const classId = fixedClassId || state.videoByClassId;
   const roster = classId ? DATA.students.filter(s=>s.classId===classId) : [];
+  const classVideos = classId ? DATA.videos.filter(v=>!v.classId || v.classId===classId) : [];
+  if(fixedClassId) loadAllRecordsIfNeeded();
   return `
-  <div class="field" style="max-width:280px;margin-bottom:14px;"><label>반 선택</label><select onchange="state.videoByClassId=this.value; render()">
-    <option value="">-- 반 선택 --</option>
-    ${DATA.classes.map(c=>`<option value="${c.id}" ${classId===c.id?'selected':''}>${escHtml(c.name)}</option>`).join('')}
-  </select></div>
-  ${!classId ? '<div class="empty">반을 선택해주세요.</div>' :
-    !state.allRecordsLoaded ? '<div class="empty">학생 기록을 불러오는 중입니다...</div>' :
-    roster.length===0 ? '<div class="empty">이 반에 배정된 학생이 없습니다.</div>' :
-    `<table><tr><th>학생</th><th>완료 영상</th><th>평균 진도율</th><th></th></tr>
-    ${roster.map(s=>{
-      const sum = studentVideoSummary(s.studentId, classId);
-      const open = state.videoStudentDetailId===s.studentId;
-      return `<tr><td>${escHtml(s.name)}</td><td>${sum.completed} / ${sum.total}</td><td>${sum.avg}%</td>
-      <td><button class="btn btn-small" onclick="state.videoStudentDetailId = state.videoStudentDetailId==='${s.studentId}' ? null : '${s.studentId}'; render()">${open?'닫기':'상세'}</button></td></tr>
-      ${open ? `<tr><td colspan="4">
-        ${sum.details.length===0 ? '<div class="empty">이 반에 등록된 영상이 없습니다.</div>' : `
-        <table style="margin:4px 0;"><tr><th>영상</th><th>진도율</th></tr>
-        ${sum.details.map(d=>`<tr><td>${escHtml(d.video.title)}</td><td>${d.p ? (d.p.completed?'완료':d.p.percent+'%') : '미시청'}</td></tr>`).join('')}
-        </table>`}
-      </td></tr>` : ''}`;
-    }).join('')}
-    </table>`
-  }`;
-}
-function teacherVideoHTML(){
-  loadAllRecordsIfNeeded();
-  return `
+  ${fixedClassId ? `
   <div class="panel">
     <h3>영상 등록</h3>
     <div class="inline-form">
-      <div class="field"><label>대상 반</label><select id="video-class"><option value="">전체</option>${DATA.classes.map(c=>`<option value="${c.id}">${escHtml(c.name)}</option>`).join('')}</select></div>
+      <div class="field"><label>대상 반</label><select id="video-class">
+        <option value="">전체</option>
+        ${DATA.classes.map(c=>`<option value="${c.id}" ${fixedClassId===c.id?'selected':''}>${escHtml(c.name)}</option>`).join('')}
+      </select></div>
       <div class="field"><label>단원</label><input id="video-unit" placeholder="예: 대수 3단원"></div>
       <div class="field" style="flex:2;"><label>제목</label><input id="video-title" placeholder="영상 제목"></div>
       <div class="field" style="flex:2;"><label>유튜브 링크</label><input id="video-url" placeholder="https://youtube.com/watch?v=..."></div>
       <button class="btn btn-primary" onclick="addVideo()">등록</button>
     </div>
+  </div>` : `<div class="field" style="max-width:280px;margin-bottom:14px;"><label>반 선택</label><select onchange="state.videoByClassId=this.value; render()">
+    <option value="">-- 반 선택 --</option>
+    ${DATA.classes.map(c=>`<option value="${c.id}" ${classId===c.id?'selected':''}>${escHtml(c.name)}</option>`).join('')}
+  </select></div>`}
+  ${!classId ? '<div class="empty">반을 선택해주세요.</div>' : `
+  <div class="panel">
+    <h3>이 반 영상 (${classVideos.length}개)</h3>
+    ${classVideos.length===0 ? '<div class="empty">등록된 영상이 없습니다.</div>' :
+      classVideos.map(v=>videoEmbedHTML(v) + `<div style="margin:-8px 0 16px;"><button class="btn btn-red btn-small" onclick="deleteVideo('${v.id}')">삭제</button></div>`).join('')}
   </div>
   <div class="panel">
-    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px;">
-      <h3 style="margin:0;">시청 현황</h3>
-      <div class="tab-bar">
-        <button class="tab-btn ${state.videoViewMode!=='byClass'?'active':''}" onclick="state.videoViewMode='list'; render()">영상별 목록</button>
-        <button class="tab-btn ${state.videoViewMode==='byClass'?'active':''}" onclick="state.videoViewMode='byClass'; render()">반별 보기</button>
-      </div>
-    </div>
-    ${state.videoViewMode==='byClass' ? videoByClassHTML() :
-      DATA.videos.length===0?'<div class="empty">등록된 영상이 없습니다.</div>':
-      DATA.videos.map(v=>{
-        const rows = state.allRecordsLoaded ? videoWatcherRows(v) : [];
-        const watched = rows.filter(r=>r.p);
-        const completed = rows.filter(r=>r.p && r.p.completed);
-        const open = state.videoProgressDetailId===v.id;
-        return videoEmbedHTML(v) + `
-        <div style="margin:-8px 0 16px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-          <button class="btn btn-red btn-small" onclick="deleteVideo('${v.id}')">삭제</button>
-          <button class="btn btn-small" onclick="state.videoProgressDetailId = state.videoProgressDetailId==='${v.id}' ? null : '${v.id}'; render()">
-            ${open?'시청 현황 닫기':'시청 현황 보기'}${state.allRecordsLoaded?` (완료 ${completed.length} · 시청중 ${watched.length-completed.length} · 미시청 ${rows.length-watched.length})`:''}
-          </button>
-        </div>
-        ${open ? (
-          !state.allRecordsLoaded ? '<div class="empty" style="margin:-8px 0 16px;">불러오는 중...</div>' :
-          rows.length===0 ? '<div class="empty" style="margin:-8px 0 16px;">대상 학생이 없습니다.</div>' :
-          `<table style="margin:-4px 0 16px;">
-            <tr><th>학생</th><th>반</th><th>진도율</th><th>최근 시청</th></tr>
-            ${rows.map(r=>`<tr>
-              <td>${escHtml(r.student.name)}</td>
-              <td>${classNameOf(r.student.classId)}</td>
-              <td>${r.p ? `<span class="badge ${r.p.completed?'badge-ok':'badge-no'}">${r.p.completed?'완료':r.p.percent+'%'}</span>` : '<span class="badge badge-late">미시청</span>'}</td>
-              <td class="mono" style="font-size:12px;">${r.p ? (r.p.updatedAt||'').slice(0,16).replace('T',' ') : '-'}</td>
-            </tr>`).join('')}
-          </table>`
-        ) : ''}`;
+    <h3>학생별 시청 현황</h3>
+    ${!state.allRecordsLoaded ? '<div class="empty">학생 기록을 불러오는 중입니다...</div>' :
+      roster.length===0 ? '<div class="empty">이 반에 배정된 학생이 없습니다.</div>' :
+      `<table><tr><th>학생</th><th>완료 영상</th><th>평균 진도율</th><th></th></tr>
+      ${roster.map(s=>{
+        const sum = studentVideoSummary(s.studentId, classId);
+        const open = state.videoStudentDetailId===s.studentId;
+        return `<tr><td>${escHtml(s.name)}</td><td>${sum.completed} / ${sum.total}</td><td>${sum.avg}%</td>
+        <td><button class="btn btn-small" onclick="state.videoStudentDetailId = state.videoStudentDetailId==='${s.studentId}' ? null : '${s.studentId}'; render()">${open?'닫기':'상세'}</button></td></tr>
+        ${open ? `<tr><td colspan="4">
+          ${sum.details.length===0 ? '<div class="empty">이 반에 등록된 영상이 없습니다.</div>' : `
+          <table style="margin:4px 0;"><tr><th>영상</th><th>진도율</th></tr>
+          ${sum.details.map(d=>`<tr><td>${escHtml(d.video.title)}</td><td>${d.p ? (d.p.completed?'완료':d.p.percent+'%') : '미시청'}</td></tr>`).join('')}
+          </table>`}
+        </td></tr>` : ''}`;
       }).join('')}
-  </div>`;
+      </table>`
+    }
+  </div>`}`;
 }
 
 /* ---------- 시험지 관리 ---------- */
