@@ -295,26 +295,6 @@
   .video-embed-wrap{position:relative;width:100%;padding-top:56.25%;border-radius:4px;overflow:hidden;background:#000;}
   .video-embed-wrap iframe{position:absolute;top:0;left:0;width:100%;height:100%;border:0;}
   .video-embed-warn{font-size:12px;color:var(--red-pen);padding:10px;background:#FBF3F2;border-radius:4px;}
-  .vctl-center-play{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:64px;height:64px;border-radius:50%;background:rgba(0,0,0,.55);color:#fff;font-size:22px;display:flex;align-items:center;justify-content:center;padding-left:4px;cursor:pointer;z-index:2;transition:background .15s;}
-  .vctl-center-play:hover{background:rgba(0,0,0,.72);}
-  .vctl-bar{position:absolute;left:0;right:0;bottom:0;z-index:3;display:flex;align-items:center;gap:8px;background:linear-gradient(transparent, rgba(0,0,0,.8) 45%);padding:22px 10px 8px;}
-  .vctl-btn{background:none;border:none;color:#fff;font-size:16px;cursor:pointer;padding:2px 6px;line-height:1;}
-  .vctl-time{color:#fff;font-size:11px;font-family:'JetBrains Mono',monospace;white-space:nowrap;}
-  .vctl-seek{flex:1;min-width:30px;height:4px;accent-color:var(--red-pen);cursor:pointer;}
-  .vctl-speed-group{display:flex;gap:2px;flex-shrink:0;}
-  .vctl-speed-btn{background:rgba(255,255,255,.18);border:none;color:#fff;font-size:10.5px;padding:3px 6px;border-radius:3px;cursor:pointer;font-family:'JetBrains Mono',monospace;}
-  .vctl-speed-btn.active{background:var(--red-pen);}
-  .vctl-quality{background:rgba(255,255,255,.18);border:none;color:#fff;font-size:10.5px;border-radius:3px;padding:3px 4px;cursor:pointer;max-width:88px;}
-  .vctl-quality option{color:#000;}
-  @media (max-width:640px){
-    .vctl-bar{flex-wrap:wrap;padding:16px 6px 6px;gap:4px;}
-    .vctl-seek{flex-basis:100%;order:1;}
-    .vctl-btn{font-size:14px;padding:2px 4px;}
-    .vctl-speed-btn{font-size:9px;padding:2px 4px;}
-    .vctl-time{font-size:10px;}
-    .vctl-quality{font-size:9px;max-width:64px;}
-    .vctl-center-play{width:52px;height:52px;font-size:18px;}
-  }
 
   /* ---------- 시험지 관리 ---------- */
   .qrow{display:flex;gap:8px;align-items:flex-start;padding:10px 0;border-bottom:1px solid #F0EEE7;}
@@ -1073,33 +1053,16 @@ function extractYouTubeId(url){
 }
 // 유튜브 iframe에 sandbox를 걸어서(allow-popups/allow-top-navigation 없음) 제목표시줄/로고를
 // 눌러도 유튜브로 이동하지 못하게 막는다. enablejsapi=1을 켜서 시청 진도율 추적에도 쓴다.
-// 유튜브 기본 컨트롤(controls=1)에는 링크복사/유튜브 로고 같은 잡다한 버튼이 딸려오고
-// 개별로 골라서 뺄 수 있는 방법이 없어서, controls=0으로 다 끄고 재생/탐색/배속/화질/
-// 음소거/전체화면만 있는 우리 자체 컨트롤바를 그 위에 그린다.
 function videoEmbedHTML(v, forStudent){
   const vid = extractYouTubeId(v.url);
   const iframeId = 'yt-frame-' + v.id;
   let player;
   if(vid){
     const src = 'https://www.youtube-nocookie.com/embed/' + vid +
-      '?enablejsapi=1&modestbranding=1&rel=0&iv_load_policy=3&controls=0&disablekb=1&origin=' + encodeURIComponent(location.origin);
-    player = `<div class="video-embed-wrap" id="vwrap-${v.id}">
-      <iframe id="${iframeId}" class="yt-tracked-frame" data-bank-vid="${v.id}" src="${src}" title="${escHtml(v.title)}"
-        sandbox="allow-scripts allow-same-origin allow-presentation allow-forms"
-        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
-      <div class="vctl-center-play" id="vctl-center-${v.id}" onclick="toggleVideoPlay('${v.id}')">▶</div>
-      <div class="vctl-bar">
-        <button class="vctl-btn" id="vctl-playbtn-${v.id}" onclick="toggleVideoPlay('${v.id}')">▶</button>
-        <span class="vctl-time" id="vctl-time-${v.id}">0:00 / 0:00</span>
-        <input type="range" class="vctl-seek" id="vctl-seek-${v.id}" min="0" max="1000" value="0" oninput="seekVideo('${v.id}', this.value)">
-        <button class="vctl-btn" id="vctl-mutebtn-${v.id}" onclick="toggleVideoMute('${v.id}')">🔊</button>
-        <div class="vctl-speed-group" id="vctl-speedgroup-${v.id}">
-          ${[1,1.25,1.5,2].map(r=>`<button class="vctl-speed-btn${r===1?' active':''}" data-rate="${r}" onclick="setVideoSpeed('${v.id}',${r})">${r}x</button>`).join('')}
-        </div>
-        <select class="vctl-quality" id="vctl-quality-${v.id}" onchange="setVideoQuality('${v.id}', this.value)"><option value="auto">자동 화질</option></select>
-        <button class="vctl-btn" onclick="toggleVideoFullscreen('${v.id}')">⛶</button>
-      </div>
-    </div>`;
+      '?enablejsapi=1&modestbranding=1&rel=0&iv_load_policy=3&origin=' + encodeURIComponent(location.origin);
+    player = `<div class="video-embed-wrap"><iframe id="${iframeId}" class="yt-tracked-frame" data-bank-vid="${v.id}" src="${src}" title="${escHtml(v.title)}"
+      sandbox="allow-scripts allow-same-origin allow-presentation allow-forms"
+      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></div>`;
   } else {
     player = `<div class="video-embed-warn">유튜브 링크 형식을 인식하지 못했습니다. youtube.com 또는 youtu.be 링크인지 확인해주세요.</div>`;
   }
@@ -1166,24 +1129,6 @@ function flushWatchTick(entry, studentId, videoId, player, ended){
   }catch(err){}
 }
 // 학생이 '부교재 해설강의' 탭에 있을 때만 실제 유튜브 플레이어를 붙여서 재생 상태를 감시한다.
-function formatTime(seconds){
-  seconds = Math.max(0, Math.floor(seconds||0));
-  const h = Math.floor(seconds/3600), m = Math.floor((seconds%3600)/60), s = seconds%60;
-  const mm = h>0 ? String(m).padStart(2,'0') : String(m);
-  const ss = String(s).padStart(2,'0');
-  return (h>0 ? h+':' : '') + mm + ':' + ss;
-}
-// 재생바/시간 표시만 갱신하는 가벼운 UI 루프 (시청시간 기록용 타이머와는 완전히 별개).
-function updateVideoUI(videoId, player){
-  try{
-    const dur = player.getDuration(), cur = player.getCurrentTime();
-    const timeEl = document.getElementById('vctl-time-'+videoId);
-    if(timeEl) timeEl.textContent = formatTime(cur) + ' / ' + formatTime(dur);
-    const seekEl = document.getElementById('vctl-seek-'+videoId);
-    if(seekEl && dur>0 && !seekEl.dataset.dragging) seekEl.value = Math.round(cur/dur*1000);
-  }catch(err){}
-}
-// studentId가 있으면(학생 화면) 시청시간을 기록하고, 없으면(교사 미리보기) 재생 컨트롤만 붙인다.
 function mountVideoTrackers(studentId){
   const frames = document.querySelectorAll('.yt-tracked-frame[data-bank-vid]');
   if(frames.length===0) return;
@@ -1196,109 +1141,32 @@ function mountVideoTrackers(studentId){
       try{
         player = new YT.Player(frame.id, {
           events: {
-            onReady: () => {
-              try{
-                const qSel = document.getElementById('vctl-quality-'+videoId);
-                const levels = player.getAvailableQualityLevels();
-                if(qSel && levels && levels.length){
-                  const labels = {hd2160:'2160p',hd1440:'1440p',hd1080:'1080p',hd720:'720p',large:'480p',medium:'360p',small:'240p',tiny:'144p'};
-                  qSel.innerHTML = '<option value="default">자동 화질</option>' +
-                    levels.filter(l=>labels[l]).map(l=>`<option value="${l}">${labels[l]}</option>`).join('');
-                }
-              }catch(err){}
-              updateVideoUI(videoId, player);
-            },
             onStateChange: (e) => {
               const entry = state.ytPlayers[videoId];
               if(!entry) return;
-              const playBtn = document.getElementById('vctl-playbtn-'+videoId);
-              const centerBtn = document.getElementById('vctl-center-'+videoId);
-              const playing = e.data === YT.PlayerState.PLAYING;
-              if(playBtn) playBtn.textContent = playing ? '⏸' : '▶';
-              if(centerBtn) centerBtn.style.display = playing ? 'none' : 'flex';
-              if(entry.uiTimer) clearInterval(entry.uiTimer);
-              if(playing){
-                entry.uiTimer = setInterval(() => updateVideoUI(videoId, player), 500);
-              }
-              if(playing){
+              if(e.data === YT.PlayerState.PLAYING){
                 entry.lastTick = Date.now();
                 if(entry.timer) clearInterval(entry.timer);
-                if(studentId){
-                  entry.timer = setInterval(() => {
-                    const now = Date.now();
-                    const elapsed = Math.min(10, Math.max(0, (now-entry.lastTick)/1000));
-                    entry.lastTick = now;
-                    try{
-                      const dur = player.getDuration();
-                      noteVideoWatchTime(studentId, videoId, elapsed, dur, false);
-                    }catch(err){}
-                  }, 5000);
-                }
+                entry.timer = setInterval(() => {
+                  const now = Date.now();
+                  const elapsed = Math.min(10, Math.max(0, (now-entry.lastTick)/1000));
+                  entry.lastTick = now;
+                  try{
+                    const dur = player.getDuration();
+                    noteVideoWatchTime(studentId, videoId, elapsed, dur, false);
+                  }catch(err){}
+                }, 5000);
               } else {
                 if(entry.timer){ clearInterval(entry.timer); entry.timer = null; }
-                if(studentId) flushWatchTick(entry, studentId, videoId, player, e.data===YT.PlayerState.ENDED);
+                flushWatchTick(entry, studentId, videoId, player, e.data===YT.PlayerState.ENDED);
               }
             }
           }
         });
       }catch(err){ return; }
-      state.ytPlayers[videoId] = { player, timer: null, uiTimer: null };
+      state.ytPlayers[videoId] = { player, timer: null };
     });
   });
-}
-function getVtPlayer(videoId){
-  return state.ytPlayers && state.ytPlayers[videoId] && state.ytPlayers[videoId].player;
-}
-function toggleVideoPlay(videoId){
-  const player = getVtPlayer(videoId);
-  if(!player) return;
-  try{
-    const state_ = player.getPlayerState();
-    if(state_ === YT.PlayerState.PLAYING) player.pauseVideo();
-    else player.playVideo();
-  }catch(err){}
-}
-function seekVideo(videoId, sliderVal){
-  const player = getVtPlayer(videoId);
-  if(!player) return;
-  const seekEl = document.getElementById('vctl-seek-'+videoId);
-  if(seekEl) seekEl.dataset.dragging = '1';
-  try{
-    const dur = player.getDuration();
-    player.seekTo(dur * (sliderVal/1000), true);
-  }catch(err){}
-  if(seekEl) setTimeout(()=>{ delete seekEl.dataset.dragging; }, 800);
-}
-function setVideoSpeed(videoId, rate){
-  const player = getVtPlayer(videoId);
-  if(!player) return;
-  try{ player.setPlaybackRate(rate); }catch(err){}
-  const group = document.getElementById('vctl-speedgroup-'+videoId);
-  if(group){
-    group.querySelectorAll('.vctl-speed-btn').forEach(b=>{
-      b.classList.toggle('active', parseFloat(b.dataset.rate)===rate);
-    });
-  }
-}
-function setVideoQuality(videoId, level){
-  const player = getVtPlayer(videoId);
-  if(!player) return;
-  try{ player.setPlaybackQuality(level); }catch(err){}
-}
-function toggleVideoMute(videoId){
-  const player = getVtPlayer(videoId);
-  if(!player) return;
-  const btn = document.getElementById('vctl-mutebtn-'+videoId);
-  try{
-    if(player.isMuted()){ player.unMute(); if(btn) btn.textContent='🔊'; }
-    else { player.mute(); if(btn) btn.textContent='🔇'; }
-  }catch(err){}
-}
-function toggleVideoFullscreen(videoId){
-  const wrap = document.getElementById('vwrap-'+videoId);
-  if(!wrap) return;
-  if(document.fullscreenElement) document.exitFullscreen();
-  else if(wrap.requestFullscreen) wrap.requestFullscreen();
 }
 async function addVideo(){
   const unit = document.getElementById('video-unit').value.trim();
@@ -2265,8 +2133,6 @@ function render(){
   }
   if(state.view==='student' && state.studentTab==='video' && state.currentUser){
     mountVideoTrackers(state.currentUser.studentId);
-  } else if(state.view==='teacher' && state.teacherTab==='classhub' && state.classHubTab==='video'){
-    mountVideoTrackers(null);
   }
 }
 
