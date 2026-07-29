@@ -324,6 +324,10 @@
   .compare-col .colhead{font-size:11px;color:var(--ink-soft);font-family:'JetBrains Mono',monospace;margin-bottom:6px;}
   .compare-col textarea{width:100%;min-height:80px;}
   @media (max-width:640px){ .compare-grid{grid-template-columns:1fr;} }
+  .ai-solution-box{margin:12px 0;border:1px solid var(--card-border);border-radius:6px;overflow:hidden;}
+  .ai-solution-toggle{width:100%;text-align:left;background:#FBFAF8;border:none;padding:10px 14px;font-size:12.5px;color:var(--ink);cursor:pointer;font-weight:500;}
+  .ai-solution-toggle:hover{background:#F3F0EA;}
+  .ai-solution-content{padding:12px 14px;font-size:13px;white-space:pre-wrap;line-height:1.6;border-top:1px solid var(--card-border);color:var(--ink-soft);}
   .homework-card{border:1px solid var(--card-border);border-radius:6px;padding:16px;margin-bottom:12px;}
   .homework-pending{color:var(--ink-soft);font-size:13px;font-style:italic;padding:10px;background:#FBFAF8;border-radius:4px;}
   .home-icon-row{display:flex;gap:22px;justify-content:center;flex-wrap:wrap;}
@@ -514,6 +518,7 @@ async function regenerateOneWithAI(bankId){
   if(twin){
     b.variantContent = twin.content;
     b.variantAnswer = twin.answer;
+    b.aiSolution = twin.solution;
     b.status = 'pending';
     await dbSet('problem-bank', DATA.problemBank);
     await bumpAIQuotaUsed();
@@ -545,6 +550,7 @@ async function processAIQueue(){
     if(twin){
       b.variantContent = twin.content;
       b.variantAnswer = twin.answer;
+      b.aiSolution = twin.solution;
       await bumpAIQuotaUsed();
       ok++;
     }
@@ -560,6 +566,15 @@ async function processAIQueue(){
   showToast(ok + '개 쌍둥이 문제가 생성되었습니다. 검토 후 공개해주세요.' + (leftover>0 ? ` (남은 ${leftover}개는 내일 한도 초기화 후 처리해주세요)` : ''));
   render();
 }
+// AI가 프롬프트 지시를 놓쳐서 "times"/"le"/"ge" 같은 영단어를 LaTeX 명령어 대신 그대로
+// 쓰는 경우가 있어서(프롬프트 개선과 별개로) 이중 안전장치로 한 번 더 다듬는다.
+function sanitizeAiMathText(s){
+  if(!s) return s;
+  return s
+    .replace(/(?<!\\)\btimes\b/gi, '\\times')
+    .replace(/(?<!\\)\bLEQ\b/gi, '\\leq')
+    .replace(/(?<!\\)\bGEQ\b/gi, '\\geq');
+}
 async function generateTwinViaAI(content, answer, image){
   try{
     const res = await withTimeout(fetch(AI_WORKER_URL, {
@@ -570,7 +585,11 @@ async function generateTwinViaAI(content, answer, image){
     if(!res.ok) throw new Error('worker http ' + res.status);
     const data = await res.json();
     if(!data.content || !data.answer) throw new Error('incomplete AI result');
-    return { content: data.content, answer: data.answer };
+    return {
+      content: sanitizeAiMathText(data.content),
+      answer: sanitizeAiMathText(data.answer),
+      solution: data.solution || ''
+    };
   }catch(e){
     console.error('AI 쌍둥이 생성 실패', e);
     return null;
@@ -669,6 +688,7 @@ let state = {
   attendanceDate: '',
   attDraft: {},
   attDraftKey: null,
+  solutionOpen: {},
   homeworkDetailId: null,
   classHubId: null,
   classHubTab: 'students',
@@ -1628,6 +1648,13 @@ function bankCardHTML(b, editable){
         }
       </div>
     </div>
+    ${b.aiSolution ? `
+    <div class="ai-solution-box">
+      <button class="ai-solution-toggle" onclick="state.solutionOpen['${b.id}']=!state.solutionOpen['${b.id}']; render()">
+        🔍 AI 단계별 풀이 과정 검증 ${state.solutionOpen[b.id]?'▲':'▼'}
+      </button>
+      ${state.solutionOpen[b.id] ? `<div class="ai-solution-content">${escHtml(b.aiSolution)}</div>` : ''}
+    </div>` : ''}
     ${actions}
   </div>`;
 }
