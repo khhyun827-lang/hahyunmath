@@ -312,6 +312,11 @@
   .mc-choice-group{display:flex;gap:8px;flex-wrap:wrap;}
   .mc-choice-btn{border:1px solid var(--card-border);background:var(--white);border-radius:6px;width:44px;height:36px;font-size:15px;cursor:pointer;}
   .mc-choice-btn.active{background:var(--red-pen);color:#fff;border-color:var(--red-pen);}
+  .unit-check-list{display:flex;flex-direction:column;gap:2px;}
+  .unit-check-item{display:flex;align-items:center;gap:8px;padding:9px 4px;border-bottom:1px solid #F0EEE7;font-size:13.5px;cursor:pointer;user-select:none;}
+  .unit-check-item:last-child{border-bottom:none;}
+  .unit-check-item.checked{color:var(--green-ok);font-weight:700;}
+  .unit-check-item input{width:16px;height:16px;cursor:pointer;}
 
   /* ---------- 오답문제 검토 / DB ---------- */
   .review-card{border:1px solid var(--card-border);border-radius:6px;padding:16px;margin-bottom:14px;}
@@ -700,6 +705,17 @@ let DATA = {
   exams: [], problemBank: [], unitBank: [], assignments: []
 };
 const UNITS = ['공통수학1', '공통수학2', '대수', '미적분Ⅰ', '확률과통계', '기하', '미적분Ⅱ'];
+// 반별 진도 체크리스트용 과목별 단원 목록. 공통수학1은 실제 사용 목록 그대로, 나머지는
+// 2022 개정 교육과정 기준으로 채워둔 추정치라 필요하면 직접 고쳐도 됨.
+const UNIT_CHAPTERS = {
+  '공통수학1': ['다항식의 연산','항등식과 나머지정리','인수분해','복소수','이차방정식','이차함수','여러가지 방정식','여러가지 부등식','경우의 수','행렬'],
+  '공통수학2': ['평면좌표','직선의 방정식','원의 방정식','도형의 이동','집합','명제','함수','유리함수와 무리함수'],
+  '대수': ['지수와 로그','지수함수와 로그함수','삼각함수의 뜻과 그래프','삼각함수의 활용','등차수열과 등비수열','수열의 합','수학적 귀납법'],
+  '미적분Ⅰ': ['함수의 극한','함수의 연속','다항함수의 미분법','도함수의 활용','다항함수의 적분법'],
+  '확률과통계': ['경우의 수(순열과 조합)','확률의 뜻과 활용','조건부확률','이산확률변수와 확률분포','이항분포','정규분포','통계적 추정'],
+  '기하': ['이차곡선','평면벡터','공간도형','공간좌표'],
+  '미적분Ⅱ': ['수열의 극한','여러 가지 함수의 미분','여러 가지 미분법','도함수의 활용','여러 가지 적분법','정적분의 활용'],
+};
 
 function showToast(msg){
   state.toast = msg;
@@ -952,18 +968,6 @@ async function deleteScore(sid, idx){
   render();
 }
 
-/* =================== 진도 / 과제 =================== */
-async function updateProgress(){
-  const sid = state.teacherSelectedStudent;
-  if(!sid) return;
-  const unit = document.getElementById('progress-unit').value.trim();
-  const percent = parseInt(document.getElementById('progress-percent').value)||0;
-  const rec = await loadRecord(sid);
-  rec.progress = {unit, percent: Math.max(0,Math.min(100,percent))};
-  await saveRecord(sid);
-  showToast('진도가 업데이트되었습니다.');
-  render();
-}
 /* =================== 과제(숙제) — 반 단위 등록, 데일리퀴즈와 동일한 구조 =================== */
 async function addHomework(){
   const classId = document.getElementById('hw-class').value;
@@ -2486,12 +2490,13 @@ function studentHTML(){
     const featuredVideo = inProgressVideo || myVideosH.find(v=>!(rec.videoProgress[v.id] && rec.videoProgress[v.id].completed)) || myVideosH[0];
     const featuredProgress = featuredVideo ? rec.videoProgress[featuredVideo.id] : null;
     const featuredVid = featuredVideo ? extractYouTubeId(featuredVideo.url) : null;
+    const clsProgressH = getClassProgress(myClassIdH);
 
     body = `
     <div class="home-header-row">
       <div class="home-greeting">
         <h2>${escHtml(me.name||state.currentUser.name)}님, 오늘도 화이팅! 🚀</h2>
-        <p>${classNameOf(myClassIdH)}${rec.progress.unit?' · 현재 진도 '+escHtml(rec.progress.unit):''}</p>
+        <p>${classNameOf(myClassIdH)}${clsProgressH.subject?' · 현재 진도 '+escHtml(clsProgressH.subject):''}</p>
       </div>
       <div class="home-user-badge">👤 ${escHtml(me.name||state.currentUser.name)}${me.school?` (${escHtml(me.school)} ${escHtml(me.grade||'')})`:me.grade?` (${escHtml(me.grade)})`:''}</div>
     </div>
@@ -2506,9 +2511,9 @@ function studentHTML(){
           </div>`).join('')}</div>`}
       </div>
       <div class="home-card" style="text-align:center;">
-        <h4 style="justify-content:center;">🏆 이달의 진도 성취도</h4>
-        <div class="home-ring-wrap">${progressRingSVG(rec.progress.percent||0)}</div>
-        <p style="font-size:12.5px;color:var(--ink-soft);margin-top:10px;">${rec.progress.unit?escHtml(rec.progress.unit)+' 진행중':'아직 등록된 진도가 없습니다.'}</p>
+        <h4 style="justify-content:center;">🏆 반 진도 성취도</h4>
+        <div class="home-ring-wrap">${progressRingSVG(clsProgressH.percent)}</div>
+        <p style="font-size:12.5px;color:var(--ink-soft);margin-top:10px;">${clsProgressH.subject?escHtml(clsProgressH.subject)+` (${clsProgressH.doneCount}/${clsProgressH.chapters.length}단원)`:'아직 등록된 진도가 없습니다.'}</p>
       </div>
       <div class="home-card">
         <h4>💬 무엇이든 물어보세요</h4>
@@ -2551,10 +2556,15 @@ function studentHTML(){
   } else if(state.studentTab==='progress'){
     const myClassIdP = (DATA.students.find(s=>s.studentId===sid)||{}).classId;
     const myHomework = DATA.assignments.filter(a=>!a.classId || a.classId===myClassIdP);
+    const cpP = getClassProgress(myClassIdP);
     body = `<div class="panel"><h3>현재 진도</h3>
-      <p>${escHtml(rec.progress.unit) || '아직 등록된 진도가 없습니다.'}</p>
-      <div class="progress-outer"><div class="progress-inner" style="width:${rec.progress.percent}%;"></div></div>
-      <div class="mono" style="font-size:12px;color:var(--ink-soft);">${rec.progress.percent}% 완료</div>
+      ${!cpP.subject ? '<div class="empty">아직 등록된 진도가 없습니다.</div>' : `
+      <p>${escHtml(cpP.subject)}</p>
+      <div class="progress-outer"><div class="progress-inner" style="width:${cpP.percent}%;"></div></div>
+      <div class="mono" style="font-size:12px;color:var(--ink-soft);margin-bottom:12px;">${cpP.doneCount} / ${cpP.chapters.length}단원 완료 · ${cpP.percent}%</div>
+      <div class="unit-check-list">
+        ${cpP.chapters.map(u=>`<div class="unit-check-item ${cpP.doneMap[u]?'checked':''}">${cpP.doneMap[u]?'✅':'⬜'} ${escHtml(u)}</div>`).join('')}
+      </div>`}
     </div>
     <div class="panel"><h3>과제</h3>
       ${myHomework.length===0?'<div class="empty">등록된 과제가 없습니다.</div>':
@@ -2879,6 +2889,54 @@ function classRosterHTML(classId){
     </table>`}
   </div>`;
 }
+// 반의 현재 진도(과목+완료 단원)를 계산한다. 학생 홈/진도탭에서도 재사용.
+function getClassProgress(classId){
+  const c = DATA.classes.find(x=>x.id===classId);
+  const subject = c && c.progress ? c.progress.subject : '';
+  const chapters = UNIT_CHAPTERS[subject] || [];
+  const doneMap = (c && c.progress && c.progress.unitsBySubject && c.progress.unitsBySubject[subject]) || {};
+  const doneCount = chapters.filter(u=>doneMap[u]).length;
+  const percent = chapters.length ? Math.round(doneCount/chapters.length*100) : 0;
+  return { subject, chapters, doneMap, doneCount, percent };
+}
+async function setClassProgressSubject(classId, subject){
+  const c = DATA.classes.find(x=>x.id===classId);
+  if(!c) return;
+  if(!c.progress) c.progress = { subject:'', unitsBySubject:{} };
+  c.progress.subject = subject;
+  await dbSet('classes', DATA.classes);
+  render();
+}
+async function toggleClassProgressUnit(classId, unit, checked){
+  const c = DATA.classes.find(x=>x.id===classId);
+  if(!c || !c.progress || !c.progress.subject) return;
+  const subject = c.progress.subject;
+  if(!c.progress.unitsBySubject[subject]) c.progress.unitsBySubject[subject] = {};
+  c.progress.unitsBySubject[subject][unit] = checked;
+  await dbSet('classes', DATA.classes);
+  render();
+}
+function teacherClassProgressHTML(classId){
+  const { subject, chapters, doneMap, doneCount, percent } = getClassProgress(classId);
+  return `<div class="panel">
+    <h3>진도 관리</h3>
+    <div class="field" style="max-width:260px;">
+      <label>과목</label>
+      <select onchange="setClassProgressSubject('${classId}', this.value)">
+        <option value="">-- 과목 선택 --</option>
+        ${UNITS.map(u=>`<option value="${u}" ${subject===u?'selected':''}>${u}</option>`).join('')}
+      </select>
+    </div>
+    ${!subject ? '<div class="empty">과목을 선택해주세요.</div>' : `
+    <div class="progress-outer" style="margin:14px 0;"><div class="progress-inner" style="width:${percent}%;"></div></div>
+    <div class="mono" style="font-size:12px;color:var(--ink-soft);margin-bottom:14px;">${doneCount} / ${chapters.length}단원 완료 · ${percent}%</div>
+    <div class="unit-check-list">
+      ${chapters.map(u=>`<label class="unit-check-item ${doneMap[u]?'checked':''}">
+        <input type="checkbox" ${doneMap[u]?'checked':''} onchange="toggleClassProgressUnit('${classId}','${escHtml(u)}',this.checked)">${escHtml(u)}
+      </label>`).join('')}
+    </div>`}
+  </div>`;
+}
 function teacherClassHubHTML(){
   if(!state.classHubId) return teacherClassesHTML();
   const c = DATA.classes.find(x=>x.id===state.classHubId);
@@ -2886,9 +2944,10 @@ function teacherClassHubHTML(){
   const tab = state.classHubTab || 'students';
   // 학생 명단에서 "상세보기"를 누르면 반 관리 화면 그대로(사이드바/서브탭 안 바꾸고) 학생 상세만 보여준다.
   if(tab==='students' && state.studentDetailId) return teacherStudentDetailHTML(state.studentDetailId);
-  const subtabs = [['students','학생 명단'],['attendance','출석부'],['homework','과제'],['quiz','데일리퀴즈'],['video','영상']];
+  const subtabs = [['students','학생 명단'],['progress','진도'],['attendance','출석부'],['homework','과제'],['quiz','데일리퀴즈'],['video','영상']];
   let sub;
-  if(tab==='attendance') sub = teacherAttendanceHTML(c.id);
+  if(tab==='progress') sub = teacherClassProgressHTML(c.id);
+  else if(tab==='attendance') sub = teacherAttendanceHTML(c.id);
   else if(tab==='homework') sub = teacherHomeworkHTML(c.id);
   else if(tab==='quiz') sub = teacherQuizHTML(c.id);
   else if(tab==='video') sub = videoByClassHTML(c.id);
@@ -2926,7 +2985,7 @@ function teacherStudentDetailHTML(sid){
   const s = DATA.students.find(s=>s.studentId===sid);
   if(!s){ state.studentDetailId=null; return teacherClassHubHTML(); }
   const rec = DATA.records[sid];
-  const subtabs = [['info','기본정보'],['grades','성적'],['progress','진도/과제'],['attendance','출석']];
+  const subtabs = [['info','기본정보'],['grades','성적'],['attendance','출석']];
   let sub = '';
   if(!rec){
     // "상세보기"는 상태만 바꾸고 render()만 부르지, 그 학생 기록을 실제로 불러오진 않아서
@@ -2970,13 +3029,6 @@ function teacherStudentDetailHTML(sid){
     <table><tr><th>날짜</th><th>시험명</th><th>점수</th><th></th></tr>
     ${rec.scores.map((sc,i)=>`<tr><td>${sc.date}</td><td>${sc.name}</td><td>${sc.score}/${sc.total}</td><td><button class="btn btn-red btn-small" onclick="deleteScore('${sid}',${i})">삭제</button></td></tr>`).join('')}
     </table>`}`;
-  } else if(state.studentDetailTab==='progress'){
-    sub = `<div class="inline-form">
-      <div class="field" style="flex:2;"><label>현재 단원</label><input id="progress-unit" value="${escHtml(rec.progress.unit||'')}" placeholder="예: 대수 - 지수함수"></div>
-      <div class="field"><label>진도율(%)</label><input id="progress-percent" type="number" min="0" max="100" value="${rec.progress.percent||0}"></div>
-      <button class="btn btn-primary" onclick="updateProgress()">저장</button>
-    </div>
-    <p style="font-size:12.5px;color:var(--ink-soft);margin-top:14px;">과제(숙제)는 이제 학생 개별이 아니라 [과제] 탭에서 반 단위로 한 번에 등록합니다.</p>`;
   } else if(state.studentDetailTab==='attendance'){
     sub = `<div class="inline-form">
       <div class="field"><label>날짜</label><input id="att-date" type="date"></div>
