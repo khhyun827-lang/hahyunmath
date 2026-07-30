@@ -663,6 +663,7 @@ let state = {
   pendingStudentTab: null,
   studentTab: 'home',
   teacherTab: 'home',
+  settingsSubTab: 'assistants',
   teacherSelectedStudent: null,
   studentDetailId: null,
   studentDetailTab: 'info',
@@ -686,6 +687,7 @@ let state = {
   aiRegeneratingId: null,
   reviewFocusMode: false,
   reviewFocusIndex: 0,
+  reviewShowAll: false,
   videoByClassId: '',
   videoStudentDetailId: null,
   ytPlayers: null,
@@ -2712,9 +2714,9 @@ function teacherHTML(){
   const groups = [
     ['홈', [['home','홈']]],
     ['반 관리', [['classhub','반 목록 / 반별 관리']]],
-    ['오답 시스템', [['exams','시험지'],['review','오답 문제 검토'],['submissions','제출 현황'],['bank','문제 DB'],['unitbank','단원 문항 창고']]],
+    ['오답 시스템', [['exams','시험지'],['review','오답 문제 검토'],['unitbank','보충문제 창고'],['submissions','제출 현황']]],
     ['소통', [['clinic','클리닉'],['notices','공지'],['qna','질의응답'],['chat','채팅']]],
-    ['설정', [['assistants','조교'],['settings','관리자']]],
+    ['설정', [['settings','설정']]],
   ];
   let body = '';
   if(state.teacherTab==='home') body = teacherHomeHTML();
@@ -2726,9 +2728,7 @@ function teacherHTML(){
   else if(state.teacherTab==='exams') body = teacherExamsHTML();
   else if(state.teacherTab==='review') body = teacherReviewHTML();
   else if(state.teacherTab==='submissions') body = teacherSubmissionsHTML();
-  else if(state.teacherTab==='bank') body = teacherBankHTML();
   else if(state.teacherTab==='unitbank') body = teacherUnitBankHTML();
-  else if(state.teacherTab==='assistants') body = teacherAssistantsHTML();
   else if(state.teacherTab==='settings') body = teacherSettingsHTML();
   else body = teacherClassHubHTML();
 
@@ -3458,7 +3458,8 @@ function teacherExamsHTML(){
 function teacherReviewHTML(){
   loadAIQuotaIfNeeded();
   loadAllRecordsIfNeeded();
-  const pending = DATA.problemBank.filter(b=>b.status!=='approved');
+  const pendingCount = DATA.problemBank.filter(b=>b.status!=='approved').length;
+  const list = state.reviewShowAll ? DATA.problemBank : DATA.problemBank.filter(b=>b.status!=='approved');
   const needsAI = DATA.problemBank.filter(b=>!b.variantContent && !b.variantAnswer);
   const remaining = state.aiQuotaUsed===null ? null : Math.max(0, AI_DAILY_LIMIT - state.aiQuotaUsed);
   return `
@@ -3476,34 +3477,24 @@ function teacherReviewHTML(){
   </div>` : ''}
   <div class="panel">
     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
-      <h3 style="margin:0;">검토 대기 중인 문제</h3>
+      <h3 style="margin:0;">${state.reviewShowAll ? '전체 문제 이력' : '검토 대기 중인 문제'}</h3>
       <div style="display:flex;align-items:center;gap:8px;">
-        <span class="badge badge-no" style="font-size:12px;padding:4px 12px;">대기 중: ${pending.length}건</span>
-        ${pending.length>1 ? `<button class="btn btn-small" onclick="state.reviewFocusMode=!state.reviewFocusMode; state.reviewFocusIndex=0; render()">${state.reviewFocusMode?'전체 목록으로':'한 개씩 검토하기'}</button>` : ''}
+        <span class="badge badge-no" style="font-size:12px;padding:4px 12px;">대기 중: ${pendingCount}건</span>
+        ${!state.reviewShowAll && list.length>1 ? `<button class="btn btn-small" onclick="state.reviewFocusMode=!state.reviewFocusMode; state.reviewFocusIndex=0; render()">${state.reviewFocusMode?'전체 목록으로':'한 개씩 검토하기'}</button>` : ''}
+        <button class="btn btn-small" onclick="state.reviewShowAll=!state.reviewShowAll; state.reviewFocusMode=false; render()">${state.reviewShowAll ? '대기중만 보기' : `전체 이력 보기 (${DATA.problemBank.length}건)`}</button>
       </div>
     </div>
-    <p style="font-size:12.5px;color:var(--ink-soft);margin-top:8px;">시험지를 등록하거나 학생이 틀린 문제를 제출하면 여기에 빈 항목이 자동 생성됩니다. AI로 채우거나 직접 입력한 뒤, <b>1차·2차 검토를 모두 완료</b>해야 학생에게 공개됩니다.</p>
-    ${pending.length===0?'<div class="empty">검토할 문제가 없습니다.</div>':
-      state.reviewFocusMode ? (() => {
-        const idx = Math.min(state.reviewFocusIndex, pending.length-1);
+    <p style="font-size:12.5px;color:var(--ink-soft);margin-top:8px;">${state.reviewShowAll ? '지금까지 생성된 모든 오답 쌍둥이 문제 기록입니다. 상태와 상관없이 전체 이력이 보관됩니다.' : '시험지를 등록하거나 학생이 틀린 문제를 제출하면 여기에 빈 항목이 자동 생성됩니다. AI로 채우거나 직접 입력한 뒤, <b>1차·2차 검토를 모두 완료</b>해야 학생에게 공개됩니다.'}</p>
+    ${list.length===0?'<div class="empty">문제가 없습니다.</div>':
+      (!state.reviewShowAll && state.reviewFocusMode) ? (() => {
+        const idx = Math.min(state.reviewFocusIndex, list.length-1);
         return `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
           <button class="btn btn-small" ${idx<=0?'disabled':''} onclick="state.reviewFocusIndex=${idx-1}; render()">← 이전</button>
-          <span class="mono" style="font-size:12px;color:var(--ink-soft);">${idx+1} / ${pending.length}</span>
-          <button class="btn btn-small" ${idx>=pending.length-1?'disabled':''} onclick="state.reviewFocusIndex=${idx+1}; render()">다음 →</button>
-        </div>` + bankCardHTML(pending[idx], true);
+          <span class="mono" style="font-size:12px;color:var(--ink-soft);">${idx+1} / ${list.length}</span>
+          <button class="btn btn-small" ${idx>=list.length-1?'disabled':''} onclick="state.reviewFocusIndex=${idx+1}; render()">다음 →</button>
+        </div>` + bankCardHTML(list[idx], true);
       })()
-      : pending.map(b=>bankCardHTML(b, true)).join('')}
-  </div>`;
-}
-
-/* ---------- 문제 DB ---------- */
-function teacherBankHTML(){
-  return `
-  <div class="panel">
-    <h3>문제 DB (${DATA.problemBank.length}건)</h3>
-    <p style="font-size:12.5px;color:var(--ink-soft);margin-top:-8px;">지금까지 생성된 모든 오답 쌍둥이 문제 기록입니다. 상태와 상관없이 전체 이력이 보관됩니다.</p>
-    ${DATA.problemBank.length===0?'<div class="empty">등록된 문제가 없습니다.</div>':
-    DATA.problemBank.map(b=>bankCardHTML(b, true)).join('')}
+      : list.map(b=>bankCardHTML(b, true)).join('')}
   </div>`;
 }
 
@@ -3603,8 +3594,22 @@ function teacherAssistantsHTML(){
   </div>`;
 }
 
-/* ---------- 관리자 설정 (상담신청 + 비밀번호) ---------- */
+/* ---------- 설정 (조교 + 관리자) ---------- */
 function teacherSettingsHTML(){
+  const tab = state.settingsSubTab || 'assistants';
+  const subtabs = [['assistants','조교'],['admin','관리자']];
+  const sub = tab==='admin' ? teacherSettingsAdminHTML() : teacherAssistantsHTML();
+  return `
+  <div class="panel">
+    <div class="subtab-bar">
+      ${subtabs.map(t=>`<button class="subtab-btn ${tab===t[0]?'active':''}" onclick="state.settingsSubTab='${t[0]}'; render()">${t[1]}</button>`).join('')}
+    </div>
+  </div>
+  ${sub}`;
+}
+
+/* ---------- 관리자 설정 (상담신청 + 비밀번호) ---------- */
+function teacherSettingsAdminHTML(){
   return `
   <div class="panel">
     <h3>학생 계정 추가</h3>
