@@ -2513,7 +2513,7 @@ function studentHTML(){
       <div class="home-card" style="text-align:center;">
         <h4 style="justify-content:center;">🏆 반 진도 성취도</h4>
         <div class="home-ring-wrap">${progressRingSVG(clsProgressH.percent)}</div>
-        <p style="font-size:12.5px;color:var(--ink-soft);margin-top:10px;">${clsProgressH.subject?escHtml(clsProgressH.subject)+` (${clsProgressH.doneCount}/${clsProgressH.chapters.length}단원)`:'아직 등록된 진도가 없습니다.'}</p>
+        <p style="font-size:12.5px;color:var(--ink-soft);margin-top:10px;">${clsProgressH.subject?escHtml(clsProgressH.subject):'아직 등록된 진도가 없습니다.'}</p>
       </div>
       <div class="home-card">
         <h4>💬 무엇이든 물어보세요</h4>
