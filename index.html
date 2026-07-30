@@ -2702,7 +2702,6 @@ function teacherHTML(){
   const groups = [
     ['홈', [['home','홈']]],
     ['반 관리', [['classhub','반 목록 / 반별 관리']]],
-    ['학생 관리', [['students','학생 목록']]],
     ['오답 시스템', [['exams','시험지'],['review','오답 문제 검토'],['submissions','제출 현황'],['bank','문제 DB'],['unitbank','단원 문항 창고']]],
     ['소통', [['clinic','클리닉'],['notices','공지'],['qna','질의응답'],['chat','채팅']]],
     ['설정', [['assistants','조교'],['settings','관리자']]],
@@ -2710,7 +2709,6 @@ function teacherHTML(){
   let body = '';
   if(state.teacherTab==='home') body = teacherHomeHTML();
   else if(state.teacherTab==='classhub') body = teacherClassHubHTML();
-  else if(state.teacherTab==='students') body = teacherStudentsHTML();
   else if(state.teacherTab==='clinic') body = teacherClinicHTML();
   else if(state.teacherTab==='notices') body = teacherNoticesHTML();
   else if(state.teacherTab==='qna') body = teacherQnaHTML();
@@ -2751,7 +2749,7 @@ function teacherHomeHTML(){
     <div class="home-user-badge">🎓 김하현T</div>
   </div>
   <div class="home-grid-4">
-    <div class="home-stat-card accent-purple" onclick="state.teacherTab='students'; render()">
+    <div class="home-stat-card accent-purple" onclick="state.teacherTab='classhub'; state.classHubId=null; render()">
       <div class="home-stat-icon">👥</div>
       <div><div class="home-stat-num">${DATA.students.length}명</div><div class="home-stat-label">총 수강생</div></div>
     </div>
@@ -2877,7 +2875,7 @@ function classRosterHTML(classId){
     ${roster.length===0 ? '<div class="empty">이 반에 배정된 학생이 없습니다.</div>' : `
     <table><tr><th>아이디</th><th>이름</th><th>학년</th><th>학교</th><th></th></tr>
     ${roster.map(s=>`<tr><td>${s.studentId}</td><td>${escHtml(s.name)}</td><td>${escHtml(s.grade)}</td><td>${escHtml(s.school||'-')}</td>
-      <td><button class="btn btn-small" onclick="state.teacherTab='students'; state.studentDetailId='${s.studentId}'; state.teacherSelectedStudent='${s.studentId}'; state.studentDetailTab='info'; render()">상세보기</button></td></tr>`).join('')}
+      <td><button class="btn btn-small" onclick="state.studentDetailId='${s.studentId}'; state.teacherSelectedStudent='${s.studentId}'; state.studentDetailTab='info'; render()">상세보기</button></td></tr>`).join('')}
     </table>`}
   </div>`;
 }
@@ -2885,8 +2883,10 @@ function teacherClassHubHTML(){
   if(!state.classHubId) return teacherClassesHTML();
   const c = DATA.classes.find(x=>x.id===state.classHubId);
   if(!c){ state.classHubId=null; return teacherClassHubHTML(); }
-  const subtabs = [['students','학생 명단'],['attendance','출석부'],['homework','과제'],['quiz','데일리퀴즈'],['video','영상']];
   const tab = state.classHubTab || 'students';
+  // 학생 명단에서 "상세보기"를 누르면 반 관리 화면 그대로(사이드바/서브탭 안 바꾸고) 학생 상세만 보여준다.
+  if(tab==='students' && state.studentDetailId) return teacherStudentDetailHTML(state.studentDetailId);
+  const subtabs = [['students','학생 명단'],['attendance','출석부'],['homework','과제'],['quiz','데일리퀴즈'],['video','영상']];
   let sub;
   if(tab==='attendance') sub = teacherAttendanceHTML(c.id);
   else if(tab==='homework') sub = teacherHomeworkHTML(c.id);
@@ -2921,39 +2921,10 @@ function classOptionsHTML(selectedId){
   return `<option value="">미배정</option>` + DATA.classes.map(c=>`<option value="${c.id}" ${selectedId===c.id?'selected':''}>${c.name}</option>`).join('');
 }
 
-/* ---------- 학생 관리 (+ 상세 드릴다운) ---------- */
-function teacherStudentsHTML(){
-  if(state.studentDetailId){
-    return teacherStudentDetailHTML(state.studentDetailId);
-  }
-  return `
-  <div class="panel">
-    <h3>학생 추가</h3>
-    <div class="inline-form">
-      <div class="field"><label>아이디</label><input id="new-sid" placeholder="예: st01"></div>
-      <div class="field"><label>이름</label><input id="new-sname" placeholder="이름"></div>
-      <div class="field"><label>비밀번호</label><input id="new-spw" placeholder="비밀번호"></div>
-      <div class="field"><label>학년</label>
-        <select id="new-sgrade"><option>고1</option><option>고2</option><option>고3</option></select>
-      </div>
-      <div class="field"><label>학교</label><input id="new-sschool" placeholder="학교명 (선택)"></div>
-      <div class="field"><label>전화번호</label><input id="new-sphone" placeholder="010-0000-0000 (선택)"></div>
-      <div class="field"><label>반</label><select id="new-sclass">${classOptionsHTML(null)}</select></div>
-      <button class="btn btn-primary" onclick="addStudent()">추가</button>
-    </div>
-  </div>
-  <div class="panel">
-    <h3>학생 목록 (${DATA.students.length}명)</h3>
-    ${DATA.students.length===0?'<div class="empty">등록된 학생이 없습니다.</div>':`
-    <table><tr><th>아이디</th><th>이름</th><th>학년</th><th>학교</th><th>반</th><th>비밀번호</th><th></th></tr>
-    ${DATA.students.map(s=>`<tr><td>${s.studentId}</td><td>${escHtml(s.name)}</td><td>${escHtml(s.grade)}</td><td>${escHtml(s.school||'-')}</td><td>${classNameOf(s.classId)}</td><td class="mono">${escHtml(s.pw)}</td><td class="row-actions"><button class="btn btn-small" onclick="state.studentDetailId='${s.studentId}'; state.teacherSelectedStudent='${s.studentId}'; state.studentDetailTab='info'; render()">상세보기</button><button class="btn btn-red btn-small" onclick="deleteStudent('${s.studentId}')">삭제</button></td></tr>`).join('')}
-    </table>`}
-  </div>`;
-}
-
+/* ---------- 학생 상세 (반 관리 > 학생 명단에서 진입) ---------- */
 function teacherStudentDetailHTML(sid){
   const s = DATA.students.find(s=>s.studentId===sid);
-  if(!s){ state.studentDetailId=null; return teacherStudentsHTML(); }
+  if(!s){ state.studentDetailId=null; return teacherClassHubHTML(); }
   const rec = DATA.records[sid];
   const subtabs = [['info','기본정보'],['grades','성적'],['progress','진도/과제'],['attendance','출석']];
   let sub = '';
@@ -2982,7 +2953,10 @@ function teacherStudentDetailHTML(sid){
       <p style="font-size:12.5px;color:var(--ink-soft);margin-top:-4px;">출석부에서 결석 처리하며 링크를 넣으면 여기 쌓입니다. 이 학생에게만 보여요.</p>
       ${personalVideos.length===0 ? '<div class="empty">등록된 개인 영상이 없습니다.</div>' :
         personalVideos.map(v=>`<div class="row-actions" style="margin-bottom:6px;"><span style="font-size:13px;flex:1;">${escHtml(v.title)}</span><button class="btn btn-red btn-small" onclick="deleteVideo('${v.id}')">삭제</button></div>`).join('')}`;
-    })()}`;
+    })()}
+    <h3 style="margin-top:22px;font-size:14px;">학생 삭제</h3>
+    <p style="font-size:12.5px;color:var(--ink-soft);margin-top:-4px;">성적·출석·과제·오답숙제 기록이 모두 함께 삭제되며 되돌릴 수 없습니다.</p>
+    <button class="btn btn-red" onclick="deleteStudent('${sid}')">이 학생 삭제</button>`;
   } else if(state.studentDetailTab==='grades'){
     sub = `<div class="inline-form">
       <div class="field"><label>시험명</label><input id="score-name" placeholder="예: 3월 모의고사"></div>
@@ -3580,6 +3554,22 @@ function teacherAssistantsHTML(){
 /* ---------- 관리자 설정 (상담신청 + 비밀번호) ---------- */
 function teacherSettingsHTML(){
   return `
+  <div class="panel">
+    <h3>학생 계정 추가</h3>
+    <p style="font-size:12.5px;color:var(--ink-soft);margin-top:-8px;">등록 후에는 [반 관리] &gt; 반을 열고 학생 명단에서 상세보기로 수정·삭제할 수 있습니다.</p>
+    <div class="inline-form">
+      <div class="field"><label>아이디</label><input id="new-sid" placeholder="예: st01"></div>
+      <div class="field"><label>이름</label><input id="new-sname" placeholder="이름"></div>
+      <div class="field"><label>비밀번호</label><input id="new-spw" placeholder="비밀번호"></div>
+      <div class="field"><label>학년</label>
+        <select id="new-sgrade"><option>고1</option><option>고2</option><option>고3</option></select>
+      </div>
+      <div class="field"><label>학교</label><input id="new-sschool" placeholder="학교명 (선택)"></div>
+      <div class="field"><label>전화번호</label><input id="new-sphone" placeholder="010-0000-0000 (선택)"></div>
+      <div class="field"><label>반</label><select id="new-sclass">${classOptionsHTML(null)}</select></div>
+      <button class="btn btn-primary" onclick="addStudent()">추가</button>
+    </div>
+  </div>
   <div class="panel">
     <h3>관리자 비밀번호 변경</h3>
     <div class="field"><label>현재 비밀번호</label><input id="pw-current" type="password"></div>
