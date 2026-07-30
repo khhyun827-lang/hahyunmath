@@ -2931,6 +2931,9 @@ function teacherStudentDetailHTML(sid){
   const subtabs = [['info','기본정보'],['grades','성적'],['progress','진도/과제'],['attendance','출석']];
   let sub = '';
   if(!rec){
+    // "상세보기"는 상태만 바꾸고 render()만 부르지, 그 학생 기록을 실제로 불러오진 않아서
+    // 여기서 직접 불러온 뒤 끝나면 다시 그린다 — 이걸 안 하면 "불러오는 중..."에서 영원히 멈춘다.
+    loadRecord(sid).then(()=>render());
     return `<div class="empty">불러오는 중...</div>`;
   }
   if(state.studentDetailTab==='info'){
