@@ -253,7 +253,7 @@
   .subtab-btn.active{background:var(--blue-deep);color:#fff;border-color:var(--blue-deep);}
 
   /* ---------- 데일리퀴즈 ---------- */
-  .quiz-card{border:1px solid var(--card-border);border-radius:4px;padding:16px;margin-bottom:12px;background:#FBFAF8;}
+  .quiz-card{border:1px solid var(--card-border);border-radius:6px;padding:16px;margin-bottom:12px;background:#FBFAF8;}
   .quiz-card .quiz-meta{font-size:11px;color:var(--ink-soft);font-family:'JetBrains Mono',monospace;margin-bottom:6px;}
   .quiz-card .quiz-title{font-weight:700;margin-bottom:6px;}
   .quiz-card .quiz-content{font-size:13.5px;color:var(--ink-soft);white-space:pre-wrap;}
@@ -267,7 +267,7 @@
   .status-완료{background:#EDEBE3;color:var(--ink-soft);}
 
   /* ---------- 질의응답 ---------- */
-  .qna-card{border:1px solid var(--card-border);border-radius:4px;padding:16px;margin-bottom:12px;}
+  .qna-card{border:1px solid var(--card-border);border-radius:6px;padding:16px;margin-bottom:12px;}
   .qna-q{font-weight:700;margin-bottom:4px;}
   .qna-meta{font-size:11px;color:var(--ink-soft);font-family:'JetBrains Mono',monospace;margin-bottom:8px;}
   .qna-answer{margin-top:10px;padding:10px 12px;background:#FBF3F2;border-radius:4px;font-size:13.5px;}
@@ -302,7 +302,7 @@
   .qrow .qfields{flex:1;display:flex;gap:8px;flex-wrap:wrap;}
   .qrow .qfields textarea{flex:2;min-width:200px;min-height:44px;}
   .qrow .qfields input{flex:1;min-width:100px;}
-  .exam-card{border:1px solid var(--card-border);border-radius:4px;padding:14px 16px;margin-bottom:10px;}
+  .exam-card{border:1px solid var(--card-border);border-radius:6px;padding:14px 16px;margin-bottom:10px;}
   .exam-card .exam-title{font-weight:700;}
   .exam-card .exam-meta{font-size:11px;color:var(--ink-soft);font-family:'JetBrains Mono',monospace;margin-bottom:6px;}
   .wrong-check-grid{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0;}
@@ -319,7 +319,7 @@
   .unit-check-item input{width:16px;height:16px;cursor:pointer;}
 
   /* ---------- 오답문제 검토 / DB ---------- */
-  .review-card{border:1px solid var(--card-border);border-radius:6px;padding:16px;margin-bottom:14px;}
+  .data-card{border:1px solid var(--card-border);border-radius:6px;padding:16px;margin-bottom:14px;}
   .review-status{font-size:11px;padding:3px 10px;border-radius:20px;font-family:'JetBrains Mono',monospace;}
   .review-status-pending{background:#FFF3D6;color:#9A7000;}
   .review-status-review1{background:#DCEBFB;color:#2464A8;}
@@ -345,8 +345,8 @@
   .home-grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:16px;align-items:stretch;}
   .home-grid-2{display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-bottom:16px;align-items:stretch;}
   @media (max-width:900px){ .home-grid-3{grid-template-columns:1fr;} .home-grid-2{grid-template-columns:1fr;} }
-  .home-card{background:var(--white);border:1px solid var(--card-border);border-radius:10px;padding:20px;}
-  .home-card h4{margin:0 0 14px;font-size:14px;display:flex;align-items:center;gap:6px;}
+  .home-card{background:var(--white);border:1px solid var(--card-border);border-radius:6px;padding:20px;}
+  .home-card h4{margin:0 0 14px;font-size:14px;font-family:'Noto Serif KR',serif;display:flex;align-items:center;gap:6px;}
   .home-todo-list .home-todo-row{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid #F0EEE7;font-size:13px;cursor:pointer;}
   .home-todo-list .home-todo-row:last-child{border-bottom:none;}
   .home-tag{display:inline-block;font-size:10.5px;padding:2px 7px;border-radius:20px;font-family:'JetBrains Mono',monospace;margin-right:4px;}
@@ -365,7 +365,7 @@
   .home-grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:16px;}
   @media (max-width:900px){ .home-grid-4{grid-template-columns:repeat(2,1fr);} }
   @media (max-width:480px){ .home-grid-4{grid-template-columns:1fr;} }
-  .home-stat-card{background:var(--white);border:1px solid var(--card-border);border-left-width:4px;border-radius:8px;padding:16px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:box-shadow .15s;}
+  .home-stat-card{background:var(--white);border:1px solid var(--card-border);border-left-width:4px;border-radius:6px;padding:16px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:box-shadow .15s;}
   .home-stat-card:hover{box-shadow:0 2px 10px rgba(0,0,0,.06);}
   .home-stat-card.accent-purple{border-left-color:#6C3E9A;}
   .home-stat-card.accent-red{border-left-color:var(--red-pen);}
@@ -1474,7 +1474,7 @@ function wrongSubmitWidgetHTML(myExams){
       </select>
     </div>
     ${selectedExam ? `
-    <p style="font-size:13px;color:var(--ink-soft);margin-top:14px;">틀린 문제 번호를 모두 선택해주세요.</p>
+    <p class="hint">틀린 문제 번호를 모두 선택해주세요.</p>
     <div class="wrong-check-grid">
       ${selectedExam.questions.map(q=>`
         <label class="wrong-check-item ${state.wrongChecked[q.no]?'checked':''}" onclick="event.preventDefault(); toggleWrongCheck(${q.no})">
@@ -1603,7 +1603,7 @@ function teacherSubmissionsHTML(){
   return `
   <div class="panel">
     <h3>학생 오답숙제 제출 현황</h3>
-    <p style="font-size:12.5px;color:var(--ink-soft);margin-top:-8px;">학생별로 오답 숙제를 몇 개 받았고, 그중 몇 개를 풀었고, 몇 개를 맞았는지 보여줍니다. 이름을 누르면 문항별 상세를 볼 수 있어요.</p>
+    <p class="hint" style="margin-top:-8px;">학생별로 오답 숙제를 몇 개 받았고, 그중 몇 개를 풀었고, 몇 개를 맞았는지 보여줍니다. 이름을 누르면 문항별 상세를 볼 수 있어요.</p>
     <div class="inline-form" style="margin-bottom:14px;">
       <div class="field"><label>반 필터</label><select onchange="state.submissionsFilter=this.value; render()">
         <option value="">전체</option>
@@ -1677,7 +1677,7 @@ function bankCardHTML(b, editable){
     imgVal==='empty' ? '' :
     `<img src="${imgVal}" style="max-width:220px;max-height:220px;margin-top:8px;border:1px solid var(--card-border);border-radius:4px;display:block;">`
   ) : '';
-  return `<div class="review-card">
+  return `<div class="data-card">
     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;">
       <div class="mono" style="font-size:12px;color:var(--ink-soft);">${exam?escHtml(exam.title):'(삭제된 시험지)'} · ${b.questionNo}번${requesters>0?` · 요청자 ${requesters}명`:''}</div>
       <span class="review-status review-status-${b.status}">${statusLabel}</span>
@@ -2515,7 +2515,7 @@ function studentHTML(){
       <div class="home-card" style="text-align:center;">
         <h4 style="justify-content:center;">🏆 반 진도 성취도</h4>
         <div class="home-ring-wrap">${progressRingSVG(clsProgressH.percent)}</div>
-        <p style="font-size:12.5px;color:var(--ink-soft);margin-top:10px;">${clsProgressH.subject?escHtml(clsProgressH.subject):'아직 등록된 진도가 없습니다.'}</p>
+        <p class="hint" style="margin-top:10px;">${clsProgressH.subject?escHtml(clsProgressH.subject):'아직 등록된 진도가 없습니다.'}</p>
       </div>
       <div class="home-card">
         <h4>💬 무엇이든 물어보세요</h4>
@@ -3005,16 +3005,16 @@ function teacherStudentDetailHTML(sid){
       <div class="field"><label>반</label><select id="info-sclass">${classOptionsHTML(s.classId)}</select></div>
       <button class="btn btn-primary" onclick="updateStudentInfo('${sid}')">저장</button>
     </div>
-    <p style="font-size:12.5px;color:var(--ink-soft);">반을 바꿔도 성적·출석·과제·오답숙제 기록은 그대로 유지됩니다. 학생이 반을 옮길 때는 삭제 후 재등록하지 말고 여기서 반만 바꿔주세요.</p>
+    <p class="hint">반을 바꿔도 성적·출석·과제·오답숙제 기록은 그대로 유지됩니다. 학생이 반을 옮길 때는 삭제 후 재등록하지 말고 여기서 반만 바꿔주세요.</p>
     ${(() => {
       const personalVideos = DATA.videos.filter(v=>v.studentId===sid);
       return `<h3 style="margin-top:22px;font-size:14px;">개인 보충 영상</h3>
-      <p style="font-size:12.5px;color:var(--ink-soft);margin-top:-4px;">출석부에서 결석 처리하며 링크를 넣으면 여기 쌓입니다. 이 학생에게만 보여요.</p>
+      <p class="hint" style="margin-top:-4px;">출석부에서 결석 처리하며 링크를 넣으면 여기 쌓입니다. 이 학생에게만 보여요.</p>
       ${personalVideos.length===0 ? '<div class="empty">등록된 개인 영상이 없습니다.</div>' :
         personalVideos.map(v=>`<div class="row-actions" style="margin-bottom:6px;"><span style="font-size:13px;flex:1;">${escHtml(v.title)}</span><button class="btn btn-red btn-small" onclick="deleteVideo('${v.id}')">삭제</button></div>`).join('')}`;
     })()}
     <h3 style="margin-top:22px;font-size:14px;">학생 삭제</h3>
-    <p style="font-size:12.5px;color:var(--ink-soft);margin-top:-4px;">성적·출석·과제·오답숙제 기록이 모두 함께 삭제되며 되돌릴 수 없습니다.</p>
+    <p class="hint" style="margin-top:-4px;">성적·출석·과제·오답숙제 기록이 모두 함께 삭제되며 되돌릴 수 없습니다.</p>
     <button class="btn btn-red" onclick="deleteStudent('${sid}')">이 학생 삭제</button>`;
   } else if(state.studentDetailTab==='grades'){
     sub = `<div class="inline-form">
@@ -3212,7 +3212,7 @@ function teacherHomeworkHTML(fixedClassId){
       const roster = fixedClassId ? DATA.students.filter(s=>s.classId===fixedClassId) : (a.classId ? DATA.students.filter(s=>s.classId===a.classId) : DATA.students);
       const doneCount = state.allRecordsLoaded ? roster.filter(s=>state.allRecords[s.studentId] && state.allRecords[s.studentId].assignmentsDone && state.allRecords[s.studentId].assignmentsDone[a.id]).length : null;
       const open = state.homeworkDetailId===a.id;
-      return `<div class="review-card" style="margin-bottom:10px;">
+      return `<div class="data-card" style="margin-bottom:10px;">
         <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;">
           <div><b>${escHtml(a.title)}</b> <span class="mono" style="font-size:12px;color:var(--ink-soft);">· ${quizClassLabel(a.classId)}${a.dueDate?' · 마감 '+a.dueDate:''}</span></div>
           <button class="btn btn-red btn-small" onclick="deleteHomework('${a.id}')">삭제</button>
@@ -3271,7 +3271,7 @@ function teacherNoticesHTML(){
   <div class="panel">
     <h3>등록된 공지 (${DATA.notices.length}건)</h3>
     ${DATA.notices.length===0?'<div class="empty">등록된 공지가 없습니다.</div>':
-    DATA.notices.map(n=>`<div class="review-card" style="margin-bottom:10px;">
+    DATA.notices.map(n=>`<div class="data-card" style="margin-bottom:10px;">
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;">
         <div><b>${escHtml(n.title)}</b> <span class="mono" style="font-size:12px;color:var(--ink-soft);">· ${n.date}</span></div>
         <button class="btn btn-red btn-small" onclick="deleteNotice(${n.id})">삭제</button>
@@ -3405,7 +3405,7 @@ function teacherExamsHTML(){
     </div>
     <div class="field" style="margin-top:12px;background:#FBF3F2;border:1px solid var(--card-border);border-radius:4px;padding:14px;">
       <label>hwpx 파일로 문항 자동 채우기 (선택)</label>
-      <p style="font-size:11.5px;color:var(--ink-soft);margin:2px 0 8px;">올리면 아래 문항 입력칸이 자동으로 채워집니다. 직접 타이핑 안 하셔도 돼요.</p>
+      <p class="hint" style="margin:2px 0 8px;">올리면 아래 문항 입력칸이 자동으로 채워집니다. 직접 타이핑 안 하셔도 돼요.</p>
       <div class="inline-form">
         <div class="field"><label>이 파일의 단원</label><select id="exam-hwpx-unit">${UNITS.map(u=>`<option value="${u}">${u}</option>`).join('')}</select></div>
         <div class="field" style="flex:2;"><label>hwpx 파일</label><input type="file" accept=".hwpx" onchange="handleExamHwpxFile(this.files)"></div>
@@ -3466,7 +3466,7 @@ function teacherReviewHTML(){
   ${needsAI.length>0 ? `
   <div class="panel">
     <h3>AI 쌍둥이 문제 생성</h3>
-    <p style="font-size:12.5px;color:var(--ink-soft);margin-top:-8px;">
+    <p class="hint" style="margin-top:-8px;">
       아직 내용이 비어있는 문항 <b>${needsAI.length}개</b>가 있습니다.
       ${remaining===null ? '(오늘 사용량 확인 중...)' : `오늘 남은 생성 가능 건수: <b>${remaining} / ${AI_DAILY_LIMIT}</b>`}
     </p>
@@ -3484,7 +3484,7 @@ function teacherReviewHTML(){
         <button class="btn btn-small" onclick="state.reviewShowAll=!state.reviewShowAll; state.reviewFocusMode=false; render()">${state.reviewShowAll ? '대기중만 보기' : `전체 이력 보기 (${DATA.problemBank.length}건)`}</button>
       </div>
     </div>
-    <p style="font-size:12.5px;color:var(--ink-soft);margin-top:8px;">${state.reviewShowAll ? '지금까지 생성된 모든 오답 쌍둥이 문제 기록입니다. 상태와 상관없이 전체 이력이 보관됩니다.' : '시험지를 등록하거나 학생이 틀린 문제를 제출하면 여기에 빈 항목이 자동 생성됩니다. AI로 채우거나 직접 입력한 뒤, <b>1차·2차 검토를 모두 완료</b>해야 학생에게 공개됩니다.'}</p>
+    <p class="hint" style="margin-top:8px;">${state.reviewShowAll ? '지금까지 생성된 모든 오답 쌍둥이 문제 기록입니다. 상태와 상관없이 전체 이력이 보관됩니다.' : '시험지를 등록하거나 학생이 틀린 문제를 제출하면 여기에 빈 항목이 자동 생성됩니다. AI로 채우거나 직접 입력한 뒤, <b>1차·2차 검토를 모두 완료</b>해야 학생에게 공개됩니다.'}</p>
     ${list.length===0?'<div class="empty">문제가 없습니다.</div>':
       (!state.reviewShowAll && state.reviewFocusMode) ? (() => {
         const idx = Math.min(state.reviewFocusIndex, list.length-1);
@@ -3508,7 +3508,7 @@ function teacherUnitBankHTML(){
   return `
   <div class="panel">
     <h3>문항 추가</h3>
-    <p style="font-size:12.5px;color:var(--ink-soft);margin-top:-8px;">여기에 쌓아둔 문항은 학생이 같은 단원의 문제를 틀렸을 때 자동으로 검색되어 숙제로 나갑니다.</p>
+    <p class="hint" style="margin-top:-8px;">여기에 쌓아둔 문항은 학생이 같은 단원의 문제를 틀렸을 때 자동으로 검색되어 숙제로 나갑니다.</p>
     <div class="inline-form">
       <div class="field"><label>단원</label><select id="ub-unit">${UNITS.map(u=>`<option value="${u}">${u}</option>`).join('')}</select></div>
     </div>
@@ -3518,7 +3518,7 @@ function teacherUnitBankHTML(){
   </div>
   <div class="panel">
     <h3>한글(hwpx) 파일로 자동 인식</h3>
-    <p style="font-size:12.5px;color:var(--ink-soft);margin-top:-8px;">문항이 정리된 .hwpx 파일을 올리면 문제·보기·정답을 자동으로 인식합니다. (.hwp 구버전은 지원 안 함) 파일 하나 = 한 단원으로 등록됩니다.</p>
+    <p class="hint" style="margin-top:-8px;">문항이 정리된 .hwpx 파일을 올리면 문제·보기·정답을 자동으로 인식합니다. (.hwp 구버전은 지원 안 함) 파일 하나 = 한 단원으로 등록됩니다.</p>
     <div class="inline-form">
       <div class="field"><label>이 파일의 단원</label><select id="ub-hwpx-unit">${UNITS.map(u=>`<option value="${u}">${u}</option>`).join('')}</select></div>
       <div class="field" style="flex:2;"><label>hwpx 파일</label><input type="file" accept=".hwpx" onchange="handleUnitBankHwpxFile(this.files)"></div>
@@ -3526,16 +3526,16 @@ function teacherUnitBankHTML(){
   </div>
   <div class="panel">
     <h3>엑셀로 한꺼번에 올리기</h3>
-    <p style="font-size:12.5px;color:var(--ink-soft);margin-top:-8px;">.xlsx 파일에 <b>단원 / 문제 / 정답</b> 열을 만들어서 올려주세요.</p>
+    <p class="hint" style="margin-top:-8px;">.xlsx 파일에 <b>단원 / 문제 / 정답</b> 열을 만들어서 올려주세요.</p>
     <input type="file" accept=".xlsx,.xls" onchange="handleUnitBankExcelFile(this.files)">
   </div>
   ${state.unitImportPreview ? `
   <div class="panel">
     <h3>업로드 미리보기 (총 ${state.unitImportPreview.length}개)</h3>
-    <p style="font-size:12.5px;color:var(--ink-soft);margin-top:-8px;">${state.unitImportPreview.length>30?'처음 30개만 미리 보이고, 나머지는 그대로 등록됩니다. ':''}정답이 비어있는 항목(<span style="color:var(--red-pen);font-weight:700;">빨간 표시</span>)은 등록 전에 채워주시면 좋아요.</p>
+    <p class="hint" style="margin-top:-8px;">${state.unitImportPreview.length>30?'처음 30개만 미리 보이고, 나머지는 그대로 등록됩니다. ':''}정답이 비어있는 항목(<span style="color:var(--red-pen);font-weight:700;">빨간 표시</span>)은 등록 전에 채워주시면 좋아요.</p>
     <div style="max-height:420px;overflow-y:auto;margin-top:8px;">
       ${state.unitImportPreview.slice(0,30).map((r,i)=>`
-        <div class="review-card" style="margin-bottom:10px;">
+        <div class="data-card" style="margin-bottom:10px;">
           <div class="inline-form" style="margin-bottom:6px;">
             <div class="field"><label>단원</label><select id="uip-unit-${i}">${UNITS.map(u=>`<option value="${u}" ${r.unit===u?'selected':''}>${u}</option>`).join('')}</select></div>
             <div class="field"><label>정답 ${!r.answer?'<span style="color:var(--red-pen);">(비어있음)</span>':''}</label><input id="uip-answer-${i}" value="${escHtml(r.answer||'')}" style="${!r.answer?'border-color:var(--red-pen);':''}"></div>
@@ -3561,7 +3561,7 @@ function teacherUnitBankHTML(){
     </div>
     ${state.unitBankLoading ? '<div class="empty">불러오는 중...</div>' :
       list.length===0 ? '<div class="empty">등록된 문항이 없습니다.</div>' :
-      list.map(b=>`<div class="review-card">
+      list.map(b=>`<div class="data-card">
         <div style="display:flex;justify-content:space-between;align-items:center;">
           <span class="mono" style="font-size:12px;color:var(--ink-soft);">[${b.unit||'미지정'}] · ${b.createdAt||''}</span>
           <button class="btn btn-red btn-small" onclick="deleteUnitBankEntry('${b.id}')">삭제</button>
@@ -3613,7 +3613,7 @@ function teacherSettingsAdminHTML(){
   return `
   <div class="panel">
     <h3>학생 계정 추가</h3>
-    <p style="font-size:12.5px;color:var(--ink-soft);margin-top:-8px;">등록 후에는 [반 관리] &gt; 반을 열고 학생 명단에서 상세보기로 수정·삭제할 수 있습니다.</p>
+    <p class="hint" style="margin-top:-8px;">등록 후에는 [반 관리] &gt; 반을 열고 학생 명단에서 상세보기로 수정·삭제할 수 있습니다.</p>
     <div class="inline-form">
       <div class="field"><label>아이디</label><input id="new-sid" placeholder="예: st01"></div>
       <div class="field"><label>이름</label><input id="new-sname" placeholder="이름"></div>
