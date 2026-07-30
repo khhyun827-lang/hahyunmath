@@ -719,6 +719,7 @@ async function loadAll(){
     dbGet('videos', []), dbGet('assistants', []), dbGet('exams', []), dbGet('problem-bank', []), dbGet('assignments', [])
   ]);
   await seedTestAccountIfEmpty();
+  await restoreSession();
   render();
 }
 
@@ -787,6 +788,7 @@ async function doStudentLogin(){
   const found = DATA.students.find(s=>s.studentId===idInput && s.pw===pwInput);
   if(!found){ state.loginError = '아이디 또는 비밀번호가 일치하지 않습니다.'; render(); return; }
   state.currentUser = {type:'student', studentId:found.studentId, name:found.name};
+  saveSession();
   await loadRecord(found.studentId);
   state.studentTab = state.pendingStudentTab || 'home';
   state.pendingStudentTab = null;
@@ -800,11 +802,13 @@ async function doTeacherLogin(){
     DATA.teacherPw = pwInput;
     await dbSet('teacher-pw', pwInput);
     state.currentUser = {type:'teacher'};
+    saveSession();
     goto('teacher');
     return;
   }
   if(pwInput !== DATA.teacherPw){ state.loginError='비밀번호가 일치하지 않습니다.'; render(); return; }
   state.currentUser = {type:'teacher'};
+  saveSession();
   goto('teacher');
 }
 async function changeTeacherPw(){
@@ -818,7 +822,30 @@ async function changeTeacherPw(){
   render();
 }
 
-function logout(){ state.currentUser = null; goto('home'); }
+/* =================== 로그인 세션 유지 (새로고침해도 로그아웃되지 않도록) =================== */
+const SESSION_KEY = 'khm-session';
+function saveSession(){
+  try{ localStorage.setItem(SESSION_KEY, JSON.stringify(state.currentUser)); }catch(e){}
+}
+function clearSession(){
+  try{ localStorage.removeItem(SESSION_KEY); }catch(e){}
+}
+async function restoreSession(){
+  let saved;
+  try{ saved = JSON.parse(localStorage.getItem(SESSION_KEY)); }catch(e){ saved = null; }
+  if(!saved || !saved.type) return;
+  if(saved.type==='teacher'){
+    state.currentUser = {type:'teacher'};
+    state.view = 'teacher';
+  } else if(saved.type==='student'){
+    const found = DATA.students.find(s=>s.studentId===saved.studentId);
+    if(!found){ clearSession(); return; }
+    state.currentUser = {type:'student', studentId:found.studentId, name:found.name};
+    state.view = 'student';
+    await loadRecord(found.studentId);
+  }
+}
+function logout(){ clearSession(); state.currentUser = null; goto('home'); }
 
 /* =================== 반 관리 (교사) =================== */
 async function addClass(){
@@ -2438,7 +2465,7 @@ function studentHTML(){
     const myClassIdH = me.classId;
     const myQuizzesH = DATA.quizzes.filter(q=>!q.classId || q.classId===myClassIdH);
     const myHomeworkH = DATA.assignments.filter(a=>!a.classId || a.classId===myClassIdH);
-    const myVideosH = DATA.videos.filter(v=>!v.classId || v.classId===myClassIdH);
+    const myVideosH = DATA.videos.filter(v=>v.studentId ? v.studentId===sid : (!v.classId || v.classId===myClassIdH));
     const myExamsH = DATA.exams.filter(e=>e.classId===myClassIdH);
 
     // "오늘의 할 일": 퀴즈/과제/영상/오답숙제 중 아직 안 끝낸 것들을 한 리스트로 모은다.
@@ -2637,7 +2664,7 @@ function studentHTML(){
     </div>`;
   } else if(state.studentTab==='video'){
     const myClassIdV = (DATA.students.find(s=>s.studentId===sid)||{}).classId;
-    const myVideos = DATA.videos.filter(v=>!v.classId || v.classId===myClassIdV);
+    const myVideos = DATA.videos.filter(v=>v.studentId ? v.studentId===sid : (!v.classId || v.classId===myClassIdV));
     body = `<div class="panel"><h3>부교재 해설강의</h3>
       ${myVideos.length===0?'<div class="empty">등록된 영상이 없습니다.</div>':
       myVideos.map(v=>videoEmbedHTML(v, sid)).join('')}
@@ -2780,7 +2807,7 @@ function teacherHomeHTML(){
       DATA.classes.map(c=>{
         const roster = DATA.students.filter(s=>s.classId===c.id);
         const hws = DATA.assignments.filter(a=>!a.classId || a.classId===c.id);
-        const vids = DATA.videos.filter(v=>!v.classId || v.classId===c.id);
+        const vids = DATA.videos.filter(v=>!v.studentId && (!v.classId || v.classId===c.id));
         let hwDone=0, hwTotal=0, vidDone=0, vidTotal=0;
         roster.forEach(s=>{
           const rec = state.allRecords[s.studentId];
@@ -2948,7 +2975,14 @@ function teacherStudentDetailHTML(sid){
       <div class="field"><label>반</label><select id="info-sclass">${classOptionsHTML(s.classId)}</select></div>
       <button class="btn btn-primary" onclick="updateStudentInfo('${sid}')">저장</button>
     </div>
-    <p style="font-size:12.5px;color:var(--ink-soft);">반을 바꿔도 성적·출석·과제·오답숙제 기록은 그대로 유지됩니다. 학생이 반을 옮길 때는 삭제 후 재등록하지 말고 여기서 반만 바꿔주세요.</p>`;
+    <p style="font-size:12.5px;color:var(--ink-soft);">반을 바꿔도 성적·출석·과제·오답숙제 기록은 그대로 유지됩니다. 학생이 반을 옮길 때는 삭제 후 재등록하지 말고 여기서 반만 바꿔주세요.</p>
+    ${(() => {
+      const personalVideos = DATA.videos.filter(v=>v.studentId===sid);
+      return `<h3 style="margin-top:22px;font-size:14px;">개인 보충 영상</h3>
+      <p style="font-size:12.5px;color:var(--ink-soft);margin-top:-4px;">출석부에서 결석 처리하며 링크를 넣으면 여기 쌓입니다. 이 학생에게만 보여요.</p>
+      ${personalVideos.length===0 ? '<div class="empty">등록된 개인 영상이 없습니다.</div>' :
+        personalVideos.map(v=>`<div class="row-actions" style="margin-bottom:6px;"><span style="font-size:13px;flex:1;">${escHtml(v.title)}</span><button class="btn btn-red btn-small" onclick="deleteVideo('${v.id}')">삭제</button></div>`).join('')}`;
+    })()}`;
   } else if(state.studentDetailTab==='grades'){
     sub = `<div class="inline-form">
       <div class="field"><label>시험명</label><input id="score-name" placeholder="예: 3월 모의고사"></div>
@@ -3006,17 +3040,17 @@ function ensureAttDraft(classId, date){
   DATA.students.filter(s=>s.classId===classId).forEach(s=>{
     const rec = state.allRecords[s.studentId];
     const existing = rec && (rec.attendance||[]).find(a=>a.date===date);
-    state.attDraft[s.studentId] = existing ? {status:existing.status, reason:existing.reason||''} : {status:null, reason:''};
+    state.attDraft[s.studentId] = existing ? {status:existing.status, reason:existing.reason||'', videoUrl:''} : {status:null, reason:'', videoUrl:''};
   });
 }
 function setAttStatus(studentId, status){
-  const cur = state.attDraft[studentId] || {reason:''};
-  state.attDraft[studentId] = {status, reason: status==='출석' ? '' : cur.reason};
+  const cur = state.attDraft[studentId] || {reason:'', videoUrl:''};
+  state.attDraft[studentId] = {status, reason: status==='출석' ? '' : cur.reason, videoUrl: status==='결석' ? cur.videoUrl : ''};
   render();
 }
 function setAllPresent(classId){
   DATA.students.filter(s=>s.classId===classId).forEach(s=>{
-    state.attDraft[s.studentId] = {status:'출석', reason:''};
+    state.attDraft[s.studentId] = {status:'출석', reason:'', videoUrl:''};
   });
   render();
 }
@@ -3041,13 +3075,14 @@ function teacherAttendanceHTML(fixedClassId){
       roster.length===0 ? '<div class="empty">이 반에 배정된 학생이 없습니다.</div>' : `
       <button class="btn" style="margin-bottom:12px;" onclick="setAllPresent('${classId}')">전체 출석</button>
       ${roster.map(s=>{
-        const d = state.attDraft[s.studentId] || {status:null, reason:''};
+        const d = state.attDraft[s.studentId] || {status:null, reason:'', videoUrl:''};
         return `<div class="att-row">
           <div class="att-name">${escHtml(s.name)} <span class="mono" style="font-size:11px;color:var(--ink-soft);">(${s.studentId})</span></div>
           <div class="att-btn-group">
             ${['출석','지각','결석'].map(st=>`<button class="att-status-btn att-${st==='출석'?'ok':st==='지각'?'late':'no'} ${d.status===st?'active':''}" onclick="setAttStatus('${s.studentId}','${st}')">${st}</button>`).join('')}
           </div>
           ${(d.status==='지각'||d.status==='결석') ? `<input class="att-reason-input" id="att-reason-${s.studentId}" placeholder="사유 입력 (선택)" value="${escHtml(d.reason)}" oninput="state.attDraft['${s.studentId}'].reason=this.value">` : ''}
+          ${d.status==='결석' ? `<input class="att-reason-input" id="att-video-${s.studentId}" placeholder="보충 영상 유튜브 링크 (선택 — 이 학생에게만 보여요)" value="${escHtml(d.videoUrl)}" oninput="state.attDraft['${s.studentId}'].videoUrl=this.value">` : ''}
         </div>`;
       }).join('')}
       <button class="btn btn-primary" style="margin-top:12px;" onclick="saveClassAttendance('${classId}','${date}')">저장</button>
@@ -3067,6 +3102,7 @@ function teacherAttendanceHTML(fixedClassId){
 }
 async function saveClassAttendance(classId, date){
   const roster = DATA.students.filter(s=>s.classId===classId);
+  const newVideos = [];
   await Promise.all(roster.map(async s => {
     const d = state.attDraft[s.studentId];
     if(!d || !d.status) return; // 아무도 안 건드린 학생은 건너뛴다
@@ -3077,8 +3113,21 @@ async function saveClassAttendance(classId, date){
     rec.attendance.sort((a,b)=>a.date.localeCompare(b.date));
     await saveRecord(s.studentId);
     if(state.allRecords[s.studentId]) state.allRecords[s.studentId] = rec;
+    // 결석 처리하면서 보충 영상 링크를 같이 넣었으면, 그 학생에게만 보이는 개인 영상으로 등록한다.
+    if(d.status==='결석' && d.videoUrl && d.videoUrl.trim()){
+      const url = d.videoUrl.trim();
+      if(extractYouTubeId(url)){
+        newVideos.push({id:'v'+Date.now()+'_'+s.studentId, unit:'', title:date+' 결석 보충 영상', url, classId:'', studentId:s.studentId});
+      } else {
+        showToast(escHtml(s.name)+'의 보충 영상 링크 형식이 올바르지 않아 등록하지 못했습니다.');
+      }
+    }
   }));
-  showToast('출석이 저장되었습니다.');
+  if(newVideos.length>0){
+    DATA.videos.unshift(...newVideos);
+    await dbSet('videos', DATA.videos);
+  }
+  showToast('출석이 저장되었습니다.' + (newVideos.length>0 ? ` 보충 영상 ${newVideos.length}건도 배정했어요.` : ''));
   render();
 }
 
@@ -3252,7 +3301,7 @@ function teacherChatHTML(){
 /* ---------- 영상 (부교재 해설강의) ---------- */
 // 학생 한 명이 자기 반에 해당하는 영상들을 얼마나 봤는지 집계 (반 관리 허브의 영상 서브탭에서 사용).
 function studentVideoSummary(studentId, classId){
-  const relevantVideos = DATA.videos.filter(v => !v.classId || v.classId===classId);
+  const relevantVideos = DATA.videos.filter(v => v.studentId ? v.studentId===studentId : (!v.classId || v.classId===classId));
   const rec = state.allRecords[studentId];
   let completed = 0, sumPercent = 0;
   const details = relevantVideos.map(v => {
@@ -3269,7 +3318,7 @@ function studentVideoSummary(studentId, classId){
 function videoByClassHTML(fixedClassId){
   const classId = fixedClassId || state.videoByClassId;
   const roster = classId ? DATA.students.filter(s=>s.classId===classId) : [];
-  const classVideos = classId ? DATA.videos.filter(v=>!v.classId || v.classId===classId) : [];
+  const classVideos = classId ? DATA.videos.filter(v=>!v.studentId && (!v.classId || v.classId===classId)) : [];
   if(fixedClassId) loadAllRecordsIfNeeded();
   return `
   ${fixedClassId ? `
