@@ -209,6 +209,11 @@
   table tr:hover td{background:#FBFAF8;}
   .progress-outer{background:#EDEBE3;border-radius:20px;height:14px;overflow:hidden;margin:8px 0;}
   .progress-inner{background:var(--blue-deep);height:100%;border-radius:20px;}
+  .video-gauge{display:flex;align-items:center;gap:8px;margin-top:6px;}
+  .video-gauge-emoji{font-size:17px;flex-shrink:0;}
+  .video-gauge-bar{flex:1;height:10px;background:#EDEBE3;border-radius:20px;overflow:hidden;}
+  .video-gauge-fill{height:100%;background:linear-gradient(90deg,#FFC97A,var(--blue-deep));border-radius:20px;transition:width .3s;}
+  .video-gauge-pct{font-size:11.5px;color:var(--ink-soft);min-width:32px;text-align:right;flex-shrink:0;}
   .badge{display:inline-block;font-size:11px;padding:3px 10px;border-radius:20px;font-family:'JetBrains Mono',monospace;}
   .badge-ok{background:#E6F1E8;color:var(--green-ok);}
   .badge-no{background:#FBE9E7;color:var(--red-pen);}
@@ -1252,7 +1257,7 @@ function videoEmbedHTML(v, forStudent){
     <div class="vtitle">${escHtml(v.title)}</div>
     <div class="vunit mono">${escHtml(v.unit||'')} · ${quizClassLabel(v.classId)}</div>
     ${player}
-    ${forStudent && vid ? `<div class="mono" id="vprog-${v.id}" style="font-size:11px;color:var(--ink-soft);margin-top:6px;">${videoProgressLabel(forStudent, v.id)}</div>` : ''}
+    ${forStudent && vid ? `<div id="vprog-${v.id}">${videoProgressBlockHTML(forStudent, v.id)}</div>` : ''}
   </div>`;
 }
 /* ---------- 유튜브 시청 진도율 추적 ---------- */
@@ -1283,7 +1288,7 @@ async function noteVideoWatchTime(studentId, videoId, addSeconds, duration, ende
   const prev = rec.videoProgress[videoId] || {watchedSeconds:0, duration:0, percent:0, completed:false};
   const prevWatched = prev.watchedSeconds!==undefined ? prev.watchedSeconds : (prev.maxSeconds||0);
   const watchedSeconds = Math.min(duration, prevWatched + Math.max(0, addSeconds));
-  const percent = Math.min(100, Math.round(watchedSeconds/duration*100));
+  const percent = Math.min(100, Math.round(watchedSeconds/duration*150));
   rec.videoProgress[videoId] = {
     watchedSeconds, duration, percent,
     completed: prev.completed || ended || percent>=95,
@@ -1291,13 +1296,23 @@ async function noteVideoWatchTime(studentId, videoId, addSeconds, duration, ende
   };
   await saveRecord(studentId);
   const label = document.getElementById('vprog-'+videoId);
-  if(label) label.textContent = videoProgressLabel(studentId, videoId);
+  if(label) label.innerHTML = videoProgressBlockHTML(studentId, videoId);
 }
-function videoProgressLabel(studentId, videoId){
+function videoProgressGaugeHTML(percent, completed){
+  const pct = Math.max(0, Math.min(100, percent||0));
+  const milestone = completed || pct>=100 ? '🎉' : pct>=75 ? '⭐' : pct>=50 ? '🔥' : pct>=25 ? '🌿' : '🌱';
+  return `<div class="video-gauge">
+    <span class="video-gauge-emoji">${milestone}</span>
+    <div class="video-gauge-bar"><div class="video-gauge-fill" style="width:${pct}%;"></div></div>
+    <span class="video-gauge-pct mono">${pct}%</span>
+  </div>`;
+}
+function videoProgressBlockHTML(studentId, videoId){
   const rec = DATA.records[studentId];
   const p = rec && rec.videoProgress && rec.videoProgress[videoId];
-  if(!p) return '아직 시청 기록이 없습니다.';
-  return (p.completed ? '시청 완료' : `실제 시청 시간 기준 진도율 ${p.percent}%`) + ' · 최근 시청 ' + (p.updatedAt||'').slice(0,10);
+  if(!p) return '<div class="hint" style="margin-top:6px;">아직 시청 기록이 없습니다.</div>';
+  const caption = (p.completed ? '시청 완료' : '시청 중') + ' · 최근 시청 ' + (p.updatedAt||'').slice(0,10);
+  return videoProgressGaugeHTML(p.percent, p.completed) + `<div class="mono" style="font-size:11px;color:var(--ink-soft);margin-top:2px;">${caption}</div>`;
 }
 // 재생 중이던 구간의 벽시계 경과 시간을 정산해서 누적한다(멈춤/종료/화면전환 시 남은 조각까지 반영).
 function flushWatchTick(entry, studentId, videoId, player, ended){
@@ -2595,7 +2610,7 @@ function studentHTML(){
         <div class="home-video-info">
           <div class="mono" style="font-size:11px;color:var(--ink-soft);">${featuredProgress?'최근 시청 중인 강의':'강의시청'}</div>
           <div style="font-weight:700;margin:4px 0;">${escHtml(featuredVideo.title)}</div>
-          <div style="font-size:12.5px;color:var(--ink-soft);">${featuredProgress?(featuredProgress.completed?'시청 완료':`진도율 ${featuredProgress.percent}%`):'아직 시청 기록이 없습니다'}</div>
+          ${featuredProgress ? videoProgressGaugeHTML(featuredProgress.percent, featuredProgress.completed) : '<div style="font-size:12.5px;color:var(--ink-soft);">아직 시청 기록이 없습니다</div>'}
           <button class="btn btn-primary btn-small" style="margin-top:10px;">이어보기</button>
         </div>`}
       </div>
