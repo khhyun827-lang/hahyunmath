@@ -47,7 +47,15 @@
   nav.main-nav{display:flex;gap:22px;font-size:14px;font-weight:500;}
   nav.main-nav a{padding-bottom:2px;border-bottom:2px solid transparent;text-decoration:none;}
   nav.main-nav a:hover{border-color:var(--red-pen);}
-  .header-actions{display:flex;gap:8px;}
+  .header-actions{display:flex;gap:8px;align-items:center;}
+  .notif-bell{position:relative;}
+  .notif-bell-btn{position:relative;background:none;border:1.5px solid var(--ink);border-radius:50%;width:38px;height:38px;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+  .notif-badge{position:absolute;top:-4px;right:-4px;background:var(--red-pen);color:#fff;font-size:10px;font-weight:700;border-radius:20px;min-width:16px;height:16px;display:flex;align-items:center;justify-content:center;padding:0 3px;font-family:'JetBrains Mono',monospace;}
+  .notif-dropdown{position:absolute;top:calc(100% + 8px);right:0;background:var(--white);border:1px solid var(--card-border);border-radius:12px;box-shadow:0 4px 16px rgba(0,0,0,.1);min-width:220px;padding:6px;z-index:100;}
+  .notif-item{display:flex;justify-content:space-between;align-items:center;padding:9px 10px;border-radius:8px;cursor:pointer;font-size:13px;}
+  .notif-item:hover{background:#F6EFEE;}
+  .notif-item-count{background:var(--red-pen);color:#fff;font-size:11px;padding:1px 7px;border-radius:20px;font-family:'JetBrains Mono',monospace;}
+  .notif-empty{padding:14px 10px;color:var(--ink-soft);font-size:13px;text-align:center;}
   .btn{
     border:1.5px solid var(--ink);background:var(--white);color:var(--ink);
     padding:9px 16px;font-size:13px;font-weight:700;border-radius:2px;
@@ -684,6 +692,7 @@ let state = {
   examImagesCache: {},
   qnaQuestionImage: null,
   qnaAnswerImage: {},
+  notifOpen: false,
   unitBankLoaded: false,
   unitBankLoading: false,
   unitBankFilter: '',
@@ -1071,12 +1080,51 @@ async function deleteConsult(idx){
   await dbSet('consults', DATA.consults);
   render();
 }
+function unseenCount(key, currentCount){
+  const seen = parseInt(localStorage.getItem(`khm-${key}-seen`))||0;
+  return Math.max(0, currentCount - seen);
+}
+function markSeen(key, currentCount){
+  localStorage.setItem(`khm-${key}-seen`, String(currentCount));
+}
 function unseenConsultCount(){
-  const seen = parseInt(localStorage.getItem('khm-consult-seen'))||0;
-  return Math.max(0, DATA.consults.length - seen);
+  return unseenCount('consult', DATA.consults.length);
 }
 function markConsultsSeen(){
-  localStorage.setItem('khm-consult-seen', String(DATA.consults.length));
+  markSeen('consult', DATA.consults.length);
+}
+
+/* =================== 알림 벨 =================== */
+function teacherNotifItems(){
+  return [
+    {key:'consult', label:'새 상담 신청', count: DATA.consults.length, gotoCode:"state.teacherTab='settings'; state.settingsSubTab='admin';"},
+    {key:'qna', label:'새 질문', count: DATA.qnas.length, gotoCode:"state.teacherTab='qna';"},
+    {key:'clinic', label:'새 클리닉 신청', count: DATA.clinics.length, gotoCode:"state.teacherTab='clinic';"},
+  ];
+}
+function studentNotifItems(sid){
+  const me = DATA.students.find(s=>s.studentId===sid) || {};
+  const classId = me.classId;
+  const hwCount = DATA.assignments.filter(a=>!a.classId || a.classId===classId).length;
+  const vidCount = DATA.videos.filter(v=>v.studentId ? v.studentId===sid : (!v.classId || v.classId===classId)).length;
+  return [
+    {key:'homework', label:'새 과제', count: hwCount, gotoCode:"state.studentTab='progress';"},
+    {key:'video', label:'새 영상', count: vidCount, gotoCode:"state.studentTab='video';"},
+    {key:'notice', label:'새 공지', count: DATA.notices.length, gotoCode:"state.studentTab='notice';"},
+  ];
+}
+function notificationBellHTML(items){
+  const total = items.reduce((sum,it)=>sum+unseenCount(it.key, it.count), 0);
+  const unseenItems = items.filter(it=>unseenCount(it.key,it.count)>0);
+  return `<div class="notif-bell">
+    <button class="notif-bell-btn" onclick="state.notifOpen=!state.notifOpen; render()">🔔${total>0?`<span class="notif-badge">${total>9?'9+':total}</span>`:''}</button>
+    ${state.notifOpen ? `<div class="notif-dropdown">
+      ${unseenItems.length===0 ? '<div class="notif-empty">새 알림이 없습니다</div>' :
+      unseenItems.map(it=>`<div class="notif-item" onclick="${it.gotoCode} markSeen('${it.key}', ${it.count}); state.notifOpen=false; render()">
+        <span>${it.label}</span><span class="notif-item-count">${unseenCount(it.key,it.count)}</span>
+      </div>`).join('')}
+    </div>` : ''}
+  </div>`;
 }
 
 /* =================== 데일리퀴즈 =================== */
@@ -2318,12 +2366,14 @@ function renderScoreChart(scores){
 /* =================== 화면 렌더 =================== */
 function render(){
   const app = document.getElementById('app');
-  let html = '';
-  html += headerHTML();
-  if(state.view==='home') html += homeHTML();
-  else if(state.view==='login') html += loginHTML();
-  else if(state.view==='student') html += studentHTML();
-  else if(state.view==='teacher') html += teacherHTML();
+  // 탭 렌더 함수들이 내부에서 markSeen()을 호출해 알림을 "확인함" 처리하는 경우가 있어서,
+  // 알림 뱃지를 그리는 headerHTML()보다 본문을 먼저 계산해야 뱃지가 한 렌더 늦게 갱신되지 않는다.
+  let bodyHtml = '';
+  if(state.view==='home') bodyHtml = homeHTML();
+  else if(state.view==='login') bodyHtml = loginHTML();
+  else if(state.view==='student') bodyHtml = studentHTML();
+  else if(state.view==='teacher') bodyHtml = teacherHTML();
+  let html = headerHTML() + bodyHtml;
   html += footerHTML();
   if(state.toast) html += `<div style="position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1B1B1D;color:#fff;padding:12px 22px;border-radius:30px;font-size:13px;box-shadow:0 6px 20px rgba(0,0,0,.2);z-index:999;">${state.toast}</div>`;
   app.innerHTML = html;
@@ -2364,7 +2414,8 @@ function headerHTML(){
     </nav>` : ''}
     <div class="header-actions">
       ${loggedIn
-        ? `<span class="mono" style="font-size:12px;color:var(--ink-soft);align-self:center;margin-right:6px;">${loggedIn.type==='teacher'?'관리자':loggedIn.name+' 학생'}</span>
+        ? `${notificationBellHTML(loggedIn.type==='teacher' ? teacherNotifItems() : studentNotifItems(loggedIn.studentId))}
+           <span class="mono" style="font-size:12px;color:var(--ink-soft);align-self:center;margin-right:6px;">${loggedIn.type==='teacher'?'관리자':loggedIn.name+' 학생'}</span>
            <button class="btn btn-small" onclick="${loggedIn.type==='teacher'?"state.teacherTab='home';":"state.studentTab='home';"} goto('${loggedIn.type==='teacher'?'teacher':'student'}')">${loggedIn.type==='teacher'?'관리자 페이지로':'마이페이지로'}</button>
            <button class="btn btn-red btn-small" onclick="logout()">로그아웃</button>`
         : `<button class="btn btn-small" onclick="state.loginMode='student'; goto('login')">학생 로그인</button>
@@ -2638,6 +2689,7 @@ function studentHTML(){
   } else if(state.studentTab==='progress'){
     const myClassIdP = (DATA.students.find(s=>s.studentId===sid)||{}).classId;
     const myHomework = DATA.assignments.filter(a=>!a.classId || a.classId===myClassIdP);
+    markSeen('homework', myHomework.length);
     const cpP = getClassProgress(myClassIdP);
     body = `<div class="panel"><h3>현재 진도</h3>
       ${!cpP.subject ? '<div class="empty">아직 등록된 진도가 없습니다.</div>' : `
@@ -2671,6 +2723,7 @@ function studentHTML(){
       </table>`}
     </div>`;
   } else if(state.studentTab==='notice'){
+    markSeen('notice', DATA.notices.length);
     body = `<div class="panel"><h3>공지사항</h3>
       ${DATA.notices.length===0?'<div class="empty">등록된 공지가 없습니다.</div>':
       DATA.notices.map(n=>`<div style="padding:12px 0;border-bottom:1px solid #F0EEE7;"><div style="font-weight:700;">${escHtml(n.title)} <span class="mono" style="font-size:11px;color:var(--ink-soft);font-weight:400;">${escHtml(n.date)}</span></div><div style="font-size:13px;color:var(--ink-soft);margin-top:4px;">${escHtml(n.content)}</div></div>`).join('')}
@@ -2759,6 +2812,7 @@ function studentHTML(){
   } else if(state.studentTab==='video'){
     const myClassIdV = (DATA.students.find(s=>s.studentId===sid)||{}).classId;
     const myVideos = DATA.videos.filter(v=>v.studentId ? v.studentId===sid : (!v.classId || v.classId===myClassIdV));
+    markSeen('video', myVideos.length);
     body = `<div class="panel"><h3>강의시청</h3>
       ${myVideos.length===0?'<div class="empty">등록된 영상이 없습니다.</div>':
       myVideos.map(v=>videoEmbedHTML(v, sid)).join('')}
@@ -3327,6 +3381,7 @@ function teacherHomeworkHTML(fixedClassId){
 
 /* ---------- 클리닉 ---------- */
 function teacherClinicHTML(){
+  markSeen('clinic', DATA.clinics.length);
   return `
   <div class="panel">
     <h3>클리닉 신청 목록 (${DATA.clinics.length}건)</h3>
@@ -3370,6 +3425,7 @@ function teacherNoticesHTML(){
 
 /* ---------- 질의응답 ---------- */
 function teacherQnaHTML(){
+  markSeen('qna', DATA.qnas.length);
   return `
   <div class="panel">
     <h3>질의응답 관리 (${DATA.qnas.length}건)</h3>
@@ -3741,6 +3797,14 @@ function teacherSettingsAdminHTML(){
     </table>`}
   </div>`;
 }
+
+// 알림 드롭다운이 열려있을 때 벨 바깥을 클릭하면 닫는다.
+document.addEventListener('click', (e) => {
+  if(state.notifOpen && !e.target.closest('.notif-bell')){
+    state.notifOpen = false;
+    render();
+  }
+});
 
 /* =================== 시작 =================== */
 // 익명 인증 시도 (완전 공개 접근 차단용 최소 보안 장치). 인증 설정이 안 됐거나
