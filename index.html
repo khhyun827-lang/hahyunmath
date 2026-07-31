@@ -1103,7 +1103,7 @@ function markConsultsSeen(){
 /* =================== 알림 벨 =================== */
 function teacherNotifItems(){
   return [
-    {key:'consult', label:'새 상담 신청', count: DATA.consults.length, gotoCode:"state.teacherTab='settings'; state.settingsSubTab='admin';"},
+    {key:'consult', label:'새 상담 신청', count: DATA.consults.length, gotoCode:"state.teacherTab='settings'; state.settingsSubTab='consults';"},
     {key:'qna', label:'새 질문', count: DATA.qnas.length, gotoCode:"state.teacherTab='qna';"},
     {key:'clinic', label:'새 클리닉 신청', count: DATA.clinics.length, gotoCode:"state.teacherTab='clinic';"},
   ];
@@ -1599,6 +1599,22 @@ async function deleteExam(examId){
   DATA.exams = DATA.exams.filter(e=>e.id!==examId);
   await dbSet('exams', DATA.exams);
   await dbDelete('examfiles:'+examId);
+  render();
+}
+async function copyExamToClass(examId){
+  const sel = document.getElementById('copy-target-'+examId);
+  const targetClassId = sel.value;
+  if(!targetClassId){ showToast('복사할 반을 선택해주세요.'); return; }
+  const e = DATA.exams.find(x=>x.id===examId);
+  if(!e) return;
+  const newId = 'ex'+Date.now();
+  DATA.exams.unshift({id:newId, classId:targetClassId, title:e.title, date:e.date, questions:e.questions.map(q=>({...q})), hasFiles:e.hasFiles});
+  await dbSet('exams', DATA.exams);
+  if(e.hasFiles){
+    const pages = await dbGet('examfiles:'+examId, []);
+    await dbSet('examfiles:'+newId, pages);
+  }
+  showToast(`${classNameOf(targetClassId)}에 복사되었습니다.`);
   render();
 }
 
@@ -2926,7 +2942,7 @@ function teacherHomeHTML(){
     </div>
     <div class="home-user-badge">🎓 김하현T</div>
   </div>
-  ${newConsults>0 ? `<div class="home-card" style="border-left:4px solid var(--red-pen);cursor:pointer;margin-bottom:20px;" onclick="state.teacherTab='settings'; state.settingsSubTab='admin'; render()">
+  ${newConsults>0 ? `<div class="home-card" style="border-left:4px solid var(--red-pen);cursor:pointer;margin-bottom:20px;" onclick="state.teacherTab='settings'; state.settingsSubTab='consults'; render()">
     🔔 <b>새 상담 신청 ${newConsults}건</b> — 확인하러 가기 →
   </div>` : ''}
   <div class="home-grid-4">
@@ -2949,24 +2965,14 @@ function teacherHomeHTML(){
   </div>
   <div class="home-grid-2">
     <div class="home-card">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
-        <h4 style="margin:0;">🚨 변형 문제 승인 대기열</h4>
-        <button class="btn btn-small" onclick="state.teacherTab='review'; render()">전체 보기 및 상세 검토 →</button>
+      <h4>📚 과제 빠른 등록</h4>
+      <div class="inline-form">
+        <div class="field"><label>대상 반</label><select id="hw-class">${classOptionsHTML(null)}</select></div>
+        <div class="field" style="flex:2;"><label>과제명</label><input id="hw-title" placeholder="예: 3단원 오답노트 정리"></div>
+        <div class="field"><label>마감일</label><input id="hw-due" type="date"></div>
       </div>
-      ${pending.length===0 ? '<div class="empty">대기 중인 문제가 없습니다.</div>' :
-        pending.slice(0,4).map(b=>{
-          const exam = DATA.exams.find(e=>e.id===b.examId);
-          const next = b.status==='pending' ? 'review1' : 'approved';
-          const label = b.status==='pending' ? '1차 승인' : '2차 승인(공개)';
-          const requesters = bankRequesterCount(b.id);
-          return `<div class="home-queue-row">
-            <div>
-              <div style="font-weight:700;font-size:13.5px;">${exam?escHtml(exam.title):'(삭제된 시험지)'} ${b.questionNo}번</div>
-              <div class="mono" style="font-size:11.5px;color:var(--ink-soft);">요청자: ${requesters>0?requesters+'명':'-'} · 자동 변형 완료</div>
-            </div>
-            <button class="btn btn-primary btn-small" onclick="advanceBankStatus('${b.id}','${next}')">✓ ${label}</button>
-          </div>`;
-        }).join('')}
+      <div class="field"><label>설명 (선택)</label><textarea id="hw-desc" placeholder="과제 상세 내용을 입력하세요"></textarea></div>
+      <button class="btn btn-primary" onclick="addHomework()">등록</button>
     </div>
     <div class="home-card">
       <h4>📺 새 강의 업로드</h4>
@@ -3020,16 +3026,6 @@ function teacherHomeHTML(){
       ${DATA.classes.length===0 ? '<div class="empty">등록된 반이 없습니다.</div>' :
         DATA.classes.map(c=>`<button class="btn" style="width:100%;margin-bottom:8px;text-align:left;" onclick="state.teacherTab='classhub'; state.classHubId='${c.id}'; state.classHubTab='attendance'; render()">${escHtml(c.name)} 출석부 열기</button>`).join('')}
     </div>
-  </div>
-  <div class="home-card">
-    <h4>📚 과제 빠른 등록</h4>
-    <div class="inline-form">
-      <div class="field"><label>대상 반</label><select id="hw-class">${classOptionsHTML(null)}</select></div>
-      <div class="field" style="flex:2;"><label>과제명</label><input id="hw-title" placeholder="예: 3단원 오답노트 정리"></div>
-      <div class="field"><label>마감일</label><input id="hw-due" type="date"></div>
-    </div>
-    <div class="field"><label>설명 (선택)</label><textarea id="hw-desc" placeholder="과제 상세 내용을 입력하세요"></textarea></div>
-    <button class="btn btn-primary" onclick="addHomework()">등록</button>
   </div>`;
 }
 
@@ -3625,6 +3621,11 @@ function teacherExamsHTML(){
       <div class="exam-meta">${e.date||'-'} · ${classNameOf(e.classId)} · 문항 ${e.questions.length}개</div>
       <div class="row-actions">
         <button class="btn btn-small" onclick="toggleExamDetailView('${e.id}')">${state.examDetailOpen[e.id]?'상세보기 접기':'상세보기'}</button>
+        <select id="copy-target-${e.id}" style="max-width:130px;">
+          <option value="">다른 반 선택</option>
+          ${DATA.classes.filter(c=>c.id!==e.classId).map(c=>`<option value="${c.id}">${escHtml(c.name)}</option>`).join('')}
+        </select>
+        <button class="btn btn-small" onclick="copyExamToClass('${e.id}')">반에 복사</button>
         <button class="btn btn-red btn-small" onclick="deleteExam('${e.id}')">삭제</button>
       </div>
       ${state.examDetailOpen[e.id] ? examDetailHTML(e.id) : ''}
@@ -3775,8 +3776,15 @@ function teacherAssistantsHTML(){
 /* ---------- 설정 (조교 + 관리자) ---------- */
 function teacherSettingsHTML(){
   const tab = state.settingsSubTab || 'assistants';
-  const subtabs = [['assistants','조교'],['admin','관리자']];
-  const sub = tab==='admin' ? teacherSettingsAdminHTML() : teacherAssistantsHTML();
+  const subtabs = [['assistants','조교'],['students','학생'],['classes','반'],['consults','상담'],['admin','관리자']];
+  const subMap = {
+    assistants: teacherAssistantsHTML,
+    students: teacherSettingsStudentsHTML,
+    classes: teacherSettingsClassesHTML,
+    consults: teacherSettingsConsultsHTML,
+    admin: teacherSettingsAdminHTML,
+  };
+  const sub = (subMap[tab] || teacherAssistantsHTML)();
   return `
   <div class="panel">
     <div class="subtab-bar">
@@ -3786,9 +3794,8 @@ function teacherSettingsHTML(){
   ${sub}`;
 }
 
-/* ---------- 관리자 설정 (상담신청 + 비밀번호) ---------- */
-function teacherSettingsAdminHTML(){
-  markConsultsSeen();
+/* ---------- 설정: 반 추가 ---------- */
+function teacherSettingsClassesHTML(){
   return `
   <div class="panel">
     <h3>반 추가</h3>
@@ -3798,7 +3805,12 @@ function teacherSettingsAdminHTML(){
       <div class="field"><label>기간</label><input id="new-cperiod" placeholder="예: 26.03~26.12"></div>
       <button class="btn btn-primary" onclick="addClass()">추가</button>
     </div>
-  </div>
+  </div>`;
+}
+
+/* ---------- 설정: 학생 계정 추가 ---------- */
+function teacherSettingsStudentsHTML(){
+  return `
   <div class="panel">
     <h3>학생 계정 추가</h3>
     <p class="hint" style="margin-top:-8px;">등록 후에는 [반 관리] &gt; 반을 열고 학생 명단에서 상세보기로 수정·삭제할 수 있습니다.</p>
@@ -3814,19 +3826,30 @@ function teacherSettingsAdminHTML(){
       <div class="field"><label>반</label><select id="new-sclass">${classOptionsHTML(null)}</select></div>
       <button class="btn btn-primary" onclick="addStudent()">추가</button>
     </div>
-  </div>
-  <div class="panel">
-    <h3>관리자 비밀번호 변경</h3>
-    <div class="field"><label>현재 비밀번호</label><input id="pw-current" type="password"></div>
-    <div class="field"><label>새 비밀번호 (4자 이상)</label><input id="pw-new" type="password"></div>
-    <button class="btn btn-primary" onclick="changeTeacherPw()">비밀번호 변경</button>
-  </div>
+  </div>`;
+}
+
+/* ---------- 설정: 상담 신청 목록 ---------- */
+function teacherSettingsConsultsHTML(){
+  markConsultsSeen();
+  return `
   <div class="panel">
     <h3>상담 신청 목록 (${DATA.consults.length}건)</h3>
     ${DATA.consults.length===0?'<div class="empty">접수된 상담 신청이 없습니다.</div>':`
     <table><tr><th>날짜</th><th>이름</th><th>연락처</th><th>학년</th><th>내용</th><th></th></tr>
     ${DATA.consults.map((c,i)=>`<tr><td>${c.date}</td><td>${c.name}</td><td>${c.phone}</td><td>${c.grade||'-'}</td><td>${c.msg||'-'}</td><td><button class="btn btn-red btn-small" onclick="deleteConsult(${i})">삭제</button></td></tr>`).join('')}
     </table>`}
+  </div>`;
+}
+
+/* ---------- 설정: 관리자 비밀번호 변경 ---------- */
+function teacherSettingsAdminHTML(){
+  return `
+  <div class="panel">
+    <h3>관리자 비밀번호 변경</h3>
+    <div class="field"><label>현재 비밀번호</label><input id="pw-current" type="password"></div>
+    <div class="field"><label>새 비밀번호 (4자 이상)</label><input id="pw-new" type="password"></div>
+    <button class="btn btn-primary" onclick="changeTeacherPw()">비밀번호 변경</button>
   </div>`;
 }
 
