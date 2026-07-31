@@ -77,7 +77,7 @@
   .hero-visual{flex:1 1 320px;min-width:280px;}
 
   .hero-v2{
-    background:var(--ink);border-radius:14px;overflow:hidden;
+    background:var(--blue-deep);border-radius:14px;overflow:hidden;
     display:flex;align-items:stretch;min-height:440px;margin:28px 0 8px;
   }
   .hero-v2-text{flex:1 1 380px;padding:52px 44px;display:flex;flex-direction:column;justify-content:center;color:#fff;}
@@ -85,11 +85,11 @@
   .hero-v2-text h1{color:#fff;font-size:38px;line-height:1.4;margin:0 0 20px;font-weight:900;}
   .hero-v2-text h1 .tag{background:var(--blue-deep);padding:2px 12px;border-radius:6px;display:inline-block;}
   .hero-v2-text p.desc{color:#C7C0C1;font-size:15px;max-width:420px;margin-bottom:28px;}
-  .hero-v2-photo{flex:1 1 360px;min-width:260px;position:relative;background:var(--ink);}
+  .hero-v2-photo{flex:1 1 360px;min-width:260px;position:relative;background:var(--blue-deep);}
   .hero-v2-photo img{width:100%;height:100%;object-fit:cover;object-position:top center;display:block;}
   .hero-v2-photo::before{
     content:'';position:absolute;inset:0;
-    background:linear-gradient(90deg, var(--ink) 0%, rgba(61,51,53,0) 18%);
+    background:linear-gradient(90deg, var(--blue-deep) 0%, rgba(174,75,83,0) 18%);
   }
   @media (max-width:760px){
     .hero-v2{flex-direction:column;min-height:0;}
@@ -161,7 +161,6 @@
   .review-marquee:hover .review-track{animation-play-state:paused;}
   .review-track .review-card{flex:0 0 280px;}
   @keyframes review-scroll{from{transform:translateX(0);}to{transform:translateX(-50%);}}
-  @media (prefers-reduced-motion:reduce){.review-track{animation:none;}}
   .review-card{background:var(--white);border:1px solid var(--card-border);padding:20px;border-radius:4px;position:relative;}
   .review-card .quote-mark{position:absolute;top:10px;right:16px;font-size:34px;color:var(--card-border);font-family:'Noto Serif KR',serif;}
   .review-card p{font-size:14px;margin:0 0 14px;}
@@ -2305,7 +2304,7 @@ function headerHTML(){
           <a onclick="goStudentPage('quiz')">데일리퀴즈</a>
           <a onclick="goStudentPage('clinic')">클리닉 신청</a>
           <a onclick="goStudentPage('qna')">질의응답</a>
-          <a onclick="goStudentPage('video')">부교재 해설강의</a>
+          <a onclick="goStudentPage('video')">강의시청</a>
         </div>
       </div>
       <a onclick="scrollToId('sec-notice')">공지사항</a>
@@ -2492,7 +2491,7 @@ function loginHTML(){
 function studentHTML(){
   const sid = state.currentUser.studentId;
   const rec = DATA.records[sid] || {scores:[],attendance:[],assignments:[],progress:{unit:'',percent:0},quizAnswers:{},wrongHomework:[],videoProgress:{},assignmentsDone:{}};
-  const tabs = [['home','홈'],['quiz','데일리퀴즈'],['progress','진도/과제'],['wronghw','오답숙제'],['video','부교재 해설강의'],['clinic','클리닉 신청'],['chat','선생님과 채팅']];
+  const tabs = [['home','홈'],['quiz','데일리퀴즈'],['progress','진도/과제'],['wronghw','오답숙제'],['video','강의시청'],['clinic','클리닉 신청'],['chat','선생님과 채팅']];
   let body='';
   if(state.studentTab==='home'){
     const me = DATA.students.find(s=>s.studentId===sid) || {};
@@ -2556,7 +2555,7 @@ function studentHTML(){
         ${!featuredVideo ? '<div class="empty">등록된 영상이 없습니다.</div>' : `
         <div class="home-video-thumb" style="${featuredVid?`background-image:url('https://img.youtube.com/vi/${featuredVid}/hqdefault.jpg')`:''}"><div class="home-video-play">▶</div></div>
         <div class="home-video-info">
-          <div class="mono" style="font-size:11px;color:var(--ink-soft);">${featuredProgress?'최근 시청 중인 강의':'부교재 해설강의'}</div>
+          <div class="mono" style="font-size:11px;color:var(--ink-soft);">${featuredProgress?'최근 시청 중인 강의':'강의시청'}</div>
           <div style="font-weight:700;margin:4px 0;">${escHtml(featuredVideo.title)}</div>
           <div style="font-size:12.5px;color:var(--ink-soft);">${featuredProgress?(featuredProgress.completed?'시청 완료':`진도율 ${featuredProgress.percent}%`):'아직 시청 기록이 없습니다'}</div>
           <button class="btn btn-primary btn-small" style="margin-top:10px;">이어보기</button>
@@ -2705,7 +2704,7 @@ function studentHTML(){
   } else if(state.studentTab==='video'){
     const myClassIdV = (DATA.students.find(s=>s.studentId===sid)||{}).classId;
     const myVideos = DATA.videos.filter(v=>v.studentId ? v.studentId===sid : (!v.classId || v.classId===myClassIdV));
-    body = `<div class="panel"><h3>부교재 해설강의</h3>
+    body = `<div class="panel"><h3>강의시청</h3>
       ${myVideos.length===0?'<div class="empty">등록된 영상이 없습니다.</div>':
       myVideos.map(v=>videoEmbedHTML(v, sid)).join('')}
     </div>`;
@@ -2724,7 +2723,7 @@ function studentHTML(){
     </div>`;
   }
   return `
-  <div class="tab-bar">
+  <div class="tab-bar" style="margin-top:24px;">
     ${tabs.map(t=>`<button class="tab-btn ${state.studentTab===t[0]?'active':''}" onclick="state.studentTab='${t[0]}'; render()">${t[1]}</button>`).join('')}
   </div>
   ${body}
@@ -3120,17 +3119,19 @@ function teacherAttendanceHTML(fixedClassId){
   return `
   <div class="panel">
     <h3>출석 입력</h3>
-    <div class="inline-form">
+    <div class="inline-form" style="align-items:flex-end;">
       ${fixedClassId ? '' : `<div class="field"><label>반</label><select onchange="state.attendanceClassId=this.value; render()">
         <option value="">-- 반 선택 --</option>
         ${DATA.classes.map(c=>`<option value="${c.id}" ${classId===c.id?'selected':''}>${escHtml(c.name)}</option>`).join('')}
       </select></div>`}
-      <div class="field"><label>날짜</label><input type="date" value="${date}" onchange="state.attendanceDate=this.value; render()"></div>
+      <div class="field" style="max-width:200px;"><label>날짜</label><input type="date" value="${date}" onchange="state.attendanceDate=this.value; render()"></div>
+      ${classId && state.allRecordsLoaded && roster.length>0 ? `
+      <button class="btn" onclick="setAllPresent('${classId}')">전체 출석</button>
+      <button class="btn btn-primary" onclick="saveClassAttendance('${classId}','${date}')">저장</button>` : ''}
     </div>
     ${!classId ? '<div class="empty">반을 선택해주세요.</div>' :
       !state.allRecordsLoaded ? '<div class="empty">학생 기록을 불러오는 중입니다...</div>' :
       roster.length===0 ? '<div class="empty">이 반에 배정된 학생이 없습니다.</div>' : `
-      <button class="btn" style="margin-bottom:12px;" onclick="setAllPresent('${classId}')">전체 출석</button>
       ${roster.map(s=>{
         const d = state.attDraft[s.studentId] || {status:null, reason:'', videoUrl:''};
         return `<div class="att-row">
@@ -3142,7 +3143,6 @@ function teacherAttendanceHTML(fixedClassId){
           ${d.status==='결석' ? `<input class="att-reason-input" id="att-video-${s.studentId}" placeholder="보충 영상 유튜브 링크 (선택 — 이 학생에게만 보여요)" value="${escHtml(d.videoUrl)}" oninput="state.attDraft['${s.studentId}'].videoUrl=this.value">` : ''}
         </div>`;
       }).join('')}
-      <button class="btn btn-primary" style="margin-top:12px;" onclick="saveClassAttendance('${classId}','${date}')">저장</button>
     `}
   </div>
   ${classId && state.allRecordsLoaded && roster.length>0 ? `
