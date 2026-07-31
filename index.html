@@ -49,7 +49,7 @@
   nav.main-nav a:hover{border-color:var(--red-pen);}
   .header-actions{display:flex;gap:8px;align-items:center;}
   .notif-bell{position:relative;}
-  .notif-bell-btn{position:relative;background:none;border:1.5px solid var(--ink);border-radius:50%;width:38px;height:38px;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+  .notif-bell-btn{position:relative;background:none;border:none;padding:4px;font-size:21px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--ink);}
   .notif-badge{position:absolute;top:-4px;right:-4px;background:var(--red-pen);color:#fff;font-size:10px;font-weight:700;border-radius:20px;min-width:16px;height:16px;display:flex;align-items:center;justify-content:center;padding:0 3px;font-family:'JetBrains Mono',monospace;}
   .notif-dropdown{position:absolute;top:calc(100% + 8px);right:0;background:var(--white);border:1px solid var(--card-border);border-radius:12px;box-shadow:0 4px 16px rgba(0,0,0,.1);min-width:220px;padding:6px;z-index:100;}
   .notif-item{display:flex;justify-content:space-between;align-items:center;padding:9px 10px;border-radius:8px;cursor:pointer;font-size:13px;}
@@ -200,8 +200,6 @@
   .hint{font-size:12px;color:var(--ink-soft);margin-top:14px;}
 
   /* ---------- DASHBOARD ---------- */
-  .dash-header{display:flex;justify-content:space-between;align-items:center;padding:28px 0;flex-wrap:wrap;gap:10px;}
-  .dash-header h2{margin:0;font-size:24px;}
   .tab-bar{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:26px;border-bottom:1px solid var(--card-border);padding-bottom:10px;}
   .tab-btn{
     border:1px solid var(--card-border);background:var(--white);padding:8px 14px;font-size:13px;
@@ -428,7 +426,6 @@
 
     .hero h1{font-size:32px;}
     nav.main-nav{display:none;}
-    .dash-header{flex-direction:column;align-items:flex-start;}
   }
 </style>
 </head>
@@ -1208,9 +1205,9 @@ async function deleteClinic(cid){
 
 /* =================== 질의응답 =================== */
 function qnaImageFieldHTML(imageValue, onchangeCall, onremoveCall){
-  return `<div class="field">
+  return `<div class="field" style="max-width:150px;">
     ${imageValue ? `<div style="position:relative;display:inline-block;">
-      <img src="${imageValue}" style="max-width:160px;max-height:160px;border-radius:4px;border:1px solid var(--card-border);display:block;">
+      <img src="${imageValue}" style="max-width:150px;max-height:150px;border-radius:4px;border:1px solid var(--card-border);display:block;">
       <button class="btn btn-red btn-small" style="position:absolute;top:2px;right:2px;padding:1px 6px;" onclick="${onremoveCall}">×</button>
     </div>` : `<input type="file" accept="image/*" onchange="${onchangeCall}">`}
   </div>`;
@@ -2916,8 +2913,7 @@ function teacherHTML(){
   else body = teacherClassHubHTML();
 
   return `
-  <div class="dash-header"><h2>관리자 페이지</h2></div>
-  <div class="teacher-layout">
+  <div class="teacher-layout" style="margin-top:24px;">
     <div class="teacher-sidebar">
       ${groups.map(g=>`<div class="side-group-label">${g[0]}</div>${g[1].map(t=>`<button class="side-btn ${state.teacherTab===t[0]?'active':''}" onclick="state.teacherTab='${t[0]}';${t[0]==='classhub'?" state.classHubId=null; state.studentDetailId=null;":''} render()">${t[1]}</button>`).join('')}`).join('')}
     </div>
@@ -2964,6 +2960,40 @@ function teacherHomeHTML(){
     </div>
   </div>
   <div class="home-grid-2">
+    <div class="home-card" id="home-classprogress">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+        <h4 style="margin:0;">👥 반별 진도 및 과제 현황</h4>
+        <button class="btn btn-small" onclick="state.teacherTab='classhub'; render()">상세 관리 →</button>
+      </div>
+      ${DATA.classes.length===0 ? '<div class="empty">등록된 반이 없습니다.</div>' :
+        DATA.classes.map(c=>{
+          const roster = DATA.students.filter(s=>s.classId===c.id);
+          const hws = DATA.assignments.filter(a=>!a.classId || a.classId===c.id);
+          const vids = DATA.videos.filter(v=>!v.studentId && (!v.classId || v.classId===c.id));
+          let hwDone=0, hwTotal=0, vidDone=0, vidTotal=0;
+          roster.forEach(s=>{
+            const rec = state.allRecords[s.studentId];
+            hws.forEach(a=>{ hwTotal++; if(rec && rec.assignmentsDone && rec.assignmentsDone[a.id]) hwDone++; });
+            vids.forEach(v=>{ vidTotal++; if(rec && rec.videoProgress && rec.videoProgress[v.id] && rec.videoProgress[v.id].completed) vidDone++; });
+          });
+          const hwPct = hwTotal>0 ? Math.round(hwDone/hwTotal*100) : 0;
+          const vidPct = vidTotal>0 ? Math.round(vidDone/vidTotal*100) : 0;
+          return `<div class="home-classprogress-row">
+            <div style="display:flex;justify-content:space-between;font-size:13.5px;font-weight:700;margin-bottom:8px;">
+              <span>${escHtml(c.name)}</span><span class="mono" style="font-weight:400;color:var(--ink-soft);">총 ${roster.length}명</span>
+            </div>
+            <div class="home-bar-row" style="cursor:pointer;" onclick="state.teacherTab='classhub'; state.classHubId='${c.id}'; state.classHubTab='homework'; render()" title="미제출자 확인하러 가기"><span class="home-bar-label">과제 제출</span><div class="home-bar-outer"><div class="home-bar-inner home-bar-green" style="width:${hwPct}%;"></div></div><span class="home-bar-pct">${hwPct}%</span></div>
+            <div class="home-bar-row"><span class="home-bar-label">영상 시청</span><div class="home-bar-outer"><div class="home-bar-inner home-bar-blue" style="width:${vidPct}%;"></div></div><span class="home-bar-pct">${vidPct}%</span></div>
+          </div>`;
+        }).join('')}
+    </div>
+    <div class="home-card">
+      <h4>🗓️ 출석부 바로가기</h4>
+      ${DATA.classes.length===0 ? '<div class="empty">등록된 반이 없습니다.</div>' :
+        DATA.classes.map(c=>`<button class="btn" style="width:100%;margin-bottom:8px;text-align:left;" onclick="state.teacherTab='classhub'; state.classHubId='${c.id}'; state.classHubTab='attendance'; render()">${escHtml(c.name)} 출석부 열기</button>`).join('')}
+    </div>
+  </div>
+  <div class="home-grid-2">
     <div class="home-card">
       <h4>📚 과제 빠른 등록</h4>
       <div class="inline-form">
@@ -2975,43 +3005,6 @@ function teacherHomeHTML(){
       <button class="btn btn-primary" onclick="addHomework()">등록</button>
     </div>
     <div class="home-card">
-      <h4>📺 새 강의 업로드</h4>
-      <div class="field"><input id="video-url" placeholder="유튜브 링크 입력 (예: https://youtu.be/...)"></div>
-      <div class="field"><input id="video-title" placeholder="강의 제목 (예: 수학(상) 4강)"></div>
-      <div class="field" style="display:none;"><input id="video-unit" value=""></div>
-      <div class="field"><select id="video-class"><option value="">배포할 반 선택 (전체)</option>${DATA.classes.map(c=>`<option value="${c.id}">${escHtml(c.name)}</option>`).join('')}</select></div>
-      <button class="btn btn-primary" style="width:100%;" onclick="addVideo()">강의 등록 및 배포</button>
-    </div>
-  </div>
-  <div class="home-card" style="margin-bottom:16px;" id="home-classprogress">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
-      <h4 style="margin:0;">👥 반별 진도 및 과제 현황</h4>
-      <button class="btn btn-small" onclick="state.teacherTab='classhub'; render()">학생별 상세 관리 →</button>
-    </div>
-    ${DATA.classes.length===0 ? '<div class="empty">등록된 반이 없습니다.</div>' :
-      DATA.classes.map(c=>{
-        const roster = DATA.students.filter(s=>s.classId===c.id);
-        const hws = DATA.assignments.filter(a=>!a.classId || a.classId===c.id);
-        const vids = DATA.videos.filter(v=>!v.studentId && (!v.classId || v.classId===c.id));
-        let hwDone=0, hwTotal=0, vidDone=0, vidTotal=0;
-        roster.forEach(s=>{
-          const rec = state.allRecords[s.studentId];
-          hws.forEach(a=>{ hwTotal++; if(rec && rec.assignmentsDone && rec.assignmentsDone[a.id]) hwDone++; });
-          vids.forEach(v=>{ vidTotal++; if(rec && rec.videoProgress && rec.videoProgress[v.id] && rec.videoProgress[v.id].completed) vidDone++; });
-        });
-        const hwPct = hwTotal>0 ? Math.round(hwDone/hwTotal*100) : 0;
-        const vidPct = vidTotal>0 ? Math.round(vidDone/vidTotal*100) : 0;
-        return `<div class="home-classprogress-row">
-          <div style="display:flex;justify-content:space-between;font-size:13.5px;font-weight:700;margin-bottom:8px;">
-            <span>${escHtml(c.name)}</span><span class="mono" style="font-weight:400;color:var(--ink-soft);">총 ${roster.length}명</span>
-          </div>
-          <div class="home-bar-row"><span class="home-bar-label">과제 제출</span><div class="home-bar-outer"><div class="home-bar-inner home-bar-green" style="width:${hwPct}%;"></div></div><span class="home-bar-pct">${hwPct}%</span></div>
-          <div class="home-bar-row"><span class="home-bar-label">영상 시청</span><div class="home-bar-outer"><div class="home-bar-inner home-bar-blue" style="width:${vidPct}%;"></div></div><span class="home-bar-pct">${vidPct}%</span></div>
-        </div>`;
-      }).join('')}
-  </div>
-  <div class="home-grid-2">
-    <div class="home-card">
       <h4>📝 시험지 빠른 등록</h4>
       <div class="field"><label>대상 반</label><select id="exam-class">${classOptionsHTML(examDraft.classId)}</select></div>
       <div class="field"><label>시험명</label><input id="exam-title" value="${escHtml(examDraft.title)}" placeholder="예: 7월 내신 대비 모의고사"></div>
@@ -3021,11 +3014,14 @@ function teacherHomeHTML(){
       ${examDraft.questions.length>0 ? `<p style="font-size:12.5px;color:var(--green-ok);margin:8px 0;">${examDraft.questions.length}문항 인식됨 · [오답 시스템 &gt; 시험지]에서 확인하고 저장하세요.</p>
       <button class="btn btn-primary" style="width:100%;" onclick="state.teacherTab='exams'; render()">문항 확인하러 가기 →</button>` : ''}
     </div>
-    <div class="home-card">
-      <h4>🗓️ 출석부 바로가기</h4>
-      ${DATA.classes.length===0 ? '<div class="empty">등록된 반이 없습니다.</div>' :
-        DATA.classes.map(c=>`<button class="btn" style="width:100%;margin-bottom:8px;text-align:left;" onclick="state.teacherTab='classhub'; state.classHubId='${c.id}'; state.classHubTab='attendance'; render()">${escHtml(c.name)} 출석부 열기</button>`).join('')}
-    </div>
+  </div>
+  <div class="home-card">
+    <h4>📺 새 강의 업로드</h4>
+    <div class="field"><input id="video-url" placeholder="유튜브 링크 입력 (예: https://youtu.be/...)"></div>
+    <div class="field"><input id="video-title" placeholder="강의 제목 (예: 수학(상) 4강)"></div>
+    <div class="field" style="display:none;"><input id="video-unit" value=""></div>
+    <div class="field"><select id="video-class"><option value="">배포할 반 선택 (전체)</option>${DATA.classes.map(c=>`<option value="${c.id}">${escHtml(c.name)}</option>`).join('')}</select></div>
+    <button class="btn btn-primary" style="width:100%;" onclick="addVideo()">강의 등록 및 배포</button>
   </div>`;
 }
 
@@ -3465,7 +3461,7 @@ function teacherQnaHTML(){
       <div class="qna-q">Q. ${escHtml(q.question)}</div>
       ${q.image?`<img src="${q.image}" style="max-width:200px;max-height:200px;margin-top:8px;border-radius:4px;border:1px solid var(--card-border);display:block;">`:''}
       ${q.answer?`<div class="qna-answer"><div class="label">A. 답변 완료</div>${escHtml(q.answer)}${q.answerImage?`<img src="${q.answerImage}" style="max-width:200px;max-height:200px;margin-top:8px;border-radius:4px;border:1px solid var(--card-border);display:block;">`:''}</div>`:
-      `<div class="inline-form" style="margin-top:10px;align-items:flex-end;"><div class="field" style="flex:1;"><input id="answer-${q.id}" placeholder="답변 입력"></div>${qnaImageFieldHTML(state.qnaAnswerImage[q.id], `handleQnaAnswerImage('${q.id}',this.files)`, `removeQnaAnswerImage('${q.id}')`)}<button class="btn btn-primary btn-small" onclick="submitAnswer('${q.id}')">등록</button></div>`}
+      `<div class="inline-form" style="margin-top:10px;align-items:flex-start;"><div class="field" style="flex:1;"><textarea id="answer-${q.id}" placeholder="답변 입력 (엔터로 줄바꿈)" style="min-height:70px;"></textarea></div>${qnaImageFieldHTML(state.qnaAnswerImage[q.id], `handleQnaAnswerImage('${q.id}',this.files)`, `removeQnaAnswerImage('${q.id}')`)}<button class="btn btn-primary btn-small" onclick="submitAnswer('${q.id}')">등록</button></div>`}
       <div style="margin-top:8px;"><button class="btn btn-red btn-small" onclick="deleteQna('${q.id}')">삭제</button></div>
     </div>`;}).join('')}
   </div>`;
