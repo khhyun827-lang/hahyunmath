@@ -677,6 +677,8 @@ let state = {
   wrongExamId: null,
   wrongChecked: {},
   examImagesCache: {},
+  qnaQuestionImage: null,
+  qnaAnswerImage: {},
   unitBankLoaded: false,
   unitBankLoading: false,
   unitBankFilter: '',
@@ -714,13 +716,14 @@ let DATA = {
   exams: [], problemBank: [], unitBank: [], assignments: []
 };
 const UNITS = ['공통수학1', '공통수학2', '대수', '미적분Ⅰ', '확률과통계', '기하', '미적분Ⅱ'];
-// 반별 진도 체크리스트용 과목별 단원 목록. 공통수학1은 실제 사용 목록 그대로, 나머지는
-// 2022 개정 교육과정 기준으로 채워둔 추정치라 필요하면 직접 고쳐도 됨.
+// 반별 진도 체크리스트용 과목별 단원 목록. 공통수학1·공통수학2·대수·미적분Ⅰ은 실제 사용
+// 목록 그대로, 확률과통계·기하·미적분Ⅱ는 2022 개정 교육과정 기준으로 채워둔 추정치라
+// 필요하면 직접 고쳐도 됨.
 const UNIT_CHAPTERS = {
   '공통수학1': ['다항식의 연산','항등식과 나머지정리','인수분해','복소수','이차방정식','이차함수','여러가지 방정식','여러가지 부등식','경우의 수','행렬'],
-  '공통수학2': ['평면좌표','직선의 방정식','원의 방정식','도형의 이동','집합','명제','함수','유리함수와 무리함수'],
-  '대수': ['지수와 로그','지수함수와 로그함수','삼각함수의 뜻과 그래프','삼각함수의 활용','등차수열과 등비수열','수열의 합','수학적 귀납법'],
-  '미적분Ⅰ': ['함수의 극한','함수의 연속','다항함수의 미분법','도함수의 활용','다항함수의 적분법'],
+  '공통수학2': ['평면좌표','직선의 방정식','원의 방정식','도형의 이동','집합','명제','절대부등식','함수','합성함수와 역함수','유리함수와 무리함수'],
+  '대수': ['지수','로그','지수함수','로그함수','일반각과 호도법','삼각함수의 그래프','삼각함수의 활용','등차수열','등비수열','수열의 합','수학적 귀납법'],
+  '미적분Ⅰ': ['함수의 극한','함수의 연속','미분계수와 도함수','도함수의 활용(1) 접선의 방정식','도함수의 활용(2) 함수의 증가와 감소, 극대와 극소','도함수의 활용(3) 다항함수의 그래프','부정적분과 정적분','정적분의 활용','속도와 가속도'],
   '확률과통계': ['경우의 수(순열과 조합)','확률의 뜻과 활용','조건부확률','이산확률변수와 확률분포','이항분포','정규분포','통계적 추정'],
   '기하': ['이차곡선','평면벡터','공간도형','공간좌표'],
   '미적분Ⅱ': ['수열의 극한','여러 가지 함수의 미분','여러 가지 미분법','도함수의 활용','여러 가지 적분법','정적분의 활용'],
@@ -1145,13 +1148,46 @@ async function deleteClinic(cid){
 }
 
 /* =================== 질의응답 =================== */
+function qnaImageFieldHTML(imageValue, onchangeCall, onremoveCall){
+  return `<div class="field">
+    ${imageValue ? `<div style="position:relative;display:inline-block;">
+      <img src="${imageValue}" style="max-width:160px;max-height:160px;border-radius:4px;border:1px solid var(--card-border);display:block;">
+      <button class="btn btn-red btn-small" style="position:absolute;top:2px;right:2px;padding:1px 6px;" onclick="${onremoveCall}">×</button>
+    </div>` : `<input type="file" accept="image/*" onchange="${onchangeCall}">`}
+  </div>`;
+}
+async function handleQnaQuestionImage(fileList){
+  const f = (fileList||[])[0];
+  if(!f) return;
+  try{
+    state.qnaQuestionImage = await compressImageToBase64(f);
+  }catch(e){ console.error('이미지 처리 실패', e); showToast('이미지를 처리하지 못했습니다.'); }
+  render();
+}
+function removeQnaQuestionImage(){
+  state.qnaQuestionImage = null;
+  render();
+}
+async function handleQnaAnswerImage(qid, fileList){
+  const f = (fileList||[])[0];
+  if(!f) return;
+  try{
+    state.qnaAnswerImage[qid] = await compressImageToBase64(f);
+  }catch(e){ console.error('이미지 처리 실패', e); showToast('이미지를 처리하지 못했습니다.'); }
+  render();
+}
+function removeQnaAnswerImage(qid){
+  delete state.qnaAnswerImage[qid];
+  render();
+}
 async function submitQuestion(){
   const sid = state.currentUser.studentId;
   const question = document.getElementById('qna-question').value.trim();
   if(!question){ showToast('질문 내용을 입력해주세요.'); return; }
-  DATA.qnas.unshift({id:'qn'+Date.now(), studentId:sid, studentName:state.currentUser.name, question, date:new Date().toISOString().slice(0,10), answer:null, answeredAt:null});
+  DATA.qnas.unshift({id:'qn'+Date.now(), studentId:sid, studentName:state.currentUser.name, question, image:state.qnaQuestionImage||null, date:new Date().toISOString().slice(0,10), answer:null, answerImage:null, answeredAt:null});
   await dbSet('qnas', DATA.qnas);
   document.getElementById('qna-question').value='';
+  state.qnaQuestionImage = null;
   showToast('질문이 등록되었습니다.');
   render();
 }
@@ -1160,8 +1196,9 @@ async function submitAnswer(qid){
   if(!val){ showToast('답변을 입력해주세요.'); return; }
   const q = DATA.qnas.find(q=>q.id===qid);
   if(!q) return;
-  q.answer = val; q.answeredAt = new Date().toISOString().slice(0,10);
+  q.answer = val; q.answerImage = state.qnaAnswerImage[qid]||null; q.answeredAt = new Date().toISOString().slice(0,10);
   await dbSet('qnas', DATA.qnas);
+  delete state.qnaAnswerImage[qid];
   showToast('답변이 등록되었습니다.');
   render();
 }
@@ -2313,7 +2350,7 @@ function headerHTML(){
     <div class="header-actions">
       ${loggedIn
         ? `<span class="mono" style="font-size:12px;color:var(--ink-soft);align-self:center;margin-right:6px;">${loggedIn.type==='teacher'?'관리자':loggedIn.name+' 학생'}</span>
-           <button class="btn btn-small" onclick="goto('${loggedIn.type==='teacher'?'teacher':'student'}')">${loggedIn.type==='teacher'?'관리자 페이지로':'마이페이지로'}</button>
+           <button class="btn btn-small" onclick="${loggedIn.type==='teacher'?"state.teacherTab='home';":"state.studentTab='home';"} goto('${loggedIn.type==='teacher'?'teacher':'student'}')">${loggedIn.type==='teacher'?'관리자 페이지로':'마이페이지로'}</button>
            <button class="btn btn-red btn-small" onclick="logout()">로그아웃</button>`
         : `<button class="btn btn-small" onclick="state.loginMode='student'; goto('login')">학생 로그인</button>
            <button class="btn btn-primary btn-small" onclick="state.loginMode='teacher'; goto('login')">강사 로그인</button>`
@@ -2547,6 +2584,7 @@ function studentHTML(){
       <div class="home-card">
         <h4>💬 무엇이든 물어보세요</h4>
         <div class="field"><textarea id="qna-question" placeholder="문제 질문은 물론, 학습 상담 등 무엇이든 편하게 남겨주세요!" style="min-height:70px;"></textarea></div>
+        ${qnaImageFieldHTML(state.qnaQuestionImage, 'handleQnaQuestionImage(this.files)', 'removeQnaQuestionImage()')}
         <button class="btn btn-primary" style="width:100%;" onclick="submitQuestion()">질문 보내기</button>
       </div>
     </div>
@@ -2691,6 +2729,7 @@ function studentHTML(){
   } else if(state.studentTab==='qna'){
     body = `<div class="panel"><h3>질문 등록</h3>
       <div class="field"><label>질문 내용</label><textarea id="qna-question" placeholder="궁금한 점을 자유롭게 남겨주세요"></textarea></div>
+      ${qnaImageFieldHTML(state.qnaQuestionImage, 'handleQnaQuestionImage(this.files)', 'removeQnaQuestionImage()')}
       <button class="btn btn-primary" onclick="submitQuestion()">질문하기</button>
     </div>
     <div class="panel"><h3>질의응답 게시판</h3>
@@ -2698,7 +2737,8 @@ function studentHTML(){
       DATA.qnas.map(q=>`<div class="qna-card">
         <div class="qna-meta">${q.date} · ${escHtml(q.studentName)}</div>
         <div class="qna-q">Q. ${escHtml(q.question)}</div>
-        ${q.answer?`<div class="qna-answer"><div class="label">A. 답변</div>${escHtml(q.answer)}</div>`:'<div class="qna-noanswer">아직 답변이 등록되지 않았습니다.</div>'}
+        ${q.image?`<img src="${q.image}" style="max-width:200px;max-height:200px;margin-top:8px;border-radius:4px;border:1px solid var(--card-border);display:block;">`:''}
+        ${q.answer?`<div class="qna-answer"><div class="label">A. 답변</div>${escHtml(q.answer)}${q.answerImage?`<img src="${q.answerImage}" style="max-width:200px;max-height:200px;margin-top:8px;border-radius:4px;border:1px solid var(--card-border);display:block;">`:''}</div>`:'<div class="qna-noanswer">아직 답변이 등록되지 않았습니다.</div>'}
       </div>`).join('')}
     </div>`;
   } else if(state.studentTab==='video'){
@@ -2762,7 +2802,7 @@ function teacherHTML(){
   <div class="dash-header"><h2>관리자 페이지</h2></div>
   <div class="teacher-layout">
     <div class="teacher-sidebar">
-      ${groups.map(g=>`<div class="side-group-label">${g[0]}</div>${g[1].map(t=>`<button class="side-btn ${state.teacherTab===t[0]?'active':''}" onclick="state.teacherTab='${t[0]}'; render()">${t[1]}</button>`).join('')}`).join('')}
+      ${groups.map(g=>`<div class="side-group-label">${g[0]}</div>${g[1].map(t=>`<button class="side-btn ${state.teacherTab===t[0]?'active':''}" onclick="state.teacherTab='${t[0]}';${t[0]==='classhub'?" state.classHubId=null; state.studentDetailId=null;":''} render()">${t[1]}</button>`).join('')}`).join('')}
     </div>
     <div class="teacher-main">${body}</div>
   </div>
@@ -2879,21 +2919,22 @@ function teacherHomeHTML(){
       ${DATA.classes.length===0 ? '<div class="empty">등록된 반이 없습니다.</div>' :
         DATA.classes.map(c=>`<button class="btn" style="width:100%;margin-bottom:8px;text-align:left;" onclick="state.teacherTab='classhub'; state.classHubId='${c.id}'; state.classHubTab='attendance'; render()">${escHtml(c.name)} 출석부 열기</button>`).join('')}
     </div>
+  </div>
+  <div class="home-card">
+    <h4>📚 과제 빠른 등록</h4>
+    <div class="inline-form">
+      <div class="field"><label>대상 반</label><select id="hw-class">${classOptionsHTML(null)}</select></div>
+      <div class="field" style="flex:2;"><label>과제명</label><input id="hw-title" placeholder="예: 3단원 오답노트 정리"></div>
+      <div class="field"><label>마감일</label><input id="hw-due" type="date"></div>
+    </div>
+    <div class="field"><label>설명 (선택)</label><textarea id="hw-desc" placeholder="과제 상세 내용을 입력하세요"></textarea></div>
+    <button class="btn btn-primary" onclick="addHomework()">등록</button>
   </div>`;
 }
 
 /* ---------- 반 관리 ---------- */
 function teacherClassesHTML(){
   return `
-  <div class="panel">
-    <h3>반 추가</h3>
-    <div class="inline-form">
-      <div class="field"><label>반 이름</label><input id="new-cname" placeholder="예: [특강]미적분"></div>
-      <div class="field"><label>강의 시간</label><input id="new-cschedule" placeholder="예: 월,수,금 7시~9시"></div>
-      <div class="field"><label>기간</label><input id="new-cperiod" placeholder="예: 26.03~26.12"></div>
-      <button class="btn btn-primary" onclick="addClass()">추가</button>
-    </div>
-  </div>
   <div class="panel">
     <h3>반 목록 (${DATA.classes.length}개)</h3>
     ${DATA.classes.length===0?'<div class="empty">등록된 반이 없습니다.</div>':`
@@ -3318,13 +3359,16 @@ function teacherQnaHTML(){
   <div class="panel">
     <h3>질의응답 관리 (${DATA.qnas.length}건)</h3>
     ${DATA.qnas.length===0?'<div class="empty">등록된 질문이 없습니다.</div>':
-    DATA.qnas.map(q=>`<div class="qna-card">
-      <div class="qna-meta">${q.date} · ${escHtml(q.studentName)}</div>
+    DATA.qnas.map(q=>{
+      const stu = DATA.students.find(s=>s.studentId===q.studentId);
+      return `<div class="qna-card">
+      <div class="qna-meta">${q.date} · ${escHtml(q.studentName)}${stu?` · ${escHtml(classNameOf(stu.classId))}`:''}</div>
       <div class="qna-q">Q. ${escHtml(q.question)}</div>
-      ${q.answer?`<div class="qna-answer"><div class="label">A. 답변 완료</div>${escHtml(q.answer)}</div>`:
-      `<div class="inline-form" style="margin-top:10px;"><div class="field" style="flex:1;"><input id="answer-${q.id}" placeholder="답변 입력"></div><button class="btn btn-primary btn-small" onclick="submitAnswer('${q.id}')">등록</button></div>`}
+      ${q.image?`<img src="${q.image}" style="max-width:200px;max-height:200px;margin-top:8px;border-radius:4px;border:1px solid var(--card-border);display:block;">`:''}
+      ${q.answer?`<div class="qna-answer"><div class="label">A. 답변 완료</div>${escHtml(q.answer)}${q.answerImage?`<img src="${q.answerImage}" style="max-width:200px;max-height:200px;margin-top:8px;border-radius:4px;border:1px solid var(--card-border);display:block;">`:''}</div>`:
+      `<div class="inline-form" style="margin-top:10px;align-items:flex-end;"><div class="field" style="flex:1;"><input id="answer-${q.id}" placeholder="답변 입력"></div>${qnaImageFieldHTML(state.qnaAnswerImage[q.id], `handleQnaAnswerImage('${q.id}',this.files)`, `removeQnaAnswerImage('${q.id}')`)}<button class="btn btn-primary btn-small" onclick="submitAnswer('${q.id}')">등록</button></div>`}
       <div style="margin-top:8px;"><button class="btn btn-red btn-small" onclick="deleteQna('${q.id}')">삭제</button></div>
-    </div>`).join('')}
+    </div>`;}).join('')}
   </div>`;
 }
 
@@ -3643,6 +3687,15 @@ function teacherSettingsHTML(){
 function teacherSettingsAdminHTML(){
   markConsultsSeen();
   return `
+  <div class="panel">
+    <h3>반 추가</h3>
+    <div class="inline-form">
+      <div class="field"><label>반 이름</label><input id="new-cname" placeholder="예: [특강]미적분"></div>
+      <div class="field"><label>강의 시간</label><input id="new-cschedule" placeholder="예: 월,수,금 7시~9시"></div>
+      <div class="field"><label>기간</label><input id="new-cperiod" placeholder="예: 26.03~26.12"></div>
+      <button class="btn btn-primary" onclick="addClass()">추가</button>
+    </div>
+  </div>
   <div class="panel">
     <h3>학생 계정 추가</h3>
     <p class="hint" style="margin-top:-8px;">등록 후에는 [반 관리] &gt; 반을 열고 학생 명단에서 상세보기로 수정·삭제할 수 있습니다.</p>
