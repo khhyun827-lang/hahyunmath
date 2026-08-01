@@ -765,7 +765,15 @@ async function loadAll(){
   ]);
   await seedTestAccountIfEmpty();
   await restoreSession();
+  applyHashOnLoad();
   render();
+}
+
+// 새로고침 시 주소창 해시를 읽어 (로그인 상태와 일치할 때만) 탭을 복원한다.
+function applyHashOnLoad(){
+  const [view, tab] = location.hash.replace(/^#\/?/,'').split('/');
+  if(view==='teacher' && state.view==='teacher' && tab) state.teacherTab = tab;
+  if(view==='student' && state.view==='student' && tab) state.studentTab = tab;
 }
 
 /* 최초 실행 시 테스트용 반 + 학생 계정을 하나 만들어둔다 (이미 데이터가 있으면 아무것도 하지 않음) */
@@ -807,6 +815,20 @@ async function saveChat(studentId){
 
 /* =================== 네비게이션 =================== */
 function goto(view){ state.view = view; state.loginError=''; render(); window.scrollTo(0,0); }
+
+/* ---- 뒤로가기 지원용 해시 라우팅 ---- */
+function buildHashFromState(){
+  if(state.view==='teacher') return '#teacher/' + (state.teacherTab||'home');
+  if(state.view==='student') return '#student/' + (state.studentTab||'home');
+  if(state.view==='login') return '#login';
+  return '#home';
+}
+// 로그인 상태와 어긋나는 해시(예: 로그아웃 상태에서 #teacher/... 로 진입)는 무시하고 안전하게 홈으로 보낸다.
+function viewAllowedForCurrentUser(view){
+  if(view==='teacher') return state.currentUser && state.currentUser.type==='teacher' ? 'teacher' : 'home';
+  if(view==='student') return state.currentUser && state.currentUser.type==='student' ? 'student' : 'home';
+  return view || 'home';
+}
 function scrollToId(id){
   state.view='home';
   render();
@@ -2409,6 +2431,16 @@ function renderScoreChart(scores){
 }
 
 /* =================== 화면 렌더 =================== */
+let lastSyncedHash = null;
+function syncHistory(){
+  const newHash = buildHashFromState();
+  if(newHash === lastSyncedHash) return;
+  const snap = {view:state.view, teacherTab:state.teacherTab, studentTab:state.studentTab};
+  if(lastSyncedHash===null) history.replaceState(snap, '', newHash); // 첫 렌더는 기록을 새로 안 쌓고 지금 자리를 교체만
+  else history.pushState(snap, '', newHash);
+  lastSyncedHash = newHash;
+}
+
 function render(){
   const app = document.getElementById('app');
   // 탭 렌더 함수들이 내부에서 markSeen()을 호출해 알림을 "확인함" 처리하는 경우가 있어서,
@@ -2433,6 +2465,7 @@ function render(){
   if(state.view==='student' && state.studentTab==='video' && state.currentUser){
     mountVideoTrackers(state.currentUser.studentId);
   }
+  syncHistory();
 }
 
 function headerHTML(){
@@ -3855,6 +3888,19 @@ document.addEventListener('click', (e) => {
     state.notifOpen = false;
     render();
   }
+});
+
+// 브라우저 뒤로가기/앞으로가기 시 주소창 해시에 맞춰 화면을 복원한다.
+window.addEventListener('popstate', (e) => {
+  const desired = e.state ? e.state.view : (location.hash.replace(/^#\/?/,'').split('/')[0] || 'home');
+  state.view = viewAllowedForCurrentUser(desired);
+  if(e.state && state.view==='teacher' && e.state.teacherTab) state.teacherTab = e.state.teacherTab;
+  if(e.state && state.view==='student' && e.state.studentTab) state.studentTab = e.state.studentTab;
+  const correctedHash = buildHashFromState();
+  // 로그인 상태와 안 맞아 다른 화면으로 안전하게 리다이렉트된 경우, 주소창 해시도 그 화면에 맞게 바로잡는다.
+  if(correctedHash !== location.hash) history.replaceState({view:state.view, teacherTab:state.teacherTab, studentTab:state.studentTab}, '', correctedHash);
+  lastSyncedHash = correctedHash; // 복원 자체가 새 push를 유발하지 않도록 먼저 맞춰둠
+  render();
 });
 
 /* =================== 시작 =================== */
