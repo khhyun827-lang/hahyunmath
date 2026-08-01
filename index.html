@@ -2500,7 +2500,7 @@ function headerHTML(){
     <div class="header-actions">
       ${loggedIn
         ? `${notificationBellHTML(loggedIn.type==='teacher' ? teacherNotifItems() : studentNotifItems(loggedIn.studentId))}
-           <span class="mono" style="font-size:12px;color:var(--ink-soft);align-self:center;margin-right:6px;">${loggedIn.type==='teacher'?'🎓 김하현T':loggedIn.name+' 학생'}</span>
+           <span class="mono" style="font-size:12px;color:var(--ink-soft);align-self:center;margin-right:6px;">${loggedIn.type==='teacher'?'김하현T':loggedIn.name+' 학생'}</span>
            <button class="btn btn-small" onclick="${loggedIn.type==='teacher'?"state.teacherTab='home';":"state.studentTab='home';"} goto('${loggedIn.type==='teacher'?'teacher':'student'}')">${loggedIn.type==='teacher'?'관리자 페이지로':'마이페이지로'}</button>
            <button class="btn btn-red btn-small" onclick="logout()">로그아웃</button>`
         : `<button class="btn btn-small" onclick="state.loginMode='student'; goto('login')">학생 로그인</button>
