@@ -1142,7 +1142,7 @@ function notificationBellHTML(items){
   const total = items.reduce((sum,it)=>sum+unseenCount(it.key, it.count), 0);
   const unseenItems = items.filter(it=>unseenCount(it.key,it.count)>0);
   return `<div class="notif-bell">
-    <button class="notif-bell-btn" onclick="state.notifOpen=!state.notifOpen; render()">🔔${total>0?`<span class="notif-badge">${total>9?'9+':total}</span>`:''}</button>
+    <button class="notif-bell-btn" onclick="state.notifOpen=!state.notifOpen; render()"><svg width="20" height="20" viewBox="0 0 24 26" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2.5a2 2 0 0 1 2 2v.6a7 7 0 0 1 5 6.9c0 4.6 1.6 6.4 2.3 7a1 1 0 0 1-.7 1.7H3.4a1 1 0 0 1-.7-1.7c.7-.6 2.3-2.4 2.3-7a7 7 0 0 1 5-6.9v-.6a2 2 0 0 1 2-2z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M9.5 22.3a2.5 2.5 0 0 0 5 0" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>${total>0?`<span class="notif-badge">${total>9?'9+':total}</span>`:''}</button>
     ${state.notifOpen ? `<div class="notif-dropdown">
       ${unseenItems.length===0 ? '<div class="notif-empty">새 알림이 없습니다</div>' :
       unseenItems.map(it=>`<div class="notif-item" onclick="${it.gotoCode} markSeen('${it.key}', ${it.count}); state.notifOpen=false; render()">
@@ -1226,12 +1226,19 @@ async function deleteClinic(cid){
 }
 
 /* =================== 질의응답 =================== */
-function qnaImageFieldHTML(imageValue, onchangeCall, onremoveCall){
+function qnaImageFieldHTML(imageValue, onchangeCall, onremoveCall, fieldId){
+  const uid = fieldId || 'qimg';
   return `<div class="field" style="max-width:150px;">
     ${imageValue ? `<div style="position:relative;display:inline-block;">
       <img src="${imageValue}" style="max-width:150px;max-height:150px;border-radius:4px;border:1px solid var(--card-border);display:block;">
       <button class="btn btn-red btn-small" style="position:absolute;top:2px;right:2px;padding:1px 6px;" onclick="${onremoveCall}">×</button>
-    </div>` : `<input type="file" accept="image/*" onchange="${onchangeCall}">`}
+    </div>` : `
+    <input type="file" accept="image/*" id="${uid}-file" style="display:none;" onchange="${onchangeCall}">
+    <input type="file" accept="image/*" capture="environment" id="${uid}-cam" style="display:none;" onchange="${onchangeCall}">
+    <div style="display:flex;gap:6px;">
+      <button type="button" class="btn btn-small" style="flex:1;" onclick="document.getElementById('${uid}-file').click()">📁 파일</button>
+      <button type="button" class="btn btn-small" style="flex:1;" onclick="document.getElementById('${uid}-cam').click()">📷 촬영</button>
+    </div>`}
   </div>`;
 }
 async function handleQnaQuestionImage(fileList){
@@ -2728,7 +2735,7 @@ function studentHTML(){
       <div class="home-card">
         <h4>💬 무엇이든 물어보세요</h4>
         <div class="field"><textarea id="qna-question" placeholder="문제 질문은 물론, 학습 상담 등 무엇이든 편하게 남겨주세요!" style="min-height:70px;"></textarea></div>
-        ${qnaImageFieldHTML(state.qnaQuestionImage, 'handleQnaQuestionImage(this.files)', 'removeQnaQuestionImage()')}
+        ${qnaImageFieldHTML(state.qnaQuestionImage, 'handleQnaQuestionImage(this.files)', 'removeQnaQuestionImage()', 'qna-q-home')}
         <button class="btn btn-primary" style="width:100%;" onclick="submitQuestion()">질문 보내기</button>
       </div>
     </div>
@@ -2875,7 +2882,7 @@ function studentHTML(){
   } else if(state.studentTab==='qna'){
     body = `<div class="panel"><h3>질문 등록</h3>
       <div class="field"><label>질문 내용</label><textarea id="qna-question" placeholder="궁금한 점을 자유롭게 남겨주세요"></textarea></div>
-      ${qnaImageFieldHTML(state.qnaQuestionImage, 'handleQnaQuestionImage(this.files)', 'removeQnaQuestionImage()')}
+      ${qnaImageFieldHTML(state.qnaQuestionImage, 'handleQnaQuestionImage(this.files)', 'removeQnaQuestionImage()', 'qna-q-tab')}
       <button class="btn btn-primary" onclick="submitQuestion()">질문하기</button>
     </div>
     <div class="panel"><h3>질의응답 게시판</h3>
@@ -3494,7 +3501,7 @@ function teacherQnaHTML(){
       <div class="qna-q">Q. ${escHtml(q.question)}</div>
       ${q.image?`<img src="${q.image}" style="max-width:200px;max-height:200px;margin-top:8px;border-radius:4px;border:1px solid var(--card-border);display:block;">`:''}
       ${q.answer?`<div class="qna-answer"><div class="label">A. 답변 완료</div>${escHtml(q.answer)}${q.answerImage?`<img src="${q.answerImage}" style="max-width:200px;max-height:200px;margin-top:8px;border-radius:4px;border:1px solid var(--card-border);display:block;">`:''}</div>`:
-      `<div class="inline-form" style="margin-top:10px;align-items:flex-start;"><div class="field" style="flex:1;"><textarea id="answer-${q.id}" placeholder="답변 입력 (엔터로 줄바꿈)" style="min-height:70px;"></textarea></div>${qnaImageFieldHTML(state.qnaAnswerImage[q.id], `handleQnaAnswerImage('${q.id}',this.files)`, `removeQnaAnswerImage('${q.id}')`)}<button class="btn btn-primary btn-small" onclick="submitAnswer('${q.id}')">등록</button></div>`}
+      `<div class="inline-form" style="margin-top:10px;align-items:flex-start;"><div class="field" style="flex:1;"><textarea id="answer-${q.id}" placeholder="답변 입력 (엔터로 줄바꿈)" style="min-height:70px;"></textarea></div>${qnaImageFieldHTML(state.qnaAnswerImage[q.id], `handleQnaAnswerImage('${q.id}',this.files)`, `removeQnaAnswerImage('${q.id}')`, `qna-a-${q.id}`)}<button class="btn btn-primary btn-small" onclick="submitAnswer('${q.id}')">등록</button></div>`}
       <div style="margin-top:8px;"><button class="btn btn-red btn-small" onclick="deleteQna('${q.id}')">삭제</button></div>
     </div>`;}).join('')}
   </div>`;
