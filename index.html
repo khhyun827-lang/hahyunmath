@@ -91,21 +91,24 @@
   }
   .hero-v2-text{flex:1 1 380px;padding:52px 44px;display:flex;flex-direction:column;justify-content:center;color:#fff;}
   .hero-v2-text .eyebrow{border-color:rgba(255,255,255,.35);color:#F0D2D0;}
-  .hero-v2-text h1{color:#fff;font-size:38px;line-height:1.4;margin:0 0 20px;font-weight:900;}
+  .hero-v2-text h1{color:#fff;font-size:32px;line-height:1.45;margin:0 0 20px;font-weight:900;word-break:keep-all;}
   .hero-v2-text h1 .tag{background:var(--blue-deep);padding:2px 12px;border-radius:6px;display:inline-block;}
-  .hero-v2-text p.desc{color:#C7C0C1;font-size:15px;max-width:420px;margin-bottom:28px;}
+  .hero-v2-text p.desc{color:#E8D9D8;font-size:15px;max-width:420px;margin-bottom:28px;word-break:keep-all;}
+  .hero-btn-primary{background:#fff;color:var(--blue-deep-dark);border-color:#fff;}
+  .hero-btn-primary:hover{background:#F4E9E7;color:var(--blue-deep-dark);}
+  .hero-btn-outline{background:transparent;color:#fff;border-color:rgba(255,255,255,.5);}
+  .hero-btn-outline:hover{background:rgba(255,255,255,.12);color:#fff;}
   .hero-v2-photo{flex:1 1 360px;min-width:260px;position:relative;background:transparent;}
   .hero-v2-photo img{
     width:100%;height:100%;object-fit:cover;object-position:top center;display:block;
-    -webkit-mask-image:radial-gradient(115% 92% at 50% 38%, #000 68%, transparent 100%);
-    mask-image:radial-gradient(115% 92% at 50% 38%, #000 68%, transparent 100%);
     filter:drop-shadow(0 10px 22px rgba(0,0,0,.16));
   }
   .hero-v2-photo::before{
     content:'';position:absolute;inset:0;pointer-events:none;
     background:
-      radial-gradient(55% 50% at 50% 34%, rgba(255,241,232,.26) 0%, rgba(255,241,232,0) 72%),
-      linear-gradient(180deg, rgba(0,0,0,0) 66%, rgba(0,0,0,.14) 100%);
+      radial-gradient(55% 50% at 55% 32%, rgba(255,241,232,.22) 0%, rgba(255,241,232,0) 70%),
+      linear-gradient(90deg, var(--blue-deep) 0%, rgba(174,75,83,.65) 12%, rgba(174,75,83,.28) 24%, rgba(174,75,83,0) 40%),
+      linear-gradient(180deg, rgba(0,0,0,0) 60%, rgba(0,0,0,.15) 100%);
   }
   @media (max-width:760px){
     .hero-v2{flex-direction:column;min-height:0;}
@@ -2722,8 +2725,8 @@ function homeHTML(){
       <h1>수학을 잘 가르치는 것에서<br>끝나지 않습니다.</h1>
       <p class="desc">학생마다 다른 학습 속도와 약점을 분석하고,<br>가장 효율적인 학습 루틴을 설계합니다.</p>
       <div class="hero-actions">
-        <button class="btn btn-primary" onclick="scrollToId('sec-contact')">${iconSvg('phone',15)} 상담 신청하기</button>
-        <button class="btn" style="background:transparent;color:#fff;border-color:rgba(255,255,255,.4);" onclick="scrollToId('sec-curri')">커리큘럼 보기</button>
+        <button class="btn hero-btn-primary" onclick="scrollToId('sec-contact')">${iconSvg('phone',15)} 상담 신청하기</button>
+        <button class="btn hero-btn-outline" onclick="scrollToId('sec-curri')">커리큘럼 보기</button>
       </div>
     </div>
     <div class="hero-v2-photo"><img src="profile.jpg" alt="김하현 강사"></div>
