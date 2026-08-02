@@ -541,6 +541,64 @@ async function dbDelete(key){
   }catch(e){ console.error('삭제 실패', key, e); }
 }
 
+/* =================== 저장소 유틸 2 — 컬렉션(문서 하나당 레코드 하나) =================== */
+// 예전엔 kv/students 문서 하나에 학생 전체 배열을 통째로 저장해서, 학생 한 명만 바꿔도
+// 전체를 다시 쓰고(동시 편집 시 서로 덮어씀) 문서 1MB 한도에도 걸릴 수 있었다.
+// 아래 3개 함수는 컬렉션 하나에 레코드마다 문서를 따로 둬서 그 문제를 없앤다.
+// (Firestore 문서 형식을 그대로 쓰지 않고 예전처럼 value 필드 하나에 JSON 문자열로 넣는 이유는
+//  기존 dbGet/dbSet과 직렬화 방식을 통일해서 변환 과정에서 실수할 여지를 줄이기 위함.)
+async function dbSetDoc(collection, id, data){
+  try{
+    const token = await withTimeout(getAuthToken(), 8000);
+    const res = await withTimeout(fetch(FIRESTORE_ROOT + '/' + collection + '/' + encodeURIComponent(id), {
+      method: 'PATCH',
+      headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fields: { value: { stringValue: JSON.stringify(data) } } })
+    }), 8000);
+    if(!res.ok) throw new Error('firestore http ' + res.status);
+    return true;
+  }catch(e){ console.error('저장 실패', collection, id, e); return null; }
+}
+async function dbDeleteDoc(collection, id){
+  try{
+    const token = await withTimeout(getAuthToken(), 8000);
+    await withTimeout(fetch(FIRESTORE_ROOT + '/' + collection + '/' + encodeURIComponent(id), {
+      method: 'DELETE',
+      headers: { Authorization: 'Bearer ' + token }
+    }), 8000);
+  }catch(e){ console.error('삭제 실패', collection, id, e); }
+}
+async function dbGetCollection(collection){
+  try{
+    const token = await withTimeout(getAuthToken(), 8000);
+    let out = [], pageToken = '';
+    do{
+      const url = FIRESTORE_ROOT + '/' + collection + '?pageSize=300' + (pageToken ? '&pageToken=' + encodeURIComponent(pageToken) : '');
+      const res = await withTimeout(fetch(url, { headers: { Authorization: 'Bearer ' + token } }), 8000);
+      if(res.status === 404) break;
+      if(!res.ok) throw new Error('firestore http ' + res.status);
+      const json = await res.json();
+      (json.documents || []).forEach(doc => {
+        try{ out.push(JSON.parse(doc.fields.value.stringValue)); }catch(e){}
+      });
+      pageToken = json.nextPageToken || '';
+    } while(pageToken);
+    return out;
+  }catch(e){ console.error('컬렉션 불러오기 실패', collection, e); return []; }
+}
+// 예전 kv/{oldKey} 블롭(배열 하나)을 컬렉션(문서마다 레코드 하나)로 1회 옮긴다.
+// 새 컬렉션에 이미 데이터가 있으면(=이미 옮겨졌으면) 아무것도 안 하고 그걸 그대로 쓴다.
+// 예전 블롭 문서는 안전하게 그대로 남겨둔다(옮기다 실패해도 원본 데이터가 사라지지 않도록).
+async function migrateBlobToCollection(oldKey, collection, idField){
+  const existing = await dbGetCollection(collection);
+  if(existing.length > 0) return existing;
+  const oldArr = await dbGet(oldKey, []);
+  if(!oldArr || oldArr.length === 0) return [];
+  await Promise.all(oldArr.map(item => dbSetDoc(collection, String(item[idField]), item)));
+  console.log('[migrate] ' + oldKey + ' -> ' + collection + ': ' + oldArr.length + '건 이전 완료');
+  return oldArr;
+}
+
 /* =================== AI 쌍둥이 문제 생성 (일 20건 한도) =================== */
 function todayStr(){ return new Date().toISOString().slice(0,10); }
 async function getAIQuotaUsed(){
@@ -797,7 +855,7 @@ async function loadAll(){
     DATA.classes, DATA.quizzes, DATA.clinics, DATA.clinicSlots, DATA.qnas,
     DATA.videos, DATA.assistants, DATA.exams, DATA.problemBank, DATA.assignments
   ] = await Promise.all([
-    dbGet('students', []), dbGet('notices', []), dbGet('consults', []), dbGet('teacher-pw', null),
+    migrateBlobToCollection('students', 'students', 'studentId'), dbGet('notices', []), dbGet('consults', []), dbGet('teacher-pw', null),
     dbGet('classes', []), dbGet('quizzes', []), dbGet('clinics', []), dbGet('clinic-slots', []), dbGet('qnas', []),
     dbGet('videos', []), dbGet('assistants', []), dbGet('exams', []), dbGet('problem-bank', []), dbGet('assignments', [])
   ]);
@@ -823,7 +881,7 @@ async function seedTestAccountIfEmpty(){
   await dbSet('classes', DATA.classes);
   const testStudent = {studentId:'test', name:'테스트학생', pw:'1234', grade:'고1', school:'', classId:testClass.id};
   DATA.students.push(testStudent);
-  await dbSet('students', DATA.students);
+  await dbSetDoc('students', testStudent.studentId, testStudent);
   DATA.records['test'] = {scores:[], attendance:[], assignments:[], progress:{unit:'', percent:0}, quizAnswers:{}, wrongHomework:[], videoProgress:{}, assignmentsDone:{}};
   await saveRecord('test');
 }
@@ -1047,8 +1105,9 @@ async function addStudent(){
   const classId = document.getElementById('new-sclass').value;
   if(!sid || !name || !pw){ showToast('아이디, 이름, 비밀번호는 필수입니다.'); return; }
   if(DATA.students.some(s=>s.studentId===sid)){ showToast('이미 존재하는 아이디입니다.'); return; }
-  DATA.students.push({studentId:sid, name, pw, grade, school, phone, parentPhone, classId});
-  await dbSet('students', DATA.students);
+  const newStudent = {studentId:sid, name, pw, grade, school, phone, parentPhone, classId};
+  DATA.students.push(newStudent);
+  await dbSetDoc('students', sid, newStudent);
   DATA.records[sid] = {scores:[], attendance:[], assignments:[], progress:{unit:'', percent:0}, quizAnswers:{}, wrongHomework:[], videoProgress:{}, assignmentsDone:{}};
   await saveRecord(sid);
   showToast('학생이 추가되었습니다.');
@@ -1057,7 +1116,7 @@ async function addStudent(){
 async function deleteStudent(sid){
   if(!confirm(sid+' 학생을 삭제할까요? 기록도 함께 삭제됩니다.')) return;
   DATA.students = DATA.students.filter(s=>s.studentId!==sid);
-  await dbSet('students', DATA.students);
+  await dbDeleteDoc('students', sid);
   showToast('삭제되었습니다.');
   render();
 }
@@ -1076,7 +1135,7 @@ async function updateStudentInfo(sid){
   if(!name){ showToast('이름은 필수입니다.'); return; }
   s.name = name; s.grade = grade; s.school = school; s.phone = phone; s.parentPhone = parentPhone; s.classId = classId;
   if(pw) s.pw = pw;
-  await dbSet('students', DATA.students);
+  await dbSetDoc('students', sid, s);
   showToast('학생 정보가 저장되었습니다.');
   render();
 }
@@ -3584,10 +3643,9 @@ async function confirmStudentBulkImport(){
   const existingIds = new Set(DATA.students.map(s=>s.studentId));
   const toAdd = imp.rows.filter(r=>!existingIds.has(r.studentId));
   const skipped = imp.rows.length - toAdd.length;
-  toAdd.forEach(r=>{
-    DATA.students.push({studentId:r.studentId, name:r.name, pw:r.pw, grade:r.grade, school:r.school, phone:r.phone, parentPhone:r.parentPhone, classId:imp.classId});
-  });
-  await dbSet('students', DATA.students);
+  const newStudents = toAdd.map(r=>({studentId:r.studentId, name:r.name, pw:r.pw, grade:r.grade, school:r.school, phone:r.phone, parentPhone:r.parentPhone, classId:imp.classId}));
+  newStudents.forEach(ns=>DATA.students.push(ns));
+  await Promise.all(newStudents.map(ns=>dbSetDoc('students', ns.studentId, ns)));
   await Promise.all(toAdd.map(async r=>{
     DATA.records[r.studentId] = {scores:[], attendance:[], assignments:[], progress:{unit:'', percent:0}, quizAnswers:{}, wrongHomework:[], videoProgress:{}, assignmentsDone:{}};
     await saveRecord(r.studentId);
