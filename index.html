@@ -235,6 +235,8 @@
   .badge-ok{background:#E6F1E8;color:var(--green-ok);}
   .badge-no{background:#FBE9E7;color:var(--red-pen);}
   .badge-late{background:#FFF3D6;color:#9A7000;}
+  .badge-leave{background:#EFE7FB;color:#6B46A8;}
+  .badge-drop{background:#E7E7E7;color:#555;}
   .inline-form{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-bottom:18px;}
   .inline-form .field{margin-bottom:0;min-width:110px;flex:1;}
   .empty{color:var(--ink-soft);font-size:13px;padding:14px 0;text-align:center;}
@@ -269,11 +271,11 @@
   .side-group-label{font-size:10px;color:#8A8384;text-transform:uppercase;letter-spacing:.08em;padding:14px 20px 4px;font-family:'JetBrains Mono',monospace;}
   .teacher-main{flex:1;min-width:0;background:transparent;padding:0 0 0 20px;}
   @media (max-width:800px){
-    .teacher-layout{flex-direction:column;}
+    .teacher-layout{flex-direction:column;align-items:stretch;}
     .teacher-sidebar{width:100%;border-radius:16px;position:static;display:flex;flex-wrap:wrap;padding:8px;}
     .side-btn{width:auto;border-left:none;border-radius:20px;padding:7px 14px;}
     .side-btn.active{border-left:none;}
-    .teacher-main{padding:20px 0 0;}
+    .teacher-main{padding:20px 0 0;min-width:0;}
   }
 
   /* ---------- 학생 상세 (성적/진도/출석 드릴다운) ---------- */
@@ -429,7 +431,9 @@
   .att-status-btn{border:1px solid var(--card-border);background:var(--white);border-radius:6px;padding:6px 14px;font-size:12.5px;cursor:pointer;}
   .att-status-btn.att-ok.active{background:var(--green-ok);color:#fff;border-color:var(--green-ok);}
   .att-status-btn.att-late.active{background:#9A7000;color:#fff;border-color:#9A7000;}
+  .att-status-btn.att-leave.active{background:#6B46A8;color:#fff;border-color:#6B46A8;}
   .att-status-btn.att-no.active{background:var(--red-pen);color:#fff;border-color:var(--red-pen);}
+  .att-status-btn.att-drop.active{background:#555;color:#fff;border-color:#555;}
   .att-reason-input{flex-basis:100%;margin-top:4px;}
   @media (max-width:640px){ .att-name{flex-basis:100%;} }
 
@@ -716,6 +720,7 @@ let state = {
   unitBankLoading: false,
   unitBankFilter: '',
   unitImportPreview: null,
+  studentImportPreview: null,
   importProgress: null,
   pbImageCache: {},
   allRecordsLoaded: false,
@@ -975,11 +980,12 @@ async function addStudent(){
   const pw = document.getElementById('new-spw').value.trim();
   const grade = document.getElementById('new-sgrade').value;
   const school = document.getElementById('new-sschool').value.trim();
+  const parentPhone = document.getElementById('new-sparentphone').value.trim();
   const phone = document.getElementById('new-sphone').value.trim();
   const classId = document.getElementById('new-sclass').value;
   if(!sid || !name || !pw){ showToast('아이디, 이름, 비밀번호는 필수입니다.'); return; }
   if(DATA.students.some(s=>s.studentId===sid)){ showToast('이미 존재하는 아이디입니다.'); return; }
-  DATA.students.push({studentId:sid, name, pw, grade, school, phone, classId});
+  DATA.students.push({studentId:sid, name, pw, grade, school, phone, parentPhone, classId});
   await dbSet('students', DATA.students);
   DATA.records[sid] = {scores:[], attendance:[], assignments:[], progress:{unit:'', percent:0}, quizAnswers:{}, wrongHomework:[], videoProgress:{}, assignmentsDone:{}};
   await saveRecord(sid);
@@ -1002,10 +1008,11 @@ async function updateStudentInfo(sid){
   const pw = document.getElementById('info-spw').value.trim();
   const grade = document.getElementById('info-sgrade').value;
   const school = document.getElementById('info-sschool').value.trim();
+  const parentPhone = document.getElementById('info-sparentphone').value.trim();
   const phone = document.getElementById('info-sphone').value.trim();
   const classId = document.getElementById('info-sclass').value;
   if(!name){ showToast('이름은 필수입니다.'); return; }
-  s.name = name; s.grade = grade; s.school = school; s.phone = phone; s.classId = classId;
+  s.name = name; s.grade = grade; s.school = school; s.phone = phone; s.parentPhone = parentPhone; s.classId = classId;
   if(pw) s.pw = pw;
   await dbSet('students', DATA.students);
   showToast('학생 정보가 저장되었습니다.');
@@ -3106,10 +3113,12 @@ function studentHTML(){
   ${body}
   `;
 }
+function attStatusClass(status){
+  return {'출석':'ok', '지각':'late', '조퇴':'leave', '결석':'no', '퇴원':'drop'}[status] || 'no';
+}
 function attBadge(status){
-  if(status==='출석') return '<span class="badge badge-ok">출석</span>';
-  if(status==='지각') return '<span class="badge badge-late">지각</span>';
-  return '<span class="badge badge-no">결석</span>';
+  const cls = {'출석':'badge-ok', '지각':'badge-late', '조퇴':'badge-leave', '결석':'badge-no', '퇴원':'badge-drop'}[status] || 'badge-no';
+  return `<span class="badge ${cls}">${status}</span>`;
 }
 
 /* ---------- 강사 대시보드 (사이드바) ---------- */
@@ -3268,13 +3277,101 @@ function teacherClassesHTML(){
 function classRosterHTML(classId){
   const roster = DATA.students.filter(s=>s.classId===classId);
   return `<div class="panel">
-    <h3>학생 명단 (${roster.length}명)</h3>
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:4px;">
+      <h3 style="margin:0;">학생 명단 (${roster.length}명)</h3>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn btn-small" onclick="downloadStudentExcelTemplate()">${iconSvg('file',15)} 엑셀 양식</button>
+        <label class="btn btn-small" style="cursor:pointer;margin:0;display:inline-flex;align-items:center;gap:5px;">${iconSvg('chart',15)} 엑셀 일괄 등록<input type="file" accept=".xlsx,.xls" style="display:none;" onchange="handleStudentExcelFile('${classId}', this.files)"></label>
+        <button class="btn btn-primary btn-small" onclick="state.teacherTab='settings'; state.settingsSubTab='students'; render()">+ 학생 추가</button>
+      </div>
+    </div>
+    ${studentImportPreviewHTML()}
     ${roster.length===0 ? '<div class="empty">이 반에 배정된 학생이 없습니다.</div>' : `
-    <table><tr><th>아이디</th><th>이름</th><th>학년</th><th>학교</th><th></th></tr>
-    ${roster.map(s=>`<tr><td>${s.studentId}</td><td>${escHtml(s.name)}</td><td>${escHtml(s.grade)}</td><td>${escHtml(s.school||'-')}</td>
+    <div style="overflow-x:auto;">
+    <table><tr><th>아이디</th><th>이름</th><th>학년</th><th>학교</th><th>학부모 전화번호</th><th>학생 전화번호</th><th></th></tr>
+    ${roster.map(s=>`<tr><td>${s.studentId}</td><td>${escHtml(s.name)}</td><td>${escHtml(s.grade)}</td><td>${escHtml(s.school||'-')}</td><td class="mono">${escHtml(s.parentPhone||'-')}</td><td class="mono">${escHtml(s.phone||'-')}</td>
       <td><button class="btn btn-small" onclick="state.studentDetailId='${s.studentId}'; state.teacherSelectedStudent='${s.studentId}'; state.studentDetailTab='info'; render()">상세보기</button></td></tr>`).join('')}
-    </table>`}
+    </table>
+    </div>`}
   </div>`;
+}
+async function downloadStudentExcelTemplate(){
+  try{
+    await ensureXLSXLoaded();
+    const ws = XLSX.utils.aoa_to_sheet([['아이디','이름','비밀번호','학년','학교','학부모전화번호','학생전화번호']]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, '학생명단');
+    XLSX.writeFile(wb, '학생등록_양식.xlsx');
+  }catch(e){
+    console.error('엑셀 양식 생성 실패', e);
+    showToast('엑셀 양식을 만들지 못했습니다.');
+  }
+}
+async function handleStudentExcelFile(classId, fileList){
+  const file = (fileList || [])[0];
+  if(!file) return;
+  try{
+    await ensureXLSXLoaded();
+    const buf = await file.arrayBuffer();
+    const wb = XLSX.read(buf, { type: 'array' });
+    const sheet = wb.Sheets[wb.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+    const parsed = rows.map(r => ({
+      studentId: String(r['아이디'] ?? r['studentId'] ?? '').trim(),
+      name: String(r['이름'] ?? r['name'] ?? '').trim(),
+      pw: String(r['비밀번호'] ?? r['pw'] ?? '').trim(),
+      grade: String(r['학년'] ?? '').trim() || '고1',
+      school: String(r['학교'] ?? '').trim(),
+      parentPhone: String(r['학부모전화번호'] ?? r['학부모 전화번호'] ?? '').trim(),
+      phone: String(r['학생전화번호'] ?? r['학생 전화번호'] ?? r['전화번호'] ?? '').trim()
+    })).filter(r => r.studentId && r.name && r.pw);
+    if(parsed.length === 0){
+      showToast('읽을 수 있는 학생 정보가 없습니다. "아이디/이름/비밀번호" 열을 확인해주세요.');
+      return;
+    }
+    state.studentImportPreview = { classId, rows: parsed };
+    render();
+  }catch(e){
+    console.error('엑셀 처리 실패', e);
+    showToast('엑셀 파일을 읽지 못했습니다.');
+  }
+}
+function studentImportPreviewHTML(){
+  const imp = state.studentImportPreview;
+  if(!imp) return '';
+  const existingIds = new Set(DATA.students.map(s=>s.studentId));
+  const dupCount = imp.rows.filter(r=>existingIds.has(r.studentId)).length;
+  return `<div class="data-card" style="margin-bottom:14px;">
+    <h4 style="margin-top:0;">업로드 미리보기 (총 ${imp.rows.length}명)</h4>
+    <p class="hint" style="margin-top:-6px;">${dupCount>0 ? `이미 존재하는 아이디 <span style="color:var(--red-pen);font-weight:700;">${dupCount}명</span>은 등록 시 건너뜁니다.` : '중복된 아이디가 없습니다.'}</p>
+    <div style="max-height:320px;overflow:auto;">
+    <table><tr><th>아이디</th><th>이름</th><th>학년</th><th>학교</th><th>학부모전화</th><th>학생전화</th></tr>
+    ${imp.rows.map(r=>`<tr ${existingIds.has(r.studentId)?'style="color:var(--red-pen);"':''}><td>${escHtml(r.studentId)}${existingIds.has(r.studentId)?' (중복)':''}</td><td>${escHtml(r.name)}</td><td>${escHtml(r.grade)}</td><td>${escHtml(r.school)}</td><td>${escHtml(r.parentPhone)}</td><td>${escHtml(r.phone)}</td></tr>`).join('')}
+    </table>
+    </div>
+    <div style="margin-top:12px;display:flex;gap:8px;">
+      <button class="btn btn-primary btn-small" onclick="confirmStudentBulkImport()">일괄 등록</button>
+      <button class="btn btn-small" onclick="state.studentImportPreview=null; render()">취소</button>
+    </div>
+  </div>`;
+}
+async function confirmStudentBulkImport(){
+  const imp = state.studentImportPreview;
+  if(!imp) return;
+  const existingIds = new Set(DATA.students.map(s=>s.studentId));
+  const toAdd = imp.rows.filter(r=>!existingIds.has(r.studentId));
+  const skipped = imp.rows.length - toAdd.length;
+  toAdd.forEach(r=>{
+    DATA.students.push({studentId:r.studentId, name:r.name, pw:r.pw, grade:r.grade, school:r.school, phone:r.phone, parentPhone:r.parentPhone, classId:imp.classId});
+  });
+  await dbSet('students', DATA.students);
+  await Promise.all(toAdd.map(async r=>{
+    DATA.records[r.studentId] = {scores:[], attendance:[], assignments:[], progress:{unit:'', percent:0}, quizAnswers:{}, wrongHomework:[], videoProgress:{}, assignmentsDone:{}};
+    await saveRecord(r.studentId);
+  }));
+  state.studentImportPreview = null;
+  showToast(toAdd.length + '명 등록되었습니다.' + (skipped>0 ? ` (중복 ${skipped}명 제외)` : ''));
+  render();
 }
 // 반의 현재 진도(과목+완료 단원)를 계산한다. 학생 홈/진도탭에서도 재사용.
 function getClassProgress(classId){
@@ -3342,7 +3439,7 @@ function teacherClassHubHTML(){
   return `
   <div class="panel">
     <div class="student-detail-header">
-      <h3 style="margin:0;">${escHtml(c.name)} 관리</h3>
+      <div><h3 style="margin:0;">${escHtml(c.name)} 관리</h3>${c.schedule?`<p class="hint" style="margin:2px 0 0;">${escHtml(c.schedule)}</p>`:''}</div>
       <button class="btn btn-small" onclick="state.classHubId=null; render()">← 반 목록으로</button>
     </div>
     <div class="subtab-bar">
@@ -3388,7 +3485,8 @@ function teacherStudentDetailHTML(sid){
         <select id="info-sgrade">${['고1','고2','고3'].map(g=>`<option ${s.grade===g?'selected':''}>${g}</option>`).join('')}</select>
       </div>
       <div class="field"><label>학교</label><input id="info-sschool" value="${escHtml(s.school||'')}" placeholder="학교명 (선택)"></div>
-      <div class="field"><label>전화번호</label><input id="info-sphone" value="${escHtml(s.phone||'')}" placeholder="010-0000-0000 (선택)"></div>
+      <div class="field"><label>학부모 전화번호</label><input id="info-sparentphone" value="${escHtml(s.parentPhone||'')}" placeholder="010-0000-0000 (선택)"></div>
+      <div class="field"><label>학생 전화번호</label><input id="info-sphone" value="${escHtml(s.phone||'')}" placeholder="010-0000-0000 (선택)"></div>
       <div class="field"><label>반</label><select id="info-sclass">${classOptionsHTML(s.classId)}</select></div>
       <button class="btn btn-primary" onclick="updateStudentInfo('${sid}')">저장</button>
     </div>
@@ -3420,7 +3518,7 @@ function teacherStudentDetailHTML(sid){
     sub = `<div class="inline-form">
       <div class="field"><label>날짜</label><input id="att-date" type="date"></div>
       <div class="field"><label>상태</label>
-        <select id="att-status"><option>출석</option><option>지각</option><option>결석</option></select>
+        <select id="att-status">${ATT_STATUSES.map(st=>`<option>${st}</option>`).join('')}</select>
       </div>
       <button class="btn btn-primary" onclick="addAttendance()">기록</button>
     </div>
@@ -3445,6 +3543,7 @@ function teacherStudentDetailHTML(sid){
 /* ---------- 출석부 (반별 일괄 입력) ---------- */
 // 반+날짜 조합이 바뀔 때만 draft를 저장된 값(또는 미입력 상태)으로 새로 채운다.
 // 같은 조합에 머무는 동안은 학생별로 누른 상태/입력 중인 사유를 그대로 유지한다.
+const ATT_STATUSES = ['출석','지각','조퇴','결석','퇴원'];
 function ensureAttDraft(classId, date){
   const key = classId + '|' + date;
   if(state.attDraftKey === key) return;
@@ -3453,17 +3552,25 @@ function ensureAttDraft(classId, date){
   DATA.students.filter(s=>s.classId===classId).forEach(s=>{
     const rec = state.allRecords[s.studentId];
     const existing = rec && (rec.attendance||[]).find(a=>a.date===date);
-    state.attDraft[s.studentId] = existing ? {status:existing.status, reason:existing.reason||'', videoUrl:''} : {status:null, reason:'', videoUrl:''};
+    state.attDraft[s.studentId] = existing ? {status:existing.status, reason:existing.reason||'', videoUrl:'', note:existing.note||''} : {status:null, reason:'', videoUrl:'', note:''};
   });
 }
 function setAttStatus(studentId, status){
-  const cur = state.attDraft[studentId] || {reason:'', videoUrl:''};
-  state.attDraft[studentId] = {status, reason: status==='출석' ? '' : cur.reason, videoUrl: status==='결석' ? cur.videoUrl : ''};
+  const cur = state.attDraft[studentId] || {reason:'', videoUrl:'', note:''};
+  state.attDraft[studentId] = {status, reason: status==='출석' ? '' : cur.reason, videoUrl: status==='결석' ? cur.videoUrl : '', note: cur.note||''};
   render();
 }
 function setAllPresent(classId){
   DATA.students.filter(s=>s.classId===classId).forEach(s=>{
-    state.attDraft[s.studentId] = {status:'출석', reason:'', videoUrl:''};
+    const cur = state.attDraft[s.studentId] || {note:''};
+    state.attDraft[s.studentId] = {status:'출석', reason:'', videoUrl:'', note: cur.note||''};
+  });
+  render();
+}
+function setAllStatus(classId, status){
+  DATA.students.filter(s=>s.classId===classId).forEach(s=>{
+    const cur = state.attDraft[s.studentId] || {reason:'', videoUrl:'', note:''};
+    state.attDraft[s.studentId] = {status, reason: status==='출석' ? '' : cur.reason, videoUrl: status==='결석' ? cur.videoUrl : '', note: cur.note||''};
   });
   render();
 }
@@ -3484,20 +3591,24 @@ function teacherAttendanceHTML(fixedClassId){
       <div class="field" style="max-width:200px;"><label>날짜</label><input type="date" value="${date}" onchange="state.attendanceDate=this.value; render()"></div>
       ${classId && state.allRecordsLoaded && roster.length>0 ? `
       <button class="btn" onclick="setAllPresent('${classId}')">전체 출석</button>
+      <div class="field" style="max-width:110px;"><select id="att-bulk-status">${ATT_STATUSES.map(st=>`<option value="${st}">${st}</option>`).join('')}</select></div>
+      <button class="btn" onclick="setAllStatus('${classId}', document.getElementById('att-bulk-status').value)">일괄 변경</button>
       <button class="btn btn-primary" onclick="saveClassAttendance('${classId}','${date}')">저장</button>` : ''}
     </div>
     ${!classId ? '<div class="empty">반을 선택해주세요.</div>' :
       !state.allRecordsLoaded ? '<div class="empty">학생 기록을 불러오는 중입니다...</div>' :
       roster.length===0 ? '<div class="empty">이 반에 배정된 학생이 없습니다.</div>' : `
       ${roster.map(s=>{
-        const d = state.attDraft[s.studentId] || {status:null, reason:'', videoUrl:''};
+        const d = state.attDraft[s.studentId] || {status:null, reason:'', videoUrl:'', note:''};
         return `<div class="att-row">
-          <div class="att-name">${escHtml(s.name)} <span class="mono" style="font-size:11px;color:var(--ink-soft);">(${s.studentId})</span></div>
+          <div class="att-name">${escHtml(s.name)} <span class="mono" style="font-size:11px;color:var(--ink-soft);">(${s.studentId})</span><br>
+            <span class="mono" style="font-size:11px;color:var(--ink-soft);">학부모 ${escHtml(s.parentPhone||'-')} · 학생 ${escHtml(s.phone||'-')}</span></div>
           <div class="att-btn-group">
-            ${['출석','지각','결석'].map(st=>`<button class="att-status-btn att-${st==='출석'?'ok':st==='지각'?'late':'no'} ${d.status===st?'active':''}" onclick="setAttStatus('${s.studentId}','${st}')">${st}</button>`).join('')}
+            ${ATT_STATUSES.map(st=>`<button class="att-status-btn att-${attStatusClass(st)} ${d.status===st?'active':''}" onclick="setAttStatus('${s.studentId}','${st}')">${st}</button>`).join('')}
           </div>
-          ${(d.status==='지각'||d.status==='결석') ? `<input class="att-reason-input" id="att-reason-${s.studentId}" placeholder="사유 입력 (선택)" value="${escHtml(d.reason)}" oninput="state.attDraft['${s.studentId}'].reason=this.value">` : ''}
+          ${(d.status && d.status!=='출석') ? `<input class="att-reason-input" id="att-reason-${s.studentId}" placeholder="사유 입력 (선택)" value="${escHtml(d.reason)}" oninput="state.attDraft['${s.studentId}'].reason=this.value">` : ''}
           ${d.status==='결석' ? `<input class="att-reason-input" id="att-video-${s.studentId}" placeholder="보충 영상 유튜브 링크 (선택 — 이 학생에게만 보여요)" value="${escHtml(d.videoUrl)}" oninput="state.attDraft['${s.studentId}'].videoUrl=this.value">` : ''}
+          <input class="att-reason-input" id="att-note-${s.studentId}" placeholder="출결 메모 (선택)" value="${escHtml(d.note)}" oninput="state.attDraft['${s.studentId}'].note=this.value">
         </div>`;
       }).join('')}
     `}
@@ -3505,13 +3616,15 @@ function teacherAttendanceHTML(fixedClassId){
   ${classId && state.allRecordsLoaded && roster.length>0 ? `
   <div class="panel">
     <h3>${classNameOf(classId)} 출결 누적 집계</h3>
-    <table><tr><th>학생</th><th>출석</th><th>지각</th><th>결석</th></tr>
+    <div style="overflow-x:auto;">
+    <table><tr><th>학생</th>${ATT_STATUSES.map(st=>`<th>${st}</th>`).join('')}</tr>
     ${roster.map(s=>{
       const list = (state.allRecords[s.studentId] && state.allRecords[s.studentId].attendance) || [];
       const count = st => list.filter(a=>a.status===st).length;
-      return `<tr><td>${escHtml(s.name)}</td><td>${count('출석')}</td><td>${count('지각')}</td><td>${count('결석')}</td></tr>`;
+      return `<tr><td>${escHtml(s.name)}</td>${ATT_STATUSES.map(st=>`<td>${count(st)}</td>`).join('')}</tr>`;
     }).join('')}
     </table>
+    </div>
   </div>` : ''}`;
 }
 async function saveClassAttendance(classId, date){
@@ -3522,8 +3635,8 @@ async function saveClassAttendance(classId, date){
     if(!d || !d.status) return; // 아무도 안 건드린 학생은 건너뛴다
     const rec = await loadRecord(s.studentId);
     const idx = rec.attendance.findIndex(a=>a.date===date);
-    if(idx>=0) rec.attendance[idx] = {date, status:d.status, reason:d.reason||''};
-    else rec.attendance.push({date, status:d.status, reason:d.reason||''});
+    if(idx>=0) rec.attendance[idx] = {date, status:d.status, reason:d.reason||'', note:d.note||''};
+    else rec.attendance.push({date, status:d.status, reason:d.reason||'', note:d.note||''});
     rec.attendance.sort((a,b)=>a.date.localeCompare(b.date));
     await saveRecord(s.studentId);
     if(state.allRecords[s.studentId]) state.allRecords[s.studentId] = rec;
@@ -4041,7 +4154,8 @@ function teacherSettingsStudentsHTML(){
         <select id="new-sgrade"><option>고1</option><option>고2</option><option>고3</option></select>
       </div>
       <div class="field"><label>학교</label><input id="new-sschool" placeholder="학교명 (선택)"></div>
-      <div class="field"><label>전화번호</label><input id="new-sphone" placeholder="010-0000-0000 (선택)"></div>
+      <div class="field"><label>학부모 전화번호</label><input id="new-sparentphone" placeholder="010-0000-0000 (선택)"></div>
+      <div class="field"><label>학생 전화번호</label><input id="new-sphone" placeholder="010-0000-0000 (선택)"></div>
       <div class="field"><label>반</label><select id="new-sclass">${classOptionsHTML(null)}</select></div>
       <button class="btn btn-primary" onclick="addStudent()">추가</button>
     </div>
