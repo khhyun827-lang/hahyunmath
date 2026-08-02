@@ -305,6 +305,7 @@
   .status-대기{background:#FFF3D6;color:#9A7000;}
   .status-승인{background:#E6F1E8;color:var(--green-ok);}
   .status-완료{background:#EDEBE3;color:var(--ink-soft);}
+  .status-취소{background:#FBE9E7;color:var(--red-pen);}
 
   /* ---------- 질의응답 ---------- */
   .qna-card{border:1px solid var(--card-border);border-radius:6px;padding:16px;margin-bottom:12px;}
@@ -766,7 +767,7 @@ let state = {
 };
 let DATA = {
   students: [], notices: [], consults: [], teacherPw: null, records: {},
-  classes: [], quizzes: [], clinics: [], qnas: [], videos: [], assistants: [], chats: {},
+  classes: [], quizzes: [], clinics: [], clinicSlots: [], qnas: [], videos: [], assistants: [], chats: {},
   exams: [], problemBank: [], unitBank: [], assignments: []
 };
 const UNITS = ['공통수학1', '공통수학2', '대수', '미적분Ⅰ', '확률과통계', '기하', '미적분Ⅱ'];
@@ -793,11 +794,11 @@ function showToast(msg){
 async function loadAll(){
   [
     DATA.students, DATA.notices, DATA.consults, DATA.teacherPw,
-    DATA.classes, DATA.quizzes, DATA.clinics, DATA.qnas,
+    DATA.classes, DATA.quizzes, DATA.clinics, DATA.clinicSlots, DATA.qnas,
     DATA.videos, DATA.assistants, DATA.exams, DATA.problemBank, DATA.assignments
   ] = await Promise.all([
     dbGet('students', []), dbGet('notices', []), dbGet('consults', []), dbGet('teacher-pw', null),
-    dbGet('classes', []), dbGet('quizzes', []), dbGet('clinics', []), dbGet('qnas', []),
+    dbGet('classes', []), dbGet('quizzes', []), dbGet('clinics', []), dbGet('clinic-slots', []), dbGet('qnas', []),
     dbGet('videos', []), dbGet('assistants', []), dbGet('exams', []), dbGet('problem-bank', []), dbGet('assignments', [])
   ]);
   await seedTestAccountIfEmpty();
@@ -1288,17 +1289,54 @@ async function submitQuizAnswer(qid, sid){
   render();
 }
 
-/* =================== 클리닉 신청 =================== */
+/* =================== 클리닉 신청 (선생님이 만든 시간대에서만 신청 가능) =================== */
+// 슬롯 하나를 채우고 있는(취소되지 않은) 신청 건수 — 정원 초과 여부를 이걸로 판단한다.
+function clinicSlotBookedCount(slotId){
+  return DATA.clinics.filter(c=>c.slotId===slotId && c.status!=='취소').length;
+}
+// 오늘 이후이면서 정원이 남은 슬롯만 학생에게 신청 가능한 시간대로 보여준다.
+function openClinicSlots(){
+  const today = todayStr();
+  return DATA.clinicSlots
+    .filter(s=>s.date>=today)
+    .filter(s=>clinicSlotBookedCount(s.id) < s.capacity)
+    .sort((a,b)=> a.date===b.date ? a.time.localeCompare(b.time) : a.date.localeCompare(b.date));
+}
+async function addClinicSlot(){
+  const date = document.getElementById('slot-date').value;
+  const time = document.getElementById('slot-time').value.trim();
+  const capacity = parseInt(document.getElementById('slot-capacity').value) || 1;
+  if(!date || !time){ showToast('날짜와 시간을 입력해주세요.'); return; }
+  DATA.clinicSlots.push({id:'cs'+Date.now(), date, time, capacity});
+  DATA.clinicSlots.sort((a,b)=> a.date===b.date ? a.time.localeCompare(b.time) : a.date.localeCompare(b.date));
+  await dbSet('clinic-slots', DATA.clinicSlots);
+  document.getElementById('slot-date').value='';
+  document.getElementById('slot-time').value='';
+  document.getElementById('slot-capacity').value='';
+  showToast('시간대가 추가되었습니다.');
+  render();
+}
+async function deleteClinicSlot(slotId){
+  const booked = clinicSlotBookedCount(slotId);
+  if(booked>0 && !confirm(`이 시간대에 이미 ${booked}건의 신청이 있습니다. 시간대를 삭제해도 신청 내역은 남습니다. 삭제할까요?`)) return;
+  if(booked===0 && !confirm('이 시간대를 삭제할까요?')) return;
+  DATA.clinicSlots = DATA.clinicSlots.filter(s=>s.id!==slotId);
+  await dbSet('clinic-slots', DATA.clinicSlots);
+  showToast('삭제되었습니다.');
+  render();
+}
 async function submitClinicRequest(){
   const sid = state.currentUser.studentId;
   const topic = document.getElementById('clinic-topic').value.trim();
-  const day = document.getElementById('clinic-day').value;
-  const time = document.getElementById('clinic-time').value.trim();
-  if(!topic || !day){ showToast('희망 날짜와 질문 내용을 입력해주세요.'); return; }
-  DATA.clinics.unshift({id:'cl'+Date.now(), studentId:sid, name:state.currentUser.name, topic, day, time, status:'대기', requestedAt:new Date().toISOString().slice(0,10)});
+  const slotId = document.getElementById('clinic-slot').value;
+  if(!topic || !slotId){ showToast('희망 시간대와 질문 내용을 입력해주세요.'); return; }
+  const slot = DATA.clinicSlots.find(s=>s.id===slotId);
+  if(!slot){ showToast('선택한 시간대를 찾을 수 없습니다. 다시 선택해주세요.'); render(); return; }
+  if(clinicSlotBookedCount(slotId) >= slot.capacity){ showToast('죄송해요, 방금 정원이 찼습니다. 다른 시간대를 선택해주세요.'); render(); return; }
+  if(DATA.clinics.some(c=>c.studentId===sid && c.slotId===slotId && c.status!=='취소')){ showToast('이미 같은 시간대에 신청하셨습니다.'); return; }
+  DATA.clinics.unshift({id:'cl'+Date.now(), studentId:sid, name:state.currentUser.name, topic, slotId, day:slot.date, time:slot.time, status:'대기', requestedAt:new Date().toISOString().slice(0,10)});
   await dbSet('clinics', DATA.clinics);
   document.getElementById('clinic-topic').value='';
-  document.getElementById('clinic-time').value='';
   showToast('클리닉 신청이 접수되었습니다.');
   render();
 }
@@ -1307,6 +1345,15 @@ async function updateClinicStatus(cid, status){
   if(!c) return;
   c.status = status;
   await dbSet('clinics', DATA.clinics);
+  render();
+}
+async function cancelClinicRequest(cid){
+  if(!confirm('신청을 취소할까요? 취소하면 다른 학생이 그 시간대에 신청할 수 있게 됩니다.')) return;
+  const c = DATA.clinics.find(c=>c.id===cid);
+  if(!c) return;
+  c.status = '취소';
+  await dbSet('clinics', DATA.clinics);
+  showToast('신청이 취소되었습니다.');
   render();
 }
 async function deleteClinic(cid){
@@ -3155,17 +3202,27 @@ function studentHTML(){
     </div>`;
   } else if(state.studentTab==='clinic'){
     const mine = DATA.clinics.filter(c=>c.studentId===sid);
+    const slots = openClinicSlots();
     body = `<div class="panel"><h3>클리닉 신청</h3>
+      ${slots.length===0 ? '<div class="empty">현재 신청 가능한 시간대가 없습니다. 선생님께 문의해주세요.</div>' : `
       <div class="inline-form">
-        <div class="field"><label>희망 날짜</label><input id="clinic-day" type="date"></div>
-        <div class="field"><label>희망 시간</label><input id="clinic-time" placeholder="예: 저녁 7시"></div>
+        <div class="field" style="min-width:220px;"><label>희망 시간대</label>
+          <select id="clinic-slot">${slots.map(s=>{
+            const left = s.capacity - clinicSlotBookedCount(s.id);
+            return `<option value="${s.id}">${s.date} · ${escHtml(s.time)} (${left}자리 남음)</option>`;
+          }).join('')}</select>
+        </div>
         <div class="field" style="flex:2;"><label>질문/요청 내용</label><input id="clinic-topic" placeholder="예: 미분법 3단원 질문"></div>
         <button class="btn btn-primary" onclick="submitClinicRequest()">신청하기</button>
-      </div>
+      </div>`}
     </div>
     <div class="panel"><h3>내 신청 내역</h3>
       ${mine.length===0?'<div class="empty">신청 내역이 없습니다.</div>':
-      mine.map(c=>`<div class="clinic-row"><div><b>${c.day}</b> ${c.time||''} · ${c.topic}</div><span class="status-pill status-${c.status}">${c.status}</span></div>`).join('')}
+      mine.map(c=>`<div class="clinic-row"><div><b>${c.day}</b> ${c.time||''} · ${c.topic}</div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span class="status-pill status-${c.status}">${c.status}</span>
+          ${c.status==='대기'?`<button class="btn btn-red btn-small" onclick="cancelClinicRequest('${c.id}')">신청 취소</button>`:''}
+        </div></div>`).join('')}
     </div>`;
   } else if(state.studentTab==='qna'){
     body = `<div class="panel"><h3>질문 등록</h3>
@@ -4097,7 +4154,28 @@ function teacherQuizHTML(fixedClassId){
 /* ---------- 클리닉 ---------- */
 function teacherClinicHTML(){
   markSeen('clinic', DATA.clinics.length);
+  const slots = [...DATA.clinicSlots].sort((a,b)=> a.date===b.date ? a.time.localeCompare(b.time) : a.date.localeCompare(b.date));
   return `
+  <div class="panel">
+    <h3>클리닉 시간대 관리</h3>
+    <p class="hint" style="margin-top:-8px;">여기서 시간대를 만들어두면 학생은 그중에서만 골라 신청할 수 있고, 정원이 차면 자동으로 신청이 막힙니다.</p>
+    <div class="inline-form">
+      <div class="field"><label>날짜</label><input id="slot-date" type="date"></div>
+      <div class="field"><label>시간</label><input id="slot-time" placeholder="예: 저녁 7시"></div>
+      <div class="field" style="max-width:100px;"><label>정원</label><input id="slot-capacity" type="number" min="1" placeholder="1"></div>
+      <button class="btn btn-primary" onclick="addClinicSlot()">추가</button>
+    </div>
+    ${slots.length===0 ? '<div class="empty">등록된 시간대가 없습니다.</div>' : `
+    <table><tr><th>날짜</th><th>시간</th><th>신청 현황</th><th></th></tr>
+    ${slots.map(s=>{
+      const booked = clinicSlotBookedCount(s.id);
+      const full = booked>=s.capacity;
+      return `<tr><td>${s.date}</td><td>${escHtml(s.time)}</td>
+        <td><span class="badge ${full?'badge-no':'badge-ok'}">${booked}/${s.capacity}명${full?' · 마감':''}</span></td>
+        <td><button class="btn btn-red btn-small" onclick="deleteClinicSlot('${s.id}')">삭제</button></td></tr>`;
+    }).join('')}
+    </table>`}
+  </div>
   <div class="panel">
     <h3>클리닉 신청 목록 (${DATA.clinics.length}건)</h3>
     ${DATA.clinics.length===0?'<div class="empty">접수된 신청이 없습니다.</div>':
@@ -4109,6 +4187,7 @@ function teacherClinicHTML(){
           <option ${c.status==='대기'?'selected':''}>대기</option>
           <option ${c.status==='승인'?'selected':''}>승인</option>
           <option ${c.status==='완료'?'selected':''}>완료</option>
+          <option ${c.status==='취소'?'selected':''}>취소</option>
         </select>
         <button class="btn btn-red btn-small" onclick="deleteClinic('${c.id}')">삭제</button>
       </div>
