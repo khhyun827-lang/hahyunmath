@@ -3177,7 +3177,7 @@ function teacherHTML(){
   return `
   <div class="teacher-layout" style="margin-top:24px;">
     <div class="teacher-sidebar">
-      ${groups.map(g=>`<div class="side-group-label">${g[0]}</div>${g[1].map(t=>`<button class="side-btn ${state.teacherTab===t[0]?'active':''}" onclick="state.teacherTab='${t[0]}';${t[0]==='classhub'?" state.classHubId=null; state.studentDetailId=null;":''} render()">${t[1]}</button>`).join('')}`).join('')}
+      ${groups.map(g=>`<div class="side-group-label">${g[0]}</div>${g[1].map(t=>`<button class="side-btn ${state.teacherTab===t[0]?'active':''}" onclick="state.teacherTab='${t[0]}'; state.studentDetailId=null;${t[0]==='classhub'?' state.classHubId=null;':''} render()">${t[1]}</button>`).join('')}`).join('')}
     </div>
     <div class="teacher-main">${body}</div>
   </div>
@@ -3496,7 +3496,7 @@ function classOptionsHTML(selectedId){
 /* ---------- 학생 상세 (반 관리 > 학생 명단에서 진입) ---------- */
 function teacherStudentDetailHTML(sid){
   const s = DATA.students.find(s=>s.studentId===sid);
-  if(!s){ state.studentDetailId=null; return teacherClassHubHTML(); }
+  if(!s){ state.studentDetailId=null; return state.teacherTab==='settings' ? teacherSettingsHTML() : teacherClassHubHTML(); }
   const rec = DATA.records[sid];
   const subtabs = [['info','기본정보'],['grades','성적'],['attendance','출석']];
   let sub = '';
@@ -4261,6 +4261,7 @@ function teacherAssistantsHTML(){
 
 /* ---------- 설정 (조교 + 관리자) ---------- */
 function teacherSettingsHTML(){
+  if(state.studentDetailId) return teacherStudentDetailHTML(state.studentDetailId);
   const tab = state.settingsSubTab || 'assistants';
   const subtabs = [['assistants','조교'],['students','학생'],['classes','반'],['consults','상담'],['admin','관리자']];
   const subMap = {
@@ -4294,12 +4295,16 @@ function teacherSettingsClassesHTML(){
   </div>`;
 }
 
-/* ---------- 설정: 학생 계정 추가 ---------- */
+/* ---------- 설정: 학생 계정 추가 + 전체 학생 계정 목록 ---------- */
 function teacherSettingsStudentsHTML(){
+  const unassignedFirst = [...DATA.students].sort((a,b)=>{
+    const au = a.classId ? 1 : 0, bu = b.classId ? 1 : 0;
+    return au - bu; // 미배정(반 없음)을 위로
+  });
   return `
   <div class="panel">
     <h3>학생 계정 추가</h3>
-    <p class="hint" style="margin-top:-8px;">등록 후에는 [반 관리] &gt; 반을 열고 학생 명단에서 상세보기로 수정·삭제할 수 있습니다.</p>
+    <p class="hint" style="margin-top:-8px;">등록 후 반을 안 고르셨거나 나중에 반을 옮기고 싶으면, 아래 학생 계정 목록에서 상세보기로 언제든 수정할 수 있습니다.</p>
     <div class="inline-form">
       <div class="field"><label>아이디</label><input id="new-sid" placeholder="예: st01"></div>
       <div class="field"><label>이름</label><input id="new-sname" placeholder="이름"></div>
@@ -4313,6 +4318,22 @@ function teacherSettingsStudentsHTML(){
       <div class="field"><label>반</label><select id="new-sclass">${classOptionsHTML(null)}</select></div>
       <button class="btn btn-primary" onclick="addStudent()">추가</button>
     </div>
+  </div>
+  <div class="panel">
+    <h3>학생 계정 전체 목록 (${DATA.students.length}명)</h3>
+    ${DATA.students.length===0 ? '<div class="empty">등록된 학생이 없습니다.</div>' : `
+    <div style="overflow-x:auto;">
+    <table><tr><th>아이디</th><th>이름</th><th>반</th><th>학년</th><th>학교</th><th></th></tr>
+    ${unassignedFirst.map(s=>`<tr>
+      <td class="td-soft mono">${s.studentId}</td>
+      <td class="td-strong">${escHtml(s.name)}</td>
+      <td>${s.classId ? escHtml(classNameOf(s.classId)) : '<span class="badge badge-no">미배정</span>'}</td>
+      <td>${escHtml(s.grade)}</td>
+      <td class="td-soft">${escHtml(s.school||'-')}</td>
+      <td><button class="btn btn-small" onclick="state.studentDetailId='${s.studentId}'; state.teacherSelectedStudent='${s.studentId}'; state.studentDetailTab='info'; render()">상세보기</button></td>
+    </tr>`).join('')}
+    </table>
+    </div>`}
   </div>`;
 }
 
