@@ -594,6 +594,9 @@ async function migrateBlobToCollection(oldKey, collection, idField){
   if(existing.length > 0) return existing;
   const oldArr = await dbGet(oldKey, []);
   if(!oldArr || oldArr.length === 0) return [];
+  // 예전 데이터 중엔 id 필드 자체가 없던 것도 있어서(예: 상담 신청), 없으면 이전하면서 하나 만들어 채운다.
+  // 안 그러면 전부 같은 문서 키로 겹쳐 써져서 데이터가 사라진다.
+  oldArr.forEach((item, i) => { if(!item[idField]) item[idField] = collection + '_migrated_' + Date.now() + '_' + i; });
   await Promise.all(oldArr.map(item => dbSetDoc(collection, String(item[idField]), item)));
   console.log('[migrate] ' + oldKey + ' -> ' + collection + ': ' + oldArr.length + '건 이전 완료');
   return oldArr;
@@ -631,7 +634,7 @@ async function regenerateOneWithAI(bankId){
     b.variantAnswer = twin.answer;
     b.aiSolution = twin.solution;
     b.status = 'pending';
-    await dbSet('problem-bank', DATA.problemBank);
+    await dbSetDoc('problembank', b.id, b);
     await bumpAIQuotaUsed();
     state.aiQuotaUsed = null;
     showToast('다시 생성했습니다. 검토 상태가 초기화됐어요.');
@@ -665,7 +668,7 @@ async function processAIQueue(){
       await bumpAIQuotaUsed();
       ok++;
     }
-    await dbSet('problem-bank', DATA.problemBank);
+    await dbSetDoc('problembank', b.id, b);
     state.aiProgress = { done:i+1, total: batch.length };
     render();
     if(i < batch.length-1) await new Promise(r=>setTimeout(r, 13000));
@@ -855,9 +858,20 @@ async function loadAll(){
     DATA.classes, DATA.quizzes, DATA.clinics, DATA.clinicSlots, DATA.qnas,
     DATA.videos, DATA.assistants, DATA.exams, DATA.problemBank, DATA.assignments
   ] = await Promise.all([
-    migrateBlobToCollection('students', 'students', 'studentId'), dbGet('notices', []), dbGet('consults', []), dbGet('teacher-pw', null),
-    dbGet('classes', []), dbGet('quizzes', []), dbGet('clinics', []), dbGet('clinic-slots', []), dbGet('qnas', []),
-    dbGet('videos', []), dbGet('assistants', []), dbGet('exams', []), dbGet('problem-bank', []), dbGet('assignments', [])
+    migrateBlobToCollection('students', 'students', 'studentId'),
+    migrateBlobToCollection('notices', 'notices', 'id'),
+    migrateBlobToCollection('consults', 'consults', 'id'),
+    dbGet('teacher-pw', null),
+    migrateBlobToCollection('classes', 'classes', 'id'),
+    migrateBlobToCollection('quizzes', 'quizzes', 'id'),
+    migrateBlobToCollection('clinics', 'clinics', 'id'),
+    migrateBlobToCollection('clinic-slots', 'clinicslots', 'id'),
+    migrateBlobToCollection('qnas', 'qnas', 'id'),
+    migrateBlobToCollection('videos', 'videos', 'id'),
+    migrateBlobToCollection('assistants', 'assistants', 'id'),
+    migrateBlobToCollection('exams', 'exams', 'id'),
+    migrateBlobToCollection('problem-bank', 'problembank', 'id'),
+    migrateBlobToCollection('assignments', 'assignments', 'id')
   ]);
   await seedTestAccountIfEmpty();
   await restoreSession();
@@ -878,7 +892,7 @@ async function seedTestAccountIfEmpty(){
   if(DATA.classes.length > 0 || DATA.students.length > 0) return;
   const testClass = {id:'c_test', name:'테스트반', schedule:'월,수,금 7시~9시', period:'테스트용', status:'진행중'};
   DATA.classes.push(testClass);
-  await dbSet('classes', DATA.classes);
+  await dbSetDoc('classes', testClass.id, testClass);
   const testStudent = {studentId:'test', name:'테스트학생', pw:'1234', grade:'고1', school:'', classId:testClass.id};
   DATA.students.push(testStudent);
   await dbSetDoc('students', testStudent.studentId, testStudent);
@@ -1038,8 +1052,9 @@ async function addClass(){
   const schedule = document.getElementById('new-cschedule').value.trim();
   const period = document.getElementById('new-cperiod').value.trim();
   if(!name){ showToast('반 이름을 입력해주세요.'); return; }
-  DATA.classes.push({id:'c'+Date.now(), name, schedule, period, status:'진행중'});
-  await dbSet('classes', DATA.classes);
+  const cls = {id:'c'+Date.now(), name, schedule, period, status:'진행중'};
+  DATA.classes.push(cls);
+  await dbSetDoc('classes', cls.id, cls);
   document.getElementById('new-cname').value='';
   document.getElementById('new-cschedule').value='';
   document.getElementById('new-cperiod').value='';
@@ -1050,13 +1065,13 @@ async function toggleClassStatus(cid){
   const c = DATA.classes.find(c=>c.id===cid);
   if(!c) return;
   c.status = c.status==='진행중' ? '종료' : '진행중';
-  await dbSet('classes', DATA.classes);
+  await dbSetDoc('classes', c.id, c);
   render();
 }
 async function deleteClass(cid){
   if(!confirm('이 반을 삭제할까요? (배정된 학생의 반 정보는 유지되나 표시가 [삭제된 반]으로 바뀝니다)')) return;
   DATA.classes = DATA.classes.filter(c=>c.id!==cid);
-  await dbSet('classes', DATA.classes);
+  await dbDeleteDoc('classes', cid);
   showToast('삭제되었습니다.');
   render();
 }
@@ -1171,8 +1186,9 @@ async function addHomework(){
   const description = document.getElementById('hw-desc').value.trim();
   const dueDate = document.getElementById('hw-due').value;
   if(!title){ showToast('과제명을 입력해주세요.'); return; }
-  DATA.assignments.unshift({id:'hw'+Date.now(), classId, title, description, dueDate, createdAt:todayStr()});
-  await dbSet('assignments', DATA.assignments);
+  const hw = {id:'hw'+Date.now(), classId, title, description, dueDate, createdAt:todayStr()};
+  DATA.assignments.unshift(hw);
+  await dbSetDoc('assignments', hw.id, hw);
   document.getElementById('hw-title').value='';
   document.getElementById('hw-desc').value='';
   document.getElementById('hw-due').value='';
@@ -1182,7 +1198,7 @@ async function addHomework(){
 async function deleteHomework(hwId){
   if(!confirm('이 과제를 삭제할까요? 학생들의 제출/완료 표시도 함께 사라집니다.')) return;
   DATA.assignments = DATA.assignments.filter(a=>a.id!==hwId);
-  await dbSet('assignments', DATA.assignments);
+  await dbDeleteDoc('assignments', hwId);
   render();
 }
 async function toggleHomeworkDone(studentId, hwId){
@@ -1219,8 +1235,9 @@ async function addNotice(){
   const title = document.getElementById('notice-title').value.trim();
   const content = document.getElementById('notice-content').value.trim();
   if(!title || !content){ showToast('제목과 내용을 입력해주세요.'); return; }
-  DATA.notices.unshift({id:Date.now(), date:new Date().toISOString().slice(0,10), title, content});
-  await dbSet('notices', DATA.notices);
+  const notice = {id:Date.now(), date:new Date().toISOString().slice(0,10), title, content};
+  DATA.notices.unshift(notice);
+  await dbSetDoc('notices', notice.id, notice);
   document.getElementById('notice-title').value='';
   document.getElementById('notice-content').value='';
   showToast('공지사항이 등록되었습니다.');
@@ -1229,7 +1246,7 @@ async function addNotice(){
 async function deleteNotice(id){
   if(!confirm('이 공지사항을 삭제할까요?')) return;
   DATA.notices = DATA.notices.filter(n=>n.id!==id);
-  await dbSet('notices', DATA.notices);
+  await dbDeleteDoc('notices', id);
   render();
 }
 
@@ -1240,18 +1257,19 @@ async function submitConsult(){
   const grade = document.getElementById('c-grade').value;
   const msg = document.getElementById('c-msg').value.trim();
   if(!name || !phone){ showToast('이름과 연락처는 필수입니다.'); return; }
-  DATA.consults.unshift({date:new Date().toISOString().slice(0,10), name, phone, grade, msg});
-  await dbSet('consults', DATA.consults);
+  const consult = {id:'co'+Date.now(), date:new Date().toISOString().slice(0,10), name, phone, grade, msg};
+  DATA.consults.unshift(consult);
+  await dbSetDoc('consults', consult.id, consult);
   showToast('상담 신청이 접수되었습니다. 빠르게 연락드릴게요!');
   document.getElementById('c-name').value='';
   document.getElementById('c-phone').value='';
   document.getElementById('c-msg').value='';
   render();
 }
-async function deleteConsult(idx){
+async function deleteConsult(id){
   if(!confirm('이 상담 신청 내역을 삭제할까요?')) return;
-  DATA.consults.splice(idx,1);
-  await dbSet('consults', DATA.consults);
+  DATA.consults = DATA.consults.filter(c=>c.id!==id);
+  await dbDeleteDoc('consults', id);
   render();
 }
 function unseenCount(key, currentCount){
@@ -1307,8 +1325,9 @@ async function addQuiz(){
   const title = document.getElementById('quiz-title').value.trim();
   const content = document.getElementById('quiz-content').value.trim();
   if(!title || !content){ showToast('제목과 문제 내용을 입력해주세요.'); return; }
-  DATA.quizzes.unshift({id:'q'+Date.now(), classId, title, content, date:new Date().toISOString().slice(0,10)});
-  await dbSet('quizzes', DATA.quizzes);
+  const quiz = {id:'q'+Date.now(), classId, title, content, date:new Date().toISOString().slice(0,10)};
+  DATA.quizzes.unshift(quiz);
+  await dbSetDoc('quizzes', quiz.id, quiz);
   document.getElementById('quiz-title').value='';
   document.getElementById('quiz-content').value='';
   showToast('데일리퀴즈가 등록되었습니다.');
@@ -1317,7 +1336,7 @@ async function addQuiz(){
 async function deleteQuiz(qid){
   if(!confirm('이 데일리퀴즈를 삭제할까요? 학생들이 제출한 답안도 함께 사라집니다.')) return;
   DATA.quizzes = DATA.quizzes.filter(q=>q.id!==qid);
-  await dbSet('quizzes', DATA.quizzes);
+  await dbDeleteDoc('quizzes', qid);
   render();
 }
 // 객관식(①~⑤가 포함된) 문제인지 판별 — 맞으면 텍스트 입력 대신 보기 버튼을 보여준다.
@@ -1366,9 +1385,10 @@ async function addClinicSlot(){
   const time = document.getElementById('slot-time').value.trim();
   const capacity = parseInt(document.getElementById('slot-capacity').value) || 1;
   if(!date || !time){ showToast('날짜와 시간을 입력해주세요.'); return; }
-  DATA.clinicSlots.push({id:'cs'+Date.now(), date, time, capacity});
+  const slot = {id:'cs'+Date.now(), date, time, capacity};
+  DATA.clinicSlots.push(slot);
   DATA.clinicSlots.sort((a,b)=> a.date===b.date ? a.time.localeCompare(b.time) : a.date.localeCompare(b.date));
-  await dbSet('clinic-slots', DATA.clinicSlots);
+  await dbSetDoc('clinicslots', slot.id, slot);
   document.getElementById('slot-date').value='';
   document.getElementById('slot-time').value='';
   document.getElementById('slot-capacity').value='';
@@ -1380,7 +1400,7 @@ async function deleteClinicSlot(slotId){
   if(booked>0 && !confirm(`이 시간대에 이미 ${booked}건의 신청이 있습니다. 시간대를 삭제해도 신청 내역은 남습니다. 삭제할까요?`)) return;
   if(booked===0 && !confirm('이 시간대를 삭제할까요?')) return;
   DATA.clinicSlots = DATA.clinicSlots.filter(s=>s.id!==slotId);
-  await dbSet('clinic-slots', DATA.clinicSlots);
+  await dbDeleteDoc('clinicslots', slotId);
   showToast('삭제되었습니다.');
   render();
 }
@@ -1393,8 +1413,9 @@ async function submitClinicRequest(){
   if(!slot){ showToast('선택한 시간대를 찾을 수 없습니다. 다시 선택해주세요.'); render(); return; }
   if(clinicSlotBookedCount(slotId) >= slot.capacity){ showToast('죄송해요, 방금 정원이 찼습니다. 다른 시간대를 선택해주세요.'); render(); return; }
   if(DATA.clinics.some(c=>c.studentId===sid && c.slotId===slotId && c.status!=='취소')){ showToast('이미 같은 시간대에 신청하셨습니다.'); return; }
-  DATA.clinics.unshift({id:'cl'+Date.now(), studentId:sid, name:state.currentUser.name, topic, slotId, day:slot.date, time:slot.time, status:'대기', requestedAt:new Date().toISOString().slice(0,10)});
-  await dbSet('clinics', DATA.clinics);
+  const clinic = {id:'cl'+Date.now(), studentId:sid, name:state.currentUser.name, topic, slotId, day:slot.date, time:slot.time, status:'대기', requestedAt:new Date().toISOString().slice(0,10)};
+  DATA.clinics.unshift(clinic);
+  await dbSetDoc('clinics', clinic.id, clinic);
   document.getElementById('clinic-topic').value='';
   showToast('클리닉 신청이 접수되었습니다.');
   render();
@@ -1403,7 +1424,7 @@ async function updateClinicStatus(cid, status){
   const c = DATA.clinics.find(c=>c.id===cid);
   if(!c) return;
   c.status = status;
-  await dbSet('clinics', DATA.clinics);
+  await dbSetDoc('clinics', c.id, c);
   render();
 }
 async function cancelClinicRequest(cid){
@@ -1411,14 +1432,14 @@ async function cancelClinicRequest(cid){
   const c = DATA.clinics.find(c=>c.id===cid);
   if(!c) return;
   c.status = '취소';
-  await dbSet('clinics', DATA.clinics);
+  await dbSetDoc('clinics', c.id, c);
   showToast('신청이 취소되었습니다.');
   render();
 }
 async function deleteClinic(cid){
   if(!confirm('이 클리닉 신청을 삭제할까요?')) return;
   DATA.clinics = DATA.clinics.filter(c=>c.id!==cid);
-  await dbSet('clinics', DATA.clinics);
+  await dbDeleteDoc('clinics', cid);
   render();
 }
 
@@ -1489,8 +1510,9 @@ async function submitQuestion(){
   const question = document.getElementById('qna-question').value.trim();
   if(!question){ showToast('질문 내용을 입력해주세요.'); return; }
   if(state.qnaQuestionImage && state.qnaQuestionImage.uploading){ showToast('이미지 업로드가 끝난 후 다시 시도해주세요.'); return; }
-  DATA.qnas.unshift({id:'qn'+Date.now(), studentId:sid, studentName:state.currentUser.name, question, image:state.qnaQuestionImage||null, date:new Date().toISOString().slice(0,10), answer:null, answerImage:null, answeredAt:null});
-  await dbSet('qnas', DATA.qnas);
+  const qna = {id:'qn'+Date.now(), studentId:sid, studentName:state.currentUser.name, question, image:state.qnaQuestionImage||null, date:new Date().toISOString().slice(0,10), answer:null, answerImage:null, answeredAt:null};
+  DATA.qnas.unshift(qna);
+  await dbSetDoc('qnas', qna.id, qna);
   document.getElementById('qna-question').value='';
   state.qnaQuestionImage = null;
   showToast('질문이 등록되었습니다.');
@@ -1503,7 +1525,7 @@ async function submitAnswer(qid){
   const q = DATA.qnas.find(q=>q.id===qid);
   if(!q) return;
   q.answer = val; q.answerImage = state.qnaAnswerImage[qid]||null; q.answeredAt = new Date().toISOString().slice(0,10);
-  await dbSet('qnas', DATA.qnas);
+  await dbSetDoc('qnas', q.id, q);
   delete state.qnaAnswerImage[qid];
   showToast('답변이 등록되었습니다.');
   render();
@@ -1516,7 +1538,7 @@ async function deleteQna(qid){
     deleteFromDrive(imgFileIdOf(q.answerImage));
   }
   DATA.qnas = DATA.qnas.filter(q=>q.id!==qid);
-  await dbSet('qnas', DATA.qnas);
+  await dbDeleteDoc('qnas', qid);
   render();
 }
 
@@ -1679,8 +1701,9 @@ async function addVideo(){
   const classId = document.getElementById('video-class').value;
   if(!title || !url){ showToast('제목과 링크를 입력해주세요.'); return; }
   if(!extractYouTubeId(url)){ showToast('유튜브 링크 형식이 맞는지 확인해주세요.'); return; }
-  DATA.videos.unshift({id:'v'+Date.now(), unit, title, url, classId});
-  await dbSet('videos', DATA.videos);
+  const video = {id:'v'+Date.now(), unit, title, url, classId};
+  DATA.videos.unshift(video);
+  await dbSetDoc('videos', video.id, video);
   document.getElementById('video-unit').value='';
   document.getElementById('video-title').value='';
   document.getElementById('video-url').value='';
@@ -1690,7 +1713,7 @@ async function addVideo(){
 async function deleteVideo(vid){
   if(!confirm('이 영상을 삭제할까요?')) return;
   DATA.videos = DATA.videos.filter(v=>v.id!==vid);
-  await dbSet('videos', DATA.videos);
+  await dbDeleteDoc('videos', vid);
   render();
 }
 
@@ -1912,8 +1935,9 @@ async function saveExam(){
   // 올리고 링크만 저장한다. Firestore에는 짧은 URL/ID만 남아 문서 용량 제한에서 자유롭다.
   const questions = validQuestions.map((q,i)=>({no:i+1, content:q.content.trim(), answer:q.answer.trim(), unit:q.unit||''}));
   const examId = 'ex'+Date.now();
-  DATA.exams.unshift({id:examId, classId:examDraft.classId, title:examDraft.title, date:examDraft.date, questions, hasFiles:readyPages.length>0});
-  await dbSet('exams', DATA.exams);
+  const newExam = {id:examId, classId:examDraft.classId, title:examDraft.title, date:examDraft.date, questions, hasFiles:readyPages.length>0};
+  DATA.exams.unshift(newExam);
+  await dbSetDoc('exams', newExam.id, newExam);
   if(readyPages.length>0){
     await dbSet('examfiles:'+examId, readyPages);
   }
@@ -1926,15 +1950,16 @@ async function saveExam(){
       try{ imgResult = await uploadDataUrlToDrive(srcImage); }
       catch(e){ console.error('문항 이미지 업로드 실패', e); showToast(q.no+'번 문항 이미지 업로드에 실패했습니다.'); }
     }
-    DATA.problemBank.push({
+    const bankEntry = {
       id:bankId, examId, questionNo:q.no,
       originalContent:q.content, originalAnswer:q.answer,
       variantContent:'', variantAnswer:'', status:'pending',
       hasImage: !!imgResult
-    });
+    };
+    DATA.problemBank.push(bankEntry);
+    await dbSetDoc('problembank', bankEntry.id, bankEntry);
     if(imgResult) await dbSet('pbimg:'+bankId, imgResult);
   }
-  await dbSet('problem-bank', DATA.problemBank);
   examDraft = { classId:'', title:'', date:'', questions:[{content:'', answer:'', unit:UNITS[0]}], pages:[] };
   showToast('시험지가 등록되었습니다. 오답 문제 검토 탭에서 AI 쌍둥이 문제를 생성해보세요.');
   render();
@@ -1942,7 +1967,7 @@ async function saveExam(){
 async function deleteExam(examId){
   if(!confirm('이 시험지를 삭제할까요? 관련 오답 문제 DB는 유지됩니다.')) return;
   DATA.exams = DATA.exams.filter(e=>e.id!==examId);
-  await dbSet('exams', DATA.exams);
+  await dbDeleteDoc('exams', examId);
   await dbDelete('examfiles:'+examId);
   render();
 }
@@ -1953,8 +1978,9 @@ async function copyExamToClass(examId){
   const e = DATA.exams.find(x=>x.id===examId);
   if(!e) return;
   const newId = 'ex'+Date.now();
-  DATA.exams.unshift({id:newId, classId:targetClassId, title:e.title, date:e.date, questions:e.questions.map(q=>({...q})), hasFiles:e.hasFiles});
-  await dbSet('exams', DATA.exams);
+  const copiedExam = {id:newId, classId:targetClassId, title:e.title, date:e.date, questions:e.questions.map(q=>({...q})), hasFiles:e.hasFiles};
+  DATA.exams.unshift(copiedExam);
+  await dbSetDoc('exams', copiedExam.id, copiedExam);
   if(e.hasFiles){
     const pages = await dbGet('examfiles:'+examId, []);
     await dbSet('examfiles:'+newId, pages);
@@ -2031,7 +2057,7 @@ async function submitWrongAnswers(){
         newlyRequested++;
       }
       DATA.problemBank.push(bank);
-      await dbSet('problem-bank', DATA.problemBank);
+      await dbSetDoc('problembank', bank.id, bank);
     }
     if(!rec.wrongHomework.some(h=>h.bankId===bank.id)){
       rec.wrongHomework.push({bankId:bank.id, examId, questionNo:no, assignedAt:new Date().toISOString().slice(0,10), done:false, studentAnswer:''});
@@ -2255,7 +2281,7 @@ async function saveBankEdit(bankId){
   const a = document.getElementById('bank-answer-'+bankId);
   if(c) b.variantContent = c.value;
   if(a) b.variantAnswer = a.value;
-  await dbSet('problem-bank', DATA.problemBank);
+  await dbSetDoc('problembank', b.id, b);
   showToast('저장되었습니다.');
   render();
 }
@@ -2263,7 +2289,7 @@ async function advanceBankStatus(bankId, newStatus){
   const b = DATA.problemBank.find(b=>b.id===bankId);
   if(!b) return;
   b.status = newStatus;
-  await dbSet('problem-bank', DATA.problemBank);
+  await dbSetDoc('problembank', b.id, b);
   showToast(newStatus==='approved' ? '학생에게 공개되었습니다.' : '검토 상태가 업데이트되었습니다.');
   render();
 }
@@ -2271,7 +2297,7 @@ async function deleteBankEntry(bankId){
   if(!confirm('이 문제를 DB에서 삭제할까요?')) return;
   const b = DATA.problemBank.find(x=>x.id===bankId);
   DATA.problemBank = DATA.problemBank.filter(x=>x.id!==bankId);
-  await dbSet('problem-bank', DATA.problemBank);
+  await dbDeleteDoc('problembank', bankId);
   if(b && b.hasImage){
     const img = await dbGet('pbimg:'+bankId, null);
     deleteFromDrive(imgFileIdOf(img));
@@ -2760,8 +2786,9 @@ async function addAssistant(){
   if(pw.length < 4){ showToast('비밀번호는 4자 이상으로 설정해주세요.'); return; }
   if(!classId){ showToast('담당 반을 선택해주세요.'); return; }
   if(DATA.assistants.some(a=>a.taId===taId)){ showToast('이미 사용 중인 아이디입니다.'); return; }
-  DATA.assistants.push({id:'ta'+Date.now(), taId, pw, name, phone, classId});
-  await dbSet('assistants', DATA.assistants);
+  const assistant = {id:'ta'+Date.now(), taId, pw, name, phone, classId};
+  DATA.assistants.push(assistant);
+  await dbSetDoc('assistants', assistant.id, assistant);
   document.getElementById('ta-id').value='';
   document.getElementById('ta-pw').value='';
   document.getElementById('ta-name').value='';
@@ -2776,14 +2803,14 @@ async function resetAssistantPw(aid){
   if(next===null) return;
   if(next.length < 4){ showToast('비밀번호는 4자 이상이어야 합니다.'); return; }
   a.pw = next;
-  await dbSet('assistants', DATA.assistants);
+  await dbSetDoc('assistants', a.id, a);
   showToast('비밀번호가 변경되었습니다.');
   render();
 }
 async function deleteAssistant(aid){
   if(!confirm('이 조교를 삭제할까요?')) return;
   DATA.assistants = DATA.assistants.filter(a=>a.id!==aid);
-  await dbSet('assistants', DATA.assistants);
+  await dbDeleteDoc('assistants', aid);
   render();
 }
 
@@ -3669,7 +3696,7 @@ async function setClassProgressSubject(classId, subject){
   if(!c) return;
   if(!c.progress) c.progress = { subject:'', unitsBySubject:{} };
   c.progress.subject = subject;
-  await dbSet('classes', DATA.classes);
+  await dbSetDoc('classes', c.id, c);
   render();
 }
 async function toggleClassProgressUnit(classId, unit, checked){
@@ -3678,7 +3705,7 @@ async function toggleClassProgressUnit(classId, unit, checked){
   const subject = c.progress.subject;
   if(!c.progress.unitsBySubject[subject]) c.progress.unitsBySubject[subject] = {};
   c.progress.unitsBySubject[subject][unit] = checked;
-  await dbSet('classes', DATA.classes);
+  await dbSetDoc('classes', c.id, c);
   render();
 }
 function teacherClassProgressHTML(classId){
@@ -4005,7 +4032,7 @@ async function saveClassAttendance(classId, date){
   }));
   if(newVideos.length>0){
     DATA.videos.unshift(...newVideos);
-    await dbSet('videos', DATA.videos);
+    await Promise.all(newVideos.map(v=>dbSetDoc('videos', v.id, v)));
   }
   showToast('출석이 저장되었습니다.' + (newVideos.length>0 ? ` 보충 영상 ${newVideos.length}건도 배정했어요.` : ''));
   render();
@@ -4173,8 +4200,9 @@ async function addDailyHomework(classId, date){
   const description = document.getElementById('dhw-desc').value.trim();
   const dueDate = document.getElementById('dhw-due').value || date;
   if(!title){ showToast('과제명을 입력해주세요.'); return; }
-  DATA.assignments.unshift({id:'hw'+Date.now(), classId, title, description, dueDate, createdAt:date});
-  await dbSet('assignments', DATA.assignments);
+  const hw = {id:'hw'+Date.now(), classId, title, description, dueDate, createdAt:date};
+  DATA.assignments.unshift(hw);
+  await dbSetDoc('assignments', hw.id, hw);
   showToast('과제가 등록되었습니다.');
   render();
 }
@@ -4700,7 +4728,7 @@ function teacherSettingsConsultsHTML(){
     <h3>상담 신청 목록 (${DATA.consults.length}건)</h3>
     ${DATA.consults.length===0?'<div class="empty">접수된 상담 신청이 없습니다.</div>':`
     <table><tr><th>날짜</th><th>이름</th><th>연락처</th><th>학년</th><th>내용</th><th></th></tr>
-    ${DATA.consults.map((c,i)=>`<tr><td>${c.date}</td><td>${c.name}</td><td>${c.phone}</td><td>${c.grade||'-'}</td><td>${c.msg||'-'}</td><td><button class="btn btn-red btn-small" onclick="deleteConsult(${i})">삭제</button></td></tr>`).join('')}
+    ${DATA.consults.map(c=>`<tr><td>${c.date}</td><td>${c.name}</td><td>${c.phone}</td><td>${c.grade||'-'}</td><td>${c.msg||'-'}</td><td><button class="btn btn-red btn-small" onclick="deleteConsult('${c.id}')">삭제</button></td></tr>`).join('')}
     </table>`}
   </div>`;
 }
