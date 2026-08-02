@@ -3609,40 +3609,48 @@ function teacherAttendanceHTML(fixedClassId, fixedDate){
   const date = fixedDate || state.attendanceDate || todayStr();
   const roster = classId ? DATA.students.filter(s=>s.classId===classId) : [];
   if(classId && state.allRecordsLoaded) ensureAttDraft(classId, date);
-  return `
-  <div class="panel">
-    ${fixedDate ? '' : '<h3>출석 입력</h3>'}
-    <div class="inline-form" style="align-items:flex-end;">
-      ${fixedClassId ? '' : `<div class="field"><label>반</label><select onchange="state.attendanceClassId=this.value; render()">
-        <option value="">-- 반 선택 --</option>
-        ${DATA.classes.map(c=>`<option value="${c.id}" ${classId===c.id?'selected':''}>${escHtml(c.name)}</option>`).join('')}
-      </select></div>`}
-      ${fixedDate ? '' : `<div class="field" style="max-width:200px;"><label>날짜</label><input type="date" value="${date}" onchange="state.attendanceDate=this.value; render()"></div>`}
-      ${classId && state.allRecordsLoaded && roster.length>0 ? `
-      <button class="btn" onclick="setAllPresent('${classId}')">전체 출석</button>
-      <div class="field" style="max-width:110px;"><select id="att-bulk-status">${ATT_STATUSES.map(st=>`<option value="${st}">${st}</option>`).join('')}</select></div>
-      <button class="btn" onclick="setAllStatus('${classId}', document.getElementById('att-bulk-status').value)">일괄 변경</button>
-      <button class="btn btn-primary" onclick="saveClassAttendance('${classId}','${date}')">저장</button>` : ''}
-    </div>
+  const body = `
+    ${!fixedClassId ? `<div class="field" style="max-width:220px;margin-bottom:14px;"><label>반</label><select onchange="state.attendanceClassId=this.value; render()">
+      <option value="">-- 반 선택 --</option>
+      ${DATA.classes.map(c=>`<option value="${c.id}" ${classId===c.id?'selected':''}>${escHtml(c.name)}</option>`).join('')}
+    </select></div>` : ''}
+    ${!fixedDate ? `<div class="field" style="max-width:200px;margin-bottom:14px;"><label>날짜</label><input type="date" value="${date}" onchange="state.attendanceDate=this.value; render()"></div>` : ''}
     ${!classId ? '<div class="empty">반을 선택해주세요.</div>' :
       !state.allRecordsLoaded ? '<div class="empty">학생 기록을 불러오는 중입니다...</div>' :
       roster.length===0 ? '<div class="empty">이 반에 배정된 학생이 없습니다.</div>' : `
-      ${roster.map(s=>{
-        const d = state.attDraft[s.studentId] || {status:null, reason:'', videoUrl:'', note:''};
-        return `<div class="att-row">
-          <div class="att-name">${escHtml(s.name)} <span class="mono" style="font-size:11px;color:var(--ink-soft);">(${s.studentId})</span><br>
-            <span class="mono" style="font-size:11px;color:var(--ink-soft);">학부모 ${escHtml(s.parentPhone||'-')} · 학생 ${escHtml(s.phone||'-')}</span></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:14px;">
+      <h4 style="margin:0;">출석 관리 <span class="td-soft" style="font-weight:400;">· ${roster.length}명 대상</span></h4>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+        <button class="btn btn-small" onclick="setAllPresent('${classId}')">전체 출석</button>
+        <select id="att-bulk-status" style="width:auto;">${ATT_STATUSES.map(st=>`<option value="${st}">${st}</option>`).join('')}</select>
+        <button class="btn btn-small" onclick="setAllStatus('${classId}', document.getElementById('att-bulk-status').value)">일괄 변경</button>
+        <button class="btn btn-primary btn-small" onclick="saveClassAttendance('${classId}','${date}')">저장</button>
+      </div>
+    </div>
+    <div style="overflow-x:auto;">
+    <table><tr><th>#</th><th>이름</th><th>상태</th><th>학부모 전화번호</th><th>학생 전화번호</th><th>출석 상태 변경</th><th>출결 메모</th></tr>
+    ${roster.map((s,i)=>{
+      const d = state.attDraft[s.studentId] || {status:null, reason:'', videoUrl:'', note:''};
+      return `<tr>
+        <td class="td-soft mono">${i+1}</td>
+        <td class="td-strong">${escHtml(s.name)}</td>
+        <td>${d.status ? attBadge(d.status) : '<span class="td-soft">미입력</span>'}</td>
+        <td class="td-soft mono">${escHtml(s.parentPhone||'-')}</td>
+        <td class="td-soft mono">${escHtml(s.phone||'-')}</td>
+        <td>
           <div class="att-btn-group">
             ${ATT_STATUSES.map(st=>`<button class="att-status-btn att-${attStatusClass(st)} ${d.status===st?'active':''}" onclick="setAttStatus('${s.studentId}','${st}')">${st}</button>`).join('')}
           </div>
           ${(d.status && d.status!=='출석') ? `<input class="att-reason-input" id="att-reason-${s.studentId}" placeholder="사유 입력 (선택)" value="${escHtml(d.reason)}" oninput="state.attDraft['${s.studentId}'].reason=this.value">` : ''}
-          ${d.status==='결석' ? `<input class="att-reason-input" id="att-video-${s.studentId}" placeholder="보충 영상 유튜브 링크 (선택 — 이 학생에게만 보여요)" value="${escHtml(d.videoUrl)}" oninput="state.attDraft['${s.studentId}'].videoUrl=this.value">` : ''}
-          <input class="att-reason-input" id="att-note-${s.studentId}" placeholder="출결 메모 (선택)" value="${escHtml(d.note)}" oninput="state.attDraft['${s.studentId}'].note=this.value">
-        </div>`;
-      }).join('')}
-    `}
-  </div>
-  ${classId && state.allRecordsLoaded && roster.length>0 ? `
+          ${d.status==='결석' ? `<input class="att-reason-input" id="att-video-${s.studentId}" placeholder="보충 영상 유튜브 링크 (선택)" value="${escHtml(d.videoUrl)}" oninput="state.attDraft['${s.studentId}'].videoUrl=this.value">` : ''}
+        </td>
+        <td><input class="att-reason-input" id="att-note-${s.studentId}" placeholder="메모 입력" value="${escHtml(d.note)}" oninput="state.attDraft['${s.studentId}'].note=this.value"></td>
+      </tr>`;
+    }).join('')}
+    </table>
+    </div>`}
+  `;
+  const summary = classId && state.allRecordsLoaded && roster.length>0 ? `
   <div class="panel">
     <h3>${classNameOf(classId)} 출결 누적 집계</h3>
     <div style="overflow-x:auto;">
@@ -3654,7 +3662,8 @@ function teacherAttendanceHTML(fixedClassId, fixedDate){
     }).join('')}
     </table>
     </div>
-  </div>` : ''}`;
+  </div>` : '';
+  return { body, summary };
 }
 async function saveClassAttendance(classId, date){
   const roster = DATA.students.filter(s=>s.classId===classId);
@@ -3687,7 +3696,7 @@ async function saveClassAttendance(classId, date){
   render();
 }
 
-/* ---------- 수업 기록 (반 선택 → 날짜 선택 → 출석/성적/시험/과제) ---------- */
+/* ---------- 수업 기록 (반 선택 → 날짜 선택 → 출석/성적/시험/과제, 카드 하나로 통합) ---------- */
 const WEEKDAY_LABEL = ['일','월','화','수','목','금','토'];
 function teacherClassSessionsHTML(classId){
   const c = DATA.classes.find(x=>x.id===classId);
@@ -3698,38 +3707,41 @@ function teacherClassSessionsHTML(classId){
   const date = state.classHubDate;
   const dateSubtabs = [['attendance','출석'],['scores','성적'],['exam','시험'],['homework','과제']];
   const sub = state.classHubDateSubTab || 'attendance';
-  let subHtml;
-  if(sub==='scores') subHtml = teacherClassDailyScoresHTML(classId, date);
-  else if(sub==='exam') subHtml = teacherClassDailyExamHTML(classId, date);
-  else if(sub==='homework') subHtml = teacherClassDailyHomeworkHTML(classId, date);
-  else subHtml = teacherAttendanceHTML(classId, date);
+  let subHtml, extraPanels = '';
+  if(sub==='scores'){ subHtml = teacherClassDailyScoresHTML(classId, date); }
+  else if(sub==='exam'){ subHtml = teacherClassDailyExamHTML(classId, date); }
+  else if(sub==='homework'){ const r = teacherClassDailyHomeworkHTML(classId, date); subHtml = r.body; extraPanels = r.extra; }
+  else { const r = teacherAttendanceBareHTML(classId, date); subHtml = r.body; extraPanels = r.extra; }
   return `
   <div class="panel">
-    <h3>수업 날짜 선택</h3>
     ${sessionDates.length===0 ? `<div class="empty">반 일정(요일)이 등록되지 않아 날짜를 자동으로 만들 수 없습니다. [반 관리 &gt; 설정]에서 반 일정을 입력해주세요.</div>` : `
-    <div style="display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;">
+    <div style="display:flex;gap:8px;overflow-x:auto;padding-bottom:6px;align-items:center;">
+      <span class="td-soft" style="flex:0 0 auto;white-space:nowrap;">수업 날짜</span>
       ${sessionDates.map(d=>{
         const dow = WEEKDAY_LABEL[new Date(d+'T00:00:00').getDay()];
         const isToday = d===todayStr();
         return `<button class="btn btn-small ${d===date?'btn-primary':''}" style="flex:0 0 auto;white-space:nowrap;" onclick="state.classHubDate='${d}'; render()">${d.slice(5).replace('-','/')} (${dow})${isToday?' · 오늘':''}</button>`;
       }).join('')}
+      <input type="date" value="${date}" onchange="state.classHubDate=this.value; render()" style="flex:0 0 auto;width:auto;">
     </div>`}
-    <div class="field" style="max-width:200px;margin-top:12px;">
-      <label>다른 날짜 직접 선택</label>
-      <input type="date" value="${date}" onchange="state.classHubDate=this.value; render()">
+    <div class="subtab-bar" style="margin-top:14px;margin-bottom:18px;">
+      ${dateSubtabs.map(t=>`<button class="subtab-btn ${sub===t[0]?'active':''}" onclick="state.classHubDateSubTab='${t[0]}'; render()">${t[1]}</button>`).join('')}
     </div>
+    ${subHtml}
   </div>
-  <div class="subtab-bar">
-    ${dateSubtabs.map(t=>`<button class="subtab-btn ${sub===t[0]?'active':''}" onclick="state.classHubDateSubTab='${t[0]}'; render()">${t[1]}</button>`).join('')}
-  </div>
-  ${subHtml}`;
+  ${extraPanels}`;
+}
+// 출석 하위탭용: 카드 없이 본문만 반환(누적집계 패널은 별도)
+function teacherAttendanceBareHTML(classId, date){
+  const full = teacherAttendanceHTML(classId, date);
+  return { body: full.body, extra: full.summary };
 }
 function teacherClassDailyScoresHTML(classId, date){
   loadAllRecordsIfNeeded();
   const roster = DATA.students.filter(s=>s.classId===classId);
-  if(!state.allRecordsLoaded) return `<div class="panel"><div class="empty">학생 기록을 불러오는 중입니다...</div></div>`;
-  return `<div class="panel">
-    <h3>${date} 수업 성적</h3>
+  if(!state.allRecordsLoaded) return `<div class="empty">학생 기록을 불러오는 중입니다...</div>`;
+  return `
+    <h4 style="margin:0 0 12px;">${date} 수업 성적</h4>
     <div class="field" style="max-width:240px;"><label>시험명</label><input id="daily-score-name" value="${escHtml(state.dailyScoreName||'쪽지시험')}" oninput="state.dailyScoreName=this.value"></div>
     ${roster.length===0 ? '<div class="empty">이 반에 배정된 학생이 없습니다.</div>' : `
     <div style="overflow-x:auto;">
@@ -3749,7 +3761,7 @@ function teacherClassDailyScoresHTML(classId, date){
     }).join('')}
     </table>
     </div>`}
-  </div>`;
+  `;
 }
 async function saveDailyScore(sid, date){
   const nameEl = document.getElementById('daily-score-name');
@@ -3776,8 +3788,8 @@ async function deleteDailyScore(sid, date){
 }
 function teacherClassDailyExamHTML(classId, date){
   const exams = DATA.exams.filter(e=>e.classId===classId && e.date===date);
-  return `<div class="panel">
-    <h3>${date} 시험지</h3>
+  return `
+    <h4 style="margin:0 0 12px;">${date} 시험지</h4>
     ${exams.length===0 ? '<div class="empty">이 날짜로 등록된 시험지가 없습니다.</div>' :
     exams.map(e=>`<div class="exam-card">
       <div class="exam-title">${escHtml(e.title)}</div>
@@ -3788,7 +3800,7 @@ function teacherClassDailyExamHTML(classId, date){
       ${state.examDetailOpen[e.id] ? examDetailHTML(e.id) : ''}
     </div>`).join('')}
     <button class="btn btn-primary" style="margin-top:12px;" onclick="examDraft.classId='${classId}'; examDraft.date='${date}'; state.teacherTab='exams'; render()">이 날짜로 새 시험지 등록</button>
-  </div>`;
+  `;
 }
 function teacherClassDailyHomeworkHTML(classId, date){
   loadAllRecordsIfNeeded();
@@ -3796,10 +3808,9 @@ function teacherClassDailyHomeworkHTML(classId, date){
   const all = DATA.assignments.filter(a=>a.classId===classId);
   const visible = showAll ? all : all.filter(a=>a.createdAt===date || a.dueDate===date);
   const roster = DATA.students.filter(s=>s.classId===classId);
-  return `<div class="panel">
-    <h3>${showAll ? '전체 과제' : date+' 과제'} (${visible.length}건)</h3>
-    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-top:-6px;margin-bottom:10px;">
-      <p class="hint" style="margin:0;">${showAll ? '이 반의 모든 과제를 보여줍니다.' : '이 날짜에 등록되었거나 마감인 과제만 보여줍니다.'}</p>
+  const body = `
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:14px;">
+      <h4 style="margin:0;">${showAll ? '전체 과제' : date+' 과제'} <span class="td-soft" style="font-weight:400;">(${visible.length}건)</span></h4>
       <button class="btn btn-small" onclick="state.classHubHomeworkShowAll=${!showAll}; render()">${showAll?'이 날짜만 보기':'전체 보기'}</button>
     </div>
     ${visible.length===0 ? '<div class="empty">해당하는 과제가 없습니다.</div>' :
@@ -3828,7 +3839,8 @@ function teacherClassDailyHomeworkHTML(classId, date){
         ) : ''}
       </div>`;
     }).join('')}
-  </div>
+  `;
+  const extra = `
   <div class="panel">
     <h3>새 과제 등록</h3>
     <div class="inline-form">
@@ -3838,6 +3850,7 @@ function teacherClassDailyHomeworkHTML(classId, date){
     <div class="field"><label>설명 (선택)</label><textarea id="dhw-desc" placeholder="과제 상세 내용을 입력하세요"></textarea></div>
     <button class="btn btn-primary" onclick="addDailyHomework('${classId}','${date}')">등록</button>
   </div>`;
+  return { body, extra };
 }
 async function addDailyHomework(classId, date){
   const title = document.getElementById('dhw-title').value.trim();
