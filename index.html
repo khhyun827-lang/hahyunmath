@@ -223,7 +223,10 @@
   table th{text-align:left;font-size:11px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;color:var(--ink-soft);border-bottom:2px solid var(--card-border);padding:11px 14px;}
   table td{padding:13px 14px;border-bottom:1px solid #F0EEE7;}
   table tr:last-child td{border-bottom:none;}
-  table tr:hover td{background:#FBFAF8;}
+  table tr:nth-child(even) td{background:#FBFAF7;}
+  table tr:hover td{background:#F6EFEE;}
+  .td-strong{font-weight:700;color:var(--ink);}
+  .td-soft{color:var(--ink-soft);font-size:12px;}
   .progress-outer{background:#EDEBE3;border-radius:20px;height:14px;overflow:hidden;margin:8px 0;}
   .progress-inner{background:var(--blue-deep);height:100%;border-radius:20px;}
   .video-gauge{display:flex;align-items:center;gap:8px;margin-top:6px;}
@@ -426,7 +429,7 @@
   /* 출석부: 버튼형 상태 선택 */
   .att-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:10px 0;border-bottom:1px solid #F0EEE7;}
   .att-row:last-child{border-bottom:none;}
-  .att-name{flex:1;min-width:120px;font-size:13.5px;}
+  .att-name{flex:1;min-width:120px;font-size:13.5px;font-weight:700;}
   .att-btn-group{display:flex;gap:6px;}
   .att-status-btn{border:1px solid var(--card-border);background:var(--white);border-radius:6px;padding:6px 14px;font-size:12.5px;cursor:pointer;}
   .att-status-btn.att-ok.active{background:var(--green-ok);color:#fff;border-color:var(--green-ok);}
@@ -744,6 +747,7 @@ let state = {
   attDraftKey: null,
   classHubDate: null,
   classHubDateSubTab: 'attendance',
+  classHubHomeworkShowAll: false,
   dailyScoreName: '',
   solutionOpen: {},
   homeworkDetailId: null,
@@ -3240,7 +3244,7 @@ function teacherHomeHTML(){
             <div style="display:flex;justify-content:space-between;font-size:13.5px;font-weight:700;margin-bottom:8px;">
               <span>${escHtml(c.name)}</span><span class="mono" style="font-weight:400;color:var(--ink-soft);">총 ${roster.length}명</span>
             </div>
-            <div class="home-bar-row" style="cursor:pointer;" onclick="state.teacherTab='classhub'; state.classHubId='${c.id}'; state.classHubTab='homework'; render()" title="미제출자 확인하러 가기"><span class="home-bar-label">과제 제출</span><div class="home-bar-outer"><div class="home-bar-inner home-bar-green" style="width:${hwPct}%;"></div></div><span class="home-bar-pct">${hwPct}%</span></div>
+            <div class="home-bar-row" style="cursor:pointer;" onclick="state.teacherTab='classhub'; state.classHubId='${c.id}'; state.classHubTab='sessions'; state.classHubDateSubTab='homework'; render()" title="미제출자 확인하러 가기"><span class="home-bar-label">과제 제출</span><div class="home-bar-outer"><div class="home-bar-inner home-bar-green" style="width:${hwPct}%;"></div></div><span class="home-bar-pct">${hwPct}%</span></div>
             <div class="home-bar-row"><span class="home-bar-label">영상 시청</span><div class="home-bar-outer"><div class="home-bar-inner home-bar-blue" style="width:${vidPct}%;"></div></div><span class="home-bar-pct">${vidPct}%</span></div>
           </div>`;
         }).join('')}
@@ -3248,7 +3252,7 @@ function teacherHomeHTML(){
     <div class="home-card">
       <h4>${iconSvg('calendar')} 출석부 바로가기</h4>
       ${DATA.classes.length===0 ? '<div class="empty">등록된 반이 없습니다.</div>' :
-        DATA.classes.map(c=>`<button class="btn" style="width:100%;margin-bottom:8px;text-align:left;" onclick="state.teacherTab='classhub'; state.classHubId='${c.id}'; state.classHubTab='attendance'; render()">${escHtml(c.name)} 출석부 열기</button>`).join('')}
+        DATA.classes.map(c=>`<button class="btn" style="width:100%;margin-bottom:8px;text-align:left;" onclick="state.teacherTab='classhub'; state.classHubId='${c.id}'; state.classHubTab='sessions'; state.classHubDateSubTab='attendance'; render()">${escHtml(c.name)} 출석부 열기</button>`).join('')}
     </div>
   </div>
   <div class="home-grid-2">
@@ -3315,7 +3319,7 @@ function classRosterHTML(classId){
     ${roster.length===0 ? '<div class="empty">이 반에 배정된 학생이 없습니다.</div>' : `
     <div style="overflow-x:auto;">
     <table><tr><th>아이디</th><th>이름</th><th>학년</th><th>학교</th><th>학부모 전화번호</th><th>학생 전화번호</th><th></th></tr>
-    ${roster.map(s=>`<tr><td>${s.studentId}</td><td>${escHtml(s.name)}</td><td>${escHtml(s.grade)}</td><td>${escHtml(s.school||'-')}</td><td class="mono">${escHtml(s.parentPhone||'-')}</td><td class="mono">${escHtml(s.phone||'-')}</td>
+    ${roster.map(s=>`<tr><td class="td-soft mono">${s.studentId}</td><td class="td-strong">${escHtml(s.name)}</td><td>${escHtml(s.grade)}</td><td class="td-soft">${escHtml(s.school||'-')}</td><td class="td-soft mono">${escHtml(s.parentPhone||'-')}</td><td class="td-soft mono">${escHtml(s.phone||'-')}</td>
       <td><button class="btn btn-small" onclick="state.studentDetailId='${s.studentId}'; state.teacherSelectedStudent='${s.studentId}'; state.studentDetailTab='info'; render()">상세보기</button></td></tr>`).join('')}
     </table>
     </div>`}
@@ -3454,12 +3458,10 @@ function teacherClassHubHTML(){
   const tab = state.classHubTab || 'students';
   // 학생 명단에서 "상세보기"를 누르면 반 관리 화면 그대로(사이드바/서브탭 안 바꾸고) 학생 상세만 보여준다.
   if(tab==='students' && state.studentDetailId) return teacherStudentDetailHTML(state.studentDetailId);
-  const subtabs = [['students','학생 명단'],['sessions','수업 기록'],['progress','진도'],['attendance','출석부(전체)'],['homework','과제(전체)'],['quiz','데일리퀴즈'],['video','영상']];
+  const subtabs = [['students','학생 명단'],['sessions','수업 기록'],['progress','진도'],['quiz','데일리퀴즈'],['video','영상']];
   let sub;
   if(tab==='sessions') sub = teacherClassSessionsHTML(c.id);
   else if(tab==='progress') sub = teacherClassProgressHTML(c.id);
-  else if(tab==='attendance') sub = teacherAttendanceHTML(c.id);
-  else if(tab==='homework') sub = teacherHomeworkHTML(c.id);
   else if(tab==='quiz') sub = teacherQuizHTML(c.id);
   else if(tab==='video') sub = videoByClassHTML(c.id);
   else sub = classRosterHTML(c.id);
@@ -3648,7 +3650,7 @@ function teacherAttendanceHTML(fixedClassId, fixedDate){
     ${roster.map(s=>{
       const list = (state.allRecords[s.studentId] && state.allRecords[s.studentId].attendance) || [];
       const count = st => list.filter(a=>a.status===st).length;
-      return `<tr><td>${escHtml(s.name)}</td>${ATT_STATUSES.map(st=>`<td>${count(st)}</td>`).join('')}</tr>`;
+      return `<tr><td class="td-strong">${escHtml(s.name)}</td>${ATT_STATUSES.map(st=>`<td>${count(st)}</td>`).join('')}</tr>`;
     }).join('')}
     </table>
     </div>
@@ -3736,7 +3738,7 @@ function teacherClassDailyScoresHTML(classId, date){
       const rec = state.allRecords[s.studentId];
       const existing = rec && (rec.scores||[]).find(sc=>sc.date===date);
       return `<tr>
-        <td>${escHtml(s.name)}</td>
+        <td class="td-strong">${escHtml(s.name)}</td>
         <td><input type="number" id="ds-score-${s.studentId}" style="width:70px;" value="${existing?existing.score:''}"></td>
         <td><input type="number" id="ds-total-${s.studentId}" style="width:70px;" value="${existing?existing.total:''}"></td>
         <td>
@@ -3790,18 +3792,23 @@ function teacherClassDailyExamHTML(classId, date){
 }
 function teacherClassDailyHomeworkHTML(classId, date){
   loadAllRecordsIfNeeded();
-  const visible = DATA.assignments.filter(a=>a.classId===classId && (a.createdAt===date || a.dueDate===date));
+  const showAll = !!state.classHubHomeworkShowAll;
+  const all = DATA.assignments.filter(a=>a.classId===classId);
+  const visible = showAll ? all : all.filter(a=>a.createdAt===date || a.dueDate===date);
   const roster = DATA.students.filter(s=>s.classId===classId);
   return `<div class="panel">
-    <h3>${date} 과제 (${visible.length}건)</h3>
-    <p class="hint" style="margin-top:-8px;">이 날짜에 등록되었거나 마감인 과제만 보여줍니다.</p>
+    <h3>${showAll ? '전체 과제' : date+' 과제'} (${visible.length}건)</h3>
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-top:-6px;margin-bottom:10px;">
+      <p class="hint" style="margin:0;">${showAll ? '이 반의 모든 과제를 보여줍니다.' : '이 날짜에 등록되었거나 마감인 과제만 보여줍니다.'}</p>
+      <button class="btn btn-small" onclick="state.classHubHomeworkShowAll=${!showAll}; render()">${showAll?'이 날짜만 보기':'전체 보기'}</button>
+    </div>
     ${visible.length===0 ? '<div class="empty">해당하는 과제가 없습니다.</div>' :
     visible.map(a=>{
       const doneCount = state.allRecordsLoaded ? roster.filter(s=>state.allRecords[s.studentId] && state.allRecords[s.studentId].assignmentsDone && state.allRecords[s.studentId].assignmentsDone[a.id]).length : null;
       const open = state.homeworkDetailId===a.id;
       return `<div class="data-card" style="margin-bottom:10px;">
         <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;">
-          <div><b>${escHtml(a.title)}</b> <span class="mono" style="font-size:12px;color:var(--ink-soft);">${a.createdAt?'등록 '+a.createdAt:''}${a.dueDate?' · 마감 '+a.dueDate:''}</span></div>
+          <div><b>${escHtml(a.title)}</b> <span class="td-soft mono">${a.createdAt?'등록 '+a.createdAt:''}${a.dueDate?' · 마감 '+a.dueDate:''}</span></div>
           <button class="btn btn-red btn-small" onclick="deleteHomework('${a.id}')">삭제</button>
         </div>
         ${a.description ? `<div style="font-size:13px;white-space:pre-wrap;margin-top:6px;">${escHtml(a.description)}</div>` : ''}
@@ -3815,14 +3822,32 @@ function teacherClassDailyHomeworkHTML(classId, date){
           `<table style="margin-top:8px;"><tr><th>학생</th><th>상태</th></tr>
           ${roster.map(s=>{
             const done = state.allRecords[s.studentId] && state.allRecords[s.studentId].assignmentsDone && state.allRecords[s.studentId].assignmentsDone[a.id];
-            return `<tr><td>${escHtml(s.name)}</td><td>${done?'<span class="badge badge-ok">완료</span>':'<span class="badge badge-no">미완료</span>'}</td></tr>`;
+            return `<tr><td class="td-strong">${escHtml(s.name)}</td><td>${done?'<span class="badge badge-ok">완료</span>':'<span class="badge badge-no">미완료</span>'}</td></tr>`;
           }).join('')}
           </table>`
         ) : ''}
       </div>`;
     }).join('')}
-    <button class="btn btn-primary" style="margin-top:12px;" onclick="document.getElementById('hw-title')?document.getElementById('hw-title').focus():null; state.classHubTab='homework'; render()">과제 등록하러 가기</button>
+  </div>
+  <div class="panel">
+    <h3>새 과제 등록</h3>
+    <div class="inline-form">
+      <div class="field" style="flex:2;"><label>과제명</label><input id="dhw-title" placeholder="예: 3단원 오답노트 정리"></div>
+      <div class="field"><label>마감일</label><input id="dhw-due" type="date" value="${date}"></div>
+    </div>
+    <div class="field"><label>설명 (선택)</label><textarea id="dhw-desc" placeholder="과제 상세 내용을 입력하세요"></textarea></div>
+    <button class="btn btn-primary" onclick="addDailyHomework('${classId}','${date}')">등록</button>
   </div>`;
+}
+async function addDailyHomework(classId, date){
+  const title = document.getElementById('dhw-title').value.trim();
+  const description = document.getElementById('dhw-desc').value.trim();
+  const dueDate = document.getElementById('dhw-due').value || date;
+  if(!title){ showToast('과제명을 입력해주세요.'); return; }
+  DATA.assignments.unshift({id:'hw'+Date.now(), classId, title, description, dueDate, createdAt:date});
+  await dbSet('assignments', DATA.assignments);
+  showToast('과제가 등록되었습니다.');
+  render();
 }
 
 /* ---------- 데일리퀴즈 ---------- */
@@ -3850,57 +3875,6 @@ function teacherQuizHTML(fixedClassId){
         <div class="quiz-title">${escHtml(q.title)}</div>
         <div class="quiz-content">${escHtml(q.content)}</div>
         <div class="quiz-answer-box"><button class="btn btn-red btn-small" onclick="deleteQuiz('${q.id}')">삭제</button></div>
-      </div>`;
-    }).join('')}
-  </div>`;
-}
-
-/* ---------- 과제(숙제) — 반 단위 등록, 학생별 완료 현황 ---------- */
-function teacherHomeworkHTML(fixedClassId){
-  loadAllRecordsIfNeeded();
-  const visible = fixedClassId ? DATA.assignments.filter(a=>!a.classId || a.classId===fixedClassId) : DATA.assignments;
-  return `
-  <div class="panel">
-    <h3>과제 등록</h3>
-    <div class="inline-form">
-      <div class="field"><label>대상 반</label><select id="hw-class">
-        <option value="" ${!fixedClassId?'selected':''}>전체</option>
-        ${DATA.classes.map(c=>`<option value="${c.id}" ${fixedClassId===c.id?'selected':''}>${escHtml(c.name)}</option>`).join('')}
-      </select></div>
-      <div class="field" style="flex:2;"><label>과제명</label><input id="hw-title" placeholder="예: 3단원 오답노트 정리"></div>
-      <div class="field"><label>마감일</label><input id="hw-due" type="date"></div>
-    </div>
-    <div class="field"><label>설명 (선택)</label><textarea id="hw-desc" placeholder="과제 상세 내용을 입력하세요"></textarea></div>
-    <button class="btn btn-primary" onclick="addHomework()">등록</button>
-  </div>
-  <div class="panel">
-    <h3>등록된 과제 (${visible.length}건)</h3>
-    ${visible.length===0?'<div class="empty">등록된 과제가 없습니다.</div>':
-    visible.map(a=>{
-      const roster = fixedClassId ? DATA.students.filter(s=>s.classId===fixedClassId) : (a.classId ? DATA.students.filter(s=>s.classId===a.classId) : DATA.students);
-      const doneCount = state.allRecordsLoaded ? roster.filter(s=>state.allRecords[s.studentId] && state.allRecords[s.studentId].assignmentsDone && state.allRecords[s.studentId].assignmentsDone[a.id]).length : null;
-      const open = state.homeworkDetailId===a.id;
-      return `<div class="data-card" style="margin-bottom:10px;">
-        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;">
-          <div><b>${escHtml(a.title)}</b> <span class="mono" style="font-size:12px;color:var(--ink-soft);">· ${quizClassLabel(a.classId)}${a.dueDate?' · 마감 '+a.dueDate:''}</span></div>
-          <button class="btn btn-red btn-small" onclick="deleteHomework('${a.id}')">삭제</button>
-        </div>
-        ${a.description ? `<div style="font-size:13px;white-space:pre-wrap;margin-top:6px;">${escHtml(a.description)}</div>` : ''}
-        <div style="margin-top:8px;">
-          <button class="btn btn-small" onclick="state.homeworkDetailId = state.homeworkDetailId==='${a.id}' ? null : '${a.id}'; render()">
-            ${open?'닫기':`완료 현황 보기${doneCount!==null?` (완료 ${doneCount} / ${roster.length})`:''}`}
-          </button>
-        </div>
-        ${open ? (
-          !state.allRecordsLoaded ? '<div class="empty" style="margin-top:8px;">불러오는 중...</div>' :
-          roster.length===0 ? '<div class="empty" style="margin-top:8px;">대상 학생이 없습니다.</div>' :
-          `<table style="margin-top:8px;"><tr><th>학생</th><th>반</th><th>상태</th></tr>
-          ${roster.map(s=>{
-            const done = state.allRecords[s.studentId] && state.allRecords[s.studentId].assignmentsDone && state.allRecords[s.studentId].assignmentsDone[a.id];
-            return `<tr><td>${escHtml(s.name)}</td><td>${classNameOf(s.classId)}</td><td>${done?'<span class="badge badge-ok">완료</span>':'<span class="badge badge-no">미완료</span>'}</td></tr>`;
-          }).join('')}
-          </table>`
-        ) : ''}
       </div>`;
     }).join('')}
   </div>`;
