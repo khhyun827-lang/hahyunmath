@@ -430,8 +430,10 @@
   .att-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:10px 0;border-bottom:1px solid #F0EEE7;}
   .att-row:last-child{border-bottom:none;}
   .att-name{flex:1;min-width:120px;font-size:13.5px;font-weight:700;}
+  .att-table th, .att-table td{white-space:nowrap;}
+  .att-table td:last-child, .att-table th:last-child{white-space:normal;min-width:160px;}
   .att-btn-group{display:flex;gap:6px;}
-  .att-status-btn{border:1px solid var(--card-border);background:var(--white);border-radius:6px;padding:6px 14px;font-size:12.5px;cursor:pointer;}
+  .att-status-btn{border:1px solid var(--card-border);background:var(--white);border-radius:6px;padding:6px 12px;font-size:12.5px;cursor:pointer;white-space:nowrap;}
   .att-status-btn.att-ok.active{background:var(--green-ok);color:#fff;border-color:var(--green-ok);}
   .att-status-btn.att-late.active{background:#9A7000;color:#fff;border-color:#9A7000;}
   .att-status-btn.att-leave.active{background:#6B46A8;color:#fff;border-color:#6B46A8;}
@@ -3628,15 +3630,13 @@ function teacherAttendanceHTML(fixedClassId, fixedDate){
       </div>
     </div>
     <div style="overflow-x:auto;">
-    <table><tr><th>#</th><th>이름</th><th>상태</th><th>학부모 전화번호</th><th>학생 전화번호</th><th>출석 상태 변경</th><th>출결 메모</th></tr>
+    <table class="att-table"><tr><th>#</th><th>이름</th><th>상태</th><th>출석 상태 변경</th><th>출결 메모</th></tr>
     ${roster.map((s,i)=>{
       const d = state.attDraft[s.studentId] || {status:null, reason:'', videoUrl:'', note:''};
       return `<tr>
         <td class="td-soft mono">${i+1}</td>
         <td class="td-strong">${escHtml(s.name)}</td>
         <td>${d.status ? attBadge(d.status) : '<span class="td-soft">미입력</span>'}</td>
-        <td class="td-soft mono">${escHtml(s.parentPhone||'-')}</td>
-        <td class="td-soft mono">${escHtml(s.phone||'-')}</td>
         <td>
           <div class="att-btn-group">
             ${ATT_STATUSES.map(st=>`<button class="att-status-btn att-${attStatusClass(st)} ${d.status===st?'active':''}" onclick="setAttStatus('${s.studentId}','${st}')">${st}</button>`).join('')}
