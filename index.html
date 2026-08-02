@@ -65,7 +65,7 @@
   .btn:hover{background:var(--ink);color:var(--white);}
   .btn-primary{background:var(--blue-deep);border-color:var(--blue-deep);color:var(--white);}
   .btn-primary:hover{background:var(--blue-deep-dark);}
-  .btn-red{border-color:var(--red-pen);color:var(--red-pen);}
+  .btn-red{background:#FBE9E7;border-color:var(--red-pen);color:var(--red-pen);}
   .btn-red:hover{background:var(--red-pen);color:var(--white);}
   .btn-small{padding:5px 10px;font-size:12px;}
   .btn-ghost{border-color:transparent;background:transparent;}
@@ -192,10 +192,10 @@
   .contact-info div{margin-bottom:10px;}
   .contact-info b{color:var(--ink);}
   .form-box{flex:1 1 340px;background:var(--white);border:1px solid var(--card-border);padding:24px;border-radius:4px;}
-  .field{margin-bottom:14px;}
-  .field label{display:block;font-size:12px;font-weight:700;margin-bottom:5px;color:var(--ink-soft);}
+  .field{margin-bottom:16px;}
+  .field label{display:block;font-size:12px;font-weight:700;margin-bottom:6px;color:var(--ink-soft);}
   .field input, .field select, .field textarea{
-    width:100%;padding:9px 10px;border:1px solid var(--card-border);border-radius:3px;
+    width:100%;padding:10px 12px;border:1px solid var(--card-border);border-radius:3px;
     font-family:inherit;font-size:14px;background:#fff;
   }
   .field textarea{min-height:80px;resize:vertical;}
@@ -203,7 +203,7 @@
   footer{border-top:2px solid var(--ink);padding:28px 0;font-size:12px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;}
 
   /* ---------- LOGIN ---------- */
-  .login-wrap{max-width:420px;margin:60px auto;background:var(--white);border:1px solid var(--card-border);border-radius:16px;padding:36px;box-shadow:0 1px 3px rgba(61,51,53,.07),0 1px 2px rgba(61,51,53,.04);}
+  .login-wrap{max-width:420px;margin:60px auto;background:var(--white);border:1px solid var(--card-border);border-radius:6px;padding:36px;}
   .login-tabs{display:flex;border-bottom:1px solid var(--card-border);margin-bottom:24px;}
   .login-tab{flex:1;text-align:center;padding:10px;font-weight:700;font-size:14px;color:var(--ink-soft);border-bottom:2px solid transparent;}
   .login-tab.active{color:var(--blue-deep);border-color:var(--blue-deep);}
@@ -217,7 +217,7 @@
     border-radius:20px;font-weight:500;
   }
   .tab-btn.active{background:var(--ink);color:#fff;border-color:var(--ink);}
-  .panel{background:var(--white);border:1px solid var(--card-border);border-radius:16px;padding:26px;margin-bottom:20px;box-shadow:0 1px 3px rgba(61,51,53,.07),0 1px 2px rgba(61,51,53,.04);}
+  .panel{background:var(--white);border:1px solid var(--card-border);border-radius:6px;padding:26px;margin-bottom:20px;}
   .panel h3{margin:0 0 18px;font-size:17px;}
   table{width:100%;border-collapse:collapse;font-size:13.5px;}
   table th{text-align:left;font-size:11px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;color:var(--ink-soft);border-bottom:2px solid var(--card-border);padding:11px 14px;}
@@ -240,9 +240,14 @@
   .badge-late{background:#FFF3D6;color:#9A7000;}
   .badge-leave{background:#EFE7FB;color:#6B46A8;}
   .badge-drop{background:#E7E7E7;color:#555;}
-  .inline-form{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-bottom:18px;}
-  .inline-form .field{margin-bottom:0;min-width:110px;flex:1;}
-  .empty{color:var(--ink-soft);font-size:13px;padding:14px 0;text-align:center;}
+  .inline-form{display:flex;gap:16px;flex-wrap:wrap;align-items:flex-end;margin-bottom:18px;}
+  .inline-form .field{margin-bottom:0;min-width:140px;flex:1;}
+  .empty{
+    color:var(--ink-soft);font-size:13px;line-height:1.7;text-align:center;
+    padding:30px 16px;margin:4px 0;
+    border:1.5px dashed var(--card-border);border-radius:10px;
+    background:rgba(61,51,53,.02);
+  }
   .row-actions button{margin-right:4px;}
   select{cursor:pointer;}
 
@@ -262,7 +267,7 @@
   /* ---------- 강사(관리자) 사이드바 레이아웃 ---------- */
   .teacher-layout{display:flex;gap:0;align-items:flex-start;}
   .teacher-sidebar{
-    width:168px;flex-shrink:0;background:var(--ink);border-radius:16px 0 0 16px;
+    width:168px;flex-shrink:0;background:var(--ink);border-radius:6px 0 0 6px;
     padding:14px 0;position:sticky;top:20px;
   }
   .side-btn{
@@ -271,11 +276,11 @@
   }
   .side-btn:hover{background:rgba(255,255,255,.06);color:#fff;}
   .side-btn.active{background:rgba(174,75,83,.25);color:#fff;font-weight:700;border-left-color:var(--blue-deep);}
-  .side-group-label{font-size:10px;color:#8A8384;text-transform:uppercase;letter-spacing:.08em;padding:14px 20px 4px;font-family:'JetBrains Mono',monospace;}
+  .side-group-label{font-size:10.5px;font-weight:700;color:#B7ACAD;text-transform:uppercase;letter-spacing:.09em;padding:16px 20px 6px;font-family:'JetBrains Mono',monospace;}
   .teacher-main{flex:1;min-width:0;background:transparent;padding:0 0 0 20px;}
   @media (max-width:800px){
     .teacher-layout{flex-direction:column;align-items:stretch;}
-    .teacher-sidebar{width:100%;border-radius:16px;position:static;display:flex;flex-wrap:wrap;padding:8px;}
+    .teacher-sidebar{width:100%;border-radius:6px;position:static;display:flex;flex-wrap:wrap;padding:8px;}
     .side-btn{width:auto;border-left:none;border-radius:20px;padding:7px 14px;}
     .side-btn.active{border-left:none;}
     .teacher-main{padding:20px 0 0;min-width:0;}
@@ -284,11 +289,11 @@
   /* ---------- 학생 상세 (성적/진도/출석 드릴다운) ---------- */
   .student-detail-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px;}
   .subtab-bar{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap;}
-  .subtab-btn{border:1px solid var(--card-border);background:var(--white);padding:6px 12px;font-size:12px;border-radius:16px;}
+  .subtab-btn{border:1px solid var(--card-border);background:var(--white);padding:6px 12px;font-size:12px;border-radius:20px;}
   .subtab-btn.active{background:var(--blue-deep);color:#fff;border-color:var(--blue-deep);}
 
   /* ---------- 데일리퀴즈 ---------- */
-  .quiz-card{border:1px solid var(--card-border);border-radius:16px;padding:16px;margin-bottom:12px;background:#FBFAF8;box-shadow:0 1px 3px rgba(61,51,53,.07),0 1px 2px rgba(61,51,53,.04);}
+  .quiz-card{border:1px solid var(--card-border);border-radius:6px;padding:16px;margin-bottom:12px;background:#FBFAF8;}
   .quiz-card .quiz-meta{font-size:11px;color:var(--ink-soft);font-family:'JetBrains Mono',monospace;margin-bottom:6px;}
   .quiz-card .quiz-title{font-weight:700;margin-bottom:6px;}
   .quiz-card .quiz-content{font-size:13.5px;color:var(--ink-soft);white-space:pre-wrap;}
@@ -302,7 +307,7 @@
   .status-완료{background:#EDEBE3;color:var(--ink-soft);}
 
   /* ---------- 질의응답 ---------- */
-  .qna-card{border:1px solid var(--card-border);border-radius:16px;padding:16px;margin-bottom:12px;box-shadow:0 1px 3px rgba(61,51,53,.07),0 1px 2px rgba(61,51,53,.04);}
+  .qna-card{border:1px solid var(--card-border);border-radius:6px;padding:16px;margin-bottom:12px;}
   .qna-q{font-weight:700;margin-bottom:4px;}
   .qna-meta{font-size:11px;color:var(--ink-soft);font-family:'JetBrains Mono',monospace;margin-bottom:8px;}
   .qna-answer{margin-top:10px;padding:10px 12px;background:#FBF3F2;border-radius:4px;font-size:13.5px;}
@@ -324,7 +329,7 @@
   .video-row .vunit{font-size:12px;color:var(--ink-soft);font-family:'JetBrains Mono',monospace;}
 
   /* ---------- 영상 임베드 ---------- */
-  .video-embed-card{border:1px solid var(--card-border);border-radius:16px;padding:14px;margin-bottom:16px;background:#FBFAF8;box-shadow:0 1px 3px rgba(61,51,53,.07),0 1px 2px rgba(61,51,53,.04);}
+  .video-embed-card{border:1px solid var(--card-border);border-radius:6px;padding:14px;margin-bottom:16px;background:#FBFAF8;}
   .video-embed-card .vtitle{font-weight:700;margin-bottom:2px;}
   .video-embed-card .vunit{margin-bottom:10px;}
   .video-embed-wrap{position:relative;width:100%;padding-top:56.25%;border-radius:4px;overflow:hidden;background:#000;}
@@ -337,7 +342,7 @@
   .qrow .qfields{flex:1;display:flex;gap:8px;flex-wrap:wrap;}
   .qrow .qfields textarea{flex:2;min-width:200px;min-height:44px;}
   .qrow .qfields input{flex:1;min-width:100px;}
-  .exam-card{border:1px solid var(--card-border);border-radius:16px;padding:14px 16px;margin-bottom:10px;box-shadow:0 1px 3px rgba(61,51,53,.07),0 1px 2px rgba(61,51,53,.04);}
+  .exam-card{border:1px solid var(--card-border);border-radius:6px;padding:14px 16px;margin-bottom:10px;}
   .exam-card .exam-title{font-weight:700;}
   .exam-card .exam-meta{font-size:11px;color:var(--ink-soft);font-family:'JetBrains Mono',monospace;margin-bottom:6px;}
   .exam-detail{margin-top:12px;border-top:1px solid var(--card-border);padding-top:12px;}
@@ -359,7 +364,7 @@
   .unit-check-item input{width:16px;height:16px;cursor:pointer;}
 
   /* ---------- 오답문제 검토 / DB ---------- */
-  .data-card{border:1px solid var(--card-border);border-radius:16px;padding:16px;margin-bottom:14px;box-shadow:0 1px 3px rgba(61,51,53,.07),0 1px 2px rgba(61,51,53,.04);}
+  .data-card{border:1px solid var(--card-border);border-radius:6px;padding:16px;margin-bottom:14px;}
   .review-status{font-size:11px;padding:3px 10px;border-radius:20px;font-family:'JetBrains Mono',monospace;}
   .review-status-pending{background:#FFF3D6;color:#9A7000;}
   .review-status-review1{background:#DCEBFB;color:#2464A8;}
@@ -369,11 +374,11 @@
   .compare-col .colhead{font-size:11px;color:var(--ink-soft);font-family:'JetBrains Mono',monospace;margin-bottom:6px;}
   .compare-col textarea{width:100%;min-height:80px;}
   @media (max-width:640px){ .compare-grid{grid-template-columns:1fr;} }
-  .ai-solution-box{margin:12px 0;border:1px solid var(--card-border);border-radius:16px;overflow:hidden;box-shadow:0 1px 3px rgba(61,51,53,.07),0 1px 2px rgba(61,51,53,.04);}
+  .ai-solution-box{margin:12px 0;border:1px solid var(--card-border);border-radius:6px;overflow:hidden;}
   .ai-solution-toggle{width:100%;text-align:left;background:#FBFAF8;border:none;padding:10px 14px;font-size:12.5px;color:var(--ink);cursor:pointer;font-weight:500;}
   .ai-solution-toggle:hover{background:#F3F0EA;}
   .ai-solution-content{padding:12px 14px;font-size:13px;white-space:pre-wrap;line-height:1.6;border-top:1px solid var(--card-border);color:var(--ink-soft);}
-  .homework-card{border:1px solid var(--card-border);border-radius:16px;padding:16px;margin-bottom:12px;box-shadow:0 1px 3px rgba(61,51,53,.07),0 1px 2px rgba(61,51,53,.04);}
+  .homework-card{border:1px solid var(--card-border);border-radius:6px;padding:16px;margin-bottom:12px;}
   .homework-pending{color:var(--ink-soft);font-size:13px;font-style:italic;padding:10px;background:#FBFAF8;border-radius:4px;}
   .home-icon-row{display:flex;gap:22px;justify-content:center;flex-wrap:wrap;}
   .home-icon-link{background:none;border:none;cursor:pointer;font-size:12.5px;color:var(--ink-soft);text-align:center;padding:6px;}
@@ -385,7 +390,7 @@
   .home-grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-bottom:20px;align-items:stretch;}
   .home-grid-2{display:grid;grid-template-columns:2fr 1fr;gap:20px;margin-bottom:20px;align-items:stretch;}
   @media (max-width:900px){ .home-grid-3{grid-template-columns:1fr;} .home-grid-2{grid-template-columns:1fr;} }
-  .home-card{background:var(--white);border:1px solid var(--card-border);border-radius:16px;padding:20px;box-shadow:0 1px 3px rgba(61,51,53,.07),0 1px 2px rgba(61,51,53,.04);}
+  .home-card{background:var(--white);border:1px solid var(--card-border);border-radius:6px;padding:20px;}
   .home-card h4{margin:0 0 14px;font-size:14px;font-family:'Noto Serif KR',serif;display:flex;align-items:center;gap:6px;}
   .home-todo-list .home-todo-row{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid #F0EEE7;font-size:13px;cursor:pointer;}
   .home-todo-list .home-todo-row:last-child{border-bottom:none;}
@@ -405,7 +410,7 @@
   .home-grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:20px;margin-bottom:20px;}
   @media (max-width:900px){ .home-grid-4{grid-template-columns:repeat(2,1fr);} }
   @media (max-width:480px){ .home-grid-4{grid-template-columns:1fr;} }
-  .home-stat-card{background:var(--white);border:1px solid var(--card-border);border-left-width:4px;border-radius:16px;padding:16px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:box-shadow .15s;box-shadow:0 1px 3px rgba(61,51,53,.07),0 1px 2px rgba(61,51,53,.04);}
+  .home-stat-card{background:var(--white);border:1px solid var(--card-border);border-left-width:4px;border-radius:6px;padding:16px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:box-shadow .15s;}
   .home-stat-card:hover{box-shadow:0 2px 10px rgba(0,0,0,.06);}
   .home-stat-card.accent-purple{border-left-color:#6C3E9A;}
   .home-stat-card.accent-red{border-left-color:var(--red-pen);}
@@ -755,6 +760,8 @@ let state = {
   homeworkDetailId: null,
   classHubId: null,
   classHubTab: 'students',
+  studentSearchQuery: '',
+  rosterSearchQuery: '',
   toast: ''
 };
 let DATA = {
@@ -1068,6 +1075,7 @@ async function addScore(){
   render();
 }
 async function deleteScore(sid, idx){
+  if(!confirm('이 성적 기록을 삭제할까요?')) return;
   const rec = await loadRecord(sid);
   rec.scores.splice(idx,1);
   await saveRecord(sid);
@@ -1090,6 +1098,7 @@ async function addHomework(){
   render();
 }
 async function deleteHomework(hwId){
+  if(!confirm('이 과제를 삭제할까요? 학생들의 제출/완료 표시도 함께 사라집니다.')) return;
   DATA.assignments = DATA.assignments.filter(a=>a.id!==hwId);
   await dbSet('assignments', DATA.assignments);
   render();
@@ -1116,6 +1125,7 @@ async function addAttendance(){
   render();
 }
 async function deleteAttendance(sid, idx){
+  if(!confirm('이 출석 기록을 삭제할까요?')) return;
   const rec = await loadRecord(sid);
   rec.attendance.splice(idx,1);
   await saveRecord(sid);
@@ -1135,6 +1145,7 @@ async function addNotice(){
   render();
 }
 async function deleteNotice(id){
+  if(!confirm('이 공지사항을 삭제할까요?')) return;
   DATA.notices = DATA.notices.filter(n=>n.id!==id);
   await dbSet('notices', DATA.notices);
   render();
@@ -1156,6 +1167,7 @@ async function submitConsult(){
   render();
 }
 async function deleteConsult(idx){
+  if(!confirm('이 상담 신청 내역을 삭제할까요?')) return;
   DATA.consults.splice(idx,1);
   await dbSet('consults', DATA.consults);
   render();
@@ -1221,6 +1233,7 @@ async function addQuiz(){
   render();
 }
 async function deleteQuiz(qid){
+  if(!confirm('이 데일리퀴즈를 삭제할까요? 학생들이 제출한 답안도 함께 사라집니다.')) return;
   DATA.quizzes = DATA.quizzes.filter(q=>q.id!==qid);
   await dbSet('quizzes', DATA.quizzes);
   render();
@@ -1275,6 +1288,7 @@ async function updateClinicStatus(cid, status){
   render();
 }
 async function deleteClinic(cid){
+  if(!confirm('이 클리닉 신청을 삭제할까요?')) return;
   DATA.clinics = DATA.clinics.filter(c=>c.id!==cid);
   await dbSet('clinics', DATA.clinics);
   render();
@@ -1367,6 +1381,7 @@ async function submitAnswer(qid){
   render();
 }
 async function deleteQna(qid){
+  if(!confirm('이 질문을 삭제할까요?')) return;
   const q = DATA.qnas.find(q=>q.id===qid);
   if(q){
     deleteFromDrive(imgFileIdOf(q.image));
@@ -1545,6 +1560,7 @@ async function addVideo(){
   render();
 }
 async function deleteVideo(vid){
+  if(!confirm('이 영상을 삭제할까요?')) return;
   DATA.videos = DATA.videos.filter(v=>v.id!==vid);
   await dbSet('videos', DATA.videos);
   render();
@@ -2618,6 +2634,7 @@ async function addAssistant(){
   render();
 }
 async function deleteAssistant(aid){
+  if(!confirm('이 조교를 삭제할까요?')) return;
   DATA.assistants = DATA.assistants.filter(a=>a.id!==aid);
   await dbSet('assistants', DATA.assistants);
   render();
@@ -2642,7 +2659,8 @@ function renderScoreChart(scores){
   const n = pts.length;
   const stepX = n>1 ? (w-pad*2)/(n-1) : 0;
   const coords = pts.map((p,i)=>{
-    const x = pad + stepX*i;
+    // 점이 1개뿐일 땐 왼쪽 끝에 붙이지 않고 가운데 배치 — 안 그러면 차트 대부분이 텅 비어 보임.
+    const x = n>1 ? (pad + stepX*i) : (w/2);
     const y = h-pad - (p/100)*(h-pad*2);
     return [x,y];
   });
@@ -2901,7 +2919,7 @@ function loginHTML(){
 function studentHTML(){
   const sid = state.currentUser.studentId;
   const rec = DATA.records[sid] || {scores:[],attendance:[],assignments:[],progress:{unit:'',percent:0},quizAnswers:{},wrongHomework:[],videoProgress:{},assignmentsDone:{}};
-  const tabs = [['home','홈'],['quiz','데일리퀴즈'],['progress','진도/과제'],['wronghw','오답숙제'],['video','강의시청'],['clinic','클리닉 신청'],['chat','선생님과 채팅']];
+  const tabs = [['home','홈'],['quiz','데일리퀴즈'],['progress','진도/과제'],['wronghw','오답숙제'],['video','강의시청'],['grades','성적'],['attendance','출석'],['notice','공지사항'],['qna','질의응답'],['clinic','클리닉 신청'],['chat','선생님과 채팅']];
   let body='';
   if(state.studentTab==='home'){
     const me = DATA.students.find(s=>s.studentId===sid) || {};
@@ -3307,18 +3325,28 @@ function teacherClassesHTML(){
 
 /* ---------- 반 관리 허브: 반을 고르면 그 반의 학생명단/출석부/과제/데일리퀴즈/영상을 한 화면에서 ---------- */
 function classRosterHTML(classId){
-  const roster = DATA.students.filter(s=>s.classId===classId);
+  const rq = (state.rosterSearchQuery||'').trim().toLowerCase();
+  const fullRoster = DATA.students.filter(s=>s.classId===classId);
+  const roster = !rq ? fullRoster : fullRoster.filter(s=>
+    (s.name||'').toLowerCase().includes(rq) ||
+    (s.studentId||'').toLowerCase().includes(rq) ||
+    (s.school||'').toLowerCase().includes(rq)
+  );
   return `<div class="panel">
     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:4px;">
-      <h3 style="margin:0;">학생 명단 (${roster.length}명)</h3>
+      <h3 style="margin:0;">학생 명단 (${fullRoster.length}명${rq?` · 검색결과 ${roster.length}명`:''})</h3>
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
         <button class="btn btn-small" onclick="downloadStudentExcelTemplate()">${iconSvg('file',15)} 엑셀 양식</button>
         <label class="btn btn-small" style="cursor:pointer;margin:0;display:inline-flex;align-items:center;gap:5px;">${iconSvg('chart',15)} 엑셀 일괄 등록<input type="file" accept=".xlsx,.xls" style="display:none;" onchange="handleStudentExcelFile('${classId}', this.files)"></label>
         <button class="btn btn-primary btn-small" onclick="state.teacherTab='settings'; state.settingsSubTab='students'; render()">+ 학생 추가</button>
       </div>
     </div>
+    ${fullRoster.length>5 ? `<div class="field" style="max-width:280px;margin-bottom:14px;">
+      <input id="roster-search" value="${escHtml(state.rosterSearchQuery)}" placeholder="이름·아이디·학교로 검색" oninput="state.rosterSearchQuery=this.value; render(); document.getElementById('roster-search').focus();">
+    </div>` : ''}
     ${studentImportPreviewHTML()}
-    ${roster.length===0 ? '<div class="empty">이 반에 배정된 학생이 없습니다.</div>' : `
+    ${fullRoster.length===0 ? '<div class="empty">이 반에 배정된 학생이 없습니다.</div>' :
+      roster.length===0 ? `<div class="empty">"${escHtml(state.rosterSearchQuery)}"에 해당하는 학생이 없습니다.</div>` : `
     <div style="overflow-x:auto;">
     <table><tr><th>아이디</th><th>이름</th><th>학년</th><th>학교</th><th>학부모 전화번호</th><th>학생 전화번호</th><th></th></tr>
     ${roster.map(s=>`<tr><td class="td-soft mono">${s.studentId}</td><td class="td-strong">${escHtml(s.name)}</td><td>${escHtml(s.grade)}</td><td class="td-soft">${escHtml(s.school||'-')}</td><td class="td-soft mono">${escHtml(s.parentPhone||'-')}</td><td class="td-soft mono">${escHtml(s.phone||'-')}</td>
@@ -3500,7 +3528,7 @@ function teacherStudentDetailHTML(sid){
   const s = DATA.students.find(s=>s.studentId===sid);
   if(!s){ state.studentDetailId=null; return state.teacherTab==='settings' ? teacherSettingsHTML() : teacherClassHubHTML(); }
   const rec = DATA.records[sid];
-  const subtabs = [['info','기본정보'],['grades','성적'],['attendance','출석']];
+  const subtabs = [['info','기본정보'],['grades','성적'],['attendance','출석'],['homework','과제'],['wronghw','오답숙제'],['clinic','클리닉·질문'],['chat','채팅']];
   let sub = '';
   if(!rec){
     // "상세보기"는 상태만 바꾸고 render()만 부르지, 그 학생 기록을 실제로 불러오진 않아서
@@ -3557,6 +3585,61 @@ function teacherStudentDetailHTML(sid){
     <table><tr><th>날짜</th><th>상태</th><th></th></tr>
     ${rec.attendance.map((a,i)=>`<tr><td>${a.date}</td><td>${attBadge(a.status)}</td><td><button class="btn btn-red btn-small" onclick="deleteAttendance('${sid}',${i})">삭제</button></td></tr>`).join('')}
     </table>`}`;
+  } else if(state.studentDetailTab==='homework'){
+    const myHw = DATA.assignments.filter(a=>!a.classId || a.classId===s.classId);
+    sub = myHw.length===0 ? '<div class="empty">이 반에 등록된 과제가 없습니다.</div>' : `
+    <table><tr><th>과제명</th><th>마감일</th><th>상태</th><th></th></tr>
+    ${myHw.map(a=>{
+      const done = rec.assignmentsDone[a.id];
+      return `<tr><td>${escHtml(a.title)}</td><td>${a.dueDate||'-'}</td>
+        <td>${done?'<span class="badge badge-ok">완료</span>':'<span class="badge badge-no">미완료</span>'}</td>
+        <td><button class="btn btn-small" onclick="toggleHomeworkDone('${sid}','${a.id}')">${done?'완료 취소':'완료 처리'}</button></td></tr>`;
+    }).join('')}
+    </table>`;
+  } else if(state.studentDetailTab==='wronghw'){
+    sub = rec.wrongHomework.length===0 ? '<div class="empty">배정된 오답 숙제가 없습니다.</div>' : `
+    <table><tr><th>시험</th><th>문항</th><th>상태</th><th>결과</th></tr>
+    ${rec.wrongHomework.map(hw=>{
+      const bank = DATA.problemBank.find(b=>b.id===hw.bankId);
+      const exam = DATA.exams.find(e=>e.id===hw.examId);
+      const correct = hw.done && bank && (hw.studentAnswer||'').trim()===bank.variantAnswer.trim();
+      return `<tr><td>${exam?escHtml(exam.title):'(삭제된 시험지)'}</td><td>${hw.questionNo}번</td>
+        <td>${hw.done?'<span class="badge badge-ok">제출완료</span>':'<span class="badge badge-no">미제출</span>'}</td>
+        <td>${hw.done?`<span class="badge ${correct?'badge-ok':'badge-no'}">${correct?'정답':'오답'}</span>`:'-'}</td></tr>`;
+    }).join('')}
+    </table>`;
+  } else if(state.studentDetailTab==='clinic'){
+    const myClinics = DATA.clinics.filter(c=>c.studentId===sid);
+    const myQnas = DATA.qnas.filter(q=>q.studentId===sid);
+    sub = `
+    <h4 style="font-size:13px;margin:0 0 10px;">클리닉 신청 내역</h4>
+    ${myClinics.length===0?'<div class="empty">신청 내역이 없습니다.</div>':`
+    <table><tr><th>날짜</th><th>시간</th><th>내용</th><th>상태</th></tr>
+    ${myClinics.map(c=>`<tr><td>${c.day}</td><td>${escHtml(c.time||'-')}</td><td>${escHtml(c.topic)}</td><td><span class="status-pill status-${c.status}">${c.status}</span></td></tr>`).join('')}
+    </table>`}
+    <h4 style="font-size:13px;margin:22px 0 10px;">질의응답 내역</h4>
+    ${myQnas.length===0?'<div class="empty">등록한 질문이 없습니다.</div>':
+    myQnas.map(q=>`<div class="qna-card">
+      <div class="mono" style="font-size:11px;color:var(--ink-soft);">${q.date}</div>
+      <b>Q. ${escHtml(q.question)}</b>
+      ${q.answer
+        ? `<div style="margin-top:8px;padding-top:8px;border-top:1px dashed var(--card-border);"><span class="badge badge-ok">답변 완료</span><div style="margin-top:6px;">${escHtml(q.answer)}</div></div>`
+        : '<div style="margin-top:8px;"><span class="badge badge-no">답변 대기</span></div>'}
+    </div>`).join('')}`;
+  } else if(state.studentDetailTab==='chat'){
+    state.teacherSelectedStudent = sid;
+    let chat = [];
+    if(DATA.chats[sid]) chat = DATA.chats[sid];
+    else loadChat(sid).then(()=>render());
+    sub = `
+    <div class="chat-window" id="chat-win">
+      ${chat.length===0?'<div class="empty">대화 내역이 없습니다.</div>':
+      chat.map(m=>`<div class="chat-bubble from-${m.from}">${escHtml(m.text)}<span class="chat-time">${m.at}</span></div>`).join('')}
+    </div>
+    <div class="chat-input-row">
+      <input id="chat-input-teacher" placeholder="메시지 입력" onkeydown="if(event.key==='Enter') sendChatMessage('${sid}','teacher')">
+      <button class="btn btn-primary" onclick="sendChatMessage('${sid}','teacher')">전송</button>
+    </div>`;
   }
   return `
   <div class="panel">
@@ -3780,6 +3863,7 @@ async function saveDailyScore(sid, date){
   render();
 }
 async function deleteDailyScore(sid, date){
+  if(!confirm('이 날짜의 성적을 삭제할까요?')) return;
   const rec = await loadRecord(sid);
   rec.scores = rec.scores.filter(sc=>sc.date!==date);
   await saveRecord(sid);
@@ -4297,7 +4381,14 @@ function teacherSettingsClassesHTML(){
 
 /* ---------- 설정: 학생 계정 추가 + 전체 학생 계정 목록 ---------- */
 function teacherSettingsStudentsHTML(){
-  const unassignedFirst = [...DATA.students].sort((a,b)=>{
+  const q = (state.studentSearchQuery||'').trim().toLowerCase();
+  const filtered = !q ? DATA.students : DATA.students.filter(s=>
+    (s.name||'').toLowerCase().includes(q) ||
+    (s.studentId||'').toLowerCase().includes(q) ||
+    (s.school||'').toLowerCase().includes(q) ||
+    classNameOf(s.classId).toLowerCase().includes(q)
+  );
+  const unassignedFirst = [...filtered].sort((a,b)=>{
     const au = a.classId ? 1 : 0, bu = b.classId ? 1 : 0;
     return au - bu; // 미배정(반 없음)을 위로
   });
@@ -4320,8 +4411,14 @@ function teacherSettingsStudentsHTML(){
     </div>
   </div>
   <div class="panel">
-    <h3>학생 계정 전체 목록 (${DATA.students.length}명)</h3>
-    ${DATA.students.length===0 ? '<div class="empty">등록된 학생이 없습니다.</div>' : `
+    <div class="student-detail-header">
+      <h3 style="margin:0;">학생 계정 전체 목록 (${DATA.students.length}명${q?` · 검색결과 ${filtered.length}명`:''})</h3>
+      <div class="field" style="margin:0;min-width:220px;">
+        <input id="student-search" value="${escHtml(state.studentSearchQuery)}" placeholder="이름·아이디·학교·반으로 검색" oninput="state.studentSearchQuery=this.value; render(); document.getElementById('student-search').focus();">
+      </div>
+    </div>
+    ${DATA.students.length===0 ? '<div class="empty">등록된 학생이 없습니다.</div>' :
+      unassignedFirst.length===0 ? `<div class="empty">"${escHtml(state.studentSearchQuery)}"에 해당하는 학생이 없습니다.</div>` : `
     <div style="overflow-x:auto;">
     <table><tr><th>아이디</th><th>이름</th><th>반</th><th>학년</th><th>학교</th><th></th></tr>
     ${unassignedFirst.map(s=>`<tr>
