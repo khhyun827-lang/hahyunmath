@@ -811,6 +811,7 @@ function applyHashOnLoad(){
   const [view, tab] = location.hash.replace(/^#\/?/,'').split('/');
   if(view==='teacher' && state.view==='teacher' && tab) state.teacherTab = tab;
   if(view==='student' && state.view==='student' && tab) state.studentTab = tab;
+  if(view==='assistant' && state.view==='assistant' && tab) state.assistantTab = tab;
 }
 
 /* 최초 실행 시 테스트용 반 + 학생 계정을 하나 만들어둔다 (이미 데이터가 있으면 아무것도 하지 않음) */
@@ -857,6 +858,7 @@ function goto(view){ state.view = view; state.loginError=''; render(); window.sc
 function buildHashFromState(){
   if(state.view==='teacher') return '#teacher/' + (state.teacherTab||'home');
   if(state.view==='student') return '#student/' + (state.studentTab||'home');
+  if(state.view==='assistant') return '#assistant/' + (state.assistantTab||'students');
   if(state.view==='login') return '#login';
   return '#home';
 }
@@ -864,6 +866,7 @@ function buildHashFromState(){
 function viewAllowedForCurrentUser(view){
   if(view==='teacher') return state.currentUser && state.currentUser.type==='teacher' ? 'teacher' : 'home';
   if(view==='student') return state.currentUser && state.currentUser.type==='student' ? 'student' : 'home';
+  if(view==='assistant') return state.currentUser && state.currentUser.type==='assistant' ? 'assistant' : 'home';
   return view || 'home';
 }
 function scrollToId(id){
@@ -876,7 +879,7 @@ function scrollToId(id){
 function goStudentPage(tab){
   if(state.currentUser && state.currentUser.type==='student'){
     state.studentTab = tab; goto('student');
-  } else if(state.currentUser && state.currentUser.type==='teacher'){
+  } else if(state.currentUser && (state.currentUser.type==='teacher' || state.currentUser.type==='assistant')){
     showToast('학생 전용 메뉴입니다. 학생 계정으로 로그인해주세요.');
   } else {
     state.pendingStudentTab = tab;
@@ -897,6 +900,18 @@ async function doStudentLogin(){
   state.studentTab = state.pendingStudentTab || 'home';
   state.pendingStudentTab = null;
   goto('student');
+}
+
+async function doAssistantLogin(){
+  const idInput = document.getElementById('login-id').value.trim();
+  const pwInput = document.getElementById('login-pw').value;
+  const found = DATA.assistants.find(a=>a.taId===idInput && a.pw===pwInput);
+  if(!found){ state.loginError = '아이디 또는 비밀번호가 일치하지 않습니다.'; render(); return; }
+  state.currentUser = {type:'assistant', id:found.id, taId:found.taId, name:found.name, classId:found.classId};
+  saveSession();
+  await loadAllRecordsIfNeeded();
+  state.assistantTab = 'students';
+  goto('assistant');
 }
 
 async function doTeacherLogin(){
@@ -947,6 +962,13 @@ async function restoreSession(){
     state.currentUser = {type:'student', studentId:found.studentId, name:found.name};
     state.view = 'student';
     await loadRecord(found.studentId);
+  } else if(saved.type==='assistant'){
+    const found = DATA.assistants.find(a=>a.id===saved.id);
+    if(!found){ clearSession(); return; }
+    state.currentUser = {type:'assistant', id:found.id, taId:found.taId, name:found.name, classId:found.classId};
+    state.view = 'assistant';
+    state.assistantTab = state.assistantTab || 'students';
+    await loadAllRecordsIfNeeded();
   }
 }
 function logout(){ clearSession(); state.currentUser = null; goto('home'); }
@@ -2622,15 +2644,34 @@ function cancelUnitBankImport(){
 
 /* =================== 조교 관리 =================== */
 async function addAssistant(){
+  const taId = document.getElementById('ta-id').value.trim();
+  const pw = document.getElementById('ta-pw').value;
   const name = document.getElementById('ta-name').value.trim();
   const phone = document.getElementById('ta-phone').value.trim();
   const classId = document.getElementById('ta-class').value;
   if(!name){ showToast('이름을 입력해주세요.'); return; }
-  DATA.assistants.push({id:'ta'+Date.now(), name, phone, classId});
+  if(!taId || !pw){ showToast('아이디와 비밀번호를 입력해주세요.'); return; }
+  if(pw.length < 4){ showToast('비밀번호는 4자 이상으로 설정해주세요.'); return; }
+  if(!classId){ showToast('담당 반을 선택해주세요.'); return; }
+  if(DATA.assistants.some(a=>a.taId===taId)){ showToast('이미 사용 중인 아이디입니다.'); return; }
+  DATA.assistants.push({id:'ta'+Date.now(), taId, pw, name, phone, classId});
   await dbSet('assistants', DATA.assistants);
+  document.getElementById('ta-id').value='';
+  document.getElementById('ta-pw').value='';
   document.getElementById('ta-name').value='';
   document.getElementById('ta-phone').value='';
   showToast('조교가 추가되었습니다.');
+  render();
+}
+async function resetAssistantPw(aid){
+  const a = DATA.assistants.find(a=>a.id===aid);
+  if(!a) return;
+  const next = prompt(`${a.name} 조교의 새 비밀번호를 입력하세요 (4자 이상)`);
+  if(next===null) return;
+  if(next.length < 4){ showToast('비밀번호는 4자 이상이어야 합니다.'); return; }
+  a.pw = next;
+  await dbSet('assistants', DATA.assistants);
+  showToast('비밀번호가 변경되었습니다.');
   render();
 }
 async function deleteAssistant(aid){
@@ -2682,7 +2723,7 @@ let lastSyncedHash = null;
 function syncHistory(){
   const newHash = buildHashFromState();
   if(newHash === lastSyncedHash) return;
-  const snap = {view:state.view, teacherTab:state.teacherTab, studentTab:state.studentTab};
+  const snap = {view:state.view, teacherTab:state.teacherTab, studentTab:state.studentTab, assistantTab:state.assistantTab};
   if(lastSyncedHash===null) history.replaceState(snap, '', newHash); // 첫 렌더는 기록을 새로 안 쌓고 지금 자리를 교체만
   else history.pushState(snap, '', newHash);
   lastSyncedHash = newHash;
@@ -2697,6 +2738,7 @@ function render(){
   else if(state.view==='login') bodyHtml = loginHTML();
   else if(state.view==='student') bodyHtml = studentHTML();
   else if(state.view==='teacher') bodyHtml = teacherHTML();
+  else if(state.view==='assistant') bodyHtml = assistantHTML();
   let html = headerHTML() + bodyHtml;
   html += footerHTML();
   if(state.toast) html += `<div style="position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1B1B1D;color:#fff;padding:12px 22px;border-radius:30px;font-size:13px;box-shadow:0 6px 20px rgba(0,0,0,.2);z-index:999;">${state.toast}</div>`;
@@ -2739,9 +2781,9 @@ function headerHTML(){
     </nav>` : ''}
     <div class="header-actions">
       ${loggedIn
-        ? `${notificationBellHTML(loggedIn.type==='teacher' ? teacherNotifItems() : studentNotifItems(loggedIn.studentId))}
-           <span class="mono" style="font-size:12px;color:var(--ink-soft);align-self:center;margin-right:6px;">${loggedIn.type==='teacher'?'김하현T':loggedIn.name+' 학생'}</span>
-           <button class="btn btn-small" onclick="${loggedIn.type==='teacher'?"state.teacherTab='home';":"state.studentTab='home';"} goto('${loggedIn.type==='teacher'?'teacher':'student'}')">${loggedIn.type==='teacher'?'관리자 페이지로':'마이페이지로'}</button>
+        ? `${notificationBellHTML(loggedIn.type==='teacher' ? teacherNotifItems() : loggedIn.type==='student' ? studentNotifItems(loggedIn.studentId) : [])}
+           <span class="mono" style="font-size:12px;color:var(--ink-soft);align-self:center;margin-right:6px;">${loggedIn.type==='teacher'?'김하현T':loggedIn.type==='assistant'?loggedIn.name+' 조교':loggedIn.name+' 학생'}</span>
+           <button class="btn btn-small" onclick="${loggedIn.type==='teacher'?"state.teacherTab='home';":loggedIn.type==='assistant'?"state.assistantTab='students';":"state.studentTab='home';"} goto('${loggedIn.type==='teacher'?'teacher':loggedIn.type==='assistant'?'assistant':'student'}')">${loggedIn.type==='teacher'?'관리자 페이지로':loggedIn.type==='assistant'?'조교 페이지로':'마이페이지로'}</button>
            <button class="btn btn-red btn-small" onclick="logout()">로그아웃</button>`
         : `<button class="btn btn-small" onclick="state.loginMode='student'; goto('login')">학생 로그인</button>
            <button class="btn btn-primary btn-small" onclick="state.loginMode='teacher'; goto('login')">강사 로그인</button>`
@@ -2893,18 +2935,24 @@ function homeHTML(){
 
 /* ---------- 로그인 ---------- */
 function loginHTML(){
-  const isStudent = state.loginMode==='student';
-  const needsSetup = !isStudent && DATA.teacherPw===null;
+  const mode = state.loginMode || 'student';
+  const needsSetup = mode==='teacher' && DATA.teacherPw===null;
   return `
   <div class="login-wrap">
     <div class="login-tabs">
-      <div class="login-tab ${isStudent?'active':''}" onclick="state.loginMode='student'; state.loginError=''; render()">학생 로그인</div>
-      <div class="login-tab ${!isStudent?'active':''}" onclick="state.loginMode='teacher'; state.loginError=''; render()">강사 로그인</div>
+      <div class="login-tab ${mode==='student'?'active':''}" onclick="state.loginMode='student'; state.loginError=''; render()">학생 로그인</div>
+      <div class="login-tab ${mode==='assistant'?'active':''}" onclick="state.loginMode='assistant'; state.loginError=''; render()">조교 로그인</div>
+      <div class="login-tab ${mode==='teacher'?'active':''}" onclick="state.loginMode='teacher'; state.loginError=''; render()">강사 로그인</div>
     </div>
-    ${isStudent ? `
+    ${mode==='student' ? `
       <div class="field"><label>아이디</label><input id="login-id" type="text" placeholder="학원에서 안내받은 아이디"></div>
       <div class="field"><label>비밀번호</label><input id="login-pw" type="password" placeholder="비밀번호"></div>
       <button class="btn btn-primary" style="width:100%;" onclick="doStudentLogin()">로그인</button>
+      <p class="hint">아이디/비밀번호를 잊으셨다면 강사에게 문의해주세요.</p>
+    ` : mode==='assistant' ? `
+      <div class="field"><label>아이디</label><input id="login-id" type="text" placeholder="강사에게 안내받은 아이디"></div>
+      <div class="field"><label>비밀번호</label><input id="login-pw" type="password" placeholder="비밀번호"></div>
+      <button class="btn btn-primary" style="width:100%;" onclick="doAssistantLogin()">로그인</button>
       <p class="hint">아이디/비밀번호를 잊으셨다면 강사에게 문의해주세요.</p>
     ` : `
       ${needsSetup ? `<p class="hint" style="margin-bottom:14px;">최초 로그인입니다. 관리자 비밀번호를 설정해주세요 (4자 이상).</p>` : ''}
@@ -3172,6 +3220,33 @@ function attBadge(status){
 }
 
 /* ---------- 강사 대시보드 (사이드바) ---------- */
+/* ---------- 조교 대시보드 (담당 반만 접근 가능) ---------- */
+function assistantHTML(){
+  const cu = state.currentUser;
+  if(state.studentDetailId) return teacherStudentDetailHTML(state.studentDetailId);
+  const q = (state.rosterSearchQuery||'').trim().toLowerCase();
+  const fullRoster = DATA.students.filter(s=>s.classId===cu.classId);
+  const roster = !q ? fullRoster : fullRoster.filter(s=>
+    (s.name||'').toLowerCase().includes(q) || (s.studentId||'').toLowerCase().includes(q)
+  );
+  return `
+  <div class="panel">
+    <div class="student-detail-header">
+      <h3 style="margin:0;">담당반: ${escHtml(classNameOf(cu.classId))} (${fullRoster.length}명${q?` · 검색결과 ${roster.length}명`:''})</h3>
+      ${fullRoster.length>5 ? `<div class="field" style="margin:0;min-width:200px;">
+        <input id="roster-search" value="${escHtml(state.rosterSearchQuery)}" placeholder="이름·아이디로 검색" oninput="state.rosterSearchQuery=this.value; render(); document.getElementById('roster-search').focus();">
+      </div>` : ''}
+    </div>
+    <p class="hint" style="margin-top:-4px;">학생을 선택하면 성적·출석·과제·오답숙제를 확인하고 입력할 수 있습니다.</p>
+    ${fullRoster.length===0 ? '<div class="empty">아직 담당 반에 배정된 학생이 없습니다.</div>' :
+      roster.length===0 ? `<div class="empty">"${escHtml(state.rosterSearchQuery)}"에 해당하는 학생이 없습니다.</div>` : `
+    <table><tr><th>아이디</th><th>이름</th><th>학년</th><th></th></tr>
+    ${roster.map(s=>`<tr><td class="td-soft mono">${s.studentId}</td><td class="td-strong">${escHtml(s.name)}</td><td>${escHtml(s.grade||'-')}</td>
+      <td><button class="btn btn-small" onclick="state.studentDetailId='${s.studentId}'; state.teacherSelectedStudent='${s.studentId}'; state.studentDetailTab='grades'; render()">상세보기</button></td></tr>`).join('')}
+    </table>`}
+  </div>`;
+}
+
 function teacherHTML(){
   const groups = [
     ['홈', [['home',iconSvg('home')+' 홈']]],
@@ -3338,6 +3413,7 @@ function classRosterHTML(classId){
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
         <button class="btn btn-small" onclick="downloadStudentExcelTemplate()">${iconSvg('file',15)} 엑셀 양식</button>
         <label class="btn btn-small" style="cursor:pointer;margin:0;display:inline-flex;align-items:center;gap:5px;">${iconSvg('chart',15)} 엑셀 일괄 등록<input type="file" accept=".xlsx,.xls" style="display:none;" onchange="handleStudentExcelFile('${classId}', this.files)"></label>
+        <button class="btn btn-small" onclick="exportClassExcel('${classId}')">${iconSvg('chart',15)} 성적·출결 내보내기</button>
         <button class="btn btn-primary btn-small" onclick="state.teacherTab='settings'; state.settingsSubTab='students'; render()">+ 학생 추가</button>
       </div>
     </div>
@@ -3365,6 +3441,36 @@ async function downloadStudentExcelTemplate(){
   }catch(e){
     console.error('엑셀 양식 생성 실패', e);
     showToast('엑셀 양식을 만들지 못했습니다.');
+  }
+}
+async function exportClassExcel(classId){
+  try{
+    await ensureXLSXLoaded();
+    await loadAllRecordsIfNeeded();
+    const roster = DATA.students.filter(s=>s.classId===classId);
+    const header = ['아이디','이름','학년','학교','학부모전화번호','학생전화번호','출석','지각','조퇴','결석','시험 응시 횟수','평균 점수(%)','최근 시험명','최근 점수'];
+    const rows = roster.map(s=>{
+      const rec = state.allRecords[s.studentId] || {scores:[],attendance:[]};
+      const att = {출석:0, 지각:0, 조퇴:0, 결석:0};
+      (rec.attendance||[]).forEach(a=>{ if(att[a.status]!==undefined) att[a.status]++; });
+      const scores = rec.scores||[];
+      const avg = scores.length ? Math.round(scores.reduce((sum,sc)=>sum+(sc.score/sc.total*100),0)/scores.length) : '';
+      const last = scores[scores.length-1];
+      return [
+        s.studentId, s.name, s.grade||'', s.school||'', s.parentPhone||'', s.phone||'',
+        att.출석, att.지각, att.조퇴, att.결석,
+        scores.length, avg,
+        last?last.name:'', last?`${last.score}/${last.total}`:''
+      ];
+    });
+    const ws = XLSX.utils.aoa_to_sheet([header, ...rows]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, '성적출결');
+    const className = classNameOf(classId).replace(/[\\/:*?"<>|]/g,'');
+    XLSX.writeFile(wb, `${className}_성적출결_${todayStr()}.xlsx`);
+  }catch(e){
+    console.error('엑셀 내보내기 실패', e);
+    showToast('엑셀 파일을 만들지 못했습니다.');
   }
 }
 async function handleStudentExcelFile(classId, fileList){
@@ -3527,8 +3633,19 @@ function classOptionsHTML(selectedId){
 function teacherStudentDetailHTML(sid){
   const s = DATA.students.find(s=>s.studentId===sid);
   if(!s){ state.studentDetailId=null; return state.teacherTab==='settings' ? teacherSettingsHTML() : teacherClassHubHTML(); }
+  const isAssistant = state.currentUser && state.currentUser.type==='assistant';
+  if(isAssistant && s.classId !== state.currentUser.classId){
+    // 담당 반이 아닌 학생은 조교가 볼 수 없다.
+    state.studentDetailId = null;
+    return assistantHTML();
+  }
   const rec = DATA.records[sid];
-  const subtabs = [['info','기본정보'],['grades','성적'],['attendance','출석'],['homework','과제'],['wronghw','오답숙제'],['clinic','클리닉·질문'],['chat','채팅']];
+  const subtabs = isAssistant
+    ? [['grades','성적'],['attendance','출석'],['homework','과제'],['wronghw','오답숙제']]
+    : [['info','기본정보'],['grades','성적'],['attendance','출석'],['homework','과제'],['wronghw','오답숙제'],['clinic','클리닉·질문'],['chat','채팅']];
+  if(isAssistant && !['grades','attendance','homework','wronghw'].includes(state.studentDetailTab)){
+    state.studentDetailTab = 'grades';
+  }
   let sub = '';
   if(!rec){
     // "상세보기"는 상태만 바꾸고 render()만 부르지, 그 학생 기록을 실제로 불러오진 않아서
@@ -4327,9 +4444,12 @@ function teacherAssistantsHTML(){
   return `
   <div class="panel">
     <h3>조교 추가</h3>
+    <p class="hint" style="margin-top:-8px;">조교는 로그인 후 담당 반의 학생 명단·출석·성적·과제/오답숙제 현황만 볼 수 있습니다. 다른 반, 학생 연락처, 관리자 설정에는 접근할 수 없습니다.</p>
     <div class="inline-form">
+      <div class="field"><label>아이디</label><input id="ta-id" placeholder="예: ta01"></div>
+      <div class="field"><label>비밀번호</label><input id="ta-pw" placeholder="비밀번호"></div>
       <div class="field"><label>이름</label><input id="ta-name" placeholder="조교 이름"></div>
-      <div class="field"><label>연락처</label><input id="ta-phone" placeholder="010-0000-0000"></div>
+      <div class="field"><label>연락처</label><input id="ta-phone" placeholder="010-0000-0000 (선택)"></div>
       <div class="field"><label>담당 반</label><select id="ta-class">${classOptionsHTML(null)}</select></div>
       <button class="btn btn-primary" onclick="addAssistant()">추가</button>
     </div>
@@ -4337,8 +4457,9 @@ function teacherAssistantsHTML(){
   <div class="panel">
     <h3>조교 목록 (${DATA.assistants.length}명)</h3>
     ${DATA.assistants.length===0?'<div class="empty">등록된 조교가 없습니다.</div>':`
-    <table><tr><th>이름</th><th>연락처</th><th>담당 반</th><th></th></tr>
-    ${DATA.assistants.map(a=>`<tr><td>${a.name}</td><td>${a.phone||'-'}</td><td>${classNameOf(a.classId)}</td><td><button class="btn btn-red btn-small" onclick="deleteAssistant('${a.id}')">삭제</button></td></tr>`).join('')}
+    <table><tr><th>아이디</th><th>이름</th><th>연락처</th><th>담당 반</th><th></th></tr>
+    ${DATA.assistants.map(a=>`<tr><td class="mono td-soft">${escHtml(a.taId||'-')}</td><td>${escHtml(a.name)}</td><td>${escHtml(a.phone||'-')}</td><td>${classNameOf(a.classId)}</td>
+      <td class="row-actions"><button class="btn btn-small" onclick="resetAssistantPw('${a.id}')">비밀번호 재설정</button><button class="btn btn-red btn-small" onclick="deleteAssistant('${a.id}')">삭제</button></td></tr>`).join('')}
     </table>`}
   </div>`;
 }
@@ -4472,9 +4593,10 @@ window.addEventListener('popstate', (e) => {
   state.view = viewAllowedForCurrentUser(desired);
   if(e.state && state.view==='teacher' && e.state.teacherTab) state.teacherTab = e.state.teacherTab;
   if(e.state && state.view==='student' && e.state.studentTab) state.studentTab = e.state.studentTab;
+  if(e.state && state.view==='assistant' && e.state.assistantTab) state.assistantTab = e.state.assistantTab;
   const correctedHash = buildHashFromState();
   // 로그인 상태와 안 맞아 다른 화면으로 안전하게 리다이렉트된 경우, 주소창 해시도 그 화면에 맞게 바로잡는다.
-  if(correctedHash !== location.hash) history.replaceState({view:state.view, teacherTab:state.teacherTab, studentTab:state.studentTab}, '', correctedHash);
+  if(correctedHash !== location.hash) history.replaceState({view:state.view, teacherTab:state.teacherTab, studentTab:state.studentTab, assistantTab:state.assistantTab}, '', correctedHash);
   lastSyncedHash = correctedHash; // 복원 자체가 새 push를 유발하지 않도록 먼저 맞춰둠
   render();
 });
