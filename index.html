@@ -742,6 +742,9 @@ let state = {
   attendanceDate: '',
   attDraft: {},
   attDraftKey: null,
+  classHubDate: null,
+  classHubDateSubTab: 'attendance',
+  dailyScoreName: '',
   solutionOpen: {},
   homeworkDetailId: null,
   classHubId: null,
@@ -966,6 +969,29 @@ async function deleteClass(cid){
 function classNameOf(cid){
   const c = DATA.classes.find(c=>c.id===cid);
   return c ? c.name : (cid ? '[삭제된 반]' : '미배정');
+}
+// 반 일정 문자열(예: "월,수,금 7시~9시")에서 요일 글자를 찾아 요일 인덱스 배열로 변환.
+const WEEKDAY_MAP = {'일':0,'월':1,'화':2,'수':3,'목':4,'금':5,'토':6};
+function parseScheduleDays(schedule){
+  if(!schedule) return [];
+  const days = [];
+  for(const ch of schedule){
+    if(WEEKDAY_MAP[ch]!==undefined && !days.includes(WEEKDAY_MAP[ch])) days.push(WEEKDAY_MAP[ch]);
+  }
+  return days;
+}
+// 반 일정을 기준으로 최근(및 며칠 앞) 수업일을 최신순으로 생성한다. "차시" 번호 없이 날짜만 다룬다.
+function generateClassSessionDates(schedule, count){
+  const days = parseScheduleDays(schedule);
+  if(days.length===0) return [];
+  const result = [];
+  const d = new Date();
+  d.setDate(d.getDate()+2); // 다가오는 수업일도 1~2개 미리 보이도록
+  while(result.length < count){
+    if(days.includes(d.getDay())) result.push(d.toISOString().slice(0,10));
+    d.setDate(d.getDate()-1);
+  }
+  return result;
 }
 function quizClassLabel(cid){
   if(!cid) return '전체';
@@ -3428,9 +3454,10 @@ function teacherClassHubHTML(){
   const tab = state.classHubTab || 'students';
   // 학생 명단에서 "상세보기"를 누르면 반 관리 화면 그대로(사이드바/서브탭 안 바꾸고) 학생 상세만 보여준다.
   if(tab==='students' && state.studentDetailId) return teacherStudentDetailHTML(state.studentDetailId);
-  const subtabs = [['students','학생 명단'],['progress','진도'],['attendance','출석부'],['homework','과제'],['quiz','데일리퀴즈'],['video','영상']];
+  const subtabs = [['students','학생 명단'],['sessions','수업 기록'],['progress','진도'],['attendance','출석부(전체)'],['homework','과제(전체)'],['quiz','데일리퀴즈'],['video','영상']];
   let sub;
-  if(tab==='progress') sub = teacherClassProgressHTML(c.id);
+  if(tab==='sessions') sub = teacherClassSessionsHTML(c.id);
+  else if(tab==='progress') sub = teacherClassProgressHTML(c.id);
   else if(tab==='attendance') sub = teacherAttendanceHTML(c.id);
   else if(tab==='homework') sub = teacherHomeworkHTML(c.id);
   else if(tab==='quiz') sub = teacherQuizHTML(c.id);
@@ -3574,21 +3601,21 @@ function setAllStatus(classId, status){
   });
   render();
 }
-function teacherAttendanceHTML(fixedClassId){
+function teacherAttendanceHTML(fixedClassId, fixedDate){
   loadAllRecordsIfNeeded();
   const classId = fixedClassId || state.attendanceClassId;
-  const date = state.attendanceDate || todayStr();
+  const date = fixedDate || state.attendanceDate || todayStr();
   const roster = classId ? DATA.students.filter(s=>s.classId===classId) : [];
   if(classId && state.allRecordsLoaded) ensureAttDraft(classId, date);
   return `
   <div class="panel">
-    <h3>출석 입력</h3>
+    ${fixedDate ? '' : '<h3>출석 입력</h3>'}
     <div class="inline-form" style="align-items:flex-end;">
       ${fixedClassId ? '' : `<div class="field"><label>반</label><select onchange="state.attendanceClassId=this.value; render()">
         <option value="">-- 반 선택 --</option>
         ${DATA.classes.map(c=>`<option value="${c.id}" ${classId===c.id?'selected':''}>${escHtml(c.name)}</option>`).join('')}
       </select></div>`}
-      <div class="field" style="max-width:200px;"><label>날짜</label><input type="date" value="${date}" onchange="state.attendanceDate=this.value; render()"></div>
+      ${fixedDate ? '' : `<div class="field" style="max-width:200px;"><label>날짜</label><input type="date" value="${date}" onchange="state.attendanceDate=this.value; render()"></div>`}
       ${classId && state.allRecordsLoaded && roster.length>0 ? `
       <button class="btn" onclick="setAllPresent('${classId}')">전체 출석</button>
       <div class="field" style="max-width:110px;"><select id="att-bulk-status">${ATT_STATUSES.map(st=>`<option value="${st}">${st}</option>`).join('')}</select></div>
@@ -3656,6 +3683,146 @@ async function saveClassAttendance(classId, date){
   }
   showToast('출석이 저장되었습니다.' + (newVideos.length>0 ? ` 보충 영상 ${newVideos.length}건도 배정했어요.` : ''));
   render();
+}
+
+/* ---------- 수업 기록 (반 선택 → 날짜 선택 → 출석/성적/시험/과제) ---------- */
+const WEEKDAY_LABEL = ['일','월','화','수','목','금','토'];
+function teacherClassSessionsHTML(classId){
+  const c = DATA.classes.find(x=>x.id===classId);
+  const sessionDates = c ? generateClassSessionDates(c.schedule, 10) : [];
+  if(!state.classHubDate || !sessionDates.includes(state.classHubDate)){
+    state.classHubDate = sessionDates[0] || todayStr();
+  }
+  const date = state.classHubDate;
+  const dateSubtabs = [['attendance','출석'],['scores','성적'],['exam','시험'],['homework','과제']];
+  const sub = state.classHubDateSubTab || 'attendance';
+  let subHtml;
+  if(sub==='scores') subHtml = teacherClassDailyScoresHTML(classId, date);
+  else if(sub==='exam') subHtml = teacherClassDailyExamHTML(classId, date);
+  else if(sub==='homework') subHtml = teacherClassDailyHomeworkHTML(classId, date);
+  else subHtml = teacherAttendanceHTML(classId, date);
+  return `
+  <div class="panel">
+    <h3>수업 날짜 선택</h3>
+    ${sessionDates.length===0 ? `<div class="empty">반 일정(요일)이 등록되지 않아 날짜를 자동으로 만들 수 없습니다. [반 관리 &gt; 설정]에서 반 일정을 입력해주세요.</div>` : `
+    <div style="display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;">
+      ${sessionDates.map(d=>{
+        const dow = WEEKDAY_LABEL[new Date(d+'T00:00:00').getDay()];
+        const isToday = d===todayStr();
+        return `<button class="btn btn-small ${d===date?'btn-primary':''}" style="flex:0 0 auto;white-space:nowrap;" onclick="state.classHubDate='${d}'; render()">${d.slice(5).replace('-','/')} (${dow})${isToday?' · 오늘':''}</button>`;
+      }).join('')}
+    </div>`}
+    <div class="field" style="max-width:200px;margin-top:12px;">
+      <label>다른 날짜 직접 선택</label>
+      <input type="date" value="${date}" onchange="state.classHubDate=this.value; render()">
+    </div>
+  </div>
+  <div class="subtab-bar">
+    ${dateSubtabs.map(t=>`<button class="subtab-btn ${sub===t[0]?'active':''}" onclick="state.classHubDateSubTab='${t[0]}'; render()">${t[1]}</button>`).join('')}
+  </div>
+  ${subHtml}`;
+}
+function teacherClassDailyScoresHTML(classId, date){
+  loadAllRecordsIfNeeded();
+  const roster = DATA.students.filter(s=>s.classId===classId);
+  if(!state.allRecordsLoaded) return `<div class="panel"><div class="empty">학생 기록을 불러오는 중입니다...</div></div>`;
+  return `<div class="panel">
+    <h3>${date} 수업 성적</h3>
+    <div class="field" style="max-width:240px;"><label>시험명</label><input id="daily-score-name" value="${escHtml(state.dailyScoreName||'쪽지시험')}" oninput="state.dailyScoreName=this.value"></div>
+    ${roster.length===0 ? '<div class="empty">이 반에 배정된 학생이 없습니다.</div>' : `
+    <div style="overflow-x:auto;">
+    <table><tr><th>이름</th><th>점수</th><th>만점</th><th></th></tr>
+    ${roster.map(s=>{
+      const rec = state.allRecords[s.studentId];
+      const existing = rec && (rec.scores||[]).find(sc=>sc.date===date);
+      return `<tr>
+        <td>${escHtml(s.name)}</td>
+        <td><input type="number" id="ds-score-${s.studentId}" style="width:70px;" value="${existing?existing.score:''}"></td>
+        <td><input type="number" id="ds-total-${s.studentId}" style="width:70px;" value="${existing?existing.total:''}"></td>
+        <td>
+          <button class="btn btn-small" onclick="saveDailyScore('${s.studentId}','${date}')">저장</button>
+          ${existing?`<button class="btn btn-red btn-small" onclick="deleteDailyScore('${s.studentId}','${date}')">삭제</button>`:''}
+        </td>
+      </tr>`;
+    }).join('')}
+    </table>
+    </div>`}
+  </div>`;
+}
+async function saveDailyScore(sid, date){
+  const nameEl = document.getElementById('daily-score-name');
+  const name = (nameEl && nameEl.value.trim()) || '쪽지시험';
+  const score = parseFloat(document.getElementById('ds-score-'+sid).value);
+  const total = parseFloat(document.getElementById('ds-total-'+sid).value);
+  if(isNaN(score) || isNaN(total)){ showToast('점수와 만점을 입력해주세요.'); return; }
+  const rec = await loadRecord(sid);
+  const idx = rec.scores.findIndex(sc=>sc.date===date);
+  if(idx>=0) rec.scores[idx] = {name, date, score, total};
+  else rec.scores.push({name, date, score, total});
+  rec.scores.sort((a,b)=>a.date.localeCompare(b.date));
+  await saveRecord(sid);
+  if(state.allRecords[sid]) state.allRecords[sid] = rec;
+  showToast('저장되었습니다.');
+  render();
+}
+async function deleteDailyScore(sid, date){
+  const rec = await loadRecord(sid);
+  rec.scores = rec.scores.filter(sc=>sc.date!==date);
+  await saveRecord(sid);
+  if(state.allRecords[sid]) state.allRecords[sid] = rec;
+  render();
+}
+function teacherClassDailyExamHTML(classId, date){
+  const exams = DATA.exams.filter(e=>e.classId===classId && e.date===date);
+  return `<div class="panel">
+    <h3>${date} 시험지</h3>
+    ${exams.length===0 ? '<div class="empty">이 날짜로 등록된 시험지가 없습니다.</div>' :
+    exams.map(e=>`<div class="exam-card">
+      <div class="exam-title">${escHtml(e.title)}</div>
+      <div class="exam-meta">${e.date||'-'} · ${classNameOf(e.classId)} · 문항 ${e.questions.length}개</div>
+      <div class="row-actions">
+        <button class="btn btn-small" onclick="toggleExamDetailView('${e.id}')">${state.examDetailOpen[e.id]?'상세보기 접기':'상세보기'}</button>
+      </div>
+      ${state.examDetailOpen[e.id] ? examDetailHTML(e.id) : ''}
+    </div>`).join('')}
+    <button class="btn btn-primary" style="margin-top:12px;" onclick="examDraft.classId='${classId}'; examDraft.date='${date}'; state.teacherTab='exams'; render()">이 날짜로 새 시험지 등록</button>
+  </div>`;
+}
+function teacherClassDailyHomeworkHTML(classId, date){
+  loadAllRecordsIfNeeded();
+  const visible = DATA.assignments.filter(a=>a.classId===classId && (a.createdAt===date || a.dueDate===date));
+  const roster = DATA.students.filter(s=>s.classId===classId);
+  return `<div class="panel">
+    <h3>${date} 과제 (${visible.length}건)</h3>
+    <p class="hint" style="margin-top:-8px;">이 날짜에 등록되었거나 마감인 과제만 보여줍니다.</p>
+    ${visible.length===0 ? '<div class="empty">해당하는 과제가 없습니다.</div>' :
+    visible.map(a=>{
+      const doneCount = state.allRecordsLoaded ? roster.filter(s=>state.allRecords[s.studentId] && state.allRecords[s.studentId].assignmentsDone && state.allRecords[s.studentId].assignmentsDone[a.id]).length : null;
+      const open = state.homeworkDetailId===a.id;
+      return `<div class="data-card" style="margin-bottom:10px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;">
+          <div><b>${escHtml(a.title)}</b> <span class="mono" style="font-size:12px;color:var(--ink-soft);">${a.createdAt?'등록 '+a.createdAt:''}${a.dueDate?' · 마감 '+a.dueDate:''}</span></div>
+          <button class="btn btn-red btn-small" onclick="deleteHomework('${a.id}')">삭제</button>
+        </div>
+        ${a.description ? `<div style="font-size:13px;white-space:pre-wrap;margin-top:6px;">${escHtml(a.description)}</div>` : ''}
+        <div style="margin-top:8px;">
+          <button class="btn btn-small" onclick="state.homeworkDetailId = state.homeworkDetailId==='${a.id}' ? null : '${a.id}'; render()">
+            ${open?'닫기':`완료 현황 보기${doneCount!==null?` (완료 ${doneCount} / ${roster.length})`:''}`}
+          </button>
+        </div>
+        ${open ? (
+          !state.allRecordsLoaded ? '<div class="empty" style="margin-top:8px;">불러오는 중...</div>' :
+          `<table style="margin-top:8px;"><tr><th>학생</th><th>상태</th></tr>
+          ${roster.map(s=>{
+            const done = state.allRecords[s.studentId] && state.allRecords[s.studentId].assignmentsDone && state.allRecords[s.studentId].assignmentsDone[a.id];
+            return `<tr><td>${escHtml(s.name)}</td><td>${done?'<span class="badge badge-ok">완료</span>':'<span class="badge badge-no">미완료</span>'}</td></tr>`;
+          }).join('')}
+          </table>`
+        ) : ''}
+      </div>`;
+    }).join('')}
+    <button class="btn btn-primary" style="margin-top:12px;" onclick="document.getElementById('hw-title')?document.getElementById('hw-title').focus():null; state.classHubTab='homework'; render()">과제 등록하러 가기</button>
+  </div>`;
 }
 
 /* ---------- 데일리퀴즈 ---------- */
