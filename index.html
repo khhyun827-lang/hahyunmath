@@ -3326,14 +3326,17 @@ function studentHTML(){
       ${qnaImageFieldHTML(state.qnaQuestionImage, 'handleQnaQuestionImage(this.files)', 'removeQnaQuestionImage()', 'qna-q-tab')}
       <button class="btn btn-primary" onclick="submitQuestion()">질문하기</button>
     </div>
-    <div class="panel"><h3>질의응답 게시판</h3>
-      ${DATA.qnas.length===0?'<div class="empty">등록된 질문이 없습니다.</div>':
-      DATA.qnas.map(q=>`<div class="qna-card">
-        <div class="qna-meta">${q.date} · ${escHtml(q.studentName)}</div>
-        <div class="qna-q">Q. ${escHtml(q.question)}</div>
-        ${imgSrcOf(q.image)?`<img src="${imgSrcOf(q.image)}" style="max-width:200px;max-height:200px;margin-top:8px;border-radius:4px;border:1px solid var(--card-border);display:block;">`:''}
-        ${q.answer?`<div class="qna-answer"><div class="label">A. 답변</div>${escHtml(q.answer)}${imgSrcOf(q.answerImage)?`<img src="${imgSrcOf(q.answerImage)}" style="max-width:200px;max-height:200px;margin-top:8px;border-radius:4px;border:1px solid var(--card-border);display:block;">`:''}</div>`:'<div class="qna-noanswer">아직 답변이 등록되지 않았습니다.</div>'}
-      </div>`).join('')}
+    <div class="panel"><h3>내 질문 내역</h3>
+      ${(() => {
+        const myQnasTab = DATA.qnas.filter(q=>q.studentId===sid);
+        return myQnasTab.length===0?'<div class="empty">등록한 질문이 없습니다.</div>':
+        myQnasTab.map(q=>`<div class="qna-card">
+          <div class="qna-meta">${q.date}</div>
+          <div class="qna-q">Q. ${escHtml(q.question)}</div>
+          ${imgSrcOf(q.image)?`<img src="${imgSrcOf(q.image)}" style="max-width:200px;max-height:200px;margin-top:8px;border-radius:4px;border:1px solid var(--card-border);display:block;">`:''}
+          ${q.answer?`<div class="qna-answer"><div class="label">A. 답변</div>${escHtml(q.answer)}${imgSrcOf(q.answerImage)?`<img src="${imgSrcOf(q.answerImage)}" style="max-width:200px;max-height:200px;margin-top:8px;border-radius:4px;border:1px solid var(--card-border);display:block;">`:''}</div>`:'<div class="qna-noanswer">아직 답변이 등록되지 않았습니다.</div>'}
+        </div>`).join('');
+      })()}
     </div>`;
   } else if(state.studentTab==='video'){
     const myClassIdV = (DATA.students.find(s=>s.studentId===sid)||{}).classId;
