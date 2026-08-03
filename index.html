@@ -962,14 +962,23 @@ function goStudentPage(tab){
 }
 
 /* =================== 로그인 =================== */
+// 출결 기록 중 가장 최근 날짜의 상태가 "퇴원"이면 퇴원 처리된 것으로 본다.
+// (학생 계정 자체엔 별도 재적 상태 필드가 없고, 출석부에서 "퇴원"으로 기록하는 게
+//  유일한 방법이라 이걸로 판단한다.)
+function isWithdrawnRecord(rec){
+  if(!rec || !rec.attendance || rec.attendance.length===0) return false;
+  const latest = [...rec.attendance].sort((a,b)=>a.date.localeCompare(b.date)).pop();
+  return !!latest && latest.status==='퇴원';
+}
 async function doStudentLogin(){
   const idInput = document.getElementById('login-id').value.trim();
   const pwInput = document.getElementById('login-pw').value;
   const found = DATA.students.find(s=>s.studentId===idInput && s.pw===pwInput);
   if(!found){ state.loginError = '아이디 또는 비밀번호가 일치하지 않습니다.'; render(); return; }
+  const rec = await loadRecord(found.studentId);
+  if(isWithdrawnRecord(rec)){ state.loginError = '퇴원 처리된 계정입니다. 문의사항은 선생님께 연락해주세요.'; render(); return; }
   state.currentUser = {type:'student', studentId:found.studentId, name:found.name};
   saveSession();
-  await loadRecord(found.studentId);
   state.studentTab = state.pendingStudentTab || 'home';
   state.pendingStudentTab = null;
   goto('student');
@@ -1032,9 +1041,10 @@ async function restoreSession(){
   } else if(saved.type==='student'){
     const found = DATA.students.find(s=>s.studentId===saved.studentId);
     if(!found){ clearSession(); return; }
+    const rec = await loadRecord(found.studentId);
+    if(isWithdrawnRecord(rec)){ clearSession(); return; } // 로그인해 있던 중 퇴원 처리되면 다음 방문 때 자동 로그아웃
     state.currentUser = {type:'student', studentId:found.studentId, name:found.name};
     state.view = 'student';
-    await loadRecord(found.studentId);
   } else if(saved.type==='assistant'){
     const found = DATA.assistants.find(a=>a.id===saved.id);
     if(!found){ clearSession(); return; }
