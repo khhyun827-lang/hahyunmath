@@ -11,6 +11,29 @@
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;600;700;900&family=Noto+Sans+KR:wght@400;500;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
 <link rel="stylesheet" href="ds.css">
+
+<style>
+/* ============================================================
+   실서비스 셸 — «배치»만 둔다. 색·서체·반경·간격은 ds.css 토큰을 쓴다.
+   목업은 1440×900 캔버스 안에서 절대배치라 .topbar/.subnav가 absolute이고
+   .body가 top:52px로 떠 있다. 실제 앱은 «스크롤하는 문서»라 그대로 쓸 수 없다.
+   여기서 바꾸는 것은 position 뿐이다.
+   ============================================================ */
+.app{background:var(--paper);color:var(--ink);min-height:100vh;
+  font-family:'Pretendard',-apple-system,sans-serif;font-size:13px;line-height:1.5;
+  -webkit-font-smoothing:antialiased;}
+.app .topbar{position:sticky;top:0;}
+.app .subnav{position:sticky;top:52px;}
+/* .body는 ds.css에서 absolute·top:52px다. 스크롤 문서에서는 그냥 흐르게 둔다. */
+.app .body{position:static;padding:20px;}
+.app .topbar .bm{display:flex;align-items:center;gap:9px;}
+.app .topbar .bm img{height:22px;width:auto;display:block;}
+.app .topbar nav a{cursor:pointer;}
+.app .subnav a{cursor:pointer;}
+/* 아직 새 디자인으로 옮기지 않은 화면은 이 안에서 구버전 스타일을 그대로 쓴다. */
+.app .legacy{padding:0;}
+</style>
+
 <style>
 /* ============================================================
    아래는 «구버전» 스타일이다. 전부 .legacy 스코프 안에 갇혀 있다.
@@ -2936,7 +2959,7 @@ function renderScoreChart(scores){
 /* 새 디자인 시스템(ds.css)으로 옮긴 화면 목록.
    여기 들어간 화면만 구버전 스타일(.legacy)을 벗는다. 화면을 하나 옮길 때마다 여기에 더한다.
    전부 옮기고 나면 이 집합과 <style> 블록, body의 .legacy를 통째로 지운다. */
-const MIGRATED_VIEWS = new Set([]);
+const MIGRATED_VIEWS = new Set(['teacher']);
 let lastSyncedHash = null;
 function syncHistory(){
   const newHash = buildHashFromState();
@@ -2957,8 +2980,9 @@ function render(){
   else if(state.view==='student') bodyHtml = studentHTML();
   else if(state.view==='teacher') bodyHtml = teacherHTML();
   else if(state.view==='assistant') bodyHtml = assistantHTML();
-  let html = headerHTML() + bodyHtml;
-  html += footerHTML();
+  /* 새 디자인으로 옮긴 화면은 자기 셸(상단바)을 스스로 갖는다.
+     공개 사이트용 헤더·푸터를 덧씌우면 상단바가 두 겹이 된다. */
+  let html = MIGRATED_VIEWS.has(state.view) ? bodyHtml : headerHTML() + bodyHtml + footerHTML();
   if(state.toast) html += `<div style="position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1B1B1D;color:#fff;padding:12px 22px;border-radius:30px;font-size:13px;box-shadow:0 6px 20px rgba(0,0,0,.2);z-index:999;">${state.toast}</div>`;
   document.body.classList.toggle('legacy', !MIGRATED_VIEWS.has(state.view));
   app.innerHTML = html;
@@ -3479,36 +3503,109 @@ function assistantHTML(){
   </div>`;
 }
 
+/* ---------- 관리자 셸 ----------
+   좌측 사이드바 5그룹을 버리고 상단바 7메뉴 + 서브탭으로 바꿨다.
+   메뉴는 여기 한 곳에서만 정의한다 — 화면마다 손으로 적으면 반드시 어긋난다. */
+const TEACHER_NAV = [
+  ['명단', 'roster'],
+  ['신호', 'signals'],
+  ['반',   'classhub'],
+  ['수업', 'session'],
+  ['오답', 'review'],
+  ['소통', 'clinic'],
+  ['설정', 'settings']
+];
+
+/* 서브탭 — [라벨, 탭, 반 관리 내부탭?]
+   「학생 명단」은 반의 하위 목록이 아니라 01 명단으로 보낸다.
+   반은 거기서 필터일 뿐이고, 같은 곳으로 가는 문을 두 개 만들지 않는다. */
+const TEACHER_SUBNAV = {
+  '반': [
+    ['학생 명단',  'roster'],
+    ['수업 기록',  'classhub', 'sessions'],
+    ['진도',       'classhub', 'progress'],
+    ['데일리퀴즈', 'classhub', 'quiz'],
+    ['영상',       'classhub', 'video']
+  ],
+  /* 「제출 현황」은 시안에서 시험지 화면에 흡수됐지만 아직 합치지 않았다.
+     합치기 전까지는 서브탭으로 남겨 둔다 — 지금 지우면 들어갈 문이 없어진다. */
+  '오답': [
+    ['검토', 'review'], ['시험지', 'exams'],
+    ['보충문제 창고', 'unitbank'], ['제출 현황', 'submissions']
+  ],
+  '소통': [
+    ['클리닉', 'clinic'], ['공지', 'notices'],
+    ['질의응답', 'qna'], ['채팅', 'chat']
+  ]
+};
+
+/* 탭이 어느 상위 메뉴에 속하는지. 명단은 「반」의 서브탭에도 나오지만 제 자리는 「명단」이다. */
+const TEACHER_TAB_SECTION = {
+  roster:'명단', signals:'신호', home:'신호',
+  classhub:'반', session:'수업',
+  review:'오답', exams:'오답', unitbank:'오답', submissions:'오답',
+  clinic:'소통', notices:'소통', qna:'소통', chat:'소통',
+  settings:'설정'
+};
+
+/* 새 디자인으로 옮긴 탭. 여기 없는 탭은 .legacy 안에서 구버전 스타일 그대로 그린다.
+   화면을 하나 옮길 때마다 여기에 더한다. */
+const TEACHER_TABS_DS = new Set([]);
+
+function goTeacherTab(tab, hubTab){
+  state.teacherTab = tab;
+  state.studentDetailId = null;
+  if(hubTab) state.classHubTab = hubTab;
+  else if(tab==='classhub') state.classHubId = null;
+  render();
+}
+
+function teacherTabBodyHTML(){
+  const t = state.teacherTab;
+  /* 아직 시안대로 만들지 않은 세 화면은 지금 그 일을 하고 있는 화면으로 보낸다.
+     빈 «준비 중» 화면을 두는 것보다 낫다 — 기능이 사라지지 않는다.
+       명단 -> 전체 학생 계정 목록   신호 -> 홈 대시보드   수업 -> 출결 관리 */
+  if(t==='roster')      return teacherSettingsStudentsHTML();
+  if(t==='signals')     return teacherHomeHTML();
+  /* teacherAttendanceHTML은 문자열이 아니라 {body, summary}를 돌려준다 — 그대로 쓰면 [object Object]가 찍힌다. */
+  if(t==='session'){ const a = teacherAttendanceHTML(); return a.body + (a.summary || ''); }
+  if(t==='classhub')    return teacherClassHubHTML();
+  if(t==='clinic')      return teacherClinicHTML();
+  if(t==='notices')     return teacherNoticesHTML();
+  if(t==='qna')         return teacherQnaHTML();
+  if(t==='chat')        return teacherChatHTML();
+  if(t==='exams')       return teacherExamsHTML();
+  if(t==='review')      return teacherReviewHTML();
+  if(t==='submissions') return teacherSubmissionsHTML();
+  if(t==='unitbank')    return teacherUnitBankHTML();
+  if(t==='settings')    return teacherSettingsHTML();
+  return teacherClassHubHTML();
+}
+
 function teacherHTML(){
-  const groups = [
-    ['홈', [['home',iconSvg('home')+' 홈']]],
-    ['반 관리', [['classhub',iconSvg('building')+' 반 목록 / 반별 관리']]],
-    ['오답 시스템', [['exams',iconSvg('document')+' 시험지'],['review',iconSvg('search')+' 오답 문제 검토'],['unitbank',iconSvg('box')+' 보충문제 창고'],['submissions',iconSvg('chart')+' 제출 현황']]],
-    ['소통', [['clinic',iconSvg('clinic')+' 클리닉'],['notices',iconSvg('megaphone')+' 공지'],['qna',iconSvg('messageSquare')+' 질의응답'],['chat',iconSvg('messageCircle')+' 채팅']]],
-    ['설정', [['settings',iconSvg('settings')+' 설정']]],
-  ];
-  let body = '';
-  if(state.teacherTab==='home') body = teacherHomeHTML();
-  else if(state.teacherTab==='classhub') body = teacherClassHubHTML();
-  else if(state.teacherTab==='clinic') body = teacherClinicHTML();
-  else if(state.teacherTab==='notices') body = teacherNoticesHTML();
-  else if(state.teacherTab==='qna') body = teacherQnaHTML();
-  else if(state.teacherTab==='chat') body = teacherChatHTML();
-  else if(state.teacherTab==='exams') body = teacherExamsHTML();
-  else if(state.teacherTab==='review') body = teacherReviewHTML();
-  else if(state.teacherTab==='submissions') body = teacherSubmissionsHTML();
-  else if(state.teacherTab==='unitbank') body = teacherUnitBankHTML();
-  else if(state.teacherTab==='settings') body = teacherSettingsHTML();
-  else body = teacherClassHubHTML();
+  const section = TEACHER_TAB_SECTION[state.teacherTab] || '반';
+  const subs = TEACHER_SUBNAV[section];
+  const subActive = s => state.teacherTab===s[1] && (!s[2] || state.classHubTab===s[2]);
+  const body = teacherTabBodyHTML();
+  const onDs = TEACHER_TABS_DS.has(state.teacherTab);
 
   return `
-  <div class="teacher-layout" style="margin-top:24px;">
-    <div class="teacher-sidebar">
-      ${groups.map(g=>`<div class="side-group-label">${g[0]}</div>${g[1].map(t=>`<button class="side-btn ${state.teacherTab===t[0]?'active':''}" onclick="state.teacherTab='${t[0]}'; state.studentDetailId=null;${t[0]==='classhub'?' state.classHubId=null;':''} render()">${t[1]}</button>`).join('')}`).join('')}
+  <div class="app">
+    <div class="topbar">
+      <div class="bm">김하현수학연구소</div>
+      <nav>${TEACHER_NAV.map(n=>
+        `<a class="${n[0]===section?'on':''}" onclick="goTeacherTab('${n[1]}')">${n[0]}</a>`
+      ).join('')}</nav>
+      <div class="right">
+        <span class="mono">김하현T</span>
+        <button class="btn sm" onclick="logout()">로그아웃</button>
+      </div>
     </div>
-    <div class="teacher-main">${body}</div>
-  </div>
-  `;
+    ${subs ? `<div class="subnav">${subs.map(s=>
+      `<a class="${subActive(s)?'on':''}" onclick="goTeacherTab('${s[1]}'${s[2]?`,'${s[2]}'`:''})">${s[0]}</a>`
+    ).join('')}</div>` : ''}
+    <div class="body">${onDs ? body : `<div class="legacy">${body}</div>`}</div>
+  </div>`;
 }
 
 /* ---------- 홈 대시보드 ---------- */
