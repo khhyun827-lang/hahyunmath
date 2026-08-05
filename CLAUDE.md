@@ -6,31 +6,41 @@
 
 ## 0. 지금 상태 — 여기부터 읽으면 된다
 
-**전면 리디자인 «설계»는 사실상 끝났다. 구현은 아직 한 줄도 시작하지 않았다.**
-`index.html`(실제 서비스)은 **손대지 않았고, 손대지 않는다.** 산출물은 전부 별도 폴더의 목업이다.
+**설계는 끝났고, 2026-08-06부터 실제 이식이 시작됐다.**
+이제 `index.html`(실서비스)을 **직접 고친다.** 화면을 하나씩 새 디자인으로 갈아끼우는 중이며,
+진행 상황과 «다음 차례»는 **0-B**에 있다. `design-v1/`·`landing-v2/`는 이제 «따라 그릴 기준»이다.
 
 | | 상태 |
 |---|---|
-| 디자인 시스템 | **확정** — `design-v1/ds.css` + `ds.js`. 로고 기준 색까지 정리 완료 |
+| 디자인 시스템 | **확정** — 루트의 `ds.css` + `ds.js`. 로고 기준 색까지 정리 완료 |
 | 관리자 화면 | **16개 완성** — 렌더링 검증 전부 0건 |
 | 학생 마이페이지 | **11개 완성** — 모바일 390×812 |
 | 랜딩페이지 | **1개 완성** — `landing-v2/index.html`, 컨셉 「하루」 |
-| 실제 구현 | **미착수** |
+| 실제 구현 | **착수함** — 0-B 참고 |
 
-### 서버 먼저 띄우기
-`file://`로 열면 iframe 썸네일이 막힌다. Windows Store 파이썬 스텁은 동작하지 않으므로 **node**를 쓴다.
+### 이어서 시작하는 절차
 ```bash
-node "<scratchpad>/serve.js"     # 127.0.0.1:8777, 루트 = claude work/
+cd "C:\Users\hahyun\Desktop\claude work"
+git log --oneline -4              # 어디까지 왔는지
+node tools/serve.js               # 127.0.0.1:8777
+node tools/check-css-collisions.js  # 새는 속성 0이어야 정상
 ```
-스크래치패드가 날아갔으면 20줄짜리 정적 서버를 다시 만들면 된다 (mime에 `.pdf` 포함 권장).
+`file://`로 열면 iframe 썸네일이 막힌다. Windows Store 파이썬 스텁은 동작하지 않으므로 **node**를 쓴다.
+
+그 다음 **0-B의 «다음 차례»**를 읽고 이어가면 된다.
 
 ### 바로 열어볼 곳
 ```
+http://127.0.0.1:8777/index.html                  실서비스 (이식 중)
 http://127.0.0.1:8777/design-v1/preview.html      관리자 16개 한눈에
 http://127.0.0.1:8777/design-v1/00-system.html    디자인 시스템 문서
 http://127.0.0.1:8777/design-v1/20-student-app.html  학생앱 11개
 http://127.0.0.1:8777/landing-v2/preview.html     랜딩 (데스크톱+모바일 동시)
 http://127.0.0.1:8777/landing-v2/copy.html        랜딩 전환 문구 후보 5개
+```
+관리자 화면은 로그인이 필요하다. 브라우저 콘솔에서 아래로 들어갈 수 있다.
+```js
+state.currentUser = {type:'teacher'}; state.teacherTab = 'classhub'; goto('teacher');
 ```
 
 ---
@@ -61,8 +71,17 @@ http://127.0.0.1:8777/landing-v2/copy.html        랜딩 전환 문구 후보 5�
 - [x] `ds.css`/`ds.js` 루트 승격 (`design-v1/`은 `../ds.css`를 본다)
 - [x] 이행 발판 설치 — 공개 홈 문서높이 4151px·버튼 122px로 이전과 동일함을 확인
 - [x] **관리자 셸** — 좌측 사이드바 5그룹 → 상단바 7메뉴 + 서브탭. 13개 탭 전부 동작 확인
-- [ ] 명단 · 신호 · 수업 (시안대로 신설) → 아래 4-A
+- [ ] 명단 · 신호 · 수업 (시안대로 신설) → 아래 표
 - [ ] 나머지 관리자 화면 · 학생 마이페이지 · 랜딩
+
+### ▶ 다음 차례 — 「명단」(`design-v1/01-roster.html`)
+1. `teacherRosterHTML()`를 새로 만들고 `teacherTabBodyHTML()`의 `roster` 분기를 갈아끼운다
+2. `TEACHER_TABS_DS`에 `'roster'`를 더한다 → `.legacy` 래퍼가 벗겨지고 ds.css가 걸린다
+3. 고밀도 표는 `DATA.students`로 바로 된다. **저장된 뷰·일괄 작업은 신규 기능**이라 도메인 레이어에 추가가 필요하다
+4. 옮긴 뒤 `node tools/check-css-collisions.js`로 새는 속성 0 확인
+5. 기존 진입점(설정의 학생 계정 목록, 반의 `classRosterHTML`)을 여기로 모아 «같은 곳으로 가는 문»을 하나로 만든다
+
+화면을 하나 옮길 때마다 **2 → 4**를 반복하면 된다. 그게 이 이식의 전부다.
 
 ### 아직 시안대로 만들지 않은 세 화면
 빈 «준비 중» 화면을 두지 않았다. **지금 그 일을 하고 있는 화면으로 보내 뒀다** — 기능이 사라지지 않는 쪽이 낫다.
@@ -88,12 +107,14 @@ http://127.0.0.1:8777/landing-v2/copy.html        랜딩 전환 문구 후보 5�
 | ③ | 다크 테마 | **라이트 유지** — 5절 권고대로 확정 |
 | 2-C | 구현 방식 | **기존 SPA에 이식** — 아래 참고 |
 
-### 다음 세션에서 할 일
+### 이식과 별개로 남아 있는 것
+구현 순서는 **0-B**가 갖고 있다. 여기 있는 것은 그 바깥의 일이다.
 
-1. **실제 구현 착수** — 기존 `index.html` 안에서 화면을 하나씩 교체한다.
-   착수 전에 2-C에 남은 두 가지(렌더링 구조 · 관리자 모바일 대응 수준)를 정해야 한다.
+1. 2-C에 남은 두 가지 — 렌더링 구조(전체 재렌더링 유지 여부) · 관리자 모바일 대응 수준.
+   지금은 «전체 재렌더링 유지»로 진행 중이며 문제 없다. 막히면 그때 정한다
 2. 랜딩 5안 기각 사유 청취 → 필요하면 랜딩 재검토 (지금 「하루」로 충분하면 생략)
 3. 9절 이슈 중 **`AI_SITE_TOKEN` 회전**은 리디자인과 무관하게 우선순위가 높다
+4. **아직 push하지 않았다.** 로컬 커밋 4개가 origin/main보다 앞서 있다
 
 > **①·② 반영 결과는 확인했다** — 랜딩 `h2`가 데스크톱 62px / 모바일 29px에서 «짐작으로 / 가르치지 않습니다» 두 줄로 정확히 접힌다. 잘림·부모 침범·가로 스크롤 0건.
 
@@ -105,7 +126,7 @@ http://127.0.0.1:8777/landing-v2/copy.html        랜딩 전환 문구 후보 5�
 |---|---|
 | 저장소 | `github.com/khhyun827-lang/hahyunmath` (main) |
 | 로컬 | `C:\Users\hahyun\Desktop\claude work` |
-| 추적 파일 | `index.html`, `profile.jpg`, `.gitignore` — 3개뿐 |
+| 추적 파일 | 시안·로고·도구까지 전부 추적 중 (2026-08-06 커밋). 예전엔 `index.html` 등 3개뿐이었다 |
 | index.html | 4,875줄 / 322KB. CSS·JS·HTML·데이터가 전부 한 파일 |
 | 빌드 도구 | 없음 (package.json / 번들러 / 프레임워크 전무) |
 
@@ -267,7 +288,7 @@ kv/chat:{studentId}    메시지 배열
 ## 6. 결정 기록
 
 ### 6-A. 확정
-- **`index.html` 수정 금지.** 모든 시안은 별도 폴더
+- ~~**`index.html` 수정 금지**~~ — 설계 기간의 규칙이었다. 2026-08-06 이식 착수와 함께 해제됐다 (0-B)
 - 기존 디자인을 개선하지 않는다. 완전히 새 방향
 - 브랜드 성격: 학원이 아니라 **개인 브랜드**. Premium / Modern / Minimal / Trustworthy / Sophisticated
 - 피할 것: 흔한 학원 홈페이지, 과도한 카드 나열, AI가 만든 것 같은 랜딩, 복잡하고 촌스러운 디자인
@@ -320,13 +341,14 @@ kv/chat:{studentId}    메시지 배열
 
 ```
 claude work/
-├─ index.html                     ← 실제 서비스. 수정 금지
+├─ index.html                     ← 실제 서비스. 이식 중 (0-B)
 ├─ profile.png / profile.webp     ← 인물 컷아웃. webp 100KB(랜딩이 씀) / png 2.2MB(폴백)
 ├─ CLAUDE.md                      ← 이 파일
 │
-├─ design-v1/                     ★ 디자인 시스템 · 관리자 16 + 학생앱 11
-│   ├─ ds.css                     ← 유일한 디자인 시스템. 토큰은 :root
-│   ├─ ds.js                      ← 아이콘 34종 · NAV/SUBNAV · CLASSES · STUDENTS · 피팅 · 임베드 모드
+├─ ds.css                         ★ 유일한 디자인 시스템. 토큰은 :root. 실서비스·시안이 같이 쓴다
+├─ ds.js                          ★ 아이콘 34종 · NAV/SUBNAV · 피팅 · 예시 데이터 — 시안 전용, 실서비스는 로드하지 않는다
+│
+├─ design-v1/                     ★ 관리자 16 + 학생앱 11 (시안)
 │   ├─ 00-system.html             ← 디자인 시스템 문서
 │   ├─ 01-roster / 02-class / 03-student / 04-review / 05-signals
 │   ├─ 06-classes / 07-exams / 08-bank / 09-clinic / 10-notice
@@ -347,7 +369,10 @@ claude work/
 │   ※ 매뉴얼북 원본: Documents/카카오톡 받은 파일/[김하현T] 로고 매뉴얼북.zip
 │
 ├─ mockups/                       ← 랜딩 5안 (기각, 보관)
-└─ mockups-admin/                 ← 관리자 5안 (선정 완료, 보관)
+├─ mockups-admin/                 ← 관리자 5안 (선정 완료, 보관)
+└─ tools/                         ★ 개발 도구 (배포와 무관)
+    ├─ serve.js                   ← 로컬 정적 서버. node tools/serve.js
+    └─ check-css-collisions.js    ← ds.css ↔ 구버전 스타일 누수 검사. 화면 옮길 때마다 돌린다
 ```
 
 관리자 목업은 **1440×900 캔버스를 화면 크기에 맞춰 축소**하는 구조(`fitCanvas()`).
@@ -362,9 +387,11 @@ claude work/
 ## 8. 작업 규칙
 
 ### 만들 때
-- `index.html`을 수정하지 않는다. 모든 시안은 별도 폴더에
-- **새 화면은 `design-v1/ds.css`를 링크해서 만든다.** 화면별 `<style>`에는 «배치»만 두고 색·서체·반경·간격을 새로 정하지 않는다
-- **상단바·서브탭을 손으로 적지 않는다.** `<nav id="nav">` / `<div class="subnav" id="subnav">`만 두고 `renderNav()` / `renderSubnav()`를 부른다. 메뉴가 바뀌면 `ds.js`의 `NAV`/`SUBNAV`만 고친다
+- **시안을 만들 때**는 별도 폴더에. **실서비스에 이식할 때**는 `index.html`을 직접 고친다 (0-B)
+- **새 화면은 루트 `ds.css`를 링크해서 만든다.** 화면별 `<style>`에는 «배치»만 두고 색·서체·반경·간격을 새로 정하지 않는다
+- **상단바·서브탭을 손으로 적지 않는다.**
+  - 시안: `<nav id="nav">` / `<div class="subnav" id="subnav">`만 두고 `renderNav()` / `renderSubnav()`를 부른다. 메뉴가 바뀌면 `ds.js`의 `NAV`/`SUBNAV`만 고친다
+  - 실서비스: `index.html`의 `TEACHER_NAV` / `TEACHER_SUBNAV` 한 곳만 고친다. **둘은 따로다** — 시안은 href로, 실서비스는 탭 id로 움직이기 때문이다. 메뉴를 바꾸면 양쪽을 같이 고쳐야 한다
 - **두 화면에서 쓰이는 컴포넌트는 ds.css로 올린다.** 로컬에 두면 한쪽만 고쳐진다
 - 새 HTML의 리셋에 **`word-break:keep-all; overflow-wrap:break-word;`**. 없으면 한글이 음절 단위로 갈라진다("목표"→"목/표")
 - CSS 커스텀 속성은 **`:root`에.** 특정 클래스 안에 두면 그 클래스를 안 쓰는 문서 페이지에서 색이 조용히 사라진다
