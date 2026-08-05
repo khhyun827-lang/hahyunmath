@@ -32,6 +32,54 @@
 .app .subnav a{cursor:pointer;}
 /* 아직 새 디자인으로 옮기지 않은 화면은 이 안에서 구버전 스타일을 그대로 쓴다. */
 .app .legacy{padding:0;}
+
+/* ---------- 명단 (design-v1/01-roster) ----------
+   목업은 .main을 absolute로 잡고 액션바를 캔버스 바닥(bottom:0)에 붙인다.
+   실서비스는 스크롤하는 문서라 «흐르는 표 + 뷰포트에 고정된 액션바»가 된다.
+   ds.css의 클래스 이름은 여기서 다시 정의하지 않는다 — 전부 rst- 접두사다.
+   (.actbar의 position만 예외다. 위 규칙대로 position만 바꾼다.) */
+.app .rst-hrow{display:flex;align-items:flex-end;gap:14px;flex-wrap:wrap;}
+.app .rst-views{display:flex;align-items:center;gap:7px;margin-top:16px;flex-wrap:wrap;}
+.app .rst-fbar{display:flex;align-items:center;gap:8px;margin-top:13px;padding-bottom:13px;
+  border-bottom:1px solid var(--line);flex-wrap:wrap;}
+.app .rst-fbar .field{width:262px;}
+.app .rst-fbar .field input{flex:1;min-width:0;border:0;background:transparent;outline:none;
+  font-family:inherit;font-size:12.5px;color:var(--ink);}
+.app .rst-cnt{margin-left:auto;font-size:12px;color:var(--dim);white-space:nowrap;}
+.app .rst-cnt b{color:var(--ink);font-family:'JetBrains Mono',monospace;font-weight:600;}
+.app .rst-selwrap{padding-right:6px;}
+.app .rst-sel{border:0;background:transparent;outline:none;cursor:pointer;
+  font-family:inherit;font-size:12.5px;color:var(--ink);}
+
+/* 머리말은 고정하고 표«만» 스크롤한다 — 목업의 .main / .tablewrap과 같은 구조다.
+   문서 스크롤에 맡기고 th를 top:52px로 붙이는 방법은 쓸 수 없다.
+   가로 스크롤 때문에 .rst-wrap이 overflow:auto가 되는 순간 그 안이 새 스크롤포트가 되어
+   sticky 기준이 뷰포트가 아니라 이 상자로 바뀌고, 헤더가 52px 내려와 첫 행을 덮는다.
+   높이 92px = 상단바 52 + .body 상하 패딩 20+20. (서브탭 있는 화면으로 옮길 땐 +42) */
+.app .rst-screen{display:flex;flex-direction:column;height:calc(100vh - 92px);}
+.app .rst-head{flex-shrink:0;}
+.app .rst-wrap{flex:1;min-height:0;overflow:auto;margin-top:2px;}
+.app .rst-wrap table.grid thead th{position:sticky;top:0;z-index:2;}
+/* 행 높이는 40px로 고정한다. 한 행이라도 두 줄이 되면 표의 리듬이 깨진다.
+   그래서 table-layout:fixed로 열 너비를 못 박고, 넘치는 글자는 …로 자른다.
+   1440 캔버스를 전제로 그린 표다. 그보다 좁은 화면에서는 표«만» 가로로 스크롤한다
+   (문서 전체가 밀리면 상단바까지 따라 움직여서 어디에 있는지 알 수 없게 된다). */
+.app .rst-wrap table.grid{table-layout:fixed;min-width:1418px;}
+/* 반을 고르면 「반」·「반 진도」 두 열이 빠진다. 그만큼 최소 너비도 줄여야
+   좁은 화면에서 괜히 가로 스크롤이 남는다. */
+.app .rst-wrap table.grid.narrow{min-width:1214px;}
+.app .rst-wrap td{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.app .rst-wrap .cb{cursor:pointer;}
+
+.app .rst-sig{display:flex;align-items:center;gap:6px;min-width:0;}
+.app .rst-sig .why{flex:1;min-width:0;font-size:11px;color:var(--dim);overflow:hidden;text-overflow:ellipsis;}
+.app .rst-act{display:flex;gap:5px;justify-content:flex-end;opacity:0;transition:opacity var(--t);}
+.app .rst-wrap tbody tr:hover .rst-act,
+.app .rst-act:focus-within{opacity:1;}
+
+.app .actbar{position:fixed;z-index:6;flex-wrap:wrap;}
+/* 고정된 액션바가 마지막 행을 가리지 않게, 스크롤 영역 «안»에 여백을 둔다. */
+.app .rst-pad{height:64px;flex-shrink:0;}
 </style>
 
 <style>
@@ -878,9 +926,17 @@ let state = {
   solutionOpen: {},
   homeworkDetailId: null,
   classHubId: null,
-  classHubTab: 'students',
+  classHubTab: 'sessions',   // 「학생 명단」은 반 안이 아니라 명단(01-roster)이 맡는다
   studentSearchQuery: '',
   rosterSearchQuery: '',
+  /* 명단(01-roster) — 뷰는 «누구를», 플래그는 «어떤 상태를» 고른다. 두 축은 따로 논다.
+     rosterView: 'all' | 'unassigned' | 'gone' | 'class:<반id>' */
+  rosterView: 'all',
+  rosterFlags: {},
+  rosterQuery: '',
+  rosterSort: 'name',
+  rosterSelected: [],
+  rosterLastIndex: null,
   auditLogSearchQuery: '',
   toast: ''
 };
@@ -2316,7 +2372,11 @@ const ICON_PATHS = {
   bolt: '<path d="M13 3 4 14h6l-1 7 9-11h-6l1-7z"/>',
   phone: '<path d="M5 4h3l1.5 4L8 9.5a11 11 0 0 0 6.5 6.5L16 15l4 1.5v3a2 2 0 0 1-2.2 2A16 16 0 0 1 3 5.2 2 2 0 0 1 5 3z"/>',
   checkCircle: '<circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9.5"/>',
-  circle: '<circle cx="12" cy="12" r="9"/>'
+  circle: '<circle cx="12" cy="12" r="9"/>',
+  // 아래 3종은 새 디자인(ds.js)에서 가져왔다. 같은 선 굵기·같은 24 그리드다.
+  filter: '<path d="M3.5 5.5h17l-6.5 7.5V20l-4-2.5v-4.5z"/>',
+  download: '<path d="M12 4v10M7.5 10l4.5 4 4.5-4M4.5 19.5h15"/>',
+  plus: '<path d="M12 5v14M5 12h14"/>'
 };
 function iconSvg(name, size){
   size = size || 17;
@@ -3550,7 +3610,7 @@ const TEACHER_TAB_SECTION = {
 
 /* 새 디자인으로 옮긴 탭. 여기 없는 탭은 .legacy 안에서 구버전 스타일 그대로 그린다.
    화면을 하나 옮길 때마다 여기에 더한다. */
-const TEACHER_TABS_DS = new Set([]);
+const TEACHER_TABS_DS = new Set(['roster']);
 
 function goTeacherTab(tab, hubTab){
   state.teacherTab = tab;
@@ -3562,10 +3622,10 @@ function goTeacherTab(tab, hubTab){
 
 function teacherTabBodyHTML(){
   const t = state.teacherTab;
-  /* 아직 시안대로 만들지 않은 세 화면은 지금 그 일을 하고 있는 화면으로 보낸다.
+  /* 아직 시안대로 만들지 않은 두 화면은 지금 그 일을 하고 있는 화면으로 보낸다.
      빈 «준비 중» 화면을 두는 것보다 낫다 — 기능이 사라지지 않는다.
-       명단 -> 전체 학생 계정 목록   신호 -> 홈 대시보드   수업 -> 출결 관리 */
-  if(t==='roster')      return teacherSettingsStudentsHTML();
+       신호 -> 홈 대시보드   수업 -> 출결 관리 */
+  if(t==='roster')      return teacherRosterHTML();
   if(t==='signals')     return teacherHomeHTML();
   /* teacherAttendanceHTML은 문자열이 아니라 {body, summary}를 돌려준다 — 그대로 쓰면 [object Object]가 찍힌다. */
   if(t==='session'){ const a = teacherAttendanceHTML(); return a.body + (a.summary || ''); }
@@ -3587,7 +3647,9 @@ function teacherHTML(){
   const subs = TEACHER_SUBNAV[section];
   const subActive = s => state.teacherTab===s[1] && (!s[2] || state.classHubTab===s[2]);
   const body = teacherTabBodyHTML();
-  const onDs = TEACHER_TABS_DS.has(state.teacherTab);
+  /* 학생 상세(03-student)는 아직 안 옮겼다. 명단에서 학생을 열면 구버전 화면이 나오므로
+     그때는 DS 취급을 풀어 .legacy 래퍼를 다시 씌운다 — 안 그러면 스타일 없이 그려진다. */
+  const onDs = TEACHER_TABS_DS.has(state.teacherTab) && !state.studentDetailId;
 
   return `
   <div class="app">
@@ -3606,6 +3668,393 @@ function teacherHTML(){
     ).join('')}</div>` : ''}
     <div class="body">${onDs ? body : `<div class="legacy">${body}</div>`}</div>
   </div>`;
+}
+
+/* =================== 명단 (design-v1/01-roster) ===================
+   A1의 밀도를 A3의 언어로. 역할은 «전체를 훑고 · 걸러내고 · 한꺼번에 처리한다».
+
+   목업과 다른 점 — 목업은 「고2 미적분Ⅰ」 반 하나를 이미 고른 상태를 그렸다.
+   실서비스는 반이 여러 개고 미배정 학생도 있어서 «모집단(뷰)»을 먼저 고르게 했다.
+   반을 고르면 「반」·「반 진도」 열은 사라진다 — 행마다 같은 값을 되풀이하지 않는다.
+
+   목업에 있었으나 넣지 않은 것:
+     열 선택(15/22) · 사용자 저장 뷰 · 과제 일괄 배포 · 학부모 문자 · 클리닉 배정
+   전부 도메인 레이어에 없는 신규 기능이다. 눌러도 아무 일 없는 버튼은 두지 않는다.
+   (과제는 반 단위로만 배포되게 돼 있어 «선택한 학생에게»가 데이터 구조상 성립하지 않는다.) */
+
+/* 출석률 = 「퇴원」을 뺀 전체 기록 중 「결석」이 아닌 비율.
+   지각·조퇴는 «온 것»으로 센다. 여기서 묻는 것은 «왔는가»이고,
+   «얼마나 있었는가»는 학생 상세의 출석 기록이 답한다. */
+function rosterStats(s){
+  const sid = s.studentId;
+  const rec = state.allRecords[sid] || {};
+
+  const att = (rec.attendance || []).slice().sort((a,b)=>a.date.localeCompare(b.date));
+  const counted = att.filter(a=>a.status!=='퇴원');
+  const attPct = counted.length
+    ? Math.round(counted.filter(a=>a.status!=='결석').length / counted.length * 100) : null;
+
+  // 시험마다 만점이 달라 점수를 그대로 이으면 선이 거짓말을 한다. 100점 환산해서 잇는다.
+  const scores = (rec.scores || []).filter(sc=>sc.total).map(sc=>Math.round(sc.score/sc.total*100));
+  const drop = scores.length>1 ? scores[0] - scores[scores.length-1] : 0;
+
+  const hws = DATA.assignments.filter(a=>!a.classId || a.classId===s.classId);
+  const hwDone = hws.filter(a=>rec.assignmentsDone && rec.assignmentsDone[a.id]).length;
+
+  const wrongLeft = (rec.wrongHomework || []).filter(h=>!h.done).length;
+
+  const vids = DATA.videos.filter(v=>v.studentId ? v.studentId===sid : (!v.classId || v.classId===s.classId));
+  const vidPct = vids.length ? Math.round(vids.reduce((sum,v)=>{
+    const p = rec.videoProgress && rec.videoProgress[v.id];
+    if(!p) return sum;
+    return sum + (p.completed ? 100 : Math.max(0, Math.min(100, Math.round(p.percent||0))));
+  }, 0) / vids.length) : null;
+
+  return {
+    att8: att.slice(-8), attPct, scores, drop,
+    hwDone, hwTotal: hws.length, wrongLeft, vidPct,
+    withdrawn: isWithdrawnRecord(rec),
+    prog: s.classId ? getClassProgress(s.classId) : null
+  };
+}
+
+/* 신호 — A5에서 «근거 문장»만 가져온다. 뱃지 하나로는 아무 것도 못 하고, 이유가 있어야 대응한다.
+   임계값은 잠정이다. 규칙을 «편집»하는 것은 05-신호 화면이 맡을 일이고 여기서는 읽기만 한다. */
+function rosterSignal(st){
+  if(st.withdrawn) return ['gone', '퇴원', '출결 기록의 마지막 상태'];
+  const bad = [];
+  if(st.attPct!==null && st.attPct<80) bad.push('출석률 ' + st.attPct + '%');
+  if(st.vidPct!==null && st.vidPct<50) bad.push('시청률 ' + st.vidPct + '%');
+  if(st.drop>=8)                       bad.push('성적 ' + st.drop + '점 하락');
+  if(bad.length) return ['no', '위험', bad.join(' · ')];
+  const cau = [];
+  if(st.attPct!==null && st.attPct<90)      cau.push('출석률 ' + st.attPct + '%');
+  if(st.wrongLeft>0)                        cau.push('오답 ' + st.wrongLeft + '건 미제출');
+  if(st.hwTotal && st.hwDone<st.hwTotal)    cau.push('과제 ' + (st.hwTotal-st.hwDone) + '건 미제출');
+  if(st.vidPct!==null && st.vidPct<80)      cau.push('시청률 ' + st.vidPct + '%');
+  if(cau.length) return ['late', '주의', cau.join(' · ')];
+  return null;
+}
+
+/* ds.js의 spark()/dots()를 옮겨 왔다. ds.js는 예시 학생 22명이 들어 있어 실서비스에 로드하지 않는다. */
+function rosterSpark(vals, w, h){
+  if(vals.length<2) return '<span class="muted" style="font-size:11px;">—</span>';
+  w = w || 56; h = h || 20;
+  const mn = Math.min(...vals), mx = Math.max(...vals), r = (mx-mn) || 1;
+  let d = '';
+  vals.forEach((v,i)=>{
+    const x = (w * i / (vals.length-1)).toFixed(1);
+    const y = (h - 2 - ((v-mn)/r) * (h-6)).toFixed(1);
+    d += (i ? 'L' : 'M') + x + ' ' + y;
+  });
+  const down = vals[vals.length-1] < vals[0];
+  const last = vals[vals.length-1], delta = Math.abs(last - vals[0]);
+  return `<svg width="${w}" height="${h}" style="vertical-align:-6px;"><path d="${d}" fill="none" stroke="${down?'#B03A2E':'#3F7A4D'}" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/></svg>`
+    + `<span class="mono" style="font-size:12px;margin-left:5px;">${last}</span>`
+    + `<span class="mono ${down?'warn':'up'}" style="font-size:10.5px;margin-left:3px;">${down?'▼':'▲'}${delta}</span>`;
+}
+function rosterDots(att8){
+  if(!att8.length) return '<span class="muted" style="font-size:11px;">—</span>';
+  return '<span class="dots">' + att8.map(a=>
+    `<i class="${attStatusClass(a.status)}" title="${a.date} ${a.status}"></i>`).join('') + '</span>';
+}
+
+/* 화면과 엑셀이 같은 명단을 봐야 한다. 필터·정렬을 두 군데 적으면 반드시 어긋난다. */
+function rosterModel(){
+  const stats = {};
+  DATA.students.forEach(s=>{ stats[s.studentId] = rosterStats(s); });
+
+  const view = state.rosterView || 'all';
+  const classId = view.indexOf('class:')===0 ? view.slice(6) : null;
+
+  // 퇴원 학생은 「퇴원」 뷰에서만 보인다. 재원 명단에 섞이면 모든 숫자가 흐려진다.
+  const pool = DATA.students.filter(s=>{
+    const st = stats[s.studentId];
+    if(view==='gone') return st.withdrawn;
+    if(st.withdrawn) return false;
+    if(view==='unassigned') return !s.classId;
+    if(classId) return s.classId===classId;
+    return true;
+  });
+
+  const f = state.rosterFlags || {};
+  const flagged = {
+    att:   s => stats[s.studentId].attPct!==null && stats[s.studentId].attPct<90,
+    wrong: s => stats[s.studentId].wrongLeft>0,
+    hw:    s => stats[s.studentId].hwTotal>0 && stats[s.studentId].hwDone<stats[s.studentId].hwTotal
+  };
+  const q = (state.rosterQuery||'').trim().toLowerCase();
+  let rows = pool.filter(s=>{
+    for(const k in flagged){ if(f[k] && !flagged[k](s)) return false; }
+    if(!q) return true;
+    return (s.name||'').toLowerCase().includes(q)
+      || (s.studentId||'').toLowerCase().includes(q)
+      || (s.school||'').toLowerCase().includes(q)
+      || classNameOf(s.classId).toLowerCase().includes(q);
+  });
+
+  const sort = state.rosterSort || 'name';
+  const byName = (a,b)=>(a.name||'').localeCompare(b.name||'', 'ko');
+  // 기록이 없는 학생을 «출석률 0%»로 두면 맨 위로 올라와 실제 위험을 가린다. 뒤로 보낸다.
+  const cmp = {
+    name:  byName,
+    att:   (a,b)=>((stats[a.studentId].attPct ?? 999) - (stats[b.studentId].attPct ?? 999)) || byName(a,b),
+    drop:  (a,b)=>(stats[b.studentId].drop - stats[a.studentId].drop) || byName(a,b),
+    wrong: (a,b)=>(stats[b.studentId].wrongLeft - stats[a.studentId].wrongLeft) || byName(a,b)
+  }[sort] || byName;
+  rows = rows.slice().sort(cmp);
+
+  return { stats, view, classId, pool, rows, flagged };
+}
+
+const ROSTER_SORTS = [['name','이름순'], ['att','출석률 낮은 순'], ['drop','성적 하락 큰 순'], ['wrong','오답 미제출 많은 순']];
+const ROSTER_FLAGS = [['att','출결 주의'], ['wrong','오답 미제출'], ['hw','과제 미제출']];
+
+function teacherRosterHTML(){
+  if(state.studentDetailId) return teacherStudentDetailHTML(state.studentDetailId);
+  loadAllRecordsIfNeeded();
+
+  const m = rosterModel();
+  const stats = m.stats, classId = m.classId;
+  const wide = !classId;                       // 반을 고르지 않았을 때만 「반」·「반 진도」를 보인다
+  const sel = new Set(state.rosterSelected || []);
+  const selVisible = m.rows.filter(s=>sel.has(s.studentId)).length;
+
+  const enrolled = DATA.students.filter(s=>!stats[s.studentId].withdrawn).length;
+  const unassigned = DATA.students.filter(s=>!s.classId && !stats[s.studentId].withdrawn).length;
+  const gone = DATA.students.filter(s=>stats[s.studentId].withdrawn).length;
+
+  const views = [['all', '전체 학생', enrolled]]
+    .concat(DATA.classes.map(c=>['class:'+c.id, c.name,
+      DATA.students.filter(s=>s.classId===c.id && !stats[s.studentId].withdrawn).length]))
+    .concat(unassigned ? [['unassigned', '미배정', unassigned]] : [])
+    .concat(gone ? [['gone', '퇴원', gone]] : []);
+
+  const cls = classId ? DATA.classes.find(c=>c.id===classId) : null;
+  const subtitle = classId
+    ? escHtml(classNameOf(classId)) + (cls && cls.schedule ? ' · ' + escHtml(cls.schedule) : '') + ' · ' + m.pool.length + '명'
+    : `재원 ${enrolled}명 · 반 ${DATA.classes.length}개`;
+
+  const head = `
+  <div class="rst-head">
+  <div class="rst-hrow">
+    <h1 class="t-title">학생 명단<s>${subtitle}</s></h1>
+    <div class="spacer"></div>
+    <span class="field rst-selwrap" style="width:auto;">${iconSvg('chart',13)}
+      <select class="rst-sel" onchange="state.rosterSort=this.value; render()">
+        ${ROSTER_SORTS.map(o=>`<option value="${o[0]}" ${state.rosterSort===o[0]?'selected':''}>${o[1]}</option>`).join('')}
+      </select>
+    </span>
+    <button class="btn sm" onclick="exportRosterExcel()">${iconSvg('download',13)} 엑셀</button>
+    <button class="btn sm" onclick="state.teacherTab='settings'; state.settingsSubTab='students'; state.studentDetailId=null; render()">${iconSvg('plus',13)} 학생 추가</button>
+  </div>
+
+  <div class="rst-views">
+    ${views.map(v=>`<a class="pill ${state.rosterView===v[0]?'on':''}" onclick="rosterSetView('${v[0]}')">${escHtml(v[1])} <b>${v[2]}</b></a>`).join('')}
+  </div>
+
+  <div class="rst-fbar">
+    <span class="field">${iconSvg('search',15)}
+      <input id="rst-search" value="${escHtml(state.rosterQuery)}" placeholder="이름 · 아이디 · 학교 · 반으로 검색" oninput="rosterSearch(this.value)">
+    </span>
+    ${ROSTER_FLAGS.map(fl=>{
+      const on = !!(state.rosterFlags||{})[fl[0]];
+      const n = m.pool.filter(m.flagged[fl[0]]).length;
+      return `<a class="pill ${on?'f':''}" onclick="rosterToggleFlag('${fl[0]}')">${fl[1]} <b>${n}</b>${on?' <s>×</s>':''}</a>`;
+    }).join('')}
+    <span class="rst-cnt">${state.allRecordsLoading ? '기록 불러오는 중…' :
+      `${m.pool.length}명 중 <b>${m.rows.length}</b>명 표시`}</span>
+  </div>
+  </div>`;
+
+  const rows = m.rows.map((s,i)=>{
+    const st = stats[s.studentId];
+    const sg = rosterSignal(st);
+    const on = sel.has(s.studentId);
+    return `<tr class="${on?'sel':''}">
+      <td onclick="rosterToggle('${s.studentId}',${i},event)"><span class="cb ${on?'on':''}"></span></td>
+      <td><span class="nm">${escHtml(s.name)}<s>${escHtml(s.studentId)}</s></span></td>
+      <td class="sub">${escHtml(s.school||'—')} · ${escHtml(s.grade||'—')}</td>
+      ${wide ? `<td class="sub" title="${escHtml(classNameOf(s.classId))}">${s.classId ? escHtml(classNameOf(s.classId)) : '<span class="badge">미배정</span>'}</td>` : ''}
+      ${/* 근거 문장은 열 폭에서 …로 잘린다. 잘린 뒤에도 읽을 수 있게 title로 전문을 남긴다. */''}
+      <td${sg ? ` title="${escHtml(sg[1] + ' — ' + sg[2])}"` : ''}>${sg
+        ? `<span class="rst-sig"><span class="badge ${sg[0]}">${sg[1]}</span><span class="why">${escHtml(sg[2])}</span></span>`
+        : '<span class="muted" style="font-size:11px;">—</span>'}</td>
+      ${wide ? `<td>${st.prog && st.prog.subject
+        ? `<span style="display:flex;align-items:center;gap:8px;"><span class="bar" style="width:40px;"><i style="width:${st.prog.percent}%"></i></span><span class="mono sub" style="font-size:11.5px;">${st.prog.percent}%</span></span>`
+        : '<span class="muted" style="font-size:11px;">—</span>'}</td>` : ''}
+      <td style="white-space:nowrap;">${rosterSpark(st.scores)}</td>
+      <td>${rosterDots(st.att8)}</td>
+      <td class="r mono ${st.attPct===null ? 'muted' : (st.attPct<80 ? 'warn' : (st.attPct<90 ? 'cau' : ''))}">${st.attPct===null ? '—' : st.attPct + '%'}</td>
+      <td class="r mono ${st.hwTotal && st.hwDone<st.hwTotal ? 'cau' : ''}">${st.hwTotal ? st.hwDone + '/' + st.hwTotal : '—'}</td>
+      <td class="r mono ${st.wrongLeft>0 ? 'warn' : ''}">${st.wrongLeft || '—'}</td>
+      <td class="r mono ${st.vidPct===null ? 'muted' : (st.vidPct<50 ? 'warn' : (st.vidPct<80 ? 'cau' : ''))}">${st.vidPct===null ? '—' : st.vidPct + '%'}</td>
+      <td class="sub mono" style="font-size:11.5px;">${escHtml(s.parentPhone||'—')}</td>
+      <td><span class="rst-act">
+        <button class="btn sm p" onclick="rosterOpen('${s.studentId}','info')">열기</button>
+        <button class="btn sm" onclick="rosterOpen('${s.studentId}','attendance')">출결</button>
+        <button class="btn sm" onclick="rosterOpen('${s.studentId}','grades')">성적</button>
+      </span></td>
+    </tr>`;
+  }).join('');
+
+  const table = `
+  <div class="rst-wrap">
+    <table class="grid ${wide?'':'narrow'}">
+      <thead><tr>
+        <th style="width:34px;" onclick="rosterToggleAll()"><span class="cb ${m.rows.length && selVisible===m.rows.length ? 'on' : ''}"></span></th>
+        <th style="width:138px;">학생</th>
+        <th style="width:124px;">학교 · 학년</th>
+        ${wide ? '<th style="width:116px;">반</th>' : ''}
+        <th style="width:180px;">신호</th>
+        ${wide ? '<th style="width:88px;">반 진도</th>' : ''}
+        <th style="width:132px;">성적 추이</th>
+        <th style="width:118px;">출결 최근 8회</th>
+        <th class="r" style="width:60px;">출석률</th>
+        <th class="r" style="width:54px;">과제</th>
+        <th class="r" style="width:50px;">오답</th>
+        <th class="r" style="width:60px;">시청률</th>
+        <th style="width:108px;">학부모</th>
+        <th style="width:156px;"></th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+    ${m.rows.length===0 ? `<div style="padding:40px 0;text-align:center;color:var(--dim);font-size:12.5px;">${
+      DATA.students.length===0 ? '등록된 학생이 없습니다.' : '조건에 맞는 학생이 없습니다.'}</div>` : ''}
+    ${(state.rosterSelected||[]).length>0 ? '<div class="rst-pad"></div>' : ''}
+  </div>`;
+
+  const selCount = (state.rosterSelected||[]).length;
+  const bar = selCount===0 ? '' : `
+  <div class="actbar">
+    <span class="sum"><b class="mono">${selCount}</b>명 선택됨</span>
+    <span class="field rst-selwrap"><select class="rst-sel" id="rst-move">${classOptionsHTML(classId)}</select></span>
+    <button class="btn sm" onclick="rosterBulkMoveClass()">반 이동</button>
+    <button class="btn sm" onclick="exportRosterExcel(true)">${iconSvg('download',13)} 선택 학생 내보내기</button>
+    <button class="btn q sm" onclick="state.rosterSelected=[]; state.rosterLastIndex=null; render()">선택 해제</button>
+    <span class="hint">Shift+클릭으로 범위 선택</span>
+  </div>`;
+
+  return `<div class="rst-screen">${head}${table}</div>${bar}`;
+}
+
+/* 반 → 그 반의 명단. 반은 명단의 «필터»일 뿐이라 뷰만 갈아 끼운다. */
+function rosterGotoClass(classId){
+  state.teacherTab = 'roster';
+  state.classHubId = null;
+  rosterSetView('class:' + classId);
+}
+function rosterSetView(v){
+  state.rosterView = v;
+  state.rosterSelected = [];      // 모집단이 바뀌면 선택은 의미를 잃는다
+  state.rosterLastIndex = null;
+  render();
+}
+function rosterToggleFlag(k){
+  const f = state.rosterFlags || (state.rosterFlags = {});
+  f[k] = !f[k];
+  state.rosterLastIndex = null;
+  render();
+}
+function rosterSearch(v){
+  state.rosterQuery = v;
+  state.rosterLastIndex = null;
+  render();
+  // 전체 재렌더링이라 입력창이 새로 만들어진다. 포커스와 캐럿을 되돌려 놓는다.
+  const el = document.getElementById('rst-search');
+  if(el){ el.focus(); el.setSelectionRange(el.value.length, el.value.length); }
+}
+function rosterOpen(sid, tab){
+  state.studentDetailId = sid;
+  state.teacherSelectedStudent = sid;
+  state.studentDetailTab = tab || 'info';
+  render();
+}
+/* Shift+클릭 범위 선택. 기준은 «지금 보이는 순서»다 — 필터나 정렬이 바뀌면 기준을 버린다. */
+function rosterToggle(sid, idx, ev){
+  const rows = rosterModel().rows;
+  const cur = new Set(state.rosterSelected || []);
+  if(ev && ev.shiftKey && state.rosterLastIndex!==null){
+    const a = Math.min(state.rosterLastIndex, idx), b = Math.max(state.rosterLastIndex, idx);
+    const add = !cur.has(sid);
+    for(let i=a; i<=b; i++){
+      if(!rows[i]) continue;
+      if(add) cur.add(rows[i].studentId); else cur.delete(rows[i].studentId);
+    }
+  }else{
+    if(cur.has(sid)) cur.delete(sid); else cur.add(sid);
+  }
+  state.rosterSelected = [...cur];
+  state.rosterLastIndex = idx;
+  render();
+}
+function rosterToggleAll(){
+  const rows = rosterModel().rows;
+  const cur = new Set(state.rosterSelected || []);
+  const allOn = rows.length>0 && rows.every(s=>cur.has(s.studentId));
+  rows.forEach(s=>{ if(allOn) cur.delete(s.studentId); else cur.add(s.studentId); });
+  state.rosterSelected = [...cur];
+  state.rosterLastIndex = null;
+  render();
+}
+
+/* 반 이동 — 학생 레코드(성적·출석·오답숙제)는 건드리지 않고 classId만 바꾼다.
+   updateStudentInfo와 같은 방식이며, 누가 언제 옮겼는지 감사 로그에 남긴다. */
+async function rosterBulkMoveClass(){
+  const ids = (state.rosterSelected || []).slice();
+  if(ids.length===0) return;
+  const box = document.getElementById('rst-move');
+  const classId = box ? box.value : '';
+  const label = classId ? classNameOf(classId) : '미배정';
+  if(!confirm(`선택한 ${ids.length}명을 「${label}」(으)로 옮길까요?`)) return;
+  let moved = 0;
+  for(const sid of ids){
+    const s = DATA.students.find(x=>x.studentId===sid);
+    if(!s || s.classId===classId) continue;
+    const before = s.classId ? classNameOf(s.classId) : '미배정';
+    s.classId = classId;
+    await dbSetDoc('students', sid, s);
+    await logAudit('반 이동', sid, s.name, `${before} → ${label}`);
+    moved++;
+  }
+  state.rosterSelected = [];
+  state.rosterLastIndex = null;
+  showToast(moved===0 ? '이미 모두 그 반에 있습니다.' : `${moved}명을 「${label}」(으)로 옮겼습니다.`);
+}
+
+/* 명단 엑셀 — «지금 보고 있는 명단»을 화면과 같은 열 구성으로 내보낸다.
+   exportClassExcel(반 단위 성적·출결)과는 다른 일을 하므로 따로 둔다. */
+async function exportRosterExcel(onlySelected){
+  try{
+    await ensureXLSXLoaded();
+    await loadAllRecordsIfNeeded();
+    const m = rosterModel();
+    const picked = new Set(state.rosterSelected || []);
+    const list = onlySelected ? m.rows.filter(s=>picked.has(s.studentId)) : m.rows;
+    if(list.length===0){ showToast('내보낼 학생이 없습니다.'); return; }
+    const header = ['아이디','이름','학교','학년','반','신호','근거','출석률(%)','과제 제출','오답 미제출','시청률(%)','최근 점수(%)','학부모 전화번호','학생 전화번호'];
+    const body = list.map(s=>{
+      const st = m.stats[s.studentId], sg = rosterSignal(st);
+      return [
+        s.studentId, s.name, s.school||'', s.grade||'',
+        s.classId ? classNameOf(s.classId) : '미배정',
+        sg ? sg[1] : '', sg ? sg[2] : '',
+        st.attPct===null ? '' : st.attPct,
+        st.hwTotal ? st.hwDone + '/' + st.hwTotal : '',
+        st.wrongLeft,
+        st.vidPct===null ? '' : st.vidPct,
+        st.scores.length ? st.scores[st.scores.length-1] : '',
+        s.parentPhone||'', s.phone||''
+      ];
+    });
+    const ws = XLSX.utils.aoa_to_sheet([header, ...body]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, '학생명단');
+    XLSX.writeFile(wb, `학생명단_${todayStr()}.xlsx`);
+  }catch(e){
+    console.error('명단 엑셀 내보내기 실패', e);
+    showToast('엑셀 파일을 만들지 못했습니다.');
+  }
 }
 
 /* ---------- 홈 대시보드 ---------- */
@@ -3721,45 +4170,14 @@ function teacherClassesHTML(){
     ${DATA.classes.map(c=>{
       const count = DATA.students.filter(s=>s.classId===c.id).length;
       return `<tr><td>${escHtml(c.name)}</td><td>${count}</td><td>${escHtml(c.schedule||'-')}</td><td>${escHtml(c.period||'-')}</td><td>${c.status==='진행중'?'<span class="lg-badge badge-ok">진행중</span>':'<span class="lg-badge badge-no">종료</span>'}</td>
-      <td class="row-actions"><button class="lg-btn btn-primary btn-small" onclick="state.classHubId='${c.id}'; state.classHubTab='students'; render()">관리</button><button class="lg-btn btn-small" onclick="toggleClassStatus('${c.id}')">${c.status==='진행중'?'종료':'재개'}</button><button class="lg-btn btn-red btn-small" onclick="deleteClass('${c.id}')">삭제</button></td></tr>`;
+      <td class="row-actions"><button class="lg-btn btn-primary btn-small" onclick="state.classHubId='${c.id}'; state.classHubTab='sessions'; render()">관리</button><button class="lg-btn btn-small" onclick="toggleClassStatus('${c.id}')">${c.status==='진행중'?'종료':'재개'}</button><button class="lg-btn btn-red btn-small" onclick="deleteClass('${c.id}')">삭제</button></td></tr>`;
     }).join('')}
     </table>`}
   </div>`;
 }
 
-/* ---------- 반 관리 허브: 반을 고르면 그 반의 학생명단/출석부/과제/데일리퀴즈/영상을 한 화면에서 ---------- */
-function classRosterHTML(classId){
-  const rq = (state.rosterSearchQuery||'').trim().toLowerCase();
-  const fullRoster = DATA.students.filter(s=>s.classId===classId);
-  const roster = !rq ? fullRoster : fullRoster.filter(s=>
-    (s.name||'').toLowerCase().includes(rq) ||
-    (s.studentId||'').toLowerCase().includes(rq) ||
-    (s.school||'').toLowerCase().includes(rq)
-  );
-  return `<div class="lg-panel ledger">
-    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:4px;">
-      <h3 style="margin:0;">학생 명단 (${fullRoster.length}명${rq?` · 검색결과 ${roster.length}명`:''})</h3>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;">
-        <button class="lg-btn btn-small" onclick="downloadStudentExcelTemplate()">${iconSvg('file',15)} 엑셀 양식</button>
-        <label class="lg-btn btn-small" style="cursor:pointer;margin:0;display:inline-flex;align-items:center;gap:5px;">${iconSvg('chart',15)} 엑셀 일괄 등록<input type="file" accept=".xlsx,.xls" style="display:none;" onchange="handleStudentExcelFile('${classId}', this.files)"></label>
-        <button class="lg-btn btn-small" onclick="exportClassExcel('${classId}')">${iconSvg('chart',15)} 성적·출결 내보내기</button>
-        <button class="lg-btn btn-primary btn-small" onclick="state.teacherTab='settings'; state.settingsSubTab='students'; render()">+ 학생 추가</button>
-      </div>
-    </div>
-    ${fullRoster.length>5 ? `<div class="lg-field" style="max-width:280px;margin-bottom:14px;">
-      <input id="roster-search" value="${escHtml(state.rosterSearchQuery)}" placeholder="이름·아이디·학교로 검색" oninput="state.rosterSearchQuery=this.value; render(); document.getElementById('roster-search').focus();">
-    </div>` : ''}
-    ${studentImportPreviewHTML()}
-    ${fullRoster.length===0 ? '<div class="empty">이 반에 배정된 학생이 없습니다.</div>' :
-      roster.length===0 ? `<div class="empty">"${escHtml(state.rosterSearchQuery)}"에 해당하는 학생이 없습니다.</div>` : `
-    <div style="overflow-x:auto;">
-    <table><tr><th>아이디</th><th>이름</th><th>학년</th><th>학교</th><th>학부모 전화번호</th><th>학생 전화번호</th><th></th></tr>
-    ${roster.map(s=>`<tr><td class="td-soft lg-mono">${s.studentId}</td><td class="td-strong">${escHtml(s.name)}</td><td>${escHtml(s.grade)}</td><td class="td-soft">${escHtml(s.school||'-')}</td><td class="td-soft lg-mono">${escHtml(s.parentPhone||'-')}</td><td class="td-soft lg-mono">${escHtml(s.phone||'-')}</td>
-      <td><button class="lg-btn btn-small" onclick="state.studentDetailId='${s.studentId}'; state.teacherSelectedStudent='${s.studentId}'; state.studentDetailTab='info'; render()">상세보기</button></td></tr>`).join('')}
-    </table>
-    </div>`}
-  </div>`;
-}
+/* 「반 > 학생 명단」은 명단(01-roster)의 반 뷰가 대신한다 — classRosterHTML은 지웠다.
+   엑셀 양식·일괄 등록은 설정 > 학생으로, 성적·출결 내보내기는 반 관리 머리말로 옮겼다. */
 async function downloadStudentExcelTemplate(){
   try{
     await ensureXLSXLoaded();
@@ -3919,21 +4337,25 @@ function teacherClassHubHTML(){
   if(!state.classHubId) return teacherClassesHTML();
   const c = DATA.classes.find(x=>x.id===state.classHubId);
   if(!c){ state.classHubId=null; return teacherClassHubHTML(); }
-  const tab = state.classHubTab || 'students';
-  // 학생 명단에서 "상세보기"를 누르면 반 관리 화면 그대로(사이드바/서브탭 안 바꾸고) 학생 상세만 보여준다.
-  if(tab==='students' && state.studentDetailId) return teacherStudentDetailHTML(state.studentDetailId);
-  const subtabs = [['students','학생 명단'],['sessions','수업 기록'],['progress','진도'],['quiz','데일리퀴즈'],['video','영상']];
+  /* 「학생 명단」 서브탭은 없앴다 — 그 일은 명단(01-roster)이 반 뷰로 한다.
+     예전 상태가 남아 있으면 조용히 수업 기록으로 돌린다. */
+  if(state.classHubTab==='students') state.classHubTab = 'sessions';
+  const tab = state.classHubTab || 'sessions';
+  const subtabs = [['sessions','수업 기록'],['progress','진도'],['quiz','데일리퀴즈'],['video','영상']];
   let sub;
-  if(tab==='sessions') sub = teacherClassSessionsHTML(c.id);
-  else if(tab==='progress') sub = teacherClassProgressHTML(c.id);
+  if(tab==='progress') sub = teacherClassProgressHTML(c.id);
   else if(tab==='quiz') sub = teacherQuizHTML(c.id);
   else if(tab==='video') sub = videoByClassHTML(c.id);
-  else sub = classRosterHTML(c.id);
+  else sub = teacherClassSessionsHTML(c.id);
   return `
   <div class="lg-panel">
     <div class="student-detail-header">
       <div><h3 style="margin:0;">${escHtml(c.name)} 관리</h3>${c.schedule?`<p class="lg-hint" style="margin:2px 0 0;">${escHtml(c.schedule)}</p>`:''}</div>
-      <button class="lg-btn btn-small" onclick="state.classHubId=null; render()">← 반 목록으로</button>
+      <div class="row-actions">
+        <button class="lg-btn btn-small" onclick="rosterGotoClass('${c.id}')">학생 명단 →</button>
+        <button class="lg-btn btn-small" onclick="exportClassExcel('${c.id}')">${iconSvg('chart',15)} 성적·출결 내보내기</button>
+        <button class="lg-btn btn-small" onclick="state.classHubId=null; render()">← 반 목록으로</button>
+      </div>
     </div>
     <div class="subtab-bar">
       ${subtabs.map(t=>`<button class="subtab-btn ${tab===t[0]?'active':''}" onclick="state.classHubTab='${t[0]}'; render()">${t[1]}</button>`).join('')}
@@ -4857,23 +5279,15 @@ function teacherSettingsClassesHTML(){
   </div>`;
 }
 
-/* ---------- 설정: 학생 계정 추가 + 전체 학생 계정 목록 ---------- */
+/* ---------- 설정: 학생 계정 추가 · 일괄 등록 ----------
+   여기는 «계정을 만드는 곳»이다. 학생을 «보는 곳»은 명단 하나뿐이다.
+   전체 목록 표가 여기에도 있었지만 지웠다 — 같은 곳으로 가는 문이 두 개면
+   어느 쪽이 최신인지 매번 헷갈린다. */
 function teacherSettingsStudentsHTML(){
-  const q = (state.studentSearchQuery||'').trim().toLowerCase();
-  const filtered = !q ? DATA.students : DATA.students.filter(s=>
-    (s.name||'').toLowerCase().includes(q) ||
-    (s.studentId||'').toLowerCase().includes(q) ||
-    (s.school||'').toLowerCase().includes(q) ||
-    classNameOf(s.classId).toLowerCase().includes(q)
-  );
-  const unassignedFirst = [...filtered].sort((a,b)=>{
-    const au = a.classId ? 1 : 0, bu = b.classId ? 1 : 0;
-    return au - bu; // 미배정(반 없음)을 위로
-  });
   return `
   <div class="lg-panel">
     <h3>학생 계정 추가</h3>
-    <p class="lg-hint" style="margin-top:-8px;">등록 후 반을 안 고르셨거나 나중에 반을 옮기고 싶으면, 아래 학생 계정 목록에서 상세보기로 언제든 수정할 수 있습니다.</p>
+    <p class="lg-hint" style="margin-top:-8px;">등록 후 반을 안 고르셨거나 나중에 반을 옮기고 싶으면, [명단]에서 학생을 열어 언제든 수정할 수 있습니다.</p>
     <div class="inline-form">
       <div class="lg-field"><label>아이디</label><input id="new-sid" placeholder="예: st01"></div>
       <div class="lg-field"><label>이름</label><input id="new-sname" placeholder="이름"></div>
@@ -4888,27 +5302,20 @@ function teacherSettingsStudentsHTML(){
       <button class="lg-btn btn-primary" onclick="addStudent()">추가</button>
     </div>
   </div>
-  <div class="lg-panel ledger">
-    <div class="student-detail-header">
-      <h3 style="margin:0;">학생 계정 전체 목록 (${DATA.students.length}명${q?` · 검색결과 ${filtered.length}명`:''})</h3>
-      <div class="lg-field" style="margin:0;min-width:220px;">
-        <input id="student-search" value="${escHtml(state.studentSearchQuery)}" placeholder="이름·아이디·학교·반으로 검색" oninput="state.studentSearchQuery=this.value; render(); document.getElementById('student-search').focus();">
-      </div>
+  <div class="lg-panel">
+    <h3>엑셀로 한꺼번에 등록</h3>
+    <p class="lg-hint" style="margin-top:-8px;">양식을 내려받아 채운 뒤 그대로 올리면 됩니다. 이미 있는 아이디는 건너뜁니다.</p>
+    <div class="inline-form">
+      <div class="lg-field"><label>배정할 반</label><select id="import-sclass">${classOptionsHTML(null)}</select></div>
+      <button class="lg-btn btn-small" onclick="downloadStudentExcelTemplate()">${iconSvg('file',15)} 엑셀 양식 내려받기</button>
+      <label class="lg-btn btn-small" style="cursor:pointer;display:inline-flex;align-items:center;gap:5px;">${iconSvg('chart',15)} 엑셀 파일 올리기<input type="file" accept=".xlsx,.xls" style="display:none;" onchange="handleStudentExcelFile(document.getElementById('import-sclass').value, this.files)"></label>
     </div>
-    ${DATA.students.length===0 ? '<div class="empty">등록된 학생이 없습니다.</div>' :
-      unassignedFirst.length===0 ? `<div class="empty">"${escHtml(state.studentSearchQuery)}"에 해당하는 학생이 없습니다.</div>` : `
-    <div style="overflow-x:auto;">
-    <table><tr><th>아이디</th><th>이름</th><th>반</th><th>학년</th><th>학교</th><th></th></tr>
-    ${unassignedFirst.map(s=>`<tr>
-      <td class="td-soft lg-mono">${s.studentId}</td>
-      <td class="td-strong">${escHtml(s.name)}</td>
-      <td>${s.classId ? escHtml(classNameOf(s.classId)) : '<span class="lg-badge badge-no">미배정</span>'}</td>
-      <td>${escHtml(s.grade)}</td>
-      <td class="td-soft">${escHtml(s.school||'-')}</td>
-      <td><button class="lg-btn btn-small" onclick="state.studentDetailId='${s.studentId}'; state.teacherSelectedStudent='${s.studentId}'; state.studentDetailTab='info'; render()">상세보기</button></td>
-    </tr>`).join('')}
-    </table>
-    </div>`}
+  </div>
+  ${studentImportPreviewHTML()}
+  <div class="lg-panel">
+    <h3>학생 목록은 [명단]에 있습니다</h3>
+    <p class="lg-hint" style="margin-top:-8px;">전체 ${DATA.students.length}명. 검색·신호·출결·성적·반 이동까지 명단 한 곳에서 합니다.</p>
+    <button class="lg-btn btn-primary btn-small" onclick="state.teacherTab='roster'; state.studentDetailId=null; render()">명단으로 가기 →</button>
   </div>`;
 }
 
