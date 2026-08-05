@@ -5,7 +5,10 @@
    ============================================================ */
 
 *{box-sizing:border-box;}
-html,body{margin:0;padding:0;background:#101114;word-break:keep-all;overflow-wrap:break-word;}
+/* 기본 배경은 «제품»의 배경이다. 어두운 무대는 목업 뷰어에만 있는 것이라
+   여기 두면 실서비스까지 검게 칠한다. 뷰어가 붙은 페이지에서만 켠다. */
+html,body{margin:0;padding:0;background:var(--paper);word-break:keep-all;overflow-wrap:break-word;}
+body:has(> .chrome){background:#101114;}
 
 /* ---------- 목업 뷰어 크롬 (시안 밖 껍데기 · 제품 아님) ---------- */
 .chrome{height:46px;display:flex;align-items:center;gap:20px;padding:0 20px;background:#17181B;color:#8A8D94;
