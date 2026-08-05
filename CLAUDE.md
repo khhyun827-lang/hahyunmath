@@ -412,10 +412,11 @@ claude work/
 │
 ├─ mockups/                       ← 랜딩 5안 (기각, 보관)
 ├─ mockups-admin/                 ← 관리자 5안 (선정 완료, 보관)
-├─ worker/                        ★ Cloudflare 워커 — 아직 배포 안 함 (9절 1번)
-│   ├─ gemini-proxy.js            ← Firebase ID 토큰 검증 + 서버 쪽 할당량 (참조 구현)
+├─ worker/                        ★ Cloudflare 워커 — 코드 완성, 배포 대기 (9절 1번)
+│   ├─ gemini-proxy.js            ← 배포본 + Firebase ID 토큰 검증 · 서버 쪽 할당량
+│   ├─ verify-test.mjs            ← 토큰 검증 테스트. node worker/verify-test.mjs
 │   └─ README.md                  ← 왜 회전이 아니라 교체인지 · 3단계 배포 순서
-│   ※ 배포된 워커 소스는 이 저장소에 없다. 위 파일은 index.html의 계약에 맞춰 새로 쓴 것이다
+│   ※ 손댄 곳은 CORS · 인증 게이트 · 할당량 셋뿐. 드라이브·Gemini 로직은 배포본 그대로다
 └─ tools/                         ★ 개발 도구 (배포와 무관)
     ├─ serve.js                   ← 로컬 정적 서버. node tools/serve.js
     └─ check-css-collisions.js    ← ds.css ↔ 구버전 스타일 누수 검사. 화면 옮길 때마다 돌린다
@@ -485,8 +486,10 @@ claude work/
    - **순서를 지켜야 한다. 클라이언트를 먼저 바꾸면 실서비스가 죽는다** —
      새 `Authorization` 헤더가 프리플라이트를 바꾸는데 워커의 `Access-Control-Allow-Headers`에
      `authorization`이 없으면 브라우저가 요청을 통째로 막는다
-   - 상태: 워커 참조 구현 작성 완료(`worker/gemini-proxy.js`). **1단계 워커 배포는 사용자 몫**
-     (Cloudflare 접근 필요). 배포된 워커 소스가 저장소에 없어서 생성/업로드/삭제 핸들러는 비워 뒀다
+   - 상태: **워커 코드 완성** (`worker/gemini-proxy.js` — 배포본에 인증만 얹었다.
+     드라이브·Gemini 로직은 한 줄도 안 건드렸다). 토큰 검증 테스트 10/10 통과
+     (`node worker/verify-test.mjs`). **배포는 사용자 몫** — Cloudflare 접근이 필요하다
+   - **`index.html`은 일부러 안 건드렸다.** 워커가 1단계로 뜬 뒤가 2단계다
    - 커밋 이력의 옛 토큰은 회수되지 않는다. 3단계에서 무효화하는 것이 유일한 해결이다
 2. **홈 히어로 이미지 깨짐** — `homeHTML()`이 `profile.jpg`를 참조(3024, 3031)하는데 로컬엔 `profile.png`/`profile.webp`만 있고 추적되지 않음. 배포 전 커밋 필요
 3. **비밀번호 평문 저장** — 학생 `pw`, 조교 `pw`, `teacher-pw` 전부
