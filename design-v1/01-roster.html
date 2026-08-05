@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>명단 — 김하현수학연구소 관리자</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<link rel="stylesheet" href="ds.css">
+<style>
+  /* 배치만. 색·서체·반경은 ds.css 토큰. */
+  .head{padding:20px 24px 0;flex-shrink:0;}
+  .hrow{display:flex;align-items:flex-end;gap:14px;}
+
+  /* 저장된 뷰 — A1에서 흡수. 반은 필터일 뿐이고, 자주 쓰는 질문을 저장해 둔다 */
+  .views{display:flex;align-items:center;gap:7px;margin-top:16px;flex-wrap:wrap;}
+
+  .fbar{display:flex;align-items:center;gap:8px;margin-top:13px;padding-bottom:13px;
+    border-bottom:1px solid var(--line);}
+  .fbar .field{width:262px;}
+  .fbar .cnt{margin-left:auto;font-size:12px;color:var(--dim);}
+  .fbar .cnt b{color:var(--ink);font-family:'JetBrains Mono',monospace;font-weight:600;}
+
+  .tablewrap{flex:1;min-height:0;overflow-y:auto;padding:0 24px;}
+  table.grid thead th{position:sticky;top:0;z-index:2;}
+
+  /* 행 안의 신호 — A5에서 흡수. 별도 보드 대신 명단의 한 열로 들어온다.
+     행 높이는 40px로 고정한다. 한 행이라도 두 줄이 되면 표의 리듬이 깨진다. */
+  .sigcell{display:flex;align-items:center;gap:6px;white-space:nowrap;}
+  .sigcell .why{font-size:11px;color:var(--dim);overflow:hidden;text-overflow:ellipsis;}
+  td.trend{white-space:nowrap;}
+
+  .rowact{display:flex;gap:5px;justify-content:flex-end;opacity:0;transition:opacity var(--t);}
+  table.grid tbody tr:hover .rowact{opacity:1;}
+
+  .main{position:absolute;left:0;right:0;top:0;bottom:56px;display:flex;flex-direction:column;}
+</style>
+</head>
+<body>
+<div class="chrome"><span class="c-num">01</span><span class="c-name">명단 <em>· A1의 밀도를 A3의 언어로</em></span>
+  <span class="c-meta">역할: 전체를 훑고 걸러내고 한꺼번에 처리한다　·　1440 × 900</span></div>
+
+<div class="stage" id="stage"><div class="canvas" id="canvas">
+
+  <div class="topbar">
+    <div class="bm">김하현수학연구소</div>
+    <nav id="nav"></nav>
+    <div class="right"><span class="kbd">⌘K</span><span>검색 · 이동</span>
+      <s style="text-decoration:none;">·</s><span>김하현T</span></div>
+  </div>
+
+  <div class="body">
+    <div class="main">
+
+      <div class="head">
+        <div class="hrow">
+          <h1 class="t-title">학생 명단<s>재원 68명 · 반 5개</s></h1>
+          <div class="spacer"></div>
+          <button class="btn sm" id="bcol"></button>
+          <button class="btn sm" id="bsort"></button>
+          <button class="btn sm" id="bxls"></button>
+        </div>
+
+        <div class="views" id="views"></div>
+
+        <div class="fbar">
+          <div class="field" id="fsearch"></div>
+          <span class="pill f">반: 고2 미적분Ⅰ <s>×</s></span>
+          <span class="pill f">출석률 &lt; 90% <s>×</s></span>
+          <span class="pill">재원 중</span>
+          <button class="btn q sm" id="baddf"></button>
+          <span class="cnt">전체 22명 중 <b>12</b>명 표시 · 갱신 14:02</span>
+        </div>
+      </div>
+
+      <div class="tablewrap scroll">
+        <table class="grid">
+          <thead><tr>
+            <th style="width:32px;"><span class="cb on"></span></th>
+            <th style="width:142px;">학생</th>
+            <th style="width:108px;">학교 · 학년</th>
+            <th style="width:176px;">신호</th>
+            <th style="width:96px;">미적분Ⅰ 진도</th>
+            <th style="width:132px;">성적 추이</th>
+            <th style="width:118px;">출결 최근 8회</th>
+            <th class="r" style="width:64px;">출석률</th>
+            <th class="r" style="width:58px;">과제</th>
+            <th class="r" style="width:58px;">오답</th>
+            <th class="r" style="width:64px;">시청률</th>
+            <th style="width:118px;">학부모</th>
+            <th></th>
+          </tr></thead>
+          <tbody id="tb"></tbody>
+        </table>
+      </div>
+
+    </div>
+
+    <!-- 다중 선택 후 일괄 작업 — A1의 가장 큰 실무 이점 -->
+    <div class="actbar">
+      <span class="sum"><b class="mono">3</b>명 선택됨</span>
+      <button class="btn sm">반 이동</button>
+      <button class="btn sm">과제 일괄 배포</button>
+      <button class="btn sm">학부모 문자</button>
+      <button class="btn sm">클리닉 배정</button>
+      <button class="btn sm">엑셀로 내보내기</button>
+      <span class="hint">Shift+클릭 범위 선택 · Enter 인라인 편집 · Esc 선택 해제</span>
+    </div>
+  </div>
+
+</div></div>
+
+<script src="ds.js"></script>
+<script>
+  document.getElementById('fsearch').innerHTML = ICON('search',15) + '<span>이름 · 초성 · 학교 · 아이디로 검색</span>';
+  document.getElementById('bcol').innerHTML  = ICON('filter',13) + ' 열 15/22';
+  document.getElementById('bsort').innerHTML = ICON('chart',13) + ' 출석률 낮은 순';
+  document.getElementById('bxls').innerHTML  = ICON('download',13) + ' 엑셀';
+  document.getElementById('baddf').innerHTML = ICON('plus',13) + ' 필터';
+
+  /* 저장된 뷰.
+     「위험 신호」 뷰는 두지 않는다 — 신호는 05 신호 화면이 전담한다.
+     같은 곳으로 가는 문이 두 개면 어느 쪽이 최신인지 매번 헷갈린다.
+     명단에 남긴 것은 «신호 열»뿐이고, 그건 맥락 표시이지 진입점이 아니다. */
+  var VIEWS = [
+    ['고2 미적분Ⅰ', 22, 1], ['전체 학생', 68, 0],
+    ['출결 주의', 6, 0], ['오답 미제출', 11, 0], ['신규 상담', 3, 0]
+  ];
+  document.getElementById('views').innerHTML =
+    VIEWS.map(function (v) {
+      return '<a class="pill' + (v[2] ? ' on' : '') + '" href="#">' + v[0] + ' <b>' + v[1] + '</b></a>';
+    }).join('') +
+    '<a class="pill" href="#" style="color:var(--dim);">' + ICON('plus',12) + ' 뷰 저장</a>';
+
+  /* 신호 규칙 — A5의 «근거 문장»만 가져온다. 뱃지 하나로는 아무 것도 못 하고, 이유가 있어야 대응한다 */
+  function signal(r) {
+    if (r.pct < 80 && r.vd < 50) return ['no',  '위험', '결석 잦음 · 시청 ' + r.vd + '%'];
+    if (r.sp[4] < r.sp[0] - 8)   return ['no',  '위험', '성적 ' + (r.sp[0] - r.sp[4]) + '점 하락'];
+    if (parseInt(r.wr) < 4)      return ['late','주의', '오답 ' + r.wr + ' 미제출'];
+    if (r.vd < 80)               return ['late','주의', '시청률 ' + r.vd + '%'];
+    return null;
+  }
+
+  var SEL = ['cyj02','lsy07','kmj01'];
+
+  document.getElementById('tb').innerHTML = STUDENTS.map(function (r) {
+    var sel = SEL.indexOf(r.id) >= 0;
+    var sg  = signal(r);
+    var last = r.sp[4], first = r.sp[0], dn = last < first;
+    return '<tr class="' + (sel ? 'sel' : '') + '">'
+      + '<td><span class="cb' + (sel ? ' on' : '') + '"></span></td>'
+      + '<td><span class="nm">' + r.n + '<s>' + r.id + '</s></span></td>'
+      + '<td class="sub">' + r.s + ' · ' + r.g + '</td>'
+      + '<td>' + (sg
+          ? '<span class="sigcell"><span class="badge ' + sg[0] + '">' + sg[1] + '</span>'
+            + '<span class="why">' + sg[2] + '</span></span>'
+          : '<span class="muted" style="font-size:11px;">—</span>') + '</td>'
+      /* 뷰가 이미 「고2 미적분Ⅰ」로 걸러져 있다. 행마다 과목명을 되풀이하지 않는다. */
+      + '<td><span style="display:flex;align-items:center;gap:8px;">'
+        + '<span class="bar" style="width:40px;"><i style="width:' + r.prog + '%"></i></span>'
+        + '<span class="mono sub" style="font-size:11.5px;">' + r.prog + '%</span></span></td>'
+      + '<td class="trend">' + spark(r.sp, 76, 20)
+        + ' <span class="mono" style="font-size:12px;margin-left:5px;">' + last + '</span>'
+        + '<span class="mono ' + (dn ? 'warn' : 'up') + '" style="font-size:10.5px;margin-left:3px;">'
+        + (dn ? '▼' : '▲') + Math.abs(last - first) + '</span></td>'
+      + '<td>' + dots(r.att) + '</td>'
+      + '<td class="r mono ' + (r.pct < 80 ? 'warn' : (r.pct < 90 ? 'cau' : '')) + '">' + r.pct + '%</td>'
+      + '<td class="r mono ' + (parseInt(r.hw) < 6 ? 'cau' : '') + '">' + r.hw + '</td>'
+      + '<td class="r mono ' + (parseInt(r.wr) < 4 ? 'warn' : '') + '">' + r.wr + '</td>'
+      + '<td class="r mono ' + (r.vd < 50 ? 'warn' : '') + '">' + r.vd + '%</td>'
+      + '<td class="sub mono" style="font-size:11.5px;">' + r.ph + '</td>'
+      + '<td><span class="rowact">'
+        + '<a class="btn sm p" href="03-student.html">열기</a>'
+        + '<button class="btn sm">출결</button><button class="btn sm">메모</button></span></td>'
+      + '</tr>';
+  }).join('');
+
+  renderNav('명단');
+  fitCanvas();
+</script>
+</body>
+</html>

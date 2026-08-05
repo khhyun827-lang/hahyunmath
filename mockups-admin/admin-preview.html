@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>학생관리페이지 UI/UX 시안 5안 — 김하현수학연구소</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<style>
+  *{box-sizing:border-box;}
+  body{margin:0;background:#0E0F12;color:#E8EAEE;font-family:'Pretendard',ui-sans-serif,system-ui,sans-serif;
+    -webkit-font-smoothing:antialiased;
+    word-break:keep-all;overflow-wrap:break-word;}
+  .mono{font-family:'IBM Plex Mono',ui-monospace,monospace;}
+  .wrap{max-width:1340px;margin:0 auto;padding:60px 26px 100px;}
+
+  header.pg{border-bottom:1px solid #22242A;padding-bottom:28px;margin-bottom:40px;
+    display:flex;justify-content:space-between;align-items:flex-end;gap:24px;flex-wrap:wrap;}
+  header.pg h1{margin:0;font-size:25px;font-weight:700;letter-spacing:-.03em;}
+  header.pg p{margin:12px 0 0;font-size:13.5px;color:#8A8F99;line-height:1.8;max-width:660px;}
+  header.pg .meta{font-size:11px;color:#61656E;letter-spacing:.14em;text-align:right;line-height:2;}
+
+  .axis{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:40px;}
+  .axis div{border:1px solid #22242A;border-radius:9px;padding:14px 14px 15px;background:#131519;}
+  .axis .n{font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:#61656E;letter-spacing:.12em;}
+  .axis .r{margin-top:9px;font-size:13.5px;font-weight:700;letter-spacing:-.02em;}
+  .axis .s{margin-top:6px;font-size:11.5px;color:#7C818B;line-height:1.6;}
+
+  .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:36px 32px;}
+  @media (max-width:1180px){ .grid{grid-template-columns:1fr;} }
+  .card{background:#131519;border:1px solid #22242A;border-radius:10px;overflow:hidden;transition:border-color .18s,transform .18s;}
+  .card:hover{border-color:#3A3E47;transform:translateY(-2px);}
+  .thumb{position:relative;width:100%;aspect-ratio:1488/1000;overflow:hidden;background:#0B0C0F;border-bottom:1px solid #22242A;}
+  .thumb iframe{position:absolute;top:0;left:0;width:1488px;height:1000px;border:0;transform-origin:top left;pointer-events:none;}
+  .thumb .open{position:absolute;right:12px;bottom:12px;background:rgba(14,15,18,.88);color:#fff;
+    border:1px solid rgba(255,255,255,.2);border-radius:5px;padding:7px 12px;font-size:11.5px;text-decoration:none;}
+  .thumb .open:hover{background:#fff;color:#111;}
+  .body{padding:20px 22px 24px;}
+  .ttl{display:flex;align-items:baseline;gap:11px;}
+  .ttl .n{font-family:'IBM Plex Mono',monospace;font-size:11px;color:#6C717B;letter-spacing:.1em;}
+  .ttl h2{margin:0;font-size:17.5px;font-weight:700;letter-spacing:-.02em;}
+  .ttl em{font-style:normal;font-size:12px;color:#6C717B;font-family:'IBM Plex Mono',monospace;}
+  .root{margin:12px 0 0;font-size:12.5px;color:#B9BEC7;border-left:2px solid #33373F;padding-left:12px;line-height:1.8;}
+  .root b{color:#fff;font-weight:600;}
+  .kv{margin-top:14px;padding-top:14px;border-top:1px solid #22242A;display:grid;grid-template-columns:auto 1fr;
+    gap:7px 14px;font-size:12px;}
+  .kv dt{color:#61656E;} .kv dd{margin:0;color:#9BA1AB;line-height:1.6;}
+  .note{margin-top:44px;padding:18px 20px;border:1px dashed #2C2F36;border-radius:8px;font-size:12.5px;color:#7C818B;line-height:1.9;}
+  .note b{color:#B9BEC7;font-weight:600;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="pg">
+    <div>
+      <h1>학생관리페이지 UI/UX · 시안 5안</h1>
+      <p>다섯 안은 색이 아니라 <b style="color:#E8EAEE;">「무엇이 화면의 루트인가」</b>가 서로 다릅니다.
+         전체 학생 표 / 오늘의 수업 / 학생 한 명 / 처리할 일 / 위험 신호.
+         모두 데스크톱 1440 × 900 기준이며, 표시된 학생·수치는 구조를 보기 위한 예시 데이터입니다.</p>
+    </div>
+    <div class="meta mono">ADMIN · STUDENT MANAGEMENT<br>2026 · CONCEPT REVIEW</div>
+  </header>
+
+  <div class="axis">
+    <div><div class="n">A1</div><div class="r">전체 학생 표</div><div class="s">한 화면에 전원 × 전 지표. 밀도 최대.</div></div>
+    <div><div class="n">A2</div><div class="r">오늘의 수업</div><div class="s">시간이 1차 축. 수업 중에 쓰는 화면.</div></div>
+    <div><div class="n">A3</div><div class="r">학생 한 명</div><div class="s">사람이 1차 축. 상담 대응 최적화.</div></div>
+    <div><div class="n">A4</div><div class="r">처리할 일</div><div class="s">큐가 1차 축. 비우는 것이 목표.</div></div>
+    <div><div class="n">A5</div><div class="r">위험 신호</div><div class="s">규칙이 1차 축. 놓치지 않는 것이 목표.</div></div>
+  </div>
+
+  <div class="grid">
+
+    <article class="card">
+      <div class="thumb"><iframe src="admin-1.html" loading="lazy" title="A1"></iframe>
+        <a class="open" href="admin-1.html" target="_blank">실제 크기로 열기 ↗</a></div>
+      <div class="body">
+        <div class="ttl"><span class="n">A1</span><h2>명단 그리드</h2><em>The Ledger</em></div>
+        <p class="root">루트는 <b>전체 학생 표</b>입니다. 반은 필터일 뿐이고, 저장된 뷰(출결 주의 · 오답 미제출)로 화면을 좁힙니다.
+          엑셀을 쓰던 손에 가장 가깝습니다.</p>
+        <dl class="kv">
+          <dt>테이블</dt><dd>행 40px · 22개 열 중 15개 표시 · 인라인 편집 · 셀 안 스파크라인과 출결 도트</dd>
+          <dt>검색</dt><dd>단일 검색창 + 누적 필터 칩 + 뷰로 저장</dd>
+          <dt>일괄</dt><dd>다중 선택 → 반 이동 · 과제 배포 · 문자 · 엑셀</dd>
+          <dt>모바일</dt><dd>열 우선순위 축소 → 이름/출석/오답만 남긴 카드 리스트</dd>
+        </dl>
+      </div>
+    </article>
+
+    <article class="card">
+      <div class="thumb"><iframe src="admin-2.html" loading="lazy" title="A2"></iframe>
+        <a class="open" href="admin-2.html" target="_blank">실제 크기로 열기 ↗</a></div>
+      <div class="body">
+        <div class="ttl"><span class="n">A2</span><h2>오늘의 콘솔</h2><em>The Console</em></div>
+        <p class="root">루트는 <b>오늘과 수업</b>입니다. 화면을 열면 오늘 수업 3개가 있고, 하나를 열면
+          출결 → 퀴즈 → 과제 → 메모가 <b>한 흐름</b>으로 이어집니다.</p>
+        <dl class="kv">
+          <dt>대시보드</dt><dd>날짜 네비 + 오늘의 수업 카드 + 남은 일 카운터</dd>
+          <dt>학생 표시</dt><dd>표가 아니라 66px 타일 · 출·지·조·결 4버튼을 손가락으로</dd>
+          <dt>검색</dt><dd>최소화. 이 화면에서는 오늘 그 반 학생만 다룸</dd>
+          <dt>모바일</dt><dd>이 안이 유일하게 모바일 우선. 태블릿 세로에서 그대로 동작</dd>
+        </dl>
+      </div>
+    </article>
+
+    <article class="card">
+      <div class="thumb"><iframe src="admin-3.html" loading="lazy" title="A3"></iframe>
+        <a class="open" href="admin-3.html" target="_blank">실제 크기로 열기 ↗</a></div>
+      <div class="body">
+        <div class="ttl"><span class="n">A3</span><h2>학생 도시에</h2><em>The Dossier</em></div>
+        <p class="root">루트는 <b>학생 한 명</b>입니다. 성적·출석·과제 탭을 없애고 모든 기록을
+          <b>하나의 연대기</b>로 합쳤습니다. 학부모 전화가 왔을 때 가장 빠릅니다.</p>
+        <dl class="kv">
+          <dt>3단</dt><dd>학생 리스트 290 · 연대기 · 컨텍스트 패널 322</dd>
+          <dt>탭</dt><dd>없음. 대신 연대기 위 필터 칩(출결·성적·과제·질문·상담)</dd>
+          <dt>상담</dt><dd>고정 메모가 우측 상시 노출 — 통화 중 바로 읽고 적음</dd>
+          <dt>모바일</dt><dd>리스트 → 상세 드릴다운. 연대기는 세로에 그대로 맞음</dd>
+        </dl>
+      </div>
+    </article>
+
+    <article class="card">
+      <div class="thumb"><iframe src="admin-4.html" loading="lazy" title="A4"></iframe>
+        <a class="open" href="admin-4.html" target="_blank">실제 크기로 열기 ↗</a></div>
+      <div class="body">
+        <div class="ttl"><span class="n">A4</span><h2>처리함</h2><em>The Inbox</em></div>
+        <p class="root">루트는 <b>처리할 일</b>입니다. 오답 검토·미답변 질문·클리닉 승인·신규 상담이
+          한 줄로 모이고, 처리하면 사라집니다. 5안 중 유일한 다크 화면.</p>
+        <dl class="kv">
+          <dt>3단</dt><dd>큐 238 · 목록 404 · 상세와 처리 액션</dd>
+          <dt>키보드</dt><dd>J/K 이동, E 승인, R 수정, X 반려, ⌘K 검색 — 마우스 없이 완주</dd>
+          <dt>학생 정보</dt><dd>독립 화면이 아니라 각 항목의 컨텍스트로 인라인 노출</dd>
+          <dt>모바일</dt><dd>스와이프로 승인·반려. 이동 중 처리에 최적</dd>
+        </dl>
+      </div>
+    </article>
+
+    <article class="card">
+      <div class="thumb"><iframe src="admin-5.html" loading="lazy" title="A5"></iframe>
+        <a class="open" href="admin-5.html" target="_blank">실제 크기로 열기 ↗</a></div>
+      <div class="body">
+        <div class="ttl"><span class="n">A5</span><h2>신호판</h2><em>The Signals</em></div>
+        <p class="root">루트는 <b>위험 신호</b>입니다. 연속 결석·성적 급락·오답 미제출을 규칙으로 감시해
+          <b>지금 봐야 할 학생</b>만 위로 올립니다. 찾지 않아도 먼저 보입니다.</p>
+        <dl class="kv">
+          <dt>보드</dt><dd>위험 / 주의 / 관찰 3열 · 양호한 43명은 화면에 없음</dd>
+          <dt>카드</dt><dd>신호 뱃지 + 근거 문장 + 출결 8회 + 조치 버튼</dd>
+          <dt>색</dt><dd>5안 중 유일하게 색이 의미를 가짐 — 나머지는 무채색 유지</dd>
+          <dt>모바일</dt><dd>위험 열만 단일 컬럼으로. 알림과 직결</dd>
+        </dl>
+      </div>
+    </article>
+
+  </div>
+
+  <div class="note">
+    <b>확인 방법</b> — 썸네일이 비어 보이면 각 카드의 <b>「실제 크기로 열기」</b>를 쓰거나
+    <span class="mono">admin-1.html</span> ~ <span class="mono">admin-5.html</span> 을 직접 열어주세요.
+    다섯 안은 배타적이지 않습니다. 예를 들어 A1을 기본 골격으로 삼고 A4의 처리함과 A5의 신호를
+    한 메뉴로 얹는 조합이 가능합니다 — 어느 것을 <b>첫 화면</b>으로 둘지가 실제 결정입니다.
+  </div>
+
+</div>
+
+<script>
+  function fitThumbs(){
+    document.querySelectorAll('.thumb').forEach(function(t){
+      t.querySelector('iframe').style.transform = 'scale(' + (t.clientWidth/1488) + ')';
+    });
+  }
+  window.addEventListener('resize', fitThumbs); window.addEventListener('load', fitThumbs); fitThumbs();
+</script>
+</body>
+</html>

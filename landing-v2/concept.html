@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>랜딩 컨셉 「하루」 — 김하현수학연구소</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<link rel="stylesheet" href="../design-v1/ds.css">
+<style>
+  /* 이 파일은 «컨셉 보드»다. 최종 랜딩페이지가 아니다.
+     장면을 실제 크기로 렌더링한 조각들과 스펙을 나란히 놓아 판단할 수 있게 한다.
+     조각 사이가 끊겨 있고 주석이 붙어 있는 것이 의도다 — 이어 붙이면 페이지가 되지만 지금은 아니다. */
+  html,body{background:var(--paper);color:var(--ink);
+    font-family:'Pretendard',-apple-system,sans-serif;font-size:13px;line-height:1.5;
+    -webkit-font-smoothing:antialiased;}
+  .board{max-width:1180px;margin:0 auto;padding:56px 28px 110px;}
+
+  .bhead{padding-bottom:26px;border-bottom:1px solid var(--line);}
+  .bhead .eye{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--dim);
+    letter-spacing:.2em;}
+  .bhead h1{font-family:'Noto Serif KR',serif;font-size:34px;font-weight:600;
+    letter-spacing:-.03em;margin:12px 0 0;}
+  .bhead h1 em{font-style:normal;color:var(--dim);font-size:20px;margin-left:14px;}
+  .bhead p{font-size:14px;color:var(--sub);line-height:1.85;margin:14px 0 0;max-width:700px;}
+  .bhead p b{color:var(--ink);font-weight:700;}
+
+  .warn{margin-top:18px;padding:13px 16px;border:1px dashed var(--note-dash);
+    background:var(--note);border-radius:var(--r-md);font-size:12.5px;color:var(--sub);line-height:1.75;}
+  .warn b{color:var(--ink);font-weight:700;}
+
+  .sec{margin-top:56px;}
+  .sec > .h{display:flex;align-items:baseline;gap:12px;padding-bottom:12px;
+    border-bottom:1px solid var(--line);margin-bottom:22px;}
+  .sec > .h .n{font-family:'JetBrains Mono',monospace;font-size:11px;color:#C6C3B8;letter-spacing:.14em;}
+  .sec > .h b{font-size:17px;font-weight:700;letter-spacing:-.02em;}
+  .sec > .h span{font-size:12.5px;color:var(--sub);}
+
+  /* 장면 조각 — 1440 폭으로 그리고 보드 폭에 맞춰 축소한다 */
+  .frag{position:relative;width:100%;overflow:hidden;border:1px solid var(--line);
+    border-radius:var(--r-lg);background:var(--paper);}
+  .frag > .in{width:1440px;transform-origin:top left;position:relative;}
+  .fnote{display:flex;gap:14px;margin:14px 0 0;}
+  .fnote .k{flex-shrink:0;width:78px;font-family:'JetBrains Mono',monospace;
+    font-size:10.5px;color:var(--dim);letter-spacing:.02em;padding-top:2px;}
+  .fnote .v{font-size:12.5px;color:var(--sub);line-height:1.8;}
+  .fnote .v b{color:var(--ink);font-weight:700;}
+  .fgap{height:34px;}
+
+  /* ---------- 조각 내부 공용 (1440 기준 실제 크기) ----------
+     클래스 이름은 ds.css와 겹치지 않게 고른다.
+     처음에 .stage / .ev 를 썼다가 ds.css의 목업 뷰어 스테이지(검은 배경)와
+     연대기 이벤트에 그대로 먹혔다. 같은 실수를 다시 하지 않기 위해 적어 둔다. */
+  .scene{position:relative;height:100%;}
+  .spine{position:absolute;left:150px;top:0;bottom:0;width:1px;background:var(--line);}
+  .spine.on{background:#D8D4C8;}
+  .dot{position:absolute;left:146px;width:9px;height:9px;border-radius:50%;
+    background:var(--accent);border:2px solid var(--paper);}
+
+  .col{position:absolute;left:246px;right:120px;}
+
+  .eyebrow{font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--dim);
+    letter-spacing:.12em;}
+  .huge{font-family:'Noto Serif KR',serif;font-size:104px;font-weight:600;
+    letter-spacing:-.045em;line-height:1.06;margin:26px 0 0;}
+  .rule{width:52px;height:2px;background:var(--accent);margin:34px 0 0;}
+  .lead{font-size:17px;color:var(--sub);margin:18px 0 0;letter-spacing:-.01em;}
+  .cue{position:absolute;left:246px;bottom:44px;font-family:'JetBrains Mono',monospace;
+    font-size:11.5px;color:var(--dim);letter-spacing:.16em;}
+
+  /* 하루 */
+  .logrow{position:absolute;left:0;right:120px;display:flex;align-items:flex-start;}
+  .logrow .tm{width:150px;flex-shrink:0;text-align:right;padding-right:34px;
+    font-family:'JetBrains Mono',monospace;font-size:17px;font-weight:600;color:var(--sub);}
+  .logrow .bd{padding-left:96px;}
+  .logrow .lb{font-family:'JetBrains Mono',monospace;font-size:12.5px;font-weight:600;color:var(--dim);
+    letter-spacing:.18em;}
+  .logrow .sn{font-size:26px;font-weight:500;letter-spacing:-.03em;margin-top:11px;line-height:1.5;}
+  .logrow .sn b{font-weight:700;}
+  .daybreak{position:absolute;left:246px;right:120px;display:flex;align-items:center;gap:14px;
+    font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--dim);letter-spacing:.06em;}
+  .daybreak::after{content:'';flex:1;height:1px;background:var(--line);}
+
+  /* 전환 */
+  .olive{position:absolute;inset:0;background:var(--accent);}
+  .olive .spine{background:rgba(255,255,255,.22);}
+  .olive .say{position:absolute;left:246px;right:200px;top:150px;
+    font-family:'Noto Serif KR',serif;font-size:60px;font-weight:600;
+    letter-spacing:-.04em;line-height:1.32;color:#fff;}
+  .olive .sub{position:absolute;left:246px;right:340px;top:352px;
+    font-size:18px;line-height:1.85;color:rgba(255,255,255,.72);}
+  /* ds.css의 .tag(알약 배경)와 겹치지 않도록 다른 이름을 쓴다 */
+  .olive .otag{position:absolute;left:246px;top:76px;font-family:'JetBrains Mono',monospace;
+    font-size:12px;color:rgba(255,255,255,.5);letter-spacing:.22em;}
+
+  /* 사람 */
+  .person{position:absolute;right:110px;bottom:0;height:474px;}
+  .person img{height:100%;width:auto;display:block;}
+  .sign{position:absolute;left:246px;top:92px;max-width:600px;}
+  .sign .memo{background:var(--note);border:1px solid var(--note-line);border-radius:var(--r-lg);
+    padding:26px 28px;}
+  .sign .memo p{margin:0;font-size:21px;line-height:1.85;color:var(--ink);letter-spacing:-.02em;}
+  .sign .memo .by{margin-top:20px;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--dim);}
+  .sign .act{display:inline-flex;align-items:center;gap:10px;margin-top:34px;
+    background:var(--accent);color:#fff;border-radius:var(--r-md);padding:16px 26px;
+    font-size:16px;font-weight:700;}
+
+  /* ---------- 스펙 블록 ---------- */
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+  .box{border:1px solid var(--line);border-radius:var(--r-lg);background:var(--card);padding:22px 24px;}
+  .box .lab{font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--dim);
+    letter-spacing:.04em;margin-bottom:16px;}
+  .box .cmt{font-size:12px;color:var(--sub);line-height:1.75;margin-top:16px;
+    padding-top:14px;border-top:1px solid var(--line2);}
+  .box .cmt b{color:var(--ink);font-weight:700;}
+
+  .swatch{display:flex;align-items:center;gap:12px;}
+  .swatch i{display:block;border-radius:4px;}
+
+  table.spec{width:100%;border-collapse:collapse;}
+  table.spec th{text-align:left;font-size:10.5px;font-weight:700;color:var(--dim);
+    letter-spacing:.1em;padding:0 10px 10px;border-bottom:1px solid var(--line);}
+  table.spec td{padding:13px 10px;border-bottom:1px solid var(--line2);font-size:12.5px;
+    color:var(--sub);vertical-align:top;line-height:1.7;}
+  table.spec td b{color:var(--ink);font-weight:700;}
+  table.spec td.k{width:150px;font-weight:700;color:var(--ink);}
+
+  .no{margin:0;padding:0;list-style:none;}
+  .no li{position:relative;padding:11px 0 11px 28px;border-bottom:1px solid var(--line2);
+    font-size:13px;color:var(--sub);line-height:1.75;}
+  .no li::before{content:'';position:absolute;left:6px;top:19px;width:9px;height:1.5px;
+    background:var(--no);}
+  .no li b{color:var(--ink);font-weight:700;}
+
+  /* 감정 곡선 */
+  .arc{border:1px solid var(--line);border-radius:var(--r-lg);background:var(--card);padding:26px 28px;}
+  .arc .lg{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-top:6px;}
+  .arc .lg div{font-size:11.5px;color:var(--sub);line-height:1.6;}
+  .arc .lg div b{display:block;color:var(--ink);font-size:12.5px;font-weight:700;margin-bottom:4px;}
+
+  .ask{margin-top:56px;padding:22px 24px;border:1px solid var(--accent-line);
+    background:var(--accent-bg);border-radius:var(--r-lg);}
+  .ask b{color:var(--accent);}
+  .ask p{margin:0;font-size:13px;color:var(--sub);line-height:1.85;}
+  .ask p+p{margin-top:9px;}
+
+  @media (prefers-reduced-motion: reduce){ *{animation:none!important;transition:none!important;} }
+</style>
+</head>
+<body>
+<div class="board">
+
+  <div class="bhead">
+    <div style="margin-bottom:16px;padding:11px 15px;border:1px solid var(--brand);border-radius:9px;font-size:12.5px;color:var(--brand);"><b>이 보드는 로고 반영 전 버전입니다.</b> 자체 로고(2024, PAPERFIT)를 확인한 뒤 주조색을 로고 차콜로 바꾸고 히어로를 로고로 교체했습니다. 최신은 <a href="index.html" style="color:var(--brand);font-weight:700;">index.html</a> 입니다.</div>
+    <div class="eye">LANDING CONCEPT · NOT THE FINAL PAGE</div>
+    <h1>하루<em>One Day</em></h1>
+    <p>
+      이 학원이 일하는 <b>하루를 방문자가 목격한다.</b>
+      5안이 전부 «수학»을 소재로 썼다면, 이번은 «서비스»를 소재로 씁니다.
+      재료는 지금까지 만든 24개 화면에서 그대로 가져오되, <b>규모와 용법만 바꿉니다</b> — 새 색은 하나도 만들지 않았습니다.
+    </p>
+    <div class="warn">
+      <b>이건 완성된 랜딩페이지가 아닙니다.</b> 판단에 필요한 네 장면만 실제 크기로 그리고 주석을 붙인 «컨셉 보드»입니다.
+      조각 사이가 끊겨 있는 것이 의도이며, 승인해 주시면 이어 붙여 실제 페이지로 만들겠습니다.
+    </div>
+  </div>
+
+  <!-- ============ 시그니처 ============ -->
+  <div class="sec">
+    <div class="h"><span class="n">SIGNATURE</span><b>세로 규칙선과 모노 시각</b>
+      <span>학생 상세 화면의 연대기를 페이지 척추로 키운 것</span></div>
+
+    <div class="two">
+      <div class="box">
+        <div class="lab">제품에서 — 학생 상세 연대기</div>
+        <div style="position:relative;padding-left:96px;">
+          <div style="position:absolute;left:96px;top:4px;bottom:0;width:1px;background:var(--line);"></div>
+          <div style="position:relative;padding:8px 0 8px 22px;">
+            <span style="position:absolute;left:-4.5px;top:14px;width:9px;height:9px;border-radius:50%;
+              background:var(--ok);border:2px solid var(--card);"></span>
+            <div style="position:absolute;left:-96px;top:6px;width:78px;text-align:right;
+              font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--dim);">8월 5일</div>
+            <div style="font-size:13.5px;font-weight:600;">정규 수업 출석</div>
+            <div style="font-size:12.5px;color:var(--sub);margin-top:4px;">19:00 입실 · 지각 없음</div>
+          </div>
+          <div style="position:relative;padding:8px 0 8px 22px;">
+            <span style="position:absolute;left:-4.5px;top:14px;width:9px;height:9px;border-radius:50%;
+              background:#CFCEC6;border:2px solid var(--card);"></span>
+            <div style="position:absolute;left:-96px;top:6px;width:78px;text-align:right;
+              font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--dim);">8월 3일</div>
+            <div style="font-size:13.5px;font-weight:600;">오답숙제 3문항 제출</div>
+          </div>
+        </div>
+        <div class="cmt">1px 선 · 9px 점 · 좌측 모노 날짜. <b>13px 세계</b>에서 조용히 일하는 구조.</div>
+      </div>
+
+      <div class="box" style="background:var(--paper);">
+        <div class="lab">랜딩에서 — 페이지의 척추</div>
+        <div style="position:relative;height:186px;padding-left:96px;" id="demo">
+          <div style="position:absolute;left:96px;top:0;width:1px;background:#D8D4C8;height:0;"
+               id="demoline"></div>
+          <div style="position:relative;padding:6px 0 26px 26px;opacity:0;" class="dstep">
+            <span style="position:absolute;left:-4.5px;top:12px;width:9px;height:9px;border-radius:50%;
+              background:var(--accent);border:2px solid var(--paper);"></span>
+            <div style="position:absolute;left:-96px;top:4px;width:76px;text-align:right;
+              font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:600;color:var(--sub);">19:00</div>
+            <div style="font-size:19px;font-weight:500;letter-spacing:-.02em;">출결이 그날의 기록이 된다</div>
+          </div>
+          <div style="position:relative;padding:6px 0 26px 26px;opacity:0;" class="dstep">
+            <span style="position:absolute;left:-4.5px;top:12px;width:9px;height:9px;border-radius:50%;
+              background:var(--accent);border:2px solid var(--paper);"></span>
+            <div style="position:absolute;left:-96px;top:4px;width:76px;text-align:right;
+              font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:600;color:var(--sub);">21:14</div>
+            <div style="font-size:19px;font-weight:500;letter-spacing:-.02em;">틀린 문항이 쌍둥이가 된다</div>
+          </div>
+        </div>
+        <div class="cmt">같은 구조를 <b>키우고 올리브 점을 씁니다.</b> 로드될 때 선이 그어지고 시각이 하나씩 붙습니다 — 스크롤 인디케이터도 이 선이 겸합니다.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 장면 ============ -->
+  <div class="sec">
+    <div class="h"><span class="n">SCENES</span><b>네 장면</b>
+      <span>실제 크기 1440px로 그린 뒤 축소 — 화면에서 보일 크기 그대로</span></div>
+
+    <!-- A -->
+    <div class="frag"><div class="in" data-h="640">
+      <div class="scene">
+        <div class="spine"></div>
+        <div class="dot" style="top:150px;"></div>
+        <div class="col" style="top:138px;">
+          <div class="eyebrow">2026 · 08 · 05　수요일</div>
+          <h2 class="huge">김하현수학연구소</h2>
+          <div class="rule"></div>
+          <div class="lead">오늘의 기록</div>
+        </div>
+        <!-- 다음 장면이 화면 하단에 걸친다. «스크롤» 안내 문구보다 이쪽이 강하게 끈다. -->
+        <div class="dot" style="top:568px;"></div>
+        <div class="logrow" style="top:558px;">
+          <span class="tm">16:00</span>
+          <span class="bd"><span class="lb">수업</span>
+            <div class="sn">고1 공통수학2 — 오늘 나간 단원이 반의 진도에 남는다</div></span>
+        </div>
+      </div>
+    </div></div>
+    <div class="fnote"><span class="k">A · 도착</span><span class="v">
+      판매 문구가 없습니다. 이름과 날짜 한 줄뿐입니다. <b>첫 2초의 목표는 «정적»</b>입니다 —
+      흔한 학원 홈페이지의 압박이 없다는 것 자체가 첫 번째 차별점이 됩니다.
+      Noto Serif KR을 <b>104px</b>로 씁니다. 제품에서 이 서체의 최대 크기는 25px입니다. 같은 얼굴, 다른 인격.
+      <br>하단에 걸친 <span class="mono">16:00</span>은 다음 장면 B의 첫 줄입니다 — 두 조각은 실제로 이어집니다.
+      «스크롤» 안내 문구 대신 <b>다음 장면을 반쯤 보여주는 쪽</b>이 훨씬 강하게 끕니다.
+    </span></div>
+
+    <div class="fgap"></div>
+
+    <!-- B -->
+    <div class="frag"><div class="in" data-h="740">
+      <div class="scene">
+        <div class="spine"></div>
+        <div id="evs"></div>
+      </div>
+    </div></div>
+    <div class="fnote"><span class="k">B · 하루</span><span class="v">
+      16시·19시·21시10분은 지어낸 값이 아니라 <b>실제 반 시간표</b>입니다.
+      각 행은 <span class="mono">{시각, 라벨, 한 문장}</span> 하나뿐이라 문자열만 갈면 그대로 돌아갑니다.
+      <b>수치를 넣지 않았습니다</b> — 공개 페이지의 숫자는 방문자가 사실로 읽기 때문입니다.
+      마지막 <span class="mono">09:12</span>에서 날짜가 넘어가는 것이 이 장면의 핵심입니다.
+      «밤늦게 물어도 아침에 답이 온다»를 한 마디도 주장하지 않고 전달합니다.
+    </span></div>
+
+    <div class="fgap"></div>
+
+    <!-- C -->
+    <div class="frag"><div class="in" data-h="520">
+      <div class="scene">
+        <div class="olive">
+          <div class="spine"></div>
+          <div class="otag">기록</div>
+          <div class="say">무엇을 틀렸는지<br>기억합니다</div>
+          <div class="sub">틀린 문항은 쌍둥이 문항이 되어 다시 돌아옵니다.<br>
+            검토를 거친 것만 학생에게 나갑니다.</div>
+        </div>
+      </div>
+    </div></div>
+    <div class="fnote"><span class="k">C · 전환</span><span class="v">
+      페이지에서 <b>유일하게 큰 소리</b>입니다. 제품에서 올리브는 3px 바와 버튼이 전부인데, 여기서만 «면»이 됩니다.
+      새 색을 만든 것이 아니라 <b>용법을 바꾼 것</b>입니다.
+      척추가 색 위로도 이어집니다(흰색 22%) — 선이 장식이 아니라 구조라는 걸 보여주는 지점입니다.
+      <br>문장은 교체 가능합니다. 대안: 「한 명도 같은 방식으로 가르치지 않습니다」 / 「가르친 것은 전부 남습니다」
+    </span></div>
+
+    <div class="fgap"></div>
+
+    <!-- D -->
+    <div class="frag"><div class="in" data-h="560">
+      <div class="scene">
+        <div class="spine"></div>
+        <div class="dot" style="top:110px;"></div>
+        <div class="sign">
+          <div class="memo">
+            <p>수업은 두 시간이지만,<br>한 학생을 이해하는 데는 한 학기가 걸립니다.<br>그래서 전부 적습니다.</p>
+            <div class="by">김하현 · 김하현수학연구소</div>
+          </div>
+          <div class="act">상담 신청 <span id="arr"></span></div>
+        </div>
+        <div class="person"><img src="../profile.png" alt=""></div>
+      </div>
+    </div></div>
+    <div class="fnote"><span class="k">D · 사람</span><span class="v">
+      메모 종이색(<span class="mono">#FDFAEF</span>)은 시스템에서 <b>«사람이 적은 것»에만</b> 쓰는 색입니다.
+      페이지가 기계 로그에서 사람으로 넘어가는 지점이라 여기서만 씁니다.
+      인물은 <b>여기 한 번만</b> 나옵니다 — 히어로에 두면 «기록»이라는 주제와 충돌합니다.
+      검은 재킷이 웜 페이퍼 위에서 유일한 어두운 덩어리가 되어 마지막 장면을 눌러 줍니다.
+      행동은 하나뿐입니다. 입력칸 6개짜리 폼이 아닙니다.
+    </span></div>
+  </div>
+
+  <!-- ============ 타입 ============ -->
+  <div class="sec">
+    <div class="h"><span class="n">TYPE</span><b>같은 얼굴, 다른 인격</b>
+      <span>서체를 바꾸지 않고 규모만 바꿉니다</span></div>
+    <div class="two">
+      <div class="box">
+        <div class="lab">제품 — 25PX</div>
+        <div style="font-family:'Noto Serif KR',serif;font-size:25px;font-weight:600;letter-spacing:-.02em;">김민준</div>
+        <div class="cmt">화면이 다루는 <b>대상의 이름</b>에만. 규칙은 랜딩에서도 그대로 지킵니다 — 랜딩이 다루는 대상은 «연구소»입니다.</div>
+      </div>
+      <div class="box">
+        <div class="lab">랜딩 — 104PX</div>
+        <div style="font-family:'Noto Serif KR',serif;font-size:56px;font-weight:600;letter-spacing:-.045em;line-height:1;">김하현수학연구소</div>
+        <div class="cmt">위는 지면 관계상 56px입니다. 실제로는 <b>104px</b>이며 장면 A에서 확인하실 수 있습니다.</div>
+      </div>
+    </div>
+
+    <div style="margin-top:16px;">
+      <table class="spec">
+        <thead><tr><th>역할</th><th>서체</th><th>제품</th><th>랜딩</th></tr></thead>
+        <tbody>
+          <tr><td class="k">주제</td><td>Noto Serif KR 600</td><td>25px</td><td><b>104px</b> · letter-spacing −.045em</td></tr>
+          <tr><td class="k">문장</td><td>Pretendard 500</td><td>13px</td><td><b>26px</b> — 로그 한 줄이 편집 문장이 됩니다</td></tr>
+          <tr><td class="k">시각 · 라벨</td><td>JetBrains Mono 600</td><td>11.5px</td><td><b>17px</b> · letter-spacing .18em</td></tr>
+          <tr><td class="k">전환 문장</td><td>Noto Serif KR 600</td><td>—</td><td><b>60px</b> · 흰색</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ============ 색 ============ -->
+  <div class="sec">
+    <div class="h"><span class="n">COLOR</span><b>새 색 0개, 용법 변경 2개</b>
+      <span>팔레트에 새로움을 쓰지 않고 규모와 용법에 씁니다</span></div>
+    <table class="spec">
+      <thead><tr><th>토큰</th><th>제품에서</th><th>랜딩에서</th></tr></thead>
+      <tbody>
+        <tr>
+          <td class="k"><span class="swatch"><i style="width:16px;height:16px;background:#3C3034;"></i>
+            <span class="mono" style="font-size:11px;">#3C3034</span></span></td>
+          <td>3px 선택 바 · 버튼 배경</td>
+          <td><b>화면 전체를 덮는 면</b> — 단 한 번. 점과 규칙선.</td>
+        </tr>
+        <tr>
+          <td class="k"><span class="swatch"><i style="width:16px;height:16px;background:#FDFAEF;border:1px solid #EDE3C6;"></i>
+            <span class="mono" style="font-size:11px;">#FDFAEF</span></span></td>
+          <td>고정 메모 · 검토 메모</td>
+          <td><b>강사가 직접 말하는 단 한 곳</b> — 마지막 장면에만.</td>
+        </tr>
+        <tr>
+          <td class="k"><span class="swatch"><i style="width:16px;height:16px;background:#FAF9F6;border:1px solid #E7E5DE;"></i>
+            <span class="mono" style="font-size:11px;">#FAF9F6</span></span></td>
+          <td>앱 배경</td>
+          <td>동일 — 페이지 전체의 바탕</td>
+        </tr>
+        <tr>
+          <td class="k"><span class="swatch"><i style="width:16px;height:16px;background:#96968C;"></i>
+            <span class="mono" style="font-size:11px;">#96968C</span></span></td>
+          <td>흐린 글자</td>
+          <td>동일 — 시각·라벨</td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="fnote" style="margin-top:16px;"><span class="k">주의</span><span class="v">
+      CLAUDE.md에 <b>«크림 배경 + 세리프 + 테라코타는 AI 생성 디자인의 기본값이니 피할 것»</b>이라 적어 두었습니다.
+      현재 시스템은 웜 페이퍼 + 세리프 + <b>딥 올리브</b>라 그 기본값과 인접합니다.
+      그래서 새로움을 <b>팔레트가 아니라 규모·용법·구조</b>에 쓰기로 했습니다 — 색을 새로 만들면
+      24개 화면과 랜딩이 다시 남남이 되기 때문입니다.
+    </span></div>
+  </div>
+
+  <!-- ============ 감정 곡선 ============ -->
+  <div class="sec">
+    <div class="h"><span class="n">ARC</span><b>방문자의 감정 흐름</b>
+      <span>앞을 의도적으로 눌러 두었다가 한 번만 터뜨립니다</span></div>
+    <div class="arc">
+      <svg viewBox="0 0 1080 190" width="100%" height="190" style="display:block;">
+        <line x1="0" y1="150" x2="1080" y2="150" stroke="#E7E5DE" stroke-width="1"/>
+        <path id="curve" d="M40 140 L220 132 L400 110 L580 44 L760 78 L1000 66"
+              fill="none" stroke="#3C3034" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+        <g id="pts"></g>
+      </svg>
+      <div class="lg">
+        <div><b>도착</b>0–2초 · 정적</div>
+        <div><b>인지</b>선이 그어진다 · 호기심</div>
+        <div><b>몰입</b>하루가 풀린다 · 밀도</div>
+        <div><b>전환</b>올리브 · 확신</div>
+        <div><b>사람</b>메모 · 신뢰</div>
+        <div><b>행동</b>상담 신청</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 안 넣는 것 ============ -->
+  <div class="sec">
+    <div class="h"><span class="n">OUT</span><b>넣지 않는 것</b>
+      <span>지금 단계에서 의도적으로 비웁니다</span></div>
+    <ul class="no">
+      <li><b>성적 상승률 · 합격 실적 · 수강생 수</b> — 검증 불가능한 수치는 공개 페이지에서 주장이 됩니다. 방문자는 사실로 읽습니다.</li>
+      <li><b>후기</b> — 학원 홈페이지를 서로 구별되지 않게 만드는 가장 큰 원인입니다.</li>
+      <li><b>기능 카드 나열</b> — 기능 목록은 방문자에게 «평가»를 요구합니다. 하루는 «목격»을 요구합니다.</li>
+      <li><b>경력 연차 · 이력</b> — 지금 목적이 아니라고 하셨습니다. 다만 <b>자리는 지금 설계에 포함</b>하고 비활성으로 둡니다. 나중에 끼워 넣으면 레이아웃이 깨집니다.</li>
+      <li><b>01 / 02 / 03 번호</b> — 시각이 이미 순서입니다. 같은 정보를 두 번 쓰지 않습니다.</li>
+    </ul>
+  </div>
+
+  <div class="ask">
+    <p><b>승인 전 확인 한 가지</b> — 장면 C의 문장 <b>「무엇을 틀렸는지 기억합니다」</b>가 이 브랜드의 목소리로 맞습니까?
+      이 한 문장이 페이지에서 유일하게 큰 소리라, 여기가 어긋나면 나머지가 다 흔들립니다.</p>
+    <p>대안 두 가지를 같이 올립니다 — 「한 명도 같은 방식으로 가르치지 않습니다」(개별화 강조) /
+      「가르친 것은 전부 남습니다」(기록 강조, 더 담백).</p>
+    <p style="margin-top:14px;">이 방향으로 진행할지, 혹은 어느 장면이 걸리는지 말씀해 주시면
+      <span class="mono">landing-v2/</span> 에 실제 페이지로 제작하겠습니다.</p>
+  </div>
+
+</div>
+
+<script src="../design-v1/ds.js"></script>
+<script>
+  document.getElementById('arr').innerHTML = ICON('arrowR',18);
+
+  /* ---------- 하루 장면 ---------- */
+  var EV = [
+    [ 30, '16:00', '수업', '고1 공통수학2 — 오늘 나간 단원이 반의 진도에 남는다'],
+    [156, '19:00', '수업', '고2 미적분Ⅰ — 스물두 명의 출결이 그날의 기록이 된다'],
+    [282, '21:14', '검토', '틀린 문항에서 쌍둥이 문항이 만들어진다'],
+    [408, '23:41', '질문', '「극대·극소 판정에서 f″를 꼭 봐야 하나요?」'],
+    [586, '09:12', '답변', '다음 날 아침, 답이 도착한다']
+  ];
+  var html = EV.map(function (e) {
+    return '<div class="dot" style="top:' + (e[0] + 10) + 'px;"></div>'
+      + '<div class="logrow" style="top:' + e[0] + 'px;">'
+      + '<span class="tm">' + e[1] + '</span>'
+      + '<span class="bd"><span class="lb">' + e[2] + '</span>'
+      + '<div class="sn">' + e[3] + '</div></span></div>';
+  }).join('');
+  /* 날짜가 넘어가는 칸 — 이 한 줄이 이 장면의 핵심이다 */
+  html += '<div class="daybreak" style="top:534px;">다음 날　08 · 06</div>';
+  document.getElementById('evs').innerHTML = html;
+
+  /* ---------- 조각 축소 ---------- */
+  function fitFrags() {
+    document.querySelectorAll('.frag').forEach(function (f) {
+      var inn = f.querySelector('.in');
+      var h = parseInt(inn.getAttribute('data-h'), 10);
+      var s = f.clientWidth / 1440;
+      inn.style.transform = 'scale(' + s + ')';
+      inn.style.height = h + 'px';
+      f.style.height = (h * s) + 'px';
+    });
+  }
+  window.addEventListener('resize', fitFrags);
+  window.addEventListener('load', fitFrags);
+  fitFrags();
+
+  /* ---------- 시그니처 데모 ----------
+     선이 그어지고 시각이 하나씩 붙는다. 실제 페이지의 로드 시퀀스가 이렇게 된다. */
+  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function runDemo() {
+    var line = document.getElementById('demoline');
+    var steps = document.querySelectorAll('.dstep');
+    if (reduce) {
+      line.style.height = '160px';
+      steps.forEach(function (s) { s.style.opacity = 1; });
+      return;
+    }
+    line.style.height = '0';
+    steps.forEach(function (s) { s.style.opacity = 0; s.style.transform = 'translateY(6px)'; });
+    line.style.transition = 'height 620ms cubic-bezier(.4,0,.2,1)';
+    setTimeout(function () { line.style.height = '160px'; }, 120);
+    steps.forEach(function (s, i) {
+      s.style.transition = 'opacity 420ms ease, transform 420ms cubic-bezier(.4,0,.2,1)';
+      setTimeout(function () { s.style.opacity = 1; s.style.transform = 'translateY(0)'; }, 520 + i * 260);
+    });
+  }
+  var io = new IntersectionObserver(function (es) {
+    es.forEach(function (e) { if (e.isIntersecting) { runDemo(); io.unobserve(e.target); } });
+  }, {threshold:.4});
+  io.observe(document.getElementById('demo'));
+
+  /* ---------- 감정 곡선 점 ---------- */
+  var PTS = [[40,140],[220,132],[400,110],[580,44],[760,78],[1000,66]];
+  document.getElementById('pts').innerHTML = PTS.map(function (p) {
+    return '<circle cx="' + p[0] + '" cy="' + p[1] + '" r="5" fill="#FAF9F6" stroke="#3C3034" stroke-width="2.5"/>';
+  }).join('');
+</script>
+</body>
+</html>

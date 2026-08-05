@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>관리자 시안 01 — 명단 그리드 | 김하현수학연구소</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;}
+  html,body{word-break:keep-all;overflow-wrap:break-word;}
+  html,body{margin:0;padding:0;background:#101114;}
+  .chrome{height:46px;display:flex;align-items:center;gap:20px;padding:0 20px;background:#17181B;color:#8A8D94;
+    font:400 12px/1 ui-sans-serif,system-ui,sans-serif;border-bottom:1px solid #24262B;}
+  .c-num{color:#fff;background:#2E3138;padding:4px 7px;border-radius:3px;font-size:11px;}
+  .c-name{color:#EDEEF0;font-size:13px;} .c-name em{color:#767A82;font-style:normal;}
+  .c-meta{margin-left:auto;font-size:11px;color:#6E727A;}
+  .stage{position:relative;width:100%;overflow:hidden;background:#101114;}
+  .canvas{position:absolute;top:0;left:0;width:1440px;height:900px;transform-origin:top left;overflow:hidden;}
+
+  /* ===================== 시안 본체 ===================== */
+  .canvas{
+    --bg:#FFFFFF; --chrome:#FAFBFC; --ink:#111418; --sub:#5A6472; --dim:#8E97A4;
+    --hair:#E6EAEF; --hair2:#F0F3F6; --sel:#1F6FEB; --selbg:#EEF4FE;
+    --ok:#12A150; --late:#C88A04; --leave:#7C5CD6; --no:#DC3545;
+    background:var(--bg);color:var(--ink);
+    font-family:'IBM Plex Sans KR',sans-serif;font-size:13px;font-variant-numeric:tabular-nums;
+  }
+  .mono{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;}
+
+  /* 앱바 */
+  .appbar{height:50px;display:flex;align-items:center;padding:0 18px;border-bottom:1px solid var(--hair);
+    background:var(--chrome);gap:18px;}
+  .appbar .bm{font-weight:700;font-size:13.5px;letter-spacing:-.01em;}
+  .appbar .bm s{text-decoration:none;color:var(--dim);font-weight:400;margin-left:9px;}
+  .appbar nav{display:flex;gap:2px;margin-left:14px;}
+  .appbar nav a{padding:6px 11px;border-radius:5px;text-decoration:none;color:var(--sub);font-size:12.5px;}
+  .appbar nav a.on{background:#EDF0F3;color:var(--ink);font-weight:600;}
+  .appbar .right{margin-left:auto;display:flex;align-items:center;gap:10px;color:var(--dim);font-size:12px;}
+  .kbd{border:1px solid var(--hair);background:#fff;border-radius:4px;padding:3px 7px;font-size:10.5px;color:var(--dim);
+    font-family:'IBM Plex Mono',monospace;}
+
+  /* 뷰 탭 */
+  .views{height:42px;display:flex;align-items:stretch;border-bottom:1px solid var(--hair);padding:0 18px;gap:0;}
+  .views a{display:flex;align-items:center;gap:7px;padding:0 13px;text-decoration:none;color:var(--sub);font-size:12.5px;
+    border-bottom:2px solid transparent;margin-bottom:-1px;}
+  .views a b{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--dim);font-weight:500;}
+  .views a.on{color:var(--sel);border-bottom-color:var(--sel);font-weight:600;}
+  .views a.on b{color:var(--sel);}
+  .views .add{color:var(--dim);}
+  .views .tools{margin-left:auto;display:flex;align-items:center;gap:6px;}
+  .tbtn{border:1px solid var(--hair);background:#fff;border-radius:5px;padding:5px 10px;font-size:12px;color:var(--sub);
+    font-family:inherit;display:flex;align-items:center;gap:6px;}
+
+  /* 필터바 */
+  .filters{height:46px;display:flex;align-items:center;gap:8px;padding:0 18px;border-bottom:1px solid var(--hair);}
+  .search{display:flex;align-items:center;gap:8px;border:1px solid var(--hair);border-radius:6px;height:30px;
+    padding:0 10px;width:260px;color:var(--dim);font-size:12.5px;background:#fff;}
+  .chip{display:flex;align-items:center;gap:7px;height:28px;padding:0 9px;border-radius:6px;background:var(--selbg);
+    color:var(--sel);font-size:12px;border:1px solid #D6E4FC;}
+  .chip s{text-decoration:none;color:#7FA8EE;}
+  .chip.n{background:#F4F6F8;color:var(--sub);border-color:var(--hair);}
+  .addf{color:var(--dim);font-size:12px;padding:0 6px;}
+  .filters .cnt{margin-left:auto;font-size:12px;color:var(--dim);}
+  .filters .cnt b{color:var(--ink);font-family:'IBM Plex Mono',monospace;}
+
+  /* 그리드 */
+  table{width:100%;border-collapse:collapse;}
+  thead th{height:34px;text-align:left;font-size:11px;font-weight:600;color:var(--dim);letter-spacing:.02em;
+    border-bottom:1px solid var(--hair);padding:0 10px;background:#FCFDFE;white-space:nowrap;}
+  thead th.r{text-align:right;}
+  tbody td{height:40px;padding:0 10px;border-bottom:1px solid var(--hair2);font-size:12.5px;vertical-align:middle;}
+  tbody tr.hov td{background:#F7FAFF;}
+  tbody tr.sel td{background:var(--selbg);}
+  .cb{width:14px;height:14px;border:1.5px solid #C3CBD6;border-radius:3px;display:inline-block;vertical-align:-2px;}
+  .cb.on{background:var(--sel);border-color:var(--sel);position:relative;}
+  .cb.on::after{content:'✓';color:#fff;font-size:10px;position:absolute;left:2px;top:-2px;font-weight:700;}
+  .nm{font-weight:600;}
+  .nm s{text-decoration:none;color:var(--dim);font-weight:400;font-family:'IBM Plex Mono',monospace;font-size:11px;margin-left:6px;}
+  .sc{color:var(--sub);}
+  .dots{display:flex;gap:3px;}
+  .dots i{width:9px;height:16px;border-radius:2px;display:block;background:#E3E8EE;}
+  .dots i.ok{background:#BFE7CE;} .dots i.late{background:#F5DFA3;}
+  .dots i.leave{background:#DDD1F5;} .dots i.no{background:#F5C2C7;}
+  .pct{font-family:'IBM Plex Mono',monospace;font-size:12px;}
+  .warn{color:var(--no);font-weight:600;}
+  .cau{color:var(--late);font-weight:600;}
+  .rowact{display:flex;gap:5px;justify-content:flex-end;}
+  .ra{border:1px solid var(--hair);background:#fff;border-radius:5px;padding:3px 8px;font-size:11.5px;color:var(--sub);font-family:inherit;}
+  .ra.p{background:var(--sel);border-color:var(--sel);color:#fff;}
+  .muted{color:var(--dim);}
+
+  /* 하단 선택 바 */
+  .selbar{position:absolute;left:0;right:0;bottom:0;height:52px;border-top:1px solid var(--hair);background:#FCFDFE;
+    display:flex;align-items:center;gap:10px;padding:0 18px;}
+  .selbar .n{font-size:12.5px;color:var(--sub);}
+  .selbar .n b{color:var(--sel);font-family:'IBM Plex Mono',monospace;}
+  .selbar .sp{margin-left:auto;font-size:11.5px;color:var(--dim);}
+</style>
+</head>
+<body>
+<div class="chrome"><span class="c-num">A1</span><span class="c-name">명단 그리드 <em>· The Ledger</em></span>
+  <span class="c-meta">전체 학생이 루트 · 고밀도 데이터 그리드 · 인라인 편집　·　1440 × 900</span></div>
+
+<div class="stage" id="stage"><div class="canvas" id="canvas">
+
+  <div class="appbar">
+    <div class="bm">김하현수학연구소<s>학생 관리</s></div>
+    <nav>
+      <a class="on" href="#">명단</a><a href="#">수업</a><a href="#">오답</a><a href="#">소통</a><a href="#">설정</a>
+    </nav>
+    <div class="right"><span class="kbd">⌘K</span><span>검색 · 이동 · 실행</span><span style="margin-left:8px;">김하현T</span></div>
+  </div>
+
+  <div class="views">
+    <a class="on" href="#">고2 미적분Ⅰ <b>22</b></a>
+    <a href="#">전체 학생 <b>68</b></a>
+    <a href="#">출결 주의 <b>6</b></a>
+    <a href="#">오답 미제출 <b>11</b></a>
+    <a href="#">신규 상담 <b>3</b></a>
+    <a class="add" href="#">+ 뷰 저장</a>
+    <div class="tools">
+      <button class="tbtn">열 15/22</button>
+      <button class="tbtn">정렬 · 출석률 ↑</button>
+      <button class="tbtn">엑셀 내보내기</button>
+    </div>
+  </div>
+
+  <div class="filters">
+    <div class="search">🔍 이름 · 아이디 · 학교로 검색</div>
+    <span class="chip">반: 고2 미적분Ⅰ <s>×</s></span>
+    <span class="chip">출석률 &lt; 90% <s>×</s></span>
+    <span class="chip n">재원 중</span>
+    <span class="addf">+ 필터</span>
+    <span class="cnt">전체 22명 중 <b>10</b>명 표시 · 최근 갱신 14:02</span>
+  </div>
+
+  <table>
+    <thead><tr>
+      <th style="width:34px;"><span class="cb on"></span></th>
+      <th style="width:150px;">학생</th>
+      <th style="width:120px;">학교 · 학년</th>
+      <th style="width:104px;">진도</th>
+      <th style="width:150px;">성적 추이</th>
+      <th style="width:150px;">출결 최근 8회</th>
+      <th class="r" style="width:76px;">출석률</th>
+      <th class="r" style="width:74px;">과제</th>
+      <th class="r" style="width:74px;">오답</th>
+      <th class="r" style="width:78px;">시청률</th>
+      <th style="width:132px;">학부모</th>
+      <th></th>
+    </tr></thead>
+    <tbody id="tb"></tbody>
+  </table>
+
+  <div class="selbar">
+    <span class="n"><b>3</b>명 선택됨</span>
+    <button class="ra">반 이동</button>
+    <button class="ra">과제 일괄 배포</button>
+    <button class="ra">학부모 문자</button>
+    <button class="ra">클리닉 배정</button>
+    <button class="ra">엑셀로 내보내기</button>
+    <span class="sp">Shift+클릭 범위 선택 · Enter 인라인 편집 · Esc 선택 해제</span>
+  </div>
+
+</div></div>
+
+<script>
+  var ROWS = [
+    {n:'최유진', id:'cyj02', s:'건대부고', g:'고2', prog:'미적분Ⅰ 72%', sp:[78,84,88,91,94], att:'ok,ok,ok,ok,ok,ok,ok,ok', pct:100, hw:'8/8', wr:'6/6', vd:96, ph:'010-2841-…', sel:1},
+    {n:'이서연', id:'lsy07', s:'대원여고', g:'고2', prog:'미적분Ⅰ 72%', sp:[72,79,81,85,88], att:'ok,ok,late,ok,ok,ok,ok,ok', pct:91, hw:'8/8', wr:'5/6', vd:88, ph:'010-3392-…', sel:1},
+    {n:'김민준', id:'kmj01', s:'건대부고', g:'고2', prog:'미적분Ⅰ 72%', sp:[68,71,74,79,82], att:'ok,ok,ok,late,ok,ok,ok,ok', pct:96, hw:'7/8', wr:'6/6', vd:74, ph:'010-4417-…', sel:1},
+    {n:'윤서아', id:'ysa11', s:'대원고',   g:'고2', prog:'미적분Ⅰ 72%', sp:[74,77,80,83,85], att:'ok,ok,ok,ok,leave,ok,ok,ok', pct:95, hw:'8/8', wr:'4/6', vd:81, ph:'010-7728-…'},
+    {n:'한지우', id:'hjw14', s:'건대부고', g:'고2', prog:'미적분Ⅰ 72%', sp:[70,73,76,78,80], att:'ok,ok,ok,ok,ok,late,ok,ok', pct:92, hw:'6/8', wr:'5/6', vd:69, ph:'010-2205-…'},
+    {n:'정하람', id:'jhr09', s:'동대부여고',g:'고2', prog:'미적분Ⅰ 64%', sp:[76,74,73,72,71], att:'ok,late,ok,no,ok,ok,late,ok', pct:88, hw:'5/8', wr:'3/6', vd:52, ph:'010-6614-…', hov:1},
+    {n:'임태경', id:'itk12', s:'광양고',   g:'고2', prog:'미적분Ⅰ 64%', sp:[80,78,77,77,77], att:'ok,ok,late,ok,ok,no,ok,ok', pct:84, hw:'6/8', wr:'4/6', vd:63, ph:'010-9031-…'},
+    {n:'박지호', id:'pjh03', s:'광남고',   g:'고2', prog:'미적분Ⅰ 58%', sp:[74,71,68,66,64], att:'ok,no,ok,late,no,ok,ok,late', pct:78, hw:'3/8', wr:'1/6', vd:38, ph:'010-5560-…', bad:1},
+    {n:'오세훈', id:'osh15', s:'광남고',   g:'고2', prog:'미적분Ⅰ 58%', sp:[72,70,69,67,66], att:'late,ok,no,ok,ok,no,late,ok', pct:70, hw:'4/8', wr:'2/6', vd:44, ph:'010-8873-…', bad:1},
+    {n:'강도윤', id:'kdy06', s:'가람고',   g:'고2', prog:'미적분Ⅰ 51%', sp:[70,66,63,60,58], att:'no,ok,no,no,ok,late,no,ok', pct:62, hw:'2/8', wr:'0/6', vd:21, ph:'010-3348-…', bad:1}
+  ];
+
+  function spark(vals){
+    var w=118,h=22,mn=Math.min.apply(null,vals),mx=Math.max.apply(null,vals),r=(mx-mn)||1,d='';
+    vals.forEach(function(v,i){
+      var x=(w*i/(vals.length-1)).toFixed(1), y=(h-2-((v-mn)/r)*(h-6)).toFixed(1);
+      d += (i?'L':'M')+x+' '+y;
+    });
+    var down = vals[vals.length-1] < vals[0];
+    return '<svg width="'+w+'" height="'+h+'" style="vertical-align:-6px;"><path d="'+d+'" fill="none" stroke="'+
+      (down?'#DC3545':'#12A150')+'" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/></svg>';
+  }
+
+  document.getElementById('tb').innerHTML = ROWS.map(function(r){
+    var dots = r.att.split(',').map(function(s){ return '<i class="'+s+'"></i>'; }).join('');
+    var last = r.sp[r.sp.length-1], prev = r.sp[0];
+    var cls = r.bad ? 'warn' : (r.pct<90 ? 'cau' : '');
+    return '<tr class="'+(r.sel?'sel':'')+(r.hov?' hov':'')+'">'
+      + '<td><span class="cb'+(r.sel?' on':'')+'"></span></td>'
+      + '<td><span class="nm">'+r.n+'<s>'+r.id+'</s></span></td>'
+      + '<td class="sc">'+r.s+' · '+r.g+'</td>'
+      + '<td class="sc mono" style="font-size:11.5px;">'+r.prog+'</td>'
+      + '<td>'+spark(r.sp)+' <span class="pct" style="margin-left:6px;">'+last+'</span>'
+        + '<span class="pct '+(last<prev?'warn':'')+'" style="font-size:10.5px;margin-left:3px;">'
+        + (last<prev?'▼':'▲')+Math.abs(last-prev)+'</span></td>'
+      + '<td><span class="dots">'+dots+'</span></td>'
+      + '<td style="text-align:right;"><span class="pct '+cls+'">'+r.pct+'%</span></td>'
+      + '<td style="text-align:right;" class="pct '+(parseInt(r.hw)<6?'cau':'')+'">'+r.hw+'</td>'
+      + '<td style="text-align:right;" class="pct '+(parseInt(r.wr)<4?'warn':'')+'">'+r.wr+'</td>'
+      + '<td style="text-align:right;" class="pct '+(r.vd<50?'warn':'')+'">'+r.vd+'%</td>'
+      + '<td class="sc mono" style="font-size:11.5px;">'+r.ph+'</td>'
+      + '<td>'+(r.hov
+          ? '<span class="rowact"><button class="ra p">열기</button><button class="ra">출결</button><button class="ra">메모</button></span>'
+          : '')+'</td>'
+      + '</tr>';
+  }).join('');
+
+  function fit(){
+    var s=Math.min(1,(window.innerWidth-48)/1440), st=document.getElementById('stage'), c=document.getElementById('canvas');
+    st.style.height=(900*s)+'px'; c.style.transform='scale('+s+')';
+    c.style.left=Math.max(0,(st.clientWidth-1440*s)/2)+'px';
+  }
+  window.addEventListener('resize',fit); window.addEventListener('load',fit); fit();
+</script>
+</body>
+</html>

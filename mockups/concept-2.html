@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>시안 02 — 좌표계 | 김하현수학연구소</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/sun-typeface/SUIT@2/fonts/variable/woff2/SUIT.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<style>
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:#101114;}
+
+  .chrome{height:46px;display:flex;align-items:center;gap:20px;padding:0 20px;
+    background:#17181B;color:#8A8D94;font:400 12px/1 ui-sans-serif,system-ui,'Segoe UI',sans-serif;
+    border-bottom:1px solid #24262B;}
+  .c-num{font-variant-numeric:tabular-nums;color:#fff;background:#2E3138;padding:4px 7px;border-radius:3px;font-size:11px;}
+  .c-name{color:#EDEEF0;font-size:13px;} .c-name em{color:#767A82;font-style:normal;}
+  .c-sw{display:flex;gap:5px;margin-left:auto;}
+  .c-sw i{width:15px;height:15px;border-radius:3px;display:block;box-shadow:inset 0 0 0 1px rgba(255,255,255,.12);}
+  .c-meta{font-size:11px;color:#6E727A;letter-spacing:.03em;}
+
+  .stage{position:relative;width:100%;overflow:hidden;background:#101114;}
+  .canvas{position:absolute;top:0;left:0;width:1440px;height:900px;transform-origin:top left;overflow:hidden;}
+
+  /* ===================== 시안 본체 ===================== */
+  .canvas{
+    --bg:#0B0E14; --grid:#161D2A; --grid-major:#212B3D; --fg:#E6E9F0; --dim:#8E97A8;
+    --amber:#F0B429; --cobalt:#5B8DEF;
+    background:var(--bg);color:var(--fg);
+    font-family:'SUIT Variable','SUIT','Pretendard',sans-serif;
+  }
+  .mono{font-family:'DM Mono',ui-monospace,monospace;}
+  .lat{font-family:'Archivo',sans-serif;}
+
+  svg.plane{position:absolute;inset:0;width:1440px;height:900px;}
+
+  header.bar{position:absolute;top:0;left:0;right:0;height:74px;display:flex;align-items:center;
+    justify-content:space-between;padding:0 56px;border-bottom:1px solid rgba(255,255,255,.06);
+    backdrop-filter:blur(6px);}
+  .logo{font-family:'Archivo',sans-serif;font-weight:600;font-size:15px;letter-spacing:.02em;color:#fff;display:flex;align-items:center;gap:11px;}
+  .logo b{font-family:'SUIT Variable','Pretendard',sans-serif;font-weight:700;font-size:15px;}
+  .logo .dot{width:7px;height:7px;border-radius:50%;background:var(--amber);display:block;}
+  .barnav{display:flex;align-items:center;gap:30px;font-size:11px;letter-spacing:.18em;color:#7E8798;text-transform:uppercase;}
+  .barnav a{text-decoration:none;color:inherit;}
+  .barnav .login{border:1px solid rgba(255,255,255,.22);border-radius:2px;padding:8px 15px;color:#D7DCE6;letter-spacing:.1em;}
+
+  .headline{position:absolute;left:120px;top:236px;width:640px;}
+  .headline h1{margin:0;font-size:54px;line-height:1.3;font-weight:800;letter-spacing:-.025em;color:#EDF0F6;}
+  .headline h1 u{text-decoration:none;color:var(--amber);}
+  .headline p{margin:26px 0 0;font-size:16px;line-height:1.95;color:var(--dim);font-weight:300;}
+  .cta{display:flex;align-items:center;gap:22px;margin-top:40px;}
+  .cta .b1{border:1px solid rgba(255,255,255,.3);color:#EDF0F6;background:transparent;border-radius:2px;
+    padding:13px 26px;font-size:13.5px;font-weight:500;font-family:inherit;letter-spacing:.02em;}
+  .cta .b2{font-size:13px;color:var(--dim);letter-spacing:.06em;}
+
+  .readout{position:absolute;left:846px;top:392px;width:208px;border:1px solid rgba(240,180,41,.32);
+    background:rgba(11,14,20,.86);border-radius:3px;padding:11px 14px;}
+  .readout .k{font-size:9.5px;letter-spacing:.22em;color:#7E8798;text-transform:uppercase;}
+  .readout .v{font-size:19px;color:var(--amber);margin-top:5px;font-variant-numeric:tabular-nums;}
+  .readout .d{font-size:11px;color:#63D8A8;margin-top:3px;}
+
+  .nodelabel{position:absolute;font-size:12px;letter-spacing:.03em;color:#98A2B4;white-space:nowrap;}
+  .nodelabel.hot{color:var(--amber);}
+
+  .legend{position:absolute;left:120px;bottom:52px;display:flex;gap:28px;font-size:11px;color:#6E7788;letter-spacing:.04em;}
+  .legend span{display:flex;align-items:center;gap:8px;}
+  .legend i{width:22px;height:0;display:block;border-top:2px solid var(--amber);}
+  .legend i.d{border-top:1px dashed var(--cobalt);}
+
+  .minimap{position:absolute;right:56px;bottom:48px;width:206px;height:98px;border:1px solid rgba(255,255,255,.1);
+    border-radius:3px;background:rgba(255,255,255,.02);}
+  .minimap .cap{position:absolute;top:-19px;left:0;font-size:9.5px;letter-spacing:.2em;color:#5C6474;text-transform:uppercase;}
+
+  .scrollhint{position:absolute;right:56px;top:118px;font-size:10px;letter-spacing:.26em;color:#5C6474;text-transform:uppercase;}
+
+  /* 곡선 드로잉 */
+  .draw{stroke-dasharray:1;stroke-dashoffset:1;animation:draw 2.4s cubic-bezier(.22,.61,.36,1) .25s forwards;}
+  .draw.slow{animation-duration:2.9s;animation-delay:.1s;}
+  @keyframes draw{to{stroke-dashoffset:0;}}
+  .pop{opacity:0;animation:pop .5s ease-out forwards;}
+  @keyframes pop{to{opacity:1;}}
+  .n1{animation-delay:1.15s;} .n2{animation-delay:1.5s;} .n3{animation-delay:1.9s;} .n4{animation-delay:2.3s;}
+  @media (prefers-reduced-motion:reduce){
+    .draw,.draw.slow{animation:none;stroke-dashoffset:0;}
+    .pop{animation:none;opacity:1;}
+  }
+</style>
+</head>
+<body>
+
+<div class="chrome">
+  <span class="c-num">02</span>
+  <span class="c-name">좌표계 <em>· The Coordinate Plane</em></span>
+  <span class="c-sw">
+    <i style="background:#0B0E14"></i><i style="background:#161D2A"></i><i style="background:#E6E9F0"></i>
+    <i style="background:#F0B429"></i><i style="background:#5B8DEF"></i>
+  </span>
+  <span class="c-meta">Archivo + SUIT + DM Mono　·　1440 × 900</span>
+</div>
+
+<div class="stage" id="stage">
+<div class="canvas" id="canvas">
+
+  <svg class="plane" viewBox="0 0 1440 900" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <pattern id="minor" width="48" height="48" patternUnits="userSpaceOnUse">
+        <path d="M48 0H0V48" stroke="#161D2A" stroke-width="1"/>
+      </pattern>
+      <pattern id="major" width="240" height="240" patternUnits="userSpaceOnUse">
+        <path d="M240 0H0V240" stroke="#212B3D" stroke-width="1"/>
+      </pattern>
+      <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+        <feGaussianBlur stdDeviation="7" result="b"/>
+        <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+      </filter>
+      <radialGradient id="vign" cx="34%" cy="38%" r="78%">
+        <stop offset="0%" stop-color="#0B0E14" stop-opacity="0"/>
+        <stop offset="100%" stop-color="#05070B" stop-opacity=".85"/>
+      </radialGradient>
+    </defs>
+
+    <rect width="1440" height="900" fill="url(#minor)"/>
+    <rect width="1440" height="900" fill="url(#major)"/>
+    <rect width="1440" height="900" fill="url(#vign)"/>
+
+    <!-- 축 -->
+    <path d="M120 760 H1392" stroke="#33405A" stroke-width="1.2"/>
+    <path d="M120 120 V760" stroke="#33405A" stroke-width="1.2"/>
+    <!-- 눈금 -->
+    <g stroke="#33405A" stroke-width="1.2">
+      <path d="M280 760 v7"/><path d="M480 760 v7"/><path d="M680 760 v7"/>
+      <path d="M880 760 v7"/><path d="M1080 760 v7"/><path d="M1280 760 v7"/>
+    </g>
+    <g fill="#5C6474" font-family="DM Mono, monospace" font-size="11" text-anchor="middle">
+      <text x="280" y="784">3월</text><text x="480" y="784">5월</text><text x="680" y="784">7월</text>
+      <text x="880" y="784">9월</text><text x="1080" y="784">11월</text><text x="1280" y="784">수능</text>
+    </g>
+    <text x="112" y="132" fill="#5C6474" font-family="DM Mono, monospace" font-size="11" text-anchor="end">성취도</text>
+    <text x="112" y="756" fill="#5C6474" font-family="DM Mono, monospace" font-size="11" text-anchor="end">0</text>
+
+    <!-- 학년 평균 (기준선) -->
+    <path d="M160 706 C 380 684, 600 664, 820 646 C 1040 628, 1180 616, 1330 606"
+          stroke="#5B8DEF" stroke-width="1.4" stroke-dasharray="1" pathLength="1"
+          class="draw slow" opacity=".55" style="stroke-dasharray:.012 .016"/>
+
+    <!-- 실제 궤적 -->
+    <path id="track" pathLength="1" class="draw"
+      d="M160 704 C 250 672, 320 648, 400 652 C 470 656, 520 694, 592 678
+         C 680 656, 722 566, 812 502 C 900 440, 962 404, 1062 342
+         C 1162 280, 1234 250, 1332 200"
+      stroke="#F0B429" stroke-width="2.6" stroke-linecap="round" filter="url(#glow)"/>
+
+    <!-- 크로스헤어 -->
+    <g class="pop n3" stroke="#F0B429" stroke-width="1" stroke-dasharray="3 5" opacity=".5">
+      <path d="M812 502 V760"/>
+    </g>
+
+    <!-- 노드 -->
+    <g class="pop n1"><circle cx="400" cy="652" r="12" stroke="#F0B429" stroke-width="1" opacity=".35"/><circle cx="400" cy="652" r="4" fill="#F0B429"/></g>
+    <g class="pop n2"><circle cx="592" cy="678" r="12" stroke="#F0B429" stroke-width="1" opacity=".35"/><circle cx="592" cy="678" r="4" fill="#F0B429"/></g>
+    <g class="pop n3"><circle cx="812" cy="502" r="15" stroke="#F0B429" stroke-width="1.4"/><circle cx="812" cy="502" r="5" fill="#F0B429"/></g>
+    <g class="pop n4"><circle cx="1062" cy="342" r="12" stroke="#F0B429" stroke-width="1" opacity=".35"/><circle cx="1062" cy="342" r="4" fill="#F0B429"/></g>
+    <g class="pop n4"><circle cx="1332" cy="200" r="6" fill="#F0B429" filter="url(#glow)"/></g>
+
+    <!-- 미니맵 내부 곡선 -->
+    <g transform="translate(1178,754) scale(0.1385,0.1)" opacity=".8">
+      <path d="M160 704 C 250 672, 320 648, 400 652 C 470 656, 520 694, 592 678
+               C 680 656, 722 566, 812 502 C 900 440, 962 404, 1062 342
+               C 1162 280, 1234 250, 1332 200" stroke="#F0B429" stroke-width="18" stroke-linecap="round" fill="none"/>
+    </g>
+    <rect x="1180" y="756" width="72" height="94" fill="#F0B429" opacity=".07"/>
+    <rect x="1180" y="756" width="72" height="94" stroke="#F0B429" stroke-width="1" opacity=".45"/>
+  </svg>
+
+  <header class="bar">
+    <div class="logo"><span class="dot"></span><b>김하현수학연구소</b><span class="lat" style="color:#5C6474;font-weight:400;font-size:12px;letter-spacing:.14em;">MATHEMATICS</span></div>
+    <nav class="barnav">
+      <a href="#">원점</a><a href="#">극값</a><a href="#">변곡점</a><a href="#">증가구간</a><a href="#">치역</a>
+      <a class="login" href="#">학생 로그인</a>
+    </nav>
+  </header>
+
+  <div class="scrollhint">Scroll along the curve →</div>
+
+  <div class="headline">
+    <h1>성적은 점이 아니라<br><u>곡선</u>입니다.</h1>
+    <p>3월의 한 점으로 학생을 판단하지 않습니다.<br>
+       무너지는 구간까지 계산에 넣고, 11월까지의 궤적을 설계합니다.</p>
+    <div class="cta">
+      <button class="b1">상담 신청</button>
+      <span class="b2">커리큘럼 보기 →</span>
+    </div>
+  </div>
+
+  <div class="readout mono">
+    <div class="k">x = 7월 · 2주차</div>
+    <div class="v">71.4</div>
+    <div class="d">▲ +18.9 · 학년 평균 대비 +12.6</div>
+  </div>
+
+  <div class="nodelabel" style="left:352px;top:606px;">강사 소개</div>
+  <div class="nodelabel hot" style="left:520px;top:706px;">↑ 클리닉이 개입하는 지점</div>
+  <div class="nodelabel" style="left:1014px;top:296px;">지도 성과</div>
+
+  <div class="legend mono">
+    <span><i></i> 수강생 실제 궤적 · n=68</span>
+    <span><i class="d"></i> 동일 학교 학년 평균</span>
+  </div>
+
+  <div class="minimap"><span class="cap mono">Overview</span></div>
+
+</div>
+</div>
+
+<script>
+  function fit(){
+    var s = Math.min(1, (window.innerWidth - 48) / 1440);
+    var stage = document.getElementById('stage'), canvas = document.getElementById('canvas');
+    stage.style.height = (900 * s) + 'px';
+    canvas.style.transform = 'scale(' + s + ')';
+    canvas.style.left = Math.max(0, (stage.clientWidth - 1440 * s) / 2) + 'px';
+  }
+  window.addEventListener('resize', fit); window.addEventListener('load', fit); fit();
+</script>
+</body>
+</html>

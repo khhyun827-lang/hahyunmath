@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>시안 01 — 정리와 증명 | 김하현수학연구소</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;0,6..72,500;1,6..72,300;1,6..72,400&family=Hahmlet:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+<style>
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:#101114;}
+
+  /* ===== 시안 확인용 크롬 (목업 바깥) ===== */
+  .chrome{height:46px;display:flex;align-items:center;gap:20px;padding:0 20px;
+    background:#17181B;color:#8A8D94;font:400 12px/1 ui-sans-serif,system-ui,'Segoe UI',sans-serif;
+    border-bottom:1px solid #24262B;}
+  .c-num{font-variant-numeric:tabular-nums;color:#fff;background:#2E3138;padding:4px 7px;border-radius:3px;font-size:11px;}
+  .c-name{color:#EDEEF0;font-size:13px;} .c-name em{color:#767A82;font-style:normal;}
+  .c-sw{display:flex;gap:5px;margin-left:auto;}
+  .c-sw i{width:15px;height:15px;border-radius:3px;display:block;box-shadow:inset 0 0 0 1px rgba(255,255,255,.12);}
+  .c-meta{font-size:11px;color:#6E727A;letter-spacing:.03em;}
+
+  .stage{position:relative;width:100%;overflow:hidden;background:#101114;}
+  .canvas{position:absolute;top:0;left:0;width:1440px;height:900px;transform-origin:top left;
+    overflow:hidden;background:#F6F6F2;}
+
+  /* ===================== 시안 본체 ===================== */
+  .canvas{
+    --page:#F6F6F2; --ink:#16181C; --rule:#DDDDD6; --indigo:#23306B; --graphite:#7A7F87;
+    color:var(--ink);
+    font-family:'Hahmlet','Newsreader',serif;
+  }
+  .lat{font-family:'Newsreader',serif;}
+
+  /* 판면(版面) 프레임: 책 한 페이지처럼 */
+  .runhead{position:absolute;top:38px;left:120px;right:120px;display:flex;justify-content:space-between;
+    font-family:'Newsreader',serif;font-size:10.5px;letter-spacing:.28em;color:#A9ABA5;text-transform:uppercase;}
+  .folio{position:absolute;bottom:40px;left:120px;right:120px;display:flex;justify-content:space-between;align-items:baseline;
+    font-family:'Newsreader',serif;font-size:11px;letter-spacing:.2em;color:#A9ABA5;}
+
+  header.nav{position:absolute;top:92px;left:120px;right:120px;display:flex;justify-content:space-between;align-items:baseline;
+    padding-bottom:20px;border-bottom:1px solid var(--rule);}
+  .wordmark{font-family:'Hahmlet',serif;font-weight:600;font-size:17px;letter-spacing:.01em;}
+  .wordmark span{font-family:'Newsreader',serif;font-weight:300;font-style:italic;color:var(--graphite);font-size:14px;margin-left:9px;}
+  .navlist{display:flex;gap:26px;font-size:12.5px;font-weight:400;color:#5D6068;letter-spacing:.1em;}
+  .navlist a{text-decoration:none;color:inherit;padding-bottom:2px;}
+  .navlist a.cur{color:var(--indigo);border-bottom:1px solid var(--indigo);}
+
+  /* 2단: 여백 주석 + 본문 */
+  .body{position:absolute;top:212px;left:120px;width:1200px;}
+  .margin-col{position:absolute;left:0;top:0;width:222px;text-align:right;}
+  .text-col{position:absolute;left:282px;top:0;width:660px;}
+
+  /* 차례: 넓은 바깥 여백을 채우는 유일한 장치 */
+  .toc{position:absolute;left:1006px;top:4px;width:194px;}
+  .toc .h{font-family:'Newsreader',serif;font-size:10px;letter-spacing:.3em;text-transform:uppercase;
+    color:#A9ABA5;padding-bottom:11px;border-bottom:1px solid var(--rule);}
+  .toc ol{list-style:none;margin:0;padding:15px 0 0;font-size:12.5px;font-weight:300;color:#8B8F96;}
+  .toc li{display:flex;justify-content:space-between;align-items:baseline;padding:7px 0;}
+  .toc li .p{font-family:'Newsreader',serif;font-size:11.5px;color:#BFC1BA;}
+
+  .mnote{font-size:12px;line-height:1.95;color:var(--graphite);font-weight:300;margin-bottom:26px;}
+  .mnote b{font-weight:500;color:#4E525A;}
+  .mnote .k{font-family:'Newsreader',serif;font-style:italic;}
+  .mnote .eq{display:block;margin-top:8px;font-size:13px;color:#4E525A;}
+
+  .thm-label{font-family:'Newsreader',serif;font-size:12px;letter-spacing:.3em;text-transform:uppercase;
+    color:var(--indigo);margin-bottom:26px;}
+  .thm-label .n{font-variant-numeric:tabular-nums;}
+  .statement{font-size:45px;line-height:1.52;font-weight:500;letter-spacing:-.015em;margin:0;}
+  .statement em{font-style:normal;color:var(--indigo);}
+  .proof-rule{width:100%;height:1px;background:var(--rule);margin:44px 0 22px;}
+  .proof{font-size:16.5px;line-height:1.85;font-weight:300;color:#4E525A;display:flex;justify-content:space-between;align-items:baseline;gap:24px;}
+  .proof .qed{font-family:'Newsreader',serif;font-size:15px;color:var(--ink);flex-shrink:0;}
+
+  /* 다음 절 미리보기 (스크롤 예고) */
+  .next{position:absolute;left:120px;width:1200px;top:756px;padding-top:22px;border-top:1px solid var(--rule);
+    display:flex;gap:60px;align-items:baseline;}
+  .next .lbl{width:222px;text-align:right;font-family:'Newsreader',serif;font-size:11.5px;letter-spacing:.26em;
+    text-transform:uppercase;color:#A9ABA5;flex-shrink:0;}
+  .next .txt{font-size:15px;font-weight:300;color:#8B8F96;line-height:1.8;max-width:660px;}
+  .next .txt b{font-weight:500;color:#4E525A;}
+
+  .katex{font-size:1em;}
+</style>
+</head>
+<body>
+
+<div class="chrome">
+  <span class="c-num">01</span>
+  <span class="c-name">정리와 증명 <em>· Theorem &amp; Proof</em></span>
+  <span class="c-sw">
+    <i style="background:#F6F6F2"></i><i style="background:#16181C"></i><i style="background:#23306B"></i>
+    <i style="background:#7A7F87"></i><i style="background:#DDDDD6"></i>
+  </span>
+  <span class="c-meta">Newsreader + Hahmlet　·　1440 × 900</span>
+</div>
+
+<div class="stage" id="stage">
+<div class="canvas" id="canvas">
+
+  <div class="runhead"><span>Kim Hahyun · Mathematics</span><span>서울 광진 · 고등수학</span></div>
+
+  <header class="nav">
+    <div class="wordmark">김하현수학연구소<span>Institute of Mathematics</span></div>
+    <nav class="navlist">
+      <a class="cur" href="#">정의</a><a href="#">보조정리</a><a href="#">정리</a>
+      <a href="#">증명</a><a href="#">따름정리</a><a href="#">학생 로그인</a>
+    </nav>
+  </header>
+
+  <div class="body">
+    <div class="margin-col">
+      <div class="mnote">
+        <b>1)</b> 고등수학 전문.<br>메가스터디 · 대치명인학원을 거쳐<br>현재 구주이배 광진본원.
+      </div>
+      <div class="mnote">
+        <b>cf.</b> <span class="k">정의 0.1</span> — 「이해한다」란,<br>다음 물음에 답할 수 있음을 뜻한다.<br><b>왜 다른 방법은 안 되는가?</b>
+        <span class="eq">$\lim_{h\to 0}\dfrac{f(a+h)-f(a)}{h}$</span>
+      </div>
+      <div class="mnote">
+        <b>2)</b> 본 문서는 여섯 장으로 구성된다.<br>각 장은 앞 장의 결과만을 사용한다.
+      </div>
+    </div>
+
+    <div class="text-col">
+      <div class="thm-label">정리 <span class="n">1</span></div>
+      <h1 class="statement">모든 정답에는<br>그렇게 될 수밖에 없는<br><em>이유</em>가 있다.</h1>
+      <div class="proof-rule"></div>
+      <p class="proof">
+        <span>증명. 아래 여섯 장에 걸쳐 이를 보인다. 공식을 외우게 하는 대신,<br>
+        그 공식이 성립할 수밖에 없는 자리를 학생이 직접 찾게 한다.</span>
+        <span class="qed">∎</span>
+      </p>
+    </div>
+
+    <aside class="toc">
+      <div class="h">차례 · Contents</div>
+      <ol>
+        <li><span>정의</span><span class="p">1</span></li>
+        <li><span>보조정리 1 · 시스템</span><span class="p">2</span></li>
+        <li><span>보조정리 2 · 성과</span><span class="p">4</span></li>
+        <li><span>정리 · 커리큘럼</span><span class="p">5</span></li>
+        <li><span>증명 · 한 문제</span><span class="p">7</span></li>
+        <li><span>따름정리 · 상담</span><span class="p">9</span></li>
+      </ol>
+    </aside>
+  </div>
+
+  <div class="next">
+    <div class="lbl">정의 0.1</div>
+    <div class="txt">수학에서 <b>안다</b>와 <b>이해한다</b>는 같은 말이 아니다. 전자는 결과를 기억하는 일이고,
+      후자는 그 결과가 반드시 그렇게 되는 이유를 재구성할 수 있는 상태를 말한다. …</div>
+  </div>
+
+  <div class="folio"><span>상담 · @hahyun_t</span><span>1</span></div>
+
+</div>
+</div>
+
+<script>
+  function fit(){
+    var s = Math.min(1, (window.innerWidth - 48) / 1440);
+    var stage = document.getElementById('stage'), canvas = document.getElementById('canvas');
+    stage.style.height = (900 * s) + 'px';
+    canvas.style.transform = 'scale(' + s + ')';
+    canvas.style.left = Math.max(0, (stage.clientWidth - 1440 * s) / 2) + 'px';
+  }
+  window.addEventListener('resize', fit); fit();
+  window.addEventListener('load', function(){
+    if(window.renderMathInElement){
+      renderMathInElement(document.getElementById('canvas'), {
+        delimiters:[{left:'$', right:'$', display:false}], throwOnError:false
+      });
+    }
+    fit();
+  });
+</script>
+</body>
+</html>

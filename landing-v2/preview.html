@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>랜딩 프리뷰 — 김하현수학연구소</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<link rel="stylesheet" href="../design-v1/ds.css">
+<style>
+  /* 랜딩을 데스크톱·모바일 실제 폭으로 띄워 한 눈에 본다.
+     브라우저 창 크기에 상관없이 항상 같은 조건에서 판단하기 위한 장치다. */
+  html,body{background:var(--paper);color:var(--ink);
+    font-family:'Pretendard',-apple-system,sans-serif;font-size:13px;line-height:1.5;
+    -webkit-font-smoothing:antialiased;}
+  .p-wrap{max-width:1320px;margin:0 auto;padding:44px 28px 90px;}
+  .p-head{display:flex;align-items:baseline;gap:14px;padding-bottom:18px;
+    border-bottom:1px solid var(--line);margin-bottom:26px;}
+  .p-head h1{margin:0;font-family:'Noto Serif KR',serif;font-size:26px;font-weight:600;
+    letter-spacing:-.03em;}
+  .p-head span{font-size:12.5px;color:var(--sub);}
+  .p-head .r{margin-left:auto;display:flex;gap:8px;}
+  .p-open{display:inline-flex;align-items:center;gap:7px;background:var(--accent);color:#fff;
+    border-radius:var(--r-md);padding:9px 16px;font-size:13px;font-weight:700;text-decoration:none;}
+  .p-open.g{background:transparent;color:var(--ink);border:1px solid var(--line);}
+
+  .p-cols{display:flex;gap:26px;align-items:flex-start;}
+  .p-dev{flex:1;min-width:0;}
+  .p-dev.m{flex:0 0 300px;}
+  .p-lab{display:flex;align-items:baseline;gap:9px;margin-bottom:10px;}
+  .p-lab b{font-size:13px;font-weight:700;}
+  .p-lab span{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--dim);}
+  .p-frame{position:relative;width:100%;overflow:hidden;border:1px solid var(--line);
+    border-radius:var(--r-lg);background:var(--paper);}
+  .p-frame iframe{position:absolute;top:0;left:0;border:0;transform-origin:top left;}
+  @media (max-width:1040px){ .p-cols{display:block;} .p-dev.m{margin-top:30px;} }
+</style>
+</head>
+<body>
+<div class="p-wrap">
+  <div class="p-head">
+    <h1>랜딩 「하루」</h1>
+    <span>로고 반영 · 주조색 = 로고 차콜 #3F3537 · 브랜드색 = #BA5054</span>
+    <div class="r">
+      <a class="p-open" href="index.html">실제 크기로 열기</a>
+      <a class="p-open g" href="concept.html">컨셉 보드</a>
+    </div>
+  </div>
+
+  <div class="p-cols">
+    <div class="p-dev">
+      <div class="p-lab"><b>데스크톱</b><span>1440</span></div>
+      <div class="p-frame" id="fd"><iframe src="index.html" width="1440" scrolling="yes"></iframe></div>
+    </div>
+    <div class="p-dev m">
+      <div class="p-lab"><b>모바일</b><span>390</span></div>
+      <div class="p-frame" id="fm"><iframe src="index.html" width="390" scrolling="yes"></iframe></div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* 아이프레임의 «뷰포트»를 실제 기기 크기로 고정한다.
+   콘텐츠 전체 높이로 늘리면 100vh 히어로가 페이지 전체 높이가 되어버린다.
+   높이는 900/844로 두고, 안에서 스크롤해서 본다. */
+function fit(id, w, vh) {
+  var box = document.getElementById(id);
+  var f = box.querySelector('iframe');
+  f.style.height = vh + 'px';
+  var s = box.clientWidth / w;
+  f.style.transform = 'scale(' + s + ')';
+  box.style.height = (vh * s) + 'px';
+}
+function fitAll() { fit('fd', 1440, 900); fit('fm', 390, 844); }
+window.addEventListener('resize', fitAll);
+window.addEventListener('load', function () { fitAll(); setTimeout(fitAll, 500); });
+document.querySelectorAll('iframe').forEach(function (f) {
+  f.addEventListener('load', function () { setTimeout(fitAll, 120); });
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>시안 04 — 관측소 | 김하현수학연구소</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Sans+KR:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:#101114;}
+
+  .chrome{height:46px;display:flex;align-items:center;gap:20px;padding:0 20px;
+    background:#17181B;color:#8A8D94;font:400 12px/1 ui-sans-serif,system-ui,'Segoe UI',sans-serif;
+    border-bottom:1px solid #24262B;}
+  .c-num{font-variant-numeric:tabular-nums;color:#fff;background:#2E3138;padding:4px 7px;border-radius:3px;font-size:11px;}
+  .c-name{color:#EDEEF0;font-size:13px;} .c-name em{color:#767A82;font-style:normal;}
+  .c-sw{display:flex;gap:5px;margin-left:auto;}
+  .c-sw i{width:15px;height:15px;border-radius:3px;display:block;box-shadow:inset 0 0 0 1px rgba(255,255,255,.12);}
+  .c-meta{font-size:11px;color:#6E727A;letter-spacing:.03em;}
+
+  .stage{position:relative;width:100%;overflow:hidden;background:#101114;}
+  .canvas{position:absolute;top:0;left:0;width:1440px;height:900px;transform-origin:top left;overflow:hidden;}
+
+  /* ===================== 시안 본체 ===================== */
+  .canvas{
+    --paper:#FFFFFF; --panel:#F7F9FB; --ink:#0D1117; --sub:#55606E; --dim:#8A93A1;
+    --hair:#E3E8EF; --cobalt:#2563C9;
+    background:var(--paper);color:var(--ink);
+    font-family:'IBM Plex Sans KR','Inter',sans-serif;
+    font-variant-numeric:tabular-nums;
+  }
+  .mono{font-family:'IBM Plex Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums;}
+
+  /* --- 좌측 인덱스 --- */
+  .side{position:absolute;left:0;top:0;bottom:0;width:272px;border-right:1px solid var(--hair);
+    background:#FCFDFE;padding:48px 0 40px;}
+  .side .brand{padding:0 32px 0 40px;}
+  .side .brand b{display:block;font-size:14.5px;font-weight:600;letter-spacing:-.005em;}
+  .side .brand span{display:block;margin-top:7px;font-size:9.5px;letter-spacing:.28em;color:var(--cobalt);}
+  .idx{margin-top:64px;}
+  .idx a{display:flex;align-items:baseline;gap:14px;padding:11px 40px;text-decoration:none;color:var(--sub);
+    font-size:13.5px;position:relative;}
+  .idx a .n{font-family:'IBM Plex Mono',monospace;font-size:10px;color:#A9B2C0;letter-spacing:.06em;}
+  .idx a.cur{color:var(--cobalt);font-weight:600;}
+  .idx a.cur .n{color:var(--cobalt);}
+  .idx a.cur::before{content:'';position:absolute;left:0;top:9px;bottom:9px;width:2px;background:var(--cobalt);}
+  .side .foot{position:absolute;left:40px;right:32px;bottom:44px;}
+  .side .foot .ln{height:1px;background:var(--hair);margin-bottom:22px;}
+  .side .foot button{width:100%;border:1px solid var(--ink);background:#fff;color:var(--ink);
+    padding:11px 0;font-size:12.5px;font-weight:600;font-family:inherit;border-radius:3px;}
+  .side .foot p{margin:14px 0 0;font-size:11px;color:var(--dim);letter-spacing:.02em;}
+
+  /* --- 본문 --- */
+  .main{position:absolute;left:272px;right:0;top:0;bottom:0;padding:104px 88px 0;}
+  .eyebrow{font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.26em;color:var(--cobalt);
+    text-transform:uppercase;}
+  h1{margin:26px 0 0;font-size:40px;line-height:1.46;font-weight:600;letter-spacing:-.025em;max-width:700px;}
+  h1 .num{font-family:'IBM Plex Mono',monospace;font-weight:600;letter-spacing:-.01em;}
+  .sub{margin:22px 0 0;font-size:15.5px;line-height:1.9;color:var(--sub);font-weight:300;max-width:620px;}
+
+  /* --- 패널 --- */
+  .panel{position:absolute;left:360px;right:88px;top:428px;border:1px solid var(--hair);border-radius:4px;
+    background:#fff;box-shadow:0 1px 2px rgba(13,17,23,.03);}
+  .p-head{display:flex;justify-content:space-between;align-items:center;padding:16px 22px;
+    border-bottom:1px solid var(--hair);background:var(--panel);border-radius:4px 4px 0 0;}
+  .p-head b{font-size:13px;font-weight:600;}
+  .p-head .live{display:flex;align-items:center;gap:8px;font-size:10.5px;color:var(--dim);letter-spacing:.06em;}
+  .p-head .live i{width:6px;height:6px;border-radius:50%;background:#12A150;display:block;}
+  .row{display:flex;align-items:center;gap:24px;padding:0 22px;height:56px;border-bottom:1px solid #EFF3F7;}
+  .row:last-child{border-bottom:none;}
+  .row .lab{width:150px;font-size:13px;color:var(--sub);flex-shrink:0;}
+  .row .bar{flex:1;height:6px;background:#EEF2F7;border-radius:1px;overflow:hidden;}
+  .row .bar i{display:block;height:100%;background:var(--cobalt);}
+  .row .val{width:86px;text-align:right;font-family:'IBM Plex Mono',monospace;font-size:15px;font-weight:600;flex-shrink:0;}
+  .row .val s{text-decoration:none;font-size:11px;color:var(--dim);font-weight:400;margin-left:2px;}
+  .row .dlt{width:74px;text-align:right;font-family:'IBM Plex Mono',monospace;font-size:11px;color:#12A150;flex-shrink:0;}
+
+  /* --- 하단 지표 --- */
+  .stats{position:absolute;left:360px;right:88px;top:762px;display:flex;border-top:1px solid var(--hair);}
+  .stats div{flex:1;padding:24px 0 0;border-right:1px solid var(--hair);}
+  .stats div:last-child{border-right:none;}
+  .stats .k{font-size:11px;color:var(--dim);letter-spacing:.1em;}
+  .stats .v{font-family:'IBM Plex Mono',monospace;font-size:26px;font-weight:600;margin-top:10px;letter-spacing:-.02em;}
+  .stats .v em{font-style:normal;font-size:13px;color:var(--dim);font-weight:400;margin-left:3px;}
+
+  .ver{position:absolute;right:26px;top:50%;transform:translateY(-50%) rotate(180deg);writing-mode:vertical-rl;
+    font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:.24em;color:#BFC7D2;}
+</style>
+</head>
+<body>
+
+<div class="chrome">
+  <span class="c-num">04</span>
+  <span class="c-name">관측소 <em>· The Observatory</em></span>
+  <span class="c-sw">
+    <i style="background:#FFFFFF"></i><i style="background:#F7F9FB"></i><i style="background:#0D1117"></i>
+    <i style="background:#2563C9"></i><i style="background:#E3E8EF"></i>
+  </span>
+  <span class="c-meta">Inter + IBM Plex Sans KR + Plex Mono　·　1440 × 900</span>
+</div>
+
+<div class="stage" id="stage">
+<div class="canvas" id="canvas">
+
+  <aside class="side">
+    <div class="brand">
+      <b>김하현수학연구소</b>
+      <span>OBSERVATORY</span>
+    </div>
+    <nav class="idx">
+      <a class="cur" href="#"><span class="n">01</span>개요</a>
+      <a href="#"><span class="n">02</span>기록의 종류</a>
+      <a href="#"><span class="n">03</span>오답 파이프라인</a>
+      <a href="#"><span class="n">04</span>커리큘럼</a>
+      <a href="#"><span class="n">05</span>지도 성과</a>
+      <a href="#"><span class="n">06</span>상담</a>
+    </nav>
+    <div class="foot">
+      <div class="ln"></div>
+      <button>학생 로그인</button>
+      <p>조교 · 강사 계정으로 로그인</p>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="eyebrow">01 — 개요</div>
+    <h1>학생 한 명당 연간 <span class="num">1,200</span>개의<br>기록이 남습니다.</h1>
+    <p class="sub">출결, 데일리퀴즈, 오답 문항, 강의 시청 시간, 클리닉 신청.
+      말로 설명하는 대신 지금 남아 있는 기록을 그대로 보여드립니다.</p>
+  </main>
+
+  <section class="panel">
+    <div class="p-head">
+      <b>고2 · 미적분Ⅰ 정규반 &nbsp;<span style="color:#A9B2C0;font-weight:400;">재원 22명</span></b>
+      <span class="live"><i></i>실시간 · 2026-08-04 14:02 기준</span>
+    </div>
+    <div class="row"><span class="lab">출석률</span><span class="bar"><i style="width:96.4%"></i></span><span class="val">96.4<s>%</s></span><span class="dlt">▲ 1.2</span></div>
+    <div class="row"><span class="lab">진도 달성률</span><span class="bar"><i style="width:62%"></i></span><span class="val">62.0<s>%</s></span><span class="dlt">▲ 8.5</span></div>
+    <div class="row"><span class="lab">오답 재제출률</span><span class="bar"><i style="width:88.1%"></i></span><span class="val">88.1<s>%</s></span><span class="dlt">▲ 4.0</span></div>
+    <div class="row"><span class="lab">강의 시청 완료율</span><span class="bar"><i style="width:74.3%"></i></span><span class="val">74.3<s>%</s></span><span class="dlt">▲ 2.7</span></div>
+  </section>
+
+  <section class="stats">
+    <div><div class="k">재원생</div><div class="v">68<em>명</em></div></div>
+    <div><div class="k">누적 등록 문항</div><div class="v">4,210</div></div>
+    <div><div class="k">검토 완료 문항</div><div class="v">3,987</div></div>
+    <div><div class="k">누적 기록 수</div><div class="v">81,600</div></div>
+  </section>
+
+  <div class="ver">ver 2026.08 · Firestore</div>
+
+</div>
+</div>
+
+<script>
+  function fit(){
+    var s = Math.min(1, (window.innerWidth - 48) / 1440);
+    var stage = document.getElementById('stage'), canvas = document.getElementById('canvas');
+    stage.style.height = (900 * s) + 'px';
+    canvas.style.transform = 'scale(' + s + ')';
+    canvas.style.left = Math.max(0, (stage.clientWidth - 1440 * s) / 2) + 'px';
+  }
+  window.addEventListener('resize', fit); window.addEventListener('load', fit); fit();
+</script>
+</body>
+</html>

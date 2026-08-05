@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>시험지 — 김하현수학연구소 관리자</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<link rel="stylesheet" href="ds.css">
+<style>
+  /* 배치만. 색·서체·반경은 ds.css 토큰. */
+  .list{position:absolute;left:0;top:0;bottom:0;width:274px;border-right:1px solid var(--line);
+    background:var(--card);display:flex;flex-direction:column;}
+  .lh{display:flex;align-items:center;padding:14px 16px 10px;flex-shrink:0;}
+  .lbody{flex:1;min-height:0;overflow-y:auto;padding-bottom:12px;}
+  .ex{padding:12px 16px;border-left:3px solid transparent;cursor:pointer;transition:background var(--t);}
+  .ex:hover{background:var(--hover);}
+  .ex.on{background:var(--accent-bg);border-left-color:var(--accent);}
+  .ex .n{font-size:13px;font-weight:600;}
+  .ex .m{font-size:11.5px;color:var(--dim);margin-top:4px;}
+  .ex .s{display:flex;align-items:center;gap:6px;margin-top:7px;}
+
+  .main{position:absolute;left:274px;right:326px;top:0;bottom:0;padding:22px 26px 0;
+    display:flex;flex-direction:column;overflow:hidden;}
+  .mh{display:flex;align-items:flex-start;gap:14px;flex-shrink:0;}
+  .mh .r{margin-left:auto;display:flex;gap:6px;}
+  .qwrap{flex:1;min-height:0;overflow-y:auto;margin-top:18px;padding-bottom:20px;}
+
+  /* 문항별 오답률 — 이 화면의 존재 이유.
+     막대를 세로로 세우지 않고 «행»으로 눕힌다. 20문항이면 세로 막대는 라벨이 안 들어간다. */
+  .qr{display:flex;align-items:center;gap:12px;padding:9px 2px;border-bottom:1px solid var(--line2);
+    transition:background var(--t);}
+  .qr:hover{background:var(--hover);}
+  .qr .no{width:30px;flex-shrink:0;font-family:'JetBrains Mono',monospace;font-size:12px;
+    font-weight:600;color:var(--sub);}
+  .qr .unit{width:190px;flex-shrink:0;font-size:12px;color:var(--sub);
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .qr .track{flex:1;min-width:0;height:18px;background:var(--line2);border-radius:4px;overflow:hidden;}
+  .qr .track i{display:block;height:100%;border-radius:4px;background:#D9D6CC;}
+  .qr.hi .track i{background:var(--no);}
+  .qr.mid .track i{background:var(--late);}
+  .qr .pct{width:46px;flex-shrink:0;text-align:right;font-family:'JetBrains Mono',monospace;font-size:12px;}
+  .qr .tw{width:96px;flex-shrink:0;text-align:right;}
+
+  .ctx{position:absolute;right:0;top:0;bottom:0;width:326px;border-left:1px solid var(--line);
+    background:var(--card);padding:20px 20px 0;display:flex;flex-direction:column;overflow:hidden;}
+  .sub-list{flex:1;min-height:0;overflow-y:auto;margin-top:4px;}
+  .sr{display:flex;align-items:center;gap:9px;padding:8px 0;border-bottom:1px solid var(--line2);}
+  .sr .t{flex:1;min-width:0;font-size:12.5px;}
+  .sr .t span{display:block;font-size:11px;color:var(--dim);margin-top:1px;}
+</style>
+</head>
+<body>
+<div class="chrome"><span class="c-num">07</span><span class="c-name">시험지 <em>· 오답 시스템</em></span>
+  <span class="c-meta">역할: 어느 문항이 무너졌는지 본다 · 오답 파이프라인의 입구　·　1440 × 900</span></div>
+
+<div class="stage" id="stage"><div class="canvas" id="canvas">
+
+  <div class="topbar">
+    <div class="bm">김하현수학연구소</div>
+    <nav id="nav"></nav>
+    <div class="right"><span>시험지 24</span><s style="text-decoration:none;">·</s><span>김하현T</span></div>
+  </div>
+
+  <div class="subnav" id="subnav"></div>
+
+  <div class="body sub">
+
+    <aside class="list">
+      <div class="lh">
+        <span style="font-size:12px;font-weight:700;color:var(--dim);letter-spacing:.08em;">시험지</span>
+        <span class="spacer"></span>
+        <button class="btn q sm" id="bup"></button>
+      </div>
+      <div class="lbody scroll" id="exs"></div>
+    </aside>
+
+    <main class="main">
+      <div class="mh">
+        <div>
+          <h1 class="t-title">7월 3주 시험지</h1>
+          <div class="t-meta" style="margin-top:6px;">
+            고2 미적분Ⅰ 정규반<s>·</s>20문항<s>·</s>도함수의 활용<s>·</s>
+            <span class="mono">2026-07-21 등록</span>
+          </div>
+        </div>
+        <div class="r">
+          <button class="btn sm" id="bhwp"></button>
+          <button class="btn sm p" id="bgen"></button>
+        </div>
+      </div>
+
+      <div class="kpis" style="margin-top:16px;flex-shrink:0;">
+        <div class="kpi"><div class="k">응시</div><div class="v">22<s>/22</s></div></div>
+        <div class="kpi"><div class="k">반 평균</div><div class="v">76<s>/100</s></div></div>
+        <div class="kpi"><div class="k">평균 오답률</div><div class="v">31<s>%</s></div></div>
+        <div class="kpi"><div class="k">쌍둥이 생성</div><div class="v">37<s>문항</s></div></div>
+        <div class="kpi"><div class="k">검토 대기</div><div class="v down">12</div></div>
+      </div>
+
+      <div class="row" style="margin-top:20px;flex-shrink:0;">
+        <b style="font-size:12px;color:var(--dim);font-weight:600;">문항별 오답률</b>
+        <a class="pill on" href="#" style="margin-left:6px;">전체 <b>20</b></a>
+        <a class="pill" href="#">오답률 50%↑ <b>5</b></a>
+        <a class="pill" href="#">쌍둥이 미생성 <b>3</b></a>
+        <span class="spacer"></span>
+        <span class="muted" style="font-size:11.5px;">막대를 누르면 해당 문항의 오답 학생이 열립니다</span>
+      </div>
+
+      <div class="qwrap scroll" id="qs"></div>
+    </main>
+
+    <!-- 제출 현황은 시험지 밖에서는 의미가 없다. 별도 화면으로 떼지 않고 여기에 붙인다. -->
+    <aside class="ctx">
+      <div class="t-sec">오답숙제 제출 현황</div>
+      <div class="row" style="gap:10px;">
+        <span class="bar" style="flex:1;"><i style="width:82%"></i></span>
+        <b class="mono" style="font-size:13px;">18/22</b>
+      </div>
+      <div class="muted" style="font-size:11.5px;margin-top:7px;">
+        배포 8/1 · 마감 8/8 · <span style="color:var(--no);font-weight:600;">미제출 4명</span>
+      </div>
+
+      <hr class="s">
+      <div class="t-sec">미제출 학생</div>
+      <div class="sub-list scroll" id="unsub"></div>
+
+      <div style="flex-shrink:0;padding:14px 0 18px;border-top:1px solid var(--line2);">
+        <button class="btn p" style="width:100%;" id="brem"></button>
+      </div>
+    </aside>
+
+  </div>
+
+</div></div>
+
+<script src="ds.js"></script>
+<script>
+  document.getElementById('bup').innerHTML  = ICON('plus',13) + ' 등록';
+  document.getElementById('bhwp').innerHTML = ICON('download',13) + ' HWPX 내려받기';
+  document.getElementById('bgen').innerHTML = ICON('sparkle',13) + ' 쌍둥이 문항 생성';
+  document.getElementById('brem').innerHTML = ICON('megaphone',14) + ' 미제출 4명에게 알림 보내기';
+
+  var EXAMS = [
+    ['7월 3주 시험지', '고2 미적분Ⅰ · 20문항', '도함수의 활용', 76, 12, 1],
+    ['7월 2주 시험지', '고2 미적분Ⅰ · 20문항', '증가와 감소',   79, 0,  0],
+    ['7월 학교 모의고사', '고2 전체 · 30문항',  '미적분Ⅰ 전범위', 74, 0, 0],
+    ['6월 4주 시험지', '고2 미적분Ⅰ · 18문항', '접선의 방정식', 81, 0,  0],
+    ['7월 3주 시험지', '고3 미적분Ⅱ · 22문항', '급수와 적분',   72, 4,  0],
+    ['7월 2주 시험지', '고1 공통수학2 · 16문항','삼각함수',      83, 0,  0]
+  ];
+  document.getElementById('exs').innerHTML = EXAMS.map(function (e) {
+    return '<div class="ex' + (e[5] ? ' on' : '') + '">'
+      + '<div class="n">' + e[0] + '</div>'
+      + '<div class="m">' + e[1] + ' · ' + e[2] + '</div>'
+      + '<div class="s"><span class="badge score">평균 ' + e[3] + '</span>'
+      + (e[4] ? '<span class="badge no">검토 ' + e[4] + '</span>' : '<span class="badge ok">검토 완료</span>')
+      + '</div></div>';
+  }).join('');
+
+  /* 20문항 · 단원 · 오답률. 오답률이 높은 문항이 곧 다음 수업의 주제가 된다. */
+  var QS = [
+    [1,'함수의 극한',9],[2,'함수의 연속',14],[3,'미분계수',18],[4,'도함수의 활용 — 접선',58],
+    [5,'접선의 방정식',22],[6,'증가와 감소',27],[7,'극대와 극소',35],[8,'극대와 극소',41],
+    [9,'접선의 방정식',49],[10,'그래프의 개형',31],[11,'극값의 판정',58],[12,'그래프의 개형',24],
+    [13,'방정식에의 활용',44],[14,'부등식에의 활용',38],[15,'속도와 가속도',19],
+    [16,'최대·최소',29],[17,'정적분의 활용',52],[18,'최대·최소',26],
+    [19,'방정식에의 활용',33],[20,'도함수의 활용 종합',71]
+  ];
+  document.getElementById('qs').innerHTML = QS.map(function (q) {
+    var cls = q[2] >= 50 ? 'hi' : (q[2] >= 35 ? 'mid' : '');
+    var tw  = q[2] >= 35;
+    return '<div class="qr ' + cls + '">'
+      + '<span class="no">' + q[0] + '번</span>'
+      + '<span class="unit">' + q[1] + '</span>'
+      + '<span class="track"><i style="width:' + q[2] + '%"></i></span>'
+      + '<span class="pct ' + (q[2] >= 50 ? 'warn' : (q[2] >= 35 ? 'cau' : 'muted')) + '">' + q[2] + '%</span>'
+      + '<span class="tw">' + (tw
+          ? '<span class="badge consult">쌍둥이 ' + Math.round(q[2] / 12) + '</span>'
+          : '<span class="muted" style="font-size:11px;">—</span>') + '</span>'
+      + '</div>';
+  }).join('');
+
+  var UNSUB = ['pjh03','osh15','kdy06','jhr09'];
+  document.getElementById('unsub').innerHTML = UNSUB.map(function (id) {
+    var s = STUDENTS.filter(function (x) { return x.id === id; })[0];
+    return '<div class="sr"><div class="av">' + s.n[0] + '</div>'
+      + '<div class="t">' + s.n + '<span>' + s.s + ' ' + s.g + ' · 오답 ' + s.wr + '</span></div>'
+      + '<span class="rk ' + s.rk + '"></span></div>';
+  }).join('');
+
+  renderNav('오답');
+  renderSubnav('오답', '시험지');
+  fitCanvas();
+</script>
+</body>
+</html>

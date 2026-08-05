@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>관리자 시안 05 — 신호판 | 김하현수학연구소</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<style>
+  *{box-sizing:border-box;}
+  html,body{word-break:keep-all;overflow-wrap:break-word;}
+  html,body{margin:0;padding:0;background:#101114;}
+  .chrome{height:46px;display:flex;align-items:center;gap:20px;padding:0 20px;background:#17181B;color:#8A8D94;
+    font:400 12px/1 ui-sans-serif,system-ui,sans-serif;border-bottom:1px solid #24262B;}
+  .c-num{color:#fff;background:#2E3138;padding:4px 7px;border-radius:3px;font-size:11px;}
+  .c-name{color:#EDEEF0;font-size:13px;} .c-name em{color:#767A82;font-style:normal;}
+  .c-meta{margin-left:auto;font-size:11px;color:#6E727A;}
+  .stage{position:relative;width:100%;overflow:hidden;background:#101114;}
+  .canvas{position:absolute;top:0;left:0;width:1440px;height:900px;transform-origin:top left;overflow:hidden;}
+
+  /* ===================== 시안 본체 ===================== */
+  .canvas{
+    --bg:#F7F8FA; --card:#FFFFFF; --ink:#151A20; --sub:#586374; --dim:#8D97A6;
+    --line:#E4E8ED; --line2:#EFF2F5;
+    --r:#C0392B; --rbg:#FCEDEB; --rln:#F2CFCA;
+    --a:#B57A00; --abg:#FDF6E4; --aln:#EEDDB4;
+    --w:#2E6BA8; --wbg:#EBF2F9; --wln:#CDDEEE;
+    --g:#1E8A5F;
+    background:var(--bg);color:var(--ink);font-family:'Pretendard',sans-serif;font-size:13px;
+  }
+  .mono{font-family:'JetBrains Mono',monospace;font-variant-numeric:tabular-nums;}
+
+  .topbar{height:52px;display:flex;align-items:center;padding:0 22px;gap:14px;background:var(--card);
+    border-bottom:1px solid var(--line);}
+  .bm{font-weight:800;font-size:13.5px;letter-spacing:-.02em;}
+  .topbar nav{display:flex;gap:3px;margin-left:12px;}
+  .topbar nav a{padding:6px 12px;border-radius:7px;text-decoration:none;color:var(--sub);font-size:12.5px;}
+  .topbar nav a.on{background:#151A20;color:#fff;font-weight:700;}
+  .topbar .right{margin-left:auto;display:flex;align-items:center;gap:12px;font-size:12.5px;color:var(--dim);}
+  .topbar .right a{color:var(--w);text-decoration:none;font-weight:600;}
+
+  /* 요약 스트립 */
+  .strip{display:flex;align-items:center;gap:0;padding:16px 22px 0;}
+  .seg{flex:1;padding:0 18px;border-left:3px solid var(--line);}
+  .seg:first-child{padding-left:0;border-left:none;}
+  .seg .k{font-size:11.5px;color:var(--dim);font-weight:600;}
+  .seg .v{font-family:'JetBrains Mono',monospace;font-size:29px;font-weight:700;letter-spacing:-.03em;margin-top:3px;line-height:1;}
+  .seg .d{font-size:11.5px;color:var(--dim);margin-top:6px;}
+  .seg.r{border-left-color:var(--r);} .seg.r .v{color:var(--r);}
+  .seg.a{border-left-color:var(--a);} .seg.a .v{color:var(--a);}
+  .seg.w{border-left-color:var(--w);} .seg.w .v{color:var(--w);}
+  .seg.g{border-left-color:var(--g);} .seg.g .v{color:var(--g);}
+  .stackbar{display:flex;height:7px;border-radius:4px;overflow:hidden;margin:18px 22px 0;}
+  .stackbar i{display:block;height:100%;}
+
+  /* 필터 */
+  .filt{display:flex;align-items:center;gap:8px;padding:16px 22px 0;}
+  .filt b{font-size:12px;color:var(--dim);font-weight:600;margin-right:4px;}
+  .filt a{text-decoration:none;font-size:12px;padding:6px 12px;border-radius:20px;border:1px solid var(--line);
+    background:var(--card);color:var(--sub);display:flex;align-items:center;gap:7px;}
+  .filt a.on{background:#151A20;border-color:#151A20;color:#fff;font-weight:600;}
+  .filt a s{text-decoration:none;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--dim);}
+  .filt a.on s{color:#9AA3B0;}
+  .filt .r{margin-left:auto;font-size:12px;color:var(--dim);}
+
+  /* 보드 */
+  .board{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;padding:18px 22px 0;}
+  .col .ch{display:flex;align-items:center;gap:9px;padding:0 2px 11px;}
+  .col .ch i{width:9px;height:9px;border-radius:50%;display:block;}
+  .col .ch b{font-size:13.5px;font-weight:700;}
+  .col .ch span{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--dim);}
+  .col .ch em{margin-left:auto;font-style:normal;font-size:11.5px;color:var(--dim);}
+
+  .cd{background:var(--card);border:1px solid var(--line);border-radius:11px;padding:14px 15px;margin-bottom:10px;}
+  .cd.r{border-color:var(--rln);} .cd.a{border-color:var(--aln);} .cd.w{border-color:var(--wln);}
+  .cd .h{display:flex;align-items:center;gap:9px;}
+  .cd .h b{font-size:14.5px;font-weight:700;letter-spacing:-.02em;}
+  .cd .h span{font-size:11.5px;color:var(--dim);}
+  .cd .h .sc{margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;
+    padding:3px 8px;border-radius:5px;}
+  .cd.r .sc{background:var(--rbg);color:var(--r);} .cd.a .sc{background:var(--abg);color:var(--a);}
+  .cd.w .sc{background:var(--wbg);color:var(--w);}
+  .sig{display:flex;flex-wrap:wrap;gap:5px;margin-top:10px;}
+  .sig span{font-size:11px;padding:3px 8px;border-radius:5px;background:#F1F4F7;color:var(--sub);font-weight:600;}
+  .cd.r .sig span{background:var(--rbg);color:var(--r);}
+  .cd.a .sig span{background:var(--abg);color:var(--a);}
+  .cd.w .sig span{background:var(--wbg);color:var(--w);}
+  .ev{margin-top:11px;padding-top:11px;border-top:1px solid var(--line2);display:flex;align-items:center;gap:12px;}
+  .ev .why{flex:1;font-size:12px;color:var(--sub);line-height:1.6;}
+  .ev .why b{font-family:'JetBrains Mono',monospace;color:var(--ink);font-weight:600;}
+  .dots{display:flex;gap:2.5px;flex-shrink:0;}
+  .dots i{width:7px;height:14px;border-radius:2px;display:block;background:#E3E8EE;}
+  .dots i.ok{background:#BFE7CE;} .dots i.late{background:#F3DFA6;} .dots i.no{background:#F0BEB8;}
+  .btns{display:flex;gap:6px;margin-top:12px;}
+  .btns button{flex:1;border:1px solid var(--line);background:#FCFDFE;border-radius:7px;padding:7px 0;
+    font-size:11.5px;font-family:inherit;color:var(--sub);font-weight:600;}
+  .btns button.p{background:#151A20;border-color:#151A20;color:#fff;}
+  .more{text-align:center;font-size:12px;color:var(--dim);padding:6px 0;}
+  .rule{margin-top:2px;border:1px dashed var(--line);border-radius:10px;padding:12px 14px;font-size:12px;
+    color:var(--dim);line-height:1.75;background:#FBFCFD;}
+  .rule b{color:var(--sub);}
+</style>
+</head>
+<body>
+<div class="chrome"><span class="c-num">A5</span><span class="c-name">신호판 <em>· The Signals</em></span>
+  <span class="c-meta">위험 신호가 루트 · 규칙 기반 자동 트리아지 · 색이 곧 의미　·　1440 × 900</span></div>
+
+<div class="stage" id="stage"><div class="canvas" id="canvas">
+
+  <div class="topbar">
+    <div class="bm">김하현수학연구소</div>
+    <nav><a class="on" href="#">신호판</a><a href="#">학생</a><a href="#">수업</a><a href="#">오답</a><a href="#">소통</a></nav>
+    <div class="right"><span class="mono">2026-08-05 14:02 갱신</span><a href="#">신호 규칙 설정</a><span>김하현T</span></div>
+  </div>
+
+  <div class="strip">
+    <div class="seg r"><div class="k">위험</div><div class="v">4</div><div class="d">즉시 연락 권장</div></div>
+    <div class="seg a"><div class="k">주의</div><div class="v">9</div><div class="d">이번 주 안에 개입</div></div>
+    <div class="seg w"><div class="k">관찰</div><div class="v">12</div><div class="d">추세 지켜보는 중</div></div>
+    <div class="seg g"><div class="k">양호</div><div class="v">43</div><div class="d">신호 없음</div></div>
+    <div class="seg" style="flex:1.4;border-left-color:var(--line);">
+      <div class="k">이번 주 처리</div><div class="v" style="color:var(--sub);">7</div>
+      <div class="d">해제 5 · 클리닉 배정 2</div></div>
+  </div>
+
+  <div class="stackbar">
+    <i style="width:5.9%;background:#C0392B"></i><i style="width:13.2%;background:#B57A00"></i>
+    <i style="width:17.6%;background:#2E6BA8"></i><i style="width:63.3%;background:#CFD6DE"></i>
+  </div>
+
+  <div class="filt">
+    <b>신호</b>
+    <a class="on" href="#">전체 <s>25</s></a>
+    <a href="#">연속 결석 <s>3</s></a>
+    <a href="#">성적 급락 <s>5</s></a>
+    <a href="#">오답 미제출 <s>11</s></a>
+    <a href="#">시청률 저조 <s>8</s></a>
+    <a href="#">과제 누락 <s>6</s></a>
+    <span class="r">반: 전체 ▾　·　정렬: 위험도순 ▾</span>
+  </div>
+
+  <div class="board">
+    <div class="col">
+      <div class="ch"><i style="background:var(--r)"></i><b>위험</b><span>4</span><em>즉시 연락</em></div>
+      <div id="c1"></div>
+      <div class="rule"><b>이 열에 오르는 조건</b><br>연속 결석 2회 이상 · 성적 15점 이상 하락 ·
+        오답숙제 7일 이상 미제출 중 <b>2개 이상</b> 동시 해당</div>
+    </div>
+    <div class="col">
+      <div class="ch"><i style="background:var(--a)"></i><b>주의</b><span>9</span><em>이번 주 개입</em></div>
+      <div id="c2"></div>
+      <div class="more">+ 6명 더 보기</div>
+    </div>
+    <div class="col">
+      <div class="ch"><i style="background:var(--w)"></i><b>관찰</b><span>12</span><em>추세 확인</em></div>
+      <div id="c3"></div>
+      <div class="more">+ 9명 더 보기</div>
+    </div>
+  </div>
+
+</div></div>
+
+<script>
+  function card(lv, n, meta, score, sigs, why, att, btns){
+    return '<div class="cd '+lv+'"><div class="h"><b>'+n+'</b><span>'+meta+'</span><span class="sc">'+score+'</span></div>'
+      + '<div class="sig">'+sigs.map(function(s){return '<span>'+s+'</span>';}).join('')+'</div>'
+      + '<div class="ev"><div class="why">'+why+'</div><div class="dots">'
+      + att.split(',').map(function(s){return '<i class="'+s+'"></i>';}).join('')+'</div></div>'
+      + '<div class="btns">'+btns.map(function(b,i){return '<button'+(i===0?' class="p"':'')+'>'+b+'</button>';}).join('')+'</div>'
+      + '</div>';
+  }
+
+  document.getElementById('c1').innerHTML =
+    card('r','강도윤','가람고 고2','위험 92',
+      ['연속 결석 2회','성적 −12','오답 0/6','시청 21%'],
+      '최근 8회 중 결석 <b>3</b> · 7월 모의 <b>58</b>점 (직전 70) · 오답숙제 <b>14일</b> 미제출',
+      'no,ok,no,no,ok,late,no,ok', ['학부모 연락','클리닉 배정','해제'])
+  + card('r','박지호','광남고 고2','위험 84',
+      ['성적 −10','오답 1/6','과제 3/8'],
+      '3개월 연속 하락 <b>74→64</b> · 과제 제출률 <b>38%</b> · 시청 <b>38%</b>',
+      'ok,no,ok,late,no,ok,ok,late', ['학부모 연락','클리닉 배정','해제'])
+  + card('r','오세훈','광남고 고2','위험 79',
+      ['연속 결석 2회','시청 44%'],
+      '8/1·8/3 <b>연속 결석</b> · 보충영상 <b>2건</b> 미시청',
+      'late,ok,no,ok,ok,no,late,ok', ['학부모 연락','보충영상 배정','해제']);
+
+  document.getElementById('c2').innerHTML =
+    card('a','정하람','동대부여고 고2','주의 61',
+      ['성적 정체','과제 5/8','시청 52%'],
+      '4회 연속 <b>76→71</b> 완만한 하락 · 과제 <b>3건</b> 누락',
+      'ok,late,ok,no,ok,ok,late,ok', ['클리닉 배정','메모','해제'])
+  + card('a','임태경','광양고 고2','주의 54',
+      ['오답 4/6','시청 63%'],
+      '오답숙제 <b>2문항</b> 5일째 미제출 · 출석은 안정적',
+      'ok,ok,late,ok,ok,no,ok,ok', ['오답 독려','메모','해제'])
+  + card('a','한지우','건대부고 고2','주의 48',
+      ['과제 6/8','시청 69%'],
+      '과제 제출이 <b>이틀</b>씩 늦어지는 패턴 반복',
+      'ok,ok,ok,ok,ok,late,ok,ok', ['메모','클리닉 배정','해제']);
+
+  document.getElementById('c3').innerHTML =
+    card('w','윤서아','대원고 고2','관찰 32',
+      ['시청 81%'],
+      '전 지표 양호 · 시청 완료율만 <b>목표 90%</b> 미달',
+      'ok,ok,ok,ok,leave,ok,ok,ok', ['메모','해제','—'])
+  + card('w','문가온','광남고 고2','관찰 27',
+      ['오답 5/6'],
+      '오답 <b>1문항</b> 미제출 · 이번 주 신규 진입',
+      'ok,ok,ok,ok,ok,ok,late,ok', ['메모','해제','—'])
+  + card('w','서준영','건대부고 고2','관찰 24',
+      ['성적 −4'],
+      '소폭 하락이나 <b>반 평균 이상</b> 유지 중',
+      'ok,ok,ok,ok,ok,ok,ok,ok', ['메모','해제','—']);
+
+  function fit(){
+    var s=Math.min(1,(window.innerWidth-48)/1440), st=document.getElementById('stage'), c=document.getElementById('canvas');
+    st.style.height=(900*s)+'px'; c.style.transform='scale('+s+')';
+    c.style.left=Math.max(0,(st.clientWidth-1440*s)/2)+'px';
+  }
+  window.addEventListener('resize',fit); window.addEventListener('load',fit); fit();
+</script>
+</body>
+</html>

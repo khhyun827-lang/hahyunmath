@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>영상 — 김하현수학연구소 관리자</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<link rel="stylesheet" href="ds.css">
+<style>
+  /* 배치만. 색·서체·반경은 ds.css 토큰. */
+  .list{position:absolute;left:0;top:0;bottom:0;width:268px;border-right:1px solid var(--line);
+    background:var(--card);display:flex;flex-direction:column;}
+  .lh{display:flex;align-items:center;padding:14px 16px 10px;flex-shrink:0;}
+  .lbody{flex:1;min-height:0;overflow-y:auto;padding-bottom:12px;}
+  .cl{padding:11px 16px;border-left:3px solid transparent;cursor:pointer;transition:background var(--t);}
+  .cl:hover{background:var(--hover);}
+  .cl.on{background:var(--accent-bg);border-left-color:var(--accent);}
+  .cl .n{font-size:13.5px;font-weight:600;}
+  .cl .m{font-size:11.5px;color:var(--dim);margin-top:3px;}
+  .cl .p{display:flex;align-items:center;gap:8px;margin-top:8px;}
+  .cl .p .bar{flex:1;}
+  .cl .p span{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--sub);}
+
+  /* 영상 목록 */
+  .vids{position:absolute;left:268px;top:0;bottom:0;width:296px;
+    border-right:1px solid var(--line);background:var(--card);display:flex;flex-direction:column;}
+  .vh{display:flex;align-items:center;gap:8px;padding:14px 15px;border-bottom:1px solid var(--line);flex-shrink:0;}
+  .vbody{flex:1;min-height:0;overflow-y:auto;}
+  .vd{padding:13px 15px;border-left:3px solid transparent;border-bottom:1px solid var(--line2);
+    cursor:pointer;transition:background var(--t);}
+  .vd:hover{background:var(--hover);}
+  .vd.on{background:var(--accent-bg);border-left-color:var(--accent);}
+  .vd .t{font-size:13px;font-weight:600;line-height:1.5;}
+  .vd .m{display:flex;align-items:center;gap:8px;margin-top:8px;
+    font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--dim);}
+  .vd .p{display:flex;align-items:center;gap:9px;margin-top:9px;}
+  .vd .p .bar{flex:1;}
+  .vd .p b{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;}
+
+  .main{position:absolute;left:564px;right:0;top:0;bottom:0;padding:22px 26px 0;
+    display:flex;flex-direction:column;overflow:hidden;}
+  .mh{flex-shrink:0;}
+  .mh .r{margin-left:auto;display:flex;gap:6px;}
+
+  /* ── 이탈 지점 ──
+     이 화면이 존재하는 이유. «몇 %가 봤나»가 아니라 «어디서 멈췄나»가 다음 수업을 바꾼다.
+     단일 계열 크기 비교 — 색은 한 가지, 값은 최고점에만 붙인다. */
+  .drop{margin-top:18px;padding:16px 18px 12px;border:1px solid var(--line);
+    border-radius:var(--r-lg);background:var(--card);flex-shrink:0;}
+  .drop .dh{display:flex;align-items:baseline;gap:10px;margin-bottom:14px;}
+  .drop .dh b{font-size:12.5px;font-weight:700;}
+  .drop .dh span{font-size:11.5px;color:var(--dim);}
+  .drop .dh .r{margin-left:auto;font-size:11px;color:var(--dim);}
+  .dbars{display:flex;align-items:flex-end;gap:4px;height:74px;border-bottom:1px solid var(--line);}
+  .dbars .b{flex:1;position:relative;display:flex;flex-direction:column;justify-content:flex-end;height:100%;}
+  .dbars .b i{display:block;width:100%;background:#DEDAD1;border-radius:4px 4px 0 0;}
+  .dbars .b.peak i{background:var(--no);}
+  .dbars .b .v{position:absolute;top:-17px;left:-14px;right:-14px;text-align:center;
+    font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;color:var(--no);}
+  .dax{display:flex;gap:4px;margin-top:7px;}
+  .dax span{flex:1;text-align:center;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);}
+
+  /* 학생별 진행 */
+  .swrap{flex:1;min-height:0;overflow-y:auto;margin-top:18px;padding-bottom:16px;}
+  .sh{display:flex;align-items:baseline;gap:10px;padding-bottom:9px;border-bottom:1px solid var(--line);
+    position:sticky;top:0;background:var(--paper);z-index:2;}
+  .sh b{font-size:12.5px;font-weight:700;}
+  .sh span{font-size:11.5px;color:var(--dim);}
+  .sh .r{margin-left:auto;font-size:11px;color:var(--dim);}
+  .sv{display:flex;align-items:center;gap:12px;padding:9px 2px;border-bottom:1px solid var(--line2);
+    transition:background var(--t);}
+  .sv:hover{background:var(--hover);}
+  .sv .who{width:150px;flex-shrink:0;display:flex;align-items:center;gap:9px;}
+  .sv .who b{font-size:13px;font-weight:600;}
+  .sv .track{flex:1;min-width:0;height:16px;background:var(--line2);border-radius:4px;overflow:hidden;}
+  .sv .track i{display:block;height:100%;border-radius:4px;background:#CFCBC2;}
+  .sv.done .track i{background:var(--ok);}
+  .sv.low .track i{background:var(--no);}
+  .sv .pct{width:46px;flex-shrink:0;text-align:right;font-family:'JetBrains Mono',monospace;font-size:12px;}
+  .sv .st{width:70px;flex-shrink:0;text-align:right;}
+</style>
+</head>
+<body>
+<div class="chrome"><span class="c-num">16</span><span class="c-name">영상 <em>· 반 관리</em></span>
+  <span class="c-meta">역할: 누가 어디서 멈췄는지 본다 · 시청률이 아니라 이탈 지점　·　1440 × 900</span></div>
+
+<div class="stage" id="stage"><div class="canvas" id="canvas">
+
+  <div class="topbar">
+    <div class="bm">김하현수학연구소</div>
+    <nav id="nav"></nav>
+    <div class="right"><span>영상 24 · 반 평균 시청 <b class="mono">86%</b></span>
+      <s style="text-decoration:none;">·</s><span>김하현T</span></div>
+  </div>
+
+  <div class="subnav" id="subnav"></div>
+
+  <div class="body sub">
+
+    <aside class="list">
+      <div class="lh">
+        <span style="font-size:12px;font-weight:700;color:var(--dim);letter-spacing:.08em;">반 목록</span>
+      </div>
+      <div class="lbody scroll" id="cls"></div>
+    </aside>
+
+    <div class="vids">
+      <div class="vh">
+        <span style="font-size:13px;font-weight:700;">영상</span>
+        <span class="muted" style="font-size:11.5px;">12개</span>
+        <span class="spacer"></span>
+        <button class="btn sm p" id="bup"></button>
+      </div>
+      <div class="vbody scroll" id="vs"></div>
+    </div>
+
+    <main class="main">
+      <div class="mh">
+        <div class="row" style="align-items:flex-start;">
+          <div>
+            <h1 class="t-title">도함수의 활용(2) 증가와 감소</h1>
+            <div class="t-meta" style="margin-top:6px;">
+              <span class="mono">39분</span><s>·</s>2026-07-24 업로드<s>·</s>고2 미적분Ⅰ 정규반 22명
+            </div>
+          </div>
+          <div class="r">
+            <button class="btn sm" id="bopen"></button>
+            <button class="btn sm p" id="bpush"></button>
+          </div>
+        </div>
+      </div>
+
+      <div class="kpis" style="margin-top:16px;flex-shrink:0;">
+        <div class="kpi"><div class="k">평균 시청률</div><div class="v down">69<s>%</s></div></div>
+        <div class="kpi"><div class="k">완주</div><div class="v">9<s>/22</s></div></div>
+        <div class="kpi"><div class="k">미시청</div><div class="v down">4<s>명</s></div></div>
+        <div class="kpi"><div class="k">최다 이탈</div><div class="v">62<s>%</s> 지점</div></div>
+      </div>
+
+      <div class="drop">
+        <div class="dh"><b>이탈 지점</b><span>10% 구간별 중단 인원</span>
+          <span class="r">62% 지점 = 극값 판정 설명이 시작되는 곳</span></div>
+        <div class="dbars" id="db"></div>
+        <div class="dax" id="dx"></div>
+      </div>
+
+      <div class="swrap scroll">
+        <div class="sh"><b>학생별 진행</b><span>시청률 낮은 순</span>
+          <span class="r">50% 미만이면 신호 규칙에 걸립니다</span></div>
+        <div id="sv"></div>
+      </div>
+    </main>
+
+  </div>
+
+</div></div>
+
+<script src="ds.js"></script>
+<script>
+  document.getElementById('bup').innerHTML   = ICON('plus',13) + ' 등록';
+  document.getElementById('bopen').innerHTML = ICON('play',13) + ' 영상 열기';
+  document.getElementById('bpush').innerHTML = ICON('megaphone',13) + ' 미시청 4명에게 알림';
+
+  /* [제목, 길이, 업로드, 평균 시청률, 선택] */
+  var VIDS = [
+    ['도함수의 활용(3) 극대와 극소','28분','08-05',12,0],
+    ['도함수의 활용(2) 증가와 감소','39분','07-24',69,1],
+    ['7월 3주 시험지 해설','52분','07-22',54,0],
+    ['도함수의 활용(1) 접선의 방정식','34분','07-03',94,0],
+    ['미분계수와 도함수','41분','06-12',97,0],
+    ['함수의 연속','26분','05-20',98,0]
+  ];
+  document.getElementById('vs').innerHTML = VIDS.map(function (v) {
+    return '<div class="vd' + (v[4] ? ' on' : '') + '">'
+      + '<div class="t">' + v[0] + '</div>'
+      + '<div class="m">' + ICON('clock',12) + ' ' + v[1] + '<span>·</span>' + v[2] + '</div>'
+      + '<div class="p"><span class="bar"><i style="width:' + v[3] + '%"></i></span>'
+      + '<b class="' + (v[3] < 50 ? 'warn' : (v[3] < 80 ? 'cau' : '')) + '">' + v[3] + '%</b></div>'
+      + '</div>';
+  }).join('');
+
+  /* 이탈 지점 — 10% 구간별 중단 인원. 최고점 하나에만 값을 붙인다. */
+  var DROP = [0,1,0,1,0,2,5,1,0,3];
+  var PEAK = DROP.indexOf(Math.max.apply(null, DROP));
+  var DMAX = Math.max.apply(null, DROP);
+  document.getElementById('db').innerHTML = DROP.map(function (n, i) {
+    var h = DMAX ? Math.round(n / DMAX * 100) : 0;
+    return '<div class="b' + (i === PEAK ? ' peak' : '') + '" title="'
+      + (i * 10) + '–' + (i * 10 + 10) + '% 구간에서 중단 ' + n + '명">'
+      + (i === PEAK ? '<span class="v">' + n + '명</span>' : '')
+      + '<i style="height:' + h + '%"></i></div>';
+  }).join('');
+  document.getElementById('dx').innerHTML = DROP.map(function (n, i) {
+    return '<span>' + (i % 2 === 0 ? (i * 10) : '') + '</span>';
+  }).join('');
+
+  /* 학생별 진행 — 시청률 낮은 순. 미시청이 맨 위. */
+  var W = [
+    ['kdy06',0],['pjh03',0],['osh15',0],['jhr09',0],
+    ['itk12',31],['hjw14',62],['mgo21',62],['kmj01',74],
+    ['ysa11',88],['sjy18',100],['lsy07',100],['cyj02',100]
+  ];
+  document.getElementById('sv').innerHTML = W.map(function (r) {
+    var s = STUDENTS.filter(function (x) { return x.id === r[0]; })[0];
+    var done = r[1] === 100, low = r[1] < 50;
+    return '<div class="sv ' + (done ? 'done' : (low ? 'low' : '')) + '">'
+      + '<span class="who"><span class="av">' + s.n[0] + '</span><b>' + s.n + '</b></span>'
+      + '<span class="track"><i style="width:' + r[1] + '%"></i></span>'
+      + '<span class="pct ' + (low ? 'warn' : (done ? 'up' : '')) + '">' + r[1] + '%</span>'
+      + '<span class="st">' + (r[1] === 0 ? '<span class="badge no">미시청</span>'
+          : done ? '<span class="badge ok">완주</span>'
+          : '<span class="badge late">중단</span>') + '</span></div>';
+  }).join('');
+
+  renderClassList('cls', 0);
+  renderNav('반');
+  renderSubnav('반', '영상');
+  fitCanvas();
+</script>
+</body>
+</html>

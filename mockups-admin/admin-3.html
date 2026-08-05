@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>관리자 시안 03 — 학생 도시에 | 김하현수학연구소</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<style>
+  *{box-sizing:border-box;}
+  html,body{word-break:keep-all;overflow-wrap:break-word;}
+  html,body{margin:0;padding:0;background:#101114;}
+  .chrome{height:46px;display:flex;align-items:center;gap:20px;padding:0 20px;background:#17181B;color:#8A8D94;
+    font:400 12px/1 ui-sans-serif,system-ui,sans-serif;border-bottom:1px solid #24262B;}
+  .c-num{color:#fff;background:#2E3138;padding:4px 7px;border-radius:3px;font-size:11px;}
+  .c-name{color:#EDEEF0;font-size:13px;} .c-name em{color:#767A82;font-style:normal;}
+  .c-meta{margin-left:auto;font-size:11px;color:#6E727A;}
+  .stage{position:relative;width:100%;overflow:hidden;background:#101114;}
+  .canvas{position:absolute;top:0;left:0;width:1440px;height:900px;transform-origin:top left;overflow:hidden;}
+
+  /* ===================== 시안 본체 ===================== */
+  .canvas{
+    --paper:#FAF9F6; --card:#FFFFFF; --ink:#22221E; --sub:#5C5C54; --dim:#96968C;
+    --line:#E7E5DE; --line2:#F1EFE9; --olive:#4E5A42; --olivebg:#EDF0E8;
+    --ok:#3F7A4D; --late:#9A7000; --no:#B03A2E; --blue:#39607F;
+    background:var(--paper);color:var(--ink);font-family:'Pretendard',sans-serif;font-size:13px;
+  }
+  .mono{font-family:'JetBrains Mono',monospace;font-variant-numeric:tabular-nums;}
+  .serif{font-family:'Noto Serif KR',serif;}
+
+  .topbar{height:52px;display:flex;align-items:center;padding:0 20px;gap:16px;border-bottom:1px solid var(--line);background:var(--card);}
+  .topbar .bm{font-weight:800;font-size:13.5px;letter-spacing:-.02em;}
+  .topbar nav{display:flex;gap:3px;margin-left:12px;}
+  .topbar nav a{padding:6px 12px;border-radius:7px;text-decoration:none;color:var(--sub);font-size:12.5px;}
+  .topbar nav a.on{background:var(--olivebg);color:var(--olive);font-weight:700;}
+  .topbar .right{margin-left:auto;font-size:12.5px;color:var(--dim);}
+
+  /* 좌: 학생 리스트 */
+  .list{position:absolute;left:0;top:52px;bottom:0;width:290px;border-right:1px solid var(--line);background:var(--card);}
+  .lsearch{padding:14px 16px;border-bottom:1px solid var(--line2);}
+  .lsearch .i{height:32px;border:1px solid var(--line);border-radius:8px;display:flex;align-items:center;padding:0 10px;
+    gap:8px;color:var(--dim);font-size:12.5px;background:#FDFDFB;}
+  .lmeta{display:flex;justify-content:space-between;padding:11px 16px 8px;font-size:11px;color:var(--dim);}
+  .li{display:flex;align-items:center;gap:11px;padding:10px 16px;border-left:3px solid transparent;cursor:pointer;}
+  .li:hover{background:#FBFAF6;}
+  .li.on{background:var(--olivebg);border-left-color:var(--olive);}
+  .av{width:30px;height:30px;border-radius:9px;background:#EFEDE6;color:var(--sub);font-size:12px;font-weight:700;
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .li.on .av{background:var(--olive);color:#fff;}
+  .li .t{flex:1;min-width:0;}
+  .li .t b{display:block;font-size:13.5px;font-weight:600;}
+  .li .t span{display:block;font-size:11.5px;color:var(--dim);margin-top:1px;}
+  .li .rk{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+  .rk.r{background:#B03A2E;} .rk.y{background:#D6A400;} .rk.g{background:#CFCEC6;}
+
+  /* 중앙 */
+  .doc{position:absolute;left:290px;right:322px;top:52px;bottom:0;padding:24px 30px 0;overflow:hidden;}
+  .dh{display:flex;align-items:flex-start;gap:16px;}
+  .dh .big{width:54px;height:54px;border-radius:14px;background:var(--olive);color:#fff;font-size:20px;font-weight:700;
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .dh h1{margin:0;font-size:25px;font-weight:600;letter-spacing:-.02em;font-family:'Noto Serif KR',serif;}
+  .dh .meta{margin-top:6px;font-size:12.5px;color:var(--sub);}
+  .dh .meta s{text-decoration:none;color:var(--dim);margin:0 7px;}
+  .dh .tags{margin-left:auto;display:flex;gap:6px;}
+  .tag{font-size:11px;padding:4px 10px;border-radius:20px;background:#F1EFE9;color:var(--sub);}
+  .tag.warn{background:#FBEAE8;color:var(--no);font-weight:600;}
+
+  .kpis{display:flex;gap:0;margin-top:20px;border:1px solid var(--line);border-radius:12px;background:var(--card);overflow:hidden;}
+  .kpi{flex:1;padding:13px 16px;border-right:1px solid var(--line2);}
+  .kpi:last-child{border-right:none;}
+  .kpi .k{font-size:11px;color:var(--dim);}
+  .kpi .v{font-family:'JetBrains Mono',monospace;font-size:19px;font-weight:600;margin-top:5px;letter-spacing:-.02em;}
+  .kpi .v s{text-decoration:none;font-size:11px;color:var(--dim);font-weight:400;}
+  .kpi .v em{font-style:normal;font-size:11px;margin-left:4px;}
+  .up{color:var(--ok);} .down{color:var(--no);}
+
+  /* 연대기 필터 */
+  .tf{display:flex;align-items:center;gap:6px;margin:22px 0 4px;}
+  .tf b{font-size:12px;color:var(--dim);font-weight:600;margin-right:6px;}
+  .tf a{text-decoration:none;font-size:12px;padding:5px 11px;border-radius:20px;color:var(--sub);border:1px solid var(--line);background:var(--card);}
+  .tf a.on{background:var(--ink);border-color:var(--ink);color:#fff;font-weight:600;}
+  .tf .r{margin-left:auto;font-size:12px;color:var(--dim);}
+
+  /* 연대기 */
+  .tl{margin-top:14px;padding-left:96px;position:relative;}
+  .tl::before{content:'';position:absolute;left:96px;top:6px;bottom:0;width:1px;background:var(--line);}
+  .day{position:relative;margin-bottom:4px;}
+  .day .dt{position:absolute;left:-96px;top:0;width:78px;text-align:right;font-family:'JetBrains Mono',monospace;
+    font-size:11.5px;color:var(--dim);padding-top:9px;}
+  .ev{position:relative;padding:9px 0 9px 22px;}
+  .ev::before{content:'';position:absolute;left:-4.5px;top:16px;width:9px;height:9px;border-radius:50%;
+    background:#CFCEC6;border:2px solid var(--paper);}
+  .ev.k-att::before{background:var(--ok);} .ev.k-no::before{background:var(--no);}
+  .ev.k-score::before{background:var(--blue);} .ev.k-consult::before{background:var(--olive);}
+  .ev .h{display:flex;align-items:baseline;gap:9px;}
+  .kind{font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:5px;background:#F1EFE9;color:var(--sub);flex-shrink:0;}
+  .kind.att{background:#E9F2EC;color:var(--ok);} .kind.no{background:#FBEAE8;color:var(--no);}
+  .kind.score{background:#E8EFF4;color:var(--blue);} .kind.hw{background:#FBF3DE;color:var(--late);}
+  .kind.qna{background:#F0EBF7;color:#6B46A8;} .kind.consult{background:var(--olivebg);color:var(--olive);}
+  .ev .ti{font-size:13.5px;font-weight:600;}
+  .ev .ds{font-size:12.5px;color:var(--sub);margin-top:4px;line-height:1.65;}
+  .ev .ds b{font-family:'JetBrains Mono',monospace;font-weight:600;color:var(--ink);}
+  .pin{border:1px dashed #D8CFA8;background:#FDFAEF;border-radius:9px;padding:9px 12px;margin-top:6px;}
+
+  /* 우: 컨텍스트 */
+  .ctx{position:absolute;right:0;top:52px;bottom:0;width:322px;border-left:1px solid var(--line);background:var(--card);
+    padding:20px 20px 0;}
+  .cs{font-size:11px;font-weight:700;color:var(--dim);letter-spacing:.08em;margin:0 0 10px;}
+  .crow{display:flex;justify-content:space-between;font-size:12.5px;padding:7px 0;border-bottom:1px solid var(--line2);}
+  .crow span{color:var(--dim);} .crow b{font-weight:600;}
+  .crow b.m{font-family:'JetBrains Mono',monospace;font-weight:500;}
+  .bar{height:6px;background:#EFEDE6;border-radius:4px;overflow:hidden;margin-top:9px;}
+  .bar i{display:block;height:100%;background:var(--olive);}
+  .qa{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px;}
+  .qa button{border:1px solid var(--line);background:#FDFDFB;border-radius:9px;padding:11px 8px;font-size:12.5px;
+    font-family:inherit;color:var(--ink);font-weight:500;}
+  .qa button.p{background:var(--olive);border-color:var(--olive);color:#fff;font-weight:700;}
+  .note{background:#FDFAEF;border:1px solid #EDE3C6;border-radius:10px;padding:12px 13px;font-size:12.5px;line-height:1.7;color:var(--sub);}
+  .note .d{font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--dim);margin-bottom:5px;}
+  hr.s{border:none;border-top:1px solid var(--line2);margin:20px 0;}
+</style>
+</head>
+<body>
+<div class="chrome"><span class="c-num">A3</span><span class="c-name">학생 도시에 <em>· The Dossier</em></span>
+  <span class="c-meta">학생 한 명이 루트 · 탭 없는 통합 연대기 · 상담 대응 최적화　·　1440 × 900</span></div>
+
+<div class="stage" id="stage"><div class="canvas" id="canvas">
+
+  <div class="topbar">
+    <div class="bm">김하현수학연구소</div>
+    <nav><a class="on" href="#">학생</a><a href="#">수업</a><a href="#">오답</a><a href="#">소통</a><a href="#">설정</a></nav>
+    <div class="right">김하현T · 재원 68명</div>
+  </div>
+
+  <aside class="list">
+    <div class="lsearch"><div class="i">🔍 이름 · ㄱㅁㅈ · 학교 · 아이디</div></div>
+    <div class="lmeta"><span>고2 미적분Ⅰ 정규반 · 22명</span><span>출석률순 ▾</span></div>
+    <div id="ls"></div>
+  </aside>
+
+  <main class="doc">
+    <div class="dh">
+      <div class="big">김</div>
+      <div>
+        <h1>김민준</h1>
+        <div class="meta">건대부고 고2<s>·</s>고2 미적분Ⅰ 정규반<s>·</s><span class="mono">kmj01</span><s>·</s>등원 2025.03.04</div>
+      </div>
+      <div class="tags"><span class="tag">재원 중</span><span class="tag warn">시청률 저조</span></div>
+    </div>
+
+    <div class="kpis">
+      <div class="kpi"><div class="k">최근 성적</div><div class="v">82<s>/100</s><em class="up">▲8</em></div></div>
+      <div class="kpi"><div class="k">출석률</div><div class="v">96<s>%</s></div></div>
+      <div class="kpi"><div class="k">과제</div><div class="v">7<s>/8</s></div></div>
+      <div class="kpi"><div class="k">오답 제출</div><div class="v">6<s>/6</s></div></div>
+      <div class="kpi"><div class="k">강의 시청</div><div class="v down">74<s>%</s></div></div>
+    </div>
+
+    <div class="tf">
+      <b>기록</b>
+      <a class="on" href="#">전체</a><a href="#">출결</a><a href="#">성적</a><a href="#">과제·오답</a>
+      <a href="#">질문</a><a href="#">상담</a>
+      <span class="r">최근 30일 · 24건</span>
+    </div>
+
+    <div class="tl" id="tl"></div>
+  </main>
+
+  <aside class="ctx">
+    <div class="cs">연락처</div>
+    <div class="crow"><span>학부모</span><b class="m">010-4417-2280</b></div>
+    <div class="crow"><span>학생</span><b class="m">010-9925-7714</b></div>
+
+    <hr class="s">
+    <div class="cs">반 · 진도</div>
+    <div class="crow"><span>반</span><b>고2 미적분Ⅰ 정규반</b></div>
+    <div class="crow"><span>수업</span><b class="m">월·수·금 19:00</b></div>
+    <div style="margin-top:12px;font-size:12.5px;display:flex;justify-content:space-between;">
+      <span style="color:var(--dim);">미적분Ⅰ 진도</span><b class="mono">72%</b></div>
+    <div class="bar"><i style="width:72%"></i></div>
+    <div style="margin-top:7px;font-size:11.5px;color:var(--dim);">다음 단원 · 도함수의 활용(3) 다항함수의 그래프</div>
+
+    <hr class="s">
+    <div class="cs">빠른 작업</div>
+    <div class="qa">
+      <button class="p">클리닉 배정</button>
+      <button>과제 추가</button>
+      <button>보충영상 배정</button>
+      <button>학부모 연락</button>
+    </div>
+
+    <hr class="s">
+    <div class="cs">고정 메모</div>
+    <div class="note">
+      <div class="d">2026-07-20 · 학부모 통화</div>
+      9월부터 주 2회 클리닉 희망. 학교 내신 대비 기간에는 금요일 결석 가능성 있음.
+    </div>
+  </aside>
+
+</div></div>
+
+<script>
+  var LS=[
+    ['최유진','건대부고 고2','g'],['이서연','대원여고 고2','g'],['김민준','건대부고 고2','y',1],
+    ['윤서아','대원고 고2','g'],['한지우','건대부고 고2','g'],['정하람','동대부여고 고2','y'],
+    ['임태경','광양고 고2','y'],['박지호','광남고 고2','r'],['오세훈','광남고 고2','r'],
+    ['강도윤','가람고 고2','r'],['서준영','건대부고 고2','g'],['문가온','광남고 고2','g']
+  ];
+  document.getElementById('ls').innerHTML = LS.map(function(r){
+    return '<div class="li'+(r[3]?' on':'')+'"><div class="av">'+r[0][0]+'</div>'
+      +'<div class="t"><b>'+r[0]+'</b><span>'+r[1]+'</span></div>'
+      +'<span class="rk '+r[2]+'"></span></div>';
+  }).join('');
+
+  var EV=[
+    ['8월 5일 (수)',[
+      ['att','출결','정규 수업 출석','19:00 입실 · 지각 없음','k-att'],
+      ['hw','퀴즈','데일리퀴즈 3회차 제출','<b>8</b> / 10점 · 오답 2문항 자동 배정','']
+    ]],
+    ['8월 3일 (월)',[
+      ['hw','오답','오답숙제 3문항 제출','7월 3주 시험지 4·11·17번 · 검토 대기',''],
+      ['','강의','도함수의 활용(2) 시청','<b>74%</b> 지점에서 중단 · 3일째 미완료','']
+    ]],
+    ['7월 29일 (화)',[
+      ['score','성적','7월 학교 모의고사','<b>82</b> / 100 · 직전 대비 <b>▲ 8</b> · 반 평균 76','k-score']
+    ]],
+    ['7월 26일 (토)',[
+      ['qna','질문','“극대·극소 판정에서 f″를 꼭 봐야 하나요?”','23:41 질문 · 다음날 09:12 답변 완료','']
+    ]],
+    ['7월 20일 (일)',[
+      ['consult','상담','학부모 전화 상담 20분','여름 특강 및 클리닉 편성 문의','k-consult']
+    ]],
+    ['7월 15일 (화)',[
+      ['no','결석','정규 수업 결석','사유: 학교 체육대회 · 보충영상 1건 배정 완료','k-no']
+    ]]
+  ];
+  document.getElementById('tl').innerHTML = EV.map(function(d){
+    return '<div class="day"><div class="dt">'+d[0]+'</div>'
+      + d[1].map(function(e){
+          return '<div class="ev '+e[4]+'"><div class="h"><span class="kind '+e[0]+'">'+e[1]+'</span>'
+            +'<span class="ti">'+e[2]+'</span></div><div class="ds">'+e[3]+'</div></div>';
+        }).join('')
+      + '</div>';
+  }).join('');
+
+  function fit(){
+    var s=Math.min(1,(window.innerWidth-48)/1440), st=document.getElementById('stage'), c=document.getElementById('canvas');
+    st.style.height=(900*s)+'px'; c.style.transform='scale('+s+')';
+    c.style.left=Math.max(0,(st.clientWidth-1440*s)/2)+'px';
+  }
+  window.addEventListener('resize',fit); window.addEventListener('load',fit); fit();
+</script>
+</body>
+</html>

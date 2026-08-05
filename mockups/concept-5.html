@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>시안 05 — 한 문제 | 김하현수학연구소</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+<style>
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:#101114;}
+
+  .chrome{height:46px;display:flex;align-items:center;gap:20px;padding:0 20px;
+    background:#17181B;color:#8A8D94;font:400 12px/1 ui-sans-serif,system-ui,'Segoe UI',sans-serif;
+    border-bottom:1px solid #24262B;}
+  .c-num{font-variant-numeric:tabular-nums;color:#fff;background:#2E3138;padding:4px 7px;border-radius:3px;font-size:11px;}
+  .c-name{color:#EDEEF0;font-size:13px;} .c-name em{color:#767A82;font-style:normal;}
+  .c-sw{display:flex;gap:5px;margin-left:auto;}
+  .c-sw i{width:15px;height:15px;border-radius:3px;display:block;box-shadow:inset 0 0 0 1px rgba(255,255,255,.12);}
+  .c-meta{font-size:11px;color:#6E727A;letter-spacing:.03em;}
+  .c-tip{color:#F0B429;font-size:11px;}
+
+  .stage{position:relative;width:100%;overflow:hidden;background:#101114;}
+  .canvas{position:absolute;top:0;left:0;width:1440px;height:900px;transform-origin:top left;overflow:hidden;}
+
+  /* ===================== 시안 본체 ===================== */
+  .canvas{
+    --paper:#FCFCFD; --canvasbg:#F6F5FA; --ink:#1C1B22; --body:#4A4855; --dim:#8B8896;
+    --hair:#E9E7F0; --indigo:#5B3DF5; --green:#0E9F6E; --red:#D64545;
+    background:var(--paper);color:var(--ink);
+    font-family:'Pretendard','Instrument Sans',sans-serif;
+  }
+  .mono{font-family:'JetBrains Mono',ui-monospace,monospace;}
+
+  /* ---------- 좌: 고정 캔버스 ---------- */
+  .prob{position:absolute;left:0;top:0;bottom:0;width:648px;background:var(--canvasbg);
+    border-right:1px solid var(--hair);padding:76px 64px;}
+  .pin{position:absolute;top:34px;left:64px;font-family:'JetBrains Mono',monospace;font-size:10px;
+    letter-spacing:.22em;color:var(--dim);text-transform:uppercase;}
+  .peyebrow{font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.2em;color:var(--indigo);}
+  .formula{margin:30px 0 0;font-size:31px;color:var(--ink);}
+  .prompt{margin:26px 0 0;font-size:20px;font-weight:600;letter-spacing:-.01em;}
+  .choices{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:30px;width:100%;}
+  .ch{display:flex;align-items:center;gap:12px;height:56px;padding:0 18px;background:#fff;
+    border:1px solid var(--hair);border-radius:8px;font-family:inherit;font-size:17px;color:var(--ink);
+    cursor:pointer;transition:border-color .16s,background .16s,opacity .16s,color .16s;text-align:left;}
+  .ch .no{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--dim);width:16px;}
+  .ch:hover{border-color:var(--indigo);}
+  .ch.right{border-color:var(--green);background:#F0FBF6;color:var(--green);font-weight:700;}
+  .ch.right .no{color:var(--green);}
+  .ch.right::after{content:'✓';margin-left:auto;font-size:14px;font-weight:700;}
+  .ch.mute{opacity:.34;}
+
+  .graph{margin-top:34px;}
+  .pfoot{position:absolute;left:64px;bottom:56px;font-size:12px;color:var(--dim);letter-spacing:.01em;}
+  .pfoot b{color:var(--body);font-weight:600;font-family:'JetBrains Mono',monospace;}
+
+  .tan,.pt,.lbl{opacity:0;transition:opacity .5s ease .15s;}
+  .revealed .tan,.revealed .pt,.revealed .lbl{opacity:1;}
+  .tanline{stroke-dasharray:1;stroke-dashoffset:1;}
+  .revealed .tanline{transition:stroke-dashoffset .7s ease .2s;stroke-dashoffset:0;}
+  @media (prefers-reduced-motion:reduce){
+    .tan,.pt,.lbl,.tanline{transition:none;}
+  }
+
+  /* ---------- 우: 스크롤 서사 ---------- */
+  .story{position:absolute;left:648px;right:0;top:0;bottom:0;padding:0 88px;}
+  header.sh{display:flex;justify-content:space-between;align-items:center;height:76px;
+    border-bottom:1px solid var(--hair);margin:0 -88px;padding:0 88px;}
+  .sh b{font-size:14.5px;font-weight:700;letter-spacing:-.01em;}
+  .sh nav{display:flex;gap:26px;font-size:12.5px;color:var(--dim);align-items:center;}
+  .sh nav a{text-decoration:none;color:inherit;}
+  .sh nav .lg{border:1px solid var(--ink);border-radius:6px;padding:8px 14px;color:var(--ink);font-weight:600;font-size:12px;}
+
+  .step{margin-top:96px;display:flex;align-items:center;gap:14px;}
+  .step .n{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.2em;color:var(--indigo);}
+  .step .ln{flex:1;height:1px;background:var(--hair);}
+  h1{margin:26px 0 0;font-size:38px;line-height:1.42;font-weight:700;letter-spacing:-.03em;}
+  .lead{margin:26px 0 0;font-size:16px;line-height:2.05;color:var(--body);max-width:540px;font-weight:400;}
+  .lead u{text-decoration:none;background:linear-gradient(transparent 62%, rgba(91,61,245,.16) 62%);}
+
+  .quote{margin-top:38px;padding-left:22px;border-left:3px solid var(--indigo);max-width:520px;}
+  .quote p{margin:0;font-size:19px;line-height:1.7;font-weight:600;letter-spacing:-.015em;}
+  .quote span{display:block;margin-top:10px;font-size:12px;color:var(--dim);}
+
+  .hint{position:absolute;left:88px;bottom:150px;font-size:12.5px;color:var(--indigo);display:flex;align-items:center;gap:9px;}
+  .hint i{font-style:normal;font-size:15px;}
+  .revealed-r .hint{display:none;}
+  .next{position:absolute;left:88px;bottom:58px;font-size:12.5px;color:var(--dim);display:flex;align-items:center;gap:10px;}
+  .next b{color:var(--ink);font-weight:600;}
+
+  .solved{position:absolute;left:88px;right:88px;bottom:150px;opacity:0;transform:translateY(8px);
+    transition:opacity .45s ease .25s, transform .45s ease .25s;}
+  .revealed-r .solved{opacity:1;transform:none;}
+  .solved .k{font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.2em;color:var(--green);}
+  .solved p{margin:12px 0 0;font-size:15px;line-height:1.95;color:var(--body);max-width:540px;}
+  .katex{font-size:1em;}
+</style>
+</head>
+<body>
+
+<div class="chrome">
+  <span class="c-num">05</span>
+  <span class="c-name">한 문제 <em>· One Problem</em></span>
+  <span class="c-tip">← 좌측 선택지를 눌러보세요</span>
+  <span class="c-sw">
+    <i style="background:#FCFCFD"></i><i style="background:#F6F5FA"></i><i style="background:#1C1B22"></i>
+    <i style="background:#5B3DF5"></i><i style="background:#0E9F6E"></i>
+  </span>
+  <span class="c-meta">Instrument Sans + Pretendard　·　1440 × 900</span>
+</div>
+
+<div class="stage" id="stage">
+<div class="canvas" id="canvas">
+
+  <!-- 좌: 고정 문제 캔버스 -->
+  <section class="prob" id="prob">
+    <div class="pin">고정 캔버스 · 스크롤해도 남아 있음</div>
+    <div class="peyebrow">문제 01 · 미적분Ⅰ · 도함수의 활용</div>
+    <div class="formula">$f(x) = x^{3} - 3x$</div>
+    <div class="prompt">함수 <span class="mono" style="font-size:18px;">f</span> 의 극댓값을 구하시오.</div>
+
+    <div class="choices">
+      <button class="ch" data-ok="1"><span class="no">①</span>2</button>
+      <button class="ch"><span class="no">②</span>−2</button>
+      <button class="ch"><span class="no">③</span>0</button>
+      <button class="ch"><span class="no">④</span>4</button>
+    </div>
+
+    <div class="graph">
+      <svg id="gsvg" width="520" height="220" viewBox="0 0 520 220" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M0 110 H520" stroke="#DAD6E6" stroke-width="1"/>
+        <path d="M260 0 V220" stroke="#DAD6E6" stroke-width="1"/>
+        <path id="curve" stroke="#1C1B22" stroke-width="2" stroke-linecap="round"/>
+        <g class="tan">
+          <path id="tanline" class="tanline" pathLength="1" d="M25 42 H248" stroke="#5B3DF5" stroke-width="1.6" stroke-dasharray="1"/>
+        </g>
+        <g class="pt">
+          <circle cx="136" cy="42" r="10" stroke="#5B3DF5" stroke-width="1" opacity=".35"/>
+          <circle cx="136" cy="42" r="4.5" fill="#5B3DF5"/>
+        </g>
+        <g class="lbl">
+          <text x="152" y="34" fill="#5B3DF5" font-family="JetBrains Mono, monospace" font-size="11">(−1, 2) 극대</text>
+          <text x="396" y="184" fill="#8B8896" font-family="JetBrains Mono, monospace" font-size="11">(1, −2) 극소</text>
+          <circle cx="384" cy="178" r="3.5" fill="#8B8896"/>
+        </g>
+      </svg>
+    </div>
+
+    <div class="pfoot">이 문제를 <b>1,284</b>명이 풀었습니다 · 정답률 <b>41%</b> · 오답 1순위 <b>③ 0</b></div>
+  </section>
+
+  <!-- 우: 스크롤 서사 -->
+  <section class="story" id="story">
+    <header class="sh">
+      <b>김하현수학연구소</b>
+      <nav>
+        <a href="#">문제</a><a href="#">수업</a><a href="#">커리큘럼</a><a href="#">성과</a>
+        <a class="lg" href="#">학생 로그인</a>
+      </nav>
+    </header>
+
+    <div class="step"><span class="n">STEP 01</span><span class="ln"></span></div>
+    <h1>대부분은<br>여기서 멈춥니다.</h1>
+    <p class="lead">
+      <span class="mono" style="font-size:14px;">f'(x)=0</span> 을 풀어 <span class="mono" style="font-size:14px;">x=±1</span> 을 얻는 것까지는 누구나 합니다.
+      문제는 그 다음입니다. <u>왜 x=−1이 극대이고 x=1이 극소인지</u> 설명하지 못하면,
+      문제를 조금만 비틀었을 때 그대로 무너집니다.
+    </p>
+
+    <div class="quote">
+      <p>저는 정확히 이 지점에서<br>수업을 시작합니다.</p>
+      <span>김하현 · 고등수학</span>
+    </div>
+
+    <div class="hint"><i>←</i> 왼쪽 선택지를 고르면 풀이가 시작됩니다</div>
+
+    <div class="solved">
+      <div class="k">풀이 시작</div>
+      <p>정답입니다. 이제 <b>왜</b>를 봅니다. f′의 부호가 <b>+ → −</b> 로 바뀌는 자리가 극대입니다.
+         값을 외운 것이 아니라 부호 변화를 읽었다면, 4차·유리함수로 바뀌어도 같은 방법이 통합니다.</p>
+    </div>
+
+    <div class="next"><b>02</b> 그 다음, 틀린 문제는 어디로 가는가 &nbsp;↓</div>
+  </section>
+
+</div>
+</div>
+
+<script>
+  /* --- 그래프: f(x)=x^3-3x --- */
+  (function(){
+    var x0=260, y0=110, sx=123.8, sy=34, d='';
+    for(var i=0;i<=240;i++){
+      var x = -2.1 + (4.2*i/240);
+      var y = x*x*x - 3*x;
+      d += (i===0?'M':'L') + (x0 + x*sx).toFixed(1) + ' ' + (y0 - y*sy).toFixed(1);
+    }
+    document.getElementById('curve').setAttribute('d', d);
+  })();
+
+  /* --- 선택지 인터랙션 --- */
+  document.querySelectorAll('.ch').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      document.querySelectorAll('.ch').forEach(function(b){
+        if(b.dataset.ok) b.classList.add('right'); else b.classList.add('mute');
+      });
+      document.getElementById('prob').classList.add('revealed');
+      document.getElementById('gsvg').classList.add('revealed');
+      document.getElementById('story').classList.add('revealed-r');
+    });
+  });
+
+  function fit(){
+    var s = Math.min(1, (window.innerWidth - 48) / 1440);
+    var stage = document.getElementById('stage'), canvas = document.getElementById('canvas');
+    stage.style.height = (900 * s) + 'px';
+    canvas.style.transform = 'scale(' + s + ')';
+    canvas.style.left = Math.max(0, (stage.clientWidth - 1440 * s) / 2) + 'px';
+  }
+  window.addEventListener('resize', fit); fit();
+  window.addEventListener('load', function(){
+    if(window.renderMathInElement){
+      renderMathInElement(document.getElementById('canvas'), {
+        delimiters:[{left:'$', right:'$', display:false}], throwOnError:false
+      });
+    }
+    fit();
+  });
+</script>
+</body>
+</html>

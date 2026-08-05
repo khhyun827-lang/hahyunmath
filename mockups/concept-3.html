@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>시안 03 — 한 사람 | 김하현수학연구소</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,200;0,9..144,300;0,9..144,400;1,9..144,300&family=Gowun+Batang:wght@400;700&family=Noto+Sans+KR:wght@200;300;400&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:#101114;}
+
+  .chrome{height:46px;display:flex;align-items:center;gap:20px;padding:0 20px;
+    background:#17181B;color:#8A8D94;font:400 12px/1 ui-sans-serif,system-ui,'Segoe UI',sans-serif;
+    border-bottom:1px solid #24262B;}
+  .c-num{font-variant-numeric:tabular-nums;color:#fff;background:#2E3138;padding:4px 7px;border-radius:3px;font-size:11px;}
+  .c-name{color:#EDEEF0;font-size:13px;} .c-name em{color:#767A82;font-style:normal;}
+  .c-sw{display:flex;gap:5px;margin-left:auto;}
+  .c-sw i{width:15px;height:15px;border-radius:3px;display:block;box-shadow:inset 0 0 0 1px rgba(255,255,255,.12);}
+  .c-meta{font-size:11px;color:#6E727A;letter-spacing:.03em;}
+
+  .stage{position:relative;width:100%;overflow:hidden;background:#101114;}
+  .canvas{position:absolute;top:0;left:0;width:1440px;height:900px;transform-origin:top left;overflow:hidden;}
+
+  /* ===================== 시안 본체 ===================== */
+  .canvas{
+    --stone:#E9E9E7; --ink:#101010; --forest:#2A3630; --muted:#77776F;
+    background:var(--stone);color:var(--ink);
+    font-family:'Gowun Batang',serif;
+  }
+  .lat{font-family:'Fraunces',serif;}
+  .sans{font-family:'Noto Sans KR',sans-serif;}
+
+  /* 판면 프레임 */
+  .frame{position:absolute;inset:40px;border:1px solid rgba(16,16,16,.14);pointer-events:none;z-index:3;}
+
+  /* 인물 */
+  .figure{position:absolute;right:-52px;bottom:0;height:944px;z-index:1;}
+  .figure img{height:944px;width:auto;display:block;
+    filter:grayscale(1) contrast(1.06) brightness(1.02);}
+  .figure .fallback{width:700px;height:944px;background:
+    linear-gradient(160deg,#D8D8D4,#C4C4BF);display:none;}
+  .halo{position:absolute;right:-160px;bottom:-220px;width:1040px;height:1040px;border-radius:50%;
+    background:radial-gradient(circle at 50% 50%, rgba(42,54,48,.09) 0%, rgba(42,54,48,0) 62%);z-index:0;}
+
+  /* 상단 */
+  header.top{position:absolute;top:84px;left:120px;width:540px;z-index:4;}
+  .mark{font-family:'Gowun Batang',serif;font-size:15px;letter-spacing:.1em;}
+  .mark i{font-family:'Fraunces',serif;font-style:italic;font-weight:300;font-size:13px;color:var(--muted);margin-left:10px;letter-spacing:0;}
+  .topnav{display:flex;gap:26px;margin-top:22px;font-family:'Noto Sans KR',sans-serif;font-weight:300;font-size:11px;
+    letter-spacing:.24em;color:var(--muted);}
+  .topnav a{text-decoration:none;color:inherit;}
+  .topnav a.act{color:var(--forest);}
+
+  /* 좌측 세로 각인 */
+  .spine{position:absolute;left:74px;top:50%;transform:translateY(-50%) rotate(180deg);writing-mode:vertical-rl;
+    font-family:'Fraunces',serif;font-weight:300;font-size:10.5px;letter-spacing:.42em;color:#9E9E97;
+    text-transform:uppercase;z-index:4;}
+
+  /* 텍스트 블록 */
+  .lede{position:absolute;left:120px;bottom:132px;width:560px;z-index:4;}
+  .kicker{font-family:'Fraunces',serif;font-weight:300;font-size:10.5px;letter-spacing:.42em;
+    color:var(--forest);text-transform:uppercase;}
+  .rule{width:52px;height:1px;background:var(--forest);margin:22px 0 26px;}
+  .name{font-size:42px;font-weight:400;letter-spacing:.06em;margin:0;line-height:1;}
+  .role{font-family:'Noto Sans KR',sans-serif;font-weight:300;font-size:11.5px;letter-spacing:.26em;
+    color:var(--muted);margin-top:16px;}
+  .say{font-size:24px;font-weight:400;line-height:2.15;letter-spacing:.01em;margin:56px 0 0;color:#22221F;}
+  .say b{font-weight:700;}
+  .more{margin-top:44px;font-family:'Noto Sans KR',sans-serif;font-weight:300;font-size:12px;letter-spacing:.14em;
+    color:var(--forest);border-bottom:1px solid rgba(42,54,48,.35);padding-bottom:4px;display:inline-block;}
+
+  .stamp{position:absolute;left:120px;bottom:84px;font-family:'Fraunces',serif;font-weight:300;font-size:10px;
+    letter-spacing:.4em;color:#A9A9A1;text-transform:uppercase;z-index:4;}
+</style>
+</head>
+<body>
+
+<div class="chrome">
+  <span class="c-num">03</span>
+  <span class="c-name">한 사람 <em>· Portrait</em></span>
+  <span class="c-sw">
+    <i style="background:#E9E9E7"></i><i style="background:#101010"></i><i style="background:#2A3630"></i>
+    <i style="background:#77776F"></i><i style="background:#C4C4BF"></i>
+  </span>
+  <span class="c-meta">Fraunces + Gowun Batang　·　1440 × 900</span>
+</div>
+
+<div class="stage" id="stage">
+<div class="canvas" id="canvas">
+
+  <div class="halo"></div>
+
+  <div class="figure">
+    <img src="../profile.png" alt="김하현" onerror="this.style.display='none';this.nextElementSibling.style.display='block';">
+    <div class="fallback"></div>
+  </div>
+
+  <div class="frame"></div>
+
+  <header class="top">
+    <div class="mark">김하현<i>Institute of Mathematics</i></div>
+    <nav class="topnav">
+      <a class="act" href="#">사람</a><a href="#">태도</a><a href="#">경력</a>
+      <a href="#">성과</a><a href="#">목소리</a><a href="#">만남</a><a href="#">학생 로그인</a>
+    </nav>
+  </header>
+
+  <div class="spine">Kim Hahyun — Mathematics · Seoul</div>
+
+  <div class="lede">
+    <div class="kicker">01 — 사람</div>
+    <div class="rule"></div>
+    <h1 class="name">김하현</h1>
+    <div class="role">고등수학 · 서울 광진</div>
+    <p class="say">모든 수업은 같은 질문에서 시작합니다.<br><b>“이 문제는 왜 이렇게 풀어야 하는가.”</b></p>
+    <span class="more">이야기를 읽어보세요 ―</span>
+  </div>
+
+  <div class="stamp">Seoul · MMXXVI</div>
+
+</div>
+</div>
+
+<script>
+  function fit(){
+    var s = Math.min(1, (window.innerWidth - 48) / 1440);
+    var stage = document.getElementById('stage'), canvas = document.getElementById('canvas');
+    stage.style.height = (900 * s) + 'px';
+    canvas.style.transform = 'scale(' + s + ')';
+    canvas.style.left = Math.max(0, (stage.clientWidth - 1440 * s) / 2) + 'px';
+  }
+  window.addEventListener('resize', fit); window.addEventListener('load', fit); fit();
+</script>
+</body>
+</html>

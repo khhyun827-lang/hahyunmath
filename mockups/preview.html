@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>디자인 시안 5안 — 김하현수학연구소</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<style>
+  *{box-sizing:border-box;}
+  body{margin:0;background:#0E0F12;color:#E8EAEE;
+    font-family:'Pretendard',ui-sans-serif,system-ui,sans-serif;
+    -webkit-font-smoothing:antialiased;}
+  .mono{font-family:'IBM Plex Mono',ui-monospace,monospace;}
+  a{color:inherit;}
+
+  .wrap{max-width:1340px;margin:0 auto;padding:64px 26px 100px;}
+
+  header.pg{border-bottom:1px solid #22242A;padding-bottom:30px;margin-bottom:44px;
+    display:flex;justify-content:space-between;align-items:flex-end;gap:24px;flex-wrap:wrap;}
+  header.pg h1{margin:0;font-size:26px;font-weight:700;letter-spacing:-.03em;}
+  header.pg p{margin:12px 0 0;font-size:13.5px;color:#8A8F99;line-height:1.75;max-width:620px;}
+  header.pg .meta{font-size:11px;color:#61656E;letter-spacing:.14em;text-align:right;line-height:2;}
+
+  .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:40px 34px;}
+  @media (max-width:1180px){ .grid{grid-template-columns:1fr;} }
+
+  .card{background:#131519;border:1px solid #22242A;border-radius:10px;overflow:hidden;
+    transition:border-color .18s,transform .18s;}
+  .card:hover{border-color:#3A3E47;transform:translateY(-2px);}
+
+  .thumb{position:relative;width:100%;aspect-ratio:1488/1000;overflow:hidden;background:#0B0C0F;
+    border-bottom:1px solid #22242A;}
+  .thumb iframe{position:absolute;top:0;left:0;width:1488px;height:1000px;border:0;
+    transform-origin:top left;pointer-events:none;}
+  .thumb .veil{position:absolute;inset:0;}
+  .thumb .open{position:absolute;right:12px;bottom:12px;background:rgba(14,15,18,.86);color:#fff;
+    border:1px solid rgba(255,255,255,.2);border-radius:5px;padding:7px 12px;font-size:11.5px;
+    text-decoration:none;letter-spacing:.02em;backdrop-filter:blur(4px);}
+  .thumb .open:hover{background:#fff;color:#111;}
+
+  .body{padding:22px 24px 26px;}
+  .ttl{display:flex;align-items:baseline;gap:11px;}
+  .ttl .n{font-family:'IBM Plex Mono',monospace;font-size:11px;color:#6C717B;letter-spacing:.1em;}
+  .ttl h2{margin:0;font-size:18px;font-weight:700;letter-spacing:-.02em;}
+  .ttl em{font-style:normal;font-size:12px;color:#6C717B;font-family:'IBM Plex Mono',monospace;}
+  .kw{margin:12px 0 0;font-size:12.5px;color:#8A8F99;line-height:1.8;}
+  .sig{margin:14px 0 0;font-size:12.5px;color:#B9BEC7;line-height:1.85;
+    border-left:2px solid #33373F;padding-left:12px;}
+  .sig b{color:#fff;font-weight:600;}
+  .row{display:flex;align-items:center;gap:14px;margin-top:18px;padding-top:16px;border-top:1px solid #22242A;
+    font-size:11px;color:#61656E;letter-spacing:.03em;flex-wrap:wrap;}
+  .sw{display:flex;gap:4px;}
+  .sw i{width:14px;height:14px;border-radius:3px;display:block;box-shadow:inset 0 0 0 1px rgba(255,255,255,.14);}
+
+  .note{margin-top:48px;padding:18px 20px;border:1px dashed #2C2F36;border-radius:8px;
+    font-size:12.5px;color:#7C818B;line-height:1.9;}
+  .note b{color:#B9BEC7;font-weight:600;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="pg">
+    <div>
+      <h1>홈페이지 리디자인 · 디자인 시안 5안</h1>
+      <p>각 시안은 데스크톱 1440 × 900 기준 첫 화면(Hero)입니다. 카드를 열면 실제 크기로 확인할 수 있고,
+         브라우저 창을 줄이면 1440px 화면이 비율 그대로 축소되어 보입니다.</p>
+    </div>
+    <div class="meta mono">KIM HAHYUN · MATHEMATICS<br>2026 · CONCEPT REVIEW</div>
+  </header>
+
+  <div class="grid" id="grid">
+
+    <article class="card">
+      <div class="thumb"><iframe src="concept-1.html" loading="lazy" title="시안 01"></iframe>
+        <div class="veil"></div><a class="open" href="concept-1.html" target="_blank">실제 크기로 열기 ↗</a></div>
+      <div class="body">
+        <div class="ttl"><span class="n">01</span><h2>정리와 증명</h2><em>Theorem &amp; Proof</em></div>
+        <p class="kw">논증 · 조판 · 여백의 권위 · 읽는 홈페이지</p>
+        <p class="sig">첫 화면이 <b>「정리 1」</b> 한 문장입니다. 이미지도 버튼도 없이, 페이지 전체가 한 편의 증명으로 구성됩니다.
+          좁은 본문 1단 + 넓은 여백 주석. 수식은 실제 조판으로 놓입니다.</p>
+        <div class="row">
+          <span class="sw"><i style="background:#F6F6F2"></i><i style="background:#16181C"></i><i style="background:#23306B"></i><i style="background:#7A7F87"></i><i style="background:#DDDDD6"></i></span>
+          <span class="mono">Newsreader + Hahmlet</span>
+        </div>
+      </div>
+    </article>
+
+    <article class="card">
+      <div class="thumb"><iframe src="concept-2.html" loading="lazy" title="시안 02"></iframe>
+        <div class="veil"></div><a class="open" href="concept-2.html" target="_blank">실제 크기로 열기 ↗</a></div>
+      <div class="body">
+        <div class="ttl"><span class="n">02</span><h2>좌표계</h2><em>The Coordinate Plane</em></div>
+        <p class="kw">계측기 · 곡선 · 어둠 속의 광채 · 스크롤이 곧 함수</p>
+        <p class="sig">화면 전체가 좌표평면입니다. 성적 궤적이 <b>실시간으로 그려지고</b>, 섹션은 곡선 위의 좌표점에 놓입니다.
+          앰버는 버튼이 아니라 데이터 잉크로만 씁니다.</p>
+        <div class="row">
+          <span class="sw"><i style="background:#0B0E14"></i><i style="background:#161D2A"></i><i style="background:#E6E9F0"></i><i style="background:#F0B429"></i><i style="background:#5B8DEF"></i></span>
+          <span class="mono">Archivo + SUIT + DM Mono</span>
+        </div>
+      </div>
+    </article>
+
+    <article class="card">
+      <div class="thumb"><iframe src="concept-3.html" loading="lazy" title="시안 03"></iframe>
+        <div class="veil"></div><a class="open" href="concept-3.html" target="_blank">실제 크기로 열기 ↗</a></div>
+      <div class="body">
+        <div class="ttl"><span class="n">03</span><h2>한 사람</h2><em>Portrait</em></div>
+        <p class="kw">인물 · 정적 · 절제된 럭셔리 · 사진이 먼저</p>
+        <p class="sig">인물 컷아웃이 화면 오른쪽을 넘어가고, 왼쪽은 거의 비워둡니다. 헤드라인을 크게 쓰지 않는 것이
+          이 안의 핵심 결정입니다. <b>현재 보유한 프로필 사진을 그대로 적용</b>했습니다.</p>
+        <div class="row">
+          <span class="sw"><i style="background:#E9E9E7"></i><i style="background:#101010"></i><i style="background:#2A3630"></i><i style="background:#77776F"></i><i style="background:#C4C4BF"></i></span>
+          <span class="mono">Fraunces + Gowun Batang</span>
+        </div>
+      </div>
+    </article>
+
+    <article class="card">
+      <div class="thumb"><iframe src="concept-4.html" loading="lazy" title="시안 04"></iframe>
+        <div class="veil"></div><a class="open" href="concept-4.html" target="_blank">실제 크기로 열기 ↗</a></div>
+      <div class="body">
+        <div class="ttl"><span class="n">04</span><h2>관측소</h2><em>The Observatory</em></div>
+        <p class="kw">기록 · 스위스 그리드 · 헤어라인 · 제품으로서의 관리 시스템</p>
+        <p class="sig">카피가 아니라 <b>실제 기록</b>이 히어로입니다. 좌측 고정 인덱스 + 우측 데이터 패널.
+          숫자는 전부 tabular 정렬이고, 색은 데이터에만 허용됩니다.</p>
+        <div class="row">
+          <span class="sw"><i style="background:#FFFFFF"></i><i style="background:#F7F9FB"></i><i style="background:#0D1117"></i><i style="background:#2563C9"></i><i style="background:#E3E8EF"></i></span>
+          <span class="mono">Inter + IBM Plex Sans KR</span>
+        </div>
+      </div>
+    </article>
+
+    <article class="card">
+      <div class="thumb"><iframe src="concept-5.html" loading="lazy" title="시안 05"></iframe>
+        <div class="veil"></div><a class="open" href="concept-5.html" target="_blank">실제 크기로 열기 ↗</a></div>
+      <div class="body">
+        <div class="ttl"><span class="n">05</span><h2>한 문제</h2><em>One Problem</em></div>
+        <p class="kw">시연 · 단계 공개 · 좌우 분할 · 설득 대신 증명</p>
+        <p class="sig">방문자에게 실제 문제 한 개를 냅니다. <b>선택지를 누르면 풀이가 시작됩니다</b> —
+          실제 크기로 열어서 직접 눌러보세요. 좌측 캔버스는 고정, 우측만 스크롤됩니다.</p>
+        <div class="row">
+          <span class="sw"><i style="background:#FCFCFD"></i><i style="background:#F6F5FA"></i><i style="background:#1C1B22"></i><i style="background:#5B3DF5"></i><i style="background:#0E9F6E"></i></span>
+          <span class="mono">Instrument Sans + Pretendard</span>
+        </div>
+      </div>
+    </article>
+
+  </div>
+
+  <div class="note">
+    <b>확인 방법</b> — 이 페이지의 썸네일이 비어 보이면 브라우저가 로컬 파일 간 iframe을 막은 것입니다.
+    그때는 각 카드의 <b>「실제 크기로 열기」</b> 링크를 쓰거나, <span class="mono">concept-1.html</span> ~
+    <span class="mono">concept-5.html</span> 파일을 직접 열어주세요.
+    시안 05는 인터랙션이 있으므로 반드시 직접 열어서 선택지를 눌러보시는 것을 권합니다.
+  </div>
+
+</div>
+
+<script>
+  function fitThumbs(){
+    document.querySelectorAll('.thumb').forEach(function(t){
+      var f = t.querySelector('iframe');
+      f.style.transform = 'scale(' + (t.clientWidth / 1488) + ')';
+    });
+  }
+  window.addEventListener('resize', fitThumbs);
+  window.addEventListener('load', fitThumbs);
+  fitThumbs();
+</script>
+</body>
+</html>

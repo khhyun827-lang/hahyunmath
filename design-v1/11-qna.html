@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>질의응답 — 김하현수학연구소 관리자</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<link rel="stylesheet" href="ds.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<style>
+  /* 배치만. 색·서체·반경은 ds.css 토큰. */
+  .list{position:absolute;left:0;top:0;bottom:0;width:326px;border-right:1px solid var(--line);
+    background:var(--card);display:flex;flex-direction:column;}
+  .lh{display:flex;align-items:center;gap:8px;padding:14px 16px;border-bottom:1px solid var(--line);flex-shrink:0;}
+  .lbody{flex:1;min-height:0;overflow-y:auto;}
+
+  .doc{position:absolute;left:326px;right:0;top:0;bottom:0;padding:22px 30px 0;
+    display:flex;flex-direction:column;overflow:hidden;}
+  .thread{flex:1;min-height:0;overflow-y:auto;margin-top:18px;padding-bottom:16px;}
+
+  /* 질문과 답변을 좌우로 벌리지 않는다. 수학 질문은 길고 수식이 들어가서
+     말풍선으로 만들면 폭이 좁아 수식이 깨진다. 세로로 쌓고 «누가 썼는지»를 머리에 붙인다. */
+  .msg{padding:16px 18px;border-radius:var(--r-lg);border:1px solid var(--line);
+    background:var(--card);margin-bottom:12px;}
+  .msg.me{background:var(--accent-bg);border-color:var(--accent-line);}
+  .msg .h{display:flex;align-items:center;gap:8px;margin-bottom:10px;}
+  .msg .h b{font-size:12.5px;font-weight:700;}
+  .msg .h .t{margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--dim);}
+  .msg .x{font-size:13.5px;line-height:1.9;color:var(--ink);}
+  .msg.me .x{color:var(--ink);}
+
+  .composer{flex-shrink:0;border-top:1px solid var(--line);padding:14px 0 16px;}
+  .cbox{border:1px solid var(--line);border-radius:var(--r-lg);background:var(--card);
+    padding:13px 15px;min-height:78px;font-size:13px;color:var(--dim);line-height:1.8;}
+  .crow{display:flex;align-items:center;gap:7px;margin-top:10px;}
+  .katex{font-size:1.02em;}
+</style>
+</head>
+<body>
+<div class="chrome"><span class="c-num">11</span><span class="c-name">질의응답 <em>· 소통</em></span>
+  <span class="c-meta">역할: 학생 질문에 답한다 · 수식이 들어가는 긴 글　·　1440 × 900</span></div>
+
+<div class="stage" id="stage"><div class="canvas" id="canvas">
+
+  <div class="topbar">
+    <div class="bm">김하현수학연구소</div>
+    <nav id="nav"></nav>
+    <div class="right"><span>미답변 <b class="mono" style="color:var(--no);">5</b></span>
+      <s style="text-decoration:none;">·</s><span>평균 응답 <span class="mono">7시간</span></span>
+      <s style="text-decoration:none;">·</s><span>김하현T</span></div>
+  </div>
+
+  <div class="subnav" id="subnav"></div>
+
+  <div class="body sub">
+
+    <aside class="list">
+      <div class="lh">
+        <a class="pill on" href="#">미답변 <b>5</b></a>
+        <a class="pill" href="#">전체 <b>142</b></a>
+        <span class="spacer"></span>
+        <button class="btn q sm" id="bsort"></button>
+      </div>
+      <div class="lbody scroll" id="qs"></div>
+    </aside>
+
+    <main class="doc">
+      <div style="flex-shrink:0;">
+        <div class="row" style="gap:8px;">
+          <span class="badge qna">질문</span>
+          <span class="badge">도함수의 활용</span>
+          <span class="spacer"></span>
+          <span class="muted" style="font-size:11.5px;">7월 3주 시험지 11번에서 시작된 질문</span>
+          <button class="btn sm" id="bexam"></button>
+        </div>
+        <h1 class="t-title" style="margin-top:12px;">극대·극소 판정에서 f″를 꼭 봐야 하나요?</h1>
+        <div class="t-meta" style="margin-top:7px;">
+          <a href="03-student.html" style="color:var(--accent);font-weight:600;text-decoration:none;">정하람</a>
+          <s>·</s>동대부여고 고2<s>·</s>고2 미적분Ⅰ 정규반<s>·</s>
+          <span class="mono">2026-08-04 23:41</span><s>·</s>
+          <span style="color:var(--no);font-weight:600;">19시간째 미답변</span>
+        </div>
+      </div>
+
+      <div class="thread scroll">
+        <div class="msg">
+          <div class="h"><div class="av" style="width:24px;height:24px;font-size:11px;">정</div>
+            <b>정하람</b><span class="t">08-04 23:41</span></div>
+          <div class="x">
+            수업에서 $f'(x)=0$ 인 점을 찾고 부호 변화를 보라고 하셨는데,
+            문제집 해설에는 $f''(x)$ 의 부호로 판정하는 풀이가 나옵니다.
+            둘 중 어느 걸 써야 하나요? 시험에서 $f''$ 를 쓰면 감점되나요?
+          </div>
+        </div>
+
+        <div class="msg">
+          <div class="h"><div class="av" style="width:24px;height:24px;font-size:11px;">정</div>
+            <b>정하람</b><span class="t">08-04 23:44</span></div>
+          <div class="x">
+            그리고 $f''(x)=0$ 이 나오면 그때는 어떻게 판정하나요?
+          </div>
+        </div>
+
+        <div class="msg me">
+          <div class="h">
+            <div class="av" style="width:24px;height:24px;font-size:11px;background:var(--accent);color:#fff;">김</div>
+            <b>김하현T</b><span class="badge consult">작성 중</span><span class="t">방금</span></div>
+          <div class="x">
+            둘 다 맞는 풀이이고 감점되지 않습니다. 다만 <b>부호 변화가 더 안전합니다</b> —
+            $f''$ 판정법은 $f''(x_0)=0$ 일 때 아무 것도 말해주지 않기 때문입니다.
+          </div>
+        </div>
+      </div>
+
+      <div class="composer">
+        <div class="cbox">
+          예를 들어 $f(x)=x^4$ 은 $x=0$ 에서 $f''(0)=0$ 이지만 극소입니다.
+          이런 경우는 결국 부호 변화를 봐야 하므로, 처음부터 부호 변화로 통일해서 익히는 편이…
+        </div>
+        <div class="crow">
+          <button class="btn sm" id="bmath"></button>
+          <button class="btn sm" id="bimg"></button>
+          <button class="btn sm" id="bbank"></button>
+          <span class="spacer"></span>
+          <span class="muted" style="font-size:11.5px;">공개 답변은 같은 반 학생 모두가 봅니다</span>
+          <button class="btn sm">비공개로 답변</button>
+          <button class="btn p" id="bsend"></button>
+        </div>
+      </div>
+    </main>
+
+  </div>
+
+</div></div>
+
+<script src="ds.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+<script>
+  document.getElementById('bsort').innerHTML = '오래된 순 ' + ICON('chevD',12);
+  document.getElementById('bexam').innerHTML = ICON('clipboard',13) + ' 원본 문항 보기';
+  document.getElementById('bmath').innerHTML = ICON('pencil',13) + ' 수식';
+  document.getElementById('bimg').innerHTML  = ICON('plus',13) + ' 사진';
+  document.getElementById('bbank').innerHTML = ICON('archive',13) + ' 창고에서 문항 첨부';
+  document.getElementById('bsend').innerHTML = '답변 등록 ' + ICON('arrowR',14);
+
+  var QNA = [
+    ['jhr09','19시간','극대·극소 판정에서 f″를 꼭 봐야 하나요?','도함수의 활용',1,1],
+    ['pjh03','3시간','오답숙제 제출했는데 왜 아직 미제출로 뜨나요?','기타',1,0],
+    ['hjw14','1일','접선의 방정식에서 접점을 모를 때 접근법이 헷갈립니다.','도함수의 활용',1,0],
+    ['kmj01','1일','정적분에서 넓이를 구할 때 절댓값을 언제 씌우나요?','정적분',1,0],
+    ['mgo21','2일','속도와 가속도 문제에서 부호의 의미가 무엇인가요?','속도와 가속도',1,0],
+    ['cyj02','3일','8월 특강 교재는 따로 사야 하나요?','기타',0,0],
+    ['lsy07','4일','그래프 개형에서 변곡점을 꼭 표시해야 하나요?','그래프의 개형',0,0]
+  ];
+  document.getElementById('qs').innerHTML = QNA.map(function (q) {
+    var s = STUDENTS.filter(function (x) { return x.id === q[0]; })[0];
+    return '<div class="q' + (q[5] ? ' on' : '') + '">'
+      + '<div class="h">'
+        + '<span class="badge ' + (q[4] ? 'no' : 'ok') + '">' + (q[4] ? '미답변' : '완료') + '</span>'
+        + '<span class="who">' + s.n + '</span>'
+        + '<span class="muted" style="font-size:11px;">' + q[3] + '</span>'
+        + '<span class="ago">' + q[1] + '</span></div>'
+      + '<div class="x">' + q[2] + '</div></div>';
+  }).join('');
+
+  renderMathInElement(document.getElementById('canvas'), {
+    delimiters: [{left:'$', right:'$', display:false}], throwOnError:false
+  });
+
+  renderNav('소통');
+  renderSubnav('소통', '질의응답');
+  fitCanvas();
+</script>
+</body>
+</html>

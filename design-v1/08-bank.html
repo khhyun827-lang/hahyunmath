@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>보충문제 창고 — 김하현수학연구소 관리자</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<link rel="stylesheet" href="ds.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<style>
+  /* 배치만. 색·서체·반경은 ds.css 토큰. */
+  .main{position:absolute;left:0;right:0;top:0;bottom:56px;display:flex;flex-direction:column;}
+  .head{padding:20px 24px 0;flex-shrink:0;}
+  .hrow{display:flex;align-items:flex-end;gap:14px;}
+  .fbar{display:flex;align-items:center;gap:7px;margin-top:16px;padding-bottom:14px;
+    border-bottom:1px solid var(--line);flex-wrap:wrap;}
+  .fbar .field{width:250px;}
+  .fbar .r{margin-left:auto;display:flex;align-items:center;gap:7px;}
+
+  /* 문항 카드 3열. 창고는 «고르는» 곳이라 수식이 보여야 한다 —
+     목록으로 눕히면 한 줄에 수식이 잘려서 결국 하나씩 열어봐야 한다. */
+  .grid3{flex:1;min-height:0;overflow-y:auto;padding:16px 24px 20px;
+    display:grid;grid-template-columns:repeat(3,1fr);gap:12px;align-content:start;}
+  .qc{background:var(--card);border:1px solid var(--line);border-radius:var(--r-lg);
+    padding:14px 16px;display:flex;flex-direction:column;transition:border-color var(--t);}
+  .qc:hover{border-color:#D9D6CC;}
+  .qc .h{display:flex;align-items:center;gap:6px;}
+  .qc .h .id{margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--dim);}
+  .qc .stem{margin-top:11px;font-size:13.5px;line-height:1.75;min-height:52px;}
+  .qc .ft{display:flex;align-items:center;gap:8px;margin-top:12px;padding-top:11px;
+    border-top:1px solid var(--line2);font-size:11.5px;color:var(--dim);}
+  .qc .ft .sp{margin-left:auto;display:flex;gap:5px;opacity:0;transition:opacity var(--t);}
+  .qc:hover .ft .sp{opacity:1;}
+  .katex{font-size:1.02em;}
+</style>
+</head>
+<body>
+<div class="chrome"><span class="c-num">08</span><span class="c-name">보충문제 창고 <em>· 오답 시스템</em></span>
+  <span class="c-meta">역할: 승인된 문항을 쌓아두고 다시 꺼내 쓴다　·　1440 × 900</span></div>
+
+<div class="stage" id="stage"><div class="canvas" id="canvas">
+
+  <div class="topbar">
+    <div class="bm">김하현수학연구소</div>
+    <nav id="nav"></nav>
+    <div class="right"><span>승인 문항 <b class="mono">412</b></span>
+      <s style="text-decoration:none;">·</s><span>김하현T</span></div>
+  </div>
+
+  <div class="subnav" id="subnav"></div>
+
+  <div class="body sub">
+    <div class="main">
+
+      <div class="head">
+        <div class="hrow">
+          <h1 class="t-title">보충문제 창고<s>승인된 쌍둥이 문항 412 · 직접 등록 78</s></h1>
+          <div class="spacer"></div>
+          <button class="btn sm" id="badd"></button>
+          <button class="btn sm p" id="bassign"></button>
+        </div>
+
+        <div class="fbar">
+          <div class="field" id="fsearch"></div>
+          <span class="pill f">과목: 미적분Ⅰ <s>×</s></span>
+          <a class="pill on" href="#">전체 <b>412</b></a>
+          <a class="pill" href="#">도함수의 활용 <b>96</b></a>
+          <a class="pill" href="#">정적분 <b>54</b></a>
+          <a class="pill" href="#">미사용 <b>31</b></a>
+          <div class="r">
+            <button class="btn q sm" id="blevel"></button>
+            <button class="btn q sm" id="bsort"></button>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid3 scroll" id="bank"></div>
+
+    </div>
+
+    <div class="actbar">
+      <span class="sum"><b class="mono">3</b>문항 선택됨</span>
+      <button class="btn sm">과제로 배포</button>
+      <button class="btn sm">클리닉 자료로</button>
+      <button class="btn sm">시험지로 묶기</button>
+      <button class="btn sm">HWPX 내려받기</button>
+      <span class="hint">Shift+클릭 범위 선택 · 카드를 누르면 원본 문항과 나란히 열립니다</span>
+    </div>
+  </div>
+
+</div></div>
+
+<script src="ds.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+<script>
+  document.getElementById('fsearch').innerHTML = ICON('search',15) + '<span>문항 내용 · 단원 · 출처로 검색</span>';
+  document.getElementById('badd').innerHTML    = ICON('plus',13) + ' 직접 등록';
+  document.getElementById('bassign').innerHTML = ICON('arrowR',13) + ' 선택 문항 배포';
+  document.getElementById('blevel').innerHTML  = '난도: 전체 ' + ICON('chevD',12);
+  document.getElementById('bsort').innerHTML   = '최근 승인순 ' + ICON('chevD',12);
+
+  /* 출처를 반드시 표시한다 — AI가 만든 것인지 직접 넣은 것인지 모르면
+     문항을 신뢰할 수 없고, 신뢰할 수 없는 문항은 결국 안 쓰게 된다. */
+  var BANK = [
+    ['AI','도함수의 활용','상','MB-0412','$f(x)=x^3-6x^2+9x$ 의 극솟값을 구하시오.', '7월 3주 11번', 4, 1],
+    ['AI','도함수의 활용','중','MB-0411','곡선 $y=x^3-3x+1$ 위의 점 $(2,3)$ 에서의 접선의 방정식을 구하시오.', '7월 3주 4번', 7, 1],
+    ['직접','정적분','상','MB-0408','$\\int_{0}^{2}(3x^2-2x)\\,dx$ 의 값을 구하시오.', '직접 등록', 12, 0],
+    ['AI','극대와 극소','중','MB-0405','$f(x)=2x^3-9x^2+12x$ 가 극대가 되는 $x$ 의 값을 구하시오.', '7월 2주 8번', 5, 1],
+    ['AI','그래프의 개형','하','MB-0402','$f(x)=x^3-3x^2$ 의 그래프가 증가하는 구간을 구하시오.', '7월 2주 6번', 9, 0],
+    ['직접','방정식에의 활용','상','MB-0399','방정식 $x^3-3x-k=0$ 이 서로 다른 세 실근을 갖도록 하는 $k$ 의 범위를 구하시오.', '직접 등록', 15, 0],
+    ['AI','속도와 가속도','중','MB-0396','점 P의 위치가 $x=t^3-3t^2$ 일 때 $t=2$ 에서의 속도를 구하시오.', '6월 4주 15번', 3, 0],
+    ['AI','정적분의 활용','상','MB-0393','곡선 $y=x^2-2x$ 와 $x$축으로 둘러싸인 부분의 넓이를 구하시오.', '7월 3주 17번', 6, 0],
+    ['AI','최대와 최소','중','MB-0390','$0\\le x\\le 3$ 에서 $f(x)=x^3-3x^2$ 의 최솟값을 구하시오.', '7월 3주 16번', 2, 0]
+  ];
+
+  document.getElementById('bank').innerHTML = BANK.map(function (b) {
+    return '<div class="qc">'
+      + '<div class="h">'
+        + '<span class="badge ' + (b[0] === 'AI' ? 'consult' : 'score') + '">' + b[0] + '</span>'
+        + '<span class="badge">' + b[1] + '</span>'
+        + '<span class="badge ' + (b[2] === '상' ? 'no' : (b[2] === '중' ? 'late' : 'ok')) + '">' + b[2] + '</span>'
+        + '<span class="id">' + b[3] + '</span>'
+      + '</div>'
+      + '<div class="stem">' + b[4] + '</div>'
+      + '<div class="ft">' + ICON('archive',12) + ' ' + b[5]
+        + '<span style="margin-left:8px;">사용 ' + b[6] + '회</span>'
+        + '<span class="sp"><button class="btn sm">배포</button>'
+        + '<button class="btn sm">원본 비교</button></span>'
+      + '</div></div>';
+  }).join('');
+
+  renderMathInElement(document.getElementById('canvas'), {
+    delimiters: [{left:'$', right:'$', display:false}], throwOnError:false
+  });
+
+  renderNav('오답');
+  renderSubnav('오답', '보충문제 창고');
+  fitCanvas();
+</script>
+</body>
+</html>

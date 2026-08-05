@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>반 관리 — 김하현수학연구소 관리자</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<link rel="stylesheet" href="ds.css">
+<style>
+  /* 배치만. 색·서체·반경은 ds.css 토큰. */
+  .list{position:absolute;left:0;top:0;bottom:0;width:268px;border-right:1px solid var(--line);
+    background:var(--card);display:flex;flex-direction:column;}
+  .lh{display:flex;align-items:center;padding:14px 16px 10px;flex-shrink:0;}
+  .lbody{flex:1;min-height:0;overflow-y:auto;padding-bottom:12px;}
+
+  /* 반 하나 = 한 항목. 진도 막대를 항목 안에 두면 반 목록만 봐도 어디가 밀렸는지 보인다 */
+  .cl{padding:11px 16px;border-left:3px solid transparent;cursor:pointer;transition:background var(--t);}
+  .cl:hover{background:var(--hover);}
+  .cl.on{background:var(--accent-bg);border-left-color:var(--accent);}
+  .cl .n{font-size:13.5px;font-weight:600;}
+  .cl .m{font-size:11.5px;color:var(--dim);margin-top:3px;}
+  .cl .p{display:flex;align-items:center;gap:8px;margin-top:8px;}
+  .cl .p .bar{flex:1;}
+  .cl .p span{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--sub);}
+
+  .main{position:absolute;left:268px;right:0;top:0;bottom:0;padding:22px 26px 0;
+    display:flex;flex-direction:column;overflow:hidden;}
+  .mh{display:flex;align-items:flex-start;gap:14px;flex-shrink:0;}
+  .mh .r{margin-left:auto;display:flex;gap:6px;}
+
+  .prog{flex:1;min-height:0;overflow-y:auto;margin-top:18px;padding-bottom:20px;}
+
+  /* 단원 체크리스트 — 반 관리의 핵심. 표가 아니라 «목록»으로 둔다.
+     열이 많은 표는 훑는 데 좋고, 순서가 있는 것은 목록이 낫다. 진도는 순서가 전부다. */
+  .u{display:flex;align-items:center;gap:13px;padding:11px 2px;
+    border-bottom:1px solid var(--line2);transition:background var(--t);}
+  .u:hover{background:var(--hover);}
+  .u .ck{width:18px;height:18px;border-radius:5px;border:1.5px solid #C9C6BB;background:var(--card);
+    flex-shrink:0;display:flex;align-items:center;justify-content:center;color:transparent;}
+  .u.done .ck{background:var(--accent);border-color:var(--accent);color:#fff;}
+  .u.now .ck{border-color:var(--accent);border-style:dashed;}
+  .u .no{width:22px;flex-shrink:0;font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--dim);}
+  .u .t{flex:1;min-width:0;font-size:13.5px;}
+  .u.done .t{color:var(--sub);}
+  .u.wait .t{color:var(--dim);}
+  .u .t b{font-weight:600;}
+  .u .meta{width:200px;flex-shrink:0;font-size:11.5px;color:var(--dim);text-align:right;}
+  .u .st{width:74px;flex-shrink:0;text-align:right;}
+
+  .usec{display:flex;align-items:center;gap:9px;padding:20px 2px 8px;
+    border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--paper);z-index:2;}
+  .usec b{font-size:12px;font-weight:700;}
+  .usec .c{margin-left:auto;font-size:11.5px;color:var(--dim);}
+</style>
+</head>
+<body>
+<div class="chrome"><span class="c-num">06</span><span class="c-name">반 관리 <em>· 진도</em></span>
+  <span class="c-meta">역할: 반이 어디까지 나갔는지 관리한다 · 순서가 전부인 화면　·　1440 × 900</span></div>
+
+<div class="stage" id="stage"><div class="canvas" id="canvas">
+
+  <div class="topbar">
+    <div class="bm">김하현수학연구소</div>
+    <nav id="nav"></nav>
+    <div class="right"><span>반 5개 · 재원 68명</span><s style="text-decoration:none;">·</s><span>김하현T</span></div>
+  </div>
+
+  <div class="subnav" id="subnav"></div>
+
+  <div class="body sub">
+
+    <aside class="list">
+      <div class="lh">
+        <span style="font-size:12px;font-weight:700;color:var(--dim);letter-spacing:.08em;">반 목록</span>
+        <span class="spacer"></span>
+        <button class="btn q sm" id="badd"></button>
+      </div>
+      <div class="lbody scroll" id="cls"></div>
+    </aside>
+
+    <main class="main">
+      <div class="mh">
+        <div>
+          <h1 class="t-title">고2 미적분Ⅰ 정규반</h1>
+          <div class="t-meta" style="margin-top:6px;">
+            월·수·금 19:00—21:00<s>·</s>22명<s>·</s>담당 김하현T<s>·</s>개강 2026.03.02
+          </div>
+        </div>
+        <div class="r">
+          <button class="btn sm" id="bplan"></button>
+          <button class="btn sm p" id="brec"></button>
+        </div>
+      </div>
+
+      <div class="kpis" style="margin-top:16px;flex-shrink:0;">
+        <div class="kpi"><div class="k">진도</div><div class="v">72<s>%</s></div></div>
+        <div class="kpi"><div class="k">진행 회차</div><div class="v">38<s>/52</s></div></div>
+        <div class="kpi"><div class="k">반 평균</div><div class="v">76<s>/100</s><em class="up">▲3</em></div></div>
+        <div class="kpi"><div class="k">평균 출석률</div><div class="v">88<s>%</s></div></div>
+        <div class="kpi"><div class="k">신호 있는 학생</div><div class="v down">8<s>/22</s></div></div>
+      </div>
+
+      <div class="prog scroll" id="prog"></div>
+    </main>
+
+  </div>
+
+</div></div>
+
+<script src="ds.js"></script>
+<script>
+  document.getElementById('badd').innerHTML  = ICON('plus',13) + ' 반 추가';
+  document.getElementById('bplan').innerHTML = ICON('calendar',13) + ' 진도 계획 편집';
+  document.getElementById('brec').innerHTML  = ICON('check',13) + ' 오늘 진도 기록';
+
+  /* 반 목록은 ds.js가 그린다 — 반 관리의 네 화면이 같은 목록을 쓴다. */
+  renderClassList("cls", 0);
+
+  /* 미적분Ⅰ 단원 — 실제 교육과정 순서를 따른다.
+     d=완료 / n=이번 주 진행 중 / w=예정 */
+  var UNITS = [
+    ['미분', [
+      ['함수의 극한',                   'd', '3/4 · 5회차'],
+      ['함수의 연속',                   'd', '3/13 · 8회차'],
+      ['미분계수와 도함수',             'd', '4/1 · 13회차'],
+      ['도함수의 활용(1) 접선의 방정식','d', '4/24 · 19회차'],
+      ['도함수의 활용(2) 증가와 감소',  'd', '5/15 · 24회차'],
+      ['도함수의 활용(3) 극대와 극소',  'n', '8/5 · 38회차'],
+      ['도함수의 활용(4) 그래프',       'w', '8/12 예정'],
+      ['방정식·부등식에의 활용',        'w', '8/21 예정'],
+      ['속도와 가속도',                 'w', '8/28 예정']
+    ]],
+    ['적분', [
+      ['부정적분',                      'w', '9/4 예정'],
+      ['정적분',                        'w', '9/16 예정'],
+      ['정적분의 활용 — 넓이',          'w', '10/2 예정'],
+      ['정적분의 활용 — 속도와 거리',   'w', '10/16 예정']
+    ]]
+  ];
+  var ST = {d:['done','완료','ok'], n:['now','진행 중','consult'], w:['wait','예정','']};
+
+  var no = 0;
+  document.getElementById('prog').innerHTML = UNITS.map(function (sec) {
+    var done = sec[1].filter(function (u) { return u[1] === 'd'; }).length;
+    return '<div class="usec"><b>' + sec[0] + '</b>'
+      + '<span class="muted" style="font-size:11.5px;">' + sec[1].length + '개 단원</span>'
+      + '<span class="c">완료 ' + done + ' / ' + sec[1].length + '</span></div>'
+      + sec[1].map(function (u) {
+          no++;
+          var s = ST[u[1]];
+          return '<div class="u ' + s[0] + '">'
+            + '<span class="ck">' + ICON('check',12) + '</span>'
+            + '<span class="no">' + (no < 10 ? '0' + no : no) + '</span>'
+            + '<span class="t">' + (u[1] === 'n' ? '<b>' + u[0] + '</b>' : u[0]) + '</span>'
+            + '<span class="meta">' + u[2] + '</span>'
+            + '<span class="st"><span class="badge ' + s[2] + '">' + s[1] + '</span></span>'
+            + '</div>';
+        }).join('');
+  }).join('');
+
+  renderNav('반');
+  renderSubnav('반', '진도',
+    '<button class="btn q sm">과목: 미적분Ⅰ ' + ICON('chevD',12) + '</button>');
+  fitCanvas();
+</script>
+</body>
+</html>

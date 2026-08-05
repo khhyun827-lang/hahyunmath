@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>전환 문구 비교 — 김하현수학연구소</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<link rel="stylesheet" href="../design-v1/ds.css">
+<style>
+  /* 후보 문구를 «실제 섹션 그대로» 반복해 보여준다.
+     목록으로 읽는 것과 62px 세리프로 보는 것은 완전히 다른 판단이다. */
+  html,body{background:var(--paper);color:var(--ink);
+    font-family:'Pretendard',-apple-system,sans-serif;font-size:13px;line-height:1.5;
+    -webkit-font-smoothing:antialiased;}
+  .c-wrap{max-width:1180px;margin:0 auto;padding:52px 28px 100px;}
+
+  .c-head{padding-bottom:22px;border-bottom:1px solid var(--line);}
+  .c-head .eye{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--dim);
+    letter-spacing:.18em;}
+  .c-head h1{margin:12px 0 0;font-family:'Noto Serif KR',serif;font-size:30px;font-weight:600;
+    letter-spacing:-.03em;}
+  .c-head p{margin:14px 0 0;font-size:13.5px;color:var(--sub);line-height:1.85;max-width:720px;}
+  .c-head p b{color:var(--ink);font-weight:700;}
+
+  .c-ctx{margin-top:16px;padding:14px 17px;background:var(--card);border:1px solid var(--line);
+    border-radius:var(--r-lg);font-size:12.5px;color:var(--sub);line-height:1.9;}
+  .c-ctx b{color:var(--ink);font-weight:700;}
+  .c-ctx .m{font-family:'JetBrains Mono',monospace;color:var(--dim);}
+
+  .c-item{margin-top:38px;}
+  .c-lab{display:flex;align-items:baseline;gap:11px;margin-bottom:11px;}
+  .c-lab .n{font-family:'JetBrains Mono',monospace;font-size:11px;color:#C6C3B8;letter-spacing:.14em;}
+  .c-lab b{font-size:14px;font-weight:700;}
+  .c-lab .pick{background:var(--brand);color:#fff;font-size:10.5px;font-weight:700;
+    padding:3px 9px;border-radius:20px;letter-spacing:.02em;}
+
+  /* 실제 전환 섹션을 1440으로 그리고 축소 */
+  .c-frame{position:relative;width:100%;overflow:hidden;border-radius:var(--r-lg);}
+  .c-frame > .in{width:1440px;height:470px;transform-origin:top left;position:relative;
+    background:var(--accent);}
+  .c-spine{position:absolute;left:132px;top:0;bottom:0;width:1px;background:rgba(255,255,255,.2);}
+  .c-dot{position:absolute;left:128px;top:96px;width:9px;height:9px;border-radius:50%;
+    background:var(--brand);border:2px solid var(--accent);}
+  .c-col{position:absolute;left:296px;right:170px;top:92px;}
+  .c-k{font-family:'JetBrains Mono',monospace;font-size:12.5px;
+    color:rgba(255,255,255,.5);letter-spacing:.24em;}
+  .c-h{margin:34px 0 0;font-family:'Noto Serif KR',serif;font-size:62px;font-weight:600;
+    letter-spacing:-.045em;line-height:1.3;color:#fff;max-width:15ch;}
+  .c-p{margin:32px 0 0;font-size:18px;line-height:1.9;color:rgba(255,255,255,.7);max-width:44ch;}
+
+  .c-why{display:flex;gap:14px;margin-top:13px;}
+  .c-why .k{flex-shrink:0;width:52px;font-family:'JetBrains Mono',monospace;font-size:10.5px;
+    color:var(--dim);padding-top:2px;}
+  .c-why .v{font-size:12.5px;color:var(--sub);line-height:1.8;}
+  .c-why .v b{color:var(--ink);font-weight:700;}
+  .c-why .v .no{color:var(--no);font-weight:700;}
+
+  .c-end{margin-top:52px;padding:20px 22px;border:1px solid var(--accent-line);
+    background:var(--accent-bg);border-radius:var(--r-lg);font-size:13px;color:var(--sub);
+    line-height:1.9;}
+  .c-end b{color:var(--ink);font-weight:700;}
+</style>
+</head>
+<body>
+<div class="c-wrap">
+
+  <div class="c-head">
+    <div class="eye">LANDING · TURN SECTION</div>
+    <h1>전환 문구 후보</h1>
+    <p>페이지에서 <b>유일하게 큰 소리</b>인 자리입니다. 여기가 어긋나면 나머지가 다 흔들립니다.
+      다섯 후보를 <b>실제 섹션 그대로</b> 그렸습니다 — 62px 세리프로 보면 목록으로 읽을 때와 판단이 달라집니다.</p>
+
+    <div class="c-ctx">
+      <b>앞뒤 맥락</b> —
+      바로 위에는 하루 로그가 끝납니다. <span class="m">09:12 · 답변 · 다음 날 아침, 답이 도착한다</span><br>
+      바로 아래에는 강사의 메모가 옵니다. <span class="m">「수업은 두 시간이지만, 한 학생을 이해하는 데는 한 학기가 걸립니다. <b>그래서 전부 적습니다.</b>」</span><br>
+      → 메모가 이미 «적는다»고 말하므로, 전환 문구까지 «기록»을 말하면 <b>같은 말을 두 번</b> 하게 됩니다.
+    </div>
+  </div>
+
+  <div id="list"></div>
+
+  <div class="c-end">
+    <b>고르셨으면 알려만 주세요.</b>
+    <span class="mono">landing-v2/index.html</span> 의 <span class="mono">&lt;h2&gt;</span> 한 줄과
+    그 아래 보조 문장만 바꾸면 됩니다. 나머지는 손댈 게 없습니다.
+  </div>
+
+</div>
+
+<script src="../design-v1/ds.js"></script>
+<script>
+var SUB_DEFAULT = '틀린 문항은 쌍둥이 문항이 되어 다시 돌아옵니다.<br>검토를 거친 것만 학생에게 나갑니다.';
+
+var CANDIDATES = [
+  {
+    t: '짐작으로 가르치지 않습니다',
+    sub: SUB_DEFAULT,
+    pick: 1,
+    for: '이 페이지 전체의 <b>주장</b>을 한 문장으로 말합니다. 위의 로그가 그대로 «증거»가 되고, 아래 메모가 «이유»가 됩니다. 셋이 서로 다른 일을 합니다.',
+    against: '다섯 중 가장 추상적입니다. 구체성은 아래 보조 문장이 받습니다.'
+  },
+  {
+    t: '틀린 문제는 두 번 만납니다',
+    sub: '한 번은 시험지에서, 한 번은 쌍둥이 문항으로.<br>검토를 거친 것만 학생에게 나갑니다.',
+    for: '가장 <b>구체적</b>이고, 유일하게 «학생의 경험»으로 쓰였습니다. 방문자가 자기를 대입하게 됩니다. 기억에 남습니다.',
+    against: '오답 시스템 <span class="no">하나만</span> 말합니다. 출결·진도·질문은 커버하지 못합니다.'
+  },
+  {
+    t: '무엇을 틀렸는지 기억합니다',
+    sub: SUB_DEFAULT,
+    for: '서비스에 직결되고 따뜻합니다. 이전 제안의 기본값이었습니다.',
+    against: '아래 메모의 «전부 적습니다»와 <span class="no">의미가 겹칩니다.</span> 큰 소리를 냈는데 다음 문단이 같은 말을 하면 힘이 빠집니다.'
+  },
+  {
+    t: '한 명도 같은 방식으로 가르치지 않습니다',
+    sub: '반은 같아도 오답은 다릅니다.<br>학생마다 다른 문항이 나갑니다.',
+    for: '개별화를 정면으로 말합니다. 학부모가 가장 궁금해하는 지점입니다.',
+    against: '문장이 <span class="no">깁니다.</span> 62px에서 두 줄로 접히면서 앞의 「한 명도」가 약해집니다.'
+  },
+  {
+    t: '가르친 것은 전부 남습니다',
+    sub: SUB_DEFAULT,
+    for: '가장 담백하고 조용합니다. 페이지의 톤과 가장 잘 맞습니다.',
+    against: '메모의 «전부 적습니다»와 <span class="no">거의 같은 문장</span>입니다. 셋 중 겹침이 가장 심합니다.'
+  }
+];
+
+document.getElementById('list').innerHTML = CANDIDATES.map(function (c, i) {
+  return '<div class="c-item">'
+    + '<div class="c-lab"><span class="n">' + (i < 9 ? '0' : '') + (i + 1) + '</span>'
+    + '<b>' + c.t + '</b>'
+    + (c.pick ? '<span class="pick">추천</span>' : '') + '</div>'
+    + '<div class="c-frame"><div class="in">'
+      + '<div class="c-spine"></div><div class="c-dot"></div>'
+      + '<div class="c-col"><div class="c-k">기록</div>'
+      + '<h2 class="c-h">' + c.t + '</h2>'
+      + '<p class="c-p">' + c.sub + '</p></div>'
+    + '</div></div>'
+    + '<div class="c-why"><span class="k">좋은 점</span><span class="v">' + c.for + '</span></div>'
+    + '<div class="c-why"><span class="k">걸리는 점</span><span class="v">' + c.against + '</span></div>'
+    + '</div>';
+}).join('');
+
+function fit() {
+  document.querySelectorAll('.c-frame').forEach(function (f) {
+    var inn = f.querySelector('.in');
+    var s = f.clientWidth / 1440;
+    inn.style.transform = 'scale(' + s + ')';
+    f.style.height = (470 * s) + 'px';
+  });
+}
+window.addEventListener('resize', fit);
+window.addEventListener('load', fit);
+fit();
+</script>
+</body>
+</html>

@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>수업 진행 — 김하현수학연구소 관리자</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<link rel="stylesheet" href="ds.css">
+<style>
+  /* 배치만. 색·서체·반경은 ds.css 토큰. */
+  .side{position:absolute;left:0;top:0;bottom:0;width:288px;padding:20px 18px;
+    border-right:1px solid var(--line);overflow-y:auto;}
+
+  /* 오늘의 수업 — 시간이 1차 축 */
+  .sess{background:var(--card);border:1px solid var(--line);border-radius:var(--r-lg);
+    padding:13px 15px;margin-bottom:9px;position:relative;transition:border-color var(--t);}
+  .sess.done{opacity:.6;}
+  .sess.now{border-color:var(--accent);box-shadow:0 0 0 2px rgba(60,48,52,.1);}
+  .sess .t{font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--dim);font-weight:600;}
+  .sess .n{font-size:14px;font-weight:700;margin-top:5px;letter-spacing:-.02em;}
+  .sess .m{font-size:11.5px;color:var(--sub);margin-top:5px;}
+  .sess .st{position:absolute;right:13px;top:13px;}
+
+  .todo{background:var(--card);border:1px solid var(--line);border-radius:var(--r-lg);padding:4px 15px;}
+  .todo a{display:flex;justify-content:space-between;align-items:center;padding:11px 0;
+    border-bottom:1px solid var(--line2);font-size:12.5px;color:var(--ink);text-decoration:none;}
+  .todo a:last-child{border-bottom:none;}
+  .todo a:hover{color:var(--accent);}
+  .todo a b{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600;
+    background:var(--line2);border-radius:var(--r-xs);padding:2px 8px;color:var(--sub);}
+  .todo a.hot b{background:var(--nobg);color:var(--no);}
+
+  .main{position:absolute;left:288px;right:0;top:0;bottom:56px;padding:22px 26px 0;
+    display:flex;flex-direction:column;overflow:hidden;}
+  .mh{display:flex;align-items:flex-end;justify-content:space-between;flex-shrink:0;}
+
+  .tiles{flex:1;min-height:0;overflow-y:auto;margin-top:16px;padding-bottom:16px;
+    display:grid;grid-template-columns:repeat(3,1fr);gap:10px;align-content:start;}
+
+  .actbar{left:288px;}
+</style>
+</head>
+<body>
+<div class="chrome"><span class="c-num">02</span><span class="c-name">수업 진행 <em>· A2의 워크플로를 A3의 언어로</em></span>
+  <span class="c-meta">역할: 수업 중에 순서대로 끝낸다 · 큰 터치 타깃　·　1440 × 900</span></div>
+
+<div class="stage" id="stage"><div class="canvas" id="canvas">
+
+  <div class="topbar">
+    <div class="bm">김하현수학연구소</div>
+    <nav id="nav"></nav>
+    <div class="row" style="margin-left:14px;gap:10px;">
+      <button class="btn icon" id="prev"></button>
+      <div class="mono" style="font-size:14px;font-weight:600;">2026-08-05<span class="muted" style="margin-left:7px;font-weight:400;">수</span></div>
+      <button class="btn icon" id="next"></button>
+      <button class="btn sm">오늘</button>
+    </div>
+    <div class="right"><span>수업 3</span><s style="text-decoration:none;">·</s><span>김하현T</span></div>
+  </div>
+
+  <div class="body">
+
+    <aside class="side scroll">
+      <div class="t-sec">오늘의 수업</div>
+
+      <div class="sess done">
+        <div class="t">16:00 — 18:00</div>
+        <div class="n">고1 공통수학2 A반</div>
+        <div class="m">18명 · 출석 17 · 결석 1</div>
+        <span class="st badge ok">완료</span>
+      </div>
+
+      <div class="sess now">
+        <div class="t">19:00 — 21:00</div>
+        <div class="n">고2 미적분Ⅰ 정규반</div>
+        <div class="m">22명 · 출결 입력 중 (12/22)</div>
+        <span class="st badge consult">진행 중</span>
+      </div>
+
+      <div class="sess">
+        <div class="t">21:10 — 22:40</div>
+        <div class="n">고3 미적분Ⅱ 실전반</div>
+        <div class="m">14명 · 시작 전</div>
+        <span class="st badge">예정</span>
+      </div>
+
+      <div class="t-sec" style="margin-top:24px;">오늘 남은 일</div>
+      <div class="todo">
+        <a class="hot" href="04-review.html"><span>오답 문항 검토</span><b>12</b></a>
+        <a class="hot" href="#"><span>미답변 질문</span><b>5</b></a>
+        <a href="#"><span>클리닉 승인 대기</span><b>4</b></a>
+        <a href="#"><span>신규 상담 신청</span><b>3</b></a>
+      </div>
+    </aside>
+
+    <main class="main">
+      <div class="mh">
+        <h1 class="t-title">고2 미적분Ⅰ 정규반<s>19:00 — 21:00 · 월·수·금</s></h1>
+        <div class="t-meta">22명 중 <b class="mono">12</b>명 입력됨</div>
+      </div>
+
+      <!-- 수업 한 번이 끝나기까지의 순서를 화면이 대신 기억한다.
+           데일리퀴즈는 이 흐름에 없다 — 학생이 직접 제출하고 자동 채점되므로
+           수업 중에 교사가 손댈 단계가 아니다. -->
+      <div class="steps" style="margin-top:18px;flex-shrink:0;">
+        <div class="s fin"><span class="b">✓</span>지난 수업 확인</div>
+        <div class="s on"><span class="b">1</span>출결</div>
+        <div class="s"><span class="b">2</span>진도</div>
+        <div class="s"><span class="b">3</span>과제</div>
+        <div class="s"><span class="b">4</span>메모</div>
+      </div>
+
+      <div class="tiles scroll" id="tiles"></div>
+      <div style="flex-shrink:0;padding:10px 0 14px;text-align:center;font-size:12.5px;color:var(--dim);">
+        ↓ 나머지 10명 · 스크롤
+      </div>
+    </main>
+
+    <div class="actbar">
+      <span class="sum">출석 <b>9</b> · 지각 <b>2</b> · 결석 <b>1</b> · 미입력 <b>10</b></span>
+      <button class="btn sm ok">남은 10명 전체 출석 처리</button>
+      <button class="btn sm">임시 저장</button>
+      <span class="spacer"></span>
+      <button class="btn p" id="bnext"></button>
+    </div>
+
+  </div>
+
+</div></div>
+
+<script src="ds.js"></script>
+<script>
+  document.getElementById('prev').innerHTML  = ICON('chevL',16);
+  document.getElementById('next').innerHTML  = ICON('chevR',16);
+  document.getElementById('bnext').innerHTML = '저장하고 진도로 ' + ICON('arrowR',15);
+
+  /* 출결 5상태. 퇴원은 명단에서 처리하므로 수업 화면에는 4개만 둔다 —
+     수업 중에 누를 일이 없는 버튼을 띄우지 않는 것이 이 화면의 역할이다. */
+  var STATE = {cyj02:'ok', lsy07:'ok', kmj01:'ok', ysa11:'ok', hjw14:'late', jhr09:'ok',
+               itk12:'ok', pjh03:'no', osh15:'late', kdy06:'', sjy18:'ok', mgo21:'ok'};
+  var LBL = {ok:'출', late:'지', leave:'조', no:'결'};
+
+  document.getElementById('tiles').innerHTML = STUDENTS.map(function (r) {
+    var st = STATE[r.id] || '';
+    var flag = st === 'no';
+    return '<div class="tile' + (flag ? ' flag' : '') + '">'
+      + '<div class="who"><b>' + r.n + '</b><span>' + r.s + ' ' + r.g + '</span>'
+      + (flag ? '<div class="memo">결석 사유 입력 필요</div>' : '') + '</div>'
+      + '<div class="seg">'
+      + ['ok','late','leave','no'].map(function (k) {
+          return '<button class="' + (st === k ? 'on ' + k : '') + '">' + LBL[k] + '</button>';
+        }).join('')
+      + '</div></div>';
+  }).join('');
+
+  renderNav('수업');
+  fitCanvas();
+</script>
+</body>
+</html>

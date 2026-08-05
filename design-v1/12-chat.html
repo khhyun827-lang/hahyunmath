@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>채팅 — 김하현수학연구소 관리자</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<link rel="stylesheet" href="ds.css">
+<style>
+  /* 배치만. 색·서체·반경은 ds.css 토큰. */
+  .list{position:absolute;left:0;top:0;bottom:0;width:290px;border-right:1px solid var(--line);
+    background:var(--card);display:flex;flex-direction:column;}
+  .lh{display:flex;align-items:center;gap:8px;padding:14px 16px;border-bottom:1px solid var(--line);flex-shrink:0;}
+  .lbody{flex:1;min-height:0;overflow-y:auto;}
+  .cv{display:flex;align-items:flex-start;gap:11px;padding:12px 16px;border-left:3px solid transparent;
+    cursor:pointer;transition:background var(--t);}
+  .cv:hover{background:var(--hover);}
+  .cv.on{background:var(--accent-bg);border-left-color:var(--accent);}
+  .cv .t{flex:1;min-width:0;}
+  .cv .t .n{display:flex;align-items:baseline;gap:6px;}
+  .cv .t .n b{font-size:13px;font-weight:600;}
+  .cv .t .n span{margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--dim);}
+  .cv .t .p{font-size:11.5px;color:var(--dim);margin-top:4px;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .cv .un{width:17px;height:17px;border-radius:9px;background:var(--no);color:#fff;flex-shrink:0;
+    font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;
+    display:flex;align-items:center;justify-content:center;margin-top:2px;}
+
+  .room{position:absolute;left:290px;right:0;top:0;bottom:0;display:flex;flex-direction:column;}
+  .rh{display:flex;align-items:center;gap:12px;padding:14px 24px;border-bottom:1px solid var(--line);
+    background:var(--card);flex-shrink:0;}
+  .rh .r{margin-left:auto;display:flex;gap:6px;}
+
+  .msgs{flex:1;min-height:0;overflow-y:auto;padding:20px 24px;}
+
+  /* 말풍선(.chat-day / .bub-row)은 ds.css에 있다 — 학생 앱과 공유하는 컴포넌트다. */
+  .composer{flex-shrink:0;border-top:1px solid var(--line);background:var(--card);padding:12px 24px 14px;}
+  .cbox{border:1px solid var(--line);border-radius:var(--r-lg);background:var(--sunk);
+    padding:11px 14px;font-size:13px;color:var(--dim);}
+  .crow{display:flex;align-items:center;gap:7px;margin-top:9px;}
+</style>
+</head>
+<body>
+<div class="chrome"><span class="c-num">12</span><span class="c-name">채팅 <em>· 소통</em></span>
+  <span class="c-meta">역할: 짧은 말을 빠르게 주고받는다 · 1:1　·　1440 × 900</span></div>
+
+<div class="stage" id="stage"><div class="canvas" id="canvas">
+
+  <div class="topbar">
+    <div class="bm">김하현수학연구소</div>
+    <nav id="nav"></nav>
+    <div class="right"><span>안 읽은 대화 <b class="mono" style="color:var(--no);">3</b></span>
+      <s style="text-decoration:none;">·</s><span>김하현T</span></div>
+  </div>
+
+  <div class="subnav" id="subnav"></div>
+
+  <div class="body sub">
+
+    <aside class="list">
+      <div class="lh">
+        <div class="field" id="fsearch" style="flex:1;"></div>
+      </div>
+      <div class="lbody scroll" id="cvs"></div>
+    </aside>
+
+    <main class="room">
+      <div class="rh">
+        <div class="av">한</div>
+        <div>
+          <div style="font-size:14px;font-weight:700;">한지우</div>
+          <div class="muted" style="font-size:11.5px;margin-top:2px;">
+            건대부고 고2 · 고2 미적분Ⅰ 정규반 · <span class="mono">010-2205-8830</span>
+          </div>
+        </div>
+        <span class="tag cau" style="margin-left:10px;">주의 신호 1</span>
+        <div class="r">
+          <button class="btn sm" id="bstu"></button>
+          <button class="btn sm" id="bclinic"></button>
+        </div>
+      </div>
+
+      <div class="msgs scroll" id="msgs"></div>
+
+      <div class="composer">
+        <div class="cbox">메시지를 입력하세요</div>
+        <div class="crow">
+          <button class="btn sm" id="bimg"></button>
+          <button class="btn sm" id="bfix"></button>
+          <span class="spacer"></span>
+          <span class="muted" style="font-size:11.5px;">Enter 전송 · Shift+Enter 줄바꿈</span>
+          <button class="btn p" id="bsend"></button>
+        </div>
+      </div>
+    </main>
+
+  </div>
+
+</div></div>
+
+<script src="ds.js"></script>
+<script>
+  document.getElementById('fsearch').innerHTML = ICON('search',15) + '<span>학생 이름으로 검색</span>';
+  document.getElementById('bstu').innerHTML    = ICON('user',13) + ' 학생 상세';
+  document.getElementById('bclinic').innerHTML = ICON('calendar',13) + ' 클리닉 배정';
+  document.getElementById('bimg').innerHTML    = ICON('plus',13) + ' 사진';
+  document.getElementById('bfix').innerHTML    = ICON('chat',13) + ' 자주 쓰는 문구';
+  document.getElementById('bsend').innerHTML   = '전송 ' + ICON('arrowR',14);
+
+  var CVS = [
+    ['hjw14','14:02','네 감사합니다! 그럼 오늘 보충영상 먼저 볼게요',0,1],
+    ['pjh03','11:20','선생님 오답숙제 다시 올렸습니다',2,0],
+    ['jhr09','어제','질문 남겨뒀습니다 확인 부탁드려요',1,0],
+    ['kdy06','어제','내일 학교 행사라 못 갈 것 같습니다',3,0],
+    ['cyj02','2일 전','네 알겠습니다',0,0],
+    ['mgo21','3일 전','특강 신청은 어디서 하나요?',0,0],
+    ['lsy07','4일 전','감사합니다',0,0]
+  ];
+  document.getElementById('cvs').innerHTML = CVS.map(function (c) {
+    var s = STUDENTS.filter(function (x) { return x.id === c[0]; })[0];
+    return '<div class="cv' + (c[4] ? ' on' : '') + '">'
+      + '<div class="av">' + s.n[0] + '</div>'
+      + '<div class="t"><div class="n"><b>' + s.n + '</b><span>' + c[1] + '</span></div>'
+      + '<div class="p">' + c[2] + '</div></div>'
+      + (c[3] ? '<span class="un">' + c[3] + '</span>' : '') + '</div>';
+  }).join('');
+
+  /* [보낸이(me/them), 시각, 내용] */
+  var MSGS = [
+    ['day','8월 4일 (화)'],
+    ['them','21:14','선생님 안녕하세요. 오늘 수업에서 나간 도함수의 활용(2) 영상 다시 봐야 할까요?'],
+    ['me','21:31','네, 74%까지만 보고 멈춰 있더라고요. 남은 부분에 극값 판정이 나오니까 꼭 마저 보세요.'],
+    ['them','21:33','아 네 알겠습니다 ㅠㅠ 계속 미루고 있었어요'],
+    ['me','21:35','괜찮아요. 대신 이번 주 안에는 끝냅시다. 다 보고 나면 오답숙제 3문항이 훨씬 쉬워질 거예요.'],
+    ['day','8월 5일 (수) — 오늘'],
+    ['them','13:48','선생님 오늘 수업 전에 잠깐 질문 가능할까요? 접선 문제가 안 풀려서요'],
+    ['me','13:55','18:40쯤 오면 봐줄게요. 안 풀리는 문제 번호 미리 보내두세요.'],
+    ['them','13:58','7월 3주 시험지 9번이요!'],
+    ['me','14:00','확인했어요. 그 문항 오답률이 49%라 반에서도 많이 틀렸어요. 같이 봅시다.'],
+    ['them','14:02','네 감사합니다! 그럼 오늘 보충영상 먼저 볼게요']
+  ];
+  document.getElementById('msgs').innerHTML = MSGS.map(function (m) {
+    if (m[0] === 'day') return '<div class="chat-day"><span>' + m[1] + '</span></div>';
+    return '<div class="bub-row ' + (m[0] === 'me' ? 'me' : '') + '">'
+      + '<div class="bub">' + m[2] + '</div>'
+      + '<span class="tm">' + m[1] + '</span></div>';
+  }).join('');
+
+  renderNav('소통');
+  renderSubnav('소통', '채팅');
+  fitCanvas();
+  var mm = document.getElementById('msgs'); mm.scrollTop = mm.scrollHeight;
+</script>
+</body>
+</html>

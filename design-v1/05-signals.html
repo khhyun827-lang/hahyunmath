@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>신호 — 김하현수학연구소 관리자</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<link rel="stylesheet" href="ds.css">
+<style>
+  /* 배치만. 색·서체·반경은 ds.css 토큰.
+     A5는 3열 칸반 보드였다. 카드 27장이 흩어지면 «놓치지 않는» 화면이 오히려 산만해진다.
+     여기서는 A3의 연대기와 같은 idiom을 쓴다 — 하나의 세로 목록을 등급으로 «묶는다».
+     읽는 눈이 위에서 아래로 한 번만 움직인다. */
+  .main{position:absolute;left:0;right:0;top:0;bottom:56px;display:flex;flex-direction:column;}
+  .head{padding:20px 24px 0;flex-shrink:0;}
+  .hrow{display:flex;align-items:flex-end;gap:14px;}
+  .fbar{display:flex;align-items:center;gap:7px;margin-top:16px;padding-bottom:14px;
+    border-bottom:1px solid var(--line);flex-wrap:wrap;}
+  .fbar .r{margin-left:auto;display:flex;align-items:center;gap:7px;}
+
+  .listwrap{flex:1;min-height:0;overflow-y:auto;padding:0 24px;}
+
+  /* 등급 머리 — 연대기의 날짜 자리와 같은 역할 */
+  .ghead{display:flex;align-items:center;gap:9px;padding:22px 2px 9px;
+    border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--paper);z-index:2;}
+  .ghead b{font-size:13px;font-weight:700;}
+  .ghead .n{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600;color:var(--dim);}
+  .ghead .do{font-size:12px;color:var(--sub);}
+  .ghead .cond{margin-left:auto;font-size:11px;color:var(--dim);}
+
+  /* 한 줄 = 한 학생. 근거 문장이 주인공이다.
+     뱃지만 있으면 «위험하다»만 알고 아무 것도 못 한다. */
+  .sig{display:flex;align-items:center;gap:13px;padding:12px 2px;
+    border-bottom:1px solid var(--line2);cursor:pointer;transition:background var(--t);}
+  .sig:hover{background:var(--hover);}
+  .sig .who{width:186px;flex-shrink:0;display:flex;align-items:center;gap:10px;}
+  .sig .who .t b{display:block;font-size:13.5px;font-weight:600;}
+  .sig .who .t span{display:block;font-size:11.5px;color:var(--dim);margin-top:1px;}
+
+  .sig .mid{flex:1;min-width:0;}
+  .sig .rules{display:flex;gap:5px;flex-wrap:wrap;}
+  .sig .why{font-size:12.5px;color:var(--sub);margin-top:5px;line-height:1.55;}
+  .sig .why b{font-family:'JetBrains Mono',monospace;font-weight:600;color:var(--ink);}
+
+  .sig .num{width:104px;flex-shrink:0;text-align:right;}
+  .sig .num .sc{font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:600;letter-spacing:-.02em;}
+  .sig .num .dots{justify-content:flex-end;margin-top:6px;}
+
+  .sig .act{width:232px;flex-shrink:0;display:flex;gap:5px;justify-content:flex-end;
+    opacity:0;transition:opacity var(--t);}
+  .sig:hover .act{opacity:1;}
+  /* 위험은 미루면 안 된다. 이 등급만 조치 버튼을 상시 노출한다 —
+     장식이 아니라 등급 차이를 행동으로 드러내는 유일한 지점이다. */
+  .sig.now .act{opacity:1;}
+
+  .more{padding:12px 2px 4px;font-size:12.5px;color:var(--dim);}
+  .more:hover{color:var(--accent);}
+</style>
+</head>
+<body>
+<div class="chrome"><span class="c-num">05</span><span class="c-name">신호 <em>· A5를 A3의 언어로</em></span>
+  <span class="c-meta">역할: 놓치기 전에 먼저 보인다 · 3열 보드 대신 등급으로 묶은 한 줄기 목록　·　1440 × 900</span></div>
+
+<div class="stage" id="stage"><div class="canvas" id="canvas">
+
+  <div class="topbar">
+    <div class="bm">김하현수학연구소</div>
+    <nav id="nav"></nav>
+    <div class="right"><span class="mono">2026-08-05 14:02</span><span>갱신</span>
+      <s style="text-decoration:none;">·</s><span>김하현T</span></div>
+  </div>
+
+  <div class="body">
+    <div class="main">
+
+      <div class="head">
+        <div class="hrow">
+          <h1 class="t-title">신호<s>규칙 기반 자동 트리아지 · 재원 68명 중 25명</s></h1>
+          <div class="spacer"></div>
+          <button class="btn sm" id="brule"></button>
+          <button class="btn sm" id="bhist"></button>
+        </div>
+
+        <div class="fbar">
+          <a class="pill on" href="#">전체 <b>25</b></a>
+          <a class="pill" href="#">연속 결석 <b>3</b></a>
+          <a class="pill" href="#">성적 급락 <b>5</b></a>
+          <a class="pill" href="#">오답 미제출 <b>11</b></a>
+          <a class="pill" href="#">시청률 저조 <b>8</b></a>
+          <a class="pill" href="#">과제 누락 <b>6</b></a>
+          <div class="r">
+            <button class="btn q sm" id="bclass"></button>
+            <button class="btn q sm" id="bsort"></button>
+          </div>
+        </div>
+      </div>
+
+      <div class="listwrap scroll" id="list"></div>
+
+    </div>
+
+    <div class="actbar">
+      <span class="sum">양호 <b>43</b>명은 이 화면에 없습니다</span>
+      <span class="muted" style="font-size:12px;">· 이번 주 해제 <b class="mono" style="color:var(--ink);">7</b>건 — 클리닉 배정 2 · 학부모 연락 5</span>
+      <span class="hint">행을 누르면 학생 상세로 · <span class="kbd">R</span> 규칙 설정</span>
+    </div>
+  </div>
+
+</div></div>
+
+<script src="ds.js"></script>
+<script>
+  document.getElementById('brule').innerHTML  = ICON('settings',13) + ' 신호 규칙 설정';
+  document.getElementById('bhist').innerHTML  = ICON('chart',13)    + ' 해제 이력';
+  document.getElementById('bclass').innerHTML = '반: 전체 ' + ICON('chevD',12);
+  document.getElementById('bsort').innerHTML  = '위험도순 ' + ICON('chevD',12);
+
+  /* 등급은 셋. 늘리지 않는다 — 사람이 한 번에 판단할 수 있는 층은 셋이 한계다. */
+  var GROUPS = [
+    {k:'r', name:'위험', n:4,  todo:'즉시 연락 권장',
+     cond:'출석률 80% 미만 + 시청률 50% 미만', now:1, rest:1},
+    {k:'y', name:'주의', n:9,  todo:'이번 주 안에 개입',
+     cond:'오답 미제출 · 성적 8점 이상 하락 · 시청률 70% 미만 중 하나', rest:6},
+    {k:'g', name:'관찰', n:12, todo:'추세만 지켜보는 중',
+     cond:'시청률 70~80% · 과제 1회 누락 등 단일 경미 신호', rest:10}
+  ];
+
+  /* 근거 문장은 전부 공용 데이터(STUDENTS)에서 실제로 계산된 값으로 쓴다.
+     화면끼리 숫자가 어긋나면 그 순간 신뢰를 잃는다. */
+  var ROWS = {
+    r: [
+      {id:'kdy06', score:92, rules:['연속 결석','성적 급락','오답 미제출'],
+       why:'최근 8회 중 결석 <b>3</b> · 성적 <b>70→58</b> · 오답숙제 <b>0/6</b> · 시청 <b>21%</b>'},
+      {id:'pjh03', score:84, rules:['연속 결석','성적 급락'],
+       why:'최근 8회 중 결석 <b>2</b> · 성적 <b>74→64</b> · 오답숙제 <b>1/6</b> · 시청 <b>38%</b>'},
+      {id:'osh15', score:79, rules:['연속 결석','시청률 저조'],
+       why:'최근 8회 중 결석 <b>2</b> · 지각 <b>2</b> · 오답숙제 <b>2/6</b> · 시청 <b>44%</b>'}
+    ],
+    y: [
+      {id:'jhr09', score:61, rules:['오답 미제출','과제 누락'],
+       why:'오답숙제 <b>3/6</b> · 과제 <b>5/8</b> · 시청 <b>52%</b> · 성적은 <b>76→71</b> 완만한 하락'},
+      {id:'itk12', score:54, rules:['시청률 저조'],
+       why:'시청 <b>63%</b> · 오답숙제 <b>4/6</b> · 출석은 <b>84%</b>로 안정적'},
+      {id:'hjw14', score:48, rules:['시청률 저조'],
+       why:'시청 <b>69%</b> · 과제 <b>6/8</b> · 성적 <b>70→80</b>으로 상승 중이라 학습 자체는 문제 없음'}
+    ],
+    g: [
+      {id:'kmj01', score:32, rules:['시청률 저조'],
+       why:'전 지표 양호 · 시청 <b>74%</b>만 반 평균 <b>86%</b>에 미달'},
+      {id:'mgo21', score:27, rules:['시청률 저조'],
+       why:'시청 <b>79%</b> · 이번 주 신규 진입 · 나머지 지표는 전부 정상'}
+    ]
+  };
+
+  var ACT = {
+    r: ['학부모 연락','클리닉 배정','해제'],
+    y: ['클리닉 배정','메모','해제'],
+    g: ['메모','해제']
+  };
+
+  function find(id){ return STUDENTS.filter(function(s){ return s.id===id; })[0]; }
+
+  document.getElementById('list').innerHTML = GROUPS.map(function (g) {
+    var rows = (ROWS[g.k] || []).map(function (r) {
+      var s = find(r.id);
+      return '<div class="sig' + (g.now ? ' now' : '') + '">'
+        + '<div class="who"><div class="av">' + s.n[0] + '</div>'
+          + '<div class="t"><b>' + s.n + '</b><span>' + s.s + ' ' + s.g + '</span></div></div>'
+        + '<div class="mid">'
+          + '<div class="rules">' + r.rules.map(function (x) {
+              return '<span class="badge ' + (g.k === 'r' ? 'no' : (g.k === 'y' ? 'late' : '')) + '">' + x + '</span>';
+            }).join('') + '</div>'
+          + '<div class="why">' + r.why + '</div></div>'
+        + '<div class="num"><div class="sc ' + (g.k === 'r' ? 'warn' : (g.k === 'y' ? 'cau' : 'muted')) + '">'
+          + r.score + '</div>' + dots(s.att) + '</div>'
+        + '<div class="act">' + ACT[g.k].map(function (a, i) {
+              return '<button class="btn sm' + (i === 0 && g.k === 'r' ? ' p' : '') + '">' + a + '</button>';
+            }).join('') + '</div>'
+        + '</div>';
+    }).join('');
+
+    return '<div class="ghead"><span class="rk ' + g.k + '"></span>'
+      + '<b>' + g.name + '</b><span class="n">' + g.n + '</span>'
+      + '<span class="do">· ' + g.todo + '</span>'
+      + '<span class="cond">' + g.cond + '</span></div>'
+      + rows
+      + (g.rest ? '<div class="more">+ ' + g.rest + '명 더 보기</div>' : '');
+  }).join('');
+
+  renderNav('신호');
+  fitCanvas();
+</script>
+</body>
+</html>

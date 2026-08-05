@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>학생 마이페이지 — 김하현수학연구소</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<link rel="stylesheet" href="ds.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<style>
+  /* 문서 페이지. 캔버스를 쓰지 않고 :root 토큰만 상속받는다. */
+  html,body{background:var(--paper);color:var(--ink);
+    font-family:'Pretendard',-apple-system,sans-serif;font-size:13px;line-height:1.5;
+    -webkit-font-smoothing:antialiased;}
+  .wrap{max-width:1320px;margin:0 auto;padding:56px 28px 100px;}
+
+  .top{display:flex;align-items:flex-start;gap:40px;padding-bottom:26px;border-bottom:1px solid var(--line);}
+  .top h1{font-family:'Noto Serif KR',serif;font-size:31px;font-weight:600;letter-spacing:-.03em;margin:0;}
+  .top .lede{font-size:14px;color:var(--sub);line-height:1.85;margin:13px 0 0;max-width:700px;}
+  .top .lede b{color:var(--ink);font-weight:700;}
+  .top .aside{margin-left:auto;text-align:right;flex-shrink:0;}
+  .top .aside .m{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--dim);
+    letter-spacing:.1em;line-height:1.9;}
+
+  .call{margin-top:24px;padding:18px 20px;border:1px solid var(--accent-line);background:var(--accent-bg);
+    border-radius:var(--r-lg);}
+  .call b{color:var(--accent);}
+  .call .h{font-size:13.5px;font-weight:700;color:var(--accent);margin-bottom:8px;}
+  .call p{margin:0;font-size:12.5px;color:var(--sub);line-height:1.85;}
+  .call p+p{margin-top:8px;}
+
+  .map{margin-top:14px;padding:18px 20px;border:1px solid var(--line);border-radius:var(--r-lg);
+    background:var(--card);}
+  .map .r{display:flex;align-items:baseline;gap:12px;padding:8px 0;font-size:12.5px;}
+  .map .r+.r{border-top:1px solid var(--line2);}
+  .map .r>b{width:70px;flex-shrink:0;font-weight:700;}
+  .map .r>div{color:var(--sub);}
+  .map .r s{text-decoration:none;color:var(--dim);margin:0 6px;}
+
+  .sh{display:flex;align-items:baseline;gap:12px;margin:52px 0 22px;
+    padding-bottom:12px;border-bottom:1px solid var(--line);}
+  .sh b{font-family:'Noto Serif KR',serif;font-size:19px;font-weight:600;letter-spacing:-.02em;}
+  .sh span{font-size:12.5px;color:var(--sub);}
+  .sh .n{margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--dim);}
+
+  /* ds.css의 .row 를 덮어쓰지 않도록 별도 이름을 쓴다.
+     폰 안에서도 .row 를 쓰기 때문에 이름이 겹치면 조용히 망가진다. */
+  .phones{display:flex;gap:26px;flex-wrap:wrap;align-items:flex-start;}
+  .item{width:390px;}
+  .cap{margin-top:12px;}
+  .cap .t{display:flex;align-items:baseline;gap:8px;}
+  .cap .t b{font-size:14px;font-weight:700;}
+  .cap .t em{font-style:normal;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--dim);}
+  .cap p{margin:7px 0 0;font-size:12px;color:var(--sub);line-height:1.75;}
+  .cap p b{color:var(--ink);font-weight:700;}
+
+  .foot{margin-top:52px;padding:20px 22px;border:1px dashed var(--note-dash);background:var(--note);
+    border-radius:var(--r-lg);font-size:12.5px;color:var(--sub);line-height:1.85;}
+  .foot b{color:var(--ink);font-weight:700;}
+  .katex{font-size:1em;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="top">
+    <div>
+      <h1>학생 마이페이지</h1>
+      <p class="lede">
+        관리자와 <b>같은 디자인 시스템</b>을 씁니다 — 색·서체·반경·상태색·메모 종이색이 전부 같습니다.
+        바꾼 것은 <b>밀도</b>뿐입니다. 관리자는 앉아서 마우스로 쓰고, 학생은 서서 엄지로 씁니다.
+      </p>
+    </div>
+    <div class="aside">
+      <div class="m">STUDENT APP<br>MOBILE FIRST · 390 × 812<br>11 FUNCTIONS · 4 TABS</div>
+    </div>
+  </div>
+
+  <div class="call">
+    <div class="h">먼저 확인받고 싶은 판단 — 탭 11개를 4개로 묶었습니다</div>
+    <p>
+      기존 마이페이지는 <b>홈 / 데일리퀴즈 / 진도·과제 / 오답숙제 / 강의시청 / 성적 / 출석 / 공지사항 /
+      질의응답 / 클리닉 신청 / 채팅</b> 11개 탭이 평평하게 나열돼 있습니다.
+      데스크톱에서는 가능하지만 <b>폰에서는 쓸 수 없습니다</b> — 하단 탭바에 들어가는 것은 4~5개가 한계이고,
+      11개를 가로로 밀어서 쓰게 하면 뒤쪽 탭은 아무도 안 누릅니다.
+    </p>
+    <p>
+      <b>기능은 하나도 빼지 않았습니다.</b> 묶기만 했습니다 —
+      학생이 «지금 뭘 하려는가»를 기준으로 나눴습니다.
+    </p>
+  </div>
+
+  <div class="map" id="map"></div>
+
+  <div id="screens"></div>
+
+  <div class="foot">
+    <b>모바일 우선으로 그린 이유</b> — 데일리퀴즈 제출, 오답숙제 답 입력, 강의 시청, 클리닉 신청은
+    전부 학생이 <b>집이나 이동 중에 폰으로</b> 하는 일입니다. 관리자 화면과 같은 1440×900으로 그리면
+    실제로 쓰이는 환경과 다른 것을 검토하게 됩니다.
+    데스크톱에서 열면 이 레이아웃이 가운데 정렬로 넓어지는 형태가 되며, 별도 설계가 필요하면 말씀해 주세요.
+    표시된 이름과 수치는 전부 <b>구조 확인용 예시</b>이며 실제 데이터가 아닙니다.
+  </div>
+
+</div>
+
+<script src="ds.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+<script>
+  /* ---------- 탭 구조 ---------- */
+  var MAP = [
+    ['홈',   '오늘 할 일 <s>·</s> 다음 수업 <s>·</s> 이번 주 요약'],
+    ['학습', '데일리퀴즈 <s>·</s> 오답숙제 <s>·</s> 진도·과제 <s>·</s> 강의시청'],
+    ['기록', '성적 <s>·</s> 출석'],
+    ['소통', '공지사항 <s>·</s> 질의응답 <s>·</s> 클리닉 신청 <s>·</s> 채팅']
+  ];
+  document.getElementById('map').innerHTML =
+    '<div style="font-size:11px;font-weight:700;color:var(--dim);letter-spacing:.08em;margin-bottom:8px;">'
+    + '하단 탭 4개 — 기존 11개 기능이 전부 이 안에 들어갑니다</div>'
+    + MAP.map(function (r) {
+        return '<div class="r"><b>' + r[0] + '</b><div>' + r[1] + '</div></div>';
+      }).join('');
+
+  var TABS = [['홈','home'],['학습','book'],['기록','chart'],['소통','chat']];
+
+  function phone(o) {
+    return '<div class="item"><div class="ph">'
+      + '<div class="ph-top">' + (o.back ? ICON('chevL',18) : '')
+        + '<span class="t">' + o.title + '</span>'
+        + '<span class="r">' + (o.right || '') + '</span></div>'
+      + '<div class="ph-body">' + o.body + '</div>'
+      + '<div class="ph-tabs">' + TABS.map(function (t) {
+          return '<a class="' + (t[0] === o.tab ? 'on' : '') + '" href="#">'
+            + ICON(t[1], 20) + '<span>' + t[0] + '</span></a>';
+        }).join('') + '</div>'
+      + '</div>'
+      + '<div class="cap"><div class="t"><b>' + o.title + '</b><em>' + o.en + '</em></div>'
+      + '<p>' + o.note + '</p></div></div>';
+  }
+
+  /* ================= 홈 ================= */
+  var HOME = phone({
+    tab:'홈', title:'홈', en:'Home',
+    right: ICON('bell',18) + '<span class="rk r" style="margin-left:-6px;margin-top:-10px;"></span>',
+    note:'첫 화면이 답해야 할 질문은 하나입니다 — <b>«오늘 뭐 해야 하지?»</b> 성적도 출석도 아래로 내렸습니다. 마감이 가까운 것이 위로 옵니다.',
+    body:
+      '<div style="font-family:\'Noto Serif KR\',serif;font-size:21px;font-weight:600;letter-spacing:-.02em;">한지우님</div>'
+      + '<div style="font-size:12.5px;color:var(--dim);margin-top:5px;">건대부고 고2 · 고2 미적분Ⅰ 정규반</div>'
+
+      + '<div class="msec" style="margin-top:20px;">오늘 할 일 <span style="color:var(--no);">3</span></div>'
+      /* 마감은 제목 줄에 뱃지로 붙인다. 부제에 섞으면 좁은 폭에서 줄이 갈라진다. */
+      + '<div class="todo"><span class="ic" style="background:var(--nobg);color:var(--no);">' + ICON('clipboard',18) + '</span>'
+        + '<span class="t"><b>오답숙제 3문항 <span class="badge no">D-3</span></b>'
+        + '<span>7월 3주 시험지 · 8월 8일까지</span></span>'
+        + '<span class="go">' + ICON('chevR',16) + '</span></div>'
+      + '<div class="todo"><span class="ic" style="background:var(--latebg);color:var(--late);">' + ICON('sparkle',18) + '</span>'
+        + '<span class="t"><b>데일리퀴즈 4회차</b><span>오늘 자정까지 · 10문항</span></span>'
+        + '<span class="go">' + ICON('chevR',16) + '</span></div>'
+      + '<div class="todo"><span class="ic" style="background:var(--accent-bg);color:var(--accent);">' + ICON('video',18) + '</span>'
+        + '<span class="t"><b>도함수의 활용(2)</b><span>69%까지 봄 · 남은 12분</span></span>'
+        + '<span class="go">' + ICON('chevR',16) + '</span></div>'
+
+      + '<div class="msec">다음 수업</div>'
+      + '<div class="mc"><div style="display:flex;align-items:baseline;gap:9px;">'
+        + '<b class="mono" style="font-size:15px;">오늘 19:00</b>'
+        + '<span style="font-size:12.5px;color:var(--sub);">고2 미적분Ⅰ 정규반</span></div>'
+        + '<div style="font-size:12px;color:var(--dim);margin-top:7px;">'
+        + '진도 · 도함수의 활용(3) 극대와 극소</div></div>'
+
+      + '<div class="msec">이번 주</div>'
+      + '<div class="kpis"><div class="kpi"><div class="k">출석</div><div class="v">3<s>/3</s></div></div>'
+      + '<div class="kpi"><div class="k">과제</div><div class="v">6<s>/8</s></div></div>'
+      + '<div class="kpi"><div class="k">시청</div><div class="v down">69<s>%</s></div></div></div>'
+  });
+
+  /* ================= 학습 ================= */
+  var QUIZ = phone({
+    tab:'학습', title:'데일리퀴즈', en:'Daily Quiz', back:1,
+    right:'<b class="mono" style="color:var(--ink);">3</b>/10',
+    note:'풀이 화면은 <b>한 문제만</b> 보여줍니다. 목록으로 돌아가지 않아도 되게 하단에 다음 버튼을 둡니다. 수식은 KaTeX로 실제 렌더링합니다.',
+    body:
+      '<div class="bar" style="margin-bottom:16px;"><i style="width:30%"></i></div>'
+      + '<div style="font-size:11.5px;color:var(--dim);">3번 · 도함수의 활용</div>'
+      + '<div style="font-size:16px;line-height:1.85;margin-top:10px;">'
+        + '함수 $f(x)=x^3-3x^2+2$ 의 극솟값을 구하시오.</div>'
+      + '<div style="margin-top:18px;">'
+        + ['$-2$','$0$','$2$','$4$'].map(function (c, i) {
+            var on = i === 0;
+            return '<div class="mc' + (on ? ' go' : '') + '" style="margin-top:' + (i ? 9 : 0) + 'px;">'
+              + '<div class="mrow" style="min-height:24px;gap:12px;">'
+              + '<span style="width:24px;height:24px;border-radius:50%;flex-shrink:0;'
+              + 'display:flex;align-items:center;justify-content:center;font-size:11.5px;font-weight:700;'
+              + (on ? 'background:var(--accent);color:#fff;' : 'background:#EFEDE6;color:var(--sub);')
+              + '">' + (i + 1) + '</span>'
+              + '<span style="font-size:15px;">' + c + '</span></div></div>';
+          }).join('')
+      + '</div>'
+      + '<div style="margin-top:20px;"><button class="mbtn p">다음 문제 ' + ICON('arrowR',15) + '</button></div>'
+      + '<button class="mbtn q" style="margin-top:8px;">모르겠어요 · 넘기기</button>'
+  });
+
+  var WRONG = phone({
+    tab:'학습', title:'오답숙제', en:'Wrong Answers', back:1,
+    right:'<span class="badge no">D-3</span>',
+    note:'원본 문항 번호를 <b>반드시 같이 보여줍니다.</b> 학생이 «내가 뭘 틀려서 이걸 푸는지» 모르면 그냥 새 숙제가 됩니다.',
+    body:
+      '<div class="mc hi"><div style="font-size:13px;font-weight:700;">7월 3주 시험지</div>'
+        + '<div style="font-size:12px;color:var(--sub);margin-top:6px;line-height:1.65;">'
+        + '틀린 <b>3문항</b>의 쌍둥이 문제입니다.<br>8월 8일(금) 자정까지 제출해 주세요.</div>'
+        + '<div class="row" style="gap:10px;margin-top:11px;">'
+        + '<span class="bar" style="flex:1;"><i style="width:33%"></i></span>'
+        + '<b class="mono" style="font-size:12px;">1/3</b></div></div>'
+
+      + '<div class="msec">문항</div>'
+      + [['4번','접선의 방정식','$g(x)=x^3-6x^2+9x$ 의 극솟값을 구하시오.','done'],
+         ['11번','극값의 판정','$h(x)=2x^3-9x^2+12x$ 가 극대가 되는 $x$ 를 구하시오.','now'],
+         ['17번','정적분의 활용','곡선 $y=x^2-2x$ 와 $x$축이 둘러싼 넓이를 구하시오.','wait']
+        ].map(function (q, i) {
+          var st = q[3];
+          return '<div class="mc' + (st === 'now' ? ' go' : '') + '" style="margin-top:' + (i ? 10 : 0) + 'px;'
+            + (st === 'done' ? 'opacity:.6;' : '') + '">'
+            + '<div class="row" style="gap:7px;">'
+            + '<span class="badge score">원본 ' + q[0] + '</span>'
+            + '<span class="badge">' + q[1] + '</span>'
+            + '<span class="spacer"></span>'
+            + (st === 'done' ? '<span class="badge ok">제출</span>'
+               : st === 'now' ? '<span class="badge late">풀는 중</span>' : '<span class="badge">대기</span>')
+            + '</div>'
+            + '<div style="font-size:14px;line-height:1.8;margin-top:10px;">' + q[2] + '</div>'
+            + (st === 'now'
+                ? '<div class="field" style="height:44px;margin-top:12px;background:var(--card);">답을 입력하세요</div>'
+                  + '<button class="mbtn p" style="margin-top:9px;">제출</button>'
+                : '') + '</div>';
+        }).join('')
+  });
+
+  var PROG = phone({
+    tab:'학습', title:'진도 · 과제', en:'Progress', back:1,
+    note:'<b>반 진도와 내 과제를 한 화면에</b> 둡니다. «어디까지 나갔는지»와 «내가 뭘 안 냈는지»는 학생 입장에서 같은 질문입니다.',
+    body:
+      '<div class="mc"><div class="row"><span style="font-size:13px;font-weight:700;">미적분Ⅰ 진도</span>'
+        + '<span class="spacer"></span><b class="mono" style="font-size:14px;">72%</b></div>'
+        + '<div class="bar" style="margin-top:10px;"><i style="width:72%"></i></div>'
+        + '<div style="font-size:12px;color:var(--sub);margin-top:10px;">'
+        + '이번 주 · <b>도함수의 활용(3) 극대와 극소</b></div>'
+        + '<div style="font-size:11.5px;color:var(--dim);margin-top:5px;">'
+        + '다음 · 도함수의 활용(4) 그래프 (8/12)</div></div>'
+
+      + '<div class="msec">과제 <span class="mono" style="color:var(--late);">6/8</span></div>'
+      + [['도함수의 활용 워크북 p.42-47','8/6 (목)','no'],
+         ['극값 판정 연습 20문항','8/8 (금)','no'],
+         ['접선의 방정식 워크북 p.36-41','7/31','ok'],
+         ['증가와 감소 연습 15문항','7/29','ok'],
+         ['미분계수 복습 프린트','7/24','ok']
+        ].map(function (a, i) {
+          var done = a[2] === 'ok';
+          return '<div class="mc" style="margin-top:' + (i ? 9 : 0) + 'px;' + (done ? 'opacity:.6;' : '') + '">'
+            + '<div class="mrow" style="min-height:34px;">'
+            + '<span style="width:20px;height:20px;border-radius:6px;flex-shrink:0;display:flex;'
+            + 'align-items:center;justify-content:center;'
+            + (done ? 'background:var(--accent);color:#fff;' : 'border:1.5px solid #C9C6BB;color:transparent;')
+            + '">' + ICON('check',13) + '</span>'
+            + '<span style="flex:1;min-width:0;font-size:13.5px;' + (done ? 'color:var(--sub);' : 'font-weight:600;') + '">'
+            + a[0] + '</span>'
+            + '<span class="mono" style="font-size:11px;color:' + (done ? 'var(--dim)' : 'var(--no)') + ';">'
+            + a[1] + '</span></div></div>';
+        }).join('')
+  });
+
+  var VIDEO = phone({
+    tab:'학습', title:'강의시청', en:'Videos', back:1,
+    right:'시청률 <b class="mono" style="color:var(--no);">69%</b>',
+    note:'<b>이어보기를 맨 위에</b> 둡니다. 중단 지점이 기록돼 있는데 목록 맨 아래에서 찾게 하면 결국 안 봅니다.',
+    body:
+      '<div class="mc go"><div style="font-size:11.5px;color:var(--accent);font-weight:700;">이어보기</div>'
+        + '<div style="font-size:14.5px;font-weight:700;margin-top:7px;">도함수의 활용(2) 증가와 감소</div>'
+        + '<div class="row" style="gap:10px;margin-top:10px;">'
+        + '<span class="bar" style="flex:1;"><i style="width:69%"></i></span>'
+        + '<span class="mono" style="font-size:11.5px;">69%</span></div>'
+        + '<div style="font-size:11.5px;color:var(--sub);margin-top:8px;">남은 시간 12분 · 3일째 미완료</div>'
+        + '<button class="mbtn p" style="margin-top:12px;">' + ICON('play',17) + ' 이어서 보기</button></div>'
+
+      + '<div class="msec">전체 강의</div>'
+      + [['도함수의 활용(3) 극대와 극소','28분',0,'새 강의'],
+         ['도함수의 활용(2) 증가와 감소','39분',69,''],
+         ['도함수의 활용(1) 접선의 방정식','34분',100,''],
+         ['미분계수와 도함수','41분',100,''],
+         ['7월 3주 시험지 해설','52분',12,'보충']
+        ].map(function (v, i) {
+          return '<div class="mc" style="margin-top:' + (i ? 9 : 0) + 'px;">'
+            + '<div class="row" style="gap:8px;">'
+            + '<span style="flex:1;min-width:0;font-size:13.5px;font-weight:600;">' + v[0] + '</span>'
+            + (v[3] ? '<span class="badge ' + (v[3] === '보충' ? 'late' : 'consult') + '">' + v[3] + '</span>' : '')
+            + '</div>'
+            + '<div class="row" style="gap:10px;margin-top:9px;">'
+            + '<span class="bar" style="flex:1;"><i style="width:' + v[2] + '%"></i></span>'
+            + '<span class="mono" style="font-size:11px;color:' + (v[2] === 100 ? 'var(--ok)' : 'var(--dim)') + ';">'
+            + (v[2] === 100 ? '완료' : v[2] + '%') + '</span>'
+            + '<span class="mono" style="font-size:11px;color:var(--dim);">' + v[1] + '</span></div></div>';
+        }).join('')
+  });
+
+  /* ================= 기록 ================= */
+  function line(vals, w, h) {
+    var mn = Math.min.apply(null, vals) - 4, mx = Math.max.apply(null, vals) + 4, r = mx - mn, d = '', dots = '';
+    vals.forEach(function (v, i) {
+      var x = (w * i / (vals.length - 1)), y = h - ((v - mn) / r) * h;
+      d += (i ? 'L' : 'M') + x.toFixed(1) + ' ' + y.toFixed(1);
+      dots += '<circle cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="3" fill="#3F3537"/>';
+    });
+    return '<svg width="' + w + '" height="' + h + '" style="display:block;">'
+      + '<path d="' + d + '" fill="none" stroke="#3F3537" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>'
+      + dots + '</svg>';
+  }
+
+  var SCORE = phone({
+    tab:'기록', title:'성적', en:'Scores', back:1,
+    note:'그래프를 <b>크게</b> 씁니다. 폰에서 표는 읽히지 않고, 학생이 알고 싶은 건 «오르고 있나»입니다. 반 평균은 옆에 작게만.',
+    body:
+      '<div class="mc"><div class="row"><span style="font-size:12.5px;color:var(--sub);">최근 5회 추이</span>'
+        + '<span class="spacer"></span>'
+        + '<b class="mono" style="font-size:20px;">80</b>'
+        + '<span class="mono up" style="font-size:12px;">▲10</span></div>'
+        + '<div style="margin-top:14px;">' + line([70,73,76,78,80], 320, 96) + '</div>'
+        + '<div class="row" style="justify-content:space-between;margin-top:8px;">'
+        + ['3월','5월','6월','7월초','7월말'].map(function (m) {
+            return '<span class="mono" style="font-size:10px;color:var(--dim);">' + m + '</span>';
+          }).join('') + '</div></div>'
+
+      + '<div class="msec">시험</div>'
+      + [['7월 학교 모의고사','80/100','반 평균 76','up'],
+         ['7월 3주 시험지','78/100','반 평균 76','up'],
+         ['7월 2주 시험지','76/100','반 평균 79','down'],
+         ['6월 4주 시험지','73/100','반 평균 81','down']
+        ].map(function (s, i) {
+          return '<div class="mc" style="margin-top:' + (i ? 9 : 0) + 'px;">'
+            + '<div class="mrow" style="min-height:34px;">'
+            + '<span style="flex:1;min-width:0;"><b style="display:block;font-size:13.5px;font-weight:600;">' + s[0] + '</b>'
+            + '<span style="display:block;font-size:11.5px;color:var(--dim);margin-top:3px;">' + s[2] + '</span></span>'
+            + '<b class="mono ' + s[3] + '" style="font-size:15px;">' + s[1] + '</b></div></div>';
+        }).join('')
+  });
+
+  /* 8월 달력 — 1일 토요일 기준 */
+  var ATT = {3:'ok',5:'ok',7:'late',10:'ok',12:'ok',14:'ok',17:'ok',19:'no',21:'ok',24:'ok',26:'ok',28:'leave',31:'ok'};
+  var cal = ['일','월','화','수','목','금','토'].map(function (d) {
+    return '<div class="dh">' + d + '</div>';
+  }).join('');
+  for (var i = 0; i < 5; i++) cal += '<div class="d off"></div>';   /* 8/1 = 금요일 */
+  for (var d = 1; d <= 31; d++) {
+    var st = ATT[d] || '';
+    cal += '<div class="d ' + st + (d === 5 ? ' today' : '') + '">' + d + '</div>';
+  }
+
+  var ATTEND = phone({
+    tab:'기록', title:'출석', en:'Attendance', back:1,
+    right:'8월 <b class="mono" style="color:var(--ink);">92%</b>',
+    note:'달력이 맞습니다 — 출결은 <b>«언제»가 핵심</b>이라 목록으로는 결석이 몰린 시기가 안 보입니다. 5상태 색은 관리자와 같습니다.',
+    body:
+      '<div class="mc"><div class="row" style="margin-bottom:12px;">'
+        + ICON('chevL',16) + '<span class="spacer"></span>'
+        + '<b style="font-size:14px;">2026년 8월</b><span class="spacer"></span>' + ICON('chevR',16) + '</div>'
+        + '<div class="cal">' + cal + '</div></div>'
+
+      + '<div class="msec">이번 달</div>'
+      + '<div class="kpis"><div class="kpi"><div class="k">출석</div><div class="v" style="color:var(--ok);">10</div></div>'
+      + '<div class="kpi"><div class="k">지각</div><div class="v" style="color:var(--late);">1</div></div>'
+      + '<div class="kpi"><div class="k">조퇴</div><div class="v" style="color:var(--leave);">1</div></div>'
+      + '<div class="kpi"><div class="k">결석</div><div class="v" style="color:var(--no);">1</div></div></div>'
+
+      + '<div class="msec">결석 · 지각 내역</div>'
+      + '<div class="mc"><div class="row" style="gap:8px;"><span class="badge no">결석</span>'
+        + '<span class="mono" style="font-size:12px;">8월 19일 (수)</span></div>'
+        + '<div style="font-size:12px;color:var(--sub);margin-top:8px;">'
+        + '사유 · 학교 체육대회<br>보충영상 <b>1건</b>이 배정되었습니다.</div></div>'
+      + '<div class="mc"><div class="row" style="gap:8px;"><span class="badge late">지각</span>'
+        + '<span class="mono" style="font-size:12px;">8월 7일 (금)</span></div>'
+        + '<div style="font-size:12px;color:var(--sub);margin-top:8px;">19:14 입실 · 14분</div></div>'
+  });
+
+  /* ================= 소통 ================= */
+  var NOTICE = phone({
+    tab:'소통', title:'공지사항', en:'Notice', back:1,
+    right:'<span class="badge no">2</span>',
+    note:'안 읽은 공지에 <b>왼쪽 올리브 바</b>를 답니다. 관리자 화면에서 «선택»을 뜻하던 그 표시와 같은 모양입니다.',
+    body:
+      [['8월 특강 일정 및 클리닉 운영 안내','08-01','중요',1],
+       ['7월 3주 시험지 오답숙제 배포','08-01','',1],
+       ['여름 방학 중 자습실 개방 시간','07-28','',0],
+       ['7월 학교 모의고사 성적 입력 완료','07-30','중요',0],
+       ['휴원 안내 — 8월 15일 광복절','07-25','',0],
+       ['6월 4주 시험지 해설 영상 업로드','07-02','',0]
+      ].map(function (n, i) {
+        return '<div class="mc" style="margin-top:' + (i ? 9 : 0) + 'px;'
+          + (n[3] ? 'border-left:3px solid var(--accent);' : 'opacity:.72;') + '">'
+          + '<div class="row" style="gap:7px;">'
+          + (n[2] ? '<span class="badge no">' + n[2] + '</span>' : '')
+          + '<span class="spacer"></span>'
+          + '<span class="mono" style="font-size:10.5px;color:var(--dim);">' + n[1] + '</span></div>'
+          + '<div style="font-size:13.5px;' + (n[3] ? 'font-weight:700;' : '') + 'margin-top:7px;line-height:1.55;">'
+          + n[0] + '</div></div>';
+      }).join('')
+  });
+
+  var QNA = phone({
+    tab:'소통', title:'질의응답', en:'Q&A', back:1,
+    note:'답변이 <b>왔는지 안 왔는지</b>가 목록에서 바로 보여야 합니다. 학생이 여러 번 들어와 확인하는 화면입니다.',
+    body:
+      '<button class="mbtn p">' + ICON('pencil',16) + ' 질문하기</button>'
+      + '<div class="msec">내 질문 <span class="mono">7</span></div>'
+      + [['극대·극소 판정에서 f″를 꼭 봐야 하나요?','도함수의 활용','19시간 전',0],
+         ['접선의 방정식에서 접점을 모를 때는요?','도함수의 활용','1일 전',0],
+         ['정적분에서 절댓값을 언제 씌우나요?','정적분','1일 전',1],
+         ['그래프 개형에서 변곡점을 꼭 표시해야 하나요?','그래프의 개형','4일 전',1]
+        ].map(function (q, i) {
+          return '<div class="mc" style="margin-top:' + (i ? 9 : 0) + 'px;">'
+            + '<div class="row" style="gap:7px;">'
+            + (q[3] ? '<span class="badge ok">답변 완료</span>' : '<span class="badge late">답변 대기</span>')
+            + '<span class="badge">' + q[1] + '</span>'
+            + '<span class="spacer"></span>'
+            + '<span class="mono" style="font-size:10.5px;color:var(--dim);">' + q[2] + '</span></div>'
+            + '<div style="font-size:13.5px;margin-top:8px;line-height:1.6;">' + q[0] + '</div></div>';
+        }).join('')
+  });
+
+  var CLINIC = phone({
+    tab:'소통', title:'클리닉 신청', en:'Clinic', back:1,
+    note:'<b>빈 시간을 먼저 보여주고</b> 고르게 합니다. 날짜를 적어 신청하고 기다리는 방식이면 거절될 때마다 처음부터 다시 해야 합니다.',
+    body:
+      '<div class="mc hi"><div class="row" style="gap:7px;">'
+        + '<span class="badge late">승인 대기</span>'
+        + '<span class="mono" style="font-size:11.5px;">8월 7일 (금) 17:00</span></div>'
+        + '<div style="font-size:12px;color:var(--sub);margin-top:8px;">'
+        + '미적분Ⅰ 도함수의 활용 집중해서 보고 싶습니다.</div>'
+        + '<button class="mbtn q" style="margin-top:8px;">신청 취소</button></div>'
+
+      + '<div class="msec">이번 주 남은 자리</div>'
+      + [['8/5 (수)','16:00',1],['8/5 (수)','18:00',0],['8/6 (목)','16:00',1],
+         ['8/6 (목)','18:00',1],['8/7 (금)','16:00',0],['8/7 (금)','18:00',1]
+        ].map(function (s, i) {
+          return '<div class="mc" style="margin-top:' + (i ? 8 : 0) + 'px;' + (s[2] ? '' : 'opacity:.45;') + '">'
+            + '<div class="mrow" style="min-height:30px;">'
+            + '<span class="mono" style="font-size:12.5px;width:76px;flex-shrink:0;">' + s[0] + '</span>'
+            + '<b class="mono" style="font-size:14px;flex:1;">' + s[1] + '</b>'
+            + (s[2] ? '<button class="btn sm p">신청</button>'
+                    : '<span class="badge">마감</span>') + '</div></div>';
+        }).join('')
+  });
+
+  var CHAT = phone({
+    tab:'소통', title:'김하현T', en:'Chat', back:1,
+    right: ICON('phone',16),
+    note:'관리자 채팅과 <b>같은 말풍선</b>입니다. 학생 쪽에서는 선생님 말이 왼쪽, 내 말이 올리브로 오른쪽에 옵니다.',
+    body:
+      '<div class="chat-day"><span>8월 4일 (화)</span></div>'
+      + [['them','선생님 안녕하세요. 오늘 수업에서 나간 도함수의 활용(2) 영상 다시 봐야 할까요?','21:14'],
+         ['me','네, 74%까지만 보고 멈춰 있더라고요. 남은 부분에 극값 판정이 나오니까 꼭 마저 보세요.','21:31'],
+         ['them','아 네 알겠습니다 ㅠㅠ 계속 미루고 있었어요','21:33'],
+         ['me','괜찮아요. 대신 이번 주 안에는 끝냅시다.','21:35']
+        ].map(function (m) {
+          return '<div class="bub-row ' + (m[0] === 'me' ? 'me' : '') + '">'
+            + '<div class="bub" style="max-width:250px;font-size:12.5px;">' + m[1] + '</div>'
+            + '<span class="tm">' + m[2] + '</span></div>';
+        }).join('')
+      + '<div class="chat-day"><span>오늘</span></div>'
+      + [['them','선생님 오늘 수업 전에 잠깐 질문 가능할까요? 접선 문제가 안 풀려서요','13:48'],
+         ['me','18:40쯤 오면 봐줄게요. 안 풀리는 문제 번호 미리 보내두세요.','13:55'],
+         ['them','7월 3주 시험지 9번이요!','13:58']
+        ].map(function (m) {
+          return '<div class="bub-row ' + (m[0] === 'me' ? 'me' : '') + '">'
+            + '<div class="bub" style="max-width:250px;font-size:12.5px;">' + m[1] + '</div>'
+            + '<span class="tm">' + m[2] + '</span></div>';
+        }).join('')
+      + '<div class="field" style="height:44px;margin-top:14px;background:var(--card);">메시지 입력</div>'
+  });
+
+  /* ---------- 배치 ---------- */
+  var SECTIONS = [
+    ['홈', '첫 화면은 «오늘 뭐 해야 하지»에만 답한다', [HOME]],
+    ['학습', '학생이 실제로 손을 쓰는 화면들 — 제출·입력·시청', [QUIZ, WRONG, PROG, VIDEO]],
+    ['기록', '읽기만 하는 화면. 표보다 그림이 먼저 읽힌다', [SCORE, ATTEND]],
+    ['소통', '선생님과 닿는 네 가지 경로', [NOTICE, QNA, CLINIC, CHAT]]
+  ];
+  document.getElementById('screens').innerHTML = SECTIONS.map(function (s) {
+    return '<div class="sh"><b>' + s[0] + '</b><span>' + s[1] + '</span>'
+      + '<span class="n">' + s[2].length + ' SCREEN' + (s[2].length > 1 ? 'S' : '') + '</span></div>'
+      + '<div class="phones">' + s[2].join('') + '</div>';
+  }).join('');
+
+  renderMathInElement(document.body, {
+    delimiters: [{left:'$', right:'$', display:false}], throwOnError:false
+  });
+</script>
+</body>
+</html>

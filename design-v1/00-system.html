@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>디자인 시스템 v1 — 김하현수학연구소</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<link rel="stylesheet" href="ds.css">
+<style>
+  /* 문서 페이지라 캔버스를 쓰지 않는다. :root 토큰을 그대로 쓴다. */
+  html,body{background:var(--paper);color:var(--ink);
+    font-family:'Pretendard',-apple-system,sans-serif;font-size:13px;line-height:1.5;
+    -webkit-font-smoothing:antialiased;}
+  .doc{max-width:1180px;margin:0 auto;padding:56px 32px 100px;}
+  .doc h1{font-family:'Noto Serif KR',serif;font-size:32px;font-weight:600;letter-spacing:-.03em;margin:0;}
+  .lede{font-size:14.5px;color:var(--sub);line-height:1.85;margin:14px 0 0;max-width:720px;}
+  .lede b{color:var(--ink);font-weight:700;}
+
+  h2{font-size:12px;font-weight:700;color:var(--dim);letter-spacing:.1em;
+    margin:56px 0 4px;padding-bottom:12px;border-bottom:1px solid var(--line);}
+  h2 s{text-decoration:none;font-family:'JetBrains Mono',monospace;color:#C6C3B8;margin-right:10px;}
+  .cap{font-size:13px;color:var(--sub);line-height:1.8;margin:16px 0 20px;max-width:760px;}
+  .cap b{color:var(--ink);font-weight:700;}
+
+  .roles{width:100%;border-collapse:collapse;margin-top:8px;}
+  .roles th{text-align:left;font-size:11px;font-weight:700;color:var(--dim);letter-spacing:.06em;
+    padding:0 12px 9px;border-bottom:1px solid var(--line);}
+  .roles td{padding:14px 12px;border-bottom:1px solid var(--line2);font-size:13px;vertical-align:top;line-height:1.7;}
+  .roles td.n{font-family:'JetBrains Mono',monospace;color:var(--dim);width:34px;}
+  .roles td.s a{font-weight:700;color:var(--ink);text-decoration:none;font-size:13.5px;}
+  .roles td.s a:hover{color:var(--accent);}
+  .roles td.s span{display:block;font-size:11.5px;color:var(--dim);margin-top:3px;}
+  .roles td.role{color:var(--sub);}
+  .roles td.from{width:210px;}
+
+  .sw{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;}
+  .sw div{border:1px solid var(--line);border-radius:var(--r-md);overflow:hidden;background:var(--card);}
+  .sw i{display:block;height:52px;}
+  .sw p{margin:0;padding:8px 10px 10px;font-size:11px;color:var(--sub);line-height:1.5;}
+  .sw p b{display:block;color:var(--ink);font-size:11.5px;font-weight:700;}
+  .sw p s{text-decoration:none;font-family:'JetBrains Mono',monospace;color:var(--dim);font-size:10px;}
+
+  .demo{background:var(--card);border:1px solid var(--line);border-radius:var(--r-lg);padding:22px 24px;}
+  .demo+.demo{margin-top:12px;}
+  .dl{font-size:11px;font-weight:700;color:var(--dim);letter-spacing:.06em;margin-bottom:14px;}
+  .strip{display:flex;align-items:center;gap:9px;flex-wrap:wrap;}
+
+  .rules{margin:0;padding:0;list-style:none;}
+  .rules li{position:relative;padding:11px 0 11px 26px;border-bottom:1px solid var(--line2);
+    font-size:13px;line-height:1.75;color:var(--sub);}
+  .rules li::before{content:'';position:absolute;left:6px;top:19px;width:5px;height:5px;
+    border-radius:50%;background:var(--accent);}
+  .rules li b{color:var(--ink);font-weight:700;}
+  .rules li.no::before{background:var(--no);}
+
+  .icons{display:grid;grid-template-columns:repeat(10,1fr);gap:8px;}
+  .icons div{border:1px solid var(--line);border-radius:var(--r-md);background:var(--card);
+    padding:14px 6px 9px;text-align:center;color:var(--sub);}
+  .icons span{display:block;margin-top:8px;font-family:'JetBrains Mono',monospace;
+    font-size:9.5px;color:var(--dim);}
+</style>
+</head>
+<body>
+<div class="doc">
+
+  <h1>디자인 시스템 v1</h1>
+  <p class="lede">
+    관리자 시안 <b>A3 「학생 도시에」</b>를 기준 언어로 삼는다.
+    다른 시안은 화면을 합치는 방식으로 가져오지 않는다. <b>화면마다 역할을 먼저 정의하고</b>,
+    그 역할에 가장 맞는 UX만 골라 A3의 언어로 번역해 들인다.
+    버튼·카드·색·서체·간격·아이콘·인터랙션은 <b>13개 화면 전부</b> 예외 없이 이 문서 하나를 따른다.
+  </p>
+  <p class="lede" style="margin-top:12px;">
+    상단 메뉴와 서브탭은 <span class="mono">ds.js</span>의 <span class="mono">NAV</span>·<span class="mono">SUBNAV</span>
+    한 곳에서 생성한다. 13개 화면이 각자 <span class="mono">&lt;nav&gt;</span>를 손으로 적으면 반드시 어긋나기 때문이다.
+  </p>
+
+  <!-- ============================================ -->
+  <h2><s>01</s>화면의 역할</h2>
+  <p class="cap">
+    먼저 각 화면이 <b>무엇을 하는 자리인지</b> 한 문장으로 정한다. 그 다음에 UX를 고른다.
+    순서가 뒤바뀌면 기능이 많은 화면이 되고, 제품이 아니게 된다.
+  </p>
+  <table class="roles">
+    <thead><tr><th></th><th>화면</th><th>역할 — 이 화면에서 사용자가 하는 일</th><th>루트(1차 축)</th><th class="from">가져온 곳</th></tr></thead>
+    <tbody>
+      <tr>
+        <td class="n">01</td>
+        <td class="s"><a href="01-roster.html">명단</a><span>Roster</span></td>
+        <td class="role">전체를 훑고, 조건으로 걸러내고, <b>한꺼번에</b> 처리한다.<br>한 명을 깊이 보는 자리가 아니다 — 그건 03이 한다.</td>
+        <td class="role">전체 학생 표</td>
+        <td class="from"><b>A1</b> 고밀도 표 · 저장된 뷰 · 다중 선택 일괄 작업<br><span class="muted" style="font-size:11.5px;">+ A5 신호를 «열» 하나로</span></td>
+      </tr>
+      <tr>
+        <td class="n">02</td>
+        <td class="s"><a href="02-class.html">수업 진행</a><span>Class</span></td>
+        <td class="role">수업 중에 <b>순서대로 끝낸다.</b> 출결 → 퀴즈 → 과제 → 메모.<br>서서 태블릿으로 누르는 화면이라 타깃이 커야 한다.</td>
+        <td class="role">오늘 · 수업</td>
+        <td class="from"><b>A2</b> 단계형 워크플로 · 64px 타일 · 4상태 세그먼트</td>
+      </tr>
+      <tr>
+        <td class="n">03</td>
+        <td class="s"><a href="03-student.html">학생 상세</a><span>Student</span></td>
+        <td class="role">한 명을 <b>이해하고 대응한다.</b> 학부모 전화를 받으면서 읽고 적는다.<br>탭을 없애고 모든 기록을 하나의 세로 연대기로 합친다.</td>
+        <td class="role">학생 한 명</td>
+        <td class="from"><b>A3</b> — 기준 화면 그대로<br><span class="muted" style="font-size:11.5px;">+ A5 신호의 «근거 문장»</span></td>
+      </tr>
+      <tr>
+        <td class="n">04</td>
+        <td class="s"><a href="04-review.html">오답 검토</a><span>Review</span></td>
+        <td class="role">쌓인 것을 <b>비운다.</b> 처리하면 사라진다.<br>판단이 반복되므로 손이 키보드를 떠나지 않아야 한다.</td>
+        <td class="role">처리할 일의 큐</td>
+        <td class="from"><b>A4</b> 큐 · 원본↔쌍둥이 2열 비교 · 키보드 우선<br><span style="color:var(--no);font-size:11.5px;">− 다크 테마는 버림</span></td>
+      </tr>
+      <tr>
+        <td class="n">05</td>
+        <td class="s"><a href="05-signals.html">신호</a><span>Signals</span></td>
+        <td class="role">놓치기 전에 <b>먼저 보인다.</b> 규칙이 감시하고 화면이 먼저 말을 건다.<br>찾아야 보이는 것은 결국 못 본다.</td>
+        <td class="role">위험 신호</td>
+        <td class="from"><b>A5</b> 규칙 기반 자동 트리아지 · 근거 문장 · 규칙 설정<br><span style="color:var(--no);font-size:11.5px;">− 3열 칸반 보드는 버림</span></td>
+      </tr>
+      <tr>
+        <td class="n">06</td>
+        <td class="s"><a href="06-classes.html">반 관리</a><span>Classes</span></td>
+        <td class="role">반이 <b>어디까지 나갔는지</b> 관리한다.<br>진도는 순서가 전부다.</td>
+        <td class="role">반 · 단원 순서</td>
+        <td class="from">표가 아니라 «목록» — 순서가 있는 것은 목록이 낫다</td>
+      </tr>
+      <tr>
+        <td class="n">07</td>
+        <td class="s"><a href="07-exams.html">시험지</a><span>Exams</span></td>
+        <td class="role">어느 문항이 <b>무너졌는지</b> 본다.<br>오답 파이프라인의 입구.</td>
+        <td class="role">시험지 · 문항</td>
+        <td class="from">오답률 막대를 «행»으로 눕힘 · 제출 현황을 같은 화면에</td>
+      </tr>
+      <tr>
+        <td class="n">08</td>
+        <td class="s"><a href="08-bank.html">보충문제 창고</a><span>Bank</span></td>
+        <td class="role">승인된 문항을 쌓아두고 <b>다시 꺼내 쓴다.</b></td>
+        <td class="role">문항</td>
+        <td class="from">3열 카드 — 고르는 곳이라 수식이 보여야 한다</td>
+      </tr>
+      <tr>
+        <td class="n">09</td>
+        <td class="s"><a href="09-clinic.html">클리닉</a><span>Clinic</span></td>
+        <td class="role">남는 시간에 학생을 앉힌다.<br>클리닉은 <b>시간이 자원</b>이다.</td>
+        <td class="role">주간 슬롯</td>
+        <td class="from">슬롯 판 + 승인 대기를 한 화면에</td>
+      </tr>
+      <tr>
+        <td class="n">10</td>
+        <td class="s"><a href="10-notice.html">공지</a><span>Notice</span></td>
+        <td class="role">한 번 써서 여러 명에게.<br>성패는 «썼다»가 아니라 <b>«읽혔다»</b>로 판정된다.</td>
+        <td class="role">공지 · 읽음</td>
+        <td class="from">읽음 현황을 우측에 상설 배치</td>
+      </tr>
+      <tr>
+        <td class="n">11</td>
+        <td class="s"><a href="11-qna.html">질의응답</a><span>Q&amp;A</span></td>
+        <td class="role">학생 질문에 답한다.<br><b>수식이 들어가는 긴 글.</b></td>
+        <td class="role">질문 스레드</td>
+        <td class="from">말풍선을 쓰지 않음 — 좁은 폭에서 수식이 깨진다</td>
+      </tr>
+      <tr>
+        <td class="n">12</td>
+        <td class="s"><a href="12-chat.html">채팅</a><span>Chat</span></td>
+        <td class="role">짧은 말을 <b>빠르게</b> 주고받는다. 1:1.</td>
+        <td class="role">대화</td>
+        <td class="from">여기는 말풍선이 맞다 — 누가 말했는지가 먼저 읽혀야 한다</td>
+      </tr>
+      <tr>
+        <td class="n">13</td>
+        <td class="s"><a href="13-settings.html">설정</a><span>Settings</span></td>
+        <td class="role">규칙과 권한을 정한다.<br><b>05가 무엇을 잡을지</b> 여기서 결정된다.</td>
+        <td class="role">규칙 · 권한</td>
+        <td class="from">토글마다 설명 — 설명 없는 토글은 아무도 안 건드린다</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p class="cap" style="margin-top:26px;">
+    <b>11 질의응답과 12 채팅은 일부러 형태를 다르게 했다.</b>
+    같은 «소통»이어도 글의 성격이 다르면 형태가 달라야 한다.
+    수식이 들어가는 긴 질문은 세로로 쌓고, 짧은 말이 오가는 대화는 말풍선으로 둔다.
+    형태를 억지로 통일하는 것은 일관성이 아니라 게으름이다 —
+    <b>통일해야 하는 것은 색·서체·간격·버튼이지 레이아웃이 아니다.</b>
+  </p>
+
+  <p class="cap" style="margin-top:26px;">
+    <b>같은 곳으로 가는 문은 하나만 둔다.</b> 신호에 전용 화면이 생겼으므로
+    명단의 「위험 신호」 저장된 뷰는 없앴다. 명단에 남은 «신호 열»은 학생을 훑을 때의
+    맥락 표시이지 진입점이 아니다. 문이 둘이면 어느 쪽이 최신인지 매번 헷갈린다.
+  </p>
+
+  <!-- ============================================ -->
+  <h2><s>01-B</s>학생 마이페이지</h2>
+  <p class="cap">
+    <a href="20-student-app.html" style="color:var(--accent);font-weight:700;">학생 마이페이지 11개 화면 →</a>
+    관리자와 <b>같은 토큰</b>을 쓴다. 색·서체·반경·상태색·메모 종이색이 전부 같다.
+    바꾼 것은 <b>밀도</b>뿐이다 — 관리자는 앉아서 마우스로 쓰고, 학생은 서서 엄지로 쓴다.
+  </p>
+  <ul class="rules">
+    <li><b>모바일 우선 390×812.</b> 데일리퀴즈 제출·오답숙제 입력·강의 시청·클리닉 신청은 전부 학생이 폰으로 하는 일이다. 관리자와 같은 1440×900으로 그리면 실제로 쓰이지 않는 것을 검토하게 된다.</li>
+    <li><b>탭 11개 → 4개.</b> 홈 / 학습 / 기록 / 소통. 기능은 하나도 빼지 않고 묶기만 했다. 하단 탭바에 들어가는 것은 4~5개가 한계이고, 11개를 가로로 밀게 하면 뒤쪽은 아무도 안 누른다.</li>
+    <li><b>누르는 것은 최소 46px.</b> 관리자 화면의 32px 버튼을 그대로 쓰지 않는다.</li>
+    <li><b>상태색 5종은 그대로.</b> 학생이 보는 출석 달력의 색과 관리자가 보는 출결 도트의 색이 같아야 «같은 것»을 말하고 있다는 게 전달된다.</li>
+  </ul>
+
+  <!-- ============================================ -->
+  <h2><s>02</s>무엇을 버렸는가</h2>
+  <p class="cap">
+    일관성을 해치는 것은 아무리 좋아 보여도 넣지 않는다. <b>하나의 제품처럼 보이는 것이 개별 화면의 완성도보다 앞선다.</b>
+  </p>
+  <ul class="rules">
+    <li class="no"><b>A4의 다크 테마</b> — 처리함만 검은 화면이면 같은 제품이 아니게 된다. 큐 구조와 2열 비교, 키보드 조작만 라이트로 번역해 가져왔다.</li>
+    <li class="no"><b>A1의 파랑 선택색 <span class="mono">#1F6FEB</span></b> — 선택을 뜻하는 색은 시스템에 하나만 있어야 한다. 딥 올리브로 통일했다.</li>
+    <li class="no"><b>A1의 IBM Plex Sans KR</b> — 본문 서체는 Pretendard 하나. 표가 좁아 보이는 문제는 서체가 아니라 <span class="mono">tabular-nums</span>와 행 높이로 해결한다.</li>
+    <li class="no"><b>A5의 3열 칸반 보드</b> — 신호 화면은 두되 보드는 버렸다. 카드 27장이 세 열에 흩어지면 «놓치지 않는» 화면이 오히려 산만해진다. A3의 연대기와 같은 idiom으로 <b>등급으로 묶은 한 줄기 목록</b>을 썼다 — 읽는 눈이 위에서 아래로 한 번만 움직인다.</li>
+    <li class="no"><b>이모지 아이콘</b> — 플랫폼마다 모양이 달라 제품이 흔들린다. 인라인 SVG 한 벌로 교체했다.</li>
+  </ul>
+
+  <!-- ============================================ -->
+  <h2><s>03</s>색</h2>
+  <p class="cap">
+    표면은 <b>웜 페이퍼</b>다. 순백 배경을 쓰지 않는다.
+    강조·선택·주요 액션은 전부 <b>로고 차콜 하나</b>로 처리한다.
+    상태색은 <b>의미가 있을 때만</b> 쓴다 — 장식으로 쓰는 순간 신호가 죽는다.
+  </p>
+  <p class="cap">
+    <b>모든 색은 자체 로고(2024, PAPERFIT)에서 나온다.</b>
+    로고는 차콜 <span class="mono">#3F3537</span> → 와인 <span class="mono">#BA5054</span> 그라데이션이다.
+    주조색으로 <b>차콜</b>을 쓰고 <b>와인은 브랜드 순간에만</b> 아껴 쓴다 —
+    와인을 UI 강조에 쓰면 위험색 <span class="mono">#B03A2E</span>와 색상이 가까워
+    고밀도 표에서 «선택된 행»과 «위험한 학생»이 구분되지 않는다. 취향이 아니라 사용성 문제다.
+  </p>
+  <div class="sw" id="sw1"></div>
+  <div class="cap" style="margin-top:22px;"><b>출결 5상태</b> — 실제 도메인 값. 이 다섯 개 밖의 상태는 없다.</div>
+  <div class="sw" id="sw2"></div>
+
+  <!-- ============================================ -->
+  <h2><s>04</s>서체</h2>
+  <p class="cap">
+    <b>Noto Serif KR은 「그 화면이 다루는 대상의 이름」에만 쓴다.</b>
+    학생 상세에서는 학생 이름, 수업에서는 반 이름, 명단에서는 화면 이름.
+    그 외 어디에도 쓰지 않는다. 이 규칙이 흔들리면 시스템이 무너진다.
+  </p>
+  <div class="demo">
+    <div class="dl">TYPE SCALE</div>
+    <div style="font-family:'Noto Serif KR',serif;font-size:25px;font-weight:600;letter-spacing:-.02em;">김민준 &nbsp;<span style="font-family:Pretendard;font-size:13px;font-weight:500;color:var(--dim);">Noto Serif KR 600 · 25px — 화면의 주제</span></div>
+    <div style="margin-top:16px;font-size:13.5px;font-weight:600;">정규 수업 출석 &nbsp;<span style="font-size:12px;font-weight:400;color:var(--dim);">Pretendard 600 · 13.5px — 항목 제목</span></div>
+    <div style="margin-top:12px;font-size:13px;color:var(--sub);">본문은 Pretendard 400 · 13px. 한글은 <span class="mono" style="font-size:12px;">word-break:keep-all</span> 로 단어를 지킨다.</div>
+    <div style="margin-top:12px;" class="mono">82 / 100 · 010-4417-2280 · 19:00 &nbsp;<span style="font-family:Pretendard;font-size:12px;color:var(--dim);">JetBrains Mono · 숫자·시각·ID·전화는 전부 고정폭</span></div>
+    <div style="margin-top:12px;font-size:11px;font-weight:700;color:var(--dim);letter-spacing:.08em;">섹션 라벨 · 11PX · LETTER-SPACING .08EM</div>
+  </div>
+
+  <!-- ============================================ -->
+  <h2><s>05</s>버튼</h2>
+  <p class="cap">
+    기본은 <b>조용한 아웃라인</b>이다. 올리브로 칠한 주요 버튼은 <b>화면당 하나만</b> 둔다.
+    두 개가 되는 순간 무엇이 중요한지 사라진다.
+  </p>
+  <div class="demo">
+    <div class="dl">기본</div>
+    <div class="strip">
+      <button class="btn p">주요 · 화면당 하나</button>
+      <button class="btn">보조</button>
+      <button class="btn q">조용한 것</button>
+      <button class="btn ok">승인</button>
+      <button class="btn no">반려</button>
+      <button class="btn" disabled>비활성</button>
+    </div>
+  </div>
+  <div class="demo">
+    <div class="dl">크기 · 키보드</div>
+    <div class="strip">
+      <button class="btn lg p">저장하고 다음</button>
+      <button class="btn">기본 32px</button>
+      <button class="btn sm">작게 · 행 안</button>
+      <button class="btn ok"><span class="k">E</span> 승인하고 다음</button>
+      <span class="kbd">⌘K</span><span class="kbd">J</span><span class="kbd">K</span>
+    </div>
+  </div>
+
+  <!-- ============================================ -->
+  <h2><s>06</s>칩 · 뱃지 · 태그</h2>
+  <p class="cap">
+    형태로 출처를 구분한다. <b>둥근 것(pill)은 사용자가 켜고 끄는 것</b>,
+    <b>각진 것(badge)은 시스템이 붙인 것</b>이다. 이 구분을 지키면 화면을 읽는 속도가 달라진다.
+  </p>
+  <div class="demo">
+    <div class="dl">PILL — 사용자가 조작</div>
+    <div class="strip">
+      <a class="pill on" href="#">전체 <b>25</b></a>
+      <a class="pill" href="#">출결 주의 <b>6</b></a>
+      <a class="pill" href="#">오답 미제출 <b>11</b></a>
+      <span class="pill f">반: 고2 미적분Ⅰ <s>×</s></span>
+      <span class="pill f">출석률 &lt; 90% <s>×</s></span>
+    </div>
+  </div>
+  <div class="demo">
+    <div class="dl">BADGE — 시스템이 부여</div>
+    <div class="strip">
+      <span class="badge ok">출결</span><span class="badge late">오답</span>
+      <span class="badge score">성적</span><span class="badge qna">질문</span>
+      <span class="badge consult">상담</span><span class="badge no">결석</span>
+      <span class="badge">예정</span>
+      <span style="margin-left:10px;"></span>
+      <span class="tag">재원 중</span><span class="tag cau">주의 신호 1</span><span class="tag warn">시청률 저조</span>
+      <span style="margin-left:10px;"></span>
+      <span class="rk r"></span><span class="rk y"></span><span class="rk g"></span>
+      <span style="font-size:11.5px;color:var(--dim);">신호 도트</span>
+    </div>
+  </div>
+
+  <!-- ============================================ -->
+  <h2><s>07</s>아이콘</h2>
+  <p class="cap">
+    24×24 뷰박스, <span class="mono">stroke-width 1.6</span>, <span class="mono">currentColor</span>.
+    선 굵기와 끝 처리를 통일하는 것만으로 화면이 한 벌처럼 보인다.
+  </p>
+  <div class="icons" id="icons"></div>
+
+  <!-- ============================================ -->
+  <h2><s>08</s>표면 · 간격 · 인터랙션</h2>
+  <div class="demo">
+    <div class="dl">반경 · 표면</div>
+    <div class="strip" style="gap:14px;">
+      <span class="badge" style="border-radius:5px;">5 뱃지</span>
+      <span class="btn sm" style="pointer-events:none;">7 작은 버튼</span>
+      <span class="btn" style="pointer-events:none;">9 버튼·입력</span>
+      <span class="card" style="padding:8px 14px;">12 패널·카드</span>
+      <span class="av lg" style="width:38px;height:38px;font-size:14px;">14</span>
+      <span class="pill">20 pill</span>
+    </div>
+    <div style="margin-top:18px;" class="dl">사람이 적은 것은 전부 이 종이색</div>
+    <div class="note" style="max-width:420px;">
+      <div class="d">2026-07-20 · 학부모 통화</div>
+      9월부터 주 2회 클리닉 희망. 학교 내신 대비 기간에는 금요일 결석 가능성 있음.
+    </div>
+  </div>
+  <div class="demo">
+    <div class="dl">선택 · hover</div>
+    <div style="border:1px solid var(--line);border-radius:var(--r-lg);overflow:hidden;max-width:420px;background:var(--card);">
+      <div class="li"><div class="av">최</div><div class="t"><b>최유진</b><span>건대부고 고2</span></div><span class="rk g"></span></div>
+      <div class="li on"><div class="av">김</div><div class="t"><b>김민준</b><span>건대부고 고2</span></div><span class="rk y"></span></div>
+      <div class="li"><div class="av">박</div><div class="t"><b>박지호</b><span>광남고 고2</span></div><span class="rk r"></span></div>
+    </div>
+    <ul class="rules" style="margin-top:16px;">
+      <li>선택은 <b>올리브 배경 + 좌측 3px 올리브 바</b>. 리스트·표·큐 어디서나 같은 모양이다.</li>
+      <li>hover는 <b>웜 그레이 틴트 한 단계</b>만. 그림자를 띄우거나 확대하지 않는다.</li>
+      <li>전환은 <span class="mono">140ms</span> <span class="mono">cubic-bezier(.4,0,.2,1)</span>. 튀는 이징을 쓰지 않는다.</li>
+      <li>포커스는 <b>올리브 링 3px @ 12%</b>. 키보드 사용자를 위해 절대 지우지 않는다.</li>
+    </ul>
+  </div>
+
+  <!-- ============================================ -->
+  <h2><s>09</s>지켜야 할 것</h2>
+  <ul class="rules">
+    <li>새 화면을 만들 때 <b>색·서체·반경·간격을 새로 정하지 않는다.</b> 화면별 <span class="mono">&lt;style&gt;</span>에는 «배치»만 둔다.</li>
+    <li>주요(올리브) 버튼은 <b>화면당 하나.</b></li>
+    <li>상태색은 <b>의미가 있을 때만.</b> 예쁘라고 칠하지 않는다.</li>
+    <li>serif는 <b>그 화면이 다루는 대상의 이름</b>에만.</li>
+    <li>숫자는 전부 <span class="mono">JetBrains Mono</span> + <span class="mono">tabular-nums</span>. 표에서 자릿수가 흔들리면 안 된다.</li>
+    <li>모든 HTML에 <span class="mono">word-break:keep-all</span>. 없으면 한글이 음절 단위로 갈라진다.</li>
+    <li>목업을 만들면 <b>반드시 브라우저로 렌더링을 확인한다.</b></li>
+  </ul>
+
+  <p style="margin-top:48px;font-size:12px;color:var(--dim);line-height:1.9;">
+    표시된 학생 이름·수치는 전부 구조 확인용 예시 데이터이며 실제 데이터가 아니다.
+    학교명·과목명·출결 상태·오답 검토 단계는 실제 도메인 값을 사용했다.
+  </p>
+
+</div>
+
+<script src="ds.js"></script>
+<script>
+  var C1 = [
+    ['#FAF9F6','--paper','앱 배경'], ['#FFFFFF','--card','패널·카드'], ['#F1EFE9','--line2','내부 구분'],
+    ['#E7E5DE','--line','패널 경계'], ['#96968C','--dim','흐린 글자'], ['#5C5C54','--sub','보조 글자'],
+    ['#22221E','--ink','본문'], ['#3F3537','--accent','주조 · 선택 · 액션 · 로고 차콜'], ['#BA5054','--brand','브랜드 · 로고 와인'],
+    ['#39607F','--blue','성적'], ['#FDFAEF','--note','사람이 적은 것'], ['#EDE3C6','--note-line','메모 경계']
+  ];
+  document.getElementById('sw1').innerHTML = C1.map(function (c) {
+    return '<div><i style="background:' + c[0] + ';"></i><p><b>' + c[2] + '</b><s>' + c[1] + '</s><br><s>' + c[0] + '</s></p></div>';
+  }).join('');
+
+  var C2 = [
+    ['#3F7A4D','출석','--ok'], ['#9A7000','지각','--late'], ['#6B46A8','조퇴','--leave'],
+    ['#B03A2E','결석','--no'], ['#96968C','퇴원','--gone'], ['#E9F2EC','출석 배경','--okbg']
+  ];
+  document.getElementById('sw2').innerHTML = C2.map(function (c) {
+    return '<div><i style="background:' + c[0] + ';"></i><p><b>' + c[1] + '</b><s>' + c[2] + '</s><br><s>' + c[0] + '</s></p></div>';
+  }).join('');
+
+  document.getElementById('icons').innerHTML = Object.keys(ICON_PATHS).map(function (k) {
+    return '<div>' + ICON(k, 20) + '<span>' + k + '</span></div>';
+  }).join('');
+</script>
+</body>
+</html>

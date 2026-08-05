@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>김하현수학연구소</title>
+<meta name="description" content="기록하는 수학 학원. 출결·진도·오답·질문이 모두 남고, 틀린 문항은 쌍둥이 문항이 되어 다시 돌아옵니다.">
+<meta property="og:title" content="김하현수학연구소">
+<meta property="og:description" content="기록하는 수학 학원. 출결·진도·오답·질문이 모두 남습니다.">
+<meta property="og:type" content="website">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<link rel="stylesheet" href="../design-v1/ds.css">
+<style>
+/* ============================================================
+   랜딩 「하루」
+   토큰은 전부 ds.css(:root). 여기에는 «배치»만 둔다.
+   클래스는 전부 l- 접두사 — ds.css와 이름이 겹치면 조용히 망가진다.
+   (.stage / .ev / .tag / .row 로 이미 세 번 당했다)
+   ============================================================ */
+html,body{background:var(--paper);color:var(--ink);
+  font-family:'Pretendard',-apple-system,sans-serif;font-size:16px;line-height:1.5;
+  -webkit-font-smoothing:antialiased;}
+body{overflow-x:hidden;}
+a{color:inherit;}
+:focus-visible{outline:2px solid var(--brand);outline-offset:3px;border-radius:2px;}
+
+.l-skip{position:absolute;left:-9999px;top:0;background:var(--accent);color:#fff;
+  padding:12px 18px;z-index:100;border-radius:0 0 8px 0;}
+.l-skip:focus{left:0;}
+
+/* 공통 배치 — 시각 열 / 척추 / 본문 열 */
+.l-wrap{max-width:1180px;margin:0 auto;padding:0 28px;}
+.l-rail{position:relative;}
+.l-spine{position:absolute;left:132px;top:0;bottom:0;width:1px;background:var(--line);
+  transform-origin:top;}
+.l-dot{position:absolute;left:128px;width:9px;height:9px;border-radius:50%;
+  background:var(--brand);border:2px solid var(--paper);}
+.l-col{padding-left:164px;}
+
+/* ---------- 상단 바 : 히어로를 지나면 나타난다 ---------- */
+.l-bar{position:fixed;left:0;right:0;top:0;height:62px;z-index:50;
+  display:flex;align-items:center;gap:16px;padding:0 28px;
+  background:rgba(250,249,246,.88);backdrop-filter:blur(10px);
+  border-bottom:1px solid var(--line);
+  transform:translateY(-100%);transition:transform .32s cubic-bezier(.4,0,.2,1);}
+.l-bar.on{transform:translateY(0);}
+.l-bar .l-inner{max-width:1180px;margin:0 auto;width:100%;display:flex;align-items:center;gap:16px;}
+.l-bar img{height:26px;width:auto;display:block;}
+.l-bar .l-sp{margin-left:auto;}
+
+.l-btn{display:inline-flex;align-items:center;gap:9px;background:var(--accent);color:#fff;
+  border:1px solid var(--accent);border-radius:var(--r-md);padding:11px 20px;
+  font-size:14px;font-weight:700;text-decoration:none;
+  transition:background var(--t),border-color var(--t);}
+.l-btn:hover{background:var(--accent-d);border-color:var(--accent-d);}
+.l-btn.l-sm{padding:8px 15px;font-size:13px;}
+.l-btn.l-lg{padding:17px 30px;font-size:16.5px;border-radius:var(--r-lg);}
+.l-btn.l-ghost{background:transparent;color:var(--ink);border-color:var(--line);}
+.l-btn.l-ghost:hover{background:var(--hover);border-color:#D9D6CC;}
+
+/* ---------- 1. 도착 ---------- */
+/* 히어로 높이를 뷰포트보다 조금 낮게 잡아 «하루»의 첫 행이 접힌 채로 보이게 한다.
+   따로 미리보기 행을 두면 같은 16:00이 두 번 나온다 — 그건 장치가 아니라 버그로 읽힌다. */
+.l-hero{min-height:calc(100vh - 118px);min-height:calc(100svh - 118px);
+  display:flex;flex-direction:column;justify-content:center;padding:110px 0 0;position:relative;}
+.l-hero .l-logo{max-width:392px;width:52%;min-width:260px;height:auto;display:block;}
+.l-hero .l-date{margin-top:38px;font-family:'JetBrains Mono',monospace;font-size:14px;
+  color:var(--dim);letter-spacing:.14em;}
+.l-hero .l-sub{margin-top:14px;font-size:16px;color:var(--sub);}
+
+/* ---------- 2. 하루 ---------- */
+.l-day{padding:0 0 128px;}
+.l-row{position:relative;display:flex;align-items:flex-start;padding:34px 0;}
+.l-row .l-t{width:132px;flex-shrink:0;text-align:right;padding-right:30px;
+  font-family:'JetBrains Mono',monospace;font-size:17px;font-weight:600;color:var(--sub);
+  padding-top:2px;}
+.l-row .l-b{padding-left:32px;flex:1;min-width:0;}
+.l-row .l-k{font-family:'JetBrains Mono',monospace;font-size:12.5px;font-weight:600;
+  color:var(--dim);letter-spacing:.18em;}
+.l-row .l-s{margin:12px 0 0;font-size:27px;font-weight:500;letter-spacing:-.035em;
+  line-height:1.5;}
+.l-row .l-s b{font-weight:700;}
+
+.l-break{display:flex;align-items:center;gap:16px;margin:12px 0 12px 164px;
+  font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--dim);letter-spacing:.06em;}
+.l-break::after{content:'';flex:1;height:1px;background:var(--line);}
+
+/* ---------- 3. 전환 : 유일하게 큰 소리 ---------- */
+.l-turn{background:var(--accent);color:#fff;padding:130px 0;position:relative;}
+.l-turn .l-spine{background:rgba(255,255,255,.2);}
+.l-turn .l-dot{background:var(--brand);border-color:var(--accent);}
+.l-turn .l-k{font-family:'JetBrains Mono',monospace;font-size:12.5px;
+  color:rgba(255,255,255,.5);letter-spacing:.24em;}
+.l-turn h2{margin:34px 0 0;font-family:'Noto Serif KR',serif;font-size:62px;font-weight:600;
+  letter-spacing:-.045em;line-height:1.3;max-width:15ch;}
+.l-turn p{margin:34px 0 0;font-size:18px;line-height:1.9;color:rgba(255,255,255,.7);
+  max-width:44ch;}
+
+/* ---------- 4. 사람 ---------- */
+.l-human{padding:128px 0 0;position:relative;overflow:hidden;}
+.l-human .l-inner{display:flex;align-items:flex-end;gap:40px;}
+.l-human .l-say{flex:1;min-width:0;max-width:620px;padding-bottom:96px;}
+.l-note{background:var(--note);border:1px solid var(--note-line);border-radius:var(--r-lg);
+  padding:30px 32px;}
+.l-note p{margin:0;font-size:22px;line-height:1.85;letter-spacing:-.025em;}
+.l-note .l-by{margin-top:24px;display:flex;align-items:baseline;gap:10px;
+  font-family:'JetBrains Mono',monospace;font-size:12.5px;color:var(--dim);}
+.l-note .l-by b{font-family:'Pretendard',sans-serif;font-size:14px;font-weight:700;color:var(--ink);}
+.l-human .l-photo{flex-shrink:0;width:340px;align-self:flex-end;}
+.l-human .l-photo picture{display:block;}
+.l-human .l-photo img{width:100%;height:auto;display:block;}
+
+/* ---------- 5. 행동 ---------- */
+.l-act{padding:96px 0 120px;border-top:1px solid var(--line);}
+.l-act h3{margin:0;font-family:'Noto Serif KR',serif;font-size:34px;font-weight:600;
+  letter-spacing:-.035em;}
+.l-act p{margin:16px 0 0;font-size:16px;color:var(--sub);line-height:1.85;max-width:46ch;}
+.l-act .l-btns{display:flex;gap:11px;margin-top:34px;flex-wrap:wrap;}
+
+.l-foot{border-top:1px solid var(--line);padding:38px 0 52px;}
+.l-foot .l-inner{display:flex;align-items:center;gap:20px;flex-wrap:wrap;}
+.l-foot img{height:34px;width:auto;opacity:.62;}
+.l-foot .l-meta{margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:11.5px;
+  color:var(--dim);letter-spacing:.06em;text-align:right;line-height:1.9;}
+
+/* ---------- 등장 ---------- */
+.l-rise{opacity:0;transform:translateY(14px);
+  transition:opacity .62s cubic-bezier(.4,0,.2,1),transform .62s cubic-bezier(.4,0,.2,1);}
+.l-rise.in{opacity:1;transform:none;}
+.l-draw{transform:scaleY(0);transition:transform .9s cubic-bezier(.4,0,.2,1);}
+.l-draw.in{transform:scaleY(1);}
+
+/* ---------- 반응형 ----------
+   척추는 사라지지 않는다. 좁아지면 왼쪽 끝으로 붙고 시각이 문장 위로 올라간다. */
+@media (max-width:900px){
+  .l-spine{left:9px;}
+  .l-dot{left:5px;}
+  .l-col{padding-left:44px;}
+  .l-hero{padding-top:96px;}
+  .l-hero .l-logo{width:74%;min-width:0;}
+  .l-row{display:block;padding:26px 0 26px 44px;}
+  .l-row .l-t{width:auto;text-align:left;padding:0 0 8px;font-size:15px;}
+  .l-row .l-b{padding-left:0;}
+  .l-row .l-s{font-size:21px;margin-top:9px;}
+  .l-break{margin-left:44px;}
+  .l-turn{padding:88px 0;}
+  .l-turn h2{font-size:36px;}
+  .l-turn p{font-size:16px;}
+  .l-human{padding-top:88px;}
+  .l-human .l-inner{display:block;}
+  .l-human .l-say{padding-bottom:40px;max-width:none;}
+  .l-human .l-photo{width:230px;margin-left:auto;}
+  .l-note p{font-size:18px;}
+  .l-act{padding:72px 0 88px;}
+  .l-act h3{font-size:26px;}
+}
+@media (max-width:560px){
+  .l-wrap{padding:0 20px;}
+  .l-hero .l-logo{width:88%;}
+  .l-turn h2{font-size:29px;}
+  .l-foot .l-meta{margin-left:0;text-align:left;width:100%;}
+}
+
+@media (prefers-reduced-motion:reduce){
+  .l-rise{opacity:1;transform:none;transition:none;}
+  .l-draw{transform:none;transition:none;}
+  .l-bar{transition:none;}
+}
+</style>
+</head>
+<body>
+<a class="l-skip" href="#main">본문으로 건너뛰기</a>
+
+<header class="l-bar" id="bar">
+  <div class="l-inner">
+    <a href="#main" aria-label="김하현수학연구소 홈"><img src="../로고/가로형(1).png" alt="김하현수학연구소"></a>
+    <span class="l-sp"></span>
+    <a class="l-btn l-sm" href="#contact">상담 신청</a>
+  </div>
+</header>
+
+<main id="main">
+
+  <!-- ============ 1. 도착 ============
+       판매 문구를 두지 않는다. 이름과 날짜뿐이다.
+       브랜드 이름은 로고로만 말한다 — 같은 이름을 서체로 또 쓰면 한 이름을 두 목소리로 말하게 된다. -->
+  <section class="l-hero">
+    <div class="l-wrap l-rail">
+      <div class="l-spine l-draw" id="spine1"></div>
+      <div class="l-dot" style="top:8px;"></div>
+      <div class="l-col">
+        <img class="l-logo l-rise" src="../로고/가로형(1).png"
+             alt="김하현수학연구소 — KIM HA HYUN MATH" width="966" height="223">
+        <div class="l-date l-rise" id="today"></div>
+        <div class="l-sub l-rise">오늘의 기록</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 2. 하루 ============
+       각 행은 {시각, 라벨, 문장} 하나뿐이라 문자열만 갈면 그대로 돌아간다.
+       수치를 쓰지 않는다 — 공개 페이지의 숫자는 방문자가 사실로 읽는다. -->
+  <section class="l-day" aria-label="오늘의 기록">
+    <div class="l-wrap l-rail">
+      <div class="l-spine"></div>
+      <div id="log"></div>
+    </div>
+  </section>
+
+  <!-- ============ 경력 · 성과 자리 ============
+       지금은 비워 둔다. 나중에 끼워 넣으면 레이아웃이 깨지므로 «자리»만 미리 잡아 둔다.
+       살릴 때는 아래 주석을 풀고 CONTENT.credits 배열만 채우면 된다.
+  <section class="l-day" aria-label="기록">
+    <div class="l-wrap l-rail">
+      <div class="l-spine"></div>
+      <div id="credits"></div>
+    </div>
+  </section>
+  ============================================ -->
+
+  <!-- ============ 3. 전환 ============
+       페이지에서 유일하게 큰 소리. 로고 차콜을 «면»으로 쓰는 단 한 번.
+       척추가 색 위로도 이어진다 — 선이 장식이 아니라 구조라는 걸 보여주는 지점. -->
+  <section class="l-turn">
+    <div class="l-wrap l-rail">
+      <div class="l-spine"></div>
+      <div class="l-dot" style="top:4px;"></div>
+      <div class="l-col">
+        <div class="l-k l-rise">기록</div>
+        <!-- 이 한 문장이 페이지에서 유일하게 큰 소리다. 2026-08-06 확정.
+             위의 로그가 «증거», 이 문장이 «주장», 아래 메모가 «이유» — 셋이 서로 다른 일을 한다.
+             «기록»을 말하는 문구(「무엇을 틀렸는지 기억합니다」·「가르친 것은 전부 남습니다」)는
+             아래 메모의 «전부 적습니다»와 겹쳐서 기각했다. 후보 5개는 copy.html에 남아 있다. -->
+        <h2 class="l-rise">짐작으로 가르치지 않습니다</h2>
+        <p class="l-rise">틀린 문항은 쌍둥이 문항이 되어 다시 돌아옵니다.
+          검토를 거친 것만 학생에게 나갑니다.</p>
+        <!-- 흰색 녹아웃 로고(가로형(2))를 여기 넣었다가 뺐다.
+             상단바·히어로·푸터까지 로고가 네 번이 되어 과했고,
+             이 섹션은 문장 하나만 있을 때 가장 세다. -->
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 4. 사람 ============
+       메모 종이색은 시스템에서 «사람이 적은 것»에만 쓰는 색이다.
+       페이지가 기록에서 사람으로 넘어가는 지점이라 여기서만 쓴다. -->
+  <section class="l-human">
+    <div class="l-wrap">
+      <div class="l-inner">
+        <div class="l-say l-rise">
+          <div class="l-note">
+            <p>수업은 두 시간이지만,<br>한 학생을 이해하는 데는 한 학기가 걸립니다.<br>그래서 전부 적습니다.</p>
+            <div class="l-by"><b>김하현</b><span>김하현수학연구소</span></div>
+          </div>
+        </div>
+        <div class="l-photo l-rise">
+          <!-- webp 100KB / png 2.2MB. webp를 못 읽는 브라우저만 png로 내려간다. -->
+          <picture>
+            <source srcset="../profile.webp" type="image/webp">
+            <img src="../profile.png" alt="김하현 원장" loading="lazy" decoding="async"
+                 width="1299" height="1624">
+          </picture>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 5. 행동 ============ -->
+  <section class="l-act" id="contact">
+    <div class="l-wrap">
+      <h3 class="l-rise">상담은 한 번이면 됩니다</h3>
+      <p class="l-rise">지금 어디에서 막혀 있는지 듣고, 어떻게 기록하며 가르칠지 말씀드립니다.
+        수업을 권하지 않는 편이 낫다고 판단되면 그렇게 말씀드립니다.</p>
+      <div class="l-btns l-rise">
+        <a class="l-btn l-lg" href="#">상담 신청</a>
+        <a class="l-btn l-lg l-ghost" href="#">전화로 문의</a>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="l-foot">
+  <div class="l-wrap l-inner">
+    <img src="../로고/가로형(1).png" alt="김하현수학연구소">
+    <div class="l-meta" id="foot"></div>
+  </div>
+</footer>
+
+<script>
+/* ============================================================
+   콘텐츠는 전부 여기 모아 둔다. 레이아웃은 콘텐츠를 모른다.
+   문자열만 갈면 페이지가 그대로 돌아간다.
+   ============================================================ */
+var CONTENT = {
+  /* 실제 반 시간표에서 나온 값이다. 지어낸 시각이 아니다. */
+  log: [
+    ['16:00', '수업', '고1 공통수학2 — 오늘 나간 단원이 반의 진도에 남는다'],
+    ['19:00', '수업', '고2 미적분Ⅰ — 스물두 명의 출결이 그날의 기록이 된다'],
+    ['21:10', '수업', '고3 미적분Ⅱ — 마지막 반이 끝난다'],
+    ['21:14', '검토', '틀린 문항에서 쌍둥이 문항이 만들어진다'],
+    ['23:41', '질문', '「극대·극소 판정에서 f″를 꼭 봐야 하나요?」']
+  ],
+  /* 날짜가 넘어가는 칸. 이 한 줄이 «밤늦게 물어도 아침에 답이 온다»를 주장 없이 말한다. */
+  next: ['09:12', '답변', '다음 날 아침, 답이 도착한다'],
+
+  /* 경력·성과 자리. 지금은 비어 있다. 채우면 위의 주석 처리된 섹션을 살린다. */
+  credits: []
+};
+
+/* ---------- 오늘 날짜 ---------- */
+var DAYS = ['일','월','화','수','목','금','토'];
+var now = new Date();
+var p2 = function (n) { return (n < 10 ? '0' : '') + n; };
+document.getElementById('today').textContent =
+  now.getFullYear() + ' · ' + p2(now.getMonth() + 1) + ' · ' + p2(now.getDate())
+  + '　' + DAYS[now.getDay()] + '요일';
+document.getElementById('foot').innerHTML =
+  'KIM HA HYUN MATH<br>' + now.getFullYear();
+
+/* ---------- 로그 ---------- */
+function row(e, rise) {
+  return '<div class="l-row' + (rise ? ' l-rise' : '') + '">'
+    + '<div class="l-dot" style="top:44px;"></div>'
+    + '<div class="l-t">' + e[0] + '</div>'
+    + '<div class="l-b"><div class="l-k">' + e[1] + '</div>'
+    + '<p class="l-s">' + e[2] + '</p></div></div>';
+}
+
+var tomorrow = new Date(now.getTime() + 864e5);
+document.getElementById('log').innerHTML =
+  CONTENT.log.map(function (e) { return row(e, true); }).join('')
+  + '<div class="l-break l-rise">다음 날　'
+    + p2(tomorrow.getMonth() + 1) + ' · ' + p2(tomorrow.getDate()) + '</div>'
+  + row(CONTENT.next, true);
+
+/* ---------- 등장 ----------
+   한 번만 실행되고 끝난다. 스크롤할 때마다 다시 움직이면 피곤하다. */
+var reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+var rises = document.querySelectorAll('.l-rise, .l-draw');
+if (reduce) {
+  rises.forEach(function (el) { el.classList.add('in'); });
+} else {
+  /* 히어로는 스크롤을 기다리지 않고 순서대로 들어온다 */
+  var hero = document.querySelectorAll('.l-hero .l-rise');
+  document.getElementById('spine1').classList.add('in');
+  hero.forEach(function (el, i) {
+    setTimeout(function () { el.classList.add('in'); }, 260 + i * 170);
+  });
+
+  var io = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (!e.isIntersecting) return;
+      e.target.classList.add('in');
+      io.unobserve(e.target);
+    });
+  }, {threshold: .18, rootMargin: '0px 0px -8% 0px'});
+  rises.forEach(function (el) {
+    if (el.closest('.l-hero')) return;
+    io.observe(el);
+  });
+}
+
+/* ---------- 상단 바 ---------- */
+var bar = document.getElementById('bar');
+var heroEl = document.querySelector('.l-hero');
+var barIO = new IntersectionObserver(function (es) {
+  bar.classList.toggle('on', !es[0].isIntersecting);
+}, {threshold: 0, rootMargin: '-72px 0px 0px 0px'});
+barIO.observe(heroEl);
+</script>
+</body>
+</html>

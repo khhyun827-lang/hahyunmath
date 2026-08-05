@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>수업 기록 — 김하현수학연구소 관리자</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<link rel="stylesheet" href="ds.css">
+<style>
+  /* 배치만. 색·서체·반경은 ds.css 토큰. */
+  .list{position:absolute;left:0;top:0;bottom:0;width:268px;border-right:1px solid var(--line);
+    background:var(--card);display:flex;flex-direction:column;}
+  .lh{display:flex;align-items:center;padding:14px 16px 10px;flex-shrink:0;}
+  .lbody{flex:1;min-height:0;overflow-y:auto;padding-bottom:12px;}
+  .cl{padding:11px 16px;border-left:3px solid transparent;cursor:pointer;transition:background var(--t);}
+  .cl:hover{background:var(--hover);}
+  .cl.on{background:var(--accent-bg);border-left-color:var(--accent);}
+  .cl .n{font-size:13.5px;font-weight:600;}
+  .cl .m{font-size:11.5px;color:var(--dim);margin-top:3px;}
+  .cl .p{display:flex;align-items:center;gap:8px;margin-top:8px;}
+  .cl .p .bar{flex:1;}
+  .cl .p span{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--sub);}
+
+  .main{position:absolute;left:268px;right:0;top:0;bottom:0;padding:22px 26px 0;
+    display:flex;flex-direction:column;overflow:hidden;}
+  .mh{display:flex;align-items:flex-start;gap:14px;flex-shrink:0;}
+  .mh .r{margin-left:auto;display:flex;gap:6px;}
+  .fbar{display:flex;align-items:center;gap:7px;margin-top:16px;padding-bottom:14px;
+    border-bottom:1px solid var(--line);flex-shrink:0;}
+  .fbar .r{margin-left:auto;display:flex;align-items:center;gap:7px;}
+
+  /* 지난 수업은 «순서»가 전부다. 06 진도와 같은 목록 idiom을 쓴다.
+     한 행이 한 회차이고, 그날 남은 것이 전부 그 행 안에 있다. */
+  .sessions{flex:1;min-height:0;overflow-y:auto;padding-bottom:20px;}
+  .sess{display:flex;gap:18px;padding:16px 2px;border-bottom:1px solid var(--line2);
+    transition:background var(--t);}
+  .sess:hover{background:var(--hover);}
+  .sess .when{width:118px;flex-shrink:0;}
+  .sess .when .d{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:600;}
+  .sess .when .no{font-size:11px;color:var(--dim);margin-top:4px;}
+  .sess .mid{flex:1;min-width:0;}
+  .sess .unit{font-size:14px;font-weight:600;letter-spacing:-.01em;}
+  .sess .att{display:flex;align-items:center;gap:10px;margin-top:9px;}
+  .sess .att .sum{font-size:11.5px;color:var(--sub);}
+  .sess .att .sum b{font-family:'JetBrains Mono',monospace;font-weight:600;color:var(--ink);}
+  .sess .memo{margin-top:11px;background:var(--note);border:1px solid var(--note-line);
+    border-radius:var(--r-md);padding:10px 13px;font-size:12.5px;color:var(--sub);line-height:1.7;}
+  .sess .tags{width:172px;flex-shrink:0;display:flex;flex-direction:column;gap:6px;align-items:flex-end;}
+
+  .msec{display:flex;align-items:center;gap:9px;padding:20px 2px 8px;
+    border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--paper);z-index:2;}
+  .msec b{font-size:12px;font-weight:700;}
+  .msec .c{margin-left:auto;font-size:11.5px;color:var(--dim);}
+</style>
+</head>
+<body>
+<div class="chrome"><span class="c-num">14</span><span class="c-name">수업 기록 <em>· 반 관리</em></span>
+  <span class="c-meta">역할: 지난 수업에 무슨 일이 있었는지 되짚는다　·　1440 × 900</span></div>
+
+<div class="stage" id="stage"><div class="canvas" id="canvas">
+
+  <div class="topbar">
+    <div class="bm">김하현수학연구소</div>
+    <nav id="nav"></nav>
+    <div class="right"><span>반 5개 · 재원 68명</span><s style="text-decoration:none;">·</s><span>김하현T</span></div>
+  </div>
+
+  <div class="subnav" id="subnav"></div>
+
+  <div class="body sub">
+
+    <aside class="list">
+      <div class="lh">
+        <span style="font-size:12px;font-weight:700;color:var(--dim);letter-spacing:.08em;">반 목록</span>
+      </div>
+      <div class="lbody scroll" id="cls"></div>
+    </aside>
+
+    <main class="main">
+      <div class="mh">
+        <div>
+          <h1 class="t-title">고2 미적분Ⅰ 정규반</h1>
+          <div class="t-meta" style="margin-top:6px;">
+            수업 기록<s>·</s>38회차까지 진행<s>·</s>월·수·금 19:00—21:00
+          </div>
+        </div>
+        <div class="r">
+          <button class="btn sm" id="bxls"></button>
+          <button class="btn sm p" id="bnew"></button>
+        </div>
+      </div>
+
+      <div class="fbar">
+        <a class="pill on" href="#">전체 <b>38</b></a>
+        <a class="pill" href="#">메모 있음 <b>17</b></a>
+        <a class="pill" href="#">결석 발생 <b>9</b></a>
+        <a class="pill" href="#">과제 배포 <b>22</b></a>
+        <div class="r">
+          <span class="muted" style="font-size:11.5px;">02 수업 진행의 「지난 수업 확인」이 이 화면으로 들어옵니다</span>
+          <button class="btn q sm" id="bsort"></button>
+        </div>
+      </div>
+
+      <div class="sessions scroll" id="ss"></div>
+    </main>
+
+  </div>
+
+</div></div>
+
+<script src="ds.js"></script>
+<script>
+  document.getElementById('bxls').innerHTML = ICON('download',13) + ' 엑셀';
+  document.getElementById('bnew').innerHTML = ICON('pencil',13) + ' 오늘 기록 작성';
+  document.getElementById('bsort').innerHTML = '최근 순 ' + ICON('chevD',12);
+
+  /* [날짜, 요일, 회차, 단원, 출석, 지각, 조퇴, 결석, 메모, 과제] */
+  var SESSIONS = [
+    ['08-05','수',38,'도함수의 활용(3) 극대와 극소',20,1,0,1,
+      '극값 판정에서 부호 변화와 이계도함수를 둘 다 다뤘다. 정하람·한지우가 f″ 쪽을 계속 헷갈려 함 — 다음 시간 앞부분에 5분 더.','워크북 p.42-47'],
+    ['08-03','월',37,'도함수의 활용(3) 극대와 극소',21,0,1,0,
+      '','극값 판정 연습 20문항'],
+    ['07-31','금',36,'도함수의 활용(2) 증가와 감소 — 복습',19,2,0,1,
+      '7월 3주 시험지 오답 상위 5문항을 다시 풀렸다. 4번(접선) 오답률이 여전히 높아 보충영상 배정.',''],
+    ['07-29','수',35,'7월 학교 모의고사 해설',22,0,0,0,
+      '','오답숙제 3문항'],
+    ['07-26','토',34,'보충 수업 — 접선의 방정식',12,0,0,0,
+      '희망자만. 접점을 모르는 유형을 집중적으로 다뤘다.',''],
+    ['07-24','수',33,'도함수의 활용(2) 증가와 감소',20,1,0,1,
+      '','워크북 p.36-41']
+  ];
+
+  var STL = {ok:'출석', late:'지각', leave:'조퇴', no:'결석'};
+
+  function attDots(o, l, lv, n) {
+    var s = '';
+    for (var i = 0; i < o; i++)  s += '<i class="ok"></i>';
+    for (var i = 0; i < l; i++)  s += '<i class="late"></i>';
+    for (var i = 0; i < lv; i++) s += '<i class="leave"></i>';
+    for (var i = 0; i < n; i++)  s += '<i class="no"></i>';
+    return '<span class="dots">' + s + '</span>';
+  }
+
+  document.getElementById('ss').innerHTML =
+    '<div class="msec"><b>8월</b><span class="muted" style="font-size:11.5px;">3회차</span>'
+    + '<span class="c">결석 2 · 메모 2</span></div>'
+    + SESSIONS.slice(0, 2).map(sessRow).join('')
+    + '<div class="msec"><b>7월</b><span class="muted" style="font-size:11.5px;">14회차</span>'
+    + '<span class="c">결석 5 · 메모 8</span></div>'
+    + SESSIONS.slice(2).map(sessRow).join('');
+
+  function sessRow(s) {
+    var total = s[4] + s[5] + s[6] + s[7];
+    return '<div class="sess">'
+      + '<div class="when"><div class="d">' + s[0] + ' (' + s[1] + ')</div>'
+        + '<div class="no">' + s[2] + '회차</div></div>'
+      /* 클래스 이름을 .body 로 두었다가 ds.css의 앱 셸 .body(absolute, top:52px)에 먹혀
+         모든 행이 헤더 위로 겹쳐 올라갔다. ds.css와 겹치는 이름은 쓰지 않는다. */
+      + '<div class="mid">'
+        + '<div class="unit">' + s[3] + '</div>'
+        + '<div class="att">' + attDots(s[4], s[5], s[6], s[7])
+          + '<span class="sum">' + total + '명 중 출석 <b>' + s[4] + '</b>'
+          + (s[5] ? ' · 지각 <b>' + s[5] + '</b>' : '')
+          + (s[6] ? ' · 조퇴 <b>' + s[6] + '</b>' : '')
+          + (s[7] ? ' · <span style="color:var(--no);">결석 <b style="color:var(--no);">' + s[7] + '</b></span>' : '')
+          + '</span></div>'
+        + (s[8] ? '<div class="memo">' + s[8] + '</div>' : '')
+      + '</div>'
+      + '<div class="tags">'
+        + (s[9] ? '<span class="badge consult">과제</span>'
+                + '<span class="muted" style="font-size:11px;text-align:right;">' + s[9] + '</span>'
+                : '<span class="muted" style="font-size:11px;">과제 없음</span>')
+      + '</div></div>';
+  }
+
+  renderClassList('cls', 0);
+  renderNav('반');
+  renderSubnav('반', '수업 기록');
+  fitCanvas();
+</script>
+</body>
+</html>

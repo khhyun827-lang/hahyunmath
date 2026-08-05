@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>공지 — 김하현수학연구소 관리자</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<link rel="stylesheet" href="ds.css">
+<style>
+  /* 배치만. 색·서체·반경은 ds.css 토큰. */
+  .list{position:absolute;left:0;top:0;bottom:0;width:300px;border-right:1px solid var(--line);
+    background:var(--card);display:flex;flex-direction:column;}
+  .lh{display:flex;align-items:center;padding:14px 16px 10px;flex-shrink:0;}
+  .lbody{flex:1;min-height:0;overflow-y:auto;padding-bottom:12px;}
+  .nt{padding:12px 16px;border-left:3px solid transparent;border-bottom:1px solid var(--line2);
+    cursor:pointer;transition:background var(--t);}
+  .nt:hover{background:var(--hover);}
+  .nt.on{background:var(--accent-bg);border-left-color:var(--accent);}
+  .nt .h{display:flex;align-items:center;gap:7px;}
+  .nt .h .d{margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--dim);}
+  .nt .t{font-size:13px;font-weight:600;margin-top:6px;}
+  .nt .m{font-size:11.5px;color:var(--dim);margin-top:5px;}
+
+  .doc{position:absolute;left:300px;right:314px;top:0;bottom:0;padding:24px 30px 0;
+    display:flex;flex-direction:column;overflow:hidden;}
+  .dbody{flex:1;min-height:0;overflow-y:auto;margin-top:18px;padding-bottom:20px;
+    font-size:13.5px;line-height:1.95;color:var(--sub);}
+  .dbody p{margin:0 0 16px;}
+  .dbody b{color:var(--ink);font-weight:700;}
+  .dbody ul{margin:0 0 16px;padding-left:18px;}
+  .dbody li{margin-bottom:7px;}
+
+  .ctx{position:absolute;right:0;top:0;bottom:0;width:314px;border-left:1px solid var(--line);
+    background:var(--card);padding:20px 20px 0;display:flex;flex-direction:column;overflow:hidden;}
+  /* 읽음 현황 — 공지의 성패는 «썼다»가 아니라 «읽혔다»로 판정된다 */
+  .rd{flex:1;min-height:0;overflow-y:auto;margin-top:4px;}
+  .rr{display:flex;align-items:center;gap:9px;padding:7px 0;border-bottom:1px solid var(--line2);}
+  .rr .t{flex:1;min-width:0;font-size:12.5px;}
+  .rr .w{font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--dim);}
+</style>
+</head>
+<body>
+<div class="chrome"><span class="c-num">10</span><span class="c-name">공지 <em>· 소통</em></span>
+  <span class="c-meta">역할: 한 번 써서 여러 명에게 · 읽혔는지까지 확인한다　·　1440 × 900</span></div>
+
+<div class="stage" id="stage"><div class="canvas" id="canvas">
+
+  <div class="topbar">
+    <div class="bm">김하현수학연구소</div>
+    <nav id="nav"></nav>
+    <div class="right"><span>공지 32</span><s style="text-decoration:none;">·</s><span>김하현T</span></div>
+  </div>
+
+  <div class="subnav" id="subnav"></div>
+
+  <div class="body sub">
+
+    <aside class="list">
+      <div class="lh">
+        <span style="font-size:12px;font-weight:700;color:var(--dim);letter-spacing:.08em;">공지</span>
+        <span class="spacer"></span>
+        <button class="btn sm p" id="bnew"></button>
+      </div>
+      <div class="lbody scroll" id="nts"></div>
+    </aside>
+
+    <main class="doc">
+      <div style="flex-shrink:0;">
+        <div class="row" style="gap:7px;">
+          <span class="badge no">중요</span>
+          <span class="badge">고2 미적분Ⅰ 정규반</span>
+          <span class="spacer"></span>
+          <button class="btn sm" id="bedit"></button>
+          <button class="btn sm q" id="bdel"></button>
+        </div>
+        <h1 class="t-title" style="margin-top:12px;">8월 특강 일정 및 클리닉 운영 안내</h1>
+        <div class="t-meta" style="margin-top:7px;">
+          김하현T<s>·</s><span class="mono">2026-08-01 09:20</span><s>·</s>대상 22명<s>·</s>
+          <span style="color:var(--accent);font-weight:600;">읽음 18</span>
+        </div>
+      </div>
+
+      <div class="dbody scroll">
+        <p>안녕하세요. 8월 학사 일정 안내드립니다.</p>
+        <p><b>1. 8월 특강 (도함수의 활용 집중)</b></p>
+        <ul>
+          <li>기간: 8월 11일(월) — 8월 22일(금), 주 3회</li>
+          <li>시간: 정규 수업 전 <b>17:30 — 18:50</b></li>
+          <li>대상: 7월 3주 시험지 <b>70점 미만</b> 학생 우선 배정</li>
+          <li>교재: 보충문제 창고에서 선별한 96문항 (별도 배포)</li>
+        </ul>
+        <p><b>2. 클리닉 운영 변경</b></p>
+        <ul>
+          <li>특강 기간 중 클리닉은 <b>16:00 — 17:00</b> 한 타임만 운영합니다.</li>
+          <li>신청은 마이페이지 &gt; 클리닉 신청에서 <b>전날 21시까지</b> 해주세요.</li>
+        </ul>
+        <p><b>3. 오답숙제 마감</b></p>
+        <ul>
+          <li>7월 3주 시험지 오답숙제 마감은 <b>8월 8일(금) 자정</b>입니다.</li>
+          <li>현재 미제출 4명은 개별 연락드리겠습니다.</li>
+        </ul>
+        <p>문의 사항은 질의응답 또는 채팅으로 남겨주세요.</p>
+      </div>
+    </main>
+
+    <aside class="ctx">
+      <div class="t-sec">읽음 현황</div>
+      <div class="row" style="gap:10px;">
+        <span class="bar" style="flex:1;"><i style="width:82%"></i></span>
+        <b class="mono" style="font-size:13px;">18/22</b>
+      </div>
+      <div class="muted" style="font-size:11.5px;margin-top:7px;">
+        게시 후 4일 · 평균 열람까지 <span class="mono">6시간</span>
+      </div>
+
+      <hr class="s">
+      <div class="t-sec">아직 안 읽은 학생 <span style="color:var(--no);">4</span></div>
+      <div class="rd scroll" id="unread"></div>
+
+      <div style="flex-shrink:0;padding:14px 0 18px;border-top:1px solid var(--line2);">
+        <button class="btn p" style="width:100%;" id="bpush"></button>
+        <div class="muted" style="font-size:11px;margin-top:8px;text-align:center;">
+          학부모에게도 함께 보낼 수 있습니다
+        </div>
+      </div>
+    </aside>
+
+  </div>
+
+</div></div>
+
+<script src="ds.js"></script>
+<script>
+  document.getElementById('bnew').innerHTML  = ICON('pencil',13) + ' 새 공지';
+  document.getElementById('bedit').innerHTML = ICON('pencil',13) + ' 수정';
+  document.getElementById('bdel').innerHTML  = ICON('x',13) + ' 삭제';
+  document.getElementById('bpush').innerHTML = ICON('megaphone',14) + ' 안 읽은 4명에게 다시 알림';
+
+  var NOTICES = [
+    ['중요','no','8월 특강 일정 및 클리닉 운영 안내','고2 미적분Ⅰ 정규반 · 22명','08-01',18,22,1],
+    ['','',  '7월 3주 시험지 오답숙제 배포','고2 미적분Ⅰ 정규반 · 22명','08-01',22,22,0],
+    ['','',  '여름 방학 중 자습실 개방 시간','전체 · 68명','07-28',61,68,0],
+    ['중요','no','7월 학교 모의고사 성적 입력 완료','고2 전체 · 31명','07-30',29,31,0],
+    ['','',  '휴원 안내 — 8월 15일 광복절','전체 · 68명','07-25',66,68,0],
+    ['','',  '6월 4주 시험지 해설 영상 업로드','고2 미적분Ⅰ 정규반 · 22명','07-02',20,22,0]
+  ];
+  document.getElementById('nts').innerHTML = NOTICES.map(function (n) {
+    var pct = Math.round(n[5] / n[6] * 100);
+    return '<div class="nt' + (n[7] ? ' on' : '') + '">'
+      + '<div class="h">' + (n[0] ? '<span class="badge ' + n[1] + '">' + n[0] + '</span>' : '')
+      + '<span class="d">' + n[4] + '</span></div>'
+      + '<div class="t">' + n[2] + '</div>'
+      + '<div class="m">' + n[3] + ' · 읽음 ' + n[5] + '/' + n[6]
+      + (pct < 90 ? ' <span style="color:var(--late);font-weight:600;">' + pct + '%</span>' : '')
+      + '</div></div>';
+  }).join('');
+
+  var UNREAD = ['pjh03','kdy06','osh15','itk12'];
+  document.getElementById('unread').innerHTML = UNREAD.map(function (id) {
+    var s = STUDENTS.filter(function (x) { return x.id === id; })[0];
+    return '<div class="rr"><div class="av">' + s.n[0] + '</div>'
+      + '<div class="t">' + s.n + '</div>'
+      + '<span class="w">최근 접속 ' + (id === 'kdy06' ? '9일 전' : '2일 전') + '</span>'
+      + '<span class="rk ' + s.rk + '"></span></div>';
+  }).join('');
+
+  renderNav('소통');
+  renderSubnav('소통', '공지');
+  fitCanvas();
+</script>
+</body>
+</html>
