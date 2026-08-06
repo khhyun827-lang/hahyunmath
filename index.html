@@ -5225,7 +5225,7 @@ function teacherExamsHTML(){
     ${DATA.classes.length===0?'<div class="empty">먼저 [반] 탭에서 반을 등록해주세요.</div>':`
     <div class="inline-form">
       <div class="lg-field"><label>대상 반</label><select id="exam-class">${classOptionsHTML(examDraft.classId)}</select></div>
-      <div class="lg-field" style="flex:2;"><label>시험명</label><input id="exam-title" value="${examDraft.title}" placeholder="예: 7월 내신 대비 모의고사"></div>
+      <div class="lg-field" style="flex:2;"><label>시험명</label><input id="exam-title" value="${escHtml(examDraft.title)}" placeholder="예: 7월 내신 대비 모의고사"></div>
       <div class="lg-field"><label>날짜</label><input id="exam-date" type="date" value="${examDraft.date}"></div>
     </div>
     <div class="lg-field" style="margin-top:12px;background:#FBF3F2;border:1px solid var(--card-border);border-radius:4px;padding:14px;">
