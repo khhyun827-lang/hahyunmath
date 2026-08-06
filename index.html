@@ -448,6 +448,76 @@
 @media (max-width:1280px){ .app .sd-ctx{display:none;} }
 @media (max-width:1020px){ .app .sd-list{display:none;} }
 
+/* ---------- 소통 4종 (design-v1/09~12) ----------
+   네 화면이 성격이 다르다. 통일해야 하는 것은 색·서체·간격·버튼이지 «형태»가 아니다 —
+   질의응답은 세로 스택, 채팅은 말풍선, 클리닉은 시간 판, 공지는 목록이다. */
+.app .co-screen{display:flex;height:calc(100vh - 134px);}
+.app .co-main{flex:1;min-width:0;min-height:0;display:flex;flex-direction:column;}
+.app .co-body{flex:1;min-height:0;overflow-y:auto;margin-top:16px;}
+.app .co-side{width:320px;flex-shrink:0;border-left:1px solid var(--line);padding-left:18px;
+  margin-left:20px;display:flex;flex-direction:column;min-height:0;}
+.app .co-sbody{flex:1;min-height:0;overflow-y:auto;margin-top:12px;}
+
+/* 클리닉 — 시간이 자원이다. 목록만으로는 «어디가 비었나»가 안 보인다. */
+.app .cn-week{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;align-items:start;}
+.app .cn-col{min-width:0;}
+.app .cn-ch{text-align:center;font-size:11.5px;font-weight:700;color:var(--sub);padding-bottom:8px;
+  border-bottom:1px solid var(--line);margin-bottom:8px;}
+.app .cn-ch s{text-decoration:none;display:block;font-family:'JetBrains Mono',monospace;
+  font-size:10.5px;color:var(--dim);font-weight:500;margin-top:2px;}
+.app .cn-ch.today{color:var(--accent);}
+.app .cn-slot{border:1px solid var(--line);border-radius:var(--r-md);background:var(--card);
+  padding:8px 9px;margin-bottom:6px;transition:border-color var(--t);}
+.app .cn-slot.free{background:var(--sunk);border-style:dashed;}
+.app .cn-slot.full{background:var(--okbg);border-color:var(--ok-line);}
+.app .cn-slot .t{font-family:'JetBrains Mono',monospace;font-size:11.5px;font-weight:600;}
+.app .cn-slot .u{font-size:11px;color:var(--sub);margin-top:4px;line-height:1.5;}
+.app .cn-none{font-size:11px;color:var(--dim);text-align:center;padding:10px 0;}
+.app .cn-rq{padding:12px 2px;border-bottom:1px solid var(--line2);}
+.app .cn-rq .h{display:flex;align-items:center;gap:8px;}
+.app .cn-rq .h b{font-size:13px;font-weight:600;}
+.app .cn-rq .h .ago{margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--dim);}
+.app .cn-rq .w{font-size:12px;color:var(--sub);margin-top:6px;line-height:1.6;}
+.app .cn-rq .a{display:flex;gap:5px;margin-top:9px;flex-wrap:wrap;}
+
+/* 질의응답 — 세로 스택. 질문 하나가 한 덩어리고 답이 그 아래 붙는다. */
+.app .qn-card{border:1px solid var(--line);border-radius:var(--r-lg);background:var(--card);
+  padding:15px 17px;margin-bottom:12px;}
+.app .qn-card.open{border-color:var(--late-line);}
+.app .qn-meta{display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--dim);}
+.app .qn-meta .spacer{margin-left:auto;}
+.app .qn-q{font-size:14px;line-height:1.75;margin-top:9px;white-space:pre-wrap;}
+.app .qn-a{margin-top:12px;padding-top:12px;border-top:1px solid var(--line2);
+  font-size:13px;line-height:1.75;color:var(--sub);white-space:pre-wrap;}
+.app .qn-img{max-width:220px;max-height:220px;margin-top:10px;border:1px solid var(--line);
+  border-radius:var(--r-md);display:block;}
+
+/* 공지 — 읽히는 순서가 곧 최신 순이다. */
+.app .nt-card{border:1px solid var(--line);border-radius:var(--r-lg);background:var(--card);
+  padding:14px 16px;margin-bottom:10px;}
+.app .nt-h{display:flex;align-items:baseline;gap:10px;}
+.app .nt-h b{font-size:14px;font-weight:700;}
+.app .nt-h s{text-decoration:none;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--dim);}
+.app .nt-b{font-size:13px;line-height:1.75;margin-top:8px;white-space:pre-wrap;color:var(--sub);}
+
+/* 채팅 — 말풍선. 왼쪽에 학생, 오른쪽에 대화. */
+.app .ch-list{width:240px;flex-shrink:0;border-right:1px solid var(--line);padding-right:14px;
+  display:flex;flex-direction:column;min-height:0;}
+.app .ch-lbody{flex:1;min-height:0;overflow-y:auto;margin-right:-6px;padding-right:6px;}
+.app .ch-win{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:8px;
+  padding:16px 2px;}
+.app .ch-b{max-width:72%;padding:9px 13px;border-radius:var(--r-lg);font-size:13px;line-height:1.65;
+  white-space:pre-wrap;word-break:break-word;}
+.app .ch-b.from-student{align-self:flex-start;background:var(--card);border:1px solid var(--line);}
+.app .ch-b.from-teacher{align-self:flex-end;background:var(--accent);color:#fff;}
+.app .ch-b .at{display:block;font-family:'JetBrains Mono',monospace;font-size:10px;
+  opacity:.6;margin-top:5px;}
+.app .ch-in{display:flex;gap:8px;flex-shrink:0;padding-top:12px;border-top:1px solid var(--line);}
+.app .ch-in input{flex:1;min-width:0;border:1px solid var(--line);border-radius:var(--r-md);
+  background:var(--paper);padding:9px 12px;font-family:inherit;font-size:13px;color:var(--ink);outline:none;}
+.app .ch-in input:focus{border-color:var(--accent-line);}
+@media (max-width:1180px){ .app .co-side{display:none;} }
+
 .app .actbar{position:fixed;z-index:6;flex-wrap:wrap;}
 /* 고정된 액션바가 마지막 행을 가리지 않게, 스크롤 영역 «안»에 여백을 둔다. */
 .app .rst-pad{height:64px;flex-shrink:0;}
@@ -1299,6 +1369,8 @@ let state = {
   reviewQueue: 'pending',
   reviewSelectedId: null,
   sdFilter: 'all',           // 학생 상세 연대기의 갈래
+  clinicWeek: '',            // 클리닉 주간 판의 시작(월요일). 빈 값이면 이번 주
+  qnaFilter: 'open',
   ytPlayers: null,
   attDraft: {},
   attDraftKey: null,
@@ -4011,7 +4083,8 @@ const TEACHER_TAB_SECTION = {
 
 /* 새 디자인으로 옮긴 탭. 여기 없는 탭은 .legacy 안에서 구버전 스타일 그대로 그린다.
    화면을 하나 옮길 때마다 여기에 더한다. */
-const TEACHER_TABS_DS = new Set(['roster', 'signals', 'home', 'session', 'classhub', 'review']);
+const TEACHER_TABS_DS = new Set(['roster', 'signals', 'home', 'session', 'classhub', 'review',
+  'clinic', 'notices', 'qna', 'chat']);
 
 function goTeacherTab(tab, hubTab){
   state.teacherTab = tab;
@@ -5410,17 +5483,6 @@ function chubProgressHTML(classId){
   </div>`;
 }
 
-function studentSelectorHTML(){
-  if(DATA.students.length===0) return '<div class="empty">먼저 [학생] 탭에서 학생을 등록해주세요.</div>';
-  return `<div class="lg-field" style="max-width:260px;margin-bottom:18px;">
-    <label>학생 선택</label>
-    <select onchange="state.teacherSelectedStudent=this.value; render()">
-      <option value="">-- 선택 --</option>
-      ${DATA.students.map(s=>`<option value="${s.studentId}" ${state.teacherSelectedStudent===s.studentId?'selected':''}>${s.name} (${s.studentId})</option>`).join('')}
-    </select>
-  </div>`;
-}
-
 function classOptionsHTML(selectedId){
   return `<option value="">미배정</option>` + DATA.classes.map(c=>`<option value="${c.id}" ${selectedId===c.id?'selected':''}>${c.name}</option>`).join('');
 }
@@ -6369,116 +6431,266 @@ function chubQuizHTML(classId){
 /* teacherQuizHTML(등록 폼 + 퀴즈 카드 나열)은 지웠다 — chubQuizHTML이 대신한다.
    카드 나열은 회차 스트립이, 등록 폼은 그 위 폼이 흡수했다. */
 
-/* ---------- 클리닉 ---------- */
+/* =================== 클리닉 (design-v1/09-clinic) ===================
+   역할은 «남는 시간에 학생을 앉힌다». 시간이 자원인 화면이라, 목록만으로는
+   «어디가 비었나»가 보이지 않는다. 그래서 주 단위 판으로 세운다.
+
+   **시안의 시간축 격자는 만들 수 없다.** 슬롯의 `time`이 「저녁 7시」 같은 자유 텍스트라
+   시각으로 정렬·배치할 수 없다. 형식을 강제하는 곳이 없어서 파싱하려 들면 오히려 깨진다.
+   → 세로축(시각) 대신 **날짜별 열 안에 그 날의 슬롯을 쌓는다.** 「어디가 비었나」는 그대로 읽힌다.
+
+   승인 대기는 슬롯 «옆»에 붙어 있어야 한다 — 누가 신청했나와 어디가 비었나를
+   한 화면에서 못 보면 배정이 두 번 일이 된다. */
+function clinicWeekStart(ymd){
+  const d = new Date(ymd + 'T00:00:00');
+  return shiftYmd(ymd, -((d.getDay() + 6) % 7));   // 월요일 시작
+}
+function goClinicWeek(delta){
+  state.clinicWeek = shiftYmd(state.clinicWeek || clinicWeekStart(todayStr()), delta * 7);
+  render();
+}
+
 function teacherClinicHTML(){
   markSeen('clinic', DATA.clinics.length);
-  const slots = [...DATA.clinicSlots].sort((a,b)=> a.date===b.date ? a.time.localeCompare(b.time) : a.date.localeCompare(b.date));
-  return `
-  <div class="lg-panel">
-    <h3>클리닉 시간대 관리</h3>
-    <p class="lg-hint" style="margin-top:-8px;">여기서 시간대를 만들어두면 학생은 그중에서만 골라 신청할 수 있고, 정원이 차면 자동으로 신청이 막힙니다.</p>
-    <div class="inline-form">
-      <div class="lg-field"><label>날짜</label><input id="slot-date" type="date"></div>
-      <div class="lg-field"><label>시간</label><input id="slot-time" placeholder="예: 저녁 7시"></div>
-      <div class="lg-field" style="max-width:100px;"><label>정원</label><input id="slot-capacity" type="number" min="1" placeholder="1"></div>
-      <button class="lg-btn btn-primary" onclick="addClinicSlot()">추가</button>
-    </div>
-    ${slots.length===0 ? '<div class="empty">등록된 시간대가 없습니다.</div>' : `
-    <table><tr><th>날짜</th><th>시간</th><th>신청 현황</th><th></th></tr>
-    ${slots.map(s=>{
-      const booked = clinicSlotBookedCount(s.id);
-      const full = booked>=s.capacity;
-      return `<tr><td>${s.date}</td><td>${escHtml(s.time)}</td>
-        <td><span class="lg-badge ${full?'badge-no':'badge-ok'}">${booked}/${s.capacity}명${full?' · 마감':''}</span></td>
-        <td><button class="lg-btn btn-red btn-small" onclick="deleteClinicSlot('${s.id}')">삭제</button></td></tr>`;
+  const start = state.clinicWeek || clinicWeekStart(todayStr());
+  const days = Array.from({length:7}, (_,i)=>shiftYmd(start, i));
+  const inWeek = DATA.clinicSlots.filter(s=>days.includes(s.date));
+  const booked = inWeek.reduce((n,s)=>n+clinicSlotBookedCount(s.id), 0);
+  const cap = inWeek.reduce((n,s)=>n+(Number(s.capacity)||0), 0);
+  const waiting = DATA.clinics.filter(c=>c.status==='대기');
+
+  /* 신호가 있는 학생을 위로 올린다 — 같은 대기라도 먼저 앉혀야 할 사람이 있다. */
+  const rank = c => {
+    const s = DATA.students.find(x=>x.studentId===c.studentId);
+    if(!s) return 3;
+    const sg = signalOf(rosterStats(s));
+    return sg ? (sg.grade==='r' ? 0 : 1) : 2;
+  };
+  const sorted = waiting.slice().sort((a,b)=> rank(a)-rank(b) || (b.requestedAt||'').localeCompare(a.requestedAt||''));
+
+  const grid = `<div class="cn-week">
+    ${days.map(d=>{
+      const list = DATA.clinicSlots.filter(s=>s.date===d)
+        .slice().sort((a,b)=>(a.time||'').localeCompare(b.time||''));
+      const isToday = d===todayStr();
+      return `<div class="cn-col">
+        <div class="cn-ch ${isToday?'today':''}">${WEEKDAY_LABEL[new Date(d+'T00:00:00').getDay()]}<s>${d.slice(5).replace('-','/')}</s></div>
+        ${list.length===0 ? '<div class="cn-none">—</div>'
+        : list.map(s=>{
+            const n = clinicSlotBookedCount(s.id); const full = n >= s.capacity;
+            const who = DATA.clinics.filter(c=>c.slotId===s.id && c.status!=='취소');
+            return `<div class="cn-slot ${full?'full':(n===0?'free':'')}">
+              <div class="t">${escHtml(s.time||'시간 미정')}</div>
+              <div class="u">${n}/${s.capacity}명${full?' · 마감':''}
+                ${who.length ? '<br>' + who.map(c=>escHtml(c.name)).join(', ') : ''}</div>
+              <button class="btn q sm" style="margin-top:6px;" onclick="deleteClinicSlot('${s.id}')">삭제</button>
+            </div>`;
+          }).join('')}
+      </div>`;
     }).join('')}
-    </table>`}
-  </div>
-  <div class="lg-panel">
-    <h3>클리닉 신청 목록 (${DATA.clinics.length}건)</h3>
-    ${DATA.clinics.length===0?'<div class="empty">접수된 신청이 없습니다.</div>':
-    DATA.clinics.map(c=>`<div class="clinic-row">
-      <div><b>${c.name}</b> · ${c.day} ${c.time||''}<br><span style="color:var(--ink-soft);font-size:13px;">${c.topic}</span></div>
-      <div style="display:flex;align-items:center;gap:8px;">
-        <span class="status-pill status-${c.status}">${c.status}</span>
-        <select onchange="updateClinicStatus('${c.id}', this.value)">
-          <option ${c.status==='대기'?'selected':''}>대기</option>
-          <option ${c.status==='승인'?'selected':''}>승인</option>
-          <option ${c.status==='완료'?'selected':''}>완료</option>
-          <option ${c.status==='취소'?'selected':''}>취소</option>
-        </select>
-        <button class="lg-btn btn-red btn-small" onclick="deleteClinic('${c.id}')">삭제</button>
+  </div>`;
+
+  const side = `<aside class="co-side">
+    <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+      <span style="font-size:13px;font-weight:700;">승인 대기</span>
+      ${waiting.length ? `<span class="badge late">${waiting.length}</span>` : '<span class="badge">0</span>'}
+    </div>
+    <div style="font-size:11.5px;color:var(--dim);margin-top:7px;flex-shrink:0;">신호가 있는 학생을 위로 올렸습니다</div>
+    <div class="co-sbody">
+      ${sorted.length===0 ? '<div style="padding:32px 0;text-align:center;color:var(--dim);font-size:12.5px;">대기 중인 신청이 없습니다.</div>'
+      : sorted.map(c=>{
+          const s = DATA.students.find(x=>x.studentId===c.studentId);
+          const sg = s ? signalOf(rosterStats(s)) : null;
+          return `<div class="cn-rq">
+            <div class="h">${sg?`<span class="rk ${sg.grade}"></span>`:''}<b>${escHtml(c.name)}</b>
+              <span class="ago">${c.requestedAt||''}</span></div>
+            <div class="w">${escHtml(c.day||'')} ${escHtml(c.time||'')} · ${escHtml(c.topic||'')}</div>
+            <div class="a">
+              <button class="btn sm ok" onclick="updateClinicStatus('${c.id}','승인')">승인</button>
+              <button class="btn sm" onclick="updateClinicStatus('${c.id}','완료')">완료</button>
+              <button class="btn q sm" onclick="updateClinicStatus('${c.id}','취소')">취소</button>
+              ${s ? `<button class="btn q sm" onclick="rosterOpen('${c.studentId}','info')">학생</button>` : ''}
+            </div>
+          </div>`;
+        }).join('')}
+    </div>
+  </aside>`;
+
+  /* 지난 신청까지 훑을 일이 있다 — 승인 대기 밖의 것은 아래 목록으로 남긴다. */
+  const others = DATA.clinics.filter(c=>c.status!=='대기');
+
+  return `<div class="co-screen">
+    <main class="co-main">
+      <div class="rst-hrow" style="flex-shrink:0;">
+        <h1 class="t-title">클리닉<s>${start} — ${days[6]}</s></h1>
+        <div class="spacer"></div>
+        <button class="btn icon" title="지난 주" onclick="goClinicWeek(-1)">${iconSvg('chevL',16)}</button>
+        <button class="btn sm" onclick="state.clinicWeek=''; render()">이번 주</button>
+        <button class="btn icon" title="다음 주" onclick="goClinicWeek(1)">${iconSvg('chevR',16)}</button>
       </div>
-    </div>`).join('')}
+      <div class="t-meta" style="margin-top:7px;flex-shrink:0;">
+        이 주 슬롯 ${inWeek.length}개<s>·</s>배정 <b class="mono">${booked}</b>/${cap}<s>·</s>
+        승인 대기 <b class="mono" style="color:var(--late);">${waiting.length}</b>
+      </div>
+
+      <div class="cls-hw" style="display:block;margin-top:14px;flex-shrink:0;">
+        <div class="t-sec" style="margin:0;">시간대 추가</div>
+        <div class="cls-form">
+          <label><span>날짜</span><input id="slot-date" type="date" value="${todayStr()}"></label>
+          <label style="flex:1;min-width:150px;"><span>시간</span><input id="slot-time" placeholder="예: 저녁 7시"></label>
+          <label style="width:90px;"><span>정원</span><input id="slot-capacity" type="number" min="1" placeholder="1"></label>
+          <button class="btn p sm" onclick="addClinicSlot()">추가</button>
+        </div>
+        <div style="margin-top:8px;font-size:11.5px;color:var(--dim);">여기서 만든 시간대 중에서만 학생이 고를 수 있고, 정원이 차면 신청이 자동으로 막힙니다.</div>
+      </div>
+
+      <div class="co-body">${grid}
+        ${others.length ? `<div class="t-sec" style="margin-top:24px;">처리된 신청 ${others.length}건</div>
+        ${others.map(c=>`<div class="cn-rq">
+          <div class="h"><b>${escHtml(c.name)}</b>
+            <span class="status-badge"><span class="badge ${c.status==='취소'?'gone':(c.status==='승인'||c.status==='완료'?'ok':'late')}">${c.status}</span></span>
+            <span class="ago">${c.requestedAt||''}</span></div>
+          <div class="w">${escHtml(c.day||'')} ${escHtml(c.time||'')} · ${escHtml(c.topic||'')}</div>
+          <div class="a">
+            <button class="btn q sm" onclick="updateClinicStatus('${c.id}','대기')">대기로</button>
+            <button class="btn q sm" onclick="deleteClinic('${c.id}')">삭제</button>
+          </div>
+        </div>`).join('')}` : ''}
+        <div class="rst-pad"></div>
+      </div>
+    </main>
+    ${side}
   </div>`;
 }
 
-/* ---------- 공지사항 ---------- */
+/* 구버전 클리닉 화면(시간대 표 + 신청 목록)은 지웠다 — 주간 판과 승인 대기 패널이 대신한다.
+   studentSelectorHTML(채팅의 학생 드롭다운)도 좌측 목록이 흡수해 함께 지웠다. */
+
+/* =================== 공지 (design-v1/10-notice) ===================
+   가장 단순한 화면이다. 쓰는 곳이 위, 읽는 곳이 아래. 최신이 먼저. */
 function teacherNoticesHTML(){
-  return `
-  <div class="lg-panel">
-    <h3>공지 등록</h3>
-    <div class="lg-field"><label>제목</label><input id="notice-title" placeholder="공지 제목"></div>
-    <div class="lg-field"><label>내용</label><textarea id="notice-content" placeholder="공지 내용을 입력하세요"></textarea></div>
-    <button class="lg-btn btn-primary" onclick="addNotice()">등록</button>
-  </div>
-  <div class="lg-panel">
-    <h3>등록된 공지 (${DATA.notices.length}건)</h3>
-    ${DATA.notices.length===0?'<div class="empty">등록된 공지가 없습니다.</div>':
-    DATA.notices.map(n=>`<div class="data-card" style="margin-bottom:10px;">
-      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;">
-        <div><b>${escHtml(n.title)}</b> <span class="lg-mono" style="font-size:12px;color:var(--ink-soft);">· ${n.date}</span></div>
-        <button class="lg-btn btn-red btn-small" onclick="deleteNotice(${n.id})">삭제</button>
+  const list = [...DATA.notices].sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+  return `<div class="co-screen"><main class="co-main">
+    <div class="rst-hrow" style="flex-shrink:0;">
+      <h1 class="t-title">공지<s>학생 앱 첫 화면에 그대로 붙는다</s></h1>
+    </div>
+    <div class="cls-hw" style="display:block;margin-top:14px;flex-shrink:0;">
+      <div class="t-sec" style="margin:0;">새 공지</div>
+      <div class="cls-form">
+        <label style="flex:1;min-width:220px;"><span>제목</span><input id="notice-title" placeholder="공지 제목"></label>
       </div>
-      <div style="font-size:13px;white-space:pre-wrap;margin-top:6px;">${escHtml(n.content)}</div>
-    </div>`).join('')}
-  </div>`;
+      <div class="cls-form"><label style="flex:1;"><span>내용</span>
+        <textarea id="notice-content" rows="3" placeholder="공지 내용을 입력하세요"></textarea></label></div>
+      <button class="btn p sm" style="margin-top:11px;" onclick="addNotice()">${iconSvg('plus',13)} 등록</button>
+    </div>
+    <div class="co-body">
+      <div class="t-sec">등록된 공지 ${list.length}</div>
+      ${list.length===0 ? '<div style="padding:40px 0;text-align:center;color:var(--dim);font-size:12.5px;">등록된 공지가 없습니다.</div>'
+      : list.map(n=>`<div class="nt-card">
+          <div class="nt-h"><b>${escHtml(n.title)}</b><s>${n.date||''}</s>
+            <span class="spacer"></span>
+            <button class="btn q sm" onclick="deleteNotice(${n.id})">삭제</button></div>
+          <div class="nt-b">${escHtml(n.content)}</div>
+        </div>`).join('')}
+      <div class="rst-pad"></div>
+    </div>
+  </main></div>`;
 }
 
-/* ---------- 질의응답 ---------- */
+/* =================== 질의응답 (design-v1/11-qna) ===================
+   **세로 스택이다.** 채팅과 형태를 억지로 맞추지 않는다 — 질문 하나가 한 덩어리이고
+   답이 그 아래 붙는 글이지, 주고받는 말이 아니다. 형태를 맞추는 것은 일관성이 아니라 게으름이다.
+   미답변을 위로 올린다 — 이 화면에 오는 이유가 그것이다. */
 function teacherQnaHTML(){
   markSeen('qna', DATA.qnas.length);
-  return `
-  <div class="lg-panel">
-    <h3>질의응답 관리 (${DATA.qnas.length}건)</h3>
-    ${DATA.qnas.length===0?'<div class="empty">등록된 질문이 없습니다.</div>':
-    DATA.qnas.map(q=>{
-      const stu = DATA.students.find(s=>s.studentId===q.studentId);
-      return `<div class="qna-card">
-      <div class="qna-meta">${q.date} · ${escHtml(q.studentName)}${stu?` · ${escHtml(classNameOf(stu.classId))}`:''}</div>
-      <div class="qna-q">Q. ${escHtml(q.question)}</div>
-      ${imgSrcOf(q.image)?`<img src="${imgSrcOf(q.image)}" style="max-width:200px;max-height:200px;margin-top:8px;border-radius:4px;border:1px solid var(--card-border);display:block;">`:''}
-      ${q.answer?`<div class="qna-answer"><div class="label">A. 답변 완료</div>${escHtml(q.answer)}${imgSrcOf(q.answerImage)?`<img src="${imgSrcOf(q.answerImage)}" style="max-width:200px;max-height:200px;margin-top:8px;border-radius:4px;border:1px solid var(--card-border);display:block;">`:''}</div>`:
-      `<div class="inline-form" style="margin-top:10px;align-items:flex-start;"><div class="lg-field" style="flex:1;"><textarea id="answer-${q.id}" placeholder="답변 입력 (엔터로 줄바꿈)" style="min-height:70px;"></textarea></div>${qnaImageFieldHTML(state.qnaAnswerImage[q.id], `handleQnaAnswerImage('${q.id}',this.files)`, `removeQnaAnswerImage('${q.id}')`, `qna-a-${q.id}`)}<button class="lg-btn btn-primary btn-small" onclick="submitAnswer('${q.id}')">등록</button></div>`}
-      <div style="margin-top:8px;"><button class="lg-btn btn-red btn-small" onclick="deleteQna('${q.id}')">삭제</button></div>
-    </div>`;}).join('')}
-  </div>`;
+  const open = DATA.qnas.filter(q=>!q.answer);
+  const done = DATA.qnas.filter(q=>q.answer);
+  const f = state.qnaFilter || 'open';
+  const list = f==='open' ? open : (f==='done' ? done : DATA.qnas);
+
+  const card = q => {
+    const stu = DATA.students.find(s=>s.studentId===q.studentId);
+    return `<div class="qn-card ${q.answer?'':'open'}">
+      <div class="qn-meta"><span class="mono">${q.date||''}</span>
+        <b style="color:var(--ink);font-size:12.5px;">${escHtml(q.studentName||'')}</b>
+        ${stu?`<span>${escHtml(classNameOf(stu.classId))}</span>`:''}
+        <span class="spacer"></span>
+        <span class="badge ${q.answer?'ok':'no'}">${q.answer?'답변 완료':'답변 대기'}</span></div>
+      <div class="qn-q">${escHtml(q.question)}</div>
+      ${imgSrcOf(q.image)?`<img class="qn-img" src="${imgSrcOf(q.image)}">`:''}
+      ${q.answer
+        ? `<div class="qn-a">${escHtml(q.answer)}${imgSrcOf(q.answerImage)?`<img class="qn-img" src="${imgSrcOf(q.answerImage)}">`:''}
+             <div style="font-size:11px;color:var(--dim);margin-top:8px;">${q.answeredAt||''} 답변</div></div>`
+        : `<div class="cls-form" style="align-items:flex-start;">
+             <label style="flex:1;min-width:220px;"><span>답변</span>
+               <textarea id="answer-${q.id}" rows="3" placeholder="답변 입력"></textarea></label>
+             <div class="legacy" style="padding:0;">${qnaImageFieldHTML(state.qnaAnswerImage[q.id], `handleQnaAnswerImage('${q.id}',this.files)`, `removeQnaAnswerImage('${q.id}')`, `qna-a-${q.id}`)}</div>
+             <button class="btn p sm" onclick="submitAnswer('${q.id}')">등록</button>
+           </div>`}
+      <div style="margin-top:10px;"><button class="btn q sm" onclick="deleteQna('${q.id}')">삭제</button></div>
+    </div>`;
+  };
+
+  return `<div class="co-screen"><main class="co-main">
+    <div class="rst-hrow" style="flex-shrink:0;">
+      <h1 class="t-title">질의응답<s>학생이 사진과 함께 묻고, 여기서 답한다</s></h1>
+    </div>
+    <div class="rst-fbar" style="flex-shrink:0;">
+      <a class="pill ${f==='open'?'on':''}" onclick="state.qnaFilter='open'; render()">답변 대기 <b>${open.length}</b></a>
+      <a class="pill ${f==='done'?'on':''}" onclick="state.qnaFilter='done'; render()">답변 완료 <b>${done.length}</b></a>
+      <a class="pill ${f==='all'?'on':''}" onclick="state.qnaFilter='all'; render()">전체 <b>${DATA.qnas.length}</b></a>
+    </div>
+    <div class="co-body">
+      ${list.length===0 ? `<div style="padding:48px 0;text-align:center;color:var(--dim);font-size:12.5px;">${
+        f==='open' ? '답변을 기다리는 질문이 없습니다.' : '해당하는 질문이 없습니다.'}</div>`
+      : list.map(card).join('')}
+      <div class="rst-pad"></div>
+    </div>
+  </main></div>`;
 }
 
-/* ---------- 채팅 ---------- */
+/* =================== 채팅 (design-v1/12-chat) ===================
+   **말풍선이다.** 질의응답과 형태가 다른 것이 맞다 — 이건 주고받는 말이다.
+   예전에는 «학생 선택» 드롭다운 하나였다. 목록을 왼쪽에 세워 두면 누구와 이야기 중인지,
+   다음에 누구에게 가야 하는지가 화면에 남는다. */
 function teacherChatHTML(){
   const sid = state.teacherSelectedStudent;
-  let chat = [];
+  let chat = null;
   if(sid){
-    if(DATA.chats[sid]){
-      chat = DATA.chats[sid];
-    } else {
-      loadChat(sid).then(()=>render());
-    }
+    if(DATA.chats[sid]) chat = DATA.chats[sid];
+    else { loadChat(sid).then(()=>render()); }
   }
-  return `
-  <div class="lg-panel">
-    <h3>채팅</h3>
-    ${studentSelectorHTML()}
-    ${sid ? `
-    <div class="chat-window" id="chat-win">
-      ${chat.length===0?'<div class="empty">대화 내역이 없습니다.</div>':
-      chat.map(m=>`<div class="chat-bubble from-${m.from}">${escHtml(m.text)}<span class="chat-time">${m.at}</span></div>`).join('')}
-    </div>
-    <div class="chat-input-row">
-      <input id="chat-input-teacher" placeholder="메시지 입력" onkeydown="if(event.key==='Enter') sendChatMessage('${sid}','teacher')">
-      <button class="lg-btn btn-primary" onclick="sendChatMessage('${sid}','teacher')">전송</button>
-    </div>` : ''}
+  const students = DATA.students.slice().sort((a,b)=>(a.name||'').localeCompare(b.name||'','ko'));
+
+  return `<div class="co-screen">
+    <aside class="ch-list">
+      <div class="t-sec" style="margin:0 0 10px;flex-shrink:0;">학생 ${students.length}</div>
+      <div class="ch-lbody">
+        ${students.length===0 ? '<div style="font-size:12.5px;color:var(--dim);">등록된 학생이 없습니다.</div>'
+        : students.map(s=>`<div class="li ${s.studentId===sid?'on':''}"
+            onclick="state.teacherSelectedStudent='${s.studentId}'; render()">
+            <span class="av">${escHtml((s.name||'?').slice(0,1))}</span>
+            <span class="t"><b>${escHtml(s.name)}</b><span>${escHtml(classNameOf(s.classId))}</span></span>
+          </div>`).join('')}
+      </div>
+    </aside>
+    <main class="co-main">
+      ${!sid ? `<div style="padding:64px 0;text-align:center;color:var(--dim);font-size:12.5px;">왼쪽에서 학생을 고르세요.</div>`
+      : `<div class="rst-hrow" style="flex-shrink:0;">
+          <h1 class="t-title">${escHtml(studentNameOf(sid))}<s>${escHtml(classNameOf((DATA.students.find(s=>s.studentId===sid)||{}).classId))}</s></h1>
+          <div class="spacer"></div>
+          <button class="btn sm" onclick="rosterOpen('${sid}','info')">학생 상세 ${iconSvg('arrowR',13)}</button>
+        </div>
+        <div class="ch-win">
+          ${chat===null ? '<div style="margin:auto;color:var(--dim);font-size:12.5px;">대화를 불러오는 중…</div>'
+          : chat.length===0 ? '<div style="margin:auto;color:var(--dim);font-size:12.5px;">아직 주고받은 말이 없습니다.</div>'
+          : chat.map(m=>`<div class="ch-b from-${m.from}">${escHtml(m.text)}<span class="at">${m.at||''}</span></div>`).join('')}
+        </div>
+        <div class="ch-in">
+          <input id="chat-input-teacher" placeholder="메시지 입력" onkeydown="if(event.key==='Enter') sendChatMessage('${sid}','teacher')">
+          <button class="btn p" onclick="sendChatMessage('${sid}','teacher')">전송</button>
+        </div>`}
+    </main>
   </div>`;
 }
 
