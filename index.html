@@ -501,7 +501,10 @@
 .app .nt-b{font-size:13px;line-height:1.75;margin-top:8px;white-space:pre-wrap;color:var(--sub);}
 
 /* 채팅 — 말풍선. 왼쪽에 학생, 오른쪽에 대화. */
-.app .ch-list{width:240px;flex-shrink:0;border-right:1px solid var(--line);padding-right:14px;
+/* 목록과 대화 사이는 «선 하나»가 아니라 여백까지 있어야 갈라져 보인다.
+   padding-right만 주면 선에 제목과 말풍선이 붙는다. */
+.app .ch-list{width:240px;flex-shrink:0;border-right:1px solid var(--line);
+  padding-right:16px;margin-right:24px;
   display:flex;flex-direction:column;min-height:0;}
 .app .ch-lbody{flex:1;min-height:0;overflow-y:auto;margin-right:-6px;padding-right:6px;}
 .app .ch-win{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:8px;
@@ -1370,6 +1373,7 @@ let state = {
   reviewSelectedId: null,
   sdFilter: 'all',           // 학생 상세 연대기의 갈래
   clinicWeek: '',            // 클리닉 주간 판의 시작(월요일). 빈 값이면 이번 주
+  clinicApplyMode: '',       // 학생 신청 경로 — 'slot'(열린 시간대) | 'free'(직접 제안)
   qnaFilter: 'open',
   ytPlayers: null,
   attDraft: {},
@@ -2071,20 +2075,70 @@ async function deleteClinicSlot(slotId){
   showToast('삭제되었습니다.');
   render();
 }
-async function submitClinicRequest(){
+/* 신청 경로는 둘이다.
+     ① 시간대에서 고르기 — 교사가 열어 둔 슬롯. 정원이 차면 막힌다
+     ② 직접 제안하기   — 열린 슬롯에 맞는 시간이 없을 때 학생이 날짜·시간을 적어 낸다.
+                        슬롯이 없으므로 slotId는 빈 문자열이고 정원 개념도 없다.
+                        교사가 승인해야 확정된다 — 그래서 «제안»이지 «예약»이 아니다.
+   두 경우 모두 같은 clinic 레코드에 담긴다 (day·time이 이미 있다). 컬렉션을 늘리지 않았다. */
+async function submitClinicRequest(freeform){
   const sid = state.currentUser.studentId;
   const topic = document.getElementById('clinic-topic').value.trim();
-  const slotId = document.getElementById('clinic-slot').value;
-  if(!topic || !slotId){ showToast('희망 시간대와 질문 내용을 입력해주세요.'); return; }
-  const slot = DATA.clinicSlots.find(s=>s.id===slotId);
-  if(!slot){ showToast('선택한 시간대를 찾을 수 없습니다. 다시 선택해주세요.'); render(); return; }
-  if(clinicSlotBookedCount(slotId) >= slot.capacity){ showToast('죄송해요, 방금 정원이 찼습니다. 다른 시간대를 선택해주세요.'); render(); return; }
-  if(DATA.clinics.some(c=>c.studentId===sid && c.slotId===slotId && c.status!=='취소')){ showToast('이미 같은 시간대에 신청하셨습니다.'); return; }
-  const clinic = {id:'cl'+Date.now(), studentId:sid, name:state.currentUser.name, topic, slotId, day:slot.date, time:slot.time, status:'대기', requestedAt:todayStr()};
+  if(!topic){ showToast('질문/요청 내용을 입력해주세요.'); return; }
+
+  let slotId = '', day = '', time = '';
+  if(freeform){
+    day  = document.getElementById('clinic-free-date').value;
+    time = document.getElementById('clinic-free-time').value.trim();
+    if(!day || !time){ showToast('희망 날짜와 시간을 입력해주세요.'); return; }
+    if(day < todayStr()){ showToast('지난 날짜로는 신청할 수 없습니다.'); return; }
+    if(DATA.clinics.some(c=>c.studentId===sid && c.day===day && c.time===time && c.status!=='취소')){
+      showToast('이미 같은 날짜·시간으로 신청하셨습니다.'); return;
+    }
+  } else {
+    slotId = document.getElementById('clinic-slot').value;
+    if(!slotId){ showToast('희망 시간대를 선택해주세요.'); return; }
+    const slot = DATA.clinicSlots.find(s=>s.id===slotId);
+    if(!slot){ showToast('선택한 시간대를 찾을 수 없습니다. 다시 선택해주세요.'); render(); return; }
+    if(clinicSlotBookedCount(slotId) >= slot.capacity){ showToast('죄송해요, 방금 정원이 찼습니다. 다른 시간대를 선택해주세요.'); render(); return; }
+    if(DATA.clinics.some(c=>c.studentId===sid && c.slotId===slotId && c.status!=='취소')){ showToast('이미 같은 시간대에 신청하셨습니다.'); return; }
+    day = slot.date; time = slot.time;
+  }
+
+  const clinic = {id:'cl'+Date.now(), studentId:sid, name:state.currentUser.name, topic, slotId,
+                  day, time, status:'대기', requestedAt:todayStr()};
   DATA.clinics.unshift(clinic);
   await dbSetDoc('clinics', clinic.id, clinic);
   document.getElementById('clinic-topic').value='';
-  showToast('클리닉 신청이 접수되었습니다.');
+  if(freeform){ document.getElementById('clinic-free-time').value=''; }
+  showToast(freeform ? '희망 시간을 제안했습니다. 선생님 승인 후 확정됩니다.' : '클리닉 신청이 접수되었습니다.');
+  render();
+}
+
+/* 교사가 학생을 직접 앉힌다. 슬롯을 고르면 그 슬롯에 배정되고(정원에 반영된다),
+   고르지 않으면 날짜·시간을 직접 적어 슬롯 없이 잡는다. 교사가 넣는 것이므로 바로 «승인»이다. */
+async function assignClinic(){
+  const sid = document.getElementById('cn-assign-student').value;
+  const slotId = document.getElementById('cn-assign-slot').value;
+  const topic = document.getElementById('cn-assign-topic').value.trim();
+  let day = document.getElementById('cn-assign-date').value;
+  let time = document.getElementById('cn-assign-time').value.trim();
+  if(!sid){ showToast('학생을 선택해주세요.'); return; }
+  if(slotId){
+    const slot = DATA.clinicSlots.find(s=>s.id===slotId);
+    if(!slot){ showToast('시간대를 찾을 수 없습니다.'); return; }
+    day = slot.date; time = slot.time;
+  } else if(!day || !time){
+    showToast('시간대를 고르거나 날짜·시간을 직접 입력해주세요.'); return;
+  }
+  const clinic = {id:'cl'+Date.now(), studentId:sid, name:studentNameOf(sid), topic:topic||'클리닉',
+                  slotId, day, time, status:'승인', requestedAt:todayStr()};
+  DATA.clinics.unshift(clinic);
+  await dbSetDoc('clinics', clinic.id, clinic);
+  await logAudit('클리닉 배정', sid, studentNameOf(sid), `${day} ${time}`);
+  document.getElementById('cn-assign-topic').value='';
+  document.getElementById('cn-assign-time').value='';
+  showToast(`${studentNameOf(sid)} — ${day} ${time}에 배정했습니다.`);
   render();
 }
 async function updateClinicStatus(cid, status){
@@ -3932,9 +3986,16 @@ function studentHTML(){
   } else if(state.studentTab==='clinic'){
     const mine = DATA.clinics.filter(c=>c.studentId===sid);
     const slots = openClinicSlots();
+    /* 열린 시간대가 없으면 «직접 제안»으로 시작한다 — 빈손으로 돌려보내지 않는다. */
+    const cmode = state.clinicApplyMode || (slots.length ? 'slot' : 'free');
     body = `<div class="lg-panel"><h3>클리닉 신청</h3>
-      ${slots.length===0 ? '<div class="empty">현재 신청 가능한 시간대가 없습니다. 선생님께 문의해주세요.</div>' : `
-      <div class="inline-form">
+      <div class="subtab-bar" style="margin-bottom:14px;">
+        <button class="subtab-btn ${cmode==='slot'?'active':''}" onclick="state.clinicApplyMode='slot'; render()">열린 시간대에서 고르기${slots.length?` (${slots.length})`:''}</button>
+        <button class="subtab-btn ${cmode==='free'?'active':''}" onclick="state.clinicApplyMode='free'; render()">희망 시간 직접 제안</button>
+      </div>
+      ${cmode==='slot' ? (slots.length===0
+        ? '<div class="empty">지금 열려 있는 시간대가 없습니다. 위의 「희망 시간 직접 제안」으로 신청해보세요.</div>'
+        : `<div class="inline-form">
         <div class="lg-field" style="min-width:220px;"><label>희망 시간대</label>
           <select id="clinic-slot">${slots.map(s=>{
             const left = s.capacity - clinicSlotBookedCount(s.id);
@@ -3942,8 +4003,15 @@ function studentHTML(){
           }).join('')}</select>
         </div>
         <div class="lg-field" style="flex:2;"><label>질문/요청 내용</label><input id="clinic-topic" placeholder="예: 미분법 3단원 질문"></div>
-        <button class="lg-btn btn-primary" onclick="submitClinicRequest()">신청하기</button>
-      </div>`}
+        <button class="lg-btn btn-primary" onclick="submitClinicRequest(false)">신청하기</button>
+      </div>`)
+      : `<div class="inline-form">
+        <div class="lg-field"><label>희망 날짜</label><input id="clinic-free-date" type="date" min="${todayStr()}" value="${todayStr()}"></div>
+        <div class="lg-field"><label>희망 시간</label><input id="clinic-free-time" placeholder="예: 저녁 7시"></div>
+        <div class="lg-field" style="flex:2;"><label>질문/요청 내용</label><input id="clinic-topic" placeholder="예: 미분법 3단원 질문"></div>
+        <button class="lg-btn btn-primary" onclick="submitClinicRequest(true)">제안하기</button>
+      </div>
+      <p class="lg-hint">직접 제안한 시간은 <b>선생님이 승인해야 확정</b>됩니다. 열린 시간대에서 고르면 자리가 있는 한 바로 접수돼요.</p>`}
     </div>
     <div class="lg-panel"><h3>내 신청 내역</h3>
       ${mine.length===0?'<div class="empty">신청 내역이 없습니다.</div>':
@@ -6473,10 +6541,13 @@ function teacherClinicHTML(){
       const list = DATA.clinicSlots.filter(s=>s.date===d)
         .slice().sort((a,b)=>(a.time||'').localeCompare(b.time||''));
       const isToday = d===todayStr();
+      /* 슬롯 없이 잡힌 것(학생 직접 제안 · 교사 직접 배정)도 그날 칸에 세운다 —
+         판에 안 보이면 교사가 이미 잡아 둔 시간을 모르고 이중으로 앉힌다. */
+      const loose = DATA.clinics.filter(c=>!c.slotId && c.day===d && c.status!=='취소');
       return `<div class="cn-col">
         <div class="cn-ch ${isToday?'today':''}">${WEEKDAY_LABEL[new Date(d+'T00:00:00').getDay()]}<s>${d.slice(5).replace('-','/')}</s></div>
-        ${list.length===0 ? '<div class="cn-none">—</div>'
-        : list.map(s=>{
+        ${list.length===0 && loose.length===0 ? '<div class="cn-none">—</div>' : ''}
+        ${list.map(s=>{
             const n = clinicSlotBookedCount(s.id); const full = n >= s.capacity;
             const who = DATA.clinics.filter(c=>c.slotId===s.id && c.status!=='취소');
             return `<div class="cn-slot ${full?'full':(n===0?'free':'')}">
@@ -6486,6 +6557,11 @@ function teacherClinicHTML(){
               <button class="btn q sm" style="margin-top:6px;" onclick="deleteClinicSlot('${s.id}')">삭제</button>
             </div>`;
           }).join('')}
+        ${loose.map(c=>`<div class="cn-slot" style="border-style:dashed;">
+            <div class="t">${escHtml(c.time||'시간 미정')}</div>
+            <div class="u">${escHtml(c.name)} · ${c.status==='대기'?'승인 대기':c.status}<br>
+              <span class="muted">시간대 밖</span></div>
+          </div>`).join('')}
       </div>`;
     }).join('')}
   </div>`;
@@ -6503,6 +6579,7 @@ function teacherClinicHTML(){
           const sg = s ? signalOf(rosterStats(s)) : null;
           return `<div class="cn-rq">
             <div class="h">${sg?`<span class="rk ${sg.grade}"></span>`:''}<b>${escHtml(c.name)}</b>
+              ${c.slotId ? '' : '<span class="badge late">직접 제안</span>'}
               <span class="ago">${c.requestedAt||''}</span></div>
             <div class="w">${escHtml(c.day||'')} ${escHtml(c.time||'')} · ${escHtml(c.topic||'')}</div>
             <div class="a">
@@ -6541,7 +6618,30 @@ function teacherClinicHTML(){
           <label style="width:90px;"><span>정원</span><input id="slot-capacity" type="number" min="1" placeholder="1"></label>
           <button class="btn p sm" onclick="addClinicSlot()">추가</button>
         </div>
-        <div style="margin-top:8px;font-size:11.5px;color:var(--dim);">여기서 만든 시간대 중에서만 학생이 고를 수 있고, 정원이 차면 신청이 자동으로 막힙니다.</div>
+        <div style="margin-top:8px;font-size:11.5px;color:var(--dim);">여기서 만든 시간대를 학생이 골라 신청합니다. 정원이 차면 자동으로 막힙니다. 학생이 <b>희망 시간을 직접 제안</b>할 수도 있고, 그건 승인해야 확정됩니다.</div>
+      </div>
+
+      ${/* 교사가 학생을 직접 앉히는 경로. 슬롯을 고르면 그 슬롯에 배정되고(정원에 반영),
+           고르지 않으면 날짜·시간을 직접 적어 슬롯 없이 잡는다. */''}
+      <div class="cls-hw" style="display:block;margin-top:10px;flex-shrink:0;">
+        <div class="t-sec" style="margin:0;">학생 직접 배정</div>
+        <div class="cls-form">
+          <label style="min-width:150px;"><span>학생</span>
+            <select id="cn-assign-student" style="border:1px solid var(--line);border-radius:var(--r-sm);background:var(--paper);padding:8px 10px;font-family:inherit;font-size:12.5px;">
+              <option value="">-- 선택 --</option>
+              ${DATA.students.map(s=>`<option value="${s.studentId}">${escHtml(s.name)}</option>`).join('')}
+            </select></label>
+          <label style="min-width:190px;"><span>열린 시간대 (선택)</span>
+            <select id="cn-assign-slot" style="border:1px solid var(--line);border-radius:var(--r-sm);background:var(--paper);padding:8px 10px;font-family:inherit;font-size:12.5px;">
+              <option value="">— 직접 입력 —</option>
+              ${openClinicSlots().map(s=>`<option value="${s.id}">${s.date} · ${escHtml(s.time)} (${s.capacity-clinicSlotBookedCount(s.id)}자리)</option>`).join('')}
+            </select></label>
+          <label><span>날짜</span><input id="cn-assign-date" type="date" value="${todayStr()}"></label>
+          <label style="min-width:130px;"><span>시간</span><input id="cn-assign-time" placeholder="예: 저녁 7시"></label>
+          <label style="flex:1;min-width:150px;"><span>내용 (선택)</span><input id="cn-assign-topic" placeholder="예: 미분 보충"></label>
+          <button class="btn p sm" onclick="assignClinic()">배정</button>
+        </div>
+        <div style="margin-top:8px;font-size:11.5px;color:var(--dim);">교사가 넣은 배정은 바로 <b>승인</b> 상태가 됩니다. 시간대를 고르면 그 정원에 반영되고, 「직접 입력」이면 정원과 무관하게 잡힙니다.</div>
       </div>
 
       <div class="co-body">${grid}
