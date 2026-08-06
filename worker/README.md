@@ -16,7 +16,7 @@ verify-test.mjs   토큰 검증 테스트 (node worker/verify-test.mjs worker/ge
 **처음부터 비밀이 될 수 없는 값이었다.**
 
 실제 위험은 노출 자체가 아니라 그 뒤에 아무 방어가 없다는 점이다 —
-일 20건 제한이 클라이언트에만 있다(`index.html:731, 758`).
+일 20건 제한이 클라이언트에만 있다(`index.html:843, 871`).
 워커는 아무것도 세지 않으므로, 토큰만 있으면 직접 루프로 호출해 Gemini 비용을 태울 수 있다.
 
 ## 이 변경이 사주는 것 / 사주지 않는 것
@@ -24,7 +24,7 @@ verify-test.mjs   토큰 검증 테스트 (node worker/verify-test.mjs worker/ge
 **산다** — 영구 정적 비밀 제거(1시간 만료·회수 가능한 토큰으로 대체) ·
 **서버 쪽 할당량 강제** · uid 단위 사용량 추적.
 
-**사지 못한다 — 「강사만 접근」.** `index.html:5401`이 `signInAnonymously()`라
+**사지 못한다 — 「강사만 접근」.** `index.html:6093`이 `signInAnonymously()`라
 Firebase 신원이 «사이트를 연 사람»까지만 말해 준다. 학생/강사 구분은 Firestore 대조(앱 레벨)라
 토큰에 실리지 않는다. 커스텀 클레임을 심으려면 권한 있는 백엔드가 따로 있어야 한다 — 별건이다.
 
@@ -55,8 +55,19 @@ Firebase 신원이 «사이트를 연 사람»까지만 말해 준다. 학생/�
 - **확인**: 지금 배포된 index.html에서 AI 생성 1건 · 이미지 업로드 1건이 그대로 되는가
 
 ### 2단계 — 클라이언트 (`index.html`)
-`AI_SITE_TOKEN` 상수(594)와 `X-Site-Token` 헤더 3곳(`806, 1937, 1947`)을 지우고
+`AI_SITE_TOKEN` 상수(**706**)와 `X-Site-Token` 헤더 **4곳**을 지우고
 이미 있는 `getAuthToken()`으로 바꾼다. Firestore REST가 쓰는 그 함수 그대로다.
+
+| 줄 | 무엇 | 비고 |
+|---|---|---|
+| **918**  | Gemini 유사문항 생성 | JSON — `Content-Type` 유지 |
+| **2065** | `/upload` (파일 선택 업로드) | FormData — `Content-Type` 넣지 않는다 |
+| **2075** | `/delete` | JSON — `Content-Type` 유지 |
+| **2092** | `/upload` (hwpx 안의 base64 이미지) | FormData — 위와 같다 |
+
+> 줄 번호는 **2026-08-07 기준**이다. 예전 README는 «3곳»이라고 적어 두었는데
+> `/upload`가 두 군데(파일 선택 · hwpx 임포트)라 실제로는 4곳이다.
+> 그대로 따라가면 hwpx로 올린 이미지만 조용히 401이 난다. 고치기 전에 `X-Site-Token`을 검색해서 세어 볼 것.
 
 ```js
 headers: { 'Content-Type': 'application/json',
@@ -68,6 +79,10 @@ headers: { 'Content-Type': 'application/json',
 
 **확인**: 배포 후 AI 생성 · 업로드 · 삭제 3종. 401이 나오면 워커가 아직 1단계가 아니다.
 
+> ⚠ **`ALLOW_ORIGIN`을 걸면 로컬(`127.0.0.1:8777`)에서는 워커를 부를 수 없다.**
+> CORS가 배포 도메인만 허용하므로 AI 생성·이미지 업로드는 **배포된 사이트에서** 확인해야 한다.
+> 로컬에서 확인할 수 있는 것은 «무엇을 보내는지»까지다 (fetch를 가로채 헤더를 본다).
+
 ### 3단계 — 옛 경로 닫기
 - Cloudflare에서 **비밀 `SITE_TOKEN` 삭제** → 사이트 토큰 경로가 저절로 닫힌다.
   코드를 또 고칠 필요 없다 (`authenticate()`가 `env.SITE_TOKEN` 존재 여부를 먼저 본다)
@@ -77,7 +92,7 @@ headers: { 'Content-Type': 'application/json',
 
 ## 남는 것
 
-- **`AI_DAILY_LIMIT`은 두 곳에 있다** — `index.html:595`와 `gemini-proxy.js`.
+- **`AI_DAILY_LIMIT`은 두 곳에 있다** — `index.html:707`와 `gemini-proxy.js:30`.
   어긋나면 «남았다고 떠 있는데 429»가 된다. 고칠 때 같이 고쳐야 한다.
   클라이언트 쪽은 이제 UI 표시용이고 진짜 한도는 워커가 쥔다
 - **KV는 원자적이지 않다.** 동시 요청이 겹치면 한도를 한두 건 넘길 수 있다.

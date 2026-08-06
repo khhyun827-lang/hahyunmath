@@ -703,7 +703,11 @@
   const FIRESTORE_ROOT = 'https://firestore.googleapis.com/v1/projects/' + firebaseConfig.projectId + '/databases/(default)/documents';
   const FIRESTORE_BASE = FIRESTORE_ROOT + '/kv';
   const AI_WORKER_URL = 'https://hahyunmath-gemini-proxy.khhyun827.workers.dev';
-  const AI_SITE_TOKEN = 'qc7_CniNRFGnVnctFYoWUkx1SraOR_6M';
+  /* 워커 인증은 Firebase ID 토큰이다 (2026-08-07). 예전엔 AI_SITE_TOKEN이라는 고정 문자열을
+     X-Site-Token으로 보냈는데, 정적 클라이언트라 모든 방문자 브라우저로 내려가는 값이었다.
+     비밀이 될 수 없는 값이었고 그 뒤에 방어도 없어서, 토큰만 있으면 워커를 루프로 호출해
+     Gemini 비용을 태울 수 있었다. 이제 워커가 토큰을 검증하고 할당량을 uid별로 «서버에서» 센다.
+     아래 AI_DAILY_LIMIT은 이제 «표시용»이고 진짜 한도는 워커가 쥔다 (gemini-proxy.js:30과 같아야 한다). */
   const AI_DAILY_LIMIT = 20;
   async function getAuthToken(){
     if(!fbAuth.currentUser){
@@ -913,9 +917,10 @@ async function generateTwinViaAI(content, answer, image){
       if(typeof image === 'string') payload.image = image; // 레거시 base64
       else if(image.fileId) payload.imageFileId = image.fileId; // 신규: 드라이브 파일ID
     }
+    const token = await withTimeout(getAuthToken(), 8000);
     const res = await withTimeout(fetch(AI_WORKER_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Site-Token': AI_SITE_TOKEN },
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
       body: JSON.stringify(payload)
     }), 45000); // imageFileId 경로는 워커가 드라이브에서 바이트를 먼저 받아와야 해서 기존보다 여유를 둠
     if(!res.ok) throw new Error('worker http ' + res.status);
@@ -2060,21 +2065,28 @@ async function uploadImageToDrive(file){
   const blob = await compressImageToBlob(file);
   const fd = new FormData();
   fd.append('file', blob, 'img_' + Date.now() + '.jpg');
+  const token = await withTimeout(getAuthToken(), 8000);
+  /* FormData다 — Content-Type을 직접 넣으면 안 된다. 브라우저가 boundary까지 붙여야 한다. */
   const res = await withTimeout(fetch(AI_WORKER_URL + '/upload', {
     method: 'POST',
-    headers: { 'X-Site-Token': AI_SITE_TOKEN },
+    headers: { 'Authorization': 'Bearer ' + token },
     body: fd
   }), DRIVE_UPLOAD_TIMEOUT_MS);
   if(!res.ok) throw new Error('upload http ' + res.status);
   return res.json(); // {url, fileId}
 }
-function deleteFromDrive(fileId){
+/* 토큰을 받아 오려면 await가 필요해서 async가 됐다. 부르는 쪽 8곳은 전부 결과를 기다리지 않는
+   «보내 놓고 잊는» 호출이라 그대로 둔다 — 실패는 여기서 삼키므로 미처리 거부도 생기지 않는다. */
+async function deleteFromDrive(fileId){
   if(!fileId) return;
-  fetch(AI_WORKER_URL + '/delete', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'X-Site-Token': AI_SITE_TOKEN },
-    body: JSON.stringify({ fileId })
-  }).catch(e=>console.error('드라이브 파일 삭제 실패', e));
+  try{
+    const token = await withTimeout(getAuthToken(), 8000);
+    await fetch(AI_WORKER_URL + '/delete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({ fileId })
+    });
+  }catch(e){ console.error('드라이브 파일 삭제 실패', e); }
 }
 function dataUrlToBlob(dataUrl){
   const m = dataUrl.match(/^data:([^;]+);base64,(.*)$/s);
@@ -2089,9 +2101,10 @@ async function uploadDataUrlToDrive(dataUrl){
   const blob = dataUrlToBlob(dataUrl);
   const fd = new FormData();
   fd.append('file', blob, 'img_' + Date.now() + '.jpg');
+  const token = await withTimeout(getAuthToken(), 8000);
   const res = await withTimeout(fetch(AI_WORKER_URL + '/upload', {
     method: 'POST',
-    headers: { 'X-Site-Token': AI_SITE_TOKEN },
+    headers: { 'Authorization': 'Bearer ' + token },
     body: fd
   }), DRIVE_UPLOAD_TIMEOUT_MS);
   if(!res.ok) throw new Error('upload http ' + res.status);

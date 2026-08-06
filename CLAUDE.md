@@ -570,10 +570,18 @@ claude work/
    - **순서를 지켜야 한다. 클라이언트를 먼저 바꾸면 실서비스가 죽는다** —
      새 `Authorization` 헤더가 프리플라이트를 바꾸는데 워커의 `Access-Control-Allow-Headers`에
      `authorization`이 없으면 브라우저가 요청을 통째로 막는다
-   - 상태: **워커 코드 완성** (`worker/gemini-proxy.js` — 배포본에 인증만 얹었다.
-     드라이브·Gemini 로직은 한 줄도 안 건드렸다). 토큰 검증 테스트 10/10 통과
-     (`node worker/verify-test.mjs`). **배포는 사용자 몫** — Cloudflare 접근이 필요하다
-   - **`index.html`은 일부러 안 건드렸다.** 워커가 1단계로 뜬 뒤가 2단계다
+   - 상태 (2026-08-07): **1단계·2단계 완료. 3단계만 남았다**
+     - 1단계 — 사용자가 워커 배포 완료. 프리플라이트로 확인함:
+       `Access-Control-Allow-Headers`에 `Authorization` 있음,
+       `Access-Control-Allow-Origin: https://khhyun827-lang.github.io`,
+       잘못된 Bearer 토큰 → 401
+     - 2단계 — `index.html`에서 `AI_SITE_TOKEN` 상수와 `X-Site-Token` 헤더 **4곳**을
+       `getAuthToken()`으로 교체 완료. `deleteFromDrive()`는 await가 필요해 async가 됐다
+       (부르는 곳 8곳은 전부 결과를 안 기다리는 호출이라 그대로 둬도 된다)
+     - **3단계가 남았다 — Cloudflare에서 `SITE_TOKEN` 비밀 삭제.**
+       이때 비로소 유출된 값이 죽는다. 그 전까지는 살아 있다
+   - ⚠ **`ALLOW_ORIGIN`을 걸어서 로컬(`127.0.0.1:8777`)에서는 워커를 못 부른다.**
+     AI 생성·이미지 업로드 확인은 **배포된 사이트에서** 해야 한다
    - 커밋 이력의 옛 토큰은 회수되지 않는다. 3단계에서 무효화하는 것이 유일한 해결이다
 2. **홈 히어로 이미지 깨짐** — `homeHTML()`이 `profile.jpg`를 참조(3024, 3031)하는데 로컬엔 `profile.png`/`profile.webp`만 있고 추적되지 않음. 배포 전 커밋 필요
 3. **비밀번호 평문 저장** — 학생 `pw`, 조교 `pw`, `teacher-pw` 전부
