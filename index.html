@@ -114,6 +114,81 @@
 .app .sig-row.now .sig-act,
 .app .sig-row.off .sig-act{opacity:1;}
 
+/* ---------- 수업 (design-v1/02-class) ----------
+   목업은 좌측 사이드바를 캔버스에 absolute로 붙였다. 실서비스는 그냥 두 칸 플렉스다.
+   ds.css의 .steps / .tile / .seg / .actbar 는 그대로 쓴다 — 여기서 다시 정의하지 않는다. */
+.app .cls-screen{display:flex;height:calc(100vh - 92px);}
+.app .cls-side{width:270px;flex-shrink:0;padding-right:18px;border-right:1px solid var(--line);
+  overflow-y:auto;}
+.app .cls-main{flex:1;min-width:0;padding-left:24px;display:flex;flex-direction:column;}
+.app .cls-mh{display:flex;align-items:flex-end;justify-content:space-between;gap:14px;
+  flex-wrap:wrap;flex-shrink:0;}
+.app .cls-nav{display:flex;align-items:center;gap:8px;}
+.app .cls-day{font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:600;
+  white-space:nowrap;}
+
+/* 오늘의 수업 — 시간이 1차 축이다. 반을 고르는 것이 아니라 «지금 하는 수업»을 고른다. */
+.app .cls-sess{background:var(--card);border:1px solid var(--line);border-radius:var(--r-lg);
+  padding:13px 15px;margin-bottom:9px;position:relative;cursor:pointer;
+  transition:border-color var(--t),background var(--t);}
+.app .cls-sess:hover{background:var(--hover);}
+.app .cls-sess.on{border-color:var(--accent);box-shadow:0 0 0 2px rgba(63,53,55,.1);}
+.app .cls-sess .t{font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--dim);font-weight:600;}
+.app .cls-sess .n{font-size:14px;font-weight:700;margin-top:5px;letter-spacing:-.02em;}
+.app .cls-sess .m{font-size:11.5px;color:var(--sub);margin-top:5px;}
+.app .cls-sess .st{position:absolute;right:13px;top:13px;}
+
+.app .cls-todo{background:var(--card);border:1px solid var(--line);border-radius:var(--r-lg);padding:4px 15px;}
+.app .cls-todo a{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:11px 0;
+  border-bottom:1px solid var(--line2);font-size:12.5px;color:var(--ink);cursor:pointer;}
+.app .cls-todo a:last-child{border-bottom:none;}
+.app .cls-todo a:hover{color:var(--accent);}
+.app .cls-todo a b{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600;
+  background:var(--line2);border-radius:var(--r-xs);padding:2px 8px;color:var(--sub);}
+.app .cls-todo a.hot b{background:var(--nobg);color:var(--no);}
+
+/* 단계 본문«만» 스크롤한다. 머리말·단계 막대는 늘 보여야 어디까지 했는지 안다. */
+.app .cls-body{flex:1;min-height:0;overflow:auto;margin-top:16px;}
+/* align-items:start — 사유 칸이 붙어 커진 타일에 같은 행의 멀쩡한 타일까지 끌려가지 않게 한다.
+   높이가 들쭉날쭉해지지만, 그 차이가 곧 «여기 손볼 게 남았다»는 신호라 오히려 읽기 쉽다. */
+.app .cls-tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;
+  align-content:start;align-items:start;}
+@media (max-width:1180px){ .app .cls-tiles{grid-template-columns:repeat(2,1fr);} }
+/* 사유·보충영상 칸이 붙는 타일은 세로로 자란다. ds.css의 .tile은 64px 고정이라 여기서 푼다. */
+.app .cls-tiles .tile{height:auto;min-height:64px;flex-wrap:wrap;padding:11px 13px;}
+.app .cls-tiles .tile .seg{margin-left:auto;}
+.app .cls-sub{flex:0 0 100%;display:flex;gap:6px;margin-top:9px;}
+.app .cls-sub input{flex:1;min-width:0;height:30px;border:1px solid var(--line);
+  border-radius:var(--r-sm);background:var(--paper);padding:0 9px;
+  font-family:inherit;font-size:12px;color:var(--ink);outline:none;}
+.app .cls-sub input:focus{border-color:var(--accent-line);}
+
+/* 구버전 .lg-field / .inline-form 은 .legacy 안에서만 산다. DS 화면에서는 스타일이 없다. */
+.app .cls-form{display:flex;gap:11px;flex-wrap:wrap;align-items:flex-end;margin-top:11px;}
+.app .cls-form label{display:flex;flex-direction:column;gap:5px;}
+.app .cls-form label span{font-size:11px;font-weight:600;color:var(--dim);letter-spacing:.02em;}
+.app .cls-form input,.app .cls-form textarea{border:1px solid var(--line);border-radius:var(--r-sm);
+  background:var(--paper);padding:8px 10px;font-family:inherit;font-size:12.5px;color:var(--ink);
+  outline:none;width:100%;resize:vertical;}
+.app .cls-form input:focus,.app .cls-form textarea:focus{border-color:var(--accent-line);}
+
+.app .cls-memo{width:100%;min-height:220px;border:1px solid var(--line);border-radius:var(--r-lg);
+  background:var(--note);padding:15px 17px;font-family:inherit;font-size:13.5px;line-height:1.75;
+  color:var(--ink);outline:none;resize:vertical;}
+.app .cls-memo:focus{border-color:var(--accent-line);}
+
+.app .cls-chaps{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;}
+.app .cls-chap{display:flex;align-items:center;gap:10px;background:var(--card);
+  border:1px solid var(--line);border-radius:var(--r-md);padding:11px 14px;font-size:13px;
+  cursor:pointer;transition:background var(--t),border-color var(--t);}
+.app .cls-chap:hover{background:var(--hover);}
+.app .cls-chap.on{background:var(--accent-bg);border-color:var(--accent-line);font-weight:600;}
+
+.app .cls-hw{background:var(--card);border:1px solid var(--line);border-radius:var(--r-lg);
+  padding:13px 16px;margin-bottom:9px;display:flex;align-items:center;gap:14px;}
+.app .cls-hw .n{flex:1;min-width:0;font-size:13.5px;font-weight:600;}
+.app .cls-hw .n s{display:block;text-decoration:none;font-size:11.5px;font-weight:400;color:var(--dim);margin-top:3px;}
+
 .app .actbar{position:fixed;z-index:6;flex-wrap:wrap;}
 /* 고정된 액션바가 마지막 행을 가리지 않게, 스크롤 영역 «안»에 여백을 둔다. */
 .app .rst-pad{height:64px;flex-shrink:0;}
@@ -952,8 +1027,6 @@ let state = {
   videoByClassId: '',
   videoStudentDetailId: null,
   ytPlayers: null,
-  attendanceClassId: '',
-  attendanceDate: '',
   attDraft: {},
   attDraftKey: null,
   classHubDate: null,
@@ -981,6 +1054,13 @@ let state = {
   signalMutes: {},
   signalMutesLoaded: false,
   signalMutesLoading: false,
+  /* 수업(02-class) — 날짜 하나 · 반 하나 · 단계 하나. 출결 초안은 attDraft를 그대로 쓴다 */
+  sessionDate: '',
+  sessionClassId: '',
+  sessionStep: 'att',
+  sessionNotes: {},        // 반id -> {날짜: 메모}
+  sessionNoteLoading: {},
+  sessionNoteDraft: null,  // {key, text} — 단계를 옮겨도 쓰던 글이 날아가지 않게
   auditLogSearchQuery: '',
   toast: ''
 };
@@ -1380,18 +1460,22 @@ async function deleteScore(sid, idx){
 }
 
 /* =================== 과제(숙제) — 반 단위 등록, 데일리퀴즈와 동일한 구조 =================== */
-async function addHomework(){
-  const classId = document.getElementById('hw-class').value;
-  const title = document.getElementById('hw-title').value.trim();
-  const description = document.getElementById('hw-desc').value.trim();
-  const dueDate = document.getElementById('hw-due').value;
+/* 과제 등록 폼은 두 화면에 있다 (반 관리 > 수업 기록 > 과제 · 수업 > 과제).
+   폼을 복제하는 대신 id 접두사만 받는다 — 등록 로직이 두 벌이 되면 한쪽만 고쳐진다.
+   접두사가 다르므로 두 화면이 같이 그려져도 getElementById가 엉뚱한 칸을 읽지 않는다. */
+async function addHomework(prefix){
+  const p = prefix || '';
+  const classId = document.getElementById(p+'hw-class').value;
+  const title = document.getElementById(p+'hw-title').value.trim();
+  const description = document.getElementById(p+'hw-desc').value.trim();
+  const dueDate = document.getElementById(p+'hw-due').value;
   if(!title){ showToast('과제명을 입력해주세요.'); return; }
   const hw = {id:'hw'+Date.now(), classId, title, description, dueDate, createdAt:todayStr()};
   DATA.assignments.unshift(hw);
   await dbSetDoc('assignments', hw.id, hw);
-  document.getElementById('hw-title').value='';
-  document.getElementById('hw-desc').value='';
-  document.getElementById('hw-due').value='';
+  document.getElementById(p+'hw-title').value='';
+  document.getElementById(p+'hw-desc').value='';
+  document.getElementById(p+'hw-due').value='';
   showToast('과제가 등록되었습니다.');
   render();
 }
@@ -2420,7 +2504,10 @@ const ICON_PATHS = {
   // 아래 3종은 새 디자인(ds.js)에서 가져왔다. 같은 선 굵기·같은 24 그리드다.
   filter: '<path d="M3.5 5.5h17l-6.5 7.5V20l-4-2.5v-4.5z"/>',
   download: '<path d="M12 4v10M7.5 10l4.5 4 4.5-4M4.5 19.5h15"/>',
-  plus: '<path d="M12 5v14M5 12h14"/>'
+  plus: '<path d="M12 5v14M5 12h14"/>',
+  chevL: '<path d="M15 5l-7 7 7 7"/>',
+  chevR: '<path d="M9 5l7 7-7 7"/>',
+  arrowR: '<path d="M4 12h15M13 6l6 6-6 6"/>'
 };
 function iconSvg(name, size){
   size = size || 17;
@@ -3654,7 +3741,7 @@ const TEACHER_TAB_SECTION = {
 
 /* 새 디자인으로 옮긴 탭. 여기 없는 탭은 .legacy 안에서 구버전 스타일 그대로 그린다.
    화면을 하나 옮길 때마다 여기에 더한다. */
-const TEACHER_TABS_DS = new Set(['roster', 'signals', 'home']);
+const TEACHER_TABS_DS = new Set(['roster', 'signals', 'home', 'session']);
 
 function goTeacherTab(tab, hubTab){
   state.teacherTab = tab;
@@ -3666,16 +3753,12 @@ function goTeacherTab(tab, hubTab){
 
 function teacherTabBodyHTML(){
   const t = state.teacherTab;
-  /* 아직 시안대로 만들지 않은 화면은 지금 그 일을 하고 있는 화면으로 보낸다.
-     빈 «준비 중» 화면을 두는 것보다 낫다 — 기능이 사라지지 않는다.
-       수업 -> 출결 관리 */
   if(t==='roster')      return teacherRosterHTML();
   /* 'home'은 상단바에 없는데도 로그인 직후 기본값이라 «신호»로 모은다.
      TEACHER_TAB_SECTION도 home을 '신호'로 잡고 있어서 그게 원래 의도였다.
      (예전엔 여기 분기가 없어 반 목록으로 떨어졌다 — 메뉴는 신호가 켜진 채로.) */
   if(t==='signals' || t==='home') return teacherSignalsHTML();
-  /* teacherAttendanceHTML은 문자열이 아니라 {body, summary}를 돌려준다 — 그대로 쓰면 [object Object]가 찍힌다. */
-  if(t==='session'){ const a = teacherAttendanceHTML(); return a.body + (a.summary || ''); }
+  if(t==='session')     return teacherSessionHTML();
   if(t==='classhub')    return teacherClassHubHTML();
   if(t==='clinic')      return teacherClinicHTML();
   if(t==='notices')     return teacherNoticesHTML();
@@ -4333,6 +4416,432 @@ function signalRowHTML(r, k, isMuted){
    남겨 두면 hw-title · video-url 같은 입력 id가 살아 있는 화면과 «중복»된다.
    둘이 같이 그려지는 날 getElementById가 엉뚱한 칸을 읽는다. */
 
+/* =================== 수업 (design-v1/02-class) ===================
+   역할은 «수업 중에 순서대로 끝낸다». 명단·신호가 «훑는» 화면이라면 이건 «하는» 화면이다.
+   그래서 1차 축이 반이 아니라 **날짜와 시간**이다 — 왼쪽에서 지금 하는 수업을 고르고,
+   오른쪽에서 출결 → 진도 → 과제 → 메모를 순서대로 끝낸다.
+
+   출결 저장은 새로 쓰지 않았다. 기존 attDraft / ensureAttDraft / setAttStatus /
+   saveClassAttendance를 그대로 쓴다 — 결석 보충 영상 자동 배정까지 붙어 있는 로직이고,
+   저장 경로가 두 벌이 되면 한쪽만 고쳐진다.
+
+   **출결 버튼은 4개다 (출석·지각·조퇴·결석).** 「퇴원」은 수업 중에 누를 일이 없고,
+   잘못 누르면 학생 로그인이 막힌다. 5상태 전부와 일괄 변경은
+   반 관리 > 수업 기록 > 출석에 그대로 남아 있다 — 기능이 사라진 것이 아니다.
+
+   데일리퀴즈는 이 흐름에 없다. 학생이 직접 제출하고 자동 채점되므로
+   수업 중에 교사가 손댈 단계가 아니다. (시안의 판단을 그대로 따랐다.) */
+
+const SESSION_STEPS = [
+  ['prev', '지난 수업 확인'], ['att', '출결'], ['prog', '진도'], ['hw', '과제'], ['memo', '메모']
+];
+const SESSION_SEG = [['출석','ok','출'], ['지각','late','지'], ['조퇴','leave','조'], ['결석','no','결']];
+
+/* 날짜 더하기·빼기. **new Date(ymd).toISOString()로 하면 안 된다** —
+   'YYYY-MM-DD'는 UTC 자정으로, 'YYYY-MM-DDT00:00:00'은 «로컬» 자정으로 읽힌 뒤
+   toISOString()이 다시 UTC로 되돌린다. KST(+9)에서는 그 왕복에 하루가 깎여
+   ▶ 버튼이 제자리걸음을 하고 「지난 수업」이 하루 더 옛날을 가리켰다.
+   여기서는 양쪽 다 UTC로 맞춰 날짜 문자열 산술만 한다. todayStr()도 UTC 기준이라 이게 일관된다. */
+function shiftYmd(ymd, delta){
+  const d = new Date(ymd + 'T00:00:00Z');
+  d.setUTCDate(d.getUTCDate() + delta);
+  return d.toISOString().slice(0, 10);
+}
+
+/* 반 일정은 "월,수,금 7시~9시" 같은 자유 텍스트다. 요일 글자 뒤가 시간이라고 보고 잘라 쓴다 —
+   형식을 강제하는 곳이 없어서 파싱하려 들면 오히려 깨진다. */
+function sessionTimeText(schedule){
+  if(!schedule) return '';
+  let last = -1;
+  for(let i=0;i<schedule.length;i++) if(WEEKDAY_MAP[schedule[i]]!==undefined) last = i;
+  return schedule.slice(last+1).replace(/^[\s,·]+/, '').trim();
+}
+function sessionStartHour(schedule){
+  const m = sessionTimeText(schedule).match(/\d+/);
+  return m ? parseInt(m[0], 10) : 99;
+}
+/* 그 날짜에 수업이 있는 반. 시간 순 — 왼쪽 목록이 곧 그날의 시간표가 된다. */
+function sessionsOn(date){
+  const dow = new Date(date + 'T00:00:00').getDay();
+  return DATA.classes.filter(c=>parseScheduleDays(c.schedule).includes(dow))
+    .sort((a,b)=> sessionStartHour(a.schedule) - sessionStartHour(b.schedule)
+               || (a.name||'').localeCompare(b.name||'', 'ko'));
+}
+/* 저장된 기록 기준 요약. 초안(attDraft)이 아니라 «이미 저장된 것»만 센다 —
+   왼쪽 목록은 «이 수업 끝냈나»를 말해야 하므로 아직 저장 안 한 것을 완료로 세면 거짓말이 된다. */
+function sessionSavedSummary(classId, date){
+  const roster = DATA.students.filter(s=>s.classId===classId);
+  const cnt = {}; let filled = 0;
+  roster.forEach(s=>{
+    const rec = state.allRecords[s.studentId];
+    const a = rec && (rec.attendance||[]).find(x=>x.date===date);
+    if(a){ filled++; cnt[a.status] = (cnt[a.status]||0) + 1; }
+  });
+  return { total: roster.length, filled, cnt };
+}
+function sessionDraftSummary(classId){
+  const roster = DATA.students.filter(s=>s.classId===classId);
+  const cnt = {}; let none = 0;
+  roster.forEach(s=>{
+    const d = state.attDraft[s.studentId];
+    if(d && d.status) cnt[d.status] = (cnt[d.status]||0) + 1; else none++;
+  });
+  return { roster, cnt, none };
+}
+/* 저장 안 된 변경이 몇 명분인가. 초안은 메모리에만 있어서 반·날짜를 옮기면 사라진다 —
+   그 전에 «남아 있다»고 말해 줘야 한다. */
+function sessionUnsavedCount(classId, date){
+  let n = 0;
+  DATA.students.filter(s=>s.classId===classId).forEach(s=>{
+    const d = state.attDraft[s.studentId];
+    if(!d) return;
+    const rec = state.allRecords[s.studentId];
+    const a = rec && (rec.attendance||[]).find(x=>x.date===date);
+    if((d.status||null) !== (a ? a.status : null)) { n++; return; }
+    if(d.status && (d.reason||'') !== (a ? (a.reason||'') : '')) { n++; return; }
+    if((d.videoUrl||'').trim()) n++;
+  });
+  return n;
+}
+
+/* 수업 메모 — 새 컬렉션 대신 반마다 kv 문서 하나에 {날짜: 글}로 둔다 (신호 해제와 같은 방식).
+   컬렉션을 늘리면 loadAll·마이그레이션까지 건드려야 하는데 이 정도 데이터엔 과하다. */
+async function loadSessionNoteIfNeeded(classId){
+  if(!classId || state.sessionNotes[classId] || state.sessionNoteLoading[classId]) return;
+  state.sessionNoteLoading[classId] = true;
+  const v = await dbGet('classnote:' + classId, {});
+  state.sessionNotes[classId] = (v && typeof v === 'object') ? v : {};
+  state.sessionNoteLoading[classId] = false;
+  render();
+}
+/* 글자마다 render()를 부르면 전체 재렌더링이라 커서가 튄다. 초안만 담아 두고 저장할 때 읽는다. */
+function sessionNoteInput(key, text){ state.sessionNoteDraft = { key, text }; }
+function sessionNoteText(classId, date){
+  const key = classId + '|' + date;
+  if(state.sessionNoteDraft && state.sessionNoteDraft.key === key) return state.sessionNoteDraft.text;
+  return (state.sessionNotes[classId] || {})[date] || '';
+}
+async function saveSessionNote(classId, date){
+  const el = document.getElementById('cls-memo');
+  const text = el ? el.value : sessionNoteText(classId, date);
+  const map = Object.assign({}, state.sessionNotes[classId] || {});
+  if(text.trim()) map[date] = text; else delete map[date];
+  state.sessionNotes[classId] = map;
+  state.sessionNoteDraft = null;
+  await dbSet('classnote:' + classId, map);
+  showToast(text.trim() ? '수업 메모를 저장했습니다.' : '수업 메모를 비웠습니다.');
+  render();
+}
+
+function goSessionDate(delta){
+  state.sessionDate = shiftYmd(state.sessionDate || todayStr(), delta);
+  state.sessionClassId = '';
+  render();
+}
+function goSessionStep(step){ state.sessionStep = step; render(); }
+function pickSession(classId){
+  state.sessionClassId = classId;
+  if(state.sessionStep === 'prev') state.sessionStep = 'att';
+  render();
+}
+async function saveSessionAttendance(classId, date, nextStep){
+  await saveClassAttendance(classId, date);
+  if(nextStep) state.sessionStep = nextStep;
+  render();
+}
+function setAllRemainingPresent(classId){
+  DATA.students.filter(s=>s.classId===classId).forEach(s=>{
+    const d = state.attDraft[s.studentId];
+    if(d && d.status) return;                      // 이미 찍은 것은 건드리지 않는다
+    state.attDraft[s.studentId] = {status:'출석', reason:'', videoUrl:'', note:(d&&d.note)||''};
+  });
+  render();
+}
+
+function teacherSessionHTML(){
+  loadAllRecordsIfNeeded();
+  const date = state.sessionDate || todayStr();
+  const sessions = sessionsOn(date);
+  const dow = WEEKDAY_LABEL[new Date(date + 'T00:00:00').getDay()];
+
+  /* 고른 반이 그날 수업이 없으면 첫 수업으로 되돌린다. 날짜를 옮기면 늘 여기로 온다. */
+  let classId = state.sessionClassId;
+  if(!classId || !sessions.some(c=>c.id === classId)) classId = sessions.length ? sessions[0].id : '';
+  const cls = DATA.classes.find(c=>c.id === classId);
+  if(classId){
+    loadSessionNoteIfNeeded(classId);
+    if(state.allRecordsLoaded) ensureAttDraft(classId, date);
+  }
+
+  const side = `
+  <aside class="cls-side">
+    <div class="t-sec">${date === todayStr() ? '오늘의 수업' : dow + '요일 수업'}</div>
+    ${sessions.length === 0
+      ? `<div style="font-size:12.5px;color:var(--dim);line-height:1.7;">이 날짜에 수업이 없습니다.<br>반 일정은 반 관리에서 정합니다.</div>`
+      : sessions.map(c=>{
+          const sm = sessionSavedSummary(c.id, date);
+          const st = sm.total === 0 ? ['', '학생 없음']
+                   : sm.filled === 0 ? ['', '시작 전']
+                   : sm.filled < sm.total ? ['consult', '입력 중']
+                   : ['ok', '완료'];
+          const detail = sm.total === 0 ? '배정된 학생이 없습니다'
+            : sm.filled === 0 ? `${sm.total}명 · 출결 미입력`
+            : sm.filled < sm.total ? `${sm.total}명 · 출결 ${sm.filled}/${sm.total}`
+            : `${sm.total}명 · 출석 ${sm.cnt['출석']||0}` +
+              (sm.cnt['지각'] ? ` · 지각 ${sm.cnt['지각']}` : '') +
+              (sm.cnt['조퇴'] ? ` · 조퇴 ${sm.cnt['조퇴']}` : '') +
+              (sm.cnt['결석'] ? ` · 결석 ${sm.cnt['결석']}` : '');
+          return `
+          <div class="cls-sess ${c.id === classId ? 'on' : ''}" onclick="pickSession('${c.id}')">
+            <div class="t">${escHtml(sessionTimeText(c.schedule) || '시간 미정')}</div>
+            <div class="n">${escHtml(c.name)}</div>
+            <div class="m">${escHtml(detail)}</div>
+            <span class="st badge ${st[0]}">${st[1]}</span>
+          </div>`;
+        }).join('')}
+
+    <div class="t-sec" style="margin-top:24px;">오늘 남은 일</div>
+    <div class="cls-todo">
+      ${[
+        ['오답 문항 검토', DATA.problemBank.filter(b=>b.status!=='approved').length, "goTeacherTab('review')"],
+        ['미답변 질문',    DATA.qnas.filter(q=>!q.answer).length,                     "goTeacherTab('qna')"],
+        ['클리닉 승인 대기', DATA.clinics.filter(c=>c.status==='대기').length,        "goTeacherTab('clinic')"],
+        ['신규 상담 신청', unseenConsultCount(),                                      "goTeacherTab('settings'); state.settingsSubTab='consults'; render()"]
+      ].map(t=>`<a class="${t[1]>0?'hot':''}" onclick="${t[2]}"><span>${t[0]}</span><b>${t[1]}</b></a>`).join('')}
+    </div>
+    <div class="rst-pad"></div>
+  </aside>`;
+
+  if(!classId){
+    return `<div class="cls-screen">${side}
+      <main class="cls-main">
+        <div class="cls-mh">
+          <h1 class="t-title">수업<s>${date} ${dow}</s></h1>
+          ${sessionDateNavHTML(date)}
+        </div>
+        <div class="cls-body"><div style="padding:56px 0;text-align:center;color:var(--dim);font-size:12.5px;">
+          ${DATA.classes.length === 0 ? '등록된 반이 없습니다.' : '이 날짜에 수업이 있는 반이 없습니다. 날짜를 옮겨 보세요.'}
+        </div></div>
+      </main></div>`;
+  }
+
+  const step = state.sessionStep || 'att';
+  const sm = sessionSavedSummary(classId, date);
+  const stepsHTML = `<div class="steps" style="margin-top:18px;flex-shrink:0;">
+    ${SESSION_STEPS.map((s,i)=>{
+      const done = s[0] === 'prev' ? true : (s[0] === 'att' && sm.total > 0 && sm.filled === sm.total);
+      return `<div class="s ${step===s[0]?'on':(done?'fin':'')}" onclick="goSessionStep('${s[0]}')"
+        style="cursor:pointer;"><span class="b">${s[0]==='prev' ? '✓' : (done && step!==s[0] ? '✓' : i)}</span>${s[1]}</div>`;
+    }).join('')}
+  </div>`;
+
+  let body = '', bar = '';
+  if(step === 'prev')      { const r = sessionPrevHTML(classId, date);  body = r.body; bar = r.bar; }
+  else if(step === 'att')  { const r = sessionAttHTML(classId, date); body = r.body; bar = r.bar; }
+  else if(step === 'prog') { const r = sessionProgHTML(classId);      body = r.body; bar = r.bar; }
+  else if(step === 'hw')   { const r = sessionHwHTML(classId, date);  body = r.body; bar = r.bar; }
+  else                     { const r = sessionMemoHTML(classId, date);body = r.body; bar = r.bar; }
+
+  return `<div class="cls-screen">${side}
+    <main class="cls-main">
+      <div class="cls-mh">
+        ${/* schedule을 통째로 붙이면 시간이 두 번 나온다 — 요일만 따로 뽑아 잇는다. */''}
+        <h1 class="t-title">${escHtml(cls.name)}<s>${escHtml(sessionTimeText(cls.schedule) || '시간 미정')}${
+          parseScheduleDays(cls.schedule).length ? ' · ' + parseScheduleDays(cls.schedule).map(d=>WEEKDAY_LABEL[d]).join('·') : ''}</s></h1>
+        ${sessionDateNavHTML(date)}
+      </div>
+      ${stepsHTML}
+      <div class="cls-body">${body}<div class="rst-pad"></div></div>
+    </main>
+    ${bar}
+  </div>`;
+}
+
+function sessionDateNavHTML(date){
+  const isToday = date === todayStr();
+  return `<div class="cls-nav">
+    <button class="btn icon" title="이전 날" onclick="goSessionDate(-1)">${iconSvg('chevL',16)}</button>
+    <span class="cls-day">${date}<span class="muted" style="margin-left:7px;font-weight:400;">${WEEKDAY_LABEL[new Date(date+'T00:00:00').getDay()]}</span></span>
+    <button class="btn icon" title="다음 날" onclick="goSessionDate(1)">${iconSvg('chevR',16)}</button>
+    ${isToday ? '' : `<button class="btn sm" onclick="state.sessionDate=''; state.sessionClassId=''; render()">오늘</button>`}
+  </div>`;
+}
+
+/* ── 0단계. 지난 수업 확인 — 「저번에 어디까지 했더라」를 화면이 대신 기억한다 ── */
+function sessionPrevHTML(classId, date){
+  const cls = DATA.classes.find(c=>c.id===classId);
+  const days = parseScheduleDays(cls && cls.schedule);
+  let prev = null;
+  if(days.length){
+    let d = date;
+    for(let i=0;i<60;i++){
+      d = shiftYmd(d, -1);
+      if(days.includes(new Date(d + 'T00:00:00').getDay())){ prev = d; break; }
+    }
+  }
+  const bar = `<div class="actbar">
+    <span class="sum">${prev ? prev + ' 수업' : ''}</span>
+    <span class="spacer"></span>
+    <button class="btn p" onclick="goSessionStep('att')">출결로 ${iconSvg('arrowR',15)}</button>
+  </div>`;
+  if(!prev) return { bar, body:`<div style="padding:48px 0;text-align:center;color:var(--dim);font-size:12.5px;">반 일정이 없어 지난 수업을 찾을 수 없습니다.</div>` };
+  const sm = sessionSavedSummary(classId, prev);
+  const note = (state.sessionNotes[classId] || {})[prev] || '';
+  const hws = DATA.assignments.filter(a=>(!a.classId || a.classId===classId) && a.createdAt===prev);
+  return { bar, body: `
+  <div class="t-sec">${prev} (${WEEKDAY_LABEL[new Date(prev+'T00:00:00').getDay()]})</div>
+  <div class="cls-hw" style="display:block;">
+    <div class="n" style="margin-bottom:9px;">출결</div>
+    <div style="font-size:12.5px;color:var(--sub);">${sm.filled === 0 ? '기록이 없습니다.'
+      : `${sm.total}명 중 ${sm.filled}명 입력 · ` + ATT_STATUSES.filter(s=>sm.cnt[s]).map(s=>`${s} <b class="mono">${sm.cnt[s]}</b>`).join(' · ')}</div>
+  </div>
+  <div class="cls-hw" style="display:block;">
+    <div class="n" style="margin-bottom:9px;">그날 낸 과제</div>
+    <div style="font-size:12.5px;color:var(--sub);">${hws.length === 0 ? '없습니다.'
+      : hws.map(h=>escHtml(h.title)).join(' · ')}</div>
+  </div>
+  <div class="cls-hw" style="display:block;background:var(--note);border-color:var(--note-line);">
+    <div class="n" style="margin-bottom:9px;">그날 수업 메모</div>
+    <div style="font-size:13px;color:var(--sub);line-height:1.75;white-space:pre-wrap;">${
+      note ? escHtml(note) : '<span class="muted">적어 둔 메모가 없습니다.</span>'}</div>
+  </div>` };
+}
+
+/* ── 1단계. 출결 ── */
+function sessionAttHTML(classId, date){
+  if(!state.allRecordsLoaded) return { body:'<div style="padding:48px 0;text-align:center;color:var(--dim);font-size:12.5px;">학생 기록을 불러오는 중입니다…</div>', bar:'' };
+  const { roster, cnt, none } = sessionDraftSummary(classId);
+  if(roster.length === 0) return { body:'<div style="padding:48px 0;text-align:center;color:var(--dim);font-size:12.5px;">이 반에 배정된 학생이 없습니다.</div>', bar:'' };
+
+  const tiles = roster.map(s=>{
+    const d = state.attDraft[s.studentId] || {status:null, reason:'', videoUrl:''};
+    const flag = d.status === '결석';
+    return `
+    <div class="tile ${flag?'flag':''}">
+      <div class="who"><b>${escHtml(s.name)}</b><span>${escHtml(s.school||'—')} ${escHtml(s.grade||'')}</span></div>
+      <div class="seg">${SESSION_SEG.map(g=>
+        `<button class="${d.status===g[0] ? 'on '+g[1] : ''}" title="${g[0]}" onclick="setAttStatus('${s.studentId}','${g[0]}')">${g[2]}</button>`
+      ).join('')}</div>
+      ${d.status && d.status !== '출석' ? `<div class="cls-sub">
+        <input placeholder="${d.status} 사유 (선택)" value="${escHtml(d.reason)}"
+          oninput="state.attDraft['${s.studentId}'].reason=this.value">
+        ${flag ? `<input placeholder="보충 영상 유튜브 링크 (선택)" value="${escHtml(d.videoUrl)}"
+          oninput="state.attDraft['${s.studentId}'].videoUrl=this.value">` : ''}
+      </div>` : ''}
+    </div>`;
+  }).join('');
+
+  const unsaved = sessionUnsavedCount(classId, date);
+  const bar = `<div class="actbar">
+    <span class="sum">${ATT_STATUSES.slice(0,4).map(s=>`${s} <b class="mono">${cnt[s]||0}</b>`).join(' · ')} · 미입력 <b class="mono">${none}</b></span>
+    ${none > 0 ? `<button class="btn sm" onclick="setAllRemainingPresent('${classId}')">남은 ${none}명 전체 출석 처리</button>` : ''}
+    <button class="btn sm" onclick="saveSessionAttendance('${classId}','${date}')">저장</button>
+    <span class="spacer"></span>
+    ${unsaved > 0 ? `<span class="hint" style="margin-left:0;color:var(--late);">저장 안 된 변경 ${unsaved}명분</span>` : ''}
+    <button class="btn p" onclick="saveSessionAttendance('${classId}','${date}','prog')">저장하고 진도로 ${iconSvg('arrowR',15)}</button>
+  </div>`;
+  return { body:`<div class="cls-tiles">${tiles}</div>`, bar };
+}
+
+/* ── 2단계. 진도 — 반 관리의 진도 체크리스트와 같은 데이터를 본다 ── */
+function sessionProgHTML(classId){
+  const { subject, chapters, doneMap, doneCount, percent } = getClassProgress(classId);
+  const body = !subject
+    ? `<div style="max-width:280px;">
+        <div class="t-sec">과목</div>
+        <span class="field rst-selwrap" style="width:100%;">
+          <select class="rst-sel" style="flex:1;" onchange="setClassProgressSubject('${classId}', this.value)">
+            <option value="">-- 과목 선택 --</option>
+            ${UNITS.map(u=>`<option value="${u}">${u}</option>`).join('')}
+          </select>
+        </span>
+        <div style="margin-top:14px;font-size:12.5px;color:var(--dim);line-height:1.7;">과목을 고르면 단원 체크리스트가 나옵니다.</div>
+      </div>`
+    : `<div style="display:flex;align-items:center;gap:14px;margin-bottom:16px;flex-wrap:wrap;">
+        <span class="field rst-selwrap" style="width:220px;">
+          <select class="rst-sel" style="flex:1;" onchange="setClassProgressSubject('${classId}', this.value)">
+            ${UNITS.map(u=>`<option value="${u}" ${subject===u?'selected':''}>${u}</option>`).join('')}
+          </select>
+        </span>
+        <span class="bar" style="flex:1;min-width:120px;max-width:280px;"><i style="width:${percent}%"></i></span>
+        <span class="mono sub" style="font-size:12.5px;">${doneCount} / ${chapters.length}단원 · ${percent}%</span>
+      </div>
+      <div class="cls-chaps">${chapters.map(u=>`
+        <label class="cls-chap ${doneMap[u]?'on':''}">
+          <span class="cb ${doneMap[u]?'on':''}"></span>
+          <input type="checkbox" style="display:none;" ${doneMap[u]?'checked':''}
+            onchange="toggleClassProgressUnit('${classId}','${escHtml(u)}', this.checked)">
+          ${u}
+        </label>`).join('')}</div>`;
+  const bar = `<div class="actbar">
+    <span class="sum">${subject ? `${escHtml(subject)} · <b class="mono">${doneCount}/${chapters.length}</b>단원` : '과목 미지정'}</span>
+    <span class="hint">체크하면 바로 저장됩니다</span>
+    <span class="spacer"></span>
+    <button class="btn p" onclick="goSessionStep('hw')">과제로 ${iconSvg('arrowR',15)}</button>
+  </div>`;
+  return { body, bar };
+}
+
+/* ── 3단계. 과제 ── */
+function sessionHwHTML(classId, date){
+  const roster = DATA.students.filter(s=>s.classId===classId);
+  const hws = DATA.assignments.filter(a=>!a.classId || a.classId===classId);
+  const body = `
+  <div class="t-sec">이 수업에서 낼 과제</div>
+  <div class="cls-hw" style="display:block;">
+    <div class="cls-form">
+      <label style="flex:2;min-width:200px;"><span>과제명</span>
+        <input id="cls-hw-title" placeholder="예: 3단원 오답노트 정리"></label>
+      <label style="min-width:150px;"><span>마감일</span>
+        <input id="cls-hw-due" type="date" value="${date}"></label>
+      ${/* 대상 반은 이 화면에서 고를 일이 없다 — 지금 하는 수업의 반이다. 숨겨서 addHomework에 넘긴다. */''}
+      <select id="cls-hw-class" style="display:none;">${classOptionsHTML(classId)}</select>
+    </div>
+    <div class="cls-form"><label style="flex:1;"><span>설명 (선택)</span>
+      <textarea id="cls-hw-desc" rows="2" placeholder="과제 상세 내용"></textarea></label></div>
+    <button class="btn p sm" style="margin-top:11px;" onclick="addHomework('cls-')">${iconSvg('plus',13)} 이 반에 과제 등록</button>
+  </div>
+
+  <div class="t-sec" style="margin-top:24px;">이 반의 과제 <span class="mono">${hws.length}</span></div>
+  ${hws.length === 0 ? `<div style="padding:32px 0;text-align:center;color:var(--dim);font-size:12.5px;">아직 낸 과제가 없습니다.</div>`
+    : hws.map(h=>{
+        const done = roster.filter(s=>{
+          const rec = state.allRecords[s.studentId];
+          return rec && rec.assignmentsDone && rec.assignmentsDone[h.id];
+        }).length;
+        return `<div class="cls-hw">
+          <div class="n">${escHtml(h.title)}<s>${h.classId ? '이 반' : '전체 반'}${h.dueDate ? ' · 마감 ' + h.dueDate : ''}${h.createdAt ? ' · 등록 ' + h.createdAt : ''}</s></div>
+          <span class="mono sub" style="font-size:12.5px;white-space:nowrap;">${done}/${roster.length} 제출</span>
+          <span class="bar" style="width:70px;flex-shrink:0;"><i style="width:${roster.length?Math.round(done/roster.length*100):0}%"></i></span>
+        </div>`;
+      }).join('')}`;
+  const bar = `<div class="actbar">
+    <span class="sum">과제 <b class="mono">${hws.length}</b>건</span>
+    <span class="spacer"></span>
+    <button class="btn p" onclick="goSessionStep('memo')">메모로 ${iconSvg('arrowR',15)}</button>
+  </div>`;
+  return { body, bar };
+}
+
+/* ── 4단계. 메모 ── */
+function sessionMemoHTML(classId, date){
+  const key = classId + '|' + date;
+  const loading = state.sessionNoteLoading[classId] || !state.sessionNotes[classId];
+  const text = sessionNoteText(classId, date);
+  const body = loading
+    ? '<div style="padding:48px 0;text-align:center;color:var(--dim);font-size:12.5px;">메모를 불러오는 중입니다…</div>'
+    : `<div class="t-sec">${date} 수업 메모</div>
+       <textarea class="cls-memo" id="cls-memo" placeholder="오늘 수업에서 있었던 일 · 다음 시간에 이어서 할 것"
+         oninput="sessionNoteInput('${key}', this.value)">${escHtml(text)}</textarea>
+       <div style="margin-top:9px;font-size:11.5px;color:var(--dim);">지난 수업 확인 단계에서 다시 읽게 됩니다.</div>`;
+  const bar = `<div class="actbar">
+    <span class="sum">${loading ? '' : (text.trim() ? `<b class="mono">${text.trim().length}</b>자` : '아직 비어 있습니다')}</span>
+    <span class="spacer"></span>
+    <button class="btn p" ${loading?'disabled':''} onclick="saveSessionNote('${classId}','${date}')">메모 저장</button>
+  </div>`;
+  return { body, bar };
+}
+
 /* ---------- 반 관리 ---------- */
 function teacherClassesHTML(){
   return `
@@ -4729,18 +5238,15 @@ function setAllStatus(classId, status){
   });
   render();
 }
-function teacherAttendanceHTML(fixedClassId, fixedDate){
+/* 반 관리 > 수업 기록 > 출석 전용. 반과 날짜는 «부르는 쪽»이 정한다 —
+   자체 반·날짜 선택기가 있었지만 그것을 쓰던 유일한 화면이 수업 탭이었고,
+   수업은 02-class로 옮겨 가면서 왼쪽 시간표와 날짜 네비가 그 일을 대신한다.
+   여기 5상태(퇴원 포함)와 일괄 변경은 그대로 둔다 — 수업 화면에는 일부러 넣지 않은 것들이다. */
+function teacherAttendanceHTML(classId, date){
   loadAllRecordsIfNeeded();
-  const classId = fixedClassId || state.attendanceClassId;
-  const date = fixedDate || state.attendanceDate || todayStr();
   const roster = classId ? DATA.students.filter(s=>s.classId===classId) : [];
   if(classId && state.allRecordsLoaded) ensureAttDraft(classId, date);
   const body = `
-    ${!fixedClassId ? `<div class="lg-field" style="max-width:220px;margin-bottom:14px;"><label>반</label><select onchange="state.attendanceClassId=this.value; render()">
-      <option value="">-- 반 선택 --</option>
-      ${DATA.classes.map(c=>`<option value="${c.id}" ${classId===c.id?'selected':''}>${escHtml(c.name)}</option>`).join('')}
-    </select></div>` : ''}
-    ${!fixedDate ? `<div class="lg-field" style="max-width:200px;margin-bottom:14px;"><label>날짜</label><input type="date" value="${date}" onchange="state.attendanceDate=this.value; render()"></div>` : ''}
     ${!classId ? '<div class="empty">반을 선택해주세요.</div>' :
       !state.allRecordsLoaded ? '<div class="empty">학생 기록을 불러오는 중입니다...</div>' :
       roster.length===0 ? '<div class="empty">이 반에 배정된 학생이 없습니다.</div>' : `
