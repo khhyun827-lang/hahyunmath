@@ -2095,6 +2095,12 @@ async function submitClinicRequest(freeform){
     if(DATA.clinics.some(c=>c.studentId===sid && c.day===day && c.time===time && c.status!=='취소')){
       showToast('이미 같은 날짜·시간으로 신청하셨습니다.'); return;
     }
+    /* 승인된 제안은 그 시간에 슬롯을 만들어 잠근다. 그 자리가 꽉 찼으면 다른 학생이
+       같은 시간을 또 제안하지 못하게 여기서 막는다 — 안 막으면 승인이 겹친다. */
+    const taken = DATA.clinicSlots.find(s=>s.date===day && (s.time||'').trim()===time);
+    if(taken && clinicSlotBookedCount(taken.id) >= taken.capacity){
+      showToast('그 시간은 이미 찼습니다. 다른 시간을 적어 주세요.'); return;
+    }
   } else {
     slotId = document.getElementById('clinic-slot').value;
     if(!slotId){ showToast('희망 시간대를 선택해주세요.'); return; }
@@ -2119,7 +2125,7 @@ async function submitClinicRequest(freeform){
    고르지 않으면 날짜·시간을 직접 적어 슬롯 없이 잡는다. 교사가 넣는 것이므로 바로 «승인»이다. */
 async function assignClinic(){
   const sid = document.getElementById('cn-assign-student').value;
-  const slotId = document.getElementById('cn-assign-slot').value;
+  let slotId = document.getElementById('cn-assign-slot').value;   // 직접 입력이면 아래에서 슬롯을 만들어 채운다
   const topic = document.getElementById('cn-assign-topic').value.trim();
   let day = document.getElementById('cn-assign-date').value;
   let time = document.getElementById('cn-assign-time').value.trim();
@@ -2130,6 +2136,12 @@ async function assignClinic(){
     day = slot.date; time = slot.time;
   } else if(!day || !time){
     showToast('시간대를 고르거나 날짜·시간을 직접 입력해주세요.'); return;
+  } else {
+    /* 직접 입력이어도 슬롯을 만들어 붙인다 — 승인된 클리닉은 슬롯을 갖는다는 규칙을 여기서도 지킨다. */
+    const slot = await ensureClinicSlot(day, time);
+    const booked = clinicSlotBookedCount(slot.id);
+    if(booked >= slot.capacity){ slot.capacity = booked + 1; await dbSetDoc('clinicslots', slot.id, slot); }
+    slotId = slot.id;
   }
   const clinic = {id:'cl'+Date.now(), studentId:sid, name:studentNameOf(sid), topic:topic||'클리닉',
                   slotId, day, time, status:'승인', requestedAt:todayStr()};
@@ -2141,11 +2153,45 @@ async function assignClinic(){
   showToast(`${studentNameOf(sid)} — ${day} ${time}에 배정했습니다.`);
   render();
 }
+/* 같은 날짜·시간의 슬롯을 찾고, 없으면 만든다.
+   ⚠ time이 자유 텍스트라 «저녁 7시»와 «저녁7시»는 다른 시간으로 본다.
+   형식을 강제하는 곳이 없어서 정규화하려 들면 오히려 엉뚱한 것을 합친다 — 문자열 그대로 맞춘다. */
+async function ensureClinicSlot(day, time){
+  const t = (time||'').trim();
+  const found = DATA.clinicSlots.find(s=>s.date===day && (s.time||'').trim()===t);
+  if(found) return found;
+  const slot = {id:'cs'+Date.now(), date:day, time:t, capacity:1};
+  DATA.clinicSlots.push(slot);
+  DATA.clinicSlots.sort((a,b)=> a.date===b.date ? a.time.localeCompare(b.time) : a.date.localeCompare(b.date));
+  await dbSetDoc('clinicslots', slot.id, slot);
+  return slot;
+}
+
+/* **승인된 클리닉은 슬롯을 갖는다.** 학생이 직접 제안한 시간(slotId 없음)을 승인하면
+   그 자리에 시간대를 만들어 붙인다 — 안 그러면 다른 학생이 같은 시간에 또 제안할 수 있고,
+   주간 판에서도 점선(「시간대 밖」)으로만 떠서 자리가 잡힌 것으로 안 읽힌다.
+   새로 만드는 슬롯의 정원은 1이다. 한 사람의 제안을 받아 준 자리이므로 그 사람으로 찬다. */
 async function updateClinicStatus(cid, status){
   const c = DATA.clinics.find(c=>c.id===cid);
   if(!c) return;
+  let note = '';
+  if(status==='승인' && !c.slotId && c.day && c.time){
+    const slot = await ensureClinicSlot(c.day, c.time);
+    const booked = clinicSlotBookedCount(slot.id);
+    if(booked >= slot.capacity){
+      /* 이미 있던 시간대가 꽉 찼는데 교사가 승인했다 — 승인을 무르지 않고 정원을 한 자리 늘린다.
+         조용히 넘기면 «승인했는데 왜 안 들어가 있지»가 된다. 늘렸다는 사실을 말해 준다. */
+      slot.capacity = booked + 1;
+      await dbSetDoc('clinicslots', slot.id, slot);
+      note = ` (정원이 차 있어 ${slot.capacity}명으로 늘렸습니다)`;
+    } else {
+      note = ` · ${c.day} ${c.time} 시간대를 만들어 자리를 잡았습니다`;
+    }
+    c.slotId = slot.id;
+  }
   c.status = status;
   await dbSetDoc('clinics', c.id, c);
+  if(note) showToast(`${c.name} 승인${note}`);
   render();
 }
 async function cancelClinicRequest(cid){
