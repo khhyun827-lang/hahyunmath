@@ -398,6 +398,56 @@
 .app .rv-warn span{display:block;font-size:11.5px;line-height:1.6;color:var(--sub);}
 @media (max-width:1240px){ .app .rv-queues{display:none;} }
 
+/* ---------- 학생 상세 (design-v1/03-student) — 디자인 시스템의 기준 화면 ---------- */
+.app .sd-screen{display:flex;height:calc(100vh - 92px);}
+.app .sd-list{width:258px;flex-shrink:0;border-right:1px solid var(--line);
+  display:flex;flex-direction:column;min-height:0;padding-right:14px;}
+.app .sd-lh{flex-shrink:0;padding-bottom:10px;}
+.app .sd-lbody{flex:1;min-height:0;overflow-y:auto;margin-right:-6px;padding-right:6px;}
+.app .sd-doc{flex:1;min-width:0;min-height:0;padding:0 24px;display:flex;flex-direction:column;}
+.app .sd-dh{display:flex;align-items:flex-start;gap:16px;flex-shrink:0;}
+.app .sd-dh .tags{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;}
+/* 신호 — 별도 보드를 만들지 않고 학생 화면 안에 «근거 문장»으로 앉힌다 (A5에서 흡수). */
+.app .sd-sig{display:flex;align-items:center;gap:11px;margin-top:12px;padding:10px 14px;
+  border-radius:var(--r-md);flex-shrink:0;flex-wrap:wrap;}
+.app .sd-sig.r{background:var(--nobg);border:1px solid var(--no-line);}
+.app .sd-sig.y{background:var(--latebg);border:1px solid var(--late-line);}
+.app .sd-sig.g{background:var(--sunk);border:1px solid var(--line);}
+.app .sd-sig .x{flex:1;min-width:180px;font-size:12.5px;color:var(--sub);line-height:1.55;}
+.app .sd-sig .x b{font-weight:700;color:var(--ink);font-family:'JetBrains Mono',monospace;}
+.app .sd-tf{display:flex;align-items:center;gap:6px;margin-top:18px;flex-shrink:0;flex-wrap:wrap;}
+.app .sd-tf .r{margin-left:auto;font-size:12px;color:var(--dim);}
+.app .sd-tl{flex:1;min-height:0;margin-top:14px;overflow-y:auto;}
+/* 연대기 — 하루가 한 덩어리, 그 안에 그날 있었던 일이 종류를 가리지 않고 쌓인다. */
+.app .sd-day{display:flex;align-items:center;gap:9px;padding:18px 2px 7px;
+  border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--paper);z-index:2;}
+.app .sd-day b{font-size:12px;font-weight:700;}
+.app .sd-day span{font-size:11.5px;color:var(--dim);}
+.app .sd-ev{display:flex;align-items:flex-start;gap:12px;padding:11px 2px;
+  border-bottom:1px solid var(--line2);transition:background var(--t);}
+.app .sd-ev:hover{background:var(--hover);}
+.app .sd-ev .kind{width:52px;flex-shrink:0;font-size:11px;color:var(--dim);padding-top:4px;}
+.app .sd-ev .body{flex:1;min-width:0;}
+.app .sd-ev .ti{font-size:13.5px;font-weight:600;}
+.app .sd-ev .de{font-size:12px;color:var(--sub);margin-top:4px;line-height:1.6;}
+.app .sd-ev .de b{font-family:'JetBrains Mono',monospace;color:var(--ink);font-weight:600;}
+.app .sd-ev .st{flex-shrink:0;}
+
+.app .sd-ctx{width:296px;flex-shrink:0;border-left:1px solid var(--line);padding-left:20px;
+  overflow-y:auto;min-height:0;}
+.app .sd-crow{display:flex;justify-content:space-between;align-items:baseline;gap:10px;
+  padding:6px 0;font-size:12.5px;}
+.app .sd-crow span{color:var(--dim);flex-shrink:0;}
+.app .sd-crow b{text-align:right;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.app .sd-crow b.m{font-family:'JetBrains Mono',monospace;font-weight:600;}
+.app .sd-qa{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.app .sd-qa .btn{width:100%;}
+/* 입력 폼은 연대기 «위»에 붙는다 — 지금 보고 있는 갈래에 무엇을 더할지가 분명해진다. */
+.app .sd-form{background:var(--card);border:1px solid var(--line);border-radius:var(--r-lg);
+  padding:13px 15px;margin-top:14px;flex-shrink:0;}
+@media (max-width:1280px){ .app .sd-ctx{display:none;} }
+@media (max-width:1020px){ .app .sd-list{display:none;} }
+
 .app .actbar{position:fixed;z-index:6;flex-wrap:wrap;}
 /* 고정된 액션바가 마지막 행을 가리지 않게, 스크롤 영역 «안»에 여백을 둔다. */
 .app .rst-pad{height:64px;flex-shrink:0;}
@@ -1248,6 +1298,7 @@ let state = {
   /* 오답 검토(04-review) — 큐 하나를 골라 그 안을 J/K로 훑는다 */
   reviewQueue: 'pending',
   reviewSelectedId: null,
+  sdFilter: 'all',           // 학생 상세 연대기의 갈래
   ytPlayers: null,
   attDraft: {},
   attDraftKey: null,
@@ -3996,9 +4047,9 @@ function teacherHTML(){
   const subs = TEACHER_SUBNAV[section];
   const subActive = s => state.teacherTab===s[1] && (!s[2] || state.classHubTab===s[2]);
   const body = teacherTabBodyHTML();
-  /* 학생 상세(03-student)는 아직 안 옮겼다. 명단에서 학생을 열면 구버전 화면이 나오므로
-     그때는 DS 취급을 풀어 .legacy 래퍼를 다시 씌운다 — 안 그러면 스타일 없이 그려진다. */
-  const onDs = TEACHER_TABS_DS.has(state.teacherTab) && !state.studentDetailId;
+  /* 학생 상세(03-student)도 옮겼으므로 예외가 없어졌다.
+     조교용 구버전 학생 화면은 teacherStudentDetailLegacyHTML이 스스로 .legacy를 두른다. */
+  const onDs = TEACHER_TABS_DS.has(state.teacherTab);
 
   return `
   <div class="app">
@@ -4359,10 +4410,19 @@ function rosterSearch(v){
   const el = document.getElementById('rst-search');
   if(el){ el.focus(); el.setSelectionRange(el.value.length, el.value.length); }
 }
+/* 명단·신호·수업에서 학생을 열 때 쓰던 «탭 이름»을 학생 상세의 새 모델로 옮긴다.
+   탭이 사라지고 연대기 + 갈래가 됐으므로, 옛 탭 이름은 «어느 갈래로 열 것인가»가 된다. */
+const ROSTER_OPEN_MAP = {
+  info:['timeline','all'], attendance:['timeline','att'], grades:['timeline','score'],
+  wronghw:['timeline','hw'], homework:['timeline','hw'], clinic:['timeline','qna'],
+  chat:['chat','all']
+};
 function rosterOpen(sid, tab){
+  const m = ROSTER_OPEN_MAP[tab||'info'] || ROSTER_OPEN_MAP.info;
   state.studentDetailId = sid;
   state.teacherSelectedStudent = sid;
-  state.studentDetailTab = tab || 'info';
+  state.studentDetailTab = m[0];
+  state.sdFilter = m[1];
   render();
 }
 /* Shift+클릭 범위 선택. 기준은 «지금 보이는 순서»다 — 필터나 정렬이 바뀌면 기준을 버린다. */
@@ -5366,6 +5426,86 @@ function classOptionsHTML(selectedId){
 }
 
 /* ---------- 학생 상세 (반 관리 > 학생 명단에서 진입) ---------- */
+/* =================== 학생 상세 (design-v1/03-student) ===================
+   디자인 시스템의 «기준 화면»이고, 이 시스템 전체가 그 사상 위에 있다 —
+   **탭을 없애고 하나의 연대기로 합친다.** 출결·성적·과제·오답·퀴즈·질문·클리닉이
+   종류를 가리지 않고 날짜 순으로 한 줄기에 쌓인다. 「이 학생에게 무슨 일이 있었나」는
+   원래 시간 순 질문이지, 탭을 일곱 번 눌러 맞춰 볼 질문이 아니다.
+
+   **탭을 없애면서 잃을 뻔한 것 — 입력.** 예전 탭에는 성적 추가/삭제, 출결 추가/삭제,
+   과제 완료 토글, 기본정보 수정, 학생 삭제, 채팅이 들어 있었다. 전부 살렸다.
+     · 연대기 위의 갈래(전체/출결/성적/과제·오답/질문·클리닉)를 고르면
+       그 갈래의 «입력 폼»이 연대기 위에 붙는다 — 무엇을 더할지가 분명해진다
+     · 기본정보·채팅은 연대기와 성격이 다르다(하나는 폼, 하나는 말풍선).
+       오른쪽 «빠른 작업»에서 모드로 전환한다
+   신호는 별도 보드를 만들지 않고 여기 근거 문장으로 앉힌다 (A5에서 흡수). */
+
+const SD_FILTERS = [['all','전체'],['att','출결'],['score','성적'],['hw','과제·오답'],['qna','질문·클리닉']];
+
+/* 한 사람에게 일어난 일을 전부 «날짜가 붙은 사건»으로 바꾼다.
+   kind는 갈래 필터용, type은 화면에 찍는 이름이다. */
+function studentTimeline(s, rec){
+  const sid = s.studentId, ev = [];
+  const push = (date, kind, type, title, desc, badge, act) => { if(date) ev.push({date, kind, type, title, desc, badge, act}); };
+
+  /* 삭제는 «배열 인덱스»로 지운다 — 연대기는 날짜순으로 다시 세우므로 원래 인덱스를 들고 다녀야 한다.
+     이걸 빠뜨리면 탭에 있던 성적·출결 삭제가 사라진다. */
+  (rec.attendance||[]).forEach((a,i)=>{
+    push(a.date, 'att', '출결', a.status + (a.reason ? ' — ' + escHtml(a.reason) : ''),
+      a.note ? escHtml(a.note) : '', ['출석','지각','조퇴','결석','퇴원'].includes(a.status)
+        ? `<span class="badge ${attStatusClass(a.status)==='drop'?'gone':attStatusClass(a.status)}">${a.status}</span>` : '',
+      `<button class="btn q sm" onclick="deleteAttendance('${sid}',${i})">삭제</button>`);
+  });
+  (rec.scores||[]).forEach((sc,i)=>{
+    const pct = sc.total ? Math.round(sc.score/sc.total*100) : null;
+    push(sc.date, 'score', '성적', escHtml(sc.name||'시험'),
+      `<b>${sc.score}</b> / ${sc.total}${pct!==null?` · <b>${pct}%</b>`:''}`,
+      pct!==null ? `<span class="badge score">${pct}%</span>` : '',
+      `<button class="btn q sm" onclick="deleteScore('${sid}',${i})">삭제</button>`);
+  });
+  DATA.assignments.filter(a=>!a.classId || a.classId===s.classId).forEach(a=>{
+    const done = rec.assignmentsDone && rec.assignmentsDone[a.id];
+    push(a.createdAt || a.dueDate, 'hw', '과제', escHtml(a.title),
+      a.dueDate ? `마감 ${a.dueDate}` : '',
+      done ? '<span class="badge ok">완료</span>' : '<span class="badge no">미완료</span>');
+  });
+  (rec.wrongHomework||[]).forEach(h=>{
+    const bank = DATA.problemBank.find(b=>b.id===h.bankId);
+    const exam = DATA.exams.find(e=>e.id===h.examId);
+    const correct = h.done && bank && (h.studentAnswer||'').trim()===(bank.variantAnswer||'').trim();
+    push(h.assignedAt, 'hw', '오답', (exam?escHtml(exam.title):'(삭제된 시험지)') + ' ' + h.questionNo + '번',
+      h.done ? `제출 <b>${escHtml(h.studentAnswer||'')}</b>` : '아직 제출하지 않았습니다',
+      h.done ? `<span class="badge ${correct?'ok':'no'}">${correct?'정답':'오답'}</span>` : '<span class="badge">미제출</span>');
+  });
+  Object.keys(rec.quizAnswers||{}).forEach(qid=>{
+    const q = DATA.quizzes.find(x=>x.id===qid); const a = rec.quizAnswers[qid];
+    push(a.submittedAt, 'hw', '퀴즈', q ? escHtml(q.title) : '데일리퀴즈',
+      `제출 <b>${escHtml(a.answer||'')}</b>`, '<span class="badge">제출</span>');
+  });
+  DATA.qnas.filter(q=>q.studentId===sid).forEach(q=>{
+    push(q.date, 'qna', '질문', escHtml(q.question),
+      q.answer ? `답변 ${q.answeredAt||''} — ${escHtml(q.answer)}` : '',
+      q.answer ? '<span class="badge ok">답변 완료</span>' : '<span class="badge no">답변 대기</span>');
+  });
+  DATA.clinics.filter(c=>c.studentId===sid).forEach(c=>{
+    push(c.day, 'qna', '클리닉', escHtml(c.topic||'클리닉'),
+      escHtml(c.time||''), `<span class="badge ${c.status==='승인'||c.status==='완료'?'ok':(c.status==='취소'?'gone':'late')}">${c.status}</span>`);
+  });
+
+  ev.sort((a,b)=> b.date.localeCompare(a.date));   // 최근이 위
+  return ev;
+}
+
+function sdOpen(sid, filter){
+  state.studentDetailId = sid;
+  state.teacherSelectedStudent = sid;
+  state.studentDetailTab = 'timeline';
+  if(filter) state.sdFilter = filter;
+  render();
+}
+function sdMode(mode){ state.studentDetailTab = mode; render(); }
+function sdFilter(f){ state.sdFilter = f; render(); }
+
 function teacherStudentDetailHTML(sid){
   const s = DATA.students.find(s=>s.studentId===sid);
   if(!s){ state.studentDetailId=null; return state.teacherTab==='settings' ? teacherSettingsHTML() : teacherClassHubHTML(); }
@@ -5376,6 +5516,13 @@ function teacherStudentDetailHTML(sid){
     return assistantHTML();
   }
   const rec = DATA.records[sid];
+  if(rec && !isAssistant) return sdScreenHTML(s, rec);
+  return teacherStudentDetailLegacyHTML(sid, s, isAssistant, rec);
+}
+
+/* 조교는 담당 반 학생만, 그것도 성적·출석·과제·오답만 본다. 권한이 다르므로
+   구버전 탭 화면을 그대로 쓴다 — DS 화면은 삭제·기본정보까지 열어 두기 때문이다. */
+function teacherStudentDetailLegacyHTML(sid, s, isAssistant, rec){
   const subtabs = isAssistant
     ? [['grades','성적'],['attendance','출석'],['homework','과제'],['wronghw','오답숙제']]
     : [['info','기본정보'],['grades','성적'],['attendance','출석'],['homework','과제'],['wronghw','오답숙제'],['clinic','클리닉·질문'],['chat','채팅']];
@@ -5387,7 +5534,7 @@ function teacherStudentDetailHTML(sid){
     // "상세보기"는 상태만 바꾸고 render()만 부르지, 그 학생 기록을 실제로 불러오진 않아서
     // 여기서 직접 불러온 뒤 끝나면 다시 그린다 — 이걸 안 하면 "불러오는 중..."에서 영원히 멈춘다.
     loadRecord(sid).then(()=>render());
-    return `<div class="empty">불러오는 중...</div>`;
+    return `<div style="padding:56px 0;text-align:center;color:var(--dim);font-size:12.5px;">학생 기록을 불러오는 중입니다…</div>`;
   }
   if(state.studentDetailTab==='info'){
     sub = `<div class="inline-form">
@@ -5495,7 +5642,9 @@ function teacherStudentDetailHTML(sid){
     </div>`;
   }
   const isLedgerTab = ['grades','attendance','homework','wronghw'].includes(state.studentDetailTab);
-  return `
+  /* 스스로 .legacy를 두른다 — 부르는 쪽(DS 화면)에는 더 이상 래퍼가 없다.
+     이미 .legacy 안이면 중첩되지만 해가 없다. */
+  return `<div class="legacy">
   <div class="lg-panel${isLedgerTab?' ledger':''}">
     <div class="student-detail-header">
       <h3 style="margin:0;">${s.name} (${s.studentId}) · ${classNameOf(s.classId)}</h3>
@@ -5505,6 +5654,213 @@ function teacherStudentDetailHTML(sid){
       ${subtabs.map(t=>`<button class="subtab-btn ${state.studentDetailTab===t[0]?'active':''}" onclick="state.studentDetailTab='${t[0]}'; render()">${t[1]}</button>`).join('')}
     </div>
     ${sub}
+  </div></div>`;
+}
+
+/* ── DS 화면 ── */
+function sdScreenHTML(s, rec){
+  const sid = s.studentId;
+  const mode = state.studentDetailTab==='chat' || state.studentDetailTab==='info' ? state.studentDetailTab : 'timeline';
+  const st = rosterStats(s);
+  const sg = signalOf(st);
+  const prog = st.prog;
+
+  /* 좌측 목록 — 명단에서 들어와도 맥락을 잃지 않는다. 같은 반이 기본, 없으면 전체. */
+  const peers = (s.classId ? DATA.students.filter(x=>x.classId===s.classId) : DATA.students)
+    .slice().sort((a,b)=>(a.name||'').localeCompare(b.name||'','ko'));
+  const list = `<aside class="sd-list">
+    <div class="sd-lh">
+      <button class="btn q sm" onclick="state.studentDetailId=null; render()">${iconSvg('chevL',13)} 명단으로</button>
+      <div class="t-sec" style="margin:12px 0 0;">${s.classId ? escHtml(classNameOf(s.classId)) : '전체'} · ${peers.length}명</div>
+    </div>
+    <div class="sd-lbody">
+      ${peers.map(p=>{
+        const pst = rosterStats(p); const psg = signalOf(pst);
+        return `<div class="li ${p.studentId===sid?'on':''}" onclick="sdOpen('${p.studentId}')">
+          <span class="av">${escHtml((p.name||'?').slice(0,1))}</span>
+          <span class="t"><b>${escHtml(p.name)}</b><span>${escHtml(p.school||'—')} ${escHtml(p.grade||'')}</span></span>
+          ${psg ? `<span class="rk ${psg.grade}"></span>` : ''}
+        </div>`;
+      }).join('')}
+    </div>
+  </aside>`;
+
+  const head = `
+  <div class="sd-dh">
+    <div class="av lg">${escHtml((s.name||'?').slice(0,1))}</div>
+    <div style="min-width:0;">
+      <h1 class="t-title">${escHtml(s.name)}</h1>
+      <div class="t-meta" style="margin-top:6px;">${escHtml(s.school||'학교 미입력')} ${escHtml(s.grade||'')}<s>·</s>${escHtml(classNameOf(s.classId))}<s>·</s><span class="mono">${escHtml(sid)}</span></div>
+    </div>
+    <div class="tags">
+      <span class="tag">${st.withdrawn ? '퇴원' : '재원 중'}</span>
+      ${sg ? `<span class="tag ${sg.grade==='r'?'warn':'cau'}">${SIGNAL_GRADE[sg.grade].label} 신호 ${sg.rules.length}</span>` : ''}
+    </div>
+  </div>
+
+  <div class="kpis" style="margin-top:18px;flex-shrink:0;">
+    <div class="kpi"><div class="k">최근 성적</div><div class="v">${st.scores.length?st.scores[st.scores.length-1]:'—'}<s>${st.scores.length?'/100':''}</s></div></div>
+    <div class="kpi"><div class="k">출석률</div><div class="v ${st.attPct!==null&&st.attPct<80?'down':''}">${st.attPct===null?'—':st.attPct}<s>${st.attPct===null?'':'%'}</s></div></div>
+    <div class="kpi"><div class="k">과제</div><div class="v">${st.hwTotal?st.hwDone:'—'}<s>${st.hwTotal?'/'+st.hwTotal:''}</s></div></div>
+    <div class="kpi"><div class="k">오답 미제출</div><div class="v ${st.wrongLeft?'down':''}">${st.wrongLeft||0}<s>건</s></div></div>
+    <div class="kpi"><div class="k">강의 시청</div><div class="v ${st.vidPct!==null&&st.vidPct<50?'down':''}">${st.vidPct===null?'—':st.vidPct}<s>${st.vidPct===null?'':'%'}</s></div></div>
+  </div>
+
+  ${sg ? `<div class="sd-sig ${sg.grade}">
+    <span class="badge ${SIGNAL_GRADE[sg.grade].badge}">${SIGNAL_GRADE[sg.grade].label}</span>
+    <div class="x">${sg.rules.map(r=>r.why).join(' · ')}</div>
+    ${signalMutedUntil(sid)
+      ? `<button class="btn sm" onclick="unmuteSignal('${sid}')">신호 다시 보기</button>`
+      : `<button class="btn q sm" onclick="muteSignal('${sid}',7)">7일 해제</button>`}
+  </div>` : ''}`;
+
+  const ctx = `<aside class="sd-ctx">
+    <div class="t-sec">연락처</div>
+    <div class="sd-crow"><span>학부모</span><b class="m">${escHtml(s.parentPhone||'—')}</b></div>
+    <div class="sd-crow"><span>학생</span><b class="m">${escHtml(s.phone||'—')}</b></div>
+    <hr class="s">
+    <div class="t-sec">반 · 진도</div>
+    <div class="sd-crow"><span>반</span><b>${escHtml(classNameOf(s.classId))}</b></div>
+    <div class="sd-crow"><span>수업</span><b class="m">${escHtml((DATA.classes.find(c=>c.id===s.classId)||{}).schedule||'—')}</b></div>
+    ${prog && prog.subject ? `
+      <div style="margin-top:12px;display:flex;justify-content:space-between;font-size:12.5px;">
+        <span class="muted">${escHtml(prog.subject)} 진도</span><b class="mono">${prog.percent}%</b></div>
+      <div class="bar" style="margin-top:8px;"><i style="width:${prog.percent}%"></i></div>
+      ${(()=>{ const nx = prog.chapters.find(u=>!prog.doneMap[u]);
+        return nx ? `<div style="margin-top:7px;font-size:11.5px;color:var(--dim);">다음 단원 · ${escHtml(nx)}</div>` : ''; })()}
+    ` : '<div style="margin-top:10px;font-size:11.5px;color:var(--dim);">반 진도 과목이 정해지지 않았습니다.</div>'}
+    <hr class="s">
+    <div class="t-sec">빠른 작업</div>
+    <div class="sd-qa">
+      <button class="btn ${mode==='chat'?'p':''}" onclick="sdMode('${mode==='chat'?'timeline':'chat'}')">${mode==='chat'?'연대기로':'채팅'}</button>
+      <button class="btn ${mode==='info'?'p':''}" onclick="sdMode('${mode==='info'?'timeline':'info'}')">${mode==='info'?'연대기로':'기본정보'}</button>
+      <button class="btn" onclick="goTeacherTab('clinic')">클리닉</button>
+      <button class="btn" onclick="goTeacherTab('session')">수업 화면</button>
+    </div>
+    <hr class="s">
+    <div class="t-sec">출결 최근 8회</div>
+    <div style="margin-top:8px;">${rosterDots(st.att8)}</div>
+    <div class="rst-pad"></div>
+  </aside>`;
+
+  let center;
+  if(mode==='chat')      center = sdChatHTML(sid);
+  else if(mode==='info') center = sdInfoHTML(s, sid);
+  else                   center = sdTimelineHTML(s, sid, rec);
+
+  return `<div class="sd-screen">${list}
+    <main class="sd-doc">${head}${center}</main>
+    ${ctx}
+  </div>`;
+}
+
+function sdTimelineHTML(s, sid, rec){
+  const f = state.sdFilter || 'all';
+  const all = studentTimeline(s, rec);
+  const ev = f==='all' ? all : all.filter(e=>e.kind===f);
+
+  /* 갈래를 고르면 그 갈래의 입력 폼이 붙는다. 예전 탭에만 있던 입력을 여기서 되살린다. */
+  let form = '';
+  if(f==='score'){
+    form = `<div class="sd-form"><div class="cls-form" style="margin-top:0;">
+      <label style="flex:2;min-width:150px;"><span>시험명</span><input id="score-name" placeholder="예: 3월 모의고사"></label>
+      <label><span>날짜</span><input id="score-date" type="date"></label>
+      <label style="width:90px;"><span>점수</span><input id="score-val" type="number" placeholder="82"></label>
+      <label style="width:90px;"><span>만점</span><input id="score-total" type="number" placeholder="100"></label>
+      <button class="btn p sm" onclick="addScore()">등록</button>
+    </div></div>`;
+  } else if(f==='att'){
+    form = `<div class="sd-form"><div class="cls-form" style="margin-top:0;">
+      <label><span>날짜</span><input id="att-date" type="date"></label>
+      <label><span>상태</span><select id="att-status" style="border:1px solid var(--line);border-radius:var(--r-sm);background:var(--paper);padding:8px 10px;font-family:inherit;font-size:12.5px;">${ATT_STATUSES.map(x=>`<option>${x}</option>`).join('')}</select></label>
+      <button class="btn p sm" onclick="addAttendance()">기록</button>
+      <span class="muted" style="font-size:11.5px;align-self:center;">반 전체는 반 관리 &gt; 수업 기록에서 한 번에 넣습니다</span>
+    </div></div>`;
+  } else if(f==='hw'){
+    const myHw = DATA.assignments.filter(a=>!a.classId || a.classId===s.classId);
+    form = myHw.length===0 ? '' : `<div class="sd-form">
+      <div class="t-sec" style="margin:0 0 8px;">과제 완료 처리</div>
+      ${myHw.map(a=>{ const done = rec.assignmentsDone && rec.assignmentsDone[a.id];
+        return `<div class="sd-crow"><span style="color:var(--ink);flex:1;text-align:left;">${escHtml(a.title)}</span>
+          <button class="btn sm ${done?'ok':''}" onclick="toggleHomeworkDone('${sid}','${a.id}')">${done?'완료':'미완료'}</button></div>`;
+      }).join('')}</div>`;
+  }
+
+  return `
+  <div class="sd-tf">
+    ${SD_FILTERS.map(x=>`<a class="pill ${f===x[0]?'on':''}" onclick="sdFilter('${x[0]}')">${x[1]}${
+      x[0]==='all' ? ` <b>${all.length}</b>` : ` <b>${all.filter(e=>e.kind===x[0]).length}</b>`}</a>`).join('')}
+    <span class="r">최근 순</span>
+  </div>
+  ${form}
+  <div class="sd-tl">
+    ${ev.length===0 ? '<div style="padding:48px 0;text-align:center;color:var(--dim);font-size:12.5px;">기록이 없습니다.</div>'
+    : (()=>{
+        const days = [];
+        ev.forEach(e=>{ const d = days[days.length-1];
+          if(d && d.date===e.date) d.items.push(e); else days.push({date:e.date, items:[e]}); });
+        return days.map(d=>`
+          <div class="sd-day"><b class="mono">${d.date}</b>
+            <span>${WEEKDAY_LABEL[new Date(d.date+'T00:00:00').getDay()]}요일</span>
+            <span class="spacer"></span><span>${d.items.length}건</span></div>
+          ${d.items.map(e=>`<div class="sd-ev">
+            <div class="kind">${e.type}</div>
+            <div class="body"><div class="ti">${e.title}</div>
+              ${e.desc ? `<div class="de">${e.desc}</div>` : ''}</div>
+            <div class="st">${e.badge||''}${e.act||''}</div>
+          </div>`).join('')}`).join('');
+      })()}
+    <div class="rst-pad"></div>
+  </div>`;
+}
+
+function sdChatHTML(sid){
+  state.teacherSelectedStudent = sid;
+  let chat = DATA.chats[sid];
+  if(!chat){ loadChat(sid).then(()=>render()); chat = []; }
+  return `<div class="sd-tl" style="margin-top:18px;">
+    <div class="legacy">
+      <div class="chat-window" id="chat-win">
+        ${chat.length===0?'<div class="empty">대화 내역이 없습니다.</div>':
+        chat.map(m=>`<div class="chat-bubble from-${m.from}">${escHtml(m.text)}<span class="chat-time">${m.at}</span></div>`).join('')}
+      </div>
+      <div class="chat-input-row">
+        <input id="chat-input-teacher" placeholder="메시지 입력" onkeydown="if(event.key==='Enter') sendChatMessage('${sid}','teacher')">
+        <button class="lg-btn btn-primary" onclick="sendChatMessage('${sid}','teacher')">전송</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function sdInfoHTML(s, sid){
+  const personalVideos = DATA.videos.filter(v=>v.studentId===sid);
+  return `<div class="sd-tl" style="margin-top:18px;">
+    <div class="sd-form" style="margin-top:0;">
+      <div class="cls-form" style="margin-top:0;">
+        <label style="min-width:150px;"><span>이름</span><input id="info-sname" value="${escHtml(s.name)}"></label>
+        <label style="min-width:150px;"><span>비밀번호</span><input id="info-spw" placeholder="변경 시에만 입력"></label>
+        <label><span>학년</span><select id="info-sgrade" style="border:1px solid var(--line);border-radius:var(--r-sm);background:var(--paper);padding:8px 10px;font-family:inherit;font-size:12.5px;">${['고1','고2','고3'].map(g=>`<option ${s.grade===g?'selected':''}>${g}</option>`).join('')}</select></label>
+        <label style="min-width:150px;"><span>학교</span><input id="info-sschool" value="${escHtml(s.school||'')}" placeholder="학교명 (선택)"></label>
+      </div>
+      <div class="cls-form">
+        <label style="min-width:160px;"><span>학부모 전화</span><input id="info-sparentphone" value="${escHtml(s.parentPhone||'')}" placeholder="010-0000-0000"></label>
+        <label style="min-width:160px;"><span>학생 전화</span><input id="info-sphone" value="${escHtml(s.phone||'')}" placeholder="010-0000-0000"></label>
+        <label><span>반</span><select id="info-sclass" style="border:1px solid var(--line);border-radius:var(--r-sm);background:var(--paper);padding:8px 10px;font-family:inherit;font-size:12.5px;">${classOptionsHTML(s.classId)}</select></label>
+      </div>
+      <button class="btn p sm" style="margin-top:11px;" onclick="updateStudentInfo('${sid}')">저장</button>
+      <div style="margin-top:9px;font-size:11.5px;color:var(--dim);line-height:1.7;">반을 바꿔도 성적·출석·과제·오답숙제 기록은 그대로 유지됩니다. 반을 옮길 때는 삭제 후 재등록하지 말고 여기서 반만 바꿔주세요.</div>
+    </div>
+
+    <div class="t-sec" style="margin-top:22px;">개인 보충 영상</div>
+    <div style="font-size:11.5px;color:var(--dim);margin-bottom:8px;">수업 화면에서 결석 처리하며 링크를 넣으면 여기 쌓입니다. 이 학생에게만 보입니다.</div>
+    ${personalVideos.length===0 ? '<div style="font-size:12.5px;color:var(--dim);">등록된 개인 영상이 없습니다.</div>'
+      : personalVideos.map(v=>`<div class="sd-crow"><span style="color:var(--ink);flex:1;text-align:left;">${escHtml(v.title)}</span>
+          <button class="btn q sm" onclick="deleteVideo('${v.id}')">삭제</button></div>`).join('')}
+
+    <div class="t-sec" style="margin-top:22px;">학생 삭제</div>
+    <div style="font-size:11.5px;color:var(--dim);margin-bottom:8px;">성적·출석·과제·오답숙제 기록이 모두 함께 삭제되며 되돌릴 수 없습니다.</div>
+    <button class="btn no sm" onclick="deleteStudent('${sid}')">이 학생 삭제</button>
+    <div class="rst-pad"></div>
   </div>`;
 }
 
