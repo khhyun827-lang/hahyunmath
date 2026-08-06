@@ -56,6 +56,16 @@
    가로 스크롤 때문에 .rst-wrap이 overflow:auto가 되는 순간 그 안이 새 스크롤포트가 되어
    sticky 기준이 뷰포트가 아니라 이 상자로 바뀌고, 헤더가 52px 내려와 첫 행을 덮는다.
    높이 92px = 상단바 52 + .body 상하 패딩 20+20. (서브탭 있는 화면으로 옮길 땐 +42) */
+/* ⚠ 스크롤 상자는 반드시 position:relative여야 한다.
+   KaTeX가 수식마다 position:absolute인 .katex-mathml을 넣는데, 조상 중에 위치 지정된 것이 없으면
+   그 요소의 기준이 «문서»가 되어 overflow:auto가 잡아 주지 못한다.
+   실제로 시험지 화면에서 문서가 3736px 세로로 늘어났다 (수식이 상자 밖에 «있는» 것으로 계산된다).
+   세로로 스크롤하는 상자를 새로 만들 때마다 이 줄을 같이 넣을 것. */
+.app .rst-wrap, .app .sig-list, .app .cls-body, .app .chub-body, .app .chub-lbody,
+.app .rv-body, .app .rv-lbody, .app .sd-tl, .app .sd-lbody, .app .sd-ctx,
+.app .co-body, .app .co-sbody, .app .ch-lbody, .app .ch-win,
+.app .ex-body, .app .ex-lbody, .app .vd-main{position:relative;}
+
 .app .rst-screen{display:flex;flex-direction:column;height:calc(100vh - 92px);}
 .app .rst-head{flex-shrink:0;}
 .app .rst-wrap{flex:1;min-height:0;overflow:auto;margin-top:2px;}
@@ -520,6 +530,36 @@
   background:var(--paper);padding:9px 12px;font-family:inherit;font-size:13px;color:var(--ink);outline:none;}
 .app .ch-in input:focus{border-color:var(--accent-line);}
 @media (max-width:1180px){ .app .co-side{display:none;} }
+
+/* ---------- 시험지 (design-v1/07-exams) ----------
+   역할은 «어느 문항이 무너졌는지 본다». 오답 파이프라인의 입구다. */
+.app .ex-screen{display:flex;height:calc(100vh - 134px);}
+.app .ex-list{width:262px;flex-shrink:0;border-right:1px solid var(--line);
+  padding-right:14px;margin-right:20px;display:flex;flex-direction:column;min-height:0;}
+.app .ex-lbody{flex:1;min-height:0;overflow-y:auto;margin-right:-6px;padding-right:6px;}
+.app .ex-item{padding:11px 12px;border-left:3px solid transparent;border-bottom:1px solid var(--line2);
+  border-radius:0 var(--r-md) var(--r-md) 0;cursor:pointer;transition:background var(--t);}
+.app .ex-item:hover{background:var(--hover);}
+.app .ex-item.on{background:var(--accent-bg);border-left-color:var(--accent);}
+.app .ex-item .n{font-size:13px;font-weight:600;}
+.app .ex-item .m{font-size:11.5px;color:var(--dim);margin-top:4px;}
+.app .ex-main{flex:1;min-width:0;min-height:0;display:flex;flex-direction:column;}
+.app .ex-body{flex:1;min-height:0;overflow-y:auto;margin-top:16px;}
+/* 문항별 오답률 — 막대를 세우지 않고 «행»으로 눕힌다. 20문항이면 세로 막대엔 라벨이 안 들어간다. */
+.app .ex-q{display:flex;align-items:center;gap:12px;padding:9px 2px;
+  border-bottom:1px solid var(--line2);transition:background var(--t);}
+.app .ex-q:hover{background:var(--hover);}
+.app .ex-q .no{width:34px;flex-shrink:0;font-family:'JetBrains Mono',monospace;font-size:12px;
+  font-weight:600;color:var(--sub);}
+.app .ex-q .unit{width:150px;flex-shrink:0;font-size:12px;color:var(--sub);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.app .ex-q .track{flex:1;min-width:60px;height:18px;background:var(--line2);border-radius:4px;overflow:hidden;}
+.app .ex-q .track i{display:block;height:100%;border-radius:4px;background:#D9D6CC;}
+.app .ex-q.mid .track i{background:var(--late);}
+.app .ex-q.hi .track i{background:var(--no);}
+.app .ex-q .pct{width:46px;flex-shrink:0;text-align:right;font-family:'JetBrains Mono',monospace;font-size:12px;}
+.app .ex-q .tw{width:92px;flex-shrink:0;text-align:right;}
+@media (max-width:1240px){ .app .ex-side{display:none;} }
 
 .app .actbar{position:fixed;z-index:6;flex-wrap:wrap;}
 /* 고정된 액션바가 마지막 행을 가리지 않게, 스크롤 영역 «안»에 여백을 둔다. */
@@ -1375,6 +1415,8 @@ let state = {
   clinicWeek: '',            // 클리닉 주간 판의 시작(월요일). 빈 값이면 이번 주
   clinicApplyMode: '',       // 학생 신청 경로 — 'slot'(열린 시간대) | 'free'(직접 제안)
   qnaFilter: 'open',
+  examSelectedId: null,
+  examMode: '',              // ''이면 목록+분석, 'new'면 등록 폼
   ytPlayers: null,
   attDraft: {},
   attDraftKey: null,
@@ -2736,7 +2778,9 @@ async function saveExam(){
     if(imgResult) await dbSet('pbimg:'+bankId, imgResult);
   }
   examDraft = { classId:'', title:'', date:'', questions:[{content:'', answer:'', unit:UNITS[0]}], pages:[] };
-  showToast('시험지가 등록되었습니다. 오답 문제 검토 탭에서 AI 쌍둥이 문제를 생성해보세요.');
+  /* 저장했으면 등록 모드에서 나와 방금 만든 시험지를 보여 준다 — 폼에 남아 있으면 또 만들 것처럼 보인다. */
+  state.examMode = ''; state.examSelectedId = examId;
+  showToast('시험지가 등록되었습니다. 오답 검토에서 AI 쌍둥이 문제를 생성해보세요.');
   render();
 }
 async function deleteExam(examId){
@@ -4198,7 +4242,7 @@ const TEACHER_TAB_SECTION = {
 /* 새 디자인으로 옮긴 탭. 여기 없는 탭은 .legacy 안에서 구버전 스타일 그대로 그린다.
    화면을 하나 옮길 때마다 여기에 더한다. */
 const TEACHER_TABS_DS = new Set(['roster', 'signals', 'home', 'session', 'classhub', 'review',
-  'clinic', 'notices', 'qna', 'chat']);
+  'clinic', 'notices', 'qna', 'chat', 'exams']);
 
 function goTeacherTab(tab, hubTab){
   state.teacherTab = tab;
@@ -6355,7 +6399,7 @@ function teacherClassDailyExamHTML(classId, date){
       </div>
       ${state.examDetailOpen[e.id] ? examDetailHTML(e.id) : ''}
     </div>`).join('')}
-    <button class="lg-btn btn-primary" style="margin-top:12px;" onclick="examDraft.classId='${classId}'; examDraft.date='${date}'; state.teacherTab='exams'; render()">이 날짜로 새 시험지 등록</button>
+    <button class="lg-btn btn-primary" style="margin-top:12px;" onclick="examDraft.classId='${classId}'; examDraft.date='${date}'; state.teacherTab='exams'; state.examMode='new'; render()">이 날짜로 새 시험지 등록</button>
   `;
 }
 function teacherClassDailyHomeworkHTML(classId, date){
@@ -6978,7 +7022,116 @@ function chubVideoHTML(classId){
    iframe을 목록만큼 띄우면 그만큼 유튜브를 부른다. 학생 화면(videoEmbedHTML)은 그대로다. */
 
 /* ---------- 시험지 관리 ---------- */
+/* =================== 시험지 (design-v1/07-exams) ===================
+   역할은 «어느 문항이 무너졌는지 본다» — 오답 파이프라인의 입구다.
+   예전 화면은 «등록 폼»이 위에 길게 깔리고 시험지 목록이 그 아래 있었다.
+   등록은 가끔 하고 «보는» 일은 매번 하는데 순서가 거꾸로였다.
+   → 목록 + 분석을 앞에 세우고, 등록은 「새 시험지」 모드로 넣었다.
+
+   **문항별 오답률은 지어낸 수치가 아니다.** 학생 기록의 `wrongHomework`에
+   `{examId, questionNo}`가 그대로 있어서, 그 문항을 오답으로 올린 학생 수를 세면 된다.
+   분모는 그 반의 재원 수다.
+
+   등록 폼(hwpx 파싱 · 이미지 업로드 · 동적 문항 행)은 손대지 않고 `.legacy`로 감쌌다 —
+   이 화면에서 제일 비싼 부분이고, 형태를 바꾼다고 나아지는 곳도 아니다. */
+function examWrongCounts(exam){
+  const roster = DATA.students.filter(s=>s.classId===exam.classId);
+  const counts = {};
+  roster.forEach(s=>{
+    const rec = state.allRecords[s.studentId];
+    (rec && rec.wrongHomework || []).forEach(h=>{
+      if(h.examId===exam.id) counts[h.questionNo] = (counts[h.questionNo]||0) + 1;
+    });
+  });
+  return { counts, total: roster.length };
+}
+
 function teacherExamsHTML(){
+  loadAllRecordsIfNeeded();
+  if(state.examMode==='new' || DATA.exams.length===0) return examNewHTML();
+
+  let ex = DATA.exams.find(e=>e.id===state.examSelectedId) || DATA.exams[0];
+  const { counts, total } = examWrongCounts(ex);
+  const rows = (ex.questions||[]).map((q,i)=>{
+    const no = i + 1;
+    const n = counts[no] || 0;
+    const pct = total ? Math.round(n/total*100) : 0;
+    return { no, q, n, pct };
+  });
+  const worst = rows.reduce((m,r)=>Math.max(m, r.pct), 0);
+
+  /* 이 시험지로 만들어진 쌍둥이 문항이 어디까지 왔는지 — 파이프라인의 다음 칸이다. */
+  const banks = DATA.problemBank.filter(b=>b.examId===ex.id);
+  const bankBy = st => banks.filter(b=>b.status===st).length;
+
+  return `<div class="ex-screen">
+    <aside class="ex-list">
+      <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;padding-bottom:10px;">
+        <span class="t-sec" style="margin:0;">시험지 ${DATA.exams.length}</span>
+        <span class="spacer"></span>
+        <button class="btn q sm" onclick="state.examMode='new'; render()">${iconSvg('plus',13)} 새 시험지</button>
+      </div>
+      <div class="ex-lbody">
+        ${DATA.exams.map(e=>`<div class="ex-item ${e.id===ex.id?'on':''}"
+          onclick="state.examSelectedId='${e.id}'; render()">
+          <div class="n">${escHtml(e.title)}</div>
+          <div class="m">${e.date||'-'} · ${escHtml(classNameOf(e.classId))} · ${(e.questions||[]).length}문항</div>
+        </div>`).join('')}
+      </div>
+    </aside>
+
+    <main class="ex-main">
+      <div class="rst-hrow" style="flex-shrink:0;">
+        <h1 class="t-title">${escHtml(ex.title)}</h1>
+        <div class="spacer"></div>
+        <span class="field rst-selwrap" style="width:auto;">
+          <select class="rst-sel" id="copy-target-${ex.id}">
+            <option value="">다른 반으로 복사…</option>
+            ${DATA.classes.filter(c=>c.id!==ex.classId).map(c=>`<option value="${c.id}">${escHtml(c.name)}</option>`).join('')}
+          </select></span>
+        <button class="btn sm" onclick="copyExamToClass('${ex.id}')">복사</button>
+        <button class="btn q sm" onclick="deleteExam('${ex.id}')">삭제</button>
+      </div>
+      <div class="t-meta" style="margin-top:7px;flex-shrink:0;">
+        ${escHtml(classNameOf(ex.classId))}<s>·</s>${(ex.questions||[]).length}문항<s>·</s>
+        <span class="mono">${ex.date||'날짜 없음'}</span><s>·</s>재원 ${total}명
+        ${banks.length ? `<s>·</s>쌍둥이 ${banks.length}건 (검토 전 ${bankBy('pending')} · 1차 ${bankBy('review1')} · 공개 ${bankBy('approved')})` : ''}
+      </div>
+
+      <div class="ex-body">
+        <div class="t-sec">문항별 오답률
+          <span class="mono" style="font-weight:400;">${state.allRecordsLoading ? '기록 불러오는 중…' : `가장 높은 문항 ${worst}%`}</span></div>
+        ${rows.length===0 ? '<div style="padding:36px 0;text-align:center;color:var(--dim);font-size:12.5px;">문항이 없습니다.</div>'
+        : rows.map(r=>`<div class="ex-q ${r.pct>=50?'hi':(r.pct>=25?'mid':'')}">
+            <span class="no">${r.no}번</span>
+            <span class="unit" title="${escHtml(r.q.unit||'')}">${escHtml(r.q.unit||'단원 미지정')}</span>
+            <span class="track"><i style="width:${r.pct}%"></i></span>
+            <span class="pct">${total?r.pct+'%':'—'}</span>
+            <span class="tw muted" style="font-size:11.5px;">${r.n}명 오답</span>
+          </div>`).join('')}
+
+        <div class="t-sec" style="margin-top:24px;">문항 내용</div>
+        <div class="legacy" style="padding:0;">${examDetailHTML(ex.id)}</div>
+        <div class="rst-pad"></div>
+      </div>
+    </main>
+  </div>`;
+}
+
+/* 등록 모드 — 폼은 구버전 그대로다. 껍데기만 DS로 감싼다. */
+function examNewHTML(){
+  return `<div class="ex-screen"><main class="ex-main">
+    <div class="rst-hrow" style="flex-shrink:0;">
+      <h1 class="t-title">새 시험지<s>hwpx를 올리면 문항·정답이 자동으로 채워진다</s></h1>
+      <div class="spacer"></div>
+      ${DATA.exams.length ? `<button class="btn sm" onclick="state.examMode=''; render()">${iconSvg('chevL',13)} 시험지 목록</button>` : ''}
+    </div>
+    <div class="ex-body"><div class="legacy" style="padding:0;">${examNewLegacyHTML()}</div>
+      <div class="rst-pad"></div></div>
+  </main></div>`;
+}
+
+function examNewLegacyHTML(){
   return `
   <div class="lg-panel">
     <h3>시험지 등록</h3>
@@ -7023,24 +7176,6 @@ function teacherExamsHTML(){
       <button class="lg-btn btn-primary" onclick="saveExam()">시험지 저장</button>
     </div>
     `}
-  </div>
-  <div class="lg-panel">
-    <h3>등록된 시험지 (${DATA.exams.length}개)</h3>
-    ${DATA.exams.length===0?'<div class="empty">등록된 시험지가 없습니다.</div>':
-    DATA.exams.map(e=>`<div class="exam-card">
-      <div class="exam-title">${escHtml(e.title)}</div>
-      <div class="exam-meta">${e.date||'-'} · ${classNameOf(e.classId)} · 문항 ${e.questions.length}개</div>
-      <div class="row-actions">
-        <button class="lg-btn btn-small" onclick="toggleExamDetailView('${e.id}')">${state.examDetailOpen[e.id]?'상세보기 접기':'상세보기'}</button>
-        <select id="copy-target-${e.id}" style="max-width:130px;">
-          <option value="">다른 반 선택</option>
-          ${DATA.classes.filter(c=>c.id!==e.classId).map(c=>`<option value="${c.id}">${escHtml(c.name)}</option>`).join('')}
-        </select>
-        <button class="lg-btn btn-small" onclick="copyExamToClass('${e.id}')">반에 복사</button>
-        <button class="lg-btn btn-red btn-small" onclick="deleteExam('${e.id}')">삭제</button>
-      </div>
-      ${state.examDetailOpen[e.id] ? examDetailHTML(e.id) : ''}
-    </div>`).join('')}
   </div>`;
 }
 
