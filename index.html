@@ -291,6 +291,61 @@
   max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 @media (max-width:1080px){ .app .qz-subs{width:100%;} }
 
+/* 영상 (design-v1/16-videos) — 역할은 «시청률»이 아니라 «어디서 멈췄나»다. */
+.app .vd-screen{display:flex;gap:0;}
+.app .vd-list{width:264px;flex-shrink:0;border-right:1px solid var(--line);
+  padding-right:14px;margin-right:18px;}
+.app .vd-item{padding:12px;border-left:3px solid transparent;border-bottom:1px solid var(--line2);
+  border-radius:0 var(--r-md) var(--r-md) 0;cursor:pointer;transition:background var(--t);}
+.app .vd-item:hover{background:var(--hover);}
+.app .vd-item.on{background:var(--accent-bg);border-left-color:var(--accent);}
+.app .vd-item .t{font-size:13px;font-weight:600;line-height:1.5;}
+.app .vd-item .m{display:flex;align-items:center;gap:8px;margin-top:7px;
+  font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--dim);}
+.app .vd-item .p{display:flex;align-items:center;gap:9px;margin-top:8px;}
+.app .vd-item .p .bar{flex:1;}
+.app .vd-item .p b{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;}
+.app .vd-main{flex:1;min-width:0;}
+
+/* 이탈 지점 — 학생이 «어디까지 보고 멈췄는가»의 분포. 10구간 + 완주 칸. */
+.app .vd-drop{padding:16px 18px 12px;border:1px solid var(--line);border-radius:var(--r-lg);
+  background:var(--card);}
+.app .vd-dh{display:flex;align-items:baseline;gap:10px;margin-bottom:20px;flex-wrap:wrap;}
+.app .vd-dh b{font-size:12.5px;font-weight:700;}
+.app .vd-dh span{font-size:11.5px;color:var(--dim);}
+.app .vd-dh .r{margin-left:auto;font-size:11px;color:var(--dim);}
+.app .vd-bars{display:flex;align-items:flex-end;gap:4px;height:74px;border-bottom:1px solid var(--line);}
+.app .vd-bars .b{flex:1;position:relative;display:flex;flex-direction:column;justify-content:flex-end;
+  height:100%;min-width:0;}
+.app .vd-bars .b i{display:block;width:100%;background:#DEDAD1;border-radius:4px 4px 0 0;min-height:1px;}
+.app .vd-bars .b.peak i{background:var(--no);}
+.app .vd-bars .b.end i{background:var(--ok);}
+/* 시안은 left/right를 -14px로 빼 라벨을 막대보다 넓게 잡았는데, 실서비스에서는 그만큼
+   .vd-bars의 scrollWidth가 커져 가로 넘침으로 잡힌다. 막대 폭이 충분하므로 제 박스 안에 둔다
+   (퀴즈 스트립도 같은 방식이다). */
+.app .vd-bars .b .v{position:absolute;top:-17px;left:0;right:0;text-align:center;
+  font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;}
+.app .vd-dax{display:flex;gap:4px;margin-top:7px;}
+.app .vd-dax span{flex:1;min-width:0;text-align:center;font-family:'JetBrains Mono',monospace;
+  font-size:10px;color:var(--dim);}
+
+.app .vd-sv{display:flex;align-items:center;gap:12px;padding:9px 2px;
+  border-bottom:1px solid var(--line2);transition:background var(--t);}
+.app .vd-sv:hover{background:var(--hover);}
+.app .vd-sv .who{width:150px;flex-shrink:0;display:flex;align-items:center;gap:9px;min-width:0;}
+.app .vd-sv .who b{font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.app .vd-sv .track{flex:1;min-width:0;height:16px;background:var(--line2);border-radius:4px;overflow:hidden;}
+.app .vd-sv .track i{display:block;height:100%;border-radius:4px;background:#CFCBC2;}
+.app .vd-sv.done .track i{background:var(--ok);}
+.app .vd-sv.low .track i{background:var(--no);}
+.app .vd-sv .pct{width:46px;flex-shrink:0;text-align:right;font-family:'JetBrains Mono',monospace;font-size:12px;}
+.app .vd-sv .st{width:64px;flex-shrink:0;text-align:right;}
+@media (max-width:1000px){
+  .app .vd-screen{flex-direction:column;}
+  .app .vd-list{width:100%;border-right:0;border-bottom:1px solid var(--line);
+    padding-right:0;margin-right:0;margin-bottom:16px;}
+}
+
 .app .actbar{position:fixed;z-index:6;flex-wrap:wrap;}
 /* 고정된 액션바가 마지막 행을 가리지 않게, 스크롤 영역 «안»에 여백을 둔다. */
 .app .rst-pad{height:64px;flex-shrink:0;}
@@ -1145,14 +1200,13 @@ let state = {
   reviewFocusMode: false,
   reviewFocusIndex: 0,
   reviewShowAll: false,
-  videoByClassId: '',
-  videoStudentDetailId: null,
   ytPlayers: null,
   attDraft: {},
   attDraftKey: null,
   classHubDate: null,            // null이면 수업 기록 «목록», 날짜가 들어 있으면 그날 «상세»
   classHubLogFilter: '',
   quizSelectedId: null,
+  videoSelectedId: null,
   classHubDateSubTab: 'attendance',
   classHubHomeworkShowAll: false,
   dailyScoreName: '',
@@ -5166,7 +5220,7 @@ async function toggleClassProgressUnit(classId, unit, checked){
 
    반을 «만드는» 곳은 여기가 아니라 설정이다 (명단에서 정한 것과 같은 규칙 —
    설정은 만드는 곳, 목록은 보는 곳). 여기서는 고르고·끝내고·지운다. */
-const CLASSHUB_TABS_DS = new Set(['progress', 'sessions', 'quiz']);
+const CLASSHUB_TABS_DS = new Set(['progress', 'sessions', 'quiz', 'video']);   // 넷 다 옮겼다
 
 function teacherClassHubHTML(){
   /* 「학생 명단」 서브탭은 없앴다 — 그 일은 명단(01-roster)이 반 뷰로 한다.
@@ -5187,7 +5241,7 @@ function teacherClassHubHTML(){
   let sub, isDs = CLASSHUB_TABS_DS.has(tab);
   if(tab==='progress')   sub = chubProgressHTML(c.id);
   else if(tab==='quiz')  sub = chubQuizHTML(c.id);
-  else if(tab==='video') sub = videoByClassHTML(c.id);
+  else if(tab==='video') sub = chubVideoHTML(c.id);
   else                   sub = chubSessionsHTML(c.id);   // 안에서 «목록(DS)»과 «그날 상세(구버전)»를 가른다
 
   const roster = DATA.students.filter(s=>s.classId===c.id);
@@ -6096,58 +6150,127 @@ function studentVideoSummary(studentId, classId){
   const avg = relevantVideos.length ? Math.round(sumPercent/relevantVideos.length) : 0;
   return { total: relevantVideos.length, completed, avg, details };
 }
+/* =================== 영상 (design-v1/16-videos) ===================
+   시안이 못박은 역할 — «시청률이 아니라 이탈 지점». 몇 %가 봤나가 아니라
+   «어디서 멈췄나»가 다음 수업을 바꾼다. 그 판단을 그대로 따랐다.
+
+   **이 히스토그램은 지어낸 것이 아니다.** `videoProgress[영상id] = {completed, percent}`가
+   학생마다 «어디까지 보고 멈췄는지»를 이미 담고 있다. 그걸 구간별로 묶은 것이 이탈 분포다.
+   (시청 «시점»의 시계열은 없다. 있는 것은 최종 도달 지점 하나뿐이라 그 분포까지가 한계다.)
+
+   시안은 반 목록·영상 목록·본문 3열이었다. 실서비스는 왼쪽에 반 목록이 이미 있어
+   여기서는 영상 목록 + 본문 2열로 둔다. 좁아지면 세로로 접힌다. */
+function chubVideoHTML(classId){
+  loadAllRecordsIfNeeded();
+  const roster = DATA.students.filter(s=>s.classId===classId);
+  /* 반 영상 + 전체 배포 영상. 개인 배정 영상(studentId)은 반 화면의 대상이 아니다. */
+  const vids = DATA.videos.filter(v=>!v.studentId && (!v.classId || v.classId===classId));
+
+  const progOf = (v, sid) => {
+    const rec = state.allRecords[sid];
+    const p = rec && rec.videoProgress && rec.videoProgress[v.id];
+    if(!p) return { pct:0, done:false, seen:false };
+    return { pct: p.completed ? 100 : Math.max(0, Math.min(100, Math.round(p.percent||0))), done:!!p.completed, seen:true };
+  };
+  const avgOf = v => roster.length
+    ? Math.round(roster.reduce((sum,s)=>sum+progOf(v,s.studentId).pct, 0) / roster.length) : 0;
+
+  const form = `
+  <div class="cls-hw" style="display:block;margin-bottom:18px;">
+    <div class="t-sec" style="margin:0;">이 반에 영상 배포</div>
+    <div class="cls-form">
+      <label style="flex:2;min-width:180px;"><span>제목</span><input id="video-title" placeholder="예: 수학(상) 4강"></label>
+      <label style="min-width:140px;"><span>단원 (선택)</span><input id="video-unit" placeholder="예: 대수 3단원"></label>
+      <select id="video-class" style="display:none;">${DATA.classes.map(c=>
+        `<option value="${c.id}" ${classId===c.id?'selected':''}>${escHtml(c.name)}</option>`).join('')}</select>
+    </div>
+    <div class="cls-form"><label style="flex:1;"><span>유튜브 링크</span>
+      <input id="video-url" placeholder="https://youtu.be/..."></label></div>
+    <button class="btn p sm" style="margin-top:11px;" onclick="addVideo()">${iconSvg('plus',13)} 등록</button>
+  </div>`;
+
+  if(vids.length===0){
+    return form + `<div style="padding:40px 0;text-align:center;color:var(--dim);font-size:12.5px;">이 반에 배포된 영상이 없습니다.</div>`;
+  }
+
+  const sel = vids.find(v=>v.id===state.videoSelectedId) || vids[0];
+
+  const list = `<div class="vd-list">
+    ${vids.map(v=>{
+      const a = avgOf(v);
+      return `<div class="vd-item ${v.id===sel.id?'on':''}" onclick="state.videoSelectedId='${v.id}'; render()">
+        <div class="t">${escHtml(v.title)}</div>
+        <div class="m">${escHtml(v.unit||'단원 미지정')}${v.classId?'':' · 전체'}</div>
+        <div class="p"><span class="bar"><i style="width:${a}%"></i></span><b>${a}%</b></div>
+      </div>`;
+    }).join('')}
+  </div>`;
+
+  /* 이탈 분포 — 0~9%, 10~19% … 90~99%, 그리고 «완주» 칸. */
+  const rows = roster.map(s=>({ s, p: progOf(sel, s.studentId) }));
+  const bins = new Array(11).fill(0);
+  rows.forEach(({p})=>{ bins[p.pct >= 100 ? 10 : Math.floor(p.pct/10)]++; });
+  /* 완주 칸은 «이탈»이 아니다. 최고점 표시에서 빼야 빨간 막대가 엉뚱한 곳에 붙지 않는다.
+     동점이면 «가장 이른» 구간 하나만 칠한다 — 넷이 동시에 빨개지면 신호가 아니라 소음이 된다.
+     수업이 학생을 놓치기 시작한 지점이 제일 먼저 손볼 곳이기도 하다.
+     (나머지 구간의 정확한 인원은 각 막대의 tooltip에 있다.) */
+  const dropMax = Math.max(...bins.slice(0,10));
+  const peakIdx = dropMax > 0 ? bins.slice(0,10).indexOf(dropMax) : -1;
+  const barMax = Math.max(...bins, 1);
+  const avgSel = avgOf(sel);
+  const doneCnt = rows.filter(r=>r.p.done).length;
+  const notSeen = rows.filter(r=>!r.p.seen).length;
+
+  const drop = `<div class="vd-drop">
+    <div class="vd-dh"><b>이탈 지점</b><span>어디까지 보고 멈췄는가</span>
+      <span class="r">${state.allRecordsLoading ? '기록 불러오는 중…' : `재원 ${roster.length}명 · 평균 ${avgSel}%`}</span></div>
+    <div class="vd-bars">
+      ${bins.map((n,i)=>{
+        const isEnd = i===10;
+        const isPeak = i===peakIdx;
+        return `<div class="b ${isPeak?'peak':''} ${isEnd?'end':''}"
+          title="${isEnd?'끝까지 시청':`${i*10}~${i*10+9}%에서 멈춤`} · ${n}명">
+          ${n>0 && (isPeak||isEnd) ? `<span class="v" style="color:${isEnd?'var(--ok)':'var(--no)'}">${n}</span>` : ''}
+          <i style="height:${Math.round(n/barMax*100)}%"></i>
+        </div>`;
+      }).join('')}
+    </div>
+    <div class="vd-dax">${['0','10','20','30','40','50','60','70','80','90','완주'].map(x=>`<span>${x}</span>`).join('')}</div>
+  </div>`;
+
+  const students = `
+  <div class="t-sec" style="margin-top:22px;">학생별 진행
+    <span class="mono" style="font-weight:400;">완주 ${doneCnt}/${roster.length}${notSeen?` · 미시청 ${notSeen}`:''}</span></div>
+  ${!state.allRecordsLoaded ? '<div style="font-size:12.5px;color:var(--dim);">기록 불러오는 중…</div>'
+  : roster.length===0 ? '<div style="font-size:12.5px;color:var(--dim);">이 반에 배정된 학생이 없습니다.</div>'
+  : rows.slice().sort((a,b)=>a.p.pct-b.p.pct).map(({s,p})=>`
+    <div class="vd-sv ${p.done?'done':''} ${!p.done&&p.pct<50?'low':''}">
+      <div class="who"><span class="av">${escHtml((s.name||'?').slice(0,1))}</span><b>${escHtml(s.name)}</b></div>
+      <span class="track"><i style="width:${p.pct}%"></i></span>
+      <span class="pct">${p.seen ? p.pct+'%' : '—'}</span>
+      <span class="st">${p.done ? '<span class="badge ok">완주</span>'
+        : !p.seen ? '<span class="badge">미시청</span>'
+        : '<span class="badge late">시청 중</span>'}</span>
+    </div>`).join('')}`;
+
+  return form + `<div class="vd-screen">${list}
+    <div class="vd-main">
+      <div class="t-sec" style="margin:0 0 12px;">${escHtml(sel.title)}
+        <span class="mono" style="font-weight:400;">${escHtml(sel.unit||'')}</span></div>
+      ${drop}${students}
+      <div style="margin-top:16px;">
+        <button class="btn q sm" onclick="deleteVideo('${sel.id}')">이 영상 삭제</button>
+      </div>
+    </div>
+  </div>`;
+}
+
 // 반 상세("영상" 서브탭)에서는 fixedClassId가 오고, 등록 폼+그 반 영상 목록+학생별 시청현황을
 // 한 화면에서 전부 처리한다 (예전엔 등록/목록/반별현황이 각각 다른 화면에 흩어져 있었음).
-function videoByClassHTML(fixedClassId){
-  const classId = fixedClassId || state.videoByClassId;
-  const roster = classId ? DATA.students.filter(s=>s.classId===classId) : [];
-  const classVideos = classId ? DATA.videos.filter(v=>!v.studentId && (!v.classId || v.classId===classId)) : [];
-  if(fixedClassId) loadAllRecordsIfNeeded();
-  return `
-  ${fixedClassId ? `
-  <div class="lg-panel">
-    <h3>영상 등록</h3>
-    <div class="inline-form">
-      <div class="lg-field"><label>대상 반</label><select id="video-class">
-        <option value="">전체</option>
-        ${DATA.classes.map(c=>`<option value="${c.id}" ${fixedClassId===c.id?'selected':''}>${escHtml(c.name)}</option>`).join('')}
-      </select></div>
-      <div class="lg-field"><label>단원</label><input id="video-unit" placeholder="예: 대수 3단원"></div>
-      <div class="lg-field" style="flex:2;"><label>제목</label><input id="video-title" placeholder="영상 제목"></div>
-      <div class="lg-field" style="flex:2;"><label>유튜브 링크</label><input id="video-url" placeholder="https://youtube.com/watch?v=..."></div>
-      <button class="lg-btn btn-primary" onclick="addVideo()">등록</button>
-    </div>
-  </div>` : `<div class="lg-field" style="max-width:280px;margin-bottom:14px;"><label>반 선택</label><select onchange="state.videoByClassId=this.value; render()">
-    <option value="">-- 반 선택 --</option>
-    ${DATA.classes.map(c=>`<option value="${c.id}" ${classId===c.id?'selected':''}>${escHtml(c.name)}</option>`).join('')}
-  </select></div>`}
-  ${!classId ? '<div class="empty">반을 선택해주세요.</div>' : `
-  <div class="lg-panel">
-    <h3>이 반 영상 (${classVideos.length}개)</h3>
-    ${classVideos.length===0 ? '<div class="empty">등록된 영상이 없습니다.</div>' :
-      classVideos.map(v=>videoEmbedHTML(v) + `<div style="margin:-8px 0 16px;"><button class="lg-btn btn-red btn-small" onclick="deleteVideo('${v.id}')">삭제</button></div>`).join('')}
-  </div>
-  <div class="lg-panel">
-    <h3>학생별 시청 현황</h3>
-    ${!state.allRecordsLoaded ? '<div class="empty">학생 기록을 불러오는 중입니다...</div>' :
-      roster.length===0 ? '<div class="empty">이 반에 배정된 학생이 없습니다.</div>' :
-      `<table><tr><th>학생</th><th>완료 영상</th><th>평균 진도율</th><th></th></tr>
-      ${roster.map(s=>{
-        const sum = studentVideoSummary(s.studentId, classId);
-        const open = state.videoStudentDetailId===s.studentId;
-        return `<tr><td>${escHtml(s.name)}</td><td>${sum.completed} / ${sum.total}</td><td>${sum.avg}%</td>
-        <td><button class="lg-btn btn-small" onclick="state.videoStudentDetailId = state.videoStudentDetailId==='${s.studentId}' ? null : '${s.studentId}'; render()">${open?'닫기':'상세'}</button></td></tr>
-        ${open ? `<tr><td colspan="4">
-          ${sum.details.length===0 ? '<div class="empty">이 반에 등록된 영상이 없습니다.</div>' : `
-          <table style="margin:4px 0;"><tr><th>영상</th><th>진도율</th></tr>
-          ${sum.details.map(d=>`<tr><td>${escHtml(d.video.title)}</td><td>${d.p ? (d.p.completed?'완료':d.p.percent+'%') : '미시청'}</td></tr>`).join('')}
-          </table>`}
-        </td></tr>` : ''}`;
-      }).join('')}
-      </table>`
-    }
-  </div>`}`;
-}
+/* videoByClassHTML(등록 폼 + 영상 임베드 나열 + 시청 현황 표)은 지웠다 — chubVideoHTML이 대신한다.
+   시청 현황 표는 「이탈 지점」 히스토그램과 학생별 진행 목록이 흡수했다.
+   영상 «재생»은 여기서 빠졌다 — 강사가 자기 영상을 이 화면에서 볼 이유가 없고,
+   iframe을 목록만큼 띄우면 그만큼 유튜브를 부른다. 학생 화면(videoEmbedHTML)은 그대로다. */
 
 /* ---------- 시험지 관리 ---------- */
 function teacherExamsHTML(){
