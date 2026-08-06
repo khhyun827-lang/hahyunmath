@@ -589,6 +589,12 @@
   .legacy .compare-col .colhead{font-size:11px;color:var(--ink-soft);font-family:'JetBrains Mono',monospace;margin-bottom:6px;}
   .legacy .compare-col textarea{width:100%;min-height:80px;}
   @media (max-width:640px){ .legacy .compare-grid{grid-template-columns:1fr;} }
+  /* 「학생이 제출할 수 없는 정답」 경고. 검토 화면은 아직 구버전이라 여기 둔다 —
+     04-review를 DS로 옮길 때 ds.css 쪽으로 올라간다. */
+  .legacy .bank-warn{display:flex;gap:9px;align-items:flex-start;margin:12px 0;padding:11px 13px;
+    border:1px solid #E3B7B0;border-left-width:3px;border-radius:6px;background:#FDF4F2;color:var(--red-pen);}
+  .legacy .bank-warn b{display:block;font-size:13px;margin-bottom:3px;}
+  .legacy .bank-warn span{display:block;font-size:12px;line-height:1.6;color:var(--ink-soft);}
   .legacy .ai-solution-box{margin:12px 0;border:1px solid var(--card-border);border-radius:6px;overflow:hidden;}
   .legacy .ai-solution-toggle{width:100%;text-align:left;background:#FBFAF8;border:none;padding:10px 14px;font-size:12.5px;color:var(--ink);cursor:pointer;font-weight:500;}
   .legacy .ai-solution-toggle:hover{background:#F3F0EA;}
@@ -928,7 +934,7 @@ async function generateTwinViaAI(content, answer, image){
     if(!data.content || !data.answer) throw new Error('incomplete AI result');
     return {
       content: sanitizeAiMathText(data.content),
-      answer: sanitizeAiMathText(data.answer),
+      answer: normalizeTwinAnswer(sanitizeAiMathText(data.answer)),
       solution: data.solution || ''
     };
   }catch(e){
@@ -1635,6 +1641,38 @@ async function deleteQuiz(qid){
 // 채점이 문자열 비교라서, 학생이 "3"이라고 타이핑하면 정답 "③"과 안 맞아 오답 처리되던 문제를 해결.
 function isMultipleChoice(content){
   return /①/.test(content||'');
+}
+
+/* =================== 학생이 «입력할 수 있는» 정답인가 ===================
+   답안 입력칸이 받는 것은 둘뿐이다 — 숫자 입력 아니면 ①~⑤ 보기 버튼(answerInputHTML).
+   분수·무리수·음수·문자식이 정답이면 학생은 풀고도 제출할 방법이 없다.
+   그래서 AI 프롬프트에 «999 이하 자연수 아니면 객관식»을 못박아 뒀고(worker/gemini-proxy.js),
+   여기서는 그 약속이 지켜졌는지 «받는 쪽»에서 한 번 더 확인한다.
+   생성 모델은 규칙을 어길 수 있고, 어긴 문항이 조용히 학생에게 가면 아무도 못 푼다. */
+const CHOICE_SYMBOLS = ['①','②','③','④','⑤'];
+function isPlainNaturalAnswer(a){
+  return /^[1-9][0-9]{0,2}$/.test(String(a==null?'':a).trim());   // 1~999
+}
+/* AI는 formatRule("수식은 $로 감싸라") 때문에 숫자 정답에도 $를 두른다 — 실제로 «$155$»가 나왔다.
+   채점이 문자열 비교라 학생이 155를 내면 오답이 된다. 받는 쪽에서 벗겨 둔다.
+   벗긴 결과가 999 이하 자연수일 때«만» 벗긴다 — $\frac{1}{2}$ 같은 것은 그대로 둬야
+   검토 화면에서 선생님이 진짜 형태를 본다. */
+function normalizeTwinAnswer(a){
+  const s = String(a==null?'':a).trim();
+  const m = s.match(/^\$\s*([0-9]{1,3})\s*\$$/);
+  return (m && isPlainNaturalAnswer(m[1])) ? m[1] : s;
+}
+/* 문제 없으면 null, 있으면 «사람이 읽을 이유»를 돌려준다. */
+function answerFormProblem(content, answer){
+  const a = String(answer==null?'':answer).trim();
+  const mc = isMultipleChoice(content);
+  if(!a) return '정답이 비어 있습니다.';
+  if(CHOICE_SYMBOLS.includes(a)){
+    return mc ? null : '정답이 보기 기호(' + a + ')인데 문제에 ①~⑤ 보기가 없습니다.';
+  }
+  if(mc) return '문제에 ①~⑤ 보기가 있는데 정답이 보기 기호가 아닙니다 (지금: ' + a + ').';
+  if(isPlainNaturalAnswer(a)) return null;
+  return '정답이 999 이하 자연수가 아니고 객관식도 아닙니다 (지금: ' + a + '). 학생이 입력할 수 없습니다.';
 }
 function answerInputHTML(inputId){
   return `<input type="hidden" id="${inputId}">
@@ -2571,6 +2609,11 @@ function bankCardHTML(b, editable){
         }
       </div>
     </div>
+    ${(b.variantContent || b.variantAnswer) && answerFormProblem(b.variantContent, b.variantAnswer)
+      ? `<div class="bank-warn">${iconSvg('bell',15)} <div><b>학생이 답을 제출할 수 없는 형태입니다.</b>
+          <span>${escHtml(answerFormProblem(b.variantContent, b.variantAnswer))}</span>
+          <span>정답을 999 이하 자연수로 바꾸거나, 문제 끝에 보기 ①~⑤를 넣고 정답을 그 기호로 고쳐주세요. 「AI로 다시 생성」도 됩니다.</span></div></div>`
+      : ''}
     ${b.aiSolution ? `
     <div class="ai-solution-box">
       <button class="ai-solution-toggle" onclick="state.solutionOpen['${b.id}']=!state.solutionOpen['${b.id}']; render()">
@@ -2595,6 +2638,12 @@ async function saveBankEdit(bankId){
 async function advanceBankStatus(bankId, newStatus){
   const b = DATA.problemBank.find(b=>b.id===bankId);
   if(!b) return;
+  /* 공개는 «학생에게 보내는» 동작이다. 입력할 수 없는 정답이면 여기서 멈춘다 —
+     검토 카드의 경고를 지나쳤더라도 마지막 문에서 한 번 더 잡는다. */
+  if(newStatus==='approved'){
+    const why = answerFormProblem(b.variantContent, b.variantAnswer);
+    if(why){ showToast('공개할 수 없습니다 — ' + why); return; }
+  }
   b.status = newStatus;
   await dbSetDoc('problembank', b.id, b);
   showToast(newStatus==='approved' ? '학생에게 공개되었습니다.' : '검토 상태가 업데이트되었습니다.');
