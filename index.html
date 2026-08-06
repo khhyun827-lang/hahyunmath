@@ -255,6 +255,42 @@
 .app .chub-dh{display:flex;align-items:center;gap:10px;flex-wrap:wrap;flex-shrink:0;
   padding-bottom:13px;border-bottom:1px solid var(--line);}
 
+/* 데일리퀴즈 (design-v1/15-quiz) — 1차 축은 문항이 아니라 «회차의 흐름»이다. */
+.app .qz-strip{padding:16px 18px 12px;border:1px solid var(--line);border-radius:var(--r-lg);
+  background:var(--card);flex-shrink:0;}
+.app .qz-sh{display:flex;align-items:baseline;gap:10px;margin-bottom:24px;}
+.app .qz-sh b{font-size:12.5px;font-weight:700;}
+.app .qz-sh span{font-size:11.5px;color:var(--dim);}
+.app .qz-sh .r{margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--dim);}
+.app .qz-bars{display:flex;align-items:flex-end;gap:6px;height:92px;border-bottom:1px solid var(--line);}
+.app .qz-b{flex:1;position:relative;display:flex;flex-direction:column;justify-content:flex-end;
+  height:100%;cursor:pointer;min-width:0;}
+.app .qz-b i{display:block;width:100%;background:#CFCBC2;border-radius:4px 4px 0 0;
+  transition:background var(--t);min-height:2px;}
+/* 순서가 곧 우선순위다. «낮음»보다 «지금 보고 있는 것»이 위여야 한다 —
+   .low를 뒤에 두면 선택된 막대가 노란색에 덮여 어느 회차를 보고 있는지 알 수 없다. */
+.app .qz-b.low i{background:var(--late);}
+.app .qz-b.on i{background:var(--accent);}
+.app .qz-b:hover i{background:var(--accent-d);}
+/* 값은 선택된 회차와 가장 낮은 회차에만 붙인다 — 전부 붙이면 읽히지 않는다 */
+.app .qz-b .v{position:absolute;top:-17px;left:0;right:0;text-align:center;
+  font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;color:var(--ink);}
+.app .qz-xax{display:flex;gap:6px;margin-top:7px;}
+.app .qz-xax span{flex:1;min-width:0;text-align:center;font-family:'JetBrains Mono',monospace;
+  font-size:10px;color:var(--dim);overflow:hidden;white-space:nowrap;}
+
+.app .qz-body{display:flex;gap:22px;margin-top:18px;align-items:flex-start;flex-wrap:wrap;}
+.app .qz-q{flex:1;min-width:280px;}
+.app .qz-qbox{background:var(--note);border:1px solid var(--note-line);border-radius:var(--r-lg);
+  padding:14px 16px;font-size:13.5px;line-height:1.75;white-space:pre-wrap;}
+.app .qz-subs{width:330px;flex-shrink:0;}
+.app .qz-sr{display:flex;align-items:center;gap:9px;padding:9px 0;border-bottom:1px solid var(--line2);}
+.app .qz-sr .t{flex:1;min-width:0;font-size:12.5px;}
+.app .qz-sr .t span{display:block;font-size:11px;color:var(--dim);margin-top:1px;}
+.app .qz-sr .a{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:600;
+  max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+@media (max-width:1080px){ .app .qz-subs{width:100%;} }
+
 .app .actbar{position:fixed;z-index:6;flex-wrap:wrap;}
 /* 고정된 액션바가 마지막 행을 가리지 않게, 스크롤 영역 «안»에 여백을 둔다. */
 .app .rst-pad{height:64px;flex-shrink:0;}
@@ -1116,6 +1152,7 @@ let state = {
   attDraftKey: null,
   classHubDate: null,            // null이면 수업 기록 «목록», 날짜가 들어 있으면 그날 «상세»
   classHubLogFilter: '',
+  quizSelectedId: null,
   classHubDateSubTab: 'attendance',
   classHubHomeworkShowAll: false,
   dailyScoreName: '',
@@ -1694,15 +1731,15 @@ function notificationBellHTML(items){
 
 /* =================== 데일리퀴즈 =================== */
 async function addQuiz(){
-  const classId = document.getElementById('quiz-class').value;
-  const title = document.getElementById('quiz-title').value.trim();
-  const content = document.getElementById('quiz-content').value.trim();
+  const title = document.getElementById('qz-title').value.trim();
+  const content = document.getElementById('qz-content').value.trim();
   if(!title || !content){ showToast('제목과 문제 내용을 입력해주세요.'); return; }
-  const quiz = {id:'q'+Date.now(), classId, title, content, date:todayStr()};
+  const quiz = {id:'q'+Date.now(), classId: document.getElementById('qz-class').value, title, content, date:todayStr()};
   DATA.quizzes.unshift(quiz);
   await dbSetDoc('quizzes', quiz.id, quiz);
-  document.getElementById('quiz-title').value='';
-  document.getElementById('quiz-content').value='';
+  document.getElementById('qz-title').value='';
+  document.getElementById('qz-content').value='';
+  state.quizSelectedId = quiz.id;      // 방금 낸 회차를 바로 보여 준다
   showToast('데일리퀴즈가 등록되었습니다.');
   render();
 }
@@ -5129,7 +5166,7 @@ async function toggleClassProgressUnit(classId, unit, checked){
 
    반을 «만드는» 곳은 여기가 아니라 설정이다 (명단에서 정한 것과 같은 규칙 —
    설정은 만드는 곳, 목록은 보는 곳). 여기서는 고르고·끝내고·지운다. */
-const CLASSHUB_TABS_DS = new Set(['progress', 'sessions']);
+const CLASSHUB_TABS_DS = new Set(['progress', 'sessions', 'quiz']);
 
 function teacherClassHubHTML(){
   /* 「학생 명단」 서브탭은 없앴다 — 그 일은 명단(01-roster)이 반 뷰로 한다.
@@ -5149,7 +5186,7 @@ function teacherClassHubHTML(){
 
   let sub, isDs = CLASSHUB_TABS_DS.has(tab);
   if(tab==='progress')   sub = chubProgressHTML(c.id);
-  else if(tab==='quiz')  sub = teacherQuizHTML(c.id);
+  else if(tab==='quiz')  sub = chubQuizHTML(c.id);
   else if(tab==='video') sub = videoByClassHTML(c.id);
   else                   sub = chubSessionsHTML(c.id);   // 안에서 «목록(DS)»과 «그날 상세(구버전)»를 가른다
 
@@ -5820,34 +5857,116 @@ async function addDailyHomework(classId, date){
 }
 
 /* ---------- 데일리퀴즈 ---------- */
-function teacherQuizHTML(fixedClassId){
-  const visible = fixedClassId ? DATA.quizzes.filter(q=>!q.classId || q.classId===fixedClassId) : DATA.quizzes;
-  return `
-  <div class="lg-panel">
-    <h3>데일리퀴즈 등록</h3>
-    <div class="inline-form">
-      <div class="lg-field"><label>대상 반</label><select id="quiz-class">
-        <option value="" ${!fixedClassId?'selected':''}>전체</option>
-        ${DATA.classes.map(c=>`<option value="${c.id}" ${fixedClassId===c.id?'selected':''}>${escHtml(c.name)}</option>`).join('')}
-      </select></div>
-      <div class="lg-field" style="flex:2;"><label>제목</label><input id="quiz-title" placeholder="예: 7/27 데일리퀴즈"></div>
+/* =================== 데일리퀴즈 (design-v1/15-quiz) ===================
+   시안의 1차 축은 «회차의 흐름»이다 — 「요즘 잘 되고 있나」를 묻는 화면이지
+   한 회차를 파고드는 화면이 아니다. 그 축은 그대로 가져왔다.
+
+   **시안의 「정답률」과 「문항별 오답률」은 만들 수 없다.**
+   데일리퀴즈에는 정답 필드가 없다 (`{id, classId, title, content, date}`).
+   학생 기록에도 제출 답안만 남는다 (`quizAnswers[qid] = {answer, submittedAt}`).
+   채점이라는 개념 자체가 도메인에 없으므로 «정답률» 막대는 지어낸 숫자가 된다.
+   → 같은 자리에 **제출률**을 둔다. 축의 의미(회차별로 잘 돌고 있나)는 그대로다.
+   문항별 오답률은 아예 뺐다 — 한 퀴즈가 한 문항이라 «문항별»이 성립하지 않는다.
+
+   **대신 없던 것을 하나 채웠다 — 제출 답안 보기.**
+   학생은 답을 내는데 교사가 그걸 볼 수 있는 화면이 이제껏 없었다.
+   정답이 없으니 자동 채점은 못 하지만, 답안을 나란히 놓으면 교사가 눈으로 본다. */
+function chubQuizHTML(classId){
+  loadAllRecordsIfNeeded();
+  const roster = DATA.students.filter(s=>s.classId===classId);
+  /* 반에 배포된 것 + 전체 배포된 것. 오래된 순으로 세워야 «흐름»이 왼쪽에서 오른쪽으로 읽힌다. */
+  const quizzes = DATA.quizzes
+    .filter(q=>!q.classId || q.classId===classId)
+    .slice().sort((a,b)=>(a.date||'').localeCompare(b.date||''));
+  const recent = quizzes.slice(-14);
+
+  const rateOf = q => roster.length
+    ? Math.round(roster.filter(s=>{
+        const rec = state.allRecords[s.studentId];
+        return rec && rec.quizAnswers && rec.quizAnswers[q.id];
+      }).length / roster.length * 100)
+    : 0;
+
+  const form = `
+  <div class="cls-hw" style="display:block;margin-bottom:18px;">
+    <div class="t-sec" style="margin:0;">이 반에 퀴즈 내기</div>
+    <div class="cls-form">
+      <label style="flex:2;min-width:200px;"><span>제목</span>
+        <input id="qz-title" placeholder="예: 7/27 데일리퀴즈"></label>
+      <select id="qz-class" style="display:none;">${DATA.classes.map(c=>
+        `<option value="${c.id}" ${classId===c.id?'selected':''}>${escHtml(c.name)}</option>`).join('')}</select>
     </div>
-    <div class="lg-field"><label>문제 내용</label><textarea id="quiz-content" placeholder="문제를 입력하세요"></textarea></div>
-    <button class="lg-btn btn-primary" onclick="addQuiz()">등록</button>
-  </div>
-  <div class="lg-panel">
-    <h3>등록된 퀴즈</h3>
-    ${visible.length===0?'<div class="empty">등록된 퀴즈가 없습니다.</div>':
-    visible.map(q=>{
-      return `<div class="quiz-card">
-        <div class="quiz-meta">${q.date} · ${quizClassLabel(q.classId)}</div>
-        <div class="quiz-title">${escHtml(q.title)}</div>
-        <div class="quiz-content">${escHtml(q.content)}</div>
-        <div class="quiz-answer-box"><button class="lg-btn btn-red btn-small" onclick="deleteQuiz('${q.id}')">삭제</button></div>
-      </div>`;
-    }).join('')}
+    <div class="cls-form"><label style="flex:1;"><span>문제 내용</span>
+      <textarea id="qz-content" rows="3" placeholder="문제를 입력하세요. 보기 ①~⑤를 넣으면 학생에게 보기 버튼이 뜹니다."></textarea></label></div>
+    <button class="btn p sm" style="margin-top:11px;" onclick="addQuiz()">${iconSvg('plus',13)} 등록</button>
+  </div>`;
+
+  if(quizzes.length===0){
+    return form + `<div style="padding:40px 0;text-align:center;color:var(--dim);font-size:12.5px;">아직 낸 퀴즈가 없습니다.</div>`;
+  }
+
+  let sel = quizzes.find(q=>q.id===state.quizSelectedId);
+  if(!sel) sel = quizzes[quizzes.length-1];          // 기본은 «가장 최근 회차»
+  const rates = recent.map(rateOf);
+  const lowest = rates.length ? Math.min(...rates) : 0;
+
+  const strip = `
+  <div class="qz-strip">
+    <div class="qz-sh"><b>회차별 제출률</b><span>최근 ${recent.length}회</span>
+      <span class="r">${state.allRecordsLoading ? '기록 불러오는 중…' : '재원 '+roster.length+'명 기준'}</span></div>
+    <div class="qz-bars">
+      ${recent.map((q,i)=>{
+        const r = rates[i];
+        const show = q.id===sel.id || (r===lowest && r<100);
+        return `<div class="qz-b ${q.id===sel.id?'on':''} ${r<60?'low':''}"
+          title="${escHtml(q.title)} · ${q.date} · 제출률 ${r}%"
+          onclick="state.quizSelectedId='${q.id}'; render()">
+          ${show?`<span class="v">${r}</span>`:''}
+          <i style="height:${Math.max(2, r)}%"></i>
+        </div>`;
+      }).join('')}
+    </div>
+    <div class="qz-xax">${recent.map(q=>`<span>${(q.date||'').slice(5).replace('-','/')}</span>`).join('')}</div>
+  </div>`;
+
+  const submitted = [], missing = [];
+  roster.forEach(s=>{
+    const rec = state.allRecords[s.studentId];
+    const a = rec && rec.quizAnswers && rec.quizAnswers[sel.id];
+    (a ? submitted : missing).push({ s, a });
+  });
+
+  return form + strip + `
+  <div class="qz-body">
+    <div class="qz-q">
+      <div class="t-sec">${escHtml(sel.title)} <span class="mono" style="font-weight:400;">${sel.date||''}</span>
+        ${sel.classId ? '' : '· 전체 배포'}</div>
+      <div class="qz-qbox">${escHtml(sel.content||'(내용 없음)')}</div>
+      <div style="margin-top:11px;">
+        <button class="btn q sm" onclick="deleteQuiz('${sel.id}')">이 회차 삭제</button>
+      </div>
+    </div>
+    <div class="qz-subs">
+      <div class="t-sec">제출 <span class="mono">${submitted.length}</span> / ${roster.length}</div>
+      ${!state.allRecordsLoaded ? '<div style="font-size:12.5px;color:var(--dim);">기록 불러오는 중…</div>'
+      : roster.length===0 ? '<div style="font-size:12.5px;color:var(--dim);">이 반에 배정된 학생이 없습니다.</div>'
+      : submitted.map(({s,a})=>`<div class="qz-sr">
+          <div class="t">${escHtml(s.name)}<span>${a.submittedAt||''}</span></div>
+          <div class="a" title="${escHtml(a.answer||'')}">${escHtml(a.answer||'—')}</div>
+        </div>`).join('') +
+        missing.map(({s})=>`<div class="qz-sr" style="opacity:.5;">
+          <div class="t">${escHtml(s.name)}<span>미제출</span></div>
+          <div class="a muted">—</div>
+        </div>`).join('')}
+      ${/* 정답 필드가 없어 자동 채점을 못 한다. 그 사실을 감추지 않고 적어 둔다. */''}
+      ${submitted.length ? `<div style="margin-top:11px;font-size:11px;color:var(--dim);line-height:1.7;">
+        데일리퀴즈에는 정답을 따로 저장하지 않아 자동 채점이 되지 않습니다. 답안을 눈으로 확인해 주세요.</div>` : ''}
+    </div>
   </div>`;
 }
+
+/* teacherQuizHTML(등록 폼 + 퀴즈 카드 나열)은 지웠다 — chubQuizHTML이 대신한다.
+   카드 나열은 회차 스트립이, 등록 폼은 그 위 폼이 흡수했다. */
 
 /* ---------- 클리닉 ---------- */
 function teacherClinicHTML(){
