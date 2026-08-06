@@ -1402,7 +1402,6 @@ let state = {
   allRecordsLoaded: false,
   allRecordsLoading: false,
   allRecords: {},
-  submissionsFilter: '',
   submissionDetailId: null,
   aiQuotaUsed: null,
   aiProcessing: false,
@@ -2933,69 +2932,8 @@ function bankRequesterCount(bankId){
   }
   return n;
 }
-function teacherSubmissionsHTML(){
-  loadAllRecordsIfNeeded();
-  if(state.allRecordsLoading || !state.allRecordsLoaded){
-    return `<div class="lg-panel"><div class="empty">학생 제출 현황을 불러오는 중입니다...</div></div>`;
-  }
-  const filter = state.submissionsFilter;
-  const rows = DATA.students
-    .filter(s => !filter || s.classId===filter)
-    .map(s => {
-      const rec = state.allRecords[s.studentId];
-      const hw = rec ? (rec.wrongHomework||[]) : [];
-      const done = hw.filter(h=>h.done);
-      const correct = done.filter(h=>{
-        const bank = DATA.problemBank.find(b=>b.id===h.bankId);
-        return bank && h.studentAnswer.trim()===bank.variantAnswer.trim();
-      });
-      return { student: s, total: hw.length, done: done.length, correct: correct.length, hw };
-    })
-    .filter(r => r.total > 0);
-
-  return `
-  <div class="lg-panel">
-    <h3>학생 오답숙제 제출 현황</h3>
-    <p class="lg-hint" style="margin-top:-8px;">학생별로 오답 숙제를 몇 개 받았고, 그중 몇 개를 풀었고, 몇 개를 맞았는지 보여줍니다. 이름을 누르면 문항별 상세를 볼 수 있어요.</p>
-    <div class="inline-form" style="margin-bottom:14px;">
-      <div class="lg-field"><label>반 필터</label><select onchange="state.submissionsFilter=this.value; render()">
-        <option value="">전체</option>
-        ${DATA.classes.map(c=>`<option value="${c.id}" ${filter===c.id?'selected':''}>${c.name}</option>`).join('')}
-      </select></div>
-    </div>
-    ${rows.length===0 ? '<div class="empty">아직 오답 숙제를 제출한 학생이 없습니다.</div>' : `
-    <table>
-      <tr><th>학생</th><th>반</th><th>배정</th><th>제출</th><th>정답</th><th></th></tr>
-      ${rows.map(r=>`<tr>
-        <td>${r.student.name}</td>
-        <td>${classNameOf(r.student.classId)}</td>
-        <td>${r.total}</td>
-        <td>${r.done} / ${r.total}</td>
-        <td>${r.correct} / ${r.done}</td>
-        <td><button class="lg-btn btn-small" onclick="state.submissionDetailId = state.submissionDetailId==='${r.student.studentId}' ? null : '${r.student.studentId}'; render()">${state.submissionDetailId===r.student.studentId?'닫기':'상세보기'}</button></td>
-      </tr>
-      ${state.submissionDetailId===r.student.studentId ? `<tr><td colspan="6">
-        <table style="margin-top:4px;">
-          <tr><th>시험</th><th>번호</th><th>상태</th><th>내 답안</th><th>정답</th></tr>
-          ${r.hw.map(h=>{
-            const bank = DATA.problemBank.find(b=>b.id===h.bankId);
-            const exam = bank ? DATA.exams.find(e=>e.id===bank.examId) : null;
-            if(!bank) return '';
-            const correct = h.done && h.studentAnswer.trim()===bank.variantAnswer.trim();
-            return `<tr>
-              <td>${exam?escHtml(exam.title):'-'}</td>
-              <td>${h.questionNo}번</td>
-              <td>${!h.done?'<span class="lg-badge badge-late">미제출</span>':`<span class="lg-badge ${correct?'badge-ok':'badge-no'}">${correct?'정답':'오답'}</span>`}</td>
-              <td>${escHtml(h.studentAnswer)||'-'}</td>
-              <td>${bank.status==='approved' ? escHtml(bank.variantAnswer) : '(검토 전)'}</td>
-            </tr>`;
-          }).join('')}
-        </table>
-      </td></tr>` : ''}
-      `).join('')}
-    </table>`}
-  </div>`;
-}
+/* teacherSubmissionsHTML(모든 시험지 x 모든 학생을 한 표에)은 지웠다 —
+   시험지 화면의 우측 칸(examSubmissionsHTML)이 대신한다. 시안 07의 자리다. */
 // 문제/답안/후기 등 사용자가 입력한 텍스트를 그대로 innerHTML에 넣으면 "<", ">"가
 // 태그로 해석되어 레이아웃이 깨진다 (예: 부등식 "g(x)<f(x)<0"). HTML로 렌더링되기 전에
 // 항상 이 함수를 거쳐서 특수문자를 이스케이프한다.
@@ -4219,11 +4157,9 @@ const TEACHER_SUBNAV = {
     ['데일리퀴즈', 'classhub', 'quiz'],
     ['영상',       'classhub', 'video']
   ],
-  /* 「제출 현황」은 시안에서 시험지 화면에 흡수됐지만 아직 합치지 않았다.
-     합치기 전까지는 서브탭으로 남겨 둔다 — 지금 지우면 들어갈 문이 없어진다. */
+  /* 「제출 현황」은 시험지 화면의 우측 칸으로 흡수했다 (시안 07). 서브탭에서 뺐다. */
   '오답': [
-    ['검토', 'review'], ['시험지', 'exams'],
-    ['보충문제 창고', 'unitbank'], ['제출 현황', 'submissions']
+    ['검토', 'review'], ['시험지', 'exams'], ['보충문제 창고', 'unitbank']
   ],
   '소통': [
     ['클리닉', 'clinic'], ['공지', 'notices'],
@@ -4235,7 +4171,7 @@ const TEACHER_SUBNAV = {
 const TEACHER_TAB_SECTION = {
   roster:'명단', signals:'신호', home:'신호',
   classhub:'반', session:'수업',
-  review:'오답', exams:'오답', unitbank:'오답', submissions:'오답',
+  review:'오답', exams:'오답', unitbank:'오답',
   clinic:'소통', notices:'소통', qna:'소통', chat:'소통',
   settings:'설정'
 };
@@ -4254,6 +4190,9 @@ function goTeacherTab(tab, hubTab){
 }
 
 function teacherTabBodyHTML(){
+  /* 「제출 현황」은 시험지 화면으로 흡수됐다. 예전 세션이 그 탭을 들고 있으면
+     기본값(반 관리)으로 떨어지므로 흡수된 곳으로 보낸다. */
+  if(state.teacherTab==='submissions') state.teacherTab = 'exams';
   const t = state.teacherTab;
   if(t==='roster')      return teacherRosterHTML();
   /* 'home'은 상단바에 없는데도 로그인 직후 기본값이라 «신호»로 모은다.
@@ -4268,7 +4207,6 @@ function teacherTabBodyHTML(){
   if(t==='chat')        return teacherChatHTML();
   if(t==='exams')       return teacherExamsHTML();
   if(t==='review')      return teacherReviewHTML();
-  if(t==='submissions') return teacherSubmissionsHTML();
   if(t==='unitbank')    return teacherUnitBankHTML();
   if(t==='settings')    return teacherSettingsHTML();
   return teacherClassHubHTML();
@@ -7102,6 +7040,7 @@ function teacherExamsHTML(){
       <div class="ex-body">
         <div class="t-sec">문항별 오답률
           <span class="mono" style="font-weight:400;">${state.allRecordsLoading ? '기록 불러오는 중…' : `가장 높은 문항 ${worst}%`}</span></div>
+        ${''}
         ${rows.length===0 ? '<div style="padding:36px 0;text-align:center;color:var(--dim);font-size:12.5px;">문항이 없습니다.</div>'
         : rows.map(r=>`<div class="ex-q ${r.pct>=50?'hi':(r.pct>=25?'mid':'')}">
             <span class="no">${r.no}번</span>
@@ -7116,7 +7055,66 @@ function teacherExamsHTML(){
         <div class="rst-pad"></div>
       </div>
     </main>
+    ${examSubmissionsHTML(ex)}
   </div>`;
+}
+
+/* 「제출 현황」 서브탭을 여기로 흡수했다 (시안 07의 우측 칸).
+   따로 있던 화면은 «모든 시험지 × 모든 학생»을 한 표에 담았는데, 그렇게 보면
+   어느 시험지 이야기인지가 흐려진다. 시험지를 고른 채로 그 시험지의 제출을 보는 것이 맞다.
+   («이 학생이 전체적으로 얼마나 밀렸나»는 명단의 오답 열과 학생 상세 연대기가 답한다.) */
+function examSubmissionsHTML(ex){
+  const roster = DATA.students.filter(s=>s.classId===ex.classId);
+  const banks = DATA.problemBank.filter(b=>b.examId===ex.id);
+  const bankIds = new Set(banks.map(b=>b.id));
+
+  const rows = roster.map(s=>{
+    const rec = state.allRecords[s.studentId];
+    const hw = (rec && rec.wrongHomework || []).filter(h=>bankIds.has(h.bankId));
+    const done = hw.filter(h=>h.done);
+    const correct = done.filter(h=>{
+      const bank = banks.find(b=>b.id===h.bankId);
+      return bank && (h.studentAnswer||'').trim()===(bank.variantAnswer||'').trim();
+    });
+    return { s, total:hw.length, done:done.length, correct:correct.length, hw };
+  }).filter(r=>r.total>0).sort((a,b)=> (a.done/a.total) - (b.done/b.total));
+
+  return `<aside class="co-side ex-side">
+    <div style="flex-shrink:0;">
+      <span style="font-size:13px;font-weight:700;">이 시험지의 오답숙제</span>
+      <div style="font-size:11.5px;color:var(--dim);margin-top:7px;">덜 낸 학생이 위로 옵니다</div>
+    </div>
+    <div class="co-sbody">
+      ${!state.allRecordsLoaded ? '<div style="padding:28px 0;color:var(--dim);font-size:12.5px;">불러오는 중…</div>'
+      : rows.length===0 ? '<div style="padding:28px 0;color:var(--dim);font-size:12.5px;line-height:1.7;">아직 이 시험지에서 나간 오답숙제가 없습니다.<br>학생이 틀린 문항을 체크하면 여기 쌓입니다.</div>'
+      : rows.map(r=>{
+          const open = state.submissionDetailId===r.s.studentId;
+          const pct = r.total ? Math.round(r.done/r.total*100) : 0;
+          return `<div class="cn-rq">
+            <div class="h"><b>${escHtml(r.s.name)}</b>
+              <span class="ago">${r.done}/${r.total} 제출</span></div>
+            <div style="display:flex;align-items:center;gap:9px;margin-top:7px;">
+              <span class="bar" style="flex:1;"><i style="width:${pct}%"></i></span>
+              <span class="mono" style="font-size:11.5px;">정답 ${r.correct}/${r.done}</span>
+            </div>
+            <div class="a">
+              <button class="btn q sm" onclick="state.submissionDetailId = ${open?'null':`'${r.s.studentId}'`}; render()">${open?'접기':'문항별'}</button>
+              <button class="btn q sm" onclick="rosterOpen('${r.s.studentId}','wronghw')">학생</button>
+            </div>
+            ${open ? `<div style="margin-top:9px;">${r.hw.map(h=>{
+              const bank = banks.find(b=>b.id===h.bankId);
+              if(!bank) return '';
+              const ok = h.done && (h.studentAnswer||'').trim()===(bank.variantAnswer||'').trim();
+              return `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-top:1px solid var(--line2);font-size:11.5px;">
+                <span class="mono" style="width:34px;flex-shrink:0;">${bank.questionNo}번</span>
+                <span style="flex:1;min-width:0;color:var(--sub);">${h.done?`낸 답 ${escHtml(h.studentAnswer||'')}`:'미제출'}</span>
+                ${h.done ? `<span class="badge ${ok?'ok':'no'}">${ok?'정답':'오답'}</span>` : '<span class="badge">—</span>'}
+              </div>`;
+            }).join('')}</div>` : ''}
+          </div>`;
+        }).join('')}
+    </div>
+  </aside>`;
 }
 
 /* 등록 모드 — 폼은 구버전 그대로다. 껍데기만 DS로 감싼다. */
@@ -7256,7 +7254,7 @@ function teacherReviewHTML(){
     }).join('')}
     <div class="t-sec" style="margin-top:22px;">보기</div>
     <a class="rv-qn" onclick="goTeacherTab('exams')">시험지별로 보기</a>
-    <a class="rv-qn" onclick="goTeacherTab('submissions')">제출 현황</a>
+    <a class="rv-qn" onclick="goTeacherTab('exams')">제출 현황 (시험지)</a>
     <div class="note" style="margin-top:22px;font-size:11.5px;">
       ${left===0 ? '검토 대기가 비었습니다.'
         : `남은 <b class="mono" style="color:var(--ink);">${left}</b>건을 모두 처리하면 검토 대기가 비워집니다.`}
