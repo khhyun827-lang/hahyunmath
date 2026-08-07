@@ -5123,7 +5123,7 @@ function assistantRosterHTML(cu){
       <div class="rst-fbar">
         <span class="field rst-selwrap">${iconSvg('search',15)}
           <input id="roster-search" value="${escHtml(state.rosterSearchQuery||'')}" placeholder="이름 · 아이디로 찾기"
-            oninput="state.rosterSearchQuery=this.value; render(); const e=document.getElementById('roster-search'); e.focus(); e.setSelectionRange(e.value.length,e.value.length);"></span>
+            oninput="liveEdit(event, v=>state.rosterSearchQuery=v)" oncompositionend="liveEdit(event, v=>state.rosterSearchQuery=v)"></span>
         ${pill('hw', '과제 미완', hwLeft)}
         ${pill('wrong', '오답 미제출', wrongLeft)}
         <span class="rst-cnt">담당 반 <b>${shown.length}</b>명</span>
@@ -5503,7 +5503,7 @@ function teacherRosterHTML(){
 
   <div class="rst-fbar">
     <span class="field">${iconSvg('search',15)}
-      <input id="rst-search" value="${escHtml(state.rosterQuery)}" placeholder="이름 · 아이디 · 학교 · 반으로 검색" oninput="rosterSearch(this.value)">
+      <input id="rst-search" value="${escHtml(state.rosterQuery)}" placeholder="이름 · 아이디 · 학교 · 반으로 검색" oninput="rosterSearch(event)" oncompositionend="rosterSearch(event)">
     </span>
     ${ROSTER_FLAGS.map(fl=>{
       const on = !!(state.rosterFlags||{})[fl[0]];
@@ -5604,13 +5604,31 @@ function rosterToggleFlag(k){
   state.rosterLastIndex = null;
   render();
 }
-function rosterSearch(v){
-  state.rosterQuery = v;
-  state.rosterLastIndex = null;
+/* =================== 치면서 화면이 따라오는 입력칸 ===================
+   ⚠ **한글은 «조합»으로 들어온다.** ㅇ+ㅏ+ㄴ이 모여 「안」이 되기까지 브라우저는
+   그 글자를 «조합 중»으로 들고 있는데, 그 사이에 render()가 돌면 입력칸이 통째로
+   새로 만들어지면서 조합이 깨진다 — 「안녕하세요」를 치면 「ㅇㅏㄴㄴㅕㅇㅎㅏㅅㅔㅇㅛ」가 된다.
+   → **조합이 끝난 뒤에만 다시 그린다** (`event.isComposing`).
+
+   커서도 «끝»이 아니라 «있던 자리»로 되돌린다. 끝으로 보내면 문장 가운데를 고치다가
+   글자 하나 칠 때마다 커서가 맨 뒤로 튄다.
+
+   쓰는 곳은 oninput과 oncompositionend 둘 다 걸어야 한다 — 브라우저마다
+   조합이 끝나는 순간에 어느 이벤트가 먼저 오는지가 다르다. */
+function liveEdit(ev, apply){
+  const el = ev.target;
+  apply(el.value);
+  if(ev.isComposing) return;            // 조합 중에는 화면을 건드리지 않는다
+  const id = el.id, pos = el.selectionStart;
   render();
-  // 전체 재렌더링이라 입력창이 새로 만들어진다. 포커스와 캐럿을 되돌려 놓는다.
-  const el = document.getElementById('rst-search');
-  if(el){ el.focus(); el.setSelectionRange(el.value.length, el.value.length); }
+  const back = id && document.getElementById(id);
+  if(!back) return;
+  back.focus();
+  try{ back.setSelectionRange(pos, pos); }catch(err){}
+}
+
+function rosterSearch(ev){
+  liveEdit(ev, v=>{ state.rosterQuery = v; state.rosterLastIndex = null; });
 }
 /* 명단·신호·수업에서 학생을 열 때 쓰던 «탭 이름»을 학생 상세의 새 모델로 옮긴다.
    탭이 사라지고 연대기 + 갈래가 됐으므로, 옛 탭 이름은 «어느 갈래로 열 것인가»가 된다. */
@@ -7753,7 +7771,7 @@ function teacherNoticesHTML(){
               <span class="muted" style="font-size:11px;">＃ 큰 줄 · **굵게** · ­- 목록</span>
             </div>
             <textarea id="notice-content" rows="9" placeholder="# 8월 특강 안내&#10;&#10;**8월 12일(수)**부터 시작합니다.&#10;- 준비물: 교재, 오답노트"
-              oninput="state.noticeDraft=this.value; render(); const e=document.getElementById('notice-content'); e.focus(); e.setSelectionRange(e.value.length,e.value.length);"
+              oninput="liveEdit(event, v=>state.noticeDraft=v)" oncompositionend="liveEdit(event, v=>state.noticeDraft=v)"
               >${escHtml(draft)}</textarea></label>
         </div>
         ${draft.trim() ? `<div class="t-sec" style="margin-top:22px;">미리보기</div>
@@ -8849,7 +8867,7 @@ function teacherAuditLogHTML(){
       <input id="auditlog-search" value="${escHtml(state.auditLogSearchQuery||'')}"
         placeholder="학생 · 작성자 · 항목으로 찾기"
         style="flex:1;min-width:0;border:0;background:transparent;outline:none;font-family:inherit;font-size:12.5px;color:var(--ink);"
-        oninput="state.auditLogSearchQuery=this.value; render(); const e=document.getElementById('auditlog-search'); e.focus(); e.setSelectionRange(e.value.length,e.value.length);"></span>`,
+        oninput="liveEdit(event, v=>state.auditLogSearchQuery=v)" oncompositionend="liveEdit(event, v=>state.auditLogSearchQuery=v)"></span>`,
     body: (DATA.auditLog.length===0
       ? '<div class="st-empty">아직 기록된 변경 이력이 없습니다.<br>성적·출석·학생정보처럼 되돌리기 어려운 변경만 남습니다.</div>'
       : shown.length===0
