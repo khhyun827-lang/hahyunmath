@@ -119,6 +119,23 @@
     <span class="go" id="go2" style="color:var(--sub);"></span>
   </a>
 
+  <!-- 관리자 16개가 아니라 «그 옆»의 화면들. 상단바 메뉴에 없어서 위 카드 목록에 안 들어간다. -->
+  <a class="syslink" href="17-login.html" style="background:var(--card);border-color:var(--line);margin-top:10px;">
+    <div>
+      <div class="t" style="color:var(--ink);">로그인 <span class="mono" style="font-size:11px;color:var(--dim);font-weight:400;">5 STATES</span></div>
+      <div class="d">누구로 들어갈지 고르고 들어간다 · 문 셋을 동등하게 두지 않음 · 학생 · 조교 · 강사 · 최초 설정 · 오류</div>
+    </div>
+    <span class="go" id="go3" style="color:var(--sub);"></span>
+  </a>
+
+  <a class="syslink" href="18-assistant.html" style="background:var(--card);border-color:var(--line);margin-top:10px;">
+    <div>
+      <div class="t" style="color:var(--ink);">조교 <span class="mono" style="font-size:11px;color:var(--dim);font-weight:400;">1440 × 900 · 2 SCREENS</span></div>
+      <div class="d">따로 만든 화면이 아니라 <b>관리자 화면을 권한으로 좁힌 것</b> · 담당 반 명단 + 학생 상세(연대기)</div>
+    </div>
+    <span class="go" id="go4" style="color:var(--sub);"></span>
+  </a>
+
   <div class="ia" id="ia"></div>
 
   <div id="sections"></div>
@@ -133,8 +150,9 @@
 
 <script src="../ds.js"></script>
 <script>
-  document.getElementById('go').innerHTML  = ICON('arrowR',18);
-  document.getElementById('go2').innerHTML = ICON('arrowR',18);
+  ['go','go2','go3','go4'].forEach(function (id) {
+    document.getElementById(id).innerHTML = ICON('arrowR',18);
+  });
 
   /* 메뉴 구조 — 16개 화면이 어디에 붙는지 먼저 보여준다 */
   var IA = [

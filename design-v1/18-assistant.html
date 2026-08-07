@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>조교 — 김하현수학연구소</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<link rel="stylesheet" href="../ds.css">
+<style>
+  /* 배치만. 색·서체·반경은 ds.css 토큰.
+     클래스는 전부 as- 접두사 — ds.css 이름을 다시 정의하면 조용히 망가진다.
+     («.ph»를 placeholder 뜻으로 썼다가 학생앱 폰 액자(390×812)를 물려받아
+      입력칸이 캔버스 밖으로 나갔다. 두 글자 약어가 제일 위험하다.)
+
+     아래 한 줄만 예외다 — ds.css의 «.stage»를 덮어쓰는 게 아니라,
+     이 파일에만 있는 «두 번째 캔버스» 앞에 간격을 준다. 캔버스가 하나인 다른 시안에서는
+     인접 선택자가 아예 걸리지 않는다. */
+  .stage + .stage{margin-top:34px;}
+
+  /* 상단바 — 메뉴가 없다. 갈 곳이 하나뿐인데 메뉴를 만들면 그게 거짓말이다. */
+  .as-who{display:flex;align-items:center;gap:9px;margin-left:14px;}
+  .as-tag{font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:var(--r-xs);
+    background:var(--accent);color:#fff;letter-spacing:.02em;}
+  .as-cls{font-size:12.5px;color:var(--sub);}
+  .as-cls b{color:var(--ink);font-weight:700;}
+
+  .as-body{position:absolute;left:0;right:0;top:52px;bottom:0;padding:20px 24px;
+    display:flex;flex-direction:column;}
+  .as-head{flex-shrink:0;}
+  .as-hrow{display:flex;align-items:flex-end;gap:14px;}
+  /* serif는 «그 화면이 다루는 대상의 이름»에만. 조교에게 그 대상은 담당 반이다. */
+  .as-lede{margin:11px 0 0;font-size:12.5px;color:var(--sub);line-height:1.75;max-width:78ch;}
+  .as-lede b{color:var(--ink);font-weight:700;}
+
+  .as-fbar{display:flex;align-items:center;gap:8px;margin-top:15px;padding-bottom:13px;
+    border-bottom:1px solid var(--line);}
+  .as-fbar .field{width:250px;}
+  .as-cnt{margin-left:auto;font-size:12px;color:var(--dim);}
+  .as-cnt b{color:var(--ink);font-family:'JetBrains Mono',monospace;font-weight:600;}
+
+  .as-wrap{flex:1;min-height:0;overflow:auto;position:relative;margin-top:2px;}
+  .as-wrap table.grid thead th{position:sticky;top:0;z-index:2;}
+  .as-wrap table.grid{table-layout:fixed;}
+  .as-wrap td{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .as-nm{display:flex;align-items:center;gap:10px;min-width:0;cursor:pointer;}
+  .as-nm .t{min-width:0;}
+  .as-nm .t b{display:block;font-size:13.5px;font-weight:600;}
+  .as-nm .t span{display:block;font-size:11px;color:var(--dim);margin-top:1px;
+    font-family:'JetBrains Mono',monospace;}
+  .as-act{text-align:right;}
+
+  /* ---------- 학생 상세 ---------- */
+  .as-sd{position:absolute;left:0;right:0;top:52px;bottom:0;display:flex;}
+  .as-list{width:236px;flex-shrink:0;border-right:1px solid var(--line);background:var(--card);
+    display:flex;flex-direction:column;}
+  .as-lhead{padding:14px 16px 10px;flex-shrink:0;}
+  .as-lbody{flex:1;min-height:0;overflow:auto;position:relative;}
+  .as-main{flex:1;min-width:0;display:flex;flex-direction:column;padding:20px 24px;}
+
+  .as-sh{display:flex;align-items:flex-end;gap:12px;flex-shrink:0;}
+  .as-sh h1{font-family:'Noto Serif KR',serif;font-size:25px;font-weight:600;
+    letter-spacing:-.02em;margin:0;}
+  .as-sh .m{font-size:12.5px;color:var(--sub);padding-bottom:3px;}
+  .as-sh .m s{text-decoration:none;color:var(--dim);margin:0 7px;}
+
+  .as-kpis{margin-top:15px;flex-shrink:0;}
+
+  /* 신호 — 보이되 «해제»는 없다. 규칙을 다루는 것은 강사의 일이다 */
+  .as-sig{display:flex;align-items:center;gap:11px;margin-top:13px;padding:11px 15px;
+    border:1px solid var(--late-line);background:var(--latebg);border-radius:var(--r-lg);
+    flex-shrink:0;font-size:12.5px;color:var(--late);}
+  .as-sig b{font-weight:700;}
+  .as-sig .why{color:#7A5A00;}
+  .as-sig .why em{font-style:normal;font-family:'JetBrains Mono',monospace;font-weight:600;}
+
+  .as-tabs{display:flex;align-items:center;gap:7px;margin-top:17px;flex-shrink:0;}
+
+  /* 갈래를 고르면 그 갈래의 입력 폼이 연대기 «위»에 붙는다 (03-student와 같은 장치) */
+  .as-form{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-top:14px;
+    padding:14px 16px;border:1px solid var(--line);border-radius:var(--r-lg);background:var(--card);
+    flex-shrink:0;}
+  .as-form label{display:flex;flex-direction:column;gap:5px;width:104px;flex-shrink:0;}
+  .as-form label.grow{flex:1;min-width:180px;width:auto;}
+  .as-form label span{font-size:11px;font-weight:600;color:var(--dim);letter-spacing:.02em;}
+  .as-form .in{height:34px;border:1px solid var(--line);border-radius:var(--r-sm);
+    background:var(--paper);padding:0 10px;font-size:12.5px;color:var(--ink);
+    display:flex;align-items:center;}
+  .as-form .in.as-ph{color:var(--dim);}
+
+  .as-tl{flex:1;min-height:0;overflow:auto;position:relative;margin-top:16px;padding-right:6px;}
+  .as-day .dt{padding-top:9px;}
+  .as-ev-act{margin-left:auto;opacity:.55;}
+
+  .as-lock{display:flex;align-items:center;gap:9px;margin-top:14px;padding:11px 14px;
+    border:1px dashed var(--note-dash);background:var(--note);border-radius:var(--r-md);
+    font-size:12px;color:var(--sub);line-height:1.7;flex-shrink:0;}
+  .as-lock b{color:var(--ink);font-weight:700;}
+  .as-lock svg{flex-shrink:0;color:var(--dim);}
+</style>
+</head>
+<body>
+<div class="chrome"><span class="c-num">18</span><span class="c-name">조교 <em>· 관리자 화면을 «권한»으로 좁힌 것</em></span>
+  <span class="c-meta">역할: 담당 반 하나의 성적·출결·과제·오답을 넣는다　·　1440 × 900</span></div>
+
+<!-- ============ 1. 담당 반 명단 ============ -->
+<div class="stage" id="stage"><div class="canvas">
+
+  <div class="topbar">
+    <div class="bm">김하현수학연구소</div>
+    <div class="as-who">
+      <span class="as-tag">조교</span>
+      <span class="as-cls">담당 <b>고2 미적분Ⅰ 정규반</b></span>
+    </div>
+    <div class="right"><span>김민서 조교</span>
+      <button class="btn sm">로그아웃</button></div>
+  </div>
+
+  <div class="as-body">
+    <div class="as-head">
+      <div class="as-hrow">
+        <h1 class="t-title">고2 미적분Ⅰ 정규반<s>월·수·금 19:00 · 12명</s></h1>
+      </div>
+      <!-- 권한을 화면이 먼저 말한다. 눌러 보고 나서야 «안 되는구나»를 알게 하지 않는다. -->
+      <p class="as-lede">
+        <b>성적 · 출결 · 과제 · 오답</b>을 넣을 수 있습니다.
+        학생 등록·삭제, 반 이동, 개인정보 수정은 강사만 할 수 있습니다.
+      </p>
+      <div class="as-fbar">
+        <span class="field" id="f-search"></span>
+        <a class="pill">성적 미입력 <b>3</b></a>
+        <a class="pill">과제 미완 <b>5</b></a>
+        <span class="as-cnt">담당 반 <b>12</b>명</span>
+      </div>
+    </div>
+
+    <div class="as-wrap">
+      <table class="grid" id="roster"></table>
+    </div>
+  </div>
+
+</div></div>
+
+<!-- ============ 2. 학생 상세 ============ -->
+<div class="stage"><div class="canvas">
+
+  <div class="topbar">
+    <div class="bm">김하현수학연구소</div>
+    <div class="as-who">
+      <span class="as-tag">조교</span>
+      <span class="as-cls">담당 <b>고2 미적분Ⅰ 정규반</b></span>
+    </div>
+    <div class="right"><span>김민서 조교</span>
+      <button class="btn sm">로그아웃</button></div>
+  </div>
+
+  <div class="as-sd">
+    <aside class="as-list">
+      <div class="as-lhead"><div class="t-sec" style="margin:0;">담당 반 12명</div></div>
+      <div class="as-lbody" id="side"></div>
+    </aside>
+
+    <main class="as-main">
+      <div class="as-sh">
+        <h1>한지우</h1>
+        <div class="m">건대부고<s>·</s>고2<s>·</s><span class="mono">hjw14</span></div>
+      </div>
+
+      <div class="kpis as-kpis">
+        <div class="kpi"><div class="k">출석률</div><div class="v">92<s>%</s></div></div>
+        <div class="kpi"><div class="k">과제</div><div class="v">6<s>/8</s></div></div>
+        <div class="kpi"><div class="k">오답숙제</div><div class="v">5<s>/6</s></div></div>
+        <div class="kpi"><div class="k">최근 점수</div><div class="v">80<em class="up">▲2</em></div></div>
+      </div>
+
+      <div class="as-sig">
+        <span class="rk y"></span>
+        <b>주의</b>
+        <span class="why">시청률 <em>69%</em> · 과제 <em>2건</em> 밀림 — 무거운 신호 하나</span>
+      </div>
+
+      <div class="as-tabs" id="tabs"></div>
+
+      <!-- 「성적」 갈래를 고른 상태 -->
+      <div class="as-form">
+        <label class="grow"><span>시험명</span><div class="in as-ph">예: 7월 3주 시험지</div></label>
+        <label style="width:124px;"><span>날짜</span><div class="in mono">2026-08-07</div></label>
+        <label style="width:84px;"><span>점수</span><div class="in as-ph">82</div></label>
+        <label style="width:84px;"><span>만점</span><div class="in mono">100</div></label>
+        <button class="btn p">등록</button>
+      </div>
+
+      <div class="as-tl tl" id="tl"></div>
+
+      <div class="as-lock">
+        <span></span>
+        <div><b>여기서 할 수 없는 것</b> — 기본정보 수정 · 반 이동 · 학생 삭제 · 채팅 ·
+          클리닉 승인. 강사 화면(03-student)에 있습니다.</div>
+      </div>
+    </main>
+  </div>
+
+</div></div>
+
+<script src="../ds.js"></script>
+<script>
+  /* 이 파일은 캔버스가 둘이라 ds.js의 fitCanvas(id 하나만 본다)를 쓸 수 없다.
+     같은 계산을 .stage 전부에 돌린다. */
+  function fitAll() {
+    var s = Math.min(1, (window.innerWidth - 48) / 1440);
+    document.querySelectorAll('.stage').forEach(function (st) {
+      var c = st.querySelector('.canvas');
+      st.style.height = (900 * s) + 'px';
+      c.style.transform = 'scale(' + s + ')';
+      c.style.left = Math.max(0, (st.clientWidth - 1440 * s) / 2) + 'px';
+    });
+  }
+  window.addEventListener('resize', fitAll);
+  fitAll();
+
+  document.getElementById('f-search').innerHTML =
+    ICON('search', 15) + '<span>이름 · 아이디로 찾기</span>';
+
+  /* ---------- 명단 ----------
+     01-roster에서 «조교가 손댈 수 없는 열»을 뺐다 —
+     반 / 반 진도(반이 하나다) · 신호 등급(05가 전담이고 조교의 일이 아니다) · 시청률(영상은 강사가 올린다).
+     남은 것은 전부 조교가 «넣는» 것이다. */
+  /* 폭은 «값의 크기»에 맞춘다. 남는 자리는 성적 추이(폭 지정 없음)가 흡수한다 —
+     table-layout:fixed에서 폭 없는 열이 나머지를 가져간다. 안 그러면 열마다 균등하게
+     늘어나서 이름과 학년 사이가 손가락 두 개만큼 벌어진다. */
+  var COLS = [
+    ['학생', 'left', 236],
+    ['학년', 'left', 64],
+    ['출석률', 'right', 76],
+    ['최근 8회', 'left', 118],
+    ['과제', 'right', 70],
+    ['오답', 'right', 70],
+    ['성적 추이', 'left', 0],
+    ['', 'right', 116]
+  ];
+  document.getElementById('roster').innerHTML =
+    '<thead><tr>' + COLS.map(function (c) {
+      return '<th class="' + (c[1] === 'right' ? 'r' : '') + '"'
+        + (c[2] ? ' style="width:' + c[2] + 'px"' : '') + '>' + c[0] + '</th>';
+    }).join('') + '</tr></thead><tbody>'
+    + STUDENTS.map(function (s, i) {
+        var low = s.pct < 85;
+        return '<tr' + (i === 4 ? ' class="sel"' : '') + '>'
+          + '<td><div class="as-nm"><span class="av">' + s.n.charAt(0) + '</span>'
+            + '<span class="t"><b>' + s.n + '</b><span>' + s.id + '</span></span></div></td>'
+          + '<td>' + s.g + '</td>'
+          + '<td class="r mono' + (low ? ' warn' : '') + '">' + s.pct + '%</td>'
+          + '<td>' + dots(s.att) + '</td>'
+          + '<td class="r mono">' + s.hw + '</td>'
+          + '<td class="r mono">' + s.wr + '</td>'
+          + '<td>' + spark(s.sp, 110, 22)
+            + '<span class="mono" style="font-size:12px;margin-left:6px;">' + s.sp[s.sp.length - 1] + '</span></td>'
+          + '<td class="as-act"><button class="btn sm">기록 넣기</button></td>'
+          + '</tr>';
+      }).join('') + '</tbody>';
+
+  /* ---------- 좌측 목록 ---------- */
+  document.getElementById('side').innerHTML = STUDENTS.map(function (s, i) {
+    return '<div class="li' + (i === 4 ? ' on' : '') + '">'
+      + '<span class="av">' + s.n.charAt(0) + '</span>'
+      + '<span class="t"><b>' + s.n + '</b><span>' + s.g + ' · 출석 ' + s.pct + '%</span></span>'
+      + (s.rk !== 'g' ? '<span class="rk ' + s.rk + '"></span>' : '')
+      + '</div>';
+  }).join('');
+
+  /* ---------- 갈래 ----------
+     03-student은 일곱 갈래다. 조교는 «넣을 수 있는» 넷만 본다.
+     연락 · 클리닉 · 질문은 조교가 다루지 않으므로 갈래 자체를 만들지 않는다. */
+  var TABS = [['전체', 0], ['성적', 1], ['출결', 0], ['과제 · 오답', 0]];
+  document.getElementById('tabs').innerHTML = TABS.map(function (t) {
+    return '<a class="pill' + (t[1] ? ' on' : '') + '">' + t[0] + '</a>';
+  }).join('');
+
+  /* ---------- 연대기 ----------
+     03-student의 사상을 그대로 쓴다 — 탭을 없애고 하나의 시간 흐름으로 합친다.
+     «이 학생에게 무슨 일이 있었나»는 원래 시간 순 질문이다. */
+  var LOG = [
+    ['08-07 (금)', [
+      ['score', '7월 3주 시험지', '<b>80</b> / 100　·　반 평균 76', 1]
+    ]],
+    ['08-05 (수)', [
+      ['ok', '출석', '19:00 수업 · 정상 출석', 1],
+      ['', '오답숙제 제출', '4번 · 접선의 방정식　·　<b>정답</b>', 0]
+    ]],
+    ['08-03 (월)', [
+      ['no', '결석', '보충 영상 <b>1건</b>이 자동 배정됨', 1],
+      ['', '과제 미제출', '도함수의 활용 워크북 p.42-47', 0]
+    ]],
+    ['07-31 (목)', [
+      ['ok', '출석', '19:00 수업 · 정상 출석', 1],
+      ['score', '7월 2주 시험지', '<b>78</b> / 100　·　반 평균 79', 1]
+    ]]
+  ];
+  document.getElementById('tl').innerHTML = LOG.map(function (d) {
+    return '<div class="day"><div class="dt">' + d[0] + '</div>'
+      + d[1].map(function (e) {
+          return '<div class="ev' + (e[0] ? ' k-' + e[0] : '') + '">'
+            + '<div class="h"><span class="ti">' + e[1] + '</span>'
+            + (e[3] ? '<span class="as-ev-act">' + ICON('x', 14) + '</span>' : '') + '</div>'
+            + '<div class="ds">' + e[2] + '</div></div>';
+        }).join('')
+      + '</div>';
+  }).join('');
+
+  document.querySelector('.as-lock span').innerHTML = ICON('shield', 16);
+</script>
+</body>
+</html>

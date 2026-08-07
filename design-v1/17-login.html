@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>로그인 — 김하현수학연구소</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<link rel="stylesheet" href="../ds.css">
+<style>
+  /* 문서 페이지. 캔버스를 쓰지 않고 :root 토큰만 상속받는다.
+     로그인은 폰과 데스크톱에서 «같은 한 칸»이라 1440 캔버스로 그리면 거짓이 된다. */
+  html,body{background:var(--paper);color:var(--ink);
+    font-family:'Pretendard',-apple-system,sans-serif;font-size:13px;line-height:1.5;
+    -webkit-font-smoothing:antialiased;}
+  .wrap{max-width:1320px;margin:0 auto;padding:56px 28px 100px;}
+
+  .top{display:flex;align-items:flex-start;gap:40px;padding-bottom:26px;border-bottom:1px solid var(--line);}
+  .top h1{font-family:'Noto Serif KR',serif;font-size:31px;font-weight:600;letter-spacing:-.03em;margin:0;}
+  .top .lede{font-size:14px;color:var(--sub);line-height:1.85;margin:13px 0 0;max-width:700px;}
+  .top .lede b{color:var(--ink);font-weight:700;}
+  .top .aside{margin-left:auto;text-align:right;flex-shrink:0;}
+  .top .aside .m{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--dim);
+    letter-spacing:.1em;line-height:1.9;}
+
+  .call{margin-top:24px;padding:18px 20px;border:1px solid var(--accent-line);background:var(--accent-bg);
+    border-radius:var(--r-lg);}
+  .call .h{font-size:13.5px;font-weight:700;color:var(--accent);margin-bottom:8px;}
+  .call p{margin:0;font-size:12.5px;color:var(--sub);line-height:1.85;}
+  .call p+p{margin-top:8px;}
+  .call b{color:var(--ink);font-weight:700;}
+
+  .sh{display:flex;align-items:baseline;gap:12px;margin:52px 0 22px;
+    padding-bottom:12px;border-bottom:1px solid var(--line);}
+  .sh b{font-family:'Noto Serif KR',serif;font-size:19px;font-weight:600;letter-spacing:-.02em;}
+  .sh span{font-size:12.5px;color:var(--sub);}
+  .sh .n{margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--dim);}
+
+  /* 화면 액자 — 폰도 데스크톱도 이 한 칸이 가운데 온다.
+     ds.css의 .card / .panel 을 덮어쓰지 않도록 전부 lo- 접두사를 쓴다. */
+  .states{display:flex;gap:26px;flex-wrap:wrap;align-items:flex-start;}
+  .state{width:396px;}
+  .lo-frame{border:1px solid var(--line);border-radius:20px;background:var(--paper);
+    padding:44px 30px 34px;min-height:520px;display:flex;flex-direction:column;}
+  .cap{margin-top:12px;}
+  .cap .t{display:flex;align-items:baseline;gap:8px;}
+  .cap .t b{font-size:14px;font-weight:700;}
+  .cap .t em{font-style:normal;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--dim);}
+  .cap p{margin:7px 0 0;font-size:12px;color:var(--sub);line-height:1.75;}
+  .cap p b{color:var(--ink);font-weight:700;}
+
+  /* ---------- 로그인 한 칸 ---------- */
+  .lo-logo{width:196px;height:auto;display:block;margin:0 auto 34px;}
+  .lo-lab{font-size:12px;font-weight:700;color:var(--sub);margin:0 0 7px;letter-spacing:-.01em;}
+  .lo-in{width:100%;height:48px;border:1px solid var(--line);border-radius:var(--r-md);
+    background:var(--card);padding:0 14px;font-family:inherit;font-size:14.5px;color:var(--ink);
+    display:flex;align-items:center;}
+  .lo-in.lo-ph{color:var(--dim);}
+  .lo-in.on{border-color:var(--accent);box-shadow:0 0 0 3px rgba(60,48,52,.12);}
+  .lo-in.dots{font-family:'JetBrains Mono',monospace;letter-spacing:.24em;color:var(--ink);}
+  .lo-f+.lo-f{margin-top:16px;}
+  .lo-go{display:flex;align-items:center;justify-content:center;width:100%;height:50px;
+    background:var(--accent);border:1px solid var(--accent);border-radius:var(--r-md);
+    color:#fff;font-size:15px;font-weight:700;margin-top:24px;}
+
+  .lo-hint{margin:16px 0 0;font-size:12px;color:var(--dim);line-height:1.75;text-align:center;}
+
+  /* 다른 문 — 학생이 절대다수라 조교·강사는 «아래 작은 글»이다 */
+  .lo-doors{margin-top:auto;padding-top:26px;display:flex;align-items:center;justify-content:center;
+    gap:14px;font-size:12.5px;color:var(--sub);}
+  .lo-doors a{text-decoration:underline;text-underline-offset:3px;cursor:pointer;}
+  .lo-doors s{text-decoration:none;color:var(--line);}
+  .lo-back{margin-top:auto;padding-top:26px;text-align:center;font-size:12.5px;color:var(--sub);}
+  .lo-back a{text-decoration:underline;text-underline-offset:3px;}
+
+  /* 오류 — 다시 입력하기 «전»에 읽혀야 하므로 칸 위에 온다 */
+  .lo-err{display:flex;align-items:flex-start;gap:9px;margin-bottom:20px;padding:12px 14px;
+    background:var(--nobg);border:1px solid var(--no-line);border-radius:var(--r-md);
+    font-size:12.5px;line-height:1.7;color:var(--no);}
+  .lo-err svg{flex-shrink:0;margin-top:1px;}
+  .lo-err b{display:block;font-weight:700;}
+  .lo-err span{color:#8E4A40;}
+
+  .lo-note{margin-bottom:22px;}
+
+  .foot{margin-top:52px;padding:20px 22px;border:1px dashed var(--note-dash);background:var(--note);
+    border-radius:var(--r-lg);font-size:12.5px;color:var(--sub);line-height:1.85;}
+  .foot b{color:var(--ink);font-weight:700;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="top">
+    <div>
+      <h1>로그인</h1>
+      <p class="lede">
+        제품에서 <b>구버전으로 남은 화면 둘</b> 중 하나입니다. 시안이 없어서 여태 안 옮겼습니다.
+        옮기기 전에 먼저 정해야 할 것은 «이 화면의 역할»입니다 —
+        <b>누구로 들어갈지 고르고 들어간다.</b> 그 이상은 하지 않습니다.
+      </p>
+    </div>
+    <div class="aside">
+      <div class="m">LOGIN<br>396 CENTERED COLUMN<br>5 STATES</div>
+    </div>
+  </div>
+
+  <div class="call">
+    <div class="h">먼저 확인받고 싶은 판단 — 문 세 개를 «동등하게» 두지 않았습니다</div>
+    <p>
+      지금은 <b>학생 / 조교 / 강사</b>가 같은 크기의 탭 세 개로 나란히 있습니다.
+      그런데 실제로 이 화면에 오는 사람은 <b>거의 전부 학생</b>입니다.
+      조교는 계정이 아직 하나도 없고, 강사는 한 명입니다.
+    </p>
+    <p>
+      그래서 <b>학생 폼이 곧 화면</b>이고, 조교·강사는 아래 작은 글로 내렸습니다.
+      공개 홈도 이미 같은 비중입니다 — 상단바에 「학생 로그인」이 있고 「강사 로그인」은 푸터에 있습니다.
+      셋을 나란히 두면 <b>학생이 매번 «내 건 어느 거지»를 한 번 더 생각</b>해야 합니다.
+    </p>
+  </div>
+
+  <div id="screens"></div>
+
+  <div class="foot">
+    <b>이 화면에서 지어내지 않은 것</b> — 강사 로그인에는 <b>아이디가 없습니다.</b> 비밀번호 하나뿐입니다.
+    그게 지금 제품의 사실이라 시안도 그대로 그렸습니다. 다만 이건 약점입니다 —
+    아이디가 없으면 «누가 시도했는지»가 남지 않고, 잠금·감사 같은 것을 붙일 자리도 없습니다.
+    비밀번호 평문 저장(CLAUDE.md 9절 3번)과 함께 다뤄야 할 일이지 이 화면에서 고칠 일이 아닙니다.
+  </div>
+
+</div>
+
+<script src="../ds.js"></script>
+<script>
+  /* 로고는 실제 파일을 쓴다. 시안이라 경로 한글이 문제되지 않는다
+     (실서비스는 data URI 상수 LOGO_H1을 쓴다 — 배포본에서 한글 경로가 404가 나기 때문). */
+  var LOGO = '../로고/가로형(1).png';
+
+  function field(label, value, opts) {
+    opts = opts || {};
+    return '<div class="lo-f"><div class="lo-lab">' + label + '</div>'
+      + '<div class="lo-in' + (opts.focus ? ' on' : '') + (opts.dots ? ' dots' : '')
+      + (opts.ph ? ' lo-ph' : '') + '">' + value + '</div></div>';
+  }
+
+  function frame(o) {
+    return '<div class="state"><div class="lo-frame">'
+      + '<img class="lo-logo" src="' + LOGO + '" alt="김하현수학연구소">'
+      + o.body
+      + '</div>'
+      + '<div class="cap"><div class="t"><b>' + o.title + '</b><em>' + o.en + '</em></div>'
+      + '<p>' + o.note + '</p></div></div>';
+  }
+
+  var DOORS = '<div class="lo-doors"><a>조교로 로그인</a><s>·</s><a>강사로 로그인</a></div>';
+
+  /* ================= 학생 (기본) ================= */
+  var STUDENT = frame({
+    title:'학생 로그인', en:'Default',
+    note:'이 화면에 오는 사람은 거의 전부 학생입니다. <b>기본 상태가 곧 학생 폼</b>이고, 나머지 문은 아래 작은 글입니다.',
+    body:
+      field('아이디', '학원에서 안내받은 아이디', {ph:1})
+      + field('비밀번호', '비밀번호', {ph:1})
+      + '<div class="lo-go">로그인</div>'
+      + '<p class="lo-hint">아이디·비밀번호를 잊으셨다면<br>선생님께 문의해 주세요.</p>'
+      + DOORS
+  });
+
+  /* ================= 조교 ================= */
+  var ASSISTANT = frame({
+    title:'조교 로그인', en:'Assistant',
+    note:'학생과 <b>같은 형태</b>입니다. 하는 일이 같아서(아이디+비밀번호) 형태를 다르게 할 이유가 없습니다. 돌아가는 문만 답니다.',
+    body:
+      field('아이디', 'ta_minseo', {focus:1})
+      + field('비밀번호', '••••••••', {dots:1})
+      + '<div class="lo-go">로그인</div>'
+      + '<p class="lo-hint">아이디·비밀번호를 잊으셨다면<br>강사에게 문의해 주세요.</p>'
+      + '<div class="lo-back"><a>← 학생 로그인으로</a></div>'
+  });
+
+  /* ================= 강사 ================= */
+  var TEACHER = frame({
+    title:'강사 로그인', en:'Teacher',
+    note:'<b>아이디가 없습니다.</b> 관리자 비밀번호 하나뿐입니다 — 지금 제품이 그렇습니다. 없는 칸을 시안에서 지어내지 않았습니다.',
+    body:
+      field('관리자 비밀번호', '••••••••••', {dots:1, focus:1})
+      + '<div class="lo-go">로그인</div>'
+      + '<div class="lo-back"><a>← 학생 로그인으로</a></div>'
+  });
+
+  /* ================= 강사 최초 설정 ================= */
+  var SETUP = frame({
+    title:'최초 비밀번호 설정', en:'First run',
+    note:'지금은 <b>힌트 한 줄</b>로 지나갑니다. 하지만 이건 «처음 여는 사람»이 만나는 화면이고, 여기서 정한 값은 <b>되찾을 수 없습니다.</b> 무게를 맞췄습니다.',
+    body:
+      '<div class="lo-note"><div class="note">'
+      + '<div class="d">FIRST RUN</div>'
+      + '관리자 비밀번호를 정해 주세요. 4자 이상입니다.<br>'
+      + '<b style="color:var(--ink);">잊으면 되찾을 수 없습니다</b> — 저장된 곳이 여기 한 곳뿐입니다.'
+      + '</div></div>'
+      + field('관리자 비밀번호', '••••••••••', {dots:1})
+      + field('한 번 더', '••••••••••', {dots:1, focus:1})
+      + '<div class="lo-go">설정하고 시작하기</div>'
+  });
+
+  /* ================= 오류 ================= */
+  var ERROR = frame({
+    title:'오류', en:'Error',
+    note:'오류는 <b>칸 위</b>에 옵니다. 지금은 버튼 «아래»에 있어서, 다시 입력하려고 위로 올라간 뒤에는 안 보입니다.',
+    body:
+      '<div class="lo-err">' + ICON('alert',16)
+      + '<div><b>아이디 또는 비밀번호가 일치하지 않습니다.</b>'
+      + '<span>대소문자를 확인해 주세요.</span></div></div>'
+      + field('아이디', 'hjw14', {})
+      + field('비밀번호', '••••••', {dots:1, focus:1})
+      + '<div class="lo-go">로그인</div>'
+      + '<p class="lo-hint">아이디·비밀번호를 잊으셨다면<br>선생님께 문의해 주세요.</p>'
+      + DOORS
+  });
+
+  /* ---------- 배치 ---------- */
+  var SECTIONS = [
+    ['기본', '이 화면에 오는 사람의 대부분이 보는 것', [STUDENT, ERROR]],
+    ['다른 문', '작은 글을 눌러 들어온다. 돌아가는 길을 반드시 남긴다', [ASSISTANT, TEACHER]],
+    ['한 번뿐인 화면', '제품을 처음 여는 사람이 만나는 자리', [SETUP]]
+  ];
+  document.getElementById('screens').innerHTML = SECTIONS.map(function (s) {
+    return '<div class="sh"><b>' + s[0] + '</b><span>' + s[1] + '</span>'
+      + '<span class="n">' + s[2].length + ' STATE' + (s[2].length > 1 ? 'S' : '') + '</span></div>'
+      + '<div class="states">' + s[2].join('') + '</div>';
+  }).join('');
+</script>
+</body>
+</html>
