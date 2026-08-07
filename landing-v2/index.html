@@ -66,9 +66,16 @@ a{color:inherit;}
    따로 미리보기 행을 두면 같은 16:00이 두 번 나온다 — 그건 장치가 아니라 버그로 읽힌다. */
 .l-hero{min-height:calc(100vh - 118px);min-height:calc(100svh - 118px);
   display:flex;flex-direction:column;justify-content:center;padding:110px 0 0;position:relative;}
+/* ⚠ .l-wrap의 margin:0 auto는 «세로 플렉스»의 가로축에서 stretch를 끈다.
+   그래서 히어로 안에서만 wrap이 내용 크기(612px)로 줄어들고 척추가 아래 본문과 어긋났다
+   — 히어로 779, 그 아래 495. 페이지 전체가 한 줄기 선 위에 있다는 것이 이 랜딩의 뼈대다. */
+.l-hero .l-wrap{width:100%;}
 .l-hero .l-logo{max-width:392px;width:52%;min-width:260px;height:auto;display:block;}
 .l-hero .l-date{margin-top:38px;font-family:'JetBrains Mono',monospace;font-size:14px;
   color:var(--dim);letter-spacing:.14em;}
+/* ⚠ JetBrains Mono에 한글 글리프가 없다. 그대로 두면 브라우저가 «고정폭 한글 글꼴»로
+   떨어뜨려 「금요일」이 「금 요 일」처럼 벌어진다. 낱말은 mono 밖에 둔다. */
+.l-hero .l-date .l-dow{font-family:'Pretendard',sans-serif;letter-spacing:.02em;margin-left:16px;}
 .l-hero .l-sub{margin-top:14px;font-size:16px;color:var(--sub);}
 
 /* ---------- 2. 하루 ---------- */
@@ -315,9 +322,9 @@ var CONTENT = {
 var DAYS = ['일','월','화','수','목','금','토'];
 var now = new Date();
 var p2 = function (n) { return (n < 10 ? '0' : '') + n; };
-document.getElementById('today').textContent =
+document.getElementById('today').innerHTML =
   now.getFullYear() + ' · ' + p2(now.getMonth() + 1) + ' · ' + p2(now.getDate())
-  + '　' + DAYS[now.getDay()] + '요일';
+  + '<span class="l-dow">' + DAYS[now.getDay()] + '요일</span>';
 document.getElementById('foot').innerHTML =
   'KIM HA HYUN MATH<br>' + now.getFullYear();
 
