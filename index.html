@@ -503,6 +503,42 @@
   border-radius:var(--r-md);display:block;}
 
 /* 공지 — 읽히는 순서가 곧 최신 순이다. */
+/* ---------- 공지 (design-v1/10-notice) ----------
+   시안대로 «목록 + 본문» 두 단이다. 카드를 세로로 나열하면 긴 공지 하나가
+   나머지를 전부 화면 밖으로 밀어낸다 — 공지는 «하나를 읽는» 것이다.
+   ⚠ 시안의 세 번째 칸 「읽음 현황」은 만들 수 없다 — 아래 nt-doc 주석 참고. */
+.app .nt-screen{display:flex;height:calc(100vh - 92px);}
+.app .nt-list{width:290px;flex-shrink:0;border-right:1px solid var(--line);
+  display:flex;flex-direction:column;}
+.app .nt-lh{display:flex;align-items:center;gap:8px;padding:0 14px 12px 0;flex-shrink:0;}
+.app .nt-lbody{flex:1;min-height:0;overflow-y:auto;position:relative;padding-right:14px;}
+.app .nt-item{padding:12px 14px;border-left:3px solid transparent;border-bottom:1px solid var(--line2);
+  cursor:pointer;transition:background var(--t);}
+.app .nt-item:hover{background:var(--hover);}
+.app .nt-item.on{background:var(--accent-bg);border-left-color:var(--accent);}
+.app .nt-item .d{font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--dim);}
+.app .nt-item .t{font-size:13px;font-weight:600;margin-top:6px;line-height:1.5;}
+.app .nt-item .m{font-size:11.5px;color:var(--dim);margin-top:5px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.app .nt-doc{flex:1;min-width:0;display:flex;flex-direction:column;padding:0 4px 0 26px;}
+.app .nt-dh{display:flex;align-items:baseline;gap:12px;flex-shrink:0;padding-bottom:14px;
+  border-bottom:1px solid var(--line);}
+.app .nt-dh h2{margin:0;font-family:'Noto Serif KR',serif;font-size:22px;font-weight:600;
+  letter-spacing:-.02em;}
+.app .nt-dbody{flex:1;min-height:0;overflow-y:auto;position:relative;padding:20px 0 0;}
+
+/* ---------- 서식 있는 본문 ----------
+   .app과 .lp 양쪽에서 쓰므로 스코프를 걸지 않는다 (.mono와 같은 «내용» 클래스다).
+   저장되는 것은 언제나 평문이고, 여기서 표시할 때만 태그로 바꾼다 — 아래 noticeBodyHTML 참고. */
+.ntx{font-size:13.5px;line-height:1.9;color:var(--sub);}
+.ntx > *:first-child{margin-top:0;}
+.ntx p{margin:0 0 14px;}
+.ntx h4{margin:22px 0 10px;font-size:15px;font-weight:700;color:var(--ink);letter-spacing:-.02em;}
+.ntx ul{margin:0 0 14px;padding-left:19px;}
+.ntx li{margin-bottom:6px;}
+.ntx b{color:var(--ink);font-weight:700;}
+.ntx .big{font-size:16px;color:var(--ink);}
+
 .app .nt-card{border:1px solid var(--line);border-radius:var(--r-lg);background:var(--card);
   padding:14px 16px;margin-bottom:10px;}
 .app .nt-h{display:flex;align-items:baseline;gap:10px;}
@@ -1463,6 +1499,8 @@ let state = {
   importProgress: null,
   pbImageCache: {},
   allRecordsLoaded: false,
+  allChatsLoaded: false,
+  allChatsLoading: false,
   allRecordsLoading: false,
   allRecords: {},
   submissionDetailId: null,
@@ -1531,6 +1569,8 @@ let state = {
   settingsForm: '',       // 설정에서 열린 «추가» 폼 — '' | 'ta' | 'cls' | 'stu' | 'bulk' | 'pw'
   clinicPanel: '',        // 클리닉의 열린 폼 — '' | 'slot' | 'assign'
   noticeWriting: false,   // 공지 «새 공지» 폼이 열려 있나
+  noticeSelectedId: null, // 오른쪽에 펼쳐 놓은 공지
+  noticeDraft: '',        // 쓰는 중인 본문 — 미리보기가 이걸 본다
   videoAdding: false,     // 영상 «등록» 폼이 열려 있나
   auditLogSearchQuery: '',
   toast: ''
@@ -1990,8 +2030,9 @@ async function addNotice(){
   const notice = {id:Date.now(), date:todayStr(), title, content};
   DATA.notices.unshift(notice);
   await dbSetDoc('notices', notice.id, notice);
-  document.getElementById('notice-title').value='';
-  document.getElementById('notice-content').value='';
+  state.noticeDraft = '';
+  state.noticeWriting = false;
+  state.noticeSelectedId = notice.id;   // 방금 낸 것을 바로 보여 준다
   showToast('공지사항이 등록되었습니다.');
   render();
 }
@@ -2039,11 +2080,40 @@ function markConsultsSeen(){
 }
 
 /* =================== 알림 벨 =================== */
+/* 채팅은 «학생마다» 안 읽은 것이 따로 있다. 상담·질문처럼 한 숫자로 묶을 수 없어서
+   학생별로 세고, 벨에는 그 합을 올린다.
+   **내가 보낸 말은 세지 않는다** — 안 그러면 답장할 때마다 «안 읽음»이 늘어난다. */
+function chatUnread(sid){
+  const chat = DATA.chats[sid];
+  if(!chat) return 0;
+  return unseenCount('chat:'+sid, chat.filter(m=>m.from==='student').length);
+}
+function markChatSeen(sid){
+  const chat = DATA.chats[sid] || [];
+  markSeen('chat:'+sid, chat.filter(m=>m.from==='student').length);
+}
+/* 채팅은 학생마다 문서가 따로다(kv/chat:{studentId}). «누가 말을 걸었나»를 알려면
+   한 번은 전부 읽어야 한다 — 기록(loadAllRecordsIfNeeded)과 같은 방식이다. */
+async function loadAllChatsIfNeeded(){
+  if(state.allChatsLoaded || state.allChatsLoading) return;
+  state.allChatsLoading = true;
+  const entries = await Promise.all(DATA.students.map(async s =>
+    [s.studentId, DATA.chats[s.studentId] || await dbGet('chat:'+s.studentId, [])]));
+  entries.forEach(([sid, chat]) => { DATA.chats[sid] = chat; });
+  state.allChatsLoading = false;
+  state.allChatsLoaded = true;
+  render();
+}
+
 function teacherNotifItems(){
+  const chatN = DATA.students.reduce((n,s)=>n + chatUnread(s.studentId), 0);
   return [
     {key:'consult', label:'새 상담 신청', count: DATA.consults.length, gotoCode:"state.teacherTab='settings'; state.settingsSubTab='consults';"},
     {key:'qna', label:'새 질문', count: DATA.qnas.length, gotoCode:"state.teacherTab='qna';"},
     {key:'clinic', label:'새 클리닉 신청', count: DATA.clinics.length, gotoCode:"state.teacherTab='clinic';"},
+    /* 누르면 채팅 탭으로만 간다. «읽음»은 그 학생 대화를 실제로 열 때 찍힌다 —
+       벨을 눌렀다고 읽은 것이 아니다. */
+    {key:'chat', label:'새 채팅', count:0, unseen:chatN, keepUnseen:true, gotoCode:"state.teacherTab='chat';"},
   ];
 }
 function studentNotifItems(sid){
@@ -2055,6 +2125,10 @@ function studentNotifItems(sid){
     {key:'homework', label:'새 과제', count: hwCount, gotoCode:"state.studentTab='progress';"},
     {key:'video', label:'새 영상', count: vidCount, gotoCode:"state.studentTab='video';"},
     {key:'notice', label:'새 공지', count: DATA.notices.length, gotoCode:"state.studentTab='notice';"},
+    /* 반대 방향도 같다 — 선생님이 답을 보내면 학생 벨에 뜬다.
+       학생은 자기 대화 하나만 보므로 여기서는 곧장 셀 수 있다. */
+    {key:'chat:'+sid, label:'선생님 답장', count: (DATA.chats[sid]||[]).filter(m=>m.from==='teacher').length,
+     gotoCode:"state.studentTab='chat';"},
   ];
 }
 
@@ -3910,7 +3984,7 @@ function homeHTML(){
               <div class="l-nrow l-rise">
                 <div class="l-nd">${escHtml(n.date||'')}</div>
                 <div class="l-nt">${escHtml(n.title)}
-                  ${n.content ? `<div class="l-nx">${escHtml(n.content)}</div>` : ''}</div>
+                  ${n.content ? `<div class="l-nx ntx">${noticeBodyHTML(n.content)}</div>` : ''}</div>
               </div>`).join('')}
         </div>
       </div>
@@ -4742,8 +4816,7 @@ function stuNoticeHTML(){
         <span class="mono" style="font-size:10.5px;color:var(--dim);">${escHtml(n.date||'')}</span>
       </div>
       <div style="font-size:13.5px;${i<unread?'font-weight:700;':''}margin-top:8px;line-height:1.55;">${escHtml(n.title)}</div>
-      ${n.content ? `<div style="font-size:12.5px;color:var(--sub);line-height:1.75;margin-top:8px;
-        white-space:pre-wrap;">${escHtml(n.content)}</div>` : ''}
+      ${n.content ? `<div class="ntx" style="font-size:12.5px;margin-top:8px;">${noticeBodyHTML(n.content)}</div>` : ''}
     </div>`).join('');
 }
 
@@ -4863,6 +4936,8 @@ function stuClinicHTML(c){
 function stuChatHTML(c){
   const chat = DATA.chats[c.sid] || [];
   if(!DATA.chats[c.sid]) loadChat(c.sid).then(()=>render());
+  /* 대화를 «연» 순간이 읽은 순간이다. 학생 벨의 「선생님 답장」이 여기서 꺼진다. */
+  markSeen('chat:'+c.sid, chat.filter(m=>m.from==='teacher').length);
   let lastDay = '';
   const bubbles = chat.map(m=>{
     const day = (m.at||'').slice(0,10);
@@ -4896,16 +4971,20 @@ function stuChatHTML(c){
    구버전 notificationBellHTML은 공용 헤더에 붙어 있었는데, 그 헤더가 사라지면서
    각 셸의 상단바로 들어왔다. */
 function bellHTML(items){
-  const total = items.reduce((n,it)=>n + unseenCount(it.key, it.count), 0);
-  const unseen = items.filter(it=>unseenCount(it.key, it.count)>0);
+  /* 항목이 «안 읽은 수»를 스스로 들고 오면 그것을 쓴다 (채팅처럼 학생별로 세는 것).
+     keepUnseen이면 눌러도 읽음으로 찍지 않는다 — 벨을 눌렀다고 읽은 것은 아니다. */
+  const n = it => it.unseen !== undefined ? it.unseen : unseenCount(it.key, it.count);
+  const total = items.reduce((sum,it)=>sum + n(it), 0);
+  const unseen = items.filter(it=>n(it)>0);
   return `<div class="ds-bell">
     <button onclick="state.notifOpen=!state.notifOpen; render()">${iconSvg('bell',19)}
       ${total>0 ? `<span class="n">${total>9?'9+':total}</span>` : ''}</button>
     ${state.notifOpen ? `<div class="ds-drop">
       ${unseen.length===0 ? '<div class="em">새 알림이 없습니다</div>'
-      : unseen.map(it=>`<div class="it" onclick="${it.gotoCode} markSeen('${it.key}', ${it.count});
+      : unseen.map(it=>`<div class="it" onclick="${it.gotoCode} ${
+          it.keepUnseen ? '' : `markSeen('${it.key}', ${it.count});`}
           state.notifOpen=false; render()">
-          <span>${it.label}</span><b>${unseenCount(it.key, it.count)}</b></div>`).join('')}
+          <span>${it.label}</span><b>${n(it)}</b></div>`).join('')}
     </div>` : ''}
   </div>`;
 }
@@ -5169,6 +5248,8 @@ function teacherHTML(){
   const section = TEACHER_TAB_SECTION[state.teacherTab] || '반';
   const subs = TEACHER_SUBNAV[section];
   const subActive = s => state.teacherTab===s[1] && (!s[2] || state.classHubTab===s[2]);
+  /* 벨이 «새 채팅»을 세려면 대화를 알고 있어야 한다. 셸에서 한 번만 부른다. */
+  loadAllChatsIfNeeded();
   const body = teacherTabBodyHTML();
 
   return `
@@ -7574,41 +7655,124 @@ function teacherClinicHTML(){
 
 /* =================== 공지 (design-v1/10-notice) ===================
    가장 단순한 화면이다. 쓰는 곳이 위, 읽는 곳이 아래. 최신이 먼저. */
+/* =================== 공지 본문 서식 ===================
+   **저장되는 것은 언제나 평문이다.** 표시할 때만 태그로 바꾼다 —
+   HTML을 그대로 담아 두면 언젠가 남의 글이 섞였을 때 그게 곧 실행된다.
+   escHtml을 «먼저» 걸고 그 뒤에 표시를 찾으므로, 사용자가 <b>를 적어도 글자로만 남는다.
+
+   쓸 수 있는 것은 넷뿐이다. 더 늘리면 «쓰는 법»을 따로 배워야 하는 도구가 된다.
+     # 줄머리   큰 줄
+     **굵게**
+     - 줄머리   목록
+     빈 줄      문단 나눔 */
+function noticeBodyHTML(text){
+  const esc = escHtml(text||'');
+  const inline = s => s.replace(/\*\*([^*\n]+)\*\*/g, '<b>$1</b>');
+  let out = '', ul = false;
+  const closeUl = () => { if(ul){ out += '</ul>'; ul = false; } };
+  esc.split('\n').forEach(line=>{
+    const t = line.trim();
+    if(!t){ closeUl(); return; }
+    if(t.startsWith('# ')){ closeUl(); out += `<h4>${inline(t.slice(2))}</h4>`; return; }
+    if(t.startsWith('- ')){ if(!ul){ out += '<ul>'; ul = true; } out += `<li>${inline(t.slice(2))}</li>`; return; }
+    closeUl(); out += `<p>${inline(t)}</p>`;
+  });
+  closeUl();
+  return out;
+}
+/* 서식 넣기 — 고른 글자를 감싸거나, 커서 자리에 줄머리를 붙인다. */
+function noticeMark(kind){
+  const el = document.getElementById('notice-content');
+  if(!el) return;
+  const [a, b] = [el.selectionStart, el.selectionEnd];
+  const v = el.value, sel = v.slice(a, b);
+  if(kind === 'b'){
+    el.value = v.slice(0,a) + '**' + (sel || '굵게') + '**' + v.slice(b);
+    el.selectionStart = a + 2; el.selectionEnd = a + 2 + (sel || '굵게').length;
+  } else {
+    const mark = kind === 'h' ? '# ' : '- ';
+    let ls = v.lastIndexOf('\n', a - 1) + 1;   // 줄의 시작
+    el.value = v.slice(0, ls) + mark + v.slice(ls);
+    el.selectionStart = el.selectionEnd = a + mark.length;
+  }
+  el.focus();
+  state.noticeDraft = el.value;    // 미리보기가 곧바로 따라온다
+  render();
+  const back = document.getElementById('notice-content');
+  if(back){ back.focus(); back.setSelectionRange(el.selectionStart, el.selectionEnd); }
+}
+
+/* =================== 공지 (design-v1/10-notice) ===================
+   시안대로 «목록 + 본문» 두 단이다. 카드를 세로로 나열하면 긴 공지 하나가
+   나머지를 전부 화면 밖으로 밀어낸다 — 공지는 훑는 것이 아니라 «하나를 읽는» 것이다.
+
+   ⚠ **시안의 세 번째 칸 「읽음 현황」은 만들 수 없다.** 공지 레코드는 {id, title, content, date}뿐이고,
+   학생이 «읽었다»는 사실은 그 학생 브라우저의 localStorage에만 남는다(markSeen).
+   서버에 없는 것을 화면에 그리면 그 줄만 거짓이 된다. 넣으려면 읽음 기록을 먼저 만들어야 한다. */
 function teacherNoticesHTML(){
   const list = [...DATA.notices].sort((a,b)=>(b.date||'').localeCompare(a.date||''));
-  return `<div class="co-screen"><main class="co-main">
-    <div class="rst-hrow" style="flex-shrink:0;">
-      <h1 class="t-title">공지<s>학생 앱 첫 화면에 그대로 붙는다</s></h1>
-    </div>
-    ${/* 쓰는 일은 가끔, 읽는 일은 매번이다. 상시 펼쳐 두면 «등록된 공지»가 늘 아래로 밀린다.
-         시안(10-notice)도 목록 머리말의 「새 공지」 버튼 하나로 그렸다. */''}
-    <div class="row" style="margin-top:14px;flex-shrink:0;">
-      <button class="btn ${state.noticeWriting?'':'p'} sm"
-        onclick="state.noticeWriting=!state.noticeWriting; render()">
-        ${state.noticeWriting ? '닫기' : iconSvg('pencil',13)+' 새 공지'}</button>
-    </div>
-    ${!state.noticeWriting ? '' : `
-    <div class="st-form" style="flex-shrink:0;">
-      <div class="cls-form">
-        <label style="flex:1;min-width:220px;"><span>제목</span><input id="notice-title" placeholder="공지 제목"></label>
+  const cur = list.find(n=>String(n.id)===String(state.noticeSelectedId)) || list[0];
+  const draft = state.noticeDraft || '';
+
+  return `<div class="nt-screen">
+    <aside class="nt-list">
+      <div class="nt-lh">
+        <div class="t-sec" style="margin:0;">공지 ${list.length}</div>
+        <span class="spacer"></span>
+        <button class="btn ${state.noticeWriting?'':'p'} sm"
+          onclick="state.noticeWriting=!state.noticeWriting; render()">
+          ${state.noticeWriting ? '닫기' : iconSvg('pencil',13)+' 새 공지'}</button>
       </div>
-      <div class="cls-form"><label style="flex:1;"><span>내용</span>
-        <textarea id="notice-content" rows="3" placeholder="공지 내용을 입력하세요"></textarea></label></div>
-      <button class="btn p sm" style="margin-top:11px;" onclick="addNotice()">등록</button>
-      <p class="st-note">등록하면 <b>학생 앱 소통 > 공지</b>와 공개 홈에 그대로 붙습니다.</p>
-    </div>`}
-    <div class="co-body">
-      <div class="t-sec">등록된 공지 ${list.length}</div>
-      ${list.length===0 ? '<div style="padding:40px 0;text-align:center;color:var(--dim);font-size:12.5px;">등록된 공지가 없습니다.</div>'
-      : list.map(n=>`<div class="nt-card">
-          <div class="nt-h"><b>${escHtml(n.title)}</b><s>${n.date||''}</s>
-            <span class="spacer"></span>
-            <button class="btn q sm" onclick="deleteNotice(${n.id})">삭제</button></div>
-          <div class="nt-b">${escHtml(n.content)}</div>
-        </div>`).join('')}
-      <div class="rst-pad"></div>
-    </div>
-  </main></div>`;
+      <div class="nt-lbody">
+        ${list.length===0 ? '<div style="font-size:12.5px;color:var(--dim);padding:8px 14px;">등록된 공지가 없습니다.</div>'
+        : list.map(n=>`<div class="nt-item ${!state.noticeWriting && cur && n.id===cur.id?'on':''}"
+            onclick="state.noticeSelectedId='${n.id}'; state.noticeWriting=false; render()">
+            <div class="d">${escHtml(n.date||'')}</div>
+            <div class="t">${escHtml(n.title)}</div>
+            <div class="m">${escHtml((n.content||'').replace(/[#*\-]/g,'').replace(/\s+/g,' ').trim())}</div>
+          </div>`).join('')}
+      </div>
+    </aside>
+
+    <main class="nt-doc">
+    ${state.noticeWriting ? `
+      <div class="nt-dh"><h2>새 공지</h2>
+        <span class="spacer"></span>
+        <button class="btn p sm" onclick="addNotice()">등록</button></div>
+      <div class="nt-dbody">
+        <div class="cls-form" style="margin-top:0;">
+          <label style="flex:1;min-width:240px;"><span>제목</span>
+            <input id="notice-title" placeholder="공지 제목"></label>
+        </div>
+        <div class="cls-form">
+          <label style="flex:1;"><span>내용</span>
+            <div class="row" style="gap:5px;margin-bottom:7px;">
+              <button class="btn sm" title="큰 줄" onclick="noticeMark('h')">큰 줄</button>
+              <button class="btn sm" style="font-weight:800;" title="굵게" onclick="noticeMark('b')">굵게</button>
+              <button class="btn sm" title="목록" onclick="noticeMark('l')">목록</button>
+              <span class="muted" style="font-size:11px;">＃ 큰 줄 · **굵게** · ­- 목록</span>
+            </div>
+            <textarea id="notice-content" rows="9" placeholder="# 8월 특강 안내&#10;&#10;**8월 12일(수)**부터 시작합니다.&#10;- 준비물: 교재, 오답노트"
+              oninput="state.noticeDraft=this.value; render(); const e=document.getElementById('notice-content'); e.focus(); e.setSelectionRange(e.value.length,e.value.length);"
+              >${escHtml(draft)}</textarea></label>
+        </div>
+        ${draft.trim() ? `<div class="t-sec" style="margin-top:22px;">미리보기</div>
+          <div class="ntx">${noticeBodyHTML(draft)}</div>` : ''}
+        <p class="st-note">등록하면 <b>학생 앱 소통 > 공지</b>와 공개 홈에 그대로 붙습니다.</p>
+        <div class="rst-pad"></div>
+      </div>`
+    : !cur ? `<div style="padding:64px 0;text-align:center;color:var(--dim);font-size:12.5px;">
+        왼쪽에서 공지를 고르거나 「새 공지」로 하나 써 보세요.</div>`
+    : `<div class="nt-dh"><h2>${escHtml(cur.title)}</h2>
+        <span class="mono" style="font-size:12px;color:var(--dim);">${escHtml(cur.date||'')}</span>
+        <span class="spacer"></span>
+        <button class="btn q sm" onclick="deleteNotice(${cur.id})">삭제</button></div>
+      <div class="nt-dbody">
+        <div class="ntx">${noticeBodyHTML(cur.content)}</div>
+        <div class="rst-pad"></div>
+      </div>`}
+    </main>
+  </div>`;
 }
 
 /* =================== 질의응답 (design-v1/11-qna) ===================
@@ -7668,23 +7832,40 @@ function teacherQnaHTML(){
    예전에는 «학생 선택» 드롭다운 하나였다. 목록을 왼쪽에 세워 두면 누구와 이야기 중인지,
    다음에 누구에게 가야 하는지가 화면에 남는다. */
 function teacherChatHTML(){
+  loadAllChatsIfNeeded();          // «누가 말을 걸었나»를 알려면 한 번은 전부 읽어야 한다
   const sid = state.teacherSelectedStudent;
   let chat = null;
   if(sid){
     if(DATA.chats[sid]) chat = DATA.chats[sid];
     else { loadChat(sid).then(()=>render()); }
+    markChatSeen(sid);             // 대화를 «연» 순간이 읽은 순간이다
   }
-  const students = DATA.students.slice().sort((a,b)=>(a.name||'').localeCompare(b.name||'','ko'));
+  /* **말이 온 순서로 세운다.** 이름순은 «누가 기다리고 있나»를 말해 주지 않는다.
+     안 읽은 것이 있는 학생이 맨 위, 그다음이 최근에 말이 오간 순서다. */
+  const students = DATA.students.map(s=>{
+    const c = DATA.chats[s.studentId] || [];
+    const last = c[c.length-1];
+    return { s, last, unread: chatUnread(s.studentId), at: last ? (last.at||'') : '' };
+  }).sort((a,b)=>
+    (b.unread>0) - (a.unread>0) || b.at.localeCompare(a.at) || (a.s.name||'').localeCompare(b.s.name||'','ko'));
+  const totalUnread = students.reduce((n,x)=>n+x.unread, 0);
 
   return `<div class="co-screen">
     <aside class="ch-list">
-      <div class="t-sec" style="margin:0 0 10px;flex-shrink:0;">학생 ${students.length}</div>
+      <div class="t-sec" style="margin:0 0 10px;flex-shrink:0;">학생 ${students.length}${
+        totalUnread ? ` · <span style="color:var(--no);">안 읽음 ${totalUnread}</span>` : ''}${
+        state.allChatsLoading ? ' · 불러오는 중…' : ''}</div>
       <div class="ch-lbody">
         ${students.length===0 ? '<div style="font-size:12.5px;color:var(--dim);">등록된 학생이 없습니다.</div>'
-        : students.map(s=>`<div class="li ${s.studentId===sid?'on':''}"
+        : students.map(({s, last, unread})=>`<div class="li ${s.studentId===sid?'on':''}"
             onclick="state.teacherSelectedStudent='${s.studentId}'; render()">
             <span class="av">${escHtml((s.name||'?').slice(0,1))}</span>
-            <span class="t"><b>${escHtml(s.name)}</b><span>${escHtml(classNameOf(s.classId))}</span></span>
+            <span class="t"><b>${escHtml(s.name)}</b>
+              <span>${last
+                ? escHtml((last.from==='teacher'?'나: ':'')+last.text).slice(0,26)
+                : escHtml(classNameOf(s.classId))}</span></span>
+            ${unread ? `<span class="badge no">${unread}</span>`
+              : last ? `<span class="mono" style="font-size:10px;color:var(--dim);flex-shrink:0;">${escHtml((last.at||'').slice(5,10))}</span>` : ''}
           </div>`).join('')}
       </div>
     </aside>
