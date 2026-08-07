@@ -1,14 +1,17 @@
 # 김하현수학연구소 — 작업 노트
 
-마지막 갱신: **2026-08-08** (로그인 · 조교 이식 — **구버전 «화면»이 하나도 남지 않았다**)
+마지막 갱신: **2026-08-08** (**이식 완료 — 구버전 스타일이 파일에서 사라졌다**)
 
 ---
 
 ## 0. 지금 상태 — 여기부터 읽으면 된다
 
-**설계는 끝났고, 2026-08-06에 시작한 이식이 2026-08-07에 끝났다.**
-`index.html`(실서비스)의 **화면은 전부 새 디자인이다.** `design-v1/`·`landing-v2/`는 «따라 그릴 기준»으로 남는다.
+**2026-08-06에 시작한 이식이 2026-08-08에 끝났다.**
+`index.html`에 **구버전 스타일이 한 줄도 남아 있지 않다** — `.legacy` 스타일 블록(476줄)도,
+`body.legacy`도, `lg-` 클래스도 전부 사라졌다. `design-v1/`·`landing-v2/`는 «따라 그릴 기준»으로 남는다.
 남은 일과 진행 기록은 **0-B**에 있다.
+
+> 그래서 `tools/check-css-collisions.js`도 지웠다 — 두 CSS가 공존하는 동안만 필요한 도구였다.
 
 | | 상태 |
 |---|---|
@@ -24,7 +27,6 @@
 cd "C:\Users\hahyun\Desktop\claude work"
 git log --oneline -4              # 어디까지 왔는지
 node tools/serve.js               # 127.0.0.1:8777
-node tools/check-css-collisions.js  # 새는 속성 0이어야 정상
 ```
 `file://`로 열면 iframe 썸네일이 막힌다. Windows Store 파이썬 스텁은 동작하지 않으므로 **node**를 쓴다.
 
@@ -50,8 +52,12 @@ state.currentUser = {type:'teacher'}; state.teacherTab = 'classhub'; goto('teach
 
 **`index.html` 이식이 시작됐다.** 아래 «이행 발판»을 먼저 읽어야 이 파일의 나머지가 이해된다.
 
-### 이행 발판 — 두 CSS의 공존 장치
-새 디자인은 `ds.css`, 구버전은 `index.html`의 `<style>`이다. 화면을 하나씩 옮기려면 둘이 한동안 공존해야 하는데, **두 쪽이 클래스 이름을 10개 공유하고 있었다.**
+### 이행 발판 — 두 CSS의 공존 장치 · **2026-08-08 전부 철거됨**
+> 아래는 «이 제품이 어떻게 옮겨졌는가»의 기록이다. **지금은 하나도 남아 있지 않다** —
+> `body.legacy` · `MIGRATED_VIEWS` · `TEACHER_TABS_DS` · `CLASSHUB_TABS_DS` · `lg-` 클래스 ·
+> 구버전 `<style>` 블록(476줄)이 전부 사라졌다. 남은 것은 `.app` / `.app.sap` / `.lp` 셋뿐이다.
+
+새 디자인은 `ds.css`, 구버전은 `index.html`의 `<style>`이었다. 화면을 하나씩 옮기려면 둘이 한동안 공존해야 하는데, **두 쪽이 클래스 이름을 10개 공유하고 있었다.**
 
 > 이름이 같으면 캐스케이드는 «합집합»을 취한다. 구버전 규칙이 선언하지 않은 속성은 ds.css 것이 그대로 얹힌다.
 > `.field`가 특히 심했다 — ds.css의 `display:flex`·`height:32px`·`border`가 구버전 폼 래퍼 102곳에 들어와 레이아웃이 무너진다.
@@ -68,7 +74,8 @@ state.currentUser = {type:'teacher'}; state.teacherTab = 'classhub'; goto('teach
 | `.app.sap` | 그중 «학생 열». 폭을 480으로 묶어 가운데 세우고 하단 탭바를 뷰포트에 고정한다 |
 | `.lp` | 공개 홈(랜딩). `.app`을 안 쓴다 — 본문 16px에 전폭이라 밀도가 완전히 다르다 |
 
-**이식이 끝나면** `<style>` 블록 · `body.legacy` · 두 집합 · `lg-` 클래스가 통째로 사라진다.
+**그리고 실제로 그렇게 끝났다** — `<style>` 블록 · `body.legacy` · 두 집합 · `lg-` 클래스가 통째로 사라졌다.
+그 자리에 온 것이 `.fm-*`(폼·표 부품)이다 → 아래 「legacy 폼 정리」.
 
 ### 지금까지 옮긴 것
 - [x] `ds.css`/`ds.js` 루트 승격 (`design-v1/`은 `../ds.css`를 본다)
@@ -81,6 +88,7 @@ state.currentUser = {type:'teacher'}; state.teacherTab = 'classhub'; goto('teach
 - [x] **학생 마이페이지 11개 → 4탭** (`20-student-app`) → 아래
 - [x] **랜딩 합류** (`landing-v2/` → 공개 홈) → 아래
 - [x] **로그인 · 조교** (`17-login` · `18-assistant`) → 아래. **이로써 구버전 화면 0**
+- [x] **감싸 둔 legacy 폼 전부** → 아래. **이로써 구버전 «스타일» 0**
 
 ### 명단 이식 결과 (2026-08-06)
 `teacherRosterHTML()` 신설, `TEACHER_TABS_DS = {'roster'}`. 검증 — 행 높이 전부 40px 정확,
@@ -633,6 +641,44 @@ IntersectionObserver 둘(등장 · 상단바)을 렌더마다 새로 만들고, 
 > **⚠ 갈래를 뺐으면 연대기에서도 빼야 한다.** 처음엔 「질문·클리닉」 갈래만 없애고 사건은 남겼더니
 > **「전체 27」인데 갈래 합이 24**가 됐다. 숫자가 안 맞는 화면은 그 순간부터 아무도 안 믿는다.
 
+### legacy 폼 정리 — 완료 (2026-08-08) · **이식 끝**
+감싸 둔 폼 다섯(시험지 등록 · 창고 추가 · 설정 6갈래 · 수업 기록 상세 · 질의응답 사진칸)을 옮기고
+**구버전 `<style>` 블록 476줄을 통째로 지웠다.** `index.html`에 「legacy」라는 낱말이 하나도 없다.
+검증 — 화면 40여 곳(관리자 26 + 학생 12 + 조교 2 + 로그인 3 + 공개 홈) 잘림 0 · 침범 0 ·
+문서 가로 넘침 0 · 콘솔 오류 0.
+
+**화면마다 고치지 않고 «부품»을 바꿨다.** 살아 있던 legacy 클래스는 30개였는데
+대부분이 여러 화면이 함께 쓰는 폼 원시부품(`lg-field` 51곳 · `lg-btn` 42곳 · `lg-panel` 19곳…)이었다.
+→ `.fm-*` 한 벌을 만들고 **class 속성 154개를 토큰 단위로 치환**했다. 화면별로 손댔으면 다섯 배는 걸렸다.
+
+| 구버전 | 지금 |
+|---|---|
+| `lg-field` `inline-form` `empty` `lg-hint` `lg-panel` | `.fm-field` `.fm-row` `.fm-empty` `.fm-hint` `.fm-panel` |
+| `lg-btn btn-primary/red/small` | ds.css의 `.btn` `.btn.p` `.btn.no` `.btn.sm` |
+| `lg-badge badge-ok/no/…` · `lg-mono` | ds.css의 `.badge.ok/.no/…` · `.mono` |
+| `ledger` 표 | `.fm-panel` 안의 `table` (ds.css `table.grid`와 같은 리듬) |
+| `chat-window` `chat-bubble` | ds.css의 `.bub-row`/`.bub` — **학생 채팅과 같은 부품** |
+| `att-status-btn` | ds.css의 `.seg` — **수업 화면과 같은 부품** |
+| `progress-outer/inner` | ds.css의 `.bar` |
+
+#### ⚠ 스타일 블록을 지우면 CSS 변수도 같이 죽는다
+구버전 `:root`가 `.legacy{}` 안에 있었다 (`--ink-soft` `--card-border` `--red-pen` …).
+블록을 지우자 **인라인 `style`에 남아 있던 `var(--card-border)` 13곳이 조용히 무효**가 됐다.
+색이 «사라지는» 것이라 화면이 깨지지 않고 그냥 흐려진다 — 눈으로는 잘 안 잡힌다.
+→ `--ink-soft→--dim` · `--card-border→--line` · `--red-pen→--no`로 옮겼다.
+**남의 스타일 블록을 지울 때는 그 안의 커스텀 속성부터 grep할 것.**
+
+#### 지운 것 — 그리고 거기서 잃을 뻔한 것
+`headerHTML()`·`footerHTML()`·`notificationBellHTML()`·`goStudentPage()`.
+모든 화면이 자기 셸을 갖게 되면서 공용 헤더가 덧씌워질 자리가 없어졌다.
+
+> **⚠ 그 헤더에 알림 벨이 붙어 있었다.** 그냥 지웠으면 **강사가 새 상담·질문·클리닉 알림을
+> 받을 곳이 없어진다.** 학생 화면의 `stuBellHTML`을 `bellHTML`로 올려 관리자 상단바에 붙였다 —
+> items만 다르고(`teacherNotifItems` / `studentNotifItems`) 껍데기는 하나다.
+
+`goStudentPage()`는 공개 헤더의 「학생 ▾」 드롭다운이 유일한 호출처였고 그 헤더는
+랜딩 합류 때 이미 사라졌다. `state.pendingStudentTab`도 같이 지웠다.
+
 ### ▶ 다음 차례
 > ~~`AI_SITE_TOKEN` 3단계~~ — **끝났다 (2026-08-06 · 9절 1번).** 남은 것은 워커 **재배포** 하나인데
 > 소스에서 죽은 코드를 지운 것뿐이라 급하지 않다.
@@ -641,23 +687,20 @@ IntersectionObserver 둘(등장 · 상단바)을 렌더마다 새로 만들고, 
    안 해도 동작은 같다 (비밀이 없어 이미 닫힌 경로였다)
 2. **비밀번호 평문 저장** (9절 3번) — 이제 이게 제일 큰 보안 구멍이다.
    학생 `pw` · 조교 `pw` · `teacher-pw` 전부 Firestore에 그대로 있다
-3. **감싸 둔 legacy 폼들을 DS로 마저 옮기기.** 이제 이것만 끝내면
-   `<style>` 구버전 블록 · `render()`의 `.legacy` 토글 · `lg-` 클래스가 **통째로 사라진다.**
-   남은 것 — 시험지 등록(hwpx 파싱·이미지 업로드) · 창고 추가 · 설정 6갈래 ·
-   수업 기록 상세 · 학생 질의응답의 사진 첨부칸
-4. 9절의 나머지 (포커스 유실 · `href` 없는 `<a onclick>`의 키보드 접근)
+3. 9절의 나머지 (포커스 유실 · `href` 없는 `<a onclick>`의 키보드 접근)
+
+**리디자인은 여기서 끝난다.** 이 다음부터는 «디자인 이식»이 아니라 제품 개선이다.
 
 > **수업 화면과 반 관리 > 수업 기록의 출결 중복은 그대로 둔다.** 겹쳐 보이지만 역할이 다르다 —
 > 수업은 «지금 하는 수업을 4버튼으로 빨리 찍는 곳», 수업 기록은 «지난 날짜를 5상태로 고치고
 > 성적·시험까지 넣는 곳». 시안도 둘을 따로 그렸다.
 
-화면 하나를 옮기는 절차는 명단·신호·수업에서 확정됐다. 그대로 반복하면 된다.
+화면 하나를 옮기는 절차는 명단·신호·수업에서 확정됐고, 끝까지 그대로 반복했다.
+이제 «옮길 화면»은 없지만 **새 화면을 만들 때도 같은 순서**다.
 1. `teacherXxxHTML()`를 새로 만들고 `teacherTabBodyHTML()`의 해당 분기를 갈아끼운다
-2. `TEACHER_TABS_DS`에 탭 id를 더한다 → `.legacy` 래퍼가 벗겨지고 ds.css가 걸린다
-3. 화면별 스타일은 `.app` 블록에 **접두사를 붙여** 둔다 (명단은 `rst-`). ds.css 클래스 이름을 다시 정의하지 않는다
-4. `node tools/check-css-collisions.js`로 새는 속성 0 확인
-5. 브라우저에서 **행 높이 · 잘림 · 넘침**을 DOM 기하로 잰다. 스크린샷만 보면 놓친다
-6. 같은 일을 하던 옛 진입점을 이쪽으로 모은다
+2. 화면별 스타일은 `.app` 블록에 **접두사를 붙여** 둔다 (명단은 `rst-`). ds.css 클래스 이름을 다시 정의하지 않는다
+3. 브라우저에서 **행 높이 · 잘림 · 넘침**을 DOM 기하로 잰다. 스크린샷만 보면 놓친다
+4. 같은 일을 하던 옛 진입점을 이쪽으로 모은다
 
 학생 화면도 같은 절차를 따랐다. 다른 것은 두 가지뿐이다 —
 `STUDENT_TAB_SECTION`이 «화면 → 탭»을 되찾아 주고(그래서 옛 탭 id를 안 바꿔도 된다),
@@ -1009,7 +1052,6 @@ claude work/
 │   ※ 손댄 곳은 CORS · 인증 게이트 · 할당량 셋뿐. 드라이브·Gemini 로직은 배포본 그대로다
 └─ tools/                         ★ 개발 도구 (배포와 무관)
     ├─ serve.js                   ← 로컬 정적 서버. node tools/serve.js
-    └─ check-css-collisions.js    ← ds.css ↔ 구버전 스타일 누수 검사. 화면 옮길 때마다 돌린다
 ```
 
 관리자 목업은 **1440×900 캔버스를 화면 크기에 맞춰 축소**하는 구조(`fitCanvas()`).
@@ -1030,6 +1072,8 @@ claude work/
 - **`.mono`에 한글 «낱말»을 넣지 않는다.** JetBrains Mono에 한글이 없어 고정폭 대체 글꼴로
   떨어지면서 「오늘」이 「오 늘」처럼 벌어진다. mono는 `YYYY-MM-DD`·숫자·퍼센트에만
 - **새 화면은 루트 `ds.css`를 링크해서 만든다.** 화면별 `<style>`에는 «배치»만 두고 색·서체·반경·간격을 새로 정하지 않는다
+- **폼과 표는 `.fm-*`를 쓴다** (`fm-panel` `fm-field` `fm-row` `fm-hint` `fm-empty` `fm-card` `fm-sel`).
+  화면마다 입력칸을 다시 그리지 않는다 — 그렇게 51곳으로 늘어난 것이 구버전 `lg-field`였다
 - **상단바·서브탭을 손으로 적지 않는다.**
   - 시안: `<nav id="nav">` / `<div class="subnav" id="subnav">`만 두고 `renderNav()` / `renderSubnav()`를 부른다. 메뉴가 바뀌면 `ds.js`의 `NAV`/`SUBNAV`만 고친다
   - 실서비스: `index.html`의 `TEACHER_NAV` / `TEACHER_SUBNAV` 한 곳만 고친다. **둘은 따로다** — 시안은 href로, 실서비스는 탭 id로 움직이기 때문이다. 메뉴를 바꾸면 양쪽을 같이 고쳐야 한다
@@ -1048,9 +1092,9 @@ claude work/
 > 입력칸 하나가 390px로 부풀어 캔버스를 111px 넘어갔다.
 > **두 글자짜리 약어가 제일 위험하다** — 겹칠 확률이 높은데 눈에는 안 띈다.
 >
-> `check-css-collisions.js`는 **`index.html` ↔ ds.css만** 본다. `design-v1/`·`landing-v2/`의
-> 시안은 검사 대상이 아니다. 시안을 만들 때는 **새 클래스 이름을 ds.css에서 한 번 찾아보는 것**이
-> 유일한 방어다 (`grep -n "\.이름" ds.css`).
+> **새 클래스 이름은 ds.css에서 한 번 찾아보는 것**이 유일한 방어다 (`grep -n "\.이름" ds.css`).
+> 이걸 잡아 주던 `check-css-collisions.js`는 이식이 끝나면서 지웠고, 애초에 `index.html`만
+> 보던 도구라 `design-v1/`·`landing-v2/`의 시안은 검사 대상도 아니었다.
 
 ### 색을 정할 때
 - **브랜드 자산(로고·매뉴얼)이 있는지 먼저 묻는다.** 로고를 못 보고 주조색을 정했다가 24개 화면을 만든 뒤 갈아엎었다

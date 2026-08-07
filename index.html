@@ -34,8 +34,6 @@
 .app .topbar .bm img{height:22px;width:auto;display:block;}
 .app .topbar nav a{cursor:pointer;}
 .app .subnav a{cursor:pointer;}
-/* 아직 새 디자인으로 옮기지 않은 화면은 이 안에서 구버전 스타일을 그대로 쓴다. */
-.app .legacy{padding:0;}
 
 /* ---------- 명단 (design-v1/01-roster) ----------
    목업은 .main을 absolute로 잡고 액션바를 캔버스 바닥(bottom:0)에 붙인다.
@@ -177,7 +175,6 @@
   font-family:inherit;font-size:12px;color:var(--ink);outline:none;}
 .app .cls-sub input:focus{border-color:var(--accent-line);}
 
-/* 구버전 .lg-field / .inline-form 은 .legacy 안에서만 산다. DS 화면에서는 스타일이 없다. */
 .app .cls-form{display:flex;gap:11px;flex-wrap:wrap;align-items:flex-end;margin-top:11px;}
 .app .cls-form label{display:flex;flex-direction:column;gap:5px;}
 .app .cls-form label span{font-size:11px;font-weight:600;color:var(--dim);letter-spacing:.02em;}
@@ -229,7 +226,6 @@
 .app .chub-mh .r{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;}
 .app .chub-body{flex:1;min-height:0;overflow:auto;margin-top:16px;}
 /* 아직 DS로 안 옮긴 서브탭은 이 안에서 구버전 스타일 그대로 그린다. */
-.app .chub-body > .legacy{padding:0;}
 
 /* 단원 체크리스트 — 표가 아니라 «목록»이다. 열이 많은 표는 훑는 데 좋고,
    순서가 있는 것은 목록이 낫다. 진도는 순서가 전부다. */
@@ -598,22 +594,22 @@
   transition:color var(--t);}
 .sap-tabs a.on{color:var(--accent);font-weight:700;}
 
-/* 알림 벨 — 구버전 .notif-* 는 .legacy 안에서만 산다. DS 셸에서는 스타일이 없다. */
-.sap-bell{position:relative;display:flex;}
-.sap-bell>button{width:32px;height:32px;border:0;background:transparent;color:var(--sub);
+/* 알림 벨 — 학생·관리자 상단바가 같이 쓴다 */
+.ds-bell{position:relative;display:flex;}
+.ds-bell>button{width:32px;height:32px;border:0;background:transparent;color:var(--sub);
   border-radius:var(--r-md);cursor:pointer;display:flex;align-items:center;justify-content:center;}
-.sap-bell>button:hover{background:var(--hover);}
-.sap-bell .n{position:absolute;top:1px;right:0;min-width:15px;height:15px;padding:0 3px;
+.ds-bell>button:hover{background:var(--hover);}
+.ds-bell .n{position:absolute;top:1px;right:0;min-width:15px;height:15px;padding:0 3px;
   border-radius:8px;background:var(--no);color:#fff;font-family:'JetBrains Mono',monospace;
   font-size:9.5px;font-weight:700;display:flex;align-items:center;justify-content:center;}
-.sap-drop{position:absolute;top:38px;right:0;width:210px;z-index:9;
+.ds-drop{position:absolute;top:38px;right:0;width:210px;z-index:9;
   background:var(--card);border:1px solid var(--line);border-radius:var(--r-lg);
   box-shadow:0 8px 24px rgba(0,0,0,.1);overflow:hidden;}
-.sap-drop .it{display:flex;align-items:center;gap:8px;padding:11px 14px;font-size:12.5px;cursor:pointer;}
-.sap-drop .it+.it{border-top:1px solid var(--line2);}
-.sap-drop .it:hover{background:var(--hover);}
-.sap-drop .it b{margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--no);}
-.sap-drop .em{padding:14px;font-size:12px;color:var(--dim);text-align:center;}
+.ds-drop .it{display:flex;align-items:center;gap:8px;padding:11px 14px;font-size:12.5px;cursor:pointer;}
+.ds-drop .it+.it{border-top:1px solid var(--line2);}
+.ds-drop .it:hover{background:var(--hover);}
+.ds-drop .it b{margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--no);}
+.ds-drop .em{padding:14px;font-size:12px;color:var(--dim);text-align:center;}
 
 /* 화면 머리 — 「누구의 화면인가」. serif는 학생 이름에만 쓴다 (시스템 규칙) */
 .sap-hi b{display:block;font-family:'Noto Serif KR',serif;font-size:21px;font-weight:600;
@@ -632,8 +628,7 @@
 .sap-row2{display:flex;gap:9px;}
 .sap-row2>*{flex:1;min-width:0;}
 
-/* 보기 버튼 ①~⑤ — 구버전 .mc-choice-*는 .legacy 안이라 여기서 다시 만든다.
-   selectChoice()가 부모의 .mc-choice-btn을 찾으므로 클래스 이름은 그대로 쓴다. */
+/* 보기 버튼 ①~⑤ — selectChoice()가 부모의 .mc-choice-btn을 찾으므로 이름은 그대로 쓴다 */
 .sap .mc-choice-group{display:flex;gap:8px;}
 .sap .mc-choice-btn{flex:1;height:46px;border:1px solid var(--line);background:var(--card);
   border-radius:var(--r-md);font-family:inherit;font-size:17px;color:var(--sub);cursor:pointer;
@@ -662,10 +657,87 @@
 .sap-empty{padding:36px 0;text-align:center;font-size:12.5px;color:var(--dim);line-height:1.8;}
 .sap-img{max-width:100%;border:1px solid var(--line);border-radius:var(--r-md);display:block;margin-top:10px;}
 
-/* 강의 임베드 — 구버전 .video-embed-wrap은 .legacy 안이라 비율 상자를 여기 다시 만든다 */
+/* 강의 임베드 — 16:9 비율 상자 */
 .sap-vwrap{position:relative;width:100%;aspect-ratio:16/9;border-radius:var(--r-md);
   overflow:hidden;background:#000;margin-top:11px;}
 .sap-vwrap iframe{position:absolute;inset:0;width:100%;height:100%;border:0;}
+
+/* ============================================================
+   폼 · 표 — 구버전 스타일이 쥐고 있던 마지막 조각들이 온 자리다. 접두사 fm-
+   화면이 아니라 «부품»이라 화면별 접두사를 붙이지 않는다.
+   시험지 등록 · 창고 추가 · 설정 6갈래 · 수업 기록 상세가 이걸 같이 쓴다.
+   ============================================================ */
+.app .fm-panel{background:var(--card);border:1px solid var(--line);border-radius:var(--r-lg);
+  padding:20px 22px;margin-bottom:16px;}
+.app .fm-panel h3{margin:0 0 16px;font-family:'Noto Serif KR',serif;font-size:16px;
+  font-weight:600;letter-spacing:-.02em;}
+.app .fm-panel h4{margin:22px 0 10px;font-size:13px;font-weight:700;}
+
+.app .fm-field{margin-bottom:14px;}
+.app .fm-field label{display:block;font-size:11px;font-weight:700;color:var(--dim);
+  letter-spacing:.02em;margin-bottom:6px;}
+.app .fm-field input,.app .fm-field select,.app .fm-field textarea{
+  width:100%;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--paper);
+  padding:8px 10px;font-family:inherit;font-size:12.5px;color:var(--ink);outline:none;
+  transition:border-color var(--t),box-shadow var(--t);}
+.app .fm-field input:focus,.app .fm-field select:focus,.app .fm-field textarea:focus{
+  border-color:var(--accent);box-shadow:0 0 0 3px rgba(60,48,52,.12);}
+.app .fm-field textarea{min-height:78px;resize:vertical;}
+.app .fm-field input[type=file]{padding:6px;background:var(--card);}
+
+.app .fm-hint{font-size:11.5px;color:var(--dim);line-height:1.7;margin-top:11px;}
+/* .fm-field 밖에 홀로 선 드롭다운 — 여기 없으면 브라우저 기본 모양이 그대로 나온다 */
+.app .fm-sel{height:30px;border:1px solid var(--line);border-radius:var(--r-sm);
+  background:var(--sunk);padding:0 8px;font-family:inherit;font-size:12.5px;color:var(--ink);
+  outline:none;cursor:pointer;}
+.app .fm-sel:focus{border-color:var(--accent);}
+/* 가로로 늘어놓는 입력 줄 — 구버전 .inline-form */
+.app .fm-row{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;margin-bottom:16px;}
+.app .fm-row .fm-field{margin-bottom:0;min-width:140px;flex:1;}
+.app .fm-empty{padding:34px 0;text-align:center;font-size:12.5px;color:var(--dim);line-height:1.8;}
+.app .fm-head{display:flex;justify-content:space-between;align-items:center;
+  margin-bottom:14px;flex-wrap:wrap;gap:10px;}
+.app .fm-head h3{margin:0;font-size:15px;}
+.app .fm-card{background:var(--card);border:1px solid var(--line);border-radius:var(--r-md);
+  padding:14px 16px;margin-bottom:10px;}
+.app .fm-acts{display:flex;gap:6px;align-items:center;flex-wrap:wrap;}
+.app .fm-acts button{margin:0;}
+
+/* 표 — 구버전 .ledger(위 2px 잉크선 + 아래 얇은 선)가 여기로 왔다.
+   ds.css의 table.grid와 같은 리듬이되, 폼 패널 안이라 조금 낮다. */
+.app .fm-panel table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums;}
+.app .fm-panel thead th,.app .fm-panel tr:first-child th{height:32px;text-align:left;
+  font-size:11px;font-weight:600;color:var(--dim);border-bottom:1px solid var(--line);
+  padding:0 8px;white-space:nowrap;}
+.app .fm-panel td{height:38px;padding:0 8px;border-bottom:1px solid var(--line2);
+  font-size:12.5px;vertical-align:middle;}
+.app .fm-panel tbody tr:hover td,.app .fm-panel tr:hover td{background:var(--hover);}
+.app .fm-nm{font-weight:600;}
+.app .fm-sub{color:var(--dim);font-size:11.5px;}
+
+/* 채팅 — 학생 화면과 같은 말풍선(ds.css .bub-row)을 쓴다.
+   ⚠ 스크롤 상자에는 position:relative를 같이 준다 (KaTeX .katex-mathml 때문). */
+.app .fm-chat{position:relative;height:340px;overflow-y:auto;padding:4px 2px;margin-bottom:12px;}
+
+/* 문항 한 줄 — 시험지 등록의 «번호 + 입력들» */
+.app .fm-q{display:flex;gap:9px;align-items:flex-start;padding:9px 0;
+  border-bottom:1px solid var(--line2);}
+.app .fm-q .qno{font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--accent);
+  flex:0 0 32px;padding-top:9px;font-size:12.5px;}
+.app .fm-q .qf{flex:1;display:flex;gap:8px;flex-wrap:wrap;}
+.app .fm-q .qf textarea{flex:2;min-width:200px;min-height:44px;}
+.app .fm-q .qf input{flex:1;min-width:100px;}
+.app .fm-q .qf input,.app .fm-q .qf textarea,.app .fm-q .qf select{
+  border:1px solid var(--line);border-radius:var(--r-sm);background:var(--paper);
+  padding:8px 10px;font-family:inherit;font-size:12.5px;color:var(--ink);outline:none;resize:vertical;}
+.app .fm-q .qf input:focus,.app .fm-q .qf textarea:focus{border-color:var(--accent);}
+
+/* 출석 표 — 수업 기록 상세. 상태 버튼은 ds.css의 .seg를 그대로 쓴다 */
+.app .fm-att td,.app .fm-att th{white-space:nowrap;}
+.app .fm-att td:last-child,.app .fm-att th:last-child{white-space:normal;min-width:150px;}
+.app .fm-att input{width:100%;border:1px solid var(--line);border-radius:var(--r-sm);
+  background:var(--paper);padding:6px 9px;font-family:inherit;font-size:12px;color:var(--ink);outline:none;}
+.app .fm-att input:focus{border-color:var(--accent);}
 
 /* ============================================================
    로그인 (design-v1/17-login) — 접두사 lo-
@@ -977,488 +1049,9 @@
 }
 </style>
 
-<style>
-/* ============================================================
-   아래는 «구버전» 스타일이다. 전부 .legacy 스코프 안에 갇혀 있다.
-   새 화면은 이 블록을 쓰지 않고 ds.css만 쓴다.
-   화면 이전이 끝나면 이 <style> 블록과 render()의 .legacy 래퍼를 통째로 지운다.
-   ============================================================ */
-
-  .legacy{
-    --paper:#F5F1EB;
-    --paper-line:#EFE1E0;
-    --ink:#3D3335;
-    --ink-soft:#7D7274;
-    --blue-deep:#AE4B53;
-    --blue-deep-dark:#7C333A;
-    --blue-deep-light:#BE6C72;
-    --red-pen:#6E2A2F;
-    --green-ok:#3F7A4D;
-    --card-border:#E7DED9;
-    --white:#FFFFFF;
-  }
-  .legacy *{box-sizing:border-box;}
-  html,body{margin:0;padding:0;}
-  /* ds.css는 한글 줄바꿈을 어절 단위(keep-all)로 잡는다. 그게 옳지만,
-     구버전 화면은 음절 단위로 접히는 것을 전제로 그려져 있어 그대로 둔다.
-     화면을 옮기면 자동으로 keep-all이 적용된다. */
-  body.legacy{word-break:normal;overflow-wrap:normal;}
-  /* ds.css가 html에 배경을 주는 순간 body 배경이 더 이상 캔버스로 전파되지 않는다.
-     본문이 뷰포트보다 짧은 화면(로그인 등)에서 새 페이퍼색이 비쳐 보이므로 맞춰 준다.
-     구버전 --paper는 .legacy 안에 있어 html에서는 var()가 안 풀린다 — 값을 그대로 쓴다. */
-  html:has(> body.legacy){background:#F5F1EB;}
-  body.legacy{
-    background:var(--paper);
-    color:var(--ink);
-    font-family:'Pretendard','Noto Sans KR', sans-serif;
-    line-height:1.6;
-  }
-  .legacy .lg-mono{font-family:'JetBrains Mono', monospace;}
-  .legacy h1, .legacy h2, .legacy h3, .legacy .serif{font-family:'Noto Serif KR', serif;}
-  .legacy a{color:inherit;}
-  .legacy button{font-family:inherit;cursor:pointer;}
-  .legacy input, .legacy select, .legacy textarea{font-family:inherit;}
-  .legacy #app{max-width:1080px;margin:0 auto;padding:0 24px 80px;}
-
-  /* ---------- HEADER ---------- */
-  .legacy .site-header{
-    display:flex;align-items:center;justify-content:space-between;
-    padding:22px 0;border-bottom:2px solid var(--ink);
-    flex-wrap:wrap;gap:12px;
-  }
-  .legacy .logo{display:flex;align-items:center;gap:10px;cursor:pointer;}
-  .legacy .logo img{height:38px;width:auto;display:block;}
-  .legacy .logo .sub{font-size:12px;color:var(--ink-soft);letter-spacing:.05em;border-left:1px solid var(--card-border);padding-left:10px;}
-  .legacy nav.main-nav{display:flex;gap:22px;font-size:14px;font-weight:500;}
-  .legacy nav.main-nav a{padding-bottom:2px;border-bottom:2px solid transparent;text-decoration:none;}
-  .legacy nav.main-nav a:hover{border-color:var(--red-pen);}
-  .legacy .header-actions{display:flex;gap:8px;align-items:center;}
-  .legacy .notif-bell{position:relative;}
-  .legacy .notif-bell-btn{position:relative;background:none;border:none;padding:4px;font-size:21px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--ink);}
-  .legacy .notif-badge{position:absolute;top:-4px;right:-4px;background:var(--red-pen);color:#fff;font-size:10px;font-weight:700;border-radius:20px;min-width:16px;height:16px;display:flex;align-items:center;justify-content:center;padding:0 3px;font-family:'JetBrains Mono',monospace;}
-  .legacy .notif-dropdown{position:absolute;top:calc(100% + 8px);right:0;background:var(--white);border:1px solid var(--card-border);border-radius:12px;box-shadow:0 4px 16px rgba(0,0,0,.1);min-width:220px;padding:6px;z-index:100;}
-  .legacy .notif-item{display:flex;justify-content:space-between;align-items:center;padding:9px 10px;border-radius:8px;cursor:pointer;font-size:13px;}
-  .legacy .notif-item:hover{background:#F6EFEE;}
-  .legacy .notif-item-count{background:var(--red-pen);color:#fff;font-size:11px;padding:1px 7px;border-radius:20px;font-family:'JetBrains Mono',monospace;}
-  .legacy .notif-empty{padding:14px 10px;color:var(--ink-soft);font-size:13px;text-align:center;}
-  .legacy .lg-btn{
-    border:1.5px solid var(--ink);background:var(--white);color:var(--ink);
-    padding:9px 16px;font-size:13px;font-weight:700;border-radius:2px;
-    transition:all .15s ease;
-  }
-  .legacy .lg-btn:hover{background:var(--ink);color:var(--white);}
-  .legacy .btn-primary{background:var(--blue-deep);border-color:var(--blue-deep);color:var(--white);}
-  .legacy .btn-primary:hover{background:var(--blue-deep-dark);}
-  .legacy .btn-red{background:#FBE9E7;border-color:var(--red-pen);color:var(--red-pen);}
-  .legacy .btn-red:hover{background:var(--red-pen);color:var(--white);}
-  .legacy .btn-small{padding:5px 10px;font-size:12px;}
-  .legacy .btn-ghost{border-color:transparent;background:transparent;}
-  .legacy .btn-ghost:hover{background:var(--card-border);color:var(--ink);}
-
-  /* ---------- HERO ---------- */
-  .legacy .hero{padding:64px 0 40px;display:flex;gap:40px;align-items:center;flex-wrap:wrap;}
-  .legacy .hero-text{flex:1 1 380px;}
-  .legacy .eyebrow{
-    display:inline-block;font-family:'JetBrains Mono',monospace;font-size:12px;
-    color:var(--red-pen);border:1px solid var(--red-pen);padding:3px 10px;border-radius:20px;
-    margin-bottom:18px;
-  }
-  .legacy .hero h1{font-size:44px;line-height:1.3;margin:0 0 18px;font-weight:900;}
-  .legacy .hero h1 .accent{color:var(--blue-deep);}
-  .legacy .hero p.desc{color:var(--ink-soft);font-size:16px;max-width:480px;margin-bottom:26px;}
-  .legacy .hero-actions{display:flex;gap:10px;flex-wrap:wrap;}
-  .legacy .hero-visual{flex:1 1 320px;min-width:280px;}
-
-  .legacy .hero-v2{
-    background:linear-gradient(120deg, var(--blue-deep) 0%, var(--blue-deep-light) 100%);border-radius:14px;overflow:hidden;
-    display:flex;align-items:stretch;min-height:440px;margin:28px 0 8px;
-  }
-  .legacy .hero-v2-text{flex:1 1 380px;padding:52px 44px;display:flex;flex-direction:column;justify-content:center;color:#fff;}
-  .legacy .hero-v2-text .eyebrow{border-color:rgba(255,255,255,.35);color:#F0D2D0;}
-  .legacy .hero-v2-text h1{color:#fff;font-size:32px;line-height:1.45;margin:0 0 20px;font-weight:900;word-break:keep-all;}
-  .legacy .hero-v2-text h1 .lg-tag{background:var(--blue-deep);padding:2px 12px;border-radius:6px;display:inline-block;}
-  .legacy .hero-v2-text p.desc{color:#E8D9D8;font-size:15px;max-width:420px;margin-bottom:28px;word-break:keep-all;}
-  .legacy .hero-btn-primary{background:#fff;color:var(--blue-deep-dark);border-color:#fff;}
-  .legacy .hero-btn-primary:hover{background:#F4E9E7;color:var(--blue-deep-dark);}
-  .legacy .hero-btn-outline{background:transparent;color:#fff;border-color:rgba(255,255,255,.5);}
-  .legacy .hero-btn-outline:hover{background:rgba(255,255,255,.12);color:#fff;}
-  .legacy .hero-v2-photo{flex:1 1 360px;min-width:260px;position:relative;background:transparent;}
-  .legacy .hero-v2-photo img{
-    width:100%;height:100%;object-fit:cover;object-position:top center;display:block;
-    filter:drop-shadow(0 10px 22px rgba(0,0,0,.16));
-  }
-  .legacy .hero-v2-photo::before{
-    content:'';position:absolute;inset:0;pointer-events:none;
-    background:
-      radial-gradient(55% 50% at 55% 32%, rgba(255,241,232,.22) 0%, rgba(255,241,232,0) 70%),
-      linear-gradient(90deg, var(--blue-deep) 0%, rgba(174,75,83,.65) 12%, rgba(174,75,83,.28) 24%, rgba(174,75,83,0) 40%),
-      linear-gradient(180deg, rgba(0,0,0,0) 60%, rgba(0,0,0,.15) 100%);
-  }
-  @media (max-width:760px){
-    .legacy .hero-v2{flex-direction:column;min-height:0;}
-    .legacy .hero-v2-photo{height:320px;order:-1;}
-    .legacy .hero-v2-text{padding:32px 26px;}
-    .legacy .hero-v2-text h1{font-size:30px;}
-  }
-
-  /* ---------- CHAPTER LABEL ---------- */
-  .legacy .chapter{padding:70px 0;border-top:1px solid var(--card-border);}
-  .legacy .chapter-label{
-    display:flex;align-items:center;gap:14px;margin-bottom:8px;
-  }
-  .legacy .chapter-num{
-    font-family:'JetBrains Mono',monospace;font-weight:600;font-size:13px;
-    color:var(--white);background:var(--ink);padding:4px 10px;border-radius:2px;
-  }
-  .legacy .chapter-title-en{font-size:12px;letter-spacing:.12em;color:var(--ink-soft);font-family:'JetBrains Mono',monospace;}
-  .legacy .chapter h2{font-size:30px;margin:6px 0 34px;}
-
-  /* ---------- ABOUT ---------- */
-  .legacy .about-grid{display:flex;gap:36px;flex-wrap:wrap;}
-  .legacy .about-photo{
-    flex:0 0 220px;height:270px;background:var(--blue-deep);border-radius:4px;
-    overflow:hidden;position:relative;
-  }
-  .legacy .about-photo img{width:100%;height:100%;object-fit:cover;display:block;}
-  .legacy .career-list{list-style:none;padding:0;margin:22px 0 0;font-size:13px;color:var(--ink-soft);}
-  .legacy .career-list li{padding:7px 0 7px 20px;border-left:2px solid var(--card-border);position:relative;}
-  .legacy .career-list li::before{content:'';position:absolute;left:-5px;top:13px;width:8px;height:8px;border-radius:50%;background:var(--blue-deep);}
-  .legacy .career-list li.current{color:var(--ink);font-weight:700;}
-  .legacy .career-list li.current::before{background:var(--red-pen);}
-  .legacy .achieve-box{margin-top:22px;background:#FBF3F2;border:1px solid var(--card-border);border-radius:4px;padding:18px 20px;}
-  .legacy .achieve-box h4{margin:0 0 10px;font-size:13px;color:var(--red-pen);font-family:'JetBrains Mono',monospace;letter-spacing:.03em;}
-  .legacy .achieve-box ul{margin:0;padding-left:18px;font-size:13.5px;color:var(--ink);}
-  .legacy .achieve-box li{margin-bottom:5px;}
-  .legacy .about-body{flex:1 1 320px;}
-  .legacy .about-body p{margin:0 0 14px;}
-  .legacy .stat-row{display:flex;gap:28px;margin-top:22px;flex-wrap:wrap;}
-  .legacy .stat{border-left:3px solid var(--red-pen);padding-left:12px;}
-  .legacy .stat .num{font-family:'JetBrains Mono',monospace;font-size:26px;font-weight:700;color:var(--blue-deep);}
-  .legacy .stat .label{font-size:12px;color:var(--ink-soft);}
-
-  /* ---------- CURRICULUM ---------- */
-  .legacy .curri-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:18px;}
-  .legacy .curri-card{
-    background:var(--white);border:1px solid var(--card-border);border-radius:4px;
-    padding:22px;border-top:4px solid var(--blue-deep);
-  }
-  .legacy .curri-card h3{margin:0 0 8px;font-size:18px;}
-  .legacy .curri-card .lg-tag{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--red-pen);}
-  .legacy .curri-card ul{padding-left:18px;margin:12px 0 0;font-size:14px;color:var(--ink-soft);}
-
-  /* ---------- SYSTEM PROMO ---------- */
-  .legacy .system-box{
-    background:var(--blue-deep);color:#fff;border-radius:6px;padding:40px;
-    display:flex;gap:30px;flex-wrap:wrap;align-items:center;
-  }
-  .legacy .system-box .left{flex:1 1 320px;}
-  .legacy .system-box h3{margin:0 0 12px;font-size:24px;}
-  .legacy .system-box p{color:#F3DEDD;margin:0 0 20px;}
-  .legacy .system-features{flex:1 1 280px;display:grid;gap:10px;font-size:14px;}
-  .legacy .system-features div{display:flex;gap:8px;align-items:flex-start;}
-  .legacy .system-features .dot{color:#FFCFC9;font-family:'JetBrains Mono',monospace;}
-
-  /* ---------- REVIEWS ---------- */
-  .legacy .review-marquee{overflow:hidden;-webkit-mask-image:linear-gradient(90deg,transparent,#000 4%,#000 96%,transparent);mask-image:linear-gradient(90deg,transparent,#000 4%,#000 96%,transparent);}
-  .legacy .review-track{display:flex;gap:18px;width:max-content;animation:review-scroll 44s linear infinite;}
-  .legacy .review-marquee:hover .review-track{animation-play-state:paused;}
-  .legacy .review-track .review-card{flex:0 0 280px;}
-  @keyframes review-scroll{from{transform:translateX(0);}to{transform:translateX(-50%);}}
-  .legacy .review-card{background:var(--white);border:1px solid var(--card-border);padding:20px;border-radius:4px;position:relative;}
-  .legacy .review-card .quote-mark{position:absolute;top:10px;right:16px;font-size:34px;color:var(--card-border);font-family:'Noto Serif KR',serif;}
-  .legacy .review-card p{font-size:14px;margin:0 0 14px;}
-  .legacy .review-card .lg-who{font-size:12px;color:var(--ink-soft);font-family:'JetBrains Mono',monospace;display:flex;align-items:center;gap:8px;}
-  .legacy .review-card .medal{background:var(--red-pen);color:#fff;font-size:10px;padding:2px 7px;border-radius:20px;font-family:'Noto Sans KR',sans-serif;font-weight:700;}
-
-  /* ---------- CONTACT ---------- */
-  .legacy .contact-grid{display:flex;gap:40px;flex-wrap:wrap;}
-  .legacy .contact-info{flex:1 1 260px;font-size:14px;color:var(--ink-soft);}
-  .legacy .contact-info div{margin-bottom:10px;}
-  .legacy .contact-info b{color:var(--ink);}
-  .legacy .form-box{flex:1 1 340px;background:var(--white);border:1px solid var(--card-border);padding:24px;border-radius:4px;}
-  .legacy .lg-field{margin-bottom:16px;}
-  .legacy .lg-field label{display:block;font-size:12px;font-weight:700;margin-bottom:6px;color:var(--ink-soft);}
-  .legacy .lg-field input, .legacy .lg-field select, .legacy .lg-field textarea{
-    width:100%;padding:10px 12px;border:1px solid var(--card-border);border-radius:3px;
-    font-family:inherit;font-size:14px;background:#fff;
-  }
-  .legacy .lg-field textarea{min-height:80px;resize:vertical;}
-
-  .legacy footer{border-top:2px solid var(--ink);padding:28px 0;font-size:12px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;}
-
-  /* ---------- LOGIN ---------- */
-  .legacy .login-wrap{position:relative;overflow:hidden;max-width:420px;margin:60px auto;background:var(--white);border:1px solid var(--card-border);border-radius:6px;padding:36px;}
-  .legacy .login-tabs{display:flex;border-bottom:1px solid var(--card-border);margin-bottom:24px;}
-  .legacy .login-tab{flex:1;text-align:center;padding:10px;font-weight:700;font-size:14px;color:var(--ink-soft);border-bottom:2px solid transparent;}
-  .legacy .login-tab.active{color:var(--blue-deep);border-color:var(--blue-deep);}
-  .legacy .error-msg{color:var(--red-pen);font-size:13px;margin-top:10px;}
-  .legacy .lg-hint{font-size:12px;color:var(--ink-soft);margin-top:14px;}
-
-  /* ---------- DASHBOARD ---------- */
-  .legacy .tab-bar{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:26px;border-bottom:1px solid var(--card-border);padding-bottom:10px;}
-  .legacy .tab-btn{
-    border:1px solid var(--card-border);background:var(--white);padding:8px 14px;font-size:13px;
-    border-radius:20px;font-weight:500;
-  }
-  .legacy .tab-btn.active{background:var(--ink);color:#fff;border-color:var(--ink);}
-  .legacy .lg-panel{position:relative;background:var(--white);border:1px solid var(--card-border);border-radius:6px;padding:26px;margin-bottom:20px;overflow:hidden;}
-  .legacy .lg-panel::after, .legacy .login-wrap::after, .legacy .quiz-card::after, .legacy .qna-card::after, .legacy .video-embed-card::after, .legacy .exam-card::after, .legacy .data-card::after, .legacy .homework-card::after, .legacy .home-card::after{
-    content:'';position:absolute;top:0;right:0;width:0;height:0;
-    border-style:solid;border-width:0 15px 15px 0;
-    border-color:transparent var(--paper) transparent transparent;
-    filter:drop-shadow(-1px 1px 1px rgba(61,51,53,.12));
-  }
-  .legacy .lg-panel h3{margin:0 0 18px;font-size:17px;}
-  /* 명단/출석/성적처럼 "표"가 본체인 패널은 카드가 아니라 장부 한 장처럼 —
-     접힘 표시 없이 위아래 룰선만 긋는다. */
-  .legacy .ledger{border-radius:0;border:none;border-top:2px solid var(--ink);border-bottom:1px solid var(--card-border);overflow:visible;}
-  .legacy .ledger::after{content:none;}
-  .legacy table{width:100%;border-collapse:collapse;font-size:13.5px;}
-  .legacy table th{text-align:left;font-size:11px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;color:var(--ink-soft);border-bottom:2px solid var(--card-border);padding:11px 14px;}
-  .legacy table td{padding:13px 14px;border-bottom:1px solid #F0EEE7;}
-  .legacy table tr:last-child td{border-bottom:none;}
-  .legacy table tr:nth-child(even) td{background:#FBFAF7;}
-  .legacy table tr:hover td{background:#F6EFEE;}
-  .legacy .td-strong{font-weight:700;color:var(--ink);}
-  .legacy .td-soft{color:var(--ink-soft);font-size:12px;}
-  .legacy .progress-outer{background:#EDEBE3;border-radius:20px;height:14px;overflow:hidden;margin:8px 0;}
-  .legacy .progress-inner{background:var(--blue-deep);height:100%;border-radius:20px;}
-  .legacy .video-gauge{display:flex;align-items:center;gap:8px;margin-top:6px;}
-  .legacy .video-gauge-emoji{font-size:17px;flex-shrink:0;}
-  .legacy .video-gauge-bar{flex:1;height:10px;background:#EDEBE3;border-radius:20px;overflow:hidden;}
-  .legacy .video-gauge-fill{height:100%;background:linear-gradient(90deg,#FFC97A,var(--blue-deep));border-radius:20px;transition:width .3s;}
-  .legacy .video-gauge-pct{font-size:11.5px;color:var(--ink-soft);min-width:32px;text-align:right;flex-shrink:0;}
-  .legacy .lg-badge{display:inline-flex;align-items:center;gap:4px;font-size:11px;padding:3px 10px;border-radius:20px;font-family:'JetBrains Mono',monospace;}
-  .legacy .badge-ok{background:#E6F1E8;color:var(--green-ok);}
-  .legacy .badge-ok::before{content:'✓';display:inline-block;font-weight:900;transform:rotate(-8deg);}
-  .legacy .badge-no{background:#FBE9E7;color:var(--red-pen);}
-  .legacy .badge-no::before{content:'✗';display:inline-block;font-weight:900;transform:rotate(-8deg);}
-  .legacy .badge-late{background:#FFF3D6;color:#9A7000;}
-  .legacy .badge-leave{background:#EFE7FB;color:#6B46A8;}
-  .legacy .badge-drop{background:#E7E7E7;color:#555;}
-  .legacy .inline-form{display:flex;gap:16px;flex-wrap:wrap;align-items:flex-end;margin-bottom:18px;}
-  .legacy .inline-form .lg-field{margin-bottom:0;min-width:140px;flex:1;}
-  .legacy .empty{
-    color:var(--ink-soft);font-size:13px;line-height:1.7;text-align:center;
-    padding:30px 16px;margin:4px 0;
-    border:1.5px dashed var(--card-border);border-radius:10px;
-    background:rgba(61,51,53,.02);
-  }
-  .legacy .row-actions button{margin-right:4px;}
-  .legacy select{cursor:pointer;}
-
-  /* ---------- 상단 드롭다운 (학생 메뉴) ---------- */
-  .legacy .nav-item{position:relative;}
-  .legacy .nav-dropdown{
-    display:none;position:absolute;top:100%;left:50%;transform:translateX(-50%);
-    background:var(--white);border:1px solid var(--card-border);border-radius:6px;
-    box-shadow:0 8px 24px rgba(0,0,0,.08);padding:6px;min-width:170px;z-index:50;margin-top:10px;
-  }
-  .legacy .nav-item:hover .nav-dropdown{display:block;}
-  .legacy .nav-dropdown a{
-    display:block;padding:9px 12px;font-size:13px;border-radius:4px;white-space:nowrap;text-decoration:none;
-  }
-  .legacy .nav-dropdown a:hover{background:#F6EFEE;color:var(--blue-deep);}
-
-  /* ---------- 강사(관리자) 사이드바 레이아웃 ---------- */
-  .legacy .teacher-layout{display:flex;gap:0;align-items:flex-start;}
-  .legacy .teacher-sidebar{
-    width:168px;flex-shrink:0;background:var(--ink);border-radius:6px 0 0 6px;
-    padding:14px 0;position:sticky;top:20px;
-  }
-  .legacy .side-btn{
-    display:block;width:100%;text-align:left;background:none;border:none;color:#CFC6C7;
-    padding:11px 20px;font-size:13px;cursor:pointer;font-family:inherit;border-left:3px solid transparent;
-    transition:border-color .15s, color .15s;
-  }
-  .legacy .side-btn:hover{color:#fff;}
-  .legacy .side-btn.active{color:#fff;font-weight:700;border-left:4px solid var(--blue-deep);}
-  .legacy .side-group-label{font-size:10.5px;font-weight:700;color:#B7ACAD;text-transform:uppercase;letter-spacing:.09em;padding:16px 20px 6px;font-family:'JetBrains Mono',monospace;}
-  .legacy .teacher-main{flex:1;min-width:0;background:transparent;padding:0 0 0 20px;}
-  @media (max-width:800px){
-    .legacy .teacher-layout{flex-direction:column;align-items:stretch;}
-    .legacy .teacher-sidebar{width:100%;border-radius:6px;position:static;display:flex;flex-wrap:wrap;padding:8px;}
-    .legacy .side-btn{width:auto;border-left:none;border-bottom:3px solid transparent;border-radius:0;padding:7px 14px;}
-    .legacy .side-btn.active{border-left:none;border-bottom-color:var(--blue-deep);}
-    .legacy .teacher-main{padding:20px 0 0;min-width:0;}
-  }
-
-  /* ---------- 학생 상세 (성적/진도/출석 드릴다운) ---------- */
-  .legacy .student-detail-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px;}
-  .legacy .subtab-bar{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap;}
-  .legacy .subtab-btn{border:1px solid var(--card-border);background:var(--white);padding:6px 12px;font-size:12px;border-radius:20px;}
-  .legacy .subtab-btn.active{background:var(--blue-deep);color:#fff;border-color:var(--blue-deep);}
-
-  /* ---------- 데일리퀴즈 ---------- */
-  .legacy .quiz-card{position:relative;overflow:hidden;border:1px solid var(--card-border);border-radius:6px;padding:16px;margin-bottom:12px;background:#FBFAF8;}
-  .legacy .quiz-card .quiz-meta{font-size:11px;color:var(--ink-soft);font-family:'JetBrains Mono',monospace;margin-bottom:6px;}
-  .legacy .quiz-card .quiz-title{font-weight:700;margin-bottom:6px;}
-  .legacy .quiz-card .quiz-content{font-size:13.5px;color:var(--ink-soft);white-space:pre-wrap;}
-  .legacy .quiz-answer-box{margin-top:10px;padding-top:10px;border-top:1px dashed var(--card-border);}
-
-  /* ---------- 클리닉 ---------- */
-  .legacy .clinic-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #F0EEE7;gap:10px;flex-wrap:wrap;}
-  .legacy .status-pill{font-size:11px;padding:3px 10px;border-radius:20px;font-family:'JetBrains Mono',monospace;}
-  .legacy .status-대기{background:#FFF3D6;color:#9A7000;}
-  .legacy .status-승인{background:#E6F1E8;color:var(--green-ok);}
-  .legacy .status-완료{background:#EDEBE3;color:var(--ink-soft);}
-  .legacy .status-취소{background:#FBE9E7;color:var(--red-pen);}
-
-  /* ---------- 질의응답 ---------- */
-  .legacy .qna-card{position:relative;overflow:hidden;border:1px solid var(--card-border);border-radius:6px;padding:16px;margin-bottom:12px;}
-  .legacy .qna-q{font-weight:700;margin-bottom:4px;}
-  .legacy .qna-meta{font-size:11px;color:var(--ink-soft);font-family:'JetBrains Mono',monospace;margin-bottom:8px;}
-  .legacy .qna-answer{margin-top:10px;padding:10px 12px;background:#FBF3F2;border-radius:4px;font-size:13.5px;}
-  .legacy .qna-answer .label{font-size:11px;color:var(--red-pen);font-weight:700;margin-bottom:4px;font-family:'JetBrains Mono',monospace;}
-  .legacy .qna-noanswer{margin-top:10px;font-size:12.5px;color:var(--ink-soft);font-style:italic;}
-
-  /* ---------- 채팅 ---------- */
-  .legacy .chat-window{border:1px solid var(--card-border);border-radius:4px;height:340px;overflow-y:auto;padding:14px;background:#FBFAF8;margin-bottom:12px;display:flex;flex-direction:column;gap:8px;}
-  .legacy .chat-bubble{max-width:70%;padding:8px 12px;border-radius:12px;font-size:13.5px;line-height:1.45;}
-  .legacy .chat-bubble.from-teacher{background:var(--blue-deep);color:#fff;align-self:flex-start;border-bottom-left-radius:2px;}
-  .legacy .chat-bubble.from-student{background:#fff;border:1px solid var(--card-border);align-self:flex-end;border-bottom-right-radius:2px;}
-  .legacy .chat-bubble .chat-time{display:block;font-size:10px;opacity:.7;margin-top:3px;font-family:'JetBrains Mono',monospace;}
-  .legacy .chat-input-row{display:flex;gap:8px;}
-  .legacy .chat-input-row input{flex:1;}
-
-  /* ---------- 영상 ---------- */
-  .legacy .video-row{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid #F0EEE7;gap:10px;flex-wrap:wrap;}
-  .legacy .video-row .vtitle{font-weight:700;font-size:14px;}
-  .legacy .video-row .vunit{font-size:12px;color:var(--ink-soft);font-family:'JetBrains Mono',monospace;}
-
-  /* ---------- 영상 임베드 ---------- */
-  .legacy .video-embed-card{position:relative;overflow:hidden;border:1px solid var(--card-border);border-radius:6px;padding:14px;margin-bottom:16px;background:#FBFAF8;}
-  .legacy .video-embed-card .vtitle{font-weight:700;margin-bottom:2px;}
-  .legacy .video-embed-card .vunit{margin-bottom:10px;}
-  .legacy .video-embed-wrap{position:relative;width:100%;padding-top:56.25%;border-radius:4px;overflow:hidden;background:#000;}
-  .legacy .video-embed-wrap iframe{position:absolute;top:0;left:0;width:100%;height:100%;border:0;}
-  .legacy .video-embed-warn{font-size:12px;color:var(--red-pen);padding:10px;background:#FBF3F2;border-radius:4px;}
-
-  /* ---------- 시험지 관리 ---------- */
-  .legacy .qrow{display:flex;gap:8px;align-items:flex-start;padding:10px 0;border-bottom:1px solid #F0EEE7;}
-  .legacy .qrow .qno{font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--blue-deep);flex:0 0 34px;padding-top:8px;}
-  .legacy .qrow .qfields{flex:1;display:flex;gap:8px;flex-wrap:wrap;}
-  .legacy .qrow .qfields textarea{flex:2;min-width:200px;min-height:44px;}
-  .legacy .qrow .qfields input{flex:1;min-width:100px;}
-  .legacy .exam-card{position:relative;overflow:hidden;border:1px solid var(--card-border);border-radius:6px;padding:14px 16px;margin-bottom:10px;}
-  .legacy .exam-card .exam-title{font-weight:700;}
-  .legacy .exam-card .exam-meta{font-size:11px;color:var(--ink-soft);font-family:'JetBrains Mono',monospace;margin-bottom:6px;}
-  .legacy .exam-detail{margin-top:12px;border-top:1px solid var(--card-border);padding-top:12px;}
-  .legacy .exam-question-row{padding:12px 0;border-bottom:1px solid #F0EEE7;}
-  .legacy .exam-question-row:last-child{border-bottom:none;}
-  .legacy .exam-question-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
-  .legacy .exam-variant-box{margin-top:8px;background:#FBF3F2;border-radius:4px;padding:10px 12px;}
-  .legacy .wrong-check-grid{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0;}
-  .legacy .wrong-check-item{border:1px solid var(--card-border);border-radius:6px;padding:8px 4px;width:52px;text-align:center;font-size:12px;cursor:pointer;user-select:none;}
-  .legacy .wrong-check-item.checked{background:var(--red-pen);color:#fff;border-color:var(--red-pen);}
-  .legacy .wrong-check-item input{display:none;}
-  .legacy .mc-choice-group{display:flex;gap:8px;flex-wrap:wrap;}
-  .legacy .mc-choice-btn{border:1px solid var(--card-border);background:var(--white);border-radius:6px;width:44px;height:36px;font-size:15px;cursor:pointer;}
-  .legacy .mc-choice-btn.active{background:var(--red-pen);color:#fff;border-color:var(--red-pen);}
-  .legacy .unit-check-list{display:flex;flex-direction:column;gap:2px;}
-  .legacy .unit-check-item{display:flex;align-items:center;gap:8px;padding:9px 4px;border-bottom:1px solid #F0EEE7;font-size:13.5px;cursor:pointer;user-select:none;}
-  .legacy .unit-check-item:last-child{border-bottom:none;}
-  .legacy .unit-check-item.checked{color:var(--green-ok);font-weight:700;}
-  .legacy .unit-check-item input{width:16px;height:16px;cursor:pointer;}
-
-  /* ---------- 오답문제 검토 / DB ---------- */
-  .legacy .data-card{position:relative;overflow:hidden;border:1px solid var(--card-border);border-radius:6px;padding:16px;margin-bottom:14px;}
-  .legacy .review-status{font-size:11px;padding:3px 10px;border-radius:20px;font-family:'JetBrains Mono',monospace;}
-  .legacy .review-status-pending{background:#FFF3D6;color:#9A7000;}
-  .legacy .review-status-review1{background:#DCEBFB;color:#2464A8;}
-  .legacy .review-status-approved{background:#E6F1E8;color:var(--green-ok);}
-  .legacy .compare-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:12px 0;}
-  .legacy .compare-col{background:#FBFAF8;border-radius:4px;padding:12px;}
-  .legacy .compare-col .colhead{font-size:11px;color:var(--ink-soft);font-family:'JetBrains Mono',monospace;margin-bottom:6px;}
-  .legacy .compare-col textarea{width:100%;min-height:80px;}
-  @media (max-width:640px){ .legacy .compare-grid{grid-template-columns:1fr;} }
-  /* .bank-warn(「학생이 제출할 수 없는 정답」 경고)은 지웠다 —
-     04-review를 DS로 옮기면서 .app .rv-warn이 그 자리를 갖는다. */
-  .legacy .ai-solution-box{margin:12px 0;border:1px solid var(--card-border);border-radius:6px;overflow:hidden;}
-  .legacy .ai-solution-toggle{width:100%;text-align:left;background:#FBFAF8;border:none;padding:10px 14px;font-size:12.5px;color:var(--ink);cursor:pointer;font-weight:500;}
-  .legacy .ai-solution-toggle:hover{background:#F3F0EA;}
-  .legacy .ai-solution-content{padding:12px 14px;font-size:13px;white-space:pre-wrap;line-height:1.6;border-top:1px solid var(--card-border);color:var(--ink-soft);}
-  .legacy .homework-card{position:relative;overflow:hidden;border:1px solid var(--card-border);border-radius:6px;padding:16px;margin-bottom:12px;}
-  .legacy .homework-pending{color:var(--ink-soft);font-size:13px;font-style:italic;padding:10px;background:#FBFAF8;border-radius:4px;}
-  .legacy .home-icon-row{display:flex;gap:22px;justify-content:center;flex-wrap:wrap;}
-  .legacy .home-icon-link{background:none;border:none;cursor:pointer;font-size:12.5px;color:var(--ink-soft);text-align:center;padding:6px;}
-  .legacy .home-icon-link .emoji{display:block;font-size:24px;margin-bottom:4px;}
-  .legacy .home-header-row{display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;margin-bottom:20px;}
-  .legacy .home-greeting h2{margin:0 0 4px;font-size:21px;}
-  .legacy .home-greeting p{margin:0;color:var(--ink-soft);font-size:13.5px;}
-  .legacy .home-user-badge{background:var(--white);border:1px solid var(--card-border);border-radius:30px;padding:8px 16px;font-size:12.5px;white-space:nowrap;}
-  .legacy .home-grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-bottom:20px;align-items:stretch;}
-  .legacy .home-grid-2{display:grid;grid-template-columns:2fr 1fr;gap:20px;margin-bottom:20px;align-items:stretch;}
-  @media (max-width:900px){ .legacy .home-grid-3{grid-template-columns:1fr;} .legacy .home-grid-2{grid-template-columns:1fr;} }
-  .legacy .home-card{position:relative;overflow:hidden;background:var(--white);border:1px solid var(--card-border);border-radius:6px;padding:20px;}
-  .legacy .home-card h4{margin:0 0 14px;font-size:14px;font-family:'Noto Serif KR',serif;display:flex;align-items:center;gap:6px;}
-  .legacy .home-todo-list .home-todo-row{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid #F0EEE7;font-size:13px;cursor:pointer;}
-  .legacy .home-todo-list .home-todo-row:last-child{border-bottom:none;}
-  .legacy .home-tag{display:inline-block;font-size:10.5px;padding:3px 10px;border-radius:20px;font-family:'JetBrains Mono',monospace;margin-right:4px;}
-  .legacy .home-tag.tag-quiz{background:#E7EEF7;color:#2F5D9A;}
-  .legacy .home-tag.tag-hw{background:#FFF3D6;color:#9A7000;}
-  .legacy .home-tag.tag-video{background:#F1E9F7;color:#6C3E9A;}
-  .legacy .home-tag.tag-wrong{background:#FBE9E7;color:var(--red-pen);}
-  .legacy .home-ring-wrap{display:flex;justify-content:center;}
-  .legacy .home-video-feature{display:flex;gap:16px;align-items:stretch;cursor:pointer;padding:0;overflow:hidden;}
-  .legacy .home-video-thumb{flex:0 0 160px;background:#111 center/cover no-repeat;border-radius:10px 0 0 10px;display:flex;align-items:center;justify-content:center;min-height:120px;}
-  .legacy .home-video-play{width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,.9);color:var(--ink);display:flex;align-items:center;justify-content:center;font-size:16px;}
-  .legacy .home-video-info{padding:20px 20px 20px 0;flex:1;}
-  @media (max-width:640px){ .legacy .home-video-feature{flex-direction:column;} .legacy .home-video-thumb{border-radius:10px 10px 0 0;width:100%;} .legacy .home-video-info{padding:16px;} }
-
-  /* 관리자 홈 대시보드 */
-  .legacy .home-grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:20px;margin-bottom:20px;}
-  @media (max-width:900px){ .legacy .home-grid-4{grid-template-columns:repeat(2,1fr);} }
-  @media (max-width:480px){ .legacy .home-grid-4{grid-template-columns:1fr;} }
-  .legacy .home-stat-card{background:var(--white);border:1px solid var(--card-border);border-left-width:4px;border-radius:6px;padding:16px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:box-shadow .15s;}
-  .legacy .home-stat-card:hover{box-shadow:0 2px 10px rgba(0,0,0,.06);}
-  .legacy .home-stat-card.accent-purple{border-left-color:#6C3E9A;}
-  .legacy .home-stat-card.accent-red{border-left-color:var(--red-pen);}
-  .legacy .home-stat-card.accent-blue{border-left-color:#2F5D9A;}
-  .legacy .home-stat-card.accent-green{border-left-color:var(--green-ok);}
-  .legacy .home-stat-icon{width:40px;height:40px;border-radius:8px;background:#FBFAF8;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;}
-  .legacy .home-stat-num{font-size:22px;font-weight:700;font-family:'JetBrains Mono',monospace;line-height:1.2;}
-  .legacy .home-stat-label{font-size:12px;color:var(--ink-soft);}
-  .legacy .home-queue-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #F0EEE7;}
-  .legacy .home-queue-row:last-child{border-bottom:none;}
-  .legacy .home-classprogress-row{padding:12px 0;border-bottom:1px solid #F0EEE7;}
-  .legacy .home-classprogress-row:last-child{border-bottom:none;}
-  .legacy .home-bar-row{display:flex;align-items:center;gap:8px;margin-top:6px;font-size:12px;}
-  .legacy .home-bar-label{width:56px;color:var(--ink-soft);flex-shrink:0;}
-  .legacy .home-bar-outer{flex:1;background:#EDEBE3;border-radius:20px;height:10px;overflow:hidden;}
-  .legacy .home-bar-inner{height:100%;border-radius:20px;}
-  .legacy .home-bar-green{background:var(--green-ok);}
-  .legacy .home-bar-blue{background:#2F5D9A;}
-  .legacy .home-bar-pct{width:36px;text-align:right;font-family:'JetBrains Mono',monospace;color:var(--ink-soft);flex-shrink:0;}
-
-  /* 출석부: 버튼형 상태 선택 */
-  .legacy .att-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:10px 0;border-bottom:1px solid #F0EEE7;}
-  .legacy .att-row:last-child{border-bottom:none;}
-  .legacy .att-name{flex:1;min-width:120px;font-size:13.5px;font-weight:700;}
-  .legacy .att-table th, .legacy .att-table td{white-space:nowrap;}
-  .legacy .att-table td:last-child, .legacy .att-table th:last-child{white-space:normal;min-width:160px;}
-  .legacy .att-btn-group{display:flex;gap:6px;}
-  .legacy .att-status-btn{border:1px solid var(--card-border);background:var(--white);border-radius:6px;padding:6px 12px;font-size:12.5px;cursor:pointer;white-space:nowrap;}
-  .legacy .att-status-btn.att-ok.active{background:var(--green-ok);color:#fff;border-color:var(--green-ok);}
-  .legacy .att-status-btn.att-late.active{background:#9A7000;color:#fff;border-color:#9A7000;}
-  .legacy .att-status-btn.att-leave.active{background:#6B46A8;color:#fff;border-color:#6B46A8;}
-  .legacy .att-status-btn.att-no.active{background:var(--red-pen);color:#fff;border-color:var(--red-pen);}
-  .legacy .att-status-btn.att-drop.active{background:#555;color:#fff;border-color:#555;}
-  .legacy .att-reason-input{flex-basis:100%;margin-top:4px;}
-  @media (max-width:640px){ .legacy .att-name{flex-basis:100%;} }
-
-  @media (max-width:640px){
-
-    .legacy .hero h1{font-size:32px;}
-    .legacy nav.main-nav{display:none;}
-  }
-</style>
 </head>
-<!-- class="legacy"는 이행용 발판이다. 구버전 스타일 전체가 이 클래스 안에 갇혀 있고,
-     화면을 새 디자인으로 옮길 때마다 render()가 이 클래스를 떼어낸다.
-     전부 옮기고 나면 <style> 블록과 함께 통째로 사라진다. -->
-<body class="legacy">
-<div id="app"><div class="empty">불러오는 중...</div></div>
+<body>
+<div id="app"><div style="padding:64px;text-align:center;color:#96968C;font-size:13px;">불러오는 중…</div></div>
 
 <!-- ============================================================
   Firebase 설정: 아래 firebaseConfig 값을 본인의 Firebase 프로젝트 값으로
@@ -1800,7 +1393,6 @@ let state = {
   loginMode: 'student',     // student | teacher
   loginError: '',
   currentUser: null,        // {type:'student', studentId, name} | {type:'teacher'}
-  pendingStudentTab: null,
   studentTab: 'home',
   teacherTab: 'home',
   settingsSubTab: 'assistants',
@@ -2014,18 +1606,8 @@ function scrollToId(id){
   setTimeout(()=>{ const el=document.getElementById(id); if(el) el.scrollIntoView({behavior:'smooth'}); }, 30);
 }
 
-/* =================== 상단 학생 메뉴 이동 =================== */
-function goStudentPage(tab){
-  if(state.currentUser && state.currentUser.type==='student'){
-    state.studentTab = tab; goto('student');
-  } else if(state.currentUser && (state.currentUser.type==='teacher' || state.currentUser.type==='assistant')){
-    showToast('학생 전용 메뉴입니다. 학생 계정으로 로그인해주세요.');
-  } else {
-    state.pendingStudentTab = tab;
-    state.loginMode = 'student';
-    goto('login');
-  }
-}
+/* goStudentPage()는 지웠다 — 공개 헤더의 «학생 ▾» 드롭다운이 유일한 호출처였고,
+   그 헤더는 랜딩 합류와 함께 사라졌다. 쓰던 state 값도 같이 지웠다. */
 
 /* =================== 로그인 =================== */
 // 출결 기록 중 가장 최근 날짜의 상태가 "퇴원"이면 퇴원 처리된 것으로 본다.
@@ -2045,8 +1627,7 @@ async function doStudentLogin(){
   if(isWithdrawnRecord(rec)){ state.loginError = '퇴원 처리된 계정입니다. 문의사항은 선생님께 연락해주세요.'; render(); return; }
   state.currentUser = {type:'student', studentId:found.studentId, name:found.name};
   saveSession();
-  state.studentTab = state.pendingStudentTab || 'home';
-  state.pendingStudentTab = null;
+  state.studentTab = 'home';
   goto('student');
 }
 
@@ -2423,19 +2004,6 @@ function studentNotifItems(sid){
     {key:'notice', label:'새 공지', count: DATA.notices.length, gotoCode:"state.studentTab='notice';"},
   ];
 }
-function notificationBellHTML(items){
-  const total = items.reduce((sum,it)=>sum+unseenCount(it.key, it.count), 0);
-  const unseenItems = items.filter(it=>unseenCount(it.key,it.count)>0);
-  return `<div class="notif-bell">
-    <button class="notif-bell-btn" onclick="state.notifOpen=!state.notifOpen; render()"><svg width="20" height="20" viewBox="0 0 24 26" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2.5a2 2 0 0 1 2 2v.6a7 7 0 0 1 5 6.9c0 4.6 1.6 6.4 2.3 7a1 1 0 0 1-.7 1.7H3.4a1 1 0 0 1-.7-1.7c.7-.6 2.3-2.4 2.3-7a7 7 0 0 1 5-6.9v-.6a2 2 0 0 1 2-2z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M9.5 22.3a2.5 2.5 0 0 0 5 0" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>${total>0?`<span class="notif-badge">${total>9?'9+':total}</span>`:''}</button>
-    ${state.notifOpen ? `<div class="notif-dropdown">
-      ${unseenItems.length===0 ? '<div class="notif-empty">새 알림이 없습니다</div>' :
-      unseenItems.map(it=>`<div class="notif-item" onclick="${it.gotoCode} markSeen('${it.key}', ${it.count}); state.notifOpen=false; render()">
-        <span>${it.label}</span><span class="notif-item-count">${unseenCount(it.key,it.count)}</span>
-      </div>`).join('')}
-    </div>` : ''}
-  </div>`;
-}
 
 /* =================== 데일리퀴즈 =================== */
 async function addQuiz(){
@@ -2696,16 +2264,16 @@ function qnaImageFieldHTML(imageValue, onchangeCall, onremoveCall, fieldId){
   const uid = fieldId || 'qimg';
   const src = imgSrcOf(imageValue);
   const uploading = imageValue && typeof imageValue === 'object' && imageValue.uploading;
-  return `<div class="lg-field" style="max-width:150px;">
+  return `<div style="max-width:150px;">
     ${src ? `<div style="position:relative;display:inline-block;">
-      <img src="${src}" style="max-width:150px;max-height:150px;border-radius:4px;border:1px solid var(--card-border);display:block;${uploading?'opacity:.5;':''}">
-      ${uploading ? `<span style="position:absolute;bottom:2px;left:2px;background:rgba(0,0,0,.6);color:#fff;font-size:10px;padding:1px 5px;border-radius:3px;">업로드 중...</span>` : `<button class="lg-btn btn-red btn-small" style="position:absolute;top:2px;right:2px;padding:1px 6px;" onclick="${onremoveCall}">×</button>`}
+      <img src="${src}" style="max-width:150px;max-height:150px;border-radius:var(--r-sm);border:1px solid var(--line);display:block;${uploading?'opacity:.5;':''}">
+      ${uploading ? `<span style="position:absolute;bottom:3px;left:3px;background:rgba(0,0,0,.6);color:#fff;font-size:10px;padding:2px 6px;border-radius:3px;">업로드 중…</span>` : `<button class="btn no sm" style="position:absolute;top:3px;right:3px;padding:2px 7px;" onclick="${onremoveCall}">×</button>`}
     </div>` : `
     <input type="file" accept="image/*" id="${uid}-file" style="display:none;" onchange="${onchangeCall}">
     <input type="file" accept="image/*" capture="environment" id="${uid}-cam" style="display:none;" onchange="${onchangeCall}">
     <div style="display:flex;gap:6px;">
-      <button type="button" class="lg-btn btn-small" style="flex:1;" onclick="document.getElementById('${uid}-file').click()">${iconSvg('file',15)} 파일</button>
-      <button type="button" class="lg-btn btn-small" style="flex:1;" onclick="document.getElementById('${uid}-cam').click()">${iconSvg('camera',15)} 촬영</button>
+      <button type="button" class="btn sm" style="flex:1;" onclick="document.getElementById('${uid}-file').click()">${iconSvg('file',14)} 파일</button>
+      <button type="button" class="btn sm" style="flex:1;" onclick="document.getElementById('${uid}-cam').click()">${iconSvg('camera',14)} 촬영</button>
     </div>`}
   </div>`;
 }
@@ -2861,7 +2429,7 @@ async function noteVideoWatchTime(studentId, videoId, addSeconds, duration, ende
   if(label) label.innerHTML = videoProgressBlockHTML(studentId, videoId);
 }
 /* 재생 중에 이 자리만 다시 그린다 (render()를 부르면 iframe이 새로 생겨 재생이 끊긴다).
-   그래서 여기서 나오는 것은 DS 조각이어야 한다 — 구버전 .video-gauge는 .legacy 안에서만 산다.
+   그래서 여기서 나오는 것은 DS 조각이어야 한다 — 구버전 .video-gauge는 이제 없다.
    이모지 마일스톤(🌱🌿🔥⭐🎉)은 뺐다. 이 시스템은 이모지를 아이콘으로 쓰지 않는다. */
 function videoProgressBlockHTML(studentId, videoId){
   const rec = DATA.records[studentId];
@@ -3118,7 +2686,7 @@ function examImagesHTML(examId){
   if(!c) return '';
   if(c === 'loading') return '<div class="empty">불러오는 중...</div>';
   if(c === 'empty') return '<div class="empty">첨부된 이미지가 없습니다.</div>';
-  return `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">${c.map(p=>`<img src="${imgSrcOf(p)}" style="width:90px;height:120px;object-fit:cover;border-radius:4px;border:1px solid var(--card-border);">`).join('')}</div>`;
+  return `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">${c.map(p=>`<img src="${imgSrcOf(p)}" style="width:90px;height:120px;object-fit:cover;border-radius:4px;border:1px solid var(--line);">`).join('')}</div>`;
 }
 
 function toggleExamDetailView(examId){
@@ -3134,14 +2702,14 @@ function examDetailHTML(examId){
       const bank = findBankEntry(examId, q.no);
       const statusLabel = bank ? {pending:'생성됨 (검토 전)', review1:'1차 검토 완료', approved:'2차 검토 완료 · 공개'}[bank.status] : null;
       return `<div class="exam-question-row">
-        <div class="exam-question-head"><b>${q.no}번</b> <span class="lg-mono" style="font-size:11px;color:var(--ink-soft);">${escHtml(q.unit||'')}</span>
+        <div class="exam-question-head"><b>${q.no}번</b> <span class="mono" style="font-size:11px;color:var(--dim);">${escHtml(q.unit||'')}</span>
           ${statusLabel ? `<span class="review-status review-status-${bank.status}">${statusLabel}</span>` : ''}</div>
         <div style="font-size:13.5px;white-space:pre-wrap;margin-top:4px;">${escHtml(q.content)}</div>
-        <div class="lg-mono" style="font-size:11px;color:var(--ink-soft);margin-top:4px;">정답: ${escHtml(q.answer)}</div>
+        <div class="mono" style="font-size:11px;color:var(--dim);margin-top:4px;">정답: ${escHtml(q.answer)}</div>
         ${bank && (bank.variantContent||bank.variantAnswer) ? `<div class="exam-variant-box">
-          <div class="lg-mono" style="font-size:11px;color:var(--red-pen);margin-bottom:4px;">변형 문제</div>
+          <div class="mono" style="font-size:11px;color:var(--no);margin-bottom:4px;">변형 문제</div>
           <div style="font-size:13px;white-space:pre-wrap;">${escHtml(bank.variantContent||'')}</div>
-          <div class="lg-mono" style="font-size:11px;color:var(--ink-soft);margin-top:4px;">정답: ${escHtml(bank.variantAnswer||'')}</div>
+          <div class="mono" style="font-size:11px;color:var(--dim);margin-top:4px;">정답: ${escHtml(bank.variantAnswer||'')}</div>
         </div>` : bank ? '<p class="lg-hint" style="margin-top:6px;">아직 변형 문제가 생성되지 않았습니다.</p>' : ''}
       </div>`;
     }).join('')}
@@ -3990,12 +3558,6 @@ function renderScoreChart(scores){
 
 /* =================== 화면 렌더 =================== */
 
-/* 새 디자인 시스템(ds.css)으로 옮긴 화면 목록.
-   여기 들어간 화면만 구버전 스타일(.legacy)을 벗는다. 화면을 하나 옮길 때마다 여기에 더한다.
-   전부 옮기고 나면 이 집합과 <style> 블록, body의 .legacy를 통째로 지운다. */
-/* 이제 전부 들어왔다 — 구버전 «화면»은 하나도 남지 않았다.
-   남은 legacy는 DS 화면 «안»에 감싸 둔 폼과 표뿐이다. */
-const MIGRATED_VIEWS = new Set(['teacher', 'student', 'home', 'login', 'assistant']);
 let lastSyncedHash = null;
 function syncHistory(){
   const newHash = buildHashFromState();
@@ -4016,11 +3578,9 @@ function render(){
   else if(state.view==='student') bodyHtml = studentHTML();
   else if(state.view==='teacher') bodyHtml = teacherHTML();
   else if(state.view==='assistant') bodyHtml = assistantHTML();
-  /* 새 디자인으로 옮긴 화면은 자기 셸(상단바)을 스스로 갖는다.
-     공개 사이트용 헤더·푸터를 덧씌우면 상단바가 두 겹이 된다. */
-  let html = MIGRATED_VIEWS.has(state.view) ? bodyHtml : headerHTML() + bodyHtml + footerHTML();
+  /* 모든 화면이 자기 셸(상단바·푸터)을 스스로 갖는다. 덧씌우는 공용 껍데기는 없다. */
+  let html = bodyHtml;
   if(state.toast) html += `<div style="position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1B1B1D;color:#fff;padding:12px 22px;border-radius:30px;font-size:13px;box-shadow:0 6px 20px rgba(0,0,0,.2);z-index:999;">${state.toast}</div>`;
-  document.body.classList.toggle('legacy', !MIGRATED_VIEWS.has(state.view));
   app.innerHTML = html;
   if(window.renderMathInElement){
     try{
@@ -4034,54 +3594,19 @@ function render(){
     mountVideoTrackers(state.currentUser.studentId);
   }
   /* 채팅은 «마지막 말»이 있는 곳에서 열려야 한다. 전체 재렌더링이라 매번 위로 되돌아간다. */
-  const chatBox = app.querySelector('.sap-chat, .ch-win');
+  const chatBox = app.querySelector('.sap-chat, .ch-win, .fm-chat');
   if(chatBox) chatBox.scrollTop = chatBox.scrollHeight;
   /* 랜딩의 등장·상단바. 시안의 <script>는 innerHTML로 들어가면 실행되지 않는다. */
   if(state.view==='home') mountLanding();
   syncHistory();
 }
 
-function headerHTML(){
-  const loggedIn = state.currentUser;
-  return `
-  <header class="site-header">
-    <div class="logo" onclick="goto('home')">
-      <img src="${LOGO_H1}" alt="김하현수학연구소 로고">
-    </div>
-    ${!loggedIn ? `
-    <nav class="main-nav">
-      <a onclick="scrollToId('sec-about')">강사소개</a>
-      <div class="nav-item">
-        <a>학생 ▾</a>
-        <div class="nav-dropdown">
-          <a onclick="goStudentPage('quiz')">데일리퀴즈</a>
-          <a onclick="goStudentPage('clinic')">클리닉 신청</a>
-          <a onclick="goStudentPage('qna')">질의응답</a>
-          <a onclick="goStudentPage('video')">강의시청</a>
-        </div>
-      </div>
-      <a onclick="scrollToId('sec-notice')">공지사항</a>
-      <a onclick="scrollToId('sec-review')">후기</a>
-    </nav>` : ''}
-    <div class="header-actions">
-      ${loggedIn
-        ? `${notificationBellHTML(loggedIn.type==='teacher' ? teacherNotifItems() : loggedIn.type==='student' ? studentNotifItems(loggedIn.studentId) : [])}
-           <span class="lg-mono" style="font-size:12px;color:var(--ink-soft);align-self:center;margin-right:6px;">${loggedIn.type==='teacher'?'김하현T':loggedIn.type==='assistant'?loggedIn.name+' 조교':loggedIn.name+' 학생'}</span>
-           <button class="lg-btn btn-small" onclick="${loggedIn.type==='teacher'?"state.teacherTab='home';":loggedIn.type==='assistant'?"state.assistantTab='students';":"state.studentTab='home';"} goto('${loggedIn.type==='teacher'?'teacher':loggedIn.type==='assistant'?'assistant':'student'}')">${loggedIn.type==='teacher'?'관리자 페이지로':loggedIn.type==='assistant'?'조교 페이지로':'마이페이지로'}</button>
-           <button class="lg-btn btn-red btn-small" onclick="logout()">로그아웃</button>`
-        : `<button class="lg-btn btn-small" onclick="state.loginMode='student'; goto('login')">학생 로그인</button>
-           <button class="lg-btn btn-primary btn-small" onclick="state.loginMode='teacher'; goto('login')">강사 로그인</button>`
-      }
-    </div>
-  </header>`;
-}
+/* headerHTML() · footerHTML()은 지웠다.
+   공개 사이트용 헤더(로고 + 학생 메뉴 + 로그인 버튼)와 푸터를 render()가 덧씌우던 것인데,
+   이제 **모든 화면이 자기 셸을 스스로 갖는다** — 공개 홈은 .l-bar/.l-foot,
+   관리자·조교·학생은 .topbar, 로그인은 로고 하나. 덧씌우면 상단바가 두 겹이 됐다.
+   notificationBellHTML도 함께 지웠다 — 학생은 bellHTML, 관리자는 상단바가 맡는다. */
 
-function footerHTML(){
-  return `<footer>
-    <div>ⓒ 김하현수학연구소. 모든 개념에는 정확한 이유가 있습니다.</div>
-    <div><a href="https://instagram.com/hahyun_t" target="_blank" rel="noopener">Instagram @hahyun_t</a></div>
-  </footer>`;
-}
 
 /* =================== 공개 홈 — 랜딩 「하루」 (landing-v2/index.html) ===================
    **이 학원이 일하는 하루를 방문자가 목격한다.**
@@ -5180,8 +4705,8 @@ function stuQnaHTML(c){
     <textarea id="qna-question" class="sap-in" rows="4"
       placeholder="문제 질문은 물론, 학습 상담 등 무엇이든 편하게 남겨주세요."></textarea>
     <div class="sap-lab" style="margin-top:13px;">사진 (선택)</div>
-    <div class="legacy" style="padding:0;">${qnaImageFieldHTML(state.qnaQuestionImage,
-      'handleQnaQuestionImage(this.files)', 'removeQnaQuestionImage()', 'qna-q-stu')}</div>
+    ${qnaImageFieldHTML(state.qnaQuestionImage,
+      'handleQnaQuestionImage(this.files)', 'removeQnaQuestionImage()', 'qna-q-stu')}
     <button class="mbtn p" style="margin-top:14px;" onclick="submitQuestion()">질문 보내기</button>
     <button class="mbtn q" style="margin-top:6px;" onclick="state.stuQnaWriting=false; render()">닫기</button>
   </div>`
@@ -5313,15 +4838,17 @@ function stuChatHTML(c){
 }
 
 /* ---------- 셸 ---------- */
-/* 알림 벨 — 구버전 notificationBellHTML은 .legacy 스코프의 스타일을 쓴다.
-   items·unseenCount·markSeen은 그대로 쓰고 껍데기만 DS로 다시 그린다. */
-function stuBellHTML(items){
+/* 알림 벨 — 학생·관리자가 같이 쓴다.
+   items는 화면마다 다르지만(studentNotifItems / teacherNotifItems) 껍데기는 하나다.
+   구버전 notificationBellHTML은 공용 헤더에 붙어 있었는데, 그 헤더가 사라지면서
+   각 셸의 상단바로 들어왔다. */
+function bellHTML(items){
   const total = items.reduce((n,it)=>n + unseenCount(it.key, it.count), 0);
   const unseen = items.filter(it=>unseenCount(it.key, it.count)>0);
-  return `<div class="sap-bell">
+  return `<div class="ds-bell">
     <button onclick="state.notifOpen=!state.notifOpen; render()">${iconSvg('bell',19)}
       ${total>0 ? `<span class="n">${total>9?'9+':total}</span>` : ''}</button>
-    ${state.notifOpen ? `<div class="sap-drop">
+    ${state.notifOpen ? `<div class="ds-drop">
       ${unseen.length===0 ? '<div class="em">새 알림이 없습니다</div>'
       : unseen.map(it=>`<div class="it" onclick="${it.gotoCode} markSeen('${it.key}', ${it.count});
           state.notifOpen=false; render()">
@@ -5369,7 +4896,7 @@ function studentHTML(){
     <div class="topbar">
       <div class="bm">김하현수학연구소</div>
       <div class="right">
-        ${stuBellHTML(studentNotifItems(c.sid))}
+        ${bellHTML(studentNotifItems(c.sid))}
         <button class="btn sm" onclick="logout()">로그아웃</button>
       </div>
     </div>
@@ -5390,7 +4917,7 @@ function attStatusClass(status){
 }
 function attBadge(status){
   const cls = {'출석':'badge-ok', '지각':'badge-late', '조퇴':'badge-leave', '결석':'badge-no', '퇴원':'badge-drop'}[status] || 'badge-no';
-  return `<span class="lg-badge ${cls}">${status}</span>`;
+  return `<span class="badge ${cls}">${status}</span>`;
 }
 
 /* ---------- 강사 대시보드 (사이드바) ---------- */
@@ -5553,10 +5080,6 @@ const TEACHER_TAB_SECTION = {
   settings:'설정'
 };
 
-/* 새 디자인으로 옮긴 탭. 여기 없는 탭은 .legacy 안에서 구버전 스타일 그대로 그린다.
-   화면을 하나 옮길 때마다 여기에 더한다. */
-const TEACHER_TABS_DS = new Set(['roster', 'signals', 'home', 'session', 'classhub', 'review',
-  'clinic', 'notices', 'qna', 'chat', 'exams', 'unitbank', 'settings']);   // 관리자 16개 전부
 
 function goTeacherTab(tab, hubTab){
   state.teacherTab = tab;
@@ -5594,9 +5117,6 @@ function teacherHTML(){
   const subs = TEACHER_SUBNAV[section];
   const subActive = s => state.teacherTab===s[1] && (!s[2] || state.classHubTab===s[2]);
   const body = teacherTabBodyHTML();
-  /* 16개가 전부 들어 있어 사실상 항상 참이다. 남겨 두는 것은 «이 장치가 무엇이었는지»를
-     보이기 위해서다 — 구버전 <style> 블록을 지울 때 이 줄도 같이 사라진다. */
-  const onDs = TEACHER_TABS_DS.has(state.teacherTab);
 
   return `
   <div class="app">
@@ -5606,6 +5126,7 @@ function teacherHTML(){
         `<a class="${n[0]===section?'on':''}" onclick="goTeacherTab('${n[1]}')">${n[0]}</a>`
       ).join('')}</nav>
       <div class="right">
+        ${bellHTML(teacherNotifItems())}
         <span class="mono">김하현T</span>
         <button class="btn sm" onclick="logout()">로그아웃</button>
       </div>
@@ -5613,7 +5134,7 @@ function teacherHTML(){
     ${subs ? `<div class="subnav">${subs.map(s=>
       `<a class="${subActive(s)?'on':''}" onclick="goTeacherTab('${s[1]}'${s[2]?`,'${s[2]}'`:''})">${s[0]}</a>`
     ).join('')}</div>` : ''}
-    <div class="body">${onDs ? body : `<div class="legacy">${body}</div>`}</div>
+    <div class="body">${body}</div>
   </div>`;
 }
 
@@ -6751,17 +6272,17 @@ function studentImportPreviewHTML(){
   if(!imp) return '';
   const existingIds = new Set(DATA.students.map(s=>s.studentId));
   const dupCount = imp.rows.filter(r=>existingIds.has(r.studentId)).length;
-  return `<div class="data-card" style="margin-bottom:14px;">
+  return `<div class="fm-card" style="margin-bottom:14px;">
     <h4 style="margin-top:0;">업로드 미리보기 (총 ${imp.rows.length}명)</h4>
-    <p class="lg-hint" style="margin-top:-6px;">${dupCount>0 ? `이미 존재하는 아이디 <span style="color:var(--red-pen);font-weight:700;">${dupCount}명</span>은 등록 시 건너뜁니다.` : '중복된 아이디가 없습니다.'}</p>
+    <p class="fm-hint" style="margin-top:-6px;">${dupCount>0 ? `이미 존재하는 아이디 <span style="color:var(--no);font-weight:700;">${dupCount}명</span>은 등록 시 건너뜁니다.` : '중복된 아이디가 없습니다.'}</p>
     <div style="max-height:320px;overflow:auto;">
     <table><tr><th>아이디</th><th>이름</th><th>학년</th><th>학교</th><th>학부모전화</th><th>학생전화</th></tr>
-    ${imp.rows.map(r=>`<tr ${existingIds.has(r.studentId)?'style="color:var(--red-pen);"':''}><td>${escHtml(r.studentId)}${existingIds.has(r.studentId)?' (중복)':''}</td><td>${escHtml(r.name)}</td><td>${escHtml(r.grade)}</td><td>${escHtml(r.school)}</td><td>${escHtml(r.parentPhone)}</td><td>${escHtml(r.phone)}</td></tr>`).join('')}
+    ${imp.rows.map(r=>`<tr ${existingIds.has(r.studentId)?'style="color:var(--no);"':''}><td>${escHtml(r.studentId)}${existingIds.has(r.studentId)?' (중복)':''}</td><td>${escHtml(r.name)}</td><td>${escHtml(r.grade)}</td><td>${escHtml(r.school)}</td><td>${escHtml(r.parentPhone)}</td><td>${escHtml(r.phone)}</td></tr>`).join('')}
     </table>
     </div>
     <div style="margin-top:12px;display:flex;gap:8px;">
-      <button class="lg-btn btn-primary btn-small" onclick="confirmStudentBulkImport()">일괄 등록</button>
-      <button class="lg-btn btn-small" onclick="state.studentImportPreview=null; render()">취소</button>
+      <button class="btn p sm" onclick="confirmStudentBulkImport()">일괄 등록</button>
+      <button class="btn sm" onclick="state.studentImportPreview=null; render()">취소</button>
     </div>
   </div>`;
 }
@@ -6818,7 +6339,6 @@ async function toggleClassProgressUnit(classId, unit, checked){
 
    반을 «만드는» 곳은 여기가 아니라 설정이다 (명단에서 정한 것과 같은 규칙 —
    설정은 만드는 곳, 목록은 보는 곳). 여기서는 고르고·끝내고·지운다. */
-const CLASSHUB_TABS_DS = new Set(['progress', 'sessions', 'quiz', 'video']);   // 넷 다 옮겼다
 
 function teacherClassHubHTML(){
   /* 「학생 명단」 서브탭은 없앴다 — 그 일은 명단(01-roster)이 반 뷰로 한다.
@@ -6836,7 +6356,7 @@ function teacherClassHubHTML(){
   let c = DATA.classes.find(x=>x.id===state.classHubId);
   if(!c){ c = DATA.classes[0]; state.classHubId = c.id; }
 
-  let sub, isDs = CLASSHUB_TABS_DS.has(tab);
+  let sub;
   if(tab==='progress')   sub = chubProgressHTML(c.id);
   else if(tab==='quiz')  sub = chubQuizHTML(c.id);
   else if(tab==='video') sub = chubVideoHTML(c.id);
@@ -6862,7 +6382,7 @@ function teacherClassHubHTML(){
           <button class="btn q sm" onclick="deleteClass('${c.id}')">삭제</button>
         </div>
       </div>
-      <div class="chub-body">${isDs ? sub : `<div class="legacy">${sub}</div>`}</div>
+      <div class="chub-body">${sub}</div>
     </main>
   </div>`;
 }
@@ -7248,16 +6768,27 @@ function sdChatHTML(sid){
   state.teacherSelectedStudent = sid;
   let chat = DATA.chats[sid];
   if(!chat){ loadChat(sid).then(()=>render()); chat = []; }
+  /* 학생 화면과 «같은 말풍선»이다 (ds.css의 .bub-row). 강사 쪽에서는 내 말이 오른쪽에 온다.
+     날짜가 바뀌는 자리에 구분선을 넣는 것도 같다 — 학생 화면(stuChatHTML)과 짝이다. */
+  let lastDay = '';
+  const bubbles = chat.map(m=>{
+    const day = (m.at||'').slice(0,10), time = (m.at||'').slice(11,16);
+    let sep = '';
+    if(day && day!==lastDay){ lastDay = day; sep = `<div class="chat-day"><span>${escHtml(day)}</span></div>`; }
+    return sep + `<div class="bub-row ${m.from==='teacher'?'me':''}">
+      <div class="bub" style="max-width:66%;">${escHtml(m.text)}</div>
+      <span class="tm">${escHtml(time)}</span></div>`;
+  }).join('');
+
   return `<div class="sd-tl" style="margin-top:18px;">
-    <div class="legacy">
-      <div class="chat-window" id="chat-win">
-        ${chat.length===0?'<div class="empty">대화 내역이 없습니다.</div>':
-        chat.map(m=>`<div class="chat-bubble from-${m.from}">${escHtml(m.text)}<span class="chat-time">${m.at}</span></div>`).join('')}
-      </div>
-      <div class="chat-input-row">
-        <input id="chat-input-teacher" placeholder="메시지 입력" onkeydown="if(event.key==='Enter') sendChatMessage('${sid}','teacher')">
-        <button class="lg-btn btn-primary" onclick="sendChatMessage('${sid}','teacher')">전송</button>
-      </div>
+    <div class="fm-chat" id="chat-win">
+      ${chat.length===0 ? '<div class="fm-empty">대화 내역이 없습니다.</div>' : bubbles}
+    </div>
+    <div class="fm-row" style="margin-bottom:0;flex-wrap:nowrap;">
+      <div class="fm-field" style="margin-bottom:0;flex:1;">
+        <input id="chat-input-teacher" placeholder="메시지 입력"
+          onkeydown="if(event.key==='Enter') sendChatMessage('${sid}','teacher')"></div>
+      <button class="btn p" onclick="sendChatMessage('${sid}','teacher')">전송</button>
     </div>
   </div>`;
 }
@@ -7337,48 +6868,51 @@ function teacherAttendanceHTML(classId, date){
   const roster = classId ? DATA.students.filter(s=>s.classId===classId) : [];
   if(classId && state.allRecordsLoaded) ensureAttDraft(classId, date);
   const body = `
-    ${!classId ? '<div class="empty">반을 선택해주세요.</div>' :
-      !state.allRecordsLoaded ? '<div class="empty">학생 기록을 불러오는 중입니다...</div>' :
-      roster.length===0 ? '<div class="empty">이 반에 배정된 학생이 없습니다.</div>' : `
+    ${!classId ? '<div class="fm-empty">반을 선택해주세요.</div>' :
+      !state.allRecordsLoaded ? '<div class="fm-empty">학생 기록을 불러오는 중입니다...</div>' :
+      roster.length===0 ? '<div class="fm-empty">이 반에 배정된 학생이 없습니다.</div>' : `
     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:14px;">
-      <h4 style="margin:0;">출석 관리 <span class="td-soft" style="font-weight:400;">· ${roster.length}명 대상</span></h4>
+      <h4 style="margin:0;">출석 관리 <span class="fm-sub" style="font-weight:400;">· ${roster.length}명 대상</span></h4>
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-        <button class="lg-btn btn-small" onclick="setAllPresent('${classId}')">전체 출석</button>
-        <select id="att-bulk-status" style="width:auto;">${ATT_STATUSES.map(st=>`<option value="${st}">${st}</option>`).join('')}</select>
-        <button class="lg-btn btn-small" onclick="setAllStatus('${classId}', document.getElementById('att-bulk-status').value)">일괄 변경</button>
-        <button class="lg-btn btn-primary btn-small" onclick="saveClassAttendance('${classId}','${date}')">저장</button>
+        <button class="btn sm" onclick="setAllPresent('${classId}')">전체 출석</button>
+        <select class="fm-sel" id="att-bulk-status">${ATT_STATUSES.map(st=>`<option value="${st}">${st}</option>`).join('')}</select>
+        <button class="btn sm" onclick="setAllStatus('${classId}', document.getElementById('att-bulk-status').value)">일괄 변경</button>
+        <button class="btn p sm" onclick="saveClassAttendance('${classId}','${date}')">저장</button>
       </div>
     </div>
     <div style="overflow-x:auto;">
-    <table class="att-table"><tr><th>#</th><th>이름</th><th>상태</th><th>출석 상태 변경</th><th>출결 메모</th></tr>
+    <table class="fm-att"><tr><th>#</th><th>이름</th><th>상태</th><th>출석 상태 변경</th><th>출결 메모</th></tr>
     ${roster.map((s,i)=>{
       const d = state.attDraft[s.studentId] || {status:null, reason:'', videoUrl:'', note:''};
       return `<tr>
-        <td class="td-soft lg-mono">${i+1}</td>
-        <td class="td-strong">${escHtml(s.name)}</td>
-        <td>${d.status ? attBadge(d.status) : '<span class="td-soft">미입력</span>'}</td>
+        <td class="fm-sub mono">${i+1}</td>
+        <td class="fm-nm">${escHtml(s.name)}</td>
+        <td>${d.status ? attBadge(d.status) : '<span class="fm-sub">미입력</span>'}</td>
         <td>
-          <div class="att-btn-group">
-            ${ATT_STATUSES.map(st=>`<button class="att-status-btn att-${attStatusClass(st)} ${d.status===st?'active':''}" onclick="setAttStatus('${s.studentId}','${st}')">${st}</button>`).join('')}
+          <!-- 상태 버튼은 ds.css의 .seg다 — 수업 화면(02-class)이 쓰는 것과 같은 부품이다.
+               저쪽은 4개(퇴원 제외), 여기는 5개 전부. 그 차이는 «역할»이지 «모양»이 아니다. -->
+          <div class="seg">
+            ${ATT_STATUSES.map(st=>`<button class="${d.status===st?'on '+attStatusClass(st):''}"
+              style="width:auto;padding:0 10px;" onclick="setAttStatus('${s.studentId}','${st}')">${st}</button>`).join('')}
           </div>
-          ${(d.status && d.status!=='출석') ? `<input class="att-reason-input" id="att-reason-${s.studentId}" placeholder="사유 입력 (선택)" value="${escHtml(d.reason)}" oninput="state.attDraft['${s.studentId}'].reason=this.value">` : ''}
-          ${d.status==='결석' ? `<input class="att-reason-input" id="att-video-${s.studentId}" placeholder="보충 영상 유튜브 링크 (선택)" value="${escHtml(d.videoUrl)}" oninput="state.attDraft['${s.studentId}'].videoUrl=this.value">` : ''}
+          ${(d.status && d.status!=='출석') ? `<input style="margin-top:7px;" id="att-reason-${s.studentId}" placeholder="사유 입력 (선택)" value="${escHtml(d.reason)}" oninput="state.attDraft['${s.studentId}'].reason=this.value">` : ''}
+          ${d.status==='결석' ? `<input style="margin-top:7px;" id="att-video-${s.studentId}" placeholder="보충 영상 유튜브 링크 (선택)" value="${escHtml(d.videoUrl)}" oninput="state.attDraft['${s.studentId}'].videoUrl=this.value">` : ''}
         </td>
-        <td><input class="att-reason-input" id="att-note-${s.studentId}" placeholder="메모 입력" value="${escHtml(d.note)}" oninput="state.attDraft['${s.studentId}'].note=this.value"></td>
+        <td><input id="att-note-${s.studentId}" placeholder="메모 입력" value="${escHtml(d.note)}" oninput="state.attDraft['${s.studentId}'].note=this.value"></td>
       </tr>`;
     }).join('')}
     </table>
     </div>`}
   `;
   const summary = classId && state.allRecordsLoaded && roster.length>0 ? `
-  <div class="lg-panel">
+  <div class="fm-panel">
     <h3>${classNameOf(classId)} 출결 누적 집계</h3>
     <div style="overflow-x:auto;">
     <table><tr><th>학생</th>${ATT_STATUSES.map(st=>`<th>${st}</th>`).join('')}</tr>
     ${roster.map(s=>{
       const list = (state.allRecords[s.studentId] && state.allRecords[s.studentId].attendance) || [];
       const count = st => list.filter(a=>a.status===st).length;
-      return `<tr><td class="td-strong">${escHtml(s.name)}</td>${ATT_STATUSES.map(st=>`<td>${count(st)}</td>`).join('')}</tr>`;
+      return `<tr><td class="fm-nm">${escHtml(s.name)}</td>${ATT_STATUSES.map(st=>`<td>${count(st)}</td>`).join('')}</tr>`;
     }).join('')}
     </table>
     </div>
@@ -7424,7 +6958,7 @@ async function saveClassAttendance(classId, date){
 
    그래서 두 단으로 갈랐다.
      목록  그날 남은 것이 한 행에 다 있다 (DS, 새로 만듦)
-     상세  행을 누르면 그날의 출석·성적·시험·과제 입력 (구버전 그대로, .legacy)
+     상세  행을 누르면 그날의 출석·성적·시험·과제 입력
 
    **시안에 있었으나 넣지 않은 것 — 「회차」와 「단원」.**
    도메인에 둘 다 없다. 기존 코드도 «차시 번호 없이 날짜만 다룬다»고 못박아 두었고,
@@ -7532,7 +7066,7 @@ function chubSessionDetailHTML(classId, date){
     <span class="spacer"></span>
     ${dateSubtabs.map(t=>`<a class="pill ${sub===t[0]?'on':''}" onclick="state.classHubDateSubTab='${t[0]}'; render()">${t[1]}</a>`).join('')}
   </div>
-  <div class="legacy" style="padding-top:16px;">${subHtml}${extra}</div>`;
+  <div style="padding-top:16px;">${subHtml}${extra}</div>`;
 }
 /* teacherClassSessionsHTML(날짜 버튼 줄 + 서브탭 막대)은 지웠다 —
    chubSessionsHTML의 «목록»과 chubSessionDetailHTML의 «머리말»이 그 일을 나눠 갖는다. */
@@ -7545,23 +7079,23 @@ function teacherAttendanceBareHTML(classId, date){
 function teacherClassDailyScoresHTML(classId, date){
   loadAllRecordsIfNeeded();
   const roster = DATA.students.filter(s=>s.classId===classId);
-  if(!state.allRecordsLoaded) return `<div class="empty">학생 기록을 불러오는 중입니다...</div>`;
+  if(!state.allRecordsLoaded) return `<div class="fm-empty">학생 기록을 불러오는 중입니다...</div>`;
   return `
     <h4 style="margin:0 0 12px;">${date} 수업 성적</h4>
-    <div class="lg-field" style="max-width:240px;"><label>시험명</label><input id="daily-score-name" value="${escHtml(state.dailyScoreName||'쪽지시험')}" oninput="state.dailyScoreName=this.value"></div>
-    ${roster.length===0 ? '<div class="empty">이 반에 배정된 학생이 없습니다.</div>' : `
+    <div class="fm-field" style="max-width:240px;"><label>시험명</label><input id="daily-score-name" value="${escHtml(state.dailyScoreName||'쪽지시험')}" oninput="state.dailyScoreName=this.value"></div>
+    ${roster.length===0 ? '<div class="fm-empty">이 반에 배정된 학생이 없습니다.</div>' : `
     <div style="overflow-x:auto;">
     <table><tr><th>이름</th><th>점수</th><th>만점</th><th></th></tr>
     ${roster.map(s=>{
       const rec = state.allRecords[s.studentId];
       const existing = rec && (rec.scores||[]).find(sc=>sc.date===date);
       return `<tr>
-        <td class="td-strong">${escHtml(s.name)}</td>
+        <td class="fm-nm">${escHtml(s.name)}</td>
         <td><input type="number" id="ds-score-${s.studentId}" style="width:70px;" value="${existing?existing.score:''}"></td>
         <td><input type="number" id="ds-total-${s.studentId}" style="width:70px;" value="${existing?existing.total:''}"></td>
         <td>
-          <button class="lg-btn btn-small" onclick="saveDailyScore('${s.studentId}','${date}')">저장</button>
-          ${existing?`<button class="lg-btn btn-red btn-small" onclick="deleteDailyScore('${s.studentId}','${date}')">삭제</button>`:''}
+          <button class="btn sm" onclick="saveDailyScore('${s.studentId}','${date}')">저장</button>
+          ${existing?`<button class="btn no sm" onclick="deleteDailyScore('${s.studentId}','${date}')">삭제</button>`:''}
         </td>
       </tr>`;
     }).join('')}
@@ -7600,16 +7134,16 @@ function teacherClassDailyExamHTML(classId, date){
   const exams = DATA.exams.filter(e=>e.classId===classId && e.date===date);
   return `
     <h4 style="margin:0 0 12px;">${date} 시험지</h4>
-    ${exams.length===0 ? '<div class="empty">이 날짜로 등록된 시험지가 없습니다.</div>' :
-    exams.map(e=>`<div class="exam-card">
+    ${exams.length===0 ? '<div class="fm-empty">이 날짜로 등록된 시험지가 없습니다.</div>' :
+    exams.map(e=>`<div class="fm-card">
       <div class="exam-title">${escHtml(e.title)}</div>
       <div class="exam-meta">${e.date||'-'} · ${classNameOf(e.classId)} · 문항 ${e.questions.length}개</div>
-      <div class="row-actions">
-        <button class="lg-btn btn-small" onclick="toggleExamDetailView('${e.id}')">${state.examDetailOpen[e.id]?'상세보기 접기':'상세보기'}</button>
+      <div class="fm-acts">
+        <button class="btn sm" onclick="toggleExamDetailView('${e.id}')">${state.examDetailOpen[e.id]?'상세보기 접기':'상세보기'}</button>
       </div>
       ${state.examDetailOpen[e.id] ? examDetailHTML(e.id) : ''}
     </div>`).join('')}
-    <button class="lg-btn btn-primary" style="margin-top:12px;" onclick="examDraft.classId='${classId}'; examDraft.date='${date}'; state.teacherTab='exams'; state.examMode='new'; render()">이 날짜로 새 시험지 등록</button>
+    <button class="btn p" style="margin-top:12px;" onclick="examDraft.classId='${classId}'; examDraft.date='${date}'; state.teacherTab='exams'; state.examMode='new'; render()">이 날짜로 새 시험지 등록</button>
   `;
 }
 function teacherClassDailyHomeworkHTML(classId, date){
@@ -7622,41 +7156,41 @@ function teacherClassDailyHomeworkHTML(classId, date){
     ${/* 과제 등록은 원래 홈 대시보드에만 있었다. 홈이 「신호」로 바뀌면서
         여기로 옮겼다 — 과제를 보는 곳과 만드는 곳이 같아야 한다.
         입력 id는 addHomework()가 그대로 읽으므로 바꾸지 않는다. */''}
-    <div class="data-card" style="margin-bottom:16px;">
+    <div class="fm-card" style="margin-bottom:16px;">
       <h4 style="margin-top:0;">${iconSvg('book')} 이 반에 과제 등록</h4>
-      <div class="inline-form">
-        <div class="lg-field"><label>대상 반</label><select id="hw-class">${classOptionsHTML(classId)}</select></div>
-        <div class="lg-field" style="flex:2;"><label>과제명</label><input id="hw-title" placeholder="예: 3단원 오답노트 정리"></div>
-        <div class="lg-field"><label>마감일</label><input id="hw-due" type="date" value="${date}"></div>
+      <div class="fm-row">
+        <div class="fm-field"><label>대상 반</label><select id="hw-class">${classOptionsHTML(classId)}</select></div>
+        <div class="fm-field" style="flex:2;"><label>과제명</label><input id="hw-title" placeholder="예: 3단원 오답노트 정리"></div>
+        <div class="fm-field"><label>마감일</label><input id="hw-due" type="date" value="${date}"></div>
       </div>
-      <div class="lg-field"><label>설명 (선택)</label><textarea id="hw-desc" placeholder="과제 상세 내용을 입력하세요"></textarea></div>
-      <button class="lg-btn btn-primary" onclick="addHomework()">등록</button>
+      <div class="fm-field"><label>설명 (선택)</label><textarea id="hw-desc" placeholder="과제 상세 내용을 입력하세요"></textarea></div>
+      <button class="btn p" onclick="addHomework()">등록</button>
     </div>
     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:14px;">
-      <h4 style="margin:0;">${showAll ? '전체 과제' : date+' 과제'} <span class="td-soft" style="font-weight:400;">(${visible.length}건)</span></h4>
-      <button class="lg-btn btn-small" onclick="state.classHubHomeworkShowAll=${!showAll}; render()">${showAll?'이 날짜만 보기':'전체 보기'}</button>
+      <h4 style="margin:0;">${showAll ? '전체 과제' : date+' 과제'} <span class="fm-sub" style="font-weight:400;">(${visible.length}건)</span></h4>
+      <button class="btn sm" onclick="state.classHubHomeworkShowAll=${!showAll}; render()">${showAll?'이 날짜만 보기':'전체 보기'}</button>
     </div>
-    ${visible.length===0 ? '<div class="empty">해당하는 과제가 없습니다.</div>' :
+    ${visible.length===0 ? '<div class="fm-empty">해당하는 과제가 없습니다.</div>' :
     visible.map(a=>{
       const doneCount = state.allRecordsLoaded ? roster.filter(s=>state.allRecords[s.studentId] && state.allRecords[s.studentId].assignmentsDone && state.allRecords[s.studentId].assignmentsDone[a.id]).length : null;
       const open = state.homeworkDetailId===a.id;
-      return `<div class="data-card" style="margin-bottom:10px;">
+      return `<div class="fm-card" style="margin-bottom:10px;">
         <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;">
-          <div><b>${escHtml(a.title)}</b> <span class="td-soft lg-mono">${a.createdAt?'등록 '+a.createdAt:''}${a.dueDate?' · 마감 '+a.dueDate:''}</span></div>
-          <button class="lg-btn btn-red btn-small" onclick="deleteHomework('${a.id}')">삭제</button>
+          <div><b>${escHtml(a.title)}</b> <span class="fm-sub mono">${a.createdAt?'등록 '+a.createdAt:''}${a.dueDate?' · 마감 '+a.dueDate:''}</span></div>
+          <button class="btn no sm" onclick="deleteHomework('${a.id}')">삭제</button>
         </div>
         ${a.description ? `<div style="font-size:13px;white-space:pre-wrap;margin-top:6px;">${escHtml(a.description)}</div>` : ''}
         <div style="margin-top:8px;">
-          <button class="lg-btn btn-small" onclick="state.homeworkDetailId = state.homeworkDetailId==='${a.id}' ? null : '${a.id}'; render()">
+          <button class="btn sm" onclick="state.homeworkDetailId = state.homeworkDetailId==='${a.id}' ? null : '${a.id}'; render()">
             ${open?'닫기':`완료 현황 보기${doneCount!==null?` (완료 ${doneCount} / ${roster.length})`:''}`}
           </button>
         </div>
         ${open ? (
-          !state.allRecordsLoaded ? '<div class="empty" style="margin-top:8px;">불러오는 중...</div>' :
+          !state.allRecordsLoaded ? '<div class="fm-empty" style="margin-top:8px;">불러오는 중...</div>' :
           `<table style="margin-top:8px;"><tr><th>학생</th><th>상태</th></tr>
           ${roster.map(s=>{
             const done = state.allRecords[s.studentId] && state.allRecords[s.studentId].assignmentsDone && state.allRecords[s.studentId].assignmentsDone[a.id];
-            return `<tr><td class="td-strong">${escHtml(s.name)}</td><td>${done?'<span class="lg-badge badge-ok">완료</span>':'<span class="lg-badge badge-no">미완료</span>'}</td></tr>`;
+            return `<tr><td class="fm-nm">${escHtml(s.name)}</td><td>${done?'<span class="badge ok">완료</span>':'<span class="badge no">미완료</span>'}</td></tr>`;
           }).join('')}
           </table>`
         ) : ''}
@@ -7664,14 +7198,14 @@ function teacherClassDailyHomeworkHTML(classId, date){
     }).join('')}
   `;
   const extra = `
-  <div class="lg-panel">
+  <div class="fm-panel">
     <h3>새 과제 등록</h3>
-    <div class="inline-form">
-      <div class="lg-field" style="flex:2;"><label>과제명</label><input id="dhw-title" placeholder="예: 3단원 오답노트 정리"></div>
-      <div class="lg-field"><label>마감일</label><input id="dhw-due" type="date" value="${date}"></div>
+    <div class="fm-row">
+      <div class="fm-field" style="flex:2;"><label>과제명</label><input id="dhw-title" placeholder="예: 3단원 오답노트 정리"></div>
+      <div class="fm-field"><label>마감일</label><input id="dhw-due" type="date" value="${date}"></div>
     </div>
-    <div class="lg-field"><label>설명 (선택)</label><textarea id="dhw-desc" placeholder="과제 상세 내용을 입력하세요"></textarea></div>
-    <button class="lg-btn btn-primary" onclick="addDailyHomework('${classId}','${date}')">등록</button>
+    <div class="fm-field"><label>설명 (선택)</label><textarea id="dhw-desc" placeholder="과제 상세 내용을 입력하세요"></textarea></div>
+    <button class="btn p" onclick="addDailyHomework('${classId}','${date}')">등록</button>
   </div>`;
   return { body, extra };
 }
@@ -8024,7 +7558,7 @@ function teacherQnaHTML(){
         : `<div class="cls-form" style="align-items:flex-start;">
              <label style="flex:1;min-width:220px;"><span>답변</span>
                <textarea id="answer-${q.id}" rows="3" placeholder="답변 입력"></textarea></label>
-             <div class="legacy" style="padding:0;">${qnaImageFieldHTML(state.qnaAnswerImage[q.id], `handleQnaAnswerImage('${q.id}',this.files)`, `removeQnaAnswerImage('${q.id}')`, `qna-a-${q.id}`)}</div>
+             ${qnaImageFieldHTML(state.qnaAnswerImage[q.id], `handleQnaAnswerImage('${q.id}',this.files)`, `removeQnaAnswerImage('${q.id}')`, `qna-a-${q.id}`)}
              <button class="btn p sm" onclick="submitAnswer('${q.id}')">등록</button>
            </div>`}
       <div style="margin-top:10px;"><button class="btn q sm" onclick="deleteQna('${q.id}')">삭제</button></div>
@@ -8243,7 +7777,7 @@ function chubVideoHTML(classId){
    `{examId, questionNo}`가 그대로 있어서, 그 문항을 오답으로 올린 학생 수를 세면 된다.
    분모는 그 반의 재원 수다.
 
-   등록 폼(hwpx 파싱 · 이미지 업로드 · 동적 문항 행)은 손대지 않고 `.legacy`로 감쌌다 —
+   등록 폼(hwpx 파싱 · 이미지 업로드 · 동적 문항 행)은 «구조»를 손대지 않았다 —
    이 화면에서 제일 비싼 부분이고, 형태를 바꾼다고 나아지는 곳도 아니다. */
 function examWrongCounts(exam){
   const roster = DATA.students.filter(s=>s.classId===exam.classId);
@@ -8323,7 +7857,7 @@ function teacherExamsHTML(){
           </div>`).join('')}
 
         <div class="t-sec" style="margin-top:24px;">문항 내용</div>
-        <div class="legacy" style="padding:0;">${examDetailHTML(ex.id)}</div>
+        ${examDetailHTML(ex.id)}
         <div class="rst-pad"></div>
       </div>
     </main>
@@ -8397,54 +7931,54 @@ function examNewHTML(){
       <div class="spacer"></div>
       ${DATA.exams.length ? `<button class="btn sm" onclick="state.examMode=''; render()">${iconSvg('chevL',13)} 시험지 목록</button>` : ''}
     </div>
-    <div class="ex-body"><div class="legacy" style="padding:0;">${examNewLegacyHTML()}</div>
+    <div class="ex-body">${examNewLegacyHTML()}
       <div class="rst-pad"></div></div>
   </main></div>`;
 }
 
 function examNewLegacyHTML(){
   return `
-  <div class="lg-panel">
+  <div class="fm-panel">
     <h3>시험지 등록</h3>
-    ${DATA.classes.length===0?'<div class="empty">먼저 [반] 탭에서 반을 등록해주세요.</div>':`
-    <div class="inline-form">
-      <div class="lg-field"><label>대상 반</label><select id="exam-class">${classOptionsHTML(examDraft.classId)}</select></div>
-      <div class="lg-field" style="flex:2;"><label>시험명</label><input id="exam-title" value="${escHtml(examDraft.title)}" placeholder="예: 7월 내신 대비 모의고사"></div>
-      <div class="lg-field"><label>날짜</label><input id="exam-date" type="date" value="${examDraft.date}"></div>
+    ${DATA.classes.length===0?'<div class="fm-empty">먼저 [반] 탭에서 반을 등록해주세요.</div>':`
+    <div class="fm-row">
+      <div class="fm-field"><label>대상 반</label><select id="exam-class">${classOptionsHTML(examDraft.classId)}</select></div>
+      <div class="fm-field" style="flex:2;"><label>시험명</label><input id="exam-title" value="${escHtml(examDraft.title)}" placeholder="예: 7월 내신 대비 모의고사"></div>
+      <div class="fm-field"><label>날짜</label><input id="exam-date" type="date" value="${examDraft.date}"></div>
     </div>
-    <div class="lg-field" style="margin-top:12px;background:#FBF3F2;border:1px solid var(--card-border);border-radius:4px;padding:14px;">
+    <div class="fm-field" style="margin-top:12px;background:var(--nobg);border:1px solid var(--line);border-radius:4px;padding:14px;">
       <label>hwpx 파일로 문항 자동 채우기 (선택)</label>
-      <p class="lg-hint" style="margin:2px 0 8px;">올리면 아래 문항 입력칸이 자동으로 채워집니다. 직접 타이핑 안 하셔도 돼요.</p>
-      <div class="inline-form">
-        <div class="lg-field"><label>이 파일의 단원</label><select id="exam-hwpx-unit">${UNITS.map(u=>`<option value="${u}">${u}</option>`).join('')}</select></div>
-        <div class="lg-field" style="flex:2;"><label>hwpx 파일</label><input type="file" accept=".hwpx" onchange="handleExamHwpxFile(this.files)"></div>
+      <p class="fm-hint" style="margin:2px 0 8px;">올리면 아래 문항 입력칸이 자동으로 채워집니다. 직접 타이핑 안 하셔도 돼요.</p>
+      <div class="fm-row">
+        <div class="fm-field"><label>이 파일의 단원</label><select id="exam-hwpx-unit">${UNITS.map(u=>`<option value="${u}">${u}</option>`).join('')}</select></div>
+        <div class="fm-field" style="flex:2;"><label>hwpx 파일</label><input type="file" accept=".hwpx" onchange="handleExamHwpxFile(this.files)"></div>
       </div>
     </div>
-    <div class="lg-field" style="margin-top:12px;">
+    <div class="fm-field" style="margin-top:12px;">
       <label>시험지 이미지 첨부 (선택, 사진/스캔본 — 자동 압축되어 저장됩니다)</label>
       <input type="file" accept="image/*" multiple onchange="handleExamFileSelect(this.files)">
       ${examDraft.pages.length ? `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">
         ${examDraft.pages.map((p,i)=>`<div style="position:relative;">
-          <img src="${imgSrcOf(p)}" style="width:90px;height:120px;object-fit:cover;border-radius:4px;border:1px solid var(--card-border);${p.uploading?'opacity:.5;':''}">
-          ${p.uploading ? `<span style="position:absolute;bottom:2px;left:2px;background:rgba(0,0,0,.6);color:#fff;font-size:9px;padding:1px 4px;border-radius:3px;">업로드중</span>` : `<button class="lg-btn btn-red btn-small" style="position:absolute;top:2px;right:2px;padding:1px 6px;" onclick="removeExamPage(${i})">×</button>`}
+          <img src="${imgSrcOf(p)}" style="width:90px;height:120px;object-fit:cover;border-radius:4px;border:1px solid var(--line);${p.uploading?'opacity:.5;':''}">
+          ${p.uploading ? `<span style="position:absolute;bottom:2px;left:2px;background:rgba(0,0,0,.6);color:#fff;font-size:9px;padding:1px 4px;border-radius:3px;">업로드중</span>` : `<button class="btn no sm" style="position:absolute;top:2px;right:2px;padding:1px 6px;" onclick="removeExamPage(${i})">×</button>`}
         </div>`).join('')}
       </div>` : ''}
     </div>
     <h3 style="margin-top:20px;font-size:14px;">문항 입력</h3>
     ${examDraft.questions.map((q,i)=>`
-      <div class="qrow">
+      <div class="fm-q">
         <div class="qno">${i+1}번</div>
-        <div class="qfields">
+        <div class="qf">
           <select id="eq-unit-${i}" style="margin-bottom:6px;">${UNITS.map(u=>`<option value="${u}" ${q.unit===u?'selected':''}>${u}</option>`).join('')}</select>
           <textarea id="eq-content-${i}" placeholder="문제 내용">${escHtml(q.content)}</textarea>
           <input id="eq-answer-${i}" placeholder="정답" value="${escHtml(q.answer)}">
-          ${q.image ? `<img src="${q.image}" style="max-width:120px;max-height:120px;margin-top:6px;border:1px solid var(--card-border);border-radius:4px;display:block;">` : ''}
-          <button class="lg-btn btn-red btn-small" onclick="removeExamQuestionRow(${i})">삭제</button>
+          ${q.image ? `<img src="${q.image}" style="max-width:120px;max-height:120px;margin-top:6px;border:1px solid var(--line);border-radius:4px;display:block;">` : ''}
+          <button class="btn no sm" onclick="removeExamQuestionRow(${i})">삭제</button>
         </div>
       </div>`).join('')}
     <div style="margin-top:12px;display:flex;gap:8px;">
-      <button class="lg-btn" onclick="addExamQuestionRow()">+ 문항 추가</button>
-      <button class="lg-btn btn-primary" onclick="saveExam()">시험지 저장</button>
+      <button class="btn" onclick="addExamQuestionRow()">+ 문항 추가</button>
+      <button class="btn p" onclick="saveExam()">시험지 저장</button>
     </div>
     `}
   </div>`;
@@ -8694,7 +8228,7 @@ document.addEventListener('keydown', e=>{
    창고 목록이 맨 아래 있었다. 시험지와 같은 문제였다 — 쌓는 일은 가끔, 보는 일은 매번이다.
    → 좌측에 단원 목록을 세우고, 추가 경로는 「문항 추가」 모드로 접었다.
 
-   업로드 미리보기(hwpx·엑셀 파싱 결과 확인)는 손대지 않고 `.legacy`로 감쌌다. */
+   업로드 미리보기(hwpx·엑셀 파싱 결과 확인)도 «구조»를 손대지 않았다. */
 function teacherUnitBankHTML(){
   loadUnitBankIfNeeded();
   const filter = state.unitBankFilter;
@@ -8710,7 +8244,7 @@ function teacherUnitBankHTML(){
         <div class="spacer"></div>
         ${state.unitImportPreview ? '' : `<button class="btn sm" onclick="state.unitBankMode=''; render()">${iconSvg('chevL',13)} 창고 목록</button>`}
       </div>
-      <div class="ex-body"><div class="legacy" style="padding:0;">${unitBankAddLegacyHTML()}</div>
+      <div class="ex-body">${unitBankAddLegacyHTML()}
         <div class="rst-pad"></div></div>
     </main></div>`;
   }
@@ -8761,51 +8295,51 @@ function unitBankAddLegacyHTML(){
   const counts = {};
   DATA.unitBank.forEach(b => counts[b.unit] = (counts[b.unit]||0) + 1);
   return `
-  <div class="lg-panel">
+  <div class="fm-panel">
     <h3>문항 추가</h3>
-    <p class="lg-hint" style="margin-top:-8px;">여기에 쌓아둔 문항은 학생이 같은 단원의 문제를 틀렸을 때 자동으로 검색되어 숙제로 나갑니다.</p>
-    <div class="inline-form">
-      <div class="lg-field"><label>단원</label><select id="ub-unit">${UNITS.map(u=>`<option value="${u}">${u}</option>`).join('')}</select></div>
+    <p class="fm-hint" style="margin-top:-8px;">여기에 쌓아둔 문항은 학생이 같은 단원의 문제를 틀렸을 때 자동으로 검색되어 숙제로 나갑니다.</p>
+    <div class="fm-row">
+      <div class="fm-field"><label>단원</label><select id="ub-unit">${UNITS.map(u=>`<option value="${u}">${u}</option>`).join('')}</select></div>
     </div>
-    <div class="lg-field" style="margin-top:10px;"><label>문제 내용</label><textarea id="ub-content" placeholder="문제 내용"></textarea></div>
-    <div class="lg-field"><label>정답</label><input id="ub-answer" placeholder="정답"></div>
-    <button class="lg-btn btn-primary" onclick="addUnitBankEntry()">창고에 추가</button>
+    <div class="fm-field" style="margin-top:10px;"><label>문제 내용</label><textarea id="ub-content" placeholder="문제 내용"></textarea></div>
+    <div class="fm-field"><label>정답</label><input id="ub-answer" placeholder="정답"></div>
+    <button class="btn p" onclick="addUnitBankEntry()">창고에 추가</button>
   </div>
-  <div class="lg-panel">
+  <div class="fm-panel">
     <h3>한글(hwpx) 파일로 자동 인식</h3>
-    <p class="lg-hint" style="margin-top:-8px;">문항이 정리된 .hwpx 파일을 올리면 문제·보기·정답을 자동으로 인식합니다. (.hwp 구버전은 지원 안 함) 파일 하나 = 한 단원으로 등록됩니다.</p>
-    <div class="inline-form">
-      <div class="lg-field"><label>이 파일의 단원</label><select id="ub-hwpx-unit">${UNITS.map(u=>`<option value="${u}">${u}</option>`).join('')}</select></div>
-      <div class="lg-field" style="flex:2;"><label>hwpx 파일</label><input type="file" accept=".hwpx" onchange="handleUnitBankHwpxFile(this.files)"></div>
+    <p class="fm-hint" style="margin-top:-8px;">문항이 정리된 .hwpx 파일을 올리면 문제·보기·정답을 자동으로 인식합니다. (.hwp 구버전은 지원 안 함) 파일 하나 = 한 단원으로 등록됩니다.</p>
+    <div class="fm-row">
+      <div class="fm-field"><label>이 파일의 단원</label><select id="ub-hwpx-unit">${UNITS.map(u=>`<option value="${u}">${u}</option>`).join('')}</select></div>
+      <div class="fm-field" style="flex:2;"><label>hwpx 파일</label><input type="file" accept=".hwpx" onchange="handleUnitBankHwpxFile(this.files)"></div>
     </div>
   </div>
-  <div class="lg-panel">
+  <div class="fm-panel">
     <h3>엑셀로 한꺼번에 올리기</h3>
-    <p class="lg-hint" style="margin-top:-8px;">.xlsx 파일에 <b>단원 / 문제 / 정답</b> 열을 만들어서 올려주세요.</p>
+    <p class="fm-hint" style="margin-top:-8px;">.xlsx 파일에 <b>단원 / 문제 / 정답</b> 열을 만들어서 올려주세요.</p>
     <input type="file" accept=".xlsx,.xls" onchange="handleUnitBankExcelFile(this.files)">
   </div>
   ${state.unitImportPreview ? `
-  <div class="lg-panel">
+  <div class="fm-panel">
     <h3>업로드 미리보기 (총 ${state.unitImportPreview.length}개)</h3>
-    <p class="lg-hint" style="margin-top:-8px;">${state.unitImportPreview.length>30?'처음 30개만 미리 보이고, 나머지는 그대로 등록됩니다. ':''}정답이 비어있는 항목(<span style="color:var(--red-pen);font-weight:700;">빨간 표시</span>)은 등록 전에 채워주시면 좋아요.</p>
+    <p class="fm-hint" style="margin-top:-8px;">${state.unitImportPreview.length>30?'처음 30개만 미리 보이고, 나머지는 그대로 등록됩니다. ':''}정답이 비어있는 항목(<span style="color:var(--no);font-weight:700;">빨간 표시</span>)은 등록 전에 채워주시면 좋아요.</p>
     <div style="max-height:420px;overflow-y:auto;margin-top:8px;">
       ${state.unitImportPreview.slice(0,30).map((r,i)=>`
-        <div class="data-card" style="margin-bottom:10px;">
-          <div class="inline-form" style="margin-bottom:6px;">
-            <div class="lg-field"><label>단원</label><select id="uip-unit-${i}">${UNITS.map(u=>`<option value="${u}" ${r.unit===u?'selected':''}>${u}</option>`).join('')}</select></div>
-            <div class="lg-field"><label>정답 ${!r.answer?'<span style="color:var(--red-pen);">(비어있음)</span>':''}</label><input id="uip-answer-${i}" value="${escHtml(r.answer||'')}" style="${!r.answer?'border-color:var(--red-pen);':''}"></div>
+        <div class="fm-card" style="margin-bottom:10px;">
+          <div class="fm-row" style="margin-bottom:6px;">
+            <div class="fm-field"><label>단원</label><select id="uip-unit-${i}">${UNITS.map(u=>`<option value="${u}" ${r.unit===u?'selected':''}>${u}</option>`).join('')}</select></div>
+            <div class="fm-field"><label>정답 ${!r.answer?'<span style="color:var(--no);">(비어있음)</span>':''}</label><input id="uip-answer-${i}" value="${escHtml(r.answer||'')}" style="${!r.answer?'border-color:var(--no);':''}"></div>
           </div>
           <textarea id="uip-content-${i}" style="width:100%;min-height:60px;">${escHtml(r.content)}</textarea>
-          ${r.image ? `<img src="${r.image}" style="max-width:160px;max-height:160px;margin-top:8px;border:1px solid var(--card-border);border-radius:4px;display:block;">` : ''}
+          ${r.image ? `<img src="${r.image}" style="max-width:160px;max-height:160px;margin-top:8px;border:1px solid var(--line);border-radius:4px;display:block;">` : ''}
         </div>`).join('')}
     </div>
     <div style="margin-top:10px;display:flex;gap:8px;">
-      <button class="lg-btn btn-primary" onclick="confirmUnitBankImport()">일괄 등록</button>
-      <button class="lg-btn" onclick="cancelUnitBankImport()">취소</button>
+      <button class="btn p" onclick="confirmUnitBankImport()">일괄 등록</button>
+      <button class="btn" onclick="cancelUnitBankImport()">취소</button>
     </div>
     ${state.importProgress ? `
       <div style="margin-top:12px;font-size:13px;">업로드 중... ${state.importProgress.done} / ${state.importProgress.total}</div>
-      <div class="progress-outer"><div class="progress-inner" style="width:${Math.round(state.importProgress.done/state.importProgress.total*100)}%;"></div></div>
+      <div class="bar" style="height:10px;margin:8px 0;"><i style="width:${Math.round(state.importProgress.done/state.importProgress.total*100)}%;"></i></div>
     ` : ''}
   </div>` : ''}
   `;
@@ -8814,24 +8348,24 @@ function unitBankAddLegacyHTML(){
 /* ---------- 조교 관리 ---------- */
 function teacherAssistantsHTML(){
   return `
-  <div class="lg-panel">
+  <div class="fm-panel">
     <h3>조교 추가</h3>
-    <p class="lg-hint" style="margin-top:-8px;">조교는 로그인 후 담당 반의 학생 명단·출석·성적·과제/오답숙제 현황만 볼 수 있습니다. 다른 반, 학생 연락처, 관리자 설정에는 접근할 수 없습니다.</p>
-    <div class="inline-form">
-      <div class="lg-field"><label>아이디</label><input id="ta-id" placeholder="예: ta01"></div>
-      <div class="lg-field"><label>비밀번호</label><input id="ta-pw" placeholder="비밀번호"></div>
-      <div class="lg-field"><label>이름</label><input id="ta-name" placeholder="조교 이름"></div>
-      <div class="lg-field"><label>연락처</label><input id="ta-phone" placeholder="010-0000-0000 (선택)"></div>
-      <div class="lg-field"><label>담당 반</label><select id="ta-class">${classOptionsHTML(null)}</select></div>
-      <button class="lg-btn btn-primary" onclick="addAssistant()">추가</button>
+    <p class="fm-hint" style="margin-top:-8px;">조교는 로그인 후 담당 반의 학생 명단·출석·성적·과제/오답숙제 현황만 볼 수 있습니다. 다른 반, 학생 연락처, 관리자 설정에는 접근할 수 없습니다.</p>
+    <div class="fm-row">
+      <div class="fm-field"><label>아이디</label><input id="ta-id" placeholder="예: ta01"></div>
+      <div class="fm-field"><label>비밀번호</label><input id="ta-pw" placeholder="비밀번호"></div>
+      <div class="fm-field"><label>이름</label><input id="ta-name" placeholder="조교 이름"></div>
+      <div class="fm-field"><label>연락처</label><input id="ta-phone" placeholder="010-0000-0000 (선택)"></div>
+      <div class="fm-field"><label>담당 반</label><select id="ta-class">${classOptionsHTML(null)}</select></div>
+      <button class="btn p" onclick="addAssistant()">추가</button>
     </div>
   </div>
-  <div class="lg-panel ledger">
+  <div class="fm-panel">
     <h3>조교 목록 (${DATA.assistants.length}명)</h3>
-    ${DATA.assistants.length===0?'<div class="empty">등록된 조교가 없습니다.</div>':`
+    ${DATA.assistants.length===0?'<div class="fm-empty">등록된 조교가 없습니다.</div>':`
     <table><tr><th>아이디</th><th>이름</th><th>연락처</th><th>담당 반</th><th></th></tr>
-    ${DATA.assistants.map(a=>`<tr><td class="lg-mono td-soft">${escHtml(a.taId||'-')}</td><td>${escHtml(a.name)}</td><td>${escHtml(a.phone||'-')}</td><td>${classNameOf(a.classId)}</td>
-      <td class="row-actions"><button class="lg-btn btn-small" onclick="resetAssistantPw('${a.id}')">비밀번호 재설정</button><button class="lg-btn btn-red btn-small" onclick="deleteAssistant('${a.id}')">삭제</button></td></tr>`).join('')}
+    ${DATA.assistants.map(a=>`<tr><td class="mono fm-sub">${escHtml(a.taId||'-')}</td><td>${escHtml(a.name)}</td><td>${escHtml(a.phone||'-')}</td><td>${classNameOf(a.classId)}</td>
+      <td class="fm-acts"><button class="btn sm" onclick="resetAssistantPw('${a.id}')">비밀번호 재설정</button><button class="btn no sm" onclick="deleteAssistant('${a.id}')">삭제</button></td></tr>`).join('')}
     </table>`}
   </div>`;
 }
@@ -8854,7 +8388,7 @@ function teacherSettingsHTML(){
      여섯 갈래가 서로 닮은 데가 없다 — 조교 계정, 학생 계정, 반 만들기, 상담 신청,
      변경 이력, 관리자 비밀번호. 하나의 형태로 묶을 이유가 없어서 **껍데기만 DS로 바꿨다.**
      갈래를 왼쪽에 세우면 여섯 개가 한눈에 보이고, 지금 어디에 있는지가 화면에 남는다.
-     각 갈래의 본문은 손대지 않고 `.legacy`로 감쌌다 — 폼과 표가 전부라 형태를 바꿔도 나아지지 않는다. */
+     각 갈래의 본문은 «구조»를 손대지 않았다 — 폼과 표가 전부라 형태를 바꿔도 나아지지 않는다. */
   const LABEL = { assistants:'조교 계정을 만들고 담당 반을 정한다', students:'학생 계정을 만든다 · 엑셀 일괄 등록',
     classes:'반을 만든다', consults:'홈페이지로 들어온 상담 신청', auditlog:'누가 무엇을 바꿨는지', admin:'관리자 비밀번호' };
   return `<div class="ex-screen">
@@ -8871,7 +8405,7 @@ function teacherSettingsHTML(){
       <div class="rst-hrow" style="flex-shrink:0;">
         <h1 class="t-title">${(subtabs.find(t=>t[0]===tab)||subtabs[0])[1]}<s>${LABEL[tab]||''}</s></h1>
       </div>
-      <div class="ex-body"><div class="legacy" style="padding:0;">${sub}</div>
+      <div class="ex-body">${sub}
         <div class="rst-pad"></div></div>
     </main>
   </div>`;
@@ -8880,13 +8414,13 @@ function teacherSettingsHTML(){
 /* ---------- 설정: 반 추가 ---------- */
 function teacherSettingsClassesHTML(){
   return `
-  <div class="lg-panel">
+  <div class="fm-panel">
     <h3>반 추가</h3>
-    <div class="inline-form">
-      <div class="lg-field"><label>반 이름</label><input id="new-cname" placeholder="예: [특강]미적분"></div>
-      <div class="lg-field"><label>강의 시간</label><input id="new-cschedule" placeholder="예: 월,수,금 7시~9시"></div>
-      <div class="lg-field"><label>기간</label><input id="new-cperiod" placeholder="예: 26.03~26.12"></div>
-      <button class="lg-btn btn-primary" onclick="addClass()">추가</button>
+    <div class="fm-row">
+      <div class="fm-field"><label>반 이름</label><input id="new-cname" placeholder="예: [특강]미적분"></div>
+      <div class="fm-field"><label>강의 시간</label><input id="new-cschedule" placeholder="예: 월,수,금 7시~9시"></div>
+      <div class="fm-field"><label>기간</label><input id="new-cperiod" placeholder="예: 26.03~26.12"></div>
+      <button class="btn p" onclick="addClass()">추가</button>
     </div>
   </div>`;
 }
@@ -8897,37 +8431,37 @@ function teacherSettingsClassesHTML(){
    어느 쪽이 최신인지 매번 헷갈린다. */
 function teacherSettingsStudentsHTML(){
   return `
-  <div class="lg-panel">
+  <div class="fm-panel">
     <h3>학생 계정 추가</h3>
-    <p class="lg-hint" style="margin-top:-8px;">등록 후 반을 안 고르셨거나 나중에 반을 옮기고 싶으면, [명단]에서 학생을 열어 언제든 수정할 수 있습니다.</p>
-    <div class="inline-form">
-      <div class="lg-field"><label>아이디</label><input id="new-sid" placeholder="예: st01"></div>
-      <div class="lg-field"><label>이름</label><input id="new-sname" placeholder="이름"></div>
-      <div class="lg-field"><label>비밀번호</label><input id="new-spw" placeholder="비밀번호"></div>
-      <div class="lg-field"><label>학년</label>
+    <p class="fm-hint" style="margin-top:-8px;">등록 후 반을 안 고르셨거나 나중에 반을 옮기고 싶으면, [명단]에서 학생을 열어 언제든 수정할 수 있습니다.</p>
+    <div class="fm-row">
+      <div class="fm-field"><label>아이디</label><input id="new-sid" placeholder="예: st01"></div>
+      <div class="fm-field"><label>이름</label><input id="new-sname" placeholder="이름"></div>
+      <div class="fm-field"><label>비밀번호</label><input id="new-spw" placeholder="비밀번호"></div>
+      <div class="fm-field"><label>학년</label>
         <select id="new-sgrade"><option>고1</option><option>고2</option><option>고3</option></select>
       </div>
-      <div class="lg-field"><label>학교</label><input id="new-sschool" placeholder="학교명 (선택)"></div>
-      <div class="lg-field"><label>학부모 전화번호</label><input id="new-sparentphone" placeholder="010-0000-0000 (선택)"></div>
-      <div class="lg-field"><label>학생 전화번호</label><input id="new-sphone" placeholder="010-0000-0000 (선택)"></div>
-      <div class="lg-field"><label>반</label><select id="new-sclass">${classOptionsHTML(null)}</select></div>
-      <button class="lg-btn btn-primary" onclick="addStudent()">추가</button>
+      <div class="fm-field"><label>학교</label><input id="new-sschool" placeholder="학교명 (선택)"></div>
+      <div class="fm-field"><label>학부모 전화번호</label><input id="new-sparentphone" placeholder="010-0000-0000 (선택)"></div>
+      <div class="fm-field"><label>학생 전화번호</label><input id="new-sphone" placeholder="010-0000-0000 (선택)"></div>
+      <div class="fm-field"><label>반</label><select id="new-sclass">${classOptionsHTML(null)}</select></div>
+      <button class="btn p" onclick="addStudent()">추가</button>
     </div>
   </div>
-  <div class="lg-panel">
+  <div class="fm-panel">
     <h3>엑셀로 한꺼번에 등록</h3>
-    <p class="lg-hint" style="margin-top:-8px;">양식을 내려받아 채운 뒤 그대로 올리면 됩니다. 이미 있는 아이디는 건너뜁니다.</p>
-    <div class="inline-form">
-      <div class="lg-field"><label>배정할 반</label><select id="import-sclass">${classOptionsHTML(null)}</select></div>
-      <button class="lg-btn btn-small" onclick="downloadStudentExcelTemplate()">${iconSvg('file',15)} 엑셀 양식 내려받기</button>
-      <label class="lg-btn btn-small" style="cursor:pointer;display:inline-flex;align-items:center;gap:5px;">${iconSvg('chart',15)} 엑셀 파일 올리기<input type="file" accept=".xlsx,.xls" style="display:none;" onchange="handleStudentExcelFile(document.getElementById('import-sclass').value, this.files)"></label>
+    <p class="fm-hint" style="margin-top:-8px;">양식을 내려받아 채운 뒤 그대로 올리면 됩니다. 이미 있는 아이디는 건너뜁니다.</p>
+    <div class="fm-row">
+      <div class="fm-field"><label>배정할 반</label><select id="import-sclass">${classOptionsHTML(null)}</select></div>
+      <button class="btn sm" onclick="downloadStudentExcelTemplate()">${iconSvg('file',15)} 엑셀 양식 내려받기</button>
+      <label class="btn sm" style="cursor:pointer;display:inline-flex;align-items:center;gap:5px;">${iconSvg('chart',15)} 엑셀 파일 올리기<input type="file" accept=".xlsx,.xls" style="display:none;" onchange="handleStudentExcelFile(document.getElementById('import-sclass').value, this.files)"></label>
     </div>
   </div>
   ${studentImportPreviewHTML()}
-  <div class="lg-panel">
+  <div class="fm-panel">
     <h3>학생 목록은 [명단]에 있습니다</h3>
-    <p class="lg-hint" style="margin-top:-8px;">전체 ${DATA.students.length}명. 검색·신호·출결·성적·반 이동까지 명단 한 곳에서 합니다.</p>
-    <button class="lg-btn btn-primary btn-small" onclick="state.teacherTab='roster'; state.studentDetailId=null; render()">명단으로 가기 →</button>
+    <p class="fm-hint" style="margin-top:-8px;">전체 ${DATA.students.length}명. 검색·신호·출결·성적·반 이동까지 명단 한 곳에서 합니다.</p>
+    <button class="btn p sm" onclick="state.teacherTab='roster'; state.studentDetailId=null; render()">명단으로 가기 →</button>
   </div>`;
 }
 
@@ -8935,11 +8469,11 @@ function teacherSettingsStudentsHTML(){
 function teacherSettingsConsultsHTML(){
   markConsultsSeen();
   return `
-  <div class="lg-panel ledger">
+  <div class="fm-panel">
     <h3>상담 신청 목록 (${DATA.consults.length}건)</h3>
-    ${DATA.consults.length===0?'<div class="empty">접수된 상담 신청이 없습니다.</div>':`
+    ${DATA.consults.length===0?'<div class="fm-empty">접수된 상담 신청이 없습니다.</div>':`
     <table><tr><th>날짜</th><th>이름</th><th>연락처</th><th>학년</th><th>내용</th><th></th></tr>
-    ${DATA.consults.map(c=>`<tr><td>${c.date}</td><td>${c.name}</td><td>${c.phone}</td><td>${c.grade||'-'}</td><td>${c.msg||'-'}</td><td><button class="lg-btn btn-red btn-small" onclick="deleteConsult('${c.id}')">삭제</button></td></tr>`).join('')}
+    ${DATA.consults.map(c=>`<tr><td>${c.date}</td><td>${c.name}</td><td>${c.phone}</td><td>${c.grade||'-'}</td><td>${c.msg||'-'}</td><td><button class="btn no sm" onclick="deleteConsult('${c.id}')">삭제</button></td></tr>`).join('')}
     </table>`}
   </div>`;
 }
@@ -8955,33 +8489,33 @@ function teacherAuditLogHTML(){
   const shown = filtered.slice(0, 300);
   const fmtAt = iso => { try{ return new Date(iso).toLocaleString('ko-KR', {year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}); }catch(e){ return iso; } };
   return `
-  <div class="lg-panel ledger">
-    <div class="student-detail-header">
+  <div class="fm-panel">
+    <div class="fm-head">
       <h3 style="margin:0;">변경 이력 (${DATA.auditLog.length}건${q?` · 검색결과 ${filtered.length}건`:''})</h3>
-      <div class="lg-field" style="margin:0;min-width:220px;">
+      <div class="fm-field" style="margin:0;min-width:220px;">
         <input id="auditlog-search" value="${escHtml(state.auditLogSearchQuery)}" placeholder="학생명·작성자·항목으로 검색" oninput="state.auditLogSearchQuery=this.value; render(); document.getElementById('auditlog-search').focus();">
       </div>
     </div>
-    <p class="lg-hint" style="margin-top:-4px;">성적·출석·학생정보처럼 민감한 변경만 기록됩니다. 조교가 수정한 내역도 여기서 확인할 수 있습니다.</p>
-    ${DATA.auditLog.length===0 ? '<div class="empty">아직 기록된 변경 이력이 없습니다.</div>' :
-      shown.length===0 ? `<div class="empty">"${escHtml(state.auditLogSearchQuery)}"에 해당하는 기록이 없습니다.</div>` : `
+    <p class="fm-hint" style="margin-top:-4px;">성적·출석·학생정보처럼 민감한 변경만 기록됩니다. 조교가 수정한 내역도 여기서 확인할 수 있습니다.</p>
+    ${DATA.auditLog.length===0 ? '<div class="fm-empty">아직 기록된 변경 이력이 없습니다.</div>' :
+      shown.length===0 ? `<div class="fm-empty">"${escHtml(state.auditLogSearchQuery)}"에 해당하는 기록이 없습니다.</div>` : `
     <div style="overflow-x:auto;">
     <table><tr><th>시간</th><th>작성자</th><th>항목</th><th>학생</th><th>내용</th></tr>
-    ${shown.map(e=>`<tr><td class="td-soft lg-mono" style="white-space:nowrap;">${fmtAt(e.at)}</td><td>${escHtml(e.actor)}</td><td>${escHtml(e.action)}</td><td class="td-strong">${escHtml(e.studentName||'-')}</td><td class="td-soft">${escHtml(e.detail||'-')}</td></tr>`).join('')}
+    ${shown.map(e=>`<tr><td class="fm-sub mono" style="white-space:nowrap;">${fmtAt(e.at)}</td><td>${escHtml(e.actor)}</td><td>${escHtml(e.action)}</td><td class="fm-nm">${escHtml(e.studentName||'-')}</td><td class="fm-sub">${escHtml(e.detail||'-')}</td></tr>`).join('')}
     </table>
     </div>
-    ${filtered.length>300 ? `<p class="lg-hint">최근 300건만 표시됩니다. (전체 ${filtered.length}건)</p>` : ''}`}
+    ${filtered.length>300 ? `<p class="fm-hint">최근 300건만 표시됩니다. (전체 ${filtered.length}건)</p>` : ''}`}
   </div>`;
 }
 
 /* ---------- 설정: 관리자 비밀번호 변경 ---------- */
 function teacherSettingsAdminHTML(){
   return `
-  <div class="lg-panel">
+  <div class="fm-panel">
     <h3>관리자 비밀번호 변경</h3>
-    <div class="lg-field"><label>현재 비밀번호</label><input id="pw-current" type="password"></div>
-    <div class="lg-field"><label>새 비밀번호 (4자 이상)</label><input id="pw-new" type="password"></div>
-    <button class="lg-btn btn-primary" onclick="changeTeacherPw()">비밀번호 변경</button>
+    <div class="fm-field"><label>현재 비밀번호</label><input id="pw-current" type="password"></div>
+    <div class="fm-field"><label>새 비밀번호 (4자 이상)</label><input id="pw-new" type="password"></div>
+    <button class="btn p" onclick="changeTeacherPw()">비밀번호 변경</button>
   </div>`;
 }
 
