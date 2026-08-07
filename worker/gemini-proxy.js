@@ -16,11 +16,11 @@
    서버 쪽 할당량 강제(지금은 클라이언트 장식), uid 단위 추적.
    「강사만 접근」은 커스텀 클레임이 필요하고 클레임을 심을 백엔드가 따로 있어야 한다. 별건이다.
 
-   배포 (worker/README.md의 3단계를 따를 것)
-     기존 비밀   SITE_TOKEN을 «그대로 둔다» → 옛 클라이언트가 계속 돈다 (2단계까지)
-                 3단계에서 이 비밀을 지우면 옛 경로가 저절로 닫힌다. 코드를 또 고칠 필요 없다
-     새 바인딩   [[kv_namespaces]] binding = "QUOTA"   (없으면 할당량 검사를 건너뛴다)
-     새 vars     ALLOW_ORIGIN — 실제 배포 도메인. 안 넣으면 지금처럼 '*'
+   **2026-08-06에 3단계까지 끝났다.** SITE_TOKEN 비밀이 삭제되어 유출된 값은 죽었고
+   (옛 토큰으로 부르면 401 — 실제로 확인함), 이 파일에서도 옛 경로를 지웠다.
+     바인딩   [[kv_namespaces]] binding = "QUOTA"   (없으면 할당량 검사를 건너뛴다)
+     vars     ALLOW_ORIGIN — 실제 배포 도메인. 안 넣으면 '*'
+     비밀     GEMINI 관련 키만 남는다. SITE_TOKEN은 더 이상 쓰지 않는다
    ============================================================= */
 
 const FIREBASE_PROJECT_ID = 'hahyunmath';
@@ -37,10 +37,10 @@ export default {
     const corsHeaders = {
       // Authorization을 반드시 넣어야 한다. 없으면 브라우저가 프리플라이트에서 요청을
       // 통째로 막아 AI 생성과 이미지 업로드가 그 자리에서 죽는다.
-      // X-Site-Token은 이행 기간용이다 — 3단계에서 뺀다.
+      // X-Site-Token은 이행 기간용이었다 — 3단계(2026-08-06)에서 뺐다.
       'Access-Control-Allow-Origin': env.ALLOW_ORIGIN || '*',
       'Access-Control-Allow-Methods': 'POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Site-Token',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
       'Access-Control-Max-Age': '86400',
       'Vary': 'Origin',
     };
@@ -80,21 +80,14 @@ export default {
 
 /* =================== 인증 =================== */
 
-/* 2단계(클라이언트 전환) 동안만 옛 사이트 토큰도 받는다.
-   SITE_TOKEN 비밀을 지우는 순간 이 경로는 저절로 닫힌다. */
+/* 인증은 Firebase ID 토큰 하나뿐이다.
+   2단계 동안 열어 뒀던 옛 사이트 토큰 경로는 3단계(2026-08-06 SITE_TOKEN 비밀 삭제)로 닫혔고,
+   확인 뒤 코드에서도 지웠다 — 옛 토큰으로 부르면 401이다. */
 async function authenticate(request, env) {
   const auth = request.headers.get('Authorization') || '';
-  if (auth.startsWith('Bearer ')) {
-    const payload = await verifyFirebaseIdToken(auth.slice(7));
-    if (payload) return { uid: payload.sub, via: 'firebase' };
-    // 토큰을 보냈는데 틀렸다면 옛 경로로 되돌리지 않는다
-    return null;
-  }
-  const legacy = request.headers.get('X-Site-Token');
-  if (env.SITE_TOKEN && legacy && legacy === env.SITE_TOKEN) {
-    return { uid: 'legacy', via: 'site-token' };
-  }
-  return null;
+  if (!auth.startsWith('Bearer ')) return null;
+  const payload = await verifyFirebaseIdToken(auth.slice(7));
+  return payload ? { uid: payload.sub, via: 'firebase' } : null;
 }
 
 /* Firebase ID 토큰 검증 — 구글 공개키(JWKS)로 서명을 확인하고 iss/aud/exp를 본다.

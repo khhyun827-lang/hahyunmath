@@ -83,12 +83,15 @@ headers: { 'Content-Type': 'application/json',
 > CORS가 배포 도메인만 허용하므로 AI 생성·이미지 업로드는 **배포된 사이트에서** 확인해야 한다.
 > 로컬에서 확인할 수 있는 것은 «무엇을 보내는지»까지다 (fetch를 가로채 헤더를 본다).
 
-### 3단계 — 옛 경로 닫기
-- Cloudflare에서 **비밀 `SITE_TOKEN` 삭제** → 사이트 토큰 경로가 저절로 닫힌다.
-  코드를 또 고칠 필요 없다 (`authenticate()`가 `env.SITE_TOKEN` 존재 여부를 먼저 본다)
-- `Access-Control-Allow-Headers`에서 `X-Site-Token` 제거
-- **이때 비로소 유출된 값이 죽는다.** 그 전까지는 살아 있다
-- 확인: 옛 토큰으로 curl → 401
+### 3단계 — 옛 경로 닫기 · **완료 (2026-08-06)**
+- [x] Cloudflare에서 **비밀 `SITE_TOKEN` 삭제** → 사이트 토큰 경로가 저절로 닫혔다
+      (`authenticate()`가 `env.SITE_TOKEN` 존재 여부를 먼저 봤기 때문에 코드를 안 고쳐도 닫혔다)
+- [x] **확인: 옛 토큰으로 curl → 401.** 인증 없음·틀린 Bearer도 401,
+      프리플라이트는 200에 `Access-Control-Allow-Headers: Content-Type, Authorization`
+- [x] `Access-Control-Allow-Headers`에서 `X-Site-Token` 제거 · `authenticate()`의 옛 분기 삭제
+      — **소스만 정리한 것이라 반영하려면 재배포해야 한다.** 안 해도 동작은 같다 (죽은 코드였다)
+
+**이로써 유출된 값은 죽었다.** 커밋 이력의 옛 토큰은 회수되지 않지만 이제 아무 데도 안 열린다.
 
 ## 남는 것
 
