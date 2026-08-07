@@ -663,6 +663,55 @@
 .sap-vwrap iframe{position:absolute;inset:0;width:100%;height:100%;border:0;}
 
 /* ============================================================
+   설정 · 목록 — 접두사 st-
+   **카드를 쓰지 않는다.** 시안(13-settings)이 정한 언어는 «구역 + 줄»이다 —
+   제목 아래 실선 하나로 구역을 가르고, 그 안은 얇은 선으로 나눈 줄이 쌓인다.
+   흰 상자를 종이 위에 띄우는 것은 구버전(.lg-panel)의 어법이었다.
+   한 화면에 상자가 서넛 뜨면 «무엇이 무엇 안에 있는지»가 흐려진다.
+   ============================================================ */
+.app .st-wrap{max-width:840px;}
+.app .st-sec{margin-bottom:30px;}
+.app .st-sec:last-child{margin-bottom:0;}
+.app .st-h{display:flex;align-items:baseline;gap:10px;padding-bottom:11px;
+  border-bottom:1px solid var(--line);}
+.app .st-h b{font-size:14px;font-weight:700;}
+.app .st-h span{font-size:12px;color:var(--dim);}
+.app .st-h .r{margin-left:auto;display:flex;align-items:center;gap:6px;align-self:center;}
+
+/* 한 줄 = 한 가지. 라벨과 설명을 붙여 둔다 —
+   설명 없는 줄은 «건드리면 뭐가 되는지» 몰라서 결국 아무도 안 건드린다. */
+.app .st-row{display:flex;align-items:center;gap:16px;padding:13px 2px;
+  border-bottom:1px solid var(--line2);}
+.app .st-row:hover{background:var(--hover);}
+.app .st-row .t{flex:1;min-width:0;}
+/* ⚠ 직계 자식만 블록으로 만든다. 후손 전체에 걸면 줄 안에 넣은 <span class="mono">까지
+   블록이 되어 「test11」과 「· 테스트반」이 두 줄로 갈라진다. */
+.app .st-row .t > b{display:block;font-size:13px;font-weight:600;}
+.app .st-row .t > span{display:block;font-size:11.5px;color:var(--dim);margin-top:4px;line-height:1.6;}
+.app .st-row .t s{text-decoration:none;color:var(--line);margin:0 6px;}
+.app .st-row .v{flex-shrink:0;display:flex;align-items:center;gap:6px;}
+.app .st-empty{padding:30px 2px;font-size:12.5px;color:var(--dim);line-height:1.8;}
+
+/* 변경 이력 한 줄 — 시안이 그린 그대로. 표가 아니라 줄이다.
+   표는 «비교»하는 것이고 로그는 «훑는» 것이라, 열 머리가 필요 없다. */
+.app .st-log{display:flex;align-items:center;gap:12px;padding:9px 2px;
+  border-bottom:1px solid var(--line2);font-size:12px;}
+.app .st-log .tm{width:104px;flex-shrink:0;font-family:'JetBrains Mono',monospace;
+  font-size:11px;color:var(--dim);white-space:nowrap;}
+.app .st-log .ac{width:84px;flex-shrink:0;}
+.app .st-log .x{flex:1;min-width:0;color:var(--sub);overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap;}
+.app .st-log .by{width:74px;flex-shrink:0;text-align:right;font-size:11.5px;color:var(--dim);}
+
+/* 접히는 입력 — 「추가」를 눌러야 열린다.
+   상시 펼쳐 둔 폼은 화면에서 제일 큰 자리를 차지하면서 제일 가끔 쓰인다.
+   (시험지 「새 시험지」· 창고 「문항 추가」· 학생앱 「틀린 문제 등록」과 같은 장치다.) */
+.app .st-form{padding:16px 0 6px;border-bottom:1px solid var(--line2);}
+.app .st-form .cls-form{margin-top:0;}
+.app .st-note{margin:12px 0 0;font-size:11.5px;color:var(--dim);line-height:1.75;}
+.app .st-note b{color:var(--ink);font-weight:700;}
+
+/* ============================================================
    폼 · 표 — 구버전 스타일이 쥐고 있던 마지막 조각들이 온 자리다. 접두사 fm-
    화면이 아니라 «부품»이라 화면별 접두사를 붙이지 않는다.
    시험지 등록 · 창고 추가 · 설정 6갈래 · 수업 기록 상세가 이걸 같이 쓴다.
@@ -1479,6 +1528,10 @@ let state = {
   stuQnaWriting: false,   // 질문 폼이 열려 있나
   lpRevealed: false,      // 랜딩이 한 번 드러났나 — 다시 그려도 다시 페이드인하지 않는다
   asFlag: '',             // 조교 명단의 필터 — '' | 'hw' | 'wrong'
+  settingsForm: '',       // 설정에서 열린 «추가» 폼 — '' | 'ta' | 'cls' | 'stu' | 'bulk' | 'pw'
+  clinicPanel: '',        // 클리닉의 열린 폼 — '' | 'slot' | 'assign'
+  noticeWriting: false,   // 공지 «새 공지» 폼이 열려 있나
+  videoAdding: false,     // 영상 «등록» 폼이 열려 있나
   auditLogSearchQuery: '',
   toast: ''
 };
@@ -6272,17 +6325,30 @@ function studentImportPreviewHTML(){
   if(!imp) return '';
   const existingIds = new Set(DATA.students.map(s=>s.studentId));
   const dupCount = imp.rows.filter(r=>existingIds.has(r.studentId)).length;
-  return `<div class="fm-card" style="margin-bottom:14px;">
-    <h4 style="margin-top:0;">업로드 미리보기 (총 ${imp.rows.length}명)</h4>
-    <p class="fm-hint" style="margin-top:-6px;">${dupCount>0 ? `이미 존재하는 아이디 <span style="color:var(--no);font-weight:700;">${dupCount}명</span>은 등록 시 건너뜁니다.` : '중복된 아이디가 없습니다.'}</p>
-    <div style="max-height:320px;overflow:auto;">
-    <table><tr><th>아이디</th><th>이름</th><th>학년</th><th>학교</th><th>학부모전화</th><th>학생전화</th></tr>
-    ${imp.rows.map(r=>`<tr ${existingIds.has(r.studentId)?'style="color:var(--no);"':''}><td>${escHtml(r.studentId)}${existingIds.has(r.studentId)?' (중복)':''}</td><td>${escHtml(r.name)}</td><td>${escHtml(r.grade)}</td><td>${escHtml(r.school)}</td><td>${escHtml(r.parentPhone)}</td><td>${escHtml(r.phone)}</td></tr>`).join('')}
-    </table>
-    </div>
-    <div style="margin-top:12px;display:flex;gap:8px;">
-      <button class="btn p sm" onclick="confirmStudentBulkImport()">일괄 등록</button>
-      <button class="btn sm" onclick="state.studentImportPreview=null; render()">취소</button>
+  /* 확인하고 나서야 다음으로 갈 수 있으므로 «구역»으로 세운다.
+     떠 있는 카드로 두면 위의 업로드 폼과 두 겹이 된다. */
+  return `<div class="st-sec">
+    <div class="st-h"><b>올린 것 확인</b><span>총 ${imp.rows.length}명</span>
+      <span class="r">
+        <button class="btn p sm" onclick="confirmStudentBulkImport()">${imp.rows.length-dupCount}명 등록</button>
+        <button class="btn q sm" onclick="state.studentImportPreview=null; render()">취소</button>
+      </span></div>
+    <p class="st-note" style="margin:10px 0 0;">${dupCount>0
+      ? `이미 있는 아이디 <b style="color:var(--no);">${dupCount}명</b>은 건너뜁니다.`
+      : '중복된 아이디가 없습니다.'}</p>
+    <div class="rst-wrap" style="max-height:340px;margin-top:10px;">
+      <table class="grid">
+        <thead><tr><th style="width:120px;">아이디</th><th style="width:100px;">이름</th>
+          <th style="width:64px;">학년</th><th>학교</th>
+          <th style="width:140px;">학부모전화</th><th style="width:140px;">학생전화</th></tr></thead>
+        <tbody>${imp.rows.map(r=>{
+          const dup = existingIds.has(r.studentId);
+          return `<tr${dup?' style="opacity:.55;"':''}>
+            <td class="mono">${escHtml(r.studentId)}${dup?' <span class="badge no">중복</span>':''}</td>
+            <td class="nm">${escHtml(r.name)}</td><td>${escHtml(r.grade)}</td><td>${escHtml(r.school)}</td>
+            <td class="mono">${escHtml(r.parentPhone)}</td><td class="mono">${escHtml(r.phone)}</td></tr>`;
+        }).join('')}</tbody>
+      </table>
     </div>
   </div>`;
 }
@@ -6905,8 +6971,8 @@ function teacherAttendanceHTML(classId, date){
     </div>`}
   `;
   const summary = classId && state.allRecordsLoaded && roster.length>0 ? `
-  <div class="fm-panel">
-    <h3>${classNameOf(classId)} 출결 누적 집계</h3>
+  <div class="st-sec" style="margin-top:26px;">
+    <div class="st-h"><b>${classNameOf(classId)} 출결 누적</b><span>이 반 전체 · 전 기간</span></div>
     <div style="overflow-x:auto;">
     <table><tr><th>학생</th>${ATT_STATUSES.map(st=>`<th>${st}</th>`).join('')}</tr>
     ${roster.map(s=>{
@@ -7133,16 +7199,17 @@ async function deleteDailyScore(sid, date){
 function teacherClassDailyExamHTML(classId, date){
   const exams = DATA.exams.filter(e=>e.classId===classId && e.date===date);
   return `
-    <h4 style="margin:0 0 12px;">${date} 시험지</h4>
-    ${exams.length===0 ? '<div class="fm-empty">이 날짜로 등록된 시험지가 없습니다.</div>' :
-    exams.map(e=>`<div class="fm-card">
-      <div class="exam-title">${escHtml(e.title)}</div>
-      <div class="exam-meta">${e.date||'-'} · ${classNameOf(e.classId)} · 문항 ${e.questions.length}개</div>
-      <div class="fm-acts">
-        <button class="btn sm" onclick="toggleExamDetailView('${e.id}')">${state.examDetailOpen[e.id]?'상세보기 접기':'상세보기'}</button>
-      </div>
-      ${state.examDetailOpen[e.id] ? examDetailHTML(e.id) : ''}
-    </div>`).join('')}
+    <div class="st-h" style="margin-bottom:0;"><b>${date} 시험지</b><span>${exams.length}개</span></div>
+    ${exams.length===0 ? '<div class="st-empty">이 날짜로 등록된 시험지가 없습니다.</div>' :
+    exams.map(e=>{
+      const on = state.examDetailOpen[e.id];
+      return `<div class="st-row" style="align-items:flex-start;">
+        <div class="t"><b>${escHtml(e.title)}</b>
+          <span><span class="mono">${e.date||'-'}</span><s>·</s>${escHtml(classNameOf(e.classId))}<s>·</s>문항 ${e.questions.length}개</span>
+          ${on ? `<span style="margin-top:12px;">${examDetailHTML(e.id)}</span>` : ''}</div>
+        <div class="v"><button class="btn sm" onclick="toggleExamDetailView('${e.id}')">${on?'접기':'문항 보기'}</button></div>
+      </div>`;
+    }).join('')}
     <button class="btn p" style="margin-top:12px;" onclick="examDraft.classId='${classId}'; examDraft.date='${date}'; state.teacherTab='exams'; state.examMode='new'; render()">이 날짜로 새 시험지 등록</button>
   `;
 }
@@ -7152,62 +7219,54 @@ function teacherClassDailyHomeworkHTML(classId, date){
   const all = DATA.assignments.filter(a=>a.classId===classId);
   const visible = showAll ? all : all.filter(a=>a.createdAt===date || a.dueDate===date);
   const roster = DATA.students.filter(s=>s.classId===classId);
+  const open = state.settingsForm==='dhw';
+  /* ⚠ **여기에 과제 등록 폼이 두 벌 있었다.** body의 「이 반에 과제 등록」(addHomework)과
+     extra의 「새 과제 등록」(addDailyHomework)이 같은 화면에 나란히 그려지고 있었다.
+     한쪽만 고쳐지는 것은 시간 문제였다. addDailyHomework 쪽으로 합쳤다 —
+     그날 화면이라 «오늘 낸 과제»로 등록되는 것이 맞고, 반은 이미 고른 상태라 고를 이유가 없다. */
   const body = `
-    ${/* 과제 등록은 원래 홈 대시보드에만 있었다. 홈이 「신호」로 바뀌면서
-        여기로 옮겼다 — 과제를 보는 곳과 만드는 곳이 같아야 한다.
-        입력 id는 addHomework()가 그대로 읽으므로 바꾸지 않는다. */''}
-    <div class="fm-card" style="margin-bottom:16px;">
-      <h4 style="margin-top:0;">${iconSvg('book')} 이 반에 과제 등록</h4>
-      <div class="fm-row">
-        <div class="fm-field"><label>대상 반</label><select id="hw-class">${classOptionsHTML(classId)}</select></div>
-        <div class="fm-field" style="flex:2;"><label>과제명</label><input id="hw-title" placeholder="예: 3단원 오답노트 정리"></div>
-        <div class="fm-field"><label>마감일</label><input id="hw-due" type="date" value="${date}"></div>
+    <div class="st-h" style="margin-bottom:0;">
+      <b>${showAll ? '전체 과제' : date+' 과제'}</b><span>${visible.length}건</span>
+      <span class="r">
+        <button class="btn sm" onclick="state.classHubHomeworkShowAll=${!showAll}; render()">${showAll?'이 날짜만':'전체 보기'}</button>
+        <button class="btn ${open?'':'p'} sm" onclick="stOpen('dhw')">${open?'닫기':iconSvg('plus',13)+' 과제 등록'}</button>
+      </span>
+    </div>
+    ${!open ? '' : `<div class="st-form">
+      <div class="cls-form">
+        <label style="flex:2;min-width:200px;"><span>과제명</span><input id="dhw-title" placeholder="예: 3단원 오답노트 정리"></label>
+        <label style="min-width:150px;"><span>마감일</span><input id="dhw-due" type="date" value="${date}"></label>
       </div>
-      <div class="fm-field"><label>설명 (선택)</label><textarea id="hw-desc" placeholder="과제 상세 내용을 입력하세요"></textarea></div>
-      <button class="btn p" onclick="addHomework()">등록</button>
-    </div>
-    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:14px;">
-      <h4 style="margin:0;">${showAll ? '전체 과제' : date+' 과제'} <span class="fm-sub" style="font-weight:400;">(${visible.length}건)</span></h4>
-      <button class="btn sm" onclick="state.classHubHomeworkShowAll=${!showAll}; render()">${showAll?'이 날짜만 보기':'전체 보기'}</button>
-    </div>
-    ${visible.length===0 ? '<div class="fm-empty">해당하는 과제가 없습니다.</div>' :
+      <div class="cls-form"><label style="flex:1;"><span>설명 (선택)</span>
+        <textarea id="dhw-desc" rows="2" placeholder="과제 상세 내용"></textarea></label></div>
+      <button class="btn p sm" style="margin-top:11px;" onclick="addDailyHomework('${classId}','${date}')">등록</button>
+      <p class="st-note">이 반 학생 전원에게 나갑니다. 등록일은 <b>${date}</b>로 남습니다.</p>
+    </div>`}
+    ${visible.length===0 ? '<div class="st-empty">해당하는 과제가 없습니다.</div>' :
     visible.map(a=>{
       const doneCount = state.allRecordsLoaded ? roster.filter(s=>state.allRecords[s.studentId] && state.allRecords[s.studentId].assignmentsDone && state.allRecords[s.studentId].assignmentsDone[a.id]).length : null;
-      const open = state.homeworkDetailId===a.id;
-      return `<div class="fm-card" style="margin-bottom:10px;">
-        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;">
-          <div><b>${escHtml(a.title)}</b> <span class="fm-sub mono">${a.createdAt?'등록 '+a.createdAt:''}${a.dueDate?' · 마감 '+a.dueDate:''}</span></div>
-          <button class="btn no sm" onclick="deleteHomework('${a.id}')">삭제</button>
+      const on = state.homeworkDetailId===a.id;
+      return `<div class="st-row" style="align-items:flex-start;">
+        <div class="t"><b>${escHtml(a.title)}</b>
+          <span><span class="mono">${a.createdAt?'등록 '+a.createdAt:''}${a.dueDate?' · 마감 '+a.dueDate:''}</span>${
+            doneCount!==null?`<s>·</s>완료 ${doneCount}/${roster.length}`:''}</span>
+          ${a.description?`<span style="color:var(--sub);margin-top:6px;white-space:pre-wrap;">${escHtml(a.description)}</span>`:''}
+          ${!on ? '' : (!state.allRecordsLoaded
+            ? '<span style="margin-top:9px;">불러오는 중…</span>'
+            : `<span style="margin-top:10px;display:flex;flex-wrap:wrap;gap:6px;">${
+                roster.map(s=>{
+                  const done = state.allRecords[s.studentId] && state.allRecords[s.studentId].assignmentsDone && state.allRecords[s.studentId].assignmentsDone[a.id];
+                  return `<span class="badge ${done?'ok':'no'}">${escHtml(s.name)}</span>`;
+                }).join('')}</span>`)}
         </div>
-        ${a.description ? `<div style="font-size:13px;white-space:pre-wrap;margin-top:6px;">${escHtml(a.description)}</div>` : ''}
-        <div style="margin-top:8px;">
-          <button class="btn sm" onclick="state.homeworkDetailId = state.homeworkDetailId==='${a.id}' ? null : '${a.id}'; render()">
-            ${open?'닫기':`완료 현황 보기${doneCount!==null?` (완료 ${doneCount} / ${roster.length})`:''}`}
-          </button>
+        <div class="v">
+          <button class="btn sm" onclick="state.homeworkDetailId = state.homeworkDetailId==='${a.id}' ? null : '${a.id}'; render()">${on?'접기':'완료 현황'}</button>
+          <button class="btn q sm" onclick="deleteHomework('${a.id}')">삭제</button>
         </div>
-        ${open ? (
-          !state.allRecordsLoaded ? '<div class="fm-empty" style="margin-top:8px;">불러오는 중...</div>' :
-          `<table style="margin-top:8px;"><tr><th>학생</th><th>상태</th></tr>
-          ${roster.map(s=>{
-            const done = state.allRecords[s.studentId] && state.allRecords[s.studentId].assignmentsDone && state.allRecords[s.studentId].assignmentsDone[a.id];
-            return `<tr><td class="fm-nm">${escHtml(s.name)}</td><td>${done?'<span class="badge ok">완료</span>':'<span class="badge no">미완료</span>'}</td></tr>`;
-          }).join('')}
-          </table>`
-        ) : ''}
       </div>`;
     }).join('')}
   `;
-  const extra = `
-  <div class="fm-panel">
-    <h3>새 과제 등록</h3>
-    <div class="fm-row">
-      <div class="fm-field" style="flex:2;"><label>과제명</label><input id="dhw-title" placeholder="예: 3단원 오답노트 정리"></div>
-      <div class="fm-field"><label>마감일</label><input id="dhw-due" type="date" value="${date}"></div>
-    </div>
-    <div class="fm-field"><label>설명 (선택)</label><textarea id="dhw-desc" placeholder="과제 상세 내용을 입력하세요"></textarea></div>
-    <button class="btn p" onclick="addDailyHomework('${classId}','${date}')">등록</button>
-  </div>`;
-  return { body, extra };
+  return { body, extra: '' };
 }
 async function addDailyHomework(classId, date){
   const title = document.getElementById('dhw-title').value.trim();
@@ -7444,21 +7503,33 @@ function teacherClinicHTML(){
         승인 대기 <b class="mono" style="color:var(--late);">${waiting.length}</b>
       </div>
 
-      <div class="cls-hw" style="display:block;margin-top:14px;flex-shrink:0;">
-        <div class="t-sec" style="margin:0;">시간대 추가</div>
+      ${/* 두 폼은 «가끔 하는 일»이다. 상시 펼쳐 두면 이 화면의 본문인 주간 판을
+           위에서 눌러 내린다. 시안(09-clinic)도 머리말의 버튼 하나로 그렸다. */''}
+      <div class="row" style="gap:6px;margin-top:14px;flex-shrink:0;">
+        <button class="btn ${state.clinicPanel==='slot'?'p':''} sm"
+          onclick="state.clinicPanel = state.clinicPanel==='slot' ? '' : 'slot'; render()">
+          ${iconSvg('plus',13)} 시간대 추가</button>
+        <button class="btn ${state.clinicPanel==='assign'?'p':''} sm"
+          onclick="state.clinicPanel = state.clinicPanel==='assign' ? '' : 'assign'; render()">
+          ${iconSvg('users',13)} 학생 직접 배정</button>
+      </div>
+
+      ${state.clinicPanel!=='slot' ? '' : `
+      <div class="st-form" style="flex-shrink:0;">
         <div class="cls-form">
           <label><span>날짜</span><input id="slot-date" type="date" value="${todayStr()}"></label>
           <label style="flex:1;min-width:150px;"><span>시간</span><input id="slot-time" placeholder="예: 저녁 7시"></label>
           <label style="width:90px;"><span>정원</span><input id="slot-capacity" type="number" min="1" placeholder="1"></label>
           <button class="btn p sm" onclick="addClinicSlot()">추가</button>
         </div>
-        <div style="margin-top:8px;font-size:11.5px;color:var(--dim);">여기서 만든 시간대를 학생이 골라 신청합니다. 정원이 차면 자동으로 막힙니다. 학생이 <b>희망 시간을 직접 제안</b>할 수도 있고, 그건 승인해야 확정됩니다.</div>
-      </div>
+        <p class="st-note">여기서 만든 시간대를 학생이 골라 신청합니다. 정원이 차면 자동으로 막힙니다.
+          학생이 <b>희망 시간을 직접 제안</b>할 수도 있고, 그건 승인해야 확정됩니다.</p>
+      </div>`}
 
       ${/* 교사가 학생을 직접 앉히는 경로. 슬롯을 고르면 그 슬롯에 배정되고(정원에 반영),
            고르지 않으면 날짜·시간을 직접 적어 슬롯 없이 잡는다. */''}
-      <div class="cls-hw" style="display:block;margin-top:10px;flex-shrink:0;">
-        <div class="t-sec" style="margin:0;">학생 직접 배정</div>
+      ${state.clinicPanel!=='assign' ? '' : `
+      <div class="st-form" style="flex-shrink:0;">
         <div class="cls-form">
           <label style="min-width:150px;"><span>학생</span>
             <select id="cn-assign-student" style="border:1px solid var(--line);border-radius:var(--r-sm);background:var(--paper);padding:8px 10px;font-family:inherit;font-size:12.5px;">
@@ -7475,8 +7546,9 @@ function teacherClinicHTML(){
           <label style="flex:1;min-width:150px;"><span>내용 (선택)</span><input id="cn-assign-topic" placeholder="예: 미분 보충"></label>
           <button class="btn p sm" onclick="assignClinic()">배정</button>
         </div>
-        <div style="margin-top:8px;font-size:11.5px;color:var(--dim);">교사가 넣은 배정은 바로 <b>승인</b> 상태가 됩니다. 시간대를 고르면 그 정원에 반영되고, 「직접 입력」이면 정원과 무관하게 잡힙니다.</div>
-      </div>
+        <p class="st-note">교사가 넣은 배정은 바로 <b>승인</b> 상태가 됩니다.
+          시간대를 고르면 그 정원에 반영되고, 「직접 입력」이면 정원과 무관하게 잡힙니다.</p>
+      </div>`}
 
       <div class="co-body">${grid}
         ${others.length ? `<div class="t-sec" style="margin-top:24px;">처리된 신청 ${others.length}건</div>
@@ -7508,15 +7580,23 @@ function teacherNoticesHTML(){
     <div class="rst-hrow" style="flex-shrink:0;">
       <h1 class="t-title">공지<s>학생 앱 첫 화면에 그대로 붙는다</s></h1>
     </div>
-    <div class="cls-hw" style="display:block;margin-top:14px;flex-shrink:0;">
-      <div class="t-sec" style="margin:0;">새 공지</div>
+    ${/* 쓰는 일은 가끔, 읽는 일은 매번이다. 상시 펼쳐 두면 «등록된 공지»가 늘 아래로 밀린다.
+         시안(10-notice)도 목록 머리말의 「새 공지」 버튼 하나로 그렸다. */''}
+    <div class="row" style="margin-top:14px;flex-shrink:0;">
+      <button class="btn ${state.noticeWriting?'':'p'} sm"
+        onclick="state.noticeWriting=!state.noticeWriting; render()">
+        ${state.noticeWriting ? '닫기' : iconSvg('pencil',13)+' 새 공지'}</button>
+    </div>
+    ${!state.noticeWriting ? '' : `
+    <div class="st-form" style="flex-shrink:0;">
       <div class="cls-form">
         <label style="flex:1;min-width:220px;"><span>제목</span><input id="notice-title" placeholder="공지 제목"></label>
       </div>
       <div class="cls-form"><label style="flex:1;"><span>내용</span>
         <textarea id="notice-content" rows="3" placeholder="공지 내용을 입력하세요"></textarea></label></div>
-      <button class="btn p sm" style="margin-top:11px;" onclick="addNotice()">${iconSvg('plus',13)} 등록</button>
-    </div>
+      <button class="btn p sm" style="margin-top:11px;" onclick="addNotice()">등록</button>
+      <p class="st-note">등록하면 <b>학생 앱 소통 > 공지</b>와 공개 홈에 그대로 붙습니다.</p>
+    </div>`}
     <div class="co-body">
       <div class="t-sec">등록된 공지 ${list.length}</div>
       ${list.length===0 ? '<div style="padding:40px 0;text-align:center;color:var(--dim);font-size:12.5px;">등록된 공지가 없습니다.</div>'
@@ -7668,9 +7748,17 @@ function chubVideoHTML(classId){
   const avgOf = v => roster.length
     ? Math.round(roster.reduce((sum,s)=>sum+progOf(v,s.studentId).pct, 0) / roster.length) : 0;
 
+  /* 배포는 가끔, 보는 일은 매번이다. 상시 펼쳐 두면 이 화면의 본문인 «이탈 지점»이
+     한 화면 아래로 내려간다. 시안(16-videos)도 목록 머리말의 「등록」 버튼 하나로 그렸다. */
   const form = `
-  <div class="cls-hw" style="display:block;margin-bottom:18px;">
-    <div class="t-sec" style="margin:0;">이 반에 영상 배포</div>
+  <div class="row" style="margin-bottom:14px;">
+    <button class="btn ${state.videoAdding?'':'p'} sm"
+      onclick="state.videoAdding=!state.videoAdding; render()">
+      ${state.videoAdding ? '닫기' : iconSvg('plus',13)+' 영상 등록'}</button>
+    <span class="muted" style="font-size:11.5px;">이 반 학생에게만 보입니다</span>
+  </div>
+  ${!state.videoAdding ? '' : `
+  <div class="st-form" style="margin-bottom:16px;">
     <div class="cls-form">
       <label style="flex:2;min-width:180px;"><span>제목</span><input id="video-title" placeholder="예: 수학(상) 4강"></label>
       <label style="min-width:140px;"><span>단원 (선택)</span><input id="video-unit" placeholder="예: 대수 3단원"></label>
@@ -7679,8 +7767,9 @@ function chubVideoHTML(classId){
     </div>
     <div class="cls-form"><label style="flex:1;"><span>유튜브 링크</span>
       <input id="video-url" placeholder="https://youtu.be/..."></label></div>
-    <button class="btn p sm" style="margin-top:11px;" onclick="addVideo()">${iconSvg('plus',13)} 등록</button>
-  </div>`;
+    <button class="btn p sm" style="margin-top:11px;" onclick="addVideo()">등록</button>
+    <p class="st-note">등록하면 학생 앱 <b>학습 > 강의</b>에 뜨고, 여기서 «어디까지 보고 멈췄는지»가 쌓입니다.</p>
+  </div>`}`;
 
   if(vids.length===0){
     return form + `<div style="padding:40px 0;text-align:center;color:var(--dim);font-size:12.5px;">이 반에 배포된 영상이 없습니다.</div>`;
@@ -7733,7 +7822,7 @@ function chubVideoHTML(classId){
 
   const students = `
   <div class="t-sec" style="margin-top:22px;">학생별 진행
-    <span class="mono" style="font-weight:400;">완주 ${doneCnt}/${roster.length}${notSeen?` · 미시청 ${notSeen}`:''}</span></div>
+    <span style="font-weight:400;color:var(--sub);">완주 <b class="mono">${doneCnt}/${roster.length}</b>${notSeen?` · 미시청 <b class="mono">${notSeen}</b>`:''}</span></div>
   ${!state.allRecordsLoaded ? '<div style="font-size:12.5px;color:var(--dim);">기록 불러오는 중…</div>'
   : roster.length===0 ? '<div style="font-size:12.5px;color:var(--dim);">이 반에 배정된 학생이 없습니다.</div>'
   : rows.slice().sort((a,b)=>a.p.pct-b.p.pct).map(({s,p})=>`
@@ -7749,7 +7838,7 @@ function chubVideoHTML(classId){
   return form + `<div class="vd-screen">${list}
     <div class="vd-main">
       <div class="t-sec" style="margin:0 0 12px;">${escHtml(sel.title)}
-        <span class="mono" style="font-weight:400;">${escHtml(sel.unit||'')}</span></div>
+        <span style="font-weight:400;color:var(--dim);">${escHtml(sel.unit||'')}</span></div>
       ${drop}${students}
       <div style="margin-top:16px;">
         <button class="btn q sm" onclick="deleteVideo('${sel.id}')">이 영상 삭제</button>
@@ -7938,8 +8027,8 @@ function examNewHTML(){
 
 function examNewLegacyHTML(){
   return `
-  <div class="fm-panel">
-    <h3>시험지 등록</h3>
+  <div class="st-sec">
+    <div class="st-h"><b>시험지 등록</b><span>hwpx를 올리면 문항·정답이 자동으로 채워진다</span></div>
     ${DATA.classes.length===0?'<div class="fm-empty">먼저 [반] 탭에서 반을 등록해주세요.</div>':`
     <div class="fm-row">
       <div class="fm-field"><label>대상 반</label><select id="exam-class">${classOptionsHTML(examDraft.classId)}</select></div>
@@ -8295,8 +8384,8 @@ function unitBankAddLegacyHTML(){
   const counts = {};
   DATA.unitBank.forEach(b => counts[b.unit] = (counts[b.unit]||0) + 1);
   return `
-  <div class="fm-panel">
-    <h3>문항 추가</h3>
+  <div class="st-sec">
+    <div class="st-h"><b>문항 추가</b><span>단원이 같으면 오답숙제로 자동 배정된다</span></div>
     <p class="fm-hint" style="margin-top:-8px;">여기에 쌓아둔 문항은 학생이 같은 단원의 문제를 틀렸을 때 자동으로 검색되어 숙제로 나갑니다.</p>
     <div class="fm-row">
       <div class="fm-field"><label>단원</label><select id="ub-unit">${UNITS.map(u=>`<option value="${u}">${u}</option>`).join('')}</select></div>
@@ -8305,26 +8394,28 @@ function unitBankAddLegacyHTML(){
     <div class="fm-field"><label>정답</label><input id="ub-answer" placeholder="정답"></div>
     <button class="btn p" onclick="addUnitBankEntry()">창고에 추가</button>
   </div>
-  <div class="fm-panel">
-    <h3>한글(hwpx) 파일로 자동 인식</h3>
+  <div class="st-sec">
+    <div class="st-h"><b>한글(hwpx)로 자동 인식</b><span>문제·보기·정답을 읽어 온다</span></div>
     <p class="fm-hint" style="margin-top:-8px;">문항이 정리된 .hwpx 파일을 올리면 문제·보기·정답을 자동으로 인식합니다. (.hwp 구버전은 지원 안 함) 파일 하나 = 한 단원으로 등록됩니다.</p>
     <div class="fm-row">
       <div class="fm-field"><label>이 파일의 단원</label><select id="ub-hwpx-unit">${UNITS.map(u=>`<option value="${u}">${u}</option>`).join('')}</select></div>
       <div class="fm-field" style="flex:2;"><label>hwpx 파일</label><input type="file" accept=".hwpx" onchange="handleUnitBankHwpxFile(this.files)"></div>
     </div>
   </div>
-  <div class="fm-panel">
-    <h3>엑셀로 한꺼번에 올리기</h3>
+  <div class="st-sec">
+    <div class="st-h"><b>엑셀로 한꺼번에</b><span>단원 / 문제 / 정답 세 열</span></div>
     <p class="fm-hint" style="margin-top:-8px;">.xlsx 파일에 <b>단원 / 문제 / 정답</b> 열을 만들어서 올려주세요.</p>
     <input type="file" accept=".xlsx,.xls" onchange="handleUnitBankExcelFile(this.files)">
   </div>
   ${state.unitImportPreview ? `
-  <div class="fm-panel">
-    <h3>업로드 미리보기 (총 ${state.unitImportPreview.length}개)</h3>
+  <div class="st-sec">
+    <div class="st-h"><b>올린 것 확인</b><span>총 ${state.unitImportPreview.length}개</span>
+      <span class="r"><button class="btn p sm" onclick="confirmUnitBankImport()">일괄 등록</button>
+      <button class="btn q sm" onclick="cancelUnitBankImport()">취소</button></span></div>
     <p class="fm-hint" style="margin-top:-8px;">${state.unitImportPreview.length>30?'처음 30개만 미리 보이고, 나머지는 그대로 등록됩니다. ':''}정답이 비어있는 항목(<span style="color:var(--no);font-weight:700;">빨간 표시</span>)은 등록 전에 채워주시면 좋아요.</p>
     <div style="max-height:420px;overflow-y:auto;margin-top:8px;">
       ${state.unitImportPreview.slice(0,30).map((r,i)=>`
-        <div class="fm-card" style="margin-bottom:10px;">
+        <div class="st-form" style="padding-top:12px;">
           <div class="fm-row" style="margin-bottom:6px;">
             <div class="fm-field"><label>단원</label><select id="uip-unit-${i}">${UNITS.map(u=>`<option value="${u}" ${r.unit===u?'selected':''}>${u}</option>`).join('')}</select></div>
             <div class="fm-field"><label>정답 ${!r.answer?'<span style="color:var(--no);">(비어있음)</span>':''}</label><input id="uip-answer-${i}" value="${escHtml(r.answer||'')}" style="${!r.answer?'border-color:var(--no);':''}"></div>
@@ -8332,10 +8423,6 @@ function unitBankAddLegacyHTML(){
           <textarea id="uip-content-${i}" style="width:100%;min-height:60px;">${escHtml(r.content)}</textarea>
           ${r.image ? `<img src="${r.image}" style="max-width:160px;max-height:160px;margin-top:8px;border:1px solid var(--line);border-radius:4px;display:block;">` : ''}
         </div>`).join('')}
-    </div>
-    <div style="margin-top:10px;display:flex;gap:8px;">
-      <button class="btn p" onclick="confirmUnitBankImport()">일괄 등록</button>
-      <button class="btn" onclick="cancelUnitBankImport()">취소</button>
     </div>
     ${state.importProgress ? `
       <div style="margin-top:12px;font-size:13px;">업로드 중... ${state.importProgress.done} / ${state.importProgress.total}</div>
@@ -8346,29 +8433,6 @@ function unitBankAddLegacyHTML(){
 }
 
 /* ---------- 조교 관리 ---------- */
-function teacherAssistantsHTML(){
-  return `
-  <div class="fm-panel">
-    <h3>조교 추가</h3>
-    <p class="fm-hint" style="margin-top:-8px;">조교는 로그인 후 담당 반의 학생 명단·출석·성적·과제/오답숙제 현황만 볼 수 있습니다. 다른 반, 학생 연락처, 관리자 설정에는 접근할 수 없습니다.</p>
-    <div class="fm-row">
-      <div class="fm-field"><label>아이디</label><input id="ta-id" placeholder="예: ta01"></div>
-      <div class="fm-field"><label>비밀번호</label><input id="ta-pw" placeholder="비밀번호"></div>
-      <div class="fm-field"><label>이름</label><input id="ta-name" placeholder="조교 이름"></div>
-      <div class="fm-field"><label>연락처</label><input id="ta-phone" placeholder="010-0000-0000 (선택)"></div>
-      <div class="fm-field"><label>담당 반</label><select id="ta-class">${classOptionsHTML(null)}</select></div>
-      <button class="btn p" onclick="addAssistant()">추가</button>
-    </div>
-  </div>
-  <div class="fm-panel">
-    <h3>조교 목록 (${DATA.assistants.length}명)</h3>
-    ${DATA.assistants.length===0?'<div class="fm-empty">등록된 조교가 없습니다.</div>':`
-    <table><tr><th>아이디</th><th>이름</th><th>연락처</th><th>담당 반</th><th></th></tr>
-    ${DATA.assistants.map(a=>`<tr><td class="mono fm-sub">${escHtml(a.taId||'-')}</td><td>${escHtml(a.name)}</td><td>${escHtml(a.phone||'-')}</td><td>${classNameOf(a.classId)}</td>
-      <td class="fm-acts"><button class="btn sm" onclick="resetAssistantPw('${a.id}')">비밀번호 재설정</button><button class="btn no sm" onclick="deleteAssistant('${a.id}')">삭제</button></td></tr>`).join('')}
-    </table>`}
-  </div>`;
-}
 
 /* ---------- 설정 (조교 + 관리자) ---------- */
 function teacherSettingsHTML(){
@@ -8411,74 +8475,172 @@ function teacherSettingsHTML(){
   </div>`;
 }
 
-/* ---------- 설정: 반 추가 ---------- */
-function teacherSettingsClassesHTML(){
-  return `
-  <div class="fm-panel">
-    <h3>반 추가</h3>
-    <div class="fm-row">
-      <div class="fm-field"><label>반 이름</label><input id="new-cname" placeholder="예: [특강]미적분"></div>
-      <div class="fm-field"><label>강의 시간</label><input id="new-cschedule" placeholder="예: 월,수,금 7시~9시"></div>
-      <div class="fm-field"><label>기간</label><input id="new-cperiod" placeholder="예: 26.03~26.12"></div>
-      <button class="btn p" onclick="addClass()">추가</button>
-    </div>
+/* =================== 설정 (design-v1/13-settings) ===================
+   **카드를 버렸다.** 구버전은 갈래마다 흰 상자(.lg-panel)를 두세 개 띄우고
+   그 안에 제목과 폼을 담았다. 시안이 정한 언어는 «구역 + 줄»이다 —
+   제목 아래 실선 하나로 구역을 가르고, 그 안은 얇은 선으로 나눈 줄이 쌓인다.
+   한 화면에 상자가 서넛 뜨면 «무엇이 무엇 안에 있는지»가 흐려진다.
+
+   **만드는 폼은 접어 둔다.** 계정·반을 만드는 일은 가끔이고 목록을 보는 일은 매번이다.
+   상시 펼쳐 둔 폼은 화면에서 제일 큰 자리를 차지하면서 제일 가끔 쓰인다.
+   (시험지 「새 시험지」· 창고 「문항 추가」와 같은 장치다.)
+
+   여섯 갈래가 서로 닮은 데가 없다 — 조교 계정, 학생 계정, 반 만들기, 상담 신청,
+   변경 이력, 관리자 비밀번호. 하나의 형태로 묶지 않고 «같은 부품»으로만 짓는다. */
+
+function stOpen(key){
+  state.settingsForm = state.settingsForm===key ? '' : key;
+  render();
+}
+/* 구역 하나 — 제목 · 설명 · (우측 액션) · 본문 */
+function stSec(o){
+  return `<div class="st-sec">
+    <div class="st-h"><b>${o.title}</b>${o.desc?`<span>${o.desc}</span>`:''}
+      ${o.action?`<span class="r">${o.action}</span>`:''}</div>
+    ${o.form || ''}${o.body || ''}
   </div>`;
 }
 
-/* ---------- 설정: 학생 계정 추가 · 일괄 등록 ----------
+/* ---------- 조교 ---------- */
+function teacherAssistantsHTML(){
+  const open = state.settingsForm==='ta';
+  const list = DATA.assistants;
+  return `<div class="st-wrap">
+  ${stSec({
+    title:'조교 계정', desc:'권한을 나눠 맡깁니다',
+    action:`<button class="btn ${open?'':'p'} sm" onclick="stOpen('ta')">${
+      open ? '닫기' : iconSvg('plus',13)+' 조교 추가'}</button>`,
+    form: !open ? '' : `<div class="st-form">
+      <div class="cls-form">
+        <label style="min-width:130px;"><span>아이디</span><input id="ta-id" placeholder="예: ta01"></label>
+        <label style="min-width:130px;"><span>비밀번호</span><input id="ta-pw" placeholder="4자 이상"></label>
+        <label style="min-width:120px;"><span>이름</span><input id="ta-name" placeholder="조교 이름"></label>
+        <label style="min-width:140px;"><span>연락처</span><input id="ta-phone" placeholder="010-0000-0000 (선택)"></label>
+        <label style="min-width:160px;"><span>담당 반</span><select class="fm-sel" id="ta-class">${classOptionsHTML(null)}</select></label>
+        <button class="btn p sm" onclick="addAssistant()">추가</button>
+      </div></div>`,
+    body: list.length===0
+      ? `<div class="st-empty">현재 조교 계정이 <b style="color:var(--ink);">없습니다.</b><br>
+          조교는 <b style="color:var(--ink);">담당 반 하나</b>의 성적·출결·과제·오답만 넣을 수 있습니다.
+          학생 등록·삭제, 반 이동, 개인정보 수정, 오답 승인, 설정에는 접근할 수 없습니다.</div>`
+      : list.map(a=>`<div class="st-row">
+          <span class="av">${escHtml((a.name||'?').slice(0,1))}</span>
+          <div class="t"><b>${escHtml(a.name)}</b>
+            <span><span class="mono">${escHtml(a.taId||'—')}</span><s>·</s>${escHtml(classNameOf(a.classId))}${
+              a.phone?`<s>·</s><span class="mono">${escHtml(a.phone)}</span>`:''}</span></div>
+          <div class="v">
+            <button class="btn sm" onclick="resetAssistantPw('${a.id}')">비밀번호 재설정</button>
+            <button class="btn q sm" onclick="deleteAssistant('${a.id}')">삭제</button>
+          </div></div>`).join('')
+  })}
+  </div>`;
+}
+
+/* ---------- 반 ---------- */
+function teacherSettingsClassesHTML(){
+  const open = state.settingsForm==='cls';
+  const list = DATA.classes;
+  return `<div class="st-wrap">
+  ${stSec({
+    title:'반', desc:'수업 시간과 기간을 정합니다',
+    action:`<button class="btn ${open?'':'p'} sm" onclick="stOpen('cls')">${
+      open ? '닫기' : iconSvg('plus',13)+' 반 추가'}</button>`,
+    form: !open ? '' : `<div class="st-form">
+      <div class="cls-form">
+        <label style="flex:1;min-width:170px;"><span>반 이름</span><input id="new-cname" placeholder="예: [특강]미적분"></label>
+        <label style="flex:1;min-width:170px;"><span>강의 시간</span><input id="new-cschedule" placeholder="예: 월,수,금 7시~9시"></label>
+        <label style="min-width:140px;"><span>기간</span><input id="new-cperiod" placeholder="예: 26.03~26.12"></label>
+        <button class="btn p sm" onclick="addClass()">추가</button>
+      </div>
+      <p class="st-note">요일 글자(월·화·수…)로 수업일이 정해집니다. 「월,수,금 7시~9시」처럼 적어 주세요.</p></div>`,
+    body: list.length===0 ? '<div class="st-empty">아직 만든 반이 없습니다.</div>'
+      : list.map(c=>{
+          const n = DATA.students.filter(s=>s.classId===c.id).length;
+          const cp = getClassProgress(c.id);
+          return `<div class="st-row">
+            <div class="t"><b>${escHtml(c.name)}</b>
+              <span>${escHtml(c.schedule||'일정 미등록')}<s>·</s>${n}명${
+                c.period?`<s>·</s>${escHtml(c.period)}`:''}${cp.subject?`<s>·</s>${escHtml(cp.subject)} ${cp.percent}%`:''}</span></div>
+            <div class="v">
+              ${c.status==='종료' ? '<span class="badge gone">종료</span>' : ''}
+              <button class="btn sm" onclick="state.classHubId='${c.id}'; goTeacherTab('classhub','progress')">반 관리 →</button>
+            </div></div>`;
+        }).join('')
+  })}
+  </div>`;
+}
+
+/* ---------- 학생 ----------
    여기는 «계정을 만드는 곳»이다. 학생을 «보는 곳»은 명단 하나뿐이다.
    전체 목록 표가 여기에도 있었지만 지웠다 — 같은 곳으로 가는 문이 두 개면
    어느 쪽이 최신인지 매번 헷갈린다. */
 function teacherSettingsStudentsHTML(){
-  return `
-  <div class="fm-panel">
-    <h3>학생 계정 추가</h3>
-    <p class="fm-hint" style="margin-top:-8px;">등록 후 반을 안 고르셨거나 나중에 반을 옮기고 싶으면, [명단]에서 학생을 열어 언제든 수정할 수 있습니다.</p>
-    <div class="fm-row">
-      <div class="fm-field"><label>아이디</label><input id="new-sid" placeholder="예: st01"></div>
-      <div class="fm-field"><label>이름</label><input id="new-sname" placeholder="이름"></div>
-      <div class="fm-field"><label>비밀번호</label><input id="new-spw" placeholder="비밀번호"></div>
-      <div class="fm-field"><label>학년</label>
-        <select id="new-sgrade"><option>고1</option><option>고2</option><option>고3</option></select>
+  const open = state.settingsForm==='stu';
+  const bulk = state.settingsForm==='bulk';
+  return `<div class="st-wrap">
+  ${stSec({
+    title:'학생 계정', desc:`전체 ${DATA.students.length}명`,
+    action:`<button class="btn ${open?'':'p'} sm" onclick="stOpen('stu')">${
+      open ? '닫기' : iconSvg('plus',13)+' 학생 추가'}</button>`,
+    form: !open ? '' : `<div class="st-form">
+      <div class="cls-form">
+        <label style="min-width:120px;"><span>아이디</span><input id="new-sid" placeholder="예: st01"></label>
+        <label style="min-width:110px;"><span>이름</span><input id="new-sname" placeholder="이름"></label>
+        <label style="min-width:120px;"><span>비밀번호</span><input id="new-spw" placeholder="비밀번호"></label>
+        <label style="width:92px;"><span>학년</span><select class="fm-sel" id="new-sgrade"><option>고1</option><option>고2</option><option>고3</option></select></label>
+        <label style="min-width:130px;"><span>학교</span><input id="new-sschool" placeholder="학교명 (선택)"></label>
+        <label style="min-width:150px;"><span>학부모 전화</span><input id="new-sparentphone" placeholder="010-0000-0000 (선택)"></label>
+        <label style="min-width:150px;"><span>학생 전화</span><input id="new-sphone" placeholder="010-0000-0000 (선택)"></label>
+        <label style="min-width:150px;"><span>반</span><select class="fm-sel" id="new-sclass">${classOptionsHTML(null)}</select></label>
+        <button class="btn p sm" onclick="addStudent()">추가</button>
       </div>
-      <div class="fm-field"><label>학교</label><input id="new-sschool" placeholder="학교명 (선택)"></div>
-      <div class="fm-field"><label>학부모 전화번호</label><input id="new-sparentphone" placeholder="010-0000-0000 (선택)"></div>
-      <div class="fm-field"><label>학생 전화번호</label><input id="new-sphone" placeholder="010-0000-0000 (선택)"></div>
-      <div class="fm-field"><label>반</label><select id="new-sclass">${classOptionsHTML(null)}</select></div>
-      <button class="btn p" onclick="addStudent()">추가</button>
-    </div>
-  </div>
-  <div class="fm-panel">
-    <h3>엑셀로 한꺼번에 등록</h3>
-    <p class="fm-hint" style="margin-top:-8px;">양식을 내려받아 채운 뒤 그대로 올리면 됩니다. 이미 있는 아이디는 건너뜁니다.</p>
-    <div class="fm-row">
-      <div class="fm-field"><label>배정할 반</label><select id="import-sclass">${classOptionsHTML(null)}</select></div>
-      <button class="btn sm" onclick="downloadStudentExcelTemplate()">${iconSvg('file',15)} 엑셀 양식 내려받기</button>
-      <label class="btn sm" style="cursor:pointer;display:inline-flex;align-items:center;gap:5px;">${iconSvg('chart',15)} 엑셀 파일 올리기<input type="file" accept=".xlsx,.xls" style="display:none;" onchange="handleStudentExcelFile(document.getElementById('import-sclass').value, this.files)"></label>
-    </div>
-  </div>
-  ${studentImportPreviewHTML()}
-  <div class="fm-panel">
-    <h3>학생 목록은 [명단]에 있습니다</h3>
-    <p class="fm-hint" style="margin-top:-8px;">전체 ${DATA.students.length}명. 검색·신호·출결·성적·반 이동까지 명단 한 곳에서 합니다.</p>
-    <button class="btn p sm" onclick="state.teacherTab='roster'; state.studentDetailId=null; render()">명단으로 가기 →</button>
+      <p class="st-note">반을 안 고르셨거나 나중에 옮기고 싶으면 <b>명단</b>에서 학생을 열어 언제든 바꿀 수 있습니다.</p></div>`,
+    body: `<div class="st-row">
+      <div class="t"><b>학생 목록은 명단에 있습니다</b>
+        <span>검색 · 신호 · 출결 · 성적 · 반 이동까지 명단 한 곳에서 합니다</span></div>
+      <div class="v"><button class="btn sm"
+        onclick="state.teacherTab='roster'; state.studentDetailId=null; render()">명단으로 ${iconSvg('arrowR',13)}</button></div>
+    </div>`
+  })}
+  ${stSec({
+    title:'엑셀로 한꺼번에', desc:'양식을 채워 올리면 이미 있는 아이디는 건너뜁니다',
+    action:`<button class="btn ${bulk?'':'p'} sm" onclick="stOpen('bulk')">${bulk?'닫기':'일괄 등록'}</button>`,
+    form: !bulk ? '' : `<div class="st-form">
+      <div class="cls-form">
+        <label style="min-width:170px;"><span>배정할 반</span><select class="fm-sel" id="import-sclass">${classOptionsHTML(null)}</select></label>
+        <button class="btn sm" onclick="downloadStudentExcelTemplate()">${iconSvg('download',14)} 양식 내려받기</button>
+        <label class="btn sm" style="cursor:pointer;">${iconSvg('file',14)} 엑셀 올리기<input type="file" accept=".xlsx,.xls"
+          style="display:none;" onchange="handleStudentExcelFile(this.files)"></label>
+      </div></div>`,
+    body: studentImportPreviewHTML()
+  })}
   </div>`;
 }
 
-/* ---------- 설정: 상담 신청 목록 ---------- */
+/* ---------- 상담 ----------
+   홈페이지 상담 폼으로 들어온 것. 표가 아니라 줄이다 —
+   한 건이 «이름 · 연락처 · 하고 싶은 말»이라 열을 맞춰 비교할 것이 없다. */
 function teacherSettingsConsultsHTML(){
   markConsultsSeen();
-  return `
-  <div class="fm-panel">
-    <h3>상담 신청 목록 (${DATA.consults.length}건)</h3>
-    ${DATA.consults.length===0?'<div class="fm-empty">접수된 상담 신청이 없습니다.</div>':`
-    <table><tr><th>날짜</th><th>이름</th><th>연락처</th><th>학년</th><th>내용</th><th></th></tr>
-    ${DATA.consults.map(c=>`<tr><td>${c.date}</td><td>${c.name}</td><td>${c.phone}</td><td>${c.grade||'-'}</td><td>${c.msg||'-'}</td><td><button class="btn no sm" onclick="deleteConsult('${c.id}')">삭제</button></td></tr>`).join('')}
-    </table>`}
+  const list = DATA.consults;
+  return `<div class="st-wrap">
+  ${stSec({
+    title:'상담 신청', desc:`${list.length}건 · 공개 홈의 신청 폼으로 들어옵니다`,
+    body: list.length===0 ? '<div class="st-empty">접수된 상담 신청이 없습니다.</div>'
+      : list.map(c=>`<div class="st-row" style="align-items:flex-start;">
+          <div class="t"><b>${escHtml(c.name)}
+            <span class="mono" style="font-weight:400;font-size:12px;color:var(--sub);margin-left:8px;">${escHtml(c.phone||'')}</span></b>
+            <span><span class="mono">${escHtml(c.date||'')}</span>${c.grade?`<s>·</s>${escHtml(c.grade)}`:''}</span>
+            ${c.msg?`<span style="color:var(--sub);margin-top:7px;white-space:pre-wrap;">${escHtml(c.msg)}</span>`:''}</div>
+          <div class="v"><button class="btn q sm" onclick="deleteConsult('${c.id}')">삭제</button></div>
+        </div>`).join('')
+  })}
   </div>`;
 }
 
-/* ---------- 설정: 변경 이력(감사 로그) ---------- */
+/* ---------- 변경 이력 ----------
+   시안(13-settings)이 그린 그대로 «줄»이다. 표가 아니다 —
+   표는 «비교»하는 것이고 로그는 «훑는» 것이라 열 머리가 필요 없다. */
 function teacherAuditLogHTML(){
   const q = (state.auditLogSearchQuery||'').trim().toLowerCase();
   const filtered = !q ? DATA.auditLog : DATA.auditLog.filter(e=>
@@ -8487,41 +8649,71 @@ function teacherAuditLogHTML(){
     (e.action||'').toLowerCase().includes(q)
   );
   const shown = filtered.slice(0, 300);
-  const fmtAt = iso => { try{ return new Date(iso).toLocaleString('ko-KR', {year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}); }catch(e){ return iso; } };
-  return `
-  <div class="fm-panel">
-    <div class="fm-head">
-      <h3 style="margin:0;">변경 이력 (${DATA.auditLog.length}건${q?` · 검색결과 ${filtered.length}건`:''})</h3>
-      <div class="fm-field" style="margin:0;min-width:220px;">
-        <input id="auditlog-search" value="${escHtml(state.auditLogSearchQuery)}" placeholder="학생명·작성자·항목으로 검색" oninput="state.auditLogSearchQuery=this.value; render(); document.getElementById('auditlog-search').focus();">
-      </div>
-    </div>
-    <p class="fm-hint" style="margin-top:-4px;">성적·출석·학생정보처럼 민감한 변경만 기록됩니다. 조교가 수정한 내역도 여기서 확인할 수 있습니다.</p>
-    ${DATA.auditLog.length===0 ? '<div class="fm-empty">아직 기록된 변경 이력이 없습니다.</div>' :
-      shown.length===0 ? `<div class="fm-empty">"${escHtml(state.auditLogSearchQuery)}"에 해당하는 기록이 없습니다.</div>` : `
-    <div style="overflow-x:auto;">
-    <table><tr><th>시간</th><th>작성자</th><th>항목</th><th>학생</th><th>내용</th></tr>
-    ${shown.map(e=>`<tr><td class="fm-sub mono" style="white-space:nowrap;">${fmtAt(e.at)}</td><td>${escHtml(e.actor)}</td><td>${escHtml(e.action)}</td><td class="fm-nm">${escHtml(e.studentName||'-')}</td><td class="fm-sub">${escHtml(e.detail||'-')}</td></tr>`).join('')}
-    </table>
-    </div>
-    ${filtered.length>300 ? `<p class="fm-hint">최근 300건만 표시됩니다. (전체 ${filtered.length}건)</p>` : ''}`}
+  /* 「26. 08. 04. 오전 12:16」은 두 줄로 접힌다 — toLocaleString의 한국어 오전/오후 때문이다.
+     시안이 쓴 24시간 형식으로 맞춘다. 전부 숫자라 mono에서도 제대로 읽힌다. */
+  const p2 = n => String(n).padStart(2,'0');
+  const fmtAt = iso => { try{
+    const d = new Date(iso);
+    if(isNaN(d)) return iso||'';
+    return `${String(d.getFullYear()).slice(2)}-${p2(d.getMonth()+1)}-${p2(d.getDate())} ${p2(d.getHours())}:${p2(d.getMinutes())}`;
+  }catch(e){ return iso||''; } };
+  /* 항목마다 색을 달리한다 — 성적·출석은 «고친 것», 삭제는 «없앤 것»이라 무게가 다르다. */
+  const tone = a => /삭제/.test(a) ? 'no' : /성적|출석|출결/.test(a) ? 'late'
+              : /추가|등록|생성/.test(a) ? 'ok' : '';
+
+  return `<div class="st-wrap">
+  ${stSec({
+    title:'변경 이력', desc:`${DATA.auditLog.length}건${q?` · 검색결과 ${filtered.length}건`:''}`,
+    action:`<span class="field" style="width:230px;">${iconSvg('search',14)}
+      <input id="auditlog-search" value="${escHtml(state.auditLogSearchQuery||'')}"
+        placeholder="학생 · 작성자 · 항목으로 찾기"
+        style="flex:1;min-width:0;border:0;background:transparent;outline:none;font-family:inherit;font-size:12.5px;color:var(--ink);"
+        oninput="state.auditLogSearchQuery=this.value; render(); const e=document.getElementById('auditlog-search'); e.focus(); e.setSelectionRange(e.value.length,e.value.length);"></span>`,
+    body: (DATA.auditLog.length===0
+      ? '<div class="st-empty">아직 기록된 변경 이력이 없습니다.<br>성적·출석·학생정보처럼 되돌리기 어려운 변경만 남습니다.</div>'
+      : shown.length===0
+      ? `<div class="st-empty">「${escHtml(state.auditLogSearchQuery)}」에 해당하는 기록이 없습니다.</div>`
+      : shown.map(e=>`<div class="st-log">
+          <span class="tm">${fmtAt(e.at)}</span>
+          <span class="ac"><span class="badge ${tone(e.action)}">${escHtml(e.action)}</span></span>
+          <span class="x">${e.studentName?`<b style="color:var(--ink);font-weight:600;">${escHtml(e.studentName)}</b> `:''}${escHtml(e.detail||'')}</span>
+          <span class="by">${escHtml(e.actor||'')}</span>
+        </div>`).join('')
+      + (filtered.length>300 ? `<p class="st-note">최근 300건만 보입니다 (전체 ${filtered.length}건).</p>` : ''))
+  })}
   </div>`;
 }
 
-/* ---------- 설정: 관리자 비밀번호 변경 ---------- */
+/* ---------- 관리자 ---------- */
 function teacherSettingsAdminHTML(){
-  return `
-  <div class="fm-panel">
-    <h3>관리자 비밀번호 변경</h3>
-    <div class="fm-field"><label>현재 비밀번호</label><input id="pw-current" type="password"></div>
-    <div class="fm-field"><label>새 비밀번호 (4자 이상)</label><input id="pw-new" type="password"></div>
-    <button class="btn p" onclick="changeTeacherPw()">비밀번호 변경</button>
+  const open = state.settingsForm==='pw';
+  return `<div class="st-wrap">
+  ${stSec({
+    title:'관리자', desc:'이 계정 하나로 모든 화면에 들어옵니다',
+    body: `<div class="st-row">
+        <div class="t"><b>비밀번호</b>
+          <span>확인할 수는 없고 새로 정하는 것만 됩니다<s>·</s>잊으면 되찾을 수 없습니다</span></div>
+        <div class="v"><button class="btn ${open?'':'p'} sm" onclick="stOpen('pw')">${open?'닫기':'변경'}</button></div>
+      </div>
+      ${!open ? '' : `<div class="st-form">
+        <div class="cls-form">
+          <label style="min-width:170px;"><span>현재 비밀번호</span><input id="pw-current" type="password" autocomplete="current-password"></label>
+          <label style="min-width:170px;"><span>새 비밀번호 (4자 이상)</span><input id="pw-new" type="password" autocomplete="new-password"></label>
+          <button class="btn p sm" onclick="changeTeacherPw()">변경</button>
+        </div></div>`}
+      <div class="st-row">
+        <div class="t"><b>아이디가 없습니다</b>
+          <span>지금은 비밀번호 하나로 들어옵니다 — 누가 시도했는지 남지 않습니다</span></div>
+        <div class="v"><span class="badge late">알려진 한계</span></div>
+      </div>`
+  })}
   </div>`;
 }
+
 
 // 알림 드롭다운이 열려있을 때 벨 바깥을 클릭하면 닫는다.
 document.addEventListener('click', (e) => {
-  if(state.notifOpen && !e.target.closest('.notif-bell')){
+  if(state.notifOpen && !e.target.closest('.ds-bell')){
     state.notifOpen = false;
     render();
   }
