@@ -668,6 +668,62 @@
 .sap-vwrap iframe{position:absolute;inset:0;width:100%;height:100%;border:0;}
 
 /* ============================================================
+   로그인 (design-v1/17-login) — 접두사 lo-
+   폰과 데스크톱이 «같은 한 칸»이다. 캔버스를 씌우지 않고 가운데 세운다.
+   ============================================================ */
+.app.lo{min-height:100vh;display:flex;align-items:flex-start;justify-content:center;
+  padding:clamp(44px,11vh,116px) 20px 64px;}
+.lo-col{width:100%;max-width:396px;}
+/* 로고가 홈으로 가는 문이다. 상단 헤더가 없으므로 여기 하나뿐이다. */
+.lo-logo{width:196px;height:auto;display:block;margin:0 auto 34px;cursor:pointer;}
+.lo-lab{font-size:12px;font-weight:700;color:var(--sub);margin:0 0 7px;letter-spacing:-.01em;}
+.lo-in{width:100%;height:48px;border:1px solid var(--line);border-radius:var(--r-md);
+  background:var(--card);padding:0 14px;font-family:inherit;font-size:14.5px;color:var(--ink);
+  outline:none;transition:border-color var(--t),box-shadow var(--t);}
+.lo-in:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(60,48,52,.12);}
+.lo-in::placeholder{color:var(--dim);}
+.lo-f+.lo-f{margin-top:16px;}
+.lo-go{display:flex;align-items:center;justify-content:center;width:100%;height:50px;
+  background:var(--accent);border:1px solid var(--accent);border-radius:var(--r-md);
+  color:#fff;font-family:inherit;font-size:15px;font-weight:700;margin-top:24px;cursor:pointer;
+  transition:background var(--t);}
+.lo-go:hover{background:var(--accent-d);}
+.lo-hint{margin:16px 0 0;font-size:12px;color:var(--dim);line-height:1.75;text-align:center;}
+/* 다른 문 — 오는 사람은 거의 전부 학생이라 조교·강사는 «아래 작은 글»이다 */
+.lo-doors{margin-top:32px;padding-top:20px;border-top:1px solid var(--line2);
+  display:flex;align-items:center;justify-content:center;gap:13px;
+  font-size:12.5px;color:var(--sub);}
+.lo-doors a{text-decoration:underline;text-underline-offset:3px;cursor:pointer;}
+.lo-doors a:hover{color:var(--ink);}
+.lo-doors s{text-decoration:none;color:var(--line);}
+/* 오류는 «다시 입력하기 전»에 읽혀야 하므로 칸 위에 온다.
+   구버전은 버튼 아래에 뒀는데, 고치려고 위로 올라가면 화면 밖으로 나갔다. */
+.lo-err{display:flex;align-items:flex-start;gap:9px;margin-bottom:20px;padding:12px 14px;
+  background:var(--nobg);border:1px solid var(--no-line);border-radius:var(--r-md);
+  font-size:12.5px;line-height:1.7;color:var(--no);}
+.lo-err svg{flex-shrink:0;margin-top:1px;}
+.lo-err b{display:block;font-weight:700;}
+.lo-err span{color:#8E4A40;}
+
+/* ============================================================
+   조교 (design-v1/18-assistant) — 접두사 as-
+   **따로 만든 화면이 아니라 관리자 화면을 «권한»으로 좁힌 것이다.**
+   그래서 명단은 .rst-*, 학생 상세는 .sd-*를 그대로 쓴다. 여기 있는 것은
+   «조교라는 사실»을 말하는 부품뿐이다.
+   ============================================================ */
+.app.as .topbar{gap:10px;}
+.as-who{display:flex;align-items:center;gap:9px;margin-left:12px;}
+.as-tag{font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:var(--r-xs);
+  background:var(--accent);color:#fff;letter-spacing:.02em;flex-shrink:0;}
+.as-cls{font-size:12.5px;color:var(--sub);white-space:nowrap;}
+.as-cls b{color:var(--ink);font-weight:700;}
+/* 권한을 화면이 먼저 말한다 — 눌러 보고 나서야 «안 되는구나»를 알게 하지 않는다 */
+.as-lede{margin:11px 0 0;font-size:12.5px;color:var(--sub);line-height:1.75;max-width:78ch;}
+.as-lede b{color:var(--ink);font-weight:700;}
+/* 조교의 표는 열이 여덟이라 명단(1418px)보다 좁다. 그대로 두면 괜히 가로 스크롤이 남는다. */
+.app .rst-wrap table.grid.as-narrow{min-width:1004px;}
+
+/* ============================================================
    공개 홈 — 랜딩 「하루」 (landing-v2/index.html)
    토큰은 전부 ds.css(:root). 여기에는 «배치»만 둔다.
    클래스는 전부 l- 접두사 — ds.css와 이름이 겹치면 조용히 망가진다.
@@ -1830,6 +1886,7 @@ let state = {
   stuClinicSlotId: null,  // 신청하려고 고른 시간대
   stuQnaWriting: false,   // 질문 폼이 열려 있나
   lpRevealed: false,      // 랜딩이 한 번 드러났나 — 다시 그려도 다시 페이드인하지 않는다
+  asFlag: '',             // 조교 명단의 필터 — '' | 'hw' | 'wrong'
   auditLogSearchQuery: '',
   toast: ''
 };
@@ -2009,6 +2066,11 @@ async function doTeacherLogin(){
   const pwInput = document.getElementById('login-pw').value;
   if(DATA.teacherPw === null){
     if(pwInput.length < 4){ state.loginError='비밀번호는 4자 이상으로 설정해주세요.'; render(); return; }
+    /* 여기서 정한 값은 되찾을 수 없다. 오타 하나로 계정이 잠기므로 두 번 받는다. */
+    const again = document.getElementById('login-pw2');
+    if(again && again.value !== pwInput){
+      state.loginError='두 번 입력한 비밀번호가 서로 다릅니다.'; render(); return;
+    }
     DATA.teacherPw = pwInput;
     await dbSet('teacher-pw', pwInput);
     state.currentUser = {type:'teacher'};
@@ -3338,7 +3400,10 @@ const ICON_PATHS = {
   clipboard: '<path d="M9 4.5H7a2 2 0 00-2 2v11a2 2 0 002 2h10a2 2 0 002-2v-11a2 2 0 00-2-2h-2"/><rect x="9" y="2.8" width="6" height="3.4" rx="1.2"/><path d="M8.5 11h7M8.5 14.5h4.5"/>',
   sparkle: '<path d="M12 3.5l1.9 4.9 4.9 1.9-4.9 1.9-1.9 4.9-1.9-4.9-4.9-1.9 4.9-1.9z"/><path d="M18.5 16.5l.7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7z"/>',
   pencil: '<path d="M16.5 4.5l3 3L8 19H5v-3z"/><path d="M14.5 6.5l3 3"/>',
-  play: '<circle cx="12" cy="12" r="8.5"/><path d="M10.2 8.6l5.4 3.4-5.4 3.4z"/>'
+  play: '<circle cx="12" cy="12" r="8.5"/><path d="M10.2 8.6l5.4 3.4-5.4 3.4z"/>',
+  // 로그인 오류 · 조교 권한 안내
+  alert: '<path d="M12 4.5L21 19.5H3z"/><path d="M12 10v4M12 17h.01"/>',
+  shield: '<path d="M12 3.5l7 2.8v5.2c0 4-2.9 7.4-7 8.5-4.1-1.1-7-4.5-7-8.5V6.3z"/><path d="M9.3 12l1.9 1.9 3.5-3.8"/>'
 };
 function iconSvg(name, size){
   size = size || 17;
@@ -3928,7 +3993,9 @@ function renderScoreChart(scores){
 /* 새 디자인 시스템(ds.css)으로 옮긴 화면 목록.
    여기 들어간 화면만 구버전 스타일(.legacy)을 벗는다. 화면을 하나 옮길 때마다 여기에 더한다.
    전부 옮기고 나면 이 집합과 <style> 블록, body의 .legacy를 통째로 지운다. */
-const MIGRATED_VIEWS = new Set(['teacher', 'student', 'home']);
+/* 이제 전부 들어왔다 — 구버전 «화면»은 하나도 남지 않았다.
+   남은 legacy는 DS 화면 «안»에 감싸 둔 폼과 표뿐이다. */
+const MIGRATED_VIEWS = new Set(['teacher', 'student', 'home', 'login', 'assistant']);
 let lastSyncedHash = null;
 function syncHistory(){
   const newHash = buildHashFromState();
@@ -4365,33 +4432,76 @@ function mountLanding(){
 }
 
 /* ---------- 로그인 ---------- */
+/* =================== 로그인 (design-v1/17-login) ===================
+   **역할: 누구로 들어갈지 고르고 들어간다. 그 이상은 하지 않는다.**
+
+   **문 셋을 동등하게 두지 않았다.** 구버전은 학생·조교·강사를 같은 크기의 탭 셋으로 세웠다.
+   그런데 여기 오는 사람은 거의 전부 학생이고, 조교는 계정이 아직 하나도 없고, 강사는 한 명이다.
+   → 학생 폼이 곧 화면이고 조교·강사는 아래 작은 글이다. 공개 홈도 이미 같은 비중이다
+   (상단바에 「학생 로그인」, 푸터에 「강사 로그인」).
+
+   ⚠ **`<form>`으로 감쌌다.** 구버전은 버튼 onclick뿐이라 **입력칸에서 Enter를 쳐도 아무 일이
+   없었다.** 로그인 화면에서 Enter가 안 먹는 것은 그 자체로 결함이다. */
+function lgField(o){
+  return `<div class="lo-f"><label class="lo-lab" for="${o.id}">${o.label}</label>
+    <input class="lo-in" id="${o.id}" type="${o.type||'text'}" placeholder="${o.ph||''}"
+      ${o.auto ? `autocomplete="${o.auto}"` : ''} ${o.focus ? 'autofocus' : ''}></div>`;
+}
 function loginHTML(){
   const mode = state.loginMode || 'student';
   const needsSetup = mode==='teacher' && DATA.teacherPw===null;
+  const submit = mode==='student' ? 'doStudentLogin()'
+               : mode==='assistant' ? 'doAssistantLogin()' : 'doTeacherLogin()';
+
+  let body;
+  if(mode==='teacher'){
+    body = `
+      ${needsSetup ? `<div class="note" style="margin-bottom:22px;">
+        <div class="d">FIRST RUN</div>
+        관리자 비밀번호를 정해 주세요. 4자 이상입니다.<br>
+        <b style="color:var(--ink);">잊으면 되찾을 수 없습니다</b> — 저장된 곳이 여기 한 곳뿐입니다.
+      </div>` : ''}
+      ${lgField({id:'login-pw', label:'관리자 비밀번호', type:'password',
+                 auto: needsSetup ? 'new-password' : 'current-password', focus:1})}
+      ${needsSetup ? lgField({id:'login-pw2', label:'한 번 더', type:'password', auto:'new-password'}) : ''}
+      <button class="lo-go" type="submit">${needsSetup ? '설정하고 시작하기' : '로그인'}</button>`;
+  } else {
+    const who = mode==='assistant' ? '강사에게' : '선생님께';
+    body = `
+      ${lgField({id:'login-id', label:'아이디', auto:'username', focus:1,
+                 ph: mode==='assistant' ? '강사에게 안내받은 아이디' : '학원에서 안내받은 아이디'})}
+      ${lgField({id:'login-pw', label:'비밀번호', type:'password', auto:'current-password', ph:'비밀번호'})}
+      <button class="lo-go" type="submit">로그인</button>
+      <p class="lo-hint">아이디·비밀번호를 잊으셨다면<br>${who} 문의해 주세요.</p>`;
+  }
+
   return `
-  <div class="login-wrap">
-    <div class="login-tabs">
-      <div class="login-tab ${mode==='student'?'active':''}" onclick="state.loginMode='student'; state.loginError=''; render()">학생 로그인</div>
-      <div class="login-tab ${mode==='assistant'?'active':''}" onclick="state.loginMode='assistant'; state.loginError=''; render()">조교 로그인</div>
-      <div class="login-tab ${mode==='teacher'?'active':''}" onclick="state.loginMode='teacher'; state.loginError=''; render()">강사 로그인</div>
+  <div class="app lo">
+    <div class="lo-col">
+      <img class="lo-logo" src="${LOGO_H1}" alt="김하현수학연구소 — 홈으로"
+           title="홈으로" onclick="goto('home')">
+
+      ${state.loginError ? `<div class="lo-err">${iconSvg('alert',16)}
+        <div><b>${escHtml(state.loginError)}</b></div></div>` : ''}
+
+      <form onsubmit="${submit}; return false;">${body}</form>
+
+      ${mode==='student'
+        ? `<div class="lo-doors">
+             <a onclick="goLoginMode('assistant')">조교로 로그인</a><s>·</s>
+             <a onclick="goLoginMode('teacher')">강사로 로그인</a>
+           </div>`
+        : `<div class="lo-doors">
+             <a onclick="goLoginMode('student')">← 학생 로그인으로</a>
+           </div>`}
     </div>
-    ${mode==='student' ? `
-      <div class="lg-field"><label>아이디</label><input id="login-id" type="text" placeholder="학원에서 안내받은 아이디"></div>
-      <div class="lg-field"><label>비밀번호</label><input id="login-pw" type="password" placeholder="비밀번호"></div>
-      <button class="lg-btn btn-primary" style="width:100%;" onclick="doStudentLogin()">로그인</button>
-      <p class="lg-hint">아이디/비밀번호를 잊으셨다면 강사에게 문의해주세요.</p>
-    ` : mode==='assistant' ? `
-      <div class="lg-field"><label>아이디</label><input id="login-id" type="text" placeholder="강사에게 안내받은 아이디"></div>
-      <div class="lg-field"><label>비밀번호</label><input id="login-pw" type="password" placeholder="비밀번호"></div>
-      <button class="lg-btn btn-primary" style="width:100%;" onclick="doAssistantLogin()">로그인</button>
-      <p class="lg-hint">아이디/비밀번호를 잊으셨다면 강사에게 문의해주세요.</p>
-    ` : `
-      ${needsSetup ? `<p class="lg-hint" style="margin-bottom:14px;">최초 로그인입니다. 관리자 비밀번호를 설정해주세요 (4자 이상).</p>` : ''}
-      <div class="lg-field"><label>관리자 비밀번호</label><input id="login-pw" type="password" placeholder="비밀번호"></div>
-      <button class="lg-btn btn-primary" style="width:100%;" onclick="doTeacherLogin()">${needsSetup?'비밀번호 설정하고 시작하기':'로그인'}</button>
-    `}
-    ${state.loginError ? `<div class="error-msg">${state.loginError}</div>` : ''}
   </div>`;
+}
+/* 문을 옮길 때 오류 메시지를 반드시 지운다 — 남아 있으면 «조교 화면에 학생 오류»가 뜬다. */
+function goLoginMode(mode){
+  state.loginMode = mode;
+  state.loginError = '';
+  render();
 }
 
 /* =================== 학생 마이페이지 (design-v1/20-student-app) ===================
@@ -5285,29 +5395,118 @@ function attBadge(status){
 
 /* ---------- 강사 대시보드 (사이드바) ---------- */
 /* ---------- 조교 대시보드 (담당 반만 접근 가능) ---------- */
+/* =================== 조교 (design-v1/18-assistant) ===================
+   **따로 만든 화면이 아니라 관리자 화면을 «권한»으로 좁힌 것이다.**
+   구버전이 여기 남아 있던 이유는 «DS 학생 상세가 기본정보·삭제까지 열어 두기 때문»이었는데,
+   그건 화면의 문제가 아니라 권한의 문제다. 화면을 두 벌로 두면 앞으로 모든 변경을
+   두 번 해야 하고 반드시 한쪽만 고쳐진다 (신호 규칙을 signalOf() 하나로 합친 것과 같은 이유).
+   → 명단은 .rst-*, 학생 상세는 sdScreenHTML을 그대로 쓰고 «못 하는 것»만 뺀다.
+
+   **상단바에 메뉴가 없다.** 갈 곳이 하나뿐인데 메뉴를 만들면 그게 거짓말이다.
+   대신 「조교」 뱃지와 담당 반을 둔다 — 자기가 누구로 있는지가 늘 보여야 한다. */
 function assistantHTML(){
   const cu = state.currentUser;
-  if(state.studentDetailId) return teacherStudentDetailHTML(state.studentDetailId);
-  const q = (state.rosterSearchQuery||'').trim().toLowerCase();
-  const fullRoster = DATA.students.filter(s=>s.classId===cu.classId);
-  const roster = !q ? fullRoster : fullRoster.filter(s=>
-    (s.name||'').toLowerCase().includes(q) || (s.studentId||'').toLowerCase().includes(q)
-  );
+  loadAllRecordsIfNeeded();   // 명단의 수치가 전부 여기서 나온다
+  const body = state.studentDetailId
+    ? teacherStudentDetailHTML(state.studentDetailId)
+    : assistantRosterHTML(cu);
   return `
-  <div class="lg-panel ledger">
-    <div class="student-detail-header">
-      <h3 style="margin:0;">담당반: ${escHtml(classNameOf(cu.classId))} (${fullRoster.length}명${q?` · 검색결과 ${roster.length}명`:''})</h3>
-      ${fullRoster.length>5 ? `<div class="lg-field" style="margin:0;min-width:200px;">
-        <input id="roster-search" value="${escHtml(state.rosterSearchQuery)}" placeholder="이름·아이디로 검색" oninput="state.rosterSearchQuery=this.value; render(); document.getElementById('roster-search').focus();">
-      </div>` : ''}
+  <div class="app as">
+    <div class="topbar">
+      <div class="bm">김하현수학연구소</div>
+      <div class="as-who">
+        <span class="as-tag">조교</span>
+        <span class="as-cls">담당 <b>${escHtml(classNameOf(cu.classId))}</b></span>
+      </div>
+      <div class="right">
+        <span>${escHtml(cu.name||'')} 조교</span>
+        <button class="btn sm" onclick="logout()">로그아웃</button>
+      </div>
     </div>
-    <p class="lg-hint" style="margin-top:-4px;">학생을 선택하면 성적·출석·과제·오답숙제를 확인하고 입력할 수 있습니다.</p>
-    ${fullRoster.length===0 ? '<div class="empty">아직 담당 반에 배정된 학생이 없습니다.</div>' :
-      roster.length===0 ? `<div class="empty">"${escHtml(state.rosterSearchQuery)}"에 해당하는 학생이 없습니다.</div>` : `
-    <table><tr><th>아이디</th><th>이름</th><th>학년</th><th></th></tr>
-    ${roster.map(s=>`<tr><td class="td-soft lg-mono">${s.studentId}</td><td class="td-strong">${escHtml(s.name)}</td><td>${escHtml(s.grade||'-')}</td>
-      <td><button class="lg-btn btn-small" onclick="state.studentDetailId='${s.studentId}'; state.teacherSelectedStudent='${s.studentId}'; state.studentDetailTab='grades'; render()">상세보기</button></td></tr>`).join('')}
-    </table>`}
+    <div class="body">${body}</div>
+  </div>`;
+}
+
+/* 담당 반 명단 — 01-roster에서 «조교가 손댈 수 없는 열»을 뺐다.
+   반·반 진도(반이 하나다) · 신호 등급(05가 전담) · 시청률(영상은 강사가 올린다).
+   남은 열은 전부 조교가 «넣는» 것이다. 일괄 작업도 없다. */
+function assistantRosterHTML(cu){
+  const q = (state.rosterSearchQuery||'').trim().toLowerCase();
+  const flag = state.asFlag || '';
+  const full = DATA.students.filter(s=>s.classId===cu.classId);
+
+  const rows = full.map(s=>({s, st: rosterStats(s)}))
+    .filter(r=>!r.st.withdrawn)                 // 퇴원은 명단에서 뺀다. 섞이면 모든 숫자가 흐려진다
+    .filter(r=>!q || (r.s.name||'').toLowerCase().includes(q)
+                  || (r.s.studentId||'').toLowerCase().includes(q));
+
+  const hwLeft   = rows.filter(r=>r.st.hwTotal && r.st.hwDone < r.st.hwTotal).length;
+  const wrongLeft= rows.filter(r=>r.st.wrongLeft > 0).length;
+  const shown = rows.filter(r=>
+    flag==='hw'    ? (r.st.hwTotal && r.st.hwDone < r.st.hwTotal)
+  : flag==='wrong' ? r.st.wrongLeft > 0
+  : true);
+
+  const pill = (id, label, n) => `<a class="pill ${flag===id?'on':''}"
+    onclick="state.asFlag='${flag===id?'':id}'; render()">${label} <b>${n}</b></a>`;
+
+  return `
+  <div class="rst-screen">
+    <div class="rst-head">
+      <div class="rst-hrow">
+        <h1 class="t-title">${escHtml(classNameOf(cu.classId))}<s>${
+          escHtml((DATA.classes.find(c=>c.id===cu.classId)||{}).schedule||'일정 미등록')} · ${rows.length}명</s></h1>
+      </div>
+      <p class="as-lede">
+        <b>성적 · 출결 · 과제 · 오답</b>을 넣을 수 있습니다.
+        학생 등록·삭제, 반 이동, 개인정보 수정은 강사만 할 수 있습니다.
+      </p>
+      <div class="rst-fbar">
+        <span class="field rst-selwrap">${iconSvg('search',15)}
+          <input id="roster-search" value="${escHtml(state.rosterSearchQuery||'')}" placeholder="이름 · 아이디로 찾기"
+            oninput="state.rosterSearchQuery=this.value; render(); const e=document.getElementById('roster-search'); e.focus(); e.setSelectionRange(e.value.length,e.value.length);"></span>
+        ${pill('hw', '과제 미완', hwLeft)}
+        ${pill('wrong', '오답 미제출', wrongLeft)}
+        <span class="rst-cnt">담당 반 <b>${shown.length}</b>명</span>
+      </div>
+    </div>
+
+    <div class="rst-wrap">
+      ${full.length===0
+        ? '<div style="padding:56px 0;text-align:center;color:var(--dim);font-size:12.5px;">아직 담당 반에 배정된 학생이 없습니다.</div>'
+        : shown.length===0
+        ? '<div style="padding:56px 0;text-align:center;color:var(--dim);font-size:12.5px;">해당하는 학생이 없습니다.</div>'
+        : `<table class="grid as-narrow">
+        <thead><tr>
+          <th style="width:236px;">학생</th>
+          <th style="width:64px;">학년</th>
+          <th class="r" style="width:78px;">출석률</th>
+          <th style="width:120px;">최근 8회</th>
+          <th class="r" style="width:72px;">과제</th>
+          <th class="r" style="width:72px;">오답</th>
+          <th style="width:200px;">성적 추이</th>
+          <!-- 폭을 비워 두면 남는 자리를 이 열이 흡수한다. 오른쪽 정렬이라 버튼은 끝에 붙고,
+               비는 것은 «성적 추이와 버튼 사이»가 되어 여백으로 읽힌다.
+               성적 추이에 흡수시키면 스파크라인 옆이 900px 텅 빈다. -->
+          <th class="r"></th>
+        </tr></thead>
+        <tbody>
+        ${shown.map(({s, st})=>`
+          <tr>
+            <td><div class="rst-sig" style="cursor:pointer;" onclick="sdOpen('${s.studentId}')">
+              <span class="av">${escHtml((s.name||'?').slice(0,1))}</span>
+              <span class="nm" style="min-width:0;overflow:hidden;text-overflow:ellipsis;">${escHtml(s.name)}
+                <s>${escHtml(s.studentId)}</s></span></div></td>
+            <td>${escHtml(s.grade||'—')}</td>
+            <td class="r mono ${st.attPct!==null && st.attPct<85 ? 'warn':''}">${st.attPct===null?'—':st.attPct+'%'}</td>
+            <td>${rosterDots(st.att8)}</td>
+            <td class="r mono">${st.hwTotal ? st.hwDone+'/'+st.hwTotal : '—'}</td>
+            <td class="r mono ${st.wrongLeft?'cau':''}">${st.wrongLeft||0}</td>
+            <td>${rosterSpark(st.scores)}</td>
+            <td class="r"><button class="btn sm" onclick="sdOpen('${s.studentId}')">기록 넣기</button></td>
+          </tr>`).join('')}
+        </tbody></table>`}
+    </div>
   </div>`;
 }
 
@@ -5395,8 +5594,8 @@ function teacherHTML(){
   const subs = TEACHER_SUBNAV[section];
   const subActive = s => state.teacherTab===s[1] && (!s[2] || state.classHubTab===s[2]);
   const body = teacherTabBodyHTML();
-  /* 학생 상세(03-student)도 옮겼으므로 예외가 없어졌다.
-     조교용 구버전 학생 화면은 teacherStudentDetailLegacyHTML이 스스로 .legacy를 두른다. */
+  /* 16개가 전부 들어 있어 사실상 항상 참이다. 남겨 두는 것은 «이 장치가 무엇이었는지»를
+     보이기 위해서다 — 구버전 <style> 블록을 지울 때 이 줄도 같이 사라진다. */
   const onDs = TEACHER_TABS_DS.has(state.teacherTab);
 
   return `
@@ -6850,154 +7049,34 @@ function teacherStudentDetailHTML(sid){
   if(isAssistant && s.classId !== state.currentUser.classId){
     // 담당 반이 아닌 학생은 조교가 볼 수 없다.
     state.studentDetailId = null;
-    return assistantHTML();
+    return assistantRosterHTML(state.currentUser);
   }
   const rec = DATA.records[sid];
-  if(rec && !isAssistant) return sdScreenHTML(s, rec);
-  return teacherStudentDetailLegacyHTML(sid, s, isAssistant, rec);
-}
-
-/* 조교는 담당 반 학생만, 그것도 성적·출석·과제·오답만 본다. 권한이 다르므로
-   구버전 탭 화면을 그대로 쓴다 — DS 화면은 삭제·기본정보까지 열어 두기 때문이다. */
-function teacherStudentDetailLegacyHTML(sid, s, isAssistant, rec){
-  const subtabs = isAssistant
-    ? [['grades','성적'],['attendance','출석'],['homework','과제'],['wronghw','오답숙제']]
-    : [['info','기본정보'],['grades','성적'],['attendance','출석'],['homework','과제'],['wronghw','오답숙제'],['clinic','클리닉·질문'],['chat','채팅']];
-  if(isAssistant && !['grades','attendance','homework','wronghw'].includes(state.studentDetailTab)){
-    state.studentDetailTab = 'grades';
-  }
-  let sub = '';
   if(!rec){
-    // "상세보기"는 상태만 바꾸고 render()만 부르지, 그 학생 기록을 실제로 불러오진 않아서
-    // 여기서 직접 불러온 뒤 끝나면 다시 그린다 — 이걸 안 하면 "불러오는 중..."에서 영원히 멈춘다.
+    /* 「상세보기」는 상태만 바꾸고 render()만 부른다 — 그 학생 기록을 실제로 불러오진 않아서
+       여기서 직접 불러온 뒤 끝나면 다시 그린다. 안 하면 «불러오는 중»에서 영원히 멈춘다. */
     loadRecord(sid).then(()=>render());
     return `<div style="padding:56px 0;text-align:center;color:var(--dim);font-size:12.5px;">학생 기록을 불러오는 중입니다…</div>`;
   }
-  if(state.studentDetailTab==='info'){
-    sub = `<div class="inline-form">
-      <div class="lg-field"><label>이름</label><input id="info-sname" value="${escHtml(s.name)}"></div>
-      <div class="lg-field"><label>비밀번호</label><input id="info-spw" placeholder="변경 시에만 입력"></div>
-      <div class="lg-field"><label>학년</label>
-        <select id="info-sgrade">${['고1','고2','고3'].map(g=>`<option ${s.grade===g?'selected':''}>${g}</option>`).join('')}</select>
-      </div>
-      <div class="lg-field"><label>학교</label><input id="info-sschool" value="${escHtml(s.school||'')}" placeholder="학교명 (선택)"></div>
-      <div class="lg-field"><label>학부모 전화번호</label><input id="info-sparentphone" value="${escHtml(s.parentPhone||'')}" placeholder="010-0000-0000 (선택)"></div>
-      <div class="lg-field"><label>학생 전화번호</label><input id="info-sphone" value="${escHtml(s.phone||'')}" placeholder="010-0000-0000 (선택)"></div>
-      <div class="lg-field"><label>반</label><select id="info-sclass">${classOptionsHTML(s.classId)}</select></div>
-      <button class="lg-btn btn-primary" onclick="updateStudentInfo('${sid}')">저장</button>
-    </div>
-    <p class="lg-hint">반을 바꿔도 성적·출석·과제·오답숙제 기록은 그대로 유지됩니다. 학생이 반을 옮길 때는 삭제 후 재등록하지 말고 여기서 반만 바꿔주세요.</p>
-    ${(() => {
-      const personalVideos = DATA.videos.filter(v=>v.studentId===sid);
-      return `<h3 style="margin-top:22px;font-size:14px;">개인 보충 영상</h3>
-      <p class="lg-hint" style="margin-top:-4px;">출석부에서 결석 처리하며 링크를 넣으면 여기 쌓입니다. 이 학생에게만 보여요.</p>
-      ${personalVideos.length===0 ? '<div class="empty">등록된 개인 영상이 없습니다.</div>' :
-        personalVideos.map(v=>`<div class="row-actions" style="margin-bottom:6px;"><span style="font-size:13px;flex:1;">${escHtml(v.title)}</span><button class="lg-btn btn-red btn-small" onclick="deleteVideo('${v.id}')">삭제</button></div>`).join('')}`;
-    })()}
-    <h3 style="margin-top:22px;font-size:14px;">학생 삭제</h3>
-    <p class="lg-hint" style="margin-top:-4px;">성적·출석·과제·오답숙제 기록이 모두 함께 삭제되며 되돌릴 수 없습니다.</p>
-    <button class="lg-btn btn-red" onclick="deleteStudent('${sid}')">이 학생 삭제</button>`;
-  } else if(state.studentDetailTab==='grades'){
-    sub = `<div class="inline-form">
-      <div class="lg-field"><label>시험명</label><input id="score-name" placeholder="예: 3월 모의고사"></div>
-      <div class="lg-field"><label>날짜</label><input id="score-date" type="date"></div>
-      <div class="lg-field"><label>점수</label><input id="score-val" type="number" placeholder="82"></div>
-      <div class="lg-field"><label>만점</label><input id="score-total" type="number" placeholder="100"></div>
-      <button class="lg-btn btn-primary" onclick="addScore()">등록</button>
-    </div>
-    ${renderScoreChart(rec.scores)}
-    ${rec.scores.length===0?'':`
-    <table><tr><th>날짜</th><th>시험명</th><th>점수</th><th></th></tr>
-    ${rec.scores.map((sc,i)=>`<tr><td>${sc.date}</td><td>${sc.name}</td><td>${sc.score}/${sc.total}</td><td><button class="lg-btn btn-red btn-small" onclick="deleteScore('${sid}',${i})">삭제</button></td></tr>`).join('')}
-    </table>`}`;
-  } else if(state.studentDetailTab==='attendance'){
-    sub = `<div class="inline-form">
-      <div class="lg-field"><label>날짜</label><input id="att-date" type="date"></div>
-      <div class="lg-field"><label>상태</label>
-        <select id="att-status">${ATT_STATUSES.map(st=>`<option>${st}</option>`).join('')}</select>
-      </div>
-      <button class="lg-btn btn-primary" onclick="addAttendance()">기록</button>
-    </div>
-    ${rec.attendance.length===0?'<div class="empty">기록이 없습니다.</div>':`
-    <table><tr><th>날짜</th><th>상태</th><th></th></tr>
-    ${rec.attendance.map((a,i)=>`<tr><td>${a.date}</td><td>${attBadge(a.status)}</td><td><button class="lg-btn btn-red btn-small" onclick="deleteAttendance('${sid}',${i})">삭제</button></td></tr>`).join('')}
-    </table>`}`;
-  } else if(state.studentDetailTab==='homework'){
-    const myHw = DATA.assignments.filter(a=>!a.classId || a.classId===s.classId);
-    sub = myHw.length===0 ? '<div class="empty">이 반에 등록된 과제가 없습니다.</div>' : `
-    <table><tr><th>과제명</th><th>마감일</th><th>상태</th><th></th></tr>
-    ${myHw.map(a=>{
-      const done = rec.assignmentsDone[a.id];
-      return `<tr><td>${escHtml(a.title)}</td><td>${a.dueDate||'-'}</td>
-        <td>${done?'<span class="lg-badge badge-ok">완료</span>':'<span class="lg-badge badge-no">미완료</span>'}</td>
-        <td><button class="lg-btn btn-small" onclick="toggleHomeworkDone('${sid}','${a.id}')">${done?'완료 취소':'완료 처리'}</button></td></tr>`;
-    }).join('')}
-    </table>`;
-  } else if(state.studentDetailTab==='wronghw'){
-    sub = rec.wrongHomework.length===0 ? '<div class="empty">배정된 오답 숙제가 없습니다.</div>' : `
-    <table><tr><th>시험</th><th>문항</th><th>상태</th><th>결과</th></tr>
-    ${rec.wrongHomework.map(hw=>{
-      const bank = DATA.problemBank.find(b=>b.id===hw.bankId);
-      const exam = DATA.exams.find(e=>e.id===hw.examId);
-      const correct = hw.done && bank && (hw.studentAnswer||'').trim()===bank.variantAnswer.trim();
-      return `<tr><td>${exam?escHtml(exam.title):'(삭제된 시험지)'}</td><td>${hw.questionNo}번</td>
-        <td>${hw.done?'<span class="lg-badge badge-ok">제출완료</span>':'<span class="lg-badge badge-no">미제출</span>'}</td>
-        <td>${hw.done?`<span class="lg-badge ${correct?'badge-ok':'badge-no'}">${correct?'정답':'오답'}</span>`:'-'}</td></tr>`;
-    }).join('')}
-    </table>`;
-  } else if(state.studentDetailTab==='clinic'){
-    const myClinics = DATA.clinics.filter(c=>c.studentId===sid);
-    const myQnas = DATA.qnas.filter(q=>q.studentId===sid);
-    sub = `
-    <h4 style="font-size:13px;margin:0 0 10px;">클리닉 신청 내역</h4>
-    ${myClinics.length===0?'<div class="empty">신청 내역이 없습니다.</div>':`
-    <table><tr><th>날짜</th><th>시간</th><th>내용</th><th>상태</th></tr>
-    ${myClinics.map(c=>`<tr><td>${c.day}</td><td>${escHtml(c.time||'-')}</td><td>${escHtml(c.topic)}</td><td><span class="status-pill status-${c.status}">${c.status}</span></td></tr>`).join('')}
-    </table>`}
-    <h4 style="font-size:13px;margin:22px 0 10px;">질의응답 내역</h4>
-    ${myQnas.length===0?'<div class="empty">등록한 질문이 없습니다.</div>':
-    myQnas.map(q=>`<div class="qna-card">
-      <div class="lg-mono" style="font-size:11px;color:var(--ink-soft);">${q.date}</div>
-      <b>Q. ${escHtml(q.question)}</b>
-      ${q.answer
-        ? `<div style="margin-top:8px;padding-top:8px;border-top:1px dashed var(--card-border);"><span class="lg-badge badge-ok">답변 완료</span><div style="margin-top:6px;">${escHtml(q.answer)}</div></div>`
-        : '<div style="margin-top:8px;"><span class="lg-badge badge-no">답변 대기</span></div>'}
-    </div>`).join('')}`;
-  } else if(state.studentDetailTab==='chat'){
-    state.teacherSelectedStudent = sid;
-    let chat = [];
-    if(DATA.chats[sid]) chat = DATA.chats[sid];
-    else loadChat(sid).then(()=>render());
-    sub = `
-    <div class="chat-window" id="chat-win">
-      ${chat.length===0?'<div class="empty">대화 내역이 없습니다.</div>':
-      chat.map(m=>`<div class="chat-bubble from-${m.from}">${escHtml(m.text)}<span class="chat-time">${m.at}</span></div>`).join('')}
-    </div>
-    <div class="chat-input-row">
-      <input id="chat-input-teacher" placeholder="메시지 입력" onkeydown="if(event.key==='Enter') sendChatMessage('${sid}','teacher')">
-      <button class="lg-btn btn-primary" onclick="sendChatMessage('${sid}','teacher')">전송</button>
-    </div>`;
-  }
-  const isLedgerTab = ['grades','attendance','homework','wronghw'].includes(state.studentDetailTab);
-  /* 스스로 .legacy를 두른다 — 부르는 쪽(DS 화면)에는 더 이상 래퍼가 없다.
-     이미 .legacy 안이면 중첩되지만 해가 없다. */
-  return `<div class="legacy">
-  <div class="lg-panel${isLedgerTab?' ledger':''}">
-    <div class="student-detail-header">
-      <h3 style="margin:0;">${s.name} (${s.studentId}) · ${classNameOf(s.classId)}</h3>
-      <button class="lg-btn btn-small" onclick="state.studentDetailId=null; render()">← 목록으로</button>
-    </div>
-    <div class="subtab-bar">
-      ${subtabs.map(t=>`<button class="subtab-btn ${state.studentDetailTab===t[0]?'active':''}" onclick="state.studentDetailTab='${t[0]}'; render()">${t[1]}</button>`).join('')}
-    </div>
-    ${sub}
-  </div></div>`;
+  /* **강사와 조교가 같은 화면을 쓴다.** 다른 것은 권한뿐이라 인자 하나로 좁힌다 —
+     화면을 두 벌로 두면 앞으로 모든 변경을 두 번 해야 하고 반드시 한쪽만 고쳐진다. */
+  return sdScreenHTML(s, rec, isAssistant);
 }
 
+/* teacherStudentDetailLegacyHTML(구버전 탭 7개 화면)은 지웠다.
+   조교가 이 화면을 쓰던 유일한 이유는 «DS 화면이 삭제·기본정보까지 열어 두기 때문»이었는데,
+   그건 화면의 문제가 아니라 권한의 문제였다. sdScreenHTML이 isAssistant를 받으면서
+   화면 한 벌로 둘 다 감당한다 — 두 벌로 두면 앞으로 모든 변경을 두 번 해야 했다. */
+
 /* ── DS 화면 ── */
-function sdScreenHTML(s, rec){
+/* isAssistant면 «못 하는 것»이 빠진다. 화면을 새로 만드는 것이 아니라 좁히는 것이다.
+     빠지는 것 — 우측 칸 통째로(연락처·기본정보·삭제·채팅·클리닉·수업 화면) ·
+                 신호 «해제»(규칙을 다루는 것은 강사의 판단) · 「질문·클리닉」 갈래 */
+function sdScreenHTML(s, rec, isAssistant){
   const sid = s.studentId;
-  const mode = state.studentDetailTab==='chat' || state.studentDetailTab==='info' ? state.studentDetailTab : 'timeline';
+  /* 조교는 채팅·기본정보로 갈 문이 없다. 예전 세션이 그 값을 들고 있어도 연대기로 떨어뜨린다. */
+  const mode = !isAssistant && (state.studentDetailTab==='chat' || state.studentDetailTab==='info')
+    ? state.studentDetailTab : 'timeline';
   const st = rosterStats(s);
   const sg = signalOf(st);
   const prog = st.prog;
@@ -7046,9 +7125,10 @@ function sdScreenHTML(s, rec){
   ${sg ? `<div class="sd-sig ${sg.grade}">
     <span class="badge ${SIGNAL_GRADE[sg.grade].badge}">${SIGNAL_GRADE[sg.grade].label}</span>
     <div class="x">${sg.rules.map(r=>r.why).join(' · ')}</div>
-    ${signalMutedUntil(sid)
+    ${/* 상태를 아는 것은 조교에게도 필요하지만, 신호를 «지우는» 것은 강사의 판단이다 */
+      isAssistant ? '' : (signalMutedUntil(sid)
       ? `<button class="btn sm" onclick="unmuteSignal('${sid}')">신호 다시 보기</button>`
-      : `<button class="btn q sm" onclick="muteSignal('${sid}',7)">7일 해제</button>`}
+      : `<button class="btn q sm" onclick="muteSignal('${sid}',7)">7일 해제</button>`)}
   </div>` : ''}`;
 
   const ctx = `<aside class="sd-ctx">
@@ -7083,17 +7163,30 @@ function sdScreenHTML(s, rec){
   let center;
   if(mode==='chat')      center = sdChatHTML(sid);
   else if(mode==='info') center = sdInfoHTML(s, sid);
-  else                   center = sdTimelineHTML(s, sid, rec);
+  else                   center = sdTimelineHTML(s, sid, rec, isAssistant);
+
+  /* 조교에게 우측 칸은 통째로 없다. 연락처는 개인정보고 «빠른 작업»은 전부 강사의 것이라
+     남겨 두면 빈 칸이 된다. 그래서 3열이 아니라 2열이다. */
+  const lock = !isAssistant ? '' : `<div class="note pin" style="margin-top:12px;flex-shrink:0;
+      display:flex;align-items:center;gap:9px;">${iconSvg('shield',15)}
+      <div><b style="color:var(--ink);">여기서 할 수 없는 것</b> — 기본정보 수정 · 반 이동 ·
+      학생 삭제 · 채팅 · 클리닉 승인. 강사에게 요청해 주세요.</div></div>`;
 
   return `<div class="sd-screen">${list}
-    <main class="sd-doc">${head}${center}</main>
-    ${ctx}
+    <main class="sd-doc">${head}${center}${lock}</main>
+    ${isAssistant ? '' : ctx}
   </div>`;
 }
 
-function sdTimelineHTML(s, sid, rec){
-  const f = state.sdFilter || 'all';
-  const all = studentTimeline(s, rec);
+function sdTimelineHTML(s, sid, rec, isAssistant){
+  /* 조교에게는 「질문·클리닉」 갈래가 없다 — 답하는 것도 승인하는 것도 강사의 일이다.
+     예전 세션이 그 갈래를 들고 있으면 전체로 떨어뜨린다. */
+  const filters = isAssistant ? SD_FILTERS.filter(x=>x[0]!=='qna') : SD_FILTERS;
+  let f = state.sdFilter || 'all';
+  if(!filters.some(x=>x[0]===f)) f = 'all';
+  /* 갈래를 뺐으면 연대기에서도 빼야 한다. 「전체」에만 남겨 두면 갈래 합(24)과
+     전체(27)가 어긋나고, 숫자가 안 맞는 화면은 그 순간부터 아무도 안 믿는다. */
+  const all = studentTimeline(s, rec).filter(e=>!isAssistant || e.kind!=='qna');
   const ev = f==='all' ? all : all.filter(e=>e.kind===f);
 
   /* 갈래를 고르면 그 갈래의 입력 폼이 붙는다. 예전 탭에만 있던 입력을 여기서 되살린다. */
@@ -7125,7 +7218,7 @@ function sdTimelineHTML(s, sid, rec){
 
   return `
   <div class="sd-tf">
-    ${SD_FILTERS.map(x=>`<a class="pill ${f===x[0]?'on':''}" onclick="sdFilter('${x[0]}')">${x[1]}${
+    ${filters.map(x=>`<a class="pill ${f===x[0]?'on':''}" onclick="sdFilter('${x[0]}')">${x[1]}${
       x[0]==='all' ? ` <b>${all.length}</b>` : ` <b>${all.filter(e=>e.kind===x[0]).length}</b>`}</a>`).join('')}
     <span class="r">최근 순</span>
   </div>
