@@ -564,6 +564,104 @@
 .app .actbar{position:fixed;z-index:6;flex-wrap:wrap;}
 /* 고정된 액션바가 마지막 행을 가리지 않게, 스크롤 영역 «안»에 여백을 둔다. */
 .app .rst-pad{height:64px;flex-shrink:0;}
+
+/* ============================================================
+   학생 마이페이지 (design-v1/20-student-app) — 접두사 sap-
+   목업은 390×812 «폰 액자»(.ph/.ph-body/.ph-tabs) 안에 그려져 있다.
+   실서비스는 진짜 폰이므로 액자를 벗기고 그 자리에 뷰포트를 넣는다.
+   데스크톱에서 열면 한 칸짜리 열이 가운데로 모인다 — 시안이 못박아 둔 대로다.
+   ds.css의 모바일 부품(.mc/.mrow/.msec/.mbtn/.todo/.cal/.bar/.bub-row)은
+   여기서 다시 정의하지 않는다. 이 블록에 있는 것은 «셸»뿐이다.
+   ============================================================ */
+.app.sap{max-width:480px;margin:0 auto;min-height:100vh;position:relative;
+  background:var(--paper);box-shadow:0 0 0 1px var(--line);}
+@media (max-width:520px){ .app.sap{box-shadow:none;} }
+/* 상단바·서브내비는 ds.css 것을 그대로 쓴다. 학생이라고 다른 상단바를 만들지 않는다. */
+.app.sap .topbar{padding:0 16px;gap:10px;}
+.app.sap .topbar .bm{font-size:13px;}
+.app.sap .subnav{padding:0 6px;}
+.app.sap .subnav a{padding:0 11px;font-size:12.5px;}
+/* 하단 탭바가 마지막 줄을 가리지 않도록 본문 아래에 그만큼 비워 둔다. */
+.app.sap .body{padding:16px 16px 78px;}
+
+/* 하단 탭 — 엄지가 닿는 자리. 뷰포트에 고정하되 폭은 앱 열에 맞춘다.
+   ds.css의 .ph-tabs는 폰 액자 «안»의 것이라 position이 다르다. */
+.sap-tabs{position:fixed;bottom:0;left:50%;transform:translateX(-50%);
+  width:100%;max-width:480px;height:58px;display:flex;z-index:7;
+  background:var(--card);border-top:1px solid var(--line);}
+.sap-tabs a{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+  text-decoration:none;color:var(--dim);font-size:10.5px;cursor:pointer;
+  transition:color var(--t);}
+.sap-tabs a.on{color:var(--accent);font-weight:700;}
+
+/* 알림 벨 — 구버전 .notif-* 는 .legacy 안에서만 산다. DS 셸에서는 스타일이 없다. */
+.sap-bell{position:relative;display:flex;}
+.sap-bell>button{width:32px;height:32px;border:0;background:transparent;color:var(--sub);
+  border-radius:var(--r-md);cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.sap-bell>button:hover{background:var(--hover);}
+.sap-bell .n{position:absolute;top:1px;right:0;min-width:15px;height:15px;padding:0 3px;
+  border-radius:8px;background:var(--no);color:#fff;font-family:'JetBrains Mono',monospace;
+  font-size:9.5px;font-weight:700;display:flex;align-items:center;justify-content:center;}
+.sap-drop{position:absolute;top:38px;right:0;width:210px;z-index:9;
+  background:var(--card);border:1px solid var(--line);border-radius:var(--r-lg);
+  box-shadow:0 8px 24px rgba(0,0,0,.1);overflow:hidden;}
+.sap-drop .it{display:flex;align-items:center;gap:8px;padding:11px 14px;font-size:12.5px;cursor:pointer;}
+.sap-drop .it+.it{border-top:1px solid var(--line2);}
+.sap-drop .it:hover{background:var(--hover);}
+.sap-drop .it b{margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--no);}
+.sap-drop .em{padding:14px;font-size:12px;color:var(--dim);text-align:center;}
+
+/* 화면 머리 — 「누구의 화면인가」. serif는 학생 이름에만 쓴다 (시스템 규칙) */
+.sap-hi b{display:block;font-family:'Noto Serif KR',serif;font-size:21px;font-weight:600;
+  letter-spacing:-.02em;}
+.sap-hi span{display:block;font-size:12.5px;color:var(--dim);margin-top:5px;}
+
+/* 화면 안내문 — 「여기서 무엇을 하는가」 한 줄 */
+.sap-lede{font-size:12px;color:var(--sub);line-height:1.7;margin:0 0 14px;}
+
+/* 입력 — .cls-form은 데스크톱 밀도(12.5px)라 엄지로 쓰기엔 작다 */
+.sap-in{width:100%;border:1px solid var(--line);border-radius:var(--r-md);background:var(--card);
+  padding:12px 13px;font-family:inherit;font-size:14px;color:var(--ink);outline:none;resize:vertical;}
+.sap-in:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(60,48,52,.12);}
+.sap-in::placeholder{color:var(--dim);}
+.sap-lab{font-size:11.5px;font-weight:700;color:var(--dim);letter-spacing:.04em;margin-bottom:6px;}
+.sap-row2{display:flex;gap:9px;}
+.sap-row2>*{flex:1;min-width:0;}
+
+/* 보기 버튼 ①~⑤ — 구버전 .mc-choice-*는 .legacy 안이라 여기서 다시 만든다.
+   selectChoice()가 부모의 .mc-choice-btn을 찾으므로 클래스 이름은 그대로 쓴다. */
+.sap .mc-choice-group{display:flex;gap:8px;}
+.sap .mc-choice-btn{flex:1;height:46px;border:1px solid var(--line);background:var(--card);
+  border-radius:var(--r-md);font-family:inherit;font-size:17px;color:var(--sub);cursor:pointer;
+  transition:all var(--t);}
+.sap .mc-choice-btn.active{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:700;}
+
+/* 문제 본문 — 수식이 섞이므로 줄 간격을 넉넉히 */
+.sap-q{font-size:15px;line-height:1.85;white-space:pre-wrap;}
+
+/* 스크롤 상자에는 반드시 position:relative를 같이 준다 (KaTeX .katex-mathml 때문).
+   시험지 화면에서 문서가 3736px 늘어났던 사고와 같은 것이다. */
+.sap-chat{position:relative;height:calc(100vh - 250px);min-height:280px;overflow-y:auto;
+  padding:2px;margin-bottom:12px;}
+
+/* 오답숙제·성적처럼 «수치를 세는» 곳의 작은 진행 표시 */
+.sap-prog{display:flex;align-items:center;gap:10px;margin-top:11px;}
+.sap-prog .bar{flex:1;}
+.sap-prog b{font-family:'JetBrains Mono',monospace;font-size:12px;}
+
+/* 달 넘김 같은 «작은 화살표»도 엄지로 누른다. ds.css의 .btn.icon(32px)은 마우스 치수다. */
+.sap-navbtn{width:44px;height:44px;border:1px solid var(--line);background:var(--sunk);
+  border-radius:var(--r-md);color:var(--sub);cursor:pointer;
+  display:flex;align-items:center;justify-content:center;}
+.sap-navbtn:hover{background:var(--hover);color:var(--ink);}
+
+.sap-empty{padding:36px 0;text-align:center;font-size:12.5px;color:var(--dim);line-height:1.8;}
+.sap-img{max-width:100%;border:1px solid var(--line);border-radius:var(--r-md);display:block;margin-top:10px;}
+
+/* 강의 임베드 — 구버전 .video-embed-wrap은 .legacy 안이라 비율 상자를 여기 다시 만든다 */
+.sap-vwrap{position:relative;width:100%;aspect-ratio:16/9;border-radius:var(--r-md);
+  overflow:hidden;background:#000;margin-top:11px;}
+.sap-vwrap iframe{position:absolute;inset:0;width:100%;height:100%;border:0;}
 </style>
 
 <style>
@@ -1207,6 +1305,11 @@ function ymdLocal(d){
   return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
 }
 function todayStr(){ return ymdLocal(new Date()); }
+/* 'YYYY-MM-DD HH:MM' — 로컬 기준. 채팅처럼 «분»까지 남기는 곳이 쓴다. */
+function nowStamp(){
+  const d = new Date();
+  return ymdLocal(d) + ' ' + String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+}
 async function getAIQuotaUsed(){
   const q = await dbGet('ai-quota', { date: todayStr(), count: 0 });
   if(q.date !== todayStr()) return 0;
@@ -1455,6 +1558,14 @@ let state = {
   sessionNotes: {},        // 반id -> {날짜: 메모}
   sessionNoteLoading: {},
   sessionNoteDraft: null,  // {key, text} — 단계를 옮겨도 쓰던 글이 날아가지 않게
+  /* 학생 마이페이지(20-student-app) — 11개 화면이 4개 탭 안에 들어간다.
+     state.studentTab은 «화면 id»를 그대로 들고, 탭은 STUDENT_TAB_SECTION이 되찾아 준다. */
+  stuQuizId: null,        // 크게 펼쳐 푸는 회차. 없으면 가장 최근 미제출
+  stuWrongMode: false,    // 「틀린 문제 등록」 패널이 열려 있나
+  stuVideoId: null,       // iframe을 실제로 붙일 영상 하나. 목록 전체를 임베드하지 않는다
+  stuAttMonth: '',        // 출석 달력이 보고 있는 달 'YYYY-MM'. 빈 값이면 이번 달
+  stuClinicSlotId: null,  // 신청하려고 고른 시간대
+  stuQnaWriting: false,   // 질문 폼이 열려 있나
   auditLogSearchQuery: '',
   toast: ''
 };
@@ -2144,7 +2255,10 @@ async function submitClinicRequest(freeform){
       showToast('그 시간은 이미 찼습니다. 다른 시간을 적어 주세요.'); return;
     }
   } else {
-    slotId = document.getElementById('clinic-slot').value;
+    /* 예전에는 드롭다운 하나(#clinic-slot)였다. 학생 화면이 시간대를 «목록에서 눌러» 고르게 되면서
+       고른 값은 state가 들고 있다 — 빈 자리를 먼저 보여주고 고르게 하는 편이,
+       날짜를 적어 내고 거절되면 처음부터 다시 하는 것보다 낫다. */
+    slotId = state.stuClinicSlotId || '';
     if(!slotId){ showToast('희망 시간대를 선택해주세요.'); return; }
     const slot = DATA.clinicSlots.find(s=>s.id===slotId);
     if(!slot){ showToast('선택한 시간대를 찾을 수 없습니다. 다시 선택해주세요.'); render(); return; }
@@ -2157,10 +2271,9 @@ async function submitClinicRequest(freeform){
                   day, time, status:'대기', requestedAt:todayStr()};
   DATA.clinics.unshift(clinic);
   await dbSetDoc('clinics', clinic.id, clinic);
-  document.getElementById('clinic-topic').value='';
-  if(freeform){ document.getElementById('clinic-free-time').value=''; }
+  state.stuClinicSlotId = null;
   showToast(freeform ? '희망 시간을 제안했습니다. 선생님 승인 후 확정됩니다.' : '클리닉 신청이 접수되었습니다.');
-  render();
+  render();   // 입력칸은 지우지 않고 다시 그린다 — 전체 재렌더링이라 어차피 새 칸이 온다
 }
 
 /* 교사가 학생을 직접 앉힌다. 슬롯을 고르면 그 슬롯에 배정되고(정원에 반영된다),
@@ -2358,7 +2471,10 @@ async function sendChatMessage(sid, from){
   const text = el.value.trim();
   if(!text) return;
   const chat = await loadChat(sid);
-  chat.push({from, text, at:new Date().toISOString().slice(0,16).replace('T',' ')});
+  /* ⚠ toISOString()은 UTC다 — KST에서 보낸 말이 9시간 전으로 찍혔다. todayStr()을 로컬로
+     고칠 때 놓친 곳이다. 학생 화면이 시각을 말풍선 옆에 크게 띄우면서 드러났다.
+     이미 저장된 메시지의 시각은 그대로 둔다 — 어느 쪽 기준으로 찍힌 것인지 알 수 없다. */
+  chat.push({from, text, at: nowStamp()});
   await saveChat(sid);
   el.value='';
   render();
@@ -2376,28 +2492,10 @@ function extractYouTubeId(url){
   for(const p of patterns){ const m = url.match(p); if(m) return m[1]; }
   return null;
 }
-// 유튜브 iframe에 sandbox를 걸어서(allow-popups/allow-top-navigation 없음) 제목표시줄/로고를
-// 눌러도 유튜브로 이동하지 못하게 막는다. enablejsapi=1을 켜서 시청 진도율 추적에도 쓴다.
-function videoEmbedHTML(v, forStudent){
-  const vid = extractYouTubeId(v.url);
-  const iframeId = 'yt-frame-' + v.id;
-  let player;
-  if(vid){
-    const src = 'https://www.youtube-nocookie.com/embed/' + vid +
-      '?enablejsapi=1&modestbranding=1&rel=0&iv_load_policy=3&origin=' + encodeURIComponent(location.origin);
-    player = `<div class="video-embed-wrap"><iframe id="${iframeId}" class="yt-tracked-frame" data-bank-vid="${v.id}" src="${src}" title="${escHtml(v.title)}"
-      sandbox="allow-scripts allow-same-origin allow-presentation allow-forms"
-      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></div>`;
-  } else {
-    player = `<div class="video-embed-warn">유튜브 링크 형식을 인식하지 못했습니다. youtube.com 또는 youtu.be 링크인지 확인해주세요.</div>`;
-  }
-  return `<div class="video-embed-card">
-    <div class="vtitle">${escHtml(v.title)}</div>
-    <div class="vunit lg-mono">${escHtml(v.unit||'')} · ${quizClassLabel(v.classId)}</div>
-    ${player}
-    ${forStudent && vid ? `<div id="vprog-${v.id}">${videoProgressBlockHTML(forStudent, v.id)}</div>` : ''}
-  </div>`;
-}
+/* videoEmbedHTML(카드 + iframe + 진도 한 벌)은 지웠다 — 학생 강의 화면(stuVideoHTML)이
+   목록 카드를 이미 그리고, 거기서 «누른 하나»에만 iframe을 붙인다.
+   유튜브 iframe에 sandbox를 거는 것(allow-popups/allow-top-navigation 없음)과
+   enablejsapi=1로 시청 진도율을 추적하는 것은 그 함수로 그대로 옮겼다. */
 /* ---------- 유튜브 시청 진도율 추적 ---------- */
 // render()가 app.innerHTML을 통째로 새로 그리기 때문에, 재생 중 다른 이유로 render()가
 // 다시 호출되면 iframe이 새로 만들어지면서 재생 위치가 초기화된다. 진도율 저장 자체는
@@ -2436,21 +2534,20 @@ async function noteVideoWatchTime(studentId, videoId, addSeconds, duration, ende
   const label = document.getElementById('vprog-'+videoId);
   if(label) label.innerHTML = videoProgressBlockHTML(studentId, videoId);
 }
-function videoProgressGaugeHTML(percent, completed){
-  const pct = Math.max(0, Math.min(100, percent||0));
-  const milestone = completed || pct>=100 ? '🎉' : pct>=75 ? '⭐' : pct>=50 ? '🔥' : pct>=25 ? '🌿' : '🌱';
-  return `<div class="video-gauge">
-    <span class="video-gauge-emoji">${milestone}</span>
-    <div class="video-gauge-bar"><div class="video-gauge-fill" style="width:${pct}%;"></div></div>
-    <span class="video-gauge-pct lg-mono">${pct}%</span>
-  </div>`;
-}
+/* 재생 중에 이 자리만 다시 그린다 (render()를 부르면 iframe이 새로 생겨 재생이 끊긴다).
+   그래서 여기서 나오는 것은 DS 조각이어야 한다 — 구버전 .video-gauge는 .legacy 안에서만 산다.
+   이모지 마일스톤(🌱🌿🔥⭐🎉)은 뺐다. 이 시스템은 이모지를 아이콘으로 쓰지 않는다. */
 function videoProgressBlockHTML(studentId, videoId){
   const rec = DATA.records[studentId];
   const p = rec && rec.videoProgress && rec.videoProgress[videoId];
-  if(!p) return '<div class="lg-hint" style="margin-top:6px;">아직 시청 기록이 없습니다.</div>';
-  const caption = (p.completed ? '시청 완료' : '시청 중') + ' · 최근 시청 ' + (p.updatedAt||'').slice(0,10);
-  return videoProgressGaugeHTML(p.percent, p.completed) + `<div class="lg-mono" style="font-size:11px;color:var(--ink-soft);margin-top:2px;">${caption}</div>`;
+  if(!p) return '<div style="font-size:11.5px;color:var(--dim);margin-top:10px;">아직 시청 기록이 없습니다.</div>';
+  const pct = Math.max(0, Math.min(100, p.percent||0));
+  return `<div class="sap-prog">
+      <span class="bar"><i style="width:${pct}%"></i></span>
+      <b style="color:${p.completed?'var(--ok)':'var(--dim)'};">${p.completed?'완료':pct+'%'}</b>
+    </div>
+    <div style="font-size:11px;color:var(--dim);margin-top:6px;">${
+      p.completed ? '시청 완료' : '시청 중'} · 최근 <span class="mono">${(p.updatedAt||'').slice(0,10)}</span></div>`;
 }
 // 재생 중이던 구간의 벽시계 경과 시간을 정산해서 누적한다(멈춤/종료/화면전환 시 남은 조각까지 반영).
 function flushWatchTick(entry, studentId, videoId, player, ended){
@@ -2471,7 +2568,18 @@ function mountVideoTrackers(studentId){
     if(!state.ytPlayers) state.ytPlayers = {};
     frames.forEach(frame => {
       const videoId = frame.dataset.bankVid;
-      if(state.ytPlayers[videoId]) return; // 이미 이 화면에서 연결됨
+      const prev = state.ytPlayers[videoId];
+      if(prev && prev.el === frame) return;   // 같은 iframe에 이미 붙어 있다
+      /* ⚠ render()가 app.innerHTML을 통째로 갈면 예전 iframe은 사라지는데,
+         여기 남아 있는 플레이어는 그 죽은 iframe을 가리킨다. 예전에는 «id가 있으면 건너뛴다»라
+         새 iframe에 다시 붙지 못했다 — 화면을 한 번 다시 그린 뒤부터 시청 시간이 조용히
+         기록되지 않았다. 학생 화면이 영상을 하나씩 열고 닫게 되면서 매번 걸리는 길이 됐다. */
+      if(prev){
+        if(prev.timer) clearInterval(prev.timer);
+        flushWatchTick(prev, studentId, videoId, prev.player, false);
+        try{ prev.player.destroy(); }catch(err){}
+        delete state.ytPlayers[videoId];
+      }
       let player;
       try{
         player = new YT.Player(frame.id, {
@@ -2499,7 +2607,7 @@ function mountVideoTrackers(studentId){
           }
         });
       }catch(err){ return; }
-      state.ytPlayers[videoId] = { player, timer: null };
+      state.ytPlayers[videoId] = { player, timer: null, el: frame };
     });
   });
 }
@@ -2814,29 +2922,10 @@ function findBankEntry(examId, no){
 
 /* =================== 학생 오답 제출 =================== */
 // 시험 선택 + 틀린 문항 체크 + 제출 위젯. "오답숙제" 탭과 홈 화면의 "빠른 변형 문제 요청" 카드에서 공용으로 쓴다.
-function wrongSubmitWidgetHTML(myExams){
-  const selectedExam = myExams.find(e=>e.id===state.wrongExamId);
-  if(myExams.length===0) return '<div class="empty">우리 반에 등록된 시험지가 없습니다.</div>';
-  return `
-    <div class="lg-field" style="max-width:320px;">
-      <label>시험 선택</label>
-      <select onchange="state.wrongExamId=this.value; state.wrongChecked={}; render()">
-        <option value="">-- 선택 --</option>
-        ${myExams.map(e=>`<option value="${e.id}" ${state.wrongExamId===e.id?'selected':''}>${escHtml(e.title)} (${e.date||'-'})</option>`).join('')}
-      </select>
-    </div>
-    ${selectedExam ? `
-    <p class="lg-hint">틀린 문제 번호를 모두 선택해주세요.</p>
-    <div class="wrong-check-grid">
-      ${selectedExam.questions.map(q=>`
-        <label class="wrong-check-item ${state.wrongChecked[q.no]?'checked':''}" onclick="event.preventDefault(); toggleWrongCheck(${q.no})">
-          <input type="checkbox" ${state.wrongChecked[q.no]?'checked':''}>${q.no}번
-        </label>`).join('')}
-    </div>
-    <button class="lg-btn btn-primary" onclick="submitWrongAnswers()">제출하기</button>
-    ` : ''}
-  `;
-}
+/* wrongSubmitWidgetHTML(시험 선택 + 번호 체크 그리드)은 지웠다.
+   예전에는 «홈»과 «오답숙제» 두 화면에 같은 것이 동시에 그려져 있었다 —
+   state.wrongExamId·wrongChecked를 공유하니 한쪽에서 고른 것이 다른 쪽에 비쳤다.
+   지금은 오답숙제의 「틀린 문제 등록」 하나뿐이다 (stuWrongHTML). */
 function toggleWrongCheck(no){
   state.wrongChecked[no] = !state.wrongChecked[no];
   render();
@@ -2972,13 +3061,20 @@ const ICON_PATHS = {
   phone: '<path d="M5 4h3l1.5 4L8 9.5a11 11 0 0 0 6.5 6.5L16 15l4 1.5v3a2 2 0 0 1-2.2 2A16 16 0 0 1 3 5.2 2 2 0 0 1 5 3z"/>',
   checkCircle: '<circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9.5"/>',
   circle: '<circle cx="12" cy="12" r="9"/>',
-  // 아래 3종은 새 디자인(ds.js)에서 가져왔다. 같은 선 굵기·같은 24 그리드다.
+  // 아래는 새 디자인(ds.js)에서 가져왔다. 같은 선 굵기·같은 24 그리드다.
   filter: '<path d="M3.5 5.5h17l-6.5 7.5V20l-4-2.5v-4.5z"/>',
   download: '<path d="M12 4v10M7.5 10l4.5 4 4.5-4M4.5 19.5h15"/>',
   plus: '<path d="M12 5v14M5 12h14"/>',
   chevL: '<path d="M15 5l-7 7 7 7"/>',
   chevR: '<path d="M9 5l7 7-7 7"/>',
-  arrowR: '<path d="M4 12h15M13 6l6 6-6 6"/>'
+  arrowR: '<path d="M4 12h15M13 6l6 6-6 6"/>',
+  // 학생 마이페이지(20-student-app)가 쓰는 것들. 역시 ds.js에서 가져왔다.
+  chat: '<path d="M20.5 12.5c0 4.1-3.8 7.5-8.5 7.5a9.8 9.8 0 01-3-.45L4 21l1.3-3.4A7 7 0 013.5 12.5C3.5 8.4 7.3 5 12 5s8.5 3.4 8.5 7.5z"/>',
+  check: '<path d="M4 12.5l5.5 5.5L20 6.5"/>',
+  clipboard: '<path d="M9 4.5H7a2 2 0 00-2 2v11a2 2 0 002 2h10a2 2 0 002-2v-11a2 2 0 00-2-2h-2"/><rect x="9" y="2.8" width="6" height="3.4" rx="1.2"/><path d="M8.5 11h7M8.5 14.5h4.5"/>',
+  sparkle: '<path d="M12 3.5l1.9 4.9 4.9 1.9-4.9 1.9-1.9 4.9-1.9-4.9-4.9-1.9 4.9-1.9z"/><path d="M18.5 16.5l.7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7z"/>',
+  pencil: '<path d="M16.5 4.5l3 3L8 19H5v-3z"/><path d="M14.5 6.5l3 3"/>',
+  play: '<circle cx="12" cy="12" r="8.5"/><path d="M10.2 8.6l5.4 3.4-5.4 3.4z"/>'
 };
 function iconSvg(name, size){
   size = size || 17;
@@ -3535,16 +3631,9 @@ async function deleteAssistant(aid){
 
 /* =================== SVG 성적 그래프 =================== */
 // 홈 화면의 "이달의 진도 성취도" 원형 그래프.
-function progressRingSVG(percent){
-  const size=120, stroke=10, r=(size-stroke)/2, c=2*Math.PI*r;
-  const pct = Math.max(0, Math.min(100, percent));
-  const offset = c * (1 - pct/100);
-  return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
-    <circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="#EDEBE3" stroke-width="${stroke}"/>
-    <circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="var(--red-pen)" stroke-width="${stroke}" stroke-linecap="round" stroke-dasharray="${c}" stroke-dashoffset="${offset}" transform="rotate(-90 ${size/2} ${size/2})"/>
-    <text x="50%" y="50%" text-anchor="middle" dominant-baseline="central" font-size="22" font-weight="700" fill="var(--ink)" font-family="'JetBrains Mono',monospace">${Math.round(pct)}%</text>
-  </svg>`;
-}
+/* progressRingSVG(반 진도 도넛)은 지웠다 — 학생 홈에만 있던 것이고,
+   진도는 제 화면(학습 > 진도·과제)에서 바(.bar)와 단원 목록으로 말한다.
+   같은 값을 두 곳에서 다른 모양으로 말할 이유가 없다. */
 function renderScoreChart(scores){
   if(!scores || scores.length===0) return '<div class="empty">등록된 성적이 없습니다.</div>';
   const w=560,h=180,pad=30;
@@ -3575,7 +3664,7 @@ function renderScoreChart(scores){
 /* 새 디자인 시스템(ds.css)으로 옮긴 화면 목록.
    여기 들어간 화면만 구버전 스타일(.legacy)을 벗는다. 화면을 하나 옮길 때마다 여기에 더한다.
    전부 옮기고 나면 이 집합과 <style> 블록, body의 .legacy를 통째로 지운다. */
-const MIGRATED_VIEWS = new Set(['teacher']);
+const MIGRATED_VIEWS = new Set(['teacher', 'student']);
 let lastSyncedHash = null;
 function syncHistory(){
   const newHash = buildHashFromState();
@@ -3613,6 +3702,9 @@ function render(){
   if(state.view==='student' && state.studentTab==='video' && state.currentUser){
     mountVideoTrackers(state.currentUser.studentId);
   }
+  /* 채팅은 «마지막 말»이 있는 곳에서 열려야 한다. 전체 재렌더링이라 매번 위로 되돌아간다. */
+  const chatBox = app.querySelector('.sap-chat, .ch-win');
+  if(chatBox) chatBox.scrollTop = chatBox.scrollHeight;
   syncHistory();
 }
 
@@ -3822,281 +3914,887 @@ function loginHTML(){
   </div>`;
 }
 
-/* ---------- 학생 대시보드 ---------- */
-function studentHTML(){
+/* =================== 학생 마이페이지 (design-v1/20-student-app) ===================
+   **탭 11개를 4개로 묶었다. 기능은 하나도 빼지 않았다.**
+   예전에는 홈·데일리퀴즈·진도/과제·오답숙제·강의시청·성적·출석·공지사항·질의응답·
+   클리닉 신청·채팅 열한 개가 평평하게 나열돼 있었다. 데스크톱에서는 되지만
+   하단 탭바에 들어가는 것은 4~5개가 한계고, 열한 개를 가로로 밀게 하면 뒤쪽은 아무도 안 누른다.
+
+   묶는 기준은 «학생이 지금 뭘 하려는가»다.
+     홈   — 오늘 뭐 해야 하지
+     학습 — 손을 쓰는 화면 (제출·입력·시청)
+     기록 — 읽기만 하는 화면
+     소통 — 선생님과 닿는 경로
+
+   **탭 id는 예전 이름을 그대로 쓴다.** state.studentTab이 여전히 «화면 하나»를 가리키고,
+   그것이 어느 탭에 속하는지는 STUDENT_TAB_SECTION이 되찾아 준다 (관리자 셸과 같은 장치다).
+   그래서 #student/quiz 해시 · goStudentPage('clinic') · 알림 드롭다운의 gotoCode가
+   전부 손대지 않고 그대로 동작한다.
+
+   **모바일이 기준이다.** 데일리퀴즈 제출·오답 답 입력·강의 시청·클리닉 신청은
+   전부 학생이 집이나 이동 중에 폰으로 하는 일이다. 데스크톱에서 열면 한 칸이 가운데로 모인다. */
+
+const STUDENT_NAV = [
+  ['홈',   'home',   'home'],
+  ['학습', 'quiz',   'book'],
+  ['기록', 'grades', 'chart'],
+  ['소통', 'notice', 'chat']
+];
+/* 탭 안의 갈래. 관리자와 달리 «목록 화면»을 한 겹 더 두지 않는다 —
+   넷을 한 줄에 세울 수 있는데 굳이 한 번 더 누르게 할 이유가 없다. */
+const STUDENT_SUBNAV = {
+  '학습': [['데일리퀴즈','quiz'], ['오답숙제','wronghw'], ['진도·과제','progress'], ['강의','video']],
+  '기록': [['성적','grades'], ['출석','attendance']],
+  '소통': [['공지','notice'], ['질의응답','qna'], ['클리닉','clinic'], ['채팅','chat']]
+};
+const STUDENT_TAB_SECTION = {
+  home:'홈',
+  quiz:'학습', wronghw:'학습', progress:'학습', video:'학습',
+  grades:'기록', attendance:'기록',
+  notice:'소통', qna:'소통', clinic:'소통', chat:'소통'
+};
+
+function goStudentTab(tab){
+  state.studentTab = tab;
+  state.notifOpen = false;
+  render();
+  window.scrollTo(0, 0);
+}
+
+/* 한 화면이 쓰는 것을 한 곳에서 고른다. 열한 개가 저마다 같은 filter를 되풀이하고 있었다. */
+function stuCtx(){
   const sid = state.currentUser.studentId;
-  const rec = DATA.records[sid] || {scores:[],attendance:[],assignments:[],progress:{unit:'',percent:0},quizAnswers:{},wrongHomework:[],videoProgress:{},assignmentsDone:{}};
-  const tabs = [['home','홈'],['quiz','데일리퀴즈'],['progress','진도/과제'],['wronghw','오답숙제'],['video','강의시청'],['grades','성적'],['attendance','출석'],['notice','공지사항'],['qna','질의응답'],['clinic','클리닉 신청'],['chat','선생님과 채팅']];
-  let body='';
-  if(state.studentTab==='home'){
-    const me = DATA.students.find(s=>s.studentId===sid) || {};
-    const myClassIdH = me.classId;
-    const myQuizzesH = DATA.quizzes.filter(q=>!q.classId || q.classId===myClassIdH);
-    const myHomeworkH = DATA.assignments.filter(a=>!a.classId || a.classId===myClassIdH);
-    const myVideosH = DATA.videos.filter(v=>v.studentId ? v.studentId===sid : (!v.classId || v.classId===myClassIdH));
-    const myExamsH = DATA.exams.filter(e=>e.classId===myClassIdH);
+  const rec = DATA.records[sid] ||
+    {scores:[], attendance:[], assignments:[], progress:{unit:'',percent:0},
+     quizAnswers:{}, wrongHomework:[], videoProgress:{}, assignmentsDone:{}};
+  const me = DATA.students.find(s=>s.studentId===sid) || {};
+  const classId = me.classId;
+  return {
+    sid, rec, me, classId,
+    quizzes:  DATA.quizzes.filter(q=>!q.classId || q.classId===classId),
+    homework: DATA.assignments.filter(a=>!a.classId || a.classId===classId),
+    videos:   DATA.videos.filter(v=>v.studentId ? v.studentId===sid : (!v.classId || v.classId===classId)),
+    exams:    DATA.exams.filter(e=>e.classId===classId),
+    qnas:     DATA.qnas.filter(q=>q.studentId===sid),
+    clinics:  DATA.clinics.filter(c=>c.studentId===sid)
+  };
+}
 
-    // "오늘의 할 일": 퀴즈/과제/영상/오답숙제 중 아직 안 끝낸 것들을 한 리스트로 모은다.
-    const todoItems = [];
-    myQuizzesH.filter(q=>!rec.quizAnswers[q.id]).forEach(q=>todoItems.push({tag:'퀴즈', cls:'tag-quiz', title:q.title, status:'제출요망', tab:'quiz'}));
-    myHomeworkH.filter(a=>!rec.assignmentsDone[a.id]).forEach(a=>todoItems.push({tag:'과제', cls:'tag-hw', title:a.title, status:'제출요망', tab:'progress'}));
-    myVideosH.filter(v=>!(rec.videoProgress[v.id] && rec.videoProgress[v.id].completed)).forEach(v=>todoItems.push({tag:'강의', cls:'tag-video', title:v.title, status:'미수강', tab:'video'}));
-    rec.wrongHomework.filter(h=>{
-      const bank = DATA.problemBank.find(b=>b.id===h.bankId);
-      return bank && bank.status==='approved' && !h.done;
-    }).forEach(h=>{
-      const exam = DATA.exams.find(e=>e.id===h.examId);
-      todoItems.push({tag:'오답', cls:'tag-wrong', title:(exam?exam.title+' ':'')+h.questionNo+'번', status:'제출요망', tab:'wronghw'});
+/* 출석률 = 「퇴원」을 뺀 기록 중 「결석」이 아닌 비율. 지각·조퇴는 «온 것»으로 센다.
+   명단(rosterStats)이 쓰는 정의와 같은 것이다 — 두 화면이 다른 숫자를 말하면 둘 다 못 믿게 된다.
+   (rosterStats는 state.allRecords를 보는데 그건 교사만 싣는다. 규칙만 같이 쓴다.) */
+function stuAttRate(rec){
+  const counted = (rec.attendance||[]).filter(a=>a.status!=='퇴원');
+  if(counted.length===0) return null;
+  return Math.round(counted.filter(a=>a.status!=='결석').length / counted.length * 100);
+}
+/* 시청률 = 대상 영상들의 진도율 평균. studentVideoSummary(교사 화면)와 같은 식이다. */
+function stuVideoAvg(c){
+  if(c.videos.length===0) return null;
+  const sum = c.videos.reduce((n,v)=> n + ((c.rec.videoProgress[v.id]||{}).percent || 0), 0);
+  return Math.round(sum / c.videos.length);
+}
+function stuDday(due){
+  if(!due) return null;
+  const t = todayStr();
+  if(due < t)  return {label:'지남', tone:'no'};
+  if(due === t) return {label:'오늘', tone:'no'};
+  const days = Math.round((Date.parse(due+'T00:00:00Z') - Date.parse(t+'T00:00:00Z')) / 86400000);
+  return {label:'D-'+days, tone: days<=3 ? 'no' : days<=7 ? 'late' : ''};
+}
+/* ⚠ 이 결과를 .mono 안에 넣지 말 것. JetBrains Mono에는 한글 글리프가 없어서
+   브라우저가 «고정폭 한글 글꼴»로 떨어뜨린다 — 「오늘」이 「오 늘」처럼 벌어진다.
+   자유 텍스트 시간(「7시~9시」·「저녁 7시」)도 같다. mono는 YYYY-MM-DD·숫자·퍼센트에만 쓴다. */
+function stuDateLabel(ymd){
+  if(!ymd) return '';
+  const t = todayStr();
+  if(ymd===t) return '오늘';
+  if(ymd===shiftYmd(t,1)) return '내일';
+  const [y,m,d] = ymd.split('-').map(Number);
+  return `${m}월 ${d}일 (${WEEKDAY_LABEL[new Date(ymd+'T00:00:00').getDay()]})`;
+}
+/* 다음 수업 — 반 일정에서 오늘 이후 첫 수업일. 시각은 자유 텍스트라 그대로 보여 준다. */
+function stuNextSession(classId){
+  const cls = DATA.classes.find(x=>x.id===classId);
+  if(!cls) return null;
+  const days = parseScheduleDays(cls.schedule);
+  if(days.length===0) return null;
+  const d = new Date();
+  for(let i=0; i<14; i++){
+    if(days.includes(d.getDay())) return {date: ymdLocal(d), cls};
+    d.setDate(d.getDate()+1);
+  }
+  return null;
+}
+
+/* «오늘 뭐 해야 하지»에 답하는 한 줄들. 네 종류가 한 목록에 섞인다 —
+   학생에게 «퀴즈 탭에 하나, 과제 탭에 둘»은 의미 없는 구분이다. */
+function stuTodo(c){
+  const items = [];
+  c.quizzes.filter(q=>!c.rec.quizAnswers[q.id]).forEach(q=>items.push({
+    icon:'sparkle', bg:'var(--latebg)', fg:'var(--late)',
+    title:q.title || '데일리퀴즈', sub:`데일리퀴즈 · ${q.date||''}`,
+    tab:'quiz', pre:`state.stuQuizId='${q.id}';`
+  }));
+  c.rec.wrongHomework.filter(h=>{
+    const bank = DATA.problemBank.find(b=>b.id===h.bankId);
+    return bank && bank.status==='approved' && !h.done;
+  }).forEach(h=>{
+    const exam = DATA.exams.find(e=>e.id===h.examId);
+    items.push({
+      icon:'clipboard', bg:'var(--nobg)', fg:'var(--no)',
+      title:`오답숙제 ${h.questionNo}번`, sub:(exam ? exam.title : '시험지') + ' 쌍둥이 문제',
+      tab:'wronghw'
     });
+  });
+  c.homework.filter(a=>!c.rec.assignmentsDone[a.id]).forEach(a=>items.push({
+    icon:'document', bg:'var(--bluebg)', fg:'var(--blue)',
+    title:a.title, sub:'과제' + (a.dueDate ? ' · '+a.dueDate+'까지' : ''),
+    due:a.dueDate || '', dday:stuDday(a.dueDate), tab:'progress'
+  }));
+  c.videos.filter(v=>!((c.rec.videoProgress[v.id]||{}).completed)).forEach(v=>{
+    const p = c.rec.videoProgress[v.id];
+    items.push({
+      icon:'video', bg:'var(--accent-bg)', fg:'var(--accent)',
+      title:v.title, sub:'강의' + (p ? ` · ${p.percent}%까지 봄` : ' · 아직 안 봄'),
+      tab:'video', pre:`state.stuVideoId='${v.id}';`
+    });
+  });
+  /* 마감이 가까운 것이 위로 온다. 마감이 없는 것(퀴즈·오답·영상)은 그 아래에 원래 순서대로. */
+  return items.sort((a,b)=>{
+    if(a.due && b.due) return a.due.localeCompare(b.due);
+    return (a.due ? 0 : 1) - (b.due ? 0 : 1);
+  });
+}
 
-    // "최근 시청 중인 강의": 진도율이 있지만 아직 다 안 본 영상을 우선으로 보여준다.
-    const inProgressVideo = myVideosH.find(v=>rec.videoProgress[v.id] && !rec.videoProgress[v.id].completed);
-    const featuredVideo = inProgressVideo || myVideosH.find(v=>!(rec.videoProgress[v.id] && rec.videoProgress[v.id].completed)) || myVideosH[0];
-    const featuredProgress = featuredVideo ? rec.videoProgress[featuredVideo.id] : null;
-    const featuredVid = featuredVideo ? extractYouTubeId(featuredVideo.url) : null;
-    const clsProgressH = getClassProgress(myClassIdH);
+/* ---------- 홈 ---------- */
+/* 첫 화면이 답해야 할 질문은 하나다 — «오늘 뭐 해야 하지?»
+   예전 홈에는 질문 폼·반 진도 링·빠른 변형 문제 요청·영상 카드가 함께 있었다.
+   전부 제 화면이 따로 있는 것들이라 그리로 보냈다. 남은 것은 «할 일»과 그 주변뿐이다. */
+function stuHomeHTML(c){
+  const todo = stuTodo(c);
+  const next = stuNextSession(c.classId);
+  const cp = getClassProgress(c.classId);
+  const nextUnit = cp.chapters.find(u=>!cp.doneMap[u]);
+  const attRate = stuAttRate(c.rec);
+  const hwDone = c.homework.filter(a=>c.rec.assignmentsDone[a.id]).length;
+  const vidAvg = stuVideoAvg(c);
 
-    body = `
-    <div class="home-header-row">
-      <div class="home-greeting">
-        <h2>${escHtml(me.name||state.currentUser.name)}님, 오늘도 화이팅! 🚀</h2>
-        <p>${classNameOf(myClassIdH)}${clsProgressH.subject?' · 현재 진도 '+escHtml(clsProgressH.subject):''}</p>
-      </div>
-      <div class="home-user-badge">👤 ${escHtml(me.name||state.currentUser.name)}${me.school?` (${escHtml(me.school)} ${escHtml(me.grade||'')})`:me.grade?` (${escHtml(me.grade)})`:''}</div>
+  return `
+  <div class="sap-hi">
+    <b>${escHtml(c.me.name || state.currentUser.name)}님</b>
+    <span>${[c.me.school, c.me.grade, classNameOf(c.classId)].filter(Boolean).map(escHtml).join(' · ')}</span>
+  </div>
+
+  <div class="msec" style="margin-top:22px;">오늘 할 일
+    ${todo.length ? `<span style="color:var(--no);">${todo.length}</span>` : ''}</div>
+  ${todo.length===0
+    ? `<div class="mc"><div class="mrow" style="justify-content:center;font-size:13px;color:var(--dim);">
+         지금 밀린 것이 없습니다.</div></div>`
+    : todo.slice(0,6).map(t=>`
+      <div class="todo" onclick="${t.pre||''} goStudentTab('${t.tab}')" style="cursor:pointer;">
+        <span class="ic" style="background:${t.bg};color:${t.fg};">${iconSvg(t.icon,18)}</span>
+        <span class="t">
+          <b>${escHtml(t.title)}${t.dday?` <span class="badge ${t.dday.tone}">${t.dday.label}</span>`:''}</b>
+          <span>${escHtml(t.sub)}</span>
+        </span>
+        <span class="go">${iconSvg('chevR',16)}</span>
+      </div>`).join('')}
+  ${todo.length>6 ? `<div style="margin-top:10px;text-align:center;font-size:11.5px;color:var(--dim);">
+    외 ${todo.length-6}건은 각 화면에 있습니다</div>` : ''}
+
+  <div class="msec">다음 수업</div>
+  ${!next
+    ? `<div class="mc"><span style="font-size:12.5px;color:var(--dim);">
+         ${c.classId ? '반 일정이 등록되어 있지 않습니다.' : '아직 반에 배정되지 않았습니다.'}</span></div>`
+    : `<div class="mc">
+        <div class="row b" style="gap:9px;flex-wrap:wrap;">
+          <b style="font-size:15px;font-weight:700;">${stuDateLabel(next.date)}
+            ${escHtml(sessionTimeText(next.cls.schedule))}</b>
+          <span style="font-size:12.5px;color:var(--sub);">${escHtml(next.cls.name)}</span>
+        </div>
+        ${cp.subject ? `<div style="font-size:12px;color:var(--dim);margin-top:8px;">
+          진도 · ${escHtml(cp.subject)}${nextUnit ? ' — '+escHtml(nextUnit) : ' — 모든 단원 완료'}</div>` : ''}
+      </div>`}
+
+  <div class="msec">요약</div>
+  <div class="kpis">
+    <div class="kpi"><div class="k">출석률</div>
+      <div class="v">${attRate===null ? '—' : attRate+'<s>%</s>'}</div></div>
+    <div class="kpi"><div class="k">과제</div>
+      <div class="v">${hwDone}<s>/${c.homework.length}</s></div></div>
+    <div class="kpi"><div class="k">시청</div>
+      <div class="v ${vidAvg!==null && vidAvg<70 ? 'down' : ''}">${vidAvg===null ? '—' : vidAvg+'<s>%</s>'}</div></div>
+  </div>`;
+}
+
+/* ---------- 데일리퀴즈 ---------- */
+/* 시안은 «10문항 중 3번»을 한 문제씩 푸는 화면이었다. 도메인에는 그런 묶음이 없다 —
+   퀴즈 하나가 한 문항이고 날짜별로 따로 선다. 그래서 «지금 풀 회차 하나를 크게»는 그대로 가져오고,
+   진행 표시는 지어낸 10문항이 아니라 «제출한 회차 / 전체 회차»로 바꿨다. */
+function stuQuizHTML(c){
+  const list = c.quizzes;
+  if(list.length===0) return `<div class="sap-empty">아직 등록된 데일리퀴즈가 없습니다.</div>`;
+  const undone = list.filter(q=>!c.rec.quizAnswers[q.id]);
+  const cur = list.find(q=>q.id===state.stuQuizId) || undone[0] || list[0];
+  const doneCount = list.length - undone.length;
+  const curDone = c.rec.quizAnswers[cur.id];
+
+  return `
+  <div class="sap-prog" style="margin:0 0 16px;">
+    <span class="bar"><i style="width:${Math.round(doneCount/list.length*100)}%"></i></span>
+    <b>${doneCount}/${list.length}</b>
+  </div>
+
+  <div class="mc ${curDone ? '' : 'go'}">
+    <div class="row" style="gap:7px;">
+      <span class="badge ${curDone?'ok':'late'}">${curDone?'제출 완료':'제출 대기'}</span>
+      <span class="badge">${escHtml(quizClassLabel(cur.classId))}</span>
+      <span class="spacer"></span>
+      <span class="mono" style="font-size:10.5px;color:var(--dim);">${escHtml(cur.date||'')}</span>
     </div>
-    <div class="home-grid-3">
-      <div class="home-card">
-        <h4>${iconSvg('checklist')} 오늘의 할 일</h4>
-        ${todoItems.length===0 ? '<div class="empty">오늘 할 일을 모두 끝냈어요! 🎉</div>' :
-          `<div class="home-todo-list">${todoItems.slice(0,6).map(t=>`
-          <div class="home-todo-row" onclick="state.studentTab='${t.tab}'; render()">
-            <span><span class="home-tag ${t.cls}">${t.tag}</span> ${escHtml(t.title)}</span>
-            <span class="lg-badge badge-no">${t.status}</span>
-          </div>`).join('')}</div>`}
-      </div>
-      <div class="home-card" style="text-align:center;">
-        <h4 style="justify-content:center;">${iconSvg('trophy')} 반 진도 성취도</h4>
-        <div class="home-ring-wrap">${progressRingSVG(clsProgressH.percent)}</div>
-        <p class="lg-hint" style="margin-top:10px;">${clsProgressH.subject?escHtml(clsProgressH.subject):'아직 등록된 진도가 없습니다.'}</p>
-      </div>
-      <div class="home-card">
-        <h4>${iconSvg('messageSquare')} 무엇이든 물어보세요</h4>
-        <div class="lg-field"><textarea id="qna-question" placeholder="문제 질문은 물론, 학습 상담 등 무엇이든 편하게 남겨주세요!" style="min-height:70px;"></textarea></div>
-        ${qnaImageFieldHTML(state.qnaQuestionImage, 'handleQnaQuestionImage(this.files)', 'removeQnaQuestionImage()', 'qna-q-home')}
-        <button class="lg-btn btn-primary" style="width:100%;" onclick="submitQuestion()">질문 보내기</button>
-      </div>
+    <div style="font-size:13.5px;font-weight:700;margin-top:11px;">${escHtml(cur.title)}</div>
+    <div class="sap-q" style="margin-top:9px;">${escHtml(cur.content)}</div>
+    <div style="margin-top:15px;">
+      ${curDone
+        ? `<div class="mrow" style="min-height:0;gap:8px;">
+             <span style="font-size:12px;color:var(--sub);">낸 답</span>
+             <b class="mono" style="font-size:15px;">${escHtml(curDone.answer)}</b>
+             <span class="spacer"></span>
+             <span class="mono" style="font-size:11px;color:var(--dim);">${escHtml(curDone.submittedAt||'')}</span>
+           </div>
+           <div style="margin-top:9px;font-size:11.5px;color:var(--dim);line-height:1.7;">
+             데일리퀴즈에는 정답이 등록되지 않아 자동 채점되지 않습니다. 선생님이 답안을 직접 봅니다.</div>`
+        : isMultipleChoice(cur.content)
+          ? `${answerInputHTML('qa-'+cur.id)}
+             <button class="mbtn p" style="margin-top:11px;" onclick="submitQuizAnswer('${cur.id}','${c.sid}')">제출</button>`
+          : `<input id="qa-${cur.id}" class="sap-in" placeholder="답을 입력하세요">
+             <button class="mbtn p" style="margin-top:9px;" onclick="submitQuizAnswer('${cur.id}','${c.sid}')">제출</button>`}
     </div>
-    <div class="home-grid-2">
-      <div class="home-card home-video-feature" ${featuredVideo?`onclick="state.studentTab='video'; render()"`:''}>
-        ${!featuredVideo ? '<div class="empty">등록된 영상이 없습니다.</div>' : `
-        <div class="home-video-thumb" style="${featuredVid?`background-image:url('https://img.youtube.com/vi/${featuredVid}/hqdefault.jpg')`:''}"><div class="home-video-play">▶</div></div>
-        <div class="home-video-info">
-          <div class="lg-mono" style="font-size:11px;color:var(--ink-soft);">${featuredProgress?'최근 시청 중인 강의':'강의시청'}</div>
-          <div style="font-weight:700;margin:4px 0;">${escHtml(featuredVideo.title)}</div>
-          ${featuredProgress ? videoProgressGaugeHTML(featuredProgress.percent, featuredProgress.completed) : '<div style="font-size:12.5px;color:var(--ink-soft);">아직 시청 기록이 없습니다</div>'}
-          <button class="lg-btn btn-primary btn-small" style="margin-top:10px;">이어보기</button>
+  </div>
+
+  ${list.length>1 ? `
+  <div class="msec">지난 회차</div>
+  ${list.filter(q=>q.id!==cur.id).map(q=>{
+    const a = c.rec.quizAnswers[q.id];
+    return `<div class="mc" onclick="state.stuQuizId='${q.id}'; render(); window.scrollTo(0,0)"
+        style="cursor:pointer;${a?'opacity:.7;':''}">
+      <div class="mrow" style="min-height:38px;">
+        <span style="flex:1;min-width:0;">
+          <b style="display:block;font-size:13.5px;font-weight:600;">${escHtml(q.title)}</b>
+          <span style="display:block;font-size:11px;color:var(--dim);margin-top:3px;"
+            class="mono">${escHtml(q.date||'')}</span>
+        </span>
+        ${a ? `<span class="badge ok">제출</span>` : `<span class="badge late">대기</span>`}
+      </div>
+    </div>`;
+  }).join('')}` : ''}`;
+}
+
+/* ---------- 오답숙제 ---------- */
+/* 원본 문항 번호를 반드시 같이 보여 준다. «내가 뭘 틀려서 이걸 푸는지»를 모르면 그냥 새 숙제가 된다.
+   시험지별로 묶는 것도 같은 이유다 — 오답숙제는 «어느 시험을 다시 푸는 일»이다. */
+function stuWrongHTML(c){
+  const hws = c.rec.wrongHomework;
+  const byExam = {};
+  hws.forEach(h=>{ (byExam[h.examId] = byExam[h.examId] || []).push(h); });
+  const examIds = Object.keys(byExam);
+  const selectedExam = c.exams.find(e=>e.id===state.wrongExamId);
+
+  const card = hw => {
+    const bank = DATA.problemBank.find(b=>b.id===hw.bankId);
+    if(!bank) return '';
+    if(bank.status!=='approved'){
+      return `<div class="mc">
+        <div class="row" style="gap:7px;">
+          <span class="badge score">원본 ${hw.questionNo}번</span>
+          <span class="spacer"></span><span class="badge">검토 중</span>
+        </div>
+        <div style="font-size:12.5px;color:var(--sub);margin-top:10px;line-height:1.7;">
+          선생님이 쌍둥이 문제를 검토하고 있습니다. 끝나면 여기에 문제가 뜹니다.</div>
+      </div>`;
+    }
+    if(bank.hasImage && state.pbImageCache[bank.id]===undefined) togglePbImage(bank.id);
+    const img = bank.hasImage && state.pbImageCache[bank.id]
+      && state.pbImageCache[bank.id]!=='empty' && state.pbImageCache[bank.id]!=='loading'
+      ? state.pbImageCache[bank.id] : null;
+    const correct = hw.done && hw.studentAnswer.trim()===bank.variantAnswer.trim();
+    return `<div class="mc ${hw.done ? '' : 'go'}" style="${hw.done?'opacity:.75;':''}">
+      <div class="row" style="gap:7px;">
+        <span class="badge score">원본 ${hw.questionNo}번</span>
+        <span class="spacer"></span>
+        ${hw.done ? `<span class="badge ${correct?'ok':'no'}">${correct?'정답':'오답'}</span>`
+                  : `<span class="badge late">풀 차례</span>`}
+      </div>
+      <div class="sap-q" style="margin-top:11px;">${escHtml(bank.variantContent)}</div>
+      ${bank.hasImage ? (img ? `<img class="sap-img" src="${img}">`
+                             : `<div style="font-size:11.5px;color:var(--dim);margin-top:9px;">그림 불러오는 중…</div>`) : ''}
+      <div style="margin-top:14px;">
+        ${hw.done
+          ? `<div class="mrow" style="min-height:0;gap:8px;">
+               <span style="font-size:12px;color:var(--sub);">낸 답</span>
+               <b class="mono" style="font-size:15px;">${escHtml(hw.studentAnswer)}</b>
+               ${correct ? '' : `<span class="spacer"></span>
+                 <span style="font-size:12px;color:var(--sub);">정답</span>
+                 <b class="mono" style="font-size:15px;color:var(--ok);">${escHtml(bank.variantAnswer)}</b>`}
+             </div>`
+          : isMultipleChoice(bank.variantContent)
+            ? `${answerInputHTML('hw-answer-'+bank.id)}
+               <button class="mbtn p" style="margin-top:11px;" onclick="submitHomeworkAnswer('${bank.id}')">제출</button>`
+            : `<input id="hw-answer-${bank.id}" class="sap-in" placeholder="답을 입력하세요">
+               <button class="mbtn p" style="margin-top:9px;" onclick="submitHomeworkAnswer('${bank.id}')">제출</button>`}
+      </div>
+    </div>`;
+  };
+
+  return `
+  ${state.stuWrongMode ? `
+  <div class="mc hi">
+    <div style="font-size:13px;font-weight:700;">틀린 문제 등록</div>
+    <div style="font-size:12px;color:var(--sub);margin-top:6px;line-height:1.7;">
+      시험지를 고르고 틀린 번호를 모두 누르세요. 같은 단원의 쌍둥이 문제가 숙제로 나갑니다.</div>
+    ${c.exams.length===0
+      ? `<div style="font-size:12.5px;color:var(--dim);margin-top:12px;">우리 반에 등록된 시험지가 없습니다.</div>`
+      : `<div style="margin-top:13px;">
+          <div class="sap-lab">시험지</div>
+          <select class="sap-in" onchange="state.wrongExamId=this.value; state.wrongChecked={}; render()">
+            <option value="">— 선택 —</option>
+            ${c.exams.map(e=>`<option value="${e.id}" ${state.wrongExamId===e.id?'selected':''}>${escHtml(e.title)} (${e.date||'-'})</option>`).join('')}
+          </select>
+        </div>
+        ${selectedExam ? `
+        <div style="margin-top:14px;">
+          <div class="sap-lab">틀린 번호</div>
+          <div class="row" style="flex-wrap:wrap;gap:7px;">
+            ${selectedExam.questions.map(q=>`<a class="pill ${state.wrongChecked[q.no]?'on':''}"
+              onclick="toggleWrongCheck(${q.no})">${q.no}</a>`).join('')}
+          </div>
+        </div>
+        <button class="mbtn p" style="margin-top:14px;" onclick="submitWrongAnswers()">제출하기</button>` : ''}`}
+    <button class="mbtn q" style="margin-top:6px;" onclick="state.stuWrongMode=false; render()">닫기</button>
+  </div>`
+  : `<button class="mbtn" style="margin-bottom:4px;" onclick="state.stuWrongMode=true; render()">${iconSvg('plus',16)} 틀린 문제 등록</button>`}
+
+  ${hws.length===0
+    ? `<div class="sap-empty">아직 배정된 오답숙제가 없습니다.<br>시험을 본 뒤 틀린 번호를 등록하면 쌍둥이 문제가 나갑니다.</div>`
+    : examIds.map(eid=>{
+        const exam = DATA.exams.find(e=>e.id===eid);
+        const group = byExam[eid];
+        const done = group.filter(h=>h.done).length;
+        return `
+        <div class="msec">${escHtml(exam ? exam.title : '삭제된 시험지')}</div>
+        <div class="sap-prog" style="margin:0 0 11px;">
+          <span class="bar"><i style="width:${Math.round(done/group.length*100)}%"></i></span>
+          <b>${done}/${group.length}</b>
+        </div>
+        ${group.map(card).join('')}`;
+      }).join('')}`;
+}
+
+/* ---------- 진도 · 과제 ---------- */
+/* 반 진도와 내 과제를 한 화면에 둔다. «어디까지 나갔는지»와 «내가 뭘 안 냈는지»는
+   학생 입장에서 같은 질문이다. */
+function stuProgressHTML(c){
+  markSeen('homework', c.homework.length);
+  const cp = getClassProgress(c.classId);
+  const nextUnit = cp.chapters.find(u=>!cp.doneMap[u]);
+  const undone = c.homework.filter(a=>!c.rec.assignmentsDone[a.id]);
+  const doneCount = c.homework.length - undone.length;
+  /* 마감이 가까운 미완료가 위로, 완료는 아래로. */
+  const sorted = c.homework.slice().sort((a,b)=>{
+    const ad = !!c.rec.assignmentsDone[a.id], bd = !!c.rec.assignmentsDone[b.id];
+    if(ad!==bd) return ad ? 1 : -1;
+    return (a.dueDate||'9999').localeCompare(b.dueDate||'9999');
+  });
+
+  return `
+  ${!cp.subject
+    ? `<div class="mc"><span style="font-size:12.5px;color:var(--dim);">아직 등록된 진도가 없습니다.</span></div>`
+    : `<div class="mc">
+        <div class="mrow" style="min-height:0;">
+          <span style="flex:1;font-size:13.5px;font-weight:700;">${escHtml(cp.subject)}</span>
+          <b class="mono" style="font-size:15px;">${cp.percent}%</b>
+        </div>
+        <div class="bar" style="margin-top:11px;"><i style="width:${cp.percent}%"></i></div>
+        <div style="font-size:12px;color:var(--sub);margin-top:11px;">
+          ${cp.doneCount} / ${cp.chapters.length}단원 완료</div>
+        <div style="font-size:12px;color:var(--dim);margin-top:5px;">
+          다음 · ${nextUnit ? escHtml(nextUnit) : '모든 단원을 끝냈습니다'}</div>
+      </div>`}
+
+  <div class="msec">과제 <span class="mono" style="color:${undone.length?'var(--late)':'var(--dim)'};">${doneCount}/${c.homework.length}</span></div>
+  ${c.homework.length===0
+    ? `<div class="mc"><span style="font-size:12.5px;color:var(--dim);">등록된 과제가 없습니다.</span></div>`
+    : sorted.map(a=>{
+        const on = !!c.rec.assignmentsDone[a.id];
+        const dd = on ? null : stuDday(a.dueDate);
+        return `<div class="mc" style="${on?'opacity:.65;':''}">
+          <div class="mrow" style="min-height:34px;gap:11px;cursor:pointer;"
+            onclick="toggleHomeworkDone('${c.sid}','${a.id}')">
+            <span style="width:22px;height:22px;border-radius:var(--r-xs);flex-shrink:0;cursor:pointer;
+              display:flex;align-items:center;justify-content:center;
+              ${on?'background:var(--accent);color:#fff;':'border:1.5px solid #C9C6BB;color:transparent;'}"
+              >${iconSvg('check',14)}</span>
+            <span style="flex:1;min-width:0;font-size:13.5px;${on?'color:var(--sub);':'font-weight:600;'}">
+              ${escHtml(a.title)}</span>
+            ${dd ? `<span class="badge ${dd.tone}">${dd.label}</span>`
+                 : `<span class="mono" style="font-size:11px;color:var(--dim);">${escHtml(a.dueDate||'')}</span>`}
+          </div>
+          ${a.description ? `<div style="font-size:12.5px;color:var(--sub);line-height:1.75;
+            white-space:pre-wrap;margin-top:4px;padding-left:33px;">${escHtml(a.description)}</div>` : ''}
+        </div>`;
+      }).join('')}
+
+  ${/* 단원 체크리스트는 «읽는 것»이라 손이 닿는 자리(과제) 아래에 둔다.
+       카드를 단원마다 하나씩 세우면 열 줄에 480px을 쓴다 — 한 카드 안의 줄로 접었다. */
+    cp.chapters.length ? `
+  <div class="msec">단원 <span class="mono">${cp.doneCount}/${cp.chapters.length}</span></div>
+  <div class="mc" style="padding:4px 15px;">
+    ${cp.chapters.map(u=>{
+      const on = !!cp.doneMap[u];
+      return `<div class="row" style="gap:10px;padding:10px 0;
+        ${cp.chapters[0]===u?'':'border-top:1px solid var(--line2);'}">
+        <span style="width:18px;height:18px;border-radius:var(--r-xs);flex-shrink:0;
+          display:flex;align-items:center;justify-content:center;
+          ${on?'background:var(--accent);color:#fff;':'border:1.5px solid #C9C6BB;color:transparent;'}"
+          >${iconSvg('check',12)}</span>
+        <span style="flex:1;min-width:0;font-size:12.5px;${on?'':'color:var(--dim);'}">${escHtml(u)}</span>
+      </div>`;
+    }).join('')}
+  </div>` : ''}`;
+}
+
+/* ---------- 강의시청 ---------- */
+/* 이어보기를 맨 위에 둔다. 중단 지점이 기록돼 있는데 목록 맨 아래에서 찾게 하면 결국 안 본다.
+   **한 번에 하나만 임베드한다.** 예전에는 목록 수만큼 iframe이 떠서, 영상이 열 개면
+   화면을 열자마자 유튜브를 열 번 불렀다. 누른 것 하나만 붙인다. */
+function stuVideoHTML(c){
+  markSeen('video', c.videos.length);
+  if(c.videos.length===0) return `<div class="sap-empty">등록된 강의가 없습니다.</div>`;
+  const pg = id => c.rec.videoProgress[id] || null;
+  const resume = c.videos.find(v=>{ const p = pg(v.id); return p && !p.completed; });
+  const open = c.videos.find(v=>v.id===state.stuVideoId);
+
+  const embed = v => {
+    const vid = extractYouTubeId(v.url);
+    if(!vid) return `<div class="note" style="margin-top:11px;">유튜브 링크 형식을 인식하지 못했습니다.
+      선생님께 알려 주세요.</div>`;
+    const src = 'https://www.youtube-nocookie.com/embed/' + vid +
+      '?enablejsapi=1&modestbranding=1&rel=0&iv_load_policy=3&origin=' + encodeURIComponent(location.origin);
+    return `<div class="sap-vwrap"><iframe id="yt-frame-${v.id}" class="yt-tracked-frame"
+      data-bank-vid="${v.id}" src="${src}" title="${escHtml(v.title)}"
+      sandbox="allow-scripts allow-same-origin allow-presentation allow-forms"
+      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+      referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></div>
+      <div id="vprog-${v.id}">${videoProgressBlockHTML(c.sid, v.id)}</div>`;
+  };
+
+  return `
+  ${resume && (!open || open.id!==resume.id) ? `
+  <div class="mc go" onclick="state.stuVideoId='${resume.id}'; render()" style="cursor:pointer;">
+    <div style="font-size:11.5px;font-weight:700;color:var(--accent);">이어보기</div>
+    <div style="font-size:14.5px;font-weight:700;margin-top:7px;">${escHtml(resume.title)}</div>
+    <div class="sap-prog">
+      <span class="bar"><i style="width:${pg(resume.id).percent}%"></i></span>
+      <b>${pg(resume.id).percent}%</b>
+    </div>
+    <button class="mbtn p" style="margin-top:12px;">${iconSvg('play',17)} 이어서 보기</button>
+  </div>` : ''}
+
+  <div class="msec">전체 강의 <span class="mono">${c.videos.length}</span></div>
+  ${c.videos.map(v=>{
+    const p = pg(v.id);
+    const pct = p ? p.percent : 0;
+    const isOpen = open && open.id===v.id;
+    return `<div class="mc ${isOpen?'go':''}">
+      <div onclick="state.stuVideoId=${isOpen?'null':`'${v.id}'`}; render()" style="cursor:pointer;">
+        <div class="row" style="gap:8px;">
+          <span style="flex:1;min-width:0;font-size:13.5px;font-weight:600;">${escHtml(v.title)}</span>
+          ${v.studentId ? '<span class="badge late">개인 배정</span>' : ''}
+        </div>
+        ${v.unit ? `<div style="font-size:11.5px;color:var(--dim);margin-top:5px;">${escHtml(v.unit)}</div>` : ''}
+        ${/* 열려 있으면 진도 표시는 영상 아래 것 하나만 둔다 — 그쪽이 재생 중에 살아 움직인다 */
+          isOpen ? '' : `<div class="sap-prog">
+          <span class="bar"><i style="width:${pct}%"></i></span>
+          <b style="color:${p && p.completed ? 'var(--ok)' : 'var(--dim)'};">${p && p.completed ? '완료' : pct+'%'}</b>
         </div>`}
       </div>
-      <div class="home-card">
-        <h4>${iconSvg('bolt')} 빠른 변형 문제 요청</h4>
-        ${wrongSubmitWidgetHTML(myExamsH)}
-      </div>
-    </div>
-    <div class="lg-panel">
-      <div class="home-icon-row">
-        <button class="home-icon-link" onclick="state.studentTab='grades'; render()"><span class="emoji">${iconSvg('chart',22)}</span>성적</button>
-        <button class="home-icon-link" onclick="state.studentTab='attendance'; render()"><span class="emoji">${iconSvg('calendar',22)}</span>출석</button>
-        <button class="home-icon-link" onclick="state.studentTab='notice'; render()"><span class="emoji">${iconSvg('megaphone',22)}</span>공지사항</button>
-        <button class="home-icon-link" onclick="state.studentTab='qna'; render()"><span class="emoji">${iconSvg('messageSquare',22)}</span>질의응답</button>
-      </div>
+      ${isOpen ? embed(v) : ''}
     </div>`;
-  } else if(state.studentTab==='grades'){
-    body = `<div class="lg-panel"><h3>성적 추이</h3>${renderScoreChart(rec.scores)}</div>
-    <div class="lg-panel ledger"><h3>시험 기록</h3>
-      ${rec.scores.length===0?'<div class="empty">등록된 성적이 없습니다.</div>':`
-      <table><tr><th>날짜</th><th>시험명</th><th>점수</th><th>비율</th></tr>
-      ${rec.scores.map(s=>`<tr><td>${s.date}</td><td>${s.name}</td><td>${s.score}/${s.total}</td><td>${Math.round(s.score/s.total*100)}%</td></tr>`).join('')}
-      </table>`}
-    </div>`;
-  } else if(state.studentTab==='progress'){
-    const myClassIdP = (DATA.students.find(s=>s.studentId===sid)||{}).classId;
-    const myHomework = DATA.assignments.filter(a=>!a.classId || a.classId===myClassIdP);
-    markSeen('homework', myHomework.length);
-    const cpP = getClassProgress(myClassIdP);
-    body = `<div class="lg-panel"><h3>현재 진도</h3>
-      ${!cpP.subject ? '<div class="empty">아직 등록된 진도가 없습니다.</div>' : `
-      <p>${escHtml(cpP.subject)}</p>
-      <div class="progress-outer"><div class="progress-inner" style="width:${cpP.percent}%;"></div></div>
-      <div class="lg-mono" style="font-size:12px;color:var(--ink-soft);margin-bottom:12px;">${cpP.doneCount} / ${cpP.chapters.length}단원 완료 · ${cpP.percent}%</div>
-      <div class="unit-check-list">
-        ${cpP.chapters.map(u=>`<div class="unit-check-item ${cpP.doneMap[u]?'checked':''}">${iconSvg(cpP.doneMap[u]?'checkCircle':'circle',15)} ${escHtml(u)}</div>`).join('')}
-      </div>`}
-    </div>
-    <div class="lg-panel"><h3>과제</h3>
-      ${myHomework.length===0?'<div class="empty">등록된 과제가 없습니다.</div>':
-      myHomework.map(a=>{
-        const done = !!rec.assignmentsDone[a.id];
-        return `<div class="homework-card">
-          <div class="lg-mono" style="font-size:12px;color:var(--ink-soft);margin-bottom:4px;">${a.dueDate?'마감 '+a.dueDate:'마감일 없음'}</div>
-          <div style="font-weight:700;">${escHtml(a.title)}</div>
-          ${a.description ? `<div style="font-size:13px;white-space:pre-wrap;margin-top:4px;">${escHtml(a.description)}</div>` : ''}
-          <div style="margin-top:8px;">
-            <span class="lg-badge ${done?'badge-ok':'badge-no'}">${done?'완료':'미완료'}</span>
-            <button class="lg-btn btn-small" style="margin-left:8px;" onclick="toggleHomeworkDone('${sid}','${a.id}')">${done?'미완료로 표시':'완료로 표시'}</button>
-          </div>
-        </div>`;
-      }).join('')}
-    </div>`;
-  } else if(state.studentTab==='attendance'){
-    body = `<div class="lg-panel ledger"><h3>출석 기록</h3>
-      ${rec.attendance.length===0?'<div class="empty">기록이 없습니다.</div>':`
-      <table><tr><th>날짜</th><th>상태</th></tr>
-      ${rec.attendance.map(a=>`<tr><td>${a.date}</td><td>${attBadge(a.status)}</td></tr>`).join('')}
-      </table>`}
-    </div>`;
-  } else if(state.studentTab==='notice'){
-    markSeen('notice', DATA.notices.length);
-    body = `<div class="lg-panel"><h3>공지사항</h3>
-      ${DATA.notices.length===0?'<div class="empty">등록된 공지가 없습니다.</div>':
-      DATA.notices.map(n=>`<div style="padding:12px 0;border-bottom:1px solid #F0EEE7;"><div style="font-weight:700;">${escHtml(n.title)} <span class="lg-mono" style="font-size:11px;color:var(--ink-soft);font-weight:400;">${escHtml(n.date)}</span></div><div style="font-size:13px;color:var(--ink-soft);margin-top:4px;">${escHtml(n.content)}</div></div>`).join('')}
-    </div>`;
-  } else if(state.studentTab==='quiz'){
-    const myClassId = (DATA.students.find(s=>s.studentId===sid)||{}).classId;
-    const myQuizzes = DATA.quizzes.filter(q=>!q.classId || q.classId===myClassId);
-    body = `<div class="lg-panel"><h3>데일리퀴즈</h3>
-      ${myQuizzes.length===0?'<div class="empty">등록된 퀴즈가 없습니다.</div>':
-      myQuizzes.map(q=>{
-        const done = rec.quizAnswers[q.id];
-        return `<div class="quiz-card">
-          <div class="quiz-meta">${escHtml(q.date)} · ${quizClassLabel(q.classId)}</div>
-          <div class="quiz-title">${escHtml(q.title)}</div>
-          <div class="quiz-content">${escHtml(q.content)}</div>
-          <div class="quiz-answer-box">
-            ${done ? `<span class="lg-badge badge-ok">제출완료</span> <span class="lg-mono" style="font-size:11px;color:var(--ink-soft);">${escHtml(done.answer)} (${done.submittedAt})</span>`
-            : isMultipleChoice(q.content)
-              ? `<div class="inline-form">${answerInputHTML('qa-'+q.id)}<button class="lg-btn btn-primary btn-small" onclick="submitQuizAnswer('${q.id}','${sid}')">제출</button></div>`
-              : `<div class="inline-form"><div class="lg-field" style="flex:1;"><input id="qa-${q.id}" placeholder="답안 입력"></div><button class="lg-btn btn-primary btn-small" onclick="submitQuizAnswer('${q.id}','${sid}')">제출</button></div>`}
-          </div>
-        </div>`;
-      }).join('')}
-    </div>`;
-  } else if(state.studentTab==='wronghw'){
-    const myClassIdW = (DATA.students.find(s=>s.studentId===sid)||{}).classId;
-    const myExams = DATA.exams.filter(e=>e.classId===myClassIdW);
-    body = `<div class="lg-panel">
-      <h3>시험 오답 제출</h3>
-      ${wrongSubmitWidgetHTML(myExams)}
-    </div>
-    <div class="lg-panel">
-      <h3>내 오답 숙제</h3>
-      ${rec.wrongHomework.length===0?'<div class="empty">아직 배정된 오답 숙제가 없습니다.</div>':
-      rec.wrongHomework.map(hw=>{
-        const bank = DATA.problemBank.find(b=>b.id===hw.bankId);
-        const exam = DATA.exams.find(e=>e.id===hw.examId);
-        if(!bank) return '';
-        if(bank.status!=='approved'){
-          return `<div class="homework-card"><div class="lg-mono" style="font-size:12px;color:var(--ink-soft);margin-bottom:8px;">${exam?escHtml(exam.title):''} · ${hw.questionNo}번 오답</div><div class="homework-pending">선생님이 문제를 검토 중입니다. 검토가 끝나면 이곳에 문제가 표시됩니다.</div></div>`;
-        }
-        if(bank.hasImage && state.pbImageCache[bank.id]===undefined) togglePbImage(bank.id);
-        const correct = hw.done && hw.studentAnswer.trim()===bank.variantAnswer.trim();
-        const img = bank.hasImage && state.pbImageCache[bank.id] && state.pbImageCache[bank.id]!=='empty' && state.pbImageCache[bank.id]!=='loading' ? state.pbImageCache[bank.id] : null;
-        return `<div class="homework-card">
-          <div class="lg-mono" style="font-size:12px;color:var(--ink-soft);margin-bottom:8px;">${exam?escHtml(exam.title):''} · ${hw.questionNo}번 오답 · 쌍둥이 문제</div>
-          <div style="font-size:13.5px;white-space:pre-wrap;margin-bottom:10px;">${escHtml(bank.variantContent)}</div>
-          ${bank.hasImage ? (img ? `<img src="${img}" style="max-width:240px;max-height:240px;margin-bottom:10px;border:1px solid var(--card-border);border-radius:4px;display:block;">` : '<div class="empty">그림 불러오는 중...</div>') : ''}
-          ${hw.done
-            ? `<span class="lg-badge ${correct?'badge-ok':'badge-no'}">${correct?'정답':'오답'}</span> <span class="lg-mono" style="font-size:12px;">내 답안: ${escHtml(hw.studentAnswer)}</span>`
-            : isMultipleChoice(bank.variantContent)
-              ? `<div class="inline-form">${answerInputHTML('hw-answer-'+bank.id)}<button class="lg-btn btn-primary btn-small" onclick="submitHomeworkAnswer('${bank.id}')">제출</button></div>`
-              : `<div class="inline-form"><div class="lg-field" style="flex:1;"><input id="hw-answer-${bank.id}" placeholder="답안 입력"></div><button class="lg-btn btn-primary btn-small" onclick="submitHomeworkAnswer('${bank.id}')">제출</button></div>`}
-        </div>`;
-      }).join('')}
-    </div>`;
-  } else if(state.studentTab==='clinic'){
-    const mine = DATA.clinics.filter(c=>c.studentId===sid);
-    const slots = openClinicSlots();
-    /* 열린 시간대가 없으면 «직접 제안»으로 시작한다 — 빈손으로 돌려보내지 않는다. */
-    const cmode = state.clinicApplyMode || (slots.length ? 'slot' : 'free');
-    body = `<div class="lg-panel"><h3>클리닉 신청</h3>
-      <div class="subtab-bar" style="margin-bottom:14px;">
-        <button class="subtab-btn ${cmode==='slot'?'active':''}" onclick="state.clinicApplyMode='slot'; render()">열린 시간대에서 고르기${slots.length?` (${slots.length})`:''}</button>
-        <button class="subtab-btn ${cmode==='free'?'active':''}" onclick="state.clinicApplyMode='free'; render()">희망 시간 직접 제안</button>
-      </div>
-      ${cmode==='slot' ? (slots.length===0
-        ? '<div class="empty">지금 열려 있는 시간대가 없습니다. 위의 「희망 시간 직접 제안」으로 신청해보세요.</div>'
-        : `<div class="inline-form">
-        <div class="lg-field" style="min-width:220px;"><label>희망 시간대</label>
-          <select id="clinic-slot">${slots.map(s=>{
-            const left = s.capacity - clinicSlotBookedCount(s.id);
-            return `<option value="${s.id}">${s.date} · ${escHtml(s.time)} (${left}자리 남음)</option>`;
-          }).join('')}</select>
-        </div>
-        <div class="lg-field" style="flex:2;"><label>질문/요청 내용</label><input id="clinic-topic" placeholder="예: 미분법 3단원 질문"></div>
-        <button class="lg-btn btn-primary" onclick="submitClinicRequest(false)">신청하기</button>
-      </div>`)
-      : `<div class="inline-form">
-        <div class="lg-field"><label>희망 날짜</label><input id="clinic-free-date" type="date" min="${todayStr()}" value="${todayStr()}"></div>
-        <div class="lg-field"><label>희망 시간</label><input id="clinic-free-time" placeholder="예: 저녁 7시"></div>
-        <div class="lg-field" style="flex:2;"><label>질문/요청 내용</label><input id="clinic-topic" placeholder="예: 미분법 3단원 질문"></div>
-        <button class="lg-btn btn-primary" onclick="submitClinicRequest(true)">제안하기</button>
-      </div>
-      <p class="lg-hint">직접 제안한 시간은 <b>선생님이 승인해야 확정</b>됩니다. 열린 시간대에서 고르면 자리가 있는 한 바로 접수돼요.</p>`}
-    </div>
-    <div class="lg-panel"><h3>내 신청 내역</h3>
-      ${mine.length===0?'<div class="empty">신청 내역이 없습니다.</div>':
-      mine.map(c=>`<div class="clinic-row"><div><b>${c.day}</b> ${c.time||''} · ${c.topic}</div>
-        <div style="display:flex;align-items:center;gap:8px;">
-          <span class="status-pill status-${c.status}">${c.status}</span>
-          ${c.status==='대기'?`<button class="lg-btn btn-red btn-small" onclick="cancelClinicRequest('${c.id}')">신청 취소</button>`:''}
-        </div></div>`).join('')}
-    </div>`;
-  } else if(state.studentTab==='qna'){
-    body = `<div class="lg-panel"><h3>질문 등록</h3>
-      <div class="lg-field"><label>질문 내용</label><textarea id="qna-question" placeholder="궁금한 점을 자유롭게 남겨주세요"></textarea></div>
-      ${qnaImageFieldHTML(state.qnaQuestionImage, 'handleQnaQuestionImage(this.files)', 'removeQnaQuestionImage()', 'qna-q-tab')}
-      <button class="lg-btn btn-primary" onclick="submitQuestion()">질문하기</button>
-    </div>
-    <div class="lg-panel"><h3>내 질문 내역</h3>
-      ${(() => {
-        const myQnasTab = DATA.qnas.filter(q=>q.studentId===sid);
-        return myQnasTab.length===0?'<div class="empty">등록한 질문이 없습니다.</div>':
-        myQnasTab.map(q=>`<div class="qna-card">
-          <div class="qna-meta">${q.date}</div>
-          <div class="qna-q">Q. ${escHtml(q.question)}</div>
-          ${imgSrcOf(q.image)?`<img src="${imgSrcOf(q.image)}" style="max-width:200px;max-height:200px;margin-top:8px;border-radius:4px;border:1px solid var(--card-border);display:block;">`:''}
-          ${q.answer?`<div class="qna-answer"><div class="label">A. 답변</div>${escHtml(q.answer)}${imgSrcOf(q.answerImage)?`<img src="${imgSrcOf(q.answerImage)}" style="max-width:200px;max-height:200px;margin-top:8px;border-radius:4px;border:1px solid var(--card-border);display:block;">`:''}</div>`:'<div class="qna-noanswer">아직 답변이 등록되지 않았습니다.</div>'}
-        </div>`).join('');
-      })()}
-    </div>`;
-  } else if(state.studentTab==='video'){
-    const myClassIdV = (DATA.students.find(s=>s.studentId===sid)||{}).classId;
-    const myVideos = DATA.videos.filter(v=>v.studentId ? v.studentId===sid : (!v.classId || v.classId===myClassIdV));
-    markSeen('video', myVideos.length);
-    body = `<div class="lg-panel"><h3>강의시청</h3>
-      ${myVideos.length===0?'<div class="empty">등록된 영상이 없습니다.</div>':
-      myVideos.map(v=>videoEmbedHTML(v, sid)).join('')}
-    </div>`;
-  } else if(state.studentTab==='chat'){
-    const chat = DATA.chats[sid] || [];
-    if(!DATA.chats[sid]) loadChat(sid).then(()=>render());
-    body = `<div class="lg-panel"><h3>선생님과 채팅</h3>
-      <div class="chat-window" id="chat-win-s">
-        ${chat.length===0?'<div class="empty">대화 내역이 없습니다.</div>':
-        chat.map(m=>`<div class="chat-bubble from-${m.from}">${escHtml(m.text)}<span class="chat-time">${m.at}</span></div>`).join('')}
-      </div>
-      <div class="chat-input-row">
-        <input id="chat-input-student" placeholder="메시지 입력" onkeydown="if(event.key==='Enter') sendChatMessage('${sid}','student')">
-        <button class="lg-btn btn-primary" onclick="sendChatMessage('${sid}','student')">전송</button>
-      </div>
-    </div>`;
-  }
-  return `
-  <div class="tab-bar" style="margin-top:24px;">
-    ${tabs.map(t=>`<button class="tab-btn ${state.studentTab===t[0]?'active':''}" onclick="state.studentTab='${t[0]}'; render()">${t[1]}</button>`).join('')}
-  </div>
-  ${body}
-  `;
+  }).join('')}`;
 }
+
+/* ---------- 성적 ---------- */
+/* 그래프를 크게 쓴다. 폰에서 표는 읽히지 않고, 학생이 알고 싶은 건 «오르고 있나»다.
+   **시험마다 만점이 달라 점수를 그대로 이으면 선이 거짓말을 한다** — 100점 환산해서 잇는다
+   (명단의 성적 추이 열과 같은 규칙이다).
+
+   **시안의 「반 평균」은 넣지 않았다.** 그 값을 내려면 같은 반 학생 전원의 기록을
+   이 학생 브라우저로 내려받아야 한다. 학생 화면이 남의 성적을 싣는 것은
+   화면에 안 보여도 이미 유출이다. */
+/* 점이 상자 가장자리에 걸리면 반이 잘린다 — 안쪽으로 pad만큼 들여서 그린다.
+   (overflow:visible로 밀어내면 «부모 침범»으로 잡힌다.) */
+function stuScoreLineSVG(vals, w, h){
+  const pad = 5;
+  const mn = Math.max(0, Math.min.apply(null, vals) - 6);
+  const mx = Math.min(100, Math.max.apply(null, vals) + 6);
+  const r = (mx - mn) || 1;
+  let d = '', dots = '';
+  vals.forEach((v,i)=>{
+    const x = vals.length>1 ? (pad + (w-pad*2) * i / (vals.length-1)) : w/2;
+    const y = (h-pad) - ((v - mn) / r) * (h-pad*2);
+    d += (i ? 'L' : 'M') + x.toFixed(1) + ' ' + y.toFixed(1);
+    dots += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3.5" fill="var(--accent)"/>`;
+  });
+  return `<svg viewBox="0 0 ${w} ${h}" style="width:100%;height:auto;display:block;">
+    <path d="${d}" fill="none" stroke="var(--accent)" stroke-width="2"
+      stroke-linejoin="round" stroke-linecap="round"/>${dots}</svg>`;
+}
+function stuScoresHTML(c){
+  const scores = (c.rec.scores||[]).filter(s=>s.total);
+  if(scores.length===0) return `<div class="sap-empty">아직 등록된 성적이 없습니다.</div>`;
+  const pts = scores.map(s=>Math.round(s.score/s.total*100));
+  const last = pts[pts.length-1], first = pts[0];
+  const delta = last - first;
+
+  return `
+  <div class="mc">
+    <div class="mrow" style="min-height:0;gap:9px;">
+      <span style="flex:1;font-size:12.5px;color:var(--sub);">최근 ${pts.length}회 · 100점 환산</span>
+      <b class="mono" style="font-size:22px;">${last}</b>
+      ${pts.length>1 ? `<span class="mono ${delta<0?'down':'up'}" style="font-size:12px;">
+        ${delta<0?'▼':'▲'}${Math.abs(delta)}</span>` : ''}
+    </div>
+    ${pts.length>1 ? `<div style="margin-top:16px;">${stuScoreLineSVG(pts, 320, 96)}</div>
+    <div class="row" style="justify-content:space-between;margin-top:9px;">
+      <span class="mono" style="font-size:10px;color:var(--dim);">${escHtml(scores[0].date||'')}</span>
+      <span class="mono" style="font-size:10px;color:var(--dim);">${escHtml(scores[scores.length-1].date||'')}</span>
+    </div>` : `<div style="font-size:12px;color:var(--dim);margin-top:10px;">
+      기록이 하나뿐이라 아직 추이를 그릴 수 없습니다.</div>`}
+  </div>
+
+  <div class="msec">시험</div>
+  ${scores.slice().reverse().map(s=>{
+    const pct = Math.round(s.score/s.total*100);
+    return `<div class="mc">
+      <div class="mrow" style="min-height:34px;">
+        <span style="flex:1;min-width:0;">
+          <b style="display:block;font-size:13.5px;font-weight:600;">${escHtml(s.name)}</b>
+          <span class="mono" style="display:block;font-size:11px;color:var(--dim);margin-top:3px;">${escHtml(s.date||'')}</span>
+        </span>
+        <b class="mono" style="font-size:15px;">${s.score}<s style="text-decoration:none;color:var(--dim);font-size:11px;">/${s.total}</s></b>
+        <span class="mono" style="font-size:12px;color:var(--sub);width:38px;text-align:right;">${pct}%</span>
+      </div>
+    </div>`;
+  }).join('')}`;
+}
+
+/* ---------- 출석 ---------- */
+/* 달력이 맞다 — 출결은 «언제»가 핵심이라 목록으로는 결석이 몰린 시기가 안 보인다.
+   5상태 색은 관리자와 같은 것을 쓴다.
+   시안은 결석에 «사유»를 달았는데 도메인에 사유 필드가 없다. 지어내지 않았다. */
+function stuShiftMonth(ym, delta){
+  const [y, m] = ym.split('-').map(Number);
+  const d = new Date(Date.UTC(y, m-1+delta, 1));
+  return d.getUTCFullYear() + '-' + String(d.getUTCMonth()+1).padStart(2,'0');
+}
+function stuAttendanceHTML(c){
+  const att = (c.rec.attendance||[]).slice().sort((a,b)=>a.date.localeCompare(b.date));
+  if(att.length===0) return `<div class="sap-empty">아직 출석 기록이 없습니다.</div>`;
+  const ym = state.stuAttMonth || todayStr().slice(0,7);
+  const [y, m] = ym.split('-').map(Number);
+  const byDate = {};
+  att.filter(a=>a.date.slice(0,7)===ym).forEach(a=>{ byDate[Number(a.date.slice(8,10))] = a.status; });
+
+  /* 달력 격자 — 1일의 요일만큼 앞을 비운다. 월 길이는 다음 달 0일로 얻는다. */
+  const firstDow = new Date(y, m-1, 1).getDay();
+  const days = new Date(y, m, 0).getDate();
+  let cells = WEEKDAY_LABEL.map(d=>`<div class="dh">${d}</div>`).join('');
+  for(let i=0; i<firstDow; i++) cells += '<div class="d off"></div>';
+  const today = todayStr();
+  for(let d=1; d<=days; d++){
+    const ymd = `${ym}-${String(d).padStart(2,'0')}`;
+    const st = byDate[d] ? attStatusClass(byDate[d]) : '';
+    cells += `<div class="d ${st==='drop'?'':st}${ymd===today?' today':''}">${d}</div>`;
+  }
+
+  const cnt = {};
+  Object.values(byDate).forEach(s=>{ cnt[s] = (cnt[s]||0) + 1; });
+  const flagged = att.filter(a=>a.date.slice(0,7)===ym && a.status!=='출석').reverse();
+  const rate = stuAttRate(c.rec);
+
+  return `
+  <div class="mc">
+    <div class="mrow" style="min-height:0;">
+      <button class="sap-navbtn" onclick="state.stuAttMonth='${stuShiftMonth(ym,-1)}'; render()">${iconSvg('chevL',17)}</button>
+      <span class="spacer"></span>
+      <b style="font-size:14.5px;">${y}년 ${m}월</b>
+      <span class="spacer"></span>
+      <button class="sap-navbtn" onclick="state.stuAttMonth='${stuShiftMonth(ym,1)}'; render()">${iconSvg('chevR',17)}</button>
+    </div>
+    <div class="cal" style="margin-top:12px;">${cells}</div>
+  </div>
+
+  <div class="msec">이번 달</div>
+  <div class="kpis">
+    ${/* 0을 상태색으로 칠하지 않는다 — 빨간 「결석 0」은 없는 일을 있는 것처럼 읽힌다 */
+      [['출석','ok'],['지각','late'],['조퇴','leave'],['결석','no']].map(s=>
+      `<div class="kpi"><div class="k">${s[0]}</div>
+        <div class="v" style="color:${cnt[s[0]] ? `var(--${s[1]})` : 'var(--dim)'};">${cnt[s[0]]||0}</div></div>`).join('')}
+  </div>
+  <div style="font-size:11.5px;color:var(--dim);margin-top:9px;line-height:1.7;">
+    전체 출석률 <b class="mono" style="color:var(--ink);">${rate===null?'—':rate+'%'}</b>
+    — 퇴원 기록을 뺀 전체 중 결석이 아닌 비율입니다. 지각·조퇴는 «온 것»으로 셉니다.</div>
+
+  ${flagged.length ? `
+  <div class="msec">결석 · 지각 · 조퇴</div>
+  ${flagged.map(a=>`<div class="mc">
+    <div class="row" style="gap:8px;">
+      <span class="badge ${attStatusClass(a.status)==='drop'?'gone':attStatusClass(a.status)}">${a.status}</span>
+      <span style="font-size:12.5px;font-weight:600;">${stuDateLabel(a.date)}</span>
+      <span class="spacer"></span>
+      <span class="mono" style="font-size:10.5px;color:var(--dim);">${escHtml(a.date)}</span>
+    </div>
+  </div>`).join('')}` : ''}`;
+}
+
+/* ---------- 공지사항 ---------- */
+/* 안 읽은 공지에 왼쪽 accent 바를 단다. 관리자 화면에서 «선택»을 뜻하던 그 표시와 같은 모양이다.
+   읽음 판정은 «개수»다 (unseenCount) — 공지는 최신순으로 쌓이므로 앞의 n개가 새 것이다.
+   개별 읽음 상태를 두려면 학생마다 필드를 더해야 하는데, 이 정도 데이터엔 과하다. */
+function stuNoticeHTML(){
+  const unread = unseenCount('notice', DATA.notices.length);
+  markSeen('notice', DATA.notices.length);
+  if(DATA.notices.length===0) return `<div class="sap-empty">등록된 공지가 없습니다.</div>`;
+  return DATA.notices.map((n,i)=>`
+    <div class="mc" style="${i<unread ? 'border-left:3px solid var(--accent);' : 'opacity:.78;'}">
+      <div class="row" style="gap:7px;">
+        ${i<unread ? '<span class="badge no">새 공지</span>' : ''}
+        <span class="spacer"></span>
+        <span class="mono" style="font-size:10.5px;color:var(--dim);">${escHtml(n.date||'')}</span>
+      </div>
+      <div style="font-size:13.5px;${i<unread?'font-weight:700;':''}margin-top:8px;line-height:1.55;">${escHtml(n.title)}</div>
+      ${n.content ? `<div style="font-size:12.5px;color:var(--sub);line-height:1.75;margin-top:8px;
+        white-space:pre-wrap;">${escHtml(n.content)}</div>` : ''}
+    </div>`).join('');
+}
+
+/* ---------- 질의응답 ---------- */
+/* 답변이 왔는지 안 왔는지가 목록에서 바로 보여야 한다. 학생이 여러 번 들어와 확인하는 화면이다.
+   질문 폼은 접어 둔다 — 이 화면에 오는 이유는 «답이 왔나» 쪽이 더 잦다. */
+function stuQnaHTML(c){
+  return `
+  ${state.stuQnaWriting ? `
+  <div class="mc hi">
+    <div class="sap-lab">질문 내용</div>
+    <textarea id="qna-question" class="sap-in" rows="4"
+      placeholder="문제 질문은 물론, 학습 상담 등 무엇이든 편하게 남겨주세요."></textarea>
+    <div class="sap-lab" style="margin-top:13px;">사진 (선택)</div>
+    <div class="legacy" style="padding:0;">${qnaImageFieldHTML(state.qnaQuestionImage,
+      'handleQnaQuestionImage(this.files)', 'removeQnaQuestionImage()', 'qna-q-stu')}</div>
+    <button class="mbtn p" style="margin-top:14px;" onclick="submitQuestion()">질문 보내기</button>
+    <button class="mbtn q" style="margin-top:6px;" onclick="state.stuQnaWriting=false; render()">닫기</button>
+  </div>`
+  : `<button class="mbtn" onclick="state.stuQnaWriting=true; render()">${iconSvg('pencil',16)} 질문하기</button>`}
+
+  <div class="msec">내 질문 <span class="mono">${c.qnas.length}</span></div>
+  ${c.qnas.length===0
+    ? `<div class="sap-empty">아직 등록한 질문이 없습니다.</div>`
+    : c.qnas.map(q=>`<div class="mc">
+        <div class="row" style="gap:7px;">
+          <span class="badge ${q.answer?'ok':'late'}">${q.answer?'답변 완료':'답변 대기'}</span>
+          <span class="spacer"></span>
+          <span class="mono" style="font-size:10.5px;color:var(--dim);">${escHtml(q.date||'')}</span>
+        </div>
+        <div style="font-size:13.5px;line-height:1.7;margin-top:9px;white-space:pre-wrap;">${escHtml(q.question)}</div>
+        ${imgSrcOf(q.image) ? `<img class="sap-img" src="${imgSrcOf(q.image)}">` : ''}
+        ${q.answer
+          ? `<div class="note" style="margin-top:12px;">
+               <!-- ds.css의 .note .d는 mono다. 「답변」 같은 낱말을 넣으면 글자가 벌어진다. -->
+               <div style="font-size:10.5px;color:var(--dim);margin-bottom:5px;">답변
+                 <span class="mono">${escHtml(q.answeredAt||'')}</span></div>
+               <div style="white-space:pre-wrap;color:var(--ink);">${escHtml(q.answer)}</div>
+               ${imgSrcOf(q.answerImage) ? `<img class="sap-img" src="${imgSrcOf(q.answerImage)}">` : ''}
+             </div>`
+          : `<div style="font-size:11.5px;color:var(--dim);margin-top:11px;">아직 답변이 등록되지 않았습니다.</div>`}
+      </div>`).join('')}`;
+}
+
+/* ---------- 클리닉 신청 ---------- */
+/* 빈 시간을 먼저 보여주고 고르게 한다. 날짜를 적어 신청하고 기다리는 방식이면
+   거절될 때마다 처음부터 다시 해야 한다.
+   경로는 셋인데 학생이 쓰는 것은 둘이다 — ①열린 시간대에서 고르기 ②희망 시간 직접 제안.
+   (③교사 직접 배정은 관리자 화면에 있다.) */
+function stuClinicHTML(c){
+  const slots = openClinicSlots();
+  const mode = state.clinicApplyMode || (slots.length ? 'slot' : 'free');
+  const picked = slots.find(s=>s.id===state.stuClinicSlotId);
+  const mine = c.clinics;
+
+  return `
+  ${mine.length ? `
+  <div class="msec">내 신청</div>
+  ${mine.map(cl=>`<div class="mc ${cl.status==='대기'?'hi':''}">
+    <div class="row" style="gap:8px;flex-wrap:wrap;">
+      <span class="badge ${cl.status==='승인'?'ok':cl.status==='대기'?'late':cl.status==='완료'?'':'gone'}">${cl.status}</span>
+      <span class="mono" style="font-size:11.5px;">${escHtml(cl.day||'')}</span>
+      <span style="font-size:12.5px;font-weight:600;">${escHtml(cl.time||'')}</span>
+      ${!cl.slotId ? '<span class="badge">직접 제안</span>' : ''}
+    </div>
+    <div style="font-size:12.5px;color:var(--sub);margin-top:9px;line-height:1.7;">${escHtml(cl.topic||'')}</div>
+    ${cl.status==='대기' ? `<button class="mbtn q" style="margin-top:8px;"
+      onclick="cancelClinicRequest('${cl.id}')">신청 취소</button>` : ''}
+  </div>`).join('')}` : ''}
+
+  <div class="msec">새로 신청</div>
+  <div class="row" style="gap:7px;margin-bottom:12px;">
+    <a class="pill ${mode==='slot'?'on':''}" onclick="state.clinicApplyMode='slot'; render()">
+      열린 시간대${slots.length?` <b>${slots.length}</b>`:''}</a>
+    <a class="pill ${mode==='free'?'on':''}" onclick="state.clinicApplyMode='free'; render()">희망 시간 제안</a>
+  </div>
+
+  ${mode==='slot' ? (slots.length===0
+    ? `<div class="sap-empty">지금 열려 있는 시간대가 없습니다.<br>「희망 시간 제안」으로 신청해 보세요.</div>`
+    : `${slots.map(s=>{
+        const left = s.capacity - clinicSlotBookedCount(s.id);
+        const on = state.stuClinicSlotId===s.id;
+        return `<div class="mc ${on?'go':''}" onclick="state.stuClinicSlotId='${s.id}'; render()" style="cursor:pointer;">
+          <div class="mrow" style="min-height:30px;gap:10px;">
+            <span class="mono" style="font-size:12.5px;width:86px;flex-shrink:0;">${escHtml(s.date)}</span>
+            <b style="font-size:14px;font-weight:700;flex:1;min-width:0;">${escHtml(s.time)}</b>
+            <span class="badge ${left<=1?'no':''}">${left}자리</span>
+          </div>
+        </div>`;
+      }).join('')}
+      ${picked ? `
+      <div class="mc" style="margin-top:12px;">
+        <div class="sap-lab">${escHtml(picked.date)} ${escHtml(picked.time)} · 무엇을 묻고 싶나요?</div>
+        <input id="clinic-topic" class="sap-in" placeholder="예: 미적분Ⅰ 도함수의 활용">
+        <button class="mbtn p" style="margin-top:11px;" onclick="submitClinicRequest(false)">신청하기</button>
+      </div>` : `<div style="font-size:11.5px;color:var(--dim);margin-top:11px;text-align:center;">
+        시간대를 누르면 신청 칸이 열립니다.</div>`}`)
+  : `<div class="mc">
+      <div class="sap-row2">
+        <div><div class="sap-lab">희망 날짜</div>
+          <input id="clinic-free-date" class="sap-in" type="date" min="${todayStr()}" value="${todayStr()}"></div>
+        <div><div class="sap-lab">희망 시간</div>
+          <input id="clinic-free-time" class="sap-in" placeholder="예: 저녁 7시"></div>
+      </div>
+      <div class="sap-lab" style="margin-top:13px;">무엇을 묻고 싶나요?</div>
+      <input id="clinic-topic" class="sap-in" placeholder="예: 미적분Ⅰ 도함수의 활용">
+      <button class="mbtn p" style="margin-top:12px;" onclick="submitClinicRequest(true)">제안하기</button>
+      <div style="font-size:11.5px;color:var(--dim);margin-top:11px;line-height:1.7;">
+        직접 제안한 시간은 <b style="color:var(--ink);">선생님이 승인해야 확정</b>됩니다.
+        열린 시간대에서 고르면 자리가 있는 한 바로 접수돼요.</div>
+    </div>`}`;
+}
+
+/* ---------- 채팅 ---------- */
+/* 관리자 채팅(12-chat)과 같은 말풍선이다. 학생 쪽에서는 선생님 말이 왼쪽, 내 말이 오른쪽에 온다.
+   날짜가 바뀌는 자리에 구분선을 넣는다 — 「어제 한 말」과 「오늘 한 말」은 다른 무게를 갖는다. */
+function stuChatHTML(c){
+  const chat = DATA.chats[c.sid] || [];
+  if(!DATA.chats[c.sid]) loadChat(c.sid).then(()=>render());
+  let lastDay = '';
+  const bubbles = chat.map(m=>{
+    const day = (m.at||'').slice(0,10);
+    const time = (m.at||'').slice(11,16);
+    let sep = '';
+    /* ds.css의 .chat-day span은 mono다 — 「오늘」 같은 낱말은 넣지 않고 날짜 그대로 둔다. */
+    if(day && day!==lastDay){ lastDay = day; sep = `<div class="chat-day"><span>${escHtml(day)}</span></div>`; }
+    return sep + `<div class="bub-row ${m.from==='student'?'me':''}">
+      <div class="bub" style="max-width:70%;">${escHtml(m.text)}</div>
+      <span class="tm">${escHtml(time)}</span>
+    </div>`;
+  }).join('');
+
+  return `
+  <div class="sap-chat">
+    ${chat.length===0
+      ? `<div class="sap-empty">아직 주고받은 말이 없습니다.<br>궁금한 것을 편하게 남겨 주세요.</div>`
+      : bubbles}
+  </div>
+  <div class="row" style="gap:8px;">
+    <input id="chat-input-student" class="sap-in" placeholder="메시지 입력"
+      onkeydown="if(event.key==='Enter') sendChatMessage('${c.sid}','student')">
+    <button class="btn p" style="height:46px;flex-shrink:0;"
+      onclick="sendChatMessage('${c.sid}','student')">전송</button>
+  </div>`;
+}
+
+/* ---------- 셸 ---------- */
+/* 알림 벨 — 구버전 notificationBellHTML은 .legacy 스코프의 스타일을 쓴다.
+   items·unseenCount·markSeen은 그대로 쓰고 껍데기만 DS로 다시 그린다. */
+function stuBellHTML(items){
+  const total = items.reduce((n,it)=>n + unseenCount(it.key, it.count), 0);
+  const unseen = items.filter(it=>unseenCount(it.key, it.count)>0);
+  return `<div class="sap-bell">
+    <button onclick="state.notifOpen=!state.notifOpen; render()">${iconSvg('bell',19)}
+      ${total>0 ? `<span class="n">${total>9?'9+':total}</span>` : ''}</button>
+    ${state.notifOpen ? `<div class="sap-drop">
+      ${unseen.length===0 ? '<div class="em">새 알림이 없습니다</div>'
+      : unseen.map(it=>`<div class="it" onclick="${it.gotoCode} markSeen('${it.key}', ${it.count});
+          state.notifOpen=false; render()">
+          <span>${it.label}</span><b>${unseenCount(it.key, it.count)}</b></div>`).join('')}
+    </div>` : ''}
+  </div>`;
+}
+
+function studentTabBodyHTML(c){
+  const t = state.studentTab;
+  if(t==='home')       return stuHomeHTML(c);
+  if(t==='quiz')       return stuQuizHTML(c);
+  if(t==='wronghw')    return stuWrongHTML(c);
+  if(t==='progress')   return stuProgressHTML(c);
+  if(t==='video')      return stuVideoHTML(c);
+  if(t==='grades')     return stuScoresHTML(c);
+  if(t==='attendance') return stuAttendanceHTML(c);
+  if(t==='notice')     return stuNoticeHTML();
+  if(t==='qna')        return stuQnaHTML(c);
+  if(t==='clinic')     return stuClinicHTML(c);
+  if(t==='chat')       return stuChatHTML(c);
+  return stuHomeHTML(c);
+}
+
+function studentHTML(){
+  /* 예전 세션이 없어진 탭 이름을 들고 있으면 홈으로 떨어뜨린다. */
+  if(!STUDENT_TAB_SECTION[state.studentTab]) state.studentTab = 'home';
+  const c = stuCtx();
+  const section = STUDENT_TAB_SECTION[state.studentTab];
+  const subs = STUDENT_SUBNAV[section];
+  /* 서브내비의 숫자는 «아직 안 한 것»만 센다. 전체 개수는 화면 안에 이미 있다. */
+  const counts = {
+    quiz:    c.quizzes.filter(q=>!c.rec.quizAnswers[q.id]).length,
+    wronghw: c.rec.wrongHomework.filter(h=>{
+               const b = DATA.problemBank.find(x=>x.id===h.bankId);
+               return b && b.status==='approved' && !h.done;
+             }).length,
+    progress: c.homework.filter(a=>!c.rec.assignmentsDone[a.id]).length,
+    notice:  unseenCount('notice', DATA.notices.length),
+    qna:     c.qnas.filter(q=>!q.answer).length
+  };
+
+  return `
+  <div class="app sap">
+    <div class="topbar">
+      <div class="bm">김하현수학연구소</div>
+      <div class="right">
+        ${stuBellHTML(studentNotifItems(c.sid))}
+        <button class="btn sm" onclick="logout()">로그아웃</button>
+      </div>
+    </div>
+    ${subs ? `<div class="subnav">${subs.map(s=>
+      `<a class="${state.studentTab===s[1]?'on':''}" onclick="goStudentTab('${s[1]}')">${s[0]}${
+        counts[s[1]] ? `<b>${counts[s[1]]}</b>` : ''}</a>`
+    ).join('')}</div>` : ''}
+    <div class="body">${studentTabBodyHTML(c)}</div>
+    <div class="sap-tabs">
+      ${STUDENT_NAV.map(n=>`<a class="${n[0]===section?'on':''}" onclick="goStudentTab('${n[1]}')">
+        ${iconSvg(n[2],20)}<span>${n[0]}</span></a>`).join('')}
+    </div>
+  </div>`;
+}
+
 function attStatusClass(status){
   return {'출석':'ok', '지각':'late', '조퇴':'leave', '결석':'no', '퇴원':'drop'}[status] || 'no';
 }
@@ -6958,7 +7656,8 @@ function chubVideoHTML(classId){
 /* videoByClassHTML(등록 폼 + 영상 임베드 나열 + 시청 현황 표)은 지웠다 — chubVideoHTML이 대신한다.
    시청 현황 표는 「이탈 지점」 히스토그램과 학생별 진행 목록이 흡수했다.
    영상 «재생»은 여기서 빠졌다 — 강사가 자기 영상을 이 화면에서 볼 이유가 없고,
-   iframe을 목록만큼 띄우면 그만큼 유튜브를 부른다. 학생 화면(videoEmbedHTML)은 그대로다. */
+   iframe을 목록만큼 띄우면 그만큼 유튜브를 부른다.
+   학생 화면(stuVideoHTML)도 같은 이유로 «누른 하나»에만 iframe을 붙인다. */
 
 /* ---------- 시험지 관리 ---------- */
 /* =================== 시험지 (design-v1/07-exams) ===================
