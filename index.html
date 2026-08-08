@@ -433,11 +433,32 @@
   border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--paper);z-index:2;}
 .app .sd-day b{font-size:12px;font-weight:700;}
 .app .sd-day span{font-size:11.5px;color:var(--dim);}
-.app .sd-ev{display:flex;align-items:flex-start;gap:12px;padding:11px 2px;
+/* 시안의 세로 레일과 점을 그대로 가져왔다 (ds.css의 `.tl::before`·`.ev::before`).
+   다른 것은 «날짜의 자리» 하나다 — 시안은 레일 왼쪽 108px 밖에 날짜를 세웠는데,
+   그 여백은 1440 고정 캔버스에서만 성립한다. 여기서는 날짜가 이미 sticky 머리줄로 있고,
+   스크롤하는 목록에서는 «지금 보고 있는 날»이 위에 붙어 있는 쪽이 더 잘 읽힌다.
+
+   레일은 항목마다 제 몫을 그린다 — 스크롤 상자에 `position:absolute`로 한 줄을 세우면
+   그 줄이 «보이는 높이»만큼만 생겨 첫 화면을 지나면 끊긴다. */
+.app .sd-ev{position:relative;display:flex;align-items:flex-start;gap:12px;padding:11px 2px 11px 24px;
   border-bottom:1px solid var(--line2);transition:background var(--t);}
+.app .sd-ev::after{content:'';position:absolute;left:8px;top:0;bottom:0;width:1px;background:var(--line);}
+.app .sd-ev::before{content:'';position:absolute;left:4.5px;top:16px;width:9px;height:9px;z-index:1;
+  border-radius:50%;background:#CFCEC6;border:2px solid var(--paper);}
+/* 점 색은 «종류»가 아니라 «그날 무슨 일이 있었나»를 말한다 — 시안이 넷에만 색을 물린 것과 같다.
+   과제·오답·퀴즈·질문까지 칠하면 한 화면이 통째로 알록달록해져 아무것도 눈에 안 띈다.
+   그 항목들의 상태는 오른쪽 뱃지가 이미 말하고 있다. */
+.app .sd-ev.k-ok::before{background:var(--ok);}
+.app .sd-ev.k-late::before{background:var(--late);}
+.app .sd-ev.k-no::before{background:var(--no);}
+.app .sd-ev.k-score::before{background:var(--blue);}
+.app .sd-ev.k-consult::before{background:var(--accent);}
 .app .sd-ev:hover{background:var(--hover);}
 .app .sd-ev .kind{width:52px;flex-shrink:0;font-size:11px;color:var(--dim);padding-top:4px;}
-.app .sd-ev .body{flex:1;min-width:0;}
+/* ⚠ 여기는 `.body`였다 — 앱 셸의 `.app .body{padding:20px}`에 그대로 걸려 줄마다 20px이 붙었다.
+   종류와 제목이 어긋나 보이고 행 높이가 83px(제 높이의 1.6배)이 돼 있었다.
+   ds.css가 아니라 «이 파일 안»의 클래스와 부딪힌 여섯 번째 사고다 (8절). */
+.app .sd-ev .tx{flex:1;min-width:0;}
 .app .sd-ev .ti{font-size:13.5px;font-weight:600;}
 .app .sd-ev .de{font-size:12px;color:var(--sub);margin-top:4px;line-height:1.6;}
 .app .sd-ev .de b{font-family:'JetBrains Mono',monospace;color:var(--ink);font-weight:600;}
@@ -6727,9 +6748,13 @@ const SD_FILTERS = [['all','전체'],['att','출결'],['score','성적'],['hw','
 
 /* 한 사람에게 일어난 일을 전부 «날짜가 붙은 사건»으로 바꾼다.
    kind는 갈래 필터용, type은 화면에 찍는 이름이다. */
+/* dot — 연대기 레일에 찍히는 점의 색. 시안이 넷에만 색을 물린 것과 같은 규칙이다.
+   출결과 성적, 클리닉만 칠하고 나머지는 회색으로 둔다 (상태는 오른쪽 뱃지가 말한다). */
+const SD_ATT_DOT = { '출석':'k-ok', '지각':'k-late', '조퇴':'k-late', '결석':'k-no' };
+
 function studentTimeline(s, rec){
   const sid = s.studentId, ev = [];
-  const push = (date, kind, type, title, desc, badge, act) => { if(date) ev.push({date, kind, type, title, desc, badge, act}); };
+  const push = (date, kind, type, title, desc, badge, act, dot) => { if(date) ev.push({date, kind, type, title, desc, badge, act, dot}); };
 
   /* 삭제는 «배열 인덱스»로 지운다 — 연대기는 날짜순으로 다시 세우므로 원래 인덱스를 들고 다녀야 한다.
      이걸 빠뜨리면 탭에 있던 성적·출결 삭제가 사라진다. */
@@ -6737,14 +6762,17 @@ function studentTimeline(s, rec){
     push(a.date, 'att', '출결', a.status + (a.reason ? ' — ' + escHtml(a.reason) : ''),
       a.note ? escHtml(a.note) : '', ['출석','지각','조퇴','결석','퇴원'].includes(a.status)
         ? `<span class="badge ${attStatusClass(a.status)==='drop'?'gone':attStatusClass(a.status)}">${a.status}</span>` : '',
-      `<button class="btn q sm" onclick="deleteAttendance('${sid}',${i})">삭제</button>`);
+      `<button class="btn q sm" onclick="deleteAttendance('${sid}',${i})">삭제</button>`,
+      /* 「퇴원」은 칠하지 않는다 — 빨간 점은 «결석했다»는 뜻으로 읽히는데 퇴원은 그런 사건이 아니다.
+         상태는 옆의 «퇴원» 뱃지가 말한다. */
+      SD_ATT_DOT[a.status] || '');
   });
   (rec.scores||[]).forEach((sc,i)=>{
     const pct = sc.total ? Math.round(sc.score/sc.total*100) : null;
     push(sc.date, 'score', '성적', escHtml(sc.name||'시험'),
       `<b>${sc.score}</b> / ${sc.total}${pct!==null?` · <b>${pct}%</b>`:''}`,
       pct!==null ? `<span class="badge score">${pct}%</span>` : '',
-      `<button class="btn q sm" onclick="deleteScore('${sid}',${i})">삭제</button>`);
+      `<button class="btn q sm" onclick="deleteScore('${sid}',${i})">삭제</button>`, 'k-score');
   });
   DATA.assignments.filter(a=>!a.classId || a.classId===s.classId).forEach(a=>{
     const done = rec.assignmentsDone && rec.assignmentsDone[a.id];
@@ -6772,7 +6800,8 @@ function studentTimeline(s, rec){
   });
   DATA.clinics.filter(c=>c.studentId===sid).forEach(c=>{
     push(c.day, 'qna', '클리닉', escHtml(c.topic||'클리닉'),
-      escHtml(c.time||''), `<span class="badge ${c.status==='승인'||c.status==='완료'?'ok':(c.status==='취소'?'gone':'late')}">${c.status}</span>`);
+      escHtml(c.time||''), `<span class="badge ${c.status==='승인'||c.status==='완료'?'ok':(c.status==='취소'?'gone':'late')}">${c.status}</span>`,
+      '', c.status==='취소' ? '' : 'k-consult');
   });
 
   ev.sort((a,b)=> b.date.localeCompare(a.date));   // 최근이 위
@@ -6886,7 +6915,9 @@ function sdScreenHTML(s, rec, isAssistant){
     <hr class="s">
     <div class="t-sec">반 · 진도</div>
     <div class="sd-crow"><span>반</span><b>${escHtml(classNameOf(s.classId))}</b></div>
-    <div class="sd-crow"><span>수업</span><b class="m">${escHtml((DATA.classes.find(c=>c.id===s.classId)||{}).schedule||'—')}</b></div>
+    ${/* ⚠ mono를 걷어냈다 — 「월,수,금 7시~9시」는 한글 낱말이라 고정폭 대체 글꼴로 떨어지면서
+         「월 , 수 , 금」처럼 벌어졌다. mono는 날짜·숫자·퍼센트에만 (8절). */''}
+    <div class="sd-crow"><span>수업</span><b>${escHtml((DATA.classes.find(c=>c.id===s.classId)||{}).schedule||'—')}</b></div>
     ${prog && prog.subject ? `
       <div style="margin-top:12px;display:flex;justify-content:space-between;font-size:12.5px;">
         <span class="muted">${escHtml(prog.subject)} 진도</span><b class="mono">${prog.percent}%</b></div>
@@ -6981,9 +7012,9 @@ function sdTimelineHTML(s, sid, rec, isAssistant){
           <div class="sd-day"><b class="mono">${d.date}</b>
             <span>${WEEKDAY_LABEL[new Date(d.date+'T00:00:00').getDay()]}요일</span>
             <span class="spacer"></span><span>${d.items.length}건</span></div>
-          ${d.items.map(e=>`<div class="sd-ev">
+          ${d.items.map(e=>`<div class="sd-ev ${e.dot||''}">
             <div class="kind">${e.type}</div>
-            <div class="body"><div class="ti">${e.title}</div>
+            <div class="tx"><div class="ti">${e.title}</div>
               ${e.desc ? `<div class="de">${e.desc}</div>` : ''}</div>
             <div class="st">${e.badge||''}${e.act||''}</div>
           </div>`).join('')}`).join('');
