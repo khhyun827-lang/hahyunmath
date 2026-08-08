@@ -2949,10 +2949,10 @@ function examDetailHTML(examId){
       const bank = findBankEntry(examId, q.no);
       const statusLabel = bank ? {pending:'생성됨 (검토 전)', review1:'1차 검토 완료', approved:'2차 검토 완료 · 공개'}[bank.status] : null;
       return `<div class="exam-question-row">
-        <div class="exam-question-head"><b>${q.no}번</b> <span class="mono" style="font-size:11px;color:var(--dim);">${escHtml(q.unit||'')}</span>
+        <div class="exam-question-head"><b>${q.no}번</b> <span style="font-size:11px;color:var(--dim);">${escHtml(q.unit||'')}</span>
           ${statusLabel ? `<span class="review-status review-status-${bank.status}">${statusLabel}</span>` : ''}</div>
         <div style="font-size:13.5px;white-space:pre-wrap;margin-top:4px;">${escHtml(q.content)}</div>
-        <div class="mono" style="font-size:11px;color:var(--dim);margin-top:4px;">정답: ${escHtml(q.answer)}</div>
+        <div style="font-size:11px;color:var(--dim);margin-top:4px;">정답 <span class="mono">${escHtml(q.answer)}</span></div>
         ${bank && (bank.variantContent||bank.variantAnswer) ? `<div class="exam-variant-box">
           <div class="mono" style="font-size:11px;color:var(--no);margin-bottom:4px;">변형 문제</div>
           <div style="font-size:13px;white-space:pre-wrap;">${escHtml(bank.variantContent||'')}</div>
@@ -5390,7 +5390,7 @@ function teacherHTML(){
       ).join('')}</nav>
       <div class="right">
         ${bellHTML(teacherNotifItems())}
-        <span class="mono">김하현T</span>
+        <span>김하현T</span>
         <button class="btn sm" onclick="logout()">로그아웃</button>
       </div>
     </div>
@@ -6433,7 +6433,7 @@ function sessionProgHTML(classId){
           </select>
         </span>
         <span class="bar" style="flex:1;min-width:120px;max-width:280px;"><i style="width:${percent}%"></i></span>
-        <span class="mono sub" style="font-size:12.5px;">${doneCount} / ${chapters.length}단원 · ${percent}%</span>
+        <span class="sub" style="font-size:12.5px;"><span class="mono">${doneCount} / ${chapters.length}</span>단원 · <span class="mono">${percent}%</span></span>
       </div>
       <div class="cls-chaps">${chapters.map(u=>`
         <label class="cls-chap ${doneMap[u]?'on':''}">
@@ -6480,7 +6480,7 @@ function sessionHwHTML(classId, date){
         }).length;
         return `<div class="cls-hw">
           <div class="n">${escHtml(h.title)}<s>${h.classId ? '이 반' : '전체 반'}${h.dueDate ? ' · 마감 ' + h.dueDate : ''}${h.createdAt ? ' · 등록 ' + h.createdAt : ''}</s></div>
-          <span class="mono sub" style="font-size:12.5px;white-space:nowrap;">${done}/${roster.length} 제출</span>
+          <span class="sub" style="font-size:12.5px;white-space:nowrap;"><span class="mono">${done}/${roster.length}</span> 제출</span>
           <span class="bar" style="width:70px;flex-shrink:0;"><i style="width:${roster.length?Math.round(done/roster.length*100):0}%"></i></span>
         </div>`;
       }).join('')}`;
@@ -6793,7 +6793,8 @@ function chubProgressHTML(classId){
         ${UNITS.map(u=>`<option value="${u}" ${subject===u?'selected':''}>${u}</option>`).join('')}
       </select>
     </span>
-    <span class="t-meta">${nextIdx>=0 ? `다음 단원 <b class="mono">${escHtml(chapters[nextIdx])}</b>` : '<b>모든 단원을 마쳤습니다.</b>'}</span>
+    ${/* ⚠ 단원명은 낱말이라 mono에 넣지 않는다 — 「합 성 함 수」처럼 벌어진다 (8절) */''}
+    <span class="t-meta">${nextIdx>=0 ? `다음 단원 <b>${escHtml(chapters[nextIdx])}</b>` : '<b>모든 단원을 마쳤습니다.</b>'}</span>
   </div>
   <div style="margin-top:8px;">
     ${chapters.map((u,i)=>{
@@ -8416,7 +8417,7 @@ function teacherExamsHTML(){
 
       <div class="ex-body">
         <div class="t-sec">문항별 오답률
-          <span class="mono" style="font-weight:400;">${state.allRecordsLoading ? '기록 불러오는 중…' : `가장 높은 문항 ${worst}%`}</span></div>
+          <span style="font-weight:400;">${state.allRecordsLoading ? '기록 불러오는 중…' : `가장 높은 문항 <span class="mono">${worst}%</span>`}</span></div>
         ${''}
         ${rows.length===0 ? '<div style="padding:36px 0;text-align:center;color:var(--dim);font-size:12.5px;">문항이 없습니다.</div>'
         : rows.map(r=>`<div class="ex-q ${r.pct>=50?'hi':(r.pct>=25?'mid':'')}">
@@ -8472,7 +8473,7 @@ function examSubmissionsHTML(ex){
               <span class="ago">${r.done}/${r.total} 제출</span></div>
             <div style="display:flex;align-items:center;gap:9px;margin-top:7px;">
               <span class="bar" style="flex:1;"><i style="width:${pct}%"></i></span>
-              <span class="mono" style="font-size:11.5px;">정답 ${r.correct}/${r.done}</span>
+              <span style="font-size:11.5px;">정답 <span class="mono">${r.correct}/${r.done}</span></span>
             </div>
             <div class="a">
               <button class="btn q sm" onclick="state.submissionDetailId = ${open?'null':`'${r.s.studentId}'`}; render()">${open?'접기':'문항별'}</button>
@@ -8645,7 +8646,7 @@ function teacherReviewHTML(){
         ${remaining===null ? '오늘 사용량 확인 중…' : `오늘 남은 생성 <b class="mono" style="color:var(--ink);">${remaining}/${AI_DAILY_LIMIT}</b>`}</span>
       <span class="spacer"></span>
       ${state.aiProgress
-        ? `<span class="mono" style="font-size:12px;">생성 중… ${state.aiProgress.done}/${state.aiProgress.total} (문항당 약 13초)</span>`
+        ? `<span style="font-size:12px;">생성 중… <span class="mono">${state.aiProgress.done}/${state.aiProgress.total}</span> (문항당 약 13초)</span>`
         : `<button class="btn p sm" ${remaining===0?'disabled':''} onclick="processAIQueue()">AI로 채우기</button>`}
     </div>` : '';
 
