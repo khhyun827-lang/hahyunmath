@@ -1680,6 +1680,14 @@ let state = {
   studentNotes: {},
   studentNoteLoading: {},
   sdNoteDrafts: {},
+  /* 상담 일지 — 학생마다 «날짜가 붙는 기록의 배열». 연대기에 합류한다 */
+  consultLogs: {},
+  consultLogLoading: {},
+  /* 강의자료 — 반마다 파일 목록. 파일 자체는 드라이브에 있고 여기엔 이름·fileId만 있다 */
+  materials: {},
+  materialLoading: {},
+  materialUploading: {},
+  materialAdding: false,   // 「자료 올리기」 폼이 열려 있나
   clinicAssignSid: '',    // 학생 상세에서 「클리닉 배정」으로 들어올 때 미리 고를 학생
   /* 수업(02-class) — 날짜 하나 · 반 하나 · 단계 하나. 출결 초안은 attDraft를 그대로 쓴다 */
   sessionDate: '',
@@ -2902,6 +2910,86 @@ async function uploadDataUrlToDrive(dataUrl){
   if(!res.ok) throw new Error('upload http ' + res.status);
   return res.json(); // {url, fileId}
 }
+/* =================== 강의자료 (2026-08-09) ===================
+   업로드 길은 이미 있었다 — 워커의 `/upload`는 파일 종류를 가리지 않고 드라이브에 올리고
+   공개 권한까지 붙인다. 이미지만 그 길을 쓰고 있었을 뿐이라 **워커는 손대지 않았다.**
+
+   `uploadImageToDrive`와 다른 점은 둘이다 —
+   ① 압축하지 않는다 (PDF·한글 파일을 JPEG로 만들 수는 없다)
+   ② 링크를 파일 종류에 맞게 고른다. 워커가 돌려주는 `url`은 **썸네일**이라 이미지에만 맞다.
+      문서는 `drive.google.com/file/d/{id}/view`로 열어야 한다. */
+const MATERIAL_MAX_BYTES = 15 * 1024 * 1024;   // 워커가 본문을 메모리에 쌓아 올리므로 상한을 둔다
+
+async function uploadFileToDrive(file){
+  const fd = new FormData();
+  fd.append('file', file, file.name);
+  const token = await withTimeout(getAuthToken(), 8000);
+  /* FormData다 — Content-Type을 직접 넣으면 안 된다. 브라우저가 boundary까지 붙여야 한다. */
+  const res = await withTimeout(fetch(AI_WORKER_URL + '/upload', {
+    method: 'POST',
+    headers: { 'Authorization': 'Bearer ' + token },
+    body: fd
+  }), DRIVE_UPLOAD_TIMEOUT_MS);
+  if(!res.ok) throw new Error('upload http ' + res.status);
+  return res.json(); // {url, fileId}
+}
+function materialLink(m){
+  return (m.mime||'').indexOf('image/')===0 && m.url ? m.url
+       : `https://drive.google.com/file/d/${m.fileId}/view`;
+}
+function fileSizeLabel(n){
+  if(!n && n!==0) return '';
+  return n >= 1024*1024 ? (n/1024/1024).toFixed(1) + 'MB' : Math.max(1, Math.round(n/1024)) + 'KB';
+}
+/* 반마다 kv 문서 하나에 배열로 둔다 (수업 메모·상담 일지와 같은 방식).
+   파일 «내용»은 드라이브에 있고 여기 남는 것은 이름·크기·fileId뿐이라 문서가 커지지 않는다. */
+async function loadMaterialsIfNeeded(classId){
+  if(!classId || state.materials[classId] || state.materialLoading[classId]) return;
+  state.materialLoading[classId] = true;
+  const v = await dbGet('material:' + classId, []);
+  state.materials[classId] = Array.isArray(v) ? v : [];
+  state.materialLoading[classId] = false;
+  render();
+}
+async function uploadMaterial(classId, files){
+  const f = files && files[0];
+  if(!f) return;
+  if(f.size > MATERIAL_MAX_BYTES){
+    showToast(`파일이 너무 큽니다 (${fileSizeLabel(f.size)}). ${fileSizeLabel(MATERIAL_MAX_BYTES)}까지 올릴 수 있습니다.`);
+    return;
+  }
+  const titleEl = document.getElementById('mt-title');
+  const title = (titleEl && titleEl.value.trim()) || f.name;
+  state.materialUploading[classId] = true; render();
+  try{
+    const { url, fileId } = await uploadFileToDrive(f);
+    const list = (state.materials[classId] || []).concat([{
+      id:'mt'+Date.now(), title, name:f.name, size:f.size, mime:f.type||'', url, fileId, at:nowStamp()
+    }]);
+    state.materials[classId] = list;
+    await dbSet('material:' + classId, list);
+    await logAudit('강의자료 등록', '', '', `${classNameOf(classId)} · ${title}`);
+    showToast(`「${title}」을 올렸습니다.`);
+  }catch(e){
+    /* ⚠ 로컬(127.0.0.1)에서는 ALLOW_ORIGIN 때문에 워커를 부를 수 없다 — 배포본에서 확인한다. */
+    showToast('업로드에 실패했습니다. 잠시 뒤 다시 시도해 주세요.');
+  }
+  state.materialUploading[classId] = false;
+  render();
+}
+async function deleteMaterial(classId, id){
+  const m = (state.materials[classId] || []).find(x=>x.id===id);
+  if(!m) return;
+  if(!confirm(`「${m.title}」을 지울까요? 학생 화면에서도 사라집니다.`)) return;
+  const list = (state.materials[classId] || []).filter(x=>x.id!==id);
+  state.materials[classId] = list;
+  await dbSet('material:' + classId, list);
+  deleteFromDrive(m.fileId);          // 드라이브에서도 지운다 (결과를 기다리지 않는다)
+  await logAudit('강의자료 삭제', '', '', `${classNameOf(classId)} · ${m.title}`);
+  showToast('자료를 지웠습니다.');
+  render();
+}
+
 // 레거시(base64 문자열) 레코드와 신규({url,fileId}) 레코드를 모두 렌더링할 수 있게 흡수하는 헬퍼
 function imgSrcOf(v){
   if(!v) return null;
@@ -4340,13 +4428,13 @@ const STUDENT_NAV = [
 /* 탭 안의 갈래. 관리자와 달리 «목록 화면»을 한 겹 더 두지 않는다 —
    넷을 한 줄에 세울 수 있는데 굳이 한 번 더 누르게 할 이유가 없다. */
 const STUDENT_SUBNAV = {
-  '학습': [['데일리퀴즈','quiz'], ['오답숙제','wronghw'], ['진도·과제','progress'], ['강의','video']],
+  '학습': [['데일리퀴즈','quiz'], ['오답숙제','wronghw'], ['진도·과제','progress'], ['강의','video'], ['자료','material']],
   '기록': [['성적','grades'], ['출석','attendance']],
   '소통': [['공지','notice'], ['질의응답','qna'], ['클리닉','clinic'], ['채팅','chat']]
 };
 const STUDENT_TAB_SECTION = {
   home:'홈',
-  quiz:'학습', wronghw:'학습', progress:'학습', video:'학습',
+  quiz:'학습', wronghw:'학습', progress:'학습', video:'학습', material:'학습',
   grades:'기록', attendance:'기록',
   notice:'소통', qna:'소통', clinic:'소통', chat:'소통'
 };
@@ -4765,6 +4853,30 @@ function stuProgressHTML(c){
 /* 이어보기를 맨 위에 둔다. 중단 지점이 기록돼 있는데 목록 맨 아래에서 찾게 하면 결국 안 본다.
    **한 번에 하나만 임베드한다.** 예전에는 목록 수만큼 iframe이 떠서, 영상이 열 개면
    화면을 열자마자 유튜브를 열 번 불렀다. 누른 것 하나만 붙인다. */
+/* 학생 쪽 자료 — 받아 가는 곳이라 목록 하나면 된다.
+   ⚠ 파일을 앱 안에서 열지 않는다. 드라이브 링크를 새 창으로 넘긴다 —
+   PDF·한글을 폰에서 여는 것은 기기가 훨씬 잘한다. */
+function stuMaterialHTML(c){
+  if(!c.classId) return '<div class="sap-empty">아직 반이 정해지지 않았습니다.</div>';
+  loadMaterialsIfNeeded(c.classId);
+  const list = (state.materials[c.classId] || []).slice().reverse();
+  if(state.materialLoading[c.classId] && !state.materials[c.classId])
+    return '<div class="sap-empty">불러오는 중…</div>';
+  if(list.length===0) return '<div class="sap-empty">아직 올라온 자료가 없습니다.</div>';
+  return list.map(m=>`
+    <a class="mc" href="${materialLink(m)}" target="_blank" rel="noopener"
+       style="display:block;text-decoration:none;color:inherit;">
+      <div class="row" style="gap:7px;">
+        <span class="badge">${escHtml(((m.name||'').split('.').pop()||'파일').toUpperCase().slice(0,4))}</span>
+        <span class="spacer"></span>
+        <span class="mono" style="font-size:10.5px;color:var(--dim);">${escHtml((m.at||'').slice(0,10))}</span>
+      </div>
+      <div style="font-size:13.5px;font-weight:700;margin-top:8px;line-height:1.5;">${escHtml(m.title)}</div>
+      <div style="font-size:11.5px;color:var(--dim);margin-top:5px;">
+        ${escHtml(m.name)} · <span class="mono">${fileSizeLabel(m.size)}</span></div>
+    </a>`).join('');
+}
+
 function stuVideoHTML(c){
   markSeen('video', c.videos.length);
   if(c.videos.length===0) return `<div class="sap-empty">등록된 강의가 없습니다.</div>`;
@@ -5151,6 +5263,7 @@ function studentTabBodyHTML(c){
   if(t==='wronghw')    return stuWrongHTML(c);
   if(t==='progress')   return stuProgressHTML(c);
   if(t==='video')      return stuVideoHTML(c);
+  if(t==='material')   return stuMaterialHTML(c);
   if(t==='grades')     return stuScoresHTML(c);
   if(t==='attendance') return stuAttendanceHTML(c);
   if(t==='notice')     return stuNoticeHTML();
@@ -5346,7 +5459,8 @@ const TEACHER_SUBNAV = {
     ['수업 기록',  'classhub', 'sessions'],
     ['진도',       'classhub', 'progress'],
     ['데일리퀴즈', 'classhub', 'quiz'],
-    ['영상',       'classhub', 'video']
+    ['영상',       'classhub', 'video'],
+    ['자료',       'classhub', 'material']
   ],
   /* 「제출 현황」은 시험지 화면의 우측 칸으로 흡수했다 (시안 07). 서브탭에서 뺐다. */
   '오답': [
@@ -6721,6 +6835,7 @@ function teacherClassHubHTML(){
   if(tab==='progress')   sub = chubProgressHTML(c.id);
   else if(tab==='quiz')  sub = chubQuizHTML(c.id);
   else if(tab==='video') sub = chubVideoHTML(c.id);
+  else if(tab==='material') sub = chubMaterialHTML(c.id);
   else                   sub = chubSessionsHTML(c.id);   // 안에서 «목록(DS)»과 «그날 상세(구버전)»를 가른다
 
   const roster = DATA.students.filter(s=>s.classId===c.id);
@@ -6858,7 +6973,48 @@ function classOptionsHTML(selectedId){
        오른쪽 «빠른 작업»에서 모드로 전환한다
    신호는 별도 보드를 만들지 않고 여기 근거 문장으로 앉힌다 (A5에서 흡수). */
 
-const SD_FILTERS = [['all','전체'],['att','출결'],['score','성적'],['hw','과제·오답'],['qna','질문·클리닉']];
+const SD_FILTERS = [['all','전체'],['att','출결'],['score','성적'],['hw','과제·오답'],['qna','질문·클리닉'],['consult','상담']];
+
+/* =================== 상담 일지 (2026-08-09) ===================
+   시안 03의 연대기에 「상담」 갈래가 있었는데 도메인에 상담 «기록»이 없어서 비어 있었다.
+   (`DATA.consults`는 홈페이지로 들어온 «신청»이지 나눈 이야기가 아니다.)
+   학생 메모·수업 메모와 같은 방식으로 만든다 — 컬렉션을 늘리지 않고 `kv/consultlog:{학생id}`에 배열 하나.
+
+   **메모(한 덩어리)와 다른 것은 «날짜가 붙는다»는 점이다.** 상담은 사건이라 연대기에 쌓여야 하고,
+   메모는 «늘 참인 한 가지»라 옆에 붙어 있어야 한다. 둘은 서로를 대신하지 못한다. */
+const CONSULT_KINDS = ['전화', '대면', '문자'];
+
+async function loadConsultLogIfNeeded(sid){
+  if(!sid || state.consultLogs[sid] || state.consultLogLoading[sid]) return;
+  state.consultLogLoading[sid] = true;
+  const v = await dbGet('consultlog:' + sid, []);
+  state.consultLogs[sid] = Array.isArray(v) ? v : [];
+  state.consultLogLoading[sid] = false;
+  render();
+}
+async function addConsultLog(sid){
+  const date = document.getElementById('cs-date').value || todayStr();
+  const kind = document.getElementById('cs-kind').value;
+  const text = document.getElementById('cs-text').value.trim();
+  if(!text){ showToast('상담 내용을 적어 주세요.'); return; }
+  const list = (state.consultLogs[sid] || []).concat([{ id:'cl'+Date.now(), date, kind, text, at: nowStamp() }]);
+  state.consultLogs[sid] = list;
+  await dbSet('consultlog:' + sid, list);
+  /* 무엇을 나눴는지는 변경 이력에 남기지 않는다 — 상담에는 사적인 말이 들어가고
+     변경 이력은 조교도 본다 (학생 메모와 같은 판단). */
+  await logAudit('상담 기록', sid, studentNameOf(sid), `${date} ${kind}`);
+  showToast('상담을 기록했습니다.');
+  render();
+}
+async function deleteConsultLog(sid, id){
+  if(!confirm('이 상담 기록을 지울까요?')) return;
+  const list = (state.consultLogs[sid] || []).filter(x=>x.id!==id);
+  state.consultLogs[sid] = list;
+  await dbSet('consultlog:' + sid, list);
+  await logAudit('상담 기록 삭제', sid, studentNameOf(sid), '');
+  showToast('상담 기록을 지웠습니다.');
+  render();
+}
 
 /* 한 사람에게 일어난 일을 전부 «날짜가 붙은 사건»으로 바꾼다.
    kind는 갈래 필터용, type은 화면에 찍는 이름이다. */
@@ -6918,6 +7074,13 @@ function studentTimeline(s, rec){
       '', c.status==='취소' ? '' : 'k-consult');
   });
 
+  /* 상담 일지 — kv에 따로 사는 기록이라 여기서 연대기에 합류시킨다.
+     아직 안 불러왔으면 그냥 없는 것으로 둔다(불러오면 다시 그린다). */
+  (state.consultLogs[sid] || []).forEach(c=>{
+    push(c.date, 'consult', '상담', escHtml(c.kind || '상담'), escHtml(c.text),
+      '', `<button class="btn q sm" onclick="deleteConsultLog('${sid}','${c.id}')">삭제</button>`, 'k-consult');
+  });
+
   ev.sort((a,b)=> b.date.localeCompare(a.date));   // 최근이 위
   return ev;
 }
@@ -6965,7 +7128,10 @@ function teacherStudentDetailHTML(sid){
 function sdScreenHTML(s, rec, isAssistant){
   const sid = s.studentId;
   const SR = signalRules();   // KPI의 빨강도 명단과 같은 임계값을 본다
-  if(!isAssistant) loadStudentNoteIfNeeded(sid);   // 메모는 우측 칸에만 있고 그 칸은 강사의 것이다
+  if(!isAssistant){
+    loadStudentNoteIfNeeded(sid);    // 메모는 우측 칸에만 있고 그 칸은 강사의 것이다
+    loadConsultLogIfNeeded(sid);     // 상담 일지도 마찬가지 — 연대기에 합류시키려면 먼저 있어야 한다
+  }
   /* 조교는 채팅·기본정보로 갈 문이 없다. 예전 세션이 그 값을 들고 있어도 연대기로 떨어뜨린다. */
   const mode = !isAssistant && (state.studentDetailTab==='chat' || state.studentDetailTab==='info')
     ? state.studentDetailTab : 'timeline';
@@ -7086,14 +7252,14 @@ function sdScreenHTML(s, rec, isAssistant){
 }
 
 function sdTimelineHTML(s, sid, rec, isAssistant){
-  /* 조교에게는 「질문·클리닉」 갈래가 없다 — 답하는 것도 승인하는 것도 강사의 일이다.
-     예전 세션이 그 갈래를 들고 있으면 전체로 떨어뜨린다. */
-  const filters = isAssistant ? SD_FILTERS.filter(x=>x[0]!=='qna') : SD_FILTERS;
+  /* 조교에게는 「질문·클리닉」과 「상담」 갈래가 없다 — 답하는 것도 승인하는 것도,
+     학부모와 이야기하는 것도 강사의 일이다. 예전 세션이 그 갈래를 들고 있으면 전체로 떨어뜨린다. */
+  const filters = isAssistant ? SD_FILTERS.filter(x=>x[0]!=='qna' && x[0]!=='consult') : SD_FILTERS;
   let f = state.sdFilter || 'all';
   if(!filters.some(x=>x[0]===f)) f = 'all';
   /* 갈래를 뺐으면 연대기에서도 빼야 한다. 「전체」에만 남겨 두면 갈래 합(24)과
      전체(27)가 어긋나고, 숫자가 안 맞는 화면은 그 순간부터 아무도 안 믿는다. */
-  const all = studentTimeline(s, rec).filter(e=>!isAssistant || e.kind!=='qna');
+  const all = studentTimeline(s, rec).filter(e=>!isAssistant || (e.kind!=='qna' && e.kind!=='consult'));
   const ev = f==='all' ? all : all.filter(e=>e.kind===f);
 
   /* 갈래를 고르면 그 갈래의 입력 폼이 붙는다. 예전 탭에만 있던 입력을 여기서 되살린다. */
@@ -7121,6 +7287,19 @@ function sdTimelineHTML(s, sid, rec, isAssistant){
         return `<div class="sd-crow"><span style="color:var(--ink);flex:1;text-align:left;">${escHtml(a.title)}</span>
           <button class="btn sm ${done?'ok':''}" onclick="toggleHomeworkDone('${sid}','${a.id}')">${done?'완료':'미완료'}</button></div>`;
       }).join('')}</div>`;
+  } else if(f==='consult' && !isAssistant){
+    /* 상담 기록 — 다른 갈래와 같은 자리에 폼이 붙는다. 저장할 때 DOM에서 읽으므로
+       글자마다 render()가 돌지 않는다(한글 조합·커서 안전). */
+    form = `<div class="sd-form"><div class="cls-form" style="margin-top:0;align-items:flex-start;">
+      <label><span>날짜</span><input id="cs-date" type="date" value="${todayStr()}"></label>
+      <label style="width:110px;"><span>방식</span><select class="fm-sel" id="cs-kind">${
+        CONSULT_KINDS.map(k=>`<option>${k}</option>`).join('')}</select></label>
+      <label style="flex:1;min-width:260px;"><span>내용</span>
+        <textarea id="cs-text" rows="3" placeholder="나눈 이야기와 약속한 것&#10;예: 어머니 통화 — 9월부터 클리닉 주 2회 희망, 금요일 학교 보충으로 지각 잦다고 하심"></textarea></label>
+      <button class="btn p sm" onclick="addConsultLog('${sid}')">기록</button>
+    </div>
+    <p class="st-note">여기 적은 것은 <b>연대기에 상담으로 쌓입니다.</b>
+      학생·학부모에게는 보이지 않고, 변경 이력에도 «누구와 언제»까지만 남습니다.</p></div>`;
   }
 
   return `
@@ -8264,6 +8443,45 @@ function studentVideoSummary(studentId, classId){
 
    시안은 반 목록·영상 목록·본문 3열이었다. 실서비스는 왼쪽에 반 목록이 이미 있어
    여기서는 영상 목록 + 본문 2열로 둔다. 좁아지면 세로로 접힌다. */
+/* 강의자료 — 반 단위다. 과제·영상과 같은 배포 단위라 «누구에게 갈 것인가»를 따로 묻지 않는다.
+   올리는 일은 가끔이고 보는 일은 매번이라 폼은 접어 둔다 (시험지·창고와 같은 장치). */
+function chubMaterialHTML(classId){
+  loadMaterialsIfNeeded(classId);
+  const list = (state.materials[classId] || []).slice().reverse();   // 새로 올린 것이 위
+  const open = state.materialAdding;
+  const busy = state.materialUploading[classId];
+
+  return `
+  <div class="row" style="margin-bottom:14px;">
+    <button class="btn ${open?'':'p'} sm" onclick="state.materialAdding=${!open}; render()">${
+      open ? '닫기' : iconSvg('plus',13) + ' 자료 올리기'}</button>
+    <span class="muted" style="font-size:11.5px;">이 반 학생에게만 보입니다</span>
+  </div>
+  ${!open ? '' : `<div class="st-form" style="margin-bottom:16px;">
+    <div class="cls-form" style="margin-top:0;">
+      <label style="flex:1;min-width:200px;"><span>제목 (선택)</span>
+        <input id="mt-title" placeholder="비우면 파일 이름을 씁니다"></label>
+      <label style="min-width:220px;"><span>파일</span>
+        <input type="file" id="mt-file" ${busy?'disabled':''}
+          onchange="uploadMaterial('${classId}', this.files)"></label>
+      ${busy ? '<span class="muted" style="font-size:11.5px;align-self:center;">올리는 중…</span>' : ''}
+    </div>
+    <p class="st-note">PDF · 한글 · 이미지 무엇이든 올릴 수 있고, <b>${fileSizeLabel(MATERIAL_MAX_BYTES)}까지</b>입니다.
+      올린 파일은 <b>학생 앱 학습 &gt; 자료</b>에 바로 뜹니다.</p>
+  </div>`}
+  ${state.materialLoading[classId] && !state.materials[classId]
+    ? '<div class="st-empty">불러오는 중…</div>'
+    : list.length===0
+      ? '<div class="st-empty">아직 올린 자료가 없습니다.<br>수업 프린트·해설지·필기를 올려 두면 학생이 앱에서 받아 갑니다.</div>'
+      : list.map(m=>`<div class="st-row">
+          <div class="t"><b>${escHtml(m.title)}</b>
+            <span>${escHtml(m.name)}<s>·</s><span class="mono">${fileSizeLabel(m.size)}</span><s>·</s><span class="mono">${escHtml((m.at||'').slice(0,10))}</span></span></div>
+          <div class="v">
+            <a class="btn sm" href="${materialLink(m)}" target="_blank" rel="noopener">열기</a>
+            <button class="btn q sm" onclick="deleteMaterial('${classId}','${m.id}')">삭제</button>
+          </div></div>`).join('')}`;
+}
+
 function chubVideoHTML(classId){
   loadAllRecordsIfNeeded();
   const roster = DATA.students.filter(s=>s.classId===classId);
