@@ -747,6 +747,18 @@
 .app .st-note{margin:12px 0 0;font-size:11.5px;color:var(--dim);line-height:1.75;}
 .app .st-note b{color:var(--ink);font-weight:700;}
 
+/* 신호 규칙 — 줄 끝에 서는 «숫자 하나». 접두사 sr-
+   ⚠ mono는 숫자 칸에만. 「회 이상」·「무거움」 같은 낱말은 밖으로 뺀다 (8절). */
+.app .sr-v{gap:5px;font-size:11.5px;color:var(--dim);flex-wrap:wrap;justify-content:flex-end;}
+.app .sr-num{width:62px;height:30px;border:1px solid var(--line);border-radius:var(--r-sm);
+  background:var(--paper);padding:0 6px;font-size:12.5px;color:var(--ink);text-align:right;
+  outline:none;transition:border-color var(--t),box-shadow var(--t);}
+.app .sr-num:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(60,48,52,.12);}
+.app .sr-u{min-width:60px;}
+.app .sr-pre{margin-left:6px;}
+.app .sr-pre:first-child{margin-left:0;}
+.app .sr-fixed{color:var(--dim);}
+
 /* ============================================================
    폼 · 표 — 구버전 스타일이 쥐고 있던 마지막 조각들이 온 자리다. 접두사 fm-
    화면이 아니라 «부품»이라 화면별 접두사를 붙이지 않는다.
@@ -1549,6 +1561,8 @@ let state = {
   signalMutes: {},
   signalMutesLoaded: false,
   signalMutesLoading: false,
+  /* 임계값 — 저장된 것만 담는다. 읽을 때는 반드시 signalRules()로 기본값과 합쳐 본다 */
+  signalRules: {},
   /* 수업(02-class) — 날짜 하나 · 반 하나 · 단계 하나. 출결 초안은 attDraft를 그대로 쓴다 */
   sessionDate: '',
   sessionClassId: '',
@@ -3023,11 +3037,18 @@ async function togglePbImage(bankId){
   state.pbImageCache[bankId] = img || 'empty';
   render();
 }
+/* 신호 임계값도 여기서 같이 읽는다. signalOf()를 쓰는 세 화면(명단·신호·학생 상세)이
+   전부 이 함수를 거치므로, 기록이 도착한 시점에는 규칙도 와 있다.
+   따로 불러오면 «기본값으로 한 번 그리고 → 규칙이 와서 등급이 바뀌는» 깜빡임이 생긴다. */
 async function loadAllRecordsIfNeeded(){
   if(state.allRecordsLoaded || state.allRecordsLoading) return;
   state.allRecordsLoading = true;
   render();
-  const entries = await Promise.all(DATA.students.map(async s => [s.studentId, await dbGet('record:'+s.studentId, null)]));
+  const [entries, savedRules] = await Promise.all([
+    Promise.all(DATA.students.map(async s => [s.studentId, await dbGet('record:'+s.studentId, null)])),
+    dbGet('signal-rules', {})
+  ]);
+  state.signalRules = (savedRules && typeof savedRules === 'object') ? savedRules : {};
   state.allRecords = {};
   entries.forEach(([sid, rec]) => { if(rec) state.allRecords[sid] = rec; });
   state.allRecordsLoading = false;
@@ -5332,34 +5353,70 @@ function rosterStats(s){
    시안(05-signals)은 위험을 «출석률<80 그리고 시청률<50»으로 못박았는데,
    그러면 결석이 잦아도 영상만 잘 본 학생이 어디에도 안 걸린다.
    실데이터에 맞춰 «무거운 신호 2개 이상»으로 바꿨다.
-   임계값은 잠정이다. 규칙 «편집» UI는 없다 — 고치려면 이 함수를 고친다. */
+
+   **임계값은 상수가 아니라 설정이다 (설정 > 신호 규칙).** 학원마다 다르고 학기마다 달라진다.
+   등급을 «어떻게» 매기는지(무거운 신호 2개 = 위험)는 여기 고정이고,
+   각 신호가 «언제» 켜지는지만 연다. 층을 정하는 규칙까지 열면 화면끼리 말이 달라진다. */
 
 const SIGNAL_GRADE = {
   r: { label:'위험', badge:'no',   todo:'즉시 연락 권장',     cond:'무거운 신호 2개 이상' },
-  y: { label:'주의', badge:'late', todo:'이번 주 안에 개입',  cond:'무거운 신호 1개 · 시청률 70% 미만' },
+  y: { label:'주의', badge:'late', todo:'이번 주 안에 개입',  cond:'무거운 신호 1개 · 시청률 저조' },
   g: { label:'관찰', badge:'',     todo:'추세만 지켜보는 중', cond:'경미한 신호 하나' }
 };
+/* 등급 조건 문장은 임계값을 따라가야 한다 — 설정에서 70을 60으로 바꿨는데
+   화면이 「70% 미만」이라고 적혀 있으면 둘 중 하나는 거짓말이 된다. */
+function gradeCond(k){
+  return k === 'y' ? `무거운 신호 1개 · 시청률 ${signalRules().vidWarn}% 미만` : SIGNAL_GRADE[k].cond;
+}
+
+/* 임계값 일곱 개 — 저장은 신호 해제와 같은 방식이다 (컬렉션 대신 kv 문서 하나).
+   ⚠ 이 일곱 값이 **명단 · 신호 · 학생 상세 세 화면의 등급**을 한꺼번에 정한다. */
+const SIGNAL_DEFAULTS = { absent:2, attPct:80, drop:8, wrong:3, vidHeavy:50, vidWarn:70, vidLight:80 };
+const SIGNAL_LIMITS   = { absent:[1,8], attPct:[1,100], drop:[1,100], wrong:[1,99],
+                          vidHeavy:[0,100], vidWarn:[0,100], vidLight:[0,100] };
+const SIGNAL_RULE_LABELS = { absent:'연속 결석', attPct:'출석률', drop:'성적 급락', wrong:'오답 미제출',
+                             vidHeavy:'시청률 무거움', vidWarn:'시청률 주의', vidLight:'시청률 경미' };
+
+function clampRule(k, n){
+  const [lo, hi] = SIGNAL_LIMITS[k] || [0, 100];
+  return Math.min(hi, Math.max(lo, Math.round(n)));
+}
+/* 저장된 값이 비었거나 깨져 있어도 화면이 멈추면 안 된다 — 읽을 때마다 기본값에 덮어 씌우고
+   범위와 순서를 바로잡는다. 그래서 이 함수를 통하지 않고 state.signalRules를 직접 보지 않는다. */
+function signalRules(){
+  const saved = state.signalRules || {};
+  const r = {};
+  for(const k in SIGNAL_DEFAULTS){
+    const n = Number(saved[k]);
+    r[k] = Number.isFinite(n) ? clampRule(k, n) : SIGNAL_DEFAULTS[k];
+  }
+  // 시청률 셋은 항상 «무거움 ≤ 주의 ≤ 경미»다. 뒤집히면 어느 구간도 성립하지 않는다.
+  r.vidWarn  = Math.max(r.vidWarn, r.vidHeavy);
+  r.vidLight = Math.max(r.vidLight, r.vidWarn);
+  return r;
+}
 
 function signalOf(st){
   if(st.withdrawn) return null;              // 퇴원은 트리아지 대상이 아니다
+  const R = signalRules();
   const rules = [];
   const absent = st.att8.filter(a=>a.status==='결석').length;
   const push = (name, heavy, why) => rules.push({ name, heavy, why });
 
-  if(absent >= 2)                          push('연속 결석',   true,  `최근 ${st.att8.length}회 중 결석 <b>${absent}</b>`);
-  if(st.attPct !== null && st.attPct < 80) push('출석률 저조', true,  `출석률 <b>${st.attPct}%</b>`);
-  if(st.drop >= 8)                         push('성적 급락',   true,  `성적 <b>${st.scores[0]}→${st.scores[st.scores.length-1]}</b>`);
-  if(st.wrongLeft >= 3)                    push('오답 미제출', true,  `오답숙제 <b>${st.wrongLeft}건</b> 미제출`);
-  else if(st.wrongLeft > 0)                push('오답 미제출', false, `오답숙제 <b>${st.wrongLeft}건</b> 미제출`);
-  if(st.vidPct !== null && st.vidPct < 50)      push('시청률 저조', true,  `강의 시청 <b>${st.vidPct}%</b>`);
-  else if(st.vidPct !== null && st.vidPct < 80) push('시청률 저조', false, `강의 시청 <b>${st.vidPct}%</b>`);
+  if(absent >= R.absent)                          push('연속 결석',   true,  `최근 ${st.att8.length}회 중 결석 <b>${absent}</b>`);
+  if(st.attPct !== null && st.attPct < R.attPct)  push('출석률 저조', true,  `출석률 <b>${st.attPct}%</b>`);
+  if(st.drop >= R.drop)                           push('성적 급락',   true,  `성적 <b>${st.scores[0]}→${st.scores[st.scores.length-1]}</b>`);
+  if(st.wrongLeft >= R.wrong)                     push('오답 미제출', true,  `오답숙제 <b>${st.wrongLeft}건</b> 미제출`);
+  else if(st.wrongLeft > 0)                       push('오답 미제출', false, `오답숙제 <b>${st.wrongLeft}건</b> 미제출`);
+  if(st.vidPct !== null && st.vidPct < R.vidHeavy)      push('시청률 저조', true,  `강의 시청 <b>${st.vidPct}%</b>`);
+  else if(st.vidPct !== null && st.vidPct < R.vidLight) push('시청률 저조', false, `강의 시청 <b>${st.vidPct}%</b>`);
   if(st.hwTotal && st.hwDone < st.hwTotal) push('과제 누락',   false, `과제 <b>${st.hwDone}/${st.hwTotal}</b>`);
 
   if(rules.length === 0) return null;
 
   const heavy = rules.filter(r=>r.heavy).length;
   const grade = heavy >= 2 ? 'r'
-              : (heavy === 1 || (st.vidPct !== null && st.vidPct < 70)) ? 'y' : 'g';
+              : (heavy === 1 || (st.vidPct !== null && st.vidPct < R.vidWarn)) ? 'y' : 'g';
 
   /* 위험도 점수 — 등급을 «정하는» 값이 아니라 등급 «안에서 줄 세우는» 값이다.
      점수로 등급까지 정하면 임계값이 두 벌이 되고, 어느 쪽이 진짜인지 알 수 없게 된다. */
@@ -5463,6 +5520,7 @@ function teacherRosterHTML(){
   loadAllRecordsIfNeeded();
 
   const m = rosterModel();
+  const R = signalRules();                     // 숫자 칸의 빨강은 신호 임계값과 같은 값을 본다
   const stats = m.stats, classId = m.classId;
   const wide = !classId;                       // 반을 고르지 않았을 때만 「반」·「반 진도」를 보인다
   const sel = new Set(state.rosterSelected || []);
@@ -5533,10 +5591,12 @@ function teacherRosterHTML(){
         : '<span class="muted" style="font-size:11px;">—</span>'}</td>` : ''}
       <td style="white-space:nowrap;">${rosterSpark(st.scores)}</td>
       <td>${rosterDots(st.att8)}</td>
-      <td class="r mono ${st.attPct===null ? 'muted' : (st.attPct<80 ? 'warn' : (st.attPct<90 ? 'cau' : ''))}">${st.attPct===null ? '—' : st.attPct + '%'}</td>
+      ${/* 빨강은 «무거운 신호가 켜졌다»와 같은 뜻이어야 한다 — 그래서 설정의 임계값을 그대로 본다.
+           노랑(cau)은 신호가 아니라 «가까워지고 있다»는 넓은 띠라 고정값이다. */''}
+      <td class="r mono ${st.attPct===null ? 'muted' : (st.attPct<R.attPct ? 'warn' : (st.attPct<90 ? 'cau' : ''))}">${st.attPct===null ? '—' : st.attPct + '%'}</td>
       <td class="r mono ${st.hwTotal && st.hwDone<st.hwTotal ? 'cau' : ''}">${st.hwTotal ? st.hwDone + '/' + st.hwTotal : '—'}</td>
       <td class="r mono ${st.wrongLeft>0 ? 'warn' : ''}">${st.wrongLeft || '—'}</td>
-      <td class="r mono ${st.vidPct===null ? 'muted' : (st.vidPct<50 ? 'warn' : (st.vidPct<80 ? 'cau' : ''))}">${st.vidPct===null ? '—' : st.vidPct + '%'}</td>
+      <td class="r mono ${st.vidPct===null ? 'muted' : (st.vidPct<R.vidHeavy ? 'warn' : (st.vidPct<R.vidLight ? 'cau' : ''))}">${st.vidPct===null ? '—' : st.vidPct + '%'}</td>
       <td class="sub mono" style="font-size:11.5px;">${escHtml(s.parentPhone||'—')}</td>
       <td><span class="rst-act">
         <button class="btn sm p" onclick="rosterOpen('${s.studentId}','info')">열기</button>
@@ -5826,6 +5886,8 @@ function teacherSignalsHTML(){
       </span>
       ${m.muted ? `<button class="btn sm" onclick="state.signalShowMuted=${!state.signalShowMuted}; render()">${
         state.signalShowMuted ? '해제한 학생 숨기기' : `해제한 학생 ${m.muted}명 보기`}</button>` : ''}
+      ${/* 「이 줄은 왜 위험이지」의 답은 임계값에 있다. 그 문을 화면 안에 둔다. */''}
+      <button class="btn sm" onclick="goTeacherTab('settings'); state.settingsSubTab='signalrules'; render()">규칙 고치기</button>
     </div>
 
     <div class="rst-fbar">
@@ -5850,7 +5912,7 @@ function teacherSignalsHTML(){
     <div class="sig-ghead"><span class="rk ${k}"></span><b>${g.label}</b>
       <span class="sig-n mono">${list.length}</span>
       <span class="sig-do">· ${g.todo}</span>
-      <span class="sig-cond">${g.cond}</span>
+      <span class="sig-cond">${gradeCond(k)}</span>
     </div>
     ${list.map(r=>signalRowHTML(r, k)).join('')}`;
   }).join('');
@@ -6759,6 +6821,7 @@ function teacherStudentDetailHTML(sid){
                  신호 «해제»(규칙을 다루는 것은 강사의 판단) · 「질문·클리닉」 갈래 */
 function sdScreenHTML(s, rec, isAssistant){
   const sid = s.studentId;
+  const SR = signalRules();   // KPI의 빨강도 명단과 같은 임계값을 본다
   /* 조교는 채팅·기본정보로 갈 문이 없다. 예전 세션이 그 값을 들고 있어도 연대기로 떨어뜨린다. */
   const mode = !isAssistant && (state.studentDetailTab==='chat' || state.studentDetailTab==='info')
     ? state.studentDetailTab : 'timeline';
@@ -6801,10 +6864,10 @@ function sdScreenHTML(s, rec, isAssistant){
 
   <div class="kpis" style="margin-top:18px;flex-shrink:0;">
     <div class="kpi"><div class="k">최근 성적</div><div class="v">${st.scores.length?st.scores[st.scores.length-1]:'—'}<s>${st.scores.length?'/100':''}</s></div></div>
-    <div class="kpi"><div class="k">출석률</div><div class="v ${st.attPct!==null&&st.attPct<80?'down':''}">${st.attPct===null?'—':st.attPct}<s>${st.attPct===null?'':'%'}</s></div></div>
+    <div class="kpi"><div class="k">출석률</div><div class="v ${st.attPct!==null&&st.attPct<SR.attPct?'down':''}">${st.attPct===null?'—':st.attPct}<s>${st.attPct===null?'':'%'}</s></div></div>
     <div class="kpi"><div class="k">과제</div><div class="v">${st.hwTotal?st.hwDone:'—'}<s>${st.hwTotal?'/'+st.hwTotal:''}</s></div></div>
     <div class="kpi"><div class="k">오답 미제출</div><div class="v ${st.wrongLeft?'down':''}">${st.wrongLeft||0}<s>건</s></div></div>
-    <div class="kpi"><div class="k">강의 시청</div><div class="v ${st.vidPct!==null&&st.vidPct<50?'down':''}">${st.vidPct===null?'—':st.vidPct}<s>${st.vidPct===null?'':'%'}</s></div></div>
+    <div class="kpi"><div class="k">강의 시청</div><div class="v ${st.vidPct!==null&&st.vidPct<SR.vidHeavy?'down':''}">${st.vidPct===null?'—':st.vidPct}<s>${st.vidPct===null?'':'%'}</s></div></div>
   </div>
 
   ${sg ? `<div class="sd-sig ${sg.grade}">
@@ -8637,12 +8700,14 @@ function unitBankAddLegacyHTML(){
 function teacherSettingsHTML(){
   if(state.studentDetailId) return teacherStudentDetailHTML(state.studentDetailId);
   const tab = state.settingsSubTab || 'assistants';
-  const subtabs = [['assistants','조교'],['students','학생'],['classes','반'],['consults','상담'],['auditlog','변경 이력'],['admin','관리자']];
+  const subtabs = [['assistants','조교'],['students','학생'],['classes','반'],['consults','상담'],
+    ['signalrules','신호 규칙'],['auditlog','변경 이력'],['admin','관리자']];
   const subMap = {
     assistants: teacherAssistantsHTML,
     students: teacherSettingsStudentsHTML,
     classes: teacherSettingsClassesHTML,
     consults: teacherSettingsConsultsHTML,
+    signalrules: teacherSignalRulesHTML,
     auditlog: teacherAuditLogHTML,
     admin: teacherSettingsAdminHTML,
   };
@@ -8653,7 +8718,8 @@ function teacherSettingsHTML(){
      갈래를 왼쪽에 세우면 여섯 개가 한눈에 보이고, 지금 어디에 있는지가 화면에 남는다.
      각 갈래의 본문은 «구조»를 손대지 않았다 — 폼과 표가 전부라 형태를 바꿔도 나아지지 않는다. */
   const LABEL = { assistants:'조교 계정을 만들고 담당 반을 정한다', students:'학생 계정을 만든다 · 엑셀 일괄 등록',
-    classes:'반을 만든다', consults:'홈페이지로 들어온 상담 신청', auditlog:'누가 무엇을 바꿨는지', admin:'관리자 비밀번호' };
+    classes:'반을 만든다', consults:'홈페이지로 들어온 상담 신청', signalrules:'위험·주의를 가르는 임계값',
+    auditlog:'누가 무엇을 바꿨는지', admin:'관리자 비밀번호' };
   return `<div class="ex-screen">
     <aside class="ex-list">
       <div class="t-sec" style="margin:0 0 10px;flex-shrink:0;">설정</div>
@@ -8733,6 +8799,110 @@ function teacherAssistantsHTML(){
           </div></div>`).join('')
   })}
   </div>`;
+}
+
+/* ---------- 신호 규칙 ----------
+   시안(13-settings)에는 없던 갈래다. 임계값이 코드 상수라 «고치려면 코드를 건드리는» 값이었는데,
+   그 일곱 숫자가 명단·신호·학생 상세 세 화면의 등급을 한꺼번에 정한다.
+
+   **입력은 state에 담지 않는다.** 여기서 render()가 돌면 화면이 통째로 다시 그려져
+   쓰던 값이 날아간다 — 조교·반 추가 폼과 같이 «저장할 때 DOM에서 읽는» 방식을 쓴다.
+   그래서 조합 중 커서 문제(9절 4번)도 애초에 생기지 않는다.
+
+   **등급을 «어떻게» 매기는지는 열지 않았다** — 「무거운 신호 2개 = 위험」은 규칙의 뼈대라
+   그것까지 열면 화면마다 등급의 뜻이 달라진다. 여는 것은 각 신호가 «언제» 켜지는가뿐이다. */
+function teacherSignalRulesHTML(){
+  loadAllRecordsIfNeeded();
+  loadSignalMutesIfNeeded();
+  const R = signalRules();
+  const changed = Object.keys(SIGNAL_DEFAULTS).filter(k=>R[k] !== SIGNAL_DEFAULTS[k]);
+
+  /* 지금 이 규칙으로 몇 명이 어느 등급인가 — 값을 고칠 때 «그래서 몇 명이 걸리나»가 첫 물음이다.
+     해제해 둔 학생은 빼고 센다. 신호 화면에 안 보이는 학생을 여기서 세면 두 숫자가 어긋난다. */
+  const dist = signalDist();
+  const num = (k, unit) => `<input class="sr-num mono" id="sr-${k}" type="number" value="${R[k]}"
+    min="${SIGNAL_LIMITS[k][0]}" max="${SIGNAL_LIMITS[k][1]}">${unit ? `<span class="sr-u">${unit}</span>` : ''}`;
+  const row = (title, desc, v) => `<div class="st-row">
+    <div class="t"><b>${title}</b><span>${desc}</span></div>
+    <div class="v sr-v">${v}</div></div>`;
+
+  return `<div class="st-wrap">
+  ${stSec({
+    title:'신호 규칙',
+    desc: dist ? `지금 이 값으로 위험 ${dist.r} · 주의 ${dist.y} · 관찰 ${dist.g}` : '기록 불러오는 중…',
+    action:`<button class="btn sm" onclick="fillSignalRuleDefaults()">기본값 채우기</button>
+      <button class="btn p sm" onclick="saveSignalRules()">저장</button>`,
+    body:
+      row('연속 결석', `최근 8회 기록 중 결석이 이만큼이면 <b>무거운 신호</b>입니다. 기본값 ${SIGNAL_DEFAULTS.absent}회`,
+        `<span class="sr-pre">최근 8회 중</span>${num('absent','회 이상')}`) +
+      row('출석률 저조', `「퇴원」을 뺀 기록 중 「결석」이 아닌 비율입니다. 지각·조퇴는 «온 것»으로 셉니다. 기본값 ${SIGNAL_DEFAULTS.attPct}%`,
+        num('attPct','% 미만')) +
+      row('성적 급락', `첫 점수에서 마지막 점수까지의 하락폭입니다. 시험마다 만점이 달라 100점으로 환산해 비교합니다. 기본값 ${SIGNAL_DEFAULTS.drop}점`,
+        num('drop','점 이상 하락')) +
+      row('오답 미제출', `이 건수부터 <b>무거운 신호</b>입니다. 1건만 남아도 경미한 신호는 켜집니다. 기본값 ${SIGNAL_DEFAULTS.wrong}건`,
+        num('wrong','건 이상')) +
+      row('시청률 저조', `세 값은 항상 <b>무거움 ≤ 주의 ≤ 경미</b> 순서여야 합니다. 「주의」는 다른 신호가 없어도 이 밑으로 떨어지면 등급을 올립니다. 기본값 ${SIGNAL_DEFAULTS.vidHeavy}·${SIGNAL_DEFAULTS.vidWarn}·${SIGNAL_DEFAULTS.vidLight}%`,
+        `<span class="sr-pre">무거움</span>${num('vidHeavy')}
+         <span class="sr-pre">주의</span>${num('vidWarn')}
+         <span class="sr-pre">경미</span>${num('vidLight','% 미만')}`) +
+      row('과제 누락', '하나라도 미완이면 경미한 신호입니다. 「몇 개부터」가 없으므로 고칠 값도 없습니다.',
+        '<span class="sr-fixed">미완 1건부터</span>') +
+      `<p class="st-note">
+        등급은 <b>무거운 신호 2개 이상이면 위험</b>, <b>1개면 주의</b>, <b>경미한 것만이면 관찰</b>입니다 —
+        이 셋은 규칙의 뼈대라 여기서 고치지 않습니다.<br>
+        바꾼 값은 <b>명단 · 신호 · 학생 상세</b> 세 화면에 함께 반영되고, 변경 이력에 남습니다.
+        ${changed.length ? `<br>지금 기본값과 다른 항목 — <b>${changed.map(k=>SIGNAL_RULE_LABELS[k]).join(' · ')}</b>` : ''}</p>`
+  })}
+  </div>`;
+}
+
+/* 지금 규칙으로 등급별 인원. 기록이 아직 없으면 셀 수 없으므로 null을 돌려준다. */
+function signalDist(){
+  if(!state.allRecordsLoaded) return null;
+  const dist = { r:0, y:0, g:0 };
+  DATA.students.forEach(s=>{
+    if(signalMutedUntil(s.studentId)) return;
+    const sg = signalOf(rosterStats(s));
+    if(sg) dist[sg.grade]++;
+  });
+  return dist;
+}
+
+/* 폼을 채우기만 한다 — 여기서 render()나 showToast()를 부르면 화면이 다시 그려지면서
+   방금 채운 값이 저장된 값으로 되돌아간다. 저장은 사용자가 누른다. */
+function fillSignalRuleDefaults(){
+  for(const k in SIGNAL_DEFAULTS){
+    const el = document.getElementById('sr-' + k);
+    if(el) el.value = SIGNAL_DEFAULTS[k];
+  }
+}
+
+async function saveSignalRules(){
+  const before = signalRules();
+  const next = {};
+  for(const k in SIGNAL_DEFAULTS){
+    const el = document.getElementById('sr-' + k);
+    const n = Number(el && el.value);
+    if(!el || el.value.trim()==='' || !Number.isFinite(n)){
+      showToast(`${SIGNAL_RULE_LABELS[k]} — 숫자를 넣어 주세요.`); return;
+    }
+    next[k] = clampRule(k, n);
+  }
+  /* 뒤집힌 값은 조용히 고치지 않고 되돌려 보낸다 — 말없이 바꾸면 «내가 넣은 값»과
+     «화면이 쓰는 값»이 달라지고, 그때부터 이 화면을 못 믿게 된다. */
+  if(!(next.vidHeavy <= next.vidWarn && next.vidWarn <= next.vidLight)){
+    showToast('시청률은 무거움 ≤ 주의 ≤ 경미 순서여야 합니다.'); return;
+  }
+  const diff = Object.keys(SIGNAL_DEFAULTS).filter(k=>before[k] !== next[k])
+    .map(k=>`${SIGNAL_RULE_LABELS[k]} ${before[k]}→${next[k]}`);
+  if(diff.length === 0){ showToast('바뀐 값이 없습니다.'); return; }
+
+  state.signalRules = next;
+  await dbSet('signal-rules', next);
+  await logAudit('신호 규칙 변경', '', '', diff.join(' · '));
+
+  const dist = signalDist();
+  showToast(dist ? `저장했습니다 — 위험 ${dist.r} · 주의 ${dist.y} · 관찰 ${dist.g}` : '저장했습니다.');
 }
 
 /* ---------- 반 ---------- */
