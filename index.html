@@ -363,8 +363,10 @@
    시안이 A4에서 흡수한 것 셋 — 큐 · 2열 비교 · 키보드. 다크 테마는 버렸다.
    높이 134px = 상단바 52 + 서브탭 42 + .body 상하 패딩 40. */
 .app .rv-screen{display:flex;height:calc(100vh - 134px);}
+/* 큐는 시안대로 종이색이지만 **경계선은 흰 면과 같은 높이로** 서야 한다.
+   위아래 패딩만큼 짧으면 선이 중간에서 끊기고, 목록과 16px 떠 있으면 선이 어디에도 안 붙는다. */
 .app .rv-queues{width:196px;flex-shrink:0;padding-right:14px;border-right:1px solid var(--line);
-  overflow-y:auto;}
+  overflow-y:auto;margin:-20px 0 -20px -20px;padding-left:20px;padding-top:20px;padding-bottom:20px;}
 .app .rv-qn{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:var(--r-md);
   font-size:12.5px;color:var(--sub);cursor:pointer;transition:background var(--t),color var(--t);}
 .app .rv-qn:hover{background:var(--hover);color:var(--ink);}
@@ -373,8 +375,10 @@
 
 /* min-height:0이 없으면 플렉스 항목의 최소 높이가 «내용 크기»가 되어, 안에 든 KaTeX 수식이
    상자를 밀어낸다. 화면 높이는 고정인데 문서가 그만큼 세로로 스크롤됐다. */
+/* 흰 면은 큐의 경계선에 «붙어» 시작한다 (시안 04: .list{left:216px} — 큐 폭과 정확히 같다).
+   margin-left로 띄우면 선과 면 사이에 종이색 띠가 생겨 선이 떠 보인다. 안쪽 여백으로 바꿨다. */
 .app .rv-list{width:292px;flex-shrink:0;border-right:1px solid var(--line);
-  display:flex;flex-direction:column;min-height:0;margin-left:16px;padding-right:14px;}
+  display:flex;flex-direction:column;min-height:0;padding-left:16px;padding-right:14px;}
 .app .rv-lh{display:flex;align-items:center;gap:8px;padding-bottom:11px;
   border-bottom:1px solid var(--line);flex-shrink:0;}
 .app .rv-lbody{flex:1;min-height:0;overflow-y:auto;}
@@ -426,15 +430,15 @@
    시안은 1440 캔버스에 `position:absolute`라 칸이 화면 가장자리에 닿았다. 여기는 스크롤
    문서이므로 본문 패딩(`.app .body{padding:20px}`)을 **음수 마진으로 되먹여** 같은 자리를 만든다. */
 .app .sd-list, .app .sd-ctx, .app .rv-list, .app .chub-side, .app .ex-list,
-.app .co-side, .app .nt-list, .app .ch-list, .app .vd-list{background:var(--card);}
+.app .co-side, .app .nt-list, .app .ch-list, .app .vd-list, .app .qn-list{background:var(--card);}
 
 /* 세로는 본문 위아래 패딩까지 채운다 — 칸이 상단바 밑에서 창 아래까지 이어진다.
    `.vd-list`는 빠진다: 반 관리 «본문 안»에 있는 칸이라 여기서 재면 엉뚱한 자리를 먹는다. */
 .app .sd-list, .app .sd-ctx, .app .rv-list, .app .chub-side, .app .ex-list,
-.app .co-side, .app .nt-list, .app .ch-list{
+.app .co-side, .app .nt-list, .app .ch-list, .app .qn-list{
   margin-top:-20px;margin-bottom:-20px;padding-top:20px;padding-bottom:20px;}
 /* 가로는 창 가장자리에 닿는 칸만 그쪽 패딩을 먹는다 (`.rv-list`는 큐 다음의 «가운데» 칸이다) */
-.app .sd-list, .app .chub-side, .app .ex-list, .app .nt-list, .app .ch-list{
+.app .sd-list, .app .chub-side, .app .ex-list, .app .nt-list, .app .ch-list, .app .qn-list{
   margin-left:-20px;padding-left:20px;}
 .app .sd-ctx, .app .co-side{margin-right:-20px;padding-right:20px;}
 
@@ -553,16 +557,33 @@
 .app .cn-rq .a{display:flex;gap:5px;margin-top:9px;flex-wrap:wrap;}
 
 /* 질의응답 — 세로 스택. 질문 하나가 한 덩어리고 답이 그 아래 붙는다. */
-.app .qn-card{border:1px solid var(--line);border-radius:var(--r-lg);background:var(--card);
-  padding:15px 17px;margin-bottom:12px;}
-.app .qn-card.open{border-color:var(--late-line);}
-.app .qn-meta{display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--dim);}
-.app .qn-meta .spacer{margin-left:auto;}
-.app .qn-q{font-size:14px;line-height:1.75;margin-top:9px;white-space:pre-wrap;}
-.app .qn-a{margin-top:12px;padding-top:12px;border-top:1px solid var(--line2);
-  font-size:13px;line-height:1.75;color:var(--sub);white-space:pre-wrap;}
-.app .qn-img{max-width:220px;max-height:220px;margin-top:10px;border:1px solid var(--line);
+/* 질의응답 — 시안 11 그대로 «좌 목록 + 우 하나» 두 단이다 (2026-08-08에 다시 짰다).
+   예전에는 카드를 세로로 쌓았다. 그런데 수학 질문은 길고 사진이 붙어서, 하나를 읽는 동안
+   다음 질문이 화면 밖으로 나갔다. **답하는 화면은 «다음 것으로 넘어가는» 화면이라
+   목록이 늘 옆에 있어야 한다** — 오답 검토에서 내린 것과 같은 판단이다. */
+.app .qn-screen{display:flex;height:calc(100vh - 134px);}
+.app .qn-list{width:326px;flex-shrink:0;border-right:1px solid var(--line);
+  display:flex;flex-direction:column;}
+.app .qn-lh{display:flex;align-items:center;gap:6px;padding:0 14px 12px 0;flex-shrink:0;flex-wrap:wrap;}
+.app .qn-lbody{flex:1;min-height:0;overflow-y:auto;position:relative;padding-right:14px;}
+
+.app .qn-doc{flex:1;min-width:0;min-height:0;display:flex;flex-direction:column;padding:0 4px 0 26px;}
+.app .qn-dh{flex-shrink:0;padding-bottom:14px;border-bottom:1px solid var(--line);}
+.app .qn-thread{flex:1;min-height:0;overflow-y:auto;position:relative;padding:16px 0 8px;}
+/* 질문과 답변을 좌우로 벌리지 않는다 — 수학 질문은 길고 수식이 들어가서
+   말풍선으로 만들면 폭이 좁아 읽기 어렵다. 세로로 쌓고 «누가 썼는지»를 머리에 붙인다. */
+.app .qn-msg{padding:16px 18px;border-radius:var(--r-lg);border:1px solid var(--line);
+  background:var(--card);margin-bottom:12px;}
+.app .qn-msg.me{background:var(--accent-bg);border-color:var(--accent-line);}
+.app .qn-msg .h{display:flex;align-items:center;gap:8px;margin-bottom:10px;}
+.app .qn-msg .h b{font-size:12.5px;font-weight:700;}
+.app .qn-msg .h .t{margin-left:auto;font-family:'JetBrains Mono',monospace;
+  font-size:10.5px;color:var(--dim);}
+.app .qn-msg .x{font-size:13.5px;line-height:1.9;white-space:pre-wrap;}
+.app .qn-comp{flex-shrink:0;border-top:1px solid var(--line);padding:14px 0 4px;}
+.app .qn-img{max-width:260px;max-height:260px;margin-top:10px;border:1px solid var(--line);
   border-radius:var(--r-md);display:block;}
+@media (max-width:1080px){ .app .qn-list{width:250px;} }
 
 /* 공지 — 읽히는 순서가 곧 최신 순이다. */
 /* ---------- 공지 (design-v1/10-notice) ----------
@@ -640,11 +661,22 @@
 .app .ex-list{width:262px;flex-shrink:0;border-right:1px solid var(--line);
   padding-right:14px;margin-right:20px;display:flex;flex-direction:column;min-height:0;}
 .app .ex-lbody{flex:1;min-height:0;overflow-y:auto;margin-right:-6px;padding-right:6px;}
-.app .ex-item{padding:11px 12px;border-left:3px solid transparent;border-bottom:1px solid var(--line2);
-  border-radius:0 var(--r-md) var(--r-md) 0;cursor:pointer;transition:background var(--t);}
+/* 시안 07의 `.ex` 그대로 — 항목 사이에 선을 넣지 않는다. 선이 있으면 «표»로 읽혀서
+   두세 줄짜리 항목이 서로 붙어 보인다. 구분은 여백과 hover가 한다. */
+.app .ex-item{padding:12px 16px;border-left:3px solid transparent;
+  cursor:pointer;transition:background var(--t);}
 .app .ex-item:hover{background:var(--hover);}
 .app .ex-item.on{background:var(--accent-bg);border-left-color:var(--accent);}
 .app .ex-item .n{font-size:13px;font-weight:600;}
+/* 갈래를 «고르는» 목록(설정·창고)은 카드가 아니라 내비게이션이다 — 시안 13의 `.sn` 알약.
+   같은 부품으로 그리면 「시험지 하나」와 「설정 갈래」가 같은 무게로 보인다. */
+.app .ex-list.ex-nav .ex-item{padding:8px 10px;border-left:0;border-radius:var(--r-md);
+  color:var(--sub);transition:background var(--t),color var(--t);}
+.app .ex-list.ex-nav .ex-item:hover{color:var(--ink);}
+.app .ex-list.ex-nav .ex-item.on{background:var(--accent-bg);color:var(--accent);}
+.app .ex-list.ex-nav .ex-item .n{font-size:12.5px;font-weight:600;}
+.app .ex-list.ex-nav .ex-item.on .n{font-weight:700;}
+.app .ex-list.ex-nav .ex-item .m{margin-top:2px;}
 .app .ex-item .m{font-size:11.5px;color:var(--dim);margin-top:4px;}
 .app .ex-main{flex:1;min-width:0;min-height:0;display:flex;flex-direction:column;}
 .app .ex-body{flex:1;min-height:0;overflow-y:auto;margin-top:16px;}
@@ -1594,6 +1626,7 @@ let state = {
   clinicWeek: '',            // 클리닉 주간 판의 시작(월요일). 빈 값이면 이번 주
   clinicApplyMode: '',       // 학생 신청 경로 — 'slot'(열린 시간대) | 'free'(직접 제안)
   qnaFilter: 'open',
+  qnaSelectedId: null,    // 오른쪽에 펼쳐 놓은 질문 (공지의 noticeSelectedId와 같은 장치)
   examSelectedId: null,
   examMode: '',              // ''이면 목록+분석, 'new'면 등록 폼
   unitBankMode: '',          // ''이면 창고 목록, 'add'면 문항 추가
@@ -8013,45 +8046,86 @@ function teacherQnaHTML(){
   const f = state.qnaFilter || 'open';
   const list = f==='open' ? open : (f==='done' ? done : DATA.qnas);
 
-  const card = q => {
-    const stu = DATA.students.find(s=>s.studentId===q.studentId);
-    return `<div class="qn-card ${q.answer?'':'open'}">
-      <div class="qn-meta"><span class="mono">${q.date||''}</span>
-        <b style="color:var(--ink);font-size:12.5px;">${escHtml(q.studentName||'')}</b>
-        ${stu?`<span>${escHtml(classNameOf(stu.classId))}</span>`:''}
-        <span class="spacer"></span>
-        <span class="badge ${q.answer?'ok':'no'}">${q.answer?'답변 완료':'답변 대기'}</span></div>
-      <div class="qn-q">${escHtml(q.question)}</div>
-      ${imgSrcOf(q.image)?`<img class="qn-img" src="${imgSrcOf(q.image)}">`:''}
-      ${q.answer
-        ? `<div class="qn-a">${escHtml(q.answer)}${imgSrcOf(q.answerImage)?`<img class="qn-img" src="${imgSrcOf(q.answerImage)}">`:''}
-             <div style="font-size:11px;color:var(--dim);margin-top:8px;">${q.answeredAt||''} 답변</div></div>`
-        : `<div class="cls-form" style="align-items:flex-start;">
-             <label style="flex:1;min-width:220px;"><span>답변</span>
-               <textarea id="answer-${q.id}" rows="3" placeholder="답변 입력"></textarea></label>
-             ${qnaImageFieldHTML(state.qnaAnswerImage[q.id], `handleQnaAnswerImage('${q.id}',this.files)`, `removeQnaAnswerImage('${q.id}')`, `qna-a-${q.id}`)}
-             <button class="btn p sm" onclick="submitAnswer('${q.id}')">등록</button>
-           </div>`}
-      <div style="margin-top:10px;"><button class="btn q sm" onclick="deleteQna('${q.id}')">삭제</button></div>
-    </div>`;
-  };
+  /* 최근 질문이 위. 답을 기다린 지 오래된 것을 아래로 묻지 않으려면 «미답변» 갈래로 본다. */
+  const sorted = list.slice().sort((a,b)=>String(b.date||'').localeCompare(String(a.date||'')));
+  /* 고른 것이 이 갈래에 없으면(방금 답해서 빠졌다면) 첫 항목으로 내려온다 — 손이 멈추지 않는다. */
+  const cur = sorted.find(q=>q.id===state.qnaSelectedId) || sorted[0] || null;
+  if(cur) state.qnaSelectedId = cur.id;
 
-  return `<div class="co-screen"><main class="co-main">
-    <div class="rst-hrow" style="flex-shrink:0;">
-      <h1 class="t-title">질의응답<s>학생이 사진과 함께 묻고, 여기서 답한다</s></h1>
-    </div>
-    <div class="rst-fbar" style="flex-shrink:0;">
-      <a class="pill ${f==='open'?'on':''}" onclick="state.qnaFilter='open'; render()">답변 대기 <b>${open.length}</b></a>
-      <a class="pill ${f==='done'?'on':''}" onclick="state.qnaFilter='done'; render()">답변 완료 <b>${done.length}</b></a>
-      <a class="pill ${f==='all'?'on':''}" onclick="state.qnaFilter='all'; render()">전체 <b>${DATA.qnas.length}</b></a>
-    </div>
-    <div class="co-body">
-      ${list.length===0 ? `<div style="padding:48px 0;text-align:center;color:var(--dim);font-size:12.5px;">${
+  /* 목록 항목은 ds.css의 «처리 큐» 부품(`.qitem`)을 그대로 쓴다 — 시안 11이 쓰는 것과 같은 것이다.
+     여기서 새로 그리면 오답 검토의 큐와 미세하게 어긋난다. */
+  const item = q => `<div class="qitem ${cur && q.id===cur.id ? 'on':''}" onclick="state.qnaSelectedId='${q.id}'; render()">
+    <div class="h">
+      <span class="badge ${q.answer?'ok':'no'}">${q.answer?'완료':'대기'}</span>
+      <span class="who">${escHtml(q.studentName||'')}</span>
+      ${imgSrcOf(q.image) ? '<span class="muted" style="font-size:11px;">사진</span>' : ''}
+      <span class="ago">${escHtml(q.date||'')}</span></div>
+    <div class="x">${escHtml(q.question)}</div>
+  </div>`;
+
+  const doc = !cur
+    ? `<div style="padding:56px 0;text-align:center;color:var(--dim);font-size:12.5px;">${
         f==='open' ? '답변을 기다리는 질문이 없습니다.' : '해당하는 질문이 없습니다.'}</div>`
-      : list.map(card).join('')}
-      <div class="rst-pad"></div>
-    </div>
-  </main></div>`;
+    : (()=>{
+        const stu = DATA.students.find(s=>s.studentId===cur.studentId);
+        /* ⚠ 「N시간째 미답변」은 만들 수 없다 — 질문에 날짜만 남고 시각이 없다. 날짜로 셀 수 있는 만큼만 말한다. */
+        const waited = !cur.answer && cur.date ? Math.max(0, Math.round((Date.parse(todayStr()) - Date.parse(cur.date))/86400000)) : null;
+        return `
+        <div class="qn-dh">
+          <div class="row" style="gap:8px;">
+            <span class="badge ${cur.answer?'ok':'no'}">${cur.answer?'답변 완료':'답변 대기'}</span>
+            ${waited!==null ? `<span style="font-size:11.5px;color:${waited>=2?'var(--no)':'var(--dim)'};font-weight:${waited>=2?'600':'400'};">${
+              waited===0 ? '오늘 들어온 질문' : `${waited}일째 기다리는 중`}</span>` : ''}
+            <span class="spacer"></span>
+            <button class="btn q sm" onclick="deleteQna('${cur.id}')">삭제</button>
+          </div>
+          <div class="t-meta" style="margin-top:10px;">
+            <a onclick="rosterOpen('${cur.studentId}','info')" style="color:var(--accent);font-weight:600;cursor:pointer;">${escHtml(cur.studentName||'')}</a>
+            ${stu ? `<s>·</s>${escHtml(stu.school||'—')} ${escHtml(stu.grade||'')}<s>·</s>${escHtml(classNameOf(stu.classId))}` : ''}
+            <s>·</s><span class="mono">${escHtml(cur.date||'')}</span>
+          </div>
+        </div>
+        <div class="qn-thread">
+          <div class="qn-msg">
+            <div class="h"><span class="av" style="width:24px;height:24px;font-size:11px;">${escHtml((cur.studentName||'?').slice(0,1))}</span>
+              <b>${escHtml(cur.studentName||'')}</b><span class="t">${escHtml(cur.date||'')}</span></div>
+            <div class="x">${escHtml(cur.question)}</div>
+            ${imgSrcOf(cur.image)?`<img class="qn-img" src="${imgSrcOf(cur.image)}">`:''}
+          </div>
+          ${cur.answer ? `
+          <div class="qn-msg me">
+            <div class="h"><span class="av" style="width:24px;height:24px;font-size:11px;background:var(--accent);color:#fff;">김</span>
+              <b>김하현T</b><span class="t">${escHtml(cur.answeredAt||'')}</span></div>
+            <div class="x">${escHtml(cur.answer)}</div>
+            ${imgSrcOf(cur.answerImage)?`<img class="qn-img" src="${imgSrcOf(cur.answerImage)}">`:''}
+          </div>` : ''}
+          <div class="rst-pad"></div>
+        </div>
+        ${cur.answer ? '' : `
+        <div class="qn-comp">
+          <div class="cls-form" style="align-items:flex-start;margin-top:0;">
+            <label style="flex:1;min-width:240px;"><span>답변</span>
+              <textarea id="answer-${cur.id}" rows="3" placeholder="답변 입력"></textarea></label>
+            ${qnaImageFieldHTML(state.qnaAnswerImage[cur.id], `handleQnaAnswerImage('${cur.id}',this.files)`, `removeQnaAnswerImage('${cur.id}')`, `qna-a-${cur.id}`)}
+            <button class="btn p sm" onclick="submitAnswer('${cur.id}')">등록</button>
+          </div>
+        </div>`}`;
+      })();
+
+  return `<div class="qn-screen">
+    <aside class="qn-list">
+      <div class="qn-lh">
+        <a class="pill ${f==='open'?'on':''}" onclick="state.qnaFilter='open'; render()">대기 <b>${open.length}</b></a>
+        <a class="pill ${f==='done'?'on':''}" onclick="state.qnaFilter='done'; render()">완료 <b>${done.length}</b></a>
+        <a class="pill ${f==='all'?'on':''}" onclick="state.qnaFilter='all'; render()">전체 <b>${DATA.qnas.length}</b></a>
+      </div>
+      <div class="qn-lbody">
+        ${sorted.length===0 ? '<div class="st-empty" style="padding:24px 14px;">해당하는 질문이 없습니다.</div>'
+          : sorted.map(item).join('')}
+      </div>
+    </aside>
+    <main class="qn-doc">${doc}</main>
+  </div>`;
 }
 
 /* =================== 채팅 (design-v1/12-chat) ===================
@@ -8747,7 +8821,9 @@ function teacherUnitBankHTML(){
   }
 
   return `<div class="ex-screen">
-    <aside class="ex-list">
+    ${/* 단원 목록은 «고르는 갈래»다 — 설정과 같은 내비게이션 부품을 쓴다.
+         (창고는 시안에 좌측 칸이 아예 없다. 「단원이 1차 축」이라 우리가 세운 칸이다.) */''}
+    <aside class="ex-list ex-nav">
       <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;padding-bottom:10px;">
         <span class="t-sec" style="margin:0;">단원</span>
         <span class="spacer"></span>
@@ -8867,7 +8943,7 @@ function teacherSettingsHTML(){
     classes:'반을 만든다', consults:'홈페이지로 들어온 상담 신청', signalrules:'위험·주의를 가르는 임계값',
     auditlog:'누가 무엇을 바꿨는지', admin:'관리자 비밀번호' };
   return `<div class="ex-screen ex-nosub">
-    <aside class="ex-list">
+    <aside class="ex-list ex-nav">
       <div class="t-sec" style="margin:0 0 10px;flex-shrink:0;">설정</div>
       <div class="ex-lbody">
         ${subtabs.map(t=>`<div class="ex-item ${tab===t[0]?'on':''}" onclick="state.settingsSubTab='${t[0]}'; render()">

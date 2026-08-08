@@ -173,7 +173,7 @@
     ['17번','문가온','3시간 전','정적분 활용. 보충문제 창고의 기존 문항과 중복 가능성 있음.','',0]
   ];
   document.getElementById('q').innerHTML = Q.map(function (r) {
-    return '<div class="q' + (r[5] ? ' on' : '') + '">'
+    return '<div class="qitem' + (r[5] ? ' on' : '') + '">'
       + '<div class="h"><span class="badge ' + r[4] + '">' + r[0] + '</span>'
       + '<span class="who">' + r[1] + '</span>'
       + '<span class="ago">' + r[2] + '</span></div>'

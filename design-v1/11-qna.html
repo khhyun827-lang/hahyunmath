@@ -158,7 +158,7 @@
   ];
   document.getElementById('qs').innerHTML = QNA.map(function (q) {
     var s = STUDENTS.filter(function (x) { return x.id === q[0]; })[0];
-    return '<div class="q' + (q[5] ? ' on' : '') + '">'
+    return '<div class="qitem' + (q[5] ? ' on' : '') + '">'
       + '<div class="h">'
         + '<span class="badge ' + (q[4] ? 'no' : 'ok') + '">' + (q[4] ? '미답변' : '완료') + '</span>'
         + '<span class="who">' + s.n + '</span>'
