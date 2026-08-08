@@ -247,6 +247,13 @@
 /* 수업 기록 (design-v1/14-log) — 한 행이 한 번의 수업. 그날 남은 것이 전부 그 행 안에 있다. */
 .app .chub-fbar{display:flex;align-items:center;gap:7px;padding-bottom:13px;flex-wrap:wrap;
   border-bottom:1px solid var(--line);flex-shrink:0;}
+/* 달이 바뀌는 자리의 머리 (시안 14). 훑는 목록이라 «언제 이야기인지»가 스크롤 중에도 남아야 한다. */
+.app .chub-mhead{display:flex;align-items:baseline;gap:9px;padding:18px 2px 7px;
+  border-bottom:1px solid var(--line);}
+.app .chub-mhead:first-child{padding-top:4px;}
+.app .chub-mhead b{font-size:12px;font-weight:700;}
+.app .chub-mhead span{font-size:11.5px;color:var(--dim);}
+.app .chub-mhead .r{margin-left:auto;}
 .app .chub-sess{display:flex;gap:18px;padding:15px 2px;border-bottom:1px solid var(--line2);
   cursor:pointer;transition:background var(--t);}
 .app .chub-sess:hover{background:var(--hover);}
@@ -549,6 +556,12 @@
 .app .cn-slot .t{font-family:'JetBrains Mono',monospace;font-size:11.5px;font-weight:600;}
 .app .cn-slot .u{font-size:11px;color:var(--sub);margin-top:4px;line-height:1.5;}
 .app .cn-none{font-size:11px;color:var(--dim);text-align:center;padding:10px 0;}
+/* 날짜 열 아래의 «그날에 시간대 추가» — 평소에는 조용히 있다가 열에 손을 올리면 드러난다 */
+.app .cn-add{width:100%;margin-top:6px;padding:7px 0;border:1px dashed var(--line);
+  border-radius:var(--r-md);background:transparent;font-family:inherit;font-size:11px;
+  color:var(--dim);cursor:pointer;opacity:.55;transition:opacity var(--t),background var(--t),color var(--t);}
+.app .cn-col:hover .cn-add{opacity:1;}
+.app .cn-add:hover{background:var(--hover);color:var(--accent);border-color:var(--accent-line);}
 .app .cn-rq{padding:12px 2px;border-bottom:1px solid var(--line2);}
 .app .cn-rq .h{display:flex;align-items:center;gap:8px;}
 .app .cn-rq .h b{font-size:13px;font-weight:600;}
@@ -1687,6 +1700,7 @@ let state = {
   asFlag: '',             // 조교 명단의 필터 — '' | 'hw' | 'wrong'
   settingsForm: '',       // 설정에서 열린 «추가» 폼 — '' | 'ta' | 'cls' | 'stu' | 'bulk' | 'pw'
   clinicPanel: '',        // 클리닉의 열린 폼 — '' | 'slot' | 'assign'
+  clinicSlotDate: '',     // 주간 판의 「+ 시간대」로 열었을 때 미리 채울 날짜
   noticeWriting: false,   // 공지 «새 공지» 폼이 열려 있나
   noticeSelectedId: null, // 오른쪽에 펼쳐 놓은 공지
   noticeDraft: '',        // 쓰는 중인 본문 — 미리보기가 이걸 본다
@@ -2344,6 +2358,16 @@ function openClinicSlots(){
     .filter(s=>clinicSlotBookedCount(s.id) < s.capacity)
     .sort((a,b)=> a.date===b.date ? a.time.localeCompare(b.time) : a.date.localeCompare(b.date));
 }
+/* 주간 판의 날짜 열에서 곧장 시간대를 연다 — 그 날짜를 폼에 미리 채워 둔다.
+   시간 칸에 커서를 놓아 주므로 «날짜를 다시 고르는» 걸음이 없다. */
+function clinicAddSlotOn(date){
+  state.clinicSlotDate = date;
+  state.clinicPanel = 'slot';
+  render();
+  const el = document.getElementById('slot-time');
+  if(el) el.focus();
+}
+
 async function addClinicSlot(){
   const date = document.getElementById('slot-date').value;
   const time = document.getElementById('slot-time').value.trim();
@@ -2353,10 +2377,12 @@ async function addClinicSlot(){
   DATA.clinicSlots.push(slot);
   DATA.clinicSlots.sort((a,b)=> a.date===b.date ? a.time.localeCompare(b.time) : a.date.localeCompare(b.date));
   await dbSetDoc('clinicslots', slot.id, slot);
-  document.getElementById('slot-date').value='';
   document.getElementById('slot-time').value='';
   document.getElementById('slot-capacity').value='';
-  showToast('시간대가 추가되었습니다.');
+  /* 날짜는 비우지 않는다 — 같은 날에 시간대를 둘셋 여는 일이 흔하다.
+     대신 미리 채워 둔 값은 한 번 쓰고 지운다(폼을 닫았다 열면 오늘로 돌아온다). */
+  state.clinicSlotDate = date;
+  showToast(`${date}에 시간대를 추가했습니다.`);
   render();
 }
 async function deleteClinicSlot(slotId){
@@ -7383,8 +7409,15 @@ function chubSessionFacts(classId, date){
     if(a){ filled++; cnt[a.status] = (cnt[a.status]||0)+1; }
     if(rec && (rec.scores||[]).some(sc=>sc.date===date)) scored++;
   });
+  /* 시안 14는 한 줄마다 «그날의 출결»을 도트로 그린다 — 「출석 20 · 결석 1」이라는 글자보다
+     «누가 빠졌나»가 먼저 보인다. 명단·학생 상세와 같은 `.dots` 부품을 쓴다. */
+  const marks = roster.map(s=>{
+    const rec = state.allRecords[s.studentId];
+    const a = rec && (rec.attendance||[]).find(x=>x.date===date);
+    return { name: s.name, status: a ? a.status : null };
+  });
   return {
-    total: roster.length, filled, cnt, scored,
+    total: roster.length, filled, cnt, scored, marks,
     absent: cnt['결석'] || 0,
     memo: (state.sessionNotes[classId] || {})[date] || '',
     hws: DATA.assignments.filter(a=>(!a.classId || a.classId===classId) && a.createdAt===date)
@@ -7427,9 +7460,18 @@ function chubSessionsHTML(classId){
     </span>
   </div>
   ${shown.length===0 ? '<div style="padding:48px 0;text-align:center;color:var(--dim);font-size:12.5px;">이 조건에 맞는 수업이 없습니다.</div>'
-  : shown.map(({date, f})=>{
+  : shown.map(({date, f}, i)=>{
     const isToday = date===todayStr();
-    return `<div class="chub-sess" onclick="state.classHubDate='${date}'; render()">
+    /* 달이 바뀌는 자리에 머리를 하나 끼운다 (시안 14). 목록이 스무 줄이 넘으면
+       «언제 이야기인지»가 흐려지는데, 날짜만으로는 스크롤 중에 그게 안 잡힌다. */
+    const ym = date.slice(0,7);
+    const newMonth = i===0 || shown[i-1].date.slice(0,7)!==ym;
+    const mine = shown.filter(x=>x.date.slice(0,7)===ym);
+    const head = !newMonth ? '' : `<div class="chub-mhead"><b>${Number(ym.slice(5))}월</b>
+      <span>${mine.length}회</span><span class="r">${
+        mine.filter(x=>x.f.absent>0).length ? `결석 ${mine.reduce((n,x)=>n+x.f.absent,0)}` : ''}${
+        mine.filter(x=>x.f.memo).length ? ` · 메모 ${mine.filter(x=>x.f.memo).length}` : ''}</span></div>`;
+    return head + `<div class="chub-sess" onclick="state.classHubDate='${date}'; render()">
       <div class="when">
         <div class="d">${date.slice(5).replace('-','/')}${isToday?'':''}</div>
         <div class="w">${WEEKDAY_LABEL[new Date(date+'T00:00:00').getDay()]}요일${isToday?' · 오늘':''}</div>
@@ -7438,7 +7480,9 @@ function chubSessionsHTML(classId){
         <div class="att">
           ${f.total===0 ? '<span class="sum muted">배정된 학생이 없습니다</span>'
             : f.filled===0 ? '<span class="badge">출결 미입력</span>'
-            : `<span class="sum">출석 <b>${f.cnt['출석']||0}</b>${
+            : `<span class="dots" title="${escHtml(f.marks.map(m=>m.name+' '+(m.status||'미입력')).join(' · '))}">${
+                f.marks.map(m=>`<i class="${m.status?attStatusClass(m.status):''}"></i>`).join('')}</span>
+               <span class="sum">출석 <b>${f.cnt['출석']||0}</b>${
                 f.cnt['지각']?` · 지각 <b>${f.cnt['지각']}</b>`:''}${
                 f.cnt['조퇴']?` · 조퇴 <b>${f.cnt['조퇴']}</b>`:''}${
                 f.absent?` · 결석 <b>${f.absent}</b>`:''}</span>
@@ -7796,6 +7840,10 @@ function teacherClinicHTML(){
             <div class="u">${escHtml(c.name)} · ${c.status==='대기'?'승인 대기':c.status}<br>
               <span class="muted">시간대 밖</span></div>
           </div>`).join('')}
+        ${/* 시안 09는 빈 칸마다 「+ 빈자리」를 둬서 거기서 곧장 시간대를 연다.
+             여기는 세로축이 시각이 아니라 «그날의 슬롯 더미»라 칸이 아니라 열 아래에 둔다.
+             날짜를 미리 채워 주므로 폼에서 다시 고를 일이 없다. */''}
+        <button class="cn-add" onclick="clinicAddSlotOn('${d}')" title="${d}에 시간대 추가">+ 시간대</button>
       </div>`;
     }).join('')}
   </div>`;
@@ -7858,7 +7906,7 @@ function teacherClinicHTML(){
       ${state.clinicPanel!=='slot' ? '' : `
       <div class="st-form" style="flex-shrink:0;">
         <div class="cls-form">
-          <label><span>날짜</span><input id="slot-date" type="date" value="${todayStr()}"></label>
+          <label><span>날짜</span><input id="slot-date" type="date" value="${state.clinicSlotDate || todayStr()}"></label>
           <label style="flex:1;min-width:150px;"><span>시간</span><input id="slot-time" placeholder="예: 저녁 7시"></label>
           <label style="width:90px;"><span>정원</span><input id="slot-capacity" type="number" min="1" placeholder="1"></label>
           <button class="btn p sm" onclick="addClinicSlot()">추가</button>
@@ -8381,6 +8429,15 @@ function teacherExamsHTML(){
   const banks = DATA.problemBank.filter(b=>b.examId===ex.id);
   const bankBy = st => banks.filter(b=>b.status===st).length;
 
+  /* KPI 넷 — 전부 지금 데이터에서 나온다. 평균 오답률은 문항별 오답률의 평균이고,
+     「오답 올린 학생」은 이 시험지에서 한 문항이라도 오답으로 올린 재원 수다. */
+  const avgWrong = rows.length ? Math.round(rows.reduce((s,r)=>s+r.pct,0)/rows.length) : 0;
+  const wrongStudents = DATA.students.filter(s=>s.classId===ex.classId).filter(s=>{
+    const rec = state.allRecords[s.studentId];
+    return (rec && rec.wrongHomework || []).some(h=>h.examId===ex.id);
+  }).length;
+  const reviewWait = bankBy('pending') + bankBy('review1');
+
   return `<div class="ex-screen">
     <aside class="ex-list">
       <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;padding-bottom:10px;">
@@ -8409,7 +8466,16 @@ function teacherExamsHTML(){
         <button class="btn sm" onclick="copyExamToClass('${ex.id}')">복사</button>
         <button class="btn q sm" onclick="deleteExam('${ex.id}')">삭제</button>
       </div>
-      <div class="t-meta" style="margin-top:7px;flex-shrink:0;">
+      ${/* 시안 07의 KPI 다섯 중 «넷»만 세운다 — 「반 평균」은 만들 수 없다.
+           성적(scores)과 시험지(exams)를 잇는 것이 도메인에 없어서, 이 시험지의 점수가 어느 것인지
+           알 방법이 없다. 이름으로 짐작해 이으면 그 줄만 거짓이 된다. */''}
+      <div class="kpis" style="margin-top:14px;flex-shrink:0;">
+        <div class="kpi"><div class="k">오답 올린 학생</div><div class="v">${state.allRecordsLoaded ? wrongStudents : '…'}<s>/${total}</s></div></div>
+        <div class="kpi"><div class="k">평균 오답률</div><div class="v ${avgWrong>=25?'down':''}">${state.allRecordsLoaded ? avgWrong : '…'}<s>%</s></div></div>
+        <div class="kpi"><div class="k">쌍둥이 생성</div><div class="v">${banks.length}<s>문항</s></div></div>
+        <div class="kpi"><div class="k">검토 대기</div><div class="v ${reviewWait?'down':''}">${reviewWait}<s>건</s></div></div>
+      </div>
+      <div class="t-meta" style="margin-top:12px;flex-shrink:0;">
         ${escHtml(classNameOf(ex.classId))}<s>·</s>${(ex.questions||[]).length}문항<s>·</s>
         <span class="mono">${ex.date||'날짜 없음'}</span><s>·</s>재원 ${total}명
         ${banks.length ? `<s>·</s>쌍둥이 ${banks.length}건 (검토 전 ${bankBy('pending')} · 1차 ${bankBy('review1')} · 공개 ${bankBy('approved')})` : ''}
