@@ -473,6 +473,17 @@
 .app .sd-crow b.m{font-family:'JetBrains Mono',monospace;font-weight:600;}
 .app .sd-qa{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
 .app .sd-qa .btn{width:100%;}
+/* 고정 메모 — ds.css의 `.note.pin`(점선 메모지)과 같은 옷이지만 «쓰는» 칸이라 textarea다.
+   글자마다 render()가 돌지 않으므로(초안만 담는다) 커서도 한글 조합도 안전하다. */
+.app .sd-note{width:100%;margin-top:8px;min-height:96px;resize:vertical;
+  background:var(--note);border:1px dashed var(--note-dash);border-radius:var(--r-md);
+  padding:9px 12px;font-family:inherit;font-size:12.5px;line-height:1.7;color:var(--ink);
+  outline:none;transition:border-color var(--t);}
+.app .sd-note::placeholder{color:var(--dim);}
+.app .sd-note:focus{border-color:var(--accent-line);border-style:solid;}
+.app .sd-note-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;
+  margin-top:7px;font-size:11px;color:var(--dim);}
+.app .sd-note-at{font-family:'JetBrains Mono',monospace;}
 /* 입력 폼은 연대기 «위»에 붙는다 — 지금 보고 있는 갈래에 무엇을 더할지가 분명해진다. */
 .app .sd-form{background:var(--card);border:1px solid var(--line);border-radius:var(--r-lg);
   padding:13px 15px;margin-top:14px;flex-shrink:0;}
@@ -1584,6 +1595,11 @@ let state = {
   signalMutesLoading: false,
   /* 임계값 — 저장된 것만 담는다. 읽을 때는 반드시 signalRules()로 기본값과 합쳐 본다 */
   signalRules: {},
+  /* 학생 고정 메모 — 학생마다 «한 덩어리». 초안은 학생별로 담아 둔다 (다른 학생을 봤다 와도 남게) */
+  studentNotes: {},
+  studentNoteLoading: {},
+  sdNoteDrafts: {},
+  clinicAssignSid: '',    // 학생 상세에서 「클리닉 배정」으로 들어올 때 미리 고를 학생
   /* 수업(02-class) — 날짜 하나 · 반 하나 · 단계 하나. 출결 초안은 attDraft를 그대로 쓴다 */
   sessionDate: '',
   sessionClassId: '',
@@ -2361,6 +2377,7 @@ async function assignClinic(){
   await logAudit('클리닉 배정', sid, studentNameOf(sid), `${day} ${time}`);
   document.getElementById('cn-assign-topic').value='';
   document.getElementById('cn-assign-time').value='';
+  state.clinicAssignSid = '';   // 미리 골라 준 것은 한 번만 쓴다. 남겨 두면 다음 배정이 엉뚱한 학생으로 열린다
   showToast(`${studentNameOf(sid)} — ${day} ${time}에 배정했습니다.`);
   render();
 }
@@ -3104,6 +3121,8 @@ const ICON_PATHS = {
   building: '<rect x="4" y="3" width="16" height="18" rx="1"/><path d="M9 7h1M14 7h1M9 11h1M14 11h1M9 15h1M14 15h1"/><path d="M10 21v-4h4v4"/>',
   document: '<path d="M6 3h9l4 4v14H6V3z"/><path d="M14 3v5h5"/><path d="M9 12.5h6M9 15.5h6M9 18.5h3.5"/>',
   search: '<circle cx="10.5" cy="10.5" r="6.5"/><path d="M20 20l-5-5"/>',
+  /* ds.js에도 같은 것이 있다 — 시안이 쓰기 시작하면 그때 이쪽으로 옮겨 적는다는 규칙대로 가져왔다 */
+  pin: '<path d="M9 4.5h6l-1 5 3.5 3v1.5h-11V12.5l3.5-3z"/><path d="M12 14v5.5"/>',
   box: '<path d="M4 7l8-4 8 4-8 4-8-4z"/><path d="M4 7v10l8 4 8-4V7"/><path d="M12 11v10"/>',
   chart: '<path d="M4 20V11M11 20V4M18 20v-6"/><path d="M3 20h18"/>',
   clinic: '<circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/>',
@@ -6851,6 +6870,7 @@ function teacherStudentDetailHTML(sid){
 function sdScreenHTML(s, rec, isAssistant){
   const sid = s.studentId;
   const SR = signalRules();   // KPI의 빨강도 명단과 같은 임계값을 본다
+  if(!isAssistant) loadStudentNoteIfNeeded(sid);   // 메모는 우측 칸에만 있고 그 칸은 강사의 것이다
   /* 조교는 채팅·기본정보로 갈 문이 없다. 예전 세션이 그 값을 들고 있어도 연대기로 떨어뜨린다. */
   const mode = !isAssistant && (state.studentDetailTab==='chat' || state.studentDetailTab==='info')
     ? state.studentDetailTab : 'timeline';
@@ -6930,12 +6950,25 @@ function sdScreenHTML(s, rec, isAssistant){
     <div class="sd-qa">
       <button class="btn ${mode==='chat'?'p':''}" onclick="sdMode('${mode==='chat'?'timeline':'chat'}')">${mode==='chat'?'연대기로':'채팅'}</button>
       <button class="btn ${mode==='info'?'p':''}" onclick="sdMode('${mode==='info'?'timeline':'info'}')">${mode==='info'?'연대기로':'기본정보'}</button>
-      <button class="btn" onclick="goTeacherTab('clinic')">클리닉</button>
+      <button class="btn" onclick="sdAssignClinic('${sid}')">클리닉 배정</button>
       <button class="btn" onclick="goTeacherTab('session')">수업 화면</button>
     </div>
     <hr class="s">
     <div class="t-sec">출결 최근 8회</div>
     <div style="margin-top:8px;">${rosterDots(st.att8)}</div>
+    <hr class="s">
+    ${/* 고정 메모 — 시안의 「pin」 구역. ds.css의 .note.pin(점선)과 같은 옷을 입힌다.
+         ⚠ 시각은 .sd-note-at(mono)에만 넣는다 — 「마지막 저장」은 낱말이라 밖에 둔다. */''}
+    <div class="t-sec">${iconSvg('pin',13)} 고정 메모</div>
+    ${state.studentNoteLoading[sid] && !state.studentNotes[sid]
+      ? '<div style="margin-top:8px;font-size:11.5px;color:var(--dim);">불러오는 중…</div>'
+      : `<textarea id="sd-note" class="sd-note" placeholder="이 학생을 볼 때마다 먼저 알아야 할 것&#10;예: 형이 같은 반 · 금요일 학교 보충으로 지각 잦음"
+          oninput="sdNoteInput('${sid}', this.value)">${escHtml(sdNoteText(sid))}</textarea>
+        <div class="sd-note-foot">
+          <span>${(state.studentNotes[sid]||{}).at
+            ? `마지막 저장 <span class="sd-note-at">${escHtml((state.studentNotes[sid]||{}).at)}</span>` : '아직 메모가 없습니다'}</span>
+          <button class="btn sm" onclick="saveStudentNote('${sid}')">저장</button>
+        </div>`}
     <div class="rst-pad"></div>
   </aside>`;
 
@@ -7021,6 +7054,52 @@ function sdTimelineHTML(s, sid, rec, isAssistant){
       })()}
     <div class="rst-pad"></div>
   </div>`;
+}
+
+/* =================== 학생 고정 메모 ===================
+   시안(03-student)의 우측 「고정 메모」다. 도메인에 학생 메모가 없어서 이식 때 빠져 있었다.
+   수업 메모와 같은 방식으로 만든다 — 컬렉션을 늘리지 않고 `kv/studentnote:{학생id}` 문서 하나.
+
+   **날짜별로 쌓지 않고 «한 덩어리»다.** 연대기가 이미 «언제 무슨 일이 있었나»를 답하므로,
+   여기 필요한 것은 그 위에 얹히지 않는 «늘 참인 한 가지»다 (형제 학원 · 통화 요지 · 주의사항).
+   그래서 날짜도 손으로 적지 않는다 — 마지막 저장 시각만 자동으로 남는다. */
+async function loadStudentNoteIfNeeded(sid){
+  if(!sid || state.studentNotes[sid] || state.studentNoteLoading[sid]) return;
+  state.studentNoteLoading[sid] = true;
+  const v = await dbGet('studentnote:' + sid, {});
+  state.studentNotes[sid] = (v && typeof v === 'object') ? v : {};
+  state.studentNoteLoading[sid] = false;
+  render();
+}
+/* 초안만 담고 화면은 건드리지 않는다 — 여기서 render()가 돌면 커서가 튀고 한글 조합이 깨진다.
+   학생별로 담으므로 옆 학생을 봤다 돌아와도 쓰던 글이 남아 있다. */
+function sdNoteInput(sid, text){ state.sdNoteDrafts[sid] = text; }
+function sdNoteText(sid){
+  if(state.sdNoteDrafts[sid] !== undefined) return state.sdNoteDrafts[sid];
+  return (state.studentNotes[sid] || {}).text || '';
+}
+async function saveStudentNote(sid){
+  const el = document.getElementById('sd-note');
+  const text = (el ? el.value : sdNoteText(sid)).trim();
+  const doc = text ? { text, at: nowStamp() } : {};
+  state.studentNotes[sid] = doc;
+  delete state.sdNoteDrafts[sid];
+  await dbSet('studentnote:' + sid, doc);
+  /* 무엇을 적었는지는 남기지 않는다 — 메모에는 사적인 말이 들어가고 변경 이력은 조교도 본다. */
+  await logAudit(text ? '학생 메모 저장' : '학생 메모 지움', sid, studentNameOf(sid), '');
+  showToast(text ? '메모를 저장했습니다.' : '메모를 비웠습니다.');
+  render();
+}
+
+/* 학생 상세에서 곧장 클리닉을 잡는다. 이식 당시엔 «학생이 신청하고 강사가 승인»뿐이라
+   강사가 배정하는 문이 없었는데, 2026-08-07에 「학생 직접 배정」이 생겨 이제 성립한다.
+   폼을 여기 복제하지 않는다 — 그 화면으로 보내되 학생을 미리 골라 둔다. */
+function sdAssignClinic(sid){
+  state.clinicAssignSid = sid;
+  state.clinicPanel = 'assign';
+  state.studentDetailId = null;
+  goTeacherTab('clinic');
+  render();
 }
 
 function sdChatHTML(sid){
@@ -7727,7 +7806,8 @@ function teacherClinicHTML(){
           <label style="min-width:150px;"><span>학생</span>
             <select id="cn-assign-student" style="border:1px solid var(--line);border-radius:var(--r-sm);background:var(--paper);padding:8px 10px;font-family:inherit;font-size:12.5px;">
               <option value="">-- 선택 --</option>
-              ${DATA.students.map(s=>`<option value="${s.studentId}">${escHtml(s.name)}</option>`).join('')}
+              ${/* 학생 상세의 「클리닉 배정」으로 들어오면 그 학생이 골라진 채로 열린다 */''}
+              ${DATA.students.map(s=>`<option value="${s.studentId}" ${state.clinicAssignSid===s.studentId?'selected':''}>${escHtml(s.name)}</option>`).join('')}
             </select></label>
           <label style="min-width:190px;"><span>열린 시간대 (선택)</span>
             <select id="cn-assign-slot" style="border:1px solid var(--line);border-radius:var(--r-sm);background:var(--paper);padding:8px 10px;font-family:inherit;font-size:12.5px;">
