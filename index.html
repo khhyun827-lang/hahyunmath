@@ -1507,6 +1507,8 @@ async function regenerateOneWithAI(bankId){
     b.variantContent = twin.content;
     b.variantAnswer = twin.answer;
     b.aiSolution = twin.solution;
+    /* 그림 없이 푸는 문제로 새로 썼으면 표시해 둔다 — 변형에 원본 그림을 붙이지 않는다. */
+    b.variantFigureFree = !!twin.figureFree;
     b.status = 'pending';
     await dbSetDoc('problembank', b.id, b);
     await bumpAIQuotaUsed();
@@ -1542,6 +1544,7 @@ async function runTwinBatch(needsAI, label){
       b.variantContent = twin.content;
       b.variantAnswer = twin.answer;
       b.aiSolution = twin.solution;
+      b.variantFigureFree = !!twin.figureFree;
       await bumpAIQuotaUsed();
       ok++;
     }
@@ -1621,7 +1624,10 @@ async function generateTwinViaAI(content, answer, image){
     return {
       content: sanitizeAiMathText(data.content),
       answer: normalizeTwinAnswer(sanitizeAiMathText(data.answer)),
-      solution: data.solution || ''
+      solution: data.solution || '',
+      /* 원본에 그림이 있어 «그림 없이 푸는 문제»로 새로 쓴 경우다.
+         옛 워커는 이 값을 안 보내므로 없으면 false로 본다. */
+      figureFree: !!data.figureFree
     };
   }catch(e){
     console.error('AI 쌍둥이 생성 실패', e);
@@ -2594,15 +2600,19 @@ function dqPool(rec){
     if(!h.done) return;
     const b = DATA.problemBank.find(x=>x.id===h.bankId);
     if(!b) return;
-    const base = {bankId:b.id, no:h.questionNo, examId:h.examId, hasImage:!!b.hasImage,
+    const base = {bankId:b.id, no:h.questionNo, examId:h.examId,
                   chapter:b.chapter||'', subject:b.subject||''};
     /* 원본은 검토 상태와 무관하다 — 교사가 시험지에 직접 넣은 문제다.
        변형만 approved를 본다. 검토 중인 쌍둥이가 나가면 학생이 못 푸는 문제가 뜬다. */
     const oa = b.originalContent ? dqAnswerable(b.originalContent, b.originalAnswer) : null;
-    if(oa) out.push({...base, id:b.id+':orig', kind:'orig', content:b.originalContent, answer:oa});
+    if(oa) out.push({...base, id:b.id+':orig', kind:'orig', content:b.originalContent, answer:oa,
+                     hasImage: !!b.hasImage});
     const va = (b.status==='approved' && b.variantContent)
       ? dqAnswerable(b.variantContent, b.variantAnswer) : null;
-    if(va) out.push({...base, id:b.id+':var', kind:'var', content:b.variantContent, answer:va});
+    /* ⚠ 그림은 카드마다 다르다. 원본은 늘 자기 그림을 쓰지만, 변형이 «그림 없이 푸는 문제»로
+       새로 쓰였으면 원본 그림을 붙이면 안 된다 — 상관없는 그림을 보고 풀려다 틀린다. */
+    if(va) out.push({...base, id:b.id+':var', kind:'var', content:b.variantContent, answer:va,
+                     hasImage: !!b.hasImage && !b.variantFigureFree});
   });
   return out;
 }
@@ -5367,9 +5377,13 @@ function stuWrongHTML(c){
           선생님이 쌍둥이 문제를 검토하고 있습니다. 끝나면 여기에 문제가 뜹니다.</div>
       </div>`;
     }
-    if(bank.hasImage && state.pbImageCache[bank.id]===undefined) togglePbImage(bank.id);
+    /* ⚠ 오답숙제가 내는 것은 «변형»이다. 변형이 «그림 없이 푸는 문제»로 새로 쓰인 것이면
+       원본 그림을 붙이면 안 된다 — 필요한 정보는 이미 글에 다 적혀 있고,
+       상관없는 그림이 같이 뜨면 학생이 그걸 보고 풀려다 틀린다. */
+    const useImg = bank.hasImage && !bank.variantFigureFree;
+    if(useImg && state.pbImageCache[bank.id]===undefined) togglePbImage(bank.id);
     /* imgSrcOf()를 거쳐야 한다 — 데일리퀴즈 쪽과 같은 이유다 (드라이브 그림은 객체로 저장된다). */
-    const iv = bank.hasImage ? state.pbImageCache[bank.id] : null;
+    const iv = useImg ? state.pbImageCache[bank.id] : null;
     const img = iv && iv!=='empty' && iv!=='loading' ? imgSrcOf(iv) : null;
     const correct = hw.done && hw.studentAnswer.trim()===bank.variantAnswer.trim();
     return `<div class="mc ${hw.done ? '' : 'go'}" style="${hw.done?'opacity:.75;':''}">
@@ -5380,7 +5394,7 @@ function stuWrongHTML(c){
                   : `<span class="badge late">풀 차례</span>`}
       </div>
       <div class="sap-q" style="margin-top:11px;">${problemHTML(bank.variantContent)}</div>
-      ${bank.hasImage ? (img ? `<img class="sap-img" src="${img}">`
+      ${useImg ? (img ? `<img class="sap-img" src="${img}">`
                              : `<div style="font-size:11.5px;color:var(--dim);margin-top:9px;">그림 불러오는 중…</div>`) : ''}
       <div style="margin-top:14px;">
         ${hw.done
@@ -9769,7 +9783,18 @@ function reviewWorkHTML(b, list){
         <div class="q-body">${b.variantContent ? problemHTML(b.variantContent)
           : '<span style="color:var(--dim);">아직 내용이 없습니다 — AI로 채우거나 아래에 직접 입력하세요.</span>'}</div>
         <div class="q-ans">정답 <b>${escHtml(b.variantAnswer||'—')}</b></div>
-        ${imgHTML ? `<div style="font-size:11px;color:var(--dim);margin-top:9px;">↑ 왼쪽과 같은 그림을 그대로 씁니다 (새로 생성하지 않음)</div>` : ''}
+        ${/* 예전엔 여기에 원본 그림을 그대로 얹고 「같은 그림을 씁니다」라고 적었다.
+             그건 «같은 그림»이 아니라 사실상 «같은 문제»라는 뜻이었다 — 그림을 못 바꾸니
+             바꿀 것이 글자밖에 안 남아 소재만 갈린 문제가 나왔다.
+             지금은 그림 문항이면 «그림 없이 푸는 문제»로 새로 쓰고, 변형에는 그림을 안 붙인다. */''}
+        ${b.hasImage ? (b.variantFigureFree
+          ? `<div style="font-size:11px;color:var(--sub);margin-top:9px;line-height:1.7;">
+               원본에 그림이 있어 <b>그림 없이 풀 수 있는 문제</b>로 새로 썼습니다.
+               필요한 값이 본문에 다 적혀 있는지 확인해 주세요 —
+               「다음 그림과 같이」 같은 말이 남아 있으면 학생이 못 풉니다.</div>`
+          : `<div style="font-size:11px;color:var(--dim);margin-top:9px;line-height:1.7;">
+               원본에 그림이 있는 문항입니다. 이 변형은 그림을 쓰지 않는 형태여야 합니다 —
+               아니라면 직접 고쳐 주세요.</div>`) : ''}
         <textarea class="rv-edit" id="bank-content-${b.id}" rows="4"
           placeholder="쌍둥이 문항 내용">${escHtml(b.variantContent||'')}</textarea>
         <input class="rv-edit mono" id="bank-answer-${b.id}" value="${escHtml(b.variantAnswer||'')}"
