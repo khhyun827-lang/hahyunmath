@@ -715,6 +715,32 @@
 .app .ex-q .tw{width:92px;flex-shrink:0;text-align:right;}
 @media (max-width:1240px){ .app .ex-side{display:none;} }
 
+/* 문항 내용 — 원본과 변형을 «좌우»로 세운다.
+   세로로 이어 붙이면 어디서 문항이 끝나고 다음이 시작하는지 안 보이고,
+   무엇보다 «이 변형이 저 원본의 쌍둥이가 맞나»를 보려면 둘이 나란해야 한다
+   (오답 검토 화면에서 2열로 간 것과 같은 이유다). */
+.app .exq{border:1px solid var(--line);border-radius:var(--r-lg);background:var(--card);
+  margin-bottom:12px;overflow:hidden;}
+.app .exq-h{display:flex;align-items:center;gap:9px;padding:10px 14px;
+  background:var(--note);border-bottom:1px solid var(--line);}
+.app .exq-h .no{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:var(--accent);}
+.app .exq-h .ch{font-size:11.5px;color:var(--sub);}
+.app .exq-b{display:flex;align-items:stretch;}
+.app .exq-c{flex:1;min-width:0;padding:13px 15px;position:relative;}
+/* 가운데 선. 세로로 접히면(좁은 화면) 가로선으로 바뀐다. */
+.app .exq-c + .exq-c{border-left:1px solid var(--line);}
+.app .exq-c .lb{display:flex;align-items:center;gap:6px;font-size:10.5px;color:var(--dim);
+  margin-bottom:7px;text-transform:uppercase;letter-spacing:.04em;}
+.app .exq-c .tx{font-size:13px;line-height:1.85;white-space:pre-wrap;}
+.app .exq-c .ans{margin-top:10px;padding-top:9px;border-top:1px dashed var(--line);font-size:12px;color:var(--sub);}
+.app .exq-c .ans b{font-family:'JetBrains Mono',monospace;font-size:13.5px;color:var(--ink);margin-left:5px;}
+.app .exq-c.none{display:flex;align-items:center;justify-content:center;
+  color:var(--dim);font-size:12px;text-align:center;line-height:1.7;background:var(--paper);}
+@media (max-width:900px){
+  .app .exq-b{flex-direction:column;}
+  .app .exq-c + .exq-c{border-left:0;border-top:1px solid var(--line);}
+}
+
 .app .actbar{position:fixed;z-index:6;flex-wrap:wrap;}
 /* 고정된 액션바가 마지막 행을 가리지 않게, 스크롤 영역 «안»에 여백을 둔다. */
 .app .rst-pad{height:64px;flex-shrink:0;}
@@ -1486,13 +1512,16 @@ async function regenerateOneWithAI(bankId){
   state.aiRegeneratingId = null;
   render();
 }
-async function processAIQueue(){
-  if(state.aiProcessing) return;
-  const needsAI = DATA.problemBank.filter(b=>!b.variantContent && !b.variantAnswer);
-  if(needsAI.length===0){ showToast('생성할 문항이 없습니다.'); return; }
+/* 쌍둥이 일괄 생성. 대상 목록만 받아서 «오늘 한도까지» 돌린다.
+   한도를 넘는 것은 손대지 않고 남겨 둔다 — 내용이 빈 채로 남으므로 다음날 다시 부르면 이어진다.
+   생성된 것은 status를 건드리지 않는다: 등록 때 'pending'이었으므로 내용이 채워지는 순간
+   저절로 「1차 검토 대기」 큐로 옮겨 간다 (그 큐의 조건이 status==='pending' && 내용 있음이다). */
+async function runTwinBatch(needsAI, label){
+  if(state.aiProcessing){ showToast('다른 AI 작업이 진행 중입니다. 끝난 뒤 다시 시도해주세요.'); return null; }
+  if(needsAI.length===0){ showToast('생성할 문항이 없습니다.'); return null; }
   const used = await getAIQuotaUsed();
   const remaining = AI_DAILY_LIMIT - used;
-  if(remaining<=0){ showToast('오늘 AI 생성 한도(' + AI_DAILY_LIMIT + '건)를 모두 사용했습니다. 내일 다시 시도해주세요.'); return; }
+  if(remaining<=0){ showToast('오늘 AI 생성 한도(' + AI_DAILY_LIMIT + '건)를 모두 사용했습니다. 내일 다시 시도해주세요.'); return null; }
   const batch = needsAI.slice(0, remaining);
   state.aiProcessing = true;
   state.aiProgress = { done:0, total: batch.length };
@@ -1518,9 +1547,45 @@ async function processAIQueue(){
   state.aiProgress = null;
   state.aiQuotaUsed = null;
   const leftover = needsAI.length - batch.length;
-  showToast(ok + '개 쌍둥이 문제가 생성되었습니다. 검토 후 공개해주세요.' + (leftover>0 ? ` (남은 ${leftover}개는 내일 한도 초기화 후 처리해주세요)` : ''));
+  showToast(`${label}${ok}개를 생성했습니다. 「1차 검토 대기」에 있습니다.`
+    + (leftover>0 ? ` 남은 ${leftover}개는 오늘 한도를 넘어 내일 이어서 만들 수 있습니다.` : ''));
   render();
+  return { ok, leftover };
 }
+async function processAIQueue(){
+  await runTwinBatch(DATA.problemBank.filter(b=>!b.variantContent && !b.variantAnswer), '');
+}
+/* 시험지를 올린 «그 자리»에서 그 시험지 것만 한꺼번에 만든다.
+   예전에는 등록 → 검토 탭으로 이동 → 문항마다 「생성」을 눌러야 했다.
+   끝나면 검토 화면의 «1차 검토 대기»로 데려간다 — 다음에 할 일이 그것이기 때문이다. */
+async function generateTwinsForExam(examId){
+  const e = DATA.exams.find(x=>x.id===examId);
+  if(!e) return;
+  const needsAI = DATA.problemBank
+    .filter(b=>b.examId===examId && !b.variantContent && !b.variantAnswer)
+    .sort((a,b)=>(a.questionNo||0)-(b.questionNo||0));
+  if(needsAI.length===0){ showToast('이 시험지에는 새로 만들 문항이 없습니다.'); return; }
+  const used = await getAIQuotaUsed();
+  const remaining = Math.max(0, AI_DAILY_LIMIT - used);
+  const willDo = Math.min(needsAI.length, remaining);
+  if(willDo===0){ showToast('오늘 AI 생성 한도(' + AI_DAILY_LIMIT + '건)를 모두 사용했습니다. 내일 다시 시도해주세요.'); return; }
+  /* 한 건에 13초씩 쉬어 가므로 20건이면 4분이 넘는다. 얼마나 걸리는지 미리 말해 준다. */
+  const mins = Math.ceil(willDo * 13 / 60);
+  if(!confirm(`${escHtmlPlain(e.title)}의 문항 ${willDo}개로 쌍둥이를 만듭니다.\n`
+    + `약 ${mins}분 걸립니다. 그동안 이 화면을 닫지 마세요.\n\n`
+    + (needsAI.length > willDo
+        ? `오늘 남은 한도가 ${remaining}건이라 ${needsAI.length - willDo}개는 내일 이어서 만듭니다.\n\n` : '')
+    + '시작할까요?')) return;
+  const res = await runTwinBatch(needsAI, `${e.title} — `);
+  if(res && res.ok > 0){
+    state.teacherTab = 'review';
+    state.reviewQueue = 'pending';        // 1차 검토 대기
+    state.examMode = '';
+    render();
+  }
+}
+/* confirm()은 HTML을 못 그린다. 태그가 섞이면 그대로 보이므로 표시용으로만 벗긴다. */
+function escHtmlPlain(s){ return String(s==null?'':s).replace(/<[^>]*>/g,''); }
 // AI가 프롬프트 지시를 놓쳐서 "times"/"le"/"ge" 같은 영단어를 LaTeX 명령어 대신 그대로
 // 쓰는 경우가 있어서(프롬프트 개선과 별개로) 이중 안전장치로 한 번 더 다듬는다.
 function sanitizeAiMathText(s){
@@ -3400,27 +3465,45 @@ function toggleExamDetailView(examId){
   state.examDetailOpen[examId] = !state.examDetailOpen[examId];
   render();
 }
+/* 문항 내용 — 원본과 변형을 좌우로 세운다.
+   예전에는 둘을 세로로 이어 붙여 글만 쭉 나왔다. 문항 경계가 안 보이고,
+   무엇보다 «이 변형이 저 원본의 쌍둥이가 맞나»를 보려면 둘이 나란해야 한다
+   (오답 검토 화면을 2열로 만든 것과 같은 이유다). */
 function examDetailHTML(examId){
   const e = DATA.exams.find(x=>x.id===examId);
   if(!e) return '';
-  return `<div class="exam-detail">
-    ${e.hasFiles ? `<button class="lg-btn btn-small" style="margin-bottom:10px;" onclick="toggleExamImages('${examId}')">${state.examImagesCache[examId]?'스캔 이미지 접기':'스캔 이미지 보기'}</button>${examImagesHTML(examId)}` : ''}
+  const STATUS = {pending:['검토 전','late'], review1:['1차 검토 완료','score'], approved:['공개됨','ok']};
+  return `
+    ${e.hasFiles ? `<button class="btn sm" style="margin-bottom:12px;" onclick="toggleExamImages('${examId}')">${state.examImagesCache[examId]?'스캔 이미지 접기':'스캔 이미지 보기'}</button>${examImagesHTML(examId)}` : ''}
     ${e.questions.map(q=>{
       const bank = findBankEntry(examId, q.no);
-      const statusLabel = bank ? {pending:'생성됨 (검토 전)', review1:'1차 검토 완료', approved:'2차 검토 완료 · 공개'}[bank.status] : null;
-      return `<div class="exam-question-row">
-        <div class="exam-question-head"><b>${q.no}번</b> <span style="font-size:11px;color:var(--dim);">${escHtml(q.unit||'')}</span>
-          ${statusLabel ? `<span class="review-status review-status-${bank.status}">${statusLabel}</span>` : ''}</div>
-        <div style="font-size:13.5px;white-space:pre-wrap;margin-top:4px;">${escHtml(q.content)}</div>
-        <div style="font-size:11px;color:var(--dim);margin-top:4px;">정답 <span class="mono">${escHtml(q.answer)}</span></div>
-        ${bank && (bank.variantContent||bank.variantAnswer) ? `<div class="exam-variant-box">
-          <div class="mono" style="font-size:11px;color:var(--no);margin-bottom:4px;">변형 문제</div>
-          <div style="font-size:13px;white-space:pre-wrap;">${escHtml(bank.variantContent||'')}</div>
-          <div class="mono" style="font-size:11px;color:var(--dim);margin-top:4px;">정답: ${escHtml(bank.variantAnswer||'')}</div>
-        </div>` : bank ? '<p class="lg-hint" style="margin-top:6px;">아직 변형 문제가 생성되지 않았습니다.</p>' : ''}
+      const st = bank ? STATUS[bank.status] : null;
+      const hasTwin = bank && (bank.variantContent || bank.variantAnswer);
+      return `<div class="exq">
+        <div class="exq-h">
+          <span class="no">${q.no}번</span>
+          <span class="ch">${escHtml(q.chapter || q.unit || '단원 미지정')}</span>
+          <span class="spacer"></span>
+          ${st ? `<span class="badge ${st[1]}">${st[0]}</span>`
+               : '<span class="badge">쌍둥이 없음</span>'}
+        </div>
+        <div class="exq-b">
+          <div class="exq-c">
+            <div class="lb"><span class="badge no">원본</span></div>
+            <div class="tx">${escHtml(q.content)}</div>
+            <div class="ans">정답<b>${escHtml(q.answer)}</b></div>
+          </div>
+          ${hasTwin ? `<div class="exq-c">
+            <div class="lb"><span class="badge score">변형</span></div>
+            <div class="tx">${escHtml(bank.variantContent||'')}</div>
+            <div class="ans">정답<b>${escHtml(bank.variantAnswer||'—')}</b></div>
+          </div>`
+          : `<div class="exq-c none">${bank
+              ? '아직 쌍둥이 문제가 없습니다.<br>위 「쌍둥이 전부 생성」으로 만들 수 있습니다.'
+              : '이 문항은 쌍둥이 대상이 아닙니다.'}</div>`}
+        </div>
       </div>`;
-    }).join('')}
-  </div>`;
+    }).join('')}`;
 }
 function addExamQuestionRow(){
   // 화면에 남아있는 값 먼저 보존
@@ -9247,6 +9330,19 @@ function teacherExamsHTML(){
         <button class="btn sm" onclick="copyExamToClass('${ex.id}')">복사</button>
         <button class="btn q sm" onclick="deleteExam('${ex.id}')">삭제</button>
       </div>
+      ${/* 등록한 «그 자리»에서 쌍둥이를 한꺼번에 만든다. 예전에는 검토 탭으로 옮겨 가
+           문항마다 「생성」을 눌러야 했다. 만들 것이 없으면 버튼 자체를 안 그린다. */''}
+      ${(()=>{ const need = banks.filter(b=>!b.variantContent && !b.variantAnswer).length;
+        if(!need) return '';
+        return `<div class="fm-row" style="margin:12px 0 0;align-items:center;gap:10px;">
+          <button class="btn p" ${state.aiProcessing?'disabled':''} onclick="generateTwinsForExam('${ex.id}')">
+            ${iconSvg('sparkle',14)} ${state.aiProcessing && state.aiProgress
+              ? `생성 중 ${state.aiProgress.done}/${state.aiProgress.total}…`
+              : `쌍둥이 전부 생성 (${need}문항)`}</button>
+          <span style="font-size:11.5px;color:var(--dim);line-height:1.7;">
+            오늘 한도까지 만들고 남은 것은 내일 이어서 만듭니다.
+            끝나면 <b>1차 검토 대기</b>로 넘어갑니다.</span>
+        </div>`; })()}
       ${/* 시안 07의 KPI 다섯 중 «넷»만 세운다 — 「반 평균」은 만들 수 없다.
            성적(scores)과 시험지(exams)를 잇는 것이 도메인에 없어서, 이 시험지의 점수가 어느 것인지
            알 방법이 없다. 이름으로 짐작해 이으면 그 줄만 거짓이 된다. */''}
@@ -9269,7 +9365,8 @@ function teacherExamsHTML(){
         ${rows.length===0 ? '<div style="padding:36px 0;text-align:center;color:var(--dim);font-size:12.5px;">문항이 없습니다.</div>'
         : rows.map(r=>`<div class="ex-q ${r.pct>=50?'hi':(r.pct>=25?'mid':'')}">
             <span class="no">${r.no}번</span>
-            <span class="unit" title="${escHtml(r.q.unit||'')}">${escHtml(r.q.unit||'단원 미지정')}</span>
+            ${/* 단원이 있으면 단원을, 없으면 과목을. 범위 판정이 쓰는 값과 같은 것을 보여 준다. */''}
+            <span class="unit" title="${escHtml(r.q.chapter || r.q.unit || '')}">${escHtml(r.q.chapter || r.q.unit || '단원 미지정')}</span>
             <span class="track"><i style="width:${r.pct}%"></i></span>
             <span class="pct">${total?r.pct+'%':'—'}</span>
             <span class="tw muted" style="font-size:11.5px;">${r.n}명 오답</span>
@@ -9643,7 +9740,7 @@ function reviewActbarHTML(b, list){
     <span class="spacer"></span>
     <span class="hint" style="margin-left:0;">
       ${next ? `다음 · ${next.questionNo}번` : '이 큐의 마지막'}
-      <span class="kbd">J</span><span class="kbd">K</span> 이동</span>
+      <span class="kbd">J</span> 이전 <span class="kbd">K</span> 다음</span>
   </div>`;
 }
 
@@ -9657,8 +9754,9 @@ document.addEventListener('keydown', e=>{
   const list = reviewQueueList(state.reviewQueue || 'pending');
   const b = reviewSelected(list);
   const k = e.key.toLowerCase();
-  if(k==='j'){ e.preventDefault(); reviewMove(1); }
-  else if(k==='k'){ e.preventDefault(); reviewMove(-1); }
+  /* J=이전 · K=다음. 처음엔 vi식(J=아래)이었는데 쓰는 사람 손에 안 맞아 뒤집었다 (2026-08-10). */
+  if(k==='j'){ e.preventDefault(); reviewMove(-1); }
+  else if(k==='k'){ e.preventDefault(); reviewMove(1); }
   else if(!b) return;
   else if(k==='e'){
     e.preventDefault();
