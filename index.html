@@ -1851,7 +1851,7 @@ function isVacationSeason(name){ return String(name||'').includes('방학'); }
 
 /* 과목별 «중간고사 경계» — 앞 N단원이 중간, 나머지가 기말. 방학은 전체를 연다.
    기말을 «중간 이후만»으로 잡은 것은 보통의 학교 시험 방식이다 (2026-08-10 확정).
-   누적으로 보고 싶으면 학교별 범위에서 앞 단원을 다시 체크하면 된다 — 어차피 체크리스트다. */
+   누적으로 보고 싶으면 학교·학년별 범위에서 앞 단원을 다시 체크하면 된다 — 어차피 체크리스트다. */
 const SEASON_SPLIT = {
   '공통수학1': 6,   // 다항식의 연산 ~ 이차함수
   '공통수학2': 5,   // 평면좌표 ~ 집합
@@ -1947,14 +1947,22 @@ function presetChapters(subject){
 }
 /* 학교별 수정이 있으면 그것이 프리셋을 대신한다 (더하는 것이 아니라 갈아끼운다 —
    «확장»도 «축소»도 되어야 하고, 둘을 합치면 어느 쪽이 진짜인지 알 수 없게 된다). */
-function rangeChapters(school, subject){
-  const ov = state.examRanges && state.examRanges.bySchool && state.examRanges.bySchool[school];
-  const got = ov && ov[subject];
-  return (Array.isArray(got) && got.length) ? got.slice() : presetChapters(subject);
+/* ⚠ 범위는 «학교»만으로 갈리지 않는다. **같은 학교라도 학년마다 시험범위가 다르다.**
+   그래서 저장은 학교 → 학년 → 과목 세 겹이다 (`bySchool[학교][학년][과목] = [단원…]`).
+   처음엔 학교×과목 두 겹이었는데, 한 학교의 고1과 고2가 같은 과목을 들으면
+   범위가 하나로 합쳐져 한쪽이 틀린 범위를 받는다 (2026-08-10에 학년을 넣었다). */
+function rangeOverrideOf(school, grade, subject){
+  const bys = state.examRanges && state.examRanges.bySchool;
+  const byGrade = bys && bys[school];
+  const got = byGrade && byGrade[grade] && byGrade[grade][subject];
+  return (Array.isArray(got) && got.length) ? got : null;
 }
-function hasRangeOverride(school, subject){
-  const ov = state.examRanges && state.examRanges.bySchool && state.examRanges.bySchool[school];
-  return !!(ov && Array.isArray(ov[subject]) && ov[subject].length);
+function rangeChapters(school, grade, subject){
+  const got = rangeOverrideOf(school, grade, subject);
+  return got ? got.slice() : presetChapters(subject);
+}
+function hasRangeOverride(school, grade, subject){
+  return !!rangeOverrideOf(school, grade, subject);
 }
 /* 이 학생이 지금 배우는 과목 — 반에서 온다. 반이 없거나 과목을 안 정했으면 빈 문자열. */
 function subjectOfStudent(sid){
@@ -1968,7 +1976,7 @@ function studentRange(sid){
   const subject = subjectOfStudent(sid);
   if(!subject) return null;
   const s = DATA.students.find(x=>x.studentId===sid);
-  const list = rangeChapters((s && s.school) || '', subject);
+  const list = rangeChapters((s && s.school) || '', (s && s.grade) || '', subject);
   return list.length ? new Set(list) : null;
 }
 
@@ -1983,17 +1991,19 @@ async function endSeason(){
   const now = currentSeason();
   const next = SEASONS[(SEASONS.indexOf(now) + 1) % SEASONS.length];
   if(!confirm(`「${now}」을 끝내고 「${next}」으로 넘어갈까요?\n\n`
-    + `학교별로 수정해 둔 시험범위는 모두 지워지고 기본 범위로 돌아갑니다.`)) return;
+    + `학교·학년별로 수정해 둔 시험범위는 모두 지워지고 기본 범위로 돌아갑니다.`)) return;
   await saveSeason(next);
   logAudit('시험 시즌 변경', '', '', `${now} → ${next}`);
   showToast(`「${next}」으로 넘어갔습니다.`);
   render();
 }
-async function saveSchoolRange(school, subject, chapters){
+async function saveSchoolRange(school, grade, subject, chapters){
   if(!state.examRanges) state.examRanges = {season: currentSeason(), bySchool: {}};
-  if(!state.examRanges.bySchool[school]) state.examRanges.bySchool[school] = {};
-  if(chapters && chapters.length) state.examRanges.bySchool[school][subject] = chapters;
-  else delete state.examRanges.bySchool[school][subject];
+  const bys = state.examRanges.bySchool;
+  if(!bys[school]) bys[school] = {};
+  if(!bys[school][grade]) bys[school][grade] = {};
+  if(chapters && chapters.length) bys[school][grade][subject] = chapters;
+  else delete bys[school][grade][subject];
   state.examRanges.season = currentSeason();
   await dbSet('exam-ranges', state.examRanges);
 }
@@ -8643,7 +8653,7 @@ function chubQuizHTML(classId){
       ${!state.allRecordsLoaded ? '<div style="font-size:12.5px;color:var(--dim);">기록 불러오는 중…</div>'
       : roster.length===0 ? '<div style="font-size:12.5px;color:var(--dim);">이 반에 배정된 학생이 없습니다.</div>'
       : `<table class="grid"><thead><tr>
-          <th>학생</th><th>학교 · 범위</th><th>오늘</th><th class="r">복습 대기</th>
+          <th>학생</th><th>학교 · 학년 · 범위</th><th>오늘</th><th class="r">복습 대기</th>
           <th class="r">범위 밖</th><th class="r">누적 정답률</th></tr></thead><tbody>
         ${rows.map(r=>`<tr class="${sel && r.s.studentId===sel.s.studentId ? 'sel' : ''}"
             onclick="state.quizStudentId='${r.s.studentId}'; render()" style="cursor:pointer;">
@@ -8652,7 +8662,9 @@ function chubQuizHTML(classId){
                 여기서는 취소선이 그대로 그려져 「광남고 ~6단원」처럼 보인다. */''}
           <td class="sub">${r.school ? escHtml(r.school) : '<span style="color:var(--dim);">학교 미입력</span>'}
             <span style="color:var(--dim);">·</span>
-            ${r.range ? `${r.range.size}단원${hasRangeOverride(r.school, subjectOfStudent(r.s.studentId))
+            ${r.s.grade ? escHtml(r.s.grade) : '<span style="color:var(--dim);">학년 미입력</span>'}
+            <span style="color:var(--dim);">·</span>
+            ${r.range ? `${r.range.size}단원${hasRangeOverride(r.school, r.s.grade||'', subjectOfStudent(r.s.studentId))
               ? ' <span class="badge score">수정됨</span>' : ''}`
               : '<span style="color:var(--dim);">범위 미설정</span>'}</td>
           <td>${r.poolN===0 ? '<span style="color:var(--dim);">풀 문제 없음</span>'
@@ -9994,7 +10006,7 @@ function unitBankAddLegacyHTML(){
 
    ① **시즌** — 전역이다. 날짜로 넘기지 않고 「시즌 종료」를 누르면 다음으로 간다.
       학교마다 시험 날짜가 다르지만 먼저 끝난 학교는 휴강·휴식기로 가므로 문제가 없다.
-   ② **학교별 범위** — 프리셋(과목의 단원 목록을 시즌으로 자른 것)을 «갈아끼운다».
+   ② **학교·학년별 범위** — 프리셋(과목의 단원 목록을 시즌으로 자른 것)을 «갈아끼운다».
       더하는 것이 아니라 갈아끼우는 이유는 확장도 축소도 되어야 하기 때문이다 —
       둘을 합치면 어느 쪽이 진짜인지 알 수 없게 된다.
 
@@ -10003,19 +10015,24 @@ function unitBankAddLegacyHTML(){
 function teacherExamRangeHTML(){
   const season = currentSeason();
   const next = SEASONS[(SEASONS.indexOf(season) + 1) % SEASONS.length];
-  /* 학교 × 그 학교 학생이 속한 반의 과목 — 실제로 범위가 필요한 조합만 세운다. */
+  /* 학교 × 학년 × 과목 — 실제로 범위가 필요한 조합만 세운다.
+     학년이 들어가야 하는 이유는 rangeChapters() 주석에 있다 (같은 학교도 학년마다 범위가 다르다). */
   const combos = {};
   DATA.students.forEach(s=>{
     const subject = subjectOfStudent(s.studentId);
     if(!subject) return;
-    const school = s.school || '';
-    const key = rangeKey(school, subject);
-    if(!combos[key]) combos[key] = {school, subject, n:0};
+    const school = s.school || '', grade = s.grade || '';
+    const key = rangeKey(school, grade, subject);
+    if(!combos[key]) combos[key] = {school, grade, subject, n:0};
     combos[key].n++;
   });
+  /* 학교 → 학년 → 과목 순으로 세운다. 학교가 빈 것은 맨 뒤로 (「힣」이 한글 끝이다). */
   const list = Object.values(combos).sort((a,b)=>
-    (a.school||'힣').localeCompare(b.school||'힣') || a.subject.localeCompare(b.subject));
+    (a.school||'힣').localeCompare(b.school||'힣')
+    || (a.grade||'힣').localeCompare(b.grade||'힣')
+    || a.subject.localeCompare(b.subject));
   const noSchool = DATA.students.filter(s=>!s.school).length;
+  const noGrade = DATA.students.filter(s=>!s.grade).length;
   const noSubject = DATA.students.filter(s=>!subjectOfStudent(s.studentId)).length;
 
   const openKey = state.rangeSchool;
@@ -10035,26 +10052,29 @@ function teacherExamRangeHTML(){
         ? '방학에는 <b>과목의 모든 단원</b>이 나갑니다 — 그동안 범위 밖으로 접어 둔 문제가 다시 돌아옵니다.'
         : '시즌에 해당하는 단원만 데일리퀴즈로 나갑니다. 범위 밖 문제는 복습 시계가 멈춘 채 기다립니다.'}<br>
       순서 — ${SEASONS.map(s=>s===season?`<b>${escHtml(s)}</b>`:escHtml(s)).join(' → ')} → …<br>
-      <b>시즌을 넘기면 아래 학교별 수정은 모두 지워지고 기본 범위로 돌아갑니다.</b>
+      <b>시즌을 넘기면 아래 학교·학년별 수정은 모두 지워지고 기본 범위로 돌아갑니다.</b>
     </div>
   </div>
 
-  <div class="t-sec">학교별 시험 범위</div>
-  ${noSchool || noSubject ? `<div class="fm-warn" style="margin-bottom:12px;">
+  <div class="t-sec">학교·학년별 시험 범위</div>
+  ${noSchool || noGrade || noSubject ? `<div class="fm-warn" style="margin-bottom:12px;">
     ${noSchool ? `학교를 입력하지 않은 학생이 <b>${noSchool}명</b> 있습니다. ` : ''}
+    ${noGrade ? `학년을 입력하지 않은 학생이 <b>${noGrade}명</b> 있습니다. ` : ''}
     ${noSubject ? `반의 진도 과목이 정해지지 않아 범위를 못 정하는 학생이 <b>${noSubject}명</b> 있습니다
       (반 관리 &gt; 진도에서 과목을 고르면 됩니다). ` : ''}
-    이 학생들에게는 <b>범위를 적용하지 않습니다</b> — 지금까지처럼 모든 문제가 나갑니다.</div>` : ''}
+    학교·학년이 비어 있어도 «빈 값»끼리 한 줄로 묶여 범위는 적용됩니다 —
+    다만 <b>다른 학교 학생과 범위를 같이 쓰게</b> 되니 명단에서 채워 주세요.</div>` : ''}
   ${list.length===0 ? `<div style="font-size:12.5px;color:var(--dim);">범위를 정할 조합이 없습니다.</div>`
-  : list.map(({school, subject, n})=>{
+  : list.map(({school, grade, subject, n})=>{
     const all = UNIT_CHAPTERS[subject] || [];
-    const cur = new Set(rangeChapters(school, subject));
-    const overridden = hasRangeOverride(school, subject);
-    const open = openKey === rangeKey(school, subject);
+    const cur = new Set(rangeChapters(school, grade, subject));
+    const overridden = hasRangeOverride(school, grade, subject);
+    const open = openKey === rangeKey(school, grade, subject);
     return `<div class="ex-item" style="display:block;cursor:default;margin-bottom:8px;">
       <div class="row" style="gap:9px;align-items:center;cursor:pointer;"
-           onclick="toggleRangeOpen('${jsAttr(school)}','${jsAttr(subject)}')">
+           onclick="toggleRangeOpen('${jsAttr(school)}','${jsAttr(grade)}','${jsAttr(subject)}')">
         <b style="font-size:13px;">${escHtml(school || '(학교 미입력)')}</b>
+        <span class="badge">${escHtml(grade || '학년 미입력')}</span>
         <span style="font-size:11.5px;color:var(--dim);">${escHtml(subject)} · ${n}명</span>
         ${overridden ? '<span class="badge score">수정됨</span>' : '<span class="badge">기본</span>'}
         <span class="spacer"></span>
@@ -10065,11 +10085,11 @@ function teacherExamRangeHTML(){
         all.filter(ch=>cur.has(ch)).map(escHtml).join(' · ') || '<span style="color:var(--no);">선택된 단원이 없습니다</span>'}</div>`
       : `<div style="margin-top:11px;display:flex;flex-wrap:wrap;gap:7px;">
           ${all.map((ch,i)=>`<a class="pill ${cur.has(ch)?'on':''}"
-            onclick="toggleRangeChapter('${jsAttr(school)}','${jsAttr(subject)}','${jsAttr(ch)}')"
+            onclick="toggleRangeChapter('${jsAttr(school)}','${jsAttr(grade)}','${jsAttr(subject)}','${jsAttr(ch)}')"
             >${i+1}. ${escHtml(ch)}</a>`).join('')}
         </div>
         <div class="row" style="gap:8px;margin-top:11px;flex-wrap:wrap;">
-          <button class="btn q sm" onclick="resetSchoolRange('${jsAttr(school)}','${jsAttr(subject)}')">기본 범위로 되돌리기</button>
+          <button class="btn q sm" onclick="resetSchoolRange('${jsAttr(school)}','${jsAttr(grade)}','${jsAttr(subject)}')">기본 범위로 되돌리기</button>
           <span style="font-size:11.5px;color:var(--dim);">기본은 «${escHtml(season)}» 기준
             ${presetChapters(subject).length}단원입니다.</span>
         </div>`}
@@ -10086,23 +10106,23 @@ function jsAttr(s){
     .replace(/\\/g,'\\\\').replace(/'/g,"\\'");
   return js.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
-function rangeKey(school, subject){ return school + '\n' + subject; }
-function toggleRangeOpen(school, subject){
-  const key = rangeKey(school, subject);
+function rangeKey(school, grade, subject){ return school + '\n' + grade + '\n' + subject; }
+function toggleRangeOpen(school, grade, subject){
+  const key = rangeKey(school, grade, subject);
   state.rangeSchool = (state.rangeSchool === key) ? '' : key;
   render();
 }
-async function toggleRangeChapter(school, subject, chapter){
-  const cur = rangeChapters(school, subject);
+async function toggleRangeChapter(school, grade, subject, chapter){
+  const cur = rangeChapters(school, grade, subject);
   const all = UNIT_CHAPTERS[subject] || [];
   const set = new Set(cur);
   if(set.has(chapter)) set.delete(chapter); else set.add(chapter);
   /* 단원 목록의 «순서»를 지킨다 — 누른 순서로 쌓이면 화면마다 순서가 달라진다. */
-  await saveSchoolRange(school, subject, all.filter(ch=>set.has(ch)));
+  await saveSchoolRange(school, grade, subject, all.filter(ch=>set.has(ch)));
   render();
 }
-async function resetSchoolRange(school, subject){
-  await saveSchoolRange(school, subject, null);
+async function resetSchoolRange(school, grade, subject){
+  await saveSchoolRange(school, grade, subject, null);
   showToast('기본 범위로 되돌렸습니다.');
   render();
 }
@@ -10131,7 +10151,7 @@ function teacherSettingsHTML(){
      각 갈래의 본문은 «구조»를 손대지 않았다 — 폼과 표가 전부라 형태를 바꿔도 나아지지 않는다. */
   const LABEL = { assistants:'조교 계정을 만들고 담당 반을 정한다', students:'학생 계정을 만든다 · 엑셀 일괄 등록',
     classes:'반을 만든다', consults:'홈페이지로 들어온 상담 신청', signalrules:'위험·주의를 가르는 임계값',
-    examrange:'데일리퀴즈가 낼 단원을 시즌과 학교로 정한다',
+    examrange:'데일리퀴즈가 낼 단원을 시즌과 학교·학년으로 정한다',
     auditlog:'누가 무엇을 바꿨는지', admin:'관리자 비밀번호' };
   return `<div class="ex-screen ex-nosub">
     <aside class="ex-list ex-nav">
