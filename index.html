@@ -741,6 +741,13 @@
   .app .exq-c + .exq-c{border-left:0;border-top:1px solid var(--line);}
 }
 
+/* 문제 안에 되살린 표 (problemHTML). 교사 화면과 학생 화면이 같이 쓴다 —
+   그래서 .app 안에 가두지 않는다. 문제 폭을 밀지 않게 스스로 가로 스크롤한다. */
+.pb-tbl{border-collapse:collapse;margin:9px 0;font-size:12.5px;display:block;
+  max-width:100%;overflow-x:auto;white-space:nowrap;}
+.pb-tbl td{border:1px solid var(--line);padding:5px 11px;text-align:center;vertical-align:middle;}
+.pb-tbl tr:first-child td{background:var(--note);font-weight:600;}
+
 .app .actbar{position:fixed;z-index:6;flex-wrap:wrap;}
 /* 고정된 액션바가 마지막 행을 가리지 않게, 스크롤 영역 «안»에 여백을 둔다. */
 .app .rst-pad{height:64px;flex-shrink:0;}
@@ -3402,6 +3409,47 @@ async function deleteMaterial(classId, id){
 }
 
 // 레거시(base64 문자열) 레코드와 신규({url,fileId}) 레코드를 모두 렌더링할 수 있게 흡수하는 헬퍼
+/* =================== 문제 본문을 «보이게» 그린다 ===================
+   내용은 평문으로 저장된다(HTML을 넣을 수 없다). 그 평문을 화면에 올릴 때
+   두 가지를 되살린다 —
+
+   ① **표** — hwpx 파서가 `| 칸 | 칸 |` 줄로 적어 둔 것을 진짜 표로 만든다.
+      예전에는 셀을 공백으로 이어 붙여 대진표·조건표가 글 뭉치가 됐다.
+   ② **객관식 선지** — hwpx는 선지 사이를 탭으로 두는데 그 탭이 파싱에서 사라져
+      `① $4$② $12$③ $64$`처럼 다닥다닥 붙는다. 기호 앞에서 줄을 바꿔 한 줄에 하나씩 세운다.
+
+   ⚠ 수식은 여기서 건드리지 않는다. `$…$`를 그대로 남기면 render() 끝의
+   renderMathInElement가 알아서 그린다 — 두 곳에서 손대면 어느 쪽이 그린 건지 알 수 없게 된다. */
+const CHOICE_MARKS = '①②③④⑤⑥⑦⑧⑨⑩';
+function spaceChoices(line){
+  if(!new RegExp('['+CHOICE_MARKS+']').test(line)) return line;
+  /* 줄 맨 앞의 기호는 그대로 두고, 「내용 뒤에 바로 붙은」 기호 앞에서만 줄을 바꾼다. */
+  return line.replace(new RegExp('(\\S)\\s*([' + CHOICE_MARKS + '])', 'g'), '$1\n$2');
+}
+function problemHTML(text){
+  const src = String(text == null ? '' : text);
+  const lines = src.split('\n');
+  let out = '', row = [];
+  const flush = () => {
+    if(!row.length) return;
+    out += '<table class="pb-tbl"><tbody>' + row.map(cells =>
+      '<tr>' + cells.map(c => '<td>' + escHtml(c) + '</td>').join('') + '</tr>').join('') + '</tbody></table>';
+    row = [];
+  };
+  for(const line of lines){
+    const t = line.trim();
+    /* 표 줄 — `|`로 시작하고 `|`로 끝나며 칸이 둘 이상. 수식 줄은 `$`로 시작하므로 안 걸린다. */
+    if(t.length > 2 && t.startsWith('|') && t.endsWith('|')){
+      row.push(t.slice(1, -1).split('|').map(c => c.trim()));
+      continue;
+    }
+    flush();
+    out += escHtml(spaceChoices(line)) + '\n';
+  }
+  flush();
+  return out.replace(/\n$/, '');
+}
+
 function imgSrcOf(v){
   if(!v) return null;
   return typeof v === 'string' ? v : (v.previewUrl || v.url || null);
@@ -3490,12 +3538,12 @@ function examDetailHTML(examId){
         <div class="exq-b">
           <div class="exq-c">
             <div class="lb"><span class="badge no">원본</span></div>
-            <div class="tx">${escHtml(q.content)}</div>
+            <div class="tx">${problemHTML(q.content)}</div>
             <div class="ans">정답<b>${escHtml(q.answer)}</b></div>
           </div>
           ${hasTwin ? `<div class="exq-c">
             <div class="lb"><span class="badge score">변형</span></div>
-            <div class="tx">${escHtml(bank.variantContent||'')}</div>
+            <div class="tx">${problemHTML(bank.variantContent||'')}</div>
             <div class="ans">정답<b>${escHtml(bank.variantAnswer||'—')}</b></div>
           </div>`
           : `<div class="exq-c none">${bank
@@ -4076,26 +4124,41 @@ function hwpWalkParagraphs(paras, tokens){
           const ref = imgEl ? imgEl.getAttribute('binaryItemIDRef') : null;
           if(ref) tokens.push({type:'pic', v: ref});
         } else if(local === 'tbl'){
-          // 보기(①②③④⑤) 같은 작은 표는 같은 행 안에서는 줄바꿈 없이 공백으로만
-          // 구분해서, 세로로 한 줄씩 쌓이지 않고 가로로 나열되게 한다.
+          /* 표를 «줄 하나로 뭉개지» 않고 행·열을 살려 둔다.
+             예전에는 셀을 공백으로 이어 붙여서, 대진표나 조건 표가 테두리도 칸도 없는
+             글 뭉치가 됐다. 지금은 한 행을 `| 칸 | 칸 |` 한 줄로 적는다 —
+             글로 봐도 읽히고, 화면에서는 problemHTML()이 진짜 표로 되살린다.
+             (내용은 평문으로 저장되므로 HTML을 넣을 수는 없다. 그래서 이 표기를 쓴다.) */
           const trs = Array.from(child.childNodes).filter(n=>n.nodeType===1 && n.localName==='tr');
+          const rows = [];
           for(const tr of trs){
             const tcs = Array.from(tr.childNodes).filter(n=>n.nodeType===1 && n.localName==='tc');
+            const cells = [];
             for(const tc of tcs){
               const subList = Array.from(tc.childNodes).find(n=>n.nodeType===1 && n.localName==='subList');
-              if(subList){
-                const cellParas = Array.from(subList.childNodes).filter(n=>n.nodeType===1 && n.localName==='p');
-                const cellTokens = [];
-                hwpWalkParagraphs(cellParas, cellTokens);
-                while(cellTokens.length && cellTokens[cellTokens.length-1].type==='break') cellTokens.pop();
-                if(cellTokens.length){
-                  tokens.push(...cellTokens);
-                  tokens.push({type:'text', v:' '});
-                }
+              if(!subList){ cells.push(''); continue; }
+              const cellParas = Array.from(subList.childNodes).filter(n=>n.nodeType===1 && n.localName==='p');
+              const cellTokens = [];
+              hwpWalkParagraphs(cellParas, cellTokens);
+              let s = '';
+              for(const t of cellTokens){
+                if(t.type==='text' || t.type==='eq') s += t.v;
+                else if(t.type==='break') s += ' ';
+                else if(t.type==='pic') tokens.push(t);       // 그림은 표 밖으로 빼서 살린다
+                else if(t.type==='endnote') tokens.push(t);   // 정답 미주도 마찬가지
               }
+              /* 칸 안의 세로줄은 표 문법과 부딪힌다 — 절댓값 등은 이미 $…$ 안이지만 만약을 위해 지운다. */
+              cells.push(s.replace(/\|/g,'').replace(/\s+/g,' ').trim());
+            }
+            if(cells.some(c=>c)) rows.push(cells);
+          }
+          if(rows.length){
+            tokens.push({type:'break'});
+            for(const cells of rows){
+              tokens.push({type:'text', v:'| ' + cells.join(' | ') + ' |'});
+              tokens.push({type:'break'});
             }
           }
-          tokens.push({type:'break'});
         } else if(local === 'ctrl'){
           const endNoteEl = child.getElementsByTagNameNS(HP_NS,'endNote')[0];
           if(endNoteEl){
@@ -5200,7 +5263,10 @@ function stuQuizHTML(c){
      도형 문제의 쌍둥이는 같은 그림을 쓰라고 만들어졌기 때문이다. 여기서도 규칙을 맞춘다. */
   if(cur.hasImage && state.pbImageCache[cur.bankId]===undefined) togglePbImage(cur.bankId);
   const imgVal = cur.hasImage ? state.pbImageCache[cur.bankId] : null;
-  const img = imgVal && imgVal!=='empty' && imgVal!=='loading' ? imgVal : null;
+  /* ⚠ 반드시 imgSrcOf()를 거친다. 드라이브에 올린 그림은 «{url, fileId} 객체»로 저장돼 있어
+     그대로 src에 넣으면 "[object Object]"가 되어 아무것도 안 뜬다.
+     옛 기록에는 base64 문자열도 섞여 있어 두 가지를 다 받아 줘야 한다. */
+  const img = imgVal && imgVal!=='empty' && imgVal!=='loading' ? imgSrcOf(imgVal) : null;
 
   const kindBadge = k => k==='orig'
     ? `<span class="badge no">원본</span>`
@@ -5225,7 +5291,7 @@ function stuQuizHTML(c){
       ${cur.kind==='orig' ? '· 그때 틀린 문제' : '· 같은 유형의 쌍둥이 문제'}
       ${st && st.streak ? ` · 연속 ${st.streak}회 정답` : ''}
     </div>
-    <div class="sap-q" style="margin-top:11px;">${escHtml(cur.content)}</div>
+    <div class="sap-q" style="margin-top:11px;">${problemHTML(cur.content)}</div>
     ${cur.hasImage ? (img ? `<img class="sap-img" src="${img}">`
                           : `<div style="font-size:11.5px;color:var(--dim);margin-top:9px;">그림 불러오는 중…</div>`) : ''}
     <div style="margin-top:15px;">
@@ -5302,9 +5368,9 @@ function stuWrongHTML(c){
       </div>`;
     }
     if(bank.hasImage && state.pbImageCache[bank.id]===undefined) togglePbImage(bank.id);
-    const img = bank.hasImage && state.pbImageCache[bank.id]
-      && state.pbImageCache[bank.id]!=='empty' && state.pbImageCache[bank.id]!=='loading'
-      ? state.pbImageCache[bank.id] : null;
+    /* imgSrcOf()를 거쳐야 한다 — 데일리퀴즈 쪽과 같은 이유다 (드라이브 그림은 객체로 저장된다). */
+    const iv = bank.hasImage ? state.pbImageCache[bank.id] : null;
+    const img = iv && iv!=='empty' && iv!=='loading' ? imgSrcOf(iv) : null;
     const correct = hw.done && hw.studentAnswer.trim()===bank.variantAnswer.trim();
     return `<div class="mc ${hw.done ? '' : 'go'}" style="${hw.done?'opacity:.75;':''}">
       <div class="row" style="gap:7px;">
@@ -5313,7 +5379,7 @@ function stuWrongHTML(c){
         ${hw.done ? `<span class="badge ${correct?'ok':'no'}">${correct?'정답':'오답'}</span>`
                   : `<span class="badge late">풀 차례</span>`}
       </div>
-      <div class="sap-q" style="margin-top:11px;">${escHtml(bank.variantContent)}</div>
+      <div class="sap-q" style="margin-top:11px;">${problemHTML(bank.variantContent)}</div>
       ${bank.hasImage ? (img ? `<img class="sap-img" src="${img}">`
                              : `<div style="font-size:11.5px;color:var(--dim);margin-top:9px;">그림 불러오는 중…</div>`) : ''}
       <div style="margin-top:14px;">
@@ -8548,7 +8614,7 @@ function chubQuizHTML(classId){
           ${done ? `<span class="badge ${st.correct?'ok':'no'}">${st.correct?'정답':'오답'}</span>`
                  : `<span class="badge late">미제출</span>`}
         </div>
-        <div style="font-size:12.5px;line-height:1.7;margin-top:6px;white-space:pre-wrap;">${escHtml(card.content)}</div>
+        <div style="font-size:12.5px;line-height:1.7;margin-top:6px;white-space:pre-wrap;">${problemHTML(card.content)}</div>
         <div class="mono" style="font-size:11px;color:var(--dim);margin-top:5px;">
           정답 ${escHtml(card.answer)}${done ? ` · 낸 답 ${escHtml(st.ans||'')}` : ''}
         </div>
@@ -9694,13 +9760,13 @@ function reviewWorkHTML(b, list){
     <div class="cmp" style="margin-top:${why?'14px':'0'};">
       <div class="side">
         <div class="lab">원본 문항 <s>${b.questionNo}번</s></div>
-        <div class="q-body">${escHtml(b.originalContent||'(내용 없음)')}</div>
+        <div class="q-body">${problemHTML(b.originalContent||'(내용 없음)')}</div>
         <div class="q-ans">정답 <b>${escHtml(b.originalAnswer||'—')}</b></div>
         ${imgHTML}
       </div>
       <div class="side ai">
         <div class="lab">AI 생성 쌍둥이 <s>${b.aiSolution?'Gemini':'직접 입력'}</s></div>
-        <div class="q-body">${b.variantContent ? escHtml(b.variantContent)
+        <div class="q-body">${b.variantContent ? problemHTML(b.variantContent)
           : '<span style="color:var(--dim);">아직 내용이 없습니다 — AI로 채우거나 아래에 직접 입력하세요.</span>'}</div>
         <div class="q-ans">정답 <b>${escHtml(b.variantAnswer||'—')}</b></div>
         ${imgHTML ? `<div style="font-size:11px;color:var(--dim);margin-top:9px;">↑ 왼쪽과 같은 그림을 그대로 씁니다 (새로 생성하지 않음)</div>` : ''}

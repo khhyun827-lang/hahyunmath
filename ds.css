@@ -370,7 +370,9 @@ table.grid .nm s{text-decoration:none;color:var(--dim);font-weight:400;
 .cmp .side.ai .lab{color:var(--accent);}
 .cmp .side .lab s{text-decoration:none;margin-left:auto;font-family:'JetBrains Mono',monospace;
   font-weight:500;letter-spacing:0;}
-.cmp .q-body{font-size:14px;line-height:1.8;color:var(--ink);min-height:52px;}
+/* 문제 본문은 줄바꿈이 뜻을 갖는다 — 객관식 보기가 줄마다 하나씩 서고, 조건 (가)(나)도 그렇다.
+   pre-wrap이 없으면 그 줄바꿈이 통째로 사라져 보기가 한 줄에 다닥다닥 붙는다. */
+.cmp .q-body{font-size:14px;line-height:1.8;color:var(--ink);min-height:52px;white-space:pre-wrap;}
 .cmp .q-ans{margin-top:12px;padding-top:11px;border-top:1px solid var(--line2);font-size:12px;color:var(--sub);}
 .cmp .q-ans b{font-family:'JetBrains Mono',monospace;color:var(--ink);font-weight:600;}
 
