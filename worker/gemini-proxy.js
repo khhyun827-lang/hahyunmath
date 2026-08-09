@@ -61,6 +61,16 @@ export default {
 
     const url = new URL(request.url);
 
+    /* 남은 한도를 «쓰지 않고» 물어보는 길. 화면이 「오늘 남은 생성」을 정확히 띄우려면 필요하다.
+       클라이언트가 따로 세면 반드시 어긋난다 — 워커는 실패한 요청도 세고, 사용자별로 세고,
+       날짜를 UTC로 보는데 클라이언트는 성공만·공용 하나·로컬 날짜로 셌다.
+       그래서 «남았다고 떠 있는데 429»가 났다 (2026-08-10). 진실은 여기 하나뿐이다. */
+    if (url.pathname === '/quota') {
+      return new Response(JSON.stringify(await peekQuota(env, 'ai', who.uid, AI_DAILY_LIMIT)), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     /* 할당량은 «비용이 드는 것»에만 건다.
        /delete는 정리 작업이라 막으면 드라이브에 쓰레기가 쌓인다 — 그대로 통과시킨다. */
     if (url.pathname === '/upload') {
@@ -74,7 +84,7 @@ export default {
 
     if (url.pathname === '/upload') return handleUpload(request, env, corsHeaders);
     if (url.pathname === '/delete') return handleDelete(request, env, corsHeaders);
-    return handleGeminiTwin(request, env, corsHeaders);
+    return handleGeminiTwin(request, env, corsHeaders, who.uid);
   },
 };
 
@@ -171,12 +181,26 @@ function quotaExceeded(q, corsHeaders) {
   });
 }
 
+/* 세지 않고 «지금 얼마나 썼나»만 본다. bumpQuota와 같은 키·같은 날짜 계산을 써야
+   둘이 어긋나지 않는다 — 그래서 날짜를 만드는 곳을 하나로 모았다. */
+function quotaDay(){ return new Date().toISOString().slice(0, 10); }
+async function peekQuota(env, bucket, uid, limit) {
+  if (!env.QUOTA) return { used: 0, limit, remaining: limit, unlimited: true };
+  const day = quotaDay();
+  const [uRaw, gRaw] = await Promise.all([
+    env.QUOTA.get(`q:${bucket}:${uid}:${day}`),
+    env.QUOTA.get(`q:${bucket}:_all:${day}`),
+  ]);
+  /* 개인 한도와 전체 한도 중 «더 많이 찬 쪽»이 실제로 막는 쪽이다. */
+  const used = Math.max(Number(uRaw || 0), Number(gRaw || 0));
+  return { used, limit, remaining: Math.max(0, limit - used) };
+}
 async function bumpQuota(env, bucket, uid, perUserLimit, globalLimit) {
   if (!env.QUOTA) {
     console.warn('QUOTA KV 미바인딩 — 할당량 검사를 건너뜁니다');
     return { ok: true, used: 0 };
   }
-  const day = new Date().toISOString().slice(0, 10);
+  const day = quotaDay();
   const uKey = `q:${bucket}:${uid}:${day}`;
   const gKey = `q:${bucket}:_all:${day}`;
 
@@ -330,7 +354,7 @@ async function fetchDriveFileAsDataUrl(fileId, env) {
 
 /* =================== 기존 Gemini 쌍둥이문제 생성 (imageFileId 지원 추가) =================== */
 
-async function handleGeminiTwin(request, env, corsHeaders) {
+async function handleGeminiTwin(request, env, corsHeaders, uid) {
   let body;
   try {
     body = await request.json();
@@ -468,9 +492,11 @@ ${answer}`;
   /* figureFree — 원본에 그림이 있었고, 그래서 «그림 없이 푸는 문제»로 새로 썼다는 표시다.
      클라이언트는 이 값을 보고 **변형에 원본 그림을 붙이지 않는다.**
      안 그러면 글에 다 적혀 있는데 상관없는 그림이 같이 떠서 학생이 헷갈린다. */
+  /* 남은 한도를 같이 실어 보낸다 — 클라이언트가 스스로 세면 반드시 어긋난다. */
+  const q = await peekQuota(env, 'ai', uid, AI_DAILY_LIMIT);
   return new Response(JSON.stringify({
     content: parsed.problem, answer: parsed.answer, solution: parsed.solution || '',
-    figureFree: hasImage,
+    figureFree: hasImage, quotaUsed: q.used, quotaLimit: q.limit,
   }), {
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   });

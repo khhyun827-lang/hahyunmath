@@ -1478,14 +1478,28 @@ function nowStamp(){
   const d = new Date();
   return ymdLocal(d) + ' ' + String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
 }
+/* ⚠ **한도는 워커가 쥔다. 여기서 따로 세면 반드시 어긋난다.**
+   실제로 화면엔 15/20으로 떠 있는데 누르면 429가 났다 (2026-08-10). 어긋난 이유가 셋이었다 —
+     ① 워커는 «요청을 받을 때마다» 세고 여기서는 «성공했을 때만» 셌다 (실패가 안 세짐)
+     ② 워커는 사용자(uid)별로 세고 여기서는 공용 문서 하나로 셌다
+     ③ 워커의 날짜는 UTC, `todayStr()`은 로컬 — KST 00~09시에 하루가 어긋난다
+   그래서 워커에 `/quota`를 열고 **그 숫자를 그대로 쓴다.** 여기서는 세지 않는다. */
 async function getAIQuotaUsed(){
-  const q = await dbGet('ai-quota', { date: todayStr(), count: 0 });
-  if(q.date !== todayStr()) return 0;
-  return q.count;
-}
-async function bumpAIQuotaUsed(){
-  const used = await getAIQuotaUsed();
-  await dbSet('ai-quota', { date: todayStr(), count: used + 1 });
+  try{
+    const token = await withTimeout(getAuthToken(), 8000);
+    const res = await withTimeout(fetch(AI_WORKER_URL + '/quota', {
+      method:'POST', headers:{ 'Authorization': 'Bearer ' + token }
+    }), 8000);
+    if(!res.ok) throw new Error('quota http ' + res.status);
+    const q = await res.json();
+    if(typeof q.used === 'number') return q.used;
+    throw new Error('bad quota body');
+  }catch(e){
+    /* 워커를 못 부르는 곳(로컬 127.0.0.1은 ALLOW_ORIGIN에 막힌다)에서는 화면이 멈추면 안 된다.
+       0으로 보고 «남았다»고 그린다 — 진짜 한도는 어차피 워커가 막는다. */
+    console.warn('한도 조회 실패 — 0으로 본다', e);
+    return 0;
+  }
 }
 async function loadAIQuotaIfNeeded(){
   if(state.aiQuotaUsed !== null) return;
@@ -1503,7 +1517,9 @@ async function regenerateOneWithAI(bankId){
   render();
   const image = b.hasImage ? await dbGet('pbimg:'+b.id, null) : null;
   const twin = await generateTwinViaAI(b.originalContent, b.originalAnswer, image);
-  if(twin){
+  if(twin && twin.quotaExceeded){
+    showToast(`오늘 AI 생성 한도(${AI_DAILY_LIMIT}건)를 모두 사용했습니다. 내일 다시 시도해주세요.`);
+  } else if(twin){
     b.variantContent = twin.content;
     b.variantAnswer = twin.answer;
     b.aiSolution = twin.solution;
@@ -1511,8 +1527,8 @@ async function regenerateOneWithAI(bankId){
     b.variantFigureFree = !!twin.figureFree;
     b.status = 'pending';
     await dbSetDoc('problembank', b.id, b);
-    await bumpAIQuotaUsed();
-    state.aiQuotaUsed = null;
+    /* 워커가 실어 보낸 숫자를 그대로 쓴다 — 여기서 세지 않는다. */
+    state.aiQuotaUsed = (typeof twin.quotaUsed === 'number') ? twin.quotaUsed : null;
     showToast('다시 생성했습니다. 검토 상태가 초기화됐어요.');
   } else {
     showToast('생성에 실패했습니다. 잠시 후 다시 시도해주세요.');
@@ -1535,30 +1551,36 @@ async function runTwinBatch(needsAI, label){
   state.aiProcessing = true;
   state.aiProgress = { done:0, total: batch.length };
   render();
-  let ok = 0;
+  let ok = 0, stoppedByQuota = false, doneCount = 0;
   for(let i=0;i<batch.length;i++){
     const b = batch[i];
     const image = b.hasImage ? await dbGet('pbimg:'+b.id, null) : null;
     const twin = await generateTwinViaAI(b.originalContent, b.originalAnswer, image);
+    /* 한도에 걸리면 그 자리에서 멈춘다 — 계속 두드려도 전부 429인데
+       13초씩 쉬며 헛돌기만 한다. 남은 것은 손대지 않고 그대로 둔다. */
+    if(twin && twin.quotaExceeded){ stoppedByQuota = true; break; }
     if(twin){
       b.variantContent = twin.content;
       b.variantAnswer = twin.answer;
       b.aiSolution = twin.solution;
       b.variantFigureFree = !!twin.figureFree;
-      await bumpAIQuotaUsed();
+      if(typeof twin.quotaUsed === 'number') state.aiQuotaUsed = twin.quotaUsed;
       ok++;
+      await dbSetDoc('problembank', b.id, b);
     }
-    await dbSetDoc('problembank', b.id, b);
-    state.aiProgress = { done:i+1, total: batch.length };
+    doneCount = i + 1;
+    state.aiProgress = { done:doneCount, total: batch.length };
     render();
     if(i < batch.length-1) await new Promise(r=>setTimeout(r, 13000));
   }
   state.aiProcessing = false;
   state.aiProgress = null;
   state.aiQuotaUsed = null;
-  const leftover = needsAI.length - batch.length;
-  showToast(`${label}${ok}개를 생성했습니다. 「1차 검토 대기」에 있습니다.`
-    + (leftover>0 ? ` 남은 ${leftover}개는 오늘 한도를 넘어 내일 이어서 만들 수 있습니다.` : ''));
+  const leftover = needsAI.length - (stoppedByQuota ? doneCount : batch.length);
+  showToast(ok===0 && stoppedByQuota
+    ? `오늘 AI 생성 한도(${AI_DAILY_LIMIT}건)를 모두 사용했습니다. 내일 다시 시도해주세요.`
+    : `${label}${ok}개를 생성했습니다. 「1차 검토 대기」에 있습니다.`
+      + (leftover>0 ? ` 남은 ${leftover}개는 오늘 한도를 넘어 내일 이어서 만들 수 있습니다.` : ''));
   render();
   return { ok, leftover };
 }
@@ -1618,6 +1640,13 @@ async function generateTwinViaAI(content, answer, image){
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
       body: JSON.stringify(payload)
     }), 45000); // imageFileId 경로는 워커가 드라이브에서 바이트를 먼저 받아와야 해서 기존보다 여유를 둠
+    /* 한도 초과는 «실패»와 다르게 다뤄야 한다. 일괄 생성 중이면 남은 것을 계속 두드려도
+       전부 429라, 13초씩 쉬며 헛돌기만 한다. 그 자리에서 멈추도록 신호를 돌려준다. */
+    if(res.status === 429){
+      const body = await res.json().catch(()=>({}));
+      if(typeof body.used === 'number') state.aiQuotaUsed = body.used;
+      return { quotaExceeded:true, used: body.used };
+    }
     if(!res.ok) throw new Error('worker http ' + res.status);
     const data = await res.json();
     if(!data.content || !data.answer) throw new Error('incomplete AI result');
@@ -1627,7 +1656,8 @@ async function generateTwinViaAI(content, answer, image){
       solution: data.solution || '',
       /* 원본에 그림이 있어 «그림 없이 푸는 문제»로 새로 쓴 경우다.
          옛 워커는 이 값을 안 보내므로 없으면 false로 본다. */
-      figureFree: !!data.figureFree
+      figureFree: !!data.figureFree,
+      quotaUsed: (typeof data.quotaUsed === 'number') ? data.quotaUsed : undefined
     };
   }catch(e){
     console.error('AI 쌍둥이 생성 실패', e);
