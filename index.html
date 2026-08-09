@@ -809,6 +809,10 @@
 .sap-navbtn:hover{background:var(--hover);color:var(--ink);}
 
 .sap-empty{padding:36px 0;text-align:center;font-size:12.5px;color:var(--dim);line-height:1.8;}
+/* 지금 시험 범위 — «왜 이 문제만 나오나»를 학생이 알아야 납득한다 */
+.sap-range{display:flex;align-items:center;gap:6px;margin:0 0 12px;font-size:11.5px;color:var(--sub);
+  background:var(--note);border:1px solid var(--note-line);border-radius:var(--r);padding:7px 11px;}
+.sap-range s{text-decoration:none;color:var(--dim);}
 .sap-img{max-width:100%;border:1px solid var(--line);border-radius:var(--r-md);display:block;margin-top:10px;}
 
 /* 강의 임베드 — 16:9 비율 상자 */
@@ -909,6 +913,9 @@
 /* 가로로 늘어놓는 입력 줄 — 구버전 .inline-form */
 .app .fm-row{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;margin-bottom:16px;}
 .app .fm-row .fm-field{margin-bottom:0;min-width:140px;flex:1;}
+/* 막지는 않고 «이렇게 됩니다»를 말해 주는 자리 */
+.app .fm-warn{background:var(--latebg);border:1px solid var(--late);border-radius:var(--r);
+  padding:9px 12px;font-size:12px;line-height:1.7;color:var(--ink);}
 .app .fm-empty{padding:34px 0;text-align:center;font-size:12.5px;color:var(--dim);line-height:1.8;}
 .app .fm-head{display:flex;justify-content:space-between;align-items:center;
   margin-bottom:14px;flex-wrap:wrap;gap:10px;}
@@ -1654,6 +1661,9 @@ let state = {
   attDraftKey: null,
   classHubDate: null,            // null이면 수업 기록 «목록», 날짜가 들어 있으면 그날 «상세»
   classHubLogFilter: '',
+  season: null,                  // kv/season {name, startedAt} — 지금 시험 시즌
+  examRanges: null,              // kv/exam-ranges {season, bySchool:{학교:{과목:[단원…]}}}
+  rangeSchool: '',               // 설정 > 시험 범위에서 펼쳐 보는 학교
   quizStudentId: null,           // 데일리퀴즈 화면에서 «오늘 것을 펼쳐 볼» 학생 (예전엔 회차 id였다)
   videoSelectedId: null,
   classHubDateSubTab: 'attendance',
@@ -1741,6 +1751,168 @@ const UNIT_CHAPTERS = {
   '미적분Ⅱ': ['수열의 극한','여러 가지 함수의 미분','여러 가지 미분법','도함수의 활용','여러 가지 적분법','정적분의 활용'],
 };
 
+/* =================== 시험 시즌과 범위 ===================
+   데일리퀴즈가 «지금 준비하는 시험 범위»만 내도록 하는 장치다.
+
+   **날짜로 자동 전환하지 않는다** — 관리자가 「시즌 종료」를 누르면 다음으로 넘어간다.
+   학교마다 시험 날짜가 다르지만, 먼저 끝난 학교는 휴강·휴식기로 가므로
+   다 같이 넘겨도 문제가 없다는 것이 현장 판단이다 (2026-08-10).
+
+   **과목은 반에서 온다.** 학생 → 반 → `progress.subject`. 학년에서 유추하지 않는다 —
+   고2·고3은 선택과목이 갈려서 학년만으로는 정해지지 않는데, 반은 이미 과목을 알고 있다.
+   그래서 시즌이 정할 것은 «그 과목의 단원 목록을 어디서 자르나» 하나뿐이다. */
+const SEASONS = ['겨울방학', '1학기 중간', '1학기 기말', '여름방학', '2학기 중간', '2학기 기말'];
+function isVacationSeason(name){ return String(name||'').includes('방학'); }
+
+/* 과목별 «중간고사 경계» — 앞 N단원이 중간, 나머지가 기말. 방학은 전체를 연다.
+   기말을 «중간 이후만»으로 잡은 것은 보통의 학교 시험 방식이다 (2026-08-10 확정).
+   누적으로 보고 싶으면 학교별 범위에서 앞 단원을 다시 체크하면 된다 — 어차피 체크리스트다. */
+const SEASON_SPLIT = {
+  '공통수학1': 6,   // 다항식의 연산 ~ 이차함수
+  '공통수학2': 5,   // 평면좌표 ~ 집합
+  '대수': 6,        // 지수 ~ 삼각함수의 그래프
+  '미적분Ⅰ': 5,
+  '확률과통계': 3,
+  '기하': 2,
+  '미적분Ⅱ': 3,
+};
+
+/* 문항 내용에서 단원을 짐작하는 데 쓰는 낱말들. **초안일 뿐이다** —
+   등록 화면에서 강사가 보고 고친다. 지금은 낱말 대조지만, 이 함수만 갈아끼우면
+   AI 판정으로 올릴 수 있다 (워커에 엔드포인트를 하나 더 만들어야 한다). */
+const CHAPTER_HINTS = {
+  '다항식의 연산': ['다항식', '전개', '조립제법'],
+  '항등식과 나머지정리': ['항등식', '나머지정리', '인수정리'],
+  '인수분해': ['인수분해'],
+  '복소수': ['복소수', '허수', 'i^', '켤레'],
+  '이차방정식': ['이차방정식', '판별식', '근과 계수'],
+  '이차함수': ['이차함수', '포물선', '꼭짓점', '최댓값', '최솟값'],
+  '여러가지 방정식': ['삼차방정식', '사차방정식', '연립방정식', '고차방정식'],
+  '여러가지 부등식': ['부등식', '연립부등식', '절대부등식'],
+  '경우의 수': ['경우의 수', '순열', '조합', '팩토리얼', '뽑는', '나열'],
+  '행렬': ['행렬', '성분', '역행렬'],
+  '평면좌표': ['내분', '외분', '두 점 사이의 거리'],
+  '직선의 방정식': ['직선의 방정식', '기울기', '평행', '수직'],
+  '원의 방정식': ['원의 방정식', '접선', '반지름'],
+  '도형의 이동': ['평행이동', '대칭이동'],
+  '집합': ['집합', '부분집합', '합집합', '교집합', '여집합'],
+  '명제': ['명제', '역', '대우', '충분조건', '필요조건'],
+  '절대부등식': ['절대부등식', '산술평균', '기하평균', '코시'],
+  '함수': ['정의역', '치역', '일대일대응'],
+  '합성함수와 역함수': ['합성함수', '역함수'],
+  '유리함수와 무리함수': ['유리함수', '무리함수', '점근선'],
+  '지수': ['거듭제곱근', '지수법칙'],
+  /* 수식은 LaTeX로 들어온다 — 「로그」라고 안 쓰고 \log라고 쓴다. 명령어도 같이 본다. */
+  '로그': ['로그', '상용로그', '\\log'],
+  '지수함수': ['지수함수'],
+  '로그함수': ['로그함수'],
+  '일반각과 호도법': ['호도법', '일반각', '라디안', '부채꼴'],
+  '삼각함수의 그래프': ['삼각함수', '주기', 'sin', 'cos', 'tan'],
+  '삼각함수의 활용': ['사인법칙', '코사인법칙', '삼각형의 넓이'],
+  '등차수열': ['등차수열', '공차'],
+  '등비수열': ['등비수열', '공비'],
+  '수열의 합': ['시그마', '수열의 합', '\\sum'],
+  '수학적 귀납법': ['귀납법'],
+  '함수의 극한': ['극한', '\\lim'],
+  '함수의 연속': ['연속', '불연속'],
+  '미분계수와 도함수': ['미분계수', '도함수', '미분', "f'("],
+  '부정적분과 정적분': ['부정적분', '정적분', '적분', '\\int'],
+  '속도와 가속도': ['속도', '가속도'],
+  '확률의 뜻과 활용': ['확률', '여사건'],
+  '조건부확률': ['조건부확률', '독립시행'],
+  '이산확률변수와 확률분포': ['확률변수', '확률분포', '기댓값'],
+  '이항분포': ['이항분포'],
+  '정규분포': ['정규분포', '표준정규'],
+  '통계적 추정': ['신뢰구간', '표본평균', '추정'],
+  '이차곡선': ['타원', '쌍곡선', '포물선의 초점'],
+  '평면벡터': ['벡터', '내적'],
+  '공간도형': ['공간도형', '이면각'],
+  '공간좌표': ['공간좌표', '구의 방정식'],
+};
+/* 과목 안에서만 고른다 — 「포물선」은 이차함수에도 이차곡선에도 있다.
+   과목을 모르면 짐작하지 않는다. 틀린 초안은 없느니만 못하다. */
+function guessChapter(content, subject){
+  const chapters = UNIT_CHAPTERS[subject] || [];
+  const text = String(content || '');
+  let best = '', bestScore = 0;
+  chapters.forEach(ch => {
+    const hints = CHAPTER_HINTS[ch] || [ch];
+    const score = hints.reduce((n, h) => n + (text.includes(h) ? h.length : 0), 0);
+    if(score > bestScore){ bestScore = score; best = ch; }
+  });
+  return best;
+}
+
+/* ---------- 지금 시즌과 «지금 범위» ----------
+   저장은 컬렉션을 늘리지 않고 kv 문서 둘이다 (이 프로젝트의 기존 판단과 같다).
+     kv/season       {name, startedAt}
+     kv/exam-ranges  {season, bySchool:{학교:{과목:[단원…]}}}
+   **학교별 수정은 «지금 시즌에 대한 것»이라 시즌이 넘어가면 비운다.**
+   시험범위는 매 시험마다 새로 받는 것이라, 지난 시즌 수정이 남아 있으면 그게 더 위험하다. */
+function currentSeason(){ return (state.season && state.season.name) || SEASONS[0]; }
+
+/* 프리셋 — 과목의 단원 목록을 시즌으로 자른다. */
+function presetChapters(subject){
+  const all = UNIT_CHAPTERS[subject] || [];
+  const season = currentSeason();
+  if(isVacationSeason(season)) return all.slice();
+  const cut = SEASON_SPLIT[subject];
+  if(!cut) return all.slice();
+  return season.includes('중간') ? all.slice(0, cut) : all.slice(cut);
+}
+/* 학교별 수정이 있으면 그것이 프리셋을 대신한다 (더하는 것이 아니라 갈아끼운다 —
+   «확장»도 «축소»도 되어야 하고, 둘을 합치면 어느 쪽이 진짜인지 알 수 없게 된다). */
+function rangeChapters(school, subject){
+  const ov = state.examRanges && state.examRanges.bySchool && state.examRanges.bySchool[school];
+  const got = ov && ov[subject];
+  return (Array.isArray(got) && got.length) ? got.slice() : presetChapters(subject);
+}
+function hasRangeOverride(school, subject){
+  const ov = state.examRanges && state.examRanges.bySchool && state.examRanges.bySchool[school];
+  return !!(ov && Array.isArray(ov[subject]) && ov[subject].length);
+}
+/* 이 학생이 지금 배우는 과목 — 반에서 온다. 반이 없거나 과목을 안 정했으면 빈 문자열. */
+function subjectOfStudent(sid){
+  const s = DATA.students.find(x=>x.studentId===sid);
+  const c = s && DATA.classes.find(x=>x.id===s.classId);
+  return (c && c.progress && c.progress.subject) || '';
+}
+/* 이 학생의 «지금 범위» = 단원 이름 Set. 과목을 못 정했으면 null —
+   null은 «범위를 모른다»는 뜻이고, 그때는 거르지 않는다 (모른다고 다 막으면 화면이 빈다). */
+function studentRange(sid){
+  const subject = subjectOfStudent(sid);
+  if(!subject) return null;
+  const s = DATA.students.find(x=>x.studentId===sid);
+  const list = rangeChapters((s && s.school) || '', subject);
+  return list.length ? new Set(list) : null;
+}
+
+async function saveSeason(name){
+  state.season = {name, startedAt: todayStr()};
+  await dbSet('season', state.season);
+  /* 시즌이 바뀌면 학교별 수정은 지난 시험의 것이 된다. 비우고 프리셋으로 돌아간다. */
+  state.examRanges = {season: name, bySchool: {}};
+  await dbSet('exam-ranges', state.examRanges);
+}
+async function endSeason(){
+  const now = currentSeason();
+  const next = SEASONS[(SEASONS.indexOf(now) + 1) % SEASONS.length];
+  if(!confirm(`「${now}」을 끝내고 「${next}」으로 넘어갈까요?\n\n`
+    + `학교별로 수정해 둔 시험범위는 모두 지워지고 기본 범위로 돌아갑니다.`)) return;
+  await saveSeason(next);
+  logAudit('시험 시즌 변경', '', '', `${now} → ${next}`);
+  showToast(`「${next}」으로 넘어갔습니다.`);
+  render();
+}
+async function saveSchoolRange(school, subject, chapters){
+  if(!state.examRanges) state.examRanges = {season: currentSeason(), bySchool: {}};
+  if(!state.examRanges.bySchool[school]) state.examRanges.bySchool[school] = {};
+  if(chapters && chapters.length) state.examRanges.bySchool[school][subject] = chapters;
+  else delete state.examRanges.bySchool[school][subject];
+  state.examRanges.season = currentSeason();
+  await dbSet('exam-ranges', state.examRanges);
+}
+
 function showToast(msg){
   state.toast = msg;
   render();
@@ -1772,6 +1944,13 @@ async function loadAll(){
     migrateBlobToCollection('assignments', 'assignments', 'id'),
     dbGetCollection('auditlog')
   ]);
+  /* 시즌·범위는 데일리퀴즈가 첫 렌더에서 바로 본다. 늦게 오면 «범위 밖»으로 잘못 걸러
+     한 번 그렸다가 바뀌는 깜빡임이 생기므로 여기서 같이 받는다. */
+  [state.season, state.examRanges] = await Promise.all([
+    dbGet('season', null), dbGet('exam-ranges', null)
+  ]);
+  if(!state.examRanges) state.examRanges = {season: currentSeason(), bySchool: {}};
+
   await seedTestAccountIfEmpty();
   await restoreSession();
   applyHashOnLoad();
@@ -2336,7 +2515,8 @@ function dqPool(rec){
     if(!h.done) return;
     const b = DATA.problemBank.find(x=>x.id===h.bankId);
     if(!b) return;
-    const base = {bankId:b.id, no:h.questionNo, examId:h.examId, hasImage:!!b.hasImage};
+    const base = {bankId:b.id, no:h.questionNo, examId:h.examId, hasImage:!!b.hasImage,
+                  chapter:b.chapter||'', subject:b.subject||''};
     /* 원본은 검토 상태와 무관하다 — 교사가 시험지에 직접 넣은 문제다.
        변형만 approved를 본다. 검토 중인 쌍둥이가 나가면 학생이 못 푸는 문제가 뜬다. */
     const oa = b.originalContent ? dqAnswerable(b.originalContent, b.originalAnswer) : null;
@@ -2349,10 +2529,19 @@ function dqPool(rec){
 }
 function dqCardById(rec, cardId){ return dqPool(rec).find(c=>c.id===cardId); }
 
-/* 오늘 낼 후보 — 한 번도 안 나온 것 + 복습 날짜가 된 것. 은퇴한 것은 빠진다. */
-function dqDueCards(rec, today){
+/* ---------- 지금 시험 범위 안인가 ----------
+   범위를 모르면(반이 과목을 안 정했거나 프리셋이 없으면) 거르지 않는다 —
+   모른다고 다 막으면 화면이 통째로 비어 «고장난 줄» 알게 된다.
+   단원이 없는 문항은 어느 범위에도 안 든다. 등록 화면이 그 사실을 미리 말해 준다. */
+function dqInRange(card, range){
+  if(!range) return true;
+  return !!card.chapter && range.has(card.chapter);
+}
+/* 오늘 낼 후보 — 범위 안 · 한 번도 안 나온 것 + 복습 날짜가 된 것. 은퇴한 것은 빠진다. */
+function dqDueCards(rec, today, range){
   const cards = dqState(rec).cards;
   return dqPool(rec).filter(c=>{
+    if(!dqInRange(c, range)) return false;
     const st = cards[c.id];
     if(!st) return true;
     if(!st.due) return false;
@@ -2362,9 +2551,21 @@ function dqDueCards(rec, today){
 
 /* 오늘 것을 «한 번만» 뽑아 기록에 박아 둔다.
    render()가 전체 재렌더링이라, 뽑기를 그릴 때마다 하면 화면을 그릴 때마다 문제가 바뀐다. */
-function dqRoll(rec, today){
+function dqRoll(rec, today, range){
   const d = dqState(rec);
-  const due = dqDueCards(rec, today);
+  /* ⚠ **범위 밖에서는 복습 시계를 멈춘다.** 안 그러면 시즌이 넘어가 있던 동안에도
+     due가 계속 흘러, 방학에 범위를 다시 열 때 수십 장이 한꺼번에 밀린 상태로 쏟아진다.
+     그러면 «3일 뒤»였던 것과 «14일 뒤»였던 것이 구분되지 않아 간격 반복이 무너진다.
+     마지막으로 뽑은 날(d.day)이 있으므로 그 사이 지난 만큼 밀어 주면 된다. */
+  const gap = d.day ? Math.round(
+    (new Date(today+'T00:00:00Z') - new Date(d.day+'T00:00:00Z')) / 86400000) : 0;
+  if(gap > 0){
+    dqPool(rec).forEach(c=>{
+      const st = d.cards[c.id];
+      if(st && st.due && !dqInRange(c, range)) st.due = shiftYmd(st.due, gap);
+    });
+  }
+  const due = dqDueCards(rec, today, range);
   for(let i=due.length-1; i>0; i--){            // Fisher-Yates
     const j = Math.floor(Math.random()*(i+1));
     [due[i], due[j]] = [due[j], due[i]];
@@ -2386,7 +2587,7 @@ function dqEnsureToday(sid, rec){
   const d = dqState(rec);
   const today = todayStr();
   if(d.day === today) return;
-  dqRoll(rec, today);
+  dqRoll(rec, today, studentRange(sid));
   if(DATA.records[sid]) saveRecord(sid);
 }
 /* 오늘 낼 카드들 (풀에서 사라진 것은 조용히 뺀다 — 교사가 시험지를 지웠을 수 있다) */
@@ -3237,10 +3438,34 @@ function syncExamDraftFromDOM(){
     const c = document.getElementById('eq-content-'+i);
     const a = document.getElementById('eq-answer-'+i);
     const u = document.getElementById('eq-unit-'+i);
+    const ch = document.getElementById('eq-chapter-'+i);
     if(c) q.content = c.value;
     if(a) q.answer = a.value;
     if(u) q.unit = u.value;
+    if(ch) q.chapter = ch.value;
   });
+}
+/* 문항마다 단원 초안을 채운다. **이미 정해 둔 것은 건드리지 않는다** —
+   강사가 고쳐 놓은 값을 자동 판정이 덮어쓰면 고칠 이유가 없어진다. */
+function autofillChapters(){
+  syncExamDraftFromDOM();
+  let filled = 0;
+  examDraft.questions.forEach(q=>{
+    if(q.chapter) return;
+    const g = guessChapter(q.content, q.unit);
+    if(g){ q.chapter = g; filled++; }
+  });
+  const blank = examDraft.questions.filter(q=>q.content.trim() && !q.chapter).length;
+  showToast(filled ? `${filled}개 문항의 단원을 채웠습니다.` + (blank?` ${blank}개는 못 찾았습니다 — 직접 골라 주세요.`:'')
+                   : '새로 채울 것이 없습니다.');
+  render();
+}
+/* 시험지 전체가 한 단원일 때 쓴다. 여러 단원이 섞인 시험지가 흔해서 문항별이 기본이지만,
+   한 단원짜리를 문항 수만큼 고르게 하면 등록이 무거워진다. */
+function setAllChapters(ch){
+  syncExamDraftFromDOM();
+  examDraft.questions.forEach(q=>{ q.chapter = ch; });
+  render();
 }
 async function saveExam(){
   syncExamDraftFromDOM();
@@ -3251,7 +3476,8 @@ async function saveExam(){
   const readyPages = examDraft.pages.filter(p=>p.url);
   // 문항 이미지는 problem-bank 항목마다 별도 문서(pbimg:id)로, 스캔 페이지는 구글 드라이브에
   // 올리고 링크만 저장한다. Firestore에는 짧은 URL/ID만 남아 문서 용량 제한에서 자유롭다.
-  const questions = validQuestions.map((q,i)=>({no:i+1, content:q.content.trim(), answer:q.answer.trim(), unit:q.unit||''}));
+  const questions = validQuestions.map((q,i)=>({no:i+1, content:q.content.trim(), answer:q.answer.trim(),
+    unit:q.unit||'', chapter:q.chapter||''}));
   const examId = 'ex'+Date.now();
   const newExam = {id:examId, classId:examDraft.classId, title:examDraft.title, date:examDraft.date, questions, hasFiles:readyPages.length>0};
   DATA.exams.unshift(newExam);
@@ -3268,10 +3494,13 @@ async function saveExam(){
       try{ imgResult = await uploadDataUrlToDrive(srcImage); }
       catch(e){ console.error('문항 이미지 업로드 실패', e); showToast(q.no+'번 문항 이미지 업로드에 실패했습니다.'); }
     }
+    /* ⚠ 과목·단원을 여기에 «복사»해 둔다. 시험지를 지우면 문항의 태그를 잃는데,
+       데일리퀴즈의 범위 판정은 시험지가 사라진 뒤에도 돌아야 한다. */
     const bankEntry = {
       id:bankId, examId, questionNo:q.no,
       originalContent:q.content, originalAnswer:q.answer,
       variantContent:'', variantAnswer:'', status:'pending',
+      subject:q.unit||'', chapter:q.chapter||'',
       hasImage: !!imgResult
     };
     DATA.problemBank.push(bankEntry);
@@ -3340,12 +3569,15 @@ async function submitWrongAnswers(){
       if(!q) continue;
       const candidates = q.unit ? DATA.unitBank.filter(u=>u.unit===q.unit) : [];
       const match = candidates.length ? candidates[Math.floor(Math.random()*candidates.length)] : null;
+      /* 시험지 등록 때와 같은 태그를 싣는다 — 이 길로 만들어진 항목만 태그가 없으면
+         그 학생만 조용히 범위 판정에서 빠진다 (문항 태그는 problembank가 진실이다). */
+      const tag = {subject:q.unit||'', chapter:q.chapter||''};
       if(match){
         bank = {
           id:'pb'+Date.now()+'_'+no, examId, questionNo:no,
           originalContent:q.content, originalAnswer:q.answer,
           variantContent: match.content, variantAnswer: match.answer,
-          status:'approved', source:'unitbank', unitBankId: match.id
+          status:'approved', source:'unitbank', unitBankId: match.id, ...tag
         };
         matchedFromBank++;
       } else {
@@ -3353,7 +3585,7 @@ async function submitWrongAnswers(){
           id:'pb'+Date.now()+'_'+no, examId, questionNo:no,
           originalContent:q.content, originalAnswer:q.answer,
           variantContent: '', variantAnswer: '',
-          status:'pending'
+          status:'pending', ...tag
         };
         newlyRequested++;
       }
@@ -3908,7 +4140,9 @@ async function handleExamHwpxFile(fileList){
     showToast('hwpx 파일을 분석하는 중입니다...');
     const problems = await parseHwpxToProblems(file);
     if(problems.length === 0){ showToast('인식된 문항이 없습니다.'); return; }
-    examDraft.questions = problems.map(p => ({ content: p.content, answer: p.answer, unit, image: p.image }));
+    /* 단원 초안도 여기서 같이 채운다 — 일괄 등록의 이점이 «문항 수만큼 단원 고르기»로 사라지면 안 된다. */
+    examDraft.questions = problems.map(p => ({ content: p.content, answer: p.answer, unit,
+      chapter: guessChapter(p.content, unit), image: p.image }));
     render();
     const noAnswer = problems.filter(p=>!p.answer).length;
     const wm = problems.watermarkedCount || 0;
@@ -4763,27 +4997,36 @@ function stuHomeHTML(c){
    내가 뭘 틀려서 이걸 다시 푸는지 모르면 그냥 새 숙제가 된다 (오답숙제와 같은 판단). */
 function stuQuizHTML(c){
   const cards = dqTodayCards(c.rec);
-  const pool = dqPool(c.rec);
+  const range = studentRange(c.sid);
+  const all = dqPool(c.rec);
+  const pool = all.filter(x=>dqInRange(x, range));   // 지금 시험 범위 안의 것만
+  /* 지금 무엇을 준비하는 중인지 학생도 알아야 «왜 이 문제만 나오나»가 납득된다. */
+  const banner = range ? `<div class="sap-range">${escHtml(currentSeason())}
+    <s>·</s>${escHtml(subjectOfStudent(c.sid))} ${range.size}단원</div>` : '';
 
   if(pool.length===0){
-    /* «오답숙제가 남아 있나»에 따라 다음에 할 일이 다르다 — 안내가 갈려야 학생이 움직인다. */
     const left = (c.rec.wrongHomework||[]).filter(h=>{
       const b = DATA.problemBank.find(x=>x.id===h.bankId);
       return b && b.status==='approved' && !h.done;
     }).length;
-    return `<div class="sap-empty">아직 풀 문제가 없습니다.<br>
-      ${left ? `오답숙제를 <b>${left}개</b> 끝내면 그 문제가 여기로 돌아옵니다.`
-             : '시험에서 틀린 번호를 등록하고 오답숙제를 끝내면 그 문제가 여기로 돌아옵니다.'}
-      <div style="margin-top:14px;"><button class="mbtn" style="max-width:220px;margin:0 auto;"
+    /* 셋을 가른다 — 할 일이 저마다 다르다. 「범위 밖」을 «없다»고만 하면
+       학생은 다 푼 줄 알지만 실제로는 시험이 끝나서 접힌 것이다. */
+    const outOfRange = all.length - pool.length;
+    return banner + `<div class="sap-empty">${
+      outOfRange ? `지금 시험 범위에 해당하는 문제가 없습니다.<br>
+        <span style="font-size:11.5px;">범위 밖으로 접어 둔 문제 ${outOfRange}개는 방학에 다시 나옵니다.</span>`
+      : left ? `아직 풀 문제가 없습니다.<br>오답숙제를 <b>${left}개</b> 끝내면 그 문제가 여기로 돌아옵니다.`
+      : `아직 풀 문제가 없습니다.<br>시험에서 틀린 번호를 등록하고 오답숙제를 끝내면 그 문제가 여기로 돌아옵니다.`}
+      ${outOfRange ? '' : `<div style="margin-top:14px;"><button class="mbtn" style="max-width:220px;margin:0 auto;"
         onclick="state.studentTab='wronghw'; ${left?'':'state.stuWrongMode=true; '}render()"
-        >${left ? '오답숙제 풀러 가기' : '틀린 문제 등록하러 가기'}</button></div>
+        >${left ? '오답숙제 풀러 가기' : '틀린 문제 등록하러 가기'}</button></div>`}
     </div>`;
   }
   if(cards.length===0){
     /* 풀은 있는데 오늘 차례가 없다 — 전부 복습 날짜가 아직 안 됐거나 다 익혔다. */
     const nexts = pool.map(x=>(dqState(c.rec).cards[x.id]||{}).due).filter(Boolean).sort();
     const retired = pool.filter(x=>{ const st = dqState(c.rec).cards[x.id]; return st && !st.due; }).length;
-    return `<div class="sap-empty">오늘 풀 문제가 없습니다.
+    return banner + `<div class="sap-empty">오늘 풀 문제가 없습니다.
       ${nexts.length ? `<br>다음 복습은 <b class="mono">${escHtml(nexts[0])}</b>입니다.` : ''}
       ${retired ? `<br><span style="font-size:11.5px;">다 익힌 문제 ${retired}개는 이제 나오지 않습니다.</span>` : ''}
     </div>`;
@@ -4807,7 +5050,7 @@ function stuQuizHTML(c){
     ? `<span class="badge no">원본</span>`
     : `<span class="badge score">변형</span>`;
 
-  return `
+  return banner + `
   <div class="sap-prog" style="margin:0 0 16px;">
     <span class="bar"><i style="width:${Math.round(doneCount/cards.length*100)}%"></i></span>
     <b>${doneCount}/${cards.length}</b>
@@ -8079,18 +8322,23 @@ function chubQuizHTML(classId){
     const rec = state.allRecords[s.studentId];
     const d = rec && rec.dailyQuiz;
     (d && d.log || []).forEach(e=>{ if(byDay[e.d]){ byDay[e.d].n++; if(e.ok) byDay[e.d].ok++; } });
-    const pool = rec ? dqPool(rec) : [];
+    /* 학교마다 범위가 다를 수 있으므로 학생별로 구한다. */
+    const range = studentRange(s.studentId);
+    const allPool = rec ? dqPool(rec) : [];
+    const pool = allPool.filter(x=>dqInRange(x, range));
     const cards = (d && d.cards) || {};
     /* 오늘 것은 학생이 앱을 열어야 뽑힌다 — 안 열었으면 «아직 안 열어 봄»이지 «미제출»이 아니다. */
     const opened = !!(d && d.day === today);
     const picks = opened ? d.picks.filter(id=>pool.some(x=>x.id===id)) : [];
     const doneToday = picks.filter(id=>cards[id] && cards[id].at===today).length;
     const okToday   = picks.filter(id=>cards[id] && cards[id].at===today && cards[id].correct).length;
-    const due = rec ? dqDueCards(rec, today).length : 0;
+    const due = rec ? dqDueCards(rec, today, range).length : 0;
     const retired = pool.filter(x=>cards[x.id] && !cards[x.id].due).length;
+    const folded = allPool.length - pool.length;      // 범위 밖으로 접힌 것
+    const school = s.school || '';
     let n = 0, ok = 0;
     Object.keys(cards).forEach(id=>{ n += cards[id].n||0; ok += cards[id].okN||0; });
-    return {s, rec, opened, picks, doneToday, okToday, due, retired,
+    return {s, rec, opened, picks, doneToday, okToday, due, retired, folded, school, range,
             poolN:pool.length, rate: n ? Math.round(ok/n*100) : null};
   });
 
@@ -8132,6 +8380,7 @@ function chubQuizHTML(classId){
     const pool = dqPool(sel.rec);
     return sel.picks.map(id=>{
       const card = pool.find(x=>x.id===id);
+      if(!card) return '';          // 시험지가 지워지는 등으로 풀에서 빠진 카드
       const st = cards[id];
       const done = st && st.at===today;
       const exam = DATA.exams.find(e=>e.id===card.examId);
@@ -8158,22 +8407,31 @@ function chubQuizHTML(classId){
       ${!state.allRecordsLoaded ? '<div style="font-size:12.5px;color:var(--dim);">기록 불러오는 중…</div>'
       : roster.length===0 ? '<div style="font-size:12.5px;color:var(--dim);">이 반에 배정된 학생이 없습니다.</div>'
       : `<table class="grid"><thead><tr>
-          <th>학생</th><th>오늘</th><th class="r">복습 대기</th><th class="r">다 익힘</th>
-          <th class="r">누적 정답률</th></tr></thead><tbody>
+          <th>학생</th><th>학교 · 범위</th><th>오늘</th><th class="r">복습 대기</th>
+          <th class="r">범위 밖</th><th class="r">누적 정답률</th></tr></thead><tbody>
         ${rows.map(r=>`<tr class="${sel && r.s.studentId===sel.s.studentId ? 'sel' : ''}"
             onclick="state.quizStudentId='${r.s.studentId}'; render()" style="cursor:pointer;">
           <td class="nm">${escHtml(r.s.name)}</td>
+          ${/* 구분자에 <s>를 쓰면 안 된다 — text-decoration을 지우는 규칙이 .nm에만 있어서
+                여기서는 취소선이 그대로 그려져 「광남고 ~6단원」처럼 보인다. */''}
+          <td class="sub">${r.school ? escHtml(r.school) : '<span style="color:var(--dim);">학교 미입력</span>'}
+            <span style="color:var(--dim);">·</span>
+            ${r.range ? `${r.range.size}단원${hasRangeOverride(r.school, subjectOfStudent(r.s.studentId))
+              ? ' <span class="badge score">수정됨</span>' : ''}`
+              : '<span style="color:var(--dim);">범위 미설정</span>'}</td>
           <td>${r.poolN===0 ? '<span style="color:var(--dim);">풀 문제 없음</span>'
                 : !r.opened ? '<span style="color:var(--dim);">안 열어 봄</span>'
                 : r.picks.length===0 ? '<span style="color:var(--dim);">차례 아님</span>'
                 : `<b class="mono">${r.doneToday}/${r.picks.length}</b>` +
                   (r.doneToday ? ` <span style="font-size:11px;color:var(--dim);">정답 ${r.okToday}</span>` : '')}</td>
           <td class="r mono">${r.due}</td>
-          <td class="r mono">${r.retired}</td>
+          <td class="r mono">${r.folded || '—'}</td>
           <td class="r mono">${r.rate===null ? '—' : r.rate+'%'}</td>
         </tr>`).join('')}
       </tbody></table>`}
       <div style="margin-top:11px;font-size:11px;color:var(--dim);line-height:1.7;">
+        지금 시즌은 <b>${escHtml(currentSeason())}</b>입니다 — 그 범위의 단원만 나갑니다.
+        범위는 <b>설정 &gt; 시험 범위</b>에서 학교별로 고칠 수 있습니다.<br>
         <b>오답숙제를 끝낸</b> 문항만 여기로 들어옵니다 — 원본과 AI 쌍둥이가 각각 한 문제입니다.
         하루 ${DQ_PER_DAY}문제씩, 맞히면 ${DQ_STEPS.join('·')}일 뒤에 다시 나오고 그다음엔 나오지 않습니다.
         틀리면 다음날 다시 나옵니다.</div>
@@ -9038,7 +9296,9 @@ function examNewLegacyHTML(){
       <label>hwpx 파일로 문항 자동 채우기 (선택)</label>
       <p class="fm-hint" style="margin:2px 0 8px;">올리면 아래 문항 입력칸이 자동으로 채워집니다. 직접 타이핑 안 하셔도 돼요.</p>
       <div class="fm-row">
-        <div class="fm-field"><label>이 파일의 단원</label><select id="exam-hwpx-unit">${UNITS.map(u=>`<option value="${u}">${u}</option>`).join('')}</select></div>
+        ${/* «단원»이 아니라 «과목»이다. 진짜 단원은 문항마다 아래에서 따로 고른다 —
+             한 폼에 같은 이름이 둘이면 어느 쪽을 고치는지 알 수 없다. */''}
+        <div class="fm-field"><label>이 파일의 과목</label><select id="exam-hwpx-unit">${UNITS.map(u=>`<option value="${u}">${u}</option>`).join('')}</select></div>
         <div class="fm-field" style="flex:2;"><label>hwpx 파일</label><input type="file" accept=".hwpx" onchange="handleExamHwpxFile(this.files)"></div>
       </div>
     </div>
@@ -9053,17 +9313,41 @@ function examNewLegacyHTML(){
       </div>` : ''}
     </div>
     <h3 style="margin-top:20px;font-size:14px;">문항 입력</h3>
+    ${/* 단원은 데일리퀴즈의 «지금 시험 범위» 판정에 쓰인다. 자동 초안을 채운 뒤
+         강사가 훑고 이상한 것만 고치는 흐름이다 — 22문항을 하나씩 고르게 하면 등록이 무거워진다. */''}
+    <div class="fm-row" style="margin-bottom:10px;align-items:center;gap:8px;flex-wrap:wrap;">
+      <button class="btn sm" onclick="autofillChapters()">${iconSvg('sparkle',13)} 단원 자동 채우기</button>
+      <span style="font-size:11.5px;color:var(--dim);">비어 있는 문항만 채웁니다. 고쳐 둔 것은 그대로 둡니다.</span>
+      <span class="spacer"></span>
+      <select onchange="if(this.value) setAllChapters(this.value)" style="max-width:220px;">
+        <option value="">전부 한 단원으로 지정…</option>
+        ${(UNIT_CHAPTERS[examDraft.questions[0] && examDraft.questions[0].unit] || [])
+          .map(ch=>`<option value="${escHtml(ch)}">${escHtml(ch)}</option>`).join('')}
+      </select>
+    </div>
     ${examDraft.questions.map((q,i)=>`
       <div class="fm-q">
         <div class="qno">${i+1}번</div>
         <div class="qf">
-          <select id="eq-unit-${i}" style="margin-bottom:6px;">${UNITS.map(u=>`<option value="${u}" ${q.unit===u?'selected':''}>${u}</option>`).join('')}</select>
+          <div style="display:flex;gap:6px;margin-bottom:6px;flex-wrap:wrap;">
+            <select id="eq-unit-${i}" style="flex:1;min-width:130px;">${UNITS.map(u=>`<option value="${u}" ${q.unit===u?'selected':''}>${u}</option>`).join('')}</select>
+            <select id="eq-chapter-${i}" style="flex:2;min-width:170px;${q.chapter?'':'border-color:var(--late);'}">
+              <option value="">— 단원 미지정 —</option>
+              ${(UNIT_CHAPTERS[q.unit] || []).map(ch=>
+                `<option value="${escHtml(ch)}" ${q.chapter===ch?'selected':''}>${escHtml(ch)}</option>`).join('')}
+            </select>
+          </div>
           <textarea id="eq-content-${i}" placeholder="문제 내용">${escHtml(q.content)}</textarea>
           <input id="eq-answer-${i}" placeholder="정답" value="${escHtml(q.answer)}">
           ${q.image ? `<img src="${q.image}" style="max-width:120px;max-height:120px;margin-top:6px;border:1px solid var(--line);border-radius:4px;display:block;">` : ''}
           <button class="btn no sm" onclick="removeExamQuestionRow(${i})">삭제</button>
         </div>
       </div>`).join('')}
+    ${/* 단원이 빈 문항은 «어느 범위에도 안 드는» 문제가 되어 데일리퀴즈에 영영 안 나온다.
+         저장을 막지는 않는다 — 막으면 급할 때 등록 자체를 못 한다. 대신 사실을 말해 준다. */''}
+    ${(()=>{ const n = examDraft.questions.filter(q=>q.content.trim() && !q.chapter).length;
+      return n ? `<div class="fm-warn" style="margin-top:10px;">단원을 정하지 않은 문항이 <b>${n}개</b> 있습니다.
+        그대로 저장하면 그 문항은 <b>데일리퀴즈에 나오지 않습니다</b> (오답숙제로는 나갑니다).</div>` : ''; })()}
     <div style="margin-top:12px;display:flex;gap:8px;">
       <button class="btn" onclick="addExamQuestionRow()">+ 문항 추가</button>
       <button class="btn p" onclick="saveExam()">시험지 저장</button>
@@ -9435,17 +9719,121 @@ function unitBankAddLegacyHTML(){
 
 /* ---------- 조교 관리 ---------- */
 
+/* =================== 설정 > 시험 범위 ===================
+   데일리퀴즈가 «지금 준비하는 시험 범위»만 내도록 하는 곳이다. 두 층으로 되어 있다.
+
+   ① **시즌** — 전역이다. 날짜로 넘기지 않고 「시즌 종료」를 누르면 다음으로 간다.
+      학교마다 시험 날짜가 다르지만 먼저 끝난 학교는 휴강·휴식기로 가므로 문제가 없다.
+   ② **학교별 범위** — 프리셋(과목의 단원 목록을 시즌으로 자른 것)을 «갈아끼운다».
+      더하는 것이 아니라 갈아끼우는 이유는 확장도 축소도 되어야 하기 때문이다 —
+      둘을 합치면 어느 쪽이 진짜인지 알 수 없게 된다.
+
+   학교 목록은 학생 명부에서 나온다. 학교를 따로 등록하는 곳을 만들지 않았다 —
+   이름을 두 곳에서 관리하면 오타 하나로 «다른 학교»가 된다. */
+function teacherExamRangeHTML(){
+  const season = currentSeason();
+  const next = SEASONS[(SEASONS.indexOf(season) + 1) % SEASONS.length];
+  /* 학교 × 그 학교 학생이 속한 반의 과목 — 실제로 범위가 필요한 조합만 세운다. */
+  const combos = {};
+  DATA.students.forEach(s=>{
+    const subject = subjectOfStudent(s.studentId);
+    if(!subject) return;
+    const school = s.school || '';
+    const key = school + '\u0000' + subject;
+    if(!combos[key]) combos[key] = {school, subject, n:0};
+    combos[key].n++;
+  });
+  const list = Object.values(combos).sort((a,b)=>
+    (a.school||'힣').localeCompare(b.school||'힣') || a.subject.localeCompare(b.subject));
+  const noSchool = DATA.students.filter(s=>!s.school).length;
+  const noSubject = DATA.students.filter(s=>!subjectOfStudent(s.studentId)).length;
+
+  const openKey = state.rangeSchool;
+  return `
+  <div class="cls-hw" style="display:block;margin-bottom:18px;">
+    <div class="t-sec" style="margin:0;">지금 시즌</div>
+    <div class="row" style="gap:12px;align-items:center;margin-top:10px;flex-wrap:wrap;">
+      <b style="font-size:20px;">${escHtml(season)}</b>
+      ${/* 한글은 mono 밖에 둔다 — 「부터」가 「부 터」로 벌어진다 */''}
+      ${state.season && state.season.startedAt
+        ? `<span style="font-size:11.5px;color:var(--dim);"><span class="mono">${escHtml(state.season.startedAt)}</span>부터</span>` : ''}
+      <span class="spacer"></span>
+      <button class="btn p sm" onclick="endSeason()">${escHtml(season)} 종료 → ${escHtml(next)}</button>
+    </div>
+    <div style="margin-top:10px;font-size:11.5px;color:var(--dim);line-height:1.8;">
+      ${isVacationSeason(season)
+        ? '방학에는 <b>과목의 모든 단원</b>이 나갑니다 — 그동안 범위 밖으로 접어 둔 문제가 다시 돌아옵니다.'
+        : '시즌에 해당하는 단원만 데일리퀴즈로 나갑니다. 범위 밖 문제는 복습 시계가 멈춘 채 기다립니다.'}<br>
+      순서 — ${SEASONS.map(s=>s===season?`<b>${escHtml(s)}</b>`:escHtml(s)).join(' → ')} → …<br>
+      <b>시즌을 넘기면 아래 학교별 수정은 모두 지워지고 기본 범위로 돌아갑니다.</b>
+    </div>
+  </div>
+
+  <div class="t-sec">학교별 시험 범위</div>
+  ${noSchool || noSubject ? `<div class="fm-warn" style="margin-bottom:12px;">
+    ${noSchool ? `학교를 입력하지 않은 학생이 <b>${noSchool}명</b> 있습니다. ` : ''}
+    ${noSubject ? `반의 진도 과목이 정해지지 않아 범위를 못 정하는 학생이 <b>${noSubject}명</b> 있습니다
+      (반 관리 &gt; 진도에서 과목을 고르면 됩니다). ` : ''}
+    이 학생들에게는 <b>범위를 적용하지 않습니다</b> — 지금까지처럼 모든 문제가 나갑니다.</div>` : ''}
+  ${list.length===0 ? `<div style="font-size:12.5px;color:var(--dim);">범위를 정할 조합이 없습니다.</div>`
+  : list.map(({school, subject, n})=>{
+    const key = school + '\u0000' + subject;
+    const all = UNIT_CHAPTERS[subject] || [];
+    const cur = new Set(rangeChapters(school, subject));
+    const overridden = hasRangeOverride(school, subject);
+    const open = openKey === key;
+    return `<div class="ex-item" style="display:block;cursor:default;margin-bottom:8px;">
+      <div class="row" style="gap:9px;align-items:center;cursor:pointer;"
+           onclick="state.rangeSchool = ${open?"''":`'${escHtml(key).replace(/'/g,"\\'")}'`}; render()">
+        <b style="font-size:13px;">${escHtml(school || '(학교 미입력)')}</b>
+        <span style="font-size:11.5px;color:var(--dim);">${escHtml(subject)} · ${n}명</span>
+        ${overridden ? '<span class="badge score">수정됨</span>' : '<span class="badge">기본</span>'}
+        <span class="spacer"></span>
+        <span style="font-size:11.5px;"><span class="mono">${cur.size}/${all.length}</span>단원</span>
+        <span style="font-size:11px;color:var(--dim);">${open?'접기':'펼치기'}</span>
+      </div>
+      ${!open ? `<div class="m" style="margin-top:5px;">${
+        all.filter(ch=>cur.has(ch)).map(escHtml).join(' · ') || '<span style="color:var(--no);">선택된 단원이 없습니다</span>'}</div>`
+      : `<div style="margin-top:11px;display:flex;flex-wrap:wrap;gap:7px;">
+          ${all.map((ch,i)=>`<a class="pill ${cur.has(ch)?'on':''}"
+            onclick="toggleRangeChapter('${escHtml(school).replace(/'/g,"\\'")}','${escHtml(subject)}','${escHtml(ch).replace(/'/g,"\\'")}')"
+            >${i+1}. ${escHtml(ch)}</a>`).join('')}
+        </div>
+        <div class="row" style="gap:8px;margin-top:11px;flex-wrap:wrap;">
+          <button class="btn q sm" onclick="resetSchoolRange('${escHtml(school).replace(/'/g,"\\'")}','${escHtml(subject)}')">기본 범위로 되돌리기</button>
+          <span style="font-size:11.5px;color:var(--dim);">기본은 «${escHtml(season)}» 기준
+            ${presetChapters(subject).length}단원입니다.</span>
+        </div>`}
+    </div>`;
+  }).join('')}`;
+}
+async function toggleRangeChapter(school, subject, chapter){
+  const cur = rangeChapters(school, subject);
+  const all = UNIT_CHAPTERS[subject] || [];
+  const set = new Set(cur);
+  if(set.has(chapter)) set.delete(chapter); else set.add(chapter);
+  /* 단원 목록의 «순서»를 지킨다 — 누른 순서로 쌓이면 화면마다 순서가 달라진다. */
+  await saveSchoolRange(school, subject, all.filter(ch=>set.has(ch)));
+  render();
+}
+async function resetSchoolRange(school, subject){
+  await saveSchoolRange(school, subject, null);
+  showToast('기본 범위로 되돌렸습니다.');
+  render();
+}
+
 /* ---------- 설정 (조교 + 관리자) ---------- */
 function teacherSettingsHTML(){
   if(state.studentDetailId) return teacherStudentDetailHTML(state.studentDetailId);
   const tab = state.settingsSubTab || 'assistants';
   const subtabs = [['assistants','조교'],['students','학생'],['classes','반'],['consults','상담'],
-    ['signalrules','신호 규칙'],['auditlog','변경 이력'],['admin','관리자']];
+    ['examrange','시험 범위'],['signalrules','신호 규칙'],['auditlog','변경 이력'],['admin','관리자']];
   const subMap = {
     assistants: teacherAssistantsHTML,
     students: teacherSettingsStudentsHTML,
     classes: teacherSettingsClassesHTML,
     consults: teacherSettingsConsultsHTML,
+    examrange: teacherExamRangeHTML,
     signalrules: teacherSignalRulesHTML,
     auditlog: teacherAuditLogHTML,
     admin: teacherSettingsAdminHTML,
@@ -9458,6 +9846,7 @@ function teacherSettingsHTML(){
      각 갈래의 본문은 «구조»를 손대지 않았다 — 폼과 표가 전부라 형태를 바꿔도 나아지지 않는다. */
   const LABEL = { assistants:'조교 계정을 만들고 담당 반을 정한다', students:'학생 계정을 만든다 · 엑셀 일괄 등록',
     classes:'반을 만든다', consults:'홈페이지로 들어온 상담 신청', signalrules:'위험·주의를 가르는 임계값',
+    examrange:'데일리퀴즈가 낼 단원을 시즌과 학교로 정한다',
     auditlog:'누가 무엇을 바꿨는지', admin:'관리자 비밀번호' };
   return `<div class="ex-screen ex-nosub">
     <aside class="ex-list ex-nav">
