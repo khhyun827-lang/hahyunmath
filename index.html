@@ -949,6 +949,13 @@
 .app .fm-q .qf{flex:1;display:flex;gap:8px;flex-wrap:wrap;}
 .app .fm-q .qf textarea{flex:2;min-width:200px;min-height:44px;}
 .app .fm-q .qf input{flex:1;min-width:100px;}
+/* 입력칸 옆의 «보이는 판». textarea 안의 $…$는 KaTeX가 못 건드리므로(입력칸이다)
+   단원을 판단하려면 그려진 것을 따로 보여 줘야 한다. */
+.app .fm-eqprev{flex:1 1 100%;min-width:0;background:var(--note);
+  border:1px solid var(--note-line);border-radius:var(--r-sm);padding:9px 11px;
+  font-size:13px;line-height:1.9;white-space:pre-wrap;overflow-x:auto;position:relative;}
+.app .fm-eqprev:empty::before{content:'문제를 입력하면 수식이 여기에 그려집니다';color:var(--dim);font-size:11.5px;}
+.app .fm-eqprev .lb{display:block;font-size:10.5px;color:var(--dim);margin-bottom:3px;}
 .app .fm-q .qf input,.app .fm-q .qf textarea,.app .fm-q .qf select{
   border:1px solid var(--line);border-radius:var(--r-sm);background:var(--paper);
   padding:8px 10px;font-family:inherit;font-size:12.5px;color:var(--ink);outline:none;resize:vertical;}
@@ -3467,6 +3474,40 @@ function setAllChapters(ch){
   examDraft.questions.forEach(q=>{ q.chapter = ch; });
   render();
 }
+/* 등록 화면에서도 수식이 보여야 «이게 무슨 단원인지»를 판단할 수 있다.
+   ⚠ textarea·input 안의 `$…$`는 KaTeX가 건드리지 않는다 — 입력칸이기 때문이다.
+   그래서 옆에 «그려진 판»을 따로 둔다.
+
+   ⚠ 글자마다 render()를 부르면 안 된다 — 전체 재렌더링이라 커서가 튀고 한글 조합이 깨진다
+   (수업 메모·학생 메모에서 이미 겪은 것과 같은 함정). 이 판 하나만 직접 그린다. */
+function updateEqPreview(i){
+  const box = document.getElementById('eq-prev-'+i);
+  if(!box) return;
+  const c = document.getElementById('eq-content-'+i);
+  const a = document.getElementById('eq-answer-'+i);
+  box.textContent = c ? c.value : '';
+  if(a && a.value.trim()){
+    const lb = document.createElement('span');
+    lb.className = 'lb'; lb.style.marginTop = '7px'; lb.textContent = '정답';
+    box.appendChild(lb);
+    box.appendChild(document.createTextNode(a.value));
+  }
+  if(window.renderMathInElement){
+    try{ renderMathInElement(box, {delimiters:[{left:'$', right:'$', display:false}], throwOnError:false}); }
+    catch(e){ /* 쓰는 중인 수식은 깨져 있는 것이 정상이다. 조용히 넘긴다 */ }
+  }
+}
+/* hwpx를 잘못 올렸을 때 쓴다. 22문항을 하나씩 지우게 두면 다시 올리는 것보다 오래 걸린다.
+   되돌릴 수 없으므로 몇 개를 지우는지 세어서 묻는다. */
+function clearExamQuestions(){
+  syncExamDraftFromDOM();
+  const n = examDraft.questions.filter(q=>(q.content||'').trim()).length;
+  if(n === 0){ showToast('지울 문항이 없습니다.'); return; }
+  if(!confirm(`문항 ${n}개를 모두 지울까요?\n되돌릴 수 없습니다. 시험명·반·첨부 이미지는 그대로 둡니다.`)) return;
+  examDraft.questions = [{content:'', answer:'', unit:examDraft.questions[0]?.unit || UNITS[0], chapter:''}];
+  showToast(`문항 ${n}개를 지웠습니다.`);
+  render();
+}
 async function saveExam(){
   syncExamDraftFromDOM();
   if(!examDraft.title || !examDraft.classId){ showToast('반과 시험명을 입력해주세요.'); return; }
@@ -3896,7 +3937,20 @@ function convertHwpEq(script){
   s = replaceBalancedKeyword(s, 'bar', inner => '\\overline{' + inner + '}');
   s = s.replace(/(?<!\\)\bbar\s+([A-Za-z]+)\b/g, '\\overline{$1}');
   s = s.replace(/(?<!\\)\bbar([A-Z]{1,3})\b/g, '\\overline{$1}');
-  s = s.replace(/LEFT\s*\(/g, '\\left(').replace(/RIGHT\s*\)/g, '\\right)');
+  /* LEFT/RIGHT는 괄호만이 아니다 — 절댓값 LEFT | … RIGHT |, 대괄호, 중괄호가 다 온다.
+     ⚠ 중괄호는 LaTeX에서 \left\{ 로 이스케이프해야 한다 (\left{ 는 KaTeX가 못 읽는다).
+     짝이 안 맞는 LEFT/RIGHT가 남으면 수식 전체가 안 그려지므로, 못 알아본 것은 그냥 지운다. */
+  s = s.replace(/\bLEFT\s*\{/g, '\\left\\{').replace(/\bRIGHT\s*\}/g, '\\right\\}');
+  s = s.replace(/\bLEFT\s*([([|])/g, (m,d)=>'\\left'+d)
+       .replace(/\bRIGHT\s*([)\]|])/g, (m,d)=>'\\right'+d);
+  s = s.replace(/\bLEFT\b\s*/g, '').replace(/\bRIGHT\b\s*/g, '');
+  s = s.replace(/\bCDOTS\b/gi, '\\cdots').replace(/\bLDOTS\b/gi, '\\ldots')
+       .replace(/\bDOTSAXIS\b/gi, '\\cdots').replace(/\bDOTS\b/gi, '\\cdots');
+  /* «같지 않다»가 세 가지 표기로 온다 — != 와 NEQ(위에서 처리) 와 ne. */
+  s = s.replace(/!=/g, '\\neq').replace(/(?<!\\)\bne\b/g, '\\neq');
+  /* pile{a#b}는 «세로로 쌓기»다. 열이 하나인 행렬로 옮긴다 (행 구분은 cases·pmatrix와 같은 #). */
+  s = replaceBalancedKeyword(s, 'pile', inner =>
+    '\\begin{matrix}' + inner.replace(/#/g,'\\\\') + '\\end{matrix}');
   s = convertOverToFrac(s);
   s = replaceBalancedKeyword(s, 'sqrt', inner => '\\sqrt{' + inner + '}');
   // 첨자가 여러 글자인데 중괄호 없이 붙어있으면(a_11 등) LaTeX에서 첫 글자만
@@ -3999,7 +4053,18 @@ function hwpCellToBlock(cellParas){
   }
   return { text, answer, pics };
 }
-function hwpParseBlocks(topParas){
+/* 최상위 표를 «문항 컨테이너»로 볼 것인가, «문항 안의 상자»로 볼 것인가.
+
+   ⚠ 이 둘을 한 규칙으로 못 가른다. 시험지 양식이 두 가지다 —
+   ① 표 한 칸이 문항 하나인 시험지 (원래 이 파서가 맞춘 양식)
+   ② 문항은 본문에 흐르고, 표는 «다음 조건을 만족시킨다» 상자나 보기 격자로 쓰이는 시험지
+   ②를 ①로 읽으면 **한 문제가 조각조각 갈라진다.** 실제로 20문항짜리가 39개로 쪼개졌고,
+   좌석 번호 표(①~⑧)가 든 문항 하나가 12조각이 났다 (2026-08-10, 광남고 1-1b).
+
+   그래서 **양쪽으로 다 읽어 보고 미주(정답) 개수와 맞는 쪽을 고른다.**
+   문항 하나에 정답 미주가 하나씩 달리므로 미주 개수가 곧 «문항 수»의 근거다.
+   양식을 미리 알아맞히려 들지 않는 것이 요점이다 — 알아맞히는 규칙은 다음 양식에서 또 깨진다. */
+function hwpParseBlocks(topParas, tablesAsProblems){
   const blocks = [];
   let plainTokens = [];
   let stopped = false;
@@ -4029,7 +4094,7 @@ function hwpParseBlocks(topParas){
         if(child.nodeType===1 && child.localName==='tbl') foundTable = child;
       }
     }
-    if(foundTable){
+    if(foundTable && tablesAsProblems){
       flushPlain();
       const trs = Array.from(foundTable.childNodes).filter(n=>n.nodeType===1 && n.localName==='tr');
       for(const tr of trs){
@@ -4060,17 +4125,25 @@ async function parseHwpxToProblems(file){
   const sec = doc.documentElement;
   const topParas = Array.from(sec.childNodes).filter(n=>n.nodeType===1 && n.localName==='p');
 
-  const blocks = hwpParseBlocks(topParas);
+  /* 미주 개수 = 문항 개수의 근거. 두 가지로 읽어 보고 여기에 맞는 쪽을 고른다. */
+  const allEndnotes = Array.from(doc.getElementsByTagNameNS(HP_NS,'endNote'));
+  const orderedAnswers = allEndnotes.map(hwpEndnoteText);
+  const endnoteCount = orderedAnswers.length;
+
+  const candidates = [hwpParseBlocks(topParas, true), hwpParseBlocks(topParas, false)];
+  const scoreOf = bs => {
+    const answered = bs.filter(b=>b.answer && b.answer.trim()).length;
+    /* ① 미주 수와 문항 수가 맞으면 압도적으로 좋다 ② 그다음은 정답이 붙은 비율 */
+    return (endnoteCount && bs.length === endnoteCount ? 1000 : 0)
+         + (bs.length ? Math.round(answered / bs.length * 100) : 0);
+  };
+  /* 동점이면 «표를 문항으로 보는» 기존 해석을 유지한다 — 그 양식으로 이미 쓰던 문서가 있다. */
+  const blocks = scoreOf(candidates[1]) > scoreOf(candidates[0]) ? candidates[1] : candidates[0];
 
   // 문제 칸 안에서 정답을 못 찾은 문항이 있으면(정답이 문제와 분리된 별도 표에
   // 순서대로 나열된 문서 양식), 문서 전체의 미주를 등장 순서대로 모아 같은 순번끼리 매칭한다.
-  const missingCount = blocks.filter(b=>!b.answer).length;
-  if(missingCount > 0){
-    const allEndnotes = Array.from(doc.getElementsByTagNameNS(HP_NS,'endNote'));
-    const orderedAnswers = allEndnotes.map(hwpEndnoteText);
-    if(orderedAnswers.length === blocks.length){
-      blocks.forEach((b,i)=>{ if(!b.answer) b.answer = orderedAnswers[i]; });
-    }
+  if(blocks.some(b=>!b.answer) && orderedAnswers.length === blocks.length){
+    blocks.forEach((b,i)=>{ if(!b.answer) b.answer = orderedAnswers[i]; });
   }
 
   // 저작권 보호 워터마크(예: 족보닷컴)가 문제나 정답에 섞인 문항은 자동 인식에서 제외한다.
@@ -9337,8 +9410,13 @@ function examNewLegacyHTML(){
                 `<option value="${escHtml(ch)}" ${q.chapter===ch?'selected':''}>${escHtml(ch)}</option>`).join('')}
             </select>
           </div>
-          <textarea id="eq-content-${i}" placeholder="문제 내용">${escHtml(q.content)}</textarea>
-          <input id="eq-answer-${i}" placeholder="정답" value="${escHtml(q.answer)}">
+          <textarea id="eq-content-${i}" placeholder="문제 내용"
+            oninput="updateEqPreview(${i})">${escHtml(q.content)}</textarea>
+          <input id="eq-answer-${i}" placeholder="정답" value="${escHtml(q.answer)}"
+            oninput="updateEqPreview(${i})">
+          ${/* 그려진 판. 초기 렌더는 render() 끝의 renderMathInElement가 알아서 해 준다. */''}
+          <div class="fm-eqprev" id="eq-prev-${i}">${escHtml(q.content)}${
+            q.answer ? `<span class="lb" style="margin-top:7px;">정답</span>${escHtml(q.answer)}` : ''}</div>
           ${q.image ? `<img src="${q.image}" style="max-width:120px;max-height:120px;margin-top:6px;border:1px solid var(--line);border-radius:4px;display:block;">` : ''}
           <button class="btn no sm" onclick="removeExamQuestionRow(${i})">삭제</button>
         </div>
@@ -9348,9 +9426,12 @@ function examNewLegacyHTML(){
     ${(()=>{ const n = examDraft.questions.filter(q=>q.content.trim() && !q.chapter).length;
       return n ? `<div class="fm-warn" style="margin-top:10px;">단원을 정하지 않은 문항이 <b>${n}개</b> 있습니다.
         그대로 저장하면 그 문항은 <b>데일리퀴즈에 나오지 않습니다</b> (오답숙제로는 나갑니다).</div>` : ''; })()}
-    <div style="margin-top:12px;display:flex;gap:8px;">
+    <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
       <button class="btn" onclick="addExamQuestionRow()">+ 문항 추가</button>
       <button class="btn p" onclick="saveExam()">시험지 저장</button>
+      <span class="spacer"></span>
+      ${/* hwpx를 잘못 올렸을 때 하나씩 지우면 다시 올리는 것보다 오래 걸린다. */''}
+      <button class="btn no" onclick="clearExamQuestions()">문항 전체 삭제</button>
     </div>
     `}
   </div>`;
@@ -9739,7 +9820,7 @@ function teacherExamRangeHTML(){
     const subject = subjectOfStudent(s.studentId);
     if(!subject) return;
     const school = s.school || '';
-    const key = school + '\u0000' + subject;
+    const key = rangeKey(school, subject);
     if(!combos[key]) combos[key] = {school, subject, n:0};
     combos[key].n++;
   });
@@ -9777,14 +9858,13 @@ function teacherExamRangeHTML(){
     이 학생들에게는 <b>범위를 적용하지 않습니다</b> — 지금까지처럼 모든 문제가 나갑니다.</div>` : ''}
   ${list.length===0 ? `<div style="font-size:12.5px;color:var(--dim);">범위를 정할 조합이 없습니다.</div>`
   : list.map(({school, subject, n})=>{
-    const key = school + '\u0000' + subject;
     const all = UNIT_CHAPTERS[subject] || [];
     const cur = new Set(rangeChapters(school, subject));
     const overridden = hasRangeOverride(school, subject);
-    const open = openKey === key;
+    const open = openKey === rangeKey(school, subject);
     return `<div class="ex-item" style="display:block;cursor:default;margin-bottom:8px;">
       <div class="row" style="gap:9px;align-items:center;cursor:pointer;"
-           onclick="state.rangeSchool = ${open?"''":`'${escHtml(key).replace(/'/g,"\\'")}'`}; render()">
+           onclick="toggleRangeOpen('${jsAttr(school)}','${jsAttr(subject)}')">
         <b style="font-size:13px;">${escHtml(school || '(학교 미입력)')}</b>
         <span style="font-size:11.5px;color:var(--dim);">${escHtml(subject)} · ${n}명</span>
         ${overridden ? '<span class="badge score">수정됨</span>' : '<span class="badge">기본</span>'}
@@ -9796,16 +9876,32 @@ function teacherExamRangeHTML(){
         all.filter(ch=>cur.has(ch)).map(escHtml).join(' · ') || '<span style="color:var(--no);">선택된 단원이 없습니다</span>'}</div>`
       : `<div style="margin-top:11px;display:flex;flex-wrap:wrap;gap:7px;">
           ${all.map((ch,i)=>`<a class="pill ${cur.has(ch)?'on':''}"
-            onclick="toggleRangeChapter('${escHtml(school).replace(/'/g,"\\'")}','${escHtml(subject)}','${escHtml(ch).replace(/'/g,"\\'")}')"
+            onclick="toggleRangeChapter('${jsAttr(school)}','${jsAttr(subject)}','${jsAttr(ch)}')"
             >${i+1}. ${escHtml(ch)}</a>`).join('')}
         </div>
         <div class="row" style="gap:8px;margin-top:11px;flex-wrap:wrap;">
-          <button class="btn q sm" onclick="resetSchoolRange('${escHtml(school).replace(/'/g,"\\'")}','${escHtml(subject)}')">기본 범위로 되돌리기</button>
+          <button class="btn q sm" onclick="resetSchoolRange('${jsAttr(school)}','${jsAttr(subject)}')">기본 범위로 되돌리기</button>
           <span style="font-size:11.5px;color:var(--dim);">기본은 «${escHtml(season)}» 기준
             ${presetChapters(subject).length}단원입니다.</span>
         </div>`}
     </div>`;
   }).join('')}`;
+}
+/* 인라인 onclick 안의 «문자열 리터럴»로 안전하게 넣는다.
+   학교 이름은 사람이 친 값이라 따옴표·백슬래시가 들어올 수 있다.
+   ⚠ 제어문자(특히 NUL)는 HTML 파서가 U+FFFD로 바꿔 버려 키가 영영 안 맞는다 —
+   실제로 학교+과목 키를 `\u0000`으로 이어 붙였다가 「펼치기」가 안 먹었다 (2026-08-10).
+   순서가 중요하다: 먼저 JS 이스케이프, 그다음 HTML 속성 이스케이프. */
+function jsAttr(s){
+  const js = String(s==null?'':s).replace(/[\u0000-\u001F]/g,' ')
+    .replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+  return js.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function rangeKey(school, subject){ return school + '\n' + subject; }
+function toggleRangeOpen(school, subject){
+  const key = rangeKey(school, subject);
+  state.rangeSchool = (state.rangeSchool === key) ? '' : key;
+  render();
 }
 async function toggleRangeChapter(school, subject, chapter){
   const cur = rangeChapters(school, subject);
