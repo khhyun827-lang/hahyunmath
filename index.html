@@ -3705,11 +3705,62 @@ async function saveExam(){
   showToast('시험지가 등록되었습니다. 오답 검토에서 AI 쌍둥이 문제를 생성해보세요.');
   render();
 }
+/* 시험지를 지우면 **거기서 나온 것도 같이 지운다.**
+   예전에는 시험지만 지우고 문항 창고는 남겼다. 그러면 검토 큐에 「(삭제된 시험지) N번」이
+   영영 남아 비울 수 없는 줄이 된다 — 원본이 없어졌으니 쌍둥이를 만들 수도, 판단할 수도 없다.
+   학생 기록의 오답숙제도 같이 턴다. 안 그러면 «화면에 아무것도 안 뜨는 숙제»가 남는다. */
 async function deleteExam(examId){
-  if(!confirm('이 시험지를 삭제할까요? 관련 오답 문제 DB는 유지됩니다.')) return;
-  DATA.exams = DATA.exams.filter(e=>e.id!==examId);
+  const e = DATA.exams.find(x=>x.id===examId);
+  const banks = DATA.problemBank.filter(b=>b.examId===examId);
+  const bankIds = new Set(banks.map(b=>b.id));
+
+  /* 학생 기록을 다 봐야 몇 건이 딸려 나가는지 셀 수 있다. 지우기 «전»에 말해 주려고 먼저 싣는다. */
+  await loadAllRecordsIfNeeded();
+  const affected = DATA.students.filter(s=>{
+    const rec = state.allRecords[s.studentId];
+    return (rec && rec.wrongHomework || []).some(h=>bankIds.has(h.bankId) || h.examId===examId);
+  });
+  const hwCount = affected.reduce((n,s)=>{
+    const rec = state.allRecords[s.studentId];
+    return n + (rec.wrongHomework||[]).filter(h=>bankIds.has(h.bankId) || h.examId===examId).length;
+  }, 0);
+
+  if(!confirm(`「${escHtmlPlain(e ? e.title : '시험지')}」를 삭제할까요?\n\n`
+    + `함께 지워지는 것 —\n`
+    + `· 이 시험지에서 만든 문항 ${banks.length}개 (검토 대기에 있는 것 포함)\n`
+    + (hwCount ? `· 학생 ${affected.length}명의 오답숙제 ${hwCount}건\n` : '')
+    + `\n되돌릴 수 없습니다.`)) return;
+
+  DATA.exams = DATA.exams.filter(x=>x.id!==examId);
   await dbDeleteDoc('exams', examId);
   await dbDelete('examfiles:'+examId);
+
+  for(const b of banks){
+    await dbDeleteDoc('problembank', b.id);
+    if(b.hasImage){
+      const img = await dbGet('pbimg:'+b.id, null);
+      deleteFromDrive(imgFileIdOf(img));      // 결과를 기다리지 않는다
+      await dbDelete('pbimg:'+b.id);
+    }
+  }
+  DATA.problemBank = DATA.problemBank.filter(b=>b.examId!==examId);
+
+  for(const s of affected){
+    const rec = await loadRecord(s.studentId);
+    rec.wrongHomework = (rec.wrongHomework||[]).filter(h=>!bankIds.has(h.bankId) && h.examId!==examId);
+    /* 데일리퀴즈 상태에서도 그 카드들을 턴다 — 안 그러면 풀에 없는 id가 picks에 남는다.
+       (dqTodayCards가 걸러 주긴 하지만 이력·카드 상태가 계속 쌓인다.) */
+    const d = dqState(rec);
+    Object.keys(d.cards).forEach(id=>{ if(bankIds.has(String(id).split(':')[0])) delete d.cards[id]; });
+    d.picks = d.picks.filter(id=>!bankIds.has(String(id).split(':')[0]));
+    d.log = d.log.filter(x=>!bankIds.has(String(x.id).split(':')[0]));
+    state.allRecords[s.studentId] = rec;
+    await saveRecord(s.studentId);
+  }
+
+  logAudit('시험지 삭제', '', '', `${e ? e.title : examId} · 문항 ${banks.length}개 · 오답숙제 ${hwCount}건`);
+  showToast(`시험지와 문항 ${banks.length}개를 지웠습니다.`
+    + (hwCount ? ` 학생 오답숙제 ${hwCount}건도 함께 지웠습니다.` : ''));
   render();
 }
 async function copyExamToClass(examId){
