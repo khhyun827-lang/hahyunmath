@@ -742,11 +742,22 @@
 }
 
 /* 문제 안에 되살린 표 (problemHTML). 교사 화면과 학생 화면이 같이 쓴다 —
-   그래서 .app 안에 가두지 않는다. 문제 폭을 밀지 않게 스스로 가로 스크롤한다. */
-.pb-tbl{border-collapse:collapse;margin:9px 0;font-size:12.5px;display:block;
-  max-width:100%;overflow-x:auto;white-space:nowrap;}
-.pb-tbl td{border:1px solid var(--line);padding:5px 11px;text-align:center;vertical-align:middle;}
-.pb-tbl tr:first-child td{background:var(--note);font-weight:600;}
+   그래서 .app 안에 가두지 않는다.
+
+   ⚠ **머리줄을 칠하지 않는다.** 첫 행이 머리인지 알 방법이 없다 —
+   조건 (가)(나)(다) 상자의 첫 줄까지 색이 들어가 «그 줄만 특별한 것»처럼 보였다.
+   ⚠ **줄바꿈을 막지 않는다.** nowrap이면 긴 칸 하나가 가로로 쭉 늘어난다
+   (증명 상자 한 칸에 361자가 든 문항이 그랬다). 폭에 맞춰 접는다. */
+.pb-tbl{border-collapse:collapse;margin:9px 0;font-size:12.5px;max-width:100%;}
+.pb-tbl td{padding:6px 11px;text-align:left;vertical-align:top;
+  white-space:normal;word-break:break-word;line-height:1.75;}
+/* 열이 하나뿐인 «상자»(조건·증명 상자)는 바깥 테두리만 두른다 — 줄마다 선을 그으면
+   한 덩어리인 글이 표처럼 잘려 보인다. 폭을 채워야 긴 글이 제 자리에서 접힌다. */
+.pb-tbl.box{width:100%;table-layout:fixed;border:1px solid var(--line);border-radius:var(--r-sm);}
+.pb-tbl.box td{border:0;}
+.pb-tbl.box tr + tr td{padding-top:0;}
+/* 열이 둘 이상인 진짜 격자만 칸을 그린다 */
+.pb-tbl.grid td{border:1px solid var(--line);}
 
 .app .actbar{position:fixed;z-index:6;flex-wrap:wrap;}
 /* 고정된 액션바가 마지막 행을 가리지 않게, 스크롤 영역 «안»에 여백을 둔다. */
@@ -3482,7 +3493,10 @@ function problemHTML(text){
   let out = '', row = [];
   const flush = () => {
     if(!row.length) return;
-    out += '<table class="pb-tbl"><tbody>' + row.map(cells =>
+    /* 열이 하나뿐이면 «상자»(조건·증명 상자), 둘 이상이면 «격자»다. 그리는 법이 다르다 —
+       상자는 한 덩어리인 글이라 줄마다 선을 그으면 표처럼 잘려 보인다. */
+    const kind = row.every(cells => cells.length === 1) ? 'box' : 'grid';
+    out += `<table class="pb-tbl ${kind}"><tbody>` + row.map(cells =>
       '<tr>' + cells.map(c => '<td>' + escHtml(c) + '</td>').join('') + '</tr>').join('') + '</tbody></table>';
     row = [];
   };
