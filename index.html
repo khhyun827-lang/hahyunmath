@@ -4243,21 +4243,47 @@ function hwpWalkParagraphs(paras, tokens){
               hwpWalkParagraphs(cellParas, cellTokens);
               let s = '';
               for(const t of cellTokens){
-                if(t.type==='text' || t.type==='eq') s += t.v;
-                else if(t.type==='break') s += ' ';
-                else if(t.type==='pic') tokens.push(t);       // 그림은 표 밖으로 빼서 살린다
-                else if(t.type==='endnote') tokens.push(t);   // 정답 미주도 마찬가지
+                /* ⚠ 세로줄(`|`)은 표 행 문법과 부딪힌다. 그런데 **그냥 지우면 안 된다** —
+                   수식의 절댓값이 이미 `\left|…\right|`로 바뀌어 있어서 막대를 지우면
+                   `\left ` 만 남아 수식 전체가 안 그려진다 (실제로 겪었다).
+                   수식 안에서는 LaTeX가 알아듣는 `\vert`로 바꾸고, 평문에서만 지운다. */
+                if(t.type==='eq') s += String(t.v).replace(/\|/g, '\\vert ');
+                else if(t.type==='text') s += String(t.v).replace(/\|/g, '');
+                else if(t.type==='break') s += '\n';           // 줄바꿈을 살린다
+                else if(t.type==='pic') tokens.push(t);        // 그림은 표 밖으로 빼서 살린다
+                else if(t.type==='endnote') tokens.push(t);    // 정답 미주도 마찬가지
               }
-              /* 칸 안의 세로줄은 표 문법과 부딪힌다 — 절댓값 등은 이미 $…$ 안이지만 만약을 위해 지운다. */
-              cells.push(s.replace(/\|/g,'').replace(/\s+/g,' ').trim());
+              cells.push(s.replace(/[ \t]+/g,' ').replace(/\n{2,}/g,'\n').trim());
             }
             if(cells.some(c=>c)) rows.push(cells);
           }
           if(rows.length){
+            /* ⚠ 표라고 다 «격자»가 아니다. 셋으로 갈린다.
+               ① 보기 표 — 선지를 표로 그린 시험지가 흔하다 (칸 하나가 딱 ①②③④⑤).
+                  격자로 두면 10칸짜리 한 줄이 되어 읽기 나쁘다 → 글로 펴고
+                  problemHTML의 spaceChoices가 한 줄에 하나씩 세운다
+               ② 상자 — 열이 하나뿐인 표 (조건 (가)(나) 상자). 한 행으로 뭉치면 그 안의
+                  줄바꿈이 사라지므로 **줄마다 한 행**으로 편다
+               ③ 진짜 격자 — 열이 둘 이상. 칸을 지켜야 하므로 줄바꿈은 공백으로 접는다 */
+            const isChoiceTable = rows.some(cells =>
+              cells.some(c => /^[①②③④⑤⑥⑦⑧⑨⑩]$/.test(c.trim())));
             tokens.push({type:'break'});
-            for(const cells of rows){
-              tokens.push({type:'text', v:'| ' + cells.join(' | ') + ' |'});
-              tokens.push({type:'break'});
+            if(isChoiceTable){
+              for(const cells of rows){
+                const line = cells.map(c=>c.replace(/\s+/g,' ').trim()).filter(Boolean).join(' ');
+                if(line){ tokens.push({type:'text', v:line}); tokens.push({type:'break'}); }
+              }
+            } else {
+              const singleCol = rows.every(cells=>cells.length===1);
+              for(const cells of rows){
+                const out = singleCol
+                  ? cells[0].split('\n').map(l=>l.trim()).filter(Boolean).map(l=>[l])
+                  : [cells.map(c=>c.replace(/\s+/g,' ').trim())];
+                for(const row of out){
+                  tokens.push({type:'text', v:'| ' + row.join(' | ') + ' |'});
+                  tokens.push({type:'break'});
+                }
+              }
             }
           }
         } else if(local === 'ctrl'){
@@ -4377,21 +4403,29 @@ async function parseHwpxToProblems(file){
   const orderedAnswers = allEndnotes.map(hwpEndnoteText);
   const endnoteCount = orderedAnswers.length;
 
-  const candidates = [hwpParseBlocks(topParas, true), hwpParseBlocks(topParas, false)];
+  /* ⚠ 미주 순서 매칭을 «점수를 매기기 전»에 해야 한다.
+     정답이 문제 칸 «밖»에 있는 양식(문항마다 표로 감싼 시험지가 그렇다)에서는
+     표=문항 해석이 정답을 하나도 못 붙여 0점이 되고, 그러면 문항 전체가 한 셀에 든
+     표=상자 해석이 이겨 **문항이 통째로 한 줄로 뭉개진다** (2026-08-10).
+     보정까지 마친 «최종 모습»끼리 견줘야 옳은 쪽이 뽑힌다. */
+  const fillAnswers = bs => {
+    if(bs.some(b=>!b.answer) && orderedAnswers.length === bs.length){
+      bs.forEach((b,i)=>{ if(!b.answer) b.answer = orderedAnswers[i]; });
+    }
+    return bs;
+  };
+  const candidates = [
+    fillAnswers(hwpParseBlocks(topParas, true)),
+    fillAnswers(hwpParseBlocks(topParas, false)),
+  ];
   const scoreOf = bs => {
     const answered = bs.filter(b=>b.answer && b.answer.trim()).length;
     /* ① 미주 수와 문항 수가 맞으면 압도적으로 좋다 ② 그다음은 정답이 붙은 비율 */
     return (endnoteCount && bs.length === endnoteCount ? 1000 : 0)
          + (bs.length ? Math.round(answered / bs.length * 100) : 0);
   };
-  /* 동점이면 «표를 문항으로 보는» 기존 해석을 유지한다 — 그 양식으로 이미 쓰던 문서가 있다. */
+  /* 동점이면 «표를 문항으로 보는» 해석을 택한다 — 그쪽이 셀 안의 줄바꿈을 지킨다. */
   const blocks = scoreOf(candidates[1]) > scoreOf(candidates[0]) ? candidates[1] : candidates[0];
-
-  // 문제 칸 안에서 정답을 못 찾은 문항이 있으면(정답이 문제와 분리된 별도 표에
-  // 순서대로 나열된 문서 양식), 문서 전체의 미주를 등장 순서대로 모아 같은 순번끼리 매칭한다.
-  if(blocks.some(b=>!b.answer) && orderedAnswers.length === blocks.length){
-    blocks.forEach((b,i)=>{ if(!b.answer) b.answer = orderedAnswers[i]; });
-  }
 
   // 저작권 보호 워터마크(예: 족보닷컴)가 문제나 정답에 섞인 문항은 자동 인식에서 제외한다.
   let watermarked = 0;
