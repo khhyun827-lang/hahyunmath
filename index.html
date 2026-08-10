@@ -926,6 +926,18 @@
    (시험지 「새 시험지」· 창고 「문항 추가」· 학생앱 「틀린 문제 등록」과 같은 장치다.) */
 .app .st-form{padding:16px 0 6px;border-bottom:1px solid var(--line2);}
 .app .st-form .cls-form{margin-top:0;}
+/* 조교의 담당 반 고르개 — 반이 여럿이라 select가 아니라 체크상자를 편다 (2026-08-11).
+   .edit는 줄 «아래»에 붙는 판이라 어느 줄에 딸린 것인지 보이게 왼쪽에 선을 세운다. */
+.app .ta-cls{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-top:13px;}
+.app .ta-cls.edit{margin:0;padding:13px 15px;background:var(--note);
+  border-left:3px solid var(--accent-line);border-bottom:1px solid var(--line2);}
+.app .ta-cls .lb{font-size:11px;font-weight:600;color:var(--dim);letter-spacing:.02em;}
+.app .ta-cls .lb s{text-decoration:none;font-weight:400;color:var(--line);margin-left:7px;}
+.app .ta-cbx{display:flex;align-items:center;gap:6px;padding:6px 11px;border-radius:var(--r-sm);
+  border:1px solid var(--line);background:var(--paper);font-size:12.5px;cursor:pointer;}
+.app .ta-cbx:hover{border-color:var(--accent-line);}
+.app .ta-cbx input{margin:0;cursor:pointer;}
+.app .ta-none{font-size:11.5px;color:var(--dim);}
 .app .st-note{margin:12px 0 0;font-size:11.5px;color:var(--dim);line-height:1.75;}
 .app .st-note b{color:var(--ink);font-weight:700;}
 
@@ -1890,6 +1902,8 @@ let state = {
   stuQnaWriting: false,   // 질문 폼이 열려 있나
   lpRevealed: false,      // 랜딩이 한 번 드러났나 — 다시 그려도 다시 페이드인하지 않는다
   asFlag: '',             // 조교 명단의 필터 — '' | 'hw' | 'wrong'
+  asClassId: '',          // 조교가 골라 본 담당 반. ''이면 담당 반 전체 (반이 둘 이상일 때만 쓴다)
+  taEditId: null,         // 설정에서 담당 반을 고치는 중인 조교 id
   settingsForm: '',       // 설정에서 열린 «추가» 폼 — '' | 'ta' | 'cls' | 'stu' | 'bulk' | 'pw'
   clinicPanel: '',        // 클리닉의 열린 폼 — '' | 'slot' | 'assign'
   clinicSlotDate: '',     // 주간 판의 「+ 시간대」로 열었을 때 미리 채울 날짜
@@ -2242,7 +2256,8 @@ async function doAssistantLogin(){
   const pwInput = document.getElementById('login-pw').value;
   const found = DATA.assistants.find(a=>a.taId===idInput && a.pw===pwInput);
   if(!found){ state.loginError = '아이디 또는 비밀번호가 일치하지 않습니다.'; render(); return; }
-  state.currentUser = {type:'assistant', id:found.id, taId:found.taId, name:found.name, classId:found.classId};
+  state.currentUser = {type:'assistant', id:found.id, taId:found.taId, name:found.name,
+                       classIds: assistantClassIds(found)};
   saveSession();
   await loadAllRecordsIfNeeded();
   state.assistantTab = 'students';
@@ -2306,7 +2321,10 @@ async function restoreSession(){
   } else if(saved.type==='assistant'){
     const found = DATA.assistants.find(a=>a.id===saved.id);
     if(!found){ clearSession(); return; }
-    state.currentUser = {type:'assistant', id:found.id, taId:found.taId, name:found.name, classId:found.classId};
+    /* 담당 반은 세션에 담아 두지 않고 «지금의 계정»에서 다시 읽는다 — 강사가 반을 바꿨는데
+       옛 세션이 옛 반을 들고 다니면 조교가 남의 반을 계속 보게 된다. */
+    state.currentUser = {type:'assistant', id:found.id, taId:found.taId, name:found.name,
+                         classIds: assistantClassIds(found)};
     state.view = 'assistant';
     state.assistantTab = state.assistantTab || 'students';
     await loadAllRecordsIfNeeded();
@@ -2337,7 +2355,15 @@ async function toggleClassStatus(cid){
   render();
 }
 async function deleteClass(cid){
-  if(!confirm('이 반을 삭제할까요? (배정된 학생의 반 정보는 유지되나 표시가 [삭제된 반]으로 바뀝니다)')) return;
+  /* 이 반만 맡은 조교는 지우는 순간 «맡은 반이 없는» 계정이 된다. 지우기 전에 말해 준다 —
+     조교 화면이 통째로 비면 강사는 그 이유를 알 길이 없다 (시험지 삭제와 같은 판단). */
+  const orphan = DATA.assistants.filter(a=>{
+    const ids = assistantClassIds(a);
+    return ids.includes(cid) && ids.length===1;
+  });
+  if(!confirm('이 반을 삭제할까요? (배정된 학생의 반 정보는 유지되나 표시가 [삭제된 반]으로 바뀝니다)'
+    + (orphan.length ? `\n\n⚠ ${orphan.map(a=>a.name).join(', ')} 조교는 이 반만 맡고 있어 `
+        + `맡은 반이 없어집니다. 설정 > 조교에서 다른 반을 지정해 주세요.` : ''))) return;
   DATA.classes = DATA.classes.filter(c=>c.id!==cid);
   await dbDeleteDoc('classes', cid);
   showToast('삭제되었습니다.');
@@ -2346,6 +2372,20 @@ async function deleteClass(cid){
 function classNameOf(cid){
   const c = DATA.classes.find(c=>c.id===cid);
   return c ? c.name : (cid ? '[삭제된 반]' : '미배정');
+}
+/* 조교가 맡는 반은 여럿이다 (2026-08-11). 예전에는 `classId` 하나였고 바꿀 문도 없었다.
+   옛 계정은 그 필드만 갖고 있으므로 **읽을 때** 맞춰 준다 — 한꺼번에 옮기지 않는 이유는
+   「담당 반 변경」을 저장하는 순간 저절로 새 모양이 되기 때문이다 (그때 옛 필드는 지운다).
+   읽는 곳이 다섯이라(로그인·세션 복원·명단·학생 상세 권한·설정 목록) 함수 하나로 모은다 —
+   두 벌이면 한쪽만 고쳐지고, 그러면 «명단엔 보이는데 상세는 막히는» 학생이 생긴다. */
+function assistantClassIds(a){
+  if(!a) return [];
+  if(Array.isArray(a.classIds)) return a.classIds.filter(Boolean);
+  return a.classId ? [a.classId] : [];
+}
+function assistantClassLabel(ids){
+  if(!ids || ids.length===0) return '없음';
+  return ids.map(classNameOf).join(' · ');
 }
 // 반 일정 문자열(예: "월,수,금 7시~9시")에서 요일 글자를 찾아 요일 인덱스 배열로 변환.
 const WEEKDAY_MAP = {'일':0,'월':1,'화':2,'수':3,'목':4,'금':5,'토':6};
@@ -4711,25 +4751,54 @@ function cancelUnitBankImport(){
 }
 
 /* =================== 조교 관리 =================== */
+/* 체크된 반을 읽어 온다. 추가 폼과 줄마다의 «담당 반 변경»이 같은 일을 하므로 한 곳에 둔다 —
+   id 접두사만 다르다 (과제 폼을 addHomework(prefix)로 합친 것과 같은 판단). */
+function readCheckedClassIds(prefix){
+  return DATA.classes.filter(c=>{
+    const el = document.getElementById(prefix + c.id);
+    return el && el.checked;
+  }).map(c=>c.id);
+}
 async function addAssistant(){
   const taId = document.getElementById('ta-id').value.trim();
   const pw = document.getElementById('ta-pw').value;
   const name = document.getElementById('ta-name').value.trim();
   const phone = document.getElementById('ta-phone').value.trim();
-  const classId = document.getElementById('ta-class').value;
+  const classIds = readCheckedClassIds('ta-cls-');
   if(!name){ showToast('이름을 입력해주세요.'); return; }
   if(!taId || !pw){ showToast('아이디와 비밀번호를 입력해주세요.'); return; }
   if(pw.length < 4){ showToast('비밀번호는 4자 이상으로 설정해주세요.'); return; }
-  if(!classId){ showToast('담당 반을 선택해주세요.'); return; }
+  if(classIds.length===0){ showToast('담당 반을 하나 이상 고르세요.'); return; }
   if(DATA.assistants.some(a=>a.taId===taId)){ showToast('이미 사용 중인 아이디입니다.'); return; }
-  const assistant = {id:'ta'+Date.now(), taId, pw, name, phone, classId};
+  const assistant = {id:'ta'+Date.now(), taId, pw, name, phone, classIds};
   DATA.assistants.push(assistant);
   await dbSetDoc('assistants', assistant.id, assistant);
   document.getElementById('ta-id').value='';
   document.getElementById('ta-pw').value='';
   document.getElementById('ta-name').value='';
   document.getElementById('ta-phone').value='';
-  showToast('조교가 추가되었습니다.');
+  showToast(`${name} 조교를 추가했습니다 — 담당 ${assistantClassLabel(classIds)}`);
+  render();
+}
+function taEditClasses(aid){
+  state.taEditId = state.taEditId===aid ? null : aid;
+  render();
+}
+/* 담당 반 변경. 예전에는 이 문이 아예 없어서, 반을 바꾸려면 계정을 지우고 새로 만들어야 했다. */
+async function saveAssistantClasses(aid){
+  const a = DATA.assistants.find(x=>x.id===aid);
+  if(!a) return;
+  const next = readCheckedClassIds('tae-' + aid + '-');
+  if(next.length===0){ showToast('담당 반을 하나 이상 골라야 합니다.'); return; }
+  const before = assistantClassLabel(assistantClassIds(a));
+  a.classIds = next;
+  /* 옛 단수 필드는 여기서 없앤다 — 둘이 같이 남으면 어느 쪽이 진짜인지 알 수 없게 된다.
+     (assistantClassIds가 classIds를 먼저 보므로 당장은 안 틀리지만, 남겨 두면 언젠가 틀린다.) */
+  delete a.classId;
+  await dbSetDoc('assistants', a.id, a);
+  await logAudit('조교 담당 반 변경', '', '', `${a.name} · ${before} → ${assistantClassLabel(next)}`);
+  state.taEditId = null;
+  showToast(`${a.name} 조교의 담당 반을 바꿨습니다.`);
   render();
 }
 async function resetAssistantPw(aid){
@@ -6263,9 +6332,12 @@ function assistantHTML(){
   <div class="app as">
     <div class="topbar">
       <div class="bm">김하현수학연구소</div>
+      ${/* 맡은 반이 여럿일 수 있다. 이름을 다 적되 좁아지면 …로 자른다 —
+           «자기가 누구로 있는지»가 늘 보여야 하므로 숫자로 뭉뚱그리지 않는다. */''}
       <div class="as-who">
         <span class="as-tag">조교</span>
-        <span class="as-cls">담당 <b>${escHtml(classNameOf(cu.classId))}</b></span>
+        <span class="as-cls" title="${escHtml(assistantClassLabel(assistantClassIds(cu)))}">담당
+          <b>${escHtml(assistantClassLabel(assistantClassIds(cu)))}</b></span>
       </div>
       <div class="right">
         <span>${escHtml(cu.name||'')} 조교</span>
@@ -6277,12 +6349,22 @@ function assistantHTML(){
 }
 
 /* 담당 반 명단 — 01-roster에서 «조교가 손댈 수 없는 열»을 뺐다.
-   반·반 진도(반이 하나다) · 신호 등급(05가 전담) · 시청률(영상은 강사가 올린다).
-   남은 열은 전부 조교가 «넣는» 것이다. 일괄 작업도 없다. */
+   반 진도(05가 전담하는 신호 등급도) · 시청률(영상은 강사가 올린다).
+   남은 열은 전부 조교가 «넣는» 것이다. 일괄 작업도 없다.
+
+   ⚠ **「반」 열은 담당 반이 둘 이상일 때만 세운다** (2026-08-11). 예전에는 반이 하나뿐이라
+   아예 뺐는데, 여러 반을 맡게 되면 그 열이 없으면 «이 학생이 어느 반인지»를 알 수 없다.
+   반을 하나 골라 본 상태에서는 다시 뺀다 — 한 열에 같은 값만 스무 줄 서는 것은 자리 낭비다. */
 function assistantRosterHTML(cu){
   const q = (state.rosterSearchQuery||'').trim().toLowerCase();
   const flag = state.asFlag || '';
-  const full = DATA.students.filter(s=>s.classId===cu.classId);
+  const ids = assistantClassIds(cu);
+  /* 고른 반이 «지금도 내 반인지»를 매번 본다 — 강사가 반을 뺏은 뒤에도 state에 남아 있으면
+     그 반 학생이 계속 보인다. */
+  const pick = ids.includes(state.asClassId) ? state.asClassId : '';
+  const multi = ids.length > 1;
+  const wide = multi && !pick;              // 「반」 열을 세울 때
+  const full = DATA.students.filter(s=> pick ? s.classId===pick : ids.includes(s.classId));
 
   const rows = full.map(s=>({s, st: rosterStats(s)}))
     .filter(r=>!r.st.withdrawn)                 // 퇴원은 명단에서 뺀다. 섞이면 모든 숫자가 흐려진다
@@ -6299,35 +6381,57 @@ function assistantRosterHTML(cu){
   const pill = (id, label, n) => `<a class="pill ${flag===id?'on':''}"
     onclick="state.asFlag='${flag===id?'':id}'; render()">${label} <b>${n}</b></a>`;
 
+  /* 머리말은 «지금 무엇을 보고 있는가»를 말한다 — 반을 고르면 그 반, 아니면 담당 전체. */
+  const head = pick
+    ? { title: classNameOf(pick),
+        sub: ((DATA.classes.find(c=>c.id===pick)||{}).schedule || '일정 미등록') + ' · ' + rows.length + '명' }
+    : multi
+    ? { title: '담당 반 ' + ids.length + '개', sub: assistantClassLabel(ids) + ' · ' + rows.length + '명' }
+    : { title: classNameOf(ids[0]),
+        sub: ((DATA.classes.find(c=>c.id===ids[0])||{}).schedule || '일정 미등록') + ' · ' + rows.length + '명' };
+
+  /* 반 고르개는 «담당 반이 둘 이상일 때만» 나온다. 하나뿐인데 「전체 / 그 반」 둘을 그리면
+     고를 것이 없는 줄이 된다 (명단 화면의 뷰 축과 같은 부품을 쓴다). */
+  const views = !multi ? '' : `<div class="rst-views">
+    <a class="pill ${pick?'':'on'}" onclick="state.asClassId=''; render()">전체 <b>${
+      DATA.students.filter(s=>ids.includes(s.classId) && !rosterStats(s).withdrawn).length}</b></a>
+    ${ids.map(id=>`<a class="pill ${pick===id?'on':''}" onclick="state.asClassId='${id}'; render()">${
+      escHtml(classNameOf(id))} <b>${
+      DATA.students.filter(s=>s.classId===id && !rosterStats(s).withdrawn).length}</b></a>`).join('')}
+  </div>`;
+
   return `
   <div class="rst-screen">
     <div class="rst-head">
       <div class="rst-hrow">
-        <h1 class="t-title">${escHtml(classNameOf(cu.classId))}<s>${
-          escHtml((DATA.classes.find(c=>c.id===cu.classId)||{}).schedule||'일정 미등록')} · ${rows.length}명</s></h1>
+        <h1 class="t-title">${escHtml(head.title)}<s>${escHtml(head.sub)}</s></h1>
       </div>
       <p class="as-lede">
         <b>성적 · 출결 · 과제 · 오답</b>을 넣을 수 있습니다.
         학생 등록·삭제, 반 이동, 개인정보 수정은 강사만 할 수 있습니다.
       </p>
+      ${views}
       <div class="rst-fbar">
         <span class="field rst-selwrap">${iconSvg('search',15)}
           <input id="roster-search" value="${escHtml(state.rosterSearchQuery||'')}" placeholder="이름 · 아이디로 찾기"
             oninput="liveEdit(event, v=>state.rosterSearchQuery=v)" oncompositionend="liveEdit(event, v=>state.rosterSearchQuery=v)"></span>
         ${pill('hw', '과제 미완', hwLeft)}
         ${pill('wrong', '오답 미제출', wrongLeft)}
-        <span class="rst-cnt">담당 반 <b>${shown.length}</b>명</span>
+        <span class="rst-cnt">${pick ? escHtml(classNameOf(pick)) : '담당 반'} <b>${shown.length}</b>명</span>
       </div>
     </div>
 
     <div class="rst-wrap">
-      ${full.length===0
+      ${ids.length===0
+        ? '<div style="padding:56px 0;text-align:center;color:var(--dim);font-size:12.5px;line-height:1.8;">맡은 반이 없습니다.<br>강사에게 담당 반 배정을 요청해 주세요.</div>'
+        : full.length===0
         ? '<div style="padding:56px 0;text-align:center;color:var(--dim);font-size:12.5px;">아직 담당 반에 배정된 학생이 없습니다.</div>'
         : shown.length===0
         ? '<div style="padding:56px 0;text-align:center;color:var(--dim);font-size:12.5px;">해당하는 학생이 없습니다.</div>'
         : `<table class="grid as-narrow">
         <thead><tr>
           <th style="width:236px;">학생</th>
+          ${wide ? '<th style="width:130px;">반</th>' : ''}
           <th style="width:64px;">학년</th>
           <th class="r" style="width:78px;">출석률</th>
           <th style="width:120px;">최근 8회</th>
@@ -6346,6 +6450,7 @@ function assistantRosterHTML(cu){
               <span class="av">${escHtml((s.name||'?').slice(0,1))}</span>
               <span class="nm" style="min-width:0;overflow:hidden;text-overflow:ellipsis;">${escHtml(s.name)}
                 <s>${escHtml(s.studentId)}</s></span></div></td>
+            ${wide ? `<td class="sub" title="${escHtml(classNameOf(s.classId))}">${escHtml(classNameOf(s.classId))}</td>` : ''}
             <td>${escHtml(s.grade||'—')}</td>
             <td class="r mono ${st.attPct!==null && st.attPct<85 ? 'warn':''}">${st.attPct===null?'—':st.attPct+'%'}</td>
             <td>${rosterDots(st.att8)}</td>
@@ -8027,8 +8132,8 @@ function teacherStudentDetailHTML(sid){
   const s = DATA.students.find(s=>s.studentId===sid);
   if(!s){ state.studentDetailId=null; return state.teacherTab==='settings' ? teacherSettingsHTML() : teacherClassHubHTML(); }
   const isAssistant = state.currentUser && state.currentUser.type==='assistant';
-  if(isAssistant && s.classId !== state.currentUser.classId){
-    // 담당 반이 아닌 학생은 조교가 볼 수 없다.
+  if(isAssistant && !assistantClassIds(state.currentUser).includes(s.classId)){
+    // 담당 반이 아닌 학생은 조교가 볼 수 없다. 담당 반은 여럿일 수 있다.
     state.studentDetailId = null;
     return assistantRosterHTML(state.currentUser);
   }
@@ -10535,22 +10640,45 @@ function teacherAssistantsHTML(){
         <label style="min-width:130px;"><span>비밀번호</span><input id="ta-pw" placeholder="4자 이상"></label>
         <label style="min-width:120px;"><span>이름</span><input id="ta-name" placeholder="조교 이름"></label>
         <label style="min-width:140px;"><span>연락처</span><input id="ta-phone" placeholder="010-0000-0000 (선택)"></label>
-        <label style="min-width:160px;"><span>담당 반</span><select class="fm-sel" id="ta-class">${classOptionsHTML(null)}</select></label>
         <button class="btn p sm" onclick="addAssistant()">추가</button>
+      </div>
+      ${/* 반은 여럿을 맡을 수 있다. 고르개를 select로 두면 하나밖에 못 고르므로 체크상자로 편다 —
+           반이 몇 개인지·무엇을 맡기는지가 한눈에 보이는 것이 이 화면의 일이다. */''}
+      <div class="ta-cls"><span class="lb">담당 반 <s>여러 반을 맡길 수 있습니다</s></span>
+        ${DATA.classes.length===0
+          ? '<span class="ta-none">먼저 「반」 갈래에서 반을 등록해 주세요.</span>'
+          : DATA.classes.map(c=>`<label class="ta-cbx">
+              <input type="checkbox" id="ta-cls-${c.id}">${escHtml(c.name)}</label>`).join('')}
       </div></div>`,
     body: list.length===0
       ? `<div class="st-empty">현재 조교 계정이 <b style="color:var(--ink);">없습니다.</b><br>
-          조교는 <b style="color:var(--ink);">담당 반 하나</b>의 성적·출결·과제·오답만 넣을 수 있습니다.
+          조교는 <b style="color:var(--ink);">맡은 반</b>의 성적·출결·과제·오답만 넣을 수 있습니다.
           학생 등록·삭제, 반 이동, 개인정보 수정, 오답 승인, 설정에는 접근할 수 없습니다.</div>`
-      : list.map(a=>`<div class="st-row">
+      : list.map(a=>{
+          const ids = assistantClassIds(a);
+          const editing = state.taEditId===a.id;
+          return `<div class="st-row">
           <span class="av">${escHtml((a.name||'?').slice(0,1))}</span>
           <div class="t"><b>${escHtml(a.name)}</b>
-            <span><span class="mono">${escHtml(a.taId||'—')}</span><s>·</s>${escHtml(classNameOf(a.classId))}${
+            <span><span class="mono">${escHtml(a.taId||'—')}</span><s>·</s>${escHtml(assistantClassLabel(ids))}${
               a.phone?`<s>·</s><span class="mono">${escHtml(a.phone)}</span>`:''}</span></div>
           <div class="v">
+            <button class="btn ${editing?'':'sm'} sm" onclick="taEditClasses('${a.id}')">${editing?'닫기':'담당 반 변경'}</button>
             <button class="btn sm" onclick="resetAssistantPw('${a.id}')">비밀번호 재설정</button>
             <button class="btn q sm" onclick="deleteAssistant('${a.id}')">삭제</button>
-          </div></div>`).join('')
+          </div></div>
+          ${!editing ? '' : `<div class="ta-cls edit">
+            <span class="lb">${escHtml(a.name)} 조교가 맡을 반</span>
+            ${DATA.classes.length===0
+              ? '<span class="ta-none">등록된 반이 없습니다.</span>'
+              : DATA.classes.map(c=>`<label class="ta-cbx">
+                  <input type="checkbox" id="tae-${a.id}-${c.id}" ${ids.includes(c.id)?'checked':''}>${escHtml(c.name)}</label>`).join('')}
+            <button class="btn p sm" onclick="saveAssistantClasses('${a.id}')">저장</button>
+            ${/* 지금 맡고 있는데 없어진 반이 있으면 말해 준다 — 저장하면 그 반은 조용히 빠진다. */''}
+            ${(()=>{ const gone = ids.filter(id=>!DATA.classes.some(c=>c.id===id));
+              return gone.length ? `<span class="ta-none">지워진 반 ${gone.length}개를 맡고 있습니다. 저장하면 정리됩니다.</span>` : ''; })()}
+          </div>`}`;
+        }).join('')
   })}
   </div>`;
 }
