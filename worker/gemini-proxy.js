@@ -352,6 +352,51 @@ async function fetchDriveFileAsDataUrl(fileId, env) {
   return `data:${mimeType};base64,${btoa(bin)}`;
 }
 
+/* =================== 모델이 낸 JSON 읽기 ===================
+   ⚠ **모델이 LaTeX의 역슬래시를 JSON 규칙대로 두 번 쓰지 않을 때가 있다.** 간헐적이고,
+   수식이 많은 문항일수록 자주 걸린다. 그 결과가 두 갈래인데 **뒤쪽이 더 나쁘다.**
+
+     "$\alpha$"  → \a 는 JSON에 없는 이스케이프다. 그 자리에서 파싱이 **터진다** (눈에 보인다)
+     "$\frac{}$" → \f 는 «폼피드»라 파싱은 **통과하고** 글자만 조용히 깨진다.
+                   그대로 두면 깨진 문제가 검토를 지나 학생에게 간다
+
+   그래서 «문자열 안의 역슬래시»만 한 번 더 이스케이프해서 다시 읽는다.
+   제대로 쓴 응답(`\\alpha`)은 첫 파싱에서 그대로 통과하므로 손대지 않는다.
+
+   ⚠ `\n`은 살려 둔다 — figureSpec의 네 줄을 나누는 것이 그것이다.
+     (`\neq`가 줄바꿈으로 읽힐 수 있지만, 우리가 줄바꿈을 시켜 놓았으므로 그쪽이 압도적으로 흔하다.
+      부등호는 프롬프트에서 `\leq`/`\geq`로 쓰게 해 두었다.) */
+const MANGLED = /[\b\f\t\r]/;   // 백스페이스·폼피드·탭·CR — 문제 본문에 있을 리 없는 글자들
+
+function repairJsonEscapes(src) {
+  let out = '', inStr = false;
+  for (let i = 0; i < src.length; i++) {
+    const c = src[i];
+    if (!inStr) { if (c === '"') inStr = true; out += c; continue; }
+    if (c === '"') { inStr = false; out += c; continue; }
+    if (c !== '\\') { out += c; continue; }
+    const n = src[i + 1];
+    // 진짜 이스케이프는 그대로 둔다. \" 를 건드리면 문자열 끝을 잘못 읽는다
+    if (n === '"' || n === '\\' || n === '/' || n === 'n') { out += c + n; i++; continue; }
+    if (n === 'u' && /^[0-9a-fA-F]{4}$/.test(src.slice(i + 2, i + 6))) { out += src.slice(i, i + 6); i += 5; continue; }
+    out += '\\\\';            // 나머지는 전부 LaTeX 명령어로 본다 (\alpha, \frac, \times …)
+  }
+  return out;
+}
+
+function parseModelJson(text) {
+  let first;
+  try {
+    first = JSON.parse(text);
+  } catch (e) {
+    return JSON.parse(repairJsonEscapes(text));   // 여기서 또 터지면 부르는 쪽이 받는다
+  }
+  // 파싱은 됐다. 그래도 \frac 류가 제어문자로 읽힌 흔적이 있으면 고쳐서 다시 읽는다
+  const junk = Object.values(first).some(v => typeof v === 'string' && MANGLED.test(v));
+  if (!junk) return first;
+  try { return JSON.parse(repairJsonEscapes(text)); } catch (e) { return first; }
+}
+
 /* =================== 기존 Gemini 쌍둥이문제 생성 (imageFileId 지원 추가) =================== */
 
 async function handleGeminiTwin(request, env, corsHeaders, uid) {
@@ -396,7 +441,7 @@ async function handleGeminiTwin(request, env, corsHeaders, uid) {
   const formatRule = `수식(분수, 제곱, 루트, 부등호 등)은 반드시 LaTeX 문법으로 쓰고 앞뒤를 $ 기호로 감싸주세요 (예: $x^2 - 3x + 2 = 0$, $\\frac{1}{2}$, $\\sqrt{5}$, $\\alpha \\leq x$). 곱하기·이하·이상 같은 연산은 절대 "times", "le", "ge" 같은 영단어로 쓰지 말고 반드시 \\times, \\leq, \\geq 같은 LaTeX 명령어만 사용하세요. 수식이 아닌 일반 문장은 $ 없이 그대로 쓰세요.`;
 
   const jsonSchemaRule = `반드시 아래 JSON 형식으로만 답하세요. 다른 설명, 인사말, 코드블록 기호는 절대 포함하지 마세요.
-{"problem": "새 문제 내용 (객관식이면 보기 ①~⑤까지 이 안에 포함)", "answer": "999 이하 자연수 또는 보기 기호 ①~⑤ 중 하나", "solution": "단계별 풀이 과정을 1. 2. 3. 처럼 번호를 매겨 서술 (검토자가 정답을 검증할 수 있도록, 마크다운 기호 없이 일반 텍스트로)"}`;
+{"mode": "text" 또는 "figure" 또는 "reuse" (그림이 없는 문제면 언제나 "text"), "problem": "새 문제 내용 (객관식이면 보기 ①~⑤까지 이 안에 포함)", "answer": "999 이하 자연수 또는 보기 기호 ①~⑤ 중 하나", "solution": "단계별 풀이 과정을 1. 2. 3. 처럼 번호를 매겨 서술 (검토자가 정답을 검증할 수 있도록, 마크다운 기호 없이 일반 텍스트로). **여섯 단계 이내로, 각 단계는 두 줄을 넘기지 마세요.**", "figureSpec": "mode가 figure일 때만 채우고, 아니면 빈 문자열"}`;
 
   let effectiveImage = image;
   if ((!effectiveImage || typeof effectiveImage !== 'string') && imageFileId) {
@@ -407,20 +452,65 @@ async function handleGeminiTwin(request, env, corsHeaders, uid) {
     }
   }
   const hasImage = typeof effectiveImage === 'string' && effectiveImage.startsWith('data:');
-  /* ⚠ 그림이 있는 문항은 «그림 없이 풀 수 있는 문제»로 다시 쓴다.
+  /* ⚠ 그림 문항의 «변형»은 두 길 중 하나다. 모델이 고르되, 고를 «기준»을 준다.
 
-     예전 지시는 「그림은 그대로 두고 숫자만 바꾸거나, **또는** 그림에 의존하지 않는 형태로
-     조정하라」였다. 두 갈래를 열어 주니 모델이 쉬운 쪽을 골라 **소재만 바꾼 같은 문제**가 나왔다
-     (축구 대진표 → 피구 대진표. 그림도 수도 그대로였다).
-     그림을 새로 그릴 수 없는 이상 «그림을 남기는 변형»은 원본과 같은 문제일 수밖에 없다.
-     그래서 갈래를 없애고 한 길로 못박는다 — 그림에 있던 정보를 글로 옮겨 적게 한다. */
+     이 규칙은 두 번 뒤집혔다. 처음에는 「그림은 두고 숫자만 바꾸거나, **또는** 그림에
+     의존하지 않는 형태로 조정하라」였다 — 두 갈래를 조건 없이 열어 주니 모델이 늘 쉬운 쪽을
+     골라 **소재만 바꾼 같은 문제**가 나왔다 (축구 대진표 → 피구 대진표. 수도 그림도 그대로).
+     그래서 2026-08-10에 갈래를 없애고 「무조건 그림 없이 풀 수 있게 다시 써라」 하나로 못박았다.
+
+     그러자 반대쪽으로 넘어갔다 — 그림 하나에 들어 있던 배치·좌표를 전부 문장으로 풀어 쓰니
+     **원본보다 길고 어려운 문제**가 되어 나왔다 (사용자 확인, 2026-08-11).
+     그림을 읽는 것 자체가 물음인 문제는 애초에 글로 옮길 수 없다.
+
+     → 갈래는 둘로 되돌리되 **판단 기준을 못박고, 쉬운 쪽에 대가를 붙인다.**
+     "figure"를 고르면 그림을 **사람이 새로 그려야** 하므로 «그리는 지침»(figureSpec)을
+     반드시 써 내야 하고, 그 그림이 붙기 전에는 학생에게 공개되지 않는다.
+     그림을 남기면서 수까지 그대로 두는 «소재만 바꾸기»는 (B)에서도 금지된다. */
   const taskRule = hasImage
-    ? `다음은 고등학교 수학 문제와 정답이고, 문제에 첨부된 그림(그래프/도형)도 같이 드립니다. 이 문제와 같은 개념·난이도를 묻되 **그림 없이 글만으로 풀 수 있는** "쌍둥이 문제" 1개를 새로 만들어주세요.
-반드시 지킬 것:
-- 그림에서만 알 수 있는 정보(좌표, 길이, 각도, 배치, 개수 등)는 **새 문제의 본문에 글로 명시**하세요. 새 문제에는 그림이 첨부되지 않습니다.
-- "다음 그림과 같이", "위 그림에서", "아래 표와 같이" 같은 표현을 절대 쓰지 마세요. 그런 말이 들어가면 학생은 문제를 풀 수 없습니다.
-- 원본과 **숫자·상황이 모두** 달라야 합니다. 소재(축구→피구 같은)만 바꾸고 수를 그대로 두면 같은 문제입니다.`
-    : `다음은 고등학교 수학 문제와 정답입니다. 문제의 풀이 구조, 유형, 난이도는 그대로 유지하되 숫자(계수, 상수, 조건 값 등)만 바꾸어 "쌍둥이 문제" 1개를 새로 만들어주세요.`;
+    ? `다음은 고등학교 수학 문제와 정답이고, 문제에 첨부된 그림(그래프/도형/표)도 같이 드립니다. 이 문제와 같은 개념·난이도를 묻는 "쌍둥이 문제" 1개를 새로 만들어주세요.
+
+먼저 아래 세 갈래 중 하나를 고르세요. 어느 것을 고르든 **원본과 다른 문제가 되어야 합니다** — 수가 그대로면 그것은 쌍둥이가 아니라 원본입니다.
+
+**(C) → (A) → (B) 순으로 따져 보고, 앞의 것이 성립하면 뒤의 것을 고르지 마세요.** 뒤로 갈수록 사람이 손으로 해야 할 일이 늘어납니다. 다만 성립하지 않는데 억지로 앞의 것을 고르면 안 됩니다 — 각 갈래의 조건을 그대로 지키세요.
+
+(C) 그림은 원본 것을 그대로 두고 **본문의 수만** 바꾸면 되는 경우 → "mode"를 "reuse"로 하세요.
+  다음 두 조건을 **모두** 만족할 때만 (C)입니다.
+  - 그림에 원본 문제의 수치(좌표, 길이, 각도, 눈금 값 등)가 **적혀 있지 않다.** 그림은 배치·구조만 보여 주는 배경이다 (지도, 구역도, 대진표, 인접 관계도, 좌석 배치 등)
+  - 바꿀 수가 **본문에만** 있다 (예: 색의 가짓수, 사람 수, 횟수, 확률의 조건)
+  (C)에서 지킬 것:
+  - **본문의 수를 반드시 바꾸세요.** 바꿀 수 없다면 (C)가 아닙니다.
+  - 상황·소재는 바꾸지 마세요. 그림을 그대로 쓰므로 소재를 바꾸면 그림과 본문이 어긋납니다.
+  - "figureSpec"은 빈 문자열로 두세요. 사람이 그릴 것이 없습니다.
+  - ⚠ 그림에 수치가 하나라도 적혀 있는데 그 수를 본문에서 바꾸면 **그림과 본문이 모순됩니다.** 그런 경우는 (C)가 아니라 (B)입니다.
+
+(C)가 아니라면, 다음을 판단하세요 — 그림이 담고 있는 정보를 문장으로 옮겨 적었을 때, 새 문제가 원본과 비슷한 길이·난이도로 남습니까?
+
+(A) 남는다 → "mode"를 "text"로 하고, **그림 없이 글만으로 풀 수 있는 문제**로 새로 쓰세요.
+  - 그림에서만 알 수 있는 정보(좌표, 길이, 각도, 배치, 개수 등)를 새 문제 본문에 글로 명시하세요. 새 문제에는 그림이 붙지 않습니다.
+  - "다음 그림과 같이", "위 그림에서", "아래 표와 같이" 같은 표현을 절대 쓰지 마세요. 그런 말이 들어가면 학생은 문제를 풀 수 없습니다.
+  - 원본과 숫자·상황이 모두 달라야 합니다. 소재(축구→피구 같은)만 바꾸고 수를 그대로 두면 같은 문제입니다.
+
+(B) 남지 않는다 → "mode"를 "figure"로 하세요. 아래 중 하나라도 해당하면 반드시 (B)입니다.
+  - 그림을 글로 옮기면 조건 문장이 다섯 줄을 넘거나, 원본에 없던 좌표계·기호를 새로 도입해야 한다
+  - 그림을 읽어 내는 것 자체가 이 문제가 묻는 능력이다 (그래프 개형, 도형의 위치 관계, 자료·표 해석 등)
+  - 글로 옮기면 원본보다 눈에 띄게 어려워지거나 쉬워진다
+  (B)에서 지킬 것:
+  - **그림이 반드시 달라져야 합니다.** "원본 그림과 동일", "변형 없음" 같은 지침은 절대 쓰지 마세요. 그림을 그대로 쓸 것이라면 (B)가 아니라 (C)입니다.
+  - 바꿀 것은 숫자만이 아닙니다. 그림에 바꿀 숫자가 없으면 **구조를 바꾸세요.**
+    · 수가 있는 그림(그래프, 도형, 좌표평면) → 계수, 길이, 좌표값, 눈금, 각도를 바꾼다
+    · 수가 없는 그림(지도, 인접 관계도, 배치도, 대진표, 연결망) → **칸·영역·꼭짓점의 개수나 인접 관계, 배치 자체를 바꾼다.** 예를 들어 7개 영역짜리 지도라면 6개나 8개짜리로, 또는 어느 영역끼리 맞닿는지를 바꾼다. (구조를 그대로 두고 본문의 수만 바꿀 생각이라면 그것은 (C)입니다)
+  - 상황·소재는 바꾸지 마세요 (축구를 피구로 바꾸는 식). 바꿔야 하는 것은 소재가 아니라 **그림이 담은 수 또는 구조**입니다.
+  - **자기 점검**: 그림도 본문도 원본과 같은데 정답만 달라졌다면, 그 문제는 틀린 것입니다. 정답이 달라졌다면 그림이나 본문 중 무엇이 달라졌는지 figureSpec에 반드시 적혀 있어야 합니다.
+  - 본문에 "다음 그림과 같이" 같은 표현을 원본처럼 그대로 써도 됩니다. 그림은 사람이 새로 그려서 붙입니다.
+  - "figureSpec"에 그 그림을 그릴 사람을 위한 지침을 쓰세요. 형식은 아래와 같습니다.
+
+[figureSpec 작성 형식] 마크다운 기호 없이 일반 텍스트로, 아래 네 줄을 줄바꿈으로 나누어 순서대로 쓰세요.
+1. 달라지는 것: 원본 그림에서 무엇이 어떻게 바뀌는지 (예: 포물선의 꼭짓점이 (1, -4)에서 (2, -9)로 바뀝니다 / 예: 가운데 영역에 맞닿는 영역이 4개에서 3개로 줄어듭니다). **여기가 비거나 "없음"이면 (B)를 고른 것 자체가 잘못입니다.**
+2. 그대로 두는 것: 축, 눈금 간격, 점 이름, 위치 관계 등 손대지 않을 것
+3. 반드시 표시할 값: 새 그림에 적어 넣어야 하는 좌표·길이·각도·점 이름을 빠짐없이
+4. 그리는 방법: 어떤 범위로 어떻게 그리면 되는지 한 줄 (예: 모눈종이에 x축 -1~5, y축 -10~2 범위로)`
+    : `다음은 고등학교 수학 문제와 정답입니다. 문제의 풀이 구조, 유형, 난이도는 그대로 유지하되 숫자(계수, 상수, 조건 값 등)만 바꾸어 "쌍둥이 문제" 1개를 새로 만들어주세요. 이 문제에는 그림이 없으므로 "mode"는 "text"입니다.`;
 
   const prompt = `${persona}
 ${taskRule}
@@ -452,7 +542,11 @@ ${answer}`;
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: [{ parts }],
-          generationConfig: { responseMimeType: 'application/json' },
+          /* ⚠ maxOutputTokens를 반드시 명시한다. 안 걸어 두면 기본값에 걸려 **JSON이 중간에서 잘리고**,
+             그러면 아래 JSON.parse가 터져 «parse failed»로만 보인다 — 실제로 겪었다 (2026-08-11,
+             갈래를 셋으로 늘려 프롬프트가 길어진 직후). 이 모델은 생각한 것도 출력 예산에서 쓴다.
+             잘린 것과 «모델이 JSON을 못 쓴 것»은 고치는 법이 다르므로 finishReason도 같이 본다. */
+          generationConfig: { responseMimeType: 'application/json', maxOutputTokens: 16384 },
         }),
       }
     );
@@ -472,12 +566,18 @@ ${answer}`;
   }
 
   const data = await geminiRes.json();
-  const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+  const cand = data.candidates?.[0];
+  const text = cand?.content?.parts?.[0]?.text || '';
+  const finishReason = cand?.finishReason || '';
   let parsed;
   try {
-    parsed = JSON.parse(text);
+    parsed = parseModelJson(text);
   } catch (e) {
-    return new Response(JSON.stringify({ error: 'parse failed', raw: text }), {
+    /* «잘렸다»와 «모델이 JSON을 못 썼다»는 고치는 법이 다르다. 어느 쪽인지 남긴다. */
+    return new Response(JSON.stringify({
+      error: finishReason === 'MAX_TOKENS' ? 'truncated' : 'parse failed',
+      finishReason, raw: text,
+    }), {
       status: 502,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
@@ -489,14 +589,26 @@ ${answer}`;
     });
   }
 
-  /* figureFree — 원본에 그림이 있었고, 그래서 «그림 없이 푸는 문제»로 새로 썼다는 표시다.
-     클라이언트는 이 값을 보고 **변형에 원본 그림을 붙이지 않는다.**
-     안 그러면 글에 다 적혀 있는데 상관없는 그림이 같이 떠서 학생이 헷갈린다. */
+  /* 그림 문항이 어느 길로 갔는지를 클라이언트가 알아야 한다. 셋이 서로 배타적이다.
+       needsFigure  — (B). 그림이 있어야 풀리고 그림도 달라져야 한다. figureSpec을 보고 **사람이 그린다.**
+                      그림이 붙기 전에는 공개할 수 없다 (index.html advanceBankStatus).
+       reuseFigure  — (C). 그림은 배경이라 원본 것을 그대로 쓰고 **본문의 수만** 바뀌었다.
+                      사람이 그릴 것이 없다 — 지도·배치도·대진표가 여기로 온다.
+       figureFree   — (A). 그림 없이 푸는 문제로 새로 썼다. **원본 그림을 붙이면 안 된다** —
+                      글에 값이 다 적혀 있는데 상관없는 그림이 같이 뜨면 그걸 보고 풀려다 틀린다.
+       셋 다 아님    — 원본에 그림이 없던 문항.
+     ⚠ mode를 안 보내는 옛 모델 응답은 (A)로 본다. 예전 프롬프트가 (A) 하나뿐이었다. */
+  const needsFigure = hasImage && parsed.mode === 'figure';
+  const reuseFigure = hasImage && parsed.mode === 'reuse';
   /* 남은 한도를 같이 실어 보낸다 — 클라이언트가 스스로 세면 반드시 어긋난다. */
   const q = await peekQuota(env, 'ai', uid, AI_DAILY_LIMIT);
   return new Response(JSON.stringify({
     content: parsed.problem, answer: parsed.answer, solution: parsed.solution || '',
-    figureFree: hasImage, quotaUsed: q.used, quotaLimit: q.limit,
+    figureFree: hasImage && !needsFigure && !reuseFigure,
+    needsFigure,
+    reuseFigure,
+    figureSpec: needsFigure ? String(parsed.figureSpec || '') : '',
+    quotaUsed: q.used, quotaLimit: q.limit,
   }), {
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   });
