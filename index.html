@@ -775,7 +775,9 @@
    260px로 잘려 나왔다. 선택자 무게를 맞춰서 «뒤에 온 쪽이 이기게» 한다.
    사진에 높이를 묶는 이유는 «원본이 얼마나 클지 모르기» 때문인데, 여기는 우리가 그린 것이다. */
 .app .pb-svg{max-height:none;}
-.pb-svg svg{max-width:100%;height:auto;display:block;margin:0 auto;color:var(--ink);}
+/* ⚠ `max-width:100%`만 두면 **열이 넓어져도 그림은 560px에서 멈춘다** (SVG의 width 속성).
+   벡터라 늘려도 안 뭉개지므로 열을 채우게 한다 — 태블릿에서 이게 실제로 보이는 차이다. */
+.pb-svg svg{width:100%;height:auto;display:block;margin:0 auto;color:var(--ink);}
 
 /* 문제 안에 되살린 표 (problemHTML). 교사 화면과 학생 화면이 같이 쓴다 —
    그래서 .app 안에 가두지 않는다.
@@ -807,8 +809,21 @@
    ds.css의 모바일 부품(.mc/.mrow/.msec/.mbtn/.todo/.cal/.bar/.bub-row)은
    여기서 다시 정의하지 않는다. 이 블록에 있는 것은 «셸»뿐이다.
    ============================================================ */
-.app.sap{max-width:480px;margin:0 auto;min-height:100vh;position:relative;
+/* ⚠ **열 폭은 `--sap-w` 한 곳에서만 정한다.** 셸(.app.sap)과 하단 탭바(.sap-tabs)가
+   같은 폭이어야 하는데, 두 곳에 숫자를 따로 적어 두면 한쪽만 고치는 날 탭바가 본문과
+   어긋난다. 탭바는 position:fixed라 흐름에서 빠지지만 **.app.sap의 자손**이므로
+   커스텀 속성이 그대로 상속된다.
+
+   태블릿으로 보는 학생이 있어 폭을 단계로 푼다 (2026-08-12). 기기는 섞여 있어
+   «아이패드 몇 인치»가 아니라 **폭 구간**으로 가른다 —
+     폰 480 · 태블릿 세로(≥760) 620 · 가로(≥1100) 680.
+   ⚠ **전용 레이아웃(좌측 레일 + 본문)은 만들지 않는다.** 화면이 11개라 유지비가 두 배인데
+     얻는 것이 그만큼 크지 않다. **한 열은 그대로 두고 폭만 넓힌다.** */
+.app.sap{--sap-w:480px;
+  max-width:var(--sap-w);margin:0 auto;min-height:100vh;position:relative;
   background:var(--paper);box-shadow:0 0 0 1px var(--line);}
+@media (min-width:760px){ .app.sap{--sap-w:620px;} }
+@media (min-width:1100px){ .app.sap{--sap-w:680px;} }
 @media (max-width:520px){ .app.sap{box-shadow:none;} }
 /* 상단바·서브내비는 ds.css 것을 그대로 쓴다. 학생이라고 다른 상단바를 만들지 않는다. */
 .app.sap .topbar{padding:0 16px;gap:10px;}
@@ -821,7 +836,7 @@
 /* 하단 탭 — 엄지가 닿는 자리. 뷰포트에 고정하되 폭은 앱 열에 맞춘다.
    ds.css의 .ph-tabs는 폰 액자 «안»의 것이라 position이 다르다. */
 .sap-tabs{position:fixed;bottom:0;left:50%;transform:translateX(-50%);
-  width:100%;max-width:480px;height:58px;display:flex;z-index:7;
+  width:100%;max-width:var(--sap-w);height:58px;display:flex;z-index:7;
   background:var(--card);border-top:1px solid var(--line);}
 .sap-tabs a{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
   text-decoration:none;color:var(--dim);font-size:10.5px;cursor:pointer;
