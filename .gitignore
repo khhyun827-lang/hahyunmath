@@ -9,3 +9,7 @@ cases.json
 
 # figure-preview.mjs가 돌 때마다 새로 쓰는 대조표. 결과물이지 원본이 아니다.
 tools/figure-preview.html
+
+# probe-figure.mjs에 먹이는 문항 꾸러미 · 그 실측 대조표. 같은 이유로 뺀다.
+figure-cases.json
+tools/figure-probe.html
