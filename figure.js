@@ -347,10 +347,14 @@
   }
   function n(v) { return Math.round(v * 100) / 100; }
 
+  /* ⚠ 기본 크기가 «화면에서 글자가 읽히는가»를 정한다.
+     학생 앱은 폭 480px 열이라 카드 안이 약 400px다. 캔버스를 720으로 잡으면 0.56배로 줄어
+     18px 글자가 10px이 되어 **눈금 숫자를 못 읽는다** (실제로 그랬다).
+     560으로 좁히면 0.72배라 13px로 읽힌다 — 벡터라 폭을 좁혀도 선은 그대로 선명하다. */
   function renderScene(scene, opt) {
     var o = opt || {};
-    var W = o.width || 720, H = o.height || 540;
-    var pad = o.pad || { l: 40, r: 46, t: 34, b: 42 };
+    var W = o.width || 560, H = o.height || 430;
+    var pad = o.pad || { l: 38, r: 42, t: 30, b: 38 };
     var win = autoWindow(scene);
     var xr = win.xRange, yr = win.yRange;
     var cs = compileCurves(scene);
@@ -398,15 +402,15 @@
       if (v === ax.x) return;
       var px = PX(v);
       out.push('<path d="M' + n(px) + ' ' + n(oy - 5) + 'v10"/>');
-      out.push(text(px, oy + 24, esc(fmt(v)), 'middle', 16));
-      inkText(px, oy + 24, fmt(v), 'middle', 16);
+      out.push(text(px, oy + 24, esc(fmt(v)), 'middle', 17));
+      inkText(px, oy + 24, fmt(v), 'middle', 17);
     });
     (scene.yTicks || []).forEach(function (v) {
       if (v === ax.y) return;
       var py = PY(v);
       out.push('<path d="M' + n(ox - 5) + ' ' + n(py) + 'h10"/>');
-      out.push(text(ox - 10, py + 6, esc(fmt(v)), 'end', 16));
-      inkText(ox - 10, py + 6, fmt(v), 'end', 16);
+      out.push(text(ox - 10, py + 6, esc(fmt(v)), 'end', 17));
+      inkText(ox - 10, py + 6, fmt(v), 'end', 17);
     });
 
     /* 곡선 — 창 밖으로 나가면 선을 끊는다. 잘린 자리가 자연스러워 보인다.

@@ -84,6 +84,7 @@ export default {
 
     if (url.pathname === '/upload') return handleUpload(request, env, corsHeaders);
     if (url.pathname === '/delete') return handleDelete(request, env, corsHeaders);
+    if (url.pathname === '/figure') return handleFigureScene(request, env, corsHeaders, who.uid);
     return handleGeminiTwin(request, env, corsHeaders, who.uid);
   },
 };
@@ -610,6 +611,164 @@ ${answer}`;
     figureSpec: needsFigure ? String(parsed.figureSpec || '') : '',
     quotaUsed: q.used, quotaLimit: q.limit,
   }), {
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  });
+}
+
+/* =================== 그림 «장면(scene)» 생성 — (B)의 초안 ===================
+
+   ⚠ 여기서 만드는 것은 **그림이 아니라 «무엇을 그릴지»를 적은 데이터**다.
+   모델에게 그리게 하면 그럴듯한데 좌표가 틀린 그림이 나오고, 그 순간 문제가 거짓이 된다.
+   그리는 것은 클라이언트의 figure.js이고, 이 응답은 그 입력일 뿐이다.
+
+   **검산은 여기서 하지 않는다.** 규칙이 두 벌이 되면 워커와 화면이 다른 판정을 내리는데,
+   막는 쪽은 화면이므로 진실도 거기 하나여야 한다 → index.html이 Figure.verifyScene()으로
+   받자마자 검문하고, 통과 못 한 초안은 버린다 (「그림 필요」에 그대로 남는다).
+
+   ⚠ 이 경로도 **하루 20건 한도를 하나 쓴다** (위 라우팅의 else-if가 /upload·/delete만 비켜 간다).
+   그래서 클라이언트는 «일괄 생성»에서 이걸 부르지 않는다 — 검토자가 「초안 그려 보기」를
+   누를 때만 부른다. 안 그러면 (B) 하나가 한도를 둘씩 먹는다. */
+
+async function handleFigureScene(request, env, corsHeaders, uid) {
+  let body;
+  try {
+    body = await request.json();
+  } catch (e) {
+    return new Response(JSON.stringify({ error: 'invalid json' }), {
+      status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+  const { spec, content, image, imageFileId } = body;
+  if (!spec) {
+    return new Response(JSON.stringify({ error: 'missing spec' }), {
+      status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+
+  let effectiveImage = image;
+  if ((!effectiveImage || typeof effectiveImage !== 'string') && imageFileId) {
+    try { effectiveImage = await fetchDriveFileAsDataUrl(imageFileId, env); }
+    catch (e) { console.error('drive image fetch failed', e); }
+  }
+  const hasImage = typeof effectiveImage === 'string' && effectiveImage.startsWith('data:');
+
+  /* 스키마는 figure.js 머리말과 **같은 것**이어야 한다. 한쪽만 고치면 조용히 어긋난다.
+     여기 적는 것은 «모델에게 시킬 만큼»으로 줄인 판이다 — v1에서 실제로 쓰는 갈래만 남겼다. */
+  const schemaRule = `아래 JSON 형식으로만 답하세요. 설명·인사말·코드블록 기호를 절대 붙이지 마세요.
+
+{"kind": "graph" 또는 "unsupported",
+ "reason": "kind가 unsupported일 때만, 왜 못 그리는지 한 문장",
+ "curves": [{"expr": "x에 대한 산술식", "label": "y=f(x)"}],
+ "points": [{"x": 숫자, "curve": 곡선번호, "dot": true, "dropTo": "axis" 또는 null}],
+ "xTicks": [숫자들], "yTicks": [숫자들],
+ "axis": {"xLabel": "x", "yLabel": "y", "origin": "O"},
+ "checks": [ … 아래 참고 … ]}
+
+[expr — 식을 쓰는 법]
+- 변수는 x 하나뿐입니다. 순수 산술식으로 쓰세요. **LaTeX를 쓰지 마세요** ($, \\frac, ^{} 모두 금지).
+- 쓸 수 있는 것: 숫자 · x · + - * / ^ · 괄호 · abs sqrt sin cos tan exp ln log log10 · pi e
+- 예: "-(x-2)*(x-6)"  "0.5*x^2 - 3*x + 1"  "sqrt(x+4)"  "abs(x-1)"
+- 그 밖의 이름을 쓰면 그림이 통째로 버려집니다.
+
+[checks — 이것이 이 응답의 핵심입니다]
+지침에 적힌 수가 그림에서 **실제로 그렇게 되는지** 기계가 검산합니다. 하나라도 어긋나면
+이 초안은 버려지고 사람이 손으로 그리게 됩니다. 지침의 「달라지는 것」과 「반드시 표시할 값」에
+나오는 수를 빠짐없이 checks로 옮기세요.
+- {"type": "root", "curve": 0, "x": 2}                 곡선0이 x=2에서 x축과 만난다
+- {"type": "intersect", "curves": [0, 1], "x": 1}      곡선0과 곡선1이 x=1에서 만난다
+- {"type": "value", "curve": 0, "x": 4, "y": 4}        곡선0의 x=4에서의 값이 4다
+- {"type": "convex", "curve": 0, "dir": "down"}        "down"=위로 볼록(∩) · "up"=아래로 볼록(∪)
+
+[식을 «유도»하세요 — 임의로 쓰고 맞기를 바라지 마세요]
+조건이 여럿이면 그 조건을 만족하도록 식을 세워야 합니다.
+- x절편이 p, q이고 위로 볼록한 이차함수 → "-(x-p)*(x-q)"
+- f와 x=m, n에서 만나는 또 하나의 곡선 g → "(f의 식) + k*(x-m)*(x-n)" 꼴로 두고 k를 정합니다.
+  f가 위로 볼록일 때 g를 아래로 볼록으로 만들려면 k > 1이어야 합니다 (k=2가 무난합니다).
+- 이렇게 세우면 checks가 저절로 맞습니다. 숫자를 찍어 넣고 맞기를 바라면 거의 틀립니다.
+
+[그 밖의 규칙]
+- **xRange·yRange는 쓰지 마세요.** 보기 좋은 창은 그리는 쪽이 알아서 잡습니다.
+- xTicks에는 지침의 「반드시 표시할 값」 중 x축에 적어야 하는 수만 넣으세요.
+- points는 교점·특별한 점입니다. "dropTo": "axis"를 주면 그 점에서 x축으로 점선이 내려갑니다.
+- label에도 LaTeX를 쓰지 마세요. "y=f(x)"처럼 그대로 씁니다.
+
+[unsupported로 답해야 하는 경우]
+좌표평면 위의 **함수 그래프**만 그릴 수 있습니다. 아래는 반드시 "unsupported"입니다.
+지도·구역도·인접 관계도 · 대진표·수형도 · 입체도형 · 사진이나 실물 그림 · 표 ·
+좌표평면이 아닌 자유 배치 도형(삼각형·원의 위치 관계 등).
+**그럴듯하게 비슷한 것을 지어내지 마세요.** 못 그린다고 답하면 사람이 그립니다 — 그것이 옳습니다.`;
+
+  const prompt = `당신은 고등학교 수학 문제의 그림을 «좌표평면 위의 함수 그래프»로 옮겨 적는 사람입니다.
+아래는 원본 문제의 그림${hasImage ? '(첨부)' : ''}과, 그 그림을 어떻게 바꿔 그려야 하는지 적은 지침,
+그리고 그 그림이 붙을 새 문제의 본문입니다.
+**지침대로 바뀐 «새» 그림**을 아래 JSON 형식으로 적어 주세요. 원본 그림을 그대로 옮기는 것이 아닙니다.
+
+${schemaRule}
+
+[그리는 지침]
+${spec}
+
+[이 그림이 붙을 새 문제]
+${content || '(본문 없음)'}`;
+
+  const parts = [{ text: prompt }];
+  if (hasImage) {
+    const m = effectiveImage.match(/^data:([^;]+);base64,(.*)$/s);
+    if (m) parts.push({ inlineData: { mimeType: m[1], data: m[2] } });
+  }
+
+  let geminiRes;
+  try {
+    geminiRes = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${env.GEMINI_API_KEY}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts }],
+          generationConfig: { responseMimeType: 'application/json', maxOutputTokens: 8192 },
+        }),
+      }
+    );
+  } catch (e) {
+    return new Response(JSON.stringify({ error: 'gemini request failed', detail: String(e) }), {
+      status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+  if (!geminiRes.ok) {
+    return new Response(JSON.stringify({ error: 'gemini error', detail: await geminiRes.text() }), {
+      status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+
+  const data = await geminiRes.json();
+  const cand = data.candidates?.[0];
+  const text = cand?.content?.parts?.[0]?.text || '';
+  const finishReason = cand?.finishReason || '';
+  let scene;
+  try {
+    /* 쌍둥이와 같은 복구를 거친다 — 여기는 LaTeX가 없어야 정상이지만, 모델이 label에
+       $를 붙여 보내는 일이 있고 그때 역슬래시가 같은 방식으로 깨진다. */
+    scene = parseModelJson(text);
+  } catch (e) {
+    return new Response(JSON.stringify({
+      error: finishReason === 'MAX_TOKENS' ? 'truncated' : 'parse failed',
+      finishReason, raw: text,
+    }), { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+  }
+
+  const q = await peekQuota(env, 'ai', uid, AI_DAILY_LIMIT);
+  /* «못 그린다»는 실패가 아니다 — 200으로 돌려준다. 화면은 이걸 받아 「사람이 그리세요」로 간다.
+     502로 돌리면 화면이 «워커가 고장났다»와 구분할 수 없다. */
+  if (!scene || scene.kind !== 'graph' || !Array.isArray(scene.curves) || !scene.curves.length) {
+    return new Response(JSON.stringify({
+      unsupported: true,
+      reason: (scene && scene.reason) || '이 그림은 좌표평면 위의 함수 그래프로 옮길 수 없습니다.',
+      quotaUsed: q.used, quotaLimit: q.limit,
+    }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+  }
+
+  return new Response(JSON.stringify({ scene, quotaUsed: q.used, quotaLimit: q.limit }), {
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   });
 }

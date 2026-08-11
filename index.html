@@ -439,6 +439,16 @@
 .app .rv-spec{margin-top:9px;padding:9px 11px;border-radius:var(--r-sm);background:var(--paper);
   border:1px solid var(--line2);font-size:11.5px;line-height:1.85;color:var(--ink);white-space:pre-wrap;}
 .app .rv-fignote{font-size:11px;color:var(--sub);margin-top:9px;line-height:1.7;}
+/* 기계가 그린 초안. **아직 붙지 않은 것**이라 작업대 안에서 한 겹 더 들어가 보여야 한다 —
+   검산을 통과했는지(초록)와 걸렸는지(붉음)를 테두리로 가른다. */
+.app .rv-draft{margin-top:10px;padding:10px 12px;border-radius:var(--r-sm);
+  border:1px solid var(--line2);background:var(--paper);}
+.app .rv-draft.ok{border-color:var(--ok-line,var(--line));border-left:3px solid var(--ok,#2c6b3f);}
+.app .rv-draft.no{border-color:var(--no-line);border-left:3px solid var(--no);}
+.app .rv-draft > b{display:block;font-size:12px;margin-bottom:3px;}
+.app .rv-draft.ok > b{color:var(--ok,#2c6b3f);}
+.app .rv-draft.no > b{color:var(--no);}
+.app .rv-draftfail{margin:6px 0 0;padding-left:17px;font-size:11.5px;line-height:1.8;color:var(--no);}
 @media (max-width:1240px){ .app .rv-queues{display:none;} }
 
 /* ============================================================
@@ -756,6 +766,14 @@
 /* 문항에 딸린 그림. 시험지 탭과 검토 탭이 같은 모양으로 그린다 (pbImageHTML). */
 .app .pb-fig{max-width:100%;max-height:260px;margin-top:10px;display:block;
   border:1px solid var(--line);border-radius:var(--r-md);}
+/* figure.js가 그린 SVG. 사진과 달리 **벡터라 늘려도 안 뭉갠다** — 높이를 묶지 않는다.
+   ⚠ `.pb-fig`와 같이 붙으므로 거기 걸린 `max-height:260px`를 여기서 푼다.
+     안 풀면 상자에 세로 스크롤바가 생겨 그림이 잘린 채로 뜬다 (실제로 그랬다).
+     사진에 높이를 묶는 이유는 «원본이 얼마나 클지 모르기» 때문인데, 여기는 우리가 그린 것이다.
+   교사·학생 화면이 같이 쓰므로 .app 안에 가두지 않는다. currentColor를 쓰니 색은 글자색을 따른다. */
+.pb-svg{margin-top:10px;padding:6px;border:1px solid var(--line);border-radius:var(--r-md);
+  background:var(--paper);overflow-x:auto;max-height:none;}
+.pb-svg svg{max-width:100%;height:auto;display:block;margin:0 auto;color:var(--ink);}
 
 /* 문제 안에 되살린 표 (problemHTML). 교사 화면과 학생 화면이 같이 쓴다 —
    그래서 .app 안에 가두지 않는다.
@@ -1365,6 +1383,11 @@
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+
+<!-- 그림 «장면(scene)» → SVG. 워커가 내는 것은 그림이 아니라 이 파일에 먹일 데이터다.
+     검산(Figure.verifyScene)도 여기 하나뿐이다 — 워커에도 두면 둘이 다른 판정을 내린다. -->
+<script src="figure.js"></script>
+
 <script>
   const firebaseConfig = {
     apiKey: "AIzaSyC7dsvcLVjuFUUtnQRtPLurzBN06kZ9MZQ",
@@ -1729,6 +1752,40 @@ async function generateTwinViaAI(content, answer, image){
   }
 }
 
+/* (B)의 그림 «초안»을 받아 온다. 돌아오는 것은 **그림이 아니라 장면(scene)**이고,
+   그리는 것도 판정하는 것도 여기다 (figure.js). 워커는 검산하지 않는다 —
+   규칙이 두 벌이면 워커와 화면이 다른 답을 내는데, 막는 쪽이 화면이라 진실도 여기여야 한다.
+   ⚠ 이 호출도 하루 한도를 하나 쓴다. 그래서 «일괄 생성»에서는 부르지 않는다. */
+async function fetchFigureSceneViaAI(spec, content, image){
+  try{
+    const payload = { spec, content };
+    if(image){
+      if(typeof image === 'string') payload.image = image;
+      else if(image.fileId) payload.imageFileId = image.fileId;
+    }
+    const token = await withTimeout(getAuthToken(), 8000);
+    const res = await withTimeout(fetch(AI_WORKER_URL + '/figure', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify(payload)
+    }), 45000);
+    if(res.status === 429){
+      const body = await res.json().catch(()=>({}));
+      if(typeof body.used === 'number') state.aiQuotaUsed = body.used;
+      return { quotaExceeded:true };
+    }
+    if(!res.ok) throw new Error('worker http ' + res.status);
+    const data = await res.json();
+    if(typeof data.quotaUsed === 'number') state.aiQuotaUsed = data.quotaUsed;
+    /* «못 그린다»는 실패가 아니다. 워커가 200으로 돌려주고 화면은 「사람이 그리세요」로 간다. */
+    if(data.unsupported) return { unsupported:true, reason: data.reason || '' };
+    return { scene: data.scene };
+  }catch(e){
+    console.error('그림 장면 생성 실패', e);
+    return null;
+  }
+}
+
 /* =================== Firestore 컬렉션(문서 여러 개) 헬퍼 =================== */
 /* kv 방식(단일 문서에 큰 JSON 저장)은 대량 데이터에는 안 맞아서, 문항 창고처럼
    개수가 많이 늘어날 수 있는 데이터는 문서를 하나씩 따로 저장하는 이 방식을 쓴다. */
@@ -1825,6 +1882,10 @@ let state = {
   aiProgress: null,
   aiRegeneratingId: null,
   figureUploading: null,      // «그림이 있어야 푸는 변형»에 그림을 올리는 중인 문항 id
+  figureDrafting: null,       // 기계가 그림 «초안»을 그리는 중인 문항 id
+  /* 받아 온 초안. **저장하지 않는다** — 검토자가 「이 그림으로 하겠습니다」를 눌러야 붙는다.
+     검산을 통과했다는 것과 «이 문제에 맞다»는 것은 다른 판단이다. */
+  figureDraft: null,          // {bankId, scene, svg, ok, failures} 또는 {bankId, unsupported, reason}
   /* 오답 검토(04-review) — 큐 하나를 골라 그 안을 J/K로 훑는다 */
   reviewQueue: 'pending',
   reviewSelectedId: null,
@@ -4050,12 +4111,22 @@ function pbImageSrc(bankId, kind){
   const v = state.pbImageCache[pbImgCacheKey(bankId, kind)];
   return (v && v!=='loading' && v!=='empty') ? imgSrcOf(v) : null;
 }
-/* 「불러오는 중」 자리를 채우는 조각. 그림을 쓰는 화면이 넷이라 표기를 한 곳에 모은다. */
+/* 「불러오는 중」 자리를 채우는 조각. 그림을 쓰는 화면이 넷이라 표기를 한 곳에 모은다.
+   ⚠ 그림이 두 «모양»으로 저장된다 — 드라이브에 올린 사진(`{url, fileId}`)과
+   figure.js가 그린 SVG 문자열(`{kind:'svg', svg}`). 여기가 그 둘을 가르는 유일한 자리다.
+   **어느 그림을 쓸지**는 여전히 variantImgKind()가 정한다 — «어떻게 저장돼 있나»와
+   «어느 카드가 쓰나»는 다른 물음이라 섞으면 안 된다.
+
+   ⚠ SVG를 innerHTML로 넣는다. **모델이 낸 SVG는 절대 저장하지 않는다** — 저장하는 것은
+   figure.js의 renderScene()이 «장면»에서 만들어 낸 것뿐이고, 거기서 글자는 전부 이스케이프된다.
+   이 불변식이 깨지면 그 자리가 곧 스크립트 주입 구멍이다. */
 function pbImageHTML(bankId, kind, cls){
   ensurePbImage(bankId, kind);
+  const v = state.pbImageCache[pbImgCacheKey(bankId, kind)];
+  if(v && typeof v === 'object' && v.kind === 'svg' && v.svg)
+    return `<div class="${cls} pb-svg">${v.svg}</div>`;
   const src = pbImageSrc(bankId, kind);
   if(src) return `<img class="${cls}" src="${src}">`;
-  const v = state.pbImageCache[pbImgCacheKey(bankId, kind)];
   return v==='empty' ? ''
     : '<div style="font-size:11.5px;color:var(--dim);margin-top:9px;">그림 불러오는 중…</div>';
 }
@@ -10117,20 +10188,29 @@ function variantFigureNoteHTML(b){
       + (unchanged ? `<div class="rv-fignote" style="color:var(--no);">
           <b>AI가 그림을 그대로 두겠다고 적었습니다.</b> 그러면 원본과 같은 문제입니다 —
           정답만 다르다면 그 정답이 틀린 것입니다. <b>「AI로 다시 생성」</b>을 권합니다.</div>` : '');
+    /* 함수 그래프는 기계가 먼저 그려 볼 수 있다. 되면 강사 손이 아예 안 가고,
+       안 되면 «못 그린다»고 말하고 물러난다 — 지어낸 그림보다 그쪽이 옳다. */
+    const draftBtn = (busy || state.figureDrafting===b.id) ? ''
+      : `<button class="btn sm" onclick="requestFigureDraft('${b.id}')">${iconSvg('sparkle',13)} 초안 그려 보기</button>`;
     if(b.hasVariantImage) return `<div class="rv-fig on">
       <b>이 변형에 붙는 그림</b>
       ${pbImageHTML(b.id, 'var', 'pb-fig')}
       <div class="rv-figact">${busy?'<span class="hx">올리는 중…</span>':fileInput}
+        ${draftBtn}
         <button class="btn no sm" onclick="removeVariantFigure('${b.id}')">그림 지우기</button></div>
+      ${figureDraftHTML(b)}
       ${specBox}
     </div>`;
     return `<div class="rv-fig">
-      <b>그림을 직접 그려서 올려야 합니다</b>
+      <b>그림을 그려서 올려야 합니다</b>
       <span class="hx">그림을 읽어 내는 것이 이 문제의 물음이라, AI가 구조는 그대로 두고 수만 바꿨습니다.
-        아래 지침대로 그려서 올리기 전에는 <b>학생에게 공개할 수 없습니다.</b></span>
+        그림이 붙기 전에는 <b>학생에게 공개할 수 없습니다.</b>
+        <b>「초안 그려 보기」</b>를 누르면 기계가 먼저 그려 봅니다 — 함수 그래프라면 대개 됩니다.</span>
       ${specBox}
       <div class="rv-figact">${busy?'<span class="hx">올리는 중…</span>':fileInput}
-        <span class="hx">사진으로 찍어 올려도 됩니다 — 올리면서 자동으로 압축됩니다.</span></div>
+        ${draftBtn}</div>
+      <span class="hx">사진으로 찍어 올려도 됩니다 — 올리면서 자동으로 압축됩니다.</span>
+      ${figureDraftHTML(b)}
     </div>`;
   }
   if(b.variantFigureFree) return `<div class="rv-fignote">
@@ -10148,6 +10228,106 @@ function variantFigureNoteHTML(b){
     ${pbImageHTML(b.id, 'orig', 'pb-fig')}
     원본에 그림이 있는 문항입니다. 이 변형은 <b>왼쪽 원본 그림을 그대로</b> 씁니다.
     그림과 본문의 수가 어긋나 있으면 다시 생성하거나 직접 고쳐 주세요.</div>`;
+}
+
+/* =================== (B)의 그림 초안 — 기계가 먼저 그려 본다 ===================
+   (B)의 대가가 「강사가 손으로 그린다」인데, 함수 그래프는 기계가 그릴 수 있다.
+   ⚠ **AI에게 그리게 하지 않는다.** 워커가 내는 것은 «무엇을 그릴지»를 적은 장면(scene)이고,
+   그림은 figure.js가 그린다. 그러면 «정말 x=2에서 x축을 만나는가»를 **검산할 수 있다.**
+
+   초안은 **저장하지 않는다.** state에만 담아 두고 검토자가 「이 그림으로 하겠습니다」를
+   눌러야 붙는다 — 검산을 통과했다는 것과 «이 문제에 맞다»는 것은 다른 판단이다. */
+async function requestFigureDraft(bankId){
+  if(state.aiProcessing || state.figureDrafting){ showToast('다른 AI 작업이 진행 중입니다.'); return; }
+  const b = DATA.problemBank.find(x=>x.id===bankId);
+  if(!b) return;
+  const used = await getAIQuotaUsed();
+  if(used >= AI_DAILY_LIMIT){ showToast('오늘 AI 생성 한도('+AI_DAILY_LIMIT+'건)를 모두 사용했습니다.'); return; }
+  state.figureDrafting = bankId;
+  state.figureDraft = null;
+  render();
+  const image = b.hasImage ? await dbGet('pbimg:'+b.id, null) : null;
+  const r = await fetchFigureSceneViaAI(b.variantFigureSpec||'', b.variantContent||'', image);
+  state.figureDrafting = null;
+  if(!r){ showToast('초안을 받지 못했습니다. 다시 시도하거나 직접 그려 올려주세요.'); render(); return; }
+  if(r.quotaExceeded){ showToast('오늘 AI 생성 한도를 모두 사용했습니다.'); render(); return; }
+  if(r.unsupported){
+    state.figureDraft = { bankId, unsupported:true, reason:r.reason };
+    render(); return;
+  }
+  /* ★ 검문. 통과 못 하면 그림은 그려 두되 «쓸 수 없음»으로 보여 준다 —
+     무엇이 어긋났는지 눈으로 봐야 다시 생성할지 직접 그릴지 정할 수 있다. */
+  let v = null, svg = '';
+  try{
+    v = Figure.verifyScene(r.scene);
+    svg = Figure.renderScene(r.scene);
+  }catch(e){
+    console.error('장면을 그리지 못했다', e);
+    state.figureDraft = { bankId, unsupported:true, reason:'받은 장면을 그리지 못했습니다.' };
+    render(); return;
+  }
+  state.figureDraft = { bankId, scene:r.scene, svg, ok:v.ok, failures:v.failures };
+  render();
+}
+function discardFigureDraft(){ state.figureDraft = null; render(); }
+
+/* 초안을 이 변형의 그림으로 삼는다. 손으로 올린 것과 **같은 문서·같은 플래그**를 쓴다 —
+   그래야 「그림 필요」 큐·공개 잠금·다시 생성 시 버리기가 전부 그대로 동작한다.
+   ⚠ 그린 SVG와 장면을 **둘 다** 저장한다. 장면만 두고 볼 때마다 다시 그리면, 나중에
+   렌더러를 손보는 날 **검토자가 승인한 그림이 조용히 달라진다.** */
+async function acceptFigureDraft(bankId){
+  const d = state.figureDraft;
+  const b = DATA.problemBank.find(x=>x.id===bankId);
+  if(!d || d.bankId!==bankId || !d.svg || !b) return;
+  state.figureUploading = bankId;
+  render();
+  try{
+    if(b.hasVariantImage) await dropVariantFigure(b);
+    const doc = { kind:'svg', svg:d.svg, scene:d.scene, at:new Date().toISOString() };
+    await dbSet('pbvimg:'+bankId, doc);
+    state.pbImageCache[pbImgCacheKey(bankId, 'var')] = doc;
+    b.hasVariantImage = true;
+    await dbSetDoc('problembank', b.id, b);
+    /* 손으로 올릴 때와 같은 이유로 큐를 문항 따라 옮긴다 — 붙인 사람이 빈 큐를 마주하면 안 된다. */
+    if(state.reviewQueue==='nofig'){
+      state.reviewQueue = b.status==='review1' ? 'review1' : 'pending';
+      state.reviewSelectedId = b.id;
+    }
+    state.figureDraft = null;
+    showToast('그림을 붙였습니다. 이제 공개할 수 있습니다.');
+  }catch(e){
+    console.error('초안 저장 실패', e);
+    showToast('그림을 붙이지 못했습니다. 다시 시도해주세요.');
+  }
+  state.figureUploading = null;
+  render();
+}
+
+/* 초안 상자. 「그림 필요」 작업대 안에 산다. */
+function figureDraftHTML(b){
+  if(state.figureDrafting===b.id)
+    return `<div class="rv-draft"><b>초안을 그리는 중…</b>
+      <span class="hx">지침과 원본 그림을 보고 «무엇을 그릴지»를 받아 와서 그립니다.</span></div>`;
+  const d = state.figureDraft;
+  if(!d || d.bankId!==b.id) return '';
+  if(d.unsupported)
+    return `<div class="rv-draft no"><b>기계가 그릴 수 없는 그림입니다</b>
+      <span class="hx">${escHtml(d.reason||'')} — <b>직접 그려서 올려주세요.</b></span>
+      <div class="rv-figact"><button class="btn sm" onclick="discardFigureDraft()">닫기</button></div></div>`;
+  return `<div class="rv-draft ${d.ok?'ok':'no'}">
+    <b>${d.ok ? '초안 — 검산을 통과했습니다' : '초안 — 검산에 걸렸습니다'}</b>
+    <span class="hx">${d.ok
+      ? '지침에 적힌 값이 그림에서 실제로 그렇게 되는지 확인했습니다. <b>문제에 맞는지는 눈으로 보고 정해주세요.</b>'
+      : '아래가 어긋납니다. <b>이대로 붙일 수 없습니다</b> — 다시 받거나 직접 그려주세요.'}</span>
+    ${d.ok ? '' : `<ul class="rv-draftfail">${d.failures.map(f=>`<li>${escHtml(f.msg)}</li>`).join('')}</ul>`}
+    <div class="pb-svg">${d.svg}</div>
+    <div class="rv-figact">
+      ${d.ok ? `<button class="btn p sm" onclick="acceptFigureDraft('${b.id}')">이 그림으로 하겠습니다</button>` : ''}
+      <button class="btn sm" onclick="requestFigureDraft('${b.id}')">다시 받기</button>
+      <button class="btn sm" onclick="discardFigureDraft()">버리기</button>
+      <span class="hx">다시 받으면 한도를 하나 더 씁니다.</span>
+    </div>
+  </div>`;
 }
 
 /* 그린 그림을 붙인다. 원본 그림과 같은 길(압축 → 드라이브)을 쓰고 문서만 pbvimg:{id}로 따로 둔다. */
