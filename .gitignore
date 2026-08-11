@@ -6,3 +6,6 @@
 
 # tools/probe-worker.mjs에 먹이는 문항 꾸러미. 시험지 본문이 그대로 들어 있어 같은 이유로 뺀다.
 cases.json
+
+# figure-preview.mjs가 돌 때마다 새로 쓰는 대조표. 결과물이지 원본이 아니다.
+tools/figure-preview.html
