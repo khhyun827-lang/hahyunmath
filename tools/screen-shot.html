@@ -44,7 +44,7 @@ const t=setInterval(()=>{
           + "loadRecord('"+sid+"').then(render);");
       }
       setTimeout(()=>{ o.style.display='none'; document.title='SHOT'; }, 1200);
-    } else if(n>90){ clearInterval(t); o.textContent='TIMEOUT'; document.title='ERR'; }
+    } else if(n>200){ clearInterval(t); o.textContent='TIMEOUT'; document.title='ERR'; }
   }catch(e){ clearInterval(t); o.textContent='ERR '+e.message; document.title='ERR'; }
 },100);
 </script>

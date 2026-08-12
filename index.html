@@ -1131,6 +1131,31 @@
 /* 조교의 표는 열이 여덟이라 명단(1418px)보다 좁다. 그대로 두면 괜히 가로 스크롤이 남는다. */
 .app .rst-wrap table.grid.as-narrow{min-width:1050px;}
 
+/* ---------- 시험 달력 (설정 > 시험 일정) ----------
+   학생 마이페이지의 출석 달력(.cal)은 ds.css의 «모바일 부품»이라 폰 크기다.
+   여기는 강사 화면이라 칸이 훨씬 크고 안에 학교 딱지가 들어간다 — 그래서 따로 세운다.
+   접두사 exc- (exam calendar). ds.css 이름을 다시 정의하지 않는다. */
+.app .exc{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:1px;
+  background:var(--line);border:1px solid var(--line);border-radius:var(--r-md);overflow:hidden;}
+.app .exc .dh{background:var(--hover);padding:9px 0;text-align:center;
+  font-size:11.5px;font-weight:700;color:var(--dim);}
+.app .exc .d{background:var(--card);min-height:104px;padding:7px 7px 9px;}
+.app .exc .d.off{background:var(--sunk);}
+.app .exc .d .n{font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--sub);}
+.app .exc .d.sat .n{color:var(--blue);}
+.app .exc .d.sun .n{color:var(--no);}
+/* 오늘은 «칠하지» 않고 번호만 감싼다 — 칸을 통째로 칠하면 그날의 딱지가 안 읽힌다 */
+.app .exc .d.today .n{background:var(--accent);color:#fff;border-radius:9px;padding:1px 7px;}
+.app .exc-chip{display:block;margin-top:4px;padding:3px 6px;border-radius:5px;
+  font-size:11px;line-height:1.45;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  background:var(--accent-bg);color:var(--sub);}
+/* 시험기간의 «첫날»만 학교 이름을 온전히 쓴다. 가운데 날은 이어지는 띠로 둔다 —
+   닷새 내내 같은 이름이 반복되면 달력이 글자로 덮인다. */
+.app .exc-chip.mid{background:var(--line2);color:var(--dim);}
+/* 수학 시험일 — 이 화면에서 가장 중요한 하루라 브랜드 와인을 여기에만 쓴다 */
+.app .exc-chip.math{background:var(--brand);color:#fff;font-weight:700;}
+.app .exc-more{display:block;margin-top:4px;font-size:10.5px;color:var(--dim);}
+
 /* ============================================================
    공개 홈 — 랜딩 「생각의 흐름」 (2026-08-13 전면 재구성)
    주인공은 시스템이 아니라 **수학강사 김하현**이다.
@@ -2032,6 +2057,10 @@ let state = {
   season: null,                  // kv/season {name, startedAt} — 지금 시험 시즌
   examRanges: null,              // kv/exam-ranges {season, bySchool:{학교:{학년:{과목:[단원…]}}}, dates:{학교:{학년:{start,end}}}}
   schoolBooks: null,             // kv/school-books {학교:{학년:'미래엔 / 학교프린트'}} — 시즌과 무관하다
+  examHistory: null,             // kv/exam-history {items:[…]} — 지난 시즌 보관본. 화면을 열 때 늦게 받는다
+  examSeasonView: '',            // 시험 일정 화면이 보고 있는 시즌. '' = 지금, 숫자 = 보관본 index
+  examViewMode: 'table',         // 'table' | 'cal'
+  examCalMonth: '',              // 달력이 보고 있는 달 'YYYY-MM'. 빈 값이면 시험이 있는 첫 달
   rangeSchool: '',               // 설정 > 시험 범위에서 펼쳐 보는 학교
   quizStudentId: null,           // 데일리퀴즈 화면에서 «오늘 것을 펼쳐 볼» 학생 (예전엔 회차 id였다)
   videoSelectedId: null,
@@ -2223,9 +2252,10 @@ function guessChapter(content, subject){
 function currentSeason(){ return (state.season && state.season.name) || SEASONS[0]; }
 
 /* 프리셋 — 과목의 단원 목록을 시즌으로 자른다. */
-function presetChapters(subject){
+/* seasonName을 넘기면 «그 시즌» 기준으로 자른다 — 지난 기록을 볼 때 필요하다. */
+function presetChapters(subject, seasonName){
   const all = UNIT_CHAPTERS[subject] || [];
-  const season = currentSeason();
+  const season = seasonName || currentSeason();
   if(isVacationSeason(season)) return all.slice();
   const cut = SEASON_SPLIT[subject];
   if(!cut) return all.slice();
@@ -2275,14 +2305,55 @@ async function saveSeason(name){
   state.examRanges = {season: name, bySchool: {}, dates: {}};
   await dbSet('exam-ranges', state.examRanges);
 }
+/* ---------- 지난 시즌 보관 ----------
+   시즌을 넘기면 범위와 날짜를 «비운다»는 판단은 그대로다 — 지난 시험의 범위가 남아 있으면
+   그게 더 위험하기 때문이다. 다만 **비우기 전에 통째로 떠서 보관한다.**
+   작년 이맘때 그 학교 시험이 언제였고 범위가 어디까지였는지는 다음 해에 그대로 쓸모가 있다.
+
+   ⚠ 교재(kv/school-books)는 시즌과 무관해 «지금 값»이 계속 살아 있지만,
+      **보관본에는 그때의 스냅숏을 같이 넣는다** — 나중에 바뀌면 지난 기록이 거짓이 된다.
+   ⚠ 컬렉션을 늘리지 않는다. kv 문서 하나에 배열로 쌓고 스물넷(4년치)까지만 남긴다. */
+const EXAM_HISTORY_MAX = 24;
+async function loadExamHistoryIfNeeded(){
+  if(state.examHistory) return;
+  state.examHistory = (await dbGet('exam-history', null)) || {items: []};
+  render();
+}
+async function archiveCurrentSeason(){
+  const er = state.examRanges || {};
+  const hasRanges = er.bySchool && Object.keys(er.bySchool).length;
+  const hasDates  = er.dates    && Object.keys(er.dates).length;
+  /* 적어 둔 것이 없으면 보관하지 않는다 — 빈 기록이 목록을 채우면 찾기만 어려워진다. */
+  if(!hasRanges && !hasDates) return;
+  const hist = state.examHistory || (await dbGet('exam-history', null)) || {items: []};
+  hist.items.unshift({
+    season: currentSeason(),
+    startedAt: (state.season && state.season.startedAt) || '',
+    endedAt: todayStr(),
+    bySchool: er.bySchool || {},
+    dates: er.dates || {},
+    books: JSON.parse(JSON.stringify(state.schoolBooks || {})),
+  });
+  hist.items = hist.items.slice(0, EXAM_HISTORY_MAX);
+  state.examHistory = hist;
+  await dbSet('exam-history', hist);
+}
+/* 보관본 한 건의 이름 — 같은 시즌이 해마다 돌아오므로 «연도»가 있어야 구분된다. */
+function examHistLabel(h){
+  const y = (h.startedAt || h.endedAt || '').slice(0,4);
+  return (y ? y + ' · ' : '') + h.season;
+}
+
 async function endSeason(){
   const now = currentSeason();
   const next = SEASONS[(SEASONS.indexOf(now) + 1) % SEASONS.length];
   if(!confirm(`「${now}」을 끝내고 「${next}」으로 넘어갈까요?\n\n`
-    + `학교·학년별로 수정해 둔 시험범위는 모두 지워지고 기본 범위로 돌아갑니다.`)) return;
+    + `지금 적어 둔 시험 일정(날짜·범위·교재)은 «지난 기록»으로 보관되고,\n`
+    + `학교·학년별 수정은 지워져 기본 범위로 돌아갑니다.`)) return;
+  await archiveCurrentSeason();          // ⚠ 반드시 «비우기 전»에
   await saveSeason(next);
   logAudit('시험 시즌 변경', '', '', `${now} → ${next}`);
-  showToast(`「${next}」으로 넘어갔습니다.`);
+  showToast(`「${next}」으로 넘어갔습니다. 지난 일정은 «지난 기록»에서 볼 수 있습니다.`);
   render();
 }
 async function saveSchoolRange(school, grade, subject, chapters){
@@ -2312,14 +2383,17 @@ async function saveSchoolRange(school, grade, subject, chapters){
 function examDatesOf(school, grade){
   const d = state.examRanges && state.examRanges.dates;
   const got = d && d[school] && d[school][grade];
-  return (got && (got.start || got.end)) ? got : null;
+  return (got && (got.start || got.end || got.math)) ? got : null;
 }
-async function saveExamDates(school, grade, start, end){
+/* 날짜 셋 — 시험기간 시작·끝, 그리고 **수학 시험일**.
+   수학 시험일이 따로 있는 이유: 시험기간은 닷새인데 수학은 그중 하루다.
+   이 사람에게 중요한 날은 그 하루이므로 D-day의 기준도 그것이 된다. */
+async function saveExamDates(school, grade, start, end, math){
   if(!state.examRanges) state.examRanges = {season: currentSeason(), bySchool: {}};
   if(!state.examRanges.dates) state.examRanges.dates = {};
   const d = state.examRanges.dates;
   if(!d[school]) d[school] = {};
-  if(start || end) d[school][grade] = {start: start || '', end: end || ''};
+  if(start || end || math) d[school][grade] = {start: start||'', end: end||'', math: math||''};
   else delete d[school][grade];
   state.examRanges.season = currentSeason();
   await dbSet('exam-ranges', state.examRanges);
@@ -2341,14 +2415,20 @@ async function saveSchoolBook(school, grade, text){
       되돌리면 KST에서 하루가 깎인다 (2026-08-07에 겪었다). */
 function examDdayOf(school, grade){
   const d = examDatesOf(school, grade);
-  if(!d || !d.start) return null;
-  const t = todayStr();
-  const end = d.end || d.start;
+  if(!d) return null;
+  /* **수학 시험일이 있으면 그 날이 기준이다.** 시험기간은 닷새여도 이 사람에게 중요한 날은 하루다.
+     없을 때만 시험기간 시작일로 물러난다. */
+  const target = d.math || d.start;
+  if(!target) return null;
+  const end = d.end || d.start || target;
   const days = ymd => Math.round(Date.parse(ymd+'T00:00:00Z') / 86400000);
-  const left = days(d.start) - days(t);
-  if(left > 0)          return {state:'before', days:left,  start:d.start, end:d.end};
-  if(days(t) <= days(end)) return {state:'during', days:0,  start:d.start, end:d.end};
-  return {state:'after', days:0, start:d.start, end:d.end};
+  const t = todayStr();
+  const basis = d.math ? 'math' : 'start';
+  const base = {basis, start:d.start, end:d.end, math:d.math, target};
+  const left = days(target) - days(t);
+  if(left > 0)             return Object.assign({state:'before', days:left}, base);
+  if(days(t) <= days(end)) return Object.assign({state:'during', days:0},    base);
+  return Object.assign({state:'after', days:0}, base);
 }
 /* 이 학생의 시험 일정. 학교·학년이 비어 있으면 «빈 값»끼리 묶인 줄을 본다 —
    범위가 그렇게 동작하므로 날짜도 같아야 한다. */
@@ -5916,18 +5996,22 @@ function stuHomeHTML(c){
     const on = all.filter(ch=>range && range.has(ch));
     const span = on.length===0 ? '' : on.length===1 ? on[0] : `${on[0]} ~ ${on[on.length-1]}`;
     const tone = dd.state==='during' ? 'no' : dd.days<=7 ? 'no' : dd.days<=14 ? 'late' : '';
+    /* 학생에게 중요한 날은 «수학 시험일» 하루다. 있으면 그것을 크게 쓰고
+       시험기간은 아래 작은 줄로 내린다. 없을 때만 시험기간이 주인공이 된다. */
     return `
-  <div class="msec">시험</div>
+  <div class="msec">${dd.basis==='math' ? '수학 시험' : '시험'}</div>
   <div class="mc">
     <div class="row b" style="gap:9px;flex-wrap:wrap;align-items:center;">
       <b style="font-size:19px;font-weight:800;letter-spacing:-.02em;">${
-        dd.state==='during' ? '시험 중' : 'D-'+dd.days}</b>
-      ${tone ? `<span class="badge ${tone}">${dd.state==='during' ? '오늘도 시험' : '곧'}</span>` : ''}
+        dd.state==='during' ? (dd.basis==='math' ? '오늘 시험' : '시험 중') : 'D-'+dd.days}</b>
+      ${tone && dd.state!=='during' ? `<span class="badge ${tone}">곧</span>` : ''}
       <span class="spacer"></span>
-      <span style="font-size:12.5px;color:var(--sub);">${escHtml(stuDateLabel(dd.start))}${
-        dd.end && dd.end!==dd.start ? ' ~ '+escHtml(stuDateLabel(dd.end)) : ''}</span>
+      <span style="font-size:13px;font-weight:700;color:var(--brand-d);">${escHtml(stuDateLabel(dd.target))}</span>
     </div>
-    ${span ? `<div style="font-size:12px;color:var(--dim);margin-top:8px;">
+    ${dd.basis==='math' && dd.start ? `<div style="font-size:12px;color:var(--dim);margin-top:7px;">
+      시험기간 ${escHtml(stuDateLabel(dd.start))}${
+        dd.end && dd.end!==dd.start ? ' ~ '+escHtml(stuDateLabel(dd.end)) : ''}</div>` : ''}
+    ${span ? `<div style="font-size:12px;color:var(--dim);margin-top:6px;">
       ${escHtml(currentSeason())} 범위 · ${escHtml(subject)} — ${escHtml(span)}</div>` : ''}
   </div>`;
   })()}
@@ -10981,42 +11065,118 @@ function unitBankAddLegacyHTML(){
    학교 목록은 학생 명부에서 나온다. 학교를 따로 등록하는 곳을 만들지 않았다 —
    이름을 두 곳에서 관리하면 오타 하나로 «다른 학교»가 된다. */
 function teacherExamRangeHTML(){
+  loadExamHistoryIfNeeded();
   const season = currentSeason();
   const next = SEASONS[(SEASONS.indexOf(season) + 1) % SEASONS.length];
-  /* 학교 × 학년 × 과목 — 실제로 범위가 필요한 조합만 세운다.
-     학년이 들어가야 하는 이유는 rangeChapters() 주석에 있다 (같은 학교도 학년마다 범위가 다르다). */
-  const combos = {};
-  DATA.students.forEach(s=>{
-    const subject = subjectOfStudent(s.studentId);
-    if(!subject) return;
-    const school = s.school || '', grade = s.grade || '';
-    const key = rangeKey(school, grade, subject);
-    if(!combos[key]) combos[key] = {school, grade, subject, n:0};
-    combos[key].n++;
-  });
+  const hist = (state.examHistory && state.examHistory.items) || [];
+
+  /* ---- 지금이냐 지난 기록이냐. 이 갈림을 «접근자 셋»에 가둔다 —
+         아래 표와 달력은 어느 쪽을 보고 있는지 몰라도 되게 한다. ---- */
+  const vi = state.examSeasonView;
+  const past = (vi !== '' && vi != null && hist[vi]) ? hist[vi] : null;
+  const viewSeason = past ? past.season : season;
+  const getDates = (sc, gr) => past
+    ? ((past.dates && past.dates[sc] && past.dates[sc][gr]) || null)
+    : examDatesOf(sc, gr);
+  const getBook = (sc, gr) => past
+    ? ((past.books && past.books[sc] && past.books[sc][gr]) || '')
+    : schoolBookOf(sc, gr);
+  const getChaps = (sc, gr, sj) => {
+    if(!past) return rangeChapters(sc, gr, sj);
+    const got = past.bySchool && past.bySchool[sc] && past.bySchool[sc][gr] && past.bySchool[sc][gr][sj];
+    return (Array.isArray(got) && got.length) ? got.slice() : presetChapters(sj, past.season);
+  };
+  const getDday = (sc, gr) => {
+    if(!past) return examDdayOf(sc, gr);
+    return null;               // 지난 기록에 D-day는 뜻이 없다
+  };
+
+  /* ---- 줄 목록 ---- */
+  let list = [];
+  if(past){
+    /* 보관본에서 뽑는다 — 그때의 명단은 남아 있지 않다. 적혀 있던 것만 보여 준다. */
+    const seen = {};
+    const add = (school, grade, subject) => {
+      const k = rangeKey(school, grade, subject);
+      if(seen[k]) return; seen[k] = 1;
+      list.push({school, grade, subject, n: null});
+    };
+    Object.entries(past.bySchool || {}).forEach(([sc, byG]) =>
+      Object.entries(byG || {}).forEach(([gr, byS]) =>
+        Object.keys(byS || {}).forEach(sj => add(sc, gr, sj))));
+    /* 범위는 기본값이라 안 적혔지만 «날짜»만 적어 둔 학교·학년도 한 줄로 세운다. */
+    Object.entries(past.dates || {}).forEach(([sc, byG]) =>
+      Object.keys(byG || {}).forEach(gr => {
+        if(!list.some(x => x.school === sc && x.grade === gr)) add(sc, gr, '');
+      }));
+  } else {
+    /* 학교 × 학년 × 과목 — 실제로 범위가 필요한 조합만 세운다.
+       학년이 들어가야 하는 이유는 rangeChapters() 주석에 있다. */
+    const combos = {};
+    DATA.students.forEach(s => {
+      const subject = subjectOfStudent(s.studentId);
+      if(!subject) return;
+      const school = s.school || '', grade = s.grade || '';
+      const key = rangeKey(school, grade, subject);
+      if(!combos[key]) combos[key] = {school, grade, subject, n: 0};
+      combos[key].n++;
+    });
+    list = Object.values(combos);
+  }
   /* **가까운 시험이 위로 온다.** 이 화면의 물음이 「어디가 먼저인가」이기 때문이다 —
      노션 표는 학교순이었지만 그건 표를 «적는» 순서지 «보는» 순서가 아니다.
-     날짜가 없는 줄은 맨 아래로 내리고 거기서만 학교 → 학년 → 과목으로 세운다.
-     학교가 빈 것은 그 안에서도 맨 뒤 (「힣」이 한글 끝이다). */
-  const list = Object.values(combos).sort((a,b)=>{
-    const da = examDatesOf(a.school, a.grade), db = examDatesOf(b.school, b.grade);
-    const sa = (da && da.start) || '', sb = (db && db.start) || '';
+     기준은 수학 시험일 → 없으면 시험기간 시작일. 날짜가 없는 줄은 맨 아래로 내린다. */
+  list.sort((a, b) => {
+    const da = getDates(a.school, a.grade), db = getDates(b.school, b.grade);
+    const sa = (da && (da.math || da.start)) || '', sb = (db && (db.math || db.start)) || '';
     if(sa && sb && sa !== sb) return sa.localeCompare(sb);
     if(!!sa !== !!sb) return sa ? -1 : 1;
-    return (a.school||'힣').localeCompare(b.school||'힣')
-      || (a.grade||'힣').localeCompare(b.grade||'힣')
-      || a.subject.localeCompare(b.subject);
+    return (a.school || '힣').localeCompare(b.school || '힣')
+      || (a.grade || '힣').localeCompare(b.grade || '힣')
+      || (a.subject || '').localeCompare(b.subject || '');
   });
-  /* 「한눈에」의 첫 줄 — 세어 보지 않아도 알 수 있어야 한다. */
-  const dated = list.filter(x=>examDatesOf(x.school, x.grade)).length;
-  const soon = list.filter(x=>{ const d = examDdayOf(x.school, x.grade);
-    return d && (d.state==='during' || (d.state==='before' && d.days<=14)); }).length;
-  const noSchool = DATA.students.filter(s=>!s.school).length;
-  const noGrade = DATA.students.filter(s=>!s.grade).length;
-  const noSubject = DATA.students.filter(s=>!subjectOfStudent(s.studentId)).length;
 
+  const noSchool = DATA.students.filter(s => !s.school).length;
+  const noGrade = DATA.students.filter(s => !s.grade).length;
+  const noSubject = DATA.students.filter(s => !subjectOfStudent(s.studentId)).length;
+  const dated = list.filter(x => getDates(x.school, x.grade)).length;
+  const soon = past ? 0 : list.filter(x => {
+    const d = getDday(x.school, x.grade);
+    return d && (d.state === 'during' || (d.state === 'before' && d.days <= 14));
+  }).length;
   const openKey = state.rangeSchool;
-  return `
+  const mode = state.examViewMode || 'table';
+
+  /* ---- 시즌 고르개 + 보기 전환 ---- */
+  const seasonPicker = `
+  <div class="row" style="gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px;">
+    <span class="field" style="min-width:0;">
+      <select onchange="goExamSeason(this.value)" style="min-width:190px;">
+        <option value="" ${!past ? 'selected' : ''}>지금 — ${escHtml(season)}</option>
+        ${hist.map((h, i) => `<option value="${i}" ${vi === i || vi === String(i) ? 'selected' : ''}
+          >${escHtml(examHistLabel(h))}</option>`).join('')}
+      </select>
+    </span>
+    ${hist.length === 0 && !past
+      ? `<span style="font-size:11.5px;color:var(--dim);">시즌을 넘기면 지금 일정이 «지난 기록»으로 보관됩니다.</span>`
+      : ''}
+    <span class="spacer"></span>
+    <div class="row" style="gap:0;">
+      <button class="btn sm ${mode === 'table' ? 'p' : 'q'}" style="border-radius:var(--r-sm) 0 0 var(--r-sm);"
+        onclick="state.examViewMode='table'; render()">표</button>
+      <button class="btn sm ${mode === 'cal' ? 'p' : 'q'}" style="border-radius:0 var(--r-sm) var(--r-sm) 0;"
+        onclick="state.examViewMode='cal'; render()">달력</button>
+    </div>
+  </div>`;
+
+  /* ---- 지금 시즌 상자 (지난 기록을 볼 때는 그 자리에 «읽기 전용» 알림이 온다) ---- */
+  const seasonBox = past ? `
+  <div class="fm-warn" style="margin-bottom:18px;">
+    <b>${escHtml(examHistLabel(past))}</b>의 지난 기록입니다 —
+    ${past.startedAt ? `<span class="mono">${escHtml(past.startedAt)}</span>에 시작해 ` : ''}
+    <span class="mono">${escHtml(past.endedAt)}</span>에 보관됐습니다.
+    <b>고칠 수 없습니다.</b> 지금 시즌으로 돌아가려면 위에서 «지금»을 고르세요.
+  </div>` : `
   <div class="cls-hw" style="display:block;margin-bottom:18px;">
     <div class="t-sec" style="margin:0;">지금 시즌</div>
     <div class="row" style="gap:12px;align-items:center;margin-top:10px;flex-wrap:wrap;">
@@ -11031,23 +11191,26 @@ function teacherExamRangeHTML(){
       ${isVacationSeason(season)
         ? '방학에는 <b>과목의 모든 단원</b>이 나갑니다 — 그동안 범위 밖으로 접어 둔 문제가 다시 돌아옵니다.'
         : '시즌에 해당하는 단원만 데일리퀴즈로 나갑니다. 범위 밖 문제는 복습 시계가 멈춘 채 기다립니다.'}<br>
-      순서 — ${SEASONS.map(s=>s===season?`<b>${escHtml(s)}</b>`:escHtml(s)).join(' → ')} → …<br>
-      <b>시즌을 넘기면 아래 학교·학년별 수정은 모두 지워지고 기본 범위로 돌아갑니다.</b>
+      순서 — ${SEASONS.map(s => s === season ? `<b>${escHtml(s)}</b>` : escHtml(s)).join(' → ')} → …<br>
+      <b>시즌을 넘기면 지금 일정은 «지난 기록»으로 보관되고, 학교·학년별 수정은 기본 범위로 돌아갑니다.</b>
     </div>
-  </div>
+  </div>`;
 
+  const head = `
   <div class="row" style="align-items:baseline;gap:12px;margin-bottom:4px;flex-wrap:wrap;">
-    <div class="t-sec" style="margin:0;">학교·학년별 시험 일정</div>
+    <div class="t-sec" style="margin:0;">${past ? '지난 시험 일정' : '학교·학년별 시험 일정'}</div>
     <span style="font-size:11.5px;color:var(--dim);">
-      ${soon ? `<b style="color:var(--no);">2주 안 ${soon}곳</b> · ` : ''}날짜 정함
+      ${soon ? `<b style="color:var(--no);">2주 안 ${soon}곳</b> · ` : ''}날짜 있음
       <b class="mono" style="color:var(--ink);">${dated}</b>/<span class="mono">${list.length}</span>
     </span>
-  </div>
+  </div>`;
+
+  const help = past ? '' : `
   <div style="margin:0 0 12px;font-size:11.5px;color:var(--dim);line-height:1.8;">
-    <b>가까운 시험이 위로 옵니다.</b> 날짜를 안 넣은 줄은 맨 아래입니다.
+    <b>가까운 시험이 위로 옵니다</b> — 기준은 <b>수학 시험일</b>이고, 없으면 시험기간 시작일입니다.
     한 줄이 «학교 × 학년 × 과목»이고, 줄을 누르면 그 자리에서 고칠 수 있습니다.<br>
-    <b>날짜와 교재는 학교·학년 단위</b>라 같은 학교·학년의 다른 과목 줄에도 같이 반영됩니다 —
-    시험기간은 학교가 정하니까요. <b>범위는 과목마다 다릅니다.</b>
+    <b>날짜와 교재는 학교·학년 단위</b>라 같은 학교·학년의 다른 과목 줄에도 같이 반영됩니다.
+    <b>범위는 과목마다 다릅니다.</b>
   </div>
   ${noSchool || noGrade || noSubject ? `<div class="fm-warn" style="margin-bottom:12px;">
     ${noSchool ? `학교를 입력하지 않은 학생이 <b>${noSchool}명</b> 있습니다. ` : ''}
@@ -11055,102 +11218,102 @@ function teacherExamRangeHTML(){
     ${noSubject ? `반의 진도 과목이 정해지지 않아 범위를 못 정하는 학생이 <b>${noSubject}명</b> 있습니다
       (반 관리 &gt; 진도에서 과목을 고르면 됩니다). ` : ''}
     학교·학년이 비어 있어도 «빈 값»끼리 한 줄로 묶여 범위는 적용됩니다 —
-    다만 <b>다른 학교 학생과 범위를 같이 쓰게</b> 되니 명단에서 채워 주세요.</div>` : ''}
-  ${list.length===0 ? `<div style="font-size:12.5px;color:var(--dim);">범위를 정할 조합이 없습니다.</div>`
-  : `<div class="rst-wrap" style="max-height:none;">
-    ${/* ⚠ .app .rst-wrap table.grid의 min-width는 명단(1464px)의 것이다. 여기 표는 더 좁으므로
-         인라인으로 눌러 준다 — 인라인 style이 시트 규칙을 이긴다.
-         sticky 헤더는 걸지 않는다. 줄이 적고, 가로 스크롤과 같이 쓰면 헤더가 첫 행을 덮는다 (0-B). */''}
-    <table class="grid" style="min-width:1108px;">
-      <thead><tr>
-        <th style="width:118px;">학교</th>
-        <th style="width:60px;">학년</th>
-        <th style="width:118px;">과목</th>
-        <th class="r" style="width:50px;">인원</th>
-        <th style="width:78px;">D-day</th>
-        <th style="width:172px;">시험 기간</th>
-        <th style="width:288px;">범위</th>
-        <th style="width:164px;">교재 · 메모</th>
-        <th class="r" style="width:60px;"></th>
-      </tr></thead>
-      <tbody>
-      ${list.map(({school, grade, subject, n})=>{
-        const all = UNIT_CHAPTERS[subject] || [];
-        const cur = new Set(rangeChapters(school, grade, subject));
-        const overridden = hasRangeOverride(school, grade, subject);
-        const open = openKey === rangeKey(school, grade, subject);
-        const sc = jsAttr(school), gr = jsAttr(grade), sj = jsAttr(subject);
-        const dd = examDdayOf(school, grade), dates = examDatesOf(school, grade);
-        const book = schoolBookOf(school, grade);
-        /* 켜진 단원의 «처음과 끝». 노션 표가 그렇게 적혀 있었고, 그게 사람이 읽기 좋다. */
-        const on = all.filter(ch=>cur.has(ch));
-        const span = on.length===0 ? '' : on.length===1 ? `${all.indexOf(on[0])+1}. ${on[0]}`
-          : `${all.indexOf(on[0])+1}. ${on[0]} ~ ${all.indexOf(on[on.length-1])+1}. ${on[on.length-1]}`;
-        const ddTone = !dd ? '' : dd.state==='during' ? 'no' : dd.state==='after' ? 'gone'
-          : dd.days<=7 ? 'no' : dd.days<=14 ? 'late' : '';
-        return `
+    다만 <b>다른 학교 학생과 범위를 같이 쓰게</b> 되니 명단에서 채워 주세요.</div>` : ''}`;
+
+  if(list.length === 0)
+    return seasonPicker + seasonBox + head
+      + `<div style="font-size:12.5px;color:var(--dim);">${past ? '이 시즌에는 적어 둔 일정이 없습니다.' : '범위를 정할 조합이 없습니다.'}</div>`;
+
+  if(mode === 'cal')
+    return seasonPicker + seasonBox + head
+      + examCalendarHTML(list, getDates, viewSeason);
+
+  const body = list.map(({school, grade, subject, n}) => {
+    const all = UNIT_CHAPTERS[subject] || [];
+    const cur = new Set(getChaps(school, grade, subject));
+    const overridden = past
+      ? !!(past.bySchool && past.bySchool[school] && past.bySchool[school][grade] && past.bySchool[school][grade][subject])
+      : hasRangeOverride(school, grade, subject);
+    const open = !past && openKey === rangeKey(school, grade, subject);
+    const sc = jsAttr(school), gr = jsAttr(grade), sj = jsAttr(subject);
+    const dd = getDday(school, grade), dates = getDates(school, grade);
+    const book = getBook(school, grade);
+    /* 켜진 단원의 «처음과 끝». 노션 표가 그렇게 적혀 있었고, 그게 사람이 읽기 좋다. */
+    const on = all.filter(ch => cur.has(ch));
+    const span = !subject ? '' : on.length === 0 ? '' : on.length === 1 ? `${all.indexOf(on[0]) + 1}. ${on[0]}`
+      : `${all.indexOf(on[0]) + 1}. ${on[0]} ~ ${all.indexOf(on[on.length - 1]) + 1}. ${on[on.length - 1]}`;
+    const ddTone = !dd ? '' : dd.state === 'during' ? 'no' : dd.state === 'after' ? 'gone'
+      : dd.days <= 7 ? 'no' : dd.days <= 14 ? 'late' : '';
+    const dow = ymd => WEEKDAY_LABEL[new Date(ymd + 'T00:00:00').getDay()];
+    return `
       ${/* ⚠ .cb는 «체크박스 네모»의 클래스다(width·height가 박혀 있다). 행에 걸면 줄이 찌그러진다. */''}
-      <tr style="cursor:pointer;${open?'background:var(--hover);':''}"
-          onclick="toggleRangeOpen('${sc}','${gr}','${sj}')">
+      <tr style="${past ? '' : 'cursor:pointer;'}${open ? 'background:var(--hover);' : ''}"
+          ${past ? '' : `onclick="toggleRangeOpen('${sc}','${gr}','${sj}')"`}>
         <td><b>${escHtml(school || '(학교 미입력)')}</b></td>
         <td class="sub">${escHtml(grade || '—')}</td>
-        <td class="sub">${escHtml(subject)}</td>
-        <td class="r mono">${n}</td>
-        <td>${dd ? `<span class="badge ${ddTone}">${
-            dd.state==='before' ? 'D-'+dd.days : dd.state==='during' ? '시험 중' : '끝남'}</span>`
+        <td class="sub">${escHtml(subject || '—')}</td>
+        <td class="r mono">${n == null ? '<span style="color:var(--dim);">—</span>' : n}</td>
+        ${/* D-day는 «수학 시험일»이 기준이다. 없을 때만 시험기간 시작일로 물러난다. */''}
+        <td>${dd ? `<span class="badge ${ddTone}" title="${dd.basis === 'math' ? '수학 시험일 기준' : '시험기간 시작일 기준'}">${
+            dd.state === 'before' ? 'D-' + dd.days : dd.state === 'during' ? '시험 중' : '끝남'}</span>`
           : `<span style="color:var(--dim);">—</span>`}</td>
-        ${/* 연도를 뗀다 — 두 날짜를 온전히 쓰면 이 폭에서 잘린다. 시즌마다 비우는 값이라
-             해가 헷갈릴 일이 없고, 온전한 날짜는 title과 펼친 칸에 있다. */''}
-        <td class="mono sub" title="${dates ? escHtml(dates.start + (dates.end ? ' ~ ' + dates.end : '')) : ''}">${
-          dates ? escHtml(dates.start.slice(5)) + (dates.end ? ' ~ ' + escHtml(dates.end.slice(5)) : '') : '—'}</td>
+        ${/* 연도를 뗀다 — 두 날짜를 온전히 쓰면 이 폭에서 잘린다. 온전한 날짜는 title과 펼친 칸에 있다. */''}
+        <td class="mono sub" title="${dates && dates.start ? escHtml(dates.start + (dates.end ? ' ~ ' + dates.end : '')) : ''}">${
+          dates && dates.start ? escHtml(dates.start.slice(5)) + (dates.end ? ' ~ ' + escHtml(dates.end.slice(5)) : '') : '—'}</td>
+        <td class="mono" title="${dates && dates.math ? escHtml(dates.math) : ''}" style="${
+          dates && dates.math ? 'color:var(--brand-d);font-weight:700;' : 'color:var(--dim);'}">${
+          dates && dates.math ? escHtml(dates.math.slice(5)) + ' ' + dow(dates.math) : '—'}</td>
         <td class="sub" title="${span ? escHtml(span) : ''}">${
-          span ? escHtml(span) : '<span style="color:var(--no);">단원 없음</span>'}
+          span ? escHtml(span) : '<span style="color:var(--dim);">—</span>'}
           ${overridden ? '<span class="badge score" style="margin-left:6px;">수정됨</span>' : ''}</td>
         <td class="sub" title="${escHtml(book)}">${book ? escHtml(book) : '—'}</td>
-        <td class="r sub" style="font-size:11px;">${open?'접기':'펼치기'}</td>
+        <td class="r sub" style="font-size:11px;">${past ? '' : (open ? '접기' : '펼치기')}</td>
       </tr>
       ${!open ? '' : `
-      <tr><td colspan="9" style="white-space:normal;overflow:visible;background:var(--hover);padding:16px 14px;">
+      <tr><td colspan="10" style="white-space:normal;overflow:visible;background:var(--hover);padding:16px 14px;">
         ${/* ⚠ 날짜·교재는 change(칸을 떠날 때)에 저장한다. oninput으로 하면 render()가
-             글자마다 돌아 커서가 끝으로 튄다 (9절 4번). */''}
+             글자마다 돌아 커서가 끝으로 튄다 (9절 4번).
+             ⚠ 안의 입력·버튼은 전부 stopPropagation — 안 그러면 줄의 onclick이 같이 터져 칸이 접힌다. */''}
         <div class="row" style="gap:10px;flex-wrap:wrap;align-items:flex-end;">
           <label style="font-size:11.5px;color:var(--sub);">시험 시작
             <input type="date" class="fm-in" style="display:block;margin-top:4px;width:150px;"
-              value="${escHtml((dates&&dates.start)||'')}"
-              onclick="event.stopPropagation()"
+              value="${escHtml((dates && dates.start) || '')}" onclick="event.stopPropagation()"
               onchange="setExamDate('${sc}','${gr}','start',this.value)"></label>
           <label style="font-size:11.5px;color:var(--sub);">시험 끝
             <input type="date" class="fm-in" style="display:block;margin-top:4px;width:150px;"
-              value="${escHtml((dates&&dates.end)||'')}"
-              onclick="event.stopPropagation()"
+              value="${escHtml((dates && dates.end) || '')}" onclick="event.stopPropagation()"
               onchange="setExamDate('${sc}','${gr}','end',this.value)"></label>
-          <label style="font-size:11.5px;color:var(--sub);flex:1;min-width:220px;">교재 · 메모
+          <label style="font-size:11.5px;color:var(--brand-d);font-weight:700;">수학 시험일
+            <input type="date" class="fm-in" style="display:block;margin-top:4px;width:150px;border-color:var(--brand);"
+              value="${escHtml((dates && dates.math) || '')}" onclick="event.stopPropagation()"
+              onchange="setExamDate('${sc}','${gr}','math',this.value)"></label>
+          <label style="font-size:11.5px;color:var(--sub);flex:1;min-width:200px;">교재 · 메모
             <input type="text" class="fm-in" style="display:block;margin-top:4px;width:100%;"
-              placeholder="미래엔 / 학교프린트" value="${escHtml(book)}"
-              onclick="event.stopPropagation()"
+              placeholder="미래엔 / 학교프린트" value="${escHtml(book)}" onclick="event.stopPropagation()"
               onchange="setSchoolBook('${sc}','${gr}',this.value)"></label>
         </div>
         <div style="margin-top:5px;font-size:11px;color:var(--dim);">
-          날짜와 교재는 <b>${escHtml(school||'(학교 미입력)')} ${escHtml(grade||'학년 미입력')}</b>의
-          모든 과목 줄이 같이 씁니다. 교재는 시즌을 넘겨도 남습니다.
+          날짜와 교재는 <b>${escHtml(school || '(학교 미입력)')} ${escHtml(grade || '학년 미입력')}</b>의
+          모든 과목 줄이 같이 씁니다. <b>D-day는 수학 시험일부터</b> 셉니다.
+          교재는 시즌을 넘겨도 남습니다.
         </div>
 
         <div class="row" style="gap:8px;margin-top:14px;flex-wrap:wrap;align-items:flex-end;">
           <label style="font-size:11.5px;color:var(--sub);">시작 단원
             <select class="fm-in" id="rs-a" style="display:block;margin-top:4px;" onclick="event.stopPropagation()">
-              ${all.map((ch,i)=>`<option value="${i}" ${on.length&&all.indexOf(on[0])===i?'selected':''}>${i+1}. ${escHtml(ch)}</option>`).join('')}
+              ${all.map((ch, i) => `<option value="${i}" ${on.length && all.indexOf(on[0]) === i ? 'selected' : ''}>${i + 1}. ${escHtml(ch)}</option>`).join('')}
             </select></label>
           <label style="font-size:11.5px;color:var(--sub);">끝 단원
             <select class="fm-in" id="rs-b" style="display:block;margin-top:4px;" onclick="event.stopPropagation()">
-              ${all.map((ch,i)=>`<option value="${i}" ${on.length&&all.indexOf(on[on.length-1])===i?'selected':''}>${i+1}. ${escHtml(ch)}</option>`).join('')}
+              ${all.map((ch, i) => `<option value="${i}" ${on.length && all.indexOf(on[on.length - 1]) === i ? 'selected' : ''}>${i + 1}. ${escHtml(ch)}</option>`).join('')}
             </select></label>
           <button class="btn sm" onclick="event.stopPropagation(); applyRangeSpan('${sc}','${gr}','${sj}')">이 구간으로</button>
         </div>
 
         <div style="margin-top:11px;display:flex;flex-wrap:wrap;gap:7px;">
-          ${all.map((ch,i)=>`<a class="pill ${cur.has(ch)?'on':''}"
+          ${all.map((ch, i) => `<a class="pill ${cur.has(ch) ? 'on' : ''}"
             onclick="event.stopPropagation(); toggleRangeChapter('${sc}','${gr}','${sj}','${jsAttr(ch)}')"
-            >${i+1}. ${escHtml(ch)}</a>`).join('')}
+            >${i + 1}. ${escHtml(ch)}</a>`).join('')}
         </div>
         <div class="row" style="gap:8px;margin-top:11px;flex-wrap:wrap;">
           <button class="btn q sm" onclick="event.stopPropagation(); resetSchoolRange('${sc}','${gr}','${sj}')">기본 범위로 되돌리기</button>
@@ -11158,10 +11321,117 @@ function teacherExamRangeHTML(){
             ${presetChapters(subject).length}단원입니다.</span>
         </div>
       </td></tr>`}`;
-      }).join('')}
-      </tbody>
+  }).join('');
+
+  return seasonPicker + seasonBox + head + help + `
+  <div class="rst-wrap" style="max-height:none;">
+    ${/* ⚠ .app .rst-wrap table.grid의 min-width는 명단(1464px)의 것이다. 이 표는 더 좁으므로
+         인라인으로 눌러 준다 — 인라인 style이 시트 규칙을 이긴다.
+         sticky 헤더는 걸지 않는다. 줄이 적고, 가로 스크롤과 같이 쓰면 헤더가 첫 행을 덮는다 (0-B). */''}
+    <table class="grid" style="min-width:1110px;">
+      <thead><tr>
+        <th style="width:118px;">학교</th>
+        <th style="width:60px;">학년</th>
+        <th style="width:118px;">과목</th>
+        <th class="r" style="width:50px;">인원</th>
+        <th style="width:78px;">D-day</th>
+        <th style="width:150px;">시험 기간</th>
+        <th style="width:92px;">수학</th>
+        <th style="width:222px;">범위</th>
+        <th style="width:160px;">교재 · 메모</th>
+        <th class="r" style="width:60px;"></th>
+      </tr></thead>
+      <tbody>${body}</tbody>
     </table>
-  </div>`}`;
+  </div>`;
+}
+
+function goExamSeason(v){
+  state.examSeasonView = (v === '') ? '' : Number(v);
+  state.rangeSchool = '';        // 보던 줄은 다른 시즌의 것이다
+  state.examCalMonth = '';       // 달력도 그 시즌의 첫 달로 되돌린다
+  render();
+}
+
+/* ---------- 시험 달력 ----------
+   표는 «어디가 먼저인가»에 답하고, 달력은 «이번 달이 어떻게 생겼나»에 답한다.
+   시험기간이 서로 겹치는 학교가 몇인지는 표로는 안 보인다.
+
+   ⚠ 한 학교·학년이 과목 줄을 여럿 갖지만 **날짜는 하나**다. 그대로 그리면 같은 딱지가
+      과목 수만큼 겹쳐 나온다 — 학교·학년으로 먼저 묶는다. */
+function examCalendarHTML(list, getDates, viewSeason){
+  const seen = {}, spans = [];
+  list.forEach(({school, grade}) => {
+    const k = school + '\n' + grade;
+    if(seen[k]) return; seen[k] = 1;
+    const d = getDates(school, grade);
+    if(!d) return;
+    spans.push({school, grade, start: d.start || d.math, end: d.end || d.start || d.math, math: d.math || ''});
+  });
+
+  if(spans.length === 0) return `<div style="font-size:12.5px;color:var(--dim);">
+    날짜를 적어 둔 학교가 없습니다. «표»에서 줄을 눌러 시험 날짜를 넣어주세요.</div>`;
+
+  /* 보고 있는 달 — 정해 두지 않았으면 «가장 이른 시험이 있는 달»에서 시작한다.
+     오늘 달에서 시작하면 시험이 다음 달일 때 빈 달을 마주한다. */
+  const first = spans.map(s => s.start).filter(Boolean).sort()[0] || todayStr();
+  const ym = state.examCalMonth || first.slice(0, 7);
+  const [y, m] = ym.split('-').map(Number);
+
+  const firstDow = new Date(y, m - 1, 1).getDay();
+  const days = new Date(y, m, 0).getDate();
+  const today = todayStr();
+
+  let cells = WEEKDAY_LABEL.map(d => `<div class="dh">${d}</div>`).join('');
+  for(let i = 0; i < firstDow; i++) cells += '<div class="d off"></div>';
+  for(let d = 1; d <= days; d++){
+    const ymd = `${ym}-${String(d).padStart(2, '0')}`;
+    const dow = new Date(y, m - 1, d).getDay();
+    const hits = spans.filter(s => s.start && ymd >= s.start && ymd <= (s.end || s.start));
+    const maths = spans.filter(s => s.math === ymd);
+    /* 수학 시험일은 «기간 딱지»에서 빼고 따로 크게 세운다 — 같은 학교가 두 번 나오면 안 된다. */
+    const chips = maths.map(s => `<span class="exc-chip math"
+        title="${escHtml(s.school + ' ' + s.grade)} 수학 시험">${escHtml(s.school)} ${escHtml(s.grade)}</span>`)
+      .concat(hits.filter(s => s.math !== ymd).map(s => {
+        const isFirst = s.start === ymd;
+        /* 첫날만 이름을 온전히 쓴다. 가운데 날은 이어지는 띠로 둔다 —
+           닷새 내내 같은 이름이 반복되면 달력이 글자로 덮인다. */
+        return `<span class="exc-chip ${isFirst ? '' : 'mid'}"
+          title="${escHtml(s.school + ' ' + s.grade)} 시험기간">${
+          isFirst ? escHtml(s.school) + ' ' + escHtml(s.grade) : '·'}</span>`;
+      }));
+    const show = chips.slice(0, 3);
+    cells += `<div class="d${ymd === today ? ' today' : ''}${dow === 0 ? ' sun' : dow === 6 ? ' sat' : ''}">
+      <span class="n">${d}</span>${show.join('')}${
+      chips.length > 3 ? `<span class="exc-more">외 ${chips.length - 3}곳</span>` : ''}</div>`;
+  }
+  /* 마지막 주의 남는 칸도 채운다 — 안 채우면 그 자리에 격자 배경(회색)이 통째로 드러난다. */
+  const tail = (7 - ((firstDow + days) % 7)) % 7;
+  for(let i = 0; i < tail; i++) cells += '<div class="d off"></div>';
+
+  return `
+  <div class="row" style="gap:10px;align-items:center;margin:2px 0 12px;">
+    <button class="btn q sm" onclick="shiftExamCal('${ym}',-1)">${iconSvg('chevL', 14)}</button>
+    <b style="font-size:15px;">${y}년 ${m}월</b>
+    <button class="btn q sm" onclick="shiftExamCal('${ym}',1)">${iconSvg('chevR', 14)}</button>
+    <span class="spacer"></span>
+    <span style="font-size:11.5px;color:var(--dim);">
+      <span class="exc-chip math" style="display:inline-block;margin:0 4px 0 0;padding:2px 7px;">수학 시험일</span>
+      <span class="exc-chip" style="display:inline-block;margin:0 4px 0 0;padding:2px 7px;">시험기간 첫날</span>
+      <span class="exc-chip mid" style="display:inline-block;margin:0;padding:2px 7px;">기간 중</span>
+    </span>
+  </div>
+  <div class="exc">${cells}</div>
+  <div style="margin-top:10px;font-size:11.5px;color:var(--dim);line-height:1.8;">
+    «${escHtml(viewSeason)}» 기준 <b class="mono" style="color:var(--ink);">${spans.length}</b>개 학교·학년의 일정입니다.
+    한 칸에 셋까지 보이고 나머지는 «외 n곳»으로 접힙니다.
+  </div>`;
+}
+function shiftExamCal(ym, delta){
+  const [y, m] = ym.split('-').map(Number);
+  const d = new Date(Date.UTC(y, m - 1 + delta, 1));
+  state.examCalMonth = d.getUTCFullYear() + '-' + String(d.getUTCMonth() + 1).padStart(2, '0');
+  render();
 }
 /* 인라인 onclick 안의 «문자열 리터럴»로 안전하게 넣는다.
    학교 이름은 사람이 친 값이라 따옴표·백슬래시가 들어올 수 있다.
@@ -11179,17 +11449,22 @@ function toggleRangeOpen(school, grade, subject){
   state.rangeSchool = (state.rangeSchool === key) ? '' : key;
   render();
 }
-/* 날짜 한쪽만 고쳐도 다른 쪽은 그대로 둔다 — 두 칸이 한 값이라 통째로 다시 쓴다. */
+/* 한 칸만 고쳐도 나머지는 그대로 둔다 — 셋이 한 값이라 통째로 다시 쓴다. */
 async function setExamDate(school, grade, which, value){
-  const d = examDatesOf(school, grade) || {start:'', end:''};
-  const next = {start: d.start||'', end: d.end||''};
+  const d = examDatesOf(school, grade) || {};
+  const next = {start: d.start||'', end: d.end||'', math: d.math||''};
   next[which] = value || '';
-  /* 끝이 시작보다 앞서면 사람이 잘못 고른 것이다. 막지 않고 되돌린다 — 하루짜리 시험도 있다. */
+  /* 끝이 시작보다 앞서면 사람이 잘못 고른 것이다. 되돌린다 — 하루짜리 시험도 있으니 같은 날은 받는다. */
   if(next.start && next.end && next.end < next.start){
     showToast('시험 끝 날짜가 시작보다 앞섭니다. 다시 골라주세요.');
     render(); return;
   }
-  await saveExamDates(school, grade, next.start, next.end);
+  /* 수학 시험일이 시험기간 밖이면 대개 잘못 고른 것이다. 다만 **막지는 않는다** —
+     보충 시험처럼 기간 밖에 치르는 경우가 실제로 있다. 알려만 준다. */
+  if(next.math && next.start && next.end && (next.math < next.start || next.math > next.end)){
+    showToast('수학 시험일이 시험기간 밖입니다. 맞다면 그대로 두셔도 됩니다.');
+  }
+  await saveExamDates(school, grade, next.start, next.end, next.math);
   render();
 }
 async function setSchoolBook(school, grade, text){
