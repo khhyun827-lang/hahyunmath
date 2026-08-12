@@ -12,22 +12,24 @@
      굽는 법:
        node tools/serve.js
        chrome --headless=new --hide-scrollbars --force-device-scale-factor=2 \
-         --virtual-time-budget=9000 --window-size=1280,740 \
+         --virtual-time-budget=9000 --window-size=1440,760 \
          --screenshot=out.png http://127.0.0.1:8777/tools/make-book-mockup.html
      그 뒤 1760폭 JPG로 줄여 book-set.jpg로 둔다. -->
 <style>
 :root{ --paper:#FAF9F6; }
 *{box-sizing:border-box;}
 html,body{margin:0;background:var(--paper);}
-.stage{width:1280px;height:740px;background:var(--paper);
+.stage{width:1440px;height:760px;background:var(--paper);
   display:flex;align-items:center;justify-content:center;gap:0;}
 .stage img{display:block;height:auto;}
-/* 주기나 — 뒤. 개념서에 살짝 가린다 */
-.b-jugina{width:452px;margin-right:-74px;transform:translateY(-8px);}
-/* 개념서 — 앞 */
-.b-gaenyeom{width:453px;transform:translateY(12px);}
+/* 책 높이를 셋 다 519px로 맞췄다 — 목업마다 «책이 이미지에서 차지하는 비율»이 달라
+   같은 width를 주면 책 크기가 어긋난다. 폭은 그 비율로 역산한 값이다. */
+.b-ending{width:436px;margin-right:-60px;transform:translateY(-14px);}
+.b-jugina{width:452px;margin-right:-60px;transform:translateY(-2px);}
+.b-gaenyeom{width:453px;transform:translateY(16px);}
 </style>
 <div class="stage">
+  <img class="b-ending"   src="/tools/mock-ending.png"   alt="엔딩크레딧">
   <img class="b-jugina"   src="/tools/mock-jugina.png"   alt="주기나 기출변형">
   <img class="b-gaenyeom" src="/tools/mock-gaenyeom.png" alt="개념서">
 </div>
