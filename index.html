@@ -1132,7 +1132,11 @@
 .app .rst-wrap table.grid.as-narrow{min-width:1004px;}
 
 /* ============================================================
-   공개 홈 — 랜딩 「하루」 (landing-v2/index.html)
+   공개 홈 — 랜딩 「생각의 흐름」 (2026-08-13 전면 재구성)
+   주인공은 시스템이 아니라 **수학강사 김하현**이다.
+   원칙 셋(개념 · 떠올리는 순서 · 반복)이 페이지의 뼈대이고,
+   교재 · 오답 · 변형문항 · 데일리퀴즈는 전부 «원칙 03의 도구»로 뒤에 선다.
+
    토큰은 전부 ds.css(:root). 여기에는 «배치»만 둔다.
    클래스는 전부 l- 접두사 — ds.css와 이름이 겹치면 조용히 망가진다.
    («.stage / .ev / .tag / .row»로 이미 세 번 당했다.)
@@ -1153,7 +1157,9 @@
   padding:12px 18px;z-index:100;border-radius:0 0 8px 0;text-decoration:none;}
 .lp .l-skip:focus{left:0;}
 
-/* 공통 배치 — 시각 열 / 척추 / 본문 열 */
+/* 공통 배치 — 시각 열 / 척추 / 본문 열.
+   척추는 페이지 전체를 관통한다. 「원칙 01 → 02 → 03이 한 학생 안에서 이어진다」가
+   이 선의 뜻이라, 원칙 구간(차콜)에서도 끊기지 않는다. */
 .lp .l-wrap{max-width:1180px;margin:0 auto;padding:0 28px;}
 .lp .l-rail{position:relative;}
 .lp .l-spine{position:absolute;left:132px;top:0;bottom:0;width:1px;background:var(--line);
@@ -1161,6 +1167,11 @@
 .lp .l-dot{position:absolute;left:128px;width:9px;height:9px;border-radius:50%;
   background:var(--brand);border:2px solid var(--paper);}
 .lp .l-col{padding-left:164px;}
+
+/* 눈금 — 섹션이 무엇인지 한 낱말로. mono라 한글을 넣지 않는다(자간이 벌어진다). */
+.lp .l-k{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;
+  letter-spacing:.2em;text-transform:uppercase;color:var(--dim);}
+.lp .l-hk{font-size:13px;font-weight:700;letter-spacing:.22em;color:var(--dim);}
 
 /* ---------- 상단 바 : 히어로를 지나면 나타난다 ---------- */
 .lp .l-bar{position:fixed;left:0;right:0;top:0;height:62px;z-index:50;
@@ -1184,148 +1195,187 @@
 .lp .l-btn.l-ghost{background:transparent;color:var(--ink);border-color:var(--line);}
 .lp .l-btn.l-ghost:hover{background:var(--hover);border-color:#D9D6CC;}
 
-/* ---------- 1. 도착 ---------- */
-/* 히어로 높이를 뷰포트보다 조금 낮게 잡아 «하루»의 첫 행이 접힌 채로 보이게 한다.
-   따로 미리보기 행을 두면 같은 16:00이 두 번 나온다 — 그건 장치가 아니라 버그로 읽힌다. */
+/* ============ 1. 도착 — 얼굴과 방식이 «같은 화면»에 ============
+   개인 브랜딩 페이지라 사람이 먼저다. 그런데 얼굴만 있으면 인물 포트폴리오가 되고
+   (랜딩 5안 03이 그래서 기각됐다), 문장만 있으면 누구 말인지 모른다.
+   그래서 둘을 한 화면에 나란히 세운다. */
 .lp .l-hero{min-height:calc(100vh - 118px);min-height:calc(100svh - 118px);
-  display:flex;flex-direction:column;justify-content:center;padding:110px 0 0;position:relative;}
+  display:flex;flex-direction:column;justify-content:center;padding:104px 0 40px;position:relative;}
 /* ⚠ .l-wrap의 margin:0 auto는 «세로 플렉스»의 가로축에서 stretch를 끈다.
-   그래서 히어로 안에서만 wrap이 내용 크기(612px)로 줄어들고, **척추가 아래 본문과 어긋났다**
-   — 히어로 495 대신 779. 페이지 전체가 한 줄기 선 위에 있다는 것이 이 랜딩의 뼈대인데
-   그 선이 첫 화면에서 끊겨 있었다. 시안(landing-v2)에도 같은 것이 있어 함께 고쳤다. */
+   그래서 히어로 안에서만 wrap이 내용 크기로 줄어들고 척추가 아래 본문과 어긋난다.
+   2026-08-07에 겪은 사고라 이 한 줄을 반드시 남긴다. */
 .lp .l-hero .l-wrap{width:100%;}
-.lp .l-hero .l-logo{max-width:392px;width:52%;min-width:260px;height:auto;display:block;}
-.lp .l-hero .l-date{margin-top:38px;font-family:'JetBrains Mono',monospace;font-size:14px;
-  color:var(--dim);letter-spacing:.14em;}
-.lp .l-hero .l-date .l-dow{font-family:'Pretendard',sans-serif;letter-spacing:.02em;margin-left:16px;}
-.lp .l-hero .l-sub{margin-top:14px;font-size:16px;color:var(--sub);}
+.lp .l-hero .l-in{display:grid;grid-template-columns:minmax(0,1fr) 342px;gap:56px;align-items:center;}
+.lp .l-hero .l-logo{max-width:290px;width:62%;min-width:210px;height:auto;display:block;}
+.lp .l-name{margin-top:26px;display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;}
+.lp .l-name b{font-size:19px;font-weight:800;letter-spacing:-.02em;}
+.lp .l-name span{font-family:'JetBrains Mono',monospace;font-size:11.5px;letter-spacing:.16em;
+  color:var(--dim);text-transform:uppercase;}
+.lp .l-lead{margin:22px 0 0;font-size:44px;line-height:1.24;letter-spacing:-.045em;
+  font-weight:800;max-width:15ch;}
+.lp .l-lead em{font-style:normal;color:var(--brand);}
+.lp .l-sub{margin:20px 0 0;font-size:17px;line-height:1.75;color:var(--sub);max-width:34ch;}
+.lp .l-heroimg{position:relative;}
+.lp .l-heroimg img{width:100%;height:auto;display:block;}
+/* 컷아웃 사진이라 바닥이 없다. 옅은 판을 깔아 인물이 «떠 있지» 않게 한다. */
+.lp .l-heroimg::before{content:'';position:absolute;left:6%;right:6%;bottom:0;height:62%;
+  background:var(--accent-bg);border-radius:var(--r-xl) var(--r-xl) 0 0;z-index:0;}
+.lp .l-heroimg picture{position:relative;z-index:1;display:block;}
 
-/* ---------- 2. 하루 ---------- */
-.lp .l-day{padding:0 0 128px;}
-.lp .l-row{position:relative;display:flex;align-items:flex-start;padding:34px 0;}
-.lp .l-row .l-t{width:132px;flex-shrink:0;text-align:right;padding-right:30px;
-  font-family:'JetBrains Mono',monospace;font-size:17px;font-weight:600;color:var(--sub);
-  padding-top:2px;}
-.lp .l-row .l-b{padding-left:32px;flex:1;min-width:0;}
-.lp .l-row .l-k{font-family:'JetBrains Mono',monospace;font-size:12.5px;font-weight:600;
-  color:var(--dim);letter-spacing:.18em;}
-.lp .l-row .l-s{margin:12px 0 0;font-size:27px;font-weight:500;letter-spacing:-.035em;
-  line-height:1.5;}
-.lp .l-row .l-s b{font-weight:700;}
+/* ============ 2. 사람 ============ */
+.lp .l-me{padding:118px 0 0;}
+.lp .l-me .l-mt{margin:22px 0 0;font-size:23px;line-height:1.68;letter-spacing:-.035em;
+  font-weight:750;max-width:30ch;}
+.lp .l-me .l-mx{margin:22px 0 0;font-size:16.5px;line-height:1.85;color:var(--sub);max-width:46ch;}
+.lp .l-me .l-mx b{color:var(--ink);font-weight:700;}
 
-.lp .l-break{display:flex;align-items:center;gap:16px;margin:12px 0 12px 164px;
-  font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--dim);letter-spacing:.06em;}
-.lp .l-break::after{content:'';flex:1;height:1px;background:var(--line);}
+/* ============ 3. 원칙 셋 ============
+   페이지에서 유일하게 큰 소리. 로고 차콜을 «면»으로 쓰는 단 한 번이다.
+   척추가 색 위로도 이어진다 — 선이 장식이 아니라 구조라는 걸 보여주는 지점. */
+.lp .l-prin{margin-top:118px;background:var(--accent);color:#F3F1EE;padding:104px 0 108px;}
+.lp .l-prin .l-spine{background:rgba(243,241,238,.22);}
+.lp .l-prin .l-dot{border-color:var(--accent);}
+.lp .l-prin .l-hk{color:#A8A4A4;}
+.lp .l-p{position:relative;padding:44px 0 0;}
+/* ⚠ 번호만 mono다. JetBrains Mono에 한글이 없어 「원칙」·「개념」을 그대로 넣으면
+   폴백 글꼴에 mono의 자간이 얹혀 「개 념」으로 벌어진다 —
+   랜딩 합류 때 「금요일」이 「금 요 일」이 됐던 것과 같은 함정이다. */
+.lp .l-p .l-pn{font-size:12px;font-weight:700;letter-spacing:.14em;color:var(--brand);}
+.lp .l-p .l-pn em{font-family:'JetBrains Mono',monospace;font-style:normal;
+  font-size:11px;letter-spacing:.16em;margin-right:11px;}
+.lp .l-p h2{margin:14px 0 0;font-size:37px;line-height:1.32;letter-spacing:-.045em;
+  font-weight:800;max-width:20ch;color:#FBFAF6;}
+.lp .l-p p{margin:16px 0 0;font-size:16.5px;line-height:1.85;color:#C6C1C3;max-width:44ch;}
+.lp .l-p p b{color:#FBFAF6;font-weight:700;}
 
-/* ---------- 3. 전환 : 유일하게 큰 소리 ---------- */
-.lp .l-turn{background:var(--accent);color:#fff;padding:130px 0;position:relative;}
-.lp .l-turn .l-spine{background:rgba(255,255,255,.2);}
-.lp .l-turn .l-dot{background:var(--brand);border-color:var(--accent);}
-.lp .l-turn .l-k{font-family:'JetBrains Mono',monospace;font-size:12.5px;
-  color:rgba(255,255,255,.5);letter-spacing:.24em;}
-.lp .l-turn h2{margin:34px 0 0;font-family:'Noto Serif KR',serif;font-size:62px;font-weight:600;
-  letter-spacing:-.045em;line-height:1.3;max-width:15ch;}
-.lp .l-turn p{margin:34px 0 0;font-size:18px;line-height:1.9;color:rgba(255,255,255,.7);
-  max-width:44ch;}
+/* ============ 4. 시연 — 원칙 02를 말하지 말고 보여준다 ============ */
+.lp .l-flow{padding:112px 0 0;}
+.lp .l-fq{margin:26px 0 0;background:var(--card);border:1px solid var(--line);
+  border-radius:var(--r-lg);padding:26px 30px;max-width:52ch;}
+.lp .l-fq .l-fqk{font-size:11.5px;font-weight:700;letter-spacing:.2em;color:var(--dim);}
+.lp .l-fq p{margin:12px 0 0;font-size:19px;line-height:1.7;letter-spacing:-.02em;font-weight:600;}
+.lp .l-steps{margin:8px 0 0;padding:0;list-style:none;}
+.lp .l-step{position:relative;display:flex;align-items:flex-start;padding:26px 0 0;}
+.lp .l-step .l-sn{width:132px;flex-shrink:0;text-align:right;padding:3px 30px 0 0;
+  font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:600;color:var(--dim);}
+.lp .l-step .l-sb{padding-left:32px;flex:1;min-width:0;}
+.lp .l-step .l-see{font-size:14px;color:var(--dim);letter-spacing:-.01em;}
+.lp .l-step .l-think{margin:7px 0 0;font-size:20px;line-height:1.6;letter-spacing:-.03em;
+  font-weight:700;}
+.lp .l-step .l-think b{color:var(--brand-d);}
+/* 갈래를 «지우는» 단계. 이 페이지에서 제일 중요한 한 칸이라 종이색으로 따로 세운다 —
+   답을 고르는 것이 아니라 아닌 것을 지우는 것이 이 수업의 핵심이기 때문이다. */
+.lp .l-step.l-cut{padding-top:22px;}
+.lp .l-step.l-cut .l-sb{background:var(--note);border:1px solid var(--note-line);
+  border-radius:var(--r-md);margin-left:32px;padding:16px 22px;max-width:56ch;}
+.lp .l-fend{margin:40px 0 0;padding:26px 30px;background:var(--accent-bg);
+  border-radius:var(--r-lg);max-width:52ch;}
+.lp .l-fend p{margin:0;font-size:18px;line-height:1.72;letter-spacing:-.03em;font-weight:700;}
+.lp .l-fend span{display:block;margin-top:10px;font-size:15px;font-weight:400;
+  line-height:1.75;color:var(--sub);letter-spacing:0;}
 
-/* ---------- 4. 사람 ---------- */
-.lp .l-human{padding:128px 0 0;position:relative;overflow:hidden;}
-.lp .l-human .l-inner{display:flex;align-items:flex-end;gap:40px;}
-.lp .l-human .l-say{flex:1;min-width:0;max-width:620px;padding-bottom:96px;}
-.lp .l-note{background:var(--note);border:1px solid var(--note-line);border-radius:var(--r-lg);
-  padding:30px 32px;}
-.lp .l-note p{margin:0;font-size:22px;line-height:1.85;letter-spacing:-.025em;}
-.lp .l-note .l-by{margin-top:24px;display:flex;align-items:baseline;gap:10px;
-  font-family:'JetBrains Mono',monospace;font-size:12.5px;color:var(--dim);}
-.lp .l-note .l-by b{font-family:'Pretendard',sans-serif;font-size:14px;font-weight:700;color:var(--ink);}
-.lp .l-human .l-photo{flex-shrink:0;width:340px;align-self:flex-end;}
-.lp .l-human .l-photo picture{display:block;}
-.lp .l-human .l-photo img{width:100%;height:auto;display:block;}
+/* ============ 5. 교재 ============ */
+.lp .l-book{padding:118px 0 0;}
+.lp .l-book .l-bin{display:grid;grid-template-columns:300px minmax(0,1fr);gap:52px;align-items:start;}
+.lp .l-book .l-bimg img{width:100%;height:auto;display:block;border-radius:var(--r-md);
+  box-shadow:0 14px 34px rgba(34,34,30,.13);filter:saturate(.9);}
+.lp .l-book .l-bcap{margin-top:14px;font-size:12.5px;color:var(--dim);line-height:1.6;}
+.lp .l-book h2{margin:0;font-size:31px;line-height:1.34;letter-spacing:-.04em;font-weight:800;max-width:18ch;}
+.lp .l-book .l-blead{margin:18px 0 0;font-size:17px;line-height:1.82;color:var(--sub);max-width:42ch;}
+.lp .l-why{margin:30px 0 0;padding:0;list-style:none;display:grid;gap:2px;}
+.lp .l-why li{padding:18px 0;border-top:1px solid var(--line);}
+.lp .l-why li:last-child{border-bottom:1px solid var(--line);}
+.lp .l-why b{display:block;font-size:16.5px;letter-spacing:-.025em;font-weight:750;}
+.lp .l-why span{display:block;margin-top:6px;font-size:14.5px;line-height:1.75;color:var(--sub);max-width:48ch;}
 
-/* ---------- 4-B. 들은 말 (수강생 후기) ----------
-   같은 메모 종이색이다. 시스템에서 «사람이 적은 것»은 전부 이 색이고,
-   후기는 학생이 적은 것이다. 원장 메모와 크기로 갈린다 — 저쪽이 22px, 이쪽이 17px. */
-/* 섹션 머리 — 「하루」의 l-k와 같은 목소리다. 척추 옆에 붙는 작은 라벨 */
-.lp .l-hk{font-family:'JetBrains Mono',monospace;font-size:12.5px;font-weight:600;
-  color:var(--dim);letter-spacing:.18em;}
+/* ============ 6. 장치 — 시스템은 여기서 처음 나온다 ============ */
+.lp .l-sys{padding:118px 0 0;}
+.lp .l-sys h2{margin:22px 0 0;font-size:31px;line-height:1.34;letter-spacing:-.04em;
+  font-weight:800;max-width:22ch;}
+.lp .l-sys .l-slead{margin:18px 0 0;font-size:17px;line-height:1.82;color:var(--sub);max-width:44ch;}
+.lp .l-sl{margin:34px 0 0;padding:0;list-style:none;}
+.lp .l-sl li{position:relative;padding:16px 0 16px 30px;border-top:1px solid var(--line);
+  font-size:16.5px;line-height:1.72;letter-spacing:-.02em;}
+.lp .l-sl li:last-child{border-bottom:1px solid var(--line);}
+.lp .l-sl li::before{content:'';position:absolute;left:6px;top:26px;width:5px;height:5px;
+  border-radius:50%;background:var(--accent-line);}
+.lp .l-sl li b{font-weight:750;}
+.lp .l-sl li.l-lock{background:var(--note);border-radius:var(--r-md);padding-left:30px;
+  border-top-color:var(--note-line);}
+.lp .l-sl li.l-lock::before{background:var(--brand);}
+.lp .l-sl li.l-lock + li{border-top-color:var(--line);}
 
-.lp .l-heard{padding:80px 0 0;}
-.lp .l-heard .l-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:18px;margin-top:28px;}
-.lp .l-heard .l-q{background:var(--note);border:1px solid var(--note-line);
-  border-radius:var(--r-lg);padding:24px 26px;}
-.lp .l-heard .l-q p{margin:0;font-size:17px;line-height:1.8;letter-spacing:-.02em;}
-.lp .l-heard .l-who{margin-top:18px;display:flex;align-items:center;gap:9px;
-  font-size:12.5px;color:var(--dim);}
-.lp .l-heard .l-medal{font-size:11px;font-weight:700;padding:2px 8px;border-radius:var(--r-xs);
-  background:var(--accent);color:#fff;}
-.lp .l-heard .l-more{margin-top:22px;}
-/* 나머지 후기는 접어 둔다. 펴는 것은 render() 없이 클래스 하나로 —
-   전체 재렌더링이 일어나면 등장 애니메이션이 통째로 다시 돈다. */
-.lp .l-heard .l-q.l-x{display:none;}
-.lp .l-heard.l-open .l-q.l-x{display:block;}
+/* ============ 7. 들은 말 ============
+   구버전은 아홉 개를 가로로 흘리는 마퀴였다. 흐르는 글은 읽으려면 기다려야 하고
+   멈출 수도 없었다(prefers-reduced-motion 대응도 없었다). 넷을 세우고 나머지는 눌러서 편다. */
+.lp .l-heard{padding:118px 0 0;}
+.lp .l-heard .l-grid{margin-top:30px;display:grid;grid-template-columns:1fr 1fr;gap:18px;}
+.lp .l-q{background:var(--note);border:1px solid var(--note-line);border-radius:var(--r-lg);
+  padding:24px 26px;}
+.lp .l-q p{margin:0;font-size:16.5px;line-height:1.75;letter-spacing:-.02em;}
+.lp .l-q .l-who{margin-top:16px;display:flex;align-items:center;gap:9px;flex-wrap:wrap;
+  font-size:13px;color:var(--sub);}
+.lp .l-q .l-medal{background:var(--accent);color:#fff;border-radius:var(--r-pill);
+  padding:3px 10px;font-size:11.5px;font-weight:700;}
+.lp .l-heard .l-x{display:none;}
+.lp .l-heard.l-open .l-x{display:block;}
+.lp .l-more{margin-top:24px;}
 
-/* ---------- 5. 기록 (경력 · 성과) ----------
-   시안이 «자리»만 잡아 두고 비워 둔 칸(CONTENT.credits)이 여기다.
-   ⚠ 왼쪽 라벨은 mono가 아니다. 「경력」·「성과」는 낱말이라 고정폭에서 글자가 벌어진다. */
-.lp .l-cred{position:relative;display:flex;align-items:flex-start;padding:30px 0;}
-.lp .l-cred .l-t{width:132px;flex-shrink:0;text-align:right;padding-right:30px;padding-top:2px;
-  font-size:15px;font-weight:700;color:var(--sub);letter-spacing:-.02em;}
+/* ============ 8. 기록 (경력 · 성과) ============ */
+.lp .l-rec{padding:118px 0 0;}
+.lp .l-cred{position:relative;display:flex;align-items:flex-start;padding:30px 0 0;}
+.lp .l-cred .l-t{width:132px;flex-shrink:0;text-align:right;padding:2px 30px 0 0;
+  font-size:14px;font-weight:700;color:var(--sub);letter-spacing:.02em;}
 .lp .l-cred .l-b{padding-left:32px;flex:1;min-width:0;}
 .lp .l-cred ul{margin:0;padding:0;list-style:none;}
-.lp .l-cred li{font-size:17px;line-height:1.5;letter-spacing:-.025em;padding:9px 0;
-  color:var(--sub);}
-.lp .l-cred li+li{border-top:1px solid var(--line2);}
-.lp .l-cred li b{color:var(--ink);font-weight:700;}
-.lp .l-cred li.l-now{color:var(--ink);font-weight:700;}
-.lp .l-cred li.l-now::before{content:'';display:inline-block;width:6px;height:6px;
-  border-radius:50%;background:var(--brand);margin-right:9px;vertical-align:2px;}
+.lp .l-cred li{padding:9px 0;font-size:16.5px;letter-spacing:-.02em;border-bottom:1px solid var(--line2);}
+.lp .l-cred li:last-child{border-bottom:none;}
+.lp .l-cred li b{display:inline-block;min-width:78px;font-weight:750;}
+.lp .l-cred li.l-now::after{content:'현재';margin-left:10px;font-size:11.5px;font-weight:700;
+  color:var(--brand);letter-spacing:.06em;vertical-align:1px;}
 
-/* ---------- 6. 공지 ---------- */
+/* ============ 9. 공지 ============
+   재원생용 정보라 브랜드 흐름의 주인공은 아니다. 다만 앵커(sec-notice)는 유지한다 —
+   구버전 로그인 헤더가 이 앵커를 부르고 있어서, 없애면 그 링크가 죽는다. */
 .lp .l-notice{padding:110px 0 0;}
-.lp .l-notice .l-nrow{display:flex;align-items:baseline;gap:18px;padding:18px 0;
-  border-bottom:1px solid var(--line2);}
-.lp .l-notice .l-nrow:first-of-type{border-top:1px solid var(--line);}
-.lp .l-notice .l-nd{font-family:'JetBrains Mono',monospace;font-size:12.5px;color:var(--dim);
-  flex-shrink:0;width:96px;}
-.lp .l-notice .l-nt{flex:1;min-width:0;font-size:17px;letter-spacing:-.02em;}
-.lp .l-notice .l-nx{margin-top:7px;font-size:14px;color:var(--sub);line-height:1.8;
-  white-space:pre-wrap;}
+.lp .l-nrow{display:flex;align-items:flex-start;padding:15px 0;border-top:1px solid var(--line2);}
+.lp .l-nrow:first-of-type{border-top:1px solid var(--line);}
+.lp .l-nd{width:104px;flex-shrink:0;font-family:'JetBrains Mono',monospace;font-size:12.5px;
+  color:var(--dim);padding-top:3px;}
+.lp .l-nt{flex:1;min-width:0;font-size:16px;letter-spacing:-.02em;}
+.lp .l-nx{margin-top:8px;font-size:14.5px;line-height:1.75;color:var(--sub);}
 
-/* ---------- 7. 행동 ---------- */
-.lp .l-act{padding:110px 0 120px;}
-.lp .l-act .l-inner{display:flex;gap:56px;align-items:flex-start;flex-wrap:wrap;}
-.lp .l-act .l-say{flex:1;min-width:290px;}
-.lp .l-act h3{margin:0;font-family:'Noto Serif KR',serif;font-size:34px;font-weight:600;
-  letter-spacing:-.035em;}
-.lp .l-act p{margin:16px 0 0;font-size:16px;color:var(--sub);line-height:1.85;max-width:46ch;}
-.lp .l-act .l-ways{margin-top:30px;display:flex;flex-direction:column;gap:2px;}
-.lp .l-act .l-way{display:flex;align-items:baseline;gap:14px;padding:11px 0;
-  border-top:1px solid var(--line2);font-size:14.5px;}
-.lp .l-act .l-way span{width:78px;flex-shrink:0;font-size:12.5px;color:var(--dim);}
-.lp .l-form{width:400px;flex-shrink:0;background:var(--card);border:1px solid var(--line);
-  border-radius:var(--r-xl);padding:30px 32px;}
-.lp .l-form .l-fk{font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--dim);
-  letter-spacing:.16em;margin-bottom:20px;}
-.lp .l-form label{display:block;font-size:12.5px;font-weight:700;color:var(--sub);
-  margin:0 0 7px;letter-spacing:-.01em;}
-.lp .l-form label+*{margin-bottom:17px;}
+/* ============ 10. 상담 ============ */
+.lp .l-act{margin-top:118px;background:var(--card);border-top:1px solid var(--line);
+  padding:104px 0 112px;}
+.lp .l-act .l-inner{display:grid;grid-template-columns:minmax(0,1fr) 396px;gap:60px;align-items:start;}
+.lp .l-act h2{margin:22px 0 0;font-size:33px;line-height:1.32;letter-spacing:-.04em;
+  font-weight:800;max-width:16ch;}
+.lp .l-act p{margin:18px 0 0;font-size:16.5px;line-height:1.82;color:var(--sub);max-width:40ch;}
+.lp .l-ways{margin-top:32px;display:grid;gap:0;}
+.lp .l-way{display:flex;gap:16px;padding:14px 0;border-top:1px solid var(--line);font-size:15px;}
+.lp .l-way:last-child{border-bottom:1px solid var(--line);}
+.lp .l-way span{width:88px;flex-shrink:0;color:var(--dim);font-size:13.5px;padding-top:1px;}
+.lp .l-form{background:var(--sunk);border:1px solid var(--line);border-radius:var(--r-xl);
+  padding:30px 30px 32px;}
+.lp .l-fk{font-size:12.5px;font-weight:700;letter-spacing:.2em;color:var(--dim);margin-bottom:20px;}
+.lp .l-form label{display:block;font-size:13px;font-weight:700;color:var(--sub);margin:16px 0 7px;}
+.lp .l-form label:first-of-type{margin-top:0;}
 .lp .l-form input,.lp .l-form select,.lp .l-form textarea{
-  width:100%;border:1px solid var(--line);border-radius:var(--r-md);background:var(--sunk);
-  padding:12px 14px;font-family:inherit;font-size:14.5px;color:var(--ink);outline:none;
-  resize:vertical;transition:border-color var(--t),box-shadow var(--t);}
-.lp .l-form input:focus,.lp .l-form select:focus,.lp .l-form textarea:focus{
-  border-color:var(--accent);box-shadow:0 0 0 3px rgba(60,48,52,.12);}
-.lp .l-form textarea{min-height:96px;}
-.lp .l-form .l-btn{width:100%;margin-top:4px;}
+  width:100%;background:var(--card);border:1px solid var(--line);border-radius:var(--r-sm);
+  padding:11px 13px;font-family:inherit;font-size:15px;color:var(--ink);}
+.lp .l-form textarea{min-height:96px;resize:vertical;line-height:1.65;}
+.lp .l-form input::placeholder,.lp .l-form textarea::placeholder{color:var(--dim);}
+.lp .l-form .l-btn{width:100%;margin-top:24px;padding:15px 20px;font-size:15.5px;}
 
-.lp .l-foot{border-top:1px solid var(--line);padding:38px 0 52px;margin-top:24px;}
-.lp .l-foot .l-inner{display:flex;align-items:center;gap:20px;flex-wrap:wrap;}
-.lp .l-foot img{height:34px;width:auto;opacity:.62;}
-.lp .l-foot .l-meta{margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:11.5px;
-  color:var(--dim);letter-spacing:.06em;text-align:right;line-height:1.9;}
-.lp .l-foot .l-tlog{font-family:'Pretendard',sans-serif;letter-spacing:0;font-size:12px;
-  cursor:pointer;text-decoration:underline;text-underline-offset:3px;}
-.lp .l-foot .l-tlog:hover{color:var(--ink);}
+/* ---------- 푸터 ---------- */
+.lp .l-foot{border-top:1px solid var(--line);padding:38px 0 46px;background:var(--paper);}
+.lp .l-foot .l-inner{display:flex;align-items:flex-start;gap:24px;}
+.lp .l-foot img{height:30px;width:auto;display:block;}
+.lp .l-meta{margin-left:auto;text-align:right;font-family:'JetBrains Mono',monospace;
+  font-size:11.5px;line-height:1.9;color:var(--dim);letter-spacing:.06em;}
+.lp .l-tlog{cursor:pointer;text-decoration:underline;text-underline-offset:3px;
+  font-family:'Pretendard',sans-serif;letter-spacing:0;}
 
 /* ---------- 등장 ---------- */
 .lp .l-rise{opacity:0;transform:translateY(14px);
@@ -1336,46 +1386,85 @@
 
 /* ---------- 반응형 ----------
    척추는 사라지지 않는다. 좁아지면 왼쪽 끝으로 붙고 시각이 문장 위로 올라간다. */
-@media (max-width:980px){
-  .lp .l-act .l-inner{display:block;}
-  .lp .l-form{width:auto;margin-top:40px;}
+@media (max-width:1080px){
+  .lp .l-hero .l-in{grid-template-columns:minmax(0,1fr) 290px;gap:40px;}
+  .lp .l-act .l-inner{grid-template-columns:minmax(0,1fr) 340px;gap:40px;}
+  .lp .l-book .l-bin{grid-template-columns:250px minmax(0,1fr);gap:40px;}
 }
 @media (max-width:900px){
   .lp .l-spine{left:9px;}
   .lp .l-dot{left:5px;}
   .lp .l-col{padding-left:44px;}
-  .lp .l-hero{padding-top:96px;}
-  .lp .l-hero .l-logo{width:74%;min-width:0;}
-  .lp .l-row,.lp .l-cred{display:block;padding:26px 0 26px 44px;}
-  .lp .l-row .l-t,.lp .l-cred .l-t{width:auto;text-align:left;padding:0 0 8px;font-size:15px;}
-  .lp .l-row .l-b,.lp .l-cred .l-b{padding-left:0;}
-  .lp .l-row .l-s{font-size:21px;margin-top:9px;}
-  .lp .l-break{margin-left:44px;}
-  .lp .l-turn{padding:88px 0;}
-  .lp .l-turn h2{font-size:36px;}
-  .lp .l-turn p{font-size:16px;}
-  .lp .l-human{padding-top:88px;}
-  .lp .l-human .l-inner{display:block;}
-  .lp .l-human .l-say{padding-bottom:40px;max-width:none;}
-  .lp .l-human .l-photo{width:230px;margin-left:auto;}
-  .lp .l-note p{font-size:18px;}
-  .lp .l-heard{padding-top:72px;}
+
+  .lp .l-hero{padding-top:92px;}
+  .lp .l-hero .l-in{grid-template-columns:1fr;gap:34px;}
+  .lp .l-hero .l-logo{width:66%;max-width:260px;min-width:0;}
+  .lp .l-lead{font-size:34px;max-width:none;}
+  .lp .l-sub{font-size:16px;max-width:none;}
+  /* 사진이 문장을 밀어내지 않도록 폭을 묶고 오른쪽에 세운다.
+     모바일 첫 화면에서도 «얼굴 + 한 문장»이 함께 보여야 한다. */
+  .lp .l-heroimg{width:212px;margin-left:auto;margin-right:0;}
+
+  .lp .l-me{padding-top:88px;}
+  .lp .l-me .l-mt{font-size:20px;max-width:none;}
+  .lp .l-me .l-mx{max-width:none;}
+
+  .lp .l-prin{margin-top:88px;padding:80px 0 84px;}
+  .lp .l-p h2{font-size:27px;max-width:none;}
+  .lp .l-p p{font-size:16px;max-width:none;}
+
+  .lp .l-flow{padding-top:88px;}
+  .lp .l-fq{max-width:none;padding:22px 24px;}
+  .lp .l-fq p{font-size:17px;}
+  .lp .l-step{display:block;padding:24px 0 0;}
+  .lp .l-step .l-sn{width:auto;text-align:left;padding:0 0 7px;font-size:13px;}
+  .lp .l-step .l-sb{padding-left:0;}
+  .lp .l-step .l-think{font-size:18px;}
+  .lp .l-step.l-cut .l-sb{margin-left:0;padding:15px 18px;}
+  .lp .l-fend{max-width:none;padding:22px 24px;}
+  .lp .l-fend p{font-size:17px;}
+
+  .lp .l-book{padding-top:88px;}
+  .lp .l-book .l-bin{grid-template-columns:1fr;gap:30px;}
+  .lp .l-book .l-bimg{width:216px;}
+  .lp .l-book h2{font-size:25px;max-width:none;}
+  .lp .l-book .l-blead{max-width:none;}
+  .lp .l-why span{max-width:none;}
+
+  .lp .l-sys{padding-top:88px;}
+  .lp .l-sys h2{font-size:25px;max-width:none;}
+  .lp .l-sys .l-slead{max-width:none;}
+  .lp .l-sl li{font-size:15.5px;}
+
+  .lp .l-heard{padding-top:88px;}
   .lp .l-heard .l-grid{grid-template-columns:1fr;}
-  .lp .l-heard .l-q p{font-size:15.5px;}
+  .lp .l-q p{font-size:15.5px;}
+
+  .lp .l-rec{padding-top:88px;}
+  .lp .l-cred{display:block;padding:26px 0 0;}
+  .lp .l-cred .l-t{width:auto;text-align:left;padding:0 0 10px;}
+  .lp .l-cred .l-b{padding-left:0;}
   .lp .l-cred li{font-size:15.5px;}
-  .lp .l-notice{padding-top:80px;}
-  .lp .l-notice .l-nrow{display:block;}
-  .lp .l-notice .l-nd{width:auto;margin-bottom:6px;}
-  .lp .l-notice .l-nt{font-size:15.5px;}
-  .lp .l-act{padding:80px 0 88px;}
-  .lp .l-act h3{font-size:26px;}
+
+  .lp .l-notice{padding-top:84px;}
+  .lp .l-nrow{display:block;}
+  .lp .l-nd{width:auto;margin-bottom:6px;}
+  .lp .l-nt{font-size:15.5px;}
+
+  .lp .l-act{margin-top:88px;padding:80px 0 88px;}
+  .lp .l-act .l-inner{grid-template-columns:1fr;gap:40px;}
+  .lp .l-act h2{font-size:26px;max-width:none;}
+  .lp .l-act p{max-width:none;}
 }
 @media (max-width:560px){
   .lp .l-wrap{padding:0 20px;}
-  .lp .l-hero .l-logo{width:88%;}
-  .lp .l-turn h2{font-size:29px;}
+  .lp .l-hero .l-logo{width:76%;}
+  .lp .l-lead{font-size:29px;}
+  .lp .l-heroimg{width:184px;}
+  .lp .l-p h2{font-size:24px;}
   .lp .l-form{padding:24px 22px;}
-  .lp .l-foot .l-meta{margin-left:0;text-align:left;width:100%;}
+  .lp .l-foot .l-inner{display:block;}
+  .lp .l-meta{margin-left:0;text-align:left;width:100%;margin-top:20px;}
 }
 
 @media (prefers-reduced-motion:reduce){
@@ -5037,41 +5126,84 @@ function render(){
    notificationBellHTML도 함께 지웠다 — 학생은 bellHTML, 관리자는 상단바가 맡는다. */
 
 
-/* =================== 공개 홈 — 랜딩 「하루」 (landing-v2/index.html) ===================
-   **이 학원이 일하는 하루를 방문자가 목격한다.**
-   기존 5안이 전부 «수학»을 소재로 썼다면 이번은 «서비스»를 소재로 쓴다.
-   컨셉과 기각 사유는 CLAUDE.md 6-B에 있다.
+/* =================== 공개 홈 — 랜딩 「생각의 흐름」 (2026-08-13 전면 재구성) ===================
+   **주인공은 시스템이 아니라 수학강사 김하현이다.**
 
-   콘텐츠는 전부 아래 상수에 모여 있다. 레이아웃은 콘텐츠를 모른다 —
-   문자열만 갈면 페이지가 그대로 돌아간다.
+   전판(「하루」)은 «이 학원이 일하는 하루»를 보여 주는 페이지였다. 태도는 보였지만
+   그 태도가 «누구의 것»인지가 흐렸고, 이름은 로고에만 있었다.
+   이번 판의 뼈대는 사용자가 직접 말한 **수업의 원칙 셋**이다.
 
-   **시안에 없던 것을 셋 붙였다.** 시안은 개념 페이지라 다섯 장면(도착·하루·전환·사람·행동)뿐인데,
-   실서비스 홈은 진짜 내용을 싣고 있었다. 없애면 안 되는 것만 골라 «하루»의 언어로 옮겼다.
-     들은 말 — 수강생 후기 9개. 마퀴(자동으로 흐르던 띠)를 버리고 메모 종이로 세웠다.
-                시스템에서 «사람이 적은 것»은 전부 이 종이색이고, 후기는 학생이 적은 것이다.
-                (마퀴는 prefers-reduced-motion 대응도 없었다 — 9절 7번)
-     기록     — 경력·성과. 시안이 CONTENT.credits로 «자리»만 잡아 둔 칸이 바로 여기다
-     공지     — 실데이터. 헤더 메뉴(scrollToId('sec-notice'))가 걸려 있다
+     01 개념 — 개념의 원리를 정확히 이해하며 학습한다
+     02 문제 — 풀이법을 주지 않고, 발문에서 스스로 떠올리는 순서를 만들어 준다
+     03 반복 — 그 흐름이 몸에 붙을 때까지 따라간다 (교재 · 클리닉 · 오답)
 
-   **커리큘럼(고1/고2/고3 카드 3개)은 뺐다.** 고등수학 어디나 같은 내용이라 브랜드가 없다 —
-   랜딩 5안을 기각한 이유(「아무 수학 강사나 쓸 수 있는 소재」)에 그대로 걸린다.
-   필요하면 상담에서 말한다.
+   **오답 · 변형문항 · 데일리퀴즈는 «원칙 03의 도구»로 뒤에 선다** — 전체의 70% 지점에서
+   처음 등장한다. 「AI가 이런 기능을 합니다」로 시작하면 이 페이지의 순서가 뒤집힌다.
+
+   ⚠ **사실이 아닌 것을 쓰지 않는다.** 2026-08-13에 전판의 두 문장
+   (「한 학생을 이해하는 데는 한 학기가 걸립니다」·「왜 그 풀이가 성립하는지를 설명하는」)이
+   **사용자의 말이 아니라 시안 작업 중에 지어낸 것**임이 드러나 통째로 내렸다.
+   인물 사진 alt의 「원장」도 사실이 아니었다 — **학원에 소속된 개인 강사**다.
+   「김하현수학연구소」는 학원 이름이 아니라 **개인 브랜드명**이다.
+   → 아래 상수의 문장은 전부 사용자의 말에서 나왔거나, 그 말을 벗어나지 않는 범위에서만 다듬은 것이다.
 
    ⚠ 시안의 <script>는 그대로 못 옮긴다. render()가 innerHTML로 넣는 문자열이라
-   그 안의 <script>는 실행되지 않는다. 등장·상단바는 mountLanding()이 맡는다. */
+   그 안의 <script>는 실행되지 않는다. 등장·상단바는 mountLanding()이 맡는다.
+   수식($…$)은 render() 끝의 renderMathInElement가 그린다 — 여기서 건드리지 않는다. */
 
 const HOME_CONTENT = {
-  /* 실제 반 시간표에서 나온 값이다. 지어낸 시각이 아니다.
-     수치를 쓰지 않는다 — 공개 페이지의 숫자는 방문자가 사실로 읽는다. */
-  log: [
-    ['16:00', '수업', '고1 공통수학2 — 오늘 나간 단원이 반의 진도에 남는다'],
-    ['19:00', '수업', '고2 미적분Ⅰ — 스물두 명의 출결이 그날의 기록이 된다'],
-    ['21:10', '수업', '고3 미적분Ⅱ — 마지막 반이 끝난다'],
-    ['21:14', '검토', '틀린 문항에서 쌍둥이 문항이 만들어진다'],
-    ['23:41', '질문', '「극대·극소 판정에서 f″를 꼭 봐야 하나요?」']
+  /* 원칙 셋. 큰 문장은 사용자의 말을 그대로 옮기거나 한 겹만 다듬은 것이고,
+     아래 설명은 그 말이 담고 있는 것에서 벗어나지 않는 선까지만 썼다. */
+  principles: [
+    ['01', '개념',
+     '개념은 외우는 것이 아니라, 원리를 이해하는 것입니다',
+     '공식을 먼저 건네면 그 순간은 빠릅니다. 개념 수업에서는 그 개념이 <b>왜 그렇게 되는지</b>, 원리를 정확히 짚고 갑니다.'],
+    ['02', '문제',
+     '풀이법을 알려주지 않습니다. 떠올리는 순서를 만들어 드립니다',
+     '문제를 푸는 힘은 풀이를 외운 양이 아니라, <b>발문을 읽고 무엇을 떠올릴지</b> 아는 데서 나옵니다. 수업에서는 그 생각의 흐름을 함께 세웁니다.'],
+    ['03', '반복',
+     '그 흐름이 몸에 붙을 때까지 따라갑니다',
+     '한 번 세운 흐름도 시간이 지나면 흐려집니다. 그래서 <b>교재를 직접 만들고</b>, 클리닉으로 따로 보고, 틀린 문제가 다시 돌아오게 해 두었습니다.']
   ],
-  /* 날짜가 넘어가는 칸. 이 한 줄이 «밤늦게 물어도 아침에 답이 온다»를 주장 없이 말한다. */
-  next: ['09:12', '답변', '다음 날 아침, 답이 도착한다'],
+
+  /* 시연 — 원칙 02를 «말하지 않고 보여주는» 자리.
+     사용자가 실제로 수업에서 쓰는 항등식 문항의 생각 흐름을 그대로 옮겼다.
+     [보이는 것, 떠올리는 것, 갈래를 지우는 단계인가] */
+  flow: [
+    ['발문에서 보이는 것',
+     '「임의의 실수 $x$에 대하여 성립한다」 — 이건 방정식이 아니라 <b>항등식</b>이다', 0],
+    ['항등식이라면',
+     '여기서 이어지는 길은 둘뿐이다 — <b>수치대입</b> 또는 <b>계수비교</b>', 0],
+    ['둘 중 하나를 지운다',
+     '계수를 비교하려면 양변을 정리해 식을 세울 수 있어야 한다. 이 문제는 그럴 수 없다 — <b>계수비교는 탈락</b>', 1],
+    ['남은 길',
+     '<b>수치대입</b> 하나다', 0],
+    ['무엇을 대입할 것인가',
+     '구해야 하는 것이 $f(3)$이니, 대입할 값도 정해진다 — <b>$x=3$</b>', 0],
+    ['그리고',
+     '정답에 도달한다', 0]
+  ],
+
+  /* 교재를 직접 만드는 이유 — 사용자의 말 그대로다. */
+  bookWhy: [
+    ['흐름에 맞는 문제만 고릅니다',
+     '수업에서 세운 생각의 순서를 그대로 따라올 수 있는 문항만 직접 골라 싣습니다.'],
+    ['지역과 학교를 봅니다',
+     '학교마다 시험의 결이 다릅니다. 그 특색에 맞춘 교재를 따로 만듭니다.'],
+    ['학생 수준에 맞춥니다',
+     '같은 단원이라도 지금 그 학생이 훈련해야 할 문항은 다릅니다.']
+  ],
+
+  /* 장치 — **실제로 구현되어 돌아가는 것만** 적는다. [문장, 잠금 카드인가]
+     없는 기능을 있는 것처럼 쓰지 않는다. */
+  system: [
+    ['제가 낸 시험지가 <b>문항 단위로</b> 그대로 남습니다.', 0],
+    ['학생이 틀린 문항은 그 학생의 기록이 됩니다 — <b>어디서 흐름이 끊겼는지</b>가 남습니다.', 0],
+    ['같은 구조의 문제를 하나 더 만들어, <b>같은 흐름을 한 번 더</b> 떠올리게 합니다.', 0],
+    ['<b>제가 보지 않은 문제는 학생에게 나가지 않습니다.</b> 검토를 통과하지 못한 것은 공개 자체가 막혀 있습니다.', 1],
+    ['<b>3일 · 7일 · 14일</b> 뒤에 그 문제가 다시 옵니다. 세 번을 다 맞히면 그때 놓아 줍니다.', 0],
+    ['지금 준비하는 <b>시험 범위 밖</b>의 문제는 나오지 않습니다.', 0]
+  ],
 
   /* 경력·성과 — 실존 인물에 대한 사실이라 지어내지 않는다. 구버전 홈에 있던 것을 그대로 옮겼다. */
   career: [
@@ -5114,16 +5246,7 @@ function lpScroll(id){
 
 function homeHTML(){
   const now = new Date();
-  const p2 = n => String(n).padStart(2, '0');
-  const tomorrow = shiftYmd(todayStr(), 1);   // 문자열 산술. toISOString()으로 하면 하루가 깎인다
   const cu = state.currentUser;
-
-  const logRow = (e, dotTop) => `
-    <div class="l-row l-rise">
-      <div class="l-dot" style="top:${dotTop}px;"></div>
-      <div class="l-t">${e[0]}</div>
-      <div class="l-b"><div class="l-k">${e[1]}</div><p class="l-s">${escHtml(e[2])}</p></div>
-    </div>`;
 
   const review = (r, hidden) => `
     <div class="l-q${hidden ? ' l-x' : ''}">
@@ -5131,6 +5254,27 @@ function homeHTML(){
       <div class="l-who"><span>${escHtml(r[1])}</span>${
         r[2] ? `<span class="l-medal">${escHtml(r[2])}</span>` : ''}</div>
     </div>`;
+
+  /* 원칙 하나. 문장은 상수에서 오고 레이아웃은 내용을 모른다. */
+  const principle = p => `
+    <div class="l-p">
+      <div class="l-col">
+        <div class="l-pn l-rise"><em>${p[0]}</em>${escHtml(p[1])}</div>
+        <h2 class="l-rise">${escHtml(p[2])}</h2>
+        <p class="l-rise">${p[3]}</p>
+      </div>
+    </div>`;
+
+  /* 시연 한 단계. «보이는 것»과 «떠올리는 것»을 갈라 둔다 —
+     이 페이지가 파는 것은 답이 아니라 그 사이의 화살표다. */
+  const step = (s, i) => `
+    <li class="l-step l-rise${s[2] ? ' l-cut' : ''}">
+      <div class="l-sn">${String(i+1).padStart(2,'0')}</div>
+      <div class="l-sb">
+        <div class="l-see">${escHtml(s[0])}</div>
+        <div class="l-think">${s[1]}</div>
+      </div>
+    </li>`;
 
   return `
   <div class="lp">
@@ -5157,114 +5301,181 @@ function homeHTML(){
   <main id="lp-main">
 
     <!-- ============ 1. 도착 ============
-         판매 문구를 두지 않는다. 이름과 날짜뿐이다.
-         브랜드 이름은 로고로만 말한다 — 같은 이름을 서체로 또 쓰면 한 이름을 두 목소리로 말하게 된다. -->
+         얼굴과 방식이 «같은 화면»에 있어야 한다.
+         얼굴만 있으면 인물 포트폴리오가 되고(랜딩 5안 03이 그래서 기각됐다),
+         문장만 있으면 누구 말인지 모른다.
+         로고는 브랜드 이름, 그 아래 줄은 사람 이름 — 한 이름을 두 목소리로 말하는 것이 아니다. -->
     <section class="l-hero">
       <div class="l-wrap l-rail">
         <div class="l-spine l-draw" id="lp-spine"></div>
         <div class="l-dot" style="top:8px;"></div>
         <div class="l-col">
-          <img class="l-logo l-rise" src="${LOGO_H1}"
-               alt="김하현수학연구소 — KIM HA HYUN MATH" width="966" height="223">
-          <!-- 요일은 mono 밖에 둔다. JetBrains Mono에 한글이 없어 「금요일」이 「금 요 일」로 벌어진다. -->
-          <div class="l-date l-rise">${now.getFullYear()} · ${p2(now.getMonth()+1)} · ${p2(now.getDate())}<span
-            class="l-dow">${WEEKDAY_LABEL[now.getDay()]}요일</span></div>
-          <div class="l-sub l-rise">오늘의 기록</div>
+          <div class="l-in">
+            <div>
+              <img class="l-logo l-rise" src="${LOGO_H1}"
+                   alt="김하현수학연구소" width="966" height="223">
+              <div class="l-name l-rise"><b>수학강사 김하현</b><span>KIM HA HYUN</span></div>
+              <h1 class="l-lead l-rise">풀이법을 외우게 하지 않습니다</h1>
+              <p class="l-sub l-rise">문제의 발문에서 <b>스스로 생각을 떠올리는 순서</b>를 만들어 드립니다.
+                그 순서가 몸에 붙을 때까지 따라갑니다.</p>
+            </div>
+            <div class="l-heroimg l-rise">
+              <!-- 컷아웃이라 투명 배경이 필요하다. profile.jpg(84KB)는 배경이 있어 폴백으로 못 쓴다.
+                   webp 99KB / png 2.2MB — webp를 못 읽는 브라우저만 png로 내려간다. -->
+              <picture>
+                <source srcset="profile.webp" type="image/webp">
+                <img src="profile.png" alt="수학강사 김하현" width="1299" height="1624">
+              </picture>
+            </div>
+          </div>
         </div>
       </div>
     </section>
 
-    <!-- ============ 2. 하루 ============ -->
-    <section class="l-day" aria-label="오늘의 기록">
-      <div class="l-wrap l-rail">
-        <div class="l-spine"></div>
-        ${HOME_CONTENT.log.map(e=>logRow(e, 44)).join('')}
-        <div class="l-break l-rise">다음 날　${tomorrow.slice(5,7)} · ${tomorrow.slice(8,10)}</div>
-        ${logRow(HOME_CONTENT.next, 44)}
-      </div>
-    </section>
-
-    <!-- ============ 3. 전환 ============
-         페이지에서 유일하게 큰 소리. 로고 차콜을 «면»으로 쓰는 단 한 번.
-         척추가 색 위로도 이어진다 — 선이 장식이 아니라 구조라는 걸 보여주는 지점.
-         위의 로그가 «증거», 이 문장이 «주장», 아래 메모가 «이유» — 셋이 서로 다른 일을 한다. -->
-    <section class="l-turn">
+    <!-- ============ 2. 사람 ============ -->
+    <section class="l-me" id="sec-about">
       <div class="l-wrap l-rail">
         <div class="l-spine"></div>
         <div class="l-dot" style="top:4px;"></div>
         <div class="l-col">
-          <div class="l-k l-rise">기록</div>
-          <h2 class="l-rise">짐작으로 가르치지 않습니다</h2>
-          <p class="l-rise">틀린 문항은 쌍둥이 문항이 되어 다시 돌아옵니다.
-            검토를 거친 것만 학생에게 나갑니다.</p>
+          <div class="l-hk l-rise">사람</div>
+          <p class="l-mt l-rise">제가 가르치는 것은 풀이가 아니라,
+            문제 앞에서 <b>무엇을 먼저 떠올려야 하는가</b>입니다.</p>
+          <p class="l-mx l-rise">스카이에듀 인터넷 강의와 대치명인학원 · 목동 사과나무학원 ·
+            메가스터디 삽자루 수학학원을 거쳐, 지금은 <b>구주이배 수학학원 광진본원</b>에서
+            고등부 수업을 하고 있습니다. 문항을 직접 만들어 온 시간이 길고(CSM17 문항 제작·판매),
+            그 습관이 지금 쓰는 교재와 시험지로 이어집니다.</p>
         </div>
       </div>
     </section>
 
-    <!-- ============ 4. 사람 ============
-         메모 종이색은 시스템에서 «사람이 적은 것»에만 쓰는 색이다.
-         페이지가 기록에서 사람으로 넘어가는 지점이라 여기서 처음 쓴다. -->
-    <section class="l-human" id="sec-about">
-      <div class="l-wrap">
-        <div class="l-inner">
-          <div class="l-say l-rise">
-            <div class="l-note">
-              <p>수업은 두 시간이지만,<br>한 학생을 이해하는 데는 한 학기가 걸립니다.<br>그래서 전부 적습니다.</p>
-              <div class="l-by"><b>김하현</b><span>김하현수학연구소</span></div>
-            </div>
-          </div>
-          <div class="l-photo l-rise">
-            <!-- 컷아웃이라 투명 배경이 필요하다. profile.jpg(84KB)는 배경이 있어 폴백으로 못 쓴다.
-                 webp 99KB / png 2.2MB — webp를 못 읽는 브라우저만 png로 내려간다. -->
-            <picture>
-              <source srcset="profile.webp" type="image/webp">
-              <img src="profile.png" alt="김하현 원장" loading="lazy" decoding="async"
-                   width="1299" height="1624">
-            </picture>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ============ 4-B. 들은 말 ============
-         구버전은 아홉 개를 가로로 흘리는 마퀴였다. 흐르는 글은 읽으려면 기다려야 하고,
-         멈출 수도 없었다. 넷을 세워 두고 나머지는 눌러서 편다. -->
-    <!-- 척추를 달지 않는다. 위의 원장 메모와 «같은 덩이»다 —
-         척추는 «기록»의 것이고 이 둘은 «사람»의 것이다. 페이지가 그 지점에서 반으로 갈린다. -->
-    <section class="l-heard" id="sec-review">
-      <div class="l-wrap">
-        <div class="l-hk l-rise">들은 말</div>
-        <div class="l-grid">
-          ${HOME_REVIEWS.map((r,i)=>review(r, i>=4)).join('')}
-        </div>
-        ${HOME_REVIEWS.length>4 ? `<div class="l-more l-rise">
-          <button class="l-btn l-sm l-ghost" onclick="
-            this.closest('.l-heard').classList.add('l-open'); this.parentElement.remove()">
-            ${HOME_REVIEWS.length-4}개 더 보기</button>
-        </div>` : ''}
-      </div>
-    </section>
-
-    <!-- ============ 5. 기록 (경력 · 성과) ============
-         시안이 «자리»만 잡아 두고 비워 둔 칸(CONTENT.credits)이 여기다. -->
-    <section class="l-day" style="padding-top:110px;" aria-label="기록">
+    <!-- ============ 3. 원칙 셋 ============
+         페이지에서 유일하게 큰 소리. 로고 차콜을 «면»으로 쓰는 단 한 번이다.
+         척추가 색 위로도 이어진다 — 선이 장식이 아니라 구조라는 걸 보여주는 지점.
+         01 → 02 → 03은 한 학생 안에서 순서대로 일어나는 일이라 한 줄기에 꿰인다. -->
+    <section class="l-prin" aria-label="수업의 원칙">
       <div class="l-wrap l-rail">
         <div class="l-spine"></div>
-        <div class="l-col" style="padding-bottom:26px;">
+        <div class="l-col" style="padding-bottom:6px;">
+          <div class="l-hk l-rise">수업의 원칙</div>
+        </div>
+        ${HOME_CONTENT.principles.map(principle).join('')}
+      </div>
+    </section>
+
+    <!-- ============ 4. 시연 ============
+         원칙 02를 «말하지 않고 보여준다». 이 페이지의 심장이다.
+         답은 끝까지 나오지 않는다 — 파는 것이 답이 아니라 순서이기 때문이다.
+         수식은 render() 끝의 renderMathInElement가 그린다. -->
+    <section class="l-flow" aria-label="생각의 흐름">
+      <div class="l-wrap l-rail">
+        <div class="l-spine"></div>
+        <div class="l-dot" style="top:4px;"></div>
+        <div class="l-col">
+          <div class="l-hk l-rise">생각의 흐름</div>
+          <div class="l-fq l-rise">
+            <div class="l-fqk">문제</div>
+            <p>임의의 실수 $x$에 대하여 등식이 성립할 때, $f(3)$의 값을 구하시오.</p>
+          </div>
+          <ul class="l-steps">
+            ${HOME_CONTENT.flow.map(step).join('')}
+          </ul>
+          <div class="l-fend l-rise">
+            <p>여기까지 오는 동안, 제가 알려 드린 풀이는 하나도 없습니다.
+              <span>학생이 발문에서 하나씩 떠올린 것입니다.
+                이 순서가 몸에 붙으면 처음 보는 문제 앞에서도 손이 멈추지 않습니다.</span></p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 5. 교재 ============ -->
+    <section class="l-book" aria-label="교재">
+      <div class="l-wrap l-rail">
+        <div class="l-spine"></div>
+        <div class="l-dot" style="top:4px;"></div>
+        <div class="l-col">
+          <div class="l-hk l-rise" style="margin-bottom:30px;">교재</div>
+          <div class="l-bin">
+            <div class="l-bimg l-rise">
+              <img src="book-naesin.jpg" alt="직접 만든 내신대비 교재 「기출변형」"
+                   loading="lazy" decoding="async" width="495" height="615">
+              <!-- ⚠ 지금 것은 표지 시안(목업)이다. 실물 사진을 받으면 갈아끼운다.
+                   원본 책목업.png은 작은 글씨가 깨져 있어 그 부분을 잘라 냈다. -->
+              <div class="l-bcap">내신대비 교재 「기출변형」 — 표지 시안</div>
+            </div>
+            <div>
+              <h2 class="l-rise">교재를 직접 만듭니다</h2>
+              <p class="l-blead l-rise">시중 교재는 이것저것 담아 둔 책입니다.
+                제가 말하려는 흐름에 맞는 문제만 골라 실어야,
+                <b>수업에서 세운 순서가 문제집에서도 그대로 이어집니다.</b></p>
+              <ul class="l-why">
+                ${HOME_CONTENT.bookWhy.map(w=>`<li class="l-rise">
+                  <b>${escHtml(w[0])}</b><span>${escHtml(w[1])}</span></li>`).join('')}
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 6. 장치 ============
+         **시스템은 여기서 처음 나온다.** 전체의 70% 지점이다.
+         「AI가 이런 기능을 합니다」로 시작하면 이 페이지의 순서가 뒤집힌다 —
+         이것들은 전부 원칙 03을 지키기 위한 도구다. -->
+    <section class="l-sys" aria-label="장치">
+      <div class="l-wrap l-rail">
+        <div class="l-spine"></div>
+        <div class="l-dot" style="top:4px;"></div>
+        <div class="l-col">
+          <div class="l-hk l-rise">장치</div>
+          <h2 class="l-rise">혼자서는 모든 학생의 흐름을 다 따라갈 수 없어서, 만들었습니다</h2>
+          <p class="l-slead l-rise">수업에서 한 번 세운 흐름도 시간이 지나면 흐려집니다.
+            누가 어디에서 흐름이 끊겼는지 기억해 두려고 만든 것들입니다.</p>
+          <ul class="l-sl">
+            ${HOME_CONTENT.system.map(s=>`<li class="l-rise${s[1]?' l-lock':''}">${s[0]}</li>`).join('')}
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 7. 들은 말 ============
+         메모 종이색은 시스템에서 «사람이 적은 것»에만 쓰는 색이다. 후기는 학생이 적은 것이다.
+         넷을 세워 두고 나머지는 눌러서 편다 — 여는 것은 render() 없이 클래스 하나로.
+         전체 재렌더링이 일어나면 등장 애니메이션이 통째로 다시 돈다. -->
+    <section class="l-heard" id="sec-review">
+      <div class="l-wrap l-rail">
+        <div class="l-spine"></div>
+        <div class="l-dot" style="top:4px;"></div>
+        <div class="l-col">
+          <div class="l-hk l-rise">들은 말</div>
+          <div class="l-grid">
+            ${HOME_REVIEWS.map((r,i)=>review(r, i>=4)).join('')}
+          </div>
+          ${HOME_REVIEWS.length>4 ? `<div class="l-more l-rise">
+            <button class="l-btn l-sm l-ghost" onclick="
+              this.closest('.l-heard').classList.add('l-open'); this.parentElement.remove()">
+              ${HOME_REVIEWS.length-4}개 더 보기</button>
+          </div>` : ''}
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 8. 기록 (경력 · 성과) ============ -->
+    <section class="l-rec" aria-label="기록">
+      <div class="l-wrap l-rail">
+        <div class="l-spine"></div>
+        <div class="l-dot" style="top:4px;"></div>
+        <div class="l-col" style="padding-bottom:8px;">
           <div class="l-hk l-rise">기록</div>
-          <p class="l-rise" style="margin:18px 0 0;font-size:19px;line-height:1.75;
-            letter-spacing:-.03em;max-width:34ch;">공식을 외우는 수업이 아니라,
-            <b>왜 그 풀이가 성립하는지</b>를 설명하는 수업을 지향합니다.</p>
         </div>
         <div class="l-cred l-rise">
-          <div class="l-dot" style="top:40px;"></div>
           <div class="l-t">경력</div>
           <div class="l-b"><ul>
             ${HOME_CONTENT.career.map(c=>`<li class="${c[1]?'l-now':''}">${escHtml(c[0])}</li>`).join('')}
           </ul></div>
         </div>
         <div class="l-cred l-rise">
-          <div class="l-dot" style="top:40px;"></div>
           <div class="l-t">성과</div>
           <div class="l-b"><ul>
             ${HOME_CONTENT.achievements.map(a=>`<li><b>${escHtml(a[0])}</b> ${escHtml(a[1])}</li>`).join('')}
@@ -5273,13 +5484,15 @@ function homeHTML(){
       </div>
     </section>
 
-    <!-- ============ 6. 공지 ============ -->
+    <!-- ============ 9. 공지 ============
+         재원생용 정보라 브랜드 흐름의 주인공은 아니다. 다만 앵커는 유지한다 —
+         구버전 로그인 헤더가 scrollToId('sec-notice')로 이걸 부르고 있어서 없애면 링크가 죽는다. -->
     <section class="l-notice" id="sec-notice">
       <div class="l-wrap l-rail">
         <div class="l-spine"></div>
         <div class="l-dot" style="top:4px;"></div>
         <div class="l-col">
-          <div class="l-hk l-rise" style="margin-bottom:26px;">공지</div>
+          <div class="l-hk l-rise" style="margin-bottom:24px;">공지</div>
           ${DATA.notices.length===0
             ? `<div class="l-rise" style="font-size:15px;color:var(--dim);">등록된 공지가 없습니다.</div>`
             : DATA.notices.slice(0,5).map(n=>`
@@ -5292,15 +5505,16 @@ function homeHTML(){
       </div>
     </section>
 
-    <!-- ============ 7. 행동 ============ -->
+    <!-- ============ 10. 상담 ============ -->
     <section class="l-act" id="sec-contact">
       <div class="l-wrap">
         <div class="l-inner">
-          <div class="l-say l-rise">
-            <h3>상담은 한 번이면 됩니다</h3>
-            <p>지금 어디에서 막혀 있는지 듣고, 어떻게 기록하며 가르칠지 말씀드립니다.
-              수업을 권하지 않는 편이 낫다고 판단되면 그렇게 말씀드립니다.</p>
-            <div class="l-ways">
+          <div>
+            <div class="l-hk l-rise">상담</div>
+            <h2 class="l-rise">상담으로 시작합니다</h2>
+            <p class="l-rise">지금 어디에서 막혀 있는지 듣고,
+              어떤 순서로 가르칠지 말씀드립니다.</p>
+            <div class="l-ways l-rise">
               <div class="l-way"><span>인스타그램</span>
                 <a href="https://instagram.com/hahyun_t" target="_blank" rel="noopener">@hahyun_t</a></div>
               <div class="l-way"><span>운영 시간</span>평일 14:00 – 22:00 · 주말 상담 가능</div>

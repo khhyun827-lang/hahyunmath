@@ -1,0 +1,130 @@
+<!doctype html><meta charset="utf-8">
+<title>measure</title>
+<!-- 공개 홈(랜딩)을 «진짜 뷰포트 크기»의 iframe에 띄워 DOM 기하를 잰다.
+     스크린샷만 보면 «잘림»과 «어긋남»을 놓친다 — 그건 픽셀이 아니라 숫자로만 보인다.
+     (2026-08-07에 히어로 척추가 284px 어긋나 있었는데 잘림·넘침 검사가 못 잡았다.)
+
+     브라우저 확장 없이 헤드리스 크롬으로 돌린다 —
+       node tools/serve.js
+       chrome --headless=new --dump-dom --virtual-time-budget=14000 \
+         "http://127.0.0.1:8777/tools/measure-landing.html?w=390&h=844"
+     ?y=N 을 붙이면 재지 않고 그 위치로 스크롤해 둔다 (--screenshot 용).
+     ⚠ .l-rise는 opacity:0이라 재기 전에 등장을 강제로 끝낸다. 안 그러면 전부 0으로 나온다. -->
+<style>html,body{margin:0;background:#111;} iframe{border:0;display:block;}</style>
+<pre id="out" style="color:#ddd;font:12px/1.5 monospace;padding:8px;margin:0;">측정 중…</pre>
+<script>
+const q = new URLSearchParams(location.search);
+const W = +(q.get('w') || 1440), H = +(q.get('h') || 900);
+const fr = document.createElement('iframe');
+fr.width = W; fr.height = H; fr.src = '/index.html';
+document.body.appendChild(fr);
+
+const out = document.getElementById('out');
+const log = [];
+function p(s){ log.push(s); out.textContent = log.join('\n'); }
+
+function measure(){
+  const d = fr.contentDocument, w = fr.contentWindow;
+  const lp = d.querySelector('.lp');
+  if(!lp){ p('FAIL .lp 없음 — 렌더 안 됨'); return done(); }
+
+  /* 등장 애니메이션을 강제로 끝낸다. opacity:0인 채로 재면 전부 0으로 나온다. */
+  const st = d.createElement('style');
+  st.textContent = '.lp .l-rise{opacity:1!important;transform:none!important}'
+                 + '.lp .l-draw{transform:none!important}';
+  d.head.appendChild(st);
+
+  p('폭 ' + W + ' × ' + H);
+  p('');
+
+  /* ① 문서 가로 넘침 */
+  const de = d.documentElement;
+  const over = de.scrollWidth - de.clientWidth;
+  p('① 문서 가로 넘침 : ' + (over > 1 ? 'FAIL +' + over + 'px' : 'OK') );
+
+  /* ② 텍스트 잘림 — 내용이 제 상자보다 넓거나 높은 것 */
+  const cut = [];
+  lp.querySelectorAll('h1,h2,h3,p,li,b,span,div,button,a').forEach(el=>{
+    if(el.children.length && el.tagName !== 'BUTTON') return;   // 잎 노드만
+    const cs = w.getComputedStyle(el);
+    if(cs.display === 'none' || cs.overflow === 'auto' || cs.overflow === 'scroll') return;
+    if(el.scrollWidth > el.clientWidth + 1 && cs.overflowX !== 'visible')
+      cut.push('가로 ' + el.tagName + '.' + el.className + ' +' + (el.scrollWidth-el.clientWidth));
+    if(el.scrollHeight > el.clientHeight + 1 && cs.overflowY === 'hidden')
+      cut.push('세로 ' + el.tagName + '.' + el.className + ' +' + (el.scrollHeight-el.clientHeight));
+  });
+  p('② 텍스트 잘림    : ' + (cut.length ? 'FAIL ' + cut.length + '건\n   ' + cut.slice(0,8).join('\n   ') : 'OK'));
+
+  /* ③ 부모 침범 — 자식이 부모 상자 밖으로 나간 것 */
+  const esc = [];
+  lp.querySelectorAll('.l-col, .l-fq, .l-fend, .l-q, .l-form, .l-bimg, .l-heroimg').forEach(el=>{
+    const pr = el.getBoundingClientRect();
+    el.querySelectorAll(':scope > *').forEach(c=>{
+      const cr = c.getBoundingClientRect();
+      if(cr.width === 0) return;
+      if(cr.right > pr.right + 1.5 || cr.left < pr.left - 1.5)
+        esc.push(c.tagName + '.' + c.className + ' (부모 ' + el.className + ')');
+    });
+  });
+  p('③ 부모 침범      : ' + (esc.length ? 'FAIL ' + esc.length + '건\n   ' + esc.slice(0,6).join('\n   ') : 'OK'));
+
+  /* ④ 척추 정렬 — 페이지 전체가 한 줄기 선 위에 있어야 한다.
+        2026-08-07에 히어로 척추가 284px 어긋나 있던 것을 «잘림 검사»가 못 잡았다. */
+  const xs = [...lp.querySelectorAll('.l-spine')].map(s=>Math.round(s.getBoundingClientRect().left));
+  const uniq = [...new Set(xs)];
+  p('④ 척추 x좌표     : ' + (uniq.length <= 1 ? 'OK ' + uniq[0] : 'FAIL 어긋남 ' + JSON.stringify(uniq)));
+
+  /* ⑤ 붉은 점 정렬 — 점은 척추 위에 앉아야 한다 */
+  const dx = [...lp.querySelectorAll('.l-dot')].map(s=>Math.round(s.getBoundingClientRect().left));
+  const du = [...new Set(dx)];
+  p('⑤ 점 x좌표       : ' + (du.length <= 1 ? 'OK ' + du[0] : 'FAIL ' + JSON.stringify(du)));
+
+  /* ⑥ 히어로 첫 화면 — 이름과 한 문장이 접히지 않고 보이는가 */
+  const lead = lp.querySelector('.l-lead'), name = lp.querySelector('.l-name');
+  const img  = lp.querySelector('.l-heroimg');
+  const fold = H;
+  const r = el => el ? Math.round(el.getBoundingClientRect().bottom) : -1;
+  p('⑥ 첫 화면(' + fold + 'px) : 이름 ' + r(name) + ' · 문장 ' + r(lead) + ' · 사진 ' + r(img)
+    + ' → ' + (r(lead) <= fold && r(name) <= fold ? (r(img) <= fold ? 'OK 셋 다 보임' : 'OK 문장까지 · 사진 일부 아래')
+                                                  : 'FAIL 문장이 접힘'));
+
+  /* ⑦ 수식 렌더 */
+  const kx = lp.querySelectorAll('.katex').length;
+  p('⑦ KaTeX 수식     : ' + (kx ? 'OK ' + kx + '개' : 'FAIL 0개 — $…$가 안 그려짐'));
+
+  /* ⑧ 섹션 존재 · 앵커 */
+  const need = ['.l-hero','.l-me','.l-prin','.l-flow','.l-book','.l-sys','.l-heard','.l-rec','.l-notice','.l-act'];
+  const miss = need.filter(s=>!lp.querySelector(s));
+  const anch = ['sec-about','sec-review','sec-notice','sec-contact'].filter(i=>!d.getElementById(i));
+  p('⑧ 섹션/앵커      : ' + (miss.length||anch.length ? 'FAIL 없음 ' + miss.concat(anch).join(' ') : 'OK 10섹션 · 앵커 4'));
+
+  p('');
+  p('문서 높이 ' + de.scrollHeight + 'px');
+  done();
+}
+function done(){ document.title = 'MEASURED'; }
+
+/* 스크린샷용 — 진짜 뷰포트 크기의 iframe을 그 자리에서 스크롤해 두고 찍는다.
+   ?y=N 을 주면 재지 않고 그 위치로 내린다. */
+function shot(){
+  const d = fr.contentDocument;
+  const st = d.createElement('style');
+  st.textContent = '.lp .l-rise{opacity:1!important;transform:none!important}'
+                 + '.lp .l-draw{transform:none!important}';
+  d.head.appendChild(st);
+  out.style.display = 'none';
+  document.body.style.background = '#fff';
+  fr.contentWindow.scrollTo(0, +q.get('y'));
+  setTimeout(done, 300);
+}
+
+let tries = 0;
+const t = setInterval(()=>{
+  tries++;
+  try{
+    if(fr.contentDocument && fr.contentDocument.querySelector('.lp .l-lead')){
+      clearInterval(t); setTimeout(q.has('y') ? shot : measure, 400);
+    } else if(tries > 60){ clearInterval(t); p('TIMEOUT — .lp가 안 뜸'); done(); }
+  }catch(e){ clearInterval(t); p('ERR ' + e.message); done(); }
+}, 100);
+</script>
