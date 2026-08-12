@@ -1652,6 +1652,9 @@ async function regenerateOneWithAI(bankId){
   } else if(twin){
     b.status = 'pending';
     await applyTwinToBank(b, twin);
+    /* 다시 생성하면 문항이 지금 큐에서 빠진다 (「공개됨」에서 눌렀다면 pending으로 내려간다).
+       그림을 붙일 때와 같은 이유로 큐를 문항 따라 옮긴다 — 여기는 «하나»를 손보는 자리다. */
+    followBankToQueue(b);
     /* 워커가 실어 보낸 숫자를 그대로 쓴다 — 여기서 세지 않는다. */
     state.aiQuotaUsed = (typeof twin.quotaUsed === 'number') ? twin.quotaUsed : null;
     showToast(twin.needsFigure
@@ -10124,6 +10127,21 @@ function reviewQueueList(key){
   return DATA.problemBank.filter(q[3]);
 }
 
+/* 한 문항을 손봐서 그것이 «지금 보고 있는 큐»의 조건에서 빠졌을 때, 큐를 문항 따라 옮긴다.
+   그대로 두면 방금 손댄 사람이 **빈 화면**을 마주한다 — 그리고 이어서 할 일(붙인 그림을 보고
+   공개하기 · 다시 생성한 내용 검토하기)이 바로 그 문항에 달려 있다.
+   ⚠ **한 문항을 손보는 «버튼 핸들러»에서만 부른다.** 일괄 작업은 큐를 옮기면 안 된다 —
+      스무 건을 도는 중에 화면이 튀고, 어느 것을 따라갈지도 정할 수 없다.
+   가는 곳은 REVIEW_QUEUES 순서상 **처음 걸리는 줄**이다. 이 순서가 곧 「먼저 손봐야 하는 것」이다. */
+function followBankToQueue(b){
+  const cur = REVIEW_QUEUES.find(q => q[0] === (state.reviewQueue || 'pending'));
+  if(cur && cur[3](b)) return;                 // 아직 이 큐에 있다면 건드리지 않는다
+  const next = REVIEW_QUEUES.find(q => q[3](b));
+  if(!next) return;                            // 어느 줄에도 안 걸리면 그대로 둔다
+  state.reviewQueue = next[0];
+  state.reviewSelectedId = b.id;
+}
+
 function goReviewQueue(key){
   state.reviewQueue = key;
   state.reviewSelectedId = null;   // 큐를 옮기면 선택도 옮긴다
@@ -10351,10 +10369,7 @@ async function acceptFigureDraft(bankId){
     b.hasVariantImage = true;
     await dbSetDoc('problembank', b.id, b);
     /* 손으로 올릴 때와 같은 이유로 큐를 문항 따라 옮긴다 — 붙인 사람이 빈 큐를 마주하면 안 된다. */
-    if(state.reviewQueue==='nofig'){
-      state.reviewQueue = b.status==='review1' ? 'review1' : 'pending';
-      state.reviewSelectedId = b.id;
-    }
+    followBankToQueue(b);
     state.figureDraft = null;
     showToast('그림을 붙였습니다. 이제 공개할 수 있습니다.');
   }catch(e){
@@ -10408,10 +10423,7 @@ async function uploadVariantFigure(bankId, fileList){
     await dbSetDoc('problembank', b.id, b);
     /* 그림이 붙는 순간 이 문항은 「그림 필요」 큐에서 빠진다. 그대로 두면 방금 올린 사람이
        빈 큐를 마주한다 — 올린 그림을 보고 공개까지 이어서 해야 하므로 문항을 따라 큐를 옮긴다. */
-    if(state.reviewQueue==='nofig'){
-      state.reviewQueue = b.status==='review1' ? 'review1' : 'pending';
-      state.reviewSelectedId = b.id;
-    }
+    followBankToQueue(b);
     showToast('그림을 올렸습니다. 이제 공개할 수 있습니다.');
   }catch(e){
     console.error('변형 그림 업로드 실패', e);
