@@ -10994,11 +10994,23 @@ function teacherExamRangeHTML(){
     if(!combos[key]) combos[key] = {school, grade, subject, n:0};
     combos[key].n++;
   });
-  /* 학교 → 학년 → 과목 순으로 세운다. 학교가 빈 것은 맨 뒤로 (「힣」이 한글 끝이다). */
-  const list = Object.values(combos).sort((a,b)=>
-    (a.school||'힣').localeCompare(b.school||'힣')
-    || (a.grade||'힣').localeCompare(b.grade||'힣')
-    || a.subject.localeCompare(b.subject));
+  /* **가까운 시험이 위로 온다.** 이 화면의 물음이 「어디가 먼저인가」이기 때문이다 —
+     노션 표는 학교순이었지만 그건 표를 «적는» 순서지 «보는» 순서가 아니다.
+     날짜가 없는 줄은 맨 아래로 내리고 거기서만 학교 → 학년 → 과목으로 세운다.
+     학교가 빈 것은 그 안에서도 맨 뒤 (「힣」이 한글 끝이다). */
+  const list = Object.values(combos).sort((a,b)=>{
+    const da = examDatesOf(a.school, a.grade), db = examDatesOf(b.school, b.grade);
+    const sa = (da && da.start) || '', sb = (db && db.start) || '';
+    if(sa && sb && sa !== sb) return sa.localeCompare(sb);
+    if(!!sa !== !!sb) return sa ? -1 : 1;
+    return (a.school||'힣').localeCompare(b.school||'힣')
+      || (a.grade||'힣').localeCompare(b.grade||'힣')
+      || a.subject.localeCompare(b.subject);
+  });
+  /* 「한눈에」의 첫 줄 — 세어 보지 않아도 알 수 있어야 한다. */
+  const dated = list.filter(x=>examDatesOf(x.school, x.grade)).length;
+  const soon = list.filter(x=>{ const d = examDdayOf(x.school, x.grade);
+    return d && (d.state==='during' || (d.state==='before' && d.days<=14)); }).length;
   const noSchool = DATA.students.filter(s=>!s.school).length;
   const noGrade = DATA.students.filter(s=>!s.grade).length;
   const noSubject = DATA.students.filter(s=>!subjectOfStudent(s.studentId)).length;
@@ -11024,11 +11036,18 @@ function teacherExamRangeHTML(){
     </div>
   </div>
 
-  <div class="t-sec">학교·학년별 시험 일정</div>
-  <div style="margin:-4px 0 12px;font-size:11.5px;color:var(--dim);line-height:1.8;">
-    한 줄이 «학교 × 학년 × 과목»입니다. <b>날짜와 교재는 학교·학년 단위</b>라
-    같은 학교·학년의 다른 과목 줄에도 같이 반영됩니다 — 시험기간은 학교가 정하니까요.<br>
-    <b>범위는 과목마다 다릅니다.</b> 시작·끝 단원을 고르면 그 사이가 통째로 켜집니다.
+  <div class="row" style="align-items:baseline;gap:12px;margin-bottom:4px;flex-wrap:wrap;">
+    <div class="t-sec" style="margin:0;">학교·학년별 시험 일정</div>
+    <span style="font-size:11.5px;color:var(--dim);">
+      ${soon ? `<b style="color:var(--no);">2주 안 ${soon}곳</b> · ` : ''}날짜 정함
+      <b class="mono" style="color:var(--ink);">${dated}</b>/<span class="mono">${list.length}</span>
+    </span>
+  </div>
+  <div style="margin:0 0 12px;font-size:11.5px;color:var(--dim);line-height:1.8;">
+    <b>가까운 시험이 위로 옵니다.</b> 날짜를 안 넣은 줄은 맨 아래입니다.
+    한 줄이 «학교 × 학년 × 과목»이고, 줄을 누르면 그 자리에서 고칠 수 있습니다.<br>
+    <b>날짜와 교재는 학교·학년 단위</b>라 같은 학교·학년의 다른 과목 줄에도 같이 반영됩니다 —
+    시험기간은 학교가 정하니까요. <b>범위는 과목마다 다릅니다.</b>
   </div>
   ${noSchool || noGrade || noSubject ? `<div class="fm-warn" style="margin-bottom:12px;">
     ${noSchool ? `학교를 입력하지 않은 학생이 <b>${noSchool}명</b> 있습니다. ` : ''}
@@ -11038,52 +11057,77 @@ function teacherExamRangeHTML(){
     학교·학년이 비어 있어도 «빈 값»끼리 한 줄로 묶여 범위는 적용됩니다 —
     다만 <b>다른 학교 학생과 범위를 같이 쓰게</b> 되니 명단에서 채워 주세요.</div>` : ''}
   ${list.length===0 ? `<div style="font-size:12.5px;color:var(--dim);">범위를 정할 조합이 없습니다.</div>`
-  : list.map(({school, grade, subject, n})=>{
-    const all = UNIT_CHAPTERS[subject] || [];
-    const cur = new Set(rangeChapters(school, grade, subject));
-    const overridden = hasRangeOverride(school, grade, subject);
-    const open = openKey === rangeKey(school, grade, subject);
-    const sc = jsAttr(school), gr = jsAttr(grade), sj = jsAttr(subject);
-    const dd = examDdayOf(school, grade), dates = examDatesOf(school, grade);
-    const book = schoolBookOf(school, grade);
-    /* 켜진 단원의 «처음과 끝». 노션 표가 그렇게 적혀 있었고, 그게 사람이 읽기 좋다. */
-    const on = all.filter(ch=>cur.has(ch));
-    const span = on.length===0 ? '' : on.length===1 ? on[0]
-      : `${all.indexOf(on[0])+1}. ${on[0]} ~ ${all.indexOf(on[on.length-1])+1}. ${on[on.length-1]}`;
-    return `<div class="ex-item" style="display:block;cursor:default;margin-bottom:8px;">
-      <div class="row" style="gap:9px;align-items:center;cursor:pointer;flex-wrap:wrap;"
-           onclick="toggleRangeOpen('${sc}','${gr}','${sj}')">
-        <b style="font-size:13px;">${escHtml(school || '(학교 미입력)')}</b>
-        <span class="badge">${escHtml(grade || '학년 미입력')}</span>
-        <span style="font-size:11.5px;color:var(--dim);">${escHtml(subject)} · ${n}명</span>
-        ${overridden ? '<span class="badge score">수정됨</span>' : '<span class="badge">기본</span>'}
-        ${dd ? `<span class="badge ${dd.state==='before' && dd.days<=7 ? 'no' : dd.state==='during' ? 'no' : ''}">${
-          dd.state==='before' ? 'D-'+dd.days : dd.state==='during' ? '시험 중' : '끝남'}</span>` : ''}
-        <span class="spacer"></span>
-        ${dates ? `<span class="mono" style="font-size:11px;color:var(--dim);">${
-          escHtml(dates.start)}${dates.end ? ' ~ '+escHtml(dates.end) : ''}</span>`
-        : `<span style="font-size:11px;color:var(--dim);">날짜 없음</span>`}
-        <span style="font-size:11.5px;"><span class="mono">${cur.size}/${all.length}</span>단원</span>
-        <span style="font-size:11px;color:var(--dim);">${open?'접기':'펼치기'}</span>
-      </div>
-      ${!open ? `<div class="m" style="margin-top:5px;">${
-          span ? escHtml(span) : '<span style="color:var(--no);">선택된 단원이 없습니다</span>'}${
-          book ? ` <span style="color:var(--dim);">· ${escHtml(book)}</span>` : ''}</div>`
-      : `
+  : `<div class="rst-wrap" style="max-height:none;">
+    ${/* ⚠ .app .rst-wrap table.grid의 min-width는 명단(1464px)의 것이다. 여기 표는 더 좁으므로
+         인라인으로 눌러 준다 — 인라인 style이 시트 규칙을 이긴다.
+         sticky 헤더는 걸지 않는다. 줄이 적고, 가로 스크롤과 같이 쓰면 헤더가 첫 행을 덮는다 (0-B). */''}
+    <table class="grid" style="min-width:1108px;">
+      <thead><tr>
+        <th style="width:118px;">학교</th>
+        <th style="width:60px;">학년</th>
+        <th style="width:118px;">과목</th>
+        <th class="r" style="width:50px;">인원</th>
+        <th style="width:78px;">D-day</th>
+        <th style="width:172px;">시험 기간</th>
+        <th style="width:288px;">범위</th>
+        <th style="width:164px;">교재 · 메모</th>
+        <th class="r" style="width:60px;"></th>
+      </tr></thead>
+      <tbody>
+      ${list.map(({school, grade, subject, n})=>{
+        const all = UNIT_CHAPTERS[subject] || [];
+        const cur = new Set(rangeChapters(school, grade, subject));
+        const overridden = hasRangeOverride(school, grade, subject);
+        const open = openKey === rangeKey(school, grade, subject);
+        const sc = jsAttr(school), gr = jsAttr(grade), sj = jsAttr(subject);
+        const dd = examDdayOf(school, grade), dates = examDatesOf(school, grade);
+        const book = schoolBookOf(school, grade);
+        /* 켜진 단원의 «처음과 끝». 노션 표가 그렇게 적혀 있었고, 그게 사람이 읽기 좋다. */
+        const on = all.filter(ch=>cur.has(ch));
+        const span = on.length===0 ? '' : on.length===1 ? `${all.indexOf(on[0])+1}. ${on[0]}`
+          : `${all.indexOf(on[0])+1}. ${on[0]} ~ ${all.indexOf(on[on.length-1])+1}. ${on[on.length-1]}`;
+        const ddTone = !dd ? '' : dd.state==='during' ? 'no' : dd.state==='after' ? 'gone'
+          : dd.days<=7 ? 'no' : dd.days<=14 ? 'late' : '';
+        return `
+      ${/* ⚠ .cb는 «체크박스 네모»의 클래스다(width·height가 박혀 있다). 행에 걸면 줄이 찌그러진다. */''}
+      <tr style="cursor:pointer;${open?'background:var(--hover);':''}"
+          onclick="toggleRangeOpen('${sc}','${gr}','${sj}')">
+        <td><b>${escHtml(school || '(학교 미입력)')}</b></td>
+        <td class="sub">${escHtml(grade || '—')}</td>
+        <td class="sub">${escHtml(subject)}</td>
+        <td class="r mono">${n}</td>
+        <td>${dd ? `<span class="badge ${ddTone}">${
+            dd.state==='before' ? 'D-'+dd.days : dd.state==='during' ? '시험 중' : '끝남'}</span>`
+          : `<span style="color:var(--dim);">—</span>`}</td>
+        ${/* 연도를 뗀다 — 두 날짜를 온전히 쓰면 이 폭에서 잘린다. 시즌마다 비우는 값이라
+             해가 헷갈릴 일이 없고, 온전한 날짜는 title과 펼친 칸에 있다. */''}
+        <td class="mono sub" title="${dates ? escHtml(dates.start + (dates.end ? ' ~ ' + dates.end : '')) : ''}">${
+          dates ? escHtml(dates.start.slice(5)) + (dates.end ? ' ~ ' + escHtml(dates.end.slice(5)) : '') : '—'}</td>
+        <td class="sub" title="${span ? escHtml(span) : ''}">${
+          span ? escHtml(span) : '<span style="color:var(--no);">단원 없음</span>'}
+          ${overridden ? '<span class="badge score" style="margin-left:6px;">수정됨</span>' : ''}</td>
+        <td class="sub" title="${escHtml(book)}">${book ? escHtml(book) : '—'}</td>
+        <td class="r sub" style="font-size:11px;">${open?'접기':'펼치기'}</td>
+      </tr>
+      ${!open ? '' : `
+      <tr><td colspan="9" style="white-space:normal;overflow:visible;background:var(--hover);padding:16px 14px;">
         ${/* ⚠ 날짜·교재는 change(칸을 떠날 때)에 저장한다. oninput으로 하면 render()가
              글자마다 돌아 커서가 끝으로 튄다 (9절 4번). */''}
-        <div class="row" style="gap:10px;margin-top:12px;flex-wrap:wrap;align-items:flex-end;">
+        <div class="row" style="gap:10px;flex-wrap:wrap;align-items:flex-end;">
           <label style="font-size:11.5px;color:var(--sub);">시험 시작
             <input type="date" class="fm-in" style="display:block;margin-top:4px;width:150px;"
               value="${escHtml((dates&&dates.start)||'')}"
+              onclick="event.stopPropagation()"
               onchange="setExamDate('${sc}','${gr}','start',this.value)"></label>
           <label style="font-size:11.5px;color:var(--sub);">시험 끝
             <input type="date" class="fm-in" style="display:block;margin-top:4px;width:150px;"
               value="${escHtml((dates&&dates.end)||'')}"
+              onclick="event.stopPropagation()"
               onchange="setExamDate('${sc}','${gr}','end',this.value)"></label>
           <label style="font-size:11.5px;color:var(--sub);flex:1;min-width:220px;">교재 · 메모
             <input type="text" class="fm-in" style="display:block;margin-top:4px;width:100%;"
               placeholder="미래엔 / 학교프린트" value="${escHtml(book)}"
+              onclick="event.stopPropagation()"
               onchange="setSchoolBook('${sc}','${gr}',this.value)"></label>
         </div>
         <div style="margin-top:5px;font-size:11px;color:var(--dim);">
@@ -11093,28 +11137,31 @@ function teacherExamRangeHTML(){
 
         <div class="row" style="gap:8px;margin-top:14px;flex-wrap:wrap;align-items:flex-end;">
           <label style="font-size:11.5px;color:var(--sub);">시작 단원
-            <select class="fm-in" id="rs-a" style="display:block;margin-top:4px;">
+            <select class="fm-in" id="rs-a" style="display:block;margin-top:4px;" onclick="event.stopPropagation()">
               ${all.map((ch,i)=>`<option value="${i}" ${on.length&&all.indexOf(on[0])===i?'selected':''}>${i+1}. ${escHtml(ch)}</option>`).join('')}
             </select></label>
           <label style="font-size:11.5px;color:var(--sub);">끝 단원
-            <select class="fm-in" id="rs-b" style="display:block;margin-top:4px;">
+            <select class="fm-in" id="rs-b" style="display:block;margin-top:4px;" onclick="event.stopPropagation()">
               ${all.map((ch,i)=>`<option value="${i}" ${on.length&&all.indexOf(on[on.length-1])===i?'selected':''}>${i+1}. ${escHtml(ch)}</option>`).join('')}
             </select></label>
-          <button class="btn sm" onclick="applyRangeSpan('${sc}','${gr}','${sj}')">이 구간으로</button>
+          <button class="btn sm" onclick="event.stopPropagation(); applyRangeSpan('${sc}','${gr}','${sj}')">이 구간으로</button>
         </div>
 
         <div style="margin-top:11px;display:flex;flex-wrap:wrap;gap:7px;">
           ${all.map((ch,i)=>`<a class="pill ${cur.has(ch)?'on':''}"
-            onclick="toggleRangeChapter('${sc}','${gr}','${sj}','${jsAttr(ch)}')"
+            onclick="event.stopPropagation(); toggleRangeChapter('${sc}','${gr}','${sj}','${jsAttr(ch)}')"
             >${i+1}. ${escHtml(ch)}</a>`).join('')}
         </div>
         <div class="row" style="gap:8px;margin-top:11px;flex-wrap:wrap;">
-          <button class="btn q sm" onclick="resetSchoolRange('${sc}','${gr}','${sj}')">기본 범위로 되돌리기</button>
+          <button class="btn q sm" onclick="event.stopPropagation(); resetSchoolRange('${sc}','${gr}','${sj}')">기본 범위로 되돌리기</button>
           <span style="font-size:11.5px;color:var(--dim);">기본은 «${escHtml(season)}» 기준
             ${presetChapters(subject).length}단원입니다.</span>
-        </div>`}
-    </div>`;
-  }).join('')}`;
+        </div>
+      </td></tr>`}`;
+      }).join('')}
+      </tbody>
+    </table>
+  </div>`}`;
 }
 /* 인라인 onclick 안의 «문자열 리터럴»로 안전하게 넣는다.
    학교 이름은 사람이 친 값이라 따옴표·백슬래시가 들어올 수 있다.
