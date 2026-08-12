@@ -1335,18 +1335,10 @@
 .lp .l-cred li.l-now::after{content:'현재';margin-left:10px;font-size:11.5px;font-weight:700;
   color:var(--brand);letter-spacing:.06em;vertical-align:1px;}
 
-/* ============ 9. 공지 ============
-   재원생용 정보라 브랜드 흐름의 주인공은 아니다. 다만 앵커(sec-notice)는 유지한다 —
-   구버전 로그인 헤더가 이 앵커를 부르고 있어서, 없애면 그 링크가 죽는다. */
-.lp .l-notice{padding:110px 0 0;}
-.lp .l-nrow{display:flex;align-items:flex-start;padding:15px 0;border-top:1px solid var(--line2);}
-.lp .l-nrow:first-of-type{border-top:1px solid var(--line);}
-.lp .l-nd{width:104px;flex-shrink:0;font-family:'JetBrains Mono',monospace;font-size:12.5px;
-  color:var(--dim);padding-top:3px;}
-.lp .l-nt{flex:1;min-width:0;font-size:16px;letter-spacing:-.02em;}
-.lp .l-nx{margin-top:8px;font-size:14.5px;line-height:1.75;color:var(--sub);}
+/* 공지는 이 페이지에 없다 (2026-08-13에 뺐다) — 재원생에게 자주 내보내는 글이라
+   브랜드 페이지의 흐름을 끊는다. 학생은 마이페이지에서 본다. */
 
-/* ============ 10. 상담 ============ */
+/* ============ 9. 상담 ============ */
 .lp .l-act{margin-top:118px;background:var(--card);border-top:1px solid var(--line);
   padding:104px 0 112px;}
 .lp .l-act .l-inner{display:grid;grid-template-columns:minmax(0,1fr) 396px;gap:60px;align-items:start;}
@@ -1449,10 +1441,6 @@
   .lp .l-cred .l-b{padding-left:0;}
   .lp .l-cred li{font-size:15.5px;}
 
-  .lp .l-notice{padding-top:84px;}
-  .lp .l-nrow{display:block;}
-  .lp .l-nd{width:auto;margin-bottom:6px;}
-  .lp .l-nt{font-size:15.5px;}
 
   .lp .l-act{margin-top:88px;padding:80px 0 88px;}
   .lp .l-act .l-inner{grid-template-columns:1fr;gap:40px;}
@@ -5483,28 +5471,13 @@ function homeHTML(){
       </div>
     </section>
 
-    <!-- ============ 9. 공지 ============
-         재원생용 정보라 브랜드 흐름의 주인공은 아니다. 다만 앵커는 유지한다 —
-         구버전 로그인 헤더가 scrollToId('sec-notice')로 이걸 부르고 있어서 없애면 링크가 죽는다. -->
-    <section class="l-notice" id="sec-notice">
-      <div class="l-wrap l-rail">
-        <div class="l-spine"></div>
-        <div class="l-dot" style="top:4px;"></div>
-        <div class="l-col">
-          <div class="l-hk l-rise" style="margin-bottom:24px;">공지</div>
-          ${DATA.notices.length===0
-            ? `<div class="l-rise" style="font-size:15px;color:var(--dim);">등록된 공지가 없습니다.</div>`
-            : DATA.notices.slice(0,5).map(n=>`
-              <div class="l-nrow l-rise">
-                <div class="l-nd">${escHtml(n.date||'')}</div>
-                <div class="l-nt">${escHtml(n.title)}
-                  ${n.content ? `<div class="l-nx ntx">${noticeBodyHTML(n.content)}</div>` : ''}</div>
-              </div>`).join('')}
-        </div>
-      </div>
-    </section>
+    <!-- 공지는 이 페이지에 두지 않는다 (2026-08-13에 뺐다).
+         **재원생에게 자주 내보내는 글**이라 브랜드 페이지의 흐름을 끊고,
+         방문자가 첫 화면에서 보게 될 것도 아니다. 학생은 마이페이지에서 본다.
+         앵커(sec-notice)도 함께 지웠다 — 그걸 부르던 구버전 로그인 헤더는
+         2026-08-08 이식 때 이미 사라졌고, 지금 scrollToId를 부르는 곳은 lpScroll 하나뿐이다. -->
 
-    <!-- ============ 10. 상담 ============ -->
+    <!-- ============ 9. 상담 ============ -->
     <section class="l-act" id="sec-contact">
       <div class="l-wrap">
         <div class="l-inner">

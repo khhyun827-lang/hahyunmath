@@ -93,10 +93,12 @@ function measure(){
   p('⑦ KaTeX 수식     : ' + (kx ? 'OK ' + kx + '개' : 'FAIL 0개 — $…$가 안 그려짐'));
 
   /* ⑧ 섹션 존재 · 앵커 */
-  const need = ['.l-hero','.l-me','.l-prin','.l-flow','.l-book','.l-sys','.l-heard','.l-rec','.l-notice','.l-act'];
+  /* 공지는 2026-08-13에 랜딩에서 뺐다 — 앵커(sec-notice)까지 함께 지웠다. */
+  const need = ['.l-hero','.l-me','.l-prin','.l-flow','.l-book','.l-sys','.l-heard','.l-rec','.l-act'];
   const miss = need.filter(s=>!lp.querySelector(s));
-  const anch = ['sec-about','sec-review','sec-notice','sec-contact'].filter(i=>!d.getElementById(i));
-  p('⑧ 섹션/앵커      : ' + (miss.length||anch.length ? 'FAIL 없음 ' + miss.concat(anch).join(' ') : 'OK 10섹션 · 앵커 4'));
+  const anch = ['sec-about','sec-review','sec-contact'].filter(i=>!d.getElementById(i));
+  p('⑧ 섹션/앵커      : ' + (miss.length||anch.length ? 'FAIL 없음 ' + miss.concat(anch).join(' ')
+    : 'OK ' + need.length + '섹션 · 앵커 ' + 3));
 
   p('');
   p('문서 높이 ' + de.scrollHeight + 'px');
