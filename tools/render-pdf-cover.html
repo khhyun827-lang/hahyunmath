@@ -1,0 +1,36 @@
+<!doctype html><meta charset="utf-8">
+<title>pdfshot</title>
+<!-- PDF 표지 한 장을 캔버스로 그린다. poppler가 없어서 pdf.js로 대신한다.
+     ?f=<루트 기준 경로>&w=<가로 픽셀>   ⚠ 확인용 임시 파일
+     ⚠ workerSrc를 지정하면 헤드리스의 --virtual-time-budget이 워커 시간을 안 돌려 멈춘다.
+        지정하지 않으면 pdf.js가 «가짜 워커»로 메인 스레드에서 돈다. -->
+<style>html,body{margin:0;background:#fff}canvas{display:block}
+#s{position:fixed;right:0;top:0;font:11px monospace;color:#c00;background:#fff;z-index:9}</style>
+<canvas id="c"></canvas>
+<div id="s">start</div>
+<script type="module">
+const s = document.getElementById('s');
+const say = t => { s.textContent = t; document.title = t; };
+try{
+  say('importing');
+  /* ⚠ 헤드리스의 --virtual-time-budget은 «워커»의 시간을 돌리지 않는다 —
+     실제 워커를 쓰면 getDocument()에서 영영 멈춘다.
+     Worker를 없애 두면 pdf.js가 «가짜 워커»로 메인 스레드에서 돌고, 가상 시간이 그대로 먹는다. */
+  window.Worker = undefined;
+  const pdfjs = await import('/tools/pdfjs/pdf.mjs');
+  pdfjs.GlobalWorkerOptions.workerSrc = '/tools/pdfjs/pdf.worker.mjs';
+  say('imported');
+  const q = new URLSearchParams(location.search);
+  const W = +(q.get('w') || 760);
+  const doc = await pdfjs.getDocument({url: q.get('f'), disableFontFace: q.has('nff')}).promise;
+  say('doc ' + doc.numPages);
+  const page = await doc.getPage(1);
+  const v1 = page.getViewport({scale:1});
+  const vp = page.getViewport({scale: W / v1.width});
+  const c = document.getElementById('c');
+  c.width = Math.round(vp.width); c.height = Math.round(vp.height);
+  await page.render({canvasContext: c.getContext('2d'), viewport: vp}).promise;
+  say('OK ' + c.width + 'x' + c.height);
+  s.style.display = 'none';
+}catch(e){ say('ERR ' + e.message); }
+</script>

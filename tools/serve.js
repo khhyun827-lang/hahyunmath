@@ -16,6 +16,8 @@ const MIME = {
   '.html': 'text/html; charset=utf-8',
   '.css': 'text/css; charset=utf-8',
   '.js': 'text/javascript; charset=utf-8',
+  // ⚠ 모듈은 MIME이 JS가 아니면 브라우저가 통째로 거절한다 ("Failed to fetch dynamically imported module")
+  '.mjs': 'text/javascript; charset=utf-8',
   '.json': 'application/json; charset=utf-8',
   '.svg': 'image/svg+xml',
   '.png': 'image/png',

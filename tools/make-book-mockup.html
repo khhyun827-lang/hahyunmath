@@ -1,0 +1,100 @@
+<!doctype html><meta charset="utf-8">
+<title>bookshot</title>
+<!-- 교재 세 권 목업. 표지는 실제 PDF에서 렌더한 것이고,
+     책의 «몸»(책등·책배·바닥 그림자·스프링)만 여기서 그린다.
+     ⚠ 사진이 아니라 «만든 것»이므로 과장하지 않는다 — 페이지가 절제된 톤이라
+        번들거리는 3D 렌더를 얹으면 그 자리만 튄다. 옅은 원근 + 얕은 그림자까지만.
+
+     ⚠ 3D 문맥을 «책 한 권»으로 끊는다. row에 preserve-3d를 걸면 형제들이
+        DOM 순서가 아니라 z로 정렬돼서 뒷 책의 바닥 그림자가 앞 책 표지 위로 올라온다.
+        perspective()를 각 책의 transform 안에 두면 책끼리는 DOM 순서대로 그려진다.
+     ⚠ 그림자에 filter:blur를 쓰지 않는다 — 합성 층이 생겨 밝은 사각 얼룩을 남긴다. -->
+<style>
+:root{ --paper:#FAF9F6; }
+*{box-sizing:border-box;}
+html,body{margin:0;background:var(--paper);}
+.stage{
+  width:1280px;height:740px;position:relative;
+  display:flex;align-items:flex-end;justify-content:center;
+  /* ⚠ 바탕은 페이지와 «똑같은» --paper 하나여야 한다. 바닥 그라디언트를 깔면
+     이미지의 네 변이 사각 테두리로 드러난다. 접지감은 책마다의 .cast가 맡는다. */
+  background:var(--paper);
+  padding-bottom:80px;
+}
+.row{display:flex;align-items:flex-end;}
+
+/* 한 자리 = 바닥 그림자 + 책. 이 상자는 3D가 아니다 */
+.slot{position:relative;}
+.cast{position:absolute;left:-11%;right:-15%;bottom:-12px;height:42px;
+  background:radial-gradient(52% 100% at 50% 0%,
+    rgba(34,34,30,.36) 0%, rgba(34,34,30,.15) 46%, rgba(34,34,30,0) 78%);}
+
+/* 책 — 앞표지 + 책등 + 책배 */
+.bk{position:relative;transform-style:preserve-3d;}
+.bk img{display:block;width:100%;height:auto;border-radius:1px 3px 3px 1px;
+  box-shadow:0 30px 48px -24px rgba(34,34,30,.46), 0 2px 7px rgba(34,34,30,.11);}
+/* 책등 — 표지 왼쪽 모서리에 경첩을 달아 뒤로 접는다 */
+.bk .spine{position:absolute;top:0;left:0;height:100%;
+  transform-origin:left center;transform:rotateY(-72deg);border-radius:2px 0 0 2px;}
+/* 책배(종이 단면) — 얇은 결이 있어야 «종이 뭉치»로 읽힌다 */
+.bk .edge{position:absolute;top:4px;right:0;height:calc(100% - 8px);
+  transform-origin:right center;transform:rotateY(74deg);border-radius:0 2px 2px 0;
+  background:repeating-linear-gradient(to right, #EFEDE7 0 1px, #FBFAF7 1px 3px);}
+
+/* ---- 스프링 제본 (개념서) ---- */
+.bk.spring img{border-radius:3px;}
+.bk .holes{position:absolute;top:3.4%;bottom:3.4%;left:15px;width:9px;
+  display:flex;flex-direction:column;justify-content:space-between;}
+.bk .holes i{display:block;height:9px;border-radius:9px;background:rgba(34,34,30,.26);}
+.bk .rings{position:absolute;top:3.4%;bottom:3.4%;left:-13px;width:34px;
+  display:flex;flex-direction:column;justify-content:space-between;}
+.bk .rings i{display:block;height:9px;border-radius:9px;
+  background:linear-gradient(180deg,#F2F1EE 0%,#BFBCB6 42%,#8B8781 68%,#DAD7D1 100%);
+  box-shadow:0 1px 1px rgba(34,34,30,.34), inset 0 0 0 .5px rgba(34,34,30,.18);}
+</style>
+
+<div class="stage">
+  <div class="row">
+
+    <!-- 엔딩크레딧 — 제일 뒤 -->
+    <div class="slot" style="width:372px;margin:0 -66px 26px 0;">
+      <div class="cast"></div>
+      <div class="bk" style="transform:perspective(2600px) rotateY(16deg);">
+        <div class="spine" style="width:19px;background:linear-gradient(90deg,#9B9794,#6E6A68);"></div>
+        <div class="edge" style="width:22px;"></div>
+        <img src="/tools/cover-ending.png" alt="엔딩크레딧">
+      </div>
+    </div>
+
+    <!-- 주기나 -->
+    <div class="slot" style="width:392px;margin:0 -58px 13px 0;">
+      <div class="cast"></div>
+      <div class="bk" style="transform:perspective(2600px) rotateY(13deg);">
+        <div class="spine" style="width:26px;background:linear-gradient(90deg,#4FBDE9,#1E93C9);"></div>
+        <div class="edge" style="width:26px;"></div>
+        <img src="/tools/cover-jugina.png" alt="주기나 기출변형">
+      </div>
+    </div>
+
+    <!-- 개념서 — 스프링. 제일 앞에 세운다 (원칙 01이 «개념»이다) -->
+    <div class="slot" style="width:412px;">
+      <div class="cast"></div>
+      <div class="bk spring" style="transform:perspective(2600px) rotateY(9deg);">
+        <div class="edge" style="width:20px;"></div>
+        <img src="/tools/cover-gaenyeom.png" alt="개념서">
+        <div class="holes"></div>
+        <div class="rings"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+/* 링과 구멍은 개수가 같아야 한다. 손으로 두 번 쓰면 한쪽만 고쳐진다. */
+const N = 15;
+document.querySelectorAll('.rings, .holes').forEach(b=>{
+  b.innerHTML = Array.from({length:N}, ()=>'<i></i>').join('');
+});
+document.title = 'READY';
+</script>

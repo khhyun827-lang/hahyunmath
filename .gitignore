@@ -13,3 +13,8 @@ tools/figure-preview.html
 # probe-figure.mjs에 먹이는 문항 꾸러미 · 그 실측 대조표. 같은 이유로 뺀다.
 figure-cases.json
 tools/figure-probe.html
+
+# pdf.js 본체(1.7MB). tools/render-pdf-cover.html이 쓰지만 저장소에 둘 것은 아니다.
+#   curl -sL -o tools/pdfjs/pdf.mjs        https://cdn.jsdelivr.net/npm/pdfjs-dist@4.7.76/build/pdf.min.mjs
+#   curl -sL -o tools/pdfjs/pdf.worker.mjs https://cdn.jsdelivr.net/npm/pdfjs-dist@4.7.76/build/pdf.worker.min.mjs
+tools/pdfjs/
