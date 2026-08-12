@@ -1,0 +1,50 @@
+<!doctype html><meta charset="utf-8"><title>screen</title>
+<!-- 로그인한 화면을 진짜 뷰포트 iframe에 띄워 찍는다. 브라우저 확장 없이 헤드리스 크롬으로 돈다.
+       ?w= &h= &as=teacher|student &tab= &sub= &sid= &open= &pre=<인코딩한 JS>
+
+     node tools/serve.js
+     chrome --headless=new --hide-scrollbars --virtual-time-budget=32000 --window-size=1440,900 \
+       --screenshot=out.png "http://127.0.0.1:8777/tools/screen-shot.html?w=1440&h=900&as=teacher&tab=roster"
+
+     ⚠ state/DATA는 let으로 선언돼 있어 window의 속성이 아니다 —
+        프레임 밖에서 fr.contentWindow.state로는 못 잡는다. eval로 그 전역 스코프에서 실행한다.
+     ⚠ DATA.students가 «찰 때까지» 기다린다 — 빈 배열도 truthy라 !!DATA.students로는 못 잡는다.
+     ⚠ ?pre=에 저장 함수(dbSet을 부르는 것)를 넣지 말 것 — 실 DB에 쓴다.
+        시험 날짜처럼 «보기만» 할 값은 state에 직접 꽂는다.
+     ⚠ 학생 화면은 «그리기만 해도» 저장한다(dqEnsureToday). 테스트 계정만 쓸 것. -->
+<style>html,body{margin:0;background:#fff}iframe{border:0;display:block}</style>
+<pre id="o" style="font:12px monospace;color:#333;margin:0;padding:4px;">…</pre>
+<script>
+const q=new URLSearchParams(location.search);
+const W=+(q.get('w')||1440), H=+(q.get('h')||900);
+const fr=document.createElement('iframe'); fr.width=W; fr.height=H; fr.src='/index.html';
+document.body.appendChild(fr);
+const o=document.getElementById('o');
+let n=0;
+const t=setInterval(()=>{
+  n++;
+  try{
+    const w=fr.contentWindow;
+    const ready = w && w.eval && w.eval('typeof render==="function" && typeof DATA!=="undefined" && DATA.students.length>0');
+    if(ready){
+      clearInterval(t);
+      /* ?pre= — 렌더 전에 그 프레임에서 돌릴 코드. ⚠ 저장 함수는 부르지 말 것(실 DB에 쓴다). */
+      if(q.get('pre')) w.eval(decodeURIComponent(q.get('pre')));
+      const as=q.get('as')||'teacher';
+      if(as==='teacher'){
+        w.eval("state.currentUser={type:'teacher'}; state.view='teacher';"
+          + "state.teacherTab='"+(q.get('tab')||'settings')+"';"
+          + (q.get('sub') ? "state.settingsSubTab='"+q.get('sub')+"';" : '')
+          + (q.get('open') ? "state.rangeSchool="+JSON.stringify(decodeURIComponent(q.get('open')))+";" : '')
+          + "render();");
+      } else {
+        const sid=q.get('sid')||'test';
+        w.eval("state.currentUser={type:'student',studentId:'"+sid+"',name:'테스트학생'};"
+          + "state.view='student'; state.studentTab='"+(q.get('tab')||'home')+"';"
+          + "loadRecord('"+sid+"').then(render);");
+      }
+      setTimeout(()=>{ o.style.display='none'; document.title='SHOT'; }, 1200);
+    } else if(n>90){ clearInterval(t); o.textContent='TIMEOUT'; document.title='ERR'; }
+  }catch(e){ clearInterval(t); o.textContent='ERR '+e.message; document.title='ERR'; }
+},100);
+</script>
