@@ -10088,7 +10088,7 @@ function teacherClinicHTML(){
   const grid = `<div class="cn-week">
     ${days.map(d=>{
       const list = DATA.clinicSlots.filter(s=>s.date===d)
-        .slice().sort((a,b)=>(a.time||'').localeCompare(b.time||''));
+        .slice().sort((a,b)=>slotTimeKey(a.time).localeCompare(slotTimeKey(b.time)));
       const isToday = d===todayStr();
       /* 슬롯 없이 잡힌 것(학생 직접 제안 · 교사 직접 배정)도 그날 칸에 세운다 —
          판에 안 보이면 교사가 이미 잡아 둔 시간을 모르고 이중으로 앉힌다. */
@@ -10146,8 +10146,12 @@ function teacherClinicHTML(){
     </div>
   </aside>`;
 
-  /* 지난 신청까지 훑을 일이 있다 — 승인 대기 밖의 것은 아래 목록으로 남긴다. */
-  const others = DATA.clinics.filter(c=>c.status!=='대기');
+  /* 처리가 끝난 신청은 주간 판 아래에 남긴다 — 「그날 누가 왔었나」를 되짚을 일이 있다.
+     ⚠ 예전에는 **날짜와 무관하게 전부** 나열했다. 바로 위 주간 판은 주 단위로 넘겨 보는데
+        이 목록만 전 기간이라 짝이 안 맞았고, 주가 지나도 지워지지 않고 계속 쌓였다.
+        지금은 **보고 있는 그 주의 것만** 선다 — 지난 주 것은 ←로 넘겨서 본다.
+     («승인 대기»는 옆 칸에 주와 무관하게 늘 뜬다. 처리 안 된 것을 숨기면 안 된다.) */
+  const others = DATA.clinics.filter(c=>c.status!=='대기' && days.includes(c.day));
 
   return `<div class="co-screen">
     <main class="co-main">
@@ -10224,7 +10228,7 @@ function teacherClinicHTML(){
       </div>`}
 
       <div class="co-body">${grid}
-        ${others.length ? `<div class="t-sec" style="margin-top:24px;">처리된 신청 ${others.length}건</div>
+        ${others.length ? `<div class="t-sec" style="margin-top:24px;">이 주에 처리된 신청 ${others.length}건</div>
         ${others.map(c=>`<div class="cn-rq">
           <div class="h"><b>${escHtml(c.name)}</b>
             <span class="status-badge"><span class="badge ${c.status==='취소'?'gone':(c.status==='승인'||c.status==='완료'?'ok':'late')}">${c.status}</span></span>
