@@ -823,7 +823,7 @@
 .hw-row{padding:11px 0;border-top:1px solid var(--line2);}
 .hw-row:first-of-type{border-top:0;}
 .hw-rt{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
-.hw-who{font-size:12.5px;min-width:62px;}
+.hw-who{font-size:12.5px;min-width:62px;flex:0 0 auto;}
 .hw-title{flex:1;min-width:120px;font-size:12.5px;color:var(--ink);text-align:left;}
 .hw-when{font-size:11px;color:var(--dim);}
 .hw-acts{display:flex;gap:6px;margin-top:9px;flex-wrap:wrap;}
@@ -2991,9 +2991,13 @@ async function setHwState(studentId, hwId, patch){
 }
 /* 학생이 낸다. 사진은 이미 드라이브에 올라가 있고 여기서는 «주소»만 기록에 박는다. */
 async function submitHomework(studentId, hwId){
-  const photos = (state.hwPhotos && state.hwPhotos[hwId] || []).filter(p=>p && p.url);
+  const staged = (state.hwPhotos && state.hwPhotos[hwId]) || [];
+  if(staged.some(p=>p.uploading)){ showToast('사진을 올리는 중입니다. 잠시만 기다려주세요.'); return; }
+  /* ⚠ **올리는 중에 쓰던 부스러기를 기록에 넣지 않는다.** 칸 하나가 `{uploading, previewUrl}`로
+     시작해 거기에 url·fileId가 «얹히는» 구조라, 그대로 저장하면 **죽은 blob 주소**(previewUrl)가
+     학생 기록에 영영 남는다. 실제로 그렇게 저장된 것을 배포본에서 봤다. 둘만 골라 담는다. */
+  const photos = staged.filter(p=>p && p.url).map(p=>({url:p.url, fileId:p.fileId}));
   if(photos.length===0){ showToast('사진을 한 장 이상 올려주세요.'); return; }
-  if(photos.some(p=>p.uploading)){ showToast('사진을 올리는 중입니다. 잠시만 기다려주세요.'); return; }
   /* 반려된 것을 다시 낼 때 옛 사진은 드라이브에서 지운다 — 안 지우면 파일이 쌓이기만 한다. */
   const old = hwState(await loadRecord(studentId), hwId).photos;
   await setHwState(studentId, hwId, {
@@ -3152,9 +3156,50 @@ async function loadAllChatsIfNeeded(){
   render();
 }
 
+/* «확인 대기»는 몇 건인가 — 학생이 냈고 아직 강사가 안 본 것.
+   ⚠ 기록을 아직 안 실었으면 0이다. 렌더 중에 부르므로 여기서 불러오지는 않는다
+      (loadAllRecordsIfNeeded가 끝나면 스스로 render를 부른다 — 그때 숫자가 채워진다). */
+function hwWaitingInClass(classId){
+  if(!state.allRecordsLoaded) return 0;
+  const hws = DATA.assignments.filter(a=>a.classId===classId);
+  if(!hws.length) return 0;
+  return DATA.students.filter(s=>s.classId===classId).reduce((n,s)=>{
+    const rec = state.allRecords[s.studentId];
+    return n + (rec ? hws.filter(a=>hwState(rec, a.id).status===HW_SUBMITTED).length : 0);
+  }, 0);
+}
+function hwWaitingTotal(){
+  return DATA.classes.reduce((n,c)=>n + hwWaitingInClass(c.id), 0);
+}
+/* 벨에서 누르면 «제일 밀린 반»의 과제 자리로 곧장 간다.
+   예전에는 반 → 수업 기록 → 날짜 → 과제 → 확인하기로 다섯 번을 들어가야 했다. */
+function gotoHwWaiting(){
+  const worst = DATA.classes
+    .map(c=>({id:c.id, n:hwWaitingInClass(c.id)}))
+    .sort((a,b)=>b.n-a.n)[0];
+  if(worst && worst.n > 0) state.classHubId = worst.id;
+  state.teacherTab = 'classhub';
+  state.classHubTab = 'homework';
+  state.classHubDate = null;
+  /* 대기가 있는 첫 과제를 펴 둔다 — 열자마자 할 일이 보여야 한다. */
+  const rosters = DATA.students.filter(s=>s.classId===state.classHubId);
+  const first = DATA.assignments.filter(a=>a.classId===state.classHubId)
+    .find(a=>rosters.some(s=>{
+      const rec = state.allRecords[s.studentId];
+      return rec && hwState(rec, a.id).status===HW_SUBMITTED;
+    }));
+  state.homeworkDetailId = first ? first.id : null;
+  state.hwRejectOpen = null;
+}
 function teacherNotifItems(){
   const chatN = DATA.students.reduce((n,s)=>n + chatUnread(s.studentId), 0);
   return [
+    /* ⚠ 상담·질문처럼 «본 개수»로 셀 수 없다. 그것들은 늘기만 하는 목록이라
+       watermark가 맞지만, 과제 제출은 **수락하면 줄어든다.**
+       채팅과 같은 길로 간다 — 지금 대기 중인 수를 그대로 들고 오고(keepUnseen),
+       벨을 눌렀다고 지우지 않는다. 확인해서 처리해야 사라진다. */
+    {key:'hwsub', label:'과제 제출 확인 대기', count:0, unseen: hwWaitingTotal(),
+     keepUnseen:true, gotoCode:"gotoHwWaiting();"},
     {key:'consult', label:'새 상담 신청', count: DATA.consults.length, gotoCode:"state.teacherTab='settings'; state.settingsSubTab='consults';"},
     {key:'qna', label:'새 질문', count: DATA.qnas.length, gotoCode:"state.teacherTab='qna';"},
     {key:'clinic', label:'새 클리닉 신청', count: DATA.clinics.length, gotoCode:"state.teacherTab='clinic';"},
@@ -3256,7 +3301,9 @@ function hwState(rec, hwId){
   const v = rec && rec.assignmentsDone ? rec.assignmentsDone[hwId] : null;
   if(v === true)  return { status: HW_APPROVED, photos: [], legacy: true };   // 옛 기록
   if(!v || typeof v !== 'object') return { status: HW_NONE, photos: [] };
-  return { ...v, status: v.status || HW_NONE, photos: v.photos || [] };
+  /* 드라이브 주소가 있는 것만 사진으로 친다 — 올리다 만 칸이 기록에 남아 있어도
+     («blob:…» previewUrl만 든 것) 화면에서 깨진 그림으로 뜨지 않는다. */
+  return { ...v, status: v.status || HW_NONE, photos: (v.photos || []).filter(p=>p && p.url) };
 }
 /* «완료»는 오직 수락된 것이다. 제출만 해 둔 것은 아직 아니다 —
    그걸 완료로 세면 강사가 보기도 전에 숫자가 차서 검토할 이유가 사라진다. */
@@ -6550,8 +6597,10 @@ function hwReviewRowHTML(sid, rec, a, opts){
 
   return `<div class="hw-row">
     <div class="hw-rt">
-      ${o.wide ? `<b class="hw-who">${escHtml(o.name||'')}</b>` : ''}
-      <span class="hw-title">${escHtml(a.title)}</span>
+      ${/* 반 관리에서는 과제 하나를 «펼친 안»이라 줄마다 과제명을 되풀이할 이유가 없다.
+           그 자리에 학생 이름이 온다 — 여기서 가려는 것은 «누가»다. */''}
+      ${o.wide ? `<b class="hw-who hw-title">${escHtml(o.name||'')}</b>`
+               : `<span class="hw-title">${escHtml(a.title)}</span>`}
       ${label ? `<span class="badge ${tone}">${label}</span>` : '<span class="badge">미제출</span>'}
       ${st.submittedAt ? `<span class="mono hw-when">낸 날 ${escHtml(st.submittedAt)}</span>` : ''}
       ${st.by ? `<span class="hw-when">${escHtml(st.by)}${st.decidedAt?' · '+escHtml(st.decidedAt):''}</span>` : ''}
@@ -7337,6 +7386,7 @@ const TEACHER_SUBNAV = {
   '반': [
     ['학생 명단',  'roster'],
     ['수업 기록',  'classhub', 'sessions'],
+    ['과제',       'classhub', 'homework'],
     ['진도',       'classhub', 'progress'],
     ['데일리퀴즈', 'classhub', 'quiz'],
     ['영상',       'classhub', 'video'],
@@ -7399,6 +7449,8 @@ function teacherHTML(){
   const subActive = s => state.teacherTab===s[1] && (!s[2] || state.classHubTab===s[2]);
   /* 벨이 «새 채팅»을 세려면 대화를 알고 있어야 한다. 셸에서 한 번만 부른다. */
   loadAllChatsIfNeeded();
+  /* 「과제 제출 확인 대기」도 같은 이유로 기록이 있어야 센다 — 어느 화면에 있든 벨은 떠 있다. */
+  loadAllRecordsIfNeeded();
   const body = teacherTabBodyHTML();
 
   return `
@@ -8723,7 +8775,15 @@ function teacherClassHubHTML(){
   if(!c){ c = DATA.classes[0]; state.classHubId = c.id; }
 
   let sub;
-  if(tab==='progress')   sub = chubProgressHTML(c.id);
+  /* 과제는 «그날 상세» 안에도 있지만 묻는 것이 다르다 —
+     저기는 「그날 무슨 과제를 냈나」, 여기는 「이 반 과제가 지금 어떻게 돌아가나」다.
+     제출을 확인하러 올 때 날짜를 먼저 골라야 하는 것은 말이 안 되므로 날짜에 묶지 않는다.
+     **그리는 함수는 같은 것 하나를 쓴다** — 목록을 두 벌로 두면 한쪽만 고쳐진다. */
+  if(tab==='homework'){
+    state.classHubHomeworkShowAll = true;      // 이 자리는 늘 «전체»다
+    sub = (r => r.body + r.extra)(teacherClassDailyHomeworkHTML(c.id, todayStr()));
+  }
+  else if(tab==='progress')   sub = chubProgressHTML(c.id);
   else if(tab==='quiz')  sub = chubQuizHTML(c.id);
   else if(tab==='video') sub = chubVideoHTML(c.id);
   else if(tab==='material') sub = chubMaterialHTML(c.id);
@@ -8766,9 +8826,11 @@ function chubClassListHTML(activeId){
       ${DATA.classes.map(c=>{
         const n = DATA.students.filter(s=>s.classId===c.id).length;
         const pr = getClassProgress(c.id);
+        const wait = hwWaitingInClass(c.id);
         return `<div class="chub-cl ${c.id===activeId?'on':''} ${c.status==='진행중'?'':'off'}"
           onclick="state.classHubId='${c.id}'; render()">
-          <div class="n">${escHtml(c.name)}</div>
+          <div class="n">${escHtml(c.name)}${
+            wait ? `<span class="badge late" style="margin-left:6px;">과제 ${wait}</span>` : ''}</div>
           <div class="m">${escHtml(c.schedule||'일정 미정')} · ${n}명${c.status==='진행중'?'':' · 종료'}</div>
           <div class="p"><span class="bar"><i style="width:${pr.subject?pr.percent:0}%"></i></span>
             <span>${pr.subject ? pr.percent+'%' : '—'}</span></div>
@@ -9686,7 +9748,9 @@ function teacherClassDailyExamHTML(classId, date){
 }
 function teacherClassDailyHomeworkHTML(classId, date){
   loadAllRecordsIfNeeded();
-  const showAll = !!state.classHubHomeworkShowAll;
+  /* 「반 > 과제」 상시 자리에서는 날짜 토글이 뜻이 없다 — 늘 전체다. */
+  const standalone = state.classHubTab === 'homework';
+  const showAll = standalone || !!state.classHubHomeworkShowAll;
   const all = DATA.assignments.filter(a=>a.classId===classId);
   const visible = showAll ? all : all.filter(a=>a.createdAt===date || a.dueDate===date);
   const roster = DATA.students.filter(s=>s.classId===classId);
@@ -9697,9 +9761,11 @@ function teacherClassDailyHomeworkHTML(classId, date){
      그날 화면이라 «오늘 낸 과제»로 등록되는 것이 맞고, 반은 이미 고른 상태라 고를 이유가 없다. */
   const body = `
     <div class="st-h" style="margin-bottom:0;">
-      <b>${showAll ? '전체 과제' : date+' 과제'}</b><span>${visible.length}건</span>
+      <b>${showAll ? '전체 과제' : date+' 과제'}</b><span>${visible.length}건</span>${
+        (()=>{ const w = hwWaitingInClass(classId);
+          return w ? `<span class="badge late" style="margin-left:8px;">확인 대기 ${w}</span>` : ''; })()}
       <span class="r">
-        <button class="btn sm" onclick="state.classHubHomeworkShowAll=${!showAll}; render()">${showAll?'이 날짜만':'전체 보기'}</button>
+        ${standalone ? '' : `<button class="btn sm" onclick="state.classHubHomeworkShowAll=${!showAll}; render()">${showAll?'이 날짜만':'전체 보기'}</button>`}
         <button class="btn ${open?'':'p'} sm" onclick="stOpen('dhw')">${open?'닫기':iconSvg('plus',13)+' 과제 등록'}</button>
       </span>
     </div>
