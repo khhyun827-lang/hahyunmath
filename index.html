@@ -3105,6 +3105,26 @@ function dqAnswerable(content, answer){
   return /^-?[0-9]+(\.[0-9]+)?$/.test(a) ? a : null;
 }
 
+/* =================== 오답숙제를 읽는 두 가지 문 ===================
+   ⚠ **문항이 사라져도 학생 기록의 숙제는 남는다.** 시험지 삭제(`deleteExam`)는 딸린 숙제까지
+      털지만, 그 길을 «타지 않고» 문항이 없어지는 경우가 있다 — 컬렉션을 손으로 비웠거나,
+      지우다 중간에 끊겼거나. 그러면 `bankId`가 아무 데도 닿지 않는 숙제가 남는다.
+      실제로 그런 숙제 15건이 테스트학생 기록에 남아 **거짓 「위험」 신호**를 만들고 있었고,
+      학생 화면에는 「삭제된 시험지 0/15」짜리 **유령 구획**이 떴다.
+   그래서 «읽는 쪽»에서 막는다. 지우는 쪽을 아무리 조여도 이미 남은 것은 못 지운다. */
+function liveWrongHomework(rec){
+  return (rec && rec.wrongHomework || []).filter(h => DATA.problemBank.some(b => b.id === h.bankId));
+}
+/* «아직 해야 할» 오답숙제 — 살아 있고 · 공개됐고 · 아직 안 낸 것.
+   ⚠ 같은 조건이 네 곳(할 일 줄 · 서브내비 숫자 · 퀴즈 빈 화면 · 신호)에 필요하다.
+      복제해 두었더니 **신호 한 곳만 조건이 빠져** 이 사달이 났다. 한 곳에서만 정한다. */
+function wrongHomeworkLeft(rec){
+  return (rec && rec.wrongHomework || []).filter(h => {
+    const b = DATA.problemBank.find(x => x.id === h.bankId);
+    return b && b.status === 'approved' && !h.done;
+  });
+}
+
 /* 이 학생이 풀 수 있는 카드 전부. 순수 계산이라 렌더 중에 불러도 안전하다.
 
    ⚠ **오답숙제를 끝낸 문항만 들어온다** (`h.done`). 두 화면의 역할을 갈라 두는 선이다 —
@@ -5957,10 +5977,7 @@ function stuTodo(c){
     title:`데일리퀴즈 ${dqLeft.length}문제`, sub:'틀렸던 문제 다시 풀기',
     tab:'quiz', pre:`state.stuQuizId='${dqLeft[0].id}';`
   });
-  c.rec.wrongHomework.filter(h=>{
-    const bank = DATA.problemBank.find(b=>b.id===h.bankId);
-    return bank && bank.status==='approved' && !h.done;
-  }).forEach(h=>{
+  wrongHomeworkLeft(c.rec).forEach(h=>{
     const exam = DATA.exams.find(e=>e.id===h.examId);
     items.push({
       icon:'clipboard', bg:'var(--nobg)', fg:'var(--no)',
@@ -6095,10 +6112,7 @@ function stuQuizHTML(c){
     <s>·</s>${escHtml(subjectOfStudent(c.sid))} ${range.size}단원</div>` : '';
 
   if(pool.length===0){
-    const left = (c.rec.wrongHomework||[]).filter(h=>{
-      const b = DATA.problemBank.find(x=>x.id===h.bankId);
-      return b && b.status==='approved' && !h.done;
-    }).length;
+    const left = wrongHomeworkLeft(c.rec).length;
     /* 셋을 가른다 — 할 일이 저마다 다르다. 「범위 밖」을 «없다»고만 하면
        학생은 다 푼 줄 알지만 실제로는 시험이 끝나서 접힌 것이다. */
     const outOfRange = all.length - pool.length;
@@ -6212,7 +6226,9 @@ function stuQuizHTML(c){
 /* 원본 문항 번호를 반드시 같이 보여 준다. «내가 뭘 틀려서 이걸 푸는지»를 모르면 그냥 새 숙제가 된다.
    시험지별로 묶는 것도 같은 이유다 — 오답숙제는 «어느 시험을 다시 푸는 일»이다. */
 function stuWrongHTML(c){
-  const hws = c.rec.wrongHomework;
+  /* 없는 문항을 가리키는 숙제는 «묶기 전에» 뺀다. 카드만 안 그리면
+     「삭제된 시험지 0/15」짜리 빈 구획이 남는다 (아래 byExam이 그걸로 만들어진다). */
+  const hws = liveWrongHomework(c.rec);
   const byExam = {};
   hws.forEach(h=>{ (byExam[h.examId] = byExam[h.examId] || []).push(h); });
   const examIds = Object.keys(byExam);
@@ -6812,10 +6828,7 @@ function studentHTML(){
   /* 서브내비의 숫자는 «아직 안 한 것»만 센다. 전체 개수는 화면 안에 이미 있다. */
   const counts = {
     quiz:    dqTodayCards(c.rec).filter(x=>!dqDoneToday(c.rec, x.id)).length,
-    wronghw: c.rec.wrongHomework.filter(h=>{
-               const b = DATA.problemBank.find(x=>x.id===h.bankId);
-               return b && b.status==='approved' && !h.done;
-             }).length,
+    wronghw: wrongHomeworkLeft(c.rec).length,
     progress: c.homework.filter(a=>!c.rec.assignmentsDone[a.id]).length,
     notice:  unseenCount('notice', DATA.notices.length),
     qna:     c.qnas.filter(q=>!q.answer).length
@@ -7138,7 +7151,10 @@ function rosterStats(s){
   const hws = DATA.assignments.filter(a=>!a.classId || a.classId===s.classId);
   const hwDone = hws.filter(a=>rec.assignmentsDone && rec.assignmentsDone[a.id]).length;
 
-  const wrongLeft = (rec.wrongHomework || []).filter(h=>!h.done).length;
+  /* ⚠ 없는 문항을 가리키는 숙제는 세지 않는다 — 학생이 손쓸 수 없는 것으로 「위험」을 만들면
+     그 신호는 영원히 안 꺼진다. 실제로 고아 9건이 한 학생을 위험 1순위로 올려 두고 있었다.
+     («검토 중»인 것은 여기서 아직 센다 — 뜻이 다른 이야기라 따로 정한다.) */
+  const wrongLeft = liveWrongHomework(rec).filter(h=>!h.done).length;
 
   const vids = DATA.videos.filter(v=>v.studentId ? v.studentId===sid : (!v.classId || v.classId===s.classId));
   const vidPct = vids.length ? Math.round(vids.reduce((sum,v)=>{
