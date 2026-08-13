@@ -408,6 +408,9 @@ table.grid .nm s{text-decoration:none;color:var(--dim);font-weight:400;
   font-family:inherit;font-size:14px;font-weight:600;cursor:pointer;}
 .mbtn.p{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:700;}
 .mbtn.q{background:transparent;border-color:transparent;color:var(--sub);height:40px;font-size:13px;}
+/* .btn과 같은 규칙을 학생앱 버튼에도 준다 — 없으면 «못 누르는데 멀쩡해 보이는» 버튼이 된다
+   (과제 제출에서 사진 0장일 때 실제로 그랬다). */
+.mbtn[disabled]{opacity:.45;pointer-events:none;}
 
 /* 할 일 한 줄 */
 .todo{display:flex;align-items:center;gap:12px;padding:13px 15px;background:var(--card);

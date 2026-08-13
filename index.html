@@ -797,6 +797,46 @@
 /* 열이 둘 이상인 진짜 격자만 칸을 그린다 */
 .pb-tbl.grid td{border:1px solid var(--line);}
 
+/* ---------- 과제 제출 (학생앱 · 강사 검토 공용) ----------
+   사진은 «증거»라 큰 것이 필요 없다. 줄로 세워 두고 누르면 크게 본다.
+   폰에서도 좁아지지 않게 고정 크기 + 가로 스크롤로 둔다 — 접으면 줄 수가 들쭉날쭉해진다. */
+.hw-shots{display:flex;gap:7px;margin-top:9px;overflow-x:auto;padding-bottom:2px;}
+.hw-shots img{width:74px;height:74px;object-fit:cover;flex-shrink:0;cursor:pointer;
+  border-radius:var(--r-sm);border:1px solid var(--line);display:block;}
+.hw-shot{position:relative;flex-shrink:0;line-height:0;}
+.hw-x{position:absolute;top:3px;right:3px;width:19px;height:19px;border-radius:50%;
+  border:0;background:rgba(0,0,0,.62);color:#fff;font-size:12px;line-height:1;cursor:pointer;padding:0;}
+.hw-upping{position:absolute;left:3px;bottom:3px;background:rgba(0,0,0,.62);color:#fff;
+  font-size:9.5px;font-weight:400;padding:2px 5px;border-radius:3px;line-height:1.3;}
+.hw-up{margin-top:11px;padding-top:11px;border-top:1px solid var(--line2);}
+.hw-hint{font-size:11px;color:var(--dim);margin-top:7px;line-height:1.6;}
+/* 반려는 «왜»가 본문이다. 사유가 눈에 안 들어오면 학생은 같은 것을 또 낸다. */
+.hw-back{margin-top:9px;padding:9px 11px;border-radius:var(--r-sm);
+  background:var(--nobg);border:1px solid var(--no);}
+.hw-back b{display:block;font-size:11.5px;color:var(--no);margin-bottom:4px;}
+.hw-back span{display:block;font-size:12.5px;line-height:1.7;white-space:pre-wrap;}
+.hw-back i{display:block;font-style:normal;font-size:11px;color:var(--dim);margin-top:5px;}
+.hw-ok,.hw-wait{margin-top:8px;font-size:11.5px;line-height:1.6;}
+.hw-ok{color:var(--ok);} .hw-wait{color:var(--sub);}
+.hw-ok i{font-style:normal;color:var(--dim);}
+/* 강사·조교의 «과제 확인» 한 줄. 학생 상세와 반 관리가 같이 쓴다. */
+.hw-row{padding:11px 0;border-top:1px solid var(--line2);}
+.hw-row:first-of-type{border-top:0;}
+.hw-rt{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.hw-who{font-size:12.5px;min-width:62px;}
+.hw-title{flex:1;min-width:120px;font-size:12.5px;color:var(--ink);text-align:left;}
+.hw-when{font-size:11px;color:var(--dim);}
+.hw-acts{display:flex;gap:6px;margin-top:9px;flex-wrap:wrap;}
+.hw-note{font-size:11.5px;color:var(--dim);margin-top:7px;}
+.hw-rej{margin-top:9px;}
+.hw-rej textarea{width:100%;border:1px solid var(--line);border-radius:var(--r-sm);
+  background:var(--paper);padding:8px 10px;font-family:inherit;font-size:12.5px;
+  line-height:1.7;resize:vertical;}
+/* 사진 크게 보기 — 화면을 덮는다. 아무 데나 눌러 닫는다. */
+.hw-view{position:fixed;inset:0;z-index:60;background:rgba(20,18,17,.86);
+  display:flex;align-items:center;justify-content:center;padding:22px;cursor:zoom-out;}
+.hw-view img{max-width:100%;max-height:100%;border-radius:var(--r-sm);display:block;}
+
 .app .actbar{position:fixed;z-index:6;flex-wrap:wrap;}
 /* 고정된 액션바가 마지막 행을 가리지 않게, 스크롤 영역 «안»에 여백을 둔다. */
 .app .rst-pad{height:64px;flex-shrink:0;}
@@ -2100,6 +2140,9 @@ let state = {
   dailyScoreName: '',
   solutionOpen: {},
   homeworkDetailId: null,
+  hwPhotos: {},              // 과제id → 아직 «제출 전»인 사진들 (드라이브에는 이미 올라가 있다)
+  hwRejectOpen: null,        // 반려 사유를 적고 있는 «과제id:학생id»
+  hwPhotoView: null,         // 크게 보고 있는 사진 주소
   classHubId: null,
   classHubTab: 'sessions',   // 「학생 명단」은 반 안이 아니라 명단(01-roster)이 맡는다
   studentSearchQuery: '',
@@ -2918,15 +2961,86 @@ async function addHomework(prefix){
   render();
 }
 async function deleteHomework(hwId){
-  if(!confirm('이 과제를 삭제할까요? 학생들의 제출/완료 표시도 함께 사라집니다.')) return;
+  /* 제출 사진이 몇 장 딸려 나가는지 지우기 «전»에 말해 준다 — 드라이브에서도 지워진다. */
+  await loadAllRecordsIfNeeded();
+  const shots = [];
+  for(const sid in state.allRecords) hwState(state.allRecords[sid], hwId).photos.forEach(p=>{
+    if(p.fileId) shots.push(p.fileId);
+  });
+  if(!confirm('이 과제를 삭제할까요? 학생들의 제출/완료 표시도 함께 사라집니다.'
+    + (shots.length ? `\n\n제출된 사진 ${shots.length}장도 드라이브에서 지워집니다.` : ''))) return;
   DATA.assignments = DATA.assignments.filter(a=>a.id!==hwId);
   await dbDeleteDoc('assignments', hwId);
+  /* kv에서만 지우면 드라이브에 파일이 남아 쌓인다 (강의자료에서 겪은 것과 같다). */
+  shots.forEach(id=>deleteFromDrive(id));
   render();
 }
-async function toggleHomeworkDone(studentId, hwId){
+/* 과제 상태를 옮기는 문은 여기 넷뿐이다. 전부 «읽어 온 그 객체»를 제자리에서 고친다
+   (saveRecord가 다른 객체를 막는다 — 2026-08-12의 사고 이후로 그렇다). */
+async function setHwState(studentId, hwId, patch){
   const rec = await loadRecord(studentId);
-  rec.assignmentsDone[hwId] = !rec.assignmentsDone[hwId];
+  const prev = hwState(rec, hwId);
+  rec.assignmentsDone[hwId] = { ...prev, ...patch };
+  delete rec.assignmentsDone[hwId].legacy;
   await saveRecord(studentId);
+  /* ⚠ **강사 화면은 `state.allRecords`를 본다 — `DATA.records`가 아니다.** 둘은 각각
+     따로 읽어 온 «다른 객체»라, 여기서 되꽂지 않으면 강사가 수락을 눌러도 자기 화면은
+     그대로다 (버튼이 안 먹는 것처럼 보인다). deleteExam도 같은 이유로 되꽂는다. */
+  state.allRecords[studentId] = rec;
+  return rec;
+}
+/* 학생이 낸다. 사진은 이미 드라이브에 올라가 있고 여기서는 «주소»만 기록에 박는다. */
+async function submitHomework(studentId, hwId){
+  const photos = (state.hwPhotos && state.hwPhotos[hwId] || []).filter(p=>p && p.url);
+  if(photos.length===0){ showToast('사진을 한 장 이상 올려주세요.'); return; }
+  if(photos.some(p=>p.uploading)){ showToast('사진을 올리는 중입니다. 잠시만 기다려주세요.'); return; }
+  /* 반려된 것을 다시 낼 때 옛 사진은 드라이브에서 지운다 — 안 지우면 파일이 쌓이기만 한다. */
+  const old = hwState(await loadRecord(studentId), hwId).photos;
+  await setHwState(studentId, hwId, {
+    status: HW_SUBMITTED, photos, submittedAt: todayStr(),
+    reason: '', decidedAt: '', by: '', onSite: false
+  });
+  old.forEach(p=>{ if(p.fileId && !photos.some(n=>n.fileId===p.fileId)) deleteFromDrive(p.fileId); });
+  if(state.hwPhotos) delete state.hwPhotos[hwId];
+  showToast('제출했습니다. 강사·조교가 확인하면 완료로 바뀝니다.');
+  render();
+}
+/* 강사·조교가 수락한다. onSite면 «온라인으로 안 냈지만 현장에서 보여 준» 경우다. */
+async function approveHomework(studentId, hwId, onSite){
+  const s = DATA.students.find(x=>x.studentId===studentId);
+  await setHwState(studentId, hwId, {
+    status: HW_APPROVED, decidedAt: todayStr(), by: actorLabel(),
+    onSite: !!onSite, reason: ''
+  });
+  const hw = DATA.assignments.find(a=>a.id===hwId);
+  logAudit(onSite ? '과제 현장 확인' : '과제 수락', studentId, s?s.name:'',
+    (hw?hw.title:'과제'));
+  showToast(onSite ? '현장 확인으로 완료 처리했습니다.' : '수락했습니다.');
+  render();
+}
+/* 반려한다. 사유를 반드시 받는다 — 이유 없이 되돌리면 학생은 뭘 고쳐야 할지 모른다. */
+async function rejectHomework(studentId, hwId){
+  const reason = (document.getElementById('hw-reject-'+hwId+'-'+studentId)||{}).value;
+  const r = (reason||'').trim();
+  if(!r){ showToast('반려 사유를 적어주세요. 학생 화면에 그대로 보입니다.'); return; }
+  const s = DATA.students.find(x=>x.studentId===studentId);
+  await setHwState(studentId, hwId, {
+    status: HW_REJECTED, decidedAt: todayStr(), by: actorLabel(), reason: r, onSite: false
+  });
+  const hw = DATA.assignments.find(a=>a.id===hwId);
+  logAudit('과제 반려', studentId, s?s.name:'', (hw?hw.title:'과제') + ' — ' + r);
+  state.hwRejectOpen = null;
+  showToast('반려했습니다. 학생 화면에 사유가 보입니다.');
+  render();
+}
+/* 잘못 누른 것을 되돌린다. 제출물(사진)은 그대로 두고 «판단»만 지운다 —
+   사진까지 지우면 학생이 다시 올려야 한다. */
+async function undoHwDecision(studentId, hwId){
+  const cur = hwState(await loadRecord(studentId), hwId);
+  await setHwState(studentId, hwId, {
+    status: cur.photos.length ? HW_SUBMITTED : HW_NONE,
+    decidedAt: '', by: '', reason: '', onSite: false
+  });
   render();
 }
 
@@ -3123,6 +3237,35 @@ function wrongHomeworkLeft(rec){
     const b = DATA.problemBank.find(x => x.id === h.bankId);
     return b && b.status === 'approved' && !h.done;
   });
+}
+
+/* =================== 과제 제출 · 승인 ===================
+   과제는 오래 «학생이 스스로 누르는 참/거짓» 하나였다. 이제 흐름이 생겼다 —
+   학생이 **사진을 올려 제출**하면 강사·조교가 보고 **수락**하거나 **반려**한다.
+   온라인으로 안 낸 학생도 현장에서 보여 주면 그 자리에서 **현장 확인**으로 완료가 된다.
+
+   ⚠ **옛 기록은 마이그레이션하지 않는다.** `assignmentsDone[id] === true`로 저장된 것이
+      이미 있는데, 기록을 통째로 다시 쓰는 일은 이 앱에서 제일 위험한 작업이다
+      (2026-08-12에 그렇게 한 학생의 기록을 날렸다). **읽는 쪽에서 흡수한다** —
+      참이면 «수락됨»으로 읽는다. 그러면 옛 기록도 새 화면에서 그대로 완료로 보인다.
+
+   ⚠ **읽는 문을 처음부터 하나로 둔다.** 오늘 오답숙제 신호 버그가 «같은 조건문 네 벌 중
+      한 곳만 빠져서» 났다. 과제 상태를 보는 곳은 그보다 많다 — 전부 아래 셋만 부른다. */
+const HW_NONE = 'none', HW_SUBMITTED = 'submitted', HW_APPROVED = 'approved', HW_REJECTED = 'rejected';
+function hwState(rec, hwId){
+  const v = rec && rec.assignmentsDone ? rec.assignmentsDone[hwId] : null;
+  if(v === true)  return { status: HW_APPROVED, photos: [], legacy: true };   // 옛 기록
+  if(!v || typeof v !== 'object') return { status: HW_NONE, photos: [] };
+  return { ...v, status: v.status || HW_NONE, photos: v.photos || [] };
+}
+/* «완료»는 오직 수락된 것이다. 제출만 해 둔 것은 아직 아니다 —
+   그걸 완료로 세면 강사가 보기도 전에 숫자가 차서 검토할 이유가 사라진다. */
+function hwIsDone(rec, hwId){ return hwState(rec, hwId).status === HW_APPROVED; }
+/* 학생이 손댈 일이 남았는가 — 안 냈거나(none) 반려됐거나(rejected).
+   제출해 둔 것은 «기다리는 중»이라 할 일이 아니다. */
+function hwNeedsAction(rec, hwId){
+  const s = hwState(rec, hwId).status;
+  return s === HW_NONE || s === HW_REJECTED;
 }
 
 /* 이 학생이 풀 수 있는 카드 전부. 순수 계산이라 렌더 중에 불러도 안전하다.
@@ -3516,6 +3659,48 @@ async function deleteClinic(cid){
   if(!confirm('이 클리닉 신청을 삭제할까요?')) return;
   DATA.clinics = DATA.clinics.filter(c=>c.id!==cid);
   await dbDeleteDoc('clinics', cid);
+  render();
+}
+
+/* =================== 과제 사진 (여러 장) ===================
+   질의응답은 한 장이라 `state.qnaQuestionImage` 하나로 됐지만, 과제는 노트 여러 쪽을
+   찍어 올린다. 그래서 «올리는 중»인 것과 «다 올라간» 것이 한 줄에 섞인다 —
+   목록 하나로 두고 각 칸이 자기 상태를 들고 있게 한다.
+   ⚠ 제출 «전»의 사진은 state에만 있다. 그래도 드라이브에는 이미 올라가 있으므로,
+     빼기(×)를 누르면 그 자리에서 드라이브에서도 지운다. */
+const HW_PHOTO_MAX = 6;
+function hwPhotoList(hwId){ return (state.hwPhotos && state.hwPhotos[hwId]) || []; }
+async function handleHwPhotos(hwId, fileList){
+  const files = Array.from(fileList||[]);
+  if(!files.length) return;
+  state.hwPhotos = state.hwPhotos || {};
+  const list = state.hwPhotos[hwId] = hwPhotoList(hwId).slice();
+  const room = HW_PHOTO_MAX - list.length;
+  if(room <= 0){ showToast(`사진은 ${HW_PHOTO_MAX}장까지 올릴 수 있습니다.`); return; }
+  if(files.length > room) showToast(`${HW_PHOTO_MAX}장까지만 올라갑니다.`);
+  /* 한 장씩 순서대로 올린다. 한꺼번에 던지면 느린 회선에서 전부 타임아웃으로 죽는다. */
+  for(const f of files.slice(0, room)){
+    const previewUrl = URL.createObjectURL(f);
+    const slot = { uploading:true, previewUrl };
+    list.push(slot); render();
+    try{
+      const { url, fileId } = await uploadImageToDrive(f);
+      Object.assign(slot, { url, fileId, uploading:false });
+    }catch(e){
+      console.error('과제 사진 업로드 실패', e);
+      showToast('사진 업로드에 실패했습니다. 다시 시도해주세요.');
+      const i = list.indexOf(slot); if(i>=0) list.splice(i,1);
+    }
+    URL.revokeObjectURL(previewUrl);
+    render();
+  }
+}
+function removeHwPhoto(hwId, idx){
+  const list = hwPhotoList(hwId).slice();
+  const [gone] = list.splice(idx, 1);
+  if(gone && gone.fileId) deleteFromDrive(gone.fileId);
+  state.hwPhotos = state.hwPhotos || {};
+  state.hwPhotos[hwId] = list;
   render();
 }
 
@@ -5295,6 +5480,10 @@ function render(){
   else if(state.view==='assistant') bodyHtml = assistantHTML();
   /* 모든 화면이 자기 셸(상단바·푸터)을 스스로 갖는다. 덧씌우는 공용 껍데기는 없다. */
   let html = bodyHtml;
+  /* 제출 사진 크게 보기. 화면 위에 덮으므로 어느 뷰에서 눌렀든 여기 한 곳에서 그린다 —
+     학생앱과 강사 검토 화면이 같은 자리를 쓴다. */
+  if(state.hwPhotoView) html += `<div class="hw-view" onclick="state.hwPhotoView=null; render()">
+    <img src="${escHtml(state.hwPhotoView)}" alt="제출한 사진 크게 보기"></div>`;
   if(state.toast) html += `<div style="position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1B1B1D;color:#fff;padding:12px 22px;border-radius:30px;font-size:13px;box-shadow:0 6px 20px rgba(0,0,0,.2);z-index:999;">${state.toast}</div>`;
   app.innerHTML = html;
   if(window.renderMathInElement){
@@ -5985,9 +6174,13 @@ function stuTodo(c){
       tab:'wronghw'
     });
   });
-  c.homework.filter(a=>!c.rec.assignmentsDone[a.id]).forEach(a=>items.push({
+  /* ⚠ «낸 것»은 할 일이 아니다 — 학생은 기다리는 중이고 공은 강사에게 넘어가 있다.
+     안 냈거나(none) 반려된 것(rejected)만 남긴다. */
+  c.homework.filter(a=>hwNeedsAction(c.rec, a.id)).forEach(a=>items.push({
     icon:'document', bg:'var(--bluebg)', fg:'var(--blue)',
-    title:a.title, sub:'과제' + (a.dueDate ? ' · '+a.dueDate+'까지' : ''),
+    title:a.title,
+    sub:(hwState(c.rec, a.id).status===HW_REJECTED ? '과제 · 다시 해야 해요' : '과제')
+        + (a.dueDate ? ' · '+a.dueDate+'까지' : ''),
     due:a.dueDate || '', dday:stuDday(a.dueDate), tab:'progress'
   }));
   c.videos.filter(v=>!((c.rec.videoProgress[v.id]||{}).completed)).forEach(v=>{
@@ -6015,7 +6208,7 @@ function stuHomeHTML(c){
   const cp = getClassProgress(c.classId);
   const nextUnit = cp.chapters.find(u=>!cp.doneMap[u]);
   const attRate = stuAttRate(c.rec);
-  const hwDone = c.homework.filter(a=>c.rec.assignmentsDone[a.id]).length;
+  const hwDone = c.homework.filter(a=>hwIsDone(c.rec, a.id)).length;
   const vidAvg = stuVideoAvg(c);
 
   return `
@@ -6322,18 +6515,144 @@ function stuWrongHTML(c){
       }).join('')}`;
 }
 
+/* =================== 과제 확인 (강사 · 조교 공용) ===================
+   **학생 상세와 반 관리, 두 화면이 이 한 줄을 같이 쓴다.** 두 벌로 두면 다음에 반드시
+   한쪽만 고쳐진다 — 오늘 오답숙제 신호가 그렇게 새고 있었다.
+   `wide`는 반 관리처럼 «학생 이름»을 앞에 세워야 하는 자리에서 켠다. */
+function hwReviewRowHTML(sid, rec, a, opts){
+  const o = opts || {};
+  const st = hwState(rec, a.id);
+  const key = a.id + ':' + sid;
+  const rejecting = state.hwRejectOpen === key;
+  const [tone, label] = HW_BADGE[st.status];
+
+  const shots = st.photos.length ? `
+    <div class="hw-shots">${st.photos.map(p=>`
+      <img src="${escHtml(p.url)}" alt="제출한 사진"
+        onclick="state.hwPhotoView='${escHtml(p.url)}'; render()">`).join('')}</div>`
+    : (st.status===HW_APPROVED && (st.onSite || st.legacy)
+        ? `<div class="hw-note">${st.legacy ? '예전 방식으로 완료 표시된 과제입니다 (제출물 없음).'
+                                             : '현장에서 확인했습니다 (온라인 제출물 없음).'}</div>` : '');
+
+  /* 버튼은 «지금 상태에서 할 수 있는 것»만 낸다. 전부 늘어놓으면 무엇이 다음인지 흐려진다. */
+  let acts = '';
+  if(st.status===HW_SUBMITTED){
+    acts = `<button class="btn p sm" onclick="approveHomework('${sid}','${a.id}',false)">수락</button>
+      <button class="btn q sm" onclick="state.hwRejectOpen='${key}'; render()">반려</button>`;
+  } else if(st.status===HW_APPROVED){
+    acts = `<button class="btn sm" onclick="undoHwDecision('${sid}','${a.id}')">완료 취소</button>`;
+  } else {
+    /* 미제출·반려 — 현장에서 보여 주면 여기서 바로 완료가 된다. */
+    acts = `<button class="btn p sm" onclick="approveHomework('${sid}','${a.id}',true)">현장 확인</button>
+      ${st.status===HW_REJECTED
+        ? `<button class="btn sm" onclick="undoHwDecision('${sid}','${a.id}')">반려 취소</button>` : ''}`;
+  }
+
+  return `<div class="hw-row">
+    <div class="hw-rt">
+      ${o.wide ? `<b class="hw-who">${escHtml(o.name||'')}</b>` : ''}
+      <span class="hw-title">${escHtml(a.title)}</span>
+      ${label ? `<span class="badge ${tone}">${label}</span>` : '<span class="badge">미제출</span>'}
+      ${st.submittedAt ? `<span class="mono hw-when">낸 날 ${escHtml(st.submittedAt)}</span>` : ''}
+      ${st.by ? `<span class="hw-when">${escHtml(st.by)}${st.decidedAt?' · '+escHtml(st.decidedAt):''}</span>` : ''}
+    </div>
+    ${st.status===HW_REJECTED && st.reason
+      ? `<div class="hw-back"><b>반려 사유</b><span>${escHtml(st.reason)}</span></div>` : ''}
+    ${shots}
+    ${rejecting ? `<div class="hw-rej">
+      <textarea id="hw-reject-${a.id}-${sid}" rows="2"
+        placeholder="무엇을 다시 해야 하는지 적어주세요. 학생 화면에 그대로 보입니다."></textarea>
+      <div class="row" style="gap:6px;margin-top:7px;">
+        <button class="btn q sm" onclick="rejectHomework('${sid}','${a.id}')">반려하고 알리기</button>
+        <button class="btn sm" onclick="state.hwRejectOpen=null; render()">취소</button>
+      </div></div>`
+      : `<div class="hw-acts">${acts}</div>`}
+  </div>`;
+}
+
 /* ---------- 진도 · 과제 ---------- */
+/* 과제 한 장. 예전에는 «학생이 직접 누르는 체크박스»였다 — 눌렀다는 말 말고는 아무 근거가
+   없었다. 지금은 사진을 올려 내고, 강사·조교가 보고 수락해야 완료가 된다.
+   ⚠ 학생에게는 «완료로 만드는 버튼»이 없다. 그 문은 강사·조교 쪽에만 있다. */
+const HW_BADGE = {
+  [HW_NONE]:      ['', ''],
+  [HW_SUBMITTED]: ['late', '확인 기다리는 중'],
+  [HW_APPROVED]:  ['ok',   '완료'],
+  [HW_REJECTED]:  ['no',   '다시 해야 해요']
+};
+function stuHomeworkCardHTML(c, a){
+  const st = hwState(c.rec, a.id);
+  const done = st.status === HW_APPROVED;
+  const dd = hwNeedsAction(c.rec, a.id) ? stuDday(a.dueDate) : null;
+  const [tone, label] = HW_BADGE[st.status];
+  const staged = hwPhotoList(a.id);
+  const busy = staged.some(p=>p.uploading);
+
+  /* 이미 낸 사진 — 제출했든 수락됐든 «내가 낸 것»은 늘 보여 준다. */
+  const sent = st.photos.length ? `
+    <div class="hw-shots">${st.photos.map(p=>`
+      <img src="${escHtml(p.url)}" alt="제출한 사진"
+        onclick="state.hwPhotoView='${escHtml(p.url)}'; render()">`).join('')}</div>` : '';
+
+  /* 낼 차례일 때만 올리는 자리를 연다. */
+  const uploader = hwNeedsAction(c.rec, a.id) ? `
+    <div class="hw-up">
+      ${staged.length ? `<div class="hw-shots">${staged.map((p,i)=>`
+        <span class="hw-shot">
+          <img src="${escHtml(p.url || p.previewUrl)}" ${p.uploading?'style="opacity:.45;"':''} alt="올린 사진">
+          ${p.uploading ? `<b class="hw-upping">올리는 중…</b>`
+            : `<button class="hw-x" onclick="removeHwPhoto('${a.id}',${i})">×</button>`}
+        </span>`).join('')}</div>` : ''}
+      <input type="file" accept="image/*" multiple id="hwf-${a.id}" style="display:none;"
+        onchange="handleHwPhotos('${a.id}', this.files); this.value='';">
+      <input type="file" accept="image/*" capture="environment" id="hwc-${a.id}" style="display:none;"
+        onchange="handleHwPhotos('${a.id}', this.files); this.value='';">
+      <div class="row" style="gap:7px;margin-top:${staged.length?'9px':'2px'};">
+        <button class="mbtn" style="flex:1;" ${staged.length>=HW_PHOTO_MAX?'disabled':''}
+          onclick="document.getElementById('hwc-${a.id}').click()">${iconSvg('camera',15)} 촬영</button>
+        <button class="mbtn" style="flex:1;" ${staged.length>=HW_PHOTO_MAX?'disabled':''}
+          onclick="document.getElementById('hwf-${a.id}').click()">${iconSvg('file',15)} 사진 선택</button>
+      </div>
+      <button class="mbtn p" style="margin-top:8px;" ${staged.length===0||busy?'disabled':''}
+        onclick="submitHomework('${c.sid}','${a.id}')">${
+          busy ? '사진 올리는 중…' : `제출하기${staged.length?` (${staged.length}장)`:''}`}</button>
+      <div class="hw-hint">노트를 찍어 올리면 강사·조교가 확인합니다. 최대 ${HW_PHOTO_MAX}장.</div>
+    </div>` : '';
+
+  return `<div class="mc" style="${done?'opacity:.7;':''}">
+    <div class="mrow" style="min-height:34px;gap:9px;">
+      <span style="flex:1;min-width:0;font-size:13.5px;${done?'color:var(--sub);':'font-weight:600;'}">
+        ${escHtml(a.title)}</span>
+      ${label ? `<span class="badge ${tone}">${label}</span>` : ''}
+      ${dd ? `<span class="badge ${dd.tone}">${dd.label}</span>`
+           : `<span class="mono" style="font-size:11px;color:var(--dim);">${escHtml(a.dueDate||'')}</span>`}
+    </div>
+    ${a.description ? `<div style="font-size:12.5px;color:var(--sub);line-height:1.75;
+      white-space:pre-wrap;margin-top:4px;">${escHtml(a.description)}</div>` : ''}
+    ${st.status===HW_REJECTED && st.reason ? `<div class="hw-back">
+      <b>다시 해야 하는 이유</b><span>${escHtml(st.reason)}</span>
+      <i>${escHtml(st.by||'')}${st.decidedAt?' · '+escHtml(st.decidedAt):''}</i></div>` : ''}
+    ${st.status===HW_APPROVED ? `<div class="hw-ok">${
+      st.onSite ? '현장에서 확인받았습니다.' : '확인받았습니다.'}${
+      st.by ? ` <i>${escHtml(st.by)}${st.decidedAt?' · '+escHtml(st.decidedAt):''}</i>` : ''}</div>` : ''}
+    ${st.status===HW_SUBMITTED ? `<div class="hw-wait">
+      ${escHtml(st.submittedAt||'')}에 냈습니다. 강사·조교가 확인하면 완료로 바뀝니다.</div>` : ''}
+    ${sent}
+    ${uploader}
+  </div>`;
+}
+
 /* 반 진도와 내 과제를 한 화면에 둔다. «어디까지 나갔는지»와 «내가 뭘 안 냈는지»는
    학생 입장에서 같은 질문이다. */
 function stuProgressHTML(c){
   markSeen('homework', c.homework.length);
   const cp = getClassProgress(c.classId);
   const nextUnit = cp.chapters.find(u=>!cp.doneMap[u]);
-  const undone = c.homework.filter(a=>!c.rec.assignmentsDone[a.id]);
+  const undone = c.homework.filter(a=>!hwIsDone(c.rec, a.id));
   const doneCount = c.homework.length - undone.length;
   /* 마감이 가까운 미완료가 위로, 완료는 아래로. */
   const sorted = c.homework.slice().sort((a,b)=>{
-    const ad = !!c.rec.assignmentsDone[a.id], bd = !!c.rec.assignmentsDone[b.id];
+    const ad = hwIsDone(c.rec, a.id), bd = hwIsDone(c.rec, b.id);
     if(ad!==bd) return ad ? 1 : -1;
     return (a.dueDate||'9999').localeCompare(b.dueDate||'9999');
   });
@@ -6356,25 +6675,7 @@ function stuProgressHTML(c){
   <div class="msec">과제 <span class="mono" style="color:${undone.length?'var(--late)':'var(--dim)'};">${doneCount}/${c.homework.length}</span></div>
   ${c.homework.length===0
     ? `<div class="mc"><span style="font-size:12.5px;color:var(--dim);">등록된 과제가 없습니다.</span></div>`
-    : sorted.map(a=>{
-        const on = !!c.rec.assignmentsDone[a.id];
-        const dd = on ? null : stuDday(a.dueDate);
-        return `<div class="mc" style="${on?'opacity:.65;':''}">
-          <div class="mrow" style="min-height:34px;gap:11px;cursor:pointer;"
-            onclick="toggleHomeworkDone('${c.sid}','${a.id}')">
-            <span style="width:22px;height:22px;border-radius:var(--r-xs);flex-shrink:0;cursor:pointer;
-              display:flex;align-items:center;justify-content:center;
-              ${on?'background:var(--accent);color:#fff;':'border:1.5px solid #C9C6BB;color:transparent;'}"
-              >${iconSvg('check',14)}</span>
-            <span style="flex:1;min-width:0;font-size:13.5px;${on?'color:var(--sub);':'font-weight:600;'}">
-              ${escHtml(a.title)}</span>
-            ${dd ? `<span class="badge ${dd.tone}">${dd.label}</span>`
-                 : `<span class="mono" style="font-size:11px;color:var(--dim);">${escHtml(a.dueDate||'')}</span>`}
-          </div>
-          ${a.description ? `<div style="font-size:12.5px;color:var(--sub);line-height:1.75;
-            white-space:pre-wrap;margin-top:4px;padding-left:33px;">${escHtml(a.description)}</div>` : ''}
-        </div>`;
-      }).join('')}
+    : sorted.map(a=>stuHomeworkCardHTML(c, a)).join('')}
 
   ${/* 단원 체크리스트는 «읽는 것»이라 손이 닿는 자리(과제) 아래에 둔다.
        카드를 단원마다 하나씩 세우면 열 줄에 480px을 쓴다 — 한 카드 안의 줄로 접었다. */
@@ -6829,7 +7130,7 @@ function studentHTML(){
   const counts = {
     quiz:    dqTodayCards(c.rec).filter(x=>!dqDoneToday(c.rec, x.id)).length,
     wronghw: wrongHomeworkLeft(c.rec).length,
-    progress: c.homework.filter(a=>!c.rec.assignmentsDone[a.id]).length,
+    progress: c.homework.filter(a=>hwNeedsAction(c.rec, a.id)).length,
     notice:  unseenCount('notice', DATA.notices.length),
     qna:     c.qnas.filter(q=>!q.answer).length
   };
@@ -7149,7 +7450,7 @@ function rosterStats(s){
   const drop = scores.length>1 ? scores[0] - scores[scores.length-1] : 0;
 
   const hws = DATA.assignments.filter(a=>!a.classId || a.classId===s.classId);
-  const hwDone = hws.filter(a=>rec.assignmentsDone && rec.assignmentsDone[a.id]).length;
+  const hwDone = hws.filter(a=>hwIsDone(rec, a.id)).length;
 
   /* ⚠ 없는 문항을 가리키는 숙제는 세지 않는다 — 학생이 손쓸 수 없는 것으로 「위험」을 만들면
      그 신호는 영원히 안 꺼진다. 실제로 고아 9건이 한 학생을 위험 1순위로 올려 두고 있었다.
@@ -8206,7 +8507,7 @@ function sessionHwHTML(classId, date){
     : hws.map(h=>{
         const done = roster.filter(s=>{
           const rec = state.allRecords[s.studentId];
-          return rec && rec.assignmentsDone && rec.assignmentsDone[h.id];
+          return rec && hwIsDone(rec, h.id);
         }).length;
         return `<div class="cls-hw">
           <div class="n">${escHtml(h.title)}<s>${h.classId ? '이 반' : '전체 반'}${h.dueDate ? ' · 마감 ' + h.dueDate : ''}${h.createdAt ? ' · 등록 ' + h.createdAt : ''}</s></div>
@@ -8635,10 +8936,15 @@ function studentTimeline(s, rec){
       `<button class="btn q sm" onclick="deleteScore('${sid}',${i})">삭제</button>`, 'k-score');
   });
   DATA.assignments.filter(a=>!a.classId || a.classId===s.classId).forEach(a=>{
-    const done = rec.assignmentsDone && rec.assignmentsDone[a.id];
+    /* 연대기는 «무슨 일이 있었나»라 상태를 넷 그대로 보여 준다 —
+       완료/미완료로 뭉개면 «냈는데 아직 확인 안 됨»이 미완료로 보인다. */
+    const stt = hwState(rec, a.id);
+    const [tone, label] = HW_BADGE[stt.status];
     push(a.createdAt || a.dueDate, 'hw', '과제', escHtml(a.title),
-      a.dueDate ? `마감 ${a.dueDate}` : '',
-      done ? '<span class="badge ok">완료</span>' : '<span class="badge no">미완료</span>');
+      (a.dueDate ? `마감 ${a.dueDate}` : '')
+        + (stt.by ? `${a.dueDate?' · ':''}${escHtml(stt.by)}` : ''),
+      label ? `<span class="badge ${tone}">${escHtml(label)}</span>`
+            : '<span class="badge no">미제출</span>');
   });
   (rec.wrongHomework||[]).forEach(h=>{
     const bank = DATA.problemBank.find(b=>b.id===h.bankId);
@@ -8877,12 +9183,17 @@ function sdTimelineHTML(s, sid, rec, isAssistant){
     </div></div>`;
   } else if(f==='hw'){
     const myHw = DATA.assignments.filter(a=>!a.classId || a.classId===s.classId);
+    /* 낸 것이 위로 온다 — 이 화면에서 할 일은 «확인해 주는 것»이다. */
+    const ordered = myHw.slice().sort((a,b)=>{
+      const rank = x => hwState(rec, x.id).status===HW_SUBMITTED ? 0
+                      : hwState(rec, x.id).status===HW_APPROVED ? 2 : 1;
+      return rank(a)-rank(b) || (b.dueDate||'').localeCompare(a.dueDate||'');
+    });
     form = myHw.length===0 ? '' : `<div class="sd-form">
-      <div class="t-sec" style="margin:0 0 8px;">과제 완료 처리</div>
-      ${myHw.map(a=>{ const done = rec.assignmentsDone && rec.assignmentsDone[a.id];
-        return `<div class="sd-crow"><span style="color:var(--ink);flex:1;text-align:left;">${escHtml(a.title)}</span>
-          <button class="btn sm ${done?'ok':''}" onclick="toggleHomeworkDone('${sid}','${a.id}')">${done?'완료':'미완료'}</button></div>`;
-      }).join('')}</div>`;
+      <div class="t-sec" style="margin:0 0 8px;">과제 확인</div>
+      ${ordered.map(a=>hwReviewRowHTML(sid, rec, a)).join('')}
+      <p class="st-note">사진을 눌러 크게 볼 수 있습니다.
+        온라인으로 안 낸 학생이 <b>현장에서 보여 주면</b> 「현장 확인」으로 바로 완료 처리합니다.</p></div>`;
   } else if(f==='consult' && !isAssistant){
     /* 상담 기록 — 다른 갈래와 같은 자리에 폼이 붙는다. 저장할 때 DOM에서 읽으므로
        글자마다 render()가 돌지 않는다(한글 조합·커서 안전). */
@@ -9404,23 +9715,30 @@ function teacherClassDailyHomeworkHTML(classId, date){
     </div>`}
     ${visible.length===0 ? '<div class="st-empty">해당하는 과제가 없습니다.</div>' :
     visible.map(a=>{
-      const doneCount = state.allRecordsLoaded ? roster.filter(s=>state.allRecords[s.studentId] && state.allRecords[s.studentId].assignmentsDone && state.allRecords[s.studentId].assignmentsDone[a.id]).length : null;
+      const recOf = s => state.allRecords[s.studentId];
+      const doneCount = state.allRecordsLoaded
+        ? roster.filter(s=>recOf(s) && hwIsDone(recOf(s), a.id)).length : null;
+      /* 「몇 명이 냈고 아직 안 봤는가」가 이 줄에서 제일 급한 숫자다. */
+      const waiting = state.allRecordsLoaded
+        ? roster.filter(s=>recOf(s) && hwState(recOf(s), a.id).status===HW_SUBMITTED).length : 0;
       const on = state.homeworkDetailId===a.id;
       return `<div class="st-row" style="align-items:flex-start;">
         <div class="t"><b>${escHtml(a.title)}</b>
           <span><span class="mono">${a.createdAt?'등록 '+a.createdAt:''}${a.dueDate?' · 마감 '+a.dueDate:''}</span>${
-            doneCount!==null?`<s>·</s>완료 ${doneCount}/${roster.length}`:''}</span>
+            doneCount!==null?`<s>·</s>완료 ${doneCount}/${roster.length}`:''}${
+            waiting?`<s>·</s><b style="color:var(--late);">확인 대기 ${waiting}</b>`:''}</span>
           ${a.description?`<span style="color:var(--sub);margin-top:6px;white-space:pre-wrap;">${escHtml(a.description)}</span>`:''}
           ${!on ? '' : (!state.allRecordsLoaded
             ? '<span style="margin-top:9px;">불러오는 중…</span>'
-            : `<span style="margin-top:10px;display:flex;flex-wrap:wrap;gap:6px;">${
-                roster.map(s=>{
-                  const done = state.allRecords[s.studentId] && state.allRecords[s.studentId].assignmentsDone && state.allRecords[s.studentId].assignmentsDone[a.id];
-                  return `<span class="badge ${done?'ok':'no'}">${escHtml(s.name)}</span>`;
-                }).join('')}</span>`)}
+            : `<div style="margin-top:10px;">${
+                roster.length===0 ? '<span class="muted" style="font-size:12px;">이 반에 재원생이 없습니다.</span>'
+                : roster.map(s=>{
+                    const rec = recOf(s);
+                    return rec ? hwReviewRowHTML(s.studentId, rec, a, {wide:true, name:s.name}) : '';
+                  }).join('')}</div>`)}
         </div>
         <div class="v">
-          <button class="btn sm" onclick="state.homeworkDetailId = state.homeworkDetailId==='${a.id}' ? null : '${a.id}'; render()">${on?'접기':'완료 현황'}</button>
+          <button class="btn sm" onclick="state.homeworkDetailId = state.homeworkDetailId==='${a.id}' ? null : '${a.id}'; state.hwRejectOpen=null; render()">${on?'접기':'확인하기'}</button>
           <button class="btn q sm" onclick="deleteHomework('${a.id}')">삭제</button>
         </div>
       </div>`;
