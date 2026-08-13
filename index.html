@@ -2193,7 +2193,7 @@ let state = {
   stuWrongMode: false,    // 「틀린 문제 등록」 패널이 열려 있나
   stuVideoId: null,       // iframe을 실제로 붙일 영상 하나. 목록 전체를 임베드하지 않는다
   stuAttMonth: '',        // 출석 달력이 보고 있는 달 'YYYY-MM'. 빈 값이면 이번 달
-  stuClinicSlotId: null,  // 신청하려고 고른 시간대
+  stuClinicSlotIds: [],   // 신청하려고 고른 시간대들 (여러 시간 이어서 신청할 수 있다)
   stuQnaWriting: false,   // 질문 폼이 열려 있나
   lpRevealed: false,      // 랜딩이 한 번 드러났나 — 다시 그려도 다시 페이드인하지 않는다
   asFlag: '',             // 조교 명단의 필터 — '' | 'hw' | 'wrong'
@@ -3533,15 +3533,40 @@ function selectChoice(inputId, symbol, btnEl){
       되고, 정작 그 시각의 시간대는 0/20으로 남아 거짓말을 한다.
       그래서 «확정된 것»(승인·완료)은 가리키는 자리가 사라졌으면 **날짜·시각으로 이 자리에 센다.**
       대기 중인 제안은 세지 않는다 — 아직 자리를 차지한 것이 아니다. */
+/* 신청 하나가 **여러 자리**를 차지할 수 있다 — 클리닉은 한 시간만 하는 것이 아니다.
+   옛 기록은 `slotId` 하나뿐이라 둘 다 본다. */
+function clinicSlotIds(c){
+  const many = c.slotIds || [];
+  return many.length ? many : (c.slotId ? [c.slotId] : []);
+}
 function clinicSlotBookedCount(slotId){
   const slot = DATA.clinicSlots.find(s=>s.id===slotId);
   return DATA.clinics.filter(c=>{
     if(c.status==='취소') return false;
-    if(c.slotId === slotId) return true;
+    const ids = clinicSlotIds(c);
+    if(ids.includes(slotId)) return true;
     if(!slot || (c.status!=='승인' && c.status!=='완료')) return false;
-    if(c.slotId && DATA.clinicSlots.some(s=>s.id===c.slotId)) return false;   // 살아 있는 다른 자리에 앉아 있다
-    return c.day===slot.date && slotTimeKey(c.time)===slotTimeKey(slot.time);
+    /* 살아 있는 자리를 이미 붙들고 있으면 여기 것이 아니다. */
+    if(ids.some(id=>DATA.clinicSlots.some(s=>s.id===id))) return false;
+    /* 가리키던 자리가 사라진 «확정»은 날짜·시각으로 이 자리에 센다.
+       범위로 잡은 것이면 시작~마지막 사이에 이 자리가 들면 센다. */
+    if(c.day !== slot.date) return false;
+    const k = slotTimeKey(slot.time), a = slotTimeKey(c.time), b = slotTimeKey(c.timeEnd || c.time);
+    return k >= a && k <= b;
   }).length;
+}
+/* 화면에 쓰는 «언제». 여러 자리면 처음~끝을 한 줄로 보여 준다. */
+function clinicWhenLabel(c){
+  const ids = clinicSlotIds(c);
+  const times = ids.map(id=>(DATA.clinicSlots.find(s=>s.id===id)||{}).time).filter(Boolean);
+  if(times.length > 1){
+    const sorted = times.slice().sort((x,y)=>slotTimeKey(x).localeCompare(slotTimeKey(y)));
+    return `${slotTimeLabel(sorted[0])} ~ ${slotTimeLabel(sorted[sorted.length-1])} · ${times.length}개`;
+  }
+  if(c.timeEnd && slotTimeKey(c.timeEnd) !== slotTimeKey(c.time)){
+    return `${slotTimeLabel(c.time)} ~ ${slotTimeLabel(c.timeEnd)}`;
+  }
+  return slotTimeLabel(times[0] || c.time);
 }
 /* =================== 클리닉 시간대 — 고르고, 한꺼번에 연다 ===================
    시간은 오래 «자유 문장»이었다(「저녁 7시」). 사람이 매번 타이핑해야 했고,
@@ -3650,42 +3675,55 @@ async function submitClinicRequest(freeform){
   const topic = document.getElementById('clinic-topic').value.trim();
   if(!topic){ showToast('질문/요청 내용을 입력해주세요.'); return; }
 
-  let slotId = '', day = '', time = '';
+  let slotIds = [], day = '', time = '', timeEnd = '';
   if(freeform){
     day  = document.getElementById('clinic-free-date').value;
     time = document.getElementById('clinic-free-time').value.trim();
-    if(!day || !time){ showToast('희망 날짜와 시간을 입력해주세요.'); return; }
+    timeEnd = (document.getElementById('clinic-free-end')||{}).value || '';
+    if(!day || !time){ showToast('희망 날짜와 시작 시각을 골라주세요.'); return; }
     if(day < todayStr()){ showToast('지난 날짜로는 신청할 수 없습니다.'); return; }
-    if(DATA.clinics.some(c=>c.studentId===sid && c.day===day
-        && slotTimeKey(c.time)===slotTimeKey(time) && c.status!=='취소')){
-      showToast('이미 같은 날짜·시간으로 신청하셨습니다.'); return;
+    /* 「마지막」은 열린 시간대와 같은 뜻이다 — 그 시각에도 한 자리가 선다. */
+    if(timeEnd && slotTimeKey(timeEnd) < slotTimeKey(time)){
+      showToast('마지막 시각이 시작 시각보다 빠릅니다.'); return;
     }
-    /* 승인된 제안은 그 시간에 슬롯을 만들어 잠근다. 그 자리가 꽉 찼으면 다른 학생이
-       같은 시간을 또 제안하지 못하게 여기서 막는다 — 안 막으면 승인이 겹친다.
-       ⚠ 여기도 «시각»으로 맞춘다. 문자열로 보면 열려 있는 자리를 못 찾는다. */
-    const taken = findClinicSlot(day, time);
-    if(taken && clinicSlotBookedCount(taken.id) >= taken.capacity){
-      showToast('그 시간은 이미 찼습니다. 다른 시간을 적어 주세요.'); return;
-    }
+    if(!timeEnd || slotTimeKey(timeEnd)===slotTimeKey(time)) timeEnd = '';
+    const a = slotTimeKey(time), b = slotTimeKey(timeEnd || time);
+    /* 이미 신청한 시간과 «겹치는지»를 본다 — 붙여서 두 번 내면 같은 자리를 두 번 잡는다. */
+    if(DATA.clinics.some(c=>{
+        if(c.studentId!==sid || c.day!==day || c.status==='취소') return false;
+        return slotTimeKey(c.timeEnd || c.time) >= a && slotTimeKey(c.time) <= b;
+      })){ showToast('이미 그 시간과 겹치는 신청이 있습니다.'); return; }
+    /* 열려 있는 자리 중 꽉 찬 것이 범위 안에 있으면 막는다 — 승인이 겹친다. */
+    const full = DATA.clinicSlots.filter(s=>s.date===day)
+      .filter(s=>{ const k=slotTimeKey(s.time); return k>=a && k<=b; })
+      .find(s=>clinicSlotBookedCount(s.id) >= s.capacity);
+    if(full){ showToast(`${slotTimeLabel(full.time)}는 이미 찼습니다. 다른 시간을 골라 주세요.`); return; }
   } else {
-    /* 예전에는 드롭다운 하나(#clinic-slot)였다. 학생 화면이 시간대를 «목록에서 눌러» 고르게 되면서
-       고른 값은 state가 들고 있다 — 빈 자리를 먼저 보여주고 고르게 하는 편이,
-       날짜를 적어 내고 거절되면 처음부터 다시 하는 것보다 낫다. */
-    slotId = state.stuClinicSlotId || '';
-    if(!slotId){ showToast('희망 시간대를 선택해주세요.'); return; }
-    const slot = DATA.clinicSlots.find(s=>s.id===slotId);
-    if(!slot){ showToast('선택한 시간대를 찾을 수 없습니다. 다시 선택해주세요.'); render(); return; }
-    if(clinicSlotBookedCount(slotId) >= slot.capacity){ showToast('죄송해요, 방금 정원이 찼습니다. 다른 시간대를 선택해주세요.'); render(); return; }
-    if(DATA.clinics.some(c=>c.studentId===sid && c.slotId===slotId && c.status!=='취소')){ showToast('이미 같은 시간대에 신청하셨습니다.'); return; }
-    day = slot.date; time = slot.time;
+    /* 고른 값은 state가 들고 있다. **여러 개를 고를 수 있다** — 클리닉을 두세 시간
+       이어서 하는 일이 흔한데, 예전에는 하나만 골라져서 한 시간씩 따로 내야 했다. */
+    const ids = (state.stuClinicSlotIds || []);
+    if(ids.length===0){ showToast('희망 시간대를 선택해주세요.'); return; }
+    const picked = ids.map(id=>DATA.clinicSlots.find(s=>s.id===id)).filter(Boolean);
+    if(picked.length !== ids.length){ showToast('선택한 시간대를 찾을 수 없습니다. 다시 선택해주세요.'); state.stuClinicSlotIds=[]; render(); return; }
+    const full = picked.find(s=>clinicSlotBookedCount(s.id) >= s.capacity);
+    if(full){ showToast(`${slotTimeLabel(full.time)}는 방금 정원이 찼습니다. 다시 골라 주세요.`); render(); return; }
+    const dup = picked.find(s=>DATA.clinics.some(c=>c.studentId===sid && c.status!=='취소' && clinicSlotIds(c).includes(s.id)));
+    if(dup){ showToast(`${slotTimeLabel(dup.time)}는 이미 신청하셨습니다.`); return; }
+    picked.sort(slotCmp);
+    slotIds = picked.map(s=>s.id);
+    day = picked[0].date;
+    time = picked[0].time;
+    timeEnd = picked.length>1 ? picked[picked.length-1].time : '';
   }
 
-  const clinic = {id:'cl'+Date.now(), studentId:sid, name:state.currentUser.name, topic, slotId,
-                  day, time, status:'대기', requestedAt:todayStr()};
+  const clinic = {id:'cl'+Date.now(), studentId:sid, name:state.currentUser.name, topic,
+                  slotId: slotIds[0] || '', slotIds,
+                  day, time, timeEnd, status:'대기', requestedAt:todayStr()};
   DATA.clinics.unshift(clinic);
   await dbSetDoc('clinics', clinic.id, clinic);
-  state.stuClinicSlotId = null;
-  showToast(freeform ? '희망 시간을 제안했습니다. 선생님 승인 후 확정됩니다.' : '클리닉 신청이 접수되었습니다.');
+  state.stuClinicSlotIds = [];
+  showToast(freeform ? '희망 시간을 제안했습니다. 선생님 승인 후 확정됩니다.'
+    : `클리닉 신청이 접수되었습니다.${slotIds.length>1?` (${slotIds.length}개 시간대)`:''}`);
   render();   // 입력칸은 지우지 않고 다시 그린다 — 전체 재렌더링이라 어차피 새 칸이 온다
 }
 
@@ -3712,7 +3750,7 @@ async function assignClinic(){
     slotId = slot.id;
   }
   const clinic = {id:'cl'+Date.now(), studentId:sid, name:studentNameOf(sid), topic:topic||'클리닉',
-                  slotId, day, time, status:'승인', requestedAt:todayStr()};
+                  slotId, slotIds:[slotId], day, time, timeEnd:'', status:'승인', requestedAt:todayStr()};
   DATA.clinics.unshift(clinic);
   await dbSetDoc('clinics', clinic.id, clinic);
   await logAudit('클리닉 배정', sid, studentNameOf(sid), `${day} ${time}`);
@@ -3741,7 +3779,10 @@ async function ensureClinicSlot(day, time){
   /* 새로 만들 때는 읽을 수 있으면 `HH:MM`으로 담는다 — 다음부터 어긋나지 않는다. */
   const key = slotTimeKey(t);
   const norm = /^\d{4}$/.test(key) ? key.slice(0,2) + ':' + key.slice(2) : t;
-  const slot = {id:'cs'+Date.now(), date:day, time:norm, capacity:1};
+  /* ⚠ id에 `Date.now()`만 쓰면 안 된다. 범위를 승인할 때 이 함수가 **한 밀리초 안에
+     여러 번** 불려 id가 겹쳤고, 그러면 find()가 늘 첫 번째 것을 돌려줘서
+     세 시간을 잡았는데 전부 같은 자리로 붙었다. 실제로 그렇게 만들었다가 잡았다. */
+  const slot = {id:'cs'+Date.now()+'_'+Math.random().toString(36).slice(2,7), date:day, time:norm, capacity:1};
   DATA.clinicSlots.push(slot);
   DATA.clinicSlots.sort(slotCmp);
   await dbSetDoc('clinicslots', slot.id, slot);
@@ -3756,24 +3797,34 @@ async function updateClinicStatus(cid, status){
   const c = DATA.clinics.find(c=>c.id===cid);
   if(!c) return;
   let note = '';
-  if(status==='승인' && !c.slotId && c.day && c.time){
-    /* 이미 열어 둔 시간대가 있으면 «거기 앉힌다». 학생이 그 자리가 열린 줄 모르고
-       직접 제안하는 일이 흔하다 — 그때 새 자리를 또 만들면 같은 시각이 둘로 갈린다. */
-    const existed = findClinicSlot(c.day, c.time);
-    const slot = existed || await ensureClinicSlot(c.day, c.time);
-    const booked = clinicSlotBookedCount(slot.id);
-    if(booked >= slot.capacity){
-      /* 이미 있던 시간대가 꽉 찼는데 교사가 승인했다 — 승인을 무르지 않고 정원을 한 자리 늘린다.
-         조용히 넘기면 «승인했는데 왜 안 들어가 있지»가 된다. 늘렸다는 사실을 말해 준다. */
-      slot.capacity = booked + 1;
-      await dbSetDoc('clinicslots', slot.id, slot);
-      note = ` (정원이 차 있어 ${slot.capacity}명으로 늘렸습니다)`;
-    } else {
-      note = existed
-        ? ` · ${c.day} ${slotTimeLabel(slot.time)} 자리에 앉혔습니다 (${booked+1}/${slot.capacity})`
-        : ` · ${c.day} ${slotTimeLabel(slot.time)} 시간대를 만들어 자리를 잡았습니다`;
+  if(status==='승인' && clinicSlotIds(c).length===0 && c.day && c.time){
+    /* 제안이 «범위»일 수 있다 (2시~4시). 그 사이 시각마다 자리를 하나씩 잡는다.
+       한 시간짜리면 한 자리다. 간격은 1시간으로 본다 — 열린 시간대의 기본과 같다. */
+    const toMin = t => { const k = slotTimeKey(t); return /^\d{4}$/.test(k) ? +k.slice(0,2)*60 + +k.slice(2) : null; };
+    const a = toMin(c.time), b = toMin(c.timeEnd || c.time);
+    const times = (a===null || b===null || b<a) ? [c.time]
+      : Array.from({length: Math.floor((b-a)/60)+1}, (_,i)=>SLOT_HHMM(a + i*60));
+    const ids = [], madeNew = [], grew = [];
+    for(const t of times){
+      /* 이미 열어 둔 시간대가 있으면 «거기 앉힌다». 학생이 그 자리가 열린 줄 모르고
+         직접 제안하는 일이 흔하다 — 그때 새 자리를 또 만들면 같은 시각이 둘로 갈린다. */
+      const existed = findClinicSlot(c.day, t);
+      const slot = existed || await ensureClinicSlot(c.day, t);
+      const booked = clinicSlotBookedCount(slot.id);
+      if(booked >= slot.capacity){
+        /* 이미 있던 시간대가 꽉 찼는데 교사가 승인했다 — 승인을 무르지 않고 정원을 한 자리 늘린다.
+           조용히 넘기면 «승인했는데 왜 안 들어가 있지»가 된다. 늘렸다는 사실을 말해 준다. */
+        slot.capacity = booked + 1;
+        await dbSetDoc('clinicslots', slot.id, slot);
+        grew.push(slotTimeLabel(slot.time));
+      } else if(!existed) madeNew.push(slotTimeLabel(slot.time));
+      ids.push(slot.id);
     }
-    c.slotId = slot.id;
+    c.slotIds = ids;
+    c.slotId = ids[0] || '';
+    note = ` · ${c.day} ${clinicWhenLabel(c)} 자리를 잡았습니다`
+      + (madeNew.length ? ` (${madeNew.join(' · ')}는 새로 열었습니다)` : '')
+      + (grew.length ? ` (${grew.join(' · ')}는 정원이 차 있어 한 자리 늘렸습니다)` : '');
   }
   c.status = status;
   await dbSetDoc('clinics', c.id, c);
@@ -7116,10 +7167,27 @@ function stuQnaHTML(c){
    거절될 때마다 처음부터 다시 해야 한다.
    경로는 셋인데 학생이 쓰는 것은 둘이다 — ①열린 시간대에서 고르기 ②희망 시간 직접 제안.
    (③교사 직접 배정은 관리자 화면에 있다.) */
+/* 고른 시간대를 켜고 끈다. **같은 날 안에서만** 여러 개를 고를 수 있다 —
+   클리닉 한 번은 한 자리에서 이어 앉는 일이라, 날짜가 섞이면 그건 신청 둘이다. */
+function stuToggleSlot(id){
+  const s = DATA.clinicSlots.find(x=>x.id===id);
+  if(!s) return;
+  let ids = (state.stuClinicSlotIds || []).slice();
+  const others = ids.map(i=>DATA.clinicSlots.find(x=>x.id===i)).filter(Boolean);
+  if(others.length && others[0].date !== s.date){
+    ids = [];                                    // 날짜를 바꾸면 앞의 선택은 버린다
+    showToast('다른 날짜를 골라 앞의 선택을 비웠습니다.');
+  }
+  ids = ids.includes(id) ? ids.filter(x=>x!==id) : ids.concat(id);
+  state.stuClinicSlotIds = ids;
+  render();
+}
 function stuClinicHTML(c){
   const slots = openClinicSlots();
   const mode = state.clinicApplyMode || (slots.length ? 'slot' : 'free');
-  const picked = slots.find(s=>s.id===state.stuClinicSlotId);
+  const pickedIds = (state.stuClinicSlotIds || []).filter(id=>slots.some(s=>s.id===id));
+  const picked = pickedIds.map(id=>slots.find(s=>s.id===id))
+    .sort((a,b)=>slotCmp(a,b));
   const mine = c.clinics;
 
   return `
@@ -7129,8 +7197,8 @@ function stuClinicHTML(c){
     <div class="row" style="gap:8px;flex-wrap:wrap;">
       <span class="badge ${cl.status==='승인'?'ok':cl.status==='대기'?'late':cl.status==='완료'?'':'gone'}">${cl.status}</span>
       <span class="mono" style="font-size:11.5px;">${escHtml(cl.day||'')}</span>
-      <span style="font-size:12.5px;font-weight:600;">${escHtml(cl.time||'')}</span>
-      ${!cl.slotId ? '<span class="badge">직접 제안</span>' : ''}
+      <span style="font-size:12.5px;font-weight:600;">${escHtml(clinicWhenLabel(cl))}</span>
+      ${clinicSlotIds(cl).length===0 ? '<span class="badge">직접 제안</span>' : ''}
     </div>
     <div style="font-size:12.5px;color:var(--sub);margin-top:9px;line-height:1.7;">${escHtml(cl.topic||'')}</div>
     ${cl.status==='대기' ? `<button class="mbtn q" style="margin-top:8px;"
@@ -7146,22 +7214,32 @@ function stuClinicHTML(c){
 
   ${mode==='slot' ? (slots.length===0
     ? `<div class="sap-empty">지금 열려 있는 시간대가 없습니다.<br>「희망 시간 제안」으로 신청해 보세요.</div>`
-    : `${slots.map(s=>{
+    : `<div style="font-size:11.5px;color:var(--dim);margin:-4px 0 10px;line-height:1.7;">
+        오래 남을 거라면 <b style="color:var(--ink);">이어지는 시간대를 여러 개</b> 고르세요.
+        다시 누르면 빠집니다.</div>
+      ${slots.map(s=>{
         const left = s.capacity - clinicSlotBookedCount(s.id);
-        const on = state.stuClinicSlotId===s.id;
-        return `<div class="mc ${on?'go':''}" onclick="state.stuClinicSlotId='${s.id}'; render()" style="cursor:pointer;">
+        const on = pickedIds.includes(s.id);
+        return `<div class="mc ${on?'go':''}" onclick="stuToggleSlot('${s.id}')" style="cursor:pointer;">
           <div class="mrow" style="min-height:30px;gap:10px;">
+            <span style="width:20px;height:20px;border-radius:var(--r-xs);flex-shrink:0;
+              display:flex;align-items:center;justify-content:center;
+              ${on?'background:var(--accent);color:#fff;':'border:1.5px solid #C9C6BB;color:transparent;'}"
+              >${iconSvg('check',13)}</span>
             <span class="mono" style="font-size:12.5px;width:86px;flex-shrink:0;">${escHtml(s.date)}</span>
             <b style="font-size:14px;font-weight:700;flex:1;min-width:0;">${escHtml(slotTimeLabel(s.time))}</b>
             <span class="badge ${left<=1?'no':''}">${left}자리</span>
           </div>
         </div>`;
       }).join('')}
-      ${picked ? `
+      ${picked.length ? `
       <div class="mc" style="margin-top:12px;">
-        <div class="sap-lab">${escHtml(picked.date)} ${escHtml(picked.time)} · 무엇을 묻고 싶나요?</div>
+        <div class="sap-lab">${escHtml(picked[0].date)} ·
+          ${escHtml(picked.map(s=>slotTimeLabel(s.time)).join(' · '))}</div>
+        <div class="sap-lab" style="margin-top:11px;">무엇을 묻고 싶나요?</div>
         <input id="clinic-topic" class="sap-in" placeholder="예: 미적분Ⅰ 도함수의 활용">
-        <button class="mbtn p" style="margin-top:11px;" onclick="submitClinicRequest(false)">신청하기</button>
+        <button class="mbtn p" style="margin-top:11px;" onclick="submitClinicRequest(false)">
+          ${picked.length>1 ? `${picked.length}개 시간대로 신청하기` : '신청하기'}</button>
       </div>` : `<div style="font-size:11.5px;color:var(--dim);margin-top:11px;text-align:center;">
         시간대를 누르면 신청 칸이 열립니다.</div>`}`)
   : `<div class="mc">
@@ -7170,8 +7248,14 @@ function stuClinicHTML(c){
           <input id="clinic-free-date" class="sap-in" type="date" min="${todayStr()}" value="${todayStr()}"></div>
         ${/* 자유 문장이던 것을 고르개로 바꿨다 — 「오후 4시」와 열린 자리의 16:00이
              다른 것으로 읽혀 승인해도 정원이 안 줄던 사고의 근원이 여기였다. */''}
-        <div><div class="sap-lab">희망 시간</div>
+        <div><div class="sap-lab">시작</div>
           <input id="clinic-free-time" class="sap-in" type="time" step="1800" value="19:00"></div>
+      </div>
+      <div class="sap-row2" style="margin-top:11px;">
+        <div><div class="sap-lab">마지막 (선택)</div>
+          <input id="clinic-free-end" class="sap-in" type="time" step="1800"></div>
+        <div style="font-size:11px;color:var(--dim);align-self:end;padding-bottom:9px;line-height:1.6;">
+          오래 남을 거면 끝 시각을 고르세요.<br>비우면 한 시간입니다.</div>
       </div>
       <div class="sap-lab" style="margin-top:13px;">무엇을 묻고 싶나요?</div>
       <input id="clinic-topic" class="sap-in" placeholder="예: 미적분Ⅰ 도함수의 활용">
@@ -9140,7 +9224,7 @@ function studentTimeline(s, rec){
   });
   DATA.clinics.filter(c=>c.studentId===sid).forEach(c=>{
     push(c.day, 'qna', '클리닉', escHtml(c.topic||'클리닉'),
-      escHtml(slotTimeLabel(c.time)), `<span class="badge ${c.status==='승인'||c.status==='완료'?'ok':(c.status==='취소'?'gone':'late')}">${c.status}</span>`,
+      escHtml(clinicWhenLabel(c)), `<span class="badge ${c.status==='승인'||c.status==='완료'?'ok':(c.status==='취소'?'gone':'late')}">${c.status}</span>`,
       '', c.status==='취소' ? '' : 'k-consult');
   });
 
@@ -10126,13 +10210,13 @@ function teacherClinicHTML(){
       const isToday = d===todayStr();
       /* 슬롯 없이 잡힌 것(학생 직접 제안 · 교사 직접 배정)도 그날 칸에 세운다 —
          판에 안 보이면 교사가 이미 잡아 둔 시간을 모르고 이중으로 앉힌다. */
-      const loose = DATA.clinics.filter(c=>!c.slotId && c.day===d && c.status!=='취소');
+      const loose = DATA.clinics.filter(c=>clinicSlotIds(c).length===0 && c.day===d && c.status!=="취소");
       return `<div class="cn-col">
         <div class="cn-ch ${isToday?'today':''}">${WEEKDAY_LABEL[new Date(d+'T00:00:00').getDay()]}<s>${d.slice(5).replace('-','/')}</s></div>
         ${list.length===0 && loose.length===0 ? '<div class="cn-none">—</div>' : ''}
         ${list.map(s=>{
             const n = clinicSlotBookedCount(s.id); const full = n >= s.capacity;
-            const who = DATA.clinics.filter(c=>c.slotId===s.id && c.status!=='취소');
+            const who = DATA.clinics.filter(c=>clinicSlotIds(c).includes(s.id) && c.status!=="취소");
             return `<div class="cn-slot ${full?'full':(n===0?'free':'')}">
               <div class="t">${escHtml(slotTimeLabel(s.time) || "시간 미정")}</div>
               <div class="u">${n}/${s.capacity}명${full?' · 마감':''}
@@ -10141,7 +10225,7 @@ function teacherClinicHTML(){
             </div>`;
           }).join('')}
         ${loose.map(c=>`<div class="cn-slot" style="border-style:dashed;">
-            <div class="t">${escHtml(slotTimeLabel(c.time) || "시간 미정")}</div>
+            <div class="t">${escHtml(clinicWhenLabel(c) || "시간 미정")}</div>
             <div class="u">${escHtml(c.name)} · ${c.status==='대기'?'승인 대기':c.status}<br>
               <span class="muted">시간대 밖</span></div>
           </div>`).join('')}
@@ -10166,9 +10250,9 @@ function teacherClinicHTML(){
           const sg = s ? signalOf(rosterStats(s)) : null;
           return `<div class="cn-rq">
             <div class="h">${sg?`<span class="rk ${sg.grade}"></span>`:''}<b>${escHtml(c.name)}</b>
-              ${c.slotId ? '' : '<span class="badge late">직접 제안</span>'}
+              ${clinicSlotIds(c).length ? "" : `<span class="badge late">직접 제안</span>`}
               <span class="ago">${c.requestedAt||''}</span></div>
-            <div class="w">${escHtml(c.day||'')} ${escHtml(slotTimeLabel(c.time))} · ${escHtml(c.topic||'')}</div>
+            <div class="w">${escHtml(c.day||"")} ${escHtml(clinicWhenLabel(c))} · ${escHtml(c.topic||'')}</div>
             <div class="a">
               <button class="btn sm ok" onclick="updateClinicStatus('${c.id}','승인')">승인</button>
               <button class="btn sm" onclick="updateClinicStatus('${c.id}','완료')">완료</button>
@@ -10267,7 +10351,7 @@ function teacherClinicHTML(){
           <div class="h"><b>${escHtml(c.name)}</b>
             <span class="status-badge"><span class="badge ${c.status==='취소'?'gone':(c.status==='승인'||c.status==='완료'?'ok':'late')}">${c.status}</span></span>
             <span class="ago">${c.requestedAt||''}</span></div>
-          <div class="w">${escHtml(c.day||'')} ${escHtml(slotTimeLabel(c.time))} · ${escHtml(c.topic||'')}</div>
+          <div class="w">${escHtml(c.day||"")} ${escHtml(clinicWhenLabel(c))} · ${escHtml(c.topic||'')}</div>
           <div class="a">
             <button class="btn q sm" onclick="updateClinicStatus('${c.id}','대기')">대기로</button>
             <button class="btn q sm" onclick="deleteClinic('${c.id}')">삭제</button>
