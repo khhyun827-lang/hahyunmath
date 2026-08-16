@@ -1197,6 +1197,9 @@
 .app .exc-chip.mid{background:var(--line2);color:var(--dim);}
 /* 수학 시험일 — 이 화면에서 가장 중요한 하루라 브랜드 와인을 여기에만 쓴다 */
 .app .exc-chip.math{background:var(--brand);color:#fff;font-weight:700;}
+/* 그 학교가 «그 줄에 없는 날»의 빈 자리. 이게 없으면 아랫줄이 위로 당겨져
+   학교마다 높이가 어긋난다 — 딱지와 같은 높이를 차지하되 보이지는 않는다 */
+.app .exc-chip.void{background:transparent;}
 .app .exc-more{display:block;margin-top:4px;font-size:10.5px;color:var(--dim);}
 
 /* ============================================================
@@ -12016,7 +12019,10 @@ function examCalendarHTML(list, getDates, viewSeason){
     if(seen[k]) return; seen[k] = 1;
     const d = getDates(school, grade);
     if(!d) return;
-    spans.push({school, grade, start: d.start || d.math, end: d.end || d.start || d.math, math: d.math || ''});
+    const start = d.start || d.math, end = d.end || d.start || d.math, math = d.math || '';
+    /* 줄을 차지하는 범위는 «수학 시험일까지» 포함한다 — 기간 밖에 적힌 경우가 있다 */
+    const at = [start, end, math].filter(Boolean).sort();
+    spans.push({school, grade, start, end, math, from: at[0], to: at[at.length - 1]});
   });
 
   if(spans.length === 0) return `<div style="font-size:12.5px;color:var(--dim);">
@@ -12032,28 +12038,59 @@ function examCalendarHTML(list, getDates, viewSeason){
   const days = new Date(y, m, 0).getDate();
   const today = todayStr();
 
+  /* ⚠ 학교마다 «줄»을 고정한다.
+     예전에는 그날 걸린 것을 순서대로 쌓아서 같은 학교가 날마다 다른 높이에 떴고,
+     수학 시험일에는 그 학교만 맨 위로 튀어 **띠가 두 동강** 났다.
+     이제 한 학교·학년은 그 달 내내 같은 줄에 있고 수학 시험일도 그 줄 위에 선다.
+     기간이 안 겹치는 학교끼리는 같은 줄을 나눠 써서 칸이 무한정 높아지지 않는다. */
+  const laneEnd = [];   // 줄마다 «지금까지 찬 마지막 날»
+  spans.sort((a, b) => a.from < b.from ? -1 : a.from > b.from ? 1
+    : (a.school + a.grade).localeCompare(b.school + b.grade))
+    .forEach(s => {
+      let i = 0;
+      while(i < laneEnd.length && laneEnd[i] >= s.from) i++;
+      s.lane = i; laneEnd[i] = s.to;
+    });
+  /* ⚠ 줄을 고정하면 «그날 걸린 것 중 셋»을 고르던 예전과 달리, 높은 줄로 밀린 학교는
+     한 달 내내 한 번도 안 보이게 된다. 그래서 셋에서 여섯으로 늘렸다 —
+     겹치는 것끼리만 줄을 더 쓰므로 한산한 주는 그대로 낮다. */
+  const LANES = 6;
+
   let cells = WEEKDAY_LABEL.map(d => `<div class="dh">${d}</div>`).join('');
   for(let i = 0; i < firstDow; i++) cells += '<div class="d off"></div>';
   for(let d = 1; d <= days; d++){
     const ymd = `${ym}-${String(d).padStart(2, '0')}`;
     const dow = new Date(y, m - 1, d).getDay();
-    const hits = spans.filter(s => s.start && ymd >= s.start && ymd <= (s.end || s.start));
-    const maths = spans.filter(s => s.math === ymd);
-    /* 수학 시험일은 «기간 딱지»에서 빼고 따로 크게 세운다 — 같은 학교가 두 번 나오면 안 된다. */
-    const chips = maths.map(s => `<span class="exc-chip math"
-        title="${escHtml(s.school + ' ' + s.grade)} 수학 시험">${escHtml(s.school)} ${escHtml(s.grade)}</span>`)
-      .concat(hits.filter(s => s.math !== ymd).map(s => {
-        const isFirst = s.start === ymd;
+    const onLane = []; let more = 0;
+    spans.forEach(s => {
+      const inPeriod = s.start && ymd >= s.start && ymd <= (s.end || s.start);
+      if(!inPeriod && s.math !== ymd) return;
+      if(s.lane >= LANES){ more++; return; }
+      onLane[s.lane] = s;
+    });
+    /* 뒤쪽 빈 줄은 안 그린다 — 앞쪽만 맞으면 가로줄은 이미 맞는다.
+       (sparse 배열이라 forEach가 빈 자리를 건너뛴다) */
+    let last = -1; onLane.forEach((s, i) => { last = i; });
+    let rows = '';
+    for(let i = 0; i <= last; i++){
+      const s = onLane[i];
+      /* 비어 있는 줄도 자리를 남긴다. 이게 없으면 아랫줄이 위로 당겨져 행이 어긋난다 */
+      if(!s){ rows += '<span class="exc-chip void">&nbsp;</span>'; continue; }
+      const who = escHtml(s.school) + ' ' + escHtml(s.grade);
+      if(s.math === ymd){
+        /* 수학 시험일 — 기간 딱지 대신 이것을 그린다. 같은 학교가 두 번 나오면 안 된다 */
+        rows += `<span class="exc-chip math" title="${who} 수학 시험">${who}</span>`;
+      }else{
         /* 첫날만 이름을 온전히 쓴다. 가운데 날은 이어지는 띠로 둔다 —
            닷새 내내 같은 이름이 반복되면 달력이 글자로 덮인다. */
-        return `<span class="exc-chip ${isFirst ? '' : 'mid'}"
-          title="${escHtml(s.school + ' ' + s.grade)} 시험기간">${
-          isFirst ? escHtml(s.school) + ' ' + escHtml(s.grade) : '·'}</span>`;
-      }));
-    const show = chips.slice(0, 3);
+        const isFirst = s.start === ymd;
+        rows += `<span class="exc-chip ${isFirst ? '' : 'mid'}" title="${who} 시험기간">${
+          isFirst ? who : '·'}</span>`;
+      }
+    }
     cells += `<div class="d${ymd === today ? ' today' : ''}${dow === 0 ? ' sun' : dow === 6 ? ' sat' : ''}">
-      <span class="n">${d}</span>${show.join('')}${
-      chips.length > 3 ? `<span class="exc-more">외 ${chips.length - 3}곳</span>` : ''}</div>`;
+      <span class="n">${d}</span>${rows}${
+      more ? `<span class="exc-more">외 ${more}곳</span>` : ''}</div>`;
   }
   /* 마지막 주의 남는 칸도 채운다 — 안 채우면 그 자리에 격자 배경(회색)이 통째로 드러난다. */
   const tail = (7 - ((firstDow + days) % 7)) % 7;
@@ -12074,7 +12111,8 @@ function examCalendarHTML(list, getDates, viewSeason){
   <div class="exc">${cells}</div>
   <div style="margin-top:10px;font-size:11.5px;color:var(--dim);line-height:1.8;">
     «${escHtml(viewSeason)}» 기준 <b class="mono" style="color:var(--ink);">${spans.length}</b>개 학교·학년의 일정입니다.
-    한 칸에 셋까지 보이고 나머지는 «외 n곳»으로 접힙니다.
+    <b style="color:var(--ink);">한 학교는 그 달 내내 같은 줄</b>에 서고 수학 시험일도 그 줄 위에 뜹니다.
+    줄은 여섯까지 보이고 나머지는 «외 n곳»으로 접힙니다.
   </div>`;
 }
 function shiftExamCal(ym, delta){
