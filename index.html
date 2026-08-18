@@ -9235,7 +9235,10 @@ function studentTimeline(s, rec){
       label ? `<span class="badge ${tone}">${escHtml(label)}</span>`
             : '<span class="badge no">미제출</span>');
   });
-  (rec.wrongHomework||[]).forEach(h=>{
+  /* ⚠ 고아 숙제는 여기서도 뺀다 — `liveWrongHomework`. 08-14에 막은 것은 학생 화면뿐이라
+     강사 연대기에는 「(삭제된 시험지) n번」이 그대로 섰다 (문항이 없으니 눌러도 볼 것이 없다).
+     데이터는 안 건드린다 — 읽는 쪽에서만 막는 결정이다 (3291행 머리말). */
+  liveWrongHomework(rec).forEach(h=>{
     const bank = DATA.problemBank.find(b=>b.id===h.bankId);
     const exam = DATA.exams.find(e=>e.id===h.examId);
     const correct = h.done && bank && (h.studentAnswer||'').trim()===(bank.variantAnswer||'').trim();
