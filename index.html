@@ -965,6 +965,130 @@
 .sap-vwrap iframe{position:absolute;inset:0;width:100%;height:100%;border:0;}
 
 /* ============================================================
+   출석 도장 — 접두사 gm-  (2026-08-21 · 시안 design-v1/21-checkin.html)
+   ⚠ **이것은 출결이 아니다.** 강사가 「수업 > 출결」에 넣는 출석·지각·조퇴·결석은
+     그대로 두고, 이 도장은 «앱을 연 날»에만 찍히는 **다른 줄**이다.
+     출석률에 한 숫자도 섞이지 않는다. 그래서 이름도 「출석 체크」가 아니라 「출석 도장」이다.
+   ⚠ **이름을 전부 gm- 으로 연다.** ds.css 와 한 글자도 겹치지 않게 —
+     예전에 .field 가 겹쳐 폼 102곳이 무너진 적이 있다.
+   ============================================================ */
+.gm-head{display:flex;align-items:baseline;gap:8px;}
+.gm-head .st{font-family:'Noto Serif KR',serif;font-size:26px;font-weight:600;letter-spacing:-.03em;
+  line-height:1;}
+.gm-head .st em{font-style:normal;font-size:13px;font-weight:400;color:var(--dim);margin-left:3px;}
+.gm-head .best{margin-left:auto;font-size:11px;color:var(--dim);}
+.gm-head .best b{font-family:'JetBrains Mono',monospace;color:var(--sub);}
+
+/* 일곱 칸 — 이번 주 */
+.gm-weekwrap{padding-bottom:20px;}
+.gm-week{display:flex;gap:6px;margin-top:14px;}
+.gm-day{flex:1;aspect-ratio:1;border-radius:50%;border:1px dashed var(--line);
+  display:flex;align-items:center;justify-content:center;position:relative;
+  font-size:10.5px;color:var(--dim);background:var(--sunk);}
+/* ⚠ 도장 자체가 원이라 찍힌 칸은 테두리 원을 지운다 — 안 그러면 원이 두 겹이 된다 */
+.gm-day.on{border-color:transparent;background:transparent;}
+.gm-day.today{border-color:var(--accent);border-style:solid;}
+.gm-day .lb{position:absolute;bottom:-17px;left:0;right:0;text-align:center;
+  font-size:9.5px;color:var(--dim);}
+.gm-day .stmp{width:104%;height:104%;object-fit:contain;display:block;}
+
+/* 「오늘의 게임」 줄 */
+.gm-run{display:flex;align-items:center;gap:12px;margin-top:14px;padding:13px 14px;
+  border:1px solid var(--accent-line);background:var(--accent-bg);border-radius:var(--r-lg);
+  cursor:pointer;transition:background var(--t);}
+.gm-run:hover{background:#E3DFDA;}
+.gm-run .ic{width:34px;height:34px;border-radius:var(--r-md);flex-shrink:0;background:var(--card);
+  display:flex;align-items:center;justify-content:center;font-size:17px;}
+.gm-run .ic img{width:32px;height:32px;object-fit:contain;display:block;}
+.gm-run .t{flex:1;min-width:0;}
+.gm-run .t b{display:block;font-size:13.5px;font-weight:700;}
+.gm-run .t span{display:block;font-size:11.5px;color:var(--sub);margin-top:3px;}
+.gm-run .go{color:var(--accent);flex-shrink:0;}
+/* 오늘 것을 다 쓴 자리 — «눌러도 안 되는 버튼»이 아니라 «닫힌 자리»로 보여야 한다 */
+.gm-run.off{border-color:var(--line);background:var(--sunk);cursor:default;}
+.gm-run.off:hover{background:var(--sunk);}
+.gm-run.off .ic{background:transparent;}
+.gm-run.off .t b{color:var(--sub);}
+
+/* 이번 주 순위 — 학원 전체 · 상위 5명 */
+.gm-rank{margin-top:14px;padding-top:13px;border-top:1px solid var(--line2);}
+.gm-rank .hd{display:flex;align-items:baseline;gap:7px;margin-bottom:9px;}
+.gm-rank .hd b{font-size:11.5px;font-weight:700;color:var(--dim);letter-spacing:.06em;}
+.gm-rank .hd s{text-decoration:none;margin-left:auto;font-size:10.5px;color:var(--dim);
+  font-family:'JetBrains Mono',monospace;}
+.gm-rk{display:flex;align-items:center;gap:9px;padding:4px 0;font-size:12.5px;}
+.gm-rk .n{width:15px;flex-shrink:0;font-family:'JetBrains Mono',monospace;font-size:11.5px;
+  color:var(--dim);text-align:center;}
+/* 1위만 브랜드색을 준다. 셋을 다 칠하면 «등수»가 아니라 «장식»이 된다 */
+.gm-rk.top .n{color:var(--brand);font-weight:700;}
+.gm-rk .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+/* 전체를 한 판에 세우면 이름만으로는 누군지 모른다 — 반을 작게 덧붙인다 */
+.gm-rk .nm i{font-style:normal;font-size:10.5px;color:var(--dim);margin-left:6px;}
+.gm-rk .sc{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--sub);
+  font-variant-numeric:tabular-nums;}
+.gm-rk.me{background:var(--accent-bg);border-radius:var(--r);margin:0 -7px;padding:4px 7px;}
+.gm-rk.me .nm{font-weight:700;}
+.gm-rk.me .nm em{font-style:normal;font-size:10.5px;color:var(--accent);margin-left:5px;}
+/* ⚠ 5위 밖일 때 «몇 등»인지는 말하지 않는다 —
+   매일 열 때마다 자기 이름이 아래쪽에 있는 것을 보면 그만두게 된다 */
+.gm-rank .yet{margin-top:8px;font-size:11px;color:var(--dim);line-height:1.6;}
+.gm-rank .yet b{color:var(--sub);}
+
+/* ============================================================
+   게임 — 화면을 덮는다
+   ⚠ **캔버스는 `#app` 밖에 있어야 한다.** render() 가 app.innerHTML 을 통째로
+     갈아치우므로 안에 두면 렌더 한 번에 캔버스가 사라진다.
+     그래서 덮개는 body 의 #gamehost 에 붙인다.
+   ============================================================ */
+.gm-over{position:fixed;inset:0;z-index:55;background:var(--paper);
+  display:flex;flex-direction:column;align-items:center;}
+.gm-shell{--gw:480px;width:100%;max-width:var(--gw);height:100%;
+  display:flex;flex-direction:column;}
+@media (min-width:760px){ .gm-shell{--gw:620px;} }
+@media (min-width:1100px){ .gm-shell{--gw:680px;} }
+.gm-bar{height:52px;flex-shrink:0;display:flex;align-items:center;gap:10px;padding:0 12px;
+  border-bottom:1px solid var(--line);background:var(--card);}
+.gm-x{width:36px;height:36px;border:0;background:transparent;color:var(--sub);cursor:pointer;
+  border-radius:var(--r-md);font-size:16px;font-family:inherit;}
+.gm-x:hover{background:var(--hover);}
+.gm-bar .sc{margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:600;
+  font-variant-numeric:tabular-nums;}
+.gm-bar .bs{font-size:11px;color:var(--dim);}
+.gm-stage{flex:1;min-height:0;position:relative;}
+/* ⚠ touch-action:none 이 없으면 끄는 손가락이 페이지를 스크롤한다 */
+.gm-stage canvas{display:block;touch-action:none;}
+
+/* 결과 — 캔버스 위에 얹는다 */
+.gm-res{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  background:rgba(250,249,246,.93);overflow-y:auto;}
+.gm-res .in{width:82%;max-width:360px;text-align:center;padding:18px 0;}
+.gm-res .big{font-family:'Noto Serif KR',serif;font-size:40px;font-weight:600;letter-spacing:-.03em;
+  line-height:1;}
+.gm-res .sub2{font-size:12px;color:var(--dim);margin-top:8px;}
+/* 도장 — 판이 끝나면 «쿵» 하고 내려앉는다.
+   ⚠ 글로 「도장을 찍었습니다」라고 쓰는 것과 실제로 찍히는 것은 다른 일이다.
+     이 0.45초가 이 기능의 보상이다. */
+.gm-res .stamp{margin-top:14px;display:flex;flex-direction:column;align-items:center;gap:8px;}
+.gm-res .stamp img{width:132px;height:auto;display:block;
+  animation:gmStampDrop .45s cubic-bezier(.2,1.5,.4,1) both;}
+.gm-res .stamp .day{font-size:12.5px;font-weight:700;color:var(--brand-d);
+  animation:gmFadeUp .3s ease .34s both;}
+@keyframes gmStampDrop{
+  0%{transform:scale(2.4) rotate(-15deg);opacity:0;}
+  55%{transform:scale(.92) rotate(4deg);opacity:1;}
+  100%{transform:scale(1) rotate(0);opacity:1;}
+}
+@keyframes gmFadeUp{ from{opacity:0;transform:translateY(5px);} to{opacity:1;transform:none;} }
+.gm-res .one{margin-top:10px;font-size:11.5px;color:var(--dim);line-height:1.6;}
+.gm-res .btns{display:flex;gap:8px;margin-top:14px;}
+.gm-res .btns button{flex:1;height:46px;border-radius:var(--r-md);font-family:inherit;
+  font-size:13.5px;cursor:pointer;border:1px solid var(--accent);background:var(--accent);
+  color:#fff;font-weight:700;}
+@media (prefers-reduced-motion:reduce){
+  .gm-res .stamp img,.gm-res .stamp .day{animation:none;}
+}
+
+/* ============================================================
    설정 · 목록 — 접두사 st-
    **카드를 쓰지 않는다.** 시안(13-settings)이 정한 언어는 «구역 + 줄»이다 —
    제목 아래 실선 하나로 구역을 가르고, 그 안은 얇은 선으로 나눈 줄이 쌓인다.
@@ -1557,6 +1681,9 @@
 </head>
 <body>
 <div id="app"><div style="padding:64px;text-align:center;color:#96968C;font-size:13px;">불러오는 중…</div></div>
+<!-- ⚠ 출석 도장 게임이 붙는 자리. **#app «밖»이어야 한다** —
+     render()가 app.innerHTML을 통째로 갈아치우므로 안에 두면 렌더 한 번에 캔버스가 사라진다. -->
+<div id="gamehost"></div>
 
 <!-- ============================================================
   Firebase 설정: 아래 firebaseConfig 값을 본인의 Firebase 프로젝트 값으로
@@ -2609,7 +2736,9 @@ async function seedTestAccountIfEmpty(){
 function emptyRecord(){
   return {scores:[], attendance:[], assignments:[], progress:{unit:'', percent:0},
           wrongHomework:[], videoProgress:{}, assignmentsDone:{},
-          dailyQuiz:{day:'', picks:[], cards:{}, log:[]}};
+          dailyQuiz:{day:'', picks:[], cards:{}, log:[]},
+          /* 출석 도장 — «앱을 연 날». ⚠ attendance(강사가 넣는 출결)와 **다른 줄**이다 */
+          checkin:{last:'', streak:0, best:0, bestScore:0, days:{}}};
 }
 /* ⚠ **저장해도 되는 기록은 «읽어 온 그 객체» 하나뿐이다.**
    메모리의 기록을 다른 객체로 갈아끼운 뒤 저장하면 진짜 문서를 통째로 덮는다.
@@ -2631,6 +2760,7 @@ async function loadRecord(studentId){
   if(!DATA.records[studentId].videoProgress) DATA.records[studentId].videoProgress = {};
   if(!DATA.records[studentId].assignmentsDone) DATA.records[studentId].assignmentsDone = {};
   dqState(DATA.records[studentId]);          // dailyQuiz 없는 옛 기록을 여기서 채운다
+  ckState(DATA.records[studentId]);          // checkin 없는 옛 기록도 마찬가지
   return DATA.records[studentId];
 }
 async function saveRecord(studentId){
@@ -5719,6 +5849,11 @@ function render(){
   if(state.view==='student' && state.studentTab==='video' && state.currentUser){
     mountVideoTrackers(state.currentUser.studentId);
   }
+  /* 출석 도장의 순위는 «읽어 온 뒤»에 그 자리만 갈아 끼운다.
+     ⚠ 홈을 그리는 것만으로는 아무것도 «저장»하지 않는다 — 읽기뿐이다. */
+  if(state.view==='student' && state.studentTab==='home' && state.currentUser){
+    ckEnsureRank(state.currentUser.studentId);
+  }
   /* 채팅은 «마지막 말»이 있는 곳에서 열려야 한다. 전체 재렌더링이라 매번 위로 되돌아간다. */
   const chatBox = app.querySelector('.sap-chat, .ch-win, .fm-chat');
   if(chatBox) chatBox.scrollTop = chatBox.scrollHeight;
@@ -6420,6 +6555,454 @@ function stuTodo(c){
   });
 }
 
+/* =================== 출석 도장 ===================
+   학생 홈에 놓는 «하루 한 판»짜리 장치. 시안은 design-v1/21-checkin.html 이다.
+
+   ⚠ **이것은 출결이 아니다.** 강사가 「수업 > 출결」에 넣는 `rec.attendance` 는 그대로 두고,
+     이 도장은 `rec.checkin` 이라는 **다른 줄**에 쌓인다. 출석률에 한 숫자도 섞이지 않는다.
+   ⚠ **화면을 그리는 것만으로는 아무것도 저장하지 않는다.** 이 앱은 학생 화면을 그리기만 해도
+     저장하는 길이 하나 있는데(dqEnsureToday), 도장은 **그 길을 따라가지 않는다.**
+     학생이 실제로 한 판을 끝낸 순간에만 쓴다. 「연 것」과 「찍은 것」이 같아지면
+     도장이 아무 뜻도 못 갖는다.
+   ⚠ **연속은 수업 없는 날도 센다.** 학원 출결이 아니라 「앱을 연 날」이라
+     주말에 끊기면 아무도 안 하게 된다.
+   =================================================== */
+
+/* checkin 없는 옛 기록을 제자리에서 채운다 (dqState 와 같은 어법) */
+function ckState(rec){
+  if(!rec.checkin) rec.checkin = {last:'', streak:0, best:0, bestScore:0, days:{}};
+  const c = rec.checkin;
+  if(!c.days) c.days = {};
+  if(typeof c.streak !== 'number') c.streak = 0;
+  if(typeof c.best !== 'number') c.best = 0;
+  if(typeof c.bestScore !== 'number') c.bestScore = 0;
+  return c;
+}
+function ckDoneToday(rec){ return ckState(rec).last === todayStr(); }
+
+/* 그 주 «월요일». ⚠ 로컬 기준이다 — UTC로 세면 한국 새벽에 하루가 어긋난다 */
+function weekStartOf(ymd){
+  const d = new Date(ymd + 'T00:00:00');
+  d.setDate(d.getDate() - ((d.getDay() + 6) % 7));   // 일=0 이므로 월=0 으로 옮긴다
+  return ymdLocal(d);
+}
+function weekLabelOf(monday){
+  const a = new Date(monday + 'T00:00:00');
+  const b = new Date(monday + 'T00:00:00'); b.setDate(b.getDate() + 6);
+  return (a.getMonth()+1) + '/' + a.getDate() + ' ~ ' + (b.getMonth()+1) + '/' + b.getDate();
+}
+
+/* ---------- 이번 주 순위 ----------
+   ⚠ **학생 기록(record:학번)에는 성적·출결이 다 들어 있다.** 순위를 그리자고 남의 기록을
+     읽으면 안 된다. **이름·반·점수만** 든 별도 문서를 따로 둔다.
+   ⚠ **열쇠에 주(週)가 들어 있어 «리셋»이라는 동작이 없다.** 월요일이 되면 열쇠가 바뀌고
+     새 문서는 그냥 비어 있다. 지우는 작업이 없으니 실패할 일도 없고,
+     지난 주 것이 남아 「지난 주 1등」을 보여줄 수 있다.
+   ⚠ **조작을 막지 못한다** — 브라우저가 Firestore 를 직접 부르는 구조라 콘솔 한 줄로
+     1등이 된다. 감수하는 근거는 둘뿐이다: **보상이 없고 · 하루 한 판이다.**
+     🔴 **상품이나 성적 가산점을 거는 순간 워커 검증이 먼저여야 한다.** */
+const RANK_TOP = 5;
+const rankCache = {};            // 주(월요일) → 배열
+
+async function loadRank(monday){
+  if(!rankCache[monday]) rankCache[monday] = await dbGet('rank:'+monday, []);
+  return rankCache[monday];
+}
+/* ⚠ **읽고 → 내 줄만 고치고 → 쓴다.** 들고 있던 배열로 통째로 덮으면
+   그 사이에 올라온 «남의 점수»가 사라진다. */
+async function rankSubmit(sid, name, cls, score){
+  const monday = weekStartOf(todayStr());
+  const rows = await dbGet('rank:'+monday, []);
+  const mine = rows.find(r => r.sid === sid);
+  if(mine){ if(score > mine.score){ mine.score = score; mine.at = todayStr(); mine.name = name; mine.cls = cls; } }
+  else rows.push({sid, name, cls, score, at: todayStr()});
+  rows.sort((a,b) => b.score - a.score);
+  rankCache[monday] = rows;
+  await dbSet('rank:'+monday, rows);
+  return rows;
+}
+
+function rankHTML(sid, rows, lastRows, monday){
+  const top = (rows||[]).slice(0, RANK_TOP);
+  const mine = (rows||[]).find(r => r.sid === sid);
+  const inTop = top.some(r => r.sid === sid);
+  const last = (lastRows||[])[0];
+
+  const list = top.map((r, n) => `
+    <div class="gm-rk${n===0?' top':''}${r.sid===sid?' me':''}">
+      <span class="n">${n+1}</span>
+      <span class="nm">${escHtml(r.name||'')}${r.cls?`<i>${escHtml(r.cls)}</i>`:''}${
+        r.sid===sid?'<em>나</em>':''}</span>
+      <span class="sc">${(r.score||0).toLocaleString()}</span>
+    </div>`).join('');
+
+  /* ⚠ 5위 밖이어도 «몇 등»인지는 말하지 않는다. 매일 열 때마다 자기 이름이 아래쪽에 있는 것을
+     보면 그만두게 된다. 대신 «내 점수»는 보여 준다 — 겨룰 대상이 남이 아니라 어제의 자기여도 된다.
+     ⚠ 전체를 한 판에 세우면 5위가 멀어서, 실제로 대부분의 학생이 매일 보는 것은 이 줄이다. */
+  const yet = inTop ? '' : `<div class="yet">${mine
+    ? `이번 주 내 최고 <b>${(mine.score||0).toLocaleString()}점</b> — ${RANK_TOP}위 안에 들면 여기 이름이 올라갑니다`
+    : '한 판 하면 이번 주 기록이 시작됩니다'}</div>`;
+
+  return `<div class="gm-rank">
+    <div class="hd"><b>이번 주 순위</b><s>${weekLabelOf(monday)}</s></div>
+    ${list}
+    ${yet}
+    <div class="yet">전체 ${(rows||[]).length}명 · 월요일에 새로 시작합니다${
+      last ? `<br>지난 주 1등 <b>${escHtml(last.name||'')}</b>${
+        last.cls?` (${escHtml(last.cls)})`:''} ${(last.score||0).toLocaleString()}점` : ''}</div>
+  </div>`;
+}
+
+/* ---------- 홈에 놓는 카드 ---------- */
+const DOW_CK = ['일','월','화','수','목','금','토'];
+function ckCardHTML(c){
+  const ck = ckState(c.rec);
+  const today = todayStr();
+  const monday = weekStartOf(today);
+  const done = ckDoneToday(c.rec);
+
+  /* 일곱 칸 — 이번 주 월요일부터 일요일까지 */
+  let cells = '';
+  for(let i=0; i<7; i++){
+    const d = new Date(monday + 'T00:00:00'); d.setDate(d.getDate() + i);
+    const ymd = ymdLocal(d);
+    const on = !!ck.days[ymd];
+    const dow = d.getDay();
+    cells += `<div class="gm-day${on?' on':''}${ymd===today?' today':''}">${
+      on ? `<img class="stmp" src="stamp.webp" alt="도장">` : ''
+    }<span class="lb">${DOW_CK[dow]}</span></div>`;
+  }
+
+  const todayScore = (ck.days[today] && ck.days[today].score) || 0;
+  const run = done
+    ? `<div class="gm-run off">
+        <span class="ic"><img src="stamp.webp" alt=""></span>
+        <span class="t"><b>오늘 도장을 찍었습니다 — ${todayScore.toLocaleString()}점</b>
+        <span>내일 다시 열립니다 · 역대 최고 ${(ck.bestScore||0).toLocaleString()}점</span></span></div>`
+    : `<div class="gm-run" onclick="openDodge()">
+        <span class="ic">💩</span>
+        <span class="t"><b>오늘의 게임 — 똥피하기</b>
+        <span>하루 한 판입니다 · 역대 최고 ${(ck.bestScore||0).toLocaleString()}점</span></span>
+        <span class="go">${iconSvg('chevR',16)}</span></div>`;
+
+  return `
+  <div class="msec" style="margin-top:22px;">출석 도장</div>
+  <div class="mc">
+    <div class="gm-head">
+      <span class="st">${ck.streak||0}<em>일째</em></span>
+      <span class="best">최고 <b>${ck.best||0}</b>일</span>
+    </div>
+    <div class="gm-weekwrap"><div class="gm-week">${cells}</div></div>
+    ${run}
+    <div id="ck-rank">${rankHTML(c.sid, rankCache[monday], rankCache[weekStartOf(shiftYmd(monday,-7))], monday)}</div>
+    <div style="font-size:11px;color:var(--dim);margin-top:11px;line-height:1.7;">
+      학원 출결과는 별개입니다. 앱을 연 날에만 찍힙니다.</div>
+  </div>`;
+}
+
+/* 순위는 «읽어 온 뒤»에 그린다. 홈을 그릴 때 없으면 비어 보이므로,
+   받아 오면 그 자리만 갈아 끼운다 (화면 전체를 다시 그리지 않는다). */
+async function ckEnsureRank(sid){
+  const monday = weekStartOf(todayStr());
+  const prev = weekStartOf(shiftYmd(monday, -7));
+  if(rankCache[monday] && rankCache[prev]) return;
+  await Promise.all([loadRank(monday), loadRank(prev)]);
+  const box = document.getElementById('ck-rank');
+  if(box) box.innerHTML = rankHTML(sid, rankCache[monday], rankCache[prev], monday);
+}
+
+/* ---------- 게임 셸 ----------
+   캔버스 하나 · 루프 하나 · 입력 한 벌. 게임이 바뀌면 _step 과 _draw 만 갈아 끼운다.
+   ⚠ 지켜야 할 것 셋 —
+     ① 캔버스는 #app «밖»(#gamehost)에 둔다. render() 가 app.innerHTML 을 갈아치운다
+     ② 화면을 떠나면 반드시 stop() 한다. 안 그러면 루프와 리스너가 살아남는다
+     ③ 점수는 «판이 끝날 때 한 번»만 저장한다. 루프 안에서 저장하면 초당 60번 쓴다 */
+const CHAR_IMG = new Image();
+CHAR_IMG.src = 'game-char.webp';
+const CHAR_ANCHOR = 0.479;     // «색이 있는 픽셀»의 무게중심. 상자 중앙이 아니다
+const CHAR_H = 46;
+(new Image()).src = 'stamp.webp';   // 미리 받아 둔다 — 찍히는 순간에 늦게 뜨면 «쿵»이 죽는다
+
+const Dodge = {
+  cv:null, cx:null, w:0, h:0,
+  raf:0, running:false, started:false,
+  t:0, last:0, spawnIn:0,
+  px:0, py:0, items:[], score:0, stars:0,
+  face:1, onScore:null, onEnd:null,
+  ptr:null, keys:null, _h:null,
+
+  mount(cv, o){
+    o = o || {};
+    this.stop();
+    this.cv = cv;
+    const wrap = cv.parentNode;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const w = wrap.clientWidth, h = wrap.clientHeight;
+    /* ⚠ width 를 넣는 순간 컨텍스트가 초기화된다. transform 은 «그 뒤에» 건다 */
+    cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
+    cv.style.width = w + 'px'; cv.style.height = h + 'px';
+    this.cx = cv.getContext('2d');
+    this.cx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    this.w = w; this.h = h;
+    this.onScore = o.onScore || null; this.onEnd = o.onEnd || null;
+
+    this.started = false;
+    this.t = 0; this.spawnIn = .6; this.items = [];
+    this.score = 0; this.stars = 0;
+    this.px = w / 2; this.py = h - 58; this.face = 1;
+    this.ptr = null; this.keys = {l:false, r:false};
+
+    const self = this;
+    this._h = {
+      down(e){ self.started = true; self.ptr = self._x(e); e.preventDefault(); },
+      /* ⚠ move 를 캔버스에 걸면 손가락이 밖으로 나갔을 때 놓친다. window 에 건다 */
+      move(e){ if(self.ptr !== null){ self.ptr = self._x(e); e.preventDefault(); } },
+      up(){ self.ptr = null; },
+      key(e){
+        const d = (e.type === 'keydown');
+        if(e.key === 'ArrowLeft'){ self.started = true; self.keys.l = d; e.preventDefault(); }
+        if(e.key === 'ArrowRight'){ self.started = true; self.keys.r = d; e.preventDefault(); }
+      },
+      /* ⚠ 폰에서 앱을 바꿨다 돌아오면 손가락은 없는데 마지막 자리가 남아 혼자 미끄러진다 */
+      vis(){ if(document.hidden) self.ptr = null; }
+    };
+    cv.addEventListener('pointerdown', this._h.down);
+    window.addEventListener('pointermove', this._h.move, {passive:false});
+    window.addEventListener('pointerup', this._h.up);
+    window.addEventListener('pointercancel', this._h.up);
+    window.addEventListener('keydown', this._h.key);
+    window.addEventListener('keyup', this._h.key);
+    document.addEventListener('visibilitychange', this._h.vis);
+
+    this.running = true;
+    this.last = performance.now();
+    this.raf = requestAnimationFrame(ts => self._loop(ts));
+  },
+
+  stop(){
+    this.running = false;
+    if(this.raf) cancelAnimationFrame(this.raf);
+    this.raf = 0;
+    if(this._h){
+      if(this.cv) this.cv.removeEventListener('pointerdown', this._h.down);
+      window.removeEventListener('pointermove', this._h.move);
+      window.removeEventListener('pointerup', this._h.up);
+      window.removeEventListener('pointercancel', this._h.up);
+      window.removeEventListener('keydown', this._h.key);
+      window.removeEventListener('keyup', this._h.key);
+      document.removeEventListener('visibilitychange', this._h.vis);
+      this._h = null;
+    }
+  },
+
+  _x(e){ return e.clientX - this.cv.getBoundingClientRect().left; },
+
+  _loop(ts){
+    if(!this.running) return;
+    /* ⚠ dt 에 상한을 둔다. 화면이 잠겼다 돌아오면 한 프레임이 몇 초가 되고,
+       그 한 번에 똥이 화면을 «통과»해 버린다 (터널링) */
+    const dt = Math.min((ts - this.last) / 1000, 1/30);
+    this.last = ts;
+    this._step(dt);
+    this._draw();
+    if(this.running) this.raf = requestAnimationFrame(t => this._loop(t));
+  },
+
+  _step(dt){
+    if(!this.started) return;
+    this.t += dt;
+
+    /* 손가락을 «따라가되» 즉시 붙지는 않는다. 붙여 버리면 조작감이 없다 */
+    const pr = 15, was = this.px;
+    if(this.ptr !== null) this.px += (this.ptr - this.px) * Math.min(1, dt * 14);
+    const k = (this.keys.r ? 1 : 0) - (this.keys.l ? 1 : 0);
+    if(k) this.px += k * 300 * dt;
+    if(this.px < pr) this.px = pr;
+    if(this.px > this.w - pr) this.px = this.w - pr;
+    /* ⚠ 문턱을 둔다. 0 이면 제자리에서 좌우가 깜빡인다 */
+    const moved = this.px - was;
+    if(moved > .5) this.face = 1; else if(moved < -.5) this.face = -1;
+
+    /* 난이도 — **서로 다른 시각에 오르는 셋**.
+       ⚠ 개수를 따로 올리는 것이 핵심이다. 속도만 올리면 화면은 오히려 «비어» 보인다 —
+         빨리 떨어질수록 화면에 머무는 시간이 짧아지기 때문이다.
+       ⚠ 처음 30초는 일부러 느슨하게 둔다. 초반부터 조이면 뒤쪽 단계를 아무도 못 본다. */
+    const fall = Math.min(155 + this.t * 9, 540);
+    this.spawnIn -= dt;
+    if(this.spawnIn <= 0){
+      this.spawnIn = Math.max(.14, .70 - this.t * .016);
+      const burst = this.t > 80 ? 4 : this.t > 55 ? 3 : this.t > 30 ? 2 : 1;
+      const r = 13, xs = [];
+      for(let b = 0; b < burst; b++){
+        /* ⚠ 한 번에 여럿을 낼 때 서로 붙여 놓으면 «피할 수 없는 벽»이 된다 */
+        let x, tries = 0, ok;
+        do{
+          x = r + Math.random() * (this.w - r * 2);
+          ok = !xs.some(v => Math.abs(v - x) < 58);
+          tries++;
+        } while(!ok && tries < 14);
+        xs.push(x);
+        this.items.push({x, y: -r - b * 7, r,
+          v: fall * (.85 + Math.random() * .3), star: Math.random() < .16});
+      }
+    }
+
+    for(let i = this.items.length - 1; i >= 0; i--){
+      const it = this.items[i];
+      it.y += it.v * dt;
+      /* ⚠ 판정은 그림보다 «작게» 잡는다. 후하지 않으면 억울하고, 억울하면 안 한다 */
+      const dx = it.x - this.px, dy = it.y - this.py, reach = it.r * .72 + 10;
+      if(dx*dx + dy*dy < reach*reach){
+        if(it.star){ this.stars++; this.items.splice(i,1); continue; }
+        this._end(); return;
+      }
+      if(it.y > this.h + it.r) this.items.splice(i,1);
+    }
+
+    const s = Math.floor(this.t * 10) + this.stars * 50;
+    if(s !== this.score){ this.score = s; if(this.onScore) this.onScore(s); }
+  },
+
+  _end(){
+    this.running = false;
+    const s = this.score, cb = this.onEnd;
+    this.stop();
+    if(cb) cb(s);
+  },
+
+  _draw(){
+    const c = this.cx, w = this.w, h = this.h;
+    c.clearRect(0, 0, w, h);
+    c.strokeStyle = '#E7E5DE'; c.lineWidth = 1;
+    c.beginPath(); c.moveTo(0, this.py + 22.5); c.lineTo(w, this.py + 22.5); c.stroke();
+
+    c.textAlign = 'center'; c.textBaseline = 'middle';
+    for(const it of this.items){
+      c.font = (it.r * 2) + 'px serif';
+      c.fillText(it.star ? '⭐' : '💩', it.x, it.y);
+    }
+    this._player();
+
+    if(!this.started){
+      c.fillStyle = '#22221E'; c.font = '700 15px Pretendard, sans-serif';
+      c.fillText('화면을 눌러 시작', w/2, h/2 - 16);
+      c.fillStyle = '#96968C'; c.font = '12.5px Pretendard, sans-serif';
+      c.fillText('손가락을 끌어 좌우로 피하세요', w/2, h/2 + 8);
+      c.fillText('⭐ 를 먹으면 50점', w/2, h/2 + 28);
+    }
+  },
+
+  _player(){
+    const c = this.cx, x = this.px, y = this.py, r = 15;
+    if(CHAR_IMG.complete && CHAR_IMG.naturalWidth){
+      const hh = CHAR_H, ww = hh * (CHAR_IMG.naturalWidth / CHAR_IMG.naturalHeight);
+      c.save(); c.translate(x, y);
+      /* ⚠ 그림은 «왼쪽으로 달리는» 자세다 — 먼지 자국이 오른쪽에 있다.
+         자국은 «가던 길 뒤»에 남으므로 오른쪽에 자국이면 왼쪽으로 가는 것이다.
+         그래서 **오른쪽으로 갈 때** 뒤집는다. */
+      if(this.face > 0) c.scale(-1, 1);
+      c.drawImage(CHAR_IMG, -ww * CHAR_ANCHOR, -hh / 2, ww, hh);
+      c.restore();
+      return;
+    }
+    /* 그림을 못 읽었을 때 — 도형으로 떨어진다. 그림 하나 때문에 게임이 안 열리면 안 된다 */
+    c.fillStyle = '#3F3537';
+    c.beginPath();
+    if(c.roundRect) c.roundRect(x-r, y-r, r*2, r*2, 7); else c.arc(x, y, r, 0, 6.2832);
+    c.fill();
+    c.fillStyle = '#FAF9F6';
+    c.beginPath(); c.arc(x-4.6, y-2, 2.3, 0, 6.2832); c.fill();
+    c.beginPath(); c.arc(x+4.6, y-2, 2.3, 0, 6.2832); c.fill();
+  }
+};
+
+/* ---------- 열기 · 닫기 ---------- */
+function openDodge(){
+  const sid = state.currentUser && state.currentUser.studentId;
+  if(!sid) return;
+  const rec = DATA.records[sid];
+  /* ⚠ 하루 한 판. «끝난» 판이 있어야 소모된다 —
+     열었다가 시작도 안 하고 닫은 것은 소모가 아니다 (그러면 잘못 눌러 하루를 잃는다) */
+  if(!rec || ckDoneToday(rec)) return;
+
+  const host = document.getElementById('gamehost');
+  if(!host || host.querySelector('.gm-over')) return;
+  const ck = ckState(rec);
+  const ov = document.createElement('div');
+  ov.className = 'gm-over';
+  ov.innerHTML = `<div class="gm-shell">
+    <div class="gm-bar">
+      <button type="button" class="gm-x" aria-label="닫기" onclick="closeDodge()">✕</button>
+      <span class="sc" id="gm-score">0</span>
+      <span class="bs" id="gm-best">최고 ${(ck.bestScore||0).toLocaleString()}</span>
+    </div>
+    <div class="gm-stage" id="gm-stage"><canvas id="gm-canvas"></canvas></div>
+  </div>`;
+  host.appendChild(ov);
+  Dodge.mount(ov.querySelector('#gm-canvas'), {
+    onScore(s){ const e = document.getElementById('gm-score'); if(e) e.textContent = s; },
+    onEnd: finishDodge
+  });
+}
+
+function closeDodge(){
+  Dodge.stop();
+  const host = document.getElementById('gamehost');
+  const ov = host && host.querySelector('.gm-over');
+  if(ov) ov.remove();
+  render();
+}
+
+/* ⚠ **저장은 여기 한 곳이다** — 판이 끝날 때 한 번.
+   기록은 «읽어 온 그 객체»를 제자리에서 고친다 (saveRecord 가 객체 동일성을 본다). */
+async function finishDodge(score){
+  const sid = state.currentUser && state.currentUser.studentId;
+  if(!sid) return;
+  const rec = DATA.records[sid];
+  if(!rec) return;
+  const ck = ckState(rec);
+  const today = todayStr();
+
+  const first = ck.last !== today;
+  if(first){
+    /* 연속 — 어제 찍었으면 잇고, 아니면 1부터 */
+    ck.streak = (ck.last === shiftYmd(today, -1)) ? (ck.streak || 0) + 1 : 1;
+    if(ck.streak > (ck.best||0)) ck.best = ck.streak;
+    ck.last = today;
+  }
+  const dayRec = ck.days[today] || (ck.days[today] = {score:0, n:0});
+  dayRec.n = (dayRec.n||0) + 1;
+  if(score > (dayRec.score||0)) dayRec.score = score;
+  const newBest = score > (ck.bestScore||0);
+  if(newBest) ck.bestScore = score;
+  await saveRecord(sid);
+  /* 상단바의 「최고」도 같이 고친다 — 안 고치면 새 기록을 낸 화면에서 옛 최고가 그대로 떠 있다 */
+  const bestEl = document.getElementById('gm-best');
+  if(bestEl) bestEl.textContent = '최고 ' + (ck.bestScore||0).toLocaleString();
+
+  /* 순위 — 이름과 반만 올린다. 성적·출결은 넘기지 않는다 */
+  const me = DATA.students.find(s => s.studentId === sid) || {};
+  let rows = null;
+  try{ rows = await rankSubmit(sid, me.name || state.currentUser.name || '', classNameOf(me.classId) || '', score); }
+  catch(e){ console.error('순위 저장 실패', e); }
+
+  const stage = document.getElementById('gm-stage');
+  if(!stage) return;
+  const monday = weekStartOf(today);
+  const res = document.createElement('div');
+  res.className = 'gm-res';
+  res.innerHTML = `<div class="in">
+    <div class="big">${score.toLocaleString()}</div>
+    <div class="sub2">${newBest ? '최고 기록입니다' : '역대 최고 ' + (ck.bestScore||0).toLocaleString() + '점'}</div>
+    <div class="stamp"><img src="stamp.webp" alt="참! 잘했어요 도장">
+      <span class="day">오늘 도장을 찍었습니다 · ${ck.streak}일째</span></div>
+    ${rankHTML(sid, rows || rankCache[monday], rankCache[weekStartOf(shiftYmd(monday,-7))], monday)}
+    <div class="one">하루 한 판입니다. 내일 다시 열립니다</div>
+    <div class="btns"><button type="button" onclick="closeDodge()">닫기</button></div>
+  </div>`;
+  stage.appendChild(res);
+}
+
 /* ---------- 홈 ---------- */
 /* 첫 화면이 답해야 할 질문은 하나다 — «오늘 뭐 해야 하지?»
    예전 홈에는 질문 폼·반 진도 링·빠른 변형 문제 요청·영상 카드가 함께 있었다.
@@ -6438,6 +7021,8 @@ function stuHomeHTML(c){
     <b>${escHtml(c.me.name || state.currentUser.name)}님</b>
     <span>${[c.me.school, c.me.grade, classNameOf(c.classId)].filter(Boolean).map(escHtml).join(' · ')}</span>
   </div>
+
+  ${ckCardHTML(c)}
 
   <div class="msec" style="margin-top:22px;">오늘 할 일
     ${todo.length ? `<span style="color:var(--no);">${todo.length}</span>` : ''}</div>
