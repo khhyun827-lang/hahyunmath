@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>스프라이트 따내기 — 검은 배경과 발광 테두리를 걷어낸다</title>
+<style>
+  body{margin:0;padding:24px;background:#FAF9F6;color:#22221E;
+    font:13px/1.6 -apple-system,'Segoe UI',sans-serif;}
+  h1{font-size:17px;margin:0 0 4px;}
+  p{margin:0 0 16px;color:#5C5C54;max-width:760px;}
+  .row{display:flex;gap:20px;align-items:flex-start;flex-wrap:wrap;}
+  .box{border:1px solid #E7E5DE;border-radius:10px;background:#fff;padding:12px;}
+  .box h2{font-size:12px;margin:0 0 8px;color:#96968C;letter-spacing:.06em;}
+  canvas{display:block;max-width:340px;height:auto;}
+  /* 결과는 «종이색 위»에서 봐야 한다. 흰 배경에 올리면 남은 흰 발광이 안 보인다 */
+  #outWrap{background:#FAF9F6;}
+  #chk{background-image:linear-gradient(45deg,#eee 25%,transparent 25%),
+    linear-gradient(-45deg,#eee 25%,transparent 25%),
+    linear-gradient(45deg,transparent 75%,#eee 75%),
+    linear-gradient(-45deg,transparent 75%,#eee 75%);
+    background-size:16px 16px;background-position:0 0,0 8px,8px -8px,-8px 0;}
+  #log{margin-top:16px;font-family:'JetBrains Mono',monospace;font-size:12px;
+    white-space:pre-wrap;color:#5C5C54;}
+</style>
+</head>
+<body>
+
+<h1>스프라이트 따내기</h1>
+<p>
+  검은 배경 위에 <b>흰 발광 테두리</b>가 있는 그림에서 인물만 남긴다.
+  가장자리에서 흘려보내되(flood fill) <b>두 번</b> 나눠 흘린다 —
+  ① 어두운 배경을 먼저 먹고 ② 이어서 <b>무채색이면서 밝은</b> 발광만 먹는다.
+  인물의 검은 윤곽선은 ①에는 이어져 있지 않고(발광이 가로막는다) ②의 「밝은」 조건에 걸리지 않으므로 살아남는다.
+</p>
+
+<div class="row">
+  <div class="box"><h2>원본</h2><canvas id="src"></canvas></div>
+  <div class="box" id="chk"><h2>따낸 것 (격자 = 투명)</h2><canvas id="out"></canvas></div>
+  <div class="box" id="outWrap"><h2>종이색 위</h2><canvas id="out2"></canvas></div>
+</div>
+
+<div id="log">읽는 중…</div>
+
+<script>
+/* 읽을 그림은 주소로 준다 —  cut-sprite.html?src=../어떤그림.png
+   ⚠ 원본을 저장소에 남기지 않는다. 1.16MB 짜리를 44px 로 그리자고 들고 다닐 이유가 없다.
+     따낸 결과(`game-char.webp`, 12KB)만 남기고 원본은 지웠다. */
+var Q = new URLSearchParams(location.search);
+var SRC = Q.get('src') || '../game-char.webp';
+/* 두 갈래다 —
+   dark  : 검은 배경 + 발광 테두리. 가장자리에서 «흘려보내» 지운다 (연결로 판정)
+   white : 흰 배경 위의 선그림. **채도로** 지운다 (연결을 안 쓴다)
+   ⚠ white 에서 연결을 쓰면 안 된다. 도장은 «닫힌 원»이라 원 «안쪽» 흰색이 바깥과 이어져 있지 않다.
+     흘려보내면 안쪽이 흰 원반으로 남아 종이 위에 허연 딱지가 붙는다. */
+var MODE = Q.get('mode') || 'dark';
+/* 부스러기 문턱 (전체 불투명 픽셀 대비) 과 «가장 큰 조각 상자 밖 지우기» */
+var MIN_FRAC  = Q.get('min') !== null ? Number(Q.get('min')) : 0.004;
+var CLIP_MAIN = Q.get('clip') === 'main';
+/* ⚠ 축소한 뒤에 훑으면 안 된다. 검은 윤곽선(20)과 흰 발광(240)이 섞여 «중간 회색»이 되고,
+   그것이 ②의 조건(무채색·밝음)에 걸려 윤곽선을 뚫는 다리가 된다.
+   실제로 그렇게 머리카락이 통째로 먹혔다. 원본 해상도로 훑는다 — 흘리기는 O(N)이라 금방 끝난다. */
+var WORK_W = 0;        // 0 = 원본 그대로
+var OUT_H  = Number(Q.get('h')) || 176;   // 내보낼 높이 (?h=256)
+/* ⚠ 문턱을 «순수 검정»에 바짝 붙인다.
+   단면을 재 보니 배경은 정확히 0 이고, 거기서 **한두 픽셀 만에** 인물의 윤곽선(L≈27~36)이 온다.
+   내가 가정했던 «넓은 발광 그라데이션»은 없었다.
+   그래서 문턱 70 은 머리카락(L=55)·바지(L=78)·윤곽선까지 «배경»으로 삼았고,
+   발광 띠의 틈으로 흘러 들어가 **윤곽선 그물을 통째로 훑어** 냈다. */
+var DARK   = 16;
+/* ② 밝은 무채색(발광) 먹기 — 지금 그림에는 넓은 발광이 없어 꺼 둔다.
+   ⚠ 켜면 흰 신발(L=254·무채색)까지 먹을 위험이 있다. 다른 그림에 쓸 때만 켠다. */
+var GLOW_ON = false;
+var SATMAX = 0.10;
+var GLOW_L = 150;
+var GLOW_DEPTH = 60;
+
+function luma(r,g,b){ return .2126*r + .7152*g + .0722*b; }
+function sat(r,g,b){
+  var mx = Math.max(r,g,b), mn = Math.min(r,g,b);
+  return mx === 0 ? 0 : (mx - mn) / mx;
+}
+
+var img = new Image();
+img.onload = function(){
+  var W = WORK_W || img.width;
+  var H = WORK_W ? Math.round(img.height * (WORK_W / img.width)) : img.height;
+
+  var c0 = document.getElementById('src');
+  c0.width = W; c0.height = H;
+  var x0 = c0.getContext('2d');
+  x0.drawImage(img, 0, 0, W, H);
+
+  var id = x0.getImageData(0, 0, W, H);
+  var d = id.data, N = W * H;
+  var bg = new Uint8Array(N);          // 1 = 배경으로 판정된 것
+  var stack = [], i, p;
+
+  /* ── white 갈래 — 채도로 가른다. 흐림 없이 «부드럽게» 지운다 ────
+     흰색(채도 0·밝기 255)은 완전히 지우고, 옅은 보라 채움(채도 .15)은 그대로 남긴다.
+     둘 사이(선 가장자리의 안티에일리어싱)는 반투명으로 이어 준다 — 안 그러면 테두리가 계단이 된다.
+     ⚠ **밝기만으로 가르면 옅은 보라 채움(밝기 212)까지 날아간다.** 채도가 진짜 기준이다. */
+  if(MODE === 'white'){
+    var SAT_FULL = 0.12, L_GONE = 245, L_SPAN = 40;
+    for(i = 0; i < N; i++){
+      p = i * 4;
+      var Lw = luma(d[p], d[p+1], d[p+2]);
+      var Sw = sat(d[p], d[p+1], d[p+2]);
+      var a = Math.max(Sw / SAT_FULL, (L_GONE - Lw) / L_SPAN);
+      if(a > 1) a = 1;
+      /* ⚠ **바닥을 잘라낸다.** JPEG 잡티가 알파 5~20 짜리 «안개»로 온 화면에 깔리는데,
+         눈에는 안 보여도 «이어져 있는 것»으로 세어져 외딴 점이 본체와 한 덩어리가 된다.
+         실제로 도장 오른쪽 얼룩이 이 안개를 타고 원과 붙어 부스러기 제거를 빠져나갔다.
+         겸사겸사 종이 위에 뜨는 희미한 때도 같이 없어진다. */
+      if(a < 0.10) a = 0;
+      d[p+3] = Math.round(a * 255);
+    }
+    x0.putImageData(id, 0, 0);
+    finish(id, d, N, W, H, x0, img, 0, 0);
+    return;
+  }
+
+  function push(x, y){
+    if(x < 0 || y < 0 || x >= W || y >= H) return;
+    var k = y * W + x;
+    if(bg[k]) return;
+    stack.push(k);
+  }
+
+  /* ── ① 어두운 배경을 가장자리에서 흘린다 ───────────────── */
+  for(i = 0; i < W; i++){ push(i, 0); push(i, H-1); }
+  for(i = 0; i < H; i++){ push(0, i); push(W-1, i); }
+  var pass1 = 0;
+  while(stack.length){
+    var k = stack.pop();
+    if(bg[k]) continue;
+    p = k * 4;
+    if(luma(d[p], d[p+1], d[p+2]) >= DARK) continue;
+    bg[k] = 1; pass1++;
+    var x = k % W, y = (k / W) | 0;
+    push(x-1,y); push(x+1,y); push(x,y-1); push(x,y+1);
+  }
+
+  /* ── ② 그 경계에서 «무채색이면서 밝은» 발광만 이어서 먹는다.
+        너비 우선(BFS)으로 돌며 GLOW_DEPTH 걸음까지만 간다 ─────── */
+  var depth = new Int32Array(N);
+  var q = [], qi = 0;
+  for(k = 0; k < N; k++){
+    if(!bg[k]) continue;
+    var x2 = k % W, y2 = (k / W) | 0;
+    var nb = [k-1, k+1, k-W, k+W], t;
+    for(t = 0; t < 4; t++){
+      var nk = nb[t];
+      if(nk < 0 || nk >= N || bg[nk] || depth[nk]) continue;
+      if(t === 0 && x2 === 0) continue;
+      if(t === 1 && x2 === W-1) continue;
+      depth[nk] = 1; q.push(nk);
+    }
+  }
+  var pass2 = 0;
+  while(GLOW_ON && qi < q.length){
+    var k2 = q[qi++];
+    if(bg[k2]) continue;
+    p = k2 * 4;
+    var L = luma(d[p], d[p+1], d[p+2]);
+    var S = sat(d[p], d[p+1], d[p+2]);
+    /* 밝기 조건이 인물의 검은 윤곽선을 막아 준다 */
+    if(!(S < SATMAX && L >= GLOW_L)) continue;
+    bg[k2] = 1; pass2++;
+    if(depth[k2] >= GLOW_DEPTH) continue;
+    var x3 = k2 % W, y3 = (k2 / W) | 0;
+    var nb2 = [k2-1, k2+1, k2-W, k2+W], t2;
+    for(t2 = 0; t2 < 4; t2++){
+      var nk2 = nb2[t2];
+      if(nk2 < 0 || nk2 >= N || bg[nk2] || depth[nk2]) continue;
+      if(t2 === 0 && x3 === 0) continue;
+      if(t2 === 1 && x3 === W-1) continue;
+      depth[nk2] = depth[k2] + 1; q.push(nk2);
+    }
+  }
+
+  /* ── 지우고, 남은 것의 테두리를 한 겹 부드럽게 ─────────── */
+  for(k = 0; k < N; k++) if(bg[k]) d[k*4+3] = 0;
+  /* 배경에 «닿아 있는» 픽셀은 반투명으로 낮춰 계단을 줄인다 */
+  var soft = new Uint8Array(N);
+  for(var y4 = 1; y4 < H-1; y4++){
+    for(var x4 = 1; x4 < W-1; x4++){
+      var kk = y4*W + x4;
+      if(bg[kk]) continue;
+      if(bg[kk-1] || bg[kk+1] || bg[kk-W] || bg[kk+W]) soft[kk] = 1;
+    }
+  }
+  for(k = 0; k < N; k++) if(soft[k]) d[k*4+3] = 150;
+
+  x0.putImageData(id, 0, 0);
+  finish(id, d, N, W, H, x0, img, pass1, pass2);
+};
+
+/* ── 여기서부터는 두 갈래가 같이 쓴다 — 자르고 · 줄이고 · 기준점을 낸다 ── */
+function finish(id, d, N, W, H, x0, img, pass1, pass2){
+  var k;
+
+  /* ── 외딴 부스러기를 떼어낸다 ─────────────────────────────
+     ⚠ 원본에 얼룩·점이 하나라도 있으면 «남은 것»에 끼어 테두리 상자가 그만큼 넓어진다.
+       그러면 그림이 상자 안에서 한쪽으로 쏠리고, 화면에서는 보이지도 않는 점 때문에
+       정작 그림이 작아진다. 도장 오른쪽의 점 하나가 실제로 그랬다.
+     ⚠ 문턱을 낮게 잡는다 — 캐릭터의 «속도선»처럼 **작지만 있어야 하는 조각**을 지우면 안 된다. */
+  var lab = new Int32Array(N), sizes = [0], boxes = [null], cur = 0, total = 0, qq = [], qh;
+  for(k = 0; k < N; k++) if(d[k*4+3] >= 8) total++;
+  for(k = 0; k < N; k++){
+    if(d[k*4+3] < 8 || lab[k]) continue;
+    cur++; qq = [k]; qh = 0; lab[k] = cur;
+    var n = 0, ax0 = W, ax1 = -1, ay0 = H, ay1 = -1;
+    while(qh < qq.length){
+      var c0 = qq[qh++]; n++;
+      var cx = c0 % W, cy = (c0 / W) | 0, t, nk;
+      if(cx < ax0) ax0 = cx;
+      if(cx > ax1) ax1 = cx;
+      if(cy < ay0) ay0 = cy;
+      if(cy > ay1) ay1 = cy;
+      var nbs = [c0 - 1, c0 + 1, c0 - W, c0 + W];
+      for(t = 0; t < 4; t++){
+        nk = nbs[t];
+        if(nk < 0 || nk >= N || lab[nk] || d[nk*4+3] < 8) continue;
+        if(t === 0 && cx === 0) continue;
+        if(t === 1 && cx === W - 1) continue;
+        lab[nk] = cur; qq.push(nk);
+      }
+    }
+    sizes[cur] = n;
+    boxes[cur] = { x0:ax0, x1:ax1, y0:ay0, y1:ay1, area:(ax1-ax0+1) * (ay1-ay0+1) };
+  }
+  /* ⚠ **크기만으로 가르면 안 되는 그림이 있다.**
+     도장에서 「참!」의 느낌표는 작은 조각이라 얼룩과 크기가 비슷하다 —
+     문턱을 얼룩에 맞추면 느낌표가 같이 지워지고, 느낌표에 맞추면 얼룩이 남는다.
+     둘을 가르는 것은 크기가 아니라 **자리**다: 얼룩은 원 «바깥»이고 느낌표는 «안»이다.
+     → clip=main 이면 **가장 큰 조각의 상자 밖**을 지운다 (도장·배지처럼 «닫힌 테두리»가 있는 그림용).
+     ⚠ 캐릭터에는 쓰면 안 된다 — 먼지 자국과 속도선이 몸통 상자 «밖»이라 같이 날아간다. */
+  var minKeep = total * MIN_FRAC, dropped = 0;
+  /* ⚠ 「가장 큰 조각」을 **픽셀 수로 고르면 안 된다.**
+     도장의 바깥 테두리는 «얇은 선»이라 픽셀이 적고, 안쪽에 색으로 채워진 덩어리가 더 많다.
+     실제로 픽셀 수로 골랐더니 캐릭터 덩어리가 뽑혀 **테두리가 통째로 잘려 나갔다.**
+     테두리를 찾으려면 «가장 넓게 퍼진 것» — 즉 **상자가 가장 큰 조각**을 골라야 한다. */
+  var big = 0, bigA = -1, ci;
+  for(ci = 1; ci <= cur; ci++) if(boxes[ci].area > bigA){ bigA = boxes[ci].area; big = ci; }
+  var bx0 = 0, bx1 = W - 1, by0 = 0, by1 = H - 1;
+  if(CLIP_MAIN && big){
+    bx0 = boxes[big].x0; bx1 = boxes[big].x1;
+    by0 = boxes[big].y0; by1 = boxes[big].y1;
+  }
+  for(k = 0; k < N; k++){
+    var L2 = lab[k];
+    if(!L2) continue;
+    var gone = sizes[L2] < minKeep;
+    if(!gone && CLIP_MAIN && big && L2 !== big){
+      var ox = k % W, oy = (k / W) | 0;
+      if(ox < bx0 || ox > bx1 || oy < by0 || oy > by1) gone = true;
+    }
+    if(gone){ d[k*4+3] = 0; dropped++; }
+  }
+  x0.putImageData(id, 0, 0);
+
+  var minX = W, minY = H, maxX = -1, maxY = -1;
+  for(k = 0; k < N; k++){
+    if(d[k*4+3] < 8) continue;
+    var xx = k % W, yy = (k / W) | 0;
+    if(xx < minX) minX = xx;
+    if(xx > maxX) maxX = xx;
+    if(yy < minY) minY = yy;
+    if(yy > maxY) maxY = yy;
+  }
+  var cw = maxX - minX + 1, ch = maxY - minY + 1;
+
+  var cut = document.createElement('canvas');
+  cut.width = cw; cut.height = ch;
+  cut.getContext('2d').putImageData(id, -minX, -minY);
+
+  /* ── 내보낼 크기로 줄인다 ─────────────────────────────── */
+  var ow = Math.round(cw * (OUT_H / ch)), oh = OUT_H;
+  var out = document.getElementById('out');
+  out.width = ow; out.height = oh;
+  var xo = out.getContext('2d');
+  xo.imageSmoothingQuality = 'high';
+  xo.drawImage(cut, 0, 0, ow, oh);
+
+  /* 종이색 위에서도 확인 — 흰 발광이 남았는지는 흰 배경에서 안 보인다 */
+  var out2 = document.getElementById('out2');
+  out2.width = ow; out2.height = oh;
+  var xo2 = out2.getContext('2d');
+  xo2.fillStyle = '#FAF9F6'; xo2.fillRect(0, 0, ow, oh);
+  xo2.drawImage(out, 0, 0);
+
+  /* ── 몸통 기준점 ────────────────────────────────────────
+     ⚠ 상자 중앙은 몸 중앙이 아니다. 오른쪽에 «먼지 자국·속도선»이 붙어 있어
+       상자 중앙에 맞춰 그리면 캐릭터가 왼쪽으로 치우쳐 보이고,
+       손가락 위치와 실제 몸이 어긋나 조작감이 나빠진다.
+     그래서 «색이 있는 픽셀»(살·볼·셔츠·바지)의 무게중심을 기준으로 삼는다 —
+     먼지와 속도선은 무채색이라 저절로 빠진다. */
+  var sx = 0, sn = 0, pp;
+  for(k = 0; k < N; k++){
+    if(d[k*4+3] < 8) continue;
+    pp = k * 4;
+    if(sat(d[pp], d[pp+1], d[pp+2]) < 0.18) continue;
+    sx += (k % W); sn++;
+  }
+  var anchor = sn ? ((sx / sn) - minX) / cw : 0.5;
+
+  /* PNG 대신 WebP 로 내보낸다 — 알파를 지키면서 훨씬 작다.
+     이 프로젝트는 이미 profile.webp 를 쓰고 있어 새로 들이는 형식이 아니다. */
+  window.__dataURL = out.toDataURL('image/webp', 0.92);
+  window.__anchor = anchor;
+  var png = out.toDataURL('image/png');
+  document.getElementById('log').textContent =
+      '갈래      ' + MODE + (MODE === 'white' ? '  (흰 배경 · 채도로 지움)' : '  (검은 배경 · 흘려보냄)') + '\n'
+    + '원본      ' + img.width + ' x ' + img.height + '\n'
+    + '처리 크기 ' + W + ' x ' + H + '\n'
+    + (MODE === 'dark'
+        ? '① 어두운 배경  ' + pass1 + ' px\n'
+          + '② 발광         ' + pass2 + ' px' + (GLOW_ON ? '' : '  (꺼 둠)') + '\n'
+        : '')
+    + '부스러기 제거  ' + dropped + ' px  (조각 ' + cur + '개 중 ' + minKeep.toFixed(0) + 'px 미만'
+      + (CLIP_MAIN ? ' + 본체 상자 밖' : '') + ')\n'
+    + '테두리 상자    ' + cw + ' x ' + ch + '  (x ' + minX + ', y ' + minY + ')\n'
+    + '내보낼 크기    ' + ow + ' x ' + oh + '\n'
+    + '기준점         ' + anchor.toFixed(3) + '  (0=왼끝, 1=오른끝 · 색 있는 픽셀 ' + sn + '개)\n'
+    + 'WebP  ' + Math.round(window.__dataURL.length * 3 / 4 / 1024) + ' KB'
+    + '   PNG ' + Math.round(png.length * 3 / 4 / 1024) + ' KB';
+}
+img.onerror = function(){ document.getElementById('log').textContent = '이미지를 못 읽었다: ' + SRC; };
+img.src = SRC;
+</script>
+
+</body>
+</html>

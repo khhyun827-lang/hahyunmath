@@ -136,6 +136,15 @@
     <span class="go" id="go4" style="color:var(--sub);"></span>
   </a>
 
+  <!-- ⚠ 아직 실서비스에 없다. 셋 중 하나를 고르면 그 하나만 심는다. -->
+  <a class="syslink" href="21-checkin.html" style="background:var(--card);border-color:var(--line);margin-top:10px;">
+    <div>
+      <div class="t" style="color:var(--ink);">출석 도장 <span class="mono" style="font-size:11px;color:var(--dim);font-weight:400;">MOBILE · 4 안 · 미확정</span></div>
+      <div class="d">학생 홈에 놓는 하루 한 번짜리 장치 · <b>강사 출결과는 별개</b> · 도장 / 카드 뽑기 / 한 문제 / <b>똥피하기</b> — 넷 다 눌러볼 수 있음</div>
+    </div>
+    <span class="go" id="go5" style="color:var(--sub);"></span>
+  </a>
+
   <div class="ia" id="ia"></div>
 
   <div id="sections"></div>
@@ -150,7 +159,7 @@
 
 <script src="../ds.js"></script>
 <script>
-  ['go','go2','go3','go4'].forEach(function (id) {
+  ['go','go2','go3','go4','go5'].forEach(function (id) {
     document.getElementById(id).innerHTML = ICON('arrowR',18);
   });
 
