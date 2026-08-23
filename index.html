@@ -35,6 +35,107 @@
 .app .topbar nav a{cursor:pointer;}
 .app .subnav a{cursor:pointer;}
 
+/* ---------- 폰 세로에서 강사·조교 셸 (2026-08-24) ----------
+   강사 화면은 처음부터 데스크톱 전용으로 지었다. 폰(410px)에서 재 보니 **13개 탭이
+   똑같이 223px씩 넘쳤는데, 원인은 내용이 아니라 상단바 하나였다** —
+   브랜드 + 메뉴 7개 + (벨·이름·로그아웃)이 줄바꿈 없는 한 줄이라 **633px**가 필요했다.
+   그래서 「소통·설정」과 오른쪽 블록이 화면 밖으로 잘리고 페이지가 통째로 옆으로 밀렸다.
+
+   ⚠ **상단바 높이는 절대 늘리지 않는다.** `.subnav`가 `top:52px`에 붙어 있고
+     화면들이 `height:calc(100vh - 92px)` · `- 134px`로 그 숫자를 박아 쓰고 있다.
+     두 줄로 만들면 그 계산이 전부 어긋난다 → **높이는 두고 «안에서» 접는다.**
+   ⚠ **`.app.sap`(학생 앱)은 건드리지 않는다.** 학생 쪽은 이미 폰 우선으로 풀려 있다
+     (`--sap-w` 620/680). 그래서 선택자를 `.app:not(.sap)`로 좁혔다.
+   ⚠ **`overflow-x:hidden`으로 덮지 않았다.** 그건 넘침을 «안 보이게» 할 뿐이라
+     잘린 메뉴에 영영 손이 닿지 않는다. 넘치는 것은 그 자리에서 «밀 수 있게» 만든다. */
+@media (max-width:560px){
+  /* 브랜드 글자를 접는다 — 앱 «안»에 이미 들어와 있는 사람에게 학원 이름은 길잡이가 아니다.
+     여기서 100px 가까이 나오고, 그게 메뉴가 숨 쉴 자리가 된다. */
+  .app:not(.sap) .topbar .bm{display:none;}
+  .app:not(.sap) .topbar{padding:0 12px;gap:8px;}
+
+  /* 메뉴는 «가로로 미는» 띠가 된다. 일곱 개를 다 보여주려 줄이면 글자가 못 읽게 된다. */
+  .app:not(.sap) .topbar nav{margin-left:0;flex:1;min-width:0;
+    overflow-x:auto;scrollbar-width:none;-ms-overflow-style:none;
+    -webkit-overflow-scrolling:touch;}
+  .app:not(.sap) .topbar nav::-webkit-scrollbar{display:none;}
+  .app:not(.sap) .topbar nav a{flex:none;white-space:nowrap;padding:6px 10px;}
+
+  /* 오른쪽 블록에서 «이름»만 접는다. 벨과 로그아웃은 누를 것이라 남긴다 —
+     누구로 있는지는 화면 안에서도 알 수 있지만, 벨은 여기 말고 다른 문이 없다. */
+  .app:not(.sap) .topbar .right{gap:6px;flex:none;}
+  .app:not(.sap) .topbar .right .who{display:none;}
+  /* 조교의 .as-who(「조교 · 담당 ○○반」)는 접지 않는다 — 코드에 «자기가 누구로 있는지가
+     늘 보여야 한다»고 못박아 둔 자리다. 줄어들 수 있게만 해 준다. */
+  .app:not(.sap) .topbar .as-who{min-width:0;overflow:hidden;}
+  .app:not(.sap) .topbar .as-who .as-cls{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+
+  /* 서브탭도 같은 어법으로 민다 (소통은 다섯 갈래라 410px에 안 들어간다). */
+  .app:not(.sap) .subnav{padding:0 12px;overflow-x:auto;
+    scrollbar-width:none;-ms-overflow-style:none;-webkit-overflow-scrolling:touch;}
+  .app:not(.sap) .subnav::-webkit-scrollbar{display:none;}
+  .app:not(.sap) .subnav a{flex:none;white-space:nowrap;padding:0 10px;}
+
+  /* 본문 여백은 20 → 13. 폰에서 좌우 40px는 표 한 열만큼이다. */
+  .app:not(.sap) .body{padding:13px;}
+
+  /* 같은 «두 쪽짜리 화면» 식구에 건다. 전부 `display:flex` + `height:calc(100vh - …)` 이고
+     안에 제 스크롤러를 갖고 있다. 공지(532px) · 질의응답(509) · 시험지(453)가 여기 걸렸고,
+     나머지는 지금도 안 넘치므로 이 규칙이 아무것도 바꾸지 않는다.
+     ⚠ **`overflow-y:hidden`을 같이 적는다.** 한 축만 `auto`로 두면 다른 축의 `visible`이
+       «auto»로 계산돼 세로 스크롤바가 한 겹 더 생긴다. 안쪽 스크롤러가 이미 있으므로 막는다.
+     ⚠ **`.cls-screen`(수업)은 여기서 뺐다** — 아래에서 «위아래로 푸는» 쪽으로 제대로 고쳤다.
+       거기서는 `height:auto`가 되므로 `overflow-y:hidden`이 남아 있으면 본문이 잘린다. */
+  .app:not(.sap) .chub-screen,
+  .app:not(.sap) .rv-screen,
+  .app:not(.sap) .ex-screen,
+  .app:not(.sap) .qn-screen,
+  .app:not(.sap) .nt-screen,
+  .app:not(.sap) .co-screen{overflow-x:auto;overflow-y:hidden;}
+
+  /* ---------- 수업 «만» 폰용으로 제대로 푼다 (2026-08-24 · M-2a) ----------
+     사용자가 「모바일로 이용한다면 수업 탭을 그때그때 쓸 가능성이 제일 높다」고 했다.
+     그래서 여기만 «옆으로 미는» 임시 처방을 걷어내고 **위아래로 푼다.**
+
+     ⚠ **순서를 바꾼다 — 이게 이 화면의 핵심이다.**
+       데스크톱은 왼쪽에 「오늘의 수업 + 오늘 남은 일」, 오른쪽에 작업 칸이다.
+       그대로 세로로 쌓으면 **출결을 찍으러 올 때마다 「오늘 남은 일」 200px를 지나쳐야 한다.**
+       수업 중에 폰을 꺼내는 이유는 출결이지 «남은 일 훑기»가 아니다.
+       → **수업 고르기(1) → 작업 칸(2) → 오늘 남은 일(3)**
+     ⚠ **`display:contents`로 aside를 «녹인다».** 그래야 그 아이들이 `.cls-screen`의
+       직접 항목이 되어 `order`가 먹는다. 부모를 넘나드는 재배치는 이 방법뿐이다.
+       (aside의 width:270px · border-right · overflow-y도 같이 사라진다 — 폰에서는 다 방해물이다) */
+  .app:not(.sap) .cls-screen{flex-direction:column;height:auto;}
+  .app:not(.sap) .cls-side{display:contents;}
+  .app:not(.sap) .cls-main{order:2;padding-left:0;margin-top:18px;}
+  .app:not(.sap) .cls-rest{order:3;}
+
+  /* aside 끝의 64px 여백은 데스크톱에서 «왼쪽 칸 바닥»을 띄우려던 것이다.
+     세로로 쌓으면 수업 목록과 작업 칸 사이에 빈 구멍이 된다. */
+  .app:not(.sap) .cls-side > .rst-pad{display:none;}
+
+  /* ⚠ **안쪽 스크롤러를 푼다.** 데스크톱은 «머리말 고정 + 본문만 스크롤»이지만,
+       폰에서 화면 안에 또 스크롤 영역이 있으면 손가락이 어느 쪽을 미는지 알 수 없다.
+       페이지 하나만 스크롤하게 둔다. */
+  .app:not(.sap) .cls-body{overflow:visible;min-height:0;margin-top:14px;}
+
+  /* 학생 타일은 한 줄에 하나. 1180px에서 이미 3→2로 줄여 뒀고 폰은 1이다. */
+  .app:not(.sap) .cls-tiles{grid-template-columns:1fr;}
+
+  /* 단계 막대(지난 수업·출결·진도·과제·메모)는 `.s{flex:1}`이라 다섯이 폭을 나눠 갖는다.
+     384px에서는 한 칸이 77px이 되어 «출 결»처럼 글자가 접힌다.
+     → 나눠 갖기를 그만두고 **가로로 미는 띠**로 바꾼다. 상단바와 같은 어법이다. */
+  .app:not(.sap) .steps{overflow-x:auto;scrollbar-width:none;-ms-overflow-style:none;
+    -webkit-overflow-scrolling:touch;}
+  .app:not(.sap) .steps::-webkit-scrollbar{display:none;}
+  .app:not(.sap) .steps .s{flex:none;white-space:nowrap;}
+
+  /* ⚠ `.actbar`는 `position:fixed; bottom:0` 이고 폰에서는 줄바꿈까지 해서 더 두꺼워진다.
+       화면이 이제 «페이지 스크롤»이므로 마지막 학생 타일이 그 아래 깔린다.
+       → 바닥에 그만큼 자리를 비워 둔다. */
+  .app:not(.sap) .cls-screen{padding-bottom:96px;}
+}
+
 /* ---------- 명단 (design-v1/01-roster) ----------
    목업은 .main을 absolute로 잡고 액션바를 캔버스 바닥(bottom:0)에 붙인다.
    실서비스는 스크롤하는 문서라 «흐르는 표 + 뷰포트에 고정된 액션바»가 된다.
@@ -8150,7 +8251,7 @@ function assistantHTML(){
           <b>${escHtml(assistantClassLabel(assistantClassIds(cu)))}</b></span>
       </div>
       <div class="right">
-        <span>${escHtml(cu.name||'')} 조교</span>
+        <span class="who">${escHtml(cu.name||'')} 조교</span>
         <button class="btn sm" onclick="logout()">로그아웃</button>
       </div>
     </div>
@@ -8373,7 +8474,7 @@ function teacherHTML(){
       ).join('')}</nav>
       <div class="right">
         ${bellHTML(teacherNotifItems())}
-        <span>김하현T</span>
+        <span class="who">김하현T</span>
         <button class="btn sm" onclick="logout()">로그아웃</button>
       </div>
     </div>
@@ -9263,14 +9364,19 @@ function teacherSessionHTML(){
           </div>`;
         }).join('')}
 
-    <div class="t-sec" style="margin-top:24px;">오늘 남은 일</div>
-    <div class="cls-todo">
-      ${[
-        ['오답 문항 검토', DATA.problemBank.filter(b=>b.status!=='approved').length, "goTeacherTab('review')"],
-        ['미답변 질문',    DATA.qnas.filter(q=>!q.answer).length,                     "goTeacherTab('qna')"],
-        ['클리닉 승인 대기', DATA.clinics.filter(c=>c.status==='대기').length,        "goTeacherTab('clinic')"],
-        ['신규 상담 신청', unseenConsultCount(),                                      "goTeacherTab('settings'); state.settingsSubTab='consults'; render()"]
-      ].map(t=>`<a class="${t[1]>0?'hot':''}" onclick="${t[2]}"><span>${t[0]}</span><b>${t[1]}</b></a>`).join('')}
+    ${/* 폰에서는 이 덩어리를 «본문 아래»로 내린다(order:3). 그래서 따로 싸 둔다 —
+         수업 중에 출결을 찍으려는데 「오늘 남은 일」 200px를 매번 지나쳐 스크롤해야 한다.
+         데스크톱에서는 그냥 감싸는 div 하나일 뿐이라 보이는 것이 달라지지 않는다. */''}
+    <div class="cls-rest">
+      <div class="t-sec" style="margin-top:24px;">오늘 남은 일</div>
+      <div class="cls-todo">
+        ${[
+          ['오답 문항 검토', DATA.problemBank.filter(b=>b.status!=='approved').length, "goTeacherTab('review')"],
+          ['미답변 질문',    DATA.qnas.filter(q=>!q.answer).length,                     "goTeacherTab('qna')"],
+          ['클리닉 승인 대기', DATA.clinics.filter(c=>c.status==='대기').length,        "goTeacherTab('clinic')"],
+          ['신규 상담 신청', unseenConsultCount(),                                      "goTeacherTab('settings'); state.settingsSubTab='consults'; render()"]
+        ].map(t=>`<a class="${t[1]>0?'hot':''}" onclick="${t[2]}"><span>${t[0]}</span><b>${t[1]}</b></a>`).join('')}
+      </div>
     </div>
     <div class="rst-pad"></div>
   </aside>`;
