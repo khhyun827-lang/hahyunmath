@@ -134,6 +134,32 @@
        화면이 이제 «페이지 스크롤»이므로 마지막 학생 타일이 그 아래 깔린다.
        → 바닥에 그만큼 자리를 비워 둔다. */
   .app:not(.sap) .cls-screen{padding-bottom:96px;}
+
+  /* ---------- 신호 — 한 줄을 «카드»로 접는다 (2026-08-24 · M-2b) ----------
+     `.sig-row`는 네 칸짜리 가로줄인데 셋이 `flex-shrink:0`이다 —
+     who 198 + num 104 + act 250 + 간격 39 = **591px를 요구한다.** 폭은 369px뿐이라
+     남은 몫을 다 가져가는 `.sig-mid`가 **폭 0**이 되고, 근거 문장이 세로로 서서
+     **학생 한 명이 763px**가 됐다. 그래서 화면에 학생이 한 명밖에 안 들어왔다.
+     → 가로로 욱여넣기를 그만두고 **세 줄짜리 카드**로 접는다.
+        ① 이름·학교 + 점수   ② 배지 + 근거 문장   ③ 조치 버튼
+     DOM 순서가 who → mid → num → act 라 num을 첫 줄로 올리려면 `order`가 필요하다.
+
+     🔴 **`.sig-act{opacity:0}`은 폰에서 «기능이 없는 것»과 같다.**
+        조치 버튼은 `:hover`에서만 나타난다. 폰에는 hover가 없으니
+        위험(`.now`)·해제(`.off`) 등급을 뺀 **주의·양호 학생에게는 손이 닿지 않았다.**
+        연락·출결·오답·7일 해제가 통째로 막혀 있었던 것이다 → 폰에서는 늘 보인다.
+        ⚠ 데스크톱의 «hover에서만 뜬다»는 의도된 절제다. 거기는 건드리지 않는다. */
+  .app:not(.sap) .sig-row{flex-wrap:wrap;align-items:flex-start;gap:9px 10px;padding:14px 2px;}
+  .app:not(.sap) .sig-who{width:auto;flex:1 1 auto;min-width:0;order:0;}
+  .app:not(.sap) .sig-num{width:auto;flex:none;order:1;}
+  .app:not(.sap) .sig-num .dots{margin-top:4px;}
+  .app:not(.sap) .sig-mid{flex:1 1 100%;order:2;}
+  .app:not(.sap) .sig-act{width:100%;flex:1 1 100%;order:3;
+    justify-content:flex-start;opacity:1;}
+
+  /* 등급 머리(「위험 1 · 즉시 연락 권장」 + 「무거운 신호 2개 이상」)도 한 줄에 안 들어간다.
+     `.sig-cond`는 `margin-left:auto`로 오른쪽 끝에 붙는 조건 설명이라 접히면 그만이다. */
+  .app:not(.sap) .sig-ghead{flex-wrap:wrap;gap:4px 9px;}
 }
 
 /* ---------- 명단 (design-v1/01-roster) ----------
