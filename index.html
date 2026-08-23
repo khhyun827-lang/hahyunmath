@@ -956,6 +956,30 @@
 .hw-acts{display:flex;gap:6px;margin-top:9px;flex-wrap:wrap;}
 .hw-note{font-size:11.5px;color:var(--dim);margin-top:7px;}
 .hw-rej{margin-top:9px;}
+/* 미제출 알림 (2026-08-24 · N-1). 펼친 과제의 «맨 위»에 붙는다 —
+   학생 줄을 다 내려간 뒤에 나오면 「누가 안 냈나」를 보고 나서 또 올라와야 한다. */
+/* ⚠ 폭을 묶는다. 반 관리에서는 이 자리가 «본문 칸 전체»라 1200px까지 늘어나는데,
+   이름 두 글자와 전화번호 하나가 화면 양 끝으로 갈라져 짝이 안 읽힌다. */
+
+.hw-nbar{display:flex;align-items:center;gap:9px;padding:9px 0 10px;max-width:560px;
+  min-width:280px;border-bottom:1px solid var(--line2);}
+.hw-nbar .sub{font-size:12.5px;color:var(--sub);}
+.hw-nbar .sub b{color:var(--ink);}
+.hw-npanel{border:1px solid var(--line);border-radius:var(--r-md);background:var(--card);
+  padding:13px 14px;margin:10px 0 4px;max-width:560px;min-width:280px;}
+.hw-nlist{display:flex;flex-direction:column;gap:1px;}
+.hw-nlist.off{opacity:.6;}
+.hw-nrow{display:flex;align-items:center;gap:10px;padding:6px 0;
+  border-bottom:1px solid var(--line2);font-size:12.5px;}
+.hw-nrow:last-child{border-bottom:0;}
+.hw-nrow b{font-weight:600;min-width:72px;}
+.hw-nrow .mono{color:var(--sub);font-size:12px;}
+.hw-nnone{font-size:12.5px;color:var(--sub);line-height:1.7;}
+/* 문안은 «나갈 그대로»를 보여 준다 — 줄바꿈까지 살려야 심사에 넣을 문장이 된다. */
+.hw-nmsg{white-space:pre-wrap;font-size:12.5px;line-height:1.75;color:var(--ink);
+  background:var(--sunk);border:1px solid var(--line2);border-radius:var(--r-sm);padding:11px 13px;}
+.hw-nact{display:flex;align-items:center;gap:11px;margin-top:14px;flex-wrap:wrap;}
+.hw-nact .muted{font-size:11.5px;line-height:1.6;flex:1;min-width:180px;}
 /* 수업 화면에서 과제 한 줄을 펴면 그 아래로 학생들이 붙는다. */
 .sess-hw{padding:2px 14px 10px;margin:-4px 0 10px;border:1px solid var(--line);
   border-top:0;border-radius:0 0 var(--r-sm) var(--r-sm);background:var(--sunk);}
@@ -7619,6 +7643,107 @@ function hwReviewRowHTML(sid, rec, a, opts){
   </div>`;
 }
 
+/* =================== 숙제 미제출 알림 (2026-08-24 · N-1) ===================
+   사용자가 「미제출 알림 버튼을 누르면 카카오톡으로 자동 발송」을 원했다.
+   **지금 여기 있는 것은 «발송 직전»까지다 — 실제로 나가지 않는다.** 사용자가 그 순서로 정했다.
+
+   🔴 **왜 아직 못 보내는가 — 코드가 아니라 바깥 준비물이 없어서다.**
+     카카오톡으로 «친구가 아닌 사람»에게 보내는 길은 **알림톡뿐**이고, 그러려면
+     ① 카카오톡 채널 + 비즈니스 인증(사업자등록증) ② 발송 대행사 계약(솔라피·알리고·NHN 등 —
+     카카오가 API를 직접 열지 않는다) ③ **템플릿 사전 심사**가 먼저다. 건당 과금이다.
+     (카카오 메시지 API의 「친구에게 보내기」는 학부모·학생이 **이 앱에 카카오 로그인**을 하고
+      **선생님과 카톡 친구**여야 해서 학원 알림으로는 성립하지 않는다. 그래서 뺐다.)
+
+   ⚠ **그래서 «문안»이 코드보다 앞선다.** 승인된 템플릿 문장 밖으로는 한 글자도 못 나가고,
+     바꾸려면 재심사다. 아래 `HW_NOTICE_TEMPLATE`이 **심사에 넣을 원문 그대로**이고
+     화면의 미리보기는 그것을 실제 값으로 치환해 보여 준다 — 심사 전에 눈으로 확정하라는 뜻이다.
+
+   ⚠ **받는 사람은 «학생 본인»이다 — 2026-08-24에 사용자가 그렇게 정했다.** `s.phone`을 쓴다.
+     학부모(`s.parentPhone`)로 바꾸려면 아래 `HW_NOTICE_TO` 한 곳만 고치면 된다.
+
+   🔴 **연결하기 전에 반드시 풀어야 하는 것 둘** (지금은 발송이 막혀 있어 문제가 안 될 뿐이다) —
+     ① **워커가 「강사인지」를 모른다.** `signInAnonymously()`라 토큰이 «사이트를 연 사람»까지만
+        말해 준다(worker/README). AI 한도일 때는 감수했지만, **돈이 나가고 학생에게 도달하는**
+        엔드포인트를 그대로 열면 누구든 호출해 뿌릴 수 있다
+     ② **중복 방지·발송 기록**이 없다. 두 번 누르면 두 번 간다.
+        만들 때는 순위 문서(`rank:<월요일>`)와 **같은 어법**으로 — 읽고 → 내 줄만 더하고 → 쓴다
+   ⚠ **API 키는 워커 비밀로만 둔다.** 브라우저에 실으면 그 순간 공개된다(AI_SITE_TOKEN의 교훈). */
+
+const HW_NOTICE_TO = s => (s.phone || '').trim();      // 받는 사람 = 학생 본인
+
+/* ⚠ 이 문안은 **내가 지은 자리표시다 — 사용자의 말이 아니다.**
+   심사에 넣기 전에 원장님이 문장을 확정해야 한다 (9절 8번의 규칙). */
+const HW_NOTICE_TEMPLATE =
+`[김하현수학연구소]
+#{학생명} 학생, 과제 「#{과제명}」이 아직 제출되지 않았습니다.
+마감: #{마감일}
+앱에서 사진으로 제출할 수 있습니다.`;
+
+function hwNoticeText(name, a){
+  return HW_NOTICE_TEMPLATE
+    .replace('#{학생명}', name || '')
+    .replace('#{과제명}', a.title || '')
+    .replace('#{마감일}', a.dueDate || '미정');
+}
+
+/* 이 과제를 아직 «해야 할 일»로 들고 있는 학생 — 안 냈거나 반려됐거나.
+   ⚠ 판정은 `hwNeedsAction` 하나만 부른다. 제출해 둔 것(확인 대기)은 미제출이 아니다 —
+     그걸 섞으면 «낸 사람에게 안 냈다고 보내는» 일이 생긴다. */
+function hwUnsubmitted(a, roster){
+  return roster.filter(s=>{
+    const rec = state.allRecords[s.studentId];
+    return rec && hwNeedsAction(rec, a.id);
+  });
+}
+
+/* 펼친 과제 위에 붙는 한 줄. 수업 > 과제와 반 관리 > 과제가 **같은 것을 쓴다** —
+   두 벌로 두면 다음에 반드시 한쪽만 고쳐진다(hwReviewRowHTML과 같은 이유). */
+function hwNoticeBarHTML(a, roster){
+  if(!state.allRecordsLoaded) return '';
+  const miss = hwUnsubmitted(a, roster);
+  if(miss.length === 0) return '';
+  const open = state.hwNoticeFor === a.id;
+  return `<div class="hw-nbar">
+    <span class="sub">미제출 <b class="mono">${miss.length}</b>명</span>
+    <span class="spacer"></span>
+    <button class="btn sm" onclick="event.stopPropagation(); state.hwNoticeFor = ${
+      open ? 'null' : `'${a.id}'`}; render()">${open ? '닫기' : '미제출 알림'}</button>
+  </div>${open ? hwNoticePanelHTML(a, miss) : ''}`;
+}
+
+function hwNoticePanelHTML(a, miss){
+  const withPhone = miss.filter(s=>HW_NOTICE_TO(s));
+  const noPhone   = miss.filter(s=>!HW_NOTICE_TO(s));
+  const sample    = withPhone[0] || miss[0];
+
+  return `<div class="hw-npanel" onclick="event.stopPropagation();">
+    <div class="t-sec" style="margin:0 0 9px;">보낼 사람 <span class="mono">${withPhone.length}</span>명</div>
+    ${withPhone.length === 0
+      ? `<div class="hw-nnone">보낼 수 있는 사람이 없습니다 — 아래 학생들의 <b>전화번호가 비어 있습니다.</b></div>`
+      : `<div class="hw-nlist">${withPhone.map(s=>`<div class="hw-nrow">
+          <b>${escHtml(s.name)}</b><span class="mono">${escHtml(HW_NOTICE_TO(s))}</span>
+        </div>`).join('')}</div>`}
+
+    ${noPhone.length ? `
+      <div class="t-sec" style="margin:16px 0 7px;">번호가 없어 못 보냄 <span class="mono">${noPhone.length}</span>명</div>
+      <div class="hw-nlist off">${noPhone.map(s=>`<div class="hw-nrow">
+        <b>${escHtml(s.name)}</b><span class="muted">전화번호 없음</span></div>`).join('')}</div>
+      <p class="st-note" style="margin-top:7px;">명단 &gt; 학생을 열어 <b>전화번호</b>를 채우면 보낼 수 있습니다.</p>` : ''}
+
+    <div class="t-sec" style="margin:16px 0 7px;">보낼 문안</div>
+    ${/* 심사 전에 «실제로 나갈 문장»을 눈으로 확정하라는 자리다. 요약하지 않고 그대로 보여 준다. */''}
+    <div class="hw-nmsg">${escHtml(hwNoticeText(sample ? sample.name : '홍길동', a))}</div>
+    <p class="st-note" style="margin-top:7px;">
+      학생 이름·과제명·마감일만 사람마다 바뀝니다. <b>나머지 문장은 심사받은 그대로 고정</b>입니다.</p>
+
+    <div class="hw-nact">
+      <button class="btn p" disabled title="아직 연결되지 않았습니다">카카오톡으로 보내기</button>
+      <span class="muted">아직 <b>실제로 보내지지 않습니다.</b> 채널 인증 · 발송 대행사 ·
+        템플릿 심사가 끝나야 연결됩니다.</span>
+    </div>
+  </div>`;
+}
+
 /* ---------- 진도 · 과제 ---------- */
 /* 과제 한 장. 예전에는 «학생이 직접 누르는 체크박스»였다 — 눌렀다는 말 말고는 아무 근거가
    없었다. 지금은 사진을 올려 내고, 강사·조교가 보고 수락해야 완료가 된다.
@@ -9613,7 +9738,7 @@ function sessionHwHTML(classId, date){
           <span class="bar" style="width:70px;flex-shrink:0;"><i style="width:${roster.length?Math.round(done/roster.length*100):0}%"></i></span>
           <span class="sub" style="font-size:11.5px;flex-shrink:0;">${open?'접기':'누가 냈나'}</span>
         </div>
-        ${!open ? '' : `<div class="sess-hw">${
+        ${!open ? '' : `<div class="sess-hw">${hwNoticeBarHTML(h, roster)}${
           !state.allRecordsLoaded ? '<span class="muted" style="font-size:12px;">학생 기록을 불러오는 중…</span>'
           : roster.length===0 ? '<span class="muted" style="font-size:12px;">이 반에 재원생이 없습니다.</span>'
           /* 안 낸 사람이 위로 온다 — 수업 중에 찾는 것은 그쪽이다.
@@ -10859,7 +10984,7 @@ function teacherClassDailyHomeworkHTML(classId, date){
           ${a.description?`<span style="color:var(--sub);margin-top:6px;white-space:pre-wrap;">${escHtml(a.description)}</span>`:''}
           ${!on ? '' : (!state.allRecordsLoaded
             ? '<span style="margin-top:9px;">불러오는 중…</span>'
-            : `<div style="margin-top:10px;">${
+            : `<div style="margin-top:10px;">${hwNoticeBarHTML(a, roster)}${
                 roster.length===0 ? '<span class="muted" style="font-size:12px;">이 반에 재원생이 없습니다.</span>'
                 : roster.map(s=>{
                     const rec = recOf(s);
