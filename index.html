@@ -950,19 +950,65 @@
 .hw-row{padding:11px 0;border-top:1px solid var(--line2);}
 .hw-row:first-of-type{border-top:0;}
 .hw-rt{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
-.hw-who{font-size:12.5px;min-width:62px;flex:0 0 auto;}
+/* ⚠ **이 이름에 `.hw-title`을 같이 붙이고 있었다** (2026-08-25에 고침).
+   `.hw-title{flex:1}`이 스타일시트에서 뒤에 나와 같은 특정도로 이겼다 —
+   `flex:0 0 auto`가 죽고 **이름이 늘어나 배지가 오른쪽 끝까지 밀렸다.**
+   이름과 상태가 화면 양 끝으로 갈라져 짝이 안 읽혔다. 클래스를 하나로 떼어 놨다.
+   ⚠ 두 클래스를 다시 겹치지 말 것 — 겹치면 조용히 같은 증상으로 돌아간다. */
+.hw-who{font-size:13.5px;font-weight:600;color:var(--ink);min-width:62px;flex:0 0 auto;}
 .hw-title{flex:1;min-width:120px;font-size:12.5px;color:var(--ink);text-align:left;}
 .hw-when{font-size:11px;color:var(--dim);}
 .hw-acts{display:flex;gap:6px;margin-top:9px;flex-wrap:wrap;}
+/* 상태별로 묶인 명단에서는 버튼이 이름과 같은 줄 오른쪽에 붙는다 (`tight`). */
+.hw-acts.inline{margin:0 0 0 auto;flex-shrink:0;}
 .hw-note{font-size:11.5px;color:var(--dim);margin-top:7px;}
 .hw-rej{margin-top:9px;}
+/* ---------- 과제 확인 명단 — «할 일» 순서로 접는다 (2026-08-25 · H-3) ----------
+   강사가 이 화면에서 실제로 하는 일은 «확인 대기를 수락/반려»하는 것 하나다.
+   그런데 전에는 명단이 등록 순서로 늘어서 대기 2명을 눈으로 찾아야 했다.
+   셋으로 갈라 위계를 준다 — 대기는 펴고, 안 낸 사람은 눕히고, 완료는 접는다. */
+.hw-sum{display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+  font-size:12.5px;color:var(--sub);padding:1px 0 11px;}
+.hw-sum .bar{width:118px;flex-shrink:0;}
+.hw-sum b{color:var(--ink);font-weight:600;}
+.hw-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;margin-left:6px;}
+.hw-dot.late{background:var(--late);}
+.hw-grp{margin-top:13px;}
+.hw-grp-h{display:flex;align-items:center;gap:8px;padding-bottom:5px;
+  border-bottom:1px solid var(--line2);}
+.hw-grp-h b{font-size:11.5px;font-weight:700;letter-spacing:.06em;color:var(--dim);}
+.hw-grp-h.late b{color:var(--late);}
+.hw-grp-h.no b{color:var(--no);}
+.hw-grp-h span{margin-left:auto;font-family:'JetBrains Mono',monospace;
+  font-size:11px;color:var(--dim);}
+/* 아직 안 낸 사람에게는 «볼 것»이 없다 — 사진도 낸 날짜도 없다. 이름과 버튼뿐이라 눕힌다. */
+.hw-mini{display:flex;align-items:center;gap:8px;padding:8px 0;
+  border-bottom:1px solid var(--line2);font-size:13.5px;}
+.hw-mini:last-child{border-bottom:0;}
+.hw-mini > b{font-weight:600;color:var(--ink);flex-shrink:0;}
+.hw-mini-r{font-size:11.5px;color:var(--dim);flex:1;min-width:0;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.hw-mini .act{margin-left:auto;display:flex;gap:6px;flex-shrink:0;}
+/* 완료는 볼 일이 없다. 이름만 스치듯 남기고 접어 둔다. */
+.hw-fold{display:flex;align-items:center;gap:7px;width:100%;text-align:left;
+  border:0;background:none;padding:9px 0;cursor:pointer;font:inherit;color:var(--dim);
+  border-top:1px solid var(--line2);}
+.hw-fold:hover b, .hw-fold:focus-visible b{text-decoration:underline;}
+.hw-fold b{font-size:11.5px;font-weight:700;letter-spacing:.06em;color:var(--ok);}
+.hw-fold .n{font-family:'JetBrains Mono',monospace;font-size:11px;flex-shrink:0;}
+.hw-caret{font-size:11px;line-height:1;color:var(--ok);flex-shrink:0;}
+/* 접힌 채로도 «누가 냈는지»는 스쳐 읽힌다. 넘치면 잘라 둔다 — 세면 숫자가 옆에 있다. */
+.hw-fold .who{flex:1;min-width:0;font-size:11.5px;margin-left:3px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 /* 미제출 알림 (2026-08-24 · N-1). 펼친 과제의 «맨 위»에 붙는다 —
    학생 줄을 다 내려간 뒤에 나오면 「누가 안 냈나」를 보고 나서 또 올라와야 한다. */
 /* ⚠ 폭을 묶는다. 반 관리에서는 이 자리가 «본문 칸 전체»라 1200px까지 늘어나는데,
    이름 두 글자와 전화번호 하나가 화면 양 끝으로 갈라져 짝이 안 읽힌다. */
 
-.hw-nbar{display:flex;align-items:center;gap:9px;padding:9px 0 10px;max-width:560px;
-  min-width:280px;border-bottom:1px solid var(--line2);}
+/* ⚠ 밑줄을 뺐다 (2026-08-25) — 바로 아래 묶음 머리가 자기 밑줄을 갖게 되면서
+   가로줄 둘이 20px 사이로 겹쳐 보였다. 사이를 띄우는 것으로 갈음한다. */
+.hw-nbar{display:flex;align-items:center;gap:9px;padding:9px 0 4px;max-width:560px;
+  min-width:280px;}
 .hw-nbar .sub{font-size:12.5px;color:var(--sub);}
 .hw-nbar .sub b{color:var(--ink);}
 .hw-npanel{border:1px solid var(--line);border-radius:var(--r-md);background:var(--card);
@@ -2444,6 +2490,7 @@ let state = {
   homeworkDetailId: null,
   hwPhotos: {},              // 과제id → 아직 «제출 전»인 사진들 (드라이브에는 이미 올라가 있다)
   hwRejectOpen: null,        // 반려 사유를 적고 있는 «과제id:학생id»
+  hwDoneOpen: null,          // 「완료」 묶음을 펴 둔 과제id (기본은 접힘)
   hwPhotoView: null,         // 크게 보고 있는 사진 주소
   classHubId: null,
   classHubTab: 'sessions',   // 「학생 명단」은 반 안이 아니라 명단(01-roster)이 맡는다
@@ -7623,11 +7670,22 @@ function hwReviewRowHTML(sid, rec, a, opts){
     <div class="hw-rt">
       ${/* 반 관리에서는 과제 하나를 «펼친 안»이라 줄마다 과제명을 되풀이할 이유가 없다.
            그 자리에 학생 이름이 온다 — 여기서 가려는 것은 «누가»다. */''}
-      ${o.wide ? `<b class="hw-who hw-title">${escHtml(o.name||'')}</b>`
+      ${/* ⚠ `.hw-who` 하나만 붙인다. `.hw-title`을 같이 붙이면 그쪽 `flex:1`이 이겨
+           이름이 늘어나고 배지가 화면 오른쪽 끝으로 밀린다 (2026-08-25에 고친 것). */''}
+      ${o.wide ? `<b class="hw-who">${escHtml(o.name||'')}</b>`
                : `<span class="hw-title">${escHtml(a.title)}</span>`}
-      ${label ? `<span class="badge ${tone}">${label}</span>` : '<span class="badge">미제출</span>'}
-      ${st.submittedAt ? `<span class="mono hw-when">낸 날 ${escHtml(st.submittedAt)}</span>` : ''}
+      ${/* ⚠ `hideBadge`는 «상태별로 묶인 명단» 안에서 켠다 — 묶음 머리가 이미
+           「확인 대기」라고 말했는데 줄마다 「확인 기다리는 중」을 또 다는 것은
+           같은 말을 두 번 하는 것이다. 학생 상세처럼 섞여 있는 자리에서는 끈다. */''}
+      ${o.hideBadge ? '' :
+        (label ? `<span class="badge ${tone}">${label}</span>` : '<span class="badge">미제출</span>')}
+      ${/* ⚠ **한글을 `.mono` 안에 넣지 말 것.** `.mono`는 JetBrains Mono라 한글 글리프가
+           없어서 「낸 날」이 **두부 상자 두 개**로 나왔다 (2026-08-25에 발견). 날짜만 mono다. */''}
+      ${st.submittedAt ? `<span class="hw-when">낸 날 <span class="mono">${escHtml(st.submittedAt)}</span></span>` : ''}
       ${st.by ? `<span class="hw-when">${escHtml(st.by)}${st.decidedAt?' · '+escHtml(st.decidedAt):''}</span>` : ''}
+      ${/* `tight`면 버튼이 이름과 «같은 줄» 오른쪽에 붙는다. 사진 아래로 내려보내면
+           한 사람이 130px씩 먹어서 대기 두 명에 화면 절반이 나간다. */''}
+      ${o.tight && !rejecting ? `<span class="hw-acts inline">${acts}</span>` : ''}
     </div>
     ${st.status===HW_REJECTED && st.reason
       ? `<div class="hw-back"><b>반려 사유</b><span>${escHtml(st.reason)}</span></div>` : ''}
@@ -7639,8 +7697,90 @@ function hwReviewRowHTML(sid, rec, a, opts){
         <button class="btn q sm" onclick="rejectHomework('${sid}','${a.id}')">반려하고 알리기</button>
         <button class="btn sm" onclick="state.hwRejectOpen=null; render()">취소</button>
       </div></div>`
-      : `<div class="hw-acts">${acts}</div>`}
+      : (o.tight ? '' : `<div class="hw-acts">${acts}</div>`)}
   </div>`;
+}
+
+/* =================== 과제 확인 명단 — 반 전체 (2026-08-25 · H-3) ===================
+   **강사 화면 둘이 이 한 덩어리를 같이 쓴다** — 「수업 > 과제」와 「반 관리 > 과제」.
+   ⚠ 전에는 두 곳이 `roster.map(hwReviewRowHTML)`을 **각자** 돌렸고,
+     **수업 쪽에만 정렬이 있었다.** 노트에 적어 둔 「두 벌로 두면 한쪽만 고쳐진다」가
+     실제로 벌어져 있던 자리다. 요약줄·알림바·정렬·접기를 전부 여기 하나로 모은다.
+
+   **명단을 «할 일» 순서로 접는다 — 2026-08-25에 사용자가 고른 방향이다.**
+   강사가 이 화면에서 실제로 하는 일은 «확인 대기를 수락/반려»하는 것 하나인데,
+   전에는 20명이 등록 순서로 늘어서 대기 2명을 눈으로 찾아야 했다. 셋으로 간다 —
+   ① **확인 대기** — 지금 손이 가야 하는 것. 사진과 버튼을 **편 채로** 둔다
+   ② **아직 안 냄** — 볼 것이 없다(사진도 낸 날짜도 없다). **한 줄로 눕힌다**
+   ③ **완료** — 볼 일이 없다. **접는다.** 이름만 스치듯 남기고 눌러야 펴진다
+
+   ⚠ **②는 `hwNeedsAction` 하나로만 가른다 — 미제출 알림이 잡는 집합과 «같아야» 한다.**
+     여기서 따로 세면 「안 냈다는데 알림 목록엔 없다」가 생긴다. 안 냈거나 반려된 것 둘 다다.
+   ⚠ **요약줄에 미제출 수를 넣지 않았다.** 바로 아래 알림바가 그 숫자를 이미 말한다 —
+     같은 수를 두 번 쓰면 어느 쪽이 진짜인지 묻게 된다. 요약줄은 «완료»와 «대기»만 진다.
+   ⚠ **알림바는 맨 위에 그대로 둔다** (N-1에서 정한 자리). 「아직 안 냄」 묶음 머리로
+     내리면 대기가 많은 날 화면 아래로 밀려 «또 올라와야» 한다. */
+function hwRosterReviewHTML(a, roster){
+  if(!state.allRecordsLoaded)
+    return '<span class="muted" style="font-size:12px;">학생 기록을 불러오는 중…</span>';
+  if(roster.length === 0)
+    return '<span class="muted" style="font-size:12px;">이 반에 재원생이 없습니다.</span>';
+
+  const recOf  = s => state.allRecords[s.studentId];
+  const withRec = roster.filter(s => recOf(s));
+  const byName = (x, y) => x.name.localeCompare(y.name);
+
+  /* 판정은 전부 기존 셋에 맡긴다 — 여기서 상태를 새로 해석하지 않는다. */
+  const waiting = withRec.filter(s => hwState(recOf(s), a.id).status === HW_SUBMITTED).sort(byName);
+  const todo    = withRec.filter(s => hwNeedsAction(recOf(s), a.id)).sort(byName);
+  const done    = withRec.filter(s => hwIsDone(recOf(s), a.id)).sort(byName);
+
+  const pct = Math.round(done.length / roster.length * 100);
+  const openDone = state.hwDoneOpen === a.id;
+
+  const full = s => hwReviewRowHTML(s.studentId, recOf(s), a,
+    {wide:true, name:s.name, tight:true, hideBadge:true});
+
+  /* 아직 안 낸 사람 한 줄. 반려된 사람은 «왜»가 붙는다 — 그게 다시 낼 근거다. */
+  const mini = s => {
+    const st = hwState(recOf(s), a.id);
+    const back = st.status === HW_REJECTED;
+    return `<div class="hw-mini">
+      <b>${escHtml(s.name)}</b>
+      ${back ? '<span class="badge no">반려</span>' : ''}
+      ${back && st.reason ? `<span class="hw-mini-r">${escHtml(st.reason)}</span>` : ''}
+      <span class="act">
+        ${/* 이 화면의 «주된» 손짓은 수락이다. 현장 확인까지 진한 버튼으로 두면
+             미제출이 열 명일 때 진한 버튼 열 개가 깔려 무엇이 먼저인지 흐려진다. */''}
+        <button class="btn sm" onclick="approveHomework('${s.studentId}','${a.id}',true)">현장 확인</button>
+        ${back ? `<button class="btn sm" onclick="undoHwDecision('${s.studentId}','${a.id}')">반려 취소</button>` : ''}
+      </span>
+    </div>`;
+  };
+
+  const grp = (tone, label, list, rowFn) => !list.length ? '' : `
+    <div class="hw-grp">
+      <div class="hw-grp-h ${tone}"><b>${label}</b><span>${list.length}명</span></div>
+      ${list.map(rowFn).join('')}
+    </div>`;
+
+  return `
+    <div class="hw-sum">
+      <span class="bar"><i style="width:${pct}%"></i></span>
+      <b class="mono">${done.length}/${roster.length}</b><span>완료</span>
+      ${waiting.length ? `<span class="hw-dot late"></span><span>확인 대기 <b>${waiting.length}</b></span>` : ''}
+    </div>
+    ${hwNoticeBarHTML(a, roster)}
+    ${grp('late', '확인 대기', waiting, full)}
+    ${grp('no',   '아직 안 냄', todo,   mini)}
+    ${!done.length ? '' : `<div class="hw-grp">
+      <button class="hw-fold" onclick="state.hwDoneOpen = state.hwDoneOpen==='${a.id}' ? null : '${a.id}'; render()">
+        <span class="hw-caret">${openDone ? '▾' : '▸'}</span>
+        <b>완료</b><span class="n">${done.length}명</span>
+        ${openDone ? '' : `<span class="who">${done.map(s=>escHtml(s.name)).join(' · ')}</span>`}
+      </button>
+      ${openDone ? done.map(full).join('') : ''}
+    </div>`}`;
 }
 
 /* =================== 숙제 미제출 알림 (2026-08-24 · N-1) ===================
@@ -9738,19 +9878,9 @@ function sessionHwHTML(classId, date){
           <span class="bar" style="width:70px;flex-shrink:0;"><i style="width:${roster.length?Math.round(done/roster.length*100):0}%"></i></span>
           <span class="sub" style="font-size:11.5px;flex-shrink:0;">${open?'접기':'누가 냈나'}</span>
         </div>
-        ${!open ? '' : `<div class="sess-hw">${hwNoticeBarHTML(h, roster)}${
-          !state.allRecordsLoaded ? '<span class="muted" style="font-size:12px;">학생 기록을 불러오는 중…</span>'
-          : roster.length===0 ? '<span class="muted" style="font-size:12px;">이 반에 재원생이 없습니다.</span>'
-          /* 안 낸 사람이 위로 온다 — 수업 중에 찾는 것은 그쪽이다.
-             줄은 반 관리와 «같은 것»을 쓴다. 그래서 여기서 바로 「현장 확인」이 된다. */
-          : roster.slice().sort((a,b)=>{
-              const rank = s => { const r = recOf(s); if(!r) return 0;
-                const st = hwState(r, h.id).status;
-                return st===HW_NONE ? 0 : st===HW_REJECTED ? 1 : st===HW_SUBMITTED ? 2 : 3; };
-              return rank(a)-rank(b) || a.name.localeCompare(b.name);
-            }).map(s=>{ const r = recOf(s);
-              return r ? hwReviewRowHTML(s.studentId, r, h, {wide:true, name:s.name}) : '';
-            }).join('')}</div>`}`;
+        ${/* 명단은 반 관리와 «같은 것»을 쓴다 — 요약줄·알림바·정렬·접기까지 한 덩어리다.
+             전에는 여기에만 정렬이 있고 반 관리에는 없어 두 화면이 이미 어긋나 있었다. */''}
+        ${!open ? '' : `<div class="sess-hw">${hwRosterReviewHTML(h, roster)}</div>`}`;
       }).join('')}`;
   const bar = `<div class="actbar">
     <span class="sum">과제 <b class="mono">${hws.length}</b>건</span>
@@ -10978,18 +11108,14 @@ function teacherClassDailyHomeworkHTML(classId, date){
       const on = state.homeworkDetailId===a.id;
       return `<div class="st-row" style="align-items:flex-start;">
         <div class="t"><b>${escHtml(a.title)}</b>
-          <span><span class="mono">${a.createdAt?'등록 '+a.createdAt:''}${a.dueDate?' · 마감 '+a.dueDate:''}</span>${
+          ${/* ⚠ 「등록」·「마감」이 `.mono` 안에 있어 두부 상자로 나왔다. 날짜만 mono로 둔다. */''}
+          <span><span>${a.createdAt?`등록 <span class="mono">${a.createdAt}</span>`:''}${a.dueDate?` · 마감 <span class="mono">${a.dueDate}</span>`:''}</span>${
             doneCount!==null?`<s>·</s>완료 ${doneCount}/${roster.length}`:''}${
             waiting?`<s>·</s><b style="color:var(--late);">확인 대기 ${waiting}</b>`:''}</span>
           ${a.description?`<span style="color:var(--sub);margin-top:6px;white-space:pre-wrap;">${escHtml(a.description)}</span>`:''}
-          ${!on ? '' : (!state.allRecordsLoaded
-            ? '<span style="margin-top:9px;">불러오는 중…</span>'
-            : `<div style="margin-top:10px;">${hwNoticeBarHTML(a, roster)}${
-                roster.length===0 ? '<span class="muted" style="font-size:12px;">이 반에 재원생이 없습니다.</span>'
-                : roster.map(s=>{
-                    const rec = recOf(s);
-                    return rec ? hwReviewRowHTML(s.studentId, rec, a, {wide:true, name:s.name}) : '';
-                  }).join('')}</div>`)}
+          ${/* 명단은 수업 화면과 «같은 것»을 쓴다 (hwRosterReviewHTML).
+               불러오는 중·재원생 없음도 그 안에서 함께 말한다. */''}
+          ${!on ? '' : `<div style="margin-top:10px;">${hwRosterReviewHTML(a, roster)}</div>`}
         </div>
         <div class="v">
           <button class="btn sm" onclick="state.homeworkDetailId = state.homeworkDetailId==='${a.id}' ? null : '${a.id}'; state.hwRejectOpen=null; render()">${on?'접기':'확인하기'}</button>
