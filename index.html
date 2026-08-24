@@ -3332,11 +3332,10 @@ function pwChangeModalHTML(){
         <label><span>새 비밀번호 확인</span>
           <input id="pw-new2" type="password" autocomplete="new-password"
             onkeydown="if(event.key==='Enter') submitPwChange()"></label>
-        ${/* ⚠ 이 두 줄을 지우지 말 것 — 위 주석의 이유다. */''}
-        <p style="font-size:11px;color:var(--dim);line-height:1.65;margin:0;">
-          학원 계정에만 쓰는 비밀번호입니다.
-          <b style="color:var(--sub);font-weight:600;">다른 곳에서 쓰는 비밀번호는 넣지 마세요.</b><br>
-          잊어버리면 선생님께 말씀하시면 다시 정해 드립니다.</p>
+        ${/* 안내 문단은 **사용자가 빼라고 해서 뺐다** (2026-08-25).
+             「올해는 테스트용으로 몇 명만 쓰고, 내년에 본격적으로 시작할 때
+             평문 비밀번호를 고치겠다」는 계획을 함께 말했다 → P-2.
+             ⚠ **P-2 전에 사용자가 늘어나면 이 안내를 다시 세우는 것을 «먼저» 물을 것.** */''}
         <div class="pwm-f">
           <button class="btn sm" onclick="closePwChange()">취소</button>
           <button class="btn p sm" onclick="submitPwChange()">바꾸기</button>
@@ -3355,33 +3354,31 @@ function pwChangeModalHTML(){
    🔴 **P-2를 하면 이 기능은 «못 만드는 것»이 된다.** 서버 인증으로 옮기면 비밀번호를
      한 방향으로만 저장하므로 **서버도 원본을 모른다.** 그때 이 자리는 지워야 한다.
      P-2를 시작하는 사람은 **여기부터 걷어내고 시작할 것.**
-   ⚠ **본 것을 기록에 남긴다.** 「누가 언제 누구 것을 봤나」가 없으면 이 기능은
-     그냥 «구멍»이 된다. 남기면 적어도 «열어 본 일»이다.
-     ⚠ **기록에 비밀번호 자체를 적지 않는다** — 그러면 감사 기록이 비밀번호 목록이 된다.
+   ⚠ **감사 기록은 «남기지 않는다» — 사용자가 그렇게 정했다** (2026-08-25).
+     처음에는 「누가 언제 누구 것을 봤나」를 남겼는데 빼라고 했다.
+     지금은 강사가 원장 한 사람뿐이라 «누가»를 물을 일이 없다.
+     ⚠ **강사가 둘 이상이 되면 이 판단이 달라진다 — 그때 다시 물을 것.**
+     ⚠ 다시 넣게 되더라도 **기록에 비밀번호 자체는 적지 말 것** — 감사 기록이 비밀번호 목록이 된다.
    ⚠ **한 번에 하나만 보인다**(`state.pwReveal`이 값 하나). 목록 전체가 한꺼번에 열리면
      화면을 그대로 찍어 남기기 쉬워진다. 하나씩 열게 둔다.
    ⚠ **강사만 부를 수 있다.** onclick은 콘솔에서도 부를 수 있으니 함수 안에서 막는다
      (지금 구조에선 상징적이지만, P-2 뒤에는 이 가드가 실제로 일한다). */
 function pwRevealKey(kind, id){ return (kind==='student' ? 's:' : 'ta:') + id; }
-async function togglePwReveal(kind, id, name){
+function togglePwReveal(kind, id){
   if(!state.currentUser || state.currentUser.type!=='teacher'){
     showToast('강사만 볼 수 있습니다.'); return;
   }
   const key = pwRevealKey(kind, id);
-  if(state.pwReveal === key){ state.pwReveal = null; render(); return; }
-  state.pwReveal = key;
+  state.pwReveal = (state.pwReveal === key) ? null : key;
   render();
-  /* ⚠ 비밀번호는 적지 않는다 — 본 «사실»만 남긴다. */
-  await logAudit('비밀번호 확인', kind==='student' ? id : '', name || '',
-    kind==='student' ? '강사가 학생 비밀번호를 확인' : '강사가 조교 비밀번호를 확인');
 }
 /* 「•••• [보기]」 한 줄. 학생 기본정보와 조교 목록이 같은 것을 쓴다. */
-function pwRevealHTML(kind, id, name, pw){
+function pwRevealHTML(kind, id, pw){
   const on = state.pwReveal === pwRevealKey(kind, id);
   const has = !!(pw && String(pw).length);
   return `<span class="pwr">
     <span class="v ${on?'on':''}">${has ? (on ? escHtml(pw) : '•'.repeat(Math.min(String(pw).length, 12))) : '없음'}</span>
-    ${has ? `<button class="btn q sm" onclick="togglePwReveal('${kind}','${id}','${escHtml(name||'').replace(/'/g,"\\'")}')">${on?'가리기':'보기'}</button>` : ''}
+    ${has ? `<button class="btn q sm" onclick="togglePwReveal('${kind}','${id}')">${on?'가리기':'보기'}</button>` : ''}
   </span>`;
 }
 
@@ -11159,7 +11156,7 @@ function sdInfoHTML(s, sid){
              ⚠ **라벨 줄에 붙이는 이유** — `.cls-form`이 `align-items:flex-end`라
                입력칸 «아래»에 달면 이 칸만 위로 떠서 다른 칸과 밑선이 어긋난다. */''}
         <label style="min-width:184px;">
-          <span>비밀번호 ${pwRevealHTML('student', sid, s.name, s.pw)}</span>
+          <span>비밀번호 ${pwRevealHTML('student', sid, s.pw)}</span>
           <input id="info-spw" placeholder="변경 시에만 입력"></label>
         <label><span>학년</span><select id="info-sgrade" style="border:1px solid var(--line);border-radius:var(--r-sm);background:var(--paper);padding:8px 10px;font-family:inherit;font-size:12.5px;">${['고1','고2','고3'].map(g=>`<option ${s.grade===g?'selected':''}>${g}</option>`).join('')}</select></label>
         <label style="min-width:150px;"><span>학교</span><input id="info-sschool" value="${escHtml(s.school||'')}" placeholder="학교명 (선택)"></label>
@@ -13909,7 +13906,7 @@ function teacherAssistantsHTML(){
           <div class="t"><b>${escHtml(a.name)}</b>
             <span><span class="mono">${escHtml(a.taId||'—')}</span><s>·</s>${escHtml(assistantClassLabel(ids))}${
               a.phone?`<s>·</s><span class="mono">${escHtml(a.phone)}</span>`:''}</span>
-            <span style="margin-top:5px;">비밀번호 ${pwRevealHTML('assistant', a.id, a.name, a.pw)}</span></div>
+            <span style="margin-top:5px;">비밀번호 ${pwRevealHTML('assistant', a.id, a.pw)}</span></div>
           <div class="v">
             <button class="btn ${editing?'':'sm'} sm" onclick="taEditClasses('${a.id}')">${editing?'닫기':'담당 반 변경'}</button>
             <button class="btn sm" onclick="resetAssistantPw('${a.id}')">비밀번호 재설정</button>
