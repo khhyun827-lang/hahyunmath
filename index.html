@@ -85,13 +85,41 @@
      ⚠ **`overflow-y:hidden`을 같이 적는다.** 한 축만 `auto`로 두면 다른 축의 `visible`이
        «auto»로 계산돼 세로 스크롤바가 한 겹 더 생긴다. 안쪽 스크롤러가 이미 있으므로 막는다.
      ⚠ **`.cls-screen`(수업)은 여기서 뺐다** — 아래에서 «위아래로 푸는» 쪽으로 제대로 고쳤다.
-       거기서는 `height:auto`가 되므로 `overflow-y:hidden`이 남아 있으면 본문이 잘린다. */
-  .app:not(.sap) .chub-screen,
+       거기서는 `height:auto`가 되므로 `overflow-y:hidden`이 남아 있으면 본문이 잘린다.
+     ⚠ **`.chub-screen`(반 관리)도 2026-08-25에 뺐다** — 같은 이유다. 아래에서 푼다. */
   .app:not(.sap) .rv-screen,
   .app:not(.sap) .ex-screen,
   .app:not(.sap) .qn-screen,
   .app:not(.sap) .nt-screen,
   .app:not(.sap) .co-screen{overflow-x:auto;overflow-y:hidden;}
+
+  /* ---------- 반 관리를 폰용으로 푼다 (2026-08-25 · M-2c) ----------
+     M-2 노트에 「반 관리는 폰에서 원래 짜부라져 있다」고 적어 둔 화면이다.
+     실제로 재 보니 **어느 탭이든 본문이 152px밖에 없었다** — 반 목록이 250px를 먹고
+     남은 것을 본문이 갖는 구조라, 반 이름 「명덕여고 2차시」가 **한 글자씩 세로로 쌓였다.**
+     과제 격자를 여기 넣은 이상 그대로 둘 수 없다 — 152px에서는 새 화면이 죽는다.
+
+     **수업(M-2a)과 같은 어법으로 위아래로 푼다** — 반 목록이 위, 본문이 아래.
+     ⚠ **`height:auto`가 되므로 위의 «가둠» 목록에서 `.chub-screen`을 뺐다.**
+       빼지 않으면 `overflow-y:hidden`이 남아 본문이 잘린다 (M-1이 남긴 함정 그대로다).
+     ⚠ 반 목록은 **높이를 묶어 둔다** — 반이 열 개면 목록만으로 화면이 차서
+       정작 보러 온 본문이 스크롤 두 번 아래로 밀려난다. */
+  .app:not(.sap) .chub-screen{display:block;height:auto;overflow:visible;}
+  .app:not(.sap) .chub-side{width:auto;padding-right:0;border-right:0;
+    border-bottom:1px solid var(--line);padding-bottom:12px;margin-bottom:14px;}
+  .app:not(.sap) .chub-lbody{max-height:196px;}
+  .app:not(.sap) .chub-main{padding-left:0;}
+  /* 반 이름과 오른쪽 버튼 묶음이 한 줄에 안 들어간다. 이름을 온전히 읽는 쪽을 택한다. */
+  .app:not(.sap) .chub-mh{flex-wrap:wrap;}
+  .app:not(.sap) .chub-mh > .r{width:100%;flex-wrap:wrap;}
+  .app:not(.sap) .chub-body{overflow:visible;margin-top:14px;}
+
+  /* ---------- 구역 머리를 폰에서 접는다 (2026-08-25 · H-5) ----------
+     `.st-h`는 「제목 · 숫자 … 오른쪽 버튼들」 한 줄이라 폰에서 오른쪽이 잘렸다.
+     🔴 **「과제 등록」 버튼이 폰에서 «없는 기능»이었다** — 화면 밖 505px에 놓여 있었다.
+     신호 탭의 hover 버튼과 같은 종류의 사고다(M-2b). 아래로 접어 준다. */
+  .app:not(.sap) .st-h{flex-wrap:wrap;}
+  .app:not(.sap) .st-h .r{margin-left:0;width:100%;justify-content:flex-end;}
 
   /* ---------- 수업 «만» 폰용으로 제대로 푼다 (2026-08-24 · M-2a) ----------
      사용자가 「모바일로 이용한다면 수업 탭을 그때그때 쓸 가능성이 제일 높다」고 했다.
@@ -1000,6 +1028,89 @@
 /* 접힌 채로도 «누가 냈는지»는 스쳐 읽힌다. 넘치면 잘라 둔다 — 세면 숫자가 옆에 있다. */
 .hw-fold .who{flex:1;min-width:0;font-size:11.5px;margin-left:3px;
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+
+/* ---------- 과제 격자 — 행=학생 · 열=과제 (2026-08-25 · H-5) ----------
+   **축이 바뀐다.** 여태 이 화면은 「과제 하나를 펴면 그 안에 학생」이라
+   **한 번에 한 과제만** 보였다. 사용자가 「한눈에 보고 싶다」며 격자 화면을 가리켰다.
+   격자는 «반 전체 × 과제 전체»를 한 판에 올린다 — 명단은 그 다음이다.
+   ⚠ 표 골격은 새로 짜지 않는다. `table.grid`(ds.css)를 그대로 쓴다. */
+.hwg-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--r-md);
+  background:var(--card);}
+.hwg{table-layout:fixed;min-width:max-content;}
+/* 이름 열은 왼쪽에 못 박는다 — 열을 오른쪽으로 밀다 보면 «누구 줄인지»를 잃는다. */
+.hwg th.who, .hwg td.who{position:sticky;left:0;z-index:1;width:158px;
+  background:var(--card);border-right:1px solid var(--line);}
+.hwg thead th.who{z-index:3;}
+.hwg tbody tr:hover td.who{background:var(--hover);}
+.hwg thead th{vertical-align:bottom;padding:8px 10px;height:auto;line-height:1.45;}
+/* 열 머리 = 과제 하나. 누르면 그 과제의 명단이 격자 아래로 펴진다(미제출 알림도 거기 있다). */
+.hwg-col{width:112px;cursor:pointer;user-select:none;}
+.hwg-col.on{background:var(--accent-bg);}
+.hwg-col b{display:block;font-size:12px;font-weight:600;color:var(--ink);
+  white-space:normal;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;}
+/* ⚠ **이 두 줄에 mono를 걸지 말 것** — 「마감」·「완료」·「대기」가 들어간다.
+   `.mono`(JetBrains Mono)는 한글 글리프가 없어 두부 상자가 된다.
+   숫자만 안쪽 <span class="mono">으로 감싼다. */
+.hwg-col .due{display:block;font-size:10.5px;color:var(--dim);margin-top:3px;
+  font-weight:400;}
+.hwg-col .n{display:block;font-size:10.5px;margin-top:4px;color:var(--sub);
+  font-weight:400;}
+.hwg-col .n.wait{color:var(--late);font-weight:700;}
+.hwg td{padding:0 6px;text-align:center;}
+/* ⚠ 한 줄로 못 박는다 — 두 자리 번호(10~13)에서 «1 / 0»으로 줄바꿈되어
+   그 행만 키가 커지고 표의 리듬이 깨졌다. */
+.hwg td.who{text-align:left;white-space:nowrap;}
+.hwg .rk{display:inline-block;width:17px;text-align:right;margin-right:7px;
+  font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--dim);}
+.hwg .nm{font-size:12.5px;}
+.hwg .mine{float:right;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--dim);}
+/* 한 칸 = 한 학생의 한 과제.
+   🔴 **여기가 이 화면의 전부다 — 눈이 «확인 대기»에 먼저 가야 한다.**
+   처음엔 완료를 초록 배경으로 칠했더니 **다 된 것이 화면을 지배하고 할 일이 묻혔다.**
+   그래서 색을 «할 일 순»으로 다시 매겼다 —
+   · **확인 대기** — 노란 바탕 + 테두리. 유일하게 «튀는» 칸이다
+   · **반려** — 붉은 글자. 학생이 다시 낼 차례라 강사 손은 덜 급하다
+   · **완료** — **바탕 없이 흐린 초록 글자.** 끝난 것은 조용해야 한다
+   · **미제출** — 가장 흐리게. 셀 필요는 있지만 눈을 끌 이유는 없다
+   ⚠ **완료를 다시 칠하지 말 것.** 칠하면 그 순간 격자가 «성적표»가 되고
+     「지금 뭘 해야 하나」를 못 읽는 화면으로 돌아간다. */
+.hwg-c{display:block;width:100%;border:0;font:inherit;cursor:pointer;
+  padding:6px 4px;border-radius:var(--r-sm);font-size:11.5px;line-height:1.4;
+  background:transparent;color:var(--dim);transition:background var(--t);}
+.hwg-c:hover{background:var(--hover);}
+.hwg-c.ok{color:var(--ok);opacity:.62;}
+.hwg-c.wait{color:var(--late);background:var(--latebg);font-weight:700;
+  box-shadow:inset 0 0 0 1px var(--late-line);}
+.hwg-c.no{color:var(--no);font-weight:600;}
+.hwg-c.sel{box-shadow:inset 0 0 0 2px var(--accent);opacity:1;}
+.hwg-c s{display:block;text-decoration:none;font-size:10px;font-weight:400;
+  opacity:.8;font-family:'JetBrains Mono',monospace;}
+/* 격자 위 한 줄 — 「지금 손이 가야 할 것이 몇 건인가」. */
+.hwg-top{display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  font-size:12.5px;color:var(--sub);margin:0 0 10px;}
+.hwg-top b{color:var(--ink);font-weight:600;}
+.hwg-empty{padding:30px 0;text-align:center;color:var(--dim);font-size:12.5px;}
+
+/* 한 칸을 누르면 오른쪽에서 상세가 나온다 — 격자를 떠나지 않고 처리한다. */
+.hwd-back{position:fixed;inset:0;z-index:58;background:rgba(20,18,17,.28);}
+.hwd{position:fixed;top:0;right:0;bottom:0;z-index:59;width:min(400px,92vw);
+  background:var(--card);border-left:1px solid var(--line);
+  box-shadow:-8px 0 32px -12px rgba(20,18,17,.3);
+  display:flex;flex-direction:column;}
+.hwd-h{flex-shrink:0;padding:16px 18px 13px;border-bottom:1px solid var(--line);}
+.hwd-h .t{font-size:14px;font-weight:700;line-height:1.45;}
+.hwd-h .m{font-size:11.5px;color:var(--dim);margin-top:4px;}
+/* ⚠ `<s>`는 이 프로젝트에서 «가운뎃점 구분자»로 쓴다. 기본 취소선을 지우지 않으면
+   점에 줄이 그어져 「–·」처럼 보인다 (`.t-meta s`와 같은 처리). */
+.hwd-h .m s{text-decoration:none;color:var(--dim);margin:0 6px;}
+.hwd-h .x{position:absolute;top:12px;right:12px;width:30px;height:30px;border:0;
+  background:none;font-size:19px;line-height:1;color:var(--dim);cursor:pointer;
+  border-radius:var(--r-sm);}
+.hwd-h .x:hover{background:var(--hover);color:var(--ink);}
+.hwd-b{flex:1;min-height:0;overflow:auto;padding:4px 18px 18px;}
+.hwd-f{flex-shrink:0;padding:12px 18px;border-top:1px solid var(--line);
+  display:flex;align-items:center;gap:9px;}
+.hwd-f .nav{margin-left:auto;display:flex;gap:6px;}
 /* 미제출 알림 (2026-08-24 · N-1). 펼친 과제의 «맨 위»에 붙는다 —
    학생 줄을 다 내려간 뒤에 나오면 「누가 안 냈나」를 보고 나서 또 올라와야 한다. */
 /* ⚠ 폭을 묶는다. 반 관리에서는 이 자리가 «본문 칸 전체»라 1200px까지 늘어나는데,
@@ -2491,6 +2602,7 @@ let state = {
   hwPhotos: {},              // 과제id → 아직 «제출 전»인 사진들 (드라이브에는 이미 올라가 있다)
   hwRejectOpen: null,        // 반려 사유를 적고 있는 «과제id:학생id»
   hwDoneOpen: null,          // 「완료」 묶음을 펴 둔 과제id (기본은 접힘)
+  hwCell: null,              // 격자에서 누른 칸 «{sid, hwId}» — 오른쪽 상세가 이걸 본다
   hwPhotoView: null,         // 크게 보고 있는 사진 주소
   classHubId: null,
   classHubTab: 'sessions',   // 「학생 명단」은 반 안이 아니라 명단(01-roster)이 맡는다
@@ -5999,11 +6111,13 @@ function closeHwPhoto(){
   state.hwPhotoView = null;
   render();
 }
-/* ESC는 «떠 있을 때만» 듣는다. 안 떠 있으면 다른 화면의 ESC를 가로채지 않는다. */
+/* ESC는 «떠 있을 때만» 듣는다. 안 떠 있으면 다른 화면의 ESC를 가로채지 않는다.
+   ⚠ **겹친 순서대로 닫는다** — 사진을 크게 본 채로 ESC를 누르면 사진만 닫히고
+     오른쪽 상세는 남아야 한다. 둘이 한꺼번에 닫히면 어디까지 보던 중이었는지 잃는다. */
 document.addEventListener('keydown', e=>{
-  if(e.key!=='Escape' || !state.hwPhotoView) return;
-  e.preventDefault();
-  closeHwPhoto();
+  if(e.key!=='Escape') return;
+  if(state.hwPhotoView){ e.preventDefault(); closeHwPhoto(); return; }
+  if(state.hwCell){ e.preventDefault(); hwCloseCell(); }
 });
 
 let lastSyncedHash = null;
@@ -6028,6 +6142,9 @@ function render(){
   else if(state.view==='assistant') bodyHtml = assistantHTML();
   /* 모든 화면이 자기 셸(상단바·푸터)을 스스로 갖는다. 덧씌우는 공용 껍데기는 없다. */
   let html = bodyHtml;
+  /* 과제 격자의 오른쪽 상세. 화면을 덮으므로 사진 확대와 같은 자리에서 그린다.
+     ⚠ **사진 확대보다 «먼저» 붙인다** — 상세 안에서 사진을 누르면 확대가 그 위에 와야 한다. */
+  if(state.hwCell) html += hwCellDrawerHTML();
   /* 제출 사진 크게 보기. 화면 위에 덮으므로 어느 뷰에서 눌렀든 여기 한 곳에서 그린다 —
      학생앱과 강사 검토 화면이 같은 자리를 쓴다. */
   if(state.hwPhotoView) html += `<div class="hw-view" onclick="closeHwPhoto()">
@@ -7781,6 +7898,144 @@ function hwRosterReviewHTML(a, roster){
       </button>
       ${openDone ? done.map(full).join('') : ''}
     </div>`}`;
+}
+
+/* =================== 과제 격자 — 행=학생 · 열=과제 (2026-08-25 · H-5) ===================
+   사용자가 격자 화면을 가리키며 **「이런식으로 뭔가 한눈에 보고싶은데」**라고 했다.
+   **문제는 시인성이 아니라 «축»이었다.** 이 화면은 「과제 하나를 펴면 그 안에 학생」이라
+   **한 번에 한 과제만** 보였다. 명단을 아무리 정리해도 «한눈에»가 될 수 없는 모양이다.
+   격자는 반 전체 × 과제 전체를 한 판에 올린다.
+
+   **눈이 먼저 가는 것은 «확인 대기»여야 한다** — 강사가 실제로 할 일이다.
+   완료는 조용한 초록, 미제출은 흐린 글자, 반려는 붉게, **확인 대기만 테두리까지 준다.**
+
+   **누르는 곳이 둘이다** —
+   · **칸** → 오른쪽에서 상세가 나온다(`state.hwCell`). 격자를 떠나지 않고 수락·반려한다
+   · **열 머리** → 그 과제의 명단이 격자 «아래»로 펴진다(`state.homeworkDetailId`).
+     **미제출 알림 버튼이 거기 있다** — 격자만 두면 N-1로 가는 길이 끊긴다
+
+   ⚠ **표 골격을 새로 짜지 않는다** — `table.grid`(ds.css)를 그대로 쓴다.
+   ⚠ **판정은 `hwState` 하나만 부른다.** 격자라고 상태를 새로 해석하지 않는다.
+   ⚠ **최신 과제가 왼쪽이다.** 지금 밀린 것을 먼저 보는 화면이지 연대기가 아니다. */
+const HWG_CELL = {
+  [HW_APPROVED]:  ['ok',   '완료'],
+  [HW_SUBMITTED]: ['wait', '확인 대기'],
+  [HW_REJECTED]:  ['no',   '반려'],
+  [HW_NONE]:      ['',     '미제출']
+};
+function hwGridHTML(classId, list, roster){
+  if(!state.allRecordsLoaded)
+    return '<div class="hwg-empty">학생 기록을 불러오는 중…</div>';
+  if(roster.length === 0) return '<div class="hwg-empty">이 반에 재원생이 없습니다.</div>';
+  if(list.length === 0)   return '<div class="hwg-empty">등록된 과제가 없습니다.</div>';
+
+  const recOf = s => state.allRecords[s.studentId];
+  const named = roster.slice().sort((x,y)=>x.name.localeCompare(y.name));
+  /* 최신이 왼쪽 — 등록일이 없으면 뒤로 민다. */
+  const cols = list.slice().sort((x,y)=>String(y.createdAt||'').localeCompare(String(x.createdAt||'')));
+
+  const cell = (s, a) => {
+    const rec = recOf(s);
+    if(!rec) return '<td></td>';
+    const st = hwState(rec, a.id);
+    const [tone, label] = HWG_CELL[st.status] || HWG_CELL[HW_NONE];
+    const sel = state.hwCell && state.hwCell.sid===s.studentId && state.hwCell.hwId===a.id;
+    /* ⚠ 사진 장수는 «확인 대기»에서만 말한다 — 볼지 말지를 정하는 정보라서다.
+       완료된 칸에까지 「사진 1」을 달았더니 표 전체가 그 글자로 뒤덮였다. */
+    const shots = st.status===HW_SUBMITTED ? st.photos.length : 0;
+    return `<td><button class="hwg-c ${tone}${sel?' sel':''}"
+      onclick="hwOpenCell('${s.studentId}','${a.id}')"
+      title="${escHtml(s.name)} · ${escHtml(a.title)} — ${label}">${label}${
+        shots ? `<s>사진 ${shots}</s>` : ''}</button></td>`;
+  };
+
+  const head = cols.map(a=>{
+    const done = named.filter(s=>recOf(s) && hwIsDone(recOf(s), a.id)).length;
+    const wait = named.filter(s=>recOf(s) && hwState(recOf(s), a.id).status===HW_SUBMITTED).length;
+    const on = state.homeworkDetailId===a.id;
+    return `<th class="hwg-col${on?' on':''}" onclick="hwToggleCol('${a.id}')"
+      title="${escHtml(a.title)} — 누르면 명단이 아래에 펴집니다">
+      <b>${escHtml(a.title)}</b>
+      <span class="due">${a.dueDate ? `마감 <span class="mono">${escHtml(a.dueDate)}</span>` : '마감 없음'}</span>
+      <span class="n${wait?' wait':''}">완료 <span class="mono">${done}/${named.length}</span>${
+        wait?` · 대기 <span class="mono">${wait}</span>`:''}</span>
+    </th>`;
+  }).join('');
+
+  const rows = named.map((s,i)=>{
+    const rec = recOf(s);
+    const mine = rec ? cols.filter(a=>hwIsDone(rec, a.id)).length : 0;
+    return `<tr>
+      <td class="who"><span class="rk">${i+1}</span><span class="nm">${escHtml(s.name)}</span>
+        <span class="mine">${mine}/${cols.length}</span></td>
+      ${cols.map(a=>cell(s, a)).join('')}
+    </tr>`;
+  }).join('');
+
+  return `<div class="hwg-wrap"><table class="grid hwg">
+    <thead><tr><th class="who">학생</th>${head}</tr></thead>
+    <tbody>${rows}</tbody>
+  </table></div>`;
+}
+/* 칸을 누르면 오른쪽 상세를 연다. 같은 칸을 다시 누르면 닫힌다. */
+function hwOpenCell(sid, hwId){
+  const cur = state.hwCell;
+  state.hwCell = (cur && cur.sid===sid && cur.hwId===hwId) ? null : {sid, hwId};
+  state.hwRejectOpen = null;
+  render();
+}
+function hwCloseCell(){ state.hwCell = null; state.hwRejectOpen = null; render(); }
+/* 열 머리 — 그 과제의 «명단»을 격자 아래에 편다. 미제출 알림이 거기 있다. */
+function hwToggleCol(hwId){
+  state.homeworkDetailId = state.homeworkDetailId===hwId ? null : hwId;
+  state.hwDoneOpen = null;
+  render();
+}
+/* 오른쪽 상세. **줄은 명단과 «같은 것»을 쓴다**(`hwReviewRowHTML`) —
+   여기서만 쓰는 두 번째 검토 화면을 만들면 다음에 한쪽만 고쳐진다.
+   ⚠ 상태를 옮기는 문은 여전히 `approveHomework`·`rejectHomework`·`undoHwDecision` 셋뿐이다. */
+function hwCellDrawerHTML(){
+  const c = state.hwCell;
+  if(!c) return '';
+  const a = DATA.assignments.find(x=>x.id===c.hwId);
+  const s = DATA.students.find(x=>x.studentId===c.sid);
+  const rec = state.allRecords[c.sid];
+  if(!a || !s || !rec){ return ''; }
+  const st = hwState(rec, a.id);
+  const [tone, label] = HW_BADGE[st.status];
+
+  /* 대기 중인 다음 사람으로 바로 넘어간다 — 다섯 명을 볼 때 격자로 되돌아갈 이유가 없다. */
+  const sameClass = DATA.students.filter(x=>x.classId===a.classId)
+    .sort((x,y)=>x.name.localeCompare(y.name));
+  const waiting = sameClass.filter(x=>{
+    const r = state.allRecords[x.studentId];
+    return r && hwState(r, a.id).status===HW_SUBMITTED;
+  });
+  const at = waiting.findIndex(x=>x.studentId===c.sid);
+  const nextWait = at >= 0 ? waiting[at+1] : waiting[0];
+
+  return `<div class="hwd-back" onclick="hwCloseCell()"></div>
+    <aside class="hwd">
+      <div class="hwd-h" style="position:relative;">
+        <div class="t">${escHtml(a.title)}</div>
+        <div class="m">${a.dueDate ? '마감 <span class="mono">'+escHtml(a.dueDate)+'</span>' : '마감 없음'}
+          <s>·</s>${escHtml(DATA.classes.find(x=>x.id===a.classId)?.name || '')}</div>
+        <button class="x" onclick="hwCloseCell()" title="닫기 (Esc)">×</button>
+      </div>
+      <div class="hwd-b">
+        ${hwReviewRowHTML(c.sid, rec, a, {wide:true, name:s.name})}
+        ${st.photos.length ? '' : `<div class="hw-note">아직 올린 사진이 없습니다.</div>`}
+      </div>
+      <div class="hwd-f">
+        <span class="badge ${tone}">${label || '미제출'}</span>
+        <div class="nav">
+          ${nextWait && nextWait.studentId!==c.sid
+            ? `<button class="btn sm" onclick="hwOpenCell('${nextWait.studentId}','${a.id}')">다음 대기 ${iconSvg('arrowR',13)}</button>`
+            : ''}
+          <button class="btn sm" onclick="hwCloseCell()">닫기</button>
+        </div>
+      </div>
+    </aside>`;
 }
 
 /* =================== 숙제 미제출 알림 (2026-08-24 · N-1) ===================
@@ -11097,8 +11352,29 @@ function teacherClassDailyHomeworkHTML(classId, date){
       <button class="btn p sm" style="margin-top:11px;" onclick="addDailyHomework('${classId}','${date}')">등록</button>
       <p class="st-note">이 반 학생 전원에게 나갑니다. 등록일은 <b>${date}</b>로 남습니다.</p>
     </div>`}
-    ${visible.length===0 ? '<div class="st-empty">해당하는 과제가 없습니다.</div>' :
-    visible.map(a=>{
+    ${/* 「반 관리 > 과제」(standalone)에서는 **격자**가 본문이다 — 반 전체 × 과제 전체를
+         한 판에 올린다. 열 머리를 누르면 그 과제의 명단이 격자 아래로 펴진다.
+         ⚠ 「수업 기록 > 그날」 안의 과제는 격자가 아니다 — 거기는 «그날 낸 과제»를 묻는
+           자리라 한두 건뿐이고, 반 전체를 가로로 펼 이유가 없다. 목록 그대로 둔다. */''}
+    ${!standalone ? '' : (()=>{
+      const picked = visible.find(a=>a.id===state.homeworkDetailId);
+      return hwGridHTML(classId, visible, roster) + (!picked ? '' : `
+        <div class="hw-grp" style="margin-top:20px;">
+          <div class="st-h" style="margin-bottom:2px;">
+            <b>${escHtml(picked.title)}</b>
+            <span>${picked.dueDate ? '마감 '+escHtml(picked.dueDate) : '마감 없음'}</span>
+            <span class="r">
+              <button class="btn q sm" onclick="deleteHomework('${picked.id}')">과제 삭제</button>
+              <button class="btn sm" onclick="hwToggleCol('${picked.id}')">명단 접기</button>
+            </span>
+          </div>
+          ${picked.description?`<p class="st-note" style="white-space:pre-wrap;margin:0 0 8px;">${escHtml(picked.description)}</p>`:''}
+          ${hwRosterReviewHTML(picked, roster)}
+        </div>`);
+    })()}
+    ${standalone ? '' :
+     visible.length===0 ? '<div class="st-empty">해당하는 과제가 없습니다.</div>' :
+     visible.map(a=>{
       const recOf = s => state.allRecords[s.studentId];
       const doneCount = state.allRecordsLoaded
         ? roster.filter(s=>recOf(s) && hwIsDone(recOf(s), a.id)).length : null;
