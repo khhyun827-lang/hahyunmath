@@ -86,9 +86,9 @@
        «auto»로 계산돼 세로 스크롤바가 한 겹 더 생긴다. 안쪽 스크롤러가 이미 있으므로 막는다.
      ⚠ **`.cls-screen`(수업)은 여기서 뺐다** — 아래에서 «위아래로 푸는» 쪽으로 제대로 고쳤다.
        거기서는 `height:auto`가 되므로 `overflow-y:hidden`이 남아 있으면 본문이 잘린다.
-     ⚠ **`.chub-screen`(반 관리)도 2026-08-25에 뺐다** — 같은 이유다. 아래에서 푼다. */
+     ⚠ **`.chub-screen`(반 관리)도 2026-08-25에 뺐다** — 같은 이유다. 아래에서 푼다.
+     ⚠ **`.ex-screen`(설정·시험지·창고)도 2026-08-26에 뺐다** — 같은 이유다(M-2d). */
   .app:not(.sap) .rv-screen,
-  .app:not(.sap) .ex-screen,
   .app:not(.sap) .qn-screen,
   .app:not(.sap) .nt-screen,
   .app:not(.sap) .co-screen{overflow-x:auto;overflow-y:hidden;}
@@ -113,6 +113,39 @@
   .app:not(.sap) .chub-mh{flex-wrap:wrap;}
   .app:not(.sap) .chub-mh > .r{width:100%;flex-wrap:wrap;}
   .app:not(.sap) .chub-body{overflow:visible;margin-top:14px;}
+
+  /* ---------- 설정·시험지·창고를 폰용으로 푼다 (2026-08-26 · M-2d) ----------
+     셋이 `.ex-screen` 한 골격을 나눠 쓴다 — 설정(갈래 목록) · 시험지(시험지 목록) ·
+     창고(단원 목록). 왼쪽 칸이 262px를 먹고 남은 것을 본문이 갖는 구조라
+     **폰에서 본문이 122px밖에 없었다** — M-2c 전의 반 관리와 같은 병이다.
+     🔴 **08-26에 급해졌다** — 계정 관리(비밀번호·정보·삭제)가 설정으로 옮겨 왔다.
+       그전까지 설정은 «가끔 여는 곳»이라 미뤄 둘 수 있었지만, 이제 폰에서 못 쓰면
+       **폰으로는 비밀번호를 못 바꾼다.**
+
+     **반 관리(M-2c)와 같은 어법으로 위아래로 푼다** — 왼쪽 칸이 위, 본문이 아래.
+     ⚠ **`height:auto`가 되므로 위의 «가둠» 목록에서 `.ex-screen`을 뺐다.**
+       빼지 않으면 `overflow-y:hidden`이 남아 본문이 잘린다 (M-1이 남긴 함정 그대로다).
+     ⚠ **`.ex-nosub`도 같이 풀어야 한다** — 설정이 그것을 쓴다. `.ex-screen`만 풀면
+       뒤에 오는 `.ex-nosub{height:calc(...)}`가 높이를 다시 못 박는다.
+     ⚠ 목록은 **높이를 묶는다** — 시험지·단원은 개수가 정해져 있지 않다.
+       안 묶으면 목록만으로 화면이 차서 정작 보러 온 본문이 스크롤 밖으로 밀린다.
+       (반 목록 196px과 같은 판단. 여기는 항목이 더 촘촘해 190px로 뒀다) */
+  .app:not(.sap) .ex-screen,
+  .app:not(.sap) .ex-screen.ex-nosub{display:block;height:auto;overflow:visible;}
+  .app:not(.sap) .ex-list{width:auto;padding-right:0;margin-right:0;border-right:0;
+    border-bottom:1px solid var(--line);padding-bottom:12px;margin-bottom:14px;}
+  .app:not(.sap) .ex-lbody{max-height:190px;margin-right:0;padding-right:0;}
+  .app:not(.sap) .ex-body{overflow:visible;margin-top:14px;}
+
+  /* 문항별 오답률 한 줄 — 고정폭 다섯이 430px을 요구해서 폰에서 50px이 넘쳤다.
+     ⚠ **전에는 `.ex-screen`의 `overflow-x:auto`가 이걸 가리고 있었다.** 가둠을 풀었으니
+       여기서 제대로 접는다 — M-1이 「옆으로 미는 임시 처방」을 걷어낼 때마다 나오는 일이다.
+     단원 이름과 막대가 남는 자리를 나눠 갖게 하고, 나머지는 제 폭만 쓴다.
+     `flex-wrap`은 안전줄이다 — 단원 이름이 길어도 넘치는 대신 아래로 내려간다. */
+  .app:not(.sap) .ex-q{flex-wrap:wrap;gap:5px 10px;}
+  .app:not(.sap) .ex-q .unit{width:auto;flex:1 1 80px;min-width:0;}
+  .app:not(.sap) .ex-q .track{min-width:52px;}
+  .app:not(.sap) .ex-q .tw{width:auto;}
 
   /* ---------- 목록 한 줄도 폰에서 접는다 (2026-08-25 · P-3) ----------
      `.st-row`는 「내용 … 오른쪽 버튼들」 한 줄이라 폰에서 오른쪽이 통째로 잘렸다.
@@ -1188,8 +1221,10 @@
    ⚠ 값 자리를 «가린 상태에서도» 같은 너비로 두면 눌러 보기 전에도 길이가 새어 나간다.
      그래서 점은 최대 12개까지만 찍는다. */
 .pwr{display:inline-flex;align-items:center;gap:7px;vertical-align:middle;max-width:100%;}
-/* ⚠ 좁은 칸에서는 **밀고 나가지 말고 잘린다.** 설정 화면은 폰에서 본문이 74px까지
-   짜부라지는데(M-2d · 기존 문제), 그때 이 줄이 칸 밖으로 나가 버렸다. */
+/* ⚠ 좁은 칸에서는 **밀고 나가지 말고 잘린다.** 설정 화면이 폰에서 본문 74px까지
+   짜부라지던 시절(M-2d)에 이 줄이 칸 밖으로 나가 버렸다.
+   **M-2d는 2026-08-26에 풀렸다**(본문 369px). 그래도 이 규칙은 그대로 둔다 —
+   칸이 좁아지는 자리는 또 생기고, 잘리는 편이 밀고 나가는 것보다 언제나 낫다. */
 .pwr .v{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--dim);
   letter-spacing:.06em;min-width:0;flex:0 1 auto;
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
