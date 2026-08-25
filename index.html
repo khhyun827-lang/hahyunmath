@@ -250,6 +250,29 @@
 .app .st-fbar .field{flex:1;min-width:200px;}
 .app .st-fbar .field input{flex:1;min-width:0;border:0;background:transparent;outline:none;
   font-family:inherit;font-size:12.5px;color:var(--ink);}
+/* 설정 > 학생 — 한 줄에 열을 맞춘 계정 목록 (2026-08-26 · W-2).
+   🔴 **폭은 «고정»이 아니라 «기준»이다** — `flex:0 1 <폭>`이라 좁아지면 줄어든다.
+     `flex-shrink:0`으로 못 박으면 폰에서 줄이 통째로 밀려 나간다(M-1이 세 번 잡은 그 사고).
+   ⚠ 이름만 `min-width`를 준다 — 다른 칸은 잘려도 읽히지만 이름이 잘리면 누구인지 모른다. */
+.app .stu-line{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;width:100%;}
+/* ⚠ **글꼴을 여기서 못 박는다** — 예전에는 `.st-row .t > b`가 먹였는데, 이름이
+     `.stu-line` 안으로 한 단계 들어가면서 그 규칙(직계 자식 선택자)이 더는 안 걸린다.
+     안 적으면 이름만 조용히 작아진다. */
+.app .stu-line .nm{flex:0 1 96px;min-width:64px;font-size:13px;font-weight:600;}
+.app .stu-line .id{flex:0 1 78px;font-weight:400;font-size:12px;color:var(--sub);}
+.app .stu-line .sch{flex:0 1 148px;font-size:12.5px;color:var(--sub);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.app .stu-line .cls{flex:0 1 116px;font-size:12.5px;color:var(--sub);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+/* 퇴원 줄은 «있지만 지금 사람은 아니다». 흐리게 두되 읽히기는 해야 한다 —
+   너무 흐리면 되돌리러 온 사람이 이름을 못 읽는다. */
+.app .stu-row.gone .nm, .app .stu-row.gone .id{color:var(--dim);}
+/* 재원과 퇴원 사이의 금. 「퇴원 n명」을 선 위에 얹어 어디부터인지 한눈에 말한다. */
+.app .stu-sep{display:flex;align-items:center;gap:10px;margin:14px 0 4px;
+  font-size:11.5px;color:var(--dim);}
+.app .stu-sep::after{content:'';flex:1;height:1px;background:var(--line);}
+.app .stu-sep span{flex-shrink:0;}
+
 /* 학적 상자 — 퇴원과 삭제가 나란히 사는 곳 (2026-08-26 · W-1).
    ⚠ **테두리로 «따로 떼어» 둔다.** 위의 이름·비밀번호와 같은 평면에 두면
      저장하러 왔다가 삭제를 누르는 자리가 된다. */
@@ -14348,27 +14371,53 @@ function teacherSettingsStudentsHTML(){
   const hit = s => !q || [s.name, s.studentId, s.school, classNameOf(s.classId)]
     .some(v => String(v||'').toLowerCase().includes(q));
   /* 반 → 이름 순. 계정을 손볼 때는 «같은 반끼리» 보게 되는 일이 많다. */
+  /* **퇴원생은 맨 아래로 내려간다** (2026-08-26 · W-2) — 사용자가 그렇게 정했다.
+     ⚠ 감추지는 않는다. 계정을 다루는 곳이라 «되돌리러» 오는 일이 있고, 그때 없으면 못 찾는다.
+     퇴원끼리는 **늦게 그만둔 사람이 위**다 — 되돌릴 일이 있다면 대개 최근 사람이다. */
   const listed = DATA.students.filter(hit).slice().sort((a,b)=>
-    String(classNameOf(a.classId)).localeCompare(String(classNameOf(b.classId)),'ko')
+    (isWithdrawn(a) - isWithdrawn(b))
+    || (isWithdrawn(a) ? String(b.withdrawnAt||'').localeCompare(String(a.withdrawnAt||'')) : 0)
+    || String(classNameOf(a.classId)).localeCompare(String(classNameOf(b.classId)),'ko')
     || String(a.name||'').localeCompare(String(b.name||''),'ko'));
+  const goneCount = listed.filter(isWithdrawn).length;
+
+  /* 한 줄에 열을 맞춘다 (2026-08-26 · W-2). 사용자의 말 —
+     「학교와 반이 이름 옆으로 쓰여지면서 보이게 하면 더 한눈에 여러 학생이 정리되지 않을까」.
+     🔴 **한 줄로 만드는 것만으로는 절반이다 — 열이 맞아야 값을 한다.**
+       이 목록의 일은 «여러 명을 훑어 한 명을 찾는 것»이고 그때 눈은 세로로 내려간다.
+       그냥 이어 붙이면 「광남고」·「건대부고」·「학교 미입력」의 길이가 달라서
+       **「반」이 줄마다 다른 자리에 서고, 세로로 훑을 수가 없다.**
+     ⚠ `table`을 쓰지 않는다 — 줄을 펴면 그 아래에 편집 폼이 들어와야 하는데
+       표의 칸 안에서는 폼이 열 폭에 갇힌다. 고정폭 `flex`가 같은 결과를 준다.
+     ⚠ 폰에서는 `.st-row{flex-wrap:wrap}`(P-3)이 이미 접어 준다. 고정폭에
+       `flex-shrink`를 남겨 둬야 좁은 폭에서 글자가 안 잘린다. */
+  const line = s => {
+    const on = state.stuEditId===s.studentId;
+    const gone = isWithdrawn(s);
+    return `<div class="st-row stu-row${gone?' gone':''}" style="align-items:flex-start;">
+      <div class="t">
+        <div class="stu-line">
+          <b class="nm">${escHtml(s.name)}</b>
+          <span class="mono id">${escHtml(s.studentId)}</span>
+          <span class="sch">${escHtml(s.school||'학교 미입력')} ${escHtml(s.grade||'')}</span>
+          <span class="cls">${s.classId ? escHtml(classNameOf(s.classId)) : '<span class="badge">미배정</span>'}</span>
+          ${gone ? `<span class="badge gone">퇴원${
+            s.withdrawnAt ? ' <span class="mono">'+escHtml(s.withdrawnAt)+'</span>' : ''}</span>` : ''}
+        </div>
+        ${on ? `<div style="margin-top:10px;">${studentAccountFormHTML(s)}</div>` : ''}
+      </div>
+      <div class="v"><button class="btn ${on?'p':''} sm" onclick="stuEdit('${s.studentId}')">${
+        on ? '닫기' : '계정 수정'}</button></div>
+    </div>`;
+  };
 
   const rows = listed.length===0
     ? `<div class="st-empty">${DATA.students.length===0 ? '등록된 학생이 없습니다.' : '조건에 맞는 학생이 없습니다.'}</div>`
-    : listed.map(s=>{
-        const on = state.stuEditId===s.studentId;
-        return `<div class="st-row" style="align-items:flex-start;">
-          <div class="t"><b>${escHtml(s.name)}
-            <span class="mono" style="font-weight:400;font-size:12px;color:var(--sub);margin-left:8px;">${escHtml(s.studentId)}</span>${
-            /* 퇴원은 이름 옆에 붙인다 — 목록을 훑을 때 «지금 다니는 사람»과 갈려야 한다 (W-1) */
-            s.withdrawnAt ? '<span class="badge gone" style="margin-left:8px;font-weight:400;">퇴원</span>' : ''}</b>
-            <span>${escHtml(s.school||'학교 미입력')} ${escHtml(s.grade||'')}<s>·</s>${
-              s.classId ? escHtml(classNameOf(s.classId)) : '<span class="badge">미배정</span>'}${
-              s.withdrawnAt ? `<s>·</s>퇴원 <span class="mono">${escHtml(s.withdrawnAt)}</span>` : ''}</span>
-            ${on ? `<div style="margin-top:10px;">${studentAccountFormHTML(s)}</div>` : ''}
-          </div>
-          <div class="v"><button class="btn ${on?'p':''} sm" onclick="stuEdit('${s.studentId}')">${
-            on ? '닫기' : '계정 수정'}</button></div>
-        </div>`;
+    : listed.map((s,i)=>{
+        /* 재원과 퇴원 사이에 «금»을 하나 긋는다 — 아래로 내리기만 하면
+           어디부터가 퇴원인지 한 줄씩 확인해야 한다. */
+        const first = goneCount && isWithdrawn(s) && (i===0 || !isWithdrawn(listed[i-1]));
+        return (first ? `<div class="stu-sep"><span>퇴원 ${goneCount}명</span></div>` : '') + line(s);
       }).join('');
 
   return `<div class="st-wrap">
