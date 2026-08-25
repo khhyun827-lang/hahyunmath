@@ -209,6 +209,14 @@
 .app .rst-fbar .field{width:262px;}
 .app .rst-fbar .field input{flex:1;min-width:0;border:0;background:transparent;outline:none;
   font-family:inherit;font-size:12.5px;color:var(--ink);}
+/* 설정 > 학생의 검색 줄 (2026-08-26).
+   ⚠ **바로 위 `.rst-fbar .field input` 규칙은 «명단» 전용이다** — 설정은 `.ex-screen` 안이라
+     안 걸린다. 안 세우면 input이 브라우저 기본 테두리(2px·흰 바탕)를 그대로 써서
+     둥근 `.field` 안에 «상자 속 상자»가 그려진다. 실제로 그렇게 나왔다.
+   ⚠ 폭은 `.rst-fbar`의 262px 고정과 달리 늘어나게 둔다 — 설정 본문이 명단보다 넓다. */
+.app .st-fbar .field{flex:1;min-width:200px;}
+.app .st-fbar .field input{flex:1;min-width:0;border:0;background:transparent;outline:none;
+  font-family:inherit;font-size:12.5px;color:var(--ink);}
 .app .rst-cnt{margin-left:auto;font-size:12px;color:var(--dim);white-space:nowrap;}
 .app .rst-cnt b{color:var(--ink);font-family:'JetBrains Mono',monospace;font-weight:600;}
 .app .rst-selwrap{padding-right:6px;}
@@ -2586,9 +2594,15 @@ let state = {
   studentTab: 'home',
   teacherTab: 'home',
   settingsSubTab: 'assistants',
+  /* 설정 > 학생 — 계정 목록에서 «지금 펴 놓은 학생» 하나와 검색어 (2026-08-26).
+     ⚠ 하나만 두는 이유는 `info-*` id가 화면에 하나뿐이어야 하기 때문이다 → studentAccountFormHTML */
+  stuEditId: null,
+  stuQuery: '',
   teacherSelectedStudent: null,
   studentDetailId: null,
-  studentDetailTab: 'info',
+  /* ⚠ 'info'는 이제 없는 값이다 (2026-08-26에 기본정보가 설정으로 갔다).
+     기본값을 'timeline'으로 둔다 — 예전 값이 남아 있어도 sdScreenHTML이 떨어뜨린다. */
+  studentDetailTab: 'timeline',
   wrongExamId: null,
   wrongChecked: {},
   examImagesCache: {},
@@ -8323,7 +8337,9 @@ function hwNoticePanelHTML(a, miss){
       <div class="t-sec" style="margin:16px 0 7px;">번호가 없어 못 보냄 <span class="mono">${noPhone.length}</span>명</div>
       <div class="hw-nlist off">${noPhone.map(s=>`<div class="hw-nrow">
         <b>${escHtml(s.name)}</b><span class="muted">전화번호 없음</span></div>`).join('')}</div>
-      <p class="st-note" style="margin-top:7px;">명단 &gt; 학생을 열어 <b>전화번호</b>를 채우면 보낼 수 있습니다.</p>` : ''}
+      ${/* ⚠ 2026-08-26에 «설정»으로 바뀌었다 — 전화번호를 채우는 곳이 옮겨 갔다.
+             계정·개인정보를 손대는 문은 이제 설정 > 학생 하나뿐이다. */''}
+      <p class="st-note" style="margin-top:7px;">설정 &gt; 학생에서 <b>계정 수정</b>을 눌러 <b>전화번호</b>를 채우면 보낼 수 있습니다.</p>` : ''}
 
     <div class="t-sec" style="margin:16px 0 7px;">보낼 문안</div>
     ${/* 심사 전에 «실제로 나갈 문장»을 눈으로 확정하라는 자리다. 요약하지 않고 그대로 보여 준다. */''}
@@ -10836,6 +10852,9 @@ function sdOpen(sid, filter){
 }
 function sdMode(mode){ state.studentDetailTab = mode; render(); }
 function sdFilter(f){ state.sdFilter = f; render(); }
+/* 빠른 작업의 「상담」 — 연대기로 돌아가면서 갈래를 상담으로 맞춘다.
+   ⚠ 둘을 «같이» 해야 한다. 채팅을 보던 중이면 갈래만 바꿔서는 화면이 안 바뀐다. */
+function sdConsult(){ state.studentDetailTab = 'timeline'; state.sdFilter = 'consult'; render(); }
 
 function teacherStudentDetailHTML(sid){
   const s = DATA.students.find(s=>s.studentId===sid);
@@ -10874,9 +10893,10 @@ function sdScreenHTML(s, rec, isAssistant){
     loadStudentNoteIfNeeded(sid);    // 메모는 우측 칸에만 있고 그 칸은 강사의 것이다
     loadConsultLogIfNeeded(sid);     // 상담 일지도 마찬가지 — 연대기에 합류시키려면 먼저 있어야 한다
   }
-  /* 조교는 채팅·기본정보로 갈 문이 없다. 예전 세션이 그 값을 들고 있어도 연대기로 떨어뜨린다. */
-  const mode = !isAssistant && (state.studentDetailTab==='chat' || state.studentDetailTab==='info')
-    ? state.studentDetailTab : 'timeline';
+  /* 조교는 채팅으로 갈 문이 없다. 예전 세션이 그 값을 들고 있어도 연대기로 떨어뜨린다.
+     ⚠ **'info'가 목록에서 빠졌다** (2026-08-26) — 기본정보는 설정으로 갔다.
+       예전 세션이 `studentDetailTab==='info'`를 들고 있으면 여기서 연대기로 떨어진다. */
+  const mode = !isAssistant && state.studentDetailTab==='chat' ? 'chat' : 'timeline';
   const st = rosterStats(s);
   const sg = signalOf(st);
   const prog = st.prog;
@@ -10949,16 +10969,40 @@ function sdScreenHTML(s, rec, isAssistant){
         return nx ? `<div style="margin-top:7px;font-size:11.5px;color:var(--dim);">다음 단원 · ${escHtml(nx)}</div>` : ''; })()}
     ` : '<div style="margin-top:10px;font-size:11.5px;color:var(--dim);">반 진도 과목이 정해지지 않았습니다.</div>'}
     <hr class="s">
+    ${/* 빠른 작업 — 「기본정보」가 있던 자리가 「상담」이 됐다 (2026-08-26).
+         **기본정보·비밀번호·삭제는 계정 일이라 설정으로 갔다** (사용자가 그렇게 갈랐다:
+         «계정 관련 설정이나 정보 입력 등을 전부 설정탭으로 옮기고, 명단에서는 학업에
+         관련한 관리만 하도록 분리»). 이 화면은 그래서 **학업만 다룬다.**
+         ⚠ 나머지 셋(채팅·클리닉 배정·수업 화면)은 **아직 정하지 않은 자리다** —
+           사용자가 「추후에 활용도가 높은 걸 다시 이야기하면 그때 수정하자」고 했다.
+           혼자 갈아끼우지 말 것. */''}
     <div class="t-sec">빠른 작업</div>
     <div class="sd-qa">
       <button class="btn ${mode==='chat'?'p':''}" onclick="sdMode('${mode==='chat'?'timeline':'chat'}')">${mode==='chat'?'연대기로':'채팅'}</button>
-      <button class="btn ${mode==='info'?'p':''}" onclick="sdMode('${mode==='info'?'timeline':'info'}')">${mode==='info'?'연대기로':'기본정보'}</button>
+      ${/* 상담은 연대기의 «갈래»다 — 폼도 목록도 거기 이미 있다(sdTimelineHTML).
+           새 화면을 만들지 않고 그 갈래로 데려다 놓기만 한다. */''}
+      <button class="btn ${mode==='timeline' && state.sdFilter==='consult' ? 'p' : ''}"
+        onclick="sdConsult()">상담</button>
       <button class="btn" onclick="sdAssignClinic('${sid}')">클리닉 배정</button>
       <button class="btn" onclick="goTeacherTab('session')">수업 화면</button>
     </div>
     <hr class="s">
     <div class="t-sec">출결 최근 8회</div>
     <div style="margin-top:8px;">${rosterDots(st.att8)}</div>
+    ${/* 개인 보충 영상 — 예전에는 «기본정보» 화면 안에 있었다. 그 화면이 설정으로 가면서
+         여기로 옮겨 왔다 (2026-08-26). **계정이 아니라 학업이라 명단에 남는 것이 맞다** —
+         결석한 학생에게 붙여 주는 것이라 출결 바로 아래가 제 자리다.
+         ⚠ 넣는 문은 여기가 아니다 — 수업 화면에서 결석 처리하며 링크를 넣으면 쌓인다.
+           여기서는 «있는지 보고, 잘못 들어간 것을 지우는» 일만 한다. */''}
+    <hr class="s">
+    <div class="t-sec">개인 보충 영상</div>
+    ${(()=>{
+      const pv = DATA.videos.filter(v=>v.studentId===sid);
+      return pv.length===0
+        ? '<div style="margin-top:8px;font-size:11.5px;color:var(--dim);line-height:1.7;">등록된 개인 영상이 없습니다. 수업 화면에서 결석 처리하며 링크를 넣으면 여기 쌓입니다.</div>'
+        : pv.map(v=>`<div class="sd-crow"><span style="color:var(--ink);flex:1;text-align:left;">${escHtml(v.title)}</span>
+            <button class="btn q sm" onclick="deleteVideo('${v.id}')">삭제</button></div>`).join('');
+    })()}
     <hr class="s">
     ${/* 고정 메모 — 시안의 「pin」 구역. ds.css의 .note.pin(점선)과 같은 옷을 입힌다.
          ⚠ 시각은 .sd-note-at(mono)에만 넣는다 — 「마지막 저장」은 낱말이라 밖에 둔다. */''}
@@ -10976,9 +11020,8 @@ function sdScreenHTML(s, rec, isAssistant){
   </aside>`;
 
   let center;
-  if(mode==='chat')      center = sdChatHTML(sid);
-  else if(mode==='info') center = sdInfoHTML(s, sid);
-  else                   center = sdTimelineHTML(s, sid, rec, isAssistant);
+  if(mode==='chat') center = sdChatHTML(sid);
+  else              center = sdTimelineHTML(s, sid, rec, isAssistant);
 
   /* 조교에게 우측 칸은 통째로 없다. 연락처는 개인정보고 «빠른 작업»은 전부 강사의 것이라
      남겨 두면 빈 칸이 된다. 그래서 3열이 아니라 2열이다. */
@@ -11152,10 +11195,20 @@ function sdChatHTML(sid){
   </div>`;
 }
 
-function sdInfoHTML(s, sid){
-  const personalVideos = DATA.videos.filter(v=>v.studentId===sid);
-  return `<div class="sd-tl" style="margin-top:18px;">
-    <div class="sd-form" style="margin-top:0;">
+/* =================== 학생 계정 편집 폼 (2026-08-26 · 설정으로 옮겨 왔다) ===================
+   **예전 이름은 `sdInfoHTML`이었고 «명단 > 학생 > 기본정보»에 살았다.**
+   사용자가 갈랐다 — **«계정 관련 설정이나 정보 입력 등을 전부 설정탭으로 옮기고,
+   명단에서는 학업에 관련한 관리만 하도록 분리»**. 그래서 이 폼은 설정의 것이 됐다.
+
+   🔴 **입력칸 id(`info-*`)를 바꾸지 말 것** — `updateStudentInfo(sid)`가 DOM에서 그 id로
+     읽는다. 화면을 옮기면서 함수는 한 글자도 안 고쳤고, 그럴 수 있었던 이유가 이것이다.
+   ⚠ **한 번에 하나만 펴진다**(`state.stuEditId`) — 같은 id가 화면에 둘이면
+     `getElementById`가 위엣것만 집어서 «다른 학생의 값을 저장»하게 된다.
+   ⚠ 여기서 그리는 것은 **계정과 개인정보뿐이다.** 성적·출결·과제는 명단의 것이다 —
+     이 폼에 학업을 다시 붙이면 분리한 뜻이 없어진다. */
+function studentAccountFormHTML(s){
+  const sid = s.studentId;
+  return `<div class="st-form">
       <div class="cls-form" style="margin-top:0;">
         <label style="min-width:150px;"><span>이름</span><input id="info-sname" value="${escHtml(s.name)}"></label>
         ${/* 입력칸은 «바꿀 때만» 쓴다(비워 두면 그대로). 지금 것은 라벨 줄에서 본다 — P-3.
@@ -11172,22 +11225,27 @@ function sdInfoHTML(s, sid){
         <label style="min-width:160px;"><span>학생 전화</span><input id="info-sphone" value="${escHtml(s.phone||'')}" placeholder="010-0000-0000"></label>
         <label><span>반</span><select id="info-sclass" style="border:1px solid var(--line);border-radius:var(--r-sm);background:var(--paper);padding:8px 10px;font-family:inherit;font-size:12.5px;">${classOptionsHTML(s.classId)}</select></label>
       </div>
-      <button class="btn p sm" style="margin-top:11px;" onclick="updateStudentInfo('${sid}')">저장</button>
-      <div style="margin-top:9px;font-size:11.5px;color:var(--dim);line-height:1.7;">반을 바꿔도 성적·출석·과제·오답숙제 기록은 그대로 유지됩니다. 반을 옮길 때는 삭제 후 재등록하지 말고 여기서 반만 바꿔주세요.</div>
-    </div>
-
-    <div class="t-sec" style="margin-top:22px;">개인 보충 영상</div>
-    <div style="font-size:11.5px;color:var(--dim);margin-bottom:8px;">수업 화면에서 결석 처리하며 링크를 넣으면 여기 쌓입니다. 이 학생에게만 보입니다.</div>
-    ${personalVideos.length===0 ? '<div style="font-size:12.5px;color:var(--dim);">등록된 개인 영상이 없습니다.</div>'
-      : personalVideos.map(v=>`<div class="sd-crow"><span style="color:var(--ink);flex:1;text-align:left;">${escHtml(v.title)}</span>
-          <button class="btn q sm" onclick="deleteVideo('${v.id}')">삭제</button></div>`).join('')}
-
-    <div class="t-sec" style="margin-top:22px;">학생 삭제</div>
-    <div style="font-size:11.5px;color:var(--dim);margin-bottom:8px;">성적·출석·과제·오답숙제 기록이 모두 함께 삭제되며 되돌릴 수 없습니다.</div>
-    <button class="btn no sm" onclick="deleteStudent('${sid}')">이 학생 삭제</button>
-    <div class="rst-pad"></div>
-  </div>`;
+      <div style="display:flex;align-items:center;gap:9px;margin-top:11px;flex-wrap:wrap;">
+        <button class="btn p sm" onclick="updateStudentInfo('${sid}')">저장</button>
+        <button class="btn sm" onclick="stuEdit(null)">닫기</button>
+        <span class="spacer" style="flex:1;"></span>
+        ${/* 삭제는 «저장»과 같은 무게로 놓지 않는다 — 오른쪽 끝에 따로 떼어 둔다. */''}
+        <button class="btn no sm" onclick="deleteStudent('${sid}')">이 학생 삭제</button>
+      </div>
+      <p class="st-note">반을 바꿔도 <b>성적·출석·과제·오답숙제 기록은 그대로 유지됩니다.</b>
+        반을 옮길 때는 삭제 후 재등록하지 말고 여기서 반만 바꿔주세요.<br>
+        삭제하면 그 기록이 <b>모두 함께 지워지고 되돌릴 수 없습니다.</b></p>
+    </div>`;
 }
+/* 한 번에 한 학생만 편다. 같은 학생을 다시 누르면 닫힌다.
+   ⚠ 여는 김에 «비밀번호 보기»를 닫는다 — 열어 둔 채 다른 학생으로 옮기면
+     화면에 남은 점이 누구 것인지 알 수 없다(P-3의 «한 번에 하나»와 같은 뜻). */
+function stuEdit(sid){
+  state.stuEditId = (sid && state.stuEditId===sid) ? null : (sid || null);
+  state.pwReveal = null;
+  render();
+}
+function stuSearch(e){ state.stuQuery = e.target.value; render(); }
 
 /* ---------- 출석부 (반별 일괄 입력) ---------- */
 // 반+날짜 조합이 바뀔 때만 draft를 저장된 값(또는 미입력 상태)으로 새로 채운다.
@@ -13840,7 +13898,10 @@ function teacherSettingsHTML(){
      변경 이력, 관리자 비밀번호. 하나의 형태로 묶을 이유가 없어서 **껍데기만 DS로 바꿨다.**
      갈래를 왼쪽에 세우면 여섯 개가 한눈에 보이고, 지금 어디에 있는지가 화면에 남는다.
      각 갈래의 본문은 «구조»를 손대지 않았다 — 폼과 표가 전부라 형태를 바꿔도 나아지지 않는다. */
-  const LABEL = { assistants:'조교 계정을 만들고 담당 반을 정한다', students:'학생 계정을 만든다 · 엑셀 일괄 등록',
+  /* ⚠ 학생 갈래의 설명이 2026-08-26에 바뀌었다 — 여기는 이제 «만드는 곳»이 아니라
+     계정을 **만들고 · 고치고 · 지우는** 곳이다. 학업은 명단이 맡는다. */
+  const LABEL = { assistants:'조교 계정을 만들고 담당 반을 정한다',
+    students:'학생 계정을 만들고 · 정보와 비밀번호를 고치고 · 지운다',
     classes:'반을 만든다', consults:'홈페이지로 들어온 상담 신청', signalrules:'위험·주의를 가르는 임계값',
     examrange:'데일리퀴즈가 낼 단원을 시즌과 학교·학년으로 정한다',
     auditlog:'누가 무엇을 바꿨는지', admin:'관리자 비밀번호' };
@@ -14088,15 +14149,51 @@ function teacherSettingsClassesHTML(){
 }
 
 /* ---------- 학생 ----------
-   여기는 «계정을 만드는 곳»이다. 학생을 «보는 곳»은 명단 하나뿐이다.
-   전체 목록 표가 여기에도 있었지만 지웠다 — 같은 곳으로 가는 문이 두 개면
-   어느 쪽이 최신인지 매번 헷갈린다. */
+   여기는 **«계정을 다루는 곳»**이다 — 만들고, 고치고, 지운다.
+   학생의 **«학업»을 보는 곳은 명단 하나뿐이다** — 성적·출결·과제·신호·연대기.
+
+   ⚠ **한때 여기서 목록을 뺐다가 2026-08-26에 다시 세웠다. 같은 목록이 아니다.**
+     그때 뺀 이유는 «같은 곳으로 가는 문이 두 개면 어느 쪽이 최신인지 헷갈린다»였고,
+     그 말은 **둘 다 학생을 «보는» 목록이었을 때** 옳았다.
+     지금은 문이 둘이 아니라 **일이 둘로 갈렸다** — 사용자가 그렇게 갈랐다:
+     **«계정 관련 설정이나 정보 입력 등을 전부 설정탭으로 옮기고, 명단에서는
+     학업에 관련한 관리만 하도록 분리»**.
+     그래서 이 목록에는 **성적·출결·신호를 한 칸도 두지 않는다.** 두는 순간 옛 문제로 돌아간다. */
 function teacherSettingsStudentsHTML(){
   const open = state.settingsForm==='stu';
   const bulk = state.settingsForm==='bulk';
+
+  /* 검색은 «계정을 찾는» 검색이다 — 이름·아이디·학교·반까지만 본다.
+     ⚠ 명단의 `rosterQuery`와 따로 둔다. 한쪽에서 거른 것이 다른 쪽에 따라가면
+       「왜 학생이 없지」로 이어진다 — 두 화면은 이제 하는 일이 다르다. */
+  const q = (state.stuQuery||'').trim().toLowerCase();
+  const hit = s => !q || [s.name, s.studentId, s.school, classNameOf(s.classId)]
+    .some(v => String(v||'').toLowerCase().includes(q));
+  /* 반 → 이름 순. 계정을 손볼 때는 «같은 반끼리» 보게 되는 일이 많다. */
+  const listed = DATA.students.filter(hit).slice().sort((a,b)=>
+    String(classNameOf(a.classId)).localeCompare(String(classNameOf(b.classId)),'ko')
+    || String(a.name||'').localeCompare(String(b.name||''),'ko'));
+
+  const rows = listed.length===0
+    ? `<div class="st-empty">${DATA.students.length===0 ? '등록된 학생이 없습니다.' : '조건에 맞는 학생이 없습니다.'}</div>`
+    : listed.map(s=>{
+        const on = state.stuEditId===s.studentId;
+        return `<div class="st-row" style="align-items:flex-start;">
+          <div class="t"><b>${escHtml(s.name)}
+            <span class="mono" style="font-weight:400;font-size:12px;color:var(--sub);margin-left:8px;">${escHtml(s.studentId)}</span></b>
+            <span>${escHtml(s.school||'학교 미입력')} ${escHtml(s.grade||'')}<s>·</s>${
+              s.classId ? escHtml(classNameOf(s.classId)) : '<span class="badge">미배정</span>'}</span>
+            ${on ? `<div style="margin-top:10px;">${studentAccountFormHTML(s)}</div>` : ''}
+          </div>
+          <div class="v"><button class="btn ${on?'p':''} sm" onclick="stuEdit('${s.studentId}')">${
+            on ? '닫기' : '계정 수정'}</button></div>
+        </div>`;
+      }).join('');
+
   return `<div class="st-wrap">
   ${stSec({
-    title:'학생 계정', desc:`전체 ${DATA.students.length}명`,
+    title:'학생 계정', desc:`전체 ${DATA.students.length}명${
+      q ? ` · <b class="mono">${listed.length}</b>명 표시` : ''}`,
     action:`<button class="btn ${open?'':'p'} sm" onclick="stOpen('stu')">${
       open ? '닫기' : iconSvg('plus',13)+' 학생 추가'}</button>`,
     form: !open ? '' : `<div class="st-form">
@@ -14111,13 +14208,16 @@ function teacherSettingsStudentsHTML(){
         <label style="min-width:150px;"><span>반</span><select class="fm-sel" id="new-sclass">${classOptionsHTML(null)}</select></label>
         <button class="btn p sm" onclick="addStudent()">추가</button>
       </div>
-      <p class="st-note">반을 안 고르셨거나 나중에 옮기고 싶으면 <b>명단</b>에서 학생을 열어 언제든 바꿀 수 있습니다.</p></div>`,
-    body: `<div class="st-row">
-      <div class="t"><b>학생 목록은 명단에 있습니다</b>
-        <span>검색 · 신호 · 출결 · 성적 · 반 이동까지 명단 한 곳에서 합니다</span></div>
-      <div class="v"><button class="btn sm"
-        onclick="state.teacherTab='roster'; state.studentDetailId=null; render()">명단으로 ${iconSvg('arrowR',13)}</button></div>
-    </div>`
+      <p class="st-note">반을 안 고르셨거나 나중에 옮기고 싶으면 <b>아래 목록</b>에서 <b>계정 수정</b>을 눌러 언제든 바꿀 수 있습니다.</p></div>`,
+    body: `<div class="st-fbar" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 10px;">
+      <span class="field">${iconSvg('search',15)}
+        <input id="stu-search" value="${escHtml(state.stuQuery||'')}"
+          placeholder="이름 · 아이디 · 학교 · 반으로 검색"
+          oninput="stuSearch(event)" oncompositionend="stuSearch(event)"></span>
+      ${/* 학업은 여기 없다 — 찾으러 온 사람을 명단으로 보내는 문 하나는 남긴다. */''}
+      <button class="btn sm" onclick="state.teacherTab='roster'; state.studentDetailId=null; render()">성적·출결은 명단에서 ${iconSvg('arrowR',13)}</button>
+    </div>
+    ${rows}`
   })}
   ${stSec({
     title:'엑셀로 한꺼번에', desc:'양식을 채워 올리면 이미 있는 아이디는 건너뜁니다',
