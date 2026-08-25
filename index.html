@@ -250,6 +250,16 @@
 .app .st-fbar .field{flex:1;min-width:200px;}
 .app .st-fbar .field input{flex:1;min-width:0;border:0;background:transparent;outline:none;
   font-family:inherit;font-size:12.5px;color:var(--ink);}
+/* 학적 상자 — 퇴원과 삭제가 나란히 사는 곳 (2026-08-26 · W-1).
+   ⚠ **테두리로 «따로 떼어» 둔다.** 위의 이름·비밀번호와 같은 평면에 두면
+     저장하러 왔다가 삭제를 누르는 자리가 된다. */
+.app .stu-life{margin-top:16px;padding:13px 14px;border:1px solid var(--line);
+  border-radius:var(--r-md);background:var(--note);}
+.app .stu-life-now{display:flex;align-items:center;gap:9px;flex-wrap:wrap;font-size:12.5px;}
+/* 삭제만 한 번 더 가른다 — 이 상자 안에서도 «되돌릴 수 없는 것»은 이것뿐이다. */
+.app .stu-life-danger{display:flex;align-items:center;gap:11px;flex-wrap:wrap;
+  margin-top:13px;padding-top:12px;border-top:1px solid var(--line);}
+.app .stu-life-danger span{font-size:11.5px;color:var(--dim);line-height:1.7;flex:1;min-width:180px;}
 .app .rst-cnt{margin-left:auto;font-size:12px;color:var(--dim);white-space:nowrap;}
 .app .rst-cnt b{color:var(--ink);font-family:'JetBrains Mono',monospace;font-weight:600;}
 .app .rst-selwrap{padding-right:6px;}
@@ -3224,13 +3234,37 @@ function scrollToId(id){
    그 헤더는 랜딩 합류와 함께 사라졌다. 쓰던 state 값도 같이 지웠다. */
 
 /* =================== 로그인 =================== */
-// 출결 기록 중 가장 최근 날짜의 상태가 "퇴원"이면 퇴원 처리된 것으로 본다.
-// (학생 계정 자체엔 별도 재적 상태 필드가 없고, 출석부에서 "퇴원"으로 기록하는 게
-//  유일한 방법이라 이걸로 판단한다.)
+// ⚠ 아래 두 줄은 «2026-08-26 이전»의 설명이었다. 지금은 틀렸으니 그대로 믿지 말 것 —
+//   학생 계정에 재적 필드(`withdrawnAt`)가 생겼다. 아래 W-1 상자가 지금의 설명이다.
+//   `isWithdrawnRecord`는 **옛 데이터를 읽기 위해서만** 남아 있다.
+/* =================== 퇴원 (2026-08-26 · W-1) ===================
+   **퇴원은 «삭제와 다른 것»이다** — 사용자의 말: 「그냥 삭제랑 별도로 정보는 남겨두고
+   퇴원처리만 하는 기능이 필요해」. 기록은 한 줄도 안 지우고 **명단에서만 내려놓는다.**
+
+   🔴 **판정은 `student.withdrawnAt` 하나가 한다** (「YYYY-MM-DD」). 그 전에는 «마지막 출결
+   상태가 퇴원인가»로 봤는데, 그러면 **나중에 더 늦은 날짜의 출결이 한 줄 들어가는 순간
+   조용히 재원으로 돌아간다.** 학적은 사건이지 출결의 부산물이 아니다.
+   ⚠ **옛 방식도 계속 읽는다** — 그렇게 적힌 학생이 이미 있으면 갑자기 되살아나면 안 된다.
+     다만 **새로 적지는 않는다**(출결의 「퇴원」 항목은 W-1에서 뺐다 → `ATT_STATUSES`).
+   ⚠ `rec`는 «있으면» 본다 — 기록이 아직 안 실린 화면에서도 `withdrawnAt`만으로 답이 나와야
+     한다. 반 명단을 거르는 자리 스무 곳이 전부 동기 함수라 이게 중요하다. */
 function isWithdrawnRecord(rec){
   if(!rec || !rec.attendance || rec.attendance.length===0) return false;
   const latest = [...rec.attendance].sort((a,b)=>a.date.localeCompare(b.date)).pop();
   return !!latest && latest.status==='퇴원';
+}
+function isWithdrawn(s, rec){
+  if(!s) return false;
+  if(s.withdrawnAt) return true;
+  return isWithdrawnRecord(rec || state.allRecords[s.studentId] || DATA.records[s.studentId]);
+}
+/* **지금 이 반에 «다니는» 학생.** 출석부·과제·클리닉처럼 «앞으로의 일»을 다루는 자리는
+   전부 이것을 쓴다 — `DATA.students.filter(s=>s.classId===…)`를 직접 쓰면 퇴원생이 딸려 온다.
+   ⚠ **«지난 기록» 화면은 이걸 쓰지 않는다** — 사용자가 그렇게 정했다(2026-08-26).
+     지난 시험의 오답 집계·제출 현황에서 퇴원생을 빼면 **그때 20명이 봤던 시험이
+     나중에 18명으로 보인다.** 과거를 고쳐 쓰는 셈이라 그 화면들은 그대로 둔다. */
+function classRoster(classId){
+  return DATA.students.filter(s=>s.classId===classId && !isWithdrawn(s));
 }
 async function doStudentLogin(){
   const idInput = document.getElementById('login-id').value.trim();
@@ -3238,7 +3272,7 @@ async function doStudentLogin(){
   const found = DATA.students.find(s=>s.studentId===idInput && s.pw===pwInput);
   if(!found){ state.loginError = '아이디 또는 비밀번호가 일치하지 않습니다.'; render(); return; }
   const rec = await loadRecord(found.studentId);
-  if(isWithdrawnRecord(rec)){ state.loginError = '퇴원 처리된 계정입니다. 문의사항은 선생님께 연락해주세요.'; render(); return; }
+  if(isWithdrawn(found, rec)){ state.loginError = '퇴원 처리된 계정입니다. 문의사항은 선생님께 연락해주세요.'; render(); return; }
   state.currentUser = {type:'student', studentId:found.studentId, name:found.name};
   saveSession();
   state.studentTab = 'home';
@@ -3309,7 +3343,7 @@ async function restoreSession(){
     const found = DATA.students.find(s=>s.studentId===saved.studentId);
     if(!found){ clearSession(); return; }
     const rec = await loadRecord(found.studentId);
-    if(isWithdrawnRecord(rec)){ clearSession(); return; } // 로그인해 있던 중 퇴원 처리되면 다음 방문 때 자동 로그아웃
+    if(isWithdrawn(found, rec)){ clearSession(); return; } // 로그인해 있던 중 퇴원 처리되면 다음 방문 때 자동 로그아웃
     state.currentUser = {type:'student', studentId:found.studentId, name:found.name};
     state.view = 'student';
   } else if(saved.type==='assistant'){
@@ -3573,6 +3607,54 @@ async function deleteStudent(sid){
   await dbDeleteDoc('students', sid);
   showToast('삭제되었습니다.');
   render();
+}
+
+/* =================== 퇴원 처리 · 재원 복귀 (2026-08-26 · W-1) ===================
+   🔴 **삭제와 헷갈리지 말 것.** 사용자가 이 둘을 갈라 달라고 해서 만든 것이다 —
+   **「그냥 삭제랑 별도로 정보는 남겨두고 퇴원처리만 하는 기능이 필요해」**.
+   | | 지우는 것 | 되돌리기 |
+   |---|---|---|
+   | **퇴원** | **아무것도 안 지운다** — 계정·성적·출결·과제가 전부 그대로다 | **된다**(재원 복귀) |
+   | **삭제** | 학생 문서와 기록이 함께 사라진다 | **안 된다** |
+
+   ⚠ **반 배정을 그대로 둔다**(`classId`를 안 지운다) — 「어느 반이었나」가 기록의 일부다.
+     대신 `classRoster`가 걸러서 출석부·과제 격자에는 안 뜬다.
+   ⚠ **되돌릴 때 `withdrawnAt`을 지운다**(빈 문자열이 아니라 삭제). `isWithdrawn`이
+     «값이 있나»로 보므로 빈 문자열을 넣으면 재원인데 퇴원으로 읽힐 여지가 생긴다.
+   ⚠ **감사 기록에 남긴다** — 학적은 나중에 「언제 그만뒀더라」를 반드시 다시 묻는 일이다. */
+async function withdrawStudent(sid){
+  const s = DATA.students.find(x=>x.studentId===sid);
+  if(!s) return;
+  const date = (document.getElementById('wd-date')||{}).value || todayStr();
+  const reason = ((document.getElementById('wd-reason')||{}).value || '').trim();
+  /* 저장이 성공한 «뒤에» 메모리를 고친다 — 실패했는데 화면만 퇴원으로 바뀌면
+     다음 새로고침에 되살아나서 «퇴원시킨 줄 알았던» 학생에게 알림이 나간다 (P-1과 같은 규칙). */
+  const next = Object.assign({}, s, { withdrawnAt: date, withdrawnReason: reason });
+  await dbSetDoc('students', sid, next);
+  s.withdrawnAt = date;
+  s.withdrawnReason = reason;
+  await logAudit('퇴원 처리', sid, s.name, date + (reason ? ' · ' + reason : ''));
+  state.stuEditId = null;
+  showToast(s.name + ' 학생을 퇴원 처리했습니다.');
+  render();
+}
+async function restoreStudent(sid){
+  const s = DATA.students.find(x=>x.studentId===sid);
+  if(!s) return;
+  const next = Object.assign({}, s);
+  delete next.withdrawnAt;
+  delete next.withdrawnReason;
+  await dbSetDoc('students', sid, next);
+  delete s.withdrawnAt;
+  delete s.withdrawnReason;
+  await logAudit('재원 복귀', sid, s.name, '');
+  showToast(s.name + ' 학생을 재원으로 되돌렸습니다.');
+  render();
+}
+/* 명단·신호의 「퇴원」 배지 옆에 붙는 한 줄. 옛 데이터는 날짜를 모른다. */
+function withdrawnWhy(s){
+  if(!s || !s.withdrawnAt) return '출결 기록의 마지막 상태';
+  return '퇴원 ' + s.withdrawnAt + (s.withdrawnReason ? ' · ' + s.withdrawnReason : '');
 }
 /* =================== 변경 이력(감사 로그) =================== */
 // 강사뿐 아니라 조교도 성적/출석을 고칠 수 있게 되면서, 누가 언제 뭘 바꿨는지
@@ -3871,7 +3953,7 @@ function hwWaitingInClass(classId){
   if(!state.allRecordsLoaded) return 0;
   const hws = DATA.assignments.filter(a=>a.classId===classId);
   if(!hws.length) return 0;
-  return DATA.students.filter(s=>s.classId===classId).reduce((n,s)=>{
+  return classRoster(classId).reduce((n,s)=>{
     const rec = state.allRecords[s.studentId];
     return n + (rec ? hws.filter(a=>hwState(rec, a.id).status===HW_SUBMITTED).length : 0);
   }, 0);
@@ -3890,7 +3972,7 @@ function gotoHwWaiting(){
   state.classHubTab = 'homework';
   state.classHubDate = null;
   /* 대기가 있는 첫 과제를 펴 둔다 — 열자마자 할 일이 보여야 한다. */
-  const rosters = DATA.students.filter(s=>s.classId===state.classHubId);
+  const rosters = classRoster(state.classHubId);
   const first = DATA.assignments.filter(a=>a.classId===state.classHubId)
     .find(a=>rosters.some(s=>{
       const rec = state.allRecords[s.studentId];
@@ -8254,7 +8336,7 @@ function hwCellDrawerHTML(){
   const [tone, label] = HW_BADGE[st.status];
 
   /* 대기 중인 다음 사람으로 바로 넘어간다 — 다섯 명을 볼 때 격자로 되돌아갈 이유가 없다. */
-  const sameClass = DATA.students.filter(x=>x.classId===a.classId)
+  const sameClass = classRoster(a.classId)
     .sort((x,y)=>x.name.localeCompare(y.name));
   const waiting = sameClass.filter(x=>{
     const r = state.allRecords[x.studentId];
@@ -9333,7 +9415,10 @@ function rosterStats(s){
   return {
     att8: att.slice(-8), attPct, scores, drop,
     hwDone, hwTotal: hws.length, wrongLeft, vidPct,
-    withdrawn: isWithdrawnRecord(rec),
+    withdrawn: isWithdrawn(s, rec),
+    /* 퇴원의 «언제·왜»를 말하려면 학생 자체가 필요하다 — `withdrawnAt`은 기록이 아니라
+       학생 문서에 있다(W-1). 신호 열이 이걸 쓴다. */
+    student: s,
     prog: s.classId ? getClassProgress(s.classId) : null
   };
 }
@@ -9431,7 +9516,7 @@ function signalOf(st){
 /* 명단의 신호 열 — 한 줄(40px)에 들어가야 하므로 규칙 «이름»만 잇는다.
    근거 숫자까지 보려면 신호 화면으로 간다. */
 function rosterSignal(st){
-  if(st.withdrawn) return ['gone', '퇴원', '출결 기록의 마지막 상태'];
+  if(st.withdrawn) return ['gone', '퇴원', withdrawnWhy(st.student)];
   const sg = signalOf(st);
   if(!sg) return null;
   const g = SIGNAL_GRADE[sg.grade];
@@ -10036,7 +10121,7 @@ function sessionsOn(date){
 /* 저장된 기록 기준 요약. 초안(attDraft)이 아니라 «이미 저장된 것»만 센다 —
    왼쪽 목록은 «이 수업 끝냈나»를 말해야 하므로 아직 저장 안 한 것을 완료로 세면 거짓말이 된다. */
 function sessionSavedSummary(classId, date){
-  const roster = DATA.students.filter(s=>s.classId===classId);
+  const roster = classRoster(classId);
   const cnt = {}; let filled = 0;
   roster.forEach(s=>{
     const rec = state.allRecords[s.studentId];
@@ -10046,7 +10131,7 @@ function sessionSavedSummary(classId, date){
   return { total: roster.length, filled, cnt };
 }
 function sessionDraftSummary(classId){
-  const roster = DATA.students.filter(s=>s.classId===classId);
+  const roster = classRoster(classId);
   const cnt = {}; let none = 0;
   roster.forEach(s=>{
     const d = state.attDraft[s.studentId];
@@ -10058,7 +10143,7 @@ function sessionDraftSummary(classId){
    그 전에 «남아 있다»고 말해 줘야 한다. */
 function sessionUnsavedCount(classId, date){
   let n = 0;
-  DATA.students.filter(s=>s.classId===classId).forEach(s=>{
+  classRoster(classId).forEach(s=>{
     const d = state.attDraft[s.studentId];
     if(!d) return;
     const rec = state.allRecords[s.studentId];
@@ -10116,7 +10201,7 @@ async function saveSessionAttendance(classId, date, nextStep){
   render();
 }
 function setAllRemainingPresent(classId){
-  DATA.students.filter(s=>s.classId===classId).forEach(s=>{
+  classRoster(classId).forEach(s=>{
     const d = state.attDraft[s.studentId];
     if(d && d.status) return;                      // 이미 찍은 것은 건드리지 않는다
     state.attDraft[s.studentId] = {status:'출석', reason:'', videoUrl:'', note:(d&&d.note)||''};
@@ -10355,7 +10440,7 @@ function sessionProgHTML(classId){
 
 /* ── 3단계. 과제 ── */
 function sessionHwHTML(classId, date){
-  const roster = DATA.students.filter(s=>s.classId===classId);
+  const roster = classRoster(classId);
   const hws = DATA.assignments.filter(a=>!a.classId || a.classId===classId);
   const body = `
   <div class="t-sec">이 수업에서 낼 과제</div>
@@ -10443,7 +10528,7 @@ async function exportClassExcel(classId){
   try{
     await ensureXLSXLoaded();
     await loadAllRecordsIfNeeded();
-    const roster = DATA.students.filter(s=>s.classId===classId);
+    const roster = classRoster(classId);
     const header = ['아이디','이름','학년','학교','학부모전화번호','학생전화번호','출석','지각','조퇴','결석','시험 응시 횟수','평균 점수(%)','최근 시험명','최근 점수'];
     const rows = roster.map(s=>{
       const rec = state.allRecords[s.studentId] || {scores:[],attendance:[]};
@@ -10615,7 +10700,7 @@ function teacherClassHubHTML(){
   else if(tab==='material') sub = chubMaterialHTML(c.id);
   else                   sub = chubSessionsHTML(c.id);   // 안에서 «목록(DS)»과 «그날 상세(구버전)»를 가른다
 
-  const roster = DATA.students.filter(s=>s.classId===c.id);
+  const roster = classRoster(c.id);
   return `<div class="chub-screen">
     ${chubClassListHTML(c.id)}
     <main class="chub-main">
@@ -10650,7 +10735,7 @@ function chubClassListHTML(activeId){
     </div>
     <div class="chub-lbody">
       ${DATA.classes.map(c=>{
-        const n = DATA.students.filter(s=>s.classId===c.id).length;
+        const n = classRoster(c.id).length;
         const pr = getClassProgress(c.id);
         const wait = hwWaitingInClass(c.id);
         return `<div class="chub-cl ${c.id===activeId?'on':''} ${c.status==='진행중'?'':'off'}"
@@ -10674,7 +10759,7 @@ function chubClassListHTML(activeId){
 function chubProgressHTML(classId){
   loadAllRecordsIfNeeded();
   const { subject, chapters, doneMap, doneCount, percent } = getClassProgress(classId);
-  const roster = DATA.students.filter(s=>s.classId===classId);
+  const roster = classRoster(classId);
   const stats = roster.map(s=>rosterStats(s));
   const live = stats.filter(st=>!st.withdrawn);
   const avgOf = arr => arr.length ? Math.round(arr.reduce((a,b)=>a+b,0)/arr.length) : null;
@@ -10936,7 +11021,10 @@ function sdScreenHTML(s, rec, isAssistant){
   const sg = signalOf(st);
   const prog = st.prog;
 
-  /* 좌측 목록 — 명단에서 들어와도 맥락을 잃지 않는다. 같은 반이 기본, 없으면 전체. */
+  /* 좌측 목록 — 명단에서 들어와도 맥락을 잃지 않는다. 같은 반이 기본, 없으면 전체.
+     ⚠ **여기는 일부러 `classRoster`를 안 쓴다** (W-1) — 이 목록은 «지금 반 명단»이 아니라
+       **보던 학생 옆으로 옮겨 다니는 길**이다. 걸러 버리면 퇴원생을 열었을 때
+       **그 학생 자신이 목록에서 사라진다.** 대신 «퇴원»이라고 적어 준다. */
   const peers = (s.classId ? DATA.students.filter(x=>x.classId===s.classId) : DATA.students)
     .slice().sort((a,b)=>(a.name||'').localeCompare(b.name||'','ko'));
   const list = `<aside class="sd-list">
@@ -10949,7 +11037,7 @@ function sdScreenHTML(s, rec, isAssistant){
         const pst = rosterStats(p); const psg = signalOf(pst);
         return `<div class="li ${p.studentId===sid?'on':''}" onclick="sdOpen('${p.studentId}')">
           <span class="av">${escHtml((p.name||'?').slice(0,1))}</span>
-          <span class="t"><b>${escHtml(p.name)}</b><span>${escHtml(p.school||'—')} ${escHtml(p.grade||'')}</span></span>
+          <span class="t"><b>${escHtml(p.name)}</b><span>${pst.withdrawn ? '퇴원' : escHtml(p.school||'—')+' '+escHtml(p.grade||'')}</span></span>
           ${psg ? `<span class="rk ${psg.grade}"></span>` : ''}
         </div>`;
       }).join('')}
@@ -10964,7 +11052,11 @@ function sdScreenHTML(s, rec, isAssistant){
       <div class="t-meta" style="margin-top:6px;">${escHtml(s.school||'학교 미입력')} ${escHtml(s.grade||'')}<s>·</s>${escHtml(classNameOf(s.classId))}<s>·</s><span class="mono">${escHtml(sid)}</span></div>
     </div>
     <div class="tags">
-      <span class="tag">${st.withdrawn ? '퇴원' : '재원 중'}</span>
+      ${/* 퇴원이면 «언제»까지 말한다 — 이 화면에 온 이유가 대개 그것이다 (W-1).
+           ⚠ 고치는 문은 여기 없다. 학적은 설정 > 학생의 일이다(A-1로 그렇게 갈랐다). */''}
+      <span class="tag ${st.withdrawn ? 'warn' : ''}">${st.withdrawn
+        ? '퇴원' + (s.withdrawnAt ? ' · ' + escHtml(s.withdrawnAt) : '')
+        : '재원 중'}</span>
       ${sg ? `<span class="tag ${sg.grade==='r'?'warn':'cau'}">${SIGNAL_GRADE[sg.grade].label} 신호 ${sg.rules.length}</span>` : ''}
     </div>
   </div>
@@ -11263,13 +11355,46 @@ function studentAccountFormHTML(s){
       <div style="display:flex;align-items:center;gap:9px;margin-top:11px;flex-wrap:wrap;">
         <button class="btn p sm" onclick="updateStudentInfo('${sid}')">저장</button>
         <button class="btn sm" onclick="stuEdit(null)">닫기</button>
-        <span class="spacer" style="flex:1;"></span>
-        ${/* 삭제는 «저장»과 같은 무게로 놓지 않는다 — 오른쪽 끝에 따로 떼어 둔다. */''}
-        <button class="btn no sm" onclick="deleteStudent('${sid}')">이 학생 삭제</button>
       </div>
       <p class="st-note">반을 바꿔도 <b>성적·출석·과제·오답숙제 기록은 그대로 유지됩니다.</b>
-        반을 옮길 때는 삭제 후 재등록하지 말고 여기서 반만 바꿔주세요.<br>
-        삭제하면 그 기록이 <b>모두 함께 지워지고 되돌릴 수 없습니다.</b></p>
+        반을 옮길 때는 삭제 후 재등록하지 말고 여기서 반만 바꿔주세요.</p>
+
+      ${/* ---------- 학적 (W-1 · 2026-08-26) ----------
+           🔴 **퇴원과 삭제를 «한 상자 안에» 나란히 둔다.** 사용자가 갈라 달라고 한 것이
+             바로 이 둘이라, 무엇이 되돌아오고 무엇이 안 되돌아오는지를 **같은 자리에서**
+             읽을 수 있어야 한다. 떨어뜨려 놓으면 급할 때 삭제를 누른다.
+           ⚠ 퇴원은 **진한 버튼이 아니다** — 흔한 일이지만 되돌릴 일도 흔하다.
+           ⚠ 삭제만 `btn no`(붉은 것)로 둔다. 이 상자에서 **되돌릴 수 없는 것은 그것뿐**이다. */''}
+      <div class="stu-life">
+        <div class="t-sec" style="margin:0 0 8px;">학적</div>
+        ${s.withdrawnAt ? `
+          <div class="stu-life-now">
+            <span class="badge gone">퇴원</span>
+            <span><span class="mono">${escHtml(s.withdrawnAt)}</span>${
+              s.withdrawnReason ? ' · ' + escHtml(s.withdrawnReason) : ''}</span>
+            <span class="spacer" style="flex:1;"></span>
+            <button class="btn sm" onclick="restoreStudent('${sid}')">재원으로 되돌리기</button>
+          </div>
+          <p class="st-note">출석부 · 과제 · 미제출 알림 · 반 인원에서 빠져 있고,
+            <b>이 학생은 로그인할 수 없습니다.</b> 지난 성적과 시험 기록은 그대로 남아 있습니다.</p>
+        ` : `
+          <div class="cls-form" style="margin-top:0;">
+            <label style="min-width:150px;"><span>퇴원일</span>
+              <input id="wd-date" type="date" value="${todayStr()}"></label>
+            <label style="flex:1;min-width:200px;"><span>사유 (선택)</span>
+              <input id="wd-reason" placeholder="예: 이사 · 타 학원 이동"></label>
+            <button class="btn sm" onclick="withdrawStudent('${sid}')">퇴원 처리</button>
+          </div>
+          <p class="st-note"><b>아무것도 지우지 않습니다.</b> 명단에서 내려놓기만 하고,
+            출석부 · 과제 · 미제출 알림 · 반 인원에서 빠집니다.
+            <b>언제든 되돌릴 수 있습니다.</b></p>
+        `}
+        <div class="stu-life-danger">
+          <button class="btn no sm" onclick="deleteStudent('${sid}')">이 학생 삭제</button>
+          <span>성적 · 출석 · 과제 · 오답숙제가 <b>모두 함께 지워지고 되돌릴 수 없습니다.</b>
+            그만둔 학생이면 <b>삭제가 아니라 퇴원 처리</b>를 쓰세요.</span>
+        </div>
+      </div>
     </div>`;
 }
 /* 한 번에 한 학생만 편다. 같은 학생을 다시 누르면 닫힌다.
@@ -11285,13 +11410,19 @@ function stuSearch(e){ state.stuQuery = e.target.value; render(); }
 /* ---------- 출석부 (반별 일괄 입력) ---------- */
 // 반+날짜 조합이 바뀔 때만 draft를 저장된 값(또는 미입력 상태)으로 새로 채운다.
 // 같은 조합에 머무는 동안은 학생별로 누른 상태/입력 중인 사유를 그대로 유지한다.
-const ATT_STATUSES = ['출석','지각','조퇴','결석','퇴원'];
+/* ⚠ **「퇴원」을 2026-08-26에 뺐다** (W-1) — 퇴원은 «그날 안 왔다»가 아니라 **학적**이다.
+   출결 항목으로 두면 ① 다음 수업에 출석을 찍는 순간 조용히 재원으로 돌아가고
+   ② 「퇴원한 날」이 출결표 한 칸에 숨어 아무도 못 찾는다.
+   이제 퇴원은 **설정 > 학생 > 계정 수정**에서 하고 `student.withdrawnAt`에 적힌다 → `isWithdrawn`.
+   ⚠ **옛 데이터는 그대로 읽는다** — 이 목록에서 뺀 것은 «새로 적는 문»일 뿐이다.
+     이미 마지막 출결이 「퇴원」인 학생은 `isWithdrawnRecord`가 계속 퇴원으로 본다. */
+const ATT_STATUSES = ['출석','지각','조퇴','결석'];
 function ensureAttDraft(classId, date){
   const key = classId + '|' + date;
   if(state.attDraftKey === key) return;
   state.attDraftKey = key;
   state.attDraft = {};
-  DATA.students.filter(s=>s.classId===classId).forEach(s=>{
+  classRoster(classId).forEach(s=>{
     const rec = state.allRecords[s.studentId];
     const existing = rec && (rec.attendance||[]).find(a=>a.date===date);
     state.attDraft[s.studentId] = existing ? {status:existing.status, reason:existing.reason||'', videoUrl:'', note:existing.note||''} : {status:null, reason:'', videoUrl:'', note:''};
@@ -11303,14 +11434,14 @@ function setAttStatus(studentId, status){
   render();
 }
 function setAllPresent(classId){
-  DATA.students.filter(s=>s.classId===classId).forEach(s=>{
+  classRoster(classId).forEach(s=>{
     const cur = state.attDraft[s.studentId] || {note:''};
     state.attDraft[s.studentId] = {status:'출석', reason:'', videoUrl:'', note: cur.note||''};
   });
   render();
 }
 function setAllStatus(classId, status){
-  DATA.students.filter(s=>s.classId===classId).forEach(s=>{
+  classRoster(classId).forEach(s=>{
     const cur = state.attDraft[s.studentId] || {reason:'', videoUrl:'', note:''};
     state.attDraft[s.studentId] = {status, reason: status==='출석' ? '' : cur.reason, videoUrl: status==='결석' ? cur.videoUrl : '', note: cur.note||''};
   });
@@ -11322,7 +11453,7 @@ function setAllStatus(classId, status){
    여기 5상태(퇴원 포함)와 일괄 변경은 그대로 둔다 — 수업 화면에는 일부러 넣지 않은 것들이다. */
 function teacherAttendanceHTML(classId, date){
   loadAllRecordsIfNeeded();
-  const roster = classId ? DATA.students.filter(s=>s.classId===classId) : [];
+  const roster = classId ? classRoster(classId) : [];
   if(classId && state.allRecordsLoaded) ensureAttDraft(classId, date);
   const body = `
     ${!classId ? '<div class="fm-empty">반을 선택해주세요.</div>' :
@@ -11377,7 +11508,7 @@ function teacherAttendanceHTML(classId, date){
   return { body, summary };
 }
 async function saveClassAttendance(classId, date){
-  const roster = DATA.students.filter(s=>s.classId===classId);
+  const roster = classRoster(classId);
   const newVideos = [];
   await Promise.all(roster.map(async s => {
     const d = state.attDraft[s.studentId];
@@ -11425,7 +11556,7 @@ const WEEKDAY_LABEL = ['일','월','화','수','목','금','토'];
 
 /* 그날 하나에 무엇이 남아 있는가. 목록과 필터가 같은 값을 본다. */
 function chubSessionFacts(classId, date){
-  const roster = DATA.students.filter(s=>s.classId===classId);
+  const roster = classRoster(classId);
   const cnt = {}; let filled = 0, scored = 0;
   roster.forEach(s=>{
     const rec = state.allRecords[s.studentId];
@@ -11553,7 +11684,7 @@ function teacherAttendanceBareHTML(classId, date){
 }
 function teacherClassDailyScoresHTML(classId, date){
   loadAllRecordsIfNeeded();
-  const roster = DATA.students.filter(s=>s.classId===classId);
+  const roster = classRoster(classId);
   if(!state.allRecordsLoaded) return `<div class="fm-empty">학생 기록을 불러오는 중입니다...</div>`;
   return `
     <h4 style="margin:0 0 12px;">${date} 수업 성적</h4>
@@ -11629,7 +11760,7 @@ function teacherClassDailyHomeworkHTML(classId, date){
   const showAll = standalone || !!state.classHubHomeworkShowAll;
   const all = DATA.assignments.filter(a=>a.classId===classId);
   const visible = showAll ? all : all.filter(a=>a.createdAt===date || a.dueDate===date);
-  const roster = DATA.students.filter(s=>s.classId===classId);
+  const roster = classRoster(classId);
   const open = state.settingsForm==='dhw';
   /* ⚠ **여기에 과제 등록 폼이 두 벌 있었다.** body의 「이 반에 과제 등록」(addHomework)과
      extra의 「새 과제 등록」(addDailyHomework)이 같은 화면에 나란히 그려지고 있었다.
@@ -11746,7 +11877,7 @@ async function addDailyHomework(classId, date){
    그 자리에 온 것이 **학생별 현황**이다. 이 화면의 물음이 「누가 밀리고 있나」로 바뀌었다. */
 function chubQuizHTML(classId){
   loadAllRecordsIfNeeded();
-  const roster = DATA.students.filter(s=>s.classId===classId);
+  const roster = classRoster(classId);
   const today = todayStr();
   const days = [];                                  // 최근 14일 (오늘이 오른쪽 끝)
   for(let i=13; i>=0; i--) days.push(shiftYmd(today, -i));
@@ -12047,7 +12178,9 @@ function teacherClinicHTML(){
             <select id="cn-assign-student" style="border:1px solid var(--line);border-radius:var(--r-sm);background:var(--paper);padding:8px 10px;font-family:inherit;font-size:12.5px;">
               <option value="">-- 선택 --</option>
               ${/* 학생 상세의 「클리닉 배정」으로 들어오면 그 학생이 골라진 채로 열린다 */''}
-              ${DATA.students.map(s=>`<option value="${s.studentId}" ${state.clinicAssignSid===s.studentId?'selected':''}>${escHtml(s.name)}</option>`).join('')}
+              ${/* ⚠ 퇴원생은 안 나온다 (W-1) — 클리닉 배정은 «앞으로의 일»이다.
+                     ⚠ 반이 없는 학생(미배정)은 그대로 나온다. 퇴원과 미배정은 다른 말이다. */''}
+              ${DATA.students.filter(x=>!isWithdrawn(x)).map(s=>`<option value="${s.studentId}" ${state.clinicAssignSid===s.studentId?'selected':''}>${escHtml(s.name)}</option>`).join('')}
             </select></label>
           <label style="min-width:190px;"><span>열린 시간대 (선택)</span>
             <select id="cn-assign-slot" style="border:1px solid var(--line);border-radius:var(--r-sm);background:var(--paper);padding:8px 10px;font-family:inherit;font-size:12.5px;">
@@ -12333,7 +12466,11 @@ function teacherChatHTML(){
         : students.map(({s, last, unread})=>`<div class="li ${s.studentId===sid?'on':''}"
             onclick="state.teacherSelectedStudent='${s.studentId}'; render()">
             <span class="av">${escHtml((s.name||'?').slice(0,1))}</span>
-            <span class="t"><b>${escHtml(s.name)}</b>
+            ${/* ⚠ **여기는 일부러 퇴원생을 안 뺀다** (W-1) — 이 목록은 «지난 대화로 가는 길»이다.
+                 빼면 그만둔 학생과 나눴던 말에 닿을 방법이 없어진다.
+                 대신 «퇴원»이라고 적어 준다 — **보내도 못 읽는다**(로그인이 막혀 있다). */''}
+            <span class="t"><b>${escHtml(s.name)}${
+              isWithdrawn(s) ? '<span class="badge gone" style="margin-left:7px;font-weight:400;">퇴원</span>' : ''}</b>
               <span>${last
                 ? escHtml((last.from==='teacher'?'나: ':'')+last.text).slice(0,26)
                 : escHtml(classNameOf(s.classId))}</span></span>
@@ -12428,7 +12565,7 @@ function chubMaterialHTML(classId){
 
 function chubVideoHTML(classId){
   loadAllRecordsIfNeeded();
-  const roster = DATA.students.filter(s=>s.classId===classId);
+  const roster = classRoster(classId);
   /* 반 영상 + 전체 배포 영상. 개인 배정 영상(studentId)은 반 화면의 대상이 아니다. */
   const vids = DATA.videos.filter(v=>!v.studentId && (!v.classId || v.classId===classId));
 
@@ -12562,6 +12699,9 @@ function chubVideoHTML(classId){
    등록 폼(hwpx 파싱 · 이미지 업로드 · 동적 문항 행)은 «구조»를 손대지 않았다 —
    이 화면에서 제일 비싼 부분이고, 형태를 바꾼다고 나아지는 곳도 아니다. */
 function examWrongCounts(exam){
+  /* ⚠ **여기는 일부러 `classRoster`를 안 쓴다** (W-1 · 2026-08-26) — 시험은 «이미 있었던 일»이다.
+     퇴원생을 빼면 **그때 20명이 봤던 시험이 나중에 18명으로 보인다.** 과거를 고쳐 쓰는 셈이다.
+     사용자가 「앞으로의 일에서만 뺀다」로 정했다. */
   const roster = DATA.students.filter(s=>s.classId===exam.classId);
   const counts = {};
   roster.forEach(s=>{
@@ -12687,6 +12827,9 @@ function teacherExamsHTML(){
    어느 시험지 이야기인지가 흐려진다. 시험지를 고른 채로 그 시험지의 제출을 보는 것이 맞다.
    («이 학생이 전체적으로 얼마나 밀렸나»는 명단의 오답 열과 학생 상세 연대기가 답한다.) */
 function examSubmissionsHTML(ex){
+  /* ⚠ **여기는 일부러 `classRoster`를 안 쓴다** (W-1 · 2026-08-26) — 시험은 «이미 있었던 일»이다.
+     퇴원생을 빼면 **그때 20명이 봤던 시험이 나중에 18명으로 보인다.** 과거를 고쳐 쓰는 셈이다.
+     사용자가 「앞으로의 일에서만 뺀다」로 정했다. */
   const roster = DATA.students.filter(s=>s.classId===ex.classId);
   const banks = DATA.problemBank.filter(b=>b.examId===ex.id);
   const bankIds = new Set(banks.map(b=>b.id));
@@ -14168,7 +14311,7 @@ function teacherSettingsClassesHTML(){
       <p class="st-note">요일 글자(월·화·수…)로 수업일이 정해집니다. 「월,수,금 7시~9시」처럼 적어 주세요.</p></div>`,
     body: list.length===0 ? '<div class="st-empty">아직 만든 반이 없습니다.</div>'
       : list.map(c=>{
-          const n = DATA.students.filter(s=>s.classId===c.id).length;
+          const n = classRoster(c.id).length;
           const cp = getClassProgress(c.id);
           return `<div class="st-row">
             <div class="t"><b>${escHtml(c.name)}</b>
@@ -14215,9 +14358,12 @@ function teacherSettingsStudentsHTML(){
         const on = state.stuEditId===s.studentId;
         return `<div class="st-row" style="align-items:flex-start;">
           <div class="t"><b>${escHtml(s.name)}
-            <span class="mono" style="font-weight:400;font-size:12px;color:var(--sub);margin-left:8px;">${escHtml(s.studentId)}</span></b>
+            <span class="mono" style="font-weight:400;font-size:12px;color:var(--sub);margin-left:8px;">${escHtml(s.studentId)}</span>${
+            /* 퇴원은 이름 옆에 붙인다 — 목록을 훑을 때 «지금 다니는 사람»과 갈려야 한다 (W-1) */
+            s.withdrawnAt ? '<span class="badge gone" style="margin-left:8px;font-weight:400;">퇴원</span>' : ''}</b>
             <span>${escHtml(s.school||'학교 미입력')} ${escHtml(s.grade||'')}<s>·</s>${
-              s.classId ? escHtml(classNameOf(s.classId)) : '<span class="badge">미배정</span>'}</span>
+              s.classId ? escHtml(classNameOf(s.classId)) : '<span class="badge">미배정</span>'}${
+              s.withdrawnAt ? `<s>·</s>퇴원 <span class="mono">${escHtml(s.withdrawnAt)}</span>` : ''}</span>
             ${on ? `<div style="margin-top:10px;">${studentAccountFormHTML(s)}</div>` : ''}
           </div>
           <div class="v"><button class="btn ${on?'p':''} sm" onclick="stuEdit('${s.studentId}')">${
