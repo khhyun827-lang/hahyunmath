@@ -8107,10 +8107,12 @@ function hwRosterReviewHTML(a, roster){
    **눈이 먼저 가는 것은 «확인 대기»여야 한다** — 강사가 실제로 할 일이다.
    완료는 조용한 초록, 미제출은 흐린 글자, 반려는 붉게, **확인 대기만 테두리까지 준다.**
 
-   **누르는 곳이 둘이다** —
-   · **칸** → 오른쪽에서 상세가 나온다(`state.hwCell`). 격자를 떠나지 않고 수락·반려한다
-   · **열 머리** → 그 과제의 명단이 격자 «아래»로 펴진다(`state.homeworkDetailId`).
-     **미제출 알림 버튼이 거기 있다** — 격자만 두면 N-1로 가는 길이 끊긴다
+   **누르는 곳이 둘이고, 하는 일이 겹치지 않는다** (2026-08-26에 갈랐다) —
+   · **칸** → 오른쪽에서 상세가 나온다(`state.hwCell`). 격자를 떠나지 않고 수락·반려한다.
+     **검토는 전부 여기서 한다**
+   · **열 머리** → 그 과제의 **미제출 알림**이 격자 «아래»로 열린다(`state.homeworkDetailId`).
+     **거기가 N-1로 가는 유일한 문이다** — 격자만 두면 그 길이 끊긴다.
+     🔴 **여기에 명단을 다시 펴지 말 것** — 격자가 이미 하는 말이라 그게 불편의 원인이었다
 
    ⚠ **표 골격을 새로 짜지 않는다** — `table.grid`(ds.css)를 그대로 쓴다.
    ⚠ **판정은 `hwState` 하나만 부른다.** 격자라고 상태를 새로 해석하지 않는다.
@@ -8152,7 +8154,7 @@ function hwGridHTML(classId, list, roster){
     const wait = named.filter(s=>recOf(s) && hwState(recOf(s), a.id).status===HW_SUBMITTED).length;
     const on = state.homeworkDetailId===a.id;
     return `<th class="hwg-col${on?' on':''}" onclick="hwToggleCol('${a.id}')"
-      title="${escHtml(a.title)} — 누르면 명단이 아래에 펴집니다">
+      title="${escHtml(a.title)} — 누르면 미제출 알림이 아래에 열립니다">
       <b>${escHtml(a.title)}</b>
       <span class="due">${a.dueDate ? `마감 <span class="mono">${escHtml(a.dueDate)}</span>` : '마감 없음'}</span>
       <span class="n${wait?' wait':''}">완료 <span class="mono">${done}/${named.length}</span>${
@@ -11561,11 +11563,23 @@ function teacherClassDailyHomeworkHTML(classId, date){
       <p class="st-note">이 반 학생 전원에게 나갑니다. 등록일은 <b>${date}</b>로 남습니다.</p>
     </div>`}
     ${/* 「반 관리 > 과제」(standalone)에서는 **격자**가 본문이다 — 반 전체 × 과제 전체를
-         한 판에 올린다. 열 머리를 누르면 그 과제의 명단이 격자 아래로 펴진다.
+         한 판에 올린다. 열 머리를 누르면 그 과제의 «미제출 알림»이 격자 아래로 열린다.
+         🔴 **명단을 다시 펴지 않는다** (2026-08-26) — 08-25에는 여기서 `hwRosterReviewHTML`을
+           통째로 그렸다. 그런데 그것이 말하는 «확인 대기 · 아직 안 냄 · 완료» 셋은
+           **격자가 이미 하고 있는 말**이다. 사용자가 그래서 불편하다고 했다 —
+           **「표에 이미 내용이 있는데 과제를 누르면 또 똑같은 내용이 반복적으로 펼쳐지고
+             그 안에서 미제출 알림을 눌러야 하는 것이 불편함」**.
+           그러니 역할을 가른다 — **검토는 «칸»을 눌러 상세(`hwCellDrawerHTML`)에서 하고,
+           «열 머리»는 알림으로 가는 문 하나만 한다.**
+           🔴 열 머리를 «못 누르게» 만들면 안 되는 이유는 그대로다 — N-1로 가는 유일한 길이다
          ⚠ 「수업 기록 > 그날」 안의 과제는 격자가 아니다 — 거기는 «그날 낸 과제»를 묻는
-           자리라 한두 건뿐이고, 반 전체를 가로로 펼 이유가 없다. 목록 그대로 둔다. */''}
+           자리라 한두 건뿐이고, 반 전체를 가로로 펼 이유가 없다. 목록 그대로 둔다.
+           **거기서는 `hwRosterReviewHTML`을 그대로 쓴다** — 격자가 없어 대신할 것이 없다. */''}
     ${!standalone ? '' : (()=>{
       const picked = visible.find(a=>a.id===state.homeworkDetailId);
+      /* ⚠ 기록을 불러오기 전에는 `hwUnsubmitted`가 빈 배열이라 «미제출자 없음»으로 보인다.
+           불러오는 중인 것과 정말 없는 것은 다른 말이므로 갈라서 말한다. */
+      const miss = picked && state.allRecordsLoaded ? hwUnsubmitted(picked, roster) : [];
       return hwGridHTML(classId, visible, roster) + (!picked ? '' : `
         <div class="hw-grp" style="margin-top:20px;">
           <div class="st-h" style="margin-bottom:2px;">
@@ -11573,11 +11587,14 @@ function teacherClassDailyHomeworkHTML(classId, date){
             <span>${picked.dueDate ? '마감 '+escHtml(picked.dueDate) : '마감 없음'}</span>
             <span class="r">
               <button class="btn q sm" onclick="deleteHomework('${picked.id}')">과제 삭제</button>
-              <button class="btn sm" onclick="hwToggleCol('${picked.id}')">명단 접기</button>
+              <button class="btn sm" onclick="hwToggleCol('${picked.id}')">접기</button>
             </span>
           </div>
           ${picked.description?`<p class="st-note" style="white-space:pre-wrap;margin:0 0 8px;">${escHtml(picked.description)}</p>`:''}
-          ${hwRosterReviewHTML(picked, roster)}
+          ${!state.allRecordsLoaded
+            ? '<span class="muted" style="font-size:12px;">학생 기록을 불러오는 중…</span>'
+            : miss.length ? hwNoticeBarHTML(picked, roster)
+            : '<p class="st-note" style="margin:0;">미제출자가 없습니다 — 보낼 알림이 없습니다.</p>'}
         </div>`);
     })()}
     ${standalone ? '' :
