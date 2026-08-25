@@ -11428,7 +11428,15 @@ function stuEdit(sid){
   state.pwReveal = null;
   render();
 }
-function stuSearch(e){ state.stuQuery = e.target.value; render(); }
+/* 🔴 **`liveEdit`을 반드시 거친다** (2026-08-26 · W-3에서 고쳤다).
+   처음엔 `state.stuQuery = e.target.value; render();`로 썼는데,
+   **한글 자음 하나만 쳐도 조합이 끊겼다** — `render()`가 입력칸을 통째로 다시 그려서
+   IME가 조합하던 글자를 잃는다. 「ㄱ」을 치면 거기서 끝나고 「김」이 안 된다.
+   `liveEdit`은 ① 조합 중(`isComposing`)이면 안 그리고 ② 그린 뒤 포커스와
+   커서 자리를 되돌려 놓는다. 명단 검색(`rosterSearch`)이 쓰던 그것이다.
+   ⚠ **화면을 다시 그리는 «모든» 입력칸이 이 규칙 아래 있다** — 새 검색·필터 입력을
+     만들 때 `oninput`에서 곧장 `render()`를 부르지 말 것. 한글에서 반드시 깨진다. */
+function stuSearch(ev){ liveEdit(ev, v=>{ state.stuQuery = v; }); }
 
 /* ---------- 출석부 (반별 일괄 입력) ---------- */
 // 반+날짜 조합이 바뀔 때만 draft를 저장된 값(또는 미입력 상태)으로 새로 채운다.
