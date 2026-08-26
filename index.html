@@ -1234,6 +1234,46 @@
 .rp-say{margin-top:16px;padding-top:14px;border-top:1px solid var(--line);}
 .rp-say-t{font-size:12px;color:var(--dim);margin-bottom:7px;}
 .rp-say p{margin:0;font-size:13px;line-height:1.8;white-space:pre-wrap;color:var(--ink);}
+/* ---------- 눈금 줄 · 표 · 글귀 (2026-08-27 · R-1b) ----------
+   사용자가 요청했다 — **「%나 표 등을 이용하여 있어보이도록」**.
+   🔴 **% 옆에 «몇 건 중 몇 건»을 반드시 함께 둔다** — 「50%」는 2건 중 1건일 때도
+     20건 중 10건일 때도 같은 얼굴이라, 크기를 모르면 학부모가 잘못 읽는다. */
+.rp-m{display:flex;align-items:center;gap:11px;padding:10px 0;
+  border-bottom:1px solid var(--line);font-size:12.5px;}
+.rp-m:last-child{border-bottom:0;}
+/* 라벨과 %는 폭을 고정한다 — 줄마다 다른 자리에서 시작하면 세로로 훑을 수가 없다 (W-2와 같은 이유). */
+.rp-m .k{flex-shrink:0;width:66px;color:var(--dim);font-size:12px;}
+.rp-m .bar{flex-shrink:0;width:96px;height:6px;border-radius:99px;background:var(--line);
+  overflow:hidden;display:block;}
+.rp-m .bar i{display:block;height:100%;border-radius:99px;background:var(--ink);}
+.rp-m .p{flex-shrink:0;width:38px;text-align:right;font-weight:700;color:var(--ink);}
+.rp-m .x{color:var(--sub);line-height:1.6;min-width:0;}
+/* ⚠ `<s>`는 이 프로젝트에서 «곁들이는 말»이다 — 기본 취소선을 지운다 (8절). */
+.rp-m .x s{text-decoration:none;color:var(--dim);font-size:11.5px;margin-left:6px;}
+
+.rp-sec{margin:18px 0 8px;font-size:12px;color:var(--dim);}
+.rp-tb{width:100%;border-collapse:collapse;font-size:12.5px;}
+.rp-tb th{text-align:left;font-weight:400;font-size:11.5px;color:var(--dim);
+  padding:0 10px 7px 0;border-bottom:1px solid var(--line);white-space:nowrap;}
+.rp-tb td{padding:10px 10px 10px 0;border-bottom:1px solid var(--line);
+  vertical-align:top;color:var(--sub);}
+.rp-tb tr:last-child td{border-bottom:0;}
+.rp-tb .nm{color:var(--ink);font-weight:600;}
+.rp-tb .nm s{display:block;text-decoration:none;color:var(--dim);
+  font-weight:400;font-size:11px;margin-top:3px;}
+.rp-tb td s{text-decoration:none;color:var(--dim);font-size:11px;margin-left:5px;}
+.rp-tb .sm{font-size:11px;color:var(--dim);}
+.rp-tb .pc{margin-left:7px;color:var(--sub);}
+.rp-tb .dash{color:var(--line);}
+
+/* 가져다 쓸 글귀 — 🔴 **누르면 «입력칸에 들어갈 뿐»이다.** 저장은 선생님이 따로 누른다.
+   그래서 버튼처럼 보이되 «확정»으로 읽히지 않게 옅게 둔다. */
+.rp-ph{margin-top:18px;padding-top:14px;border-top:1px solid var(--line);}
+.rp-ph-list{display:flex;flex-direction:column;gap:6px;}
+.rp-ph-b{text-align:left;font-family:inherit;font-size:12.5px;line-height:1.65;
+  padding:9px 11px;border:1px solid var(--line);border-radius:var(--r-sm);
+  background:var(--paper);color:var(--sub);cursor:pointer;}
+.rp-ph-b:hover{border-color:var(--ink);color:var(--ink);background:var(--card);}
 .rp-edit{max-width:620px;}
 .rp-edit .sd-note{min-height:92px;}
 /* 드로어 안에서는 알림 패널의 «상자»를 벗긴다 — 드로어가 이미 상자라 테두리가 이중이 된다. */
@@ -11178,14 +11218,41 @@ function monthlyReportData(s, rec, ym, ctx){
   const inMonth = d => ymOf(d)===ym;
 
   /* ⚠ **분모는 «기록된 날»이다.** 시간표로 세면 휴강·보강이 어긋나 실제와 달라진다. */
-  const attList = (rec.attendance||[]).filter(a=>inMonth(a.date));
+  const attList = (rec.attendance||[]).filter(a=>inMonth(a.date) && a.status!=='퇴원');
   const att = {'출석':0, '지각':0, '조퇴':0, '결석':0};
   attList.forEach(a=>{ if(att[a.status]!==undefined) att[a.status]++; });
+  /* ⚠ **출석률은 명단·KPI와 «같은 식»이어야 한다**(rosterStats) — 결석이 아닌 날 ÷ 전체.
+       여기서만 달리 세면 같은 화면 안에서 두 숫자가 어긋난다. */
+  const attPct = attList.length
+    ? Math.round(attList.filter(a=>a.status!=='결석').length / attList.length * 100) : null;
 
   /* 시험 — 반 평균과 등수는 «같은 시험(이름+날짜)을 본 사람들» 사이에서만 뜻이 있다.
      ⚠ 퇴원생을 빼지 않는다 — 지난 시험은 이미 있었던 일이다 (examWrongCounts와 같은 규칙).
      ⚠ 사용자가 **「반 평균과 등수를 넣는다」**로 정했다 (2026-08-27). 다만 **분모를 반드시 함께**
        적는다 — 「2등」만 있으면 실제보다 크게 읽힌다. */
+  /* 🔴 **고아 숙제를 뺀다** (2026-08-27에 실제로 걸렸다) — 문항이 사라져도 학생 기록의 숙제는
+       남는다(3291행 머리말). 리포트가 raw `wrongHomework`를 세는 바람에 실데이터에서
+       **「9건 중 4건」으로 나왔는데 살아 있는 것은 3건뿐**이었다.
+       **학부모에게 나갈 문서에 유령 숫자가 실릴 뻔했다.** 읽는 쪽에서 막는다는 결정을 여기도 따른다.
+     ⚠ ctx.liveWrong 이 없으면(node 검사 등) 거르지 않는다 — 그때는 주는 쪽이 이미 고른 것이다. */
+  const liveHw = ctx.liveWrong ? ctx.liveWrong(rec) : (rec.wrongHomework||[]);
+  const wrong = liveHw.filter(h=>inMonth(h.assignedAt));
+  /* 낸 답이 맞았는가 — 연대기·검토 화면과 같은 식이다(변형 문항의 정답과 문자열 비교). */
+  const isCorrect = h => !!(h.done && ctx.answerOf &&
+    String(h.studentAnswer||'').trim() === String(ctx.answerOf(h.bankId)||'').trim());
+
+  /* 시험 하나에 딸린 오답 숙제. 시험 이름·날짜로 시험지를 찾아 그 examId의 숙제를 센다.
+     ⚠ 성적(scores)과 시험지(exams)를 잇는 것이 도메인에 없다(12818행 머리말) —
+       **이름과 날짜가 둘 다 같을 때만** 잇는다. 이름만으로 짐작해 이으면 그 줄이 거짓이 된다.
+       못 이으면 null을 돌려주고 그 줄은 화면에서 빠진다. */
+  const examWrongOf = x => {
+    const ex = (ctx.exams||[]).find(e=>e.title===x.name && e.date===x.date);
+    if(!ex) return null;
+    const mine = liveHw.filter(h=>h.examId===ex.id);
+    if(!mine.length) return null;
+    return {total:mine.length, done:mine.filter(h=>h.done).length, correct:mine.filter(isCorrect).length};
+  };
+
   const scores = (rec.scores||[]).filter(x=>inMonth(x.date) && x.total).map(x=>{
     const seen = {};
     for(const sid in (ctx.allRecords||{})){
@@ -11201,11 +11268,17 @@ function monthlyReportData(s, rec, ym, ctx){
        그 시험을 이 학생만 봤다면 「반 평균 92점 · 1명 중 1등」이 되는데,
        **자기 점수를 자기와 견준 것**이라 정보가 0이면서 학부모에게는 뜻이 있는 말처럼 읽힌다. */
     const alone = peers.length < 2;
+    /* 🔵 **그 시험에서 나온 오답 숙제를 여기 붙인다** (사용자가 요청했다 —
+       「성적과 성적에 대한 오답 … 도 기록했으면」). 점수 옆에 있어야 «틀린 것을 어떻게 했는가»가
+       한 이야기로 읽힌다. 따로 떼면 두 숫자가 서로 남이 된다.
+       ⚠ 배정일이 다음 달로 넘어가도 «그 시험의» 숙제이므로 달로 자르지 않는다. */
+    const exHw = examWrongOf ? examWrongOf(x) : null;
     return {
       name: x.name, date: x.date, score: x.score, total: x.total,
       pct: Math.round(x.score / x.total * 100),
       avg: alone ? null : Math.round(peers.reduce((n,q)=>n+q.pct,0)/peers.length),
-      rank: (alone || at<0) ? null : at+1, of: peers.length
+      rank: (alone || at<0) ? null : at+1, of: peers.length,
+      wrong: exHw
     };
   });
 
@@ -11213,7 +11286,6 @@ function monthlyReportData(s, rec, ym, ctx){
   const asgs = (ctx.assignments||[]).filter(a=>a.classId===s.classId && inMonth(a.dueDate||a.createdAt));
   const hwDone = ctx.isDone ? asgs.filter(a=>ctx.isDone(rec, a.id)).length : 0;
 
-  const wrong = (rec.wrongHomework||[]).filter(h=>inMonth(h.assignedAt));
 
   /* 🔴 **강의 시청과 진도에는 날짜가 없다** — videoProgress는 편별 «누적치» 하나뿐이고
        progress.unit은 «지금» 어디까지 나갔는지다. 그 달로 자를 방법이 아예 없다.
@@ -11222,6 +11294,15 @@ function monthlyReportData(s, rec, ym, ctx){
        달이 지날수록 옛 리포트가 저절로 «고쳐 쓰이는» 셈이라, 과거를 고치지 않는다는
        이 프로젝트의 규칙(examWrongCounts · W-1)과 정면으로 어긋난다.
      ⚠ 이번 달 리포트에는 넣되 **«지금까지»라고 밝혀서** 내보낸다. 달치인 척하면 거짓이 된다. */
+  /* 데일리퀴즈 — log 항목이 {d:날짜, id:'bankId:kind', ok:참거짓}이라 **날짜가 있다.**
+     그래서 이것은 «그 달»로 정확히 자를 수 있다(시청률·진도와 다른 점이다).
+     ⚠ **«푼 날 수»를 함께 센다** — 정답률만으로는 «꾸준히 했는가»를 말할 수 없다.
+       한 날 몰아서 12문항을 푼 것과 여덟 날에 걸쳐 푼 것은 학부모가 볼 때 다른 이야기다. */
+  const qlog = ((rec.dailyQuiz && rec.dailyQuiz.log) || []).filter(e=>inMonth(e.d));
+  const qdays = {};
+  qlog.forEach(e=>{ qdays[e.d] = true; });
+  const qok = qlog.filter(e=>e.ok).length;
+
   const isNow = ctx.isThisMonth !== false;
   const vids = !isNow ? [] : (ctx.videos||[]).filter(v=>!v.studentId || v.studentId===s.studentId);
   const vp = rec.videoProgress || {};
@@ -11233,13 +11314,93 @@ function monthlyReportData(s, rec, ym, ctx){
   return {
     ym: ym, name: s.name, school: s.school||'', grade: s.grade||'',
     className: ctx.className || '',
-    att: att, attDays: attList.length,
+    att: att, attDays: attList.length, attPct: attPct,
     scores: scores,
-    hw: asgs.length ? {done:hwDone, total:asgs.length} : null,
-    wrong: wrong.length ? {done:wrong.filter(h=>h.done).length, total:wrong.length} : null,
+    hw: asgs.length ? {done:hwDone, total:asgs.length,
+          pct: Math.round(hwDone/asgs.length*100)} : null,
+    wrong: wrong.length ? {done:wrong.filter(h=>h.done).length, total:wrong.length,
+          correct: wrong.filter(isCorrect).length,
+          pct: Math.round(wrong.filter(h=>h.done).length/wrong.length*100)} : null,
+    quiz: qlog.length ? {n:qlog.length, ok:qok, days:Object.keys(qdays).length,
+          pct: Math.round(qok/qlog.length*100)} : null,
     video: vids.length ? {seen:vidSeen.length, total:vids.length, pct:vidPct} : null,
     unit: isNow ? ((rec.progress||{}).unit || '') : ''
   };
+}
+
+/* 화면도 글귀도 이것 하나로 재료를 얻는다 — 두 곳에서 따로 부르면 조건이 어긋난다. */
+function reportDataOf(s, rec, ym){
+  return monthlyReportData(s, rec, ym, {
+    allRecords: state.allRecords, assignments: DATA.assignments,
+    videos: DATA.videos, isDone: hwIsDone, className: classNameOf(s.classId),
+    exams: DATA.exams, liveWrong: liveWrongHomework,
+    answerOf: bid => (DATA.problemBank.find(b=>b.id===bid)||{}).variantAnswer,
+    isThisMonth: ym === ymNow()
+  });
+}
+/* =================== 예비 글귀 (2026-08-27 · R-1b) ===================
+   사용자가 요청했다 — **「선생님 한마디 입력을 지금처럼 할수 있게 남겨두되 예비 글귀들
+   몇개정도 만들어두고 선택할 수 있도록」**.
+
+   🔴 **이것이 «문장을 지어내지 않는다»는 규칙과 부딪히지 않는 이유는 셋이다.**
+     ① **고르는 사람은 선생님이다.** 저절로 실리지 않는다 — 누르면 «입력칸에 들어갈 뿐»이고,
+        저장은 여전히 선생님이 「저장」을 눌러야 된다. 고른 뒤 고쳐 쓸 수도 있다.
+     ② **데이터가 뒷받침하는 글귀만 목록에 뜬다.** 결석이 있는 달에 「결석 없이」가 뜨면 안 된다.
+        그래서 아래는 전부 그 달 숫자를 보고 «해당할 때만» 나온다.
+     ③ **사람의 판단이 들어가는 말(권유·당부)은 «사실 주장»을 하지 않는다.**
+        「~해 주시면 좋겠습니다」는 선생님의 뜻이지 내가 관찰한 사실이 아니다.
+   ⚠ **그래도 이것은 «초안»이다.** 화면에 그렇게 적어 둔다 — 고르고 나서 손보시라고.
+   ⚠ 새 글귀를 더할 때도 **조건 없이 항상 뜨는 «칭찬»은 만들지 말 것.** 그것이 8절의 그 일이다. */
+function reportPhrases(d){
+  const out = [];
+  const 결석 = d.att ? d.att["결석"] : 0, 지각 = d.att ? d.att["지각"] : 0;
+
+  if(d.attDays >= 2 && 결석===0 && 지각===0)
+    out.push("이번 달은 한 번도 빠지지 않고 제시간에 왔습니다.");
+  if(d.attDays >= 2 && 결석===0 && 지각 > 0)
+    out.push("결석 없이 꾸준히 나오고 있습니다. 다만 지각이 몇 번 있어 조금만 서두르면 좋겠습니다.");
+  if(결석 > 0)
+    out.push("이번 달 결석이 있었습니다. 빠진 부분은 보충으로 메우고 있으니 가정에서도 한 번 살펴봐 주시면 좋겠습니다.");
+
+  if(d.hw && d.hw.total > 0 && d.hw.done === d.hw.total)
+    out.push("내준 과제를 빠짐없이 해왔습니다.");
+  if(d.hw && d.hw.total > 0 && d.hw.pct < 60)
+    out.push("과제 제출이 밀리는 편입니다. 집에서 한 번 챙겨봐 주시면 큰 도움이 됩니다.");
+
+  if(d.wrong && d.wrong.total > 0 && d.wrong.pct >= 80)
+    out.push("틀린 문제를 그냥 넘기지 않고 오답까지 끝까지 붙잡고 갑니다.");
+  if(d.wrong && d.wrong.total > 0 && d.wrong.pct < 50)
+    out.push("오답 숙제가 남아 있습니다. 틀린 문제를 다시 푸는 것이 지금 시기에 가장 크게 남습니다.");
+
+  if(d.quiz && d.quiz.days >= 8)
+    out.push("데일리퀴즈를 거의 매일 챙기고 있습니다. 이 습관이 계속되면 좋겠습니다.");
+  if(d.quiz && d.quiz.days > 0 && d.quiz.days < 5)
+    out.push("데일리퀴즈에 들어오는 날이 뜸합니다. 하루 세 문제라 부담이 크지 않으니 함께 챙겨봐 주세요.");
+
+  if(d.scores.length && d.scores[0].rank && d.scores[0].rank === 1)
+    out.push("이번 시험에서 반에서 가장 좋은 결과를 냈습니다.");
+  if(d.scores.length && d.scores[0].avg !== null && d.scores[0].pct > d.scores[0].avg)
+    out.push("이번 시험은 반 평균을 웃돌았습니다.");
+
+  /* 마무리 — 사실 주장이 없는 «선생님의 뜻»이라 늘 둔다. 다만 이것도 «초안»이다. */
+  out.push("다음 달에도 지금처럼 해 나가면 좋겠습니다. 궁금하신 점은 언제든 연락 주세요.");
+  return out;
+}
+/* 글귀를 «입력칸에 넣기만» 한다 — 저장하지 않는다. 선생님이 고쳐 쓰고 「저장」을 눌러야 남는다.
+   🔴 **누른 «그 문장»을 그대로 받는다 — 인덱스로 집으면 안 된다** (2026-08-27에 실제로 걸렸다).
+     글귀 목록은 그 달 데이터를 보고 만들어지는데, `loadAllRecordsIfNeeded()`가 끝나기 «전»에
+     한 번 그려지고 «뒤»에 다시 그려진다. 그 사이 목록이 길어지면 **같은 자리에 다른 글귀가 온다.**
+     실제로 마지막 글귀를 눌렀는데 데일리퀴즈 문장이 들어갔다.
+     버튼의 `this.textContent`가 곧 그 글귀라 이스케이프 걱정도 없다. */
+function reportUsePhrase(sid, ym, text){
+  text = String(text||'').trim();
+  if(!text) return;
+  const el = document.getElementById("rp-comment");
+  const cur = (el ? el.value : reportCommentText(sid, ym));
+  /* 이어 붙인다 — 두 개를 고르면 두 문장이 된다. 갈아치우면 애써 쓴 말이 사라진다. */
+  const next = cur.trim() ? cur.replace(/\s+$/, "") + " " + text : text;
+  state.reportDrafts[reportKey(sid, ym)] = next;
+  if(el){ el.value = next; el.focus(); }
 }
 
 function reportKey(sid, ym){ return sid + ':' + ym; }
@@ -11279,36 +11440,57 @@ function sdReportHTML(s, rec){
   loadAllRecordsIfNeeded();
   loadReportIfNeeded(sid, ym);
   const isThisMonth = ym === ymNow();
-  const d = monthlyReportData(s, rec, ym, {
-    allRecords: state.allRecords, assignments: DATA.assignments,
-    videos: DATA.videos, isDone: hwIsDone, className: classNameOf(s.classId),
-    isThisMonth: isThisMonth
-  });
+  const d = reportDataOf(s, rec, ym);
   const doc = state.reportDocs[reportKey(sid,ym)] || {};
   const comment = reportCommentText(sid, ym);
 
-  const row = (label, value, note) => `<div class="rp-row"><span class="k">${label}</span>
-    <span class="v">${value}${note ? `<s>${note}</s>` : ''}</span></div>`;
+  /* 한 줄 = 이름 · 막대 · % · 풀어 쓴 말. 🔴 **% 만 두지 않는다** — 「50%」는 2건 중 1건일 때도
+     20건 중 10건일 때도 같은 얼굴이라, 옆에 «몇 건 중 몇 건»이 없으면 학부모가 크기를 못 잡는다. */
+  const meter = (label, pct, text) => `<div class="rp-m">
+    <span class="k">${label}</span>
+    <span class="bar"><i style="width:${Math.max(0,Math.min(100,pct))}%"></i></span>
+    <b class="p mono">${pct}%</b>
+    <span class="x">${text}</span>
+  </div>`;
 
-  const lines = [];
-  if(d.attDays) lines.push(row('출결',
-    '출석 <b class="mono">' + d.att['출석'] + '</b>'
-    + (d.att['지각'] ? ' · 지각 <b class="mono">' + d.att['지각'] + '</b>' : '')
-    + (d.att['조퇴'] ? ' · 조퇴 <b class="mono">' + d.att['조퇴'] + '</b>' : '')
-    + (d.att['결석'] ? ' · 결석 <b class="mono">' + d.att['결석'] + '</b>' : ''),
-    '기록된 ' + d.attDays + '일 기준'));
-  d.scores.forEach(x=>lines.push(row('시험',
-    escHtml(x.name) + ' <b class="mono">' + x.score + '/' + x.total + '</b>',
-    (x.avg!==null ? '반 평균 ' + x.avg + '점' : '')
-    + (x.rank ? ' · ' + x.of + '명 중 ' + x.rank + '등' : ''))));
-  if(d.hw)    lines.push(row('과제',
-    '<b class="mono">' + d.hw.total + '</b>건 중 <b class="mono">' + d.hw.done + '</b>건 제출'));
-  if(d.wrong) lines.push(row('오답 숙제',
-    '<b class="mono">' + d.wrong.total + '</b>건 중 <b class="mono">' + d.wrong.done + '</b>건 완료'));
-  if(d.video) lines.push(row('강의 시청',
-    '<b class="mono">' + d.video.total + '</b>편 중 <b class="mono">' + d.video.seen + '</b>편',
-    (d.video.pct!==null ? '평균 ' + d.video.pct + '% · ' : '') + '지금까지'));
-  if(d.unit)  lines.push(row('진도', escHtml(d.unit), '지금'));
+  const meters = [];
+  if(d.attPct !== null){
+    const bits = ["출석 " + d.att["출석"]];
+    if(d.att["지각"]) bits.push("지각 " + d.att["지각"]);
+    if(d.att["조퇴"]) bits.push("조퇴 " + d.att["조퇴"]);
+    if(d.att["결석"]) bits.push("결석 " + d.att["결석"]);
+    meters.push(meter("출결", d.attPct, bits.join(" · ") + " <s>기록된 " + d.attDays + "일</s>"));
+  }
+  if(d.hw)    meters.push(meter("과제", d.hw.pct, d.hw.total + "건 중 " + d.hw.done + "건 제출"));
+  if(d.wrong) meters.push(meter("오답 숙제", d.wrong.pct,
+                d.wrong.total + "건 중 " + d.wrong.done + "건 완료" +
+                (d.wrong.done ? " <s>정답 " + d.wrong.correct + "</s>" : "")));
+  if(d.quiz)  meters.push(meter("데일리퀴즈", d.quiz.pct,
+                d.quiz.n + "문항 중 " + d.quiz.ok + "문항 정답 <s>" + d.quiz.days + "일 참여</s>"));
+  if(d.video && d.video.pct !== null)
+    meters.push(meter("강의 시청", d.video.pct,
+      d.video.total + "편 중 " + d.video.seen + "편 <s>지금까지</s>"));
+  /* ⚠ **진도는 눈금이 아니다** — 「어디까지 나갔나」라 %가 없다.
+       눈금 줄만 만들다가 한 번 흘렸다(2026-08-27). 자리는 눈금 아래 텍스트 한 줄. */
+  if(d.unit) meters.push(`<div class="rp-m"><span class="k">진도</span><span class="x" style="color:var(--ink);">${escHtml(d.unit)}<s>지금</s></span></div>`);
+
+  /* 시험은 표다 — 점수 · 반 평균 · 등수 · 그 시험의 오답까지 «한 줄에 나란히» 놓아야
+     「몇 점이었고, 반에서 어디였고, 틀린 것을 어떻게 했나」가 한 눈에 읽힌다. */
+  const examTable = !d.scores.length ? "" : `<table class="rp-tb">
+    <thead><tr><th>시험</th><th>점수</th><th>반 평균</th><th>등수</th><th>이 시험 오답</th></tr></thead>
+    <tbody>${d.scores.map(x=>`<tr>
+      <td class="nm">${escHtml(x.name)}<s>${escHtml(x.date)}</s></td>
+      <td><b class="mono">${x.score}</b><span class="mono sm">/${x.total}</span>
+        <span class="mono sm pc">${x.pct}%</span></td>
+      <td>${x.avg===null ? '<span class="dash">—</span>' : '<span class="mono">'+x.avg+'</span>점'}</td>
+      <td>${x.rank ? '<b class="mono">'+x.rank+'</b><span class="mono sm">/'+x.of+'</span>' : '<span class="dash">—</span>'}</td>
+      <td>${!x.wrong ? '<span class="dash">—</span>'
+        : `<span class="mono">${x.wrong.done}</span>/<span class="mono">${x.wrong.total}</span>건
+          <s>정답 ${x.wrong.correct}</s>`}</td>
+    </tr>`).join('')}</tbody>
+  </table>`;
+
+  const phraseList = reportPhrases(d);
 
   return `<div class="rp-wrap">
     <div class="rp-bar">
@@ -11327,29 +11509,45 @@ function sdReportHTML(s, rec){
           ${d.school||d.grade ? `<s>·</s>${escHtml(d.school)} ${escHtml(d.grade)}` : ''}
           ${d.className ? `<s>·</s>${escHtml(d.className)}` : ''}</div>
       </div>
-      ${lines.length ? `<div class="rp-body">${lines.join('')}</div>`
+
+      ${meters.length || examTable ? `
+        <div class="rp-body">${meters.join('')}</div>
+        ${examTable ? `<div class="rp-sec">시험</div>${examTable}` : ''}
+      `
         : '<div class="rp-none">이 달에는 기록이 없습니다 — 출결 · 시험 · 과제 어느 것도 남지 않았습니다.</div>'}
+
       ${comment ? `<div class="rp-say"><div class="rp-say-t">선생님 한마디</div>
         <p>${escHtml(comment)}</p></div>` : ''}
     </div>
 
-    ${/* ⚠ 쓰는 칸은 «문서 밖»에 둔다 — 2차에서 인쇄할 때 위 .rp-doc만 나가야 한다. */''}
+    ${/* ⚠ 쓰는 칸과 글귀는 «문서 밖»에 둔다 — 2차에서 인쇄할 때 위 .rp-doc만 나가야 한다. */''}
     <div class="rp-edit">
       <div class="t-sec" style="margin:0 0 7px;">선생님 한마디
         <span style="font-weight:400;color:var(--dim);">비워 두면 리포트에 나가지 않습니다</span></div>
-      <textarea id="rp-comment" class="sd-note" placeholder="이 달 이 학생을 보며 느끼신 것을 그대로 적어 주세요.&#10;여기 적은 말만 학부모님께 나갑니다 — 시스템이 문장을 지어내지 않습니다."
+      <textarea id="rp-comment" class="sd-note" placeholder="이 달 이 학생을 보며 느끼신 것을 그대로 적어 주세요.&#10;아래 글귀를 눌러 가져다 쓰신 뒤 고쳐 쓰셔도 됩니다."
         oninput="reportCommentInput(&#39;${sid}&#39;,&#39;${ym}&#39;, this.value)">${escHtml(comment)}</textarea>
       <div class="sd-note-foot">
         <span>${doc.at ? `마지막 저장 <span class="sd-note-at">${escHtml(doc.at)}</span>` : '아직 쓰지 않았습니다'}</span>
         <button class="btn p sm" onclick="saveReportComment(&#39;${sid}&#39;,&#39;${ym}&#39;)">저장</button>
       </div>
+
+      <div class="rp-ph">
+        <div class="t-sec" style="margin:0 0 7px;">가져다 쓸 글귀
+          <span style="font-weight:400;color:var(--dim);">이 달 기록에 해당하는 것만 나옵니다 · 누르면 위에 들어갑니다</span></div>
+        <div class="rp-ph-list">
+          ${phraseList.map(t=>`<button class="rp-ph-b" title="눌러서 가져다 쓰기"
+            onclick="reportUsePhrase(&#39;${sid}&#39;,&#39;${ym}&#39;, this.textContent)">${escHtml(t)}</button>`).join('')}
+        </div>
+        <p class="st-note" style="margin-top:9px;">이것은 <b>초안입니다.</b> 가져다 쓰신 뒤
+          선생님 말로 고쳐 주세요 — <b>저장을 누르셔야 리포트에 들어갑니다.</b></p>
+      </div>
     </div>
+
     <p class="st-note">숫자는 이 달에 쌓인 기록에서 그대로 옵니다. <b>없던 항목은 줄째로 빠집니다</b> —
       빈 칸을 남기면 «안 한 것»으로 읽히기 때문입니다.
       ${!s.parentPhone ? '<br><b style="color:var(--late);">학부모 전화번호가 비어 있습니다</b> — 설정 &gt; 학생에서 채워 주세요.' : ''}</p>
   </div>`;
 }
-
 function sdScreenHTML(s, rec, isAssistant){
   const sid = s.studentId;
   const SR = signalRules();   // KPI의 빨강도 명단과 같은 임계값을 본다
