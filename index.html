@@ -1251,6 +1251,27 @@
 /* ⚠ `<s>`는 이 프로젝트에서 «곁들이는 말»이다 — 기본 취소선을 지운다 (8절). */
 .rp-m .x s{text-decoration:none;color:var(--dim);font-size:11.5px;margin-left:6px;}
 
+/* 부족한 줄에 색을 준다 (2026-08-27 · R-1c) — 사용자가 요청했다:
+   **「부족한 것이나 미비한 것은 신호판과 비슷하게 붉은색이나 노란색을 이용해서 표시」**.
+   🔴 **색은 «막대와 %»에만 준다.** 줄 전체를 물들이면 학부모 문서가 경고장처럼 보인다 —
+     이것은 한 달을 돌아보는 자료지 통보문이 아니다.
+   ⚠ 왼쪽 띠는 «어느 줄인지» 짚어 주는 정도로만 얇게 둔다. */
+.rp-m{position:relative;padding-left:0;}
+.rp-m.r .bar i{background:var(--no);}
+.rp-m.y .bar i{background:var(--late);}
+.rp-m.r .p{color:var(--no);}
+.rp-m.y .p{color:var(--late);}
+.rp-m.r .bar{background:var(--nobg);}
+.rp-m.y .bar{background:var(--latebg);}
+.rp-m.r .k,.rp-m.y .k{color:var(--sub);}
+
+/* 범례 — 색의 뜻을 «학부모 말»로 적는다. 「위험」·「주의」는 쓰지 않는다. */
+.rp-leg{display:flex;flex-wrap:wrap;gap:16px;margin-top:14px;padding-top:12px;
+  border-top:1px solid var(--line);font-size:11.5px;color:var(--dim);}
+.rp-leg span{display:inline-flex;align-items:center;gap:6px;}
+.rp-leg i{width:9px;height:9px;border-radius:99px;display:inline-block;flex-shrink:0;}
+.rp-leg i.r{background:var(--no);}
+.rp-leg i.y{background:var(--late);}
 .rp-sec{margin:18px 0 8px;font-size:12px;color:var(--dim);}
 .rp-tb{width:100%;border-collapse:collapse;font-size:12.5px;}
 .rp-tb th{text-align:left;font-weight:400;font-size:11.5px;color:var(--dim);
@@ -11403,6 +11424,26 @@ function reportUsePhrase(sid, ym, text){
   if(el){ el.value = next; el.focus(); }
 }
 
+/* 리포트 한 줄의 «등급» — 빈 문자열(넉넉함) · y(조금 아쉬움) · r(보충 필요).
+   사용자가 요청했다 — **「부족한 것이나 미비한 것은 신호판과 비슷하게 붉은색이나 노란색으로」**.
+
+   🔴 **임계값을 여기서 새로 지어내지 않는다.** 신호 규칙(설정 > 신호 규칙)에 이미 있는 것은
+     **그대로 가져다 쓴다** — 같은 학생이 신호판에서는 빨강인데 리포트에서는 멀쩡하면
+     둘 중 하나는 거짓말이 된다. 선생님이 설정에서 임계값을 바꾸면 이 색도 함께 움직인다.
+     · 출결 → `R.attPct`(기본 80) 미만이면 r. 그 위 10점 안쪽이면 y
+     · 강의 시청 → **규칙에 이미 3단계가 있다**(`vidHeavy` 50 · `vidWarn` 70). 그대로 쓴다
+     · 오답 «제출» → 남은 미제출이 `R.wrong`(기본 3)건 이상이면 r — 신호와 같은 잣대다
+   ⚠ **아래 둘은 신호 규칙에 없어서 내가 정한 값이다** (60 / 80). 과제·오답 정답률·데일리퀴즈.
+     기준이 필요하면 신호 규칙에 항목을 늘리고 여기서 그것을 읽는 쪽이 옳다.
+   ⚠ **학부모 문서에 「위험」·「주의」라는 «말»은 쓰지 않는다** — 그것은 선생님이 볼 내부 판단이다
+     (R-1에서 신호를 빼기로 한 것과 같은 뜻). 여기서는 **색과 범례로만** 말한다. */
+function rpGrade(pct, kind, R, extra){
+  if(pct === null || pct === undefined) return '';
+  if(kind === 'att')   return pct < R.attPct ? 'r' : (pct < R.attPct + 10 ? 'y' : '');
+  if(kind === 'video') return pct < R.vidHeavy ? 'r' : (pct < R.vidWarn ? 'y' : '');
+  if(kind === 'hwLeft') return extra >= R.wrong ? 'r' : (extra > 0 ? 'y' : '');
+  return pct < 60 ? 'r' : (pct < 80 ? 'y' : '');
+}
 function reportKey(sid, ym){ return sid + ':' + ym; }
 async function loadReportIfNeeded(sid, ym){
   const k = reportKey(sid, ym);
@@ -11444,35 +11485,63 @@ function sdReportHTML(s, rec){
   const doc = state.reportDocs[reportKey(sid,ym)] || {};
   const comment = reportCommentText(sid, ym);
 
-  /* 한 줄 = 이름 · 막대 · % · 풀어 쓴 말. 🔴 **% 만 두지 않는다** — 「50%」는 2건 중 1건일 때도
-     20건 중 10건일 때도 같은 얼굴이라, 옆에 «몇 건 중 몇 건»이 없으면 학부모가 크기를 못 잡는다. */
-  const meter = (label, pct, text) => `<div class="rp-m">
-    <span class="k">${label}</span>
-    <span class="bar"><i style="width:${Math.max(0,Math.min(100,pct))}%"></i></span>
-    <b class="p mono">${pct}%</b>
-    <span class="x">${text}</span>
-  </div>`;
+  const R = signalRules();
+  let anyWarn = false;
+  /* 한 줄 = 이름 · 막대 · % · 풀어 쓴 말.
+     🔴 **% 만 두지 않는다** — 「50%」는 2건 중 1건일 때도 20건 중 10건일 때도 같은 얼굴이라,
+       옆에 «몇 건 중 몇 건»이 없으면 학부모가 크기를 못 잡는다.
+     ⚠ **곁말(「기록된 n일」·「지금까지」·「지금」)은 뺐다** (2026-08-27 · 사용자가 「의미 없는 것 같다」).
+       그 대신 **분모를 본문 안에 드러낸다** — 출결은 출석·지각·결석을 «0이어도» 적어서
+       그 합이 곧 며칠인지 말하게 했다. 곁말로 분모를 대신하던 것을 본문으로 옮긴 셈이다. */
+  const meter = (label, pct, text, g) => {
+    if(g) anyWarn = true;
+    return `<div class="rp-m${g ? ' ' + g : ''}">
+      <span class="k">${label}</span>
+      <span class="bar"><i style="width:${Math.max(0,Math.min(100,pct))}%"></i></span>
+      <b class="p mono">${pct}%</b>
+      <span class="x">${text}</span>
+    </div>`;
+  };
 
   const meters = [];
   if(d.attPct !== null){
-    const bits = ["출석 " + d.att["출석"]];
-    if(d.att["지각"]) bits.push("지각 " + d.att["지각"]);
-    if(d.att["조퇴"]) bits.push("조퇴 " + d.att["조퇴"]);
-    if(d.att["결석"]) bits.push("결석 " + d.att["결석"]);
-    meters.push(meter("출결", d.attPct, bits.join(" · ") + " <s>기록된 " + d.attDays + "일</s>"));
+    /* 출석·지각·결석은 **0이어도 적는다** — 「결석 0」은 학부모가 가장 보고 싶은 줄이고,
+       셋을 다 적으면 합이 곧 분모라 「기록된 n일」이 필요 없어진다.
+       조퇴만 드문 일이라 있을 때만 낀다. */
+    const bits = ["출석 " + d.att["출석"] + "일", "지각 " + d.att["지각"] + "일"];
+    if(d.att["조퇴"]) bits.push("조퇴 " + d.att["조퇴"] + "일");
+    bits.push("결석 " + d.att["결석"] + "일");
+    meters.push(meter("출결", d.attPct, bits.join(" · "), rpGrade(d.attPct, "att", R)));
   }
-  if(d.hw)    meters.push(meter("과제", d.hw.pct, d.hw.total + "건 중 " + d.hw.done + "건 제출"));
-  if(d.wrong) meters.push(meter("오답 숙제", d.wrong.pct,
-                d.wrong.total + "건 중 " + d.wrong.done + "건 완료" +
-                (d.wrong.done ? " <s>정답 " + d.wrong.correct + "</s>" : "")));
-  if(d.quiz)  meters.push(meter("데일리퀴즈", d.quiz.pct,
-                d.quiz.n + "문항 중 " + d.quiz.ok + "문항 정답 <s>" + d.quiz.days + "일 참여</s>"));
+  if(d.hw) meters.push(meter("과제 제출", d.hw.pct,
+    d.hw.total + "건 중 " + d.hw.done + "건 제출", rpGrade(d.hw.pct, "hw", R)));
+  /* 🔵 **오답 숙제를 «제출»과 «정답률»로 가른다** (2026-08-27 · 사용자 요청).
+     둘은 다른 이야기다 — **다 냈는데 많이 틀린 것**과 **아예 안 낸 것**은 집에서 할 일이 다르다.
+     ⚠ 정답률의 분모는 «낸 것»이다(`done`). 안 낸 것까지 분모에 넣으면 «틀렸다»와 «안 냈다»가 섞인다.
+     ⚠ 하나도 안 냈으면 정답률 줄은 아예 빼야 한다 — 0/0은 0%가 아니라 «말할 수 없음»이다. */
+  if(d.wrong){
+    const left = d.wrong.total - d.wrong.done;
+    meters.push(meter("오답 제출", d.wrong.pct,
+      d.wrong.total + "건 중 " + d.wrong.done + "건 제출" +
+      (left ? " <s>남은 " + left + "건</s>" : ""),
+      rpGrade(d.wrong.pct, "hwLeft", R, left)));
+    if(d.wrong.done){
+      const cpct = Math.round(d.wrong.correct / d.wrong.done * 100);
+      meters.push(meter("오답 정답률", cpct,
+        "제출한 " + d.wrong.done + "건 중 " + d.wrong.correct + "건 정답",
+        rpGrade(cpct, "rate", R)));
+    }
+  }
+  if(d.quiz) meters.push(meter("데일리퀴즈", d.quiz.pct,
+    d.quiz.days + "일 참여 · " + d.quiz.n + "문항 중 " + d.quiz.ok + "문항 정답",
+    rpGrade(d.quiz.pct, "rate", R)));
   if(d.video && d.video.pct !== null)
     meters.push(meter("강의 시청", d.video.pct,
-      d.video.total + "편 중 " + d.video.seen + "편 <s>지금까지</s>"));
+      d.video.total + "편 중 " + d.video.seen + "편 시청",
+      rpGrade(d.video.pct, "video", R)));
   /* ⚠ **진도는 눈금이 아니다** — 「어디까지 나갔나」라 %가 없다.
        눈금 줄만 만들다가 한 번 흘렸다(2026-08-27). 자리는 눈금 아래 텍스트 한 줄. */
-  if(d.unit) meters.push(`<div class="rp-m"><span class="k">진도</span><span class="x" style="color:var(--ink);">${escHtml(d.unit)}<s>지금</s></span></div>`);
+  if(d.unit) meters.push(`<div class="rp-m"><span class="k">진도</span><span class="x" style="color:var(--ink);">${escHtml(d.unit)}</span></div>`);
 
   /* 시험은 표다 — 점수 · 반 평균 · 등수 · 그 시험의 오답까지 «한 줄에 나란히» 놓아야
      「몇 점이었고, 반에서 어디였고, 틀린 것을 어떻게 했나」가 한 눈에 읽힌다. */
@@ -11515,6 +11584,15 @@ function sdReportHTML(s, rec){
         ${examTable ? `<div class="rp-sec">시험</div>${examTable}` : ''}
       `
         : '<div class="rp-none">이 달에는 기록이 없습니다 — 출결 · 시험 · 과제 어느 것도 남지 않았습니다.</div>'}
+
+      ${/* 범례 — 🔴 **색만 칠하고 뜻을 안 적으면 학부모는 «무슨 뜻이지»에서 멈춘다.**
+           사용자가 「조금더 이해하기 쉽게」라고 한 자리가 여기다.
+         ⚠ **「위험」·「주의」라는 말은 쓰지 않는다** — 그것은 선생님이 볼 내부 판단이다.
+           학부모에게는 «무엇을 하면 되는지»로 적는다. */''}
+      ${anyWarn ? `<div class="rp-leg">
+        <span><i class="r"></i>함께 챙겨 주시면 좋은 부분</span>
+        <span><i class="y"></i>조금만 더 하면 되는 부분</span>
+      </div>` : ''}
 
       ${comment ? `<div class="rp-say"><div class="rp-say-t">선생님 한마디</div>
         <p>${escHtml(comment)}</p></div>` : ''}
