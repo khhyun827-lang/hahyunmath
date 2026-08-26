@@ -1207,6 +1207,35 @@
    ⚠ 그래서 `class="app hwd-layer"`로 감싼다 — `.app`의 «배경과 100vh»만 벗겨야 한다.
      안 벗기면 이 층이 종이색으로 화면을 통째로 덮어 뒤가 안 보인다. */
 .hwd-layer{background:none;min-height:0;}
+
+/* =================== 월간 리포트 (2026-08-27 · R-1) ===================
+   🔴 **`.rp-doc`이 «학부모가 볼 것» 전부다.** 2차에서 인쇄할 때 이 상자만 남기면 되도록,
+     쓰는 칸(`.rp-edit`)과 달 고르개(`.rp-bar`)를 일부러 **밖에** 뒀다. */
+.rp-wrap{display:flex;flex-direction:column;gap:14px;min-width:0;}
+.rp-bar{display:flex;align-items:center;gap:9px;font-size:13px;}
+.rp-bar b{font-size:14px;font-weight:700;min-width:96px;text-align:center;}
+.rp-doc{border:1px solid var(--line);border-radius:var(--r-md);background:var(--card);
+  padding:20px 22px;max-width:620px;}
+.rp-h{border-bottom:1px solid var(--line);padding-bottom:13px;margin-bottom:4px;}
+.rp-h .t{font-size:12px;color:var(--dim);letter-spacing:.02em;}
+/* ⚠ `<s>`는 이 프로젝트에서 «가운뎃점 구분자»다 — 기본 취소선을 지운다 (8절). */
+.rp-h .t s,.rp-h .m s{text-decoration:none;color:var(--dim);margin:0 6px;}
+.rp-h .m{font-size:14px;margin-top:6px;color:var(--sub);}
+.rp-h .m b{color:var(--ink);font-weight:700;font-size:15px;}
+.rp-row{display:flex;align-items:baseline;gap:12px;padding:11px 0;
+  border-bottom:1px solid var(--line);font-size:13px;}
+.rp-row:last-child{border-bottom:0;}
+/* 라벨 폭을 고정한다 — 값이 줄마다 다른 자리에서 시작하면 세로로 훑을 수가 없다 (W-2와 같은 이유). */
+.rp-row .k{flex-shrink:0;width:74px;color:var(--dim);font-size:12px;}
+.rp-row .v{color:var(--ink);line-height:1.65;}
+.rp-row .v b{font-weight:700;}
+.rp-row .v s{text-decoration:none;color:var(--dim);font-size:11.5px;margin-left:8px;}
+.rp-none{padding:24px 0;text-align:center;color:var(--dim);font-size:12.5px;}
+.rp-say{margin-top:16px;padding-top:14px;border-top:1px solid var(--line);}
+.rp-say-t{font-size:12px;color:var(--dim);margin-bottom:7px;}
+.rp-say p{margin:0;font-size:13px;line-height:1.8;white-space:pre-wrap;color:var(--ink);}
+.rp-edit{max-width:620px;}
+.rp-edit .sd-note{min-height:92px;}
 /* 드로어 안에서는 알림 패널의 «상자»를 벗긴다 — 드로어가 이미 상자라 테두리가 이중이 된다. */
 .hwd .hw-npanel{border:0;padding:0;margin:0;max-width:none;min-width:0;background:none;}
 .hwd .hw-nmsg{max-width:none;}
@@ -2756,6 +2785,11 @@ let state = {
      «수업 기록 > 그날»의 과제 목록도 쓴다. 하나로 두면 거기서 목록을 편 순간
      오른쪽 드로어까지 같이 떠 버린다. 격자 «열 머리»는 이 자리만 본다. */
   hwNoticeId: null,          // 격자 열 머리에서 연 «미제출 알림» 드로어의 과제 id
+  /* ---------- 월간 리포트 (2026-08-27 · R-1) ---------- */
+  reportYm: '',              // 보고 있는 달 'YYYY-MM'. 빈 값이면 «이번 달»
+  reportDocs: {},            // '{sid}:{ym}' → {comment, at}
+  reportLoading: {},
+  reportDrafts: {},          // 쓰는 중인 «선생님 한마디». 저장 전까지 여기 산다
   hwPhotos: {},              // 과제id → 아직 «제출 전»인 사진들 (드라이브에는 이미 올라가 있다)
   hwRejectOpen: null,        // 반려 사유를 적고 있는 «과제id:학생id»
   hwDoneOpen: null,          // 「완료」 묶음을 펴 둔 과제id (기본은 접힘)
@@ -11113,6 +11147,209 @@ function teacherStudentDetailHTML(sid){
 /* isAssistant면 «못 하는 것»이 빠진다. 화면을 새로 만드는 것이 아니라 좁히는 것이다.
      빠지는 것 — 우측 칸 통째로(연락처·기본정보·삭제·채팅·클리닉·수업 화면) ·
                  신호 «해제»(규칙을 다루는 것은 강사의 판단) · 「질문·클리닉」 갈래 */
+/* =================== 월간 리포트 (2026-08-27 · R-1) ===================
+   사용자가 원한 것 — **「우리가 수집하는 자료들을 종합해서 학부모님께 월마다 전송하는
+   시스템(직접 전송을 눌러서)」**. «직접»이 핵심이다. 자동 발송이 아니라 **선생님이 보고 나서
+   가져가는** 흐름이라, 이 화면의 일은 «만들어 보여 주는 것»까지다.
+
+   🔴 **자동으로 «칭찬 문장»을 만들지 않는다.** 「성실히 참여했습니다」 같은 말은 내가 지어낸 것이지
+     선생님이 관찰한 것이 아니다. **숫자는 시스템이, 사람의 말은 「선생님 한마디」에서 선생님이.**
+     비워 두면 그 자리는 리포트에 아예 안 나간다 → 9절 8번의 «있을 법한 말을 지어냈다»와 같은 규칙.
+   🔴 **그 달에 없던 항목은 «줄째로» 뺀다.** 빈 칸이나 0/0을 남기면 «안 한 것»으로 읽힌다.
+   ⚠ **상담 일지는 넣지 않는다** — 선생님이 나중에 보려고 적은 메모라, 학부모가 읽을 것을
+     전제로 쓰이지 않았다. 필요하면 「선생님 한마디」에 직접 옮겨 적는 것이 안전하다.
+   ⚠ **신호(위험·주의)도 넣지 않는다** — 내부 판단이다. 「위험」이 그대로 가면 안 된다. */
+
+function ymNow(){ return todayStr().slice(0,7); }
+function ymOf(d){ return String(d||'').slice(0,7); }
+function reportYm(){ return state.reportYm || ymNow(); }
+function ymLabel(ym){ const a=String(ym).split('-'); return a[0]+'년 '+Number(a[1])+'월'; }
+/* 달을 앞뒤로 옮긴다. 문자열 산술이라 시간대와 무관하다 (6절의 shiftYmd와 같은 뜻). */
+function shiftYm(ym, delta){
+  const a = ym.split('-').map(Number); let y=a[0], m=a[1]+delta;
+  while(m<1){ m+=12; y--; } while(m>12){ m-=12; y++; }
+  return y+'-'+String(m).padStart(2,'0');
+}
+
+/* 🔴 **화면과 갈라 둔 순수 함수다** — 필요한 것을 전부 ctx로 받는다.
+   그래야 브라우저 없이 node로 «숫자가 맞나»만 따로 확인할 수 있다 (08-26에 값을 한 방법). */
+function monthlyReportData(s, rec, ym, ctx){
+  rec = rec || {}; ctx = ctx || {};
+  const inMonth = d => ymOf(d)===ym;
+
+  /* ⚠ **분모는 «기록된 날»이다.** 시간표로 세면 휴강·보강이 어긋나 실제와 달라진다. */
+  const attList = (rec.attendance||[]).filter(a=>inMonth(a.date));
+  const att = {'출석':0, '지각':0, '조퇴':0, '결석':0};
+  attList.forEach(a=>{ if(att[a.status]!==undefined) att[a.status]++; });
+
+  /* 시험 — 반 평균과 등수는 «같은 시험(이름+날짜)을 본 사람들» 사이에서만 뜻이 있다.
+     ⚠ 퇴원생을 빼지 않는다 — 지난 시험은 이미 있었던 일이다 (examWrongCounts와 같은 규칙).
+     ⚠ 사용자가 **「반 평균과 등수를 넣는다」**로 정했다 (2026-08-27). 다만 **분모를 반드시 함께**
+       적는다 — 「2등」만 있으면 실제보다 크게 읽힌다. */
+  const scores = (rec.scores||[]).filter(x=>inMonth(x.date) && x.total).map(x=>{
+    const seen = {};
+    for(const sid in (ctx.allRecords||{})){
+      const r = ctx.allRecords[sid];
+      (r && r.scores || []).forEach(y=>{
+        if(y.name===x.name && y.date===x.date && y.total && seen[sid]===undefined)
+          seen[sid] = y.score / y.total * 100;
+      });
+    }
+    const peers = Object.keys(seen).map(k=>({sid:k, pct:seen[k]})).sort((a,b)=>b.pct-a.pct);
+    const at = peers.findIndex(q=>q.sid===s.studentId);
+    /* 🔴 **혼자 본 시험이면 평균도 등수도 말하지 않는다** (2026-08-27에 실제로 나왔다).
+       그 시험을 이 학생만 봤다면 「반 평균 92점 · 1명 중 1등」이 되는데,
+       **자기 점수를 자기와 견준 것**이라 정보가 0이면서 학부모에게는 뜻이 있는 말처럼 읽힌다. */
+    const alone = peers.length < 2;
+    return {
+      name: x.name, date: x.date, score: x.score, total: x.total,
+      pct: Math.round(x.score / x.total * 100),
+      avg: alone ? null : Math.round(peers.reduce((n,q)=>n+q.pct,0)/peers.length),
+      rank: (alone || at<0) ? null : at+1, of: peers.length
+    };
+  });
+
+  /* 과제 — «그 달에 내야 했던 것»이 학부모가 궁금한 것이라 마감일로 자른다 (없으면 등록일). */
+  const asgs = (ctx.assignments||[]).filter(a=>a.classId===s.classId && inMonth(a.dueDate||a.createdAt));
+  const hwDone = ctx.isDone ? asgs.filter(a=>ctx.isDone(rec, a.id)).length : 0;
+
+  const wrong = (rec.wrongHomework||[]).filter(h=>inMonth(h.assignedAt));
+
+  /* 🔴 **강의 시청과 진도에는 날짜가 없다** — videoProgress는 편별 «누적치» 하나뿐이고
+       progress.unit은 «지금» 어디까지 나갔는지다. 그 달로 자를 방법이 아예 없다.
+     🔴 **그래서 «지난 달» 리포트에서는 통째로 뺀다** (2026-08-27에 실제로 걸렸다).
+       7월 리포트를 8월에 뽑으면 «8월 현재»의 시청률과 진도가 7월 것인 양 실린다.
+       달이 지날수록 옛 리포트가 저절로 «고쳐 쓰이는» 셈이라, 과거를 고치지 않는다는
+       이 프로젝트의 규칙(examWrongCounts · W-1)과 정면으로 어긋난다.
+     ⚠ 이번 달 리포트에는 넣되 **«지금까지»라고 밝혀서** 내보낸다. 달치인 척하면 거짓이 된다. */
+  const isNow = ctx.isThisMonth !== false;
+  const vids = !isNow ? [] : (ctx.videos||[]).filter(v=>!v.studentId || v.studentId===s.studentId);
+  const vp = rec.videoProgress || {};
+  const vidSeen = vids.filter(v=>vp[v.id] && (vp[v.id].percent>0 || vp[v.id].completed));
+  const vidPct = vidSeen.length
+    ? Math.round(vidSeen.reduce((n,v)=>n + (vp[v.id].completed ? 100 : (vp[v.id].percent||0)), 0) / vidSeen.length)
+    : null;
+
+  return {
+    ym: ym, name: s.name, school: s.school||'', grade: s.grade||'',
+    className: ctx.className || '',
+    att: att, attDays: attList.length,
+    scores: scores,
+    hw: asgs.length ? {done:hwDone, total:asgs.length} : null,
+    wrong: wrong.length ? {done:wrong.filter(h=>h.done).length, total:wrong.length} : null,
+    video: vids.length ? {seen:vidSeen.length, total:vids.length, pct:vidPct} : null,
+    unit: isNow ? ((rec.progress||{}).unit || '') : ''
+  };
+}
+
+function reportKey(sid, ym){ return sid + ':' + ym; }
+async function loadReportIfNeeded(sid, ym){
+  const k = reportKey(sid, ym);
+  if(!sid || state.reportDocs[k] || state.reportLoading[k]) return;
+  state.reportLoading[k] = true;
+  const v = await dbGet('report:' + k, {});
+  state.reportDocs[k] = (v && typeof v==='object') ? v : {};
+  state.reportLoading[k] = false;
+  render();
+}
+function reportCommentText(sid, ym){
+  const k = reportKey(sid, ym);
+  if(state.reportDrafts[k] !== undefined) return state.reportDrafts[k];
+  return (state.reportDocs[k] || {}).comment || '';
+}
+/* ⚠ **render()를 부르지 않는다** — 한글 조합이 끊긴다 (W-3). 고정 메모와 같은 방식이다. */
+function reportCommentInput(sid, ym, text){ state.reportDrafts[reportKey(sid,ym)] = text; }
+async function saveReportComment(sid, ym){
+  const el = document.getElementById('rp-comment');
+  const text = (el ? el.value : reportCommentText(sid, ym)).trim();
+  const k = reportKey(sid, ym);
+  const doc = Object.assign({}, state.reportDocs[k] || {});
+  if(text) doc.comment = text; else delete doc.comment;
+  doc.at = nowStamp();
+  state.reportDocs[k] = doc;
+  delete state.reportDrafts[k];
+  await dbSet('report:' + k, doc);
+  showToast('선생님 한마디를 저장했습니다.');
+  render();
+}
+function sdReportMonth(delta){ state.reportYm = shiftYm(reportYm(), delta); render(); }
+
+function sdReportHTML(s, rec){
+  const sid = s.studentId, ym = reportYm();
+  loadAllRecordsIfNeeded();
+  loadReportIfNeeded(sid, ym);
+  const isThisMonth = ym === ymNow();
+  const d = monthlyReportData(s, rec, ym, {
+    allRecords: state.allRecords, assignments: DATA.assignments,
+    videos: DATA.videos, isDone: hwIsDone, className: classNameOf(s.classId),
+    isThisMonth: isThisMonth
+  });
+  const doc = state.reportDocs[reportKey(sid,ym)] || {};
+  const comment = reportCommentText(sid, ym);
+
+  const row = (label, value, note) => `<div class="rp-row"><span class="k">${label}</span>
+    <span class="v">${value}${note ? `<s>${note}</s>` : ''}</span></div>`;
+
+  const lines = [];
+  if(d.attDays) lines.push(row('출결',
+    '출석 <b class="mono">' + d.att['출석'] + '</b>'
+    + (d.att['지각'] ? ' · 지각 <b class="mono">' + d.att['지각'] + '</b>' : '')
+    + (d.att['조퇴'] ? ' · 조퇴 <b class="mono">' + d.att['조퇴'] + '</b>' : '')
+    + (d.att['결석'] ? ' · 결석 <b class="mono">' + d.att['결석'] + '</b>' : ''),
+    '기록된 ' + d.attDays + '일 기준'));
+  d.scores.forEach(x=>lines.push(row('시험',
+    escHtml(x.name) + ' <b class="mono">' + x.score + '/' + x.total + '</b>',
+    (x.avg!==null ? '반 평균 ' + x.avg + '점' : '')
+    + (x.rank ? ' · ' + x.of + '명 중 ' + x.rank + '등' : ''))));
+  if(d.hw)    lines.push(row('과제',
+    '<b class="mono">' + d.hw.total + '</b>건 중 <b class="mono">' + d.hw.done + '</b>건 제출'));
+  if(d.wrong) lines.push(row('오답 숙제',
+    '<b class="mono">' + d.wrong.total + '</b>건 중 <b class="mono">' + d.wrong.done + '</b>건 완료'));
+  if(d.video) lines.push(row('강의 시청',
+    '<b class="mono">' + d.video.total + '</b>편 중 <b class="mono">' + d.video.seen + '</b>편',
+    (d.video.pct!==null ? '평균 ' + d.video.pct + '% · ' : '') + '지금까지'));
+  if(d.unit)  lines.push(row('진도', escHtml(d.unit), '지금'));
+
+  return `<div class="rp-wrap">
+    <div class="rp-bar">
+      <button class="btn q sm" onclick="sdReportMonth(-1)">${iconSvg('chevL',13)}</button>
+      <b>${ymLabel(ym)}</b>
+      <button class="btn q sm" ${isThisMonth?'disabled title="아직 오지 않은 달입니다"':''}
+        onclick="sdReportMonth(1)">${iconSvg('chevR',13)}</button>
+      <span style="flex:1;"></span>
+      <button class="btn sm" onclick="sdMode('timeline')">연대기로</button>
+    </div>
+
+    <div class="rp-doc" id="rp-doc">
+      <div class="rp-h">
+        <div class="t">김하현수학연구소<s>·</s>${ymLabel(ym)} 리포트</div>
+        <div class="m"><b>${escHtml(d.name)}</b>
+          ${d.school||d.grade ? `<s>·</s>${escHtml(d.school)} ${escHtml(d.grade)}` : ''}
+          ${d.className ? `<s>·</s>${escHtml(d.className)}` : ''}</div>
+      </div>
+      ${lines.length ? `<div class="rp-body">${lines.join('')}</div>`
+        : '<div class="rp-none">이 달에는 기록이 없습니다 — 출결 · 시험 · 과제 어느 것도 남지 않았습니다.</div>'}
+      ${comment ? `<div class="rp-say"><div class="rp-say-t">선생님 한마디</div>
+        <p>${escHtml(comment)}</p></div>` : ''}
+    </div>
+
+    ${/* ⚠ 쓰는 칸은 «문서 밖»에 둔다 — 2차에서 인쇄할 때 위 .rp-doc만 나가야 한다. */''}
+    <div class="rp-edit">
+      <div class="t-sec" style="margin:0 0 7px;">선생님 한마디
+        <span style="font-weight:400;color:var(--dim);">비워 두면 리포트에 나가지 않습니다</span></div>
+      <textarea id="rp-comment" class="sd-note" placeholder="이 달 이 학생을 보며 느끼신 것을 그대로 적어 주세요.&#10;여기 적은 말만 학부모님께 나갑니다 — 시스템이 문장을 지어내지 않습니다."
+        oninput="reportCommentInput(&#39;${sid}&#39;,&#39;${ym}&#39;, this.value)">${escHtml(comment)}</textarea>
+      <div class="sd-note-foot">
+        <span>${doc.at ? `마지막 저장 <span class="sd-note-at">${escHtml(doc.at)}</span>` : '아직 쓰지 않았습니다'}</span>
+        <button class="btn p sm" onclick="saveReportComment(&#39;${sid}&#39;,&#39;${ym}&#39;)">저장</button>
+      </div>
+    </div>
+    <p class="st-note">숫자는 이 달에 쌓인 기록에서 그대로 옵니다. <b>없던 항목은 줄째로 빠집니다</b> —
+      빈 칸을 남기면 «안 한 것»으로 읽히기 때문입니다.
+      ${!s.parentPhone ? '<br><b style="color:var(--late);">학부모 전화번호가 비어 있습니다</b> — 설정 &gt; 학생에서 채워 주세요.' : ''}</p>
+  </div>`;
+}
+
 function sdScreenHTML(s, rec, isAssistant){
   const sid = s.studentId;
   const SR = signalRules();   // KPI의 빨강도 명단과 같은 임계값을 본다
@@ -11123,7 +11360,11 @@ function sdScreenHTML(s, rec, isAssistant){
   /* 조교는 채팅으로 갈 문이 없다. 예전 세션이 그 값을 들고 있어도 연대기로 떨어뜨린다.
      ⚠ **'info'가 목록에서 빠졌다** (2026-08-26) — 기본정보는 설정으로 갔다.
        예전 세션이 `studentDetailTab==='info'`를 들고 있으면 여기서 연대기로 떨어진다. */
-  const mode = !isAssistant && state.studentDetailTab==='chat' ? 'chat' : 'timeline';
+  /* ⚠ **리포트는 강사의 것이다** (2026-08-27 · R-1) — 학부모에게 나갈 문서라
+       조교에게는 문을 열지 않는다. 조교가 그 값을 들고 있어도 연대기로 떨어진다. */
+  const mode = isAssistant ? 'timeline'
+    : (state.studentDetailTab==='chat' || state.studentDetailTab==='report')
+      ? state.studentDetailTab : 'timeline';
   const st = rosterStats(s);
   const sg = signalOf(st);
   const prog = st.prog;
@@ -11213,6 +11454,10 @@ function sdScreenHTML(s, rec, isAssistant){
     <div class="t-sec">빠른 작업</div>
     <div class="sd-qa">
       <button class="btn ${mode==='chat'?'p':''}" onclick="sdMode('${mode==='chat'?'timeline':'chat'}')">${mode==='chat'?'연대기로':'채팅'}</button>
+      ${/* 월간 리포트 (2026-08-27 · R-1) — 학부모에게 보낼 것을 만드는 문.
+           ⚠ **나머지 셋은 갈아끼우지 않고 «더했다»** — 사용자가 「추후에 활용도가 높은 걸
+             다시 이야기하면 그때 수정하자」고 한 자리다. */''}
+      <button class="btn ${mode==='report'?'p':''}" onclick="sdMode('${mode==='report'?'timeline':'report'}')">${mode==='report'?'연대기로':'이번 달 리포트'}</button>
       ${/* 상담은 연대기의 «갈래»다 — 폼도 목록도 거기 이미 있다(sdTimelineHTML).
            새 화면을 만들지 않고 그 갈래로 데려다 놓기만 한다. */''}
       <button class="btn ${mode==='timeline' && state.sdFilter==='consult' ? 'p' : ''}"
@@ -11254,8 +11499,9 @@ function sdScreenHTML(s, rec, isAssistant){
   </aside>`;
 
   let center;
-  if(mode==='chat') center = sdChatHTML(sid);
-  else              center = sdTimelineHTML(s, sid, rec, isAssistant);
+  if(mode==='chat')        center = sdChatHTML(sid);
+  else if(mode==='report') center = sdReportHTML(s, rec);   // 2026-08-27 · R-1
+  else                     center = sdTimelineHTML(s, sid, rec, isAssistant);
 
   /* 조교에게 우측 칸은 통째로 없다. 연락처는 개인정보고 «빠른 작업»은 전부 강사의 것이라
      남겨 두면 빈 칸이 된다. 그래서 3열이 아니라 2열이다. */
