@@ -974,6 +974,22 @@
 .app .ex-q .tw{width:92px;flex-shrink:0;text-align:right;}
 @media (max-width:1240px){ .app .ex-side{display:none;} }
 
+/* 시험 성적판 (2026-08-29) — 표 서식은 .fm-panel 안에만 살아 있어서 여기서는 맨 표가 된다.
+   같은 결로 한 벌 따로 둔다. 여기 표는 «칠 수 있는 칸»이라 줄 높이를 조금 넉넉히 준다. */
+/* ⚠ 폭을 잡아 둔다 — 표를 화면 끝까지 늘리면 이름과 점수 칸이 멀리 떨어져
+   «누구의 점수를 치고 있는지»가 안 보인다. 치는 표는 좁아야 한다. */
+.app .es-tb{width:100%;max-width:560px;border-collapse:collapse;font-variant-numeric:tabular-nums;}
+.app .es-tb td:last-child,.app .es-tb th:last-child{width:74px;color:var(--dim);}
+.app .es-tb th{height:30px;text-align:left;font-size:11px;font-weight:600;color:var(--dim);
+  border-bottom:1px solid var(--line);padding:0 8px;white-space:nowrap;}
+.app .es-tb td{height:40px;padding:0 8px;border-bottom:1px solid var(--line2);font-size:12.5px;}
+.app .es-tb tr:hover td{background:var(--hover);}
+.app .es-tb input{height:28px;padding:0 8px;border:1px solid var(--line);border-radius:var(--r);
+  background:var(--card);color:var(--ink);font-family:'JetBrains Mono',monospace;font-size:12.5px;}
+.app .es-tb input:focus{outline:none;border-color:var(--accent);}
+/* 머리말 줄 — 「전체 저장」을 오른쪽 끝이 아니라 만점 바로 옆에 둔다. 둘은 한 동작이다. */
+.app .es-head{display:flex;align-items:center;gap:10px;}
+
 /* 문항 내용 — 원본과 변형을 «좌우»로 세운다.
    세로로 이어 붙이면 어디서 문항이 끝나고 다음이 시작하는지 안 보이고,
    무엇보다 «이 변형이 저 원본의 쌍둥이가 맞나»를 보려면 둘이 나란해야 한다
@@ -2592,8 +2608,9 @@ async function processAIQueue(){
 async function generateTwinsForExam(examId){
   const e = DATA.exams.find(x=>x.id===examId);
   if(!e) return;
+  /* 복사본에서 눌러도 «뿌리»의 문항을 채운다 — 쌍둥이는 반이 아니라 문항에 딸린 것이다. */
   const needsAI = DATA.problemBank
-    .filter(b=>b.examId===examId && !b.variantContent && !b.variantAnswer)
+    .filter(b=>b.examId===examRootId(examId) && !b.variantContent && !b.variantAnswer)
     .sort((a,b)=>(a.questionNo||0)-(b.questionNo||0));
   if(needsAI.length===0){ showToast('이 시험지에는 새로 만들 문항이 없습니다.'); return; }
   const used = await getAIQuotaUsed();
@@ -2821,6 +2838,7 @@ let state = {
   qnaSelectedId: null,    // 오른쪽에 펼쳐 놓은 질문 (공지의 noticeSelectedId와 같은 장치)
   examSelectedId: null,
   examMode: '',              // ''이면 목록+분석, 'new'면 등록 폼
+  examStatAll: false,        // 문항별 오답률을 «복사본까지 합쳐» 볼 것인가 (2026-08-29)
   unitBankMode: '',          // ''이면 창고 목록, 'add'면 문항 추가
   ytPlayers: null,
   attDraft: {},
@@ -5565,23 +5583,35 @@ async function saveExam(){
    학생 기록의 오답숙제도 같이 턴다. 안 그러면 «화면에 아무것도 안 뜨는 숙제»가 남는다. */
 async function deleteExam(examId){
   const e = DATA.exams.find(x=>x.id===examId);
-  const banks = DATA.problemBank.filter(b=>b.examId===examId);
+  /* 🔴 **창고를 함께 쓰는 시험지가 있으면 창고는 손대지 않는다** (2026-08-29) —
+     복사본이 뿌리의 문항을 가리키고 있다. 예전 코드처럼 `examId`로 문항을 싹 지우면
+     **다른 반의 쌍둥이까지 사라진다.** 마지막 한 장일 때만 턴다. */
+  const siblings = e ? examSiblings(e).filter(x=>x.id!==examId) : [];
+  const banks = examBanks(e || {id:examId});
   const bankIds = new Set(banks.map(b=>b.id));
+  const dropBanks = siblings.length===0;
 
   /* 학생 기록을 다 봐야 몇 건이 딸려 나가는지 셀 수 있다. 지우기 «전»에 말해 주려고 먼저 싣는다. */
   await loadAllRecordsIfNeeded();
+  /* ⚠ **창고를 함께 쓸 때는 «이 시험지의» 숙제만 턴다** — bankId로 털면 같은 문항을
+     받은 **다른 반 학생의 숙제까지** 딸려 나간다. 마지막 한 장일 때만 주인 없는 것까지 쓸어 담는다. */
+  const mineHw = h => h.examId===examId || (dropBanks && bankIds.has(h.bankId));
   const affected = DATA.students.filter(s=>{
     const rec = state.allRecords[s.studentId];
-    return (rec && rec.wrongHomework || []).some(h=>bankIds.has(h.bankId) || h.examId===examId);
+    return (rec && rec.wrongHomework || []).some(mineHw);
   });
   const hwCount = affected.reduce((n,s)=>{
     const rec = state.allRecords[s.studentId];
-    return n + (rec.wrongHomework||[]).filter(h=>bankIds.has(h.bankId) || h.examId===examId).length;
+    return n + (rec.wrongHomework||[]).filter(mineHw).length;
   }, 0);
+  /* 지울 것과 «남길 것»을 한 줄로 말해 준다 — 복사본이 있으면 창고는 안 지운다. */
+  const bankLine = dropBanks
+    ? `· 이 시험지에서 만든 문항 ${banks.length}개 (검토 대기에 있는 것 포함)`
+    : `· 쌍둥이 문항 ${banks.length}개는 «남깁니다» — ${siblings.map(x=>classNameOf(x.classId)).join(' · ')}의 복사본이 함께 씁니다`;
 
   if(!confirm(`「${escHtmlPlain(e ? e.title : '시험지')}」를 삭제할까요?\n\n`
     + `함께 지워지는 것 —\n`
-    + `· 이 시험지에서 만든 문항 ${banks.length}개 (검토 대기에 있는 것 포함)\n`
+    + `${bankLine}\n`
     + (hwCount ? `· 학생 ${affected.length}명의 오답숙제 ${hwCount}건\n` : '')
     + `\n되돌릴 수 없습니다.`)) return;
 
@@ -5589,33 +5619,47 @@ async function deleteExam(examId){
   await dbDeleteDoc('exams', examId);
   await dbDelete('examfiles:'+examId);
 
-  for(const b of banks){
-    await dbDeleteDoc('problembank', b.id);
-    if(b.hasImage){
-      const img = await dbGet('pbimg:'+b.id, null);
-      deleteFromDrive(imgFileIdOf(img));      // 결과를 기다리지 않는다
-      await dbDelete('pbimg:'+b.id);
+  if(dropBanks){
+    for(const b of banks){
+      await dbDeleteDoc('problembank', b.id);
+      if(b.hasImage){
+        const img = await dbGet('pbimg:'+b.id, null);
+        deleteFromDrive(imgFileIdOf(img));      // 결과를 기다리지 않는다
+        await dbDelete('pbimg:'+b.id);
+      }
+      /* 강사가 변형용으로 직접 그려 올린 그림도 같이 턴다 — 남기면 드라이브에 주인 없는 파일이 쌓인다. */
+      if(b.hasVariantImage) await dropVariantFigure(b);
     }
-    /* 강사가 변형용으로 직접 그려 올린 그림도 같이 턴다 — 남기면 드라이브에 주인 없는 파일이 쌓인다. */
-    if(b.hasVariantImage) await dropVariantFigure(b);
+    DATA.problemBank = DATA.problemBank.filter(b=>b.examId!==examId);
+  } else if(e && !e.sourceExamId){
+    /* 지운 것이 «뿌리»였다 — 창고가 주인을 잃는다. 남은 복사본 하나를 새 뿌리로 세우고
+       문항과 나머지 복사본이 그쪽을 가리키게 옮긴다. 안 그러면 쌍둥이가 통째로 미아가 된다. */
+    const heir = siblings[0];
+    for(const b of banks){ b.examId = heir.id; await dbSetDoc('problembank', b.id, b); }
+    delete heir.sourceExamId;
+    await dbSetDoc('exams', heir.id, heir);
+    for(const x of siblings.slice(1)){ x.sourceExamId = heir.id; await dbSetDoc('exams', x.id, x); }
   }
-  DATA.problemBank = DATA.problemBank.filter(b=>b.examId!==examId);
 
   for(const s of affected){
     const rec = await loadRecord(s.studentId);
-    rec.wrongHomework = (rec.wrongHomework||[]).filter(h=>!bankIds.has(h.bankId) && h.examId!==examId);
+    rec.wrongHomework = (rec.wrongHomework||[]).filter(h=>!mineHw(h));
     /* 데일리퀴즈 상태에서도 그 카드들을 턴다 — 안 그러면 풀에 없는 id가 picks에 남는다.
        (dqTodayCards가 걸러 주긴 하지만 이력·카드 상태가 계속 쌓인다.) */
-    const d = dqState(rec);
-    Object.keys(d.cards).forEach(id=>{ if(bankIds.has(String(id).split(':')[0])) delete d.cards[id]; });
-    d.picks = d.picks.filter(id=>!bankIds.has(String(id).split(':')[0]));
-    d.log = d.log.filter(x=>!bankIds.has(String(x.id).split(':')[0]));
+    /* ⚠ **문항이 남아 있으면(복사본이 쓰고 있으면) 카드도 그대로 둔다** — 아직 유효한 문제다. */
+    if(dropBanks){
+      const d = dqState(rec);
+      Object.keys(d.cards).forEach(id=>{ if(bankIds.has(String(id).split(':')[0])) delete d.cards[id]; });
+      d.picks = d.picks.filter(id=>!bankIds.has(String(id).split(':')[0]));
+      d.log = d.log.filter(x=>!bankIds.has(String(x.id).split(':')[0]));
+    }
     state.allRecords[s.studentId] = rec;
     await saveRecord(s.studentId);
   }
 
-  logAudit('시험지 삭제', '', '', `${e ? e.title : examId} · 문항 ${banks.length}개 · 오답숙제 ${hwCount}건`);
-  showToast(`시험지와 문항 ${banks.length}개를 지웠습니다.`
+  logAudit('시험지 삭제', '', '', `${e ? e.title : examId} · 문항 ${dropBanks?banks.length:0}개 · 오답숙제 ${hwCount}건${dropBanks?'':' · 쌍둥이 '+banks.length+'개는 복사본이 이어받음'}`);
+  showToast(`${dropBanks ? '시험지와 문항 '+banks.length+'개를 지웠습니다.'
+      : '시험지를 지웠습니다. 쌍둥이 문항 '+banks.length+'개는 복사본이 계속 씁니다.'}`
     + (hwCount ? ` 학생 오답숙제 ${hwCount}건도 함께 지웠습니다.` : ''));
   render();
 }
@@ -5625,20 +5669,59 @@ async function copyExamToClass(examId){
   if(!targetClassId){ showToast('복사할 반을 선택해주세요.'); return; }
   const e = DATA.exams.find(x=>x.id===examId);
   if(!e) return;
+  /* 🔴 **날짜를 베끼지 않는다** (2026-08-29에 고쳤다) — 예전에는 `date:e.date`라
+     **원본을 처음 등록한 날**이 그대로 따라왔다. 복사는 «다른 반이 이 시험을 본다»는 뜻이라
+     그 반이 본 날이 맞다. 기본값은 오늘이고, 옆 칸에서 고쳐서 복사할 수 있다. */
+  const dateEl = document.getElementById('copy-date-'+examId);
+  const newDate = (dateEl && dateEl.value) || todayStr();
   const newId = 'ex'+Date.now();
-  const copiedExam = {id:newId, classId:targetClassId, title:e.title, date:e.date, questions:e.questions.map(q=>({...q})), hasFiles:e.hasFiles};
+  const copiedExam = {id:newId, classId:targetClassId, title:e.title, date:newDate,
+    questions:e.questions.map(q=>({...q})), hasFiles:e.hasFiles,
+    /* 뿌리를 가리킨다 — 복사본의 복사본이어도 뿌리는 하나다(사슬을 만들지 않는다). */
+    sourceExamId: e.sourceExamId || e.id};
   DATA.exams.unshift(copiedExam);
   await dbSetDoc('exams', copiedExam.id, copiedExam);
   if(e.hasFiles){
     const pages = await dbGet('examfiles:'+examId, []);
     await dbSet('examfiles:'+newId, pages);
   }
-  showToast(`${classNameOf(targetClassId)}에 복사되었습니다.`);
+  const shared = examBanks(copiedExam).length;
+  logAudit('시험지 복사', '', '', `${e.title} → ${classNameOf(targetClassId)} · ${newDate}`);
+  /* 복사한 것을 곧장 열어 준다 — 안 그러면 어디로 갔는지 모르고 목록에서 찾아야 한다. */
+  state.examSelectedId = newId;
+  showToast(`${classNameOf(targetClassId)}에 복사되었습니다 (${newDate}).`
+    + (shared ? ` 쌍둥이 문항 ${shared}개는 원본과 함께 씁니다.` : ''));
   render();
 }
 
+/* =================== 시험지 복사 — «뿌리»와 «복사본» ===================
+   다른 반으로 복사한 시험지는 문항 창고(problemBank)를 **복제하지 않고 원본 것을 함께 쓴다.**
+   쌍둥이 문제는 «문항»에 딸린 것이지 «반»에 딸린 것이 아니다 — 반마다 따로 만들면
+   같은 문항의 쌍둥이가 둘이 되고, 검토해서 고친 것이 한쪽에만 남는다. AI 한도도 두 번 쓴다.
+   그래서 복사본은 `sourceExamId`로 뿌리를 가리키기만 한다 (2026-08-29 · 사용자 요청).
+   🔴 **창고는 함께 쓰고 통계는 따로다 — 이 둘을 헷갈리지 말 것.**
+     학생 기록(`wrongHomework`)에는 **복사본의 `examId`가 그대로** 들어간다.
+     문항별 오답률은 «그 반이 어디서 무너졌나»라 반마다 갈라져 있어야 한다.
+     두 반을 합쳐 보고 싶을 때는 화면의 「전체」 토글이 답한다. */
+function examRootId(examId){
+  const e = DATA.exams.find(x=>x.id===examId);
+  return (e && e.sourceExamId) || examId;
+}
+/* 이 시험지가 «쓰는» 쌍둥이 문항. 복사본이면 뿌리의 것이 나온다. */
+function examBanks(exam){
+  if(!exam) return [];
+  return DATA.problemBank.filter(b=>b.examId===(exam.sourceExamId || exam.id));
+}
+/* 같은 창고를 쓰는 시험지 전부 — 뿌리와 그 복사본들(자기 자신 포함). */
+function examSiblings(exam){
+  if(!exam) return [];
+  const root = exam.sourceExamId || exam.id;
+  return DATA.exams.filter(e=>e.id===root || e.sourceExamId===root);
+}
 function findBankEntry(examId, no){
-  return DATA.problemBank.find(b=>b.examId===examId && b.questionNo===no);
+  /* 🔴 복사본이면 «뿌리»에서 찾는다. 예전에는 `examId`가 딱 맞아야 해서 복사본에서는
+     항상 못 찾았고, 그래서 **이미 만들어 둔 쌍둥이를 놔두고 또 만들었다.** */
+  return DATA.problemBank.find(b=>b.examId===examRootId(examId) && b.questionNo===no);
 }
 
 /* =================== 학생 오답 제출 =================== */
@@ -11262,12 +11345,14 @@ function monthlyReportData(s, rec, ym, ctx){
   const isCorrect = h => !!(h.done && ctx.answerOf &&
     String(h.studentAnswer||'').trim() === String(ctx.answerOf(h.bankId)||'').trim());
 
-  /* 시험 하나에 딸린 오답 숙제. 시험 이름·날짜로 시험지를 찾아 그 examId의 숙제를 센다.
-     ⚠ 성적(scores)과 시험지(exams)를 잇는 것이 도메인에 없다(12818행 머리말) —
-       **이름과 날짜가 둘 다 같을 때만** 잇는다. 이름만으로 짐작해 이으면 그 줄이 거짓이 된다.
+  /* 시험 하나에 딸린 오답 숙제.
+     ✅ **2026-08-29부터 성적에 examId가 붙는다** — 시험지 화면의 성적판에서 넣은 것은
+       짐작 없이 곧장 이어진다. 옛 기록(examId가 없는 것)만 예전 방식으로 잇는다:
+     ⚠ **이름과 날짜가 둘 다 같을 때만** 잇는다. 이름만으로 짐작해 이으면 그 줄이 거짓이 된다.
        못 이으면 null을 돌려주고 그 줄은 화면에서 빠진다. */
   const examWrongOf = x => {
-    const ex = (ctx.exams||[]).find(e=>e.title===x.name && e.date===x.date);
+    const ex = x.examId ? (ctx.exams||[]).find(e=>e.id===x.examId)
+                        : (ctx.exams||[]).find(e=>e.title===x.name && e.date===x.date);
     if(!ex) return null;
     const mine = liveHw.filter(h=>h.examId===ex.id);
     if(!mine.length) return null;
@@ -11279,7 +11364,10 @@ function monthlyReportData(s, rec, ym, ctx){
     for(const sid in (ctx.allRecords||{})){
       const r = ctx.allRecords[sid];
       (r && r.scores || []).forEach(y=>{
-        if(y.name===x.name && y.date===x.date && y.total && seen[sid]===undefined)
+        /* ✅ examId가 있으면 그것으로 짝을 짓는다 (2026-08-29) — 이름과 날짜가 우연히
+           같은 다른 시험을 «같은 시험»으로 세던 자리다. 옛 기록은 예전대로 이름+날짜. */
+        const same = x.examId ? (y.examId===x.examId) : (y.name===x.name && y.date===x.date);
+        if(same && y.total && seen[sid]===undefined)
           seen[sid] = y.score / y.total * 100;
       });
     }
@@ -11295,7 +11383,7 @@ function monthlyReportData(s, rec, ym, ctx){
        ⚠ 배정일이 다음 달로 넘어가도 «그 시험의» 숙제이므로 달로 자르지 않는다. */
     const exHw = examWrongOf ? examWrongOf(x) : null;
     return {
-      name: x.name, date: x.date, score: x.score, total: x.total,
+      name: x.name, date: x.date, score: x.score, total: x.total, examId: x.examId||'',
       pct: Math.round(x.score / x.total * 100),
       avg: alone ? null : Math.round(peers.reduce((n,q)=>n+q.pct,0)/peers.length),
       rank: (alone || at<0) ? null : at+1, of: peers.length,
@@ -12355,7 +12443,7 @@ function teacherClassDailyScoresHTML(classId, date){
     <table><tr><th>이름</th><th>점수</th><th>만점</th><th></th></tr>
     ${roster.map(s=>{
       const rec = state.allRecords[s.studentId];
-      const existing = rec && (rec.scores||[]).find(sc=>sc.date===date);
+      const existing = rec && (rec.scores||[]).find(sc=>sc.date===date && !sc.examId);
       return `<tr>
         <td class="fm-nm">${escHtml(s.name)}</td>
         <td><input type="number" id="ds-score-${s.studentId}" style="width:70px;" value="${existing?existing.score:''}"></td>
@@ -12377,7 +12465,9 @@ async function saveDailyScore(sid, date){
   const total = parseFloat(document.getElementById('ds-total-'+sid).value);
   if(isNaN(score) || isNaN(total)){ showToast('점수와 만점을 입력해주세요.'); return; }
   const rec = await loadRecord(sid);
-  const idx = rec.scores.findIndex(sc=>sc.date===date);
+  /* ⚠ **!sc.examId를 반드시 건다** (2026-08-29) — 시험지에서 넣은 성적은 examId로 갈라
+     두는데, 여기서 날짜만 보고 덮으면 **같은 날 본 시험 성적이 쪽지시험으로 바뀐다.** */
+  const idx = rec.scores.findIndex(sc=>sc.date===date && !sc.examId);
   if(idx>=0) rec.scores[idx] = {name, date, score, total};
   else rec.scores.push({name, date, score, total});
   rec.scores.sort((a,b)=>a.date.localeCompare(b.date));
@@ -12390,8 +12480,8 @@ async function saveDailyScore(sid, date){
 async function deleteDailyScore(sid, date){
   if(!confirm('이 날짜의 성적을 삭제할까요?')) return;
   const rec = await loadRecord(sid);
-  const removed = rec.scores.find(sc=>sc.date===date);
-  rec.scores = rec.scores.filter(sc=>sc.date!==date);
+  const removed = rec.scores.find(sc=>sc.date===date && !sc.examId);
+  rec.scores = rec.scores.filter(sc=>!(sc.date===date && !sc.examId));
   await saveRecord(sid);
   if(state.allRecords[sid]) state.allRecords[sid] = rec;
   if(removed) await logAudit('성적 삭제', sid, studentNameOf(sid), `${removed.name} ${removed.score}/${removed.total} (${date})`);
@@ -13342,19 +13432,92 @@ function chubVideoHTML(classId){
 
    등록 폼(hwpx 파싱 · 이미지 업로드 · 동적 문항 행)은 «구조»를 손대지 않았다 —
    이 화면에서 제일 비싼 부분이고, 형태를 바꾼다고 나아지는 곳도 아니다. */
-function examWrongCounts(exam){
+function examWrongCounts(exam, all){
   /* ⚠ **여기는 일부러 `classRoster`를 안 쓴다** (W-1 · 2026-08-26) — 시험은 «이미 있었던 일»이다.
      퇴원생을 빼면 **그때 20명이 봤던 시험이 나중에 18명으로 보인다.** 과거를 고쳐 쓰는 셈이다.
      사용자가 「앞으로의 일에서만 뺀다」로 정했다. */
-  const roster = DATA.students.filter(s=>s.classId===exam.classId);
+  /* 🔵 **«전체»면 같은 창고를 쓰는 복사본까지 한 통에 붓는다** (2026-08-29 · 사용자가 골랐다).
+     기본은 여전히 «그 반만»이다 — 반마다 진도·수준이 달라 섞으면 «어디서 무너졌나»가 흐려진다.
+     합쳐 보는 것은 «이 문항 자체가 어려운가»를 물을 때 값을 한다. */
+  const scope = all ? examSiblings(exam) : [exam];
+  const ids = new Set(scope.map(e=>e.id));
+  const clsIds = new Set(scope.map(e=>e.classId));
+  const roster = DATA.students.filter(s=>clsIds.has(s.classId));
   const counts = {};
+  let wrongStudents = 0;
   roster.forEach(s=>{
     const rec = state.allRecords[s.studentId];
-    (rec && rec.wrongHomework || []).forEach(h=>{
-      if(h.examId===exam.id) counts[h.questionNo] = (counts[h.questionNo]||0) + 1;
-    });
+    const hw = (rec && rec.wrongHomework || []).filter(h=>ids.has(h.examId));
+    if(hw.length) wrongStudents++;
+    hw.forEach(h=>{ counts[h.questionNo] = (counts[h.questionNo]||0) + 1; });
   });
-  return { counts, total: roster.length };
+  return { counts, total: roster.length, wrongStudents };
+}
+
+/* =================== 시험 성적 — 강사가 반 전체를 한 화면에서 넣는다 ===================
+   (2026-08-29 · 사용자 요청) 예전에는 성적이 «수업 기록 > 날짜 > 성적»에만 있었고
+   **시험지와 이어져 있지 않았다.** 그래서 이 화면에서 «반 평균»을 만들 수 없었고
+   (아래 KPI 머리말이 그렇게 적어 뒀다), 리포트는 «이름과 날짜가 둘 다 같을 때만» 시험을 이었다.
+   이제 성적에 examId를 달아 둔다 — **짐작이 아니라 이음이다.**
+   ⚠ **날짜로 덮어쓰지 않는다.** saveDailyScore는 «날짜 하나당 한 건»으로 덮어쓰는데,
+     시험 성적은 examId로 가른다. 같은 날 쪽지시험과 시험 성적이 함께 있어도 안 부딪친다.
+     그래서 saveDailyScore 쪽에 !sc.examId 조건을 걸어 뒀다 — **둘이 서로를 못 건드리게 한다.** */
+function examScoreOf(rec, examId){
+  return (rec && rec.scores || []).find(sc=>sc.examId===examId) || null;
+}
+function examScoreStats(ex){
+  /* ⚠ 여기도 classRoster를 안 쓴다 — 시험은 «이미 있었던 일»이다 (W-1과 같은 이유). */
+  const roster = DATA.students.filter(s=>s.classId===ex.classId);
+  const pts = [];
+  roster.forEach(s=>{
+    const sc = examScoreOf(state.allRecords[s.studentId], ex.id);
+    if(sc && sc.total) pts.push(sc.score/sc.total*100);
+  });
+  if(!pts.length) return {n:0, of:roster.length, avg:null, hi:null, lo:null};
+  return {n:pts.length, of:roster.length,
+    avg: Math.round(pts.reduce((a,b)=>a+b,0)/pts.length),
+    hi: Math.round(Math.max.apply(null, pts)), lo: Math.round(Math.min.apply(null, pts))};
+}
+/* 한 반 점수를 «한 번에» 저장한다. 줄마다 저장 버튼을 두면 한 명 누를 때마다 render()가 돌아
+   **아직 안 누른 칸이 통째로 지워진다** — 20명짜리 반에서는 못 쓴다.
+   ⚠ 빈 칸은 «안 본 것»이다. 0점이 아니다 — 0으로 넣으면 반 평균이 거짓이 된다. */
+async function saveExamScores(examId){
+  const ex = DATA.exams.find(x=>x.id===examId);
+  if(!ex) return;
+  const totalEl = document.getElementById('es-total-'+examId);
+  const total = parseFloat(totalEl ? totalEl.value : '');
+  if(isNaN(total) || total<=0){ showToast('만점을 먼저 입력해주세요.'); return; }
+  const roster = DATA.students.filter(s=>s.classId===ex.classId);
+  let saved = 0, cleared = 0, over = 0;
+  for(const st of roster){
+    const el = document.getElementById('es-score-'+st.studentId);
+    if(!el) continue;
+    const raw = el.value.trim();
+    const idx0 = (state.allRecords[st.studentId] && state.allRecords[st.studentId].scores || [])
+      .findIndex(x=>x.examId===examId);
+    if(raw==='' && idx0<0) continue;          // 원래 없던 칸은 건드리지 않는다
+    const rec = await loadRecord(st.studentId);
+    const idx = rec.scores.findIndex(x=>x.examId===examId);
+    if(raw===''){
+      if(idx>=0){ rec.scores.splice(idx,1); cleared++; } else continue;
+    }else{
+      const score = parseFloat(raw);
+      if(isNaN(score) || score<0) continue;
+      if(score>total) over++;
+      const entry = {name: ex.title, date: ex.date || todayStr(), score, total, examId};
+      if(idx>=0) rec.scores[idx] = entry; else rec.scores.push(entry);
+      saved++;
+    }
+    rec.scores.sort((a,b)=> String(a.date||'').localeCompare(String(b.date||'')));
+    await saveRecord(st.studentId);
+    state.allRecords[st.studentId] = rec;
+  }
+  if(!saved && !cleared){ showToast('입력된 점수가 없습니다.'); return; }
+  await logAudit('시험 성적 등록', '', '', ex.title+' · '+classNameOf(ex.classId)+' · '+saved+'명 (만점 '+total+')');
+  showToast(saved+'명의 성적을 저장했습니다.'
+    + (cleared ? ' '+cleared+'명은 비워서 지웠습니다.' : '')
+    + (over ? ' ⚠ '+over+'명은 만점을 넘습니다 — 확인해주세요.' : ''));
+  render();
 }
 
 function teacherExamsHTML(){
@@ -13362,7 +13525,10 @@ function teacherExamsHTML(){
   if(state.examMode==='new' || DATA.exams.length===0) return examNewHTML();
 
   let ex = DATA.exams.find(e=>e.id===state.examSelectedId) || DATA.exams[0];
-  const { counts, total } = examWrongCounts(ex);
+  /* 같은 창고를 쓰는 시험지들(뿌리+복사본). 둘 이상일 때만 «전체» 토글이 뜻이 있다. */
+  const sibs = examSiblings(ex);
+  const statAll = !!state.examStatAll && sibs.length > 1;
+  const { counts, total, wrongStudents } = examWrongCounts(ex, statAll);
   const rows = (ex.questions||[]).map((q,i)=>{
     const no = i + 1;
     const n = counts[no] || 0;
@@ -13372,16 +13538,13 @@ function teacherExamsHTML(){
   const worst = rows.reduce((m,r)=>Math.max(m, r.pct), 0);
 
   /* 이 시험지로 만들어진 쌍둥이 문항이 어디까지 왔는지 — 파이프라인의 다음 칸이다. */
-  const banks = DATA.problemBank.filter(b=>b.examId===ex.id);
+  const banks = examBanks(ex);
   const bankBy = st => banks.filter(b=>b.status===st).length;
+  const scStat = examScoreStats(ex);
 
   /* KPI 넷 — 전부 지금 데이터에서 나온다. 평균 오답률은 문항별 오답률의 평균이고,
      「오답 올린 학생」은 이 시험지에서 한 문항이라도 오답으로 올린 재원 수다. */
   const avgWrong = rows.length ? Math.round(rows.reduce((s,r)=>s+r.pct,0)/rows.length) : 0;
-  const wrongStudents = DATA.students.filter(s=>s.classId===ex.classId).filter(s=>{
-    const rec = state.allRecords[s.studentId];
-    return (rec && rec.wrongHomework || []).some(h=>h.examId===ex.id);
-  }).length;
   const reviewWait = bankBy('pending') + bankBy('review1');
 
   return `<div class="ex-screen">
@@ -13409,6 +13572,11 @@ function teacherExamsHTML(){
             <option value="">다른 반으로 복사…</option>
             ${DATA.classes.filter(c=>c.id!==ex.classId).map(c=>`<option value="${c.id}">${escHtml(c.name)}</option>`).join('')}
           </select></span>
+        ${/* 🔴 **복사본의 날짜를 여기서 고른다** (2026-08-29) — 예전에는 원본을 처음 등록한
+             날이 그대로 따라왔다. 복사는 «다른 반이 이 시험을 본다»는 뜻이라 그 반이 본 날이 맞다. */''}
+        <span class="field rst-selwrap" style="width:auto;">
+          <input class="rst-sel" type="date" id="copy-date-${ex.id}" value="${todayStr()}"
+            title="복사본의 시험 날짜입니다. 기본값은 오늘입니다."></span>
         <button class="btn sm" onclick="copyExamToClass('${ex.id}')">복사</button>
         <button class="btn q sm" onclick="deleteExam('${ex.id}')">삭제</button>
       </div>
@@ -13428,10 +13596,14 @@ function teacherExamsHTML(){
             오늘 한도까지 만들고 남은 것은 내일 이어서 만듭니다.
             끝나면 <b>1차 검토 대기</b>로 넘어갑니다.</span>
         </div>`; })()}
-      ${/* 시안 07의 KPI 다섯 중 «넷»만 세운다 — 「반 평균」은 만들 수 없다.
-           성적(scores)과 시험지(exams)를 잇는 것이 도메인에 없어서, 이 시험지의 점수가 어느 것인지
-           알 방법이 없다. 이름으로 짐작해 이으면 그 줄만 거짓이 된다. */''}
+      ${/* ✅ **「반 평균」이 생겼다** (2026-08-29) — 예전 주석은 「성적과 시험지를 잇는 것이
+           도메인에 없어서 만들 수 없다」였다. 이제 성적에 examId가 붙어 **짐작 없이** 이어진다.
+           ⚠ 분모는 «점수를 넣은 사람»이다(scStat.n). 안 넣은 사람을 0점으로 세면 평균이 거짓이 된다. */''}
       <div class="kpis" style="margin-top:14px;flex-shrink:0;">
+        ${/* ⚠ 단위는 «점»이 아니라 «%»다 — 만점이 100이 아닌 시험에서 점수로 읽으면 거짓이 된다. */''}
+        <div class="kpi" title="만점 대비 평균입니다. 점수를 넣은 학생만으로 냅니다 — 안 넣은 학생은 0점으로 세지 않습니다.">
+          <div class="k">반 평균${scStat.n ? ' ('+scStat.n+'/'+scStat.of+'명)' : ''}</div>
+          <div class="v">${scStat.avg===null ? '—' : scStat.avg}<s>${scStat.avg===null ? '' : '%'}</s></div></div>
         <div class="kpi"><div class="k">오답 올린 학생</div><div class="v">${state.allRecordsLoaded ? wrongStudents : '…'}<s>/${total}</s></div></div>
         <div class="kpi"><div class="k">평균 오답률</div><div class="v ${avgWrong>=25?'down':''}">${state.allRecordsLoaded ? avgWrong : '…'}<s>%</s></div></div>
         <div class="kpi"><div class="k">쌍둥이 생성</div><div class="v">${banks.length}<s>문항</s></div></div>
@@ -13446,13 +13618,26 @@ function teacherExamsHTML(){
              ⚠ 같은 화면의 「오답 올린 학생 n/${total}」도 이 수를 분모로 쓴다 — 그래서 함께 맞다.
              ⚠ 아래 «이탈 지점»의 「재원 n명」은 `classRoster`라 **진짜 재원이다. 그대로 둔다.** */''}
         <span class="mono">${ex.date||'날짜 없음'}</span><s>·</s><span
-          title="이 시험을 본 사람 수입니다 — 그 뒤에 퇴원한 학생도 포함합니다.">대상 ${total}명</span>
+          title="이 시험을 본 사람 수입니다 — 그 뒤에 퇴원한 학생도 포함합니다.">대상 ${total}${statAll?'명(합산)':'명'}</span>
+        ${/* 🔵 «창고를 함께 쓴다»는 것은 화면에 말해 줘야 안다 — 안 그러면 쌍둥이가 왜
+             벌써 있는지, 원본을 지우면 무슨 일이 나는지 알 길이 없다. */''}
+        ${sibs.length>1 ? `<s>·</s><span title="${escHtml(sibs.map(e=>classNameOf(e.classId)+' ('+(e.date||'날짜 없음')+')').join(' · '))}"
+          >${ex.sourceExamId ? '복사본' : '원본'} · 쌍둥이를 ${sibs.length}개 반이 함께 씁니다</span>` : ''}
         ${banks.length ? `<s>·</s>쌍둥이 ${banks.length}건 (검토 전 ${bankBy('pending')} · 1차 ${bankBy('review1')} · 공개 ${bankBy('approved')})` : ''}
       </div>
 
       <div class="ex-body">
-        <div class="t-sec">문항별 오답률
-          <span style="font-weight:400;">${state.allRecordsLoading ? '기록 불러오는 중…' : `가장 높은 문항 <span class="mono">${worst}%</span>`}</span></div>
+        ${/* ⚠ .t-sec은 블록이라 .spacer(margin-left:auto)가 안 먹는다 — 여기만 flex로 세운다. */''}
+        <div class="t-sec" style="display:flex;align-items:center;gap:10px;">문항별 오답률
+          <span style="font-weight:400;">${state.allRecordsLoading ? '기록 불러오는 중…' : `가장 높은 문항 <span class="mono">${worst}%</span>`}</span>
+          ${/* 🔵 **기본은 «이 반만»이다** (2026-08-29 · 사용자가 골랐다) — 반마다 진도·수준이
+               달라 섞으면 «어디서 무너졌나»가 흐려진다. 합쳐 보는 것은 «이 문항 자체가
+               어려운가»를 물을 때다. 복사본이 있을 때만 이 토글이 뜻이 있으므로 그때만 그린다. */''}
+          ${sibs.length>1 ? `<span class="spacer"></span>
+            <button class="btn q sm" style="font-weight:400;"
+              title="${escHtml(statAll ? '이 반의 학생만 셉니다.' : sibs.map(e=>classNameOf(e.classId)).join(' · ')+' 를 합쳐서 셉니다.')}"
+              onclick="state.examStatAll=${statAll?'false':'true'}; render()"
+              >${statAll ? '이 반만 보기' : '복사본까지 합쳐 보기'}</button>` : ''}</div>
         ${''}
         ${rows.length===0 ? '<div style="padding:36px 0;text-align:center;color:var(--dim);font-size:12.5px;">문항이 없습니다.</div>'
         : rows.map(r=>`<div class="ex-q ${r.pct>=50?'hi':(r.pct>=25?'mid':'')}">
@@ -13464,6 +13649,8 @@ function teacherExamsHTML(){
             <span class="tw muted" style="font-size:11.5px;">${r.n}명 오답</span>
           </div>`).join('')}
 
+        ${examScoreBoardHTML(ex, scStat)}
+
         <div class="t-sec" style="margin-top:24px;">문항 내용</div>
         ${examDetailHTML(ex.id)}
         <div class="rst-pad"></div>
@@ -13471,6 +13658,58 @@ function teacherExamsHTML(){
     </main>
     ${examSubmissionsHTML(ex)}
   </div>`;
+}
+
+/* =================== 시험 성적판 (2026-08-29 · 사용자 요청) ===================
+   «학생이 틀린 번호를 올리면 성적이 된다»가 아니라 **강사·조교가 점수를 적는다.**
+   둘은 다른 일이다 — 틀린 번호는 «무엇을 다시 풀어야 하나»를 정하고,
+   점수는 «얼마나 했나»를 말한다. 리포트가 학부모께 보내는 것은 뒤쪽이다.
+   여기서 넣은 점수는 examId를 달고 rec.scores에 들어가 **월간 리포트의 시험 표**에
+   그대로 실린다 (반 평균·등수까지 examId로 정확히 이어진다).
+   ⚠ **줄마다 저장 버튼을 두지 않는다** — 한 명 저장할 때마다 render()가 돌아
+     아직 안 누른 칸이 지워진다. 「전체 저장」 하나로 한 번에 읽는다. */
+function examScoreBoardHTML(ex, st){
+  /* ⚠ 여기도 classRoster를 안 쓴다 — 시험은 «이미 있었던 일»이라 퇴원생도 그때는 봤다. */
+  const roster = DATA.students.filter(s=>s.classId===ex.classId);
+  if(!state.allRecordsLoaded)
+    return `<div class="t-sec" style="margin-top:24px;">시험 성적</div>
+      <div style="padding:20px 0;color:var(--dim);font-size:12.5px;">학생 기록을 불러오는 중입니다…</div>`;
+  if(roster.length===0)
+    return `<div class="t-sec" style="margin-top:24px;">시험 성적</div>
+      <div style="padding:20px 0;color:var(--dim);font-size:12.5px;">${escHtml(classNameOf(ex.classId))}에 배정된 학생이 없습니다.</div>`;
+  /* 만점은 시험 하나에 하나다. 이미 넣은 것이 있으면 그것을, 없으면 100을 기본으로 둔다. */
+  const anyTotal = roster.map(s=>examScoreOf(state.allRecords[s.studentId], ex.id))
+    .filter(Boolean).map(x=>x.total).find(x=>x);
+  return `<div class="t-sec" style="margin-top:24px;">시험 성적
+      <span style="font-weight:400;">${st.n
+        ? `반 평균 <span class="mono">${st.avg}</span>% · 최고 <span class="mono">${st.hi}</span>% · 최저 <span class="mono">${st.lo}</span>% · ${st.n}/${st.of}명 입력`
+        : '아직 아무도 입력하지 않았습니다'}</span></div>
+    <div class="es-head" style="margin:0 0 12px;flex-wrap:wrap;">
+      <span class="field" style="width:auto;">만점
+        <input class="rst-sel" type="number" id="es-total-${ex.id}" min="1" step="1"
+          style="width:64px;text-align:right;" value="${anyTotal||100}"></span>
+      <button class="btn p sm" onclick="saveExamScores('${ex.id}')">전체 저장</button>
+      <span style="font-size:11.5px;color:var(--dim);line-height:1.7;flex:1;min-width:200px;">
+        빈 칸은 <b>«안 봤다»</b>입니다 — 0점으로 세지 않고 반 평균에서도 뺍니다.
+        넣은 점수는 <b>월간 리포트의 시험 표</b>에 그대로 실립니다.</span>
+    </div>
+    <div style="overflow-x:auto;">
+      <table class="es-tb"><thead><tr><th>이름</th><th style="text-align:right;">점수</th
+        ><th style="text-align:right;">%</th><th></th></tr></thead><tbody>
+      ${roster.map(s=>{
+        const cur = examScoreOf(state.allRecords[s.studentId], ex.id);
+        const pct = cur && cur.total ? Math.round(cur.score/cur.total*100) : null;
+        const gone = isWithdrawn(s);
+        return `<tr>
+          <td class="fm-nm">${escHtml(s.name)}${gone?' <span class="badge gone">퇴원</span>':''}</td>
+          <td style="text-align:right;"><input type="number" id="es-score-${s.studentId}"
+            style="width:72px;text-align:right;" step="any" value="${cur ? cur.score : ''}" placeholder="—"></td>
+          <td style="text-align:right;"><span class="mono">${pct===null ? '—' : pct+'%'}</span></td>
+          <td><span style="font-size:11.5px;color:var(--dim);">${cur ? '만점 '+cur.total : ''}</span></td>
+        </tr>`;
+      }).join('')}
+      </tbody></table>
+    </div>`;
 }
 
 /* 「제출 현황」 서브탭을 여기로 흡수했다 (시안 07의 우측 칸).
@@ -13482,12 +13721,13 @@ function examSubmissionsHTML(ex){
      퇴원생을 빼면 **그때 20명이 봤던 시험이 나중에 18명으로 보인다.** 과거를 고쳐 쓰는 셈이다.
      사용자가 「앞으로의 일에서만 뺀다」로 정했다. */
   const roster = DATA.students.filter(s=>s.classId===ex.classId);
-  const banks = DATA.problemBank.filter(b=>b.examId===ex.id);
-  const bankIds = new Set(banks.map(b=>b.id));
+  const banks = examBanks(ex);
 
   const rows = roster.map(s=>{
     const rec = state.allRecords[s.studentId];
-    const hw = (rec && rec.wrongHomework || []).filter(h=>bankIds.has(h.bankId));
+    /* ⚠ **bankId가 아니라 examId로 고른다** (2026-08-29) — 창고를 복사본과 함께 쓰면서
+       같은 bankId가 두 반에 걸린다. bankId로 고르면 **다른 반 학생의 숙제가 여기 섞인다.** */
+    const hw = (rec && rec.wrongHomework || []).filter(h=>h.examId===ex.id);
     const done = hw.filter(h=>h.done);
     const correct = done.filter(h=>{
       const bank = banks.find(b=>b.id===h.bankId);
