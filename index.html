@@ -1289,7 +1289,7 @@
 .rp-leg i.r{background:var(--no);}
 .rp-leg i.y{background:var(--late);}
 .rp-sec{margin:18px 0 8px;font-size:12px;color:var(--dim);}
-.rp-tb{width:100%;border-collapse:collapse;font-size:12.5px;}
+.rp-tb{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:18px;}
 .rp-tb th{text-align:left;font-weight:400;font-size:11.5px;color:var(--dim);
   padding:0 10px 7px 0;border-bottom:1px solid var(--line);white-space:nowrap;}
 .rp-tb td{padding:10px 10px 10px 0;border-bottom:1px solid var(--line);
@@ -11669,7 +11669,10 @@ function sdReportHTML(s, rec){
 
       ${meters.length || examTable ? `
         <div class="rp-body">${meters.join('')}</div>
-        ${examTable ? `<div class="rp-sec">시험</div>${examTable}` : ''}
+        ${/* ⚠ 여기에 「시험」 소제목을 다시 세우지 말 것 (2026-08-29 · 사용자가 짚었다) —
+             **표의 첫 열 머리가 이미 「시험」이다.** 둘이 나란히 있으면 같은 말이 두 번 적힌다.
+             자리 띄우기는 `.rp-tb`의 margin-top이 진다. */''}
+        ${examTable}
       `
         : '<div class="rp-none">이 달에는 기록이 없습니다 — 출결 · 시험 · 과제 어느 것도 남지 않았습니다.</div>'}
 
