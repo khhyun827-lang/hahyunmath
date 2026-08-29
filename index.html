@@ -515,8 +515,17 @@
   white-space:pre-wrap;}
 .app .chub-sess .tags{width:186px;flex-shrink:0;display:flex;flex-direction:column;gap:6px;
   align-items:flex-end;font-size:11.5px;color:var(--dim);text-align:right;}
-.app .chub-dh{display:flex;align-items:center;gap:10px;flex-wrap:wrap;flex-shrink:0;
-  padding-bottom:13px;border-bottom:1px solid var(--line);}
+/* 반 > 출결의 «날짜 고르개» 줄 (2026-08-30 · C-5).
+   옛 .chub-dh(「수업 기록 › 날짜」 상세의 머리말)가 있던 자리다 — 그 화면을 없애면서
+   같은 일을 하는 이 줄로 갈아 끼웠다. 날짜가 «화면»에서 «고르개»로 내려온 자국이다. */
+.app .chub-datebar{display:flex;align-items:center;gap:9px;flex-wrap:wrap;flex-shrink:0;
+  margin-bottom:16px;padding-bottom:13px;border-bottom:1px solid var(--line);}
+.app .chub-datebar b.mono{font-size:15px;font-weight:600;}
+.app .chub-datebar .muted{font-size:12px;color:var(--dim);}
+.app .chub-datebar .btn[disabled]{opacity:.35;cursor:default;}
+/* 지금 보고 있는 날짜는 목록에서도 표가 나야 한다 — 안 그러면 위아래가 따로 논다. */
+.app .chub-sess.on{background:var(--accent-bg);}
+.app .chub-sess.on .when .d{color:var(--accent);}
 
 /* 데일리퀴즈 (design-v1/15-quiz) — 1차 축은 문항이 아니라 «회차의 흐름»이다. */
 .app .qz-strip{padding:16px 18px 12px;border:1px solid var(--line);border-radius:var(--r-lg);
@@ -2867,7 +2876,6 @@ let state = {
   wrongExamId: null,
   wrongChecked: {},
   examImagesCache: {},
-  examDetailOpen: {},
   qnaQuestionImage: null,
   qnaAnswerImage: {},
   notifOpen: false,
@@ -2913,7 +2921,7 @@ let state = {
   ytPlayers: null,
   attDraft: {},
   attDraftKey: null,
-  classHubDate: null,            // null이면 수업 기록 «목록», 날짜가 들어 있으면 그날 «상세»
+  classHubDate: '',              // 반 > 출결이 보고 있는 날짜. 빈 값이면 «가장 최근 수업» (2026-08-30 · C-5)
   classHubLogFilter: '',
   season: null,                  // kv/season {name, startedAt} — 지금 시험 시즌
   examRanges: null,              // kv/exam-ranges {season, bySchool:{학교:{학년:{과목:[단원…]}}}, dates:{학교:{학년:{start,end}}}}
@@ -2925,7 +2933,6 @@ let state = {
   rangeSchool: '',               // 설정 > 시험 범위에서 펼쳐 보는 학교
   quizStudentId: null,           // 데일리퀴즈 화면에서 «오늘 것을 펼쳐 볼» 학생 (예전엔 회차 id였다)
   videoSelectedId: null,
-  classHubDateSubTab: 'attendance',
   classHubHomeworkShowAll: false,
   scoreAddFor: '',           // 반 > 성적에서 「시험 추가」 폼을 편 반 id (2026-08-30 · C-4)
   solutionOpen: {},
@@ -4183,7 +4190,7 @@ function gotoHwWaiting(){
   if(worst && worst.n > 0) state.classHubId = worst.id;
   state.teacherTab = 'classhub';
   state.classHubTab = 'homework';
-  state.classHubDate = null;
+  state.classHubDate = '';
   /* 대기가 있는 첫 과제를 펴 둔다 — 열자마자 할 일이 보여야 한다. */
   const rosters = classRoster(state.classHubId);
   const first = DATA.assignments.filter(a=>a.classId===state.classHubId)
@@ -5443,10 +5450,6 @@ function examImagesHTML(examId){
   return `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">${c.map(p=>`<img src="${imgSrcOf(p)}" style="width:90px;height:120px;object-fit:cover;border-radius:4px;border:1px solid var(--line);">`).join('')}</div>`;
 }
 
-function toggleExamDetailView(examId){
-  state.examDetailOpen[examId] = !state.examDetailOpen[examId];
-  render();
-}
 /* 문항 내용 — 원본과 변형을 좌우로 세운다.
    예전에는 둘을 세로로 이어 붙여 글만 쭉 나왔다. 문항 경계가 안 보이고,
    무엇보다 «이 변형이 저 원본의 쌍둥이가 맞나»를 보려면 둘이 나란해야 한다
@@ -9680,7 +9683,7 @@ const TEACHER_NAV = [
 const TEACHER_SUBNAV = {
   '반': [
     ['학생',       'classhub', 'students'],
-    ['수업 기록',  'classhub', 'sessions'],
+    ['출결',       'classhub', 'sessions'],
     ['성적',       'classhub', 'scores'],
     ['과제',       'classhub', 'homework'],
     ['진도',       'classhub', 'progress'],
@@ -11110,7 +11113,7 @@ function teacherClassHubHTML(){
   else if(tab==='quiz')  sub = chubQuizHTML(c.id);
   else if(tab==='video') sub = chubVideoHTML(c.id);
   else if(tab==='material') sub = chubMaterialHTML(c.id);
-  else                   sub = chubSessionsHTML(c.id);   // 안에서 «목록(DS)»과 «그날 상세(구버전)»를 가른다
+  else                   sub = chubAttendanceHTML(c.id);   // 날짜는 화면이 아니라 이 안의 고르개다
 
   const roster = classRoster(c.id);
   return `<div class="chub-screen">
@@ -12647,17 +12650,69 @@ function chubSessionFacts(classId, date){
   };
 }
 
-function chubSessionsHTML(classId){
-  loadAllRecordsIfNeeded();
-  loadSessionNoteIfNeeded(classId);          // 메모는 수업 화면과 같은 kv 문서를 본다
-  if(state.classHubDate) return chubSessionDetailHTML(classId, state.classHubDate);
+/* =================== 반 > 출결 — 날짜는 «화면»이 아니라 «고르개»다 (2026-08-30 · C-5) ===================
+   🔴 **「수업 기록 › 날짜 › 출석/시험/과제」라는 두 겹 화면을 없앴다** (사용자가 「거의 안 쓴다」고 정했다).
+     그 구조가 이 화면 전체를 비틀고 있었다 — **날짜가 화면이라서** 출결을 보려면 먼저
+     날짜를 골라 «들어가야» 했고, 그래서 출결·성적이 과제와 다른 층에 있었다.
+     이제 셋이 반 서브탭에 나란히 선다: 학생 · 출결 · 성적 · 과제.
 
+   여기 오면 **가장 최근 수업의 출결이 곧장 열려 있다.** 다른 날은 위 줄에서 고른다.
+   ⚠ 「시험」 갈래는 없앴다 — 그날 본 시험은 «반 > 성적»의 열이고, 문항은 «오답 > 시험지»다.
+   ⚠ 「과제」 갈래도 없앴다 — «반 > 과제»가 그 일을 한다(거기가 늘 «전체»라 더 낫다).
+   🔵 지난 수업 목록은 **지우지 않고 아래로 내렸다.** 그것이 곧 날짜 고르개다 —
+     «언제 결석이 있었나»를 보면서 그 날짜를 누르면 위 표가 그 날로 바뀐다. */
+function chubAttendanceHTML(classId){
+  loadAllRecordsIfNeeded();
+  loadSessionNoteIfNeeded(classId);
   const c = DATA.classes.find(x=>x.id===classId);
-  const dates = generateClassSessionDates(c && c.schedule, 20);
+  const dates = generateClassSessionDates(c && c.schedule, 20);   // 최근이 앞
   if(dates.length===0){
     return `<div style="padding:56px 0;text-align:center;color:var(--dim);font-size:12.5px;line-height:1.8;">
       반 일정(요일)이 없어 수업 날짜를 만들 수 없습니다.<br>설정 &gt; 반 추가에서 「월,수,금 7시~9시」처럼 넣어 주세요.</div>`;
   }
+  /* 기본은 «가장 최근에 지난 수업». 앞으로 올 수업(오늘+2까지 만든다)을 기본으로 열면
+     아직 있지도 않은 날의 출결을 넣게 된다. */
+  const today = todayStr();
+  const cur = state.classHubDate || dates.find(d=>d<=today) || dates[0];
+  const idx = dates.indexOf(cur);
+  const prev = idx>=0 && idx+1<dates.length ? dates[idx+1] : '';   // 배열이 최근순이라 «이전»은 뒤쪽
+  const next = idx>0 ? dates[idx-1] : '';
+  const dow = WEEKDAY_LABEL[new Date(cur+'T00:00:00').getDay()];
+  const att = teacherAttendanceHTML(classId, cur);
+  const memo = sessionMemoHTML(classId, cur);
+
+  return `
+  <div class="chub-datebar">
+    <button class="btn q sm" ${prev?'':'disabled'} title="${prev||'더 앞의 수업이 없습니다'}"
+      onclick="state.classHubDate='${prev}'; render()">${iconSvg('chevL',13)}</button>
+    <b class="mono">${cur}</b>
+    <span class="muted">${dow}요일${cur===today?' · 오늘':''}</span>
+    <button class="btn q sm" ${next?'':'disabled'} title="${next||'더 뒤의 수업이 없습니다'}"
+      onclick="state.classHubDate='${next}'; render()">${iconSvg('chevR',13)}</button>
+    <span class="spacer"></span>
+    ${/* ⚠ 날짜를 «옮겨 놓았을 때»만 되돌아가는 문을 낸다. `cur===today`로 판단하면 안 된다 —
+         오늘이 수업일이 아닌 날에는 기본으로 열려 있는데도 버튼이 떠 있게 된다. */''}
+    ${state.classHubDate ? `<button class="btn q sm" onclick="state.classHubDate=''; render()">최근 수업으로</button>` : ''}
+    ${/* 보충 수업처럼 일정 밖의 날짜로 들어갈 문. 옛 목록 화면이 갖고 있던 것을 여기로 옮겼다. */''}
+    <span class="field rst-selwrap" style="width:auto;">${iconSvg('calendar',13)}
+      <input type="date" class="rst-sel" style="width:132px;" value="${cur}" title="일정 밖의 날짜도 열 수 있습니다"
+        onchange="if(this.value){ state.classHubDate=this.value; render(); }">
+    </span>
+  </div>
+
+  ${att.body}
+  ${att.summary || ''}
+
+  <div style="margin-top:24px;">${memo.body}${memo.bar}</div>
+
+  <div class="t-sec" style="margin-top:28px;">지난 수업
+    <span style="font-weight:400;">날짜를 누르면 위 출결이 그 날로 바뀝니다</span></div>
+  ${chubSessionLogHTML(classId, dates, cur)}`;
+}
+
+/* 지난 수업 목록 — 예전 「수업 기록」의 목록이 그대로 여기로 왔다.
+   달라진 것은 **누르면 «들어가지» 않고 위 표의 날짜만 바꾼다**는 것뿐이다. */
+function chubSessionLogHTML(classId, dates, cur){
   const facts = dates.map(d=>({ date:d, f:chubSessionFacts(classId, d) }));
   const filter = state.classHubLogFilter || '';
   const match = x => filter==='memo' ? !!x.f.memo
@@ -12675,12 +12730,6 @@ function chubSessionsHTML(classId){
     ${pill('absent', '결석 발생', facts.filter(x=>x.f.absent>0).length)}
     ${pill('hw', '과제 배포', facts.filter(x=>x.f.hws.length>0).length)}
     <span class="rst-cnt">${state.allRecordsLoading ? '기록 불러오는 중…' : '최근 순 · ' + dates.length + '회'}</span>
-    ${/* 목록은 반 일정에서 만든 날짜만 담는다. 보충 수업처럼 일정 밖의 날짜로 들어갈 문을
-        옛 화면이 갖고 있었으므로(날짜 입력칸) 여기에도 남긴다. */''}
-    <span class="field rst-selwrap" style="width:auto;">${iconSvg('calendar',13)}
-      <input type="date" class="rst-sel" style="width:132px;" title="일정 밖의 날짜 열기"
-        onchange="if(this.value){ state.classHubDate=this.value; render(); }">
-    </span>
   </div>
   ${shown.length===0 ? '<div style="padding:48px 0;text-align:center;color:var(--dim);font-size:12.5px;">이 조건에 맞는 수업이 없습니다.</div>'
   : shown.map(({date, f}, i)=>{
@@ -12694,9 +12743,9 @@ function chubSessionsHTML(classId){
       <span>${mine.length}회</span><span class="r">${
         mine.filter(x=>x.f.absent>0).length ? `결석 ${mine.reduce((n,x)=>n+x.f.absent,0)}` : ''}${
         mine.filter(x=>x.f.memo).length ? ` · 메모 ${mine.filter(x=>x.f.memo).length}` : ''}</span></div>`;
-    return head + `<div class="chub-sess" onclick="state.classHubDate='${date}'; render()">
+    return head + `<div class="chub-sess ${date===cur?'on':''}" onclick="state.classHubDate='${date}'; render()">
       <div class="when">
-        <div class="d">${date.slice(5).replace('-','/')}${isToday?'':''}</div>
+        <div class="d">${date.slice(5).replace('-','/')}</div>
         <div class="w">${WEEKDAY_LABEL[new Date(date+'T00:00:00').getDay()]}요일${isToday?' · 오늘':''}</div>
       </div>
       <div class="mid">
@@ -12721,55 +12770,6 @@ function chubSessionsHTML(classId){
   }).join('')}`;
 }
 
-/* 그날 상세 — 머리말만 DS로 갈고 본문 넷은 구버전 그대로다.
-   출석의 5상태(퇴원 포함)·일괄 변경, 일별 성적, 시험 등록이 전부 여기 있다. */
-function chubSessionDetailHTML(classId, date){
-  /* 🔴 **「성적」 갈래를 뺐다** (2026-08-30 · C-4) — 성적을 넣는 자리는 «반 > 성적» 하나다.
-     여기 있던 것은 `examId`가 없는 «떠 있는 점수»(옛 쪽지시험)를 만들고 있었다. */
-  const dateSubtabs = [['attendance','출석'],['exam','시험'],['homework','과제']];
-  /* 예전 세션이 「성적」 갈래를 들고 있으면 조용히 출석으로 돌린다. */
-  if(state.classHubDateSubTab==='scores') state.classHubDateSubTab = 'attendance';
-  const sub = state.classHubDateSubTab || 'attendance';
-  let subHtml, extra = '';
-  if(sub==='exam')     subHtml = teacherClassDailyExamHTML(classId, date);
-  else if(sub==='homework'){ const r = teacherClassDailyHomeworkHTML(classId, date); subHtml = r.body; extra = r.extra; }
-  else { const r = teacherAttendanceBareHTML(classId, date); subHtml = r.body; extra = r.extra; }
-
-  return `
-  <div class="chub-dh">
-    <button class="btn sm" onclick="state.classHubDate=null; render()">${iconSvg('chevL',13)} 목록</button>
-    <span class="mono" style="font-size:14px;font-weight:600;">${date}</span>
-    <span class="muted" style="font-size:12px;">${WEEKDAY_LABEL[new Date(date+'T00:00:00').getDay()]}요일${date===todayStr()?' · 오늘':''}</span>
-    <span class="spacer"></span>
-    ${dateSubtabs.map(t=>`<a class="pill ${sub===t[0]?'on':''}" onclick="state.classHubDateSubTab='${t[0]}'; render()">${t[1]}</a>`).join('')}
-  </div>
-  <div style="padding-top:16px;">${subHtml}${extra}</div>`;
-}
-/* teacherClassSessionsHTML(날짜 버튼 줄 + 서브탭 막대)은 지웠다 —
-   chubSessionsHTML의 «목록»과 chubSessionDetailHTML의 «머리말»이 그 일을 나눠 갖는다. */
-
-// 출석 하위탭용: 카드 없이 본문만 반환(누적집계 패널은 별도)
-function teacherAttendanceBareHTML(classId, date){
-  const full = teacherAttendanceHTML(classId, date);
-  return { body: full.body, extra: full.summary };
-}
-function teacherClassDailyExamHTML(classId, date){
-  const exams = DATA.exams.filter(e=>e.classId===classId && e.date===date);
-  return `
-    <div class="st-h" style="margin-bottom:0;"><b>${date} 시험지</b><span>${exams.length}개</span></div>
-    ${exams.length===0 ? '<div class="st-empty">이 날짜로 등록된 시험지가 없습니다.</div>' :
-    exams.map(e=>{
-      const on = state.examDetailOpen[e.id];
-      return `<div class="st-row" style="align-items:flex-start;">
-        <div class="t"><b>${escHtml(e.title)}</b>
-          <span><span class="mono">${e.date||'-'}</span><s>·</s>${escHtml(classNameOf(e.classId))}<s>·</s>문항 ${e.questions.length}개</span>
-          ${on ? `<span style="margin-top:12px;">${examDetailHTML(e.id)}</span>` : ''}</div>
-        <div class="v"><button class="btn sm" onclick="toggleExamDetailView('${e.id}')">${on?'접기':'문항 보기'}</button></div>
-      </div>`;
-    }).join('')}
-    <button class="btn p" style="margin-top:12px;" onclick="examDraft.classId='${classId}'; examDraft.date='${date}'; state.teacherTab='exams'; state.examMode='new'; render()">이 날짜로 새 시험지 등록</button>
-  `;
-}
 function teacherClassDailyHomeworkHTML(classId, date){
   loadAllRecordsIfNeeded();
   /* 「반 > 과제」 상시 자리에서는 날짜 토글이 뜻이 없다 — 늘 전체다. */
