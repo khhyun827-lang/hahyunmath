@@ -515,6 +515,49 @@
   white-space:pre-wrap;}
 .app .chub-sess .tags{width:186px;flex-shrink:0;display:flex;flex-direction:column;gap:6px;
   align-items:flex-end;font-size:11.5px;color:var(--dim);text-align:right;}
+/* ---------- 반 > 출결 격자 (2026-08-30 · C-6) ----------
+   과제·성적 격자(.hwg)의 뼈대를 그대로 쓴다. 셋이 같은 모양이어야 «반의 한 학기»가 한 눈이 된다. */
+.app .ag-col{width:60px;cursor:pointer;}
+.app .ag-col.on{background:var(--accent-bg);}
+.app .ag td.on{background:var(--accent-bg);}
+.app .ag td{padding:5px 4px;}
+/* 상태 한 글자 — 뱃지보다 작고 조밀하다. 20회 × 20명이 한 판에 들어와야 한다. */
+.app .ag-m{display:inline-flex;align-items:center;justify-content:center;position:relative;
+  width:26px;height:24px;border-radius:var(--r-sm);font-size:12px;font-weight:700;
+  border:1px solid transparent;}
+.app .ag-m.ok{background:var(--okbg);border-color:var(--ok-line);color:var(--ok);}
+.app .ag-m.late,.app .ag-m.leave{background:var(--latebg);border-color:var(--late-line);color:var(--late);}
+.app .ag-m.no{background:var(--nobg);border-color:var(--no-line);color:var(--no);}
+.app .ag-m.drop{background:var(--gonebg);border-color:var(--line);color:var(--gone);}
+.app .ag-m.none{color:var(--dim);font-weight:400;}
+/* 사유·메모·보충영상이 달린 칸은 «점»으로 알린다 — 열어 보기 전에는 알 길이 없었다. */
+.app .ag-m .dotmark{position:absolute;right:2px;bottom:2px;width:4px;height:4px;border-radius:50%;
+  background:currentColor;opacity:.65;}
+.app .ag th.ag-rate,.app .ag td.ag-rate{width:66px;text-align:right;padding-right:12px;
+  border-left:1px solid var(--line);background:var(--sunk);}
+.app .ag th.ag-rate{vertical-align:bottom;}
+.app .ag .down{color:var(--no);font-weight:700;}
+/* 날짜 열을 눌러 편 «고치는 판» — 격자와 이어져 보이게 위쪽 금을 지운다. */
+.app .ag-edit{margin-top:18px;padding:18px 20px;border:1px solid var(--accent-line);
+  border-radius:var(--r-lg);background:var(--card);}
+
+/* ---------- 출결 입력의 «적는 칸» 줄 (2026-08-30 · C-6) ----------
+   🔴 사유·보충영상·메모가 이름표 없이 두 칸에 흩어져 있었다. 한 줄로 내리고 이름을 붙인다. */
+.app .fm-att-sub td{padding-top:0;border-top:0;}
+.app .att-fields{display:flex;gap:10px;flex-wrap:wrap;padding:0 0 10px;}
+.app .att-fields label{display:flex;align-items:center;gap:8px;flex:1;min-width:190px;}
+.app .att-fields label.wide{flex:2;min-width:220px;}
+.app .att-fields span{flex-shrink:0;font-size:11px;font-weight:700;color:var(--dim);
+  letter-spacing:.02em;width:52px;}
+.app .att-fields input{flex:1;min-width:0;}
+
+/* ---------- 수업 기록에서 펴 놓은 «그날» (2026-08-30 · C-6) ---------- */
+.app .chub-day{padding:18px 20px 20px;margin:0 0 6px;background:var(--sunk);
+  border:1px solid var(--line);border-radius:var(--r-lg);}
+.app .chub-day-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;}
+@media (max-width:900px){ .app .chub-day-grid{grid-template-columns:1fr;} }
+.app .chub-day .t-sec{margin-top:0;}
+
 /* 반 > 출결의 «날짜 고르개» 줄 (2026-08-30 · C-5).
    옛 .chub-dh(「수업 기록 › 날짜」 상세의 머리말)가 있던 자리다 — 그 화면을 없애면서
    같은 일을 하는 이 줄로 갈아 끼웠다. 날짜가 «화면»에서 «고르개»로 내려온 자국이다. */
@@ -1030,6 +1073,15 @@
   background:var(--sunk);color:var(--dim);cursor:pointer;font-family:inherit;font-size:10.5px;
   font-weight:500;line-height:1.6;}
 .app .sg .sg-x:hover{background:var(--hover);color:var(--ink);}
+.app .sg .sg-x.on{background:var(--accent-bg);border-color:var(--accent-line);color:var(--accent);font-weight:700;}
+/* 칸 아래 곁줄 — «몇 점 · 몇 틀림 · 오답 몇/몇». 숫자를 보러 온 자리라 작게 눌러 담는다. */
+.app .sg .sg-sub{display:block;margin-top:3px;font-size:10px;line-height:1.5;color:var(--dim);
+  font-family:JetBrains Mono,monospace;font-variant-numeric:tabular-nums;}
+.app .sg .sg-sub b{font-weight:700;color:var(--sub);}
+.app .sg .sg-sub.wait{color:var(--late);font-weight:600;}
+.app .sg .sg-sub.ok{color:var(--ok);}
+/* 곁줄이 붙으면서 칸이 세로로 길어진다 — 열 폭도 조금 넓혀야 «12틀림»이 안 접힌다. */
+.app .sg-col{width:132px;}
 /* 오른쪽 끝 «평균» 열 — 이름 열과 짝을 이뤄 표를 닫는다. */
 .app .sg th.sg-avg,.app .sg td.sg-avg{width:74px;text-align:right;padding-right:12px;
   border-left:1px solid var(--line);background:var(--sunk);}
@@ -2921,7 +2973,8 @@ let state = {
   ytPlayers: null,
   attDraft: {},
   attDraftKey: null,
-  classHubDate: '',              // 반 > 출결이 보고 있는 날짜. 빈 값이면 «가장 최근 수업» (2026-08-30 · C-5)
+  classHubDate: '',              // 반 > 수업 기록에서 펴 놓은 날짜 (2026-08-30 · C-6)
+  attOpenDate: '',               // 반 > 출결 격자에서 «고치려고» 펴 놓은 날짜 열
   classHubLogFilter: '',
   season: null,                  // kv/season {name, startedAt} — 지금 시험 시즌
   examRanges: null,              // kv/exam-ranges {season, bySchool:{학교:{학년:{과목:[단원…]}}}, dates:{학교:{학년:{start,end}}}}
@@ -5166,7 +5219,10 @@ async function deleteVideo(vid){
 }
 
 /* =================== 시험지 관리 =================== */
-let examDraft = { classId:'', title:'', date:'', questions:[{content:'', answer:'', unit:UNITS[0]}], pages:[] };
+/* `examId`가 비어 있으면 새 시험지를, 들어 있으면 **이미 있는 시험에 문항을 채운다**
+   (2026-08-30 · C-7 · 사용자 요청 — 「성적을 먼저 넣어 두고 나중에 시험지를 연결」).
+   ⚠ 성적은 `examId`로 붙어 있으므로 **id를 그대로 두면 저절로 이어진다.** 따로 «연결»할 것이 없다. */
+let examDraft = { examId:'', classId:'', title:'', date:'', questions:[{content:'', answer:'', unit:UNITS[0]}], pages:[] };
 
 function compressImageToBase64(file, maxDim, quality){
   maxDim = maxDim || 1400; quality = quality || 0.6;
@@ -5598,9 +5654,21 @@ async function saveExam(){
   // 올리고 링크만 저장한다. Firestore에는 짧은 URL/ID만 남아 문서 용량 제한에서 자유롭다.
   const questions = validQuestions.map((q,i)=>({no:i+1, content:q.content.trim(), answer:q.answer.trim(),
     unit:q.unit||'', chapter:q.chapter||''}));
-  const examId = 'ex'+Date.now();
-  const newExam = {id:examId, classId:examDraft.classId, title:examDraft.title, date:examDraft.date, questions, hasFiles:readyPages.length>0};
-  DATA.exams.unshift(newExam);
+  /* 🔵 **이미 있는 시험을 채우는 길** (2026-08-30 · C-7) — 성적만 먼저 넣어 둔 시험에
+     나중에 문항을 붙인다. 새 문서를 만들지 않고 **그 문서를 고친다** —
+     id가 그대로라 `rec.scores[].examId`가 가리키는 곳이 안 바뀌고, 성적이 그대로 붙어 있다.
+     ⚠ `scoreTotal`·`sourceExamId` 같은 이미 있던 값은 **덮지 않는다.** */
+  const editing = examDraft.examId ? DATA.exams.find(x=>x.id===examDraft.examId) : null;
+  const examId = editing ? editing.id : 'ex'+Date.now();
+  let newExam;
+  if(editing){
+    Object.assign(editing, {classId:examDraft.classId, title:examDraft.title, date:examDraft.date,
+      questions, hasFiles:readyPages.length>0 || !!editing.hasFiles});
+    newExam = editing;
+  }else{
+    newExam = {id:examId, classId:examDraft.classId, title:examDraft.title, date:examDraft.date, questions, hasFiles:readyPages.length>0};
+    DATA.exams.unshift(newExam);
+  }
   await dbSetDoc('exams', newExam.id, newExam);
   if(readyPages.length>0){
     await dbSet('examfiles:'+examId, readyPages);
@@ -5627,10 +5695,12 @@ async function saveExam(){
     await dbSetDoc('problembank', bankEntry.id, bankEntry);
     if(imgResult) await dbSet('pbimg:'+bankId, imgResult);
   }
-  examDraft = { classId:'', title:'', date:'', questions:[{content:'', answer:'', unit:UNITS[0]}], pages:[] };
+  examDraft = { examId:'', classId:'', title:'', date:'', questions:[{content:'', answer:'', unit:UNITS[0]}], pages:[] };
   /* 저장했으면 등록 모드에서 나와 방금 만든 시험지를 보여 준다 — 폼에 남아 있으면 또 만들 것처럼 보인다. */
   state.examMode = ''; state.examSelectedId = examId;
-  showToast('시험지가 등록되었습니다. 오답 검토에서 AI 쌍둥이 문제를 생성해보세요.');
+  showToast(editing
+    ? `「${newExam.title}」에 문항 ${questions.length}개를 붙였습니다. 넣어 둔 성적은 그대로 이어집니다.`
+    : '시험지가 등록되었습니다. 오답 검토에서 AI 쌍둥이 문제를 생성해보세요.');
   render();
 }
 /* 시험지를 지우면 **거기서 나온 것도 같이 지운다.**
@@ -9686,6 +9756,7 @@ const TEACHER_SUBNAV = {
     ['출결',       'classhub', 'sessions'],
     ['성적',       'classhub', 'scores'],
     ['과제',       'classhub', 'homework'],
+    ['수업 기록',  'classhub', 'log'],
     ['진도',       'classhub', 'progress'],
     ['데일리퀴즈', 'classhub', 'quiz'],
     ['영상',       'classhub', 'video'],
@@ -11109,6 +11180,7 @@ function teacherClassHubHTML(){
   }
   else if(tab==='students')   sub = teacherRosterHTML(c.id);
   else if(tab==='scores')     sub = chubScoresHTML(c.id);
+  else if(tab==='log')        sub = chubLogHTML(c.id);
   else if(tab==='progress')   sub = chubProgressHTML(c.id);
   else if(tab==='quiz')  sub = chubQuizHTML(c.id);
   else if(tab==='video') sub = chubVideoHTML(c.id);
@@ -11161,14 +11233,29 @@ function classExams(classId){
   return DATA.exams.filter(e=>e.classId===classId)
     .slice().sort((a,b)=> String(a.date||'').localeCompare(String(b.date||'')));
 }
-/* 만점 — 시험에 적어 둔 값이 먼저고, 없으면 이미 넣은 점수에서 가져온다. 그것도 없으면 100. */
+/* 🔵 **«만점»이 아니라 «문항수»다** (2026-08-30 · C-7 · 사용자 요청) —
+   「총 문항수와 정답수로 입력되면 100점 환산되어서 표기되는 구조가 되었으면 좋겠어.
+     그래야 몇 문제 틀렸는데 몇 문제 오답하고 있는지까지가 보일 것 같아.」
+   ⚠ **저장되는 값은 그대로 `{score, total}`이다** — 셈이 같기 때문이다(정답수/문항수 = 점수/만점).
+     바뀐 것은 «무엇을 넣는가»와 «무엇을 보여 주는가»다. 옛 기록을 건드리지 않아도 된다.
+   문항이 있는 시험지는 문항수를 **알고 있으므로** 그것을 쓴다 — 손으로 고칠 일이 아니다. */
 function examTotalOf(ex){
+  const qn = (ex.questions||[]).length;
+  if(qn) return qn;
   if(ex.scoreTotal) return ex.scoreTotal;
   for(const s of DATA.students){
     const sc = examScoreOf(state.allRecords[s.studentId], ex.id);
     if(sc && sc.total) return sc.total;
   }
-  return 100;
+  return 20;
+}
+/* 이 학생이 그 시험에서 «틀린 것을 몇 개나 오답으로 올렸나».
+   틀린 개수(문항수 − 정답수)와 나란히 놓여야 «하다 만 것»이 보인다. */
+function examWrongProgress(sid, examId){
+  const hw = ((state.allRecords[sid] && state.allRecords[sid].wrongHomework) || [])
+    .filter(h=>h.examId===examId);
+  if(!hw.length) return null;
+  return { total: hw.length, done: hw.filter(h=>h.done).length };
 }
 function chubScoresHTML(classId){
   loadAllRecordsIfNeeded();
@@ -11186,19 +11273,19 @@ function chubScoresHTML(classId){
         <input class="rst-sel" id="qx-title" style="width:150px;" placeholder="예: 3주차 쪽지"></span>
       <span class="field" style="width:auto;">날짜
         <input class="rst-sel" type="date" id="qx-date" value="${todayStr()}"></span>
-      <span class="field" style="width:auto;">만점
-        <input class="rst-sel" type="number" id="qx-total" min="1" style="width:64px;text-align:right;" value="100"></span>
+      <span class="field" style="width:auto;">문항수
+        <input class="rst-sel" type="number" id="qx-total" min="1" step="1" style="width:64px;text-align:right;" value="20"></span>
       <button class="btn p sm" onclick="addQuickExam('${classId}')">만들기</button>
       <button class="btn q sm" onclick="state.scoreAddFor=''; render()">취소</button>
       <span style="font-size:11.5px;color:var(--dim);line-height:1.7;flex:1;min-width:200px;">
-        <b>점수만 있는 시험</b>입니다. 문항까지 등록해 <b>오답 쌍둥이</b>를 만들려면
-        오답 &gt; 시험지에서 만듭니다.</span>`
+        지금은 <b>점수만</b> 넣습니다. <b>문항은 나중에 붙여도 됩니다</b> —
+        붙이면 넣어 둔 성적이 그대로 이어지고 오답 쌍둥이가 돕니다.</span>`
     : `
       <button class="btn p sm" onclick="state.scoreAddFor='${classId}'; render()">${iconSvg('plus',13)} 시험 추가</button>
       ${exams.length ? `<button class="btn sm" onclick="saveClassScores('${classId}')">전체 저장</button>` : ''}
       <span style="font-size:11.5px;color:var(--dim);line-height:1.7;flex:1;min-width:220px;">
-        빈 칸은 <b>«안 봤다»</b>입니다 — 0점으로 세지 않고 평균에서도 뺍니다.
-        넣은 점수는 <b>월간 리포트</b>에 그대로 실립니다.</span>`}
+        <b>맞은 개수</b>를 넣으면 100점으로 환산해 보여 줍니다. 빈 칸은 <b>«안 봤다»</b>입니다 —
+        0점으로 세지 않고 평균에서도 뺍니다. 넣은 점수는 <b>월간 리포트</b>에 실립니다.</span>`}
   </div>`;
 
   if(exams.length===0)
@@ -11221,18 +11308,23 @@ function chubScoresHTML(classId){
     <thead><tr>
       <th class="who">이름</th>
       ${exams.map(ex=>{
-        const quick = !(ex.questions||[]).length;
+        const qn = (ex.questions||[]).length;
         const avg = colAvg(ex);
         return `<th class="hwg-col sg-col">
           <b title="${escHtml(ex.title)}">${escHtml(ex.title)}</b>
           <span class="due"><span class="mono">${escHtml(ex.date||'-')}</span></span>
-          <span class="n">만점 <input class="sg-tot mono" type="number" min="1"
-            id="cst-${ex.id}" value="${examTotalOf(ex)}"></span>
+          ${/* 문항이 있는 시험지는 문항수를 «알고 있다» — 손으로 고칠 값이 아니다. */''}
+          <span class="n">${qn
+            ? `문항 <b class="mono">${qn}</b>`
+            : `문항 <input class="sg-tot mono" type="number" min="1" title="이 시험의 총 문항수"
+                 id="cst-${ex.id}" value="${examTotalOf(ex)}">`}</span>
           <span class="n ${avg!==null && avg<60 ? 'wait' : ''}">${avg===null ? '—' : '평균 '+avg+'%'}</span>
-          ${quick
-            ? `<button class="sg-x" title="이 시험을 지웁니다" onclick="deleteExam('${ex.id}')">✕</button>`
-            : `<button class="sg-x" title="문항·오답률을 봅니다"
-                 onclick="goTeacherTab('exams'); examOpenClass(examRootId('${ex.id}'),'${ex.id}')">문항</button>`}
+          ${qn
+            ? `<button class="sg-x" title="문항·오답률을 봅니다"
+                 onclick="goTeacherTab('exams'); examOpenClass(examRootId('${ex.id}'),'${ex.id}')">문항 보기</button>`
+            : `<button class="sg-x on" title="이 시험에 문항을 붙입니다. 넣어 둔 성적은 그대로 이어집니다."
+                 onclick="attachExamQuestions('${ex.id}')">문항 등록</button>
+               <button class="sg-x" title="이 시험을 지웁니다" onclick="deleteExam('${ex.id}')">✕</button>`}
         </th>`;
       }).join('')}
       <th class="sg-avg">평균</th>
@@ -11246,14 +11338,40 @@ function chubScoresHTML(classId){
             isWithdrawn(s) ? ' <span class="badge gone">퇴원</span>' : ''}</td>
           ${exams.map(ex=>{
             const sc = examScoreOf(state.allRecords[s.studentId], ex.id);
-            return `<td><input class="sg-in mono" type="number" step="any" placeholder="—"
-              id="cs-${ex.id}-${s.studentId}" value="${sc ? sc.score : ''}"></td>`;
+            const tot = examTotalOf(ex);
+            const pct = sc && sc.total ? Math.round(sc.score/sc.total*100) : null;
+            const missed = sc && sc.total ? Math.max(0, sc.total - sc.score) : null;
+            const wp = examWrongProgress(s.studentId, ex.id);
+            /* 🔵 «몇 문제 틀렸는데 몇 문제 오답하고 있나»가 한 칸에서 읽혀야 한다 (사용자 요청).
+               오답을 다 못 낸 것은 색으로 알린다 — 숫자만으로는 스무 칸 중에서 안 보인다. */
+            return `<td><input class="sg-in mono" type="number" step="1" min="0" max="${tot}" placeholder="—"
+                id="cs-${ex.id}-${s.studentId}" value="${sc ? sc.score : ''}">
+              ${pct===null ? '' : `<span class="sg-sub"><b>${pct}</b>점${
+                missed ? ` · ${missed}틀림` : ''}</span>`}
+              ${wp ? `<span class="sg-sub ${wp.done<wp.total?'wait':'ok'}">오답 ${wp.done}/${wp.total}</span>` : ''}
+            </td>`;
           }).join('')}
           <td class="sg-avg"><span class="mono">${avg===null ? '—' : avg+'%'}</span></td>
         </tr>`;
       }).join('')}
     </tbody>
   </table></div>`;
+}
+
+/* 🔵 **성적을 먼저 넣어 둔 시험에 나중에 문항을 붙인다** (2026-08-30 · C-7 · 사용자 요청).
+   「시험지 이름이랑 점수를 먼저 입력한 상태에서 추후 시험지를 등록시켜서 연결을 지어주는
+     방법은 없는거야?」 — 있다. 그리고 **«연결»이라는 일이 따로 필요 없다.**
+   성적은 `examId`로 붙어 있으므로, **그 시험 문서에 문항을 채우기만 하면** 그대로 이어진다.
+   그래서 새 시험지를 만드는 대신 `examDraft.examId`를 세워 등록 폼을 연다 (→ `saveExam`). */
+function attachExamQuestions(examId){
+  const ex = DATA.exams.find(x=>x.id===examId);
+  if(!ex) return;
+  examDraft = { examId, classId: ex.classId, title: ex.title, date: ex.date,
+    questions:[{content:'', answer:'', unit:UNITS[0]}], pages:[] };
+  goTeacherTab('exams');
+  state.examMode = 'new';
+  showToast(`「${ex.title}」에 붙일 문항을 넣어 주세요. 넣어 둔 성적은 그대로 이어집니다.`);
+  render();
 }
 
 /* 점수만 있는 시험을 만든다 — 예전 «쪽지시험»이 이 자리다.
@@ -11263,11 +11381,11 @@ async function addQuickExam(classId){
   const date  = document.getElementById('qx-date').value || todayStr();
   const total = parseFloat(document.getElementById('qx-total').value);
   if(!title){ showToast('시험명을 입력해주세요.'); return; }
-  if(isNaN(total) || total<=0){ showToast('만점을 입력해주세요.'); return; }
+  if(isNaN(total) || total<=0){ showToast('문항수를 입력해주세요.'); return; }
   const ex = {id:'ex'+Date.now(), classId, title, date, questions:[], hasFiles:false, scoreTotal:total};
   DATA.exams.unshift(ex);
   await dbSetDoc('exams', ex.id, ex);
-  await logAudit('시험 등록', '', '', `${title} · ${classNameOf(classId)} · ${date} (점수만)`);
+  await logAudit('시험 등록', '', '', `${title} · ${classNameOf(classId)} · ${date} · ${total}문항 (점수만)`);
   state.scoreAddFor = '';
   showToast(`「${title}」을 만들었습니다. 점수를 넣고 「전체 저장」을 눌러주세요.`);
   render();
@@ -11282,13 +11400,16 @@ async function saveClassScores(classId){
   /* 만점부터 거둔다 — 점수를 읽기 전에 시험마다 만점이 정해져 있어야 한다. */
   const totals = {};
   for(const ex of exams){
+    /* 문항이 있는 시험지는 칸이 없다 — 문항수를 알고 있으므로 그것을 쓴다. */
+    const qn = (ex.questions||[]).length;
+    if(qn){ totals[ex.id] = qn; continue; }
     const el = document.getElementById('cst-'+ex.id);
     const t = parseFloat(el ? el.value : '');
-    if(isNaN(t) || t<=0){ showToast(`「${ex.title}」의 만점을 확인해주세요.`); return; }
+    if(isNaN(t) || t<=0){ showToast(`「${ex.title}」의 문항수를 확인해주세요.`); return; }
     totals[ex.id] = t;
     if(ex.scoreTotal !== t){ ex.scoreTotal = t; await dbSetDoc('exams', ex.id, ex); }
   }
-  let saved = 0, cleared = 0, over = 0;
+  let saved = 0, cleared = 0; const over = [];
   for(const st of roster){
     let touched = false;
     const rec = await loadRecord(st.studentId);
@@ -11303,7 +11424,8 @@ async function saveClassScores(classId){
       }
       const score = parseFloat(raw);
       if(isNaN(score) || score<0) continue;
-      if(score>totals[ex.id]) over++;
+      /* 🔴 넘치면 «건너뛴다» — 알림만 띄우고 저장하면 440% 같은 값이 리포트까지 간다. */
+      if(score>totals[ex.id]){ over.push(st.name + ' · ' + ex.title); continue; }
       const entry = {name: ex.title, date: ex.date || todayStr(), score, total: totals[ex.id], examId: ex.id};
       if(idx>=0){
         const o = rec.scores[idx];
@@ -11317,12 +11439,252 @@ async function saveClassScores(classId){
     await saveRecord(st.studentId);
     state.allRecords[st.studentId] = rec;
   }
-  if(!saved && !cleared){ showToast('바뀐 점수가 없습니다.'); return; }
+  if(!saved && !cleared){
+    showToast(over.length
+      ? `저장하지 않았습니다 — 맞은 개수가 문항수보다 큽니다 (${over.join(', ')}).`
+      : '바뀐 점수가 없습니다.');
+    if(over.length) return;
+    return;
+  }
   await logAudit('시험 성적 등록', '', '', `${classNameOf(classId)} · ${saved}건 저장`);
   showToast(`${saved}건을 저장했습니다.`
     + (cleared ? ` ${cleared}건은 비워서 지웠습니다.` : '')
-    + (over ? ` ⚠ ${over}건이 만점을 넘습니다 — 확인해주세요.` : ''));
+    + (over.length ? ` ⚠ ${over.length}칸은 맞은 개수가 문항수보다 커서 **안 넣었습니다** (${over.join(', ')}).` : ''));
   render();
+}
+
+/* =================== 반 > 출결 — «한눈에»가 먼저다 (2026-08-30 · C-6) ===================
+   🔴 **날짜 하나의 입력 화면을 앞에 세우면 안 된다** (사용자가 짚었다) —
+     「데일리로 출석 입력하는 건 수업에서 할 수 있으니까, 반별 출석을 한눈에 파악할 수 있는
+     구조가 우선이 되면서 특정 날짜의 출결을 수정도 할 수 있으면 좋겠어.」
+     C-5에서 두 겹 화면을 없애면서 **그 자리에 «그날 입력»을 그대로 세운 것이 잘못이었다.**
+     이 탭이 답해야 할 물음은 «누가 얼마나 빠졌나»이지 «오늘 출결을 넣자»가 아니다.
+     오늘 넣는 일은 「수업」 탭이 한다.
+
+   그래서 **격자가 먼저**다 — 세로 학생 × 가로 수업일. 성적·과제 격자와 같은 결이다.
+   ⚠ **고치는 길은 열어 둔다** — 날짜 열 머리를 누르면 그날 입력이 격자 «아래»로 펴진다.
+     (과제 격자에서 열 머리를 눌러 명단을 펴는 것과 같은 장치다.) */
+function chubAttendanceHTML(classId){
+  loadAllRecordsIfNeeded();
+  const c = DATA.classes.find(x=>x.id===classId);
+  const dates = generateClassSessionDates(c && c.schedule, 20);   // 최근이 앞
+  if(dates.length===0){
+    return `<div style="padding:56px 0;text-align:center;color:var(--dim);font-size:12.5px;line-height:1.8;">
+      반 일정(요일)이 없어 수업 날짜를 만들 수 없습니다.<br>설정 &gt; 반 추가에서 「월,수,금 7시~9시」처럼 넣어 주세요.</div>`;
+  }
+  if(!state.allRecordsLoaded) return `<div class="fm-empty">학생 기록을 불러오는 중입니다…</div>`;
+  const roster = classRoster(classId);
+  if(roster.length===0) return `<div class="fm-empty">이 반에 배정된 학생이 없습니다.</div>`;
+
+  const today = todayStr();
+  /* 앞으로 올 수업(오늘+2까지 만든다)은 격자에 세우지 않는다 — 아직 있지도 않은 날이다. */
+  const past = dates.filter(d=>d<=today);
+  const cols = past.length ? past : dates.slice(-1);
+  const open = state.attOpenDate && cols.includes(state.attOpenDate) ? state.attOpenDate : '';
+
+  const attOf = (sid, date) =>
+    ((state.allRecords[sid] && state.allRecords[sid].attendance) || []).find(a=>a.date===date) || null;
+  /* 출석률 = 「퇴원」을 뺀 기록 중 «결석이 아닌» 비율. 명단·신호가 쓰는 셈과 같은 것이다. */
+  const rateOf = sid => {
+    const list = ((state.allRecords[sid] && state.allRecords[sid].attendance) || []).filter(a=>a.status!=='퇴원');
+    if(!list.length) return null;
+    return Math.round(list.filter(a=>a.status!=='결석').length / list.length * 100);
+  };
+  const MARK = {'출석':'출', '지각':'지', '조퇴':'조', '결석':'결', '퇴원':'퇴'};
+
+  return `
+  <div class="es-head" style="margin:0 0 14px;flex-wrap:wrap;">
+    <span class="t-sec" style="margin:0;">최근 ${cols.length}회</span>
+    <span class="spacer"></span>
+    <span style="font-size:11.5px;color:var(--dim);line-height:1.7;text-align:right;">
+      <b>날짜를 누르면</b> 그날 출결을 아래에서 고칠 수 있습니다.
+      오늘 수업의 출결은 <b>「수업」 탭</b>에서 넣습니다.</span>
+  </div>
+
+  <div class="hwg-wrap"><table class="hwg ag">
+    <thead><tr>
+      <th class="who">이름</th>
+      ${cols.map(d=>{
+        const filled = roster.filter(s=>attOf(s.studentId, d)).length;
+        const absent = roster.filter(s=>{ const a = attOf(s.studentId, d); return a && a.status==='결석'; }).length;
+        return `<th class="hwg-col ag-col ${d===open?'on':''}" title="${d} — 누르면 이 날짜를 고칩니다"
+          onclick="state.attOpenDate='${d===open?'':d}'; render()">
+          <b>${d.slice(5).replace('-','/')}</b>
+          <span class="due">${WEEKDAY_LABEL[new Date(d+'T00:00:00').getDay()]}${d===today?' · 오늘':''}</span>
+          <span class="n ${filled<roster.length?'wait':''}">${
+            filled===0 ? '미입력' : filled<roster.length ? '입력 '+filled+'/'+roster.length : (absent?'결석 '+absent:'완료')}</span>
+        </th>`;
+      }).join('')}
+      <th class="ag-rate">출석률</th>
+    </tr></thead>
+    <tbody>
+      ${roster.map(s=>{
+        const r = rateOf(s.studentId);
+        return `<tr>
+          <td class="who"><span class="nm">${escHtml(s.name)}</span></td>
+          ${cols.map(d=>{
+            const a = attOf(s.studentId, d);
+            const extra = a && (a.reason || a.videoUrl || a.note);
+            return `<td class="${d===open?'on':''}">${a
+              ? `<span class="ag-m ${attStatusClass(a.status)}" title="${escHtml(
+                  a.status + (a.reason?' · '+a.reason:'') + (a.note?' · '+a.note:'') + (a.videoUrl?' · 보충 영상 있음':''))}"
+                  >${MARK[a.status]||a.status.slice(0,1)}${extra?'<i class="dotmark"></i>':''}</span>`
+              : '<span class="ag-m none" title="미입력">·</span>'}</td>`;
+          }).join('')}
+          <td class="ag-rate"><span class="mono ${r!==null && r<80 ? 'down':''}">${r===null?'—':r+'%'}</span></td>
+        </tr>`;
+      }).join('')}
+    </tbody>
+  </table></div>
+
+  ${open ? `<div class="ag-edit">
+    <div class="chub-datebar" style="margin-bottom:14px;">
+      <b class="mono">${open}</b>
+      <span class="muted">${WEEKDAY_LABEL[new Date(open+'T00:00:00').getDay()]}요일${open===today?' · 오늘':''}</span>
+      <span class="spacer"></span>
+      <button class="btn q sm" onclick="state.attOpenDate=''; render()">닫기</button>
+    </div>
+    ${teacherAttendanceHTML(classId, open).body}
+  </div>` : ''}
+
+  <div class="t-sec" style="margin-top:28px;">출결 누적
+    <span style="font-weight:400;">이 반 전체 · 전 기간</span></div>
+  <div style="overflow-x:auto;"><table class="es-tb" style="max-width:520px;">
+    <thead><tr><th>학생</th>${ATT_STATUSES.map(st=>`<th style="text-align:right;">${st}</th>`).join('')}
+      <th style="text-align:right;">출석률</th></tr></thead>
+    <tbody>${roster.map(s=>{
+      const list = (state.allRecords[s.studentId] && state.allRecords[s.studentId].attendance) || [];
+      const r = rateOf(s.studentId);
+      return `<tr><td class="fm-nm">${escHtml(s.name)}</td>${
+        ATT_STATUSES.map(st=>`<td style="text-align:right;"><span class="mono">${list.filter(a=>a.status===st).length}</span></td>`).join('')}
+        <td style="text-align:right;"><span class="mono ${r!==null && r<80?'down':''}">${r===null?'—':r+'%'}</span></td></tr>`;
+    }).join('')}</tbody>
+  </table></div>`;
+}
+
+/* =================== 반 > 수업 기록 — 하루하루의 «전부» (2026-08-30 · C-6) ===================
+   🔴 **출결 아래에 붙여 두었던 것을 다시 뺐다** (사용자가 짚었다) —
+     「출결만 보이는 것도 아니고 하루하루에 대해 전체적으로 시험이든 뭐든 기록되는 거니까
+     출결 탭에 있는 것도 맞지 않는 것 같아.」 맞는 말이다.
+     이 목록이 답하는 것은 «그날 무슨 일이 있었나»이고, 출결은 그중 하나일 뿐이다.
+   ⚠ **C-5의 두 겹 화면으로 되돌아가지 않는다** — 누르면 «들어가는» 것이 아니라
+     그 줄 아래로 펴진다. 목록을 잃지 않은 채로 그날을 읽는다. */
+function chubLogHTML(classId){
+  loadAllRecordsIfNeeded();
+  loadSessionNoteIfNeeded(classId);
+  const c = DATA.classes.find(x=>x.id===classId);
+  const dates = generateClassSessionDates(c && c.schedule, 20);
+  if(dates.length===0){
+    return `<div style="padding:56px 0;text-align:center;color:var(--dim);font-size:12.5px;line-height:1.8;">
+      반 일정(요일)이 없어 수업 날짜를 만들 수 없습니다.<br>설정 &gt; 반 추가에서 「월,수,금 7시~9시」처럼 넣어 주세요.</div>`;
+  }
+  const facts = dates.map(d=>({ date:d, f:chubSessionFacts(classId, d) }));
+  const filter = state.classHubLogFilter || '';
+  const match = x => filter==='memo' ? !!x.f.memo
+                   : filter==='absent' ? x.f.absent>0
+                   : filter==='hw' ? x.f.hws.length>0
+                   : true;
+  const shown = facts.filter(match);
+  const pill = (key, label, n) =>
+    `<a class="pill ${filter===key?'on':''}" onclick="state.classHubLogFilter='${key}'; render()">${label} <b>${n}</b></a>`;
+  const open = state.classHubDate;
+
+  return `
+  <div class="chub-fbar">
+    ${pill('', '전체', facts.length)}
+    ${pill('memo', '메모 있음', facts.filter(x=>x.f.memo).length)}
+    ${pill('absent', '결석 발생', facts.filter(x=>x.f.absent>0).length)}
+    ${pill('hw', '과제 배포', facts.filter(x=>x.f.hws.length>0).length)}
+    <span class="rst-cnt">${state.allRecordsLoading ? '기록 불러오는 중…' : '최근 순 · ' + dates.length + '회'}</span>
+    ${/* 보충 수업처럼 일정 밖의 날짜를 열 문 하나는 남긴다. */''}
+    <span class="field rst-selwrap" style="width:auto;">${iconSvg('calendar',13)}
+      <input type="date" class="rst-sel" style="width:132px;" title="일정 밖의 날짜도 열 수 있습니다"
+        onchange="if(this.value){ state.classHubDate=this.value; render(); }">
+    </span>
+  </div>
+  ${shown.length===0 ? '<div style="padding:48px 0;text-align:center;color:var(--dim);font-size:12.5px;">이 조건에 맞는 수업이 없습니다.</div>'
+  : shown.map(({date, f}, i)=>{
+    const isToday = date===todayStr();
+    const ym = date.slice(0,7);
+    const newMonth = i===0 || shown[i-1].date.slice(0,7)!==ym;
+    const mine = shown.filter(x=>x.date.slice(0,7)===ym);
+    const head = !newMonth ? '' : `<div class="chub-mhead"><b>${Number(ym.slice(5))}월</b>
+      <span>${mine.length}회</span><span class="r">${
+        mine.filter(x=>x.f.absent>0).length ? `결석 ${mine.reduce((n,x)=>n+x.f.absent,0)}` : ''}${
+        mine.filter(x=>x.f.memo).length ? ` · 메모 ${mine.filter(x=>x.f.memo).length}` : ''}</span></div>`;
+    const on = date===open;
+    return head + `<div class="chub-sess ${on?'on':''}" onclick="state.classHubDate='${on?'':date}'; render()">
+      <div class="when">
+        <div class="d">${date.slice(5).replace('-','/')}</div>
+        <div class="w">${WEEKDAY_LABEL[new Date(date+'T00:00:00').getDay()]}요일${isToday?' · 오늘':''}</div>
+      </div>
+      <div class="mid">
+        <div class="att">
+          ${f.total===0 ? '<span class="sum muted">배정된 학생이 없습니다</span>'
+            : f.filled===0 ? '<span class="badge">출결 미입력</span>'
+            : `<span class="dots" title="${escHtml(f.marks.map(m=>m.name+' '+(m.status||'미입력')).join(' · '))}">${
+                f.marks.map(m=>`<i class="${m.status?attStatusClass(m.status):''}"></i>`).join('')}</span>
+               <span class="sum">출석 <b>${f.cnt['출석']||0}</b>${
+                f.cnt['지각']?` · 지각 <b>${f.cnt['지각']}</b>`:''}${
+                f.cnt['조퇴']?` · 조퇴 <b>${f.cnt['조퇴']}</b>`:''}${
+                f.absent?` · 결석 <b>${f.absent}</b>`:''}</span>
+               ${f.filled<f.total?`<span class="badge late">미입력 ${f.total-f.filled}</span>`:'<span class="badge ok">완료</span>'}`}
+        </div>
+        ${f.memo ? `<div class="memo">${escHtml(f.memo)}</div>` : ''}
+      </div>
+      <div class="tags">
+        ${f.hws.length ? f.hws.map(h=>`<span class="tag">${escHtml(h.title)}</span>`).join('') : ''}
+        ${f.scored ? `<span>성적 <b class="mono">${f.scored}</b>명 입력됨</span>` : ''}
+      </div>
+    </div>`
+    + (on ? `<div class="chub-day" onclick="event.stopPropagation()">${chubDayHTML(classId, date)}</div>` : '');
+  }).join('')}`;
+}
+
+/* 그날 하나 — 목록 «아래»로 펴진다. 읽는 자리다.
+   ⚠ 출결 «입력»은 여기 두지 않는다 — 출결 탭(격자)과 수업 탭이 그 일을 한다.
+     여기까지 입력을 두면 또 문이 늘고, 그게 이 판 전체가 고치고 있는 것이다. */
+function chubDayHTML(classId, date){
+  const exams = DATA.exams.filter(e=>e.classId===classId && e.date===date);
+  const hws = DATA.assignments.filter(a=>a.classId===classId && (a.createdAt===date || a.dueDate===date));
+  const memo = sessionMemoHTML(classId, date);
+  const roster = classRoster(classId);
+  const att = roster.map(s=>({
+    s, a: ((state.allRecords[s.studentId] && state.allRecords[s.studentId].attendance) || []).find(x=>x.date===date)
+  }));
+  const notable = att.filter(x=>x.a && x.a.status!=='출석');
+  return `
+  <div class="chub-day-grid">
+    <div>
+      <div class="t-sec">출결</div>
+      ${att.every(x=>!x.a)
+        ? `<div class="st-empty">아직 넣지 않았습니다 — <b>출결 탭</b>에서 이 날짜를 눌러 넣습니다.</div>`
+        : notable.length===0
+          ? `<div class="st-empty">전원 출석했습니다.</div>`
+          : notable.map(({s, a})=>`<div class="st-row">
+              <div class="t"><b>${escHtml(s.name)}</b>
+                <span>${a.reason ? escHtml(a.reason) : '사유 없음'}${a.note ? '<s>·</s>'+escHtml(a.note) : ''}</span></div>
+              <div class="v">${attBadge(a.status)}${a.videoUrl
+                ? ` <a class="btn q sm" href="${escHtml(a.videoUrl)}" target="_blank" rel="noopener">보충 영상</a>` : ''}</div>
+            </div>`).join('')}
+
+      <div class="t-sec" style="margin-top:22px;">그날 시험</div>
+      ${exams.length===0 ? '<div class="st-empty">이 날짜로 등록된 시험이 없습니다.</div>'
+        : exams.map(e=>`<div class="st-row">
+            <div class="t"><b>${escHtml(e.title)}</b>
+              <span>${(e.questions||[]).length ? '문항 '+e.questions.length+'개' : '점수만 있는 시험'}</span></div>
+            <div class="v"><button class="btn q sm" onclick="state.classHubTab='scores'; render()">성적 보기</button></div>
+          </div>`).join('')}
+
+      <div class="t-sec" style="margin-top:22px;">그날 과제</div>
+      ${hws.length===0 ? '<div class="st-empty">이 날짜에 낸 과제가 없습니다.</div>'
+        : hws.map(h=>`<div class="st-row">
+            <div class="t"><b>${escHtml(h.title)}</b><span>마감 ${escHtml(h.dueDate||'-')}</span></div>
+            <div class="v"><button class="btn q sm" onclick="state.classHubTab='homework'; render()">과제 보기</button></div>
+          </div>`).join('')}
+    </div>
+    <div>${memo.body}${memo.bar}</div>
+  </div>`;
 }
 
 function chubClassListHTML(activeId){
@@ -12540,7 +12902,11 @@ function teacherAttendanceHTML(classId, date){
       </div>
     </div>
     <div style="overflow-x:auto;">
-    <table class="fm-att"><tr><th>#</th><th>이름</th><th>상태</th><th>출석 상태 변경</th><th>출결 메모</th></tr>
+    ${/* 🔴 **사유·보충영상·메모를 한 칸에 쌓지 않는다** (2026-08-30 · C-6 · 사용자가 짚었다) —
+         예전에는 상태 버튼 밑에 사유와 유튜브 칸이 «이름표 없이» 쌓이고, 메모는 옆 칸에 있어
+         결석을 누르는 순간 세 입력이 두 칸에 흩어졌다. 무엇을 적는 칸인지 알 수 없었다.
+       이제 **상태를 고르면 그 학생 «아래»로 한 줄이 펴진다** — 이름표를 달아 나란히 놓는다. */''}
+    <table class="fm-att"><tr><th>#</th><th>이름</th><th>상태</th><th>출석 상태 변경</th></tr>
     ${roster.map((s,i)=>{
       const d = state.attDraft[s.studentId] || {status:null, reason:'', videoUrl:'', note:''};
       return `<tr>
@@ -12554,15 +12920,31 @@ function teacherAttendanceHTML(classId, date){
             ${ATT_STATUSES.map(st=>`<button class="${d.status===st?'on '+attStatusClass(st):''}"
               style="width:auto;padding:0 10px;" onclick="setAttStatus('${s.studentId}','${st}')">${st}</button>`).join('')}
           </div>
-          ${(d.status && d.status!=='출석') ? `<input style="margin-top:7px;" id="att-reason-${s.studentId}" placeholder="사유 입력 (선택)" value="${escHtml(d.reason)}" oninput="state.attDraft['${s.studentId}'].reason=this.value">` : ''}
-          ${d.status==='결석' ? `<input style="margin-top:7px;" id="att-video-${s.studentId}" placeholder="보충 영상 유튜브 링크 (선택)" value="${escHtml(d.videoUrl)}" oninput="state.attDraft['${s.studentId}'].videoUrl=this.value">` : ''}
         </td>
-        <td><input id="att-note-${s.studentId}" placeholder="메모 입력" value="${escHtml(d.note)}" oninput="state.attDraft['${s.studentId}'].note=this.value"></td>
+      </tr>
+      ${/* 적을 것이 있을 때만 줄이 하나 늘어난다. 출석이면 메모 하나뿐이라 그것도 여기 둔다. */''}
+      <tr class="fm-att-sub">
+        <td></td>
+        <td colspan="3">
+          <div class="att-fields">
+            ${(d.status && d.status!=='출석') ? `<label><span>사유</span>
+              <input id="att-reason-${s.studentId}" placeholder="예: 병원 진료"
+                value="${escHtml(d.reason)}" oninput="state.attDraft['${s.studentId}'].reason=this.value"></label>` : ''}
+            ${d.status==='결석' ? `<label class="wide"><span>보충 영상</span>
+              <input id="att-video-${s.studentId}" placeholder="유튜브 링크 (선택)"
+                value="${escHtml(d.videoUrl)}" oninput="state.attDraft['${s.studentId}'].videoUrl=this.value"></label>` : ''}
+            <label class="wide"><span>메모</span>
+              <input id="att-note-${s.studentId}" placeholder="이 학생에 대해 남길 말 (선택)"
+                value="${escHtml(d.note)}" oninput="state.attDraft['${s.studentId}'].note=this.value"></label>
+          </div>
+        </td>
       </tr>`;
     }).join('')}
     </table>
     </div>`}
   `;
+  /* ⚠ 「출결 누적」은 이제 **출결 격자 화면**이 아래에 세운다 (C-6).
+       여기서도 그리면 격자 화면에 같은 표가 둘이 된다. 수업 탭만 이 값을 쓴다. */
   const summary = classId && state.allRecordsLoaded && roster.length>0 ? `
   <div class="st-sec" style="margin-top:26px;">
     <div class="st-h"><b>${classNameOf(classId)} 출결 누적</b><span>이 반 전체 · 전 기간</span></div>
@@ -12648,126 +13030,6 @@ function chubSessionFacts(classId, date){
     memo: (state.sessionNotes[classId] || {})[date] || '',
     hws: DATA.assignments.filter(a=>(!a.classId || a.classId===classId) && a.createdAt===date)
   };
-}
-
-/* =================== 반 > 출결 — 날짜는 «화면»이 아니라 «고르개»다 (2026-08-30 · C-5) ===================
-   🔴 **「수업 기록 › 날짜 › 출석/시험/과제」라는 두 겹 화면을 없앴다** (사용자가 「거의 안 쓴다」고 정했다).
-     그 구조가 이 화면 전체를 비틀고 있었다 — **날짜가 화면이라서** 출결을 보려면 먼저
-     날짜를 골라 «들어가야» 했고, 그래서 출결·성적이 과제와 다른 층에 있었다.
-     이제 셋이 반 서브탭에 나란히 선다: 학생 · 출결 · 성적 · 과제.
-
-   여기 오면 **가장 최근 수업의 출결이 곧장 열려 있다.** 다른 날은 위 줄에서 고른다.
-   ⚠ 「시험」 갈래는 없앴다 — 그날 본 시험은 «반 > 성적»의 열이고, 문항은 «오답 > 시험지»다.
-   ⚠ 「과제」 갈래도 없앴다 — «반 > 과제»가 그 일을 한다(거기가 늘 «전체»라 더 낫다).
-   🔵 지난 수업 목록은 **지우지 않고 아래로 내렸다.** 그것이 곧 날짜 고르개다 —
-     «언제 결석이 있었나»를 보면서 그 날짜를 누르면 위 표가 그 날로 바뀐다. */
-function chubAttendanceHTML(classId){
-  loadAllRecordsIfNeeded();
-  loadSessionNoteIfNeeded(classId);
-  const c = DATA.classes.find(x=>x.id===classId);
-  const dates = generateClassSessionDates(c && c.schedule, 20);   // 최근이 앞
-  if(dates.length===0){
-    return `<div style="padding:56px 0;text-align:center;color:var(--dim);font-size:12.5px;line-height:1.8;">
-      반 일정(요일)이 없어 수업 날짜를 만들 수 없습니다.<br>설정 &gt; 반 추가에서 「월,수,금 7시~9시」처럼 넣어 주세요.</div>`;
-  }
-  /* 기본은 «가장 최근에 지난 수업». 앞으로 올 수업(오늘+2까지 만든다)을 기본으로 열면
-     아직 있지도 않은 날의 출결을 넣게 된다. */
-  const today = todayStr();
-  const cur = state.classHubDate || dates.find(d=>d<=today) || dates[0];
-  const idx = dates.indexOf(cur);
-  const prev = idx>=0 && idx+1<dates.length ? dates[idx+1] : '';   // 배열이 최근순이라 «이전»은 뒤쪽
-  const next = idx>0 ? dates[idx-1] : '';
-  const dow = WEEKDAY_LABEL[new Date(cur+'T00:00:00').getDay()];
-  const att = teacherAttendanceHTML(classId, cur);
-  const memo = sessionMemoHTML(classId, cur);
-
-  return `
-  <div class="chub-datebar">
-    <button class="btn q sm" ${prev?'':'disabled'} title="${prev||'더 앞의 수업이 없습니다'}"
-      onclick="state.classHubDate='${prev}'; render()">${iconSvg('chevL',13)}</button>
-    <b class="mono">${cur}</b>
-    <span class="muted">${dow}요일${cur===today?' · 오늘':''}</span>
-    <button class="btn q sm" ${next?'':'disabled'} title="${next||'더 뒤의 수업이 없습니다'}"
-      onclick="state.classHubDate='${next}'; render()">${iconSvg('chevR',13)}</button>
-    <span class="spacer"></span>
-    ${/* ⚠ 날짜를 «옮겨 놓았을 때»만 되돌아가는 문을 낸다. `cur===today`로 판단하면 안 된다 —
-         오늘이 수업일이 아닌 날에는 기본으로 열려 있는데도 버튼이 떠 있게 된다. */''}
-    ${state.classHubDate ? `<button class="btn q sm" onclick="state.classHubDate=''; render()">최근 수업으로</button>` : ''}
-    ${/* 보충 수업처럼 일정 밖의 날짜로 들어갈 문. 옛 목록 화면이 갖고 있던 것을 여기로 옮겼다. */''}
-    <span class="field rst-selwrap" style="width:auto;">${iconSvg('calendar',13)}
-      <input type="date" class="rst-sel" style="width:132px;" value="${cur}" title="일정 밖의 날짜도 열 수 있습니다"
-        onchange="if(this.value){ state.classHubDate=this.value; render(); }">
-    </span>
-  </div>
-
-  ${att.body}
-  ${att.summary || ''}
-
-  <div style="margin-top:24px;">${memo.body}${memo.bar}</div>
-
-  <div class="t-sec" style="margin-top:28px;">지난 수업
-    <span style="font-weight:400;">날짜를 누르면 위 출결이 그 날로 바뀝니다</span></div>
-  ${chubSessionLogHTML(classId, dates, cur)}`;
-}
-
-/* 지난 수업 목록 — 예전 「수업 기록」의 목록이 그대로 여기로 왔다.
-   달라진 것은 **누르면 «들어가지» 않고 위 표의 날짜만 바꾼다**는 것뿐이다. */
-function chubSessionLogHTML(classId, dates, cur){
-  const facts = dates.map(d=>({ date:d, f:chubSessionFacts(classId, d) }));
-  const filter = state.classHubLogFilter || '';
-  const match = x => filter==='memo' ? !!x.f.memo
-                   : filter==='absent' ? x.f.absent>0
-                   : filter==='hw' ? x.f.hws.length>0
-                   : true;
-  const shown = facts.filter(match);
-  const pill = (key, label, n) =>
-    `<a class="pill ${filter===key?'on':''}" onclick="state.classHubLogFilter='${key}'; render()">${label} <b>${n}</b></a>`;
-
-  return `
-  <div class="chub-fbar">
-    ${pill('', '전체', facts.length)}
-    ${pill('memo', '메모 있음', facts.filter(x=>x.f.memo).length)}
-    ${pill('absent', '결석 발생', facts.filter(x=>x.f.absent>0).length)}
-    ${pill('hw', '과제 배포', facts.filter(x=>x.f.hws.length>0).length)}
-    <span class="rst-cnt">${state.allRecordsLoading ? '기록 불러오는 중…' : '최근 순 · ' + dates.length + '회'}</span>
-  </div>
-  ${shown.length===0 ? '<div style="padding:48px 0;text-align:center;color:var(--dim);font-size:12.5px;">이 조건에 맞는 수업이 없습니다.</div>'
-  : shown.map(({date, f}, i)=>{
-    const isToday = date===todayStr();
-    /* 달이 바뀌는 자리에 머리를 하나 끼운다 (시안 14). 목록이 스무 줄이 넘으면
-       «언제 이야기인지»가 흐려지는데, 날짜만으로는 스크롤 중에 그게 안 잡힌다. */
-    const ym = date.slice(0,7);
-    const newMonth = i===0 || shown[i-1].date.slice(0,7)!==ym;
-    const mine = shown.filter(x=>x.date.slice(0,7)===ym);
-    const head = !newMonth ? '' : `<div class="chub-mhead"><b>${Number(ym.slice(5))}월</b>
-      <span>${mine.length}회</span><span class="r">${
-        mine.filter(x=>x.f.absent>0).length ? `결석 ${mine.reduce((n,x)=>n+x.f.absent,0)}` : ''}${
-        mine.filter(x=>x.f.memo).length ? ` · 메모 ${mine.filter(x=>x.f.memo).length}` : ''}</span></div>`;
-    return head + `<div class="chub-sess ${date===cur?'on':''}" onclick="state.classHubDate='${date}'; render()">
-      <div class="when">
-        <div class="d">${date.slice(5).replace('-','/')}</div>
-        <div class="w">${WEEKDAY_LABEL[new Date(date+'T00:00:00').getDay()]}요일${isToday?' · 오늘':''}</div>
-      </div>
-      <div class="mid">
-        <div class="att">
-          ${f.total===0 ? '<span class="sum muted">배정된 학생이 없습니다</span>'
-            : f.filled===0 ? '<span class="badge">출결 미입력</span>'
-            : `<span class="dots" title="${escHtml(f.marks.map(m=>m.name+' '+(m.status||'미입력')).join(' · '))}">${
-                f.marks.map(m=>`<i class="${m.status?attStatusClass(m.status):''}"></i>`).join('')}</span>
-               <span class="sum">출석 <b>${f.cnt['출석']||0}</b>${
-                f.cnt['지각']?` · 지각 <b>${f.cnt['지각']}</b>`:''}${
-                f.cnt['조퇴']?` · 조퇴 <b>${f.cnt['조퇴']}</b>`:''}${
-                f.absent?` · 결석 <b>${f.absent}</b>`:''}</span>
-               ${f.filled<f.total?`<span class="badge late">미입력 ${f.total-f.filled}</span>`:'<span class="badge ok">완료</span>'}`}
-        </div>
-        ${f.memo ? `<div class="memo">${escHtml(f.memo)}</div>` : ''}
-      </div>
-      <div class="tags">
-        ${f.hws.length ? f.hws.map(h=>`<span class="tag">${escHtml(h.title)}</span>`).join('') : ''}
-        ${f.scored ? `<span>성적 <b class="mono">${f.scored}</b>명 입력됨</span>` : ''}
-      </div>
-    </div>`;
-  }).join('')}`;
 }
 
 function teacherClassDailyHomeworkHTML(classId, date){
@@ -13745,48 +14007,6 @@ function examScoreStats(ex){
     avg: Math.round(pts.reduce((a,b)=>a+b,0)/pts.length),
     hi: Math.round(Math.max.apply(null, pts)), lo: Math.round(Math.min.apply(null, pts))};
 }
-/* 한 반 점수를 «한 번에» 저장한다. 줄마다 저장 버튼을 두면 한 명 누를 때마다 render()가 돌아
-   **아직 안 누른 칸이 통째로 지워진다** — 20명짜리 반에서는 못 쓴다.
-   ⚠ 빈 칸은 «안 본 것»이다. 0점이 아니다 — 0으로 넣으면 반 평균이 거짓이 된다. */
-async function saveExamScores(examId){
-  const ex = DATA.exams.find(x=>x.id===examId);
-  if(!ex) return;
-  const totalEl = document.getElementById('es-total-'+examId);
-  const total = parseFloat(totalEl ? totalEl.value : '');
-  if(isNaN(total) || total<=0){ showToast('만점을 먼저 입력해주세요.'); return; }
-  const roster = DATA.students.filter(s=>s.classId===ex.classId);
-  let saved = 0, cleared = 0, over = 0;
-  for(const st of roster){
-    const el = document.getElementById('es-score-'+st.studentId);
-    if(!el) continue;
-    const raw = el.value.trim();
-    const idx0 = (state.allRecords[st.studentId] && state.allRecords[st.studentId].scores || [])
-      .findIndex(x=>x.examId===examId);
-    if(raw==='' && idx0<0) continue;          // 원래 없던 칸은 건드리지 않는다
-    const rec = await loadRecord(st.studentId);
-    const idx = rec.scores.findIndex(x=>x.examId===examId);
-    if(raw===''){
-      if(idx>=0){ rec.scores.splice(idx,1); cleared++; } else continue;
-    }else{
-      const score = parseFloat(raw);
-      if(isNaN(score) || score<0) continue;
-      if(score>total) over++;
-      const entry = {name: ex.title, date: ex.date || todayStr(), score, total, examId};
-      if(idx>=0) rec.scores[idx] = entry; else rec.scores.push(entry);
-      saved++;
-    }
-    rec.scores.sort((a,b)=> String(a.date||'').localeCompare(String(b.date||'')));
-    await saveRecord(st.studentId);
-    state.allRecords[st.studentId] = rec;
-  }
-  if(!saved && !cleared){ showToast('입력된 점수가 없습니다.'); return; }
-  await logAudit('시험 성적 등록', '', '', ex.title+' · '+classNameOf(ex.classId)+' · '+saved+'명 (만점 '+total+')');
-  showToast(saved+'명의 성적을 저장했습니다.'
-    + (cleared ? ' '+cleared+'명은 비워서 지웠습니다.' : '')
-    + (over ? ' ⚠ '+over+'명은 만점을 넘습니다 — 확인해주세요.' : ''));
-  render();
-}
-
 function teacherExamsHTML(){
   loadAllRecordsIfNeeded();
   if(state.examMode==='new' || DATA.exams.length===0) return examNewHTML();
