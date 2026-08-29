@@ -137,6 +137,16 @@
   .app:not(.sap) .ex-lbody{max-height:190px;margin-right:0;padding-right:0;}
   .app:not(.sap) .ex-body{overflow:visible;margin-top:14px;}
 
+  /* ---------- KPI도 폰에서 접는다 (2026-08-30 · C-2) ----------
+     🔴 **다섯이 한 줄에 서면 폰에서 칸이 73px이 된다** — 「오답 올린 학생」이 세 줄로 접히고
+       「본 학생 4명 · 2개 반」은 넉 줄이 된다. 숫자를 보러 온 자리인데 라벨이 자리를 다 먹는다.
+     ⚠ 넘치는 대신 **아래로 내린다** — 가로 스크롤로 두면 뒤쪽 KPI가 있는지조차 모른다.
+     `min-width:46%`라 한 줄에 둘씩 서고, 마지막 하나는 남는 폭을 다 쓴다.
+     ⚠ `.kpi`의 오른쪽 금은 «한 줄일 때»의 것이라 접히면 아래쪽 금이 필요하다. */
+  .app:not(.sap) .kpis{flex-wrap:wrap;}
+  .app:not(.sap) .kpi{min-width:46%;border-bottom:1px solid var(--line2);}
+  .app:not(.sap) .kpi .k{white-space:normal;}
+
   /* 문항별 오답률 한 줄 — 고정폭 다섯이 430px을 요구해서 폰에서 50px이 넘쳤다.
      ⚠ **전에는 `.ex-screen`의 `overflow-x:auto`가 이걸 가리고 있었다.** 가둠을 풀었으니
        여기서 제대로 접는다 — M-1이 「옆으로 미는 임시 처방」을 걷어낼 때마다 나오는 일이다.
@@ -972,6 +982,31 @@
 .app .ex-q.hi .track i{background:var(--no);}
 .app .ex-q .pct{width:46px;flex-shrink:0;text-align:right;font-family:'JetBrains Mono',monospace;font-size:12px;}
 .app .ex-q .tw{width:92px;flex-shrink:0;text-align:right;}
+/* 과목 폴더 (2026-08-30 · C-2) — 왼쪽은 «과목 > 시험지» 두 층뿐이다.
+   머리는 button으로 둔다. div+onclick이면 키보드로 접었다 펼 수 없다. */
+.app .ex-fold{margin-bottom:2px;}
+.app .ex-foldh{display:flex;align-items:center;gap:7px;width:100%;padding:7px 10px;
+  background:none;border:0;border-radius:var(--r-md);cursor:pointer;text-align:left;
+  font-family:inherit;font-size:11px;font-weight:700;color:var(--dim);letter-spacing:.06em;}
+.app .ex-foldh:hover{background:var(--hover);color:var(--ink);}
+.app .ex-foldh .cv{display:flex;flex-shrink:0;opacity:.65;}
+.app .ex-foldh .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.app .ex-foldh .ct{flex-shrink:0;font-family:'JetBrains Mono',monospace;font-weight:600;
+  font-size:10.5px;letter-spacing:0;}
+.app .ex-fold .ex-item{margin-left:9px;}
+
+/* 「시험 본 반과 날짜」 칩 — 왼쪽 목록에서 덜어 낸 것이 여기로 왔다.
+   ⚠ 가로로 넘치면 «줄바꿈»한다. 가로 스크롤로 두면 뒤쪽 반이 있는지조차 모른다. */
+.app .ex-chips{display:flex;align-items:center;gap:7px;flex-wrap:wrap;
+  margin-top:12px;flex-shrink:0;}
+.app .ex-chip{display:inline-flex;align-items:baseline;gap:6px;padding:6px 12px;
+  border:1px solid var(--line);border-radius:999px;background:var(--card);cursor:pointer;
+  font-family:inherit;font-size:12.5px;font-weight:600;color:var(--sub);transition:all var(--t);}
+.app .ex-chip:hover{background:var(--hover);color:var(--ink);}
+.app .ex-chip.on{background:var(--accent);border-color:var(--accent);color:#fff;}
+.app .ex-chip s{text-decoration:none;font-size:11px;font-weight:400;color:var(--dim);}
+.app .ex-chip.on s{color:rgba(255,255,255,.72);}
+
 @media (max-width:1240px){ .app .ex-side{display:none;} }
 
 /* 시험 성적판 (2026-08-29) — 표 서식은 .fm-panel 안에만 살아 있어서 여기서는 맨 표가 된다.
@@ -2838,7 +2873,11 @@ let state = {
   qnaSelectedId: null,    // 오른쪽에 펼쳐 놓은 질문 (공지의 noticeSelectedId와 같은 장치)
   examSelectedId: null,
   examMode: '',              // ''이면 목록+분석, 'new'면 등록 폼
-  examStatAll: false,        // 문항별 오답률을 «복사본까지 합쳐» 볼 것인가 (2026-08-29)
+  /* ---------- 시험지 «묶음» 보기 (2026-08-30 · C-2) ----------
+     왼쪽은 «과목 폴더 > 시험지» 둘뿐이고, «어느 반»은 본문 위 칩이 고른다.
+     복사본이 왼쪽 목록을 둘로 가르던 것을 없앤 자리다. */
+  examGroupId: '',           // 열려 있는 묶음의 «뿌리» id. 빈 값이면 첫 묶음
+  examFolders: {},           // 과목 폴더 열림/닫힘. 값이 없으면 «지금 묶음이 든 폴더만» 열린다
   unitBankMode: '',          // ''이면 창고 목록, 'add'면 문항 추가
   ytPlayers: null,
   attDraft: {},
@@ -5712,6 +5751,63 @@ function examBanks(exam){
   if(!exam) return [];
   return DATA.problemBank.filter(b=>b.examId===(exam.sourceExamId || exam.id));
 }
+/* =================== 시험지 «묶음»과 «과목 폴더» (2026-08-30 · C-2) ===================
+   화면의 뼈대다 — 왼쪽은 «과목 > 시험지», 본문 위 칩이 «어느 반».
+   🔵 **묶음의 기준은 «복사로 이어졌나»뿐이다** (`sourceExamId`). 제목이 같다고 묶지 않는다 —
+     따로 만든 두 시험지가 우연히 이름이 같을 수 있고, 그것을 묶으면 통계가 조용히 섞인다.
+   ⚠ 그래서 **2026-08-29 이전에 복사한 것은 안 묶인다** (그때는 `sourceExamId`를 안 달았다).
+     지우고 다시 복사하면 묶인다 — 사용자가 그렇게 하기로 정했다. */
+function examSubjectOf(e){
+  /* 폴더 열쇠는 문항의 «과목»(unit) 중 가장 많은 것이다. 시험지에 과목 칸이 따로 없어서
+     문항에서 뽑는다. 실데이터에서는 한 시험지가 한 과목이고 «단원»만 여럿이다. */
+  const c = {};
+  ((e && e.questions) || []).forEach(q=>{ const u = (q.unit||'').trim(); if(u) c[u] = (c[u]||0) + 1; });
+  const keys = Object.keys(c).sort((a,b)=> c[b] - c[a]);
+  return { name: keys[0] || '과목 미지정', mixed: keys.length > 1, all: keys };
+}
+/* 복사로 이어진 것들을 하나로 묶는다. 묶음마다 {뿌리, 대표, 반 목록, 과목}. */
+function examGroups(){
+  const by = {};
+  DATA.exams.forEach(e=>{ const root = e.sourceExamId || e.id; (by[root] = by[root] || []).push(e); });
+  const out = Object.keys(by).map(root=>{
+    /* 반 목록은 «시험 본 날» 차례로 세운다 — 복사한 차례가 아니라 학생이 겪은 차례다. */
+    const list = by[root].slice().sort((a,b)=> String(a.date||'').localeCompare(String(b.date||'')));
+    const head = list.find(e=>e.id===root) || list[0];
+    return { root, head, list, subject: examSubjectOf(head) };
+  });
+  /* 묶음끼리는 «가장 최근에 본 날»이 위로. 어제 본 시험이 맨 위에 있어야 한다. */
+  out.sort((a,b)=> String(b.list[b.list.length-1].date||'').localeCompare(String(a.list[a.list.length-1].date||'')));
+  return out;
+}
+/* 지금 무엇을 보고 있나 — 묶음 하나와, 골라 둔 반(없으면 «전체»). */
+function examView(){
+  const groups = examGroups();
+  if(!groups.length) return null;
+  let g = groups.find(x=>x.root===state.examGroupId);
+  if(!g) g = groups.find(x=>x.list.some(e=>e.id===state.examSelectedId)) || groups[0];
+  /* ⚠ 고른 반이 이 묶음 밖이면 «전체»로 떨어뜨린다 — 다른 묶음을 열면 반은 따라오면 안 된다. */
+  const one = (state.examSelectedId && g.list.find(e=>e.id===state.examSelectedId)) || null;
+  return { groups, g, one };
+}
+function examOpenGroup(root){
+  state.examGroupId = root; state.examSelectedId = ''; render();
+}
+function examOpenClass(root, examId){
+  state.examGroupId = root; state.examSelectedId = examId; render();
+}
+function examToggleFolder(name){
+  const cur = examFolderOpen(name);
+  state.examFolders = Object.assign({}, state.examFolders, {[name]: !cur});
+  render();
+}
+/* 값이 없으면 «지금 보고 있는 묶음이 든 폴더»만 열린 것으로 친다. */
+function examFolderOpen(name){
+  if(state.examFolders && Object.prototype.hasOwnProperty.call(state.examFolders, name))
+    return !!state.examFolders[name];
+  const v = examView();
+  return !!(v && v.g.subject.name === name);
+}
+
 /* 같은 창고를 쓰는 시험지 전부 — 뿌리와 그 복사본들(자기 자신 포함). */
 function examSiblings(exam){
   if(!exam) return [];
@@ -13526,141 +13622,244 @@ async function saveExamScores(examId){
 function teacherExamsHTML(){
   loadAllRecordsIfNeeded();
   if(state.examMode==='new' || DATA.exams.length===0) return examNewHTML();
+  const v = examView();
+  if(!v) return examNewHTML();
+  return `<div class="ex-screen">
+    ${examFolderListHTML(v)}
+    ${v.one ? examClassPaneHTML(v.g, v.one) : examGroupPaneHTML(v.g)}
+  </div>`;
+}
 
-  let ex = DATA.exams.find(e=>e.id===state.examSelectedId) || DATA.exams[0];
-  /* 같은 창고를 쓰는 시험지들(뿌리+복사본). 둘 이상일 때만 «전체» 토글이 뜻이 있다. */
-  const sibs = examSiblings(ex);
-  const statAll = !!state.examStatAll && sibs.length > 1;
-  const { counts, total, wrongStudents } = examWrongCounts(ex, statAll);
+/* ---------- 왼쪽 — «과목 폴더 > 시험지» 둘뿐이다 (2026-08-30 · C-2) ----------
+   🔴 **여기에 «반»을 세우지 말 것** — 사용자가 짚은 것이 정확히 그 자리다.
+     복사본이 생길 때마다 목록이 둘로 갈라져서 «같은 시험지가 왜 두 개지»가 됐다.
+     반은 본문 위 칩이 고른다(`examClassChipsHTML`). */
+function examFolderListHTML(v){
+  const { groups, g } = v;
+  const byName = {};
+  groups.forEach(x=>{ (byName[x.subject.name] = byName[x.subject.name] || []).push(x); });
+  /* 과목 차례는 UNITS를 따른다 — 교육과정 차례가 곧 강사가 생각하는 차례다.
+     UNITS에 없는 것(「과목 미지정」 등)은 뒤로 보낸다. */
+  const names = Object.keys(byName).sort((a,b)=>{
+    const ia = UNITS.indexOf(a), ib = UNITS.indexOf(b);
+    return (ia<0?99:ia) - (ib<0?99:ib) || a.localeCompare(b);
+  });
+  return `<aside class="ex-list">
+    <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;padding-bottom:10px;">
+      <span class="t-sec" style="margin:0;">시험지 ${groups.length}</span>
+      <span class="spacer"></span>
+      <button class="btn q sm" onclick="state.examMode='new'; render()">${iconSvg('plus',13)} 새 시험지</button>
+    </div>
+    <div class="ex-lbody">
+      ${names.map(name=>{
+        const open = examFolderOpen(name);
+        const items = byName[name];
+        return `<div class="ex-fold ${open?'on':''}">
+          <button class="ex-foldh" onclick="examToggleFolder(${JSON.stringify(name).replace(/"/g,'&quot;')})"
+            aria-expanded="${open?'true':'false'}">
+            <span class="cv">${iconSvg(open?'chevD':'chevR',12)}</span>
+            <span class="nm">${escHtml(name)}</span>
+            <span class="ct">${items.length}</span>
+          </button>
+          ${open ? items.map(x=>{
+            const last = x.list[x.list.length-1];
+            return `<div class="ex-item ${x.root===g.root?'on':''}" onclick="examOpenGroup('${x.root}')">
+              <div class="n">${escHtml(x.head.title)}</div>
+              <div class="m">${(x.head.questions||[]).length}문항 · ${x.list.length>1
+                ? `<b>${x.list.length}개 반</b> · 최근 ${escHtml(last.date||'-')}`
+                : `${escHtml(classNameOf(x.head.classId))} · ${escHtml(x.head.date||'-')}`}</div>
+            </div>`;
+          }).join('') : ''}
+        </div>`;
+      }).join('')}
+    </div>
+  </aside>`;
+}
+
+/* ---------- 본문 위 — «시험 본 반과 날짜» 칩 줄 ----------
+   왼쪽 목록에서 덜어 낸 것을 여기서 되찾는다. 「전체」가 맨 앞이고 그것이 기본이다. */
+function examClassChipsHTML(g, curId){
+  return `<div class="ex-chips">
+    <button class="ex-chip ${curId?'':'on'}" onclick="examOpenGroup('${g.root}')"
+      title="이 시험지를 본 모든 반을 합쳐서 봅니다.">전체<s>${g.list.length}개 반</s></button>
+    ${g.list.map(e=>`<button class="ex-chip ${e.id===curId?'on':''}"
+      onclick="examOpenClass('${g.root}','${e.id}')"
+      title="${escHtml(classNameOf(e.classId))}만 봅니다.">${escHtml(classNameOf(e.classId))}<s
+        class="mono">${escHtml(e.date||'날짜 없음')}</s></button>`).join('')}
+  </div>`;
+}
+
+/* 문항별 오답률 줄 — 전체 보기와 반 보기가 «같은 부품»을 쓴다.
+   두 벌로 두면 한쪽만 고쳐 놓고 다른 쪽이 조용히 어긋난다. */
+function examQRowsHTML(ex, counts, total){
   const rows = (ex.questions||[]).map((q,i)=>{
-    const no = i + 1;
-    const n = counts[no] || 0;
-    const pct = total ? Math.round(n/total*100) : 0;
-    return { no, q, n, pct };
+    const no = i + 1, n = counts[no] || 0;
+    return { no, q, n, pct: total ? Math.round(n/total*100) : 0 };
   });
   const worst = rows.reduce((m,r)=>Math.max(m, r.pct), 0);
+  const html = rows.length===0
+    ? '<div style="padding:36px 0;text-align:center;color:var(--dim);font-size:12.5px;">문항이 없습니다.</div>'
+    : rows.map(r=>`<div class="ex-q ${r.pct>=50?'hi':(r.pct>=25?'mid':'')}">
+        <span class="no">${r.no}번</span>
+        ${/* 단원이 있으면 단원을, 없으면 과목을. 범위 판정이 쓰는 값과 같은 것을 보여 준다. */''}
+        <span class="unit" title="${escHtml(r.q.chapter || r.q.unit || '')}">${escHtml(r.q.chapter || r.q.unit || '단원 미지정')}</span>
+        <span class="track"><i style="width:${r.pct}%"></i></span>
+        <span class="pct">${total?r.pct+'%':'—'}</span>
+        <span class="tw muted" style="font-size:11.5px;">${r.n}명 오답</span>
+      </div>`).join('');
+  return { html, worst, rows };
+}
 
-  /* 이 시험지로 만들어진 쌍둥이 문항이 어디까지 왔는지 — 파이프라인의 다음 칸이다. */
+/* 쌍둥이 일괄 생성 줄 — 두 화면이 같이 쓴다. 만들 것이 없으면 안 그린다.
+   ⚠ 창고는 묶음이 함께 쓰므로 «전체»에서 눌러도 «반»에서 눌러도 같은 곳을 채운다. */
+function examTwinBarHTML(ex, need){
+  if(!need) return '';
+  return `<div class="fm-row" style="margin:12px 0 0;align-items:center;gap:10px;">
+    <button class="btn p" ${state.aiProcessing?'disabled':''} onclick="generateTwinsForExam('${ex.id}')">
+      ${iconSvg('sparkle',14)} ${state.aiProcessing && state.aiProgress
+        ? `생성 중 ${state.aiProgress.done}/${state.aiProgress.total}…`
+        : `쌍둥이 전부 생성 (${need}문항)`}</button>
+    ${state.aiProcessing && state.aiProgress
+      ? `<button class="btn q" ${state.aiCancel?'disabled':''} onclick="cancelTwinBatch()">
+           ${state.aiCancel ? '멈추는 중…' : '멈춤'}</button>` : ''}
+    <span style="font-size:11.5px;color:var(--dim);line-height:1.7;">
+      오늘 한도까지 만들고 남은 것은 내일 이어서 만듭니다.
+      끝나면 <b>1차 검토 대기</b>로 넘어갑니다.</span>
+  </div>`;
+}
+
+/* ---------- 「전체」 — 이 시험지를 본 모든 반을 합쳐서 ----------
+   이 화면이 답해야 할 물음은 «이 문항이 어려운가»와 «어느 반이 달랐나» 둘이다.
+   ⚠ 성적 «입력»은 여기 두지 않는다 — 점수는 반마다 넣는 것이라 여기서는 견주기만 한다. */
+function examGroupPaneHTML(g){
+  const head = g.head;
+  const { counts, total, wrongStudents } = examWrongCounts(head, true);
+  const q = examQRowsHTML(head, counts, total);
+  const avgWrong = q.rows.length ? Math.round(q.rows.reduce((a,r)=>a+r.pct,0)/q.rows.length) : 0;
+  const banks = examBanks(head);
+  const bankBy = st => banks.filter(b=>b.status===st).length;
+  const reviewWait = bankBy('pending') + bankBy('review1');
+  const need = banks.filter(b=>!b.variantContent && !b.variantAnswer).length;
+  /* 반별 한 줄 비교 — 누르면 그 반으로 들어간다. */
+  const per = g.list.map(e=>{
+    const w = examWrongCounts(e, false);
+    const pcts = (e.questions||[]).map((x,i)=> w.total ? Math.round((w.counts[i+1]||0)/w.total*100) : 0);
+    return { e, seen: w.total, wrong: pcts.length ? Math.round(pcts.reduce((a,b)=>a+b,0)/pcts.length) : 0,
+      sc: examScoreStats(e) };
+  });
+  return `<main class="ex-main">
+    <div class="rst-hrow" style="flex-shrink:0;">
+      <h1 class="t-title">${escHtml(head.title)}</h1>
+      <span class="badge" title="${escHtml(g.subject.all.join(' · ')||'문항에 과목이 안 붙어 있습니다')}"
+        >${escHtml(g.subject.name)}${g.subject.mixed?' 외 '+(g.subject.all.length-1):''}</span>
+      <div class="spacer"></div>
+      ${/* ⚠ 복사·삭제는 «반 하나»에 하는 일이다 — 전체 화면에 두면 어느 반을 지우는지가 안 보인다. */''}
+      <span style="font-size:11.5px;color:var(--dim);">반을 고르면 성적 입력 · 복사 · 삭제를 할 수 있습니다</span>
+    </div>
+    ${examClassChipsHTML(g, '')}
+    ${examTwinBarHTML(head, need)}
+    <div class="kpis" style="margin-top:14px;flex-shrink:0;">
+      ${/* ⚠ 곁말(`<s>`)을 길게 쓰지 말 것 — 폰에서 KPI 칸이 절반 폭이라 곧장 두 줄이 된다.
+           «몇 개 반»은 세는 값이 아니라 «어느 범위»라서 라벨 쪽이 제자리다. */''}
+      <div class="kpi"><div class="k">본 학생 (${g.list.length}개 반)</div><div class="v">${total}<s>명</s></div></div>
+      <div class="kpi"><div class="k">오답 올린 학생</div><div class="v">${state.allRecordsLoaded ? wrongStudents : '…'}<s>/${total}</s></div></div>
+      <div class="kpi"><div class="k">평균 오답률</div><div class="v ${avgWrong>=25?'down':''}">${state.allRecordsLoaded ? avgWrong : '…'}<s>%</s></div></div>
+      <div class="kpi"><div class="k">쌍둥이 생성</div><div class="v">${banks.length}<s>문항</s></div></div>
+      <div class="kpi"><div class="k">검토 대기</div><div class="v ${reviewWait?'down':''}">${reviewWait}<s>건</s></div></div>
+    </div>
+    <div class="ex-body">
+      ${g.list.length>1 ? `<div class="t-sec">반별로 견주면 <span style="font-weight:400;">줄을 누르면 그 반으로 들어갑니다</span></div>
+        <div style="overflow-x:auto;"><table class="es-tb" style="max-width:660px;">
+          <thead><tr><th>반</th><th>날짜</th><th style="text-align:right;">대상</th
+            ><th style="text-align:right;">평균 오답률</th><th style="text-align:right;">반 평균</th></tr></thead>
+          <tbody>${per.map(p=>`<tr style="cursor:pointer;" onclick="examOpenClass('${g.root}','${p.e.id}')">
+            <td class="fm-nm">${escHtml(classNameOf(p.e.classId))}</td>
+            <td><span class="mono">${escHtml(p.e.date||'-')}</span></td>
+            <td style="text-align:right;"><span class="mono">${p.seen}</span>명</td>
+            <td style="text-align:right;"><span class="mono">${p.seen?p.wrong+'%':'—'}</span></td>
+            <td style="text-align:right;">${p.sc.avg===null ? '<span style="color:var(--dim);">—</span>'
+              : `<span class="mono">${p.sc.avg}</span>% <s style="font-size:11px;">${p.sc.n}/${p.sc.of}명</s>`}</td>
+          </tr>`).join('')}</tbody></table></div>` : ''}
+
+      <div class="t-sec" style="margin-top:${g.list.length>1?'24px':'0'};">문항별 오답률
+        <span style="font-weight:400;">${state.allRecordsLoading ? '기록 불러오는 중…'
+          : `${g.list.length}개 반 합산 · 가장 높은 문항 <span class="mono">${q.worst}%</span>`}</span></div>
+      ${q.html}
+
+      <div class="t-sec" style="margin-top:24px;">문항 내용</div>
+      ${examDetailHTML(head.id)}
+      <div class="rst-pad"></div>
+    </div>
+  </main>`;
+}
+
+/* ---------- 반 하나 — 성적을 넣고, 복사·삭제하고, 그 반만 본다 ---------- */
+function examClassPaneHTML(g, ex){
+  const { counts, total, wrongStudents } = examWrongCounts(ex, false);
+  const q = examQRowsHTML(ex, counts, total);
+  const avgWrong = q.rows.length ? Math.round(q.rows.reduce((a,r)=>a+r.pct,0)/q.rows.length) : 0;
   const banks = examBanks(ex);
   const bankBy = st => banks.filter(b=>b.status===st).length;
-  const scStat = examScoreStats(ex);
-
-  /* KPI 넷 — 전부 지금 데이터에서 나온다. 평균 오답률은 문항별 오답률의 평균이고,
-     「오답 올린 학생」은 이 시험지에서 한 문항이라도 오답으로 올린 재원 수다. */
-  const avgWrong = rows.length ? Math.round(rows.reduce((s,r)=>s+r.pct,0)/rows.length) : 0;
   const reviewWait = bankBy('pending') + bankBy('review1');
+  const scStat = examScoreStats(ex);
+  const need = banks.filter(b=>!b.variantContent && !b.variantAnswer).length;
+  return `<main class="ex-main">
+    <div class="rst-hrow" style="flex-shrink:0;">
+      <h1 class="t-title">${escHtml(ex.title)}</h1>
+      <span class="badge">${escHtml(classNameOf(ex.classId))}</span>
+      <div class="spacer"></div>
+      <span class="field rst-selwrap" style="width:auto;">
+        <select class="rst-sel" id="copy-target-${ex.id}">
+          <option value="">다른 반으로 복사…</option>
+          ${DATA.classes.filter(c=>c.id!==ex.classId).map(c=>`<option value="${c.id}">${escHtml(c.name)}</option>`).join('')}
+        </select></span>
+      ${/* 🔴 **복사본의 날짜를 여기서 고른다** (2026-08-29) — 예전에는 원본을 처음 등록한
+           날이 그대로 따라왔다. 복사는 «다른 반이 이 시험을 본다»는 뜻이라 그 반이 본 날이 맞다. */''}
+      <span class="field rst-selwrap" style="width:auto;">
+        <input class="rst-sel" type="date" id="copy-date-${ex.id}" value="${todayStr()}"
+          title="복사본의 시험 날짜입니다. 기본값은 오늘입니다."></span>
+      <button class="btn sm" onclick="copyExamToClass('${ex.id}')">복사</button>
+      <button class="btn q sm" onclick="deleteExam('${ex.id}')">삭제</button>
+    </div>
+    ${examClassChipsHTML(g, ex.id)}
+    ${examTwinBarHTML(ex, need)}
+    ${/* ✅ **「반 평균」이 생겼다** (2026-08-29) — 예전 주석은 「성적과 시험지를 잇는 것이
+         도메인에 없어서 만들 수 없다」였다. 이제 성적에 examId가 붙어 **짐작 없이** 이어진다.
+         ⚠ 단위는 «점»이 아니라 «%»다 — 만점이 100이 아닌 시험에서 점수로 읽으면 거짓이 된다. */''}
+    <div class="kpis" style="margin-top:14px;flex-shrink:0;">
+      <div class="kpi" title="만점 대비 평균입니다. 점수를 넣은 학생만으로 냅니다 — 안 넣은 학생은 0점으로 세지 않습니다.">
+        <div class="k">반 평균${scStat.n ? ' ('+scStat.n+'/'+scStat.of+'명)' : ''}</div>
+        <div class="v">${scStat.avg===null ? '—' : scStat.avg}<s>${scStat.avg===null ? '' : '%'}</s></div></div>
+      <div class="kpi"><div class="k">오답 올린 학생</div><div class="v">${state.allRecordsLoaded ? wrongStudents : '…'}<s>/${total}</s></div></div>
+      <div class="kpi"><div class="k">평균 오답률</div><div class="v ${avgWrong>=25?'down':''}">${state.allRecordsLoaded ? avgWrong : '…'}<s>%</s></div></div>
+      <div class="kpi"><div class="k">쌍둥이 생성</div><div class="v">${banks.length}<s>문항</s></div></div>
+      <div class="kpi"><div class="k">검토 대기</div><div class="v ${reviewWait?'down':''}">${reviewWait}<s>건</s></div></div>
+    </div>
+    <div class="t-meta" style="margin-top:12px;flex-shrink:0;">
+      ${escHtml(classNameOf(ex.classId))}<s>·</s>${(ex.questions||[]).length}문항<s>·</s>
+      ${/* 🔴 **«재원»이라고 하면 안 된다** (2026-08-27) — 이 수는 퇴원생을 «일부러 포함해» 센 것이다
+           (지난 시험은 과거라 고쳐 쓰지 않는다). 라벨이 「재원」이면 지금 다니는 사람 수로 읽힌다. */''}
+      <span class="mono">${ex.date||'날짜 없음'}</span><s>·</s><span
+        title="이 시험을 본 사람 수입니다 — 그 뒤에 퇴원한 학생도 포함합니다.">대상 ${total}명</span>
+      ${g.list.length>1 ? `<s>·</s><span title="쌍둥이 문항은 이 묶음의 반들이 함께 씁니다. 한 번 검토하면 모든 반에 반영됩니다."
+        >${ex.sourceExamId ? '복사본' : '원본'} · 쌍둥이를 ${g.list.length}개 반이 함께 씁니다</span>` : ''}
+      ${banks.length ? `<s>·</s>쌍둥이 ${banks.length}건 (검토 전 ${bankBy('pending')} · 1차 ${bankBy('review1')} · 공개 ${bankBy('approved')})` : ''}
+    </div>
 
-  return `<div class="ex-screen">
-    <aside class="ex-list">
-      <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;padding-bottom:10px;">
-        <span class="t-sec" style="margin:0;">시험지 ${DATA.exams.length}</span>
-        <span class="spacer"></span>
-        <button class="btn q sm" onclick="state.examMode='new'; render()">${iconSvg('plus',13)} 새 시험지</button>
-      </div>
-      <div class="ex-lbody">
-        ${DATA.exams.map(e=>`<div class="ex-item ${e.id===ex.id?'on':''}"
-          onclick="state.examSelectedId='${e.id}'; render()">
-          <div class="n">${escHtml(e.title)}</div>
-          <div class="m">${e.date||'-'} · ${escHtml(classNameOf(e.classId))} · ${(e.questions||[]).length}문항</div>
-        </div>`).join('')}
-      </div>
-    </aside>
+    <div class="ex-body">
+      <div class="t-sec">문항별 오답률
+        <span style="font-weight:400;">${state.allRecordsLoading ? '기록 불러오는 중…'
+          : `이 반만 · 가장 높은 문항 <span class="mono">${q.worst}%</span>`}</span></div>
+      ${q.html}
 
-    <main class="ex-main">
-      <div class="rst-hrow" style="flex-shrink:0;">
-        <h1 class="t-title">${escHtml(ex.title)}</h1>
-        <div class="spacer"></div>
-        <span class="field rst-selwrap" style="width:auto;">
-          <select class="rst-sel" id="copy-target-${ex.id}">
-            <option value="">다른 반으로 복사…</option>
-            ${DATA.classes.filter(c=>c.id!==ex.classId).map(c=>`<option value="${c.id}">${escHtml(c.name)}</option>`).join('')}
-          </select></span>
-        ${/* 🔴 **복사본의 날짜를 여기서 고른다** (2026-08-29) — 예전에는 원본을 처음 등록한
-             날이 그대로 따라왔다. 복사는 «다른 반이 이 시험을 본다»는 뜻이라 그 반이 본 날이 맞다. */''}
-        <span class="field rst-selwrap" style="width:auto;">
-          <input class="rst-sel" type="date" id="copy-date-${ex.id}" value="${todayStr()}"
-            title="복사본의 시험 날짜입니다. 기본값은 오늘입니다."></span>
-        <button class="btn sm" onclick="copyExamToClass('${ex.id}')">복사</button>
-        <button class="btn q sm" onclick="deleteExam('${ex.id}')">삭제</button>
-      </div>
-      ${/* 등록한 «그 자리»에서 쌍둥이를 한꺼번에 만든다. 예전에는 검토 탭으로 옮겨 가
-           문항마다 「생성」을 눌러야 했다. 만들 것이 없으면 버튼 자체를 안 그린다. */''}
-      ${(()=>{ const need = banks.filter(b=>!b.variantContent && !b.variantAnswer).length;
-        if(!need) return '';
-        return `<div class="fm-row" style="margin:12px 0 0;align-items:center;gap:10px;">
-          <button class="btn p" ${state.aiProcessing?'disabled':''} onclick="generateTwinsForExam('${ex.id}')">
-            ${iconSvg('sparkle',14)} ${state.aiProcessing && state.aiProgress
-              ? `생성 중 ${state.aiProgress.done}/${state.aiProgress.total}…`
-              : `쌍둥이 전부 생성 (${need}문항)`}</button>
-          ${state.aiProcessing && state.aiProgress
-            ? `<button class="btn q" ${state.aiCancel?'disabled':''} onclick="cancelTwinBatch()">
-                 ${state.aiCancel ? '멈추는 중…' : '멈춤'}</button>` : ''}
-          <span style="font-size:11.5px;color:var(--dim);line-height:1.7;">
-            오늘 한도까지 만들고 남은 것은 내일 이어서 만듭니다.
-            끝나면 <b>1차 검토 대기</b>로 넘어갑니다.</span>
-        </div>`; })()}
-      ${/* ✅ **「반 평균」이 생겼다** (2026-08-29) — 예전 주석은 「성적과 시험지를 잇는 것이
-           도메인에 없어서 만들 수 없다」였다. 이제 성적에 examId가 붙어 **짐작 없이** 이어진다.
-           ⚠ 분모는 «점수를 넣은 사람»이다(scStat.n). 안 넣은 사람을 0점으로 세면 평균이 거짓이 된다. */''}
-      <div class="kpis" style="margin-top:14px;flex-shrink:0;">
-        ${/* ⚠ 단위는 «점»이 아니라 «%»다 — 만점이 100이 아닌 시험에서 점수로 읽으면 거짓이 된다. */''}
-        <div class="kpi" title="만점 대비 평균입니다. 점수를 넣은 학생만으로 냅니다 — 안 넣은 학생은 0점으로 세지 않습니다.">
-          <div class="k">반 평균${scStat.n ? ' ('+scStat.n+'/'+scStat.of+'명)' : ''}</div>
-          <div class="v">${scStat.avg===null ? '—' : scStat.avg}<s>${scStat.avg===null ? '' : '%'}</s></div></div>
-        <div class="kpi"><div class="k">오답 올린 학생</div><div class="v">${state.allRecordsLoaded ? wrongStudents : '…'}<s>/${total}</s></div></div>
-        <div class="kpi"><div class="k">평균 오답률</div><div class="v ${avgWrong>=25?'down':''}">${state.allRecordsLoaded ? avgWrong : '…'}<s>%</s></div></div>
-        <div class="kpi"><div class="k">쌍둥이 생성</div><div class="v">${banks.length}<s>문항</s></div></div>
-        <div class="kpi"><div class="k">검토 대기</div><div class="v ${reviewWait?'down':''}">${reviewWait}<s>건</s></div></div>
-      </div>
-      <div class="t-meta" style="margin-top:12px;flex-shrink:0;">
-        ${escHtml(classNameOf(ex.classId))}<s>·</s>${(ex.questions||[]).length}문항<s>·</s>
-        ${/* 🔴 **«재원»이라고 하면 안 된다** (2026-08-27) — 이 수(`total`)는 `examWrongCounts`가
-             **퇴원생을 일부러 포함해서** 센 것이다(지난 시험은 과거라 고쳐 쓰지 않는다).
-             그런데 라벨이 「재원」이면 **지금 다니는 사람 수**로 읽혀서, 재원이 3명인데 4로 보인다.
-             W-1이 «퇴원»이라는 개념을 만들면서 이 한 단어만 뒤처져 있었다.
-             ⚠ 같은 화면의 「오답 올린 학생 n/${total}」도 이 수를 분모로 쓴다 — 그래서 함께 맞다.
-             ⚠ 아래 «이탈 지점»의 「재원 n명」은 `classRoster`라 **진짜 재원이다. 그대로 둔다.** */''}
-        <span class="mono">${ex.date||'날짜 없음'}</span><s>·</s><span
-          title="이 시험을 본 사람 수입니다 — 그 뒤에 퇴원한 학생도 포함합니다.">대상 ${total}${statAll?'명(합산)':'명'}</span>
-        ${/* 🔵 «창고를 함께 쓴다»는 것은 화면에 말해 줘야 안다 — 안 그러면 쌍둥이가 왜
-             벌써 있는지, 원본을 지우면 무슨 일이 나는지 알 길이 없다. */''}
-        ${sibs.length>1 ? `<s>·</s><span title="${escHtml(sibs.map(e=>classNameOf(e.classId)+' ('+(e.date||'날짜 없음')+')').join(' · '))}"
-          >${ex.sourceExamId ? '복사본' : '원본'} · 쌍둥이를 ${sibs.length}개 반이 함께 씁니다</span>` : ''}
-        ${banks.length ? `<s>·</s>쌍둥이 ${banks.length}건 (검토 전 ${bankBy('pending')} · 1차 ${bankBy('review1')} · 공개 ${bankBy('approved')})` : ''}
-      </div>
+      ${examScoreBoardHTML(ex, scStat)}
 
-      <div class="ex-body">
-        ${/* ⚠ .t-sec은 블록이라 .spacer(margin-left:auto)가 안 먹는다 — 여기만 flex로 세운다. */''}
-        <div class="t-sec" style="display:flex;align-items:center;gap:10px;">문항별 오답률
-          <span style="font-weight:400;">${state.allRecordsLoading ? '기록 불러오는 중…' : `가장 높은 문항 <span class="mono">${worst}%</span>`}</span>
-          ${/* 🔵 **기본은 «이 반만»이다** (2026-08-29 · 사용자가 골랐다) — 반마다 진도·수준이
-               달라 섞으면 «어디서 무너졌나»가 흐려진다. 합쳐 보는 것은 «이 문항 자체가
-               어려운가»를 물을 때다. 복사본이 있을 때만 이 토글이 뜻이 있으므로 그때만 그린다. */''}
-          ${sibs.length>1 ? `<span class="spacer"></span>
-            <button class="btn q sm" style="font-weight:400;"
-              title="${escHtml(statAll ? '이 반의 학생만 셉니다.' : sibs.map(e=>classNameOf(e.classId)).join(' · ')+' 를 합쳐서 셉니다.')}"
-              onclick="state.examStatAll=${statAll?'false':'true'}; render()"
-              >${statAll ? '이 반만 보기' : '복사본까지 합쳐 보기'}</button>` : ''}</div>
-        ${''}
-        ${rows.length===0 ? '<div style="padding:36px 0;text-align:center;color:var(--dim);font-size:12.5px;">문항이 없습니다.</div>'
-        : rows.map(r=>`<div class="ex-q ${r.pct>=50?'hi':(r.pct>=25?'mid':'')}">
-            <span class="no">${r.no}번</span>
-            ${/* 단원이 있으면 단원을, 없으면 과목을. 범위 판정이 쓰는 값과 같은 것을 보여 준다. */''}
-            <span class="unit" title="${escHtml(r.q.chapter || r.q.unit || '')}">${escHtml(r.q.chapter || r.q.unit || '단원 미지정')}</span>
-            <span class="track"><i style="width:${r.pct}%"></i></span>
-            <span class="pct">${total?r.pct+'%':'—'}</span>
-            <span class="tw muted" style="font-size:11.5px;">${r.n}명 오답</span>
-          </div>`).join('')}
-
-        ${examScoreBoardHTML(ex, scStat)}
-
-        <div class="t-sec" style="margin-top:24px;">문항 내용</div>
-        ${examDetailHTML(ex.id)}
-        <div class="rst-pad"></div>
-      </div>
-    </main>
-    ${examSubmissionsHTML(ex)}
-  </div>`;
+      <div class="t-sec" style="margin-top:24px;">문항 내용</div>
+      ${examDetailHTML(ex.id)}
+      <div class="rst-pad"></div>
+    </div>
+  </main>
+  ${examSubmissionsHTML(ex)}`;
 }
 
 /* =================== 시험 성적판 (2026-08-29 · 사용자 요청) ===================
