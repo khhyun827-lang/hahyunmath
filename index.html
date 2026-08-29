@@ -995,6 +995,14 @@
   font-size:10.5px;letter-spacing:0;}
 .app .ex-fold .ex-item{margin-left:9px;}
 
+/* 반 보기의 «창고 한 줄» — 여기 있던 문항·변형문제를 「전체」로 옮기고 남긴 이정표다.
+   ⚠ 그냥 없애면 «사라졌다»고 읽힌다. 어디로 가면 있는지를 이 줄이 진다. */
+.app .ex-bankline{display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  margin-top:12px;padding:9px 13px;flex-shrink:0;
+  border:1px solid var(--line);border-radius:var(--r-md);background:var(--note);
+  font-size:12px;color:var(--sub);}
+.app .ex-bankline s{text-decoration:none;color:var(--dim);margin-left:7px;font-size:11.5px;}
+
 /* 「시험 본 반과 날짜」 칩 — 왼쪽 목록에서 덜어 낸 것이 여기로 왔다.
    ⚠ 가로로 넘치면 «줄바꿈»한다. 가로 스크롤로 두면 뒤쪽 반이 있는지조차 모른다. */
 .app .ex-chips{display:flex;align-items:center;gap:7px;flex-wrap:wrap;
@@ -13786,7 +13794,9 @@ function examGroupPaneHTML(g){
           : `${g.list.length}개 반 합산 · 가장 높은 문항 <span class="mono">${q.worst}%</span>`}</span></div>
       ${q.html}
 
-      <div class="t-sec" style="margin-top:24px;">문항 내용</div>
+      <div class="t-sec" style="margin-top:24px;">문항 내용
+        <span style="font-weight:400;">${g.list.length>1
+        ? '원본과 변형문제는 '+g.list.length+'개 반이 함께 씁니다 — 여기서 한 번만 봅니다' : ''}</span></div>
       ${examDetailHTML(head.id)}
       <div class="rst-pad"></div>
     </div>
@@ -13800,9 +13810,7 @@ function examClassPaneHTML(g, ex){
   const avgWrong = q.rows.length ? Math.round(q.rows.reduce((a,r)=>a+r.pct,0)/q.rows.length) : 0;
   const banks = examBanks(ex);
   const bankBy = st => banks.filter(b=>b.status===st).length;
-  const reviewWait = bankBy('pending') + bankBy('review1');
   const scStat = examScoreStats(ex);
-  const need = banks.filter(b=>!b.variantContent && !b.variantAnswer).length;
   return `<main class="ex-main">
     <div class="rst-hrow" style="flex-shrink:0;">
       <h1 class="t-title">${escHtml(ex.title)}</h1>
@@ -13822,7 +13830,6 @@ function examClassPaneHTML(g, ex){
       <button class="btn q sm" onclick="deleteExam('${ex.id}')">삭제</button>
     </div>
     ${examClassChipsHTML(g, ex.id)}
-    ${examTwinBarHTML(ex, need)}
     ${/* ✅ **「반 평균」이 생겼다** (2026-08-29) — 예전 주석은 「성적과 시험지를 잇는 것이
          도메인에 없어서 만들 수 없다」였다. 이제 성적에 examId가 붙어 **짐작 없이** 이어진다.
          ⚠ 단위는 «점»이 아니라 «%»다 — 만점이 100이 아닌 시험에서 점수로 읽으면 거짓이 된다. */''}
@@ -13832,8 +13839,9 @@ function examClassPaneHTML(g, ex){
         <div class="v">${scStat.avg===null ? '—' : scStat.avg}<s>${scStat.avg===null ? '' : '%'}</s></div></div>
       <div class="kpi"><div class="k">오답 올린 학생</div><div class="v">${state.allRecordsLoaded ? wrongStudents : '…'}<s>/${total}</s></div></div>
       <div class="kpi"><div class="k">평균 오답률</div><div class="v ${avgWrong>=25?'down':''}">${state.allRecordsLoaded ? avgWrong : '…'}<s>%</s></div></div>
-      <div class="kpi"><div class="k">쌍둥이 생성</div><div class="v">${banks.length}<s>문항</s></div></div>
-      <div class="kpi"><div class="k">검토 대기</div><div class="v ${reviewWait?'down':''}">${reviewWait}<s>건</s></div></div>
+      ${/* 🔴 **«쌍둥이 생성»·«검토 대기»는 여기 세우지 않는다** (2026-08-30 · 사용자가 짚었다) —
+           창고는 묶음이 «함께» 쓰는 것이라 **반을 바꿔도 그 두 숫자는 한 글자도 안 달라진다.**
+           반 화면의 KPI는 «이 반은 어땠나»만 말해야 한다. 창고 이야기는 아래 한 줄과 「전체」로. */''}
     </div>
     <div class="t-meta" style="margin-top:12px;flex-shrink:0;">
       ${escHtml(classNameOf(ex.classId))}<s>·</s>${(ex.questions||[]).length}문항<s>·</s>
@@ -13843,8 +13851,16 @@ function examClassPaneHTML(g, ex){
         title="이 시험을 본 사람 수입니다 — 그 뒤에 퇴원한 학생도 포함합니다.">대상 ${total}명</span>
       ${g.list.length>1 ? `<s>·</s><span title="쌍둥이 문항은 이 묶음의 반들이 함께 씁니다. 한 번 검토하면 모든 반에 반영됩니다."
         >${ex.sourceExamId ? '복사본' : '원본'} · 쌍둥이를 ${g.list.length}개 반이 함께 씁니다</span>` : ''}
-      ${banks.length ? `<s>·</s>쌍둥이 ${banks.length}건 (검토 전 ${bankBy('pending')} · 1차 ${bankBy('review1')} · 공개 ${bankBy('approved')})` : ''}
     </div>
+    ${/* 🔵 **문항과 변형문제는 「전체」에만 둔다** — 반마다 «똑같은 것»이 다시 그려지고 있었다.
+         대신 «어디로 가면 보이는지»는 말해 준다. 그냥 없애면 사라진 줄 안다. */''}
+    ${banks.length ? `<div class="ex-bankline">
+      <span>쌍둥이 <b class="mono">${banks.length}</b>문항
+        <s>검토 전 ${bankBy('pending')} · 1차 ${bankBy('review1')} · 공개 ${bankBy('approved')}</s></span>
+      <span class="spacer"></span>
+      <button class="btn q sm" onclick="examOpenGroup('${g.root}')"
+        >문항 내용 · 변형문제는 「전체」에서 ${iconSvg('arrowR',12)}</button>
+    </div>` : ''}
 
     <div class="ex-body">
       <div class="t-sec">문항별 오답률
@@ -13853,9 +13869,9 @@ function examClassPaneHTML(g, ex){
       ${q.html}
 
       ${examScoreBoardHTML(ex, scStat)}
-
-      <div class="t-sec" style="margin-top:24px;">문항 내용</div>
-      ${examDetailHTML(ex.id)}
+      ${/* ⚠ 여기에 `examDetailHTML`을 다시 붙이지 말 것 (2026-08-30) — 문항과 변형문제는
+           «문항»에 딸린 것이라 반마다 한 글자도 안 달라진다. 세 반이면 같은 것을 세 번 그린다.
+           읽을 것이 20문항 × 원본+변형이라 화면이 그것으로 덮인다. 자리는 「전체」다. */''}
       <div class="rst-pad"></div>
     </div>
   </main>
