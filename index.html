@@ -1109,6 +1109,10 @@
 .app .sg .sg-sub.ok{color:var(--ok);}
 /* 곁줄이 붙으면서 칸이 세로로 길어진다 — 열 폭도 조금 넓혀야 «12틀림»이 안 접힌다. */
 .app .sg-col{width:132px;}
+/* ⚠ `.hwg-col b{display:block}`가 `.n` 안까지 닿아 「문항」과 「20」을 갈라놓고 있었다
+   (2026-09-01 · C-15). 이 줄들은 인라인이어야 «20문항»이 한 덩이로 읽힌다. */
+.app .sg-col .n .mono{display:inline;font-size:11px;font-weight:700;color:var(--sub);}
+.app .sg-col .n .sg-tot{display:inline-block;margin-right:2px;}
 /* 오른쪽 끝 «평균» 열 — 이름 열과 짝을 이뤄 표를 닫는다. */
 .app .sg th.sg-avg,.app .sg td.sg-avg{width:74px;text-align:right;padding-right:12px;
   border-left:1px solid var(--line);background:var(--sunk);}
@@ -1225,6 +1229,11 @@
 .hw-ok,.hw-wait{margin-top:8px;font-size:11.5px;line-height:1.6;}
 .hw-ok{color:var(--ok);} .hw-wait{color:var(--sub);}
 .hw-ok i{font-style:normal;color:var(--dim);}
+/* 「보완 필요」 (2026-09-01 · C-15) — 완료 편이지만 초록으로 두면 «잘했다»로 읽힌다.
+   ⚠ 붉게도 두지 않는다. 붉은 것은 «다시 해야 하는 것»(반려)뿐이어야 한다. */
+.hw-ok.half{color:var(--leave);}
+.hw-ok.half b{font-weight:700;}
+.badge.half{background:var(--leavebg);color:var(--leave);}
 /* 강사·조교의 «과제 확인» 한 줄. 학생 상세와 반 관리가 같이 쓴다. */
 .hw-row{padding:11px 0;border-top:1px solid var(--line2);}
 .hw-row:first-of-type{border-top:0;}
@@ -1363,6 +1372,12 @@
 .app .hg-m.wait{color:var(--late);background:var(--latebg);border-color:var(--late-line);}
 .app .hg-m.no{color:var(--no);}
 .app .hg-m.none{color:var(--dim);font-weight:400;}
+/* 「보완 필요」 (2026-09-01 · C-15) — «한 것»이라 완료 편이지만 눈에는 남아야 한다.
+   ⚠ 바탕은 안 깐다. 바탕을 까는 것은 «확인 대기» 하나뿐이라는 규칙은 그대로다. */
+.app .hg-m.half{color:var(--leave);font-weight:700;}
+/* 마감이 지난 미제출 — 붉은 글자. 반려와 같은 색이지만 적힌 말이 다르다(「미제출」/「반려」).
+   ⚠ 여기에도 바탕을 깔면 «확인 대기»와 다툰다. 강사 손이 먼저 갈 곳은 여전히 확인 대기다. */
+.app .hg-m.over{color:var(--no);font-weight:700;}
 .app .hg-m.sel{box-shadow:inset 0 0 0 2px var(--accent);opacity:1;}
 .app .hg-m .dotmark{position:absolute;right:2px;bottom:2px;width:4px;height:4px;
   border-radius:50%;background:currentColor;opacity:.65;}
@@ -1376,7 +1391,29 @@
    글이 섞인 줄은 block으로 두고, 표식만 inline-flex로 세운다. */
 .app .hg-hint{display:block;margin:9px 2px 0;font-size:11.5px;color:var(--dim);line-height:1.9;}
 .app .hg-hint b{font-weight:600;color:var(--sub);}
-.app .hg-hint .hg-m{cursor:default;vertical-align:-6px;margin-right:2px;}
+.app .hg-hint .hg-m{cursor:default;vertical-align:-6px;margin:0 2px 0 6px;}
+.app .hg-hint .hg-m:first-child{margin-left:0;}
+.app .hg-hint .hg-sep{margin:0 8px;color:var(--line);font-weight:400;}
+/* 「문항 보기」 판 (2026-09-01 · C-15) — 520px 안에서 오답률 줄이 안 넘치게 접는다.
+   폰용 규칙(`.app:not(.sap) .ex-q`)과 같은 어법이다: 단원과 막대가 남는 자리를 나눠 갖는다. */
+.app .sgq .ex-q{flex-wrap:wrap;gap:5px 10px;}
+.app .sgq .ex-q .unit{width:auto;flex:1 1 80px;min-width:0;}
+.app .sgq .ex-q .track{min-width:52px;}
+.app .sgq .ex-q .tw{width:auto;}
+.app .sgq-kpi{display:flex;gap:18px;flex-wrap:wrap;padding:11px 13px;margin-top:8px;
+  border:1px solid var(--line);border-radius:var(--r-md);background:var(--sunk);
+  font-size:12px;color:var(--sub);}
+.app .sgq-kpi b{font-size:14px;font-weight:700;color:var(--ink);margin-left:5px;}
+.app .sgq-kpi b.down{color:var(--no);}
+.app .sgq-kpi s{text-decoration:none;color:var(--dim);font-size:11px;margin-left:5px;}
+/* 문항 한 덩이 — 원본만 세로로. 변형문제는 시험지 화면의 일이다. */
+.app .sgq-q{padding:10px 0;border-top:1px solid var(--line2);}
+.app .sgq-q .h{display:flex;align-items:center;gap:9px;margin-bottom:5px;}
+.app .sgq-q .no{font-family:'JetBrains Mono',monospace;font-size:11.5px;font-weight:600;color:var(--dim);}
+.app .sgq-q .ch{font-size:11.5px;color:var(--sub);}
+.app .sgq-q .tx{font-size:12.5px;color:var(--ink);line-height:1.8;white-space:pre-wrap;}
+.app .sgq-q .ans{margin-top:5px;font-size:11.5px;color:var(--dim);}
+.app .sgq-q .ans b{margin-left:6px;color:var(--ok);font-weight:700;}
 
 /* 한 칸을 누르면 오른쪽에서 상세가 나온다 — 격자를 떠나지 않고 처리한다. */
 .hwd-back{position:fixed;inset:0;z-index:58;background:rgba(20,18,17,.28);}
@@ -4167,6 +4204,19 @@ async function approveHomework(studentId, hwId, onSite){
   showToast(onSite ? '현장 확인으로 완료 처리했습니다.' : '수락했습니다.');
   render();
 }
+/* 「보완 필요」로 통과시킨다 (2026-09-01 · C-15).
+   ⚠ **사유를 안 받는다** — 학생에게 «다시 하라»고 시키는 것이 아니라 강사가 «미비했다»를
+     적어 두는 것이다. 다시 시킬 것이면 그것은 반려다. */
+async function partialHomework(studentId, hwId){
+  const s = DATA.students.find(x=>x.studentId===studentId);
+  await setHwState(studentId, hwId, {
+    status: HW_PARTIAL, decidedAt: todayStr(), by: actorLabel(), onSite: false, reason: ''
+  });
+  const hw = DATA.assignments.find(a=>a.id===hwId);
+  logAudit('과제 보완 필요', studentId, s?s.name:'', (hw?hw.title:'과제'));
+  showToast('「보완 필요」로 표시했습니다. 제출은 한 것으로 셉니다.');
+  render();
+}
 /* 반려한다. 사유를 반드시 받는다 — 이유 없이 되돌리면 학생은 뭘 고쳐야 할지 모른다. */
 async function rejectHomework(studentId, hwId){
   const reason = (document.getElementById('hw-reject-'+hwId+'-'+studentId)||{}).value;
@@ -4441,7 +4491,17 @@ function wrongHomeworkLeft(rec){
 
    ⚠ **읽는 문을 처음부터 하나로 둔다.** 오늘 오답숙제 신호 버그가 «같은 조건문 네 벌 중
       한 곳만 빠져서» 났다. 과제 상태를 보는 곳은 그보다 많다 — 전부 아래 셋만 부른다. */
-const HW_NONE = 'none', HW_SUBMITTED = 'submitted', HW_APPROVED = 'approved', HW_REJECTED = 'rejected';
+/* 🔵 **「보완 필요」를 더했다** (2026-09-01 · C-15 · 사용자가 시켰다).
+   사용자의 말 — 「**과제가 하긴 하는데 미비한 학생들이 있어서 완료, 미제출 제외하고도
+     미흡?미비?와 같은 선택지도 있으면 좋겠어**」.
+   🔴 **«한 것»으로 센다 — 사용자가 그렇게 정했다.** `hwIsDone`이 참이고 `hwNeedsAction`이 거짓이다.
+     그러니 제출률·리포트·신호(과제 누락)에 **완료와 똑같이** 들어가고, 학생은 다시 안 내도 된다.
+     ⚠ **반려와 헷갈리지 말 것** — 반려는 «다시 해라»(할 일이 남는다), 보완 필요는
+       «통과시키되 미비했다고 적어 둔다»(할 일이 없다). 사유를 안 받는 이유도 그것이다.
+   ⚠ **옛 기록에는 이 값이 없다** — `hwState`가 모르는 값을 HW_NONE으로 떨구지 않는지 보라.
+     지금은 `v.status || HW_NONE`이라 저장된 문자열을 그대로 쓴다. 안전하다. */
+const HW_NONE = 'none', HW_SUBMITTED = 'submitted', HW_APPROVED = 'approved',
+      HW_REJECTED = 'rejected', HW_PARTIAL = 'partial';
 function hwState(rec, hwId){
   const v = rec && rec.assignmentsDone ? rec.assignmentsDone[hwId] : null;
   if(v === true)  return { status: HW_APPROVED, photos: [], legacy: true };   // 옛 기록
@@ -4452,7 +4512,12 @@ function hwState(rec, hwId){
 }
 /* «완료»는 오직 수락된 것이다. 제출만 해 둔 것은 아직 아니다 —
    그걸 완료로 세면 강사가 보기도 전에 숫자가 차서 검토할 이유가 사라진다. */
-function hwIsDone(rec, hwId){ return hwState(rec, hwId).status === HW_APPROVED; }
+/* ⚠ **「보완 필요」도 «한 것»이다** (2026-09-01 · C-15) — 여기 한 줄이 제출률·리포트·신호를
+   전부 정한다. 이 판정을 바꾸면 그 셋이 한꺼번에 움직인다. */
+function hwIsDone(rec, hwId){
+  const s = hwState(rec, hwId).status;
+  return s === HW_APPROVED || s === HW_PARTIAL;
+}
 /* 학생이 손댈 일이 남았는가 — 안 냈거나(none) 반려됐거나(rejected).
    제출해 둔 것은 «기다리는 중»이라 할 일이 아니다. */
 function hwNeedsAction(rec, hwId){
@@ -6943,6 +7008,8 @@ document.addEventListener('keydown', e=>{
      ⚠ 둘은 서로 다른 화면에 사니 겹칠 일이 없다. 순서는 형식적인 것이다. */
   if(state.hwNoticeId){ e.preventDefault(); hwCloseNotice(); return; }
   if(state.attOpenDate){ e.preventDefault(); attCloseDate(); return; }
+  if(state.sgQView){ e.preventDefault(); sgCloseQ(); return; }
+  if(state.hwNewOpen){ e.preventDefault(); hwCloseNew(); return; }
   if(state.stuEditId){ e.preventDefault(); stuEdit(null); }
 });
 
@@ -6978,6 +7045,14 @@ function render(){
   if(state.hwNoticeId && state.view==='teacher'
      && state.teacherTab==='classhub' && state.classHubTab==='homework')
     drawers += hwNoticeDrawerHTML();
+  /* 반 › 과제의 «등록» 판 (2026-09-01 · C-15). */
+  if(state.hwNewOpen && state.view==='teacher' && state.teacherTab==='classhub'
+     && state.classHubTab==='homework' && !state.studentDetailId)
+    drawers += hwNewDrawerHTML();
+  /* 반 › 성적에서 「문항 보기」로 여는 판 (2026-09-01 · C-15). */
+  if(state.sgQView && state.view==='teacher' && state.teacherTab==='classhub'
+     && state.classHubTab==='scores' && !state.studentDetailId)
+    drawers += sgQDrawerHTML();
   /* 반 › 출결에서 날짜를 눌러 여는 «고치는 판» (2026-09-01).
      ⚠ 다른 드로어와 같은 이유로 «화면을 함께 본다» — state.attOpenDate는 탭을 옮겨도 남는다. */
   if(state.attOpenDate && state.view==='teacher' && state.teacherTab==='classhub'
@@ -8618,17 +8693,26 @@ function hwReviewRowHTML(sid, rec, a, opts){
     <div class="hw-shots">${st.photos.map(p=>`
       <img src="${escHtml(p.url)}" alt="제출한 사진"
         onclick="state.hwPhotoView='${escHtml(p.url)}'; render()">`).join('')}</div>`
-    : (st.status===HW_APPROVED && (st.onSite || st.legacy)
+    : ((st.status===HW_APPROVED || st.status===HW_PARTIAL) && (st.onSite || st.legacy)
         ? `<div class="hw-note">${st.legacy ? '예전 방식으로 완료 표시된 과제입니다 (제출물 없음).'
                                              : '현장에서 확인했습니다 (온라인 제출물 없음).'}</div>` : '');
 
   /* 버튼은 «지금 상태에서 할 수 있는 것»만 낸다. 전부 늘어놓으면 무엇이 다음인지 흐려진다. */
   let acts = '';
   if(st.status===HW_SUBMITTED){
+    /* 🔵 셋으로 늘었다 (2026-09-01 · C-15). 왼쪽에서 오른쪽으로 «통과 → 통과하되 적어 둠 → 되돌림».
+       ⚠ 「보완 필요」는 p(강조)로 두지 않는다 — 기본 답은 여전히 「수락」이다. */
     acts = `<button class="btn p sm" onclick="approveHomework('${sid}','${a.id}',false)">수락</button>
+      <button class="btn sm" title="제출은 «한 것»으로 세되 미비했다고 적어 둡니다. 다시 낼 필요는 없습니다."
+        onclick="partialHomework('${sid}','${a.id}')">보완 필요</button>
       <button class="btn q sm" onclick="state.hwRejectOpen='${key}'; render()">반려</button>`;
   } else if(st.status===HW_APPROVED){
-    acts = `<button class="btn sm" onclick="undoHwDecision('${sid}','${a.id}')">완료 취소</button>`;
+    acts = `<button class="btn sm" title="제출은 «한 것»으로 세되 미비했다고 적어 둡니다."
+        onclick="partialHomework('${sid}','${a.id}')">보완 필요로</button>
+      <button class="btn sm" onclick="undoHwDecision('${sid}','${a.id}')">완료 취소</button>`;
+  } else if(st.status===HW_PARTIAL){
+    acts = `<button class="btn p sm" onclick="approveHomework('${sid}','${a.id}',false)">완료로</button>
+      <button class="btn sm" onclick="undoHwDecision('${sid}','${a.id}')">표시 취소</button>`;
   } else {
     /* 미제출·반려 — 현장에서 보여 주면 여기서 바로 완료가 된다. */
     acts = `<button class="btn p sm" onclick="approveHomework('${sid}','${a.id}',true)">현장 확인</button>
@@ -8779,6 +8863,7 @@ function hwRosterReviewHTML(a, roster){
      08-25에 겪은 일이고, 출결 격자의 «미입력»도 같은 이유로 점이다. 뜻은 표 아래 한 줄이 진다. */
 const HWG_CELL = {
   [HW_APPROVED]:  ['ok',   '완료',      '완료'],
+  [HW_PARTIAL]:   ['half', '보완 필요', '보완 필요'],
   [HW_SUBMITTED]: ['wait', '확인 대기', '확인 대기'],
   [HW_REJECTED]:  ['no',   '반려',      '반려'],
   [HW_NONE]:      ['none', '미제출',    '·']
@@ -8798,7 +8883,14 @@ function hwGridHTML(classId, list, roster){
     const rec = recOf(s);
     if(!rec) return '<td></td>';
     const st = hwState(rec, a.id);
-    const [tone, label, mark] = HWG_CELL[st.status] || HWG_CELL[HW_NONE];
+    let [tone, label, mark] = HWG_CELL[st.status] || HWG_CELL[HW_NONE];
+    /* 🔴 **마감이 지난 미제출은 붉게 «미제출»이라고 적는다** (2026-09-01 · C-15 · 사용자가 시켰다).
+       마감 전에는 «·» 한 점으로 조용하다 — 아직 낼 시간이 있는 것을 할 일처럼 세우면
+       표가 매일 붉어진다. **지나야 비로소 할 일이 된다.**
+       ⚠ 마감일이 없는 과제는 «지났다»가 성립하지 않으므로 영영 «·»다. */
+    if(st.status===HW_NONE && a.dueDate && a.dueDate < todayStr()){
+      tone = 'over'; mark = '미제출'; label = '미제출 · 마감 지남';
+    }
     const sel = state.hwCell && state.hwCell.sid===s.studentId && state.hwCell.hwId===a.id;
     /* ⚠ 사진 장수는 «확인 대기»에서만 말한다 — 볼지 말지를 정하는 정보라서다.
        완료된 칸에까지 「사진 1」을 달았더니 표 전체가 그 글자로 뒤덮였다.
@@ -8849,7 +8941,9 @@ function hwGridHTML(classId, list, roster){
   </table></div>
   ${/* 「·」만 뜻이 안 보이는 표식이라 이 한 줄이 그것을 진다. 나머지 셋은 칸에 다 적혀 있다.
        누르는 법도 여기서 말한다 — 격자만 보고는 «눌러도 되는 것»인지 알 수 없다. */''}
-  <div class="hg-hint"><b class="hg-m none">·</b> 아직 안 낸 것입니다 ·
+  <div class="hg-hint"><b class="hg-m none">·</b> 아직 안 낸 것 ·
+    <b class="hg-m over">미제출</b> 마감이 지난 것 ·
+    <b class="hg-m half">보완 필요</b> 냈지만 미비한 것<b class="hg-sep">|</b>
     <b>칸</b>을 누르면 오른쪽에서 검토하고, <b>열 머리</b>를 누르면 미제출 알림이 열립니다</div>`;
 }
 /* 칸을 누르면 오른쪽 상세를 연다. 같은 칸을 다시 누르면 닫힌다. */
@@ -9066,11 +9160,15 @@ const HW_BADGE = {
   [HW_NONE]:      ['', ''],
   [HW_SUBMITTED]: ['late', '확인 기다리는 중'],
   [HW_APPROVED]:  ['ok',   '완료'],
+  /* ⚠ 학생에게도 그대로 말한다 (2026-09-01 · C-15) — 「완료」로만 보이면 왜 다음에
+     더 챙기라는 말을 듣는지 알 수 없다. 다만 «다시 내라»가 아니므로 올리는 칸은 안 열린다
+     (그 문은 `hwNeedsAction`이 지키고, 보완 필요는 거기 안 든다). */
+  [HW_PARTIAL]:   ['half', '완료 · 보완이 필요해요'],
   [HW_REJECTED]:  ['no',   '다시 해야 해요']
 };
 function stuHomeworkCardHTML(c, a){
   const st = hwState(c.rec, a.id);
-  const done = st.status === HW_APPROVED;
+  const done = hwIsDone(c.rec, a.id);   // 보완 필요도 «한 것»이다 (C-15)
   const dd = hwNeedsAction(c.rec, a.id) ? stuDday(a.dueDate) : null;
   const [tone, label] = HW_BADGE[st.status];
   const staged = hwPhotoList(a.id);
@@ -9120,6 +9218,9 @@ function stuHomeworkCardHTML(c, a){
     ${st.status===HW_REJECTED && st.reason ? `<div class="hw-back">
       <b>다시 해야 하는 이유</b><span>${escHtml(st.reason)}</span>
       <i>${escHtml(st.by||'')}${st.decidedAt?' · '+escHtml(st.decidedAt):''}</i></div>` : ''}
+    ${st.status===HW_PARTIAL ? `<div class="hw-ok half">확인받았습니다 — <b>보완이 필요한 부분이 있습니다.</b>
+      다시 낼 필요는 없고, 다음에 더 챙겨 주세요.${
+      st.by ? ` <i>${escHtml(st.by)}${st.decidedAt?' · '+escHtml(st.decidedAt):''}</i>` : ''}</div>` : ''}
     ${st.status===HW_APPROVED ? `<div class="hw-ok">${
       st.onSite ? '현장에서 확인받았습니다.' : '확인받았습니다.'}${
       st.by ? ` <i>${escHtml(st.by)}${st.decidedAt?' · '+escHtml(st.decidedAt):''}</i>` : ''}</div>` : ''}
@@ -11497,15 +11598,19 @@ function chubScoresHTML(classId){
         return `<th class="hwg-col sg-col">
           <b title="${escHtml(ex.title)}">${escHtml(ex.title)}</b>
           <span class="due"><span class="mono">${escHtml(ex.date||'-')}</span></span>
-          ${/* 문항이 있는 시험지는 문항수를 «알고 있다» — 손으로 고칠 값이 아니다. */''}
+          ${/* 문항이 있는 시험지는 문항수를 «알고 있다» — 손으로 고칠 값이 아니다.
+               🔴 **「20문항」으로 붙여 쓴다** (2026-09-01 · C-15 · 사용자가 짚었다).
+                 예전에는 「문항」과 「20」이 두 줄로 갈라졌다 — `.hwg-col b`가 `display:block`이라
+                 안쪽 `<b class="mono">`가 통째로 줄을 바꿔 버렸다. 붙여 쓰면 그 사고도 같이 사라진다.
+               ⚠ 한글이 섞이므로 `.mono`는 «숫자만» 감싼다. */''}
           <span class="n">${qn
-            ? `문항 <b class="mono">${qn}</b>`
-            : `문항 <input class="sg-tot mono" type="number" min="1" title="이 시험의 총 문항수"
-                 id="cst-${ex.id}" value="${examTotalOf(ex)}">`}</span>
+            ? `<span class="mono">${qn}</span>문항`
+            : `<input class="sg-tot mono" type="number" min="1" title="이 시험의 총 문항수"
+                 id="cst-${ex.id}" value="${examTotalOf(ex)}">문항`}</span>
           <span class="n ${avg!==null && avg<60 ? 'wait' : ''}">${avg===null ? '—' : '평균 '+avg+'%'}</span>
           ${qn
-            ? `<button class="sg-x" title="문항·오답률을 봅니다"
-                 onclick="goTeacherTab('exams'); examOpenClass(examRootId('${ex.id}'),'${ex.id}')">문항 보기</button>`
+            ? `<button class="sg-x" title="문항과 오답률을 오른쪽에서 봅니다"
+                 onclick="sgOpenQ('${ex.id}')">문항 보기</button>`
             : `<button class="sg-x on" title="이 시험에 문항을 붙입니다. 넣어 둔 성적은 그대로 이어집니다."
                  onclick="attachExamQuestions('${ex.id}')">문항 등록</button>
                <button class="sg-x" title="이 시험을 지웁니다" onclick="deleteExam('${ex.id}')">✕</button>`}
@@ -11540,6 +11645,70 @@ function chubScoresHTML(classId){
       }).join('')}
     </tbody>
   </table></div>`;
+}
+
+
+/* ---------- 반 › 성적 — 「문항 보기」 오른쪽 판 (2026-09-01 · C-15) ----------
+   🔵 **사용자가 시켰다** — 「문항보기를 누르면 오답-시험지탭으로 넘어가는게 아니라
+     또 아까처럼 오른쪽 드로어로 보이면 좋을 것 같아」. 맞는 말이다. 성적을 보다가
+     «이 문항이 어려웠나»를 묻는 것인데, 답을 보려고 **탭을 통째로 떠나야** 했다.
+   🔴 **문항별 오답률은 «같은 부품»을 쓴다**(`examQRowsHTML`) — 시험지 화면과 한 벌이다.
+     두 벌로 두면 한쪽만 고쳐 놓고 다른 쪽이 조용히 어긋난다.
+   ⚠ **문항 «내용»은 여기서 원본만 세로로 편다.** `examDetailHTML`은 원본과 변형을
+     나란히 놓는 넓은 판이라 520px에 안 들어간다. 변형문제·검토는 시험지 화면의 일이고,
+     그리로 가는 문을 바닥에 뒀다 — 없애면 «사라진 줄» 안다. */
+function sgOpenQ(examId){
+  state.sgQView = state.sgQView===examId ? null : examId;
+  render();
+}
+function sgCloseQ(){ state.sgQView = null; render(); }
+function sgQDrawerHTML(){
+  const ex = DATA.exams.find(x=>x.id===state.sgQView);
+  if(!ex) return '';
+  const { counts, total } = examWrongCounts(ex, false);
+  const q = examQRowsHTML(ex, counts, total);
+  const avgWrong = q.rows.length ? Math.round(q.rows.reduce((a,r)=>a+r.pct,0)/q.rows.length) : 0;
+  const sc = examScoreStats(ex);
+  return `<div class="hwd-back" onclick="sgCloseQ()"></div>
+    <aside class="hwd wide">
+      <div class="hwd-h" style="position:relative;">
+        <div class="t">${escHtml(ex.title)}</div>
+        <div class="m"><span class="mono">${escHtml(ex.date||'날짜 없음')}</span>
+          <s>·</s><span class="mono">${(ex.questions||[]).length}</span>문항
+          <s>·</s>${escHtml(classNameOf(ex.classId))}</div>
+        <button class="x" onclick="sgCloseQ()" title="닫기 (Esc)">×</button>
+      </div>
+      <div class="hwd-b sgq">
+        ${/* ⚠ 단위는 «점»이 아니라 «%»다 — 만점이 100이 아닌 시험에서 점수로 읽으면 거짓이 된다. */''}
+        <div class="sgq-kpi">
+          <span>반 평균 <b class="mono">${sc.avg===null ? '—' : sc.avg+'%'}</b>${
+            sc.n ? ` <s>${sc.n}/${sc.of}명 입력</s>` : ''}</span>
+          <span>평균 오답률 <b class="mono ${avgWrong>=25?'down':''}">${
+            state.allRecordsLoaded ? avgWrong+'%' : '…'}</b></span>
+        </div>
+        <div class="t-sec" style="margin-top:16px;">문항별 오답률
+          <span style="font-weight:400;">${state.allRecordsLoaded
+            ? `이 반만 · 가장 높은 문항 <span class="mono">${q.worst}%</span>`
+            : '기록 불러오는 중…'}</span></div>
+        ${q.html}
+        <div class="t-sec" style="margin-top:22px;">문항 내용
+          <span style="font-weight:400;">원본만 · 변형문제는 시험지 화면에</span></div>
+        ${(ex.questions||[]).length===0
+          ? '<div class="fm-empty">문항이 없습니다.</div>'
+          : (ex.questions||[]).map((qq,i)=>`<div class="sgq-q">
+              <div class="h"><span class="no">${i+1}번</span>
+                <span class="ch">${escHtml(qq.chapter || qq.unit || '단원 미지정')}</span></div>
+              <div class="tx">${problemHTML(qq.content)}</div>
+              <div class="ans">정답<b>${escHtml(qq.answer||'—')}</b></div>
+            </div>`).join('')}
+      </div>
+      <div class="hwd-f">
+        <button class="btn q sm" title="변형문제·검토·스캔 이미지는 그 화면의 일입니다"
+          onclick="sgCloseQ(); goTeacherTab('exams'); examOpenClass(examRootId('${ex.id}'),'${ex.id}')"
+          >시험지 화면에서 자세히</button>
+        <div class="nav"><button class="btn sm" onclick="sgCloseQ()">닫기</button></div>
+      </div>
+    </aside>`;
 }
 
 /* 🔵 **성적을 먼저 넣어 둔 시험에 나중에 문항을 붙인다** (2026-08-30 · C-7 · 사용자 요청).
@@ -12846,7 +13015,7 @@ function sdTimelineHTML(s, sid, rec, isAssistant){
     /* 낸 것이 위로 온다 — 이 화면에서 할 일은 «확인해 주는 것»이다. */
     const ordered = myHw.slice().sort((a,b)=>{
       const rank = x => hwState(rec, x.id).status===HW_SUBMITTED ? 0
-                      : hwState(rec, x.id).status===HW_APPROVED ? 2 : 1;
+                      : hwIsDone(rec, x.id) ? 2 : 1;   // 보완 필요도 «끝난 것»이라 아래로 (C-15)
       return rank(a)-rank(b) || (b.dueDate||'').localeCompare(a.dueDate||'');
     });
     form = myHw.length===0 ? '' : `<div class="sd-form">
@@ -13309,18 +13478,19 @@ function teacherClassDailyHomeworkHTML(classId, date){
       <span class="r">
         ${standalone ? '' : (()=>{ const sa = !!state.classHubHomeworkShowAll;
           return `<button class="btn sm" onclick="state.classHubHomeworkShowAll=${!sa}; render()">${sa?'이 날짜만':'전체 보기'}</button>`; })()}
-        <button class="btn ${open?'':'p'} sm" onclick="stOpen('dhw')">${open?'닫기':iconSvg('plus',13)+' 과제 등록'}</button>
+        ${/* 🔵 **등록 폼이 오른쪽으로 갔다** (2026-09-01 · C-15 · 사용자가 시켰다).
+             사용자의 말 — 「과제탭의 과제등록도 오른쪽 공간이 넓기때문에 오른쪽 드로어로」.
+             아래로 펴면 격자가 통째로 밀려 내려가 «지금 밀린 것»이 화면 밖으로 나간다 —
+             이 화면에서 가장 자주 보는 것이 그 격자다. D-1이 과제 검토에서 내린 결론과 같다.
+             ⚠ 반 화면(standalone)에서만 드로어다. 「수업 기록 › 그날」 안에서는 화면 셸이
+               달라 드로어 가드(`+"`classHubTab==='homework'`"+`)가 안 서므로 예전처럼 아래로 편다. */''}
+        <button class="btn ${open?'':'p'} sm" onclick="${standalone
+          ? `hwOpenNew('${classId}','${date}')` : `stOpen('dhw')`}">${
+          open && !standalone ? '닫기' : iconSvg('plus',13)+' 과제 등록'}</button>
       </span>
     </div>
-    ${!open ? '' : `<div class="st-form">
-      <div class="cls-form">
-        <label style="flex:2;min-width:200px;"><span>과제명</span><input id="dhw-title" placeholder="예: 3단원 오답노트 정리"></label>
-        <label style="min-width:150px;"><span>마감일</span><input id="dhw-due" type="date" value="${date}"></label>
-      </div>
-      <div class="cls-form"><label style="flex:1;"><span>설명 (선택)</span>
-        <textarea id="dhw-desc" rows="2" placeholder="과제 상세 내용"></textarea></label></div>
-      <button class="btn p sm" style="margin-top:11px;" onclick="addDailyHomework('${classId}','${date}')">등록</button>
-      <p class="st-note">이 반 학생 전원에게 나갑니다. 등록일은 <b>${date}</b>로 남습니다.</p>
+    ${(!open || standalone) ? '' : `<div class="st-form">
+      ${hwNewFormHTML(classId, date)}
     </div>`}
     ${/* 「반 관리 > 과제」(standalone)에서는 **격자**가 본문이다 — 반 전체 × 과제 전체를
          한 판에 올린다. 열 머리를 누르면 그 과제의 «미제출 알림»이 격자 아래로 열린다.
@@ -13369,6 +13539,56 @@ function teacherClassDailyHomeworkHTML(classId, date){
     }).join('')}
   `;
   return { body, extra: '' };
+}
+/* ---------- 과제 등록 폼 — 한 벌만 둔다 (2026-09-01 · C-15) ----------
+   🔴 **반 화면은 오른쪽 드로어, 「수업 기록 › 그날」은 아래로 편다.**
+     자리는 둘이지만 **폼은 하나다** — 두 벌로 두면 한쪽만 고쳐진다(과제 목록에서 이미 겪었다).
+   ⚠ id는 `dhw-*` 그대로다. `addDailyHomework`가 그 id로 값을 읽는다 —
+     **한 화면에 둘이 동시에 뜨지 않으므로** id가 겹칠 일이 없다. */
+function hwNewFormHTML(classId, date){
+  return `<div class="cls-form">
+      <label style="flex:2;min-width:180px;"><span>과제명</span>
+        <input id="dhw-title" placeholder="예: 3단원 오답노트 정리"></label>
+      <label style="min-width:150px;"><span>마감일</span>
+        <input id="dhw-due" type="date" value="${date}"></label>
+    </div>
+    <div class="cls-form"><label style="flex:1;"><span>설명 (선택)</span>
+      <textarea id="dhw-desc" rows="3" placeholder="과제 상세 내용"></textarea></label></div>
+    <p class="st-note">이 반 학생 전원에게 나갑니다. 등록일은 <b>${date}</b>로 남습니다.</p>`;
+}
+function hwOpenNew(classId, date){
+  state.hwNewOpen = state.hwNewOpen ? null : {classId, date};
+  render();
+}
+function hwCloseNew(){ state.hwNewOpen = null; render(); }
+/* 등록하고 닫는다 — 「등록」은 이 판에 온 이유이고, 끝났으면 격자로 돌아가는 것이 맞다.
+   ⚠ `addDailyHomework`는 「수업 기록 › 그날」도 쓰는 함수라 거기에 «닫기»를 넣지 않는다. */
+async function hwSaveNew(){
+  const o = state.hwNewOpen; if(!o) return;
+  const before = DATA.assignments.length;
+  await addDailyHomework(o.classId, o.date);
+  if(DATA.assignments.length > before){ state.hwNewOpen = null; render(); }  // 이름이 비면 안 닫는다
+}
+function hwNewDrawerHTML(){
+  const o = state.hwNewOpen; if(!o) return '';
+  const c = DATA.classes.find(x=>x.id===o.classId); if(!c) return '';
+  return `<div class="hwd-back" onclick="hwCloseNew()"></div>
+    <aside class="hwd wide">
+      <div class="hwd-h" style="position:relative;">
+        <div class="t">과제 등록</div>
+        <div class="m">${escHtml(c.name)}<s>·</s>${classRoster(o.classId).length}명에게 나갑니다</div>
+        <button class="x" onclick="hwCloseNew()" title="닫기 (Esc)">×</button>
+      </div>
+      <div class="hwd-b"><div class="st-form" style="margin-top:10px;">
+        ${hwNewFormHTML(o.classId, o.date)}
+      </div></div>
+      <div class="hwd-f">
+        <div class="nav">
+          <button class="btn sm" onclick="hwCloseNew()">닫기</button>
+          <button class="btn p sm" onclick="hwSaveNew()">등록</button>
+        </div>
+      </div>
+    </aside>`;
 }
 async function addDailyHomework(classId, date){
   const title = document.getElementById('dhw-title').value.trim();
