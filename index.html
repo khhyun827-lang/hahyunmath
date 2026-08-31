@@ -186,7 +186,6 @@
   .app:not(.sap) .cls-screen{flex-direction:column;height:auto;}
   .app:not(.sap) .cls-side{display:contents;}
   .app:not(.sap) .cls-main{order:2;padding-left:0;margin-top:18px;}
-  .app:not(.sap) .cls-rest{order:3;}
 
   /* aside 끝의 64px 여백은 데스크톱에서 «왼쪽 칸 바닥»을 띄우려던 것이다.
      세로로 쌓으면 수업 목록과 작업 칸 사이에 빈 구멍이 된다. */
@@ -412,14 +411,6 @@
 .app .cls-sess .m{font-size:11.5px;color:var(--sub);margin-top:5px;}
 .app .cls-sess .st{position:absolute;right:13px;top:13px;}
 
-.app .cls-todo{background:var(--card);border:1px solid var(--line);border-radius:var(--r-lg);padding:4px 15px;}
-.app .cls-todo a{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:11px 0;
-  border-bottom:1px solid var(--line2);font-size:12.5px;color:var(--ink);cursor:pointer;}
-.app .cls-todo a:last-child{border-bottom:none;}
-.app .cls-todo a:hover{color:var(--accent);}
-.app .cls-todo a b{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600;
-  background:var(--line2);border-radius:var(--r-xs);padding:2px 8px;color:var(--sub);}
-.app .cls-todo a.hot b{background:var(--nobg);color:var(--no);}
 
 /* 단계 본문«만» 스크롤한다. 머리말·단계 막대는 늘 보여야 어디까지 했는지 안다. */
 .app .cls-body{flex:1;min-height:0;overflow:auto;margin-top:16px;}
@@ -453,6 +444,11 @@
 .app .cls-score s{text-decoration:none;font-size:11.5px;color:var(--dim);white-space:nowrap;
   font-family:'JetBrains Mono',monospace;}
 .app .cls-score s.over{color:var(--no);font-weight:700;}
+/* 반 › 상담의 지난 기록 한 덩이 (2026-09-01 · C-22). */
+.app .cs-item{padding:11px 0;border-top:1px solid var(--line2);}
+.app .cs-item .h{display:flex;align-items:center;gap:8px;margin-bottom:5px;}
+.app .cs-item .h b{font-size:12.5px;font-weight:600;}
+.app .cs-item .tx{font-size:12.5px;color:var(--sub);line-height:1.8;white-space:pre-wrap;}
 /* ⚠ `.sg-tot`의 폭은 `.app .sg .sg-tot`에 걸려 있어 «성적 격자 안»에서만 선다.
    수업 화면에서 그대로 쓰면 칸이 남는 자리를 통째로 먹는다 — 실제로 150px까지 늘어났다. */
 .app .cls-body .sg-tot{width:56px;height:26px;padding:0 6px;text-align:center;
@@ -3214,6 +3210,7 @@ let state = {
   sdNoteDrafts: {},
   /* 상담 일지 — 학생마다 «날짜가 붙는 기록의 배열». 연대기에 합류한다 */
   consultLogs: {},
+  chubConsultId: '',         // 반 > 상담에서 오른쪽 판을 연 학생 (2026-09-01 · C-22)
   consultLogLoading: {},
   /* 강의자료 — 반마다 파일 목록. 파일 자체는 드라이브에 있고 여기엔 이름·fileId만 있다 */
   materials: {},
@@ -4470,6 +4467,14 @@ function teacherNotifItems(){
        벨을 눌렀다고 지우지 않는다. 확인해서 처리해야 사라진다. */
     {key:'hwsub', label:'과제 제출 확인 대기', count:0, unseen: hwWaitingTotal(),
      keepUnseen:true, gotoCode:"gotoHwWaiting();"},
+    /* 🔵 **「오답 문항 검토」가 여기로 왔다** (2026-09-01 · C-22 · 사용자가 시켰다).
+       수업 화면 왼쪽의 「오늘 남은 일」에 있던 넷 중 **셋(상담·질문·클리닉)은 이미 벨에 있었다** —
+       한 가지만 갈 곳이 없어서 그 상자가 통째로 남아 있었던 셈이다. 그 하나를 여기 옮기고
+       상자를 걷었다. ⚠ 과제 제출과 같은 종류다 — **검토하면 줄어드는 수**라 «본 개수»로
+       셀 수 없다(watermark가 안 맞는다). 그래서 `keepUnseen`이다. */
+    {key:'review', label:'오답 문항 검토', count:0,
+     unseen: DATA.problemBank.filter(b=>b.status!=='approved').length,
+     keepUnseen:true, gotoCode:"goTeacherTab('review');"},
     {key:'consult', label:'새 상담 신청', count: DATA.consults.length, gotoCode:"state.teacherTab='settings'; state.settingsSubTab='consults';"},
     {key:'qna', label:'새 질문', count: DATA.qnas.length, gotoCode:"state.teacherTab='qna';"},
     {key:'clinic', label:'새 클리닉 신청', count: DATA.clinics.length, gotoCode:"state.teacherTab='clinic';"},
@@ -7109,6 +7114,7 @@ document.addEventListener('keydown', e=>{
   if(state.attOpenDate){ e.preventDefault(); attCloseDate(); return; }
   if(state.sgQView){ e.preventDefault(); sgCloseQ(); return; }
   if(state.hwNewOpen){ e.preventDefault(); hwCloseNew(); return; }
+  if(state.chubConsultId){ e.preventDefault(); chubCloseConsult(); return; }
   if(state.stuEditId){ e.preventDefault(); stuEdit(null); }
 });
 
@@ -7144,6 +7150,10 @@ function render(){
   if(state.hwNoticeId && state.view==='teacher'
      && state.teacherTab==='classhub' && state.classHubTab==='homework')
     drawers += hwNoticeDrawerHTML();
+  /* 반 › 상담의 «기록하는 판» (2026-09-01 · C-22). */
+  if(state.chubConsultId && state.view==='teacher' && state.teacherTab==='classhub'
+     && state.classHubTab==='consult' && !state.studentDetailId)
+    drawers += chubConsultDrawerHTML();
   /* 반 › 과제의 «등록» 판 (2026-09-01 · C-15). */
   if(state.hwNewOpen && state.view==='teacher' && state.teacherTab==='classhub'
      && state.classHubTab==='homework' && !state.studentDetailId)
@@ -10094,6 +10104,7 @@ const TEACHER_SUBNAV = {
     ['출결',       'classhub', 'sessions'],
     ['성적',       'classhub', 'scores'],
     ['과제',       'classhub', 'homework'],
+    ['상담',       'classhub', 'consult'],
     ['수업 기록',  'classhub', 'log'],
     ['진도',       'classhub', 'progress'],
     ['데일리퀴즈', 'classhub', 'quiz'],
@@ -11175,20 +11186,15 @@ function teacherSessionHTML(){
           </div>`;
         }).join('')}
 
-    ${/* 폰에서는 이 덩어리를 «본문 아래»로 내린다(order:3). 그래서 따로 싸 둔다 —
-         수업 중에 출결을 찍으려는데 「오늘 남은 일」 200px를 매번 지나쳐 스크롤해야 한다.
-         데스크톱에서는 그냥 감싸는 div 하나일 뿐이라 보이는 것이 달라지지 않는다. */''}
-    <div class="cls-rest">
-      <div class="t-sec" style="margin-top:24px;">오늘 남은 일</div>
-      <div class="cls-todo">
-        ${[
-          ['오답 문항 검토', DATA.problemBank.filter(b=>b.status!=='approved').length, "goTeacherTab('review')"],
-          ['미답변 질문',    DATA.qnas.filter(q=>!q.answer).length,                     "goTeacherTab('qna')"],
-          ['클리닉 승인 대기', DATA.clinics.filter(c=>c.status==='대기').length,        "goTeacherTab('clinic')"],
-          ['신규 상담 신청', unseenConsultCount(),                                      "goTeacherTab('settings'); state.settingsSubTab='consults'; render()"]
-        ].map(t=>`<a class="${t[1]>0?'hot':''}" onclick="${t[2]}"><span>${t[0]}</span><b>${t[1]}</b></a>`).join('')}
-      </div>
-    </div>
+    ${/* 🔴 **「오늘 남은 일」을 걷었다** (2026-09-01 · C-22 · 사용자가 시켰다).
+         사용자의 말 — 「**수업탭 왼쪽에 오늘 남은일은 «수업»이라는 이페이지에 어울리지 않는 것
+           같아 … 다른페이지로 이동하거나 … 아니면 지웠으면 좋겠어**」.
+         맞는 말이다. 이 화면은 «지금 이 수업을 끝내는» 곳인데 그 상자는 «오늘 학원 전체»를
+         말하고 있었다. 축이 달랐다.
+         🔵 **네 줄 중 셋(상담·질문·클리닉)은 이미 벨에 있었다.** 갈 곳이 없던 것은
+           「오답 문항 검토」 하나뿐이라 **그것만 벨로 옮기고 상자를 지웠다** →
+           `teacherNotifItems`. 새 단추를 만들 필요가 없었다.
+         ⚠ 폰에서 이 덩어리를 본문 아래로 내리던 규칙(`.cls-rest{order:3}`)도 같이 지웠다. */''}
     <div class="rst-pad"></div>
   </aside>`;
 
@@ -11899,6 +11905,7 @@ function teacherClassHubHTML(){
     sub = (r => r.body + r.extra)(teacherClassDailyHomeworkHTML(c.id, todayStr()));
   }
   else if(tab==='scores')     sub = chubScoresHTML(c.id);
+  else if(tab==='consult')    sub = chubConsultHTML(c.id);
   else if(tab==='log')        sub = chubLogHTML(c.id);
   else if(tab==='progress')   sub = chubProgressHTML(c.id);
   else if(tab==='quiz')  sub = chubQuizHTML(c.id);
@@ -11930,6 +11937,125 @@ function teacherClassHubHTML(){
       <div class="chub-body">${sub}</div>
     </main>
   </div>`;
+}
+
+/* =================== 반 › 상담 (2026-09-01 · C-22) ===================
+   🔵 사용자가 시켰다 — 「**학생 상담하는것도 출결 성적 과제 옆에 한 탭으로 들어갔으면 좋겠어**」.
+   상담 기록은 원래 «학생 상세 › 연대기 › 상담»에만 있었다. 한 사람을 열어야 보이니
+   **«이 반에서 누구와 이야기를 나눴고 누구와 아직 안 나눴나»를 볼 자리가 없었다.**
+   반의 다른 탭들이 전부 그 물음(반 전체를 한 판에)에 답하는데 상담만 빠져 있었던 셈이다.
+   🔴 **저장하는 문은 그대로 하나다** — `addConsultLog`·`deleteConsultLog`.
+     여기는 «반으로 모아 보는 창»이고, 적는 일은 오른쪽 판에서 그 함수들이 한다.
+   ⚠ **달로 자르지 않는다.** 출결·성적·과제는 달마다 쌓이지만 상담은 드물게 일어난다 —
+     달에 묶으면 대부분의 달이 비어 보이고 «언제 마지막으로 이야기했나»를 잃는다.
+     그 물음이 이 화면의 전부라 **전 기간**으로 둔다(출결 누적 표와 같은 판단). */
+function chubConsultHTML(classId){
+  const roster = classRoster(classId);
+  if(roster.length===0) return '<div class="fm-empty">이 반에 배정된 학생이 없습니다.</div>';
+  loadConsultLogsForClass(classId);
+  const loading = roster.some(s=>state.consultLogLoading[s.studentId] || !state.consultLogs[s.studentId]);
+  if(loading) return '<div class="fm-empty">상담 기록을 불러오는 중입니다…</div>';
+
+  const logOf = sid => (state.consultLogs[sid] || []).slice()
+    .sort((a,b)=>String(b.date||'').localeCompare(String(a.date||'')));
+  const rows = roster.map(s=>({s, log:logOf(s.studentId)}));
+  const never = rows.filter(r=>r.log.length===0).length;
+  const today = todayStr();
+  /* «오래된 사람»이 위다 — 이 화면에 오는 까닭이 「누구와 아직 안 나눴나」이기 때문이다.
+     한 번도 없는 사람이 제일 위, 그다음이 마지막 상담이 오래된 사람이다. */
+  rows.sort((a,b)=> (a.log.length?1:0) - (b.log.length?1:0)
+    || String(a.log[0]?a.log[0].date:'').localeCompare(String(b.log[0]?b.log[0].date:''))
+    || a.s.name.localeCompare(b.s.name,'ko'));
+
+  return `
+  <div class="es-head" style="margin:0 0 14px;flex-wrap:wrap;">
+    <span class="t-sec" style="margin:0;">상담 기록
+      <span style="font-weight:400;">이 반 전체 · <b>전 기간</b> (달과 무관합니다)</span></span>
+    <span class="spacer"></span>
+    ${never ? `<span class="badge late">아직 한 번도 없음 ${never}명</span>` : ''}
+    <span style="font-size:11.5px;color:var(--dim);line-height:1.7;">
+      학생을 누르면 오른쪽에서 기록합니다. <b>학생·학부모에게는 보이지 않습니다.</b></span>
+  </div>
+  <div class="cls-tiles" style="grid-template-columns:repeat(2,1fr);">${rows.map(({s, log})=>{
+    const last = log[0];
+    const days = last ? Math.round((new Date(today+'T00:00:00') - new Date(last.date+'T00:00:00'))/86400000) : null;
+    return `<div class="tile ${last?'':'flag'}" style="cursor:pointer;"
+        onclick="chubOpenConsult('${s.studentId}')">
+      <div class="who"><b>${escHtml(s.name)}</b>
+        <span>${last
+          ? `<span class="mono">${escHtml(last.date)}</span> · ${escHtml(last.kind||'')}${
+              days>=1 ? ` · ${days}일 전` : ' · 오늘'}`
+          : '아직 상담 기록이 없습니다'}</span></div>
+      <span class="sub" style="font-size:12px;white-space:nowrap;flex-shrink:0;">
+        <span class="mono">${log.length}</span>건</span>
+      <button class="btn q sm" style="flex-shrink:0;">기록</button>
+    </div>`;
+  }).join('')}</div>`;
+}
+/* 한 번에 다 읽고 한 번만 그린다 — 학생마다 `loadConsultLogIfNeeded`를 부르면
+   스무 명이면 render()가 스무 번 돈다. */
+async function loadConsultLogsForClass(classId){
+  const need = classRoster(classId)
+    .filter(s=>!state.consultLogs[s.studentId] && !state.consultLogLoading[s.studentId]);
+  if(!need.length) return;
+  need.forEach(s=>{ state.consultLogLoading[s.studentId] = true; });
+  await Promise.all(need.map(async s=>{
+    const v = await dbGet('consultlog:' + s.studentId, []);
+    state.consultLogs[s.studentId] = Array.isArray(v) ? v : [];
+    state.consultLogLoading[s.studentId] = false;
+  }));
+  render();
+}
+function chubOpenConsult(sid){ state.chubConsultId = state.chubConsultId===sid ? '' : sid; render(); }
+function chubCloseConsult(){ state.chubConsultId = ''; render(); }
+/* 오른쪽 판 — 그 학생의 상담 전부와, 새로 적는 칸.
+   ⚠ 입력칸 id(`cs-*`)가 학생 상세의 상담 폼과 같다. **두 화면이 동시에 뜨지 않는다** —
+     학생 상세는 「학생」 탭에서만 열리고 이 판은 「상담」 탭에서만 뜬다(과제 폼과 같은 판단). */
+function chubConsultDrawerHTML(){
+  const sid = state.chubConsultId;
+  const s = DATA.students.find(x=>x.studentId===sid);
+  if(!s) return '';
+  const log = (state.consultLogs[sid] || []).slice()
+    .sort((a,b)=>String(b.date||'').localeCompare(String(a.date||'')));
+  return `<div class="hwd-back" onclick="chubCloseConsult()"></div>
+    <aside class="hwd wide">
+      <div class="hwd-h" style="position:relative;">
+        <div class="t">${escHtml(s.name)} 상담</div>
+        <div class="m">${escHtml(s.school||'학교 미입력')} ${escHtml(s.grade||'')}<s>·</s>${
+          escHtml(classNameOf(s.classId))}<s>·</s>기록 <b class="mono">${log.length}</b>건</div>
+        <button class="x" onclick="chubCloseConsult()" title="닫기 (Esc)">×</button>
+      </div>
+      <div class="hwd-b">
+        <div class="st-form" style="margin-top:10px;">
+          <div class="cls-form" style="margin-top:0;align-items:flex-start;">
+            <label><span>날짜</span><input id="cs-date" type="date" value="${todayStr()}"></label>
+            <label style="width:96px;"><span>방식</span><select class="fm-sel" id="cs-kind">${
+              CONSULT_KINDS.map(k=>`<option>${k}</option>`).join('')}</select></label>
+          </div>
+          <div class="cls-form"><label style="flex:1;"><span>내용</span>
+            <textarea id="cs-text" rows="4" placeholder="나눈 이야기와 약속한 것&#10;예: 어머니 통화 — 9월부터 클리닉 주 2회 희망"></textarea></label></div>
+          <p class="st-note">여기 적은 것은 <b>학생 연대기에 상담으로 쌓입니다.</b>
+            학생·학부모에게는 보이지 않고, 변경 이력에도 «누구와 언제»까지만 남습니다.</p>
+        </div>
+        <div class="t-sec" style="margin-top:20px;">지난 상담 <span class="mono">${log.length}</span></div>
+        ${log.length===0
+          ? '<div class="fm-empty">아직 기록이 없습니다.</div>'
+          : log.map(c=>`<div class="cs-item">
+              <div class="h"><b class="mono">${escHtml(c.date)}</b>
+                <span class="badge">${escHtml(c.kind||'')}</span>
+                <span class="spacer"></span>
+                <button class="btn q sm" onclick="deleteConsultLog('${sid}','${c.id}')">삭제</button></div>
+              <div class="tx">${escHtml(c.text||'')}</div>
+            </div>`).join('')}
+      </div>
+      <div class="hwd-f">
+        <button class="btn q sm" onclick="chubCloseConsult(); rosterOpen('${sid}','info')">학생 화면으로</button>
+        <div class="nav">
+          <button class="btn sm" onclick="chubCloseConsult()">닫기</button>
+          <button class="btn p sm" onclick="addConsultLog('${sid}')">기록</button>
+        </div>
+      </div>
+    </aside>`;
 }
 
 /* =================== 반 > 성적 — «시험» 하나의 개념 (2026-08-30 · C-4 · 사용자 요청) ===================
