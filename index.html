@@ -544,9 +544,19 @@
 /* 아직 아무도 안 넣은 날 — 흐리게. 「미입력」 넉 자가 하던 일을 색이 대신한다. */
 .app .ag-col.empty b, .app .ag-col.empty b i{color:var(--dim);font-weight:400;}
 .app .ag .down{color:var(--no);font-weight:700;}
-/* 날짜 열을 눌러 편 «고치는 판» — 격자와 이어져 보이게 위쪽 금을 지운다. */
-.app .ag-edit{margin-top:18px;padding:18px 20px;border:1px solid var(--accent-line);
-  border-radius:var(--r-lg);background:var(--card);}
+/* 🔵 **날짜를 눌러 여는 «고치는 판»은 오른쪽 드로어다** (2026-09-01 · 사용자가 시켰다).
+   격자 아래로 펴던 `.ag-edit`은 사라졌다 — 과제 격자와 같은 자리에서 열려야 한 화면으로 읽힌다.
+   타일은 «수업» 화면이 쓰는 ds.css의 `.tile`·`.seg` 그대로다. 좁은 폭에 맞춰 세로로만 푼다. */
+.app .att-d{display:flex;flex-direction:column;gap:9px;padding:12px 0 4px;}
+.app .att-d .tile{height:auto;min-height:56px;flex-wrap:wrap;padding:11px 13px;}
+.app .att-d .tile .seg{margin-left:auto;}
+.app .att-d .tile .att-fields{flex-basis:100%;max-width:none;padding:9px 0 0;margin-top:9px;
+  border-top:1px solid var(--line2);}
+.app .att-d .tile .att-fields label{min-width:100%;}
+.app .att-d .tile .att-fields span{width:56px;}
+/* 이 판의 발판은 두 줄이 될 수 있다 — 「전체 출석」·일괄 고르개와 「저장」이 같이 선다. */
+.app .hwd-f.att-f{flex-wrap:wrap;}
+.app .hwd-f.att-f .fm-sel{height:30px;font-size:12px;}
 
 /* ---------- 출결 입력의 «적는 칸» 줄 (2026-08-30 · C-6) ----------
    🔴 사유·보충영상·메모가 이름표 없이 두 칸에 흩어져 있었다. 한 줄로 내리고 이름을 붙인다. */
@@ -566,12 +576,6 @@
 @media (max-width:900px){ .app .chub-day-grid{grid-template-columns:1fr;} }
 .app .chub-day .t-sec{margin-top:0;}
 
-/* 반 > 출결의 «날짜 고르개» 줄 (2026-08-30 · C-5).
-   옛 .chub-dh(「수업 기록 › 날짜」 상세의 머리말)가 있던 자리다 — 그 화면을 없애면서
-   같은 일을 하는 이 줄로 갈아 끼웠다. 날짜가 «화면»에서 «고르개»로 내려온 자국이다. */
-.app .chub-datebar{display:flex;align-items:center;gap:9px;flex-wrap:wrap;flex-shrink:0;
-  margin-bottom:16px;padding-bottom:13px;border-bottom:1px solid var(--line);}
-.app .chub-datebar b.mono{font-size:15px;font-weight:600;}
 /* 달 고르개 줄 (2026-08-31 · C-8) — 출결·성적·과제·수업 기록 넷이 같은 줄을 쓴다.
    화면 맨 위, 본문보다 앞에 선다 — «지금 몇 월을 보고 있나»가 첫 글자여야 한다. */
 .app .chub-mbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;flex-shrink:0;
@@ -581,8 +585,6 @@
 .app .chub-mbar .mb-x{margin-left:auto;font-size:12px;color:var(--dim);}
 .app .chub-mbar .mb-x b{font-family:JetBrains Mono,monospace;font-size:12px;font-weight:600;
   color:var(--sub);min-width:0;}
-.app .chub-datebar .muted{font-size:12px;color:var(--dim);}
-.app .chub-datebar .btn[disabled]{opacity:.35;cursor:default;}
 /* 지금 보고 있는 날짜는 목록에서도 표가 나야 한다 — 안 그러면 위아래가 따로 논다. */
 .app .chub-sess.on{background:var(--accent-bg);}
 .app .chub-sess.on .when .d{color:var(--accent);}
@@ -1287,11 +1289,23 @@
 .hwg thead th.who{z-index:3;}
 .hwg tbody tr:hover td.who{background:var(--hover);}
 .hwg thead th{vertical-align:bottom;padding:8px 10px;height:auto;line-height:1.45;}
-/* 열 머리 = 과제 하나. 누르면 그 과제의 명단이 격자 아래로 펴진다(미제출 알림도 거기 있다). */
+/* 열 머리 = 과제 하나. 누르면 그 과제의 «미제출 알림»이 오른쪽에서 열린다 (D-1). */
 .hwg-col{width:112px;cursor:pointer;user-select:none;}
 .hwg-col.on{background:var(--accent-bg);}
 .hwg-col b{display:block;font-size:12px;font-weight:600;color:var(--ink);
   white-space:normal;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;}
+/* 과제 열은 «한 글자 칸»에 맞춰 좁힌다 (2026-09-01). 제목은 한 줄로 자르고 전문은 title에 둔다.
+   🔴 **`max-width`를 반드시 건다.** `.hwg`는 `table-layout:fixed`인데 `min-width:max-content`를
+     같이 지고 있어서, 제목이 길면 «표 전체»가 그만큼 늘어난다(열 width는 무시된다).
+     실제로 「3단원 오답노트 정리하기 아주 긴 제목」 하나가 그 열을 200px로 벌렸다.
+     이 한 줄이 있어야 표 너비가 «열 수»로만 정해진다 — 제목 길이와 무관해진다.
+   ⚠ 96px는 「마감 08-14」가 안 접히는 폭에 제목 예닐곱 자를 얹은 값이다. */
+.app .hg .hwg-col{width:96px;}
+.app .hg .hwg-col b{display:block;max-width:76px;white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis;-webkit-line-clamp:unset;}
+.app .hg .hwg-col .due{max-width:76px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+/* 아무도 아직 안 낸 과제 — 흐리게. 출결의 «아직 아무도 안 넣은 날»과 같은 어법이다. */
+.app .hg .hwg-col.empty b,.app .hg .hwg-col.empty .due{color:var(--dim);font-weight:400;}
 /* ⚠ **이 두 줄에 mono를 걸지 말 것** — 「마감」·「완료」·「대기」가 들어간다.
    `.mono`(JetBrains Mono)는 한글 글리프가 없어 두부 상자가 된다.
    숫자만 안쪽 <span class="mono">으로 감싼다. */
@@ -1304,10 +1318,15 @@
 /* ⚠ 한 줄로 못 박는다 — 두 자리 번호(10~13)에서 «1 / 0»으로 줄바꿈되어
    그 행만 키가 커지고 표의 리듬이 깨졌다. */
 .hwg td.who{text-align:left;white-space:nowrap;}
-.hwg .rk{display:inline-block;width:17px;text-align:right;margin-right:7px;
-  font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--dim);}
 .hwg .nm{font-size:12.5px;}
-.hwg .mine{float:right;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--dim);}
+/* 「제출」 열 — 출결의 「출석률」·성적의 「평균」과 같은 자리다 (2026-09-01).
+   ⚠ 예전에는 이 숫자가 «이름 칸 안에» float로 붙어 있었다. 표가 화면 끝까지 늘어나면서
+     이름과 숫자 사이에 400px짜리 빈 벌판이 생겼다 — 사용자가 「옆으로 길게 늘어진다」고 한 것. */
+.app .hg th.hg-done,.app .hg td.hg-done{width:62px;text-align:right;padding-right:12px;
+  border-left:1px solid var(--line);background:var(--sunk);}
+.app .hg th.hg-done{vertical-align:bottom;}
+/* 줄 사이는 출결과 같은 숨결로 — .grid의 40px 고정을 벗은 뒤 줄이 너무 붙었다. */
+.app .hg td{padding:5px 4px;}
 /* 한 칸 = 한 학생의 한 과제.
    🔴 **여기가 이 화면의 전부다 — 눈이 «확인 대기»에 먼저 가야 한다.**
    처음엔 완료를 초록 배경으로 칠했더니 **다 된 것이 화면을 지배하고 할 일이 묻혔다.**
@@ -1317,18 +1336,25 @@
    · **완료** — **바탕 없이 흐린 초록 글자.** 끝난 것은 조용해야 한다
    · **미제출** — 가장 흐리게. 셀 필요는 있지만 눈을 끌 이유는 없다
    ⚠ **완료를 다시 칠하지 말 것.** 칠하면 그 순간 격자가 «성적표»가 되고
-     「지금 뭘 해야 하나」를 못 읽는 화면으로 돌아간다. */
-.hwg-c{display:block;width:100%;border:0;font:inherit;cursor:pointer;
-  padding:6px 4px;border-radius:var(--r-sm);font-size:11.5px;line-height:1.4;
-  background:transparent;color:var(--dim);transition:background var(--t);}
-.hwg-c:hover{background:var(--hover);}
-.hwg-c.ok{color:var(--ok);opacity:.62;}
-.hwg-c.wait{color:var(--late);background:var(--latebg);font-weight:700;
-  box-shadow:inset 0 0 0 1px var(--late-line);}
-.hwg-c.no{color:var(--no);font-weight:600;}
-.hwg-c.sel{box-shadow:inset 0 0 0 2px var(--accent);opacity:1;}
-.hwg-c s{display:block;text-decoration:none;font-size:10px;font-weight:400;
-  opacity:.8;font-family:'JetBrains Mono',monospace;}
+     「지금 뭘 해야 하나」를 못 읽는 화면으로 돌아간다.
+
+   🔵 **2026-09-01 — 한 글자로 줄였다** (사용자가 「출결표랑 같은 표로 정리」를 시켰다).
+   글자를 통째로 적던 칸(「확인 대기」 넉 자)이 열을 112px로 벌리고 있었다.
+   이제 출결과 같은 26×24 표식이다 — 완 · 대 · 반 · «·».
+   ⚠ **색의 순서는 그대로다.** 표식으로 바뀌었다고 완료에 바탕을 칠하지 말 것.
+   ⚠ 사진 장수는 «점»으로 알린다(출결의 사유·메모와 같은 어법). 수는 title에 있다. */
+.app .hg-m{display:inline-flex;align-items:center;justify-content:center;position:relative;
+  width:26px;height:24px;border:1px solid transparent;border-radius:var(--r-sm);
+  font:inherit;font-size:12px;font-weight:700;line-height:1;
+  background:transparent;color:var(--dim);cursor:pointer;transition:background var(--t);}
+.app .hg-m:hover{background:var(--hover);}
+.app .hg-m.ok{color:var(--ok);opacity:.62;font-weight:600;}
+.app .hg-m.wait{color:var(--late);background:var(--latebg);border-color:var(--late-line);}
+.app .hg-m.no{color:var(--no);}
+.app .hg-m.none{color:var(--dim);font-weight:400;}
+.app .hg-m.sel{box-shadow:inset 0 0 0 2px var(--accent);opacity:1;}
+.app .hg-m .dotmark{position:absolute;right:2px;bottom:2px;width:4px;height:4px;
+  border-radius:50%;background:currentColor;opacity:.65;}
 /* 격자 위 한 줄 — 「지금 손이 가야 할 것이 몇 건인가」. */
 .hwg-top{display:flex;align-items:center;gap:10px;flex-wrap:wrap;
   font-size:12.5px;color:var(--sub);margin:0 0 10px;}
@@ -6897,6 +6923,7 @@ document.addEventListener('keydown', e=>{
   /* 2026-08-27 · D-1 — 오른쪽에서 열리는 것은 전부 ESC로 닫힌다.
      ⚠ 둘은 서로 다른 화면에 사니 겹칠 일이 없다. 순서는 형식적인 것이다. */
   if(state.hwNoticeId){ e.preventDefault(); hwCloseNotice(); return; }
+  if(state.attOpenDate){ e.preventDefault(); attCloseDate(); return; }
   if(state.stuEditId){ e.preventDefault(); stuEdit(null); }
 });
 
@@ -6932,6 +6959,11 @@ function render(){
   if(state.hwNoticeId && state.view==='teacher'
      && state.teacherTab==='classhub' && state.classHubTab==='homework')
     drawers += hwNoticeDrawerHTML();
+  /* 반 › 출결에서 날짜를 눌러 여는 «고치는 판» (2026-09-01).
+     ⚠ 다른 드로어와 같은 이유로 «화면을 함께 본다» — state.attOpenDate는 탭을 옮겨도 남는다. */
+  if(state.attOpenDate && state.view==='teacher' && state.teacherTab==='classhub'
+     && (state.classHubTab||'sessions')==='sessions' && !state.studentDetailId)
+    drawers += attDateDrawerHTML();
   /* 설정 > 학생의 «계정 수정» (2026-08-27 · D-1). 같은 이유로 화면을 함께 본다. */
   if(state.stuEditId && state.view==='teacher'
      && state.teacherTab==='settings' && (state.settingsSubTab||'assistants')==='students'
@@ -6948,7 +6980,13 @@ function render(){
       onclick="event.stopPropagation(); closeHwPhoto()">✕</button>
     <img src="${escHtml(state.hwPhotoView)}" alt="제출한 사진 크게 보기"></div>`;
   if(state.toast) html += `<div style="position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1B1B1D;color:#fff;padding:12px 22px;border-radius:30px;font-size:13px;box-shadow:0 6px 20px rgba(0,0,0,.2);z-index:999;">${state.toast}</div>`;
+  /* 🔴 **오른쪽 판의 스크롤 자리를 지킨다** (2026-09-01).
+     드로어 안에서 버튼을 누르면 대개 `render()`가 돈다 — 20명 반의 출결 판에서
+     열여덟 번째 학생의 상태를 누르면 판이 맨 위로 튀어 «누구를 누르던 중»인지 잃는다.
+     `app.innerHTML`을 갈기 직전 자리를 재고 갈아 끼운 뒤 되돌려 놓는다. */
+  const hwdScroll = (app.querySelector('.hwd-b') || {}).scrollTop;
   app.innerHTML = html;
+  if(hwdScroll){ const nb = app.querySelector('.hwd-b'); if(nb) nb.scrollTop = hwdScroll; }
   if(window.renderMathInElement){
     try{
       renderMathInElement(app, {
@@ -8715,11 +8753,13 @@ function hwRosterReviewHTML(a, roster){
    ⚠ **표 골격을 새로 짜지 않는다** — `table.grid`(ds.css)를 그대로 쓴다.
    ⚠ **판정은 `hwState` 하나만 부른다.** 격자라고 상태를 새로 해석하지 않는다.
    ⚠ **최신 과제가 왼쪽이다.** 지금 밀린 것을 먼저 보는 화면이지 연대기가 아니다. */
+/* 🔵 **한 글자 표식이 세 번째 값이다** (2026-09-01) — 출결의 「출·지·조·결·퇴」와 같은 어법.
+   말은 title에 그대로 남는다. 표식만으로 못 읽는 사람이 없도록 그쪽을 지운 적은 없다. */
 const HWG_CELL = {
-  [HW_APPROVED]:  ['ok',   '완료'],
-  [HW_SUBMITTED]: ['wait', '확인 대기'],
-  [HW_REJECTED]:  ['no',   '반려'],
-  [HW_NONE]:      ['',     '미제출']
+  [HW_APPROVED]:  ['ok',   '완료',      '완'],
+  [HW_SUBMITTED]: ['wait', '확인 대기', '대'],
+  [HW_REJECTED]:  ['no',   '반려',      '반'],
+  [HW_NONE]:      ['none', '미제출',    '·']
 };
 function hwGridHTML(classId, list, roster){
   if(!state.allRecordsLoaded)
@@ -8736,42 +8776,53 @@ function hwGridHTML(classId, list, roster){
     const rec = recOf(s);
     if(!rec) return '<td></td>';
     const st = hwState(rec, a.id);
-    const [tone, label] = HWG_CELL[st.status] || HWG_CELL[HW_NONE];
+    const [tone, label, mark] = HWG_CELL[st.status] || HWG_CELL[HW_NONE];
     const sel = state.hwCell && state.hwCell.sid===s.studentId && state.hwCell.hwId===a.id;
     /* ⚠ 사진 장수는 «확인 대기»에서만 말한다 — 볼지 말지를 정하는 정보라서다.
-       완료된 칸에까지 「사진 1」을 달았더니 표 전체가 그 글자로 뒤덮였다. */
+       완료된 칸에까지 「사진 1」을 달았더니 표 전체가 그 글자로 뒤덮였다.
+       🔵 이제 그 «있다»는 사실만 점으로 알리고 수는 title에 둔다 (2026-09-01). */
     const shots = st.status===HW_SUBMITTED ? st.photos.length : 0;
-    return `<td><button class="hwg-c ${tone}${sel?' sel':''}"
+    return `<td><button class="hg-m ${tone}${sel?' sel':''}"
       onclick="hwOpenCell('${s.studentId}','${a.id}')"
-      title="${escHtml(s.name)} · ${escHtml(a.title)} — ${label}">${label}${
-        shots ? `<s>사진 ${shots}</s>` : ''}</button></td>`;
+      title="${escHtml(s.name)} · ${escHtml(a.title)} — ${label}${
+        shots ? ' · 사진 '+shots+'장' : ''}">${mark}${
+        shots ? '<i class="dotmark"></i>' : ''}</button></td>`;
   };
 
+  /* 🔵 **열 머리도 «세는 줄»을 뺐다** (2026-09-01 · 출결 C-10과 같은 판단).
+     「완료 1/4 · 대기 2」는 바로 아래 칸들이 이미 하고 있는 말이고,
+     격자 위에 «확인 대기 N» 뱃지가 반 전체로 한 번 더 말한다. 수는 title로 내렸다.
+     ⚠ **아무도 안 낸 과제만 흐리게** 눌러 둔다 — 자리를 한 칸도 안 쓰는 신호다. */
   const head = cols.map(a=>{
     const done = named.filter(s=>recOf(s) && hwIsDone(recOf(s), a.id)).length;
     const wait = named.filter(s=>recOf(s) && hwState(recOf(s), a.id).status===HW_SUBMITTED).length;
     const on = state.hwNoticeId===a.id;
-    return `<th class="hwg-col${on?' on':''}" onclick="hwToggleCol('${a.id}')"
-      title="${escHtml(a.title)} — 누르면 미제출 알림이 오른쪽에 열립니다">
+    return `<th class="hwg-col${on?' on':''}${(done+wait)===0?' empty':''}" onclick="hwToggleCol('${a.id}')"
+      title="${escHtml(a.title)}${a.dueDate?' · 마감 '+escHtml(a.dueDate):''} — 완료 ${done}/${named.length}${
+        wait?' · 확인 대기 '+wait:''}
+누르면 미제출 알림이 오른쪽에 열립니다">
       <b>${escHtml(a.title)}</b>
-      <span class="due">${a.dueDate ? `마감 <span class="mono">${escHtml(a.dueDate)}</span>` : '마감 없음'}</span>
-      <span class="n${wait?' wait':''}">완료 <span class="mono">${done}/${named.length}</span>${
-        wait?` · 대기 <span class="mono">${wait}</span>`:''}</span>
+      <span class="due">${a.dueDate ? `마감 <span class="mono">${escHtml(a.dueDate.slice(5))}</span>` : '마감 없음'}</span>
     </th>`;
   }).join('');
 
-  const rows = named.map((s,i)=>{
+  /* 이름 칸은 이름만 진다 — 「제출」은 오른쪽 끝 열로 나갔다(출결의 「출석률」 자리). */
+  const rows = named.map(s=>{
     const rec = recOf(s);
     const mine = rec ? cols.filter(a=>hwIsDone(rec, a.id)).length : 0;
     return `<tr>
-      <td class="who"><span class="rk">${i+1}</span><span class="nm">${escHtml(s.name)}</span>
-        <span class="mine">${mine}/${cols.length}</span></td>
+      <td class="who"><span class="nm">${escHtml(s.name)}</span></td>
       ${cols.map(a=>cell(s, a)).join('')}
+      <td class="hg-done"><span class="mono">${mine}/${cols.length}</span></td>
     </tr>`;
   }).join('');
 
-  return `<div class="hwg-wrap"><table class="grid hwg">
-    <thead><tr><th class="who">학생</th>${head}</tr></thead>
+  /* ⚠ **`table.grid`를 쓰지 않는다** (2026-09-01 · 사용자가 짚었다) —
+     `.grid`의 `width:100%`가 과제가 두어 건뿐일 때 열을 476px까지 벌려 놓았다.
+     출결(`.hwg.ag`)·성적(`.hwg.sg`)은 원래 `.grid` 없이 «내용만큼»만 선다.
+     셋 중 과제만 다른 표였다. 이제 셋이 같은 뼈대를 쓴다. */
+  return `<div class="hwg-wrap"><table class="hwg hg">
+    <thead><tr><th class="who">이름</th>${head}<th class="hg-done">제출</th></tr></thead>
     <tbody>${rows}</tbody>
   </table></div>`;
 }
@@ -11646,15 +11697,12 @@ function chubAttendanceHTML(classId){
     </tbody>
   </table></div>`}
 
-  ${open ? `<div class="ag-edit">
-    <div class="chub-datebar" style="margin-bottom:14px;">
-      <b class="mono">${open}</b>
-      <span class="muted">${WEEKDAY_LABEL[new Date(open+'T00:00:00').getDay()]}요일${open===today?' · 오늘':''}</span>
-      <span class="spacer"></span>
-      <button class="btn q sm" onclick="state.attOpenDate=''; render()">닫기</button>
-    </div>
-    ${teacherAttendanceHTML(classId, open).body}
-  </div>` : ''}
+  ${/* 🔵 **고치는 판은 «오른쪽»에서 열린다** (2026-09-01 · 사용자가 시켰다).
+       C-6에서는 격자 «아래»로 폈다. 사용자의 말 —
+       **「날짜를 눌렀을때 수정하는게 아래 펼쳐지는게 아니라 오른쪽에 뜨는걸로」**.
+       과제 격자가 이미 그렇게 하고 있었고(D-1), 같은 격자에서 여는 둘이
+       서로 다른 자리에 뜨면 «어디를 눌렀길래 이게 떴나»를 매번 다시 읽어야 한다.
+       그리는 곳은 여기가 아니라 `render()`다 → `attDateDrawerHTML`. */''}
 
   ${/* ⚠ 누적은 «전 기간»이다 — 달 고르개를 따라가지 않는다. 위 격자가 그 달을 말하고,
        이 표는 «지금까지 통틀어»를 말한다. 둘 다 달에 묶으면 «전체가 어떤가»를 볼 곳이 없어진다. */''}
@@ -12989,85 +13037,87 @@ function setAllStatus(classId, status){
   });
   render();
 }
-/* 반 관리 > 수업 기록 > 출석 전용. 반과 날짜는 «부르는 쪽»이 정한다 —
-   자체 반·날짜 선택기가 있었지만 그것을 쓰던 유일한 화면이 수업 탭이었고,
-   수업은 02-class로 옮겨 가면서 왼쪽 시간표와 날짜 네비가 그 일을 대신한다.
-   여기 5상태(퇴원 포함)와 일괄 변경은 그대로 둔다 — 수업 화면에는 일부러 넣지 않은 것들이다. */
-function teacherAttendanceHTML(classId, date){
-  loadAllRecordsIfNeeded();
-  const roster = classId ? classRoster(classId) : [];
-  if(classId && state.allRecordsLoaded) ensureAttDraft(classId, date);
-  const body = `
-    ${!classId ? '<div class="fm-empty">반을 선택해주세요.</div>' :
-      !state.allRecordsLoaded ? '<div class="fm-empty">학생 기록을 불러오는 중입니다...</div>' :
-      roster.length===0 ? '<div class="fm-empty">이 반에 배정된 학생이 없습니다.</div>' : `
-    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:14px;">
-      <h4 style="margin:0;">출석 관리 <span class="fm-sub" style="font-weight:400;">· ${roster.length}명 대상</span></h4>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-        <button class="btn sm" onclick="setAllPresent('${classId}')">전체 출석</button>
-        <select class="fm-sel" id="att-bulk-status">${ATT_STATUSES.map(st=>`<option value="${st}">${st}</option>`).join('')}</select>
-        <button class="btn sm" onclick="setAllStatus('${classId}', document.getElementById('att-bulk-status').value)">일괄 변경</button>
-        <button class="btn p sm" onclick="saveClassAttendance('${classId}','${date}')">저장</button>
-      </div>
-    </div>
-    <div style="overflow-x:auto;">
-    ${/* 🔴 **사유·보충영상·메모를 한 칸에 쌓지 않는다** (2026-08-30 · C-6 · 사용자가 짚었다) —
-         예전에는 상태 버튼 밑에 사유와 유튜브 칸이 «이름표 없이» 쌓이고, 메모는 옆 칸에 있어
-         결석을 누르는 순간 세 입력이 두 칸에 흩어졌다. 무엇을 적는 칸인지 알 수 없었다.
-       이제 **상태를 고르면 그 학생 «아래»로 한 줄이 펴진다** — 이름표를 달아 나란히 놓는다. */''}
-    <table class="fm-att"><tr><th>#</th><th>이름</th><th>상태</th><th>출석 상태 변경</th></tr>
-    ${roster.map((s,i)=>{
-      const d = state.attDraft[s.studentId] || {status:null, reason:'', videoUrl:'', note:''};
-      return `<tr>
-        <td class="fm-sub mono">${i+1}</td>
-        <td class="fm-nm">${escHtml(s.name)}</td>
-        <td>${d.status ? attBadge(d.status) : '<span class="fm-sub">미입력</span>'}</td>
-        <td>
-          <!-- 상태 버튼은 ds.css의 .seg다 — 수업 화면(02-class)이 쓰는 것과 같은 부품이다.
-               저쪽은 4개(퇴원 제외), 여기는 5개 전부. 그 차이는 «역할»이지 «모양»이 아니다. -->
-          <div class="seg">
-            ${ATT_STATUSES.map(st=>`<button class="${d.status===st?'on '+attStatusClass(st):''}"
-              style="width:auto;padding:0 10px;" onclick="setAttStatus('${s.studentId}','${st}')">${st}</button>`).join('')}
-          </div>
-        </td>
-      </tr>
-      ${/* 적을 것이 있을 때만 줄이 하나 늘어난다. 출석이면 메모 하나뿐이라 그것도 여기 둔다. */''}
-      <tr class="fm-att-sub">
-        <td></td>
-        <td colspan="3">
+/* ---------- 반 › 출결 — 날짜를 눌러 여는 «고치는 판» (2026-09-01) ----------
+   🔵 **오른쪽에서 열린다.** 사용자의 말 — 「날짜를 눌렀을때 수정하는게 아래 펼쳐지는게
+     아니라 오른쪽에 뜨는걸로 바뀌었으면 좋겠어」. 과제 격자(D-1)와 같은 껍데기(`.hwd`)를 쓴다.
+   🔴 **줄은 «수업» 화면과 같은 부품이다** — ds.css의 `.tile` + `.seg` + `SESSION_SEG`.
+     여기서만 쓰는 두 번째 출결 화면을 만들면 다음에 한쪽만 고쳐진다.
+     예전 `teacherAttendanceHTML`(가로 4칸짜리 표)이 이 자리를 지고 있었는데,
+     **부르는 곳이 여기 하나뿐이었고** 400~520px 안에 들어갈 모양이 아니었다. 그래서 접었다.
+   ⚠ 상태를 누르면 `setAttStatus`가 `render()`를 부른다 — 판이 통째로 다시 그려진다.
+     그래서 `render()`가 `.hwd-b`의 스크롤 자리를 되돌려 놓는다(20명 반에서 필요하다).
+   ⚠ 사유·보충영상·메모 칸은 `oninput`에서 state만 만지고 **다시 그리지 않는다** —
+     그려 버리면 한글 조합이 끊긴다(W-3). 이 규칙을 여기서도 그대로 지킨다. */
+function attDateDrawerHTML(){
+  const date = state.attOpenDate, classId = state.classHubId;
+  if(!date || !classId) return '';
+  const c = DATA.classes.find(x=>x.id===classId);
+  if(!c) return '';
+  /* ⚠ **반을 바꾸면 열려 있던 날짜가 남는다.** 그 날짜가 새 반의 수업일이 아닐 수 있고,
+       그대로 저장하면 «수업이 없는 날»에 출결이 적힌다. 그때는 아예 안 그린다 —
+       격자 쪽도 같은 판정으로 그 열의 강조를 지운다(cols.includes). */
+  if(!classSessionDatesInMonth(c.schedule, date.slice(0,7)).includes(date)) return '';
+  const roster = classRoster(classId);
+  if(state.allRecordsLoaded) ensureAttDraft(classId, date);
+  const wd = WEEKDAY_LABEL[new Date(date+'T00:00:00').getDay()];
+  const filled = roster.filter(s=>(state.attDraft[s.studentId]||{}).status).length;
+
+  const body = !state.allRecordsLoaded
+    ? '<div class="fm-empty">학생 기록을 불러오는 중입니다…</div>'
+    : roster.length===0 ? '<div class="fm-empty">이 반에 배정된 학생이 없습니다.</div>'
+    : `<div class="att-d">${roster.map(s=>{
+        const d = state.attDraft[s.studentId] || {status:null, reason:'', videoUrl:'', note:''};
+        const gone = d.status==='결석';
+        return `<div class="tile ${gone?'flag':''}">
+          <div class="who"><b>${escHtml(s.name)}</b>
+            <span>${escHtml(s.school||'학교 미입력')} ${escHtml(s.grade||'')}</span></div>
+          <div class="seg">${SESSION_SEG.map(g=>
+            `<button class="${d.status===g[0] ? 'on '+g[1] : ''}" title="${g[0]}"
+               onclick="setAttStatus('${s.studentId}','${g[0]}')">${g[2]}</button>`).join('')}</div>
+          ${/* 적을 것이 있을 때만 칸이 는다. 이름표는 C-6에서 붙인 그대로다. */''}
           <div class="att-fields">
             ${(d.status && d.status!=='출석') ? `<label><span>사유</span>
-              <input id="att-reason-${s.studentId}" placeholder="예: 병원 진료"
-                value="${escHtml(d.reason)}" oninput="state.attDraft['${s.studentId}'].reason=this.value"></label>` : ''}
-            ${d.status==='결석' ? `<label class="wide"><span>보충 영상</span>
-              <input id="att-video-${s.studentId}" placeholder="유튜브 링크 (선택)"
-                value="${escHtml(d.videoUrl)}" oninput="state.attDraft['${s.studentId}'].videoUrl=this.value"></label>` : ''}
-            <label class="wide"><span>메모</span>
-              <input id="att-note-${s.studentId}" placeholder="이 학생에 대해 남길 말 (선택)"
-                value="${escHtml(d.note)}" oninput="state.attDraft['${s.studentId}'].note=this.value"></label>
+              <input placeholder="예: 병원 진료" value="${escHtml(d.reason)}"
+                oninput="state.attDraft['${s.studentId}'].reason=this.value"></label>` : ''}
+            ${gone ? `<label><span>보충 영상</span>
+              <input placeholder="유튜브 링크 (선택)" value="${escHtml(d.videoUrl)}"
+                oninput="state.attDraft['${s.studentId}'].videoUrl=this.value"></label>` : ''}
+            <label><span>메모</span>
+              <input placeholder="이 학생에 대해 남길 말 (선택)" value="${escHtml(d.note)}"
+                oninput="state.attDraft['${s.studentId}'].note=this.value"></label>
           </div>
-        </td>
-      </tr>`;
-    }).join('')}
-    </table>
-    </div>`}
-  `;
-  /* ⚠ 「출결 누적」은 이제 **출결 격자 화면**이 아래에 세운다 (C-6).
-       여기서도 그리면 격자 화면에 같은 표가 둘이 된다. 수업 탭만 이 값을 쓴다. */
-  const summary = classId && state.allRecordsLoaded && roster.length>0 ? `
-  <div class="st-sec" style="margin-top:26px;">
-    <div class="st-h"><b>${classNameOf(classId)} 출결 누적</b><span>이 반 전체 · 전 기간</span></div>
-    <div style="overflow-x:auto;">
-    <table><tr><th>학생</th>${ATT_STATUSES.map(st=>`<th>${st}</th>`).join('')}</tr>
-    ${roster.map(s=>{
-      const list = (state.allRecords[s.studentId] && state.allRecords[s.studentId].attendance) || [];
-      const count = st => list.filter(a=>a.status===st).length;
-      return `<tr><td class="fm-nm">${escHtml(s.name)}</td>${ATT_STATUSES.map(st=>`<td>${count(st)}</td>`).join('')}</tr>`;
-    }).join('')}
-    </table>
-    </div>
-  </div>` : '';
-  return { body, summary };
+        </div>`;
+      }).join('')}</div>`;
+
+  return `<div class="hwd-back" onclick="attCloseDate()"></div>
+    <aside class="hwd wide">
+      <div class="hwd-h" style="position:relative;">
+        <div class="t"><span class="mono">${date}</span> ${wd}요일${date===todayStr()?' · 오늘':''}</div>
+        <div class="m">${escHtml(c.name)}<s>·</s>${roster.length}명${
+          state.allRecordsLoaded ? `<s>·</s>입력 <b class="mono">${filled}/${roster.length}</b>` : ''}</div>
+        <button class="x" onclick="attCloseDate()" title="닫기 (Esc)">×</button>
+      </div>
+      <div class="hwd-b">${body}</div>
+      ${roster.length===0 ? '' : `<div class="hwd-f att-f">
+        <button class="btn q sm" onclick="setAllPresent('${classId}')">전체 출석</button>
+        <select class="fm-sel" id="att-bulk-status">${
+          ATT_STATUSES.map(st=>`<option value="${st}">${st}</option>`).join('')}</select>
+        <button class="btn q sm"
+          onclick="setAllStatus('${classId}', document.getElementById('att-bulk-status').value)">일괄 변경</button>
+        <div class="nav">
+          <button class="btn sm" onclick="attCloseDate()">닫기</button>
+          <button class="btn p sm" onclick="attSaveDate('${classId}','${date}')">저장</button>
+        </div>
+      </div>`}
+    </aside>`;
+}
+function attCloseDate(){ state.attOpenDate=''; render(); }
+/* 저장하면 닫는다 — 「저장」은 이 판에 온 이유이고, 끝났으면 격자로 돌아가는 것이 맞다.
+   ⚠ `saveClassAttendance`는 수업 화면도 쓰는 함수라 거기에 «닫기»를 넣지 않는다. */
+async function attSaveDate(classId, date){
+  await saveClassAttendance(classId, date);
+  state.attOpenDate = '';
+  render();
 }
 async function saveClassAttendance(classId, date){
   const roster = classRoster(classId);
