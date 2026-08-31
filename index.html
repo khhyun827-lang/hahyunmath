@@ -392,6 +392,14 @@
 .app .cls-nav{display:flex;align-items:center;gap:8px;}
 .app .cls-day{font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:600;
   white-space:nowrap;}
+/* 🔵 **날짜 고르개가 왼쪽 칸 맨 위에 산다** (2026-09-01 · C-18 · 사용자가 시켰다).
+   270px 안이라 「◀ 2026-09-01 화 ▶ 오늘」이 한 줄에 빠듯하다 — 접히게 두고,
+   날짜가 가운데에서 남는 자리를 차지하게 한다. 아래 수업 목록과 한 덩이로 읽혀야 하므로
+   금(border-bottom)으로 «언제»와 «어느 반»을 가른다. */
+.app .cls-side > .cls-nav{padding-bottom:13px;margin-bottom:2px;flex-wrap:wrap;
+  border-bottom:1px solid var(--line);}
+.app .cls-side > .cls-nav .cls-day{flex:1;min-width:0;text-align:center;font-size:13.5px;}
+.app .cls-side > .cls-nav .btn.sm{margin-left:auto;}
 
 /* 오늘의 수업 — 시간이 1차 축이다. 반을 고르는 것이 아니라 «지금 하는 수업»을 고른다. */
 .app .cls-sess{background:var(--card);border:1px solid var(--line);border-radius:var(--r-lg);
@@ -428,6 +436,38 @@
   border-radius:var(--r-sm);background:var(--paper);padding:0 9px;
   font-family:inherit;font-size:12px;color:var(--ink);outline:none;}
 .app .cls-sub input:focus{border-color:var(--accent-line);}
+
+/* ---------- 수업의 «적는 카드» (2026-09-01 · C-18) ----------
+   🔵 사용자가 「이 수업 메뉴의 메인 디자인은 출결 부분인 것 같은데 이와 비슷한 형태로」라고
+     짚었다. 그래서 과제·시험 입력도 **출결과 같은 .tile** 위에 세운다.
+     예전에는 .cls-hw 카드 안에 .cls-form을 구겨 넣어 이 화면만 다른 결이었다.
+   ⚠ .tile은 display:flex + align-items:center라 폼이 가로로 늘어선다 — 세로로 푼다. */
+.app .cls-new{display:block;padding:15px 16px 13px;}
+.app .cls-new-row{display:flex;gap:11px;flex-wrap:wrap;align-items:flex-end;margin-bottom:11px;}
+.app .cls-new-row:last-of-type{margin-bottom:0;}
+.app .cls-new-row label{display:flex;flex-direction:column;gap:5px;min-width:150px;}
+.app .cls-new-row label.wide{flex:1;min-width:220px;}
+.app .cls-new-row label span{font-size:11px;font-weight:700;color:var(--dim);letter-spacing:.02em;}
+.app .cls-new-row input,.app .cls-new-row textarea{
+  border:1px solid var(--line);border-radius:var(--r-sm);background:var(--paper);
+  padding:0 11px;height:36px;font-family:inherit;font-size:13px;color:var(--ink);outline:none;
+  transition:border-color var(--t);}
+.app .cls-new-row textarea{height:auto;padding:9px 11px;line-height:1.7;resize:vertical;}
+.app .cls-new-row input:focus,.app .cls-new-row textarea:focus{border-color:var(--accent);}
+.app .cls-new-note{margin:11px 0 0;font-size:11.5px;color:var(--dim);line-height:1.8;}
+.app .cls-new-note b{font-weight:700;color:var(--sub);}
+/* ⚠ 적는 카드는 화면 끝까지 늘리지 않는다 — 1100px짜리 입력칸은 «이만큼 적으라»로 읽힌다.
+   눈이 한 줄을 훑을 수 있는 만큼이면 된다(출결의 «적는 칸»과 같은 판단). */
+.app .cls-new{max-width:900px;}
+/* 타일 아랫줄(마감·날짜·문항수)은 한 줄로 못 박는다.
+   🔴 **ds.css의 `.tile .who span{display:block}`이 «안쪽» span까지 잡는다** —
+     날짜를 `<span class="mono">`으로 감싸는 순간 그것이 제 줄을 차지해
+     「마감」과 「2026-09-03」이 두 값처럼 갈라졌다. 실제로 그렇게 나왔다.
+     그래서 ① 바깥 한 겹만 자식 결합자로 집고 ② 안쪽은 inline으로 되돌린다. */
+.app .cls-tiles .tile .who > span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.app .cls-tiles .tile .who > span span{display:inline;}
+/* 지금 펴 놓은 과제 줄은 표가 나야 한다 — 아래 명단이 그 과제의 것이기 때문이다. */
+.app .cls-hw.on{border-color:var(--accent-line);background:var(--accent-bg);}
 
 .app .cls-form{display:flex;gap:11px;flex-wrap:wrap;align-items:flex-end;margin-top:11px;}
 .app .cls-form label{display:flex;flex-direction:column;gap:5px;}
@@ -4124,14 +4164,25 @@ async function deleteScore(sid, idx){
 /* 과제 등록 폼은 두 화면에 있다 (반 관리 > 수업 기록 > 과제 · 수업 > 과제).
    폼을 복제하는 대신 id 접두사만 받는다 — 등록 로직이 두 벌이 되면 한쪽만 고쳐진다.
    접두사가 다르므로 두 화면이 같이 그려져도 getElementById가 엉뚱한 칸을 읽지 않는다. */
-async function addHomework(prefix){
+async function addHomework(prefix, sessionDate){
   const p = prefix || '';
   const classId = document.getElementById(p+'hw-class').value;
   const title = document.getElementById(p+'hw-title').value.trim();
   const description = document.getElementById(p+'hw-desc').value.trim();
   const dueDate = document.getElementById(p+'hw-due').value;
+  /* 🔴 **낸 날은 «오늘»이 아니라 «그 수업 날짜»다** (2026-09-01 · C-18에서 고쳤다).
+     예전에는 무조건 `todayStr()`이었다. 수업 화면에서 지난 수업을 열어 과제를 적으면
+     낸 날이 오늘로 박혀 **그 수업 날짜가 아닌 열에 서고**, 바로 아래 「이 수업에서 낸 과제」
+     목록(낸 날로 거른다)에도 안 나타났다. C-16이 낸 날을 열 머리로 올린 뒤로는
+     그 어긋남이 화면에 그대로 보인다. */
+  const createdAt = sessionDate || todayStr();
   if(!title){ showToast('과제명을 입력해주세요.'); return; }
-  const hw = {id:'hw'+Date.now(), classId, title, description, dueDate, createdAt:todayStr()};
+  /* ⚠ 마감이 낸 날보다 앞설 수는 없다 (C-17과 같은 규칙). 같은 날은 괜찮다. */
+  if(dueDate && dueDate < createdAt){
+    showToast(`마감일(${dueDate})이 수업 날짜(${createdAt})보다 앞섭니다. 날짜를 확인해 주세요.`);
+    return;
+  }
+  const hw = {id:'hw'+Date.now(), classId, title, description, dueDate, createdAt};
   DATA.assignments.unshift(hw);
   await dbSetDoc('assignments', hw.id, hw);
   document.getElementById(p+'hw-title').value='';
@@ -10841,8 +10892,16 @@ function signalRowHTML(r, k, isMuted){
    데일리퀴즈는 이 흐름에 없다. 학생이 직접 제출하고 자동 채점되므로
    수업 중에 교사가 손댈 단계가 아니다. (시안의 판단을 그대로 따랐다.) */
 
+/* 🔴 **수업 «순서»가 실제 수업을 따라간다** (2026-09-01 · C-18 · 사용자가 시켰다).
+   사용자의 말 — 「**실제 수업하는 구조로 바꾸기위해서 1출결 뒤에 «2.과제검사»,
+     3.진도뒤에 «4.시험»도 넣어줘**」.
+   🔵 **둘로 갈린 것이 핵심이다** — 예전 「과제」 한 단계가 «지난 과제를 검사하는 일»과
+     «오늘 낼 과제를 적는 일» 둘을 같이 지고 있었다. **수업에서는 그 둘이 다른 시각에 일어난다** —
+     검사는 시작할 때, 내주는 것은 끝날 때다. 한 단계에 묶여 있으면 두 번 들어가야 한다.
+   ⚠ 번호는 배열 순서(`i`)가 매긴다. `prev`가 0이라 출결이 1, 과제 검사가 2… 로 맞는다. */
 const SESSION_STEPS = [
-  ['prev', '지난 수업 확인'], ['att', '출결'], ['prog', '진도'], ['hw', '과제'], ['memo', '메모']
+  ['prev', '지난 수업 확인'], ['att', '출결'], ['hwcheck', '과제 검사'],
+  ['prog', '진도'], ['exam', '시험'], ['hw', '과제'], ['memo', '메모']
 ];
 const SESSION_SEG = [['출석','ok','출'], ['지각','late','지'], ['조퇴','leave','조'], ['결석','no','결']];
 
@@ -10984,7 +11043,12 @@ function teacherSessionHTML(){
 
   const side = `
   <aside class="cls-side">
-    <div class="t-sec">${date === todayStr() ? '오늘의 수업' : dow + '요일 수업'}</div>
+    ${/* 🔵 **날짜 고르개가 왼쪽 맨 위로 왔다** (2026-09-01 · C-18 · 사용자가 시켰다).
+         이 화면의 1차 축은 «날짜와 시간»인데, 날짜를 고르는 곳은 오른쪽 머리말에 있고
+         시간을 고르는 곳은 왼쪽에 있었다. **한 축을 두 곳에서 고르고 있었던 셈이다.**
+         이제 왼쪽 한 칸이 «언제»를 통째로 진다 — 날짜를 옮기면 바로 아래 수업 목록이 바뀐다. */''}
+    ${sessionDateNavHTML(date)}
+    <div class="t-sec" style="margin-top:14px;">${date === todayStr() ? '오늘의 수업' : dow + '요일 수업'}</div>
     ${sessions.length === 0
       ? `<div style="font-size:12.5px;color:var(--dim);line-height:1.7;">이 날짜에 수업이 없습니다.<br>반 일정은 반 관리에서 정합니다.</div>`
       : sessions.map(c=>{
@@ -11031,7 +11095,6 @@ function teacherSessionHTML(){
       <main class="cls-main">
         <div class="cls-mh">
           <h1 class="t-title">수업<s>${date} ${dow}</s></h1>
-          ${sessionDateNavHTML(date)}
         </div>
         <div class="cls-body"><div style="padding:56px 0;text-align:center;color:var(--dim);font-size:12.5px;">
           ${DATA.classes.length === 0 ? '등록된 반이 없습니다.' : '이 날짜에 수업이 있는 반이 없습니다. 날짜를 옮겨 보세요.'}
@@ -11052,7 +11115,9 @@ function teacherSessionHTML(){
   let body = '', bar = '';
   if(step === 'prev')      { const r = sessionPrevHTML(classId, date);  body = r.body; bar = r.bar; }
   else if(step === 'att')  { const r = sessionAttHTML(classId, date); body = r.body; bar = r.bar; }
+  else if(step === 'hwcheck'){ const r = sessionHwCheckHTML(classId, date); body = r.body; bar = r.bar; }
   else if(step === 'prog') { const r = sessionProgHTML(classId);      body = r.body; bar = r.bar; }
+  else if(step === 'exam') { const r = sessionExamHTML(classId, date);body = r.body; bar = r.bar; }
   else if(step === 'hw')   { const r = sessionHwHTML(classId, date);  body = r.body; bar = r.bar; }
   else                     { const r = sessionMemoHTML(classId, date);body = r.body; bar = r.bar; }
 
@@ -11062,7 +11127,8 @@ function teacherSessionHTML(){
         ${/* schedule을 통째로 붙이면 시간이 두 번 나온다 — 요일만 따로 뽑아 잇는다. */''}
         <h1 class="t-title">${escHtml(cls.name)}<s>${escHtml(sessionTimeText(cls.schedule) || '시간 미정')}${
           parseScheduleDays(cls.schedule).length ? ' · ' + parseScheduleDays(cls.schedule).map(d=>WEEKDAY_LABEL[d]).join('·') : ''}</s></h1>
-        ${sessionDateNavHTML(date)}
+        ${/* ⚠ 날짜 고르개는 여기 없다 — 왼쪽 칸 맨 위로 갔다 (C-18). */''}
+        <span class="cls-day">${date} <span class="muted" style="font-weight:400;">${dow}</span></span>
       </div>
       ${stepsHTML}
       <div class="cls-body">${body}<div class="rst-pad"></div></div>
@@ -11152,7 +11218,7 @@ function sessionAttHTML(classId, date){
     <button class="btn sm" onclick="saveSessionAttendance('${classId}','${date}')">저장</button>
     <span class="spacer"></span>
     ${unsaved > 0 ? `<span class="hint" style="margin-left:0;color:var(--late);">저장 안 된 변경 ${unsaved}명분</span>` : ''}
-    <button class="btn p" onclick="saveSessionAttendance('${classId}','${date}','prog')">저장하고 진도로 ${iconSvg('arrowR',15)}</button>
+    <button class="btn p" onclick="saveSessionAttendance('${classId}','${date}','hwcheck')">저장하고 과제 검사로 ${iconSvg('arrowR',15)}</button>
   </div>`;
   return { body:`<div class="cls-tiles">${tiles}</div>`, bar };
 }
@@ -11191,53 +11257,180 @@ function sessionProgHTML(classId){
     <span class="sum">${subject ? `${escHtml(subject)} · <b class="mono">${doneCount}/${chapters.length}</b>단원` : '과목 미지정'}</span>
     <span class="hint">체크하면 바로 저장됩니다</span>
     <span class="spacer"></span>
+    <button class="btn p" onclick="goSessionStep('exam')">시험으로 ${iconSvg('arrowR',15)}</button>
+  </div>`;
+  return { body, bar };
+}
+
+/* ── 2단계. 과제 검사 — «지난 과제를 확인해 주는 일» (2026-09-01 · C-18) ──
+   🔵 예전에는 「과제」 한 단계가 검사와 등록을 같이 지고 있었다. 사용자가 갈라 달라고 했다 —
+     「**과제검사에서는 최근 과제에 대해서 현장확인을 하는 것을 옮겨주고**」.
+   🔴 **명단은 반 관리와 «같은 것»을 쓴다**(`hwRosterReviewHTML`) — 요약줄·알림바·정렬·접기가
+     한 덩어리다. 두 벌로 두면 한쪽만 고쳐진다.
+   ⚠ **아직 할 일이 남은 과제를 먼저 세운다** — 확인 대기와 미제출이 있는 것이 위다.
+     수업 중에 이 화면을 여는 까닭이 그것이다. 다 끝난 과제는 아래로 내리되 감추지 않는다. */
+function sessionHwCheckHTML(classId, date){
+  const roster = classRoster(classId);
+  const recOf = s => state.allRecords[s.studentId];
+  const all = DATA.assignments.filter(a=>!a.classId || a.classId===classId);
+  const stat = a => {
+    const wait = roster.filter(s=>recOf(s) && hwState(recOf(s), a.id).status===HW_SUBMITTED).length;
+    const todo = roster.filter(s=>recOf(s) && hwNeedsAction(recOf(s), a.id)).length;
+    const done = roster.filter(s=>recOf(s) && hwIsDone(recOf(s), a.id)).length;
+    return { wait, todo, done };
+  };
+  /* 낸 날이 늦은 것이 위다. 그 위에 «할 일이 남은 것»을 한 번 더 올린다. */
+  const rows = all.map(a=>({a, ...stat(a)}))
+    .sort((x,y)=> ((y.wait+y.todo)>0) - ((x.wait+x.todo)>0)
+      || String(y.a.createdAt||'').localeCompare(String(x.a.createdAt||'')));
+  const totWait = rows.reduce((n,r)=>n+r.wait,0);
+  const totTodo = rows.reduce((n,r)=>n+r.todo,0);
+  /* 아무것도 안 펴 놓았으면 «제일 급한 것»을 열어 둔다 — 열자마자 할 일이 보여야 한다. */
+  const first = rows.find(r=>r.wait>0) || rows.find(r=>r.todo>0) || rows[0];
+  if(state.homeworkDetailId && !all.some(a=>a.id===state.homeworkDetailId)) state.homeworkDetailId = null;
+  const openId = state.homeworkDetailId || (first ? first.a.id : null);
+
+  const bar = `<div class="actbar">
+    <span class="sum">확인 대기 <b class="mono">${totWait}</b> · 아직 안 냄 <b class="mono">${totTodo}</b></span>
+    <span class="hint">현장에서 보여 주면 «현장 확인»으로 바로 완료가 됩니다</span>
+    <span class="spacer"></span>
+    <button class="btn p" onclick="goSessionStep('prog')">진도로 ${iconSvg('arrowR',15)}</button>
+  </div>`;
+  if(!state.allRecordsLoaded)
+    return { bar, body:'<div style="padding:48px 0;text-align:center;color:var(--dim);font-size:12.5px;">학생 기록을 불러오는 중입니다…</div>' };
+  if(rows.length===0)
+    return { bar, body:`<div style="padding:48px 0;text-align:center;color:var(--dim);font-size:12.5px;line-height:1.8;">
+      검사할 과제가 없습니다.<br>과제는 <b style="color:var(--sub);">「과제」 단계</b>에서 냅니다.</div>` };
+
+  const body = rows.map(({a, wait, todo, done})=>{
+    const open = openId === a.id;
+    const overdue = a.dueDate && a.dueDate < todayStr() && todo > 0;
+    return `<div class="cls-hw ${open?'on':''}" style="cursor:pointer;"
+        onclick="state.homeworkDetailId = state.homeworkDetailId==='${a.id}' ? '' : '${a.id}'; state.hwRejectOpen=null; render()">
+        <div class="n">${escHtml(a.title)}<s>${a.createdAt ? '낸 날 '+a.createdAt : '낸 날 모름'}${
+          a.dueDate ? ' · 마감 '+a.dueDate : ''}</s></div>
+        ${wait ? `<span class="badge late" style="flex-shrink:0;">확인 대기 ${wait}</span>` : ''}
+        ${overdue ? `<span class="badge no" style="flex-shrink:0;">마감 지남 ${todo}</span>` : ''}
+        <span class="sub" style="font-size:12.5px;white-space:nowrap;"><span class="mono">${done}/${roster.length}</span> 완료</span>
+        <span class="bar" style="width:70px;flex-shrink:0;"><i style="width:${roster.length?Math.round(done/roster.length*100):0}%"></i></span>
+        <span class="sub" style="font-size:11.5px;flex-shrink:0;">${open?'접기':'펴기'}</span>
+      </div>
+      ${!open ? '' : `<div class="sess-hw">${hwRosterReviewHTML(a, roster)}</div>`}`;
+  }).join('');
+  return { body, bar };
+}
+
+/* ── 4단계. 시험 — «오늘 본 시험을 그 자리에서 만든다» (2026-09-01 · C-18) ──
+   🔵 사용자의 말 — 「**«4,시험»은 시험 바로 입력해서 이게 반-성적탭에 시험등록이 되는구조로**」.
+   🔴 **만드는 함수는 `addQuickExam` 하나다** — 반 › 성적의 「시험 추가」가 쓰는 그것이다.
+     여기서 새로 만들면 «시험이 만들어지는 길»이 둘이 되고, 둘이 조용히 어긋난다.
+   ⚠ **id(`qx-*`)가 반 › 성적과 같아도 된다** — 두 화면이 동시에 뜨지 않는다(과제 폼과 같은 판단).
+   ⚠ **점수는 여기서 안 넣는다.** 넣는 자리는 반 › 성적 하나다(C-4에서 못 박았다) —
+     여기 두면 넣는 문이 둘이 되고, 20명 × 시험 여러 개를 이 좁은 칸에서 칠 수는 없다.
+     대신 **그리로 가는 문**을 만든 직후에 띄운다. */
+function sessionExamHTML(classId, date){
+  const ym = String(date).slice(0,7);
+  const exams = classExams(classId, ym);
+  const roster = DATA.students.filter(s=>s.classId===classId);
+  const scored = ex => roster.filter(s=>examScoreOf(state.allRecords[s.studentId], ex.id)).length;
+
+  const body = `
+  <div class="t-sec">오늘 본 시험 등록</div>
+  <div class="cls-tiles" style="grid-template-columns:1fr;">
+    <div class="tile cls-new">
+      <div class="cls-new-row">
+        <label class="wide"><span>시험명</span>
+          <input id="qx-title" placeholder="예: 3주차 쪽지시험"></label>
+      </div>
+      <div class="cls-new-row">
+        <label><span>본 날짜</span><input id="qx-date" type="date" value="${date}"></label>
+        <label><span>문항수</span><input id="qx-total" type="number" min="1" step="1" value="20"></label>
+      </div>
+      <p class="cls-new-note">지금은 <b>시험만</b> 만듭니다. <b>점수는 「반 › 성적」에서</b> 반 전체를
+        한 판에 넣습니다 — 20명을 이 칸에서 칠 수는 없습니다.
+        <b>문항은 나중에 붙여도</b> 넣어 둔 성적이 그대로 이어집니다.</p>
+    </div>
+  </div>
+
+  <div class="t-sec" style="margin-top:24px;">${ymLabel(ym)}에 본 시험 <span class="mono">${exams.length}</span></div>
+  ${exams.length===0
+    ? `<div style="padding:28px 0;text-align:center;color:var(--dim);font-size:12.5px;">아직 없습니다.</div>`
+    : `<div class="cls-tiles" style="grid-template-columns:repeat(2,1fr);">${exams.map(ex=>{
+        const n = scored(ex), qn = (ex.questions||[]).length;
+        return `<div class="tile">
+          <div class="who"><b>${escHtml(ex.title)}</b>
+            <span><span class="mono">${escHtml(ex.date||'날짜 없음')}</span> · ${
+              qn ? `<span class="mono">${qn}</span>문항` : `<span class="mono">${examTotalOf(ex)}</span>문항 · 점수만`}</span></div>
+          <span class="badge ${n===roster.length&&roster.length?'ok':(n?'consult':'')}"
+            style="flex-shrink:0;">성적 ${n}/${roster.length}</span>
+        </div>`;
+      }).join('')}</div>`}`;
+
+  const bar = `<div class="actbar">
+    <span class="sum">${ymLabel(ym)} 시험 <b class="mono">${exams.length}</b>개</span>
+    <button class="btn p" onclick="addQuickExam('${classId}')">${iconSvg('plus',14)} 시험 만들기</button>
+    ${exams.length ? `<button class="btn" onclick="state.classHubId='${classId}'; goTeacherTab('classhub','scores')"
+      >성적 넣으러 가기 ${iconSvg('arrowR',15)}</button>` : ''}
+    <span class="spacer"></span>
     <button class="btn p" onclick="goSessionStep('hw')">과제로 ${iconSvg('arrowR',15)}</button>
   </div>`;
   return { body, bar };
 }
 
-/* ── 3단계. 과제 ── */
+/* ── 5단계. 과제 — «오늘 낼 과제를 적는 일»만 진다 (C-18) ── */
 function sessionHwHTML(classId, date){
   const roster = classRoster(classId);
-  const hws = DATA.assignments.filter(a=>!a.classId || a.classId===classId);
+  /* 🔴 **검사는 여기 없다** (2026-09-01 · C-18) — 「2. 과제 검사」로 갔다.
+     사용자의 말 — 「**뒤에있는 과제에서는 그냥 오늘 내줄 과제 입력만 했으면 좋겠어**」.
+     이 단계의 물음은 하나다 — «오늘 뭘 내주지». 그 답을 적는 칸 하나와,
+     방금 적은 것이 제대로 들어갔는지 보이는 목록 하나면 된다. */
+  const todays = DATA.assignments.filter(a=>a.classId===classId && a.createdAt===date);
+  const recOf = s => state.allRecords[s.studentId];
   const body = `
-  <div class="t-sec">이 수업에서 낼 과제</div>
-  <div class="cls-hw" style="display:block;">
-    <div class="cls-form">
-      <label style="flex:2;min-width:200px;"><span>과제명</span>
-        <input id="cls-hw-title" placeholder="예: 3단원 오답노트 정리"></label>
-      <label style="min-width:150px;"><span>마감일</span>
-        <input id="cls-hw-due" type="date" value="${date}"></label>
+  ${/* 🔵 **디자인은 출결 타일과 같은 결이다** (사용자가 그렇게 짚었다) —
+       「이 수업 메뉴의 메인 디자인은 출결 부분인 것 같은데 이와 비슷한 형태로」.
+       그래서 .cls-tiles의 .tile을 그대로 쓰고, 예전 .cls-hw 카드 안에 폼을 구겨 넣던 것을 걷었다.
+       등록 단추도 카드 안이 아니라 **아래 발판(actbar)**에 있다 —
+       출결의 「저장」이 거기 있는 것과 같은 자리다. */''}
+  <div class="t-sec">${date} 수업에서 낼 과제</div>
+  <div class="cls-tiles" style="grid-template-columns:1fr;">
+    <div class="tile cls-new">
+      <div class="cls-new-row">
+        <label class="wide"><span>과제명</span>
+          <input id="cls-hw-title" placeholder="예: 3단원 오답노트 정리"></label>
+        <label><span>마감일</span><input id="cls-hw-due" type="date" value="${date}"></label>
+      </div>
+      <div class="cls-new-row">
+        <label class="wide"><span>설명 (선택)</span>
+          <textarea id="cls-hw-desc" rows="2" placeholder="과제 상세 내용"></textarea></label>
+      </div>
       ${/* 대상 반은 이 화면에서 고를 일이 없다 — 지금 하는 수업의 반이다. 숨겨서 addHomework에 넘긴다. */''}
       <select id="cls-hw-class" style="display:none;">${classOptionsHTML(classId)}</select>
+      <p class="cls-new-note">이 반 <b>${roster.length}명</b> 전원에게 나갑니다.
+        <b>낸 날</b>은 이 수업 날짜(<span class="mono">${date}</span>)로 남습니다 —
+        과제 표의 열 머리가 그 날짜로 섭니다.
+        낸 과제를 <b>검사</b>하는 곳은 <b>「2. 과제 검사」</b>입니다.</p>
     </div>
-    <div class="cls-form"><label style="flex:1;"><span>설명 (선택)</span>
-      <textarea id="cls-hw-desc" rows="2" placeholder="과제 상세 내용"></textarea></label></div>
-    <button class="btn p sm" style="margin-top:11px;" onclick="addHomework('cls-')">${iconSvg('plus',13)} 이 반에 과제 등록</button>
   </div>
 
-  <div class="t-sec" style="margin-top:24px;">이 반의 과제 <span class="mono">${hws.length}</span></div>
-  ${hws.length === 0 ? `<div style="padding:32px 0;text-align:center;color:var(--dim);font-size:12.5px;">아직 낸 과제가 없습니다.</div>`
-    : hws.map(h=>{
-        const recOf = s => state.allRecords[s.studentId];
+  <div class="t-sec" style="margin-top:24px;">이 수업에서 낸 과제 <span class="mono">${todays.length}</span></div>
+  ${todays.length === 0
+    ? `<div style="padding:28px 0;text-align:center;color:var(--dim);font-size:12.5px;">아직 없습니다.</div>`
+    : `<div class="cls-tiles" style="grid-template-columns:repeat(2,1fr);">${todays.map(h=>{
         const done = roster.filter(s=>recOf(s) && hwIsDone(recOf(s), h.id)).length;
-        const waiting = roster.filter(s=>recOf(s) && hwState(recOf(s), h.id).status===HW_SUBMITTED).length;
-        const open = state.homeworkDetailId === h.id;
-        /* 수업 중에 제일 자주 묻는 것이 «누가 안 냈나»다. 눌러서 편다. */
-        return `<div class="cls-hw" style="cursor:pointer;"
-            onclick="state.homeworkDetailId = state.homeworkDetailId==='${h.id}' ? null : '${h.id}'; state.hwRejectOpen=null; render()">
-          <div class="n">${escHtml(h.title)}<s>${h.classId ? '이 반' : '전체 반'}${h.dueDate ? ' · 마감 ' + h.dueDate : ''}${h.createdAt ? ' · 등록 ' + h.createdAt : ''}</s></div>
-          ${waiting ? `<span class="badge late" style="flex-shrink:0;">확인 대기 ${waiting}</span>` : ''}
-          <span class="sub" style="font-size:12.5px;white-space:nowrap;"><span class="mono">${done}/${roster.length}</span> 완료</span>
-          <span class="bar" style="width:70px;flex-shrink:0;"><i style="width:${roster.length?Math.round(done/roster.length*100):0}%"></i></span>
-          <span class="sub" style="font-size:11.5px;flex-shrink:0;">${open?'접기':'누가 냈나'}</span>
-        </div>
-        ${/* 명단은 반 관리와 «같은 것»을 쓴다 — 요약줄·알림바·정렬·접기까지 한 덩어리다.
-             전에는 여기에만 정렬이 있고 반 관리에는 없어 두 화면이 이미 어긋나 있었다. */''}
-        ${!open ? '' : `<div class="sess-hw">${hwRosterReviewHTML(h, roster)}</div>`}`;
-      }).join('')}`;
+        const wait = roster.filter(s=>recOf(s) && hwState(recOf(s), h.id).status===HW_SUBMITTED).length;
+        return `<div class="tile">
+          <div class="who"><b>${escHtml(h.title)}</b>
+            <span>${h.dueDate ? '마감 <span class="mono">'+escHtml(h.dueDate)+'</span>' : '마감 없음'}${
+              h.description ? ' · ' + escHtml(h.description.slice(0,20)) + (h.description.length>20?'…':'') : ''}</span></div>
+          ${wait ? `<span class="badge late" style="flex-shrink:0;">확인 대기 ${wait}</span>` : ''}
+          <span class="sub" style="font-size:12px;white-space:nowrap;flex-shrink:0;"><span class="mono">${done}/${roster.length}</span></span>
+          <button class="btn q sm" style="flex-shrink:0;" onclick="event.stopPropagation(); deleteHomework('${h.id}')">삭제</button>
+        </div>`;
+      }).join('')}</div>`}`;
   const bar = `<div class="actbar">
-    <span class="sum">과제 <b class="mono">${hws.length}</b>건</span>
+    <span class="sum">이 수업에서 낸 과제 <b class="mono">${todays.length}</b>건</span>
+    <button class="btn p" onclick="addHomework('cls-','${date}')">${iconSvg('plus',14)} 과제 등록</button>
     <span class="spacer"></span>
     <button class="btn p" onclick="goSessionStep('memo')">메모로 ${iconSvg('arrowR',15)}</button>
   </div>`;
