@@ -536,6 +536,13 @@
 .app .ag th.ag-rate,.app .ag td.ag-rate{width:66px;text-align:right;padding-right:12px;
   border-left:1px solid var(--line);background:var(--sunk);}
 .app .ag th.ag-rate{vertical-align:bottom;}
+/* 열 머리는 한 줄이다 (2026-09-01) — .hwg-col b의 두 줄 클램프를 풀고 날짜·요일을 나란히 놓는다. */
+.app .ag-col b{display:block;white-space:nowrap;overflow:visible;-webkit-line-clamp:unset;
+  font-size:12px;font-weight:600;color:var(--ink);}
+.app .ag-col b i{font-style:normal;font-weight:400;font-size:10.5px;color:var(--dim);margin-left:3px;}
+.app .ag-col b i.td{color:var(--ink);font-weight:700;}
+/* 아직 아무도 안 넣은 날 — 흐리게. 「미입력」 넉 자가 하던 일을 색이 대신한다. */
+.app .ag-col.empty b, .app .ag-col.empty b i{color:var(--dim);font-weight:400;}
 .app .ag .down{color:var(--no);font-weight:700;}
 /* 날짜 열을 눌러 편 «고치는 판» — 격자와 이어져 보이게 위쪽 금을 지운다. */
 .app .ag-edit{margin-top:18px;padding:18px 20px;border:1px solid var(--accent-line);
@@ -11599,12 +11606,22 @@ function chubAttendanceHTML(classId){
       ${cols.map(d=>{
         const filled = roster.filter(s=>attOf(s.studentId, d)).length;
         const absent = roster.filter(s=>{ const a = attOf(s.studentId, d); return a && a.status==='결석'; }).length;
-        return `<th class="hwg-col ag-col ${d===open?'on':''}" title="${d} — 누르면 이 날짜를 고칩니다"
+        const wd = WEEKDAY_LABEL[new Date(d+'T00:00:00').getDay()];
+        /* 🔵 열 머리는 «한 줄»이다 (2026-09-01) — 날짜와 요일이 나란히 선다.
+           ⚠ 상태 줄(「미입력」·「입력 3/4」·「완료」)을 뺐다 — 바로 아래 격자가 같은 말을
+           하고 있었다(빈 칸은 «·», 결석은 붉은 「결」). 머리가 석 줄에서 한 줄로 줄어
+           20명 반이 한 판에 들어온다. **사용자가 짚은 것이다 (2026-09-01).**
+           «아직 아무도 안 넣은 날»만 흐리게 눌러 둔다 — 자리를 한 칸도 안 쓰는 신호다.
+           수를 세는 말은 title로 내렸다 — 눌러 보기 전에도 알 길이 남는다.
+           ⚠ 달은 안 적는다 — 격자가 이미 한 달치이고 그 달은 위 고르개가 말한다.
+           ⚠ 요일에 .mono를 걸지 말 것 — 한글 글리프가 없어 두부가 된다. 숫자만 감싼다. */
+        return `<th class="hwg-col ag-col ${d===open?'on':''}${filled===0?' empty':''}"
+          title="${d} · ${wd}요일 — 누르면 이 날짜를 고칩니다${
+            filled===0 ? ' (아직 아무도 안 넣었습니다)'
+            : filled<roster.length ? ` (${filled}/${roster.length} 넣었습니다)`
+            : (absent?` (결석 ${absent}명)`:'')}"
           onclick="state.attOpenDate='${d===open?'':d}'; render()">
-          <b>${d.slice(5).replace('-','/')}</b>
-          <span class="due">${WEEKDAY_LABEL[new Date(d+'T00:00:00').getDay()]}${d===today?' · 오늘':''}</span>
-          <span class="n ${filled<roster.length?'wait':''}">${
-            filled===0 ? '미입력' : filled<roster.length ? '입력 '+filled+'/'+roster.length : (absent?'결석 '+absent:'완료')}</span>
+          <b><span class="mono">${+d.slice(8)}</span><i>${wd}</i>${d===today?'<i class="td">오늘</i>':''}</b>
         </th>`;
       }).join('')}
       <th class="ag-rate">출석률</th>
