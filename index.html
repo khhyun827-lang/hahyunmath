@@ -437,6 +437,29 @@
   font-family:inherit;font-size:12px;color:var(--ink);outline:none;}
 .app .cls-sub input:focus{border-color:var(--accent-line);}
 
+/* ---------- 수업에서 «한 번 눌러 정하는» 칸들 (2026-09-01 · C-19) ----------
+   🔵 사용자의 말 — 「수업하면서 빠르게 체크하고 입력하고 넘어가야하는 것들이라 복잡하지
+     않았으면 좋겠고 … 출결쪽처럼 학생별로 큼직하게 직관적이게 선택하면서 갈 수 있으면 좋겠어」.
+   그래서 과제 검사도 출결과 같은 `.seg`를 쓴다. 다만 글자가 「제출·보완 필요·미제출」이라
+   34px 고정으로는 안 들어간다 — 이 갈래만 폭을 푼다. */
+.app .seg.wide button{width:auto;min-width:44px;padding:0 11px;font-size:12.5px;font-weight:600;}
+/* 점수 칸 — 맞은 개수를 치면 옆에서 환산이 따라 움직인다(sessionScoreEcho). */
+.app .cls-score{display:flex;align-items:center;gap:8px;flex-shrink:0;}
+.app .cls-score input{width:66px;height:36px;text-align:center;
+  border:1px solid var(--line);border-radius:var(--r-md);background:var(--paper);
+  font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:700;color:var(--ink);
+  outline:none;transition:border-color var(--t);}
+.app .cls-score input:focus{border-color:var(--accent);}
+.app .cls-score s{text-decoration:none;font-size:11.5px;color:var(--dim);white-space:nowrap;
+  font-family:'JetBrains Mono',monospace;}
+.app .cls-score s.over{color:var(--no);font-weight:700;}
+/* ⚠ `.sg-tot`의 폭은 `.app .sg .sg-tot`에 걸려 있어 «성적 격자 안»에서만 선다.
+   수업 화면에서 그대로 쓰면 칸이 남는 자리를 통째로 먹는다 — 실제로 150px까지 늘어났다. */
+.app .cls-body .sg-tot{width:56px;height:26px;padding:0 6px;text-align:center;
+  border:1px solid var(--line);border-radius:var(--r-sm);background:var(--card);
+  color:var(--ink);font-size:12px;outline:none;}
+.app .cls-body .sg-tot:focus{border-color:var(--accent);}
+
 /* ---------- 수업의 «적는 카드» (2026-09-01 · C-18) ----------
    🔵 사용자가 「이 수업 메뉴의 메인 디자인은 출결 부분인 것 같은데 이와 비슷한 형태로」라고
      짚었다. 그래서 과제·시험 입력도 **출결과 같은 .tile** 위에 세운다.
@@ -3202,6 +3225,9 @@ let state = {
   sessionDate: '',
   sessionClassId: '',
   sessionStep: 'att',
+  sessionHwId: '',           // 수업 > 과제 검사에서 보고 있는 과제 (2026-09-01 · C-19)
+  sessionExamId: '',         // 수업 > 시험에서 점수를 치고 있는 시험 (C-19)
+  sessionExamNew: false,     // 「새 시험」 폼을 편 상태 (C-19)
   sessionNotes: {},        // 반id -> {날짜: 메모}
   sessionNoteLoading: {},
   sessionNoteDraft: null,  // {key, text} — 단계를 옮겨도 쓰던 글이 날아가지 않게
@@ -7128,8 +7154,13 @@ function render(){
      열여덟 번째 학생의 상태를 누르면 판이 맨 위로 튀어 «누구를 누르던 중»인지 잃는다.
      `app.innerHTML`을 갈기 직전 자리를 재고 갈아 끼운 뒤 되돌려 놓는다. */
   const hwdScroll = (app.querySelector('.hwd-b') || {}).scrollTop;
+  /* 🔴 **수업 화면도 같다** (2026-09-01 · C-19) — 과제 검사는 학생마다 한 번씩 누르고,
+     누를 때마다 render()가 돈다. 스무 번째 학생을 누르면 목록이 맨 위로 튀어
+     «어디까지 봤는지»를 잃는다. 손이 빨라야 하는 화면이라 이것이 곧 못 쓰는 화면이 된다. */
+  const clsScroll = (app.querySelector('.cls-body') || {}).scrollTop;
   app.innerHTML = html;
   if(hwdScroll){ const nb = app.querySelector('.hwd-b'); if(nb) nb.scrollTop = hwdScroll; }
+  if(clsScroll){ const cb = app.querySelector('.cls-body'); if(cb) cb.scrollTop = clsScroll; }
   if(window.renderMathInElement){
     try{
       renderMathInElement(app, {
@@ -11004,10 +11035,17 @@ async function saveSessionNote(classId, date){
 function goSessionDate(delta){
   state.sessionDate = shiftYmd(state.sessionDate || todayStr(), delta);
   state.sessionClassId = '';
+  sessionForgetPicks();
   render();
+}
+/* 반이나 날짜를 옮기면 «고른 과제·시험»을 놓는다 (2026-09-01 · C-19) —
+   못 박아 두었으므로 스스로 안 풀린다. 다른 반 것이 따라오면 화면이 거짓말을 한다. */
+function sessionForgetPicks(){
+  state.sessionHwId = ''; state.sessionExamId = ''; state.sessionExamNew = false;
 }
 function goSessionStep(step){ state.sessionStep = step; render(); }
 function pickSession(classId){
+  if(state.sessionClassId !== classId) sessionForgetPicks();
   state.sessionClassId = classId;
   if(state.sessionStep === 'prev') state.sessionStep = 'att';
   render();
@@ -11143,7 +11181,7 @@ function sessionDateNavHTML(date){
     <button class="btn icon" title="이전 날" onclick="goSessionDate(-1)">${iconSvg('chevL',16)}</button>
     <span class="cls-day">${date}<span class="muted" style="margin-left:7px;font-weight:400;">${WEEKDAY_LABEL[new Date(date+'T00:00:00').getDay()]}</span></span>
     <button class="btn icon" title="다음 날" onclick="goSessionDate(1)">${iconSvg('chevR',16)}</button>
-    ${isToday ? '' : `<button class="btn sm" onclick="state.sessionDate=''; state.sessionClassId=''; render()">오늘</button>`}
+    ${isToday ? '' : `<button class="btn sm" onclick="state.sessionDate=''; state.sessionClassId=''; sessionForgetPicks(); render()">오늘</button>`}
   </div>`;
 }
 
@@ -11269,55 +11307,130 @@ function sessionProgHTML(classId){
      한 덩어리다. 두 벌로 두면 한쪽만 고쳐진다.
    ⚠ **아직 할 일이 남은 과제를 먼저 세운다** — 확인 대기와 미제출이 있는 것이 위다.
      수업 중에 이 화면을 여는 까닭이 그것이다. 다 끝난 과제는 아래로 내리되 감추지 않는다. */
+/* 🔴 **한 번 눌러 정한다** (2026-09-01 · C-19 · 사용자가 시켰다).
+   사용자의 말 — 「**과제검사를 수업페이지에서는 그냥 제출 / 보완필요 / 미제출로 선택할 수
+     있으면 좋겠는데 보완필요를 하려면 현장확인을 누르고 다시 수정해야해.
+     출결처럼 바로바로 선택할 수 있으면 좋겠어**」.
+   맞는 말이었다. 예전 판은 «상태에 따라 할 수 있는 것»만 버튼으로 냈다 — 반 관리에서
+   하나씩 검토할 때는 옳은 설계지만, **수업 중에는 세 갈래가 늘 같은 자리에 있어야** 손이 빠르다.
+   그래서 이 화면만 **출결과 같은 `.seg`**(출·지·조·결)로 바꿨다. 세 칸이 늘 같은 자리다.
+   ⚠ **반 관리의 검토 화면(`hwRosterReviewHTML`)은 그대로 둔다** — 거기는 사진을 보고
+     사유를 적어 반려하는 «판단하는» 화면이라 버튼이 상태를 따라가는 것이 맞다. */
 function sessionHwCheckHTML(classId, date){
   const roster = classRoster(classId);
   const recOf = s => state.allRecords[s.studentId];
   const all = DATA.assignments.filter(a=>!a.classId || a.classId===classId);
-  const stat = a => {
-    const wait = roster.filter(s=>recOf(s) && hwState(recOf(s), a.id).status===HW_SUBMITTED).length;
-    const todo = roster.filter(s=>recOf(s) && hwNeedsAction(recOf(s), a.id)).length;
-    const done = roster.filter(s=>recOf(s) && hwIsDone(recOf(s), a.id)).length;
-    return { wait, todo, done };
-  };
-  /* 낸 날이 늦은 것이 위다. 그 위에 «할 일이 남은 것»을 한 번 더 올린다. */
+  const stat = a => ({
+    wait: roster.filter(s=>recOf(s) && hwState(recOf(s), a.id).status===HW_SUBMITTED).length,
+    todo: roster.filter(s=>recOf(s) && hwNeedsAction(recOf(s), a.id)).length,
+    done: roster.filter(s=>recOf(s) && hwIsDone(recOf(s), a.id)).length
+  });
+  /* 🔴 **고르개는 «낸 날» 순으로만 세운다 — 상태로 다시 정렬하지 않는다** (2026-09-01 · C-19).
+     처음에는 «할 일이 남은 것»을 위로 올렸는데, **누를 때마다 그 순서가 바뀌었다.**
+     `state.sessionHwId`가 비어 있으면 `rows[0]`을 보고 있었으므로 —
+     학생 하나를 「제출」로 찍는 순간 그 과제가 목록 아래로 내려가고 **보고 있던 과제가
+     조용히 다른 것으로 바뀌었다.** 화면에서 실제로 그렇게 나왔다.
+     이제 **차례는 날짜로 고정**하고, «급한 것»은 **처음 한 번 고르는 데만** 쓴다. */
   const rows = all.map(a=>({a, ...stat(a)}))
-    .sort((x,y)=> ((y.wait+y.todo)>0) - ((x.wait+x.todo)>0)
-      || String(y.a.createdAt||'').localeCompare(String(x.a.createdAt||'')));
-  const totWait = rows.reduce((n,r)=>n+r.wait,0);
-  const totTodo = rows.reduce((n,r)=>n+r.todo,0);
-  /* 아무것도 안 펴 놓았으면 «제일 급한 것»을 열어 둔다 — 열자마자 할 일이 보여야 한다. */
-  const first = rows.find(r=>r.wait>0) || rows.find(r=>r.todo>0) || rows[0];
-  if(state.homeworkDetailId && !all.some(a=>a.id===state.homeworkDetailId)) state.homeworkDetailId = null;
-  const openId = state.homeworkDetailId || (first ? first.a.id : null);
+    .sort((x,y)=> String(y.a.createdAt||'').localeCompare(String(x.a.createdAt||'')));
+  if(state.sessionHwId && !all.some(a=>a.id===state.sessionHwId)) state.sessionHwId = '';
+  /* 🔴 **고른 것을 못 박는다.** 안 박으면 위와 같은 «떠다니는 기본값» 문제가 되돌아온다. */
+  if(!state.sessionHwId && rows.length){
+    const urgent = rows.find(r=>r.wait>0) || rows.find(r=>r.todo>0) || rows[0];
+    state.sessionHwId = urgent.a.id;
+  }
+  const cur = all.find(a=>a.id===state.sessionHwId) || (rows[0] && rows[0].a);
+
+  if(!state.allRecordsLoaded)
+    return { bar:'', body:'<div style="padding:48px 0;text-align:center;color:var(--dim);font-size:12.5px;">학생 기록을 불러오는 중입니다…</div>' };
+  if(!cur)
+    return { bar:`<div class="actbar"><span class="sum">검사할 과제가 없습니다</span><span class="spacer"></span>
+        <button class="btn p" onclick="goSessionStep('prog')">진도로 ${iconSvg('arrowR',15)}</button></div>`,
+      body:`<div style="padding:48px 0;text-align:center;color:var(--dim);font-size:12.5px;line-height:1.8;">
+        검사할 과제가 없습니다.<br>과제는 <b style="color:var(--sub);">「5. 과제」 단계</b>에서 냅니다.</div>` };
+
+  const c = stat(cur);
+  const left = roster.length - c.done - roster.filter(s=>recOf(s) && hwState(recOf(s), cur.id).status===HW_NONE).length;
+
+  /* 과제 고르개 — 한 줄짜리 칩이다. 수업 중에 보는 것은 대개 «지난 시간에 낸 것» 하나라
+     기본으로 그것이 골라져 있고, 여러 개가 걸쳐 있을 때만 옆으로 옮긴다. */
+  const chips = `<div class="rst-views" style="margin:0 0 14px;">
+    ${rows.map(({a, wait, todo})=>`<a class="pill ${a.id===cur.id?'on':''}"
+      onclick="state.sessionHwId='${a.id}'; render()">${escHtml(a.title)}
+      <b>${a.createdAt ? a.createdAt.slice(5) : '—'}</b>${
+        wait+todo ? `<s style="text-decoration:none;margin-left:5px;color:var(--no);">${wait+todo}</s>` : ''}</a>`).join('')}
+  </div>`;
+
+  const tiles = roster.map(s=>{
+    const st = recOf(s) ? hwState(recOf(s), cur.id) : {status:HW_NONE, photos:[]};
+    const sel = st.status===HW_APPROVED ? 'ok' : st.status===HW_PARTIAL ? 'half'
+              : st.status===HW_NONE ? 'none' : '';
+    const shots = st.photos.length;
+    return `<div class="tile ${sel==='none'?'flag':''}">
+      <div class="who"><b>${escHtml(s.name)}</b>
+        <span>${st.status===HW_SUBMITTED ? `사진 ${shots}장 · 확인 대기`
+          : st.status===HW_REJECTED ? '반려함 — 다시 낼 차례'
+          : (shots ? `사진 ${shots}장` : escHtml((s.school||'—') + ' ' + (s.grade||'')))}</span></div>
+      <div class="seg wide">
+        <button class="${sel==='ok'?'on ok':''}" title="제출한 것으로 봅니다"
+          onclick="hwQuickSet('${s.studentId}','${cur.id}','ok')">제출</button>
+        <button class="${sel==='half'?'on leave':''}" title="냈지만 미비합니다. 제출은 «한 것»으로 셉니다"
+          onclick="hwQuickSet('${s.studentId}','${cur.id}','half')">보완 필요</button>
+        <button class="${sel==='none'?'on no':''}" title="아직 안 낸 것으로 되돌립니다"
+          onclick="hwQuickSet('${s.studentId}','${cur.id}','none')">미제출</button>
+      </div>
+      ${shots ? `<div class="cls-sub"><button class="btn q sm" style="flex:0 0 auto;"
+        onclick="state.hwPhotoView='${escHtml(st.photos[0].url)}'; render()">사진 보기</button></div>` : ''}
+    </div>`;
+  }).join('');
 
   const bar = `<div class="actbar">
-    <span class="sum">확인 대기 <b class="mono">${totWait}</b> · 아직 안 냄 <b class="mono">${totTodo}</b></span>
-    <span class="hint">현장에서 보여 주면 «현장 확인»으로 바로 완료가 됩니다</span>
+    <span class="sum">제출 <b class="mono">${c.done}</b> · 미제출 <b class="mono">${
+      roster.length - c.done}</b> · 확인 대기 <b class="mono">${c.wait}</b></span>
+    ${left > 0 ? `<button class="btn sm" onclick="hwQuickAll('${classId}','${cur.id}')">남은 ${left}명 전체 제출 처리</button>` : ''}
+    <span class="hint">누르면 바로 저장됩니다</span>
     <span class="spacer"></span>
     <button class="btn p" onclick="goSessionStep('prog')">진도로 ${iconSvg('arrowR',15)}</button>
   </div>`;
-  if(!state.allRecordsLoaded)
-    return { bar, body:'<div style="padding:48px 0;text-align:center;color:var(--dim);font-size:12.5px;">학생 기록을 불러오는 중입니다…</div>' };
-  if(rows.length===0)
-    return { bar, body:`<div style="padding:48px 0;text-align:center;color:var(--dim);font-size:12.5px;line-height:1.8;">
-      검사할 과제가 없습니다.<br>과제는 <b style="color:var(--sub);">「과제」 단계</b>에서 냅니다.</div>` };
+  return { bar, body: `${chips}
+    <div class="t-sec">${escHtml(cur.title)}
+      <span style="font-weight:400;">${cur.createdAt ? '낸 날 '+cur.createdAt : '낸 날 모름'}${
+        cur.dueDate ? ' · 마감 '+cur.dueDate : ''}</span></div>
+    <div class="cls-tiles">${tiles}</div>` };
+}
 
-  const body = rows.map(({a, wait, todo, done})=>{
-    const open = openId === a.id;
-    const overdue = a.dueDate && a.dueDate < todayStr() && todo > 0;
-    return `<div class="cls-hw ${open?'on':''}" style="cursor:pointer;"
-        onclick="state.homeworkDetailId = state.homeworkDetailId==='${a.id}' ? '' : '${a.id}'; state.hwRejectOpen=null; render()">
-        <div class="n">${escHtml(a.title)}<s>${a.createdAt ? '낸 날 '+a.createdAt : '낸 날 모름'}${
-          a.dueDate ? ' · 마감 '+a.dueDate : ''}</s></div>
-        ${wait ? `<span class="badge late" style="flex-shrink:0;">확인 대기 ${wait}</span>` : ''}
-        ${overdue ? `<span class="badge no" style="flex-shrink:0;">마감 지남 ${todo}</span>` : ''}
-        <span class="sub" style="font-size:12.5px;white-space:nowrap;"><span class="mono">${done}/${roster.length}</span> 완료</span>
-        <span class="bar" style="width:70px;flex-shrink:0;"><i style="width:${roster.length?Math.round(done/roster.length*100):0}%"></i></span>
-        <span class="sub" style="font-size:11.5px;flex-shrink:0;">${open?'접기':'펴기'}</span>
-      </div>
-      ${!open ? '' : `<div class="sess-hw">${hwRosterReviewHTML(a, roster)}</div>`}`;
-  }).join('');
-  return { body, bar };
+/* 세 갈래를 한 번에 정한다 (2026-09-01 · C-19).
+   ⚠ **문은 늘어나지 않았다** — 여전히 `approveHomework`·`partialHomework`·`undoHwDecision` 셋이다.
+     여기는 «어느 문을 열지»만 고르는 자리다.
+   ⚠ 사진이 없으면 «현장 확인»(onSite)으로 수락한다 — 온라인 제출물이 없는데 그냥 수락하면
+     기록이 «냈다»고만 남아 나중에 무엇을 보고 통과시켰는지 알 수 없다. */
+async function hwQuickSet(sid, hwId, kind){
+  const st = hwState(state.allRecords[sid] || await loadRecord(sid), hwId);
+  if(kind==='ok')        await approveHomework(sid, hwId, st.photos.length===0);
+  else if(kind==='half') await partialHomework(sid, hwId);
+  else                   await undoHwDecision(sid, hwId);
+}
+/* 남은 사람을 한 번에 «제출»로 — 출결의 「남은 N명 전체 출석 처리」와 같은 어법이다.
+   ⚠ **이미 정해 둔 사람은 안 건드린다.** 보완 필요·미제출로 찍어 둔 것을 덮으면
+     방금 한 판단이 조용히 사라진다. */
+async function hwQuickAll(classId, hwId){
+  const roster = classRoster(classId);
+  const targets = roster.filter(s=>{
+    const st = hwState(state.allRecords[s.studentId], hwId);
+    return st.status===HW_SUBMITTED || st.status===HW_REJECTED;
+  });
+  if(!targets.length){ showToast('처리할 사람이 없습니다.'); return; }
+  for(const s of targets){
+    const st = hwState(state.allRecords[s.studentId], hwId);
+    await setHwState(s.studentId, hwId, {
+      status: HW_APPROVED, decidedAt: todayStr(), by: actorLabel(),
+      onSite: st.photos.length===0, reason: ''
+    });
+  }
+  const hw = DATA.assignments.find(a=>a.id===hwId);
+  await logAudit('과제 일괄 제출 처리', '', '', `${hw?hw.title:'과제'} · ${targets.length}명`);
+  showToast(`${targets.length}명을 제출로 처리했습니다.`);
+  render();
 }
 
 /* ── 4단계. 시험 — «오늘 본 시험을 그 자리에서 만든다» (2026-09-01 · C-18) ──
@@ -11328,53 +11441,109 @@ function sessionHwCheckHTML(classId, date){
    ⚠ **점수는 여기서 안 넣는다.** 넣는 자리는 반 › 성적 하나다(C-4에서 못 박았다) —
      여기 두면 넣는 문이 둘이 되고, 20명 × 시험 여러 개를 이 좁은 칸에서 칠 수는 없다.
      대신 **그리로 가는 문**을 만든 직후에 띄운다. */
+/* 🔴 **만들고 그 자리에서 점수까지 친다** (2026-09-01 · C-19 · 사용자가 시켰다).
+   사용자의 말 — 「**시험도 바로 이자리에서 시험등록하고 (시험지는 나중에 집에서 등록하더라도)
+     바로 점수 입력할 수 있는 구조였으면 좋겠어**」.
+   C-18에서는 «만들기»만 하고 점수는 반 › 성적으로 보냈다. 그 판단의 근거는 「20명을 좁은 칸에서
+   칠 수 없다」였는데, **타일로 세우면 칠 수 있다** — 출결이 이미 20명을 그렇게 받고 있다.
+   🔴 **저장은 `saveClassScores` 하나다** — 반 › 성적 격자가 쓰는 그것에 «어느 시험»만 넘긴다.
+     입력칸 id도 그쪽과 같은 `cs-{시험}-{학생}` · `cst-{시험}`이라 그대로 읽힌다.
+     두 벌로 두면 «만점을 어떻게 세는가»가 한쪽만 고쳐진다.
+   ⚠ **퇴원생도 넣는다** — 시험은 «이미 있었던 일»이라 그때 다닌 사람의 점수가 남아야 한다.
+     그래서 `classRoster`가 아니라 `DATA.students`에서 이 반을 고른다(반 › 성적과 같은 규칙). */
 function sessionExamHTML(classId, date){
   const ym = String(date).slice(0,7);
   const exams = classExams(classId, ym);
   const roster = DATA.students.filter(s=>s.classId===classId);
   const scored = ex => roster.filter(s=>examScoreOf(state.allRecords[s.studentId], ex.id)).length;
+  if(state.sessionExamId && !exams.some(e=>e.id===state.sessionExamId)) state.sessionExamId = '';
+  /* 오늘 본 시험이 있으면 그것부터. 없으면 그 달 마지막 시험.
+     🔴 **고른 것을 못 박는다** (과제 검사와 같은 이유 · C-19) — 안 박으면 «지금 보고 있는 것»이
+       state에 없어서, 발판의 「점수 저장」 말고 다른 길로 부를 때 무엇을 저장할지 알 수 없다. */
+  const cur = exams.find(e=>e.id===state.sessionExamId)
+    || exams.filter(e=>e.date===date)[0] || exams[exams.length-1] || null;
+  if(cur && state.sessionExamId !== cur.id) state.sessionExamId = cur.id;
+  const adding = state.sessionExamNew || !cur;
 
-  const body = `
+  const chips = exams.length ? `<div class="rst-views" style="margin:0 0 14px;">
+    ${exams.map(ex=>`<a class="pill ${cur&&ex.id===cur.id&&!state.sessionExamNew?'on':''}"
+      onclick="state.sessionExamNew=false; state.sessionExamId='${ex.id}'; render()">${escHtml(ex.title)}
+      <b>${escHtml((ex.date||'').slice(5))}</b></a>`).join('')}
+    <a class="pill ${state.sessionExamNew?'on':''}"
+      onclick="state.sessionExamNew=${!state.sessionExamNew}; render()">${iconSvg('plus',12)} 새 시험</a>
+  </div>` : '';
+
+  const form = `
   <div class="t-sec">오늘 본 시험 등록</div>
   <div class="cls-tiles" style="grid-template-columns:1fr;">
     <div class="tile cls-new">
       <div class="cls-new-row">
         <label class="wide"><span>시험명</span>
           <input id="qx-title" placeholder="예: 3주차 쪽지시험"></label>
-      </div>
-      <div class="cls-new-row">
         <label><span>본 날짜</span><input id="qx-date" type="date" value="${date}"></label>
         <label><span>문항수</span><input id="qx-total" type="number" min="1" step="1" value="20"></label>
       </div>
-      <p class="cls-new-note">지금은 <b>시험만</b> 만듭니다. <b>점수는 「반 › 성적」에서</b> 반 전체를
-        한 판에 넣습니다 — 20명을 이 칸에서 칠 수는 없습니다.
-        <b>문항은 나중에 붙여도</b> 넣어 둔 성적이 그대로 이어집니다.</p>
+      <p class="cls-new-note">만들면 <b>바로 아래에서 점수를 칩니다.</b>
+        <b>시험지(문항)는 나중에</b> 「오답 › 시험지」에서 붙여도 넣어 둔 성적이 그대로 이어집니다.</p>
     </div>
-  </div>
+  </div>`;
 
-  <div class="t-sec" style="margin-top:24px;">${ymLabel(ym)}에 본 시험 <span class="mono">${exams.length}</span></div>
-  ${exams.length===0
-    ? `<div style="padding:28px 0;text-align:center;color:var(--dim);font-size:12.5px;">아직 없습니다.</div>`
-    : `<div class="cls-tiles" style="grid-template-columns:repeat(2,1fr);">${exams.map(ex=>{
-        const n = scored(ex), qn = (ex.questions||[]).length;
-        return `<div class="tile">
-          <div class="who"><b>${escHtml(ex.title)}</b>
-            <span><span class="mono">${escHtml(ex.date||'날짜 없음')}</span> · ${
-              qn ? `<span class="mono">${qn}</span>문항` : `<span class="mono">${examTotalOf(ex)}</span>문항 · 점수만`}</span></div>
-          <span class="badge ${n===roster.length&&roster.length?'ok':(n?'consult':'')}"
-            style="flex-shrink:0;">성적 ${n}/${roster.length}</span>
-        </div>`;
-      }).join('')}</div>`}`;
+  /* 점수 타일 — 출결과 같은 결이다. 맞은 개수를 치면 옆에서 100점 환산이 따라 움직인다. */
+  const tot = cur ? examTotalOf(cur) : 0;
+  const qn = cur ? (cur.questions||[]).length : 0;
+  const scoreBoard = !cur ? '' : `
+  <div class="t-sec" style="margin-top:${adding?'24px':'0'};">${escHtml(cur.title)} 점수
+    <span style="font-weight:400;"><span class="mono">${escHtml(cur.date||'')}</span> ·
+      ${qn ? `문항 <span class="mono">${qn}</span>개 (시험지에 붙어 있습니다)`
+           : `문항수 <input class="sg-tot mono" type="number" min="1" step="1" id="cst-${cur.id}"
+                value="${tot}" title="이 시험의 총 문항수">개`}</span></div>
+  <div class="cls-tiles">${roster.map(s=>{
+    const sc = examScoreOf(state.allRecords[s.studentId], cur.id);
+    const pct = sc && sc.total ? Math.round(sc.score/sc.total*100) : null;
+    return `<div class="tile">
+      <div class="who"><b>${escHtml(s.name)}${isWithdrawn(s)?' <span class="badge gone">퇴원</span>':''}</b>
+        <span>${pct===null ? '아직 안 넣었습니다' : `<b class="mono">${pct}</b>점 · ${
+          Math.max(0, sc.total-sc.score)}개 틀림`}</span></div>
+      <div class="cls-score">
+        <input class="mono" type="number" min="0" step="1" max="${tot||999}" placeholder="—"
+          id="cs-${cur.id}-${s.studentId}" value="${sc ? sc.score : ''}"
+          oninput="sessionScoreEcho('${cur.id}','${s.studentId}')">
+        <s id="se-${cur.id}-${s.studentId}">/ ${tot||'—'}</s>
+      </div>
+    </div>`;
+  }).join('')}</div>`;
 
+  const body = `${chips}${adding ? form : ''}${scoreBoard}`;
+  const done = cur ? scored(cur) : 0;
   const bar = `<div class="actbar">
-    <span class="sum">${ymLabel(ym)} 시험 <b class="mono">${exams.length}</b>개</span>
-    <button class="btn p" onclick="addQuickExam('${classId}')">${iconSvg('plus',14)} 시험 만들기</button>
-    ${exams.length ? `<button class="btn" onclick="state.classHubId='${classId}'; goTeacherTab('classhub','scores')"
-      >성적 넣으러 가기 ${iconSvg('arrowR',15)}</button>` : ''}
+    ${adding
+      ? `<span class="sum">${ymLabel(ym)} 시험 <b class="mono">${exams.length}</b>개</span>
+         <button class="btn p" onclick="addQuickExam('${classId}')">${iconSvg('plus',14)} 시험 만들기</button>`
+      : `<span class="sum">${escHtml(cur.title)} · 점수 <b class="mono">${done}/${roster.length}</b></span>
+         <button class="btn p" onclick="saveSessionScores('${classId}','${cur.id}')">점수 저장</button>
+         <span class="hint">빈 칸은 «안 봤다»입니다 — 0점으로 세지 않습니다</span>`}
     <span class="spacer"></span>
     <button class="btn p" onclick="goSessionStep('hw')">과제로 ${iconSvg('arrowR',15)}</button>
   </div>`;
   return { body, bar };
+}
+/* 치는 동안 «몇 점인지»가 옆에서 따라 움직인다. ⚠ render()를 부르지 않는다 —
+   숫자 칸이라 한글 조합은 없지만, 다시 그리면 커서가 튀고 20명 치는 손이 끊긴다(W-3와 같은 뜻). */
+function sessionScoreEcho(examId, sid){
+  const el = document.getElementById('cs-'+examId+'-'+sid);
+  const out = document.getElementById('se-'+examId+'-'+sid);
+  if(!el || !out) return;
+  const ex = DATA.exams.find(x=>x.id===examId);
+  const tot = ex ? examTotalOf(ex) : 0;
+  const v = parseFloat(el.value);
+  out.textContent = (isNaN(v) || !tot) ? '/ ' + (tot||'—') : '/ ' + tot + ' · ' + Math.round(v/tot*100) + '점';
+  out.className = (!isNaN(v) && tot && v>tot) ? 'over' : '';
+}
+/* 저장은 반 › 성적과 «같은 함수»다 — 어느 시험인지만 넘긴다. */
+async function saveSessionScores(classId, examId){
+  const ex = DATA.exams.find(x=>x.id===examId);
+  if(!ex) return;
+  await saveClassScores(classId, [ex]);
 }
 
 /* ── 5단계. 과제 — «오늘 낼 과제를 적는 일»만 진다 (C-18) ── */
@@ -11942,17 +12111,22 @@ async function addQuickExam(classId){
   await dbSetDoc('exams', ex.id, ex);
   await logAudit('시험 등록', '', '', `${title} · ${classNameOf(classId)} · ${date} · ${total}문항 (점수만)`);
   state.scoreAddFor = '';
-  showToast(`「${title}」을 만들었습니다. 점수를 넣고 「전체 저장」을 눌러주세요.`);
+  /* 🔵 수업 화면에서 만들었으면 그 시험의 점수판으로 곧장 데려간다 (C-19) —
+     만든 까닭이 «지금 점수를 치려고»이기 때문이다. */
+  state.sessionExamId = ex.id; state.sessionExamNew = false;
+  showToast(`「${title}」을 만들었습니다. 점수를 넣고 「저장」을 눌러주세요.`);
   render();
 }
 
 /* 격자 한 판을 통째로 저장한다.
    ⚠ 줄마다·칸마다 저장 버튼을 두지 않는다 — 한 번 누를 때마다 render()가 돌아
      아직 안 누른 칸이 전부 지워진다. 20명 × 시험 5개면 못 쓴다. */
-async function saveClassScores(classId){
+async function saveClassScores(classId, examList){
   /* ⚠ **격자에 «떠 있는» 시험만 읽는다** — 달로 잘라 놓았으므로 다른 달 시험까지 훑으면
-     화면에 없는 칸을 «비었다»고 보고 그 달 성적을 지워 버린다. */
-  const exams = classExams(classId, chubYm());
+     화면에 없는 칸을 «비었다»고 보고 그 달 성적을 지워 버린다.
+     🔵 수업 화면은 «그 시험 하나»만 넘긴다 (2026-09-01 · C-19) — 거기는 달 고르개가 없고
+       한 번에 한 시험만 화면에 있다. 같은 규칙의 다른 표현이다: 화면에 있는 것만 읽는다. */
+  const exams = examList || classExams(classId, chubYm());
   const roster = DATA.students.filter(s=>s.classId===classId);
   /* 만점부터 거둔다 — 점수를 읽기 전에 시험마다 만점이 정해져 있어야 한다. */
   const totals = {};
