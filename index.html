@@ -293,6 +293,14 @@
 .app .stu-life-danger{display:flex;align-items:center;gap:11px;flex-wrap:wrap;
   margin-top:13px;padding-top:12px;border-top:1px solid var(--line);}
 .app .stu-life-danger span{font-size:11.5px;color:var(--dim);line-height:1.7;flex:1;min-width:180px;}
+/* 검색 어법 한 줄 (2026-09-01 · C-14). ⚠ `.rst-cnt b`는 JetBrains Mono라 한글이 두부가 된다 —
+   여기 `<b>`는 제 글꼴을 따로 세운다. */
+.app .rst-tip{margin-left:auto;font-size:11.5px;color:var(--dim);}
+.app .rst-tip b{font-family:inherit;font-weight:700;color:var(--sub);}
+.app .rst-tip + .rst-cnt{margin-left:14px;}
+/* ⚠ 폰에서는 감춘다 — 거르개 줄이 이미 석 줄로 접히는 폭이고, 이 문장이 그 사이에 끼면
+   잘린 채로 남는다(실제로 426px에서 그렇게 나왔다). 있으면 좋은 안내지 꼭 있어야 할 것은 아니다. */
+@media (max-width:760px){ .app .rst-tip{display:none;} }
 .app .rst-cnt{margin-left:auto;font-size:12px;color:var(--dim);white-space:nowrap;}
 .app .rst-cnt b{color:var(--ink);font-family:'JetBrains Mono',monospace;font-weight:600;}
 .app .rst-selwrap{padding-right:6px;}
@@ -10172,14 +10180,24 @@ function rosterModel(){
     wrong: s => stats[s.studentId].wrongLeft>0,
     hw:    s => stats[s.studentId].hwTotal>0 && stats[s.studentId].hwDone<stats[s.studentId].hwTotal
   };
-  const q = (state.rosterQuery||'').trim().toLowerCase();
+  /* 🔴 **띄어쓰면 «둘 다 만족»이다** (2026-09-01 · C-14 · 사용자가 짚었다).
+     사용자의 말 — 「**건대부고 고1 이 두가지 필터를 이용해서 보고싶을때도 있는데
+       학년과 학교 동시에 검색이 안돼**」. 흠이 둘이었다.
+     ① **친 것을 통째로 한 낱말로 봤다.** 칸마다 `includes('건대부고 고1')`을 돌렸으니
+        어느 한 칸에도 그 문자열이 통째로 들어 있지 않아 **아무도 안 걸렸다.**
+     ② **「학년」이 아예 검색 대상에 없었다** — 「고1」은 혼자 쳐도 원래부터 안 걸렸다.
+     이제 **띄어쓰기로 잘라 낱말마다** 본다 —
+       · 낱말끼리는 **AND**: 「건대부고 고1」이면 둘 다 만족해야 한다
+       · 한 낱말 안에서는 **OR**: 이름·아이디·학교·학년·반 어디든 걸리면 된다
+     ⚠ **한 낱말만 칠 때의 동작은 예전과 똑같다.** 넓히기만 했지 좁힌 것이 없다.
+     ⚠ 엑셀(`exportRosterExcel`)도 이 모델을 보므로 **화면과 같은 명단이 나간다.** */
+  const terms = (state.rosterQuery||'').trim().toLowerCase().split(/\s+/).filter(Boolean);
   let rows = pool.filter(s=>{
     for(const k in flagged){ if(f[k] && !flagged[k](s)) return false; }
-    if(!q) return true;
-    return (s.name||'').toLowerCase().includes(q)
-      || (s.studentId||'').toLowerCase().includes(q)
-      || (s.school||'').toLowerCase().includes(q)
-      || classNameOf(s.classId).toLowerCase().includes(q);
+    if(!terms.length) return true;
+    const fields = [s.name, s.studentId, s.school, s.grade, classNameOf(s.classId)]
+      .map(v => String(v||'').toLowerCase());
+    return terms.every(t => fields.some(v => v.includes(t)));
   });
 
   const sort = state.rosterSort || 'name';
@@ -10267,13 +10285,18 @@ function teacherRosterHTML(){
 
   <div class="rst-fbar">
     <span class="field">${iconSvg('search',15)}
-      <input id="rst-search" value="${escHtml(state.rosterQuery)}" placeholder="이름 · 아이디 · 학교 · 반으로 검색" oninput="rosterSearch(event)" oncompositionend="rosterSearch(event)">
+      <input id="rst-search" value="${escHtml(state.rosterQuery)}" placeholder="이름 · 아이디 · 학교 · 학년 · 반" oninput="rosterSearch(event)" oncompositionend="rosterSearch(event)">
     </span>
     ${ROSTER_FLAGS.map(fl=>{
       const on = !!(state.rosterFlags||{})[fl[0]];
       const n = m.pool.filter(m.flagged[fl[0]]).length;
       return `<a class="pill ${on?'f':''}" onclick="rosterToggleFlag('${fl[0]}')">${fl[1]} <b>${n}</b>${on?' <s>×</s>':''}</a>`;
     }).join('')}
+    ${/* 🔵 **띄어쓰면 «둘 다 만족»** — 이 어법은 칸 안에 적을 수가 없다 (2026-09-01 · C-14).
+         `.rst-fbar .field`가 262px 고정이라 저 문장이 통째로 잘린다. 칸 옆에 둔다.
+         ⚠ 이미 «둘»을 치고 계신 분에게는 군더더기라, **낱말이 하나 이하일 때만** 띄운다. */''}
+    ${(state.rosterQuery||'').trim().split(/\s+/).filter(Boolean).length > 1 ? '' :
+      `<span class="rst-tip">띄어쓰면 <b>둘 다</b> 만족 — 예: <b>건대부고 고1</b></span>`}
     <span class="rst-cnt">${state.allRecordsLoading ? '기록 불러오는 중…' :
       `${m.pool.length}명 중 <b>${m.rows.length}</b>명 표시`}</span>
   </div>
@@ -16024,9 +16047,15 @@ function teacherSettingsStudentsHTML(){
   /* 검색은 «계정을 찾는» 검색이다 — 이름·아이디·학교·반까지만 본다.
      ⚠ 명단의 `rosterQuery`와 따로 둔다. 한쪽에서 거른 것이 다른 쪽에 따라가면
        「왜 학생이 없지」로 이어진다 — 두 화면은 이제 하는 일이 다르다. */
-  const q = (state.stuQuery||'').trim().toLowerCase();
-  const hit = s => !q || [s.name, s.studentId, s.school, classNameOf(s.classId)]
-    .some(v => String(v||'').toLowerCase().includes(q));
+  /* 🔵 명단과 **같은 어법**을 쓴다 (2026-09-01 · C-14) — 띄어쓰면 AND, 한 낱말 안에서는 OR.
+     ⚠ 거르는 «값»은 여전히 따로다(`stuQuery`). 어법만 같게 둔다 —
+       한 화면에서 되던 검색이 다른 화면에서 안 되면 그것이 더 헷갈린다. */
+  const terms = (state.stuQuery||'').trim().toLowerCase().split(/\s+/).filter(Boolean);
+  const hit = s => !terms.length || (()=>{
+    const fields = [s.name, s.studentId, s.school, s.grade, classNameOf(s.classId)]
+      .map(v => String(v||'').toLowerCase());
+    return terms.every(t => fields.some(v => v.includes(t)));
+  })();
   /* 반 → 이름 순. 계정을 손볼 때는 «같은 반끼리» 보게 되는 일이 많다. */
   /* **퇴원생은 맨 아래로 내려간다** (2026-08-26 · W-2) — 사용자가 그렇게 정했다.
      ⚠ 감추지는 않는다. 계정을 다루는 곳이라 «되돌리러» 오는 일이 있고, 그때 없으면 못 찾는다.
@@ -16083,7 +16112,7 @@ function teacherSettingsStudentsHTML(){
   return `<div class="st-wrap">
   ${stSec({
     title:'학생 계정', desc:`전체 ${DATA.students.length}명${
-      q ? ` · <b class="mono">${listed.length}</b>명 표시` : ''}`,
+      terms.length ? ` · <b class="mono">${listed.length}</b>명 표시` : ''}`,
     action:`<button class="btn ${open?'':'p'} sm" onclick="stOpen('stu')">${
       open ? '닫기' : iconSvg('plus',13)+' 학생 추가'}</button>`,
     form: !open ? '' : `<div class="st-form">
@@ -16102,7 +16131,7 @@ function teacherSettingsStudentsHTML(){
     body: `<div class="st-fbar" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 10px;">
       <span class="field">${iconSvg('search',15)}
         <input id="stu-search" value="${escHtml(state.stuQuery||'')}"
-          placeholder="이름 · 아이디 · 학교 · 반으로 검색"
+          placeholder="이름 · 아이디 · 학교 · 학년 · 반"
           oninput="stuSearch(event)" oncompositionend="stuSearch(event)"></span>
       ${/* 학업은 여기 없다 — 찾으러 온 사람을 명단으로 보내는 문 하나는 남긴다.
            ⚠ 그 명단은 이제 「반 › 학생」이다 (2026-09-01 · C-13). */''}
