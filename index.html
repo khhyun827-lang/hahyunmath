@@ -1338,14 +1338,17 @@
    ⚠ **완료를 다시 칠하지 말 것.** 칠하면 그 순간 격자가 «성적표»가 되고
      「지금 뭘 해야 하나」를 못 읽는 화면으로 돌아간다.
 
-   🔵 **2026-09-01 — 한 글자로 줄였다** (사용자가 「출결표랑 같은 표로 정리」를 시켰다).
-   글자를 통째로 적던 칸(「확인 대기」 넉 자)이 열을 112px로 벌리고 있었다.
-   이제 출결과 같은 26×24 표식이다 — 완 · 대 · 반 · «·».
+   🔵 **2026-09-01 — 글자를 «작은 표식»에 담는다** (사용자가 「출결표랑 같은 표로 정리」를 시켰다).
+   예전에는 글자가 칸 폭을 통째로 먹는 버튼이라 열이 112px, 과제가 두어 건이면 476px까지 벌어졌다.
+   🔴 **한 번 «완·대·반» 한 글자까지 줄였다가 되돌렸다 — 사용자가 「대 한글자가 뭘 말하는지
+     모르겠다」고 했다.** 출결의 「출·지·조·결」은 관례가 있지만 과제에는 없다.
+   **이제 열 폭을 정하는 것은 «칸»이 아니라 «제목»이다(96px).** 그러니 칸에 말을 다 적어도
+   표는 한 픽셀도 안 넓어진다 — 「확인 대기」가 11px에서 67px이라 96px 안에 그대로 들어간다.
    ⚠ **색의 순서는 그대로다.** 표식으로 바뀌었다고 완료에 바탕을 칠하지 말 것.
    ⚠ 사진 장수는 «점»으로 알린다(출결의 사유·메모와 같은 어법). 수는 title에 있다. */
 .app .hg-m{display:inline-flex;align-items:center;justify-content:center;position:relative;
-  width:26px;height:24px;border:1px solid transparent;border-radius:var(--r-sm);
-  font:inherit;font-size:12px;font-weight:700;line-height:1;
+  min-width:26px;height:24px;padding:0 7px;border:1px solid transparent;border-radius:var(--r-sm);
+  font:inherit;font-size:11px;font-weight:700;line-height:1;white-space:nowrap;
   background:transparent;color:var(--dim);cursor:pointer;transition:background var(--t);}
 .app .hg-m:hover{background:var(--hover);}
 .app .hg-m.ok{color:var(--ok);opacity:.62;font-weight:600;}
@@ -1360,6 +1363,19 @@
   font-size:12.5px;color:var(--sub);margin:0 0 10px;}
 .hwg-top b{color:var(--ink);font-weight:600;}
 .hwg-empty{padding:30px 0;text-align:center;color:var(--dim);font-size:12.5px;}
+/* 표 아래 한 줄 — 「·」의 뜻과 누르는 법 (2026-09-01). */
+/* ⚠ flex로 두면 «b» 하나하나가 flex 아이템이 되어 「칸을」이 「칸 을」로 벌어진다.
+   글이 섞인 줄은 block으로 두고, 표식만 inline-flex로 세운다. */
+.app .hg-hint{display:block;margin:9px 2px 0;font-size:11.5px;color:var(--dim);line-height:1.9;}
+.app .hg-hint b{font-weight:600;color:var(--sub);}
+.app .hg-hint .hg-m{cursor:default;vertical-align:-6px;margin-right:2px;}
+/* 반 안에서 «그 반 밖»을 보고 있을 때의 알림 줄 (2026-09-01).
+   화면 머리(반 이름)와 아래 명단이 다른 말을 하는 순간이라, 그것을 화면이 스스로 밝힌다. */
+.app .rst-out{display:flex;align-items:center;gap:9px;flex-wrap:wrap;
+  margin:0 0 4px;padding:8px 12px;border:1px solid var(--note-line);border-radius:var(--r-md);
+  background:var(--note);font-size:11.5px;color:var(--sub);line-height:1.7;}
+.app .rst-out b{font-weight:700;color:var(--ink);}
+.app .rst-out .btn{margin-left:auto;}
 
 /* 한 칸을 누르면 오른쪽에서 상세가 나온다 — 격자를 떠나지 않고 처리한다. */
 .hwd-back{position:fixed;inset:0;z-index:58;background:rgba(20,18,17,.28);}
@@ -8753,12 +8769,15 @@ function hwRosterReviewHTML(a, roster){
    ⚠ **표 골격을 새로 짜지 않는다** — `table.grid`(ds.css)를 그대로 쓴다.
    ⚠ **판정은 `hwState` 하나만 부른다.** 격자라고 상태를 새로 해석하지 않는다.
    ⚠ **최신 과제가 왼쪽이다.** 지금 밀린 것을 먼저 보는 화면이지 연대기가 아니다. */
-/* 🔵 **한 글자 표식이 세 번째 값이다** (2026-09-01) — 출결의 「출·지·조·결·퇴」와 같은 어법.
-   말은 title에 그대로 남는다. 표식만으로 못 읽는 사람이 없도록 그쪽을 지운 적은 없다. */
+/* 세 번째 값이 «칸에 적히는 것»이다 (2026-09-01).
+   🔴 **줄여 쓰지 말 것.** 한 번 「완·대·반」으로 줄였다가 사용자가 「대 한글자가 뭘 말하는지
+     모르겠다」고 해서 되돌렸다. 열 폭은 제목이 정하므로(96px) 말을 다 적어도 표는 안 넓어진다.
+   ⚠ **미제출만 «·»이다** — 가장 흔한 상태라 글자로 적으면 표가 그 낱말로 뒤덮인다.
+     08-25에 겪은 일이고, 출결 격자의 «미입력»도 같은 이유로 점이다. 뜻은 표 아래 한 줄이 진다. */
 const HWG_CELL = {
-  [HW_APPROVED]:  ['ok',   '완료',      '완'],
-  [HW_SUBMITTED]: ['wait', '확인 대기', '대'],
-  [HW_REJECTED]:  ['no',   '반려',      '반'],
+  [HW_APPROVED]:  ['ok',   '완료',      '완료'],
+  [HW_SUBMITTED]: ['wait', '확인 대기', '확인 대기'],
+  [HW_REJECTED]:  ['no',   '반려',      '반려'],
   [HW_NONE]:      ['none', '미제출',    '·']
 };
 function hwGridHTML(classId, list, roster){
@@ -8824,7 +8843,11 @@ function hwGridHTML(classId, list, roster){
   return `<div class="hwg-wrap"><table class="hwg hg">
     <thead><tr><th class="who">이름</th>${head}<th class="hg-done">제출</th></tr></thead>
     <tbody>${rows}</tbody>
-  </table></div>`;
+  </table></div>
+  ${/* 「·」만 뜻이 안 보이는 표식이라 이 한 줄이 그것을 진다. 나머지 셋은 칸에 다 적혀 있다.
+       누르는 법도 여기서 말한다 — 격자만 보고는 «눌러도 되는 것»인지 알 수 없다. */''}
+  <div class="hg-hint"><b class="hg-m none">·</b> 아직 안 낸 것입니다 ·
+    <b>칸</b>을 누르면 오른쪽에서 검토하고, <b>열 머리</b>를 누르면 미제출 알림이 열립니다</div>`;
 }
 /* 칸을 누르면 오른쪽 상세를 연다. 같은 칸을 다시 누르면 닫힌다. */
 function hwOpenCell(sid, hwId){
@@ -10165,14 +10188,24 @@ const ROSTER_FLAGS = [['att','출결 주의'], ['wrong','오답 미제출'], ['h
 /* 🔵 `embedClassId`가 오면 «반 > 학생»에 얹히는 판이다 (2026-08-30 · C-3).
    ⚠ **화면을 한 벌 더 만들지 않는다** — 검색·거르개·정렬·일괄 처리·엑셀이 전부 여기 있다.
      두 벌로 두면 한쪽만 고쳐지고 둘이 조용히 어긋난다(과제 목록에서 이미 겪은 일이다).
-   달라지는 것은 둘뿐 — «반 고르개 줄»을 감추고, 큰 제목을 뺀다(반 이름은 위 머리가 이미 말한다). */
+   달라지는 것은 큰 제목뿐이다 — 반 이름은 위 머리가 이미 말한다.
+
+   🔵 **반 안에서도 «전체 학생»으로 넓힐 수 있다** (2026-09-01 · 사용자가 시켰다).
+   사용자의 말 — 「**반-학생탭은 명단 탭이랑 동일하게 … 학생전체로 볼 수 있도록 해줘,
+     그리고 위에서 필터로 반을 고를 수 있도록**」. 까닭도 함께 말했다 —
+   「**시험기간이나 이럴때 반별학생이 아니라 «학교별»로 학생목록을 검색해야 하는 경우도 있기때문에**」.
+   그 검색은 반 안에 갇혀 있으면 성립하지 않는다 — 한 학교 아이들이 여러 반에 흩어져 있다.
+   ⚠ **예전에는 매 렌더마다 `rosterView`를 이 반으로 «못박아» 두었다** — 고르개를 띄워도
+     다음 렌더에 되돌아간다. 이제 **반이 바뀔 때 한 번만** 맞추고, 그 뒤에는 고른 것이 남는다. */
 function teacherRosterHTML(embedClassId){
   if(state.studentDetailId) return teacherStudentDetailHTML(state.studentDetailId);
   loadAllRecordsIfNeeded();
 
-  /* 반이 이미 정해져 있으므로 모집단을 그 반으로 맞춰 둔다. rosterModel이 이 값을 본다. */
   const embedded = !!embedClassId;
-  if(embedded) state.rosterView = 'class:' + embedClassId;
+  if(embedded && state.chubRosterKey !== embedClassId){
+    state.chubRosterKey = embedClassId;
+    state.rosterView = 'class:' + embedClassId;
+  }
 
   const m = rosterModel();
   const R = signalRules();                     // 숫자 칸의 빨강은 신호 임계값과 같은 값을 본다
@@ -10200,7 +10233,11 @@ function teacherRosterHTML(embedClassId){
   <div class="rst-head">
   <div class="rst-hrow">
     ${embedded
-      ? `<span class="t-sec" style="margin:0;">학생 ${m.pool.length}명</span>`
+      ? `<span class="t-sec" style="margin:0;">${
+          classId === embedClassId ? '이 반 학생'
+          : classId ? escHtml(classNameOf(classId))
+          : state.rosterView==='gone' ? '퇴원 학생'
+          : state.rosterView==='unassigned' ? '미배정 학생' : '전체 학생'} ${m.pool.length}명</span>`
       : `<h1 class="t-title">학생 명단<s>${subtitle}</s></h1>`}
     <div class="spacer"></div>
     <span class="field rst-selwrap" style="width:auto;">${iconSvg('chart',13)}
@@ -10212,10 +10249,16 @@ function teacherRosterHTML(embedClassId){
     <button class="btn sm" onclick="state.teacherTab='settings'; state.settingsSubTab='students'; state.studentDetailId=null; render()">${iconSvg('plus',13)} 학생 추가</button>
   </div>
 
-  ${/* 모집단 고르개 — 반 «안»에서는 반이 이미 정해져 있어 이 줄이 뜻을 잃는다. */''}
-  ${embedded ? '' : `<div class="rst-views">
+  ${/* 모집간 고르개 — 반 «안»에서도 띄운다 (2026-09-01). 학교별로 훑으려면 반 밖으로 나가야 한다. */''}
+  <div class="rst-views">
     ${views.map(v=>`<a class="pill ${state.rosterView===v[0]?'on':''}" onclick="rosterSetView('${v[0]}')">${escHtml(v[1])} <b>${v[2]}</b></a>`).join('')}
-  </div>`}
+  </div>
+  ${/* ⚠ 반 안에서 다른 모집단을 보고 있으면 **머리에 적힌 반 이름과 아래 명단이 다른 말을 한다.**
+       그 어긋남을 화면이 스스로 말하고, 되돌아가는 문을 한 칸 옆에 둔다. */''}
+  ${embedded && classId !== embedClassId ? `<div class="rst-out">
+    <span>「<b>${escHtml(classNameOf(embedClassId))}</b>」 밖의 학생까지 보고 있습니다 — 위 <b>이름·아이디·학교·반</b> 검색이 이 모집단 전부에 걸립니다.</span>
+    <button class="btn q sm" onclick="rosterSetView('class:${embedClassId}')">이 반만 보기</button>
+  </div>` : ''}
 
   <div class="rst-fbar">
     <span class="field">${iconSvg('search',15)}
@@ -10314,6 +10357,15 @@ function teacherRosterHTML(embedClassId){
 
 function rosterSetView(v){
   state.rosterView = v;
+  /* 🔵 **반 안에서 다른 «반»을 고르면 왼쪽 반 목록도 따라간다** (2026-09-01) —
+     안 따라가면 머리에 적힌 반 이름과 아래 명단이 서로 다른 말을 한다.
+     ⚠ 「전체」·「미배정」·「퇴원」은 반이 아니라 따라갈 곳이 없다. 그때는 명단 위의
+       «밖까지 보고 있습니다» 줄이 그 어긋남을 대신 말한다. */
+  if(state.teacherTab==='classhub' && (state.classHubTab||'sessions')==='students'
+     && v.indexOf('class:')===0){
+    state.classHubId = v.slice(6);
+    state.chubRosterKey = state.classHubId;
+  }
   state.rosterSelected = [];      // 모집단이 바뀌면 선택은 의미를 잃는다
   state.rosterLastIndex = null;
   render();
