@@ -1369,13 +1369,6 @@
 .app .hg-hint{display:block;margin:9px 2px 0;font-size:11.5px;color:var(--dim);line-height:1.9;}
 .app .hg-hint b{font-weight:600;color:var(--sub);}
 .app .hg-hint .hg-m{cursor:default;vertical-align:-6px;margin-right:2px;}
-/* 반 안에서 «그 반 밖»을 보고 있을 때의 알림 줄 (2026-09-01).
-   화면 머리(반 이름)와 아래 명단이 다른 말을 하는 순간이라, 그것을 화면이 스스로 밝힌다. */
-.app .rst-out{display:flex;align-items:center;gap:9px;flex-wrap:wrap;
-  margin:0 0 4px;padding:8px 12px;border:1px solid var(--note-line);border-radius:var(--r-md);
-  background:var(--note);font-size:11.5px;color:var(--sub);line-height:1.7;}
-.app .rst-out b{font-weight:700;color:var(--ink);}
-.app .rst-out .btn{margin-left:auto;}
 
 /* 한 칸을 누르면 오른쪽에서 상세가 나온다 — 격자를 떠나지 않고 처리한다. */
 .hwd-back{position:fixed;inset:0;z-index:58;background:rgba(20,18,17,.28);}
@@ -2992,7 +2985,9 @@ let state = {
   loginError: '',
   currentUser: null,        // {type:'student', studentId, name} | {type:'teacher'}
   studentTab: 'home',
-  teacherTab: 'home',
+  /* 🔵 **관리자의 첫 화면은 「반 › 학생」이다** (2026-09-01 · C-13 · 사용자가 정했다).
+     예전 'home'은 상단바에 없는 값이라 «신호»로 새고 있었다. 이제 자리가 분명하다. */
+  teacherTab: 'classhub',
   settingsSubTab: 'assistants',
   /* 설정 > 학생 — 계정 목록에서 «지금 펴 놓은 학생» 하나와 검색어 (2026-08-26).
      ⚠ 하나만 두는 이유는 `info-*` id가 화면에 하나뿐이어야 하기 때문이다 → studentAccountFormHTML */
@@ -3087,7 +3082,7 @@ let state = {
   pwReveal: null,            // 강사가 «지금 보고 있는» 비밀번호 하나 («s:학번» 또는 «ta:id»)
   hwPhotoView: null,         // 크게 보고 있는 사진 주소
   classHubId: null,
-  classHubTab: 'sessions',   // 「학생 명단」은 반 안이 아니라 명단(01-roster)이 맡는다
+  classHubTab: 'students',   // 첫 화면 (2026-09-01 · C-13). 명단 탭이 여기로 들어왔다
   studentSearchQuery: '',
   rosterSearchQuery: '',
   /* 명단(01-roster) — 뷰는 «누구를», 플래그는 «어떤 상태를» 고른다. 두 축은 따로 논다.
@@ -7199,7 +7194,7 @@ function homeHTML(){
       <span class="l-sp"></span>
       ${cu
         ? `<button class="l-btn l-sm l-ghost" onclick="${
-             cu.type==='teacher' ? "state.teacherTab='roster';"
+             cu.type==='teacher' ? "state.teacherTab='classhub'; state.classHubTab='students';"
              : cu.type==='assistant' ? "state.assistantTab='students';"
              : "state.studentTab='home';"} goto('${
              cu.type==='teacher' ? 'teacher' : cu.type==='assistant' ? 'assistant' : 'student'}')">${
@@ -9843,24 +9838,32 @@ function assistantRosterHTML(cu){
 }
 
 /* ---------- 관리자 셸 ----------
-   좌측 사이드바 5그룹을 버리고 상단바 7메뉴 + 서브탭으로 바꿨다.
-   메뉴는 여기 한 곳에서만 정의한다 — 화면마다 손으로 적으면 반드시 어긋난다. */
+   좌측 사이드바 5그룹을 버리고 상단바 메뉴 + 서브탭으로 바꿨다.
+   메뉴는 여기 한 곳에서만 정의한다 — 화면마다 손으로 적으면 반드시 어긋난다.
+
+   🔴 **「명단」 탭을 없앴다 (2026-09-01 · C-13 · 사용자가 정했다).**
+   사용자의 말 — 「**여기 이식하고나면 명단탭은 없어도 될 것같아**」.
+   **화면이 사라진 것이 아니라 «문»이 하나로 줄었다** — 명단은 이제 「반 › 학생」이다.
+   같은 곳으로 가는 문이 둘이면 검색칸·정렬·고른 반이 둘 사이에서 새는데,
+   실제로 사용자가 그것을 짚었다 — 「**반-학생탭이 검색창이 명단탭의 검색창이랑 이어지는 것 같아**」.
+   ⚠ **순서도 사용자가 정했다** — 「반-수업-오답-소통-신호-설정」.
+     «반»이 첫머리인 것은 로그인 첫 화면이 그리로 가기 때문이다(→ `teacherHTML`). */
 const TEACHER_NAV = [
-  ['명단', 'roster'],
-  ['신호', 'signals'],
   ['반',   'classhub'],
   ['수업', 'session'],
   ['오답', 'review'],
   ['소통', 'clinic'],
+  ['신호', 'signals'],
   ['설정', 'settings']
 ];
 
 /* 서브탭 — [라벨, 탭, 반 관리 내부탭?]
-   🔴 **「학생 명단」이 여기서 «명단» 탭으로 나가던 것을 되돌렸다** (2026-08-30 · C-3 · 사용자 요청).
-     예전 주석은 「같은 곳으로 가는 문을 두 개 만들지 않는다」였는데, 실제로 일어난 일은
-     **누르는 순간 반에서 튕겨 나가는 것**이었다 — 상단이 「명단」으로 넘어가고 반 서브탭이
-     통째로 사라져서, 보고 있던 반이 어디였는지까지 잃었다. 문이 하나가 아니라 «나가는 문»이었다.
-     이제 반 «안»에 머문다. 화면은 명단 것을 그대로 쓰되 반 고르개만 감춘다(→ teacherRosterHTML). */
+   🔴 **「학생」은 이제 «명단» 그 자체다** (2026-09-01 · C-13). 세 판에 걸쳐 여기까지 왔다 —
+     ① 08-30(C-3) 「학생 명단」을 눌렀더니 **반에서 튕겨 나갔다**. 상단이 「명단」으로 넘어가고
+        반 서브탭이 통째로 사라져 보고 있던 반까지 잃었다. 그래서 반 «안»으로 데려왔다
+     ② 09-01(C-12) 반 안에 갇히니 **학교별로 훑을 수가 없었다**. 고르개를 살렸다
+     ③ 09-01(C-13) **「명단」 탭을 없애고 이 자리 하나만 남겼다.** 문이 둘이면 검색칸이 샌다
+   ⚠ **「학생」이 맨 앞인 것은 로그인 첫 화면이기 때문이다** (→ `state.classHubTab` 기본값). */
 const TEACHER_SUBNAV = {
   '반': [
     ['학생',       'classhub', 'students'],
@@ -9885,9 +9888,11 @@ const TEACHER_SUBNAV = {
   ]
 };
 
-/* 탭이 어느 상위 메뉴에 속하는지. 명단은 「반」의 서브탭에도 나오지만 제 자리는 「명단」이다. */
+/* 탭이 어느 상위 메뉴에 속하는지.
+   ⚠ `roster`·`home`은 여기 없다 — 둘 다 「반 › 학생」으로 옮겨졌고,
+     옛 세션·북마크가 들고 있으면 `teacherHTML`이 첫 줄에서 갈아 끼운다. */
 const TEACHER_TAB_SECTION = {
-  roster:'명단', signals:'신호', home:'신호',
+  signals:'신호',
   classhub:'반', session:'수업',
   review:'오답', exams:'오답', unitbank:'오답',
   clinic:'소통', notices:'소통', qna:'소통', chat:'소통', checkin:'소통',
@@ -9899,7 +9904,11 @@ function goTeacherTab(tab, hubTab){
   state.teacherTab = tab;
   state.studentDetailId = null;
   if(hubTab) state.classHubTab = hubTab;
-  else if(tab==='classhub') state.classHubId = null;
+  /* 🔴 **여기서 `classHubId`를 비우지 않는다** (2026-09-01 · C-13에서 뺐다).
+     예전에는 상단 「반」을 누를 때마다 첫 반으로 되돌렸다 — 그때는 반을 고르는 자리가
+     왼쪽 목록뿐이라 손해가 없었다. 지금은 **학생 명단의 고르개가 그 반을 정한다**.
+     비우면 「고20.5B」를 골라 놓고 상단 「반」을 한 번 누르는 순간 조용히 첫 반으로
+     되돌아가고, 그 뒤 출결·성적이 엉뚱한 반을 연다. */
   render();
 }
 
@@ -9908,11 +9917,7 @@ function teacherTabBodyHTML(){
      기본값(반 관리)으로 떨어지므로 흡수된 곳으로 보낸다. */
   if(state.teacherTab==='submissions') state.teacherTab = 'exams';
   const t = state.teacherTab;
-  if(t==='roster')      return teacherRosterHTML();
-  /* 'home'은 상단바에 없는데도 로그인 직후 기본값이라 «신호»로 모은다.
-     TEACHER_TAB_SECTION도 home을 '신호'로 잡고 있어서 그게 원래 의도였다.
-     (예전엔 여기 분기가 없어 반 목록으로 떨어졌다 — 메뉴는 신호가 켜진 채로.) */
-  if(t==='signals' || t==='home') return teacherSignalsHTML();
+  if(t==='signals')     return teacherSignalsHTML();
   if(t==='session')     return teacherSessionHTML();
   if(t==='classhub')    return teacherClassHubHTML();
   if(t==='clinic')      return teacherClinicHTML();
@@ -9928,6 +9933,15 @@ function teacherTabBodyHTML(){
 }
 
 function teacherHTML(){
+  /* 🔴 **옛 자리를 새 자리로 갈아 끼운다** (2026-09-01 · C-13) —
+     `roster`(없어진 「명단」 탭)와 `home`(상단바에 없던 로그인 기본값) 둘 다
+     **「반 › 학생」이 받는다.** 저장된 세션·북마크(`#teacher/roster`)가 그 값을 들고 온다.
+     ⚠ **여기서 한다** — 본문(`teacherTabBodyHTML`)에서 고치면 상단 메뉴는 이미
+       옛 값으로 그려진 뒤라 «메뉴는 명단, 본문은 반»으로 한 판이 어긋난다. */
+  if(state.teacherTab==='roster' || state.teacherTab==='home'){
+    state.teacherTab = 'classhub';
+    state.classHubTab = 'students';
+  }
   const section = TEACHER_TAB_SECTION[state.teacherTab] || '반';
   const subs = TEACHER_SUBNAV[section];
   const subActive = s => state.teacherTab===s[1] && (!s[2] || state.classHubTab===s[2]);
@@ -10185,27 +10199,28 @@ function rosterModel(){
 const ROSTER_SORTS = [['name','이름순'], ['att','출석률 낮은 순'], ['drop','성적 하락 큰 순'], ['wrong','오답 미제출 많은 순']];
 const ROSTER_FLAGS = [['att','출결 주의'], ['wrong','오답 미제출'], ['hw','과제 미제출']];
 
-/* 🔵 `embedClassId`가 오면 «반 > 학생»에 얹히는 판이다 (2026-08-30 · C-3).
+/* 🔴 **학생 명단 — 「반 › 학생」이 이 화면의 «유일한» 자리다** (2026-09-01 · C-13).
+   상단의 「명단」 탭은 없앴다. 사용자의 말 — 「여기 이식하고나면 명단탭은 없어도 될 것같아」.
    ⚠ **화면을 한 벌 더 만들지 않는다** — 검색·거르개·정렬·일괄 처리·엑셀이 전부 여기 있다.
      두 벌로 두면 한쪽만 고쳐지고 둘이 조용히 어긋난다(과제 목록에서 이미 겪은 일이다).
-   달라지는 것은 큰 제목뿐이다 — 반 이름은 위 머리가 이미 말한다.
+   ⚠ **문도 두 개 만들지 않는다.** 문이 둘이던 동안 사용자가 그것을 알아챘다 —
+     「반-학생탭이 검색창이 명단탭의 검색창이랑 이어지는 것 같아」. `state.rosterQuery` 하나를
+     두 화면이 나눠 쓰고 있었다. 이제 화면이 하나라 샐 곳이 없다.
 
-   🔵 **반 안에서도 «전체 학생»으로 넓힐 수 있다** (2026-09-01 · 사용자가 시켰다).
+   🔵 **모집단은 «반»이 아니라 고르개가 정한다** (2026-09-01 · 사용자가 시켰다).
    사용자의 말 — 「**반-학생탭은 명단 탭이랑 동일하게 … 학생전체로 볼 수 있도록 해줘,
      그리고 위에서 필터로 반을 고를 수 있도록**」. 까닭도 함께 말했다 —
    「**시험기간이나 이럴때 반별학생이 아니라 «학교별»로 학생목록을 검색해야 하는 경우도 있기때문에**」.
    그 검색은 반 안에 갇혀 있으면 성립하지 않는다 — 한 학교 아이들이 여러 반에 흩어져 있다.
-   ⚠ **예전에는 매 렌더마다 `rosterView`를 이 반으로 «못박아» 두었다** — 고르개를 띄워도
-     다음 렌더에 되돌아간다. 이제 **반이 바뀔 때 한 번만** 맞추고, 그 뒤에는 고른 것이 남는다. */
-function teacherRosterHTML(embedClassId){
+   🔴 **그래서 «반에 얹힌 판»이라는 갈래 자체가 없어졌다** (C-13). 몇 시간 만에 두 번 고친 자리다 —
+     ① 반 안에서는 `rosterView`를 그 반으로 못박고 고르개를 감춘다(C-3)
+     ② 고르개는 띄우되 «이 반 밖을 보고 있습니다» 알림을 단다(C-12)
+     ③ **반 껍데기를 아예 벗는다 — 이 화면 하나만 남는다**(C-13)
+   ①②가 진 짐은 전부 **«반 머리와 명단이 서로 다른 말을 한다»**는 한 가지였다.
+   반 머리를 치우자 그 짐이 통째로 사라졌다. **어긋남은 설명할 것이 아니라 없앨 것이었다.** */
+function teacherRosterHTML(){
   if(state.studentDetailId) return teacherStudentDetailHTML(state.studentDetailId);
   loadAllRecordsIfNeeded();
-
-  const embedded = !!embedClassId;
-  if(embedded && state.chubRosterKey !== embedClassId){
-    state.chubRosterKey = embedClassId;
-    state.rosterView = 'class:' + embedClassId;
-  }
 
   const m = rosterModel();
   const R = signalRules();                     // 숫자 칸의 빨강은 신호 임계값과 같은 값을 본다
@@ -10232,13 +10247,7 @@ function teacherRosterHTML(embedClassId){
   const head = `
   <div class="rst-head">
   <div class="rst-hrow">
-    ${embedded
-      ? `<span class="t-sec" style="margin:0;">${
-          classId === embedClassId ? '이 반 학생'
-          : classId ? escHtml(classNameOf(classId))
-          : state.rosterView==='gone' ? '퇴원 학생'
-          : state.rosterView==='unassigned' ? '미배정 학생' : '전체 학생'} ${m.pool.length}명</span>`
-      : `<h1 class="t-title">학생 명단<s>${subtitle}</s></h1>`}
+    <h1 class="t-title">학생 명단<s>${subtitle}</s></h1>
     <div class="spacer"></div>
     <span class="field rst-selwrap" style="width:auto;">${iconSvg('chart',13)}
       <select class="rst-sel" onchange="state.rosterSort=this.value; render()">
@@ -10249,16 +10258,12 @@ function teacherRosterHTML(embedClassId){
     <button class="btn sm" onclick="state.teacherTab='settings'; state.settingsSubTab='students'; state.studentDetailId=null; render()">${iconSvg('plus',13)} 학생 추가</button>
   </div>
 
-  ${/* 모집간 고르개 — 반 «안»에서도 띄운다 (2026-09-01). 학교별로 훑으려면 반 밖으로 나가야 한다. */''}
+  ${/* 🔴 **모집단 고르개 — 이 줄이 «반을 고르는 유일한 자리»다** (2026-09-01 · C-13).
+       왼쪽 반 목록을 없앤 대가로 이 줄이 그 일까지 진다. 반을 고르면 다른 여덟 탭이
+       볼 반도 따라 움직인다 → `rosterSetView`. */''}
   <div class="rst-views">
     ${views.map(v=>`<a class="pill ${state.rosterView===v[0]?'on':''}" onclick="rosterSetView('${v[0]}')">${escHtml(v[1])} <b>${v[2]}</b></a>`).join('')}
   </div>
-  ${/* ⚠ 반 안에서 다른 모집단을 보고 있으면 **머리에 적힌 반 이름과 아래 명단이 다른 말을 한다.**
-       그 어긋남을 화면이 스스로 말하고, 되돌아가는 문을 한 칸 옆에 둔다. */''}
-  ${embedded && classId !== embedClassId ? `<div class="rst-out">
-    <span>「<b>${escHtml(classNameOf(embedClassId))}</b>」 밖의 학생까지 보고 있습니다 — 위 <b>이름·아이디·학교·반</b> 검색이 이 모집단 전부에 걸립니다.</span>
-    <button class="btn q sm" onclick="rosterSetView('class:${embedClassId}')">이 반만 보기</button>
-  </div>` : ''}
 
   <div class="rst-fbar">
     <span class="field">${iconSvg('search',15)}
@@ -10357,15 +10362,13 @@ function teacherRosterHTML(embedClassId){
 
 function rosterSetView(v){
   state.rosterView = v;
-  /* 🔵 **반 안에서 다른 «반»을 고르면 왼쪽 반 목록도 따라간다** (2026-09-01) —
-     안 따라가면 머리에 적힌 반 이름과 아래 명단이 서로 다른 말을 한다.
-     ⚠ 「전체」·「미배정」·「퇴원」은 반이 아니라 따라갈 곳이 없다. 그때는 명단 위의
-       «밖까지 보고 있습니다» 줄이 그 어긋남을 대신 말한다. */
-  if(state.teacherTab==='classhub' && (state.classHubTab||'sessions')==='students'
-     && v.indexOf('class:')===0){
-    state.classHubId = v.slice(6);
-    state.chubRosterKey = state.classHubId;
-  }
+  /* 🔴 **여기가 «반을 고르는» 유일한 자리다** (2026-09-01 · C-13).
+     왼쪽 반 목록을 없앴으므로, 이 고르개에서 반을 고르면 **다른 여덟 탭(출결·성적·과제…)이
+     볼 반도 같이 움직인다.** 안 움직이면 학생 탭에서 반을 고른 뒤 출결로 넘어갔을 때
+     엉뚱한 반이 서 있다.
+     ⚠ 「전체」·「미배정」·「퇴원」은 반이 아니라 따라갈 곳이 없다 — 그때는 마지막에
+       고른 반이 그대로 남는다. 다른 탭에는 왼쪽 목록이 있으니 거기서 바꾸면 된다. */
+  if(v.indexOf('class:')===0) state.classHubId = v.slice(6);
   state.rosterSelected = [];      // 모집단이 바뀌면 선택은 의미를 잃는다
   state.rosterLastIndex = null;
   render();
@@ -11309,6 +11312,17 @@ function teacherClassHubHTML(){
   let c = DATA.classes.find(x=>x.id===state.classHubId);
   if(!c){ c = DATA.classes[0]; state.classHubId = c.id; }
 
+  /* 🔴 **「학생」 탭만은 반 껍데기를 안 쓴다** (2026-09-01 · C-13 · 사용자가 시켰다).
+     사용자의 말 — 「**아예 명단탭이랑 동일하게 학생탭에서는 왼쪽 반목록이 없어도 될 것 같아**」.
+     맞는 말이다. 이 화면의 모집단은 **반이 아니라 «고르개»가 정한다**(전체·반별·미배정·퇴원).
+     그런데 왼쪽 반 목록과 위 반 머리(`.chub-mh`)는 «지금 이 반을 보고 있다»고 말한다 —
+     「전체 학생」을 켠 순간 **화면의 두 곳이 서로 다른 말을 하게 된다.**
+     ⚠ 그래서 반을 «고르는 일»은 고르개 하나가 진다. 다른 여덟 탭이 볼 반은
+       고르개에서 반을 고를 때 따라 움직인다 → `rosterSetView`.
+     ⚠ 서브탭 줄은 여기가 아니라 셸(`teacherHTML`)이 그리므로 그대로 남는다. */
+  if(tab==='students') return teacherRosterHTML();
+
+
   let sub;
   /* 과제는 «그날 상세» 안에도 있지만 묻는 것이 다르다 —
      저기는 「그날 무슨 과제를 냈나」, 여기는 「이 반 과제가 지금 어떻게 돌아가나」다.
@@ -11320,7 +11334,6 @@ function teacherClassHubHTML(){
        여기서 켜 두면 수업 기록에서 하루를 폈을 때까지 «전체»로 새어 나간다. */
     sub = (r => r.body + r.extra)(teacherClassDailyHomeworkHTML(c.id, todayStr()));
   }
-  else if(tab==='students')   sub = teacherRosterHTML(c.id);
   else if(tab==='scores')     sub = chubScoresHTML(c.id);
   else if(tab==='log')        sub = chubLogHTML(c.id);
   else if(tab==='progress')   sub = chubProgressHTML(c.id);
@@ -12631,7 +12644,11 @@ function sdScreenHTML(s, rec, isAssistant){
   const list = `<aside class="sd-list">
     <div class="sd-lh">
       ${/* 돌아갈 곳의 «이름»을 그대로 적는다 — 반 안에서 열었으면 명단이 아니라 그 반으로 간다. */''}
-      <button class="btn q sm" onclick="state.studentDetailId=null; render()">${iconSvg('chevL',13)} ${state.teacherTab==='classhub' ? escHtml(classNameOf(state.classHubId))+' 학생으로' : '명단으로'}</button>
+      ${/* 이 문은 «온 곳»으로 되돌린다 — `studentDetailId`만 비우므로 실제로 그렇게 된다.
+           그러니 이름도 온 곳을 말해야 한다. 들어오는 문은 둘뿐이다(`rosterOpen`·`sdOpen`) —
+           「반 › 학생」과 「신호」. ⚠ 반 이름은 안 적는다. 「전체 학생」에서 왔을 수도 있다. */''}
+      <button class="btn q sm" onclick="state.studentDetailId=null; render()">${iconSvg('chevL',13)} ${
+        state.teacherTab==='signals' ? '신호로' : '학생 명단으로'}</button>
       <div class="t-sec" style="margin:12px 0 0;">${s.classId ? escHtml(classNameOf(s.classId)) : '전체'} · ${peers.length}명</div>
     </div>
     <div class="sd-lbody">
@@ -16087,8 +16104,9 @@ function teacherSettingsStudentsHTML(){
         <input id="stu-search" value="${escHtml(state.stuQuery||'')}"
           placeholder="이름 · 아이디 · 학교 · 반으로 검색"
           oninput="stuSearch(event)" oncompositionend="stuSearch(event)"></span>
-      ${/* 학업은 여기 없다 — 찾으러 온 사람을 명단으로 보내는 문 하나는 남긴다. */''}
-      <button class="btn sm" onclick="state.teacherTab='roster'; state.studentDetailId=null; render()">성적·출결은 명단에서 ${iconSvg('arrowR',13)}</button>
+      ${/* 학업은 여기 없다 — 찾으러 온 사람을 명단으로 보내는 문 하나는 남긴다.
+           ⚠ 그 명단은 이제 「반 › 학생」이다 (2026-09-01 · C-13). */''}
+      <button class="btn sm" onclick="goTeacherTab('classhub','students')">성적·출결은 학생 명단에서 ${iconSvg('arrowR',13)}</button>
     </div>
     ${rows}`
   })}
