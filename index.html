@@ -11032,7 +11032,35 @@ async function saveSessionNote(classId, date){
   render();
 }
 
-function goSessionDate(delta){
+/* 🔴 **지금 화면에 선 반은 여기 한 곳이 정한다** (2026-09-01 · C-20).
+   `teacherSessionHTML`이 «고른 반이 그날 수업에 없으면 첫 수업으로» 되돌리는 판단을
+   화면 안에서만 하고 있었다. «나갈 때 저장»이 그 판단을 다시 하면 두 벌이 되고,
+   어긋나는 날 **엉뚱한 반의 출결이 저장된다.** 그래서 함수 하나로 뽑았다. */
+function sessionCurrentClassId(date){
+  const d = date || state.sessionDate || todayStr();
+  const sessions = sessionsOn(d);
+  const cur = state.sessionClassId;
+  if(cur && sessions.some(c=>c.id===cur)) return cur;
+  return sessions.length ? sessions[0].id : '';
+}
+/* 🔵 **출결은 «넘어가면» 저장된다** (2026-09-01 · C-20 · 사용자가 시켰다).
+   사용자의 말 — 「**출결도 다음페이지 넘어가면 저장되는 것으로 해주고**」.
+   과제 검사는 누르는 즉시 저장되는데 출결만 「저장」을 눌러야 했다 — **같은 화면에서
+   두 가지 규칙이 도는 것**이 헷갈린다고 본 것이다. 맞는 말이다.
+   ⚠ **바뀐 것이 없으면 아무 일도 안 한다** — 단계를 오갈 때마다 저장이 돌면
+     토스트가 계속 뜨고 실 DB에 같은 값이 반복해서 쓰인다.
+   ⚠ **출결 단계에서 나갈 때만이다.** 다른 단계에서는 attDraft가 화면과 무관하다. */
+async function sessionAutoSaveAtt(){
+  if((state.sessionStep || 'att') !== 'att') return;
+  if(!state.allRecordsLoaded) return;
+  const date = state.sessionDate || todayStr();
+  const classId = sessionCurrentClassId(date);
+  if(!classId) return;
+  if(sessionUnsavedCount(classId, date) === 0) return;
+  await saveClassAttendance(classId, date);
+}
+async function goSessionDate(delta){
+  await sessionAutoSaveAtt();
   state.sessionDate = shiftYmd(state.sessionDate || todayStr(), delta);
   state.sessionClassId = '';
   sessionForgetPicks();
@@ -11043,9 +11071,21 @@ function goSessionDate(delta){
 function sessionForgetPicks(){
   state.sessionHwId = ''; state.sessionExamId = ''; state.sessionExamNew = false;
 }
-function goSessionStep(step){ state.sessionStep = step; render(); }
-function pickSession(classId){
-  if(state.sessionClassId !== classId) sessionForgetPicks();
+async function sessionGoToday(){
+  await sessionAutoSaveAtt();
+  state.sessionDate = ''; state.sessionClassId = '';
+  sessionForgetPicks();
+  render();
+}
+async function goSessionStep(step){
+  if(step !== state.sessionStep) await sessionAutoSaveAtt();
+  state.sessionStep = step;
+  render();
+}
+async function pickSession(classId){
+  if(state.sessionClassId === classId){ render(); return; }
+  await sessionAutoSaveAtt();     // 반을 옮기기 «전»에 — 옮기고 나면 어느 반 것인지 모른다
+  sessionForgetPicks();
   state.sessionClassId = classId;
   if(state.sessionStep === 'prev') state.sessionStep = 'att';
   render();
@@ -11070,9 +11110,9 @@ function teacherSessionHTML(){
   const sessions = sessionsOn(date);
   const dow = WEEKDAY_LABEL[new Date(date + 'T00:00:00').getDay()];
 
-  /* 고른 반이 그날 수업이 없으면 첫 수업으로 되돌린다. 날짜를 옮기면 늘 여기로 온다. */
-  let classId = state.sessionClassId;
-  if(!classId || !sessions.some(c=>c.id === classId)) classId = sessions.length ? sessions[0].id : '';
+  /* 고른 반이 그날 수업이 없으면 첫 수업으로 되돌린다. 날짜를 옮기면 늘 여기로 온다.
+     ⚠ 판단은 `sessionCurrentClassId` 하나가 한다 — «나갈 때 저장»이 같은 답을 봐야 한다. */
+  const classId = sessionCurrentClassId(date);
   const cls = DATA.classes.find(c=>c.id === classId);
   if(classId){
     loadSessionNoteIfNeeded(classId);
@@ -11181,7 +11221,7 @@ function sessionDateNavHTML(date){
     <button class="btn icon" title="이전 날" onclick="goSessionDate(-1)">${iconSvg('chevL',16)}</button>
     <span class="cls-day">${date}<span class="muted" style="margin-left:7px;font-weight:400;">${WEEKDAY_LABEL[new Date(date+'T00:00:00').getDay()]}</span></span>
     <button class="btn icon" title="다음 날" onclick="goSessionDate(1)">${iconSvg('chevR',16)}</button>
-    ${isToday ? '' : `<button class="btn sm" onclick="state.sessionDate=''; state.sessionClassId=''; sessionForgetPicks(); render()">오늘</button>`}
+    ${isToday ? '' : `<button class="btn sm" onclick="sessionGoToday()">오늘</button>`}
   </div>`;
 }
 
@@ -11253,10 +11293,15 @@ function sessionAttHTML(classId, date){
   const bar = `<div class="actbar">
     <span class="sum">${ATT_STATUSES.slice(0,4).map(s=>`${s} <b class="mono">${cnt[s]||0}</b>`).join(' · ')} · 미입력 <b class="mono">${none}</b></span>
     ${none > 0 ? `<button class="btn sm" onclick="setAllRemainingPresent('${classId}')">남은 ${none}명 전체 출석 처리</button>` : ''}
+    ${/* 🔵 **넘어가면 저절로 저장된다** (2026-09-01 · C-20) — 그래도 「저장」은 남긴다.
+         수업 중에 «여기까지 넣어 뒀다»를 손으로 확인하고 싶을 때가 있고,
+         그것을 없애면 «저장했나?»를 화면이 대답해 주지 못한다. */''}
     <button class="btn sm" onclick="saveSessionAttendance('${classId}','${date}')">저장</button>
     <span class="spacer"></span>
-    ${unsaved > 0 ? `<span class="hint" style="margin-left:0;color:var(--late);">저장 안 된 변경 ${unsaved}명분</span>` : ''}
-    <button class="btn p" onclick="saveSessionAttendance('${classId}','${date}','hwcheck')">저장하고 과제 검사로 ${iconSvg('arrowR',15)}</button>
+    ${unsaved > 0
+      ? `<span class="hint" style="margin-left:0;color:var(--late);">안 넣은 변경 ${unsaved}명분 — 넘어갈 때 저장됩니다</span>`
+      : '<span class="hint" style="margin-left:0;">넘어갈 때 저절로 저장됩니다</span>'}
+    <button class="btn p" onclick="goSessionStep('hwcheck')">과제 검사로 ${iconSvg('arrowR',15)}</button>
   </div>`;
   return { body:`<div class="cls-tiles">${tiles}</div>`, bar };
 }
