@@ -8170,6 +8170,29 @@ function weekStartOf(ymd){
   d.setDate(d.getDate() - ((d.getDay() + 6) % 7));   // 일=0 이므로 월=0 으로 옮긴다
   return ymdLocal(d);
 }
+/* ---------- 이번 주의 게임 (2026-09-01 · S-D) ----------
+   사용자가 정했다 — 「**일주일씩 로테이션으로 게임이 바뀐다**」.
+   🔵 **이것이 순위 문제를 통째로 없앤다.** 순위는 원래 «주 단위»(`rank:{월요일}`)라,
+     한 주에 게임이 하나면 **그 주의 순위는 같은 잣대끼리만 겨룬다.**
+     고르게 했으면 «점수 잘 나오는 쪽»으로 몰려 순위가 «누가 쉬운 걸 찾았나»가 됐을 것이다.
+   ⚠ 도장·연속·하루 한 판은 **그대로 하나다** — 게임이 바뀌어도 출석의 뜻은 안 바뀐다. */
+const GAMES = [
+  { key:'runner', name:'달리기',   icon:'🏃',
+    tip:'세 줄을 오가며 장애물을 피하세요', tip2:'좌우 화살표 · 화면 좌우를 눌러 옮깁니다' },
+  { key:'dodge',  name:'똥피하기', icon:'💩',
+    tip:'손가락을 끌어 좌우로 피하세요',   tip2:'⭐ 를 먹으면 50점' }
+];
+/* 주차를 세는 기준. ⚠ 이 날짜를 옮기면 «이번 주 게임»이 통째로 바뀐다 — 주 중에 옮기면
+   그 주에 이미 올라간 점수가 다른 게임 것이 되어 순위에서 빠진다. 월요일에만 옮길 것. */
+const GAME_EPOCH = '2026-08-31';
+function gameOfWeek(monday){
+  const a = new Date(GAME_EPOCH + 'T00:00:00'), b = new Date((monday||GAME_EPOCH) + 'T00:00:00');
+  const wk = Math.round((b - a) / 604800000);
+  return GAMES[((wk % GAMES.length) + GAMES.length) % GAMES.length];
+}
+function gameThisWeek(){ return gameOfWeek(weekStartOf(todayStr())); }
+function gameByKey(k){ return GAMES.find(g => g.key === k) || GAMES[0]; }
+
 function weekLabelOf(monday){
   const a = new Date(monday + 'T00:00:00');
   const b = new Date(monday + 'T00:00:00'); b.setDate(b.getDate() + 6);
@@ -8196,10 +8219,14 @@ async function loadRank(monday){
    그 사이에 올라온 «남의 점수»가 사라진다. */
 async function rankSubmit(sid, name, cls, score){
   const monday = weekStartOf(todayStr());
+  const game = gameOfWeek(monday).key;
   const rows = await dbGet('rank:'+monday, []);
+  /* 🔴 **어느 게임의 점수인지 적어 둔다.** 게임은 주마다 바뀌므로 한 주 안에서는 섞일 일이
+     없지만, **기준 주(GAME_EPOCH)를 옮기면** 옛 점수가 다른 게임 것이 된다.
+     ⚠ 게임이 안 적힌 옛 줄은 「똥피하기」로 읽는다 — 그때는 그것뿐이었다. */
   const mine = rows.find(r => r.sid === sid);
-  if(mine){ if(score > mine.score){ mine.score = score; mine.at = todayStr(); mine.name = name; mine.cls = cls; } }
-  else rows.push({sid, name, cls, score, at: todayStr()});
+  if(mine){ if(score > mine.score){ mine.score = score; mine.at = todayStr(); mine.name = name; mine.cls = cls; mine.game = game; } }
+  else rows.push({sid, name, cls, score, at: todayStr(), game});
   rows.sort((a,b) => b.score - a.score);
   rankCache[monday] = rows;
   await dbSet('rank:'+monday, rows);
@@ -8207,10 +8234,15 @@ async function rankSubmit(sid, name, cls, score){
 }
 
 function rankHTML(sid, rows, lastRows, monday){
-  const top = (rows||[]).slice(0, RANK_TOP);
-  const mine = (rows||[]).find(r => r.sid === sid);
+  /* 🔵 **그 주의 게임 점수만 센다** (2026-09-01 · S-D). 게임이 주마다 바뀌므로
+     한 주의 순위는 언제나 «같은 잣대끼리»다. 게임이 안 적힌 옛 줄은 똥피하기로 본다. */
+  const gw = gameOfWeek(monday), gl = gameOfWeek(weekStartOf(shiftYmd(monday, -7)));
+  const only = (list, g) => (list||[]).filter(r => (r.game || 'dodge') === g.key);
+  rows = only(rows, gw); lastRows = only(lastRows, gl);
+  const top = rows.slice(0, RANK_TOP);
+  const mine = rows.find(r => r.sid === sid);
   const inTop = top.some(r => r.sid === sid);
-  const last = (lastRows||[])[0];
+  const last = lastRows[0];
 
   const list = top.map((r, n) => `
     <div class="gm-rk${n===0?' top':''}${r.sid===sid?' me':''}">
@@ -8228,11 +8260,11 @@ function rankHTML(sid, rows, lastRows, monday){
     : '한 판 하면 이번 주 기록이 시작됩니다'}</div>`;
 
   return `<div class="gm-rank">
-    <div class="hd"><b>이번 주 순위</b><s>${weekLabelOf(monday)}</s></div>
+    <div class="hd"><b>이번 주 순위</b><s>${gw.icon} ${escHtml(gw.name)}<i style="font-style:normal;"> · </i>${weekLabelOf(monday)}</s></div>
     ${list}
     ${yet}
-    <div class="yet">전체 ${(rows||[]).length}명 · 월요일에 새로 시작합니다${
-      last ? `<br>지난 주 1등 <b>${escHtml(last.name||'')}</b>${
+    <div class="yet">전체 ${rows.length}명 · <b>월요일에 게임이 바뀝니다</b>${
+      last ? `<br>지난 주(${escHtml(gl.name)}) 1등 <b>${escHtml(last.name||'')}</b>${
         last.cls?` (${escHtml(last.cls)})`:''} ${(last.score||0).toLocaleString()}점` : ''}</div>
   </div>`;
 }
@@ -8263,9 +8295,9 @@ function ckCardHTML(c){
         <span class="ic"><img src="stamp.webp" alt=""></span>
         <span class="t"><b>오늘 도장을 찍었습니다 — ${todayScore.toLocaleString()}점</b>
         <span>내일 다시 열립니다 · 역대 최고 ${(ck.bestScore||0).toLocaleString()}점</span></span></div>`
-    : `<div class="gm-run" onclick="openDodge()">
-        <span class="ic">💩</span>
-        <span class="t"><b>오늘의 게임 — 똥피하기</b>
+    : `<div class="gm-run" onclick="openGame()">
+        <span class="ic">${gameThisWeek().icon}</span>
+        <span class="t"><b>이번 주 게임 — ${escHtml(gameThisWeek().name)}</b>
         <span>하루 한 판입니다 · 역대 최고 ${(ck.bestScore||0).toLocaleString()}점</span></span>
         <span class="go">${iconSvg('chevR',16)}</span></div>`;
 
@@ -8416,17 +8448,183 @@ const CHAR_ANCHOR = 0.479;     // «색이 있는 픽셀»의 무게중심. 상�
 const CHAR_H = 46;
 (new Image()).src = 'stamp.webp';   // 미리 받아 둔다 — 찍히는 순간에 늦게 뜨면 «쿵»이 죽는다
 
-const Dodge = {
+/* ---------- 갈래 ① 똥피하기 ---------- */
+const MODE_DODGE = {
+  reset(g){
+    g.spawnIn = .6; g.items = [];
+    g.px = g.w / 2; g.py = g.h - 58; g.face = 1;
+  },
+  step(g, dt){
+    /* 손가락을 «따라가되» 즉시 붙지는 않는다. 붙여 버리면 조작감이 없다 */
+    const pr = 15, was = g.px;
+    if(g.ptr !== null) g.px += (g.ptr - g.px) * Math.min(1, dt * 14);
+    const k = (g.keys.r ? 1 : 0) - (g.keys.l ? 1 : 0);
+    if(k) g.px += k * 300 * dt;
+    if(g.px < pr) g.px = pr;
+    if(g.px > g.w - pr) g.px = g.w - pr;
+    /* ⚠ 문턱을 둔다. 0 이면 제자리에서 좌우가 깜빡인다 */
+    const moved = g.px - was;
+    if(moved > .5) g.face = 1; else if(moved < -.5) g.face = -1;
+
+    /* 난이도 — **서로 다른 시각에 오르는 셋**.
+       ⚠ 개수를 따로 올리는 것이 핵심이다. 속도만 올리면 화면은 오히려 «비어» 보인다 —
+         빨리 떨어질수록 화면에 머무는 시간이 짧아지기 때문이다.
+       ⚠ 처음 30초는 일부러 느슨하게 둔다. 초반부터 조이면 뒤쪽 단계를 아무도 못 본다. */
+    const fall = Math.min(155 + g.t * 9, 540);
+    g.spawnIn -= dt;
+    if(g.spawnIn <= 0){
+      g.spawnIn = Math.max(.14, .70 - g.t * .016);
+      const burst = g.t > 80 ? 4 : g.t > 55 ? 3 : g.t > 30 ? 2 : 1;
+      const r = 13, xs = [];
+      for(let b = 0; b < burst; b++){
+        /* ⚠ 한 번에 여럿을 낼 때 서로 붙여 놓으면 «피할 수 없는 벽»이 된다 */
+        let x, tries = 0, ok;
+        do{
+          x = r + Math.random() * (g.w - r * 2);
+          ok = !xs.some(v => Math.abs(v - x) < 58);
+          tries++;
+        } while(!ok && tries < 14);
+        xs.push(x);
+        g.items.push({x, y: -r - b * 7, r,
+          v: fall * (.85 + Math.random() * .3), star: Math.random() < .16});
+      }
+    }
+
+    for(let i = g.items.length - 1; i >= 0; i--){
+      const it = g.items[i];
+      it.y += it.v * dt;
+      /* ⚠ 판정은 그림보다 «작게» 잡는다. 후하지 않으면 억울하고, 억울하면 안 한다 */
+      const dx = it.x - g.px, dy = it.y - g.py, reach = it.r * .72 + 10;
+      if(dx*dx + dy*dy < reach*reach){
+        if(it.star){ g.stars++; g.items.splice(i,1); continue; }
+        return false;
+      }
+      if(it.y > g.h + it.r) g.items.splice(i,1);
+    }
+    return true;
+  },
+  draw(g){
+    const c = g.cx, w = g.w, h = g.h;
+    c.strokeStyle = '#E7E5DE'; c.lineWidth = 1;
+    c.beginPath(); c.moveTo(0, g.py + 22.5); c.lineTo(w, g.py + 22.5); c.stroke();
+    c.textAlign = 'center'; c.textBaseline = 'middle';
+    for(const it of g.items){
+      c.font = (it.r * 2) + 'px serif';
+      c.fillText(it.star ? '⭐' : '💩', it.x, it.y);
+    }
+    g._player(g.px, g.py, g.face);
+  }
+};
+
+/* ---------- 갈래 ② 달리기 — 3레인 (2026-09-01 · S-D · 사용자가 시켰다) ----------
+   「**서브웨이서퍼 같은 3레인 장애물 게임을 단순화하여**」.
+   🔵 **단순화한 자리** — 점프와 슬라이드를 뺐다. 남은 조작은 «좌우 한 칸»뿐이다.
+     폰에서 한 손으로 하는 게임이고, 조작이 셋이 되는 순간 «못 하겠다»가 나온다.
+   🔴 **에셋을 새로 만들지 않았다.** 노트가 「러너의 걸림돌은 코드가 아니라 그림」이라고
+     적어 둔 자리다(S-D). 달리는 사람은 이미 있는 \`game-char.webp\`를 그대로 쓰고,
+     길과 장애물은 도형이다. 그래서 사흘이 아니라 하루에 끝났다.
+   ⚠ **한 줄은 반드시 비워 둔다.** 셋 다 막으면 «피할 수 없는 벽»이 된다 —
+     똥피하기에서 x 를 58px 떼어 놓은 것과 같은 규칙이다. */
+const MODE_RUNNER = {
+  reset(g){
+    g.lane = 1; g.lanes = 3;
+    g.px = g.laneX(1); g.py = g.h - 74; g.face = 1;
+    g.items = []; g.spawnIn = .9; g.road = 0;
+  },
+  /* 화면 좌우를 눌러도, 화살표를 눌러도 «한 칸»이다 */
+  down(g, x){ this.move(g, x < g.w / 2 ? -1 : 1); },
+  key(g, k, isDown){ if(isDown) this.move(g, k === 'ArrowLeft' ? -1 : 1); },
+  move(g, d){
+    const n = Math.max(0, Math.min(g.lanes - 1, g.lane + d));
+    if(n !== g.lane){ g.lane = n; g.face = d; }
+  },
+  step(g, dt){
+    /* 칸 사이를 미끄러지듯 옮긴다 — 순간이동하면 «내가 옮겼나»가 안 보인다 */
+    const tx = g.laneX(g.lane);
+    g.px += (tx - g.px) * Math.min(1, dt * 16);
+
+    /* 난이도 — 속도와 «한 번에 몇 줄을 막나»가 따로 오른다.
+       ⚠ 두 줄을 막는 것은 40초 뒤부터다. 처음부터 두 줄이면 운으로 죽는다. */
+    const v = Math.min(230 + g.t * 11, 720);
+    g.road = (g.road + v * dt) % 46;
+    g.spawnIn -= dt;
+    if(g.spawnIn <= 0){
+      /* 오는 간격을 «시간»이 아니라 «거리»로 잡는다 — 빨라져도 빽빽해지지 않는다 */
+      g.spawnIn = Math.max(.34, 210 / v);
+      const blockTwo = g.t > 40 && Math.random() < Math.min(.45, (g.t - 40) * .012);
+      const free = Math.floor(Math.random() * 3);          // 반드시 비는 한 줄
+      const picks = [0,1,2].filter(l => l !== free);
+      const lanes = blockTwo ? picks : [picks[Math.floor(Math.random() * picks.length)]];
+      lanes.forEach(l => g.items.push({lane:l, y:-30, h:26, v, star:false}));
+      /* 별은 «빈 줄»에만 둔다 — 장애물과 겹치면 먹으러 갔다가 죽는다 */
+      if(Math.random() < .3) g.items.push({lane:free, y:-30, h:22, v, star:true});
+    }
+
+    for(let i = g.items.length - 1; i >= 0; i--){
+      const it = g.items[i];
+      const was = it.y;
+      it.y += it.v * dt;
+      /* ⚠ 지나간 «구간»으로 본다. 한 점으로 보면 빠를 때 사람을 통과해 버린다(터널링) */
+      const hit = it.lane === g.lane
+        && was + it.h/2 > g.py - 18 - (it.y - was)
+        && it.y - it.h/2 < g.py + 18;
+      if(hit){
+        if(it.star){ g.stars++; g.items.splice(i,1); continue; }
+        return false;
+      }
+      if(it.y - it.h > g.h) g.items.splice(i,1);
+    }
+    return true;
+  },
+  draw(g){
+    const c = g.cx, w = g.w, h = g.h, lw = g.laneW();
+    const x0 = g.roadX();
+    /* 길 */
+    c.fillStyle = '#F1EFE9';
+    c.fillRect(x0, 0, lw * 3, h);
+    /* 줄 사이 점선이 흐르면 «달리는 중»으로 보인다 — 이 게임의 속도감은 전부 여기서 온다 */
+    c.strokeStyle = '#DDDAD1'; c.lineWidth = 3; c.setLineDash([20, 26]);
+    c.lineDashOffset = -g.road;
+    for(let i = 1; i < 3; i++){
+      c.beginPath(); c.moveTo(x0 + lw * i, 0); c.lineTo(x0 + lw * i, h); c.stroke();
+    }
+    c.setLineDash([]);
+    /* 장애물 · 별 */
+    c.textAlign = 'center'; c.textBaseline = 'middle';
+    for(const it of g.items){
+      const x = g.laneX(it.lane);
+      if(it.star){ c.font = '22px serif'; c.fillText('⭐', x, it.y); continue; }
+      const bw = lw * .62, bh = it.h;
+      c.fillStyle = '#B03A2E';
+      c.beginPath();
+      if(c.roundRect) c.roundRect(x - bw/2, it.y - bh/2, bw, bh, 5);
+      else c.rect(x - bw/2, it.y - bh/2, bw, bh);
+      c.fill();
+    }
+    g._player(g.px, g.py, g.face);
+  }
+};
+
+const Game = {
   cv:null, cx:null, w:0, h:0,
   raf:0, running:false, started:false,
   t:0, last:0, spawnIn:0,
   px:0, py:0, items:[], score:0, stars:0,
   face:1, onScore:null, onEnd:null,
   ptr:null, keys:null, _h:null,
+  mode:null, lane:1, lanes:3, road:0,
+
+  /* 3레인 자리 계산 — 길은 화면 가운데에 두되 너무 넓히지 않는다.
+     폰을 가로로 눕혀도 줄이 손 닿는 곳에 있어야 한다. */
+  roadW(){ return Math.min(this.w, 330); },
+  roadX(){ return (this.w - this.roadW()) / 2; },
+  laneW(){ return this.roadW() / 3; },
+  laneX(i){ return this.roadX() + this.laneW() * (i + .5); },
 
   mount(cv, o){
     o = o || {};
     this.stop();
+    this.mode = o.mode || MODE_DODGE;
     this.cv = cv;
     const wrap = cv.parentNode;
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -8440,21 +8638,35 @@ const Dodge = {
     this.onScore = o.onScore || null; this.onEnd = o.onEnd || null;
 
     this.started = false;
-    this.t = 0; this.spawnIn = .6; this.items = [];
-    this.score = 0; this.stars = 0;
-    this.px = w / 2; this.py = h - 58; this.face = 1;
+    this.t = 0; this.score = 0; this.stars = 0;
     this.ptr = null; this.keys = {l:false, r:false};
+    this.mode.reset(this);            // 자리·장애물·난이도는 갈래가 정한다
 
     const self = this;
     this._h = {
-      down(e){ self.started = true; self.ptr = self._x(e); e.preventDefault(); },
+      down(e){
+        const x = self._x(e);
+        const first = !self.started;
+        self.started = true; self.ptr = x;
+        /* ⚠ 시작하는 그 첫 누름은 «한 칸 옮기기»로 세지 않는다 —
+           시작하자마자 옆줄로 튀면 «내가 안 눌렀는데»가 된다 */
+        if(!first && self.mode.down) self.mode.down(self, x);
+        e.preventDefault();
+      },
       /* ⚠ move 를 캔버스에 걸면 손가락이 밖으로 나갔을 때 놓친다. window 에 건다 */
       move(e){ if(self.ptr !== null){ self.ptr = self._x(e); e.preventDefault(); } },
       up(){ self.ptr = null; },
       key(e){
         const d = (e.type === 'keydown');
-        if(e.key === 'ArrowLeft'){ self.started = true; self.keys.l = d; e.preventDefault(); }
-        if(e.key === 'ArrowRight'){ self.started = true; self.keys.r = d; e.preventDefault(); }
+        if(e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+        /* ⚠ 눌러 둔 채로 두면 keydown 이 되풀이해서 온다 — 칸을 옮기는 갈래에서는
+           그 되풀이가 «주르륵»이 되므로 처음 한 번만 받는다 */
+        const repeat = d && e.repeat;
+        const first = !self.started;
+        self.started = true;
+        if(e.key === 'ArrowLeft') self.keys.l = d; else self.keys.r = d;
+        if(!first && !repeat && self.mode.key) self.mode.key(self, e.key, d);
+        e.preventDefault();
       },
       /* ⚠ 폰에서 앱을 바꿨다 돌아오면 손가락은 없는데 마지막 자리가 남아 혼자 미끄러진다 */
       vis(){ if(document.hidden) self.ptr = null; }
@@ -8504,54 +8716,9 @@ const Dodge = {
   _step(dt){
     if(!this.started) return;
     this.t += dt;
-
-    /* 손가락을 «따라가되» 즉시 붙지는 않는다. 붙여 버리면 조작감이 없다 */
-    const pr = 15, was = this.px;
-    if(this.ptr !== null) this.px += (this.ptr - this.px) * Math.min(1, dt * 14);
-    const k = (this.keys.r ? 1 : 0) - (this.keys.l ? 1 : 0);
-    if(k) this.px += k * 300 * dt;
-    if(this.px < pr) this.px = pr;
-    if(this.px > this.w - pr) this.px = this.w - pr;
-    /* ⚠ 문턱을 둔다. 0 이면 제자리에서 좌우가 깜빡인다 */
-    const moved = this.px - was;
-    if(moved > .5) this.face = 1; else if(moved < -.5) this.face = -1;
-
-    /* 난이도 — **서로 다른 시각에 오르는 셋**.
-       ⚠ 개수를 따로 올리는 것이 핵심이다. 속도만 올리면 화면은 오히려 «비어» 보인다 —
-         빨리 떨어질수록 화면에 머무는 시간이 짧아지기 때문이다.
-       ⚠ 처음 30초는 일부러 느슨하게 둔다. 초반부터 조이면 뒤쪽 단계를 아무도 못 본다. */
-    const fall = Math.min(155 + this.t * 9, 540);
-    this.spawnIn -= dt;
-    if(this.spawnIn <= 0){
-      this.spawnIn = Math.max(.14, .70 - this.t * .016);
-      const burst = this.t > 80 ? 4 : this.t > 55 ? 3 : this.t > 30 ? 2 : 1;
-      const r = 13, xs = [];
-      for(let b = 0; b < burst; b++){
-        /* ⚠ 한 번에 여럿을 낼 때 서로 붙여 놓으면 «피할 수 없는 벽»이 된다 */
-        let x, tries = 0, ok;
-        do{
-          x = r + Math.random() * (this.w - r * 2);
-          ok = !xs.some(v => Math.abs(v - x) < 58);
-          tries++;
-        } while(!ok && tries < 14);
-        xs.push(x);
-        this.items.push({x, y: -r - b * 7, r,
-          v: fall * (.85 + Math.random() * .3), star: Math.random() < .16});
-      }
-    }
-
-    for(let i = this.items.length - 1; i >= 0; i--){
-      const it = this.items[i];
-      it.y += it.v * dt;
-      /* ⚠ 판정은 그림보다 «작게» 잡는다. 후하지 않으면 억울하고, 억울하면 안 한다 */
-      const dx = it.x - this.px, dy = it.y - this.py, reach = it.r * .72 + 10;
-      if(dx*dx + dy*dy < reach*reach){
-        if(it.star){ this.stars++; this.items.splice(i,1); continue; }
-        this._end(); return;
-      }
-      if(it.y > this.h + it.r) this.items.splice(i,1);
-    }
-
+    /* 🔴 **갈래가 `false` 를 돌려주면 그 판은 끝이다.** 갈래 안에서 직접 끝내지 않는다 —
+       끝내는 길이 둘이 되면 «저장을 한 번만»이라는 약속이 깨진다. */
+    if(this.mode.step(this, dt) === false){ this._end(); return; }
     const s = Math.floor(this.t * 10) + this.stars * 50;
     if(s !== this.score){ this.score = s; if(this.onScore) this.onScore(s); }
   },
@@ -8566,34 +8733,27 @@ const Dodge = {
   _draw(){
     const c = this.cx, w = this.w, h = this.h;
     c.clearRect(0, 0, w, h);
-    c.strokeStyle = '#E7E5DE'; c.lineWidth = 1;
-    c.beginPath(); c.moveTo(0, this.py + 22.5); c.lineTo(w, this.py + 22.5); c.stroke();
-
-    c.textAlign = 'center'; c.textBaseline = 'middle';
-    for(const it of this.items){
-      c.font = (it.r * 2) + 'px serif';
-      c.fillText(it.star ? '⭐' : '💩', it.x, it.y);
-    }
-    this._player();
-
+    this.mode.draw(this);
     if(!this.started){
+      c.textAlign = 'center'; c.textBaseline = 'middle';
       c.fillStyle = '#22221E'; c.font = '700 15px Pretendard, sans-serif';
       c.fillText('화면을 눌러 시작', w/2, h/2 - 16);
       c.fillStyle = '#96968C'; c.font = '12.5px Pretendard, sans-serif';
-      c.fillText('손가락을 끌어 좌우로 피하세요', w/2, h/2 + 8);
-      c.fillText('⭐ 를 먹으면 50점', w/2, h/2 + 28);
+      c.fillText(this.mode === MODE_RUNNER ? GAMES[0].tip : GAMES[1].tip, w/2, h/2 + 8);
+      c.fillText(this.mode === MODE_RUNNER ? GAMES[0].tip2 : GAMES[1].tip2, w/2, h/2 + 28);
     }
   },
 
-  _player(){
-    const c = this.cx, x = this.px, y = this.py, r = 15;
+  _player(px, py, face){
+    const c = this.cx, x = (px===undefined?this.px:px), y = (py===undefined?this.py:py), r = 15;
+    face = (face===undefined ? this.face : face);
     if(CHAR_IMG.complete && CHAR_IMG.naturalWidth){
       const hh = CHAR_H, ww = hh * (CHAR_IMG.naturalWidth / CHAR_IMG.naturalHeight);
       c.save(); c.translate(x, y);
       /* ⚠ 그림은 «왼쪽으로 달리는» 자세다 — 먼지 자국이 오른쪽에 있다.
          자국은 «가던 길 뒤»에 남으므로 오른쪽에 자국이면 왼쪽으로 가는 것이다.
          그래서 **오른쪽으로 갈 때** 뒤집는다. */
-      if(this.face > 0) c.scale(-1, 1);
+      if(face > 0) c.scale(-1, 1);
       c.drawImage(CHAR_IMG, -ww * CHAR_ANCHOR, -hh / 2, ww, hh);
       c.restore();
       return;
@@ -8610,7 +8770,9 @@ const Dodge = {
 };
 
 /* ---------- 열기 · 닫기 ---------- */
-function openDodge(){
+/* 🔴 **이번 주의 게임을 연다.** 어느 갈래인지는 «주»가 정한다 — 학생이 고르지 않는다.
+   고르게 하면 점수 잘 나오는 쪽으로 몰려 그 주 순위가 «누가 쉬운 걸 찾았나»가 된다. */
+function openGame(){
   const sid = state.currentUser && state.currentUser.studentId;
   if(!sid) return;
   const rec = DATA.records[sid];
@@ -8621,25 +8783,28 @@ function openDodge(){
   const host = document.getElementById('gamehost');
   if(!host || host.querySelector('.gm-over')) return;
   const ck = ckState(rec);
+  const gw = gameThisWeek();
   const ov = document.createElement('div');
   ov.className = 'gm-over';
   ov.innerHTML = `<div class="gm-shell">
     <div class="gm-bar">
-      <button type="button" class="gm-x" aria-label="닫기" onclick="closeDodge()">✕</button>
+      <button type="button" class="gm-x" aria-label="닫기" onclick="closeGame()">✕</button>
       <span class="sc" id="gm-score">0</span>
+      <span class="bs" style="margin-left:auto;">${gw.icon} ${escHtml(gw.name)}</span>
       <span class="bs" id="gm-best">최고 ${(ck.bestScore||0).toLocaleString()}</span>
     </div>
     <div class="gm-stage" id="gm-stage"><canvas id="gm-canvas"></canvas></div>
   </div>`;
   host.appendChild(ov);
-  Dodge.mount(ov.querySelector('#gm-canvas'), {
+  Game.mount(ov.querySelector('#gm-canvas'), {
+    mode: gameThisWeek().key === 'runner' ? MODE_RUNNER : MODE_DODGE,
     onScore(s){ const e = document.getElementById('gm-score'); if(e) e.textContent = s; },
-    onEnd: finishDodge
+    onEnd: finishGame
   });
 }
 
-function closeDodge(){
-  Dodge.stop();
+function closeGame(){
+  Game.stop();
   const host = document.getElementById('gamehost');
   const ov = host && host.querySelector('.gm-over');
   if(ov) ov.remove();
@@ -8648,7 +8813,7 @@ function closeDodge(){
 
 /* ⚠ **저장은 여기 한 곳이다** — 판이 끝날 때 한 번.
    기록은 «읽어 온 그 객체»를 제자리에서 고친다 (saveRecord 가 객체 동일성을 본다). */
-async function finishDodge(score){
+async function finishGame(score){
   const sid = state.currentUser && state.currentUser.studentId;
   if(!sid) return;
   const rec = DATA.records[sid];
@@ -8691,7 +8856,7 @@ async function finishDodge(score){
       <span class="day">오늘 도장을 찍었습니다 · ${ck.streak}일째</span></div>
     ${rankHTML(sid, rows || rankCache[monday], rankCache[weekStartOf(shiftYmd(monday,-7))], monday)}
     <div class="one">하루 한 판입니다. 내일 다시 열립니다</div>
-    <div class="btns"><button type="button" onclick="closeDodge()">닫기</button></div>
+    <div class="btns"><button type="button" onclick="closeGame()">닫기</button></div>
   </div>`;
   stage.appendChild(res);
 }
