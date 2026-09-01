@@ -3849,6 +3849,25 @@ function studentClassIds(s){
   return out;
 }
 function studentMainClassId(s){ return (s && s.classId) || ''; }
+/* 🔴 **«이 학생의 반»을 한 줄로 적는 말은 여기 하나뿐이다** (2026-09-01 · E-3).
+   씨앗 데이터를 심고 명단을 눈으로 보고서야 보였다 — 뷰 고르개는 고쳤는데 **행의 이름표**가
+   `s.classId`만 보고 특강만 듣는 학생을 「미배정」이라 부르고 있었다.
+   기획서에 «「미배정」의 뜻이 바뀝니다»라고 적어 둔 그 자리다. 적어 두고도 한 곳을 빠뜨렸다.
+   ⚠ 주 반이 있으면 그 이름이 먼저다 — 뒤에 «+N»으로 겹쳐 듣는 수만 덧붙인다.
+     반 이름을 전부 늘어놓으면 40px 행에서 표가 무너진다(8절). */
+function studentClassLabel(s, opt){
+  const ids = studentClassIds(s);
+  if(ids.length === 0) return '미배정';
+  const main = studentMainClassId(s);
+  const extra = ids.length - (main ? 1 : 0);
+  if(main) return classNameOf(main) + (extra ? ' +' + extra : '');
+  return (opt && opt.short) ? SPECIAL_ONLY_LABEL : ids.map(classNameOf).join(' · ');
+}
+/* 마우스를 올렸을 때 보이는 «전부». 잘린 것은 여기서 펴 준다. */
+function studentClassTitle(s){
+  const ids = studentClassIds(s);
+  return ids.length ? ids.map(classNameOf).join(' · ') : '미배정';
+}
 function studentExtraClassIds(s){ return studentClassIds(s).slice(1); }
 function classKindOf(id){
   const c = DATA.classes.find(x=>x.id===id);
@@ -10773,7 +10792,10 @@ function teacherRosterHTML(){
         return ` <span class="badge ${dd.state==='during' || dd.days<=7 ? 'no' : dd.days<=14 ? 'late' : ''}"
           >${dd.state==='during' ? '시험 중' : 'D-'+dd.days}</span>`;
       })()}</td>
-      ${wide ? `<td class="sub" title="${escHtml(classNameOf(s.classId))}">${s.classId ? escHtml(classNameOf(s.classId)) : '<span class="badge">미배정</span>'}</td>` : ''}
+      ${wide ? `<td class="sub" title="${escHtml(studentClassTitle(s))}">${
+        studentClassIds(s).length
+          ? escHtml(studentClassLabel(s, {short:true}))
+          : '<span class="badge">미배정</span>'}</td>` : ''}
       ${/* 근거 문장은 열 폭에서 …로 잘린다. 잘린 뒤에도 읽을 수 있게 title로 전문을 남긴다. */''}
       <td${sg ? ` title="${escHtml(sg[1] + ' — ' + sg[2])}"` : ''}>${sg
         ? `<span class="rst-sig"><span class="badge ${sg[0]}">${sg[1]}</span><span class="why">${escHtml(sg[2])}</span></span>`
@@ -10967,7 +10989,7 @@ async function exportRosterExcel(onlySelected){
       const st = m.stats[s.studentId], sg = rosterSignal(st);
       return [
         s.studentId, s.name, s.school||'', s.grade||'',
-        s.classId ? classNameOf(s.classId) : '미배정',
+        studentClassTitle(s),
         sg ? sg[1] : '', sg ? sg[2] : '',
         st.attPct===null ? '' : st.attPct,
         st.hwTotal ? st.hwDone + '/' + st.hwTotal : '',
@@ -13876,7 +13898,7 @@ function rptBatchDrawerHTML(){
     return `<div class="rpb-row ${off ? 'off' : ''}${done ? ' ok' : ''}${now ? ' now' : ''}">
       <span class="n mono">${i + 1}</span>
       <span class="nm">${escHtml(st ? st.name : sid)}<s>${
-        escHtml(st && st.classId ? classNameOf(st.classId) : '미배정')}</s></span>
+        escHtml(st ? studentClassTitle(st) : '미배정')}</s></span>
       <span class="st">${word}</span></div>`;
   }).join('');
 
@@ -14193,7 +14215,7 @@ function sdScreenHTML(s, rec, isAssistant){
     <div class="av lg">${escHtml((s.name||'?').slice(0,1))}</div>
     <div style="min-width:0;">
       <h1 class="t-title">${escHtml(s.name)}</h1>
-      <div class="t-meta" style="margin-top:6px;">${escHtml(s.school||'학교 미입력')} ${escHtml(s.grade||'')}<s>·</s>${escHtml(classNameOf(s.classId))}<s>·</s><span class="mono">${escHtml(sid)}</span></div>
+      <div class="t-meta" style="margin-top:6px;">${escHtml(s.school||'학교 미입력')} ${escHtml(s.grade||'')}<s>·</s>${escHtml(studentClassTitle(s))}<s>·</s><span class="mono">${escHtml(sid)}</span></div>
     </div>
     <div class="tags">
       ${/* 퇴원이면 «언제»까지 말한다 — 이 화면에 온 이유가 대개 그것이다 (W-1).
@@ -14228,7 +14250,8 @@ function sdScreenHTML(s, rec, isAssistant){
     <div class="sd-crow"><span>학생</span><b class="m">${escHtml(s.phone||'—')}</b></div>
     <hr class="s">
     <div class="t-sec">반 · 진도</div>
-    <div class="sd-crow"><span>반</span><b>${escHtml(classNameOf(s.classId))}</b></div>
+    ${/* 겹쳐 듣는 반까지 적는다 (2026-09-01 · E-3) — 여기는 세로로 늘어나므로 다 적어도 된다. */''}
+    <div class="sd-crow"><span>반</span><b>${escHtml(studentClassTitle(s))}</b></div>
     ${/* ⚠ mono를 걷어냈다 — 「월,수,금 7시~9시」는 한글 낱말이라 고정폭 대체 글꼴로 떨어지면서
          「월 , 수 , 금」처럼 벌어졌다. mono는 날짜·숫자·퍼센트에만 (8절). */''}
     <div class="sd-crow"><span>수업</span><b>${escHtml((DATA.classes.find(c=>c.id===s.classId)||{}).schedule||'—')}</b></div>
@@ -14588,7 +14611,7 @@ function studentAccountDrawerHTML(){
         <div class="t">${escHtml(s.name)}${gone?' <span class="badge gone">퇴원</span>':''}</div>
         <div class="m"><span class="mono">${escHtml(s.studentId)}</span>
           <s>·</s>${escHtml(s.school||'학교 미입력')} ${escHtml(s.grade||'')}
-          <s>·</s>${s.classId ? escHtml(classNameOf(s.classId)) : '미배정'}</div>
+          <s>·</s>${escHtml(studentClassTitle(s))}</div>
         <button class="x" onclick="stuEdit(null)" title="닫기 (Esc)">×</button>
       </div>
       <div class="hwd-b">${studentAccountFormHTML(s)}</div>
