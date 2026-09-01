@@ -5490,6 +5490,21 @@ async function deleteQna(qid){
 }
 
 /* =================== 채팅 =================== */
+/* 🔴 **한글 조합을 끝내는 Enter는 «전송»이 아니다** (2026-09-01 · T-2).
+   「안녕하세」까지 치고 조합을 확정하려고 누르는 그 Enter도 keydown 을 쏜다.
+   막지 않으면 **반쯤 친 말이 그대로 나간다** — 되돌릴 수 없는 자리라 더 나쁘다.
+   ⚠ **영문만 쳐 보면 절대 안 걸린다.** 교재 칸(T-1)에서 같은 덫을 만나 막았는데,
+     그때 채팅 세 곳에 같은 것이 남아 있는 것을 보고도 미뤘다 — 이제 막는다.
+   ⚠ Shift+Enter 는 줄바꿈이다. 전송으로 세지 않는다.
+   🔵 판단을 여기 하나로 모은다. 칸이 셋(학생 · 강사 상세 · 강사 채팅 탭)인데
+     각자 조건을 들고 있으면 한 곳만 고쳐지는 날이 온다. */
+function chatSendKey(ev){
+  if(!ev || ev.key !== 'Enter') return false;
+  if(ev.isComposing || ev.keyCode === 229) return false;   // 조합 중 (229는 옛 브라우저)
+  if(ev.shiftKey) return false;
+  ev.preventDefault();
+  return true;
+}
 async function sendChatMessage(sid, from){
   const inputId = from==='teacher' ? 'chat-input-teacher' : 'chat-input-student';
   const el = document.getElementById(inputId);
@@ -10226,7 +10241,7 @@ function stuChatHTML(c){
   </div>
   <div class="row" style="gap:8px;">
     <input id="chat-input-student" class="sap-in" placeholder="메시지 입력"
-      onkeydown="if(event.key==='Enter') sendChatMessage('${c.sid}','student')">
+      onkeydown="if(chatSendKey(event)) sendChatMessage('${c.sid}','student')">
     <button class="btn p" style="height:46px;flex-shrink:0;"
       onclick="sendChatMessage('${c.sid}','student')">전송</button>
   </div>`;
@@ -11036,7 +11051,7 @@ function teacherRosterHTML(){
     <button class="btn sm" onclick="rosterBulkMoveClass()">반 이동</button>
     <button class="btn sm" onclick="exportRosterExcel(true)">${iconSvg('download',13)} 선택 학생 내보내기</button>
     ${/* 리포트 PDF (2026-09-01 · R-3) — 고르는 칸도 발판도 이미 있었다. 단추 하나만 얹는다. */''}
-    <button class="btn sm" onclick="openReportBatch()">${iconSvg('download',13)} 리포트 PDF</button>
+    <button class="btn sm" onclick="openReportBatch()">${iconSvg('download',13)} 리포트 이미지</button>
     <button class="btn q sm" onclick="state.rosterSelected=[]; state.rosterLastIndex=null; render()">선택 해제</button>
     <span class="hint">Shift+클릭으로 범위 선택</span>
   </div>`;
@@ -13855,17 +13870,6 @@ function ensureHtml2CanvasLoaded(){
     document.head.appendChild(s);
   });
 }
-function ensureJsPDFLoaded(){
-  if(window.jspdf && window.jspdf.jsPDF) return Promise.resolve();
-  return new Promise((resolve, reject)=>{
-    const s = document.createElement('script');
-    s.src = 'https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js';
-    s.onload = () => resolve();
-    s.onerror = () => reject(new Error('PDF 라이브러리를 불러오지 못했습니다.'));
-    document.head.appendChild(s);
-  });
-}
-
 /* 화면이 그리는 «그» 문서를 그대로 떼어 온다.
    🔴 **여기서 리포트를 다시 만들지 않는다** — 만들면 화면과 PDF가 두 벌이 되고,
      한쪽만 고치는 날부터 «화면에서는 맞는데 PDF는 틀린» 일이 시작된다.
@@ -13908,73 +13912,69 @@ function rptMonthOptions(ids){
 /* 자를 자리 — «덩어리의 아래끝»만 고른다. 눈금 줄이나 표 행 한가운데를 자르면
    글자가 위아래로 반씩 갈려 **두 장 모두에서 못 읽는다.**
    ⚠ 한 덩어리가 한 장보다 크면 어쩔 수 없이 그냥 자른다(선생님 한마디가 아주 길 때). */
-function rptPageCuts(el){
-  const top = el.getBoundingClientRect().top;
-  const total = el.scrollHeight;
-  const marks = Array.from(el.querySelectorAll('.rp-h, .rp-m, .rp-tb thead, .rp-tb tbody tr, .rp-leg, .rp-say'))
-    .map(x => x.getBoundingClientRect().bottom - top)
-    .filter(v => v > 0 && v < total)
-    .sort((a,b)=>a-b);
-  const cuts = [0];
-  let at = 0, guard = 0;
-  while(total - at > RPB_PAGE_PX && guard++ < 200){
-    const fits = marks.filter(v => v > at && v <= at + RPB_PAGE_PX);
-    at = fits.length ? fits[fits.length-1] : at + RPB_PAGE_PX;
-    cuts.push(at);
+/* 🔴 **PDF가 아니라 «사진»으로 낸다** (2026-09-01 · R-4 · 사용자가 정했다).
+   까닭은 쓰임이 바뀌었기 때문이다 — 「**파일이나 사진으로 문자전송할 생각**」.
+   PDF 한 장이 **3.6MB**였고 MMS는 보통 1MB 안팎이라, 그대로는 못 보낸다.
+   🔵 어차피 안에 든 것은 처음부터 그림이었다(html2canvas). **PDF 껍데기만 벗긴 셈이다** —
+     jsPDF도, 장 나누기도 필요 없어져 코드가 오히려 줄었다.
+   ⚠ **한 학생에 한 장이다.** 장을 나누면 문자에 사진이 여러 개 붙어 «어느 게 앞이지»가 된다.
+     종이로 곱게 뽑을 때는 인쇄(R-2b)가 그대로 있다 — 그쪽은 벡터라 글자가 선명하다. */
+const RPB_MAX_BYTES = 950 * 1024;      // MMS가 대개 1MB 언저리다. 그 밑으로 맞춘다
+
+/* 캔버스를 «문자로 보낼 만한 크기»가 될 때까지 낮춰 가며 굽는다.
+   ⚠ 품질만 낮추면 글자 가장자리가 먼저 뭉갠다. **크기를 줄이는 쪽이 글자에 덜 아프다** —
+     그래서 품질을 두 번 낮춘 뒤에야 크기를 건드린다. */
+async function rptBakeImage(canvas){
+  const tries = [ {q:.92, s:1}, {q:.84, s:1}, {q:.86, s:.8}, {q:.8, s:.66} ];
+  let last = null;
+  for(const t of tries){
+    let cv = canvas;
+    if(t.s !== 1){
+      cv = document.createElement('canvas');
+      cv.width  = Math.round(canvas.width  * t.s);
+      cv.height = Math.round(canvas.height * t.s);
+      const c = cv.getContext('2d');
+      c.imageSmoothingQuality = 'high';
+      /* ⚠ JPEG에는 투명이 없다 — 흰 바탕을 먼저 깔지 않으면 검게 나온다 */
+      c.fillStyle = '#ffffff'; c.fillRect(0, 0, cv.width, cv.height);
+      c.drawImage(canvas, 0, 0, cv.width, cv.height);
+    }
+    const url = cv.toDataURL('image/jpeg', t.q);
+    const bytes = Math.round((url.length - url.indexOf(',') - 1) * 3 / 4);
+    last = {url, bytes, q:t.q, scale:t.s, w:cv.width, h:cv.height};
+    if(bytes <= RPB_MAX_BYTES) return last;
   }
-  cuts.push(total);
-  return cuts;
+  return last;                          // 끝까지 못 줄였으면 가장 작은 것을 준다
+}
+function rptDataUrlToBlob(url){
+  const i = url.indexOf(','), bin = atob(url.slice(i + 1));
+  const buf = new Uint8Array(bin.length);
+  for(let k = 0; k < bin.length; k++) buf[k] = bin.charCodeAt(k);
+  return new Blob([buf], {type:'image/jpeg'});
 }
 
-/* 🔴 **크롬은 «한 번에 여러 파일 내려받기»를 조용히 막는다** (2026-09-01에 실제로 당했다).
-   3명을 저장했다고 알렸는데 **내려받기 폴더에는 한 개만** 있었다. 주소창에 작은 차단 표시가
-   뜰 뿐이라 **아무도 모른다.** 「허용해 주세요」라고 적어 둔 것으로는 못 막는다 —
-   **어긋남은 설명할 것이 아니라 없앨 것이다**(08-31에 배운 그것).
-   🔵 그래서 **폴더를 한 번 고르게 하고 거기에 직접 쓴다.** 내려받기가 아니므로 막힐 일이 없고,
-     «어디에 저장됐는지»도 사용자가 고른 그 폴더로 확정된다 — 두 번째 불만도 같이 없어진다.
-   ⚠ **고르는 창은 «누른 그 순간»에 열어야 한다** — 라이브러리를 먼저 기다리면 클릭의 힘이
-     풀려서 브라우저가 창을 안 띄운다. 그래서 runReportBatch의 맨 첫 줄이다.
-   ⚠ 이 API가 없는 브라우저에서는 옛길(내려받기)로 간다. 그때는 **한 개씩 밖에 안 온다는 것을
-     화면에 적어 둔다** — 조용히 실패하게 두지 않는다. */
-function rptCanPickFolder(){ return typeof window.showDirectoryPicker === 'function'; }
-async function rptPickFolder(){
-  if(!rptCanPickFolder()) return null;
-  try{
-    return await window.showDirectoryPicker({ id:'hh-report', mode:'readwrite', startIn:'downloads' });
-  }catch(e){
-    return 'CANCEL';                     // 사용자가 창을 닫았다 — 잘못이 아니다
-  }
-}
-
-/* 한 학생 → 파일 하나. **파일 이름이 곧 학부모께 보낼 때의 이름**이 되므로 사람이 읽는 말로 짓는다.
-   dir가 있으면 그 폴더에 쓰고, 없으면 옛길(내려받기)로 간다. */
+/* 한 학생 → 사진 한 장. **파일 이름이 곧 학부모께 보낼 때의 이름**이 되므로 사람이 읽는 말로 짓는다.
+   dir 가 있으면 그 폴더에 쓰고, 없으면 옛길(내려받기)로 간다. */
 async function rptSaveOne(el, s, ym, dir){
-  /* 긴 문서는 배율을 낮춘다 — 안 그러면 캔버스가 수억 픽셀이 되어 브라우저가 빈 그림을 준다. */
-  const scale = el.scrollHeight > 2600 ? 2 : 3;
+  /* 문자로 보낼 그림이라 288dpi까지 갈 까닭이 없다. 192dpi면 폰에서 또렷하고 용량이 1/3이다. */
+  const scale = el.scrollHeight > 2600 ? 1.5 : 2;
   const canvas = await html2canvas(el, {scale, backgroundColor:'#ffffff', logging:false, useCORS:true});
-  const cuts = rptPageCuts(el);
-  const pdf = new window.jspdf.jsPDF({unit:'mm', format:'a4', orientation:'portrait'});
-  for(let i=0;i<cuts.length-1;i++){
-    const y0 = Math.round(cuts[i]*scale);
-    const h  = Math.round(cuts[i+1]*scale) - y0;
-    if(h <= 0) continue;
-    const part = document.createElement('canvas');
-    part.width = canvas.width; part.height = h;
-    part.getContext('2d').drawImage(canvas, 0, y0, canvas.width, h, 0, 0, canvas.width, h);
-    if(i > 0) pdf.addPage();
-    /* PNG로 넣는다 — JPEG는 글자 가장자리에 얼룩이 진다. 흰 바탕에 글자라 용량도 오히려 작다. */
-    pdf.addImage(part.toDataURL('image/png'), 'PNG', RPB.X, RPB.Y, RPB.PW, (cuts[i+1]-cuts[i])*RPB.MMPX);
-  }
-  const name = (s.name + '_' + ym + '_월간리포트').replace(/[\\/:*?"<>|]/g, '').replace(/\s+/g, '') + '.pdf';
+  const baked = await rptBakeImage(canvas);
+  const name = (s.name + '_' + ym + '_월간리포트').replace(/[\\/:*?"<>|]/g, '').replace(/\s+/g, '') + '.jpg';
   if(dir){
     const fh = await dir.getFileHandle(name, { create:true });
     const w = await fh.createWritable();
-    await w.write(pdf.output('blob'));
+    await w.write(rptDataUrlToBlob(baked.url));
     await w.close();
   }else{
-    pdf.save(name);
+    /* 옛길 — a[download]. 큰 dataURL을 그대로 물리면 브라우저가 버거우므로 blob 주소를 쓴다. */
+    const href = URL.createObjectURL(rptDataUrlToBlob(baked.url));
+    const a = document.createElement('a');
+    a.href = href; a.download = name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(href), 4000);
   }
-  return name;
+  return { name, bytes: baked.bytes };
 }
 
 function rptBatchMonth(delta){
@@ -14029,13 +14029,12 @@ async function runReportBatch(){
   const dir = await rptPickFolder();
   if(dir === 'CANCEL') return;               // 창을 닫으셨다 — 아무 일도 안 한다
   state.reportYm = b.ym;                     // sdReportHTML이 보는 달을 못박는다
-  b.phase = 'running'; b.cur = 0; b.saved = []; b.files = []; b.err = '';
+  b.phase = 'running'; b.cur = 0; b.saved = []; b.files = []; b.bytes = 0; b.err = '';
   b.where = dir ? (dir.name || '고르신 폴더') : '';
   render();
   let stage = null;
   try{
     await ensureHtml2CanvasLoaded();
-    await ensureJsPDFLoaded();
     /* ⚠ 글꼴이 아직 안 왔으면 html2canvas가 **대체 글꼴로** 그려 버린다. 되돌릴 수 없다. */
     if(document.fonts && document.fonts.ready) await document.fonts.ready;
     stage = document.createElement('div');
@@ -14053,16 +14052,20 @@ async function runReportBatch(){
       stage.appendChild(doc);
       /* 두 프레임을 쉰다 — 붙이자마자 재면 배치가 안 끝나 자를 자리가 어긋난다. */
       await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
-      const fname = await rptSaveOne(doc, st, b.ym, dir);
-      b.saved.push(sid); b.files.push(fname); render();
+      const out = await rptSaveOne(doc, st, b.ym, dir);
+      b.saved.push(sid);
+      b.files.push(out.name + '  (' + Math.round(out.bytes/1024) + 'KB)');
+      b.bytes = (b.bytes||0) + out.bytes;
+      render();
       /* ⚠ 옛길(내려받기)일 때만 쉰다 — 잇달아 시키면 브라우저가 뒤엣것을 흘린다.
          폴더에 직접 쓸 때는 그럴 일이 없다. */
       if(!dir) await new Promise(r=>setTimeout(r, 350));
     }
     b.phase = 'done'; render();
+    const mb = Math.round((b.bytes||0)/1024/1024*10)/10;
     showToast(dir
-      ? b.saved.length + '개를 「' + b.where + '」 폴더에 저장했습니다.'
-      : b.saved.length + '개를 내려받기 폴더로 보냈습니다 — 실제로 왔는지 확인해 주세요.');
+      ? b.saved.length + '장을 「' + b.where + '」 폴더에 저장했습니다 · 모두 ' + mb + 'MB'
+      : b.saved.length + '장을 내려받기 폴더로 보냈습니다 — 실제로 왔는지 확인해 주세요.');
   }catch(e){
     b.phase = 'ready';
     b.err = (e && e.message) ? e.message : String(e);
@@ -14094,7 +14097,7 @@ function rptBatchDrawerHTML(){
   return `<div class="hwd-back" onclick="closeReportBatch()"></div>
     <aside class="hwd">
       <div class="hwd-h" style="position:relative;">
-        <div class="t">리포트 PDF로 저장</div>
+        <div class="t">리포트 이미지로 저장</div>
         <div class="m">고른 <b class="mono">${b.ids.length}</b>명<s>·</s>${ymLabel(b.ym)}</div>
         ${running ? '' : '<button class="x" onclick="closeReportBatch()" title="닫기 (Esc)">×</button>'}
       </div>
@@ -14127,13 +14130,15 @@ function rptBatchDrawerHTML(){
              모르겠고」라고 한 자리다 — 3개를 저장했다고 알렸는데 실제로는 1개만 와 있었다. */''}
         <p class="st-note">${rptCanPickFolder()
           ? `누르면 <b>폴더를 고르는 창</b>이 먼저 뜹니다. 고르신 그 폴더에 <b>학생마다 파일 하나씩</b>
-             바로 저장됩니다 — 「이름_${escHtml(b.ym)}_월간리포트.pdf」.`
+             바로 저장됩니다 — 「이름_${escHtml(b.ym)}_월간리포트.jpg」.`
           : `이 브라우저는 폴더 고르기를 지원하지 않아 <b>내려받기 폴더</b>로 갑니다 —
-             「이름_${escHtml(b.ym)}_월간리포트.pdf」.<br>
+             「이름_${escHtml(b.ym)}_월간리포트.jpg」.<br>
              🔴 <b>크롬은 파일을 여러 개 내려받는 것을 막을 수 있습니다</b> — 주소창에 차단 표시가 뜨면
              허용해 주세요. <b>저장했다고 나와도 실제로 몇 개가 왔는지 꼭 확인</b>하세요.`}<br>
-          ⚠ 이 PDF는 리포트를 <b>그림으로</b> 담습니다 — 글자를 복사·검색할 수 없습니다.
-          한 명을 곱게 뽑으실 때는 그 학생 리포트 화면의 <b>「인쇄」</b>를 쓰세요.<br>
+          🔵 <b>문자로 보내실 수 있게</b> 한 학생에 <b>사진 한 장</b>으로 만들고,
+          <b>한 장이 1MB를 넘지 않게</b> 맞춥니다(MMS가 대개 그 언저리입니다).<br>
+          ⚠ 사진이라 글자를 복사·검색할 수 없습니다. 종이로 곱게 뽑으실 때는
+          그 학생 리포트 화면의 <b>「인쇄」</b>를 쓰세요 — 그쪽은 글자가 선명합니다.<br>
           ⚠ <b>「선생님 한마디」는 저장하신 것만</b> 들어갑니다.</p>
       </div>
       <div class="hwd-f">
@@ -14143,9 +14148,9 @@ function rptBatchDrawerHTML(){
             onclick="runReportBatch()">${
               b.phase === 'loading' ? '읽는 중…'
               : running ? '만드는 중 ' + b.saved.length + '/' + live.length
-              : b.phase === 'done' ? '다시 저장 (' + live.length + '명)'
-              : rptCanPickFolder() ? '폴더 고르고 ' + live.length + '명 저장'
-              : live.length + '명 저장'}</button>
+              : b.phase === 'done' ? '다시 저장 (' + live.length + '장)'
+              : rptCanPickFolder() ? '폴더 고르고 ' + live.length + '장 저장'
+              : live.length + '장 저장'}</button>
         </div>
       </div>
     </aside>`;
@@ -14688,7 +14693,7 @@ function sdChatHTML(sid){
     <div class="fm-row" style="margin-bottom:0;flex-wrap:nowrap;">
       <div class="fm-field" style="margin-bottom:0;flex:1;">
         <input id="chat-input-teacher" placeholder="메시지 입력"
-          onkeydown="if(event.key==='Enter') sendChatMessage('${sid}','teacher')"></div>
+          onkeydown="if(chatSendKey(event)) sendChatMessage('${sid}','teacher')"></div>
       <button class="btn p" onclick="sendChatMessage('${sid}','teacher')">전송</button>
     </div>
   </div>`;
@@ -15834,7 +15839,7 @@ function teacherChatHTML(){
           : chat.map(m=>`<div class="ch-b from-${m.from}">${escHtml(m.text)}<span class="at">${m.at||''}</span></div>`).join('')}
         </div>
         <div class="ch-in">
-          <input id="chat-input-teacher" placeholder="메시지 입력" onkeydown="if(event.key==='Enter') sendChatMessage('${sid}','teacher')">
+          <input id="chat-input-teacher" placeholder="메시지 입력" onkeydown="if(chatSendKey(event)) sendChatMessage('${sid}','teacher')">
           <button class="btn p" onclick="sendChatMessage('${sid}','teacher')">전송</button>
         </div>`}
     </main>
