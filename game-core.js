@@ -111,8 +111,14 @@ const RUN_SEQ = {
      mount 할 때 한 번 읽어 둔다 — 디자인 시스템이 바뀌면 게임도 따라간다.
    ⚠ **바깥 그림은 캐릭터 하나뿐이다.** 하늘·도로·장애물은 전부 도형이다(사용자가 그렇게 정했다). */
 const MODE_RUNNER = {
-  /* 깊이 — 0이 사람 발밑, Z_FAR가 지평선이다 */
-  Z_FAR: 1,
+  /* 깊이 — 0이 사람 발밑, Z_FAR 가 «장애물이 처음 놓이는 자리»다.
+     🔴 **1 → 1.45 로 늘렸다** (2026-09-02 · S-D-11). 1일 때 그 자리는 k=1/(1+3.1)=0.244,
+       곧 길의 위쪽 4분의 1 지점이었다. 그 위로는 길이 그려져 있을 뿐 **아무 일도 안 일어나는
+       띠**였고, 하늘까지 합쳐 화면의 40%가 놀았다 — 사용자가 「위에 빈 공간이 넓다」고
+       한 것이 이것이다. 1.45면 그 자리가 k=0.18까지 올라가 띠가 얇아지고,
+       덤으로 **장애물을 더 일찍 보게 되어** 반응할 참이 1.6초에서 2.3초로 늘어난다.
+     ⚠ 발산하는 자리(z=-1/3.1)는 안 건드렸다 — 뒤쪽 잘라내기 값은 그대로다. */
+  Z_FAR: 1.45,
   reset(g){
     g.lane = 1; g.lanes = 3; g.laneF = 1;        // laneF = 부드럽게 따라가는 «지금 자리»
     g.items = []; g.spawnZ = .55; g.freeLane = 1;
@@ -121,11 +127,24 @@ const MODE_RUNNER = {
        그래서 «누르고 한참 있다 뛰는» 것으로 보였다. 이제 그냥 위로 던지고 중력으로 내린다. */
     g.jy = 0; g.jv = 0; g.slide = 0; g.anim = 0; g.road = 0;
     g.dist = 0; g.hurtAt = -9;
-    /* 사람이 서는 자리. 발밑에 길이 남아야 «내 뒤로 흘러가는» 것이 보인다.
-       ⚠ 0.80 → 0.70 으로 올렸다가 «너무 앞에 나가 있다»는 말을 들었다 (2026-09-02).
-         0.76 이 두 말의 가운데다 — 뒤에 길이 남으면서도 사람이 앞쪽으로 튀어나가지 않는다. */
-    g.py = Math.round(g.h * .76);                 // 사람이 서는 자리(바닥선)
-    g.horizon = Math.round(g.h * .30);
+    /* ── 구도 (2026-09-02 · S-D-11) ──
+       🔴 **«게임 위의 빈 공간»은 하늘이었다** (사용자가 짚었다). 지평선을 화면의 30%에 두면
+         위쪽 3분의 1이 통째로 아무 일도 안 일어나는 띠가 된다. 거기에 장애물이 나타나는
+         자리(z=1)까지 더하면 **화면의 40%가 놀고 있었다.**
+       🔵 그래서 지평선을 올리고 사람을 내린다 — 그 사이가 길이고, 길이 곧 게임이다.
+       🔵 **화면의 «모양»을 보고 정한다.** 폰 세로(높이가 너비의 1.8배쯤)에서는 길게 쓰고,
+         납작한 창에서는 지평선을 도로 내린다. 납작한 화면에서 지평선을 높이면
+         길이 위아래로 눌려 «벽에 그린 그림»이 된다. */
+    const asp = g.h / Math.max(1, g.w);
+    const t = Math.max(0, Math.min(1, (asp - .8) / .7));     // .8 → 0 · 1.5 이상 → 1
+    g.horizon = Math.round(g.h * (.25 - .10 * t));           // 납작한 창 .25 · 폰 세로 .15
+    g.py      = Math.round(g.h * (.745 + .035 * t));         // 사람이 서는 자리(바닥선)
+    /* 🔴 **«바닥 기준 px»의 잣대** (2026-09-02 · S-D-11). 사람 키 92, 차 높이 78 같은 값은
+       그동안 «화면 px»이었다. 그래서 큰 창에서는 길만 넓어지고 **사람과 장애물만 작아졌다.**
+       이제 길 폭에 묶는다 — 420은 옛 길 폭이고, 그때 92px 사람이 알맞았으므로 그것이 1이다.
+       ⚠ 가로 자리(x)는 이미 laneW·roadHalf 로 길 폭을 따라가므로 여기서 또 곱하면 안 된다.
+         **높이와 두께에만** 곱한다. */
+    g.u = g.roadW() / 420;
   },
   /* ── 조작 ── */
   key(g, k, down){
@@ -200,7 +219,9 @@ const MODE_RUNNER = {
         const kind = ph === 0 ? (r < .52 ? 'block' : r < .84 ? 'low' : 'high')
                    : ph === 1 ? (r < .38 ? 'block' : r < .70 ? 'low' : 'high')
                               : (r < .32 ? 'block' : r < .62 ? 'low' : 'high');
-        g.items.push({lane:l, z:this.Z_FAR, kind, hit:false});
+        /* seed — 물웅덩이의 울퉁불퉁한 모양을 하나씩 다르게 하는 씨앗.
+           ⚠ 그릴 때 뽑으면 «매 프레임 모양이 바뀌어» 물이 끓는다. 날 때 한 번만 뽑는다. */
+        g.items.push({lane:l, z:this.Z_FAR, kind, hit:false, seed: Math.random() * 6.2832});
       });
       /* 별은 «빈 줄»에만. 장애물과 겹치면 먹으러 갔다가 죽는다 */
       if(Math.random() < .34) g.items.push({lane:free, z:this.Z_FAR, kind:'star', hit:false});
@@ -261,8 +282,12 @@ const MODE_RUNNER = {
   draw(g){
     const c = g.cx, w = g.w, h = g.h, C = g.col, Z = this.Z_FAR;
     /* 하늘 — 단순한 두 색. 사용자가 «복잡하게 하지 말라» 했다 */
+    /* ⚠ 하늘을 한 색에서 종이색으로 바로 내리면 «빈 종이»로 보인다 —
+       사용자가 「위에 빈 공간」이라 한 데는 이 밋밋함도 한몫했다. 꼭대기를 조금 짙게 둔다. */
     const sky = c.createLinearGradient(0, 0, 0, g.horizon);
-    sky.addColorStop(0, C.sky0); sky.addColorStop(1, C.sky1);
+    sky.addColorStop(0, this.shade(C.sky0, -.16));
+    sky.addColorStop(.55, C.sky0);
+    sky.addColorStop(1, C.sky1);
     c.fillStyle = sky; c.fillRect(0, 0, w, g.horizon);
     /* 길 옆 땅 — 지평선 쪽으로 살짝 어둡게. 평평한 한 색이면 종이처럼 보인다 */
     const gd = c.createLinearGradient(0, g.horizon, 0, h);
@@ -289,7 +314,7 @@ const MODE_RUNNER = {
       c.beginPath();
       for(let s = 0; s <= 22; s++){
         const z = Z * s / 20 - Z * .2, p = this.proj(g, z);
-        const x = w/2 + sgn * (this.roadHalf(g, p.k) - 3 * p.k);
+        const x = w/2 + sgn * (this.roadHalf(g, p.k) - 3 * p.k * g.u);
         s ? c.lineTo(x, p.y) : c.moveTo(x, p.y);
       }
       c.stroke();
@@ -299,12 +324,12 @@ const MODE_RUNNER = {
        ⚠ 선이 아니라 «사다리꼴»로 그린다. 한 선으로 그으면 멀리서도 굵어 도로가 안 된다. */
     c.fillStyle = C.mark;
     for(let i = 1; i < 3; i++){
-      for(let s = 0; s < 11; s++){
-        const z0 = this.flowZ(g, s, 11, 1.3), z1 = z0 + Z * .05;
+      for(let s = 0; s < 15; s++){
+        const z0 = this.flowZ(g, s, 15, 1.3), z1 = z0 + Z * .035;
         if(z1 < -Z * .22 || z0 > Z) continue;
         const p0 = this.proj(g, Math.max(z0, -.235)), p1 = this.proj(g, Math.max(z1, -.235));
         const x0 = w/2 + (i - 1.5) * this.laneW(g, p0.k), x1 = w/2 + (i - 1.5) * this.laneW(g, p1.k);
-        const t0 = Math.max(.6, 2.2 * p0.k), t1 = Math.max(.6, 2.2 * p1.k);
+        const t0 = Math.max(.6, 2.2 * p0.k * g.u), t1 = Math.max(.6, 2.2 * p1.k * g.u);
         c.globalAlpha = Math.max(0, Math.min(.85, 1 - z0 / Z));
         c.beginPath();
         c.moveTo(x0 - t0, p0.y); c.lineTo(x0 + t0, p0.y);
@@ -316,11 +341,11 @@ const MODE_RUNNER = {
 
     /* ── 길가 꽃 (2026-09-02 · 사용자가 시켰다) ──
        ⚠ 도로 «밖»에만 둔다. 길 위에 두면 장애물과 헷갈린다. */
-    for(let s = 0; s < 9; s++){
-      const z = this.flowZ(g, s, 9, 1.3);
+    for(let s = 0; s < 12; s++){
+      const z = this.flowZ(g, s, 12, 1.3);
       if(z < -Z * .2 || z > Z) continue;
       const p = this.proj(g, z), rx = this.roadHalf(g, p.k);
-      const sz = Math.max(1.2, 5.5 * p.k);
+      const sz = Math.max(1.2, 5.5 * p.k * g.u);
       c.globalAlpha = Math.max(0, Math.min(1, 1 - z / Z));
       for(const sgn of [-1, 1]){
         const fx2 = w/2 + sgn * (rx + sz * 2.6);
@@ -364,11 +389,16 @@ const MODE_RUNNER = {
     /* 속도 — 사용자가 «현재 속도 또는 진행 상태»를 달라고 했다 */
     const spd = Math.min(.62 + g.t * .011, 1.75);
     const pct = (spd - .62) / (1.75 - .62);
-    c.fillStyle = C.line; c.fillRect(14, 14, 74, 4);
-    c.fillStyle = C.accent; c.fillRect(14, 14, 74 * Math.max(.04, pct), 4);
-    c.fillStyle = C.dim; c.font = '10px Pretendard, sans-serif';
-    c.textAlign = 'left'; c.textBaseline = 'top';
-    c.fillText(Math.round(g.dist) + 'm', 14, 23);
+    /* 🔵 **왼쪽 아래로 내렸다** (2026-09-02 · S-D-11). 점수·최고·닫기가 이제 캔버스 «위»에
+       떠 있으므로(HTML), 위쪽 구석을 비워 줘야 둘이 겹치지 않는다. */
+    const by = h - 26;
+    c.globalAlpha = .85;
+    c.fillStyle = C.line;   c.fillRect(14, by, 74, 4);
+    c.fillStyle = C.accent; c.fillRect(14, by, 74 * Math.max(.04, pct), 4);
+    c.fillStyle = C.sub;    c.font = '600 10px Pretendard, sans-serif';
+    c.textAlign = 'left';   c.textBaseline = 'top';
+    c.fillText(Math.round(g.dist) + 'm', 14, by + 9);
+    c.globalAlpha = 1;
   },
 
   /* ---------- 입체 (2026-09-02 · S-D-9) ----------
@@ -404,12 +434,17 @@ const MODE_RUNNER = {
     const pN = this.proj(g, z - dep / 2), pF = this.proj(g, z + dep / 2);
     const wN = this.laneW(g, pN.k) * wf / 2, wF = this.laneW(g, pF.k) * wf / 2;
     const xN = this.laneCX(g, lane, pN.k), xF = this.laneCX(g, lane, pF.k);
-    const nB = pN.y - hLo * pN.k, nT = pN.y - hHi * pN.k;
-    const fB = pF.y - hLo * pF.k, fT = pF.y - hHi * pF.k;
-    /* 윗면 — 우리가 위에서 내려다보므로 늘 보인다. 밝게 */
+    const U = g.u || 1;                                   // 바닥 기준 px → 화면 px
+    const nB = pN.y - hLo * U * pN.k, nT = pN.y - hHi * U * pN.k;
+    const fB = pF.y - hLo * U * pF.k, fT = pF.y - hHi * U * pF.k;
+    /* 윗면 — 우리가 위에서 내려다보므로 늘 보인다. 밝게.
+       ⚠ 가까울수록 이 면이 크게 벌어진다 — 앞면에만 무늬를 넣으면 **윗면이 커다란
+         민판**이 되어 «봉»이 아니라 «벽»으로 보인다(2026-09-02에 눈으로 잡았다).
+         그래서 네 점을 돌려준다 — 부르는 쪽이 여기에도 무늬를 넣을 수 있게. */
+    const top4 = [xN - wN, nT, xN + wN, nT, xF + wF, fT, xF - wF, fT];
     c.fillStyle = this.shade(col, .20);
-    c.beginPath(); c.moveTo(xN - wN, nT); c.lineTo(xN + wN, nT);
-    c.lineTo(xF + wF, fT); c.lineTo(xF - wF, fT); c.closePath(); c.fill();
+    c.beginPath(); c.moveTo(top4[0], top4[1]); c.lineTo(top4[2], top4[3]);
+    c.lineTo(top4[4], top4[5]); c.lineTo(top4[6], top4[7]); c.closePath(); c.fill();
     /* 옆면 — 화면 가운데에서 «벗어난 쪽»이 보인다. 어둡게 */
     const sd = xN < g.w / 2 ? 1 : -1;
     c.fillStyle = this.shade(col, -.18);
@@ -419,106 +454,300 @@ const MODE_RUNNER = {
     c.fillStyle = col;
     c.beginPath(); c.moveTo(xN - wN, nT); c.lineTo(xN + wN, nT);
     c.lineTo(xN + wN, nB); c.lineTo(xN - wN, nB); c.closePath(); c.fill();
-    return { x: xN, w: wN, top: nT, bot: nB, k: pN.k };
+    /* g0 = 앞면 자리의 «바닥» — 여기에서 높이를 재야 일러스트가 상자와 어긋나지 않는다 */
+    return { x: xN, w: wN, top: nT, bot: nB, k: pN.k, g0: pN.y, u: U, top4 };
   },
 
-  /* 🔴 **모양이 곧 «무엇을 하라»는 말이어야 한다** (2026-09-02 · 사용자가 정했다).
-     · 물웅덩이 — 바닥에 납작하게 깔린다. **뛰어넘는 것**
-     · 자동차 — 길을 막고 선다. **비켜 가는 수밖에 없는 것**
-     · 가로대 — 기둥 둘에 걸린 봉이 «머리 높이»에 있다. **숙여서 지나는 것**
-     ⚠ 가로대의 봉은 **머리 높이**여야 한다. 낮게 두면 «뛰어넘는 것»으로 읽힌다.
-     ⚠ 가까워지면 작은 화살표를 얹는다. 이미 지나간 것(z<0)에는 안 적는다. */
+  /* ---------- 장애물 일러스트 (2026-09-02 · S-D-11) ----------
+     사용자가 참고 그림을 주었다 — 정면을 보는 빨간 자동차, 노랑·검정 빗줄의 차단봉,
+     반짝이는 파란 물웅덩이.
+     🔴 **그림 파일로 넣지 않고 캔버스로 그린다** (사용자가 「비슷하게 만들어 달라」고 정했다).
+       ① 파일이 늘지 않는다 — 바깥 그림은 캐릭터 하나로 족하다.
+       ② 멀고 가까움(k)에 따라 **선 굵기·둥근 모서리까지 같이 줄어든다.**
+          그림을 늘려 쓰면 가까울 때 굵어져 뭉개지고, 멀 때는 뭉텅이가 된다.
+     ⚠ 세우는 것(자동차·차단봉)은 **여전히 box3 로 «세 면»을 만든 뒤** 그 앞면 위에 얹는다.
+       앞면만 예쁘게 그리면 09-02에 고친 «평면·떠 있음»으로 그대로 되돌아간다.
+
+     모양이 곧 «무엇을 하라»는 말이어야 한다 (사용자가 정했다).
+       · 물웅덩이 — 바닥에 납작하게 깔린다. **뛰어넘는 것**
+       · 자동차 — 길을 막고 선다. **비켜 가는 수밖에 없는 것**
+       · 차단봉 — 기둥 둘에 걸린 봉이 «머리 높이»에 있다. **숙여서 지나는 것**
+     ⚠ 차단봉의 봉은 **머리 높이**여야 한다. 낮게 두면 «뛰어넘는 것»으로 읽힌다. */
+
+  /* box3 가 돌려준 앞면 위에 «바닥에서 몇 px · 폭의 몇 배»로 얹는다 */
+  fx(b, u){ return b.x + u * b.w; },
+  fy(b, hh){ return b.g0 - hh * b.u * b.k; },
+  /* 빗줄 — 위험을 알리는 무늬다. 네모 안을 비스듬히 채운다 */
+  stripes(c, x, y, w, h, col, k, dir){
+    this.stripesQ(c, [x, y, x + w, y, x + w, y + h, x, y + h], col, k, dir);
+  },
+  /* 네 점으로 주어진 낯짝에 빗줄. 윗면처럼 «사다리꼴»인 데도 쓴다 */
+  stripesQ(c, q, col, k, dir){
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    for(let i = 0; i < q.length; i += 2){
+      x0 = Math.min(x0, q[i]);     x1 = Math.max(x1, q[i]);
+      y0 = Math.min(y0, q[i+1]);   y1 = Math.max(y1, q[i+1]);
+    }
+    const w = x1 - x0, h = Math.max(1, y1 - y0), x = x0, y = y0;
+    c.save();
+    c.beginPath(); c.moveTo(q[0], q[1]);
+    for(let i = 2; i < q.length; i += 2) c.lineTo(q[i], q[i+1]);
+    c.closePath(); c.clip();
+    c.fillStyle = col;
+    const sw = Math.max(2.5, 10 * k);
+    for(let sx = x - h * 2; sx < x + w + h * 2; sx += sw * 2){
+      c.beginPath();
+      c.moveTo(sx, y + h); c.lineTo(sx + sw, y + h);
+      c.lineTo(sx + sw + dir * h, y); c.lineTo(sx + dir * h, y);
+      c.closePath(); c.fill();
+    }
+    c.restore();
+  },
+  /* 울퉁불퉁한 닫힌 길 — 물웅덩이의 «가장자리»다. 정원(正圓)이면 접시로 보인다.
+     ⚠ 칠하지도 긋지도 않는다 — 부르는 쪽이 정한다 */
+  blob(c, cx, cy, rx, ry, seed){
+    const N = 20;
+    c.beginPath();
+    for(let i = 0; i <= N; i++){
+      const a = i / N * 6.2832;
+      const w = 1 + .17 * Math.sin(a * 3 + seed) + .09 * Math.sin(a * 5 - seed * 1.7);
+      const x = cx + Math.cos(a) * rx * w, y = cy + Math.sin(a) * ry * w;
+      i ? c.lineTo(x, y) : c.moveTo(x, y);
+    }
+    c.closePath();
+  },
+
   obstacle(g, it){
     const c = g.cx, C = g.col, p = this.proj(g, it.z);
     if(p.k < .02) return;
     const x = this.laneCX(g, it.lane, p.k);
-    const lw = this.laneW(g, p.k) * .8;
     const near = p.k > .55 && it.z > .05;
     c.textAlign = 'center'; c.textBaseline = 'middle';
 
     if(it.kind === 'star'){
-      /* 별도 그림자를 준다 — 떠 있다는 것을 «그림자와의 거리»가 말해 준다 */
       this.contact(g, it.lane, it.z, .28, 0);
       c.fillStyle = C.star;
-      c.font = Math.max(9, 30 * p.k) + 'px serif';
-      c.fillText('★', x, p.y - 44 * p.k);
+      c.font = Math.max(9, 30 * p.k * g.u) + 'px serif';
+      c.fillText('★', x, p.y - 44 * p.k * g.u);
       return;
     }
-
-    if(it.kind === 'low'){
-      /* 물웅덩이 — 🔴 **밝은 접시를 놓으면 뜬다** (2026-09-02 · 사용자가 두 번 짚었다).
-         회색 아스팔트 위에 밝은 하늘색 원을 놓고 그 밑에 어두운 테를 «비껴» 깔았더니
-         «원반 + 그림자»로 읽혀 떠 보였다.
-         🔵 물웅덩이는 **길보다 어두워야 한다** — 젖은 아스팔트는 빛을 먹는다.
-           길 색을 어둡게 물들인 것으로 채우고, **가장자리 한 줄만** 밝게 둔다(물의 테두리).
-           떨어뜨린 그림자는 아예 없앤다 — 바닥에 «깔린» 것에는 그림자가 없다. */
-      const rw = lw * .66, rh = rw * .30;
-      const wet = this.shade(C.water, -.30);
-      const grd = c.createLinearGradient(0, p.y - rh, 0, p.y + rh);
-      grd.addColorStop(0, this.shade(wet, -.18));      // 먼 쪽이 더 어둡다
-      grd.addColorStop(1, this.shade(wet, .10));
-      c.fillStyle = grd;
-      c.beginPath(); c.ellipse(x, p.y, rw, rh, 0, 0, 6.2832); c.fill();
-      /* 가장자리 한 줄 — 물이 고인 «테»다. 얇아야 한다 */
-      c.strokeStyle = this.shade(C.waterBg, -.05);
-      c.lineWidth = Math.max(.8, 1.4 * p.k);
-      c.globalAlpha = .7;
-      c.beginPath(); c.ellipse(x, p.y, rw * .96, rh * .94, 0, 0, 6.2832); c.stroke();
-      /* 하늘이 비친 자국 둘 — 물이라는 것을 말해 주는 최소한 */
-      c.globalAlpha = .38; c.fillStyle = C.mark;
-      c.beginPath(); c.ellipse(x - rw*.30, p.y - rh*.22, rw*.20, rh*.16, 0, 0, 6.2832); c.fill();
-      c.beginPath(); c.ellipse(x + rw*.30, p.y + rh*.18, rw*.13, rh*.12, 0, 0, 6.2832); c.fill();
-      c.globalAlpha = 1;
-      if(near){ c.fillStyle = C.waterBg; c.font = '700 ' + Math.round(13*p.k) + 'px Pretendard, sans-serif';
-        c.fillText('↑', x, p.y - 28 * p.k); }
-      return;
-    }
-
-    if(it.kind === 'high'){
-      /* 가로대 — 기둥 둘 + 머리 높이의 봉. 밑이 뚫려 있어야 «숙여서 지난다»가 읽힌다 */
-      this.contact(g, it.lane, it.z, .78, .05);
-      const HB = 66, TH = 13;                       // 봉 아래끝 · 봉 두께(바닥 기준 px)
-      const dep = .07;
-      /* 기둥 둘 — 좌우로 살짝 밀어 그린다 */
-      const pN = this.proj(g, it.z - dep/2), wN = this.laneW(g, pN.k) * .8 / 2;
-      const xN = this.laneCX(g, it.lane, pN.k);
-      c.fillStyle = this.shade(C.bar, -.12);
-      const pw = Math.max(1.5, wN * .13);
-      c.fillRect(xN - wN, pN.y - (HB + TH) * pN.k, pw, (HB + TH) * pN.k);
-      c.fillRect(xN + wN - pw, pN.y - (HB + TH) * pN.k, pw, (HB + TH) * pN.k);
-      /* 봉 — 두께를 가진 상자다 */
-      this.box3(g, it.lane, it.z, dep, .9, HB, HB + TH, C.bar);
-      if(near){ c.fillStyle = C.bar; c.font = '700 ' + Math.round(13*p.k) + 'px Pretendard, sans-serif';
-        c.fillText('↓', x, p.y - 20 * p.k); }
-      return;
-    }
-
-    /* 자동차 — 뒤에서 본 상자 둘(차체 + 지붕). 길을 막고 서 있다 */
-    this.contact(g, it.lane, it.z, .95, .18);
-    const dep = .16;
-    /* 바퀴 — 바닥에 닿는 점을 눈에 보이게 한다 */
-    const pw2 = this.proj(g, it.z - dep/2), ww = this.laneW(g, pw2.k) * .95 / 2;
-    const xw = this.laneCX(g, it.lane, pw2.k), wr = Math.max(1.5, ww * .17);
-    c.fillStyle = this.shade(C.carDark, -.25);
-    c.fillRect(xw - ww * .98, pw2.y - wr * 1.5, wr * 1.5, wr * 1.6);
-    c.fillRect(xw + ww * .98 - wr * 1.5, pw2.y - wr * 1.5, wr * 1.5, wr * 1.6);
-    /* 차체 · 지붕 */
-    const body = this.box3(g, it.lane, it.z, dep, .92, 7, 42, C.car);
-    this.box3(g, it.lane, it.z, dep * .62, .70, 42, 68, this.shade(C.car, -.08));
-    /* 뒷유리와 미등은 «앞면»에 얹는다 */
-    const gp = this.proj(g, it.z - dep * .31 / 2);
-    const gw = this.laneW(g, gp.k) * .70 / 2, gx = this.laneCX(g, it.lane, gp.k);
-    c.fillStyle = this.shade(C.sky0, -.06); c.globalAlpha = .9;
-    c.beginPath();
-    c.rect(gx - gw * .76, gp.y - 63 * gp.k, gw * 1.52, 17 * gp.k);
-    c.fill(); c.globalAlpha = 1;
-    c.fillStyle = C.late;
-    const ls = Math.max(1.4, body.w * .22);
-    c.fillRect(body.x - body.w * .74, body.bot - 26 * body.k, ls, ls * .62);
-    c.fillRect(body.x + body.w * .74 - ls, body.bot - 26 * body.k, ls, ls * .62);
-    if(near){ c.fillStyle = C.car; c.font = '700 ' + Math.round(12*p.k) + 'px Pretendard, sans-serif';
-      c.fillText('↔', x, p.y - 82 * p.k); }
+    if(it.kind === 'low')  { this.puddle(g, it, p, x, near); return; }
+    if(it.kind === 'high') { this.gate(g, it, p, x, near);   return; }
+    this.car(g, it, p, x, near);
   },
+
+  /* ── 물웅덩이 — 뛰어넘는 것 ──
+     🔴 **밝은 접시를 놓으면 뜬다** (2026-09-02 · 사용자가 두 번 짚었다).
+       회색 아스팔트 위에 밝은 원을 놓고 그 밑에 어두운 테를 «비껴» 깔았더니
+       «원반 + 그림자»로 읽혀 떠 보였다.
+     🔵 바닥에 붙이는 것은 셋이다.
+       ① **길보다 어둡게** — 젖은 아스팔트는 빛을 먹는다.
+       ② **가장자리가 울퉁불퉁하게** — 정원은 «물체»고, 삐뚤빼뚤한 것이 «고인 물»이다.
+       ③ **둘레의 길이 조금 젖어 있게** — 물과 길 사이에 중간이 있어야 얹힌 것이 아니다.
+     ⚠ 떨어뜨린 그림자는 없다. 바닥에 «깔린» 것에는 그림자가 없다. */
+  puddle(g, it, p, x, near){
+    const c = g.cx, C = g.col, sd = it.seed || 0;
+    const uk = p.k * g.u;                                 // 바닥 기준 px → 화면 px
+    const lw = this.laneW(g, p.k) * .8;
+    const rw = lw * .45, rh = rw * .34;   // ⚠ .70 은 레인보다 넓었다
+
+    /* ① 젖은 자리 */
+    c.globalAlpha = .34; c.fillStyle = this.shade(C.road, -.34);
+    this.blob(c, x, p.y, rw * 1.20, rh * 1.26, sd); c.fill();
+    c.globalAlpha = 1;
+    /* ② 물 — 먼 쪽이 어둡고 앞이 밝다 */
+    const grd = c.createLinearGradient(0, p.y - rh, 0, p.y + rh);
+    grd.addColorStop(0,  this.shade(C.water, -.24));
+    grd.addColorStop(.5, C.water);
+    grd.addColorStop(1,  this.shade(C.water, .16));   // ⚠ 이보다 밝히면 길보다 밝아져 «뜬다»
+    c.fillStyle = grd;
+    this.blob(c, x, p.y, rw, rh, sd); c.fill();
+    /* ③ 가장자리 한 줄 — 물의 «테». 얇아야 한다 */
+    c.strokeStyle = this.shade(C.water, .45); c.globalAlpha = .5;
+    c.lineWidth = Math.max(.7, 1.5 * p.k);
+    this.blob(c, x, p.y, rw * .94, rh * .92, sd); c.stroke();
+    c.globalAlpha = 1;
+    /* ④ 비친 빛 — 참고 그림의 «반짝이»다. 물이라는 것을 이것이 말한다 */
+    c.globalAlpha = .5; c.fillStyle = C.mark;
+    c.beginPath(); c.ellipse(x - rw*.34, p.y - rh*.30, rw*.26, rh*.17, -.25, 0, 6.2832); c.fill();
+    c.globalAlpha = .3;
+    c.beginPath(); c.ellipse(x + rw*.30, p.y + rh*.22, rw*.16, rh*.13, .2, 0, 6.2832); c.fill();
+    c.globalAlpha = 1;
+    /* ⑤ 튄 물방울 — 둘레에 작게. 웅덩이가 «방금 생긴 것»으로 보인다 */
+    c.fillStyle = this.shade(C.water, .10);
+    for(let i = 0; i < 4; i++){
+      const a = sd + i * 1.9, dr = 1.28 + .18 * Math.sin(sd * 3 + i);
+      const dx = Math.cos(a) * rw * dr, dy = Math.sin(a) * rh * dr;
+      const s = Math.max(.8, rw * .07 * (1 + .4 * Math.sin(i * 2 + sd)));
+      c.beginPath(); c.ellipse(x + dx, p.y + dy, s, s * .68, 0, 0, 6.2832); c.fill();
+    }
+    if(near){ c.fillStyle = this.shade(C.water, .55);
+      c.font = '700 ' + Math.round(13 * uk) + 'px Pretendard, sans-serif';
+      c.fillText('↑', x, p.y - 30 * uk); }
+  },
+
+  /* ── 차단봉 — 숙여서 지나는 것 ──
+     참고 그림 그대로: 쇠기둥 둘 + 노랑·검정 빗줄의 봉 + 꼭대기의 빨간 등.
+     ⚠ 봉 «밑이 뚫려 있다»는 것이 한눈에 보여야 한다. 기둥을 가늘게 두는 까닭이다. */
+  gate(g, it, p, x, near){
+    const c = g.cx, C = g.col;
+    /* ⚠ dep(앞뒤 두께)는 «봉 두께»와 눈에 비슷하게 보여야 한다. 깊이와 높이는 잣대가
+       다르므로(y는 k에 곱해지고 z는 k를 만든다) .05만 줘도 가까이서 윗면이 앞면의 네 배가
+       된다 — 그러면 봉이 아니라 «광고판»이 된다. .018이 둘을 비슷하게 맞춘다. */
+    const HB = 62, TH = 15, dep = .018;                // 봉 아래끝 · 봉 두께 · 앞뒤 두께
+    this.contact(g, it.lane, it.z, .88, .06);
+
+    const pn = this.proj(g, it.z - dep / 2), k = pn.k, uk = k * g.u;
+    const half = this.laneW(g, k) * .88 / 2, x0 = this.laneCX(g, it.lane, k), gy = pn.y;
+    const pw = Math.max(2.2, half * .17);
+    const TOP = HB + TH + 5;                            // 기둥 꼭대기 높이
+
+    for(const s of [-1, 1]){
+      const cxp = x0 + s * (half - pw * .1);            // 기둥 한가운데
+      /* 받침 — 빗줄이 있어 «땅에 박혀 있다»가 읽힌다 */
+      const bw = pw * 2.3, bh = 13 * uk;
+      c.fillStyle = C.stripeB;
+      this.box(c, cxp - bw/2, gy - bh, bw, bh, Math.max(1, 2 * uk));
+      this.stripes(c, cxp - bw/2, gy - bh, bw, bh, C.stripeA, k, -1);
+      /* 기둥 — 왼쪽이 밝고 오른쪽이 어두우면 눈이 «원통»으로 읽는다 */
+      const lg = c.createLinearGradient(cxp - pw/2, 0, cxp + pw/2, 0);
+      lg.addColorStop(0,   this.shade(C.steel, .34));
+      lg.addColorStop(.38, this.shade(C.steel, .08));
+      lg.addColorStop(1,   this.shade(C.steel, -.34));
+      c.fillStyle = lg;
+      c.fillRect(cxp - pw/2, gy - TOP * uk, pw, (TOP - 6) * uk);
+      /* 이음매 둘 — 쇠붙이로 보이게 하는 값싼 손질 */
+      c.fillStyle = this.shade(C.steel, -.20);
+      for(const hh of [HB - 6, HB + TH + 1])
+        c.fillRect(cxp - pw * .62, gy - hh * uk, pw * 1.24, Math.max(1, 2.4 * uk));
+      /* 꼭대기 빨간 등 — 번갈아 깜빡인다. 살아 있는 것이 하나 있으면 화면이 산다 */
+      const lr = Math.max(2, pw * .78);
+      c.fillStyle = this.shade(C.steel, -.10);
+      this.box(c, cxp - lr * .78, gy - TOP * uk - lr * .5, lr * 1.56, lr * .9, Math.max(1, lr * .3));
+      const cy = gy - TOP * uk - lr * 1.15;
+      const on = (Math.floor(g.t * 2.2) + (s > 0 ? 1 : 0)) % 2 === 0;
+      if(on){ c.globalAlpha = .28; c.fillStyle = C.lamp;
+        c.beginPath(); c.arc(cxp, cy, lr * 1.9, 0, 6.2832); c.fill(); c.globalAlpha = 1; }
+      const rg = c.createRadialGradient(cxp - lr*.3, cy - lr*.35, lr*.1, cxp, cy, lr);
+      rg.addColorStop(0, on ? '#FFFFFF' : this.shade(C.lamp, .34));
+      rg.addColorStop(.42, C.lamp);
+      rg.addColorStop(1, this.shade(C.lamp, -.44));
+      c.fillStyle = rg;
+      c.beginPath(); c.arc(cxp, cy, lr * .85, 0, 6.2832); c.fill();
+    }
+
+    /* 봉 — 두께를 가진 상자. 앞면에만 빗줄을 넣는다(윗면까지 넣으면 무늬가 어지럽다) */
+    const b = this.box3(g, it.lane, it.z, dep, .92, HB, HB + TH, C.stripeB);
+    const bk = b.k * b.u;
+    this.stripesQ(c, b.top4, C.stripeA, bk, 1);                                    // 윗면
+    this.stripes(c, b.x - b.w, b.top, b.w * 2, b.bot - b.top, C.stripeA, bk, 1);   // 앞면
+    /* 봉 아랫면에 그늘 한 줄 — 봉이 «떠 있는 판»이 아니라 «걸린 막대»가 된다 */
+    c.fillStyle = 'rgba(0,0,0,.22)';
+    c.fillRect(b.x - b.w, b.bot - Math.max(1, 2.5 * b.k), b.w * 2, Math.max(1, 2.5 * b.k));
+
+    if(near){ c.fillStyle = C.lamp;
+      c.font = '700 ' + Math.round(13 * b.k * b.u) + 'px Pretendard, sans-serif';
+      c.fillText('↓', x, b.g0 - 22 * b.k * b.u); }
+  },
+
+  /* ── 자동차 — 비켜 가는 수밖에 없는 것 ──
+     참고 그림 그대로 «정면»이다. 마주 오는 차라야 «비켜라»가 몸으로 읽힌다.
+     헤드라이트 둘 + 빛무리 · 가로살 그릴 · 범퍼 · 번호판 · 방향지시등 · 바퀴. */
+  car(g, it, p, x, near){
+    const c = g.cx, C = g.col;
+    const dep = .17;
+    this.contact(g, it.lane, it.z, 1.0, .20);
+
+    /* 바퀴 먼저 — 몸통이 그 위를 덮어야 «안으로 들어간» 모양이 된다 */
+    const pw = this.proj(g, it.z - dep * .30);
+    const ww = this.laneW(g, pw.k) * .96 / 2, xw = this.laneCX(g, it.lane, pw.k);
+    const tw = Math.max(2, ww * .23);
+    c.fillStyle = this.shade(C.ink, .14);
+    for(const s of [-1, 1])
+      this.box(c, xw + s * ww - (s > 0 ? tw : 0), pw.y - tw * 1.75, tw, tw * 1.75,
+               Math.max(1, tw * .34));
+
+    /* 몸통 · 지붕 — 세 면짜리 상자 둘. 여기서 «입체»가 나온다 */
+    const b   = this.box3(g, it.lane, it.z, dep,       .92, 5,  47, C.car);
+    const cab = this.box3(g, it.lane, it.z, dep * .66, .70, 47, 78, this.shade(C.car, -.09));
+
+    /* 지붕 앞면 — 앞유리. 안이 비쳐 어둡고, 왼쪽 위에 빛이 한 줄 든다 */
+    const gw = cab.w * .84;
+    c.fillStyle = this.shade(C.glass, -.10);
+    this.box(c, cab.x - gw, this.fy(cab, 74), gw * 2, (74 - 52) * cab.k * cab.u, Math.max(1, 3 * cab.k * cab.u));
+    c.globalAlpha = .30; c.fillStyle = '#FFFFFF';
+    c.beginPath();
+    c.moveTo(cab.x - gw * .92, this.fy(cab, 72));
+    c.lineTo(cab.x - gw * .16, this.fy(cab, 72));
+    c.lineTo(cab.x - gw * .60, this.fy(cab, 54));
+    c.lineTo(cab.x - gw * .90, this.fy(cab, 54));
+    c.closePath(); c.fill(); c.globalAlpha = 1;
+    /* 옆거울 둘 */
+    c.fillStyle = this.shade(C.car, -.18);
+    for(const s of [-1, 1])
+      this.box(c, cab.x + s * cab.w * 1.02 - (s > 0 ? 0 : cab.w * .26), this.fy(cab, 70),
+               cab.w * .26, 7 * cab.k * cab.u, Math.max(1, 2 * cab.k * cab.u));
+
+    /* 몸통 앞면 — 여기에 일러스트를 얹는다.
+       ⚠ 먼저 «둥근 앞면»으로 덮어 모서리를 굴린다. box3 의 윗면·옆면은 그대로 비져 나와
+         입체로 남는다 — 그것이 노림수다. */
+    const bw = b.w, X = u => this.fx(b, u), Y = hh => this.fy(b, hh);
+    const bg = c.createLinearGradient(0, Y(47), 0, Y(5));
+    bg.addColorStop(0,   this.shade(C.car, .22));      // 보닛 쪽이 하늘을 받아 밝다
+    bg.addColorStop(.45, C.car);
+    bg.addColorStop(1,   this.shade(C.car, -.20));
+    c.fillStyle = bg;
+    this.box(c, X(-1), Y(47), bw * 2, (47 - 5) * b.k * b.u, Math.max(1.5, 5 * b.k * b.u));
+    /* 보닛 위 빛 한 줄 */
+    c.globalAlpha = .22; c.fillStyle = '#FFFFFF';
+    this.box(c, X(-.9), Y(46), bw * 1.8, 4 * b.k * b.u, Math.max(.8, 2 * b.k * b.u));
+    c.globalAlpha = 1;
+
+    /* 그릴 — 가로살 넷. 참고 그림에서 가장 «차»로 보이게 하는 부분이다 */
+    const gx = X(-.44), gy2 = Y(33), gh = 14 * b.k * b.u, gwid = bw * .88;
+    c.fillStyle = this.shade(C.chrome, -.08);
+    this.box(c, gx - 1.5 * b.k * b.u, gy2 - 1.5 * b.k * b.u, gwid + 3 * b.k * b.u, gh + 3 * b.k * b.u, Math.max(1, 3 * b.k * b.u));
+    c.fillStyle = this.shade(C.ink, .10);
+    this.box(c, gx, gy2, gwid, gh, Math.max(.8, 2 * b.k * b.u));
+    c.fillStyle = this.shade(C.chrome, .12);
+    for(let i = 0; i < 4; i++){
+      const yy = gy2 + gh * (.16 + i * .23);
+      c.fillRect(gx + gwid * .05, yy, gwid * .90, Math.max(.6, 1.5 * b.k * b.u));
+    }
+
+    /* 헤드라이트 둘 — 빛무리를 먼저 깔고 알을 얹는다 */
+    const hr = bw * .21, hy = Y(31);
+    for(const s of [-1, 1]){
+      const hx = X(s * .68);
+      c.globalAlpha = .30;
+      const gl = c.createRadialGradient(hx, hy, hr * .3, hx, hy, hr * 2.4);
+      gl.addColorStop(0, C.head); gl.addColorStop(1, 'rgba(255,255,255,0)');
+      c.fillStyle = gl;
+      c.beginPath(); c.arc(hx, hy, hr * 2.4, 0, 6.2832); c.fill();
+      c.globalAlpha = 1;
+      c.fillStyle = this.shade(C.chrome, -.12);
+      c.beginPath(); c.ellipse(hx, hy, hr * 1.1, hr * .98, 0, 0, 6.2832); c.fill();
+      const lg2 = c.createRadialGradient(hx - hr*.3, hy - hr*.3, hr*.1, hx, hy, hr);
+      lg2.addColorStop(0, '#FFFFFF'); lg2.addColorStop(.5, C.head);
+      lg2.addColorStop(1, this.shade(C.head, -.30));
+      c.fillStyle = lg2;
+      c.beginPath(); c.ellipse(hx, hy, hr * .92, hr * .82, 0, 0, 6.2832); c.fill();
+      /* 방향지시등 — 헤드라이트 바깥 아래에 작게 */
+      c.fillStyle = C.turn;
+      this.box(c, X(s * .93) - bw * .07, Y(23), bw * .14, 4.5 * b.k * b.u, Math.max(.8, 1.6 * b.k * b.u));
+    }
+
+    /* 범퍼 · 번호판 */
+    c.fillStyle = this.shade(C.carDark, .06);
+    this.box(c, X(-1), Y(17), bw * 2, 10 * b.k * b.u, Math.max(1, 3 * b.k * b.u));
+    c.fillStyle = this.shade(C.chrome, .30);
+    this.box(c, X(-.21), Y(15.5), bw * .42, 7 * b.k * b.u, Math.max(.6, 1.5 * b.k * b.u));
+
+    if(near){ c.fillStyle = C.car;
+      c.font = '700 ' + Math.round(12 * b.k * b.u) + 'px Pretendard, sans-serif';
+      c.fillText('↔', x, this.fy(b, 92)); }
+  },
+
   box(c, x, y, w, h, r){
     c.beginPath();
     if(c.roundRect) c.roundRect(x, y, w, h, Math.max(1, r)); else c.rect(x, y, w, h);
@@ -542,14 +771,16 @@ const MODE_RUNNER = {
     const up = Math.min(1, lift / (g.h * .18));
     c.globalAlpha = .30 - up * .17;
     c.fillStyle = C.ink;
-    c.beginPath(); c.ellipse(x, g.py, 27 - up * 9, 7.5 - up * 2.5, 0, 0, 6.2832); c.fill();
+    const U = g.u || 1;
+    c.beginPath(); c.ellipse(x, g.py, (27 - up * 9) * U, (7.5 - up * 2.5) * U, 0, 0, 6.2832); c.fill();
     c.globalAlpha = 1;
 
     /* 🔴 **칸을 «같은 배율»로 그린다** (2026-09-02 · 사용자가 짚었다).
        예전에는 슬라이드일 때 높이를 46으로 줄여 그렸다 — 칸 안에서 이미 낮은 자세인데
        거기에 또 줄이니 **사람이 통째로 작아졌다.** 칸은 바닥을 맞춰 묶어 두었으므로
        배율 하나로 그리면 자세만 낮아지고 «몸집»은 그대로다. */
-    const S = 92 / RUN_CH;                            // 칸 하나를 92px 높이로
+    /* 🔵 사람 키도 잣대를 탄다 — 길이 넓어지면 사람도 그만큼 커진다 (2026-09-02 · S-D-11) */
+    const S = 92 * (g.u || 1) / RUN_CH;               // 칸 하나를 «바닥 기준» 92px 높이로
     const ww = RUN_CW * S, hh = RUN_CH * S;
     if(RUN_IMG.complete && RUN_IMG.naturalWidth){
       c.drawImage(RUN_IMG, fi * RUN_CW, 0, RUN_CW, RUN_CH,
@@ -577,7 +808,9 @@ const Game = {
   /* 🔵 길과 사람을 키웠다 (2026-09-02 · 사용자가 «조금 더 확대»를 시켰다).
      폰에서는 화면 폭의 96%까지 쓰고, 넓은 화면에서는 420에서 멈춘다 —
      끝없이 넓히면 바깥 줄이 손에서 멀어진다. */
-  roadW(){ return Math.min(this.w * .96, 420); },
+  /* 🔵 길의 폭 (2026-09-02 · S-D-11) — 420px 고정이면 큰 창에서 길만 가늘게 남는다.
+     화면이 높을수록 길도 넓게 쓴다. 위아래로 긴 화면에 가는 길을 두면 «복도»가 된다. */
+  roadW(){ return Math.min(this.w * .96, Math.max(400, this.h * .60)); },
   roadX(){ return (this.w - this.roadW()) / 2; },
   laneW(){ return this.roadW() / 3; },
   laneX(i){ return this.roadX() + this.laneW() * (i + .5); },
@@ -601,6 +834,19 @@ const Game = {
       water: v('--blue', '#39607F'), waterBg: v('--bluebg', '#E8EFF4'),
       car: v('--no', '#B03A2E'), carDark: v('--sub', '#5C5C54'),
       bar: v('--leave', '#6B46A8'),
+      /* 🔵 **일러스트 색** (2026-09-02 · S-D-11). 여기 넷은 디자인 시스템에 없는 색이다.
+         지어낸 것이 아니라 **«그것이어야만 하는» 색**이라 넣었다 —
+         위험을 알리는 빗줄 노랑, 켜진 등의 빨강, 헤드라이트의 따뜻한 흰빛.
+         흐린 노랑(--late)으로 빗줄을 치면 «위험»이 아니라 «낡은 나무»로 읽힌다. */
+      steel:   '#8C8C84',      // 쇠기둥
+      stripeA: '#E8B62C',      // 빗줄 노랑
+      stripeB: '#2B2B26',      // 빗줄 검정
+      lamp:    '#DE3B2C',      // 켜진 등
+      head:    '#FFE9A8',      // 헤드라이트 불빛
+      turn:    '#E8952C',      // 방향지시등
+      chrome:  '#C9C7BF',      // 크롬·번호판
+      glass:   v('--sub', '#5C5C54'),
+      sub:     v('--sub', '#5C5C54'),
       /* 꽃은 «상태색»을 빌린다 — 새 색을 지어내지 않는다 */
       flower: [v('--brand', '#BA5054'), v('--late', '#9A7000'),
                v('--leave', '#6B46A8'), v('--ok', '#3F7A4D')],
