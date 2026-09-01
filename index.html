@@ -8590,7 +8590,7 @@ const MODE_RUNNER = {
     g.jump = 0; g.jumpV = 0; g.slide = 0; g.anim = 0; g.road = 0;
     g.dist = 0; g.hurtAt = -9;
     g.py = Math.round(g.h * .80);                 // 사람이 서는 자리(바닥선)
-    g.horizon = Math.round(g.h * .34);
+    g.horizon = Math.round(g.h * .30);
   },
   /* ── 조작 ── */
   key(g, k, down){
@@ -8689,10 +8689,11 @@ const MODE_RUNNER = {
     const k = 1 / (1 + Math.max(0, z) * 3.1);
     return { y: g.horizon + (g.py - g.horizon) * k, k };
   },
-  laneCX(g, laneF, k){
-    const spread = g.roadW() * .5 * k;                      // 멀수록 좁아진다
-    return g.w / 2 + (laneF - 1) * (spread * .62);
-  },
+  /* 🔴 **한 줄의 폭은 «도로의 1/3»이다.** 처음엔 0.62 같은 어림수를 곱했다가
+     장애물이 도로 밖으로 튀어나왔다 — 줄과 장애물이 서로 다른 잣대를 보고 있었다.
+     이제 자리도 폭도 이 함수 하나에서 나온다. */
+  laneW(g, k){ return g.roadW() / 3 * k; },
+  laneCX(g, laneF, k){ return g.w / 2 + (laneF - 1) * this.laneW(g, k); },
   draw(g){
     const c = g.cx, w = g.w, h = g.h, C = g.col;
     /* 하늘 — 단순한 두 색. 사용자가 «복잡하게 하지 말라» 했다 */
@@ -8701,6 +8702,8 @@ const MODE_RUNNER = {
     c.fillStyle = sky; c.fillRect(0, 0, w, g.horizon);
     /* 땅 */
     c.fillStyle = C.ground; c.fillRect(0, g.horizon, w, h - g.horizon);
+    c.strokeStyle = C.line; c.lineWidth = 1;
+    c.beginPath(); c.moveTo(0, g.horizon + .5); c.lineTo(w, g.horizon + .5); c.stroke();
 
     /* 도로 — 지평선의 한 점에서 발밑으로 벌어지는 사다리꼴 */
     const near = this.proj(g, 0), far = this.proj(g, this.Z_FAR);
@@ -8717,7 +8720,7 @@ const MODE_RUNNER = {
       c.beginPath();
       for(let s = 0; s <= 20; s++){
         const z = this.Z_FAR * s / 20, p = this.proj(g, z);
-        const x = w/2 + (i - 1.5) * (g.roadW() * .62 * p.k);
+        const x = w/2 + (i - 1.5) * this.laneW(g, p.k);
         s ? c.lineTo(x, p.y) : c.moveTo(x, p.y);
       }
       c.stroke();
@@ -8753,7 +8756,7 @@ const MODE_RUNNER = {
     const c = g.cx, C = g.col, p = this.proj(g, it.z);
     if(p.k < .02) return;
     const x = this.laneCX(g, it.lane, p.k);
-    const lw = g.roadW() * .62 * p.k * .78;          // 한 줄 폭의 78%
+    const lw = this.laneW(g, p.k) * .78;             // 한 줄 폭의 78% — 사이가 보여야 «줄»로 읽힌다
     if(it.kind === 'star'){
       c.fillStyle = C.star; c.textAlign = 'center'; c.textBaseline = 'middle';
       c.font = Math.max(8, 26 * p.k) + 'px serif';
@@ -8841,8 +8844,10 @@ const Game = {
     const v = (k, d) => (cs.getPropertyValue(k) || '').trim() || d;
     const paper = v('--paper', '#FAF9F6'), line = v('--line', '#E7E5DE');
     return {
-      sky0: v('--card', '#FFFFFF'), sky1: paper,
-      ground: v('--sunk', '#FDFDFB'), road: v('--line2', '#F1EFE9'),
+      /* 🔵 하늘은 옅은 파랑(성적 칸의 `--bluebg`)에서 종이색으로 내려온다.
+         둘 다 흰색이면 지평선이 안 보이고, 지평선이 없으면 «달린다»가 아니라 «떠 있다»가 된다. */
+      sky0: v('--bluebg', '#E8EFF4'), sky1: paper,
+      ground: v('--hover', '#FBFAF6'), road: v('--line2', '#F1EFE9'),
       line: line, line2: v('--accent-line', '#D5D0CA'),
       ink: v('--ink', '#22221E'), dim: v('--dim', '#96968C'),
       accent: v('--accent', '#3F3537'),
