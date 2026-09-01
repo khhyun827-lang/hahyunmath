@@ -542,6 +542,17 @@
 
 /* 단원 체크리스트 — 표가 아니라 «목록»이다. 열이 많은 표는 훑는 데 좋고,
    순서가 있는 것은 목록이 낫다. 진도는 순서가 전부다. */
+/* 반 › 진도의 «교재» (2026-09-01 · T-1). 여러 권을 나란히 두므로 알약 모양이다 —
+   한 줄 입력칸이면 「개념서 · 워크북」처럼 손으로 구분자를 넣게 되고, 그러면 한 권을
+   빼는 일이 «글자 지우기»가 된다. */
+.app .cb-list{display:flex;flex-wrap:wrap;gap:8px;}
+.app .cb-item{display:inline-flex;align-items:center;gap:9px;padding:7px 9px 7px 13px;
+  border:1px solid var(--line);border-radius:var(--r-pill);background:var(--card);font-size:12.5px;}
+.app .cb-item .t{color:var(--ink);}
+.app .cb-item .x{border:0;background:none;color:var(--dim);cursor:pointer;
+  font-size:15px;line-height:1;padding:0 2px;font-family:inherit;}
+.app .cb-item .x:hover{color:var(--no);}
+.app .cb-none{font-size:12.5px;color:var(--dim);}
 .app .chub-u{display:flex;align-items:center;gap:13px;padding:11px 2px;
   border-bottom:1px solid var(--line2);cursor:pointer;transition:background var(--t);}
 .app .chub-u:hover{background:var(--hover);}
@@ -8629,6 +8640,10 @@ function stuHomeHTML(c){
         </div>
         ${cp.subject ? `<div style="font-size:12px;color:var(--dim);margin-top:8px;">
           진도 · ${escHtml(cp.subject)}${nextUnit ? ' — '+escHtml(nextUnit) : ' — 모든 단원 완료'}</div>` : ''}
+        ${/* 교재 (2026-09-01 · T-1b) — «다음 수업» 카드에 둔다. 학생에게 이 줄은
+             «무슨 책을 챙겨 가나»라는 뜻이라, 날짜·시간 바로 아래가 제 자리다. */''}
+        ${cp.books && cp.books.length ? `<div style="font-size:12px;color:var(--dim);margin-top:4px;">
+          교재 · ${cp.books.map(b=>escHtml(b)).join(' · ')}</div>` : ''}
       </div>`}
 
   <div class="msec">요약</div>
@@ -9459,6 +9474,9 @@ function stuProgressHTML(c){
           ${cp.doneCount} / ${cp.chapters.length}단원 완료</div>
         <div style="font-size:12px;color:var(--dim);margin-top:5px;">
           다음 · ${nextUnit ? escHtml(nextUnit) : '모든 단원을 끝냈습니다'}</div>
+        ${cp.books && cp.books.length ? `<div style="font-size:12px;color:var(--sub);margin-top:9px;
+          padding-top:9px;border-top:1px solid var(--line);">교재 · ${
+          cp.books.map(b=>escHtml(b)).join(' · ')}</div>` : ''}
       </div>`}
 
   <div class="msec">과제 <span class="mono" style="color:${undone.length?'var(--late)':'var(--dim)'};">${doneCount}/${c.homework.length}</span></div>
@@ -11920,14 +11938,55 @@ function getClassProgress(classId){
   const doneMap = (c && c.progress && c.progress.unitsBySubject && c.progress.unitsBySubject[subject]) || {};
   const doneCount = chapters.filter(u=>doneMap[u]).length;
   const percent = chapters.length ? Math.round(doneCount/chapters.length*100) : 0;
-  return { subject, chapters, doneMap, doneCount, percent };
+  /* 🔴 **교재도 과목별이다** (2026-09-01 · T-1) — 단원 체크(`unitsBySubject`)와 같은 모양으로 둔다.
+     반 단위로 두면 미적분Ⅰ을 마치고 확률과통계로 넘어갔을 때 **남의 과목 책이 그대로 남는다.**
+     되돌아오면 그 과목에 적어 둔 책이 다시 나온다 — 단원 체크가 그러는 것과 같다. */
+  const books = (c && c.progress && c.progress.booksBySubject && c.progress.booksBySubject[subject]) || [];
+  return { subject, chapters, doneMap, doneCount, percent, books };
 }
 async function setClassProgressSubject(classId, subject){
   const c = DATA.classes.find(x=>x.id===classId);
   if(!c) return;
-  if(!c.progress) c.progress = { subject:'', unitsBySubject:{} };
+  if(!c.progress) c.progress = { subject:'', unitsBySubject:{}, booksBySubject:{} };
   c.progress.subject = subject;
   await dbSetDoc('classes', c.id, c);
+  render();
+}
+/* 교재를 더한다 (2026-09-01 · T-1 · 사용자가 시켰다: 「진도탭에 어떤교재 사용중인지 입력」).
+   🔴 **글자마다 render()를 부르지 않는다** — 한글 조합이 끊긴다(W-3). 누를 때 DOM에서 읽는다.
+   ⚠ 같은 책을 두 번 넣지 않는다 — 빼는 쪽이 이름으로 찾기 때문이다. */
+async function addClassBook(classId){
+  const el = document.getElementById('cb-new');
+  const title = (el ? el.value : '').trim();
+  if(!title){ showToast('교재 이름을 적어 주세요.'); return; }
+  const c = DATA.classes.find(x=>x.id===classId);
+  if(!c || !c.progress || !c.progress.subject){ showToast('과목을 먼저 고르세요.'); return; }
+  const subject = c.progress.subject;
+  if(!c.progress.booksBySubject) c.progress.booksBySubject = {};
+  if(!c.progress.booksBySubject[subject]) c.progress.booksBySubject[subject] = [];
+  const list = c.progress.booksBySubject[subject];
+  if(list.indexOf(title) >= 0){ showToast('이미 적어 둔 교재입니다.'); return; }
+  list.push(title);
+  await dbSetDoc('classes', c.id, c);
+  await logAudit('교재 등록', '', '', c.name + ' · ' + subject + ' · ' + title);
+  showToast('교재를 더했습니다.');
+  render();
+}
+/* 🔴 **인덱스가 아니라 «그 이름»으로 뺀다** (08-27에 글귀에서 실제로 걸렸던 덫).
+   ⚠ 이름은 `data-b`에 담아 `this.dataset.b`로 받는다 — onclick 문자열에 끼워 넣으면
+     따옴표가 든 제목(「선생님's 노트」)에서 코드가 깨진다. escHtml은 `'`를 `&#39;`로 바꾸는데
+     그것이 속성 안에서 다시 `'`로 풀리기 때문이다. */
+async function removeClassBook(classId, title){
+  const c = DATA.classes.find(x=>x.id===classId);
+  if(!c || !c.progress || !c.progress.subject) return;
+  const subject = c.progress.subject;
+  const list = (c.progress.booksBySubject && c.progress.booksBySubject[subject]) || [];
+  const i = list.indexOf(title);
+  if(i < 0) return;
+  list.splice(i, 1);
+  await dbSetDoc('classes', c.id, c);
+  await logAudit('교재 삭제', '', '', c.name + ' · ' + subject + ' · ' + title);
+  showToast('교재를 뺐습니다.');
   render();
 }
 async function toggleClassProgressUnit(classId, unit, checked){
@@ -12790,7 +12849,7 @@ function chubClassListHTML(activeId){
    그건 실제로 도출되는 값이라 거짓이 아니다. */
 function chubProgressHTML(classId){
   loadAllRecordsIfNeeded();
-  const { subject, chapters, doneMap, doneCount, percent } = getClassProgress(classId);
+  const { subject, chapters, doneMap, doneCount, percent, books } = getClassProgress(classId);
   const roster = classRoster(classId);
   const stats = roster.map(s=>rosterStats(s));
   const live = stats.filter(st=>!st.withdrawn);
@@ -12819,7 +12878,8 @@ function chubProgressHTML(classId){
           ${UNITS.map(u=>`<option value="${u}">${u}</option>`).join('')}
         </select>
       </span>
-      <div style="margin-top:14px;font-size:12.5px;color:var(--dim);line-height:1.7;">과목을 고르면 그 과목의 단원 체크리스트가 나옵니다.</div>
+      <div style="margin-top:14px;font-size:12.5px;color:var(--dim);line-height:1.7;">과목을 고르면 그 과목의
+        <b>단원 체크리스트</b>와 <b>교재 칸</b>이 나옵니다.</div>
     </div>`;
   }
 
@@ -12833,7 +12893,29 @@ function chubProgressHTML(classId){
     ${/* ⚠ 단원명은 낱말이라 mono에 넣지 않는다 — 「합 성 함 수」처럼 벌어진다 (8절) */''}
     <span class="t-meta">${nextIdx>=0 ? `다음 단원 <b>${escHtml(chapters[nextIdx])}</b>` : '<b>모든 단원을 마쳤습니다.</b>'}</span>
   </div>
-  <div style="margin-top:8px;">
+  ${/* 교재 (2026-09-01 · T-1). 단원 목록 «위»에 둔다 — 「무슨 책으로」가 「어디까지」보다 먼저다. */''}
+  <div style="margin-top:20px;max-width:620px;">
+    <div class="t-sec" style="margin:0 0 8px;">교재
+      <span style="font-weight:400;color:var(--dim);">${escHtml(subject)}에서 쓰는 책</span></div>
+    ${books.length ? `<div class="cb-list">${books.map(t=>`
+      <span class="cb-item"><span class="t">${escHtml(t)}</span>
+        <button type="button" class="x" data-b="${escHtml(t)}" title="빼기"
+          onclick="removeClassBook('${classId}', this.dataset.b)">×</button></span>`).join('')}</div>`
+      : '<div class="cb-none">아직 적어 둔 교재가 없습니다.</div>'}
+    ${/* 🔴 **`!event.isComposing`이 없으면 한글이 반쯤 든 채로 등록된다** (W-3의 새 얼굴).
+         「개념서」를 치고 **조합을 끝내려고 누르는 Enter**도 keydown을 쏜다 — 그 한 번에
+         책이 들어가 버리고, 이어 치려던 글자는 갈 곳을 잃는다. 영문만 쳐 보면 절대 안 걸린다. */''}
+    <div class="cls-form" style="margin-top:10px;">
+      <label style="flex:1;min-width:230px;"><span>교재 이름</span>
+        <input id="cb-new" placeholder="예: [2026] 개념서 미적분Ⅰ"
+          onkeydown="if(event.key==='Enter' && !event.isComposing){ event.preventDefault(); addClassBook('${classId}'); }"></label>
+      <button class="btn p sm" onclick="addClassBook('${classId}')">추가</button>
+    </div>
+    <p class="st-note">여러 권이면 <b>하나씩 더합니다</b> — 개념서 · 워크북처럼 함께 쓰는 책을 나란히 둡니다.<br>
+      <b>과목마다 따로 기억합니다</b> — 과목을 바꾸면 그 과목에 적어 둔 교재가 나오고,
+      돌아오면 그대로 있습니다.</p>
+  </div>
+  <div style="margin-top:20px;">
     ${chapters.map((u,i)=>{
       const done = !!doneMap[u];
       const cls = done ? 'done' : (i===nextIdx ? 'now' : 'wait');
@@ -13185,7 +13267,11 @@ function monthlyReportData(s, rec, ym, ctx){
     quiz: qlog.length ? {n:qlog.length, ok:qok, days:Object.keys(qdays).length,
           pct: Math.round(qok/qlog.length*100)} : null,
     video: vids.length ? {seen:vidSeen.length, total:vids.length, pct:vidPct} : null,
-    unit: isNow ? ((rec.progress||{}).unit || '') : ''
+    unit: isNow ? ((rec.progress||{}).unit || '') : '',
+    /* 교재 (2026-09-01 · T-1b). ⚠ **달치가 아니라 «지금» 값이다** — 반이 쓰는 책은 이력을 안 남긴다.
+       그래서 지난 달 리포트에서는 화면이 «지금 쓰는 책»이라고 밝혀서 적는다
+       (08-27에 정한 규칙 그대로: 지금 값을 실을 때는 «지금»이라고 밝힌다. 달치인 척하면 거짓이 된다). */
+    books: ctx.books || []
   };
 }
 
@@ -13194,13 +13280,17 @@ function monthlyReportData(s, rec, ym, ctx){
    리포트 화면의 「기록이 없습니다」와, 여러 명 PDF에서 «건너뛸 사람»과, 달 고르개의 «N명 기록 있음»이
    **전부 이 함수를 본다.** 따로 세면 «화면에는 줄이 있는데 PDF는 건너뛴» 어긋남이 생긴다.
    ⚠ 아래 조건은 sdReportHTML이 눈금 줄을 «미는 조건»과 한 글자도 다르면 안 된다 —
-     줄을 하나 더할 때 여기도 같이 고칠 것. */
+     줄을 하나 더할 때 여기도 같이 고칠 것.
+   🔴 **딱 하나 일부러 뺀 것이 있다 — `books`(교재).** 교재는 **반의 속성이지 이 학생이 한 일이 아니다.**
+     넣으면 «출결도 과제도 하나 없는 학생»이 반에 교재가 적혀 있다는 이유로 리포트를 받게 되고,
+     학부모는 책 이름 한 줄만 든 종이를 받는다. 그래서 교재 줄은 **«기록이 있을 때만» 따라 나온다.** */
 function reportIsEmpty(d){
   return d.attPct === null && !d.hw && !d.wrong && !d.quiz
       && !(d.video && d.video.pct !== null) && !d.unit && !d.scores.length;
 }
 function reportDataOf(s, rec, ym){
   return monthlyReportData(s, rec, ym, {
+    books: s.classId ? getClassProgress(s.classId).books : [],
     allRecords: state.allRecords, assignments: DATA.assignments,
     videos: DATA.videos, isDone: hwIsDone, className: classNameOf(s.classId),
     exams: DATA.exams, liveWrong: liveWrongHomework,
@@ -13743,6 +13833,13 @@ function sdReportHTML(s, rec){
     meters.push(meter("강의 시청", d.video.pct,
       d.video.total + "편 중 " + d.video.seen + "편 시청",
       rpGrade(d.video.pct, "video", R)));
+  /* 교재 (2026-09-01 · T-1b · 사용자가 「넓혀줘」로 시켰다). 진도 «위»에 둔다 —
+     「무슨 책으로」가 「어디까지」보다 먼저다(반 › 진도에서 정한 순서와 같다).
+     ⚠ **지난 달 리포트에서는 «지금 쓰는 책»이라고 밝힌다.** 반의 교재는 이력을 안 남기므로
+       그 달에 그 책을 썼다고 말할 수 없다 — 달치인 척하면 거짓이 된다. */
+  if(d.books && d.books.length) meters.push(
+    `<div class="rp-m"><span class="k">교재</span><span class="x" style="color:var(--ink);">${
+      d.books.map(b=>escHtml(b)).join(' · ')}${isThisMonth ? '' : '<s>지금 쓰는 책</s>'}</span></div>`);
   /* ⚠ **진도는 눈금이 아니다** — 「어디까지 나갔나」라 %가 없다.
        눈금 줄만 만들다가 한 번 흘렸다(2026-08-27). 자리는 눈금 아래 텍스트 한 줄. */
   if(d.unit) meters.push(`<div class="rp-m"><span class="k">진도</span><span class="x" style="color:var(--ink);">${escHtml(d.unit)}</span></div>`);
@@ -13935,6 +14032,11 @@ function sdScreenHTML(s, rec, isAssistant){
       <div class="bar" style="margin-top:8px;"><i style="width:${prog.percent}%"></i></div>
       ${(()=>{ const nx = prog.chapters.find(u=>!prog.doneMap[u]);
         return nx ? `<div style="margin-top:7px;font-size:11.5px;color:var(--dim);">다음 단원 · ${escHtml(nx)}</div>` : ''; })()}
+      ${/* 교재 (2026-09-01 · T-1b). 🔴 **명단의 「반 진도」 열에는 안 넣었다** — 그 열은 88px이고
+           표의 행 높이가 40px로 못박혀 있어, 책 이름이 들어가면 한 행만 두 줄이 되어 리듬이 깨진다
+           (8절). 대신 «학생을 연» 이 칸에 둔다 — 여기는 세로로 얼마든지 늘어난다. */''}
+      ${prog.books && prog.books.length ? `<div style="margin-top:7px;font-size:11.5px;color:var(--dim);
+        line-height:1.6;">교재 · ${prog.books.map(b=>escHtml(b)).join(' · ')}</div>` : ''}
     ` : '<div style="margin-top:10px;font-size:11.5px;color:var(--dim);">반 진도 과목이 정해지지 않았습니다.</div>'}
     <hr class="s">
     ${/* 빠른 작업 — 「기본정보」가 있던 자리가 「상담」이 됐다 (2026-08-26).
