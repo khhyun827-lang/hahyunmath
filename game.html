@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>달리기 연습 · 김하현수학연구소</title>
+<meta name="theme-color" content="#FAF9F6">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<link rel="stylesheet" href="ds.css">
+<style>
+  /* 연습 페이지 — 학생 앱의 «하루 한 판»과 달리 몇 번이든 한다.
+     🔴 점수를 어디에도 저장하지 않는다. 도장도 순위도 여기서는 없다 —
+       연습이 실제 기록에 섞이면 그 순위를 아무도 못 믿는다. */
+  *{box-sizing:border-box;}
+  html,body{margin:0;height:100%;overflow:hidden;background:var(--paper);
+    font-family:'Pretendard',-apple-system,sans-serif;color:var(--ink);
+    -webkit-font-smoothing:antialiased;}
+  #wrap{height:100%;max-width:520px;margin:0 auto;display:flex;flex-direction:column;
+    background:var(--card);}
+  .bar{height:52px;flex-shrink:0;display:flex;align-items:center;gap:8px;padding:0 12px;
+    border-bottom:1px solid var(--line);}
+  .bar .t{font-size:13px;font-weight:700;}
+  .bar .t s{text-decoration:none;color:var(--dim);font-weight:400;margin-left:6px;font-size:11.5px;}
+  .bar .sc{margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:600;
+    font-variant-numeric:tabular-nums;}
+  .stage{flex:1;min-height:0;position:relative;}
+  .stage canvas{display:block;touch-action:none;}
+  /* 끝난 뒤 — 바로 다시 할 수 있어야 «연습»이다 */
+  .over{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    background:rgba(250,249,246,.94);}
+  .over .in{text-align:center;padding:0 20px;}
+  .over .big{font-family:'JetBrains Mono',monospace;font-size:40px;font-weight:700;line-height:1.1;}
+  .over .sub{margin-top:6px;font-size:12.5px;color:var(--sub);}
+  .over .btns{margin-top:18px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap;}
+  .btn{font-family:inherit;font-size:13px;padding:10px 18px;border-radius:var(--r-md);
+    border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer;}
+  .btn.p{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:700;}
+  .btn:active{transform:translateY(1px);}
+  .help{flex-shrink:0;border-top:1px solid var(--line);padding:10px 14px 14px;
+    font-size:11.5px;color:var(--dim);line-height:1.75;}
+  .help b{color:var(--sub);}
+  .help .k{display:inline-block;min-width:20px;padding:1px 5px;border:1px solid var(--line);
+    border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--sub);
+    background:var(--sunk);text-align:center;}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div class="bar">
+    <span class="t">달리기 연습<s id="which">3레인 러너</s></span>
+    <span class="sc" id="sc">0</span>
+  </div>
+  <div class="stage" id="stage"><canvas id="cv"></canvas></div>
+  <div class="help">
+    <b>PC</b> <span class="k">←</span> <span class="k">→</span> 레인 ·
+    <span class="k">↑</span> <span class="k">Space</span> 점프 ·
+    <span class="k">↓</span> 슬라이드<br>
+    <b>폰</b> 옆으로 쓸기 = 레인 · 위로 = 점프 · 아래로 = 슬라이드 · 톡 누르면 점프<br>
+    <b style="color:var(--no);">빨강</b> 비켜 가기 ·
+    <b style="color:var(--late);">노랑</b> 뛰어넘기 ·
+    <b style="color:var(--leave);">보라</b> 미끄러지기 · ★ 50점<br>
+    여기 점수는 <b>어디에도 저장되지 않습니다</b> — 마음껏 연습하세요.
+  </div>
+</div>
+
+<script src="game-core.js"></script>
+<script>
+  const cv = document.getElementById('cv');
+  const scEl = document.getElementById('sc');
+  const stage = document.getElementById('stage');
+  let mode = MODE_RUNNER, best = 0;
+
+  function start(){
+    const old = stage.querySelector('.over');
+    if(old) old.remove();
+    scEl.textContent = '0';
+    Game.mount(cv, { mode, onScore(s){ scEl.textContent = s; }, onEnd: done });
+  }
+  function done(score){
+    if(score > best) best = score;
+    const d = document.createElement('div');
+    d.className = 'over';
+    d.innerHTML = '<div class="in">' +
+      '<div class="big">' + score.toLocaleString() + '</div>' +
+      '<div class="sub">' + (score >= best ? '이번이 가장 높습니다' :
+        '이 연습에서 가장 높은 점수 ' + best.toLocaleString()) + '</div>' +
+      '<div class="btns">' +
+        '<button class="btn p" id="again">다시 하기</button>' +
+        '<button class="btn" id="swap">' +
+          (mode === MODE_RUNNER ? '똥피하기로' : '달리기로') + '</button>' +
+      '</div></div>';
+    stage.appendChild(d);
+    d.querySelector('#again').onclick = start;
+    d.querySelector('#swap').onclick = () => {
+      mode = (mode === MODE_RUNNER) ? MODE_DODGE : MODE_RUNNER;
+      document.getElementById('which').textContent =
+        mode === MODE_RUNNER ? '3레인 러너' : '똥피하기';
+      start();
+    };
+  }
+  /* 창 크기가 바뀌면 캔버스를 다시 잡는다 — 폰을 돌리면 반드시 일어난다 */
+  let rt = 0;
+  addEventListener('resize', () => {
+    clearTimeout(rt);
+    rt = setTimeout(() => { if(!stage.querySelector('.over')) start(); }, 250);
+  });
+  start();
+</script>
+</body>
+</html>
