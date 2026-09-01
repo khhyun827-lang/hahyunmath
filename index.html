@@ -481,7 +481,7 @@
 /* 타일 아랫줄(마감·날짜·문항수)은 한 줄로 못 박는다.
    🔴 **ds.css의 `.tile .who span{display:block}`이 «안쪽» span까지 잡는다** —
      날짜를 `<span class="mono">`으로 감싸는 순간 그것이 제 줄을 차지해
-     「마감」과 「2026-09-03」이 두 값처럼 갈라졌다. 실제로 그렇게 나왔다.
+     「마감」과 「2026-09-01」이 두 값처럼 갈라졌다. 실제로 그렇게 나왔다.
      그래서 ① 바깥 한 겹만 자식 결합자로 집고 ② 안쪽은 inline으로 되돌린다. */
 .app .cls-tiles .tile .who > span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .app .cls-tiles .tile .who > span span{display:inline;}
@@ -2537,6 +2537,75 @@
   .lp .l-draw{transform:none;transition:none;}
   .lp .l-bar{transition:none;}
 }
+
+/* ---------- 리포트 PDF 묶음 (2026-09-01 · R-3) ----------
+   🔴 **«그리는 자리»는 화면 밖에 두되 «보이게» 둔다.** `display:none`이면 폭도 높이도 0이라
+     html2canvas가 빈 그림을 그린다. 그래서 왼쪽으로 멀리 밀어낸다.
+   ⚠ 폭 703px은 **A4 본문 폭(210−12−12=186mm)을 96dpi로 옮긴 값**이다. 이 폭으로 그려야
+     PDF에 넣을 때 늘리거나 줄이지 않아 글자가 안 뭉갠다. */
+.rpb-stage{position:fixed;left:-20000px;top:0;width:703px;background:#fff;z-index:-1;pointer-events:none;}
+.rpb-stage .rp-doc{width:703px;max-width:none;border:0;border-radius:0;padding:0;background:#fff;}
+.rpb-row{display:flex;align-items:center;gap:10px;padding:9px 0;
+  border-bottom:1px solid var(--line);font-size:12.5px;}
+.rpb-row:last-child{border-bottom:0;}
+.rpb-row .n{flex-shrink:0;width:20px;text-align:right;color:var(--dim);font-size:11.5px;}
+.rpb-row .nm{flex:1;min-width:0;color:var(--ink);font-weight:600;}
+.rpb-row .nm s{text-decoration:none;color:var(--dim);font-weight:400;font-size:11.5px;margin-left:6px;}
+.rpb-row .st{flex-shrink:0;font-size:11.5px;color:var(--dim);}
+.rpb-row.off .nm{color:var(--dim);font-weight:400;}
+.rpb-row.now .st{color:var(--ink);font-weight:700;}
+.rpb-row.ok .st{color:var(--ok);font-weight:700;}
+
+/* =================== 인쇄 — 월간 리포트 (2026-09-01 · R-2) ===================
+   🔴 **나가는 것은 `#rp-doc` 하나다.** R-1에서 달 고르개(`.rp-bar`)와 쓰는 칸(`.rp-edit`)을
+     일부러 문서 «밖»에 둔 것이 여기서 값을 한다 — 고를 것이 없다.
+
+   🔴 **껍질을 벗기는 것이 절반이다.** 셸은 `.app{min-height:100vh}` · `.sd-screen{height:calc(100vh-92px)}` ·
+     `.sd-doc{flex;min-height:0}`로 «한 화면»을 전제한다. 그대로 인쇄하면 **첫 장 뒤가 통째로 잘린다.**
+     그래서 조상 넷의 높이·넘침·flex를 전부 풀어 놓는다.
+
+   🔴 **`print-color-adjust:exact`가 없으면 막대 색이 날아간다.** 이 문서에서 색은 꾸밈이 아니라
+     «함께 챙겨 주시면 좋은 부분»이라는 **뜻**이고, 범례가 그 색을 가리킨다 —
+     색이 빠지면 범례가 없는 것을 가리키게 된다. 그래서 필수다.
+
+   ⚠ **`:has()`로 «리포트가 떠 있을 때»만 걷어낸다.** 안 그러면 다른 화면에서 Ctrl+P를 눌렀을 때
+     빈 종이가 나온다. 못 알아듣는 브라우저에서는 이 규칙만 통째로 버려지고 (덜 예쁠 뿐) 인쇄는 된다.
+   ⚠ 자동화에서 `window.print()`를 부르지 말 것 — 대화상자가 세션을 막는다. 누르는 것은 사람이다. */
+@media print{
+  @page{ size:A4; margin:14mm 12mm; }
+
+  /* ① 문서 말고는 아무것도 안 나간다. 겹쳐 뜬 것들(토스트·드로어·모달·사진 확대)은
+       position:fixed라 자리를 안 먹으므로 이 한 줄로 전부 사라진다 — 하나씩 세어 둘 필요가 없다. */
+  body:has(#rp-doc) *{ visibility:hidden !important; }
+  body:has(#rp-doc) #rp-doc, body:has(#rp-doc) #rp-doc *{ visibility:visible !important; }
+
+  /* ② 자리를 먹는 «흐름 속» 껍질은 visibility로는 안 된다 — 빈 칸이 그대로 남는다. 지운다.
+       ⚠ `.sd-dh`(학생 이름 머리)도 지운다 — `.rp-h`가 이미 이름·학교·반을 적는다. 두 번 적힌다. */
+  .app .topbar, .app .subnav, .app .sd-list, .app .sd-ctx, .app .sd-dh,
+  .rp-bar, .rp-edit, .rp-wrap > .st-note, .sd-doc > .note.pin,
+  .rpb-stage{ display:none !important; }
+
+  /* ③ 껍질의 높이·넘침·flex를 푼다. 이것이 «둘째 장»을 만든다. */
+  html, body{ background:#fff !important; height:auto !important; overflow:visible !important; }
+  #app, .app, .app .body, .app .sd-screen, .app .sd-doc, .rp-wrap{
+    display:block !important; height:auto !important; max-height:none !important;
+    min-height:0 !important; overflow:visible !important;
+    margin:0 !important; padding:0 !important; background:#fff !important; border:0 !important; }
+
+  /* ④ 종이 위에서는 문서가 곧 지면이다 — 화면용 상자(테두리·모서리·620px)를 벗긴다. */
+  .rp-doc{ max-width:none !important; width:auto !important;
+    border:0 !important; border-radius:0 !important; padding:0 !important;
+    background:#fff !important; }
+
+  /* ⑤ 색은 뜻이다. 지우지 말 것 (위 주석). */
+  #rp-doc, #rp-doc *{ -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important; }
+
+  /* ⑥ 줄과 표가 장 사이에서 반으로 갈리지 않게. 표는 길어지면 넘겨야 하므로 표 «자체»는 푼다. */
+  .rp-m, .rp-tb tr, .rp-leg, .rp-say{ break-inside:avoid !important; page-break-inside:avoid !important; }
+  .rp-tb{ break-inside:auto !important; page-break-inside:auto !important; }
+  .rp-tb thead{ display:table-header-group; }   /* 넘어간 장에도 열 머리가 다시 선다 */
+  .rp-h{ break-after:avoid !important; page-break-after:avoid !important; }
+}
 </style>
 
 </head>
@@ -3194,6 +3263,7 @@ let state = {
   rosterQuery: '',
   rosterSort: 'name',
   rosterSelected: [],
+  rptBatch: null,                 // 리포트 PDF 묶음 (2026-09-01 · R-3)
   rosterLastIndex: null,
   /* 신호(05-signals) — 규칙은 signalOf()가 쥐고 여기는 «무엇을 보여줄지»만 담는다 */
   signalClassId: '',
@@ -7167,6 +7237,11 @@ function render(){
   if(state.attOpenDate && state.view==='teacher' && state.teacherTab==='classhub'
      && (state.classHubTab||'sessions')==='sessions' && !state.studentDetailId)
     drawers += attDateDrawerHTML();
+  /* 리포트 PDF 묶음 (2026-09-01 · R-3). 명단(반 › 학생)에서만 연다 — 고른 학생이 거기 있다.
+     ⚠ 만드는 중에는 화면을 떠나면 안 되므로 닫는 문을 그때만 잠근다(드로어 안에서 처리). */
+  if(state.rptBatch && state.view==='teacher' && state.teacherTab==='classhub'
+     && (state.classHubTab||'sessions')==='students' && !state.studentDetailId)
+    drawers += rptBatchDrawerHTML();
   /* 설정 > 학생의 «계정 수정» (2026-08-27 · D-1). 같은 이유로 화면을 함께 본다. */
   if(state.stuEditId && state.view==='teacher'
      && state.teacherTab==='settings' && (state.settingsSubTab||'assistants')==='students'
@@ -10288,13 +10363,19 @@ function gradeCond(k){
   return k === 'y' ? `무거운 신호 1개 · 시청률 ${signalRules().vidWarn}% 미만` : SIGNAL_GRADE[k].cond;
 }
 
-/* 임계값 일곱 개 — 저장은 신호 해제와 같은 방식이다 (컬렉션 대신 kv 문서 하나).
-   ⚠ 이 일곱 값이 **명단 · 신호 · 학생 상세 세 화면의 등급**을 한꺼번에 정한다. */
-const SIGNAL_DEFAULTS = { absent:2, attPct:80, drop:8, wrong:3, vidHeavy:50, vidWarn:70, vidLight:80 };
+/* 임계값 아홉 개 — 저장은 신호 해제와 같은 방식이다 (컬렉션 대신 kv 문서 하나).
+   ⚠ 앞의 일곱이 **명단 · 신호 · 학생 상세 세 화면의 등급**을 한꺼번에 정한다.
+   ⚠ 뒤의 둘(`rpRed`·`rpYellow`)은 **월간 리포트의 막대 색에만** 쓰인다 (2026-09-01).
+     같은 kv 문서에 담는 까닭은 **임계값이 한 곳에만 있어야 하기 때문**이다 —
+     흩어 두면 «어디서 정하는 값이더라»를 다시 찾아야 한다. */
+const SIGNAL_DEFAULTS = { absent:2, attPct:80, drop:8, wrong:3, vidHeavy:50, vidWarn:70, vidLight:80,
+                          rpRed:60, rpYellow:80 };
 const SIGNAL_LIMITS   = { absent:[1,8], attPct:[1,100], drop:[1,100], wrong:[1,99],
-                          vidHeavy:[0,100], vidWarn:[0,100], vidLight:[0,100] };
+                          vidHeavy:[0,100], vidWarn:[0,100], vidLight:[0,100],
+                          rpRed:[0,100], rpYellow:[0,100] };
 const SIGNAL_RULE_LABELS = { absent:'연속 결석', attPct:'출석률', drop:'성적 급락', wrong:'오답 미제출',
-                             vidHeavy:'시청률 무거움', vidWarn:'시청률 주의', vidLight:'시청률 경미' };
+                             vidHeavy:'시청률 무거움', vidWarn:'시청률 주의', vidLight:'시청률 경미',
+                             rpRed:'리포트 빨강', rpYellow:'리포트 노랑' };
 
 function clampRule(k, n){
   const [lo, hi] = SIGNAL_LIMITS[k] || [0, 100];
@@ -10312,6 +10393,8 @@ function signalRules(){
   // 시청률 셋은 항상 «무거움 ≤ 주의 ≤ 경미»다. 뒤집히면 어느 구간도 성립하지 않는다.
   r.vidWarn  = Math.max(r.vidWarn, r.vidHeavy);
   r.vidLight = Math.max(r.vidLight, r.vidWarn);
+  // 리포트 색도 같다 — 빨강 ≤ 노랑이 아니면 «빨강도 노랑도 아닌» 구간이 생긴다.
+  r.rpYellow = Math.max(r.rpYellow, r.rpRed);
   return r;
 }
 
@@ -10603,6 +10686,8 @@ function teacherRosterHTML(){
     <span class="field rst-selwrap"><select class="rst-sel" id="rst-move">${classOptionsHTML(classId)}</select></span>
     <button class="btn sm" onclick="rosterBulkMoveClass()">반 이동</button>
     <button class="btn sm" onclick="exportRosterExcel(true)">${iconSvg('download',13)} 선택 학생 내보내기</button>
+    ${/* 리포트 PDF (2026-09-01 · R-3) — 고르는 칸도 발판도 이미 있었다. 단추 하나만 얹는다. */''}
+    <button class="btn sm" onclick="openReportBatch()">${iconSvg('download',13)} 리포트 PDF</button>
     <button class="btn q sm" onclick="state.rosterSelected=[]; state.rosterLastIndex=null; render()">선택 해제</button>
     <span class="hint">Shift+클릭으로 범위 선택</span>
   </div>`;
@@ -13105,6 +13190,15 @@ function monthlyReportData(s, rec, ym, ctx){
 }
 
 /* 화면도 글귀도 이것 하나로 재료를 얻는다 — 두 곳에서 따로 부르면 조건이 어긋난다. */
+/* 🔴 **«이 달에 기록이 없다»는 판정은 여기 하나뿐이다** (2026-09-01 · R-3b).
+   리포트 화면의 「기록이 없습니다」와, 여러 명 PDF에서 «건너뛸 사람»과, 달 고르개의 «N명 기록 있음»이
+   **전부 이 함수를 본다.** 따로 세면 «화면에는 줄이 있는데 PDF는 건너뛴» 어긋남이 생긴다.
+   ⚠ 아래 조건은 sdReportHTML이 눈금 줄을 «미는 조건»과 한 글자도 다르면 안 된다 —
+     줄을 하나 더할 때 여기도 같이 고칠 것. */
+function reportIsEmpty(d){
+  return d.attPct === null && !d.hw && !d.wrong && !d.quiz
+      && !(d.video && d.video.pct !== null) && !d.unit && !d.scores.length;
+}
 function reportDataOf(s, rec, ym){
   return monthlyReportData(s, rec, ym, {
     allRecords: state.allRecords, assignments: DATA.assignments,
@@ -13196,8 +13290,9 @@ function reportUsePhrase(sid, ym, text){
      · 출결 → `R.attPct`(기본 80) 미만이면 r. 그 위 10점 안쪽이면 y
      · 강의 시청 → **규칙에 이미 3단계가 있다**(`vidHeavy` 50 · `vidWarn` 70). 그대로 쓴다
      · 오답 «제출» → 남은 미제출이 `R.wrong`(기본 3)건 이상이면 r — 신호와 같은 잣대다
-   ⚠ **아래 둘은 신호 규칙에 없어서 내가 정한 값이다** (60 / 80). 과제·오답 정답률·데일리퀴즈.
-     기준이 필요하면 신호 규칙에 항목을 늘리고 여기서 그것을 읽는 쪽이 옳다.
+   ✅ **과제 · 오답 정답률 · 데일리퀴즈도 이제 규칙에서 읽는다** — `R.rpRed`(기본 60) · `R.rpYellow`(기본 80).
+     08-30에는 내가 지어낸 상수였고, **2026-09-01에 사용자가 「설정에서 조절하게」로 정했다.**
+     ⚠ 이 둘은 **리포트에서만** 쓰인다 — 신호판·명단은 안 본다. 설정 화면에서도 그렇게 적었다.
    ⚠ **학부모 문서에 「위험」·「주의」라는 «말»은 쓰지 않는다** — 그것은 선생님이 볼 내부 판단이다
      (R-1에서 신호를 빼기로 한 것과 같은 뜻). 여기서는 **색과 범례로만** 말한다. */
 function rpGrade(pct, kind, R, extra){
@@ -13205,7 +13300,7 @@ function rpGrade(pct, kind, R, extra){
   if(kind === 'att')   return pct < R.attPct ? 'r' : (pct < R.attPct + 10 ? 'y' : '');
   if(kind === 'video') return pct < R.vidHeavy ? 'r' : (pct < R.vidWarn ? 'y' : '');
   if(kind === 'hwLeft') return extra >= R.wrong ? 'r' : (extra > 0 ? 'y' : '');
-  return pct < 60 ? 'r' : (pct < 80 ? 'y' : '');
+  return pct < R.rpRed ? 'r' : (pct < R.rpYellow ? 'y' : '');
 }
 function reportKey(sid, ym){ return sid + ':' + ym; }
 async function loadReportIfNeeded(sid, ym){
@@ -13238,6 +13333,348 @@ async function saveReportComment(sid, ym){
   render();
 }
 function sdReportMonth(delta){ state.reportYm = shiftYm(reportYm(), delta); render(); }
+
+/* 인쇄 (2026-09-01 · R-2) — 하는 일은 대화상자를 여는 것 하나뿐이다.
+   🔴 **무엇이 나갈지는 전부 `@media print`가 정한다** — 여기서 DOM을 만들거나 새 창을 띄우지 않는다.
+     새 창을 띄우면 스타일과 글꼴을 다시 이어 줘야 하고, 그때부터 «화면과 종이»가 두 벌이 된다.
+   ⚠ **자동화로 이 함수를 부르지 말 것** — 인쇄 대화상자가 세션을 막는다. 누르는 것은 사람이다. */
+/* =================== 리포트 PDF 묶음 (2026-09-01 · R-3) ===================
+   사용자가 시켰다 — 「**학생명단에서 학생 체크표시해서 하단에 여러명 리포트 pdf로 저장하는
+   기능**」. 갈림길에서 **「학생별로 파일이 나뉜다」 → 「한 번에 N개 자동 저장」**을 골랐다.
+
+   🔵 **만들 것이 적었다** — 고르는 칸(state.rosterSelected · Shift+범위)도 하단 발판(.actbar)도
+     **이미 있었다.** 얹은 것은 단추 하나와 «파일 만드는 일»뿐이다 (09-01의 ②: 옮기기 전에 센다).
+
+   🔴 **왜 브라우저 인쇄가 아닌가.** window.print()는 **한 번에 파일 하나**만 만든다.
+     N명을 나누려면 사람이 대화상자를 N번 눌러야 한다. 사용자가 그 대신 **한 번 눌러 N개**를
+     골랐고, 그 대가가 아래 ⚠다.
+   ⚠ **리포트가 «사진»으로 들어간다** — 글자를 복사·검색할 수 없고 크게 키우면 흐리다.
+     이 대가를 **먼저 말하고 고르게 했다.** 벡터로 넣으려면 한글 글꼴을 PDF에 심고 표·눈금을
+     jsPDF로 **다시 그려야** 하는데, 그러면 «화면과 종이»가 두 벌이 되어 한쪽만 고치는 날
+     어긋난다. 인쇄(R-2b)를 화면 CSS 하나로 끝낸 것과 같은 까닭이다.
+   🔵 그래서 **흐림을 값으로 줄였다** — 288dpi(scale 3)로 그리고, 자를 자리를 DOM에서 재서
+     **줄 한가운데를 안 자른다.** 한 명을 곱게 뽑을 때는 여전히 R-2b의 「인쇄」가 답이다. */
+
+/* A4 세로. 좌우 12mm · 위아래 14mm는 @media print의 @page와 **같은 값**이다 —
+   두 길로 나온 종이가 같아 보여야 한다. 703px = 186mm(210−24)를 96dpi로 옮긴 값. */
+const RPB = { W:703, MMPX:186/703, X:12, Y:14, PW:186 };
+const RPB_PAGE_PX = 269 / (186/703);         // 한 장에 들어가는 CSS 픽셀 (≈1016)
+
+function ensureHtml2CanvasLoaded(){
+  if(window.html2canvas) return Promise.resolve();
+  return new Promise((resolve, reject)=>{
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js';
+    s.onload = () => resolve();
+    s.onerror = () => reject(new Error('그림 변환 라이브러리를 불러오지 못했습니다.'));
+    document.head.appendChild(s);
+  });
+}
+function ensureJsPDFLoaded(){
+  if(window.jspdf && window.jspdf.jsPDF) return Promise.resolve();
+  return new Promise((resolve, reject)=>{
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js';
+    s.onload = () => resolve();
+    s.onerror = () => reject(new Error('PDF 라이브러리를 불러오지 못했습니다.'));
+    document.head.appendChild(s);
+  });
+}
+
+/* 화면이 그리는 «그» 문서를 그대로 떼어 온다.
+   🔴 **여기서 리포트를 다시 만들지 않는다** — 만들면 화면과 PDF가 두 벌이 되고,
+     한쪽만 고치는 날부터 «화면에서는 맞는데 PDF는 틀린» 일이 시작된다.
+   🔴 **id를 뗀다** — #rp-doc이 둘이 되면 인쇄 규칙 body:has(#rp-doc)이 명단 화면에서도 켜져
+     Ctrl+P가 엉뚱한 것을 걷어낸다. */
+function rptDocEl(s, rec){
+  const box = document.createElement('div');
+  box.innerHTML = sdReportHTML(s, rec);
+  const doc = box.querySelector('.rp-doc');
+  if(doc) doc.removeAttribute('id');
+  return doc;
+}
+/* «이 달에 기록이 없다»는 판정은 reportIsEmpty 하나를 본다 (R-3b).
+   🔴 **여기서 sdReportHTML을 부르지 않는다** — 그 함수는 loadReportIfNeeded를 부르므로
+     달 고르개에서 열두 달을 세는 순간 **학생×달 만큼 DB를 읽고 render()가 그만큼 돈다.**
+     reportDataOf는 이미 읽어 둔 것만 보는 순수 계산이라 몇백 번을 불러도 값이 안 든다. */
+function rptIsEmpty(s, rec, ym){
+  if(!s || !rec) return true;
+  return reportIsEmpty(reportDataOf(s, rec, ym));
+}
+/* 달 고르개에 «몇 명이나 기록이 있나»를 함께 적는다 (2026-09-01 · R-3b).
+   🔵 **이러면 «어느 달을 골라야 하나»를 사용자가 짐작하지 않아도 된다** — 9월 1일에 열면
+     「9월 0명 · 8월 3명」이 나란히 보인다. 기본값을 내가 «똑똑하게» 맞히려 들지 않는 까닭이다:
+     8월 말에 8월 것을 뽑는 날도, 9월 1일에 8월 것을 뽑는 날도 둘 다 있다. */
+function rptMonthOptions(ids){
+  const out = [];
+  let ym = ymNow();
+  for(let i=0;i<12;i++){
+    let has = 0;
+    for(const sid of ids){
+      const st = DATA.students.find(x=>x.studentId===sid);
+      if(st && DATA.records[sid] && !rptIsEmpty(st, DATA.records[sid], ym)) has++;
+    }
+    out.push({ ym, has });
+    ym = shiftYm(ym, -1);
+  }
+  return out;
+}
+
+/* 자를 자리 — «덩어리의 아래끝»만 고른다. 눈금 줄이나 표 행 한가운데를 자르면
+   글자가 위아래로 반씩 갈려 **두 장 모두에서 못 읽는다.**
+   ⚠ 한 덩어리가 한 장보다 크면 어쩔 수 없이 그냥 자른다(선생님 한마디가 아주 길 때). */
+function rptPageCuts(el){
+  const top = el.getBoundingClientRect().top;
+  const total = el.scrollHeight;
+  const marks = Array.from(el.querySelectorAll('.rp-h, .rp-m, .rp-tb thead, .rp-tb tbody tr, .rp-leg, .rp-say'))
+    .map(x => x.getBoundingClientRect().bottom - top)
+    .filter(v => v > 0 && v < total)
+    .sort((a,b)=>a-b);
+  const cuts = [0];
+  let at = 0, guard = 0;
+  while(total - at > RPB_PAGE_PX && guard++ < 200){
+    const fits = marks.filter(v => v > at && v <= at + RPB_PAGE_PX);
+    at = fits.length ? fits[fits.length-1] : at + RPB_PAGE_PX;
+    cuts.push(at);
+  }
+  cuts.push(total);
+  return cuts;
+}
+
+/* 🔴 **크롬은 «한 번에 여러 파일 내려받기»를 조용히 막는다** (2026-09-01에 실제로 당했다).
+   3명을 저장했다고 알렸는데 **내려받기 폴더에는 한 개만** 있었다. 주소창에 작은 차단 표시가
+   뜰 뿐이라 **아무도 모른다.** 「허용해 주세요」라고 적어 둔 것으로는 못 막는다 —
+   **어긋남은 설명할 것이 아니라 없앨 것이다**(08-31에 배운 그것).
+   🔵 그래서 **폴더를 한 번 고르게 하고 거기에 직접 쓴다.** 내려받기가 아니므로 막힐 일이 없고,
+     «어디에 저장됐는지»도 사용자가 고른 그 폴더로 확정된다 — 두 번째 불만도 같이 없어진다.
+   ⚠ **고르는 창은 «누른 그 순간»에 열어야 한다** — 라이브러리를 먼저 기다리면 클릭의 힘이
+     풀려서 브라우저가 창을 안 띄운다. 그래서 runReportBatch의 맨 첫 줄이다.
+   ⚠ 이 API가 없는 브라우저에서는 옛길(내려받기)로 간다. 그때는 **한 개씩 밖에 안 온다는 것을
+     화면에 적어 둔다** — 조용히 실패하게 두지 않는다. */
+function rptCanPickFolder(){ return typeof window.showDirectoryPicker === 'function'; }
+async function rptPickFolder(){
+  if(!rptCanPickFolder()) return null;
+  try{
+    return await window.showDirectoryPicker({ id:'hh-report', mode:'readwrite', startIn:'downloads' });
+  }catch(e){
+    return 'CANCEL';                     // 사용자가 창을 닫았다 — 잘못이 아니다
+  }
+}
+
+/* 한 학생 → 파일 하나. **파일 이름이 곧 학부모께 보낼 때의 이름**이 되므로 사람이 읽는 말로 짓는다.
+   dir가 있으면 그 폴더에 쓰고, 없으면 옛길(내려받기)로 간다. */
+async function rptSaveOne(el, s, ym, dir){
+  /* 긴 문서는 배율을 낮춘다 — 안 그러면 캔버스가 수억 픽셀이 되어 브라우저가 빈 그림을 준다. */
+  const scale = el.scrollHeight > 2600 ? 2 : 3;
+  const canvas = await html2canvas(el, {scale, backgroundColor:'#ffffff', logging:false, useCORS:true});
+  const cuts = rptPageCuts(el);
+  const pdf = new window.jspdf.jsPDF({unit:'mm', format:'a4', orientation:'portrait'});
+  for(let i=0;i<cuts.length-1;i++){
+    const y0 = Math.round(cuts[i]*scale);
+    const h  = Math.round(cuts[i+1]*scale) - y0;
+    if(h <= 0) continue;
+    const part = document.createElement('canvas');
+    part.width = canvas.width; part.height = h;
+    part.getContext('2d').drawImage(canvas, 0, y0, canvas.width, h, 0, 0, canvas.width, h);
+    if(i > 0) pdf.addPage();
+    /* PNG로 넣는다 — JPEG는 글자 가장자리에 얼룩이 진다. 흰 바탕에 글자라 용량도 오히려 작다. */
+    pdf.addImage(part.toDataURL('image/png'), 'PNG', RPB.X, RPB.Y, RPB.PW, (cuts[i+1]-cuts[i])*RPB.MMPX);
+  }
+  const name = (s.name + '_' + ym + '_월간리포트').replace(/[\\/:*?"<>|]/g, '').replace(/\s+/g, '') + '.pdf';
+  if(dir){
+    const fh = await dir.getFileHandle(name, { create:true });
+    const w = await fh.createWritable();
+    await w.write(pdf.output('blob'));
+    await w.close();
+  }else{
+    pdf.save(name);
+  }
+  return name;
+}
+
+function rptBatchMonth(delta){
+  const b = state.rptBatch; if(!b || b.phase==='running') return;
+  state.reportYm = shiftYm(b.ym, delta);
+  openReportBatch(b.ids);
+}
+function rptBatchPickMonth(ym){
+  const b = state.rptBatch; if(!b || b.phase==='running' || !ym || ym===b.ym) return;
+  state.reportYm = ym;
+  openReportBatch(b.ids);
+}
+function closeReportBatch(){
+  if(state.rptBatch && state.rptBatch.phase==='running') return;   // 만드는 중에는 안 닫는다
+  state.rptBatch = null; render();
+}
+
+/* 여는 것과 «재료를 다 읽는 것»이 한 몸이다.
+   🔴 **다 읽기 «전»에 그리면 안 된다** — 선생님 한마디는 학생마다 따로 읽어 오는데,
+     안 읽힌 채로 그리면 **한마디가 빠진 PDF**가 조용히 나간다. 그래서 phase를 둔다. */
+async function openReportBatch(ids){
+  ids = (ids || state.rosterSelected || []).slice();
+  if(ids.length === 0){ showToast('학생을 먼저 고르세요.'); return; }
+  const ym = reportYm();
+  state.rptBatch = { ids, ym, phase:'loading', cur:0, saved:[], skipped:[], err:'',
+                     months:(state.rptBatch && state.rptBatch.months) || [], files:[], where:'' };
+  render();
+  await loadAllRecordsIfNeeded();
+  for(const sid of ids){
+    await loadRecord(sid);
+    const k = reportKey(sid, ym);
+    if(!state.reportDocs[k]) state.reportDocs[k] = (await dbGet('report:' + k, {})) || {};
+  }
+  const b = state.rptBatch;
+  if(!b || b.ym !== ym) return;              // 그 사이 달을 바꿨으면 이 결과는 버린다
+  b.skipped = ids.filter(sid=>{
+    const st = DATA.students.find(x=>x.studentId===sid);
+    return rptIsEmpty(st, DATA.records[sid], ym);
+  });
+  b.months = rptMonthOptions(ids);           // 「어느 달에 몇 명」 — 고르는 근거를 함께 보인다
+  b.phase = 'ready';
+  render();
+}
+
+async function runReportBatch(){
+  const b = state.rptBatch;
+  if(!b || b.phase !== 'ready') return;
+  const list = b.ids.filter(id => !b.skipped.includes(id));
+  if(list.length === 0){ showToast('이 달에 기록이 있는 학생이 없습니다.'); return; }
+  /* 🔴 **폴더 고르는 창을 맨 먼저 연다** — 아래에서 라이브러리를 기다린 뒤에 열면
+     «사용자가 누른 힘»이 이미 풀려서 브라우저가 창을 안 띄운다. */
+  const dir = await rptPickFolder();
+  if(dir === 'CANCEL') return;               // 창을 닫으셨다 — 아무 일도 안 한다
+  state.reportYm = b.ym;                     // sdReportHTML이 보는 달을 못박는다
+  b.phase = 'running'; b.cur = 0; b.saved = []; b.files = []; b.err = '';
+  b.where = dir ? (dir.name || '고르신 폴더') : '';
+  render();
+  let stage = null;
+  try{
+    await ensureHtml2CanvasLoaded();
+    await ensureJsPDFLoaded();
+    /* ⚠ 글꼴이 아직 안 왔으면 html2canvas가 **대체 글꼴로** 그려 버린다. 되돌릴 수 없다. */
+    if(document.fonts && document.fonts.ready) await document.fonts.ready;
+    stage = document.createElement('div');
+    stage.className = 'rpb-stage';
+    document.body.appendChild(stage);
+    for(let i=0;i<list.length;i++){
+      const sid = list[i];
+      b.cur = i; render();
+      const st = DATA.students.find(x=>x.studentId===sid);
+      const rec = DATA.records[sid];
+      if(!st || !rec) continue;
+      const doc = rptDocEl(st, rec);
+      if(!doc) continue;
+      stage.innerHTML = '';
+      stage.appendChild(doc);
+      /* 두 프레임을 쉰다 — 붙이자마자 재면 배치가 안 끝나 자를 자리가 어긋난다. */
+      await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
+      const fname = await rptSaveOne(doc, st, b.ym, dir);
+      b.saved.push(sid); b.files.push(fname); render();
+      /* ⚠ 옛길(내려받기)일 때만 쉰다 — 잇달아 시키면 브라우저가 뒤엣것을 흘린다.
+         폴더에 직접 쓸 때는 그럴 일이 없다. */
+      if(!dir) await new Promise(r=>setTimeout(r, 350));
+    }
+    b.phase = 'done'; render();
+    showToast(dir
+      ? b.saved.length + '개를 「' + b.where + '」 폴더에 저장했습니다.'
+      : b.saved.length + '개를 내려받기 폴더로 보냈습니다 — 실제로 왔는지 확인해 주세요.');
+  }catch(e){
+    b.phase = 'ready';
+    b.err = (e && e.message) ? e.message : String(e);
+    render();
+    showToast('PDF를 만들지 못했습니다 — ' + b.err);
+  }finally{
+    if(stage) stage.remove();
+  }
+}
+
+function rptBatchDrawerHTML(){
+  const b = state.rptBatch; if(!b) return '';
+  const live = b.ids.filter(id => !b.skipped.includes(id));
+  const running = b.phase === 'running';
+  const rows = b.ids.map((sid, i)=>{
+    const st = DATA.students.find(x=>x.studentId===sid);
+    const off  = b.skipped.includes(sid);
+    const done = b.saved.includes(sid);
+    const now  = running && live[b.cur] === sid;
+    const word = off ? '이 달 기록 없음' : done ? '저장됨' : now ? '만드는 중…'
+      : b.phase === 'loading' ? '읽는 중…' : '대기';
+    return `<div class="rpb-row ${off ? 'off' : ''}${done ? ' ok' : ''}${now ? ' now' : ''}">
+      <span class="n mono">${i + 1}</span>
+      <span class="nm">${escHtml(st ? st.name : sid)}<s>${
+        escHtml(st && st.classId ? classNameOf(st.classId) : '미배정')}</s></span>
+      <span class="st">${word}</span></div>`;
+  }).join('');
+
+  return `<div class="hwd-back" onclick="closeReportBatch()"></div>
+    <aside class="hwd">
+      <div class="hwd-h" style="position:relative;">
+        <div class="t">리포트 PDF로 저장</div>
+        <div class="m">고른 <b class="mono">${b.ids.length}</b>명<s>·</s>${ymLabel(b.ym)}</div>
+        ${running ? '' : '<button class="x" onclick="closeReportBatch()" title="닫기 (Esc)">×</button>'}
+      </div>
+      <div class="hwd-b">
+        ${/* 🔵 **달을 «고르는 것»으로 만들었다** (2026-09-01 · R-3b · 사용자가 시켰다):
+             「9월 1일이어서 8월달 리포트를 쓰고싶을수도 있고, 8월말에 8월달 리포트를 저장할 수도
+             있어서」. **그래서 기본값을 똑똑하게 맞히려 들지 않는다** — 두 경우가 다 있는데
+             한쪽으로 찍으면 나머지 절반은 매번 되돌려야 한다.
+             대신 **«어느 달에 몇 명»을 옆에 적어** 고르는 근거를 화면이 준다. */''}
+        <div class="st-form" style="margin:0 0 12px;">
+          <label style="display:block;">
+            <span style="display:block;font-size:11.5px;color:var(--dim);margin-bottom:5px;">리포트 달</span>
+            <select class="fm-sel" style="width:100%;" ${running ? 'disabled' : ''}
+              onchange="rptBatchPickMonth(this.value)">
+              ${(b.months && b.months.length ? b.months : [{ym:b.ym, has:null}]).map(o=>
+                `<option value="${o.ym}" ${o.ym===b.ym?'selected':''}>${ymLabel(o.ym)}${
+                  o.has === null ? '' : (o.has ? '  ·  기록 있는 학생 ' + o.has + '명' : '  ·  기록 없음')
+                }${o.ym===ymNow() ? '  (이번 달)' : ''}</option>`).join('')}
+            </select>
+          </label>
+        </div>
+        ${rows}
+        ${b.skipped.length ? `<p class="st-note"><b>${b.skipped.length}명은 이 달 기록이 없어 뺐습니다</b> —
+          출결 · 시험 · 과제 어느 것도 남지 않은 달이라 빈 종이가 나갑니다. 위에서 달을 바꾸면 다시 셉니다.</p>` : ''}
+        ${b.err ? `<p class="st-note" style="color:var(--no);">${escHtml(b.err)}</p>` : ''}
+        ${b.phase === 'done' && b.files.length ? `<p class="st-note">
+          <b>${b.where ? '「' + escHtml(b.where) + '」 폴더에' : '내려받기 폴더로'} ${b.files.length}개를 저장했습니다.</b><br>
+          ${b.files.map(f=>escHtml(f)).join('<br>')}</p>` : ''}
+        ${/* 🔴 어디에 저장되는지를 **누르기 전에** 말한다. 09-01에 사용자가 「어디에 저장했는지도
+             모르겠고」라고 한 자리다 — 3개를 저장했다고 알렸는데 실제로는 1개만 와 있었다. */''}
+        <p class="st-note">${rptCanPickFolder()
+          ? `누르면 <b>폴더를 고르는 창</b>이 먼저 뜹니다. 고르신 그 폴더에 <b>학생마다 파일 하나씩</b>
+             바로 저장됩니다 — 「이름_${escHtml(b.ym)}_월간리포트.pdf」.`
+          : `이 브라우저는 폴더 고르기를 지원하지 않아 <b>내려받기 폴더</b>로 갑니다 —
+             「이름_${escHtml(b.ym)}_월간리포트.pdf」.<br>
+             🔴 <b>크롬은 파일을 여러 개 내려받는 것을 막을 수 있습니다</b> — 주소창에 차단 표시가 뜨면
+             허용해 주세요. <b>저장했다고 나와도 실제로 몇 개가 왔는지 꼭 확인</b>하세요.`}<br>
+          ⚠ 이 PDF는 리포트를 <b>그림으로</b> 담습니다 — 글자를 복사·검색할 수 없습니다.
+          한 명을 곱게 뽑으실 때는 그 학생 리포트 화면의 <b>「인쇄」</b>를 쓰세요.<br>
+          ⚠ <b>「선생님 한마디」는 저장하신 것만</b> 들어갑니다.</p>
+      </div>
+      <div class="hwd-f">
+        <div class="nav">
+          <button class="btn sm" ${running ? 'disabled' : ''} onclick="closeReportBatch()">닫기</button>
+          <button class="btn p sm" ${b.phase !== 'ready' || live.length === 0 ? 'disabled' : ''}
+            onclick="runReportBatch()">${
+              b.phase === 'loading' ? '읽는 중…'
+              : running ? '만드는 중 ' + b.saved.length + '/' + live.length
+              : b.phase === 'done' ? '다시 저장 (' + live.length + '명)'
+              : rptCanPickFolder() ? '폴더 고르고 ' + live.length + '명 저장'
+              : live.length + '명 저장'}</button>
+        </div>
+      </div>
+    </aside>`;
+}
+function printReport(){
+
+  /* 저장 안 한 한마디가 있으면 먼저 알린다 — 눌러 놓고 종이에서야 빠진 걸 알면 늦다. */
+  const el = document.getElementById('rp-comment');
+  const saved = (state.reportDocs[reportKey(state.studentDetailId, reportYm())] || {}).comment || '';
+  if(el && el.value.trim() !== saved.trim()){
+    showToast('선생님 한마디가 아직 저장되지 않았습니다 — 저장해야 문서에 실립니다.');
+  }
+  window.print();
+}
 
 function sdReportHTML(s, rec){
   const sid = s.studentId, ym = reportYm();
@@ -13335,6 +13772,8 @@ function sdReportHTML(s, rec){
       <button class="btn q sm" ${isThisMonth?'disabled title="아직 오지 않은 달입니다"':''}
         onclick="sdReportMonth(1)">${iconSvg('chevR',13)}</button>
       <span style="flex:1;"></span>
+      ${/* 인쇄 (2026-09-01 · R-2) — 이 단추는 `.rp-bar` 안이라 «문서 밖»이고, 그래서 종이에 안 나간다. */''}
+      <button class="btn sm" onclick="printReport()">인쇄</button>
       <button class="btn sm" onclick="sdMode('timeline')">연대기로</button>
     </div>
 
@@ -13346,7 +13785,7 @@ function sdReportHTML(s, rec){
           ${d.className ? `<s>·</s>${escHtml(d.className)}` : ''}</div>
       </div>
 
-      ${meters.length || examTable ? `
+      ${!reportIsEmpty(d) ? `
         <div class="rp-body">${meters.join('')}</div>
         ${/* ⚠ 여기에 「시험」 소제목을 다시 세우지 말 것 (2026-08-29 · 사용자가 짚었다) —
              **표의 첫 열 머리가 이미 「시험」이다.** 둘이 나란히 있으면 같은 말이 두 번 적힌다.
@@ -13393,6 +13832,9 @@ function sdReportHTML(s, rec){
 
     <p class="st-note">숫자는 이 달에 쌓인 기록에서 그대로 옵니다. <b>없던 항목은 줄째로 빠집니다</b> —
       빈 칸을 남기면 «안 한 것»으로 읽히기 때문입니다.
+      <br><b>「인쇄」를 누르면 위 문서만 나갑니다</b> — 달 고르개 · 「선생님 한마디」 입력칸 · 글귀는 빠집니다.
+      한마디는 <b>저장하신 뒤에</b> 인쇄해야 문서에 실립니다. PDF로 남기시려면 인쇄 대화상자에서
+      «대상»을 <b>PDF로 저장</b>으로 고르시면 됩니다.
       ${!s.parentPhone ? '<br><b style="color:var(--late);">학부모 전화번호가 비어 있습니다</b> — 설정 &gt; 학생에서 채워 주세요.' : ''}</p>
   </div>`;
 }
@@ -16773,10 +17215,18 @@ function teacherSignalRulesHTML(){
          <span class="sr-pre">경미</span>${num('vidLight','% 미만')}`) +
       row('과제 누락', '하나라도 미완이면 경미한 신호입니다. 「몇 개부터」가 없으므로 고칠 값도 없습니다.',
         '<span class="sr-fixed">미완 1건부터</span>') +
+      /* ⚠ 이 한 줄만 «신호»가 아니다 — 그래서 이름에 「리포트」를 넣고 설명 첫머리에 밝힌다.
+           그래도 여기 두는 까닭은 **임계값을 한 곳에서만 정하기 위해서**다. */
+      row('리포트 색 기준', `<b>월간 리포트에서만</b> 쓰입니다 — <b>과제 제출 · 오답 정답률 · 데일리퀴즈</b>
+        세 줄의 막대 색입니다. 출결 · 오답 제출 · 강의 시청은 위의 값을 그대로 씁니다.
+        기본값 ${SIGNAL_DEFAULTS.rpRed}·${SIGNAL_DEFAULTS.rpYellow}%`,
+        `<span class="sr-pre">빨강</span>${num('rpRed')}
+         <span class="sr-pre">노랑</span>${num('rpYellow','% 미만')}`) +
       `<p class="st-note">
         등급은 <b>무거운 신호 2개 이상이면 위험</b>, <b>1개면 주의</b>, <b>경미한 것만이면 관찰</b>입니다 —
         이 셋은 규칙의 뼈대라 여기서 고치지 않습니다.<br>
         바꾼 값은 <b>명단 · 신호 · 학생 상세</b> 세 화면에 함께 반영되고, 변경 이력에 남습니다.
+        「리포트 색 기준」만은 <b>월간 리포트</b>에만 반영됩니다.
         ${changed.length ? `<br>지금 기본값과 다른 항목 — <b>${changed.map(k=>SIGNAL_RULE_LABELS[k]).join(' · ')}</b>` : ''}</p>`
   })}
   </div>`;
@@ -16818,6 +17268,9 @@ async function saveSignalRules(){
      «화면이 쓰는 값»이 달라지고, 그때부터 이 화면을 못 믿게 된다. */
   if(!(next.vidHeavy <= next.vidWarn && next.vidWarn <= next.vidLight)){
     showToast('시청률은 무거움 ≤ 주의 ≤ 경미 순서여야 합니다.'); return;
+  }
+  if(!(next.rpRed <= next.rpYellow)){
+    showToast('리포트 색 기준은 빨강 ≤ 노랑 순서여야 합니다.'); return;
   }
   const diff = Object.keys(SIGNAL_DEFAULTS).filter(k=>before[k] !== next[k])
     .map(k=>`${SIGNAL_RULE_LABELS[k]} ${before[k]}→${next[k]}`);
