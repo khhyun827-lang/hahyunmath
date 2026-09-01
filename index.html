@@ -11441,7 +11441,7 @@ function sessionAttHTML(classId, date){
 
 /* ── 2단계. 진도 — 반 관리의 진도 체크리스트와 같은 데이터를 본다 ── */
 function sessionProgHTML(classId){
-  const { subject, chapters, doneMap, doneCount, percent } = getClassProgress(classId);
+  const { subject, chapters, doneMap, doneCount, percent, books } = getClassProgress(classId);
   const body = !subject
     ? `<div style="max-width:280px;">
         <div class="t-sec">과목</div>
@@ -11462,6 +11462,13 @@ function sessionProgHTML(classId){
         <span class="bar" style="flex:1;min-width:120px;max-width:280px;"><i style="width:${percent}%"></i></span>
         <span class="sub" style="font-size:12.5px;"><span class="mono">${doneCount} / ${chapters.length}</span>단원 · <span class="mono">${percent}%</span></span>
       </div>
+      ${/* 교재 (2026-09-01 · T-1c · 사용자가 시켰다: 「수업탭에서도 진도를 입력할때 교재도 표시」).
+           🔴 **여기는 «보는» 자리다 — 넣는 문은 만들지 않았다.** 이 화면의 기준은 사용자가 준
+             그 문장이다: 「빠르게 체크하고 입력하고 넘어가야 … **작은 글들이 너무 많으면 좋지 않을**」.
+             교재를 여기서도 고칠 수 있게 하면 칸과 단추가 둘 더 늘고, 반 › 진도와 «두 곳»이 된다.
+           ⚠ 적어 둔 책이 없으면 **줄째로 뺀다** — 「미등록」이라고 적으면 그것이 곧 작은 글 하나다. */''}
+      ${books && books.length ? `<div style="margin:-8px 0 16px;font-size:12.5px;color:var(--sub);">
+        교재 · ${books.map(b=>escHtml(b)).join(' · ')}</div>` : ''}
       <div class="cls-chaps">${chapters.map(u=>`
         <label class="cls-chap ${doneMap[u]?'on':''}">
           <span class="cb ${doneMap[u]?'on':''}"></span>
