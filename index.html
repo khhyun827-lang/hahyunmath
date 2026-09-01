@@ -3264,6 +3264,7 @@ let state = {
   season: null,                  // kv/season {name, startedAt} — 지금 시험 시즌
   examRanges: null,              // kv/exam-ranges {season, bySchool:{학교:{학년:{과목:[단원…]}}}, dates:{학교:{학년:{start,end}}}}
   schoolBooks: null,             // kv/school-books {학교:{학년:'미래엔 / 학교프린트'}} — 시즌과 무관하다
+  gradeCuts: null,               // kv/grade-cuts {byKey:{시즌판:{학교:{학년:{과목:{c1..c4}}}}}} — G-1
   examHistory: null,             // kv/exam-history {items:[…]} — 지난 시즌 보관본. 화면을 열 때 늦게 받는다
   examSeasonView: '',            // 시험 일정 화면이 보고 있는 시즌. '' = 지금, 숫자 = 보관본 index
   examViewMode: 'table',         // 'table' | 'cal'
@@ -3551,8 +3552,12 @@ async function archiveCurrentSeason(){
   const er = state.examRanges || {};
   const hasRanges = er.bySchool && Object.keys(er.bySchool).length;
   const hasDates  = er.dates    && Object.keys(er.dates).length;
+  /* ⚠ **등급컷만 적어 둔 시즌도 보관한다** (2026-09-02 · G-1). 등급컷은 시험이 끝난 뒤에
+     적는 값이라 «범위도 날짜도 안 적고 등급컷만» 있는 시즌이 실제로 생긴다. 그걸 안 보관하면
+     지난 기록 고르개에 그 시즌이 아예 안 떠서 **적어 둔 등급컷을 다시 못 본다.** */
+  const hasCuts   = gradeCutCount(curSeasonKey()) > 0;
   /* 적어 둔 것이 없으면 보관하지 않는다 — 빈 기록이 목록을 채우면 찾기만 어려워진다. */
-  if(!hasRanges && !hasDates) return;
+  if(!hasRanges && !hasDates && !hasCuts) return;
   const hist = state.examHistory || (await dbGet('exam-history', null)) || {items: []};
   hist.items.unshift({
     season: currentSeason(),
@@ -3625,6 +3630,82 @@ async function saveExamDates(school, grade, start, end, math){
   else delete d[school][grade];
   state.examRanges.season = currentSeason();
   await dbSet('exam-ranges', state.examRanges);
+}
+/* ---------- 내신 등급컷 (2026-09-02 · G-1) ----------
+   사용자가 시켰다 — 「시험 일정과 비슷하게 **학교별 학년별 내신성적 등급컷**을 기록」,
+   「**1등급컷부터 4등급컷까지**」. 물어서 정한 둘: **과목까지 나눈다** · **기록만 한다**.
+
+   🔴 **저장을 kv/exam-ranges 에 넣지 않았다. 이것이 이 기능의 핵심 판단이다.**
+     범위·날짜는 시험 «전»에 적는 값이라 시즌을 넘기면 비우는 것이 맞다.
+     그런데 **등급컷은 시험이 «끝난 뒤»에 학교에서 나온다.** 넘긴 뒤에 나오는 일이 흔하고,
+     exam-ranges 에 뒀다면 **넘기는 순간 적을 데가 사라진다.**
+   🔵 그래서 kv 문서를 따로 두고 **«시즌 한 판»을 열쇠로 삼는다.** 시즌 초기화에 안 휩쓸리고,
+     지난 기록을 보면서도 그 시즌의 등급컷은 «적을 수 있다» — 지난 기록 중 유일하게 고쳐지는 값이다.
+   ⚠ 시즌 이름은 해마다 돌아온다(「1학기 중간」). 그래서 열쇠는 **시작일 + 이름**이다 —
+     examHistLabel 이 연도를 앞에 붙이는 것과 같은 까닭이다.
+   ⚠ 컬렉션을 늘리지 않는다 — 이 프로젝트의 기존 판단대로 kv 문서 하나다. */
+function seasonKeyOf(name, startedAt){ return String(startedAt || '') + '|' + String(name || ''); }
+function curSeasonKey(){
+  return seasonKeyOf(currentSeason(), (state.season && state.season.startedAt) || '');
+}
+const CUT_GRADES = [1, 2, 3, 4];              // 사용자가 정했다 — 1~4등급컷까지
+function gradeCutOf(seasonKey, school, grade, subject){
+  const by = state.gradeCuts && state.gradeCuts.byKey;
+  const got = by && by[seasonKey] && by[seasonKey][school]
+    && by[seasonKey][school][grade] && by[seasonKey][school][grade][subject];
+  return (got && CUT_GRADES.some(g => got['c' + g] != null)) ? got : null;
+}
+/* 한 등급컷을 고친다. **넷이 다 비면 줄째로 지운다** — 빈 껍데기가 남으면
+   「적어 둔 곳 N개」가 거짓이 되고, 지난 기록 목록에도 빈 시즌이 뜬다.
+   ⚠ 0점을 «비었다»로 읽으면 안 된다 — 빈 칸과 0은 다른 말이다. */
+async function saveGradeCut(seasonKey, school, grade, subject, g, value){
+  if(!state.gradeCuts) state.gradeCuts = {byKey: {}};
+  if(!state.gradeCuts.byKey) state.gradeCuts.byKey = {};
+  const by = state.gradeCuts.byKey;
+  if(!by[seasonKey]) by[seasonKey] = {};
+  if(!by[seasonKey][school]) by[seasonKey][school] = {};
+  if(!by[seasonKey][school][grade]) by[seasonKey][school][grade] = {};
+  const cell = Object.assign({}, by[seasonKey][school][grade][subject] || {});
+  const num = String(value == null ? '' : value).trim();
+  if(num === '') delete cell['c' + g];
+  else {
+    const v = Number(num);
+    /* 원점수다 — 100을 넘을 수 없다. 잘못 친 값은 «저장 안 함»으로 돌려보낸다 */
+    if(!Number.isFinite(v) || v < 0 || v > 100) return false;
+    cell['c' + g] = v;
+  }
+  if(CUT_GRADES.every(x => cell['c' + x] == null)) delete by[seasonKey][school][grade][subject];
+  else by[seasonKey][school][grade][subject] = cell;
+  /* 빈 껍데기를 걷는다 */
+  if(!Object.keys(by[seasonKey][school][grade]).length) delete by[seasonKey][school][grade];
+  if(!Object.keys(by[seasonKey][school]).length) delete by[seasonKey][school];
+  if(!Object.keys(by[seasonKey]).length) delete by[seasonKey];
+  await dbSet('grade-cuts', state.gradeCuts);
+  return true;
+}
+/* 「88 · 79 · 71 · 64」 — 표 한 칸에 넣는 짧은 말. 빠진 등급은 «—»로 둔다 */
+function gradeCutLabel(cut){
+  if(!cut) return '';
+  return CUT_GRADES.map(g => (cut['c' + g] == null ? '—' : cut['c' + g])).join(' · ');
+}
+/* 🔴 **등급은 내림차순이어야 한다** — 1등급컷이 2등급컷보다 낮으면 둘 중 하나가 오타다.
+   막지는 않는다(학교가 이상하게 낸 해도 있다). **말해 줄 뿐이다.** */
+function gradeCutWarn(cut){
+  if(!cut) return '';
+  for(let i = 0; i < CUT_GRADES.length - 1; i++){
+    const a = cut['c' + CUT_GRADES[i]], b = cut['c' + CUT_GRADES[i + 1]];
+    if(a != null && b != null && a <= b)
+      return CUT_GRADES[i] + '등급컷이 ' + CUT_GRADES[i + 1] + '등급컷보다 낮습니다';
+  }
+  return '';
+}
+/* 이 시즌에 등급컷이 적힌 «칸»의 수 */
+function gradeCutCount(seasonKey){
+  const by = state.gradeCuts && state.gradeCuts.byKey && state.gradeCuts.byKey[seasonKey];
+  let k = 0;
+  Object.values(by || {}).forEach(byG => Object.values(byG || {}).forEach(bySj =>
+    { k += Object.keys(bySj || {}).length; }));
+  return k;
 }
 function schoolBookOf(school, grade){
   const b = state.schoolBooks;
@@ -3699,12 +3780,16 @@ async function loadAll(){
   ]);
   /* 시즌·범위는 데일리퀴즈가 첫 렌더에서 바로 본다. 늦게 오면 «범위 밖»으로 잘못 걸러
      한 번 그렸다가 바뀌는 깜빡임이 생기므로 여기서 같이 받는다. */
-  [state.season, state.examRanges, state.schoolBooks] = await Promise.all([
-    dbGet('season', null), dbGet('exam-ranges', null), dbGet('school-books', null)
+  /* ⚠ 등급컷도 여기서 같이 받는다 — 시험 범위 화면이 첫 렌더에서 바로 본다.
+     늦게 오면 「적어 둔 곳 0」을 한 번 그렸다가 바뀐다 (G-1). */
+  [state.season, state.examRanges, state.schoolBooks, state.gradeCuts] = await Promise.all([
+    dbGet('season', null), dbGet('exam-ranges', null), dbGet('school-books', null),
+    dbGet('grade-cuts', null)
   ]);
   if(!state.examRanges) state.examRanges = {season: currentSeason(), bySchool: {}};
   if(!state.examRanges.dates) state.examRanges.dates = {};
   if(!state.schoolBooks) state.schoolBooks = {};
+  if(!state.gradeCuts || !state.gradeCuts.byKey) state.gradeCuts = {byKey: {}};
 
   await seedTestAccountIfEmpty();
   await restoreSession();
@@ -16899,6 +16984,13 @@ function teacherExamRangeHTML(){
     if(!past) return examDdayOf(sc, gr);
     return null;               // 지난 기록에 D-day는 뜻이 없다
   };
+  /* 🔴 **등급컷은 지난 기록에서도 «지금 값»이다** (2026-09-02 · G-1).
+     범위·날짜·교재는 보관본 «안»에 뜬 스냅숏이라 못 고친다. 등급컷은 kv 문서에
+     «시즌 한 판»을 열쇠로 따로 살아 있어서 지난 시즌 것도 적을 수 있다 —
+     시험이 끝난 뒤에 나오는 값이라 그래야 한다. */
+  const cutKey = past ? seasonKeyOf(past.season, past.startedAt) : curSeasonKey();
+  const cutSeasonLabel = past ? examHistLabel(past) : season;
+  const cutN = gradeCutCount(cutKey);
 
   /* ---- 줄 목록 ---- */
   let list = [];
@@ -16985,6 +17077,8 @@ function teacherExamRangeHTML(){
     ${past.startedAt ? `<span class="mono">${escHtml(past.startedAt)}</span>에 시작해 ` : ''}
     <span class="mono">${escHtml(past.endedAt)}</span>에 보관됐습니다.
     <b>고칠 수 없습니다.</b> 지금 시즌으로 돌아가려면 위에서 «지금»을 고르세요.
+    <br><b>다만 내신 등급컷은 여기서도 적을 수 있습니다</b> — 등급컷은 시험이 끝난 뒤에
+    나오기 때문입니다. 줄을 누르면 펼쳐집니다.
   </div>` : `
   <div class="cls-hw" style="display:block;margin-bottom:18px;">
     <div class="t-sec" style="margin:0;">지금 시즌</div>
@@ -17011,6 +17105,7 @@ function teacherExamRangeHTML(){
     <span style="font-size:11.5px;color:var(--dim);">
       ${soon ? `<b style="color:var(--no);">2주 안 ${soon}곳</b> · ` : ''}날짜 있음
       <b class="mono" style="color:var(--ink);">${dated}</b>/<span class="mono">${list.length}</span>
+      · 등급컷 <b class="mono" style="color:${cutN ? 'var(--ink)' : 'var(--dim)'};">${cutN}</b>곳
     </span>
   </div>`;
 
@@ -17043,10 +17138,14 @@ function teacherExamRangeHTML(){
     const overridden = past
       ? !!(past.bySchool && past.bySchool[school] && past.bySchool[school][grade] && past.bySchool[school][grade][subject])
       : hasRangeOverride(school, grade, subject);
-    const open = !past && openKey === rangeKey(school, grade, subject);
+    /* ⚠ 지난 기록에서도 펼친다 — 거기서도 등급컷은 적기 때문이다 (2026-09-02 · G-1) */
+    const open = openKey === rangeKey(school, grade, subject);
     const sc = jsAttr(school), gr = jsAttr(grade), sj = jsAttr(subject);
     const dd = getDday(school, grade), dates = getDates(school, grade);
     const book = getBook(school, grade);
+    const cut = gradeCutOf(cutKey, school, grade, subject);
+    const cutWarn = gradeCutWarn(cut);
+    const ck = jsAttr(cutKey);
     /* 켜진 단원의 «처음과 끝». 노션 표가 그렇게 적혀 있었고, 그게 사람이 읽기 좋다. */
     const on = all.filter(ch => cur.has(ch));
     const span = !subject ? '' : on.length === 0 ? '' : on.length === 1 ? `${all.indexOf(on[0]) + 1}. ${on[0]}`
@@ -17056,8 +17155,8 @@ function teacherExamRangeHTML(){
     const dow = ymd => WEEKDAY_LABEL[new Date(ymd + 'T00:00:00').getDay()];
     return `
       ${/* ⚠ .cb는 «체크박스 네모»의 클래스다(width·height가 박혀 있다). 행에 걸면 줄이 찌그러진다. */''}
-      <tr style="${past ? '' : 'cursor:pointer;'}${open ? 'background:var(--hover);' : ''}"
-          ${past ? '' : `onclick="toggleRangeOpen('${sc}','${gr}','${sj}')"`}>
+      <tr style="cursor:pointer;${open ? 'background:var(--hover);' : ''}"
+          onclick="toggleRangeOpen('${sc}','${gr}','${sj}')">
         <td><b>${escHtml(school || '(학교 미입력)')}</b></td>
         <td class="sub">${escHtml(grade || '—')}</td>
         <td class="sub">${escHtml(subject || '—')}</td>
@@ -17076,13 +17175,20 @@ function teacherExamRangeHTML(){
           span ? escHtml(span) : '<span style="color:var(--dim);">—</span>'}
           ${overridden ? '<span class="badge score" style="margin-left:6px;">수정됨</span>' : ''}</td>
         <td class="sub" title="${escHtml(book)}">${book ? escHtml(book) : '—'}</td>
-        <td class="r sub" style="font-size:11px;">${past ? '' : (open ? '접기' : '펼치기')}</td>
+        ${/* 등급컷 — 「88 · 79 · 71 · 64」. 적힌 것이 없으면 «—» (2026-09-02 · G-1) */''}
+        <td class="mono sub" title="${cut ? escHtml('1~4등급컷 ' + gradeCutLabel(cut)) : ''}"
+            style="${cutWarn ? 'color:var(--late);' : ''}">${
+          cut ? escHtml(gradeCutLabel(cut)) : '<span style="color:var(--dim);">—</span>'}</td>
+        <td class="r sub" style="font-size:11px;">${open ? '접기' : '펼치기'}</td>
       </tr>
       ${!open ? '' : `
-      <tr><td colspan="10" style="white-space:normal;overflow:visible;background:var(--hover);padding:16px 14px;">
+      <tr><td colspan="11" style="white-space:normal;overflow:visible;background:var(--hover);padding:16px 14px;">
         ${/* ⚠ 날짜·교재는 change(칸을 떠날 때)에 저장한다. oninput으로 하면 render()가
              글자마다 돌아 커서가 끝으로 튄다 (9절 4번).
              ⚠ 안의 입력·버튼은 전부 stopPropagation — 안 그러면 줄의 onclick이 같이 터져 칸이 접힌다. */''}
+        ${/* ⚠ 지난 기록에서는 날짜·교재·범위를 못 고친다 — 보관본 «안»의 스냅숏이다.
+             아래 «등급컷»만 지난 시즌에도 열린다 (2026-09-02 · G-1). */''}
+        ${past ? '' : `
         <div class="row" style="gap:10px;flex-wrap:wrap;align-items:flex-end;">
           <label style="font-size:11.5px;color:var(--sub);">시험 시작
             <input type="date" class="fm-in" style="display:block;margin-top:4px;width:150px;"
@@ -17128,6 +17234,28 @@ function teacherExamRangeHTML(){
           <button class="btn q sm" onclick="event.stopPropagation(); resetSchoolRange('${sc}','${gr}','${sj}')">기본 범위로 되돌리기</button>
           <span style="font-size:11.5px;color:var(--dim);">기본은 «${escHtml(season)}» 기준
             ${presetChapters(subject).length}단원입니다.</span>
+        </div>`}
+
+        ${/* ---- 내신 등급컷 (2026-09-02 · G-1) — 사용자가 「기록만 한다」로 정했다.
+             여기서 적고 여기서 본다. 학생 점수 화면에는 안 나간다. ---- */''}
+        <div class="t-sec" style="margin:${past ? '0' : '16px'} 0 8px;font-size:12px;">
+          내신 등급컷 <span style="font-weight:400;color:var(--dim);">· 원점수</span></div>
+        <div class="row" style="gap:8px;flex-wrap:wrap;align-items:flex-end;">
+          ${CUT_GRADES.map(g => `<label style="font-size:11.5px;color:var(--sub);">${g}등급컷
+            <input type="number" class="fm-in mono" inputmode="numeric" min="0" max="100" step="1"
+              style="display:block;margin-top:4px;width:84px;text-align:right;"
+              placeholder="—" value="${cut && cut['c' + g] != null ? cut['c' + g] : ''}"
+              onclick="event.stopPropagation()"
+              onchange="setGradeCut('${ck}','${sc}','${gr}','${sj}',${g},this.value)"></label>`).join('')}
+          ${cutWarn ? `<span class="badge late" style="margin-bottom:6px;">${escHtml(cutWarn)}</span>` : ''}
+        </div>
+        <div style="margin-top:5px;font-size:11px;color:var(--dim);line-height:1.7;">
+          <b>${escHtml(school || '(학교 미입력)')} ${escHtml(grade || '학년 미입력')}${
+            subject ? ' ' + escHtml(subject) : ''}</b>의
+          <b>${escHtml(cutSeasonLabel)}</b> 등급컷입니다 — 시험 범위와 같이 <b>과목마다 따로</b>입니다.
+          비우면 지워지고, 0~100 밖의 값은 저장되지 않습니다.
+          ${past ? '<br><b>지난 기록에서도 등급컷만은 적을 수 있습니다</b> — 등급컷은 시험이 끝난 뒤에 나오기 때문입니다.'
+                 : '<br>시즌을 넘겨도 <b>지워지지 않습니다</b> — «지난 기록»에서 그대로 보이고, 거기서 더 적을 수도 있습니다.'}
         </div>
       </td></tr>`}`;
   }).join('');
@@ -17137,7 +17265,7 @@ function teacherExamRangeHTML(){
     ${/* ⚠ .app .rst-wrap table.grid의 min-width는 명단(1464px)의 것이다. 이 표는 더 좁으므로
          인라인으로 눌러 준다 — 인라인 style이 시트 규칙을 이긴다.
          sticky 헤더는 걸지 않는다. 줄이 적고, 가로 스크롤과 같이 쓰면 헤더가 첫 행을 덮는다 (0-B). */''}
-    <table class="grid" style="min-width:1110px;">
+    <table class="grid" style="min-width:1242px;">
       <thead><tr>
         <th style="width:118px;">학교</th>
         <th style="width:60px;">학년</th>
@@ -17148,6 +17276,7 @@ function teacherExamRangeHTML(){
         <th style="width:92px;">수학</th>
         <th style="width:222px;">범위</th>
         <th style="width:160px;">교재 · 메모</th>
+        <th style="width:132px;">등급컷 1~4</th>
         <th class="r" style="width:60px;"></th>
       </tr></thead>
       <tbody>${body}</tbody>
@@ -17322,6 +17451,15 @@ async function setExamDate(school, grade, which, value){
 }
 async function setSchoolBook(school, grade, text){
   await saveSchoolBook(school, grade, String(text||'').trim());
+  render();
+}
+/* 등급컷 한 칸 (2026-09-02 · G-1).
+   ⚠ 시즌 «판 열쇠»를 화면에서 받아 온다 — 지난 기록을 보면서 적을 수도 있어서,
+     여기서 `curSeasonKey()`를 부르면 **지난 시즌 것이 지금 시즌에 적힌다.**
+   ⚠ change(칸을 떠날 때)에 저장한다. oninput이면 render()가 글자마다 돌아 커서가 튄다 (9절 4번). */
+async function setGradeCut(seasonKey, school, grade, subject, g, value){
+  const ok = await saveGradeCut(seasonKey, school, grade, subject, g, value);
+  if(!ok) showToast('등급컷은 0~100 사이의 원점수로 적어 주세요.');
   render();
 }
 /* 노션 표가 «시작 단원 ~ 끝 단원» 두 칸이었다. 그 입력을 그대로 옮긴 것 —
