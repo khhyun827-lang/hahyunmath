@@ -9689,8 +9689,23 @@ function stuAttendanceHTML(c){
   if(att.length===0) return `<div class="sap-empty">아직 출석 기록이 없습니다.</div>`;
   const ym = state.stuAttMonth || todayStr().slice(0,7);
   const [y, m] = ym.split('-').map(Number);
+  /* 🔴 **달력은 «출석률과 같은 줄»을 세야 한다** (2026-09-02 · E-5).
+     예전에는 반을 가리지 않고 `byDate[일] = 상태`로 덮어썼다. 그래서 정규반과 특강이
+     **같은 요일에 겹치는 학생은 하루에 한 칸밖에 없어 한쪽이 조용히 사라졌다** —
+     실제로 「정규 결석 / 특강 출석」인 날이 **초록(출석)으로** 보이고 있었다.
+     바로 옆의 출석률(stuAttRate)은 정규만 세는데 달력과 카운터는 섞어 세서
+     **같은 화면의 두 숫자가 서로 달랐다.**
+     🔵 달력·카운터는 정규(주 반)만 센다. 특강은 아래에 **제 이름을 달고 따로** 선다 —
+       리포트가 쓰는 규칙과 같다(E-1b). */
+  const mine = attCountedOf(c.rec, c.me).slice().sort((a,b)=>a.date.localeCompare(b.date));
   const byDate = {};
-  att.filter(a=>a.date.slice(0,7)===ym).forEach(a=>{ byDate[Number(a.date.slice(8,10))] = a.status; });
+  mine.filter(a=>a.date.slice(0,7)===ym).forEach(a=>{ byDate[Number(a.date.slice(8,10))] = a.status; });
+  /* 같은 날 다른 반에 남은 줄 — 칸에 마우스를 올리면 전부 보이게 한다 */
+  const dayAll = {};
+  att.filter(a=>a.date.slice(0,7)===ym).forEach(a=>{
+    const d = Number(a.date.slice(8,10));
+    (dayAll[d] = dayAll[d] || []).push(classNameOf(attClassOf(a, studentMainClassId(c.me))) + ' ' + a.status);
+  });
 
   /* 달력 격자 — 1일의 요일만큼 앞을 비운다. 월 길이는 다음 달 0일로 얻는다. */
   const firstDow = new Date(y, m-1, 1).getDay();
@@ -9701,13 +9716,22 @@ function stuAttendanceHTML(c){
   for(let d=1; d<=days; d++){
     const ymd = `${ym}-${String(d).padStart(2,'0')}`;
     const st = byDate[d] ? attStatusClass(byDate[d]) : '';
-    cells += `<div class="d ${st==='drop'?'':st}${ymd===today?' today':''}">${d}</div>`;
+    const tip = (dayAll[d]||[]).length ? ` title="${escHtml(ymd + ' · ' + dayAll[d].join(' · '))}"` : '';
+    cells += `<div class="d ${st==='drop'?'':st}${ymd===today?' today':''}"${tip}>${d}</div>`;
   }
 
   const cnt = {};
   Object.values(byDate).forEach(s=>{ cnt[s] = (cnt[s]||0) + 1; });
-  const flagged = att.filter(a=>a.date.slice(0,7)===ym && a.status!=='출석').reverse();
+  /* 「결석·지각·조퇴」 목록도 정규만 — 위 숫자와 같은 줄을 세야 한다.
+     특강 것은 아래 특강 구역이 제 이름을 달고 말한다. */
+  const flagged = mine.filter(a=>a.date.slice(0,7)===ym && a.status!=='출석').reverse();
   const rate = stuAttRate(c.rec, c.me);
+  /* 특강 구역 — 주 반이 아닌 반마다 그 달을 따로 센다. 그 달에 아무 일도 없던 특강은 뺀다 */
+  const extraAtt = studentExtraClassIds(c.me).map(cid=>{
+    const rows = attOfClass(c.rec, cid, studentMainClassId(c.me))
+      .filter(a=>a.date.slice(0,7)===ym && a.status!=='퇴원');
+    return { name: classNameOf(cid), rows, rate: attRateOf(rows) };
+  }).filter(x=>x.rows.length);
 
   return `
   <div class="mc">
@@ -9729,8 +9753,26 @@ function stuAttendanceHTML(c){
         <div class="v" style="color:${cnt[s[0]] ? `var(--${s[1]})` : 'var(--dim)'};">${cnt[s[0]]||0}</div></div>`).join('')}
   </div>
   <div style="font-size:11.5px;color:var(--dim);margin-top:9px;line-height:1.7;">
-    전체 출석률 <b class="mono" style="color:var(--ink);">${rate===null?'—':rate+'%'}</b>
-    — 퇴원 기록을 뺀 전체 중 결석이 아닌 비율입니다. 지각·조퇴는 «온 것»으로 셉니다.</div>
+    ${extraAtt.length ? '정규 수업' : '전체'} 출석률
+    <b class="mono" style="color:var(--ink);">${rate===null?'—':rate+'%'}</b>
+    — 퇴원 기록을 뺀 전체 중 결석이 아닌 비율입니다. 지각·조퇴는 «온 것»으로 셉니다.
+    ${extraAtt.length ? '<br>위 달력과 숫자는 <b>정규 수업</b>만입니다 — 특강은 아래에 따로 있습니다.' : ''}</div>
+
+  ${extraAtt.length ? `
+  <div class="msec">특강</div>
+  ${extraAtt.map(x=>`<div class="mc">
+    <div class="row" style="gap:8px;">
+      <span style="font-size:12.5px;font-weight:700;">${escHtml(x.name)}</span>
+      <span class="spacer"></span>
+      <b class="mono" style="font-size:12.5px;">${x.rate===null?'—':x.rate+'%'}</b>
+    </div>
+    <div style="font-size:11.5px;color:var(--dim);margin-top:5px;line-height:1.7;">
+      ${['출석','지각','조퇴','결석'].map(st=>{
+        const k = x.rows.filter(a=>a.status===st).length;
+        return k ? st + ' ' + k + '일' : '';
+      }).filter(Boolean).join(' · ')}
+    </div>
+  </div>`).join('')}` : ''}
 
   ${flagged.length ? `
   <div class="msec">결석 · 지각 · 조퇴</div>
@@ -13057,8 +13099,17 @@ function studentTimeline(s, rec){
 
   /* 삭제는 «배열 인덱스»로 지운다 — 연대기는 날짜순으로 다시 세우므로 원래 인덱스를 들고 다녀야 한다.
      이걸 빠뜨리면 탭에 있던 성적·출결 삭제가 사라진다. */
+  /* 🔴 **어느 반 것인지 적는다** (2026-09-02 · E-5). 반이 여럿인 학생은 같은 날 줄이 둘 서는데
+     («정규 지각 / 특강 결석» 같은 날이 실제로 있다) 화면에는 「지각」 「결석」만 나란히 떠서
+     **어느 것이 어느 반인지 알 길이 없었다.**
+     ⚠ 반이 하나뿐인 학생에게는 안 적는다 — 열에 아홉은 그쪽이고, 늘 적으면 잡음이 된다. */
+  const attMulti = studentClassIds(s).length > 1;
+  const attMain = studentMainClassId(s);
   (rec.attendance||[]).forEach((a,i)=>{
-    push(a.date, 'att', '출결', a.status + (a.reason ? ' — ' + escHtml(a.reason) : ''),
+    const where = attMulti
+      ? ` <s style="text-decoration:none;color:var(--dim);font-weight:400;">${escHtml(classNameOf(attClassOf(a, attMain)))}</s>`
+      : '';
+    push(a.date, 'att', '출결', a.status + where + (a.reason ? ' — ' + escHtml(a.reason) : ''),
       a.note ? escHtml(a.note) : '', ['출석','지각','조퇴','결석','퇴원'].includes(a.status)
         ? `<span class="badge ${attStatusClass(a.status)==='drop'?'gone':attStatusClass(a.status)}">${a.status}</span>` : '',
       `<button class="btn q sm" onclick="deleteAttendance('${sid}',${i})">삭제</button>`,
