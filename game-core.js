@@ -121,9 +121,10 @@ const MODE_RUNNER = {
        그래서 «누르고 한참 있다 뛰는» 것으로 보였다. 이제 그냥 위로 던지고 중력으로 내린다. */
     g.jy = 0; g.jv = 0; g.slide = 0; g.anim = 0; g.road = 0;
     g.dist = 0; g.hurtAt = -9;
-    /* 🔴 사람을 위로 올린다 (2026-09-02 · 사용자가 짚었다) — 발밑에 길이 더 남아야
-       그 길이 «내 뒤로 흘러가는» 것이 보이고, 그래야 앞으로 나아가는 느낌이 든다. */
-    g.py = Math.round(g.h * .70);                 // 사람이 서는 자리(바닥선)
+    /* 사람이 서는 자리. 발밑에 길이 남아야 «내 뒤로 흘러가는» 것이 보인다.
+       ⚠ 0.80 → 0.70 으로 올렸다가 «너무 앞에 나가 있다»는 말을 들었다 (2026-09-02).
+         0.76 이 두 말의 가운데다 — 뒤에 길이 남으면서도 사람이 앞쪽으로 튀어나가지 않는다. */
+    g.py = Math.round(g.h * .76);                 // 사람이 서는 자리(바닥선)
     g.horizon = Math.round(g.h * .30);
   },
   /* ── 조작 ── */
@@ -342,12 +343,23 @@ const MODE_RUNNER = {
     }
     c.globalAlpha = 1;
 
-    /* 장애물 — 먼 것부터 그린다(뒤엣것이 앞엣것에 가려야 한다) */
+    /* 🔴 **사람보다 «앞에 온» 것은 사람 위에 그린다** (2026-09-02 · 사용자가 짚었다).
+       예전에는 장애물을 전부 그린 뒤 사람을 얹었다. 그래서 **가로대 밑으로 미끄러져 지날 때
+       사람이 봉 위에 그려져 «뚫고 가는» 모양**이 됐다. 사람은 z=0에 있으므로,
+       그보다 가까운 것(z < .05)은 사람 «뒤»가 아니라 «앞»이다.
+       ⚠ 물웅덩이와 별은 언제나 사람 뒤다 — 웅덩이는 바닥에 깔린 것이고 사람이 그 위를 밟는다. */
     const sorted = g.items.slice().sort((a, b) => b.z - a.z);
-    for(const it of sorted) this.obstacle(g, it);
+    const front = [];
+    for(const it of sorted){
+      if(it.z < .05 && (it.kind === 'high' || it.kind === 'block')) front.push(it);
+      else this.obstacle(g, it);
+    }
 
     /* 사람 */
     this.player(g);
+
+    /* 사람을 지나쳐 오는 것들 — 사람 위로 지나간다 */
+    for(const it of front) this.obstacle(g, it);
 
     /* 속도 — 사용자가 «현재 속도 또는 진행 상태»를 달라고 했다 */
     const spd = Math.min(.62 + g.t * .011, 1.75);
@@ -434,18 +446,30 @@ const MODE_RUNNER = {
     }
 
     if(it.kind === 'low'){
-      /* 물웅덩이 — 바닥에 눕는다. 파인 곳이라 **그림자 대신 «어두운 테»**로 깊이를 낸다 */
-      const rw = lw * .62, rh = rw * .32;
-      c.fillStyle = this.shade(C.water, -.35);
-      c.beginPath(); c.ellipse(x, p.y + rh * .12, rw * 1.02, rh * 1.02, 0, 0, 6.2832); c.fill();
-      c.fillStyle = C.waterBg;
+      /* 물웅덩이 — 🔴 **밝은 접시를 놓으면 뜬다** (2026-09-02 · 사용자가 두 번 짚었다).
+         회색 아스팔트 위에 밝은 하늘색 원을 놓고 그 밑에 어두운 테를 «비껴» 깔았더니
+         «원반 + 그림자»로 읽혀 떠 보였다.
+         🔵 물웅덩이는 **길보다 어두워야 한다** — 젖은 아스팔트는 빛을 먹는다.
+           길 색을 어둡게 물들인 것으로 채우고, **가장자리 한 줄만** 밝게 둔다(물의 테두리).
+           떨어뜨린 그림자는 아예 없앤다 — 바닥에 «깔린» 것에는 그림자가 없다. */
+      const rw = lw * .66, rh = rw * .30;
+      const wet = this.shade(C.water, -.30);
+      const grd = c.createLinearGradient(0, p.y - rh, 0, p.y + rh);
+      grd.addColorStop(0, this.shade(wet, -.18));      // 먼 쪽이 더 어둡다
+      grd.addColorStop(1, this.shade(wet, .10));
+      c.fillStyle = grd;
       c.beginPath(); c.ellipse(x, p.y, rw, rh, 0, 0, 6.2832); c.fill();
-      /* 물비늘 — 물이라는 것을 말해 주는 최소한 */
-      c.globalAlpha = .55; c.fillStyle = C.water;
-      c.beginPath(); c.ellipse(x - rw*.30, p.y - rh*.25, rw*.22, rh*.22, 0, 0, 6.2832); c.fill();
-      c.beginPath(); c.ellipse(x + rw*.28, p.y + rh*.20, rw*.15, rh*.18, 0, 0, 6.2832); c.fill();
+      /* 가장자리 한 줄 — 물이 고인 «테»다. 얇아야 한다 */
+      c.strokeStyle = this.shade(C.waterBg, -.05);
+      c.lineWidth = Math.max(.8, 1.4 * p.k);
+      c.globalAlpha = .7;
+      c.beginPath(); c.ellipse(x, p.y, rw * .96, rh * .94, 0, 0, 6.2832); c.stroke();
+      /* 하늘이 비친 자국 둘 — 물이라는 것을 말해 주는 최소한 */
+      c.globalAlpha = .38; c.fillStyle = C.mark;
+      c.beginPath(); c.ellipse(x - rw*.30, p.y - rh*.22, rw*.20, rh*.16, 0, 0, 6.2832); c.fill();
+      c.beginPath(); c.ellipse(x + rw*.30, p.y + rh*.18, rw*.13, rh*.12, 0, 0, 6.2832); c.fill();
       c.globalAlpha = 1;
-      if(near){ c.fillStyle = C.water; c.font = '700 ' + Math.round(13*p.k) + 'px Pretendard, sans-serif';
+      if(near){ c.fillStyle = C.waterBg; c.font = '700 ' + Math.round(13*p.k) + 'px Pretendard, sans-serif';
         c.fillText('↑', x, p.y - 28 * p.k); }
       return;
     }
