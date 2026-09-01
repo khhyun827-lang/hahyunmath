@@ -2666,7 +2666,10 @@
      검산(Figure.verifyScene)도 여기 하나뿐이다 — 워커에도 두면 둘이 다른 판정을 내린다. -->
 <script src="figure.js"></script>
 <!-- 출석 도장 게임(셸·똥피하기·달리기). 연습 페이지 game.html 도 같은 파일을 쓴다 -->
-<script src="game-core.js"></script>
+<!-- ⚠ ?v= 를 붙이는 까닭 — 브라우저가 game-core.js 를 캐시해서, 올려도 학생 화면에는
+     옛 게임이 그대로 돈다(Ctrl+Shift+R 을 해야 바뀐다 — 학생에게 그걸 시킬 수는 없다).
+     🔴 **game-core.js 를 고칠 때마다 이 날짜를 같이 올린다.** 두 파일 다. -->
+<script src="game-core.js?v=2026-09-02b"></script>
 
 <script>
   const firebaseConfig = {

@@ -91,7 +91,10 @@
   </details>
 </div>
 
-<script src="game-core.js"></script>
+<!-- ⚠ ?v= 를 붙이는 까닭 — 브라우저가 game-core.js 를 캐시해서, 올려도 학생 화면에는
+     옛 게임이 그대로 돈다(Ctrl+Shift+R 을 해야 바뀐다 — 학생에게 그걸 시킬 수는 없다).
+     🔴 **game-core.js 를 고칠 때마다 이 날짜를 같이 올린다.** 두 파일 다. -->
+<script src="game-core.js?v=2026-09-02b"></script>
 <script>
   const cv = document.getElementById('cv');
   const scEl = document.getElementById('sc');
