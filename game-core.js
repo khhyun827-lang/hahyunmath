@@ -121,7 +121,9 @@ const MODE_RUNNER = {
        그래서 «누르고 한참 있다 뛰는» 것으로 보였다. 이제 그냥 위로 던지고 중력으로 내린다. */
     g.jy = 0; g.jv = 0; g.slide = 0; g.anim = 0; g.road = 0;
     g.dist = 0; g.hurtAt = -9;
-    g.py = Math.round(g.h * .80);                 // 사람이 서는 자리(바닥선)
+    /* 🔴 사람을 위로 올린다 (2026-09-02 · 사용자가 짚었다) — 발밑에 길이 더 남아야
+       그 길이 «내 뒤로 흘러가는» 것이 보이고, 그래야 앞으로 나아가는 느낌이 든다. */
+    g.py = Math.round(g.h * .70);                 // 사람이 서는 자리(바닥선)
     g.horizon = Math.round(g.h * .30);
   },
   /* ── 조작 ── */
@@ -199,21 +201,25 @@ const MODE_RUNNER = {
       if(Math.random() < .34) g.items.push({lane:free, z:this.Z_FAR, kind:'star', hit:false});
     }
 
-    /* ── 다가오게 하고, 부딪히는지 본다 ── */
+    /* ── 다가오게 하고, 부딪히는지 본다 ──
+       🔴 **한 순간만 보고 «넘었다»로 굳히면 안 된다** (2026-09-02 · 사용자가 짚었다).
+         예전에는 띠에 들어온 첫 프레임에 `hit`을 찍고 그 판정을 끝까지 썼다. 그래서
+         **뛰어올랐다가 장애물 위에서 내려앉아도 «넘은 것»으로 남았다.**
+         이제 몸이 겹치는 **모든 프레임**을 본다 — 한 프레임이라도 안전하지 않으면 부딪힌 것이다. */
     for(let i = g.items.length - 1; i >= 0; i--){
       const it = g.items[i];
       it.z -= spd * dt;
-      if(it.z < -.12){ g.items.splice(i, 1); continue; }
-      if(it.hit) continue;
-      /* 사람은 z=0 에 있다. 몸 두께만큼의 띠를 지날 때 판정한다 */
-      if(it.z > .085 || it.z < -.085) continue;
-      if(Math.abs(it.lane - g.laneF) > .5) continue;       // 아직 그 줄에 안 왔다
-      it.hit = true;
-      if(it.kind === 'star'){ g.stars++; g.items.splice(i, 1); continue; }
+      if(it.z < -.16){ g.items.splice(i, 1); continue; }
+      if(Math.abs(it.lane - g.laneF) > .45) continue;
+      if(it.kind === 'star'){
+        if(!it.hit && Math.abs(it.z) < .09){ it.hit = true; g.stars++; g.items.splice(i, 1); }
+        continue;
+      }
+      if(Math.abs(it.z) > .075) continue;              // 아직 몸에 안 닿았다
       /* 🔵 **어떻게 피하는지가 종류마다 다르다** — 이것이 이 게임의 전부다 */
-      const safe = it.kind === 'low'  ? (g.jy > g.h * .045)  // 낮은 것 — 뛰어넘는다
-                 : it.kind === 'high' ? (g.slide > 0)       // 높은 것 — 미끄러져 지난다
-                 : false;                                   // block — 줄을 바꾸는 수밖에 없다
+      const safe = it.kind === 'low'  ? (g.jy > g.h * .055)   // 낮은 것 — 뛰어넘는다
+                 : it.kind === 'high' ? (g.slide > 0)         // 높은 것 — 미끄러져 지난다
+                 : false;                                     // block — 줄을 바꾸는 수밖에
       if(!safe) return false;
     }
     return true;
@@ -230,6 +236,11 @@ const MODE_RUNNER = {
      이제 자리도 폭도 이 함수 하나에서 나온다. */
   laneW(g, k){ return g.roadW() / 3 * k; },
   laneCX(g, laneF, k){ return g.w / 2 + (laneF - 1) * this.laneW(g, k); },
+  /* 🔴 **길의 반폭도 같은 k에서 나온다** (2026-09-02). 예전에는 길을 «화면 맨 아래»의 폭으로
+     그려 놓고 줄은 «사람 자리»의 폭으로 놓았다. 둘이 어긋나서 **바깥 줄이 길 끝에 바짝 붙어**
+     캐릭터가 옆으로 치우쳐 보였다 — 사용자가 짚은 그 자리다. */
+  roadHalf(g, k){ return g.roadW() / 2 * k; },
+  kAtY(g, y){ return (y - g.horizon) / (g.py - g.horizon); },
   draw(g){
     const c = g.cx, w = g.w, h = g.h, C = g.col;
     /* 하늘 — 단순한 두 색. 사용자가 «복잡하게 하지 말라» 했다 */
@@ -242,8 +253,9 @@ const MODE_RUNNER = {
     c.beginPath(); c.moveTo(0, g.horizon + .5); c.lineTo(w, g.horizon + .5); c.stroke();
 
     /* 도로 — 지평선의 한 점에서 발밑으로 벌어지는 사다리꼴 */
-    const near = this.proj(g, 0), far = this.proj(g, this.Z_FAR);
-    const nx = g.roadW() * .5, fx = g.roadW() * .5 * far.k;
+    const far = this.proj(g, this.Z_FAR);
+    const kb = this.kAtY(g, h);                       // 화면 아래끝의 잣대(1보다 크다)
+    const nx = this.roadHalf(g, kb), fx = this.roadHalf(g, far.k);
     c.fillStyle = C.road;
     c.beginPath();
     c.moveTo(w/2 - fx, far.y); c.lineTo(w/2 + fx, far.y);
@@ -254,8 +266,8 @@ const MODE_RUNNER = {
     c.strokeStyle = C.line; c.lineWidth = 2;
     for(let i = 1; i < 3; i++){
       c.beginPath();
-      for(let s = 0; s <= 20; s++){
-        const z = this.Z_FAR * s / 20, p = this.proj(g, z);
+      for(let s = 0; s <= 23; s++){
+        const z = this.Z_FAR * s / 20 - this.Z_FAR * .12, p = this.proj(g, z);
         const x = w/2 + (i - 1.5) * this.laneW(g, p.k);
         s ? c.lineTo(x, p.y) : c.moveTo(x, p.y);
       }
@@ -263,20 +275,23 @@ const MODE_RUNNER = {
     }
     /* 가로 줄무늬 — 흐르는 것이 눈에 보여야 «앞으로 간다»가 된다 */
     c.strokeStyle = C.line2; c.lineWidth = 2;
-    for(let s = 0; s < 9; s++){
+    for(let s = 0; s < 12; s++){
       /* 🔴 **빼야 다가온다.** 더하면 줄무늬의 깊이가 «커져» 지평선 쪽으로 멀어진다 —
          장애물은 다가오는데 바닥은 멀어지니 **뒤로 달리는 것처럼** 보였다.
          사용자가 실제로 해 보고 짚은 그 자리다(2026-09-01). */
-      const z = ((((s - g.road) % 9) + 9) % 9 / 9) * this.Z_FAR;
-      const p = this.proj(g, z), x = g.roadW() * .5 * p.k;
-      c.globalAlpha = Math.max(0, 1 - z / this.Z_FAR);
+      /* ⚠ 사람 «뒤»(z<0)까지 이어 그린다 (2026-09-02 · 사용자가 짚었다) — 사람 앞에서 끊기면
+         발밑에서 길이 사라져 «제자리걸음»처럼 보인다. 뒤로 흘러 나가야 앞으로 가는 것이다. */
+      const z = ((((s - g.road) % 12) + 12) % 12 / 12) * (this.Z_FAR * 1.3) - this.Z_FAR * .3;
+      if(z < -this.Z_FAR * .29) continue;
+      const p = this.proj(g, z), x = this.roadHalf(g, p.k);
+      c.globalAlpha = Math.max(0, Math.min(1, 1 - z / this.Z_FAR));
       c.beginPath(); c.moveTo(w/2 - x, p.y); c.lineTo(w/2 + x, p.y); c.stroke();
     }
     /* 길가 표시 — 줄무늬와 «같은 방향»으로 다가온다. 앞으로 간다는 것을 옆에서도 말해 준다 */
     c.fillStyle = C.line2;
     for(let s = 0; s < 6; s++){
       const z = ((((s - g.road * .8) % 6) + 6) % 6 / 6) * this.Z_FAR;
-      const q = this.proj(g, z), rx = g.roadW() * .5 * q.k;
+      const q = this.proj(g, z), rx = this.roadHalf(g, q.k);
       const sz = Math.max(1, 7 * q.k);
       c.globalAlpha = Math.max(0, .85 - z / this.Z_FAR);
       c.fillRect(w/2 - rx - sz * 1.6, q.y - sz, sz, sz * 2);
@@ -301,36 +316,68 @@ const MODE_RUNNER = {
     c.fillText(Math.round(g.dist) + 'm', 14, 23);
   },
 
+  /* 🔴 **모양이 곧 «무엇을 하라»는 말이어야 한다** (2026-09-02 · 사용자가 짚었다).
+     색만 다르고 다 네모라 무엇을 하는 것인지 구분이 안 갔다. 셋을 다른 «물건»으로 그린다 —
+     허들(다리 둘 + 가로대) · 매달린 가로대(위에서 내려온 끈) · 통행 차단대(빗금 판).
+     ⚠ 높은 것에 **바닥 받침대를 두지 않는다** — 밑이 막혀 보이면 «지나갈 수 있다»가 안 읽힌다.
+     ⚠ 가까워지면 작은 화살표를 얹는다(↑ 뛰기 · ↓ 미끄러지기). 멀 때는 안 그린다 — 글자가 뭉갠다. */
   obstacle(g, it){
     const c = g.cx, C = g.col, p = this.proj(g, it.z);
     if(p.k < .02) return;
     const x = this.laneCX(g, it.lane, p.k);
-    const lw = this.laneW(g, p.k) * .78;             // 한 줄 폭의 78% — 사이가 보여야 «줄»로 읽힌다
+    const lw = this.laneW(g, p.k) * .8;
+    const H0 = 78 * p.k;                              // 사람 키쯤
+    const near = p.k > .55;                           // 가까울 때만 화살표를 적는다
+    c.textAlign = 'center'; c.textBaseline = 'middle';
+
     if(it.kind === 'star'){
-      c.fillStyle = C.star; c.textAlign = 'center'; c.textBaseline = 'middle';
-      c.font = Math.max(8, 26 * p.k) + 'px serif';
-      c.fillText('★', x, p.y - 34 * p.k);
+      c.fillStyle = C.star;
+      c.font = Math.max(9, 30 * p.k) + 'px serif';
+      c.fillText('★', x, p.y - 40 * p.k);
       return;
     }
-    const H0 = 76 * p.k;                              // 사람 키쯤
     if(it.kind === 'low'){
-      /* 낮은 것 — 뛰어넘는다. 낮고 넓게 그려 «넘을 수 있다»가 보이게 */
-      const hh = H0 * .34;
+      /* 허들 — 다리 둘 위에 가로대 하나. «뛰어넘는 것»의 생김새다 */
+      const top = p.y - H0 * .40, bar = Math.max(2, H0 * .11), leg = Math.max(1.5, lw * .07);
       c.fillStyle = C.low;
-      this.box(c, x - lw/2, p.y - hh, lw, hh, 3 * p.k);
-    }else if(it.kind === 'high'){
-      /* 높은 것 — 위에 걸린 가로대. 밑이 비어 있어야 «지나갈 수 있다»가 보인다 */
-      const hh = H0 * .40;
-      c.fillStyle = C.high;
-      this.box(c, x - lw/2, p.y - H0 * 1.04, lw, hh, 3 * p.k);
-      c.globalAlpha = .35;
-      c.fillRect(x - lw*.06, p.y - H0*.64, lw*.12, H0*.64);
+      c.fillRect(x - lw * .40, top, leg, H0 * .40);
+      c.fillRect(x + lw * .40 - leg, top, leg, H0 * .40);
+      this.box(c, x - lw / 2, top, lw, bar, bar * .4);
+      c.globalAlpha = .5;
+      c.fillRect(x - lw * .34, top + bar * 1.9, lw * .68, Math.max(1, bar * .45));
       c.globalAlpha = 1;
-    }else{
-      /* 벽 — 줄을 바꾸는 수밖에 없다. 위아래를 꽉 채워 그린다 */
-      c.fillStyle = C.block;
-      this.box(c, x - lw/2, p.y - H0, lw, H0, 4 * p.k);
+      if(near){ c.fillStyle = C.low; c.font = '700 ' + Math.round(13 * p.k) + 'px Pretendard, sans-serif';
+        c.fillText('↑', x, top - 11 * p.k); }
+      return;
     }
+    if(it.kind === 'high'){
+      /* 위에서 내려온 가로대 — **밑이 뻥 뚫려** 있어야 «미끄러져 지난다»가 읽힌다.
+         끈은 «위로» 뻗는다. 바닥으로 내리면 못 지나가는 것처럼 보인다. */
+      const bot = p.y - H0 * .62, hh = H0 * .34;
+      c.strokeStyle = C.high; c.lineWidth = Math.max(1, 1.6 * p.k);
+      c.beginPath();
+      c.moveTo(x - lw * .3, bot - hh); c.lineTo(x - lw * .3, bot - hh - H0 * .3);
+      c.moveTo(x + lw * .3, bot - hh); c.lineTo(x + lw * .3, bot - hh - H0 * .3);
+      c.stroke();
+      c.fillStyle = C.high;
+      this.box(c, x - lw / 2, bot - hh, lw, hh, 3 * p.k);
+      if(near){ c.fillStyle = C.high; c.font = '700 ' + Math.round(13 * p.k) + 'px Pretendard, sans-serif';
+        c.fillText('↓', x, p.y - H0 * .18); }
+      return;
+    }
+    /* 통행 차단대 — 빗금 판. «못 지나간다»는 말은 빗금이 제일 잘 한다 */
+    const top = p.y - H0;
+    c.fillStyle = C.block;
+    this.box(c, x - lw / 2, top, lw, H0, 3 * p.k);
+    c.save();
+    c.beginPath(); c.rect(x - lw / 2, top, lw, H0); c.clip();
+    c.globalAlpha = .28; c.strokeStyle = '#FFFFFF'; c.lineWidth = Math.max(2, lw * .13);
+    for(let d = -H0; d < lw + H0; d += Math.max(6, lw * .3)){
+      c.beginPath(); c.moveTo(x - lw / 2 + d, top + H0); c.lineTo(x - lw / 2 + d + H0, top); c.stroke();
+    }
+    c.restore(); c.globalAlpha = 1;
+    if(near){ c.fillStyle = C.block; c.font = '700 ' + Math.round(12 * p.k) + 'px Pretendard, sans-serif';
+      c.fillText('↔', x, top - 10 * p.k); }
   },
   box(c, x, y, w, h, r){
     c.beginPath();
@@ -356,15 +403,20 @@ const MODE_RUNNER = {
     c.beginPath(); c.ellipse(x, g.py + 2, 22 - lift * .03, 6, 0, 0, 6.2832); c.fill();
     c.globalAlpha = 1;
 
-    const hh = (sliding ? 46 : 64);
-    const ww = hh * (RUN_CW / RUN_CH);
+    /* 🔴 **칸을 «같은 배율»로 그린다** (2026-09-02 · 사용자가 짚었다).
+       예전에는 슬라이드일 때 높이를 46으로 줄여 그렸다 — 칸 안에서 이미 낮은 자세인데
+       거기에 또 줄이니 **사람이 통째로 작아졌다.** 칸은 바닥을 맞춰 묶어 두었으므로
+       배율 하나로 그리면 자세만 낮아지고 «몸집»은 그대로다. */
+    const S = 78 / RUN_CH;                            // 칸 하나를 78px 높이로
+    const ww = RUN_CW * S, hh = RUN_CH * S;
     if(RUN_IMG.complete && RUN_IMG.naturalWidth){
       c.drawImage(RUN_IMG, fi * RUN_CW, 0, RUN_CW, RUN_CH,
         Math.round(x - ww/2), Math.round(y - hh), Math.round(ww), Math.round(hh));
     }else{
       /* 그림을 못 읽어도 게임은 돌아야 한다 */
       c.fillStyle = C.accent;
-      this.box(c, x - 13, y - hh, 26, hh, 6);
+      const fh = sliding ? 26 : 58;
+      this.box(c, x - 13, y - fh, 26, fh, 6);
     }
   }
 };
