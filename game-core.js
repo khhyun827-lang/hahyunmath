@@ -116,7 +116,10 @@ const MODE_RUNNER = {
   reset(g){
     g.lane = 1; g.lanes = 3; g.laneF = 1;        // laneF = 부드럽게 따라가는 «지금 자리»
     g.items = []; g.spawnZ = .55; g.freeLane = 1;
-    g.jump = 0; g.jumpV = 0; g.slide = 0; g.anim = 0; g.road = 0;
+    /* 🔴 **점프는 «높이»로 다룬다** (2026-09-01). 예전에는 0~1짜리 값을 `sin(v·π)`로 옮겼는데,
+       그 값을 **1에서 시작**해 버려서 `sin(π)=0` — **올라가는 내내 높이가 0**이었다.
+       그래서 «누르고 한참 있다 뛰는» 것으로 보였다. 이제 그냥 위로 던지고 중력으로 내린다. */
+    g.jy = 0; g.jv = 0; g.slide = 0; g.anim = 0; g.road = 0;
     g.dist = 0; g.hurtAt = -9;
     g.py = Math.round(g.h * .80);                 // 사람이 서는 자리(바닥선)
     g.horizon = Math.round(g.h * .30);
@@ -142,8 +145,11 @@ const MODE_RUNNER = {
     const n = Math.max(0, Math.min(2, g.lane + d));
     if(n !== g.lane){ g.lane = n; g.face = d; }
   },
-  up(g){ if(g.jump <= 0 && g.slide <= 0){ g.jump = 1; g.jumpV = 1; } },
-  down(g){ if(g.jump <= 0){ g.slide = .52; } },
+  /* 뛰는 높이와 떠 있는 시간을 «화면 크기»로 잡는다 — 폰에서도 같은 느낌이 되어야 한다.
+     꼭대기 = 화면의 0.17 · 떠 있는 시간 ≈ 0.62초. 거기서 중력과 처음 속도가 나온다. */
+  jumpG(g){ return 3.54 * g.h; },
+  up(g){ if(g.jy <= 0 && g.slide <= 0) g.jv = 1.10 * g.h; },
+  down(g){ if(g.jy <= 0) g.slide = .52; },
 
   /* ── 한 걸음 ── */
   step(g, dt){
@@ -157,11 +163,12 @@ const MODE_RUNNER = {
 
     /* 레인은 «짧게, 그러나 부드럽게» 옮긴다 (사용자가 답답하지 않게 해 달라 했다) */
     g.laneF += (g.lane - g.laneF) * Math.min(1, dt * 19);
-    /* 점프 — 위로 솟았다 내려온다. 0이면 땅이다 */
-    if(g.jump > 0){
-      g.jumpV -= dt * 3.4;
-      g.jump += g.jumpV * dt * 2.6;
-      if(g.jump <= 0){ g.jump = 0; g.jumpV = 0; }
+    /* 점프 — 던지고 중력으로 내린다. jy가 0이면 땅이다.
+       ⚠ **누른 그 프레임부터 곧장 오른다** — 이것이 «딜레이»의 답이다. */
+    if(g.jv !== 0 || g.jy > 0){
+      g.jv -= this.jumpG(g) * dt;
+      g.jy += g.jv * dt;
+      if(g.jy <= 0){ g.jy = 0; g.jv = 0; }
     }
     if(g.slide > 0){ g.slide -= dt; if(g.slide < 0) g.slide = 0; }
     g.anim += dt * (7 + spd * 3);
@@ -204,7 +211,7 @@ const MODE_RUNNER = {
       it.hit = true;
       if(it.kind === 'star'){ g.stars++; g.items.splice(i, 1); continue; }
       /* 🔵 **어떻게 피하는지가 종류마다 다르다** — 이것이 이 게임의 전부다 */
-      const safe = it.kind === 'low'  ? (g.jump > .18)      // 낮은 것 — 뛰어넘는다
+      const safe = it.kind === 'low'  ? (g.jy > g.h * .045)  // 낮은 것 — 뛰어넘는다
                  : it.kind === 'high' ? (g.slide > 0)       // 높은 것 — 미끄러져 지난다
                  : false;                                   // block — 줄을 바꾸는 수밖에 없다
       if(!safe) return false;
@@ -257,10 +264,23 @@ const MODE_RUNNER = {
     /* 가로 줄무늬 — 흐르는 것이 눈에 보여야 «앞으로 간다»가 된다 */
     c.strokeStyle = C.line2; c.lineWidth = 2;
     for(let s = 0; s < 9; s++){
-      const z = ((s + g.road) / 9) * this.Z_FAR;
+      /* 🔴 **빼야 다가온다.** 더하면 줄무늬의 깊이가 «커져» 지평선 쪽으로 멀어진다 —
+         장애물은 다가오는데 바닥은 멀어지니 **뒤로 달리는 것처럼** 보였다.
+         사용자가 실제로 해 보고 짚은 그 자리다(2026-09-01). */
+      const z = ((((s - g.road) % 9) + 9) % 9 / 9) * this.Z_FAR;
       const p = this.proj(g, z), x = g.roadW() * .5 * p.k;
       c.globalAlpha = Math.max(0, 1 - z / this.Z_FAR);
       c.beginPath(); c.moveTo(w/2 - x, p.y); c.lineTo(w/2 + x, p.y); c.stroke();
+    }
+    /* 길가 표시 — 줄무늬와 «같은 방향»으로 다가온다. 앞으로 간다는 것을 옆에서도 말해 준다 */
+    c.fillStyle = C.line2;
+    for(let s = 0; s < 6; s++){
+      const z = ((((s - g.road * .8) % 6) + 6) % 6 / 6) * this.Z_FAR;
+      const q = this.proj(g, z), rx = g.roadW() * .5 * q.k;
+      const sz = Math.max(1, 7 * q.k);
+      c.globalAlpha = Math.max(0, .85 - z / this.Z_FAR);
+      c.fillRect(w/2 - rx - sz * 1.6, q.y - sz, sz, sz * 2);
+      c.fillRect(w/2 + rx + sz * .6,  q.y - sz, sz, sz * 2);
     }
     c.globalAlpha = 1;
 
@@ -322,11 +342,11 @@ const MODE_RUNNER = {
     const c = g.cx, C = g.col;
     const k = 1;                                     // 사람은 늘 발밑(z=0)이다
     const x = this.laneCX(g, g.laneF, k);
-    const lift = Math.sin(Math.min(1, g.jump) * Math.PI) * g.h * .17;
+    const lift = g.jy;
     const y = g.py - lift;
     const sliding = g.slide > 0;
     const seq = sliding ? RUN_SEQ.slide
-              : g.jump > 0 ? (g.jumpV > 0 ? RUN_SEQ.jump : RUN_SEQ.fall)
+              : g.jy > 0 ? (g.jv > 0 ? RUN_SEQ.jump : RUN_SEQ.fall)
               : RUN_SEQ.run;
     const fi = seq[Math.floor(g.anim) % seq.length];
 
