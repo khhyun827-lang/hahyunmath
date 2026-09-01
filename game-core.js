@@ -192,9 +192,13 @@ const MODE_RUNNER = {
       lanes.forEach(l => {
         /* 종류 — 초반은 «비켜 가는 것»만, 그다음 뛰는 것, 후반에 슬라이드까지 */
         const r = Math.random();
-        const kind = ph === 0 ? (r < .65 ? 'block' : 'low')
-                   : ph === 1 ? (r < .45 ? 'block' : r < .8 ? 'low' : 'high')
-                              : (r < .34 ? 'block' : r < .67 ? 'low' : 'high');
+        /* 🔵 **셋을 고루 낸다** (2026-09-02 · 사용자가 「슬라이딩 장애물이 적다」고 짚었다).
+           예전에는 초반에 `high`가 아예 없고 뒤에서도 20%뿐이라, 대부분 죽기 전에
+           **미끄러질 일이 서너 번밖에 없었다.** 초반부터 내되 조금만 낸다 —
+           처음 보는 것이 한꺼번에 셋이면 무엇을 하라는 건지 모른다. */
+        const kind = ph === 0 ? (r < .52 ? 'block' : r < .84 ? 'low' : 'high')
+                   : ph === 1 ? (r < .38 ? 'block' : r < .70 ? 'low' : 'high')
+                              : (r < .32 ? 'block' : r < .62 ? 'low' : 'high');
         g.items.push({lane:l, z:this.Z_FAR, kind, hit:false});
       });
       /* 별은 «빈 줄»에만. 장애물과 겹치면 먹으러 갔다가 죽는다 */
@@ -209,7 +213,7 @@ const MODE_RUNNER = {
     for(let i = g.items.length - 1; i >= 0; i--){
       const it = g.items[i];
       it.z -= spd * dt;
-      if(it.z < -.16){ g.items.splice(i, 1); continue; }
+      if(it.z < -.23){ g.items.splice(i, 1); continue; }   // 화면 밖으로 쓸려 나간 뒤에 지운다
       if(Math.abs(it.lane - g.laneF) > .45) continue;
       if(it.kind === 'star'){
         if(!it.hit && Math.abs(it.z) < .09){ it.hit = true; g.stars++; g.items.splice(i, 1); }
@@ -227,8 +231,13 @@ const MODE_RUNNER = {
 
   /* ── 그리기 ── */
   /* 깊이 → 화면. 1/(1+z) 꼴이라 멀수록 촘촘해진다 — 그것이 «다가오는» 느낌을 만든다 */
+  /* 🔴 **음수 깊이를 자르면 안 된다** (2026-09-02 · 사용자가 짚었다).
+     `Math.max(0, z)`가 사람 뒤(z<0)를 전부 «사람 자리»로 눌러 붙였다 — 그래서 장애물이
+     발밑에서 **커지지도 지나가지도 못하고 그 자리에서 사라졌다.**
+     이제 뒤로도 이어져 화면 아래로 «쓸려 나간다» — 그것이 앞으로 나아가는 증거다.
+     ⚠ z = -1/3.1 에서 발산한다. 그 앞에서 막고 k에도 천장을 둔다. */
   proj(g, z){
-    const k = 1 / (1 + Math.max(0, z) * 3.1);
+    const k = Math.min(6, 1 / (1 + Math.max(-.24, z) * 3.1));
     return { y: g.horizon + (g.py - g.horizon) * k, k };
   },
   /* 🔴 **한 줄의 폭은 «도로의 1/3»이다.** 처음엔 0.62 같은 어림수를 곱했다가
@@ -267,7 +276,7 @@ const MODE_RUNNER = {
     for(let i = 1; i < 3; i++){
       c.beginPath();
       for(let s = 0; s <= 23; s++){
-        const z = this.Z_FAR * s / 20 - this.Z_FAR * .12, p = this.proj(g, z);
+        const z = this.Z_FAR * s / 20 - this.Z_FAR * .2, p = this.proj(g, z);
         const x = w/2 + (i - 1.5) * this.laneW(g, p.k);
         s ? c.lineTo(x, p.y) : c.moveTo(x, p.y);
       }
@@ -282,7 +291,7 @@ const MODE_RUNNER = {
       /* ⚠ 사람 «뒤»(z<0)까지 이어 그린다 (2026-09-02 · 사용자가 짚었다) — 사람 앞에서 끊기면
          발밑에서 길이 사라져 «제자리걸음»처럼 보인다. 뒤로 흘러 나가야 앞으로 가는 것이다. */
       const z = ((((s - g.road) % 12) + 12) % 12 / 12) * (this.Z_FAR * 1.3) - this.Z_FAR * .3;
-      if(z < -this.Z_FAR * .29) continue;
+      if(z < -this.Z_FAR * .22) continue;
       const p = this.proj(g, z), x = this.roadHalf(g, p.k);
       c.globalAlpha = Math.max(0, Math.min(1, 1 - z / this.Z_FAR));
       c.beginPath(); c.moveTo(w/2 - x, p.y); c.lineTo(w/2 + x, p.y); c.stroke();
@@ -326,8 +335,10 @@ const MODE_RUNNER = {
     if(p.k < .02) return;
     const x = this.laneCX(g, it.lane, p.k);
     const lw = this.laneW(g, p.k) * .8;
-    const H0 = 78 * p.k;                              // 사람 키쯤
-    const near = p.k > .55;                           // 가까울 때만 화살표를 적는다
+    const H0 = 92 * p.k;                              // 사람 키쯤
+    /* 가까울 때만 화살표를 적는다. ⚠ **이미 지나간 것(z<0)에는 안 적는다** —
+       뒤로 쓸려 나가는 장애물에 화살표가 남으면 «지금 뭘 하라는 거지»가 된다. */
+    const near = p.k > .55 && it.z > .05;
     c.textAlign = 'center'; c.textBaseline = 'middle';
 
     if(it.kind === 'star'){
@@ -400,14 +411,14 @@ const MODE_RUNNER = {
     /* 그림자 — 발밑에 두면 «떠 있는 정도»가 보인다. 점프의 높이를 이것이 말해 준다 */
     c.globalAlpha = .16 - Math.min(.1, lift / g.h * .5);
     c.fillStyle = C.ink;
-    c.beginPath(); c.ellipse(x, g.py + 2, 22 - lift * .03, 6, 0, 0, 6.2832); c.fill();
+    c.beginPath(); c.ellipse(x, g.py + 2, 26 - lift * .03, 7, 0, 0, 6.2832); c.fill();
     c.globalAlpha = 1;
 
     /* 🔴 **칸을 «같은 배율»로 그린다** (2026-09-02 · 사용자가 짚었다).
        예전에는 슬라이드일 때 높이를 46으로 줄여 그렸다 — 칸 안에서 이미 낮은 자세인데
        거기에 또 줄이니 **사람이 통째로 작아졌다.** 칸은 바닥을 맞춰 묶어 두었으므로
        배율 하나로 그리면 자세만 낮아지고 «몸집»은 그대로다. */
-    const S = 78 / RUN_CH;                            // 칸 하나를 78px 높이로
+    const S = 92 / RUN_CH;                            // 칸 하나를 92px 높이로
     const ww = RUN_CW * S, hh = RUN_CH * S;
     if(RUN_IMG.complete && RUN_IMG.naturalWidth){
       c.drawImage(RUN_IMG, fi * RUN_CW, 0, RUN_CW, RUN_CH,
@@ -432,7 +443,10 @@ const Game = {
 
   /* 3레인 자리 계산 — 길은 화면 가운데에 두되 너무 넓히지 않는다.
      폰을 가로로 눕혀도 줄이 손 닿는 곳에 있어야 한다. */
-  roadW(){ return Math.min(this.w, 330); },
+  /* 🔵 길과 사람을 키웠다 (2026-09-02 · 사용자가 «조금 더 확대»를 시켰다).
+     폰에서는 화면 폭의 96%까지 쓰고, 넓은 화면에서는 420에서 멈춘다 —
+     끝없이 넓히면 바깥 줄이 손에서 멀어진다. */
+  roadW(){ return Math.min(this.w * .96, 420); },
   roadX(){ return (this.w - this.roadW()) / 2; },
   laneW(){ return this.roadW() / 3; },
   laneX(i){ return this.roadX() + this.laneW() * (i + .5); },
