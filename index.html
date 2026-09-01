@@ -8213,7 +8213,8 @@ function weekStartOf(ymd){
    ⚠ 도장·연속·하루 한 판은 **그대로 하나다** — 게임이 바뀌어도 출석의 뜻은 안 바뀐다. */
 const GAMES = [
   { key:'runner', name:'달리기',   icon:'🏃',
-    tip:'세 줄을 오가며 장애물을 피하세요', tip2:'좌우 화살표 · 화면 좌우를 눌러 옮깁니다' },
+    tip:'← → 옮기기 · ↑ 뛰기 · ↓ 미끄러지기',
+    tip2:'폰에서는 옆으로 · 위로 · 아래로 쓸어 넘기세요' },
   { key:'dodge',  name:'똥피하기', icon:'💩',
     tip:'손가락을 끌어 좌우로 피하세요',   tip2:'⭐ 를 먹으면 50점' }
 ];
@@ -8553,101 +8554,266 @@ const MODE_DODGE = {
   }
 };
 
-/* ---------- 갈래 ② 달리기 — 3레인 (2026-09-01 · S-D · 사용자가 시켰다) ----------
-   「**서브웨이서퍼 같은 3레인 장애물 게임을 단순화하여**」.
-   🔵 **단순화한 자리** — 점프와 슬라이드를 뺐다. 남은 조작은 «좌우 한 칸»뿐이다.
-     폰에서 한 손으로 하는 게임이고, 조작이 셋이 되는 순간 «못 하겠다»가 나온다.
-   🔴 **에셋을 새로 만들지 않았다.** 노트가 「러너의 걸림돌은 코드가 아니라 그림」이라고
-     적어 둔 자리다(S-D). 달리는 사람은 이미 있는 \`game-char.webp\`를 그대로 쓰고,
-     길과 장애물은 도형이다. 그래서 사흘이 아니라 하루에 끝났다.
-   ⚠ **한 줄은 반드시 비워 둔다.** 셋 다 막으면 «피할 수 없는 벽»이 된다 —
-     똥피하기에서 x 를 58px 떼어 놓은 것과 같은 규칙이다. */
+/* ---------- 달리는 사람 그림 (2026-09-01 · S-D-3) ----------
+   사용자가 준 시트(`책표지/캐릭터.png`)에서 열두 칸을 골라 게임 크기로 묶었다.
+   🔵 **배경은 손댈 것이 없었다** — 알파가 이미 캐릭터를 가르고 있다.
+   ⚠ 칸 하나가 86×119다. **바닥을 맞추고 가로는 «캐릭터의 가운데»로** 맞춰 두었으므로,
+     그릴 때도 바닥 기준으로 놓아야 달릴 때 키가 안 흔들린다. */
+const RUN_IMG = new Image();
+RUN_IMG.src = 'run-sprite.png';
+const RUN_CW = 86, RUN_CH = 119;
+const RUN_SEQ = {
+  run:   [0,1,2,3,4,5],
+  jump:  [6,7],
+  fall:  [8,9],
+  slide: [10,11]
+};
+
+/* ---------- 갈래 ② 달리기 — 3레인 러너 (2026-09-01 · S-D) ----------
+   사용자가 시킨 것 —
+   · 조작: ←→ 레인 · ↑/Space 점프 · ↓ 슬라이드 / 폰은 **스와이프 우선**(큰 버튼 없이)
+   · 화면: 학생관리 디자인 시스템과 어울리게. 단순한 도로·3레인·하늘·장애물·캐릭터·점수·속도
+   · 장애물 **세 종류 이상** — 뛰어넘는 것 · 레인을 바꿔야 하는 것 · 슬라이드로 지나는 것
+   · 멀리서 다가오게 만들어 **앞으로 나아가는 것처럼** 보이게. 난이도는 시간이 지날수록
+
+   🔴 **원근을 준 것이 이 판의 핵심이다.** 위에서 아래로 «떨어지게» 두면 피하기 게임이지
+     달리기가 아니다. 장애물에 «깊이(z)»를 주고 지평선에서 커지며 다가오게 했다.
+   🔵 **색은 화면에서 읽어 온다**(`--paper`·`--ink`…). 캔버스는 CSS 변수를 모르므로
+     mount 할 때 한 번 읽어 둔다 — 디자인 시스템이 바뀌면 게임도 따라간다.
+   ⚠ **바깥 그림은 캐릭터 하나뿐이다.** 하늘·도로·장애물은 전부 도형이다(사용자가 그렇게 정했다). */
 const MODE_RUNNER = {
+  /* 깊이 — 0이 사람 발밑, Z_FAR가 지평선이다 */
+  Z_FAR: 1,
   reset(g){
-    g.lane = 1; g.lanes = 3;
-    g.px = g.laneX(1); g.py = g.h - 74; g.face = 1;
-    g.items = []; g.spawnIn = 1.1; g.road = 0;
-    g.freeLane = 1;               // 마지막으로 «비워 둔» 줄. 길이 이어지는지 여기서 본다
+    g.lane = 1; g.lanes = 3; g.laneF = 1;        // laneF = 부드럽게 따라가는 «지금 자리»
+    g.items = []; g.spawnZ = .55; g.freeLane = 1;
+    g.jump = 0; g.jumpV = 0; g.slide = 0; g.anim = 0; g.road = 0;
+    g.dist = 0; g.hurtAt = -9;
+    g.py = Math.round(g.h * .80);                 // 사람이 서는 자리(바닥선)
+    g.horizon = Math.round(g.h * .34);
   },
-  /* 화면 좌우를 눌러도, 화살표를 눌러도 «한 칸»이다 */
-  down(g, x){ this.move(g, x < g.w / 2 ? -1 : 1); },
-  key(g, k, isDown){ if(isDown) this.move(g, k === 'ArrowLeft' ? -1 : 1); },
+  /* ── 조작 ── */
+  key(g, k, down){
+    if(!down) return;
+    if(k === 'ArrowLeft')  this.move(g, -1);
+    if(k === 'ArrowRight') this.move(g, 1);
+    if(k === 'ArrowUp' || k === ' ' || k === 'Spacebar') this.up(g);
+    if(k === 'ArrowDown')  this.down(g);
+  },
+  /* 🔵 **스와이프를 먼저 본다** — 사용자가 그렇게 정했다. 큰 버튼을 두지 않는다.
+     ⚠ 문턱(28px)이 없으면 «누르기»가 전부 스와이프로 읽혀 손가락을 뗄 때마다 뛴다. */
+  swipe(g, dx, dy){
+    const ax = Math.abs(dx), ay = Math.abs(dy);
+    if(ax < 28 && ay < 28){ this.up(g); return; }   // 그냥 누르면 점프 — 러너의 관행이다
+    if(ax > ay) this.move(g, dx > 0 ? 1 : -1);
+    else if(dy < 0) this.up(g);
+    else this.down(g);
+  },
   move(g, d){
-    const n = Math.max(0, Math.min(g.lanes - 1, g.lane + d));
+    const n = Math.max(0, Math.min(2, g.lane + d));
     if(n !== g.lane){ g.lane = n; g.face = d; }
   },
-  step(g, dt){
-    /* 칸 사이를 미끄러지듯 옮긴다 — 순간이동하면 «내가 옮겼나»가 안 보인다 */
-    const tx = g.laneX(g.lane);
-    g.px += (tx - g.px) * Math.min(1, dt * 16);
+  up(g){ if(g.jump <= 0 && g.slide <= 0){ g.jump = 1; g.jumpV = 1; } },
+  down(g){ if(g.jump <= 0){ g.slide = .52; } },
 
-    /* 난이도 — 속도와 «한 번에 몇 줄을 막나»가 따로 오른다.
-       ⚠ 두 줄을 막는 것은 40초 뒤부터다. 처음부터 두 줄이면 운으로 죽는다. */
-    /* ⚠ 처음은 느슨하게. 초반부터 조이면 뒤쪽을 아무도 못 본다 (똥피하기와 같은 규칙) */
-    const v = Math.min(200 + g.t * 8, 620);
-    g.road = (g.road + v * dt) % 46;
-    g.spawnIn -= dt;
-    if(g.spawnIn <= 0){
-      /* 오는 간격을 «시간»이 아니라 «거리»로 잡는다 — 빨라져도 빽빽해지지 않는다 */
-      g.spawnIn = Math.max(.42, 280 / v);
-      const blockTwo = g.t > 40 && Math.random() < Math.min(.45, (g.t - 40) * .012);
-      /* 🔴 **한 번에 한 줄을 비우는 것만으로는 모자랐다** (2026-09-01에 검사로 잡았다).
-         물결 넷이 한 화면에 겹쳐 서면, 물결마다 비운 줄이 달라 **세 줄이 다 막힌 띠**가 생긴다.
-         봇이 4.8초에 죽었다 — 그건 게임이 아니라 벽이다.
-         🔵 그래서 **빈 줄을 «이어» 놓는다** — 다음에 비울 줄은 지난번 빈 줄의 «옆 칸»까지만이다.
-           그러면 빈 줄이 한 칸씩만 꺾이는 길이 되어 **언제나 걸어서 통과할 수 있다.** */
-      const near = [g.freeLane - 1, g.freeLane, g.freeLane + 1].filter(l => l >= 0 && l < 3);
+  /* ── 한 걸음 ── */
+  step(g, dt){
+    /* 난이도 셋 — 사용자가 말한 초반·중반·후반이 그대로 값이 된다.
+       ⚠ 속도와 «사이»를 따로 올린다. 속도만 올리면 화면이 오히려 비어 보인다. */
+    const ph = g.t < 25 ? 0 : g.t < 60 ? 1 : 2;
+    const spd = Math.min(.62 + g.t * .011, 1.75);          // 다가오는 빠르기(깊이/초)
+    const gapZ = ph === 0 ? .62 : ph === 1 ? .50 : .40;    // 물결 사이 «거리»
+    g.dist += spd * dt * 34;
+    g.road = (g.road + spd * dt * 3.2) % 1;
+
+    /* 레인은 «짧게, 그러나 부드럽게» 옮긴다 (사용자가 답답하지 않게 해 달라 했다) */
+    g.laneF += (g.lane - g.laneF) * Math.min(1, dt * 19);
+    /* 점프 — 위로 솟았다 내려온다. 0이면 땅이다 */
+    if(g.jump > 0){
+      g.jumpV -= dt * 3.4;
+      g.jump += g.jumpV * dt * 2.6;
+      if(g.jump <= 0){ g.jump = 0; g.jumpV = 0; }
+    }
+    if(g.slide > 0){ g.slide -= dt; if(g.slide < 0) g.slide = 0; }
+    g.anim += dt * (7 + spd * 3);
+
+    /* ── 장애물을 낸다 ──
+       🔴 **빈 줄을 «이어» 놓는다** — 다음에 비울 줄은 지난번 빈 줄의 옆 칸까지다.
+         이것이 없으면 물결이 겹쳐 «피할 수 없는 벽»이 된다(09-01에 검사로 잡았다). */
+    g.spawnZ -= spd * dt;
+    if(g.spawnZ <= 0){
+      g.spawnZ = gapZ;
+      const near = [g.freeLane-1, g.freeLane, g.freeLane+1].filter(l => l >= 0 && l < 3);
       const free = near[Math.floor(Math.random() * near.length)];
       g.freeLane = free;
-      const picks = [0,1,2].filter(l => l !== free);
-      const lanes = blockTwo ? picks : [picks[Math.floor(Math.random() * picks.length)]];
-      lanes.forEach(l => g.items.push({lane:l, y:-30, h:26, v, star:false}));
-      /* 별은 «빈 줄»에만 둔다 — 장애물과 겹치면 먹으러 갔다가 죽는다 */
-      if(Math.random() < .3) g.items.push({lane:free, y:-30, h:22, v, star:true});
+      const others = [0,1,2].filter(l => l !== free);
+      /* 중반부터 두 줄, 후반에 가끔 «빈 줄 하나만» 남는 판 */
+      const many = ph === 0 ? 1 : (ph === 1 ? (Math.random() < .35 ? 2 : 1)
+                                            : (Math.random() < .6 ? 2 : 1));
+      const lanes = many === 2 ? others : [others[Math.floor(Math.random()*2)]];
+      lanes.forEach(l => {
+        /* 종류 — 초반은 «비켜 가는 것»만, 그다음 뛰는 것, 후반에 슬라이드까지 */
+        const r = Math.random();
+        const kind = ph === 0 ? (r < .65 ? 'block' : 'low')
+                   : ph === 1 ? (r < .45 ? 'block' : r < .8 ? 'low' : 'high')
+                              : (r < .34 ? 'block' : r < .67 ? 'low' : 'high');
+        g.items.push({lane:l, z:this.Z_FAR, kind, hit:false});
+      });
+      /* 별은 «빈 줄»에만. 장애물과 겹치면 먹으러 갔다가 죽는다 */
+      if(Math.random() < .34) g.items.push({lane:free, z:this.Z_FAR, kind:'star', hit:false});
     }
 
+    /* ── 다가오게 하고, 부딪히는지 본다 ── */
     for(let i = g.items.length - 1; i >= 0; i--){
       const it = g.items[i];
-      const was = it.y;
-      it.y += it.v * dt;
-      /* ⚠ 지나간 «구간»으로 본다. 한 점으로 보면 빠를 때 사람을 통과해 버린다(터널링) */
-      const hit = it.lane === g.lane
-        && was + it.h/2 > g.py - 18 - (it.y - was)
-        && it.y - it.h/2 < g.py + 18;
-      if(hit){
-        if(it.star){ g.stars++; g.items.splice(i,1); continue; }
-        return false;
-      }
-      if(it.y - it.h > g.h) g.items.splice(i,1);
+      it.z -= spd * dt;
+      if(it.z < -.12){ g.items.splice(i, 1); continue; }
+      if(it.hit) continue;
+      /* 사람은 z=0 에 있다. 몸 두께만큼의 띠를 지날 때 판정한다 */
+      if(it.z > .085 || it.z < -.085) continue;
+      if(Math.abs(it.lane - g.laneF) > .5) continue;       // 아직 그 줄에 안 왔다
+      it.hit = true;
+      if(it.kind === 'star'){ g.stars++; g.items.splice(i, 1); continue; }
+      /* 🔵 **어떻게 피하는지가 종류마다 다르다** — 이것이 이 게임의 전부다 */
+      const safe = it.kind === 'low'  ? (g.jump > .18)      // 낮은 것 — 뛰어넘는다
+                 : it.kind === 'high' ? (g.slide > 0)       // 높은 것 — 미끄러져 지난다
+                 : false;                                   // block — 줄을 바꾸는 수밖에 없다
+      if(!safe) return false;
     }
     return true;
   },
+
+  /* ── 그리기 ── */
+  /* 깊이 → 화면. 1/(1+z) 꼴이라 멀수록 촘촘해진다 — 그것이 «다가오는» 느낌을 만든다 */
+  proj(g, z){
+    const k = 1 / (1 + Math.max(0, z) * 3.1);
+    return { y: g.horizon + (g.py - g.horizon) * k, k };
+  },
+  laneCX(g, laneF, k){
+    const spread = g.roadW() * .5 * k;                      // 멀수록 좁아진다
+    return g.w / 2 + (laneF - 1) * (spread * .62);
+  },
   draw(g){
-    const c = g.cx, w = g.w, h = g.h, lw = g.laneW();
-    const x0 = g.roadX();
-    /* 길 */
-    c.fillStyle = '#F1EFE9';
-    c.fillRect(x0, 0, lw * 3, h);
-    /* 줄 사이 점선이 흐르면 «달리는 중»으로 보인다 — 이 게임의 속도감은 전부 여기서 온다 */
-    c.strokeStyle = '#DDDAD1'; c.lineWidth = 3; c.setLineDash([20, 26]);
-    c.lineDashOffset = -g.road;
+    const c = g.cx, w = g.w, h = g.h, C = g.col;
+    /* 하늘 — 단순한 두 색. 사용자가 «복잡하게 하지 말라» 했다 */
+    const sky = c.createLinearGradient(0, 0, 0, g.horizon);
+    sky.addColorStop(0, C.sky0); sky.addColorStop(1, C.sky1);
+    c.fillStyle = sky; c.fillRect(0, 0, w, g.horizon);
+    /* 땅 */
+    c.fillStyle = C.ground; c.fillRect(0, g.horizon, w, h - g.horizon);
+
+    /* 도로 — 지평선의 한 점에서 발밑으로 벌어지는 사다리꼴 */
+    const near = this.proj(g, 0), far = this.proj(g, this.Z_FAR);
+    const nx = g.roadW() * .5, fx = g.roadW() * .5 * far.k;
+    c.fillStyle = C.road;
+    c.beginPath();
+    c.moveTo(w/2 - fx, far.y); c.lineTo(w/2 + fx, far.y);
+    c.lineTo(w/2 + nx, h);     c.lineTo(w/2 - nx, h);
+    c.closePath(); c.fill();
+
+    /* 줄 사이 선 — 흐르면 «달리는 중»이 된다. 이 게임의 속도감은 전부 여기서 온다 */
+    c.strokeStyle = C.line; c.lineWidth = 2;
     for(let i = 1; i < 3; i++){
-      c.beginPath(); c.moveTo(x0 + lw * i, 0); c.lineTo(x0 + lw * i, h); c.stroke();
-    }
-    c.setLineDash([]);
-    /* 장애물 · 별 */
-    c.textAlign = 'center'; c.textBaseline = 'middle';
-    for(const it of g.items){
-      const x = g.laneX(it.lane);
-      if(it.star){ c.font = '22px serif'; c.fillText('⭐', x, it.y); continue; }
-      const bw = lw * .62, bh = it.h;
-      c.fillStyle = '#B03A2E';
       c.beginPath();
-      if(c.roundRect) c.roundRect(x - bw/2, it.y - bh/2, bw, bh, 5);
-      else c.rect(x - bw/2, it.y - bh/2, bw, bh);
-      c.fill();
+      for(let s = 0; s <= 20; s++){
+        const z = this.Z_FAR * s / 20, p = this.proj(g, z);
+        const x = w/2 + (i - 1.5) * (g.roadW() * .62 * p.k);
+        s ? c.lineTo(x, p.y) : c.moveTo(x, p.y);
+      }
+      c.stroke();
     }
-    g._player(g.px, g.py, g.face);
+    /* 가로 줄무늬 — 흐르는 것이 눈에 보여야 «앞으로 간다»가 된다 */
+    c.strokeStyle = C.line2; c.lineWidth = 2;
+    for(let s = 0; s < 9; s++){
+      const z = ((s + g.road) / 9) * this.Z_FAR;
+      const p = this.proj(g, z), x = g.roadW() * .5 * p.k;
+      c.globalAlpha = Math.max(0, 1 - z / this.Z_FAR);
+      c.beginPath(); c.moveTo(w/2 - x, p.y); c.lineTo(w/2 + x, p.y); c.stroke();
+    }
+    c.globalAlpha = 1;
+
+    /* 장애물 — 먼 것부터 그린다(뒤엣것이 앞엣것에 가려야 한다) */
+    const sorted = g.items.slice().sort((a,b) => b.z - a.z);
+    for(const it of sorted) this.obstacle(g, it);
+
+    /* 사람 */
+    this.player(g);
+
+    /* 속도 — 사용자가 «현재 속도 또는 진행 상태»를 달라고 했다 */
+    const spd = Math.min(.62 + g.t * .011, 1.75);
+    const pct = (spd - .62) / (1.75 - .62);
+    c.fillStyle = C.line; c.fillRect(14, 14, 74, 4);
+    c.fillStyle = C.accent; c.fillRect(14, 14, 74 * Math.max(.04, pct), 4);
+    c.fillStyle = C.dim; c.font = '10px Pretendard, sans-serif';
+    c.textAlign = 'left'; c.textBaseline = 'top';
+    c.fillText(Math.round(g.dist) + 'm', 14, 23);
+  },
+
+  obstacle(g, it){
+    const c = g.cx, C = g.col, p = this.proj(g, it.z);
+    if(p.k < .02) return;
+    const x = this.laneCX(g, it.lane, p.k);
+    const lw = g.roadW() * .62 * p.k * .78;          // 한 줄 폭의 78%
+    if(it.kind === 'star'){
+      c.fillStyle = C.star; c.textAlign = 'center'; c.textBaseline = 'middle';
+      c.font = Math.max(8, 26 * p.k) + 'px serif';
+      c.fillText('★', x, p.y - 34 * p.k);
+      return;
+    }
+    const H0 = 76 * p.k;                              // 사람 키쯤
+    if(it.kind === 'low'){
+      /* 낮은 것 — 뛰어넘는다. 낮고 넓게 그려 «넘을 수 있다»가 보이게 */
+      const hh = H0 * .34;
+      c.fillStyle = C.low;
+      this.box(c, x - lw/2, p.y - hh, lw, hh, 3 * p.k);
+    }else if(it.kind === 'high'){
+      /* 높은 것 — 위에 걸린 가로대. 밑이 비어 있어야 «지나갈 수 있다»가 보인다 */
+      const hh = H0 * .40;
+      c.fillStyle = C.high;
+      this.box(c, x - lw/2, p.y - H0 * 1.04, lw, hh, 3 * p.k);
+      c.globalAlpha = .35;
+      c.fillRect(x - lw*.06, p.y - H0*.64, lw*.12, H0*.64);
+      c.globalAlpha = 1;
+    }else{
+      /* 벽 — 줄을 바꾸는 수밖에 없다. 위아래를 꽉 채워 그린다 */
+      c.fillStyle = C.block;
+      this.box(c, x - lw/2, p.y - H0, lw, H0, 4 * p.k);
+    }
+  },
+  box(c, x, y, w, h, r){
+    c.beginPath();
+    if(c.roundRect) c.roundRect(x, y, w, h, Math.max(1, r)); else c.rect(x, y, w, h);
+    c.fill();
+  },
+
+  player(g){
+    const c = g.cx, C = g.col;
+    const k = 1;                                     // 사람은 늘 발밑(z=0)이다
+    const x = this.laneCX(g, g.laneF, k);
+    const lift = Math.sin(Math.min(1, g.jump) * Math.PI) * g.h * .17;
+    const y = g.py - lift;
+    const sliding = g.slide > 0;
+    const seq = sliding ? RUN_SEQ.slide
+              : g.jump > 0 ? (g.jumpV > 0 ? RUN_SEQ.jump : RUN_SEQ.fall)
+              : RUN_SEQ.run;
+    const fi = seq[Math.floor(g.anim) % seq.length];
+
+    /* 그림자 — 발밑에 두면 «떠 있는 정도»가 보인다. 점프의 높이를 이것이 말해 준다 */
+    c.globalAlpha = .16 - Math.min(.1, lift / g.h * .5);
+    c.fillStyle = C.ink;
+    c.beginPath(); c.ellipse(x, g.py + 2, 22 - lift * .03, 6, 0, 0, 6.2832); c.fill();
+    c.globalAlpha = 1;
+
+    const hh = (sliding ? 46 : 64);
+    const ww = hh * (RUN_CW / RUN_CH);
+    if(RUN_IMG.complete && RUN_IMG.naturalWidth){
+      c.drawImage(RUN_IMG, fi * RUN_CW, 0, RUN_CW, RUN_CH,
+        Math.round(x - ww/2), Math.round(y - hh), Math.round(ww), Math.round(hh));
+    }else{
+      /* 그림을 못 읽어도 게임은 돌아야 한다 */
+      c.fillStyle = C.accent;
+      this.box(c, x - 13, y - hh, 26, hh, 6);
+    }
   }
 };
 
@@ -8657,7 +8823,7 @@ const Game = {
   t:0, last:0, spawnIn:0,
   px:0, py:0, items:[], score:0, stars:0,
   face:1, onScore:null, onEnd:null,
-  ptr:null, keys:null, _h:null,
+  ptr:null, keys:null, _h:null, sw:null, col:null,
   mode:null, lane:1, lanes:3, road:0,
 
   /* 3레인 자리 계산 — 길은 화면 가운데에 두되 너무 넓히지 않는다.
@@ -8667,10 +8833,30 @@ const Game = {
   laneW(){ return this.roadW() / 3; },
   laneX(i){ return this.roadX() + this.laneW() * (i + .5); },
 
+  /* 🔵 **색을 화면에서 읽어 온다** (2026-09-01 · S-D). 캔버스는 CSS 변수를 모르므로
+     한 번 읽어 둔다 — 디자인 시스템(ds.css)이 바뀌면 게임 색도 따라간다.
+     ⚠ 값이 비어 있을 수 있다(옛 브라우저·읽기 실패) — 그때 쓸 것을 옆에 둔다. */
+  readColors(){
+    const cs = getComputedStyle(document.documentElement);
+    const v = (k, d) => (cs.getPropertyValue(k) || '').trim() || d;
+    const paper = v('--paper', '#FAF9F6'), line = v('--line', '#E7E5DE');
+    return {
+      sky0: v('--card', '#FFFFFF'), sky1: paper,
+      ground: v('--sunk', '#FDFDFB'), road: v('--line2', '#F1EFE9'),
+      line: line, line2: v('--accent-line', '#D5D0CA'),
+      ink: v('--ink', '#22221E'), dim: v('--dim', '#96968C'),
+      accent: v('--accent', '#3F3537'),
+      low: v('--late', '#9A7000'),      // 뛰어넘는 것 — 노랑
+      high: v('--leave', '#6B46A8'),    // 미끄러져 지나는 것 — 보라
+      block: v('--no', '#B03A2E'),      // 비켜 가는 수밖에 없는 것 — 빨강
+      star: v('--brand', '#BA5054')
+    };
+  },
   mount(cv, o){
     o = o || {};
     this.stop();
     this.mode = o.mode || MODE_DODGE;
+    this.col = this.readColors();
     this.cv = cv;
     const wrap = cv.parentNode;
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -8694,23 +8880,30 @@ const Game = {
         const x = self._x(e);
         const first = !self.started;
         self.started = true; self.ptr = x;
-        /* ⚠ 시작하는 그 첫 누름은 «한 칸 옮기기»로 세지 않는다 —
-           시작하자마자 옆줄로 튀면 «내가 안 눌렀는데»가 된다 */
-        if(!first && self.mode.down) self.mode.down(self, x);
+        self.sw = first ? null : {x: e.clientX, y: e.clientY};   // 스와이프 시작점
         e.preventDefault();
       },
       /* ⚠ move 를 캔버스에 걸면 손가락이 밖으로 나갔을 때 놓친다. window 에 건다 */
       move(e){ if(self.ptr !== null){ self.ptr = self._x(e); e.preventDefault(); } },
-      up(){ self.ptr = null; },
+      /* 🔵 **폰은 스와이프로 한다** — 사용자가 그렇게 정했다(큰 버튼을 두지 않는다).
+         손을 뗄 때 «어디서 어디로»를 갈래에 넘긴다. */
+      up(e){
+        if(self.sw && self.mode.swipe && e){
+          self.mode.swipe(self, e.clientX - self.sw.x, e.clientY - self.sw.y);
+        }
+        self.sw = null; self.ptr = null;
+      },
       key(e){
         const d = (e.type === 'keydown');
-        if(e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+        const K = ['ArrowLeft','ArrowRight','ArrowUp','ArrowDown',' ','Spacebar'];
+        if(K.indexOf(e.key) < 0) return;
         /* ⚠ 눌러 둔 채로 두면 keydown 이 되풀이해서 온다 — 칸을 옮기는 갈래에서는
            그 되풀이가 «주르륵»이 되므로 처음 한 번만 받는다 */
         const repeat = d && e.repeat;
         const first = !self.started;
         self.started = true;
-        if(e.key === 'ArrowLeft') self.keys.l = d; else self.keys.r = d;
+        if(e.key === 'ArrowLeft') self.keys.l = d;
+        else if(e.key === 'ArrowRight') self.keys.r = d;
         if(!first && !repeat && self.mode.key) self.mode.key(self, e.key, d);
         e.preventDefault();
       },
@@ -8785,8 +8978,9 @@ const Game = {
       c.fillStyle = '#22221E'; c.font = '700 15px Pretendard, sans-serif';
       c.fillText('화면을 눌러 시작', w/2, h/2 - 16);
       c.fillStyle = '#96968C'; c.font = '12.5px Pretendard, sans-serif';
-      c.fillText(this.mode === MODE_RUNNER ? GAMES[0].tip : GAMES[1].tip, w/2, h/2 + 8);
-      c.fillText(this.mode === MODE_RUNNER ? GAMES[0].tip2 : GAMES[1].tip2, w/2, h/2 + 28);
+      const gi = this.mode === MODE_RUNNER ? GAMES[0] : GAMES[1];
+      c.fillText(gi.tip, w/2, h/2 + 8);
+      c.fillText(gi.tip2, w/2, h/2 + 28);
     }
   },
 
