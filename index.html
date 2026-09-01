@@ -3869,6 +3869,13 @@ function studentClassTitle(s){
   return ids.length ? ids.map(classNameOf).join(' · ') : '미배정';
 }
 function studentExtraClassIds(s){ return studentClassIds(s).slice(1); }
+/* 🔴 **«이 학생을 대표하는 반»** (2026-09-01 · E-4). 주 반이 있으면 그것이고,
+   **없으면 그가 듣는 첫 반**이다 — 특강만 듣는 학생에게는 그 특강이 곧 그의 반이다.
+   ⚠ `studentMainClassId`와 갈라 둔다. «출결을 어느 반 것으로 세나»(main)와
+     «이 학생을 뭐라고 소개하나»(primary)는 **다른 물음**이다. main은 없을 수 있어야
+     `attCountedOf`가 «듣는 것이 곧 전부»로 떨어진다.
+   🔵 이것이 없어서 **학부모께 가는 리포트에 반 이름이 「미배정」**으로 찍히고 있었다. */
+function studentPrimaryClassId(s){ return studentClassIds(s)[0] || ''; }
 function classKindOf(id){
   const c = DATA.classes.find(x=>x.id===id);
   return (c && c.kind) || '정규';                         // 갈래가 없는 옛 반은 정규다
@@ -10485,7 +10492,8 @@ function rosterStats(s){
     /* 퇴원의 «언제·왜»를 말하려면 학생 자체가 필요하다 — `withdrawnAt`은 기록이 아니라
        학생 문서에 있다(W-1). 신호 열이 이걸 쓴다. */
     student: s,
-    prog: s.classId ? getClassProgress(s.classId) : null
+    /* 대표 반의 진도 — 특강만 듣는 학생도 제 반의 진도를 본다 (E-4). */
+    prog: studentPrimaryClassId(s) ? getClassProgress(studentPrimaryClassId(s)) : null
   };
 }
 
@@ -13385,7 +13393,10 @@ function monthlyReportData(s, rec, ym, ctx){
   });
 
   /* 과제 — «그 달에 내야 했던 것»이 학부모가 궁금한 것이라 마감일로 자른다 (없으면 등록일). */
-  const asgs = (ctx.assignments||[]).filter(a=>a.classId===s.classId && inMonth(a.dueDate||a.createdAt));
+  /* ⚠ «대표 반»의 과제다 — 주 반이 없는 학생(특강만)은 그 특강이 곧 대표 반이라
+     여기서 세어야 한다. 그 학생은 `extras`가 비어 있으므로 두 번 세어지지 않는다 (E-4). */
+  const asgs = (ctx.assignments||[]).filter(a=>a.classId===(ctx.primaryClassId||s.classId)
+      && inMonth(a.dueDate||a.createdAt));
   const hwDone = ctx.isDone ? asgs.filter(a=>ctx.isDone(rec, a.id)).length : 0;
   /* 🔵 **「보완 필요」를 따로 센다** (2026-09-01 · C-21 · 사용자가 시켰다).
      ⚠ **제출 수(hwDone)에서 빼지 않는다** — 09-01에 사용자가 «한 것으로 센다»로 정했고
@@ -13495,10 +13506,14 @@ function reportDataOf(s, rec, ym){
      «안 한 것»으로 읽힌다. 리포트 전체가 그 규칙 위에 서 있다. */
   }).filter(x => x.attDays || x.hw || x.scores.length);
   return monthlyReportData(s, rec, ym, {
-    attOfMain, extras, isExtraScore,
-    books: s.classId ? getClassProgress(s.classId).books : [],
+    attOfMain, extras, isExtraScore, primaryClassId: studentPrimaryClassId(s),
+    /* 🔴 «대표 반»을 본다 — 특강만 듣는 학생은 주 반이 없어 교재가 통째로 비어 있었다 (E-4). */
+    books: studentPrimaryClassId(s) ? getClassProgress(studentPrimaryClassId(s)).books : [],
     allRecords: state.allRecords, assignments: DATA.assignments,
-    videos: DATA.videos, isDone: hwIsDone, className: classNameOf(s.classId),
+    videos: DATA.videos, isDone: hwIsDone,
+    /* 🔴 학부모가 읽는 반 이름이다. 특강만 듣는 학생에게 「미배정」이라 적으면
+       **그 집에서는 «우리 애가 반이 없다»로 읽힌다** (2026-09-01 · E-4). */
+    className: studentPrimaryClassId(s) ? classNameOf(studentPrimaryClassId(s)) : '미배정',
     exams: DATA.exams, liveWrong: liveWrongHomework,
     isPartial: (r, id) => hwState(r, id).status === HW_PARTIAL,
     answerOf: bid => (DATA.problemBank.find(b=>b.id===bid)||{}).variantAnswer,
@@ -14186,7 +14201,10 @@ function sdScreenHTML(s, rec, isAssistant){
      ⚠ **여기는 일부러 `classRoster`를 안 쓴다** (W-1) — 이 목록은 «지금 반 명단»이 아니라
        **보던 학생 옆으로 옮겨 다니는 길**이다. 걸러 버리면 퇴원생을 열었을 때
        **그 학생 자신이 목록에서 사라진다.** 대신 «퇴원»이라고 적어 준다. */
-  const peers = (s.classId ? DATA.students.filter(x=>x.classId===s.classId) : DATA.students)
+  /* ⚠ 대표 반을 «함께 듣는» 사람들이다 (2026-09-01 · E-4) — 겹쳐 듣는 학생도 여기 든다.
+     특강만 듣는 학생은 그 특강 사람들 옆에 선다. 예전에는 «미배정끼리» 묶여 있었다. */
+  const peerCid = studentPrimaryClassId(s);
+  const peers = (peerCid ? DATA.students.filter(x=>studentClassIds(x).includes(peerCid)) : DATA.students)
     .slice().sort((a,b)=>(a.name||'').localeCompare(b.name||'','ko'));
   const list = `<aside class="sd-list">
     <div class="sd-lh">
@@ -14196,7 +14214,7 @@ function sdScreenHTML(s, rec, isAssistant){
            「반 › 학생」과 「신호」. ⚠ 반 이름은 안 적는다. 「전체 학생」에서 왔을 수도 있다. */''}
       <button class="btn q sm" onclick="state.studentDetailId=null; render()">${iconSvg('chevL',13)} ${
         state.teacherTab==='signals' ? '신호로' : '학생 명단으로'}</button>
-      <div class="t-sec" style="margin:12px 0 0;">${s.classId ? escHtml(classNameOf(s.classId)) : '전체'} · ${peers.length}명</div>
+      <div class="t-sec" style="margin:12px 0 0;">${peerCid ? escHtml(classNameOf(peerCid)) : '전체'} · ${peers.length}명</div>
     </div>
     <div class="sd-lbody">
       ${peers.map(p=>{
@@ -14361,7 +14379,7 @@ function sdTimelineHTML(s, sid, rec, isAssistant){
       <span style="font-size:12.5px;color:var(--sub);line-height:1.8;flex:1;min-width:200px;">
         성적은 <b>반 &gt; 성적</b>에서 반 전체를 한 번에 넣습니다.
         시험에 붙여 두어야 <b>반 평균과 등수</b>가 리포트에 정확히 실립니다.</span>
-      ${s.classId ? `<button class="btn sm" onclick="state.studentDetailId=null; state.classHubId='${s.classId}'; goTeacherTab('classhub','scores')"
+      ${studentPrimaryClassId(s) ? `<button class="btn sm" onclick="state.studentDetailId=null; state.classHubId='${studentPrimaryClassId(s)}'; goTeacherTab('classhub','scores')"
         >${escHtml(classNameOf(s.classId))} 성적으로 ${iconSvg('arrowR',13)}</button>` : ''}
     </div></div>`;
   } else if(f==='att'){
@@ -17733,7 +17751,9 @@ function teacherSettingsStudentsHTML(){
           <b class="nm">${escHtml(s.name)}</b>
           <span class="mono id">${escHtml(s.studentId)}</span>
           <span class="sch">${escHtml(s.school||'학교 미입력')} ${escHtml(s.grade||'')}</span>
-          <span class="cls">${s.classId ? escHtml(classNameOf(s.classId)) : '<span class="badge">미배정</span>'}</span>
+          <span class="cls" title="${escHtml(studentClassTitle(s))}">${studentClassIds(s).length
+            ? escHtml(studentClassLabel(s, {short:true}))
+            : '<span class="badge">미배정</span>'}</span>
           ${gone ? `<span class="badge gone">퇴원${
             s.withdrawnAt ? ' <span class="mono">'+escHtml(s.withdrawnAt)+'</span>' : ''}</span>` : ''}
         </div>
