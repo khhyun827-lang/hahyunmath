@@ -8529,7 +8529,8 @@ const MODE_RUNNER = {
   reset(g){
     g.lane = 1; g.lanes = 3;
     g.px = g.laneX(1); g.py = g.h - 74; g.face = 1;
-    g.items = []; g.spawnIn = .9; g.road = 0;
+    g.items = []; g.spawnIn = 1.1; g.road = 0;
+    g.freeLane = 1;               // 마지막으로 «비워 둔» 줄. 길이 이어지는지 여기서 본다
   },
   /* 화면 좌우를 눌러도, 화살표를 눌러도 «한 칸»이다 */
   down(g, x){ this.move(g, x < g.w / 2 ? -1 : 1); },
@@ -8545,14 +8546,22 @@ const MODE_RUNNER = {
 
     /* 난이도 — 속도와 «한 번에 몇 줄을 막나»가 따로 오른다.
        ⚠ 두 줄을 막는 것은 40초 뒤부터다. 처음부터 두 줄이면 운으로 죽는다. */
-    const v = Math.min(230 + g.t * 11, 720);
+    /* ⚠ 처음은 느슨하게. 초반부터 조이면 뒤쪽을 아무도 못 본다 (똥피하기와 같은 규칙) */
+    const v = Math.min(200 + g.t * 8, 620);
     g.road = (g.road + v * dt) % 46;
     g.spawnIn -= dt;
     if(g.spawnIn <= 0){
       /* 오는 간격을 «시간»이 아니라 «거리»로 잡는다 — 빨라져도 빽빽해지지 않는다 */
-      g.spawnIn = Math.max(.34, 210 / v);
+      g.spawnIn = Math.max(.42, 280 / v);
       const blockTwo = g.t > 40 && Math.random() < Math.min(.45, (g.t - 40) * .012);
-      const free = Math.floor(Math.random() * 3);          // 반드시 비는 한 줄
+      /* 🔴 **한 번에 한 줄을 비우는 것만으로는 모자랐다** (2026-09-01에 검사로 잡았다).
+         물결 넷이 한 화면에 겹쳐 서면, 물결마다 비운 줄이 달라 **세 줄이 다 막힌 띠**가 생긴다.
+         봇이 4.8초에 죽었다 — 그건 게임이 아니라 벽이다.
+         🔵 그래서 **빈 줄을 «이어» 놓는다** — 다음에 비울 줄은 지난번 빈 줄의 «옆 칸»까지만이다.
+           그러면 빈 줄이 한 칸씩만 꺾이는 길이 되어 **언제나 걸어서 통과할 수 있다.** */
+      const near = [g.freeLane - 1, g.freeLane, g.freeLane + 1].filter(l => l >= 0 && l < 3);
+      const free = near[Math.floor(Math.random() * near.length)];
+      g.freeLane = free;
       const picks = [0,1,2].filter(l => l !== free);
       const lanes = blockTwo ? picks : [picks[Math.floor(Math.random() * picks.length)]];
       lanes.forEach(l => g.items.push({lane:l, y:-30, h:26, v, star:false}));
