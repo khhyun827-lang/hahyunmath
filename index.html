@@ -858,6 +858,22 @@
 .app .ic-ncnt{font-size:11.5px;color:var(--dim);min-width:64px;}
 .app .ic-ncode{font-size:14px;font-weight:700;color:var(--brand);}
 .app .ic-nhint{flex:1;font-size:11px;color:var(--dim);}
+/* 문항 카드 — 코드 하나에 붙은 것을 다 모아 보인다 */
+.app .ic-card{border:1px solid var(--line);border-radius:var(--r-md);background:var(--card);
+  overflow:hidden;}
+.app .ic-ch{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 16px;
+  background:var(--accent-bg);border-bottom:1px solid var(--accent-line);}
+.app .ic-ch > b{font-size:15px;font-weight:700;color:var(--ink);}
+.app .ic-ct{font-size:12.5px;color:var(--sub);}
+.app .ic-ct s{color:var(--dim);text-decoration:none;}
+.app .ic-cw{font-size:12px;color:var(--no);font-weight:600;}
+.app .ic-cb{padding:4px 16px 10px;}
+.app .ic-crow{display:flex;gap:14px;padding:8px 0;border-bottom:1px solid var(--line2);
+  font-size:12.5px;line-height:1.65;}
+.app .ic-crow:last-child{border-bottom:0;}
+.app .ic-cl{flex:0 0 84px;color:var(--dim);font-size:11.5px;padding-top:1px;}
+.app .ic-cs{color:var(--dim);font-size:11px;text-decoration:none;margin-left:6px;}
+.app .ic-cq{color:var(--sub);}
 /* «그림을 직접 그려야 하는 변형»의 작업대. 아직 안 그린 것은 붉게, 붙은 것은 가라앉힌다 —
    이 상자가 곧 «공개를 막고 있는 것»이라 눈에 띄어야 한다. */
 .app .rv-fig{margin-top:11px;padding:11px 13px;border-radius:var(--r-md);
@@ -16677,15 +16693,128 @@ async function reviewAdvance(id, next){
      (「어긋남은 설명할 것이 아니라 없앨 것이다」와 같은 결이다.)
    ⚠ 번호를 «예약»하지 않는다. 받아 적고 안 쓰면 그 번호는 다음에 다시 나온다.
      일련번호는 뜻이 없어 구멍이 나도 되고, **구멍보다 겹치는 것이 위험**하다. */
+const SUBJECT_OF_CODE = { K1:'공통수학1', K2:'공통수학2', AL:'대수', C1:'미적분Ⅰ',
+                          PS:'확률과통계', GE:'기하', C2:'미적분Ⅱ' };
+const BOOK_OF_CODE    = { E:'엔딩크레딧', S:'학교 기출', D:'동그랑땡 모의고사', A:'시중교재' };
+const SCENE_MEANING   = { '1':'기본유형 — 배운 규칙을 한 번 적용',
+                          '2':'발전유형 — 조건이 한 겹 얹힌다',
+                          '3':'실전 — 다른 눈이 필요하다' };
+
+/* 단원 «이름»은 `UNIT_CHAPTERS` 에서 자리로 찾는다.
+   ⚠ **이건 보여 주기용일 뿐이고, 진실은 코드에 든 번호다.**
+     배열 중간에 단원을 끼우면 이름이 조용히 어긋난다 — 그래서 번호를 못박는 일(기획서 02·B)이
+     아직 남아 있다. 그때까지는 이름이 틀릴 수 있다는 것을 알고 쓴다. */
+function chapterNameOf(subjectCode, chapNo){
+  const subj = SUBJECT_OF_CODE[subjectCode];
+  const list = UNIT_CHAPTERS[subj] || [];
+  return list[parseInt(chapNo, 10) - 1] || '';
+}
+
+/* 이 코드가 «어느 시험지에 나갔나». 장부에는 없는 것이라 problemBank 에서 캐 온다 —
+   창고와 실제 수업을 잇는 유일한 줄이다. */
+function icUsedIn(code){
+  return DATA.problemBank.filter(b => b.itemCode === code).map(b => {
+    const ex = DATA.exams.find(e => e.id === b.examId);
+    return { no: b.questionNo, title: ex ? ex.title : '(지운 시험지)',
+             date: ex ? ex.date : '', cls: ex ? classNameOf(ex.classId) : '' };
+  });
+}
+
 function icLookup(){
   const el = document.getElementById('ic-q');
   state.icQuery = el ? el.value : '';
   render();
 }
+function icPick(code){ state.icQuery = code; render(); }
 function icCopy(text){
   if(navigator.clipboard) navigator.clipboard.writeText(text);
   showToast(text + ' 를 복사했습니다 — 한글 미주 맨 앞에 붙여넣으세요.');
 }
+/* 🔵 **문항 카드** — 코드 하나에 붙은 것을 다 모아 보인다.
+   장부가 아는 것(단원·출처·정답·SCENE·해설 앞머리)에, 장부가 모르는 것 하나를 더한다:
+   **이 문항이 어느 시험지에 나갔나**(problemBank). 그게 창고와 수업을 잇는 줄이다. */
+function icItemCardHTML(root, it, vs){
+  const sp = splitItemCode(root) || {};
+  const m  = String(root).match(ITEM_CODE_RE) || [];
+  const subjCode = m[1] || '', chapNo = m[2] || '', bookCode = m[3] || '';
+  const subj = SUBJECT_OF_CODE[subjCode] || subjCode;
+  const chap = chapterNameOf(subjCode, chapNo);
+  const book = BOOK_OF_CODE[bookCode] || bookCode;
+  const used = icUsedIn(root);
+  const sceneNo = it && it.scene ? String(it.scene).replace(/\D/g,'') : '';
+
+  if(!it){
+    return `<div class="ic-card">
+      <div class="ic-ch"><b class="mono">${escHtml(root)}</b>
+        <span class="ic-cw">창고에 없는 문항입니다</span></div>
+      <div class="ic-cb"><div class="ic-crow"><span class="ic-cl">코드가 말하는 것</span>
+        <span>${escHtml(subj)}${chapNo?' · '+chapNo+(chap?' '+chap:''):''}${book?' · '+book:''}</span></div>
+        <div class="ic-crow"><span class="ic-cl">왜 없나</span>
+        <span>오타이거나, <b>아직 코드를 안 심은 교재</b>입니다.
+          지금 창고에 있는 것은 ${(state.itemIndex||[]).map(L=>escHtml((SUBJECT_OF_CODE[L.subject]||L.subject)+' '+(BOOK_OF_CODE[L.book]||L.book)+' '+L.count+'제')).join(' · ')||'없습니다'}</span></div>
+      </div></div>`;
+  }
+
+  return `<div class="ic-card">
+    <div class="ic-ch">
+      <b class="mono">${escHtml(root)}</b>
+      <span class="ic-ct">${escHtml(subj)} <s>·</s> ${escHtml(chapNo)}${chap?' '+escHtml(chap):''} <s>·</s> ${escHtml(book)}</span>
+      <span style="flex:1;"></span>
+      <span class="${vs.length?'ic-have':'ic-none'}">변형 <b class="mono">${vs.length}</b>개</span>
+    </div>
+    <div class="ic-cb">
+      <div class="ic-crow"><span class="ic-cl">출처</span>
+        <span><b>${escHtml((it.source&&it.source.book)||'출처없음')}</b>
+        ${it.source&&it.source.label&&it.source.label!==it.source.book
+          ? `<s class="ic-cs">문서에는 「${escHtml(it.source.label)}」로 적혀 있습니다</s>` : ''}</span></div>
+      <div class="ic-crow"><span class="ic-cl">정답</span>
+        <span><b class="mono">${escHtml(it.answer||'—')}</b>
+          <s class="ic-cs">${escHtml(it.answerKind||'')}</s></span></div>
+      ${sceneNo ? `<div class="ic-crow"><span class="ic-cl">자리</span>
+        <span>SCENE <b>${escHtml(sceneNo)}</b>
+          <s class="ic-cs">${escHtml(SCENE_MEANING[sceneNo]||'')}</s></span></div>` : ''}
+      ${it.noteHead ? `<div class="ic-crow"><span class="ic-cl">해설 첫머리</span>
+        <span class="ic-cq">${escHtml(it.noteHead)}…</span></div>` : ''}
+      ${it.flag ? `<div class="ic-crow"><span class="ic-cl">눈으로 볼 것</span>
+        <span style="color:var(--no);font-weight:600;">${escHtml(it.flag)}</span></div>` : ''}
+      <div class="ic-crow"><span class="ic-cl">쓰인 곳</span>
+        <span>${used.length
+          ? used.map(u=>`${escHtml(u.title)} <b>${u.no}번</b>
+              <s class="ic-cs">${escHtml(u.cls||'')}${u.date?' · '+escHtml(u.date):''}</s>`).join('<br>')
+          : '<s class="ic-cs">아직 시험지에 안 나갔습니다</s>'}</span></div>
+    </div>
+  </div>`;
+}
+
+/* 코드를 다 안 쳐도 찾아 준다 — `K2-05` 로 그 단원을, `0431` 로 그 번호를.
+   🔵 **나중에 학생이 쓸 검색이 바로 이것**이다. 강사가 먼저 써 보고 다듬는 셈이다. */
+function icPartialHTML(raw){
+  const q = raw.trim().toUpperCase().replace(/\s+/g,'');
+  const all = Object.keys(state.itemByCode);
+  const hits = all.filter(c => c.includes(q)).sort().slice(0, 40);
+  if(!hits.length){
+    return `<div class="rst-empty">「<b class="mono">${escHtml(raw)}</b>」 로 찾은 것이 없습니다.<br>
+      <span class="mono">K2-05-E-0431</span> 처럼 다 넣거나,
+      <span class="mono">K2-05</span>·<span class="mono">0431</span> 처럼 일부만 넣어도 됩니다.</div>`;
+  }
+  const more = all.filter(c => c.includes(q)).length - hits.length;
+  return `<div class="ic-list" style="margin-top:0;">
+    ${hits.map(c=>{
+      const x = state.itemByCode[c];
+      const n = variantsOfCode(c).length;
+      return `<div class="ic-row" style="cursor:pointer;" onclick="icPick('${escHtml(c)}')">
+        <b class="mono">${escHtml(c)}</b>
+        <span class="ic-kind">${escHtml(x.chapter||'')}</span>
+        <span class="ic-txt">${escHtml((x.source&&x.source.book)||'')}
+          <s class="ic-cs">${escHtml(String(x.noteHead||'').replace(/^\[정답\]\s*/,'').slice(0,44))}</s></span>
+        ${n ? `<span class="ic-have">변형 ${n}</span>` : ''}
+        <span class="mono ic-a">${escHtml(x.answer||'—')}</span>
+      </div>`;
+    }).join('')}
+  </div>
+  ${more>0 ? `<div class="rst-empty" style="margin-top:8px;">${more}개가 더 있습니다 — 더 좁혀 주세요.</div>` : ''}`;
+}
+
 function teacherItemCodeHTML(){
   if(!state.itemByCode){
     loadItemStoreIfNeeded().then(()=>{ if(state.itemByCode) render(); });
@@ -16703,15 +16832,8 @@ function teacherItemCodeHTML(){
     ? `<div class="rst-empty">코드를 넣으면 <b>이미 만들어 둔 변형</b>과 <b>다음 번호</b>를 알려 드립니다.<br>
         창고에 원본 <b class="mono">${total}</b>제가 있습니다.</div>`
     : !sp
-      ? `<div class="rst-empty">코드 모양이 아닙니다 — <span class="mono">K2-05-E-0431</span> 처럼 넣어주세요.</div>`
-      : `<div class="ic-strip on" style="margin-top:0;">
-          <span class="ic-k">원본</span><b class="ic-code mono">${escHtml(root)}</b>
-          ${it ? `<span class="ic-meta">${escHtml(it.chapter||'')} · ${escHtml((it.source&&it.source.book)||'')}
-            ${it.answer ? '· 정답 <b>'+escHtml(it.answer)+'</b>' : ''}</span>`
-               : `<span class="ic-meta warn">창고에 없는 원본입니다 — 오타이거나, 아직 코드를 안 심은 교재입니다</span>`}
-          <span style="flex:1;"></span>
-          <span class="${vs.length?'ic-have':'ic-none'}">변형 <b class="mono">${vs.length}</b>개</span>
-        </div>
+      ? icPartialHTML(raw)
+      : `${icItemCardHTML(root, it, vs)}
         ${/* 🔵 이 표가 이 화면의 전부다 — 갈래마다 «다음 번호» 하나씩. */''}
         <div class="ic-next">
           ${VARIANT_KINDS.map(([k,label])=>{
