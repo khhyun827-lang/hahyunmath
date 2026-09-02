@@ -6450,8 +6450,11 @@ async function saveExam(){
   const readyPages = examDraft.pages.filter(p=>p.url);
   // 문항 이미지는 problem-bank 항목마다 별도 문서(pbimg:id)로, 스캔 페이지는 구글 드라이브에
   // 올리고 링크만 저장한다. Firestore에는 짧은 URL/ID만 남아 문서 용량 제한에서 자유롭다.
+  /* ⚠ 여기서 문항을 «새로 짓는다» — 초안에 든 것을 그대로 안 쓰고 고른 칸만 옮긴다.
+     그래서 **새 칸을 더할 때마다 여기에도 적어야 한다.** itemCode 를 빠뜨렸더니
+     hwpx 에서 읽어 온 코드가 저장 직전에 조용히 사라졌다 (2026-09-03에 실제로 그랬다). */
   const questions = validQuestions.map((q,i)=>({no:i+1, content:q.content.trim(), answer:q.answer.trim(),
-    unit:q.unit||'', chapter:q.chapter||''}));
+    unit:q.unit||'', chapter:q.chapter||'', itemCode:q.itemCode||''}));
   /* 🔵 **이미 있는 시험을 채우는 길** (2026-08-30 · C-7) — 성적만 먼저 넣어 둔 시험에
      나중에 문항을 붙인다. 새 문서를 만들지 않고 **그 문서를 고친다** —
      id가 그대로라 `rec.scores[].examId`가 가리키는 곳이 안 바뀌고, 성적이 그대로 붙어 있다.
@@ -7391,15 +7394,29 @@ function hwpParseBlocks(topParas, tablesAsProblems){
 async function parseHwpxToProblems(file){
   await ensureJSZipLoaded();
   const zip = await JSZip.loadAsync(file);
-  const sectionFile = zip.file('Contents/section0.xml');
-  if(!sectionFile) throw new Error('올바른 hwpx 파일이 아닙니다.');
-  const xmlText = await sectionFile.async('string');
-  const doc = new DOMParser().parseFromString(xmlText, 'text/xml');
-  const sec = doc.documentElement;
-  const topParas = Array.from(sec.childNodes).filter(n=>n.nodeType===1 && n.localName==='p');
+  /* 🔴 **구역을 «전부» 읽는다** (2026-09-03).
+     예전에는 `section0.xml` 하나만 읽었다. 학교 시험지는 구역이 하나라 그것으로 됐지만,
+     **교재는 구역이 여럿이다** — 엔딩크레딧 공통수학2 는 다섯이고 목차·표지가 앞을 차지해
+     문항은 2·3 구역에 있다. 그래서 실제로 올려 보니 **목차 10줄만 읽고 문항은 하나도**
+     **못 잡았다.** (내가 만든 흠이 아니라 원래 있던 한계인데, 교재를 올리게 되면서 드러났다.)
+     ⚠ 구역 차례는 파일 이름의 숫자다 — `section10` 이 `section2` 보다 뒤여야 하므로 숫자로 센다. */
+  const secNames = Object.keys(zip.files)
+    .filter(n => /^Contents\/section\d+\.xml$/.test(n))
+    .sort((a,b) => (+a.match(/\d+/)[0]) - (+b.match(/\d+/)[0]));
+  if(!secNames.length) throw new Error('올바른 hwpx 파일이 아닙니다.');
+
+  const topParas = [];
+  const allEndnotes = [];
+  for(const nm of secNames){
+    const xmlText = await zip.file(nm).async('string');
+    const doc = new DOMParser().parseFromString(xmlText, 'text/xml');
+    const sec = doc.documentElement;
+    if(!sec) continue;
+    for(const n of Array.from(sec.childNodes)) if(n.nodeType===1 && n.localName==='p') topParas.push(n);
+    for(const e of Array.from(doc.getElementsByTagNameNS(HP_NS,'endNote'))) allEndnotes.push(e);
+  }
 
   /* 미주 개수 = 문항 개수의 근거. 두 가지로 읽어 보고 여기에 맞는 쪽을 고른다. */
-  const allEndnotes = Array.from(doc.getElementsByTagNameNS(HP_NS,'endNote'));
   const orderedParts   = allEndnotes.map(hwpEndnoteParts);
   const orderedAnswers = orderedParts.map(x=>x.answer);
   const endnoteCount = orderedAnswers.length;
@@ -17296,7 +17313,8 @@ function itemCodeStripHTML(b){
   </div>` : ''}
   ${(b.variantContent || b.variantAnswer) ? `<div class="ic-save">
     <span>지금 이 변형을 창고에 넣어 두면 <b>다음엔 찾아집니다</b> — 어느 갈래입니까?</span>
-    ${VARIANT_KINDS.map(([k,label])=>`<button class="btn q sm" onclick="saveVariantToStore('${b.id}','${k}')">${label}로 저장</button>`).join('')}
+    ${/* 셋 다 받침으로 끝나므로 「으로」다 — 「숫자변형로」가 되어 있었다. */''}
+    ${VARIANT_KINDS.map(([k,label])=>`<button class="btn q sm" onclick="saveVariantToStore('${b.id}','${k}')">${label}으로 저장</button>`).join('')}
   </div>` : ''}`;
 }
 
