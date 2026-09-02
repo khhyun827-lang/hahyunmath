@@ -2908,8 +2908,19 @@ async function loadItemStoreIfNeeded(){
   } finally { state.itemLoading = false; }
 }
 
-const ITEM_CODE_RE = /^([A-Z]{1,2}\d?)-(\d{2})-([A-Z])-(\d{4})$/;   // K2-05-E-0431
+const ITEM_CODE_RE = /^([A-Z]{1,2}\d?)-(\d{2})-([A-Z])-(\d{4})(?:-([NUD])(\d{2}))?$/;  // K2-05-E-0431 · …-N01
 const VARIANT_KINDS = [['N','숫자변형'],['U','상향'],['D','하향']];
+/* 코드 하나를 «원본»과 «변형»으로 가른다.
+   🔴 **복습테스트는 기존 문항의 숫자변형이 곧 문항**이라, 그 시험지에는 변형 코드가
+     그대로 적힌다. 그것도 알아들어야 «이 문항은 0001의 N01» 이라고 말해 줄 수 있다. */
+function splitItemCode(code){
+  const m = String(code || '').match(ITEM_CODE_RE);
+  if(!m) return null;
+  return {
+    origin: m[1] + '-' + m[2] + '-' + m[3] + '-' + m[4],
+    isVariant: !!m[5], variantKind: m[5] || '', variantNo: m[6] || '',
+  };
+}
 
 function normItemCode(s){
   const t = String(s||'').trim().toUpperCase().replace(/\s+/g,'');
@@ -2967,6 +2978,29 @@ async function saveVariantToStore(bankId, kind){
   (state.variants[b.itemCode] = state.variants[b.itemCode] || []).push(v);
   state.variants[b.itemCode].sort((a,b2)=> a.code < b2.code ? -1 : 1);
   showToast(code + ' 로 창고에 넣었습니다 — 다음엔 찾아집니다.');
+  render();
+}
+
+/* 🔵 **손으로 코드를 적어 올린 변형을 창고에 넣는다** (2026-09-03).
+   복습테스트처럼 «이미 변형인 문항»으로 시험지를 만들어 올리면, 그 문항 자체가 N01 이다.
+   그때는 AI 가 만든 것이 아니므로 갈래를 물을 필요도 없다 — **코드가 이미 말하고 있다.**
+   ⚠ 번호도 여기서 새로 매기지 않는다. 사용자가 파일에 적은 그 번호를 그대로 쓴다. */
+async function registerVariantFromBank(bankId){
+  const b = DATA.problemBank.find(x=>x.id===bankId);
+  if(!b || !b.itemCode) return;
+  const sp = splitItemCode(b.itemCode);
+  if(!sp || !sp.isVariant){ showToast('변형 코드가 아닙니다.'); return; }
+  await loadItemStoreIfNeeded();
+  if(variantsOfCode(sp.origin).some(v=>v.code===b.itemCode)){ showToast('이미 창고에 있습니다.'); render(); return; }
+  const v = {
+    code: b.itemCode, originCode: sp.origin, variantKind: sp.variantKind,
+    content: b.originalContent || '', answer: b.originalAnswer || '',
+    solution: '', needsFigure: false, fromBankId: b.id, createdAt: nowStamp(),
+  };
+  await dbSetDoc('variants', v.code, v);
+  (state.variants[sp.origin] = state.variants[sp.origin] || []).push(v);
+  state.variants[sp.origin].sort((a,b2)=> a.code < b2.code ? -1 : 1);
+  showToast(v.code + ' 를 창고에 넣었습니다.');
   render();
 }
 
@@ -7205,7 +7239,10 @@ function hwpWalkParagraphs(paras, tokens){
      미주 속 글자를 «전부 이어 붙인 뒤» 라벨을 떼기 때문에, 끝에 두든 다음 줄에 두든
      정답 텍스트에 섞인다. 자리를 옮길 일이 아니라 **떼어 내야 하는 일**이다.
    🔵 그리고 떼어 낸 코드는 버리지 않는다 — 그대로 문항의 `itemCode` 가 된다. */
-const HWP_CODE_RE = /^\s*\[([A-Z]{1,2}\d?-\d{2}-[A-Z]-\d{4})\]\s*/;
+/* ⚠ **변형 코드(`-N01`)까지 받는다.** 복습테스트처럼 «이미 변형인 문항»으로 시험지를 만들면
+     미주에 `[K2-01-E-0001-N01]` 이 적힌다. 접미사를 안 받으면 그것도 못 알아보고
+     **정답에 통째로 섞인다** — 원본 코드에서 겪은 것과 똑같은 흠이다. */
+const HWP_CODE_RE = /^\s*\[([A-Z]{1,2}\d?-\d{2}-[A-Z]-\d{4}(?:-[NUD]\d{2})?)\]\s*/;
 function hwpEndnoteParts(endNoteEl){
   const subList = endNoteEl.getElementsByTagNameNS(HP_NS,'subList')[0];
   const innerParas = subList ? Array.from(subList.childNodes).filter(n=>n.nodeType===1 && n.localName==='p') : [];
@@ -16964,8 +17001,13 @@ function itemCodeStripHTML(b){
     return `<div class="ic-strip"><span class="ic-load">문항 창고를 여는 중…</span></div>`;
   }
   const code = b.itemCode || '';
-  const it   = code ? itemOfCode(code) : null;
-  const vs   = code ? variantsOfCode(code) : [];
+  /* 🔴 **이 문항이 «변형»일 수 있다.** 복습테스트 시험지가 그렇다 — 문항 자체가 N01 이다.
+     그때 «이 코드의 변형»을 찾으면 언제나 0개다. 찾아야 할 것은 **원본의 형제들**이다. */
+  const sp   = code ? splitItemCode(code) : null;
+  const root = sp ? sp.origin : code;
+  const it   = root ? itemOfCode(root) : null;
+  const vs   = root ? variantsOfCode(root) : [];
+  const mine = sp && sp.isVariant ? vs.find(v=>v.code===code) : null;
 
   if(!code){
     return `<div class="ic-strip">
@@ -16983,15 +17025,22 @@ function itemCodeStripHTML(b){
     return got.length ? `<span class="ic-kind">${label} <b class="mono">${got.length}</b></span>` : '';
   }).join('');
 
+  const kindName = sp && sp.isVariant
+    ? (VARIANT_KINDS.find(x=>x[0]===sp.variantKind)||['','?'])[1] : '';
+
   return `<div class="ic-strip on">
     <span class="ic-k">문항 코드</span>
     <b class="ic-code mono">${escHtml(code)}</b>
-    ${it ? `<span class="ic-meta">${escHtml(it.chapter||'')} · ${escHtml((it.source&&it.source.book)||'')}
-      ${it.answer ? '· 정답 <b>'+escHtml(it.answer)+'</b>' : ''}</span>` : '<span class="ic-meta warn">창고에 없는 코드</span>'}
+    ${sp && sp.isVariant
+      ? `<span class="ic-meta"><b class="mono">${escHtml(sp.origin)}</b> 의 <b>${kindName} ${escHtml(sp.variantNo)}</b></span>
+         ${mine ? '' : `<button class="btn q sm" onclick="registerVariantFromBank('${b.id}')">창고에 넣기</button>`}`
+      : (it ? `<span class="ic-meta">${escHtml(it.chapter||'')} · ${escHtml((it.source&&it.source.book)||'')}
+          ${it.answer ? '· 정답 <b>'+escHtml(it.answer)+'</b>' : ''}</span>`
+            : '<span class="ic-meta warn">창고에 없는 코드</span>')}
     <button class="btn q sm" onclick="if(confirm('이 문항의 코드를 뗄까요?')){const b=DATA.problemBank.find(x=>x.id==='${b.id}');b.itemCode='';dbSetDoc('problembank',b.id,b);render();}">떼기</button>
     <span style="flex:1;"></span>
     ${vs.length
-      ? `<span class="ic-have">이미 있는 변형 <b class="mono">${vs.length}</b>개</span>${byKind}`
+      ? `<span class="ic-have">${sp && sp.isVariant ? '형제 변형' : '이미 있는 변형'} <b class="mono">${vs.length}</b>개</span>${byKind}`
       : `<span class="ic-none">아직 만들어 둔 변형이 없습니다</span>`}
   </div>
   ${vs.length ? `<div class="ic-list">
