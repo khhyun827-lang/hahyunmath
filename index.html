@@ -2973,6 +2973,13 @@ async function setBankItemCode(bankId){
   if(!b || !el) return;
   const raw = el.value;
   if(!raw.trim()){
+    /* ⚠ 빈 칸으로 눌렀는데 «뗐습니다»라고 했다 — 뗄 코드가 없는데도.
+       사용자가 「잇기가 뭐 하는 건가」 하고 눌러 보고 그 말을 들었다 (2026-09-03).
+       **아무 일도 안 일어났으면 «무엇을 해야 하는지»를 말해야 한다.** */
+    if(!b.itemCode){
+      showToast('코드를 먼저 넣어 주세요 — 교재 미주 맨 앞의 「[K2-05-E-0431]」 같은 것입니다.');
+      return;
+    }
     b.itemCode = '';
     await dbSetDoc('problembank', b.id, b);
     showToast('코드를 뗐습니다.'); render(); return;
@@ -2980,7 +2987,16 @@ async function setBankItemCode(bankId){
   const code = normItemCode(raw);
   if(!code){ showToast('코드 모양이 아닙니다 — 「K2-05-E-0431」처럼 적어주세요.'); return; }
   await loadItemStoreIfNeeded();
-  if(!itemOfCode(code)){ showToast('창고에 없는 코드입니다 — 단원이나 번호를 다시 봐주세요.'); return; }
+  /* 🔴 **변형 코드(`…-N01`)면 «원본»이 창고에 있는지 본다.**
+     변형은 장부에 없다(장부는 원본만 담는다). 코드 그대로 찾으면 언제나 «없다»가 되어
+     **손으로 변형 코드를 잇는 길이 통째로 막힌다** — 복습테스트가 바로 그 길이다. */
+  const sp = splitItemCode(code);
+  if(!itemOfCode(sp.origin)){
+    showToast(sp.isVariant
+      ? '원본 ' + sp.origin + ' 이 창고에 없습니다 — 단원이나 번호를 다시 봐주세요.'
+      : '창고에 없는 코드입니다 — 단원이나 번호를 다시 봐주세요.');
+    return;
+  }
   b.itemCode = code;
   await dbSetDoc('problembank', b.id, b);
   showToast(code + ' 에 이었습니다.');
@@ -17274,8 +17290,10 @@ function itemCodeStripHTML(b){
       <input class="ic-in mono" id="ic-in-${b.id}" placeholder="K2-05-E-0431"
         onkeydown="if(event.key==='Enter'&&!event.isComposing)setBankItemCode('${b.id}')">
       <button class="btn q sm" onclick="setBankItemCode('${b.id}')">잇기</button>
-      <span class="ic-hint">코드를 이으면 <b>이미 만들어 둔 변형</b>을 먼저 찾아봅니다
-        — 교재 미주 맨 앞에 적혀 있습니다</span>
+      <span class="ic-hint">교재 미주 맨 앞의 <span class="mono">[K2-05-E-0431]</span> 을 적으면
+        <b>이미 만들어 둔 변형</b>을 먼저 찾아봅니다 ·
+        <a href="#teacher/itemcode" style="color:var(--brand);"
+           onclick="goTeacherTab('itemcode');render();return false;">코드를 모르면 여기서 찾기</a></span>
     </div>`;
   }
 
