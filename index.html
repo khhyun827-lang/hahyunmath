@@ -848,6 +848,16 @@
 .app .ic-save{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:6px;
   padding:8px 12px;border:1px dashed var(--note-dash);border-radius:var(--r-md);background:var(--note);}
 .app .ic-save span{font-size:11.5px;color:var(--sub);}
+/* «다음 번호» 표 — 이 화면의 주인공이라 코드를 크게 세운다 */
+.app .ic-next{margin-top:10px;border:1px solid var(--line);border-radius:var(--r-md);
+  background:var(--card);overflow:hidden;}
+.app .ic-nrow{display:flex;align-items:center;gap:12px;padding:11px 14px;
+  border-bottom:1px solid var(--line2);}
+.app .ic-nrow:last-child{border-bottom:0;}
+.app .ic-nlab{min-width:58px;font-size:12.5px;font-weight:600;color:var(--ink);}
+.app .ic-ncnt{font-size:11.5px;color:var(--dim);min-width:64px;}
+.app .ic-ncode{font-size:14px;font-weight:700;color:var(--brand);}
+.app .ic-nhint{flex:1;font-size:11px;color:var(--dim);}
 /* «그림을 직접 그려야 하는 변형»의 작업대. 아직 안 그린 것은 붉게, 붙은 것은 가라앉힌다 —
    이 상자가 곧 «공개를 막고 있는 것»이라 눈에 띄어야 한다. */
 .app .rv-fig{margin-top:11px;padding:11px 13px;border-radius:var(--r-md);
@@ -10572,7 +10582,7 @@ const TEACHER_SUBNAV = {
   ],
   /* 「제출 현황」은 시험지 화면의 우측 칸으로 흡수했다 (시안 07). 서브탭에서 뺐다. */
   '오답': [
-    ['검토', 'review'], ['시험지', 'exams'], ['보충문제 창고', 'unitbank']
+    ['검토', 'review'], ['시험지', 'exams'], ['보충문제 창고', 'unitbank'], ['문항 코드', 'itemcode']
   ],
   /* 「출석 도장」이 여기 있는 이유 — «신호»는 지표를 세우는 화면이고 «명단»은 평가하는
      화면이라, 놀이를 그 옆에 두면 놀이가 그 성격을 물려받는다. 소통이 제일 안 다치는 자리다. */
@@ -10588,7 +10598,10 @@ const TEACHER_SUBNAV = {
 const TEACHER_TAB_SECTION = {
   signals:'신호',
   classhub:'반', session:'수업',
-  review:'오답', exams:'오답', unitbank:'오답',
+  /* ⚠ 여기와 TEACHER_SUBNAV 는 **둘 다** 고쳐야 한다 — 노트가 적어 둔 그것이다.
+     itemcode 를 서브탭에만 넣고 여기를 빠뜨렸더니 상단 메뉴가 「반」으로 잡히고
+     서브탭 줄이 통째로 반의 것으로 그려졌다 (2026-09-03). */
+  review:'오답', exams:'오답', unitbank:'오답', itemcode:'오답',
   clinic:'소통', notices:'소통', qna:'소통', chat:'소통', checkin:'소통',
   settings:'설정'
 };
@@ -10622,6 +10635,7 @@ function teacherTabBodyHTML(){
   if(t==='exams')       return teacherExamsHTML();
   if(t==='review')      return teacherReviewHTML();
   if(t==='unitbank')    return teacherUnitBankHTML();
+  if(t==='itemcode')    return teacherItemCodeHTML();
   if(t==='settings')    return teacherSettingsHTML();
   return teacherClassHubHTML();
 }
@@ -16654,6 +16668,87 @@ async function reviewAdvance(id, next){
   const stillHere = reviewQueueList(state.reviewQueue || 'pending').some(x=>x.id===id);
   if(!stillHere) state.reviewSelectedId = after ? after.id : null;
   render();
+}
+
+/* =================== 문항 코드 조회 (2026-09-03 · I-3) ===================
+   🔴 **번호를 «세는 일»을 없앤다.**
+     한글에서 복습테스트를 만들며 「이건 몇 번째 변형이지?」를 알 길이 없었다.
+     세는 것을 돕는 대신 **다음 번호를 그냥 말해 준다** — 받아 적으면 끝이다.
+     (「어긋남은 설명할 것이 아니라 없앨 것이다」와 같은 결이다.)
+   ⚠ 번호를 «예약»하지 않는다. 받아 적고 안 쓰면 그 번호는 다음에 다시 나온다.
+     일련번호는 뜻이 없어 구멍이 나도 되고, **구멍보다 겹치는 것이 위험**하다. */
+function icLookup(){
+  const el = document.getElementById('ic-q');
+  state.icQuery = el ? el.value : '';
+  render();
+}
+function icCopy(text){
+  if(navigator.clipboard) navigator.clipboard.writeText(text);
+  showToast(text + ' 를 복사했습니다 — 한글 미주 맨 앞에 붙여넣으세요.');
+}
+function teacherItemCodeHTML(){
+  if(!state.itemByCode){
+    loadItemStoreIfNeeded().then(()=>{ if(state.itemByCode) render(); });
+    return `<div class="st-sec"><div class="st-h">문항 코드</div>
+      <div class="rst-empty">문항 창고를 여는 중…</div></div>`;
+  }
+  const raw  = state.icQuery || '';
+  const sp   = splitItemCode(normItemCode(raw) || raw.trim().toUpperCase());
+  const root = sp ? sp.origin : '';
+  const it   = root ? itemOfCode(root) : null;
+  const vs   = root ? variantsOfCode(root) : [];
+  const total = Object.keys(state.itemByCode).length;
+
+  const body = !raw.trim()
+    ? `<div class="rst-empty">코드를 넣으면 <b>이미 만들어 둔 변형</b>과 <b>다음 번호</b>를 알려 드립니다.<br>
+        창고에 원본 <b class="mono">${total}</b>제가 있습니다.</div>`
+    : !sp
+      ? `<div class="rst-empty">코드 모양이 아닙니다 — <span class="mono">K2-05-E-0431</span> 처럼 넣어주세요.</div>`
+      : `<div class="ic-strip on" style="margin-top:0;">
+          <span class="ic-k">원본</span><b class="ic-code mono">${escHtml(root)}</b>
+          ${it ? `<span class="ic-meta">${escHtml(it.chapter||'')} · ${escHtml((it.source&&it.source.book)||'')}
+            ${it.answer ? '· 정답 <b>'+escHtml(it.answer)+'</b>' : ''}</span>`
+               : `<span class="ic-meta warn">창고에 없는 원본입니다 — 오타이거나, 아직 코드를 안 심은 교재입니다</span>`}
+          <span style="flex:1;"></span>
+          <span class="${vs.length?'ic-have':'ic-none'}">변형 <b class="mono">${vs.length}</b>개</span>
+        </div>
+        ${/* 🔵 이 표가 이 화면의 전부다 — 갈래마다 «다음 번호» 하나씩. */''}
+        <div class="ic-next">
+          ${VARIANT_KINDS.map(([k,label])=>{
+            const got = vs.filter(v=>v.variantKind===k);
+            const next = nextVariantCode(root, k);
+            return `<div class="ic-nrow">
+              <span class="ic-nlab">${label}</span>
+              <span class="ic-ncnt">지금 <b class="mono">${got.length}</b>개</span>
+              <b class="mono ic-ncode">${escHtml(next)}</b>
+              <span class="ic-nhint">다음은 이 번호</span>
+              <button class="btn q sm" onclick="icCopy('${escHtml(next)}')">복사</button>
+            </div>`;
+          }).join('')}
+        </div>
+        ${vs.length ? `<div class="ic-list" style="margin-top:12px;">
+          ${vs.map(v=>`<div class="ic-row">
+            <b class="mono">${escHtml(v.code)}</b>
+            <span class="ic-kind">${escHtml((VARIANT_KINDS.find(x=>x[0]===v.variantKind)||['','?'])[1])}</span>
+            <span class="ic-txt">${escHtml(String(v.content||'').replace(/\s+/g,' ').slice(0,72))}</span>
+            <span class="mono ic-a">${escHtml(v.answer||'—')}</span>
+          </div>`).join('')}
+        </div>` : `<div class="rst-empty" style="margin-top:12px;">아직 이 문항의 변형이 없습니다 —
+          <b class="mono">${escHtml(nextVariantCode(root,'N'))}</b> 부터 시작하시면 됩니다.</div>`}`;
+
+  return `<div class="st-sec">
+    <div class="st-h">문항 코드
+      <s>한글에서 변형을 만들기 «전»에 여기서 다음 번호를 받아 적으세요</s></div>
+    <div class="ic-strip" style="margin-top:12px;">
+      <span class="ic-k">코드</span>
+      <input class="ic-in mono" id="ic-q" style="width:210px;" value="${escHtml(raw)}"
+        placeholder="K2-05-E-0431"
+        onkeydown="if(event.key==='Enter'&&!event.isComposing)icLookup()">
+      <button class="btn sm" onclick="icLookup()">찾기</button>
+      <span class="ic-hint">원본 코드도, 변형 코드(<span class="mono">…-N01</span>)도 받습니다 — 어느 쪽이든 그 원본을 봅니다</span>
+    </div>
+    ${body}
+  </div>`;
 }
 
 function teacherReviewHTML(){
