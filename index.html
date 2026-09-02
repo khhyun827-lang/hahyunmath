@@ -848,6 +848,17 @@
 .app .ic-row:last-child{border-bottom:0;}
 .app .ic-txt{flex:1;min-width:0;color:var(--sub);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .app .ic-a{color:var(--ink);font-weight:700;}
+/* 🔴 변형 목록의 문제는 «통째로» 보인다 — 한 줄로 자르면 수학 문항은 판단이 안 되고,
+   자르는 자리가 `$…$` 한가운데면 날 LaTeX 가 남는다 (2026-09-04).
+   여러 줄이 되므로 줄 전체를 위로 정렬해 단추가 안 흔들리게 한다. */
+.app .ic-txt.full{white-space:normal;overflow:visible;text-overflow:clip;
+  line-height:1.75;color:var(--ink);}
+.app .ic-row{align-items:flex-start;}
+.app .ic-row > b, .app .ic-row .ic-kind, .app .ic-row .ic-a, .app .ic-row .btn{flex-shrink:0;margin-top:1px;}
+/* 정답 칸에 해설이 통째로 든 옛 기록 — 답만 굵게, 해설은 뒤에 흐리게 */
+.app .q-sol{display:block;margin-top:4px;font-size:11.5px;line-height:1.65;
+  color:var(--dim);text-decoration:none;}
+.app .lab-code{margin-left:6px;font-size:11px;color:var(--brand);font-weight:700;}
 .app .ic-save{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:6px;
   padding:8px 12px;border:1px dashed var(--note-dash);border-radius:var(--r-md);background:var(--note);}
 .app .ic-save span{font-size:11.5px;color:var(--sub);}
@@ -3037,6 +3048,8 @@ async function saveVariantToStore(bankId, kind){
      `nextVariantCode` 가 그것을 못 봐서 **두 번 눌러도 둘 다 N01** 이 됐다 (2026-09-04). */
   (state.variants[root] = state.variants[root] || []).push(v);
   state.variants[root].sort((a,b2)=> a.code < b2.code ? -1 : 1);
+  b.variantCode = code;              // 화면이 «이건 어느 변형인가»를 말할 수 있게
+  await dbSetDoc('problembank', b.id, b);
   showToast(code + ' 로 창고에 넣었습니다 — 다음엔 찾아집니다.');
   render();
 }
@@ -3054,8 +3067,9 @@ async function registerVariantFromBank(bankId){
   if(variantsOfCode(sp.origin).some(v=>v.code===b.itemCode)){ showToast('이미 창고에 있습니다.'); render(); return; }
   const v = {
     code: b.itemCode, originCode: sp.origin, variantKind: sp.variantKind,
-    content: b.originalContent || '', answer: b.originalAnswer || '',
-    solution: b.originalSolution || '', needsFigure: false, fromBankId: b.id, createdAt: nowStamp(),
+    content: b.originalContent || '', answer: splitAnswerSolution(b.originalAnswer).answer,
+    solution: b.originalSolution || splitAnswerSolution(b.originalAnswer).solution,
+    needsFigure: false, fromBankId: b.id, createdAt: nowStamp(),
   };
   await dbSetDoc('variants', v.code, v);
   (state.variants[sp.origin] = state.variants[sp.origin] || []).push(v);
@@ -3074,9 +3088,12 @@ async function useVariantFromStore(bankId, code){
   const v = variantsOfCode(root).find(x=>x.code===code);
   if(!b){ return; }
   if(!v){ showToast('창고에서 ' + code + ' 를 못 찾았습니다 — 새로고침 뒤에도 그러면 알려주세요.'); return; }
+  /* 옛 기록은 정답 칸에 해설이 통째로 들어 있다 — 가져오면서 가른다. */
+  const as = splitAnswerSolution(v.answer);
   b.variantContent = v.content;
-  b.variantAnswer  = v.answer;
-  b.aiSolution     = v.solution || '';
+  b.variantAnswer  = as.answer;
+  b.aiSolution     = v.solution || as.solution || '';
+  b.variantCode    = v.code;          // 어느 변형을 가져왔는지 화면이 말해 줄 수 있게
   b.variantNeedsFigure = !!v.needsFigure;
   await dbSetDoc('problembank', b.id, b);
   showToast(code + ' 를 가져왔습니다 — AI 한도를 안 썼습니다.');
@@ -16871,9 +16888,24 @@ function icUsedIn(code){
   });
 }
 
-/* 목록 한 줄에 넣을 «한 줄짜리» 글. 수식 기호는 그대로 두되 줄바꿈만 없앤다. */
-function icOneLine(s, n){
-  return String(s || '').replace(/\s+/g, ' ').trim().slice(0, n || 64);
+/* 🔴 **자르지 않는다** (2026-09-04). 처음엔 64자로 잘라 한 줄에 넣었는데,
+   수학 문항은 그 길이로는 «가져와도 되는 문제인지» 판단이 안 되고,
+   자르는 자리가 `$…$` 한가운데면 **수식이 날 LaTeX 로 남는다.**
+   변형은 한 문항에 몇 개뿐이므로 통째로 보이는 편이 낫다 — 줄바꿈만 없앤다. */
+function icOneLine(s){
+  return String(s || '').replace(/\s+/g, ' ').trim();
+}
+
+/* 정답과 해설을 가른다 — 첫 글자가 ①~⑤ 면 그것이 답이고 나머지는 해설이다.
+   ⚠ **주관식은 안 가른다** — 어디까지가 답인지 기계가 모른다.
+   🔴 옛 기록에는 정답 칸에 해설이 통째로 든 것이 있다. 그것을 그대로 «변형 정답»으로 가져오면
+     「학생이 답을 제출할 수 없는 형태입니다」에 걸려 **공개가 막힌다** (사용자가 겪었다).
+     그래서 **가져오는 그 순간에도** 가른다 — 이미 저장된 것은 못 고치니까. */
+function splitAnswerSolution(text){
+  const s = String(text || '').trim();
+  const m = s.match(/^\s*([①②③④⑤])\s*/);
+  if(m) return { answer: m[1], solution: s.slice(m[0].length).trim() };
+  return { answer: s, solution: '' };
 }
 /* 🔴 **정답은 짧게 자른다.** 교재 미주를 읽어 온 옛 기록에는 정답 칸에 해설이 통째로
    들어 있는 것이 있다 — 그대로 그리면 목록 한 줄이 화면을 다 먹는다.
@@ -17020,7 +17052,7 @@ function teacherItemCodeHTML(){
           ${vs.map(v=>`<div class="ic-row">
             <b class="mono">${escHtml(v.code)}</b>
             <span class="ic-kind">${escHtml((VARIANT_KINDS.find(x=>x[0]===v.variantKind)||['','?'])[1])}</span>
-            <span class="ic-txt">${escHtml(icOneLine(v.content, 76) || '(문제 내용이 없습니다)')}</span>
+            <span class="ic-txt full">${v.content ? problemHTML(icOneLine(v.content)) : '(문제 내용이 없습니다)'}</span>
             <span class="mono ic-a">${escHtml(icShortAnswer(v.answer))}</span>
           </div>`).join('')}
         </div>` : `<div class="rst-empty" style="margin-top:12px;">아직 이 문항의 변형이 없습니다 —
@@ -17339,13 +17371,21 @@ function reviewWorkHTML(b, list){
 
     <div class="cmp" style="margin-top:${why?'14px':'0'};">
       <div class="side">
-        <div class="lab">원본 문항 <s>${b.questionNo}번</s></div>
+        ${/* 🔵 **코드를 여기에도 적는다** (2026-09-04 · 사용자 요청) — 위 띠에도 있지만,
+             두 칸을 나란히 놓고 견줄 때 **어느 쪽이 무슨 코드인지**가 그 자리에 있어야 안 헷갈린다. */''}
+        <div class="lab">원본 문항 <s>${b.questionNo}번</s>
+          ${b.itemCode ? `<b class="mono lab-code">${escHtml(b.itemCode)}</b>` : ''}</div>
         <div class="q-body">${problemHTML(b.originalContent||'(내용 없음)')}</div>
-        <div class="q-ans">정답 <b>${escHtml(b.originalAnswer||'—')}</b></div>
+        ${/* 정답 칸에 해설이 통째로 든 옛 기록이 있다 — 답만 굵게, 해설은 뒤에 흐리게. */''}
+        ${(()=>{ const as = splitAnswerSolution(b.originalAnswer);
+          return `<div class="q-ans">정답 <b>${escHtml(as.answer||'—')}</b>${
+            as.solution ? `<s class="q-sol">${escHtml(as.solution)}</s>` : ''}</div>`; })()}
         ${imgHTML}
       </div>
       <div class="side ai">
-        <div class="lab">AI 생성 쌍둥이 <s>${b.aiSolution?'Gemini':'직접 입력'}</s></div>
+        <div class="lab">${b.variantCode ? '가져온 변형' : 'AI 생성 쌍둥이'}
+          <s>${b.variantCode ? '창고' : (b.aiSolution?'Gemini':'직접 입력')}</s>
+          ${b.variantCode ? `<b class="mono lab-code">${escHtml(b.variantCode)}</b>` : ''}</div>
         <div class="q-body">${b.variantContent ? problemHTML(b.variantContent)
           : '<span style="color:var(--dim);">아직 내용이 없습니다 — AI로 채우거나 아래에 직접 입력하세요.</span>'}</div>
         <div class="q-ans">정답 <b>${escHtml(b.variantAnswer||'—')}</b></div>
@@ -17440,7 +17480,7 @@ function itemCodeStripHTML(b){
       ${/* 🔴 **보여야 하는 것은 «문제»다.** 예전엔 정답 칸에 해설이 통째로 들어 있어
              줄마다 풀이가 쏟아졌고, **가져와도 되는 문제인지 알 수가 없었다**(사용자가 겪었다).
              그래서 문제를 넓게 두고 정답은 짧게 자른다. */''}
-      <span class="ic-txt">${escHtml(icOneLine(v.content) || '(문제 내용이 없습니다)')}</span>
+      <span class="ic-txt full">${v.content ? problemHTML(icOneLine(v.content)) : '(문제 내용이 없습니다)'}</span>
       <span class="mono ic-a">${escHtml(icShortAnswer(v.answer))}</span>
       <button class="btn q sm" onclick="useVariantFromStore('${b.id}','${escHtml(v.code)}')">가져오기</button>
     </div>`).join('')}
