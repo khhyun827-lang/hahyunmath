@@ -821,6 +821,33 @@
   background:var(--nobg);color:var(--no);}
 .app .rv-warn b{display:block;font-size:12.5px;margin-bottom:3px;}
 .app .rv-warn span{display:block;font-size:11.5px;line-height:1.6;color:var(--sub);}
+/* 문항 코드 띠 (2026-09-03 · I-2). 접두사 ic- 는 ds.css 에도 이 파일에도 없던 이름이다
+   — 여섯 번 데인 «클래스 이름 겹침»을 피하려고 먼저 찾아봤다. */
+.app .ic-strip{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:14px;
+  padding:9px 12px;border:1px solid var(--line);border-radius:var(--r-md);background:var(--sunk);}
+.app .ic-strip.on{background:var(--accent-bg);border-color:var(--accent-line);}
+.app .ic-k{font-size:11px;color:var(--dim);letter-spacing:.04em;}
+.app .ic-code{font-size:13px;font-weight:700;color:var(--ink);}
+.app .ic-meta{font-size:11.5px;color:var(--sub);}
+.app .ic-meta.warn{color:var(--no);font-weight:600;}
+.app .ic-in{width:150px;height:28px;padding:0 8px;font-size:12.5px;
+  border:1px solid var(--line);border-radius:var(--r-sm);background:var(--card);color:var(--ink);}
+.app .ic-hint{font-size:11px;color:var(--dim);line-height:1.5;}
+.app .ic-load{font-size:11.5px;color:var(--dim);}
+.app .ic-have{font-size:12px;color:var(--ok);font-weight:600;}
+.app .ic-none{font-size:11.5px;color:var(--dim);}
+.app .ic-kind{font-size:11px;color:var(--sub);padding:1px 7px;border-radius:var(--r-pill);
+  border:1px solid var(--line);background:var(--card);}
+.app .ic-list{margin-top:6px;border:1px solid var(--line);border-radius:var(--r-md);
+  background:var(--card);overflow:hidden;}
+.app .ic-row{display:flex;align-items:center;gap:10px;padding:8px 12px;
+  border-bottom:1px solid var(--line2);font-size:12px;}
+.app .ic-row:last-child{border-bottom:0;}
+.app .ic-txt{flex:1;min-width:0;color:var(--sub);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.app .ic-a{color:var(--ink);font-weight:700;}
+.app .ic-save{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:6px;
+  padding:8px 12px;border:1px dashed var(--note-dash);border-radius:var(--r-md);background:var(--note);}
+.app .ic-save span{font-size:11.5px;color:var(--sub);}
 /* «그림을 직접 그려야 하는 변형»의 작업대. 아직 안 그린 것은 붉게, 붙은 것은 가라앉힌다 —
    이 상자가 곧 «공개를 막고 있는 것»이라 눈에 띄어야 한다. */
 .app .rv-fig{margin-top:11px;padding:11px 13px;border-radius:var(--r-md);
@@ -2835,6 +2862,128 @@ async function migrateBlobToCollection(oldKey, collection, idField){
   return oldArr;
 }
 
+/* =================== 문항 창고 — 코드로 찾는다 (2026-09-03 · I-2) ===================
+   기획서 3단계: **만들기 전에 먼저 찾는다.**
+
+   🔴 **창고가 둘이고, 그건 일부러다.**
+     ① **원본**은 «장부 파일»(`codes/*.json`)에 산다. 한글 문서에 코드를 심을 때 같이 만들어졌고
+        **안 변한다.** 저장소에 있으니 배포에 실려 온다.
+     ② **변형**은 Firestore(`variants`)에 산다. 계속 «늘어나는» 것이라 파일로는 못 담는다.
+     「시험 전에 적는 값과 후에 적는 값은 다른 곳에 산다」와 같은 가름이다.
+
+   ⚠ **둘 다 loadAll() 에 넣지 않는다.** loadAll 은 로그인마다 도는데 장부만 지금 564제다.
+     거기 넣으면 **학생이 홈을 여는 데까지** 그 값을 치른다. 쓰는 화면에서만 받는다. */
+/* ⚠ **여기서 `state.xxx = null` 로 자리를 잡지 않는다.** 이 블록은 `const state` 선언보다
+     «위»에 있어서, 그렇게 적으면 「Cannot access 'state' before initialization」로
+     **스크립트가 통째로 죽는다** (2026-09-03에 실제로 그렇게 만들었다 —
+     함수 선언은 끌어올려져 살아 있는데 state·DATA 가 없어서, 겉보기엔 «페이지는 뜨는데
+     아무것도 안 되는» 꼴이 됐다). 자리는 state 선언 안에 잡아 뒀다: itemIndex·itemByCode·variants. */
+
+async function loadItemStoreIfNeeded(){
+  if(state.itemByCode && state.variants) return;
+  if(state.itemLoading) return;
+  state.itemLoading = true;
+  try{
+    if(!state.itemByCode){
+      /* ⚠ file:// 로 열면 fetch 가 막힌다. 그때는 창고가 «빈 채»로 남고 화면은 그대로 돈다 —
+         터지지 않는 것이 중요하다. 서버로 열면(node tools/serve.js) 정상이다. */
+      const map = {};
+      try{
+        const idx = await fetch('codes/index.json', {cache:'no-cache'}).then(r=>r.json());
+        state.itemIndex = idx.ledgers || [];
+        for(const L of state.itemIndex){
+          const g = await fetch('codes/' + L.file, {cache:'no-cache'}).then(r=>r.json());
+          for(const it of (g.items||[])) map[it.code] = it;
+        }
+      }catch(e){ console.warn('[창고] 장부를 못 읽었다 —', e.message); state.itemIndex = []; }
+      state.itemByCode = map;
+    }
+    if(!state.variants){
+      const rows = await dbGetCollection('variants');
+      const by = {};
+      for(const v of rows) (by[v.originCode] = by[v.originCode] || []).push(v);
+      for(const k in by) by[k].sort((a,b)=> a.code < b.code ? -1 : 1);
+      state.variants = by;
+    }
+  } finally { state.itemLoading = false; }
+}
+
+const ITEM_CODE_RE = /^([A-Z]{1,2}\d?)-(\d{2})-([A-Z])-(\d{4})$/;   // K2-05-E-0431
+const VARIANT_KINDS = [['N','숫자변형'],['U','상향'],['D','하향']];
+
+function normItemCode(s){
+  const t = String(s||'').trim().toUpperCase().replace(/\s+/g,'');
+  return ITEM_CODE_RE.test(t) ? t : '';
+}
+function itemOfCode(code){ return (state.itemByCode || {})[code] || null; }
+function variantsOfCode(code){ return (state.variants || {})[code] || []; }
+
+/* 다음 변형 번호. **갈래마다 따로 센다** — N01 이 있어도 U01 은 비어 있을 수 있다.
+   ⚠ 변형의 변형은 만들지 않는다. 언제나 «원본»에 직접 매단다 (체인이 끊길 자리를 안 만든다). */
+function nextVariantCode(originCode, kind){
+  const used = variantsOfCode(originCode)
+    .filter(v => v.variantKind === kind)
+    .map(v => parseInt(String(v.code).slice(-2), 10) || 0);
+  return originCode + '-' + kind + String((used.length ? Math.max(...used) : 0) + 1).padStart(2,'0');
+}
+
+/* 시험지 문항에 코드를 잇는다.
+   🔴 **창고에 없는 코드는 막는다.** 조용히 받아 두면 나중에 «찾아도 안 나오는 문항»이 되고,
+     그때는 원인을 못 찾는다. 오타는 지금 드러나야 한다. */
+async function setBankItemCode(bankId){
+  const el = document.getElementById('ic-in-' + bankId);
+  const b = DATA.problemBank.find(x=>x.id===bankId);
+  if(!b || !el) return;
+  const raw = el.value;
+  if(!raw.trim()){
+    b.itemCode = '';
+    await dbSetDoc('problembank', b.id, b);
+    showToast('코드를 뗐습니다.'); render(); return;
+  }
+  const code = normItemCode(raw);
+  if(!code){ showToast('코드 모양이 아닙니다 — 「K2-05-E-0431」처럼 적어주세요.'); return; }
+  await loadItemStoreIfNeeded();
+  if(!itemOfCode(code)){ showToast('창고에 없는 코드입니다 — 단원이나 번호를 다시 봐주세요.'); return; }
+  b.itemCode = code;
+  await dbSetDoc('problembank', b.id, b);
+  showToast(code + ' 에 이었습니다.');
+  render();
+}
+
+/* 만든 변형을 창고에 넣는다. **여기가 «다음에 찾아지는» 자리다.** */
+async function saveVariantToStore(bankId, kind){
+  const b = DATA.problemBank.find(x=>x.id===bankId);
+  if(!b || !b.itemCode){ showToast('먼저 이 문항에 코드를 이어주세요.'); return; }
+  if(!b.variantContent && !b.variantAnswer){ showToast('저장할 변형 내용이 없습니다.'); return; }
+  await loadItemStoreIfNeeded();
+  const code = nextVariantCode(b.itemCode, kind);
+  const v = {
+    code, originCode: b.itemCode, variantKind: kind,
+    content: b.variantContent || '', answer: b.variantAnswer || '',
+    solution: b.aiSolution || '', needsFigure: !!b.variantNeedsFigure,
+    fromBankId: b.id, createdAt: nowStamp(),
+  };
+  await dbSetDoc('variants', code, v);
+  (state.variants[b.itemCode] = state.variants[b.itemCode] || []).push(v);
+  state.variants[b.itemCode].sort((a,b2)=> a.code < b2.code ? -1 : 1);
+  showToast(code + ' 로 창고에 넣었습니다 — 다음엔 찾아집니다.');
+  render();
+}
+
+/* 창고에 있는 변형을 이 문항으로 가져온다 — **만들지 않고 쓰는 길.** */
+async function useVariantFromStore(bankId, code){
+  const b = DATA.problemBank.find(x=>x.id===bankId);
+  const v = variantsOfCode(b && b.itemCode).find(x=>x.code===code);
+  if(!b || !v) return;
+  b.variantContent = v.content;
+  b.variantAnswer  = v.answer;
+  b.aiSolution     = v.solution || '';
+  b.variantNeedsFigure = !!v.needsFigure;
+  await dbSetDoc('problembank', b.id, b);
+  showToast(code + ' 를 가져왔습니다 — AI 한도를 안 썼습니다.');
+  render();
+}
+
 /* =================== AI 쌍둥이 문제 생성 (일 20건 한도) =================== */
 /* «오늘»은 로컬 날짜다. 예전엔 toISOString()(UTC)이었는데, KST(+9)에서는 00:00~09:00 사이에
    하루 전을 가리켰다. 그 시간대에 출결을 넣으면 하루 전 날짜로 저장됐고,
@@ -3305,6 +3454,12 @@ let state = {
   rosterSort: 'name',
   rosterSelected: [],
   rptBatch: null,                 // 리포트 PDF 묶음 (2026-09-01 · R-3)
+  /* 문항 창고 (2026-09-03 · I-2). null 은 «아직 안 받았다»는 뜻이다 —
+     빈 객체로 두면 «받았는데 비었다»와 구별이 안 돼 매번 다시 받는다. */
+  itemIndex: null,                // 장부 목록 (codes/index.json)
+  itemByCode: null,               // 코드 -> 원본 문항 (장부 파일에서)
+  variants: null,                 // 원본코드 -> 변형들 (Firestore)
+  itemLoading: false,
   rosterLastIndex: null,
   /* 신호(05-signals) — 규칙은 signalOf()가 쥐고 여기는 «무엇을 보여줄지»만 담는다 */
   signalClassId: '',
@@ -16736,6 +16891,8 @@ function reviewWorkHTML(b, list){
       <span>정답을 999 이하 자연수로 바꾸거나, 문제 끝에 보기 ①~⑤를 넣고 정답을 그 기호로 고쳐주세요.</span>
     </div></div>` : ''}
 
+    ${itemCodeStripHTML(b)}
+
     <div class="cmp" style="margin-top:${why?'14px':'0'};">
       <div class="side">
         <div class="lab">원본 문항 <s>${b.questionNo}번</s></div>
@@ -16771,6 +16928,63 @@ function reviewWorkHTML(b, list){
     </div>` : ''}
     <div class="rst-pad"></div>
   </div>`;
+}
+
+/* 문항 코드 띠 — «만들기» 위에 놓는다 (2026-09-03 · I-2).
+   🔴 **자리가 곧 뜻이다.** 만들기 단추보다 «위»에 있어야 「먼저 찾는다」가 읽힌다.
+     아래에 두면 이미 만들고 난 뒤에 보게 되고, 그러면 있으나 마나다. */
+function itemCodeStripHTML(b){
+  const loaded = !!state.itemByCode;
+  if(!loaded){
+    /* 창고를 아직 안 받았다 — 이 화면을 연 김에 받아 두고 다시 그린다.
+       ⚠ render() 안에서 부르므로 await 하지 않는다. 끝나면 스스로 다시 그린다. */
+    loadItemStoreIfNeeded().then(()=>{ if(state.itemByCode) render(); });
+    return `<div class="ic-strip"><span class="ic-load">문항 창고를 여는 중…</span></div>`;
+  }
+  const code = b.itemCode || '';
+  const it   = code ? itemOfCode(code) : null;
+  const vs   = code ? variantsOfCode(code) : [];
+
+  if(!code){
+    return `<div class="ic-strip">
+      <span class="ic-k">문항 코드</span>
+      <input class="ic-in mono" id="ic-in-${b.id}" placeholder="K2-05-E-0431"
+        onkeydown="if(event.key==='Enter'&&!event.isComposing)setBankItemCode('${b.id}')">
+      <button class="btn q sm" onclick="setBankItemCode('${b.id}')">잇기</button>
+      <span class="ic-hint">코드를 이으면 <b>이미 만들어 둔 변형</b>을 먼저 찾아봅니다
+        — 교재 미주 맨 앞에 적혀 있습니다</span>
+    </div>`;
+  }
+
+  const byKind = VARIANT_KINDS.map(([k,label])=>{
+    const got = vs.filter(v=>v.variantKind===k);
+    return got.length ? `<span class="ic-kind">${label} <b class="mono">${got.length}</b></span>` : '';
+  }).join('');
+
+  return `<div class="ic-strip on">
+    <span class="ic-k">문항 코드</span>
+    <b class="ic-code mono">${escHtml(code)}</b>
+    ${it ? `<span class="ic-meta">${escHtml(it.chapter||'')} · ${escHtml((it.source&&it.source.book)||'')}
+      ${it.answer ? '· 정답 <b>'+escHtml(it.answer)+'</b>' : ''}</span>` : '<span class="ic-meta warn">창고에 없는 코드</span>'}
+    <button class="btn q sm" onclick="if(confirm('이 문항의 코드를 뗄까요?')){const b=DATA.problemBank.find(x=>x.id==='${b.id}');b.itemCode='';dbSetDoc('problembank',b.id,b);render();}">떼기</button>
+    <span style="flex:1;"></span>
+    ${vs.length
+      ? `<span class="ic-have">이미 있는 변형 <b class="mono">${vs.length}</b>개</span>${byKind}`
+      : `<span class="ic-none">아직 만들어 둔 변형이 없습니다</span>`}
+  </div>
+  ${vs.length ? `<div class="ic-list">
+    ${vs.map(v=>`<div class="ic-row">
+      <b class="mono">${escHtml(v.code)}</b>
+      <span class="ic-kind">${escHtml((VARIANT_KINDS.find(x=>x[0]===v.variantKind)||['','?'])[1])}</span>
+      <span class="ic-txt">${escHtml(String(v.content||'').replace(/\s+/g,' ').slice(0,64))}</span>
+      <span class="mono ic-a">${escHtml(v.answer||'—')}</span>
+      <button class="btn q sm" onclick="useVariantFromStore('${b.id}','${escHtml(v.code)}')">가져오기</button>
+    </div>`).join('')}
+  </div>` : ''}
+  ${(b.variantContent || b.variantAnswer) ? `<div class="ic-save">
+    <span>지금 이 변형을 창고에 넣어 두면 <b>다음엔 찾아집니다</b> — 어느 갈래입니까?</span>
+    ${VARIANT_KINDS.map(([k,label])=>`<button class="btn q sm" onclick="saveVariantToStore('${b.id}','${k}')">${label}로 저장</button>`).join('')}
+  </div>` : ''}`;
 }
 
 function reviewActbarHTML(b, list){

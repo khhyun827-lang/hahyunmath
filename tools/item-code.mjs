@@ -292,5 +292,17 @@ if (OUT) {
   console.log(`\n  장부에 적었다 → ${OUT}`);
   console.log(`  장부 전체 : ${ledger.count}제 · 단원 ${ledger.chapters.join(', ')}`);
   console.log('  🔴 이 파일이 코드의 «진실»이다. 보관할 것 — 다음 단원의 번호가 여기서 이어진다.');
+
+  /* 웹이 «어떤 장부가 있는지» 알아야 받아 갈 수 있다. 폴더를 훑어 목록을 다시 적는다.
+     ⚠ 목록을 손으로 적으면 장부를 늘린 날 반드시 잊는다 — 그래서 여기서 짓는다. */
+  const dir = path.dirname(OUT);
+  const list = fs.readdirSync(dir).filter((f) => /\.json$/.test(f) && f !== 'index.json').sort();
+  const idx = list.map((f) => {
+    const g = JSON.parse(fs.readFileSync(path.join(dir, f), 'utf8'));
+    return { file: f, subject: g.subject, book: g.book, count: g.count, chapters: g.chapters || [] };
+  });
+  fs.writeFileSync(path.join(dir, 'index.json'),
+    JSON.stringify({ updatedAt: ledger.updatedAt, ledgers: idx }, null, 2), 'utf8');
+  console.log(`  장부 목록도 새로 적었다 → ${path.join(dir, 'index.json')} (${idx.length}권)`);
 }
 console.log('\n  원본은 한 글자도 안 고쳤다.\n');
