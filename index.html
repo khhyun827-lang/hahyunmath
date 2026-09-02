@@ -13808,8 +13808,12 @@ function rptDataUrlToBlob(url){
 /* 한 학생 → 사진 한 장. **파일 이름이 곧 학부모께 보낼 때의 이름**이 되므로 사람이 읽는 말로 짓는다.
    dir 가 있으면 그 폴더에 쓰고, 없으면 옛길(내려받기)로 간다. */
 async function rptSaveOne(el, s, ym, dir){
-  /* 문자로 보낼 그림이라 288dpi까지 갈 까닭이 없다. 192dpi면 폰에서 또렷하고 용량이 1/3이다. */
-  const scale = el.scrollHeight > 2600 ? 1.5 : 2;
+  /* 🔵 **192dpi에서 384dpi로 올렸다 (2026-09-02 · R-4b).** 09-01에 «흐릴 것»을 걱정해
+     배율을 낮춰 뒀는데, **실측해 보니 한 장이 123KB였다** — 950KB 한도의 8분의 1이라
+     품질 낮추기 사다리가 한 칸도 안 내려가고 있었다. 4배로 올려도 **309KB**다.
+     ⚠ **긴 문서는 3배로 내린다** — 캔버스는 폭×높이에 상한이 있어, 4배로 굽다가
+       넘으면 html2canvas가 **빈 그림을 조용히 돌려준다**. 넘치는 크기는 사다리가 받아 준다. */
+  const scale = el.scrollHeight > 2600 ? 3 : 4;
   const canvas = await html2canvas(el, {scale, backgroundColor:'#ffffff', logging:false, useCORS:true});
   const baked = await rptBakeImage(canvas);
   const name = (s.name + '_' + ym + '_월간리포트').replace(/[\\/:*?"<>|]/g, '').replace(/\s+/g, '') + '.jpg';
@@ -13922,7 +13926,7 @@ async function runReportBatch(){
     b.phase = 'ready';
     b.err = (e && e.message) ? e.message : String(e);
     render();
-    showToast('PDF를 만들지 못했습니다 — ' + b.err);
+    showToast('리포트 이미지를 만들지 못했습니다 — ' + b.err);
   }finally{
     if(stage) stage.remove();
   }
