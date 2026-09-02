@@ -6423,6 +6423,9 @@ async function saveExam(){
       originalContent:q.content, originalAnswer:q.answer,
       variantContent:'', variantAnswer:'', status:'pending',
       subject:q.unit||'', chapter:q.chapter||'',
+      /* hwpx 미주에 코드가 심겨 있었으면 그대로 물려받는다 (2026-09-03 · I-2).
+         손으로 다시 칠 일이 없어지는 자리다. */
+      itemCode: q.itemCode || '',
       hasImage: !!imgResult
     };
     DATA.problemBank.push(bankEntry);
@@ -7182,7 +7185,8 @@ function hwpWalkParagraphs(paras, tokens){
         } else if(local === 'ctrl'){
           const endNoteEl = child.getElementsByTagNameNS(HP_NS,'endNote')[0];
           if(endNoteEl){
-            tokens.push({type:'endnote', v: hwpEndnoteText(endNoteEl)});
+            { const _p = hwpEndnoteParts(endNoteEl);
+              tokens.push({type:'endnote', v: _p.answer, code: _p.code}); }
           } else if(child.getElementsByTagNameNS(HP_NS,'autoNum')[0]?.getAttribute('numType')==='ENDNOTE'){
             // 문서 맨 뒤 "빠른정답" 요약처럼 진짜 hp:endNote가 아닌 평문 목록을 만나면
             // 문항 구간이 끝난 것으로 보고 멈춘다.
@@ -7194,30 +7198,42 @@ function hwpWalkParagraphs(paras, tokens){
     tokens.push({type:'break'});
   }
 }
-function hwpEndnoteText(endNoteEl){
+/* 🔴 **미주 맨 앞의 문항 코드를 여기서 떼어 낸다** (2026-09-03 · I-2).
+   안 떼면 `[정답]` 라벨이 «맨 앞»이 아니게 되어 아래 정규식이 빗나가고,
+   **정답에 코드와 라벨이 통째로 들어간다.** 코드를 심자마자 실제로 그렇게 됐다.
+   ⚠ **코드를 미주의 다른 자리로 옮겨도 이 문제는 안 사라진다** — 아래에서 보듯
+     미주 속 글자를 «전부 이어 붙인 뒤» 라벨을 떼기 때문에, 끝에 두든 다음 줄에 두든
+     정답 텍스트에 섞인다. 자리를 옮길 일이 아니라 **떼어 내야 하는 일**이다.
+   🔵 그리고 떼어 낸 코드는 버리지 않는다 — 그대로 문항의 `itemCode` 가 된다. */
+const HWP_CODE_RE = /^\s*\[([A-Z]{1,2}\d?-\d{2}-[A-Z]-\d{4})\]\s*/;
+function hwpEndnoteParts(endNoteEl){
   const subList = endNoteEl.getElementsByTagNameNS(HP_NS,'subList')[0];
   const innerParas = subList ? Array.from(subList.childNodes).filter(n=>n.nodeType===1 && n.localName==='p') : [];
   const innerTokens = [];
   hwpWalkParagraphs(innerParas, innerTokens);
   let ans = '';
   for(const it of innerTokens){ if(it.type==='text'||it.type==='eq') ans += it.v; }
+  let code = '';
+  const m = ans.match(HWP_CODE_RE);
+  if(m){ code = m[1]; ans = ans.slice(m[0].length); }
   // "[정답]" 라벨과, 일부 문서에서 수식 앞에 자동으로 붙는 "수식입니다." 안내 문구를 제거한다.
-  return ans.replace(/^\s*\[정답\]\s*/,'').replace(/수식입니다\.?/g,'').trim();
+  return { code, answer: ans.replace(/^\s*\[정답\]\s*/,'').replace(/수식입니다\.?/g,'').trim() };
 }
+function hwpEndnoteText(endNoteEl){ return hwpEndnoteParts(endNoteEl).answer; }
 // 표의 셀 하나를 문제 하나로 취급해서 텍스트/그림/(있다면) 정답을 뽑는다.
 // 표 기반 시험지는 "번호 인식"을 미주 등장 시점에 의존하면 정답이 없는 문항에서
 // 여러 문제가 한 덩어리로 뭉쳐버리는 문제가 있어서, 셀 경계를 기준으로 삼는 게 훨씬 안정적이다.
 function hwpCellToBlock(cellParas){
   const tokens = [];
   hwpWalkParagraphs(cellParas, tokens);
-  let text = '', answer = null, pics = [];
+  let text = '', answer = null, pics = [], itemCode = '';
   for(const tok of tokens){
-    if(tok.type === 'endnote') answer = tok.v;
+    if(tok.type === 'endnote'){ answer = tok.v; if(tok.code) itemCode = tok.code; }
     else if(tok.type === 'text' || tok.type === 'eq') text += tok.v;
     else if(tok.type === 'pic') pics.push(tok.v);
     else if(tok.type === 'break') text += '\n';
   }
-  return { text, answer, pics };
+  return { text, answer, pics, itemCode };
 }
 /* 최상위 표를 «문항 컨테이너»로 볼 것인가, «문항 안의 상자»로 볼 것인가.
 
@@ -7241,7 +7257,7 @@ function hwpParseBlocks(topParas, tablesAsProblems){
       if(tok.type === 'stop'){ stopped = true; break; }
       if(tok.type === 'endnote'){
         if(cur.text.trim()) blocks.push(cur);
-        cur = { text:'', answer: tok.v, pics:[] };
+        cur = { text:'', answer: tok.v, itemCode: tok.code || '', pics:[] };
       } else if(tok.type === 'text') cur.text += tok.v;
       else if(tok.type === 'eq') cur.text += tok.v;
       else if(tok.type === 'pic') cur.pics.push(tok.v);
@@ -7293,7 +7309,8 @@ async function parseHwpxToProblems(file){
 
   /* 미주 개수 = 문항 개수의 근거. 두 가지로 읽어 보고 여기에 맞는 쪽을 고른다. */
   const allEndnotes = Array.from(doc.getElementsByTagNameNS(HP_NS,'endNote'));
-  const orderedAnswers = allEndnotes.map(hwpEndnoteText);
+  const orderedParts   = allEndnotes.map(hwpEndnoteParts);
+  const orderedAnswers = orderedParts.map(x=>x.answer);
   const endnoteCount = orderedAnswers.length;
 
   /* ⚠ 미주 순서 매칭을 «점수를 매기기 전»에 해야 한다.
@@ -7304,6 +7321,10 @@ async function parseHwpxToProblems(file){
   const fillAnswers = bs => {
     if(bs.some(b=>!b.answer) && orderedAnswers.length === bs.length){
       bs.forEach((b,i)=>{ if(!b.answer) b.answer = orderedAnswers[i]; });
+    }
+    /* 코드도 같은 차례로 채운다 — 정답이 이미 붙어 있어도 코드는 비어 있을 수 있다. */
+    if(orderedParts.length === bs.length){
+      bs.forEach((b,i)=>{ if(!b.itemCode && orderedParts[i].code) b.itemCode = orderedParts[i].code; });
     }
     return bs;
   };
@@ -7342,7 +7363,8 @@ async function parseHwpxToProblems(file){
   }
   const problems = [];
   for(const b of clean){
-    const problem = { content: b.text.trim(), answer: (b.answer||'').trim(), image: null };
+    const problem = { content: b.text.trim(), answer: (b.answer||'').trim(), image: null,
+                      itemCode: b.itemCode || '' };
     const ref = b.pics[0];
     if(ref && idToHref[ref]){
       const imgFile = zip.file(idToHref[ref]);
@@ -7389,7 +7411,7 @@ async function handleExamHwpxFile(fileList){
     if(problems.length === 0){ showToast('인식된 문항이 없습니다.'); return; }
     /* 단원 초안도 여기서 같이 채운다 — 일괄 등록의 이점이 «문항 수만큼 단원 고르기»로 사라지면 안 된다. */
     examDraft.questions = problems.map(p => ({ content: p.content, answer: p.answer, unit,
-      chapter: guessChapter(p.content, unit), image: p.image }));
+      chapter: guessChapter(p.content, unit), image: p.image, itemCode: p.itemCode || '' }));
     render();
     const noAnswer = problems.filter(p=>!p.answer).length;
     const wm = problems.watermarkedCount || 0;
