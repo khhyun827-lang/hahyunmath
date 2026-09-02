@@ -892,6 +892,9 @@
 .app .ic-cl{flex:0 0 84px;color:var(--dim);font-size:11.5px;padding-top:1px;}
 .app .ic-cs{color:var(--dim);font-size:11px;text-decoration:none;margin-left:6px;}
 .app .ic-cq{color:var(--sub);}
+/* 카드 안의 «문제» 줄 — 수식이 본문과 같은 크기로 보이게 (목록 줄과 같은 규칙) */
+.app .ic-cbody{color:var(--ink);line-height:1.9;}
+.app .ic-cbody .katex{font-size:1.06em;}
 /* «그림을 직접 그려야 하는 변형»의 작업대. 아직 안 그린 것은 붉게, 붙은 것은 가라앉힌다 —
    이 상자가 곧 «공개를 막고 있는 것»이라 눈에 띄어야 한다. */
 .app .rv-fig{margin-top:11px;padding:11px 13px;border-radius:var(--r-md);
@@ -2861,7 +2864,25 @@ async function dbSetDoc(collection, id, data){
     }), 8000);
     if(!res.ok) throw new Error('firestore http ' + res.status);
     return true;
-  }catch(e){ console.error('저장 실패', collection, id, e); return null; }
+  }catch(e){
+    console.error('저장 실패', collection, id, e);
+    dbWarnDenied(collection, e);
+    return null;
+  }
+}
+/* 🔴 **막힌 저장은 «말»을 해야 한다** (2026-09-04에 실제로 당했다).
+   새 컬렉션 `variants` 가 Firestore 규칙에 없어서 쓰기가 403 인데, `dbSetDoc` 은
+   그 실패를 삼키고 `null` 만 돌려줬다. 부르는 쪽은 그걸 안 보고 **「창고에 넣었습니다」**라고
+   알렸다 — 사용자는 저장된 줄 알았고, 새로고침하면 사라졌다.
+   **«저장했다»고 말하는 기능은 저장이 됐는지 봐야 한다** (값을 한 방법 ⑧과 같은 결).
+   ⚠ 같은 컬렉션에 대고 여러 번 쓰면 토스트가 쏟아지므로 한 번만 말한다. */
+const dbDeniedSaid = new Set();
+function dbWarnDenied(collection, e){
+  if(!/403/.test(String(e && e.message))) return;
+  if(dbDeniedSaid.has(collection)) return;
+  dbDeniedSaid.add(collection);
+  showToast('저장이 막혔습니다 — Firestore 규칙에 「' + collection + '」 컬렉션이 없습니다. '
+    + '설정 > 관리자에 안내가 있습니다.');
 }
 async function dbDeleteDoc(collection, id){
   try{
@@ -3053,7 +3074,9 @@ async function saveVariantToStore(bankId, kind){
     solution: b.aiSolution || '', needsFigure: !!b.variantNeedsFigure,
     fromBankId: b.id, createdAt: nowStamp(),
   };
-  await dbSetDoc('variants', code, v);
+  /* 🔴 **저장이 됐는지 보고 말한다.** 안 보고 알리면 «넣었다»고 해 놓고 새로고침하면 사라진다. */
+  const ok = await dbSetDoc('variants', code, v);
+  if(!ok){ showToast(code + ' 를 창고에 넣지 못했습니다 — 저장이 막혀 있습니다.'); return; }
   /* ⚠ **뿌리 칸에 넣어야 한다.** `b.itemCode` 로 넣었더니 `…-N01` 이라는 엉뚱한 칸이 생겼고,
      `nextVariantCode` 가 그것을 못 봐서 **두 번 눌러도 둘 다 N01** 이 됐다 (2026-09-04). */
   (state.variants[root] = state.variants[root] || []).push(v);
@@ -3081,7 +3104,8 @@ async function registerVariantFromBank(bankId){
     solution: b.originalSolution || splitAnswerSolution(b.originalAnswer).solution,
     needsFigure: false, fromBankId: b.id, createdAt: nowStamp(),
   };
-  await dbSetDoc('variants', v.code, v);
+  const ok = await dbSetDoc('variants', v.code, v);
+  if(!ok){ showToast(v.code + ' 를 창고에 넣지 못했습니다 — 저장이 막혀 있습니다.'); return; }
   (state.variants[sp.origin] = state.variants[sp.origin] || []).push(v);
   state.variants[sp.origin].sort((a,b2)=> a.code < b2.code ? -1 : 1);
   showToast(v.code + ' 를 창고에 넣었습니다.');
@@ -3108,7 +3132,9 @@ async function deleteVariantFromStore(code){
      ⚠ 되살릴 길은 아직 없다. 필요해지면 이 표시만 지우면 된다. */
   v.deleted = true;
   v.deletedAt = nowStamp();
-  await dbSetDoc('variants', code, v);
+  const ok = await dbSetDoc('variants', code, v);
+  if(!ok){ delete v.deleted; delete v.deletedAt;
+    showToast(code + ' 를 빼지 못했습니다 — 저장이 막혀 있습니다.'); return; }
   showToast(code + ' 를 창고에서 뺐습니다 — 그 번호는 다시 쓰지 않습니다.');
   render();
 }
@@ -17045,6 +17071,16 @@ function icItemCardHTML(root, it, vs){
         <span class="ic-cq">${escHtml(it.noteHead)}…</span></div>` : ''}
       ${it.flag ? `<div class="ic-crow"><span class="ic-cl">눈으로 볼 것</span>
         <span style="color:var(--no);font-weight:600;">${escHtml(it.flag)}</span></div>` : ''}
+      ${/* 🔴 **원본 «내용»은 장부에 없다 — 일부러다** (2026-09-04에 사용자가 짚었다).
+             장부는 배포에 실려 나가는 정적 파일이라 주소만 알면 누구나 받는다.
+             그래서 문제 본문도 정답도 안 담았다.
+             🔵 대신 **시험지에 올린 문항에서 가져온다** — 그건 Firestore 에 있고 강사만 쓰는 화면이다.
+             아직 안 올린 문항은 보여 줄 내용이 없다. 그건 «없다»고 말한다. */''}
+      ${(()=>{ const src = DATA.problemBank.find(b=>b.itemCode===root && b.originalContent);
+        return `<div class="ic-crow"><span class="ic-cl">문제</span>
+          <span class="ic-cbody">${src ? problemHTML(icOneLine(src.originalContent))
+            : '<s class="ic-cs">아직 시험지로 올린 적이 없어 내용이 없습니다 — 창고(장부)에는 코드와 출처만 담습니다</s>'}</span>
+        </div>`; })()}
       <div class="ic-crow"><span class="ic-cl">쓰인 곳</span>
         <span>${used.length
           ? used.map(u=>`${escHtml(u.title)} <b>${u.no}번</b>
@@ -17466,11 +17502,24 @@ function reviewWorkHTML(b, list){
              바꿀 것이 글자밖에 안 남아 소재만 갈린 문제가 나왔다.
              지금은 갈래가 둘이고, 어느 쪽으로 갔는지를 워커가 말해 준다 → variantFigureNoteHTML. */''}
         ${variantFigureNoteHTML(b)}
+        ${/* 🔵 **고치는 칸은 접어 둔다** (2026-09-04 · 사용자 요청) —
+             「수정할 일이 많지는 않을 것 같아서 필요할 때만 눌러서 열도록」.
+             노트의 규칙과 같다: 「만드는 폼은 접어 둔다 — 상시 펼쳐 둔 폼은 화면에서
+             제일 큰 자리를 차지하면서 제일 가끔 쓰인다」.
+             ⚠ 내용이 아예 없으면 «칠 곳»이 있어야 하므로 그때는 펴 둔다. */''}
+        ${(state.bankEditOpen && state.bankEditOpen[b.id]) || (!b.variantContent && !b.variantAnswer) ? `
         <textarea class="rv-edit" id="bank-content-${b.id}" rows="4"
           placeholder="쌍둥이 문항 내용">${escHtml(b.variantContent||'')}</textarea>
         <input class="rv-edit mono" id="bank-answer-${b.id}" value="${escHtml(b.variantAnswer||'')}"
           placeholder="정답 — 999 이하 자연수 또는 보기 기호 ①~⑤">
-        <button class="btn sm" style="margin-top:9px;" onclick="saveBankEdit('${b.id}')">수정 내용 저장</button>
+        <div style="display:flex;gap:8px;margin-top:9px;">
+          <button class="btn sm" onclick="saveBankEdit('${b.id}')">수정 내용 저장</button>
+          ${(b.variantContent || b.variantAnswer) ? `<button class="btn q sm"
+            onclick="state.bankEditOpen={...(state.bankEditOpen||{}),['${b.id}']:false}; render()">닫기</button>` : ''}
+        </div>`
+        : `<button class="btn q sm" style="margin-top:9px;"
+             onclick="state.bankEditOpen={...(state.bankEditOpen||{}),['${b.id}']:true}; render()">
+             ${iconSvg('pencil',13)} 고치기</button>`}
       </div>
     </div>
 
@@ -18943,9 +18992,60 @@ function teacherAuditLogHTML(){
 }
 
 /* ---------- 관리자 ---------- */
+/* 🔴 **막힌 컬렉션은 사람이 풀어야 한다** (2026-09-04).
+   `variants` 는 코드로 만든 새 컬렉션인데 Firestore 규칙에 없으면 쓰기가 **403** 이고,
+   `dbSetDoc` 이 그것을 삼켜 **저장이 조용히 실패한 뒤 새로고침하면 사라진다.**
+   규칙은 Firebase 콘솔에서만 고칠 수 있다 — 앱은 «막혔다»는 것까지만 말할 수 있다. */
+const NEEDED_COLLECTIONS = ['variants'];
+async function checkCollections(){
+  state.collCheck = { running:true, rows:[] };
+  render();
+  const rows = [];
+  for(const c of NEEDED_COLLECTIONS){
+    let status = '못 물어봄';
+    try{
+      const token = await getAuthToken();
+      const res = await fetch(FIRESTORE_ROOT + '/' + c + '?pageSize=1',
+        { headers:{ Authorization:'Bearer ' + token } });
+      status = res.status === 403 ? '막힘' : ((res.ok || res.status === 404) ? '열림' : '오류 ' + res.status);
+    }catch(e){}
+    rows.push({ name:c, status });
+  }
+  state.collCheck = { running:false, rows };
+  render();
+}
+
 function teacherSettingsAdminHTML(){
   const open = state.settingsForm==='pw';
+  const cc = state.collCheck;
+  const rulesText = 'match /databases/{database}/documents {\n'
+    + '  // 이미 있는 줄은 그대로 두고, 아래 한 덩이만 더합니다\n'
+    + '  match /variants/{doc} {\n'
+    + '    allow read, write: if request.auth != null;\n'
+    + '  }\n}';
   return `<div class="st-wrap">
+  ${stSec({
+    title:'저장이 막힌 곳', desc:'Firestore 규칙에 없는 컬렉션은 «조용히» 저장에 실패합니다',
+    body: `<div class="st-row">
+        <div class="t"><b>문항 창고 <span class="mono">variants</span></b>
+          <span>「창고에 넣기」가 여기에 씁니다<s>·</s>막혀 있으면 넣어도 새로고침하면 사라집니다</span></div>
+        <div class="v"><button class="btn sm" onclick="checkCollections()">${cc && cc.running ? '보는 중…' : '지금 확인'}</button></div>
+      </div>
+      ${cc && !cc.running ? cc.rows.map(r=>`<div class="st-row">
+        <div class="t"><b class="mono">${escHtml(r.name)}</b></div>
+        <div class="v"><b style="color:var(--${r.status==='열림'?'ok':'no'});">${escHtml(r.status)}</b></div>
+      </div>`).join('') : ''}
+      ${cc && !cc.running && cc.rows.some(r=>r.status!=='열림') ? `
+      <div class="st-row" style="display:block;">
+        <div class="t" style="margin-bottom:8px;"><b>푸는 법</b>
+          <span>Firebase 콘솔 → Firestore Database → 「규칙」에 아래를 더하고 «게시»합니다</span></div>
+        <pre style="background:var(--sunk);border:1px solid var(--line);border-radius:var(--r-md);
+          padding:12px 14px;font-size:12px;line-height:1.7;overflow-x:auto;margin:0;
+          font-family:JetBrains Mono,monospace;">${escHtml(rulesText)}</pre>
+        <p class="hint" style="display:block;margin-top:8px;">⚠ 이 규칙은 <b>로그인한 사람이면 누구나</b> 읽고 씁니다
+          — 지금 다른 컬렉션과 같은 조건입니다. 더 좁히는 것은 별건입니다(익명 로그인이라 강사·학생이 구분되지 않습니다).</p>
+      </div>` : ''}`
+  })}
   ${stSec({
     title:'관리자', desc:'이 계정 하나로 모든 화면에 들어옵니다',
     body: `<div class="st-row">
