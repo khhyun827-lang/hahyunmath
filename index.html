@@ -789,7 +789,10 @@
   display:flex;flex-direction:column;min-height:0;padding-left:16px;padding-right:14px;}
 .app .rv-lh{display:flex;align-items:center;gap:8px;padding-bottom:11px;
   border-bottom:1px solid var(--line);flex-shrink:0;}
-.app .rv-lbody{flex:1;min-height:0;overflow-y:auto;}
+/* ⚠ 아래에 `.actbar`(position:fixed; bottom:0)가 깔려 있어서, 여백이 없으면
+   **목록의 맨 아래 문항이 가려지고 더 내려갈 수도 없다** (2026-09-04에 사용자가 겪었다).
+   오른쪽 본문은 `.rst-pad`로 같은 일을 하고 있었는데 **왼쪽 목록만 빠져 있었다.** */
+.app .rv-lbody{flex:1;min-height:0;overflow-y:auto;padding-bottom:72px;}
 .app .rv-item{padding:12px 11px;border-left:3px solid transparent;border-bottom:1px solid var(--line2);
   border-radius:0 var(--r-md) var(--r-md) 0;cursor:pointer;transition:background var(--t);}
 .app .rv-item:hover{background:var(--hover);}
@@ -3016,16 +3019,24 @@ async function saveVariantToStore(bankId, kind){
   if(!b || !b.itemCode){ showToast('먼저 이 문항에 코드를 이어주세요.'); return; }
   if(!b.variantContent && !b.variantAnswer){ showToast('저장할 변형 내용이 없습니다.'); return; }
   await loadItemStoreIfNeeded();
-  const code = nextVariantCode(b.itemCode, kind);
+  /* 🔴 **이 문항이 이미 «변형»일 수 있다** (2026-09-04에 사용자가 겪었다).
+     복습테스트처럼 N01 문항으로 시험지를 만들면 `b.itemCode` 가 `…-N01` 이고,
+     그것을 그대로 원본으로 삼으면 **`…-N01-N01`** 이 나온다.
+     기획서에 「변형의 변형은 만들지 않는다」고 적어 놓고 **코드로는 안 막아 두었다.**
+     변형은 언제나 **원본에 직접** 매단다 — 그래서 뿌리를 찾아서 쓴다. */
+  const root = (splitItemCode(b.itemCode) || {}).origin || b.itemCode;
+  const code = nextVariantCode(root, kind);
   const v = {
-    code, originCode: b.itemCode, variantKind: kind,
+    code, originCode: root, variantKind: kind,
     content: b.variantContent || '', answer: b.variantAnswer || '',
     solution: b.aiSolution || '', needsFigure: !!b.variantNeedsFigure,
     fromBankId: b.id, createdAt: nowStamp(),
   };
   await dbSetDoc('variants', code, v);
-  (state.variants[b.itemCode] = state.variants[b.itemCode] || []).push(v);
-  state.variants[b.itemCode].sort((a,b2)=> a.code < b2.code ? -1 : 1);
+  /* ⚠ **뿌리 칸에 넣어야 한다.** `b.itemCode` 로 넣었더니 `…-N01` 이라는 엉뚱한 칸이 생겼고,
+     `nextVariantCode` 가 그것을 못 봐서 **두 번 눌러도 둘 다 N01** 이 됐다 (2026-09-04). */
+  (state.variants[root] = state.variants[root] || []).push(v);
+  state.variants[root].sort((a,b2)=> a.code < b2.code ? -1 : 1);
   showToast(code + ' 로 창고에 넣었습니다 — 다음엔 찾아집니다.');
   render();
 }
@@ -3044,7 +3055,7 @@ async function registerVariantFromBank(bankId){
   const v = {
     code: b.itemCode, originCode: sp.origin, variantKind: sp.variantKind,
     content: b.originalContent || '', answer: b.originalAnswer || '',
-    solution: '', needsFigure: false, fromBankId: b.id, createdAt: nowStamp(),
+    solution: b.originalSolution || '', needsFigure: false, fromBankId: b.id, createdAt: nowStamp(),
   };
   await dbSetDoc('variants', v.code, v);
   (state.variants[sp.origin] = state.variants[sp.origin] || []).push(v);
@@ -3056,8 +3067,13 @@ async function registerVariantFromBank(bankId){
 /* 창고에 있는 변형을 이 문항으로 가져온다 — **만들지 않고 쓰는 길.** */
 async function useVariantFromStore(bankId, code){
   const b = DATA.problemBank.find(x=>x.id===bankId);
-  const v = variantsOfCode(b && b.itemCode).find(x=>x.code===code);
-  if(!b || !v) return;
+  /* 🔴 **뿌리에서 찾아야 한다.** 이 문항이 `…-N02` 면 자기 코드의 변형은 언제나 0개라
+     아무것도 못 찾고 **단추가 조용히 아무 일도 안 했다** (2026-09-04에 사용자가 겪었다).
+     ⚠ 못 찾았을 때 «말없이 돌아가지» 않는다 — 안 되는 것보다 나쁜 것이 안 되는 줄 모르는 것이다. */
+  const root = (splitItemCode(b && b.itemCode) || {}).origin || (b && b.itemCode);
+  const v = variantsOfCode(root).find(x=>x.code===code);
+  if(!b){ return; }
+  if(!v){ showToast('창고에서 ' + code + ' 를 못 찾았습니다 — 새로고침 뒤에도 그러면 알려주세요.'); return; }
   b.variantContent = v.content;
   b.variantAnswer  = v.answer;
   b.aiSolution     = v.solution || '';
@@ -6476,7 +6492,7 @@ async function saveExam(){
      그래서 **새 칸을 더할 때마다 여기에도 적어야 한다.** itemCode 를 빠뜨렸더니
      hwpx 에서 읽어 온 코드가 저장 직전에 조용히 사라졌다 (2026-09-03에 실제로 그랬다). */
   const questions = validQuestions.map((q,i)=>({no:i+1, content:q.content.trim(), answer:q.answer.trim(),
-    unit:q.unit||'', chapter:q.chapter||'', itemCode:q.itemCode||''}));
+    unit:q.unit||'', chapter:q.chapter||'', itemCode:q.itemCode||'', solution:q.solution||''}));
   /* 🔵 **이미 있는 시험을 채우는 길** (2026-08-30 · C-7) — 성적만 먼저 넣어 둔 시험에
      나중에 문항을 붙인다. 새 문서를 만들지 않고 **그 문서를 고친다** —
      id가 그대로라 `rec.scores[].examId`가 가리키는 곳이 안 바뀌고, 성적이 그대로 붙어 있다.
@@ -6539,6 +6555,8 @@ async function saveExam(){
       /* hwpx 미주에 코드가 심겨 있었으면 그대로 물려받는다 (2026-09-03 · I-2).
          손으로 다시 칠 일이 없어지는 자리다. */
       itemCode: q.itemCode || '',
+      /* 교재 미주의 해설. 정답 칸에 통째로 들어가던 것을 갈라 여기 둔다 (2026-09-04). */
+      originalSolution: q.solution || '',
       hasImage: !!imgResult
     };
     DATA.problemBank.push(bankEntry);
@@ -7299,7 +7317,7 @@ function hwpWalkParagraphs(paras, tokens){
           const endNoteEl = child.getElementsByTagNameNS(HP_NS,'endNote')[0];
           if(endNoteEl){
             { const _p = hwpEndnoteParts(endNoteEl);
-              tokens.push({type:'endnote', v: _p.answer, code: _p.code}); }
+              tokens.push({type:'endnote', v: _p.answer, code: _p.code, sol: _p.solution}); }
           } else if(child.getElementsByTagNameNS(HP_NS,'autoNum')[0]?.getAttribute('numType')==='ENDNOTE'){
             // 문서 맨 뒤 "빠른정답" 요약처럼 진짜 hp:endNote가 아닌 평문 목록을 만나면
             // 문항 구간이 끝난 것으로 보고 멈춘다.
@@ -7322,6 +7340,19 @@ function hwpWalkParagraphs(paras, tokens){
      미주에 `[K2-01-E-0001-N01]` 이 적힌다. 접미사를 안 받으면 그것도 못 알아보고
      **정답에 통째로 섞인다** — 원본 코드에서 겪은 것과 똑같은 흠이다. */
 const HWP_CODE_RE = /^\s*\[([A-Z]{1,2}\d?-\d{2}-[A-Z]-\d{4}(?:-[NUD]\d{2})?)\]\s*/;
+
+/* 문제 끝의 배점 표기를 걷어낸다 — 「[5.0점]」·「[4점]」·「(3점)」 (2026-09-04 · 사용자 요청).
+   🔵 배점은 **그 시험지에서만 참인 값**이다. 문항을 창고에 담아 다른 시험지로 돌려 쓰면
+     거짓말이 되고, 학생 화면에도 남의 시험 배점이 따라다닌다.
+   ⚠ **줄 끝에 있는 것만** 걷는다 — 본문 한가운데의 「(3점)」은 문제의 일부일 수 있다. */
+function stripScoreMarks(s){
+  return String(s || '')
+    .split('\n')
+    .map(line => line.replace(/\s*[[(]\s*\d+(?:\.\d+)?\s*점\s*[\])]\s*$/, ''))
+    .join('\n')
+    .trim();
+}
+
 function hwpEndnoteParts(endNoteEl){
   const subList = endNoteEl.getElementsByTagNameNS(HP_NS,'subList')[0];
   const innerParas = subList ? Array.from(subList.childNodes).filter(n=>n.nodeType===1 && n.localName==='p') : [];
@@ -7333,7 +7364,18 @@ function hwpEndnoteParts(endNoteEl){
   const m = ans.match(HWP_CODE_RE);
   if(m){ code = m[1]; ans = ans.slice(m[0].length); }
   // "[정답]" 라벨과, 일부 문서에서 수식 앞에 자동으로 붙는 "수식입니다." 안내 문구를 제거한다.
-  return { code, answer: ans.replace(/^\s*\[정답\]\s*/,'').replace(/수식입니다\.?/g,'').trim() };
+  let rest = ans.replace(/^\s*\[정답\]\s*/,'').replace(/수식입니다\.?/g,'').trim();
+
+  /* 🔴 **정답과 해설을 가른다** (2026-09-04).
+     학교 시험지의 미주는 「[정답] ②」로 끝나서 그동안 문제가 없었다. 그런데 **교재의 미주에는**
+     **해설이 통째로 들어 있다.** 그것을 다 «정답»으로 받았더니 창고의 변형 목록에
+     **문제 대신 풀이가 줄줄이 떴다** (사용자가 겪었다).
+     ⚠ **확실할 때만 가른다** — 첫 글자가 ①~⑤ 면 그것이 정답이고 나머지는 해설이다.
+       주관식은 어디까지가 답인지 기계가 모르므로 **가르지 않고 그대로 둔다.**
+       짐작으로 자르면 «답이 잘린» 문항이 조용히 생긴다. */
+  const mk = rest.match(/^\s*([①②③④⑤])\s*/);
+  if(mk) return { code, answer: mk[1], solution: rest.slice(mk[0].length).trim() };
+  return { code, answer: rest, solution: '' };
 }
 function hwpEndnoteText(endNoteEl){ return hwpEndnoteParts(endNoteEl).answer; }
 // 표의 셀 하나를 문제 하나로 취급해서 텍스트/그림/(있다면) 정답을 뽑는다.
@@ -7342,14 +7384,14 @@ function hwpEndnoteText(endNoteEl){ return hwpEndnoteParts(endNoteEl).answer; }
 function hwpCellToBlock(cellParas){
   const tokens = [];
   hwpWalkParagraphs(cellParas, tokens);
-  let text = '', answer = null, pics = [], itemCode = '';
+  let text = '', answer = null, pics = [], itemCode = '', solution = '';
   for(const tok of tokens){
-    if(tok.type === 'endnote'){ answer = tok.v; if(tok.code) itemCode = tok.code; }
+    if(tok.type === 'endnote'){ answer = tok.v; if(tok.code) itemCode = tok.code; if(tok.sol) solution = tok.sol; }
     else if(tok.type === 'text' || tok.type === 'eq') text += tok.v;
     else if(tok.type === 'pic') pics.push(tok.v);
     else if(tok.type === 'break') text += '\n';
   }
-  return { text, answer, pics, itemCode };
+  return { text, answer, pics, itemCode, solution };
 }
 /* 최상위 표를 «문항 컨테이너»로 볼 것인가, «문항 안의 상자»로 볼 것인가.
 
@@ -7373,7 +7415,7 @@ function hwpParseBlocks(topParas, tablesAsProblems){
       if(tok.type === 'stop'){ stopped = true; break; }
       if(tok.type === 'endnote'){
         if(cur.text.trim()) blocks.push(cur);
-        cur = { text:'', answer: tok.v, itemCode: tok.code || '', pics:[] };
+        cur = { text:'', answer: tok.v, itemCode: tok.code || '', solution: tok.sol || '', pics:[] };
       } else if(tok.type === 'text') cur.text += tok.v;
       else if(tok.type === 'eq') cur.text += tok.v;
       else if(tok.type === 'pic') cur.pics.push(tok.v);
@@ -7454,7 +7496,10 @@ async function parseHwpxToProblems(file){
     }
     /* 코드도 같은 차례로 채운다 — 정답이 이미 붙어 있어도 코드는 비어 있을 수 있다. */
     if(orderedParts.length === bs.length){
-      bs.forEach((b,i)=>{ if(!b.itemCode && orderedParts[i].code) b.itemCode = orderedParts[i].code; });
+      bs.forEach((b,i)=>{
+        if(!b.itemCode && orderedParts[i].code) b.itemCode = orderedParts[i].code;
+        if(!b.solution && orderedParts[i].solution) b.solution = orderedParts[i].solution;
+      });
     }
     return bs;
   };
@@ -7493,8 +7538,8 @@ async function parseHwpxToProblems(file){
   }
   const problems = [];
   for(const b of clean){
-    const problem = { content: b.text.trim(), answer: (b.answer||'').trim(), image: null,
-                      itemCode: b.itemCode || '' };
+    const problem = { content: stripScoreMarks(b.text.trim()), answer: (b.answer||'').trim(), image: null,
+                      itemCode: b.itemCode || '', solution: b.solution || '' };
     const ref = b.pics[0];
     if(ref && idToHref[ref]){
       const imgFile = zip.file(idToHref[ref]);
@@ -7541,7 +7586,8 @@ async function handleExamHwpxFile(fileList){
     if(problems.length === 0){ showToast('인식된 문항이 없습니다.'); return; }
     /* 단원 초안도 여기서 같이 채운다 — 일괄 등록의 이점이 «문항 수만큼 단원 고르기»로 사라지면 안 된다. */
     examDraft.questions = problems.map(p => ({ content: p.content, answer: p.answer, unit,
-      chapter: guessChapter(p.content, unit), image: p.image, itemCode: p.itemCode || '' }));
+      chapter: guessChapter(p.content, unit), image: p.image, itemCode: p.itemCode || '',
+      solution: p.solution || '' }));
     render();
     const noAnswer = problems.filter(p=>!p.answer).length;
     const wm = problems.watermarkedCount || 0;
@@ -11678,8 +11724,48 @@ async function sessionAutoSaveAtt(){
   if(sessionUnsavedCount(classId, date) === 0) return;
   await saveClassAttendance(classId, date);
 }
-async function goSessionDate(delta){
+
+/* 시험 점수도 «넘어가면 저절로 저장된다» (2026-09-04 · 사용자 요청).
+   사용자의 말 — 「시험성적을 입력하고 **점수 저장을 누르지 않아도 과제로 넘어가게 되면**
+   **저장되게** 했으면 좋겠어」. 출결이 이미 그렇게 도는데 **점수만 손으로 눌러야 했다** —
+   한 화면에서 두 규칙이 도는 것이 헷갈린다는 지적이고, 출결 때와 같은 말이다(C-20).
+   ⚠ **점수 단계에서 나갈 때만**이고, **바뀐 것이 없으면 아무 일도 안 한다** —
+     단계를 오갈 때마다 저장이 돌면 토스트가 계속 뜨고 실 DB에 같은 값이 반복해서 쓰인다.
+   ⚠ 화면을 다시 그리기 «전»에 불러야 한다 — 값을 DOM에서 읽으므로 지워지면 못 읽는다. */
+function sessionUnsavedScoreCount(classId, examId){
+  const ex = DATA.exams.find(x=>x.id===examId);
+  if(!ex) return 0;
+  let n = 0;
+  for(const st of classRoster(classId)){
+    const el = document.getElementById('cs-' + examId + '-' + st.studentId);
+    if(!el) continue;
+    const raw = el.value.trim();
+    const cur = examScoreOf(state.allRecords[st.studentId], examId);
+    /* ⚠ **점수가 `null` 인 기록이 실제로 있다.** `String(null)` 은 `"null"` 이라
+       빈 칸과 «다르다»로 세어지고, 그러면 **아무것도 안 고쳤는데 단계를 옮길 때마다 저장이 돈다**
+       (2026-09-04에 실제 데이터에서 나왔다 — 만들어 넣은 값으로는 안 나올 흠이다). */
+    const was = (cur && cur.score != null) ? String(cur.score) : '';
+    if(raw !== was) n++;
+  }
+  return n;
+}
+async function sessionAutoSaveScores(){
+  if((state.sessionStep || 'att') !== 'exam') return;
+  if(!state.allRecordsLoaded) return;
+  const classId = sessionCurrentClassId(state.sessionDate || todayStr());
+  const examId = state.sessionExamId;
+  if(!classId || !examId) return;
+  if(state.sessionExamNew) return;              // 새 시험을 «만드는 중»이면 점수 격자가 없다
+  if(sessionUnsavedScoreCount(classId, examId) === 0) return;
+  await saveSessionScores(classId, examId);
+}
+/* 단계·날짜·반을 옮길 때 부르는 하나. 어느 단계에 있었든 그 단계 것만 저장된다. */
+async function sessionAutoSave(){
   await sessionAutoSaveAtt();
+  await sessionAutoSaveScores();
+}
+async function goSessionDate(delta){
+  await sessionAutoSave();
   state.sessionDate = shiftYmd(state.sessionDate || todayStr(), delta);
   state.sessionClassId = '';
   sessionForgetPicks();
@@ -11691,19 +11777,19 @@ function sessionForgetPicks(){
   state.sessionHwId = ''; state.sessionExamId = ''; state.sessionExamNew = false;
 }
 async function sessionGoToday(){
-  await sessionAutoSaveAtt();
+  await sessionAutoSave();
   state.sessionDate = ''; state.sessionClassId = '';
   sessionForgetPicks();
   render();
 }
 async function goSessionStep(step){
-  if(step !== state.sessionStep) await sessionAutoSaveAtt();
+  if(step !== state.sessionStep) await sessionAutoSave();
   state.sessionStep = step;
   render();
 }
 async function pickSession(classId){
   if(state.sessionClassId === classId){ render(); return; }
-  await sessionAutoSaveAtt();     // 반을 옮기기 «전»에 — 옮기고 나면 어느 반 것인지 모른다
+  await sessionAutoSave();        // 반을 옮기기 «전»에 — 옮기고 나면 어느 반 것인지 모른다
   sessionForgetPicks();
   state.sessionClassId = classId;
   if(state.sessionStep === 'prev') state.sessionStep = 'att';
@@ -12187,7 +12273,8 @@ function sessionExamHTML(classId, date){
          <button class="btn p" onclick="addQuickExam('${classId}')">${iconSvg('plus',14)} 시험 만들기</button>`
       : `<span class="sum">${escHtml(cur.title)} · 점수 <b class="mono">${done}/${roster.length}</b></span>
          <button class="btn p" onclick="saveSessionScores('${classId}','${cur.id}')">점수 저장</button>
-         <span class="hint">빈 칸은 «안 봤다»입니다 — 0점으로 세지 않습니다</span>`}
+         ${/* 🔵 출결과 같은 말을 같은 자리에 둔다 — 한 화면에서 두 규칙이 도는 것처럼 보이면 안 된다. */''}
+         <span class="hint">넘어갈 때 저절로 저장됩니다 · 빈 칸은 «안 봤다»입니다 — 0점으로 세지 않습니다</span>`}
     <span class="spacer"></span>
     <button class="btn p" onclick="goSessionStep('hw')">과제로 ${iconSvg('arrowR',15)}</button>
   </div>`;
@@ -16784,6 +16871,19 @@ function icUsedIn(code){
   });
 }
 
+/* 목록 한 줄에 넣을 «한 줄짜리» 글. 수식 기호는 그대로 두되 줄바꿈만 없앤다. */
+function icOneLine(s, n){
+  return String(s || '').replace(/\s+/g, ' ').trim().slice(0, n || 64);
+}
+/* 🔴 **정답은 짧게 자른다.** 교재 미주를 읽어 온 옛 기록에는 정답 칸에 해설이 통째로
+   들어 있는 것이 있다 — 그대로 그리면 목록 한 줄이 화면을 다 먹는다.
+   ⚠ 이미 저장된 것은 못 고치므로 **그리는 쪽에서 막는다.** */
+function icShortAnswer(a){
+  const s = String(a || '').replace(/\s+/g, ' ').trim();
+  if(!s) return '—';
+  return s.length <= 12 ? s : s.slice(0, 12) + '…';
+}
+
 function icLookup(){
   const el = document.getElementById('ic-q');
   state.icQuery = el ? el.value : '';
@@ -16920,8 +17020,8 @@ function teacherItemCodeHTML(){
           ${vs.map(v=>`<div class="ic-row">
             <b class="mono">${escHtml(v.code)}</b>
             <span class="ic-kind">${escHtml((VARIANT_KINDS.find(x=>x[0]===v.variantKind)||['','?'])[1])}</span>
-            <span class="ic-txt">${escHtml(String(v.content||'').replace(/\s+/g,' ').slice(0,72))}</span>
-            <span class="mono ic-a">${escHtml(v.answer||'—')}</span>
+            <span class="ic-txt">${escHtml(icOneLine(v.content, 76) || '(문제 내용이 없습니다)')}</span>
+            <span class="mono ic-a">${escHtml(icShortAnswer(v.answer))}</span>
           </div>`).join('')}
         </div>` : `<div class="rst-empty" style="margin-top:12px;">아직 이 문항의 변형이 없습니다 —
           <b class="mono">${escHtml(nextVariantCode(root,'N'))}</b> 부터 시작하시면 됩니다.</div>`}`;
@@ -17291,8 +17391,11 @@ function itemCodeStripHTML(b){
   const sp   = code ? splitItemCode(code) : null;
   const root = sp ? sp.origin : code;
   const it   = root ? itemOfCode(root) : null;
-  const vs   = root ? variantsOfCode(root) : [];
-  const mine = sp && sp.isVariant ? vs.find(v=>v.code===code) : null;
+  const all  = root ? variantsOfCode(root) : [];
+  const mine = sp && sp.isVariant ? all.find(v=>v.code===code) : null;
+  /* 🔴 **자기 자신은 «가져올 수 있는 것»에서 뺀다** (2026-09-04에 사용자가 짚었다).
+     이 문항이 N03 인데 목록에 N03 이 떠 있으면 «자기를 자기에게 가져오기»가 된다. */
+  const vs   = all.filter(v => v.code !== code);
 
   if(!code){
     return `<div class="ic-strip">
@@ -17334,8 +17437,11 @@ function itemCodeStripHTML(b){
     ${vs.map(v=>`<div class="ic-row">
       <b class="mono">${escHtml(v.code)}</b>
       <span class="ic-kind">${escHtml((VARIANT_KINDS.find(x=>x[0]===v.variantKind)||['','?'])[1])}</span>
-      <span class="ic-txt">${escHtml(String(v.content||'').replace(/\s+/g,' ').slice(0,64))}</span>
-      <span class="mono ic-a">${escHtml(v.answer||'—')}</span>
+      ${/* 🔴 **보여야 하는 것은 «문제»다.** 예전엔 정답 칸에 해설이 통째로 들어 있어
+             줄마다 풀이가 쏟아졌고, **가져와도 되는 문제인지 알 수가 없었다**(사용자가 겪었다).
+             그래서 문제를 넓게 두고 정답은 짧게 자른다. */''}
+      <span class="ic-txt">${escHtml(icOneLine(v.content) || '(문제 내용이 없습니다)')}</span>
+      <span class="mono ic-a">${escHtml(icShortAnswer(v.answer))}</span>
       <button class="btn q sm" onclick="useVariantFromStore('${b.id}','${escHtml(v.code)}')">가져오기</button>
     </div>`).join('')}
   </div>` : ''}
