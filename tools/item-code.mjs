@@ -279,10 +279,24 @@ for (const r of rows.slice(0, 10)) {
   console.log(`    ${r.code}  ${r.source.book.padEnd(11)} ${(r.answer || '·').padEnd(2)} ${r.noteHead}`);
 }
 
+/* 🔴 **정답과 해설은 장부에 «안 적는다»** (2026-09-03).
+   장부는 배포에 실려 나가는 정적 파일이고, 사이트는 GitHub Pages 라
+   **주소만 알면 누구나 받는다** — 저장소를 비공개로 돌려도 마찬가지다(사이트가 그 파일을 받아 가니까).
+   정답 564개를 거기 두면 **학생이 주소 하나로 시험지 정답을 미리 본다.**
+   ⚠ 위에서 정답을 «읽기는» 한다 — 조판 흠(「[정답]」이 빠졌다 등)을 찾는 데 쓰고 **여기서 버린다.**
+     안 읽으면 그 검사가 통째로 사라지므로 «안 읽는 것»과 «안 적는 것»은 다른 일이다.
+   정답이 필요한 곳(강사의 검토 화면)에는 시험지를 올릴 때 `problemBank` 로 들어온다. */
+const SECRET_FIELDS = ['answer', 'answerKind', 'noteHead'];
+function forLedger(r){
+  const out = {};
+  for(const k of Object.keys(r)) if(!SECRET_FIELDS.includes(k)) out[k] = r[k];
+  return out;
+}
+
 if (OUT) {
   ledger.subject = SUBJECT;
   ledger.book = BOOK;
-  ledger.items = ledger.items.concat(rows).sort((a, b) => a.seq - b.seq);
+  ledger.items = ledger.items.concat(rows.map(forLedger)).sort((a, b) => a.seq - b.seq);
   ledger.count = ledger.items.length;
   ledger.updatedAt = new Date().toISOString().slice(0, 10);
   ledger.chapters = [...new Set(ledger.items.map((x) => x.chapter))].sort();
