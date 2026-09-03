@@ -1832,14 +1832,40 @@
      발견했다 (`.rp-h` 는 리포트 문서의 머리다). 노트의 「같은 사고를 여섯 번 냈다」가 그것이다.
      새 클래스는 index.html «과» ds.css 에서 한 번 찾아본다 — 그게 유일한 방어다.
    ⚠ 학생 앱 안에만 걸리게 `.app.sap` 아래에 둔다. 강사 화면에는 이 단추가 없다. */
+/* 🔵 **«각주»가 아니라 «단추»로 보이게** (2026-09-05 · 사용자 요청).
+     처음엔 회색 글씨에 가는 테두리라 학생 눈에 안 들어왔다. 잉크색 글자와 또렷한 테두리로
+     바꾸고 아이콘을 붙였다. 손가락이 닿는 자리도 32px 로 키웠다.
+   ⚠ 그래도 «주요 액션»은 아니다 — 제출보다 튀면 잘못 눌린다. 채운 색은 안 쓴다. */
 .app.sap .flaw-btn{
-  font-size:11px; color:var(--dim); background:none; border:1px solid var(--line);
-  border-radius:999px; padding:3px 9px; cursor:pointer; line-height:1.5;
+  display:inline-flex; align-items:center; gap:5px;
+  font-size:12px; font-weight:600; color:var(--ink); background:var(--card);
+  border:1px solid var(--accent-line); border-radius:999px;
+  padding:0 11px; min-height:30px; cursor:pointer; line-height:1;
   font-family:inherit; white-space:nowrap;
 }
-.app.sap .flaw-btn:hover{color:var(--sub); border-color:var(--line2); background:var(--hover);}
-.app.sap .flaw-btn.on{color:var(--ink); border-color:var(--accent-line); background:var(--accent-bg);}
+.app.sap .flaw-btn svg{color:var(--no); flex:none;}
+.app.sap .flaw-btn:hover{background:var(--hover); border-color:var(--accent);}
+.app.sap .flaw-btn.on{color:var(--ink); border-color:var(--accent); background:var(--accent-bg);}
 .app.sap .flaw-btn:focus-visible{outline:2px solid var(--accent); outline-offset:2px;}
+/* 이미 알린 문제 — 눌러도 소용없으니 단추가 아니라 «상태»로 보여야 한다 */
+.app.sap .flaw-sent{
+  display:inline-flex; align-items:center; gap:4px; white-space:nowrap;
+  font-size:11.5px; font-weight:600; color:var(--ok);
+  background:var(--okbg); border:1px solid var(--ok-line);
+  border-radius:999px; padding:4px 10px; line-height:1;
+}
+/* 🔵 **한 번도 안 눌러 본 학생에게만** 뜨는 안내. 이것도 눌리는 자리다. */
+.app.sap .flaw-hint{
+  display:flex; align-items:flex-start; gap:8px; width:100%; text-align:left;
+  margin-top:13px; padding:11px 13px; cursor:pointer; font-family:inherit;
+  background:var(--sunk); border:1px dashed var(--accent-line);
+  border-radius:var(--r-md); line-height:1.6;
+}
+.app.sap .flaw-hint svg{color:var(--no); flex:none; margin-top:1px;}
+.app.sap .flaw-hint b{display:block; font-size:12.5px; font-weight:700; color:var(--ink);}
+.app.sap .flaw-hint span{min-width:0; font-size:11.5px; color:var(--sub);}
+.app.sap .flaw-hint:hover{background:var(--hover); border-color:var(--accent);}
+.app.sap .flaw-hint:focus-visible{outline:2px solid var(--accent); outline-offset:2px;}
 .app.sap .flaw-form{
   margin-top:12px; padding:13px; border:1px solid var(--line);
   border-radius:var(--r-md); background:var(--sunk);
@@ -5262,18 +5288,40 @@ function faceReported(b, face){ return openReports(b).some(r=>r.face===face); }
 /* 이 학생이 이 얼굴을 이미 신고했나 — 두 번 누르게 두면 같은 말이 쌓인다. */
 function myReport(b, face, sid){ return openReports(b).find(r=>r.face===face && r.sid===sid); }
 
-/* 학생 화면 카드의 오른쪽 위에 붙는다. 데일리퀴즈·오답숙제가 같은 모양으로 쓴다. */
+/* 학생 화면 카드의 오른쪽 위에 붙는다. 데일리퀴즈·오답숙제가 같은 모양으로 쓴다.
+   🔵 **처음엔 너무 조용했다** (2026-09-05 · 사용자가 짚었다 — 「더 잘보여야 애들이
+     무시하지않고 적극적으로 해줄것같아」). 회색 글씨에 가는 테두리라 «각주»로 읽혔다.
+     → 잉크색 글자 + 아이콘 + 제대로 된 테두리. **누를 것처럼 보여야 누른다.**
+   ⚠ 그렇다고 «주요 액션»으로 만들지는 않았다 — 제출보다 눈에 띄면 잘못 눌린다.
+     이 화면에서 제일 중요한 것은 여전히 문제를 푸는 것이다. */
 function reportBtnHTML(bankId, face){
   const b = DATA.problemBank.find(x=>x.id===bankId);
   const sid = state.currentUser && state.currentUser.studentId;
   if(!b || !sid) return '';
   if(myReport(b, face, sid))
-    return `<span class="badge late" title="선생님이 확인 중입니다">신고함</span>`;
+    return `<span class="flaw-sent">${iconSvg('check', 13)} 알렸습니다</span>`;
   const key = bankId + '|' + face;
   const open = state.reportOpen === key;
   return `<button class="flaw-btn ${open?'on':''}" onclick="toggleReport('${escHtml(key)}')"
-    aria-label="이 문제의 오류 신고">${open ? '닫기' : '오류 신고'}</button>`;
+    aria-label="이 문제의 오류 신고">${open ? '닫기' : iconSvg('alert', 13) + ' 오류 신고'}</button>`;
 }
+
+/* 🔵 **한 번도 안 눌러 본 학생에게만** 한 줄로 알려 준다 (2026-09-05).
+   단추를 키워도 «저게 나를 위한 것»인 줄 모르면 안 누른다. 그런데 늘 띄우면 잔소리가 된다.
+   → **한 번이라도 신고해 본 학생에게는 안 보인다.** 스스로 사라지는 안내가 제일 낫다.
+   ⚠ 이것도 눌리는 자리다 — 「오른쪽 위를 누르세요」라고 글로만 가리키면 한 번 더 헤맨다. */
+function reportHintHTML(bankId, face){
+  const sid = state.currentUser && state.currentUser.studentId;
+  if(!sid) return '';
+  if(state.reportOpen === bankId + '|' + face) return '';
+  const b = DATA.problemBank.find(x=>x.id===bankId);
+  if(!b || myReport(b, face, sid)) return '';
+  const everReported = DATA.problemBank.some(x => (x.reports||[]).some(r => r.sid === sid));
+  if(everReported) return '';
+  return `<button class="flaw-hint" onclick="toggleReport('${escHtml(bankId + '|' + face)}')">
+    ${iconSvg('alert', 14)}<span><b>문제가 이상한가요?</b>알려주면 선생님이 확인해서 고쳐 줍니다</span></button>`;
+}
+
 function toggleReport(key){
   state.reportOpen = state.reportOpen === key ? '' : key;
   state.reportWhy = '';
@@ -9284,6 +9332,7 @@ function stuQuizHTML(c){
     </div>
     <div class="sap-q" style="margin-top:11px;">${problemHTML(face.content)}</div>
     ${imgHTML}
+    ${reportHintHTML(face.bankId, face.face)}
     ${reportFormHTML(face.bankId, face.face)}
     ${reportAckHTML(face.bankId)}
     <div style="margin-top:15px;">
@@ -9375,6 +9424,7 @@ function stuWrongHTML(c){
                   : `<span class="badge late">풀 차례</span>`}
       </div>
       <div class="sap-q" style="margin-top:11px;">${problemHTML(bank.variantContent)}</div>
+      ${reportHintHTML(bank.id, 'legacy')}
       ${reportFormHTML(bank.id, 'legacy')}
       ${reportAckHTML(bank.id)}
       ${vk ? pbImageHTML(bank.id, vk, 'sap-img') : ''}
