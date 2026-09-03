@@ -18236,7 +18236,12 @@ function teacherSettingsHTML(){
   const tab = state.settingsSubTab || 'assistants';
   const subtabs = [['assistants','조교'],['students','학생'],['classes','반'],['consults','상담'],
     ['examrange','시험 일정'],['signalrules','신호 규칙'],['auditlog','변경 이력'],
-    ['cleanup','데이터 정리'],['admin','관리자']];
+    ['admin','관리자']];
+  /* 🔵 **«데이터 정리»를 서브탭에서 뺐다** (2026-09-05 · 사용자 요청 — 「내가 쓸 일이 없는거면 화면에서 가려줘」).
+     세 가지(배점·sqrt·정답 속 해설)가 전부 «쓰는 자리»에서 막혔고, 저장된 기록에도 남은 것이 0건이다.
+     그래서 평소에 쓸 일이 없다. **없애지는 않았다** — 옛 hwpx 를 다시 올리거나 변환기를 또 고치면
+     «이미 저장된 것»을 손볼 유일한 문이라 필요해진다. 설정 › 관리자 안에 접어 두었다.
+     ⚠ subMap 에는 남겨 둔다 — 옛 주소나 남아 있는 state 로 들어와도 빈 화면이 되지 않게. */
   const subMap = {
     assistants: teacherAssistantsHTML,
     students: teacherSettingsStudentsHTML,
@@ -18742,44 +18747,63 @@ async function checkCollections(){
 function teacherSettingsAdminHTML(){
   const open = state.settingsForm==='pw';
   const cc = state.collCheck;
+  /* 🔵 **저절로 한 번 본다 — 「지금 확인」을 누르게 하지 않는다** (2026-09-05 · 사용자 요청).
+     사용자가 물었다 — 「관리자 탭에 있는 저장이 막힌 곳 이야기는 계속 있어야하는거야?」.
+     **없애면 안 된다** — 이 사고를 이미 두 번 겪었다(`variants` 한 번, `items` 한 번).
+     실패가 조용해서, 이 자리가 없으면 「했는데 왜 안 되지」의 답을 또 못 찾는다.
+     🔵 하지만 **늘 뜨는 경고는 아무도 안 본다.** 그래서 «평소에는 한 줄»로 물러나 있고
+       막혔을 때만 크게 말한다 — 09-05 에 정리 도구에서 배운 것과 같은 결이다. */
+  if(!cc) checkCollections();
+  const rows = (cc && !cc.running) ? cc.rows : [];
+  const bad = rows.filter(r => r.status !== '열림');
   /* ⚠ **붙여 주는 규칙은 «막힌 것 전부»여야 한다** (2026-09-05).
      예전에는 variants 한 덩이만 적어 주었는데, 보는 자리는 items 까지 센다.
      그대로 붙여 넣으면 반만 풀리고 **나머지는 또 조용히 실패한다.** */
-  const blocked = (cc && !cc.running && cc.rows.length)
-    ? cc.rows.filter(r=>r.status!=='열림').map(r=>r.name) : NEEDED_COLLECTIONS;
+  const blocked = bad.length ? bad.map(r=>r.name) : NEEDED_COLLECTIONS;
   const rulesText = 'match /databases/{database}/documents {\n'
     + '  // 이미 있는 줄은 그대로 두고, 아래 덩이만 더합니다\n'
     + blocked.map(c => '  match /' + c + '/{doc} {\n'
       + '    allow read, write: if request.auth != null;\n'
       + '  }\n').join('')
     + '}';
-  return `<div class="st-wrap">
-  ${stSec({
-    title:'저장이 막힌 곳', desc:'Firestore 규칙에 없는 컬렉션은 «조용히» 저장에 실패합니다',
-    body: `<div class="st-row">
-        <div class="t"><b>문항 창고 <span class="mono">variants</span></b>
-          <span>「창고에 넣기」가 여기에 씁니다<s>·</s>막혀 있으면 넣어도 새로고침하면 사라집니다</span></div>
-        <div class="v"><button class="btn sm" onclick="checkCollections()">${cc && cc.running ? '보는 중…' : '지금 확인'}</button></div>
-      </div>
-      <div class="st-row">
-        <div class="t"><b>원본 본문 <span class="mono">items</span></b>
-          <span>「교재에서 본문 채우기」가 여기에 씁니다<s>·</s>막혀 있으면 변형을 만들 원본이 안 담깁니다</span></div>
-        <div class="v"><span class="hint">같은 규칙으로 함께 풉니다</span></div>
-      </div>
-      ${cc && !cc.running ? cc.rows.map(r=>`<div class="st-row">
-        <div class="t"><b class="mono">${escHtml(r.name)}</b></div>
+  const okLine = `<div class="st-row">
+      <div class="t"><b>저장 통로</b>
+        <span>${rows.map(r=>escHtml(r.name)).join(' · ')} — 쓰기가 열려 있습니다</span></div>
+      <div class="v"><b style="color:var(--ok);">이상 없음</b>
+        <button class="btn sm" style="margin-left:8px;" onclick="checkCollections()">다시 보기</button></div>
+    </div>`;
+  const badBody = `${rows.map(r=>`<div class="st-row">
+        <div class="t"><b class="mono">${escHtml(r.name)}</b>
+          <span>${r.name==='variants' ? '「창고에 넣기」가 여기에 씁니다' : '「교재에서 본문 채우기」가 여기에 씁니다'}</span></div>
         <div class="v"><b style="color:var(--${r.status==='열림'?'ok':'no'});">${escHtml(r.status)}</b></div>
-      </div>`).join('') : ''}
-      ${cc && !cc.running && cc.rows.some(r=>r.status!=='열림') ? `
+      </div>`).join('')}
       <div class="st-row" style="display:block;">
         <div class="t" style="margin-bottom:8px;"><b>푸는 법</b>
           <span>Firebase 콘솔 → Firestore Database → 「규칙」에 아래를 더하고 «게시»합니다</span></div>
         <pre style="background:var(--sunk);border:1px solid var(--line);border-radius:var(--r-md);
           padding:12px 14px;font-size:12px;line-height:1.7;overflow-x:auto;margin:0;
           font-family:JetBrains Mono,monospace;">${escHtml(rulesText)}</pre>
-        <p class="hint" style="display:block;margin-top:8px;">⚠ 이 규칙은 <b>로그인한 사람이면 누구나</b> 읽고 씁니다
-          — 지금 다른 컬렉션과 같은 조건입니다. 더 좁히는 것은 별건입니다(익명 로그인이라 강사·학생이 구분되지 않습니다).</p>
-      </div>` : ''}`
+        <p class="hint" style="display:block;margin-top:8px;">⚠ <b>바깥 중괄호 «안»에</b> 넣어야 합니다 —
+          다른 <span class="mono">match</span> 덩이 «안»에 들어가면 문법은 맞아도 안 걸립니다(2026-09-05에 실제로 그랬습니다).
+          그리고 이 규칙은 <b>로그인한 사람이면 누구나</b> 읽고 씁니다 — 지금 다른 컬렉션과 같은 조건입니다.</p>
+      </div>`;
+  return `<div class="st-wrap">
+  ${stSec({
+    title: bad.length ? '🔴 저장이 막혀 있습니다' : '저장 통로',
+    desc: bad.length
+      ? 'Firestore 규칙에 없는 컬렉션은 «조용히» 저장에 실패합니다 — 넣어도 새로고침하면 사라집니다'
+      : '새 컬렉션을 만들 때 규칙에 안 넣으면 조용히 실패합니다. 그것만 지켜봅니다',
+    body: (cc && cc.running) ? `<div class="st-row"><div class="t"><b>보는 중…</b></div></div>`
+        : (bad.length ? badBody : okLine)
+  })}
+  ${stSec({
+    title:'데이터 정리', desc:'옛 기록을 한 번에 손보는 곳입니다 — 평소에는 쓸 일이 없습니다',
+    body: `<div class="st-row">
+        <div class="t"><b>지금은 손볼 것이 없습니다</b>
+          <span>배점<s>·</s>sqrt<s>·</s>정답에 붙은 해설은 <b>이제 올릴 때 저절로 걸러집니다</b><s>·</s>여기는 «이미 저장된 것»을 고치는 문입니다</span></div>
+        <div class="v"><button class="btn sm" onclick="stOpen('${state.settingsForm==='cleanup'?'':'cleanup'}')">${state.settingsForm==='cleanup'?'닫기':'열기'}</button></div>
+      </div>
+      ${state.settingsForm==='cleanup' ? `<div style="margin-top:12px;">${teacherCleanupHTML()}</div>` : ''}`
   })}
   ${stSec({
     title:'관리자', desc:'이 계정 하나로 모든 화면에 들어옵니다',
