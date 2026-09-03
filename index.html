@@ -1267,6 +1267,17 @@
 .app .ex-main{flex:1;min-width:0;min-height:0;display:flex;flex-direction:column;}
 .app .ex-body{flex:1;min-height:0;overflow-y:auto;margin-top:16px;}
 
+/* 못 읽고 있을 때의 띠. 화면 «위»에 고정한다 — 어느 화면에 있든 보여야 하고,
+   비어 보이는 «이유»를 그 자리에서 말해 줘야 한다 (2026-09-04). */
+.app .db-trouble{position:fixed;top:0;left:0;right:0;z-index:1200;
+  background:var(--nobg);border-bottom:2px solid var(--no);
+  padding:10px 18px;font-size:12.5px;line-height:1.7;color:var(--ink);}
+/* ⚠ 직계만 블록으로 — 문장 «안»의 <b>까지 블록이 되면 한 문장이 세 줄로 쪼개진다 */
+.app .db-trouble > b{display:block;font-weight:700;}
+.app .db-trouble span{display:block;color:var(--sub);margin-top:2px;}
+.app .db-trouble s{display:block;text-decoration:none;font-size:11px;
+  color:var(--dim);margin-top:3px;font-family:'JetBrains Mono',monospace;}
+
 /* ============================================================
    새 시험지 등록 (`exn-`) — 2026-09-04에 다시 짰다.
    사용자가 한 화면에서 흠 넷을 짚었다: ① 머리말이 같은 말을 두 번 ② 입력칸이 배경과
@@ -3084,6 +3095,47 @@ function warnDbBlocked(key){
   dbBlockWarned.add(key);
   try{ showToast('저장하지 못했습니다 — 이 기록을 불러오지 못한 상태입니다. 새로고침해 주세요.'); }catch(e){}
 }
+
+/* 🔴 **컬렉션에도 같은 보호를 건다** (2026-09-04 · 실제로 겪고 나서 넣었다).
+   위 `dbReadFailed` 는 kv 문서(학생 기록 등)만 지키고 있었고, **컬렉션(`dbSetDoc`)에는
+   아무 보호가 없었다.** 그런데 2026-09-04에 Firestore 읽기 할당량이 소진돼(429) 모든
+   컬렉션이 빈 배열로 읽혔고, 화면에는 「학생 1명·기록 0건」으로 떴다 — 사용자가
+   「그동안의 기록들도 거의다 사라졌어」라고 물어볼 만큼 진짜 삭제처럼 보였다.
+   그 상태에서 무언가를 저장했다면 **못 읽은 것을 모르는 채로 덮어썼을 것이다.**
+   ⚠ 읽기가 다시 성공하면 저절로 풀린다 — 사람이 손댈 것이 없어야 한다. */
+const collectionReadFailed = new Set();
+function markCollectionRead(collection, ok, err){
+  if(ok) collectionReadFailed.delete(collection);
+  else {
+    collectionReadFailed.add(collection);
+    if(/429/.test(String(err && err.message))) dbQuotaHit = true;
+  }
+}
+/* 이 컬렉션에 지금 써도 되나. 못 읽은 적이 있으면 «메모리에 있는 것은 진짜가 아니다». */
+function collectionWriteBlocked(collection){
+  if(!collectionReadFailed.has(collection)) return false;
+  warnDbBlocked('collection:' + collection);
+  console.error('저장을 막았다 — 이 컬렉션을 읽지 못한 적이 있다', collection);
+  return true;
+}
+/* 지금 못 읽고 있는 것이 있나 — 화면 위 띠(#3)가 이걸 본다. */
+function dbReadTrouble(){
+  return collectionReadFailed.size > 0 || dbReadFailed.size > 0;
+}
+/* 할당량 소진(429)은 «오늘 하루»의 일이라 사람 말이 달라야 한다 —
+   새로고침해도 안 풀리고 시간이 지나야 풀린다. 그걸 모르면 계속 새로고침하게 된다. */
+let dbQuotaHit = false;
+function dbTroubleBarHTML(){
+  const names = [...collectionReadFailed].slice(0, 4).join(' · ');
+  return `<div class="db-trouble">
+    <b>지금 자료를 불러오지 못하고 있습니다 — 화면이 비어 보여도 지워진 것이 아닙니다.</b>
+    <span>${dbQuotaHit
+      ? '오늘 치 읽기 한도를 다 썼습니다. 시간이 지나면 저절로 풀립니다(태평양 시간 자정 기준). '
+        + '그때까지 <b>새로 만들거나 지우지 마세요</b> — 저장은 이미 막아 두었습니다.'
+      : '연결이 불안정합니다. 잠시 뒤 새로고침해 주세요. 그때까지 저장은 막아 두었습니다.'}</span>
+    ${names ? `<s>못 읽은 것 — ${escHtml(names)}${collectionReadFailed.size>4?' 외':''}</s>` : ''}
+  </div>`;
+}
 async function dbGet(key, fallback){
   try{
     const token = await withTimeout(getAuthToken(), 8000);
@@ -3138,6 +3190,7 @@ async function dbDelete(key){
 // (Firestore 문서 형식을 그대로 쓰지 않고 예전처럼 value 필드 하나에 JSON 문자열로 넣는 이유는
 //  기존 dbGet/dbSet과 직렬화 방식을 통일해서 변환 과정에서 실수할 여지를 줄이기 위함.)
 async function dbSetDoc(collection, id, data){
+  if(collectionWriteBlocked(collection)) return false;
   try{
     const token = await withTimeout(getAuthToken(), 8000);
     const res = await withTimeout(fetch(FIRESTORE_ROOT + '/' + collection + '/' + encodeURIComponent(id), {
@@ -3198,9 +3251,11 @@ async function dbGetCollection(collection, opts){
       });
       pageToken = json.nextPageToken || '';
     } while(pageToken);
+    markCollectionRead(collection, true);
     return out;
   }catch(e){
     console.error('컬렉션 불러오기 실패', collection, e);
+    markCollectionRead(collection, false, e);
     if(opts && opts.strict) throw e;
     return [];
   }
@@ -3866,10 +3921,15 @@ async function collectionListAll(collectionName){
       (data.documents || []).forEach(doc => out.push(fromFirestoreDoc(doc)));
       pageToken = data.nextPageToken || '';
     } while(pageToken);
-  }catch(e){ console.error('목록 조회 실패', collectionName, e); }
+    markCollectionRead(collectionName, true);
+  }catch(e){
+    console.error('목록 조회 실패', collectionName, e);
+    markCollectionRead(collectionName, false, e);   // 이 컬렉션에는 쓰기를 막는다 (2026-09-04)
+  }
   return out;
 }
 async function collectionDelete(collectionName, id){
+  if(collectionWriteBlocked(collectionName)) return;
   try{
     const token = await withTimeout(getAuthToken(), 8000);
     await withTimeout(fetch(FIRESTORE_ROOT + '/' + collectionName + '/' + id, {
@@ -8578,6 +8638,16 @@ function render(){
       onclick="event.stopPropagation(); closeHwPhoto()">✕</button>
     <img src="${escHtml(state.hwPhotoView)}" alt="제출한 사진 크게 보기"></div>`;
   if(state.toast) html += `<div style="position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1B1B1D;color:#fff;padding:12px 22px;border-radius:30px;font-size:13px;box-shadow:0 6px 20px rgba(0,0,0,.2);z-index:999;">${state.toast}</div>`;
+  /* 🔴 **못 읽었으면 «못 읽었다»고 말한다** (2026-09-04 · 사용자가 겪고 나서 넣었다).
+     읽기가 실패해도 `dbGetCollection` 은 빈 배열을 준다(앱이 서면 안 되니까). 그래서
+     할당량이 소진된 날, 화면은 「학생 1명 · 기록 0건」으로 **아주 멀쩡하게** 그려졌고
+     사용자는 「그동안의 기록들도 거의다 사라졌어」라고 물었다. 지운 것과 못 읽은 것이
+     화면에서 똑같이 보이면 안 된다 — 그 둘은 정반대의 대응을 요구한다.
+     ⚠ 이 띠는 «데이터가 없다»가 아니라 «지금 못 읽고 있다»만 말한다. 저장도 이미
+       막혀 있으므로(collectionWriteBlocked) 여기서는 그 사실을 알려 주기만 한다. */
+  /* ⚠ `.app` 으로 감싼다 — 서식이 `.app .db-trouble` 이라 그냥 붙이면 안 걸린다
+     (토스트가 인라인 서식인 것도 같은 까닭이다). 드로어 층과 같은 방식이다. */
+  if(dbReadTrouble()) html += `<div class="app">${dbTroubleBarHTML()}</div>`;
   /* 🔴 **오른쪽 판의 스크롤 자리를 지킨다** (2026-09-01).
      드로어 안에서 버튼을 누르면 대개 `render()`가 돈다 — 20명 반의 출결 판에서
      열여덟 번째 학생의 상태를 누르면 판이 맨 위로 튀어 «누구를 누르던 중»인지 잃는다.
@@ -8588,6 +8658,11 @@ function render(){
      «어디까지 봤는지»를 잃는다. 손이 빨라야 하는 화면이라 이것이 곧 못 쓰는 화면이 된다. */
   const clsScroll = (app.querySelector('.cls-body') || {}).scrollTop;
   app.innerHTML = html;
+  /* ⚠ 경고 띠는 `position:fixed` 라 **자리를 안 차지한다** — 그대로 두면 화면 맨 위
+     (제목·탭)를 덮는다. 띠의 높이만큼 본문을 내려 준다. 글이 길어져 두 줄이 되어도
+     맞으라고 «재서» 넣는다 (2026-09-04). */
+  const troubleBar = app.querySelector('.db-trouble');
+  app.style.paddingTop = troubleBar ? troubleBar.offsetHeight + 'px' : '';
   if(hwdScroll){ const nb = app.querySelector('.hwd-b'); if(nb) nb.scrollTop = hwdScroll; }
   if(clsScroll){ const cb = app.querySelector('.cls-body'); if(cb) cb.scrollTop = clsScroll; }
   if(window.renderMathInElement){
