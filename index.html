@@ -1272,6 +1272,10 @@
    ⚠ 접두사가 `st-` 가 아니다 — 그건 «설정·폼»(st-h · st-form · st-note)이 이미 쓰고 있고
      `.st-empty` 는 실제로 겹쳤다. 예전에 `rp-` 로 같은 함정을 밟은 적이 있다.
    ============================================================ */
+/* 과목 줄은 «펼치개»라 조금 굵게, 단원 줄은 한 칸 들여써 «그 아래»임을 보인다 */
+.app .ist-subj .n{font-weight:600;display:flex;align-items:center;gap:5px;}
+.app .ist-chap{padding-left:20px;}
+.app .ist-chap .n{font-size:12.5px;}
 .app .ist-books{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;flex-shrink:0;}
 .app .ist-books .pill b{font-variant-numeric:tabular-nums;color:var(--dim);font-weight:600;}
 .app .ist-books .pill.on b{color:#fff;}
@@ -4009,6 +4013,7 @@ let state = {
      ⚠ 단원 «이름»이 아니라 «번호»를 든다 — 이름은 교육과정이 바뀌면 갈리지만
        코드에 박힌 번호는 안 갈린다 (2026-09-04). */
   storeChapter: '',
+  storeSubject: '',          // 왼쪽에서 펼쳐 고른 과목 코드('K2'…). ''이면 전체
   storeBook: '',             // 출처 교재로 좁히기 (''이면 전부)
   storePage: 1,              // 한 쪽에 STORE_PER_PAGE 개씩
   unitImportPreview: null,
@@ -8174,6 +8179,10 @@ const ICON_PATHS = {
   plus: '<path d="M12 5v14M5 12h14"/>',
   chevL: '<path d="M15 5l-7 7 7 7"/>',
   chevR: '<path d="M9 5l7 7-7 7"/>',
+  /* ⚠ **`chevD` 는 이름만 쓰이고 그림이 없었다** (2026-09-04에 넣었다).
+     `iconSvg` 는 모르는 이름이면 `''` 로 «빈 SVG»를 그린다 — 터지지 않아서 눈에 안 띈다.
+     시험지 폴더 머리(`ex-foldh`)가 펼쳐졌을 때 화살표가 사라지던 것이 이것 때문이다. */
+  chevD: '<path d="M5 9l7 7 7-7"/>',
   arrowR: '<path d="M4 12h15M13 6l6 6-6 6"/>',
   // 학생 마이페이지(20-student-app)가 쓰는 것들. 역시 ds.js에서 가져왔다.
   chat: '<path d="M20.5 12.5c0 4.1-3.8 7.5-8.5 7.5a9.8 9.8 0 01-3-.45L4 21l1.3-3.4A7 7 0 013.5 12.5C3.5 8.4 7.3 5 12 5s8.5 3.4 8.5 7.5z"/>',
@@ -18964,7 +18973,35 @@ function storeItems(){
   const all = Object.values(state.itemByCode || {});
   return all.filter(x => x && x.code);
 }
-function storeGoChapter(ch){ state.storeChapter = ch; state.storeBook = ''; state.storePage = 1; render(); }
+/* 코드의 «과목 자리»(K2 · C1 …). 이름이 아니라 «코드»를 열쇠로 쓴다 —
+   이름은 교육과정이 바뀌면 갈리지만 코드는 안 갈린다. */
+function storeSubjectCode(code){
+  return (String(code || '').match(/^([A-Z]{1,2}\d?)-/) || [])[1] || '';
+}
+/* 🔴 **단원 번호는 과목 안에서만 유일하다** (2026-09-04 · 과목 대분류를 넣으며 잡았다).
+   `01` 은 공통수학2 에도 미적분Ⅰ 에도 있다. 그래서 단원으로 거를 때는 **반드시 과목을
+   함께** 봐야 한다 — 지금은 장부에 K2 하나뿐이라 안 드러나지만, 과목이 둘이 되는 순간
+   조용히 섞인다. 드러나기 전에 막는다. */
+function storeMatches(x, subj, ch){
+  if(subj && storeSubjectCode(x.code) !== subj) return false;
+  if(ch && x.chapter !== ch) return false;
+  return true;
+}
+/* 과목을 고르면 그 과목만 보이고 단원 목록이 펼쳐진다. 같은 과목을 다시 누르면 접는다. */
+function storeGoSubject(subj){
+  const same = state.storeSubject === subj;
+  state.storeSubject = same ? '' : subj;
+  state.storeChapter = ''; state.storeBook = ''; state.storePage = 1;
+  render();
+}
+function storeGoChapter(subj, ch){
+  state.storeSubject = subj; state.storeChapter = ch;
+  state.storeBook = ''; state.storePage = 1; render();
+}
+function storeGoAll(){
+  state.storeSubject = ''; state.storeChapter = '';
+  state.storeBook = ''; state.storePage = 1; render();
+}
 function storeGoBook(b){ state.storeBook = b; state.storePage = 1; render(); }
 function storeMore(){ state.storePage = (state.storePage || 1) + 1; render(); }
 /* 정답은 장부에도 `items` 에도 없다(일부러다 — 공개되는 파일이라 뺐다).
@@ -18978,12 +19015,17 @@ function teacherItemStoreHTML(){
      (문항 코드 화면이 쓰는 것과 같은 장치다). */
   if(!state.itemByCode) loadItemStoreIfNeeded().then(()=>{ if(state.itemByCode) render(); });
   const items = storeItems();
-  /* 단원 번호별 개수 — 왼쪽 목록이 쓴다. 코드에 박힌 번호라 이름이 바뀌어도 안 흔들린다. */
-  const byCh = {};
-  for(const it of items) byCh[it.chapter] = (byCh[it.chapter] || 0) + 1;
-  const chapters = Object.keys(byCh).sort();
-  const ch = state.storeChapter || '';
-  let list = ch ? items.filter(x => x.chapter === ch) : items;
+  const subj = state.storeSubject || '';
+  const ch   = state.storeChapter || '';
+  /* 과목별 개수, 그리고 과목마다 단원별 개수. 코드에 박힌 자리라 이름이 바뀌어도 안 흔들린다. */
+  const bySubj = {}, byChOf = {};
+  for(const it of items){
+    const s = storeSubjectCode(it.code);
+    bySubj[s] = (bySubj[s] || 0) + 1;
+    (byChOf[s] = byChOf[s] || {})[it.chapter] = ((byChOf[s] || {})[it.chapter] || 0) + 1;
+  }
+  const subjects = Object.keys(bySubj).sort();
+  let list = items.filter(x => storeMatches(x, subj, ch));
   /* 출처 교재 — 고른 단원 «안에서» 센다. 전체 기준으로 세면 눌렀을 때 0건이 나온다. */
   const byBook = {};
   for(const it of list) byBook[(it.source && it.source.book) || '출처없음'] =
@@ -19034,26 +19076,42 @@ function teacherItemStoreHTML(){
   return `<div class="ex-screen">
     <aside class="ex-list ex-nav">
       <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;padding-bottom:10px;">
-        <span class="t-sec" style="margin:0;">단원</span>
+        <span class="t-sec" style="margin:0;">과목 · 단원</span>
       </div>
       <div class="ex-lbody">
-        <div class="ex-item ${ch===''?'on':''}" onclick="storeGoChapter('')">
+        <div class="ex-item ${subj===''?'on':''}" onclick="storeGoAll()">
           <div class="n">전체</div><div class="m">${items.length}문항</div></div>
-        ${chapters.map(c=>{
-          /* 단원 «이름»은 과목마다 다르다 — 코드 앞자리로 과목을 알아내 이름을 찾는다.
-             못 찾으면 번호만 보인다(장부가 새 과목을 담아도 화면이 안 깨진다). */
-          const anyCode = (items.find(x=>x.chapter===c) || {}).code || '';
-          const subj = CODE_SUBJECTS[(String(anyCode).match(/^([A-Z]{1,2}\d?)-/) || [])[1]] || '';
-          const name = (subj && chapterNameOfNo(subj, c)) || '';
-          return `<div class="ex-item ${ch===c?'on':''}" onclick="storeGoChapter('${c}')">
-            <div class="n">${escHtml(name || (c + '단원'))}</div>
-            <div class="m">${byCh[c]}문항</div></div>`;
+        ${/* 🔵 **과목으로 먼저 가른다** (2026-09-04 · 사용자 요청 — 「단원전에 과목으로 먼저
+             대분류하고 과목선택하면 펼쳐져서 단원선택」). 지금은 장부에 공통수학2 하나뿐이라
+             한 줄뿐이지만, 과목이 늘면 이 층이 없이는 단원이 수십 개로 늘어선다. */''}
+        ${subjects.map(s=>{
+          const name = CODE_SUBJECTS[s] || s;
+          const open = subj === s;
+          const chs = Object.keys(byChOf[s] || {}).sort();
+          return `<div class="ex-item ist-subj ${open?'on':''}" onclick="storeGoSubject('${s}')">
+              <div class="n">${iconSvg(open?'chevD':'chevR',12)} ${escHtml(name)}</div>
+              <div class="m">${bySubj[s]}문항</div>
+            </div>
+            ${!open ? '' : chs.map(c=>{
+              /* 단원 «이름»은 과목마다 다르다 — 못 찾으면 번호만 보인다
+                 (장부가 새 과목을 담아도 화면이 안 깨진다). */
+              const cname = chapterNameOfNo(name, c) || (c + '단원');
+              return `<div class="ex-item ist-chap ${ch===c?'on':''}" onclick="storeGoChapter('${s}','${c}')">
+                <div class="n">${escHtml(cname)}</div>
+                <div class="m">${byChOf[s][c]}문항</div></div>`;
+            }).join('')}`;
         }).join('')}
       </div>
     </aside>
     <main class="ex-main">
       <div class="rst-hrow" style="flex-shrink:0;">
-        <h1 class="t-title">문항 창고<s>${ch ? '이 단원' : '전체'} ${list.length}문항</s></h1>
+        ${/* 어디를 보고 있는지 제목이 말한다 — 왼쪽에서 두 층을 내려왔으므로
+             「전체」인지 「공통수학2」인지 「공통수학2 › 원의 방정식」인지 적어 준다. */''}
+        <h1 class="t-title">문항 창고<s>${escHtml(
+          !subj ? '전체'
+          : !ch  ? (CODE_SUBJECTS[subj] || subj)
+          : (CODE_SUBJECTS[subj] || subj) + ' › ' + (chapterNameOfNo(CODE_SUBJECTS[subj] || subj, ch) || (ch + '단원'))
+        )} ${list.length}문항</s></h1>
       </div>
       ${books.length > 1 ? `<div class="ist-books">
         <a class="pill ${state.storeBook===''?'on':''}" onclick="storeGoBook('')">교재 전체</a>
