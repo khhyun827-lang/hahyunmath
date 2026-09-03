@@ -1082,16 +1082,28 @@
 .app .co-body{flex:1;min-height:0;overflow-y:auto;margin-top:16px;}
 .app .co-side{width:320px;flex-shrink:0;border-left:1px solid var(--line);padding-left:18px;
   margin-left:20px;display:flex;flex-direction:column;min-height:0;}
+/* 🔵 **왼쪽에 놓는 판** (2026-09-05 · 클리닉 승인 대기). 기본 `.co-side`는 늘 «오른쪽」이라
+   가정하고 짜여 있다(위 993행의 오른쪽 bleed도 그중 하나) — `.left`가 전부 거울상으로 뒤집는다.
+   ⚠ `.co-side`보다 뒤에 있어야 한다. 같은 특이도(class 2개)라 **CSS 순서가 이긴다.** */
+.app .co-side.left{border-left:none;border-right:1px solid var(--line);
+  margin-left:-20px;padding-left:20px;margin-right:20px;padding-right:18px;}
 .app .co-sbody{flex:1;min-height:0;overflow-y:auto;margin-top:12px;}
 
 /* 클리닉 — 시간이 자원이다. 목록만으로는 «어디가 비었나»가 안 보인다. */
 .app .cn-week{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;align-items:start;}
 .app .cn-col{min-width:0;}
 .app .cn-ch{text-align:center;font-size:11.5px;font-weight:700;color:var(--sub);padding-bottom:8px;
-  border-bottom:1px solid var(--line);margin-bottom:8px;}
+  border-bottom:1px solid var(--line);margin-bottom:8px;position:relative;border-radius:var(--r-sm);
+  transition:background var(--t);}
+.app .cn-ch:hover{background:var(--hover);}
 .app .cn-ch s{text-decoration:none;display:block;font-family:'JetBrains Mono',monospace;
   font-size:10.5px;color:var(--dim);font-weight:500;margin-top:2px;}
 .app .cn-ch.today{color:var(--accent);}
+/* 그 날짜의 출석 확인이 남았는지 — 지났는데 미확인이면 주황, 전원 확인했으면 초록.
+   날짜를 눌러야 하는 자리라는 것을 알리는 표시이기도 하다. */
+.app .cn-ch .cn-dot{position:absolute;top:2px;right:6px;width:6px;height:6px;border-radius:50%;}
+.app .cn-ch .cn-dot.warn{background:var(--late);}
+.app .cn-ch .cn-dot.done{background:var(--ok);}
 .app .cn-slot{border:1px solid var(--line);border-radius:var(--r-md);background:var(--card);
   padding:8px 9px;margin-bottom:6px;transition:border-color var(--t);}
 .app .cn-slot.free{background:var(--sunk);border-style:dashed;}
@@ -1111,6 +1123,18 @@
 .app .cn-rq .h .ago{margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--dim);}
 .app .cn-rq .w{font-size:12px;color:var(--sub);margin-top:6px;line-height:1.6;}
 .app .cn-rq .a{display:flex;gap:5px;margin-top:9px;flex-wrap:wrap;}
+/* 「이 주에 처리된 신청」을 접었다 펴는 단추 — 기본은 접혀 있다(미확인이 없으면). */
+.app .cn-hist-toggle{display:flex;align-items:center;gap:6px;width:100%;margin-top:20px;
+  padding:9px 10px;background:none;border:none;border-top:1px solid var(--line);
+  font-family:inherit;font-size:12.5px;font-weight:600;color:var(--sub);cursor:pointer;text-align:left;}
+.app .cn-hist-toggle:hover{color:var(--ink);}
+/* 날짜별 출석 확인 판(.hwd 재사용) 안의 학생 한 줄. */
+.app .cn-day-row{display:flex;align-items:center;justify-content:space-between;gap:10px;
+  padding:11px 2px;border-bottom:1px solid var(--line2);}
+.app .cn-day-row .w{min-width:0;font-size:12.5px;}
+.app .cn-day-row .w b{display:block;font-size:13px;}
+.app .cn-day-row .w span{display:block;color:var(--sub);margin-top:2px;}
+.app .cn-day-row .w span s{text-decoration:none;color:var(--dim);margin:0 5px;}
 
 /* 질의응답 — 세로 스택. 질문 하나가 한 덩어리고 답이 그 아래 붙는다. */
 /* 질의응답 — 시안 11 그대로 «좌 목록 + 우 하나» 두 단이다 (2026-08-08에 다시 짰다).
@@ -3883,6 +3907,8 @@ let state = {
   settingsForm: '',       // 설정에서 열린 «추가» 폼 — '' | 'ta' | 'cls' | 'stu' | 'bulk' | 'pw'
   clinicPanel: '',        // 클리닉의 열린 폼 — '' | 'slot' | 'assign'
   clinicSlotDate: '',     // 주간 판의 「+ 시간대」로 열었을 때 미리 채울 날짜
+  clinicDrawerDate: '',   // 날짜를 눌러 연 «출석 확인» 판 — 그 날짜 (2026-09-05)
+  clinicHistoryOpen: null,// 「이 주에 처리된 신청」을 펴 뒀나 — null이면 자동(미확인 있으면 편다)
   noticeWriting: false,   // 공지 «새 공지» 폼이 열려 있나
   noticeSelectedId: null, // 오른쪽에 펼쳐 놓은 공지
   noticeDraft: '',        // 쓰는 중인 본문 — 미리보기가 이걸 본다
@@ -6242,14 +6268,23 @@ async function submitClinicRequest(freeform){
     timeEnd = picked.length>1 ? picked[picked.length-1].time : '';
   }
 
+  /* 🔴 **열린 시간대를 고른 신청은 승인 없이 바로 확정된다** (2026-09-05 · 사용자 요청).
+     「열려져있는 클리닉에 대해서는 나한테 승인여부를 물을 필요없이 … 자동으로 승인」.
+     ⚠ **그런데도 안전하다** — 정원이 찬 시간대는 애초에 `openClinicSlots()`가 골라 놓은
+       목록에 안 뜬다(위에서 학생이 고를 수조차 없다). 그리고 몇 줄 위에서 «지금 이 순간
+       정원이 남았는지»를 한 번 더 확인했다(`full` 검사). 그 관문을 통과했다는 것은
+       «지금 자리가 있다»는 뜻이니, 그대로 승인해도 정원을 넘길 일이 없다.
+     🔵 **«희망 시간 직접 제안»(freeform)만 대기로 남는다** — 그건 아직 없는 시간대를
+       새로 만들자는 제안이라, 교사가 «그 시간을 열지 말지»를 정해야 한다.
+       사용자의 말 그대로다 — 「추가적으로 학생이 시간을 제안하였거나 하면 승인대기로」. */
   const clinic = {id:'cl'+Date.now(), studentId:sid, name:state.currentUser.name, topic,
                   slotId: slotIds[0] || '', slotIds,
-                  day, time, timeEnd, status:'대기', requestedAt:todayStr()};
+                  day, time, timeEnd, status: freeform ? '대기' : '승인', requestedAt:todayStr()};
   DATA.clinics.unshift(clinic);
   await dbSetDoc('clinics', clinic.id, clinic);
   state.stuClinicSlotIds = [];
   showToast(freeform ? '희망 시간을 제안했습니다. 선생님 승인 후 확정됩니다.'
-    : `클리닉 신청이 접수되었습니다.${slotIds.length>1?` (${slotIds.length}개 시간대)`:''}`);
+    : `클리닉이 확정되었습니다.${slotIds.length>1?` (${slotIds.length}개 시간대)`:''}`);
   render();   // 입력칸은 지우지 않고 다시 그린다 — 전체 재렌더링이라 어차피 새 칸이 온다
 }
 
@@ -6352,6 +6387,60 @@ function clinicAttendanceActionsHTML(c){
   return `
     <button class="btn q sm" onclick="updateClinicStatus('${c.id}','대기')">대기로</button>
     <button class="btn q sm" onclick="deleteClinic('${c.id}')">삭제</button>`;   // 취소
+}
+
+/* =================== 클리닉 — 날짜별 출석 확인 판 (2026-09-05) ===================
+   사용자가 재요청했다 — 「시간대별로 누른다거나」가 아니라 **날짜를 택해서 사람별로
+   시간 쓰여져있는 상태에서 출석여부만 체크」**하고 싶다고 했다. 이유도 같이 말했다 —
+   「너무 시간단위로 뭐라하면 클리닉에 대해서 압박을 느낄 학생들을 위해서」.
+   그래서 이 판은 **시간대(슬롯)가 아니라 «그 날짜»를 단위로** 연다. 슬롯이 여럿이어도
+   하루치를 한 판에서 다 처리한다 — 슬롯마다 따로 여닫을 필요가 없다. */
+
+/* 그 날짜에 «확정된» 클리닉 전부 — 슬롯에 딸린 것과 자유 제안(loose) 둘 다 시간 순으로.
+   취소·대기는 안 온다 — 대기는 아직 확정이 아니니 왼쪽 «승인 대기»가 맡는다. */
+function clinicDayBookings(date){
+  return DATA.clinics
+    .filter(c => c.day===date && (c.status==='승인' || c.status==='완료' || c.status==='불참'))
+    .slice().sort((a,b) => slotTimeKey(a.time).localeCompare(slotTimeKey(b.time)));
+}
+/* 날짜 칸에 찍을 점. **지나야(오늘이거나 그 전) 뜻이 있다** — 내일 것을 «미확인»이라고
+   하면 아직 오지도 않은 일을 다그치는 셈이다. 예약만 있고 아직 아무도 안 눌렀으면 주황,
+   전원 출석/불참으로 정했으면 초록, 그 날짜에 확정된 것이 없으면 점을 안 찍는다. */
+function clinicDayCheckState(date){
+  if(date > todayStr()) return null;
+  const list = clinicDayBookings(date);
+  if(!list.length) return null;
+  return list.every(c => c.status==='완료' || c.status==='불참') ? 'done' : 'warn';
+}
+function clinicOpenDayDrawer(date){ state.clinicDrawerDate = date; render(); }
+function clinicCloseDayDrawer(){ state.clinicDrawerDate = ''; render(); }
+/* ⚠ **여기서는 두 단추만 준다(출석·불참)** — 「대기로」·「삭제」·「승인으로 되돌리기」 같은
+   드문 손질은 아래 「이 주에 처리된 신청」(clinicAttendanceActionsHTML)에 그대로 남겨 둔다.
+   이 판은 «가볍게, 빨리»가 목적이라 자주 쓸 것만 놓는다. */
+function clinicDayDrawerHTML(date){
+  const list = clinicDayBookings(date);
+  const dow = WEEKDAY_LABEL[new Date(date+'T00:00:00').getDay()];
+  const unchecked = list.filter(c=>c.status==='승인').length;
+  return `<div class="hwd-back" onclick="clinicCloseDayDrawer()"></div>
+    <aside class="hwd">
+      <div class="hwd-h" style="position:relative;">
+        <div class="t">${escHtml(date)} ${dow}요일</div>
+        <div class="m">확정 <b class="mono">${list.length}</b>명${unchecked ? `<s>·</s>미확인 <b class="mono" style="color:var(--late);">${unchecked}</b>명` : ''}</div>
+        <button class="x" onclick="clinicCloseDayDrawer()" title="닫기 (Esc)">×</button>
+      </div>
+      <div class="hwd-b">
+        ${list.length===0
+          ? `<div style="padding:44px 0;text-align:center;color:var(--dim);font-size:12.5px;">이 날짜엔 확정된 클리닉이 없습니다.</div>`
+          : list.map(c=>`<div class="cn-day-row">
+              <div class="w"><b class="mono">${escHtml(slotTimeLabel(c.time) || '시간 미정')}</b>
+                <span>${escHtml(c.name)}${c.topic ? '<s>·</s>'+escHtml(c.topic) : ''}</span></div>
+              <div class="seg wide">
+                <button class="${c.status==='완료'?'on ok':''}" onclick="updateClinicStatus('${c.id}','완료')">출석</button>
+                <button class="${c.status==='불참'?'on no':''}" onclick="updateClinicStatus('${c.id}','불참')">불참</button>
+              </div>
+            </div>`).join('')}
+      </div>
+    </aside>`;
 }
 
 /* **승인된 클리닉은 슬롯을 갖는다.** 학생이 직접 제안한 시간(slotId 없음)을 승인하면
@@ -8145,6 +8234,7 @@ document.addEventListener('keydown', e=>{
   if(state.hwNewOpen){ e.preventDefault(); hwCloseNew(); return; }
   if(state.chubConsultId){ e.preventDefault(); chubCloseConsult(); return; }
   if(state.stuEditId){ e.preventDefault(); stuEdit(null); }
+  if(state.clinicDrawerDate){ e.preventDefault(); clinicCloseDayDrawer(); return; }
 });
 
 let lastSyncedHash = null;
@@ -8206,6 +8296,9 @@ function render(){
      && state.teacherTab==='settings' && (state.settingsSubTab||'assistants')==='students'
      && !state.studentDetailId)
     drawers += studentAccountDrawerHTML();
+  /* 클리닉 — 날짜를 눌러 여는 «출석 확인» 판 (2026-09-05). */
+  if(state.clinicDrawerDate && state.view==='teacher' && state.teacherTab==='clinic')
+    drawers += clinicDayDrawerHTML(state.clinicDrawerDate);
   /* 🔴 `.app`으로 감싸는 이유는 CSS 쪽 `.hwd-layer` 주석에 적어 뒀다 — 글자 크기가 걸린다. */
   if(drawers) html += `<div class="app hwd-layer">${drawers}</div>`;
   /* 비밀번호 변경. 학생·조교 어느 화면에서 눌렀든 여기 한 곳에서 그린다. */
@@ -10706,7 +10799,14 @@ function stuClinicHTML(c){
       ${clinicSlotIds(cl).length===0 ? '<span class="badge">직접 제안</span>' : ''}
     </div>
     <div style="font-size:12.5px;color:var(--sub);margin-top:9px;line-height:1.7;">${escHtml(cl.topic||'')}</div>
-    ${cl.status==='대기' ? `<button class="mbtn q" style="margin-top:8px;"
+    ${/* 🔵 **자동 승인이면 «취소»가 사라지면 안 된다** (2026-09-05).
+         원래는 '대기' 일 때만 취소 단추가 있었다 — 그때는 선생님이 승인하기 전
+         잠깐의 틈이었을 뿐이라 크게 안 보였다. 그런데 이제 열린 시간대는
+         곧장 '승인'으로 확정되니, '대기'만 보면 학생이 스스로 취소할 길이
+         거의 사라진다(신청 = 확정이 되어버려서). 그래서 앞으로 있을 '승인'
+         건도 취소할 수 있게 넓힌다 — 지난 날짜(이미 지나간 클리닉)는 취소할
+         것이 없으니 뺀다. */''}
+    ${(cl.status==='대기' || (cl.status==='승인' && cl.day >= todayStr())) ? `<button class="mbtn q" style="margin-top:8px;"
       onclick="cancelClinicRequest('${cl.id}')">신청 취소</button>` : ''}
   </div>`).join('')}` : ''}
 
@@ -16085,8 +16185,15 @@ function teacherClinicHTML(){
       /* 슬롯 없이 잡힌 것(학생 직접 제안 · 교사 직접 배정)도 그날 칸에 세운다 —
          판에 안 보이면 교사가 이미 잡아 둔 시간을 모르고 이중으로 앉힌다. */
       const loose = DATA.clinics.filter(c=>clinicSlotIds(c).length===0 && c.day===d && c.status!=="취소");
+      /* 🔵 **날짜 머리를 누르면 그날의 출석 확인 판이 열린다** (2026-09-05).
+         「시간대별로」가 아니라 «날짜를 택해서» 확인하고 싶다고 했다 — 슬롯을 하나씩
+         누르게 하면 결국 시간 단위로 다그치는 것과 같아진다. 점 하나로 «미확인이 남았나»만
+         먼저 보여 주고, 실제 체크는 날짜 단위 판에서 한 번에 한다. */
+      const dayState = clinicDayCheckState(d);
       return `<div class="cn-col">
-        <div class="cn-ch ${isToday?'today':''}">${WEEKDAY_LABEL[new Date(d+'T00:00:00').getDay()]}<s>${d.slice(5).replace('-','/')}</s></div>
+        <div class="cn-ch ${isToday?'today':''}" style="cursor:pointer;" onclick="clinicOpenDayDrawer('${d}')" title="${d} 출석 확인">
+          ${WEEKDAY_LABEL[new Date(d+'T00:00:00').getDay()]}<s>${d.slice(5).replace('-','/')}</s>
+          ${dayState ? `<i class="cn-dot ${dayState}"></i>` : ''}</div>
         ${list.length===0 && loose.length===0 ? '<div class="cn-none">—</div>' : ''}
         ${list.map(s=>{
             const n = clinicSlotBookedCount(s.id); const full = n >= s.capacity;
@@ -16111,12 +16218,18 @@ function teacherClinicHTML(){
     }).join('')}
   </div>`;
 
-  const side = `<aside class="co-side">
+  /* 🔵 **왼쪽으로 옮겼다** (2026-09-05 · 사용자 요청).
+     「승인대기를 왼쪽으로 보낸다던가」. 그리고 자동 승인(아래 `submitClinicRequest`) 뒤로는
+     여기 뜨는 것이 «학생이 직접 제안한 시간»(승인해야 자리가 생긴다)뿐이라 대개 비어 있다 —
+     그래서 **비어 있을 때는 조용히**, 있을 때만 눈에 띄게 뒀다(정리 도구·저장 통로와 같은 결).
+     ⚠ 완전히 지우지는 않았다 — 자동 승인이 못 잡는 경우(직접 제안)가 남아 있는 한
+       늘 볼 수 있는 자리가 있어야 놓치지 않는다. */
+  const side = `<aside class="co-side left">
     <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
       <span style="font-size:13px;font-weight:700;">승인 대기</span>
       ${waiting.length ? `<span class="badge late">${waiting.length}</span>` : '<span class="badge">0</span>'}
     </div>
-    <div style="font-size:11.5px;color:var(--dim);margin-top:7px;flex-shrink:0;">신호가 있는 학생을 위로 올렸습니다</div>
+    <div style="font-size:11.5px;color:var(--dim);margin-top:7px;flex-shrink:0;">직접 제안한 시간만 여기 옵니다 — 열린 시간대는 자동으로 확정됩니다</div>
     <div class="co-sbody">
       ${sorted.length===0 ? '<div style="padding:32px 0;text-align:center;color:var(--dim);font-size:12.5px;">대기 중인 신청이 없습니다.</div>'
       : sorted.map(c=>{
@@ -16147,10 +16260,18 @@ function teacherClinicHTML(){
      ⚠ 예전에는 **날짜와 무관하게 전부** 나열했다. 바로 위 주간 판은 주 단위로 넘겨 보는데
         이 목록만 전 기간이라 짝이 안 맞았고, 주가 지나도 지워지지 않고 계속 쌓였다.
         지금은 **보고 있는 그 주의 것만** 선다 — 지난 주 것은 ←로 넘겨서 본다.
-     («승인 대기»는 옆 칸에 주와 무관하게 늘 뜬다. 처리 안 된 것을 숨기면 안 된다.) */
+     («승인 대기»는 왼쪽 칸에 주와 무관하게 늘 뜬다. 처리 안 된 것을 숨기면 안 된다.)
+
+     🔵 **날짜 판(드로어)이 생긴 뒤로는 이 목록이 «빠른 처리»가 아니라 «기록 훑어보기»다.**
+     그래서 상시로 펴 두지 않는다 — 사용자 결정: **이 주에 미확인이 하나라도 있으면 펴서 시작**,
+     없으면 접어 둔다. `state.clinicHistoryOpen`이 null(아직 손대지 않음)일 때만 이 자동 규칙을
+     쓰고, 사람이 한 번 열고 닫으면 그 뒤로는 그 뜻을 따른다(값을 뒤집을 때까지). */
   const others = DATA.clinics.filter(c=>c.status!=='대기' && days.includes(c.day));
+  const weekUnchecked = days.some(d => clinicDayCheckState(d) === 'warn');
+  const historyOpen = state.clinicHistoryOpen===null ? weekUnchecked : state.clinicHistoryOpen;
 
   return `<div class="co-screen">
+    ${side}
     <main class="co-main">
       <div class="rst-hrow" style="flex-shrink:0;">
         <h1 class="t-title">클리닉<s>${start} — ${days[6]}</s></h1>
@@ -16227,8 +16348,12 @@ function teacherClinicHTML(){
       </div>`}
 
       <div class="co-body">${grid}
-        ${others.length ? `<div class="t-sec" style="margin-top:24px;">이 주에 처리된 신청 ${others.length}건</div>
-        ${others.map(c=>`<div class="cn-rq">
+        ${others.length ? `
+        <button class="cn-hist-toggle" onclick="state.clinicHistoryOpen=${historyOpen?'false':'true'}; render()">
+          ${iconSvg(historyOpen?'chevL':'chevR',12)} 이 주에 처리된 신청 ${others.length}건
+          ${weekUnchecked ? '<span class="badge late" style="margin-left:6px;">미확인 있음</span>' : ''}
+        </button>
+        ${!historyOpen ? '' : others.map(c=>`<div class="cn-rq">
           <div class="h"><b>${escHtml(c.name)}</b>
             <span class="status-badge"><span class="badge ${clinicStatusTone(c.status)}">${c.status}</span></span>
             <span class="ago">${c.requestedAt||''}</span></div>
@@ -16238,7 +16363,6 @@ function teacherClinicHTML(){
         <div class="rst-pad"></div>
       </div>
     </main>
-    ${side}
   </div>`;
 }
 
