@@ -1267,6 +1267,37 @@
 .app .ex-main{flex:1;min-width:0;min-height:0;display:flex;flex-direction:column;}
 .app .ex-body{flex:1;min-height:0;overflow-y:auto;margin-top:16px;}
 
+/* ============================================================
+   문항 창고 — 훑어보기 (`ist-`) · 2026-09-04
+   ⚠ 접두사가 `st-` 가 아니다 — 그건 «설정·폼»(st-h · st-form · st-note)이 이미 쓰고 있고
+     `.st-empty` 는 실제로 겹쳤다. 예전에 `rp-` 로 같은 함정을 밟은 적이 있다.
+   ============================================================ */
+.app .ist-books{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;flex-shrink:0;}
+.app .ist-books .pill b{font-variant-numeric:tabular-nums;color:var(--dim);font-weight:600;}
+.app .ist-books .pill.on b{color:#fff;}
+.app .ist-empty{padding:44px 0;text-align:center;font-size:12.5px;color:var(--dim);line-height:1.8;}
+.app .ist-item{background:var(--card);border:1px solid var(--line);border-radius:var(--r-md);
+  padding:13px 15px;margin-bottom:10px;}
+.app .ist-ih{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:9px;}
+.app .ist-ih b{font-size:12.5px;color:var(--accent);}
+.app .ist-src{font-size:11px;color:var(--sub);background:var(--sunk);
+  border-radius:var(--r-sm);padding:2px 7px;}
+.app .ist-scene{font-size:11px;color:var(--dim);}
+/* 본문은 «다 보인다» — 사용자가 그렇게 정했다(「문제가 완벽하게 다 보여지는 구조」).
+   줄바꿈을 지켜야 조건·보기 상자가 표로 살아난다 (problemHTML 과 같은 까닭). */
+.app .ist-body{font-size:13px;line-height:1.9;white-space:pre-wrap;overflow-x:auto;}
+.app .ist-body.none{font-size:11.5px;color:var(--dim);line-height:1.7;}
+.app .ist-fig{display:block;max-width:340px;max-height:260px;margin-top:10px;
+  border:1px solid var(--line);border-radius:var(--r-sm);}
+.app .ist-if{display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  margin-top:11px;padding-top:9px;border-top:1px solid var(--line2);font-size:11.5px;color:var(--dim);}
+.app .ist-ans b{color:var(--ink);font-weight:600;margin-left:2px;}
+.app .ist-vs b{color:var(--ink);font-weight:600;}
+.app .ist-vs.none{color:var(--dim);}
+.app .ist-vk{font-size:10.5px;color:var(--sub);background:var(--sunk);
+  border-radius:var(--r-sm);padding:1px 6px;}
+.app .ist-used s{text-decoration:none;color:var(--dim);margin-left:5px;}
+
 /* 못 읽고 있을 때의 띠. 화면 «위»에 고정한다 — 어느 화면에 있든 보여야 하고,
    비어 보이는 «이유»를 그 자리에서 말해 줘야 한다 (2026-09-04). */
 .app .db-trouble{position:fixed;top:0;left:0;right:0;z-index:1200;
@@ -3974,6 +4005,12 @@ let state = {
   unitBankLoaded: false,
   unitBankLoading: false,
   unitBankFilter: '',
+  /* 문항 창고(훑어보기) — 왼쪽에서 고른 단원 코드('01'…, ''이면 전체)와 «더 보기» 쪽수.
+     ⚠ 단원 «이름»이 아니라 «번호»를 든다 — 이름은 교육과정이 바뀌면 갈리지만
+       코드에 박힌 번호는 안 갈린다 (2026-09-04). */
+  storeChapter: '',
+  storeBook: '',             // 출처 교재로 좁히기 (''이면 전부)
+  storePage: 1,              // 한 쪽에 STORE_PER_PAGE 개씩
   unitImportPreview: null,
   studentImportPreview: null,
   importProgress: null,
@@ -11600,7 +11637,7 @@ const TEACHER_SUBNAV = {
   ],
   /* 「제출 현황」은 시험지 화면의 우측 칸으로 흡수했다 (시안 07). 서브탭에서 뺐다. */
   '오답': [
-    ['검토', 'review'], ['시험지', 'exams'], ['보충문제 창고', 'unitbank'], ['문항 코드', 'itemcode']
+    ['검토', 'review'], ['시험지', 'exams'], ['문항 창고', 'unitbank'], ['문항 코드', 'itemcode']
   ],
   /* 「출석 도장」이 여기 있는 이유 — «신호»는 지표를 세우는 화면이고 «명단»은 평가하는
      화면이라, 놀이를 그 옆에 두면 놀이가 그 성격을 물려받는다. 소통이 제일 안 다치는 자리다. */
@@ -11652,7 +11689,7 @@ function teacherTabBodyHTML(){
   if(t==='checkin')     return teacherCheckinHTML();
   if(t==='exams')       return teacherExamsHTML();
   if(t==='review')      return teacherReviewHTML();
-  if(t==='unitbank')    return teacherUnitBankHTML();
+  if(t==='unitbank')    return teacherItemStoreHTML();
   if(t==='itemcode')    return teacherItemCodeHTML();
   if(t==='settings')    return teacherSettingsHTML();
   return teacherClassHubHTML();
@@ -18904,15 +18941,143 @@ document.addEventListener('keydown', e=>{
   else if(k==='r'){ e.preventDefault(); if(!state.aiProcessing) regenerateOneWithAI(b.id); }
 });
 
-/* =================== 보충문제 창고 (design-v1/08-bank) ===================
-   역할은 «단원별로 쌓아 두고 필요할 때 꺼낸다». 학생이 어떤 단원을 틀리면
-   같은 단원의 문항이 자동으로 검색되어 오답숙제로 나간다 — 그래서 **단원이 1차 축**이다.
+/* =================== 문항 창고 — 훑어보기 (2026-09-04) ===================
+   🔵 **이 탭은 원래 「보충문제 창고」(unitbank)였다.** 사용자가 정했다 —
+   「앞으로 모든 문항은 코드화 … 다만 그 창고의 구조가 지금 코드검색의 구조보다 보기가
+    직관적이고 좋아서 어떻게 활용할 방법이 있을지」.
+   그래서 **골격은 그대로 두고 내용물만 갈아끼웠다** — 왼쪽 단원 목록 + 오른쪽 목록이라는
+   짜임은 살리고, 담는 것을 «손으로 넣은 보충문제»에서 «코드가 붙은 장부 문항»으로 바꿨다.
 
-   예전 화면은 «추가하는 방법 세 가지»(직접·hwpx·엑셀)가 위에 길게 깔리고
-   창고 목록이 맨 아래 있었다. 시험지와 같은 문제였다 — 쌓는 일은 가끔, 보는 일은 매번이다.
-   → 좌측에 단원 목록을 세우고, 추가 경로는 「문항 추가」 모드로 접었다.
+   🔵 **두 화면은 묻는 것이 다르다.**
+   · 문항 코드 탭 = «이 코드가 뭐지» — 코드를 알아야 쓴다(찾아가는 화면).
+   · 이 화면      = «3단원에 뭐가 있지» — 코드를 몰라도 쓴다(훑어보는 화면).
+   564개가 수천 개가 되면 뒤쪽이 없으면 창고를 눈으로 볼 길이 없어진다.
 
-   업로드 미리보기(hwpx·엑셀 파싱 결과 확인)도 «구조»를 손대지 않았다. */
+   🔴 **목록은 Firestore를 한 건도 안 읽는다.** 코드·단원·출처·SCENE 은 전부 정적 장부
+   (`codes/*.json` → `state.itemByCode`)에서 온다. 본문·그림만 `items` 컬렉션이 필요하고
+   그건 한 번 읽으면 564개가 통째로 들어오므로, 한 개를 보든 한 단원을 다 펼치든
+   **읽기 비용이 같다.** 2026-09-04에 할당량이 터진 뒤라 이 성질이 특히 중요하다.
+   ⚠ 본문을 못 읽었을 때도 목록은 그대로 서야 한다 — 그때는 «본문 없음»으로만 적는다. */
+const STORE_PER_PAGE = 30;
+/* 장부에서 이 화면이 쓸 꼴로 — 코드에서 과목을 떼어 내고 단원 번호를 붙인다. */
+function storeItems(){
+  const all = Object.values(state.itemByCode || {});
+  return all.filter(x => x && x.code);
+}
+function storeGoChapter(ch){ state.storeChapter = ch; state.storeBook = ''; state.storePage = 1; render(); }
+function storeGoBook(b){ state.storeBook = b; state.storePage = 1; render(); }
+function storeMore(){ state.storePage = (state.storePage || 1) + 1; render(); }
+/* 정답은 장부에도 `items` 에도 없다(일부러다 — 공개되는 파일이라 뺐다).
+   시험지에 나간 적이 있으면 problemBank 가 알고 있으므로 거기서만 가져온다. */
+function storeAnswerOf(code){
+  const b = DATA.problemBank.find(x => x.itemCode === code && x.originalAnswer);
+  return b ? b.originalAnswer : '';
+}
+function teacherItemStoreHTML(){
+  /* ⚠ 다 실리면 «다시 그려야» 한다 — 안 그리면 처음 연 사람은 빈 창고를 본다
+     (문항 코드 화면이 쓰는 것과 같은 장치다). */
+  if(!state.itemByCode) loadItemStoreIfNeeded().then(()=>{ if(state.itemByCode) render(); });
+  const items = storeItems();
+  /* 단원 번호별 개수 — 왼쪽 목록이 쓴다. 코드에 박힌 번호라 이름이 바뀌어도 안 흔들린다. */
+  const byCh = {};
+  for(const it of items) byCh[it.chapter] = (byCh[it.chapter] || 0) + 1;
+  const chapters = Object.keys(byCh).sort();
+  const ch = state.storeChapter || '';
+  let list = ch ? items.filter(x => x.chapter === ch) : items;
+  /* 출처 교재 — 고른 단원 «안에서» 센다. 전체 기준으로 세면 눌렀을 때 0건이 나온다. */
+  const byBook = {};
+  for(const it of list) byBook[(it.source && it.source.book) || '출처없음'] =
+    (byBook[(it.source && it.source.book) || '출처없음'] || 0) + 1;
+  const books = Object.keys(byBook).sort((a,b)=> byBook[b] - byBook[a]);
+  if(state.storeBook) list = list.filter(x => ((x.source && x.source.book) || '출처없음') === state.storeBook);
+  list = list.slice().sort((a,b)=> a.code < b.code ? -1 : 1);
+
+  const shown = list.slice(0, (state.storePage || 1) * STORE_PER_PAGE);
+  const bodyLoaded = !!state.itemBody;
+
+  const card = it => {
+    const body = (state.itemBody || {})[it.code] || null;
+    const vs   = variantsOfCode(it.code);
+    const used = icUsedIn(it.code);
+    const ans  = storeAnswerOf(it.code);
+    const kinds = VARIANT_KINDS.map(([k,label])=>{
+      const n = vs.filter(v=>(v.variantKind||'N')===k).length;
+      return n ? `<span class="ist-vk">${label} ${n}</span>` : '';
+    }).join('');
+    return `<div class="ist-item">
+      <div class="ist-ih">
+        <b class="mono">${escHtml(it.code)}</b>
+        <span class="ist-src">${escHtml((it.source && it.source.book) || '출처없음')}</span>
+        ${it.scene ? `<span class="ist-scene">${escHtml(it.scene)}</span>` : ''}
+        <span class="spacer"></span>
+        <button class="btn q sm" onclick="goTeacherTab('itemcode'); icPick('${escHtml(it.code)}')"
+          title="문항 코드 화면에서 열기">코드 화면</button>
+        <button class="btn q sm" onclick="icCopy('${escHtml(it.code)}')">복사</button>
+      </div>
+      ${body && body.content
+        ? `<div class="ist-body">${escHtml(body.content)}</div>`
+        : `<div class="ist-body none">${bodyLoaded
+            ? '본문이 아직 없습니다 — 「문항 코드 › 교재에서 본문 채우기」로 hwpx 를 올리면 채워집니다.'
+            : '본문을 불러오지 못했습니다.'}</div>`}
+      ${body && body.image && body.image.url
+        ? `<img class="ist-fig" src="${escHtml(body.image.url)}" loading="lazy" alt="">` : ''}
+      <div class="ist-if">
+        ${ans ? `<span class="ist-ans">정답 <b>${escHtml(ans)}</b></span>` : ''}
+        ${vs.length ? `<span class="ist-vs">변형 <b>${vs.length}</b></span>${kinds}`
+                    : `<span class="ist-vs none">변형 없음</span>`}
+        ${used.length ? `<span class="ist-used">출제 ${used.length}회<s>${
+            escHtml(used.slice(0,2).map(u=>`${u.title} ${u.no}번`).join(' · '))}${used.length>2?' 외':''}</s></span>` : ''}
+      </div>
+    </div>`;
+  };
+
+  return `<div class="ex-screen">
+    <aside class="ex-list ex-nav">
+      <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;padding-bottom:10px;">
+        <span class="t-sec" style="margin:0;">단원</span>
+      </div>
+      <div class="ex-lbody">
+        <div class="ex-item ${ch===''?'on':''}" onclick="storeGoChapter('')">
+          <div class="n">전체</div><div class="m">${items.length}문항</div></div>
+        ${chapters.map(c=>{
+          /* 단원 «이름»은 과목마다 다르다 — 코드 앞자리로 과목을 알아내 이름을 찾는다.
+             못 찾으면 번호만 보인다(장부가 새 과목을 담아도 화면이 안 깨진다). */
+          const anyCode = (items.find(x=>x.chapter===c) || {}).code || '';
+          const subj = CODE_SUBJECTS[(String(anyCode).match(/^([A-Z]{1,2}\d?)-/) || [])[1]] || '';
+          const name = (subj && chapterNameOfNo(subj, c)) || '';
+          return `<div class="ex-item ${ch===c?'on':''}" onclick="storeGoChapter('${c}')">
+            <div class="n">${escHtml(name || (c + '단원'))}</div>
+            <div class="m">${byCh[c]}문항</div></div>`;
+        }).join('')}
+      </div>
+    </aside>
+    <main class="ex-main">
+      <div class="rst-hrow" style="flex-shrink:0;">
+        <h1 class="t-title">문항 창고<s>${ch ? '이 단원' : '전체'} ${list.length}문항</s></h1>
+      </div>
+      ${books.length > 1 ? `<div class="ist-books">
+        <a class="pill ${state.storeBook===''?'on':''}" onclick="storeGoBook('')">교재 전체</a>
+        ${books.map(b=>`<a class="pill ${state.storeBook===b?'on':''}" onclick="storeGoBook('${escHtml(b)}')">
+          ${escHtml(b)} <b>${byBook[b]}</b></a>`).join('')}
+      </div>` : ''}
+      <div class="ex-body">
+        ${!state.itemByCode ? `<div class="ist-empty">장부를 불러오는 중…</div>`
+        : list.length===0 ? `<div class="ist-empty">이 조건에 맞는 문항이 없습니다.</div>`
+        : shown.map(card).join('') + (shown.length < list.length
+            ? `<button class="btn" style="width:100%;margin-top:12px;" onclick="storeMore()">
+                 ${list.length - shown.length}개 더 보기</button>`
+            : '')}
+        <div class="rst-pad"></div>
+      </div>
+    </main>
+  </div>`;
+}
+
+/* =================== 보충문제 창고 (구버전 · 화면에서는 뺐다) ===================
+   ⚠ **데이터와 뒷길은 살아 있다** — `submitWrongAnswers` 가 «코드가 없는 문항»을 만났을 때
+     `DATA.unitBank` 에서 하나 뽑는 길이 아직 있다(2026-09-04). 다만 사용자가 모든 문항을
+     코드화하기로 해서 **넣고 빼는 화면은 더 안 쓴다** — 그래서 탭에서 내렸다.
+     아래 함수들은 그 뒷길과 옛 데이터를 위해 남겨 둔 것이다. */
 function teacherUnitBankHTML(){
   loadUnitBankIfNeeded();
   const filter = state.unitBankFilter;
