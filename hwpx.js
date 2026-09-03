@@ -64,6 +64,16 @@ function convertOverToFrac(s){
               continue;
             }
           }
+          /* ⚠ **분모에 중괄호가 없는 꼴도 온다** — `{sqrt{5}} over 5` (2026-09-05).
+             분자만 중괄호면 위 갈래에 안 걸려 `over` 가 글자로 남는다. 분모가 «숫자 하나 또는
+             낱글자»일 때만 받는다 — 그보다 넓히면 어디까지가 분모인지 알 수 없다. */
+          const bare = s.slice(k).match(/^([0-9]+|[A-Za-z])/);
+          if(bare){
+            const num = convertOverToFrac(s.slice(i+1, close1));
+            result += '\\frac{'+num+'}{'+bare[1]+'}';
+            i = k + bare[1].length;
+            continue;
+          }
         }
       }
     }
@@ -99,6 +109,16 @@ function convertHwpEq(script){
      학교 시험지에는 없던 표기라 여태 안 드러났다 — `90 DEG` 는 「DEG」 라는 글자로,
      `l prime` 은 「prime」 이라는 글자로 그대로 화면에 떴다. */
   s = s.replace(/\bDEG\b/gi, '^{\\circ}');
+  /* 🔵 교재에서 더 나온 셋 (2026-09-05 · 564제를 훑어 세어 보고 더했다).
+     ⚠ **맨몸 `over`** — `convertOverToFrac` 은 `{분자} over {분모}` 만 다루는데 교재는
+       `11 over 2` 처럼 중괄호 없이도 쓴다(13건). 양쪽이 «숫자 하나 또는 낱글자»일 때만 받는다 —
+       그보다 넓히면 어디까지가 분자인지 기계가 알 수 없다. */
+  s = s.replace(/\s*(?<!\\)\btherefore\b/g, '\\therefore ');
+  s = s.replace(/\s*(?<!\\)\bbecause\b/g, '\\because ');
+  s = s.replace(/([0-9]+|[A-Za-z])\s*(?<!\\)\bover\s+([0-9]+|[A-Za-z])/g, '\\frac{$1}{$2}');
+  /* ⚠ 붙여 쓴 것도 온다 — `1over 2`. 왼쪽이 «숫자»일 때만 낱말 경계 없이 받는다
+     (글자까지 허용하면 `lover 2` 같은 것을 물어뜯는다). */
+  s = s.replace(/([0-9]+)over\s+([0-9]+|[A-Za-z])/g, '\\frac{$1}{$2}');
   s = s.replace(/\s*(?<!\\)\bprime\b/g, '^{\\prime}');
   /* ⚠ **`prime` 도 붙여 쓴 꼴이 온다** — `OprimeAprimeBprime` (angle·bar 와 같은 사정이다).
      낱말 경계가 없어 위 규칙에 안 걸린다. 앞 글자를 남기고 프라임만 올린다. */
@@ -109,6 +129,8 @@ function convertHwpEq(script){
   // angle/bar는 "angle{BAD}"(중괄호), "angle BAD"(공백), "angleBAD"(붙여쓰기) 세 가지 형태가
   // 모두 나오므로 각각 처리한다. 방금 만든 "\angle"/"\overline"을 다시 건드리지 않도록
   // (무한 중복 방지) 바로 앞이 백슬래시가 아닐 때만 매치한다.
+  /* ⚠ 교재는 `ANGLE` 을 대문자로도 쓴다 — 아래 규칙들이 전부 소문자만 보므로 먼저 낮춘다. */
+  s = s.replace(/\bANGLE\b/g, 'angle');
   s = replaceBalancedKeyword(s, 'angle', inner => '\\angle ' + inner);
   s = s.replace(/(?<!\\)\bangle\s+([A-Za-z]+)\b/g, '\\angle $1');
   s = s.replace(/(?<!\\)\bangle([A-Z]{1,3})\b/g, '\\angle $1');
@@ -185,6 +207,16 @@ function hwpWalkParagraphs(paras, tokens){
              (내용은 평문으로 저장되므로 HTML을 넣을 수는 없다. 그래서 이 표기를 쓴다.) */
           const trs = Array.from(child.childNodes).filter(n=>n.nodeType===1 && n.localName==='tr');
           const rows = [];
+          /* 🔴 **미주를 품은 표는 «상자»가 아니라 «문항 그 자체»다** (2026-09-05).
+             교재는 문항 하나를 표 하나로 감싸고 그 안에 또 «보기» 상자를 둔다. 그런데 셀을 글자로
+             납작하게 만드는 동안 **안쪽 상자의 `|` 가 지워져** 보기·조건 상자가 통째로 줄글이 됐다.
+             (사용자가 모바일에서 짚었다. 2026-08-10에 고친 「표가 글 뭉치로 뭉개진다」의 **한 겹 안쪽 판**이다.)
+             🔵 껍질과 상자는 **모양이 똑같아서**(둘 다 「머리 3칸 + 내용 1칸」) 모양으로는 못 가른다.
+               가르는 것은 **미주다** — 정답 미주가 든 표는 문항이고, 안 든 표는 상자다.
+               실측: 교재 05 집합의 표 432개 중 미주를 품은 것이 **정확히 134개 = 문항 수**였고,
+               광남고 시험지는 **0개**였다(= 시험지 쪽은 한 글자도 안 바뀐다). */
+          const shellCells = [];
+          let isProblemShell = false;
           for(const tr of trs){
             const tcs = Array.from(tr.childNodes).filter(n=>n.nodeType===1 && n.localName==='tc');
             const cells = [];
@@ -194,6 +226,7 @@ function hwpWalkParagraphs(paras, tokens){
               const cellParas = Array.from(subList.childNodes).filter(n=>n.nodeType===1 && n.localName==='p');
               const cellTokens = [];
               hwpWalkParagraphs(cellParas, cellTokens);
+              shellCells.push(cellTokens);
               let s = '';
               for(const t of cellTokens){
                 /* ⚠ 세로줄(`|`)은 표 행 문법과 부딪힌다. 그런데 **그냥 지우면 안 된다** —
@@ -204,11 +237,30 @@ function hwpWalkParagraphs(paras, tokens){
                 else if(t.type==='text') s += String(t.v).replace(/\|/g, '');
                 else if(t.type==='break') s += '\n';           // 줄바꿈을 살린다
                 else if(t.type==='pic') tokens.push(t);        // 그림은 표 밖으로 빼서 살린다
-                else if(t.type==='endnote') tokens.push(t);    // 정답 미주도 마찬가지
+                else if(t.type==='endnote'){ isProblemShell = true; tokens.push(t); }  // 정답 미주도 마찬가지
               }
               cells.push(s.replace(/[ \t]+/g,' ').replace(/\n{2,}/g,'\n').trim());
             }
             if(cells.some(c=>c)) rows.push(cells);
+          }
+          if(isProblemShell){
+            /* 껍질은 그리지 않는다 — 안의 토큰을 그대로 흘려보낸다.
+               그러면 ① 발문이 표에 안 갇히고 ② **안쪽 보기 상자가 최상위 표가 되어 살아난다.**
+               ⚠ 그림·미주는 위에서 이미 내보냈으므로 여기서 또 넣지 않는다.
+               ⚠ **출처 딱지 칸은 버린다** — 「고쟁이」·「[유형반복R]」 같은 짧은 이름이다.
+                 문항의 일부가 아니고, 장부에 이미 있으며 화면의 「출처」 칸이 따로 보여 준다.
+                 잣대는 item-code.mjs 의 looksName 과 같다 — 짧고, 문장부호도 번호도 없는 낱말. */
+            for(const cellTokens of shellCells){
+              let plain = '';
+              for(const t of cellTokens) if(t.type==='text' || t.type==='eq') plain += String(t.v);
+              plain = plain.trim();
+              const looksLikeSourceTag = plain.length > 0 && plain.replace(/^\[|\]$/g,'').length <= 14
+                && !/[.,?!()①②③④⑤]/.test(plain) && !/^\d+$/.test(plain);
+              if(looksLikeSourceTag) continue;
+              for(const t of cellTokens) if(t.type !== 'pic' && t.type !== 'endnote') tokens.push(t);
+              tokens.push({type:'break'});
+            }
+            continue;
           }
           if(rows.length){
             /* ⚠ 표라고 다 «격자»가 아니다. 셋으로 갈린다.
@@ -235,10 +287,19 @@ function hwpWalkParagraphs(paras, tokens){
                 if(line){ tokens.push({type:'text', v:line}); tokens.push({type:'break'}); }
               }
             } else {
-              const singleCol = rows.every(cells=>cells.length===1);
+              /* 🔵 **«열이 하나»가 아니라 «값이 든 칸이 하나»로 센다** (2026-09-05).
+                 교재의 보기·조건 상자는 머리가 세 칸이다 — `| | [보기] | |`. 가운데만 값이 있고
+                 양옆은 여백용 빈 칸이다. 그런데 «칸 수»로 세면 세 칸이라 **격자로 오판**되고,
+                 격자는 칸을 지키려고 줄바꿈을 공백으로 접으므로 **상자 안이 통째로 한 줄이 된다.**
+                 (사용자가 모바일에서 짚은 「조건박스·보기박스가 줄글로 뜬다」가 이것이다.)
+                 ⚠ 값이 든 칸이 둘 이상인 행이 하나라도 있으면 **진짜 격자**다 — 그때는 손대지 않는다.
+                 ⚠ 그리고 값은 `cells[0]` 이 아니라 **«값이 든 칸»**에서 가져와야 한다.
+                   빈 칸이 앞에 오는 상자에서 `cells[0]` 을 쓰면 제목이 통째로 사라진다. */
+              const filled = cells => cells.filter(c => c.trim());
+              const isBox = rows.every(cells => filled(cells).length <= 1);
               for(const cells of rows){
-                const out = singleCol
-                  ? cells[0].split('\n').map(l=>l.trim()).filter(Boolean).map(l=>[l])
+                const out = isBox
+                  ? (filled(cells)[0] || '').split('\n').map(l=>l.trim()).filter(Boolean).map(l=>[l])
                   : [cells.map(c=>c.replace(/\s+/g,' ').trim())];
                 for(const row of out){
                   tokens.push({type:'text', v:'| ' + row.join(' | ') + ' |'});
@@ -412,43 +473,38 @@ function hwpParseBlocks(topParas, tablesAsProblems){
   return blocks;
 }
 
-/* ── 교재의 «표 껍질»을 벗긴다 ─────────────────────────────────────────
-   🔴 **교재는 문항 하나를 표 하나로 감싼다.** 그래서 본문을 그대로 담으면 이렇게 된다:
+/* ── 장식 그림을 가려낸다 ─────────────────────────────────────────────
+   🔴 **«그림이 붙어 있다»와 «그림이 있어야 푸는 문제다»는 다른 말이다** (2026-09-05).
+   교재는 문항마다 번호 딱지를 그림 개체로 넣는다. 그대로 두면 564제가 **전부** «그림 문항»이
+   되고, 첫 그림을 문항 그림으로 삼는 자리에서는 문항마다 딱지가 붙는다.
 
-       | | [유형반복R] | |          ← 출처 딱지 (문항이 아니다)
-       | 좌표평면 위의 두 점 … |    ← 진짜 본문
-       | | 두 점 사이의 거리 |      ← «다음» 유형의 제목이 꼬리로 딸려 온다
-       | SCENE | 2 | |             ← 장 배지도 마찬가지
+   🔵 가르는 잣대는 **되풀이**다 — 여러 문항에 나오는 그림은 내용이 아니라 장식이다.
 
-   미주가 문항 «앞»에 오는 조판이라, 미주와 미주 사이에 다음 문항의 «머리»까지 들어온다.
-   564제를 실제로 훑어보고 셋을 확인했다 — 표 껍질 564/564 · 출처 딱지 498 · 꼬리 118.
+   🔴 ⚠ **«참조 이름»으로 세면 안 된다** (사용자가 화면에서 필름릴 아이콘을 보고 짚었다).
+     한글은 같은 딱지를 문서 안에 **여러 벌로 따로 저장**한다 — `image10`(57번) · `image23`(7번) ·
+     `image18`(1번)이 **md5 가 같은 한 파일**이었다. 이름으로 세면 `image18` 은 «한 번뿐»이라
+     진짜 그림으로 통과한다. **내용으로 묶어야** 65번 쓰인 딱지로 보인다.
+     (진짜 그림은 1.1~1.5MB BMP 였고 딱지는 34KB PNG 였다 — 크기로도 갈렸지만 그건 이 교재의
+      사정일 뿐이라 기대지 않는다. 내용이 같으냐가 언제나 참인 잣대다.)
 
-   ⚠ **이것을 그냥 두면 AI 에게 그대로 먹인다.** 변형을 만들 때 「유형반복R」이나
-     남의 유형 제목이 문제의 일부로 읽힌다. 창고에 담기 전에 벗겨야 하는 까닭이다.
-
-   🔵 **가르는 잣대는 «첫 칸이 비었는가»다.** 딱지·제목·배지는 첫 칸이 비어 있고
-     (`| | 제목 |`), 본문은 첫 칸에 바로 글이 온다 (`| 본문 |`).
-     564제에서 «첫 칸이 안 빈 줄»은 554개가 하나, 10개가 둘이었고 그 둘째는 전부 SCENE 배지였다.
-     그래서 **첫 번째 것 하나만** 취한다.
-
-   ⚠ **못 알아보면 손대지 않는다.** 표가 아닌 줄이 하나라도 섞였거나, 본문 줄이 여러 칸이면
-     (진짜 격자일 수 있다) 원래 글을 그대로 돌려준다. 학교 시험지는 애초에 표 껍질이 없어
-     여기서 그냥 지나간다 — **이 함수는 교재에만 걸린다.** */
-function hwpxUnwrapBookBody(content){
-  const src = String(content || '');
-  const lines = src.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
-  if(!lines.length) return content;
-  const isRow = l => l.length > 1 && l[0] === '|' && l[l.length-1] === '|';
-  if(!lines.every(isRow)) return content;          // 표가 아닌 줄이 섞였다 — 손대지 않는다
-  for(const l of lines){
-    const cells = l.slice(1, -1).split('|').map(c => c.trim());
-    if(cells[0] === '') continue;                  // 딱지·제목·배지
-    if(cells.length === 1) return cells[0];        // 한 칸짜리 본문 — 껍질만 벗긴다
-    return content;                                // 여러 칸이면 진짜 표일 수 있다
+   `keyOf(ref)` 는 «그 그림의 내용 열쇠»를 돌려준다 — node 는 md5, 브라우저는 길이+표본 해시.
+   안 주면 참조 이름으로 센다(옛 동작).
+   ⚠ 지우지 않고 `decorPics` 로 남긴다 — 「딱지가 왜 없냐」를 나중에 되짚을 수 있어야 한다. */
+function hwpxMarkDecorPics(problems, keyOf){
+  const key = typeof keyOf === 'function' ? keyOf : (ref => ref);
+  const use = {};
+  for(const p of problems){
+    const seen = new Set();
+    for(const ref of (p.pics || [])){ const k = key(ref); if(seen.has(k)) continue; seen.add(k); use[k] = (use[k]||0) + 1; }
   }
-  return content;
+  const DECOR_MIN = 5;   // 같은 그림이 다섯 문항 넘게 나오면 장식이다
+  for(const p of problems){
+    const pics = p.pics || [];
+    p.decorPics = pics.filter(ref => use[key(ref)] >= DECOR_MIN);
+    p.pics      = pics.filter(ref => use[key(ref)] <  DECOR_MIN);
+  }
+  return problems;
 }
-
 
 /* ── 문서(여럿) → 문항 목록 ────────────────────────────────────────────
    🔴 **여기가 «문항이 몇 개인가»를 정하는 자리다.** 웹과 도구가 갈리면 안 되는 곳이라
@@ -519,5 +575,6 @@ function hwpxProblemsFromDocs(docs){
     pics: b.pics || [],
     image: null,
   }));
+
   return { problems, watermarkedCount, endnoteCount };
 }

@@ -16,6 +16,7 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import { execFileSync } from 'child_process';
+import crypto from 'crypto';
 import { fileURLToPath } from 'url';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -29,7 +30,7 @@ const RULE_NAMES = [
   'convertHwpEq', 'cleanHwpPlainText', 'hwpWalkParagraphs',
   'stripScoreMarks', 'fixBareSqrt',
   'hwpEndnoteParts', 'hwpEndnoteText', 'hwpCellToBlock', 'hwpParseBlocks',
-  'hwpxUnwrapBookBody', 'hwpxProblemsFromDocs',
+  'hwpxMarkDecorPics', 'hwpxProblemsFromDocs',
 ];
 export function loadHwpxRules() {
   const src = fs.readFileSync(path.join(ROOT, 'hwpx.js'), 'utf8');
@@ -178,7 +179,10 @@ export function contentsDir(p) {
 }
 
 export function sectionDocs(fileOrDir) {
-  const cdir = contentsDir(fileOrDir);
+  return sectionDocsFrom(contentsDir(fileOrDir));
+}
+/* ⚠ 이미 풀어 둔 Contents 를 다시 안 풀려고 갈라 두었다 — 3~8MB 짜리를 두 번 푸는 것은 낭비다. */
+export function sectionDocsFrom(cdir) {
   // ⚠ 차례는 파일 이름의 «숫자»다 — section10 이 section2 보다 뒤여야 한다.
   const names = fs.readdirSync(cdir)
     .filter((f) => /^section\d+\.xml$/.test(f))
@@ -187,8 +191,30 @@ export function sectionDocs(fileOrDir) {
   return names.map((f) => parseXml(fs.readFileSync(path.join(cdir, f), 'utf8')));
 }
 
+/* 그림 참조 → «내용 열쇠». 한글은 같은 딱지를 여러 벌로 저장하므로 **이름으로는 못 묶는다** —
+   md5 로 묶어야 `image10`·`image23`·`image18` 이 한 그림으로 보인다 (hwpx.js 의 hwpxMarkDecorPics 참고). */
+function picKeyMap(cdir) {
+  const key = {};
+  const hpfPath = path.join(cdir, 'content.hpf');
+  if (!fs.existsSync(hpfPath)) return key;
+  const hpf = fs.readFileSync(hpfPath, 'utf8');
+  const root = path.dirname(cdir);
+  for (const m of hpf.matchAll(/<opf:item[^>]*id="([^"]+)"[^>]*href="([^"]+)"/g)) {
+    const f = path.join(cdir, m[2]);
+    const g = fs.existsSync(f) ? f : path.join(root, m[2]);
+    if (!fs.existsSync(g)) continue;
+    try { key[m[1]] = crypto.createHash('md5').update(fs.readFileSync(g)).digest('hex'); } catch (e) {}
+  }
+  return key;
+}
+
 /* 파일 하나 → 문항 목록. **가르는 일은 hwpx.js 가 한다.**
-   그림은 안 붙는다 — 여기서 가져가는 것은 «글»뿐이다. */
+   그림 바이트는 안 붙는다 — 여기서 가져가는 것은 «글»뿐이다.
+   다만 **어느 그림이 장식인지는 가려 준다** — 그건 파일을 쥔 이쪽만 알 수 있다. */
 export function problemsFromHwpx(fileOrDir, rules = loadHwpxRules()) {
-  return rules.hwpxProblemsFromDocs(sectionDocs(fileOrDir));
+  const cdir = contentsDir(fileOrDir);
+  const r = rules.hwpxProblemsFromDocs(sectionDocsFrom(cdir));
+  const key = picKeyMap(cdir);
+  rules.hwpxMarkDecorPics(r.problems, ref => key[ref] || ref);
+  return r;
 }

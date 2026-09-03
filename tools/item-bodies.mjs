@@ -74,9 +74,7 @@ export function bodiesFromHwpx(hwpxPath) {
   for (const p of problems) {
     if (!p.itemCode) { noCode++; continue; }
     if (!p.content || !p.content.trim()) { noBody++; continue; }
-    /* 교재는 문항을 표로 감싸고 출처 딱지·다음 유형 제목까지 딸려 온다 — 벗겨서 담는다.
-       웹의 「교재에서 본문 채우기」도 같은 함수를 부른다 (hwpx.js). */
-    items.push({ code: p.itemCode, content: rules.hwpxUnwrapBookBody(p.content) });
+    items.push({ code: p.itemCode, content: p.content });
   }
   return { items, total: problems.length, endnoteCount, watermarkedCount, noCode, noBody };
 }
