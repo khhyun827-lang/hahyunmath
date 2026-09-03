@@ -6315,6 +6315,45 @@ async function ensureClinicSlot(day, time){
   return slot;
 }
 
+/* =================== 클리닉 출석 확인 (2026-09-05) ===================
+   사용자 요청 — 「클리닉도 등록된 학생들에대해 가볍게 출석확인은 하고싶어」.
+
+   🔴 **«완료» 단추가 있긴 했는데 «오기 전»에만 눌리는 자리에 있었다.** 승인 대기 칸(아직
+   시간도 안 잡힌 신청)에 «완료» 단추가 나란히 있었다 — 그래서 실제로 한 번도 안 쓰였다
+   (실 DB에 «완료»가 0건). 출석은 **승인돼 날짜가 잡힌 뒤에나 뜻이 있는 말**이라,
+   승인된 것들이 나열되는 「이 주에 처리된 신청」으로 옮겼다.
+
+   🔵 **«취소»와 «불참»은 다른 말이라 상태를 하나 더 뒀다.** 취소는 그 시간이 오기 «전»에
+   빠진 것(다른 학생이 그 자리에 앉을 수 있어야 한다는 뜻이 있다)이고, 불참은 자리를
+   잡아 놓고 «그 시간에 오지 않은 것»이다 — 나중에 「이 학생이 클리닉을 자주 빼먹는지」를
+   되짚으려면 이 둘이 같은 값이면 안 된다.
+   ⚠ **정원 계산은 손 안 댔다** — `clinicSlotBookedCount`는 이미 `상태!=='취소'`인 것만
+     세고 있어서, 불참으로 표시해도 그 자리는 «그때는 찼던 자리»로 그대로 잡힌다. 맞는 셈이다
+     (그 시간에 다른 학생을 못 앉힌 것은 사실이니까). */
+function clinicStatusTone(status){
+  if(status==='취소') return 'gone';
+  if(status==='승인' || status==='완료') return 'ok';
+  if(status==='불참') return 'no';
+  return 'late';   // 대기
+}
+/* 「이 주에 처리된 신청」의 단추 줄. 상태마다 다음에 누를 것이 다르다 —
+   승인된 것은 «왔는지»를 아직 안 물었으니 그것부터, 이미 물은 것은 되돌리는 문만 열어 둔다. */
+function clinicAttendanceActionsHTML(c){
+  if(c.status === '승인') return `
+    <button class="btn sm ok" onclick="updateClinicStatus('${c.id}','완료')">출석</button>
+    <button class="btn sm no" onclick="updateClinicStatus('${c.id}','불참')">불참</button>
+    <button class="btn q sm" onclick="updateClinicStatus('${c.id}','대기')">대기로</button>
+    <button class="btn q sm" onclick="deleteClinic('${c.id}')">삭제</button>`;
+  if(c.status === '완료' || c.status === '불참') return `
+    ${/* ⚠ 잘못 눌렀을 때 되돌리는 문 — «대기로」로 보내면 승인해 둔 자리·시간이 그대로 있으니
+         한 번 더 승인 절차를 밟을 필요 없이 «승인」으로 바로 되돌린다. */''}
+    <button class="btn q sm" onclick="updateClinicStatus('${c.id}','승인')">승인으로 되돌리기</button>
+    <button class="btn q sm" onclick="deleteClinic('${c.id}')">삭제</button>`;
+  return `
+    <button class="btn q sm" onclick="updateClinicStatus('${c.id}','대기')">대기로</button>
+    <button class="btn q sm" onclick="deleteClinic('${c.id}')">삭제</button>`;   // 취소
+}
+
 /* **승인된 클리닉은 슬롯을 갖는다.** 학생이 직접 제안한 시간(slotId 없음)을 승인하면
    그 자리에 시간대를 만들어 붙인다 — 안 그러면 다른 학생이 같은 시간에 또 제안할 수 있고,
    주간 판에서도 점선(「시간대 밖」)으로만 떠서 자리가 잡힌 것으로 안 읽힌다.
@@ -14029,7 +14068,7 @@ function studentTimeline(s, rec){
   });
   DATA.clinics.filter(c=>c.studentId===sid).forEach(c=>{
     push(c.day, 'qna', '클리닉', escHtml(c.topic||'클리닉'),
-      escHtml(clinicWhenLabel(c)), `<span class="badge ${c.status==='승인'||c.status==='완료'?'ok':(c.status==='취소'?'gone':'late')}">${c.status}</span>`,
+      escHtml(clinicWhenLabel(c)), `<span class="badge ${clinicStatusTone(c.status)}">${c.status}</span>`,
       '', c.status==='취소' ? '' : 'k-consult');
   });
 
@@ -16089,8 +16128,13 @@ function teacherClinicHTML(){
               <span class="ago">${c.requestedAt||''}</span></div>
             <div class="w">${escHtml(c.day||"")} ${escHtml(clinicWhenLabel(c))} · ${escHtml(c.topic||'')}</div>
             <div class="a">
+              ${/* 🔴 **여기 있던 「완료」 단추를 뺐다** (2026-09-05 · 사용자 요청 —
+                     「클리닉도 등록된 학생들에대해 가볍게 출석확인은 하고싶어」).
+                   이 칸은 «아직 승인 전»인 신청 목록이다. 오기도 전에 «출석 확인»을 누르는
+                   자리가 있었던 셈이다 — 실제로 실 데이터에도 «완료»가 한 건도 없었다.
+                   출석은 **승인돼 날짜가 잡힌 뒤에나 뜻이 있다** → 아래 「이 주에 처리된 신청」으로
+                   옮겼다. 거기는 이미 승인된 것들이 날짜와 함께 나열되는 자리다. */''}
               <button class="btn sm ok" onclick="updateClinicStatus('${c.id}','승인')">승인</button>
-              <button class="btn sm" onclick="updateClinicStatus('${c.id}','완료')">완료</button>
               <button class="btn q sm" onclick="updateClinicStatus('${c.id}','취소')">취소</button>
               ${s ? `<button class="btn q sm" onclick="rosterOpen('${c.studentId}','info')">학생</button>` : ''}
             </div>
@@ -16186,13 +16230,10 @@ function teacherClinicHTML(){
         ${others.length ? `<div class="t-sec" style="margin-top:24px;">이 주에 처리된 신청 ${others.length}건</div>
         ${others.map(c=>`<div class="cn-rq">
           <div class="h"><b>${escHtml(c.name)}</b>
-            <span class="status-badge"><span class="badge ${c.status==='취소'?'gone':(c.status==='승인'||c.status==='완료'?'ok':'late')}">${c.status}</span></span>
+            <span class="status-badge"><span class="badge ${clinicStatusTone(c.status)}">${c.status}</span></span>
             <span class="ago">${c.requestedAt||''}</span></div>
           <div class="w">${escHtml(c.day||"")} ${escHtml(clinicWhenLabel(c))} · ${escHtml(c.topic||'')}</div>
-          <div class="a">
-            <button class="btn q sm" onclick="updateClinicStatus('${c.id}','대기')">대기로</button>
-            <button class="btn q sm" onclick="deleteClinic('${c.id}')">삭제</button>
-          </div>
+          <div class="a">${clinicAttendanceActionsHTML(c)}</div>
         </div>`).join('')}` : ''}
         <div class="rst-pad"></div>
       </div>
