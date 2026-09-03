@@ -9005,6 +9005,16 @@ function stuDateLabel(ymd){
   return `${m}월 ${d}일 (${WEEKDAY_LABEL[new Date(ymd+'T00:00:00').getDay()]})`;
 }
 /* 다음 수업 — 반 일정에서 오늘 이후 첫 수업일. 시각은 자유 텍스트라 그대로 보여 준다. */
+/* 학생 홈에 보일 «다음 클리닉» 하나 — 확정(승인)된 것 중 가장 가까운 날짜만.
+   🔵 **'대기'(아직 승인 전 제안)는 홈에 안 올린다** (2026-09-04). 확정 안 된 일정을
+   홈 카드로 보여주면 «잡힌 일정»으로 오해하기 쉽다 — 그건 소통>클리닉 탭에서
+   「대기」 배지로 이미 보고 있다. 여기는 «확실히 갈 곳»만 말한다. */
+function stuNextClinic(c){
+  const upcoming = c.clinics
+    .filter(cl => cl.status==='승인' && cl.day >= todayStr())
+    .sort((a,b) => a.day===b.day ? slotTimeKey(a.time).localeCompare(slotTimeKey(b.time)) : a.day.localeCompare(b.day));
+  return upcoming[0] || null;
+}
 function stuNextSession(classId){
   const cls = DATA.classes.find(x=>x.id===classId);
   if(!cls) return null;
@@ -9561,6 +9571,23 @@ function stuHomeHTML(c){
         ${cp.books && cp.books.length ? `<div style="font-size:12px;color:var(--dim);margin-top:4px;">
           교재 · ${cp.books.map(b=>escHtml(b)).join(' · ')}</div>` : ''}
       </div>`}
+
+  ${/* 다음 클리닉 — 사용자 질문에서 시작 (2026-09-04) 「학생이 로그인하면 홈화면에
+       클리닉에 대한것도 떠?」. 없었어서 만들었다. 확정된 다음 일정이 없으면
+       통째로 안 그린다 — 「다음 수업」과 달리 클리닉은 늘 있는 일이 아니라서,
+       빈 칸을 만들어 두면 «클리닉이 하나도 없다»는 사실이 아니라 빈 카드로 읽힌다. */''}
+  ${(()=>{
+    const nc = stuNextClinic(c);
+    if(!nc) return '';
+    return `
+  <div class="msec">다음 클리닉</div>
+  <div class="mc">
+    <div class="row b" style="gap:9px;flex-wrap:wrap;">
+      <b style="font-size:15px;font-weight:700;">${stuDateLabel(nc.day)} ${escHtml(clinicWhenLabel(nc))}</b>
+    </div>
+    ${nc.topic ? `<div style="font-size:12px;color:var(--dim);margin-top:8px;">${escHtml(nc.topic)}</div>` : ''}
+  </div>`;
+  })()}
 
   <div class="msec">요약</div>
   <div class="kpis">
