@@ -3176,14 +3176,21 @@ async function dbDeleteDoc(collection, id){
     }), 8000);
   }catch(e){ console.error('삭제 실패', collection, id, e); }
 }
-async function dbGetCollection(collection){
+/* ⚠ **기본은 «실패해도 빈 배열»이다** — 화면 하나가 못 읽었다고 앱 전체가 서면 안 된다.
+   그런데 그 너그러움이 위험한 자리가 있다: 읽은 결과를 **«이게 전부»라고 캐시하는 곳**이다.
+   실패한 []를 캐시하면 그 세션 내내 «창고가 비었다»가 되고 다시 읽지도 않는다.
+   그런 곳은 `{strict:true}` 로 불러서 **실패를 실패로 받아야 한다** (2026-09-04). */
+async function dbGetCollection(collection, opts){
   try{
     const token = await withTimeout(getAuthToken(), 8000);
     let out = [], pageToken = '';
     do{
       const url = FIRESTORE_ROOT + '/' + collection + '?pageSize=300' + (pageToken ? '&pageToken=' + encodeURIComponent(pageToken) : '');
       const res = await withTimeout(fetch(url, { headers: { Authorization: 'Bearer ' + token } }), 8000);
-      if(res.status === 404) break;
+      /* ⚠ 404 는 «아직 문서가 하나도 없는 컬렉션»일 수 있어 평소에는 빈 결과로 넘긴다.
+         하지만 strict 로 부른 쪽은 그 «빈 결과»를 창고로 캐시하므로, 거기서는 넘기면 안 된다 —
+         실제로 이걸로 «변형 0개»를 한 번 잘못 읽었다 (2026-09-04). */
+      if(res.status === 404){ if(opts && opts.strict) throw new Error('firestore http 404'); break; }
       if(!res.ok) throw new Error('firestore http ' + res.status);
       const json = await res.json();
       (json.documents || []).forEach(doc => {
@@ -3192,7 +3199,11 @@ async function dbGetCollection(collection){
       pageToken = json.nextPageToken || '';
     } while(pageToken);
     return out;
-  }catch(e){ console.error('컬렉션 불러오기 실패', collection, e); return []; }
+  }catch(e){
+    console.error('컬렉션 불러오기 실패', collection, e);
+    if(opts && opts.strict) throw e;
+    return [];
+  }
 }
 // 예전 kv/{oldKey} 블롭(배열 하나)을 컬렉션(문서마다 레코드 하나)로 1회 옮긴다.
 // 새 컬렉션에 이미 데이터가 있으면(=이미 옮겨졌으면) 아무것도 안 하고 그걸 그대로 쓴다.
@@ -3262,16 +3273,48 @@ async function loadItemStoreIfNeeded(){
       for(const r of rows) if(r && r.code) byCode[r.code] = r;
       state.itemBody = byCode;
     }
-    if(!state.variants){
-      const rows = await dbGetCollection('variants');
+    if(!state.variants) await loadVariantsIfNeeded();
+  } finally { itemStoreLoading = null; }
+  })();
+  return itemStoreLoading;
+}
+
+/* 🔴 **변형 창고만 따로 싣는 문** (2026-09-04).
+   `loadItemStoreIfNeeded` 는 장부(codes/*.json)와 본문(`items` 564개)까지 다 읽는데,
+   **학생에게는 그 둘이 필요 없다** — 학생 화면이 쓰는 것은 «변형»뿐이다(dqFaces).
+   그리고 그 무거운 함수는 부르는 곳이 전부 강사 화면이었다. 그래서 학생은 `state.variants`
+   가 영영 `undefined` 였고, **창고에 쌓아 둔 `-N01`·`-D01` 이 한 번도 학생에게 안 나갔다.**
+   데일리퀴즈를 코드 위에 다시 세우면서 그 길을 이어 두는 것을 빠뜨린 자리다(09-05).
+   ⚠ 이 함수는 «있으면 안 읽는다» — 화면을 그릴 때마다 부르므로 다시 읽으면 안 된다. */
+let variantsLoading = null, variantsFailedAt = 0;
+/* 읽기가 한 번이라도 엎어졌나. 엎어졌으면 «변형 없이라도» 퀴즈를 굴린다 —
+   창고 하나 때문에 학생이 오늘 퀴즈를 통째로 못 보는 것이 더 나쁘다. */
+function variantsLoadFailed(){ return variantsFailedAt > 0; }
+async function loadVariantsIfNeeded(){
+  if(state.variants) return true;
+  if(variantsLoading) return variantsLoading;
+  /* ⚠ 실패 직후에 또 부르면 화면을 그릴 때마다 두드리게 된다(429 를 스스로 키운다). 잠깐 쉰다. */
+  if(variantsFailedAt && Date.now() - variantsFailedAt < 60000) return false;
+  variantsLoading = (async () => {
+    try{
+      /* 🔴 **strict 로 읽는다** — 여기는 결과를 «이게 전부»라고 캐시하는 자리다.
+         너그러운 기본값([])을 그대로 담으면 **읽기 실패가 «빈 창고»로 굳는다.**
+         실제로 겪었다: 429(할당량)로 읽기가 다 엎어진 상태에서 `state.variants = {}` 가
+         박혀, 그 세션 내내 변형이 하나도 안 나가고 다시 읽지도 않았다. */
+      const rows = await dbGetCollection('variants', {strict:true});
       const by = {};
       for(const v of rows) (by[v.originCode] = by[v.originCode] || []).push(v);
       for(const k in by) by[k].sort((a,b)=> a.code < b.code ? -1 : 1);
       state.variants = by;
-    }
-  } finally { itemStoreLoading = null; }
+      variantsFailedAt = 0;
+      return true;
+    }catch(e){
+      console.warn('[창고] 변형을 못 읽었다 —', e && e.message);
+      variantsFailedAt = Date.now();   // state.variants 는 그대로 둔다(다음에 다시 읽는다)
+      return false;
+    } finally { variantsLoading = null; }
   })();
-  return itemStoreLoading;
+  return variantsLoading;
 }
 
 const ITEM_CODE_RE = /^([A-Z]{1,2}\d?)-(\d{2})-([A-Z])-(\d{4})(?:-([NUD])(\d{2}))?$/;  // K2-05-E-0431 · …-N01
@@ -7758,6 +7801,22 @@ function examSiblings(exam){
   const root = exam.sourceExamId || exam.id;
   return DATA.exams.filter(e=>e.id===root || e.sourceExamId===root);
 }
+/* 🔵 **문항 코드 → 그 문항의 변형 하나** (2026-09-04).
+   오답숙제로 내보낼 «쌍둥이»를 창고에서 고른다. 고르는 규칙은 갈래 우선순위 하나뿐이다 —
+   N(숫자변형) → D(하향) → 나머지. 틀린 문제를 «같은 난이도로 한 번 더»가 오답숙제의 뜻이라
+   N이 먼저고, 없으면 발판(하향)을 준다. 상향(U)은 틀린 학생에게 먼저 낼 이유가 없다.
+   ⚠ **학생이 칠 수 있는 답인지 본다**(`dqAnswerable`) — 아니면 안 낸다. 못 치는 답을 가진
+     문제를 내보내면 학생은 풀고도 영원히 오답이 된다(그 함수 주석에 겪은 일이 적혀 있다).
+   ⚠ **그림이 있어야 푸는데 아직 안 그려진 것도 뺀다** — `dqFaces` 와 같은 판단이다. */
+function codeVariantFor(itemCode){
+  if(!itemCode) return null;
+  const root = (splitItemCode(itemCode) || {}).origin || itemCode;
+  const usable = variantsOfCode(root).filter(v =>
+    !v.needsFigure && dqAnswerable(v.content, v.answer));
+  if(!usable.length) return null;
+  const byKind = k => usable.find(v => (v.variantKind || 'N') === k);
+  return byKind('N') || byKind('D') || usable[0];
+}
 function findBankEntry(examId, no){
   /* 🔴 복사본이면 «뿌리»에서 찾는다. 예전에는 `examId`가 딱 맞아야 해서 복사본에서는
      항상 못 찾았고, 그래서 **이미 만들어 둔 쌍둥이를 놔두고 또 만들었다.** */
@@ -7781,20 +7840,40 @@ async function submitWrongAnswers(){
   const wrongNos = Object.keys(state.wrongChecked).filter(k=>state.wrongChecked[k]).map(k=>parseInt(k));
   if(wrongNos.length===0){ showToast('틀린 문제 번호를 선택해주세요.'); return; }
   await loadUnitBankIfNeeded();
+  await loadVariantsIfNeeded();
   const sid = state.currentUser.studentId;
   const rec = await loadRecord(sid);
-  let matchedFromBank = 0, newlyRequested = 0;
+  let matchedFromBank = 0, newlyRequested = 0, matchedFromCode = 0;
   for(const no of wrongNos){
     let bank = findBankEntry(examId, no);
     if(!bank){
       const q = exam.questions.find(q=>q.no===no);
       if(!q) continue;
-      const candidates = q.unit ? DATA.unitBank.filter(u=>u.unit===q.unit) : [];
-      const match = candidates.length ? candidates[Math.floor(Math.random()*candidates.length)] : null;
       /* 시험지 등록 때와 같은 태그를 싣는다 — 이 길로 만들어진 항목만 태그가 없으면
-         그 학생만 조용히 범위 판정에서 빠진다 (문항 태그는 problembank가 진실이다). */
-      const tag = {subject:q.unit||'', chapter:q.chapter||''};
-      if(match){
+         그 학생만 조용히 범위 판정에서 빠진다 (문항 태그는 problembank가 진실이다).
+         ⚠ **코드도 같이 싣는다** — 예전에는 이 길로 만든 항목만 `itemCode` 가 비어서,
+           나중에 창고와 이어지지 않는 «떠 있는» 문항이 됐다 (2026-09-04). */
+      const tag = {subject:q.unit||'', chapter:q.chapter||'', itemCode:q.itemCode||''};
+      /* 🔵 **먼저 «그 문항의 변형»을 찾는다** (2026-09-04 · 사용자 결정).
+         예전에는 보충문제 창고(`unitbank`)에서 **과목이 같은 것 중 아무거나** 하나를
+         무작위로 집었다 — 「공통수학2를 틀렸다」에 공통수학2 아무 문제나 나가는 셈이다.
+         지금은 문항마다 코드가 있고 그 코드에 진짜 쌍둥이(`-N01`…)가 매달려 있으므로,
+         **같은 문항의 변형**을 먼저 쓴다. 창고는 코드가 없을 때의 뒷길로만 남긴다.
+         🔵 갈래는 N(숫자변형)을 먼저 본다 — 틀린 문제를 «같은 난이도로 한 번 더»가
+           오답숙제의 뜻이다. 없으면 하향(D), 그것도 없으면 남은 아무 변형. */
+      const codeMatch = codeVariantFor(q.itemCode);
+      const candidates = q.unit ? DATA.unitBank.filter(u=>u.unit===q.unit) : [];
+      const match = codeMatch ? null
+        : (candidates.length ? candidates[Math.floor(Math.random()*candidates.length)] : null);
+      if(codeMatch){
+        bank = {
+          id:'pb'+Date.now()+'_'+no, examId, questionNo:no,
+          originalContent:q.content, originalAnswer:q.answer,
+          variantContent: codeMatch.content, variantAnswer: codeMatch.answer,
+          status:'approved', source:'itemstore', variantCode: codeMatch.code, ...tag
+        };
+        matchedFromCode++;
+      } else if(match){
         bank = {
           id:'pb'+Date.now()+'_'+no, examId, questionNo:no,
           originalContent:q.content, originalAnswer:q.answer,
@@ -7821,8 +7900,11 @@ async function submitWrongAnswers(){
   await saveRecord(sid);
   state.wrongChecked = {};
   let msg = '제출되었습니다.';
-  if(matchedFromBank>0 && newlyRequested>0) msg = `제출되었습니다. ${matchedFromBank}개는 바로 숙제로 나갔고, ${newlyRequested}개는 선생님이 등록하면 나갑니다.`;
-  else if(matchedFromBank>0) msg = '제출되었습니다. 문항 창고에서 바로 숙제로 나갔습니다.';
+  /* 창고에서 나온 것은 «어느 창고»인지 학생에게 구별해 말하지 않는다 — 학생에게는
+     「바로 나왔다 / 기다려야 한다」 둘뿐이 뜻이 있다. 세는 것만 합쳐서 말한다. */
+  const ready = matchedFromCode + matchedFromBank;
+  if(ready>0 && newlyRequested>0) msg = `제출되었습니다. ${ready}개는 바로 숙제로 나갔고, ${newlyRequested}개는 선생님이 등록하면 나갑니다.`;
+  else if(ready>0) msg = '제출되었습니다. 문항 창고에서 바로 숙제로 나갔습니다.';
   else if(newlyRequested>0) msg = '제출되었습니다. 선생님이 쌍둥이 문제를 등록하면 숙제로 나갑니다.';
   showToast(msg);
   render();
@@ -9126,8 +9208,17 @@ function stuCtx(){
   const myClassIds = studentClassIds(me);        // 듣는 반 전부 (2026-09-01 · E-1)
   /* 오늘의 데일리퀴즈는 «학생이 앱을 연 순간» 한 번 정해진다. 여기서 보장해 두면
      홈의 할 일 줄·서브내비 숫자·퀴즈 화면이 전부 같은 세 문제를 본다.
-     (교사 화면은 이걸 부르지 않는다 — 남의 기록을 렌더 중에 저장하게 된다.) */
-  dqEnsureToday(sid, rec);
+     (교사 화면은 이걸 부르지 않는다 — 남의 기록을 렌더 중에 저장하게 된다.)
+
+     🔴 **변형 창고가 실린 «뒤에» 굴려야 한다** (2026-09-04).
+     `dqRoll` 은 그날 낼 «얼굴»을 골라 기록에 **박아 둔다**(`d.faces[카드]`). 그러니 변형이
+     아직 없을 때 굴리면 원본만 후보가 되고, **그날 하루는 창고의 `-N01`·`-D01` 이 못 나간다.**
+     ⚠ 이게 그냥 «늦게 실리는» 문제가 아니었다 — 학생 화면에는 창고를 싣는 길이 **아예 없어서**
+       `state.variants` 가 영영 `undefined` 였다(부르는 곳이 전부 강사 화면이었다).
+       그래서 코드 위에 다시 세운 데일리퀴즈가 실은 **원본·옛 쌍둥이만** 내보내고 있었다.
+     못 읽으면 `{}` 가 들어오므로(위 `loadVariantsIfNeeded`) 여기서 영영 막히지는 않는다. */
+  if(state.variants || variantsLoadFailed()) dqEnsureToday(sid, rec);
+  else loadVariantsIfNeeded().then(()=>render());
   return {
     sid, rec, me, classId,
     /* quizzes는 없앴다 — 데일리퀴즈가 반 배포물이 아니라 이 학생의 오답에서 뽑히므로
