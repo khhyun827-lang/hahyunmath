@@ -841,6 +841,10 @@
 .app .ic-none{font-size:11.5px;color:var(--dim);}
 .app .ic-kind{font-size:11px;color:var(--sub);padding:1px 7px;border-radius:var(--r-pill);
   border:1px solid var(--line);background:var(--card);}
+/* 검색 결과를 과목으로 묶을 때의 머리. 과목이 하나뿐이면 안 그린다 — 없는 갈래를 보여 줄 까닭이 없다. */
+.app .ic-sub{display:flex;align-items:baseline;gap:8px;margin:14px 0 6px;}
+.app .ic-sub b{font-size:12.5px;font-weight:700;color:var(--ink);}
+.app .ic-sub s{text-decoration:none;font-size:11px;color:var(--dim);}
 .app .ic-list{margin-top:6px;border:1px solid var(--line);border-radius:var(--r-md);
   background:var(--card);overflow:hidden;}
 .app .ic-row{display:flex;align-items:center;gap:10px;padding:8px 12px;
@@ -2193,6 +2197,11 @@
   border-bottom:1px solid var(--line);}
 .app .st-h b{font-size:14px;font-weight:700;}
 .app .st-h span{font-size:12px;color:var(--dim);}
+/* 🔴 **`<s>` 는 이 디자인 시스템에서 «곁말»의 표시다 — 취소선이 아니다** (2026-09-05).
+   ds.css 는 쓰는 자리마다 `text-decoration:none` 을 걸어 두는데 `.st-h` 만 빠져 있었다.
+   그래서 문항 코드 화면의 곁말에 **줄이 죽 그어져** 있었다(사용자가 짚었다).
+   ⚠ 한 곳만 고치면 다음에 또 난다 — 여기 걸어 두면 `.st-h` 를 쓰는 모든 화면이 같이 낫는다. */
+.app .st-h s{text-decoration:none;font-size:12px;color:var(--dim);font-weight:400;}
 .app .st-h .r{margin-left:auto;display:flex;align-items:center;gap:6px;align-self:center;}
 
 /* 한 줄 = 한 가지. 라벨과 설명을 붙여 둔다 —
@@ -3145,9 +3154,18 @@ function splitItemCode(code){
   };
 }
 
+/* 🔵 **줄표를 안 쳐도 받는다** (2026-09-05 · 사용자 요청).
+   `K201E0010` · `k2 01 e 0010` 도 `K2-01-E-0010` 으로 읽는다 — 사람이 코드를 옮겨 적을 때
+   줄표는 제일 먼저 흘리는 것이라, 그것 때문에 «없다»가 나오면 안 된다.
+   ⚠ 자릿수가 정해져 있어서 되붙일 수 있다 — 과목(1~3) · 단원(2) · 책(1) · 번호(4) [· 갈래(1)+번호(2)]. */
 function normItemCode(s){
   const t = String(s||'').trim().toUpperCase().replace(/\s+/g,'');
-  return ITEM_CODE_RE.test(t) ? t : '';
+  if(ITEM_CODE_RE.test(t)) return t;
+  const bare = t.replace(/[^A-Z0-9]/g,'');
+  const m = bare.match(/^([A-Z]{1,2}\d?)(\d{2})([A-Z])(\d{4})(?:([NUD])(\d{2}))?$/);
+  if(!m) return '';
+  const back = m[1]+'-'+m[2]+'-'+m[3]+'-'+m[4] + (m[5] ? '-'+m[5]+m[6] : '');
+  return ITEM_CODE_RE.test(back) ? back : '';
 }
 function itemOfCode(code){ return (state.itemByCode || {})[code] || null; }
 /* 🔴 **뺀 변형은 «지우지 않고 표시만» 한다** (2026-09-04).
@@ -17351,34 +17369,70 @@ function icItemCardHTML(root, it, vs){
   </div>`;
 }
 
-/* 코드를 다 안 쳐도 찾아 준다 — `K2-05` 로 그 단원을, `0431` 로 그 번호를.
-   🔵 **나중에 학생이 쓸 검색이 바로 이것**이다. 강사가 먼저 써 보고 다듬는 셈이다. */
+/* 코드의 «과목 자리»(K2 · C1 …)를 사람 이름으로. `UNITS` 와 같은 말을 쓴다 —
+   화면마다 다른 이름을 쓰면 같은 과목이 두 가지로 보인다.
+   ⚠ 여기 없는 약자는 그대로 보인다(장부가 늘면 여기 한 줄만 더한다). */
+const CODE_SUBJECTS = { K1:'공통수학1', K2:'공통수학2', AL:'대수', C1:'미적분Ⅰ',
+                        C2:'미적분Ⅱ', PS:'확률과통계', GE:'기하' };
+function subjectOfItemCode(code){
+  const m = String(code||'').match(/^([A-Z]{1,2}\d?)-/);
+  return m ? (CODE_SUBJECTS[m[1]] || m[1]) : '';
+}
+/* 🔵 **줄표를 안 쳐도 찾아진다** (2026-09-05 · 사용자 요청).
+   `K201E0010` 도 `k2 01 e 0010` 도 같은 코드를 가리킨다. 사람이 코드를 옮겨 적을 때
+   줄표는 제일 먼저 흘리는 것이라, 그것 때문에 «없다»가 나오면 안 된다. */
+function bareCode(s){ return String(s||'').toUpperCase().replace(/[^A-Z0-9]/g, ''); }
+
+/* 코드를 다 안 쳐도 찾아 준다 — `K2-05` 로 그 단원을, `0431` 로 그 번호를, `E0010` 으로 그 자리를.
+   🔵 **나중에 학생이 쓸 검색이 바로 이것**이다. 강사가 먼저 써 보고 다듬는 셈이다.
+
+   🔵 **과목으로 묶어서 보여 준다** (2026-09-05 · 사용자 요청).
+     「E0010만으로 검색하면 과목별로 E0010 코드가 존재하는 문항이 존재하는 과목만
+      과목과 함께 뜨게 하면 어떨까」. 코드가 길어서 앞자리를 빼고 치게 되는데,
+     그러면 여러 과목에 같은 뒷자리가 있을 수 있다 — **어느 과목의 것인지가 곧 답**이다. */
 function icPartialHTML(raw){
-  const q = raw.trim().toUpperCase().replace(/\s+/g,'');
+  const q = bareCode(raw);
   const all = Object.keys(state.itemByCode);
-  const hits = all.filter(c => c.includes(q)).sort().slice(0, 40);
-  if(!hits.length){
+  const hitAll = all.filter(c => bareCode(c).includes(q));
+  if(!hitAll.length){
     return `<div class="rst-empty">「<b class="mono">${escHtml(raw)}</b>」 로 찾은 것이 없습니다.<br>
-      <span class="mono">K2-05-E-0431</span> 처럼 다 넣거나,
-      <span class="mono">K2-05</span>·<span class="mono">0431</span> 처럼 일부만 넣어도 됩니다.</div>`;
+      <span class="mono">K2-05-E-0431</span> 처럼 다 넣어도 되고,
+      <span class="mono">E0010</span>·<span class="mono">0431</span> 처럼 일부만,
+      <span class="mono">K201E0010</span> 처럼 줄표 없이 쳐도 됩니다.</div>`;
   }
-  const more = all.filter(c => c.includes(q)).length - hits.length;
-  return `<div class="ic-list" style="margin-top:0;">
-    ${hits.map(c=>{
-      const x = state.itemByCode[c];
-      const n = variantsOfCode(c).length;
-      return `<div class="ic-row" style="cursor:pointer;" onclick="icPick('${escHtml(c)}')">
-        <b class="mono">${escHtml(c)}</b>
-        <span class="ic-kind">${escHtml(x.chapter||'')}</span>
-        ${/* 장부에 정답·해설이 없다(일부러다) — 있는 것만 보인다. */''}
-        <span class="ic-txt">${escHtml((x.source&&x.source.book)||'')}
-          <s class="ic-cs">${escHtml(x.scene||'')}</s></span>
-        ${n ? `<span class="ic-have">변형 ${n}</span>` : ''}
-        ${x.answer ? `<span class="mono ic-a">${escHtml(x.answer)}</span>` : ''}
-      </div>`;
-    }).join('')}
-  </div>
-  ${more>0 ? `<div class="rst-empty" style="margin-top:8px;">${more}개가 더 있습니다 — 더 좁혀 주세요.</div>` : ''}`;
+  /* 과목별로 나눈다. 한 과목뿐이면 묶음 머리를 안 그린다 — 없는 갈래를 보여 줄 까닭이 없다. */
+  const bySubject = {};
+  for(const c of hitAll.sort()) (bySubject[subjectOfItemCode(c)] = bySubject[subjectOfItemCode(c)] || []).push(c);
+  const subjects = Object.keys(bySubject);
+  const LIMIT = 40;
+  let shown = 0;
+  const body = subjects.map(sub => {
+    const list = bySubject[sub];
+    const take = list.slice(0, Math.max(0, LIMIT - shown));
+    shown += take.length;
+    if(!take.length) return '';
+    return `${subjects.length > 1
+      ? `<div class="ic-sub"><b>${escHtml(sub)}</b><s>${list.length}개</s></div>` : ''}
+      <div class="ic-list" style="margin-top:0;">
+      ${take.map(c=>{
+        const x = state.itemByCode[c];
+        const n = variantsOfCode(c).length;
+        return `<div class="ic-row" style="cursor:pointer;" onclick="icPick('${escHtml(c)}')">
+          <b class="mono">${escHtml(c)}</b>
+          ${subjects.length > 1 ? '' : `<span class="ic-kind">${escHtml(sub)}</span>`}
+          <span class="ic-kind">${escHtml(x.chapter||'')}</span>
+          ${/* 장부에 정답·해설이 없다(일부러다) — 있는 것만 보인다. */''}
+          <span class="ic-txt">${escHtml((x.source&&x.source.book)||'')}
+            <s class="ic-cs">${escHtml(x.scene||'')}</s></span>
+          ${n ? `<span class="ic-have">변형 ${n}</span>` : ''}
+          ${x.answer ? `<span class="mono ic-a">${escHtml(x.answer)}</span>` : ''}
+        </div>`;
+      }).join('')}
+    </div>`;
+  }).join('');
+  const more = hitAll.length - shown;
+  return body + (more > 0
+    ? `<div class="rst-empty" style="margin-top:8px;">${more}개가 더 있습니다 — 더 좁혀 주세요.</div>` : '');
 }
 
 function teacherItemCodeHTML(){
@@ -17428,15 +17482,16 @@ function teacherItemCodeHTML(){
           <b class="mono">${escHtml(nextVariantCode(root,'N'))}</b> 부터 시작하시면 됩니다.</div>`}`;
 
   return `<div class="st-sec">
-    <div class="st-h">문항 코드
-      <s>한글에서 변형을 만들기 «전»에 여기서 다음 번호를 받아 적으세요</s></div>
+    ${/* 🔵 **머리글을 걷었다** (2026-09-05 · 사용자 요청) — 서브탭에 이미 「문항 코드」가 적혀 있어
+         같은 말이 두 번이었다. 곁말은 검색칸 옆으로 옮겼다(거기서 읽혀야 쓸모가 있다). */''}
     <div class="ic-strip" style="margin-top:12px;">
       <span class="ic-k">코드</span>
       <input class="ic-in mono" id="ic-q" style="width:210px;" value="${escHtml(raw)}"
-        placeholder="K2-05-E-0431"
+        placeholder="K2-05-E-0431 · E0431 · K205E0431"
         onkeydown="if(event.key==='Enter'&&!event.isComposing)icLookup()">
       <button class="btn sm" onclick="icLookup()">찾기</button>
-      <span class="ic-hint">원본 코드도, 변형 코드(<span class="mono">…-N01</span>)도 받습니다 — 어느 쪽이든 그 원본을 봅니다</span>
+      <span class="ic-hint">줄표 없이 <span class="mono">K201E0010</span> 도, <span class="mono">E0010</span> 처럼 일부만도 됩니다
+        <s>·</s>변형 코드(<span class="mono">…-N01</span>)를 넣으면 그 원본을 봅니다</span>
     </div>
     ${/* 🔵 원본 «본문»을 채우는 문 — 시험지와 무관하다(원본은 교재로 푸는 것이라 출제하지 않는다). */''}
     <div class="ic-strip">
