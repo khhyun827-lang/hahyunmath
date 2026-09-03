@@ -12225,9 +12225,48 @@ function teacherSessionHTML(){
 
   const step = state.sessionStep || 'att';
   const sm = sessionSavedSummary(classId, date);
+  /* 🔴 **모든 단계가 체크로 바뀌어야 한다 — 출결만 되고 있었다** (2026-09-05 · 사용자가 짚었다).
+     「넘어가면 번호가 체크표시로 바뀌는거 같은데 출결까지만 되고 과제부터는 안바뀌네」.
+     맞았다 — `done` 판정이 `att` 하나에만 있었고 나머지 다섯은 조건 자체가 없어 늘 `false`였다.
+     ⚠ **«끝났다»의 뜻이 단계마다 다르다** — 하나의 규칙으로 묶을 수 없어서 단계별로 적는다.
+       · 출결 — 오늘 «전원»을 채워야 끝난다 (기존 그대로)
+       · 과제 검사 — «지난 과제 전체»를 보는 자리라 날짜에 안 걸린다. 지금 급한 것(대기·미확인)이
+         하나도 없으면 끝났다고 본다 — 검사할 것이 애초에 없어도 끝난 것이다.
+       · 진도 — 학기 내내 이어 가는 체크리스트라 «100%」를 기다리면 사실상 영영 안 켜진다.
+         과목을 정해 두었으면 «오늘 관리하고 있다»로 본다.
+       · 시험 — «오늘» 시험을 등록했으면 그 점수를 다 쳐야 끝난다. 오늘 본 시험이 없으면
+         칠 것도 없으니 끝난 것이다(과제를 매번 안 내도 되는 것과 같은 사정).
+       · 과제(등록) — 오늘 이 수업에서 낸 과제가 하나라도 있으면 끝난 것으로 본다.
+       · 메모 — 오늘 날짜 메모에 글자가 있으면 끝난 것으로 본다. */
+  const stepDone = {
+    prev: true,
+    att: sm.total > 0 && sm.filled === sm.total,
+    hwcheck: (() => {
+      const roster = classRoster(classId);
+      const all = DATA.assignments.filter(a=>!a.classId || a.classId===classId);
+      return all.every(a => roster.every(s => {
+        const rec = state.allRecords[s.studentId];
+        if(!rec) return true;
+        return hwState(rec, a.id).status !== HW_SUBMITTED && !hwNeedsAction(rec, a.id);
+      }));
+    })(),
+    prog: !!getClassProgress(classId).subject,
+    exam: (() => {
+      const today = classExams(classId, date.slice(0,7)).filter(e=>e.date===date);
+      if(!today.length) return true;
+      const roster = classRoster(classId);
+      return today.every(ex => roster.every(s => examScoreOf(state.allRecords[s.studentId], ex.id)));
+    })(),
+    hw: DATA.assignments.some(a=>a.classId===classId && a.createdAt===date),
+    /* ⚠ **초안이 아니라 «저장된 것»만 본다.** `sessionNoteText`는 아직 저장 안 한 입력칸의
+       글자까지 끌어와 보여 준다(타자 치는 동안 화면이 안 끊기려고 만든 것) — 그걸 그대로 쓰면
+       메모를 «치기만 하고 저장은 안 한» 상태에서도 체크가 뜬다. 새로고침하면 사라질 것을
+       두고 «끝났다»고 말하면 안 된다(출결·시험 점수와 같은 원칙 — 저장된 기록만 믿는다). */
+    memo: !!((state.sessionNotes[classId] || {})[date] || '').trim(),
+  };
   const stepsHTML = `<div class="steps" style="margin-top:18px;flex-shrink:0;">
     ${SESSION_STEPS.map((s,i)=>{
-      const done = s[0] === 'prev' ? true : (s[0] === 'att' && sm.total > 0 && sm.filled === sm.total);
+      const done = !!stepDone[s[0]];
       return `<div class="s ${step===s[0]?'on':(done?'fin':'')}" onclick="goSessionStep('${s[0]}')"
         style="cursor:pointer;"><span class="b">${s[0]==='prev' ? '✓' : (done && step!==s[0] ? '✓' : i)}</span>${s[1]}</div>`;
     }).join('')}
