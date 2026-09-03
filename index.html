@@ -1123,18 +1123,24 @@
 .app .cn-rq .h .ago{margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--dim);}
 .app .cn-rq .w{font-size:12px;color:var(--sub);margin-top:6px;line-height:1.6;}
 .app .cn-rq .a{display:flex;gap:5px;margin-top:9px;flex-wrap:wrap;}
-/* 「이 주에 처리된 신청」을 접었다 펴는 단추 — 기본은 접혀 있다(미확인이 없으면). */
-.app .cn-hist-toggle{display:flex;align-items:center;gap:6px;width:100%;margin-top:20px;
-  padding:9px 10px;background:none;border:none;border-top:1px solid var(--line);
-  font-family:inherit;font-size:12.5px;font-weight:600;color:var(--sub);cursor:pointer;text-align:left;}
-.app .cn-hist-toggle:hover{color:var(--ink);}
 /* 날짜별 출석 확인 판(.hwd 재사용) 안의 학생 한 줄. */
 .app .cn-day-row{display:flex;align-items:center;justify-content:space-between;gap:10px;
-  padding:11px 2px;border-bottom:1px solid var(--line2);}
+  padding:11px 2px;border-bottom:1px solid var(--line2);flex-wrap:wrap;}
 .app .cn-day-row .w{min-width:0;font-size:12.5px;}
 .app .cn-day-row .w b{display:block;font-size:13px;}
 .app .cn-day-row .w span{display:block;color:var(--sub);margin-top:2px;}
 .app .cn-day-row .w span s{text-decoration:none;color:var(--dim);margin:0 5px;}
+/* 🔵 **드문 손질(삭제·되돌리기)은 접어 둔다** (2026-09-04 · 「이 주에 처리된 신청」을 없애며
+   그 안에 있던 손질 버튼들을 옮겨 온 자리). `<details>`라 JS 상태가 따로 필요 없다 —
+   평소엔 「⋯」뿐이고, 눌러야 삭제·되돌리기가 보인다. 출석·불참(자주 쓰는 것)과 한 줄에
+   나란히 두지 않는 이유도 그것 — «가볍게, 빨리»가 이 판의 목적이다. */
+.app .cn-day-more{flex-basis:100%;}
+.app .cn-day-more summary{list-style:none;cursor:pointer;display:inline-block;
+  font-size:11px;color:var(--dim);padding:3px 6px;border-radius:var(--r-sm);}
+.app .cn-day-more summary::-webkit-details-marker{display:none;}
+.app .cn-day-more summary:hover{background:var(--hover);color:var(--sub);}
+.app .cn-day-more[open] summary{color:var(--sub);}
+.app .cn-day-more-a{display:flex;gap:5px;flex-wrap:wrap;margin-top:6px;}
 
 /* 질의응답 — 세로 스택. 질문 하나가 한 덩어리고 답이 그 아래 붙는다. */
 /* 질의응답 — 시안 11 그대로 «좌 목록 + 우 하나» 두 단이다 (2026-08-08에 다시 짰다).
@@ -3908,7 +3914,6 @@ let state = {
   clinicPanel: '',        // 클리닉의 열린 폼 — '' | 'slot' | 'assign'
   clinicSlotDate: '',     // 주간 판의 「+ 시간대」로 열었을 때 미리 채울 날짜
   clinicDrawerDate: '',   // 날짜를 눌러 연 «출석 확인» 판 — 그 날짜 (2026-09-05)
-  clinicHistoryOpen: null,// 「이 주에 처리된 신청」을 펴 뒀나 — null이면 자동(미확인 있으면 편다)
   noticeWriting: false,   // 공지 «새 공지» 폼이 열려 있나
   noticeSelectedId: null, // 오른쪽에 펼쳐 놓은 공지
   noticeDraft: '',        // 쓰는 중인 본문 — 미리보기가 이걸 본다
@@ -6356,7 +6361,7 @@ async function ensureClinicSlot(day, time){
    🔴 **«완료» 단추가 있긴 했는데 «오기 전»에만 눌리는 자리에 있었다.** 승인 대기 칸(아직
    시간도 안 잡힌 신청)에 «완료» 단추가 나란히 있었다 — 그래서 실제로 한 번도 안 쓰였다
    (실 DB에 «완료»가 0건). 출석은 **승인돼 날짜가 잡힌 뒤에나 뜻이 있는 말**이라,
-   승인된 것들이 나열되는 「이 주에 처리된 신청」으로 옮겼다.
+   날짜별 출석 확인 판(아래 `clinicDayDrawerHTML`)으로 옮겼다.
 
    🔵 **«취소»와 «불참»은 다른 말이라 상태를 하나 더 뒀다.** 취소는 그 시간이 오기 «전»에
    빠진 것(다른 학생이 그 자리에 앉을 수 있어야 한다는 뜻이 있다)이고, 불참은 자리를
@@ -6371,22 +6376,21 @@ function clinicStatusTone(status){
   if(status==='불참') return 'no';
   return 'late';   // 대기
 }
-/* 「이 주에 처리된 신청」의 단추 줄. 상태마다 다음에 누를 것이 다르다 —
-   승인된 것은 «왔는지»를 아직 안 물었으니 그것부터, 이미 물은 것은 되돌리는 문만 열어 둔다. */
-function clinicAttendanceActionsHTML(c){
+/* 🔵 **«드문 손질»만 담는다** (2026-09-04 · 「이 주에 처리된 신청」을 없애며 다시 짰다).
+   사용자가 물었다 — 「이주에 처리된 신청건 표시해주는거 이거 밑에있을 이유가있어?」.
+   출석·불참은 이미 날짜 판(`clinicDayDrawerHTML`)의 큰 두 단추가 맡고 있어 여기 안 둔다 —
+   여긴 «잘못 눌렀을 때 되돌리기»·«삭제»처럼 자주 안 쓰는 것만, `<details>` 뒤에 접어 둔다. */
+/* ⚠ 여기 오는 건 `clinicDayBookings`가 이미 걸러 둔 승인·완료·불참뿐이다(대기·취소는 안 옴) —
+   그래서 그 둘만 가른다. */
+function clinicDayMoreActionsHTML(c){
   if(c.status === '승인') return `
-    <button class="btn sm ok" onclick="updateClinicStatus('${c.id}','완료')">출석</button>
-    <button class="btn sm no" onclick="updateClinicStatus('${c.id}','불참')">불참</button>
     <button class="btn q sm" onclick="updateClinicStatus('${c.id}','대기')">대기로</button>
     <button class="btn q sm" onclick="deleteClinic('${c.id}')">삭제</button>`;
-  if(c.status === '완료' || c.status === '불참') return `
-    ${/* ⚠ 잘못 눌렀을 때 되돌리는 문 — «대기로」로 보내면 승인해 둔 자리·시간이 그대로 있으니
-         한 번 더 승인 절차를 밟을 필요 없이 «승인」으로 바로 되돌린다. */''}
-    <button class="btn q sm" onclick="updateClinicStatus('${c.id}','승인')">승인으로 되돌리기</button>
-    <button class="btn q sm" onclick="deleteClinic('${c.id}')">삭제</button>`;
+  /* ⚠ 잘못 눌렀을 때 되돌리는 문 — «대기로」로 보내면 승인해 둔 자리·시간이 그대로 있으니
+     한 번 더 승인 절차를 밟을 필요 없이 «승인」으로 바로 되돌린다. */
   return `
-    <button class="btn q sm" onclick="updateClinicStatus('${c.id}','대기')">대기로</button>
-    <button class="btn q sm" onclick="deleteClinic('${c.id}')">삭제</button>`;   // 취소
+    <button class="btn q sm" onclick="updateClinicStatus('${c.id}','승인')">승인으로 되돌리기</button>
+    <button class="btn q sm" onclick="deleteClinic('${c.id}')">삭제</button>`;   // 완료 · 불참
 }
 
 /* =================== 클리닉 — 날짜별 출석 확인 판 (2026-09-05) ===================
@@ -6414,9 +6418,11 @@ function clinicDayCheckState(date){
 }
 function clinicOpenDayDrawer(date){ state.clinicDrawerDate = date; render(); }
 function clinicCloseDayDrawer(){ state.clinicDrawerDate = ''; render(); }
-/* ⚠ **여기서는 두 단추만 준다(출석·불참)** — 「대기로」·「삭제」·「승인으로 되돌리기」 같은
-   드문 손질은 아래 「이 주에 처리된 신청」(clinicAttendanceActionsHTML)에 그대로 남겨 둔다.
-   이 판은 «가볍게, 빨리»가 목적이라 자주 쓸 것만 놓는다. */
+/* ⚠ **큰 두 단추(출석·불참)가 먼저 보인다** — «가볍게, 빨리»가 이 판의 목적이다.
+   「대기로」·「삭제」·「승인으로 되돌리기」 같은 드문 손질은 `<details>`(「⋯」) 뒤에 접어 둔다
+   — 원래 「이 주에 처리된 신청」이라는 별도 목록에 있던 것을 사용자 요청으로 여기로
+   옮겼다(2026-09-04). 「이주에 처리된 신청건 표시해주는거 이거 밑에있을 이유가있어?」 →
+   출석 확인은 이 판이 이미 다 하고 있었으니, 자주 안 쓰는 손질만 접어서 남긴다. */
 function clinicDayDrawerHTML(date){
   const list = clinicDayBookings(date);
   const dow = WEEKDAY_LABEL[new Date(date+'T00:00:00').getDay()];
@@ -6438,6 +6444,10 @@ function clinicDayDrawerHTML(date){
                 <button class="${c.status==='완료'?'on ok':''}" onclick="updateClinicStatus('${c.id}','완료')">출석</button>
                 <button class="${c.status==='불참'?'on no':''}" onclick="updateClinicStatus('${c.id}','불참')">불참</button>
               </div>
+              <details class="cn-day-more">
+                <summary>⋯</summary>
+                <div class="cn-day-more-a">${clinicDayMoreActionsHTML(c)}</div>
+              </details>
             </div>`).join('')}
       </div>
     </aside>`;
@@ -16245,8 +16255,8 @@ function teacherClinicHTML(){
                      「클리닉도 등록된 학생들에대해 가볍게 출석확인은 하고싶어」).
                    이 칸은 «아직 승인 전»인 신청 목록이다. 오기도 전에 «출석 확인»을 누르는
                    자리가 있었던 셈이다 — 실제로 실 데이터에도 «완료»가 한 건도 없었다.
-                   출석은 **승인돼 날짜가 잡힌 뒤에나 뜻이 있다** → 아래 「이 주에 처리된 신청」으로
-                   옮겼다. 거기는 이미 승인된 것들이 날짜와 함께 나열되는 자리다. */''}
+                   출석은 **승인돼 날짜가 잡힌 뒤에나 뜻이 있다** → 날짜를 눌러 여는
+                   출석 확인 판(`clinicDayDrawerHTML`)으로 옮겼다. */''}
               <button class="btn sm ok" onclick="updateClinicStatus('${c.id}','승인')">승인</button>
               <button class="btn q sm" onclick="updateClinicStatus('${c.id}','취소')">취소</button>
               ${s ? `<button class="btn q sm" onclick="rosterOpen('${c.studentId}','info')">학생</button>` : ''}
@@ -16255,20 +16265,6 @@ function teacherClinicHTML(){
         }).join('')}
     </div>
   </aside>`;
-
-  /* 처리가 끝난 신청은 주간 판 아래에 남긴다 — 「그날 누가 왔었나」를 되짚을 일이 있다.
-     ⚠ 예전에는 **날짜와 무관하게 전부** 나열했다. 바로 위 주간 판은 주 단위로 넘겨 보는데
-        이 목록만 전 기간이라 짝이 안 맞았고, 주가 지나도 지워지지 않고 계속 쌓였다.
-        지금은 **보고 있는 그 주의 것만** 선다 — 지난 주 것은 ←로 넘겨서 본다.
-     («승인 대기»는 왼쪽 칸에 주와 무관하게 늘 뜬다. 처리 안 된 것을 숨기면 안 된다.)
-
-     🔵 **날짜 판(드로어)이 생긴 뒤로는 이 목록이 «빠른 처리»가 아니라 «기록 훑어보기»다.**
-     그래서 상시로 펴 두지 않는다 — 사용자 결정: **이 주에 미확인이 하나라도 있으면 펴서 시작**,
-     없으면 접어 둔다. `state.clinicHistoryOpen`이 null(아직 손대지 않음)일 때만 이 자동 규칙을
-     쓰고, 사람이 한 번 열고 닫으면 그 뒤로는 그 뜻을 따른다(값을 뒤집을 때까지). */
-  const others = DATA.clinics.filter(c=>c.status!=='대기' && days.includes(c.day));
-  const weekUnchecked = days.some(d => clinicDayCheckState(d) === 'warn');
-  const historyOpen = state.clinicHistoryOpen===null ? weekUnchecked : state.clinicHistoryOpen;
 
   return `<div class="co-screen">
     ${side}
@@ -16347,19 +16343,13 @@ function teacherClinicHTML(){
           시간대를 고르면 그 정원에 반영되고, 「직접 입력」이면 정원과 무관하게 잡힙니다.</p>
       </div>`}
 
+      ${/* 🔵 **「이 주에 처리된 신청」을 없앴다** (2026-09-04 · 사용자 질문 —
+           「이주에 처리된 신청건 표시해주는거 이거 밑에있을 이유가있어?」).
+           출석·불참 확인은 이미 날짜 드로어가 다 하고 있어 겹쳤다. 취소 기록과
+           드문 손질(삭제·되돌리기)만 여기 남아 있었는데, 취소 기록은 화면에서 빼기로
+           했고(Firestore엔 그대로 남는다), 손질 단추는 날짜 드로어의 「⋯」 안으로 옮겼다
+           — `clinicDayMoreActionsHTML`. */''}
       <div class="co-body">${grid}
-        ${others.length ? `
-        <button class="cn-hist-toggle" onclick="state.clinicHistoryOpen=${historyOpen?'false':'true'}; render()">
-          ${iconSvg(historyOpen?'chevL':'chevR',12)} 이 주에 처리된 신청 ${others.length}건
-          ${weekUnchecked ? '<span class="badge late" style="margin-left:6px;">미확인 있음</span>' : ''}
-        </button>
-        ${!historyOpen ? '' : others.map(c=>`<div class="cn-rq">
-          <div class="h"><b>${escHtml(c.name)}</b>
-            <span class="status-badge"><span class="badge ${clinicStatusTone(c.status)}">${c.status}</span></span>
-            <span class="ago">${c.requestedAt||''}</span></div>
-          <div class="w">${escHtml(c.day||"")} ${escHtml(clinicWhenLabel(c))} · ${escHtml(c.topic||'')}</div>
-          <div class="a">${clinicAttendanceActionsHTML(c)}</div>
-        </div>`).join('')}` : ''}
         <div class="rst-pad"></div>
       </div>
     </main>
