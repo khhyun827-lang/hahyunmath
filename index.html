@@ -4025,6 +4025,24 @@ const CHAPTER_HINTS = {
 };
 /* 과목 안에서만 고른다 — 「포물선」은 이차함수에도 이차곡선에도 있다.
    과목을 모르면 짐작하지 않는다. 틀린 초안은 없느니만 못하다. */
+/* 🔵 **코드가 있으면 짐작하지 않고 코드를 읽는다** (2026-09-05 · 사용자 요청).
+   「시험지파일안에 코드가 있다면 코드를 해석해서 코드안에 과목이랑 단원이 들어있으니까
+    그거대로 단원이 설정되었으면 좋겠어」.
+   `guessChapter` 는 낱말 대조라 초안일 뿐이다(주석에도 그렇게 적혀 있다) — 그런데
+   교재에서 코드를 심어 낸 시험지(복습테스트 등)는 **미주에 코드가 이미 있다.**
+   `K2-01-E-0010` 의 `K2` 가 과목, `01` 이 단원 번호다 — **짐작할 필요가 없다.**
+   ⚠ 과목까지 코드가 정한다 — 등록 화면의 과목 고르개(드롭다운)보다 코드가 우선이다.
+     시험지 하나에 여러 과목 문항이 섞여 들어오는 경우(복습테스트가 그렇다)를 위해서다. */
+function chapterInfoFromItemCode(code){
+  const m = String(code || '').match(ITEM_CODE_RE);
+  if(!m) return null;
+  const subject = CODE_SUBJECTS[m[1]];
+  if(!subject) return null;
+  const chapter = chapterNameOfNo(subject, m[2]);
+  if(!chapter) return null;
+  return { subject, chapter };
+}
+
 function guessChapter(content, subject){
   const chapters = UNIT_CHAPTERS[subject] || [];
   const text = String(content || '');
@@ -7054,14 +7072,20 @@ function syncExamDraftFromDOM(){
    강사가 고쳐 놓은 값을 자동 판정이 덮어쓰면 고칠 이유가 없어진다. */
 function autofillChapters(){
   syncExamDraftFromDOM();
-  let filled = 0;
+  let filled = 0, byCode = 0;
   examDraft.questions.forEach(q=>{
     if(q.chapter) return;
+    /* 🔴 **코드가 있으면 짐작하지 않는다** — 미주에 심긴 코드가 과목·단원을 이미 말하고
+       있으면 낱말 대조(`guessChapter`)로 넘어가지 않는다. 과목도 코드가 정한 것으로
+       맞춘다(등록 화면 드롭다운이 옛 기본값을 들고 있을 수 있어서). */
+    const ci = q.itemCode ? chapterInfoFromItemCode(q.itemCode) : null;
+    if(ci){ q.unit = ci.subject; q.chapter = ci.chapter; filled++; byCode++; return; }
     const g = guessChapter(q.content, q.unit);
     if(g){ q.chapter = g; filled++; }
   });
   const blank = examDraft.questions.filter(q=>q.content.trim() && !q.chapter).length;
-  showToast(filled ? `${filled}개 문항의 단원을 채웠습니다.` + (blank?` ${blank}개는 못 찾았습니다 — 직접 골라 주세요.`:'')
+  showToast(filled ? `${filled}개 문항의 단원을 채웠습니다.` + (byCode?` (그중 ${byCode}개는 코드로)`:'')
+                     + (blank?` ${blank}개는 못 찾았습니다 — 직접 골라 주세요.`:'')
                    : '새로 채울 것이 없습니다.');
   render();
 }
@@ -7861,14 +7885,22 @@ async function handleExamHwpxFile(fileList){
     showToast('hwpx 파일을 분석하는 중입니다...');
     const problems = await parseHwpxToProblems(file);
     if(problems.length === 0){ showToast('인식된 문항이 없습니다.'); return; }
-    /* 단원 초안도 여기서 같이 채운다 — 일괄 등록의 이점이 «문항 수만큼 단원 고르기»로 사라지면 안 된다. */
-    examDraft.questions = problems.map(p => ({ content: p.content, answer: p.answer, unit,
-      chapter: guessChapter(p.content, unit), image: p.image, itemCode: p.itemCode || '',
-      solution: p.solution || '' }));
+    /* 단원 초안도 여기서 같이 채운다 — 일괄 등록의 이점이 «문항 수만큼 단원 고르기»로 사라지면 안 된다.
+       🔴 **코드가 있으면 짐작하지 않는다** — 미주에 심긴 코드(`K2-01-E-0010`)가 과목·단원을
+       이미 말하고 있다. 낱말 대조(`guessChapter`)는 코드가 없을 때만 쓰는 초안이다. */
+    let codeFilled = 0;
+    examDraft.questions = problems.map(p => {
+      const ci = p.itemCode ? chapterInfoFromItemCode(p.itemCode) : null;
+      if(ci) codeFilled++;
+      return { content: p.content, answer: p.answer, unit: ci ? ci.subject : unit,
+        chapter: ci ? ci.chapter : guessChapter(p.content, unit), image: p.image,
+        itemCode: p.itemCode || '', solution: p.solution || '' };
+    });
     render();
     const noAnswer = problems.filter(p=>!p.answer).length;
     const wm = problems.watermarkedCount || 0;
     showToast(problems.length + '개 문항을 인식했습니다.'
+      + (codeFilled ? ` (${codeFilled}개는 코드로 단원을 정했습니다)` : '')
       + (noAnswer>0 ? ` (정답 비어있는 ${noAnswer}개는 아래에서 직접 채워주세요)` : '')
       + (wm>0 ? ` (저작권 보호 자료로 보이는 ${wm}개는 제외됨)` : ''));
   }catch(e){
