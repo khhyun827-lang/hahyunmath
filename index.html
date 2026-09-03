@@ -19093,11 +19093,17 @@ async function checkCollections(){
 function teacherSettingsAdminHTML(){
   const open = state.settingsForm==='pw';
   const cc = state.collCheck;
+  /* ⚠ **붙여 주는 규칙은 «막힌 것 전부»여야 한다** (2026-09-05).
+     예전에는 variants 한 덩이만 적어 주었는데, 보는 자리는 items 까지 센다.
+     그대로 붙여 넣으면 반만 풀리고 **나머지는 또 조용히 실패한다.** */
+  const blocked = (cc && !cc.running && cc.rows.length)
+    ? cc.rows.filter(r=>r.status!=='열림').map(r=>r.name) : NEEDED_COLLECTIONS;
   const rulesText = 'match /databases/{database}/documents {\n'
-    + '  // 이미 있는 줄은 그대로 두고, 아래 한 덩이만 더합니다\n'
-    + '  match /variants/{doc} {\n'
-    + '    allow read, write: if request.auth != null;\n'
-    + '  }\n}';
+    + '  // 이미 있는 줄은 그대로 두고, 아래 덩이만 더합니다\n'
+    + blocked.map(c => '  match /' + c + '/{doc} {\n'
+      + '    allow read, write: if request.auth != null;\n'
+      + '  }\n').join('')
+    + '}';
   return `<div class="st-wrap">
   ${stSec({
     title:'저장이 막힌 곳', desc:'Firestore 규칙에 없는 컬렉션은 «조용히» 저장에 실패합니다',
@@ -19105,6 +19111,11 @@ function teacherSettingsAdminHTML(){
         <div class="t"><b>문항 창고 <span class="mono">variants</span></b>
           <span>「창고에 넣기」가 여기에 씁니다<s>·</s>막혀 있으면 넣어도 새로고침하면 사라집니다</span></div>
         <div class="v"><button class="btn sm" onclick="checkCollections()">${cc && cc.running ? '보는 중…' : '지금 확인'}</button></div>
+      </div>
+      <div class="st-row">
+        <div class="t"><b>원본 본문 <span class="mono">items</span></b>
+          <span>「교재에서 본문 채우기」가 여기에 씁니다<s>·</s>막혀 있으면 변형을 만들 원본이 안 담깁니다</span></div>
+        <div class="v"><span class="hint">같은 규칙으로 함께 풉니다</span></div>
       </div>
       ${cc && !cc.running ? cc.rows.map(r=>`<div class="st-row">
         <div class="t"><b class="mono">${escHtml(r.name)}</b></div>
