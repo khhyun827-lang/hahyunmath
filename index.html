@@ -1357,6 +1357,16 @@
   margin-top:9px;padding-top:8px;border-top:1px solid var(--line2);}
 .app .exn-a{font-size:11.5px;color:var(--dim);}
 .app .exn-a b{color:var(--ink);font-weight:600;margin-left:3px;}
+.app .exn-bad{font-size:10.5px;color:var(--no);background:var(--nobg);
+  border-radius:var(--r-sm);padding:2px 6px;cursor:help;}
+/* 보기 단추 — 자판에 없는 ①~⑤ 를 넣는 유일한 길이라 «누르는 것»으로 보여야 한다 */
+.app .exn-choice{display:flex;align-items:center;gap:5px;flex-wrap:wrap;}
+.app .exn-choice span{font-size:11px;font-weight:700;color:var(--dim);margin-right:2px;}
+.app .exn-choice button{min-width:34px;border:1px solid var(--line);border-radius:var(--r-sm);
+  background:var(--paper);padding:5px 0;font-family:inherit;font-size:14px;color:var(--sub);
+  cursor:pointer;transition:all var(--t);}
+.app .exn-choice button:hover{border-color:var(--accent-line);background:var(--hover);color:var(--ink);}
+.app .exn-choice button.on{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:700;}
 /* 고치는 칸 */
 .app .exn-qedit{display:flex;flex-direction:column;gap:7px;margin-bottom:10px;}
 .app .exn-qsel{display:flex;gap:7px;flex-wrap:wrap;align-items:center;}
@@ -7303,6 +7313,40 @@ function examToggleEdit(i){
   syncExamDraftFromDOM();
   state.examEditQ = (state.examEditQ === i) ? null : i;
   render();
+}
+/* =================== 보기 기호(①~⑤)를 넣는 공용 단추 줄 (2026-09-04) ===================
+   🔴 **자판에 없는 글자를 요구하고 있었다.** 채점이 문자열 비교라 객관식 정답은 반드시
+   ①~⑤ 여야 하는데, 그 글자를 «넣는» 수단이 어느 화면에도 없었다 (학생 화면에만 있었다).
+   시험지 등록과 오답 검토 두 곳이 같은 흠을 지고 있어서 부품 하나로 만들어 같이 쓴다.
+   ⚠ 값만 바꾸고 `render()` 는 안 부른다 — 고치는 중에 다시 그리면 커서가 튄다.
+     초안에는 다음 sync(접기·저장) 때 실린다. textarea 에 친 글과 같은 셈법이다. */
+function choicePickerHTML(inputId, current, eqIndex){
+  const cur = normalizeTwinAnswer(current);
+  const idx = (eqIndex === undefined || eqIndex === null) ? '' : `,${eqIndex}`;
+  return `<div class="exn-choice" id="cp-${inputId}">
+    <span>보기에서 고르기</span>
+    ${CHOICE_SYMBOLS.map(s=>`<button type="button" class="${cur===s?'on':''}"
+      onclick="pickChoice('${inputId}','${s}'${idx})">${s}</button>`).join('')}
+  </div>`;
+}
+function pickChoice(inputId, sym, eqIndex){
+  const a = document.getElementById(inputId);
+  if(!a) return;
+  a.value = sym;
+  const grp = document.getElementById('cp-'+inputId);
+  if(grp) grp.querySelectorAll('button').forEach(b=>b.classList.toggle('on', b.textContent.trim()===sym));
+  /* 시험지 등록 화면에서만 «그려진 모습»이 옆에 있다 — 있으면 같이 새로 그린다. */
+  if(eqIndex !== undefined && eqIndex !== null) updateEqPreview(eqIndex);
+}
+/* 🔵 **객관식인데 정답이 기호가 아닌 것만** 짚는다 (2026-09-04).
+   ⚠ `answerFormProblem` 을 그대로 쓰면 안 된다 — 그쪽은 «학생이 칠 수 있는가»를 묻느라
+     주관식 정답에 «999 이하 자연수»를 요구한다. 시험지에는 `y=x+1` 같은 답이 정상으로
+     들어오므로 그것까지 빨갛게 칠하면 경고가 소음이 된다. 여기서 묻는 것은 하나뿐이다:
+     보기가 있는 문제인데 정답이 보기 기호가 아닌가. */
+function examChoiceMismatch(q){
+  if(!isMultipleChoice(q.content)) return false;
+  const a = normalizeTwinAnswer(q.answer);
+  return !!a && !CHOICE_SYMBOLS.includes(a);
 }
 /* 머리줄의 단원 고르개. `syncExamDraftFromDOM` 이 이미 새 값을 읽어 가므로 여기서
    따로 대입할 것은 없다 — 다시 그리는 것이 할 일의 전부다(「단원 미지정」 배지 색과
@@ -17430,7 +17474,16 @@ function examNewLegacyHTML(){
         </div>
         <textarea id="eq-content-${i}" placeholder="문제 내용 ($…$ 안에 수식)"
           oninput="updateEqPreview(${i})">${escHtml(q.content)}</textarea>
-        <input id="eq-answer-${i}" placeholder="정답" value="${escHtml(q.answer)}"
+        ${/* 🔴 **동그라미 기호를 «칠» 방법이 없었다** (2026-09-04 · 사용자 요청 —
+             「동그라미 번호를 따로 입력할 방법이 없어」).
+             채점은 문자열 비교라 객관식 정답은 반드시 ①~⑤ 여야 하는데, 그 글자는
+             자판에 없다(한글 자모+한자키로나 나온다). 학생 화면에는 이미 보기 단추가
+             있었는데(`answerInputHTML`) **정답을 «넣는» 쪽에는 없었다** — 요구는
+             해 놓고 입력 수단을 안 준 셈이다.
+           ⚠ 여기서는 `render()` 를 안 부른다 — 고치는 중에 다시 그리면 커서가 튄다.
+             값만 넣고 미리보기만 손본다(textarea 와 같은 결). */''}
+        ${isMultipleChoice(q.content) ? choicePickerHTML('eq-answer-'+i, q.answer, i) : ''}
+        <input id="eq-answer-${i}" placeholder="${isMultipleChoice(q.content)?'정답 (①~⑤)':'정답'}" value="${escHtml(q.answer)}"
           oninput="updateEqPreview(${i})">
         <div class="exn-prevlb">그려진 모습</div>
       </div>` : ''}
@@ -17441,6 +17494,7 @@ function examNewLegacyHTML(){
       ${q.image ? `<img class="exn-img" src="${q.image}">` : ''}
       <div class="exn-qf">
         <span class="exn-a">정답 <b id="eq-a-${i}">${q.answer ? escHtml(q.answer) : '—'}</b></span>
+        ${examChoiceMismatch(q) ? `<span class="exn-bad" title="채점이 글자 그대로 비교라, 학생이 ③을 눌러도 «3»과는 안 맞습니다">보기 기호 아님</span>` : ''}
         ${editing ? `<span class="spacer"></span>
           <button class="btn no sm" onclick="removeExamQuestionRow(${i})">이 문항 삭제</button>` : ''}
       </div>
@@ -18500,6 +18554,10 @@ function reviewWorkHTML(b, list){
         ${(state.bankEditOpen && state.bankEditOpen[b.id]) || (!b.variantContent && !b.variantAnswer) ? `
         <textarea class="rv-edit" id="bank-content-${b.id}" rows="4"
           placeholder="쌍둥이 문항 내용">${escHtml(b.variantContent||'')}</textarea>
+        ${/* 🔴 여기 안내문은 「보기 기호 ①~⑤」를 요구하면서 **넣을 방법을 안 줬다**
+             (2026-09-04). 게다가 학생 채점이 실제로 견주는 값이 바로 이 `variantAnswer` 다 —
+             여기가 어긋나면 학생은 풀고도 영원히 오답이 된다. */''}
+        ${isMultipleChoice(b.variantContent) ? choicePickerHTML('bank-answer-'+b.id, b.variantAnswer) : ''}
         <input class="rv-edit mono" id="bank-answer-${b.id}" value="${escHtml(b.variantAnswer||'')}"
           placeholder="정답 — 999 이하 자연수 또는 보기 기호 ①~⑤">
         <div style="display:flex;gap:8px;margin-top:9px;">
