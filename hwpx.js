@@ -88,8 +88,24 @@ function convertHwpEq(script){
   // 뒤쪽 \b는 안 쓰고 시작 위치만 단어 경계로 확인한다. 방금 만든 "\leq"의 "le"를
   // 다시 건드리지 않도록(무한 중복 방지) 바로 앞이 백슬래시가 아닐 때만 매치한다.
   s = s.replace(/(?<!\\)\bLEQ/gi, '\\leq').replace(/(?<!\\)\bGEQ/gi, '\\geq').replace(/(?<!\\)\bNEQ/gi, '\\neq');
-  s = s.replace(/(?<!\\)\ble/g, '\\leq').replace(/(?<!\\)\bge/g, '\\geq');
+  /* 🔴 **`le` 가 `left` 를 물어뜯고 있었다** (2026-09-05 · 교재 564제 중 315개가 깨져 있었다).
+     뒤쪽 낱말 경계를 안 본 탓에 `left(` 가 **`\leqft(`** 이 되고, 그러면 아래 LEFT/RIGHT 규칙도
+     못 알아봐 **수식이 통째로 안 그려진다.** 학교 시험지는 대문자 `LEFT` 를 써서 여태 안 드러났다.
+     ⚠ 그렇다고 뒤에 `\b` 를 붙이면 안 된다 — `le5` 처럼 숫자가 바로 붙는 꼴을 놓친다(옛 주석의 그 까닭).
+     🔵 그래서 **«뒤가 글자일 때만» 비켜선다.** 숫자·공백·괄호 앞에서는 그대로 뜻이 산다. */
+  s = s.replace(/(?<!\\)\ble(?![a-zA-Z])/g, '\\leq').replace(/(?<!\\)\bge(?![a-zA-Z])/g, '\\geq');
   s = s.replace(/\bTIMES\b/gi, '\\times');
+  /* 🔵 **교재에서 새로 나온 셋** (2026-09-05 · 564제를 훑어보고 찾았다).
+     학교 시험지에는 없던 표기라 여태 안 드러났다 — `90 DEG` 는 「DEG」 라는 글자로,
+     `l prime` 은 「prime」 이라는 글자로 그대로 화면에 떴다. */
+  s = s.replace(/\bDEG\b/gi, '^{\\circ}');
+  s = s.replace(/\s*(?<!\\)\bprime\b/g, '^{\\prime}');
+  /* ⚠ **`prime` 도 붙여 쓴 꼴이 온다** — `OprimeAprimeBprime` (angle·bar 와 같은 사정이다).
+     낱말 경계가 없어 위 규칙에 안 걸린다. 앞 글자를 남기고 프라임만 올린다. */
+  s = s.replace(/([A-Za-z}])prime/g, '$1^{\\prime}');
+  /* ⚠ **`it` 이 «맨 끝»에도 온다** — 위쪽 규칙은 뒤에 글자·숫자·괄호가 올 때만 걷어서
+     `{{ABC}}it$` 처럼 끝에 붙은 것 54개가 그대로 남았다. 서체 지정이라 뜻이 없으니 걷는다. */
+  s = s.replace(/\bit\b\s*/g, '');
   // angle/bar는 "angle{BAD}"(중괄호), "angle BAD"(공백), "angleBAD"(붙여쓰기) 세 가지 형태가
   // 모두 나오므로 각각 처리한다. 방금 만든 "\angle"/"\overline"을 다시 건드리지 않도록
   // (무한 중복 방지) 바로 앞이 백슬래시가 아닐 때만 매치한다.
@@ -103,10 +119,14 @@ function convertHwpEq(script){
   /* LEFT/RIGHT는 괄호만이 아니다 — 절댓값 LEFT | … RIGHT |, 대괄호, 중괄호가 다 온다.
      ⚠ 중괄호는 LaTeX에서 \left\{ 로 이스케이프해야 한다 (\left{ 는 KaTeX가 못 읽는다).
      짝이 안 맞는 LEFT/RIGHT가 남으면 수식 전체가 안 그려지므로, 못 알아본 것은 그냥 지운다. */
-  s = s.replace(/\bLEFT\s*\{/g, '\\left\\{').replace(/\bRIGHT\s*\}/g, '\\right\\}');
-  s = s.replace(/\bLEFT\s*([([|])/g, (m,d)=>'\\left'+d)
-       .replace(/\bRIGHT\s*([)\]|])/g, (m,d)=>'\\right'+d);
-  s = s.replace(/\bLEFT\b\s*/g, '').replace(/\bRIGHT\b\s*/g, '');
+  /* ⚠ **교재는 소문자 `left(` `right)` 를 쓴다** — 시험지는 대문자였다. 둘 다 받는다 (2026-09-05). */
+  s = s.replace(/\bLEFT\s*\{/gi, '\\left\\{').replace(/\bRIGHT\s*\}/gi, '\\right\\}');
+  s = s.replace(/\bLEFT\s*([([|])/gi, (m,d)=>'\\left'+d)
+       .replace(/\bRIGHT\s*([)\]|])/gi, (m,d)=>'\\right'+d);
+  /* ⚠ **여기서 «방금 만든 것»을 지우면 안 된다** — 위에서 `\left(` 를 만들어 놓고
+     대소문자를 안 가리고 지우면 `left` 가 통째로 날아가 `\(` 만 남는다.
+     그래서 **바로 앞이 역슬래시면 비켜선다** (angle·bar 규칙과 같은 장치다). */
+  s = s.replace(/(?<!\\)\bLEFT\b\s*/gi, '').replace(/(?<!\\)\bRIGHT\b\s*/gi, '');
   s = s.replace(/\bCDOTS\b/gi, '\\cdots').replace(/\bLDOTS\b/gi, '\\ldots')
        .replace(/\bDOTSAXIS\b/gi, '\\cdots').replace(/\bDOTS\b/gi, '\\cdots');
   /* «같지 않다»가 세 가지 표기로 온다 — != 와 NEQ(위에서 처리) 와 ne. */
@@ -391,6 +411,44 @@ function hwpParseBlocks(topParas, tablesAsProblems){
   flushPlain();
   return blocks;
 }
+
+/* ── 교재의 «표 껍질»을 벗긴다 ─────────────────────────────────────────
+   🔴 **교재는 문항 하나를 표 하나로 감싼다.** 그래서 본문을 그대로 담으면 이렇게 된다:
+
+       | | [유형반복R] | |          ← 출처 딱지 (문항이 아니다)
+       | 좌표평면 위의 두 점 … |    ← 진짜 본문
+       | | 두 점 사이의 거리 |      ← «다음» 유형의 제목이 꼬리로 딸려 온다
+       | SCENE | 2 | |             ← 장 배지도 마찬가지
+
+   미주가 문항 «앞»에 오는 조판이라, 미주와 미주 사이에 다음 문항의 «머리»까지 들어온다.
+   564제를 실제로 훑어보고 셋을 확인했다 — 표 껍질 564/564 · 출처 딱지 498 · 꼬리 118.
+
+   ⚠ **이것을 그냥 두면 AI 에게 그대로 먹인다.** 변형을 만들 때 「유형반복R」이나
+     남의 유형 제목이 문제의 일부로 읽힌다. 창고에 담기 전에 벗겨야 하는 까닭이다.
+
+   🔵 **가르는 잣대는 «첫 칸이 비었는가»다.** 딱지·제목·배지는 첫 칸이 비어 있고
+     (`| | 제목 |`), 본문은 첫 칸에 바로 글이 온다 (`| 본문 |`).
+     564제에서 «첫 칸이 안 빈 줄»은 554개가 하나, 10개가 둘이었고 그 둘째는 전부 SCENE 배지였다.
+     그래서 **첫 번째 것 하나만** 취한다.
+
+   ⚠ **못 알아보면 손대지 않는다.** 표가 아닌 줄이 하나라도 섞였거나, 본문 줄이 여러 칸이면
+     (진짜 격자일 수 있다) 원래 글을 그대로 돌려준다. 학교 시험지는 애초에 표 껍질이 없어
+     여기서 그냥 지나간다 — **이 함수는 교재에만 걸린다.** */
+function hwpxUnwrapBookBody(content){
+  const src = String(content || '');
+  const lines = src.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+  if(!lines.length) return content;
+  const isRow = l => l.length > 1 && l[0] === '|' && l[l.length-1] === '|';
+  if(!lines.every(isRow)) return content;          // 표가 아닌 줄이 섞였다 — 손대지 않는다
+  for(const l of lines){
+    const cells = l.slice(1, -1).split('|').map(c => c.trim());
+    if(cells[0] === '') continue;                  // 딱지·제목·배지
+    if(cells.length === 1) return cells[0];        // 한 칸짜리 본문 — 껍질만 벗긴다
+    return content;                                // 여러 칸이면 진짜 표일 수 있다
+  }
+  return content;
+}
+
 
 /* ── 문서(여럿) → 문항 목록 ────────────────────────────────────────────
    🔴 **여기가 «문항이 몇 개인가»를 정하는 자리다.** 웹과 도구가 갈리면 안 되는 곳이라

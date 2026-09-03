@@ -29,7 +29,7 @@ const RULE_NAMES = [
   'convertHwpEq', 'cleanHwpPlainText', 'hwpWalkParagraphs',
   'stripScoreMarks', 'fixBareSqrt',
   'hwpEndnoteParts', 'hwpEndnoteText', 'hwpCellToBlock', 'hwpParseBlocks',
-  'hwpxProblemsFromDocs',
+  'hwpxUnwrapBookBody', 'hwpxProblemsFromDocs',
 ];
 export function loadHwpxRules() {
   const src = fs.readFileSync(path.join(ROOT, 'hwpx.js'), 'utf8');

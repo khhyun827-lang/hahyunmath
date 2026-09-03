@@ -16654,7 +16654,11 @@ async function icFillBodies(input){
     for(let i=0;i<withCode.length;i++){
       const p = withCode[i];
       const root = (splitItemCode(p.itemCode) || {}).origin || p.itemCode;
-      const doc = { code: root, content: p.content, updatedAt: nowStamp() };
+      /* 🔵 **교재는 문항을 «표»로 감싼다 — 벗겨서 담는다** (2026-09-05).
+         출처 딱지(「[유형반복R]」)와 다음 유형의 제목까지 표 줄로 딸려 온다.
+         그대로 담으면 변형을 만들 때 AI 에게 그것까지 먹인다.
+         🔴 **도구(tools/item-bodies.mjs)도 같은 함수를 부른다** — 어느 길로 담아도 같아야 한다. */
+      const doc = { code: root, content: hwpxUnwrapBookBody(p.content), updatedAt: nowStamp() };
       if(i % 20 === 0){ state.icFill = { running:true, msg:`${i+1} / ${withCode.length} 담는 중…` }; render(); }
       const ok = await dbSetDoc('items', root, doc);
       if(ok){ state.itemBody[root] = doc; saved++; } else failed++;
