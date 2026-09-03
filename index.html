@@ -6496,9 +6496,13 @@ async function updateClinicStatus(cid, status){
   render();
 }
 async function cancelClinicRequest(cid){
-  if(!confirm('신청을 취소할까요? 취소하면 다른 학생이 그 시간대에 신청할 수 있게 됩니다.')) return;
   const c = DATA.clinics.find(c=>c.id===cid);
   if(!c) return;
+  /* ⚠ **여기서 한 번 더 막는다** — 단추는 렌더링 시점의 날짜로 감춰지는데, 자정을 넘겨
+     화면을 그대로 두고 있던 학생이 옛 화면의 단추를 누르면 그 검사를 피해 간다.
+     (2026-09-04 · 「클리닉 당일은 수정하지 못하도록」) */
+  if(!(c.day > todayStr())){ showToast('클리닉 당일에는 취소할 수 없습니다 — 선생님께 말씀해주세요.'); return; }
+  if(!confirm('신청을 취소할까요? 취소하면 다른 학생이 그 시간대에 신청할 수 있게 됩니다.')) return;
   c.status = '취소';
   await dbSetDoc('clinics', c.id, c);
   showToast('신청이 취소되었습니다.');
@@ -10814,9 +10818,13 @@ function stuClinicHTML(c){
          잠깐의 틈이었을 뿐이라 크게 안 보였다. 그런데 이제 열린 시간대는
          곧장 '승인'으로 확정되니, '대기'만 보면 학생이 스스로 취소할 길이
          거의 사라진다(신청 = 확정이 되어버려서). 그래서 앞으로 있을 '승인'
-         건도 취소할 수 있게 넓힌다 — 지난 날짜(이미 지나간 클리닉)는 취소할
-         것이 없으니 뺀다. */''}
-    ${(cl.status==='대기' || (cl.status==='승인' && cl.day >= todayStr())) ? `<button class="mbtn q" style="margin-top:8px;"
+         건도 취소할 수 있게 넓혔다.
+       ⚠ **당일은 뺀다** (2026-09-04 · 사용자 요청 — 「학생들이 시간을 뺄때 클리닉
+         당일은 수정하지 못하도록 해줘」). 처음엔 '승인' 건에만 `day >= todayStr()`로
+         오늘까지 포함해 열어 뒀는데, 그러면 «당일 아침에 갑자기 취소»가 가능해진다.
+         `>`로 바꿔 **오늘은 막고**, '대기'(아직 승인 전 제안)도 같은 기준을 준다 —
+         제안이든 확정이든 «클리닉 당일»이라는 말은 같다. */''}
+    ${((cl.status==='대기' || cl.status==='승인') && cl.day > todayStr()) ? `<button class="mbtn q" style="margin-top:8px;"
       onclick="cancelClinicRequest('${cl.id}')">신청 취소</button>` : ''}
   </div>`).join('')}` : ''}
 
@@ -16297,7 +16305,7 @@ function teacherClinicHTML(){
         <div class="cls-form">
           <label><span>날짜</span><input id="slot-date" type="date" value="${state.clinicSlotDate || todayStr()}"></label>
           <label style="width:120px;"><span>시작</span><input id="slot-from" type="time" step="1800" value="14:00"></label>
-          <label style="width:130px;"><span>마지막</span><input id="slot-to" type="time" step="1800" value="22:00"></label>
+          <label style="width:130px;"><span>마지막</span><input id="slot-to" type="time" step="1800" value="21:00"></label>
           <label style="width:110px;"><span>간격</span>
             <select id="slot-step" class="fm-sel">
               <option value="60" selected>1시간</option>
@@ -16309,8 +16317,8 @@ function teacherClinicHTML(){
           <button class="btn p sm" onclick="addClinicSlots()">시간대 만들기</button>
         </div>
         <p class="st-note"><b>「마지막」 시각에도 시간대가 하나 섭니다.</b>
-          예를 들어 시작 <b>오후 2시</b> · 마지막 <b>오후 10시</b> · 간격 <b>1시간</b>이면
-          2시부터 10시까지 <b>아홉 개</b>가 한 번에 열립니다.
+          예를 들어 시작 <b>오후 2시</b> · 마지막 <b>오후 9시</b> · 간격 <b>1시간</b>이면
+          2시부터 9시까지 <b>여덟 개</b>가 한 번에 열립니다.
           한 개만 열려면 <b>마지막을 비우면</b> 됩니다. 이미 열린 시각은 건너뜁니다.<br>
           여기서 만든 시간대를 학생이 골라 신청합니다. 정원이 차면 자동으로 막힙니다.
           학생이 <b>희망 시간을 직접 제안</b>할 수도 있고, 그건 승인해야 확정됩니다.</p>
