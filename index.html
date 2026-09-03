@@ -1266,6 +1266,105 @@
 .app .ex-item .m{font-size:11.5px;color:var(--dim);margin-top:4px;}
 .app .ex-main{flex:1;min-width:0;min-height:0;display:flex;flex-direction:column;}
 .app .ex-body{flex:1;min-height:0;overflow-y:auto;margin-top:16px;}
+
+/* ============================================================
+   새 시험지 등록 (`exn-`) — 2026-09-04에 다시 짰다.
+   사용자가 한 화면에서 흠 넷을 짚었다: ① 머리말이 같은 말을 두 번 ② 입력칸이 배경과
+   같은 색이고 쓸데없이 길다 ③ 주력인 hwpx 칸이 덩치만 크다 ④ 문항이 «입력칸 + 그려진 판»
+   으로 두 번 적히고 좌우로만 길다. ①은 HTML에서, ②③④는 여기 서식으로 푼다.
+   ============================================================ */
+.app .exn{max-width:1180px;}
+/* 흰 카드 — `--paper` 입력칸이 «보이게» 하는 바탕이다(둘 다 --paper면 칸이 사라진다) */
+.app .exn-card{display:flex;align-items:flex-end;gap:14px;flex-wrap:wrap;
+  background:var(--card);border:1px solid var(--line);border-radius:var(--r-md);
+  padding:14px 16px;margin-bottom:12px;}
+.app .exn-f label{display:block;font-size:11px;font-weight:700;color:var(--dim);margin-bottom:6px;}
+.app .exn-f input,.app .exn-f select{width:100%;border:1px solid var(--line);
+  border-radius:var(--r-sm);background:var(--paper);padding:8px 10px;
+  font-family:inherit;font-size:12.5px;color:var(--ink);outline:none;
+  transition:border-color var(--t),box-shadow var(--t);}
+.app .exn-f input:focus,.app .exn-f select:focus{border-color:var(--accent);
+  box-shadow:0 0 0 3px rgba(60,48,52,.12);}
+/* hwpx 줄 — 주력이라 강조색을 쓰되 «한 줄»로 눕힌다 (예전엔 --nobg 빨강에 130px 높이였다) */
+.app .exn-hwpx{align-items:center;background:var(--accent-bg);border-color:var(--accent-line);}
+.app .exn-hwpx .exn-hi{display:flex;align-items:center;color:var(--accent);}
+.app .exn-ht b{display:block;font-size:13px;font-weight:700;}
+.app .exn-ht s{display:block;text-decoration:none;font-size:11.5px;color:var(--sub);margin-top:2px;}
+/* 드물게 쓰는 것은 접어 둔다 */
+.app .exn-more{margin-bottom:16px;}
+.app .exn-more summary{list-style:none;cursor:pointer;font-size:12.5px;font-weight:600;
+  color:var(--sub);padding:7px 0;}
+.app .exn-more summary::-webkit-details-marker{display:none;}
+.app .exn-more summary::before{content:'▸ ';color:var(--dim);}
+.app .exn-more[open] summary::before{content:'▾ ';}
+.app .exn-more summary:hover{color:var(--ink);}
+.app .exn-more summary s{text-decoration:none;font-weight:400;color:var(--dim);margin-left:6px;font-size:11.5px;}
+.app .exn-morein{padding:4px 0 10px;}
+.app .exn-pages{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;}
+.app .exn-pg{position:relative;}
+.app .exn-pg img{width:90px;height:120px;object-fit:cover;border-radius:var(--r-sm);border:1px solid var(--line);}
+.app .exn-pg .up{position:absolute;bottom:2px;left:2px;background:rgba(0,0,0,.6);color:#fff;
+  font-size:9px;padding:1px 4px;border-radius:3px;}
+.app .exn-pg button{position:absolute;top:2px;right:2px;padding:1px 6px;}
+/* 문항 머리 줄 */
+.app .exn-qbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+  padding-bottom:9px;border-bottom:1px solid var(--line);}
+.app .exn-qbar b{font-size:13.5px;font-weight:700;}
+.app .exn-qbar s{text-decoration:none;font-size:11.5px;color:var(--dim);margin-left:7px;}
+.app .exn-note{font-size:11.5px;color:var(--dim);margin:8px 0 12px;}
+
+/* 🔵 **2~3단** — 창이 좁아지면 저절로 1단이 된다. 폭을 재는 자바스크립트가 필요 없다. */
+.app .exn-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:12px;}
+.app .exn-q{background:var(--card);border:1px solid var(--line);border-radius:var(--r-md);
+  padding:11px 13px 10px;display:flex;flex-direction:column;
+  transition:border-color var(--t),box-shadow var(--t);}
+.app .exn-q:hover{border-color:var(--accent-line);}
+/* 고치는 중인 한 장만 통째 폭을 쓴다 — 입력칸엔 폭이 필요하다 */
+.app .exn-q.editing{grid-column:1/-1;border-color:var(--accent);
+  box-shadow:0 0 0 3px rgba(60,48,52,.08);}
+.app .exn-qh{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-bottom:8px;}
+.app .exn-qh b{font-size:12.5px;color:var(--accent);}
+.app .exn-ch{font-size:11px;color:var(--sub);background:var(--sunk);
+  border-radius:var(--r-sm);padding:2px 7px;}
+.app .exn-ch.none{color:var(--late);background:var(--latebg);}
+.app .exn-code{font-size:10.5px;color:var(--dim);}
+/* 「고치기」는 평소엔 조용히 — 필요할 때만 쓰는 것이라 (사용자: 「버튼 축소해주고」) */
+.app .exn-edit{display:flex;align-items:center;gap:4px;border:1px solid transparent;
+  border-radius:var(--r-sm);background:none;padding:3px 7px;font-family:inherit;
+  font-size:11px;color:var(--dim);cursor:pointer;transition:all var(--t);}
+.app .exn-q:hover .exn-edit{border-color:var(--line);color:var(--sub);}
+.app .exn-edit:hover{background:var(--hover);color:var(--ink);}
+.app .exn-edit.on{background:var(--accent);border-color:var(--accent);color:#fff;}
+/* 그려진 문제 — 평소엔 이것이 카드의 본문이고, 고칠 때는 미리보기가 된다 */
+.app .exn-body{font-size:12.5px;line-height:1.85;white-space:pre-wrap;overflow-x:auto;
+  flex:1;min-width:0;}
+/* ⚠ 클래스가 아니라 `:empty` 로 잡는다 — 클래스로 하면 렌더 시점에만 정해져서
+   고치는 중에 글을 넣어도 안내 문구가 «글 옆에» 그대로 남는다. */
+.app .exn-body:empty::before{content:'내용 없음 — 「고치기」로 채우세요';
+  color:var(--dim);font-size:11.5px;}
+.app .exn-img{max-width:150px;max-height:150px;margin-top:8px;display:block;
+  border:1px solid var(--line);border-radius:var(--r-sm);}
+.app .exn-qf{display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+  margin-top:9px;padding-top:8px;border-top:1px solid var(--line2);}
+.app .exn-a{font-size:11.5px;color:var(--dim);}
+.app .exn-a b{color:var(--ink);font-weight:600;margin-left:3px;}
+/* 고치는 칸 */
+.app .exn-qedit{display:flex;flex-direction:column;gap:7px;margin-bottom:10px;}
+.app .exn-qsel{display:flex;gap:7px;flex-wrap:wrap;}
+.app .exn-qsel select{flex:1;min-width:150px;}
+.app .exn-qedit select,.app .exn-qedit textarea,.app .exn-qedit input{
+  border:1px solid var(--line);border-radius:var(--r-sm);background:var(--paper);
+  padding:8px 10px;font-family:inherit;font-size:12.5px;color:var(--ink);
+  outline:none;resize:vertical;}
+.app .exn-qedit textarea{min-height:96px;}
+.app .exn-qedit textarea:focus,.app .exn-qedit input:focus,.app .exn-qedit select:focus{
+  border-color:var(--accent);}
+.app .exn-prevlb{font-size:10.5px;font-weight:700;color:var(--dim);margin-top:2px;}
+.app .exn-q.editing .exn-body{background:var(--note);border:1px solid var(--note-line);
+  border-radius:var(--r-sm);padding:9px 11px;}
+.app .exn-foot{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:18px;
+  padding-top:14px;border-top:1px solid var(--line);}
+
 /* 문항별 오답률 — 막대를 세우지 않고 «행»으로 눕힌다. 20문항이면 세로 막대엔 라벨이 안 들어간다. */
 .app .ex-q{display:flex;align-items:center;gap:12px;padding:9px 2px;
   border-bottom:1px solid var(--line2);transition:background var(--t);}
@@ -2351,25 +2450,9 @@
    ⚠ 스크롤 상자에는 position:relative를 같이 준다 (KaTeX .katex-mathml 때문). */
 .app .fm-chat{position:relative;height:340px;overflow-y:auto;padding:4px 2px;margin-bottom:12px;}
 
-/* 문항 한 줄 — 시험지 등록의 «번호 + 입력들» */
-.app .fm-q{display:flex;gap:9px;align-items:flex-start;padding:9px 0;
-  border-bottom:1px solid var(--line2);}
-.app .fm-q .qno{font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--accent);
-  flex:0 0 32px;padding-top:9px;font-size:12.5px;}
-.app .fm-q .qf{flex:1;display:flex;gap:8px;flex-wrap:wrap;}
-.app .fm-q .qf textarea{flex:2;min-width:200px;min-height:44px;}
-.app .fm-q .qf input{flex:1;min-width:100px;}
-/* 입력칸 옆의 «보이는 판». textarea 안의 $…$는 KaTeX가 못 건드리므로(입력칸이다)
-   단원을 판단하려면 그려진 것을 따로 보여 줘야 한다. */
-.app .fm-eqprev{flex:1 1 100%;min-width:0;background:var(--note);
-  border:1px solid var(--note-line);border-radius:var(--r-sm);padding:9px 11px;
-  font-size:13px;line-height:1.9;white-space:pre-wrap;overflow-x:auto;position:relative;}
-.app .fm-eqprev:empty::before{content:'문제를 입력하면 수식이 여기에 그려집니다';color:var(--dim);font-size:11.5px;}
-.app .fm-eqprev .lb{display:block;font-size:10.5px;color:var(--dim);margin-bottom:3px;}
-.app .fm-q .qf input,.app .fm-q .qf textarea,.app .fm-q .qf select{
-  border:1px solid var(--line);border-radius:var(--r-sm);background:var(--paper);
-  padding:8px 10px;font-family:inherit;font-size:12.5px;color:var(--ink);outline:none;resize:vertical;}
-.app .fm-q .qf input:focus,.app .fm-q .qf textarea:focus{border-color:var(--accent);}
+/* ⚠ **`.fm-q` · `.fm-eqprev` 는 2026-09-04에 지웠다.** 시험지 등록의 «번호 + 입력들» 한 줄이
+   쓰던 서식인데, 그 화면을 카드 격자(`exn-`)로 다시 짜면서 쓰는 곳이 없어졌다.
+   남겨 두면 다음 사람이 «시험지 등록은 저 서식을 쓴다»고 읽는다 — 그게 죽은 코드의 값이다. */
 
 /* 출석 표 — 상태 버튼은 ds.css의 .seg를 그대로 쓴다.
    🔴 **이 표는 제 서식을 스스로 지녀야 한다** (2026-08-31 · 사용자가 짚었다) —
@@ -3801,6 +3884,8 @@ let state = {
   qnaSelectedId: null,    // 오른쪽에 펼쳐 놓은 질문 (공지의 noticeSelectedId와 같은 장치)
   examSelectedId: null,
   examMode: '',              // ''이면 목록+분석, 'new'면 등록 폼
+  examEditQ: null,           // 등록 폼에서 «펴서 고치는 중»인 문항 번호(0부터). null이면 다 접힘
+  examImgOpen: false,        // 「시험지 이미지 첨부」를 펴 뒀나 (드물게 쓰는 것이라 접어 둔다)
   /* ---------- 시험지 «묶음» 보기 (2026-08-30 · C-2) ----------
      왼쪽은 «과목 폴더 > 시험지» 둘뿐이고, «어느 반»은 본문 위 칩이 고른다.
      복사본이 왼쪽 목록을 둘로 가르던 것을 없앤 자리다. */
@@ -7190,6 +7275,22 @@ function removeExamQuestionRow(idx){
   syncExamDraftFromDOM();
   examDraft.questions.splice(idx,1);
   if(examDraft.questions.length===0) examDraft.questions.push({content:'', answer:'', unit:UNITS[0]});
+  /* ⚠ **펴 둔 번호는 자리를 가리킨다** — 하나를 지우면 뒤가 한 칸씩 당겨져서
+     그대로 두면 «다른 문항»이 펴진 채로 열린다. 그래서 닫는다 (2026-09-04). */
+  state.examEditQ = null;
+  render();
+}
+/* 🔵 **문항은 평소에 «읽는 것»이고, 고칠 때만 입력칸이 된다** (2026-09-04 · 사용자 요청).
+   「수정가능한 형태와 문제가 두번 반복해서 쓰여지는데 수정은 필요할 때만 수정할 수 있도록
+    버튼 축소해주고」. 예전엔 문항마다 **원본 LaTeX 입력칸과 그려진 판이 나란히** 있어서
+   같은 문제가 두 번 적혀 있었다 — 22문항이면 그 되풀이가 44번이다.
+   ⚠ **접기 전에 반드시 `syncExamDraftFromDOM()` 을 부른다.** 안 그러면 방금 고친 값이
+     화면에서 사라지면서 같이 사라진다 (`syncExamDraftFromDOM` 은 `if(el)` 가드라
+     **없는 칸은 조용히 건너뛴다** — 그 덕에 접어 두는 것이 안전한 것이지, 공짜는 아니다).
+   🔵 한 번에 하나만 편다 — 여럿을 펴 두면 결국 예전 화면으로 돌아간다. */
+function examToggleEdit(i){
+  syncExamDraftFromDOM();
+  state.examEditQ = (state.examEditQ === i) ? null : i;
   render();
 }
 function syncExamDraftFromDOM(){
@@ -7245,21 +7346,20 @@ function setAllChapters(ch){
    ⚠ 글자마다 render()를 부르면 안 된다 — 전체 재렌더링이라 커서가 튀고 한글 조합이 깨진다
    (수업 메모·학생 메모에서 이미 겪은 것과 같은 함정). 이 판 하나만 직접 그린다. */
 function updateEqPreview(i){
-  const box = document.getElementById('eq-prev-'+i);
-  if(!box) return;
-  const c = document.getElementById('eq-content-'+i);
-  const a = document.getElementById('eq-answer-'+i);
-  box.textContent = c ? c.value : '';
-  if(a && a.value.trim()){
-    const lb = document.createElement('span');
-    lb.className = 'lb'; lb.style.marginTop = '7px'; lb.textContent = '정답';
-    box.appendChild(lb);
-    box.appendChild(document.createTextNode(a.value));
-  }
-  if(window.renderMathInElement){
-    try{ renderMathInElement(box, {delimiters:[{left:'$', right:'$', display:false}], throwOnError:false}); }
+  const draw = el => {
+    if(!el || !window.renderMathInElement) return;
+    try{ renderMathInElement(el, {delimiters:[{left:'$', right:'$', display:false}], throwOnError:false}); }
     catch(e){ /* 쓰는 중인 수식은 깨져 있는 것이 정상이다. 조용히 넘긴다 */ }
-  }
+  };
+  const box = document.getElementById('eq-prev-'+i);
+  const c = document.getElementById('eq-content-'+i);
+  if(box){ box.textContent = c ? c.value : ''; draw(box); }
+  /* 🔵 **정답은 제 자리에서만 산다** (2026-09-04). 예전엔 정답을 미리보기 판 «안»에
+     같이 그렸는데, 새 카드에는 아래 «정답» 줄이 따로 있어서 그러면 한 카드에 정답이
+     두 번 적힌다 — 이 화면을 다시 짠 까닭(같은 것을 두 번 안 적는다)과 어긋난다. */
+  const a  = document.getElementById('eq-answer-'+i);
+  const ab = document.getElementById('eq-a-'+i);
+  if(ab){ ab.textContent = (a && a.value.trim()) ? a.value : '—'; draw(ab); }
 }
 /* hwpx를 잘못 올렸을 때 쓴다. 22문항을 하나씩 지우게 두면 다시 올리는 것보다 오래 걸린다.
    되돌릴 수 없으므로 몇 개를 지우는지 세어서 묻는다. */
@@ -7269,6 +7369,7 @@ function clearExamQuestions(){
   if(n === 0){ showToast('지울 문항이 없습니다.'); return; }
   if(!confirm(`문항 ${n}개를 모두 지울까요?\n되돌릴 수 없습니다. 시험명·반·첨부 이미지는 그대로 둡니다.`)) return;
   examDraft.questions = [{content:'', answer:'', unit:examDraft.questions[0]?.unit || UNITS[0], chapter:''}];
+  state.examEditQ = null;
   showToast(`문항 ${n}개를 지웠습니다.`);
   render();
 }
@@ -17243,7 +17344,10 @@ function examSubmissionsHTML(ex){
   </aside>`;
 }
 
-/* 등록 모드 — 폼은 구버전 그대로다. 껍데기만 DS로 감싼다. */
+/* 등록 모드. 🔵 **2026-09-04에 통째로 다시 짰다** (사용자 요청 — 「전체적인 페이지 리뉴얼」).
+   ⚠ 머리말 부제는 **여기 한 번만** 둔다 — 예전에는 이 `<h1>` 과 아래 「시험지 등록」 머리말이
+     «hwpx를 올리면 문항·정답이 자동으로 채워진다»를 **글자 하나 안 틀리고 두 번** 적고 있었다
+     (사용자가 짚었다: 「자동으로 채워진다랑 … 또 … 자동으로 채워진다는 내용이 반복」). */
 function examNewHTML(){
   return `<div class="ex-screen"><main class="ex-main">
     <div class="rst-hrow" style="flex-shrink:0;">
@@ -17257,84 +17361,135 @@ function examNewHTML(){
 }
 
 function examNewLegacyHTML(){
-  return `
-  <div class="st-sec">
-    <div class="st-h"><b>시험지 등록</b><span>hwpx를 올리면 문항·정답이 자동으로 채워진다</span></div>
-    ${DATA.classes.length===0?'<div class="fm-empty">먼저 [반] 탭에서 반을 등록해주세요.</div>':`
-    <div class="fm-row">
-      <div class="fm-field"><label>대상 반</label><select id="exam-class">${classOptionsHTML(examDraft.classId)}</select></div>
-      <div class="fm-field" style="flex:2;"><label>시험명</label><input id="exam-title" value="${escHtml(examDraft.title)}" placeholder="예: 7월 내신 대비 모의고사"></div>
-      <div class="fm-field"><label>날짜</label><input id="exam-date" type="date" value="${examDraft.date}"></div>
-    </div>
-    <div class="fm-field" style="margin-top:12px;background:var(--nobg);border:1px solid var(--line);border-radius:4px;padding:14px;">
-      <label>hwpx 파일로 문항 자동 채우기 (선택)</label>
-      <p class="fm-hint" style="margin:2px 0 8px;">올리면 아래 문항 입력칸이 자동으로 채워집니다. 직접 타이핑 안 하셔도 돼요.</p>
-      <div class="fm-row">
-        ${/* «단원»이 아니라 «과목»이다. 진짜 단원은 문항마다 아래에서 따로 고른다 —
-             한 폼에 같은 이름이 둘이면 어느 쪽을 고치는지 알 수 없다. */''}
-        <div class="fm-field"><label>이 파일의 과목</label><select id="exam-hwpx-unit">${UNITS.map(u=>`<option value="${u}">${u}</option>`).join('')}</select></div>
-        <div class="fm-field" style="flex:2;"><label>hwpx 파일</label><input type="file" accept=".hwpx" onchange="handleExamHwpxFile(this.files)"></div>
+  if(DATA.classes.length===0)
+    return `<div class="fm-empty">먼저 [반] 탭에서 반을 등록해주세요.</div>`;
+
+  const qs = examDraft.questions;
+  const noChapter = qs.filter(q=>q.content.trim() && !q.chapter).length;
+  const filled = qs.filter(q=>(q.content||'').trim()).length;
+
+  /* ── 문항 한 장. 평소엔 «그려진 문제»만, 「고치기」를 눌러야 입력칸이 열린다. ── */
+  const cardHTML = (q,i)=>{
+    const editing = state.examEditQ === i;
+    return `<div class="exn-q${editing?' editing':''}">
+      <div class="exn-qh">
+        <b class="mono">${i+1}번</b>
+        ${q.chapter ? `<span class="exn-ch">${escHtml(q.chapter)}</span>`
+                    : `<span class="exn-ch none">단원 미지정</span>`}
+        ${q.itemCode ? `<span class="exn-code mono">${escHtml(q.itemCode)}</span>` : ''}
+        <span class="spacer"></span>
+        <button class="exn-edit${editing?' on':''}" onclick="examToggleEdit(${i})"
+          title="${editing?'접기':'이 문항 고치기'}">${editing ? '접기' : iconSvg('pencil',12)+' 고치기'}</button>
       </div>
-    </div>
-    <div class="fm-field" style="margin-top:12px;">
-      <label>시험지 이미지 첨부 (선택, 사진/스캔본 — 자동 압축되어 저장됩니다)</label>
-      <input type="file" accept="image/*" multiple onchange="handleExamFileSelect(this.files)">
-      ${examDraft.pages.length ? `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">
-        ${examDraft.pages.map((p,i)=>`<div style="position:relative;">
-          <img src="${imgSrcOf(p)}" style="width:90px;height:120px;object-fit:cover;border-radius:4px;border:1px solid var(--line);${p.uploading?'opacity:.5;':''}">
-          ${p.uploading ? `<span style="position:absolute;bottom:2px;left:2px;background:rgba(0,0,0,.6);color:#fff;font-size:9px;padding:1px 4px;border-radius:3px;">업로드중</span>` : `<button class="btn no sm" style="position:absolute;top:2px;right:2px;padding:1px 6px;" onclick="removeExamPage(${i})">×</button>`}
-        </div>`).join('')}
+
+      ${editing ? `
+      <div class="exn-qedit">
+        <div class="exn-qsel">
+          <select id="eq-unit-${i}">${UNITS.map(u=>`<option value="${u}" ${q.unit===u?'selected':''}>${u}</option>`).join('')}</select>
+          <select id="eq-chapter-${i}" ${q.chapter?'':'style="border-color:var(--late);"'}>
+            <option value="">— 단원 미지정 —</option>
+            ${(UNIT_CHAPTERS[q.unit] || []).map(ch=>
+              `<option value="${escHtml(ch)}" ${q.chapter===ch?'selected':''}>${escHtml(ch)}</option>`).join('')}
+          </select>
+        </div>
+        <textarea id="eq-content-${i}" placeholder="문제 내용 ($…$ 안에 수식)"
+          oninput="updateEqPreview(${i})">${escHtml(q.content)}</textarea>
+        <input id="eq-answer-${i}" placeholder="정답" value="${escHtml(q.answer)}"
+          oninput="updateEqPreview(${i})">
+        <div class="exn-prevlb">그려진 모습</div>
       </div>` : ''}
+
+      ${/* 그려진 판. 고칠 때는 «미리보기», 평소에는 이것이 곧 문항 카드의 본문이다.
+           id 를 두 경우에 같이 두는 것이 중요하다 — `updateEqPreview` 가 이걸 찾는다. */''}
+      <div class="exn-body" id="eq-prev-${i}">${escHtml(q.content)}</div>
+      ${q.image ? `<img class="exn-img" src="${q.image}">` : ''}
+      <div class="exn-qf">
+        <span class="exn-a">정답 <b id="eq-a-${i}">${q.answer ? escHtml(q.answer) : '—'}</b></span>
+        ${editing ? `<span class="spacer"></span>
+          <button class="btn no sm" onclick="removeExamQuestionRow(${i})">이 문항 삭제</button>` : ''}
+      </div>
+    </div>`;
+  };
+
+  return `
+  <div class="exn">
+    ${/* ── ① 기본 정보. 흰 카드 위에 놓아야 입력칸이 보인다 ──
+         🔴 **입력칸 바탕(`--paper`)이 페이지 바탕과 같은 색이다** (사용자가 짚었다 —
+           「색이 배경색과 같아서 눈에 잘 들어오지도 않아」). 다른 화면은 `.fm-panel`(흰 카드)
+           안에 있어서 안 드러났는데 이 화면만 배경 위에 맨몸으로 놓여 있었다.
+           그래서 **공용 `.fm-field` 규칙은 안 건드리고** 카드를 씌워서 고친다.
+         ⚠ 폭도 묶는다 — 예전엔 시험명 칸 하나가 700px를 넘었다
+           (「불필요하게 좌우로 길고」). 짧은 글을 넣는 칸은 짧아야 한다. */''}
+    <div class="exn-card exn-basic">
+      <div class="exn-f" style="width:190px;">
+        <label>대상 반</label><select id="exam-class">${classOptionsHTML(examDraft.classId)}</select></div>
+      <div class="exn-f" style="flex:1;max-width:380px;">
+        <label>시험명</label><input id="exam-title" value="${escHtml(examDraft.title)}" placeholder="예: 7월 내신 대비 모의고사"></div>
+      <div class="exn-f" style="width:160px;">
+        <label>날짜</label><input id="exam-date" type="date" value="${examDraft.date}"></div>
     </div>
-    <h3 style="margin-top:20px;font-size:14px;">문항 입력</h3>
-    ${/* 단원은 데일리퀴즈의 «지금 시험 범위» 판정에 쓰인다. 자동 초안을 채운 뒤
-         강사가 훑고 이상한 것만 고치는 흐름이다 — 22문항을 하나씩 고르게 하면 등록이 무거워진다. */''}
-    <div class="fm-row" style="margin-bottom:10px;align-items:center;gap:8px;flex-wrap:wrap;">
-      <button class="btn sm" onclick="autofillChapters()">${iconSvg('sparkle',13)} 단원 자동 채우기</button>
-      <span style="font-size:11.5px;color:var(--dim);">비어 있는 문항만 채웁니다. 고쳐 둔 것은 그대로 둡니다.</span>
+
+    ${/* ── ② hwpx 자동 채우기. **이 화면에서 제일 많이 쓰는 길**이라 눈에 띄게 두되,
+           덩치는 줄인다 (사용자: 「주로 할 기능이긴 한데 불필요하게 사이즈가 커」).
+         ⚠ 예전 바탕이 `--nobg`(빨강 계열)였다 — 주력 기능에 «오류» 색을 깔고 있던 셈이다. */''}
+    <div class="exn-card exn-hwpx">
+      <span class="exn-hi">${iconSvg('sparkle',15)}</span>
+      <div class="exn-ht"><b>hwpx로 문항 자동 채우기</b>
+        <s>올리면 문항·정답이 채워집니다 — 직접 타이핑 안 하셔도 돼요</s></div>
       <span class="spacer"></span>
-      <select onchange="if(this.value) setAllChapters(this.value)" style="max-width:220px;">
-        <option value="">전부 한 단원으로 지정…</option>
-        ${(UNIT_CHAPTERS[examDraft.questions[0] && examDraft.questions[0].unit] || [])
+      ${/* «단원»이 아니라 «과목»이다. 진짜 단원은 문항마다 따로 고른다 —
+           한 폼에 같은 이름이 둘이면 어느 쪽을 고치는지 알 수 없다. */''}
+      <select id="exam-hwpx-unit" class="fm-sel" title="이 파일의 과목">${UNITS.map(u=>`<option value="${u}">${u}</option>`).join('')}</select>
+      <input type="file" accept=".hwpx" id="exam-hwpx-file" style="display:none;"
+        onchange="handleExamHwpxFile(this.files)">
+      <button class="btn p sm" onclick="document.getElementById('exam-hwpx-file').click()">파일 고르기</button>
+    </div>
+
+    ${/* ── ③ 이미지 첨부는 드물게 쓴다 → 접어 둔다. 붙여 둔 것이 있으면 펴서 보여 준다. */''}
+    <details class="exn-more" ${state.examImgOpen || examDraft.pages.length ? 'open' : ''}>
+      <summary>시험지 이미지 첨부 <s>사진·스캔본, 자동 압축${examDraft.pages.length?` · ${examDraft.pages.length}장 붙임`:''}</s></summary>
+      <div class="exn-morein">
+        <input type="file" accept="image/*" multiple onchange="handleExamFileSelect(this.files)">
+        ${examDraft.pages.length ? `<div class="exn-pages">
+          ${examDraft.pages.map((p,i)=>`<div class="exn-pg">
+            <img src="${imgSrcOf(p)}" ${p.uploading?'style="opacity:.5;"':''}>
+            ${p.uploading ? `<span class="up">업로드중</span>`
+                          : `<button class="btn no sm" onclick="removeExamPage(${i})">×</button>`}
+          </div>`).join('')}
+        </div>` : ''}
+      </div>
+    </details>
+
+    ${/* ── ④ 문항. 단원은 데일리퀴즈의 «지금 시험 범위» 판정에 쓰인다. */''}
+    <div class="exn-qbar">
+      <b>문항 ${qs.length}개</b>${filled !== qs.length ? `<s>내용 있는 것 ${filled}개</s>` : ''}
+      <span class="spacer"></span>
+      <button class="btn sm" onclick="autofillChapters()">${iconSvg('sparkle',13)} 단원 자동 채우기</button>
+      <select class="fm-sel" onchange="if(this.value) setAllChapters(this.value)">
+        <option value="">전부 한 단원으로…</option>
+        ${(UNIT_CHAPTERS[qs[0] && qs[0].unit] || [])
           .map(ch=>`<option value="${escHtml(ch)}">${escHtml(ch)}</option>`).join('')}
       </select>
     </div>
-    ${examDraft.questions.map((q,i)=>`
-      <div class="fm-q">
-        <div class="qno">${i+1}번</div>
-        <div class="qf">
-          <div style="display:flex;gap:6px;margin-bottom:6px;flex-wrap:wrap;">
-            <select id="eq-unit-${i}" style="flex:1;min-width:130px;">${UNITS.map(u=>`<option value="${u}" ${q.unit===u?'selected':''}>${u}</option>`).join('')}</select>
-            <select id="eq-chapter-${i}" style="flex:2;min-width:170px;${q.chapter?'':'border-color:var(--late);'}">
-              <option value="">— 단원 미지정 —</option>
-              ${(UNIT_CHAPTERS[q.unit] || []).map(ch=>
-                `<option value="${escHtml(ch)}" ${q.chapter===ch?'selected':''}>${escHtml(ch)}</option>`).join('')}
-            </select>
-          </div>
-          <textarea id="eq-content-${i}" placeholder="문제 내용"
-            oninput="updateEqPreview(${i})">${escHtml(q.content)}</textarea>
-          <input id="eq-answer-${i}" placeholder="정답" value="${escHtml(q.answer)}"
-            oninput="updateEqPreview(${i})">
-          ${/* 그려진 판. 초기 렌더는 render() 끝의 renderMathInElement가 알아서 해 준다. */''}
-          <div class="fm-eqprev" id="eq-prev-${i}">${escHtml(q.content)}${
-            q.answer ? `<span class="lb" style="margin-top:7px;">정답</span>${escHtml(q.answer)}` : ''}</div>
-          ${q.image ? `<img src="${q.image}" style="max-width:120px;max-height:120px;margin-top:6px;border:1px solid var(--line);border-radius:4px;display:block;">` : ''}
-          <button class="btn no sm" onclick="removeExamQuestionRow(${i})">삭제</button>
-        </div>
-      </div>`).join('')}
+    <p class="exn-note">비어 있는 문항만 채웁니다. 고쳐 둔 것은 그대로 둡니다.</p>
+
+    ${/* 🔵 **2~3단으로 깐다** (사용자: 「좌우로만 길게나와서 보기 힘들어. 2단 혹은 3단으로」).
+         `auto-fill`+`minmax` 라 창이 좁아지면 저절로 1단이 된다 — 화면 폭을 안 재도 된다.
+         고치는 중인 한 장만 `grid-column:1/-1` 로 통째 폭을 쓴다(입력칸엔 폭이 필요하다). */''}
+    <div class="exn-grid">${qs.map(cardHTML).join('')}</div>
+
     ${/* 단원이 빈 문항은 «어느 범위에도 안 드는» 문제가 되어 데일리퀴즈에 영영 안 나온다.
          저장을 막지는 않는다 — 막으면 급할 때 등록 자체를 못 한다. 대신 사실을 말해 준다. */''}
-    ${(()=>{ const n = examDraft.questions.filter(q=>q.content.trim() && !q.chapter).length;
-      return n ? `<div class="fm-warn" style="margin-top:10px;">단원을 정하지 않은 문항이 <b>${n}개</b> 있습니다.
-        그대로 저장하면 그 문항은 <b>데일리퀴즈에 나오지 않습니다</b> (오답숙제로는 나갑니다).</div>` : ''; })()}
-    <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
+    ${noChapter ? `<div class="fm-warn" style="margin-top:14px;">단원을 정하지 않은 문항이 <b>${noChapter}개</b> 있습니다.
+      그대로 저장하면 그 문항은 <b>데일리퀴즈에 나오지 않습니다</b> (오답숙제로는 나갑니다).</div>` : ''}
+
+    <div class="exn-foot">
       <button class="btn" onclick="addExamQuestionRow()">+ 문항 추가</button>
-      <button class="btn p" onclick="saveExam()">시험지 저장</button>
       <span class="spacer"></span>
       ${/* hwpx를 잘못 올렸을 때 하나씩 지우면 다시 올리는 것보다 오래 걸린다. */''}
       <button class="btn no" onclick="clearExamQuestions()">문항 전체 삭제</button>
+      <button class="btn p" onclick="saveExam()">시험지 저장</button>
     </div>
-    `}
   </div>`;
 }
 
