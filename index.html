@@ -1866,6 +1866,39 @@
 .app.sap .flaw-hint span{min-width:0; font-size:11.5px; color:var(--sub);}
 .app.sap .flaw-hint:hover{background:var(--hover); border-color:var(--accent);}
 .app.sap .flaw-hint:focus-visible{outline:2px solid var(--accent); outline-offset:2px;}
+/* 신고 폼 아래 곁말 — 「왜 보내기가 안 눌리지」를 묻기 «전»에 답한다 */
+.app.sap .flaw-note-hint{margin-top:7px; font-size:11px; color:var(--dim); line-height:1.6;}
+
+/* ── 데일리퀴즈 판정 (2026-09-05) ──────────────────────────────────
+   🔴 **맞았는지 틀렸는지가 «느껴져야» 한다** — 사용자가 써 보고 짚었다.
+     토스트는 곧 사라지고 작은 이름표는 «채점됐다»만 알린다.
+   🔵 큰 표시 + 색 + 한 번 튀는 움직임, 셋을 함께 준다.
+   ⚠ 움직임에 약한 사람을 위해 `prefers-reduced-motion` 을 지킨다 — 그때는 색과 표시만 남는다. */
+.app.sap .dq-vd{
+  display:flex; align-items:center; gap:12px;
+  padding:14px 15px; border-radius:var(--r-md); border:1px solid;
+  animation:dqPop .34s cubic-bezier(.34,1.56,.64,1) both;
+}
+.app.sap .dq-vd .mk{
+  flex:none; width:38px; height:38px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center; color:#fff;
+  animation:dqMark .42s .08s cubic-bezier(.34,1.56,.64,1) both;
+}
+.app.sap .dq-vd .tx{min-width:0; line-height:1.5;}
+.app.sap .dq-vd .tx > b{display:block; font-size:16px; font-weight:700;}
+.app.sap .dq-vd .tx > span{display:block; font-size:12px; color:var(--sub); margin-top:2px;}
+.app.sap .dq-vd .tx s{text-decoration:none; color:var(--dim); margin:0 5px;}
+.app.sap .dq-vd.ok{background:var(--okbg); border-color:var(--ok-line);}
+.app.sap .dq-vd.ok .mk{background:var(--ok);}
+.app.sap .dq-vd.ok .tx > b{color:var(--ok);}
+.app.sap .dq-vd.no{background:var(--nobg); border-color:var(--no-line);}
+.app.sap .dq-vd.no .mk{background:var(--no);}
+.app.sap .dq-vd.no .tx > b{color:var(--no);}
+@keyframes dqPop{from{opacity:0; transform:translateY(8px) scale(.97);} to{opacity:1; transform:none;}}
+@keyframes dqMark{from{opacity:0; transform:scale(.4) rotate(-12deg);} to{opacity:1; transform:none;}}
+@media (prefers-reduced-motion: reduce){
+  .app.sap .dq-vd, .app.sap .dq-vd .mk{animation:none;}
+}
 .app.sap .flaw-form{
   margin-top:12px; padding:13px; border:1px solid var(--line);
   border-radius:var(--r-md); background:var(--sunk);
@@ -5280,6 +5313,9 @@ const REPORT_WHYS = [
   ['answer',  '답이 안 맞아요',         '풀었는데 계속 틀렸다고 나와요'],
   ['image',   '그림이 안 보여요',       ''],
   ['text',    '글자·수식이 깨져 보여요', ''],
+  /* ⚠ 넷 중에 없어서 «글로만» 적은 것이 여기로 온다 (2026-09-05). 학생 화면에는 안 보인다 —
+     학생이 고를 것이 아니라 **우리가 못 넣은 갈래**를 담는 칸이다. */
+  ['other',   '그 밖의 문제',          ''],
 ];
 const REPORT_WHY_LABEL = Object.fromEntries(REPORT_WHYS.map(w=>[w[0], w[1]]));
 
@@ -5327,31 +5363,47 @@ function toggleReport(key){
   state.reportWhy = '';
   render();
 }
-/* 펼쳐지는 신고 폼. **묻는 것을 짧게 둔다** — 고르고 한 줄이면 끝나야 학생이 실제로 누른다. */
+/* 펼쳐지는 신고 폼. **묻는 것을 짧게 둔다** — 고르고 한 줄이면 끝나야 학생이 실제로 누른다.
+
+   🔴 **넷 중 하나를 «반드시» 고르게 하면 안 된다** (2026-09-05 · 사용자가 써 보고 짚었다).
+     「네개중에 해당하지 않는 또다른 상황이 있을 수 있어서 그 네개중 고르지 않고 밑에칸에
+      말을적어봤는데 보내기가 활성화되지않아」.
+     맞는 말이다 — **넷은 «자주 있는 것»이지 «전부»가 아니다.** 우리가 못 넣은 갈래를
+     학생이 글로 적었는데 문이 안 열리면, 그 학생은 다음부터 안 누른다.
+   → **고르거나, 적거나. 둘 중 하나면 보낼 수 있다.**
+   ⚠ 글만 적었으면 갈래는 `other` 로 둔다 — 강사 화면이 「그 밖의 문제」로 읽는다.
+   ⚠ 단추를 살리는 데 `render()` 를 쓰지 않는다. 글자 하나 칠 때마다 다시 그리면
+     **입력칸이 포커스를 잃는다.** 그래서 그 자리에서 `disabled` 만 끈다. */
 function reportFormHTML(bankId, face){
   if(state.reportOpen !== bankId + '|' + face) return '';
   const why = state.reportWhy || '';
   return `<div class="flaw-form">
     <div class="flaw-h">무엇이 이상한가요?</div>
     <div class="flaw-whys">
-      ${REPORT_WHYS.map(([k,label,hint])=>`<button class="flaw-why ${why===k?'on':''}"
+      ${REPORT_WHYS.filter(w=>w[0]!=='other').map(([k,label,hint])=>`<button class="flaw-why ${why===k?'on':''}"
         onclick="state.reportWhy='${k}'; render()">
         <b>${escHtml(label)}</b>${hint?`<s>${escHtml(hint)}</s>`:''}</button>`).join('')}
     </div>
-    <input id="flaw-note" class="sap-in" style="margin-top:9px;" placeholder="더 알려줄 것이 있으면 적어주세요 (안 적어도 됩니다)">
-    <button class="mbtn p" style="margin-top:9px;" ${why?'':'disabled'}
-      onclick="sendReport('${escHtml(bankId)}','${escHtml(face)}')">
-      ${why ? '보내기' : '무엇이 이상한지 골라주세요'}</button>
+    <input id="flaw-note" class="sap-in" style="margin-top:9px;"
+      placeholder="여기 없는 경우면 직접 적어주세요"
+      oninput="document.getElementById('flaw-send').disabled = !state.reportWhy && !this.value.trim()">
+    <button id="flaw-send" class="mbtn p" style="margin-top:9px;" ${why?'':'disabled'}
+      onclick="sendReport('${escHtml(bankId)}','${escHtml(face)}')">보내기</button>
+    <div class="flaw-note-hint">위에서 고르거나, 아래에 직접 적으면 보낼 수 있어요.</div>
   </div>`;
 }
+
 async function sendReport(bankId, face){
   const b = DATA.problemBank.find(x=>x.id===bankId);
   const sid = state.currentUser && state.currentUser.studentId;
-  if(!b || !sid || !state.reportWhy) return;
-  const noteEl = document.getElementById('flaw-note');
+  if(!b || !sid) return;
+  const noteEl0 = document.getElementById('flaw-note');
+  const note = (noteEl0 ? noteEl0.value : '').trim();
+  /* 고르거나 적거나 — 둘 다 없으면 보낼 것이 없다. 그때는 «왜 안 되는지»를 말해 준다. */
+  if(!state.reportWhy && !note){ showToast('무엇이 이상한지 고르거나, 아래에 적어주세요.'); return; }
   const r = {
     id: 'rp' + Date.now(), sid, name: state.currentUser.name || '',
-    face, why: state.reportWhy, note: (noteEl ? noteEl.value : '').trim(),
+    face, why: state.reportWhy || 'other', note,
     at: nowStamp(), done: false,
   };
   b.reports = (b.reports || []).concat(r);
@@ -5535,43 +5587,54 @@ function hwNeedsAction(rec, hwId){
    ⚠ **낼 수 없는 얼굴은 여기서 뺀다** — 답을 못 치는 문제가 나가면 영원히 오답이 되고,
      그 카드가 로테이션을 통째로 막는다(`dqAnswerable` 주석과 같은 까닭). */
 function dqFaces(b){
-  /* 🔴 **신고된 얼굴은 안 낸다** (2026-09-05). 강사가 볼 때까지 다른 날 또 나가면,
-     학생은 「말해도 소용없다」를 배운다. 그러면 두 번째부터는 아무도 안 누른다.
-     ⚠ 얼굴 단위다 — 원본은 멀쩡한데 N02 만 깨졌을 수 있다. */
-  const hurt = f => faceReported(b, f);
-  const faces = [];
+  const all = [];
   const oa = b.originalContent ? dqAnswerable(b.originalContent, b.originalAnswer) : null;
   /* 원본은 검토 상태와 무관하다 — 교사가 시험지에 직접 넣은 문제다. */
-  if(oa && !hurt('orig')) faces.push({ face:'orig', kind:'orig', content:b.originalContent, answer:oa,
-                      bankId:b.id, imgKind: b.hasImage ? 'orig' : null });
+  if(oa) all.push({ face:'orig', kind:'orig', content:b.originalContent, answer:oa,
+                    bankId:b.id, imgKind: b.hasImage ? 'orig' : null });
   /* 옛 쌍둥이 — 창고가 생기기 전부터 problemBank 에 한 칸으로 들어 있던 것.
      갈래로는 «숫자변형(N)»과 같은 자리다. 검토를 통과한 것만 나간다. */
   const va = (b.status==='approved' && b.variantContent)
     ? dqAnswerable(b.variantContent, b.variantAnswer) : null;
-  if(va && !hurt('legacy')) faces.push({ face:'legacy', kind:'N', content:b.variantContent, answer:va,
-                      bankId:b.id, imgKind: variantImgKind(b) });
+  if(va) all.push({ face:'legacy', kind:'N', content:b.variantContent, answer:va,
+                    bankId:b.id, imgKind: variantImgKind(b) });
   /* 창고의 변형들. ⚠ **그림이 있어야 푸는데 아직 안 그려진 것은 뺀다** — 학생이 못 푼다. */
   const root = dqRootCode(b);
   if(root) for(const v of variantsOfCode(root)){
-    if(hurt(v.code)) continue;
     if(v.needsFigure) continue;
     const a = dqAnswerable(v.content, v.answer);
     if(!a) continue;
-    faces.push({ face:v.code, kind:(v.variantKind || 'N'), content:v.content, answer:a,
-                 bankId:b.id, imgKind:null });
+    all.push({ face:v.code, kind:(v.variantKind || 'N'), content:v.content, answer:a,
+               bankId:b.id, imgKind:null });
   }
+
+  const norm = s => String(s || '').replace(/\s+/g, ' ').trim();
+
+  /* 🔴 **신고된 얼굴은 안 낸다** (2026-09-05). 강사가 볼 때까지 다른 날 또 나가면,
+     학생은 「말해도 소용없다」를 배운다. 그러면 두 번째부터는 아무도 안 누른다.
+
+     🔴 **그리고 «글자가 같은» 다른 얼굴도 같이 빼야 한다** (사용자가 실제로 겪었다).
+       원본을 「글자가 깨져 보여요」로 신고했더니 **글이 완전히 같은 `-N01` 이 대신 나갔다.**
+       이름만 다르지 같은 문제라, 학생 눈에는 신고가 아무 일도 안 한 것이 된다.
+       (복습테스트처럼 «변형이 곧 시험지 문항»인 교재에서 늘 이렇게 된다.)
+     ⚠ 얼굴 단위인 것은 그대로다 — 원본은 멀쩡한데 N02 만 깨진 경우가 있다. */
+  const hurtFace = new Set(openReports(b).map(r => r.face));
+  const hurtText = new Set(all.filter(f => hurtFace.has(f.face)).map(f => norm(f.content)));
+  const live = all.filter(f => !hurtFace.has(f.face) && !hurtText.has(norm(f.content)));
+
   /* 🔴 **같은 문제를 두 얼굴로 세지 않는다** (2026-09-05 · 실 데이터에서 찾았다).
      복습테스트처럼 «변형이 곧 시험지 문항»인 경우, 그 문항의 `originalContent` 와
      창고의 같은 코드 변형이 **글자까지 같다.** 그대로 두면 학생이 3일 뒤에 «다른 문제»라며
      **같은 문제를 다시 만난다** — 이 화면을 고친 까닭이 바로 그것이었는데.
      ⚠ 공백만 다른 것도 같은 것으로 본다. */
   const seen = new Set();
-  return faces.filter(f => {
-    const key = String(f.content || '').replace(/\s+/g, ' ').trim();
+  return live.filter(f => {
+    const key = norm(f.content);
     if(!key || seen.has(key)) return false;
     seen.add(key); return true;
   });
 }
+
 function dqRootCode(b){
   if(!b || !b.itemCode) return '';
   return (splitItemCode(b.itemCode) || {}).origin || b.itemCode;
@@ -7489,6 +7552,7 @@ const ICON_PATHS = {
   // 학생 마이페이지(20-student-app)가 쓰는 것들. 역시 ds.js에서 가져왔다.
   chat: '<path d="M20.5 12.5c0 4.1-3.8 7.5-8.5 7.5a9.8 9.8 0 01-3-.45L4 21l1.3-3.4A7 7 0 013.5 12.5C3.5 8.4 7.3 5 12 5s8.5 3.4 8.5 7.5z"/>',
   check: '<path d="M4 12.5l5.5 5.5L20 6.5"/>',
+  x: '<path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/>',
   clipboard: '<path d="M9 4.5H7a2 2 0 00-2 2v11a2 2 0 002 2h10a2 2 0 002-2v-11a2 2 0 00-2-2h-2"/><rect x="9" y="2.8" width="6" height="3.4" rx="1.2"/><path d="M8.5 11h7M8.5 14.5h4.5"/>',
   sparkle: '<path d="M12 3.5l1.9 4.9 4.9 1.9-4.9 1.9-1.9 4.9-1.9-4.9-4.9-1.9 4.9-1.9z"/><path d="M18.5 16.5l.7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7z"/>',
   pencil: '<path d="M16.5 4.5l3 3L8 19H5v-3z"/><path d="M14.5 6.5l3 3"/>',
@@ -9251,6 +9315,27 @@ function stuHomeHTML(c){
    하루 세 문제가 학생 자기 오답에서 뽑혀 나오고, 지금 푸는 것 하나가 크게 선다.
    문제 위에 «원본 12번» / «변형 12번»을 붙이는 것이 이 화면의 핵심이다 —
    내가 뭘 틀려서 이걸 다시 푸는지 모르면 그냥 새 숙제가 된다 (오답숙제와 같은 판단). */
+/* 🔴 **맞았는지 틀렸는지가 «느껴져야» 한다** (2026-09-05 · 사용자가 써 보고 짚었다).
+   「맞았는지 틀렸는지 확실하게 느껴지지가 않아서」.
+   그럴 만했다 — 지금까지는 토스트 한 줄과 「낸 답 ③」이 전부였다. 토스트는 곧 사라지고,
+   작은 이름표는 «채점됐다»는 사실만 알리지 «맞았다»는 기분을 안 준다.
+
+   🔵 **셋을 함께 준다** — ① 큰 표시(✓/✗) ② 색을 입힌 판정 줄 ③ 한 번 튀는 움직임.
+   ⚠ 틀렸을 때의 말은 **나무라지 않는다.** 오답은 이 화면의 «실패»가 아니라 «할 일»이다 —
+     내일 다시 나오고, 그러라고 만든 화면이다.
+   ⚠ `prefers-reduced-motion` 을 지킨다. 움직임에 약한 사람에게는 색과 표시만 남는다. */
+function dqVerdictHTML(done, face){
+  const ok = !!done.correct;
+  return `<div class="dq-vd ${ok?'ok':'no'}">
+    <div class="mk">${iconSvg(ok?'check':'x', 22)}</div>
+    <div class="tx">
+      <b>${ok ? '정답입니다' : '아쉬워요'}</b>
+      <span>낸 답 <b class="mono">${escHtml(done.ans||'')}</b>${
+        ok ? '' : ` <s>·</s> 정답 <b class="mono">${escHtml(face.answer)}</b>`}</span>
+    </div>
+  </div>`;
+}
+
 function stuQuizHTML(c){
   const cards = dqTodayCards(c.rec);
   const range = studentRange(c.sid);
@@ -9337,14 +9422,8 @@ function stuQuizHTML(c){
     ${reportAckHTML(face.bankId)}
     <div style="margin-top:15px;">
       ${curDone
-        ? `<div class="mrow" style="min-height:0;gap:8px;">
-             <span style="font-size:12px;color:var(--sub);">낸 답</span>
-             <b class="mono" style="font-size:15px;">${escHtml(curDone.ans||'')}</b>
-             ${curDone.correct ? '' : `<span class="spacer"></span>
-               <span style="font-size:12px;color:var(--sub);">정답</span>
-               <b class="mono" style="font-size:15px;color:var(--ok);">${escHtml(face.answer)}</b>`}
-           </div>
-           <div style="margin-top:9px;font-size:11.5px;color:var(--dim);line-height:1.7;">
+        ? `${dqVerdictHTML(curDone, face)}
+           <div style="margin-top:11px;font-size:11.5px;color:var(--dim);line-height:1.7;">
              ${escHtml(dqNextLabel(curDone))}</div>`
         : isMultipleChoice(face.content)
           ? `${answerInputHTML('dq-ans-'+cur.id)}
