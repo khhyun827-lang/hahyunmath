@@ -106,7 +106,18 @@ export async function emitBodies(hwpxPath, outJson, push) {
       null, 2), 'utf8');
   }
   console.log(`\n  본문        문항 ${r.total} 개 중 코드가 붙은 ${r.items.length} 개를 담았다`);
-  if (r.noCode) console.log(`  ⚠ 코드가 없는 문항 ${r.noCode}건 — 심기가 빗나갔는지 봐야 한다`);
+  /* 🔴 **«코드 없는 덩이»를 그대로 경고로 내면 안 된다** (2026-09-05에 실제로 겪었다).
+     교재의 맨 앞 목차·표지는 첫 미주 «앞»에 있어서 언제나 한 덩이가 코드 없이 잡힌다.
+     그것까지 「심기가 빗나갔다」고 부르면 **다섯 파일이 전부 경고를 달고 나오는데 실은 멀쩡했다.**
+     🔵 진짜 잣대는 **미주 수와 코드 붙은 수가 같은가**다 — 문항 하나에 미주 하나이므로.
+     ⚠ 경고는 «걱정할 것»만 가리켜야 한다. 늘 뜨는 경고는 아무도 안 본다. */
+  if (r.endnoteCount === r.items.length) {
+    console.log(`  ✅ 미주 ${r.endnoteCount}개와 딱 맞는다 — 빠진 문항이 없다`
+      + (r.noCode ? `  (앞의 ${r.noCode}덩이는 목차·표지다)` : ''));
+  } else {
+    console.log(`  🔴 미주는 ${r.endnoteCount}개인데 코드가 붙은 것은 ${r.items.length}개다 — ${r.endnoteCount - r.items.length}개가 빈다.`);
+    console.log('     심기가 빗나갔는지 봐야 한다 (다시 심기 전에 매핑표부터 볼 것).');
+  }
   if (r.noBody) console.log(`  ⚠ 본문이 빈 문항 ${r.noBody}건`);
   if (outJson) console.log(`  냈다 → ${outJson}  (${(fs.statSync(outJson).size / 1024).toFixed(0)}KB)`);
 
