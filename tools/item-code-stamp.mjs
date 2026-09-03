@@ -21,15 +21,23 @@ import zlib from 'zlib';
 import { execFileSync } from 'child_process';
 
 const argv = process.argv.slice(2);
-const bare = argv.filter((a, i) => !a.startsWith('--') && !(i > 0 && ['--out', '--chapter'].includes(argv[i - 1])));
+const bare = argv.filter((a, i) => !a.startsWith('--') && !(i > 0 && ['--out', '--chapter', '--bodies'].includes(argv[i - 1])));
 const [SRC, MAP] = bare;
 const oi = argv.indexOf('--out');
 const OUT = oi >= 0 ? argv[oi + 1] : '';
 const ci = argv.indexOf('--chapter');
 const CHAPTER = ci >= 0 ? argv[ci + 1] : '';
+const bi = argv.indexOf('--bodies');
+/* 🔵 **코드를 심는 «그 자리»에서 본문도 같이 낸다** (2026-09-05 · 사용자 요청).
+   「원본 교재를 추후에 업로드하는 게 아니라 코드 삽입할 때 같이 저장하고 싶다」.
+   심고 난 파일에는 미주에 코드가 들어 있으므로, 그것을 그대로 읽으면 코드와 본문이 짝지어진다.
+   ⚠ 뽑는 규칙은 여기 없다 — 웹과 같은 `hwpx.js` 를 쓴다 (tools/item-bodies.mjs 참고). */
+const BODIES = bi >= 0 && argv[bi + 1] && !argv[bi + 1].startsWith('--') ? argv[bi + 1] : (bi >= 0 ? '' : null);
+const PUSH = argv.includes('--push');
 
 if (!SRC || !MAP || !OUT || !CHAPTER) {
   console.error('쓰는 법: node tools/item-code-stamp.mjs <원본.hwpx> <장부.json> --chapter 01 --out <새파일.hwpx>');
+  console.error('  [--bodies 본문.json] [--push]  코드를 심은 김에 원본 본문까지 낸다 (--push 면 Firestore items 로 바로).');
   console.error('  ⚠ 장부에는 여러 단원이 들어 있다. --chapter 로 «이 파일의 단원»을 골라야 한다.');
   process.exit(1);
 }
@@ -160,3 +168,11 @@ console.log(`\n  미주 ${seen}개 · 코드를 심은 것 ${stamped}개`);
 if (skipped.length) { console.log('  ⚠ 건너뛴 것 ' + skipped.length + '건'); skipped.slice(0, 8).forEach((s) => console.log('     ' + s)); }
 console.log(`  냈다 → ${OUT}  (${(fs.statSync(OUT).size / 1024 / 1024).toFixed(2)}MB · 파일 ${all.length}개)`);
 console.log(`  원본 「${path.basename(SRC)}」 는 한 글자도 안 고쳤다.\n`);
+
+
+/* ── 코드를 심었으면 본문도 같이 낸다 ────────────────────────────────
+   ⚠ **심은 파일(OUT)에서 읽는다.** 원본에서 읽으면 미주에 코드가 없어 짝을 못 짓는다. */
+if (BODIES !== null || PUSH) {
+  const { emitBodies } = await import('./item-bodies.mjs');
+  await emitBodies(OUT, BODIES || '', PUSH);
+}
