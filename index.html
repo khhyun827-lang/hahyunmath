@@ -1826,6 +1826,43 @@
 .app.sap{--sap-w:480px;
   max-width:var(--sap-w);margin:0 auto;min-height:100vh;position:relative;
   background:var(--paper);box-shadow:0 0 0 1px var(--line);}
+
+/* ── 오류 신고 (2026-09-05) ────────────────────────────────────────────
+   ⚠ **이름을 `flaw-` 로 쓴다.** 처음에 `rp-` 로 적었다가 **월간 리포트가 이미 쓰고 있는 것**을
+     발견했다 (`.rp-h` 는 리포트 문서의 머리다). 노트의 「같은 사고를 여섯 번 냈다」가 그것이다.
+     새 클래스는 index.html «과» ds.css 에서 한 번 찾아본다 — 그게 유일한 방어다.
+   ⚠ 학생 앱 안에만 걸리게 `.app.sap` 아래에 둔다. 강사 화면에는 이 단추가 없다. */
+.app.sap .flaw-btn{
+  font-size:11px; color:var(--dim); background:none; border:1px solid var(--line);
+  border-radius:999px; padding:3px 9px; cursor:pointer; line-height:1.5;
+  font-family:inherit; white-space:nowrap;
+}
+.app.sap .flaw-btn:hover{color:var(--sub); border-color:var(--line2); background:var(--hover);}
+.app.sap .flaw-btn.on{color:var(--ink); border-color:var(--accent-line); background:var(--accent-bg);}
+.app.sap .flaw-btn:focus-visible{outline:2px solid var(--accent); outline-offset:2px;}
+.app.sap .flaw-form{
+  margin-top:12px; padding:13px; border:1px solid var(--line);
+  border-radius:var(--r-md); background:var(--sunk);
+}
+.app.sap .flaw-h{font-size:12.5px; font-weight:700; color:var(--ink); margin-bottom:9px;}
+.app.sap .flaw-whys{display:flex; flex-direction:column; gap:6px;}
+.app.sap .flaw-why{
+  display:block; width:100%; text-align:left; cursor:pointer; font-family:inherit;
+  background:var(--card); border:1px solid var(--line); border-radius:var(--r-md);
+  padding:9px 11px; line-height:1.5;
+}
+.app.sap .flaw-why b{display:block; font-size:12.5px; font-weight:600; color:var(--ink);}
+.app.sap .flaw-why s{display:block; text-decoration:none; font-size:11px; color:var(--dim); margin-top:2px;}
+.app.sap .flaw-why.on{border-color:var(--accent); background:var(--accent-bg);}
+.app.sap .flaw-why:focus-visible{outline:2px solid var(--accent); outline-offset:2px;}
+.app.sap .flaw-ack{
+  margin-top:12px; padding:11px 13px; border:1px solid var(--ok-line);
+  border-radius:var(--r-md); background:var(--okbg);
+  display:flex; flex-direction:column; align-items:flex-start; gap:3px;
+}
+.app.sap .flaw-ack b{font-size:12.5px; font-weight:700; color:var(--ok);}
+.app.sap .flaw-ack s{text-decoration:none; font-size:11.5px; color:var(--sub); line-height:1.7;}
+.app.sap .flaw-ack .flaw-btn{margin-top:6px;}
 @media (min-width:760px){ .app.sap{--sap-w:620px;} }
 @media (min-width:1100px){ .app.sap{--sap-w:680px;} }
 @media (max-width:520px){ .app.sap{box-shadow:none;} }
@@ -3590,6 +3627,8 @@ let state = {
   figureDraft: null,          // {bankId, scene, svg, ok, failures} 또는 {bankId, unsupported, reason}
   /* 오답 검토(04-review) — 큐 하나를 골라 그 안을 J/K로 훑는다 */
   reviewQueue: 'pending',
+  reportOpen: '',                 // 지금 펼쳐 둔 신고 폼 (bankId|face)
+  reportWhy: '',                  // 고른 사유
   reviewSelectedId: null,
   sdFilter: 'all',           // 학생 상세 연대기의 갈래
   clinicWeek: '',            // 클리닉 주간 판의 시작(월요일). 빈 값이면 이번 주
@@ -5167,6 +5206,10 @@ function teacherNotifItems(){
        한 가지만 갈 곳이 없어서 그 상자가 통째로 남아 있었던 셈이다. 그 하나를 여기 옮기고
        상자를 걷었다. ⚠ 과제 제출과 같은 종류다 — **검토하면 줄어드는 수**라 «본 개수»로
        셀 수 없다(watermark가 안 맞는다). 그래서 `keepUnseen`이다. */
+    /* 🔴 신고는 «오답 문항 검토»에 섞지 않고 따로 센다 — 학생이 기다리는 일이라 급이 다르다. */
+    {key:'report', label:'문항 오류 신고', count:0,
+     unseen: DATA.problemBank.reduce((n,b)=>n+openReports(b).length, 0),
+     keepUnseen:true, gotoCode:"goTeacherTab('review'); state.reviewQueue='reported';"},
     {key:'review', label:'오답 문항 검토', count:0,
      unseen: DATA.problemBank.filter(b=>b.status!=='approved').length,
      keepUnseen:true, gotoCode:"goTeacherTab('review');"},
@@ -5194,6 +5237,132 @@ function studentNotifItems(sid){
     {key:'chat:'+sid, label:'선생님 답장', count: (DATA.chats[sid]||[]).filter(m=>m.from==='teacher').length,
      gotoCode:"state.studentTab='chat';"},
   ];
+}
+
+/* =================== 학생이 문제의 흠을 알린다 (2026-09-05) ===================
+   사용자 요청 — 「학생이 오른쪽위에 오류신고 할 수 있는 버튼이 있었으면 좋겠어」.
+
+   🔴 **컬렉션을 새로 만들지 않는다.** 신고는 «학생의 일»이 아니라 **«문항의 일»**이라
+   `problembank` 문서에 얹는 것이 자리로도 맞다. 그리고 새 컬렉션은 Firestore 규칙을
+   또 손대야 하는데, 그 자리에서 두 번 넘어졌다 (`variants`·`items`).
+
+   🔴 **신고는 «문항»이 아니라 «얼굴»에 붙는다.** 데일리퀴즈는 같은 문항이라도 만날 때마다
+   다른 변형을 낸다. 「이 문제 이상해요」는 그 학생이 **그때 본 그 문제**를 가리키는 말이지
+   원본까지 싸잡는 말이 아니다. 원본은 멀쩡한데 N02 만 깨졌을 수 있다. */
+const REPORT_WHYS = [
+  ['content', '문제가 이상해요',        '말이 안 되거나 조건이 빠졌어요'],
+  ['answer',  '답이 안 맞아요',         '풀었는데 계속 틀렸다고 나와요'],
+  ['image',   '그림이 안 보여요',       ''],
+  ['text',    '글자·수식이 깨져 보여요', ''],
+];
+const REPORT_WHY_LABEL = Object.fromEntries(REPORT_WHYS.map(w=>[w[0], w[1]]));
+
+function openReports(b){ return ((b && b.reports) || []).filter(r=>!r.done); }
+function faceReported(b, face){ return openReports(b).some(r=>r.face===face); }
+/* 이 학생이 이 얼굴을 이미 신고했나 — 두 번 누르게 두면 같은 말이 쌓인다. */
+function myReport(b, face, sid){ return openReports(b).find(r=>r.face===face && r.sid===sid); }
+
+/* 학생 화면 카드의 오른쪽 위에 붙는다. 데일리퀴즈·오답숙제가 같은 모양으로 쓴다. */
+function reportBtnHTML(bankId, face){
+  const b = DATA.problemBank.find(x=>x.id===bankId);
+  const sid = state.currentUser && state.currentUser.studentId;
+  if(!b || !sid) return '';
+  if(myReport(b, face, sid))
+    return `<span class="badge late" title="선생님이 확인 중입니다">신고함</span>`;
+  const key = bankId + '|' + face;
+  const open = state.reportOpen === key;
+  return `<button class="flaw-btn ${open?'on':''}" onclick="toggleReport('${escHtml(key)}')"
+    aria-label="이 문제의 오류 신고">${open ? '닫기' : '오류 신고'}</button>`;
+}
+function toggleReport(key){
+  state.reportOpen = state.reportOpen === key ? '' : key;
+  state.reportWhy = '';
+  render();
+}
+/* 펼쳐지는 신고 폼. **묻는 것을 짧게 둔다** — 고르고 한 줄이면 끝나야 학생이 실제로 누른다. */
+function reportFormHTML(bankId, face){
+  if(state.reportOpen !== bankId + '|' + face) return '';
+  const why = state.reportWhy || '';
+  return `<div class="flaw-form">
+    <div class="flaw-h">무엇이 이상한가요?</div>
+    <div class="flaw-whys">
+      ${REPORT_WHYS.map(([k,label,hint])=>`<button class="flaw-why ${why===k?'on':''}"
+        onclick="state.reportWhy='${k}'; render()">
+        <b>${escHtml(label)}</b>${hint?`<s>${escHtml(hint)}</s>`:''}</button>`).join('')}
+    </div>
+    <input id="flaw-note" class="sap-in" style="margin-top:9px;" placeholder="더 알려줄 것이 있으면 적어주세요 (안 적어도 됩니다)">
+    <button class="mbtn p" style="margin-top:9px;" ${why?'':'disabled'}
+      onclick="sendReport('${escHtml(bankId)}','${escHtml(face)}')">
+      ${why ? '보내기' : '무엇이 이상한지 골라주세요'}</button>
+  </div>`;
+}
+async function sendReport(bankId, face){
+  const b = DATA.problemBank.find(x=>x.id===bankId);
+  const sid = state.currentUser && state.currentUser.studentId;
+  if(!b || !sid || !state.reportWhy) return;
+  const noteEl = document.getElementById('flaw-note');
+  const r = {
+    id: 'rp' + Date.now(), sid, name: state.currentUser.name || '',
+    face, why: state.reportWhy, note: (noteEl ? noteEl.value : '').trim(),
+    at: nowStamp(), done: false,
+  };
+  b.reports = (b.reports || []).concat(r);
+  /* 🔴 **저장이 됐는지 보고 말한다** — 안 보고 알리면 「보냈다」고 해 놓고 새로고침하면 사라진다
+     (2026-09-04 에 창고에서 똑같이 당했다). */
+  const ok = await dbSetDoc('problembank', b.id, b);
+  if(!ok){
+    b.reports = b.reports.filter(x=>x.id!==r.id);
+    showToast('보내지 못했습니다 — 잠시 뒤에 다시 눌러주세요.');
+    render(); return;
+  }
+  state.reportOpen = ''; state.reportWhy = '';
+  showToast('보냈습니다. 선생님이 확인하면 알려드릴게요.');
+  render();
+}
+
+/* 🔴 **답이 돌아가야 한다** (2026-09-05).
+   신고하고 아무 일도 안 일어나면 학생은 「말해도 소용없다」를 배우고, **두 번째부터는 안 누른다.**
+   그러면 이 단추는 있으나 마나다 — 흠은 그대로 남고 우리는 그것을 모른다.
+   그래서 강사가 닫으면 그 학생 카드에 한 줄이 뜬다. 한 번 보면 사라진다(`ack`). */
+function reportAckHTML(bankId){
+  const b = DATA.problemBank.find(x=>x.id===bankId);
+  const sid = state.currentUser && state.currentUser.studentId;
+  if(!b || !sid) return '';
+  const mine = ((b.reports)||[]).filter(r=>r.sid===sid && r.done && !r.ack);
+  if(!mine.length) return '';
+  /* ⚠ **«문제 없음»도 알려 준다.** 그쪽이 더 중요할 수 있다 — 학생은 자기가 뭘 잘못 봤는지
+     모른 채로 남아 있다. 다만 말투는 나무라지 않는다. */
+  const fixed = mine.some(r=>r.how==='fixed');
+  return `<div class="flaw-ack">
+    <b>${fixed ? '알려줘서 고마워요 — 고쳤습니다.' : '알려줘서 고마워요 — 확인해 보니 문제는 맞았습니다.'}</b>
+    <s>${fixed ? '다음에 나올 때는 고친 문제로 나옵니다.'
+               : '풀이가 헷갈리면 질의응답으로 물어봐 주세요.'}</s>
+    <button class="flaw-btn" onclick="ackReports('${escHtml(bankId)}')">확인</button>
+  </div>`;
+}
+async function ackReports(bankId){
+  const b = DATA.problemBank.find(x=>x.id===bankId);
+  const sid = state.currentUser && state.currentUser.studentId;
+  if(!b || !sid) return;
+  for(const r of (b.reports||[])) if(r.sid===sid && r.done) r.ack = true;
+  await dbSetDoc('problembank', b.id, b);
+  render();
+}
+
+/* ---------- 강사 쪽 ---------- */
+/* 신고를 처리한다. **두 갈래뿐이다** — 고쳤거나, 문제는 멀쩡했거나.
+   ⚠ 어느 쪽이든 «닫는다». 열어 둔 채로 두면 그 얼굴이 영영 안 나간다. */
+async function resolveReports(bankId, how){
+  const b = DATA.problemBank.find(x=>x.id===bankId);
+  if(!b) return;
+  const at = nowStamp();
+  for(const r of openReports(b)){ r.done = true; r.how = how; r.doneAt = at; }
+  const ok = await dbSetDoc('problembank', b.id, b);
+  if(!ok){ showToast('저장하지 못했습니다 — 다시 시도해주세요.'); return; }
+  logAudit('오류 신고 처리', '', '', `${b.itemCode || b.id} · ${how==='fixed'?'고쳤음':'문제 없음'}`);
+  showToast(how==='fixed' ? '고친 것으로 표시했습니다.' : '문제 없음으로 닫았습니다.');
+  followBankToQueue(b);
+  render();
 }
 
 /* =================== 데일리퀴즈 — 학생별 오답 간격 반복 ===================
@@ -5318,20 +5487,25 @@ function hwNeedsAction(rec, hwId){
    ⚠ **낼 수 없는 얼굴은 여기서 뺀다** — 답을 못 치는 문제가 나가면 영원히 오답이 되고,
      그 카드가 로테이션을 통째로 막는다(`dqAnswerable` 주석과 같은 까닭). */
 function dqFaces(b){
+  /* 🔴 **신고된 얼굴은 안 낸다** (2026-09-05). 강사가 볼 때까지 다른 날 또 나가면,
+     학생은 「말해도 소용없다」를 배운다. 그러면 두 번째부터는 아무도 안 누른다.
+     ⚠ 얼굴 단위다 — 원본은 멀쩡한데 N02 만 깨졌을 수 있다. */
+  const hurt = f => faceReported(b, f);
   const faces = [];
   const oa = b.originalContent ? dqAnswerable(b.originalContent, b.originalAnswer) : null;
   /* 원본은 검토 상태와 무관하다 — 교사가 시험지에 직접 넣은 문제다. */
-  if(oa) faces.push({ face:'orig', kind:'orig', content:b.originalContent, answer:oa,
+  if(oa && !hurt('orig')) faces.push({ face:'orig', kind:'orig', content:b.originalContent, answer:oa,
                       bankId:b.id, imgKind: b.hasImage ? 'orig' : null });
   /* 옛 쌍둥이 — 창고가 생기기 전부터 problemBank 에 한 칸으로 들어 있던 것.
      갈래로는 «숫자변형(N)»과 같은 자리다. 검토를 통과한 것만 나간다. */
   const va = (b.status==='approved' && b.variantContent)
     ? dqAnswerable(b.variantContent, b.variantAnswer) : null;
-  if(va) faces.push({ face:'legacy', kind:'N', content:b.variantContent, answer:va,
+  if(va && !hurt('legacy')) faces.push({ face:'legacy', kind:'N', content:b.variantContent, answer:va,
                       bankId:b.id, imgKind: variantImgKind(b) });
   /* 창고의 변형들. ⚠ **그림이 있어야 푸는데 아직 안 그려진 것은 뺀다** — 학생이 못 푼다. */
   const root = dqRootCode(b);
   if(root) for(const v of variantsOfCode(root)){
+    if(hurt(v.code)) continue;
     if(v.needsFigure) continue;
     const a = dqAnswerable(v.content, v.answer);
     if(!a) continue;
@@ -9088,6 +9262,7 @@ function stuQuizHTML(c){
       ${curDone ? `<span class="badge ${curDone.correct?'ok':'no'}">${curDone.correct?'정답':'오답'}</span>` : ''}
       <span class="spacer"></span>
       <span class="mono" style="font-size:10.5px;color:var(--dim);">${idx+1} / ${cards.length}</span>
+      ${reportBtnHTML(face.bankId, face.face)}
     </div>
     <div style="font-size:11.5px;color:var(--dim);margin-top:9px;">
       ${exam ? escHtml(exam.title) : '(삭제된 시험지)'} ${cur.no}번
@@ -9096,6 +9271,8 @@ function stuQuizHTML(c){
     </div>
     <div class="sap-q" style="margin-top:11px;">${problemHTML(face.content)}</div>
     ${imgHTML}
+    ${reportFormHTML(face.bankId, face.face)}
+    ${reportAckHTML(face.bankId)}
     <div style="margin-top:15px;">
       ${curDone
         ? `<div class="mrow" style="min-height:0;gap:8px;">
@@ -9180,10 +9357,13 @@ function stuWrongHTML(c){
       <div class="row" style="gap:7px;">
         <span class="badge score">원본 ${hw.questionNo}번</span>
         <span class="spacer"></span>
+        ${reportBtnHTML(bank.id, 'legacy')}
         ${hw.done ? `<span class="badge ${correct?'ok':'no'}">${correct?'정답':'오답'}</span>`
                   : `<span class="badge late">풀 차례</span>`}
       </div>
       <div class="sap-q" style="margin-top:11px;">${problemHTML(bank.variantContent)}</div>
+      ${reportFormHTML(bank.id, 'legacy')}
+      ${reportAckHTML(bank.id)}
       ${vk ? pbImageHTML(bank.id, vk, 'sap-img') : ''}
       <div style="margin-top:14px;">
         ${hw.done
@@ -16690,6 +16870,9 @@ function examNewLegacyHTML(){
    pending에 머무는 것이 이미 «아직 안 봤다»와 같은 뜻이라 층을 하나 더 둘 이유가 없다. */
 
 const REVIEW_QUEUES = [
+  /* 🔴 **맨 앞이다** — 학생이 못 푸는 채로 기다리고 있다. 다른 줄은 «우리 일»이지만
+     이 줄은 «학생이 말을 걸어 둔 것»이다 (2026-09-05). */
+  ['reported', '신고됨',      'r', b => openReports(b).length > 0],
   ['empty',    '내용 없음',    'y', b => !b.variantContent && !b.variantAnswer],
   ['pending',  '검토 대기',    'r', b => (b.status==='pending' || b.status==='review1')
                                         && (b.variantContent || b.variantAnswer)],
@@ -17342,6 +17525,35 @@ async function removeVariantFigure(bankId){
   render();
 }
 
+/* 🔴 **학생이 말을 걸어 둔 것**은 검토 화면 맨 위에 놓는다 (2026-09-05).
+   아래 어딘가에 두면 며칠 지나간다 — 그동안 그 학생은 그 문제를 못 푼다.
+   ⚠ **어느 «얼굴»이 신고됐는지 밝힌다.** 원본은 멀쩡한데 N02 만 깨졌을 수 있으므로,
+     강사가 고칠 곳을 찾으려면 그 학생이 «무엇을 봤는지»부터 알아야 한다. */
+function reportBoxHTML(b){
+  const open = openReports(b);
+  if(!open.length) return '';
+  /* ⚠ **`.mono` 에 한글 낱말을 넣지 않는다** — JetBrains Mono 에 한글이 없어 대체 글꼴로
+     떨어지면서 「원 본」처럼 벌어진다 (3절의 규칙). 코드일 때만 mono 를 씌운다. */
+  const faceName = f => f === 'orig' ? '원본'
+    : f === 'legacy' ? '쌍둥이 (옛 변형)'
+    : `<b class="mono">${escHtml(f)}</b>`;
+  return `<div class="rv-fig on" style="border-color:var(--no);background:var(--nobg);margin-bottom:14px;">
+    <b style="color:var(--no);">학생이 알린 흠 ${open.length}건</b>
+    ${open.map(r=>`<div style="margin-top:10px;font-size:12.5px;line-height:1.8;">
+      <b>${escHtml(REPORT_WHY_LABEL[r.why] || r.why)}</b>
+      <s style="text-decoration:none;color:var(--dim);"> · ${escHtml(r.name || r.sid)} · ${escHtml(r.at || '')}</s>
+      <div style="font-size:11px;color:var(--sub);margin-top:2px;">
+        학생이 본 문제 — ${faceName(r.face)}</div>
+      ${r.note ? `<div class="rv-spec" style="margin-top:6px;">${escHtml(r.note)}</div>` : ''}
+    </div>`).join('')}
+    <div class="rv-figact" style="margin-top:13px;">
+      <button class="btn p sm" onclick="resolveReports('${b.id}','fixed')">고쳤습니다</button>
+      <button class="btn sm" onclick="resolveReports('${b.id}','ok')">문제 없음</button>
+      <span class="hint">닫을 때까지 그 문제는 학생에게 안 나갑니다</span>
+    </div>
+  </div>`;
+}
+
 function reviewWorkHTML(b, list){
   const exam = DATA.exams.find(e=>e.id===b.examId);
   const req = bankRequesterCount(b.id);
@@ -17350,6 +17562,7 @@ function reviewWorkHTML(b, list){
   const imgHTML = b.hasImage ? pbImageHTML(b.id, 'orig', 'pb-fig') : '';
 
   return `
+  ${reportBoxHTML(b)}
   <div class="rv-wh">
     <h1 class="t-title">${exam?escHtml(exam.title):'(삭제된 시험지)'} · ${b.questionNo}번</h1>
     <div class="t-meta" style="margin-top:7px;">
