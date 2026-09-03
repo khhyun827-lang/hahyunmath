@@ -3155,6 +3155,18 @@ function itemOfCode(code){ return (state.itemByCode || {})[code] || null; }
    그러면 **이미 인쇄해 나간 시험지의 코드가 다른 문제를 가리킨다.** 조용히 틀리는 자리다.
    그래서 `deleted` 표시만 하고, **번호를 셀 때는 뺀 것까지 센다.** */
 function variantsOfCodeAll(code){ return (state.variants || {})[code] || []; }
+/* 이 문항이 지금 들고 있는 변형이 «창고에 이미 있는 것»인가.
+   ⚠ 코드가 붙어 있는지만 보면 안 된다 — 다시 생성해서 내용이 바뀌었을 수 있다.
+     그래서 **글자로 맞춰 본다**(공백만 다른 것은 같은 것으로 본다). */
+/* 이 문항이 든 변형과 «글자가 같은» 창고 변형. 없으면 null. */
+function storedVariantOf(b){
+  const root = b && b.itemCode ? ((splitItemCode(b.itemCode) || {}).origin || b.itemCode) : '';
+  if(!root || !b.variantContent) return null;
+  const norm = s => String(s || '').replace(/\s+/g, ' ').trim();
+  const mine = norm(b.variantContent);
+  return variantsOfCode(root).find(v => norm(v.content) === mine) || null;
+}
+function variantAlreadyStored(b){ return !!storedVariantOf(b); }
 function variantsOfCode(code){ return variantsOfCodeAll(code).filter(v => !v.deleted); }
 
 /* 다음 변형 번호. **갈래마다 따로 센다** — N01 이 있어도 U01 은 비어 있을 수 있다.
@@ -3212,6 +3224,14 @@ async function saveVariantToStore(bankId, kind){
   if(!b || !b.itemCode){ showToast('먼저 이 문항에 코드를 이어주세요.'); return; }
   if(!b.variantContent && !b.variantAnswer){ showToast('저장할 변형 내용이 없습니다.'); return; }
   await loadItemStoreIfNeeded();
+  /* 🔴 **같은 것을 두 번 넣지 않는다** (2026-09-05 · 사용자가 겪었다).
+     화면의 띠가 안 사라져서 계속 누른 결과 **N04·N05·N06 이 글자까지 같은 채로 쌓였다.**
+     띠는 고쳤지만 **막는 자리는 여기여야 한다** — 화면이 또 실수해도 데이터는 안 더러워진다.
+     (「고칠 자리를 셀 때 «이미 저장된 것»을 세는 것을 잊지 말 것」과 같은 결이다.) */
+  const dupe = variantsOfCode((splitItemCode(b.itemCode) || {}).origin || b.itemCode)
+    .find(v => String(v.content||'').replace(/\s+/g,' ').trim()
+            === String(b.variantContent||'').replace(/\s+/g,' ').trim());
+  if(dupe){ showToast(`이미 창고에 있습니다 — ${dupe.code}`); render(); return; }
   /* 🔴 **이 문항이 이미 «변형»일 수 있다** (2026-09-04에 사용자가 겪었다).
      복습테스트처럼 N01 문항으로 시험지를 만들면 `b.itemCode` 가 `…-N01` 이고,
      그것을 그대로 원본으로 삼으면 **`…-N01-N01`** 이 나온다.
@@ -3368,6 +3388,10 @@ async function applyTwinToBank(b, twin){
   b.variantNeedsFigure = !!twin.needsFigure;
   b.variantReuseFigure = !!twin.reuseFigure;
   b.variantFigureSpec = twin.figureSpec || '';
+  /* 🔴 **새로 만든 것은 창고 것이 아니다** (2026-09-05).
+     `variantCode` 를 안 지우면 화면이 계속 「가져온 변형 · 창고 · N02」라고 말하고,
+     「창고에 넣기」 띠도 «이미 넣은 것»으로 보고 숨는다. 둘 다 거짓말이 된다. */
+  delete b.variantCode;
   await dbSetDoc('problembank', b.id, b);
 }
 /* 변형 그림 하나를 치운다 — 드라이브 파일 · kv 문서 · 캐시 · 플래그.
@@ -17935,9 +17959,14 @@ function reviewWorkHTML(b, list){
         ${imgHTML}
       </div>
       <div class="side ai">
-        <div class="lab">${b.variantCode ? '가져온 변형' : 'AI 생성 쌍둥이'}
-          <s>${b.variantCode ? '창고' : (b.aiSolution?'Gemini':'직접 입력')}</s>
-          ${b.variantCode ? `<b class="mono lab-code">${escHtml(b.variantCode)}</b>` : ''}</div>
+        ${/* 🔴 **이름표는 «지금 창고에 있는 것»을 가리켜야 한다** (2026-09-05).
+             `b.variantCode` 만 보면 **이미 뺀 코드를 계속 가리킨다** — 실제로 N06 을 뺐는데도
+             화면은 「창고 · N06」이라고 말하고 있었다. 그리고 다시 생성해서 내용이 바뀌어도
+             옛 코드가 남는다. 그래서 **글자로 맞춰 살아 있는 것을 찾는다.** */''}
+        ${(()=>{ const inStore = storedVariantOf(b);
+          return `<div class="lab">${inStore ? '가져온 변형' : 'AI 생성 쌍둥이'}
+          <s>${inStore ? '창고' : (b.aiSolution?'Gemini':'직접 입력')}</s>
+          ${inStore ? `<b class="mono lab-code">${escHtml(inStore.code)}</b>` : ''}</div>`; })()}
         <div class="q-body">${b.variantContent ? problemHTML(b.variantContent)
           : '<span style="color:var(--dim);">아직 내용이 없습니다 — AI로 채우거나 아래에 직접 입력하세요.</span>'}</div>
         <div class="q-ans">정답 <b>${escHtml(b.variantAnswer||'—')}</b></div>
@@ -18050,7 +18079,13 @@ function itemCodeStripHTML(b){
       <button class="btn q sm" onclick="useVariantFromStore('${b.id}','${escHtml(v.code)}')">가져오기</button>
     </div>`).join('')}
   </div>` : ''}
-  ${(b.variantContent || b.variantAnswer) ? `<div class="ic-save">
+  ${/* 🔴 **이미 창고에 있으면 이 띠를 띄우지 않는다** (2026-09-05 · 사용자가 겪었다).
+       「저 버튼을 눌러도 안사라져서 계속 눌렀더니 계속누적해서 생겼어」 —
+       **N04·N05·N06 이 글자까지 같은 채로 쌓였다.** 넣고 나서도 띠가 그대로였기 때문이다.
+       ⚠ 「눌렀나」를 기억하는 것으로는 부족하다 — 새로고침하면 잊는다.
+         **«지금 이 내용이 창고에 있나»**를 본다. 그러면 가져온 변형에도 저절로 안 뜬다
+         (그건 창고에서 온 것이니까). 다시 생성하면 내용이 달라져 다시 뜬다. */''}
+  ${(b.variantContent || b.variantAnswer) && !variantAlreadyStored(b) ? `<div class="ic-save">
     <span>지금 이 변형을 창고에 넣어 두면 <b>다음엔 찾아집니다</b> — 어느 갈래입니까?</span>
     ${/* 셋 다 받침으로 끝나므로 「으로」다 — 「숫자변형로」가 되어 있었다. */''}
     ${VARIANT_KINDS.map(([k,label])=>`<button class="btn q sm" onclick="saveVariantToStore('${b.id}','${k}')">${label}으로 저장</button>`).join('')}
