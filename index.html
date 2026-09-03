@@ -5301,35 +5301,117 @@ function hwNeedsAction(rec, hwId){
   const s = hwState(rec, hwId).status;
   return s === HW_NONE || s === HW_REJECTED;
 }
+/* =================== 카드 하나 = 문항 하나 (2026-09-05) ===================
+   🔴 **예전에는 한 문항이 카드 «둘»이었다** — `bankId:orig` 와 `bankId:var`.
+   그래서 3·7·14일이 사실상 «같은 문제 두 개»의 되풀이였고, 창고(`variants`)에
+   `-N02`·`-U01` 이 쌓여도 데일리퀴즈는 그것을 **한 번도 안 봤다**.
+   사용자가 짚었다 — 「변형문제가 넉넉하게 확보되어있다면 다르게 나갔으면 좋겠어」.
+
+   🔵 **이제 카드의 열쇠는 «문항»이다** (코드가 있으면 코드 뿌리, 없으면 bankId).
+   익힘 기록도 문항 하나에 하나다 — 묻고 싶은 것이 애초에 「이 «문항»을 익혔나」였다.
+   그리고 만날 때마다 **얼굴(face)을 갈아 끼운다.**
+
+   ⚠ 코드가 없는 옛 문항도 같은 길로 간다 — 얼굴이 둘(원본·옛 쌍둥이)뿐일 뿐이다.
+     길을 두 벌로 두지 않는다. */
+
+/* 이 문항이 낼 수 있는 얼굴 전부.
+   ⚠ **낼 수 없는 얼굴은 여기서 뺀다** — 답을 못 치는 문제가 나가면 영원히 오답이 되고,
+     그 카드가 로테이션을 통째로 막는다(`dqAnswerable` 주석과 같은 까닭). */
+function dqFaces(b){
+  const faces = [];
+  const oa = b.originalContent ? dqAnswerable(b.originalContent, b.originalAnswer) : null;
+  /* 원본은 검토 상태와 무관하다 — 교사가 시험지에 직접 넣은 문제다. */
+  if(oa) faces.push({ face:'orig', kind:'orig', content:b.originalContent, answer:oa,
+                      bankId:b.id, imgKind: b.hasImage ? 'orig' : null });
+  /* 옛 쌍둥이 — 창고가 생기기 전부터 problemBank 에 한 칸으로 들어 있던 것.
+     갈래로는 «숫자변형(N)»과 같은 자리다. 검토를 통과한 것만 나간다. */
+  const va = (b.status==='approved' && b.variantContent)
+    ? dqAnswerable(b.variantContent, b.variantAnswer) : null;
+  if(va) faces.push({ face:'legacy', kind:'N', content:b.variantContent, answer:va,
+                      bankId:b.id, imgKind: variantImgKind(b) });
+  /* 창고의 변형들. ⚠ **그림이 있어야 푸는데 아직 안 그려진 것은 뺀다** — 학생이 못 푼다. */
+  const root = dqRootCode(b);
+  if(root) for(const v of variantsOfCode(root)){
+    if(v.needsFigure) continue;
+    const a = dqAnswerable(v.content, v.answer);
+    if(!a) continue;
+    faces.push({ face:v.code, kind:(v.variantKind || 'N'), content:v.content, answer:a,
+                 bankId:b.id, imgKind:null });
+  }
+  return faces;
+}
+function dqRootCode(b){
+  if(!b || !b.itemCode) return '';
+  return (splitItemCode(b.itemCode) || {}).origin || b.itemCode;
+}
+
+/* 🔴 **어느 얼굴을 낼 것인가 — 사용자가 정한 규칙이다** (2026-09-05).
+     「틀렸을때 하향으로 내리고, (있다면) 한번이라도 틀리면 상향은 내지말고 N으로 계속 했으면
+      좋겠고 3,7에서 맞은 학생이면 14일에 U가 있다면 U로, 없다면 N으로 출제했으면 좋겠어」
+
+   | 언제                         | 무엇을 |
+   |------------------------------|--------|
+   | 첫 만남                      | 원본 — 그때 틀린 그 문제 |
+   | 지난번에 틀렸다              | **D(하향)**. 없으면 N |
+   | 한 번이라도 틀린 적이 있다   | **U를 안 낸다** — N으로 계속 |
+   | 3·7일을 다 맞혔다 (14일 차례)| **U**. 없으면 N |
+   | 그 밖                        | N |
+
+   ⚠ **«한 번이라도»는 지금 연속만 보는 게 아니다** — `everWrong` 을 따로 남긴다.
+     streak 은 틀리면 0으로 돌아가므로, 그것만 보면 다시 세 번 맞힌 학생에게 U가 나간다.
+   ⚠ 갈래 안에서는 **아직 안 본 것**을 먼저, 다 봤으면 **가장 오래전에 본 것**을 낸다. */
+function dqPickFace(st, faces){
+  if(!faces.length) return null;
+  const seen = (st && st.seen) || [];
+  const of = k => faces.filter(f => f.kind === k);
+  const pick = list => {
+    if(!list.length) return null;
+    const unseen = list.filter(f => !seen.includes(f.face));
+    if(unseen.length) return unseen[0];
+    return list.slice().sort((a,b) => seen.indexOf(a.face) - seen.indexOf(b.face))[0];
+  };
+  if(!st) return of('orig')[0] || pick(of('N')) || faces[0];
+  if(st.correct === false) return pick(of('D')) || pick(of('N')) || pick(of('orig')) || faces[0];
+  if(!st.everWrong && st.streak >= DQ_STEPS.length){
+    const up = pick(of('U'));
+    if(up) return up;
+  }
+  return pick(of('N')) || pick(of('orig')) || faces[0];
+}
 
 /* 이 학생이 풀 수 있는 카드 전부. 순수 계산이라 렌더 중에 불러도 안전하다.
 
    ⚠ **오답숙제를 끝낸 문항만 들어온다** (`h.done`). 두 화면의 역할을 갈라 두는 선이다 —
    오답숙제는 «틀린 것을 한 번 제대로 푸는 곳»이고, 데일리퀴즈는 «그 뒤에 잊지 않게 하는 곳»이다.
-   이 선이 없으면 아직 손도 안 댄 숙제가 퀴즈로 먼저 나와 학생 눈에 같은 문제가 두 곳에 뜬다.
-   («숙제를 끝냈다»는 곧 그 변형을 실제로 제출했다는 뜻이라, 낼 수 없는 문항은 자연히 빠진다.) */
+   ⚠ **같은 문항이 시험지 둘에 나올 수 있다.** 그러면 카드가 둘로 갈려 같은 문제가 같은 날
+     두 번 나온다 — 코드로 합친다. */
 function dqPool(rec){
-  const out = [];
+  const byId = new Map();
   (rec.wrongHomework||[]).forEach(h=>{
     if(!h.done) return;
     const b = DATA.problemBank.find(x=>x.id===h.bankId);
     if(!b) return;
-    const base = {bankId:b.id, no:h.questionNo, examId:h.examId,
-                  chapter:b.chapter||'', subject:b.subject||''};
-    /* 원본은 검토 상태와 무관하다 — 교사가 시험지에 직접 넣은 문제다.
-       변형만 approved를 본다. 검토 중인 쌍둥이가 나가면 학생이 못 푸는 문제가 뜬다. */
-    const oa = b.originalContent ? dqAnswerable(b.originalContent, b.originalAnswer) : null;
-    if(oa) out.push({...base, id:b.id+':orig', kind:'orig', content:b.originalContent, answer:oa,
-                     imgKind: b.hasImage ? 'orig' : null});
-    const va = (b.status==='approved' && b.variantContent)
-      ? dqAnswerable(b.variantContent, b.variantAnswer) : null;
-    /* ⚠ 그림은 카드마다 다르다. 원본은 늘 자기 그림을 쓰고, 변형은 variantImgKind()가 정한다. */
-    if(va) out.push({...base, id:b.id+':var', kind:'var', content:b.variantContent, answer:va,
-                     imgKind: variantImgKind(b)});
+    const faces = dqFaces(b);
+    if(!faces.length) return;
+    const id = dqRootCode(b) || b.id;
+    const prev = byId.get(id);
+    if(prev){
+      for(const f of faces) if(!prev.faces.some(x=>x.face===f.face && x.bankId===f.bankId)) prev.faces.push(f);
+      return;
+    }
+    byId.set(id, { id, code: dqRootCode(b), bankId:b.id, no:h.questionNo, examId:h.examId,
+                   chapter:b.chapter||'', subject:b.subject||'', faces });
   });
-  return out;
+  return [...byId.values()];
 }
 function dqCardById(rec, cardId){ return dqPool(rec).find(c=>c.id===cardId); }
+/* 오늘 이 카드가 내보일 얼굴. 뽑기는 `dqRoll` 이 이미 해서 박아 두었다 —
+   못 찾으면(창고에서 빠졌다면) 그 자리에서 다시 고른다. */
+function dqFaceOf(rec, card){
+  const d = dqState(rec);
+  const want = (d.faces || {})[card.id];
+  return card.faces.find(f=>f.face===want) || dqPickFace(d.cards[card.id], card.faces) || card.faces[0];
+}
 
 /* 변형 카드가 쓸 그림이 무엇인가. 오답숙제·데일리퀴즈·시험지 탭이 전부 이 함수 하나만 본다 —
    규칙이 두 벌이면 화면마다 다른 그림이 뜬다.
@@ -5387,23 +5469,70 @@ function dqRoll(rec, today, range){
     const j = Math.floor(Math.random()*(i+1));
     [due[i], due[j]] = [due[j], due[i]];
   }
-  /* 같은 문항의 원본과 변형이 같은 날 나란히 나오지 않게 한다 — 답이 비슷해 복습이 안 된다.
-     서로 다른 문항으로 채우지 못할 때만 남은 것에서 채운다. */
-  const picks = [], rest = [], usedBank = new Set();
-  due.forEach(c=>{
-    if(picks.length < DQ_PER_DAY && !usedBank.has(c.bankId)){ picks.push(c); usedBank.add(c.bankId); }
-    else rest.push(c);
-  });
-  for(const c of rest){ if(picks.length >= DQ_PER_DAY) break; picks.push(c); }
+  /* 카드 하나가 곧 문항 하나라, 같은 문항이 하루에 두 번 나올 일이 없다
+     (예전에는 원본·변형이 카드 둘이라 그것을 따로 막아야 했다). */
+  const picks = due.slice(0, DQ_PER_DAY);
   d.day = today;
   d.picks = picks.map(c=>c.id);
+  /* 🔴 **얼굴도 오늘 «한 번만» 뽑아 박아 둔다.** render()가 전체 재렌더링이라
+     그릴 때마다 고르면 화면을 그릴 때마다 문제가 바뀐다 — picks 를 박아 두는 것과 같은 까닭이다. */
+  d.faces = d.faces || {};
+  for(const c of picks) d.faces[c.id] = (dqPickFace(d.cards[c.id], c.faces) || c.faces[0]).face;
 }
+/* 🔴 **옛 기록을 새 열쇠로 옮긴다** (2026-09-05).
+   09-05 이전의 카드 열쇠는 `bankId:orig` · `bankId:var` 였다. 이제는 문항 하나에 하나다
+   (코드가 있으면 코드 뿌리, 없으면 bankId). 그대로 두면 **쌓인 익힘 기록이 통째로 버려지고**
+   학생이 다 익힌 문항을 처음부터 다시 만난다.
+
+   ⚠ **합칠 때 연속 정답은 «둘 중 작은 쪽»을 쓴다.** 관대하게 잡으면 안 익힌 것을 은퇴시킨다 —
+     원본만 세 번 맞히고 변형은 한 번도 못 맞힌 학생이 「다 익혔다」로 나가면 안 된다.
+   ⚠ 복습 날짜는 **이른 쪽**을 쓴다. 늦은 쪽을 쓰면 그만큼 복습이 밀린다.
+   ⚠ 「한 번이라도 틀렸나」는 옛 기록에 없다 — **둘 중 하나라도 틀린 적이 있으면**(streak 이
+     0인데 푼 적이 있으면) 틀린 것으로 본다. 모르면 **U를 안 내는 쪽**이 안전하다.
+   🔵 한 번 옮기면 옛 열쇠는 지운다. 두 번 돌아도 바뀔 것이 없다. */
+function dqMigrateCards(rec){
+  const d = dqState(rec);
+  const old = Object.keys(d.cards).filter(k => /:(orig|var)$/.test(k));
+  if(!old.length) return false;
+  for(const key of old){
+    const st = d.cards[key];
+    const bankId = key.replace(/:(orig|var)$/, '');
+    const b = DATA.problemBank.find(x => x.id === bankId);
+    const id = (b && dqRootCode(b)) || bankId;
+    const face = key.endsWith(':orig') ? 'orig' : 'legacy';
+    const cur = d.cards[id];
+    /* 옛 기록에 «틀린 적»이 남아 있는지 — 푼 적이 있는데 연속이 0이면 틀린 것이다. */
+    const wrong = !!st.everWrong || st.correct === false || ((st.n || 0) > 0 && !(st.streak > 0));
+    if(!cur){
+      d.cards[id] = { ...st, seen: [face], everWrong: wrong };
+    }else{
+      cur.streak = Math.min(cur.streak || 0, st.streak || 0);
+      cur.n = (cur.n || 0) + (st.n || 0);
+      cur.okN = (cur.okN || 0) + (st.okN || 0);
+      cur.everWrong = !!cur.everWrong || wrong;
+      cur.seen = [...new Set([...(cur.seen || []), face])];
+      /* 둘 다 은퇴했을 때만 은퇴다 — 하나라도 살아 있으면 이른 쪽 날짜로 다시 나온다. */
+      if(!cur.due || !st.due) cur.due = cur.due && st.due ? (cur.due < st.due ? cur.due : st.due)
+                                                          : (cur.due || st.due || null);
+      else cur.due = cur.due < st.due ? cur.due : st.due;
+      if(st.at && (!cur.at || st.at > cur.at)){ cur.at = st.at; cur.ans = st.ans; cur.correct = st.correct; }
+    }
+    delete d.cards[key];
+  }
+  /* 오늘 뽑아 둔 것도 옛 열쇠를 가리키고 있다 — 비워서 다시 뽑게 한다. */
+  d.day = '';
+  d.picks = [];
+  return true;
+}
+
 /* 화면이 그려지기 «전»에 오늘 것이 정해져 있어야 한다. 저장은 비동기로 던진다 —
    기록은 이미 오늘 것을 들고 있으므로 화면은 기다릴 필요가 없다. */
 function dqEnsureToday(sid, rec){
   const d = dqState(rec);
+  /* 옛 열쇠를 먼저 옮긴다 — 옮기면 오늘 것을 다시 뽑아야 하므로 뽑기보다 앞이다. */
+  const moved = dqMigrateCards(rec);
   const today = todayStr();
-  if(d.day === today) return;
+  if(d.day === today && !moved) return;
   dqRoll(rec, today, studentRange(sid));
   if(DATA.records[sid]) saveRecord(sid);
 }
@@ -5430,16 +5559,25 @@ async function submitDailyQuiz(cardId){
   const rec = await loadRecord(sid);
   const card = dqCardById(rec, cardId);
   if(!card) return;
+  const face = dqFaceOf(rec, card);
+  if(!face) return;
   const el = document.getElementById('dq-ans-'+cardId);
   const val = (el ? el.value : '').trim();
   if(!val){ showToast('답을 입력해주세요.'); return; }
 
   const today = todayStr();
   const d = dqState(rec);
-  const st = d.cards[cardId] || {streak:0, n:0, okN:0};
-  const ok = val === card.answer;
+  const st = d.cards[cardId] || {streak:0, n:0, okN:0, seen:[], everWrong:false};
+  if(!st.seen) st.seen = [];
+  const ok = val === face.answer;
   st.n++; if(ok) st.okN++;
   st.ans = val; st.at = today; st.correct = ok;
+  /* 🔴 **«한 번이라도 틀렸나»를 따로 남긴다** (2026-09-05 · 사용자가 정한 규칙).
+     「한번이라도 틀리면 상향은 내지말고 N으로 계속」 —
+     streak 은 틀리면 0으로 돌아가므로 **그것만 보면 다시 세 번 맞힌 학생에게 U가 나간다.** */
+  if(!ok) st.everWrong = true;
+  /* 이미 본 얼굴은 다시 안 내려고 적어 둔다 (다 봤으면 가장 오래전 것부터 돌아온다). */
+  if(!st.seen.includes(face.face)) st.seen.push(face.face);
   if(ok){
     st.streak++;
     st.due = st.streak > DQ_STEPS.length ? null : shiftYmd(today, DQ_STEPS[st.streak-1]);
@@ -5450,10 +5588,13 @@ async function submitDailyQuiz(cardId){
   d.cards[cardId] = st;
   /* 날짜별 정답률을 그리려면 «언제 무엇을 맞고 틀렸나»가 남아야 한다.
      카드 상태에는 마지막 제출만 남으므로 이력을 따로 둔다. 무한정 쌓지 않도록 상한을 건다. */
-  d.log.push({d:today, id:cardId, ok});
+  d.log.push({d:today, id:cardId, face:face.face, ok});
   if(d.log.length > 200) d.log = d.log.slice(-200);
   await saveRecord(sid);
-  showToast(ok ? '정답입니다.' : '틀렸습니다 — 내일 다시 나옵니다.');
+  /* 다음에 무엇이 오는지 말해 준다 — 하향으로 내려가는 것은 «봐준다»가 아니라 «발판»이다. */
+  showToast(ok ? '정답입니다.'
+    : (card.faces.some(f=>f.kind==='D') ? '틀렸습니다 — 내일 조금 쉬운 문제로 다시 나옵니다.'
+                                        : '틀렸습니다 — 내일 다시 나옵니다.'));
   render();
 }
 // 객관식(①~⑤가 포함된) 문제인지 판별 — 맞으면 텍스트 입력 대신 보기 버튼을 보여준다.
@@ -6758,11 +6899,17 @@ async function deleteExam(examId){
     /* 데일리퀴즈 상태에서도 그 카드들을 턴다 — 안 그러면 풀에 없는 id가 picks에 남는다.
        (dqTodayCards가 걸러 주긴 하지만 이력·카드 상태가 계속 쌓인다.) */
     /* ⚠ **문항이 남아 있으면(복사본이 쓰고 있으면) 카드도 그대로 둔다** — 아직 유효한 문제다. */
+    /* 🔴 **열쇠가 이제 «문항»이다** — bankId 를 잘라 내는 옛 방식으로는 못 찾는다 (2026-09-05).
+       코드가 붙은 문항은 열쇠가 `K2-01-E-0004` 라 bankId 가 아예 안 들어 있다.
+       그래서 «지금 풀에 남아 있는 열쇠»를 기준으로 삼는다 — 풀에서 사라진 것만 턴다.
+       ⚠ 이 판단은 문항을 지운 «뒤»에 해야 맞다. 위에서 이미 지웠다. */
     if(dropBanks){
       const d = dqState(rec);
-      Object.keys(d.cards).forEach(id=>{ if(bankIds.has(String(id).split(':')[0])) delete d.cards[id]; });
-      d.picks = d.picks.filter(id=>!bankIds.has(String(id).split(':')[0]));
-      d.log = d.log.filter(x=>!bankIds.has(String(x.id).split(':')[0]));
+      const alive = new Set(dqPool(rec).map(c=>c.id));
+      Object.keys(d.cards).forEach(id=>{ if(!alive.has(id)) delete d.cards[id]; });
+      if(d.faces) Object.keys(d.faces).forEach(id=>{ if(!alive.has(id)) delete d.faces[id]; });
+      d.picks = d.picks.filter(id=>alive.has(id));
+      d.log = d.log.filter(x=>alive.has(x.id));
     }
     state.allRecords[s.studentId] = rec;
     await saveRecord(s.studentId);
@@ -8910,13 +9057,23 @@ function stuQuizHTML(c){
   const st = dqState(c.rec).cards[cur.id];
   const exam = DATA.exams.find(e=>e.id===cur.examId);
   const idx = cards.findIndex(x=>x.id===cur.id);
+  /* 🔵 **오늘 이 문항이 내보이는 «얼굴»** — 만날 때마다 달라진다 (2026-09-05).
+     뽑기는 dqRoll 이 이미 해서 박아 두었다. */
+  const face = dqFaceOf(c.rec, cur);
 
-  /* 어느 그림을 붙일지는 카드가 이미 알고 있다 (dqPool의 imgKind — 오답숙제와 같은 규칙이다). */
-  const imgHTML = cur.imgKind ? pbImageHTML(cur.bankId, cur.imgKind, 'sap-img') : '';
+  /* 어느 그림을 붙일지는 얼굴이 안다 (오답숙제와 같은 규칙이다).
+     ⚠ 창고 변형은 아직 자기 그림을 안 갖는다 — 그때는 안 붙는다. */
+  const imgHTML = face.imgKind ? pbImageHTML(face.bankId, face.imgKind, 'sap-img') : '';
 
-  const kindBadge = k => k==='orig'
-    ? `<span class="badge no">원본</span>`
+  /* 갈래를 학생 말로. **«하향»이라고 쓰지 않는다** — 내려갔다는 말을 학생에게 할 필요가 없다.
+     맞히면 다시 올라가는 발판일 뿐이고, 이름표가 기를 꺾을 이유가 없다. */
+  const faceBadge = f => f.kind==='orig' ? `<span class="badge no">원본</span>`
+    : f.kind==='U' ? `<span class="badge late">한 단계 위</span>`
     : `<span class="badge score">변형</span>`;
+  const faceWord = f => f.kind==='orig' ? '· 그때 틀린 문제'
+    : f.kind==='U' ? '· 한 단계 위의 문제'
+    : f.kind==='D' ? '· 같은 유형을 다시'
+    : '· 같은 유형의 쌍둥이 문제';
 
   return banner + `
   <div class="sap-prog" style="margin:0 0 16px;">
@@ -8926,7 +9083,7 @@ function stuQuizHTML(c){
 
   <div class="mc ${curDone ? '' : 'go'}">
     <div class="row" style="gap:7px;">
-      ${kindBadge(cur.kind)}
+      ${faceBadge(face)}
       <span class="badge">${cur.no}번</span>
       ${curDone ? `<span class="badge ${curDone.correct?'ok':'no'}">${curDone.correct?'정답':'오답'}</span>` : ''}
       <span class="spacer"></span>
@@ -8934,10 +9091,10 @@ function stuQuizHTML(c){
     </div>
     <div style="font-size:11.5px;color:var(--dim);margin-top:9px;">
       ${exam ? escHtml(exam.title) : '(삭제된 시험지)'} ${cur.no}번
-      ${cur.kind==='orig' ? '· 그때 틀린 문제' : '· 같은 유형의 쌍둥이 문제'}
+      ${faceWord(face)}
       ${st && st.streak ? ` · 연속 ${st.streak}회 정답` : ''}
     </div>
-    <div class="sap-q" style="margin-top:11px;">${problemHTML(cur.content)}</div>
+    <div class="sap-q" style="margin-top:11px;">${problemHTML(face.content)}</div>
     ${imgHTML}
     <div style="margin-top:15px;">
       ${curDone
@@ -8946,11 +9103,11 @@ function stuQuizHTML(c){
              <b class="mono" style="font-size:15px;">${escHtml(curDone.ans||'')}</b>
              ${curDone.correct ? '' : `<span class="spacer"></span>
                <span style="font-size:12px;color:var(--sub);">정답</span>
-               <b class="mono" style="font-size:15px;color:var(--ok);">${escHtml(cur.answer)}</b>`}
+               <b class="mono" style="font-size:15px;color:var(--ok);">${escHtml(face.answer)}</b>`}
            </div>
            <div style="margin-top:9px;font-size:11.5px;color:var(--dim);line-height:1.7;">
              ${escHtml(dqNextLabel(curDone))}</div>`
-        : isMultipleChoice(cur.content)
+        : isMultipleChoice(face.content)
           ? `${answerInputHTML('dq-ans-'+cur.id)}
              <button class="mbtn p" style="margin-top:11px;" onclick="submitDailyQuiz('${cur.id}')">제출</button>`
           : `<input id="dq-ans-${cur.id}" class="sap-in" placeholder="답을 입력하세요">
@@ -8962,6 +9119,7 @@ function stuQuizHTML(c){
   <div class="msec">오늘의 문제</div>
   ${cards.map((x,i)=>{
     const d = dqDoneToday(c.rec, x.id);
+    const xf = dqFaceOf(c.rec, x);   // 목록도 «오늘 낼 얼굴»을 보여야 한다
     return `<div class="mc" onclick="state.stuQuizId='${x.id}'; render(); window.scrollTo(0,0)"
         style="cursor:pointer;${x.id===cur.id ? 'border-color:var(--accent);' : (d?'opacity:.7;':'')}">
       <div class="mrow" style="min-height:38px;gap:8px;">
@@ -8972,9 +9130,9 @@ function stuQuizHTML(c){
                 overflow:hidden을 그냥 빠져나간다. 실제로 문서가 521px 가로로 늘어났다.
                 «스크롤 상자는 relative여야 한다»와 같은 함정의 가로 판이다. */''}
           <b style="display:block;position:relative;font-size:13px;font-weight:600;overflow:hidden;
-            text-overflow:ellipsis;white-space:nowrap;">${escHtml(x.content)}</b>
+            text-overflow:ellipsis;white-space:nowrap;">${escHtml(xf.content)}</b>
           <span style="display:block;font-size:11px;color:var(--dim);margin-top:3px;">
-            ${x.kind==='orig'?'원본':'변형'} ${x.no}번</span>
+            ${xf.kind==='orig'?'원본':(xf.kind==='U'?'한 단계 위':'변형')} ${x.no}번</span>
         </span>
         ${d ? `<span class="badge ${d.correct?'ok':'no'}">${d.correct?'정답':'오답'}</span>`
             : `<span class="badge late">대기</span>`}
@@ -15295,20 +15453,23 @@ function chubQuizHTML(classId){
     return sel.picks.map(id=>{
       const card = pool.find(x=>x.id===id);
       if(!card) return '';          // 시험지가 지워지는 등으로 풀에서 빠진 카드
+      /* 🔵 학생이 «오늘 실제로 본 얼굴»을 그대로 보여 준다 — 강사가 보는 것과 학생이 푼 것이
+         다르면 상담할 때 말이 어긋난다 (2026-09-05). */
+      const cf = dqFaceOf(sel.rec, card);
       const st = cards[id];
       const done = st && st.at===today;
       const exam = DATA.exams.find(e=>e.id===card.examId);
       return `<div class="qz-sr" style="display:block;padding:10px 0;">
         <div class="row" style="gap:6px;">
-          <span class="badge ${card.kind==='orig'?'no':'score'}">${card.kind==='orig'?'원본':'변형'}</span>
+          <span class="badge ${cf.kind==='orig'?'no':(cf.kind==='U'?'late':'score')}">${cf.kind==='orig'?'원본':(cf.kind==='U'?'한 단계 위':'변형')}</span>
           <span style="font-size:11.5px;color:var(--dim);">${exam?escHtml(exam.title):'(삭제된 시험지)'} ${card.no}번</span>
           <span class="spacer"></span>
           ${done ? `<span class="badge ${st.correct?'ok':'no'}">${st.correct?'정답':'오답'}</span>`
                  : `<span class="badge late">미제출</span>`}
         </div>
-        <div style="font-size:12.5px;line-height:1.7;margin-top:6px;white-space:pre-wrap;">${problemHTML(card.content)}</div>
+        <div style="font-size:12.5px;line-height:1.7;margin-top:6px;white-space:pre-wrap;">${problemHTML(cf.content)}</div>
         <div class="mono" style="font-size:11px;color:var(--dim);margin-top:5px;">
-          정답 ${escHtml(card.answer)}${done ? ` · 낸 답 ${escHtml(st.ans||'')}` : ''}
+          정답 ${escHtml(cf.answer)}${done ? ` · 낸 답 ${escHtml(st.ans||'')}` : ''}
         </div>
       </div>`;
     }).join('');
