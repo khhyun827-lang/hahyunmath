@@ -728,27 +728,36 @@ function hwpxSourceBadges(docs, 해시of){
   }
   const toks = [];
   hwpWalkParagraphs(paras, toks);
-  const out = [];
-  let 출처 = null, 딱지들 = [];
+  /* 🔴 **머리말은 문항 «뒤»에 온다** (2026-09-05 · 사용자가 「미주가 71개인데 70개로 인식된거야?」
+     라고 물어서 찾았다). 실제 차례가 이렇다:
+         ▣미주(116)  딱지[OR]  출처(23-09-28)  ▣미주(④)  딱지[NC]  출처(23-09-28) …
+     화면에서는 딱지가 문항 «우측 상단»에 있지만, 파일 안에서는 그 문항의 미주 «뒤»에 적힌다
+     (떠 있는 개체라 글 뒤로 밀려 적힌다).
+     🔴 그래서 «앞에서 마지막으로 본 것»을 쓰면 **한 칸씩 밀린다** — 첫 문항이 통째로 빠지고
+       마지막 딱지가 주인 없이 남는다. 실제로 그렇게 나왔었다(문항 70 · 남은 딱지 1).
+     🔵 미주도 71, 출처도 71, 딱지도 71이다. **차례대로 지퍼처럼 맞추는 것**이 옳다 —
+       셋 중 하나라도 수가 다르면 맞출 길이 없으므로 그때는 멈춘다. */
+  const 미주 = [], 출처들 = [], 딱지들 = [];
   for(const t of toks){
-    if(t.type === 'srctag'){ const v = hwpxParseSourceTag(t.v); if(v) 출처 = v; continue; }
-    if(t.type === 'pic'){
-      /* ⚠ **덮어쓰지 않고 모은다** — 한 문항에 딱지가 둘로 잡히면 그건 «알아야 할 일»이지
-         조용히 뒤엣것으로 덮을 일이 아니다(처음에 덮었더니 딱지 하나가 소리 없이 사라졌다). */
-      const b = 딱지해시[해시of(t.v)];
-      if(b) 딱지들.push(b);
-      continue;
-    }
-    if(t.type === 'endnote'){ out.push({ 출처, 딱지들 }); 출처 = null; 딱지들 = []; }
-  /* ⚠ 마지막 미주 «뒤»에 남은 딱지는 어느 문항의 것도 아니다. 조용히 버리지 않고 셈으로 남긴다 —
-     그 수가 0이 아니면 이 양식을 내가 아직 다 모른다는 뜻이다. */
-  out.남은딱지 = 딱지들.length;
+    if(t.type === 'endnote'){ 미주.push(t); continue; }
+    if(t.type === 'srctag'){ const v = hwpxParseSourceTag(t.v); if(v) 출처들.push(v); continue; }
+    if(t.type === 'pic'){ const b = 딱지해시[해시of(t.v)]; if(b) 딱지들.push(b); }
   }
+  const out = [];
+  out.셈 = { 미주: 미주.length, 출처: 출처들.length, 딱지: 딱지들.length };
+  const n = Math.max(미주.length, 출처들.length, 딱지들.length);
+  for(let i = 0; i < n; i++)
+    out.push({ 출처: 출처들[i] || null, 딱지들: 딱지들[i] ? [딱지들[i]] : [] });
   return out;
 }
 
 /* 뽑은 것을 코드로 바꾼다. 🔴 어긋나면 코드를 안 낸다 — 짐작한 코드가 제일 나쁘다. */
 function hwpxMakeSourceCodes(뽑은것){
+  /* 🔴 **셋의 수가 같아야 지퍼가 맞는다** — 하나라도 다르면 어디서 어긋났는지 알 수 없다. */
+  const 셈 = 뽑은것.셈;
+  if(셈 && !(셈.미주 === 셈.출처 && 셈.출처 === 셈.딱지))
+    return { ok:false, codes:[], 것들:[], 흠: ['미주 ' + 셈.미주 + ' · 출처 ' + 셈.출처 + ' · 딱지 ' + 셈.딱지
+      + ' — 수가 달라 짝지을 수 없습니다. 이 양식을 아직 다 모르는 것입니다.'] };
   /* 🔵 **문항이 아닌 덩이는 조용히 지나간다** — 목차·표지에도 미주가 붙어 있을 수 있다.
      출처도 딱지도 «둘 다» 없으면 문항이 아니다. 하나만 없으면 그건 흠이라 말한다. */
   const 것들 = 뽑은것.filter(x => x.출처 || (x.딱지들 && x.딱지들.length));
@@ -777,7 +786,7 @@ function hwpxMakeSourceCodes(뽑은것){
     센다[k] = (센다[k] || 0) + 1;
     return k + String(센다[k]).padStart(2, '0');
   });
-  return { ok:true, 흠:[], codes, 것들, 묶음수: Object.keys(묶음).length, 남은딱지: 뽑은것.남은딱지 || 0 };
+  return { ok:true, 흠:[], codes, 것들, 묶음수: Object.keys(묶음).length, 셈: 뽑은것.셈 };
 }
 
 /* =================== 시험지꼴 빠른정답표 (2026-09-04) ===================
