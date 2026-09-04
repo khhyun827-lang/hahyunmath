@@ -3164,7 +3164,7 @@
      이 파일은 index.html 과 «따로» 받아지므로, 물음표 뒤가 그대로면 브라우저가
      **캐시에 있는 옛 파서를 꺼내 쓴다.** 그러면 교재를 다시 올려도 옛 글이 그대로 담기고,
      화면만 보고서는 «고쳤는데 왜 안 되지»가 된다 — 파서가 바뀐 것을 아무 데서도 못 본다. -->
-<script src="hwpx.js?v=2026-09-06i"></script>
+<script src="hwpx.js?v=2026-09-06j"></script>
 <!-- 출석 도장 게임(셸·똥피하기·달리기). 연습 페이지 game.html 도 같은 파일을 쓴다 -->
 <!-- ⚠ ?v= 를 붙이는 까닭 — 브라우저가 game-core.js 를 캐시해서, 올려도 학생 화면에는
      옛 게임이 그대로 돈다(Ctrl+Shift+R 을 해야 바뀐다 — 학생에게 그걸 시킬 수는 없다).
@@ -8006,7 +8006,15 @@ async function saveExam(){
   /* ⚠ 여기서 문항을 «새로 짓는다» — 초안에 든 것을 그대로 안 쓰고 고른 칸만 옮긴다.
      그래서 **새 칸을 더할 때마다 여기에도 적어야 한다.** itemCode 를 빠뜨렸더니
      hwpx 에서 읽어 온 코드가 저장 직전에 조용히 사라졌다 (2026-09-03에 실제로 그랬다). */
-  const questions = validQuestions.map((q,i)=>({no:i+1, content:q.content.trim(), answer:q.answer.trim(),
+  /* 🔴 **열쇠는 «번호»가 아니라 «형-번호»다** (2026-09-04).
+     형이 나뉜 시험지에서는 A형 15번과 B형 15번이 **다른 문제**인데 번호는 같다.
+     그리고 번호가 숫자가 아닌 것도 있다 — `단답형1` · `서술형2`.
+     ⚠ `no` 는 **그대로 둔다** — 옛 시험지·옛 기록이 다 그것으로 이어져 있다.
+       숫자가 아닌 이름은 `no` 를 차례(i+1)로 두고, 진짜 이름은 `label` 에 둔다. */
+  const questions = validQuestions.map((q,i)=>({
+    no: i+1, type: q.type || '0', label: q.label || String(i+1),
+    qkey: (q.type || '0') + '-' + (q.label || String(i+1)),
+    content:q.content.trim(), answer:q.answer.trim(),
     unit:q.unit||'', chapter:q.chapter||'', itemCode:q.itemCode||'', solution:q.solution||''}));
   /* 🔵 **이미 있는 시험을 채우는 길** (2026-08-30 · C-7) — 성적만 먼저 넣어 둔 시험에
      나중에 문항을 붙인다. 새 문서를 만들지 않고 **그 문서를 고친다** —
@@ -8064,6 +8072,8 @@ async function saveExam(){
        데일리퀴즈의 범위 판정은 시험지가 사라진 뒤에도 돌아야 한다. */
     const bankEntry = {
       id:bankId, examId, questionNo:q.no,
+      /* 🔵 형이 나뉜 시험지의 열쇠. 옛 항목에는 없으므로 읽는 쪽이 questionNo 로 되돌린다. */
+      qkey: q.qkey || ('0-' + q.no), qtype: q.type || '0', qlabel: q.label || String(q.no),
       originalContent:q.content, originalAnswer:q.answer,
       variantContent:'', variantAnswer:'', status:'pending',
       subject:q.unit||'', chapter:q.chapter||'',
@@ -8324,10 +8334,23 @@ function codeVariantFor(itemCode){
   const byKind = k => usable.find(v => (v.variantKind || 'N') === k);
   return byKind('N') || byKind('D') || usable[0];
 }
+/* 「15번」이 아니라 「TYPE B 15번」으로 말한다 — 형이 나뉜 시험지에서는 번호만으로는
+   어느 문제인지 알 수 없다. 형이 하나뿐인(옛) 시험지에서는 예전처럼 「3번」이다. */
+function qLabelOf(x){
+  if(!x) return '';
+  const 이름 = x.qlabel || x.label || x.questionNo || x.no || '';
+  const 형 = x.qtype || x.type || '0';
+  return (형 && 형 !== '0' ? 'TYPE ' + 형 + ' ' : '') + 이름 + '번';
+}
+
 function findBankEntry(examId, no){
   /* 🔴 복사본이면 «뿌리»에서 찾는다. 예전에는 `examId`가 딱 맞아야 해서 복사본에서는
      항상 못 찾았고, 그래서 **이미 만들어 둔 쌍둥이를 놔두고 또 만들었다.** */
-  return DATA.problemBank.find(b=>b.examId===examRootId(examId) && b.questionNo===no);
+  /* 🔵 **열쇠는 `형-번호`다.** 옛 항목에는 `qkey` 가 없으므로 `questionNo` 로 되돌려 찾는다 —
+     옛 시험지도 그대로 돌아야 한다(그때는 형이 하나뿐이라 `0-3` 과 `3` 이 같은 뜻이다). */
+  const key = String(no);
+  return DATA.problemBank.find(b => b.examId===examRootId(examId)
+    && (b.qkey ? b.qkey === key : ('0-' + b.questionNo) === key || String(b.questionNo) === key));
 }
 
 /* =================== 학생 오답 제출 =================== */
@@ -8344,7 +8367,8 @@ async function submitWrongAnswers(){
   const examId = state.wrongExamId;
   const exam = DATA.exams.find(e=>e.id===examId);
   if(!exam){ showToast('시험지를 선택해주세요.'); return; }
-  const wrongNos = Object.keys(state.wrongChecked).filter(k=>state.wrongChecked[k]).map(k=>parseInt(k));
+  /* 🔵 고른 것은 이제 «형-번호» 열쇠다(`A-15` · `0-단답형1`). 숫자로 바꾸지 않는다. */
+  const wrongNos = Object.keys(state.wrongChecked).filter(k=>state.wrongChecked[k]);
   if(wrongNos.length===0){ showToast('틀린 문제 번호를 선택해주세요.'); return; }
   await loadUnitBankIfNeeded();
   await loadVariantsIfNeeded();
@@ -8354,7 +8378,7 @@ async function submitWrongAnswers(){
   for(const no of wrongNos){
     let bank = findBankEntry(examId, no);
     if(!bank){
-      const q = exam.questions.find(q=>q.no===no);
+      const q = exam.questions.find(x => (x.qkey || ('0-' + x.no)) === String(no) || String(x.no) === String(no));
       if(!q) continue;
       /* 시험지 등록 때와 같은 태그를 싣는다 — 이 길로 만들어진 항목만 태그가 없으면
          그 학생만 조용히 범위 판정에서 빠진다 (문항 태그는 problembank가 진실이다).
@@ -8374,7 +8398,9 @@ async function submitWrongAnswers(){
         : (candidates.length ? candidates[Math.floor(Math.random()*candidates.length)] : null);
       if(codeMatch){
         bank = {
-          id:'pb'+Date.now()+'_'+no, examId, questionNo:no,
+          id:'pb'+Date.now()+'_'+no, examId, questionNo: (q && q.no) || no,
+          /* 🔵 열쇠는 «형-번호»다 — 학생이 고른 그 열쇠를 그대로 싣는다. */
+          qkey: String(no), qtype: (q && q.type) || '0', qlabel: (q && q.label) || String(no),
           originalContent:q.content, originalAnswer:q.answer,
           variantContent: codeMatch.content, variantAnswer: codeMatch.answer,
           status:'approved', source:'itemstore', variantCode: codeMatch.code, ...tag
@@ -8382,7 +8408,9 @@ async function submitWrongAnswers(){
         matchedFromCode++;
       } else if(match){
         bank = {
-          id:'pb'+Date.now()+'_'+no, examId, questionNo:no,
+          id:'pb'+Date.now()+'_'+no, examId, questionNo: (q && q.no) || no,
+          /* 🔵 열쇠는 «형-번호»다 — 학생이 고른 그 열쇠를 그대로 싣는다. */
+          qkey: String(no), qtype: (q && q.type) || '0', qlabel: (q && q.label) || String(no),
           originalContent:q.content, originalAnswer:q.answer,
           variantContent: match.content, variantAnswer: match.answer,
           status:'approved', source:'unitbank', unitBankId: match.id, ...tag
@@ -8390,7 +8418,9 @@ async function submitWrongAnswers(){
         matchedFromBank++;
       } else {
         bank = {
-          id:'pb'+Date.now()+'_'+no, examId, questionNo:no,
+          id:'pb'+Date.now()+'_'+no, examId, questionNo: (q && q.no) || no,
+          /* 🔵 열쇠는 «형-번호»다 — 학생이 고른 그 열쇠를 그대로 싣는다. */
+          qkey: String(no), qtype: (q && q.type) || '0', qlabel: (q && q.label) || String(no),
           originalContent:q.content, originalAnswer:q.answer,
           variantContent: '', variantAnswer: '',
           status:'pending', ...tag
@@ -8425,7 +8455,8 @@ async function submitWrongAnswers(){
       }
     }
     if(!rec.wrongHomework.some(h=>h.bankId===bank.id)){
-      rec.wrongHomework.push({bankId:bank.id, examId, questionNo:no, assignedAt:todayStr(), done:false, studentAnswer:''});
+      /* 🔵 숙제에도 열쇠를 남긴다 — 화면이 「B형 15번」으로 말할 수 있어야 한다. */
+      rec.wrongHomework.push({bankId:bank.id, examId, questionNo: bank.questionNo, qkey: bank.qkey || String(no), qlabel: bank.qlabel || String(no), qtype: bank.qtype || '0', assignedAt:todayStr(), done:false, studentAnswer:''});
     }
   }
   await saveRecord(sid);
@@ -8831,18 +8862,42 @@ async function handleExamHwpxFile(fileList){
   const unit = document.getElementById('exam-hwpx-unit').value;
   try{
     showToast('hwpx 파일을 분석하는 중입니다...');
-    const problems = await parseHwpxToProblems(file);
+    let problems = await parseHwpxToProblems(file);
     if(problems.length === 0){ showToast('인식된 문항이 없습니다.'); return; }
+    /* =================== 형(TYPE)이 나뉜 시험지 (2026-09-04) ===================
+       🔴 **번호가 겹친다.** A형 15번과 B형 15번은 **다른 문제**다. 그래서 열쇠는 번호가 아니라
+         `형-번호`(`A-15`) 여야 한다. 번호만 쓰면 둘이 조용히 한 칸을 다툰다.
+       🔴 **본문에는 형 구분이 없다**(실측). 형을 아는 유일한 길은 **파일 끝의 빠른정답표**다 —
+         그래서 그 표는 «정답»만 주는 것이 아니라 **«번호와 형»을 주는 자리**다.
+       ⚠ 표의 차례와 미주의 차례가 같다는 데 기댄다. 그래서 **개수가 다르면 안 쓴다** —
+         한 칸이라도 밀리면 27문항 전부에 남의 번호가 붙는다. */
+    const 이어붙인글 = problems.map(x => x.content || '').join(String.fromCharCode(10));
+    let 표 = [];
+    if(hwpxLooksExamKey(이어붙인글)) 표 = hwpxExamKeyFromText(이어붙인글);
+    /* 미주가 붙은 것만 «문항»이다 — 맨 앞의 안내문처럼 미주 없는 덩이가 섞여 온다. */
+    let 문항들 = 표.length ? problems.filter(x => String(x.answer || '').trim()) : problems;
+    if(표.length && 표.length !== 문항들.length){
+      showToast(`빠른정답표는 ${표.length}개인데 문항은 ${문항들.length}개입니다 — 형·번호는 안 붙입니다.`);
+      표 = [];
+    }
+    /* 마지막 문항 뒤에 붙은 빠른정답표는 «문제»가 아니다 — 떼어 낸다. */
+    if(표.length) 문항들 = 문항들.map(x => {
+      const at = String(x.content || '').search(/[^\n]{0,30}빠른\s*정답/);
+      return at > 0 ? Object.assign({}, x, { content: x.content.slice(0, at).replace(/\s+$/, '') }) : x;
+    });
+    problems = 문항들;
     /* 단원 초안도 여기서 같이 채운다 — 일괄 등록의 이점이 «문항 수만큼 단원 고르기»로 사라지면 안 된다.
        🔴 **코드가 있으면 짐작하지 않는다** — 미주에 심긴 코드(`K2-01-E-0010`)가 과목·단원을
        이미 말하고 있다. 낱말 대조(`guessChapter`)는 코드가 없을 때만 쓰는 초안이다. */
     let codeFilled = 0;
-    examDraft.questions = problems.map(p => {
+    examDraft.questions = problems.map((p, i) => {
       const ci = p.itemCode ? chapterInfoFromItemCode(p.itemCode) : null;
       if(ci) codeFilled++;
-      return { content: p.content, answer: p.answer, unit: ci ? ci.subject : unit,
+      const k = 표[i] || null;
+      return { content: p.content, answer: (k && k.answer) || p.answer, unit: ci ? ci.subject : unit,
         chapter: ci ? ci.chapter : guessChapter(p.content, unit), image: p.image,
-        itemCode: p.itemCode || '', solution: p.solution || '' };
+        itemCode: p.itemCode || '', solution: p.solution || '',
+        type: k ? k.type : '0', label: k ? k.label : String(i + 1) };
     });
     render();
     const noAnswer = problems.filter(p=>!p.answer).length;
@@ -9886,7 +9941,7 @@ function stuTodo(c){
     const exam = DATA.exams.find(e=>e.id===h.examId);
     items.push({
       icon:'clipboard', bg:'var(--nobg)', fg:'var(--no)',
-      title:`오답숙제 ${h.questionNo}번`, sub:(exam ? exam.title : '시험지') + ' 쌍둥이 문제',
+      title:`오답숙제 ${qLabelOf(h)}`, sub:(exam ? exam.title : '시험지') + ' 쌍둥이 문제',
       tab:'wronghw'
     });
   });
@@ -10616,7 +10671,7 @@ function stuWrongHTML(c){
     if(bank.status!=='approved'){
       return `<div class="mc">
         <div class="row" style="gap:7px;">
-          <span class="badge score">원본 ${hw.questionNo}번</span>
+          <span class="badge score">원본 ${qLabelOf(hw)}</span>
           <span class="spacer"></span><span class="badge">검토 중</span>
         </div>
         <div style="font-size:12.5px;color:var(--sub);margin-top:10px;line-height:1.7;">
@@ -10629,7 +10684,7 @@ function stuWrongHTML(c){
     const correct = hw.done && hw.studentAnswer.trim()===bank.variantAnswer.trim();
     return `<div class="mc ${hw.done ? '' : 'go'}" style="${hw.done?'opacity:.75;':''}">
       <div class="row" style="gap:7px;">
-        <span class="badge score">원본 ${hw.questionNo}번</span>
+        <span class="badge score">원본 ${qLabelOf(hw)}</span>
         <span class="spacer"></span>
         ${reportBtnHTML(bank.id, 'legacy')}
         ${hw.done ? `<span class="badge ${correct?'ok':'no'}">${correct?'정답':'오답'}</span>`
@@ -10677,8 +10732,26 @@ function stuWrongHTML(c){
         <div style="margin-top:14px;">
           <div class="sap-lab">틀린 번호</div>
           <div class="row" style="flex-wrap:wrap;gap:7px;">
-            ${selectedExam.questions.map(q=>`<a class="pill ${state.wrongChecked[q.no]?'on':''}"
-              onclick="toggleWrongCheck(${q.no})">${q.no}</a>`).join('')}
+            ${/* 🔴 **시험지 양식 그대로 보여 준다** (2026-09-04 · 사용자 요청 —
+                 「그냥 시험지 양식그대로 1~14 단1 서1 서2 밑에 type A 15 16 17 …
+                  이렇게해서 자기가 해당하는거 선택할 수 있게해줘 타입까지도」).
+                 A형 15번과 B형 15번은 **다른 문제**다. 번호만 보여 주면 학생이 고를 수 없고,
+                 눌러도 어느 쪽 쌍둥이가 나갈지 알 수 없다 — 조용히 남의 문제가 나간다.
+                 🔵 형을 따로 묻지 않는다. 종이와 같은 모양으로 늘어놓고 **자기 것을 짚게** 한다. */''}
+            ${(() => {
+              const qs = selectedExam.questions || [];
+              const 형들 = [...new Set(qs.map(q => q.type || '0'))];
+              const 한형뿐 = 형들.length <= 1;
+              return 형들.map(t => {
+                const 이줄 = qs.filter(q => (q.type || '0') === t);
+                return `${한형뿐 ? '' : `<div class="sap-lab" style="margin-top:10px;">TYPE ${escHtml(t)}${t==='0'?' <s>공통</s>':''}</div>`}
+                  <div class="row" style="flex-wrap:wrap;gap:7px;">
+                    ${이줄.map(q => { const key = q.qkey || ('0-' + q.no);
+                      return `<a class="pill ${state.wrongChecked[key]?'on':''}"
+                        onclick="toggleWrongCheck('${escHtml(key)}')">${escHtml(q.label || q.no)}</a>`; }).join('')}
+                  </div>`;
+              }).join('');
+            })()}
           </div>
         </div>
         <button class="mbtn p" style="margin-top:14px;" onclick="submitWrongAnswers()">제출하기</button>` : ''}`}
@@ -18074,7 +18147,7 @@ function examSubmissionsHTML(ex){
               if(!bank) return '';
               const ok = h.done && (h.studentAnswer||'').trim()===(bank.variantAnswer||'').trim();
               return `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-top:1px solid var(--line2);font-size:11.5px;">
-                <span class="mono" style="width:34px;flex-shrink:0;">${bank.questionNo}번</span>
+                <span class="mono" style="flex-shrink:0;">${qLabelOf(bank)}</span>
                 <span style="flex:1;min-width:0;color:var(--sub);">${h.done?`낸 답 ${escHtml(h.studentAnswer||'')}`:'미제출'}</span>
                 ${h.done ? `<span class="badge ${ok?'ok':'no'}">${ok?'정답':'오답'}</span>` : '<span class="badge">—</span>'}
               </div>`;
@@ -19070,7 +19143,7 @@ function teacherReviewHTML(){
         const bad = (b.variantContent||b.variantAnswer) && answerFormProblem(b.variantContent, b.variantAnswer);
         return `<div class="rv-item ${sel && b.id===sel.id?'on':''}" onclick="selectReviewItem('${b.id}')">
           <div class="t">${bad?'<span class="rk r"></span>':''}${exam?escHtml(exam.title):'(삭제된 시험지)'}
-            <s>${b.questionNo}번</s></div>
+            <s>${qLabelOf(b)}</s></div>
           <div class="m">${b.variantContent ? escHtml(b.variantContent) : '아직 내용이 없습니다 — AI로 채우거나 직접 입력'}</div>
           ${req>0 ? `<div class="m" style="margin-top:5px;color:var(--sub);">요청한 학생 ${req}명</div>` : ''}
         </div>`;
@@ -19706,7 +19779,7 @@ function reviewWorkHTML(b, list){
   return `
   ${reportBoxHTML(b)}
   <div class="rv-wh">
-    <h1 class="t-title">${exam?escHtml(exam.title):'(삭제된 시험지)'} · ${b.questionNo}번</h1>
+    <h1 class="t-title">${exam?escHtml(exam.title):'(삭제된 시험지)'} · ${qLabelOf(b)}</h1>
     <div class="t-meta" style="margin-top:7px;">
       <span class="badge ${b.status==='approved'?'ok':(b.status==='review1'?'late':'')}">${statusLabel}</span>
       <s>·</s>${req>0 ? `이 문항을 틀린 학생 <b class="mono">${req}</b>명` : '요청한 학생 없음'}
@@ -19725,7 +19798,7 @@ function reviewWorkHTML(b, list){
       <div class="side">
         ${/* 🔵 **코드를 여기에도 적는다** (2026-09-04 · 사용자 요청) — 위 띠에도 있지만,
              두 칸을 나란히 놓고 견줄 때 **어느 쪽이 무슨 코드인지**가 그 자리에 있어야 안 헷갈린다. */''}
-        <div class="lab">원본 문항 <s>${b.questionNo}번</s>
+        <div class="lab">원본 문항 <s>${qLabelOf(b)}</s>
           ${b.itemCode ? `<b class="mono lab-code">${escHtml(b.itemCode)}</b>` : ''}</div>
         <div class="q-body">${problemHTML(b.originalContent||'(내용 없음)')}</div>
         ${/* 정답 칸에 해설이 통째로 든 옛 기록이 있다 — 답만 굵게, 해설은 뒤에 흐리게. */''}

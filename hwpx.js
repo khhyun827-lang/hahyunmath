@@ -682,6 +682,55 @@ function 수식낱말펴기(s){
 }
 
 
+/* =================== 시험지꼴 빠른정답표 (2026-09-04) ===================
+   교재의 표(`001 ② 002 ③ …`)와 **꼴이 다르다.** 시험지는 형(TYPE)으로 나뉘고,
+   번호도 숫자만이 아니다 — `단답형1` · `서술형2` 가 섞인다.
+
+   [동그랑땡1회(하) 빠른정답]
+   TYPE 0
+   1 ② 2 ② … 14 ②
+   단답형1 $4x+3y+4=0$ 또는 …
+   서술형1 $12pi$
+   TYPE A
+   15 ④ 16 ② 17 ③
+   …
+
+   🔴 **본문에는 TYPE 구분이 없다** (실측). 형을 아는 유일한 길이 이 표다.
+     그래서 이 표는 «정답»만 주는 것이 아니라 **«번호와 형»을 주는 자리**다.
+   🔴 **번호가 겹친다** — A형 15번과 B형 15번은 다른 문제다. 그래서 열쇠는 번호가 아니라
+     `형-번호` 여야 한다(`A-15`). 번호만 쓰면 둘이 조용히 한 칸을 다툰다.
+
+   ⚠ 차례가 곧 문항 차례다 — 미주와 1:1로 맞춰야 하므로 **적힌 순서를 그대로 지킨다.** */
+function hwpxExamKeyFromText(flat){
+  const 줄 = String(flat || '').split(/[\n¶]/).map(s => s.trim()).filter(Boolean);
+  const 시작 = 줄.findIndex(l => /빠른\s*정답/.test(l));
+  if(시작 < 0) return [];
+  const out = [];
+  let 형 = null;
+  for(const l of 줄.slice(시작 + 1)){
+    const t = l.match(/^TYPE\s*([0-9A-Z])\b/i);
+    if(t){ 형 = t[1].toUpperCase(); continue; }
+    if(형 === null) continue;
+    /* 「단답형1 …」 · 「서술형2 (1) … (2) …」 — 한 줄이 문항 하나다. */
+    const 서 = l.match(/^(단답형|서술형|논술형)\s*([0-9]+)\s+(.+)$/);
+    if(서){ out.push({ type:형, label: 서[1] + 서[2], answer: 서[3].trim() }); continue; }
+    /* 「1 ② 2 ② 3 ②」 — 한 줄에 여럿이다. 객관식 기호가 붙은 것만 센다. */
+    const re = /([0-9]+)\s*([①②③④⑤])/g;
+    let m, 걸림 = 0;
+    while((m = re.exec(l))){ out.push({ type:형, label:m[1], answer:m[2] }); 걸림++; }
+    /* 「3 $12$」처럼 주관식이 번호줄에 섞이는 양식도 있다 — 기호가 하나도 없을 때만 본다. */
+    if(!걸림){
+      const s = l.match(/^([0-9]+)\s+(.+)$/);
+      if(s) out.push({ type:형, label:s[1], answer:s[2].trim() });
+    }
+  }
+  return out;
+}
+/* 이 파일이 «시험지꼴»인가 — 표에 TYPE 머리가 있으면 그렇다. */
+function hwpxLooksExamKey(flat){
+  return /빠른\s*정답/.test(String(flat || '')) && /TYPE\s*[0-9A-Z]\b/i.test(String(flat || ''));
+}
+
 /* =================== 빠른정답표 (2026-09-04) ===================
    🔴 **웹도 도구도 이것만 본다.** 처음에는 도구(tools/answer-key.mjs)에만 두고 웹은 그 결과를
      JSON 으로 받게 했는데, 사용자가 물었다 — 「나는 빠른정답표만 있지 json파일을 만들줄 몰라」.
