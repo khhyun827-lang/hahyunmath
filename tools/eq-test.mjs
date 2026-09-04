@@ -154,6 +154,26 @@ console.log('');
      떼기('문제다' + NL + NL + NL + '| SCENE | 가 | |'), '문제다' + NL + NL + NL + '| SCENE | 가 | |');
 }
 
+
+// ⑫ 붙여 쓴 낱말들 — 교재가 띄어쓰기를 거의 안 한다 (실측 60문항 넘게 걸려 있었다)
+{
+  든가('root 는 sqrt 의 다른 이름 (4root2)', convertHwpEq('4root2'), '4' + B + 'sqrt{2}');
+  든가('root{…} 도 된다', convertHwpEq('root{29}'), B + 'sqrt{29}');
+  든가('붙여 쓴 over (11over5)', convertHwpEq('11over5'), B + 'frac{11}{5}');
+  든가('띄어 쓴 over (25 over8)', convertHwpEq('25 over8'), B + 'frac{25}{8}');
+  든가('🔴 2sqrt{…} — 앞에 숫자가 붙어도', convertHwpEq('2sqrt { 2}'), B + 'sqrt{');
+  든가('bar + 소문자 (barz)', convertHwpEq('barz'), B + 'overline{z}');
+  든가('box{…} 는 네모 친 자리', convertHwpEq('box{~(가)~}'), B + 'boxed{');
+  든가('timesy', convertHwpEq('x timesy'), B + 'times ');
+  든가('nin', convertHwpEq('2 nin Z'), B + 'notin ');
+  든가('cdotscdots', convertHwpEq('a cdotscdots b'), B + 'cdots ' + B + 'cdots ');
+  // 🔴 되돌이 방지 — 뿌리(replaceBalancedKeyword)를 건드렸으니 나머지가 그대로인지 본다
+  든가('cases 는 그대로', convertHwpEq('cases{a#b}'), B + 'begin{cases}');
+  든가('cases 의 줄바꿈도 그대로', convertHwpEq('cases{a#b}'), B + B);
+  든가('bar{AB} 는 그대로', convertHwpEq('bar{AB}'), B + 'overline{AB}');
+  없나('\overline 을 over 로 다시 안 자른다', convertHwpEq('bar{AB}'), B + 'frac');
+}
+
 console.log('');
 console.log('  ' + (fail ? '🔴' : '✅') + ' ' + pass + ' 통과 · ' + fail + ' 실패');
 console.log('');

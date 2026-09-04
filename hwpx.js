@@ -27,7 +27,12 @@ function findMatchingBrace(s, openIdx){
 }
 // keyword 뒤의 "{...}"를 중첩 중괄호까지 포함해서 통째로 찾아 wrap(inner)로 치환한다.
 function replaceBalancedKeyword(s, keyword, wrap){
-  const re = new RegExp('\\b'+keyword+'\\s*\\{','g');
+  /* 🔴 **낱말 경계(`\b`)를 쓰면 «붙여 쓴 것»을 통째로 놓친다** (2026-09-04).
+     교재에 `2sqrt{2}` 처럼 앞 숫자에 붙은 것이 있는데, 숫자와 글자 사이에는 경계가 없어
+     `\bsqrt` 가 안 걸린다. 그러면 `sqrt` 가 날글자로 남고 그 수식은 안 그려진다.
+     ⚠ 여기는 sqrt 만이 아니라 **cases·pmatrix·pile·box·bar 가 다 쓰는 자리**다 — 뿌리에서 고친다.
+     ⚠ 앞이 역슬래시면 비켜선다(이미 바뀐 것). 앞이 «글자»여도 비켜선다 — 그건 남의 낱말 꼬리다. */
+  const re = new RegExp('(?<![\\\\A-Za-z])'+keyword+'\\s*\\{','g');
   let result = '', lastIndex = 0, m;
   while((m = re.exec(s))){
     const openIdx = m.index + m[0].length - 1;
@@ -144,6 +149,8 @@ function convertHwpEq(script){
   s = replaceBalancedKeyword(s, 'bar', inner => '\\overline{' + inner + '}');
   s = s.replace(/(?<!\\)\bbar\s+([A-Za-z]+)\b/g, '\\overline{$1}');
   s = s.replace(/(?<!\\)\bbar([A-Z]{1,3})\b/g, '\\overline{$1}');
+  /* 소문자 한 글자도 온다 — `barz` (실측 2문항). 두 글자 이상은 변수 이름일 수 있어 안 건드린다. */
+  s = s.replace(/(?<![\\A-Za-z])bar([a-z])(?![A-Za-z])/g, '\\overline{$1}');
   /* LEFT/RIGHT는 괄호만이 아니다 — 절댓값 LEFT | … RIGHT |, 대괄호, 중괄호가 다 온다.
      ⚠ 중괄호는 LaTeX에서 \left\{ 로 이스케이프해야 한다 (\left{ 는 KaTeX가 못 읽는다).
      짝이 안 맞는 LEFT/RIGHT가 남으면 수식 전체가 안 그려지므로, 못 알아본 것은 그냥 지운다. */
@@ -180,7 +187,9 @@ function convertHwpEq(script){
   const 대소문자펴기 = w => w.split('').map(c => '[' + c + c.toUpperCase() + ']').join('');
   for(const [낱말, 기호] of [
     ['notsubset', 'not\\subset'], ['smallinter', 'cap'], ['smallunion', 'cup'],
-    ['setminus', 'setminus'], ['emptyset', 'emptyset'], ['notin', 'notin'],
+    ['setminus', 'setminus'], ['emptyset', 'emptyset'], ['notin', 'notin'], ['nin', 'notin'],
+    /* 나머지 자주 나오는 것들 — `timesy` · `x vert x` · 연산 기호 (실측 6문항). */
+    ['vert', 'vert'], ['triangle', 'triangle'], ['rarrow', 'rightarrow'],
     ['subset', 'subset'], ['supset', 'supset'], ['cap', 'cap'], ['cup', 'cup'],
   ]){
     /* 앞이 글자여도 바꾼다 — 교재는 `AcapB` · `0inemptyset` 처럼 양쪽을 다 붙여 쓴다.
@@ -191,11 +200,26 @@ function convertHwpEq(script){
      그래도 `0inemptyset` 은 잡힌다 — 위에서 emptyset 이 먼저 `\\emptyset` 이 되므로
      `in` 뒤가 역슬래시가 되어 조건을 지나간다. **그래서 이 줄은 반드시 위 고리 «다음»이다.** */
   s = s.replace(/(?<![A-Za-z\\\\])[iI][nN](?![a-z])/g, '\\in ');
-  s = s.replace(/\bCDOTS\b/gi, '\\cdots').replace(/\bLDOTS\b/gi, '\\ldots')
-       .replace(/\bDOTSAXIS\b/gi, '\\cdots').replace(/\bDOTS\b/gi, '\\cdots');
+  /* `times` 는 뒤에 변수가 바로 붙는다 — `x timesy` (실측 5문항). 그 하나만 뒤 조건을 푼다.
+     낱말이 또렷해서 «남의 낱말 꼬리»로 걸릴 일이 거의 없다. */
+  s = s.replace(/(?<![\\\\A-Za-z])[tT][iI][mM][eE][sS]/g, '\\times ');
+  /* 🔴 **`cdotscdots` 처럼 자기끼리 붙어 온다** — 한 번씩 바꾸면 **뒤엣것이 안 바뀐다.**
+     `replace` 의 뒤돌아보기는 «바꾸기 전» 글자를 보기 때문이다: 앞을 바꿔도 뒤엣것 눈에는
+     여전히 앞이 `s` 라 «남의 낱말 꼬리»로 보인다(실제로 겪었다).
+     → 붙어 있는 만큼을 **한 덩이로 잡아** 그 수만큼 펼친다. */
+  s = s.replace(/(?<![\\A-Za-z])(?:[cC][dD][oO][tT][sS])+/g,
+                m => '\\cdots '.repeat(m.length / 5))
+       .replace(/(?<![\\A-Za-z])(?:[lL][dD][oO][tT][sS])+/g,
+                m => '\\ldots '.repeat(m.length / 5));
+  /* ⚠ cdots·ldots 는 위 낱말표가 이미 바꿨다 — 여기서 또 바꾸면  가 된다(실제로 그랬다).
+     남은 것은 «다른 이름»들뿐이고, 앞이 역슬래시면 비켜선다. */
+  s = s.replace(/(?<!\\)\bDOTSAXIS\b/gi, '\\cdots')
+       .replace(/(?<!\\)\bDOTS\b/gi, '\\cdots');
   /* «같지 않다»가 세 가지 표기로 온다 — != 와 NEQ(위에서 처리) 와 ne. */
   s = s.replace(/!=/g, '\\neq').replace(/(?<!\\)\bne\b/g, '\\neq');
   /* pile{a#b}는 «세로로 쌓기»다. 열이 하나인 행렬로 옮긴다 (행 구분은 cases·pmatrix와 같은 #). */
+  /* 🔵 `box{…}` 는 네모를 친 자리다 — 교재가 «(가)» 를 이렇게 적기도 한다. KaTeX 의 \\boxed 로 옮긴다. */
+  s = replaceBalancedKeyword(s, 'box', inner => '\\boxed{' + inner + '}');
   s = replaceBalancedKeyword(s, 'pile', inner =>
     '\\begin{matrix}' + inner.replace(/#/g,'\\\\') + '\\end{matrix}');
   /* 🔵 **수식 안의 `#` 는 줄바꿈이고 `~` 는 공백이다** (2026-09-04).
@@ -206,6 +230,14 @@ function convertHwpEq(script){
   s = s.replace(/#/g, ' ');
   s = s.replace(/~{3,}/g, '~');
   s = convertOverToFrac(s);
+  /* 🔵 **붙여 쓴 `over`** (실측 27문항 — `11over5` · `25 over8`). 위 함수는 중괄호가 있는 꼴만 본다.
+     ⚠ 앞이 역슬래시나 글자면 비켜선다 — 안 그러면 `\\overline` 이 걸린다. */
+  s = s.replace(/(?<![\\A-Za-z])([A-Za-z0-9]+)\s*over\s*([A-Za-z0-9]+)/g,
+                (m, a, b) => '\\frac{' + a + '}{' + b + '}');
+  /* 🔵 **`root` 는 `sqrt` 의 다른 이름이다** (2026-09-04 · 실측 25문항이 날글자로 떴다 — `4root2`).
+     여기서 이름만 바꿔 두면 아래의 sqrt 규칙 둘이 그대로 받는다 — 규칙을 또 만들지 않는다.
+     ⚠ 앞이 역슬래시나 글자면 비켜선다. 숫자 뒤(`4root2`)는 받아야 하므로 숫자는 막지 않는다. */
+  s = s.replace(/(?<![\\A-Za-z])root/g, 'sqrt ');
   s = replaceBalancedKeyword(s, 'sqrt', inner => '\\sqrt{' + inner + '}');
   /* 중괄호를 안 쓴 `sqrt 17` 꼴도 받는다 — 위 함수는 `sqrt{` 만 본다 (2026-09-04). */
   s = fixBareSqrt(s);
@@ -260,6 +292,33 @@ function hwpWalkParagraphs(paras, tokens){
           const imgEl = child.getElementsByTagNameNS(HWP_CORE_NS,'img')[0];
           const ref = imgEl ? imgEl.getAttribute('binaryItemIDRef') : null;
           if(ref) tokens.push({type:'pic', v: ref});
+        } else if(local === 'rect'){
+          /* 🔴 **«(가)» 같은 빈칸은 «사각형 도형»이다** (2026-09-04 · 사용자가 K2-01-E-0013 에서 짚었다).
+             교재는 빈칸을 글자가 아니라 **테두리 있는 네모 개체**로 그리고 그 안에 (가)·(나)를 넣는다.
+             도형을 아예 안 보고 있어서 그 글자가 통째로 사라졌고, 그러면
+             `… = $$+b^{2}` 처럼 **수식 둘이 붙어 «어디가 빈칸인지» 알 수 없는 글**이 된다.
+             (「점 $B$는 이다」처럼 문장이 끊기기도 한다 — 원점이 들어갈 자리였다.)
+
+             ⚠ **`shapeComment` 는 가져오면 안 된다** — 「사각형입니다.」라는 접근성 안내라
+               그대로 담으면 본문에 그 말이 섞인다. 그래서 `drawText` 안만 본다.
+             ⚠ 도형 안에도 수식·표가 있을 수 있어 **같은 걸음으로 다시 훑는다**(재귀). */
+          /* ⚠ **도형 속 줄바꿈은 버린다** — 도형은 «글 한 조각»이지 «문단»이 아니다.
+             그대로 흘려보내면 문단 끝의 break 가 따라 나와 **표 한 칸이 세 칸으로 쪼개진다**
+             (실제로 그랬다: 「… 직선 $BC$를 (가) |」 「| 축으로 하는 …」 「| 이다. |」).
+             그래서 안의 글만 모아 **토큰 하나**로 넣는다. 그림·미주는 그대로 흘려보낸다. */
+          for(const dt of Array.from(child.getElementsByTagNameNS(HP_NS,'drawText'))){
+            const inner = Array.from(dt.getElementsByTagNameNS(HP_NS,'p'));
+            if(!inner.length) continue;
+            const sub = [];
+            hwpWalkParagraphs(inner, sub);
+            let 글 = '';
+            for(const t of sub){
+              if(t.type === 'text' || t.type === 'eq') 글 += t.v;
+              else if(t.type === 'pic' || t.type === 'endnote') tokens.push(t);
+            }
+            글 = 글.replace(/\s+/g, ' ').trim();
+            if(글) tokens.push({type:'text', v: 글});
+          }
         } else if(local === 'tbl'){
           /* 표를 «줄 하나로 뭉개지» 않고 행·열을 살려 둔다.
              예전에는 셀을 공백으로 이어 붙여서, 대진표나 조건 표가 테두리도 칸도 없는
