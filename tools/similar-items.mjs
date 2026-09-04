@@ -154,3 +154,56 @@ if (보기수) {
   }
 }
 console.log('\n  ⓘ 이 수는 «후보»다 — 진짜 변형인지는 사람이 봐야 안다.\n');
+
+/* ── 눈으로 보는 판 ────────────────────────────────────────────────
+   🔴 **저장소에도 인터넷에도 안 올린다.** 문항 본문은 남의 저작물이라 `.gitignore` 가
+     시험지·본문을 막고 있다(그 판단은 이 파일에도 그대로 적용된다).
+     여기서는 **내 컴퓨터에 파일 하나**를 만들 뿐이고, 그 파일도 저장소에서 빠진다.
+   🔵 수식은 KaTeX 로 그린다 — 날 LaTeX 를 견주는 것으로는 «닮았는지»를 사람이 못 본다. */
+if(process.argv.includes('--html')){
+  const 몇 = 보기수 || 20;
+  const esc = (s) => String(s == null ? '' : s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const 줄 = 짝.slice(0, 몇).map((x, i) => `
+    <section>
+      <h2>${i+1}. <span class=q>닮음 ${x.s.toFixed(2)}</span>
+        <span class=q>증거 ${x.증거.toFixed(1)}</span>
+        ${x.다른교재 ? '<span class="q hot">다른 교재</span>' : ''}
+        ${x.같은답 ? '' : '<span class="q warn">답 모양 다름</span>'}</h2>
+      <div class=two>
+        <article><b>${esc(x.a.code)}</b><div class=body>${esc(x.a.content)}</div>
+          <div class=ans>정답 ${esc(x.a.answer || '—')}</div></article>
+        <article><b>${esc(x.b.code)}</b><div class=body>${esc(x.b.content)}</div>
+          <div class=ans>정답 ${esc(x.b.answer || '—')}</div></article>
+      </div>
+    </section>`).join('');
+  const 판 = `<!doctype html><html lang=ko><head><meta charset=utf-8>
+<meta name=viewport content="width=device-width,initial-scale=1">
+<title>닮은 문항 후보 ${몇}쌍</title>
+<link rel=stylesheet href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body,{delimiters:[{left:'$',right:'$',display:false}],throwOnError:false})"></script>
+<style>
+  body{margin:0;padding:20px;background:#faf9f7;color:#1b1b1d;
+    font:14px/1.7 Pretendard,-apple-system,'맑은 고딕',sans-serif;}
+  h1{font-size:19px;margin:0 0 4px} .sub{color:#8a8580;font-size:12.5px;margin-bottom:18px}
+  section{background:#fff;border:1px solid #e7e3dd;border-radius:10px;padding:14px 16px;margin-bottom:12px}
+  h2{font-size:13px;margin:0 0 10px;font-weight:700;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+  .q{font-size:11px;font-weight:600;color:#8a8580;background:#f3f1ee;border-radius:4px;padding:2px 7px}
+  .q.hot{background:#e8f3ea;color:#2f6b3f} .q.warn{background:#fdf0e8;color:#9a5b2a}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media(max-width:760px){.two{grid-template-columns:1fr}}
+  article{border:1px solid #eee9e2;border-radius:8px;padding:11px 13px;background:#fdfcfa}
+  article b{font:600 12px/1 ui-monospace,monospace;color:#3f6f4f}
+  .body{margin-top:8px;white-space:pre-wrap;font-size:13px}
+  .ans{margin-top:9px;padding-top:8px;border-top:1px solid #f0ece6;font-size:11.5px;color:#8a8580}
+</style></head><body>
+<h1>닮은 문항 후보 ${몇}쌍</h1>
+<div class=sub>창고 ${items.length}제에서 찾은 것 · 위에서부터 닮은 순서 ·
+  <b>진짜 변형인지는 눈으로 판단하셔야 합니다</b></div>
+${줄}</body></html>`;
+  const 어디 = 'C:/Users/hahyun/Desktop/닮은문항.html';
+  fs.writeFileSync(어디, 판, 'utf8');
+  console.log('  🔵 바탕화면에 «닮은문항.html» 을 만들었습니다 — 눌러서 여시면 됩니다.' + String.fromCharCode(10));
+}
