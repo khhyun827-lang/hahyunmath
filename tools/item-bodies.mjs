@@ -93,6 +93,15 @@ export async function pushBodies(items, { quiet = false } = {}) {
     if (!quiet && i % 20 === 0) process.stdout.write(`\r  올리는 중… ${i + 1} / ${items.length}`);
   }
   if (!quiet) process.stdout.write('\r' + ' '.repeat(40) + '\r');
+  /* 🔴 **창고를 바꿨으면 «바뀌었다»고 적어 둔다** (2026-09-06 · 읽기량 줄이기 #1).
+     웹은 화면을 열 때 `kv/itemsVer` **한 건**만 읽고, 값이 그대로면 브라우저에 재워 둔 본문을 쓴다
+     (564건 → 1건). 이 도구는 웹을 안 거치고 `items` 에 쓰므로 **여기서 올려 주지 않으면**
+     이미 열어 둔 브라우저들이 옛 본문을 최대 12시간(TTL) 동안 그대로 본다.
+     ⚠ 모양은 웹의 `dbSet` 과 같아야 한다 — kv 문서도 `value` 안에 JSON 글자 하나다. */
+  if (saved) {
+    const bad = await putDoc(projectId, token, 'kv', 'itemsVer', String(Date.now()));
+    if (bad !== null && !quiet) console.log(`  ⚠ 버전 표시를 못 올렸다 (http ${bad}) — 다른 기기는 최대 12시간 뒤에 맞는다.`);
+  }
   return { saved, blocked, failed };
 }
 

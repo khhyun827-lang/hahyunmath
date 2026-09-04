@@ -3295,6 +3295,79 @@ async function dbGetCollection(collection, opts){
     return [];
   }
 }
+
+/* =================== 거의 안 변하는 창고는 «브라우저에 재워 둔다» (2026-09-06 · #1) ===================
+   🔴 **까닭** — 2026-09-04에 Firestore 무료 읽기 한도(하루 5만 건)를 다 써서 429가 났고,
+     앱이 모든 컬렉션을 빈 배열로 읽어 화면이 「학생 1명·기록 0건」으로 «멀쩡하게» 그려졌다.
+     그때 센 값 중 제일 큰 것이 이것이다 — **문항 코드·문항 창고 화면을 열 때마다 `items` 564건**.
+     🔵 **읽기 과금은 «요청 수»가 아니라 «돌려받은 문서 수»**다. 그래서 창고가 커지는 것이 곧 비용이다.
+
+   🔵 **`items` 는 «교재를 올릴 때만» 바뀐다.** 그래서 버전 문서 **한 건**만 물어보고,
+     같으면 브라우저에 재워 둔 것을 쓴다 — **564건 → 1건**이다. 문항이 5,000개가 돼도 1건이다.
+
+   🔴 **빈 것은 절대 안 재운다.** 읽기가 엎어지면 `dbGetCollection` 이 «너그럽게» []를 준다
+     (404도 빈 것으로 넘긴다). 그것을 재우면 **읽기 한 번 실패가 «빈 창고»로 굳어** 그 브라우저에서는
+     12시간 내내 창고가 없다. `variants` 에서 이미 한 번 당한 자리다(09-04 · strict 로 막았다).
+   🔴 **재운 것에도 목숨(TTL)을 준다.** `tools/item-bodies.mjs --push` 처럼 **웹을 안 거치고**
+     들어오는 길이 있어서다. 그 도구도 버전을 올리게 해 뒀지만(같은 날), 잊고 다른 길이 생겨도
+     하루 반나절이면 저절로 맞는다. **틀린 채로 영영 남는 것보다 한 번 더 읽는 것이 낫다.** */
+const ITEMS_VER_KEY   = 'itemsVer';              // kv 문서 하나 — 이것만 매번 읽는다(1건)
+const ITEMS_CACHE_KEY = 'khm-items-cache-v1';
+const ITEMS_CACHE_TTL = 12 * 60 * 60 * 1000;     // 12시간
+let itemsCacheHit = null;                        // 관리자 화면이 보는 자리 ('cache' | 'fresh' | 'stale')
+
+function itemsCacheRead(){
+  try{
+    const raw = localStorage.getItem(ITEMS_CACHE_KEY);
+    if(!raw) return null;
+    const c = JSON.parse(raw);
+    if(!c || !Array.isArray(c.rows) || !c.rows.length) return null;
+    if(!c.at || Date.now() - c.at > ITEMS_CACHE_TTL) return null;
+    return c;
+  }catch(e){ return null; }
+}
+function itemsCacheWrite(ver, rows){
+  /* ⚠ 빈 것은 안 재운다 — 위 머리말의 그 까닭이다. */
+  if(!rows || !rows.length) return false;
+  try{
+    localStorage.setItem(ITEMS_CACHE_KEY, JSON.stringify({ ver: ver, at: Date.now(), rows: rows }));
+    return true;
+  }catch(e){ console.warn('[창고] 재우지 못했다(자리가 없을 수 있다) —', e.message); return false; }
+}
+function itemsCacheClear(){
+  try{ localStorage.removeItem(ITEMS_CACHE_KEY); }catch(e){}
+  itemsCacheHit = null;
+}
+/* 창고를 바꿨다고 알린다 — 다른 브라우저들이 이 값을 보고 다시 읽는다. */
+async function itemsBumpVersion(){
+  const ver = String(Date.now());
+  const ok = await dbSet(ITEMS_VER_KEY, ver);
+  if(!ok) console.warn('[창고] 버전을 못 올렸다 — 다른 기기는 최대 12시간 뒤에 맞는다.');
+  return ver;
+}
+
+/* `items` 를 읽는 «유일한 문»이다. 여기 말고 다른 데서 dbGetCollection('items') 를 부르지 말 것. */
+async function loadItemsRows(){
+  const cached = itemsCacheRead();
+  const ver = await dbGet(ITEMS_VER_KEY, '');            // ← 읽기 1건
+  const verFailed = dbReadFailed.has(ITEMS_VER_KEY);     // «없는 문서»와 «못 읽은 문서»를 가른다
+  if(cached && !verFailed && cached.ver === ver){
+    itemsCacheHit = 'cache';
+    return cached.rows;
+  }
+  /* ⚠ 버전을 못 물어본 것은 대개 429나 끊김이다 — 그 상태에서 564건을 두드리면 스스로 키운다.
+       재워 둔 것이 있으면 «낡았을 수 있는 채로» 쓴다. 창고가 통째로 비는 것보다 낫다. */
+  if(cached && verFailed){
+    itemsCacheHit = 'stale';
+    console.warn('[창고] 버전을 못 읽어 재워 둔 것을 쓴다 — 낡았을 수 있다.');
+    return cached.rows;
+  }
+  const rows = await dbGetCollection('items');           // ← 읽기 = 문항 수
+  /* 🔴 **읽기가 성공한 것만 재운다.** 실패한 []를 재우면 «빈 창고»가 굳는다. */
+  if(!collectionReadFailed.has('items')) itemsCacheWrite(ver, rows);
+  itemsCacheHit = 'fresh';
+  return rows;
+}
 // 예전 kv/{oldKey} 블롭(배열 하나)을 컬렉션(문서마다 레코드 하나)로 1회 옮긴다.
 // 새 컬렉션에 이미 데이터가 있으면(=이미 옮겨졌으면) 아무것도 안 하고 그걸 그대로 쓴다.
 // 예전 블롭 문서는 안전하게 그대로 남겨둔다(옮기다 실패해도 원본 데이터가 사라지지 않도록).
@@ -3358,7 +3431,9 @@ async function loadItemStoreIfNeeded(){
        그래서 본문만 담는 자리를 따로 둔다(`items`). 교재 hwpx 를 한 번 올리면 채워지고
        **시험지와는 무관하다.** 강사만 여는 화면이고, 파일이 아니라 Firestore 라 공개되지도 않는다. */
     if(!state.itemBody){
-      const rows = await dbGetCollection('items');
+      /* 🔵 **여기는 «버전 한 건»만 물어본다** (2026-09-06 · #1) — `loadItemsRows` 머리말을 볼 것.
+         화면을 열 때마다 564건을 읽던 자리다. 창고가 안 바뀌었으면 재워 둔 것을 그대로 쓴다. */
+      const rows = await loadItemsRows();
       const byCode = {};
       for(const r of rows) if(r && r.code) byCode[r.code] = r;
       state.itemBody = byCode;
@@ -18021,6 +18096,14 @@ async function icFillBodies(input){
       const ok = await dbSetDoc('items', root, doc);
       if(ok){ state.itemBody[root] = doc; saved++; } else failed++;
     }
+    /* 🔴 **창고를 바꿨으면 «바뀌었다»고 적어 둔다** (2026-09-06 · #1).
+       다른 기기·다른 브라우저는 이 값 하나만 보고 다시 읽는다. 이걸 빠뜨리면 그쪽 화면은
+       **재워 둔 옛 본문을 최대 12시간(TTL) 동안 그대로 보여 준다.** 여기가 웹에서 `items` 를
+       바꾸는 유일한 자리이므로, 다른 데서 `items` 에 쓰기 시작하면 거기에도 이 두 줄이 붙어야 한다. */
+    if(saved){
+      const ver = await itemsBumpVersion();
+      itemsCacheWrite(ver, Object.values(state.itemBody));   // 이 브라우저는 다시 안 읽어도 된다
+    }
     const figMsg = figures ? ` 그림 ${figures}개도 함께 담았습니다.` : '';
     const figBad = figFailed ? ` (그림 ${figFailed}개는 못 올렸습니다)` : '';
     state.icFill = { running:false,
@@ -20483,6 +20566,38 @@ async function checkCollections(){
   render();
 }
 
+/* 🔵 **재워 둔 것은 «보이고 비울 수 있어야» 한다** (2026-09-06 · #1).
+   캐시는 틀렸을 때 손쓸 데가 없으면 무섭다 — 여기가 그 손잡이다.
+   ⚠ 평소에는 한 줄로 물러나 있는다. 늘 뜨는 경고는 아무도 안 본다(09-05에 배운 것). */
+function itemsCacheStatHTML(){
+  let c = null;
+  try{ c = JSON.parse(localStorage.getItem(ITEMS_CACHE_KEY) || 'null'); }catch(e){}
+  const n = (c && Array.isArray(c.rows)) ? c.rows.length : 0;
+  const age = (c && c.at) ? Math.round((Date.now() - c.at) / 60000) : 0;
+  const ageTxt = age < 60 ? age + '분 전' : Math.round(age/60) + '시간 전';
+  const hit = itemsCacheHit === 'cache' ? '재워 둔 것을 썼습니다 (읽기 1건)'
+            : itemsCacheHit === 'fresh' ? '이번에는 새로 읽었습니다 (' + n + '건)'
+            : itemsCacheHit === 'stale' ? '버전을 못 물어봐 낡은 것을 쓰는 중입니다'
+            : '아직 창고를 안 열었습니다';
+  return `<div class="st-row">
+      <div class="t"><b>문항 본문</b>
+        <span>${n ? n + '개를 재워 뒀습니다<s>·</s>' + escHtml(ageTxt) : '재워 둔 것이 없습니다'}<s>·</s>${escHtml(hit)}</span></div>
+      <div class="v">${n ? `<button class="btn sm" onclick="itemsCacheForget()">비우기</button>` : '<span class="badge">비어 있음</span>'}</div>
+    </div>
+    <div class="st-row">
+      <div class="t"><b>어떻게 아끼나</b>
+        <span>교재를 올릴 때만 바뀌므로 <b>버전 한 건</b>만 물어봅니다 — 같으면 다시 안 읽습니다<s>·</s>길어도 12시간이면 저절로 다시 읽습니다</span></div>
+      <div class="v"><span class="badge ok">564건 → 1건</span></div>
+    </div>`;
+}
+/* 재워 둔 것을 버리고 다음에 다시 읽게 한다. «이상하면 이것부터» 눌러 보는 자리다. */
+function itemsCacheForget(){
+  itemsCacheClear();
+  state.itemBody = null;
+  showToast('재워 둔 문항 본문을 비웠습니다 — 창고를 열면 다시 읽습니다.');
+  render();
+}
+
 function teacherSettingsAdminHTML(){
   const open = state.settingsForm==='pw';
   const cc = state.collCheck;
@@ -20534,6 +20649,10 @@ function teacherSettingsAdminHTML(){
       : '새 컬렉션을 만들 때 규칙에 안 넣으면 조용히 실패합니다. 그것만 지켜봅니다',
     body: (cc && cc.running) ? `<div class="st-row"><div class="t"><b>보는 중…</b></div></div>`
         : (bad.length ? badBody : okLine)
+  })}
+  ${stSec({
+    title:'읽기 아끼기', desc:'문항 본문은 거의 안 바뀌므로 브라우저에 재워 둡니다 — 하루 읽기 한도를 지키는 자리입니다',
+    body: itemsCacheStatHTML()
   })}
   ${stSec({
     title:'데이터 정리', desc:'옛 기록을 한 번에 손보는 곳입니다 — 평소에는 쓸 일이 없습니다',
