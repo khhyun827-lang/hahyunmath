@@ -50,7 +50,7 @@ console.log('\n문항 창고 = 문항 코드\n');
   const i = lines.findIndex(l => l.includes('function teacherItemStoreHTML()'));
   const j = lines.findIndex((l, k) => k > i && l.includes('function icDetailHTML('));
   const 창고 = lines.slice(i, j > i ? j : lines.length).join('\n');
-  봄('🔴 셋은 «창고 화면»에서 불린다 (드로어가 아니다)', 창고.includes('icToolsHTML()'));
+  봄('🔴 셋은 «창고 화면»에서 불린다 (드로어가 아니다)', 창고.includes('icToolsHTML('));
   봄('코드 검색줄도 창고에 있다', 창고.includes('id="ist-q"'));
 }
 

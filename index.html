@@ -1303,6 +1303,22 @@
 .app .ist-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
   gap:10px;align-items:start;}
 @media (max-width:1180px){ .app .ist-grid{grid-template-columns:1fr;} }
+/* 🔵 **창고 머리는 한 줄이다** (2026-09-04 · 사용자 요청 — 「버튼들이 옆으로 너무 불필요하게 길고
+   설명이 반복되어서 아래 문항을 볼 수 있는 공간이 너무 적어」).
+   ⚠ 이 화면의 주인공은 도구가 아니라 «문항»이다. 머리가 자리를 먹으면 목록이 안 보인다. */
+.app .ist-bar{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-top:10px;flex-shrink:0;}
+.app .ist-find{display:flex;align-items:center;gap:6px;padding:5px 10px;
+  border:1px solid var(--line);border-radius:var(--r-md);background:var(--card);}
+.app .ist-find input{width:210px;border:0;background:transparent;outline:none;
+  font-family:JetBrains Mono,monospace;font-size:12px;color:var(--ink);}
+.app .ist-find .x{border:0;background:none;color:var(--dim);cursor:pointer;font-size:15px;line-height:1;}
+.app .ist-bnum{font-size:11.5px;color:var(--dim);}
+.app .ist-bnum b{color:var(--ink);}
+.app .ist-bnum s{text-decoration:none;margin:0 4px;}
+/* 곁말은 «일이 돌 때만» 나온다 — 평소에는 단추 이름만으로 충분하다. */
+.app .ist-msg{margin-top:7px;padding:8px 12px;font-size:11.5px;line-height:1.7;
+  color:var(--sub);background:var(--note);border:1px dashed var(--note-dash);
+  border-radius:var(--r-md);flex-shrink:0;}
 .app .ist-books{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;flex-shrink:0;}
 .app .ist-books .pill b{font-variant-numeric:tabular-nums;color:var(--dim);font-weight:600;}
 .app .ist-books .pill.on b{color:#fff;}
@@ -3148,7 +3164,7 @@
      이 파일은 index.html 과 «따로» 받아지므로, 물음표 뒤가 그대로면 브라우저가
      **캐시에 있는 옛 파서를 꺼내 쓴다.** 그러면 교재를 다시 올려도 옛 글이 그대로 담기고,
      화면만 보고서는 «고쳤는데 왜 안 되지»가 된다 — 파서가 바뀐 것을 아무 데서도 못 본다. -->
-<script src="hwpx.js?v=2026-09-06g"></script>
+<script src="hwpx.js?v=2026-09-06h"></script>
 <!-- 출석 도장 게임(셸·똥피하기·달리기). 연습 페이지 game.html 도 같은 파일을 쓴다 -->
 <!-- ⚠ ?v= 를 붙이는 까닭 — 브라우저가 game-core.js 를 캐시해서, 올려도 학생 화면에는
      옛 게임이 그대로 돈다(Ctrl+Shift+R 을 해야 바뀐다 — 학생에게 그걸 시킬 수는 없다).
@@ -4276,6 +4292,7 @@ let state = {
   istEdit: null,        // 문항 창고에서 본문을 손으로 고치는 중 (2026-09-04)
   icOpen: '',           // 문항 창고에서 연 코드 (2026-09-04 · 문항 코드 화면을 여기로 합쳤다)
   storeQuery: '',       // 문항 창고의 코드 검색 (2026-09-04)
+  icAnsBook: '', icAnsNote: '',   // 빠른정답표를 어느 교재에 붙일 것인가 (2026-09-04)
   autoFill: null,       // 남는 한도로 창고를 채우는 고리 (2026-09-06)
   reviewVariantCode: '',// 검토 › AI가 만든 변형에서 고른 것
   aiProcessing: false,
@@ -18499,6 +18516,42 @@ async function icFillBodies(input){
      여기(Firestore `items`)가 정답이 사는 유일한 곳이고, 강사 로그인이 있어야 읽는다.
    ⚠ **본문이 없는 코드는 건너뛴다.** 정답만 있는 문항은 AI 가 변형을 못 만든다
      (워커가 content 없이는 거절한다). 그런 것이 있으면 «몇 개인지» 말해 준다. */
+/* =================== 빠른정답표를 «어느 교재»에 붙일 것인가 (2026-09-04) ===================
+   🔴 **사용자가 물어서 알았다 — 지금 구조는 위험했다.**
+     「hwpx로 올리기 해서 문제를 심고 빠른정답표를 다른거 올리면 어떡해? 어떻게 매칭을시켜?」
+
+   여태 된 것은 **우연이 아니라 «한 교재뿐»이었기 때문**이다 — 창고에 엔딩크레딧(E) 564제만
+   있어서 «표의 001» 과 «코드의 …0001» 이 한 벌뿐이었다.
+   🔴 교재가 둘이 되는 순간 `K2-01-E-0005` 와 `K2-01-R-0005` 가 **같은 번호 5** 를 두고 부딪힌다.
+     그러면 유형반복R 의 정답이 엔딩크레딧 문항에 조용히 덮인다 — **가장 나쁜 종류의 흠**이다.
+
+   → **인식하지 않는다. 사람이 고르고, 고른 것이 맞는지 기계가 검사한다.**
+     ① 어느 교재의 표인지 먼저 고른다(창고에 있는 교재만 보여 준다)
+     ② 표의 번호를 **그 교재 안에서만** 찾는다
+     ③ 못 찾은 번호가 많으면 **담기 전에 멈춘다** — 교재를 잘못 골랐다는 뜻이다 */
+function icBooksInStore(){
+  const 셈 = {};
+  for(const code in (state.itemByCode || {})){
+    const m = String(code).match(/^[A-Z0-9]+-[0-9]+-([A-Z])-[0-9]+$/);
+    if(m) 셈[m[1]] = (셈[m[1]] || 0) + 1;
+  }
+  return Object.keys(셈).sort().map(b => ({ code: b, name: BOOK_OF_CODE[b] || b, n: 셈[b] }));
+}
+/* 파일 고르기 «전»에 교재를 묻는다 — 담고 나서 되돌리는 것보다 묻는 편이 싸다. */
+function icAnsPick(){
+  const 교재 = icBooksInStore();
+  if(!교재.length){ showToast('창고가 비어 있습니다 — 교재 본문부터 올려주세요.'); return; }
+  if(교재.length === 1){ state.icAnsBook = 교재[0].code; document.getElementById('ic-ans').click(); return; }
+  const 물음 = '이 빠른정답표는 어느 교재의 것입니까?' + String.fromCharCode(10) + String.fromCharCode(10)
+    + 교재.map((b,i)=>`${i+1}. ${b.name} (${b.n}제)`).join(String.fromCharCode(10))
+    + String.fromCharCode(10) + String.fromCharCode(10) + '번호를 적어 주세요.';
+  const 답 = prompt(물음, '1');
+  const k = parseInt(답, 10);
+  if(!k || !교재[k-1]) return;
+  state.icAnsBook = 교재[k-1].code;
+  document.getElementById('ic-ans').click();
+}
+
 async function icFillAnswers(input){
   const file = input && input.files && input.files[0];
   if(!file) return;
@@ -18513,12 +18566,35 @@ async function icFillAnswers(input){
     let rows = [];
     if(/\.hwpx$/i.test(file.name || '')){
       const byNo = await parseHwpxAnswerKey(file);
-      /* 표의 번호는 «교재 통번호»이고, 그것은 코드의 끝 네 자리와 같다(564/564 실측). */
+      const 표수 = Object.keys(byNo).length;
+      /* 🔴 **고른 교재 안에서만 찾는다** — 교재가 둘이 되면 같은 번호가 부딪힌다.
+         `K2-01-E-0005` 와 `K2-01-R-0005` 는 둘 다 «5번»이다. */
+      const 책 = state.icAnsBook || '';
+      const 번호별 = {};
       for(const code in (state.itemByCode || {})){
-        const m = String(code).match(/([0-9]+)$/);
-        const a = m ? byNo[+m[1]] : null;
-        if(a) rows.push({ code, answer: a });
+        const m = String(code).match(/^[A-Z0-9]+-[0-9]+-([A-Z])-([0-9]+)$/);
+        if(!m || (책 && m[1] !== 책)) continue;
+        번호별[+m[2]] = code;
       }
+      let 못찾음 = 0;
+      for(const n in byNo){
+        const code = 번호별[+n];
+        if(code) rows.push({ code, answer: byNo[n] }); else 못찾음++;
+      }
+      /* 🔴 **절반 넘게 못 찾으면 담기 «전»에 멈춘다** — 교재를 잘못 골랐다는 뜻이다.
+         ⚠ 잣대를 «절반»으로 둔 까닭 — 표가 창고보다 조금 넓은 것은 흔하다(아직 안 올린 단원).
+           그건 막을 일이 아니라 건너뛸 일이다. 막아야 하는 것은 «통째로 다른 표»뿐이다.
+         ⚠ **이것이 잡지 못하는 것이 하나 있다** — 번호 체계가 같은 두 교재를 바꿔 고르면
+           못 찾는 것이 0이라 그냥 담긴다. 그건 기계가 알 길이 없어 **사람의 선택이 유일한 방어**다.
+           그래서 끝나고 «어느 교재에 담았는지»를 반드시 적어 준다. */
+      if(표수 && 못찾음 > 표수 * 0.5){
+        state.icAns = { running:false, msg:
+          `멈췄습니다 — 표의 ${표수}개 중 ${못찾음}개가 «${BOOK_OF_CODE[책]||책}» 창고에 없습니다. `
+          + '교재를 잘못 고르셨거나, 그 교재의 본문을 아직 안 올리셨습니다.' };
+        render(); return;
+      }
+      state.icAnsNote = `«${BOOK_OF_CODE[책]||책}» 표 ${표수}개 중 ${rows.length}개를 짝지었습니다.`
+        + (못찾음 ? ` (${못찾음}개는 창고에 없어 건너뜁니다)` : '');
     } else {
       const j = JSON.parse(await file.text());
       rows = (j && j.items) || [];
@@ -18544,8 +18620,8 @@ async function icFillAnswers(input){
     const 곁 = (그대로 ? ` 이미 같은 것 ${그대로}개는 그대로 뒀습니다.` : '')
              + (본문없음 ? ` 본문이 없는 ${본문없음}개는 건너뛰었습니다 — 교재를 먼저 올려주세요.` : '');
     state.icAns = { running:false,
-      msg: failed ? `${saved}개를 담았고 ${failed}개는 막혔습니다 — 설정 › 관리자에서 확인해주세요.`
-                  : `${saved}개 문항에 정답을 담았습니다.${곁}` };
+      msg: (state.icAnsNote ? state.icAnsNote + ' ' : '') + (failed ? `${saved}개를 담았고 ${failed}개는 막혔습니다 — 설정 › 관리자에서 확인해주세요.`
+                  : `${saved}개 문항에 정답을 담았습니다.${곁}`) };
     render();
   }catch(e){
     state.icAns = { running:false, msg:'읽지 못했습니다 — ' + (e.message || e) };
@@ -18752,51 +18828,39 @@ function icDetailHTML(root){
 /* 창고 «전체»에 대한 문 셋 — 교재 본문 채우기 · 정답 채우기 · 남는 한도로 채우기.
    🔴 **이건 «문항 하나»의 일이 아니라 «창고»의 일이라 드로어에 넣으면 안 된다.**
      합치면서 이것이 묻히면, 교재를 올릴 문이 화면에서 사라진다. 그래서 창고 머리에 남긴다. */
-function icToolsHTML(){
+/* 창고 «전체»에 대한 문 셋 — 교재 본문 채우기 · 정답 채우기 · 남는 한도로 채우기.
+   🔴 **이건 «문항 하나»의 일이 아니라 «창고»의 일이라 드로어에 넣으면 안 된다.**
+     합치면서 이것이 묻히면, 교재를 올릴 문이 화면에서 사라진다. 그래서 창고 머리에 남긴다.
+
+   🔵 **한 줄로 접었다** (2026-09-04 · 사용자 요청 — 「버튼들이 옆으로 너무 불필요하게 길고
+     설명이 반복되어서 아래 문항을 볼 수 있는 공간이 너무 적어」).
+     띠 넷이 세로로 쌓여 목록이 볼 자리를 다 먹고 있었다. 곁말은 **일이 돌 때만** 나온다 —
+     평소에는 단추 이름만으로 충분하다. 이 화면의 주인공은 도구가 아니라 **문항**이다. */
+function icToolsHTML(앞){
   const af = autoFillState();
   loadAIQuotaIfNeeded();
   const 남은 = (state.itemBody && state.variants) ? autoFillCandidates().length : null;
-  return `    ${/* 🔵 원본 «본문»을 채우는 문 — 시험지와 무관하다(원본은 교재로 푸는 것이라 출제하지 않는다). */''}
-    <div class="ic-strip">
-      <span class="ic-k">교재에서 본문 채우기</span>
-      <input type="file" accept=".hwpx" id="ic-fill" style="display:none;"
-        onchange="icFillBodies(this)">
-      <button class="btn q sm" ${state.icFill && state.icFill.running ? 'disabled' : ''}
-        onclick="document.getElementById('ic-fill').click()">
-        ${state.icFill && state.icFill.running ? '담는 중…' : 'hwpx 올리기'}</button>
-      <span class="ic-hint">${state.icFill && state.icFill.msg
-        ? escHtml(state.icFill.msg)
-        : '코드를 심어 둔 교재 hwpx'}</span>
-    </div>
-    ${/* 🔵 **정답은 따로 채운다** (2026-09-06) — 교재 미주에는 정답이 있지만 주관식은
-         뒤에 해설이 통째로 붙어 와서 «어디까지가 답인지» 기계가 모른다. 빠른정답표에는
-         그 답만 적혀 있고, 도구가 **한 칸 밀림까지 검사해서** JSON 으로 낸다. */''}
-    <div class="ic-strip">
-      <span class="ic-k">정답 채우기</span>
-      <input type="file" accept=".hwpx,.json" id="ic-ans" style="display:none;"
-        onchange="icFillAnswers(this)">
-      <button class="btn q sm" ${state.icAns && state.icAns.running ? 'disabled' : ''}
-        onclick="document.getElementById('ic-ans').click()">
-        ${state.icAns && state.icAns.running ? '담는 중…' : '빠른정답표 올리기'}</button>
-      <span class="ic-hint">${state.icAns && state.icAns.msg
-        ? escHtml(state.icAns.msg)
-        : '<b>빠른정답표</b> hwpx <s>·</s> 본문이 있는 문항에만'}</span>
-    </div>
-    ${/* 🔵 **남는 한도로 창고를 채우는 고리** (2026-09-06 · 사용자 요청).
-         「앱을 열어 둔 동안」이 조건이라 그 사실을 곁말에 그대로 적는다 — 안 적으면
-         «켰는데 왜 안 늘지»가 된다(이 앱에는 서버가 없다). */''}
-    <div class="ic-strip">
-      <span class="ic-k">남는 한도로 채우기</span>
-      <button class="btn ${af.on ? 'p' : 'q'} sm" onclick="autoFillToggle()">${af.on ? '멈추기' : '켜기'}</button>
-      <span class="ic-hint">${af.msg ? escHtml(af.msg) : (af.on
-        ? '<b>이 앱을 열어 둔 동안</b>만 돕니다'
-        : 'N 변형이 없는 문항을 한 건씩')}
-        ${남은 !== null ? (남은 ? `<s>·</s> 채울 것 <b class="mono">${남은}</b>개`
-                              : `<s>·</s> ${autoFillWhyEmpty()}`) : ''}
-        ${state.aiQuotaUsed !== null ? `<s>·</s> 오늘 <b class="mono">${state.aiQuotaUsed}/${AI_DAILY_LIMIT}</b>` : ''}
-        ${(af.done || af.skipped || af.failed) ? `<s>·</s> 이번에 담은 것 <b class="mono">${af.done}</b>${af.skipped?` · 건너뛴 것 ${af.skipped}`:''}${af.failed?` · 실패 ${af.failed}`:''}` : ''}</span>
-    </div>
-  `;
+  const 말 = [state.icFill && state.icFill.msg, state.icAns && state.icAns.msg, af.msg].filter(Boolean);
+  return `<div class="ist-bar">${앞 || ''}
+    <input type="file" accept=".hwpx" id="ic-fill" style="display:none;" onchange="icFillBodies(this)">
+    <button class="btn q sm" ${state.icFill && state.icFill.running ? 'disabled' : ''}
+      title="코드를 심어 둔 교재 hwpx 를 올리면 본문과 그림을 담습니다"
+      onclick="document.getElementById('ic-fill').click()">
+      ${state.icFill && state.icFill.running ? '담는 중…' : '＋ 교재 본문'}</button>
+    <input type="file" accept=".hwpx,.json" id="ic-ans" style="display:none;" onchange="icFillAnswers(this)">
+    <button class="btn q sm" ${state.icAns && state.icAns.running ? 'disabled' : ''}
+      title="빠른정답표 hwpx 를 올리면 정답을 담습니다"
+      onclick="icAnsPick()">
+      ${state.icAns && state.icAns.running ? '담는 중…' : '＋ 빠른정답표'}</button>
+    <button class="btn ${af.on ? 'p' : 'q'} sm" onclick="autoFillToggle()"
+      title="AI 한도가 남으면 N 변형이 없는 문항을 한 건씩 채웁니다 — 앱을 열어 둔 동안만">
+      ${af.on ? '■ 자동 채우기 멈추기' : '▶ 자동 채우기'}</button>
+    <span class="ist-bnum">
+      ${남은 !== null ? `채울 것 <b class="mono">${남은}</b>` : ''}
+      ${state.aiQuotaUsed !== null ? `<s>·</s> 오늘 <b class="mono">${state.aiQuotaUsed}/${AI_DAILY_LIMIT}</b>` : ''}
+      ${(af.done || af.skipped || af.failed) ? `<s>·</s> 담은 것 <b class="mono">${af.done}</b>${af.skipped?` · 건너뜀 ${af.skipped}`:''}${af.failed?` · 실패 ${af.failed}`:''}` : ''}</span>
+  </div>
+  ${말.length ? `<div class="ist-msg">${말.map(m=>escHtml(m)).join('<br>')}</div>` : ''}`;
 }
 
 function icOpenDrawer(code){ state.icOpen = code; render(); }
@@ -20032,18 +20096,15 @@ function teacherItemStoreHTML(){
           : (CODE_SUBJECTS[subj] || subj) + ' › ' + (chapterNameOfNo(CODE_SUBJECTS[subj] || subj, ch) || (ch + '단원'))
         )} ${list.length}문항</s></h1>
       </div>
-      <div class="ic-strip" style="margin-top:10px;">
-        <span class="ic-k">코드</span>
-        <input class="ic-in mono" id="ist-q" style="width:200px;" value="${escHtml(state.storeQuery||'')}"
-          placeholder="K2-05-E-0431 · E0431"
+      ${/* 🔵 **머리를 한 줄로 접었다** (2026-09-04) — 검색과 도구 셋이 같은 줄에 있다.
+           목록이 이 화면의 주인공이라 머리가 자리를 많이 먹으면 안 된다. */''}
+      ${icToolsHTML(`<span class="ist-find">${iconSvg('search',13)}
+        <input class="mono" id="ist-q" value="${escHtml(state.storeQuery||'')}"
+          placeholder="코드로 찾기 — E0431 처럼 일부만도"
           oninput="liveEdit(event, v=>{ state.storeQuery=v; state.storePage=1; })"
           oncompositionend="liveEdit(event, v=>{ state.storeQuery=v; state.storePage=1; })">
-        ${state.storeQuery ? `<button class="btn q sm" onclick="state.storeQuery='';render()">지우기</button>` : ''}
-        <span class="ic-hint">${찾는말 ? `<b class="mono">${list.length}</b>개` : '줄표 없이도, 일부만도 됩니다'}</span>
-      </div>
-      ${/* 🔴 **여기 셋은 «문항 하나»가 아니라 «창고 전체»의 일이다** — 드로어에 넣으면 안 된다.
-           합치면서 이것이 묻히면 교재를 올릴 문이 화면에서 사라진다. */''}
-      ${icToolsHTML()}
+        ${state.storeQuery ? `<button class="x" title="지우기" onclick="state.storeQuery='';render()">×</button>` : ''}
+      </span>${찾는말 ? `<span class="ist-bnum"><b class="mono">${list.length}</b>개</span>` : ''}`)}
       ${books.length > 1 ? `<div class="ist-books">
         <a class="pill ${state.storeBook===''?'on':''}" onclick="storeGoBook('')">교재 전체</a>
         ${books.map(b=>`<a class="pill ${state.storeBook===b?'on':''}" onclick="storeGoBook('${escHtml(b)}')">
