@@ -3102,7 +3102,7 @@
      이 파일은 index.html 과 «따로» 받아지므로, 물음표 뒤가 그대로면 브라우저가
      **캐시에 있는 옛 파서를 꺼내 쓴다.** 그러면 교재를 다시 올려도 옛 글이 그대로 담기고,
      화면만 보고서는 «고쳤는데 왜 안 되지»가 된다 — 파서가 바뀐 것을 아무 데서도 못 본다. -->
-<script src="hwpx.js?v=2026-09-06b"></script>
+<script src="hwpx.js?v=2026-09-06c"></script>
 <!-- 출석 도장 게임(셸·똥피하기·달리기). 연습 페이지 game.html 도 같은 파일을 쓴다 -->
 <!-- ⚠ ?v= 를 붙이는 까닭 — 브라우저가 game-core.js 를 캐시해서, 올려도 학생 화면에는
      옛 게임이 그대로 돈다(Ctrl+Shift+R 을 해야 바뀐다 — 학생에게 그걸 시킬 수는 없다).
@@ -19738,8 +19738,12 @@ function teacherItemStoreHTML(){
           title="문항 코드 화면에서 열기">코드 화면</button>
         <button class="btn q sm" onclick="icCopy('${escHtml(it.code)}')">복사</button>
       </div>
+        ${/* 🔴 **여기만 `problemHTML` 을 안 거치고 있었다** (2026-09-04 · 사용자가 화면으로 짚었다).
+             그래서 이 화면에서는 **선지가 격자가 안 되고 조건·보기 상자가 표로 안 살아났다** —
+             다른 화면(검토·문항 코드·학생 앱)은 다 그 함수를 거치는데 이 카드만 날글자였다.
+             ⚠ 본문을 그리는 자리가 열 곳이 넘는다. 하나라도 빠지면 **그 화면에서만** 깨진다. */''}
       ${body && body.content
-        ? `<div class="ist-body">${escHtml(body.content)}</div>`
+        ? `<div class="ist-body">${problemHTML(icKeepLines(body.content))}</div>`
         : `<div class="ist-body none">${bodyLoaded
             ? '본문이 아직 없습니다 — 「문항 코드 › 교재에서 본문 채우기」로 hwpx 를 올리면 채워집니다.'
             : '본문을 불러오지 못했습니다.'}</div>`}
