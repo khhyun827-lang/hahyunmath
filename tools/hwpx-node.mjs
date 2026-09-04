@@ -28,7 +28,7 @@ const ROOT = path.resolve(HERE, '..');
 const RULE_NAMES = [
   'HP_NS', 'HWP_CORE_NS', 'HWP_CODE_RE', 'HWP_WATERMARK_PATTERNS',
   'convertHwpEq', 'cleanHwpPlainText', 'hwpWalkParagraphs',
-  'stripScoreMarks', 'fixBareSqrt',
+  'stripScoreMarks', 'fixBareSqrt', 'stripTrailingTypeTitle',
   'hwpEndnoteParts', 'hwpEndnoteText', 'hwpCellToBlock', 'hwpParseBlocks',
   'hwpxMarkDecorPics', 'hwpxProblemsFromDocs',
 ];

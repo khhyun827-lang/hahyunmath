@@ -82,6 +82,39 @@ console.log('');
   봄('빈 수식은 빈 글자', convertHwpEq('   '), '');
 }
 
+
+// ⑧ 집합 기호 — 05 집합 단원 78문항(14%)이 날글자로 뜨고 있었다
+{
+  든가('A capB 를 갈라 바꾼다', convertHwpEq('A capB'), 'A ' + B + 'cap B');
+  든가('대문자 CUP 도 된다', convertHwpEq('A CUP B'), B + 'cup ');
+  든가('emptyset', convertHwpEq('emptyset'), B + 'emptyset');
+  든가('subsetleft{ 도 갈라진다', convertHwpEq('emptyset subsetleft{0right}'), B + 'subset ');
+  든가('0inemptyset 처럼 양쪽이 붙어도', convertHwpEq('0inemptyset'), B + 'in ');
+  든가('notsubset 은 긴 것부터', convertHwpEq('A notsubset B'), B + 'not' + B + 'subset ');
+  // 🔴 여기가 요점 — 고치려다 멀쩡한 낱말을 망가뜨리면 안 된다
+  봄('sin·min 은 안 건드린다', convertHwpEq('sin x + min y'), '$sin x + min y$');
+  없나('escape 의 cap 은 안 걸린다', convertHwpEq('escape'), B + 'cap');
+}
+
+// ⑨ 문항 끝에 딸려 오는 «다음 유형의 제목»
+{
+  const { stripTrailingTypeTitle: 떼기 } = loadHwpxRules();
+  const NL = String.fromCharCode(10);
+  봄('선지 뒤의 제목은 뗀다',
+     떼기('문제다' + NL + NL + '① 가 ② 나' + NL + NL + NL + '| 두 점 사이의 거리 |'),
+     '문제다' + NL + NL + '① 가 ② 나');
+  봄('빈 줄 둘을 사이에 둔 제목도 뗀다',
+     떼기('문제다' + NL + NL + NL + '| 좌표화 |'), '문제다');
+  봄('🔴 조건 상자는 남긴다',
+     떼기('문제다' + NL + NL + '| (가) 어떤 조건 |'), '문제다' + NL + NL + '| (가) 어떤 조건 |');
+  봄('🔴 칸이 둘 이상인 진짜 표는 남긴다',
+     떼기('문제다' + NL + NL + '| 가 | 나 |'), '문제다' + NL + NL + '| 가 | 나 |');
+  봄('붙어 있으면(빈 줄 하나) 안 건드린다',
+     떼기('문제다' + NL + '| 무언가 |'), '문제다' + NL + '| 무언가 |');
+  봄('ㄱ. 으로 시작해도 남긴다',
+     떼기('문제다' + NL + NL + NL + '| ㄱ. 조건 |'), '문제다' + NL + NL + NL + '| ㄱ. 조건 |');
+}
+
 console.log('');
 console.log('  ' + (fail ? '🔴' : '✅') + ' ' + pass + ' 통과 · ' + fail + ' 실패');
 console.log('');

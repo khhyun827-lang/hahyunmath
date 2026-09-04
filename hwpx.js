@@ -162,6 +162,35 @@ function convertHwpEq(script){
      대소문자를 안 가리고 지우면 `left` 가 통째로 날아가 `\(` 만 남는다.
      그래서 **바로 앞이 역슬래시면 비켜선다** (angle·bar 규칙과 같은 장치다). */
   s = s.replace(/(?<!\\)(?<![A-Za-z])LEFT\b\s*/gi, '').replace(/(?<!\\)(?<![A-Za-z])RIGHT\b\s*/gi, '');
+  /* 🔵 **집합 기호** (2026-09-04 · 사용자가 「수식이 제대로 뜨지 않는」 것으로 짚어 찾았다).
+     교재 05 집합 단원이 이 낱말들을 쓰는데 변환기에 없어서 **날글자로 그대로 떴다**
+     (`A subset B` · `emptyset` · `A CUP B`). 실측 78문항(14%)에 들어 있었다.
+     ⚠ **뒤에 공백을 붙여야 한다** — 교재는 `A capB` 처럼 붙여 쓰는데, 공백 없이 바꾸면
+       `\\capB` 라는 **없는 명령**이 되어 그 수식이 통째로 안 그려진다.
+  /* 🔵 **집합 기호** (2026-09-04 · 사용자가 「수식이 제대로 뜨지 않는」 것으로 짚어 찾았다).
+     교재 05 집합 단원이 이 낱말들을 쓰는데 변환기에 없어서 **날글자로 그대로 떴다**
+     (`A subset B` · `emptyset` · `A CUP B`). 실측 78문항(14%)에 들어 있었다.
+
+     ⚠ **뒤에 공백을 붙여야 한다** — 교재는 `A capB` 처럼 붙여 쓰는데 공백 없이 바꾸면
+       `\\capB` 라는 **없는 명령**이 되어 그 수식이 통째로 안 그려진다.
+     ⚠ **긴 것부터** 바꾼다 — `notsubset` 이 `subset` 뒤에 있으면 `not\\subset` 이 된다.
+     🔴 **`/i` 플래그를 쓰면 안 된다.** 그러면 뒤를 막는 `(?![a-z])` 까지 대소문자를 안 가려
+       `A capB` 의 `B` 를 «소문자»로 보고 비켜선다 — 그래서 안 바뀌었다(실제로 겪었다).
+       낱말만 대소문자를 펴서 [cC][aA][pP] 꼴로 만들고, 뒤 조건은 소문자만 막는다. */
+  const 대소문자펴기 = w => w.split('').map(c => '[' + c + c.toUpperCase() + ']').join('');
+  for(const [낱말, 기호] of [
+    ['notsubset', 'not\\subset'], ['smallinter', 'cap'], ['smallunion', 'cup'],
+    ['setminus', 'setminus'], ['emptyset', 'emptyset'], ['notin', 'notin'],
+    ['subset', 'subset'], ['supset', 'supset'], ['cap', 'cap'], ['cup', 'cup'],
+  ]){
+    /* 앞이 글자여도 바꾼다 — 교재는 `AcapB` · `0inemptyset` 처럼 양쪽을 다 붙여 쓴다.
+       뒤가 소문자면 비켜서므로 `escape` 같은 평범한 낱말은 안 걸린다. */
+    s = s.replace(new RegExp('(?<!\\\\)' + 대소문자펴기(낱말) + '(?![a-z])', 'g'), '\\' + 기호 + ' ');
+  }
+  /* 🔴 **`in` 만은 앞 경계를 지킨다** — 풀면 `sin` · `min` 의 뒤 두 글자가 걸려 `s\\in` 이 된다.
+     그래도 `0inemptyset` 은 잡힌다 — 위에서 emptyset 이 먼저 `\\emptyset` 이 되므로
+     `in` 뒤가 역슬래시가 되어 조건을 지나간다. **그래서 이 줄은 반드시 위 고리 «다음»이다.** */
+  s = s.replace(/(?<![A-Za-z\\\\])[iI][nN](?![a-z])/g, '\\in ');
   s = s.replace(/\bCDOTS\b/gi, '\\cdots').replace(/\bLDOTS\b/gi, '\\ldots')
        .replace(/\bDOTSAXIS\b/gi, '\\cdots').replace(/\bDOTS\b/gi, '\\cdots');
   /* «같지 않다»가 세 가지 표기로 온다 — != 와 NEQ(위에서 처리) 와 ne. */
@@ -545,6 +574,40 @@ function hwpxMarkDecorPics(problems, keyOf){
       **필요한 것은 documentElement 와 getElementsByTagNameNS 둘뿐**이다.
    ⚠ 그림은 여기서 안 붙인다. `pics` 에 참조만 남기고, 실제 바이트를 꺼내는 것은
       zip 을 쥔 쪽(브라우저)의 몫이다. node 는 글만 가져간다. */
+/* 🔴 **«다음 유형의 제목»이 이 문항 끝에 딸려 온다** (2026-09-04 · 사용자가 짚었다 —
+   「문제 외에 다른 글자들이 문제 아래에 적혀져 있는 경우들이 있어」, K2-01-E-0012·0027·0035).
+   교재는 유형이 바뀔 때 «제목 줄»을 표 한 칸으로 넣는데, 그 표가 앞 문항의 끝에 붙는다.
+
+   ⚠ **그냥 «끝의 표 줄»을 다 버리면 안 된다** — 조건 상자가 마지막인 문항이 있다.
+     둘을 가르는 잣대 셋을 같이 본다:
+       ① 조건 표시로 시작하면 남긴다 — `(가)`·`ㄱ.`·`1.` (조건 상자는 이렇게 시작한다)
+       ② 앞에 선지(①~⑤)가 있었으면 문항은 이미 끝난 것이다 → 제목이다
+       ③ 선지가 없어도 **빈 줄 둘 이상**을 사이에 두고 떨어져 있으면 제목이다
+     실측(교재 564제): 뺄 것 113 · 남길 것 9 · 애매 0 으로 깨끗하게 갈렸다.
+   ⚠ 시험지에는 이런 제목 줄이 없다 — 한 줄도 안 바뀐다. */
+function stripTrailingTypeTitle(text){
+  /* 조건 상자는 `(가)` · `ㄱ.` · `1.` 로 시작한다 — 그런 줄은 문항의 일부다. */
+  const 조건표시 = /^\s*(\([가-힣]\)|[ㄱ-ㅎ][.)]|[0-9]+[.)])/;
+  const 선지 = /[①②③④⑤]/;
+  let ls = String(text || '').split('\n');
+  for(let 바퀴 = 0; 바퀴 < 3; 바퀴++){          // 제목이 둘 붙는 일도 있다
+    let i = ls.length - 1;
+    while(i >= 0 && !ls[i].trim()) i--;
+    if(i < 0) break;
+    const last = ls[i].trim();
+    if(!(last.startsWith('|') && last.endsWith('|') && last.length > 2)) break;
+    const inner = last.slice(1, -1).trim();
+    if(inner.includes('|')) break;              // 칸이 둘 이상이면 진짜 표다
+    if(조건표시.test(inner)) break;              // ① 조건 상자는 남긴다
+    let 빈 = 0, j = i - 1;
+    while(j >= 0 && !ls[j].trim()){ 빈++; j--; }
+    const 앞에선지 = 선지.test(ls.slice(0, i).join('\n'));
+    if(!(앞에선지 || 빈 >= 2)) break;             // ②③ 둘 다 아니면 손대지 않는다
+    ls = ls.slice(0, i);
+  }
+  return ls.join('\n').replace(/\s+$/, '');
+}
+
 function hwpxProblemsFromDocs(docs){
   const topParas = [];
   const allEndnotes = [];
@@ -600,7 +663,7 @@ function hwpxProblemsFromDocs(docs){
   });
 
   const problems = clean.map(b => ({
-    content: stripScoreMarks(b.text.trim()),
+    content: stripTrailingTypeTitle(stripScoreMarks(b.text.trim())),
     answer: (b.answer||'').trim(),
     itemCode: b.itemCode || '',
     solution: b.solution || '',
