@@ -3164,7 +3164,7 @@
      이 파일은 index.html 과 «따로» 받아지므로, 물음표 뒤가 그대로면 브라우저가
      **캐시에 있는 옛 파서를 꺼내 쓴다.** 그러면 교재를 다시 올려도 옛 글이 그대로 담기고,
      화면만 보고서는 «고쳤는데 왜 안 되지»가 된다 — 파서가 바뀐 것을 아무 데서도 못 본다. -->
-<script src="hwpx.js?v=2026-09-06h"></script>
+<script src="hwpx.js?v=2026-09-06i"></script>
 <!-- 출석 도장 게임(셸·똥피하기·달리기). 연습 페이지 game.html 도 같은 파일을 쓴다 -->
 <!-- ⚠ ?v= 를 붙이는 까닭 — 브라우저가 game-core.js 를 캐시해서, 올려도 학생 화면에는
      옛 게임이 그대로 돈다(Ctrl+Shift+R 을 해야 바뀐다 — 학생에게 그걸 시킬 수는 없다).
@@ -18436,76 +18436,141 @@ function itemAnswerToKeep(옛것, 미주){
   return /^[①②③④⑤]$/.test(a) ? a : '';
 }
 
+/* =================== 교재와 빠른정답표를 «같이» 올린다 (2026-09-04) ===================
+   🔵 **사용자 제안** — 「하나씩 올리는게아니라 문제 파일 올릴때 같이 올리는게 더 안정적이지 않을까?」
+     맞다. 그리고 «안정적»인 까닭이 겉보기보다 크다:
+
+   ① **어느 교재인지 물을 필요가 없다.** 교재 파일 안의 코드가 이미 말해 준다(`K2-01-E-0013` 의 E).
+      따로 올리면 사람이 골라야 하고, 잘못 고르면 남의 교재에 정답이 조용히 덮인다.
+   ② 🔴 **한 칸 밀림을 그 자리에서 검사할 수 있다.** 교재 미주에는 객관식 정답이 깨끗하게 있다.
+      표의 답과 맞대 보면 «표가 이 교재의 것이 맞는지»를 기계가 안다.
+      따로 올리면 견줄 것이 없어 이 검사를 아예 못 한다.
+
+   ⚠ **표가 «세로로 내려가는» 꼴이면 조용히 틀린다.** 이 규칙은 글을 편 뒤 001·002… 를 차례로
+     찾는데, 열이 세로면 001 다음이 004 라서 사이의 것을 통째로 삼킨다(실측으로 확인했다).
+     → 번호가 «이어지는지»를 보고, 빠진 것이 많으면 담기 전에 멈춘다. */
+function icClassify(problems){
+  const withCode = problems.filter(p => p.itemCode && p.content);
+  return { 교재: withCode.length > 0, withCode };
+}
+/* 표의 번호가 1..최대 로 이어지는가. 세로 표를 잡는 유일한 신호다. */
+function icKeyLooksRowMajor(byNo){
+  const ns = Object.keys(byNo).map(Number).sort((a,b)=>a-b);
+  if(ns.length < 5) return { ok:true, 빈칸:0, 최대:ns[ns.length-1] || 0 };
+  const 최대 = ns[ns.length - 1];
+  const 빈칸 = 최대 - ns.length;
+  return { ok: 빈칸 <= 최대 * 0.1, 빈칸, 최대 };
+}
+
 async function icFillBodies(input){
-  const file = input && input.files && input.files[0];
-  if(!file) return;
+  const files = Array.from((input && input.files) || []);
+  if(!files.length) return;
   input.value = '';
   state.icFill = { running:true, msg:'파일을 읽는 중…' }; render();
   try{
     await loadItemStoreIfNeeded();
-    const problems = await parseHwpxToProblems(file);
-    const withCode = problems.filter(p=>p.itemCode && p.content);
-    if(!withCode.length){
-      state.icFill = { running:false, msg:'코드가 심긴 문항을 못 찾았습니다 — 코드를 심은 파일이 맞는지 봐주세요.' };
+
+    /* ── 파일을 갈라 본다. «코드가 든 것»이 교재, 나머지를 정답표로 읽어 본다. ── */
+    const 교재들 = [];
+    let 정답표 = null, 정답표이름 = '';
+    for(const f of files){
+      state.icFill = { running:true, msg:`${f.name} 을(를) 읽는 중…` }; render();
+      const problems = await parseHwpxToProblems(f);
+      const { 교재, withCode } = icClassify(problems);
+      if(교재){ 교재들.push({ name:f.name, withCode }); continue; }
+      const byNo = await parseHwpxAnswerKey(f);
+      if(Object.keys(byNo).length >= 5){ 정답표 = byNo; 정답표이름 = f.name; }
+    }
+    if(!교재들.length){
+      state.icFill = { running:false, msg: 정답표
+        ? '빠른정답표만 있습니다 — 코드를 심은 교재 hwpx 도 같이 올려주세요.'
+        : '코드가 심긴 문항을 못 찾았습니다 — 코드를 심은 파일이 맞는지 봐주세요.' };
       render(); return;
     }
+    const withCode = 교재들.flatMap(x => x.withCode);
+
+    /* ── 정답표가 같이 왔으면 «이 교재 안에서» 짝짓고 검사한다 ── */
+    let 정답 = {}, 검사말 = '';
+    if(정답표){
+      const 꼴 = icKeyLooksRowMajor(정답표);
+      if(!꼴.ok){
+        state.icFill = { running:false, msg:
+          `빠른정답표를 안 담았습니다 — 번호가 이어지지 않습니다(1~${꼴.최대} 중 ${꼴.빈칸}개가 빔). `
+          + '표가 «세로로 내려가는» 꼴이면 이 규칙이 조용히 틀립니다. 본문만 담습니다.' };
+        정답표 = null;
+      }
+    }
+    if(정답표){
+      /* 🔵 교재의 코드가 «어느 교재»인지 말해 준다 — 물을 필요가 없다. */
+      const 번호별 = {};
+      for(const p of withCode){
+        const root = (splitItemCode(p.itemCode) || {}).origin || p.itemCode;
+        const m = String(root).match(/([0-9]+)$/);
+        if(m) 번호별[+m[1]] = root;
+      }
+      /* 🔴 **한 칸 밀림 검사** — 미주가 «딱 ①~⑤ 하나»인 것만 맞대 본다.
+         맞대 볼 수 있는 것이 다 맞아야 주관식도 믿는다. 하나라도 어긋나면 표를 안 담는다. */
+      let 견줌 = 0, 어긋남 = 0;
+      for(const p of withCode){
+        const root = (splitItemCode(p.itemCode) || {}).origin || p.itemCode;
+        const m = String(root).match(/([0-9]+)$/);
+        const 표답 = m ? 정답표[+m[1]] : null;
+        const 미주 = String(p.answer || '').trim();
+        if(!표답 || !/^[①②③④⑤]$/.test(미주)) continue;
+        견줌++;
+        if(String(표답).trim() !== 미주) 어긋남++;
+      }
+      if(어긋남){
+        state.icFill = { running:false, msg:
+          `빠른정답표를 안 담았습니다 — 맞대 본 ${견줌}개 중 ${어긋남}개가 어긋납니다. `
+          + '표가 이 교재의 것이 아니거나 번호가 한 칸 밀렸습니다. 본문만 담습니다.' };
+        정답표 = null;
+      } else {
+        for(const n in 정답표) if(번호별[+n]) 정답[번호별[+n]] = 정답표[n];
+        검사말 = 견줌 ? ` 정답 ${Object.keys(정답).length}개도 담았습니다(객관식 ${견줌}개를 미주와 맞대 봐서 다 맞았습니다).`
+                     : ` 정답 ${Object.keys(정답).length}개도 담았습니다.`;
+      }
+    }
+
+    /* ── 담는다 ── */
     let saved = 0, failed = 0, figures = 0, figFailed = 0;
     for(let i=0;i<withCode.length;i++){
       const p = withCode[i];
       const root = (splitItemCode(p.itemCode) || {}).origin || p.itemCode;
-      /* 🔵 **교재의 «문항 껍질»은 파서가 이미 벗겨서 준다** (hwpx.js · 2026-09-05).
-         여기서 또 손대지 않는다 — 벗기는 장치를 두 곳에 두면 서로 물린다. */
       const doc = { code: root, content: p.content, updatedAt: nowStamp() };
-      /* 🔴 **이미 담아 둔 정답을 덮지 않는다** (2026-09-06).
-         `dbSetDoc` 은 문서를 «통째로» 갈아 끼운다(값이 JSON 글자 하나다). 그래서 여기서
-         빠뜨린 것은 **지워진다** — 그림이 이미 그 함정에 걸릴 뻔했던 자리다.
-         정답은 빠른정답표에서 따로 채우므로(`icFillAnswers`), 교재를 다시 올렸다고
-         그것이 날아가면 안 된다. **있으면 그대로 옮겨 싣는다.**
-         ⚠ 미주에도 정답이 있지만 **객관식만 깨끗하다** — 주관식은 뒤에 해설이 통째로
-           붙어 오고, 어디까지가 답인지 기계는 모른다(hwpx.js 의 그 판단은 그대로 둔다).
-           그래서 «미주가 딱 ①~⑤ 하나일 때»만 받고, 그것도 이미 있는 것이 이긴다. */
-      const answer = itemAnswerToKeep(state.itemBody[root], p.answer);
+      /* 🔴 정답은 «표 → 있던 것 → 미주(객관식만)» 차례로 고른다. 있던 것을 빈 것으로 안 덮는다. */
+      const answer = 정답[root] || itemAnswerToKeep(state.itemBody[root], p.answer);
       if(answer) doc.answer = answer;
-      /* 🔵 **그림도 같이 담는다** (2026-09-05 · 사용자 요청).
-         ⚠ **Firestore 문서에 그림을 넣지 않는다.** `items` 는 화면을 열 때 통째로 읽으므로
-           본문 옆에 base64 를 넣으면 **한 번 읽을 때마다 수십 MB**가 된다. 그래서 다른 그림과
-           같은 길로 보낸다 — 드라이브에 올리고 `{url, fileId}` 만 문서에 적는다.
-         ⚠ **장식(번호 딱지)은 파서가 이미 걸러 냈다** (hwpx.js 의 decorPics). 안 걸러 내면
-           564제가 전부 «그림 문항»이 되고 문항마다 딱지가 붙는다. 실제 그림은 **54개(9.6%)**다
-           — 2026-09-04에 다섯 파일을 실제로 올려 세어 본 수다(단원별 9·14·11·18·2).
-           ⚠ 예전에 여기 «70개»라고 적혀 있었는데 그건 장식 거르는 규칙을 조이기 «전»의 수였다.
-         ⚠ 그림 올리기가 실패해도 **본문은 담는다** — 본문이 창고의 본체고 그림은 곁들이다. */
       const already = (state.itemBody[root] || {}).image;
-      if(p.image && !already){
+      const alreadyMany = (state.itemBody[root] || {}).images;
+      if(alreadyMany) doc.images = alreadyMany;              // 선지 그림 여럿은 그대로 지킨다
+      if(p.image && !already && !alreadyMany){
         try{ doc.image = await uploadDataUrlToDrive(p.image); figures++; }
         catch(e){ console.error('그림 올리기 실패', root, e); figFailed++; }
       } else if(already){
-        doc.image = already;                 // 두 번 올리지 않는다
+        doc.image = already;
         if(p.image) figures++;
       }
       if(i % 10 === 0){ state.icFill = { running:true, msg:`${i+1} / ${withCode.length} 담는 중…` }; render(); }
       const ok = await dbSetDoc('items', root, doc);
       if(ok){ state.itemBody[root] = doc; saved++; } else failed++;
     }
-    /* 🔴 **창고를 바꿨으면 «바뀌었다»고 적어 둔다** (2026-09-06 · #1).
-       다른 기기·다른 브라우저는 이 값 하나만 보고 다시 읽는다. 이걸 빠뜨리면 그쪽 화면은
-       **재워 둔 옛 본문을 최대 12시간(TTL) 동안 그대로 보여 준다.** 여기가 웹에서 `items` 를
-       바꾸는 유일한 자리이므로, 다른 데서 `items` 에 쓰기 시작하면 거기에도 이 두 줄이 붙어야 한다. */
     if(saved){
       const ver = await itemsBumpVersion();
-      itemsCacheWrite(ver, Object.values(state.itemBody));   // 이 브라우저는 다시 안 읽어도 된다
+      itemsCacheWrite(ver, Object.values(state.itemBody));
     }
     const figMsg = figures ? ` 그림 ${figures}개도 함께 담았습니다.` : '';
     const figBad = figFailed ? ` (그림 ${figFailed}개는 못 올렸습니다)` : '';
     state.icFill = { running:false,
       msg: failed ? `${saved}개를 담았고 ${failed}개는 막혔습니다 — 설정 › 관리자에서 확인해주세요.`
-                  : `${saved}개 문항의 본문을 담았습니다.${figMsg}${figBad}` };
+                  : `${saved}개 문항의 본문을 담았습니다.${검사말}${figMsg}${figBad}` };
     render();
   }catch(e){
     state.icFill = { running:false, msg:'읽지 못했습니다 — ' + (e.message || e) };
     render();
   }
 }
+
 
 /* =================== 빠른정답표로 «정답»만 채운다 (2026-09-06) ===================
    🔴 **왜 hwpx 가 아니라 JSON 인가.** 정답표를 여기서 또 파싱하면 규칙이 두 곳이 된다
@@ -18842,11 +18907,11 @@ function icToolsHTML(앞){
   const 남은 = (state.itemBody && state.variants) ? autoFillCandidates().length : null;
   const 말 = [state.icFill && state.icFill.msg, state.icAns && state.icAns.msg, af.msg].filter(Boolean);
   return `<div class="ist-bar">${앞 || ''}
-    <input type="file" accept=".hwpx" id="ic-fill" style="display:none;" onchange="icFillBodies(this)">
+    <input type="file" accept=".hwpx" multiple id="ic-fill" style="display:none;" onchange="icFillBodies(this)">
     <button class="btn q sm" ${state.icFill && state.icFill.running ? 'disabled' : ''}
-      title="코드를 심어 둔 교재 hwpx 를 올리면 본문과 그림을 담습니다"
+      title="코드를 심어 둔 교재 hwpx 와 빠른정답표를 «함께» 고르면 정답까지 한 번에 담습니다"
       onclick="document.getElementById('ic-fill').click()">
-      ${state.icFill && state.icFill.running ? '담는 중…' : '＋ 교재 본문'}</button>
+      ${state.icFill && state.icFill.running ? '담는 중…' : '＋ 교재 올리기'}</button>
     <input type="file" accept=".hwpx,.json" id="ic-ans" style="display:none;" onchange="icFillAnswers(this)">
     <button class="btn q sm" ${state.icAns && state.icAns.running ? 'disabled' : ''}
       title="빠른정답표 hwpx 를 올리면 정답을 담습니다"

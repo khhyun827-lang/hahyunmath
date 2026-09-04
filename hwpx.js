@@ -725,6 +725,13 @@ function hwpxAnswerKeyFromDocs(docs, 총수){
       if(c >= 0 && (to < 0 || c < to)) to = c;
     }
     if(to < 0) to = flat.length;
+    /* 🔴 **정답은 «한 문단»을 넘지 않는다** (2026-09-04 · 웹의 밀림 검사가 잡았다).
+       마지막 번호(185·564 …)는 뒤에 올 번호가 없어서 **문서 끝까지를 통째로 삼켰다** —
+       그래서 「아래 참고」 표가 정답 뒤에 딸려 붙었다. 눈으로는 ① 로 시작해 멀쩡해 보이고,
+       node 도구는 첫 동그라미만 봐서 검사도 통과했다. **조용히 더러워지는 종류였다.**
+       → 문단 경계(¶)에서 자른다. 정답은 한 줄짜리라 잃을 것이 없다. */
+    const 끝 = flat.indexOf(String.fromCharCode(182), from);
+    if(끝 >= 0 && 끝 < to) to = 끝;
     let a = flat.slice(from, to).replace(/¶/g,' ').replace(/\[[0-9]+\.[^\]]*\]/g,'').trim();
     if(/아래\s*참고/.test(a)) a = (아래[n] || '').trim();
     if(a) byNo[n] = 수식낱말펴기(a);

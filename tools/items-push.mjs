@@ -81,9 +81,14 @@ const 쓸것 = [];
 let 본문바뀜 = 0, 정답채움 = 0, 그림지킴 = 0, 그대로 = 0;
 for (const code of Object.keys(본문).sort()) {
   const 옛 = 있던것[code] || {};
-  const doc = { code, content: 본문[code], updatedAt: stamp };
+  /* 🔴 **있던 문서 «위에» 얹는다 — 새로 만들지 않는다** (2026-09-04에 여기서 당했다).
+     예전에는 {code, content, updatedAt} 으로 새 문서를 짓고 image 만 골라 옮겼는데,
+     그 사이에 images(선지 그림 여럿)가 생겨서 **17장이 통째로 날아갔다.**
+     🔵 «골라 옮기기»는 새 칸이 생길 때마다 조용히 잃는다. «얹기»는 안 그렇다.
+     그래서 아래 image 처리도 남겨 두되, 뿌리는 Object.assign 이다. */
+  const doc = Object.assign({}, 옛, { code, content: 본문[code], updatedAt: stamp });
   /* 🔴 **그림은 그대로 옮겨 싣는다** — 여기서 빠뜨리면 지워진다. */
-  if (옛.image) { doc.image = 옛.image; 그림지킴++; }
+  if (옛.image || 옛.images) 그림지킴++;
   /* 정답은 표가 있으면 표를, 없으면 있던 것을 지킨다. */
   const a = 정답[code] || 옛.answer || '';
   if (a) doc.answer = a;
