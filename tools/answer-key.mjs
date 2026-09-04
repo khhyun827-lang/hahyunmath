@@ -95,8 +95,29 @@ export function circleOf(s) {
   return m ? '①②③④⑤'[CIRCLES.indexOf(m[0]) % 5] : '';
 }
 
+/* 🔵 **표에 «수식이 아니라 글자로» 쳐진 것이 여섯 있었다** — `2root2` · `18over5` 같은 것들이다.
+   한글 수식 개체였으면 변환기가 풀었을 텐데 그냥 글자라 손댈 데가 없었다.
+   ⚠ **overline 같은 진짜 LaTeX 을 건드리면 안 된다** — 그래서 «앞뒤가 숫자일 때»만 편다.
+     over 는 앞에 숫자가 와야 하고 root 는 뒤에 숫자가 와야 걸린다. */
+export function 수식낱말펴기(s){
+  return String(s)
+    .replace(/([0-9]+)\s*over\s*([0-9]+)/gi, (m,a,b)=> '\\frac{'+a+'}{'+b+'}')
+    .replace(/root\s*([0-9]+)/gi, (m,a)=> '\\sqrt{'+a+'}');
+}
+
+/* 표에 없거나 잘못 실린 것을 손으로 채우는 자리. 🔴 정답이라서 저장소에 안 올린다. */
+const 보충파일 = path.join(교재폴더, 'answer-key-patch.json');
+function 보충정답(){
+  if(!fs.existsSync(보충파일)) return {};
+  const raw = JSON.parse(fs.readFileSync(보충파일, 'utf8'));
+  const out = {};
+  for(const k in raw) if(!k.startsWith('_')) out[k] = raw[k];
+  return out;
+}
+
 export function buildAnswerKey(hwpxPath) {
   const { byNo, 못찾음, 아래참고 } = parseAnswerKey(hwpxPath);
+  const 보충 = 보충정답();
   const codes = codesInOrder();
   /* 🔵 **번호로 잇는다 — 차례로 잇지 않는다** (2026-09-06에 재 보고 바꿨다).
      코드의 끝 네 자리가 곧 교재 통번호였다(564/564 가 그랬다). 차례로 이으면
@@ -116,9 +137,14 @@ export function buildAnswerKey(hwpxPath) {
       if (circleOf(표) === circleOf(it.미주)) 맞음++;
       else 불일치.push({ no: n, code: it.code, 미주: circleOf(it.미주), 표: String(표).slice(0, 30) });
     }
-    if (표) rows.push({ no: n, code: it.code, answer: 표, kind: circleOf(표) ? '객관식' : '주관식' });
+    /* 보충이 있으면 그것이 이긴다 — 표가 틀렸을 때 고치는 유일한 문이다. */
+    const 최종 = 보충[it.code] || (표 ? 수식낱말펴기(표) : '');
+    if (최종) rows.push({ no: n, code: it.code, answer: 최종,
+                          kind: circleOf(최종) ? '객관식' : '주관식',
+                          from: 보충[it.code] ? '보충' : '표' });
   });
-  return { rows, 견줌, 맞음, 불일치, 못찾음, 아래참고, 코드수: codes.length, 표수: Object.keys(byNo).length };
+  return { rows, 견줌, 맞음, 불일치, 못찾음, 아래참고, 코드수: codes.length,
+           표수: Object.keys(byNo).length, 보충수: rows.filter(r=>r.from==='보충').length };
 }
 
 // ── 실행 ──────────────────────────────────────────────────────────────
@@ -139,6 +165,7 @@ if (process.argv[1] && process.argv[1].endsWith('answer-key.mjs')) {
   const 객 = r.rows.filter(x => x.kind === '객관식').length;
   console.log(`     ✅ 다 맞았다 — 차례가 맞다. 주관식 정답도 믿을 수 있다.`);
   console.log(`\n  낼 것            ${r.rows.length}개 (객관식 ${객} · 주관식 ${r.rows.length - 객})`);
+  if (r.보충수) console.log(`  손으로 채운 것    ${r.보충수}개 (answer-key-patch.json)`);
   const outAt = process.argv.indexOf('--out');
   if (outAt > 0 && process.argv[outAt + 1]) {
     fs.writeFileSync(process.argv[outAt + 1],
