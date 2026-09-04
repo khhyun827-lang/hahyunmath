@@ -47,11 +47,12 @@ function makeWorld(전체, { fails = false } = {}) {
       ...rows.map(e => ({ document: { name: 'x/' + e.id, fields: { value: { stringValue: JSON.stringify(e) } } } }))] };
   }
   const api = new Function(
-    'fetch', 'withTimeout', 'getAuthToken', 'FIRESTORE_ROOT', 'markCollectionRead',
+    'fetch', 'withTimeout', 'getAuthToken', 'FIRESTORE_ROOT', 'FIRESTORE_PATH', 'markCollectionRead',
     'AUDITLOG_DAYS', 'AUDITLOG_CAP', 'console',
     lift('dbGetCollectionSince') + '\n' + lift('loadAuditLogRecent')
       + '\nreturn { dbGetCollectionSince, loadAuditLogRecent };'
-  )(fetchStub, (p) => p, async () => 'tok', 'https://x/documents',
+  )(fetchStub, (p) => p, async () => 'tok', 'https://firestore.googleapis.com/v1/projects/p/databases/(default)/documents',
+    'projects/p/databases/(default)/documents',
     (c, ok) => { ok ? collectionReadFailed.delete(c) : collectionReadFailed.add(c); },
     60, 500, { warn(){}, error(){}, log(){} });
   return Object.assign(w, api, { collectionReadFailed });
@@ -79,7 +80,14 @@ console.log('\n변경 이력 — 최근 것만 받는다\n');
   봄('🔴 orderBy 를 쓰지 않는다 (그것이 인덱스를 요구했다)', q.orderBy, undefined);
   봄('__name__ 범위로 자른다', [q.where.fieldFilter.field.fieldPath, q.where.fieldFilter.op],
      ['__name__', 'GREATER_THAN_OR_EQUAL']);
-  봄('경계는 문서 «경로»여야 한다', /\/auditlog\/log\d+$/.test(q.where.fieldFilter.value.referenceValue), true);
+  /* 🔴 **호스트가 붙으면 400 이다** (2026-09-06에 당했다) — FIRESTORE_ROOT 는 URL 이고
+     질의의 referenceValue 는 «자원 경로»(projects/…)여야 한다. 겉보기에 같은 글자라
+     눈으로는 안 걸리고, 틀리면 그 컬렉션이 «못 읽음»으로 찍혀 쓰기까지 막힌다.
+     ⚠ 그런데 이 검사만으로는 여전히 부족하다 — 진짜로 도는지는 firestore-probe 가 본다. */
+  const rv = q.where.fieldFilter.value.referenceValue;
+  봄('🔴 경계는 projects/ 로 시작하는 «자원 경로»다', rv.indexOf('projects/'), 0);
+  봄('🔴 호스트(https://)가 붙어 있지 않다', rv.indexOf('http'), -1);
+  봄('그 경로가 auditlog 의 문서를 가리킨다', rv.indexOf('/auditlog/log') > 0, true);
   봄('한 번에 받는 수에 뚜껑이 있다', q.limit, 500);
   봄('runQuery 로 간다', w.sent.url.endsWith(':runQuery'), true);
 }
