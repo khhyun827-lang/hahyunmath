@@ -3368,6 +3368,44 @@ async function loadItemsRows(){
   itemsCacheHit = 'fresh';
   return rows;
 }
+/* 🔴 **끝없이 자라는 것은 «통째로» 읽으면 안 된다** (2026-09-06 · 읽기량 줄이기 #2).
+   `auditlog` 는 지우는 일이 없어서 영영 자라는데 **로그인마다 전부** 읽고 있었다.
+   화면은 300줄만 보여 준다 — 나머지는 받자마자 버리는 것이었다.
+   🔵 **읽기 과금은 «돌려받은 문서 수»**라, 이 자리는 쓰면 쓸수록 비싸지는 유일한 종류였다.
+
+   ⚠ **정렬은 `__name__` 으로 한다.** 문서 안은 `value` 글자 하나뿐이라 `at` 으로는 못 세운다
+     (Firestore 는 문서 «필드»만 세울 수 있는데 우리 문서에는 필드가 하나뿐이다).
+     대신 로그의 id 가 `log` + `Date.now()` 라 **글자 순서가 곧 시간 순서**다 — 13자리로 고정이라
+     2286년까지는 자릿수가 안 늘어난다. 🔴 **id 모양을 바꾸면 이 정렬이 조용히 깨진다.**
+   ⚠ 그래서 이 함수는 «아무 컬렉션»에나 쓸 수 없다 — **id 가 시간순인 것에만** 쓴다. */
+async function dbGetCollectionRecent(collection, limit){
+  try{
+    const token = await withTimeout(getAuthToken(), 8000);
+    const res = await withTimeout(fetch(FIRESTORE_ROOT + ':runQuery', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ structuredQuery: {
+        from: [{ collectionId: collection }],
+        orderBy: [{ field: { fieldPath: '__name__' }, direction: 'DESCENDING' }],
+        limit: limit
+      }})
+    }), 8000);
+    if(!res.ok) throw new Error('firestore http ' + res.status);
+    const out = [];
+    /* ⚠ 결과에는 문서가 없는 줄(readTime 만 있는 것)이 섞여 온다 — 빈 컬렉션이면 그것 하나뿐이다. */
+    for(const row of (await res.json())){
+      if(!row || !row.document) continue;
+      try{ out.push(JSON.parse(row.document.fields.value.stringValue)); }catch(e){}
+    }
+    markCollectionRead(collection, true);
+    return out;                                  // 새것이 앞이다 (DESC)
+  }catch(e){
+    console.error('컬렉션(최근) 불러오기 실패', collection, e);
+    markCollectionRead(collection, false, e);
+    return [];
+  }
+}
+
 // 예전 kv/{oldKey} 블롭(배열 하나)을 컬렉션(문서마다 레코드 하나)로 1회 옮긴다.
 // 새 컬렉션에 이미 데이터가 있으면(=이미 옮겨졌으면) 아무것도 안 하고 그걸 그대로 쓴다.
 // 예전 블롭 문서는 안전하게 그대로 남겨둔다(옮기다 실패해도 원본 데이터가 사라지지 않도록).
@@ -4245,6 +4283,8 @@ let state = {
   noticeDraft: '',        // 쓰는 중인 본문 — 미리보기가 이걸 본다
   videoAdding: false,     // 영상 «등록» 폼이 열려 있나
   auditLogSearchQuery: '',
+  /* 로그인할 때는 최근 것만 받는다(#2). 「전체에서 찾기」를 누르면 그때 전부 받는다. */
+  auditLogAll: false, auditLogLoading: false,
   toast: ''
 };
 let DATA = {
@@ -4716,7 +4756,9 @@ async function loadAll(){
     migrateBlobToCollection('exams', 'exams', 'id'),
     migrateBlobToCollection('problem-bank', 'problembank', 'id'),
     migrateBlobToCollection('assignments', 'assignments', 'id'),
-    dbGetCollection('auditlog')
+    /* 🔵 **최근 것만 받는다** (2026-09-06 · #2) — 화면은 300줄만 보여 주는데 전부 읽고 있었다.
+       검색은 「전체에서 찾기」를 누를 때만 전부 읽는다(`auditLogLoadAll`). */
+    dbGetCollectionRecent('auditlog', AUDITLOG_RECENT)
   ]);
   /* 시즌·범위는 데일리퀴즈가 첫 렌더에서 바로 본다. 늦게 오면 «범위 밖»으로 잘못 걸러
      한 번 그렸다가 바뀌는 깜빡임이 생기므로 여기서 같이 받는다. */
@@ -20496,6 +20538,23 @@ function teacherSettingsConsultsHTML(){
   </div>`;
 }
 
+/* 로그인마다 받는 줄 수. 화면이 보여 주는 수와 «같아야» 한다 —
+   다르면 「300건만 보입니다」라고 적어 놓고 다른 수를 보여 주게 된다. */
+const AUDITLOG_RECENT = 300;
+/* 🔵 **검색은 «전부»에서 해야 값을 한다** — 그런데 그것 때문에 늘 전부 읽을 까닭은 없다.
+   그래서 «누를 때만» 읽는다. 한 번 누르면 그 세션 동안은 그대로 쓴다(state.auditLogAll). */
+async function auditLogLoadAll(){
+  if(state.auditLogAll) return;
+  state.auditLogLoading = true; render();
+  const rows = await dbGetCollection('auditlog');
+  state.auditLogLoading = false;
+  /* ⚠ 목록은 이름 «오름차순»으로 온다 — 그대로 쓰면 가장 오래된 것이 맨 위다.
+     여기서 뒤집지 않으면 「최근 300건」이 옛것 300건이 된다(2026-09-06에 실제로 그랬다). */
+  if(rows.length){ rows.sort((a,b)=> (a.at||a.id||'') < (b.at||b.id||'') ? 1 : -1); DATA.auditLog = rows; state.auditLogAll = true; }
+  else showToast('불러오지 못했습니다 — 잠시 뒤 다시 눌러 주세요.');
+  render();
+}
+
 /* ---------- 변경 이력 ----------
    시안(13-settings)이 그린 그대로 «줄»이다. 표가 아니다 —
    표는 «비교»하는 것이고 로그는 «훑는» 것이라 열 머리가 필요 없다. */
@@ -20506,7 +20565,7 @@ function teacherAuditLogHTML(){
     (e.actor||'').toLowerCase().includes(q) ||
     (e.action||'').toLowerCase().includes(q)
   );
-  const shown = filtered.slice(0, 300);
+  const shown = filtered.slice(0, AUDITLOG_RECENT);
   /* 「26. 08. 04. 오전 12:16」은 두 줄로 접힌다 — toLocaleString의 한국어 오전/오후 때문이다.
      시안이 쓴 24시간 형식으로 맞춘다. 전부 숫자라 mono에서도 제대로 읽힌다. */
   const p2 = n => String(n).padStart(2,'0');
@@ -20519,9 +20578,14 @@ function teacherAuditLogHTML(){
   const tone = a => /삭제/.test(a) ? 'no' : /성적|출석|출결/.test(a) ? 'late'
               : /추가|등록|생성/.test(a) ? 'ok' : '';
 
+  /* 🔴 **쥐고 있는 것이 «전부»가 아니면 그렇게 말한다.** 예전에는 받은 수를 그냥 「N건」이라
+     적어서, 최근 300건만 받는 지금이라면 «전체가 300건»으로 읽혔을 자리다. */
+  const partial = !state.auditLogAll && DATA.auditLog.length >= AUDITLOG_RECENT;
+
   return `<div class="st-wrap">
   ${stSec({
-    title:'변경 이력', desc:`${DATA.auditLog.length}건${q?` · 검색결과 ${filtered.length}건`:''}`,
+    title:'변경 이력',
+    desc:`${partial ? `최근 ${AUDITLOG_RECENT}건` : `${DATA.auditLog.length}건`}${q?` · 찾은 것 ${filtered.length}건`:''}`,
     action:`<span class="field" style="width:230px;">${iconSvg('search',14)}
       <input id="auditlog-search" value="${escHtml(state.auditLogSearchQuery||'')}"
         placeholder="학생 · 작성자 · 항목으로 찾기"
@@ -20530,14 +20594,19 @@ function teacherAuditLogHTML(){
     body: (DATA.auditLog.length===0
       ? '<div class="st-empty">아직 기록된 변경 이력이 없습니다.<br>성적·출석·학생정보처럼 되돌리기 어려운 변경만 남습니다.</div>'
       : shown.length===0
-      ? `<div class="st-empty">「${escHtml(state.auditLogSearchQuery)}」에 해당하는 기록이 없습니다.</div>`
+      ? `<div class="st-empty">「${escHtml(state.auditLogSearchQuery)}」에 해당하는 기록이 없습니다.${partial ? `<br>최근 ${AUDITLOG_RECENT}건 안에서만 찾았습니다. <button class="btn sm" onclick="auditLogLoadAll()" ${state.auditLogLoading?'disabled':''}>${state.auditLogLoading?'불러오는 중…':'전체에서 찾기'}</button>` : ''}</div>`
       : shown.map(e=>`<div class="st-log">
           <span class="tm">${fmtAt(e.at)}</span>
           <span class="ac"><span class="badge ${tone(e.action)}">${escHtml(e.action)}</span></span>
           <span class="x">${e.studentName?`<b style="color:var(--ink);font-weight:600;">${escHtml(e.studentName)}</b> `:''}${escHtml(e.detail||'')}</span>
           <span class="by">${escHtml(e.actor||'')}</span>
         </div>`).join('')
-      + (filtered.length>300 ? `<p class="st-note">최근 300건만 보입니다 (전체 ${filtered.length}건).</p>` : ''))
+      + (partial
+         ? `<p class="st-note">최근 ${AUDITLOG_RECENT}건만 받아 둡니다 — 그보다 오래된 것은 찾기에도 안 걸립니다.
+             <button class="btn sm" style="margin-left:6px;" onclick="auditLogLoadAll()"
+               ${state.auditLogLoading?'disabled':''}>${state.auditLogLoading?'불러오는 중…':'전체에서 찾기'}</button></p>`
+         : filtered.length>AUDITLOG_RECENT
+         ? `<p class="st-note">${AUDITLOG_RECENT}건만 보입니다 (찾은 것 ${filtered.length}건).</p>` : ''))
   })}
   </div>`;
 }
