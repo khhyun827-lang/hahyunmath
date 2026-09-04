@@ -3566,6 +3566,23 @@ function storedVariantOf(b){
 }
 function variantAlreadyStored(b){ return !!storedVariantOf(b); }
 function variantsOfCode(code){ return variantsOfCodeAll(code).filter(v => !v.deleted); }
+/* 🔴 **«창고에 있다»와 «학생에게 나간다»는 다른 말이다** (2026-09-06 · 사용자 요청).
+   AI 가 스스로 만든 것은 **강사가 볼 때까지 안 나간다**(`pending`). 사용자가 말했다 —
+   「바로창고로가? 내가 검토로 들어가도록 해주면 안돼?」.
+   ⚠ **강사 화면은 `variantsOfCode` 를 그대로 쓴다** — 검토 대기인 것도 보여야 하니까.
+     여기 이 문은 **학생에게 나가는 길에서만** 쓴다(데일리퀴즈·오답숙제 둘뿐이다).
+   ⚠ 번호 매기기(`nextVariantCode`)는 `variantsOfCodeAll` 을 본다 — 검토 대기 것도 세야
+     같은 번호가 두 번 나오지 않는다. */
+function variantsLive(code){ return variantsOfCode(code).filter(v => !v.pending); }
+function variantIsPending(v){ return !!(v && v.pending && !v.deleted); }
+/* 검토를 기다리는 것 전부 — 창고를 통째로 훑는다(Firestore 를 안 읽는다). */
+function pendingVariants(){
+  const out = [];
+  for(const root in (state.variants || {}))
+    for(const v of state.variants[root]) if(variantIsPending(v)) out.push(v);
+  out.sort((a,b)=> a.code < b.code ? -1 : 1);
+  return out;
+}
 
 /* 다음 변형 번호. **갈래마다 따로 센다** — N01 이 있어도 U01 은 비어 있을 수 있다.
    ⚠ 변형의 변형은 만들지 않는다. 언제나 «원본»에 직접 매단다 (체인이 끊길 자리를 안 만든다). */
@@ -4142,6 +4159,7 @@ let state = {
   aiQuotaUsed: null,
   icAns: null,          // 빠른정답표로 정답 채우기 (2026-09-06)
   autoFill: null,       // 남는 한도로 창고를 채우는 고리 (2026-09-06)
+  reviewVariantCode: '',// 검토 › AI가 만든 변형에서 고른 것
   aiProcessing: false,
   aiProgress: null,
   aiCancel: false,            // 일괄 생성 «멈춤»을 눌렀다 — 다음 한 건으로 넘어가지 않는다
@@ -6102,7 +6120,7 @@ function dqFaces(b){
                     bankId:b.id, imgKind: variantImgKind(b) });
   /* 창고의 변형들. ⚠ **그림이 있어야 푸는데 아직 안 그려진 것은 뺀다** — 학생이 못 푼다. */
   const root = dqRootCode(b);
-  if(root) for(const v of variantsOfCode(root)){
+  if(root) for(const v of variantsLive(root)){        // ⚠ 검토 대기는 안 나간다
     if(v.needsFigure) continue;
     const a = dqAnswerable(v.content, v.answer);
     if(!a) continue;
@@ -8032,7 +8050,7 @@ function examSiblings(exam){
 function codeVariantFor(itemCode){
   if(!itemCode) return null;
   const root = (splitItemCode(itemCode) || {}).origin || itemCode;
-  const usable = variantsOfCode(root).filter(v =>
+  const usable = variantsLive(root).filter(v =>        // ⚠ 검토 대기는 안 나간다
     !v.needsFigure && dqAnswerable(v.content, v.answer));
   if(!usable.length) return null;
   const byKind = k => usable.find(v => (v.variantKind || 'N') === k);
@@ -17964,6 +17982,11 @@ const REVIEW_QUEUES = [
   /* 🔴 **맨 앞이다** — 학생이 못 푸는 채로 기다리고 있다. 다른 줄은 «우리 일»이지만
      이 줄은 «학생이 말을 걸어 둔 것»이다 (2026-09-05). */
   ['reported', '신고됨',      'r', b => openReports(b).length > 0],
+  /* 🔵 **AI 가 저 혼자 만든 것** (2026-09-06). 다른 줄과 «생김새»가 다르다 —
+     저것들은 problembank(시험지 문항)인데 이 줄은 **창고 변형**이다. 그래서 목록도 오른쪽
+     판도 따로 그린다. 조건자는 «problembank 에서는 아무것도 안 걸린다»는 뜻으로 둔다.
+     ⚠ 이 줄을 신고 다음에 둔 까닭 — 학생이 기다리는 것이 먼저고, 그다음이 «안 나가고 있는 것»이다. */
+  ['autoN',    'AI가 만든 변형', 'y', () => false],
   ['empty',    '내용 없음',    'y', b => !b.variantContent && !b.variantAnswer],
   ['pending',  '검토 대기',    'r', b => (b.status==='pending' || b.status==='review1')
                                         && (b.variantContent || b.variantAnswer)],
@@ -18418,10 +18441,11 @@ function teacherItemCodeHTML(){
         <div class="ic-next">
           ${VARIANT_KINDS.map(([k,label])=>{
             const got = vs.filter(v=>v.variantKind===k);
+            const wait = got.filter(variantIsPending).length;   // 아직 학생에게 안 나가는 것
             const next = nextVariantCode(root, k);
             return `<div class="ic-nrow">
               <span class="ic-nlab">${label}</span>
-              <span class="ic-ncnt">지금 <b class="mono">${got.length}</b>개</span>
+              <span class="ic-ncnt">지금 <b class="mono">${got.length - wait}</b>개${wait ? ` <s style="text-decoration:none;color:var(--late);">+대기 ${wait}</s>` : ''}</span>
               <b class="mono ic-ncode">${escHtml(next)}</b>
               <span class="ic-nhint">다음은 이 번호</span>
               <button class="btn q sm" onclick="icCopy('${escHtml(next)}')">복사</button>
@@ -18432,6 +18456,8 @@ function teacherItemCodeHTML(){
           ${vs.map(v=>`<div class="ic-row">
             <b class="mono">${escHtml(v.code)}</b>
             <span class="ic-kind">${escHtml((VARIANT_KINDS.find(x=>x[0]===v.variantKind)||['','?'])[1])}</span>
+            ${/* 🔴 **«창고에 있다»와 «학생에게 나간다»는 다른 말이다** — 안 적으면 «있다»로 읽힌다. */''}
+            ${variantIsPending(v) ? '<span class="badge late">검토 대기</span>' : ''}
             <span class="ic-txt full">${v.content ? problemHTML(icKeepLines(v.content)) : '(문제 내용이 없습니다)'}</span>
             <span class="mono ic-a">${escHtml(icShortAnswer(v.answer))}</span>
             ${/* 🔴 **빼는 단추는 이 화면에만 둔다** — 검토 화면은 손이 빠른 곳이라 잘못 눌린다. */''}
@@ -18496,18 +18522,96 @@ function teacherItemCodeHTML(){
   </div>`;
 }
 
+/* =================== 검토 › AI가 만든 변형 (2026-09-06) ===================
+   🔵 **강사가 볼 것은 셋뿐이다** — 원본이 무엇이었나 · AI 가 무엇을 만들었나 · 그 답이 맞나.
+     그래서 원본과 새 문제를 **나란히** 두고, 그 아래 AI 의 풀이를 편다.
+     ⚠ 풀이가 있어야 «정답이 맞는지»를 강사가 실제로 볼 수 있다 — 답만 보면 검증이 안 된다. */
+function autoVariantListHTML(list, sel){
+  return `<div class="rv-list">
+    <div class="rv-lh">
+      <span style="font-size:13px;font-weight:700;">AI가 만든 변형</span>
+      <span class="muted" style="font-size:11.5px;">${list.length}건</span>
+    </div>
+    <div class="rv-lbody">
+      ${list.length===0 ? '<div style="padding:36px 12px;text-align:center;color:var(--dim);font-size:12.5px;">비어 있습니다.</div>'
+      : list.map(v=>`<div class="rv-item ${sel && v.code===sel.code?'on':''}"
+          onclick="selectAutoVariant('${escHtml(v.code)}')">
+          <div class="t"><b class="mono">${escHtml(v.code)}</b><s>${escHtml(v.createdAt||'')}</s></div>
+          <div class="m">${escHtml(v.content||'')}</div>
+        </div>`).join('')}
+    </div>
+  </div>`;
+}
+function selectAutoVariant(code){ state.reviewVariantCode = code; render(); }
+
+function autoVariantWorkHTML(v){
+  const 원본 = (state.itemBody || {})[v.originCode] || {};
+  const 답 = dqAnswerable(v.content, v.answer);
+  const open = !!state.solutionOpen[v.code];
+  return `
+  <div class="rv-wh">
+    <h1 class="t-title"><span class="mono">${escHtml(v.code)}</span> · AI가 만든 변형</h1>
+    <div class="t-meta" style="margin-top:7px;">
+      <span class="badge late">검토 대기</span>
+      <s>·</s>원본 <b class="mono">${escHtml(v.originCode)}</b>
+      <s>·</s>${escHtml(v.createdAt||'')}
+      <s>·</s>통과시키기 전에는 학생에게 안 나갑니다
+    </div>
+  </div>
+  <div class="rv-body">
+    ${/* ⚠ 학생이 못 치는 답은 고리가 이미 걸러 낸다. 그래도 여기서 한 번 더 말한다 —
+         나중에 규칙이 바뀌거나 손으로 고칠 길이 생기면 여기가 마지막 문이 된다. */''}
+    ${답 ? '' : `<div class="rv-warn">${iconSvg('bell',15)}<div>
+      <b>이 정답은 학생이 칠 수 없는 형태입니다.</b>
+      통과시켜도 데일리퀴즈에는 안 나갑니다 — ①~⑤ 또는 정수만 됩니다.</div></div>`}
+    <div class="cmp" style="margin-top:${답?'0':'14px'};">
+      <div class="side">
+        <div class="lab">원본 <b class="mono lab-code">${escHtml(v.originCode)}</b></div>
+        <div class="q-body">${원본.content ? problemHTML(원본.content)
+          : '(본문이 없습니다 — 문항 코드 › 교재에서 본문 채우기)'}</div>
+        ${원본.answer ? `<div class="q-ans">정답 <b>${escHtml(원본.answer)}</b></div>` : ''}
+      </div>
+      <div class="side ai">
+        <div class="lab">AI가 만든 것 <b class="mono lab-code">${escHtml(v.code)}</b></div>
+        <div class="q-body">${problemHTML(v.content||'(내용 없음)')}</div>
+        <div class="q-ans">정답 <b>${escHtml(v.answer||'—')}</b></div>
+      </div>
+    </div>
+    ${/* 🔵 **풀이는 접어 둔다** — 검토 화면의 옛 판이 정한 규칙을 그대로 따른다.
+         「검토자가 먼저 판단한 뒤 펼친다」. 답을 먼저 보면 풀이에 끌려간다. */''}
+    ${v.solution ? `
+    <div class="rv-fold">
+      <div class="rv-fh" onclick="state.solutionOpen['${escHtml(v.code)}']=!state.solutionOpen['${escHtml(v.code)}']; render()">
+        ${iconSvg('search',14)} AI 풀이 ${open?'▲':'▼'}
+        <span class="sp">기본은 접힌 상태 — 검토자가 먼저 판단한 뒤 펼친다</span>
+      </div>
+      ${open ? `<div class="rv-fb">${escHtml(v.solution)}</div>` : ''}
+    </div>`
+    : `<div class="rv-warn" style="margin-top:14px;">${iconSvg('bell',15)}<div>
+        <b>풀이가 없습니다.</b> 정답이 맞는지 직접 확인해 주세요.</div></div>`}
+    <div style="display:flex;gap:10px;margin-top:18px;flex-wrap:wrap;align-items:center;">
+      <button class="btn p" onclick="approveAutoVariant('${escHtml(v.code)}')">통과 — 창고에 넣기</button>
+      <button class="btn" onclick="discardAutoVariant('${escHtml(v.code)}')">버리기</button>
+      <span class="hint">통과시키면 이 순간부터 데일리퀴즈·오답숙제에 나갑니다</span>
+    </div>
+    <div class="rst-pad"></div>
+  </div>`;
+}
+
 function teacherReviewHTML(){
   loadAIQuotaIfNeeded();
   loadAllRecordsIfNeeded();
   const qkey = state.reviewQueue || 'pending';
-  const list = reviewQueueList(qkey);
+  /* 이 줄만 창고에서 온다 — 위 REVIEW_QUEUES 의 주석 참고. */
+  const autos = pendingVariants();
+  const list = qkey === 'autoN' ? [] : reviewQueueList(qkey);
   const remaining = state.aiQuotaUsed===null ? null : Math.max(0, AI_DAILY_LIMIT - state.aiQuotaUsed);
   const left = DATA.problemBank.filter(b=>b.status!=='approved').length;
 
   const queues = `<nav class="rv-queues">
     <div class="t-sec">검토 대기</div>
     ${REVIEW_QUEUES.map(q=>{
-      const n = DATA.problemBank.filter(q[3]).length;
+      const n = q[0]==='autoN' ? autos.length : DATA.problemBank.filter(q[3]).length;
       return `<a class="rv-qn ${qkey===q[0]?'on':''}" onclick="goReviewQueue('${q[0]}')">
         <span class="rk ${q[2]}"></span>${q[1]}<b>${n}</b></a>`;
     }).join('')}
@@ -18533,8 +18637,10 @@ function teacherReviewHTML(){
         : `<button class="btn p sm" ${remaining===0?'disabled':''} onclick="processAIQueue()">AI로 채우기 (${list.length}문항)</button>`}
     </div>` : '';
 
-  const sel = reviewSelected(list);
-  const items = `<div class="rv-list">
+  const sel = qkey === 'autoN' ? null : reviewSelected(list);
+  const selAuto = qkey === 'autoN'
+    ? (autos.find(v => v.code === state.reviewVariantCode) || autos[0] || null) : null;
+  const items = qkey === 'autoN' ? autoVariantListHTML(autos, selAuto) : `<div class="rv-list">
     <div class="rv-lh">
       <span style="font-size:13px;font-weight:700;">${REVIEW_QUEUES.find(q=>q[0]===qkey)[1]}</span>
       <span class="muted" style="font-size:11.5px;">${list.length}건</span>
@@ -18555,6 +18661,12 @@ function teacherReviewHTML(){
     </div>
   </div>`;
 
+  if(qkey === 'autoN') return `<div class="rv-screen">${queues}${items}
+    <main class="rv-work">${selAuto ? autoVariantWorkHTML(selAuto) : `
+      <div style="padding:64px 0;text-align:center;color:var(--dim);font-size:12.5px;line-height:1.8;">
+        AI가 만들어 둔 변형이 없습니다.<br>
+        <b>문항 코드 › 남는 한도로 채우기</b>를 켜 두면 남는 AI 한도만큼 하나씩 만들어 여기에 쌓입니다.
+      </div>`}</main></div>`;
   return `<div class="rv-screen">${queues}${items}
     <main class="rv-work">${aiBar}${sel ? reviewWorkHTML(sel, list) : `
       <div style="padding:64px 0;text-align:center;color:var(--dim);font-size:12.5px;line-height:1.8;">
@@ -19047,19 +19159,23 @@ async function autoFillTick(){
     }
     else {
       const vcode = nextVariantCode(code, 'N');
+      /* 🔴 **바로 창고로 보내지 않는다 — 검토를 거친다** (2026-09-06 · 사용자 요청).
+         「바로창고로가? 내가 검토로 들어가도록 해주면 안돼?」. 맞는 판단이다 —
+         강사가 누를 때 하나씩 나가는 것과 **하루 20건이 저 혼자 쌓이는 것**은 규모가 다르다.
+         `pending` 인 동안은 데일리퀴즈에도 오답숙제에도 안 나간다(`variantsLive`). */
       const v = { code: vcode, originCode: code, variantKind: 'N',
                   content: twin.content, answer: twin.answer, solution: twin.solution || '',
-                  needsFigure: false, auto: true, createdAt: nowStamp() };
+                  needsFigure: false, auto: true, pending: true, createdAt: nowStamp() };
       const ok = await dbSetDoc('variants', vcode, v);
       if(!ok){
         st.failed++; st.on = false;                    // 저장이 막혔으면 계속 두드릴 까닭이 없다
         try{ localStorage.setItem(AUTOFILL_KEY, '0'); }catch(e){}
-        st.msg = `${vcode} 를 창고에 넣지 못해 멈췄습니다 — 설정 › 관리자를 봐주세요.`;
+        st.msg = `${vcode} 를 저장하지 못해 멈췄습니다 — 설정 › 관리자를 봐주세요.`;
       } else {
         (state.variants[code] = state.variants[code] || []).push(v);
         state.variants[code].sort((a,b)=> a.code < b.code ? -1 : 1);
         st.done++;
-        st.msg = `${vcode} 를 창고에 넣었습니다. (남은 ${list.length - 1}개)`;
+        st.msg = `${vcode} 를 만들었습니다 — <b>검토 › AI가 만든 변형</b>에서 봐주세요. (남은 ${list.length - 1}개)`;
       }
     }
   }catch(e){
@@ -19070,6 +19186,37 @@ async function autoFillTick(){
     render();
   }
   if(st.on) autoFillLater();
+}
+
+/* 🔵 **검토를 통과시킨다** — 이 순간부터 학생에게 나간다 (2026-09-06). */
+async function approveAutoVariant(code){
+  const v = pendingVariants().find(x => x.code === code);
+  if(!v) return;
+  const nv = Object.assign({}, v); delete nv.pending; nv.approvedAt = nowStamp();
+  const ok = await dbSetDoc('variants', code, nv);
+  if(!ok){ showToast(code + ' 를 저장하지 못했습니다 — 저장이 막혀 있습니다.'); return; }
+  Object.assign(v, nv); delete v.pending;
+  state.reviewVariantCode = '';
+  showToast(code + ' 를 창고에 넣었습니다 — 이제 학생에게 나갑니다.');
+  render();
+}
+/* 🔴 **버려도 번호는 안 돌려준다** — `nextVariantCode` 는 «뺀 것까지» 세므로 다음은 N02 다.
+   같은 번호가 두 뜻을 갖는 것이 더 나쁘다(창고 주석에 적힌 그 판단과 같다).
+   ⚠ 버린 문항은 고리가 **다시 만들지 않는다** — 그러면 같은 자리에 한도를 되풀이 쏟는다.
+     `autoFillSkipped` 에 넣어 이번 세션에는 안 뽑는다. */
+async function discardAutoVariant(code){
+  const v = pendingVariants().find(x => x.code === code);
+  if(!v) return;
+  if(!confirm(code + ' 를 버릴까요?\n\n번호는 돌려주지 않습니다 — 다음은 다음 번호가 됩니다.')) return;
+  const nv = Object.assign({}, v, { deleted: true, deletedAt: nowStamp() });
+  delete nv.pending;
+  const ok = await dbSetDoc('variants', code, nv);
+  if(!ok){ showToast(code + ' 를 저장하지 못했습니다 — 저장이 막혀 있습니다.'); return; }
+  Object.assign(v, nv);
+  autoFillSkipped.add(v.originCode);
+  state.reviewVariantCode = '';
+  showToast(code + ' 를 버렸습니다.');
+  render();
 }
 
 /* 손으로 넣는 길. AI 한도를 안 쓰고, 강사가 이미 가진 문제를 그대로 담을 때 쓴다. */

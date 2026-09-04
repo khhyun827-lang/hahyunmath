@@ -103,12 +103,16 @@ console.log('\n남는 한도로 창고 채우기\n');
   await w.autoFillTick();
   봄('한 번에 한 건만 만든다', w.부른AI.length, 1);
   봄('창고에 넣는다', w.쓴것[0].coll, 'variants');
+  봄('🔴 검토 대기로 넣는다 — 바로 학생에게 안 간다', w.쓴것[0].doc.pending, true);
   봄('코드는 N01 이다', w.쓴것[0].id, 'K2-01-E-0001-N01');
   봄('«자동으로 만든 것»이라고 적어 둔다', w.쓴것[0].doc.auto, true);
-  봄('담은 수를 센다', w.autoFillState().done, 1);
+  봄('만든 수를 센다', w.autoFillState().done, 1);
+  봄('«검토에서 봐 달라»고 말한다', /검토/.test(w.autoFillState().msg), true);
   봄('다음 것을 예약한다', w.예약.length >= 1, true);
   봄('메모리 창고에도 얹는다 — 다음 바퀴에 또 안 뽑히게',
      w.state.variants['K2-01-E-0001'].map(v => v.code), ['K2-01-E-0001-N01']);
+  봄('🔴 검토를 기다리는 것도 «있는 것»으로 세서 N02 를 또 안 만든다',
+     w.autoFillCandidates().includes('K2-01-E-0001'), false);
 }
 
 // ── ③ 🔴 여기가 이 검사의 요점 — 못 담는 문항에 한도를 되풀이 쏟지 않는가 ──
@@ -138,7 +142,7 @@ console.log('\n남는 한도로 창고 채우기\n');
   const w = makeWorld({ itemBody: 본문(3), twin: { content: 'x', answer: '②' }, saveOk: false });
   await w.autoFillTick();
   봄('🔴 저장이 막히면 스스로 멈춘다', w.autoFillState().on, false);
-  봄('왜 멈췄는지 말한다', /넣지 못해 멈췄습니다/.test(w.autoFillState().msg), true);
+  봄('왜 멈췄는지 말한다', /저장하지 못해 멈췄습니다/.test(w.autoFillState().msg), true);
 }
 {
   const w = makeWorld({ itemBody: {}, twin: { content: 'x', answer: '②' } });
