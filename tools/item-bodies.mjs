@@ -68,7 +68,7 @@ function stamp() {
      그 수가 유일한 신호다. */
 export function bodiesFromHwpx(hwpxPath) {
   const rules = loadHwpxRules();
-  const { problems, endnoteCount, watermarkedCount } = problemsFromHwpx(hwpxPath, rules);
+  const { problems, endnoteCount, watermarkedCount, watermarked } = problemsFromHwpx(hwpxPath, rules);
   const items = [];
   let noCode = 0, noBody = 0;
   for (const p of problems) {
@@ -76,7 +76,7 @@ export function bodiesFromHwpx(hwpxPath) {
     if (!p.content || !p.content.trim()) { noBody++; continue; }
     items.push({ code: p.itemCode, content: p.content });
   }
-  return { items, total: problems.length, endnoteCount, watermarkedCount, noCode, noBody };
+  return { items, total: problems.length, endnoteCount, watermarkedCount, watermarked, noCode, noBody };
 }
 
 export async function pushBodies(items, { quiet = false } = {}) {
@@ -125,7 +125,15 @@ export async function emitBodies(hwpxPath, outJson, push) {
       + (r.noCode ? `  (앞의 ${r.noCode}덩이는 목차·표지다)` : ''));
   } else {
     console.log(`  🔴 미주는 ${r.endnoteCount}개인데 코드가 붙은 것은 ${r.items.length}개다 — ${r.endnoteCount - r.items.length}개가 빈다.`);
-    console.log('     심기가 빗나갔는지 봐야 한다 (다시 심기 전에 매핑표부터 볼 것).');
+    /* 🔴 **빈 까닭을 «먼저» 말한다** (2026-09-05). 워터마크로 걸러낸 것은 «흠이 아니라
+       규칙대로 뺀 것»인데, 앞 판은 그것까지 「심기가 빗나갔다」고 말해서 엉뚱한 데를 뒤지게 했다
+       (실제로 주기나 교재에서 그랬다 — 족보닷컴 워터마크가 «수식 안»에 숨어 있었다). */
+    if (r.watermarked && r.watermarked.length) {
+      console.log(`     · ${r.watermarked.length}개는 **저작권 워터마크**가 박혀 있어 뺐다(규칙대로다):`);
+      console.log('       ' + r.watermarked.join(' '));
+    }
+    const 남은 = r.endnoteCount - r.items.length - (r.watermarked || []).length;
+    if (남은 > 0) console.log(`     · 나머지 ${남은}개는 까닭이 안 밝혀졌다 — 심기가 빗나갔는지 매핑표부터 볼 것.`);
   }
   if (r.noBody) console.log(`  ⚠ 본문이 빈 문항 ${r.noBody}건`);
   if (outJson) console.log(`  냈다 → ${outJson}  (${(fs.statSync(outJson).size / 1024).toFixed(0)}KB)`);

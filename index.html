@@ -3164,7 +3164,7 @@
      이 파일은 index.html 과 «따로» 받아지므로, 물음표 뒤가 그대로면 브라우저가
      **캐시에 있는 옛 파서를 꺼내 쓴다.** 그러면 교재를 다시 올려도 옛 글이 그대로 담기고,
      화면만 보고서는 «고쳤는데 왜 안 되지»가 된다 — 파서가 바뀐 것을 아무 데서도 못 본다. -->
-<script src="hwpx.js?v=2026-09-05b"></script>
+<script src="hwpx.js?v=2026-09-05c"></script>
 <!-- 출석 도장 게임(셸·똥피하기·달리기). 연습 페이지 game.html 도 같은 파일을 쓴다 -->
 <!-- ⚠ ?v= 를 붙이는 까닭 — 브라우저가 game-core.js 를 캐시해서, 올려도 학생 화면에는
      옛 게임이 그대로 돈다(Ctrl+Shift+R 을 해야 바뀐다 — 학생에게 그걸 시킬 수는 없다).
@@ -3645,7 +3645,34 @@ const VARIANT_KINDS = [['N','숫자변형'],['U','상향'],['D','하향']];
 /* 코드 하나를 «원본»과 «변형»으로 가른다.
    🔴 **복습테스트는 기존 문항의 숫자변형이 곧 문항**이라, 그 시험지에는 변형 코드가
      그대로 적힌다. 그것도 알아들어야 «이 문항은 0001의 N01» 이라고 말해 줄 수 있다. */
+/* 🔵 **코드 «꼴»이 이제 둘이다** (2026-09-05 · 모의고사 기출 + 변형 교재를 들이면서).
+     ① `K2-01-E-0013`      — 교재 문항. 과목·단원·책·일련번호를 «우리»가 매긴다
+     ② `1230928UP01`       — 모의고사 기출과 그 변형. **번호를 우리가 안 매긴다**
+        1  23   09   28   UP   01
+        │  │    │    │    │    └ 같은 갈래가 둘 이상일 때의 번호 (변형에는 언제나 붙는다)
+        │  │    │    │    └ OR 원본 · NC 숫자변형 · UP 상향 · DW 하향
+        │  │    │    └ 문항 번호   │ └ 시행 월   │ └ 시행 년
+        └ 학년 — 3월 시행이면 2, 그 밖은 1
+   🔴 **②는 코드 자체가 «관계»를 담는다.** 앞 7자리가 같으면 같은 기출에서 나온 형제다 —
+     ①처럼 `variants` 컬렉션을 따로 뒤질 필요가 없다. 교재가 이미 적어 둔 것을 그대로 쓴다.
+   ⚠ 과목·단원이 코드에 «없다» — 기출 번호에는 그런 자리가 없기 때문이다.
+     그래서 ②는 장부가 과목·단원을 들고 있어야 한다. 코드에서 짐작하지 않는다. */
+const SRC_CODE_RE   = /^([12])(\d{2})(\d{2})(\d{2})(OR|NC|UP|DW)(\d{2})?$/;
+const SRC_BADGE_KIND = { NC:'N', UP:'U', DW:'D' };
+const SRC_BADGE_NAME = { OR:'원본', NC:'숫자변형', UP:'상향', DW:'하향' };
+function srcCodeInfo(code){
+  const m = String(code || '').trim().toUpperCase().match(SRC_CODE_RE);
+  if(!m) return null;
+  const 년 = +m[2], 서기 = (년 <= 30 ? 2000 : 1900) + 년;
+  return { grade: m[1], year: m[2], month: m[3], no: m[4], badge: m[5], seq: m[6] || '',
+           origin: m[1] + m[2] + m[3] + m[4] + 'OR',
+           label: 서기 + '년 ' + m[3] + '월 ' + (+m[4]) + '번' };
+}
 function splitItemCode(code){
+  /* ②꼴을 먼저 본다 — 줄표가 없어 ①의 정규식에는 애초에 안 걸린다. */
+  const s = srcCodeInfo(code);
+  if(s) return { origin: s.origin, isVariant: s.badge !== 'OR',
+                 variantKind: SRC_BADGE_KIND[s.badge] || '', variantNo: s.seq, srcBadge: s.badge };
   const m = String(code || '').match(ITEM_CODE_RE);
   if(!m) return null;
   return {
@@ -18515,7 +18542,7 @@ async function reviewAdvance(id, next){
      일련번호는 뜻이 없어 구멍이 나도 되고, **구멍보다 겹치는 것이 위험**하다. */
 const SUBJECT_OF_CODE = { K1:'공통수학1', K2:'공통수학2', AL:'대수', C1:'미적분Ⅰ',
                           PS:'확률과통계', GE:'기하', C2:'미적분Ⅱ' };
-const BOOK_OF_CODE    = { E:'엔딩크레딧', S:'학교 기출', D:'동그랑땡 모의고사', A:'시중교재' };
+const BOOK_OF_CODE    = { E:'엔딩크레딧', S:'학교 기출', D:'동그랑땡 모의고사', A:'시중교재', J:'모의고사 기출' };
 const SCENE_MEANING   = { '1':'기본유형 — 배운 규칙을 한 번 적용',
                           '2':'발전유형 — 조건이 한 겹 얹힌다',
                           '3':'실전 — 다른 눈이 필요하다' };
@@ -18870,6 +18897,32 @@ function icCopy(text){
    장부가 아는 것(단원·출처·정답·SCENE·해설 앞머리)에, 장부가 모르는 것 하나를 더한다:
    **이 문항이 어느 시험지에 나갔나**(problemBank). 그게 창고와 수업을 잇는 줄이다. */
 function icItemCardHTML(root, it, vs){
+  /* 🔵 **모의고사 기출은 코드가 스스로를 설명한다** (2026-09-05).
+     `K2-01-E-0013` 은 코드에서 과목·단원·책을 읽지만, `1230928UP01` 에는 그 자리가 없다.
+     대신 **출처(2023년 09월 28번)와 갈래(상향)를 코드가 직접 말한다** — 그것을 그대로 적는다.
+     ⚠ 과목·단원은 코드가 모른다. 장부에서 가져오고, 없으면 **안 적는다** — 짐작하지 않는다. */
+  const src = srcCodeInfo(root);
+  if(src){
+    const 형제 = srcSiblings(root);
+    const 갈래 = SRC_BADGE_NAME[src.badge] || src.badge;
+    const chap = (it && it.chapter) ? it.chapter + (it.chapterName ? ' ' + it.chapterName : '') : '';
+    const subj = (it && it.subject) ? (SUBJECT_OF_CODE[it.subject] || it.subject) : '';
+    const 줄 = 형제.map(c => c === root
+      ? `<b class="mono">${escHtml(c)}</b>`
+      : `<a class="mono" href="#" onclick="icOpenDrawer(&quot;${escHtml(c)}&quot;);return false;">${escHtml(c)}</a>`
+    ).join(' <s>·</s> ');
+    return `<div class="ic-card">
+      <div class="ic-ch"><b class="mono">${escHtml(root)}</b>
+        <span class="ic-ct">${escHtml(src.label)} <s>·</s> ${escHtml(갈래)}${
+          subj ? ' <s>·</s> ' + escHtml(subj) : ''}${chap ? ' <s>·</s> ' + escHtml(chap) : ''}</span>
+        <span style="flex:1;"></span>
+        <span class="${형제.length>1?'ic-have':'ic-none'}">한 기출에서 <b class="mono">${형제.length}</b>제</span>
+      </div>
+      <div class="ic-cb">
+        ${it ? '' : '<div class="ic-crow"><span class="ic-cl">창고</span><span>아직 담기지 않았습니다</span></div>'}
+        <div class="ic-crow"><span class="ic-cl">같은 기출</span><span>${줄}</span></div>
+      </div></div>`;
+  }
   const sp = splitItemCode(root) || {};
   const m  = String(root).match(ITEM_CODE_RE) || [];
   const subjCode = m[1] || '', chapNo = m[2] || '', bookCode = m[3] || '';
@@ -19090,6 +19143,17 @@ function icToolsHTML(앞){
   ${말.length ? `<div class="ist-msg">${말.map(m=>escHtml(m)).join('<br>')}</div>` : ''}`;
 }
 
+/* 한 기출에서 나온 형제들. **앞 7자리가 열쇠다** — 원본이 먼저, 그다음 갈래·번호 순.
+   🔵 여기가 「변형끼리 엮어 줄까」의 답이다 — **닮음을 재서 짐작할 필요가 없다.**
+     교재가 이미 적어 둔 관계를 코드가 그대로 담고 있어, 앞 7자리로 저절로 모인다. */
+function srcSiblings(code){
+  const s = srcCodeInfo(code);
+  if(!s) return [];
+  const 뿌리 = s.origin.slice(0, 7);
+  const 다 = Object.assign({}, state.itemByCode || {}, state.itemBody || {});
+  return Object.keys(다).filter(c => srcCodeInfo(c) && c.slice(0, 7) === 뿌리)
+    .sort((a, b) => (a.endsWith('OR') ? ' ' : a) < (b.endsWith('OR') ? ' ' : b) ? -1 : 1);
+}
 function icOpenDrawer(code){ state.icOpen = code; render(); }
 function icCloseDrawer(){ state.icOpen = ''; render(); }
 /* ⚠ 드로어는 render() 의 «드로어 층»에서 그린다 — 다른 드로어와 같은 자리, 같은 규칙이다. */
@@ -20106,15 +20170,21 @@ function storeItems(){
 }
 /* 코드의 «과목 자리»(K2 · C1 …). 이름이 아니라 «코드»를 열쇠로 쓴다 —
    이름은 교육과정이 바뀌면 갈리지만 코드는 안 갈린다. */
-function storeSubjectCode(code){
-  return (String(code || '').match(/^([A-Z]{1,2}\d?)-/) || [])[1] || '';
+function storeSubjectCode(x){
+  /* 🔴 **코드가 과목을 말해 주지 않는 꼴이 생겼다** (2026-09-05 · 모의고사 기출).
+     `1230928OR` 에는 과목 자리가 없다 — 기출 번호에 그런 자리가 없기 때문이다.
+     그럴 때는 **장부가 들고 있는 과목**을 쓴다. 코드에서 짐작하면 조용히 틀린다.
+     ⚠ 그래서 이 함수는 이제 «코드»가 아니라 «항목»을 받는다 — 부르는 자리를 다 고쳤다. */
+  const it = (x && typeof x === 'object') ? x : { code: x };
+  const m = String(it.code || '').match(/^([A-Z]{1,2}[0-9]?)-/);
+  return m ? m[1] : (it.subject || '');
 }
 /* 🔴 **단원 번호는 과목 안에서만 유일하다** (2026-09-04 · 과목 대분류를 넣으며 잡았다).
    `01` 은 공통수학2 에도 미적분Ⅰ 에도 있다. 그래서 단원으로 거를 때는 **반드시 과목을
    함께** 봐야 한다 — 지금은 장부에 K2 하나뿐이라 안 드러나지만, 과목이 둘이 되는 순간
    조용히 섞인다. 드러나기 전에 막는다. */
 function storeMatches(x, subj, ch){
-  if(subj && storeSubjectCode(x.code) !== subj) return false;
+  if(subj && storeSubjectCode(x) !== subj) return false;
   if(ch && x.chapter !== ch) return false;
   return true;
 }
@@ -20207,7 +20277,7 @@ function teacherItemStoreHTML(){
   /* 과목별 개수, 그리고 과목마다 단원별 개수. 코드에 박힌 자리라 이름이 바뀌어도 안 흔들린다. */
   const bySubj = {}, byChOf = {};
   for(const it of items){
-    const s = storeSubjectCode(it.code);
+    const s = storeSubjectCode(it);
     bySubj[s] = (bySubj[s] || 0) + 1;
     (byChOf[s] = byChOf[s] || {})[it.chapter] = ((byChOf[s] || {})[it.chapter] || 0) + 1;
   }

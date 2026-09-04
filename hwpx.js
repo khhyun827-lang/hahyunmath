@@ -459,7 +459,14 @@ function hwpWalkParagraphs(paras, tokens){
 /* ⚠ **변형 코드(`-N01`)까지 받는다.** 복습테스트처럼 «이미 변형인 문항»으로 시험지를 만들면
      미주에 `[K2-01-E-0001-N01]` 이 적힌다. 접미사를 안 받으면 그것도 못 알아보고
      **정답에 통째로 섞인다** — 원본 코드에서 겪은 것과 똑같은 흠이다. */
-const HWP_CODE_RE = /^\s*\[([A-Z]{1,2}\d?-\d{2}-[A-Z]-\d{4}(?:-[NUD]\d{2})?)\]\s*/;
+/* 🔵 **코드 꼴이 둘이다** (2026-09-05 · 모의고사 기출 교재를 들이면서).
+     ① `[K2-01-E-0013]`  · `[K2-01-E-0013-N01]`   — 우리가 번호를 매기는 교재 문항
+     ② `[1230928OR]`     · `[1230928UP01]`        — 기출 번호가 곧 코드인 문항
+   ⚠ ②를 여기서 안 받으면 **코드가 정답 글자에 통째로 섞인다** — ①에서 겪은 그 흠이다.
+     심기는 잘 됐는데 본문이 0건 나오는 것도 같은 자리다(실제로 그렇게 나왔다).
+   ⚠ 두 꼴은 «생김새로» 절대 안 겹친다 — ①에는 줄표가 있고 ②에는 없다.
+     그래서 어느 쪽인지 헷갈릴 일이 없다. */
+const HWP_CODE_RE = /^\s*\[([A-Z]{1,2}\d?-\d{2}-[A-Z]-\d{4}(?:-[NUD]\d{2})?|[12]\d{6}(?:OR|NC|UP|DW)(?:\d{2})?)\]\s*/;
 
 /* 문제 끝의 배점 표기를 걷어낸다 — 「[5.0점]」·「[4점]」·「(3점)」 (2026-09-04 · 사용자 요청).
    🔵 배점은 **그 시험지에서만 참인 값**이다. 문항을 창고에 담아 다른 시험지로 돌려 쓰면
@@ -943,10 +950,16 @@ function hwpxProblemsFromDocs(docs){
   const blocks = scoreOf(candidates[1]) > scoreOf(candidates[0]) ? candidates[1] : candidates[0];
 
   // 저작권 보호 워터마크(예: 족보닷컴)가 문제나 정답에 섞인 문항은 자동 인식에서 제외한다.
-  let watermarkedCount = 0;
+let watermarkedCount = 0; const watermarked = [];
   const clean = blocks.filter(b=>{
     const hay = b.text + ' ' + (b.answer||'');
-    if(HWP_WATERMARK_PATTERNS.some(re=>re.test(hay))){ watermarkedCount++; return false; }
+    /* 🔵 **어느 문항이 걸렸는지 이름을 남긴다** (2026-09-05).
+       수를 세기만 하면 「71개인데 69개」만 보이고, 부르는 쪽은 «심기가 빗나갔나»를 의심한다
+       — 실제로 그렇게 잘못 짚었다. 걸린 것은 코드가 이미 붙어 있으니 그대로 말해 주면 된다. */
+    if(HWP_WATERMARK_PATTERNS.some(re=>re.test(hay))){
+      if(b.itemCode) watermarked.push(b.itemCode);
+      watermarkedCount++; return false;
+    }
     return true;
   });
 
@@ -959,5 +972,5 @@ function hwpxProblemsFromDocs(docs){
     image: null,
   }));
 
-  return { problems, watermarkedCount, endnoteCount };
+  return { problems, watermarkedCount, watermarked, endnoteCount };
 }

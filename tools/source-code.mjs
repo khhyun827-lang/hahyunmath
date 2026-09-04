@@ -25,6 +25,7 @@ import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
 import { execFileSync } from 'child_process';
+const NL = String.fromCharCode(10);
 import { sectionDocs, loadHwpxRules } from './hwpx-node.mjs';
 
 const argv = process.argv.slice(2);
@@ -49,6 +50,28 @@ if (!단원칸) {
 }
 const CHAPTER = String(단원칸[1]).padStart(2, '0');
 const 단원이름 = 단원칸[2];
+
+/* 🔴 **파일 이름이 우리 단원표와 «맞는지» 대조한다.**
+   교재가 매긴 번호와 우리가 매긴 번호가 같다는 보장이 없다 — 지금 맞는 것은 우연일 수 있고,
+   어긋나면 **71제가 통째로 엉뚱한 단원에 들어간다.** 조용히 틀리느니 멈춘다.
+   ⚠ 단원표는 index.html 에서 «글로 떠 온다» — 표를 둘로 두면 언젠가 갈린다. */
+const 표글 = fs.readFileSync('index.html', 'utf8');
+const 표 = 표글.slice(표글.indexOf('const UNIT_CHAPTER_DEFS = {'));
+const DEFS = new Function(표.slice(0, 표.indexOf(NL + '};') + 3) + ' return UNIT_CHAPTER_DEFS;')();
+const 과목이름 = { K1:'공통수학1', K2:'공통수학2', AL:'대수', C1:'미적분Ⅰ', PS:'확률과통계', GE:'기하' }[SUBJECT];
+const 우리것 = ((DEFS[과목이름] || []).find(r => r[0] === CHAPTER) || [])[1] || '';
+const 다듬 = (s) => String(s).replace(/[s()·,]/g, '');
+if (!우리것) {
+  console.error(`🔴 멈춘다 — ${과목이름}에 ${CHAPTER}단원이 없다.`);
+  process.exit(2);
+}
+if (다듬(우리것) !== 다듬(단원이름)) {
+  console.error(`🔴 멈춘다 — 단원이 안 맞는다.`);
+  console.error(`   파일 이름: ${CHAPTER} 「${단원이름}」`);
+  console.error(`   우리 단원표: ${CHAPTER} 「${우리것}」`);
+  console.error(`   교재의 번호와 우리 번호가 다르면 문항이 통째로 엉뚱한 단원에 들어간다.`);
+  process.exit(2);
+}
 
 // ── 그림의 해시 (딱지를 알아보는 유일한 길) ────────────────────────────
 // 🔴 참조 이름(image8)에도 shapeComment 에도 기댈 수 없다 — 파일마다 다르고, 넷 다 「번호.png」다.
@@ -98,14 +121,22 @@ if (!OUT) { console.log('\n  (--out 을 안 줘서 장부는 안 냈다)\n'); pr
 
 // ── 장부 ──────────────────────────────────────────────────────────────
 // ⚠ 심는 도구(item-code-stamp.mjs)가 `chapter` 로 거르고 `seq` 로 줄 세운다. 그 꼴을 그대로 따른다.
+/* 🔵 **창고 장부와 «같은 꼴»로 낸다** (사용자가 정했다 — 「같이담긴하지만 모의고사
+   기출을 필터링할수 있으면 좋겠어」). 창고 화면은 `source.book` 으로 거르는 줄을 이미
+   그리고 있으므로, 책 이름을 「모의고사 기출」로 적어 두면 **거르개가 공짜로 생긴다.**
+   ⚠ 코드에 과목·단원 자리가 없다 — 그래서 항목마다 적어 준다. 화면이 짐작하지 않게.
+   ⚠ `book: 'J'` 는 장부 이름표일 뿐 코드에는 안 들어간다 (코드는 기출 번호가 정한다). */
+const 책이름 = '모의고사 기출';
 const ledger = {
-  subject: SUBJECT, book: 'J', kind: 'source', chapter: CHAPTER, chapterName: 단원이름,
-  source: path.basename(SRC), updatedAt: new Date().toISOString(),
+  subject: SUBJECT, book: 'J', kind: 'source',
+  chapterName: 단원이름, sourceFile: path.basename(SRC),
+  updatedAt: new Date().toISOString().slice(0, 10),
   count: r.codes.length, chapters: [CHAPTER],
   items: r.것들.map((x, i) => ({
-    seq: i + 1, chapter: CHAPTER, code: r.codes[i],
-    origin: r.codes[i].slice(0, 7), badge: x.딱지들[0],
-    year: x.출처.년, month: x.출처.월, no: x.출처.번,
+    code: r.codes[i], chapter: CHAPTER, chapterName: 단원이름, subject: SUBJECT, seq: i + 1,
+    badge: x.딱지들[0], origin: r.codes[i].slice(0, 7) + 'OR',
+    source: { book: 책이름,
+              label: (+x.출처.년 <= 30 ? 2000 : 1900) + +x.출처.년 + '년 ' + x.출처.월 + '월 ' + (+x.출처.번) + '번' },
   })),
 };
 fs.writeFileSync(OUT, JSON.stringify(ledger, null, 2), 'utf8');
