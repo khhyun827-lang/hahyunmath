@@ -3667,7 +3667,28 @@ function normItemCode(s){
   const back = m[1]+'-'+m[2]+'-'+m[3]+'-'+m[4] + (m[5] ? '-'+m[5]+m[6] : '');
   return ITEM_CODE_RE.test(back) ? back : '';
 }
-function itemOfCode(code){ return (state.itemByCode || {})[code] || null; }
+/* 🔴 **코드가 사는 곳이 이제 둘이다** (2026-09-05 · 사용자가 화면에서 짚었다 —
+     「검토페이지 … 코드옆에 창고에 없는코드라고 뜨는 건 뭐야? 등록이 안된건가?」).
+   등록은 됐다. **찾는 자리가 하나뿐이었다.**
+     ① **장부**(`codes/*.json`) — 교재에 코드를 심을 때 같이 만든 것. 배포에 실려 온다
+     ② **창고**(Firestore `items`) — 시험지를 등록하며 **새로 붙은** 코드가 사는 곳
+   여태는 ①뿐이었으니 ①만 봐도 됐다. 시험지에서 코드가 태어나기 시작한 순간부터
+   ①만 보면 **방금 내가 만든 코드를 «없는 코드»라고 말한다.**
+   🔵 그래서 둘을 합쳐 본다. 창고에만 있는 것은 코드 자체가 과목·단원을 말하므로
+     그것으로 채워 준다 — 장부에 있는 것과 같은 모양으로 돌려준다. */
+function itemOfCode(code){
+  const 장부 = (state.itemByCode || {})[code];
+  if(장부) return 장부;
+  const 창고 = (state.itemBody || {})[code];
+  if(!창고) return null;
+  const ci = chapterInfoFromItemCode(code) || {};
+  const m = String(code).match(ITEM_CODE_RE);
+  return { code, chapter: ci.chapter || '', subject: ci.subject || '',
+           answer: 창고.answer || '',
+           source: { book: (m && BOOK_OF_CODE[m[3]]) || '' },
+           /* 🔵 장부에 없다는 것 자체가 뜻이 있다 — «시험지에서 태어난 문항»이다. */
+           fromExam: true };
+}
 /* 🔴 **뺀 변형은 «지우지 않고 표시만» 한다** (2026-09-04).
    진짜로 지우면 그 번호가 비고, 다음 변형이 **그 번호를 다시 받는다** —
    그러면 **이미 인쇄해 나간 시험지의 코드가 다른 문제를 가리킨다.** 조용히 틀리는 자리다.
@@ -19981,7 +20002,7 @@ function itemCodeStripHTML(b){
          ${mine ? '' : `<button class="btn q sm" onclick="registerVariantFromBank('${b.id}')">창고에 넣기</button>`}`
       : (it ? `<span class="ic-meta">${escHtml(it.chapter||'')} · ${escHtml((it.source&&it.source.book)||'')}
           ${it.answer ? '· 정답 <b>'+escHtml(it.answer)+'</b>' : ''}</span>`
-            : '<span class="ic-meta warn">창고에 없는 코드</span>')}
+            : '<span class="ic-meta warn">아직 창고에 없는 코드 — 교재를 올리거나 시험지를 저장하면 담깁니다</span>')}
     <button class="btn q sm" onclick="if(confirm('이 문항의 코드를 뗄까요?')){const b=DATA.problemBank.find(x=>x.id==='${b.id}');b.itemCode='';dbSetDoc('problembank',b.id,b);render();}">떼기</button>
     <span style="flex:1;"></span>
     ${vs.length

@@ -116,5 +116,25 @@ const { findBankEntry } = new Function('DATA', 'examRootId',
   봄('🔴 모르는 단원도 마찬가지', makeItemCodeFor({ unit: '공통수학2', chapter: '없는단원' }, 'D', 15), '');
 }
 
+// ⑮ 코드가 사는 곳이 둘이다 — 장부(codes/*.json)와 창고(items) (2026-09-05)
+{
+  const { itemOfCode } = new Function('state', 'chapterInfoFromItemCode', 'ITEM_CODE_RE', 'BOOK_OF_CODE',
+    lift('itemOfCode') + NLL + 'return { itemOfCode };')(
+    { itemByCode: { 'K2-01-E-0005': { code: 'K2-01-E-0005', chapter: '평면좌표', source: { book: '엔딩크레딧' } } },
+      itemBody:   { 'K2-05-D-0013': { code: 'K2-05-D-0013', content: '본문', answer: '③' } } },
+    (c) => (String(c).indexOf('-05-') > 0 ? { subject: '공통수학2', chapter: '집합' } : null),
+    /^([A-Z]{1,2}\d?)-(\d{2})-([A-Z])-(\d{4})/, { E: '엔딩크레딧', D: '동그랑땡 모의고사' });
+
+  봄('장부에 있는 것은 그대로', itemOfCode('K2-01-E-0005').chapter, '평면좌표');
+  // 🔴 여기가 사용자가 짚은 자리 — 시험지에서 태어난 코드를 «없는 코드»라 하고 있었다
+  봄('🔴 창고에만 있는 것도 찾는다', !!itemOfCode('K2-05-D-0013'), true);
+  봄('코드가 단원을 말해 준다', itemOfCode('K2-05-D-0013').chapter, '집합');
+  봄('교재 이름도 코드에서 온다', itemOfCode('K2-05-D-0013').source.book, '동그랑땡 모의고사');
+  봄('정답은 창고 것을 쓴다', itemOfCode('K2-05-D-0013').answer, '③');
+  봄('🔵 «시험지에서 태어난 것»이라고 표시해 둔다', itemOfCode('K2-05-D-0013').fromExam, true);
+  봄('둘 다 없으면 없는 것', itemOfCode('K2-09-Z-0001'), null);
+}
+
+
 console.log(`\n  ${fail ? '🔴' : '✅'} ${pass} 통과 · ${fail} 실패\n`);
 process.exit(fail ? 1 : 0);
