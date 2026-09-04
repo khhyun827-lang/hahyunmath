@@ -31,6 +31,7 @@ function lift(name) {
   throw new Error(name + ' 의 끝을 못 찾았습니다');
 }
 
+const NLL = String.fromCharCode(10);
 let pass = 0, fail = 0;
 const 봄 = (무엇, 나온것, 나와야할것) => {
   const ok = JSON.stringify(나온것) === JSON.stringify(나와야할것);
@@ -89,6 +90,31 @@ const { findBankEntry } = new Function('DATA', 'examRootId',
    [findBankEntry('e1', 'A-15').id, findBankEntry('e1', 'B-15').id], ['A15', 'B15']);
 봄('🔵 옛 항목은 번호로도 찾힌다', findBankEntry('e1', '3').id, '옛3');
 봄('🔵 옛 항목은 0-번호 로도 찾힌다', findBankEntry('e1', '0-3').id, '옛3');
+
+
+// ⑭ 시험지 문항에 코드를 붙인다 (2026-09-05 · 사용자가 (다)안을 골랐다)
+{
+  const { codeOfSubjectName, nextBookSerial, makeItemCodeFor } = new Function(
+    'CODE_SUBJECTS', 'chapterNoOfName', 'state',
+    lift('codeOfSubjectName') + NLL + lift('nextBookSerial') + NLL + lift('makeItemCodeFor')
+      + NLL + 'return { codeOfSubjectName, nextBookSerial, makeItemCodeFor };'
+  )({ K2: '공통수학2', K1: '공통수학1' },
+    (subject, name) => ({ '평면좌표': '01', '직선의 방정식': '02', '집합': '05' }[name] || ''),
+    { itemByCode: { 'K2-01-E-0564': {}, 'K2-01-D-0007': {} }, itemBody: { 'K2-05-D-0012': {} } });
+
+  봄('과목 이름 → 코드', codeOfSubjectName('공통수학2'), 'K2');
+  봄('모르는 과목은 K2 로 (지금 다루는 것이 그것뿐)', codeOfSubjectName('없는과목'), 'K2');
+  // 🔵 일련번호는 «교재» 안에서 쭉 간다 — 단원이 바뀌어도 이어진다
+  봄('🔵 장부와 창고를 «둘 다» 보고 다음 번호를 낸다', nextBookSerial('D'), 13);
+  봄('다른 교재의 번호에 안 휩쓸린다', nextBookSerial('E'), 565);
+  봄('처음이면 1 번부터', nextBookSerial('R'), 1);
+
+  봄('코드를 만든다', makeItemCodeFor({ unit: '공통수학2', chapter: '집합' }, 'D', 13), 'K2-05-D-0013');
+  봄('단원이 바뀌어도 번호는 그대로', makeItemCodeFor({ unit: '공통수학2', chapter: '평면좌표' }, 'D', 14), 'K2-01-D-0014');
+  // 🔴 여기가 요점 — 짐작한 코드는 나중에 남의 단원 자리에 끼어 앉는다
+  봄('🔴 단원을 못 고르면 코드를 «안» 만든다', makeItemCodeFor({ unit: '공통수학2', chapter: '' }, 'D', 15), '');
+  봄('🔴 모르는 단원도 마찬가지', makeItemCodeFor({ unit: '공통수학2', chapter: '없는단원' }, 'D', 15), '');
+}
 
 console.log(`\n  ${fail ? '🔴' : '✅'} ${pass} 통과 · ${fail} 실패\n`);
 process.exit(fail ? 1 : 0);
