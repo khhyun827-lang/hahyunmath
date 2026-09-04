@@ -376,7 +376,12 @@ function hwpWalkParagraphs(paras, tokens){
               plain = plain.trim();
               const looksLikeSourceTag = plain.length > 0 && plain.replace(/^\[|\]$/g,'').length <= 14
                 && !/[.,?!()①②③④⑤]/.test(plain) && !/^\d+$/.test(plain);
-              if(looksLikeSourceTag) continue;
+              /* 🔴 **버리기 전에 «무엇이었는지»는 남긴다** (2026-09-05).
+                 여태는 출처 딱지를 그냥 흘려보냈다 — 「고쟁이」 같은 이름은 장부에 이미 있으니까.
+                 그런데 주기나 교재는 그 자리에 **「2023년 09월 28번」**을 적어 두고,
+                 그것이 **코드의 재료**다(1230928). 버리면 코드를 만들 길이 없어진다.
+                 🔵 본문에서는 여전히 뺀다 — 문제의 일부가 아니다. 토큰 하나로 «따로» 남긴다. */
+              if(looksLikeSourceTag){ tokens.push({type:'srctag', v: plain}); continue; }
               for(const t of cellTokens) if(t.type !== 'pic' && t.type !== 'endnote') tokens.push(t);
               tokens.push({type:'break'});
             }
@@ -681,6 +686,99 @@ function 수식낱말펴기(s){
     .replace(/root\s*([0-9]+)/gi, (m,a)=> '\\sqrt{'+a+'}');
 }
 
+
+/* =================== 모의고사 기출 + 변형 교재 (주기나 꼴) · 2026-09-05 ===================
+   사용자 요청 — 「교재 자체에 2017년 09월 21번 라고하는 출처가 있어 이를통해서
+   1(학년)17(년)09(월)21(번)OR(오리지널문항) … 이런식으로 코드를 붙이고싶어.
+   교재의 문항별 우측상단에 OR DW NC UP 라고 하는 그림이 있어.」
+
+   🔴 **딱지는 «글»이 아니라 «그림»이다.** 그래서 글자로는 못 읽는다. 그림의 해시로 알아본다.
+     ⚠ 참조 이름(`image8`)에 기대면 안 된다 — 파일마다 번호가 다르게 붙는다.
+     ⚠ shapeComment 도 못 쓴다 — 넷 다 「번호.png」로 같다(실측).
+   🔵 **스스로 검사할 길이 있다** — 원본(OR)은 **출처 묶음마다 정확히 하나**여야 한다.
+     실측: 서로 다른 출처 24개 · OR 24개 · 모든 묶음에 OR 하나씩. 그 셈이 안 맞으면 멈춘다.
+     (이 검사 덕분에 그림을 안 보고도 OR 이 어느 것인지 먼저 알아냈고, 열어 보니 맞았다.) */
+const 딱지해시 = {
+  '264bb508409ed2736d541bc9f3d3e4e6': 'OR',   // 📖 원본
+  '22c12a6ee18385db377145fca66266b1': 'NC',   // 💡 숫자변형
+  'df0ac81572f0612dd9dee9aa0101679f': 'UP',   // ⬆ 상향
+  'ba6e591c3e08ac6725ef1b7e6d9e33b5': 'DW',   // ⚙ 하향
+};
+const 딱지갈래 = { NC:'N', UP:'U', DW:'D' };    // 우리 창고의 변형 갈래로 옮긴다
+
+/* 「2023년 09월 28번」 → { 년:'23', 월:'09', 번:'28' } */
+function hwpxParseSourceTag(s){
+  const m = String(s || '').match(/(20[0-9]{2})\s*년\s*([0-9]{1,2})\s*월\s*([0-9]{1,2})\s*번/);
+  if(!m) return null;
+  return { 년: m[1].slice(2), 월: String(m[2]).padStart(2,'0'), 번: String(m[3]).padStart(2,'0') };
+}
+/* 🔵 **학년은 «몇 월 시행이냐»가 정한다** (2026-09-05 사용자가 정했다 —
+     「3월이 출처인 것은 다 2학년으로 시작해주고 그외 나머지는 1학년으로」). */
+function hwpxGradeOfMonth(월){ return 월 === '03' ? '2' : '1'; }
+
+/* 문서에서 «출처 + 딱지»를 문항 차례대로 뽑는다.
+   ⚠ 짝짓는 자리는 **미주**다 — 문항 하나에 미주 하나이므로, 미주를 만날 때마다
+     그 앞에 마지막으로 본 출처와 딱지를 그 문항의 것으로 삼는다. */
+function hwpxSourceBadges(docs, 해시of){
+  const paras = [];
+  for(const doc of docs){
+    const sec = doc.documentElement;
+    if(!sec) continue;
+    for(const n of Array.from(sec.childNodes)) if(n.nodeType===1 && n.localName==='p') paras.push(n);
+  }
+  const toks = [];
+  hwpWalkParagraphs(paras, toks);
+  const out = [];
+  let 출처 = null, 딱지들 = [];
+  for(const t of toks){
+    if(t.type === 'srctag'){ const v = hwpxParseSourceTag(t.v); if(v) 출처 = v; continue; }
+    if(t.type === 'pic'){
+      /* ⚠ **덮어쓰지 않고 모은다** — 한 문항에 딱지가 둘로 잡히면 그건 «알아야 할 일»이지
+         조용히 뒤엣것으로 덮을 일이 아니다(처음에 덮었더니 딱지 하나가 소리 없이 사라졌다). */
+      const b = 딱지해시[해시of(t.v)];
+      if(b) 딱지들.push(b);
+      continue;
+    }
+    if(t.type === 'endnote'){ out.push({ 출처, 딱지들 }); 출처 = null; 딱지들 = []; }
+  /* ⚠ 마지막 미주 «뒤»에 남은 딱지는 어느 문항의 것도 아니다. 조용히 버리지 않고 셈으로 남긴다 —
+     그 수가 0이 아니면 이 양식을 내가 아직 다 모른다는 뜻이다. */
+  out.남은딱지 = 딱지들.length;
+  }
+  return out;
+}
+
+/* 뽑은 것을 코드로 바꾼다. 🔴 어긋나면 코드를 안 낸다 — 짐작한 코드가 제일 나쁘다. */
+function hwpxMakeSourceCodes(뽑은것){
+  /* 🔵 **문항이 아닌 덩이는 조용히 지나간다** — 목차·표지에도 미주가 붙어 있을 수 있다.
+     출처도 딱지도 «둘 다» 없으면 문항이 아니다. 하나만 없으면 그건 흠이라 말한다. */
+  const 것들 = 뽑은것.filter(x => x.출처 || (x.딱지들 && x.딱지들.length));
+  const 흠 = [];
+  것들.forEach((x, i) => {
+    const n = (x.딱지들 || []).length;
+    if(!x.출처) 흠.push((i+1) + '번째 문항에 출처가 없습니다');
+    else if(n === 0) 흠.push((i+1) + '번째(' + x.출처.년 + '년 ' + x.출처.월 + '월 ' + x.출처.번 + '번)에 딱지가 없습니다');
+    else if(n > 1) 흠.push((i+1) + '번째(' + x.출처.년 + '년 ' + x.출처.월 + '월 ' + x.출처.번 + '번)에 딱지가 ' + n + '개입니다 — ' + x.딱지들.join(','));
+  });
+  if(흠.length) return { ok:false, 흠, codes:[], 것들 };
+  const 묶음 = {};
+  for(const x of 것들){
+    const 뿌리 = hwpxGradeOfMonth(x.출처.월) + x.출처.년 + x.출처.월 + x.출처.번;
+    (묶음[뿌리] = 묶음[뿌리] || []).push(x.딱지들[0]);
+  }
+  const 안맞음 = Object.entries(묶음).filter(([, v]) => v.filter(d => d === 'OR').length !== 1);
+  if(안맞음.length) return { ok:false, codes:[], 것들,
+    흠: ['출처 묶음 ' + 안맞음.length + '개에 원본(OR)이 하나가 아닙니다 — 딱지를 잘못 읽었을 수 있습니다: '
+         + 안맞음.slice(0,3).map(([k, v]) => k + '(' + v.join(',') + ')').join(' · ')] };
+  const 센다 = {};
+  const codes = 것들.map(x => {
+    const 뿌리 = hwpxGradeOfMonth(x.출처.월) + x.출처.년 + x.출처.월 + x.출처.번;
+    if(x.딱지들[0] === 'OR') return 뿌리 + 'OR';
+    const k = 뿌리 + x.딱지들[0];
+    센다[k] = (센다[k] || 0) + 1;
+    return k + String(센다[k]).padStart(2, '0');
+  });
+  return { ok:true, 흠:[], codes, 것들, 묶음수: Object.keys(묶음).length, 남은딱지: 뽑은것.남은딱지 || 0 };
+}
 
 /* =================== 시험지꼴 빠른정답표 (2026-09-04) ===================
    교재의 표(`001 ② 002 ③ …`)와 **꼴이 다르다.** 시험지는 형(TYPE)으로 나뉘고,
