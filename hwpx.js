@@ -85,7 +85,12 @@ function convertOverToFrac(s){
 function convertHwpEq(script){
   let s = script || '';
   if(!s.trim()) return '';
-  s = s.replace(/`/g, '');
+  /* 🔴 **백틱은 «지우는 것»이 아니라 «공백»이다** (2026-09-04에 사용자가 짚어 찾았다).
+     한글 수식에서 ` 는 얇은 공백이다. 지워 버리면 앞뒤 낱말이 **붙는다** —
+     `left|` a`right|` 가 `left| aright|` 가 되고, 그러면 아래 LEFT/RIGHT 규칙이
+     `RIGHT` 의 낱말 경계를 못 찾아 **RIGHT 가 날글자로 남는다.** 그 수식은 안 그려진다.
+     (사용자가 K2-01-E-0009 에서 `4RIGHT )` 로 겪었다 — 원본은 `4`right|` 꼴이었다.) */
+  s = s.replace(/`/g, ' ');
   s = s.replace(/\brm\s*/g, '');
   // "it"(이탤릭 지정)은 rm과 같은 서체 지정 명령이라 내용만 남기고 지운다.
   // "it2r+3"(공백 없음), "it r ^{2}"(공백 있음) 둘 다 나오므로 뒤 공백까지 함께 지운다.
@@ -119,7 +124,8 @@ function convertHwpEq(script){
   /* ⚠ 붙여 쓴 것도 온다 — `1over 2`. 왼쪽이 «숫자»일 때만 낱말 경계 없이 받는다
      (글자까지 허용하면 `lover 2` 같은 것을 물어뜯는다). */
   s = s.replace(/([0-9]+)over\s+([0-9]+|[A-Za-z])/g, '\\frac{$1}{$2}');
-  s = s.replace(/\s*(?<!\\)\bprime\b/g, '^{\\prime}');
+  /* ⚠ 뒤 경계를 빼야 `O primeA primeB` 를 다 잡는다 — 백틱을 공백으로 바꾸면서 생긴 꼴이다. */
+  s = s.replace(/\s*(?<!\\)\bprime/g, '^{\\prime}');
   /* ⚠ **`prime` 도 붙여 쓴 꼴이 온다** — `OprimeAprimeBprime` (angle·bar 와 같은 사정이다).
      낱말 경계가 없어 위 규칙에 안 걸린다. 앞 글자를 남기고 프라임만 올린다. */
   s = s.replace(/([A-Za-z}])prime/g, '$1^{\\prime}');
@@ -142,13 +148,20 @@ function convertHwpEq(script){
      ⚠ 중괄호는 LaTeX에서 \left\{ 로 이스케이프해야 한다 (\left{ 는 KaTeX가 못 읽는다).
      짝이 안 맞는 LEFT/RIGHT가 남으면 수식 전체가 안 그려지므로, 못 알아본 것은 그냥 지운다. */
   /* ⚠ **교재는 소문자 `left(` `right)` 를 쓴다** — 시험지는 대문자였다. 둘 다 받는다 (2026-09-05). */
-  s = s.replace(/\bLEFT\s*\{/gi, '\\left\\{').replace(/\bRIGHT\s*\}/gi, '\\right\\}');
-  s = s.replace(/\bLEFT\s*([([|])/gi, (m,d)=>'\\left'+d)
-       .replace(/\bRIGHT\s*([)\]|])/gi, (m,d)=>'\\right'+d);
+  /* 🔴 **낱말 경계를 요구하면 «붙여 쓴 것»을 통째로 놓친다** (2026-09-04에 사용자가 짚었다).
+     교재에는 `4RIGHT )` · `1right}` · `subsetleft{` 처럼 앞 글자·숫자에 **붙어 있는** 것이 나온다.
+     그러면 경계를 못 찾아 **RIGHT 가 날글자로 남고, 그 수식은 통째로 안 그려진다.**
+     🔵 그래도 위험하지 않은 까닭 — **뒤에 괄호가 오는 것만** 바꾼다. `right}` · `left(` 처럼
+       괄호가 붙어 있으면 그것은 사실상 언제나 그 명령어다.
+     ⚠ 앞이 역슬래시면 비켜선다 — 방금 만든 것을 다시 건드리면 안 된다. */
+  s = s.replace(/(?<!\\)LEFT\s*\{/gi, '\\left\\{')
+       .replace(/(?<!\\)RIGHT\s*\}/gi, '\\right\\}');
+  s = s.replace(/(?<!\\)LEFT\s*([([|])/gi, (m,d)=>'\\left'+d)
+       .replace(/(?<!\\)RIGHT\s*([)\]|])/gi, (m,d)=>'\\right'+d);
   /* ⚠ **여기서 «방금 만든 것»을 지우면 안 된다** — 위에서 `\left(` 를 만들어 놓고
      대소문자를 안 가리고 지우면 `left` 가 통째로 날아가 `\(` 만 남는다.
      그래서 **바로 앞이 역슬래시면 비켜선다** (angle·bar 규칙과 같은 장치다). */
-  s = s.replace(/(?<!\\)\bLEFT\b\s*/gi, '').replace(/(?<!\\)\bRIGHT\b\s*/gi, '');
+  s = s.replace(/(?<!\\)(?<![A-Za-z])LEFT\b\s*/gi, '').replace(/(?<!\\)(?<![A-Za-z])RIGHT\b\s*/gi, '');
   s = s.replace(/\bCDOTS\b/gi, '\\cdots').replace(/\bLDOTS\b/gi, '\\ldots')
        .replace(/\bDOTSAXIS\b/gi, '\\cdots').replace(/\bDOTS\b/gi, '\\cdots');
   /* «같지 않다»가 세 가지 표기로 온다 — != 와 NEQ(위에서 처리) 와 ne. */
@@ -156,6 +169,13 @@ function convertHwpEq(script){
   /* pile{a#b}는 «세로로 쌓기»다. 열이 하나인 행렬로 옮긴다 (행 구분은 cases·pmatrix와 같은 #). */
   s = replaceBalancedKeyword(s, 'pile', inner =>
     '\\begin{matrix}' + inner.replace(/#/g,'\\\\') + '\\end{matrix}');
+  /* 🔵 **수식 안의 `#` 는 줄바꿈이고 `~` 는 공백이다** (2026-09-04).
+     행렬·cases·pile 안의 `#` 는 위에서 이미 `\` 로 바뀌었다. 여기 남은 것은
+     **한 줄짜리 수식을 편집기에서 두 줄로 접어 놓은 자국**이라, 화면에서는 한 줄이면 된다.
+     ⚠ 그대로 두면 `#` 가 날글자로 뜨고, 접은 자리를 맞추려고 넣은 `~` 스무 개가
+       **한 줄을 통째로 밀어낸다**(사용자가 K2-01-E-0011 에서 겪었다). */
+  s = s.replace(/#/g, ' ');
+  s = s.replace(/~{3,}/g, '~');
   s = convertOverToFrac(s);
   s = replaceBalancedKeyword(s, 'sqrt', inner => '\\sqrt{' + inner + '}');
   /* 중괄호를 안 쓴 `sqrt 17` 꼴도 받는다 — 위 함수는 `sqrt{` 만 본다 (2026-09-04). */
@@ -164,6 +184,18 @@ function convertHwpEq(script){
   // 첨자로 처리되어 깨지므로, 중괄호로 다시 감싸준다.
   s = s.replace(/([_^])(?!\{)([0-9a-zA-Z]+)/g, '$1{$2}');
   s = s.replace(/\s+/g, ' ').trim();
+  /* 🔴 **`\left` 와 `\right` 는 «짝»이어야 한다 — 안 맞으면 KaTeX 는 그 수식을 통째로 안 그린다** (2026-09-04).
+     원본에 짝이 안 맞게 적힌 것이 실제로 있다(`\left\{0,~9right` 처럼 닫는 쪽이 빠진 것).
+     위에서 «못 알아본 RIGHT 는 지운다»를 하고 나면 여는 쪽만 남기도 한다.
+     🔵 LaTeX 에는 **«보이지 않는 짝»**이 있다 — `\right.` 와 `\left.` 다.
+       그것으로 수를 맞추면 **원본이 깨져 있어도 나머지는 제대로 그려진다.**
+       아무것도 안 하면 그 문항은 화면에서 날 LaTeX 로 뜬다 — 그쪽이 훨씬 나쁘다. */
+  {
+    const 여는수 = (s.match(/\\left(?![a-zA-Z])/g) || []).length;
+    const 닫는수 = (s.match(/\\right(?![a-zA-Z])/g) || []).length;
+    if(여는수 > 닫는수) s = s + ' \\right.'.repeat(여는수 - 닫는수);
+    else if(닫는수 > 여는수) s = '\\left. '.repeat(닫는수 - 여는수) + s;
+  }
   return s ? '$' + s + '$' : '';
 }
 // 수식 개체가 아니라 그냥 평문(<hp:t>)으로 "barAD", "angleBAD"처럼 붙여 쓴 경우를 정리한다.
