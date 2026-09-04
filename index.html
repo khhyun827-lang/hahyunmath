@@ -826,8 +826,9 @@
 .app .rv-warn span{display:block;font-size:11.5px;line-height:1.6;color:var(--sub);}
 /* 문항 코드 띠 (2026-09-03 · I-2). 접두사 ic- 는 ds.css 에도 이 파일에도 없던 이름이다
    — 여섯 번 데인 «클래스 이름 겹침»을 피하려고 먼저 찾아봤다. */
-.app .ic-strip{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:14px;
-  padding:9px 12px;border:1px solid var(--line);border-radius:var(--r-md);background:var(--sunk);}
+/* 🔵 띠가 넷이라 사이 여백을 줄였다 (2026-09-04 · 사용자 요청 — 「공간을 줄여줘」) */
+.app .ic-strip{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:7px;
+  padding:8px 12px;border:1px solid var(--line);border-radius:var(--r-md);background:var(--sunk);}
 .app .ic-strip.on{background:var(--accent-bg);border-color:var(--accent-line);}
 .app .ic-k{font-size:11px;color:var(--dim);letter-spacing:.04em;}
 .app .ic-code{font-size:13px;font-weight:700;color:var(--ink);}
@@ -3147,7 +3148,7 @@
      이 파일은 index.html 과 «따로» 받아지므로, 물음표 뒤가 그대로면 브라우저가
      **캐시에 있는 옛 파서를 꺼내 쓴다.** 그러면 교재를 다시 올려도 옛 글이 그대로 담기고,
      화면만 보고서는 «고쳤는데 왜 안 되지»가 된다 — 파서가 바뀐 것을 아무 데서도 못 본다. -->
-<script src="hwpx.js?v=2026-09-06f"></script>
+<script src="hwpx.js?v=2026-09-06g"></script>
 <!-- 출석 도장 게임(셸·똥피하기·달리기). 연습 페이지 game.html 도 같은 파일을 쓴다 -->
 <!-- ⚠ ?v= 를 붙이는 까닭 — 브라우저가 game-core.js 를 캐시해서, 올려도 학생 화면에는
      옛 게임이 그대로 돈다(Ctrl+Shift+R 을 해야 바뀐다 — 학생에게 그걸 시킬 수는 없다).
@@ -4071,6 +4072,8 @@ function sanitizeAiMathText(s){
     .replace(/(?<!\\)\bLEQ\b/gi, '\\leq')
     .replace(/(?<!\\)\bGEQ\b/gi, '\\geq');
 }
+/* 마지막으로 AI 를 부르다 난 흠. 고리가 «왜 멈췄는지»를 말할 때 쓴다. */
+let 마지막AI오류 = '';
 async function generateTwinViaAI(content, answer, image){
   try{
     const payload = { content, answer };
@@ -4091,9 +4094,17 @@ async function generateTwinViaAI(content, answer, image){
       if(typeof body.used === 'number') state.aiQuotaUsed = body.used;
       return { quotaExceeded:true, used: body.used };
     }
-    if(!res.ok) throw new Error('worker http ' + res.status);
+    /* 🔴 **왜 안 됐는지를 버리지 않는다** (2026-09-04 · 사용자가 20건을 태우고 나서).
+       워커는 502 와 함께 까닭을 적어 보낸다(`parse failed` · `truncated` · `incomplete result`).
+       그걸 버리고 `worker http 502` 만 남기면 **화면에서는 «실패»라는 말밖에 안 보인다.** */
+    if(!res.ok){
+      let 까닭 = '';
+      try{ const b = await res.json(); 까닭 = b.error || ''; if(b.finishReason) 까닭 += ' (' + b.finishReason + ')'; }catch(e){}
+      throw new Error('워커 ' + res.status + (까닭 ? ' — ' + 까닭 : ''));
+    }
     const data = await res.json();
     if(!data.content || !data.answer) throw new Error('incomplete AI result');
+    마지막AI오류 = '';
     return {
       content: sanitizeAiMathText(data.content),
       answer: normalizeTwinAnswer(sanitizeAiMathText(data.answer)),
@@ -4111,6 +4122,7 @@ async function generateTwinViaAI(content, answer, image){
     };
   }catch(e){
     console.error('AI 쌍둥이 생성 실패', e);
+    마지막AI오류 = String((e && e.message) || e);   // 고리가 «왜 멈췄는지» 말할 때 쓴다
     return null;
   }
 }
@@ -8686,6 +8698,23 @@ function ensureJSZipLoaded(){
    ⚠ 그래서 **zip 풀기·그림 뽑기·DOMParser 는 옮기지 않았다** — 그쪽은 브라우저 것이라
      아래 `parseHwpxToProblems` 에 남아 있고, node 는 제 나름의 길로 같은 함수들을 먹인다.
    =================================================================================== */
+/* 빠른정답표 hwpx → «통번호 → 정답». 문항 파일과 여는 법은 같고 «읽는 규칙»만 다르다.
+   🔵 규칙은 `hwpx.js` 의 `hwpxAnswerKeyFromDocs` 하나다 — 도구도 같은 것을 부른다. */
+async function parseHwpxAnswerKey(file){
+  await ensureJSZipLoaded();
+  const zip = await JSZip.loadAsync(file);
+  const secNames = Object.keys(zip.files)
+    .filter(n => /^Contents\/section\d+\.xml$/.test(n))
+    .sort((a,b) => (+a.match(/\d+/)[0]) - (+b.match(/\d+/)[0]));
+  if(!secNames.length) throw new Error('올바른 hwpx 파일이 아닙니다.');
+  const docs = [];
+  for(const nm of secNames){
+    const xmlText = await zip.file(nm).async('string');
+    docs.push(new DOMParser().parseFromString(xmlText, 'text/xml'));
+  }
+  return hwpxAnswerKeyFromDocs(docs, 999);
+}
+
 async function parseHwpxToProblems(file){
   await ensureJSZipLoaded();
   const zip = await JSZip.loadAsync(file);
@@ -18477,8 +18506,23 @@ async function icFillAnswers(input){
   state.icAns = { running:true, msg:'정답표를 읽는 중…' }; render();
   try{
     await loadItemStoreIfNeeded();
-    const j = JSON.parse(await file.text());
-    const rows = (j && j.items) || [];
+    /* 🔴 **빠른정답표를 그대로 받는다** (2026-09-04 · 사용자가 물어서 바꿨다 —
+       「나는 빠른정답표만 있지 json파일을 만들줄 몰라」).
+       **파일을 만들 줄 알아야 쓸 수 있는 기능은 없는 기능이다.**
+       도구가 낸 JSON 도 그대로 받는다 — 손으로 채운 보충까지 들어 있어 그쪽이 더 온전하다. */
+    let rows = [];
+    if(/\.hwpx$/i.test(file.name || '')){
+      const byNo = await parseHwpxAnswerKey(file);
+      /* 표의 번호는 «교재 통번호»이고, 그것은 코드의 끝 네 자리와 같다(564/564 실측). */
+      for(const code in (state.itemByCode || {})){
+        const m = String(code).match(/([0-9]+)$/);
+        const a = m ? byNo[+m[1]] : null;
+        if(a) rows.push({ code, answer: a });
+      }
+    } else {
+      const j = JSON.parse(await file.text());
+      rows = (j && j.items) || [];
+    }
     if(!rows.length){ state.icAns = { running:false, msg:'정답이 하나도 없습니다 — tools/answer-key.mjs 가 낸 파일이 맞는지 봐주세요.' }; render(); return; }
     let saved = 0, failed = 0, 본문없음 = 0, 그대로 = 0;
     for(let i = 0; i < rows.length; i++){
@@ -18722,21 +18766,21 @@ function icToolsHTML(){
         ${state.icFill && state.icFill.running ? '담는 중…' : 'hwpx 올리기'}</button>
       <span class="ic-hint">${state.icFill && state.icFill.msg
         ? escHtml(state.icFill.msg)
-        : '코드를 심어 둔 교재 파일을 올리면 <b>문제 본문</b>과 그림을 담습니다 <s>·</s> 해설은 안 담습니다'}</span>
+        : '코드를 심어 둔 교재 hwpx'}</span>
     </div>
     ${/* 🔵 **정답은 따로 채운다** (2026-09-06) — 교재 미주에는 정답이 있지만 주관식은
          뒤에 해설이 통째로 붙어 와서 «어디까지가 답인지» 기계가 모른다. 빠른정답표에는
          그 답만 적혀 있고, 도구가 **한 칸 밀림까지 검사해서** JSON 으로 낸다. */''}
     <div class="ic-strip">
       <span class="ic-k">정답 채우기</span>
-      <input type="file" accept=".json,application/json" id="ic-ans" style="display:none;"
+      <input type="file" accept=".hwpx,.json" id="ic-ans" style="display:none;"
         onchange="icFillAnswers(this)">
       <button class="btn q sm" ${state.icAns && state.icAns.running ? 'disabled' : ''}
         onclick="document.getElementById('ic-ans').click()">
-        ${state.icAns && state.icAns.running ? '담는 중…' : 'answer-key.json 올리기'}</button>
+        ${state.icAns && state.icAns.running ? '담는 중…' : '빠른정답표 올리기'}</button>
       <span class="ic-hint">${state.icAns && state.icAns.msg
         ? escHtml(state.icAns.msg)
-        : '<span class="mono">node tools/answer-key.mjs 빠른정답표.hwpx --out answer-key.json</span> 으로 만든 파일을 올립니다 <s>·</s> <b>본문이 이미 있는</b> 문항에만 담깁니다'}</span>
+        : '<b>빠른정답표</b> hwpx <s>·</s> 본문이 있는 문항에만'}</span>
     </div>
     ${/* 🔵 **남는 한도로 창고를 채우는 고리** (2026-09-06 · 사용자 요청).
          「앱을 열어 둔 동안」이 조건이라 그 사실을 곁말에 그대로 적는다 — 안 적으면
@@ -18745,8 +18789,8 @@ function icToolsHTML(){
       <span class="ic-k">남는 한도로 채우기</span>
       <button class="btn ${af.on ? 'p' : 'q'} sm" onclick="autoFillToggle()">${af.on ? '멈추기' : '켜기'}</button>
       <span class="ic-hint">${af.msg ? escHtml(af.msg) : (af.on
-        ? 'N 변형이 없는 문항을 한 건씩 채웁니다 — <b>이 앱을 열어 둔 동안</b>만 돕니다'
-        : 'AI 한도가 남으면 <b>N 변형이 없는 문항</b>을 하나씩 채웁니다 <s>·</s> 켜 두고 앱을 열어 두면 됩니다')}
+        ? '<b>이 앱을 열어 둔 동안</b>만 돕니다'
+        : 'N 변형이 없는 문항을 한 건씩')}
         ${남은 !== null ? (남은 ? `<s>·</s> 채울 것 <b class="mono">${남은}</b>개`
                               : `<s>·</s> ${autoFillWhyEmpty()}`) : ''}
         ${state.aiQuotaUsed !== null ? `<s>·</s> 오늘 <b class="mono">${state.aiQuotaUsed}/${AI_DAILY_LIMIT}</b>` : ''}
@@ -19408,7 +19452,18 @@ async function autoFillTick(){
   render();
   try{
     const twin = await generateTwinViaAI(body.content, body.answer, body.image || null);
-    if(!twin){ st.failed++; st.msg = `${code} — 만들지 못했습니다. 다음에 다시 해봅니다.`; autoFillSkipped.add(code); }
+    /* 🔴 **첫 실패에서 멈춘다** (2026-09-04 · 사용자가 겪었다 — 「20문제 모두 실패했어.
+       한도는 다써버리고 실패20으로 떴어」).
+       워커는 **요청을 받을 때마다 한도를 세고 나서** 일을 한다. 그래서 실패해도 한 건이 나간다.
+       그런데 여기서는 실패해도 다음 문항으로 넘어가 버려, **같은 흠에 하루치를 통째로 쏟았다.**
+       🔵 한 건이 안 되면 나머지 열아홉도 대개 안 된다 — 까닭이 문항이 아니라 «길»에 있기 때문이다.
+       → 스스로 끄고, **까닭을 화면에 그대로 적는다.** 그것이 다음에 고칠 실마리다. */
+    if(!twin){
+      st.failed++; st.on = false;
+      try{ localStorage.setItem(AUTOFILL_KEY, '0'); }catch(e){}
+      st.msg = `${code} 에서 멈췄습니다 — ${escHtml(마지막AI오류 || '까닭을 못 받았습니다')}.`
+             + ' 한 건이 안 되면 나머지도 대개 안 되므로 하루치를 지키려고 멈춥니다.';
+    }
     else if(twin.quotaExceeded){ st.msg = `오늘 몫(${AI_DAILY_LIMIT}건)을 다 썼습니다 — 내일 이어서 채웁니다.`; }
     /* 🔴 **담을 수 없는 것은 담지 않는다.** 그림이 필요한 변형은 강사가 그려 줘야 하고,
        학생이 칠 수 없는 답은 데일리퀴즈에 아예 안 나간다(`dqAnswerable`). 둘 다
@@ -19984,8 +20039,7 @@ function teacherItemStoreHTML(){
           oninput="liveEdit(event, v=>{ state.storeQuery=v; state.storePage=1; })"
           oncompositionend="liveEdit(event, v=>{ state.storeQuery=v; state.storePage=1; })">
         ${state.storeQuery ? `<button class="btn q sm" onclick="state.storeQuery='';render()">지우기</button>` : ''}
-        <span class="ic-hint">줄표 없이 <span class="mono">K201E0010</span> 도, <span class="mono">E0010</span> 처럼 일부만도 됩니다
-          ${찾는말 ? `<s>·</s> <b class="mono">${list.length}</b>개 걸렸습니다` : ''}</span>
+        <span class="ic-hint">${찾는말 ? `<b class="mono">${list.length}</b>개` : '줄표 없이도, 일부만도 됩니다'}</span>
       </div>
       ${/* 🔴 **여기 셋은 «문항 하나»가 아니라 «창고 전체»의 일이다** — 드로어에 넣으면 안 된다.
            합치면서 이것이 묻히면 교재를 올릴 문이 화면에서 사라진다. */''}

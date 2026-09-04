@@ -49,7 +49,8 @@ function makeWorld({ itemBody = {}, variants = {}, twin = null, used = 0, saveOk
   const api = new Function(
     'state', 'render', 'localStorage', 'setTimeout', 'clearTimeout',
     'splitItemCode', 'loadItemStoreIfNeeded', 'getAIQuotaUsed', 'AI_DAILY_LIMIT',
-    'generateTwinViaAI', 'dqAnswerable', 'nextVariantCode', 'dbSetDoc', 'nowStamp', 'console',
+    'generateTwinViaAI', 'dqAnswerable', 'nextVariantCode', 'dbSetDoc', 'nowStamp',
+    'escHtml', '마지막AI오류', 'console',
     BLOCK + '\nreturn { autoFillTick, autoFillCandidates, autoFillState, autoFillToggle, autoFillWhyEmpty, skipped: autoFillSkipped };'
   )(
     state,
@@ -65,7 +66,8 @@ function makeWorld({ itemBody = {}, variants = {}, twin = null, used = 0, saveOk
     (content, answer) => (/^[①②③④⑤]$/.test(answer) || /^-?\d+$/.test(answer)) ? answer : null,
     (root, kind) => root + '-' + kind + '01',
     async (coll, id, doc) => { if (!w.saveOk) return null; w.쓴것.push({ coll, id, doc }); return true; },
-    () => '2026-09-06 12:00',
+    () => '2026-09-04 12:00',
+    (s) => String(s), 'AI 가 안 됐다',
     { warn(){}, error(){}, log(){} },
   );
   api.autoFillState().on = true;
@@ -183,5 +185,16 @@ console.log('\n남는 한도로 창고 채우기\n');
   봄('학생 화면에서는 안 돈다', w.부른AI.length, 0);
 }
 
+
+// ── ⑥ 🔴 같은 흠에 하루치를 통째로 쏟지 않는가 (2026-09-04 · 사용자가 20건을 태웠다) ──
+{
+  const w = makeWorld({ itemBody: 본문(5), twin: null });   // AI 가 안 되는 상황
+  await w.autoFillTick();
+  봄('🔴 첫 실패에서 스스로 끈다', w.autoFillState().on, false);
+  봄('🔴 그래서 한 번만 부른다 (스무 번이 아니라)', w.부른AI.length, 1);
+  봄('🔴 다음 것을 예약하지 않는다', w.예약.length, 0);
+  봄('까닭을 그대로 적는다', /AI 가 안 됐다/.test(w.autoFillState().msg), true);
+  봄('왜 멈췄는지도 말한다', /하루치를 지키려고/.test(w.autoFillState().msg), true);
+}
 console.log(`\n  ${fail ? '🔴' : '✅'} ${pass} 통과 · ${fail} 실패\n`);
 process.exit(fail ? 1 : 0);

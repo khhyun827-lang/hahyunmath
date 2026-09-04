@@ -672,6 +672,66 @@ function stripTrailingTypeTitle(text){
   }
   return ls.join('\n').replace(/\s+$/, '');
 }
+/* 🔵 표에 «수식이 아니라 글자로» 쳐진 것을 편다 —  ·  (실측 6곳).
+   수식 개체였으면 변환기가 풀었을 텐데 그냥 글자라 손댈 데가 없다.
+   ⚠ \\overline 같은 진짜 LaTeX 을 건드리면 안 되므로 «앞뒤가 숫자일 때»만 편다. */
+function 수식낱말펴기(s){
+  return String(s)
+    .replace(/([0-9]+)\s*over\s*([0-9]+)/gi, (m,a,b)=> '\\frac{'+a+'}{'+b+'}')
+    .replace(/root\s*([0-9]+)/gi, (m,a)=> '\\sqrt{'+a+'}');
+}
+
+
+/* =================== 빠른정답표 (2026-09-04) ===================
+   🔴 **웹도 도구도 이것만 본다.** 처음에는 도구(tools/answer-key.mjs)에만 두고 웹은 그 결과를
+     JSON 으로 받게 했는데, 사용자가 물었다 — 「나는 빠른정답표만 있지 json파일을 만들줄 몰라」.
+     맞는 말이다. **파일을 만들 줄 알아야 쓸 수 있는 기능은 없는 기능이다.**
+     그래서 규칙을 여기로 옮겼다 — 웹은 hwpx 를 그대로 올리면 되고, 도구는 여기를 부른다.
+
+   ⚠ **표의 번호는 «교재 통번호»(001~564)다.** 코드의 끝 네 자리와 같다(564/564 실측).
+   ⚠ 「아래 참고」로 미룬 것은 문서 끝의 표에 `| 090 | 정답 |` 꼴로 적혀 있다. */
+function hwpxAnswerKeyFromDocs(docs, 총수){
+  총수 = 총수 || 999;
+  const paras = [];
+  for(const doc of docs){
+    const sec = doc.documentElement;
+    if(!sec) continue;
+    for(const n of Array.from(sec.childNodes)) if(n.nodeType===1 && n.localName==='p') paras.push(n);
+  }
+  const toks = [];
+  hwpWalkParagraphs(paras, toks);
+  let flat = '';
+  for(const t of toks) flat += (t.type==='text' || t.type==='eq') ? t.v : ' ¶ ';
+
+  /* 「아래 참고」로 미룬 것들 — 문서 끝의 표 */
+  const 아래 = {};
+  for(const row of flat.split('¶')){
+    if(row.indexOf('|') < 0) continue;
+    const cells = row.split('|').map(s=>s.trim()).filter(Boolean);
+    for(let k=0; k+1<cells.length; k+=2) if(/^[0-9]{3}$/.test(cells[k])) 아래[+cells[k]] = cells[k+1];
+  }
+  /* 본표 — 정답 안에 `$112$` 같은 숫자가 있어 정규식으로 번호를 찾으면 헛짚는다.
+     001·002… 차례를 미리 알고 있으므로 «다음 번호가 나올 때까지»가 답이다.
+     ⚠ 다음 번호가 표에 «없을» 수도 있다(322 가 그랬다) — 앞의 여섯을 같이 보고 경계를 잡는다. */
+  const byNo = {};
+  let pos = 0;
+  for(let n=1; n<=총수; n++){
+    const at = flat.indexOf(String(n).padStart(3,'0'), pos);
+    if(at < 0) continue;
+    const from = at + 3;
+    let to = -1;
+    for(let k=1; k<=6 && n+k<=총수+1; k++){
+      const c = flat.indexOf(String(n+k).padStart(3,'0'), from);
+      if(c >= 0 && (to < 0 || c < to)) to = c;
+    }
+    if(to < 0) to = flat.length;
+    let a = flat.slice(from, to).replace(/¶/g,' ').replace(/\[[0-9]+\.[^\]]*\]/g,'').trim();
+    if(/아래\s*참고/.test(a)) a = (아래[n] || '').trim();
+    if(a) byNo[n] = 수식낱말펴기(a);
+    pos = to;
+  }
+  return byNo;
+}
 
 function hwpxProblemsFromDocs(docs){
   const topParas = [];

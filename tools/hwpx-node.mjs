@@ -30,7 +30,7 @@ const RULE_NAMES = [
   'convertHwpEq', 'cleanHwpPlainText', 'hwpWalkParagraphs',
   'stripScoreMarks', 'fixBareSqrt', 'stripTrailingTypeTitle',
   'hwpEndnoteParts', 'hwpEndnoteText', 'hwpCellToBlock', 'hwpParseBlocks',
-  'hwpxMarkDecorPics', 'hwpxProblemsFromDocs',
+  'hwpxMarkDecorPics', 'hwpxProblemsFromDocs', 'hwpxAnswerKeyFromDocs', '수식낱말펴기',
 ];
 export function loadHwpxRules() {
   const src = fs.readFileSync(path.join(ROOT, 'hwpx.js'), 'utf8');

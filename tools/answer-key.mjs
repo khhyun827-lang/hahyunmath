@@ -17,6 +17,12 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { sectionDocs, loadHwpxRules, problemsFromHwpx } from './hwpx-node.mjs';
 
+/* 🔴 **표를 읽는 규칙은 `hwpx.js` 에 있다** (2026-09-04에 옮겼다).
+   웹도 빠른정답표 hwpx 를 그대로 받게 되면서, 규칙이 두 곳에 있으면 갈린다.
+   사용자가 물어서 알았다 — 「나는 빠른정답표만 있지 json파일을 만들줄 몰라」.
+   **파일을 만들 줄 알아야 쓸 수 있는 기능은 없는 기능이다.** */
+const 규칙 = loadHwpxRules();
+
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const 교재폴더 = path.join(ROOT, '교재 코드파일');
 const 총수 = 564;
@@ -48,34 +54,10 @@ function 아래참고표(flat) {
 }
 
 export function parseAnswerKey(hwpxPath) {
-  const flat = flattenKey(hwpxPath);
-  const 아래 = 아래참고표(flat);
-  const 본표 = {}, 못찾음 = [];
-  let pos = 0;
-  for (let n = 1; n <= 총수; n++) {
-    const at = flat.indexOf(String(n).padStart(3, '0'), pos);
-    if (at < 0) { 못찾음.push(n); continue; }
-    const from = at + 3;
-    /* ⚠ **다음 번호가 표에 «없을» 수 있다** — 실제로 322 가 빠져 있었다.
-       하나만 보고 못 찾으면 그 줄이 문서 끝까지를 삼켜 **뒤가 통째로 날아간다**
-       (처음에 그렇게 만들어서 320개만 읽혔다). 그래서 앞의 몇 개를 같이 보고
-       «가장 먼저 나오는 것»을 경계로 삼는다. */
-    let to = -1;
-    for (let k = 1; k <= 6 && n + k <= 총수 + 1; k++) {
-      const c = flat.indexOf(String(n + k).padStart(3, '0'), from);
-      if (c >= 0 && (to < 0 || c < to)) to = c;
-    }
-    if (to < 0) to = flat.length;
-    본표[n] = flat.slice(from, to).replace(/¶/g, ' ').replace(/\[\d+\.[^\]]*\]/g, '').trim();
-    pos = to;
-  }
-  const byNo = {};
-  for (let n = 1; n <= 총수; n++) {
-    let a = (본표[n] || '').trim();
-    if (/아래\s*참고/.test(a)) a = (아래[n] || '').trim();
-    if (a) byNo[n] = a;
-  }
-  return { byNo, 못찾음, 아래참고: Object.keys(아래).map(Number) };
+  const byNo = 규칙.hwpxAnswerKeyFromDocs(sectionDocs(hwpxPath), 총수);
+  const 못찾음 = [];
+  for (let n = 1; n <= 총수; n++) if (!byNo[n]) 못찾음.push(n);
+  return { byNo, 못찾음, 아래참고: [] };
 }
 
 /* 교재 다섯 권을 차례로 읽어 «코드 순서»를 낸다. 이 차례가 곧 통번호 1~564 다. */
