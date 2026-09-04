@@ -1874,6 +1874,8 @@
 
 /* 한 칸을 누르면 오른쪽에서 상세가 나온다 — 격자를 떠나지 않고 처리한다. */
 .hwd-back{position:fixed;inset:0;z-index:58;background:rgba(20,18,17,.28);}
+/* 문항 창고의 드로어는 «문항 본문 + 변형 목록»이 들어가 조금 넓어야 한다 (2026-09-04) */
+.ic-hwd{width:min(560px,96vw);}
 .hwd{position:fixed;top:0;right:0;bottom:0;z-index:59;width:min(400px,92vw);
   background:var(--card);border-left:1px solid var(--line);
   box-shadow:-8px 0 32px -12px rgba(20,18,17,.3);
@@ -4260,6 +4262,8 @@ let state = {
   aiQuotaUsed: null,
   icAns: null,          // 빠른정답표로 정답 채우기 (2026-09-06)
   istEdit: null,        // 문항 창고에서 본문을 손으로 고치는 중 (2026-09-04)
+  icOpen: '',           // 문항 창고에서 연 코드 (2026-09-04 · 문항 코드 화면을 여기로 합쳤다)
+  storeQuery: '',       // 문항 창고의 코드 검색 (2026-09-04)
   autoFill: null,       // 남는 한도로 창고를 채우는 고리 (2026-09-06)
   reviewVariantCode: '',// 검토 › AI가 만든 변형에서 고른 것
   aiProcessing: false,
@@ -9069,6 +9073,10 @@ function render(){
   /* 클리닉 — 날짜를 눌러 여는 «출석 확인» 판 (2026-09-05). */
   if(state.clinicDrawerDate && state.view==='teacher' && state.teacherTab==='clinic')
     drawers += clinicDayDrawerHTML(state.clinicDrawerDate);
+  /* 문항 창고 — 코드 하나의 «속»을 오른쪽에서 연다 (2026-09-04). 다른 드로어와 같은 규칙:
+     화면을 함께 본다 — state.icOpen 은 탭을 옮겨도 남기 때문이다. */
+  if(state.icOpen && state.view==='teacher' && state.teacherTab==='unitbank')
+    drawers += icDrawerHTML();
   /* 🔴 `.app`으로 감싸는 이유는 CSS 쪽 `.hwd-layer` 주석에 적어 뒀다 — 글자 크기가 걸린다. */
   if(drawers) html += `<div class="app hwd-layer">${drawers}</div>`;
   /* 비밀번호 변경. 학생·조교 어느 화면에서 눌렀든 여기 한 곳에서 그린다. */
@@ -12027,7 +12035,7 @@ const TEACHER_SUBNAV = {
   ],
   /* 「제출 현황」은 시험지 화면의 우측 칸으로 흡수했다 (시안 07). 서브탭에서 뺐다. */
   '오답': [
-    ['검토', 'review'], ['시험지', 'exams'], ['문항 창고', 'unitbank'], ['문항 코드', 'itemcode']
+    ['검토', 'review'], ['시험지', 'exams'], ['문항 창고', 'unitbank']
   ],
   /* 「출석 도장」이 여기 있는 이유 — «신호»는 지표를 세우는 화면이고 «명단»은 평가하는
      화면이라, 놀이를 그 옆에 두면 놀이가 그 성격을 물려받는다. 소통이 제일 안 다치는 자리다. */
@@ -12046,7 +12054,7 @@ const TEACHER_TAB_SECTION = {
   /* ⚠ 여기와 TEACHER_SUBNAV 는 **둘 다** 고쳐야 한다 — 노트가 적어 둔 그것이다.
      itemcode 를 서브탭에만 넣고 여기를 빠뜨렸더니 상단 메뉴가 「반」으로 잡히고
      서브탭 줄이 통째로 반의 것으로 그려졌다 (2026-09-03). */
-  review:'오답', exams:'오답', unitbank:'오답', itemcode:'오답',
+  review:'오답', exams:'오답', unitbank:'오답',
   clinic:'소통', notices:'소통', qna:'소통', chat:'소통', checkin:'소통',
   settings:'설정'
 };
@@ -12080,7 +12088,6 @@ function teacherTabBodyHTML(){
   if(t==='exams')       return teacherExamsHTML();
   if(t==='review')      return teacherReviewHTML();
   if(t==='unitbank')    return teacherItemStoreHTML();
-  if(t==='itemcode')    return teacherItemCodeHTML();
   if(t==='settings')    return teacherSettingsHTML();
   return teacherClassHubHTML();
 }
@@ -18656,29 +18663,17 @@ function icPartialHTML(raw){
     ? `<div class="rst-empty" style="margin-top:8px;">${more}개가 더 있습니다 — 더 좁혀 주세요.</div>` : '');
 }
 
-function teacherItemCodeHTML(){
-  if(!state.itemByCode){
-    loadItemStoreIfNeeded().then(()=>{ if(state.itemByCode) render(); });
-    return `<div class="st-sec"><div class="st-h">문항 코드</div>
-      <div class="rst-empty">문항 창고를 여는 중…</div></div>`;
-  }
-  const raw  = state.icQuery || '';
-  const sp   = splitItemCode(normItemCode(raw) || raw.trim().toUpperCase());
-  const root = sp ? sp.origin : '';
-  const it   = root ? itemOfCode(root) : null;
-  const vs   = root ? variantsOfCode(root) : [];
-  const total = Object.keys(state.itemByCode).length;
-  /* 고리가 지금 무엇을 하고 있는지 — 한도는 화면을 열 때 한 번 물어본다(읽기 아님, 워커다). */
-  const af = autoFillState();
-  loadAIQuotaIfNeeded();
-  const 남은 = (state.itemBody && state.variants) ? autoFillCandidates().length : null;
-
-  const body = !raw.trim()
-    ? `<div class="rst-empty">코드를 넣으면 <b>이미 만들어 둔 변형</b>과 <b>다음 번호</b>를 알려 드립니다.<br>
-        창고에 원본 <b class="mono">${total}</b>제가 있습니다.</div>`
-    : !sp
-      ? icPartialHTML(raw)
-      : `${icItemCardHTML(root, it, vs)}
+/* =================== 문항 하나의 «속» — 창고의 드로어가 이것을 그린다 (2026-09-04) ===================
+   🔵 **화면 둘을 하나로 합쳤다** (사용자 제안 — 「문항 창고와 문항코드가 분리되어있어야 할 이유가
+     없어진 것 같다 … 코드화면 버튼을 누르면 … 드로우처럼 떠서 확인」).
+     둘로 나뉘어 있던 것은 **만들어진 순서 때문**이지 쓰임 때문이 아니었다 —
+     문항 코드 화면(09-03)이 먼저 있었고 창고(09-04)가 나중에 붙었다.
+   🔵 **오른쪽 드로어로 연다** — 이 앱이 이미 여섯 군데서 쓰는 손버릇이고(과제·출결·클리닉·
+     학생 상세·리포트), 무엇보다 **목록이 뒤에 남는다.** 코드를 여럿 훑을 때 닫고 다시 찾지 않아도 된다. */
+function icDetailHTML(root){
+  const it = root ? itemOfCode(root) : null;
+  const vs = root ? variantsOfCode(root) : [];
+  return `${icItemCardHTML(root, it, vs)}
         ${/* 🔵 이 표가 이 화면의 전부다 — 갈래마다 «다음 번호» 하나씩. */''}
         <div class="ic-next">
           ${VARIANT_KINDS.map(([k,label])=>{
@@ -18708,20 +18703,16 @@ function teacherItemCodeHTML(){
           </div>`).join('')}
         </div>` : `<div class="rst-empty" style="margin-top:12px;">아직 이 문항의 변형이 없습니다 —
           <b class="mono">${escHtml(nextVariantCode(root,'N'))}</b> 부터 시작하시면 됩니다.</div>`}`;
+}
 
-  return `<div class="st-sec">
-    ${/* 🔵 **머리글을 걷었다** (2026-09-05 · 사용자 요청) — 서브탭에 이미 「문항 코드」가 적혀 있어
-         같은 말이 두 번이었다. 곁말은 검색칸 옆으로 옮겼다(거기서 읽혀야 쓸모가 있다). */''}
-    <div class="ic-strip" style="margin-top:12px;">
-      <span class="ic-k">코드</span>
-      <input class="ic-in mono" id="ic-q" style="width:210px;" value="${escHtml(raw)}"
-        placeholder="K2-05-E-0431 · E0431 · K205E0431"
-        onkeydown="if(event.key==='Enter'&&!event.isComposing)icLookup()">
-      <button class="btn sm" onclick="icLookup()">찾기</button>
-      <span class="ic-hint">줄표 없이 <span class="mono">K201E0010</span> 도, <span class="mono">E0010</span> 처럼 일부만도 됩니다
-        <s>·</s>변형 코드(<span class="mono">…-N01</span>)를 넣으면 그 원본을 봅니다</span>
-    </div>
-    ${/* 🔵 원본 «본문»을 채우는 문 — 시험지와 무관하다(원본은 교재로 푸는 것이라 출제하지 않는다). */''}
+/* 창고 «전체»에 대한 문 셋 — 교재 본문 채우기 · 정답 채우기 · 남는 한도로 채우기.
+   🔴 **이건 «문항 하나»의 일이 아니라 «창고»의 일이라 드로어에 넣으면 안 된다.**
+     합치면서 이것이 묻히면, 교재를 올릴 문이 화면에서 사라진다. 그래서 창고 머리에 남긴다. */
+function icToolsHTML(){
+  const af = autoFillState();
+  loadAIQuotaIfNeeded();
+  const 남은 = (state.itemBody && state.variants) ? autoFillCandidates().length : null;
+  return `    ${/* 🔵 원본 «본문»을 채우는 문 — 시험지와 무관하다(원본은 교재로 푸는 것이라 출제하지 않는다). */''}
     <div class="ic-strip">
       <span class="ic-k">교재에서 본문 채우기</span>
       <input type="file" accept=".hwpx" id="ic-fill" style="display:none;"
@@ -18761,8 +18752,27 @@ function teacherItemCodeHTML(){
         ${state.aiQuotaUsed !== null ? `<s>·</s> 오늘 <b class="mono">${state.aiQuotaUsed}/${AI_DAILY_LIMIT}</b>` : ''}
         ${(af.done || af.skipped || af.failed) ? `<s>·</s> 이번에 담은 것 <b class="mono">${af.done}</b>${af.skipped?` · 건너뛴 것 ${af.skipped}`:''}${af.failed?` · 실패 ${af.failed}`:''}` : ''}</span>
     </div>
-    ${body}
-  </div>`;
+  `;
+}
+
+function icOpenDrawer(code){ state.icOpen = code; render(); }
+function icCloseDrawer(){ state.icOpen = ''; render(); }
+/* ⚠ 드로어는 render() 의 «드로어 층»에서 그린다 — 다른 드로어와 같은 자리, 같은 규칙이다. */
+function icDrawerHTML(){
+  const root = state.icOpen;
+  if(!root) return '';
+  const vs = variantsOfCode(root);
+  const 대기 = vs.filter(variantIsPending).length;
+  return `<div class="hwd-back" onclick="icCloseDrawer()"></div>
+    <aside class="hwd ic-hwd">
+      <div class="hwd-h" style="position:relative;">
+        <div class="t"><span class="mono">${escHtml(root)}</span></div>
+        <div class="m">변형 <b class="mono">${vs.length - 대기}</b>개${대기 ? ` <s>·</s> 검토 대기 ${대기}` : ''}
+          <s>·</s>다음 번호는 아래 표에</div>
+        <button class="x" onclick="icCloseDrawer()" title="닫기">×</button>
+      </div>
+      <div class="hwd-b">${icDetailHTML(root)}</div>
+    </aside>`;
 }
 
 /* =================== 검토 › AI가 만든 변형 (2026-09-06) ===================
@@ -19625,8 +19635,8 @@ function itemCodeStripHTML(b){
       <button class="btn q sm" onclick="setBankItemCode('${b.id}')">잇기</button>
       <span class="ic-hint">교재 미주 맨 앞의 <span class="mono">[K2-05-E-0431]</span> 을 적으면
         <b>이미 만들어 둔 변형</b>을 먼저 찾아봅니다 ·
-        <a href="#teacher/itemcode" style="color:var(--brand);"
-           onclick="goTeacherTab('itemcode');render();return false;">코드를 모르면 여기서 찾기</a></span>
+        <a href="#teacher/unitbank" style="color:var(--brand);"
+           onclick="goTeacherTab('unitbank');render();return false;">코드를 모르면 문항 창고에서 찾기</a></span>
     </div>`;
   }
 
@@ -19863,6 +19873,11 @@ function teacherItemStoreHTML(){
     (byBook[(it.source && it.source.book) || '출처없음'] || 0) + 1;
   const books = Object.keys(byBook).sort((a,b)=> byBook[b] - byBook[a]);
   if(state.storeBook) list = list.filter(x => ((x.source && x.source.book) || '출처없음') === state.storeBook);
+  /* 🔵 **코드 검색을 창고로 올렸다** (2026-09-04 · 화면 둘을 합치면서).
+     줄표 없이 `K201E0010` 도, `E0010` 처럼 일부만도 찾는다 — 옛 화면이 하던 그대로다.
+     ⚠ 딱 하나로 좁혀지면 «찾기»가 아니라 **바로 그 문항을 여는 것**이 손에 맞는다. */
+  const 찾는말 = (state.storeQuery || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+  if(찾는말) list = list.filter(x => x.code.toUpperCase().replace(/[^A-Z0-9]/g, '').includes(찾는말));
   list = list.slice().sort((a,b)=> a.code < b.code ? -1 : 1);
 
   const shown = list.slice(0, (state.storePage || 1) * STORE_PER_PAGE);
@@ -19883,8 +19898,8 @@ function teacherItemStoreHTML(){
         <span class="ist-src">${escHtml((it.source && it.source.book) || '출처없음')}</span>
         ${it.scene ? `<span class="ist-scene">${escHtml(it.scene)}</span>` : ''}
         <span class="spacer"></span>
-        <button class="btn q sm" onclick="goTeacherTab('itemcode'); icPick('${escHtml(it.code)}')"
-          title="문항 코드 화면에서 열기">코드 화면</button>
+        <button class="btn q sm" onclick="icOpenDrawer('${escHtml(it.code)}')"
+          title="이 문항의 변형과 다음 번호를 봅니다">코드 화면</button>
         <button class="btn q sm" onclick="istEditOpen('${escHtml(it.code)}')">고치기</button>
         <button class="btn q sm" onclick="icCopy('${escHtml(it.code)}')">복사</button>
       </div>
@@ -19962,6 +19977,19 @@ function teacherItemStoreHTML(){
           : (CODE_SUBJECTS[subj] || subj) + ' › ' + (chapterNameOfNo(CODE_SUBJECTS[subj] || subj, ch) || (ch + '단원'))
         )} ${list.length}문항</s></h1>
       </div>
+      <div class="ic-strip" style="margin-top:10px;">
+        <span class="ic-k">코드</span>
+        <input class="ic-in mono" id="ist-q" style="width:200px;" value="${escHtml(state.storeQuery||'')}"
+          placeholder="K2-05-E-0431 · E0431"
+          oninput="liveEdit(event, v=>{ state.storeQuery=v; state.storePage=1; })"
+          oncompositionend="liveEdit(event, v=>{ state.storeQuery=v; state.storePage=1; })">
+        ${state.storeQuery ? `<button class="btn q sm" onclick="state.storeQuery='';render()">지우기</button>` : ''}
+        <span class="ic-hint">줄표 없이 <span class="mono">K201E0010</span> 도, <span class="mono">E0010</span> 처럼 일부만도 됩니다
+          ${찾는말 ? `<s>·</s> <b class="mono">${list.length}</b>개 걸렸습니다` : ''}</span>
+      </div>
+      ${/* 🔴 **여기 셋은 «문항 하나»가 아니라 «창고 전체»의 일이다** — 드로어에 넣으면 안 된다.
+           합치면서 이것이 묻히면 교재를 올릴 문이 화면에서 사라진다. */''}
+      ${icToolsHTML()}
       ${books.length > 1 ? `<div class="ist-books">
         <a class="pill ${state.storeBook===''?'on':''}" onclick="storeGoBook('')">교재 전체</a>
         ${books.map(b=>`<a class="pill ${state.storeBook===b?'on':''}" onclick="storeGoBook('${escHtml(b)}')">
