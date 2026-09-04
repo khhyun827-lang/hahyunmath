@@ -22,7 +22,7 @@ const lift = (n) => { const at = html.indexOf('function ' + n + '('); let d = 0;
   for (let j = html.indexOf('{', at); j < html.length; j++) {
     if (html[j] === '{') d++; else if (html[j] === '}') { d--; if (!d) return html.slice(at, j + 1); } } };
 const { problemHTML } = new Function('escHtml', 'CHOICE_MARKS',
-  lift('spaceChoices') + String.fromCharCode(10) + lift('problemHTML') + String.fromCharCode(10) + 'return { problemHTML };')(
+  lift('spaceChoices') + String.fromCharCode(10) + lift('빈칸세우기') + String.fromCharCode(10) + lift('problemHTML') + String.fromCharCode(10) + 'return { problemHTML };')(
   (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'), '①②③④⑤');
 const B = String.fromCharCode(92);
 let pass = 0, fail = 0;
@@ -172,6 +172,25 @@ console.log('');
   든가('cases 의 줄바꿈도 그대로', convertHwpEq('cases{a#b}'), B + B);
   든가('bar{AB} 는 그대로', convertHwpEq('bar{AB}'), B + 'overline{AB}');
   없나('\overline 을 over 로 다시 안 자른다', convertHwpEq('bar{AB}'), B + 'frac');
+}
+
+
+// ⑬ (가) 빈칸 · 답이 둘인 선지 (2026-09-04 · 사용자가 캡처로 짚었다)
+{
+  const NL = String.fromCharCode(10);
+  const H = (s) => problemHTML(s);
+  const 상자 = H('| ${AB}^2 =$(가)$+b^2$ |');
+  든가('🔵 상자 안의 (가)를 «빈칸»으로 세운다', 상자, 'class="pb-blank">(가)<');
+  없나('🔴 평범한 글에서는 안 건드린다', H('위의 과정에서 (가), (나)에 알맞은 것은?'), 'pb-blank');
+  없나('🔴 (단, …) 같은 괄호도 안 건드린다', H('| (단, a>0) |'), 'pb-blank');
+
+  const 표 = H('(가) (나)' + NL + '① $a$ $b$' + NL + '② $c$ $d$');
+  든가('답이 둘이면 «표»로 세운다', 표, 'class="pb-cht"');
+  든가('머리줄을 표의 머리로 올린다', 표, 'tr class="h"');
+  없나('머리줄이 본문에 두 번 안 남는다', 표.replace(/<table[\s\S]*<\/table>/, ''), '(가) (나)');
+  const 격자 = H('① $4$ ② $5$');
+  든가('답이 하나면 그대로 «격자»다', 격자, 'class="pb-ch"');
+  없나('그때는 표가 아니다', 격자, 'pb-cht');
 }
 
 console.log('');
