@@ -50,7 +50,7 @@ function makeWorld({ itemBody = {}, variants = {}, twin = null, used = 0, saveOk
     'state', 'render', 'localStorage', 'setTimeout', 'clearTimeout',
     'splitItemCode', 'loadItemStoreIfNeeded', 'getAIQuotaUsed', 'AI_DAILY_LIMIT',
     'generateTwinViaAI', 'dqAnswerable', 'nextVariantCode', 'dbSetDoc', 'nowStamp', 'console',
-    BLOCK + '\nreturn { autoFillTick, autoFillCandidates, autoFillState, autoFillToggle, skipped: autoFillSkipped };'
+    BLOCK + '\nreturn { autoFillTick, autoFillCandidates, autoFillState, autoFillToggle, autoFillWhyEmpty, skipped: autoFillSkipped };'
   )(
     state,
     () => {},
@@ -148,7 +148,26 @@ console.log('\n남는 한도로 창고 채우기\n');
   const w = makeWorld({ itemBody: {}, twin: { content: 'x', answer: '②' } });
   await w.autoFillTick();
   봄('채울 것이 없으면 AI 도 안 부르고 타이머도 안 건다', [w.부른AI.length, w.예약.length], [0, 0]);
-  봄('다 찼다고 말한다', /다 찼습니다/.test(w.autoFillState().msg), true);
+  봄('장부가 비면 «본문부터»라고 말한다', /본문/.test(w.autoFillState().msg), true);
+}
+
+// ── ⑤ 🔴 «없다»의 까닭을 갈라 말하는가 (2026-09-06 · 사용자가 겪었다) ──
+//    「N변형이 없는 문제가 없다고 다찼다고 뜨네」 — 실은 정답이 아직 안 담겨서 0이었다.
+{
+  const w = makeWorld({ itemBody: { 'K2-01-E-0001': { content: '본문' } } });   // 정답이 없다
+  await w.autoFillTick();
+  봄('🔴 정답이 없으면 «정답 채우기»를 가리킨다', /정답 채우기/.test(w.autoFillState().msg), true);
+  봄('그때 «다 찼습니다»라고 하지 않는다', /다 찼습니다/.test(w.autoFillState().msg), false);
+  봄('AI 도 안 부른다', w.부른AI.length, 0);
+}
+{
+  const w = makeWorld({ itemBody: { 'K2-01-E-0001': {} } });                    // 본문도 없다
+  봄('본문이 없으면 «교재에서 본문 채우기»를 가리킨다', /교재에서 본문 채우기/.test(w.autoFillWhyEmpty()), true);
+}
+{
+  const w = makeWorld({ itemBody: { 'K2-01-E-0001': { content: 'a', answer: '③' } },
+                        variants: { 'K2-01-E-0001': [{ code: 'x', variantKind: 'N' }] } });
+  봄('진짜로 다 찼을 때만 «다 찼습니다»', /다 찼습니다/.test(w.autoFillWhyEmpty()), true);
 }
 {
   const w = makeWorld({ itemBody: 본문(3), twin: { content: 'x', answer: '②' } });
