@@ -11,6 +11,19 @@
 import { loadHwpxRules } from './hwpx-node.mjs';
 
 const { convertHwpEq } = loadHwpxRules();
+
+/* 화면 쪽 규칙(problemHTML)도 여기서 같이 본다 — 수식과 «같은 글»을 다루는 짝이라서다. */
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
+const lift = (n) => { const at = html.indexOf('function ' + n + '('); let d = 0;
+  for (let j = html.indexOf('{', at); j < html.length; j++) {
+    if (html[j] === '{') d++; else if (html[j] === '}') { d--; if (!d) return html.slice(at, j + 1); } } };
+const { problemHTML } = new Function('escHtml', 'CHOICE_MARKS',
+  lift('spaceChoices') + String.fromCharCode(10) + lift('problemHTML') + String.fromCharCode(10) + 'return { problemHTML };')(
+  (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'), '①②③④⑤');
 const B = String.fromCharCode(92);
 let pass = 0, fail = 0;
 const 봄 = (무엇, 나온것, 나와야할것) => {
@@ -113,6 +126,32 @@ console.log('');
      떼기('문제다' + NL + '| 무언가 |'), '문제다' + NL + '| 무언가 |');
   봄('ㄱ. 으로 시작해도 남긴다',
      떼기('문제다' + NL + NL + NL + '| ㄱ. 조건 |'), '문제다' + NL + NL + NL + '| ㄱ. 조건 |');
+}
+
+
+// ⑩ 보기 상자의 제목 — 첫 줄이 [보기]면 «내용»이 아니라 «제목»이다
+{
+  const NL = String.fromCharCode(10);
+  const H = (s) => problemHTML(s);
+  const 보기 = H('| [보기] |' + NL + '| ㄱ. 가 |' + NL + '| ㄴ. 나 |');
+  든가('제목으로 세운다', 보기, 'class="pb-bl">보기<');
+  든가('상자에 titled 를 붙인다', 보기, 'pb-tbl box titled');
+  없나('제목이 상자 «안»에 또 있지 않다', 보기, '<td>[보기]</td>');
+  든가('내용은 그대로 남는다', 보기, 'ㄱ. 가');
+  // 🔴 좁게 잡는다 — 이어지는 글이면 본문이다
+  없나('「[보기] ㄱ. …」는 제목이 아니다', H('| [보기] ㄱ. 가 |' + NL + '| ㄴ. 나 |'), 'pb-bl');
+  없나('한 줄짜리 상자는 제목만 남기지 않는다', H('| 보기 |'), 'pb-bl');
+}
+
+// ⑪ SCENE 딱지가 문항 끝에 딸려 오던 것 (K2-01-E-0035 · 실측 10개)
+{
+  const { stripTrailingTypeTitle: 떼기 } = loadHwpxRules();
+  const NL = String.fromCharCode(10);
+  봄('SCENE 딱지는 뗀다', 떼기('문제다' + NL + NL + NL + '| SCENE | 2 | |'), '문제다');
+  봄('🔴 칸이 셋이어도 진짜 표는 남긴다',
+     떼기('문제다' + NL + NL + NL + '| 가 | 나 | 다 |'), '문제다' + NL + NL + NL + '| 가 | 나 | 다 |');
+  봄('SCENE 이지만 번호가 없으면 안 뗀다',
+     떼기('문제다' + NL + NL + NL + '| SCENE | 가 | |'), '문제다' + NL + NL + NL + '| SCENE | 가 | |');
 }
 
 console.log('');

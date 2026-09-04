@@ -597,7 +597,13 @@ function stripTrailingTypeTitle(text){
     const last = ls[i].trim();
     if(!(last.startsWith('|') && last.endsWith('|') && last.length > 2)) break;
     const inner = last.slice(1, -1).trim();
-    if(inner.includes('|')) break;              // 칸이 둘 이상이면 진짜 표다
+    /* 🔵 **SCENE 딱지도 뒤에 딸려 온다** (2026-09-04 · 사용자가 K2-01-E-0035 에서 봤다).
+       `| SCENE | 2 | |` 처럼 «칸이 셋»이라 아래 «진짜 표» 조건에 걸려 안 떼지고 있었다.
+       모양이 늘 같다 — 첫 칸이 SCENE, 둘째가 번호, 나머지는 빈 칸. 실측 10개. */
+    const 칸들 = inner.split('|').map(x => x.trim());
+    const SCENE딱지 = /^scene$/i.test(칸들[0] || '') && /^[0-9]+$/.test(칸들[1] || '')
+                      && 칸들.slice(2).every(x => !x);
+    if(inner.includes('|') && !SCENE딱지) break;   // 칸이 둘 이상이면 진짜 표다
     if(조건표시.test(inner)) break;              // ① 조건 상자는 남긴다
     let 빈 = 0, j = i - 1;
     while(j >= 0 && !ls[j].trim()){ 빈++; j--; }

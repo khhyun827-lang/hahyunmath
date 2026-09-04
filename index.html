@@ -1310,6 +1310,11 @@
 .app .ist-scene{font-size:11px;color:var(--dim);}
 /* 본문은 «다 보인다» — 사용자가 그렇게 정했다(「문제가 완벽하게 다 보여지는 구조」).
    줄바꿈을 지켜야 조건·보기 상자가 표로 살아난다 (problemHTML 과 같은 까닭). */
+.app .ist-edit{margin:8px 0 10px;}
+.app .ist-edit textarea{width:100%;box-sizing:border-box;font-family:'JetBrains Mono',monospace;
+  font-size:12px;line-height:1.75;padding:10px 12px;border:1px solid var(--line);
+  border-radius:var(--r-sm);background:var(--sunk);color:var(--ink);resize:vertical;}
+.app .ist-eb{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:7px;}
 .app .ist-body{font-size:13px;line-height:1.9;white-space:pre-wrap;overflow-x:auto;}
 .app .ist-body.none{font-size:11.5px;color:var(--dim);line-height:1.7;}
 .app .ist-fig{display:block;max-width:340px;max-height:260px;margin-top:10px;
@@ -1605,6 +1610,13 @@
 /* 🔵 **선지 격자** (2026-09-04) — 간격이 «일정하게» 떨어지는 것이 요점이다.
    auto-fit 이라 짧은 선지 다섯은 한 줄에 나란히, 긴 선지는 둘씩 접힌다.
    ⚠ minmax 의 첫 값이 «한 칸의 최소 폭»이다. 너무 작으면 긴 수식이 칸 밖으로 넘친다. */
+/* 🔵 **보기 상자의 제목** (2026-09-04) — 가운데로 세우고 밑줄을 그어 «여기부터 보기»를 보인다.
+   ⚠ 상자와 «붙어» 있어야 한 덩어리로 읽힌다. 그래서 제목의 아래 테두리를 상자 테두리와 잇는다. */
+.pb-bl{margin:9px 0 0;padding:7px 11px 6px;text-align:center;
+  font-size:11.5px;font-weight:700;letter-spacing:.06em;color:var(--sub);
+  border:1px solid var(--line);border-bottom:0;
+  border-radius:var(--r-sm) var(--r-sm) 0 0;background:var(--sunk);}
+.pb-tbl.box.titled{margin-top:0;border-top-left-radius:0;border-top-right-radius:0;}
 .pb-ch{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
   gap:5px 20px;margin:9px 0;font-size:12.5px;line-height:1.9;}
 .pb-ch .c{display:flex;align-items:baseline;gap:6px;min-width:0;}
@@ -3102,7 +3114,7 @@
      이 파일은 index.html 과 «따로» 받아지므로, 물음표 뒤가 그대로면 브라우저가
      **캐시에 있는 옛 파서를 꺼내 쓴다.** 그러면 교재를 다시 올려도 옛 글이 그대로 담기고,
      화면만 보고서는 «고쳤는데 왜 안 되지»가 된다 — 파서가 바뀐 것을 아무 데서도 못 본다. -->
-<script src="hwpx.js?v=2026-09-06c"></script>
+<script src="hwpx.js?v=2026-09-06d"></script>
 <!-- 출석 도장 게임(셸·똥피하기·달리기). 연습 페이지 game.html 도 같은 파일을 쓴다 -->
 <!-- ⚠ ?v= 를 붙이는 까닭 — 브라우저가 game-core.js 를 캐시해서, 올려도 학생 화면에는
      옛 게임이 그대로 돈다(Ctrl+Shift+R 을 해야 바뀐다 — 학생에게 그걸 시킬 수는 없다).
@@ -4216,6 +4228,7 @@ let state = {
   submissionDetailId: null,
   aiQuotaUsed: null,
   icAns: null,          // 빠른정답표로 정답 채우기 (2026-09-06)
+  istEdit: null,        // 문항 창고에서 본문을 손으로 고치는 중 (2026-09-04)
   autoFill: null,       // 남는 한도로 창고를 채우는 고리 (2026-09-06)
   reviewVariantCode: '',// 검토 › AI가 만든 변형에서 고른 것
   aiProcessing: false,
@@ -7559,7 +7572,17 @@ function problemHTML(text){
     /* 열이 하나뿐이면 «상자»(조건·증명 상자), 둘 이상이면 «격자»다. 그리는 법이 다르다 —
        상자는 한 덩어리인 글이라 줄마다 선을 그으면 표처럼 잘려 보인다. */
     const kind = row.every(cells => cells.length === 1) ? 'box' : 'grid';
-    out += `<table class="pb-tbl ${kind}"><tbody>` + row.map(cells =>
+    /* 🔵 **상자의 첫 줄이 `[보기]` 면 그것은 «내용»이 아니라 «제목»이다** (2026-09-04 · 사용자 요청 —
+       「보기박스의 [보기]를 가운데정렬해주거나 아니면 보기박스 자체의 보기 글자를 디자인 해줘」).
+       그냥 두면 첫 줄이 왼쪽에 붙은 평범한 글이라 **ㄱ·ㄴ·ㄷ 과 같은 무게로 읽힌다.**
+       가운데로 세우고 밑줄을 그어 «여기부터 보기»임을 보인다. 대괄호는 뗀다 — 제목이 됐으니까.
+       ⚠ 잣대를 좁게 둔다 — 딱 그 낱말 하나뿐인 줄만. 「[보기] ㄱ. …」처럼 이어지면 본문이다. */
+    const 상자제목 = kind === 'box' && row.length > 1
+      && /^\[?\s*(보기|조건|가정)\s*\]?$/.test((row[0][0] || '').trim())
+      ? (row[0][0] || '').trim().replace(/^\[|\]$/g, '').trim() : '';
+    if(상자제목) row = row.slice(1);
+    out += (상자제목 ? `<div class="pb-bl">${escHtml(상자제목)}</div>` : '')
+      + `<table class="pb-tbl ${kind} ${상자제목?'titled':''}"><tbody>` + row.map(cells =>
       '<tr>' + cells.map(c => '<td>' + escHtml(c) + '</td>').join('') + '</tr>').join('') + '</tbody></table>';
     row = [];
   };
@@ -19692,6 +19715,62 @@ function storeAnswerOf(code){
   const b = DATA.problemBank.find(x => x.itemCode === code && x.originalAnswer);
   return b ? b.originalAnswer : '';
 }
+/* =================== 문항 본문 고치기 (2026-09-04 · 사용자 요청) ===================
+   「이정도는 고치기 기능 열어두면 내가 중간중간 지울게」.
+   파서가 아무리 좋아져도 **원본이 이상하게 적힌 것**은 남는다. 그때 손으로 지울 문이 필요하다.
+
+   🔴 **본문만 바꾼다 — 정답·그림은 손대지 않는다.** `items` 문서 하나에 셋이 같이 살아서,
+     통째로 다시 쓰면 나머지가 지워진다(그림이 이미 그 함정에 걸릴 뻔했다).
+   ⚠ **교재를 다시 올리면 여기서 고친 것은 덮인다** — 파서가 다시 뽑으니까. 그래서 화면에 적어 둔다.
+     자주 나오는 흠이면 손으로 지우지 말고 파서를 고치는 것이 맞다. */
+function istEditOpen(code){
+  const body = (state.itemBody || {})[code] || {};
+  state.istEdit = { code, text: String(body.content || ''), saving:false };
+  render();
+}
+function istEditClose(){ state.istEdit = null; render(); }
+function istEditSync(){
+  const el = document.getElementById('ist-edit-box');
+  if(el && state.istEdit) state.istEdit.text = el.value;
+}
+async function istEditSave(){
+  const e = state.istEdit;
+  if(!e || e.saving) return;
+  istEditSync();
+  const 새글 = String(e.text || '').trim();
+  if(!새글){ showToast('본문을 비울 수는 없습니다 — 지우려면 교재를 다시 올려주세요.'); return; }
+  const 옛것 = (state.itemBody || {})[e.code];
+  if(!옛것){ showToast('이 문항을 아직 못 읽었습니다.'); return; }
+  if(새글 === String(옛것.content || '').trim()){ istEditClose(); return; }   // 안 바뀌었으면 안 쓴다
+  e.saving = true; render();
+  /* 🔴 있던 것 위에 얹는다 — 정답·그림이 살아남는다. */
+  const doc = Object.assign({}, 옛것, { content: 새글, updatedAt: nowStamp(), editedByHand: true });
+  const ok = await dbSetDoc('items', e.code, doc);
+  if(!ok){ e.saving = false; showToast(e.code + ' 를 저장하지 못했습니다 — 설정 › 관리자를 봐주세요.'); render(); return; }
+  state.itemBody[e.code] = doc;
+  const ver = await itemsBumpVersion();
+  itemsCacheWrite(ver, Object.values(state.itemBody));
+  state.istEdit = null;
+  showToast(e.code + ' 본문을 고쳤습니다.');
+  render();
+}
+/* 고치는 칸. 카드 «안»에서 열린다 — 어느 문항을 고치는 중인지 눈에서 안 떨어지게. */
+function istEditHTML(code){
+  const e = state.istEdit;
+  if(!e || e.code !== code) return '';
+  return `<div class="ist-edit">
+    <textarea id="ist-edit-box" rows="8" spellcheck="false"
+      oninput="istEditSync()">${escHtml(e.text)}</textarea>
+    <div class="ist-eb">
+      <button class="btn p sm" ${e.saving?'disabled':''} onclick="istEditSave()">${e.saving?'저장 중…':'저장'}</button>
+      <button class="btn q sm" ${e.saving?'disabled':''} onclick="istEditClose()">취소</button>
+      <span class="hint">표는 <span class="mono">| 칸 | 칸 |</span> 한 줄로 적습니다
+        <s>·</s>⚠ 교재를 다시 올리면 여기서 고친 것은 덮입니다</span>
+    </div>
+  </div>`;
+}
+
+
 function teacherItemStoreHTML(){
   /* ⚠ 다 실리면 «다시 그려야» 한다 — 안 그리면 처음 연 사람은 빈 창고를 본다
      (문항 코드 화면이 쓰는 것과 같은 장치다). */
@@ -19736,12 +19815,14 @@ function teacherItemStoreHTML(){
         <span class="spacer"></span>
         <button class="btn q sm" onclick="goTeacherTab('itemcode'); icPick('${escHtml(it.code)}')"
           title="문항 코드 화면에서 열기">코드 화면</button>
+        <button class="btn q sm" onclick="istEditOpen('${escHtml(it.code)}')">고치기</button>
         <button class="btn q sm" onclick="icCopy('${escHtml(it.code)}')">복사</button>
       </div>
         ${/* 🔴 **여기만 `problemHTML` 을 안 거치고 있었다** (2026-09-04 · 사용자가 화면으로 짚었다).
              그래서 이 화면에서는 **선지가 격자가 안 되고 조건·보기 상자가 표로 안 살아났다** —
              다른 화면(검토·문항 코드·학생 앱)은 다 그 함수를 거치는데 이 카드만 날글자였다.
              ⚠ 본문을 그리는 자리가 열 곳이 넘는다. 하나라도 빠지면 **그 화면에서만** 깨진다. */''}
+      ${istEditHTML(it.code)}
       ${body && body.content
         ? `<div class="ist-body">${problemHTML(icKeepLines(body.content))}</div>`
         : `<div class="ist-body none">${bodyLoaded
