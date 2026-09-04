@@ -3130,6 +3130,9 @@ function withTimeout(promise, ms){
    → 못 읽은 열쇠를 적어 두고 **그 열쇠로는 저장을 막는다.** 다시 읽어 성공하면 풀린다.
    404는 «정상»이다 (아직 없는 문서에 처음 쓰는 길이 막히면 안 된다). */
 const dbReadFailed = new Set();
+/* 🔵 **이 세션에서 «제대로 읽어 본» 열쇠** (2026-09-04). 404(아직 없는 문서)도 읽은 것으로 친다 —
+   «없다는 것을 확인했다»도 앎이다. 아래 `saveRecord` 의 안전망이 이것을 본다. */
+const dbReadOK = new Set();
 const dbBlockWarned = new Set();
 function warnDbBlocked(key){
   if(dbBlockWarned.has(key)) return;
@@ -3183,11 +3186,12 @@ async function dbGet(key, fallback){
     const res = await withTimeout(fetch(FIRESTORE_BASE + '/' + encodeURIComponent(key), {
       headers: { Authorization: 'Bearer ' + token }
     }), 8000);
-    if(res.status === 404){ dbReadFailed.delete(key); return fallback; }   // 없는 문서 — 정상이다
+    if(res.status === 404){ dbReadFailed.delete(key); dbReadOK.add(key); return fallback; }   // 없는 문서 — 정상이다
     if(!res.ok) throw new Error('firestore http ' + res.status);
     const doc = await res.json();
     const value = JSON.parse(doc.fields.value.stringValue);
     dbReadFailed.delete(key);
+    dbReadOK.add(key);
     return value;
   }catch(e){
     console.error('불러오기 실패', key, e);
@@ -4899,6 +4903,30 @@ async function loadRecord(studentId){
   ckState(DATA.records[studentId]);          // checkin 없는 옛 기록도 마찬가지
   return DATA.records[studentId];
 }
+/* 🔴 **빈 기록으로 «있는 기록»을 덮지 않는다** (2026-09-04 · 실제로 당하고 나서 세웠다).
+   기록 문서 하나에 출석·성적·오답숙제·출석 도장이 **다 들어 있다.** 그래서 이 문서를 빈 것으로
+   덮는 것은 그 학생의 모든 것을 지우는 일이다.
+
+   ⚠ **자리를 세 군데서 찾았다** — 씨앗 심기 · 학생 추가 · 명단 가져오기. 셋 다 «이미 있나»를
+     `DATA.students` 로 보는데, 그 배열은 **읽기가 엎어지면 빈 배열**이다. 그러면 셋 다
+     「없는 학생이네」로 읽고 `adoptRecord(sid, emptyRecord())` → `saveRecord(sid)` 로 간다.
+   🔴 **자리마다 막으면 다음에 네 번째 자리가 생긴다.** 그래서 «쓰는 문»에 세운다.
+
+   잣대는 둘을 같이 본다 — «지금 쓰려는 것이 비었나»와 «이 열쇠를 이 세션에서 읽어 봤나».
+   읽어 본 적이 있으면 비어 있는 것이 사실이므로 그대로 쓴다(정말로 기록이 빈 학생도 있다).
+   읽어 본 적이 **없는데** 빈 것을 쓰려 하면 — 그때만 한 번 읽어 본다. 값이 하나뿐이라 가볍다. */
+function recordLooksEmpty(rec){
+  if(!rec) return true;
+  const c = rec.checkin || {};
+  const n = (rec.attendance || []).length + (rec.scores || []).length
+          + (rec.wrongHomework || []).length
+          + Object.keys(c.days || {}).length
+          + Object.keys(rec.videoProgress || {}).length
+          + Object.keys(rec.assignmentsDone || {}).length
+          + (((rec.dailyQuiz || {}).log) || []).length;
+  return n === 0;
+}
+
 async function saveRecord(studentId){
   const rec = DATA.records[studentId];
   if(!rec || recordLoaded.get(studentId) !== rec){
@@ -4906,7 +4934,17 @@ async function saveRecord(studentId){
     warnDbBlocked('record:'+studentId);
     return null;
   }
-  return dbSet('record:'+studentId, rec);
+  const key = 'record:' + studentId;
+  if(recordLooksEmpty(rec) && !dbReadOK.has(key)){
+    const 있던것 = await dbGet(key, null);
+    if(있던것 && !recordLooksEmpty(있던것)){
+      console.error('저장을 막았다 — 빈 기록으로 «있는 기록»을 덮을 뻔했다', studentId);
+      warnDbBlocked(key);
+      adoptRecord(studentId, 있던것);      // 있는 것을 살려 쓴다 — 화면도 진짜를 보게 된다
+      return null;
+    }
+  }
+  return dbSet(key, rec);
 }
 async function loadChat(studentId){
   if(!DATA.chats[studentId]){
