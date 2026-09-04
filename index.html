@@ -4828,6 +4828,25 @@ function applyHashOnLoad(){
 
 /* 최초 실행 시 테스트용 반 + 학생 계정을 하나 만들어둔다 (이미 데이터가 있으면 아무것도 하지 않음) */
 async function seedTestAccountIfEmpty(){
+  /* 🔴 **«비었다»와 «못 읽었다»는 다르다 — 이 함수가 그 둘을 못 갈라서 기록을 지웠다** (2026-09-04).
+     `dbGetCollection` 은 읽기가 엎어져도 **빈 배열**을 준다(앱이 서면 안 되니까). 그러면 여기서
+     「학생이 하나도 없구나」로 읽고 씨앗을 심는데, 그 마지막 줄이 **`record:test` 를 빈 기록으로
+     덮어쓴다.** 그 문서에는 출석·성적·오답숙제·출석 도장이 다 들어 있었다.
+
+     ⚠ **실제로 그렇게 지워졌다.** 주간 순위 문서(`rank:2026-08-17`·`rank:2026-08-24`)에는
+       테스트학생이 08-23(1480점)·08-30(616점)에 도장을 찍은 것이 남아 있는데,
+       정작 `record:test` 에는 그 날들이 없다. 출석·성적·오답숙제도 전부 0이다.
+       사용자가 「출석도장을 찍었던 정보라던지 그런게 일부 없어진것 같아」라고 물어서 찾았다.
+
+     🔴 **컬렉션 쓰기 막이(`collectionWriteBlocked`)로는 이걸 못 막았다.** 그 장치는 «못 읽은
+       컬렉션»만 지키는데, `record:test` 는 kv 문서고 **그 세션에서 읽은 적이 없어서**
+       `dbReadFailed` 에도 안 들어 있었다. 지키는 문이 아예 없는 자리였다.
+     → 막이를 둘 세운다: ① 못 읽은 것이 하나라도 있으면 심지 않는다
+                        ② 진짜로 비어 있어도 **있는 기록은 절대 안 덮는다** */
+  if(dbReadTrouble()){
+    console.warn('[씨앗] 못 읽은 것이 있어 심지 않는다 — «비었다»가 아닐 수 있다.');
+    return;
+  }
   if(DATA.classes.length > 0 || DATA.students.length > 0) return;
   const testClass = {id:'c_test', name:'테스트반', schedule:'월,수,금 7시~9시', period:'테스트용', status:'진행중'};
   DATA.classes.push(testClass);
@@ -4835,6 +4854,14 @@ async function seedTestAccountIfEmpty(){
   const testStudent = {studentId:'test', name:'테스트학생', pw:'1234', grade:'고1', school:'', classId:testClass.id};
   DATA.students.push(testStudent);
   await dbSetDoc('students', testStudent.studentId, testStudent);
+  /* 🔴 **있는 기록은 절대 안 덮는다.** 위 ①이 뚫려도 여기서 한 번 더 막는다 —
+     지워지는 쪽이 «되돌릴 수 없는 것»이라 문을 둘 두는 값이 있다. */
+  const 있던것 = await dbGet('record:test', null);
+  if(있던것){
+    adoptRecord('test', 있던것);
+    console.warn('[씨앗] record:test 가 이미 있다 — 덮지 않는다.');
+    return;
+  }
   adoptRecord('test', emptyRecord());        // 새 기록도 같은 문으로 등록한다
   await saveRecord('test');
 }
