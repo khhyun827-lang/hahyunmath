@@ -30,7 +30,7 @@ const RULE_NAMES = [
   'convertHwpEq', 'cleanHwpPlainText', 'hwpWalkParagraphs',
   'stripScoreMarks', 'fixBareSqrt', 'stripTrailingTypeTitle',
   'hwpEndnoteParts', 'hwpEndnoteText', 'hwpCellToBlock', 'hwpParseBlocks',
-  'hwpxMarkDecorPics', 'hwpxProblemsFromDocs', 'hwpxAnswerKeyFromDocs', '수식낱말펴기', 'hwpxExamKeyFromText', 'hwpxLooksExamKey', 'hwpxSourceBadges', 'hwpxMakeSourceCodes', 'hwpxParseSourceTag', 'hwpxGradeOfMonth',
+  'hwpxMarkDecorPics', 'hwpxProblemsFromDocs', 'hwpxAnswerKeyFromDocs', '수식낱말펴기', 'hwpxExamKeyFromText', 'hwpxLooksExamKey', 'hwpxSourceBadges', 'hwpxMakeSourceCodes', 'hwpxParseSourceTag', 'hwpxGradeOfMonth', 'hwpxRepairEqText',
 ];
 export function loadHwpxRules() {
   const src = fs.readFileSync(path.join(ROOT, 'hwpx.js'), 'utf8');

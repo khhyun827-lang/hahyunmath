@@ -3164,7 +3164,7 @@
      이 파일은 index.html 과 «따로» 받아지므로, 물음표 뒤가 그대로면 브라우저가
      **캐시에 있는 옛 파서를 꺼내 쓴다.** 그러면 교재를 다시 올려도 옛 글이 그대로 담기고,
      화면만 보고서는 «고쳤는데 왜 안 되지»가 된다 — 파서가 바뀐 것을 아무 데서도 못 본다. -->
-<script src="hwpx.js?v=2026-09-06a"></script>
+<script src="hwpx.js?v=2026-09-06b"></script>
 <!-- 출석 도장 게임(셸·똥피하기·달리기). 연습 페이지 game.html 도 같은 파일을 쓴다 -->
 <!-- ⚠ ?v= 를 붙이는 까닭 — 브라우저가 game-core.js 를 캐시해서, 올려도 학생 화면에는
      옛 게임이 그대로 돈다(Ctrl+Shift+R 을 해야 바뀐다 — 학생에게 그걸 시킬 수는 없다).
@@ -4369,6 +4369,7 @@ let state = {
   submissionDetailId: null,
   aiQuotaUsed: null,
   icAns: null,          // 빠른정답표로 정답 채우기 (2026-09-06)
+  icRepair: null,       // 창고 수식을 제자리에서 고치기 (2026-09-06). ready 면 «다시 누르면 쓴다»
   istEdit: null,        // 문항 창고에서 본문을 손으로 고치는 중 (2026-09-04)
   icOpen: '',           // 문항 창고에서 연 코드 (2026-09-04 · 문항 코드 화면을 여기로 합쳤다)
   storeQuery: '',       // 문항 창고의 코드 검색 (2026-09-04)
@@ -18902,6 +18903,79 @@ async function icFillBodies(input){
 }
 
 
+
+/* =================== 창고 수식을 «제자리에서» 고친다 (2026-09-06 · 사용자 요청) ===================
+   사용자가 물었다 — 「매번 수식수정할때마다 다시 재업로드해두면 뭔가 창고에서 수정해둔다고
+   해도 계속 돌아가는데, 재업로드 아닌형태로 수정할 방법은 없을까?」
+
+   🔵 **된다.** 규칙이 못 알아본 것은 사라진 것이 아니라 «날글자 그대로» 담겨 있어서,
+     담긴 글에 규칙을 한 번 더 대면 그 자리에서 고쳐진다(`hwpxRepairEqText`).
+     ✅ 564제로 재 봤다 — 제자리 고치기와 «교재를 다시 올리기»가 **560/560 글자까지 같다.**
+
+   🔴 **묻지 않고 고치지 않는다.** 창고를 통째로 건드리는 일이라, 한 번 누르면 «몇 건이
+     어떻게» 바뀌는지 보여 주기만 하고 **다시 눌러야** 쓴다. 모달을 안 쓰는 까닭은
+     이 앱의 다른 자리와 같다 — 화면에 적어 두면 사람이 읽고 판단할 시간이 생긴다.
+   ⚠ **`content` 한 칸만 바꾼다.** 정답·그림은 읽은 그대로 도로 쓴다
+     (`dbSetDoc` 은 문서를 통째로 갈아 끼운다 — 빠뜨린 것은 지워진다).
+   ⚠ 같은 규칙을 node 에서도 쓴다 — `tools/items-repair.mjs`. 둘이 갈리면 안 된다. */
+function icRepairEqScan(){
+  const 고칠것 = [];
+  for(const code in (state.itemBody || {})){
+    const b = state.itemBody[code];
+    if(!b || !b.content) continue;
+    const 새글 = hwpxRepairEqText(b.content);
+    if(새글 !== b.content) 고칠것.push({ code, 옛글: b.content, 새글 });
+  }
+  return 고칠것;
+}
+/* 무엇이 어떻게 바뀌는지 한 줄로 — «몇 건»만 말하면 사람이 판단할 수가 없다. */
+function icRepairEqSample(x){
+  let i = 0;
+  while(i < x.옛글.length && x.옛글[i] === x.새글[i]) i++;
+  const 잘라 = (s) => s.slice(Math.max(0, i - 12), i + 30).replace(/\n/g, ' ');
+  return x.code + ': 「' + 잘라(x.옛글) + '」 → 「' + 잘라(x.새글) + '」';
+}
+async function icRepairEq(){
+  if(state.icRepair && state.icRepair.running) return;
+  state.icRepair = { running:true, msg:'창고를 훑는 중…' }; render();
+  try{
+    await loadItemStoreIfNeeded();
+    const 고칠것 = icRepairEqScan();
+    if(!고칠것.length){
+      state.icRepair = { running:false, ready:false, msg:'고칠 수식이 없습니다 — 창고가 지금 규칙과 같습니다.' };
+      render(); return;
+    }
+    /* 첫 번째 누름 — 보여 주기만 한다. */
+    if(!(state.icRepair && state.icRepair.ready)){
+      state.icRepair = { running:false, ready:true, n:고칠것.length,
+        msg: `수식이 고쳐질 문항이 ${고칠것.length}개입니다 — ` + 고칠것.slice(0, 2).map(icRepairEqSample).join(' · ')
+           + (고칠것.length > 2 ? ` … 외 ${고칠것.length - 2}개.` : '')
+           + ' 다시 누르면 고칩니다.' };
+      render(); return;
+    }
+    /* 두 번째 누름 — 쓴다. */
+    let 됨 = 0, 막 = 0;
+    for(let i = 0; i < 고칠것.length; i++){
+      const x = 고칠것[i];
+      const doc = Object.assign({}, state.itemBody[x.code], { content: x.새글, updatedAt: nowStamp() });
+      if(i % 10 === 0){ state.icRepair = { running:true, ready:true, msg:`${i+1} / ${고칠것.length} 고치는 중…` }; render(); }
+      const ok = await dbSetDoc('items', x.code, doc);
+      if(ok){ state.itemBody[x.code] = doc; 됨++; } else 막++;
+    }
+    if(됨){
+      const ver = await itemsBumpVersion();
+      itemsCacheWrite(ver, Object.values(state.itemBody));
+    }
+    state.icRepair = { running:false, ready:false,
+      msg: 막 ? `${됨}개를 고쳤고 ${막}개는 막혔습니다 — 설정 › 관리자에서 확인해주세요.`
+              : `${됨}개 문항의 수식을 고쳤습니다. 교재를 다시 올릴 필요가 없습니다.` };
+    render();
+  }catch(e){
+    state.icRepair = { running:false, ready:false, msg:'고치지 못했습니다 — ' + (e.message || e) };
+    render();
+  }
+}
+
 /* =================== 빠른정답표로 «정답»만 채운다 (2026-09-06) ===================
    🔴 **왜 hwpx 가 아니라 JSON 인가.** 정답표를 여기서 또 파싱하면 규칙이 두 곳이 된다
      — 이 프로젝트가 hwpx.js 하나로 모은 그 까닭과 정면으로 어긋난다. 그리고 표에 없는
@@ -19246,10 +19320,7 @@ function icDetailHTML(root){
           <b class="mono">${escHtml(nextVariantCode(root,'N'))}</b> 부터 시작하시면 됩니다.</div>`}`;
 }
 
-/* 창고 «전체»에 대한 문 셋 — 교재 본문 채우기 · 정답 채우기 · 남는 한도로 채우기.
-   🔴 **이건 «문항 하나»의 일이 아니라 «창고»의 일이라 드로어에 넣으면 안 된다.**
-     합치면서 이것이 묻히면, 교재를 올릴 문이 화면에서 사라진다. 그래서 창고 머리에 남긴다. */
-/* 창고 «전체»에 대한 문 셋 — 교재 본문 채우기 · 정답 채우기 · 남는 한도로 채우기.
+/* 창고 «전체»에 대한 문 — 교재 올리기 · 빠른정답표 · 자동 채우기 · 수식 다시 훑기.
    🔴 **이건 «문항 하나»의 일이 아니라 «창고»의 일이라 드로어에 넣으면 안 된다.**
      합치면서 이것이 묻히면, 교재를 올릴 문이 화면에서 사라진다. 그래서 창고 머리에 남긴다.
 
@@ -19261,7 +19332,8 @@ function icToolsHTML(앞){
   const af = autoFillState();
   loadAIQuotaIfNeeded();
   const 남은 = (state.itemBody && state.variants) ? autoFillCandidates().length : null;
-  const 말 = [state.icFill && state.icFill.msg, state.icAns && state.icAns.msg, af.msg].filter(Boolean);
+  const rp = state.icRepair || {};
+  const 말 = [state.icFill && state.icFill.msg, state.icAns && state.icAns.msg, rp.msg, af.msg].filter(Boolean);
   return `<div class="ist-bar">${앞 || ''}
     <input type="file" accept=".hwpx" multiple id="ic-fill" style="display:none;" onchange="icFillBodies(this)">
     <button class="btn q sm" ${state.icFill && state.icFill.running ? 'disabled' : ''}
@@ -19276,6 +19348,12 @@ function icToolsHTML(앞){
     <button class="btn ${af.on ? 'p' : 'q'} sm" onclick="autoFillToggle()"
       title="AI 한도가 남으면 N 변형이 없는 문항을 한 건씩 채웁니다 — 앱을 열어 둔 동안만">
       ${af.on ? '■ 자동 채우기 멈추기' : '▶ 자동 채우기'}</button>
+    ${/* 🔵 **교재를 다시 안 올리고 수식만 고친다** (2026-09-06 · 사용자 요청).
+         한 번 누르면 «몇 건이 어떻게» 바뀌는지 보여만 주고, 다시 눌러야 고친다. */''}
+    <button class="btn ${rp.ready ? 'p' : 'q'} sm" ${rp.running ? 'disabled' : ''}
+      title="창고에 이미 담긴 본문의 수식만 지금 규칙으로 다시 훑습니다 — 교재를 다시 올릴 필요가 없습니다"
+      onclick="icRepairEq()">
+      ${rp.running ? '훑는 중…' : rp.ready ? `✓ ${rp.n}건 고치기` : '수식 다시 훑기'}</button>
     <span class="ist-bnum">
       ${남은 !== null ? `채울 것 <b class="mono">${남은}</b>` : ''}
       ${state.aiQuotaUsed !== null ? `<s>·</s> 오늘 <b class="mono">${state.aiQuotaUsed}/${AI_DAILY_LIMIT}</b>` : ''}
