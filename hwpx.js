@@ -152,7 +152,13 @@ function convertHwpEq(script){
        그보다 넓히면 어디까지가 분자인지 기계가 알 수 없다. */
   s = s.replace(/\s*(?<!\\)\btherefore\b/g, '\\therefore ');
   s = s.replace(/\s*(?<!\\)\bbecause\b/g, '\\because ');
-  s = s.replace(/([0-9]+|[A-Za-z])\s*(?<!\\)\bover\s+([0-9]+|[A-Za-z])/g, '\\frac{$1}{$2}');
+  /* 🔴 **아래첨자를 달고 오면 «반 토막»을 집는다** (2026-09-06 · KaTeX 로 그려 보고 찾았다).
+     실측 원문 'S_2 over S_1' — 「숫자 하나 또는 낱글자」만 받으니 2 over S 를 집어
+     **S_\frac{2}{S}_{1}** 이 됐다. 아래첨자가 둘이라 KaTeX 가 통째로 거절한다(빨간 글씨).
+     🔵 **S_2 는 «한 덩이»다.** 그래서 낱글자에 아래첨자가 붙은 꼴까지만 넓힌다 —
+       그 이상 넓히면 어디까지가 분자인지 기계가 알 수 없다(옛 주석의 그 까닭 그대로다). */
+  const 한덩이 = '(?:[0-9]+|[A-Za-z](?:\\s*_\\s*(?:\\{[^{}]*\\}|[0-9A-Za-z]))?)';
+  s = s.replace(new RegExp('(' + 한덩이 + ')\\s*(?<!\\\\)\\bover\\s+(' + 한덩이 + ')', 'g'), '\\frac{$1}{$2}');
   /* ⚠ 붙여 쓴 것도 온다 — `1over 2`. 왼쪽이 «숫자»일 때만 낱말 경계 없이 받는다
      (글자까지 허용하면 `lover 2` 같은 것을 물어뜯는다). */
   s = s.replace(/([0-9]+)over\s+([0-9]+|[A-Za-z])/g, '\\frac{$1}{$2}');
@@ -243,7 +249,11 @@ function convertHwpEq(script){
   s = s.replace(/(?<!\\)\bDOTSAXIS\b/gi, '\\cdots')
        .replace(/(?<!\\)\bDOTS\b/gi, '\\cdots');
   /* «같지 않다»가 세 가지 표기로 온다 — != 와 NEQ(위에서 처리) 와 ne. */
-  s = s.replace(/!=/g, '\\neq').replace(/(?<!\\)\bne\b/g, '\\neq');
+  /* 🔴 **뒤에 공백이 없어 «없는 명령»이 되고 있었다** (2026-09-06 · KaTeX 로 그려 보고 찾았다).
+     실측 원문 'A CUPB!=U' → \neqU 라는 명령은 없다. 그 수식이 통째로 빨갛게 뜬다.
+     ⚠ 이 파일의 집합 기호들이 이미 «뒤에 공백을 붙여야 한다»고 적어 둔 그 까닭인데,
+       != 와 ne 만 빠져 있었다. */
+  s = s.replace(/!=/g, '\\neq ').replace(/(?<!\\)\bne\b/g, '\\neq ');
   /* pile{a#b}는 «세로로 쌓기»다. 열이 하나인 행렬로 옮긴다 (행 구분은 cases·pmatrix와 같은 #). */
   /* 🔵 `box{…}` 는 네모를 친 자리다 — 교재가 «(가)» 를 이렇게 적기도 한다. KaTeX 의 \\boxed 로 옮긴다. */
   s = replaceBalancedKeyword(s, 'box', inner => '\\boxed{' + inner + '}');
@@ -284,6 +294,25 @@ function convertHwpEq(script){
     if(여는수 > 닫는수) s = s + ' \\right.'.repeat(여는수 - 닫는수);
     else if(닫는수 > 여는수) s = '\\left. '.repeat(닫는수 - 여는수) + s;
   }
+  /* 🔴 **수를 맞춰도 «차례»가 어긋날 수 있다** (2026-09-06 · 위 상자를 보완한다).
+     실측 `\left. \right) \right\} : \left(` — 왼쪽 둘 오른쪽 둘로 **수는 맞는데**
+     차례가 어긋난다: 두 번째 \right 가 열린 것이 없는 자리에서 나온다. 위의 셈은 이것을 못 본다.
+     🔵 그래서 여기서는 «열린 것이 없는데 나온 오른쪽»을 지우고, 안 닫힌 왼쪽을 채운다.
+     ⚠ 반드시 «맨 끝»이어야 한다 — 위의 LEFT/RIGHT 규칙이 다 돈 뒤라야 셈이 맞는다. */
+  /* 🔴 **원본의 중괄호가 안 닫혀 있는 것이 있다** (2026-09-06 · 실측 `{rmA}it{(-1,~2)`).
+     한글 편집기는 너그럽게 그려 주지만 KaTeX 는 못 읽고 빨간 글씨를 낸다.
+     🔴 **반드시 LEFT/RIGHT 를 바꾼 «뒤»여야 한다.** 한글 수식에서 `LEFT {` 의 중괄호는
+       «묶음»이 아니라 **구분자**다 — 앞에서 세면 짝이 안 맞는 줄 알고 맨 `}` 를 붙인다
+       (2026-09-06에 실제로 그렇게 만들어 집합 50여 문항에 군더더기가 붙었다).
+       바꾸고 나면 `\{` 로 escape 되어 이 셈이 건너뛴다. */
+  s = hwpxBalanceBraces(s);
+  /* 🔴 **닫고 나서야 보이는 것이 있다** — `bar{QP` 는 안 닫혀 있어서 위 bar 규칙이
+     통째로 못 알아봤다(실측 K2-03-D-0020). 닫은 뒤 한 번만 다시 댄다.
+     ⚠ 이미 바뀐 것은 `\overline` 이라 «bar» 라는 낱말이 없다 — 두 번 걸릴 일이 없다.
+     ⚠ 제자리 고치기(hwpxRepairEqText)도 «닫고 나서 bar» 차례라야 결과가 같다. */
+  s = replaceBalancedKeyword(s, 'bar', inner => '\\overline{' + inner + '}');
+  s = replaceBalancedKeyword(s, 'angle', inner => '\\angle ' + inner);
+  s = hwpxBalanceLeftRight(s);
   return s ? '$' + s + '$' : '';
 }
 // 수식 개체가 아니라 그냥 평문(<hp:t>)으로 "barAD", "angleBAD"처럼 붙여 쓴 경우를 정리한다.
@@ -833,6 +862,53 @@ function hwpxMakeSourceCodes(뽑은것){
 }
 
 
+
+/* =================== 짝이 안 맞는 것을 다듬는다 (2026-09-06) ===================
+   사용자가 짚었다 — 「주기나 문항들에도 수식 오류가 많아 쭉 훑어봐도 빨간색으로 뜬것들이 있어」.
+   창고 660건을 **KaTeX 로 실제로 그려 봐서** 찾았다(수식 7638개 중 18개가 빨갛게 떴다).
+
+   🔴 **까닭 하나는 «원본 자체가 깨진 것»이었다.** 실측 —
+     `{rmA}it{(-1,~2)` · `{rmB}{it{(3,~5)` — 중괄호가 안 닫혀 있다.
+     한글 수식 편집기는 너그러워서 그려 주지만, KaTeX 는 못 읽고 **빨간 글씨**를 낸다.
+     원본을 고칠 수는 없다(교재 파일이다). 그러니 **읽는 쪽이 다듬는다.**
+
+   🔵 **빨갛게 뜨는 것보다 «비슷하게라도 그려지는» 편이 언제나 낫다.**
+     `{A}{(-1,~2)` 는 닫아 주면 「A(−1, 2)」로 제대로 그려진다 — 잃는 것이 없다.
+   ⚠ **역슬래시로 escape 한 중괄호(`\{` `\}`)는 짝이 아니다.** 집합 기호가 그것이라,
+     세면 `\left\{ … \right\}` 가 통째로 어긋난다(실제로 겪을 뻔했다).
+   ⚠ 여기서 «고쳐 주는» 것이 흠을 덮을 수 있다. 그래서 **수를 세어 두고 말한다** —
+     `tools/katex-scan.mjs` 가 남은 것을 언제든 다시 센다. */
+function hwpxBalanceBraces(s){
+  let out = '', 깊이 = 0;
+  for(let i = 0; i < s.length; i++){
+    const ch = s[i];
+    if(ch === '\\'){ out += ch + (s[i + 1] || ''); i++; continue; }   // \{ \} 는 글자다
+    if(ch === '{'){ 깊이++; out += ch; continue; }
+    if(ch === '}'){ if(깊이 === 0) continue; 깊이--; out += ch; continue; }  // 남는 } 는 버린다
+    out += ch;
+  }
+  return 깊이 > 0 ? out + '}'.repeat(깊이) : out;
+}
+
+/* `\left` 와 `\right` 의 짝. **하나라도 어긋나면 그 수식이 통째로 안 그려진다.**
+   실측: `\left. \right) \right\} : \left(` — 왼쪽 하나에 오른쪽 둘이다.
+   🔵 남는 `\right` 는 «구분자만» 남기고 지운다(괄호는 뜻이 있으니 글자로 남긴다).
+     모자라면 뒤에 `\right.` 를 채운다 — 아무것도 안 그리는 짝이라 보이지 않는다. */
+function hwpxBalanceLeftRight(s){
+  const RE = new RegExp('\\\\(left|right)\\s*(\\\\[a-zA-Z]+|\\\\[{}|\\\\]|[()\\[\\].|/])', 'g');
+  let out = '', 마지막 = 0, 연 = 0;
+  let m;
+  while((m = RE.exec(s))){
+    out += s.slice(마지막, m.index);
+    마지막 = m.index + m[0].length;
+    if(m[1] === 'left'){ 연++; out += m[0]; continue; }
+    if(연 === 0){ out += (m[2] === '.' ? '' : m[2]); continue; }   // 남는 오른쪽은 구분자만 «글자로» 남긴다
+    연--; out += m[0];
+  }
+  out += s.slice(마지막);
+  return 연 > 0 ? out + '\\right.'.repeat(연) : out;
+}
+
 /* =================== 창고에 «이미 담긴» 글을 고친다 (2026-09-06 · 사용자 요청) ===================
    사용자가 물었다 — 「매번 수식수정할때마다 다시 재업로드해두면 뭔가 창고에서 수정해둔다고
    해도 계속 돌아가는데, 재업로드 아닌형태로 수정할 방법은 없을까?」 **있다.**
@@ -853,6 +929,18 @@ function hwpxMakeSourceCodes(뽑은것){
 function hwpxRepairEqText(s0){
   const 고치기 = (수식) => {
     let s = 수식;
+    /* 🔴 **다듬기가 «맨 앞»이어야 한다** — 안 닫힌 중괄호를 먼저 채워야 아래 bar 규칙이
+       `bar{QP` 를 알아본다. 순서가 바뀌면 `convertHwpEq` 와 결과가 갈린다. */
+    s = hwpxBalanceBraces(s);
+    /* 🔴 **아래첨자를 물어뜯긴 분수를 되돌린다** (2026-09-06 · 창고에 이미 그렇게 담겨 있다).
+       옛 규칙이 `S_2 over S_1` 에서 «2 over S» 만 집어 `S_\frac{2}{S}_{1}` 을 만들었다.
+       아래첨자가 둘이라 KaTeX 가 통째로 거절한다(빨간 글씨).
+       🔵 **되돌릴 수 있다** — 이 꼴은 원래 `S_2 over S_1` 하나뿐이라 짐작이 아니다.
+       ⚠ 멀쩡한 글에는 이 꼴이 «있을 수 없다» — 아래첨자가 둘인 LaTeX 은 어차피 안 그려진다.
+         그래서 이 규칙은 깨진 것만 만난다. */
+    s = s.replace(/([A-Za-z])_\\frac\{([^{}]*)\}\{([A-Za-z])\}_\{([^{}]*)\}/g, '\\frac{$1_{$2}}{$3_{$4}}');
+    /* 🔴 뒤에 공백이 없어 «없는 명령»이 된 것 — `\neqU` (창고에 이미 담겨 있다). */
+    s = s.replace(/\\neq(?! )/g, '\\neq ');
     /* ① 서체 지정 rm·RM — 앞이 글자면 비켜선다(form·term·norm). */
     s = s.replace(/(?<![A-Za-z\\])rm\s*/gi, '');
     /* ② rm 을 걷고 나면 그 뒤의 bar 가 드러난다 — 2rmbar{AC} → 2bar{AC} → \overline{AC} */
@@ -865,7 +953,7 @@ function hwpxRepairEqText(s0){
       덩이 => { let 남은 = 덩이, 편것 = '';
         while(남은){ const k = 이름.find(w => 남은.startsWith(w)); 편것 += '\\' + k; 남은 = 남은.slice(k.length); }
         return 편것; });
-    return s;
+    return hwpxBalanceLeftRight(s);
   };
   return String(s0 == null ? '' : s0).replace(/\$([^$]*)\$/g, (m, 안) => '$' + 고치기(안) + '$');
 }

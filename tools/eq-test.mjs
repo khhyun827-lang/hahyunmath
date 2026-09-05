@@ -10,7 +10,7 @@
 
 import { loadHwpxRules } from './hwpx-node.mjs';
 
-const { convertHwpEq } = loadHwpxRules();
+const { convertHwpEq, hwpxBalanceLeftRight } = loadHwpxRules();
 
 /* 화면 쪽 규칙(problemHTML)도 여기서 같이 본다 — 수식과 «같은 글»을 다루는 짝이라서다. */
 import fs from 'fs';
@@ -222,6 +222,46 @@ console.log('');
   /* 🔵 한 낱말만 붙은 것은 «변수 이름일 수 있어» 안 건드린다 — 그것이 이 규칙의 안전줄이다. */
   봄('🔵 그리스 낱말 하나에 글자가 붙으면 안 건드린다', convertHwpEq('alphax'), '$alphax$');
   든가('🔵 띄어 쓴 것은 예전 그대로', convertHwpEq('alpha < m < beta'), B+'alpha');
+}
+
+/* 🔵 **«빨갛게 뜨는 것»을 찾아서 고친 것들** (2026-09-06 · 사용자가 짚었다 —
+   「주기나 문항들에도 수식 오류가 많아 쭉 훑어봐도 빨간색으로 뜬것들이 있어」).
+   🔴 **이번에는 짐작하지 않고 «KaTeX 로 실제로 그려 봤다»** — 창고 660건 · 수식 7638개 중
+     18개가 빨갛게 떴다. 눈으로 훑는 것과 세어 보는 것은 다른 일이다.
+   ⚠ 여기 넷은 전부 «수식 하나가 통째로 안 그려지는» 꼴이다. 한 글자가 어긋나면
+     KaTeX 는 그 수식을 통째로 버리고 빨간 글씨를 낸다 — 조금 이상한 정도로 안 끝난다. */
+{
+  /* ① 실측 원문 `A CUPB!=U` — 뒤에 공백이 없어 `\neqU` 라는 «없는 명령»이 됐다. */
+  든가('🔴 != 뒤에 공백을 붙인다', convertHwpEq('A CUPB!=U'), B + 'neq U');
+  없나('그래야 없는 명령이 안 생긴다', convertHwpEq('x!=y'), B + 'neqy');
+
+  /* ② 실측 원문 `S_2 over S_1` — 「낱글자」만 받으니 «2 over S» 를 집어 아래첨자가 둘이 됐다. */
+  봄('🔴 over 가 아래첨자까지 «한 덩이»로 본다', convertHwpEq('S_2 over S_1'),
+     '$' + B + 'frac{S_{2}}{S_{1}}$');
+  봄('중괄호 아래첨자도', convertHwpEq('a_{n+1} over b_{n}'),
+     '$' + B + 'frac{a_{n+1}}{b_{n}}$');
+  봄('🔵 예전 꼴은 그대로', convertHwpEq('1 over 2'), '$' + B + 'frac{1}{2}$');
+
+  /* ③ 🔴 **원본 자체가 깨져 있다** — 실측 `{rmA}it{(-1,~2)`. 한글은 너그럽게 그려 주지만
+     KaTeX 는 못 읽는다. 원본을 못 고치니 읽는 쪽이 다듬는다. */
+  봄('🔴 안 닫힌 중괄호를 닫는다', convertHwpEq('{rmA}it{(-1,~2)'), '${A}{(-1,~2)}$');
+  봄('남는 닫는 괄호는 버린다', convertHwpEq('6 sqrt2 }+ 2'), '$6 ' + B + 'sqrt{2} + 2$');
+  봄('🔵 닫고 나서야 bar 가 보인다', convertHwpEq('bar{QP'), '$' + B + 'overline{QP}$');
+
+  /* 🔴 **다듬는 자리가 LEFT/RIGHT «뒤»여야 한다.** 한글에서 `LEFT {` 의 중괄호는 묶음이
+     아니라 구분자다 — 앞에서 세면 짝이 안 맞는 줄 알고 맨 `}` 를 붙인다.
+     2026-09-06에 실제로 그렇게 만들어 집합 50여 문항에 군더더기가 붙었다. */
+  봄('🔴 LEFT { 를 «묶음»으로 세지 않는다 (군더더기 } 가 안 붙는다)',
+     convertHwpEq('LEFT { x VERT x RIGHT }'), '$' + B + 'left' + B + '{ x ' + B + 'vert x ' + B + 'right' + B + '}$');
+  든가('그 집합은 멀쩡히 그려진다', convertHwpEq('LEFT { x VERT x RIGHT }'), B + 'left' + B + '{');
+
+  /* ④ `\left` 와 `\right` 의 짝. 어긋나면 그 수식이 통째로 안 그려진다. */
+  /* 🔴 **수는 맞는데 «차례»가 어긋난 것** — 위의 셈만으로는 못 잡는 자리다(실측 1211119OR).
+     두 번째 \\right 는 열린 것이 없는 자리에서 나온다. */
+  봄('🔴 열린 것 없이 나온 오른쪽을 지운다',
+     hwpxBalanceLeftRight(B + 'left. ' + B + 'right) ' + B + 'right' + B + '} : ' + B + 'left('),
+     B + 'left. ' + B + 'right) ' + B + '} : ' + B + 'left(' + B + 'right.');
+  든가('모자라면 안 보이는 짝을 채운다', convertHwpEq('LEFT ( a'), B + 'right.');
 }
 
 console.log('');
