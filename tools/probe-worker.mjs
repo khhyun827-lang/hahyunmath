@@ -50,6 +50,10 @@ for (const c of cases) {
       /* finishReason이 있어야 «잘린 것»과 «모델이 JSON을 못 쓴 것»을 가른다 — 고치는 법이 다르다. */
       console.log('!! error:', d.error, '| finishReason:', d.finishReason,
         '| raw tail:', String(d.raw).slice(-160));
+      /* 🔴 **`detail` 을 안 찍고 있었다** (2026-09-06). 워커는 Gemini 가 뭐라 했는지를
+         여기 담아 보내는데 안 찍으니 화면에도 도구에도 「gemini error」 다섯 글자뿐이었다.
+         그것으로는 «모델 이름·한도·안전 필터» 중 무엇인지 하나도 못 가른다. */
+      if (d.detail) console.log('!! detail:', String(d.detail).replace(/\s+/g, ' ').slice(0, 600));
       continue;
     }
     console.log('mode       :',

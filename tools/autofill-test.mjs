@@ -187,14 +187,36 @@ console.log('\n남는 한도로 창고 채우기\n');
 
 
 // ── ⑥ 🔴 같은 흠에 하루치를 통째로 쏟지 않는가 (2026-09-04 · 사용자가 20건을 태웠다) ──
+//    🔵 **09-06에 «한 번은 다시 해 본다»로 고쳤다.** 실제로 겪어 보니 까닭이 «길»이 아니라
+//      «가끔 엎어지는 것»이었다 — 똑같은 입력이 다음 번에는 그대로 됐다(실측).
+//      첫 실패에서 끄면 **하루 한 건도 못 채운다.** 그렇다고 스무 번 두드리면 09-04로 돌아간다.
+//      → 버리는 것을 **최대 두 건**으로 묶는다. 이 검사가 그 «두 건»을 붙든다.
 {
-  const w = makeWorld({ itemBody: 본문(5), twin: null });   // AI 가 안 되는 상황
+  const w = makeWorld({ itemBody: 본문(5), twin: null });   // AI 가 언제나 안 되는 상황
   await w.autoFillTick();
-  봄('🔴 첫 실패에서 스스로 끈다', w.autoFillState().on, false);
-  봄('🔴 그래서 한 번만 부른다 (스무 번이 아니라)', w.부른AI.length, 1);
-  봄('🔴 다음 것을 예약하지 않는다', w.예약.length, 0);
-  봄('까닭을 그대로 적는다', /AI 가 안 됐다/.test(w.autoFillState().msg), true);
+  봄('🔵 한 번 엎어져도 아직 안 끈다', w.autoFillState().on, true);
+  봄('🔵 같은 문항으로 다시 해 보려고 예약한다', w.예약.length, 1);
+  봄('그때도 까닭을 그대로 적는다', /AI 가 안 됐다/.test(w.autoFillState().msg), true);
+  봄('«한 번 더 해 본다»고 말한다', /한 번 더/.test(w.autoFillState().msg), true);
+
+  await w.autoFillTick();                                   // 두 번째도 엎어진다
+  봄('🔴 두 번째에 스스로 끈다', w.autoFillState().on, false);
+  봄('🔴 그래서 두 번만 부른다 (스무 번이 아니라)', w.부른AI.length, 2);
+  봄('🔴 그다음은 예약하지 않는다', w.예약.length, 1);
   봄('왜 멈췄는지도 말한다', /하루치를 지키려고/.test(w.autoFillState().msg), true);
+  봄('두 번이었다고 말한다', /두 번/.test(w.autoFillState().msg), true);
+}
+/* 🔵 **엎어졌다가 다시 하면 되는 경우** — 이것이 09-06에 실제로 겪은 모습이다.
+   여기서 한 건도 못 담으면 고친 뜻이 없다. */
+{
+  const w = makeWorld({ itemBody: 본문(5), twin: null });   // 첫 번은 엎어지고
+  await w.autoFillTick();
+  봄('🔵 처음엔 엎어진다', w.autoFillState().on, true);
+  w.twin = { content: 'x', answer: '②' };                   // 두 번째는 된다
+  await w.autoFillTick();
+  봄('🔵 다시 해서 담는다', w.쓴것.length, 1);
+  봄('🔵 그리고 고리는 계속 돈다', w.autoFillState().on, true);
+  봄('🔵 두 번 불렀다 (엎어진 것 + 된 것)', w.부른AI.length, 2);
 }
 console.log(`\n  ${fail ? '🔴' : '✅'} ${pass} 통과 · ${fail} 실패\n`);
 process.exit(fail ? 1 : 0);
