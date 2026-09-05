@@ -96,14 +96,39 @@ function convertHwpEq(script){
      `RIGHT` 의 낱말 경계를 못 찾아 **RIGHT 가 날글자로 남는다.** 그 수식은 안 그려진다.
      (사용자가 K2-01-E-0009 에서 `4RIGHT )` 로 겪었다 — 원본은 `4`right|` 꼴이었다.) */
   s = s.replace(/`/g, ' ');
-  s = s.replace(/\brm\s*/g, '');
+  /* 🔴 **`\b` 가 «숫자에 붙은 rm» 을 놓친다** (2026-09-06 · 사용자가 「수식 남은 넷」으로 짚었다).
+     실측 K2-02-E-0171 에 `=2rmbar{AC}` 가 있다. 앞이 숫자라 낱말 경계가 없어 `rm` 이 안 걷혔고,
+     그러면 아래 `bar` 규칙도 `rmbar` 를 못 알아봐 **날글자로 그대로 남는다.**
+     같은 문항의 `rm bar OA`(띄어 쓴 것)는 멀쩡히 그려져서 더 안 드러났다.
+     🔵 **앞이 «글자»일 때만 비켜서면 된다** — `form` · `term` · `norm` 의 꼬리가 그것이다.
+       숫자 앞에서는 서체 지정이 맞다(변수 이름이 숫자로 시작할 수 없다). */
+  s = s.replace(/(?<![A-Za-z\\])rm\s*/g, '');
   // "it"(이탤릭 지정)은 rm과 같은 서체 지정 명령이라 내용만 남기고 지운다.
   // "it2r+3"(공백 없음), "it r ^{2}"(공백 있음) 둘 다 나오므로 뒤 공백까지 함께 지운다.
   s = s.replace(/\bit\s*(?=[0-9a-zA-Z(])/g, '');
   s = replaceBalancedKeyword(s, 'pmatrix', inner => '\\begin{pmatrix}' + inner.replace(/#/g,'\\\\') + '\\end{pmatrix}');
   s = replaceBalancedKeyword(s, 'cases', inner => '\\begin{cases}' + inner.replace(/#/g,'\\\\') + '\\end{cases}');
   const greek = {alpha:'\\alpha',beta:'\\beta',gamma:'\\gamma',delta:'\\delta',theta:'\\theta',pi:'\\pi',lambda:'\\lambda',mu:'\\mu',sigma:'\\sigma',phi:'\\phi',omega:'\\omega'};
-  for(const k in greek) s = s.replace(new RegExp('\\b'+k+'\\b','g'), greek[k]);
+  /* 🔴 **붙여 쓴 그리스 문자는 낱말 경계가 없어 통째로 남는다** (2026-09-06 · 「수식 남은 넷」).
+     실측 K2-03-E-0278 의 `alphabeta+gammadelta`. 같은 문항 안의 `alpha<m<beta` 는 멀쩡히
+     그려지는데 이것만 날글자로 떴다 — 한글 수식 편집기는 «긴 것부터 이어 읽어» αβ 로 그린다.
+     🔵 **«통째로 그리스 낱말일 때만» 편다.** 한 낱말만 붙어도(`alphax`) 안 건드린다 —
+       그건 변수 이름일 수 있다. 둘 이상이 «끝까지» 이어질 때만이라 평범한 영어 낱말이
+       걸릴 길이 없다(그런 낱말은 반드시 그리스 이름이 아닌 꼬리를 남긴다).
+     ⚠ **긴 것부터 재야 한다** — `pi` 가 앞서면 `phi` 를 못 읽는다. */
+  const 그리스낱말 = Object.keys(greek).sort((a, b) => b.length - a.length);
+  s = s.replace(new RegExp('(?<![\\\\A-Za-z])(?:' + 그리스낱말.join('|') + '){2,}(?![A-Za-z])', 'g'),
+    덩이 => {
+      let 남은 = 덩이, 편것 = '';
+      while(남은){
+        const k = 그리스낱말.find(w => 남은.startsWith(w));
+        편것 += greek[k]; 남은 = 남은.slice(k.length);
+      }
+      return 편것;
+    });
+  /* ⚠ 앞이 역슬래시면 비켜선다 — 바로 위에서 «방금 만든» \alpha 를 또 바꾸면
+     \\alpha 가 되어 그 수식이 통째로 안 그려진다(이 파일이 곳곳에서 겪은 그 함정이다). */
+  for(const k in greek) s = s.replace(new RegExp('(?<!\\\\)\\b'+k+'\\b','g'), greek[k]);
   // le/ge/LEQ 등은 it과 마찬가지로 뒤에 공백 없이 숫자가 바로 붙는 경우(le5)가 있어
   // 뒤쪽 \b는 안 쓰고 시작 위치만 단어 경계로 확인한다. 방금 만든 "\leq"의 "le"를
   // 다시 건드리지 않도록(무한 중복 방지) 바로 앞이 백슬래시가 아닐 때만 매치한다.

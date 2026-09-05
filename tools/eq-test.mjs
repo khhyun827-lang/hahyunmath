@@ -193,6 +193,31 @@ console.log('');
   없나('그때는 표가 아니다', 격자, 'pb-cht');
 }
 
+/* 🔵 **«수식 남은 넷» — 사용자가 09-06에 짚어 마지막으로 남아 있던 것들** (2026-09-06).
+   564제를 다시 훑어 찾은 것은 셋이었다(`abx` 는 흠이 아니라 진짜 변수 곱 a·b·x 였다).
+   ⚠ 셋 다 «같은 문항 안에서 띄어 쓴 쪽은 멀쩡히 그려지고 붙여 쓴 쪽만» 깨져 있었다 —
+     그래서 눈으로는 하나만 이상해 보이고 원인이 안 보인다. */
+{
+  /* K2-02-E-0171 — `rm` 앞이 숫자라 낱말 경계가 없어 안 걷혔다. 그러면 bar 규칙도 못 알아본다. */
+  봄('🔴 숫자에 붙은 rm 도 걷는다 (2rmbar)', convertHwpEq('2rmbar{AC}'), '$2'+B+'overline{AC}$');
+  봄('🔴 rm 뒤에 낱말이 와도 (4rm km)', convertHwpEq('4rm km'), '$4km$');
+  든가('⚠ form·term 의 꼬리는 안 건드린다', convertHwpEq('form'), 'form');
+  든가('⚠ norm 도', convertHwpEq('norm'), 'norm');
+
+  /* K2-03-E-0278 — `alphabeta+gammadelta`. 같은 문항의 `alpha<m<beta` 는 멀쩡했다. */
+  봄('🔴 붙여 쓴 그리스 문자를 편다', convertHwpEq('alphabeta+gammadelta'),
+     '$'+B+'alpha'+B+'beta+'+B+'gamma'+B+'delta$');
+  봄('셋이 붙어도', convertHwpEq('alphabetagamma'), '$'+B+'alpha'+B+'beta'+B+'gamma$');
+  /* ⚠ 짧은 것부터 재면 phi 를 p+hi 로 못 읽는다 — 긴 것부터 재는지 본다. */
+  봄('⚠ 긴 것부터 잰다 (pi 가 phi 를 안 물어뜯는다)', convertHwpEq('phipi'), '$'+B+'phi'+B+'pi$');
+  /* 🔴 여기가 09-06에 한 번 틀렸던 자리 — 뒤따르는 옛 고리가 방금 만든 것을 또 바꿔
+     `\\alpha` 가 됐고, 그러면 그 수식이 통째로 안 그려진다. */
+  없나('🔴 역슬래시가 두 번 붙지 않는다', convertHwpEq('alphabeta'), B+B);
+  /* 🔵 한 낱말만 붙은 것은 «변수 이름일 수 있어» 안 건드린다 — 그것이 이 규칙의 안전줄이다. */
+  봄('🔵 그리스 낱말 하나에 글자가 붙으면 안 건드린다', convertHwpEq('alphax'), '$alphax$');
+  든가('🔵 띄어 쓴 것은 예전 그대로', convertHwpEq('alpha < m < beta'), B+'alpha');
+}
+
 console.log('');
 console.log('  ' + (fail ? '🔴' : '✅') + ' ' + pass + ' 통과 · ' + fail + ' 실패');
 console.log('');
