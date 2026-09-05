@@ -793,7 +793,16 @@ function hwpxMakeSourceCodes(뽑은것){
     센다[k] = (센다[k] || 0) + 1;
     return k + String(센다[k]).padStart(2, '0');
   });
-  return { ok:true, 흠:[], codes, 것들, 묶음수: Object.keys(묶음).length, 셈: 뽑은것.셈 };
+  /* 🔵 **미주 차례에 그대로 맞춘 코드 줄** (2026-09-06 · 웹이 코드를 붙일 때 쓴다).
+     `codes` 는 «문항인 것»만 모은 줄이다 — 목차·표지처럼 출처도 딱지도 없는 덩이가 하나라도
+     섞이면 **그 자리부터 한 칸씩 밀린다.** 09-05에 실제로 겪은 그 흠이다.
+     그래서 지나간 자리에 빈 칸을 도로 끼워 넣어 **미주와 1:1**로 만든다.
+     ⚠ 여기 거르는 조건은 위 `것들` 의 것과 «글자까지 같아야» 한다 — 갈리면 도로 밀린다. */
+  const codesAll = []; {
+    let k = 0;
+    for(const x of 뽑은것) codesAll.push((x.출처 || (x.딱지들 && x.딱지들.length)) ? codes[k++] : '');
+  }
+  return { ok:true, 흠:[], codes, codesAll, 것들, 묶음수: Object.keys(묶음).length, 셈: 뽑은것.셈 };
 }
 
 /* =================== 시험지꼴 빠른정답표 (2026-09-04) ===================
@@ -903,7 +912,13 @@ function hwpxAnswerKeyFromDocs(docs, 총수){
   return byNo;
 }
 
-function hwpxProblemsFromDocs(docs){
+/* 🔵 **`opts.codes` — 밖에서 매긴 코드를 미주 차례로 받는다** (2026-09-06 · 웹의 ②꼴 올리기).
+   교재에 코드가 «심겨 있으면» 미주에서 그대로 읽는다(`hwpEndnoteParts`). 하지만 모의고사
+   기출 교재는 심기 전에 올릴 수 있어야 해서, 딱지에서 갓 매긴 코드를 여기로 넘긴다.
+   🔴 **붙이는 자리가 워터마크로 거르기 «앞»이어야 한다.** 뒤에서 붙이면 걸러진 만큼
+     남은 문항이 앞으로 당겨져 **그 자리부터 남의 코드가 박힌다.** 71개 중 2개가 걸리는
+     파일이 실제로 있다(족보닷컴 워터마크가 수식 안에 숨어 있던 그 둘). */
+function hwpxProblemsFromDocs(docs, opts){
   const topParas = [];
   const allEndnotes = [];
   for(const doc of docs){
@@ -933,6 +948,19 @@ function hwpxProblemsFromDocs(docs){
         if(!b.itemCode && orderedParts[i].code) b.itemCode = orderedParts[i].code;
         if(!b.solution && orderedParts[i].solution) b.solution = orderedParts[i].solution;
       });
+    }
+    /* 🔴 **밖에서 매긴 코드는 «수가 같을 때만» 붙인다.** 하나라도 다르면 어디서 어긋났는지
+       알 길이 없고, 짐작해서 붙인 코드는 «없는 것»보다 나쁘다 — 다른 문제를 가리킨다.
+       🔴 **덩이 수와 미주 수는 같지 않다.** 교재 맨 앞의 목차·표지가 첫 미주보다 앞에 있어
+         미주 71개짜리 파일이 덩이 72개로 갈린다(실측 · 주기나 평면좌표). 덩이 차례에 맞추면
+         **첫 문항부터 통째로 밀린다** — 09-05에 딱지에서 겪은 그 흠과 똑같은 꼴이다.
+       🔵 **미주로 열린 덩이만 센다** — `answer` 가 `null` 이 아닌 것이 그것이다
+         (미주가 없으면 null, 있으면 빈 글자라도 글자다). 그 수가 코드 수와 같을 때만 붙인다. */
+    const 밖코드 = (opts && opts.codes) || null;
+    if(밖코드){
+      const 미주덩이 = bs.filter(b => b.answer != null);
+      if(미주덩이.length === 밖코드.length)
+        미주덩이.forEach((b,i)=>{ if(!b.itemCode && 밖코드[i]) b.itemCode = 밖코드[i]; });
     }
     return bs;
   };

@@ -60,7 +60,12 @@ const 표 = 표글.slice(표글.indexOf('const UNIT_CHAPTER_DEFS = {'));
 const DEFS = new Function(표.slice(0, 표.indexOf(NL + '};') + 3) + ' return UNIT_CHAPTER_DEFS;')();
 const 과목이름 = { K1:'공통수학1', K2:'공통수학2', AL:'대수', C1:'미적분Ⅰ', PS:'확률과통계', GE:'기하' }[SUBJECT];
 const 우리것 = ((DEFS[과목이름] || []).find(r => r[0] === CHAPTER) || [])[1] || '';
-const 다듬 = (s) => String(s).replace(/[s()·,]/g, '');
+/* 🔴 **백슬래시 하나가 빠져 있었다** (2026-09-06에 잡았다). `[s()·,]` 는 «공백»이 아니라
+   **글자 s** 를 지운다. 그래서 띄어쓰기가 다른 단원은 전부 「안 맞는다」로 멈췄다 —
+   `직선의방정식` 對 `직선의 방정식`. 01 평면좌표만 띄어쓰기가 없어 **우연히 통과했고**,
+   그래서 09-05에는 안 드러났다. 02·03·04 를 돌리는 순간 멈췄을 것이다.
+   ⚠ 웹에도 같은 규칙이 있다(`srcChapterFromFileName`) — 둘을 같이 봐야 한다. */
+const 다듬 = (s) => String(s).replace(/[\s()·,]/g, '');
 if (!우리것) {
   console.error(`🔴 멈춘다 — ${과목이름}에 ${CHAPTER}단원이 없다.`);
   process.exit(2);

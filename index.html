@@ -3164,7 +3164,7 @@
      이 파일은 index.html 과 «따로» 받아지므로, 물음표 뒤가 그대로면 브라우저가
      **캐시에 있는 옛 파서를 꺼내 쓴다.** 그러면 교재를 다시 올려도 옛 글이 그대로 담기고,
      화면만 보고서는 «고쳤는데 왜 안 되지»가 된다 — 파서가 바뀐 것을 아무 데서도 못 본다. -->
-<script src="hwpx.js?v=2026-09-05c"></script>
+<script src="hwpx.js?v=2026-09-06a"></script>
 <!-- 출석 도장 게임(셸·똥피하기·달리기). 연습 페이지 game.html 도 같은 파일을 쓴다 -->
 <!-- ⚠ ?v= 를 붙이는 까닭 — 브라우저가 game-core.js 를 캐시해서, 올려도 학생 화면에는
      옛 게임이 그대로 돈다(Ctrl+Shift+R 을 해야 바뀐다 — 학생에게 그걸 시킬 수는 없다).
@@ -3708,12 +3708,28 @@ function itemOfCode(code){
   if(장부) return 장부;
   const 창고 = (state.itemBody || {})[code];
   if(!창고) return null;
-  const ci = chapterInfoFromItemCode(code) || {};
+  /* 🔴 **코드가 과목·단원을 말해 주지 않는 꼴이 있다** (2026-09-06 · ②꼴 모의고사 기출).
+     `1230928OR` 에는 그 자리가 아예 없어서 코드에서 짐작하면 통째로 «없음»이 된다.
+     그래서 **창고 문서가 들고 있는 것이 먼저**고, 코드는 그것이 없을 때만 본다.
+     ⚠ 브라우저로 올린 기출이 여기로 온다 — 장부 파일은 배포에 실려 오는 정적 파일이라
+       브라우저가 못 쓴다(`icFillBodies` 의 그 자리를 볼 것). */
+  /* 🔴 **장부와 «같은 모양»으로 돌려준다** (2026-09-06에 바로잡았다).
+     장부는 `subject:'K2'` · `chapter:'01'` 인데 여기서는 `'공통수학2'` · `'평면좌표'` 로
+     **이름**을 넣고 있었다. 여태 안 드러난 까닭은 이 값을 읽는 화면이 하나도 없어서다 —
+     창고 목록이 장부만 봤기 때문이다. 그 목록에 창고를 합치는 순간(같은 날 고쳤다)
+     `storeMatches` 가 `'평면좌표' !== '01'` 로 **단원을 고르면 통째로 사라지게** 된다. */
   const m = String(code).match(ITEM_CODE_RE);
-  return { code, chapter: ci.chapter || '', subject: ci.subject || '',
+  const 기출 = srcCodeInfo(code);
+  const ci = chapterInfoFromItemCode(code) || {};
+  return { code,
+           subject: 창고.subject || (m ? m[1] : ''),
+           chapter: 창고.chapter || (m ? m[2] : ''),
+           chapterName: 창고.chapterName || ci.chapter || '',
+           badge: 창고.badge || (기출 ? 기출.badge : ''),
+           origin: 기출 ? 기출.origin : '',
            answer: 창고.answer || '',
-           source: { book: (m && BOOK_OF_CODE[m[3]]) || '' },
-           /* 🔵 장부에 없다는 것 자체가 뜻이 있다 — «시험지에서 태어난 문항»이다. */
+           source: 창고.source || { book: (m && BOOK_OF_CODE[m[3]]) || (기출 ? BOOK_OF_CODE.J : '') },
+           /* 🔵 장부에 없다는 것 자체가 뜻이 있다 — «시험지·업로드에서 태어난 문항»이다. */
            fromExam: true };
 }
 /* 🔴 **뺀 변형은 «지우지 않고 표시만» 한다** (2026-09-04).
@@ -8898,11 +8914,6 @@ async function parseHwpxToProblems(file){
     const xmlText = await zip.file(nm).async('string');
     docs.push(new DOMParser().parseFromString(xmlText, 'text/xml'));
   }
-  /* 🔵 **문항으로 가르는 규칙은 `hwpx.js` 하나뿐이다** (2026-09-05).
-     도구(`tools/item-bodies.mjs`)가 같은 함수를 부른다 —
-     여기서 따로 세면 웹과 도구가 다른 문항 수를 내놓는다. */
-  const { problems, watermarkedCount } = hwpxProblemsFromDocs(docs);
-
   // 그림 참조 → 실제 파일. `content.hpf` 가 그 대응표다.
   let idToHref = {};
   const hpfFile = zip.file('Contents/content.hpf');
@@ -8916,23 +8927,71 @@ async function parseHwpxToProblems(file){
     }
   }
 
+  /* 🔵 **그림 바이트를 한 번만 읽어 세 군데에 쓴다** (2026-09-06).
+     ① 딱지 알아보기(SHA-256) ② 장식 걸러내기(길이+앞부분) ③ 실제로 붙일 그림.
+     ⚠ 예전에는 «문항이 가리키는 그림»만 읽었는데, 딱지는 문항의 그림 목록에 안 들어올 수
+       있어서 그것만으로는 못 알아본다. 그래서 `content.hpf` 에 적힌 것을 다 읽는다
+       (실측: 주기나 평면좌표 4.1MB · 그림 57개 — 브라우저에서 눈에 안 띄는 시간이다). */
+  const refBytes = new Map();
+  for(const ref in idToHref){
+    const href = idToHref[ref];
+    /* `content.hpf` 는 그림만이 아니라 `Contents/header.xml` 같은 것도 적는다 —
+       그것들은 위에서 이미 읽었고 딱지일 리도 없다. 건너뛴다. */
+    if(/^Contents\//.test(href)) continue;
+    /* ⚠ href 가 %인코딩되어 오는 파일이 있다(node 쪽도 `decodeURIComponent` 를 쓴다).
+       지금 손에 있는 파일에는 하나도 없지만, 없으면 그때 그림이 통째로 안 읽힌다. */
+    const f = zip.file(href) || zip.file(decodeURIComponent(href));
+    if(!f) continue;
+    try{ refBytes.set(ref, await f.async('uint8array')); }
+    catch(e){ console.error('그림을 못 읽었습니다', ref, e); }
+  }
+
+  /* 🔴 **딱지는 «글»이 아니라 «그림»이라 SHA-256 으로만 알아본다** (hwpx.js 의 `딱지해시`).
+     node 쪽(`tools/source-code.mjs`)이 `crypto.createHash('sha256')…slice(0,32)` 로 뜨는
+     것과 **글자까지 같아야** 한다 — 다르면 딱지를 하나도 못 알아보고 조용히 지나간다.
+     ⚠ `crypto.subtle` 은 안전한 자리(https·localhost)에서만 있다. 없으면 딱지를 안 읽고
+       예전처럼 «심긴 코드»만 쓴다 — 터지지 않는 것이 중요하다. */
+  const 해시 = new Map();
+  if(self.crypto && self.crypto.subtle){
+    for(const [ref, u8] of refBytes){
+      try{
+        const d = await self.crypto.subtle.digest('SHA-256', u8);
+        해시.set(ref, Array.from(new Uint8Array(d)).map(x => x.toString(16).padStart(2,'0')).join('').slice(0, 32));
+      }catch(e){ /* 그림 하나를 못 떠도 나머지는 읽는다 */ }
+    }
+  }
+
+  /* =========== 모의고사 기출: 딱지를 읽어 «지금» 코드를 매긴다 (2026-09-06 · 사용자 요청) ===========
+     여태 이 꼴(`1230928UP01`)은 node 도구 두 줄로만 담겼다. 브라우저에서도 되게 한다.
+     🔴 **코드가 이미 심겨 있으면 손대지 않는다** — `hwpxProblemsFromDocs` 가 미주에서 읽은
+       것이 언제나 이긴다. 여기서 매기는 것은 «비어 있을 때»를 메우는 것뿐이다.
+     🔴 **어긋나면 코드를 안 낸다.** 짐작한 코드는 없는 것보다 나쁘다 — 다른 문제를 가리킨다.
+       왜 못 냈는지는 `problems.srcNote` 로 올려 보내서 화면이 사람 말로 말하게 한다. */
+  let 코드줄 = null, 코드말 = '';
+  const 딱지붙은것 = hwpxSourceBadges(docs, ref => 해시.get(ref) || '');
+  if((딱지붙은것.셈 || {}).딱지 > 0){
+    const r = hwpxMakeSourceCodes(딱지붙은것);
+    if(r.ok){ 코드줄 = r.codesAll; 코드말 = `출처 딱지에서 코드 ${r.codes.length}개를 매겼습니다.`; }
+    else 코드말 = '출처 딱지를 읽었지만 코드를 못 매겼습니다 — ' + (r.흠[0] || '');
+  }
+
+  /* 🔵 **문항으로 가르는 규칙은 `hwpx.js` 하나뿐이다** (2026-09-05).
+     도구(`tools/item-bodies.mjs`)가 같은 함수를 부른다 —
+     여기서 따로 세면 웹과 도구가 다른 문항 수를 내놓는다. */
+  const { problems, watermarkedCount, watermarked } = hwpxProblemsFromDocs(docs, { codes: 코드줄 });
+
   /* 🔴 **장식(번호 딱지)을 «내용»으로 묶어 걸러 낸다** (2026-09-05 · 사용자가 화면에서 짚었다).
      한글은 같은 딱지를 문서 안에 여러 벌로 따로 저장한다 — 이름으로 세면 «한 번뿐»인 벌이
      진짜 그림 행세를 하고 **문항에 필름릴 아이콘이 붙는다.** 실제로 그렇게 떴다.
-     그래서 바이트를 한 번씩 읽어 «길이 + 앞부분 해시»를 열쇠로 삼는다.
-     ⚠ 읽은 바이트는 그대로 들고 있다가 아래에서 다시 쓴다 — 같은 파일을 두 번 읽지 않는다. */
-  const refBytes = new Map(), refKey = new Map();
+     그래서 바이트를 한 번씩 읽어 «길이 + 앞부분 해시»를 열쇠로 삼는다. */
+  const refKey = new Map();
   for(const ref of new Set(problems.flatMap(p=>p.pics||[]))){
-    const f = idToHref[ref] && zip.file(idToHref[ref]);
-    if(!f) continue;
-    try{
-      const u8 = await f.async('uint8array');
-      let h = 0x811c9dc5;
-      const n = Math.min(u8.length, 4096);
-      for(let i=0;i<n;i++){ h ^= u8[i]; h = Math.imul(h, 0x01000193) >>> 0; }
-      refBytes.set(ref, u8);
-      refKey.set(ref, u8.length + ':' + h.toString(16));
-    }catch(e){ console.error('그림을 못 읽었습니다', ref, e); }
+    const u8 = refBytes.get(ref);
+    if(!u8) continue;
+    let h = 0x811c9dc5;
+    const n = Math.min(u8.length, 4096);
+    for(let i=0;i<n;i++){ h ^= u8[i]; h = Math.imul(h, 0x01000193) >>> 0; }
+    refKey.set(ref, u8.length + ':' + h.toString(16));
   }
   hwpxMarkDecorPics(problems, ref => refKey.get(ref) || ref);
 
@@ -8949,6 +9008,10 @@ async function parseHwpxToProblems(file){
     delete problem.decorPics;
   }
   problems.watermarkedCount = watermarkedCount;
+  problems.watermarked = watermarked || [];
+  /* 딱지에서 코드를 매겼는지(또는 왜 못 매겼는지) — 화면이 사람 말로 옮긴다. */
+  problems.srcNote = 코드말;
+  problems.srcCoded = !!코드줄;
   return problems;
 }
 async function handleUnitBankHwpxFile(fileList){
@@ -18642,6 +18705,35 @@ function icClassify(problems){
   const withCode = problems.filter(p => p.itemCode && p.content);
   return { 교재: withCode.length > 0, withCode };
 }
+
+/* =========== ②꼴은 «파일 이름»이 단원을 말한다 (2026-09-06) ===========
+   `1230928UP01` 에는 과목·단원 자리가 없다 — 기출 번호에 그런 자리가 없기 때문이다.
+   그래서 node 쪽(`tools/source-code.mjs`)이 하는 것과 **같은 규칙**으로 파일 이름에서 읽는다:
+     `[2026][주기나][1-2중간][1.평면좌표].hwpx` → 단원 01 「평면좌표」
+   🔴 **우리 단원표와 대조해서 안 맞으면 멈춘다.** 교재가 매긴 번호와 우리 번호가 같다는
+     보장이 없다 — 어긋나면 71제가 통째로 엉뚱한 단원에 들어간다. 조용히 틀리느니 멈춘다.
+   ⚠ **과목은 파일 이름에 없다.** 그래서 «번호와 이름이 둘 다 맞는 과목»을 단원표에서 찾고,
+     딱 하나로 좁혀질 때만 쓴다. 둘 이상이면 사람이 골라야 할 일이라 멈춘다. */
+function srcChapterFromFileName(name){
+  const 이름 = String(name || '').replace(/\.hwpx$/i, '');
+  const 칸 = [...이름.matchAll(/\[([^\]]+)\]/g)].map(m => m[1])
+    .map(s => s.match(/^\s*([0-9]{1,2})\s*[.·]\s*(.+?)\s*$/)).filter(Boolean).pop();
+  if(!칸) return { ok:false, 흠:`「${이름}」 — 파일 이름에서 단원을 못 읽었습니다. 「[1.평면좌표]」처럼 «번호.이름» 칸이 있어야 합니다.` };
+  const chapter = String(칸[1]).padStart(2, '0'), 적힌이름 = 칸[2];
+  const 다듬 = s => String(s).replace(/[\s()·,]/g, '');
+  const 맞는과목 = [];
+  for(const 과목 in UNIT_CHAPTER_DEFS){
+    const 우리것 = (UNIT_CHAPTER_DEFS[과목].find(r => r[0] === chapter) || [])[1];
+    if(우리것 && 다듬(우리것) === 다듬(적힌이름)) 맞는과목.push(과목);
+  }
+  if(!맞는과목.length)
+    return { ok:false, 흠:`「${이름}」 — 단원이 우리 단원표에 없습니다(파일 이름은 ${chapter} 「${적힌이름}」). 교재 번호와 우리 번호가 다르면 문항이 통째로 엉뚱한 단원에 들어갑니다.` };
+  if(맞는과목.length > 1)
+    return { ok:false, 흠:`「${이름}」 — 단원 ${chapter} 「${적힌이름}」이 과목 ${맞는과목.length}개에 다 있어 어느 과목인지 기계가 못 정합니다.` };
+  /* 이름은 «우리 단원표의 것»을 쓴다 — 파일에 적힌 것과 뜻은 같아도 띄어쓰기가 다르다. */
+  return { ok:true, chapter, chapterName: (UNIT_CHAPTER_DEFS[맞는과목[0]].find(r => r[0] === chapter) || [])[1],
+           subject: codeOfSubjectName(맞는과목[0]), subjectName: 맞는과목[0] };
+}
 /* 표의 번호가 1..최대 로 이어지는가. 세로 표를 잡는 유일한 신호다. */
 function icKeyLooksRowMajor(byNo){
   const ns = Object.keys(byNo).map(Number).sort((a,b)=>a-b);
@@ -18666,7 +18758,23 @@ async function icFillBodies(input){
       state.icFill = { running:true, msg:`${f.name} 을(를) 읽는 중…` }; render();
       const problems = await parseHwpxToProblems(f);
       const { 교재, withCode } = icClassify(problems);
-      if(교재){ 교재들.push({ name:f.name, withCode }); continue; }
+      if(교재){
+        /* 🔵 **②꼴(모의고사 기출)이면 과목·단원을 파일 이름에서 읽어 문항에 붙인다** (2026-09-06).
+           ①꼴은 코드가 스스로 말해 주지만 ②꼴은 아니다 — 안 실으면 창고에서 «과목 없음»이
+           되어 목록에서 통째로 사라진다. 못 읽으면 **한 건도 담기 전에 멈춘다.** */
+        const 기출 = withCode.filter(p => srcCodeInfo(p.itemCode));
+        if(기출.length){
+          const 자리 = srcChapterFromFileName(f.name);
+          if(!자리.ok){
+            state.icFill = { running:false, msg:'담지 않았습니다 — ' + 자리.흠 }; render(); return;
+          }
+          for(const p of 기출){
+            p.subject = 자리.subject; p.chapter = 자리.chapter; p.chapterName = 자리.chapterName;
+          }
+        }
+        교재들.push({ name:f.name, withCode, 딱지말: problems.srcNote || '' });
+        continue;
+      }
       const byNo = await parseHwpxAnswerKey(f);
       if(Object.keys(byNo).length >= 5){ 정답표 = byNo; 정답표이름 = f.name; }
     }
@@ -18727,6 +18835,19 @@ async function icFillBodies(input){
       const p = withCode[i];
       const root = (splitItemCode(p.itemCode) || {}).origin || p.itemCode;
       const doc = { code: root, content: p.content, updatedAt: nowStamp() };
+      /* 🔴 **②꼴은 과목·단원·출처를 «여기»에 실어야 한다** (2026-09-06).
+         ①꼴은 코드가 `K2-01-E-…` 로 다 말해 주지만 ②꼴(`1230928OR`)에는 그 자리가 없다.
+         node 로 담을 때는 장부(`codes/K2-J.json`)가 들고 있었는데, 브라우저는 장부 파일을
+         못 쓴다(배포에 실려 오는 정적 파일이다). **그래서 창고 문서가 들고 있어야 한다** —
+         안 그러면 창고 목록에서 «과목 없음»으로 빠진다. */
+      const 기출 = srcCodeInfo(root);
+      if(기출){
+        if(p.subject) doc.subject = p.subject;
+        if(p.chapter) doc.chapter = p.chapter;
+        if(p.chapterName) doc.chapterName = p.chapterName;
+        doc.badge = 기출.badge;
+        doc.source = { book: BOOK_OF_CODE.J, label: 기출.label };
+      }
       /* 🔴 정답은 «표 → 있던 것 → 미주(객관식만)» 차례로 고른다. 있던 것을 빈 것으로 안 덮는다. */
       const answer = 정답[root] || itemAnswerToKeep(state.itemBody[root], p.answer);
       if(answer) doc.answer = answer;
@@ -18750,9 +18871,13 @@ async function icFillBodies(input){
     }
     const figMsg = figures ? ` 그림 ${figures}개도 함께 담았습니다.` : '';
     const figBad = figFailed ? ` (그림 ${figFailed}개는 못 올렸습니다)` : '';
+    /* 🔵 **코드를 «여기서 매겼다»는 것은 말해 줘야 한다** (2026-09-06).
+       코드가 심긴 교재를 올린 것과 딱지를 읽어 갓 매긴 것은 **사람이 확인할 것이 다르다** —
+       뒤엣것은 코드가 맞는지 눈으로 봐야 한다. 조용히 같아 보이면 안 본다. */
+    const 딱지말 = 교재들.map(x => x.딱지말).filter(Boolean).join(' ');
     state.icFill = { running:false,
       msg: failed ? `${saved}개를 담았고 ${failed}개는 막혔습니다 — 설정 › 관리자에서 확인해주세요.`
-                  : `${saved}개 문항의 본문을 담았습니다.${검사말}${figMsg}${figBad}` };
+                  : `${saved}개 문항의 본문을 담았습니다.${검사말}${figMsg}${figBad}${딱지말 ? ' ' + 딱지말 : ''}` };
     render();
   }catch(e){
     state.icFill = { running:false, msg:'읽지 못했습니다 — ' + (e.message || e) };
@@ -20163,10 +20288,21 @@ document.addEventListener('keydown', e=>{
    **읽기 비용이 같다.** 2026-09-04에 할당량이 터진 뒤라 이 성질이 특히 중요하다.
    ⚠ 본문을 못 읽었을 때도 목록은 그대로 서야 한다 — 그때는 «본문 없음»으로만 적는다. */
 const STORE_PER_PAGE = 30;
-/* 장부에서 이 화면이 쓸 꼴로 — 코드에서 과목을 떼어 내고 단원 번호를 붙인다. */
+/* 장부에서 이 화면이 쓸 꼴로 — 코드에서 과목을 떼어 내고 단원 번호를 붙인다.
+   🔴 **코드가 사는 곳은 둘이다** (09-05에 `itemOfCode` 에서 이미 배운 것을 여기에도 붙인다).
+     ① 장부(`codes/*.json`) — 배포에 실려 온다  ② 창고(Firestore `items`)
+     이 목록은 ①만 보고 있었다. 그래서 **브라우저로 올린 모의고사 기출이 목록에 아예 안 떴다**
+     — 담기는 됐는데 보이지 않으니 「안 담겼다」로 읽힌다. 가장 나쁜 종류의 거짓말이다.
+   ⚠ 합치는 것은 `itemOfCode` 하나로 한다 — 모양을 여기서 따로 지어내면 둘이 갈린다. */
 function storeItems(){
-  const all = Object.values(state.itemByCode || {});
-  return all.filter(x => x && x.code);
+  const codes = new Set(Object.keys(state.itemByCode || {}));
+  /* ⚠ 창고에서 가져오는 것은 **코드 «꼴»이 맞는 것만**이다. 창고는 우리가 아닌 것도 담길 수
+     있는 자리라, 아무 열쇠나 들이면 «과목 없음» 무리가 생겨 화면에 빈 칸이 선다. */
+  for(const c in (state.itemBody || {}))
+    if(ITEM_CODE_RE.test(c) || srcCodeInfo(c)) codes.add(c);
+  const out = [];
+  for(const c of codes){ const it = itemOfCode(c); if(it && it.code) out.push(it); }
+  return out;
 }
 /* 코드의 «과목 자리»(K2 · C1 …). 이름이 아니라 «코드»를 열쇠로 쓴다 —
    이름은 교육과정이 바뀌면 갈리지만 코드는 안 갈린다. */

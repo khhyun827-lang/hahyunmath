@@ -116,23 +116,59 @@ const { findBankEntry } = new Function('DATA', 'examRootId',
   봄('🔴 모르는 단원도 마찬가지', makeItemCodeFor({ unit: '공통수학2', chapter: '없는단원' }, 'D', 15), '');
 }
 
-// ⑮ 코드가 사는 곳이 둘이다 — 장부(codes/*.json)와 창고(items) (2026-09-05)
-{
-  const { itemOfCode } = new Function('state', 'chapterInfoFromItemCode', 'ITEM_CODE_RE', 'BOOK_OF_CODE',
-    lift('itemOfCode') + NLL + 'return { itemOfCode };')(
-    { itemByCode: { 'K2-01-E-0005': { code: 'K2-01-E-0005', chapter: '평면좌표', source: { book: '엔딩크레딧' } } },
-      itemBody:   { 'K2-05-D-0013': { code: 'K2-05-D-0013', content: '본문', answer: '③' } } },
-    (c) => (String(c).indexOf('-05-') > 0 ? { subject: '공통수학2', chapter: '집합' } : null),
-    /^([A-Z]{1,2}\d?)-(\d{2})-([A-Z])-(\d{4})/, { E: '엔딩크레딧', D: '동그랑땡 모의고사' });
+/* ②꼴을 읽는 규칙도 index.html 에서 «글로» 떠 온다 — 옮겨 적으면 둘이 갈린다. */
+const { srcCodeInfo } = (() => {
+  const a = html.indexOf('const SRC_CODE_RE');
+  const 끝 = "DW:'하향' };";
+  const b = html.indexOf(끝, a);
+  return new Function(html.slice(a, b + 끝.length) + NLL + lift('srcCodeInfo') + NLL + 'return { srcCodeInfo };')();
+})();
 
-  봄('장부에 있는 것은 그대로', itemOfCode('K2-01-E-0005').chapter, '평면좌표');
+// ⑮ 코드가 사는 곳이 둘이다 — 장부(codes/*.json)와 창고(items) (2026-09-05)
+//    🔴 **되돌려 주는 «모양»이 장부와 같아야 한다** (2026-09-06에 바로잡았다).
+//      장부는 `subject:'K2'` · `chapter:'01'` 인데 여기서는 이름(`'집합'`)을 넣고 있었다.
+//      읽는 화면이 없어서 안 드러났을 뿐이고, 창고 목록이 장부와 창고를 합쳐 보게 된
+//      순간 `storeMatches` 가 `'집합' !== '05'` 로 **단원을 고르면 통째로 감추게** 된다.
+{
+  const 창고 = {
+    'K2-05-D-0013': { code: 'K2-05-D-0013', content: '본문', answer: '③' },
+    // ②꼴 — 브라우저로 올린 모의고사 기출. 코드에 과목·단원 자리가 «없어서» 문서가 들고 있다
+    '1230928UP01': { code: '1230928UP01', content: '본문', answer: '④',
+                     subject: 'K2', chapter: '01', chapterName: '평면좌표', badge: 'UP',
+                     source: { book: '모의고사 기출', label: '2023년 09월 28번' } },
+    // 과목·단원을 «안» 싣고 담긴 기출 — 그래도 출처는 코드가 말해 준다
+    '1140927DW01': { code: '1140927DW01', content: '본문' },
+  };
+  const { itemOfCode } = new Function('state', 'chapterInfoFromItemCode', 'ITEM_CODE_RE', 'BOOK_OF_CODE', 'srcCodeInfo',
+    lift('itemOfCode') + NLL + 'return { itemOfCode };')(
+    { itemByCode: { 'K2-01-E-0005': { code: 'K2-01-E-0005', chapter: '01', chapterName: '평면좌표', source: { book: '엔딩크레딧' } } },
+      itemBody: 창고 },
+    (c) => (String(c).indexOf('-05-') > 0 ? { subject: '공통수학2', chapter: '집합' } : null),
+    /^([A-Z]{1,2}\d?)-(\d{2})-([A-Z])-(\d{4})/, { E: '엔딩크레딧', D: '동그랑땡 모의고사', J: '모의고사 기출' },
+    srcCodeInfo);
+
+  봄('장부에 있는 것은 그대로', itemOfCode('K2-01-E-0005').chapter, '01');
   // 🔴 여기가 사용자가 짚은 자리 — 시험지에서 태어난 코드를 «없는 코드»라 하고 있었다
   봄('🔴 창고에만 있는 것도 찾는다', !!itemOfCode('K2-05-D-0013'), true);
-  봄('코드가 단원을 말해 준다', itemOfCode('K2-05-D-0013').chapter, '집합');
+  봄('🔴 단원은 장부와 «같은 모양»(번호)으로', itemOfCode('K2-05-D-0013').chapter, '05');
+  봄('과목도 번호가 아니라 코드로', itemOfCode('K2-05-D-0013').subject, 'K2');
+  봄('단원 «이름»은 따로 들고 있는다', itemOfCode('K2-05-D-0013').chapterName, '집합');
   봄('교재 이름도 코드에서 온다', itemOfCode('K2-05-D-0013').source.book, '동그랑땡 모의고사');
   봄('정답은 창고 것을 쓴다', itemOfCode('K2-05-D-0013').answer, '③');
   봄('🔵 «시험지에서 태어난 것»이라고 표시해 둔다', itemOfCode('K2-05-D-0013').fromExam, true);
   봄('둘 다 없으면 없는 것', itemOfCode('K2-09-Z-0001'), null);
+
+  // ②꼴 — 브라우저로 올린 모의고사 기출 (2026-09-06)
+  봄('🔵 ②꼴도 창고에서 찾는다', !!itemOfCode('1230928UP01'), true);
+  봄('🔴 과목은 «문서»가 들고 있다 — 코드엔 그 자리가 없다', itemOfCode('1230928UP01').subject, 'K2');
+  봄('단원도 문서에서', itemOfCode('1230928UP01').chapter, '01');
+  봄('단원 이름까지', itemOfCode('1230928UP01').chapterName, '평면좌표');
+  봄('출처는 문서가 적어 둔 그대로', itemOfCode('1230928UP01').source.label, '2023년 09월 28번');
+  봄('딱지(갈래)도 그대로', itemOfCode('1230928UP01').badge, 'UP');
+  봄('한 기출의 원본이 무엇인지는 코드가 안다', itemOfCode('1230928UP01').origin, '1230928OR');
+  // 과목·단원을 안 싣고 담긴 것 — 짐작해서 채우지 «않는다»
+  봄('🔴 과목을 안 실었으면 비운다 — 짐작하지 않는다', itemOfCode('1140927DW01').subject, '');
+  봄('그래도 교재 이름은 코드가 말해 준다', itemOfCode('1140927DW01').source.book, '모의고사 기출');
 }
 
 
