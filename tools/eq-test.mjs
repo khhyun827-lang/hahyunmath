@@ -201,6 +201,12 @@ console.log('');
   /* K2-02-E-0171 — `rm` 앞이 숫자라 낱말 경계가 없어 안 걷혔다. 그러면 bar 규칙도 못 알아본다. */
   봄('🔴 숫자에 붙은 rm 도 걷는다 (2rmbar)', convertHwpEq('2rmbar{AC}'), '$2'+B+'overline{AC}$');
   봄('🔴 rm 뒤에 낱말이 와도 (4rm km)', convertHwpEq('4rm km'), '$4km$');
+  /* 🔴 **대문자 `RM` 도 온다** — 창고 660건 중 36건이 `RMO(0,0)` 꼴로 담겨 있었다.
+     한글 수식 명령은 대소문자를 안 가린다. 09-06에 창고를 읽어 보다가 눈에 걸렸다. */
+  봄('🔴 대문자 RM 도 걷는다 (RMO → O)', convertHwpEq('RMO(0,0)'), '$O(0,0)$');
+  봄('점 이름이 줄줄이 붙어도', convertHwpEq('RMA, RMB, RMC'), '$A, B, C$');
+  든가('⚠ 대문자 NORM 의 꼬리는 안 건드린다', convertHwpEq('NORM'), 'NORM');
+  든가('⚠ TERM 도', convertHwpEq('TERM'), 'TERM');
   든가('⚠ form·term 의 꼬리는 안 건드린다', convertHwpEq('form'), 'form');
   든가('⚠ norm 도', convertHwpEq('norm'), 'norm');
 
