@@ -24,7 +24,13 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const BASE = 'https://openrouter.ai/api/v1';
 const 값 = (이름, 기본) => { const i = process.argv.indexOf(이름); return i >= 0 ? process.argv[i + 1] : 기본; };
 const N = +값('--n', 40);
-const 모델들 = process.argv.slice(2).filter((a) => !a.startsWith('--') && a !== String(N));
+const 간격 = +값('--gap', 3.5) * 1000;   // 한 건 사이의 쉼(초). 한도가 빡빡한 모델은 늘린다.
+const 재시도 = +값('--retry', 3);         // 429·5xx 를 «못 잼»으로 버리기 전에 몇 번 다시 묻나
+// ⚠ 손잡이 값(--gap 12 의 12)을 모델 이름으로 세면 안 된다 — 예전엔 --n 값만 걸러서
+//   --gap 을 붙이는 순간 12 라는 «모델»을 시험하려 들었다. 손잡이 «뒤»를 통째로 뺀다.
+const 인자 = process.argv.slice(2);
+const 모델들 = 인자.filter((a, i) => !a.startsWith(String.fromCharCode(45, 45))
+  && !(i > 0 && 인자[i - 1].startsWith(String.fromCharCode(45, 45))));
 
 // 🔵 «어디로 보내는가»를 모델 이름 앞에 붙여 고른다 — groq:… · cerebras:… · 그 밖은 OpenRouter.
 //   사용자가 실제로 물은 후보(gpt-oss-120b)는 OpenRouter 무료 목록에 없다. Groq·Cerebras 가 준다.
@@ -136,8 +142,21 @@ const 답뽑기 = (글) => {
   return '';
 };
 const 키이름 = (c) => Object.keys(곳들).find((k) => 곳들[k] === c);
-async function 풀리기(model, 문항) {
-  const g = 갈래(model);
+const 쉼 = (ms) => new Promise((끝) => setTimeout(끝, ms));
+
+// 🔴 429 는 «틀렸다»가 아니라 «못 쟀다» 다 — 그런데 못 잰 것이 쌓이면 점수가 뜻을 잃는다.
+//   qwen3.8-27b 이 15제 중 11제를 튕겨 「100%」가 나왔지만 실제로 잰 것은 4제였다. 그건 점수가 아니다.
+// ⚠ 원인이 초당 «횟수»가 아니라 분당 «토큰»(8K TPM)이면 간격을 늘려도 결국 넘긴다 —
+//   한 건이 900토큰이면 분당 8건이 천장이고, 그건 우리가 고를 수 있는 값이 아니다.
+//   그래서 «상대가 알려 주는 만큼» 기다렸다가 다시 묻는다. 안 알려 주면 20초.
+function 얼마나쉬랬나(r, t) {
+  const h = Number(r.headers.get('retry-after') || 0);
+  if (h > 0) return Math.min(h, 90) * 1000;
+  const m = String(t).match(/try again in ([0-9.]+)\s*s/i);
+  if (m) return Math.min(Number(m[1]) + 0.5, 90) * 1000;
+  return 20000;
+}
+async function 한번(g, 문항) {
   const t0 = Date.now();
   let r;
   try {
@@ -149,11 +168,26 @@ async function 풀리기(model, 문항) {
   } catch (e) { return { 흠: String(e.message || e).slice(0, 110), 초: (Date.now() - t0) / 1000 }; }
   const 초 = (Date.now() - t0) / 1000;
   const t = await r.text();
+  if (r.status === 429 || r.status >= 500) {
+    return { 흠: 'http ' + r.status + ' ' + t.replace(/\s+/g, ' ').slice(0, 90), 초, 기다림: 얼마나쉬랬나(r, t) };
+  }
   if (!r.ok) return { 흠: 'http ' + r.status + ' ' + t.replace(/\s+/g, ' ').slice(0, 110), 초 };
   let j; try { j = JSON.parse(t); } catch (e) { return { 흠: '응답을 못 읽음', 초 }; }
   if (j.error) return { 흠: String(j.error.message || j.error).slice(0, 110), 초 };
   const 글 = j.choices?.[0]?.message?.content || '';
   return { 답: 답뽑기(글), 토큰: j.usage?.total_tokens || 0, 초 };
+}
+async function 풀리기(model, 문항) {
+  const g = 갈래(model);
+  let 쉰초 = 0;
+  for (let 판 = 0; ; 판++) {
+    const r = await 한번(g, 문항);
+    r.쉰초 = 쉰초;
+    if (!r.기다림 || 판 >= 재시도) return r;
+    process.stdout.write('  (한도 — ' + Math.round(r.기다림 / 1000) + '초 쉬고 다시)   ');
+    await 쉼(r.기다림);
+    쉰초 += r.기다림 / 1000;
+  }
 }
 
 /* ── 돌린다 ───────────────────────────────────────────────────────── */
@@ -171,7 +205,7 @@ for (const model of 모델들) {
     else if (r.답 === 정답) 맞음++;
     else { 틀림++; 틀린것.push(x.code + ' (정답 ' + 정답 + ' · 낸 답 ' + (r.답 || '못 읽음') + ')'); }
     process.stdout.write('\r   ' + (i + 1) + '/' + 시험지.length + ' — 맞음 ' + 맞음 + ' · 틀림 ' + 틀림 + ' · 흠 ' + 흠 + '   ');
-    await new Promise((s) => setTimeout(s, 3500));       // 분당 20건 한도를 지킨다
+    await 쉼(간격);
   }
   const 잰것 = 맞음 + 틀림;
   const 율 = 잰것 ? Math.round((맞음 / 잰것) * 1000) / 10 : 0;
