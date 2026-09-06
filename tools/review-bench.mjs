@@ -29,7 +29,8 @@ const 재시도 = +값('--retry', 3);         // 429·5xx 를 «못 잼»으로 
 // 🔴 답이 «틀린» 것과 답을 «적기 전에 잘린» 것은 다르다 — gpt-oss 가 60제 중 3제에서
 //   추론에 1만 자를 쓰고 finish_reason=length 로 끊겨 content 가 0자였다.
 //   그걸 「틀림」으로 세면 모델을 억울하게 깎고, 검토 기능에서는 «없는 불일치»를 만든다.
-const 최대 = +값('--max', 8000);       // 답까지 적을 만큼 넉넉히
+const 최대 = +값('--max', 8000);         // 답까지 적을 만큼 넉넉히
+const 자리 = 값('--scene', '');        // '3' 이면 SCENE 3(실전)만 — 쉬운 문제로 부풀린 점수를 걷어낸다
 // ⚠ 손잡이 값(--gap 12 의 12)을 모델 이름으로 세면 안 된다 — 예전엔 --n 값만 걸러서
 //   --gap 을 붙이는 순간 12 라는 «모델»을 시험하려 들었다. 손잡이 «뒤»를 통째로 뺀다.
 const 인자 = process.argv.slice(2);
@@ -149,15 +150,27 @@ if (!items) {
   fs.mkdirSync(path.dirname(재운곳), { recursive: true });
   fs.writeFileSync(재운곳, JSON.stringify(items));
 }
+// 🔵 «쉬운 문제가 점수를 부풀린다» — 사용자가 짚은 대로다.
+//   SCENE 1(기본유형)·2(발전유형)가 섞인 60제에서 96.7% 가 나와도,
+//   정작 검토가 어려운 것은 SCENE 3(실전 — 다른 눈이 필요하다)이다.
+// ⚠ SCENE 은 창고(items)가 아니라 장부(codes/K2-E.json)에 있다 — 거기서 끌어온다.
+let 자리표 = null;
+if (자리) {
+  const 장부 = JSON.parse(fs.readFileSync(path.join(ROOT, 'codes', 'K2-E.json'), 'utf8'));
+  const 목 = Array.isArray(장부) ? 장부 : Object.values(장부).find(Array.isArray);
+  자리표 = new Set(목.filter((x) => String(x.scene || '').includes(자리)).map((x) => x.code));
+  if (!자리표.size) { console.error('🔴 SCENE ' + 자리 + ' 문항이 장부에 없습니다.'); process.exit(1); }
+}
 const 후보 = Object.values(items)
   .filter((x) => x.content && !x.image && !x.images && 정답꼴(x.answer))
+  .filter((x) => !자리표 || 자리표.has(x.code))
   .sort((a, b) => (a.code < b.code ? -1 : 1));
 /* 앞에서부터 자르면 01단원만 나온다 — 건너뛰며 뽑아 단원을 고루 섞는다. */
 const 걸음 = Math.max(1, Math.floor(후보.length / N));
 const 시험지 = [];
 for (let i = 0; i < 후보.length && 시험지.length < N; i += 걸음) 시험지.push(후보[i]);
 const 단원 = {}; for (const x of 시험지) { const c = (x.code.match(/-(\d{2})-/) || [])[1]; 단원[c] = (단원[c] || 0) + 1; }
-console.log('\n  시험지 ' + 시험지.length + '제 (창고 ' + 후보.length + '제에서 골고루) · 단원별 ' + JSON.stringify(단원));
+console.log('\n  시험지 ' + 시험지.length + '제' + (자리 ? ' · SCENE ' + 자리 + '만' : '') + ' (창고 ' + 후보.length + '제에서 골고루) · 단원별 ' + JSON.stringify(단원));
 console.log('  객관식 ' + 시험지.filter((x) => 정답꼴(x.answer).kind === '객관식').length
   + ' · 자연수 ' + 시험지.filter((x) => 정답꼴(x.answer).kind === '자연수').length);
 

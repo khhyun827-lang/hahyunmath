@@ -66,7 +66,11 @@ export default {
        날짜를 UTC로 보는데 클라이언트는 성공만·공용 하나·로컬 날짜로 셌다.
        그래서 «남았다고 떠 있는데 429»가 났다 (2026-08-10). 진실은 여기 하나뿐이다. */
     if (url.pathname === '/quota') {
-      return new Response(JSON.stringify(await peekQuota(env, 'ai', who.uid, AI_DAILY_LIMIT)), {
+      /* ⚠ 검토는 «다른 통»이다 — 같은 통으로 보이면 화면이 남은 생성을 틀리게 띄운다.
+         ?bucket=review 로 물으면 검토 통을 본다. 안 주면 예전대로 생성 통이다. */
+      const bucket = url.searchParams.get('bucket') === 'review' ? 'review' : 'ai';
+      const limit = bucket === 'review' ? REVIEW_DAILY_LIMIT : AI_DAILY_LIMIT;
+      return new Response(JSON.stringify(await peekQuota(env, bucket, who.uid, limit)), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
@@ -75,6 +79,11 @@ export default {
        /delete는 정리 작업이라 막으면 드라이브에 쓰레기가 쌓인다 — 그대로 통과시킨다. */
     if (url.pathname === '/upload') {
       const q = await bumpQuota(env, 'upload', who.uid, UPLOAD_PER_USER_DAILY, null);
+      if (!q.ok) return quotaExceeded(q, corsHeaders);
+    } else if (url.pathname === '/review') {
+      /* 🔴 검토가 «만들기» 한도를 먹으면 안 된다 — 통을 따로 둔다.
+         한 문항 검토는 위쪽 요청 1~2건이다(답이 갈릴 때만 둘째 모델을 부른다). */
+      const q = await bumpQuota(env, 'review', who.uid, REVIEW_DAILY_LIMIT, REVIEW_DAILY_LIMIT);
       if (!q.ok) return quotaExceeded(q, corsHeaders);
     } else if (url.pathname !== '/delete') {
       // 나머지는 전부 Gemini 생성이다 (기존 라우팅이 catch-all이라 그대로 맞춘다)
@@ -85,6 +94,7 @@ export default {
     if (url.pathname === '/upload') return handleUpload(request, env, corsHeaders);
     if (url.pathname === '/delete') return handleDelete(request, env, corsHeaders);
     if (url.pathname === '/figure') return handleFigureScene(request, env, corsHeaders, who.uid);
+    if (url.pathname === '/review') return handleReview(request, env, corsHeaders, who.uid);
     return handleGeminiTwin(request, env, corsHeaders, who.uid);
   },
 };
@@ -803,4 +813,182 @@ ${content || '(본문 없음)'}`;
   return new Response(JSON.stringify({ scene, quotaUsed: q.used, quotaLimit: q.limit }), {
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   });
+}
+
+/* =================== 검토: 다른 AI가 «직접 풀어» 맞대 본다 =================== */
+
+/* 🔴 **모델에게 「이 문제 괜찮나요?」라고 묻지 않는다.** 그렇게 물으면 대개 괜찮다고 한다.
+     정답을 «숨기고» 직접 풀린 뒤 맞대 본다. 그래서 프롬프트에 정답이 절대 안 들어간다 —
+     들어가면 「맞다」가 공짜로 나오고, 검토는 하나 마나가 된다.
+
+   🔴 **만든 AI의 «해설»도 안 보여 준다.** 제작 AI가 틀린 변형을 만들었으면 해설도 같이
+     틀려 있다. 그 해설을 검토 AI에게 보여 주면 틀린 논리를 그대로 따라가 같은 오답에 닿는다.
+     즉 정작 잡아야 할 문항에서 검토가 무력해진다. 해설은 판정 «뒤»에 사람에게 보여 줄 것이다.
+
+   🔵 **답이 갈렸을 때 「AI가 틀렸다」와 「AI가 못 풀었다」를 가른다.**
+     실측: 쉬운 문항이 섞이면 96.7% 지만 어려운 문항만 모으면 75% 였다(2026-09-06).
+     그 25%는 대개 문항이 잘못된 게 아니라 AI가 못 푼 것이다. 그걸 「답이 다릅니다」로
+     올리면 선생님이 헛일을 한다. 그래서 계보가 «다른» 모델을 하나 더 부른다 —
+       · 둘이 «같은» 다른 답  → 🔴 문항·정답이 의심스럽다 (사람에게 최우선)
+       · 둘째가 창고와 일치   → ✅ 통과 (첫째가 혼자 틀린 것)
+       · 셋이 다 다름         → ⚪ 검토 못 함 (문항은 건드리지 않는다)
+     ⚠ 난이도 라벨(SCENE)로 가르지 않는다 — 엔딩크레딧 교재에만 있어 다음 교재에서 무너진다.
+
+   ⚠ 값은 «갈린 것»에만 든다 — 대부분은 한 번으로 끝난다. 전부 두 번 부르면 값이 두 배다. */
+
+const REVIEW_DAILY_LIMIT = 60;
+const REVIEW_MODEL_A = 'openai/gpt-oss-120b';
+const REVIEW_MODEL_B = 'qwen/qwen3.8-27b';
+const REVIEW_MAX_TOKENS = 4000;
+/* ⚠ max_tokens 를 분당 한도(8000)와 같게 주면 «자리 예약»에 걸려 통이 비어 있지 않아도
+     매 요청이 429 다 (2026-09-06 실측). 어려운 문항의 실제 필요치는 3,700 토큰이었다. */
+
+const REVIEW_PROMPT = [
+  '너는 고등학교 수학 문제를 푸는 사람이다. 아래 문제를 직접 풀어라.',
+  '풀이를 간단히 적은 뒤, 마지막 줄에 반드시 다음 꼴로만 답을 적어라:',
+  '정답: <답>',
+  '객관식(①~⑤)이면 기호 하나만, 아니면 숫자만 적어라. 다른 말을 덧붙이지 마라.',
+].join(String.fromCharCode(10));
+
+const REVIEW_CIRCLES = ['①', '②', '③', '④', '⑤'];
+const RV_BS = String.fromCharCode(92);
+
+/* 「분수」와 「16/3」이 같은 값임을 알아본다 — 앞자리만 떼면 맞은 답이 틀린 답이 된다. */
+const RV_FRAC = new RegExp(RV_BS + RV_BS + 'd?frac' + RV_BS + 's*' + RV_BS + '{([^{}]*)' + RV_BS + '}' + RV_BS + 's*' + RV_BS + '{([^{}]*)' + RV_BS + '}', 'g');
+const RV_LR = new RegExp(RV_BS + RV_BS + 'left|' + RV_BS + RV_BS + 'right', 'g');
+function reviewValueForm(t) {
+  return String(t)
+    .replace(RV_FRAC, '$1/$2')
+    .replace(RV_LR, '')
+    .replace(/[$\s{}]/g, '')
+    .replace(/^\(|\)$/g, '');
+}
+
+/* 본문에서 보기 다섯을 갈라낸다 — 창고에 보기가 따로 없어서 글에서 읽어야 한다. */
+function reviewChoices(text) {
+  const s = String(text || '');
+  const at = REVIEW_CIRCLES.map((d) => s.lastIndexOf(d));
+  if (at.some((i) => i < 0)) return null;
+  for (let i = 1; i < 5; i++) if (at[i] < at[i - 1]) return null;
+  const edge = at.concat([s.length]);
+  return REVIEW_CIRCLES.map((d, i) => reviewValueForm(s.slice(edge[i] + d.length, edge[i + 1])));
+}
+
+/* 창고 정답이 어떤 꼴인가. 객관식도 숫자도 아니면 검토하지 않는다. */
+function reviewAnswerKind(a) {
+  const s = String(a == null ? '' : a).trim();
+  if (/^[①②③④⑤]$/.test(s)) return { kind: 'choice', v: s };
+  const m = s.replace(/\$/g, '').replace(/\s/g, '');
+  if (/^-?\d{1,4}$/.test(m)) return { kind: 'number', v: String(Number(m)) };
+  return null;
+}
+
+/* 모델이 낸 마지막 「정답:」 줄을 읽는다. */
+function reviewPickAnswer(text) {
+  const lines = String(text || '').split(String.fromCharCode(10)).map((s) => s.trim()).filter(Boolean);
+  for (let i = lines.length - 1; i >= 0; i--) {
+    const m = lines[i].match(/정답\s*[:：]\s*(.+)$/);
+    if (!m) continue;
+    const s = m[1].replace(/[*`]/g, '').trim();
+    const c = s.match(/[①②③④⑤]/); if (c) return c[0];
+    const bare = s.replace(/[$\s]/g, '');
+    if (/^-?\d{1,4}$/.test(bare)) return String(Number(bare));
+    return reviewValueForm(s).slice(0, 24);
+  }
+  return '';
+}
+
+/* 🔴 «같은 답을 다르게 적은 것»을 다르다고 하면 안 된다 — 없는 불일치가 사람을 헛일시킨다.
+   실측 세 가지: 「2」와 「②」 · 「-10」과 ①(=-10) · 「16/3」과 ②(=16/3).
+   ⚠ 반대쪽도 지킨다 — 2 를 «언제나» ② 로 보면 답이 2 인 주관식에서 아무 번호나 맞게 된다. */
+function reviewSameAnswer(given, want, kind, text) {
+  if (!given) return false;
+  if (given === want) return true;
+  if (kind !== 'choice') return false;
+  const n = String(given).match(/^([1-5])$/);
+  if (n) return REVIEW_CIRCLES[Number(n[1]) - 1] === want;
+  const ch = reviewChoices(text);
+  if (!ch) return false;
+  const i = REVIEW_CIRCLES.indexOf(want);
+  return i >= 0 && ch[i] !== '' && ch[i] === reviewValueForm(given);
+}
+
+/* 한 모델에게 «한 번» 풀린다. 돌아오는 것은 답 하나이거나, 왜 못 냈는지다. */
+async function reviewSolve(model, content, env) {
+  const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    method: 'POST',
+    headers: { Authorization: 'Bearer ' + env.GROQ_KEY, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model,
+      max_tokens: REVIEW_MAX_TOKENS,
+      messages: [
+        { role: 'system', content: REVIEW_PROMPT },
+        { role: 'user', content },
+      ],
+    }),
+  });
+  const text = await res.text();
+  if (!res.ok) return { refused: upstreamRefused(res.status), status: res.status, detail: text.slice(0, 200) };
+  let j; try { j = JSON.parse(text); } catch (e) { return { detail: '응답을 못 읽음' }; }
+  const ch = j.choices && j.choices[0];
+  const body = (ch && ch.message && ch.message.content) || '';
+  const answer = reviewPickAnswer(body);
+  /* ⚠ 답이 없는데 finish_reason 이 length 면 «못 푼 것»이 아니라 «적기 전에 잘린 것»이다.
+     그걸 틀림으로 세면 모델을 억울하게 깎고, 없는 불일치를 만든다. */
+  if (!answer && ch && ch.finish_reason === 'length') return { truncated: true };
+  return { answer, tokens: (j.usage && j.usage.total_tokens) || 0 };
+}
+
+async function handleReview(request, env, corsHeaders, uid) {
+  const send = (body, status) => new Response(JSON.stringify(body), {
+    status: status || 200,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  });
+
+  if (!env.GROQ_KEY) {
+    await refundQuota(env, 'review', uid);
+    return send({ error: 'no key', detail: 'GROQ_KEY 비밀이 워커에 없습니다' }, 500);
+  }
+
+  let body;
+  try { body = await request.json(); } catch (e) { body = null; }
+  const content = body && String(body.content || '').trim();
+  const stored = body && reviewAnswerKind(body.answer);
+  if (!content || !stored) {
+    /* 위쪽에 아무것도 안 보냈으니 한도를 먹지 않는다. */
+    await refundQuota(env, 'review', uid);
+    return send({ error: 'bad request', detail: '본문과 «①~⑤ 또는 숫자» 정답이 있어야 검토합니다' }, 400);
+  }
+
+  const a = await reviewSolve(REVIEW_MODEL_A, content, env);
+  if (a.refused) {
+    /* 🔵 못 받았으면 안 쓴 것이다 — 하루치를 돌려준다. */
+    await refundQuota(env, 'review', uid);
+    return send({ error: 'upstream', status: a.status, detail: a.detail }, 503);
+  }
+  if (a.truncated || !a.answer) {
+    return send({ verdict: 'unsure', reason: a.truncated ? 'truncated' : 'no-answer', models: [REVIEW_MODEL_A] });
+  }
+  if (reviewSameAnswer(a.answer, stored.v, stored.kind, content)) {
+    return send({ verdict: 'agree', answer: a.answer, models: [REVIEW_MODEL_A] });
+  }
+
+  /* 여기서부터가 «갈린» 경우다. 계보가 다른 모델을 하나 더 부른다. */
+  const b = await reviewSolve(REVIEW_MODEL_B, content, env);
+  if (b.refused) {
+    return send({ verdict: 'unsure', reason: 'second-refused', first: a.answer, models: [REVIEW_MODEL_A] });
+  }
+  if (b.truncated || !b.answer) {
+    return send({ verdict: 'unsure', reason: 'second-no-answer', first: a.answer, models: [REVIEW_MODEL_A, REVIEW_MODEL_B] });
+  }
+  if (reviewSameAnswer(b.answer, stored.v, stored.kind, content)) {
+    /* 둘째가 창고와 맞았다 — 첫째가 혼자 틀린 것이다. 통과시키되 그 사실은 남긴다. */
+    return send({ verdict: 'agree', answer: b.answer, lone: a.answer, models: [REVIEW_MODEL_A, REVIEW_MODEL_B] });
+  }
+  if (a.answer === b.answer || reviewSameAnswer(a.answer, b.answer, 'choice', content)) {
+    /* 🔴 계보가 다른 두 모델이 «같은» 다른 답에 닿았다 — 문항이나 정답을 의심할 이유가 가장 크다. */
+    return send({ verdict: 'suspect', answer: a.answer, stored: stored.v, models: [REVIEW_MODEL_A, REVIEW_MODEL_B] });
+  }
+  /* 셋이 다 다르다 — 문항이 이상한 게 아니라 AI가 못 푼 것이다. 문항은 건드리지 않는다. */
+  return send({ verdict: 'unsure', reason: 'disagree', first: a.answer, second: b.answer, models: [REVIEW_MODEL_A, REVIEW_MODEL_B] });
 }
