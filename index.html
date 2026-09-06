@@ -19998,6 +19998,23 @@ let autoFillTimer = null;
 const autoFillSkipped = new Set();   // 이번 세션에 «못 담은» 문항. 다시 안 뽑는다
 /* 지금 문항이 «몇 번째로» 엎어졌나. 문항이 바뀌면 0부터 다시 센다 (2026-09-06). */
 let autoFillRetry = { code:'', n:0 };
+/* 🔴 **«우리 잘못»과 «위쪽이 엎어진 것»은 다른 일이다** (2026-09-06 · 사용자가 실패율이
+     높다고 해서 까닭을 받아 보고 알았다). 실측으로 Gemini 가 두 가지로 엎어진다:
+       · 429 `You exceeded your current quota` — 한도. 한참 쉬어야 한다
+       · 503 `This model is currently experiencing high demand` — 붐빔. 곧 풀린다
+     둘 다 워커가 **502 로 뭉쳐서** 보내므로 앱은 「그냥 실패」로 읽고 있었다.
+   🔴 **그런데 실패해도 우리 하루치가 깎인다** — 워커가 Gemini 를 부르기 «전»에 세기 때문이다
+     (`bumpQuota` 가 라우팅 문턱에 있다). 그래서 위쪽이 엎어지는 날은 20건을 그냥 버린다.
+   🔵 그러니 이럴 때는 «끄지도 말고 곧바로 다시 하지도 말고» — **쉬었다 온다.**
+     ⚠ 다만 쉬었다 오는 것도 한 건을 쓴다. 그래서 **거듭되면 멈춘다**(아래 상한). */
+function aiUpstreamKind(말){
+  const s = String(말 || '');
+  if(/\b429\b|RESOURCE_EXHAUSTED|exceeded your current quota/i.test(s)) return 'rate';
+  if(/\b50[034]\b|UNAVAILABLE|high demand|overloaded/i.test(s)) return 'busy';
+  return '';
+}
+const AUTOFILL_UPSTREAM_MAX = 5;      // 위쪽이 거듭 엎어지면 이만큼에서 멈춘다
+let autoFillUpstream = 0;             // 잇따라 위쪽이 엎어진 횟수
 
 function autoFillState(){
   if(!state.autoFill){
@@ -20123,9 +20140,33 @@ async function autoFillTick(){
            더 해 보고, **거듭 엎어질 때만** 멈춘다. 버리는 것이 최대 두 건이라 스무 건과 다르다.
          ⚠ 다시 해 보는 것도 한도를 쓴다. 그래서 «한 번»이다 — 늘리지 말 것. */
       st.failed++;
+      const 까닭 = escHtml(마지막AI오류 || '까닭을 못 받았습니다');
+      /* 🔴 **위쪽(Gemini)이 엎어진 것은 «이 문항의 흠»이 아니다** (2026-09-06).
+         다른 문항으로 옮겨 봐야 똑같이 엎어진다 — 그러니 문항을 바꾸지도, 끄지도 않고 «쉰다».
+         ⚠ 13초 뒤 다시 하면 붐비는 데 또 들이받는 꼴이다. 한도(429)는 더 오래 쉰다.
+         ⚠ 쉬었다 오는 것도 한 건을 쓴다(워커가 부르기 전에 센다) — 그래서 상한을 둔다. */
+      const 위쪽 = aiUpstreamKind(마지막AI오류);
+      if(위쪽){
+        autoFillUpstream++;
+        if(autoFillUpstream >= AUTOFILL_UPSTREAM_MAX){
+          st.on = false;
+          try{ localStorage.setItem(AUTOFILL_KEY, '0'); }catch(e){}
+          st.msg = `Gemini 쪽이 ${autoFillUpstream}번 잇따라 엎어져 멈췄습니다 — ${까닭}. `
+                 + '우리 코드 흠이 아닙니다. 조금 뒤에 다시 켜주세요.';
+        } else {
+          const 쉼 = 위쪽 === 'rate' ? 1800000 : 300000;      // 한도 30분 · 붐빔 5분
+          st.msg = (위쪽 === 'rate' ? 'Gemini 하루 한도에 걸렸습니다' : 'Gemini 쪽이 붐빕니다')
+                 + ` — ${Math.round(쉼/60000)}분 쉬었다 다시 해 봅니다`
+                 + ` (${autoFillUpstream}/${AUTOFILL_UPSTREAM_MAX}번째). ${까닭}`;
+          state.aiProcessing = false; st.busy = '';
+          render(); return autoFillLater(쉼);
+        }
+        state.aiProcessing = false; st.busy = '';
+        render(); return;
+      }
+      autoFillUpstream = 0;                                   // 우리 쪽 흠이면 세던 것을 푼다
       const 처음 = autoFillRetry.code !== code;
       autoFillRetry = { code, n: 처음 ? 1 : autoFillRetry.n + 1 };
-      const 까닭 = escHtml(마지막AI오류 || '까닭을 못 받았습니다');
       if(autoFillRetry.n < 2){
         st.msg = `${code} 이(가) 한 번 엎어졌습니다 — ${까닭}. 같은 문항으로 한 번 더 해 봅니다.`;
         state.aiProcessing = false; st.busy = '';
@@ -20149,6 +20190,7 @@ async function autoFillTick(){
       st.msg = `${code} — 학생이 칠 수 없는 답이라 건너뛰었습니다.`;
     }
     else {
+      autoFillUpstream = 0;   // 한 건이 됐으면 위쪽은 멀쩡하다
       const vcode = nextVariantCode(code, 'N');
       /* 🔴 **바로 창고로 보내지 않는다 — 검토를 거친다** (2026-09-06 · 사용자 요청).
          「바로창고로가? 내가 검토로 들어가도록 해주면 안돼?」. 맞는 판단이다 —

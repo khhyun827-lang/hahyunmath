@@ -219,6 +219,28 @@ async function bumpQuota(env, bucket, uid, perUserLimit, globalLimit) {
   return { ok: true, used: used + 1 };
 }
 
+/* 🔴 **위쪽(Gemini)이 엎어지면 한 건을 돌려준다** (2026-09-06 · 사용자가 「실패율이 너무높아」).
+   여기는 Gemini 를 부르기 «전»에 센다(라우팅 문턱). 그래서 Gemini 가 429(한도)나
+   503(붐빔)을 내면 **아무것도 못 받고 하루치만 깎인다.** 실측으로 둘 다 나왔다.
+   🔵 «우리가 쓴 것»은 답을 받은 것이라야 한다 — 못 받았으면 안 쓴 것이다.
+   ⚠ **모든 실패에 돌려주면 안 된다.** 모델이 이상한 답을 내서 우리가 못 읽은 것은
+     Gemini 를 진짜로 쓴 것이다(돈이 나갔다). **위쪽이 거절한 것만** 돌려준다.
+   ⚠ 0 아래로 안 내려간다 — 다른 창에서 동시에 쓰면 셈이 어긋날 수 있다. */
+async function refundQuota(env, bucket, uid) {
+  if (!env.QUOTA) return;
+  const day = quotaDay();
+  const uKey = `q:${bucket}:${uid}:${day}`;
+  const gKey = `q:${bucket}:_all:${day}`;
+  const [uRaw, gRaw] = await Promise.all([env.QUOTA.get(uKey), env.QUOTA.get(gKey)]);
+  const opts = { expirationTtl: 60 * 60 * 48 };
+  await Promise.all([
+    env.QUOTA.put(uKey, String(Math.max(0, Number(uRaw || 0) - 1)), opts),
+    env.QUOTA.put(gKey, String(Math.max(0, Number(gRaw || 0) - 1)), opts),
+  ]);
+}
+/* 위쪽이 «거절»한 것인가 — 429(한도) · 5xx(붐빔·장애). 그 밖은 우리가 쓴 것이다. */
+function upstreamRefused(status) { return status === 429 || (status >= 500 && status <= 599); }
+
 /* =================== 구글 드라이브: OAuth 리프레시 토큰으로 액세스 토큰 발급 =================== */
 
 let driveTokenCache = { value: null, expiresAt: 0 };
@@ -559,6 +581,11 @@ ${answer}`;
   }
 
   if (!geminiRes.ok) {
+    /* 🔴 **위쪽이 거절했으면 한 건을 돌려준다** (2026-09-06 · 실측 429·503 둘 다 나왔다).
+       한도는 Gemini 를 부르기 «전»에 센다(라우팅 문턱). 안 그러면 아무것도 못 받고
+       하루치만 깎인다 — 위쪽이 붐비는 날은 20건을 통째로 버린다.
+       ⚠ 모델이 «이상한 답»을 낸 것은 쓴 것이다(돈이 나갔다) — 그건 안 돌려준다. */
+    if (upstreamRefused(geminiRes.status)) await refundQuota(env, 'ai', uid);
     const errText = await geminiRes.text();
     return new Response(JSON.stringify({ error: 'gemini error', detail: errText }), {
       status: 502,
@@ -736,6 +763,11 @@ ${content || '(본문 없음)'}`;
     });
   }
   if (!geminiRes.ok) {
+    /* 🔴 **위쪽이 거절했으면 한 건을 돌려준다** (2026-09-06 · 실측 429·503 둘 다 나왔다).
+       한도는 Gemini 를 부르기 «전»에 센다(라우팅 문턱). 안 그러면 아무것도 못 받고
+       하루치만 깎인다 — 위쪽이 붐비는 날은 20건을 통째로 버린다.
+       ⚠ 모델이 «이상한 답»을 낸 것은 쓴 것이다(돈이 나갔다) — 그건 안 돌려준다. */
+    if (upstreamRefused(geminiRes.status)) await refundQuota(env, 'ai', uid);
     return new Response(JSON.stringify({ error: 'gemini error', detail: await geminiRes.text() }), {
       status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

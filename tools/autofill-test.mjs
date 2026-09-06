@@ -37,7 +37,7 @@ const 봄 = (무엇, 나온것, 나와야할것) => {
 };
 
 /* 스텁 세상. twin 은 «다음에 무엇을 돌려줄지»를 시험이 정한다. */
-function makeWorld({ itemBody = {}, variants = {}, twin = null, used = 0, saveOk = true } = {}) {
+function makeWorld({ itemBody = {}, variants = {}, twin = null, used = 0, saveOk = true, 오류 = 'AI 가 안 됐다' } = {}) {
   const store = new Map();
   const w = { 부른AI: [], 쓴것: [], 예약: [], twin, used, saveOk };
   const itemByCode = {};
@@ -70,7 +70,7 @@ function makeWorld({ itemBody = {}, variants = {}, twin = null, used = 0, saveOk
     (root, kind) => root + '-' + kind + '01',
     async (coll, id, doc) => { if (!w.saveOk) return null; w.쓴것.push({ coll, id, doc }); return true; },
     () => '2026-09-04 12:00',
-    (s) => String(s), 'AI 가 안 됐다',
+    (s) => String(s), 오류,
     { warn(){}, error(){}, log(){} },
     (code) => [ ...(variants[code] || []),
       ...Object.keys(itemBody).filter(c => c.startsWith(code + '-')).map(c => ({ code: c, variantKind: (c.match(/-([NUD])/) || [])[1] })) ],
@@ -223,5 +223,47 @@ console.log('\n남는 한도로 창고 채우기\n');
   봄('🔵 그리고 고리는 계속 돈다', w.autoFillState().on, true);
   봄('🔵 두 번 불렀다 (엎어진 것 + 된 것)', w.부른AI.length, 2);
 }
+
+// ⑦ 🔴 «우리 잘못»과 «위쪽(Gemini)이 엎어진 것»은 다르다 (2026-09-06)
+//    사용자가 「실패율이 너무높아」라고 해서 까닭을 받아 봤더니 위쪽이었다:
+//      · 429 You exceeded your current quota   — 한도
+//      · 503 experiencing high demand          — 붐빔
+//    둘 다 워커가 502 로 뭉쳐 보내서 앱은 「그냥 실패」로 읽고 **13초 뒤 또 들이받았다.**
+//    🔴 그런데 실패해도 우리 하루치가 깎인다(워커가 부르기 «전»에 센다) — 곧 손해다.
+{
+  const 세상 = (말) => { const w = makeWorld({ itemBody: 본문(5), twin: null }); w.오류 = 말; return w; };
+  /* 붐빔(503) — 끄지 않고 «쉬었다» 온다. 13초가 아니라 훨씬 길게. */
+  {
+    const w = makeWorld({ itemBody: 본문(5), twin: null, 오류: '워커 502 — gemini error — { "code": 503, "message": "This model is currently experiencing high demand" }' });
+    await w.autoFillTick();
+    봄('🔵 위쪽이 붐비면 «끄지 않는다»', w.autoFillState().on, true);
+    봄('🔴 13초 뒤에 또 들이받지 않는다', w.예약[0] > 60000, true);
+    봄('붐빈다고 말한다', /붐빕니다/.test(w.autoFillState().msg), true);
+  }
+  /* 한도(429) — 더 오래 쉰다. 붐빔보다 길어야 한다. */
+  {
+    const w = makeWorld({ itemBody: 본문(5), twin: null, 오류: '워커 502 — gemini error — { "code": 429, "message": "You exceeded your current quota" }' });
+    await w.autoFillTick();
+    봄('🔴 한도면 더 오래 쉰다', w.예약[0] >= 1800000, true);
+    봄('한도라고 말한다', /한도/.test(w.autoFillState().msg), true);
+  }
+  /* 🔴 쉬었다 오는 것도 한 건을 쓴다 — 거듭되면 멈춰야 한다. */
+  {
+    const w = makeWorld({ itemBody: 본문(5), twin: null, 오류: '워커 502 — gemini error — 503 high demand' });
+    for (let i = 0; i < 5; i++) await w.autoFillTick();
+    봄('🔴 다섯 번 잇따라 엎어지면 멈춘다', w.autoFillState().on, false);
+    봄('🔴 그래서 다섯 건만 쓴다 (스무 건이 아니라)', w.부른AI.length, 5);
+    봄('우리 흠이 아니라고 말한다', /우리 코드 흠이 아닙니다/.test(w.autoFillState().msg), true);
+  }
+  /* ⚠ «우리 잘못»일 때는 예전 그대로 — 한 번 다시 해 보고 두 번째면 끈다. */
+  {
+    const w = makeWorld({ itemBody: 본문(5), twin: null, 오류: 'incomplete AI result' });
+    await w.autoFillTick();
+    봄('⚠ 우리 흠이면 곧바로 다시 해 본다', w.예약[0] < 60000, true);
+    await w.autoFillTick();
+    봄('⚠ 그리고 두 번째면 끈다', w.autoFillState().on, false);
+  }
+}
+
 console.log(`\n  ${fail ? '🔴' : '✅'} ${pass} 통과 · ${fail} 실패\n`);
 process.exit(fail ? 1 : 0);
