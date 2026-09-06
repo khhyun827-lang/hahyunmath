@@ -469,3 +469,8 @@ table.grid .nm s{text-decoration:none;color:var(--dim);font-weight:400;
   background:var(--hover);font-size:11.5px;color:var(--sub);}
 .app .rv-aibar b{color:var(--ink);font-weight:600;}
 .app .rv-aibar s{text-decoration:none;color:var(--line);}
+
+/* 변형 고치기 칸의 정답 입력 — 본문 옆이 아니라 단추 줄에 둔다(짧아서 줄을 안 먹는다). */
+.app .v-ans{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;color:var(--sub);}
+.app .v-ans input{width:110px;padding:4px 7px;border:1px solid var(--line);border-radius:var(--r-xs);
+  font-family:'JetBrains Mono',monospace;font-size:12px;background:var(--bg);color:var(--ink);}

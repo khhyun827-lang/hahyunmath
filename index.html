@@ -1892,7 +1892,21 @@
 /* 한 칸을 누르면 오른쪽에서 상세가 나온다 — 격자를 떠나지 않고 처리한다. */
 .hwd-back{position:fixed;inset:0;z-index:58;background:rgba(20,18,17,.28);}
 /* 문항 창고의 드로어는 «문항 본문 + 변형 목록»이 들어가 조금 넓어야 한다 (2026-09-04) */
-.ic-hwd{width:min(560px,96vw);}
+/* 🔴 **변형 문제가 통째로 들어가야 하는 창이다** (2026-09-07 · 사용자가 짚었다 —
+     「오른쪽드로우로 작게보여서 보기 어렵고 글자들도 세로로 한글자씩 떠서」).
+     560px 에 한 줄로 늘어놓으니 본문 칸이 눌려 표가 «한 글자 폭»으로 접혔다.
+     폭을 늘리고, 본문은 아래 `.ic-vcard` 에서 «제 줄»을 갖는다. */
+.ic-hwd{width:min(820px,96vw);}
+/* 변형 하나 = 카드 하나. 머리줄(코드·갈래·정답·단추)과 본문을 «세로»로 쌓는다 —
+   한 줄에 다 넣으면 본문이 남는 폭만 갖고, 그 폭이 좁으면 글자가 세로로 선다. */
+.app .ic-vcard{border:1px solid var(--line);border-radius:var(--r-md);
+  padding:11px 13px;margin-top:9px;background:var(--card);}
+.app .ic-vh{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.app .ic-va{font-size:12px;color:var(--sub);}
+.app .ic-va b{color:var(--ink);font-family:'JetBrains Mono',monospace;font-size:12.5px;}
+/* ⚠ 넘치면 «카드 안에서» 옆으로 민다 — 몸통을 늘리면 드로어가 통째로 흔들린다. */
+.app .ic-vb{margin-top:9px;font-size:13px;line-height:1.95;color:var(--ink);overflow-x:auto;}
+.app .ic-vb .pb-tbl{width:100%;}
 .hwd{position:fixed;top:0;right:0;bottom:0;z-index:59;width:min(400px,92vw);
   background:var(--card);border-left:1px solid var(--line);
   box-shadow:-8px 0 32px -12px rgba(20,18,17,.3);
@@ -3928,6 +3942,85 @@ async function registerVariantFromBank(bankId){
      손이 빠른 화면에 지우기 단추를 두면 잘못 눌린다 (설정은 만드는 곳, 목록은 보는 곳과 같은 결).
    ⚠ 번호를 다시 쓰지 않는다 — N02 를 지워도 다음 번호는 N03 이다.
      빈 번호를 메우면 **지워진 그 코드가 적힌 옛 시험지**가 엉뚱한 문제를 가리키게 된다. */
+/* =========== 변형을 손으로 고친다 (2026-09-07 · 사용자 요청) ===========
+   🔵 「변형문제도 수식이나 정답 등을 고칠 수 있으면 좋겠어」.
+     AI 가 만든 것이든 교재가 준 것이든, 한 글자 틀린 것 때문에 통째로 다시 만드는 것은
+     한도도 시간도 낭비다. 원본을 고치는 문(`istEdit`)이 이미 있으니 같은 꼴로 낸다.
+   🔴 **변형은 두 곳에 산다** — AI 가 만든 것은 `variants`, 교재가 준 ②꼴은 `items`.
+     `fromBook` 이 그것을 말해 준다. 엉뚱한 곳에 쓰면 «저장했다는데 안 바뀌는» 일이 난다.
+   ⚠ 본문과 정답을 «함께» 고친다 — 수식을 고치면 답이 따라 바뀌는 일이 흔하다.
+     따로 두면 한쪽만 고치고 넘어가게 된다. */
+function 변형찾기(code){
+  const sp = splitItemCode(code);
+  if(!sp || !sp.isVariant) return null;
+  return variantsOfCodeAll(sp.origin).find(v => v.code === code) || null;
+}
+function vEditOpen(code){
+  const v = 변형찾기(code);
+  if(!v){ showToast(code + ' 를 못 찾았습니다.'); return; }
+  state.vEdit = { code, text: String(v.content || ''), answer: String(v.answer || ''), saving:false };
+  render();
+}
+function vEditClose(){ state.vEdit = null; render(); }
+function vEditSync(){
+  if(!state.vEdit) return;
+  const t = document.getElementById('v-edit-box');
+  const a = document.getElementById('v-edit-ans');
+  if(t) state.vEdit.text = t.value;
+  if(a) state.vEdit.answer = a.value;
+}
+async function vEditSave(){
+  const e = state.vEdit;
+  if(!e || e.saving) return;
+  vEditSync();
+  const 새글 = String(e.text || '').trim();
+  const 새답 = String(e.answer || '').trim();
+  if(!새글){ showToast('본문을 비울 수는 없습니다.'); return; }
+  const v = 변형찾기(e.code);
+  if(!v){ showToast(e.code + ' 를 못 찾았습니다.'); return; }
+  if(새글 === String(v.content || '').trim() && 새답 === String(v.answer || '').trim()){ vEditClose(); return; }
+  /* ⚠ 학생이 칠 수 없는 답이면 «담기 전에» 말한다 — 담고 나서 알면 늦다. */
+  if(새답 && !dqAnswerable(새글, 새답)
+     && !confirm('이 정답은 학생이 칠 수 없는 형태입니다(①~⑤ 또는 정수만 됩니다).'
+        + String.fromCharCode(10) + String.fromCharCode(10) + '그래도 저장할까요?')) return;
+  e.saving = true; render();
+  const 곳 = v.fromBook ? 'items' : 'variants';
+  /* 🔴 있던 것 «위에» 얹는다 — 그림·풀이·검토 결과가 살아남는다. */
+  const 바탕 = v.fromBook ? ((state.itemBody || {})[e.code] || {}) : v;
+  const doc = Object.assign({}, 바탕, { content: 새글, answer: 새답, updatedAt: nowStamp(), editedByHand: true });
+  const ok = await dbSetDoc(곳, e.code, doc);
+  if(!ok){ e.saving = false; showToast(e.code + ' 를 저장하지 못했습니다 — 설정 › 관리자를 봐주세요.'); render(); return; }
+  if(v.fromBook){
+    state.itemBody[e.code] = doc;
+    const ver = await itemsBumpVersion();
+    itemsCacheWrite(ver, Object.values(state.itemBody));
+  } else {
+    Object.assign(v, { content: 새글, answer: 새답, updatedAt: doc.updatedAt, editedByHand: true });
+  }
+  state.vEdit = null;
+  showToast(e.code + ' 를 고쳤습니다.');
+  render();
+}
+/* 고치는 칸은 «그 카드 안»에서 열린다 — 어느 변형을 고치는 중인지 눈에서 안 떨어지게. */
+function vEditHTML(code){
+  const e = state.vEdit;
+  if(!e || e.code !== code) return '';
+  return `<div class="ist-edit">
+    <textarea id="v-edit-box" rows="9" spellcheck="false" oninput="vEditSync()">${escHtml(e.text)}</textarea>
+    <div class="ist-eb">
+      <label class="v-ans">정답
+        <input id="v-edit-ans" value="${escHtml(e.answer)}" spellcheck="false" oninput="vEditSync()"></label>
+      <button class="btn p sm" ${e.saving?'disabled':''} onclick="vEditSave()">${e.saving?'저장 중…':'저장'}</button>
+      <button class="btn q sm" ${e.saving?'disabled':''} onclick="vEditClose()">취소</button>
+    </div>
+    <div class="hint" style="margin-left:0;margin-top:6px;line-height:1.8;">
+      조건·과정 상자는 <span class="mono">| 칸 |</span> 한 줄로 적습니다
+      <s>·</s>빈칸 <span class="mono">(가)</span> 는 수식 «밖»에 둡니다 —
+      <span class="mono">${escHtml("$a^2 = $(가)$ + b^2$")}</span>
+      <s>·</s>수식은 <span class="mono">${escHtml("$…$")}</span> 로 감쌉니다
+    </div>
+  </div>`;
+}
 async function deleteVariantFromStore(code){
   const sp = splitItemCode(code);
   if(!sp || !sp.isVariant) return;
@@ -4412,6 +4505,7 @@ let state = {
   icAns: null,          // 빠른정답표로 정답 채우기 (2026-09-06)
   icRepair: null,       // 창고 수식을 제자리에서 고치기 (2026-09-06). ready 면 «다시 누르면 쓴다»
   istEdit: null,        // 문항 창고에서 본문을 손으로 고치는 중 (2026-09-04)
+  vEdit: null,          // 변형을 손으로 고치는 중 — {code,text,answer,saving} (2026-09-07)
   icOpen: '',           // 문항 창고에서 연 코드 (2026-09-04 · 문항 코드 화면을 여기로 합쳤다)
   storeQuery: '',       // 문항 창고의 코드 검색 (2026-09-04)
   icAnsBook: '', icAnsNote: '',   // 빠른정답표를 어느 교재에 붙일 것인가 (2026-09-04)
@@ -19464,17 +19558,23 @@ function icDetailHTML(root){
             </div>`;
           }).join('')}
         </div>
-        ${vs.length ? `<div class="ic-list" style="margin-top:12px;">
-          ${vs.map(v=>`<div class="ic-row">
-            <b class="mono">${escHtml(v.code)}</b>
-            <span class="ic-kind">${escHtml((VARIANT_KINDS.find(x=>x[0]===v.variantKind)||['','?'])[1])}</span>
-            ${/* 🔴 **«창고에 있다»와 «학생에게 나간다»는 다른 말이다** — 안 적으면 «있다»로 읽힌다. */''}
-            ${variantIsPending(v) ? '<span class="badge late">검토 대기</span>' : ''}
-            <span class="ic-txt full">${v.content ? problemHTML(icKeepLines(v.content)) : '(문제 내용이 없습니다)'}</span>
-            <span class="mono ic-a">${escHtml(icShortAnswer(v.answer))}</span>
-            ${/* 🔴 **빼는 단추는 이 화면에만 둔다** — 검토 화면은 손이 빠른 곳이라 잘못 눌린다. */''}
-            <button class="btn q sm" title="창고에서 뺍니다"
-              onclick="deleteVariantFromStore('${escHtml(v.code)}')">빼기</button>
+        ${vs.length ? `<div style="margin-top:12px;">
+          ${vs.map(v=>`<div class="ic-vcard">
+            <div class="ic-vh">
+              <b class="mono">${escHtml(v.code)}</b>
+              <span class="ic-kind">${escHtml((VARIANT_KINDS.find(x=>x[0]===v.variantKind)||['','?'])[1])}</span>
+              ${/* 🔴 «창고에 있다»와 «학생에게 나간다»는 다른 말이다 — 안 적으면 «있다»로 읽힌다. */''}
+              ${variantIsPending(v) ? '<span class="badge late">검토 대기</span>' : ''}
+              ${v.fromBook ? '<span class="ic-kind">교재가 준 것</span>' : ''}
+              <span class="spacer"></span>
+              <span class="ic-va">정답 <b>${escHtml(icShortAnswer(v.answer))}</b></span>
+              <button class="btn q sm" onclick="vEditOpen('${escHtml(v.code)}')">고치기</button>
+              ${/* 🔴 **빼는 단추는 이 화면에만 둔다** — 검토 화면은 손이 빠른 곳이라 잘못 눌린다. */''}
+              <button class="btn q sm" title="창고에서 뺍니다"
+                onclick="deleteVariantFromStore('${escHtml(v.code)}')">빼기</button>
+            </div>
+            <div class="ic-vb">${v.content ? problemHTML(icKeepLines(v.content)) : '(문제 내용이 없습니다)'}</div>
+            ${vEditHTML(v.code)}
           </div>`).join('')}
         </div>` : `<div class="rst-empty" style="margin-top:12px;">아직 이 문항의 변형이 없습니다 —
           <b class="mono">${escHtml(nextVariantCode(root,'N'))}</b> 부터 시작하시면 됩니다.</div>`}`;
