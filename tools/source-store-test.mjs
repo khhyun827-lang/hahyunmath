@@ -9,7 +9,12 @@
 
 import fs from 'fs';
 
-const HTML = fs.readFileSync('index.html', 'utf8');
+/* ⚠ **줄끝을 여기서 한 번 고른다.** git 이 체크아웃하며 CRLF 로 바꿔 놓으면
+   아래의 `NL + '}' + NL` 이 통째로 안 맞아 **규칙은 멀쩡한데 검사만 죽는다**
+   (2026-09-07에 실제로 그랬다 — 함수 조각이 3123줄로 잘려 나왔다).
+   CR 은 여기서 아무 뜻도 없으므로 읽자마자 떼어 낸다. */
+const HTML = fs.readFileSync('index.html', 'utf8')
+  .split(String.fromCharCode(13) + String.fromCharCode(10)).join(String.fromCharCode(10));
 const 떠오기 = (시작, 끝표) => {
   const a = HTML.indexOf(시작);
   if (a < 0) throw new Error('못 찾음: ' + 시작);
