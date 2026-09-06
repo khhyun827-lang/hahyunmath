@@ -191,7 +191,10 @@ function convertHwpEq(script){
   s = s.replace(/(?<!\\)\bangle\b/g, '\\angle');
   s = replaceBalancedKeyword(s, 'bar', inner => '\\overline{' + inner + '}');
   s = s.replace(/(?<!\\)\bbar\s+([A-Za-z]+)\b/g, '\\overline{$1}');
-  s = s.replace(/(?<!\\)\bbar([A-Z]{1,3})\b/g, '\\overline{$1}');
+  s = s.replace(/(?<!\\)\bbar([A-Z]{1,3}(?:\s*_\s*(?:\{[^{}]*\}|[0-9A-Za-z]))?)(?![A-Za-z])/g, '\\overline{$1}');
+  /* 🔴 **아래첨자가 붙으면 못 알아본다** (2026-09-06 · 브라우저에서 실제로 올려 보다 눈에 걸렸다).
+     실측 원문 `rmbarOA_1` — `OA_` 뒤에 낱말 경계가 없어 `bar` 가 통째로 날글자로 남는다.
+     `over` 에서 겪은 것과 **같은 흠**이다 — 이름에 아래첨자가 붙은 것은 «한 덩이»로 봐야 한다. */
   /* 소문자 한 글자도 온다 — `barz` (실측 2문항). 두 글자 이상은 변수 이름일 수 있어 안 건드린다. */
   s = s.replace(/(?<![\\A-Za-z])bar([a-z])(?![A-Za-z])/g, '\\overline{$1}');
   /* LEFT/RIGHT는 괄호만이 아니다 — 절댓값 LEFT | … RIGHT |, 대괄호, 중괄호가 다 온다.
@@ -958,7 +961,7 @@ function hwpxRepairEqText(s0){
     /* ② rm 을 걷고 나면 그 뒤의 bar 가 드러난다 — 2rmbar{AC} → 2bar{AC} → \overline{AC} */
     s = replaceBalancedKeyword(s, 'bar', inner => '\\overline{' + inner + '}');
     s = s.replace(/(?<!\\)\bbar\s+([A-Za-z]+)\b/g, '\\overline{$1}');
-    s = s.replace(/(?<!\\)\bbar([A-Z]{1,3})\b/g, '\\overline{$1}');
+    s = s.replace(/(?<!\\)\bbar([A-Z]{1,3}(?:\s*_\s*(?:\{[^{}]*\}|[0-9A-Za-z]))?)(?![A-Za-z])/g, '\\overline{$1}');
     /* ③ 붙여 쓴 그리스 문자 — 통째로 그리스 낱말일 때만 편다(한 낱말만 붙은 것은 변수 이름일 수 있다). */
     const 이름 = ['alpha','beta','gamma','delta','theta','lambda','sigma','omega','phi','pi','mu'];
     s = s.replace(new RegExp('(?<![\\\\A-Za-z])(?:' + 이름.join('|') + '){2,}(?![A-Za-z])', 'g'),
