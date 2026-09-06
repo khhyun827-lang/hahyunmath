@@ -62,5 +62,20 @@ console.log(NL + '④ 🔴 «교재를 다시 올린 것»과 결과가 같은�
     같나('다시 훑기 = 다시 올리기 · ' + 원문, hwpxRepairEqText(담긴글), convertHwpEq(원문));
 }
 
+
+console.log(NL + '⑤ 🔴 한글 전용 영역(PUA) 글자 — 사용자가 뜻을 확인해 준 것만 넣는다' + NL);
+{
+  /* 🔴 실측 `N= LEFT { a_i +d <U+E04D> a_i IN M RIGHT }` — 조건제시법의 «such that» 세로줄.
+     PUA 는 글꼴마다 뜻이 달라 기계가 알 길이 없다. 짐작하지 않고 물어서 확인받은 것이다.
+     ⚠ 표본이 하나뿐이다 — 다른 PUA 글자가 나와도 «그때 다시 물을 것». */
+  const PUA = String.fromCharCode(0xE04D);
+  봄('🔴 U+E04D 를 세로줄로 읽는다', convertHwpEq('a ' + PUA + ' b').includes(B + 'vert') ? '읽는다' : convertHwpEq('a ' + PUA + ' b'), '읽는다');
+  봄('날글자로 남지 않는다', convertHwpEq('a ' + PUA + ' b').includes(PUA) ? '남았다' : '안 남는다', '안 남는다');
+  봄('제자리 고치기도 같다', hwpxRepairEqText('$a ' + PUA + ' b$').includes(PUA) ? '남았다' : '안 남는다', '안 남는다');
+  같나('🔴 두 길의 결과가 같다',
+     hwpxRepairEqText('$a ' + PUA + ' b$').replace(/ +/g, ' '),
+     convertHwpEq('a ' + PUA + ' b').replace(/ +/g, ' '));
+}
+
 console.log(NL + '  ' + (fail ? '🔴' : '✅') + ' ' + pass + ' 통과 · ' + fail + ' 실패' + NL);
 process.exit(fail ? 1 : 0);
