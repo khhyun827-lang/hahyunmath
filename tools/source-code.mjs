@@ -94,6 +94,24 @@ const 해시표 = {};
 }
 const 해시of = (ref) => 해시표[ref] || '';
 
+/* 🔴 **교재의 문항 번호는 «단원마다 1부터»가 아니다** (2026-09-06 · 사용자가 「번호는 잘못
+   말해준 것 같아」라고 해서 찾았다. 내가 단원마다 1부터 세어 **전부 틀린 번호를 댔다**).
+   한글은 미주 번호를 `<hp:endNotePr><hp:numbering type="ON_SECTION" newNum="N">` 로 정한다.
+   실측: 01→1 · 02→**72** · 03→**153** · 04→**288** · 05→**385**. 71+81+135+97+87=471 로 딱 이어진다.
+   즉 **한 권으로 이어 매긴 번호**다 — 그것이 교재에 `72)` `73)` 으로 찍힌다.
+   ⚠ 안 적혀 있으면 1부터다. 사람에게 번호를 댈 때는 반드시 이것을 더할 것 —
+     **틀린 번호는 «없는 번호»보다 나쁘다. 사용자가 엉뚱한 문항을 고치러 간다.** */
+function 미주시작번호(tmp) {
+  for (const f of fs.readdirSync(path.join(tmp, 'Contents')).filter((x) => /^section\d+\.xml$/.test(x)).sort()) {
+    const s = fs.readFileSync(path.join(tmp, 'Contents', f), 'utf8');
+    for (const m of s.matchAll(/<hp:endNotePr>[\s\S]*?<\/hp:endNotePr>/g)) {
+      const n = m[0].match(/<hp:numbering type="ON_SECTION" newNum="(\d+)"/);
+      if (n) return +n[1];
+    }
+  }
+  return 1;
+}
+
 // ── 읽는다 ────────────────────────────────────────────────────────────
 const R = loadHwpxRules();
 /* ⚠ 문서는 «한 번만» 읽는다 — 아래 진단이 같은 것을 다시 쓴다(다시 풀면 4MB 를 또 읽는다). */
@@ -135,7 +153,8 @@ if (!r.ok) {
       if (t.type === 'text' && 지금.글.length < 60) 지금.글 += t.v;
     }
   }
-  const 줄 = (x) => '     ' + String(x.n).padStart(3) + '번째 · 출처 ' + JSON.stringify(x.출처)
+  const 시작 = 미주시작번호(tmp);
+  const 줄 = (x) => '     교재 ' + String(x.n + 시작 - 1).padStart(3) + '번 · 출처 ' + JSON.stringify(x.출처)
     + ' · 딱지 ' + JSON.stringify(x.딱지) + ' · ' + x.글.replace(/\s+/g, ' ').slice(0, 46);
   const 짝틀림 = 덩이.filter((x) => x.출처.length !== 1 || x.딱지.length !== 1 || String(x.출처[0]).startsWith('?'));
   if (짝틀림.length) {
