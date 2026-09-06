@@ -3200,6 +3200,9 @@
      Gemini 비용을 태울 수 있었다. 이제 워커가 토큰을 검증하고 할당량을 uid별로 «서버에서» 센다.
      아래 AI_DAILY_LIMIT은 이제 «표시용»이고 진짜 한도는 워커가 쥔다 (gemini-proxy.js:30과 같아야 한다). */
   const AI_DAILY_LIMIT = 20;
+  /* ⚠ worker/gemini-proxy.js 의 REVIEW_DAILY_LIMIT 과 «같은 값»이라야 한다 —
+     어긋나면 「남았다고 떠 있는데 429」가 된다 (AI_DAILY_LIMIT 이 겪은 그대로다). */
+  const REVIEW_DAILY_LIMIT = 60;
   async function getAuthToken(){
     if(!fbAuth.currentUser){
       await new Promise(resolve=>{
@@ -4418,6 +4421,11 @@ let state = {
   aiProgress: null,
   aiCancel: false,            // 일괄 생성 «멈춤»을 눌렀다 — 다음 한 건으로 넘어가지 않는다
   aiRegeneratingId: null,
+  /* AI 검토(다른 모델이 혼자 풀어 맞대 보기) — 한도 통이 생성과 다르다 */
+  reviewQuotaUsed: null,
+  reviewBusy: '',            // 지금 검토 중인 변형 코드 (단추 잠금)
+  reviewProgress: null,       // {done,total,갈림,못함}
+  reviewCancel: false,
   figureUploading: null,      // «그림이 있어야 푸는 변형»에 그림을 올리는 중인 문항 id
   figureDrafting: null,       // 기계가 그림 «초안»을 그리는 중인 문항 id
   /* 받아 온 초안. **저장하지 않는다** — 검토자가 「이 그림으로 하겠습니다」를 눌러야 붙는다.
@@ -19549,6 +19557,7 @@ function autoVariantWorkHTML(v){
     </div>`
     : `<div class="rv-warn" style="margin-top:14px;">${iconSvg('bell',15)}<div>
         <b>풀이가 없습니다.</b> 정답이 맞는지 직접 확인해 주세요.</div></div>`}
+    ${reviewVerdictHTML(v)}
     <div style="display:flex;gap:10px;margin-top:18px;flex-wrap:wrap;align-items:center;">
       ${/* 🔵 **키 이름을 단추에 적는다** (2026-09-06). 시험지 문항 쪽은 «E·X·R» 을 적어 두는데
            여기만 안 적혀 있어서, 키가 되는 줄을 모르고 마우스로만 쓰게 된다.
@@ -19566,6 +19575,7 @@ function autoVariantWorkHTML(v){
 function teacherReviewHTML(){
   loadAIQuotaIfNeeded();
   loadAllRecordsIfNeeded();
+  if(state.reviewQueue === 'pending') loadReviewQuotaIfNeeded();
   const qkey = state.reviewQueue || 'pending';
   /* 🔵 **「검토 대기」에는 두 갈래가 같이 산다** (2026-09-06 · 사용자 요청).
      시험지 문항(problembank)과 AI 가 만든 창고 변형이다. 생김새는 다르지만 **기다리는 일은 같다.**
@@ -19604,6 +19614,9 @@ function teacherReviewHTML(){
         : `<button class="btn p sm" ${remaining===0?'disabled':''} onclick="processAIQueue()">AI로 채우기 (${list.length}문항)</button>`}
     </div>` : '';
 
+  /* 🔵 AI 검토 띠는 «검토 대기»에서만 뜬다 — 거기에만 AI가 만든 변형이 있다. */
+  const rvBar = (qkey==='pending' && autos.length) ? reviewBarHTML(autos) : '';
+
   /* 변형을 고른 적이 있으면 그것이 이긴다 — 없어졌으면(통과·버리기) 문항 쪽으로 돌아간다. */
   const selAuto = autos.find(v => v.code === state.reviewVariantCode) || null;
   const sel = selAuto ? null : reviewSelected(list);
@@ -19616,7 +19629,7 @@ function teacherReviewHTML(){
       ${(list.length + autos.length)===0 ? '<div style="padding:36px 12px;text-align:center;color:var(--dim);font-size:12.5px;">비어 있습니다.</div>' : ''}
       ${autos.map(v=>`<div class="rv-item ${selAuto && v.code===selAuto.code?'on':''}"
           onclick="selectAutoVariant('${escHtml(v.code)}')">
-          <div class="t"><b class="mono">${escHtml(v.code)}</b><s>AI가 만듦</s></div>
+          <div class="t"><b class="mono">${escHtml(v.code)}</b><s>AI가 만듦</s>${reviewTagHTML(v)}</div>
           <div class="m">${escHtml(v.content||'')}</div>
         </div>`).join('')}
       ${list.map(b=>{
@@ -19634,7 +19647,7 @@ function teacherReviewHTML(){
   </div>`;
 
   return `<div class="rv-screen">${queues}${items}
-    <main class="rv-work">${aiBar}${selAuto ? autoVariantWorkHTML(selAuto) : sel ? reviewWorkHTML(sel, list) : `
+    <main class="rv-work">${aiBar}${rvBar}${selAuto ? autoVariantWorkHTML(selAuto) : sel ? reviewWorkHTML(sel, list) : `
       <div style="padding:64px 0;text-align:center;color:var(--dim);font-size:12.5px;line-height:1.8;">
         ${list.length===0 ? '이 큐는 비어 있습니다.' : '왼쪽 목록에서 문항을 고르세요.'}</div>`}
     </main>
@@ -20257,6 +20270,187 @@ async function autoFillTick(){
 }
 
 /* 🔵 **검토를 통과시킨다** — 이 순간부터 학생에게 나간다 (2026-09-06). */
+/* ======== AI 검토 — 다른 AI가 «직접 풀어» 우리 답과 맞대 본다 (2026-09-07) ======== */
+
+/* 🔵 **만든 AI에게 「이거 맞아?」라고 묻지 않는다.** 그러면 대개 맞다고 한다.
+     계보가 다른 모델에게 정답을 «숨기고» 풀린 뒤 맞대 본다 — 판정은 워커가 낸다.
+   🔴 **판정이 「버리기」로 이어지지 않는다.** AI가 틀릴 수도 있으므로,
+     갈렸다는 사실을 «사람에게 보여 줄 뿐»이다. 문항을 자동으로 손대지 않는다. */
+
+async function getReviewQuotaUsed(){
+  try{
+    const token = await withTimeout(getAuthToken(), 8000);
+    const res = await withTimeout(fetch(AI_WORKER_URL + '/quota?bucket=review', {
+      method:'POST', headers:{ 'Authorization': 'Bearer ' + token }
+    }), 8000);
+    if(!res.ok) throw new Error('quota http ' + res.status);
+    const q = await res.json();
+    return typeof q.used === 'number' ? q.used : 0;
+  }catch(e){
+    console.warn('검토 한도 조회 실패 — 0으로 본다', e);
+    return 0;
+  }
+}
+async function loadReviewQuotaIfNeeded(){
+  if(state.reviewQuotaUsed !== null) return;
+  state.reviewQuotaUsed = await getReviewQuotaUsed();
+  render();
+}
+
+/* 워커에게 한 문항을 검토시킨다. 돌아오는 것은 판정 하나다.
+   ⚠ 정답을 «보내기는» 한다 — 워커가 맞대 보려면 필요하다. 다만 워커는 그것을
+     모델에게 넘기지 않는다 (worker/gemini-proxy.js 의 handleReview). */
+async function askReview(content, answer){
+  const token = await withTimeout(getAuthToken(), 8000);
+  const res = await withTimeout(fetch(AI_WORKER_URL + '/review', {
+    method:'POST',
+    headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer ' + token },
+    body: JSON.stringify({ content, answer }),
+  }), 120000);
+  const j = await res.json().catch(()=>({}));
+  if(res.status === 429) return { error:'quota', 말:'오늘 검토 한도를 다 썼습니다.' };
+  if(res.status === 503) return { error:'busy',  말:'검토 AI가 지금 붐빕니다 — 한도는 돌려받았습니다.' };
+  if(!res.ok || !j.verdict) return { error:'fail', 말:(j.detail || j.error || ('http ' + res.status)) };
+  return j;
+}
+
+/* 판정을 문항에 붙여 둔다 — 화면을 닫았다 열어도 남아 있어야 한다.
+   ⚠ 판정은 «참고»다. `pending` 을 건드리지 않으므로 통과/버리기는 여전히 사람이 누른다. */
+async function reviewVariantOne(code){
+  const v = pendingVariants().find(x => x.code === code);
+  if(!v) return null;
+  if(!dqAnswerable(v.content, v.answer)){
+    showToast(code + ' 는 정답이 ①~⑤ 나 정수가 아니라 검토할 수 없습니다.');
+    return null;
+  }
+  state.reviewBusy = code; render();
+  const r = await askReview(v.content, v.answer);
+  state.reviewBusy = '';
+  if(r.error){
+    if(r.error !== 'busy') state.reviewQuotaUsed = await getReviewQuotaUsed();
+    showToast(r.말); render();
+    return r;
+  }
+  const 판정 = { verdict:r.verdict, answer:r.answer||'', reason:r.reason||'', lone:r.lone||'',
+                 second:r.second||'', models:r.models||[], at: nowStamp() };
+  const nv = Object.assign({}, v, { aiReview: 판정 });
+  const ok = await dbSetDoc('variants', code, nv);
+  if(!ok){ showToast(code + ' 검토 결과를 저장하지 못했습니다.'); return r; }
+  Object.assign(v, nv);
+  state.reviewQuotaUsed = (state.reviewQuotaUsed || 0) + 1;
+  render();
+  return r;
+}
+
+/* 검토 대기에 쌓인 것을 한꺼번에 본다. 이미 판정이 있는 것은 건너뛴다 —
+   한도가 하루 60건이라 같은 문항을 두 번 태우면 안 된다. */
+async function reviewAllPending(){
+  const 할것 = pendingVariants().filter(v => !v.aiReview && dqAnswerable(v.content, v.answer));
+  if(!할것.length){ showToast('새로 검토할 것이 없습니다.'); return; }
+  const used = await getReviewQuotaUsed();
+  state.reviewQuotaUsed = used;
+  const 남음 = Math.max(0, REVIEW_DAILY_LIMIT - used);
+  if(남음 === 0){ showToast('오늘 검토 한도(' + REVIEW_DAILY_LIMIT + '건)를 다 썼습니다.'); return; }
+  const 할만큼 = Math.min(할것.length, 남음);
+  if(!confirm(할만큼 + '개를 AI에게 검토시킵니다.\n\n'
+    + '문항당 3~10초 걸립니다 (어려운 문항은 두 모델을 부릅니다).\n'
+    + (할것.length > 할만큼 ? '오늘 남은 한도가 ' + 남음 + '건이라 ' + (할것.length - 할만큼) + '개는 내일 이어서 봅니다.\n' : '')
+    + '\n판정은 «참고»입니다 — 통과·버리기는 그대로 선생님이 누릅니다.\n\n시작할까요?')) return;
+
+  state.reviewCancel = false;
+  state.reviewProgress = { done:0, total:할만큼, 갈림:0, 못함:0 };
+  render();
+  for(let i = 0; i < 할만큼; i++){
+    if(state.reviewCancel) break;
+    const r = await reviewVariantOne(할것[i].code);
+    if(r && r.error === 'quota') break;          // 한도가 끝났으면 더 두드리지 않는다
+    if(r && r.verdict === 'suspect') state.reviewProgress.갈림++;
+    if(r && r.verdict === 'unsure')  state.reviewProgress.못함++;
+    state.reviewProgress.done = i + 1;
+    render();
+  }
+  const p = state.reviewProgress;
+  const 말 = p ? ('검토 ' + p.done + '건 — 답이 다른 것 ' + p.갈림 + ' · 검토 못 함 ' + p.못함) : '';
+  state.reviewProgress = null; state.reviewCancel = false;
+  showToast(말 || '검토를 마쳤습니다.');
+  render();
+}
+function cancelReviewBatch(){ state.reviewCancel = true; render(); }
+
+/* 판정을 «한 조각»으로 그린다 — 목록에도, 오른쪽 판에도 같은 말이 나가야 헷갈리지 않는다. */
+const REVIEW_VERDICT = {
+  agree:   { 색:'g', 말:'AI도 같은 답',      풀이:'검토 AI가 혼자 풀어 우리 정답과 같은 답에 닿았습니다.' },
+  suspect: { 색:'r', 말:'답이 다릅니다',      풀이:'계보가 다른 두 AI가 «둘 다» 우리 정답과 다른 같은 답을 냈습니다. 문항이나 정답을 확인해 주세요.' },
+  unsure:  { 색:'y', 말:'검토 못 함',        풀이:'AI들이 서로 다른 답을 내서 판단을 못 했습니다. 문항이 잘못됐다는 뜻은 아닙니다 — 사람이 봐야 합니다.' },
+};
+/* 목록 줄에 붙는 작은 판정표. 목록에서 «어느 것을 먼저 볼지»가 한눈에 보여야 한다 —
+   답이 다른 것이 맨 아래 있으면 아무 소용이 없다. */
+function reviewTagHTML(v){
+  const r = v && v.aiReview;
+  if(!r) return '';
+  const 배지 = { agree:'ok', suspect:'no', unsure:'late' }[r.verdict];
+  const d = REVIEW_VERDICT[r.verdict];
+  if(!배지 || !d) return '';
+  return ' <span class="badge ' + 배지 + '">' + escHtml(d.말) + '</span>';
+}
+
+
+/* 오른쪽 판에 붙는 판정 조각. «무엇을 하라»까지 적는다 — 판정만 보면 뭘 할지 모른다. */
+function reviewVerdictHTML(v){
+  const busy = state.reviewBusy === v.code;
+  const r = v.aiReview;
+  const 못함 = !dqAnswerable(v.content, v.answer);
+  const 단추 = 못함
+    ? '<span class="hint" style="margin-left:0;">정답이 ①~⑤ 나 정수가 아니라 AI가 검토할 수 없습니다.</span>'
+    : `<button class="btn sm" ${busy?'disabled':''} onclick="reviewVariantOne('${escHtml(v.code)}')">
+         ${busy ? '검토 중…' : (r ? '다시 검토' : 'AI 검토')}</button>`;
+  if(!r){
+    return `<div class="rv-fold" style="margin-top:14px;">
+      <div class="rv-fh" style="cursor:default;">${iconSvg('search',14)} AI 검토
+        <span class="sp">다른 AI가 «혼자 풀어» 우리 정답과 맞대 봅니다 — 정답은 안 알려 줍니다</span></div>
+      <div class="rv-fb" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">${단추}</div>
+    </div>`;
+  }
+  const d = REVIEW_VERDICT[r.verdict] || { 색:'y', 말:r.verdict, 풀이:'' };
+  const 배지 = { agree:'ok', suspect:'no', unsure:'late' }[r.verdict] || 'late';
+  const 곁 = r.verdict === 'suspect' ? `<div class="q-ans" style="margin-top:9px;">
+        AI가 낸 답 <b>${escHtml(r.answer||'—')}</b> <s>·</s> 우리 정답 <b>${escHtml(v.answer||'—')}</b></div>` : '';
+  const 혼자 = r.lone ? `<div class="hint" style="margin-left:0;margin-top:7px;">
+        첫 모델은 ${escHtml(r.lone)} 이라 했지만 둘째가 우리 정답과 같았습니다.</div>` : '';
+  return `<div class="rv-fold" style="margin-top:14px;">
+    <div class="rv-fh" style="cursor:default;">${iconSvg('search',14)} AI 검토
+      <span class="sp">${escHtml((r.models||[]).join(' · '))} <s>·</s> ${escHtml(r.at||'')}</span></div>
+    <div class="rv-fb">
+      <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;">
+        <span class="badge ${배지}">${escHtml(d.말)}</span>
+        <span style="font-size:12px;color:var(--sub);">${escHtml(d.풀이)}</span>
+      </div>
+      ${곁}${혼자}
+      <div style="margin-top:11px;">${단추}</div>
+    </div>
+  </div>`;
+}
+
+/* 검토 대기 줄 맨 위의 띠 — 남은 한도와 «한꺼번에 보기» 단추. */
+function reviewBarHTML(autos){
+  const 할것 = autos.filter(v => !v.aiReview && dqAnswerable(v.content, v.answer));
+  const 남음 = state.reviewQuotaUsed===null ? null : Math.max(0, REVIEW_DAILY_LIMIT - state.reviewQuotaUsed);
+  const p = state.reviewProgress;
+  return `<div class="note" style="margin-bottom:14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;flex-shrink:0;">
+    <span>AI 검토 안 한 변형 <b class="mono" style="color:var(--ink);">${할것.length}</b>개 ·
+      ${남음===null ? '오늘 사용량 확인 중…'
+        : `오늘 남은 검토 <b class="mono" style="color:var(--ink);">${남음}/${REVIEW_DAILY_LIMIT}</b>`}</span>
+    <span class="spacer"></span>
+    ${p
+      ? `<span style="font-size:12px;">검토 중… <span class="mono">${p.done}/${p.total}</span>
+           <s>·</s> 답 다름 ${p.갈림} <s>·</s> 검토 못 함 ${p.못함}</span>
+         <button class="btn q sm" ${state.reviewCancel?'disabled':''} onclick="cancelReviewBatch()">
+           ${state.reviewCancel ? '멈추는 중…' : '멈춤'}</button>`
+      : `<button class="btn sm" ${(!할것.length || 남음===0)?'disabled':''} onclick="reviewAllPending()">
+           AI로 검토하기 (${할것.length}개)</button>`}
+  </div>`;
+}
+
 async function approveAutoVariant(code){
   const v = pendingVariants().find(x => x.code === code);
   if(!v) return;
