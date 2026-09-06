@@ -18718,6 +18718,20 @@ function itemAnswerToKeep(옛것, 미주){
    ⚠ **표가 «세로로 내려가는» 꼴이면 조용히 틀린다.** 이 규칙은 글을 편 뒤 001·002… 를 차례로
      찾는데, 열이 세로면 001 다음이 004 라서 사이의 것을 통째로 삼킨다(실측으로 확인했다).
      → 번호가 «이어지는지»를 보고, 빠진 것이 많으면 담기 전에 멈춘다. */
+/* 🔴 **«문서 하나에 문항 하나»의 열쇠** (2026-09-06 · 실제로 24개를 덮어쓰고 나서 만들었다).
+   ①꼴 교재에는 원본만 실리고 변형은 `variants` 컬렉션에 따로 산다. 그래서 여기서는
+   `-N01` 같은 꼬리를 떼어 «원본»으로 접었다 — ①꼴에서는 그것이 옳다.
+   🔴 **②꼴에서는 그것이 재앙이다.** 모의고사 기출 교재에는 원본과 변형이 **나란히**
+     실려 있고 둘 다 `items` 의 «제 문서»를 가진다. 그런데 `splitItemCode(`1230928NC01`).origin`
+     은 `1230928OR` 이라, 접는 순간 **한 묶음의 변형들이 원본 문서를 차례로 덮어쓴다.**
+     2026-09-06에 실제로 그렇게 됐다 — 71개를 올렸는데 문서는 24개만 바뀌었고,
+     원본 24개에 그 묶음의 «마지막 변형» 본문이 들어갔다. 화면은 「71개 담았습니다」라고 말했다.
+   🔵 그래서 **②꼴은 코드를 그대로 쓴다.** 코드가 곧 문서 이름이다.
+   ⚠ node 쪽(`tools/hwpx-push.mjs`)은 처음부터 코드를 그대로 썼다 — 그래서 거기서는 안 났다. */
+function itemDocKey(code){
+  if(srcCodeInfo(code)) return code;                       // ②꼴 — 변형도 «제 문서»를 가진다
+  return (splitItemCode(code) || {}).origin || code;        // ①꼴 — 변형은 variants 로 간다
+}
 function icClassify(problems){
   const withCode = problems.filter(p => p.itemCode && p.content);
   return { 교재: withCode.length > 0, withCode };
@@ -18818,7 +18832,7 @@ async function icFillBodies(input){
       /* 🔵 교재의 코드가 «어느 교재»인지 말해 준다 — 물을 필요가 없다. */
       const 번호별 = {};
       for(const p of withCode){
-        const root = (splitItemCode(p.itemCode) || {}).origin || p.itemCode;
+        const root = itemDocKey(p.itemCode);
         const m = String(root).match(/([0-9]+)$/);
         if(m) 번호별[+m[1]] = root;
       }
@@ -18826,7 +18840,7 @@ async function icFillBodies(input){
          맞대 볼 수 있는 것이 다 맞아야 주관식도 믿는다. 하나라도 어긋나면 표를 안 담는다. */
       let 견줌 = 0, 어긋남 = 0;
       for(const p of withCode){
-        const root = (splitItemCode(p.itemCode) || {}).origin || p.itemCode;
+        const root = itemDocKey(p.itemCode);
         const m = String(root).match(/([0-9]+)$/);
         const 표답 = m ? 정답표[+m[1]] : null;
         const 미주 = String(p.answer || '').trim();
@@ -18850,7 +18864,7 @@ async function icFillBodies(input){
     let saved = 0, failed = 0, figures = 0, figFailed = 0;
     for(let i=0;i<withCode.length;i++){
       const p = withCode[i];
-      const root = (splitItemCode(p.itemCode) || {}).origin || p.itemCode;
+      const root = itemDocKey(p.itemCode);
       const doc = { code: root, content: p.content, updatedAt: nowStamp() };
       /* 🔴 **②꼴은 과목·단원·출처를 «여기»에 실어야 한다** (2026-09-06).
          ①꼴은 코드가 `K2-01-E-…` 로 다 말해 주지만 ②꼴(`1230928OR`)에는 그 자리가 없다.

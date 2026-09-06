@@ -117,11 +117,11 @@ const { findBankEntry } = new Function('DATA', 'examRootId',
 }
 
 /* ②꼴을 읽는 규칙도 index.html 에서 «글로» 떠 온다 — 옮겨 적으면 둘이 갈린다. */
-const { srcCodeInfo } = (() => {
+const { srcCodeInfo, splitItemCode } = (() => {
   const a = html.indexOf('const SRC_CODE_RE');
   const 끝 = "DW:'하향' };";
   const b = html.indexOf(끝, a);
-  return new Function(html.slice(a, b + 끝.length) + NLL + lift('srcCodeInfo') + NLL + 'return { srcCodeInfo };')();
+  return new Function(html.slice(a, b + 끝.length) + NLL + html.slice(html.indexOf('const ITEM_CODE_RE'), html.indexOf(NLL, html.indexOf('const ITEM_CODE_RE'))) + NLL + lift('srcCodeInfo') + NLL + lift('splitItemCode') + NLL + 'return { srcCodeInfo, splitItemCode };')();
 })();
 
 // ⑮ 코드가 사는 곳이 둘이다 — 장부(codes/*.json)와 창고(items) (2026-09-05)
@@ -171,6 +171,27 @@ const { srcCodeInfo } = (() => {
   봄('그래도 교재 이름은 코드가 말해 준다', itemOfCode('1140927DW01').source.book, '모의고사 기출');
 }
 
+
+
+// ⑯ 🔴 «문서 하나에 문항 하나» — ②꼴 변형이 원본을 덮어쓰던 것 (2026-09-06)
+//    실제로 겪었다: 주기나 71제를 웹으로 올렸더니 문서는 24개만 바뀌었고, 원본 24개에
+//    그 묶음의 «마지막 변형» 본문이 들어갔다. 그런데 화면은 「71개 담았습니다」라고 말했다.
+//    🔴 화면이 거짓말을 하므로 눈으로는 못 잡는다 — 이 검사가 없으면 다음에 또 덮어쓴다.
+{
+  const { itemDocKey } = new Function('srcCodeInfo', 'splitItemCode',
+    lift('itemDocKey') + NLL + 'return { itemDocKey };')(srcCodeInfo, splitItemCode);
+
+  봄('🔴 ②꼴 변형은 «제 문서»를 가진다', itemDocKey('1230928NC01'), '1230928NC01');
+  봄('🔴 상향도', itemDocKey('1230928UP02'), '1230928UP02');
+  봄('②꼴 원본은 그대로', itemDocKey('1230928OR'), '1230928OR');
+  /* 🔵 한 묶음의 넷이 «서로 다른» 문서로 가는가 — 이것이 이 검사의 핵심이다. */
+  const 묶음 = ['1230928OR', '1230928NC01', '1230928UP01', '1230928UP02'];
+  봄('🔴 한 기출의 형제 넷이 서로 다른 문서로 간다', new Set(묶음.map(itemDocKey)).size, 4);
+
+  /* ①꼴은 예전 그대로다 — 교재에는 원본만 실리고 변형은 variants 컬렉션에 산다. */
+  봄('🔵 ①꼴 원본은 그대로', itemDocKey('K2-01-E-0001'), 'K2-01-E-0001');
+  봄('🔵 ①꼴 변형은 원본으로 접는다', itemDocKey('K2-01-E-0001-N01'), 'K2-01-E-0001');
+}
 
 console.log(`\n  ${fail ? '🔴' : '✅'} ${pass} 통과 · ${fail} 실패\n`);
 process.exit(fail ? 1 : 0);
