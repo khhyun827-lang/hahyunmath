@@ -5272,6 +5272,22 @@ IntersectionObserver 둘(등장 · 상단바)을 렌더마다 새로 만들고, 
 > 🔴 **워커는 내가 못 올린다(Cloudflare).** `worker/gemini-proxy.js` 를 올려야 되돌려주기가 산다.
 >   **그때까지는 실패가 그대로 하루치를 깎는다.**
 >
+> ### ▶ **워커 올리는 법** (2026-09-06 · 사용자가 밖에 있어 적어 둔다)
+> 이 저장소에는 `wrangler.toml` 이 없다 — 여태 **Cloudflare 대시보드에 붙여넣어** 올렸다.
+> 1. Cloudflare 대시보드 → **Workers & Pages** → **`hahyunmath-gemini-proxy`**
+> 2. **Edit code**(빠른 편집) → 편집기 안을 전부 지우고 → 아래 글을 통째로 붙여넣기
+>    `https://raw.githubusercontent.com/khhyun827-lang/hahyunmath/main/worker/gemini-proxy.js`
+> 3. **Deploy**
+>
+> ✅ **설정은 손댈 것이 없다** — KV `QUOTA` · `GEMINI_API_KEY` · `ALLOW_ORIGIN` · 드라이브 OAuth 는
+>   이미 붙어 있다. **코드만 갈아 끼우면 된다.**
+> 🔵 **이번 변경은 «더하기»뿐이다 — 32줄 추가, 지운 줄 0.** 잃을 것이 없다.
+>
+> **올린 뒤 확인 —** `node tools/worker-check.mjs`
+> · 인자 없이 = **한도만 본다(한 건도 안 쓴다)**
+> · `--try` = 한 건 불러서 «되돌려주는지» 실제로 잰다. 위쪽이 거절했는데 한도가 **안 깎이면 최신**이다.
+>   ⚠ Gemini 가 제대로 답하면 그건 진짜로 한 건 쓴 것이다(그게 정상이다).
+>
 > ⚠ 사용자가 본 화면에 `1080913OR` 이 떴다 — **옛 코드**다. 창고에서 지운 뒤라 브라우저가
 >   재워 둔 것을 보고 있었다. 새로고침하면 사라진다.
 
