@@ -143,3 +143,75 @@ node worker/verify-test.mjs worker/gemini-proxy.js
 RSA 키쌍을 만들어 가짜 JWKS를 물리고, 정상 토큰 1개와 틀린 토큰 9개를 넣는다 —
 만료 · 미래 발급 · 다른 프로젝트 `aud` · `iss` 위조 · `sub` 없음 · 서명 변조 ·
 `alg:none` · 모르는 `kid` · 형식 깨짐. **2026-08-06 기준 10/10 통과.**
+
+## `/review` — 다른 AI가 «직접 풀어» 맞대 본다 (2026-09-07)
+
+만든 AI(Gemini)와 **다른** AI에게 문항을 풀리고, 창고 정답과 맞대 본다.
+정답은 **프롬프트에 안 들어간다** — 넣으면 「맞다」가 공짜로 나와 검토가 하나 마나가 된다.
+
+### 배포에 필요한 것 — 비밀 하나
+
+| | |
+|---|---|
+| 이름 | `GROQ_KEY` |
+| 값 | Groq 콘솔에서 만든 키 (`gsk_…`) · 로컬 `.keys/groq.txt` 와 같은 값 |
+| 어디 | Cloudflare → 해당 워커 → Settings → **Variables and Secrets** → Add → Type **Secret** |
+
+⚠ **Variable(평문)이 아니라 Secret 으로 넣는다.** Variable 로 넣으면 대시보드에서 값이 그대로 보인다.
+⚠ 비밀은 코드 배포와 별개로 남는다 — 워커를 다시 올려도 다시 넣을 필요가 없다.
+⚠ 키가 없으면 `/review` 는 500 에 `GROQ_KEY 비밀이 워커에 없습니다` 를 돌려준다.
+  다른 길(`/upload`·`/figure`·생성)은 영향을 안 받는다.
+
+### 한도
+
+`REVIEW_DAILY_LIMIT = 60` (문항 수). **생성 한도와 통이 다르다** —
+남은 검토는 `/quota?bucket=review` 로 묻는다. 안 주면 예전대로 생성 통(`ai`)을 본다.
+
+한 문항이 위쪽 요청 **1~2건**이다. 답이 일치하면 둘째 모델을 부르지 않는다.
+Groq 무료가 **모델당 하루 20만 토큰**이고 어려운 문항이 한 건 3,700 토큰이라, 60이 안전선이다.
+유료(Dev)로 올리면 한도가 10배가 되므로 이 숫자만 키우면 된다.
+
+### 판정 다섯 갈래
+
+| 돌아오는 것 | 뜻 | 화면에서 |
+|---|---|---|
+| `agree` | 첫 모델이 창고와 일치 | ✅ 통과 (둘째를 안 부른다) |
+| `agree` + `lone` | 둘째가 창고와 일치 | ✅ 통과 · 첫째가 혼자 틀렸다는 것만 남긴다 |
+| `suspect` | 계보 다른 둘이 **같은** 다른 답 | 🔴 문항·정답 의심 → 사람에게 최우선 |
+| `unsure` (`disagree`) | 셋이 다 다름 | ⚪ AI가 못 푼 것 — 문항은 건드리지 않는다 |
+| `unsure` (`truncated`·`second-refused`…) | 답을 못 받음 | ⚪ 검토 못 함 |
+
+🔴 **`suspect` 와 `unsure` 를 한 줄로 합치면 안 된다.** 어려운 문항에서 AI 일치율이
+96.7% → 75% 로 떨어지는데(2026-09-06 실측), 그 차이는 대개 문항이 아니라 AI 쪽 문제다.
+합쳐 놓으면 선생님이 멀쩡한 문항을 25%씩 다시 본다.
+
+⚠ **난이도 라벨(SCENE)로 가르지 않는다.** SCENE 은 엔딩크레딧 교재에만 있는 구분이라
+다음 교재에서 무너진다. 위 판정은 라벨 없이 «모델들끼리의 일치»만으로 선다.
+
+### 확인 — 배포한 사이트에서 (로컬은 CORS 로 막힌다)
+
+브라우저 콘솔에 그대로 붙여 넣는다.
+
+```js
+await (await fetch(AI_WORKER_URL + '/quota?bucket=review', {
+  method:'POST', headers:{ Authorization:'Bearer ' + await getAuthToken() }
+})).json()
+// → { used: 0, limit: 60, remaining: 60 }   ← 여기까지 오면 배포는 된 것이다
+
+await (await fetch(AI_WORKER_URL + '/review', {
+  method:'POST',
+  headers:{ 'Content-Type':'application/json', Authorization:'Bearer ' + await getAuthToken() },
+  body: JSON.stringify({ content:'2 와 3 의 합은? ① $4$ ② $5$ ③ $6$ ④ $7$ ⑤ $8$', answer:'②' })
+})).json()
+// → { verdict:'agree', answer:'②', models:['openai/gpt-oss-120b'] }   ← 키까지 살아 있다
+```
+
+500 `no key` → 비밀을 안 넣었거나 이름이 틀렸다.
+503 `upstream` → Groq 한도(하루 20만 토큰)를 다 쓴 것이다. **한도는 되돌려 주므로 손해는 없다.**
+
+### 검사
+
+```
+node tools/review-worker-test.mjs      판정 다섯 갈래 · 한도 되돌림 · 정답 유출 (13개)
+node tools/bench-grade-test.mjs        답 맞대기 — 「2」와 「②」, ①(=-10)과 「-10」, 분수 (17개)
+```
