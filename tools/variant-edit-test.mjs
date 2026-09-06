@@ -59,8 +59,15 @@ const 저장 = 뜨기('async function vEditSave(){');
 봄('변형은 카드다', html.includes('class="ic-vcard"'), true);
 봄('본문이 제 줄을 갖는다', html.includes('class="ic-vb"'), true);
 const ds = fs.readFileSync(path.join(ROOT, 'ds.css'), 'utf8');
-const 폭 = (html.match(/\.ic-hwd\{width:min\((\d+)px/) || [])[1];
-봄('드로어가 560px 보다 넓다', Number(폭) > 560, true);
+/* ⚠ 2026-09-07: 오른쪽 드로어를 «가운데 창»으로 바꿨다 — 폭만이 아니라 «자리»가 문제였다.
+   그래서 재는 것도 폭 하나에서 「가운데에 서는가」로 옮긴다. */
+const 창 = (() => { const a = html.indexOf(".ic-hwd{");
+                    return a < 0 ? "" : html.slice(a, html.indexOf("}", a) + 1); })();
+const 폭 = Number((창.split("width:min(")[1] || "").split("px")[0] || 0);
+봄('창이 560px 보다 넓다', Number(폭) > 560, true);
+봄('🔵 가운데에 선다', 창.includes('left:50%') && 창.includes('translateX(-50%)'), true);
+봄('오른쪽에 안 붙는다', 창.includes('right:auto'), true);
+봄('⚠ 다른 드로어는 그대로 오른쪽이다', html.includes('.hwd{position:fixed;top:0;right:0'), true);
 봄('넘치면 카드 안에서 민다', /\.ic-vb\{[^}]*overflow-x:auto/.test(html), true);
 봄('정답 칸 모양이 있다', /\.v-ans/.test(ds), true);
 

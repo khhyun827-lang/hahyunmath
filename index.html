@@ -1891,12 +1891,27 @@
 
 /* 한 칸을 누르면 오른쪽에서 상세가 나온다 — 격자를 떠나지 않고 처리한다. */
 .hwd-back{position:fixed;inset:0;z-index:58;background:rgba(20,18,17,.28);}
+.hwd-back.ic-back{background:rgba(20,18,17,.44);}
 /* 문항 창고의 드로어는 «문항 본문 + 변형 목록»이 들어가 조금 넓어야 한다 (2026-09-04) */
 /* 🔴 **변형 문제가 통째로 들어가야 하는 창이다** (2026-09-07 · 사용자가 짚었다 —
      「오른쪽드로우로 작게보여서 보기 어렵고 글자들도 세로로 한글자씩 떠서」).
      560px 에 한 줄로 늘어놓으니 본문 칸이 눌려 표가 «한 글자 폭»으로 접혔다.
      폭을 늘리고, 본문은 아래 `.ic-vcard` 에서 «제 줄»을 갖는다. */
-.ic-hwd{width:min(820px,96vw);}
+/* 🔵 **가운데 창으로 세운다** (2026-09-07 · 사용자: 「가운데 창이 좋을 것 같아」).
+     오른쪽 드로어는 아무리 넓혀도 화면 «가장자리»에 붙는다 — 820px 로 늘려도 답답한 까닭이
+     폭만이 아니라 **자리**였다. 문항 하나를 통째로 읽는 창이므로 가운데가 맞다.
+   ⚠ `.hwd` 는 안 건드린다 — 과제·출석·계정 드로어 셋이 같은 껍데기를 쓴다.
+     여기서 «덮어쓰기»만 한다. 그래야 저 셋이 그대로 오른쪽에 남는다.
+   ⚠ 위아래를 화면에 붙이지 않는다(4vh) — 붙이면 창인지 화면인지 구별이 안 간다. */
+.ic-hwd{
+  top:max(20px,4vh); bottom:max(20px,4vh); right:auto;
+  left:50%; transform:translateX(-50%);
+  width:min(1000px,94vw);
+  border:1px solid var(--line); border-radius:var(--r-lg);
+  box-shadow:0 24px 64px -20px rgba(20,18,17,.42);
+}
+/* 가운데 창은 넓으니 본문도 숨 쉴 자리를 준다. */
+.ic-hwd .hwd-b{padding:8px 22px 22px;}
 /* 변형 하나 = 카드 하나. 머리줄(코드·갈래·정답·단추)과 본문을 «세로»로 쌓는다 —
    한 줄에 다 넣으면 본문이 남는 폭만 갖고, 그 폭이 좁으면 글자가 세로로 선다. */
 .app .ic-vcard{border:1px solid var(--line);border-radius:var(--r-md);
@@ -19645,7 +19660,7 @@ function icDrawerHTML(){
   if(!root) return '';
   const vs = variantsOfCode(root);
   const 대기 = vs.filter(variantIsPending).length;
-  return `<div class="hwd-back" onclick="icCloseDrawer()"></div>
+  return `<div class="hwd-back ic-back" onclick="icCloseDrawer()"></div>
     <aside class="hwd ic-hwd">
       <div class="hwd-h" style="position:relative;">
         <div class="t"><span class="mono">${escHtml(root)}</span></div>

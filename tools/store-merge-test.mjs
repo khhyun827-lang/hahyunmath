@@ -35,8 +35,10 @@ console.log('\n문항 창고 = 문항 코드\n');
 
 // ② 드로어가 제 자리에 붙었는가
 봄('드로어 함수가 있다', 있나('function icDrawerHTML()'));
-봄('오른쪽 드로어 껍데기를 쓴다 (다른 드로어와 같은 규칙)',
-   있나('<aside class="hwd ic-hwd">') && 있나('class="hwd-back" onclick="icCloseDrawer()"'));
+/* ⚠ 2026-09-07: 같은 껍데기(`hwd`)를 쓰되 «가운데»로 세웠다 — 사용자가 오른쪽 드로어를
+   답답해했다. 껍데기는 그대로라 뒷막·닫기·머리줄이 다른 드로어와 같은 규칙으로 돈다. */
+봄('드로어 껍데기를 그대로 쓴다 (뒷막·닫기가 같은 규칙)',
+   있나("<aside class=\"hwd ic-hwd\">") && 있나("ic-back\" onclick=\"icCloseDrawer()\""));
 봄('🔴 화면을 함께 본다 — 탭을 옮기면 안 따라다닌다',
    있나("state.icOpen && state.view==='teacher' && state.teacherTab==='unitbank'"));
 봄('창고 카드의 「코드 화면」이 드로어를 연다', 있나('onclick="icOpenDrawer('));
