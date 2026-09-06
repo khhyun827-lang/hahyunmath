@@ -21490,6 +21490,20 @@ const CLEANUP_JOBS = {
   },
 };
 
+/* 🔵 **정리 도구가 지금 «몇 건»을 찾는가** (2026-09-06).
+   화면 머리에 「손볼 것이 없습니다」라고 **박아 두었던 글**을 이것으로 바꿨다 —
+   재 보지 않고 하는 말은 언젠가 거짓말이 된다(같은 날 「71개 담았습니다」로 겪었다).
+   ⚠ **DB 를 한 줄도 안 읽는다** — 이미 화면에 실려 있는 것(`DATA.problemBank`·`state.variants`)만 센다.
+     그래서 render() 마다 불려도 값이 안 든다.
+   ⚠ 아직 안 실렸으면 `null` 을 돌려준다 — «0건»과 «못 셌다»는 다르다. */
+function cleanupTotal(){
+  if(!DATA || !DATA.problemBank || !state.variants) return null;
+  try{
+    let n = 0;
+    for(const k in CLEANUP_JOBS) n += CLEANUP_JOBS[k].scan().length;
+    return n;
+  }catch(e){ console.warn('[정리] 세는 중 흠 —', e.message); return null; }
+}
 async function cleanupScan(key){
   await loadItemStoreIfNeeded();
   state.cleanup = { key, rows: CLEANUP_JOBS[key].scan(), applied: 0 };
@@ -22209,10 +22223,16 @@ function teacherSettingsAdminHTML(){
       ${(cc && cc.running) ? `<div class="st-row"><div class="t"><b>보는 중…</b></div></div>` : (bad.length ? badBody : okLine)}
       <div class="st-sub">읽기 아끼기 <s>문항 본문을 브라우저에 재워 하루 읽기 한도를 지킵니다</s></div>
       ${itemsCacheStatHTML()}
+      ${/* 🔴 **«세어 보지도 않고» 「손볼 것이 없습니다」라고 적어 두었던 자리다** (2026-09-06에 고쳤다).
+           같은 날 「71개 담았습니다」가 실제로는 24개였던 일을 겪었다 — **화면이 재 보지 않고
+           하는 말은 언젠가 거짓말이 된다.** 살펴보기는 DB 를 한 줄도 안 읽으므로(그 자리에
+           이미 실려 있는 것만 센다) 그냥 세면 된다. 안 셀 까닭이 없었다. */''}
       <div class="st-sub">데이터 정리 <s>이미 저장된 옛 기록을 한 번에 손보는 문입니다</s></div>
       <div class="st-row">
-        <div class="t"><b>지금은 손볼 것이 없습니다</b>
-          <span>배점<s>·</s>sqrt<s>·</s>정답에 붙은 해설은 <b>이제 올릴 때 저절로 걸러집니다</b></span></div>
+        <div class="t"><b>${(()=>{ const n = cleanupTotal(); return n === null ? '아직 못 셌습니다'
+            : n ? `손볼 것이 <b class="mono">${n}</b>건 있습니다` : '지금은 손볼 것이 없습니다'; })()}</b>
+          <span>배점<s>·</s>sqrt<s>·</s>정답에 붙은 해설 — <b>새로 올리는 것은 저절로 걸러지고</b>,
+            여기는 <b>이미 저장된 옛 기록</b>만 맡습니다</span></div>
         <div class="v"><button class="btn sm" onclick="stOpen('${state.settingsForm==='cleanup'?'check':'cleanup'}')">${state.settingsForm==='cleanup'?'닫기':'열기'}</button></div>
       </div>
       ${state.settingsForm==='cleanup' ? `<div style="margin-top:12px;">${teacherCleanupHTML()}</div>` : ''}`}`

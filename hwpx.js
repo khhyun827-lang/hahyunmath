@@ -945,7 +945,9 @@ function hwpxRepairEqText(s0){
     /* 🔴 **다듬기가 «맨 앞»이어야 한다** — 안 닫힌 중괄호를 먼저 채워야 아래 bar 규칙이
        `bar{QP` 를 알아본다. 순서가 바뀌면 `convertHwpEq` 와 결과가 갈린다. */
     /* 🔴 PUA 글자 — 위 `convertHwpEq` 와 **같은 표**를 쓴다(사용자가 뜻을 확인해 준 것들). */
-    s = s.split('\uE04D').join('\\vert ');
+    /* ⚠ 앞뒤 공백까지 먹어 «한 칸»으로 만든다 — 안 그러면 두 칸이 남아
+       `convertHwpEq`(공백을 한 칸으로 접는다) 와 결과가 갈린다. */
+    s = s.replace(/\s*\uE04D\s*/g, ' \\vert ');
     s = hwpxBalanceBraces(s);
     /* 🔴 **아래첨자를 물어뜯긴 분수를 되돌린다** (2026-09-06 · 창고에 이미 그렇게 담겨 있다).
        옛 규칙이 `S_2 over S_1` 에서 «2 over S» 만 집어 `S_\frac{2}{S}_{1}` 을 만들었다.

@@ -16,6 +16,7 @@ import { fileURLToPath } from 'url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
+const NL = String.fromCharCode(10);
 
 function lift(name) {
   const at = html.indexOf('function ' + name + '(');
@@ -35,19 +36,23 @@ const 봄 = (무엇, ok, 곁) => {
 };
 
 /* 화면을 실제로 그려 본다. 바깥 것들은 스텁으로 갈아 끼운다. */
-function 그리기({ 막힘 = [], 캐시 = 'cache', 열림 = '' } = {}) {
+function 그리기({ 막힘 = [], 캐시 = 'cache', 열림 = '', 정리건수 = 0 } = {}) {
   const rows = ['variants', 'items'].map(n => ({ name: n, status: 막힘.includes(n) ? '막힘' : '열림' }));
   const state = { settingsForm: 열림, collCheck: { running: false, rows } };
   return new Function(
     'state', 'stSec', 'escHtml', 'checkCollections', 'itemsCacheStatHTML',
     'teacherCleanupHTML', 'ITEMS_CACHE_KEY', 'localStorage', 'itemsCacheHit',
+    'cleanupTotal',
     'NEEDED_COLLECTIONS', 'iconSvg',
     lift('teacherSettingsAdminHTML') + '\nreturn teacherSettingsAdminHTML();'
   )(state,
     (o) => `<section data-t="${o.title}">${o.desc || ''}${o.body || ''}</section>`,
     (s) => String(s == null ? '' : s),
     () => {}, () => '<div id="캐시칸"></div>', () => '<div id="정리칸"></div>',
-    'k', { getItem: () => null }, 캐시, ['variants', 'items'], () => '');
+    'k', { getItem: () => null }, 캐시,
+    /* 🔵 정리 도구가 몇 건을 찾는지 — 화면이 «세어서» 말하는지 보려고 스텁을 둔다 */
+    () => 정리건수,
+    ['variants', 'items'], () => '');
 }
 
 console.log('\n관리자 점검 칸 — 평소엔 접히고, 이상하면 펴진다\n');
@@ -81,6 +86,23 @@ console.log('\n관리자 점검 칸 — 평소엔 접히고, 이상하면 펴진
 { // ⚠ 정리 도구를 열면 점검도 열려 있어야 한다
   const h = 그리기({ 열림: 'cleanup' });
   봄('⚠ 정리 도구를 열어도 점검이 안 접힌다', h.includes('id="정리칸"'));
+}
+
+
+console.log(NL + '⑱ 🔴 «세어 보지 않고 하는 말»이 없는가 (2026-09-06)' + NL);
+{
+  /* 같은 날 「71개 담았습니다」가 실제로는 24개였다. 화면이 재 보지 않고 하는 말은
+     언젠가 거짓말이 된다. 정리 도구 머리에도 「손볼 것이 없습니다」가 **박혀** 있었다. */
+  const 설정 = html.slice(html.indexOf('데이터 정리 <s>이미 저장된'), html.indexOf('데이터 정리 <s>이미 저장된') + 1200);
+  봄('🔴 「손볼 것이 없습니다」를 박아 두지 않는다', !설정.includes('<b>지금은 손볼 것이 없습니다</b>'));
+  봄('🔵 세어서 말한다 (cleanupTotal 을 부른다)', 설정.includes('cleanupTotal()'));
+
+  const 셈 = (() => { const at = html.indexOf('function cleanupTotal('); let d = 0;
+    for (let j = html.indexOf('{', at); j < html.length; j++) {
+      if (html[j] === '{') d++; else if (html[j] === '}') { d--; if (!d) return html.slice(at, j + 1); } } })();
+  봄('🔴 «0건»과 «못 셌다»를 가른다', 셈.includes('return null'));
+  봄('⚠ DB 를 안 읽는다 (그 자리에 실린 것만 센다)', !셈.includes('dbGet') && !셈.includes('fetch('));
+  봄('모든 정리 갈래를 다 센다', 셈.includes('for(const k in CLEANUP_JOBS)'));
 }
 
 console.log('\n  ' + (fail ? '🔴' : '✅') + ' ' + pass + ' 통과 · ' + fail + ' 실패\n');
