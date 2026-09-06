@@ -26,23 +26,43 @@ const 값 = (이름, 기본) => { const i = process.argv.indexOf(이름); return
 const N = +값('--n', 40);
 const 모델들 = process.argv.slice(2).filter((a) => !a.startsWith('--') && a !== String(N));
 
-function 열쇠() {
-  if (process.env.OPENROUTER_KEY) return process.env.OPENROUTER_KEY.trim();
-  const p = path.join(ROOT, '.keys', 'openrouter');
-  if (fs.existsSync(p)) return fs.readFileSync(p, 'utf8').trim();
-  console.error('\n🔴 열쇠가 없습니다. 둘 중 하나로 두세요:');
+// 🔵 «어디로 보내는가»를 모델 이름 앞에 붙여 고른다 — groq:… · cerebras:… · 그 밖은 OpenRouter.
+//   사용자가 실제로 물은 후보(gpt-oss-120b)는 OpenRouter 무료 목록에 없다. Groq·Cerebras 가 준다.
+//   ⚠ 그래서 열쇠를 «미리» 읽지 않는다 — 쓰지도 않을 곳의 열쇠가 없다고 멈추면 안 된다.
+const 곳들 = {
+  groq:      { 이름: 'Groq',       url: 'https://api.groq.com/openai/v1', 파일: 'groq',      환경: 'GROQ_KEY' },
+  cerebras:  { 이름: 'Cerebras',   url: 'https://api.cerebras.ai/v1',     파일: 'cerebras',  환경: 'CEREBRAS_KEY' },
+  openrouter:{ 이름: 'OpenRouter', url: BASE,                             파일: 'openrouter',환경: 'OPENROUTER_KEY' },
+};
+const 열쇠통 = {};
+function 열쇠(곳) {
+  if (열쇠통[곳]) return 열쇠통[곳];
+  const c = 곳들[곳];
+  const v = process.env[c.환경] && process.env[c.환경].trim();
+  if (v) return (열쇠통[곳] = v);
+  const p = path.join(ROOT, '.keys', c.파일);
+  if (fs.existsSync(p)) return (열쇠통[곳] = fs.readFileSync(p, 'utf8').trim());
+  console.error('\n🔴 ' + c.이름 + ' 열쇠가 없습니다. 둘 중 하나로 두세요:');
   console.error('   ① ' + p + '   (파일에 키만 한 줄)');
-  console.error('   ② 환경변수 OPENROUTER_KEY\n');
+  console.error('   ② 환경변수 ' + c.환경 + '\n');
   process.exit(1);
 }
+function 갈래(model) {
+  const i = model.indexOf(':');
+  const 앞 = i > 0 ? model.slice(0, i) : '';
+  if (곳들[앞] && 앞 !== 'openrouter') return { 곳: 곳들[앞], id: model.slice(i + 1) };
+  return { 곳: 곳들.openrouter, id: model };
+}
+
 
 if (process.argv.includes('--list')) {
-  const r = await fetch(BASE + '/models');
+  const r = await fetch(BASE + '/models', { headers: { connection: 'close' } });
   const j = await r.json();
   const 무료 = j.data.filter((m) => m.id.endsWith(':free'));
   console.log('\n  무료 모델 ' + 무료.length + '개 —');
   for (const m of 무료) console.log('    ' + m.id);
   console.log('');
+  await new Promise((끝) => setTimeout(끝, 50));
   process.exit(0);
 }
 if (!모델들.length) { console.error('쓰는 법: node tools/review-bench.mjs <모델id…> [--n 40] | --list'); process.exit(1); }
@@ -107,15 +127,16 @@ const 답뽑기 = (글) => {
   }
   return '';
 };
-const KEY = 열쇠();
+const 키이름 = (c) => Object.keys(곳들).find((k) => 곳들[k] === c);
 async function 풀리기(model, 문항) {
+  const g = 갈래(model);
   const t0 = Date.now();
   let r;
   try {
-    r = await fetch(BASE + '/chat/completions', {
+    r = await fetch(g.곳.url + '/chat/completions', {
       method: 'POST',
-      headers: { Authorization: 'Bearer ' + KEY, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model, messages: [{ role: 'system', content: 지시 }, { role: 'user', content: 문항.content }] }),
+      headers: { Authorization: 'Bearer ' + 열쇠(키이름(g.곳)), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: g.id, messages: [{ role: 'system', content: 지시 }, { role: 'user', content: 문항.content }] }),
     });
   } catch (e) { return { 흠: String(e.message || e).slice(0, 110), 초: (Date.now() - t0) / 1000 }; }
   const 초 = (Date.now() - t0) / 1000;
