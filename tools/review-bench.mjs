@@ -40,8 +40,16 @@ function 열쇠(곳) {
   const c = 곳들[곳];
   const v = process.env[c.환경] && process.env[c.환경].trim();
   if (v) return (열쇠통[곳] = v);
+  // ⚠ 탐색기에서 «확장자 없는» 파일을 만들기가 번거롭다 — .txt 도 받는다.
+  //   그리고 파일에 열쇠만 있으리라 믿지 않는다: 빈 줄·메모(#)를 걸러 첫 줄만 쓴다.
+  for (const 이름 of [c.파일, c.파일 + '.txt']) {
+    const p = path.join(ROOT, '.keys', 이름);
+    if (!fs.existsSync(p)) continue;
+    const 줄 = fs.readFileSync(p, 'utf8').replace(/^\uFEFF/, '').split(/\r?\n/)
+      .map((t) => t.trim()).filter((t) => t && !t.startsWith('#'));
+    if (줄.length) return (열쇠통[곳] = 줄[0]);
+  }
   const p = path.join(ROOT, '.keys', c.파일);
-  if (fs.existsSync(p)) return (열쇠통[곳] = fs.readFileSync(p, 'utf8').trim());
   console.error('\n🔴 ' + c.이름 + ' 열쇠가 없습니다. 둘 중 하나로 두세요:');
   console.error('   ① ' + p + '   (파일에 키만 한 줄)');
   console.error('   ② 환경변수 ' + c.환경 + '\n');
