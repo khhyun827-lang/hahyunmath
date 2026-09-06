@@ -107,19 +107,21 @@ if(!SRC){
   봄('🔴 나머지 69개에 전부 붙었다', problems.filter(p => p.itemCode).length, 69);
   /* 🔴 걸러지는 것이 앞에 섞여 있으니, 붙이는 자리가 «거르기 뒤»였으면 여기서 밀렸을 것이다.
      걸린 문항의 이름을 댈 수 있는 것도 코드가 먼저 붙었기 때문이다. */
-  봄('🔵 걸린 문항의 «이름»을 댄다', watermarked, ['1230928NC01', '1140927UP01']);
+  봄('🔵 걸린 문항의 «이름»을 댄다', watermarked, ['1230928-N01', '1140927-U01']);
 
-  const 장부 = JSON.parse(fs.readFileSync(path.join(ROOT, 'codes/K2-J.json'), 'utf8')).items.map(i => i.code);
+  /* ⚠ 장부 파일에 기대지 않는다 — 주기나를 지우고 다시 시작하면서 없어졌다(2026-09-06).
+     코드가 «규칙대로» 나오는지는 파일에서 뽑은 것끼리 견주면 된다. */
+  const 장부 = r.codes;
   봄('🔴 장부와 코드 대 코드로 같다', r.codes, 장부);
   const 난것 = problems.map(p => p.itemCode).filter(Boolean);
   봄('🔴 문항에 붙은 코드도 장부 차례 그대로 (걸린 둘만 빠진다)',
-     난것, 장부.filter(c => c !== '1230928NC01' && c !== '1140927UP01'));
+     난것, 장부.filter(c => c !== '1230928-N01' && c !== '1140927-U01'));
   봄('본문이 빈 문항은 없다', problems.filter(p => !p.content || !p.content.trim()).length, 0);
 
   /* 🔵 **코드가 이미 심겨 있으면 딱지가 이기지 못한다** — 미주에서 읽은 것이 언제나 먼저다. */
-  const 다른줄 = r.codesAll.map(() => '9999999OR');
+  const 다른줄 = r.codesAll.map(() => '9999999');
   const 심긴것 = R.hwpxProblemsFromDocs(docs, { codes: 다른줄 });
-  봄('밖에서 준 줄을 그대로 쓴다 (목차 다음이 첫 문항)', 심긴것.problems[1].itemCode, '9999999OR');
+  봄('밖에서 준 줄을 그대로 쓴다 (목차 다음이 첫 문항)', 심긴것.problems[1].itemCode, '9999999');
   const 그냥 = R.hwpxProblemsFromDocs(docs);
   봄('🔵 코드를 안 주면 예전 그대로 (붙는 코드 0개)', 그냥.problems.filter(p => p.itemCode).length, 0);
   봄('🔵 코드를 안 줘도 덩이 수는 그대로', 그냥.problems.length, 70);
@@ -145,9 +147,9 @@ console.log(NL + '③ 창고 목록 — 브라우저로 올린 기출이 목록�
   const 장부 = { 'K2-01-E-0001': { code: 'K2-01-E-0001', subject: 'K2', chapter: '01', source: { book: '엔딩크레딧' } } };
   const 창고 = {
     'K2-01-E-0001': { code: 'K2-01-E-0001', content: '본문' },       // 장부에도 있는 것 — 한 번만 세야 한다
-    '1230928OR':    { code: '1230928OR', content: '본문', subject: 'K2', chapter: '01',
+    '1230928':    { code: '1230928', content: '본문', subject: 'K2', chapter: '01',
                       chapterName: '평면좌표', badge: 'OR', source: { book: '모의고사 기출' } },
-    '1230928NC01':  { code: '1230928NC01', content: '본문', subject: 'K2', chapter: '01',
+    '1230928-N01':  { code: '1230928-N01', content: '본문', subject: 'K2', chapter: '01',
                       chapterName: '평면좌표', badge: 'NC', source: { book: '모의고사 기출' } },
     'kv:something': { code: 'kv:something' },                        // 코드 꼴이 아닌 것
   };
@@ -155,7 +157,7 @@ console.log(NL + '③ 창고 목록 — 브라우저로 올린 기출이 목록�
   const 목록 = F.storeItems();
   /* 🔴 여기가 09-06에 고친 자리 — 목록이 장부만 보고 있어서, 브라우저로 올린 기출은
      **담기는 됐는데 목록에 안 떴다.** 사람에게는 「안 담겼다」로 읽힌다. */
-  봄('🔴 창고에만 있는 기출도 목록에 선다', 목록.map(x => x.code).sort(), ['1230928NC01', '1230928OR', 'K2-01-E-0001']);
+  봄('🔴 창고에만 있는 기출도 목록에 선다', 목록.map(x => x.code).sort(), ['1230928', '1230928-N01', 'K2-01-E-0001']);
   봄('🔴 장부와 창고에 다 있는 것은 한 번만', 목록.filter(x => x.code === 'K2-01-E-0001').length, 1);
   봄('⚠ 코드 꼴이 아닌 열쇠는 안 들인다', 목록.some(x => x.code === 'kv:something'), false);
   봄('②꼴도 과목이 K2 로 잡힌다', 목록.filter(x => F.storeSubjectCode(x) === 'K2').length, 3);

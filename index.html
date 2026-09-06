@@ -3164,7 +3164,7 @@
      이 파일은 index.html 과 «따로» 받아지므로, 물음표 뒤가 그대로면 브라우저가
      **캐시에 있는 옛 파서를 꺼내 쓴다.** 그러면 교재를 다시 올려도 옛 글이 그대로 담기고,
      화면만 보고서는 «고쳤는데 왜 안 되지»가 된다 — 파서가 바뀐 것을 아무 데서도 못 본다. -->
-<script src="hwpx.js?v=2026-09-06c"></script>
+<script src="hwpx.js?v=2026-09-06d"></script>
 <!-- 출석 도장 게임(셸·똥피하기·달리기). 연습 페이지 game.html 도 같은 파일을 쓴다 -->
 <!-- ⚠ ?v= 를 붙이는 까닭 — 브라우저가 game-core.js 를 캐시해서, 올려도 학생 화면에는
      옛 게임이 그대로 돈다(Ctrl+Shift+R 을 해야 바뀐다 — 학생에게 그걸 시킬 수는 없다).
@@ -3657,24 +3657,31 @@ const VARIANT_KINDS = [['N','숫자변형'],['U','상향'],['D','하향']];
      ①처럼 `variants` 컬렉션을 따로 뒤질 필요가 없다. 교재가 이미 적어 둔 것을 그대로 쓴다.
    ⚠ 과목·단원이 코드에 «없다» — 기출 번호에는 그런 자리가 없기 때문이다.
      그래서 ②는 장부가 과목·단원을 들고 있어야 한다. 코드에서 짐작하지 않는다. */
-const SRC_CODE_RE   = /^([12])(\d{2})(\d{2})(\d{2})([AB]?)(OR|NC|UP|DW)(\d{2})?$/;
-const SRC_BADGE_KIND = { NC:'N', UP:'U', DW:'D' };    // 우리 창고의 변형 갈래로 옮긴다
+/* 🔴 **변형 꼴을 ①꼴과 «같게» 맞췄다** (2026-09-06 · 사용자가 정했다).
+     `1050919`(원본) · `1050919-N01`(숫자변형) · `2160321B-U01`(나형의 상향).
+     앞서는 딱지를 코드에 넣었는데(`1050919NC01`) **변형이 «원본»처럼 취급되어**
+     창고가 「변형 없음」이라 말하고 AI 가 이미 있는 변형을 또 만들었다(실측 3건).
+   ⚠ 이 규칙은 «출처 부분»만 본다 — 뒤의 `-N01` 은 ①꼴과 같은 `splitItemCode` 가 읽는다. */
+const SRC_CODE_RE   = /^([12])(\d{2})(\d{2})(\d{2})([AB]?)(?:-([NUD])(\d{2}))?$/;
+const SRC_BADGE_KIND = { NC:'N', UP:'U', DW:'D' };    // 교재 딱지 → 우리 창고의 변형 갈래
 const SRC_FORM_NAME = { A:'가형', B:'나형' };
 function srcCodeInfo(code){
   const m = String(code || '').trim().toUpperCase().match(SRC_CODE_RE);
   if(!m) return null;
   const 년 = +m[2], 서기 = (년 <= 30 ? 2000 : 1900) + 년;
   const 형 = m[5] || '';
-  return { grade: m[1], year: m[2], month: m[3], no: m[4], form: 형, badge: m[6], seq: m[7] || '',
-           origin: m[1] + m[2] + m[3] + m[4] + 형 + 'OR',
+  return { grade: m[1], year: m[2], month: m[3], no: m[4], form: 형,
+           kind: m[6] || '', seq: m[7] || '',
+           origin: m[1] + m[2] + m[3] + m[4] + 형,
            label: 서기 + '년 ' + m[3] + '월 ' + (+m[4]) + '번' + (형 ? ' ' + SRC_FORM_NAME[형] : '') };
 }
 const SRC_BADGE_NAME = { OR:'원본', NC:'숫자변형', UP:'상향', DW:'하향' };
 function splitItemCode(code){
   /* ②꼴을 먼저 본다 — 줄표가 없어 ①의 정규식에는 애초에 안 걸린다. */
   const s = srcCodeInfo(code);
-  if(s) return { origin: s.origin, isVariant: s.badge !== 'OR',
-                 variantKind: SRC_BADGE_KIND[s.badge] || '', variantNo: s.seq, srcBadge: s.badge };
+  /* ②꼴도 이제 «갈래+번호»가 ①꼴과 같은 꼴이다 — 옮겨 적을 것이 없다. */
+  if(s) return { origin: s.origin, isVariant: !!s.kind,
+                 variantKind: s.kind, variantNo: s.seq };
   const m = String(code || '').match(ITEM_CODE_RE);
   if(!m) return null;
   return {
@@ -3727,7 +3734,8 @@ function itemOfCode(code){
            subject: 창고.subject || (m ? m[1] : ''),
            chapter: 창고.chapter || (m ? m[2] : ''),
            chapterName: 창고.chapterName || ci.chapter || '',
-           badge: 창고.badge || (기출 ? 기출.badge : ''),
+           /* ②꼴의 갈래(N·U·D) — 원본이면 빈 글자다 (2026-09-06 에 badge→kind 로 옮겼다). */
+           variantKind: 창고.variantKind || (기출 ? 기출.kind : ''),
            origin: 기출 ? 기출.origin : '',
            answer: 창고.answer || '',
            source: 창고.source || { book: (m && BOOK_OF_CODE[m[3]]) || (기출 ? BOOK_OF_CODE.J : '') },
@@ -3738,7 +3746,35 @@ function itemOfCode(code){
    진짜로 지우면 그 번호가 비고, 다음 변형이 **그 번호를 다시 받는다** —
    그러면 **이미 인쇄해 나간 시험지의 코드가 다른 문제를 가리킨다.** 조용히 틀리는 자리다.
    그래서 `deleted` 표시만 하고, **번호를 셀 때는 뺀 것까지 센다.** */
-function variantsOfCodeAll(code){ return (state.variants || {})[code] || []; }
+/* 🔴 **변형이 사는 곳도 둘이다** (2026-09-06 · 주기나 교재를 ①꼴로 옮기면서).
+     ① `variants` 컬렉션 — **우리가/AI 가 만든** 변형. 검토를 거친다
+     ② `items`·장부 — **교재가 이미 만들어 실어 준** 변형(`1050919-N01`). 검토할 것이 없다
+   여기를 ①만 보면 무슨 일이 나는가 — 09-06에 실제로 겪었다:
+     · 창고가 「변형 없음」이라 말한다 — 교재에 둘이나 있는데
+     · **AI 가 그것을 못 보고 이미 있는 변형을 또 만든다**(실측 3건 · 하루 20건 한도를 태운다)
+     · `nextVariantCode` 가 **N01 을 다시 내준다** — 이미 인쇄된 코드가 다른 문제를 가리킨다
+   🔵 그래서 둘을 합쳐 본다. 교재 변형은 `variants` 문서 «모양»으로 맞춰 돌려준다 —
+     부르는 쪽(번호 매기기·AI·화면)이 어디서 왔는지 몰라도 되게.
+   ⚠ 교재 변형은 `pending` 이 아니다 — 검토 대상이 아니라 이미 완성된 문항이다. */
+function variantsOfCodeAll(code){
+  const 것들 = [...((state.variants || {})[code] || [])];
+  const 있는코드 = new Set(것들.map(v => v.code));
+  const 훑기 = (곳) => {
+    for(const c in (곳 || {})){
+      if(있는코드.has(c)) continue;
+      const sp = splitItemCode(c);
+      if(!sp || !sp.isVariant || sp.origin !== code) continue;
+      if(!srcCodeInfo(c)) continue;                 // ②꼴(교재가 준 것)만 여기서 합친다
+      있는코드.add(c);
+      const b = (state.itemBody || {})[c] || {};
+      것들.push({ code: c, originCode: code, variantKind: sp.variantKind,
+                  content: b.content || '', answer: b.answer || '', solution: b.solution || '',
+                  image: b.image || null, fromBook: true });
+    }
+  };
+  훑기(state.itemByCode); 훑기(state.itemBody);
+  return 것들;
+}
 /* 이 문항이 지금 들고 있는 변형이 «창고에 이미 있는 것»인가.
    ⚠ 코드가 붙어 있는지만 보면 안 된다 — 다시 생성해서 내용이 바뀌었을 수 있다.
      그래서 **글자로 맞춰 본다**(공백만 다른 것은 같은 것으로 본다). */
@@ -18896,7 +18932,7 @@ async function icFillBodies(input){
         if(p.subject) doc.subject = p.subject;
         if(p.chapter) doc.chapter = p.chapter;
         if(p.chapterName) doc.chapterName = p.chapterName;
-        doc.badge = 기출.badge;
+        if(기출.kind) doc.variantKind = 기출.kind;
         doc.source = { book: BOOK_OF_CODE.J, label: 기출.label };
       }
       /* 🔴 정답은 «표 → 있던 것 → 미주(객관식만)» 차례로 고른다. 있던 것을 빈 것으로 안 덮는다. */
@@ -19153,7 +19189,8 @@ function icItemCardHTML(root, it, vs){
   const src = srcCodeInfo(root);
   if(src){
     const 형제 = srcSiblings(root);
-    const 갈래 = SRC_BADGE_NAME[src.badge] || src.badge;
+    /* ②꼴도 이제 갈래가 ①꼴과 같은 글자다(N·U·D) — 이름표도 같은 표에서 가져온다. */
+    const 갈래 = src.kind ? ((VARIANT_KINDS.find(k => k[0] === src.kind) || [])[1] || src.kind) : '원본';
     const chap = (it && it.chapter) ? it.chapter + (it.chapterName ? ' ' + it.chapterName : '') : '';
     const subj = (it && it.subject) ? (SUBJECT_OF_CODE[it.subject] || it.subject) : '';
     const 줄 = 형제.map(c => c === root
@@ -19403,12 +19440,13 @@ function srcSiblings(code){
   const s = srcCodeInfo(code);
   if(!s) return [];
   /* 🔴 **앞 7자리를 자르면 안 된다** (2026-09-06 · 형(가/나)이 생기면서 깨질 자리였다).
-     뿌리가 이제 `2160321` 일 수도 `2160321B` 일 수도 있어 길이가 고정이 아니다.
-     7자리로 자르면 **가형과 나형이 한 묶음으로 뭉친다** — 서로 다른 기출인데.
-     → `origin` 을 통째로 견준다. 길이를 세지 말고 «만들어진 열쇠»를 그대로 쓸 것. */
+     뿌리가 `2160321` 일 수도 `2160321B` 일 수도 있어 길이가 고정이 아니다 —
+     7자리로 자르면 **가형과 나형이 한 묶음으로 뭉친다.**
+     → `origin` 을 통째로 견준다. 길이를 세지 말고 «만들어진 열쇠»를 그대로 쓸 것.
+   🔵 원본이 맨 앞에 온다 — 원본은 `-N01` 같은 꼬리가 없어 언제나 제일 짧고 먼저다. */
   const 다 = Object.assign({}, state.itemByCode || {}, state.itemBody || {});
   return Object.keys(다).filter(c => { const t = srcCodeInfo(c); return t && t.origin === s.origin; })
-    .sort((a, b) => (a.endsWith('OR') ? ' ' : a) < (b.endsWith('OR') ? ' ' : b) ? -1 : 1);
+    .sort((a, b) => a.length - b.length || (a < b ? -1 : 1));
 }
 function icOpenDrawer(code){ state.icOpen = code; render(); }
 function icCloseDrawer(){ state.icOpen = ''; render(); }
@@ -19989,7 +20027,11 @@ function autoFillCandidates(){
     if(autoFillSkipped.has(code)) continue;
     const body = state.itemBody[code];
     if(!body || !body.content || !body.answer) continue;   // 워커가 둘 다 없으면 거절한다
-    if((state.variants[code] || []).some(v => v.variantKind === 'N')) continue;
+    /* 🔴 **`state.variants` 를 직접 보면 «교재가 준 변형»을 못 본다** (2026-09-06에 고쳤다).
+       주기나 교재는 원본과 변형을 나란히 싣는데 그 변형은 `items` 에 산다.
+       여기가 못 보니 **AI 가 이미 있는 변형을 또 만들었다** — 실측 3건, 하루 20건 한도를 태웠다.
+       → 둘을 합쳐 보는 `variantsOfCodeAll` 을 쓴다. 세는 자리를 두 벌로 두지 않는다. */
+    if(variantsOfCodeAll(code).some(v => v.variantKind === 'N')) continue;
     out.push(code);
   }
   out.sort();
@@ -20011,7 +20053,7 @@ function autoFillWhyEmpty(){
     const body = state.itemBody[code];
     if(!body || !body.content){ 본문없음++; continue; }
     if(!body.answer){ 정답없음++; continue; }
-    if((state.variants[code] || []).some(v => v.variantKind === 'N')){ 이미있음++; continue; }
+    if(variantsOfCodeAll(code).some(v => v.variantKind === 'N')){ 이미있음++; continue; }
     if(autoFillSkipped.has(code)) 건너뜀++;
   }
   if(정답없음) return `정답이 없는 문항이 <b>${정답없음}</b>개입니다 — 위 <b>「정답 채우기」</b>로 `

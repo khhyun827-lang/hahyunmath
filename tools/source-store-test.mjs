@@ -34,10 +34,22 @@ const 짐 = [
 const F = new Function('state', 짐 + NL +
   'return { srcCodeInfo, storeSubjectCode, storeMatches, srcSiblings };');
 
-const 장부 = JSON.parse(fs.readFileSync('codes/K2-J.json', 'utf8'));
-const 엔딩 = JSON.parse(fs.readFileSync('codes/K2-E.json', 'utf8'));
+/* 🔴 **검사가 «데이터 파일»에 기대면 안 된다** (2026-09-06에 바로잡았다).
+   여기는 `codes/K2-J.json` 을 읽고 있었는데, 주기나를 지우고 다시 시작하면서 그 파일이
+   없어지자 **검사가 통째로 죽었다.** 규칙은 멀쩡한데. 검사는 «규칙»을 재는 것이지
+   «지금 담긴 데이터»를 재는 것이 아니다. → 표본을 여기서 만든다.
+   ⚠ 엔딩크레딧(①꼴)은 규칙을 견주는 짝이라 몇 개만 손으로 둔다. */
 const byCode = {};
-for (const it of [...엔딩.items, ...장부.items]) byCode[it.code] = it;
+for (const it of [
+  { code: 'K2-01-E-0001', chapter: '01', subject: 'K2', source: { book: '엔딩크레딧' } },
+  { code: 'K2-05-E-0431', chapter: '05', subject: 'K2', source: { book: '엔딩크레딧' } },
+  /* ②꼴 — 2026-09-06부터 변형이 ①꼴과 «같은» 꼴이다(`-N01`). */
+  { code: '1230928',     chapter: '01', subject: 'K2', source: { book: '모의고사 기출' } },
+  { code: '1230928-N01', chapter: '01', subject: 'K2', source: { book: '모의고사 기출' } },
+  { code: '1230928-U01', chapter: '01', subject: 'K2', source: { book: '모의고사 기출' } },
+  { code: '2050310',     chapter: '01', subject: 'K2', source: { book: '모의고사 기출' } },
+  { code: '2160321B',    chapter: '02', subject: 'K2', source: { book: '모의고사 기출' } },
+]) byCode[it.code] = it;
 const R = F({ itemByCode: byCode, itemBody: null });
 
 let pass = 0, fail = 0;
@@ -50,38 +62,40 @@ const 봄 = (무엇, 나온것, 나와야) => {
 console.log(NL + '모의고사 기출이 창고에 서는가' + NL);
 
 const 다 = Object.values(byCode);
-봄('창고에 둘이 같이 있다', 다.length, 564 + 71);
+봄('표본이 둘 다 있다', 다.length, 7);
 
 // ── 과목 · 단원 ──────────────────────────────────────────────────────
-// 🔴 `1230928OR` 에는 과목 자리가 없다. 장부가 든 것을 써야 한다 — 못 읽으면 «전체»에서 사라진다.
-봄('기출도 과목이 K2 로 선다', R.storeSubjectCode(byCode['1230928OR']), 'K2');
+// 🔴 `1230928` 에는 과목 자리가 없다. 장부가 든 것을 써야 한다 — 못 읽으면 «전체»에서 사라진다.
+봄('기출도 과목이 K2 로 선다', R.storeSubjectCode(byCode['1230928']), 'K2');
 봄('교재 문항은 코드에서 그대로', R.storeSubjectCode(byCode['K2-01-E-0001']), 'K2');
-봄('공통수학2 01단원으로 걸러진다', R.storeMatches(byCode['1230928UP01'], 'K2', '01'), true);
-봄('02단원에는 안 걸린다', R.storeMatches(byCode['1230928UP01'], 'K2', '02'), false);
+봄('공통수학2 01단원으로 걸러진다', R.storeMatches(byCode['1230928-U01'], 'K2', '01'), true);
+봄('02단원에는 안 걸린다', R.storeMatches(byCode['1230928-U01'], 'K2', '02'), false);
 
 // ── 🔵 거르개 (사용자가 바란 것) ─────────────────────────────────────
 const 책 = (c) => (byCode[c].source || {}).book || '';
-봄('🔵 기출은 「모의고사 기출」로 적힌다', 책('1230928OR'), '모의고사 기출');
-봄('교재는 그대로다', 책('K2-01-E-0001'), '유형반복R');
+봄('🔵 기출은 「모의고사 기출」로 적힌다', 책('1230928'), '모의고사 기출');
+봄('교재는 그대로다', 책('K2-01-E-0001'), '엔딩크레딧');
 const 기출만 = 다.filter(x => (x.source || {}).book === '모의고사 기출');
-봄('🔵 「모의고사 기출」만 고르면 71제', 기출만.length, 71);
-봄('그중 교재 코드는 하나도 없다', 기출만.filter(x => x.code.includes('-')).length, 0);
-const 단원01 = 다.filter(x => R.storeMatches(x, 'K2', '01'));
-봄('01단원에는 둘이 섞여 있다', 단원01.length > 71 && 기출만.every(x => 단원01.includes(x)), true);
+봄('🔵 「모의고사 기출」만 고르면 다섯', 기출만.length, 5);
 
 // ── 🔵 형제 (변형 엮기의 답) ─────────────────────────────────────────
-// 코드 앞 7자리가 같으면 한 기출에서 나온 것이다 — 닮음을 잴 필요가 없다.
-봄('🔵 한 기출의 형제가 모인다', R.srcSiblings('1230928UP01'),
-   ['1230928OR', '1230928NC01', '1230928UP01', '1230928UP02']);
-봄('원본이 맨 앞에 온다', R.srcSiblings('1230928NC01')[0], '1230928OR');
+/* 🔵 **2026-09-06부터 ②꼴 변형도 ①꼴과 «같은» 꼴이다** — `1230928-N01`.
+   앞서는 `1230928NC01` 이었는데 그러면 변형이 «원본»처럼 취급돼,
+   AI 가 이미 있는 변형을 또 만들고 창고가 「변형 없음」이라 말했다. */
+봄('🔵 한 기출의 형제가 모인다', R.srcSiblings('1230928-U01'),
+   ['1230928', '1230928-N01', '1230928-U01']);
+봄('원본이 맨 앞에 온다', R.srcSiblings('1230928-N01')[0], '1230928');
 봄('교재 문항에는 형제가 없다', R.srcSiblings('K2-01-E-0001'), []);
-봄('갈래를 코드가 말한다', R.srcCodeInfo('1230928UP01').badge, 'UP');
-봄('출처를 코드가 말한다', R.srcCodeInfo('1230928UP01').label, '2023년 09월 28번');
+봄('갈래를 코드가 말한다', R.srcCodeInfo('1230928-U01').kind, 'U');
+봄('원본은 갈래가 비어 있다', R.srcCodeInfo('1230928').kind, '');
+봄('출처를 코드가 말한다', R.srcCodeInfo('1230928-U01').label, '2023년 09월 28번');
+/* 🔴 가형·나형은 서로 다른 뿌리다 — 앞자리만 보면 뭉친다. */
+봄('🔴 나형은 형까지 뿌리에 든다', R.srcCodeInfo('2160321B').origin, '2160321B');
+봄('화면에는 형까지 적는다', R.srcCodeInfo('2160321B').label, '2016년 03월 21번 나형');
 
 // ── 🔴 섞이면 안 되는 자리 ───────────────────────────────────────────
 봄('🔴 교재 코드가 기출로 읽히지 않는다', R.srcCodeInfo('K2-01-E-0013'), null);
-const 겹침 = Object.keys(byCode).length !== 564 + 71;
-봄('🔴 두 장부의 코드가 하나도 안 겹친다', 겹침, false);
+봄('🔴 교재 변형도 기출로 안 읽힌다', R.srcCodeInfo('K2-01-E-0013-N01'), null);
 
-console.log(`${NL}  ${fail ? '🔴' : '✅'} ${pass} 통과 · ${fail} 실패${NL}`);
+console.log(NL + '  ' + (fail ? '🔴' : '✅') + ' ' + pass + ' 통과 · ' + fail + ' 실패' + NL);
 process.exit(fail ? 1 : 0);

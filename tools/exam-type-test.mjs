@@ -133,11 +133,11 @@ const { srcCodeInfo, splitItemCode } = (() => {
   const 창고 = {
     'K2-05-D-0013': { code: 'K2-05-D-0013', content: '본문', answer: '③' },
     // ②꼴 — 브라우저로 올린 모의고사 기출. 코드에 과목·단원 자리가 «없어서» 문서가 들고 있다
-    '1230928UP01': { code: '1230928UP01', content: '본문', answer: '④',
-                     subject: 'K2', chapter: '01', chapterName: '평면좌표', badge: 'UP',
+    '1230928-U01': { code: '1230928-U01', content: '본문', answer: '④',
+                     subject: 'K2', chapter: '01', chapterName: '평면좌표', variantKind: 'U',
                      source: { book: '모의고사 기출', label: '2023년 09월 28번' } },
     // 과목·단원을 «안» 싣고 담긴 기출 — 그래도 출처는 코드가 말해 준다
-    '1140927DW01': { code: '1140927DW01', content: '본문' },
+    '1140927-D01': { code: '1140927-D01', content: '본문' },
   };
   const { itemOfCode } = new Function('state', 'chapterInfoFromItemCode', 'ITEM_CODE_RE', 'BOOK_OF_CODE', 'srcCodeInfo',
     lift('itemOfCode') + NLL + 'return { itemOfCode };')(
@@ -159,16 +159,16 @@ const { srcCodeInfo, splitItemCode } = (() => {
   봄('둘 다 없으면 없는 것', itemOfCode('K2-09-Z-0001'), null);
 
   // ②꼴 — 브라우저로 올린 모의고사 기출 (2026-09-06)
-  봄('🔵 ②꼴도 창고에서 찾는다', !!itemOfCode('1230928UP01'), true);
-  봄('🔴 과목은 «문서»가 들고 있다 — 코드엔 그 자리가 없다', itemOfCode('1230928UP01').subject, 'K2');
-  봄('단원도 문서에서', itemOfCode('1230928UP01').chapter, '01');
-  봄('단원 이름까지', itemOfCode('1230928UP01').chapterName, '평면좌표');
-  봄('출처는 문서가 적어 둔 그대로', itemOfCode('1230928UP01').source.label, '2023년 09월 28번');
-  봄('딱지(갈래)도 그대로', itemOfCode('1230928UP01').badge, 'UP');
-  봄('한 기출의 원본이 무엇인지는 코드가 안다', itemOfCode('1230928UP01').origin, '1230928OR');
+  봄('🔵 ②꼴도 창고에서 찾는다', !!itemOfCode('1230928-U01'), true);
+  봄('🔴 과목은 «문서»가 들고 있다 — 코드엔 그 자리가 없다', itemOfCode('1230928-U01').subject, 'K2');
+  봄('단원도 문서에서', itemOfCode('1230928-U01').chapter, '01');
+  봄('단원 이름까지', itemOfCode('1230928-U01').chapterName, '평면좌표');
+  봄('출처는 문서가 적어 둔 그대로', itemOfCode('1230928-U01').source.label, '2023년 09월 28번');
+  봄('갈래(N·U·D)도 그대로', itemOfCode('1230928-U01').variantKind, 'U');
+  봄('한 기출의 원본이 무엇인지는 코드가 안다', itemOfCode('1230928-U01').origin, '1230928');
   // 과목·단원을 안 싣고 담긴 것 — 짐작해서 채우지 «않는다»
-  봄('🔴 과목을 안 실었으면 비운다 — 짐작하지 않는다', itemOfCode('1140927DW01').subject, '');
-  봄('그래도 교재 이름은 코드가 말해 준다', itemOfCode('1140927DW01').source.book, '모의고사 기출');
+  봄('🔴 과목을 안 실었으면 비운다 — 짐작하지 않는다', itemOfCode('1140927-D01').subject, '');
+  봄('그래도 교재 이름은 코드가 말해 준다', itemOfCode('1140927-D01').source.book, '모의고사 기출');
 }
 
 
@@ -181,11 +181,11 @@ const { srcCodeInfo, splitItemCode } = (() => {
   const { itemDocKey } = new Function('srcCodeInfo', 'splitItemCode',
     lift('itemDocKey') + NLL + 'return { itemDocKey };')(srcCodeInfo, splitItemCode);
 
-  봄('🔴 ②꼴 변형은 «제 문서»를 가진다', itemDocKey('1230928NC01'), '1230928NC01');
-  봄('🔴 상향도', itemDocKey('1230928UP02'), '1230928UP02');
-  봄('②꼴 원본은 그대로', itemDocKey('1230928OR'), '1230928OR');
+  봄('🔴 ②꼴 변형은 «제 문서»를 가진다', itemDocKey('1230928-N01'), '1230928-N01');
+  봄('🔴 상향도', itemDocKey('1230928-U02'), '1230928-U02');
+  봄('②꼴 원본은 그대로', itemDocKey('1230928'), '1230928');
   /* 🔵 한 묶음의 넷이 «서로 다른» 문서로 가는가 — 이것이 이 검사의 핵심이다. */
-  const 묶음 = ['1230928OR', '1230928NC01', '1230928UP01', '1230928UP02'];
+  const 묶음 = ['1230928', '1230928-N01', '1230928-U01', '1230928-U02'];
   봄('🔴 한 기출의 형제 넷이 서로 다른 문서로 간다', new Set(묶음.map(itemDocKey)).size, 4);
 
   /* ①꼴은 예전 그대로다 — 교재에는 원본만 실리고 변형은 variants 컬렉션에 산다. */
@@ -200,21 +200,22 @@ const { srcCodeInfo, splitItemCode } = (() => {
 //    사용자가 정했다: **가=A · 나=B**, 자리는 «번호 뒤 · 딱지 앞», 형이 없으면 안 붙인다
 //    (그래야 지금까지 매긴 코드가 하나도 안 바뀐다).
 {
-  봄('🔵 형이 없으면 예전 그대로', srcCodeInfo('2160321OR').origin, '2160321OR');
-  봄('가형은 A', srcCodeInfo('2160321AOR').origin, '2160321AOR');
-  봄('나형은 B', srcCodeInfo('2160321BOR').origin, '2160321BOR');
-  봄('나형의 숫자변형', srcCodeInfo('2160321BNC01').origin, '2160321BOR');
+  봄('🔵 형이 없으면 예전 그대로', srcCodeInfo('2160321').origin, '2160321');
+  봄('가형은 A', srcCodeInfo('2160321A').origin, '2160321A');
+  봄('나형은 B', srcCodeInfo('2160321B').origin, '2160321B');
+  봄('나형의 숫자변형', srcCodeInfo('2160321B-N01').origin, '2160321B');
   /* 🔴 여기가 핵심 — 가형·나형이 «서로 다른 뿌리»여야 한다. 같으면 형제로 뭉쳐 버린다. */
   봄('🔴 가형과 나형은 서로 다른 뿌리다',
-     srcCodeInfo('2160321AOR').origin === srcCodeInfo('2160321BOR').origin, false);
+     srcCodeInfo('2160321A').origin === srcCodeInfo('2160321B').origin, false);
   봄('🔴 형 없는 것과도 다르다',
-     srcCodeInfo('2160321OR').origin === srcCodeInfo('2160321BOR').origin, false);
-  봄('화면에 형까지 적는다', srcCodeInfo('2160321BOR').label, '2016년 03월 21번 나형');
-  봄('형이 없으면 안 적는다', srcCodeInfo('2160321OR').label, '2016년 03월 21번');
+     srcCodeInfo('2160321').origin === srcCodeInfo('2160321B').origin, false);
+  봄('화면에 형까지 적는다', srcCodeInfo('2160321B').label, '2016년 03월 21번 나형');
+  봄('형이 없으면 안 적는다', srcCodeInfo('2160321').label, '2016년 03월 21번');
   /* ⚠ 딱지와 헷갈리지 않아야 한다 — NC 는 형이 아니라 딱지다. */
-  봄('⚠ NC 를 형으로 읽지 않는다', srcCodeInfo('1230928NC01').badge, 'NC');
-  봄('⚠ 그때 형은 비어 있다', srcCodeInfo('1230928NC01').form, '');
-  봄('⚠ 없는 형 글자는 코드로 안 받는다', srcCodeInfo('2160321ZOR'), null);
+  /* ⚠ 갈래 글자(N·U·D)와 형 글자(A·B)를 헷갈리면 안 된다 — 자리가 다르다. */
+  봄('⚠ -N01 의 N 은 «갈래»이지 형이 아니다', srcCodeInfo('1230928-N01').kind, 'N');
+  봄('⚠ 그때 형은 비어 있다', srcCodeInfo('1230928-N01').form, '');
+  봄('⚠ 없는 형 글자는 코드로 안 받는다', srcCodeInfo('2160321Z'), null);
 }
 
 console.log(`\n  ${fail ? '🔴' : '✅'} ${pass} 통과 · ${fail} 실패\n`);

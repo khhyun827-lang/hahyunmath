@@ -51,6 +51,9 @@ function makeWorld({ itemBody = {}, variants = {}, twin = null, used = 0, saveOk
     'splitItemCode', 'loadItemStoreIfNeeded', 'getAIQuotaUsed', 'AI_DAILY_LIMIT',
     'generateTwinViaAI', 'dqAnswerable', 'nextVariantCode', 'dbSetDoc', 'nowStamp',
     'escHtml', '마지막AI오류', 'console',
+    /* 🔵 «변형 세기»가 두 곳(variants 컬렉션 + 교재가 준 items 변형)을 합쳐 본다 (2026-09-06).
+       여기서는 그 합침을 스텁으로 흉내 낸다 — 이 검사가 재는 것은 «고리»지 합침 규칙이 아니다. */
+    'variantsOfCodeAll',
     BLOCK + '\nreturn { autoFillTick, autoFillCandidates, autoFillState, autoFillToggle, autoFillWhyEmpty, skipped: autoFillSkipped };'
   )(
     state,
@@ -69,6 +72,8 @@ function makeWorld({ itemBody = {}, variants = {}, twin = null, used = 0, saveOk
     () => '2026-09-04 12:00',
     (s) => String(s), 'AI 가 안 됐다',
     { warn(){}, error(){}, log(){} },
+    (code) => [ ...(variants[code] || []),
+      ...Object.keys(itemBody).filter(c => c.startsWith(code + '-')).map(c => ({ code: c, variantKind: (c.match(/-([NUD])/) || [])[1] })) ],
   );
   api.autoFillState().on = true;
   return Object.assign(w, api, { state });
