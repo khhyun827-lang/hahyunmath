@@ -42,18 +42,27 @@ const a = await fetch('https://identitytoolkit.googleapis.com/v1/accounts:signUp
 if (!a.ok) { console.error('🔴 로그인 실패 — ' + a.status); process.exit(1); }
 const H = { Authorization: 'Bearer ' + (await a.json()).idToken };
 
-const items = {};
-for (let pt = ''; ;) {
-  const r = await fetch(BASE + '/items?pageSize=300' + (pt ? '&pageToken=' + pt : ''), { headers: H });
-  if (!r.ok) { console.error('🔴 창고를 못 읽었습니다 — http ' + r.status); process.exit(1); }
-  const j = await r.json();
-  for (const d of (j.documents || [])) {
-    const id = d.name.split('/').pop();
-    try { items[id] = JSON.parse(d.fields?.value?.stringValue || '{}'); } catch (e) { }
+/* 🔴 **변형(variants)도 같이 봐야 한다** (2026-09-06에 구멍을 찾았다).
+   처음에는 `items` 만 훑었는데, **학생 화면에 실제로 나가는 것은 변형**이다.
+   그리고 변형은 AI 가 «검토 없이» 창고로 보내므로 더더욱 세어 봐야 한다.
+   ⚠ 변형은 본문만이 아니라 **정답·해설에도 수식이 있다** — 셋 다 본다. */
+const 읽기 = async (col) => {
+  const out = {};
+  for (let pt = ''; ;) {
+    const r = await fetch(BASE + '/' + col + '?pageSize=300' + (pt ? '&pageToken=' + pt : ''), { headers: H });
+    if (!r.ok) { console.error('🔴 ' + col + ' 을 못 읽었습니다 — http ' + r.status); process.exit(1); }
+    const j = await r.json();
+    for (const d of (j.documents || [])) {
+      const id = d.name.split('/').pop();
+      try { out[id] = JSON.parse(d.fields?.value?.stringValue || '{}'); } catch (e) { }
+    }
+    if (!j.nextPageToken) break;
+    pt = j.nextPageToken;
   }
-  if (!j.nextPageToken) break;
-  pt = j.nextPageToken;
-}
+  return out;
+};
+const items = await 읽기('items');
+const variants = await 읽기('variants');
 
 /* 화면과 «같은 방식»으로 자른다 — renderMathInElement 가 $…$ 를 수식으로 본다. */
 const 수식들 = (s) => [...String(s || '').matchAll(/\$([^$]*)\$/g)].map((m) => m[1]);
@@ -69,12 +78,20 @@ const 재기 = (뽑기) => {
       catch (e) { 흠.push({ code, eq, why: String(e.message).replace(/\s+/g, ' ').slice(0, 120) }); }
     }
   }
+  /* 변형은 «고치기»의 대상이 아니다(AI 가 쓴 글이라 hwpx 규칙과 무관하다). 그래서 세기만 한다. */
+  for (const k in variants) for (const 칸 of ['content', 'answer', 'solution']) {
+    for (const eq of 수식들(variants[k][칸])) {
+      수식수++;
+      try { katex.renderToString(eq, { throwOnError: true }); }
+      catch (e) { 흠.push({ code: (variants[k].code || k) + ' (변형·' + 칸 + ')', eq, why: String(e.message).replace(/\s+/g, ' ').slice(0, 120) }); }
+    }
+  }
   return { 흠, 수식수 };
 };
 
 const 지금 = 재기((x) => x.content);
 const 문항 = [...new Set(지금.흠.map((x) => x.code))];
-console.log('\n창고 ' + Object.keys(items).length + '건 · 수식 ' + 지금.수식수 + '개');
+console.log('\n창고 ' + Object.keys(items).length + '건 · 변형 ' + Object.keys(variants).length + '건 · 수식 ' + 지금.수식수 + '개');
 console.log('🔴 빨갛게 뜨는 수식 ' + 지금.흠.length + '개 (문항 ' + 문항.length + '개)\n');
 for (const x of 지금.흠) {
   console.log('  ' + x.code + '  ' + x.eq.replace(/\n/g, ' ').slice(0, 70));
