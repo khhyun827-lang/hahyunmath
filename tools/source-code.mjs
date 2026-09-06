@@ -96,16 +96,66 @@ const 해시of = (ref) => 해시표[ref] || '';
 
 // ── 읽는다 ────────────────────────────────────────────────────────────
 const R = loadHwpxRules();
-const 뽑은것 = R.hwpxSourceBadges(sectionDocs(SRC), 해시of);
+/* ⚠ 문서는 «한 번만» 읽는다 — 아래 진단이 같은 것을 다시 쓴다(다시 풀면 4MB 를 또 읽는다). */
+const 문서 = sectionDocs(SRC);
+const 뽑은것 = R.hwpxSourceBadges(문서, 해시of);
 const r = R.hwpxMakeSourceCodes(뽑은것);
 
 console.log(`\n  ${이름}`);
 console.log(`  단원 ${CHAPTER} 「${단원이름}」 · 과목 ${SUBJECT}`);
-console.log(`  미주 ${r.셈.미주} · 출처 ${r.셈.출처} · 딱지 ${r.셈.딱지}`);
+/* 🔴 **까닭을 말하기 «전»에 터지고 있었다** (2026-09-06 · 03·04·05 를 돌려 보다 겪었다).
+   `hwpxMakeSourceCodes` 는 «못 냈을 때» `셈` 을 안 돌려준다. 그런데 여기서 `r.셈` 을
+   먼저 찍는 바람에 **TypeError 로 죽어서 아래의 「멈춘다 — 까닭」이 영영 안 나왔다.**
+   → 언제나 있는 `뽑은것.셈` 을 쓴다. **까닭을 말하는 코드가 까닭 때문에 죽으면 안 된다.** */
+console.log(`  미주 ${뽑은것.셈.미주} · 출처 ${뽑은것.셈.출처} · 딱지 ${뽑은것.셈.딱지}`);
 
 if (!r.ok) {
   console.error('\n🔴 멈춘다 — 장부를 안 낸다.');
   for (const 흠 of r.흠) console.error('   ' + 흠);
+  /* 🔵 **«어디»인지 짚어 준다** (2026-09-06 · 04·05 를 손으로 파 보고 나서 넣었다).
+     셈만 말하면 「132 대 135」밖에 안 나온다 — 사람은 «어느 문항»인지 알아야 고칠 수 있다.
+     미주 하나를 한 덩이로 보고, 그 덩이 안의 출처·딱지를 세어 어긋난 자리를 이웃과 함께 보인다.
+     ⚠ 출처 글은 있는데 «못 읽은» 것도 흠이다(`?` 로 보인다) — 1994년 것이 그래서 막혔었다. */
+  const 토큰 = [];
+  {
+    const paras = [];
+    for (const d of 문서) { const sec = d.documentElement; if (!sec) continue;
+      for (const n of Array.from(sec.childNodes)) if (n.nodeType === 1 && n.localName === 'p') paras.push(n); }
+    R.hwpWalkParagraphs(paras, 토큰);
+  }
+  const 덩이 = [];
+  {
+    let 지금 = null;
+    for (const t of 토큰) {
+      if (t.type === 'endnote') { 지금 = { n: 덩이.length + 1, 출처: [], 딱지: [], 글: '' }; 덩이.push(지금); continue; }
+      if (!지금) continue;
+      if (t.type === 'srctag') { const v = R.hwpxParseSourceTag(t.v); 지금.출처.push(v ? v.년 + '-' + v.월 + '-' + v.번 : '?' + String(t.v).trim()); continue; }
+      if (t.type === 'pic') { const b = { '264bb508409ed2736d541bc9f3d3e4e6':'OR', '22c12a6ee18385db377145fca66266b1':'NC',
+        'df0ac81572f0612dd9dee9aa0101679f':'UP', 'ba6e591c3e08ac6725ef1b7e6d9e33b5':'DW' }[해시of(t.v)]; if (b) 지금.딱지.push(b); continue; }
+      if (t.type === 'text' && 지금.글.length < 60) 지금.글 += t.v;
+    }
+  }
+  const 줄 = (x) => '     ' + String(x.n).padStart(3) + '번째 · 출처 ' + JSON.stringify(x.출처)
+    + ' · 딱지 ' + JSON.stringify(x.딱지) + ' · ' + x.글.replace(/\s+/g, ' ').slice(0, 46);
+  const 짝틀림 = 덩이.filter((x) => x.출처.length !== 1 || x.딱지.length !== 1 || String(x.출처[0]).startsWith('?'));
+  if (짝틀림.length) {
+    console.error('\n   ── 출처나 딱지가 «하나»가 아닌 덩이 ' + 짝틀림.length + '개');
+    for (const x of 짝틀림.slice(0, 12)) console.error(줄(x));
+  }
+  const 묶음 = {};
+  for (const x of 덩이) if (x.출처.length === 1 && x.딱지.length === 1 && !String(x.출처[0]).startsWith('?'))
+    (묶음[x.출처[0]] = 묶음[x.출처[0]] || []).push(x);
+  const 안맞음 = Object.entries(묶음).filter(([, v]) => v.filter((y) => y.딱지[0] === 'OR').length !== 1);
+  if (안맞음.length) {
+    console.error('\n   ── 원본(OR)이 하나가 아닌 출처 묶음 ' + 안맞음.length + '개 (앞뒤 덩이도 같이 보인다)');
+    for (const [k, v] of 안맞음.slice(0, 6)) {
+      console.error('     [' + k + '] → ' + v.map((y) => y.딱지[0]).join(','));
+      const 앞뒤 = new Set(v.flatMap((y) => [y.n - 1, y.n, y.n + 1]));
+      for (const n of [...앞뒤].sort((a, b) => a - b)) if (덩이[n - 1]) console.error(줄(덩이[n - 1]));
+    }
+    console.error('\n   🔵 본문이 «같은데» 출처만 다르면 교재의 출처 표기가 어긋난 것이다.');
+    console.error('      본문이 다르면 그 기출의 원본이 교재에 안 실린 것이다 — 어느 쪽인지는 사람이 봐야 한다.');
+  }
   process.exit(2);
 }
 
