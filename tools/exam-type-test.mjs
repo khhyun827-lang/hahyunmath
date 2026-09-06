@@ -193,5 +193,29 @@ const { srcCodeInfo, splitItemCode } = (() => {
   봄('🔵 ①꼴 변형은 원본으로 접는다', itemDocKey('K2-01-E-0001-N01'), 'K2-01-E-0001');
 }
 
+
+// ⑰ 🔴 가형/나형 — 같은 (년·월·번)에 «다른 문제»가 둘 있다 (2026-09-06)
+//    실측: 「2016년 3월 21번」이 02단원(정사각형 접기)과 03단원(원)에 둘 다 있었다.
+//    당시 시험이 가형·나형으로 나뉘어 있었기 때문이다 — 둘 다 «맞는» 출처다.
+//    사용자가 정했다: **가=A · 나=B**, 자리는 «번호 뒤 · 딱지 앞», 형이 없으면 안 붙인다
+//    (그래야 지금까지 매긴 코드가 하나도 안 바뀐다).
+{
+  봄('🔵 형이 없으면 예전 그대로', srcCodeInfo('2160321OR').origin, '2160321OR');
+  봄('가형은 A', srcCodeInfo('2160321AOR').origin, '2160321AOR');
+  봄('나형은 B', srcCodeInfo('2160321BOR').origin, '2160321BOR');
+  봄('나형의 숫자변형', srcCodeInfo('2160321BNC01').origin, '2160321BOR');
+  /* 🔴 여기가 핵심 — 가형·나형이 «서로 다른 뿌리»여야 한다. 같으면 형제로 뭉쳐 버린다. */
+  봄('🔴 가형과 나형은 서로 다른 뿌리다',
+     srcCodeInfo('2160321AOR').origin === srcCodeInfo('2160321BOR').origin, false);
+  봄('🔴 형 없는 것과도 다르다',
+     srcCodeInfo('2160321OR').origin === srcCodeInfo('2160321BOR').origin, false);
+  봄('화면에 형까지 적는다', srcCodeInfo('2160321BOR').label, '2016년 03월 21번 나형');
+  봄('형이 없으면 안 적는다', srcCodeInfo('2160321OR').label, '2016년 03월 21번');
+  /* ⚠ 딱지와 헷갈리지 않아야 한다 — NC 는 형이 아니라 딱지다. */
+  봄('⚠ NC 를 형으로 읽지 않는다', srcCodeInfo('1230928NC01').badge, 'NC');
+  봄('⚠ 그때 형은 비어 있다', srcCodeInfo('1230928NC01').form, '');
+  봄('⚠ 없는 형 글자는 코드로 안 받는다', srcCodeInfo('2160321ZOR'), null);
+}
+
 console.log(`\n  ${fail ? '🔴' : '✅'} ${pass} 통과 · ${fail} 실패\n`);
 process.exit(fail ? 1 : 0);

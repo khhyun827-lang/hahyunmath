@@ -3164,7 +3164,7 @@
      이 파일은 index.html 과 «따로» 받아지므로, 물음표 뒤가 그대로면 브라우저가
      **캐시에 있는 옛 파서를 꺼내 쓴다.** 그러면 교재를 다시 올려도 옛 글이 그대로 담기고,
      화면만 보고서는 «고쳤는데 왜 안 되지»가 된다 — 파서가 바뀐 것을 아무 데서도 못 본다. -->
-<script src="hwpx.js?v=2026-09-06b"></script>
+<script src="hwpx.js?v=2026-09-06c"></script>
 <!-- 출석 도장 게임(셸·똥피하기·달리기). 연습 페이지 game.html 도 같은 파일을 쓴다 -->
 <!-- ⚠ ?v= 를 붙이는 까닭 — 브라우저가 game-core.js 를 캐시해서, 올려도 학생 화면에는
      옛 게임이 그대로 돈다(Ctrl+Shift+R 을 해야 바뀐다 — 학생에게 그걸 시킬 수는 없다).
@@ -3657,17 +3657,19 @@ const VARIANT_KINDS = [['N','숫자변형'],['U','상향'],['D','하향']];
      ①처럼 `variants` 컬렉션을 따로 뒤질 필요가 없다. 교재가 이미 적어 둔 것을 그대로 쓴다.
    ⚠ 과목·단원이 코드에 «없다» — 기출 번호에는 그런 자리가 없기 때문이다.
      그래서 ②는 장부가 과목·단원을 들고 있어야 한다. 코드에서 짐작하지 않는다. */
-const SRC_CODE_RE   = /^([12])(\d{2})(\d{2})(\d{2})(OR|NC|UP|DW)(\d{2})?$/;
-const SRC_BADGE_KIND = { NC:'N', UP:'U', DW:'D' };
-const SRC_BADGE_NAME = { OR:'원본', NC:'숫자변형', UP:'상향', DW:'하향' };
+const SRC_CODE_RE   = /^([12])(\d{2})(\d{2})(\d{2})([AB]?)(OR|NC|UP|DW)(\d{2})?$/;
+const SRC_BADGE_KIND = { NC:'N', UP:'U', DW:'D' };    // 우리 창고의 변형 갈래로 옮긴다
+const SRC_FORM_NAME = { A:'가형', B:'나형' };
 function srcCodeInfo(code){
   const m = String(code || '').trim().toUpperCase().match(SRC_CODE_RE);
   if(!m) return null;
   const 년 = +m[2], 서기 = (년 <= 30 ? 2000 : 1900) + 년;
-  return { grade: m[1], year: m[2], month: m[3], no: m[4], badge: m[5], seq: m[6] || '',
-           origin: m[1] + m[2] + m[3] + m[4] + 'OR',
-           label: 서기 + '년 ' + m[3] + '월 ' + (+m[4]) + '번' };
+  const 형 = m[5] || '';
+  return { grade: m[1], year: m[2], month: m[3], no: m[4], form: 형, badge: m[6], seq: m[7] || '',
+           origin: m[1] + m[2] + m[3] + m[4] + 형 + 'OR',
+           label: 서기 + '년 ' + m[3] + '월 ' + (+m[4]) + '번' + (형 ? ' ' + SRC_FORM_NAME[형] : '') };
 }
+const SRC_BADGE_NAME = { OR:'원본', NC:'숫자변형', UP:'상향', DW:'하향' };
 function splitItemCode(code){
   /* ②꼴을 먼저 본다 — 줄표가 없어 ①의 정규식에는 애초에 안 걸린다. */
   const s = srcCodeInfo(code);
@@ -19400,9 +19402,12 @@ function icToolsHTML(앞){
 function srcSiblings(code){
   const s = srcCodeInfo(code);
   if(!s) return [];
-  const 뿌리 = s.origin.slice(0, 7);
+  /* 🔴 **앞 7자리를 자르면 안 된다** (2026-09-06 · 형(가/나)이 생기면서 깨질 자리였다).
+     뿌리가 이제 `2160321` 일 수도 `2160321B` 일 수도 있어 길이가 고정이 아니다.
+     7자리로 자르면 **가형과 나형이 한 묶음으로 뭉친다** — 서로 다른 기출인데.
+     → `origin` 을 통째로 견준다. 길이를 세지 말고 «만들어진 열쇠»를 그대로 쓸 것. */
   const 다 = Object.assign({}, state.itemByCode || {}, state.itemBody || {});
-  return Object.keys(다).filter(c => srcCodeInfo(c) && c.slice(0, 7) === 뿌리)
+  return Object.keys(다).filter(c => { const t = srcCodeInfo(c); return t && t.origin === s.origin; })
     .sort((a, b) => (a.endsWith('OR') ? ' ' : a) < (b.endsWith('OR') ? ' ' : b) ? -1 : 1);
 }
 function icOpenDrawer(code){ state.icOpen = code; render(); }
