@@ -18676,8 +18676,15 @@ function reviewWalkCur(){
     const x = 줄.find(y => y.auto && y.key === state.reviewVariantCode);
     if(x) return x;
   }
-  return 줄.find(y => !y.auto && y.key === state.reviewSelectedId)
-      || 줄.find(y => !y.auto) || null;      // 화면의 `reviewSelected` 가 list[0] 을 쓰는 것과 같다
+  if(state.reviewSelectedId){
+    const x = 줄.find(y => !y.auto && y.key === state.reviewSelectedId);
+    if(x) return x;
+  }
+  /* 🔴 **아무것도 안 골랐으면 «맨 위»다** (2026-09-07 · 사용자가 「단축키가 먹히지 않아」).
+     예전엔 여기서 «시험지 문항»만 찾았다. 검토 대기에 AI 변형만 남아 있으면
+     null 이 되어 **E·X 가 통째로 죽었다** — 목록은 보이는데 키가 안 듣는다.
+     ⚠ 화면도 이 함수를 쓴다. 그리는 것과 손대는 것이 갈리면 안 보이는 문항이 승인된다. */
+  return 줄[0] || null;
 }
 /* J/K로 큐 안을 오르내린다. 목록 «순서»가 기준이라 화면에 보이는 것과 어긋나지 않는다. */
 function reviewMove(delta){
@@ -19521,6 +19528,7 @@ function autoVariantWorkHTML(v){
     <h1 class="t-title"><span class="mono">${escHtml(v.code)}</span> · AI가 만든 변형</h1>
     <div class="t-meta" style="margin-top:7px;">
       <span class="badge late">검토 대기</span>
+      ${reviewMiniHTML(v)}
       <s>·</s>원본 <b class="mono">${escHtml(v.originCode)}</b>
       <s>·</s>${escHtml(v.createdAt||'')}
       <s>·</s>통과시키기 전에는 학생에게 안 나갑니다
@@ -19557,17 +19565,6 @@ function autoVariantWorkHTML(v){
     </div>`
     : `<div class="rv-warn" style="margin-top:14px;">${iconSvg('bell',15)}<div>
         <b>풀이가 없습니다.</b> 정답이 맞는지 직접 확인해 주세요.</div></div>`}
-    ${reviewVerdictHTML(v)}
-    <div style="display:flex;gap:10px;margin-top:18px;flex-wrap:wrap;align-items:center;">
-      ${/* 🔵 **키 이름을 단추에 적는다** (2026-09-06). 시험지 문항 쪽은 «E·X·R» 을 적어 두는데
-           여기만 안 적혀 있어서, 키가 되는 줄을 모르고 마우스로만 쓰게 된다.
-           ⚠ 적어 둔 키와 실제로 도는 키가 어긋나면 안 된다 — 키 처리는 `reviewWalkCur()` 하나다. */''}
-      <button class="btn p" onclick="approveAutoVariant('${escHtml(v.code)}')"><span class="k">E</span> 통과 — 창고에 넣기</button>
-      <button class="btn" onclick="discardAutoVariant('${escHtml(v.code)}')"><span class="k">X</span> 버리기</button>
-      <span class="spacer"></span>
-      <span class="hint" style="margin-left:0;"><span class="kbd">J</span> 이전 <span class="kbd">K</span> 다음</span>
-      <span class="hint">통과시키면 이 순간부터 데일리퀴즈·오답숙제에 나갑니다</span>
-    </div>
     <div class="rst-pad"></div>
   </div>`;
 }
@@ -19617,9 +19614,11 @@ function teacherReviewHTML(){
   /* 🔵 AI 검토 띠는 «검토 대기»에서만 뜬다 — 거기에만 AI가 만든 변형이 있다. */
   const rvBar = (qkey==='pending' && autos.length) ? reviewBarHTML(autos) : '';
 
-  /* 변형을 고른 적이 있으면 그것이 이긴다 — 없어졌으면(통과·버리기) 문항 쪽으로 돌아간다. */
-  const selAuto = autos.find(v => v.code === state.reviewVariantCode) || null;
-  const sel = selAuto ? null : reviewSelected(list);
+  /* 🔵 **그리는 것과 키가 손대는 것은 «한 함수»에서 나온다** — 갈리면 안 보이는 문항이 승인된다.
+     고른 적이 없으면 목록 맨 위다(AI 변형이 위에 그려지므로 그것이 맨 위다). */
+  const 지금 = reviewWalkCur();
+  const selAuto = 지금 && 지금.auto ? 지금.v : null;
+  const sel = 지금 && !지금.auto ? 지금.b : null;
   const items = `<div class="rv-list">
     <div class="rv-lh">
       <span style="font-size:13px;font-weight:700;">${REVIEW_QUEUES.find(q=>q[0]===qkey)[1]}</span>
@@ -19651,7 +19650,8 @@ function teacherReviewHTML(){
       <div style="padding:64px 0;text-align:center;color:var(--dim);font-size:12.5px;line-height:1.8;">
         ${list.length===0 ? '이 큐는 비어 있습니다.' : '왼쪽 목록에서 문항을 고르세요.'}</div>`}
     </main>
-  </div>` + (sel ? reviewActbarHTML(sel, list) : '');
+  </div>` + (selAuto ? autoVariantActbarHTML(selAuto)
+          : sel ? reviewActbarHTML(sel, list) : '');
 }
 
 function reviewSelected(list){
@@ -20395,59 +20395,65 @@ function reviewTagHTML(v){
 }
 
 
-/* 오른쪽 판에 붙는 판정 조각. «무엇을 하라»까지 적는다 — 판정만 보면 뭘 할지 모른다. */
-function reviewVerdictHTML(v){
-  const busy = state.reviewBusy === v.code;
-  const r = v.aiReview;
-  const 못함 = !dqAnswerable(v.content, v.answer);
-  const 단추 = 못함
-    ? '<span class="hint" style="margin-left:0;">정답이 ①~⑤ 나 정수가 아니라 AI가 검토할 수 없습니다.</span>'
-    : `<button class="btn sm" ${busy?'disabled':''} onclick="reviewVariantOne('${escHtml(v.code)}')">
-         ${busy ? '검토 중…' : (r ? '다시 검토' : 'AI 검토')}</button>`;
-  if(!r){
-    return `<div class="rv-fold" style="margin-top:14px;">
-      <div class="rv-fh" style="cursor:default;">${iconSvg('search',14)} AI 검토
-        <span class="sp">다른 AI가 «혼자 풀어» 우리 정답과 맞대 봅니다 — 정답은 안 알려 줍니다</span></div>
-      <div class="rv-fb" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">${단추}</div>
-    </div>`;
-  }
-  const d = REVIEW_VERDICT[r.verdict] || { 색:'y', 말:r.verdict, 풀이:'' };
-  const 배지 = { agree:'ok', suspect:'no', unsure:'late' }[r.verdict] || 'late';
-  const 곁 = r.verdict === 'suspect' ? `<div class="q-ans" style="margin-top:9px;">
-        AI가 낸 답 <b>${escHtml(r.answer||'—')}</b> <s>·</s> 우리 정답 <b>${escHtml(v.answer||'—')}</b></div>` : '';
-  const 혼자 = r.lone ? `<div class="hint" style="margin-left:0;margin-top:7px;">
-        첫 모델은 ${escHtml(r.lone)} 이라 했지만 둘째가 우리 정답과 같았습니다.</div>` : '';
-  return `<div class="rv-fold" style="margin-top:14px;">
-    <div class="rv-fh" style="cursor:default;">${iconSvg('search',14)} AI 검토
-      <span class="sp">${escHtml((r.models||[]).join(' · '))} <s>·</s> ${escHtml(r.at||'')}</span></div>
-    <div class="rv-fb">
-      <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;">
-        <span class="badge ${배지}">${escHtml(d.말)}</span>
-        <span style="font-size:12px;color:var(--sub);">${escHtml(d.풀이)}</span>
-      </div>
-      ${곁}${혼자}
-      <div style="margin-top:11px;">${단추}</div>
-    </div>
-  </div>`;
+/* 🔵 **판정은 «작게, 머리줄에»** (2026-09-07 · 사용자가 「카드는 불필요하게 큰 것 같아」).
+   검토는 «곁다리»다 — 화면의 주인공은 원본과 변형을 나란히 놓은 대조다.
+   ⚠ 그래도 «답이 다르다»는 것은 눈에 띄어야 한다. 그래서 배지 색은 살린다. */
+function reviewMiniHTML(v){
+  const r = v && v.aiReview;
+  if(!r) return '';
+  const 배지 = { agree:'ok', suspect:'no', unsure:'late' }[r.verdict];
+  const d = REVIEW_VERDICT[r.verdict];
+  if(!배지 || !d) return '';
+  const 곁 = r.verdict === 'suspect'
+    ? ' AI ' + escHtml(r.answer||'—') + ' <s>vs</s> 우리 ' + escHtml(v.answer||'—')
+    : '';
+  return '<s>·</s><span class="badge ' + 배지 + '" title="' + escHtml(d.풀이) + '">'
+       + escHtml(d.말) + '</span>' + 곁;
 }
 
+/* 아랫띠 — 「내용 없음」 줄의 `reviewActbarHTML` 과 «같은 꼴»이라야 한다.
+   🔴 사용자가 짚었다 — 「내용없음 창 아래 단축키 UI 랑 검토 대기 창이 달라져」.
+     한쪽은 화면 아래 고정 띠(actbar)이고 한쪽은 본문 안 단추 줄이었다.
+     같은 일(통과·버리기·다음)을 하는데 자리와 생김새가 달라 손이 헷갈린다. */
+function autoVariantActbarHTML(v){
+  const 줄 = reviewWalkList();
+  const i = 줄.findIndex(x => x.auto && x.key === v.code);
+  const next = 줄[i+1];
+  const busy = state.reviewBusy === v.code;
+  const 검토가능 = dqAnswerable(v.content, v.answer);
+  const 검토말 = !검토가능 ? '정답이 ①~⑤ 나 정수가 아니라 AI가 검토할 수 없습니다'
+    : (v.aiReview ? '다시 검토' : '다른 AI에게 풀려 우리 정답과 맞대 봅니다');
+  return `<div class="actbar">
+    <button class="btn ok" onclick="approveAutoVariant('${escHtml(v.code)}')"><span class="k">E</span> 통과 · 창고에 넣기</button>
+    <button class="btn no" onclick="discardAutoVariant('${escHtml(v.code)}')"><span class="k">X</span> 버리기</button>
+    <button class="btn" ${(busy||!검토가능)?'disabled':''} title="${escHtml(검토말)}"
+      onclick="reviewVariantOne('${escHtml(v.code)}')">
+      <span class="k">A</span> ${busy ? '검토 중…' : (v.aiReview ? 'AI 다시 검토' : 'AI 검토')}</button>
+    <span class="spacer"></span>
+    <span class="hint" style="margin-left:0;">
+      ${next ? (next.auto ? '다음 · ' + escHtml(next.key) : '다음 · ' + (next.b.questionNo||'') + '번') : '이 큐의 마지막'}
+      <span class="kbd">J</span> 이전 <span class="kbd">K</span> 다음</span>
+  </div>`;
+}
 /* 검토 대기 줄 맨 위의 띠 — 남은 한도와 «한꺼번에 보기» 단추. */
 function reviewBarHTML(autos){
   const 할것 = autos.filter(v => !v.aiReview && dqAnswerable(v.content, v.answer));
   const 남음 = state.reviewQuotaUsed===null ? null : Math.max(0, REVIEW_DAILY_LIMIT - state.reviewQuotaUsed);
   const p = state.reviewProgress;
-  return `<div class="note" style="margin-bottom:14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;flex-shrink:0;">
-    <span>AI 검토 안 한 변형 <b class="mono" style="color:var(--ink);">${할것.length}</b>개 ·
-      ${남음===null ? '오늘 사용량 확인 중…'
-        : `오늘 남은 검토 <b class="mono" style="color:var(--ink);">${남음}/${REVIEW_DAILY_LIMIT}</b>`}</span>
-    <span class="spacer"></span>
+  /* 🔵 **한 줄로 줄였다** (2026-09-07) — 한 건 검토는 아랫띠의 A 가 하므로
+     여기 남길 일은 «한꺼번에»와 «남은 한도» 둘뿐이다. */
+  if(!p && !할것.length) return '';
+  return `<div class="rv-aibar">
     ${p
-      ? `<span style="font-size:12px;">검토 중… <span class="mono">${p.done}/${p.total}</span>
-           <s>·</s> 답 다름 ${p.갈림} <s>·</s> 검토 못 함 ${p.못함}</span>
+      ? `검토 중 <b class="mono">${p.done}/${p.total}</b>
+         <s>·</s> 답 다름 ${p.갈림} <s>·</s> 검토 못 함 ${p.못함}
+         <span class="spacer"></span>
          <button class="btn q sm" ${state.reviewCancel?'disabled':''} onclick="cancelReviewBatch()">
            ${state.reviewCancel ? '멈추는 중…' : '멈춤'}</button>`
-      : `<button class="btn sm" ${(!할것.length || 남음===0)?'disabled':''} onclick="reviewAllPending()">
-           AI로 검토하기 (${할것.length}개)</button>`}
+      : `AI 검토 안 한 변형 <b class="mono">${할것.length}</b>개
+         <s>·</s> ${남음===null ? '한도 확인 중…' : '오늘 남은 검토 ' + 남음 + '/' + REVIEW_DAILY_LIMIT}
+         <span class="spacer"></span>
+         <button class="btn sm" ${남음===0?'disabled':''} onclick="reviewAllPending()">한꺼번에 검토</button>`}
   </div>`;
 }
 
@@ -20731,6 +20737,7 @@ document.addEventListener('keydown', e=>{
       const v = 지금.v;
       if(k==='e'){ e.preventDefault(); approveAutoVariant(v.code); }
       else if(k==='x'){ e.preventDefault(); discardAutoVariant(v.code); }
+      else if(k==='a'){ e.preventDefault(); if(state.reviewBusy!==v.code) reviewVariantOne(v.code); }
       return;
     }
     const b = 지금.b;

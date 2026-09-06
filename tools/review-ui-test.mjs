@@ -37,7 +37,7 @@ for (const v of Object.keys(REVIEW_VERDICT)) 봄(워커판정.has(v), '화면에
 const 배지 = { agree: 'ok', suspect: 'no', unsure: 'late' };
 const 쓴것 = new Set(Object.values(배지));
 봄(쓴것.size === Object.keys(배지).length, '판정 배지가 겹칩니다');
-const tagFn = web.slice(web.indexOf('function reviewTagHTML'), web.indexOf('/* 오른쪽 판에 붙는 판정 조각'));
+const tagFn = web.slice(web.indexOf('function reviewTagHTML'), web.indexOf('/* 🔵 **판정은 «작게, 머리줄에»'));
 for (const v of Object.keys(배지)) 봄(tagFn.includes("'" + 배지[v] + "'"), 'reviewTagHTML 이 ' + v + ' 배지를 안 씁니다');
 
 // ④ 🔴 판정이 문항을 «자동으로» 손대면 안 된다 — 사람이 누르는 것이라야 한다

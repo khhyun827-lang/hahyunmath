@@ -65,11 +65,33 @@ const bank = [{ id: 'pb1' }, { id: 'pb2' }];
   봄('AI 변형에서 X 는 버리기', 글.includes('discardAutoVariant'), true);
 }
 {
-  /* 🔵 키가 되는 줄을 «단추에 적어» 두었는가 — 안 적혀 있으면 아무도 안 쓴다. */
-  const 판 = lift('autoVariantWorkHTML');
+  /* 🔵 키가 되는 줄을 «단추에 적어» 두었는가 — 안 적혀 있으면 아무도 안 쓴다.
+     ⚠ 단추는 2026-09-07 에 본문 안에서 «아랫띠»로 옮겼다 — 「내용 없음」 줄과 같은 꼴로
+       맞추라는 사용자 요청이었다. 그래서 여기서 보는 곳도 옮긴다. */
+  const 판 = lift('autoVariantActbarHTML');
   봄('🔵 통과 단추에 E 가 적혀 있다', /class="k">E</.test(판), true);
   봄('🔵 버리기 단추에 X 가 적혀 있다', /class="k">X</.test(판), true);
+  봄('🔵 AI 검토 단추에 A 가 적혀 있다', /class="k">A</.test(판), true);
   봄('🔵 J·K 안내도 있다', 판.includes('kbd">J') && 판.includes('kbd">K'), true);
+  /* 🔴 적어 둔 키와 «실제로 도는» 키가 어긋나면 안 된다 — 그게 제일 나쁜 거짓말이다. */
+  const 손 = html.slice(html.indexOf('if(지금.auto){'), html.indexOf('const b = 지금.b;'));
+  봄('🔴 A 가 실제로 돈다', /k===.a./.test(손) && 손.includes('reviewVariantOne'), true);
+  봄('🔴 아랫띠는 「내용 없음」과 같은 actbar 다', 판.includes('class="actbar"'), true);
+}
+{
+  /* 🔴 **아무것도 안 골랐을 때 키가 죽지 않는가** (2026-09-07 · 「단축키가 먹히지 않아」).
+     예전 꼬리는 «시험지 문항»만 찾아서, 검토 대기에 AI 변형만 있으면 null 이었다.
+     null 이면 E·X·A 가 통째로 죽는다 — 목록은 보이는데 키가 안 듣는다. */
+  const R = F({ reviewQueue: 'pending', reviewVariantCode: '', reviewSelectedId: null }, autos, []);
+  const 지금 = R.reviewWalkCur();
+  봄('🔴 AI 변형만 있어도 지금 것이 있다', !!지금 && 지금.auto, true);
+  봄('🔴 그것은 «맨 위»다 — 화면이 그리는 것과 같다', 지금 && 지금.key, 'K2-01-E-0001-N01');
+}
+{
+  /* ⚠ 화면과 키가 «같은 함수»를 보는가 — 갈리면 안 보이는 문항이 승인된다. */
+  const 화면 = lift('teacherReviewHTML');
+  봄('🔴 화면도 reviewWalkCur 로 고른다', 화면.includes('reviewWalkCur()'), true);
+  봄('🔴 화면이 옛 reviewSelected(list) 를 안 쓴다', /reviewSelected(list)/.test(화면), false);
 }
 
 console.log(NL2 + '  ' + (fail ? '🔴' : '✅') + ' ' + pass + ' 통과 · ' + fail + ' 실패' + NL2);
