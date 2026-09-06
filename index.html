@@ -18691,7 +18691,13 @@ function reviewMove(delta){
   const 줄 = reviewWalkList();
   if(!줄.length) return;
   const 지금 = reviewWalkCur();
-  let i = 지금 ? 줄.indexOf(지금) : 0;
+  /* 🔴 **`indexOf` 는 언제나 -1 이었다** (2026-09-07 · 사용자: 「j랑k가 안되는 것 같아」).
+     `reviewWalkList()` 는 부를 때마다 `{auto,key,v}` 를 **새로 지어낸다.**
+     `reviewWalkCur()` 안에서 지은 것과 여기서 지은 것은 «다른 객체»라 못 찾는다.
+     그래서 i 가 -1 → 눌러도 언제나 맨 위로 튀어 «안 움직이는» 것처럼 보였다.
+     ⚠ 객체가 아니라 «이름»으로 찾는다 — 목록을 다시 지어도 이름은 그대로다. */
+  let i = 지금 ? 줄.findIndex(y => y.auto === 지금.auto && y.key === 지금.key) : 0;
+  if(i < 0) i = 0;
   i = Math.max(0, Math.min(줄.length - 1, i + delta));
   const x = 줄[i];
   if(x.auto){ state.reviewVariantCode = x.key; state.reviewSelectedId = null; }

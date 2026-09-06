@@ -94,5 +94,37 @@ const bank = [{ id: 'pb1' }, { id: 'pb2' }];
   봄('🔴 화면이 옛 reviewSelected(list) 를 안 쓴다', /reviewSelected(list)/.test(화면), false);
 }
 
+/* 🔴 **J·K 를 «말로» 검사하면 안 된다 — 실제로 걸어 봐야 한다** (2026-09-07).
+   사용자가 「j랑k가 안되는 것 같아」라고 했다. 까닭은 `reviewMove` 가
+   `줄.indexOf(지금)` 으로 자리를 찾은 것 — `reviewWalkList()` 는 부를 때마다
+   객체를 «새로 지어내»므로 언제나 -1 이었고, 눌러도 맨 위로만 튀었다.
+   ⚠ 앞선 검사들은 「reviewWalkCur 를 쓰는가」만 봤다. 그건 이 흠을 못 잡는다. */
+{
+  const 걷기 = (autos, bank, 처음) => {
+    const state = Object.assign({ reviewQueue: 'pending', reviewVariantCode: '', reviewSelectedId: null }, 처음);
+    const R = new Function('state', 'pendingVariants', 'reviewQueueList', 'render', 'document',
+      lift('reviewWalkList') + NL2 + lift('reviewWalkCur') + NL2 + lift('reviewMove')
+      + NL2 + 'return { reviewMove, reviewWalkCur };')(
+      state, () => autos, () => bank, () => {}, { querySelector: () => null });
+    return { state, 누름: (d) => R.reviewMove(d), 지금: () => R.reviewWalkCur().key };
+  };
+  {
+    const w = 걷기(autos, bank, {});
+    봄('🔵 처음은 맨 위다', w.지금(), 'K2-01-E-0001-N01');
+    w.누름(1);  봄('🔴 K 한 번 — 둘째로 간다', w.지금(), 'K2-01-E-0002-N01');
+    w.누름(1);  봄('🔴 K 두 번 — 갈래를 넘어 시험지 문항으로', w.지금(), 'pb1');
+    w.누름(1);  봄('🔴 K 세 번', w.지금(), 'pb2');
+    w.누름(1);  봄('⚠ 끝에서 더 눌러도 안 튄다', w.지금(), 'pb2');
+    w.누름(-1); 봄('🔴 J 한 번 — 되돌아온다', w.지금(), 'pb1');
+    w.누름(-1); 봄('🔴 J 두 번 — 갈래를 도로 넘는다', w.지금(), 'K2-01-E-0002-N01');
+  }
+  {
+    /* AI 변형만 있는 줄에서도 걸어야 한다 — 검토 대기의 실제 모습이다. */
+    const w = 걷기(autos, [], {});
+    w.누름(1); 봄('🔵 AI 변형만 있어도 걸린다', w.지금(), 'K2-01-E-0002-N01');
+    w.누름(-1); 봄('🔵 되돌아온다', w.지금(), 'K2-01-E-0001-N01');
+    w.누름(-1); 봄('⚠ 맨 위에서 더 눌러도 안 튄다', w.지금(), 'K2-01-E-0001-N01');
+  }
+}
 console.log(NL2 + '  ' + (fail ? '🔴' : '✅') + ' ' + pass + ' 통과 · ' + fail + ' 실패' + NL2);
 process.exit(fail ? 1 : 0);
