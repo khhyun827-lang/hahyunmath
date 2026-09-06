@@ -26,6 +26,10 @@ const 값 = (이름, 기본) => { const i = process.argv.indexOf(이름); return
 const N = +값('--n', 40);
 const 간격 = +값('--gap', 3.5) * 1000;   // 한 건 사이의 쉼(초). 한도가 빡빡한 모델은 늘린다.
 const 재시도 = +값('--retry', 3);         // 429·5xx 를 «못 잼»으로 버리기 전에 몇 번 다시 묻나
+// 🔴 답이 «틀린» 것과 답을 «적기 전에 잘린» 것은 다르다 — gpt-oss 가 60제 중 3제에서
+//   추론에 1만 자를 쓰고 finish_reason=length 로 끊겨 content 가 0자였다.
+//   그걸 「틀림」으로 세면 모델을 억울하게 깎고, 검토 기능에서는 «없는 불일치»를 만든다.
+const 최대 = +값('--max', 8000);       // 답까지 적을 만큼 넉넉히
 // ⚠ 손잡이 값(--gap 12 의 12)을 모델 이름으로 세면 안 된다 — 예전엔 --n 값만 걸러서
 //   --gap 을 붙이는 순간 12 라는 «모델»을 시험하려 들었다. 손잡이 «뒤»를 통째로 뺀다.
 const 인자 = process.argv.slice(2);
@@ -89,6 +93,41 @@ const 정답꼴 = (a) => {
   if (/^-?\d{1,4}$/.test(m)) return { kind: '자연수', v: String(+m) };
   return null;
 };
+// 🔴 «번호»가 아니라 «그 값»을 적은 것도 맞은 것이다 — K2-02-E-0107 은 ①이 $-10$ 인데
+//   모델이 「-10」이라 썼고, 나는 틀렸다고 셌다. K2-03-E-0288(② = $9$)도 같다.
+//   이걸 그냥 두면 검토 기능에서 「두 AI가 답이 다릅니다」가 거짓으로 뜬다 — 60제에 2건이면 3%다.
+// ⚠ 보기를 «본문에서» 읽어야 한다. 창고에 보기가 따로 없기 때문이다.
+const 동그라미 = ['①', '②', '③', '④', '⑤'];
+function 보기들(글) {
+  const s = String(글 || '');
+  const 자리 = 동그라미.map((d) => s.lastIndexOf(d));
+  if (자리.some((i) => i < 0)) return null;
+  for (let i = 1; i < 5; i++) if (자리[i] < 자리[i - 1]) return null;   // 순서가 어긋나면 보기가 아니다
+  const 끝 = 자리.concat([s.length]);
+  return 동그라미.map((d, i) => 값꼴(s.slice(끝[i] + d.length, 끝[i + 1])));
+}
+// ⚠ 분수를 한 덩이로 봐야 한다 — ② 가 \\frac{16}{3} 인데 「16」만 집어내면
+//   맞은 답이 틀린 답이 된다(K2-03-E-0271 이 그랬다).
+function 값꼴(t) {
+  return String(t)
+    .replace(/\\d?frac\s*\{([^{}]*)\}\s*\{([^{}]*)\}/g, '$1/$2')
+    .replace(/\\left|\\right/g, '')
+    .replace(/[$\s{}]/g, '')
+    .replace(/^\(|\)$/g, '');
+}
+
+function 맞나(낸답, 정답, 갈래, 본문) {
+  if (!낸답) return false;
+  if (낸답 === 정답) return true;
+  if (갈래 !== '객관식') return false;
+  const n = String(낸답).match(/^([1-5])$/);
+  if (n) return 동그라미[+n[1] - 1] === 정답;
+  const 보기 = 보기들(본문);
+  if (!보기) return false;
+  const i = 동그라미.indexOf(정답);
+  return i >= 0 && 보기[i] !== '' && 보기[i] === 값꼴(낸답);
+}
+
 /* ⚠ 창고를 한 번만 읽고 옆에 재워 둔다 — Firestore 읽기 한도를 아낀다(하루 5만 건). */
 const 재운곳 = path.join(ROOT, '.keys', 'items-cache.json');
 let items = fs.existsSync(재운곳) ? JSON.parse(fs.readFileSync(재운곳, 'utf8')) : null;
@@ -136,7 +175,9 @@ const 답뽑기 = (글) => {
     if (!m) continue;
     const s = m[1].replace(/[*`$\s]/g, '');
     const c = s.match(/[①②③④⑤]/); if (c) return c[0];
-    const n = s.match(/-?\d{1,4}/); if (n) return String(+n[0]);
+    // ⚠ 「16/3」에서 16 만 떼면 안 된다 — 통째로 넘기고, 견줄 때 값으로 맞춘다.
+    if (/^-?\d{1,4}$/.test(s)) return String(+s);
+    return 값꼴(s).slice(0, 24);
     return s.slice(0, 12);
   }
   return '';
@@ -163,7 +204,8 @@ async function 한번(g, 문항) {
     r = await fetch(g.곳.url + '/chat/completions', {
       method: 'POST',
       headers: { Authorization: 'Bearer ' + 열쇠(키이름(g.곳)), 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model: g.id, messages: [{ role: 'system', content: 지시 }, { role: 'user', content: 문항.content }] }),
+      body: JSON.stringify({ model: g.id, max_tokens: 최대,
+        messages: [{ role: 'system', content: 지시 }, { role: 'user', content: 문항.content }] }),
     });
   } catch (e) { return { 흠: String(e.message || e).slice(0, 110), 초: (Date.now() - t0) / 1000 }; }
   const 초 = (Date.now() - t0) / 1000;
@@ -174,8 +216,12 @@ async function 한번(g, 문항) {
   if (!r.ok) return { 흠: 'http ' + r.status + ' ' + t.replace(/\s+/g, ' ').slice(0, 110), 초 };
   let j; try { j = JSON.parse(t); } catch (e) { return { 흠: '응답을 못 읽음', 초 }; }
   if (j.error) return { 흠: String(j.error.message || j.error).slice(0, 110), 초 };
-  const 글 = j.choices?.[0]?.message?.content || '';
-  return { 답: 답뽑기(글), 토큰: j.usage?.total_tokens || 0, 초 };
+  const ch = j.choices?.[0] || {};
+  const 글 = ch.message?.content || '';
+  const 답 = 답뽑기(글);
+  // ⚠ 답이 없는데 finish_reason 이 length 면 «못 푼 것»이 아니라 «못 적은 것»이다.
+  if (!답 && ch.finish_reason === 'length') return { 흠: '답을 적기 전에 잘림(max ' + 최대 + ')', 초, 끝난꼴: ch.finish_reason };
+  return { 답, 토큰: j.usage?.total_tokens || 0, 초, 끝난꼴: ch.finish_reason };
 }
 async function 풀리기(model, 문항) {
   const g = 갈래(model);
@@ -190,6 +236,9 @@ async function 풀리기(model, 문항) {
   }
 }
 
+const 기록 = path.join(ROOT, '.bench', new Date().toISOString().slice(0, 10) + '.jsonl');
+fs.mkdirSync(path.dirname(기록), { recursive: true });
+
 /* ── 돌린다 ───────────────────────────────────────────────────────── */
 const 결과 = [];
 for (const model of 모델들) {
@@ -198,12 +247,17 @@ for (const model of 모델들) {
   const 틀린것 = [];
   for (let i = 0; i < 시험지.length; i++) {
     const x = 시험지[i];
-    const 정답 = 정답꼴(x.answer).v;
+    const 꼴 = 정답꼴(x.answer);
+    const 정답 = 꼴.v;
     const r = await 풀리기(model, x);
     시간 += r.초; 토큰 += r.토큰 || 0;
     if (r.흠) { 흠++; if (흠 <= 2) console.log('\n   ⚠ ' + x.code + ' — ' + r.흠); }
-    else if (r.답 === 정답) 맞음++;
+    else if (맞나(r.답, 정답, 꼴.kind, x.content)) 맞음++;
     else { 틀림++; 틀린것.push(x.code + ' (정답 ' + 정답 + ' · 낸 답 ' + (r.답 || '못 읽음') + ')'); }
+    // ⚠ 낸 답을 남겨 둔다 — 채점을 고쳤을 때 «다시 물어보지 않고» 다시 셀 수 있어야 한다.
+    //   OpenRouter 무료는 하루 50번뿐이라, 채점 버그 하나에 하루치를 태울 수는 없다.
+    fs.appendFileSync(기록, JSON.stringify({ 때: new Date().toISOString(), model, code: x.code,
+      갈래: 꼴.kind, 정답, 낸답: r.답 || null, 흠: r.흠 || null, 끝난꼴: r.끝난꼴 || null }) + '\n');
     process.stdout.write('\r   ' + (i + 1) + '/' + 시험지.length + ' — 맞음 ' + 맞음 + ' · 틀림 ' + 틀림 + ' · 흠 ' + 흠 + '   ');
     await 쉼(간격);
   }
