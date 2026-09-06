@@ -16,6 +16,7 @@ import { fileURLToPath } from 'url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
+const NL = String.fromCharCode(10);
 const lines = html.split(/\r?\n/);
 
 let pass = 0, fail = 0;
@@ -50,6 +51,30 @@ for (const c of 칸) {
 const 창고 = lines.find(l => l.includes('class="ist-body"') && !l.includes('none'));
 봄('🔴 문항 창고 카드가 날글자로 안 돌아갔다',
    !!창고 && !/escHtml\(body\.content\)/.test(창고 + ''), 창고);
+
+
+/* 🔴 **투명한 PNG 가 «검은 사각형»이 되던 것** (2026-09-06 · 화면에서 보고 찾았다).
+   캔버스는 투명으로 시작하는데 JPEG 에는 투명이 없다 — 투명한 자리가 전부 검정이 된다.
+   한글이 넣는 그림은 대개 배경이 투명한 PNG 다(실측: 주기나 51개 전부).
+   그래서 주기나 그림 44개가 통째로 검은 사각형으로 담겼다. 엔딩크레딧이 멀쩡했던 것은
+   그 문항들이 쓰는 그림이 흰 바탕이었기 때문이지 규칙이 옳아서가 아니다.
+   ⚠ 이 검사는 «그리는 코드»가 흰 바탕을 깔고 있는지만 본다 — 브라우저가 없으므로
+     실제 픽셀은 못 잰다. 그래도 이 한 줄이 빠지면 곧바로 검게 나온다. */
+console.log(NL + '⑰ 그림을 줄일 때 흰 바탕을 깔았는가' + NL);
+{
+  const 코드 = (이름) => { const at = html.indexOf('function ' + 이름 + '('); let d = 0;
+    for (let j = html.indexOf('{', at); j < html.length; j++) {
+      if (html[j] === '{') d++; else if (html[j] === '}') { d--; if (!d) return html.slice(at, j + 1); } } };
+  for (const 이름 of ['compressImageToBase64', 'compressImageToBlob']) {
+    const src = 코드(이름);
+    const 흰바탕 = src.includes('fillStyle') && src.includes('#fff') && src.includes('fillRect(0, 0');
+    const 그리기 = src.indexOf('drawImage');
+    const 칠하기 = src.indexOf('fillRect');
+    봄('🔴 ' + 이름 + ' 이 흰 바탕을 깐다', 흰바탕, true);
+    봄('🔴 ' + 이름 + ' 은 «칠한 뒤에» 그린다', 칠하기 >= 0 && 칠하기 < 그리기, true);
+    봄('(JPEG 로 내보내는 것이 맞다)', src.includes('image/jpeg'), true);
+  }
+}
 
 console.log('\n  ' + (fail ? '🔴' : '✅') + ' ' + pass + ' 통과 · ' + fail + ' 실패\n');
 process.exit(fail ? 1 : 0);
