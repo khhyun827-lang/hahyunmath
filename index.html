@@ -20211,7 +20211,6 @@ async function makeVariantWithAI(bankId){
      아무도 안 보는 곳에서 도는 것은 이 프로젝트가 가장 경계해 온 것이다. */
 const AUTOFILL_KEY  = 'khm-autofill-N';
 const AUTOFILL_GAP  = 13000;      // 한 건 사이. 기존 일괄 생성과 같은 간격이다
-const AUTOFILL_IDLE = 600000;     // 한도를 다 썼을 때 다시 보는 간격(10분) — 날이 바뀌면 저절로 이어진다
 let autoFillTimer = null;
 const autoFillSkipped = new Set();   // 이번 세션에 «못 담은» 문항. 다시 안 뽑는다
 /* 지금 문항이 «몇 번째로» 엎어졌나. 문항이 바뀌면 0부터 다시 센다 (2026-09-06). */
@@ -20242,12 +20241,27 @@ function autoFillState(){
   }
   return state.autoFill;
 }
+/* 🔴 **멈췄으면 단추도 풀려야 한다** (2026-09-07 · 사용자가 짚었다 —
+     「멈추거나 한도가꽉차서 종료되면 자동채우기 버튼이 풀렸으면 좋겠는데 계속 눌려진 상태가 돼」).
+     멈추는 길이 다섯인데 «끄는 줄»을 세 곳에만 적어 두었다. 나머지 둘(다 채웠을 때 ·
+     한도를 다 썼을 때)은 고리는 서는데 단추는 눌린 채로 남아 **「돌고 있다」고 거짓말**을 했다.
+   ⚠ 세 줄을 곳곳에 베껴 두면 다음에 멈추는 길이 하나 늘 때 또 빠뜨린다.
+     그래서 **한 곳으로 모은다** — 끄는 일은 여기서만 한다.
+   ⚠ 타이머도 같이 끊는다. 안 끊으면 꺼 놓고도 한 바퀴가 더 돈다. */
+function autoFillStop(msg){
+  const st = autoFillState();
+  st.on = false; st.busy = '';
+  try{ localStorage.setItem(AUTOFILL_KEY, '0'); }catch(e){}
+  if(autoFillTimer){ clearTimeout(autoFillTimer); autoFillTimer = null; }
+  if(msg) st.msg = msg;
+  return st;
+}
 function autoFillToggle(){
   const st = autoFillState();
   st.on = !st.on;
   try{ localStorage.setItem(AUTOFILL_KEY, st.on ? '1' : '0'); }catch(e){}
-  st.msg = st.on ? '켰습니다 — 이 화면을 열어 두면 남는 한도만큼 채웁니다.' : '멈췄습니다.';
-  if(!st.on && autoFillTimer){ clearTimeout(autoFillTimer); autoFillTimer = null; }
+  if(!st.on){ autoFillStop('멈췄습니다.'); }
+  else st.msg = '켰습니다 — 이 화면을 열어 두면 남는 한도만큼 채웁니다.';
   render();
   if(st.on) autoFillKick();
 }
@@ -20325,14 +20339,18 @@ async function autoFillTick(){
   }
   const list = autoFillCandidates();
   if(!list.length){
-    st.msg = autoFillWhyEmpty();
-    render(); return;                                  // 더 볼 것이 없으니 타이머도 안 건다
+    /* 다 채웠거나 남은 것이 다 «건너뛴 것»이다. 더 돌 일이 없으니 단추도 푼다. */
+    autoFillStop(autoFillWhyEmpty());
+    render(); return;
   }
   const used = await getAIQuotaUsed();
   state.aiQuotaUsed = used;
   if(used >= AI_DAILY_LIMIT){
-    st.msg = `오늘 몫(${AI_DAILY_LIMIT}건)을 다 썼습니다 — 남은 ${list.length}개는 내일 이어서 채웁니다.`;
-    render(); return autoFillLater(AUTOFILL_IDLE);      // 날이 바뀌면 저절로 이어진다
+    /* 🔴 예전에는 켜 둔 채 10분마다 다시 봤다(「날이 바뀌면 저절로 이어진다」).
+       그런데 화면을 하루 종일 열어 둘 일이 없어서, 실제로는 «눌린 채 아무 일도 안 하는»
+       단추만 남았다. 사용자가 그것을 짚었다. 끄고, 내일 다시 켜라고 적는다. */
+    autoFillStop(`오늘 몫(${AI_DAILY_LIMIT}건)을 다 썼습니다 — 남은 ${list.length}개는 내일 다시 켜서 채워주세요.`);
+    render(); return;
   }
 
   const code = list[0];
@@ -20367,10 +20385,8 @@ async function autoFillTick(){
       if(위쪽){
         autoFillUpstream++;
         if(autoFillUpstream >= AUTOFILL_UPSTREAM_MAX){
-          st.on = false;
-          try{ localStorage.setItem(AUTOFILL_KEY, '0'); }catch(e){}
-          st.msg = `Gemini 쪽이 ${autoFillUpstream}번 잇따라 엎어져 멈췄습니다 — ${까닭}. `
-                 + '우리 코드 흠이 아닙니다. 조금 뒤에 다시 켜주세요.';
+          autoFillStop(`Gemini 쪽이 ${autoFillUpstream}번 잇따라 엎어져 멈췄습니다 — ${까닭}. `
+                 + '우리 코드 흠이 아닙니다. 조금 뒤에 다시 켜주세요.');
         } else {
           const 쉼 = 위쪽 === 'rate' ? 1800000 : 300000;      // 한도 30분 · 붐빔 5분
           st.msg = (위쪽 === 'rate' ? 'Gemini 하루 한도에 걸렸습니다' : 'Gemini 쪽이 붐빕니다')
@@ -20390,12 +20406,10 @@ async function autoFillTick(){
         state.aiProcessing = false; st.busy = '';
         render(); return autoFillLater();
       }
-      st.on = false;
-      try{ localStorage.setItem(AUTOFILL_KEY, '0'); }catch(e){}
-      st.msg = `${code} 에서 두 번 엎어져 멈췄습니다 — ${까닭}.`
-             + ' 거듭 안 되면 나머지도 대개 안 되므로 하루치를 지키려고 멈춥니다.';
+      autoFillStop(`${code} 에서 두 번 엎어져 멈췄습니다 — ${까닭}.`
+             + ' 거듭 안 되면 나머지도 대개 안 되므로 하루치를 지키려고 멈춥니다.');
     }
-    else if(twin.quotaExceeded){ st.msg = `오늘 몫(${AI_DAILY_LIMIT}건)을 다 썼습니다 — 내일 이어서 채웁니다.`; }
+    else if(twin.quotaExceeded){ autoFillStop(`오늘 몫(${AI_DAILY_LIMIT}건)을 다 썼습니다 — 내일 다시 켜주세요.`); }
     /* 🔴 **담을 수 없는 것은 담지 않는다.** 그림이 필요한 변형은 강사가 그려 줘야 하고,
        학생이 칠 수 없는 답은 데일리퀴즈에 아예 안 나간다(`dqAnswerable`). 둘 다
        «창고에만 쌓이고 학생에게는 영영 안 가는» 것이 된다. */
@@ -20419,9 +20433,8 @@ async function autoFillTick(){
                   needsFigure: false, auto: true, pending: true, createdAt: nowStamp() };
       const ok = await dbSetDoc('variants', vcode, v);
       if(!ok){
-        st.failed++; st.on = false;                    // 저장이 막혔으면 계속 두드릴 까닭이 없다
-        try{ localStorage.setItem(AUTOFILL_KEY, '0'); }catch(e){}
-        st.msg = `${vcode} 를 저장하지 못해 멈췄습니다 — 설정 › 관리자를 봐주세요.`;
+        st.failed++;                                   // 저장이 막혔으면 계속 두드릴 까닭이 없다
+        autoFillStop(`${vcode} 를 저장하지 못해 멈췄습니다 — 설정 › 관리자를 봐주세요.`);
       } else {
         (state.variants[code] = state.variants[code] || []).push(v);
         state.variants[code].sort((a,b)=> a.code < b.code ? -1 : 1);

@@ -143,7 +143,14 @@ console.log('\n남는 한도로 창고 채우기\n');
   const w = makeWorld({ itemBody: 본문(3), used: 20 });
   await w.autoFillTick();
   봄('한도를 다 썼으면 AI 를 안 부른다', w.부른AI.length, 0);
-  봄('그래도 다시 볼 약속은 남긴다 (날이 바뀐다)', w.예약[0] >= 600000, true);
+  /* 🔴 **판단을 뒤집었다** (2026-09-07 · 사용자: 「한도가꽉차서 종료되면 자동채우기 버튼이
+     풀렸으면 좋겠는데 계속 눌려진 상태가 돼」).
+     예전에는 켜 둔 채 10분마다 다시 봤다 — 「날이 바뀌면 저절로 이어진다」는 뜻이었다.
+     그런데 화면을 하루 종일 열어 둘 일이 없어서, 실제로 남는 것은
+     «눌린 채 아무 일도 안 하는 단추»뿐이었다. 이제 끄고 내일 다시 켜게 한다. */
+  봄('🔴 한도를 다 쓰면 스스로 멈춘다', w.autoFillState().on, false);
+  봄('다음 바퀴를 예약하지 않는다', w.예약.length, 0);
+  봄('왜 멈췄는지 말한다', /다 썼습니다/.test(w.autoFillState().msg), true);
 }
 {
   const w = makeWorld({ itemBody: 본문(3), twin: { content: 'x', answer: '②' }, saveOk: false });
