@@ -29,7 +29,7 @@ const H = { Authorization: 'Bearer ' + token };
 
 const 컬렉션 = ['students', 'notices', 'consults', 'classes', 'clinics', 'clinicslots', 'qnas',
                 'videos', 'assistants', 'exams', 'problembank', 'assignments', 'auditlog',
-                'variants', 'items'];
+                'variants', 'items', 'ranks'];
 /* ⚠ 이건 «반드시 있어야 하는 것» 목록일 뿐이다 — kv 는 아래에서 **통째로** 훑는다.
    여기 적힌 것이 없으면 요약에 「없음」이라 적어 눈에 띄게 한다. */
 const kv키 = ['teacher-pw', 'season', 'exam-ranges', 'school-books', 'grade-cuts', 'itemsVer'];

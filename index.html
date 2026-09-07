@@ -3387,10 +3387,14 @@ async function dbDelete(key){
      **언제나 `data.uid` 에서 뜨므로** 어긋날 수가 없다 — 부르는 쪽이 따로 챙길 것이 없다.
    ⚠ 이게 값을 하는 까닭: `dbSetDoc` 은 문서를 «통째로» 갈아 끼운다. 색인 칸을 부르는 쪽이
      따로 넘기게 했으면, 그걸 빠뜨린 한 자리에서 **조용히 사라졌을** 것이다. */
+/* ⚠ 밖에 적는 칸은 **꼭 필요한 것만** 둔다 — 늘릴수록 «두 벌인 값»이 는다.
+   지금은 둘이다: `uid`(내 것인가) · `week`(그 주의 순위인가). 둘 다 «거르는 데»만 쓴다. */
+const 색인칸 = ['uid', 'week'];
 function docFields(data){
   const f = { value: { stringValue: JSON.stringify(data) } };
-  if (data && typeof data === 'object' && typeof data.uid === 'string' && data.uid)
-    f.uid = { stringValue: data.uid };
+  if (data && typeof data === 'object')
+    for (const k of 색인칸)
+      if (typeof data[k] === 'string' && data[k]) f[k] = { stringValue: data[k] };
   return f;
 }
 async function dbSetDoc(collection, id, data){
@@ -3607,7 +3611,8 @@ async function dbGetCollectionSince(collection, minId, cap){
 }
 /* 🔵 «내 것만» 받는다 — 학생이 남의 클리닉·질문을 안 읽게 하려면 이것이 있어야 한다.
    ⚠ 위 `docFields` 가 uid 를 진짜 칸으로 적어 두기 때문에 거를 수 있다. */
-async function dbGetCollectionByUid(collection, uid){
+/* 🔵 `dbGetCollectionByUid` 는 이것의 한 갈래다 — 아래에 남겨 둔다(부르는 곳이 여럿이라). */
+async function dbGetCollectionWhere(collection, 칸, 값){
   try{
     const token = await withTimeout(getAuthToken(), 8000);
     const res = await withTimeout(fetch(FIRESTORE_ROOT + ':runQuery', {
@@ -3615,8 +3620,8 @@ async function dbGetCollectionByUid(collection, uid){
       headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
       body: JSON.stringify({ structuredQuery: {
         from: [{ collectionId: collection }],
-        where: { fieldFilter: { field: { fieldPath: 'uid' }, op: 'EQUAL',
-                                value: { stringValue: uid } } },
+        where: { fieldFilter: { field: { fieldPath: 칸 }, op: 'EQUAL',
+                                value: { stringValue: 값 } } },
         limit: 500
       }})
     }), 8000);
@@ -3633,6 +3638,10 @@ async function dbGetCollectionByUid(collection, uid){
     markCollectionRead(collection, false, e);
     return [];
   }
+}
+
+async function dbGetCollectionByUid(collection, uid){
+  return dbGetCollectionWhere(collection, 'uid', uid);
 }
 
 /* 변경 이력을 «최근 며칠»만 받는다. 새것이 앞이다. */
@@ -10922,7 +10931,13 @@ const RANK_TOP = 5;
 const rankCache = {};            // 주(월요일) → 배열
 
 async function loadRank(monday){
-  if(!rankCache[monday]) rankCache[monday] = await dbGet('rank:'+monday, []);
+  /* 🔴 **2026-09-08에 «학생마다 한 문서»로 옮겼다.**
+     예전에는 `kv/rank:<월요일>` 문서 «하나»에 모두의 점수가 배열로 들어 있었다.
+     그러면 학생이 제 점수를 올리려고 그 문서를 통째로 쓰게 되고,
+     **한 학생이 남의 점수를 통째로 지울 수 있었다** — 규칙으로는 못 막는 모양이었다.
+     ⚠ 순위표에 이름이 보이는 것은 그대로다. 사용자가 「보여지는 게 맞다」고 정했다(09-08).
+       닫은 것은 «보는 것»이 아니라 «남의 것을 쓰는 것»이다. */
+  if(!rankCache[monday]) rankCache[monday] = await dbGetCollectionWhere('ranks', 'week', monday);
   return rankCache[monday];
 }
 /* ⚠ **읽고 → 내 줄만 고치고 → 쓴다.** 들고 있던 배열로 통째로 덮으면
@@ -10930,16 +10945,26 @@ async function loadRank(monday){
 async function rankSubmit(sid, name, cls, score){
   const monday = weekStartOf(todayStr());
   const game = gameOfWeek(monday).key;
-  const rows = await dbGet('rank:'+monday, []);
+  const rows = await rankRowsOf(monday);
   /* 🔴 **어느 게임의 점수인지 적어 둔다.** 게임은 주마다 바뀌므로 한 주 안에서는 섞일 일이
      없지만, **기준 주(GAME_EPOCH)를 옮기면** 옛 점수가 다른 게임 것이 된다.
      ⚠ 게임이 안 적힌 옛 줄은 「똥피하기」로 읽는다 — 그때는 그것뿐이었다. */
-  const mine = rows.find(r => r.sid === sid);
-  if(mine){ if(score > mine.score){ mine.score = score; mine.at = todayStr(); mine.name = name; mine.cls = cls; mine.game = game; } }
-  else rows.push({sid, name, cls, score, at: todayStr(), game});
+  const uid = authUid();
+  let mine = rows.find(r => r.sid === sid);
+  if(mine){
+    /* 더 낮은 점수로는 안 덮는다 — 예전 결 그대로다. */
+    if(score <= mine.score){ rankCache[monday] = rows; return rows; }
+    Object.assign(mine, {score, at: todayStr(), name, cls, game});
+  } else {
+    mine = {uid, week: monday, sid, name, cls, score, at: todayStr(), game};
+    rows.push(mine);
+  }
+  mine.uid = uid; mine.week = monday;      // 옛 줄에도 색인 칸을 채워 둔다
   rows.sort((a,b) => b.score - a.score);
   rankCache[monday] = rows;
-  await dbSet('rank:'+monday, rows);
+  /* 🔵 **내 문서 하나만 쓴다.** 남의 줄은 손도 못 댄다 — 규칙이 그렇게 막는다.
+     ⚠ 문서 이름에 주(週)를 넣는 까닭: 한 학생이 주마다 한 줄씩 갖는다. */
+  await dbSetDoc('ranks', monday + '__' + uid, mine);
   return rows;
 }
 

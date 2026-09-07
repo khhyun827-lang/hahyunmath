@@ -30,6 +30,7 @@ const 볼것 = [
   ['clinics', '클리닉'], ['clinicslots', '클리닉시간'], ['qnas', '질문'], ['videos', '영상'],
   ['assistants', '조교'], ['exams', '시험지'], ['problembank', '문제은행'], ['assignments', '과제'],
   ['auditlog', '변경이력'], ['items', '문항창고'], ['variants', '변형'], ['kv', '낱건'],
+  ['ranks', '게임순위(새것)'],
 ];
 
 const a = await fetch('https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=' + apiKey,

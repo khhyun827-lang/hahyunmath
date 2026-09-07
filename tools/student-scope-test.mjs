@@ -104,15 +104,21 @@ console.log('\n학생이 제 것만 읽는가\n');
 
 /* ── ③ uid 를 «문서 밖»에도 적는가 ──────────────────────────── */
 {
-  const 조각 = 떠내기('docFields', 'function ');
+  /* ⚠ `docFields` 는 위의 `색인칸` 목록을 본다 — 함수만 떠내면 그것이 없어 터진다.
+     그래서 목록 줄부터 같이 떠낸다. */
+  const 목록줄 = html.split('\n').find((t) => t.startsWith('const 색인칸 ='));
+  const 조각 = 목록줄 + '\n' + 떠내기('docFields', 'function ');
   const docFields = new Function(조각 + '; return docFields;')();
-  const f = docFields({ id: 'c1', uid: 'U9', 이름: '가' });
+  const f = docFields({ id: 'c1', uid: 'U9', week: '2026-09-07', 이름: '가' });
   봄('🔴 uid 가 진짜 칸으로도 적힌다', f.uid && f.uid.stringValue, 'U9');
+  봄('🔴 week 도 진짜 칸으로 적힌다 — 그 주의 순위를 거르는 열쇠다', f.week && f.week.stringValue, '2026-09-07');
   봄('   내용은 그대로 value 에 있다', JSON.parse(f.value.stringValue).uid, 'U9');
   봄('uid 가 없으면 칸도 안 만든다', 'uid' in docFields({ id: 'c1' }), false);
   봄('빈 uid 도 안 만든다', 'uid' in docFields({ uid: '' }), false);
-  // 🔴 값이 두 벌이 되는 자리다 — 반드시 «한 곳(data.uid)»에서 떠야 어긋나지 않는다.
-  봄('🔴 언제나 data.uid 에서 뜬다', docFields({ uid: 'A' }).uid.stringValue, 'A');
+  // 🔴 값이 두 벌이 되는 자리다 — 반드시 «한 곳(data.<칸>)»에서 떠야 어긋나지 않는다.
+  봄('🔴 언제나 data 에서 뜬다', docFields({ uid: 'A' }).uid.stringValue, 'A');
+  // ⚠ 색인 칸을 늘릴수록 «두 벌인 값»이 는다. 지금은 둘뿐이다.
+  봄('색인 칸은 둘뿐이다 — 함부로 늘리지 않는다', 목록줄.includes("'uid', 'week'"), true);
 }
 
 /* ── ④ 만드는 자리마다 uid 를 넣는가 ────────────────────────── */
@@ -126,6 +132,23 @@ console.log('\n학생이 제 것만 읽는가\n');
     /uid: studentKeyOfSid\(sid\), studentId:sid, name:studentNameOf\(sid\)/.test(코드), true);
 }
 
+/* ── ④-b 순위가 «학생마다 한 문서»인가 ──────────────────────── */
+//
+// 🔴 2026-09-08 전에는 kv/rank:<월요일> 문서 «하나»에 모두의 점수가 배열로 있었다.
+//   학생이 제 점수를 올리려면 그 문서를 통째로 써야 했고,
+//   **한 학생이 남의 점수를 통째로 지울 수 있었다.** 규칙으로는 못 막는 모양이었다.
+//   🔵 **모양을 바꿔야 규칙이 일할 수 있다** — 그것이 이 옮김의 요지다.
+{
+  const 코드 = 벗기기(html);
+  봄('🔴 옛 «공용 배열 한 문서»를 안 쓴다', /dbSet\('rank:'/.test(코드), false);
+  봄('🔴 내 문서 하나만 쓴다', /dbSetDoc\('ranks', monday \+ '__' \+ uid, mine\)/.test(코드), true);
+  봄('그 주의 줄만 받아 온다', /dbGetCollectionWhere\('ranks', 'week', monday\)/.test(코드), true);
+  봄('규칙이 «내 uid 가 박힌 것»만 쓰게 한다',
+    /match \/ranks[\s\S]{0,300}request\.resource\.data\.uid == request\.auth\.uid/.test(rules), true);
+  봄('🔵 읽기는 열어 둔다 — 순위표는 서로 보는 것이 의도다',
+    /match \/ranks[\s\S]{0,160}allow read: if realAccount\(\);/.test(rules), true);
+  봄('🔴 kv 에서 학생 쓰기 예외(rank:)가 사라졌다', /doc\.matches\('rank:/.test(rules), false);
+}
 /* ── ⑤ 규칙이 앱과 «같은 것»을 보는가 ───────────────────────── */
 {
   봄('🔴 조교가 규칙에 있다 — 없으면 로그인해도 아무것도 못 본다',
