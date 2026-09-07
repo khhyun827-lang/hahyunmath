@@ -5626,7 +5626,12 @@ async function changeTeacherPw(){
 
    ⚠ 자세한 차례와 콘솔에서 할 일은 `docs/인증-옮기기.md`. */
 
-const AUTH_도메인 = { student: 'students.hahyunmath.kr', assistant: 'ta.hahyunmath.kr', teacher: 'teacher.hahyunmath.kr' };
+/* 🔵 `.invalid` 는 인터넷 표준(RFC 2606)이 **절대 실제로 존재하지 않도록** 남겨 둔 이름이다.
+   여기 쓰는 주소는 메일을 보내는 곳이 아니라 **그냥 이름표**라, 남이 가질 수 있는 진짜
+   도메인(`.kr`)을 빌려 쓰지 않는다. 학생이 보는 화면은 이것과 아무 상관이 없다 —
+   학생은 학번만 치고, 뒤에 붙이는 것은 코드다.
+   🔴 **계정을 하나라도 만든 뒤에는 못 바꾼다** — 아이디가 통째로 달라진다. */
+const AUTH_도메인 = { student: 'students.hahyunmath.invalid', assistant: 'ta.hahyunmath.invalid', teacher: 'teacher.hahyunmath.invalid' };
 
 /* 🔴 이메일 앞자리에 아무 글자나 못 넣는다 — 한글·빈칸이 들어가면 계정을 «만들 때»가 아니라
    «로그인할 때» 조용히 실패한다. 그래서 만들 때 막고, 무엇이 문제인지 말해 준다.
@@ -6000,19 +6005,54 @@ async function addStudent(){
   const classId = document.getElementById('new-sclass').value;
   if(!sid || !name || !pw){ showToast('아이디, 이름, 비밀번호는 필수입니다.'); return; }
   if(DATA.students.some(s=>s.studentId===sid)){ showToast('이미 존재하는 아이디입니다.'); return; }
-  const newStudent = {studentId:sid, name, pw, grade, school, phone, parentPhone, classId};
+  /* 🔴 **아이디에 쓸 수 있는 글자가 정해져 있다** — 안 막으면 «만들 때»가 아니라
+     «로그인할 때» 조용히 실패한다. 그러면 「비밀번호가 틀렸나」로 보여 원인을 못 찾는다. */
+  if(!authIdOk(sid)){ showToast(authIdWhyBad(sid)); return; }
+  if(pw.length < 6){ showToast('비밀번호는 6자 이상이어야 합니다.'); return; }
+
+  /* 🔵 **계정을 «먼저» 만든다.** 문서를 먼저 만들면, 계정 만들기가 실패했을 때
+     «로그인할 수 없는 학생»이 명단에 남는다 — 화면에는 멀쩡히 보이는데 못 들어온다.
+     계정이 먼저면, 실패해도 명단이 그대로라 다시 누르면 된다.
+     ⚠ 계정 만들기는 «두 번째 앱»에서 한다 — 안 그러면 강사 세션이 학생으로 바뀐다. */
+  let uid;
+  try{ uid = await authCreateAccount('student', sid, pw); }
+  catch(e){ showToast(authWhyFailed(e)); return; }
+
+  /* 🔴 **전화번호는 학생 문서에 안 넣는다** — 명단은 학생도 읽는 자리라, 같이 두면
+     「명단을 보여 주려면 전화번호도 같이 내려간다」가 된다. contacts 로 갈라 둔다
+     (firestore.rules 에서 강사만 읽는다). */
+  const newStudent = {studentId:sid, uid, name, grade, school, classId};
+  const 연락처 = {studentId:sid, phone, parentPhone};
+
   DATA.students.push(newStudent);
-  await dbSetDoc('students', sid, newStudent);
+  const ok = await dbSetDoc('students', uid, newStudent);
+  if(ok === null){
+    /* ⚠ 계정은 생겼는데 문서를 못 썼다. 「추가했습니다」라고 하면 안 된다 —
+       그 학생은 로그인은 되는데 아무 데도 안 보인다. 있는 그대로 말한다. */
+    DATA.students = DATA.students.filter(x=>x.uid!==uid);
+    showToast('계정은 만들었으나 학생 정보를 저장하지 못했습니다. 같은 아이디로 다시 시도해 주세요.');
+    render(); return;
+  }
+  if(phone || parentPhone) await dbSetDoc('contacts', uid, 연락처);
   adoptRecord(sid, emptyRecord());           // 새 기록도 같은 문으로 등록한다
   await saveRecord(sid);
+  await logAudit('학생 추가', sid, name, '계정도 함께 만들었다');
   showToast('학생이 추가되었습니다.');
   render();
 }
 async function deleteStudent(sid){
   if(!confirm(sid+' 학생을 삭제할까요? 기록도 함께 삭제됩니다.')) return;
-  DATA.students = DATA.students.filter(s=>s.studentId!==sid);
-  await dbDeleteDoc('students', sid);
-  showToast('삭제되었습니다.');
+  const s = DATA.students.find(x=>x.studentId===sid);
+  const key = studentKeyOfSid(sid);
+  DATA.students = DATA.students.filter(x=>x.studentId!==sid);
+  await dbDeleteDoc('students', key);
+  await dbDeleteDoc('contacts', key);
+  await dbDeleteDoc('records', key);
+  /* 🔴 **Auth 계정은 아직 못 지운다** — 남의 계정을 지우는 것은 관리자 권한이라
+     브라우저만으로는 안 된다(워커에 붙이는 중 · docs/인증-옮기기.md 6번).
+     ⚠ 그래서 **같은 아이디로 다시 만들면 「이미 있는 아이디」로 막힌다.**
+       조용히 두면 「지웠는데 왜 못 만들지」가 된다 — 그러니 지금 말해 둔다. */
+  showToast('삭제했습니다. ⚠ 로그인 계정은 아직 남아 있어 같은 아이디는 다시 못 씁니다.');
   render();
 }
 
@@ -14594,7 +14634,12 @@ async function confirmStudentBulkImport(){
   const skipped = imp.rows.length - toAdd.length;
   const newStudents = toAdd.map(r=>({studentId:r.studentId, name:r.name, pw:r.pw, grade:r.grade, school:r.school, phone:r.phone, parentPhone:r.parentPhone, classId:imp.classId}));
   newStudents.forEach(ns=>DATA.students.push(ns));
-  await Promise.all(newStudents.map(ns=>dbSetDoc('students', ns.studentId, ns)));
+  /* 🔴 **여기서는 계정을 못 만든다** (2026-09-07). 계정 만들기는 한 건씩 Auth 를 부르는
+     일이라, 수십 명을 한 번에 하면 «몇은 되고 몇은 안 된» 상태가 되기 쉽고 그걸 되돌릴 길이 없다.
+     ⚠ 그대로 두면 **로그인할 수 없는 학생이 명단에 쌓인다** — 화면에는 멀쩡히 보인다.
+     ▶ 워커에 관리자 권한을 붙이면 «한꺼번에»도 안전해진다. 그때 다시 연다. */
+  showToast('명단 한꺼번에 등록은 준비 중입니다 — 지금은 「학생 추가」로 한 명씩 넣어 주세요.');
+  return;
   await Promise.all(toAdd.map(async r=>{
     adoptRecord(r.studentId, emptyRecord());  // 새 기록도 같은 문으로 등록한다
     await saveRecord(r.studentId);

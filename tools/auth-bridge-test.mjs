@@ -35,15 +35,15 @@ const 봄 = (무엇, 잰것, 바란것) => {
 };
 
 /* ── 아이디 → 이메일 ─────────────────────────────────────────── */
-봄('학생 학번이 학생 도메인으로 간다', authEmailOf('student', '20260101'), '20260101@students.hahyunmath.kr');
-봄('조교는 조교 도메인으로 간다', authEmailOf('assistant', 'ta01'), 'ta01@ta.hahyunmath.kr');
-봄('강사는 강사 도메인으로 간다', authEmailOf('teacher', 'kim'), 'kim@teacher.hahyunmath.kr');
+봄('학생 학번이 학생 도메인으로 간다', authEmailOf('student', '20260101'), '20260101@students.hahyunmath.invalid');
+봄('조교는 조교 도메인으로 간다', authEmailOf('assistant', 'ta01'), 'ta01@ta.hahyunmath.invalid');
+봄('강사는 강사 도메인으로 간다', authEmailOf('teacher', 'kim'), 'kim@teacher.hahyunmath.invalid');
 // 🔴 대문자로 친 아이디가 «다른 계정»이 되면 안 된다 — 이메일은 앞자리도 구분하는 곳이 있다.
 봄('대문자로 쳐도 같은 계정이 된다', authEmailOf('student', 'AB12'), authEmailOf('student', 'ab12'));
 
 /* ── 이메일 → 누구 ───────────────────────────────────────────── */
-봄('학생 주소를 학생으로 되읽는다', authWhoOf('20260101@students.hahyunmath.kr'), { role: 'student', id: '20260101' });
-봄('조교 주소를 조교로 되읽는다', authWhoOf('ta01@ta.hahyunmath.kr'), { role: 'assistant', id: 'ta01' });
+봄('학생 주소를 학생으로 되읽는다', authWhoOf('20260101@students.hahyunmath.invalid'), { role: 'student', id: '20260101' });
+봄('조교 주소를 조교로 되읽는다', authWhoOf('ta01@ta.hahyunmath.invalid'), { role: 'assistant', id: 'ta01' });
 // 🔴 모르는 도메인을 «학생이겠지»로 읽으면 남의 화면이 열린다.
 봄('모르는 도메인은 짐작하지 않는다', authWhoOf('someone@gmail.com'), null);
 봄('주소가 아니면 null', authWhoOf('그냥글자'), null);
