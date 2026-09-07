@@ -1,0 +1,135 @@
+rules_version = '2';
+
+// 김하현수학연구소 — Firestore 보안 규칙 (2026-09-07에 처음 파일로 남긴다)
+//
+// 🔴 **여태 규칙이 저장소에 없었다.** 콘솔에만 있어서 「지금 뭐로 돼 있나」를 아무도 몰랐고,
+//   노트에 적힌 09-04 값을 믿고 이야기해야 했다. 이제 여기가 «적힌 곳»이다.
+//   ⚠ **이 파일을 고쳐도 저절로 안 올라간다.** Firebase 콘솔 → Firestore → 규칙에
+//     붙여넣고 «게시»해야 산다. 올린 뒤 이 머리말에 올린 날짜를 적을 것.
+//
+// ══ 왜 다시 쓰는가 ═══════════════════════════════════════════════════════
+// 옛 규칙은 `allow read, write: if request.auth != null` 이었다. 그런데 앱이 맨 끝에서
+// **모든 방문자**를 `signInAnonymously()` 로 인증시킨다. 그래서 그 조건은 «누구나»와 같은 말이었고,
+// 사이트를 열기만 하면 학생 이름·전화번호·비밀번호가 통째로 내려갔다.
+//
+// 🔵 **고치는 열쇠는 «구분»이다** — 익명 인증은 우리 앱과 남을 구분하지 못한다.
+//   그래서 학생·강사를 **Firebase Auth 진짜 계정**으로 만들고, 여기서 uid 로 가른다.
+//
+// ══ 누가 누구인가 ════════════════════════════════════════════════════════
+//   강사·조교 → `teachers/{uid}` 문서가 **있으면** 강사다.
+//     🔴 이 문서는 **콘솔에서 사람이 손으로** 만든다. 코드로 만들게 두면 아무나 강사가 된다.
+//   학생     → `students/{uid}` — **문서 id 가 곧 Auth uid** 다.
+//     🔵 학번이 아니라 uid 를 id 로 쓰는 까닭: 그래야 「내 문서인가」를 조회 없이 가른다.
+//       학번은 문서 «안»에 `studentId` 로 그대로 남는다(화면 45곳이 그걸 쓴다).
+//       ⚠ 2026-09-07에 테스트 학생을 다 지워서 **옮길 것이 없다.** 지금이 바꿀 때다.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function 로그인했나() {
+      return request.auth != null;
+    }
+    // 🔴 «익명이 아닌» 진짜 계정만 센다 — 익명은 아무나 받을 수 있다.
+    function 진짜계정인가() {
+      return 로그인했나() && request.auth.token.firebase.sign_in_provider != 'anonymous';
+    }
+    function 강사인가() {
+      return 진짜계정인가()
+        && exists(/databases/$(database)/documents/teachers/$(request.auth.uid));
+    }
+    function 내것인가(uid) {
+      return 진짜계정인가() && request.auth.uid == uid;
+    }
+
+    // ── 누가 강사인가 ────────────────────────────────────────────────
+    // 🔴 아무도 못 쓴다. 콘솔에서만 만든다 — 여기가 열리면 규칙 전체가 뜻을 잃는다.
+    match /teachers/{uid} {
+      allow read: if 진짜계정인가();
+      allow write: if false;
+    }
+
+    // ── 학생 ─────────────────────────────────────────────────────────
+    // 학생은 «자기 문서»만 읽는다. 명단 전체는 강사만.
+    // 🔴 비밀번호(`pw`)는 이제 여기 없다 — Auth 가 해시로 들고 있다.
+    match /students/{uid} {
+      allow read: if 강사인가() || 내것인가(uid);
+      allow write: if 강사인가();
+    }
+
+    // ── 연락처 — 학생 문서에서 갈라 낸다 ─────────────────────────────
+    // 🔵 전화번호·학부모 전화번호는 **학생끼리도 보면 안 되는 것**이라 따로 둔다.
+    //   갈라 두지 않으면 「명단을 보여 주려면 전화번호도 같이 내려간다」가 된다.
+    match /contacts/{uid} {
+      allow read, write: if 강사인가();
+    }
+
+    // ── 학생 기록 (출결·성적·과제·도장) ──────────────────────────────
+    // ⚠ 예전에는 `kv/record:<학번>` 이었다. 컬렉션으로 뺀다 — kv 는 잡탕이라 규칙을 못 쓴다.
+    match /records/{uid} {
+      allow read, write: if 강사인가() || 내것인가(uid);
+    }
+
+    // ── 채팅 ─────────────────────────────────────────────────────────
+    match /chats/{uid} {
+      allow read, write: if 강사인가() || 내것인가(uid);
+    }
+
+    // ── 문항·교재 — 학생은 읽기만 ────────────────────────────────────
+    match /items/{doc}       { allow read: if 진짜계정인가(); allow write: if 강사인가(); }
+    match /variants/{doc}    { allow read: if 진짜계정인가(); allow write: if 강사인가(); }
+    match /problembank/{doc} { allow read: if 진짜계정인가(); allow write: if 강사인가(); }
+    match /exams/{doc}       { allow read: if 진짜계정인가(); allow write: if 강사인가(); }
+    match /assignments/{doc} { allow read: if 진짜계정인가(); allow write: if 강사인가(); }
+    match /classes/{doc}     { allow read: if 진짜계정인가(); allow write: if 강사인가(); }
+    match /notices/{doc}     { allow read: if 진짜계정인가(); allow write: if 강사인가(); }
+    match /videos/{doc}      { allow read: if 진짜계정인가(); allow write: if 강사인가(); }
+    match /clinicslots/{doc} { allow read: if 진짜계정인가(); allow write: if 강사인가(); }
+
+    // ── 학생이 «내는» 것 ─────────────────────────────────────────────
+    // 🔵 낼 수는 있고, 남의 것은 못 본다. 처리는 강사가 한다.
+    match /clinics/{doc} {
+      allow read:   if 강사인가() || (진짜계정인가() && resource.data.uid == request.auth.uid);
+      allow create: if 진짜계정인가() && request.resource.data.uid == request.auth.uid;
+      allow update, delete: if 강사인가();
+    }
+    match /qnas/{doc} {
+      allow read:   if 강사인가() || (진짜계정인가() && resource.data.uid == request.auth.uid);
+      allow create: if 진짜계정인가() && request.resource.data.uid == request.auth.uid;
+      allow update, delete: if 강사인가();
+    }
+    match /consults/{doc} {
+      // ⚠ 상담 신청은 «로그인 전»에도 낸다(공개 홈의 문의). 그래서 익명도 만들 수 있다.
+      //   대신 **아무도 못 읽는다** — 강사만 본다.
+      allow read: if 강사인가();
+      allow create: if 로그인했나();
+      allow update, delete: if 강사인가();
+    }
+
+    // ── 변경 이력 — 강사만 ───────────────────────────────────────────
+    // ⚠ 학생 행동도 여기 남는데, 남기는 것은 강사 화면에서 일어나는 일뿐이라 강사만으로 족하다.
+    //   학생 쪽에서 남길 일이 생기면 그때 `create` 만 여는 것을 볼 것.
+    match /auditlog/{doc} {
+      allow read, write: if 강사인가();
+    }
+
+    // ── 낱건 잡탕(kv) ────────────────────────────────────────────────
+    // 🔴 **여기가 아직 덜 됐다.** kv 에는 설정(season·grade-cuts…)과 순위(rank:*)와
+    //   수업기록·상담일지가 섞여 산다. 문서 이름으로 갈라야 하는데, 지금은 이렇게만 둔다:
+    //   · 읽기 — 진짜 계정이면 (설정·순위를 학생 화면이 본다)
+    //   · 쓰기 — 강사만. **단 `rank:` 만 예외**로 학생도 쓴다.
+    // 🔴 **`rank:` 는 «공용 배열 한 문서»다** — 학생이 「읽고 내 줄만 고쳐 다시 쓴다」.
+    //   그래서 **한 학생이 남의 점수를 통째로 지울 수 있다.** 규칙으로는 못 막는다 —
+    //   순위를 «학생마다 한 문서»로 다시 짜야 닫힌다. ▶ 아직 안 했다. 노트에 적어 뒀다.
+    match /kv/{doc} {
+      allow read: if 진짜계정인가();
+      allow write: if 강사인가() || (진짜계정인가() && doc.matches('rank:.*'));
+    }
+
+    // ── 그 밖은 전부 막는다 ──────────────────────────────────────────
+    // 🔵 여기가 있어야 «새로 생긴 컬렉션»이 조용히 열려 있지 않는다.
+    //   새 컬렉션을 만들면 **여기서 403 이 난다** — 그때 위에 한 줄을 적으면 된다.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

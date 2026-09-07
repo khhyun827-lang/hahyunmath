@@ -5538,6 +5538,111 @@ async function changeTeacherPw(){
   render();
 }
 
+/* =================== 인증 다리 (Firebase Auth) ===================
+   🔴 **왜 이것이 생겼나** — 여태 로그인은 «브라우저 안에서 견주는 것»이었다
+   (`s.pw===pwInput`). 그러려면 비밀번호가 미리 내려와 있어야 하고, 그래서
+   사이트를 열기만 하면 학생·강사 비밀번호가 통째로 내려갔다. 그것을 없애는 다리다.
+
+   🔵 **비밀번호는 이제 Firestore 에 없다** — Firebase Auth 가 해시로 들고 있다.
+     내려받을 것이 없어야 못 훔친다.
+
+   ⚠ 학생에게 이메일을 받지 않기로 해서 **가짜 주소**를 쓴다(`<학번>@students.…`).
+     도메인은 실제로 없어도 된다 — 메일을 보낼 일이 없기 때문이다.
+     🔴 그래서 «비밀번호 찾기 메일»은 못 쓴다. 잊었을 때는 **강사가 워커를 통해** 바꿔 준다.
+
+   ⚠ 자세한 차례와 콘솔에서 할 일은 `docs/인증-옮기기.md`. */
+
+const AUTH_도메인 = { student: 'students.hahyunmath.kr', assistant: 'ta.hahyunmath.kr', teacher: 'teacher.hahyunmath.kr' };
+
+/* 🔴 이메일 앞자리에 아무 글자나 못 넣는다 — 한글·빈칸이 들어가면 계정을 «만들 때»가 아니라
+   «로그인할 때» 조용히 실패한다. 그래서 만들 때 막고, 무엇이 문제인지 말해 준다.
+   ⚠ 지금 학생이 하나도 없으므로(2026-09-07에 다 지웠다) 이 제약을 지금 걸어 두는 것이 싸다. */
+const AUTH_아이디꼴 = /^[A-Za-z0-9][A-Za-z0-9._-]{0,62}$/;
+function authIdOk(id){ return AUTH_아이디꼴.test(String(id || '')); }
+function authIdWhyBad(id){
+  const t = String(id || '');
+  if(!t) return '아이디를 적어 주세요.';
+  if(/[가-힣ㄱ-ㅎㅏ-ㅣ]/.test(t)) return '아이디에 한글은 쓸 수 없습니다 — 영문·숫자로 지어 주세요.';
+  if(/\s/.test(t)) return '아이디에 빈칸은 쓸 수 없습니다.';
+  if(!/^[A-Za-z0-9]/.test(t)) return '아이디는 영문이나 숫자로 시작해야 합니다.';
+  if(t.length > 63) return '아이디가 너무 깁니다(63자까지).';
+  return '아이디에 쓸 수 없는 글자가 있습니다 — 영문·숫자와 . _ - 만 됩니다.';
+}
+function authEmailOf(role, id){
+  const d = AUTH_도메인[role];
+  if(!d) throw new Error('모르는 갈래: ' + role);
+  return String(id).toLowerCase() + '@' + d;
+}
+/* 되돌리기 — 토큰에 든 이메일에서 «갈래와 아이디»를 되찾는다.
+   ⚠ 모르는 도메인이면 null 이다. 「학생이겠지」로 짐작하지 않는다. */
+function authWhoOf(email){
+  const m = String(email || '').split('@');
+  if(m.length !== 2) return null;
+  const role = Object.keys(AUTH_도메인).find(k => AUTH_도메인[k] === m[1]);
+  return role ? { role, id: m[0] } : null;
+}
+
+function authUid(){ return fbAuth.currentUser ? fbAuth.currentUser.uid : null; }
+/* 🔴 «익명»과 «진짜 계정»을 가른다 — 규칙도 똑같이 가른다(firestore.rules).
+   익명은 아무나 받을 수 있으므로 로그인한 것으로 치면 안 된다. */
+function authIsReal(){
+  const u = fbAuth.currentUser;
+  if(!u) return false;
+  return (u.providerData || []).some(p => p && p.providerId === 'password');
+}
+
+async function authSignIn(role, id, pw){
+  const email = authEmailOf(role, id);
+  const cred = await fbAuth.signInWithEmailAndPassword(email, pw);
+  return cred.user;
+}
+async function authSignOut(){
+  try{ await fbAuth.signOut(); }catch(e){}
+}
+
+/* 🔴 **계정을 그냥 만들면 «강사 세션»이 새 계정으로 바뀐다.** Firebase 는 만들자마자
+   그 계정으로 로그인시킨다 — 강사가 학생 하나 만들 때마다 학생으로 바뀌는 셈이다.
+   그래서 **두 번째 앱 인스턴스**에서 만든다. 만들고 나면 그 앱은 바로 닫는다.
+   ⚠ 이름을 고정으로 두면 두 번째 호출에서 「이미 있다」로 터진다 — 만들 때마다 새 이름. */
+async function authCreateAccount(role, id, pw){
+  if(!authIdOk(id)) throw new Error(authIdWhyBad(id));
+  const 이름 = 'mk' + Date.now() + Math.random().toString(36).slice(2, 6);
+  const 곁 = firebase.initializeApp(firebaseConfig, 이름);
+  try{
+    const cred = await 곁.auth().createUserWithEmailAndPassword(authEmailOf(role, id), pw);
+    const uid = cred.user.uid;
+    await 곁.auth().signOut();
+    return uid;
+  } finally {
+    try{ await 곁.delete(); }catch(e){}
+  }
+}
+
+/* 내 비밀번호 바꾸기 — 지금 로그인한 사람 것만. 남의 것은 워커가 한다(관리자 권한이 필요하다). */
+async function authChangeMyPassword(현재, 새것){
+  const u = fbAuth.currentUser;
+  if(!u || !authIsReal()) throw new Error('로그인 상태가 아닙니다.');
+  /* ⚠ Firebase 는 «오래된 로그인»으로는 비밀번호를 못 바꾸게 한다. 그래서 먼저 다시 확인한다 —
+     그 김에 「현재 비밀번호가 맞나」도 같이 걸러진다. */
+  const cred = firebase.auth.EmailAuthProvider.credential(u.email, 현재);
+  await u.reauthenticateWithCredential(cred);
+  await u.updatePassword(새것);
+}
+
+/* 사람이 읽는 말로 바꾼다 — Firebase 의 코드는 화면에 그대로 내보내면 안 된다. */
+function authWhyFailed(e){
+  const c = (e && e.code) || '';
+  if(c === 'auth/wrong-password' || c === 'auth/user-not-found' || c === 'auth/invalid-credential')
+    return '아이디 또는 비밀번호가 일치하지 않습니다.';
+  if(c === 'auth/too-many-requests') return '너무 여러 번 시도했습니다. 잠시 뒤에 다시 해 주세요.';
+  if(c === 'auth/email-already-in-use') return '이미 있는 아이디입니다.';
+  if(c === 'auth/weak-password') return '비밀번호는 6자 이상이어야 합니다.';
+  if(c === 'auth/network-request-failed') return '연결이 안 됩니다. 인터넷을 확인해 주세요.';
+  if(c === 'auth/operation-not-allowed')
+    return '이메일/비밀번호 로그인이 아직 켜져 있지 않습니다 (콘솔 → Authentication → Sign-in method).';
+  return (e && e.message) || '로그인하지 못했습니다.';
+}
+
 /* =================== 로그인 세션 유지 (새로고침해도 로그아웃되지 않도록) =================== */
 const SESSION_KEY = 'khm-session';
 function saveSession(){
