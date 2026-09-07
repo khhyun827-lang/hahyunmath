@@ -23,28 +23,35 @@ rules_version = '2';
 //       학번은 문서 «안»에 `studentId` 로 그대로 남는다(화면 45곳이 그걸 쓴다).
 //       ⚠ 2026-09-07에 테스트 학생을 다 지워서 **옮길 것이 없다.** 지금이 바꿀 때다.
 
+// ⚠ **함수 이름은 반드시 영문이다.** 이 프로젝트는 무엇이든 한글로 이름 짓지만,
+//   Firestore 규칙 언어는 한글 식별자를 못 받는다 — 2026-09-08에 게시하려다
+//   「token recognition error at: '강'」 으로 한 글자씩 튕겨 나왔다.
+//   주석은 한글 그대로 둔다. 막히는 것은 «이름»뿐이다.
+//     signedIn() 로그인했나 · realAccount() 익명이 아닌 진짜 계정인가
+//     isTeacher() 강사인가 · isMine(uid) 내 것인가
+
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    function 로그인했나() {
+    function signedIn() {
       return request.auth != null;
     }
     // 🔴 «익명이 아닌» 진짜 계정만 센다 — 익명은 아무나 받을 수 있다.
-    function 진짜계정인가() {
-      return 로그인했나() && request.auth.token.firebase.sign_in_provider != 'anonymous';
+    function realAccount() {
+      return signedIn() && request.auth.token.firebase.sign_in_provider != 'anonymous';
     }
-    function 강사인가() {
-      return 진짜계정인가()
+    function isTeacher() {
+      return realAccount()
         && exists(/databases/$(database)/documents/teachers/$(request.auth.uid));
     }
-    function 내것인가(uid) {
-      return 진짜계정인가() && request.auth.uid == uid;
+    function isMine(uid) {
+      return realAccount() && request.auth.uid == uid;
     }
 
     // ── 누가 강사인가 ────────────────────────────────────────────────
     // 🔴 아무도 못 쓴다. 콘솔에서만 만든다 — 여기가 열리면 규칙 전체가 뜻을 잃는다.
     match /teachers/{uid} {
-      allow read: if 진짜계정인가();
+      allow read: if realAccount();
       allow write: if false;
     }
 
@@ -52,43 +59,43 @@ service cloud.firestore {
     // 학생은 «자기 문서»만 읽는다. 명단 전체는 강사만.
     // 🔴 비밀번호(`pw`)는 이제 여기 없다 — Auth 가 해시로 들고 있다.
     match /students/{uid} {
-      allow read: if 강사인가() || 내것인가(uid);
-      allow write: if 강사인가();
+      allow read: if isTeacher() || isMine(uid);
+      allow write: if isTeacher();
     }
 
     // ── 연락처 — 학생 문서에서 갈라 낸다 ─────────────────────────────
     // 🔵 전화번호·학부모 전화번호는 **학생끼리도 보면 안 되는 것**이라 따로 둔다.
     //   갈라 두지 않으면 「명단을 보여 주려면 전화번호도 같이 내려간다」가 된다.
     match /contacts/{uid} {
-      allow read, write: if 강사인가();
+      allow read, write: if isTeacher();
     }
 
     // ── 학생 기록 (출결·성적·과제·도장) ──────────────────────────────
     // ⚠ 예전에는 `kv/record:<학번>` 이었다. 컬렉션으로 뺀다 — kv 는 잡탕이라 규칙을 못 쓴다.
     match /records/{uid} {
-      allow read, write: if 강사인가() || 내것인가(uid);
+      allow read, write: if isTeacher() || isMine(uid);
     }
 
     // ── 채팅 ─────────────────────────────────────────────────────────
     match /chats/{uid} {
-      allow read, write: if 강사인가() || 내것인가(uid);
+      allow read, write: if isTeacher() || isMine(uid);
     }
 
     // ── 문항·교재 — 학생은 읽기만 ────────────────────────────────────
-    match /items/{doc}       { allow read: if 진짜계정인가(); allow write: if 강사인가(); }
-    match /variants/{doc}    { allow read: if 진짜계정인가(); allow write: if 강사인가(); }
-    match /problembank/{doc} { allow read: if 진짜계정인가(); allow write: if 강사인가(); }
-    match /exams/{doc}       { allow read: if 진짜계정인가(); allow write: if 강사인가(); }
-    match /assignments/{doc} { allow read: if 진짜계정인가(); allow write: if 강사인가(); }
-    match /classes/{doc}     { allow read: if 진짜계정인가(); allow write: if 강사인가(); }
-    match /notices/{doc}     { allow read: if 진짜계정인가(); allow write: if 강사인가(); }
-    match /videos/{doc}      { allow read: if 진짜계정인가(); allow write: if 강사인가(); }
-    match /clinicslots/{doc} { allow read: if 진짜계정인가(); allow write: if 강사인가(); }
+    match /items/{doc}       { allow read: if realAccount(); allow write: if isTeacher(); }
+    match /variants/{doc}    { allow read: if realAccount(); allow write: if isTeacher(); }
+    match /problembank/{doc} { allow read: if realAccount(); allow write: if isTeacher(); }
+    match /exams/{doc}       { allow read: if realAccount(); allow write: if isTeacher(); }
+    match /assignments/{doc} { allow read: if realAccount(); allow write: if isTeacher(); }
+    match /classes/{doc}     { allow read: if realAccount(); allow write: if isTeacher(); }
+    match /notices/{doc}     { allow read: if realAccount(); allow write: if isTeacher(); }
+    match /videos/{doc}      { allow read: if realAccount(); allow write: if isTeacher(); }
+    match /clinicslots/{doc} { allow read: if realAccount(); allow write: if isTeacher(); }
     /* 🔴 **2026-09-07에 빠져 있는 것을 찾았다.** 이 줄이 없으면 맨 아래 «전부 막는다»에 걸려
        조교가 로그인해도 아무것도 못 본다 — 제 계정조차 못 읽는다.
        ⚠ 새 컬렉션을 규칙에 적을 때는 **앱이 만지는 것을 하나씩 세어** 볼 것
          (`tools/rules-check.mjs` 가 그 목록을 들고 있다). */
-    match /assistants/{doc} { allow read: if 진짜계정인가(); allow write: if 강사인가(); }
+    match /assistants/{doc} { allow read: if realAccount(); allow write: if isTeacher(); }
 
     // ── 학생이 «내는» 것 ─────────────────────────────────────────────
     // 🔵 낼 수는 있고, 남의 것은 못 본다. 처리는 강사가 한다.
@@ -97,28 +104,28 @@ service cloud.firestore {
        그래서 `dbSetDoc` 이 `data.uid` 를 밖에도 한 벌 적는다(index.html `docFields`).
        ⚠ 그 둘이 어긋날 수 없게 «언제나 data.uid 에서 뜬다» — 부르는 쪽이 따로 챙기지 않는다. */
     match /clinics/{doc} {
-      allow read:   if 강사인가() || (진짜계정인가() && resource.data.uid == request.auth.uid);
-      allow create: if 진짜계정인가() && request.resource.data.uid == request.auth.uid;
-      allow update, delete: if 강사인가();
+      allow read:   if isTeacher() || (realAccount() && resource.data.uid == request.auth.uid);
+      allow create: if realAccount() && request.resource.data.uid == request.auth.uid;
+      allow update, delete: if isTeacher();
     }
     match /qnas/{doc} {
-      allow read:   if 강사인가() || (진짜계정인가() && resource.data.uid == request.auth.uid);
-      allow create: if 진짜계정인가() && request.resource.data.uid == request.auth.uid;
-      allow update, delete: if 강사인가();
+      allow read:   if isTeacher() || (realAccount() && resource.data.uid == request.auth.uid);
+      allow create: if realAccount() && request.resource.data.uid == request.auth.uid;
+      allow update, delete: if isTeacher();
     }
     match /consults/{doc} {
       // ⚠ 상담 신청은 «로그인 전»에도 낸다(공개 홈의 문의). 그래서 익명도 만들 수 있다.
       //   대신 **아무도 못 읽는다** — 강사만 본다.
-      allow read: if 강사인가();
-      allow create: if 로그인했나();
-      allow update, delete: if 강사인가();
+      allow read: if isTeacher();
+      allow create: if signedIn();
+      allow update, delete: if isTeacher();
     }
 
     // ── 변경 이력 — 강사만 ───────────────────────────────────────────
     // ⚠ 학생 행동도 여기 남는데, 남기는 것은 강사 화면에서 일어나는 일뿐이라 강사만으로 족하다.
     //   학생 쪽에서 남길 일이 생기면 그때 `create` 만 여는 것을 볼 것.
     match /auditlog/{doc} {
-      allow read, write: if 강사인가();
+      allow read, write: if isTeacher();
     }
 
     // ── 낱건 잡탕(kv) ────────────────────────────────────────────────
@@ -130,8 +137,8 @@ service cloud.firestore {
     //   그래서 **한 학생이 남의 점수를 통째로 지울 수 있다.** 규칙으로는 못 막는다 —
     //   순위를 «학생마다 한 문서»로 다시 짜야 닫힌다. ▶ 아직 안 했다. 노트에 적어 뒀다.
     match /kv/{doc} {
-      allow read: if 진짜계정인가();
-      allow write: if 강사인가() || (진짜계정인가() && doc.matches('rank:.*'));
+      allow read: if realAccount();
+      allow write: if isTeacher() || (realAccount() && doc.matches('rank:.*'));
     }
 
     // ── 그 밖은 전부 막는다 ──────────────────────────────────────────

@@ -116,7 +116,8 @@ console.log('\n학생이 제 것만 읽는가\n');
   봄('🔴 조교가 규칙에 있다 — 없으면 로그인해도 아무것도 못 본다',
     /match \/assistants\/\{doc\}/.test(rules), true);
   봄('클리닉을 «내 것만» 읽게 한다', /match \/clinics[\s\S]{0,220}resource\.data\.uid == request\.auth\.uid/.test(rules), true);
-  봄('연락처는 강사만', /match \/contacts\/\{uid\} \{\s*allow read, write: if 강사인가\(\);/.test(rules), true);
+  봄('연락처는 강사만 — 학생끼리도 전화번호는 못 본다',
+    /match \/contacts\/\{uid\} \{\s*allow read, write: if isTeacher\(\);/.test(rules), true);
   봄('맨 끝에 «그 밖은 전부 막는다»가 있다', /match \/\{document=\*\*\} \{\s*allow read, write: if false;/.test(rules), true);
 
   /* 🔵 앱이 만지는 컬렉션이 규칙에 «하나도 안 빠졌는지» 센다.
@@ -126,6 +127,14 @@ console.log('\n학생이 제 것만 읽는가\n');
   const 규칙에있는것 = new Set([...rules.matchAll(/match \/([a-z]+)\//g)].map((m) => m[1]));
   const 빠진것 = 앱이만지는것.filter((c) => !규칙에있는것.has(c));
   봄('🔴 앱이 만지는 컬렉션이 규칙에 하나도 안 빠졌다', 빠진것, []);
+
+  /* 🔴 **규칙 언어는 한글 이름을 못 받는다** — 2026-09-08에 게시하려다 알았다
+     (「token recognition error at: '강'」이 한 글자씩 쏟아졌다).
+     이 프로젝트는 무엇이든 한글로 이름 짓기 때문에 **또 그럴 수 있다.** 그래서 못 박는다.
+     ⚠ 주석은 한글 그대로 둔다 — 막히는 것은 «이름»뿐이다. 그래서 주석을 걷고 본다. */
+  const 규칙알맹이 = stripComments(rules);
+  const 한글이름 = [...규칙알맹이.matchAll(/([가-힣][가-힣A-Za-z0-9_]*)\s*\(/g)].map((m) => m[1]);
+  봄('🔴 규칙 «코드»에 한글 이름이 없다', [...new Set(한글이름)], []);
 }
 
 console.log(틀림 ? '\n  🔴 ' + 통과 + ' 통과 · ' + 틀림 + ' 실패\n' : '\n  ✅ ' + 통과 + ' 통과 · 0 실패\n');
