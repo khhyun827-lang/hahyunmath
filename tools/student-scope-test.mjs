@@ -47,15 +47,19 @@ console.log('\n학생이 제 것만 읽는가\n');
 
 /* ── ① 학생용 읽기가 «무엇을 물어보는가» ────────────────────── */
 {
-  const w = { 문서: [], 컬렉션: [], 내것: [] };
+  const w = { 문서: [], 컬렉션: [], 내것: [], 낱건: [] };
   const DATA = {};
-  const fn = new Function('DATA', 'dbReadClear', 'dbGetDoc', 'dbGetCollection', 'dbGetCollectionByUid',
+  const state = {};
+  const fn = new Function('DATA', 'state', 'dbReadClear', 'dbGetDoc', 'dbGetCollection',
+    'dbGetCollectionByUid', 'dbGet', 'currentSeason',
     떠내기('loadStudentData') + '; return loadStudentData;')(
-    DATA,
+    DATA, state,
     () => { w.지웠나 = true; },
     async (c, id, fb) => { w.문서.push(c + '/' + id); return { studentId: 's1', uid: id, name: '나' }; },
     async (c) => { w.컬렉션.push(c); return [{ id: 'x' }]; },
     async (c, uid) => { w.내것.push(c + '@' + uid); return [{ id: 'y', uid }]; },
+    async (k, fb) => { w.낱건.push(k); return null; },
+    () => '1학기 기말',
   );
   await fn('U1');
 
@@ -66,6 +70,13 @@ console.log('\n학생이 제 것만 읽는가\n');
   봄('🔴 명단 전체(students 컬렉션)는 «안» 읽는다', w.컬렉션.includes('students'), false);
   봄('   그래도 DATA.students 에 내가 들어 있다 — 화면이 나를 찾는다', DATA.students.length, 1);
   봄('🔴 클리닉·질문은 «내 것만» 거른다', w.내것, ['clinics@U1', 'qnas@U1']);
+  /* 🔴 2026-09-08에 이 넷을 빠뜨렸다 — 학생 화면의 시험 D-day·범위 거르기·데일리퀴즈가 쓴다.
+     안 읽으면 «시험이 없는 것처럼» 보이는데, 화면은 멀쩡해서 알아채기 어렵다.
+     ⚠ 읽는 것을 좁힐 때는 좁히고 나서 «무엇이 안 보이나»를 세어 볼 것. */
+  봄('🔴 시즌·시험범위·교재·등급컷도 읽는다',
+    w.낱건, ['season', 'exam-ranges', 'school-books', 'grade-cuts']);
+  봄('   못 받아도 «빈 모양»을 세워 둔다 — 화면이 터지면 안 된다',
+    !!(state.examRanges && state.examRanges.dates && state.gradeCuts && state.gradeCuts.byKey), true);
 
   // 🔴 이 넷은 학생이 읽을 것도, 규칙이 열어 줄 것도 아니다.
   for (const c of ['contacts', 'auditlog', 'consults', 'assistants']) {

@@ -5246,6 +5246,19 @@ async function loadStudentData(uid){
   /* 🔴 **학생은 이 넷을 아예 안 읽는다** — 규칙이 막기도 하고, 학생 화면이 쓰지도 않는다.
      ⚠ `null` 이 아니라 «빈 것»으로 둔다. 화면이 `.filter` 를 부르다 터지면 안 된다. */
   DATA.consults = []; DATA.assistants = []; DATA.auditLog = []; DATA.teacherPw = null;
+
+  /* 🔴 **2026-09-08에 빠뜨린 것을 찾았다.** 학생 화면도 이 넷을 본다 —
+     시험 D-day(`studentExamDday`)·범위 거르기(`studentRange`)·데일리퀴즈가 쓴다.
+     안 읽으면 «시험이 없는 것처럼» 보이고, 화면은 멀쩡해서 알아채기 어렵다.
+     ⚠ 읽는 것을 좁힐 때는 **좁히고 나서 «무엇이 안 보이나»를 세어 볼 것.** */
+  [state.season, state.examRanges, state.schoolBooks, state.gradeCuts] = await Promise.all([
+    dbGet('season', null), dbGet('exam-ranges', null), dbGet('school-books', null),
+    dbGet('grade-cuts', null)
+  ]);
+  if(!state.examRanges) state.examRanges = {season: currentSeason(), bySchool: {}};
+  if(!state.examRanges.dates) state.examRanges.dates = {};
+  if(!state.schoolBooks) state.schoolBooks = {};
+  if(!state.gradeCuts || !state.gradeCuts.byKey) state.gradeCuts = {byKey: {}};
 }
 
 async function loadAllData(){
@@ -21952,7 +21965,19 @@ function teacherExamRangeHTML(){
       </select>
     </span>
     ${hist.length === 0 && !past
-      ? `<span style="font-size:11.5px;color:var(--dim);">시즌을 넘기면 지금 일정이 «지난 기록»으로 보관됩니다.</span>`
+      ? `<span style="font-size:11.5px;color:var(--dim);">시즌을 넘기면 지금 일정이 «지난 기록»으로 보관됩니다 —
+          <b>적어 둔 것이 있을 때만</b>입니다.
+          ${(() => {
+            /* 🔴 여기가 사용자를 헷갈리게 한 자리다 (2026-09-08) — 「시즌 넘겨도 이전 시즌
+               선택이 안 되고」. 적어 둔 것이 없으면 `archiveCurrentSeason` 이 **아무것도 안 남긴다.**
+               그건 옳은 동작이지만(빈 기록이 목록을 채우면 찾기만 어렵다), 화면이 말을 안 했다.
+               ⚠ 「보관됩니다」라고만 적어 두면 그 말이 언젠가 거짓이 된다. 조건을 같이 적는다. */
+            const er = state.examRanges || {};
+            const 있나 = (er.bySchool && Object.keys(er.bySchool).length)
+                      || (er.dates && Object.keys(er.dates).length)
+                      || gradeCutCount(curSeasonKey()) > 0;
+            return 있나 ? '' : '<b style="color:var(--no);">지금은 적어 둔 것이 없어 넘겨도 남지 않습니다.</b>';
+          })()}</span>`
       : ''}
     <span class="spacer"></span>
     <div class="row" style="gap:0;">
@@ -22017,9 +22042,32 @@ function teacherExamRangeHTML(){
     학교·학년이 비어 있어도 «빈 값»끼리 한 줄로 묶여 범위는 적용됩니다 —
     다만 <b>다른 학교 학생과 범위를 같이 쓰게</b> 되니 명단에서 채워 주세요.</div>` : ''}`;
 
-  if(list.length === 0)
+  if(list.length === 0){
+    /* 🔴 **«없습니다»만 말하면 무엇을 해야 할지 모른다** (2026-09-08 · 사용자가 짚었다).
+       「학생과 학교를 등록했는데 시험일정 적을 수 있는 표가 뜨지 않아」 —
+       까닭은 **그 학생이 듣는 반에 «진도 과목»이 안 정해져서**였다.
+       이 표의 줄은 «학교 × 학년 × 과목» 조합인데, 과목은 반의 진도에서만 나온다.
+       ⚠ 화면이 그걸 말해 주지 않아 사용자가 혼자 찾아야 했다. **세어서 말한다.** */
+    let 까닭 = '';
+    if(past) 까닭 = '이 시즌에는 적어 둔 일정이 없습니다.';
+    else if(DATA.students.length === 0)
+      까닭 = '아직 학생이 없습니다. <b>명단</b>에서 학생을 먼저 등록해 주세요.';
+    else {
+      const 반없는 = DATA.students.filter(s => !DATA.classes.some(c => c.id === s.classId));
+      const 과목없는반 = DATA.classes.filter(c => !(c.progress && c.progress.subject));
+      if(반없는.length === DATA.students.length)
+        까닭 = `학생 <b>${DATA.students.length}명</b>이 아직 어느 반에도 안 속해 있습니다.
+                <b>명단</b>에서 반을 정해 주세요.`;
+      else if(과목없는반.length)
+        까닭 = `반 <b>${과목없는반.length}개</b>에 <b>진도 과목</b>이 아직 안 정해졌습니다
+                (${과목없는반.slice(0,3).map(c => escHtml(c.name || '이름 없음')).join(' · ')}${과목없는반.length>3?' 외':''}).<br>
+                이 표의 줄은 «학교 × 학년 × <b>과목</b>» 조합인데, <b>과목은 반의 진도에서 나옵니다</b> —
+                <b>반 › 진도</b>에서 과목을 고르면 여기에 줄이 생깁니다.`;
+      else 까닭 = '범위를 정할 조합이 없습니다.';
+    }
     return seasonPicker + seasonBox + head
-      + `<div style="font-size:12.5px;color:var(--dim);">${past ? '이 시즌에는 적어 둔 일정이 없습니다.' : '범위를 정할 조합이 없습니다.'}</div>`;
+      + `<div style="font-size:12.5px;color:var(--dim);line-height:1.7;">${까닭}</div>`;
+  }
 
   if(mode === 'cal')
     return seasonPicker + seasonBox + head
