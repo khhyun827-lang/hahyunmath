@@ -5117,6 +5117,43 @@ async function backSeason(){
   showToast(`「${prev}」으로 되돌렸습니다.` + (되살릴것 ? ' 보관해 둔 일정을 되살렸습니다.' : ''));
   render();
 }
+/* 🔴 **시즌 시작일이 «단추 누른 날»로 박히고 있었다** (2026-09-08 · 사용자가 짚었다).
+   `saveSeason` 이 `startedAt: todayStr()` 로 적는데, 그건 «시즌이 시작된 날»이 아니라
+   «내가 넘긴 날»이다. 여름방학을 늦게 종료하면 2학기 중간이 9/8부터인 것처럼 보인다 —
+   **사실이 아닌 값이 화면에 뜬다.**
+
+   🔴 **그런데 그냥 지우거나 바꾸면 안 된다** — 이 값은 «등급컷의 열쇠»의 한 조각이다
+   (`seasonKeyOf(name, startedAt)`). 바꾸면 적어 둔 등급컷이 **다른 열쇠 밑에 남아
+   화면에서 조용히 사라진다.** 그래서 **옮겨 준다.**
+   ⚠ 「고쳤더니 딴 게 사라졌다」는 이 앱에서 가장 나쁜 갈래다. */
+async function setSeasonStart(ymd){
+  const 새것 = String(ymd || '').trim();
+  if(새것 && !/^\d{4}-\d{2}-\d{2}$/.test(새것)){ showToast('날짜 꼴이 아닙니다.'); return; }
+  const 이름 = currentSeason();
+  const 옛열쇠 = curSeasonKey();
+  const 새열쇠 = seasonKeyOf(이름, 새것);
+  if(옛열쇠 === 새열쇠) return;
+
+  /* 🔵 **등급컷을 새 열쇠로 옮긴다.** 안 옮기면 적어 둔 값이 화면에서 사라진다. */
+  let 옮긴수 = 0;
+  const by = (state.gradeCuts && state.gradeCuts.byKey) || null;
+  if(by && by[옛열쇠]){
+    /* ⚠ 새 열쇠에 이미 뭔가 있으면 덮지 않는다 — 덮는 쪽이 되돌릴 수 없다. */
+    if(by[새열쇠]){ showToast('그 날짜에 이미 적어 둔 등급컷이 있어 바꾸지 않았습니다.'); return; }
+    by[새열쇠] = by[옛열쇠];
+    delete by[옛열쇠];
+    옮긴수 = Object.keys(by[새열쇠] || {}).length;
+    await dbSet('grade-cuts', state.gradeCuts);
+  }
+
+  state.season = {name: 이름, startedAt: 새것};
+  await dbSet('season', state.season);
+  await logAudit('시험 시즌 시작일', '', '', 이름 + ' — ' + (새것 || '(지움)')
+    + (옮긴수 ? ' · 등급컷 ' + 옮긴수 + '곳을 같이 옮겼다' : ''));
+  showToast(새것 ? '시작일을 ' + 새것 + '로 바꿨습니다.' : '시작일을 지웠습니다.'
+    + (옮긴수 ? ' 적어 둔 등급컷도 같이 옮겼습니다.' : ''));
+  render();
+}
 async function saveSchoolRange(school, grade, subject, chapters){
   if(!state.examRanges) state.examRanges = {season: currentSeason(), bySchool: {}};
   const bys = state.examRanges.bySchool;
@@ -22100,8 +22137,15 @@ function teacherExamRangeHTML(){
     <div class="row" style="gap:12px;align-items:center;margin-top:10px;flex-wrap:wrap;">
       <b style="font-size:20px;">${escHtml(season)}</b>
       ${/* 한글은 mono 밖에 둔다 — 「부터」가 「부 터」로 벌어진다 */''}
-      ${state.season && state.season.startedAt
-        ? `<span style="font-size:11.5px;color:var(--dim);"><span class="mono">${escHtml(state.season.startedAt)}</span>부터</span>` : ''}
+      ${/* 🔵 **고칠 수 있게 둔다** (2026-09-08) — 여태 이 값은 «넘긴 날»이 그대로 박혀
+             사실이 아닌 날짜를 보여 줬다. 비우면 아예 안 뜬다.
+             ⚠ 등급컷이 이 날짜를 열쇠로 쓰므로, 바꾸면 등급컷도 «같이 옮긴다»(setSeasonStart). */''}
+      <span class="row" style="gap:5px;align-items:center;font-size:11.5px;color:var(--dim);">
+        <input type="date" class="lo-in" style="width:150px;padding:4px 8px;font-size:11.5px;"
+          value="${escHtml((state.season && state.season.startedAt) || '')}"
+          title="시즌이 시작된 날. 비워 두면 안 보입니다"
+          onchange="setSeasonStart(this.value)">부터
+      </span>
       <span class="spacer"></span>
       <button class="btn q sm" onclick="backSeason()"
         title="잘못 넘겼을 때 앞 시즌으로 되돌립니다">← ${escHtml(prevSeason)}</button>
