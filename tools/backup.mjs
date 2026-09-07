@@ -30,6 +30,8 @@ const H = { Authorization: 'Bearer ' + token };
 const 컬렉션 = ['students', 'notices', 'consults', 'classes', 'clinics', 'clinicslots', 'qnas',
                 'videos', 'assistants', 'exams', 'problembank', 'assignments', 'auditlog',
                 'variants', 'items'];
+/* ⚠ 이건 «반드시 있어야 하는 것» 목록일 뿐이다 — kv 는 아래에서 **통째로** 훑는다.
+   여기 적힌 것이 없으면 요약에 「없음」이라 적어 눈에 띄게 한다. */
 const kv키 = ['teacher-pw', 'season', 'exam-ranges', 'school-books', 'grade-cuts', 'itemsVer'];
 
 async function 컬렉션받기(c) {
@@ -71,10 +73,29 @@ for (const c of 컬렉션) {
   요약.컬렉션[c] = rows.length;
   console.log('  ' + c.padEnd(14) + String(rows.length).padStart(5) + '건');
 }
+/* 🔴 kv 를 **통째로** 훑는다 — 정해진 열쇠만 받으면 수업 기록·상담 일지·문제은행 그림·
+   옛 블롭이 통째로 빠진다(2026-09-07에 31건이 빠져 있었다). */
 const kv = {};
-for (const k of kv키) kv[k] = await kv받기(k);
+{
+  let pt = '';
+  do {
+    const res = await fetch(BASE + '/kv?pageSize=300' + (pt ? '&pageToken=' + pt : ''), { headers: H });
+    if (res.status === 404) break;
+    if (!res.ok) throw new Error('kv 목록 http ' + res.status);
+    const j = await res.json();
+    for (const d of (j.documents || [])) {
+      const k = decodeURIComponent(d.name.split('/').pop());
+      let v = null;
+      try { v = JSON.parse(d.fields?.value?.stringValue || 'null'); } catch (e) { v = d.fields || null; }
+      kv[k] = v;
+    }
+    pt = j.nextPageToken || '';
+  } while (pt);
+}
 fs.writeFileSync(path.join(폴더, 'kv.json'), JSON.stringify(kv, null, 1), 'utf8');
-요약.kv = Object.fromEntries(kv키.map(k => [k, kv[k] === null ? '없음' : '있음']));
+요약.kv = Object.fromEntries(kv키.map(k => [k, kv[k] === undefined || kv[k] === null ? '없음' : '있음']));
+요약.kv전체 = Object.keys(kv).length;
+console.log('  kv'.padEnd(16) + String(Object.keys(kv).length).padStart(5) + '건 (통째로)');
 
 /* 🔴 **학생 기록이 제일 중요하다** — 출석·성적·도장·오답숙제가 다 여기 있다.
    컬렉션이 아니라 kv 문서(`record:<학번>`)라, 학생 명단을 따라 하나씩 받아야 한다. */
@@ -83,7 +104,7 @@ const 기록 = {};
 let 출석줄 = 0, 도장일 = 0, 성적줄 = 0;
 for (const s of students) {
   if (!s.studentId) continue;
-  const rec = await kv받기('record:' + s.studentId);
+  const rec = kv['record:' + s.studentId] ?? await kv받기('record:' + s.studentId);
   if (!rec) continue;
   기록[s.studentId] = rec;
   출석줄 += (rec.attendance || []).length;
