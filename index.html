@@ -3400,6 +3400,32 @@ function dbWarnDenied(collection, e){
   showToast('저장이 막혔습니다 — Firestore 규칙에 「' + collection + '」 컬렉션이 없습니다. '
     + '설정 > 관리자에 안내가 있습니다.');
 }
+/* 🔵 **문서 «하나»를 읽는 문이 여태 없었다** — 낱건은 전부 `kv` 에 넣어 `dbGet` 으로 읽었다.
+   그런데 kv 는 설정·순위·기록·수업기록이 섞인 잡탕이라 **보안 규칙을 곱게 못 쓴다**
+   (「이 학생 것만」을 문서 이름으로 갈라야 하는데 이름 규칙이 제각각이다).
+   그래서 기록·채팅을 컬렉션으로 빼면서 이 문을 같이 낸다.
+   ⚠ `dbGet` 과 «같은 결»로 둔다 — 없는 문서는 fallback, 못 읽은 것은 표시를 남긴다.
+     그 둘을 뭉개면 「비었다」와 「못 읽었다」가 같은 말이 되고, 그건 이 앱에서 기록을 지운다. */
+async function dbGetDoc(collection, id, fallback){
+  const key = collection + '/' + id;
+  try{
+    const token = await withTimeout(getAuthToken(), 8000);
+    const res = await withTimeout(fetch(FIRESTORE_ROOT + '/' + collection + '/' + encodeURIComponent(id), {
+      headers: { Authorization: 'Bearer ' + token }
+    }), 8000);
+    if(res.status === 404){ dbReadFailed.delete(key); dbReadOK.add(key); return fallback; }
+    if(!res.ok) throw new Error('firestore http ' + res.status);
+    const doc = await res.json();
+    const value = JSON.parse(doc.fields.value.stringValue);
+    dbReadFailed.delete(key);
+    dbReadOK.add(key);
+    return value;
+  }catch(e){
+    console.error('읽기 실패', key, e);
+    dbReadFailed.add(key);
+    return fallback;
+  }
+}
 async function dbDeleteDoc(collection, id){
   try{
     const token = await withTimeout(getAuthToken(), 8000);
@@ -5215,22 +5241,22 @@ async function seedTestAccountIfEmpty(){
     return;
   }
   if(DATA.classes.length > 0 || DATA.students.length > 0) return;
-  const testClass = {id:'c_test', name:'테스트반', schedule:'월,수,금 7시~9시', period:'테스트용', status:'진행중'};
-  DATA.classes.push(testClass);
-  await dbSetDoc('classes', testClass.id, testClass);
-  const testStudent = {studentId:'test', name:'테스트학생', pw:'1234', grade:'고1', school:'', classId:testClass.id};
-  DATA.students.push(testStudent);
-  await dbSetDoc('students', testStudent.studentId, testStudent);
-  /* 🔴 **있는 기록은 절대 안 덮는다.** 위 ①이 뚫려도 여기서 한 번 더 막는다 —
-     지워지는 쪽이 «되돌릴 수 없는 것»이라 문을 둘 두는 값이 있다. */
-  const 있던것 = await dbGet('record:test', null);
-  if(있던것){
-    adoptRecord('test', 있던것);
-    console.warn('[씨앗] record:test 가 이미 있다 — 덮지 않는다.');
-    return;
-  }
-  adoptRecord('test', emptyRecord());        // 새 기록도 같은 문으로 등록한다
-  await saveRecord('test');
+
+  /* 🔴 **2026-09-07에 껐다 — 이번 인증 옮기기와 정면으로 어긋나기 때문이다.**
+     여기는 빈 DB 를 보면 `{studentId:'test', pw:'1234'}` 학생을 심었다. 그런데 이번 일의
+     요지가 **비밀번호를 Firestore 에서 없애는 것**이다. 그대로 두면 사이트를 한 번 열 때마다
+     **평문 비밀번호를 도로 넣는다** — 지운 것을 스스로 되살리는 셈이다.
+     그리고 그 학생에게는 Auth 계정이 없어서 **새 로그인으로는 어차피 못 들어간다.**
+
+     ▶ 이제 첫 계정은 이렇게 만든다 (docs/인증-옮기기.md 5번):
+       ① 콘솔에서 강사 계정 하나를 만들고 ② 그 uid 로 `teachers/{uid}` 문서를 손으로 만든다
+       ③ 강사가 로그인해서 학생을 만든다(계정도 같이 생긴다)
+
+     ⚠ 아래 두 막이는 «심는 자리»가 아니라 «덮지 않는 규칙»의 기록이다 — 걷어내지 말 것.
+       · 못 읽은 것이 있으면 심지 않는다(위 `dbReadTrouble()`)
+       · 빈 기록으로 있는 기록을 덮지 않는다(`saveRecord` 안에 산다)
+       2026-09-04에 이 둘이 없어서 출석·성적·도장을 실제로 잃었다. */
+  console.info('[씨앗] 심지 않는다 — 계정은 강사가 만든다 (docs/인증-옮기기.md).');
 }
 
 /* 빈 기록의 «모양». 다섯 군데에 같은 리터럴이 복제돼 있었다 —
@@ -5249,6 +5275,18 @@ function emptyRecord(){
    ⚠ 이 앱은 **학생 화면을 «그리기만 해도» 저장한다** (dqEnsureToday가 오늘 뽑기를 박아 둔다).
      그래서 «잘못된 기록을 메모리에 얹고 화면을 그리는 것»이 곧 삭제다 — 그 문을 여기서 닫는다.
    제자리에서 고치는(mutate) 기존 경로는 객체가 그대로라 전부 통과한다. */
+/* 🔵 **저장 자리의 열쇠는 이제 학번이 아니라 Auth uid 다** (2026-09-07 · 인증 옮기기 ③).
+   보안 규칙이 「내 문서인가」를 **조회 없이** 가르려면 문서 이름이 곧 uid 라야 한다.
+   ⚠ **화면과 메모리는 계속 학번을 쓴다** — 45곳이 `s.studentId` 를 본다. 바꾸는 것은
+     «저장하는 자리»뿐이다. 그래서 그 자리에서만 이 함수를 지난다.
+   🔴 **`|| sid` 는 «옮기는 동안만» 쓰는 임시 다리다.** 규칙을 게시하면 uid 없는 학생은
+     저장이 막힌다(그게 맞다 — 그런 학생은 Auth 계정이 없다는 뜻이다).
+     옮기기가 끝나면 이 fallback 을 걷어낼 것 → docs/인증-옮기기.md */
+function studentKeyOfSid(sid){
+  const s = (DATA.students || []).find(x => x.studentId === sid);
+  return (s && s.uid) ? s.uid : sid;
+}
+
 const recordLoaded = new Map();          // studentId → 읽어 온 «그» 객체
 function adoptRecord(studentId, rec){
   recordLoaded.set(studentId, rec);
@@ -5257,7 +5295,7 @@ function adoptRecord(studentId, rec){
 }
 async function loadRecord(studentId){
   if(!DATA.records[studentId]){
-    adoptRecord(studentId, await dbGet('record:'+studentId, emptyRecord()));
+    adoptRecord(studentId, await dbGetDoc('records', studentKeyOfSid(studentId), emptyRecord()));
   }
   if(!DATA.records[studentId].wrongHomework) DATA.records[studentId].wrongHomework = [];
   if(!DATA.records[studentId].videoProgress) DATA.records[studentId].videoProgress = {};
@@ -5292,14 +5330,17 @@ function recordLooksEmpty(rec){
 
 async function saveRecord(studentId){
   const rec = DATA.records[studentId];
+  const uid = studentKeyOfSid(studentId);
+  /* ⚠ 아래 두 막이는 2026-09-04에 기록을 실제로 잃고 나서 세운 것이다. **자리만 옮기고
+     잣대는 한 글자도 안 바꾼다** — 옮기면서 같이 손대면 무엇이 깨졌는지 못 가른다. */
   if(!rec || recordLoaded.get(studentId) !== rec){
     console.error('저장을 막았다 — 읽어 온 기록이 아니다', studentId);
-    warnDbBlocked('record:'+studentId);
+    warnDbBlocked('records/'+uid);
     return null;
   }
-  const key = 'record:' + studentId;
+  const key = 'records/' + uid;
   if(recordLooksEmpty(rec) && !dbReadOK.has(key)){
-    const 있던것 = await dbGet(key, null);
+    const 있던것 = await dbGetDoc('records', uid, null);
     if(있던것 && !recordLooksEmpty(있던것)){
       console.error('저장을 막았다 — 빈 기록으로 «있는 기록»을 덮을 뻔했다', studentId);
       warnDbBlocked(key);
@@ -5307,16 +5348,16 @@ async function saveRecord(studentId){
       return null;
     }
   }
-  return dbSet(key, rec);
+  return dbSetDoc('records', uid, rec);
 }
 async function loadChat(studentId){
   if(!DATA.chats[studentId]){
-    DATA.chats[studentId] = await dbGet('chat:'+studentId, []);
+    DATA.chats[studentId] = await dbGetDoc('chats', studentKeyOfSid(studentId), []);
   }
   return DATA.chats[studentId];
 }
 async function saveChat(studentId){
-  await dbSet('chat:'+studentId, DATA.chats[studentId]);
+  await dbSetDoc('chats', studentKeyOfSid(studentId), DATA.chats[studentId]);
 }
 
 
@@ -6281,7 +6322,7 @@ async function loadAllChatsIfNeeded(){
   if(state.allChatsLoaded || state.allChatsLoading) return;
   state.allChatsLoading = true;
   const entries = await Promise.all(DATA.students.map(async s =>
-    [s.studentId, DATA.chats[s.studentId] || await dbGet('chat:'+s.studentId, [])]));
+    [s.studentId, DATA.chats[s.studentId] || await dbGetDoc('chats', s.uid || s.studentId, [])]));
   entries.forEach(([sid, chat]) => { DATA.chats[sid] = chat; });
   state.allChatsLoading = false;
   state.allChatsLoaded = true;
@@ -9029,7 +9070,7 @@ async function loadAllRecordsIfNeeded(){
   state.allRecordsLoading = true;
   render();
   const [entries, savedRules] = await Promise.all([
-    Promise.all(DATA.students.map(async s => [s.studentId, await dbGet('record:'+s.studentId, null)])),
+    Promise.all(DATA.students.map(async s => [s.studentId, await dbGetDoc('records', s.uid || s.studentId, null)])),
     dbGet('signal-rules', {})
   ]);
   state.signalRules = (savedRules && typeof savedRules === 'object') ? savedRules : {};

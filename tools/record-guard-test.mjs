@@ -42,19 +42,24 @@ const 있는것 = () => ({ attendance: [{}, {}], scores: [1], wrongHomework: [],
                        checkin: { days: { '2026-08-23': {} } }, videoProgress: {},
                        assignmentsDone: {}, dailyQuiz: { log: [] } });
 
+/* ⚠ 2026-09-07에 기록이 `kv/record:<학번>` 에서 `records/<uid>` 로 옮겨 갔다.
+   **잣대는 그대로다** — 바뀐 것은 «어디에 쓰나»뿐이라 스텁만 문서 단위로 고친다.
+   🔵 그래서 이 검사는 여전히 09-04의 그 사고를 붙든다. */
 function makeWorld({ 저장된것 = null, 읽어봤나 = false } = {}) {
   const w = { 쓴것: [], kv: {}, 토스트: 0 };
-  if (저장된것) w.kv['record:s1'] = 저장된것;
-  const DATA = { records: {} };
+  if (저장된것) w.kv['records/s1'] = 저장된것;
+  const DATA = { records: {}, students: [] };
   const recordLoaded = new Map();
-  const dbReadOK = new Set(읽어봤나 ? ['record:s1'] : []);
+  const dbReadOK = new Set(읽어봤나 ? ['records/s1'] : []);
   const api = new Function(
-    'DATA', 'recordLoaded', 'dbReadOK', 'dbGet', 'dbSet', 'adoptRecord', 'warnDbBlocked', 'console',
+    'DATA', 'recordLoaded', 'dbReadOK', 'dbGetDoc', 'dbSetDoc', 'studentKeyOfSid',
+    'adoptRecord', 'warnDbBlocked', 'console',
     lift('recordLooksEmpty') + '\n' + lift('saveRecord', 'async function')
       + '\nreturn { recordLooksEmpty, saveRecord };'
   )(DATA, recordLoaded, dbReadOK,
-    async (k, fb) => (k in w.kv ? w.kv[k] : fb),
-    async (k, v) => { w.kv[k] = v; w.쓴것.push(k); return true; },
+    async (c, id, fb) => { const k = c + '/' + id; return (k in w.kv ? w.kv[k] : fb); },
+    async (c, id, v) => { const k = c + '/' + id; w.kv[k] = v; w.쓴것.push(k); return true; },
+    (sid) => sid,
     (id, rec) => { DATA.records[id] = rec; recordLoaded.set(id, rec); return rec; },
     () => { w.토스트++; },
     { warn: () => {}, error: () => {}, log: () => {} });
@@ -70,8 +75,8 @@ console.log('\n기록 쓰는 문 — 빈 것이 있는 것을 덮지 않는가\n
   w.adoptRecord('s1', 빈것());
   const r = await w.saveRecord('s1');
   봄('🔴 막는다', r, null);
-  봄('🔴 있던 출석이 그대로다', w.kv['record:s1'].attendance.length, 2);
-  봄('🔴 있던 도장도 그대로다', Object.keys(w.kv['record:s1'].checkin.days).length, 1);
+  봄('🔴 있던 출석이 그대로다', w.kv['records/s1'].attendance.length, 2);
+  봄('🔴 있던 도장도 그대로다', Object.keys(w.kv['records/s1'].checkin.days).length, 1);
   봄('아무것도 안 썼다', w.쓴것.length, 0);
   봄('사람에게 말한다', w.토스트, 1);
   봄('🔵 그리고 «있는 것»을 살려 쓴다 — 화면도 진짜를 본다', w.DATA.records.s1.attendance.length, 2);
@@ -80,21 +85,21 @@ console.log('\n기록 쓰는 문 — 빈 것이 있는 것을 덮지 않는가\n
   const w = makeWorld({ 저장된것: null, 읽어봤나: false });
   w.adoptRecord('s1', 빈것());
   await w.saveRecord('s1');
-  봄('없던 학생이면 빈 기록을 만든다', w.쓴것, ['record:s1']);
+  봄('없던 학생이면 빈 기록을 만든다', w.쓴것, ['records/s1']);
 }
 { // 읽어 봤으면 «비어 있는 것»이 사실이다 — 그대로 쓴다
   const w = makeWorld({ 저장된것: 빈것(), 읽어봤나: true });
   w.adoptRecord('s1', 빈것());
   await w.saveRecord('s1');
-  봄('읽어 본 뒤라면 빈 것도 그대로 쓴다', w.쓴것, ['record:s1']);
+  봄('읽어 본 뒤라면 빈 것도 그대로 쓴다', w.쓴것, ['records/s1']);
 }
 { // 내용이 있는 기록을 쓰는 것은 언제나 된다
   const w = makeWorld({ 저장된것: 있는것(), 읽어봤나: false });
   const rec = 있는것(); rec.scores.push(2);
   w.adoptRecord('s1', rec);
   await w.saveRecord('s1');
-  봄('내용이 있는 기록은 그냥 쓴다', w.쓴것, ['record:s1']);
-  봄('그 내용이 들어갔다', w.kv['record:s1'].scores.length, 2);
+  봄('내용이 있는 기록은 그냥 쓴다', w.쓴것, ['records/s1']);
+  봄('그 내용이 들어갔다', w.kv['records/s1'].scores.length, 2);
 }
 { // 읽어 온 것이 아니면 애초에 못 쓴다 (예전부터 있던 막이)
   const w = makeWorld({ 저장된것: 있는것(), 읽어봤나: true });

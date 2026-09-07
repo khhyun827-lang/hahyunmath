@@ -58,7 +58,7 @@ function makeWorld({ 못읽음 = false, 기록있음 = true, 학생있음 = fals
     (id, rec) => { DATA.records[id] = rec; recordLoaded.set(id, rec); return rec; },
     async (id) => { w.kv['record:' + id] = DATA.records[id]; w.쓴것.push({ coll: 'kv', id: 'record:' + id }); return true; },
     () => ({ attendance: [], scores: [], checkin: { last: '', days: {} } }),
-    recordLoaded, { warn: () => {}, error: () => {}, log: () => {} });
+    recordLoaded, { warn: () => {}, error: () => {}, log: () => {}, info: () => {} });
   return Object.assign(w, api, { DATA });
 }
 
@@ -71,19 +71,33 @@ console.log('\n씨앗 심기 — 있는 기록을 지우지 않는가\n');
   봄('🔴 도장이 그대로 남는다', Object.keys(w.kv['record:test'].checkin.days).length, 3);
   봄('🔴 출석도 그대로 남는다', w.kv['record:test'].attendance.length, 24);
 }
-{ // ② 막이가 하나 뚫려도 — 진짜로 비어 보여도 있는 기록은 안 덮는다
+/* 🔵 **2026-09-07 — 씨앗 심기를 껐다. 그래서 잣대가 뒤집혔다.**
+   여기는 빈 DB 를 보면 `{studentId:'test', pw:'1234'}` 를 심었는데, 인증을 Firebase Auth 로
+   옮기는 일의 요지가 **비밀번호를 Firestore 에서 없애는 것**이다. 그대로 두면 사이트를 한 번
+   열 때마다 **평문 비밀번호를 도로 넣는다.**
+   ⚠ 그래서 이제 「심는가」가 아니라 **「안 심는가」**를 붙든다. 위 ①(못 읽었을 때 안 심는다)은
+     그대로 두었다 — 그 잣대는 여전히 옳고, 09-04의 사고를 붙드는 자리다. */
+{ // ② 진짜로 비어 있어도 이제는 아무것도 안 심는다
   const w = makeWorld({ 못읽음: false, 기록있음: true });
   await w.seedTestAccountIfEmpty();
-  봄('씨앗 반·학생은 만든다', w.쓴것.filter(x => x.coll !== 'kv').map(x => x.coll), ['classes', 'students']);
-  봄('🔴 있는 기록은 안 덮는다', Object.keys(w.kv['record:test'].checkin.days).length, 3);
-  봄('🔴 출석도 안 덮는다', w.kv['record:test'].attendance.length, 24);
-  봄('기록을 새로 쓰지 않았다', w.쓴것.some(x => x.id === 'record:test'), false);
+  봄('🔴 비어 있어도 아무것도 안 쓴다', w.쓴것.length, 0);
+  봄('🔴 있는 기록은 그대로다', Object.keys(w.kv['record:test'].checkin.days).length, 3);
 }
-{ // ③ 진짜로 처음일 때는 만들어야 한다
+{ // ③ 처음이어도 안 심는다 — 계정은 강사가 만든다
   const w = makeWorld({ 못읽음: false, 기록있음: false });
   await w.seedTestAccountIfEmpty();
-  봄('처음이면 빈 기록을 만든다', w.쓴것.some(x => x.id === 'record:test'), true);
-  봄('그 기록은 비어 있다', w.kv['record:test'].attendance.length, 0);
+  봄('🔴 처음이어도 안 심는다', w.쓴것.length, 0);
+  봄('🔴 학생을 메모리에도 안 얹는다', w.DATA.students.length, 0);
+}
+{ // ④ 🔴 «평문 비밀번호»를 도로 심지 않는가 — 이게 이번 일의 요지다
+  //   ⚠ 소스 «글자»만 보면 주석에 적힌 옛 코드에 걸린다(실제로 걸렸다).
+  //     검사가 「무엇을 보고 있는지」를 헷갈리면 이렇게 거짓으로 운다.
+  //     그래서 주석을 걷어낸 «진짜 코드»를 본다.
+  const 코드 = lift('seedTestAccountIfEmpty')
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/\/\/[^\n]*/g, '');
+  봄('🔴 pw 를 심는 줄이 «코드»에 없다', /pw\s*:/.test(코드), false);
+  봄('🔴 문서를 아예 안 쓴다', /dbSetDoc|dbSet\(/.test(코드), false);
 }
 { // ④ 학생이 이미 있으면 아무것도 안 한다
   const w = makeWorld({ 못읽음: false, 기록있음: true, 학생있음: true });
