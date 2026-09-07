@@ -4681,7 +4681,12 @@ let state = {
   videoAdding: false,     // 영상 «등록» 폼이 열려 있나
   auditLogSearchQuery: '',
   /* 로그인할 때는 최근 것만 받는다(#2). 「전체에서 찾기」를 누르면 그때 전부 받는다. */
-  auditLogAll: false, auditLogLoading: false,
+  /* 🔴 깃발이 «둘»이다 — 섞으면 안 된다.
+       · auditLogRecent — 최근 60일치를 받았나 (화면을 처음 열 때 채운다)
+       · auditLogAll    — 「전체에서 찾기」로 통째로 받았나
+     하나로 합치면 「전체를 받았다」와 「최근 것만 받았다」가 같은 말이 되어,
+     화면이 «최근 60일 안에서만 찾았다»는 사실을 말할 수 없게 된다. */
+  auditLogRecent: false, auditLogAll: false, auditLogLoading: false,
   toast: ''
 };
 let DATA = {
@@ -5153,9 +5158,13 @@ async function loadAll(){
     migrateBlobToCollection('exams', 'exams', 'id'),
     migrateBlobToCollection('problem-bank', 'problembank', 'id'),
     migrateBlobToCollection('assignments', 'assignments', 'id'),
-    /* 🔵 **최근 것만 받는다** (2026-09-06 · #2) — 화면은 300줄만 보여 주는데 전부 읽고 있었다.
-       검색은 「전체에서 찾기」를 누를 때만 전부 읽는다(`auditLogLoadAll`). */
-    loadAuditLogRecent()
+    /* 🔵 **로그인 때는 아예 안 읽는다** (2026-09-07 · #2) — 09-06에 「최근 것만」으로 줄였지만,
+       그래도 로그인 한 번의 **190/334건**이 이것이었다(`tools/read-cost.mjs` 실측).
+       `DATA.auditLog` 를 쓰는 곳은 둘뿐이다 — 새 줄을 앞에 꽂는 자리(빈 배열이어도 된다)와
+       「설정 › 변경 이력」 화면. **그 화면을 열 때 받는다**(`auditLogEnsureRecent`).
+       ⚠ 그러니 이 배열은 «전부»가 아니라 «이 세션에서 새로 찍힌 것»일 수 있다.
+         화면이 그 사실을 말한다 — 아무 말 없이 「0건」이라 적으면 그게 거짓말이다. */
+    Promise.resolve([])
   ]);
   /* 시즌·범위는 데일리퀴즈가 첫 렌더에서 바로 본다. 늦게 오면 «범위 밖»으로 잘못 걸러
      한 번 그렸다가 바뀌는 깜빡임이 생기므로 여기서 같이 받는다. */
@@ -22527,6 +22536,21 @@ const AUDITLOG_CAP  = 500;    // 창이 넓어도 한 번에 이보다 많이는
 const AUDITLOG_RECENT = 300;  // 화면이 한 번에 보여 주는 줄 수
 /* 🔵 **검색은 «전부»에서 해야 값을 한다** — 그런데 그것 때문에 늘 전부 읽을 까닭은 없다.
    그래서 «누를 때만» 읽는다. 한 번 누르면 그 세션 동안은 그대로 쓴다(state.auditLogAll). */
+/* 🔵 «그 화면을 열 때» 최근 60일치를 받는다 — 로그인 때가 아니라.
+   ⚠ 한 번 받으면 그 세션 동안 다시 안 받는다. 새로 찍히는 줄은 `logAudit` 이 앞에 꽂아 준다. */
+async function auditLogEnsureRecent(){
+  if(state.auditLogRecent || state.auditLogAll || state.auditLogLoading) return;
+  state.auditLogLoading = true; render();
+  const rows = await loadAuditLogRecent();
+  /* 🔴 받은 것을 그냥 덮으면 «이 세션에서 새로 찍힌 줄»이 사라진다 — 받는 사이에 누가
+       기록을 남길 수 있다. 코드로 겹치는 것을 걸러 «둘을 합친다». */
+  const 있는 = new Set(rows.map(e=>e.id));
+  const 새것 = DATA.auditLog.filter(e=>!있는.has(e.id));
+  DATA.auditLog = 새것.concat(rows);
+  state.auditLogRecent = true;
+  state.auditLogLoading = false;
+  render();
+}
 async function auditLogLoadAll(){
   if(state.auditLogAll) return;
   state.auditLogLoading = true; render();
@@ -22534,7 +22558,7 @@ async function auditLogLoadAll(){
   state.auditLogLoading = false;
   /* ⚠ 목록은 이름 «오름차순»으로 온다 — 그대로 쓰면 가장 오래된 것이 맨 위다.
      여기서 뒤집지 않으면 「최근 300건」이 옛것 300건이 된다(2026-09-06에 실제로 그랬다). */
-  if(rows.length){ rows.sort((a,b)=> (a.at||a.id||'') < (b.at||b.id||'') ? 1 : -1); DATA.auditLog = rows; state.auditLogAll = true; }
+  if(rows.length){ rows.sort((a,b)=> (a.at||a.id||'') < (b.at||b.id||'') ? 1 : -1); DATA.auditLog = rows; state.auditLogAll = true; state.auditLogRecent = true; }
   else showToast('불러오지 못했습니다 — 잠시 뒤 다시 눌러 주세요.');
   render();
 }
@@ -22543,6 +22567,7 @@ async function auditLogLoadAll(){
    시안(13-settings)이 그린 그대로 «줄»이다. 표가 아니다 —
    표는 «비교»하는 것이고 로그는 «훑는» 것이라 열 머리가 필요 없다. */
 function teacherAuditLogHTML(){
+  auditLogEnsureRecent();   // ⚠ 기다리지 않는다 — 받아 오면 스스로 다시 그린다
   const q = (state.auditLogSearchQuery||'').trim().toLowerCase();
   const filtered = !q ? DATA.auditLog : DATA.auditLog.filter(e=>
     (e.studentName||'').toLowerCase().includes(q) ||
@@ -22569,13 +22594,19 @@ function teacherAuditLogHTML(){
   return `<div class="st-wrap">
   ${stSec({
     title:'변경 이력',
-    desc:`${partial ? `최근 ${AUDITLOG_DAYS}일 · ${DATA.auditLog.length}건` : `${DATA.auditLog.length}건`}${q?` · 찾은 것 ${filtered.length}건`:''}`,
+    /* ⚠ 아직 안 받았으면 «건수»를 적지 않는다 — 그 숫자는 이 세션에서 새로 찍힌 줄 수일 뿐이다. */
+    desc:`${!state.auditLogRecent && !state.auditLogAll ? '불러오는 중…'
+      : partial ? `최근 ${AUDITLOG_DAYS}일 · ${DATA.auditLog.length}건` : `${DATA.auditLog.length}건`}${q?` · 찾은 것 ${filtered.length}건`:''}`,
     action:`<span class="field" style="width:230px;">${iconSvg('search',14)}
       <input id="auditlog-search" value="${escHtml(state.auditLogSearchQuery||'')}"
         placeholder="학생 · 작성자 · 항목으로 찾기"
         style="flex:1;min-width:0;border:0;background:transparent;outline:none;font-family:inherit;font-size:12.5px;color:var(--ink);"
         oninput="liveEdit(event, v=>state.auditLogSearchQuery=v)" oncompositionend="liveEdit(event, v=>state.auditLogSearchQuery=v)"></span>`,
-    body: (DATA.auditLog.length===0
+    /* 🔴 «아직 못 받았다»와 «없다»는 다른 말이다 — 받는 동안 「없습니다」라고 적으면
+         그것도 거짓말이다(09-06에 「0건」으로 같은 자리에서 한 번 넘어졌다). */
+    body: (state.auditLogLoading && DATA.auditLog.length===0
+      ? '<div class="st-empty">불러오는 중…</div>'
+      : DATA.auditLog.length===0
       ? '<div class="st-empty">아직 기록된 변경 이력이 없습니다.<br>성적·출석·학생정보처럼 되돌리기 어려운 변경만 남습니다.</div>'
       : shown.length===0
       ? `<div class="st-empty">「${escHtml(state.auditLogSearchQuery)}」에 해당하는 기록이 없습니다.${partial ? `<br>최근 ${AUDITLOG_DAYS}일 안에서만 찾았습니다. <button class="btn sm" onclick="auditLogLoadAll()" ${state.auditLogLoading?'disabled':''}>${state.auditLogLoading?'불러오는 중…':'전체에서 찾기'}</button>` : ''}</div>`
