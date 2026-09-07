@@ -2363,6 +2363,71 @@
 .sap-navbtn:hover{background:var(--hover);color:var(--ink);}
 
 .sap-empty{padding:36px 0;text-align:center;font-size:12.5px;color:var(--dim);line-height:1.8;}
+/* ---------- 학생 달력 (2026-09-08) ----------
+   ⚠ 학생 화면은 390px 폭이 기준이다. 칸 하나가 48px 남짓이라 «글자»가 못 들어간다.
+     그래서 칸은 날짜와 점만 담고, 읽는 것은 아래 목록이 한다.
+   ⚠ 색은 ds.css 의 상태색만 쓴다 — 달력을 위해 새 색을 만들지 않는다. */
+.app.sap .scal-wrap{padding-bottom:14px;}
+.app.sap .scal-head{display:flex;align-items:center;gap:10px;}
+.app.sap .scal-ym{flex:1;text-align:center;line-height:1.25;}
+.app.sap .scal-ym b{display:block;font-size:19px;letter-spacing:-.01em;font-variant-numeric:tabular-nums;}
+.app.sap .scal-ym span{display:block;font-size:11px;color:var(--dim);margin-top:2px;}
+.app.sap .scal-back{text-align:center;margin-top:8px;}
+
+.app.sap .scal-dow{display:grid;grid-template-columns:repeat(7,1fr);margin-top:14px;}
+.app.sap .scal-dow span{text-align:center;font-size:11px;font-weight:700;color:var(--sub);padding-bottom:6px;}
+
+.app.sap .scal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;}
+.app.sap .scal-c{position:relative;aspect-ratio:1/1.06;border-radius:var(--r-sm);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+  cursor:pointer;transition:background var(--t);}
+.app.sap .scal-c.out{pointer-events:none;}
+.app.sap .scal-c:hover{background:var(--hover);}
+.app.sap .scal-c .d{font-size:13.5px;font-variant-numeric:tabular-nums;color:var(--ink);line-height:1;}
+/* 🔵 오늘은 «채워서», 고른 날은 «테두리»로 — 둘을 같은 꼴로 하면 어느 것이 오늘인지 잃는다. */
+.app.sap .scal-c.today{background:var(--accent);}
+.app.sap .scal-c.today .d{color:#fff;font-weight:700;}
+.app.sap .scal-c.on{box-shadow:inset 0 0 0 2px var(--accent);}
+.app.sap .scal-c.today.on{box-shadow:inset 0 0 0 2px var(--accent),inset 0 0 0 4px var(--paper);}
+
+.app.sap .scal-c .dots{display:flex;gap:2.5px;height:5px;align-items:center;}
+.app.sap .scal-c .dots i{width:4.5px;height:4.5px;border-radius:50%;display:block;}
+/* ⚠ 오늘 칸은 바탕이 진하다 — 점이 묻히지 않게 테를 두른다. */
+.app.sap .scal-c.today .dots i{box-shadow:0 0 0 1px rgba(255,255,255,.55);}
+
+.app.sap .scal-legend{display:flex;flex-wrap:wrap;gap:9px 13px;margin-top:14px;
+  padding-top:12px;border-top:1px solid var(--line);}
+.app.sap .scal-legend span{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--sub);}
+.app.sap .scal-legend i{width:6px;height:6px;border-radius:50%;display:block;}
+
+.app.sap .scal-daytitle{display:flex;align-items:center;gap:8px;}
+.app.sap .scal-daytitle b{font-size:15px;}
+.app.sap .scal-badge{font-size:10.5px;font-weight:700;color:var(--accent);
+  background:var(--accent-bg);border-radius:var(--r-pill);padding:2px 8px;}
+.app.sap .scal-empty{font-size:12.5px;color:var(--dim);padding:18px 0 6px;text-align:center;}
+.app.sap .scal-help{font-size:12px;color:var(--sub);line-height:1.65;margin:8px 0 14px;}
+
+.app.sap .scal-list{display:flex;flex-direction:column;gap:7px;margin-top:12px;}
+.app.sap .scal-item{position:relative;display:flex;align-items:center;gap:10px;
+  padding:10px 34px 10px 11px;background:var(--sunk);border-radius:var(--r-sm);
+  border-left:3px solid var(--line);}
+.app.sap .scal-item .k{flex:0 0 auto;font-size:10.5px;font-weight:700;
+  border-radius:var(--r-xs);padding:3px 7px;white-space:nowrap;}
+.app.sap .scal-item .t{flex:1;min-width:0;line-height:1.35;}
+.app.sap .scal-item .t b{display:block;font-size:13px;color:var(--ink);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.app.sap .scal-item .t span{display:block;font-size:11px;color:var(--dim);margin-top:1px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.app.sap .scal-item .tm{flex:0 0 auto;font-size:11.5px;color:var(--sub);}
+.app.sap .scal-del{position:absolute;right:6px;top:50%;transform:translateY(-50%);
+  width:24px;height:24px;border:0;background:transparent;color:var(--dim);
+  border-radius:var(--r-xs);cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.app.sap .scal-del:hover{background:var(--nobg);color:var(--no);}
+
+.app.sap .scal-form{display:flex;flex-direction:column;gap:8px;}
+.app.sap .scal-past{margin-top:14px;}
+.app.sap .scal-past summary{font-size:12px;color:var(--dim);cursor:pointer;padding:6px 0;}
+
 /* 지금 시험 범위 — «왜 이 문제만 나오나»를 학생이 알아야 납득한다 */
 .sap-range{display:flex;align-items:center;gap:6px;margin:0 0 12px;font-size:11.5px;color:var(--sub);
   background:var(--note);border:1px solid var(--note-line);border-radius:var(--r);padding:7px 11px;}
@@ -4602,6 +4667,8 @@ let state = {
   storeBook: '',             // 출처 교재로 좁히기 (''이면 전부)
   storePage: 1,              // 한 쪽에 STORE_PER_PAGE 개씩
   unitImportPreview: null,
+  /* 학생 달력 (2026-09-08) — 보고 있는 달·고른 날·「내 일정」에 미리 채울 날짜 */
+  stuCalMonth: '', stuCalDay: '', stuPlanDate: '',
   studentImportPreview: null,
   importBusy: false,         // 한꺼번에 등록이 도는 중인가 (한 줄씩 가므로 시간이 걸린다)
   importResult: null,        // 끝난 뒤의 «누가 됐고 누가 안 됐나». 안 그리면 토스트 한 줄로 묻힌다
@@ -8232,12 +8299,15 @@ async function addVideo(){
   const classId = document.getElementById('video-class').value;
   if(!title || !url){ showToast('제목과 링크를 입력해주세요.'); return; }
   if(!extractYouTubeId(url)){ showToast('유튜브 링크 형식이 맞는지 확인해주세요.'); return; }
-  const video = {id:'v'+Date.now(), unit, title, url, classId};
+  const dueEl = document.getElementById('video-due');
+  const dueDate = (dueEl && dueEl.value) || '';
+  const video = {id:'v'+Date.now(), unit, title, url, classId, dueDate};
   DATA.videos.unshift(video);
   await dbSetDoc('videos', video.id, video);
   document.getElementById('video-unit').value='';
   document.getElementById('video-title').value='';
   document.getElementById('video-url').value='';
+  if(dueEl) dueEl.value='';
   showToast('영상이 등록되었습니다.');
   render();
 }
@@ -10767,21 +10837,26 @@ function goLoginMode(mode){
    **모바일이 기준이다.** 데일리퀴즈 제출·오답 답 입력·강의 시청·클리닉 신청은
    전부 학생이 집이나 이동 중에 폰으로 하는 일이다. 데스크톱에서 열면 한 칸이 가운데로 모인다. */
 
+/* 🔵 **「일정」이 다섯째 탭이 된다** (2026-09-08 · 사용자 요청).
+   학생이 가장 자주 묻는 것이 「오늘 뭐 있지」다. 그걸 한 겹 안으로 숨기면 안 본다. */
 const STUDENT_NAV = [
-  ['홈',   'home',   'home'],
-  ['학습', 'quiz',   'book'],
-  ['기록', 'grades', 'chart'],
-  ['소통', 'notice', 'chat']
+  ['홈',   'home',     'home'],
+  ['일정', 'calendar', 'calendar'],
+  ['학습', 'quiz',     'book'],
+  ['기록', 'grades',   'chart'],
+  ['소통', 'notice',   'chat']
 ];
 /* 탭 안의 갈래. 관리자와 달리 «목록 화면»을 한 겹 더 두지 않는다 —
    넷을 한 줄에 세울 수 있는데 굳이 한 번 더 누르게 할 이유가 없다. */
 const STUDENT_SUBNAV = {
   '학습': [['데일리퀴즈','quiz'], ['오답숙제','wronghw'], ['진도·과제','progress'], ['강의','video'], ['자료','material']],
+  '일정': [['달력','calendar'], ['내 일정','myplan']],
   '기록': [['성적','grades'], ['출석','attendance']],
   '소통': [['공지','notice'], ['질의응답','qna'], ['클리닉','clinic'], ['채팅','chat']]
 };
 const STUDENT_TAB_SECTION = {
   home:'홈',
+  calendar:'일정', myplan:'일정',
   quiz:'학습', wronghw:'학습', progress:'학습', video:'학습', material:'학습',
   grades:'기록', attendance:'기록',
   notice:'소통', qna:'소통', clinic:'소통', chat:'소통'
@@ -12867,9 +12942,283 @@ function bellHTML(items){
   </div>`;
 }
 
+/* =================== 학생 일정 (2026-09-08) ===================
+   🔵 **한 곳에서 모은다.** 수업·시험·과제·영상·클리닉·내 일정이 제각기 다른 데 살아서,
+     학생은 「오늘 뭐 있지」를 알려면 화면 다섯을 돌아야 했다.
+   🔴 **여기는 «모으기»만 한다 — 새 데이터를 만들지 않는다.** 하나만 빼고:
+     학생이 스스로 적는 «내 일정»은 새것인데, 그것도 **컬렉션을 안 늘린다** —
+     제 기록(`records/{uid}`) 안에 산다. 그래서 보안 규칙을 한 줄도 안 고쳐도 된다.
+   ⚠ 갈래마다 «색»을 준다. 색은 ds.css 의 것만 쓴다 — 새 색을 만들지 않는다. */
+/* ⚠ **ds.css 에 «있는» 토큰만 쓴다.** 처음에 --warn·--info 를 썼는데 그런 것은 없다 —
+   없는 토큰은 조용히 «색 없음»이 되어, 화면은 도는데 점이 안 보인다.
+   ds.css 의 상태색은 여섯이다: ok · late · leave · no · gone · blue. */
+const CAL_KINDS = {
+  class:  {이름: '수업',    색: 'var(--ok)',    바탕: 'var(--okbg)'},
+  exam:   {이름: '시험',    색: 'var(--no)',    바탕: 'var(--nobg)'},
+  hw:     {이름: '과제',    색: 'var(--late)',  바탕: 'var(--latebg)'},
+  video:  {이름: '영상',    색: 'var(--blue)',  바탕: 'var(--bluebg)'},
+  clinic: {이름: '클리닉',  색: 'var(--leave)', 바탕: 'var(--leavebg)'},
+  mine:   {이름: '내 일정', 색: 'var(--dim)',   바탕: 'var(--sunk)'},
+};
+
+/* 그 달의 일정을 «날짜별»로 모아 준다 → { '2026-09-08': [ {kind, title, sub, time}, … ] } */
+function stuMonthEvents(c, ym){
+  const out = {};
+  const 넣기 = (date, ev) => {
+    if(!date || String(date).slice(0, 7) !== ym) return;
+    (out[date] = out[date] || []).push(ev);
+  };
+  const me = c.me || {};
+
+  /* ① 수업 — 반의 «요일»에서 그 달의 날짜를 뽑는다. */
+  const [y, m] = ym.split('-').map(Number);
+  const 날수 = new Date(y, m, 0).getDate();
+  (c.classIds || []).forEach(cid => {
+    const cls = DATA.classes.find(x => x.id === cid);
+    if(!cls) return;
+    const 요일들 = parseScheduleDays(cls.schedule);
+    if(!요일들.length) return;
+    for(let d = 1; d <= 날수; d++){
+      if(!요일들.includes(new Date(y, m - 1, d).getDay())) continue;
+      넣기(ymd(y, m, d), {kind: 'class', title: cls.name || '수업',
+        sub: sessionTimeText(cls.schedule) || ''});
+    }
+  });
+
+  /* ② 시험 — 기간(시작~끝)과 «수학 시험일»을 갈라 적는다.
+     ⚠ 수학 시험일이 따로 있는 까닭은 시험 일정 화면 주석에 있다(닷새 중 하루다). */
+  const d = examDatesOf(me.school || '', me.grade || '');
+  if(d){
+    if(d.start) 넣기(d.start, {kind: 'exam', title: '시험기간 시작', sub: me.school || ''});
+    if(d.end && d.end !== d.start) 넣기(d.end, {kind: 'exam', title: '시험기간 끝', sub: me.school || ''});
+    if(d.math) 넣기(d.math, {kind: 'exam', title: '수학 시험', sub: me.school || '', 굵게: 1});
+  }
+
+  /* ③ 과제 마감 — 내가 듣는 반의 것만. */
+  (DATA.assignments || []).forEach(hw => {
+    if(!hw.dueDate) return;
+    if(hw.classId && !(c.classIds || []).includes(hw.classId)) return;
+    넣기(hw.dueDate, {kind: 'hw', title: hw.title || '과제', sub: classNameOf(hw.classId) || ''});
+  });
+
+  /* ④ 영상 마감 — 마감일이 적힌 것만(안 적힌 영상이 대부분이다). */
+  (DATA.videos || []).forEach(v => {
+    if(!v.dueDate) return;
+    if(v.classId && !(c.classIds || []).includes(v.classId)) return;
+    넣기(v.dueDate, {kind: 'video', title: v.title || '영상', sub: v.unit || ''});
+  });
+
+  /* ⑤ 클리닉 — 내 것만. 취소한 것은 뺀다. */
+  (DATA.clinics || []).forEach(cl => {
+    if(cl.studentId !== c.sid || cl.status === '취소') return;
+    넣기(cl.day, {kind: 'clinic', title: '클리닉', sub: cl.topic || '',
+      time: slotTimeLabel(cl.time) || ''});
+  });
+
+  /* ⑥ 내 일정 — 학생이 스스로 적은 것(다른 학원·개인 일정). */
+  (myEventsOf(c.rec) || []).forEach(e => {
+    넣기(e.date, {kind: 'mine', title: e.title || '내 일정', sub: e.memo || '', time: e.time || '', id: e.id});
+  });
+
+  /* 같은 날 안에서 «시간 있는 것»이 먼저, 그다음 갈래 차례로 */
+  const 차례 = Object.keys(CAL_KINDS);
+  Object.values(out).forEach(list => list.sort((a, b) =>
+    (a.time || '\uffff').localeCompare(b.time || '\uffff')
+    || 차례.indexOf(a.kind) - 차례.indexOf(b.kind)));
+  return out;
+}
+/* 날짜 글자를 짓는다 — `todayStr` 과 같은 꼴이라야 견줄 수 있다. */
+function ymd(y, m, d){ return y + '-' + String(m).padStart(2,'0') + '-' + String(d).padStart(2,'0'); }
+
+/* 🔵 «내 일정»은 학생의 기록 안에 산다 — 컬렉션도 규칙도 안 늘린다. */
+function myEventsOf(rec){ return (rec && Array.isArray(rec.myEvents)) ? rec.myEvents : []; }
+
+/* ---------- 달력 화면 (2026-09-08 · 사용자 요청) ----------
+   🔵 **큰 달력 하나**가 이 화면의 전부다. 학생이 폰으로 보는 것이라 셋을 지킨다:
+     ① 한 손으로 달을 넘긴다 ② 점만 보고도 «바쁜 날»을 안다 ③ 누르면 그날이 밑에서 펼쳐진다.
+   ⚠ **칸 안에 글자를 우겨넣지 않는다** — 390px 에서는 안 읽힌다. 칸은 «점»으로 말하고,
+     읽는 것은 아래 목록에서 한다. 달력에 제목을 욱여넣으면 둘 다 못 읽게 된다.
+   ⚠ 오늘은 «채워서», 고른 날은 «테두리»로 나타낸다 — 둘을 같은 꼴로 하면 어느 것이 오늘인지 잃는다. */
+function stuCalendarHTML(c){
+  const 오늘 = todayStr();
+  const ym = state.stuCalMonth || 오늘.slice(0, 7);
+  const [y, m] = ym.split('-').map(Number);
+  const 첫요일 = new Date(y, m - 1, 1).getDay();
+  const 날수 = new Date(y, m, 0).getDate();
+  const 일정 = stuMonthEvents(c, ym);
+  /* 이 달이 «이번 달»이면 오늘을 고른 것으로 시작한다 — 들어오자마자 오늘 것이 보여야 한다. */
+  const 고른날 = (state.stuCalDay && state.stuCalDay.slice(0, 7) === ym) ? state.stuCalDay
+               : (오늘.slice(0, 7) === ym ? 오늘 : '');
+
+  const 칸 = [];
+  for(let i = 0; i < 첫요일; i++) 칸.push('<div class="scal-c out"></div>');
+  for(let d = 1; d <= 날수; d++){
+    const date = ymd(y, m, d);
+    const evs = 일정[date] || [];
+    /* 점은 «갈래마다 하나»다 — 같은 갈래가 셋이어도 점 하나. 그래야 칸이 안 시끄럽다. */
+    const 갈래들 = [...new Set(evs.map(e => e.kind))];
+    const dow = new Date(y, m - 1, d).getDay();
+    const 요일색 = dow === 0 ? 'color:var(--no);' : dow === 6 ? 'color:var(--blue);' : '';
+    칸.push('<div class="scal-c' + (date === 오늘 ? ' today' : '') + (date === 고른날 ? ' on' : '') + '"'
+      + ' onclick="state.stuCalDay=\'' + date + '\'; render()">'
+      + '<span class="d" style="' + 요일색 + '">' + d + '</span>'
+      + '<span class="dots">'
+      + 갈래들.slice(0, 4).map(k => '<i style="background:' + CAL_KINDS[k].색 + '"></i>').join('')
+      + '</span></div>');
+  }
+
+  const 그날 = 고른날 ? (일정[고른날] || []) : [];
+  const 이달수 = Object.values(일정).reduce((n, v) => n + v.length, 0);
+
+  const 머리 = '<div class="mc scal-wrap">'
+    + '<div class="scal-head">'
+    + '<button class="sap-navbtn" aria-label="지난달"'
+    + ' onclick="state.stuCalMonth=\'' + stuShiftMonth(ym, -1) + '\'; state.stuCalDay=\'\'; render()">'
+    + iconSvg('chevL', 17) + '</button>'
+    + '<div class="scal-ym"><b>' + y + '. ' + String(m).padStart(2, '0') + '</b>'
+    + '<span>' + (이달수 ? 이달수 + '개 일정' : '일정 없음') + '</span></div>'
+    + '<button class="sap-navbtn" aria-label="다음달"'
+    + ' onclick="state.stuCalMonth=\'' + stuShiftMonth(ym, 1) + '\'; state.stuCalDay=\'\'; render()">'
+    + iconSvg('chevR', 17) + '</button>'
+    + '</div>'
+    /* ⚠ 다른 달을 보고 있을 때만 «오늘로»를 낸다 — 늘 있으면 눌러도 아무 일 없는 단추가 된다. */
+    + (ym !== 오늘.slice(0, 7)
+        ? '<div class="scal-back"><button class="btn q sm"'
+          + ' onclick="state.stuCalMonth=\'\'; state.stuCalDay=\'\'; render()">오늘로</button></div>'
+        : '')
+    + '<div class="scal-dow">'
+    + ['일','월','화','수','목','금','토'].map((n, i) =>
+        '<span style="' + (i === 0 ? 'color:var(--no);' : i === 6 ? 'color:var(--blue);' : '') + '">' + n + '</span>').join('')
+    + '</div>'
+    + '<div class="scal-grid">' + 칸.join('') + '</div>'
+    + '<div class="scal-legend">'
+    + Object.keys(CAL_KINDS).map(k =>
+        '<span><i style="background:' + CAL_KINDS[k].색 + '"></i>' + CAL_KINDS[k].이름 + '</span>').join('')
+    + '</div></div>';
+
+  const 목록 = '<div class="mc" style="margin-top:12px;">'
+    + '<div class="scal-daytitle"><b>' + (고른날 ? stuDayLabel(고른날) : '날짜를 골라 주세요') + '</b>'
+    + (고른날 === 오늘 ? '<span class="scal-badge">오늘</span>' : '') + '</div>'
+    + (그날.length === 0
+        ? '<div class="scal-empty">' + (고른날 ? '이 날은 일정이 없습니다.' : '위 달력에서 날짜를 눌러 보세요.') + '</div>'
+        : '<div class="scal-list">' + 그날.map(e =>
+            '<div class="scal-item" style="border-left-color:' + CAL_KINDS[e.kind].색 + '">'
+            + '<div class="k" style="color:' + CAL_KINDS[e.kind].색 + ';background:' + CAL_KINDS[e.kind].바탕 + ';">'
+            + CAL_KINDS[e.kind].이름 + '</div>'
+            + '<div class="t"><b' + (e.굵게 ? ' style="color:var(--no);"' : '') + '>' + escHtml(e.title) + '</b>'
+            + (e.sub ? '<span>' + escHtml(e.sub) + '</span>' : '') + '</div>'
+            + (e.time ? '<div class="tm mono">' + escHtml(e.time) + '</div>' : '')
+            + (e.kind === 'mine'
+                ? '<button class="scal-del" title="지우기"'
+                  + ' onclick="event.stopPropagation(); delMyEvent(\'' + e.id + '\')">' + iconSvg('x', 13) + '</button>'
+                : '')
+            + '</div>').join('') + '</div>')
+    + (고른날
+        ? '<button class="btn q sm" style="margin-top:12px;width:100%;"'
+          + ' onclick="state.stuPlanDate=\'' + 고른날 + '\'; goStudentTab(\'myplan\')">'
+          + iconSvg('plus', 13) + ' 이 날에 내 일정 추가</button>'
+        : '')
+    + '</div>';
+
+  return 머리 + 목록;
+}
+/* 「9월 8일 (월)」 — 달력 밑에서 «어느 날을 보고 있는지»를 한 줄로 말한다. */
+function stuDayLabel(date){
+  const [y, m, d] = date.split('-').map(Number);
+  return m + '월 ' + d + '일 (' + ['일','월','화','수','목','금','토'][new Date(y, m - 1, d).getDay()] + ')';
+}
+
+/* ---------- 내 일정 (2026-09-08 · 사용자 요청) ----------
+   「다른 학원에 대해서도 스스로 학생이 스케줄을 등록할 수 있는 페이지가 있었으면 좋겠어」
+
+   🔵 **컬렉션을 안 늘린다.** 이 일정은 «그 학생 것»이므로 제 기록(`records/{uid}`) 안에 산다.
+     그래서 **보안 규칙을 한 줄도 안 고쳐도 된다** — 규칙이 이미 「내 기록은 나만」이다.
+   🔴 기록 문서는 출결·성적·오답숙제가 함께 사는 «가장 무거운» 문서다.
+     그래서 `saveRecord` 의 막이 둘을 그대로 지난다(빈 것으로 안 덮는다 · 읽어 온 것만 쓴다). */
+function stuMyPlanHTML(c){
+  const 오늘 = todayStr();
+  const 목록 = myEventsOf(c.rec).slice().sort((a, b) =>
+    (a.date || '').localeCompare(b.date || '') || (a.time || '').localeCompare(b.time || ''));
+  /* 지난 것은 접어 둔다 — 학원 일정은 쌓이기만 하고 지우는 사람이 없다. */
+  const 앞으로 = 목록.filter(e => (e.date || '') >= 오늘);
+  const 지난것 = 목록.filter(e => (e.date || '') < 오늘);
+
+  const 줄 = (e) => '<div class="scal-item" style="border-left-color:var(--dim)">'
+    + '<div class="k mono" style="color:var(--sub);background:var(--sunk);">' + escHtml(stuDayLabel(e.date)) + '</div>'
+    + '<div class="t"><b>' + escHtml(e.title || '') + '</b>'
+    + (e.memo ? '<span>' + escHtml(e.memo) + '</span>' : '') + '</div>'
+    + (e.time ? '<div class="tm mono">' + escHtml(e.time) + '</div>' : '')
+    + '<button class="scal-del" title="지우기" onclick="delMyEvent(\'' + e.id + '\')">' + iconSvg('x', 13) + '</button>'
+    + '</div>';
+
+  return '<div class="sap-sec">'
+    + '<div class="scal-daytitle"><b>내 일정 추가</b></div>'
+    + '<p class="scal-help">다른 학원·과외·개인 일정을 여기에 적어 두면 <b>달력에 함께</b> 보입니다.<br>'
+    + '<span style="color:var(--dim);">선생님께는 보이지 않습니다 — 내 기록에만 저장됩니다.</span></p>'
+    + '<div class="scal-form">'
+    + '<input class="lo-in" id="mp-title" placeholder="무엇인가요? (예: 영어학원)" maxlength="40">'
+    + '<div class="row" style="gap:8px;">'
+    + '<input class="lo-in" id="mp-date" type="date" value="' + escHtml(state.stuPlanDate || 오늘) + '" style="flex:1;">'
+    + '<input class="lo-in" id="mp-time" type="time" style="width:120px;">'
+    + '</div>'
+    + '<input class="lo-in" id="mp-memo" placeholder="메모 (없어도 됩니다)" maxlength="60">'
+    + '<button class="btn p" onclick="addMyEvent()">' + iconSvg('plus', 14) + ' 추가</button>'
+    + '</div></div>'
+
+    + '<div class="sap-sec">'
+    + '<div class="scal-daytitle"><b>앞으로</b><span class="scal-badge">' + 앞으로.length + '</span></div>'
+    + (앞으로.length ? '<div class="scal-list">' + 앞으로.map(줄).join('') + '</div>'
+                    : '<div class="scal-empty">앞으로 적어 둔 일정이 없습니다.</div>')
+    + (지난것.length
+        ? '<details class="scal-past"><summary>지난 일정 ' + 지난것.length + '개</summary>'
+          + '<div class="scal-list">' + 지난것.reverse().map(줄).join('') + '</div></details>'
+        : '')
+    + '</div>';
+}
+
+async function addMyEvent(){
+  const title = (document.getElementById('mp-title').value || '').trim();
+  const date = document.getElementById('mp-date').value;
+  const time = document.getElementById('mp-time').value;
+  const memo = (document.getElementById('mp-memo').value || '').trim();
+  if(!title){ showToast('무엇인지 적어 주세요.'); return; }
+  if(!date){ showToast('날짜를 골라 주세요.'); return; }
+  const sid = state.currentUser && state.currentUser.studentId;
+  const rec = DATA.records[sid];
+  /* ⚠ 읽어 온 기록이 아니면 `saveRecord` 가 막는다 — 여기서 미리 말해 준다.
+     그 막이는 2026-09-04에 기록을 잃고 세운 것이라 건드리지 않는다. */
+  if(!rec){ showToast('기록을 아직 못 받았습니다. 잠시 뒤 다시 해 주세요.'); return; }
+  if(!Array.isArray(rec.myEvents)) rec.myEvents = [];
+  rec.myEvents.push({id: 'me' + Date.now(), date, time: time || '', title, memo});
+  const ok = await saveRecord(sid);
+  if(ok === null){ rec.myEvents.pop(); showToast('저장하지 못했습니다. 잠시 뒤 다시 해 주세요.'); render(); return; }
+  document.getElementById('mp-title').value = '';
+  document.getElementById('mp-memo').value = '';
+  document.getElementById('mp-time').value = '';
+  state.stuPlanDate = date;
+  showToast('일정을 추가했습니다.');
+  render();
+}
+
+async function delMyEvent(id){
+  const sid = state.currentUser && state.currentUser.studentId;
+  const rec = DATA.records[sid];
+  if(!rec || !Array.isArray(rec.myEvents)) return;
+  const i = rec.myEvents.findIndex(e => e.id === id);
+  if(i < 0) return;
+  if(!confirm('「' + (rec.myEvents[i].title || '') + '」을 지울까요?')) return;
+  const [지운것] = rec.myEvents.splice(i, 1);
+  const ok = await saveRecord(sid);
+  /* ⚠ 저장이 막히면 «지운 것처럼 보이는» 화면이 남는다 — 도로 넣는다. */
+  if(ok === null){ rec.myEvents.splice(i, 0, 지운것); showToast('지우지 못했습니다.'); }
+  render();
+}
+
 function studentTabBodyHTML(c){
   const t = state.studentTab;
   if(t==='home')       return stuHomeHTML(c);
+  if(t==='calendar')   return stuCalendarHTML(c);
+  if(t==='myplan')      return stuMyPlanHTML(c);
   if(t==='quiz')       return stuQuizHTML(c);
   if(t==='wronghw')    return stuWrongHTML(c);
   if(t==='progress')   return stuProgressHTML(c);
@@ -18721,13 +19070,17 @@ function chubVideoHTML(classId){
     <div class="cls-form">
       <label style="flex:2;min-width:180px;"><span>제목</span><input id="video-title" placeholder="예: 수학(상) 4강"></label>
       <label style="min-width:140px;"><span>단원 (선택)</span><input id="video-unit" placeholder="예: 대수 3단원"></label>
+      ${/* 🔵 **마감일 (2026-09-08)** — 학생 달력에 뜨게 하려고 냈다. 없으면 달력에 안 뜬다.
+             ⚠ «선택»이다 — 마감이 없는 영상이 더 많다. 있는 것만 달력에 선다. */''}
+      <label style="min-width:150px;"><span>마감일 (선택)</span><input id="video-due" type="date"></label>
       <select id="video-class" style="display:none;">${DATA.classes.map(c=>
         `<option value="${c.id}" ${classId===c.id?'selected':''}>${escHtml(c.name)}</option>`).join('')}</select>
     </div>
     <div class="cls-form"><label style="flex:1;"><span>유튜브 링크</span>
       <input id="video-url" placeholder="https://youtu.be/..."></label></div>
     <button class="btn p sm" style="margin-top:11px;" onclick="addVideo()">등록</button>
-    <p class="st-note">등록하면 학생 앱 <b>학습 > 강의</b>에 뜨고, 여기서 «어디까지 보고 멈췄는지»가 쌓입니다.</p>
+    <p class="st-note">등록하면 학생 앱 <b>학습 > 강의</b>에 뜨고, 여기서 «어디까지 보고 멈췄는지»가 쌓입니다.
+      <b>마감일을 넣으면 학생 달력(일정)에도 함께 뜹니다.</b></p>
   </div>`}`;
 
   if(vids.length===0){
