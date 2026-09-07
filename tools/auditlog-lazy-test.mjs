@@ -39,7 +39,9 @@ const 봄 = (무엇, 나온것, 나와야) => {
 
 /* ── ① 로그인이 이것을 안 읽는가 ─────────────────────────────────── */
 {
-  const 로그인 = 떠내기('loadAll');
+  /* ⚠ 2026-09-07에 loadAll 이 «읽기»(loadAllData)와 «시작 절차»로 갈라졌다.
+     읽는 자리를 봐야 하므로 갈라 낸 쪽을 떠낸다 — 껍데기를 보면 늘 통과한다. */
+  const 로그인 = 떠내기('loadAllData');
   봄('🔴 loadAll 이 변경 이력을 안 읽는다', /loadAuditLogRecent\(\)/.test(로그인), false);
   봄('그 자리는 빈 배열로 채운다', /Promise\.resolve\(\[\]\)/.test(로그인), true);
   봄('화면 쪽 함수는 여전히 있다', html.includes('async function loadAuditLogRecent('), true);
