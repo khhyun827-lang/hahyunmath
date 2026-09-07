@@ -85,7 +85,10 @@ export default {
          한 문항 검토는 위쪽 요청 1~2건이다(답이 갈릴 때만 둘째 모델을 부른다). */
       const q = await bumpQuota(env, 'review', who.uid, REVIEW_DAILY_LIMIT, REVIEW_DAILY_LIMIT);
       if (!q.ok) return quotaExceeded(q, corsHeaders);
-    } else if (url.pathname !== '/delete') {
+    } else if (url.pathname !== '/delete' && !url.pathname.startsWith('/admin/')) {
+      /* 🔴 **관리자 길을 여기서 빼지 않으면 «비밀번호 재설정»이 AI 한도를 먹는다.**
+         아래 라우팅이 catch-all 이라, 새 길을 낼 때마다 이 줄을 같이 봐야 한다.
+         (한도가 다 차면 비밀번호도 못 바꾸게 되는, 설명하기 어려운 상태가 된다.) */
       // 나머지는 전부 Gemini 생성이다 (기존 라우팅이 catch-all이라 그대로 맞춘다)
       const q = await bumpQuota(env, 'ai', who.uid, AI_DAILY_LIMIT, AI_DAILY_LIMIT);
       if (!q.ok) return quotaExceeded(q, corsHeaders);
@@ -95,9 +98,172 @@ export default {
     if (url.pathname === '/delete') return handleDelete(request, env, corsHeaders);
     if (url.pathname === '/figure') return handleFigureScene(request, env, corsHeaders, who.uid);
     if (url.pathname === '/review') return handleReview(request, env, corsHeaders, who.uid);
+    /* 🔴 **관리자 길은 «강사인지»를 서버에서 본다** — 화면에서 단추를 감추는 것으로는 못 막는다.
+       학생도 토큰이 있으니 이 주소를 그대로 부를 수 있다. */
+    if (url.pathname === '/admin/reset-pw') return handleAdminResetPw(request, env, corsHeaders, who.uid);
+    if (url.pathname === '/admin/delete-user') return handleAdminDeleteUser(request, env, corsHeaders, who.uid);
     return handleGeminiTwin(request, env, corsHeaders, who.uid);
   },
 };
+
+
+/* =================== 관리자 (2026-09-07) =====================================
+   🔵 **왜 워커가 해야 하나** — 남의 비밀번호를 바꾸거나 계정을 지우는 것은 «관리자 권한»이다.
+     브라우저에서는 아무리 해도 안 된다(자기 것만 바꿀 수 있다). 그래서 서버가 대신 한다.
+
+   🔴 **그래서 이 길은 «강사인지»를 반드시 서버에서 본다.** 화면에서 단추를 감추는 것으로는
+     못 막는다 — 학생도 로그인하면 토큰이 있고, 이 주소를 그대로 부를 수 있다.
+     판단은 Firestore 의 `teachers/{uid}` 문서가 «있는가» 하나다(firestore.rules 와 같은 잣대).
+
+   ⚠ 서비스 계정 열쇠는 `FIREBASE_SA` 비밀에 JSON 통째로 들어 있다.
+     이 열쇠는 **프로젝트 전체를 여는 것**이라 저장소에 두지 않는다. 워커만 안다. */
+
+let saTokenCache = { value: null, expiresAt: 0 };
+
+/* 서비스 계정으로 «구글에게» access token 을 받는다.
+   ⚠ 드라이브 쪽(getDriveAccessToken)과 다른 길이다 — 저건 사람이 동의해 준 리프레시 토큰이고,
+     이건 서비스 계정이 스스로 서명한 JWT 다. 둘을 섞지 말 것. */
+async function getServiceAccountToken(env) {
+  const now = Date.now();
+  if (saTokenCache.value && now < saTokenCache.expiresAt - 60000) return saTokenCache.value;
+
+  let sa;
+  try { sa = JSON.parse(env.FIREBASE_SA); }
+  catch (e) { throw new Error('FIREBASE_SA 를 못 읽었다 — JSON 통째로 넣었는지 볼 것'); }
+  if (!sa.client_email || !sa.private_key) throw new Error('FIREBASE_SA 에 client_email/private_key 가 없다');
+
+  const iat = Math.floor(now / 1000);
+  const claim = {
+    iss: sa.client_email,
+    scope: 'https://www.googleapis.com/auth/cloud-platform https://www.googleapis.com/auth/datastore',
+    aud: 'https://oauth2.googleapis.com/token',
+    iat, exp: iat + 3600,
+  };
+  const b64url = (o) => btoa(JSON.stringify(o)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  const 머리 = b64url({ alg: 'RS256', typ: 'JWT' });
+  const 몸 = b64url(claim);
+  const 서명할것 = 머리 + '.' + 몸;
+
+  /* PEM(-----BEGIN PRIVATE KEY-----) 을 WebCrypto 가 받는 꼴로 푼다.
+     ⚠ JSON 안의 private_key 는 줄바꿈이 \\n 으로 들어 있다 — 진짜 줄바꿈으로 되돌려야 한다. */
+  const pem = String(sa.private_key).replace(/\\n/g, String.fromCharCode(10));
+  const 알맹이 = pem.replace(/-----[^-]+-----/g, '').replace(/\s+/g, '');
+  const raw = Uint8Array.from(atob(알맹이), (c) => c.charCodeAt(0));
+  const key = await crypto.subtle.importKey('pkcs8', raw.buffer,
+    { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' }, false, ['sign']);
+  const sig = await crypto.subtle.sign('RSASSA-PKCS1-v1_5', key, new TextEncoder().encode(서명할것));
+  const sigB64 = btoa(String.fromCharCode(...new Uint8Array(sig)))
+    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+
+  const res = await fetch('https://oauth2.googleapis.com/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
+      assertion: 서명할것 + '.' + sigB64,
+    }).toString(),
+  });
+  if (!res.ok) throw new Error('service account token failed: ' + res.status + ' ' + (await res.text()).slice(0, 200));
+  const data = await res.json();
+  saTokenCache = { value: data.access_token, expiresAt: now + data.expires_in * 1000 };
+  return saTokenCache.value;
+}
+
+/* 🔴 «강사인가»를 Firestore 에서 본다 — 규칙과 «같은 잣대»를 쓴다.
+   ⚠ 관리자 토큰으로 읽으므로 규칙을 지나치지 않는다. 그래도 잣대는 같아야 한다 —
+     둘이 갈리면 「화면에서는 강사인데 워커는 아니라고 한다」가 된다. */
+async function isTeacher(env, uid) {
+  if (!uid) return false;
+  const sa = JSON.parse(env.FIREBASE_SA);
+  const tok = await getServiceAccountToken(env);
+  const url = 'https://firestore.googleapis.com/v1/projects/' + sa.project_id
+    + '/databases/(default)/documents/teachers/' + encodeURIComponent(uid);
+  const r = await fetch(url, { headers: { Authorization: 'Bearer ' + tok } });
+  return r.status === 200;
+}
+
+/* 학번(가짜 이메일)으로 계정을 찾는다 — 화면은 uid 를 모를 수 있다. */
+async function lookupUid(env, email) {
+  const sa = JSON.parse(env.FIREBASE_SA);
+  const tok = await getServiceAccountToken(env);
+  const r = await fetch('https://identitytoolkit.googleapis.com/v1/projects/' + sa.project_id + '/accounts:lookup', {
+    method: 'POST',
+    headers: { Authorization: 'Bearer ' + tok, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: [email] }),
+  });
+  if (!r.ok) return null;
+  const j = await r.json();
+  return (j.users && j.users[0] && j.users[0].localId) || null;
+}
+
+function adminJson(obj, corsHeaders, status) {
+  return new Response(JSON.stringify(obj), {
+    status: status || 200,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  });
+}
+
+/* 관리자 길의 «앞문» — 강사인지 보고, 부르는 값을 받아 낸다. */
+async function adminGate(request, env, corsHeaders, uid) {
+  if (!env.FIREBASE_SA) {
+    return { 흠: adminJson({ error: 'not_configured',
+      detail: '워커에 FIREBASE_SA 비밀이 없습니다.' }, corsHeaders, 503) };
+  }
+  let ok;
+  try { ok = await isTeacher(env, uid); }
+  catch (e) { return { 흠: adminJson({ error: 'admin_error', detail: String(e.message || e).slice(0, 200) }, corsHeaders, 500) }; }
+  /* ⚠ 「강사가 아니다」와 「못 물어봤다」를 가른다 — 위에서 못 물어보면 500 으로 나갔다.
+     여기 오면 물어봤고 아니라는 뜻이다. */
+  if (!ok) return { 흠: adminJson({ error: 'forbidden', detail: '강사만 할 수 있습니다.' }, corsHeaders, 403) };
+  let body;
+  try { body = await request.json(); } catch (e) { body = {}; }
+  return { body };
+}
+
+/* 비밀번호 재설정 — { email } 또는 { uid } 와 { password } */
+async function handleAdminResetPw(request, env, corsHeaders, callerUid) {
+  const g = await adminGate(request, env, corsHeaders, callerUid);
+  if (g.흠) return g.흠;
+  const { email, uid, password } = g.body;
+  if (!password || String(password).length < 6)
+    return adminJson({ error: 'bad_password', detail: '비밀번호는 6자 이상이어야 합니다.' }, corsHeaders, 400);
+
+  const localId = uid || (email ? await lookupUid(env, email) : null);
+  if (!localId) return adminJson({ error: 'no_such_user', detail: '그런 계정이 없습니다.' }, corsHeaders, 404);
+
+  const sa = JSON.parse(env.FIREBASE_SA);
+  const tok = await getServiceAccountToken(env);
+  const r = await fetch('https://identitytoolkit.googleapis.com/v1/projects/' + sa.project_id + '/accounts:update', {
+    method: 'POST',
+    headers: { Authorization: 'Bearer ' + tok, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ localId, password: String(password) }),
+  });
+  if (!r.ok) return adminJson({ error: 'update_failed', detail: (await r.text()).slice(0, 200) }, corsHeaders, 502);
+  return adminJson({ ok: true, uid: localId }, corsHeaders);
+}
+
+/* 계정 삭제 — { email } 또는 { uid }
+   🔴 지우면 되돌릴 수 없다. 그래서 «누구를 지우는지»를 그대로 돌려준다 — 화면이 확인할 수 있게. */
+async function handleAdminDeleteUser(request, env, corsHeaders, callerUid) {
+  const g = await adminGate(request, env, corsHeaders, callerUid);
+  if (g.흠) return g.흠;
+  const { email, uid } = g.body;
+  const localId = uid || (email ? await lookupUid(env, email) : null);
+  if (!localId) return adminJson({ ok: true, uid: null, detail: '이미 없습니다.' }, corsHeaders);
+  /* ⚠ 자기 자신은 못 지운다 — 강사가 실수로 제 계정을 지우면 아무도 못 들어온다. */
+  if (localId === callerUid)
+    return adminJson({ error: 'self_delete', detail: '자기 계정은 여기서 못 지웁니다.' }, corsHeaders, 400);
+
+  const sa = JSON.parse(env.FIREBASE_SA);
+  const tok = await getServiceAccountToken(env);
+  const r = await fetch('https://identitytoolkit.googleapis.com/v1/projects/' + sa.project_id + '/accounts:delete', {
+    method: 'POST',
+    headers: { Authorization: 'Bearer ' + tok, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ localId }),
+  });
+  if (!r.ok) return adminJson({ error: 'delete_failed', detail: (await r.text()).slice(0, 200) }, corsHeaders, 502);
+  return adminJson({ ok: true, uid: localId }, corsHeaders);
+}
 
 /* =================== 인증 =================== */
 
