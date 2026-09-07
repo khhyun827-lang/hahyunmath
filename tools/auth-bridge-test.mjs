@@ -78,5 +78,43 @@ const 봄 = (무엇, 잰것, 바란것) => {
 봄('이메일 로그인이 안 켜진 경우를 짚어 준다',
   /operation-not-allowed[\s\S]{0,120}Sign-in method/.test(html), true);
 
+/* ── 로그아웃이 «진짜로» 나가는가 ────────────────────────────── */
+//
+// 🔴 2026-09-08에 사용자가 찾았다 — 로그아웃하고 새로고침하면 **도로 로그인돼 있었다.**
+//   `clearSession()` 은 localStorage 만 지웠고 Firebase 세션은 살아 있었다.
+//   ⚠ 예전에는 티가 안 났다. 누구인가를 localStorage 가 정했으니 그것만 지우면 됐다.
+//     «누구인가는 토큰이 정한다»로 바꾸면서 이 줄이 뒤처진 것이다.
+//     🔵 **판단하는 자리를 옮기면 지우는 자리도 같이 옮겨야 한다.**
+//   🔴 학원 공용 컴퓨터에서 위험한 자리라, 사람 기억이 아니라 검사가 지킨다.
+{
+  const at = html.indexOf('async function logout()');
+  if (at < 0) { console.log('  ✗ logout 을 못 찾았다'); 틀림++; }
+  else {
+    let 깊이 = 0, 끝 = at;
+    for (let j = html.indexOf('{', at); j < html.length; j++) {
+      if (html[j] === '{') 깊이++;
+      else if (html[j] === '}') { 깊이--; if (!깊이) { 끝 = j + 1; break; } }
+    }
+    const 몸 = html.slice(at, 끝);
+    const w = { 나갔나: false, 지웠나: false, 세션지웠나: false };
+    const state = { currentUser: { type: 'teacher' } };
+    const DATA = { students: [{ name: '앞사람' }], records: { a: 1 }, chats: { a: 1 } };
+    const fn = new Function('clearSession', 'state', 'DATA', 'dbReadClear', 'authSignOut', 'goto',
+      몸 + '; return logout;')(
+      () => { w.세션지웠나 = true; }, state, DATA,
+      () => { w.지웠나 = true; },
+      async () => { w.나갔나 = true; },
+      () => {},
+    );
+    await fn();
+    봄('🔴 Firebase 세션에서 «실제로» 나간다', w.나갔나, true);
+    봄('   저장된 세션도 지운다', w.세션지웠나, true);
+    봄('   «못 읽었다» 표시도 지운다', w.지웠나, true);
+    봄('🔴 앞사람의 명단을 화면에 남기지 않는다', DATA.students.length, 0);
+    봄('🔴 앞사람의 기록도 남기지 않는다', Object.keys(DATA.records).length, 0);
+    봄('   지금 사람이 없다고 표시한다', state.currentUser, null);
+  }
+}
+
 console.log(틀림 ? '\n  🔴 ' + 통과 + ' 통과 · ' + 틀림 + ' 실패\n' : '\n  ✅ ' + 통과 + ' 통과 · 0 실패\n');
 process.exit(틀림 ? 1 : 0);
