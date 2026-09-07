@@ -2427,6 +2427,43 @@
 .app.sap .scal-form{display:flex;flex-direction:column;gap:8px;}
 .app.sap .scal-past{margin-top:14px;}
 .app.sap .scal-past summary{font-size:12px;color:var(--dim);cursor:pointer;padding:6px 0;}
+/* ---------- 시험기간은 «면»으로 (2026-09-08 · 사용자 요청) ----------
+   🔵 시작·끝·수학 시험일 세 «점»만 찍으면 그 사이가 시험기간이라는 것이 안 보인다.
+     학생이 달력에서 가장 먼저 알아야 하는 것이 「언제부터 언제까지 시험이냐」다.
+   ⚠ 옅게 깐다 — 진하면 그 주가 통째로 «경고»처럼 보여 다른 일정이 안 읽힌다. */
+.app.sap .scal-c.exam{background:var(--nobg);}
+.app.sap .scal-c.exam .d{color:var(--no);font-weight:700;}
+/* 기간의 처음과 끝만 모서리를 둥글린다 — 가운데는 이어져 하나의 띠로 보인다. */
+.app.sap .scal-c.exam{border-radius:0;}
+.app.sap .scal-c.exam.exam-a{border-radius:var(--r-sm) 0 0 var(--r-sm);}
+.app.sap .scal-c.exam.exam-z{border-radius:0 var(--r-sm) var(--r-sm) 0;}
+.app.sap .scal-c.exam.exam-a.exam-z{border-radius:var(--r-sm);}
+/* 수학 시험일은 그 안에서 한 번 더 도드라진다 — 닷새 중 «그 하루»가 진짜 목표다. */
+.app.sap .scal-c.exam.exam-m{background:var(--no);}
+.app.sap .scal-c.exam.exam-m .d{color:#fff;}
+/* ⚠ 오늘 표시가 시험 배경에 묻히면 안 된다 — 오늘이 더 위에 온다. */
+.app.sap .scal-c.exam.today{background:var(--accent);}
+.app.sap .scal-c.exam.today .d{color:#fff;}
+.app.sap .scal-examline{display:flex;align-items:center;gap:6px;flex-wrap:wrap;
+  margin-top:12px;padding:9px 11px;background:var(--nobg);border-radius:var(--r-sm);
+  font-size:11.5px;color:var(--sub);line-height:1.5;}
+.app.sap .scal-examline b{color:var(--no);}
+
+/* ---------- 매주 반복 (2026-09-08) ---------- */
+.app.sap .scal-seg{display:flex;gap:0;margin:0 0 12px;border:1px solid var(--line);
+  border-radius:var(--r-sm);overflow:hidden;}
+.app.sap .scal-seg button{flex:1;border:0;background:var(--sunk);color:var(--sub);
+  font-family:inherit;font-size:12.5px;font-weight:600;padding:8px 0;cursor:pointer;
+  transition:background var(--t),color var(--t);}
+.app.sap .scal-seg button.on{background:var(--accent);color:#fff;}
+/* ⚠ 요일은 «단추»로 고른다 — 드롭다운으로 받으면 여럿 고르기가 번거롭다. */
+.app.sap .scal-dows{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;}
+.app.sap .scal-dows button{border:1px solid var(--line);background:var(--sunk);
+  border-radius:var(--r-sm);padding:9px 0;font-family:inherit;font-size:12.5px;font-weight:700;
+  cursor:pointer;transition:background var(--t),border-color var(--t);}
+.app.sap .scal-dows button.on{background:var(--accent);border-color:var(--accent);color:#fff !important;}
+.app.sap .scal-lab{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px;
+  font-size:11px;color:var(--sub);}
 
 /* 지금 시험 범위 — «왜 이 문제만 나오나»를 학생이 알아야 납득한다 */
 .sap-range{display:flex;align-items:center;gap:6px;margin:0 0 12px;font-size:11.5px;color:var(--sub);
@@ -4669,6 +4706,9 @@ let state = {
   unitImportPreview: null,
   /* 학생 달력 (2026-09-08) — 보고 있는 달·고른 날·「내 일정」에 미리 채울 날짜 */
   stuCalMonth: '', stuCalDay: '', stuPlanDate: '',
+  /* 「내 일정」 폼이 들고 있는 것 — 매주냐 · 고른 요일 · 적던 제목
+     ⚠ 제목을 state 에 두는 까닭: 요일 단추를 누르면 다시 그려져 input 값이 날아간다. */
+  stuPlanWeekly: true, stuPlanDows: [], stuPlanTitle: '',
   studentImportPreview: null,
   importBusy: false,         // 한꺼번에 등록이 도는 중인가 (한 줄씩 가므로 시간이 걸린다)
   importResult: null,        // 끝난 뒤의 «누가 됐고 누가 안 됐나». 안 그리면 토스트 한 줄로 묻힌다
@@ -13015,9 +13055,23 @@ function stuMonthEvents(c, ym){
       time: slotTimeLabel(cl.time) || ''});
   });
 
-  /* ⑥ 내 일정 — 학생이 스스로 적은 것(다른 학원·개인 일정). */
+  /* ⑥ 내 일정 — 학생이 스스로 적은 것(다른 학원·개인 일정).
+     🔵 **«매주»도 된다** (2026-09-08 · 사용자 요청) — 「영어학원 월·수 6시」처럼 되풀이하는 것이
+       대부분이라, 날마다 따로 적게 하면 아무도 안 쓴다.
+     ⚠ 옛 일정은 `date` 하나뿐이다 — 그건 «한 번»으로 읽는다(모양이 바뀌어도 안 잃는다). */
   (myEventsOf(c.rec) || []).forEach(e => {
-    넣기(e.date, {kind: 'mine', title: e.title || '내 일정', sub: e.memo || '', time: e.time || '', id: e.id});
+    const 알맹이 = {kind: 'mine', title: e.title || '내 일정', sub: e.memo || '', time: e.time || '', id: e.id};
+    if(!e.weekly){ 넣기(e.date, 알맹이); return; }
+    const 요일들 = Array.isArray(e.dows) ? e.dows : [];
+    if(!요일들.length) return;
+    for(let d = 1; d <= 날수; d++){
+      const date = ymd(y, m, d);
+      /* ⚠ 시작·끝을 벗어나면 안 넣는다 — 학원을 그만둔 뒤로도 계속 뜨면 안 된다. */
+      if(e.from && date < e.from) continue;
+      if(e.to && date > e.to) continue;
+      if(!요일들.includes(new Date(y, m - 1, d).getDay())) continue;
+      넣기(date, Object.assign({}, 알맹이, {매주: 1}));
+    }
   });
 
   /* 같은 날 안에서 «시간 있는 것»이 먼저, 그다음 갈래 차례로 */
@@ -13027,6 +13081,19 @@ function stuMonthEvents(c, ym){
     || 차례.indexOf(a.kind) - 차례.indexOf(b.kind)));
   return out;
 }
+/* 🔵 **시험기간은 «점»이 아니라 «면»이다** (2026-09-08 · 사용자 요청).
+   시작·끝·수학 시험일 세 점만 찍으면 «그 사이가 시험기간»이라는 것이 안 보인다.
+   학생이 달력에서 가장 먼저 알아야 하는 것이 「언제부터 언제까지 시험이냐」다.
+   ⚠ 그래서 칸 배경을 옅게 깐다. 점은 그대로 둔다 — 면은 «기간», 점은 «그날 무엇»이다. */
+function stuExamSpan(c){
+  const me = (c && c.me) || {};
+  const d = examDatesOf(me.school || '', me.grade || '');
+  if(!d) return null;
+  const 있는것 = [d.start, d.end, d.math].filter(Boolean).sort();
+  if(!있는것.length) return null;
+  return {from: 있는것[0], to: 있는것[있는것.length - 1], math: d.math || ''};
+}
+
 /* 날짜 글자를 짓는다 — `todayStr` 과 같은 꼴이라야 견줄 수 있다. */
 function ymd(y, m, d){ return y + '-' + String(m).padStart(2,'0') + '-' + String(d).padStart(2,'0'); }
 
@@ -13046,6 +13113,7 @@ function stuCalendarHTML(c){
   const 첫요일 = new Date(y, m - 1, 1).getDay();
   const 날수 = new Date(y, m, 0).getDate();
   const 일정 = stuMonthEvents(c, ym);
+  const 시험 = stuExamSpan(c);
   /* 이 달이 «이번 달»이면 오늘을 고른 것으로 시작한다 — 들어오자마자 오늘 것이 보여야 한다. */
   const 고른날 = (state.stuCalDay && state.stuCalDay.slice(0, 7) === ym) ? state.stuCalDay
                : (오늘.slice(0, 7) === ym ? 오늘 : '');
@@ -13059,7 +13127,15 @@ function stuCalendarHTML(c){
     const 갈래들 = [...new Set(evs.map(e => e.kind))];
     const dow = new Date(y, m - 1, d).getDay();
     const 요일색 = dow === 0 ? 'color:var(--no);' : dow === 6 ? 'color:var(--blue);' : '';
-    칸.push('<div class="scal-c' + (date === 오늘 ? ' today' : '') + (date === 고른날 ? ' on' : '') + '"'
+    /* 🔵 기간의 «처음»과 «끝»만 모서리를 둥글린다 — 가운데는 이어져 하나의 띠로 보인다. */
+    let 시험칸 = '';
+    if(시험 && date >= 시험.from && date <= 시험.to){
+      시험칸 = ' exam'
+        + (date === 시험.from ? ' exam-a' : '')
+        + (date === 시험.to ? ' exam-z' : '')
+        + (date === 시험.math ? ' exam-m' : '');
+    }
+    칸.push('<div class="scal-c' + 시험칸 + (date === 오늘 ? ' today' : '') + (date === 고른날 ? ' on' : '') + '"'
       + ' onclick="state.stuCalDay=\'' + date + '\'; render()">'
       + '<span class="d" style="' + 요일색 + '">' + d + '</span>'
       + '<span class="dots">'
@@ -13091,6 +13167,11 @@ function stuCalendarHTML(c){
         '<span style="' + (i === 0 ? 'color:var(--no);' : i === 6 ? 'color:var(--blue);' : '') + '">' + n + '</span>').join('')
     + '</div>'
     + '<div class="scal-grid">' + 칸.join('') + '</div>'
+    /* ⚠ 색만으로 말하지 않는다 — 색을 못 가리는 사람도 있고, 띠가 달을 넘어가면 안 보인다. */
+    + (시험 ? '<div class="scal-examline">' + iconSvg('bell', 12)
+        + '<b>시험기간</b> ' + stuDayLabel(시험.from) + ' ~ ' + stuDayLabel(시험.to)
+        + (시험.math ? ' · <b style="color:var(--no);">수학 ' + stuDayLabel(시험.math) + '</b>' : '')
+        + '</div>' : '')
     + '<div class="scal-legend">'
     + Object.keys(CAL_KINDS).map(k =>
         '<span><i style="background:' + CAL_KINDS[k].색 + '"></i>' + CAL_KINDS[k].이름 + '</span>').join('')
@@ -13137,66 +13218,130 @@ function stuDayLabel(date){
      그래서 `saveRecord` 의 막이 둘을 그대로 지난다(빈 것으로 안 덮는다 · 읽어 온 것만 쓴다). */
 function stuMyPlanHTML(c){
   const 오늘 = todayStr();
-  const 목록 = myEventsOf(c.rec).slice().sort((a, b) =>
-    (a.date || '').localeCompare(b.date || '') || (a.time || '').localeCompare(b.time || ''));
-  /* 지난 것은 접어 둔다 — 학원 일정은 쌓이기만 하고 지우는 사람이 없다. */
-  const 앞으로 = 목록.filter(e => (e.date || '') >= 오늘);
-  const 지난것 = 목록.filter(e => (e.date || '') < 오늘);
+  const 매주냐 = state.stuPlanWeekly !== false;    /* 기본이 «매주» — 학원은 대개 되풀이한다 */
+  const 고른요일 = state.stuPlanDows || [];
+  const 목록 = myEventsOf(c.rec).slice();
 
-  const 줄 = (e) => '<div class="scal-item" style="border-left-color:var(--dim)">'
+  /* 되풀이하는 것과 한 번짜리를 갈라 보여 준다 — 섞으면 「매주 가는 것」이 목록에 묻힌다. */
+  const 매주것 = 목록.filter(e => e.weekly);
+  const 한번것 = 목록.filter(e => !e.weekly).sort((a, b) =>
+    (a.date || '').localeCompare(b.date || '') || (a.time || '').localeCompare(b.time || ''));
+  const 앞으로 = 한번것.filter(e => (e.date || '') >= 오늘);
+  const 지난것 = 한번것.filter(e => (e.date || '') < 오늘);
+
+  const 요일이름 = ['일','월','화','수','목','금','토'];
+  const 지움 = (id) => '<button class="scal-del" title="지우기" onclick="delMyEvent(\'' + id + '\')">'
+    + iconSvg('x', 13) + '</button>';
+
+  const 매주줄 = (e) => '<div class="scal-item" style="border-left-color:var(--dim)">'
+    + '<div class="k" style="color:var(--sub);background:var(--sunk);">매주 '
+    + (e.dows || []).slice().sort().map(d => 요일이름[d]).join('·') + '</div>'
+    + '<div class="t"><b>' + escHtml(e.title || '') + '</b>'
+    + (e.memo || e.to
+        ? '<span>' + escHtml(e.memo || '') + (e.to ? (e.memo ? ' · ' : '') + escHtml(e.to) + '까지' : '') + '</span>'
+        : '') + '</div>'
+    + (e.time ? '<div class="tm mono">' + escHtml(e.time) + '</div>' : '')
+    + 지움(e.id) + '</div>';
+
+  const 한번줄 = (e) => '<div class="scal-item" style="border-left-color:var(--dim)">'
     + '<div class="k mono" style="color:var(--sub);background:var(--sunk);">' + escHtml(stuDayLabel(e.date)) + '</div>'
     + '<div class="t"><b>' + escHtml(e.title || '') + '</b>'
     + (e.memo ? '<span>' + escHtml(e.memo) + '</span>' : '') + '</div>'
     + (e.time ? '<div class="tm mono">' + escHtml(e.time) + '</div>' : '')
-    + '<button class="scal-del" title="지우기" onclick="delMyEvent(\'' + e.id + '\')">' + iconSvg('x', 13) + '</button>'
-    + '</div>';
+    + 지움(e.id) + '</div>';
 
-  return '<div class="sap-sec">'
+  /* ---- 적는 자리 ----
+     🔵 «매주»가 먼저 온다. 학원·과외는 대개 되풀이하는 것이라, 그쪽이 기본이라야 손이 덜 간다.
+     ⚠ 요일은 «단추»로 고른다 — 드롭다운이나 글자로 받으면 여럿 고르기가 번거롭다. */
+  const 폼 = '<div class="mc scal-wrap">'
     + '<div class="scal-daytitle"><b>내 일정 추가</b></div>'
-    + '<p class="scal-help">다른 학원·과외·개인 일정을 여기에 적어 두면 <b>달력에 함께</b> 보입니다.<br>'
+    + '<p class="scal-help">다른 학원·과외·개인 일정을 적어 두면 <b>달력에 함께</b> 보입니다.<br>'
     + '<span style="color:var(--dim);">선생님께는 보이지 않습니다 — 내 기록에만 저장됩니다.</span></p>'
-    + '<div class="scal-form">'
-    + '<input class="lo-in" id="mp-title" placeholder="무엇인가요? (예: 영어학원)" maxlength="40">'
-    + '<div class="row" style="gap:8px;">'
-    + '<input class="lo-in" id="mp-date" type="date" value="' + escHtml(state.stuPlanDate || 오늘) + '" style="flex:1;">'
-    + '<input class="lo-in" id="mp-time" type="time" style="width:120px;">'
+    + '<div class="scal-seg">'
+    + '<button class="' + (매주냐 ? 'on' : '') + '" onclick="state.stuPlanWeekly=true; render()">매주</button>'
+    + '<button class="' + (매주냐 ? '' : 'on') + '" onclick="state.stuPlanWeekly=false; render()">한 번만</button>'
     + '</div>'
+    + '<div class="scal-form">'
+    + '<input class="lo-in" id="mp-title" placeholder="무엇인가요? (예: 영어학원)" maxlength="40"'
+    + ' value="' + escHtml(state.stuPlanTitle || '') + '"'
+    + ' oninput="liveEdit(event, v=>state.stuPlanTitle=v)">'
+    + (매주냐
+        ? '<div class="scal-dows">'
+          + 요일이름.map((n, i) =>
+              '<button class="' + (고른요일.includes(i) ? 'on' : '') + '"'
+              + ' style="' + (i === 0 ? 'color:var(--no);' : i === 6 ? 'color:var(--blue);' : '') + '"'
+              + ' onclick="stuTogglePlanDow(' + i + ')">' + n + '</button>').join('')
+          + '</div>'
+          + '<div class="row" style="gap:8px;">'
+          + '<label class="scal-lab">시간<input class="lo-in" id="mp-time" type="time"></label>'
+          + '<label class="scal-lab">언제까지 (선택)<input class="lo-in" id="mp-to" type="date"></label>'
+          + '</div>'
+        : '<div class="row" style="gap:8px;">'
+          + '<label class="scal-lab">날짜<input class="lo-in" id="mp-date" type="date" value="'
+          + escHtml(state.stuPlanDate || 오늘) + '"></label>'
+          + '<label class="scal-lab">시간 (선택)<input class="lo-in" id="mp-time" type="time"></label>'
+          + '</div>')
     + '<input class="lo-in" id="mp-memo" placeholder="메모 (없어도 됩니다)" maxlength="60">'
     + '<button class="btn p" onclick="addMyEvent()">' + iconSvg('plus', 14) + ' 추가</button>'
-    + '</div></div>'
+    + '</div></div>';
 
-    + '<div class="sap-sec">'
-    + '<div class="scal-daytitle"><b>앞으로</b><span class="scal-badge">' + 앞으로.length + '</span></div>'
-    + (앞으로.length ? '<div class="scal-list">' + 앞으로.map(줄).join('') + '</div>'
-                    : '<div class="scal-empty">앞으로 적어 둔 일정이 없습니다.</div>')
+  const 목록화면 = '<div class="mc" style="margin-top:12px;">'
+    + '<div class="scal-daytitle"><b>매주 가는 것</b><span class="scal-badge">' + 매주것.length + '</span></div>'
+    + (매주것.length ? '<div class="scal-list">' + 매주것.map(매주줄).join('') + '</div>'
+                     : '<div class="scal-empty">되풀이하는 일정이 없습니다.</div>')
+    + '</div>'
+    + '<div class="mc" style="margin-top:12px;">'
+    + '<div class="scal-daytitle"><b>한 번만</b><span class="scal-badge">' + 앞으로.length + '</span></div>'
+    + (앞으로.length ? '<div class="scal-list">' + 앞으로.map(한번줄).join('') + '</div>'
+                     : '<div class="scal-empty">앞으로 적어 둔 일정이 없습니다.</div>')
     + (지난것.length
         ? '<details class="scal-past"><summary>지난 일정 ' + 지난것.length + '개</summary>'
-          + '<div class="scal-list">' + 지난것.reverse().map(줄).join('') + '</div></details>'
+          + '<div class="scal-list">' + 지난것.reverse().map(한번줄).join('') + '</div></details>'
         : '')
     + '</div>';
+
+  return 폼 + 목록화면;
+}
+
+function stuTogglePlanDow(i){
+  const 지금 = state.stuPlanDows || [];
+  state.stuPlanDows = 지금.includes(i) ? 지금.filter(x => x !== i) : 지금.concat([i]);
+  render();
 }
 
 async function addMyEvent(){
-  const title = (document.getElementById('mp-title').value || '').trim();
-  const date = document.getElementById('mp-date').value;
-  const time = document.getElementById('mp-time').value;
-  const memo = (document.getElementById('mp-memo').value || '').trim();
+  const 매주냐 = state.stuPlanWeekly !== false;
+  const title = (state.stuPlanTitle || '').trim();
+  const time = (document.getElementById('mp-time') || {}).value || '';
+  const memo = ((document.getElementById('mp-memo') || {}).value || '').trim();
   if(!title){ showToast('무엇인지 적어 주세요.'); return; }
-  if(!date){ showToast('날짜를 골라 주세요.'); return; }
+
+  let 새것;
+  if(매주냐){
+    const dows = (state.stuPlanDows || []).slice().sort();
+    if(!dows.length){ showToast('요일을 하나 이상 골라 주세요.'); return; }
+    const to = (document.getElementById('mp-to') || {}).value || '';
+    /* ⚠ 시작은 «오늘»부터다 — 지난 주까지 거슬러 채우면 달력이 옛날 것으로 덮인다. */
+    새것 = {id: 'me' + Date.now(), weekly: 1, dows, time, title, memo, from: todayStr(), to};
+  } else {
+    const date = (document.getElementById('mp-date') || {}).value || '';
+    if(!date){ showToast('날짜를 골라 주세요.'); return; }
+    새것 = {id: 'me' + Date.now(), date, time, title, memo};
+  }
+
   const sid = state.currentUser && state.currentUser.studentId;
   const rec = DATA.records[sid];
   /* ⚠ 읽어 온 기록이 아니면 `saveRecord` 가 막는다 — 여기서 미리 말해 준다.
      그 막이는 2026-09-04에 기록을 잃고 세운 것이라 건드리지 않는다. */
   if(!rec){ showToast('기록을 아직 못 받았습니다. 잠시 뒤 다시 해 주세요.'); return; }
   if(!Array.isArray(rec.myEvents)) rec.myEvents = [];
-  rec.myEvents.push({id: 'me' + Date.now(), date, time: time || '', title, memo});
+  rec.myEvents.push(새것);
   const ok = await saveRecord(sid);
   if(ok === null){ rec.myEvents.pop(); showToast('저장하지 못했습니다. 잠시 뒤 다시 해 주세요.'); render(); return; }
-  document.getElementById('mp-title').value = '';
-  document.getElementById('mp-memo').value = '';
-  document.getElementById('mp-time').value = '';
-  state.stuPlanDate = date;
-  showToast('일정을 추가했습니다.');
+
+  state.stuPlanTitle = ''; state.stuPlanDows = [];
+  const memoEl = document.getElementById('mp-memo'); if(memoEl) memoEl.value = '';
+  showToast(매주냐 ? '매주 되풀이하는 일정으로 넣었습니다.' : '일정을 추가했습니다.');
   render();
 }
 
@@ -13206,13 +13351,16 @@ async function delMyEvent(id){
   if(!rec || !Array.isArray(rec.myEvents)) return;
   const i = rec.myEvents.findIndex(e => e.id === id);
   if(i < 0) return;
-  if(!confirm('「' + (rec.myEvents[i].title || '') + '」을 지울까요?')) return;
+  const e = rec.myEvents[i];
+  if(!confirm('「' + (e.title || '') + '」을 지울까요?'
+    + (e.weekly ? '\n매주 되풀이하는 일정이라 앞으로 모두 사라집니다.' : ''))) return;
   const [지운것] = rec.myEvents.splice(i, 1);
   const ok = await saveRecord(sid);
   /* ⚠ 저장이 막히면 «지운 것처럼 보이는» 화면이 남는다 — 도로 넣는다. */
   if(ok === null){ rec.myEvents.splice(i, 0, 지운것); showToast('지우지 못했습니다.'); }
   render();
 }
+
 
 function studentTabBodyHTML(c){
   const t = state.studentTab;
