@@ -11,11 +11,16 @@
 //   앱 쪽이 워커의 대답을 사람 말로 옮기는지를 본다.
 
 import fs from 'fs';
+import { stripComments } from './strip-comments.mjs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const 벗기기 = (t) => t.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '');
+/* 🔴 예전에는 여기서 정규식으로 주석을 걷었는데, 문자열 안의 «/*»를 주석 시작으로 읽어
+   **진짜 코드를 29%나 삼켰다**(실측 1,171,182자 → 836,789자).
+   검사가 «없어서»가 아니라 «먹혀서» 통과할 수 있었다 — 조용히 눈이 머는 자리였다.
+   그래서 줄 첫머리만 보는 공용 것으로 옮겼다 → tools/strip-comments.mjs */
+const 벗기기 = stripComments;
 const worker = 벗기기(fs.readFileSync(path.join(ROOT, 'worker/gemini-proxy.js'), 'utf8').replace(/\r\n/g, '\n'));
 const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8').replace(/\r\n/g, '\n');
 

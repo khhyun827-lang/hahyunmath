@@ -13,6 +13,7 @@
 // ⚠ 화면으로는 못 본다 — 읽기가 엎어진 «그 순간»에만 일어나고, 지나고 나면 그냥 «비어 있다».
 
 import fs from 'fs';
+import { stripComments } from './strip-comments.mjs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -93,9 +94,7 @@ console.log('\n씨앗 심기 — 있는 기록을 지우지 않는가\n');
   //   ⚠ 소스 «글자»만 보면 주석에 적힌 옛 코드에 걸린다(실제로 걸렸다).
   //     검사가 「무엇을 보고 있는지」를 헷갈리면 이렇게 거짓으로 운다.
   //     그래서 주석을 걷어낸 «진짜 코드»를 본다.
-  const 코드 = lift('seedTestAccountIfEmpty')
-    .replace(/\/\*[\s\S]*?\*\//g, '')
-    .replace(/\/\/[^\n]*/g, '');
+  const 코드 = stripComments(lift('seedTestAccountIfEmpty'));
   봄('🔴 pw 를 심는 줄이 «코드»에 없다', /pw\s*:/.test(코드), false);
   봄('🔴 문서를 아예 안 쓴다', /dbSetDoc|dbSet\(/.test(코드), false);
 }

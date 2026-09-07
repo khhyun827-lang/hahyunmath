@@ -13,6 +13,7 @@
 // ⚠ 실제 Firebase 는 안 부른다 — 스텁으로 «무엇을 부르는가»만 본다.
 
 import fs from 'fs';
+import { stripComments } from './strip-comments.mjs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -136,7 +137,7 @@ console.log('\n학생 추가 — 무엇이 어디로 가는가\n');
 
 /* ── ⑤ 소스에 «되돌아간 자리»가 없는가 ───────────────────────── */
 {
-  const 조각 = 떠내기('addStudent').replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '');
+  const 조각 = stripComments(떠내기('addStudent'));
   봄('🔴 학생 문서를 짓는 자리에 pw 가 없다', /pw\s*[,:}]/.test(조각.split('newStudent =')[1] || ''), false);
   봄('🔴 학번으로 문서를 쓰지 않는다', /dbSetDoc\('students',\s*sid/.test(조각), false);
 }

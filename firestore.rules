@@ -84,9 +84,18 @@ service cloud.firestore {
     match /notices/{doc}     { allow read: if 진짜계정인가(); allow write: if 강사인가(); }
     match /videos/{doc}      { allow read: if 진짜계정인가(); allow write: if 강사인가(); }
     match /clinicslots/{doc} { allow read: if 진짜계정인가(); allow write: if 강사인가(); }
+    /* 🔴 **2026-09-07에 빠져 있는 것을 찾았다.** 이 줄이 없으면 맨 아래 «전부 막는다»에 걸려
+       조교가 로그인해도 아무것도 못 본다 — 제 계정조차 못 읽는다.
+       ⚠ 새 컬렉션을 규칙에 적을 때는 **앱이 만지는 것을 하나씩 세어** 볼 것
+         (`tools/rules-check.mjs` 가 그 목록을 들고 있다). */
+    match /assistants/{doc} { allow read: if 진짜계정인가(); allow write: if 강사인가(); }
 
     // ── 학생이 «내는» 것 ─────────────────────────────────────────────
     // 🔵 낼 수는 있고, 남의 것은 못 본다. 처리는 강사가 한다.
+    /* 🔵 아래 `resource.data.uid` 는 문서 «밖»에 따로 적힌 칸이다.
+       이 앱은 내용을 `value` 한 칸에 JSON 글자로 넣는데, 규칙도 질의도 그 «안»은 못 본다.
+       그래서 `dbSetDoc` 이 `data.uid` 를 밖에도 한 벌 적는다(index.html `docFields`).
+       ⚠ 그 둘이 어긋날 수 없게 «언제나 data.uid 에서 뜬다» — 부르는 쪽이 따로 챙기지 않는다. */
     match /clinics/{doc} {
       allow read:   if 강사인가() || (진짜계정인가() && resource.data.uid == request.auth.uid);
       allow create: if 진짜계정인가() && request.resource.data.uid == request.auth.uid;

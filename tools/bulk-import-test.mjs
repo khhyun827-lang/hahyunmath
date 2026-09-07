@@ -11,6 +11,7 @@
 //   uid 를 되찾아 이어야 한다(강사가 비밀번호를 들고 있으니 할 수 있는 일이다).
 
 import fs from 'fs';
+import { stripComments } from './strip-comments.mjs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -141,8 +142,7 @@ console.log('\n명단 한꺼번에 등록\n');
   /* 🔴 **또 주석에 걸렸다** — 소스 «글자»로 찾으면 「Promise.all 로 던지지 않는다」라고
      적어 둔 주석 자체가 걸린다. 오늘 seed-guard-test 에서 겪은 것과 같은 함정이다.
      ⚠ **검사가 무엇을 보고 있는지**를 늘 물을 것. 주석을 걷어낸 코드를 본다. */
-  const 조각 = 떠내기('confirmStudentBulkImport')
-    .replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '');
+  const 조각 = stripComments(떠내기('confirmStudentBulkImport'));
   봄('🔴 Promise.all 로 수십 개를 동시에 던지지 않는다', /Promise\.all/.test(조각), false);
   봄('한 줄씩 돈다', /for\s*\(const r of toAdd\)/.test(조각), true);
 }
