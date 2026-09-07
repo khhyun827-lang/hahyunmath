@@ -5062,6 +5062,61 @@ async function endSeason(){
   showToast(`「${next}」으로 넘어갔습니다. 지난 일정은 «지난 기록»에서 볼 수 있습니다.`);
   render();
 }
+/* 🔴 **«잘못 넘겼다»를 되돌린다** (2026-09-08 · 사용자가 실제로 겪었다).
+   「2026 2학기 중간인데 시즌을 넘겨버려서 되돌아갈 수가 없어. 목록에 뜨질 않네.」
+
+   두 가지가 겹쳐 막혀 있었다:
+   ① `archiveCurrentSeason` 은 **적어 둔 것이 없으면 아무것도 안 남긴다**(그건 옳다 —
+      빈 기록이 목록을 채우면 찾기만 어려워진다). 그래서 「지난 기록」 고르개가 비어 있었다.
+   ② 그리고 **되돌아가는 문이 아예 없었다.** 넘기는 문만 있었다.
+
+   🔴 **`saveSeason()` 을 쓰면 안 된다** — 그건 범위와 날짜를 «비운다».
+     되돌리는데 지금 적어 둔 것을 지우면, 되돌리기가 또 다른 사고가 된다.
+
+   🔵 보관본이 있으면 **그것을 되살린다** — 그게 진짜 되돌리기다. 되살린 뒤 목록에서 뺀다
+     (안 빼면 「지난 기록」에 지금 시즌이 또 떠서 둘로 보인다).
+   ⚠ 교재(school-books)는 **안 되살린다.** 교재는 시즌과 무관하게 «지금 값»이 살아 있어서,
+     보관본의 스냅숏으로 덮으면 그 뒤에 바꾼 최신 교재를 지우게 된다. */
+async function backSeason(){
+  const now = currentSeason();
+  const prev = SEASONS[(SEASONS.indexOf(now) - 1 + SEASONS.length) % SEASONS.length];
+  await loadExamHistoryIfNeeded();
+  const hist = (state.examHistory && state.examHistory.items) || [];
+  /* 맨 앞 보관본이 «바로 그 시즌»일 때만 되살린다 — 더 옛것을 끌어오면 엉뚱한 해의 것이 온다. */
+  const 되살릴것 = (hist[0] && hist[0].season === prev) ? hist[0] : null;
+  const 지금적어둔것 = (() => {
+    const er = state.examRanges || {};
+    return (er.bySchool && Object.keys(er.bySchool).length)
+        || (er.dates && Object.keys(er.dates).length);
+  })();
+
+  if(!confirm(`「${now}」을 「${prev}」으로 되돌릴까요?\n\n`
+    + (되살릴것
+        ? `보관해 둔 「${examHistLabel(되살릴것)}」의 날짜·범위를 **되살립니다.**\n`
+          + `(되살린 뒤 「지난 기록」 목록에서는 빠집니다.)\n`
+        : `보관된 기록이 없어 **이름만** 되돌립니다.\n`)
+    + (지금적어둔것 && 되살릴것
+        ? `\n⚠ 지금 적어 둔 날짜·범위는 되살아나는 것으로 «바뀝니다».\n`
+        : `\n지금 적어 둔 날짜·범위는 그대로 둡니다.\n`))) return;
+
+  if(되살릴것){
+    state.examRanges = {season: prev, bySchool: 되살릴것.bySchool || {}, dates: 되살릴것.dates || {}};
+    await dbSet('exam-ranges', state.examRanges);
+    state.examHistory.items = hist.slice(1);
+    await dbSet('exam-history', state.examHistory);
+  } else if(state.examRanges){
+    /* 이름만 되돌린다 — 적어 둔 것은 손대지 않는다. */
+    state.examRanges.season = prev;
+    await dbSet('exam-ranges', state.examRanges);
+  }
+  /* 🔴 saveSeason() 을 안 쓴다(비운다). 여기서 직접 적는다. */
+  state.season = {name: prev, startedAt: (되살릴것 && 되살릴것.startedAt) || todayStr()};
+  await dbSet('season', state.season);
+  state.examSeasonView = '';
+  logAudit('시험 시즌 되돌림', '', '', `${now} → ${prev}` + (되살릴것 ? ' · 보관본을 되살렸다' : ' · 이름만'));
+  showToast(`「${prev}」으로 되돌렸습니다.` + (되살릴것 ? ' 보관해 둔 일정을 되살렸습니다.' : ''));
+  render();
+}
 async function saveSchoolRange(school, grade, subject, chapters){
   if(!state.examRanges) state.examRanges = {season: currentSeason(), bySchool: {}};
   const bys = state.examRanges.bySchool;
@@ -21893,6 +21948,8 @@ function teacherExamRangeHTML(){
   loadExamHistoryIfNeeded();
   const season = currentSeason();
   const next = SEASONS[(SEASONS.indexOf(season) + 1) % SEASONS.length];
+  /* 되돌리기 단추가 쓴다 — 「잘못 넘겼다」는 실제로 일어난다(2026-09-08). */
+  const prevSeason = SEASONS[(SEASONS.indexOf(season) - 1 + SEASONS.length) % SEASONS.length];
   const hist = (state.examHistory && state.examHistory.items) || [];
 
   /* ---- 지금이냐 지난 기록이냐. 이 갈림을 «접근자 셋»에 가둔다 —
@@ -22046,6 +22103,8 @@ function teacherExamRangeHTML(){
       ${state.season && state.season.startedAt
         ? `<span style="font-size:11.5px;color:var(--dim);"><span class="mono">${escHtml(state.season.startedAt)}</span>부터</span>` : ''}
       <span class="spacer"></span>
+      <button class="btn q sm" onclick="backSeason()"
+        title="잘못 넘겼을 때 앞 시즌으로 되돌립니다">← ${escHtml(prevSeason)}</button>
       <button class="btn p sm" onclick="endSeason()">${escHtml(season)} 종료 → ${escHtml(next)}</button>
     </div>
     <div style="margin-top:10px;font-size:11.5px;color:var(--dim);line-height:1.8;">
