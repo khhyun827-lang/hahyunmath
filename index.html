@@ -21944,14 +21944,29 @@ function teacherExamRangeHTML(){
   } else {
     /* 학교 × 학년 × 과목 — 실제로 범위가 필요한 조합만 세운다.
        학년이 들어가야 하는 이유는 rangeChapters() 주석에 있다. */
+    /* 🔴 **과목이 안 정해졌다고 줄을 안 세우면, 날짜조차 못 적는다** (2026-09-08 · 사용자가 짚었다).
+       「학생과 학교를 등록했는데 시험일정 적을 수 있는 표가 뜨지 않아」 —
+       그 학생이 듣는 반에 진도 과목이 없어서 `return` 으로 통째로 빠지고 있었다.
+       🔵 그런데 이 화면이 스스로 말하듯 **«날짜와 교재는 학교·학년 단위»**다 — 과목과 상관없다.
+         그러니 **과목이 없어도 «학교 × 학년» 줄은 서야 한다.** 범위 칸만 비어 있으면 된다.
+       ⚠ 나중에 반에 과목을 정하면 그 줄이 «과목 있는 줄»로 바뀐다 — 적어 둔 날짜는 그대로다
+         (날짜는 학교·학년으로 저장되지, 줄에 매달려 있지 않다). */
     const combos = {};
     DATA.students.forEach(s => {
       const subject = subjectOfStudent(s.studentId);
-      if(!subject) return;
       const school = s.school || '', grade = s.grade || '';
-      const key = rangeKey(school, grade, subject);
-      if(!combos[key]) combos[key] = {school, grade, subject, n: 0};
+      /* 학교도 학년도 모르면 시험 일정을 걸 자리가 없다 — 그때만 뺀다. */
+      if(!school && !grade) return;
+      const key = rangeKey(school, grade, subject || '');
+      if(!combos[key]) combos[key] = {school, grade, subject: subject || '', n: 0};
       combos[key].n++;
+    });
+    /* ⚠ 같은 학교·학년에 «과목 있는 줄»이 생겼으면 «과목 없는 줄»은 지운다 —
+       둘 다 두면 날짜 칸이 두 줄에 겹쳐 보여 어느 것을 적어야 할지 헷갈린다. */
+    Object.values(combos).forEach(c => {
+      if(!c.subject) return;
+      const 빈줄 = rangeKey(c.school, c.grade, '');
+      if(combos[빈줄]) delete combos[빈줄];
     });
     list = Object.values(combos);
   }
