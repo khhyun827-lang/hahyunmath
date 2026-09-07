@@ -3,6 +3,10 @@
 //   node tools/review-bench.mjs --list                    돌릴 수 있는 무료 모델을 본다
 //   node tools/review-bench.mjs <모델id> [--n 40]         한 모델을 시험한다
 //   node tools/review-bench.mjs <모델A> <모델B> --n 30    여럿을 같은 시험지로
+//   node tools/review-bench.mjs <모델id> --scene 3 --resume   어제 받다 만 것을 «잇는다»
+//
+// 🔵 **--resume** — `.bench/*.jsonl` 에 남겨 둔 답을 다시 쓴다(같은 모델·같은 곳만).
+//   하루 토큰(TPD)이 SCENE 3 을 한 번에 못 재게 하므로 이틀에 걸쳐 한 시험지를 끝낸다.
 //
 // 🔵 **왜 «짐작»하지 않고 재는가** — 어느 모델이 수학을 잘하는지는 평판으로 고를 일이 아니다.
 //   우리에겐 정답이 붙은 452제가 있다. 그게 곧 시험지다.
@@ -29,13 +33,24 @@ const 재시도 = +값('--retry', 3);         // 429·5xx 를 «못 잼»으로 
 // 🔴 답이 «틀린» 것과 답을 «적기 전에 잘린» 것은 다르다 — gpt-oss 가 60제 중 3제에서
 //   추론에 1만 자를 쓰고 finish_reason=length 로 끊겨 content 가 0자였다.
 //   그걸 「틀림」으로 세면 모델을 억울하게 깎고, 검토 기능에서는 «없는 불일치»를 만든다.
-const 최대 = +값('--max', 8000);         // 답까지 적을 만큼 넉넉히
+// 🔴 이 값은 «두 벽 사이»에 있어야 한다 — 한쪽만 보고 정하면 반드시 한쪽에 부딪힌다.
+//   ↑ 너무 크면: Groq 무료의 «분당» 토큰 한도가 8000 이라, 8000 을 예약하면 통을 통째로
+//     차지해 **통이 비어 있어도 매 요청이 429** 다(09-06 에 겪었다).
+//   ↓ 너무 작으면: 답을 적기 «전»에 잘린다. 4000 으로 내렸더니 SCENE 3 은 새로 물은 3제 중
+//     2제가 잘렸다(09-07 실측). 어려운 문항은 추론에만 4000토큰을 넘게 쓴다.
+//   그래서 6000 — 문항 글(600토큰쯤)을 얹어도 8000 밑이고, 추론에도 넉넉하다.
+// ⚠ 「잘림」은 «틀림»이 아니라 «못 잼»으로 세어 둔다(아래 finish_reason 자리). 그래도
+//   못 잰 것이 쌓이면 점수가 뜻을 잃으므로, 잘림이 잦으면 이 값부터 볼 것.
+const 최대 = +값('--max', 6000);         // 답까지 적을 만큼 · 분당 한도(8000)보다는 낮게
 const 자리 = 값('--scene', '');        // '3' 이면 SCENE 3(실전)만 — 쉬운 문제로 부풀린 점수를 걷어낸다
 // ⚠ 손잡이 값(--gap 12 의 12)을 모델 이름으로 세면 안 된다 — 예전엔 --n 값만 걸러서
 //   --gap 을 붙이는 순간 12 라는 «모델»을 시험하려 들었다. 손잡이 «뒤»를 통째로 뺀다.
 const 인자 = process.argv.slice(2);
+// 🔴 «값을 안 받는» 손잡이 뒤에는 모델이 올 수 있다 — --resume 을 값 받는 것으로 세면
+//   `--resume groq:…` 이 모델을 통째로 잃고 「모델을 안 줬다」며 멈춘다.
+const 홀손잡이 = new Set(['--resume', '--list']);
 const 모델들 = 인자.filter((a, i) => !a.startsWith(String.fromCharCode(45, 45))
-  && !(i > 0 && 인자[i - 1].startsWith(String.fromCharCode(45, 45))));
+  && !(i > 0 && 인자[i - 1].startsWith(String.fromCharCode(45, 45)) && !홀손잡이.has(인자[i - 1])));
 
 // 🔵 «어디로 보내는가»를 모델 이름 앞에 붙여 고른다 — groq:… · cerebras:… · 그 밖은 OpenRouter.
 //   사용자가 실제로 물은 후보(gpt-oss-120b)는 OpenRouter 무료 목록에 없다. Groq·Cerebras 가 준다.
@@ -224,7 +239,11 @@ async function 한번(g, 문항) {
   const 초 = (Date.now() - t0) / 1000;
   const t = await r.text();
   if (r.status === 429 || r.status >= 500) {
-    return { 흠: 'http ' + r.status + ' ' + t.replace(/\s+/g, ' ').slice(0, 90), 초, 기다림: 얼마나쉬랬나(r, t) };
+    // 🔴 «자르기 전»의 말로 가린다 — per day 는 90자 뒤에 나온다.
+    //   자른 값에서 찾으면 영영 못 문다(09-07 에 실제로 못 물었다).
+    const 바닥 = /per day|TPD/i.test(t);
+    return { 흠: 'http ' + r.status + ' ' + t.replace(/\s+/g, ' ').slice(0, 90), 초,
+      기다림: 바닥 ? 0 : 얼마나쉬랬나(r, t), 바닥 };
   }
   if (!r.ok) return { 흠: 'http ' + r.status + ' ' + t.replace(/\s+/g, ' ').slice(0, 110), 초 };
   let j; try { j = JSON.parse(t); } catch (e) { return { 흠: '응답을 못 읽음', 초 }; }
@@ -242,6 +261,8 @@ async function 풀리기(model, 문항) {
   for (let 판 = 0; ; 판++) {
     const r = await 한번(g, 문항);
     r.쉰초 = 쉰초;
+    // ⚠ 바닥은 «기다린다고 풀리는 것»이 아니다 — 90초를 세 번 버리지 말고 곧장 돌려준다.
+    if (r.바닥) return r;
     if (!r.기다림 || 판 >= 재시도) return r;
     process.stdout.write('  (한도 — ' + Math.round(r.기다림 / 1000) + '초 쉬고 다시)   ');
     await 쉼(r.기다림);
@@ -252,25 +273,69 @@ async function 풀리기(model, 문항) {
 const 기록 = path.join(ROOT, '.bench', new Date().toISOString().slice(0, 10) + '.jsonl');
 fs.mkdirSync(path.dirname(기록), { recursive: true });
 
+/* ── 이어받기 ─────────────────────────────────────────────────────
+   🔵 «한 번 받은 답은 다시 안 묻는다» — 하루 토큰(TPD)이 천장이라 60제를 한 번에
+     못 끝낸다. 어제 받아 둔 답이 있으면 그것부터 쓰고, 모자란 것만 새로 묻는다.
+   🔴 같은 모델 «같은 곳»의 답만 이어받는다 — groq 와 cerebras 의 답을 섞으면
+     그 점수는 어느 곳의 점수도 아니다. 그래서 모델 글자를 통째로 견준다.
+   ⚠ 흠(429·잘림)은 안 이어받는다 — 그건 «답»이 아니라 «못 잰 것»이다. */
+const 이어 = process.argv.includes('--resume');
+const 받아둔 = {};
+if (이어) {
+  const 곳 = path.dirname(기록);
+  for (const f of fs.readdirSync(곳).filter((f) => f.endsWith('.jsonl')).sort()) {
+    for (const 줄 of fs.readFileSync(path.join(곳, f), 'utf8').split(/\r?\n/)) {
+      if (!줄.trim()) continue;
+      let r; try { r = JSON.parse(줄); } catch (e) { continue; }
+      if (r.흠 || !r.낸답) continue;
+      (받아둔[r.model] = 받아둔[r.model] || {})[r.code] = r;   // 뒤엣것이 이긴다(가장 최근 답)
+    }
+  }
+  const 셈 = Object.entries(받아둔).map(([m, o]) => m + ' ' + Object.keys(o).length + '건');
+  console.log('\n  이어받을 것: ' + (셈.join(' · ') || '없음'));
+}
+
 /* ── 돌린다 ───────────────────────────────────────────────────────── */
 const 결과 = [];
 for (const model of 모델들) {
   console.log('\n── ' + model);
   let 맞음 = 0, 틀림 = 0, 흠 = 0, 토큰 = 0, 시간 = 0;
   const 틀린것 = [];
+  let 이어받음 = 0, 남긴것 = 0, 바닥임 = false;
   for (let i = 0; i < 시험지.length; i++) {
     const x = 시험지[i];
     const 꼴 = 정답꼴(x.answer);
     const 정답 = 꼴.v;
+    const 옛 = (받아둔[model] || {})[x.code];
+    if (옛) {
+      // ⚠ 다시 «세는» 것은 한다 — 채점을 고쳤으면 옛 답도 새 잣대로 봐야 한다.
+      이어받음++;
+      if (맞나(옛.낸답, 정답, 꼴.kind, x.content)) 맞음++;
+      else { 틀림++; 틀린것.push(x.code + ' (정답 ' + 정답 + ' · 낸 답 ' + 옛.낸답 + ' · 이어받음)'); }
+      process.stdout.write('\r   ' + (i + 1) + '/' + 시험지.length + ' — 맞음 ' + 맞음 + ' · 틀림 ' + 틀림 + ' · 흠 ' + 흠 + ' · 이어받음 ' + 이어받음 + '   ');
+      continue;
+    }
+    // 🔴 바닥을 만난 뒤로는 «묻지 않는다» — 어차피 전부 429 라 못 잰 것만 쌓인다.
+    //   그래도 «걷기»는 끝까지 한다: 뒤쪽에 이어받을 답이 있으면 그건 세어야 한다.
+    //   (한 번 break 했다가 이미 받아 둔 47제를 통째로 버린 적이 있다.)
+    if (바닥임) { 남긴것++; continue; }
     const r = await 풀리기(model, x);
     시간 += r.초; 토큰 += r.토큰 || 0;
+    if (r.바닥) {
+      바닥임 = true; 남긴것++;
+      console.log('\n\n   🔴 하루 토큰이 바닥났습니다 — 여기서부터는 «안 묻는다».');
+      console.log('      ' + r.흠.slice(0, 140));
+      console.log('      한도가 돌아오면 같은 명령에 --resume 을 붙여 이으면 된다.');
+      continue;
+    }
     if (r.흠) { 흠++; if (흠 <= 2) console.log('\n   ⚠ ' + x.code + ' — ' + r.흠); }
     else if (맞나(r.답, 정답, 꼴.kind, x.content)) 맞음++;
     else { 틀림++; 틀린것.push(x.code + ' (정답 ' + 정답 + ' · 낸 답 ' + (r.답 || '못 읽음') + ')'); }
     // ⚠ 낸 답을 남겨 둔다 — 채점을 고쳤을 때 «다시 물어보지 않고» 다시 셀 수 있어야 한다.
     //   OpenRouter 무료는 하루 50번뿐이라, 채점 버그 하나에 하루치를 태울 수는 없다.
     fs.appendFileSync(기록, JSON.stringify({ 때: new Date().toISOString(), model, code: x.code,
-      갈래: 꼴.kind, 정답, 낸답: r.답 || null, 흠: r.흠 || null, 끝난꼴: r.끝난꼴 || null }) + '\n');
+      갈래: 꼴.kind, 정답, 낸답: r.답 || null, 흠: r.흠 || null, 바닥: r.바닥 || null,
+      끝난꼴: r.끝난꼴 || null }) + '\n');
     process.stdout.write('\r   ' + (i + 1) + '/' + 시험지.length + ' — 맞음 ' + 맞음 + ' · 틀림 ' + 틀림 + ' · 흠 ' + 흠 + '   ');
     await 쉼(간격);
   }
@@ -278,8 +343,10 @@ for (const model of 모델들) {
   const 율 = 잰것 ? Math.round((맞음 / 잰것) * 1000) / 10 : 0;
   console.log('\r   맞음 ' + 맞음 + ' · 틀림 ' + 틀림 + ' · 못 잼 ' + 흠 + '  →  일치율 ' + 율 + '%'
     + (잰것 ? ' · 한 건에 평균 ' + Math.round(토큰 / 잰것) + '토큰 · ' + (시간 / 시험지.length).toFixed(1) + '초' : ''));
+  if (이어받음) console.log('   (그중 ' + 이어받음 + '제는 예전에 받아 둔 답을 다시 센 것이다 — 새로 안 물었다)');
+  if (남긴것) console.log('   ⚠ ' + 남긴것 + '제는 아직 «안 물은» 것이다(하루 토큰) — 이 점수는 ' + 잰것 + '제짜리다.');
   for (const t of 틀린것.slice(0, 5)) console.log('     틀린 것: ' + t);
-  결과.push({ model, 맞음, 틀림, 흠, 율, 토큰: 잰것 ? Math.round(토큰 / 잰것) : 0 });
+  결과.push({ model, 맞음, 틀림, 흠, 율, 토큰: 잰것 ? Math.round(토큰 / 잰것) : 0, 남긴것 });
 }
 
 console.log('\n\n  ══ 견줌 ══');
