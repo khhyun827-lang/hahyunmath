@@ -52,12 +52,23 @@ const 있는컬렉션 = [...m[1].matchAll(/'([a-z-]+)'/g)].map((x) => x[1]).conc
 console.log('  (컬렉션 목록은 backup.mjs 에서 읽었다 — ' + 있는컬렉션.length + '개)');
 
 /* ── 문서 «이름»만 훑는다 (값은 안 받는다) ───────────────────── */
+/* 🔴 **2026-09-08에 규칙을 제대로 잠갔다** — 그래서 이 도구는 이제 익명으로 아무것도 못 센다.
+   ⚠ 그건 «흠»이 아니라 **옳은 상태**다. 스택을 토하지 말고 그렇게 말한다.
+     이 도구가 다시 필요해지면(테스트 데이터를 또 걷어낼 일), 강사로 로그인한 토큰이 있어야 한다. */
+function 잠겼다고말한다() {
+  console.error('\n  🔵 **규칙이 잠겨 있습니다 — 익명으로는 셀 수 없습니다.**');
+  console.error('     2026-09-08에 인증을 제대로 세우면서 그렇게 됐습니다. 흠이 아닙니다.\n');
+  console.error('  ▶ 이 도구를 다시 쓰려면 «강사 자격»으로 물어야 합니다.');
+  console.error('     지금은 그 길이 없습니다 — 필요해지면 그때 붙입니다.\n');
+  process.exit(2);
+}
 async function 이름들(c) {
   const out = []; let pt = '';
   do {
     const u = BASE + '/' + c + '?pageSize=300&mask.fieldPaths=__name__' + (pt ? '&pageToken=' + pt : '');
     const r = await fetch(u, { headers: H });
     if (r.status === 404) break;
+    if (r.status === 403) 잠겼다고말한다();
     if (!r.ok) throw new Error(c + ' http ' + r.status);
     const j = await r.json();
     for (const d of (j.documents || [])) out.push(d.name.split('/').pop());

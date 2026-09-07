@@ -3298,6 +3298,17 @@ function collectionWriteBlocked(collection){
   return true;
 }
 /* 지금 못 읽고 있는 것이 있나 — 화면 위 띠(#3)가 이걸 본다. */
+/* 🔵 **«못 읽었다» 표시를 지운다** — 사람이 바뀔 때 부른다.
+   🔴 안 지우면 «남의 자격으로 못 읽은 것»이 내 화면에 빨간 띠로 남는다.
+     2026-09-08에 실제로 그랬다: 로그인 전 익명으로 읽다 전부 403 이 났고,
+     그 표시가 로그인 뒤에도 안 지워져 강사·학생 화면 모두 띠가 떴다.
+   ⚠ 「읽어 봤다(dbReadOK)」도 같이 지운다 — 그건 «내가» 읽어 본 것이 아니기 때문이다.
+     남겨 두면 saveRecord 의 «빈 것으로 덮지 않는» 막이가 잘못된 근거로 통과한다. */
+function dbReadClear(){
+  collectionReadFailed.clear();
+  dbReadFailed.clear();
+  dbReadOK.clear();
+}
 function dbReadTrouble(){
   return collectionReadFailed.size > 0 || dbReadFailed.size > 0;
 }
@@ -5219,6 +5230,7 @@ function showToast(msg){
      그래서 명단에 제 문서 하나만 실어도 화면이 그대로 선다.
    ⚠ 강사·조교는 예전대로 전부 읽는다. 그건 규칙도 허락한다. */
 async function loadStudentData(uid){
+  dbReadClear();          // ⚠ 앞사람(익명)의 실패를 물려받지 않는다
   const [me, classes, notices, videos, exams, problemBank, assignments, clinicSlots, clinics, qnas] =
     await Promise.all([
       dbGetDoc('students', uid, null),
@@ -5242,6 +5254,7 @@ async function loadAllData(){
        그때는 거의 다 막히는데, 그게 맞다 — 공개 홈은 DB 를 볼 일이 없다. */
   const 나 = authIsReal() ? authWhoOf(fbAuth.currentUser.email) : null;
   if(나 && 나.role === 'student') return loadStudentData(fbAuth.currentUser.uid);
+  dbReadClear();          // ⚠ 앞사람(익명)의 실패를 물려받지 않는다
   [
     DATA.students, DATA.notices, DATA.consults, DATA.teacherPw,   // ⚠ teacherPw 는 이제 늘 null 이다 (아래 참고)
     DATA.classes, DATA.clinics, DATA.clinicSlots, DATA.qnas,
@@ -23270,10 +23283,31 @@ window.addEventListener('popstate', (e) => {
 });
 
 /* =================== 시작 =================== */
-// 익명 인증 시도 (완전 공개 접근 차단용 최소 보안 장치). 인증 설정이 안 됐거나
-// 실패해도 loadAll()의 자체 에러 처리로 사이트는 계속 동작한다.
-fbAuth.signInAnonymously().catch(e=>console.error('익명 로그인 실패 (Firebase Authentication에서 익명 로그인을 사용 설정했는지 확인하세요)', e));
-loadAll();
+/* 🔴 **로그인 «전»에는 DB 를 한 건도 안 읽는다** (2026-09-08).
+   예전에는 여기서 바로 `loadAll()` 을 불렀다. 규칙이 익명을 막게 되자 그 읽기가 전부 403 이 났고,
+   **그 「못 읽었다」 표시가 로그인 뒤에도 남아** 강사·학생 화면 모두 빨간 띠가 떴다.
+   ⚠ 화면은 멀쩡히 돌았다 — 띠만 거짓말을 하고 있었던 것이라 더 헷갈렸다.
+
+   🔵 공개 홈은 DB 를 볼 일이 없다. 그래서 **누가 들어온 뒤에** 읽는다.
+   ⚠ 익명 로그인은 그대로 둔다 — 로그인 «전»에 내는 상담 신청이 그것으로 간다(firestore.rules). */
+let 처음읽었나 = false;
+fbAuth.onAuthStateChanged(async (u) => {
+  if(!u){
+    /* 아직 아무도 아니다 — 상담 신청을 낼 수 있게 익명으로만 붙여 둔다. */
+    fbAuth.signInAnonymously().catch(e=>console.error('익명 로그인 실패 (Authentication 에서 익명이 켜져 있는지 볼 것)', e));
+    return;
+  }
+  if(처음읽었나) return;
+  처음읽었나 = true;
+  if(authIsReal()){
+    await loadAll();          // 진짜 계정이다 — 그 사람 몫을 읽고 화면을 세운다
+  } else {
+    /* 익명이다 — **읽지 않는다.** 공개 홈·로그인 화면만 그린다. */
+    dbReadClear();
+    applyHashOnLoad();
+    render();
+  }
+});
 </script>
 </body>
 </html>

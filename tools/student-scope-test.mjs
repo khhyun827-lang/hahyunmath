@@ -49,15 +49,19 @@ console.log('\n학생이 제 것만 읽는가\n');
 {
   const w = { 문서: [], 컬렉션: [], 내것: [] };
   const DATA = {};
-  const fn = new Function('DATA', 'dbGetDoc', 'dbGetCollection', 'dbGetCollectionByUid',
+  const fn = new Function('DATA', 'dbReadClear', 'dbGetDoc', 'dbGetCollection', 'dbGetCollectionByUid',
     떠내기('loadStudentData') + '; return loadStudentData;')(
     DATA,
+    () => { w.지웠나 = true; },
     async (c, id, fb) => { w.문서.push(c + '/' + id); return { studentId: 's1', uid: id, name: '나' }; },
     async (c) => { w.컬렉션.push(c); return [{ id: 'x' }]; },
     async (c, uid) => { w.내것.push(c + '@' + uid); return [{ id: 'y', uid }]; },
   );
   await fn('U1');
 
+  /* 🔴 앞사람(익명)의 «못 읽었다» 표시를 물려받으면, 멀쩡히 도는 화면에 빨간 띠가 뜬다.
+     2026-09-08에 실제로 그랬다 — 화면은 다 도는데 띠만 거짓말을 했다. */
+  봄('🔴 읽기 전에 «못 읽었다» 표시를 지운다', w.지웠나, true);
   봄('🔴 명단은 «제 문서 하나»만 읽는다', w.문서, ['students/U1']);
   봄('🔴 명단 전체(students 컬렉션)는 «안» 읽는다', w.컬렉션.includes('students'), false);
   봄('   그래도 DATA.students 에 내가 들어 있다 — 화면이 나를 찾는다', DATA.students.length, 1);
