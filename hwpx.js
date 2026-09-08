@@ -506,7 +506,7 @@ function hwpWalkParagraphs(paras, tokens){
           const endNoteEl = child.getElementsByTagNameNS(HP_NS,'endNote')[0];
           if(endNoteEl){
             { const _p = hwpEndnoteParts(endNoteEl);
-              tokens.push({type:'endnote', v: _p.answer, code: _p.code, sol: _p.solution}); }
+              tokens.push({type:'endnote', v: _p.answer, code: _p.code, fp: _p.fp, sol: _p.solution}); }
           } else if(child.getElementsByTagNameNS(HP_NS,'autoNum')[0]?.getAttribute('numType')==='ENDNOTE'){
             // 문서 맨 뒤 "빠른정답" 요약처럼 진짜 hp:endNote가 아닌 평문 목록을 만나면
             // 문항 구간이 끝난 것으로 보고 멈춘다.
@@ -535,7 +535,31 @@ function hwpWalkParagraphs(paras, tokens){
      심기는 잘 됐는데 본문이 0건 나오는 것도 같은 자리다(실제로 그렇게 나왔다).
    ⚠ 두 꼴은 «생김새로» 절대 안 겹친다 — ①에는 줄표가 있고 ②에는 없다.
      그래서 어느 쪽인지 헷갈릴 일이 없다. */
-const HWP_CODE_RE = /^\s*\[([A-Z]{1,2}\d?-\d{2}-[A-Z]-\d{4}(?:-[NUD]\d{2})?|[12]\d{6}[AB]?(?:OR|NC|UP|DW)(?:\d{2})?)\]\s*/;
+/* 🔵 **코드 뒤에 «지문»이 따라올 수 있다** (2026-09-09 · 복사본을 알아보려고).
+     `[K2-01-E-0013]`  — 지문 없음. 이미 심어 둔 564제가 이 꼴이다
+     `[K2-01-E-0013|a3f91c7e]`  — 그때 그 본문의 해시 앞 8자리
+   🔴 **지문 없음은 «틀림»이 아니라 «못 가림»이다.** 옛 파일을 그대로 읽어야 하므로 있어도 없어도 된다.
+   ⚠ 지문은 두 번째 묶음(`m[2]`)이다 — 코드 꼴이 둘이라 첫 묶음 안에 갈래가 들어 있다.
+     자세한 것은 [`docs/코드-숨기기.md`](docs/코드-숨기기.md).
+   🔴 **지문 자리는 «관대하게» 문다** (2026-09-09에 검사가 잡았다). 8자리 16진수만 받게 했더니
+     지문이 한 글자라도 망가진 순간 **코드까지 통째로 못 물어 코드가 정답 글자에 섞였다** —
+     ①에서 겪은 그 흠이 지문 때문에 되살아나는 꼴이다. 사람이 손으로 고칠 수 있는 자리라 실제로 난다.
+     🔵 **무는 것은 넓게, 값을 보는 것은 좁게.** 꼴이 틀린 지문은 아래에서 «없음»으로 떨어진다. */
+const HWP_CODE_RE = /^\s*\[([A-Z]{1,2}\d?-\d{2}-[A-Z]-\d{4}(?:-[NUD]\d{2})?|[12]\d{6}[AB]?(?:OR|NC|UP|DW)(?:\d{2})?)(?:\|([^\]\s]{0,32}))?\]\s*/;
+/* 지문으로 쳐 주는 꼴 — 소문자 16진수 8자리. 이것 말고는 «없음»으로 본다. */
+const HWP_FP_RE = /^[0-9a-f]{8}$/;
+
+/* 지문을 뜰 때 «무엇을 견줄 것인가» — 잣대는 여기 한 곳뿐이다 (2026-09-09).
+   🔴 **두 벌로 두면 반드시 어긋난다.** 웹도 도구도 이 함수를 부른다.
+   🔵 **공백만 접는다.** 564제로 재 보니 이것으로 족했다 —
+     줄바꿈 하나·가운데 두 칸·앞뒤 공백에는 안 흔들리고(0/564제), 숫자나 글자가 하나 바뀌면 문다.
+   ⚠ 더 느슨한 잣대(공백을 아예 없애고 ①②③ 기호까지 지우기)도 재 봤는데 **결과가 같았다.**
+     같은 값이면 덜 손대는 쪽을 쓴다 — 손댄 만큼 나중에 설명할 것이 는다.
+   ⚠ 여기서 해시를 뜨지 않는다. 브라우저는 `crypto.subtle`(비동기)이고 node 는 `createHash`(동기)라
+     한 함수로 못 담는다. **가르는 규칙만 여기 두고, 해시는 부르는 쪽이 뜬다.** */
+function hwpItemFpText(content){
+  return String(content == null ? '' : content).replace(/\s+/g, ' ').trim();
+}
 
 /* 문제 끝의 배점 표기를 걷어낸다 — 「[5.0점]」·「[4점]」·「(3점)」 (2026-09-04 · 사용자 요청).
    🔵 배점은 **그 시험지에서만 참인 값**이다. 문항을 창고에 담아 다른 시험지로 돌려 쓰면
@@ -578,9 +602,9 @@ function hwpEndnoteParts(endNoteEl){
   hwpWalkParagraphs(innerParas, innerTokens);
   let ans = '';
   for(const it of innerTokens){ if(it.type==='text'||it.type==='eq') ans += it.v; }
-  let code = '';
+  let code = '', fp = '';
   const m = ans.match(HWP_CODE_RE);
-  if(m){ code = m[1]; ans = ans.slice(m[0].length); }
+  if(m){ code = m[1]; fp = HWP_FP_RE.test(m[2] || '') ? m[2] : ''; ans = ans.slice(m[0].length); }
   // "[정답]" 라벨과, 일부 문서에서 수식 앞에 자동으로 붙는 "수식입니다." 안내 문구를 제거한다.
   let rest = ans.replace(/^\s*\[정답\]\s*/,'').replace(/수식입니다\.?/g,'').trim();
 
@@ -592,8 +616,8 @@ function hwpEndnoteParts(endNoteEl){
        주관식은 어디까지가 답인지 기계가 모르므로 **가르지 않고 그대로 둔다.**
        짐작으로 자르면 «답이 잘린» 문항이 조용히 생긴다. */
   const mk = rest.match(/^\s*([①②③④⑤])\s*/);
-  if(mk) return { code, answer: mk[1], solution: rest.slice(mk[0].length).trim() };
-  return { code, answer: rest, solution: '' };
+  if(mk) return { code, fp, answer: mk[1], solution: rest.slice(mk[0].length).trim() };
+  return { code, fp, answer: rest, solution: '' };
 }
 function hwpEndnoteText(endNoteEl){ return hwpEndnoteParts(endNoteEl).answer; }
 // 표의 셀 하나를 문제 하나로 취급해서 텍스트/그림/(있다면) 정답을 뽑는다.
@@ -602,14 +626,14 @@ function hwpEndnoteText(endNoteEl){ return hwpEndnoteParts(endNoteEl).answer; }
 function hwpCellToBlock(cellParas){
   const tokens = [];
   hwpWalkParagraphs(cellParas, tokens);
-  let text = '', answer = null, pics = [], itemCode = '', solution = '';
+  let text = '', answer = null, pics = [], itemCode = '', itemFp = '', solution = '';
   for(const tok of tokens){
-    if(tok.type === 'endnote'){ answer = tok.v; if(tok.code) itemCode = tok.code; if(tok.sol) solution = tok.sol; }
+    if(tok.type === 'endnote'){ answer = tok.v; if(tok.code) itemCode = tok.code; if(tok.fp) itemFp = tok.fp; if(tok.sol) solution = tok.sol; }
     else if(tok.type === 'text' || tok.type === 'eq') text += tok.v;
     else if(tok.type === 'pic') pics.push(tok.v);
     else if(tok.type === 'break') text += '\n';
   }
-  return { text, answer, pics, itemCode, solution };
+  return { text, answer, pics, itemCode, itemFp, solution };
 }
 /* 최상위 표를 «문항 컨테이너»로 볼 것인가, «문항 안의 상자»로 볼 것인가.
 
@@ -633,7 +657,7 @@ function hwpParseBlocks(topParas, tablesAsProblems){
       if(tok.type === 'stop'){ stopped = true; break; }
       if(tok.type === 'endnote'){
         if(cur.text.trim()) blocks.push(cur);
-        cur = { text:'', answer: tok.v, itemCode: tok.code || '', solution: tok.sol || '', pics:[] };
+        cur = { text:'', answer: tok.v, itemCode: tok.code || '', itemFp: tok.fp || '', solution: tok.sol || '', pics:[] };
       } else if(tok.type === 'text') cur.text += tok.v;
       else if(tok.type === 'eq') cur.text += tok.v;
       else if(tok.type === 'pic') cur.pics.push(tok.v);
@@ -1146,6 +1170,7 @@ function hwpxProblemsFromDocs(docs, opts){
     if(orderedParts.length === bs.length){
       bs.forEach((b,i)=>{
         if(!b.itemCode && orderedParts[i].code) b.itemCode = orderedParts[i].code;
+        if(!b.itemFp && orderedParts[i].fp) b.itemFp = orderedParts[i].fp;
         if(!b.solution && orderedParts[i].solution) b.solution = orderedParts[i].solution;
       });
     }
@@ -1195,6 +1220,9 @@ let watermarkedCount = 0; const watermarked = [];
     content: stripTrailingTypeTitle(stripScoreMarks(b.text.trim())),
     answer: (b.answer||'').trim(),
     itemCode: b.itemCode || '',
+    /* 미주에 «심겨 있던» 지문. 지금 본문에서 뜬 값이 아니라 «지난번에 확인한 몸»이다 —
+       둘을 견주는 것이 복사본·고침을 가리는 일 전부다 → tools/code-audit.mjs */
+    itemFp: b.itemFp || '',
     solution: b.solution || '',
     pics: b.pics || [],
     image: null,

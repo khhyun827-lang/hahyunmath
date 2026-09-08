@@ -2,7 +2,9 @@
 //
 //   node tools/item-code-stamp.mjs <원본.hwpx> <매핑표.json> --out <새파일.hwpx>
 //
-// 미주 **맨 앞**에 `[K2-E-01-0001]` 을 넣는다. 미주 번호 바로 뒤, 「[정답]」 앞자리다.
+// 미주 **맨 앞**에 `[K2-E-01-0001|a3f91c7e]` 을 넣는다. 미주 번호 바로 뒤, 「[정답]」 앞자리다.
+// 파이프 뒤는 **지문** — 그때 그 본문의 해시 앞 8자리다. 선생님들이 문제 틀을 복사해도
+// 그것으로 «복사본»을 알아본다 → docs/코드-숨기기.md · `--no-fp` 로 끌 수 있다.
 //
 // 🔴 **원본을 고치지 않는다.** 언제나 새 파일로 낸다. --out 이 이미 있으면 멈춘다.
 //
@@ -16,9 +18,8 @@
 
 import fs from 'fs';
 import path from 'path';
-import os from 'os';
-import zlib from 'zlib';
-import { execFileSync } from 'child_process';
+/* 풀고 묶는 일은 지문 도구와 똑같아서 한곳으로 뺐다 (2026-09-09) → tools/hwpx-zip.mjs */
+import { 푼다, 섹션들, 묶는다 } from './hwpx-zip.mjs';
 
 const argv = process.argv.slice(2);
 const bare = argv.filter((a, i) => !a.startsWith('--') && !(i > 0 && ['--out', '--chapter', '--bodies'].includes(argv[i - 1])));
@@ -57,9 +58,7 @@ if (!mine.length) {
 const codes = mine.map((i) => i.code);
 
 // ── 푼다 (언제나 임시 폴더. 원본 옆에 아무것도 안 남긴다) ────────────────
-const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'stamp-'));
-execFileSync('unzip', ['-qo', SRC, '-d', tmp]);
-const cdir = path.join(tmp, 'Contents');
+const { tmp, cdir } = 푼다(SRC);
 
 // ── 미주 첫 문단 맨 앞에 코드를 꽂는다 ─────────────────────────────────
 // ⚠ 첫 run 안에는 미주 번호를 찍는 <hp:autoNum> ctrl 이 들어 있다.
@@ -83,14 +82,11 @@ function stampNote(noteXml, code) {
   return { xml: noteXml.slice(0, at) + `<hp:t>[${code}]</hp:t>` + noteXml.slice(at), done: true, why: '' };
 }
 
-const files = fs.readdirSync(cdir)
-  .filter((f) => /^section\d+\.xml$/.test(f))
-  .sort((a, b) => (+a.match(/\d+/)[0]) - (+b.match(/\d+/)[0]));
+const files = 섹션들(cdir);
 
 let seen = 0, stamped = 0;
 const skipped = [];
-for (const f of files) {
-  const p = path.join(cdir, f);
+for (const p of files) {
   let xml = fs.readFileSync(p, 'utf8');
   let out = '', last = 0;
   const re = /<hp:endNote\b[^>]*>[\s\S]*?<\/hp:endNote>/g;
@@ -115,60 +111,28 @@ if (seen !== codes.length) {
 }
 
 // ── 다시 묶는다 ────────────────────────────────────────────────────────
-// ⚠ mimetype 은 «맨 앞에 · 압축 없이». (project2 tools/zip.mjs 와 같은 규칙)
-const all = [];
-(function walk(d, rel) {
-  for (const f of fs.readdirSync(d)) {
-    const p = path.join(d, f), r = rel ? rel + '/' + f : f;
-    if (fs.statSync(p).isDirectory()) walk(p, r); else all.push([r, p]);
-  }
-})(tmp, '');
-all.sort((a, b) => (a[0] === 'mimetype' ? -1 : b[0] === 'mimetype' ? 1 : a[0].localeCompare(b[0])));
-
-const crcTable = (() => {
-  const t = new Int32Array(256);
-  for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c; }
-  return t;
-})();
-const crc32 = (buf) => {
-  let c = -1;
-  for (let i = 0; i < buf.length; i++) c = crcTable[(c ^ buf[i]) & 0xFF] ^ (c >>> 8);
-  return (c ^ -1) >>> 0;
-};
-
-const locals = [], central = [];
-let off = 0;
-for (const [name, full] of all) {
-  const data = fs.readFileSync(full);
-  const store = name === 'mimetype';
-  const comp = store ? data : zlib.deflateRawSync(data, { level: 9 });
-  const nameB = Buffer.from(name, 'utf8');
-  const lh = Buffer.alloc(30);
-  lh.writeUInt32LE(0x04034b50, 0); lh.writeUInt16LE(20, 4); lh.writeUInt16LE(0x0800, 6);
-  lh.writeUInt16LE(store ? 0 : 8, 8); lh.writeUInt16LE(0, 10); lh.writeUInt16LE(0, 12);
-  lh.writeUInt32LE(crc32(data), 14); lh.writeUInt32LE(comp.length, 18); lh.writeUInt32LE(data.length, 22);
-  lh.writeUInt16LE(nameB.length, 26); lh.writeUInt16LE(0, 28);
-  locals.push(lh, nameB, comp);
-  const ch = Buffer.alloc(46);
-  ch.writeUInt32LE(0x02014b50, 0); ch.writeUInt16LE(20, 4); ch.writeUInt16LE(20, 6); ch.writeUInt16LE(0x0800, 8);
-  ch.writeUInt16LE(store ? 0 : 8, 10); ch.writeUInt16LE(0, 12); ch.writeUInt16LE(0, 14);
-  ch.writeUInt32LE(crc32(data), 16); ch.writeUInt32LE(comp.length, 20); ch.writeUInt32LE(data.length, 24);
-  ch.writeUInt16LE(nameB.length, 28); ch.writeUInt16LE(0, 30); ch.writeUInt16LE(0, 32);
-  ch.writeUInt16LE(0, 34); ch.writeUInt16LE(0, 36); ch.writeUInt32LE(0, 38); ch.writeUInt32LE(off, 42);
-  central.push(ch, nameB);
-  off += lh.length + nameB.length + comp.length;
-}
-const cd = Buffer.concat(central);
-const eocd = Buffer.alloc(22);
-eocd.writeUInt32LE(0x06054b50, 0); eocd.writeUInt16LE(all.length, 8); eocd.writeUInt16LE(all.length, 10);
-eocd.writeUInt32LE(cd.length, 12); eocd.writeUInt32LE(off, 16);
-fs.writeFileSync(OUT, Buffer.concat([...locals, cd, eocd]));
+const 파일수 = 묶는다(tmp, OUT);
 
 console.log(`\n  미주 ${seen}개 · 코드를 심은 것 ${stamped}개`);
 if (skipped.length) { console.log('  ⚠ 건너뛴 것 ' + skipped.length + '건'); skipped.slice(0, 8).forEach((s) => console.log('     ' + s)); }
-console.log(`  냈다 → ${OUT}  (${(fs.statSync(OUT).size / 1024 / 1024).toFixed(2)}MB · 파일 ${all.length}개)`);
+console.log(`  냈다 → ${OUT}  (${(fs.statSync(OUT).size / 1024 / 1024).toFixed(2)}MB · 파일 ${파일수}개)`);
 console.log(`  원본 「${path.basename(SRC)}」 는 한 글자도 안 고쳤다.\n`);
 
+
+/* ── 코드를 심었으면 «지문»도 이어서 박는다 (2026-09-09) ──────────────
+   지문은 본문에서 뜨는데, 본문을 문항별로 가르려면 **미주에 코드가 이미 있어야** 한다.
+   그래서 차례가 있다 — 코드를 심고(위) → 그 파일을 읽어 본문을 얻고 → 지문을 박는다.
+   ⚠ 같은 자리에 도로 놓는다. OUT 은 방금 우리가 낸 파일이라 덮어도 원본이 안 다친다.
+   🔴 `--no-fp` 로 끌 수 있다 — 지문 없는 옛 꼴 그대로 내야 할 일이 있을 때만. */
+if (!argv.includes('--no-fp')) {
+  const { stampFingerprints } = await import('./item-fp-stamp.mjs');
+  const 잠깐 = OUT + '.fp.tmp';
+  const s = stampFingerprints(OUT, 잠깐);
+  fs.rmSync(OUT); fs.renameSync(잠깐, OUT);
+  console.log(`  지문        문항 ${s.문항수}개 중 ${s.박음}개에 박았다`);
+  if (s.본문없음.length) console.log(`  ⚠ 본문이 비어 지문을 못 준 문항 ${s.본문없음.length}개: ${s.본문없음.slice(0, 5).join(' ')}`);
+  console.log('');
+}
 
 /* ── 코드를 심었으면 본문도 같이 낸다 ────────────────────────────────
    ⚠ **심은 파일(OUT)에서 읽는다.** 원본에서 읽으면 미주에 코드가 없어 짝을 못 짓는다. */
