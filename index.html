@@ -1078,16 +1078,28 @@
 /* ---------- 소통 4종 (design-v1/09~12) ----------
    네 화면이 성격이 다르다. 통일해야 하는 것은 색·서체·간격·버튼이지 «형태»가 아니다 —
    질의응답은 세로 스택, 채팅은 말풍선, 클리닉은 시간 판, 공지는 목록이다. */
+/* 🔴 **소통 네 화면의 «왼쪽 칸»은 폭이 같아야 한다** (2026-09-08 · 사용자가 짚었다 —
+     「소통 아래 서브탭들 중 출석도장 빼고 다 왼쪽에 흰 부분이 있는데 크기가 모두 다른데
+     통일시켜줘」). 실측 — 클리닉 320 · 질의응답 326 · 공지 290 · 채팅 240. 넷 다 달랐다.
+   🔵 **한 곳에서 정한다.** 각 규칙에 숫자를 적어 두면 이 어긋남이 그대로 되풀이된다 —
+     이 저장소가 여러 번 물린 「같은 값을 두 벌로 두지 말 것」이 CSS 에서도 같다.
+   ⚠ 좁은 창에서는 함께 줄어든다(예전에는 질의응답 하나만 줄었다).
+   🔵 **`--co-gap` 은 «흰 칸 다음의 여백»이다** — 흰 칸을 맞추고 나니 본문이 시작하는 자리가
+     920 · 926 · 926 · 924 로 남아 있었다. 화면을 오갈 때 글이 몇 px 씩 움직이면 어수선하다.
+     ⚠ 클리닉·채팅은 «칸의 오른쪽 margin»으로, 공지·질의응답은 «본문의 왼쪽 padding»으로
+       벌린다 — 만들어진 결이 달라서 그렇다. 값만 한곳에서 준다. */
+.app{--co-side-w:300px;--co-gap:24px;}
+@media (max-width:1080px){ .app{--co-side-w:250px;} }
 .app .co-screen{display:flex;height:calc(100vh - 134px);}
 .app .co-main{flex:1;min-width:0;min-height:0;display:flex;flex-direction:column;}
 .app .co-body{flex:1;min-height:0;overflow-y:auto;margin-top:16px;}
-.app .co-side{width:320px;flex-shrink:0;border-left:1px solid var(--line);padding-left:18px;
+.app .co-side{width:var(--co-side-w);flex-shrink:0;border-left:1px solid var(--line);padding-left:18px;
   margin-left:20px;display:flex;flex-direction:column;min-height:0;}
 /* 🔵 **왼쪽에 놓는 판** (2026-09-05 · 클리닉 승인 대기). 기본 `.co-side`는 늘 «오른쪽」이라
    가정하고 짜여 있다(위 993행의 오른쪽 bleed도 그중 하나) — `.left`가 전부 거울상으로 뒤집는다.
    ⚠ `.co-side`보다 뒤에 있어야 한다. 같은 특이도(class 2개)라 **CSS 순서가 이긴다.** */
 .app .co-side.left{border-left:none;border-right:1px solid var(--line);
-  margin-left:-20px;padding-left:20px;margin-right:20px;padding-right:18px;}
+  margin-left:-20px;padding-left:20px;margin-right:var(--co-gap);padding-right:18px;}
 .app .co-sbody{flex:1;min-height:0;overflow-y:auto;margin-top:12px;}
 
 /* 클리닉 — 시간이 자원이다. 목록만으로는 «어디가 비었나»가 안 보인다. */
@@ -1149,12 +1161,12 @@
    다음 질문이 화면 밖으로 나갔다. **답하는 화면은 «다음 것으로 넘어가는» 화면이라
    목록이 늘 옆에 있어야 한다** — 오답 검토에서 내린 것과 같은 판단이다. */
 .app .qn-screen{display:flex;height:calc(100vh - 134px);}
-.app .qn-list{width:326px;flex-shrink:0;border-right:1px solid var(--line);
+.app .qn-list{width:var(--co-side-w);flex-shrink:0;border-right:1px solid var(--line);
   display:flex;flex-direction:column;}
 .app .qn-lh{display:flex;align-items:center;gap:6px;padding:0 14px 12px 0;flex-shrink:0;flex-wrap:wrap;}
 .app .qn-lbody{flex:1;min-height:0;overflow-y:auto;position:relative;padding-right:14px;}
 
-.app .qn-doc{flex:1;min-width:0;min-height:0;display:flex;flex-direction:column;padding:0 4px 0 26px;}
+.app .qn-doc{flex:1;min-width:0;min-height:0;display:flex;flex-direction:column;padding:0 4px 0 var(--co-gap);}
 .app .qn-dh{flex-shrink:0;padding-bottom:14px;border-bottom:1px solid var(--line);}
 .app .qn-thread{flex:1;min-height:0;overflow-y:auto;position:relative;padding:16px 0 8px;}
 /* 질문과 답변을 좌우로 벌리지 않는다 — 수학 질문은 길고 수식이 들어가서
@@ -1170,7 +1182,7 @@
 .app .qn-comp{flex-shrink:0;border-top:1px solid var(--line);padding:14px 0 4px;}
 .app .qn-img{max-width:260px;max-height:260px;margin-top:10px;border:1px solid var(--line);
   border-radius:var(--r-md);display:block;}
-@media (max-width:1080px){ .app .qn-list{width:250px;} }
+/* ⚠ 좁은 창 폭은 이제 --co-side-w 가 통째로 맡는다(위) — 넷이 함께 줄어든다. */
 
 /* 공지 — 읽히는 순서가 곧 최신 순이다. */
 /* ---------- 공지 (design-v1/10-notice) ----------
@@ -1180,7 +1192,7 @@
 /* ⚠ 92가 아니라 134다 — 공지는 「소통」 서브탭 아래에 있다 (52 상단바 + 42 서브탭 + 40 패딩).
    92로 잡혀 있어 화면이 42px 길었는데, 칸에 배경이 깔리기 전에는 눈에 띄지 않았다. */
 .app .nt-screen{display:flex;height:calc(100vh - 134px);}
-.app .nt-list{width:290px;flex-shrink:0;border-right:1px solid var(--line);
+.app .nt-list{width:var(--co-side-w);flex-shrink:0;border-right:1px solid var(--line);
   display:flex;flex-direction:column;}
 .app .nt-lh{display:flex;align-items:center;gap:8px;padding:0 14px 12px 0;flex-shrink:0;}
 .app .nt-lbody{flex:1;min-height:0;overflow-y:auto;position:relative;padding-right:14px;}
@@ -1192,7 +1204,7 @@
 .app .nt-item .t{font-size:13px;font-weight:600;margin-top:6px;line-height:1.5;}
 .app .nt-item .m{font-size:11.5px;color:var(--dim);margin-top:5px;
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.app .nt-doc{flex:1;min-width:0;display:flex;flex-direction:column;padding:0 4px 0 26px;}
+.app .nt-doc{flex:1;min-width:0;display:flex;flex-direction:column;padding:0 4px 0 var(--co-gap);}
 .app .nt-dh{display:flex;align-items:baseline;gap:12px;flex-shrink:0;padding-bottom:14px;
   border-bottom:1px solid var(--line);}
 .app .nt-dh h2{margin:0;font-family:'Noto Serif KR',serif;font-size:22px;font-weight:600;
@@ -1221,8 +1233,8 @@
 /* 채팅 — 말풍선. 왼쪽에 학생, 오른쪽에 대화. */
 /* 목록과 대화 사이는 «선 하나»가 아니라 여백까지 있어야 갈라져 보인다.
    padding-right만 주면 선에 제목과 말풍선이 붙는다. */
-.app .ch-list{width:240px;flex-shrink:0;border-right:1px solid var(--line);
-  padding-right:16px;margin-right:24px;
+.app .ch-list{width:var(--co-side-w);flex-shrink:0;border-right:1px solid var(--line);
+  padding-right:16px;margin-right:var(--co-gap);
   display:flex;flex-direction:column;min-height:0;}
 .app .ch-lbody{flex:1;min-height:0;overflow-y:auto;margin-right:-6px;padding-right:6px;}
 .app .ch-win{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:8px;
