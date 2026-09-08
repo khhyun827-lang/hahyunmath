@@ -46,10 +46,14 @@ const 조각 = [갈래표, 떠내기('stuMonthEvents'), 떠내기('ymd'), 떠내
 /* ⚠ 2026-09-08에 일곱째 갈래(직보 일정표)가 붙으면서 `stuMonthEvents` 가 둘을 더 부른다.
    여기서는 «표에 무엇이 찍혀 있나»를 밖에서 넣어 준다 — 표를 «만드는» 길은
    `tools/exam-plan-test.mjs` 가 따로 잰다. 세는 자리를 두 벌로 두지 않는다. */
-function 모은다(DATA, c, ym, 직보 = {}) {
+/* ⚠ 2026-09-08 저녁에 휴강·보강이 붙으면서 셋이 더 필요해졌다.
+   «무엇이 쉬는 날인가»는 밖에서 넣어 준다 — 그 목록을 «만드는» 길은 `offday-test.mjs` 가 잰다. */
+function 모은다(DATA, c, ym, 직보 = {}, 쉼 = []) {
+  const 찾기 = (cid, date, 열쇠) => 쉼.find(o => o[열쇠] === date
+    && (!o.classIds || !o.classIds.length || o.classIds.includes(cid))) || null;
   return new Function('DATA', 'c', 'ym',
     'parseScheduleDays', 'sessionTimeText', 'examDatesOf', 'classNameOf', 'slotTimeLabel',
-    'planCellsOfStudent', 'planLabel',
+    'planCellsOfStudent', 'planLabel', 'offDayFor', 'movedInto', 'stuDayLabel',
     조각 + '; return stuMonthEvents(c, ym);')(
     DATA, c, ym,
     (sch) => (sch || '').includes('월') ? [1] : [],        // 「월」이 있으면 월요일
@@ -62,6 +66,9 @@ function 모은다(DATA, c, ym, 직보 = {}) {
        겹침을 막는 줄(`내직보[date].k === 'exam'`)이 **아예 발동하지 않아** 검사가 눈이 멀었다. */
     (cell) => { const 이름 = {off:'등원X', exam:'수학시험', jikbo:'직보', start:'등원시작'}[cell && cell.k];
                 return 이름 ? 이름 + (cell.t || '') : ''; },
+    (cid, date) => 찾기(cid, date, 'date'),
+    (cid, date) => 찾기(cid, date, 'moveTo'),
+    (date) => date,
   );
 }
 
@@ -243,6 +250,44 @@ console.log('\n시험기간 — 전날부터 끝날까지 정규 수업이 안 �
     (school) => (school === '광남고' ? { start:'2026-09-14', end:'2026-09-18', math:'2026-09-16' } : null));
   봄('🔵 구간은 «시험기간 전날 ~ 끝날»이다', 구간(기본c()), {from:'2026-09-13', to:'2026-09-18'});
   봄('   시험 날짜가 없으면 null', 구간({me:{school:'딴학교'}}), null);
+}
+
+// ── ⑨ 휴강 · 보강 (2026-09-08 · 사용자 요청) ────────────────────────
+console.log('\n휴강 · 보강 — 추석에 수업이 있다고 말하면 안 된다\n');
+{
+  /* 반은 «월요일» 수업. 9월의 월요일 — 7 · 14 · 21 · 28. (14 는 시험기간이라 원래 빠진다.) */
+  const 쉼 = [{id:'o1', date:'2026-09-21', label:'추석 연휴', classIds:[], moveTo:''}];
+  const got = 모은다(기본DATA(), 기본c(), '2026-09', {}, 쉼);
+  const 갈래 = (d, o) => ((o || got)[d] || []).map(e => e.kind + ':' + e.title);
+  봄('🔴 쉬는 날에는 수업이 안 선다', 갈래('2026-09-21').includes('class:고1A'), false);
+  /* 🔴 그냥 빼면 학생은 「내 수업이 왜 없지」가 된다 — 쉰다고 «적는다». */
+  봄('🔴 대신 「휴강」이라 적는다', 갈래('2026-09-21'), ['class:휴강']);
+  봄('   까닭도 함께 준다', (got['2026-09-21']||[])[0].sub.includes('추석 연휴'), true);
+  봄('다른 월요일은 그대로', 갈래('2026-09-28'), ['class:고1A']);
+
+  /* 날짜 변경 — 원래 날은 휴강이 되고, 옮긴 날에 «보강»으로 선다(요일이 안 맞아도). */
+  const 옮김 = [{id:'o2', date:'2026-09-21', label:'추석', classIds:[], moveTo:'2026-09-23'}];
+  const g2 = 모은다(기본DATA(), 기본c(), '2026-09', {}, 옮김);
+  봄('🔵 옮긴 날(수요일)에 보강이 선다', 갈래('2026-09-23', g2), ['class:고1A (보강)']);
+  봄('🔴 원래 날은 휴강이고, 어디로 갔는지 말한다',
+     (g2['2026-09-21']||[]).map(e => e.title), ['휴강 — 날짜가 바뀌었습니다']);
+  봄('   어느 날로 갔는지 적힌다', (g2['2026-09-21']||[])[0].sub.includes('2026-09-23'), true);
+
+  /* 🔴 반을 고른 휴강은 «그 반만» 쉰다 — 남의 반 휴강으로 내 수업이 사라지면 안 된다. */
+  const 남의반 = [{id:'o3', date:'2026-09-21', label:'', classIds:['c2'], moveTo:''}];
+  봄('🔴 남의 반 휴강은 내 수업을 안 건드린다',
+     갈래('2026-09-21', 모은다(기본DATA(), 기본c(), '2026-09', {}, 남의반)), ['class:고1A']);
+  const 내반 = [{id:'o4', date:'2026-09-21', label:'', classIds:['c1'], moveTo:''}];
+  봄('   내 반을 고른 휴강은 걸린다',
+     갈래('2026-09-21', 모은다(기본DATA(), 기본c(), '2026-09', {}, 내반)), ['class:휴강']);
+
+  /* ⚠ 시험기간 휴강이 이미 걸린 날로 옮기면? 그 날은 여전히 수업이 안 서야 한다. */
+  const 시험중으로 = [{id:'o5', date:'2026-09-21', label:'', classIds:[], moveTo:'2026-09-16'}];
+  봄('⚠ 시험기간 안으로 옮겨도 그 날엔 안 선다',
+     갈래('2026-09-16', 모은다(기본DATA(), 기본c(), '2026-09', {}, 시험중으로))
+       .filter(x => x.startsWith('class:')), []);
+  봄('쉬는 날이 없으면 예전과 똑같다',
+     갈래('2026-09-07', 모은다(기본DATA(), 기본c(), '2026-09', {}, [])), ['class:고1A']);
 }
 
 console.log(틀림 ? '\n  🔴 ' + 통과 + ' 통과 · ' + 틀림 + ' 실패\n' : '\n  ✅ ' + 통과 + ' 통과 · 0 실패\n');

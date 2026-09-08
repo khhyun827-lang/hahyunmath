@@ -75,11 +75,14 @@ console.log('\n학생이 제 것만 읽는가\n');
      ⚠ 읽는 것을 좁힐 때는 좁히고 나서 «무엇이 안 보이나»를 세어 볼 것. */
   /* ⚠ 2026-09-08에 다섯째가 붙었다 — 직보 일정표(`exam-plan`). **학생 달력이 이것을 본다.**
      안 읽으면 「나 언제 와?」의 답이 통째로 빈 채로 뜬다 — 여기가 그 자리다. */
-  봄('🔴 시즌·시험범위·교재·등급컷·직보일정표도 읽는다',
-    w.낱건, ['season', 'exam-ranges', 'school-books', 'grade-cuts', 'exam-plan']);
+  /* ⚠ 2026-09-08 저녁에 여섯째가 붙었다 — 휴강·보강(class-offdays). 안 읽으면
+     추석에도 수업이 있다고 말한다. */
+  봄('🔴 시즌·시험범위·교재·등급컷·직보일정표·휴강도 읽는다',
+    w.낱건, ['season', 'exam-ranges', 'school-books', 'grade-cuts', 'exam-plan', 'class-offdays']);
   봄('   못 받아도 «빈 모양»을 세워 둔다 — 화면이 터지면 안 된다',
     !!(state.examRanges && state.examRanges.dates && state.gradeCuts && state.gradeCuts.byKey
-       && state.examPlan && state.examPlan.byKey), true);
+       && state.examPlan && state.examPlan.byKey
+       && state.offDays && Array.isArray(state.offDays.days)), true);
 
   // 🔴 이 넷은 학생이 읽을 것도, 규칙이 열어 줄 것도 아니다.
   for (const c of ['contacts', 'auditlog', 'consults', 'assistants']) {

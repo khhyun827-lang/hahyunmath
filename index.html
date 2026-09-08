@@ -5666,15 +5666,19 @@ async function loadStudentData(uid){
      ⚠ 읽는 것을 좁힐 때는 **좁히고 나서 «무엇이 안 보이나»를 세어 볼 것.** */
   /* ⚠ 직보 일정표도 여기서 같이 받는다 — 학생 달력이 첫 렌더에서 바로 본다.
      🔵 kv 문서 하나라 «읽기 한 건»만 는다(로그인 144 → 145). */
-  [state.season, state.examRanges, state.schoolBooks, state.gradeCuts, state.examPlan] = await Promise.all([
+  /* ⚠ 휴강·보강도 여기서 같이 받는다 — 학생 달력이 첫 렌더에서 바로 본다.
+     안 읽으면 추석에도 수업이 있다고 말한다. */
+  [state.season, state.examRanges, state.schoolBooks, state.gradeCuts, state.examPlan,
+   state.offDays] = await Promise.all([
     dbGet('season', null), dbGet('exam-ranges', null), dbGet('school-books', null),
-    dbGet('grade-cuts', null), dbGet('exam-plan', null)
+    dbGet('grade-cuts', null), dbGet('exam-plan', null), dbGet('class-offdays', null)
   ]);
   if(!state.examRanges) state.examRanges = {season: currentSeason(), bySchool: {}};
   if(!state.examRanges.dates) state.examRanges.dates = {};
   if(!state.schoolBooks) state.schoolBooks = {};
   if(!state.gradeCuts || !state.gradeCuts.byKey) state.gradeCuts = {byKey: {}};
   if(!state.examPlan || !state.examPlan.byKey) state.examPlan = {byKey: {}};
+  if(!state.offDays || !Array.isArray(state.offDays.days)) state.offDays = {days: []};
 }
 
 async function loadAllData(){
@@ -5721,15 +5725,19 @@ async function loadAllData(){
      늦게 오면 「적어 둔 곳 0」을 한 번 그렸다가 바뀐다 (G-1). */
   /* ⚠ 직보 일정표도 여기서 같이 받는다 — 학생 달력이 첫 렌더에서 바로 본다.
      🔵 kv 문서 하나라 «읽기 한 건»만 는다(로그인 144 → 145). */
-  [state.season, state.examRanges, state.schoolBooks, state.gradeCuts, state.examPlan] = await Promise.all([
+  /* ⚠ 휴강·보강도 여기서 같이 받는다 — 학생 달력이 첫 렌더에서 바로 본다.
+     안 읽으면 추석에도 수업이 있다고 말한다. */
+  [state.season, state.examRanges, state.schoolBooks, state.gradeCuts, state.examPlan,
+   state.offDays] = await Promise.all([
     dbGet('season', null), dbGet('exam-ranges', null), dbGet('school-books', null),
-    dbGet('grade-cuts', null), dbGet('exam-plan', null)
+    dbGet('grade-cuts', null), dbGet('exam-plan', null), dbGet('class-offdays', null)
   ]);
   if(!state.examRanges) state.examRanges = {season: currentSeason(), bySchool: {}};
   if(!state.examRanges.dates) state.examRanges.dates = {};
   if(!state.schoolBooks) state.schoolBooks = {};
   if(!state.gradeCuts || !state.gradeCuts.byKey) state.gradeCuts = {byKey: {}};
   if(!state.examPlan || !state.examPlan.byKey) state.examPlan = {byKey: {}};
+  if(!state.offDays || !Array.isArray(state.offDays.days)) state.offDays = {days: []};
 
 }
 
@@ -6585,6 +6593,69 @@ function classEditHTML(c){
   <p class="st-note" style="margin-top:6px;">시간을 고치면 <b>학생 달력과 출결 화면이 바로 따라</b> 바뀝니다 ·
     갈래를 바꾸면 <b>출석률 셈이 갈립니다</b> · 바꾼 것은 <b>변경 이력</b>에 남습니다.</p>`;
 }
+/* =================== 휴강 · 보강 (2026-09-08 · 사용자 요청) ===================
+   「추석이나 설날 등에 휴강이나 수업 날짜 변경등 할 수 있으면 좋겠어. 그게 학생 캘린더에 반영되고」.
+   🔴 **여태 달력은 반의 «요일»만 보고 수업을 세웠다** — 그래서 추석 당일에도 수업이 있다고
+     말했다. 학원이 실제로 쉬는데 화면만 그렇게 말하는, 시험기간과 똑같은 종류의 거짓말이다.
+
+   🔵 **하나로 둘을 한다** — 「휴강」과 「날짜 변경」은 같은 것이다.
+     날짜 변경 = 그 날은 쉬고(휴강) **다른 날에 한다**(보강). 그래서 `moveTo` 한 칸이면 된다.
+     ⚠ 둘을 따로 만들면 「옮겼는데 원래 날에도 수업이 남는」 짝이 안 맞는 상태가 생긴다.
+
+   🔵 **반을 안 고르면 «학원 전체»다.** 추석은 모든 반이 쉬므로, 반이 일곱이면 일곱 번
+     넣게 하면 아무도 안 쓴다. 특정 반만 쉬는 날은 그 반을 골라 둔다.
+   ⚠ 저장은 `kv/class-offdays` 하나 — **컬렉션도 규칙도 안 늘린다**(kv 는 읽기는 진짜 계정,
+     쓰기는 강사라 «학생이 읽고 강사가 쓰는» 이 값에 그대로 맞는다). */
+function offDaysAll(){
+  const d = state.offDays && state.offDays.days;
+  return Array.isArray(d) ? d : [];
+}
+/* 이 반이 이 날 쉬는가. 반을 안 고른 것(전체 휴강)도 여기서 잡힌다. */
+function offDayFor(classId, date){
+  return offDaysAll().find(o => o.date === date
+    && (!o.classIds || !o.classIds.length || o.classIds.includes(classId))) || null;
+}
+/* 이 날로 «옮겨 온» 수업. 원래 날이 휴강이 되고 이 날에 선다. */
+function movedInto(classId, date){
+  return offDaysAll().find(o => o.moveTo === date
+    && (!o.classIds || !o.classIds.length || o.classIds.includes(classId))) || null;
+}
+async function saveOffDay(){
+  const 값 = (id) => (document.getElementById(id) || {}).value || '';
+  const date = 값('od-date').trim();
+  if(!date){ showToast('쉬는 날짜를 골라주세요.'); return; }
+  const moveTo = 값('od-move').trim();
+  /* 🔴 옮기는 날이 쉬는 날보다 앞이면 대개 잘못 고른 것이다. 막지는 않고 **말해 준다** —
+     실제로 «앞당겨 보강»하는 학원도 있다. 조용히 바꾸지 않는 것이 이 저장소의 결이다. */
+  if(moveTo && moveTo === date){ showToast('옮길 날짜가 쉬는 날과 같습니다.'); return; }
+  const 고른반 = [...document.querySelectorAll('.od-cls:checked')].map(x => x.value);
+  const 것 = {id: 'od' + Date.now(), date, moveTo, label: 값('od-label').trim(),
+              classIds: 고른반};
+  if(!state.offDays) state.offDays = {days: []};
+  if(!Array.isArray(state.offDays.days)) state.offDays.days = [];
+  state.offDays.days.push(것);
+  state.offDays.days.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+  await dbSet('class-offdays', state.offDays);
+  await logAudit('휴강·보강 등록', '', '',
+    `${date}${moveTo ? ' → ' + moveTo : ' 휴강'}${것.label ? ' · ' + 것.label : ''}`
+    + ` · ${고른반.length ? 고른반.map(classNameOf).join('·') : '전체'}`);
+  showToast(moveTo ? '날짜를 옮겼습니다.' : '휴강으로 넣었습니다.');
+  render();
+}
+async function delOffDay(id){
+  const 것 = offDaysAll().find(o => o.id === id);
+  if(!것) return;
+  state.offDays.days = offDaysAll().filter(o => o.id !== id);
+  await dbSet('class-offdays', state.offDays);
+  await logAudit('휴강·보강 삭제', '', '',
+    `${것.date}${것.moveTo ? ' → ' + 것.moveTo : ''}${것.label ? ' · ' + 것.label : ''}`);
+  render();
+}
+/* 「9월 24일 (목)」 — 목록과 달력이 같은 꼴로 말한다. */
+function offDayLabel(o){
+  return (o.label || (o.moveTo ? '날짜 변경' : '휴강'))
+    + ((!o.classIds || !o.classIds.length) ? '' : ' · ' + o.classIds.map(classNameOf).join('·'));
+}
 async function toggleClassStatus(cid){
   const c = DATA.classes.find(c=>c.id===cid);
   if(!c) return;
@@ -7003,11 +7074,26 @@ async function deleteAttendance(sid, idx){
 }
 
 /* =================== 공지사항 =================== */
+/* 🔵 **공지에 «받는 반»이 생겼다** (2026-09-08 · 사용자 요청 — 「공지사항도 반별로
+     공지할 수 있는 기능」). 여태는 전부 전체 공지였다.
+   🔴 **빈 배열은 «전체»다** — 필드가 없는 옛 공지도 자연히 전체가 된다. 옮길 것이 없다.
+   ⚠ 학생 화면·안 읽은 수·공개 홈이 **모두 같은 함수**를 지나야 한다. 한 곳이라도 빠뜨리면
+     「목록엔 없는데 안 읽음 1」 같은 어긋남이 생긴다. */
+function noticeIsForClass(n, classIds){
+  const 대상 = (n && n.classIds) || [];
+  if(!대상.length) return true;                       // 반을 안 고른 것 = 전체 공지
+  return (classIds || []).some(cid => 대상.includes(cid));
+}
+function noticesFor(c){
+  const ids = (c && c.classIds) || [];
+  return DATA.notices.filter(n => noticeIsForClass(n, ids));
+}
 async function addNotice(){
   const title = document.getElementById('notice-title').value.trim();
   const content = document.getElementById('notice-content').value.trim();
   if(!title || !content){ showToast('제목과 내용을 입력해주세요.'); return; }
-  const notice = {id:Date.now(), date:todayStr(), title, content};
+  const classIds = [...document.querySelectorAll('.nt-cls:checked')].map(x => x.value);
+  const notice = {id:Date.now(), date:todayStr(), title, content, classIds};
   DATA.notices.unshift(notice);
   await dbSetDoc('notices', notice.id, notice);
   state.noticeDraft = '';
@@ -7159,7 +7245,8 @@ function studentNotifItems(sid){
   return [
     {key:'homework', label:'새 과제', count: hwCount, gotoCode:"state.studentTab='progress';"},
     {key:'video', label:'새 영상', count: vidCount, gotoCode:"state.studentTab='video';"},
-    {key:'notice', label:'새 공지', count: DATA.notices.length, gotoCode:"state.studentTab='notice';"},
+    /* ⚠ 여기도 «내 반에 온 것»만 센다 (2026-09-08) — 남의 반 공지로 벨이 울리면 안 된다. */
+    {key:'notice', label:'새 공지', count: DATA.notices.filter(n=>noticeIsForClass(n, myClassIds)).length, gotoCode:"state.studentTab='notice';"},
     /* 반대 방향도 같다 — 선생님이 답을 보내면 학생 벨에 뜬다.
        학생은 자기 대화 하나만 보므로 여기서는 곧장 셀 수 있다. */
     {key:'chat:'+sid, label:'선생님 답장', count: (DATA.chats[sid]||[]).filter(m=>m.from==='teacher').length,
@@ -13019,10 +13106,13 @@ function stuAttendanceHTML(c){
    읽음 판정은 «개수»다 (unseenCount) — 공지는 최신순으로 쌓이므로 앞의 n개가 새 것이다.
    개별 읽음 상태를 두려면 학생마다 필드를 더해야 하는데, 이 정도 데이터엔 과하다. */
 function stuNoticeHTML(){
-  const unread = unseenCount('notice', DATA.notices.length);
-  markSeen('notice', DATA.notices.length);
-  if(DATA.notices.length===0) return `<div class="sap-empty">등록된 공지가 없습니다.</div>`;
-  return DATA.notices.map((n,i)=>`
+  /* 🔴 **내 반에 온 것만 센다** (2026-09-08) — 안 읽은 수를 «전체»로 세면
+     남의 반 공지 때문에 벨이 울리고, 들어가 보면 아무것도 새 것이 없다. */
+  const 내것 = noticesFor(stuCtx());
+  const unread = unseenCount('notice', 내것.length);
+  markSeen('notice', 내것.length);
+  if(내것.length===0) return `<div class="sap-empty">등록된 공지가 없습니다.</div>`;
+  return 내것.map((n,i)=>`
     <div class="mc" style="${i<unread ? 'border-left:3px solid var(--accent);' : 'opacity:.78;'}">
       <div class="row" style="gap:7px;">
         ${i<unread ? '<span class="badge no">새 공지</span>' : ''}
@@ -13299,9 +13389,26 @@ function stuMonthEvents(c, ym){
     if(!요일들.length) return;
     for(let d = 1; d <= 날수; d++){
       const dow = new Date(y, m - 1, d).getDay();
-      if(!요일들.includes(dow)) continue;
       const date = ymd(y, m, d);
+      /* 🔵 **다른 날에서 «옮겨 온» 수업** (2026-09-08) — 요일이 안 맞아도 이 날에 선다.
+         그것이 「날짜 변경」의 뜻이다. 원래 요일이 아닌 날이므로 요일 검사보다 «먼저» 본다. */
+      const 옮겨옴 = movedInto(cid, date);
+      if(옮겨옴 && !(휴강 && date >= 휴강.from && date <= 휴강.to)){
+        넣기(date, {kind: 'class', title: (cls.name || '수업') + ' (보강)',
+          sub: [옮겨옴.label, sessionTimeText(cls.schedule, new Date(옮겨옴.date + 'T00:00:00').getDay())]
+            .filter(Boolean).join(' · ')});
+      }
+      if(!요일들.includes(dow)) continue;
       if(휴강 && date >= 휴강.from && date <= 휴강.to) continue;
+      /* 🔴 **쉬는 날은 «쉰다고» 적는다 — 그냥 빼지 않는다** (2026-09-08 · 사용자 요청).
+         아무 말 없이 비면 학생은 「내 수업이 왜 없지」가 된다. 시험기간 띠와 같은 판단이다.
+         🔵 옮긴 날이면 어디로 갔는지까지 말해 준다 — 그것이 학생이 진짜 알아야 하는 것이다. */
+      const 쉼 = offDayFor(cid, date);
+      if(쉼){
+        넣기(date, {kind: 'class', title: 쉼.moveTo ? '휴강 — 날짜가 바뀌었습니다' : '휴강',
+          sub: [쉼.label, cls.name, 쉼.moveTo ? stuDayLabel(쉼.moveTo) + '로' : ''].filter(Boolean).join(' · ')});
+        continue;
+      }
       /* 🔴 **그 «요일»의 시간을 말한다** (2026-09-08) — 화·목과 토의 시간이 다른 반이 있다.
          요일을 안 주면 「화·목 17:00~19:30 · 토 10:00~14:00」이 통째로 칸에 들어가 안 읽힌다. */
       넣기(date, {kind: 'class', title: cls.name || '수업',
@@ -13710,7 +13817,7 @@ function studentHTML(){
     quiz:    dqTodayCards(c.rec).filter(x=>!dqDoneToday(c.rec, x.id)).length,
     wronghw: wrongHomeworkLeft(c.rec).length,
     progress: c.homework.filter(a=>hwNeedsAction(c.rec, a.id)).length,
-    notice:  unseenCount('notice', DATA.notices.length),
+    notice:  unseenCount('notice', noticesFor(c).length),
     qna:     c.qnas.filter(q=>!q.answer).length
   };
 
@@ -14966,9 +15073,15 @@ function sessionStartHour(schedule, dow){
 function sessionsOn(date){
   const dow = new Date(date + 'T00:00:00').getDay();
   /* ⚠ «그 요일»의 시작 시각으로 세운다 (2026-09-08) — 토요일만 오전인 반이 있는데
-     예전에는 마지막 덩이의 시각을 써서 **화요일 목록에서도 10시로** 정렬됐다. */
-  return DATA.classes.filter(c=>parseScheduleDays(c.schedule).includes(dow))
-    .sort((a,b)=> sessionStartHour(a.schedule, dow) - sessionStartHour(b.schedule, dow)
+     예전에는 마지막 덩이의 시각을 써서 **화요일 목록에서도 10시로** 정렬됐다.
+     🔵 **옮겨 온 수업도 이 날 목록에 선다** — 요일이 안 맞아도 그 날 실제로 수업을 하므로
+       강사가 출결을 찍어야 한다. 그 반의 시각은 «원래 날»의 요일에서 온다. */
+  const 그날요일 = (c) => {
+    const m = movedInto(c.id, date);
+    return m ? new Date(m.date + 'T00:00:00').getDay() : dow;
+  };
+  return DATA.classes.filter(c=>parseScheduleDays(c.schedule).includes(dow) || movedInto(c.id, date))
+    .sort((a,b)=> sessionStartHour(a.schedule, 그날요일(a)) - sessionStartHour(b.schedule, 그날요일(b))
                || (a.name||'').localeCompare(b.name||'', 'ko'));
 }
 /* 저장된 기록 기준 요약. 초안(attDraft)이 아니라 «이미 저장된 것»만 센다 —
@@ -15176,11 +15289,21 @@ function teacherSessionHTML(){
       ? `<div style="font-size:12.5px;color:var(--dim);line-height:1.7;">이 날짜에 수업이 없습니다.<br>반 일정은 반 관리에서 정합니다.</div>`
       : sessions.map(c=>{
           const sm = sessionSavedSummary(c.id, date);
-          const st = sm.total === 0 ? ['', '학생 없음']
+          /* 🔴 **휴강이어도 «숨기지» 않는다** (2026-09-08) — 강사 화면이다.
+             이미 출결을 찍어 둔 날을 나중에 휴강으로 넣으면, 숨기는 순간 그 기록에
+             닿을 길이 사라진다. 학생 달력에서는 안 보이지만 여기서는 딱지를 달고 남는다. */
+          const 쉼 = offDayFor(c.id, date);
+          const 보강 = movedInto(c.id, date);
+          const st = 쉼 ? ['gone', 쉼.moveTo ? '날짜 변경' : '휴강']
+                   : 보강 ? ['consult', '보강']
+                   : sm.total === 0 ? ['', '학생 없음']
                    : sm.filled === 0 ? ['', '시작 전']
                    : sm.filled < sm.total ? ['consult', '입력 중']
                    : ['ok', '완료'];
-          const detail = sm.total === 0 ? '배정된 학생이 없습니다'
+          const detail = 쉼 ? [쉼.label, 쉼.moveTo ? stuDayLabel(쉼.moveTo) + '로 옮김' : '이 날은 쉽니다']
+                              .filter(Boolean).join(' · ')
+            : 보강 ? [보강.label, stuDayLabel(보강.date) + '에서 옮겨 온 수업'].filter(Boolean).join(' · ')
+            : sm.total === 0 ? '배정된 학생이 없습니다'
             : sm.filled === 0 ? `${sm.total}명 · 출결 미입력`
             : sm.filled < sm.total ? `${sm.total}명 · 출결 ${sm.filled}/${sm.total}`
             : `${sm.total}명 · 출석 ${sm.cnt['출석']||0}` +
@@ -19347,7 +19470,10 @@ function teacherNoticesHTML(){
         ${list.length===0 ? '<div style="font-size:12.5px;color:var(--dim);padding:8px 14px;">등록된 공지가 없습니다.</div>'
         : list.map(n=>`<div class="nt-item ${!state.noticeWriting && cur && n.id===cur.id?'on':''}"
             onclick="state.noticeSelectedId='${n.id}'; state.noticeWriting=false; render()">
-            <div class="d">${escHtml(n.date||'')}</div>
+            ${/* ⚠ **누구에게 갔는지 목록에서 보여야 한다** — 안 보이면 반별 공지를 낸 뒤
+                 「이거 누구한테 갔더라」를 알 길이 없다. 전체는 굳이 안 적는다(대부분이라). */''}
+            <div class="d">${escHtml(n.date||'')}${
+              (n.classIds||[]).length ? ' · ' + escHtml(n.classIds.map(classNameOf).join('·')) : ''}</div>
             <div class="t">${escHtml(n.title)}</div>
             <div class="m">${escHtml((n.content||'').replace(/[#*\-]/g,'').replace(/\s+/g,' ').trim())}</div>
           </div>`).join('')}
@@ -19364,6 +19490,17 @@ function teacherNoticesHTML(){
           <label style="flex:1;min-width:240px;"><span>제목</span>
             <input id="notice-title" placeholder="공지 제목"></label>
         </div>
+        ${/* 🔵 **받는 반을 고른다** (2026-09-08 · 사용자 요청). 아무것도 안 고르면 «전체»다 —
+             대부분의 공지가 전체이므로 그것이 기본이라야 손이 덜 간다. */''}
+        <div style="margin-top:11px;">
+          <div style="font-size:11px;font-weight:600;color:var(--dim);margin-bottom:6px;">
+            받는 반 <s style="text-decoration:none;font-weight:500;">— 아무것도 안 고르면 <b>전체</b>에게 갑니다</s></div>
+          <div style="display:flex;gap:12px;flex-wrap:wrap;">
+            ${DATA.classes.map(c => `<label style="display:flex;align-items:center;gap:5px;font-size:12px;">
+              <input type="checkbox" class="nt-cls" value="${c.id}">${escHtml(c.name)}</label>`).join('')
+              || '<span style="font-size:12px;color:var(--dim);">먼저 반을 만들어 주세요.</span>'}
+          </div>
+        </div>
         <div class="cls-form">
           <label style="flex:1;"><span>내용</span>
             <div class="row" style="gap:5px;margin-bottom:7px;">
@@ -19378,13 +19515,16 @@ function teacherNoticesHTML(){
         </div>
         ${draft.trim() ? `<div class="t-sec" style="margin-top:22px;">미리보기</div>
           <div class="ntx">${noticeBodyHTML(draft)}</div>` : ''}
-        <p class="st-note">등록하면 <b>학생 앱 소통 > 공지</b>와 공개 홈에 그대로 붙습니다.</p>
+        <p class="st-note">등록하면 <b>학생 앱 소통 › 공지</b>에 붙습니다 —
+          반을 고르면 <b>그 반 학생에게만</b> 보이고, 안 읽은 수(벨)도 그 학생들에게만 셉니다.</p>
         <div class="rst-pad"></div>
       </div>`
     : !cur ? `<div style="padding:64px 0;text-align:center;color:var(--dim);font-size:12.5px;">
         왼쪽에서 공지를 고르거나 「새 공지」로 하나 써 보세요.</div>`
     : `<div class="nt-dh"><h2>${escHtml(cur.title)}</h2>
         <span class="mono" style="font-size:12px;color:var(--dim);">${escHtml(cur.date||'')}</span>
+        <span class="badge ${(cur.classIds||[]).length ? 'consult' : ''}">${
+          (cur.classIds||[]).length ? escHtml(cur.classIds.map(classNameOf).join(' · ')) : '전체'}</span>
         <span class="spacer"></span>
         <button class="btn q sm" onclick="deleteNotice(${cur.id})">삭제</button></div>
       <div class="nt-dbody">
@@ -24221,7 +24361,65 @@ function teacherSettingsClassesHTML(){
             </div></div>${classEditHTML(c)}`;
         }).join('')
   })}
+  ${/* 🔵 **휴강·보강을 같은 화면에 둔다** (2026-09-08) — 「반」 화면이 «반에 관한 모든 것»이 된다.
+       설정 서브탭을 하나 더 늘리는 것보다, 반을 만든 자리 바로 아래가 손에 맞는다. */''}
+  ${teacherOffDaysHTML()}
   </div>`;
+}
+
+/* 휴강 · 보강 — 「반」 화면의 둘째 구역 (2026-09-08 · 사용자 요청) */
+function teacherOffDaysHTML(){
+  const open = state.settingsForm === 'off';
+  const 오늘 = todayStr();
+  const 것들 = offDaysAll().slice().sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+  const 앞으로 = 것들.filter(o => (o.moveTo || o.date) >= 오늘);
+  const 지난 = 것들.filter(o => (o.moveTo || o.date) < 오늘);
+
+  const 줄 = (o) => `<div class="st-row">
+    <div class="t"><b>${escHtml(stuDayLabel(o.date))}${
+      o.moveTo ? ' → ' + escHtml(stuDayLabel(o.moveTo)) : ' 휴강'}</b>
+      <span>${escHtml(offDayLabel(o))}</span></div>
+    <div class="v">
+      ${o.moveTo ? '<span class="badge consult">날짜 변경</span>' : '<span class="badge gone">휴강</span>'}
+      <button class="btn q sm" onclick="delOffDay('${o.id}')">지우기</button>
+    </div></div>`;
+
+  return stSec({
+    title: '휴강 · 보강', desc: '추석·설날처럼 쉬는 날, 그리고 옮긴 수업',
+    action: `<button class="btn ${open?'':'p'} sm" onclick="stOpen('off')">${
+      open ? '닫기' : iconSvg('plus',13)+' 날짜 추가'}</button>`,
+    form: !open ? '' : `<div class="st-form">
+      <div class="cls-form">
+        <label style="min-width:150px;"><span>쉬는 날</span>
+          <input type="date" id="od-date"></label>
+        ${/* 🔵 **비워 두면 그냥 휴강**이다 — 「옮긴다」와 「쉰다」를 한 폼으로 받는다.
+             둘을 따로 만들면 「옮겼는데 원래 날에도 수업이 남는」 짝 안 맞는 상태가 생긴다. */''}
+        <label style="min-width:150px;"><span>옮길 날 (비우면 휴강)</span>
+          <input type="date" id="od-move"></label>
+        <label style="flex:1;min-width:150px;"><span>이름</span>
+          <input id="od-label" placeholder="예: 추석 연휴"></label>
+        <button class="btn p sm" onclick="saveOffDay()">추가</button>
+      </div>
+      ${/* 🔵 반을 안 고르면 «학원 전체»다 — 추석은 모든 반이 쉬므로 그것이 기본이라야 한다. */''}
+      <div style="margin-top:11px;">
+        <div style="font-size:11px;font-weight:600;color:var(--dim);margin-bottom:6px;">
+          어느 반 <s style="text-decoration:none;font-weight:500;">— 아무것도 안 고르면 <b>전체</b>입니다</s></div>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;">
+          ${DATA.classes.map(c => `<label style="display:flex;align-items:center;gap:5px;font-size:12px;">
+            <input type="checkbox" class="od-cls" value="${c.id}">${escHtml(c.name)}</label>`).join('')
+            || '<span style="font-size:12px;color:var(--dim);">먼저 반을 만들어 주세요.</span>'}
+        </div>
+      </div>
+      <p class="st-note">쉬는 날은 <b>학생 달력에서 그 반 수업이 「휴강」으로 바뀝니다</b> —
+        그냥 지우지 않고 <b>쉰다고 적습니다</b>. 옮길 날을 함께 고르면 그 날에
+        <b>「(보강)」으로 새로 섭니다</b> · 강사의 수업 화면에서는 <b>「휴강」 딱지를 달고 그대로 보입니다</b>
+        (출결을 이미 찍어 둔 날이 사라지면 안 되니까요).</p></div>`,
+    body: 것들.length === 0
+      ? '<div class="st-empty">아직 넣은 휴강·보강이 없습니다.</div>'
+      : 앞으로.map(줄).join('')
+        + (지난.length ? `<div class="st-note" style="margin-top:10px;">지난 것 ${지난.length}건</div>`
+            + 지난.map(줄).join('') : '')
+  });
 }
 
 /* ---------- 학생 ----------
