@@ -11760,8 +11760,10 @@ function stuHomeHTML(c){
          ${c.classId ? '반 일정이 등록되어 있지 않습니다.' : '아직 반에 배정되지 않았습니다.'}</span></div>`
     : `<div class="mc">
         <div class="row b" style="gap:9px;flex-wrap:wrap;">
+          ${/* ⚠ «그 날»의 시간이라야 한다 — 요일마다 시간이 다른 반이 있다 (2026-09-08). */''}
           <b style="font-size:15px;font-weight:700;">${stuDateLabel(next.date)}
-            ${escHtml(sessionTimeText(next.cls.schedule))}</b>
+            ${escHtml(sessionTimeText(next.cls.schedule,
+              new Date(next.date + 'T00:00:00').getDay()))}</b>
           <span style="font-size:12.5px;color:var(--sub);">${escHtml(next.cls.name)}</span>
         </div>
         ${cp.subject ? `<div style="font-size:12px;color:var(--dim);margin-top:8px;">
@@ -13242,11 +13244,14 @@ function stuMonthEvents(c, ym){
     const 요일들 = parseScheduleDays(cls.schedule);
     if(!요일들.length) return;
     for(let d = 1; d <= 날수; d++){
-      if(!요일들.includes(new Date(y, m - 1, d).getDay())) continue;
+      const dow = new Date(y, m - 1, d).getDay();
+      if(!요일들.includes(dow)) continue;
       const date = ymd(y, m, d);
       if(휴강 && date >= 휴강.from && date <= 휴강.to) continue;
+      /* 🔴 **그 «요일»의 시간을 말한다** (2026-09-08) — 화·목과 토의 시간이 다른 반이 있다.
+         요일을 안 주면 「화·목 17:00~19:30 · 토 10:00~14:00」이 통째로 칸에 들어가 안 읽힌다. */
       넣기(date, {kind: 'class', title: cls.name || '수업',
-        sub: sessionTimeText(cls.schedule) || ''});
+        sub: sessionTimeText(cls.schedule, dow) || ''});
     }
   });
 
@@ -14786,23 +14791,68 @@ function shiftYmd(ymd, delta){
   return d.toISOString().slice(0, 10);
 }
 
-/* 반 일정은 "월,수,금 7시~9시" 같은 자유 텍스트다. 요일 글자 뒤가 시간이라고 보고 잘라 쓴다 —
-   형식을 강제하는 곳이 없어서 파싱하려 들면 오히려 깨진다. */
-function sessionTimeText(schedule){
-  if(!schedule) return '';
-  let last = -1;
-  for(let i=0;i<schedule.length;i++) if(WEEKDAY_MAP[schedule[i]]!==undefined) last = i;
-  return schedule.slice(last+1).replace(/^[\s,·]+/, '').trim();
+/* =================== 반 일정 — 요일마다 시간이 다를 수 있다 (2026-09-08) ===================
+   사용자가 실제 반을 등록하다 물었다 — 「한 반이 화목은 5시-7시반이고 토요일은 오전10-오후2시야
+   이건 뭐라고 등록해야해?」.
+   🔴 **그때까지는 담을 자리가 없었다.** 이 칸은 «자유 텍스트 한 줄 + 시간 하나»였고,
+     `sessionTimeText` 가 **맨 마지막 요일 글자 뒤**를 시간으로 잘라 썼다. 그래서
+     「화,목 5시~7시30분 / 토 10시~14시」를 넣으면 **요일 셋은 제대로 잡히는데 시간은
+     「10시~14시」 하나만** 남아, 화·목 수업도 학생 달력에 10시라고 적혔다. 화면이 거짓말을 했다.
+   🔵 **덩이로 나눈다.** `/` 로 끊고, 덩이마다 «요일들 + 그 뒤 시간»을 읽는다.
+     ⚠ 쉼표로는 못 끊는다 — 옛 형식이 「월,수,금」처럼 요일 사이에 쉼표를 쓴다.
+   🔵 **옛 형식이 그대로 돈다** — 덩이가 하나면 그 시간이 모든 요일의 시간이다.
+     「월,수,금 7시~9시」는 한 글자도 안 고쳐도 예전과 똑같이 읽힌다. */
+function parseSchedule(schedule){
+  const out = [];
+  String(schedule || '').split(/[\/\n|]/).forEach(덩이 => {
+    const days = [];
+    let last = -1;
+    for(let i = 0; i < 덩이.length; i++){
+      const w = WEEKDAY_MAP[덩이[i]];
+      if(w !== undefined){ if(!days.includes(w)) days.push(w); last = i; }
+    }
+    const time = 덩이.slice(last + 1).replace(/^[\s,·~]+/, '').trim();
+    if(days.length || time) out.push({days, time});
+  });
+  return out;
 }
-function sessionStartHour(schedule){
-  const m = sessionTimeText(schedule).match(/\d+/);
-  return m ? parseInt(m[0], 10) : 99;
+/* 「화·목 17:00~19:30 · 토 10:00~14:00」 — 요일을 안 주면 «전부»를 한 줄로 말한다.
+   🔴 예전처럼 마지막 것 하나만 돌려주면 그것이 곧 거짓말이 된다.
+   ⚠ 덩이가 하나거나 시간이 다 같으면 **예전과 똑같이** 시간만 돌려준다(반 목록이 안 시끄러워진다). */
+function sessionTimeText(schedule, dow){
+  const 덩이들 = parseSchedule(schedule);
+  if(!덩이들.length) return '';
+  if(dow !== undefined && dow !== null && dow !== ''){
+    const 것 = 덩이들.find(x => x.days.includes(Number(dow)));
+    /* ⚠ 요일이 안 적힌 덩이(시간만 있는 것)는 «모두의 것»으로 본다 — 옛 형식의 꼬리다. */
+    return 것 ? 것.time : (덩이들.length === 1 && !덩이들[0].days.length ? 덩이들[0].time : '');
+  }
+  const 시간들 = [...new Set(덩이들.map(x => x.time).filter(Boolean))];
+  if(시간들.length <= 1) return 시간들[0] || '';
+  return 덩이들.filter(x => x.time).map(x =>
+    (x.days.length ? x.days.map(d => WEEKDAY_LABEL[d]).join('·') + ' ' : '') + x.time).join(' · ');
+}
+/* 그 요일의 시작 시각. 요일을 안 주면 **가장 이른** 것 — 수업 목록을 시간순으로 세울 때 쓴다.
+   ⚠ 예전에는 «마지막 덩이»의 시각이었다. 토요일이 뒤에 붙었다는 이유로 화요일 반이
+     10시로 정렬되던 자리다. */
+function sessionStartHour(schedule, dow){
+  if(dow !== undefined && dow !== null && dow !== ''){
+    const m = sessionTimeText(schedule, dow).match(/\d+/);
+    return m ? parseInt(m[0], 10) : 99;
+  }
+  const 시각들 = parseSchedule(schedule).map(x => {
+    const m = String(x.time).match(/\d+/);
+    return m ? parseInt(m[0], 10) : 99;
+  });
+  return 시각들.length ? Math.min(...시각들) : 99;
 }
 /* 그 날짜에 수업이 있는 반. 시간 순 — 왼쪽 목록이 곧 그날의 시간표가 된다. */
 function sessionsOn(date){
   const dow = new Date(date + 'T00:00:00').getDay();
+  /* ⚠ «그 요일»의 시작 시각으로 세운다 (2026-09-08) — 토요일만 오전인 반이 있는데
+     예전에는 마지막 덩이의 시각을 써서 **화요일 목록에서도 10시로** 정렬됐다. */
   return DATA.classes.filter(c=>parseScheduleDays(c.schedule).includes(dow))
-    .sort((a,b)=> sessionStartHour(a.schedule) - sessionStartHour(b.schedule)
+    .sort((a,b)=> sessionStartHour(a.schedule, dow) - sessionStartHour(b.schedule, dow)
                || (a.name||'').localeCompare(b.name||'', 'ko'));
 }
 /* 저장된 기록 기준 요약. 초안(attDraft)이 아니라 «이미 저장된 것»만 센다 —
@@ -24014,7 +24064,13 @@ function teacherSettingsClassesHTML(){
     form: !open ? '' : `<div class="st-form">
       <div class="cls-form">
         <label style="flex:1;min-width:170px;"><span>반 이름</span><input id="new-cname" placeholder="예: [특강]미적분"></label>
-        <label style="flex:1;min-width:170px;"><span>강의 시간</span><input id="new-cschedule" placeholder="예: 월,수,금 7시~9시"></label>
+        ${/* 🔴 **형식을 화면이 가르쳐야 한다** (2026-09-08) — 「/ 로 나눈다」는 것을
+             아무 데도 안 적으면 아무도 안 쓴다. 사용자가 실제로 겪은 반을 예로 든다. */''}
+        <label style="flex:1;min-width:170px;"><span>강의 시간</span>
+          <input id="new-cschedule" placeholder="예: 월,수,금 7시~9시">
+          <s style="display:block;text-decoration:none;margin-top:4px;font-size:11px;color:var(--dim);">
+            요일마다 시간이 다르면 <b>/</b> 로 나눕니다 — 예: <b>화,목 17:00~19:30 / 토 10:00~14:00</b>
+          </s></label>
         <label style="min-width:140px;"><span>기간</span><input id="new-cperiod" placeholder="예: 26.03~26.12"></label>
         <label style="min-width:110px;"><span>갈래</span>
           <select class="fm-sel" id="new-ckind"><option>정규</option><option>특강</option></select></label>
