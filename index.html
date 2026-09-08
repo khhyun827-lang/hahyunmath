@@ -14798,23 +14798,83 @@ function shiftYmd(ymd, delta){
      `sessionTimeText` 가 **맨 마지막 요일 글자 뒤**를 시간으로 잘라 썼다. 그래서
      「화,목 5시~7시30분 / 토 10시~14시」를 넣으면 **요일 셋은 제대로 잡히는데 시간은
      「10시~14시」 하나만** 남아, 화·목 수업도 학생 달력에 10시라고 적혔다. 화면이 거짓말을 했다.
-   🔵 **덩이로 나눈다.** `/` 로 끊고, 덩이마다 «요일들 + 그 뒤 시간»을 읽는다.
-     ⚠ 쉼표로는 못 끊는다 — 옛 형식이 「월,수,금」처럼 요일 사이에 쉼표를 쓴다.
+   🔴 **구분자에 기대지 않는다** (2026-09-08 저녁에 다시 고쳤다).
+     처음에는 `/` 로 끊게 했는데, **사용자가 쉼표로 적었다** —
+     「화,목 19시반~22시**,** 토 14시~16시」. 그게 사람이 쓰는 자연스러운 글자다.
+     🔵 그런데 쉼표로 끊을 수도 없다 — 옛 형식이 「월,수,금」처럼 **요일 사이에** 쉼표를 쓴다.
+     ▶ **그래서 «글자»가 아니라 «꼴»로 끊는다** — 요일들이 나오고, 시간이 나오고,
+       **거기서 다시 요일이 나오면 그것이 새 덩이의 시작**이다. 구분자는 무엇이든(또는 없어도) 된다.
    🔵 **옛 형식이 그대로 돈다** — 덩이가 하나면 그 시간이 모든 요일의 시간이다.
-     「월,수,금 7시~9시」는 한 글자도 안 고쳐도 예전과 똑같이 읽힌다. */
+     「월,수,금 7시~9시」는 한 글자도 안 고쳐도 예전과 똑같이 읽힌다.
+   ⚠ 시간 글자 안에 요일 글자가 들어가면 잘못 끊긴다 — 실제로 쓰는 「시·분·반·오전·오후·:·~」
+     에는 요일 글자가 없으므로 지금은 안 걸린다. **새 표기를 받을 때 여기를 다시 볼 것.** */
 function parseSchedule(schedule){
   const out = [];
-  String(schedule || '').split(/[\/\n|]/).forEach(덩이 => {
-    const days = [];
-    let last = -1;
-    for(let i = 0; i < 덩이.length; i++){
-      const w = WEEKDAY_MAP[덩이[i]];
-      if(w !== undefined){ if(!days.includes(w)) days.push(w); last = i; }
-    }
-    const time = 덩이.slice(last + 1).replace(/^[\s,·~]+/, '').trim();
+  const s = String(schedule || '');
+  let days = [], 시작 = -1, 시간중 = false;
+  const 닫기 = (끝) => {
+    if(!days.length && 시작 < 0) return;
+    const time = (시작 >= 0 ? s.slice(시작, 끝) : '').replace(/^[\s,·~\/|]+|[\s,·\/|]+$/g, '').trim();
     if(days.length || time) out.push({days, time});
-  });
+    days = []; 시작 = -1; 시간중 = false;
+  };
+  for(let i = 0; i < s.length; i++){
+    const w = WEEKDAY_MAP[s[i]];
+    if(w !== undefined){
+      /* 시간을 읽던 중에 요일이 나왔다 → 앞 덩이는 여기서 끝이고 새 덩이가 시작된다. */
+      if(시간중) 닫기(i);
+      if(!days.includes(w)) days.push(w);
+      시작 = i + 1;                       // 시간은 마지막 요일 글자 «뒤»부터다
+    } else if(days.length && !/[\s,·]/.test(s[i])) 시간중 = true;
+  }
+  닫기(s.length);
   return out;
+}
+/* =================== 시간 글자를 «한 꼴»로 (2026-09-08 · 사용자 요청) ===================
+   「등록할땐 19시반 이렇게 자유롭게 등록하더라도 뜨는건 동일하게 뜨도록 정리해줘」.
+   🔵 **적는 것은 자유롭게, 보이는 것은 한 꼴로.** 적어 둔 글자는 **안 고친다** —
+     화면에 그릴 때만 다듬는다. 그래야 사용자가 적은 것을 잃지 않는다.
+   🔴 **못 알아보면 손대지 않는다** — 이 저장소가 hwpx 파서에서 배운 그 규칙이다.
+     반쯤 알아듣고 고치면 「7시~9시」가 「7:00~」 같은 반 토막이 된다. */
+function normOneTime(글){
+  const t = String(글 || '').trim();
+  if(!t) return null;
+  let 시 = null, 분 = 0;
+  let m = t.match(/^(오전|오후)?\s*(\d{1,2})\s*:\s*(\d{1,2})$/);
+  if(m){ 시 = +m[2]; 분 = +m[3]; }
+  else {
+    m = t.match(/^(오전|오후)?\s*(\d{1,2})\s*시\s*(반|(\d{1,2})\s*분?)?$/);
+    if(!m) return null;
+    시 = +m[2];
+    분 = m[3] === '반' ? 30 : (m[4] ? +m[4] : 0);
+  }
+  if(m[1] === '오후' && 시 < 12) 시 += 12;
+  if(m[1] === '오전' && 시 === 12) 시 = 0;
+  if(!Number.isFinite(시) || 시 > 24 || 분 > 59) return null;
+  /* 🔴 **앞자리 0을 붙이지 않는다** — 「5시~7시반」을 `05:00` 으로 찍으면 **새벽 5시라고
+     단정하는 셈**이다. 학원 수업은 저녁 5시겠지만, 그것은 우리가 아는 것이 아니라 짐작이다.
+     🔵 「오전·오후」를 적어 준 것만 24시로 옮긴다 — 그건 사용자가 «말해 준» 것이다.
+     그래서 꼴만 고르게 하고(H:MM), 없는 뜻은 만들지 않는다. */
+  return 시 + ':' + String(분).padStart(2, '0');
+}
+/* 반 하나를 한 줄로 — 「화·목 19:30~22:00 · 토 14:00~16:00」.
+   🔵 목록이 «적어 둔 원문»을 그대로 뿌리면 반마다 꼴이 달라 읽기 어렵다. 한 꼴로 모은다.
+   ⚠ 시간이 하나뿐이면 요일을 앞에 세운다 — 「월·수·금 07:00~09:00」. */
+function classScheduleLabel(cls){
+  const 덩이들 = parseSchedule(cls && cls.schedule);
+  if(!덩이들.length) return '';
+  const 시간들 = [...new Set(덩이들.map(x => normTimeText(x.time)).filter(Boolean))];
+  const 요일 = parseScheduleDays(cls && cls.schedule).map(d => WEEKDAY_LABEL[d]).join('·');
+  if(시간들.length <= 1) return (요일 ? 요일 + ' ' : '') + (시간들[0] || '');
+  return sessionTimeText(cls.schedule);
+}
+function normTimeText(글){
+  const t = String(글 || '').trim();
+  if(!t) return '';
+  const 쪽 = t.split(/\s*[~\-–—]\s*/);
+  if(쪽.length !== 2) { const one = normOneTime(t); return one || t; }
+  const a = normOneTime(쪽[0]), b = normOneTime(쪽[1]);
+  return (a && b) ? a + '~' + b : t;      // 🔴 한쪽이라도 못 읽으면 원문 그대로
 }
 /* 「화·목 17:00~19:30 · 토 10:00~14:00」 — 요일을 안 주면 «전부»를 한 줄로 말한다.
    🔴 예전처럼 마지막 것 하나만 돌려주면 그것이 곧 거짓말이 된다.
@@ -14825,12 +14885,14 @@ function sessionTimeText(schedule, dow){
   if(dow !== undefined && dow !== null && dow !== ''){
     const 것 = 덩이들.find(x => x.days.includes(Number(dow)));
     /* ⚠ 요일이 안 적힌 덩이(시간만 있는 것)는 «모두의 것»으로 본다 — 옛 형식의 꼬리다. */
-    return 것 ? 것.time : (덩이들.length === 1 && !덩이들[0].days.length ? 덩이들[0].time : '');
+    const t = 것 ? 것.time : (덩이들.length === 1 && !덩이들[0].days.length ? 덩이들[0].time : '');
+    return normTimeText(t);
   }
-  const 시간들 = [...new Set(덩이들.map(x => x.time).filter(Boolean))];
+  const 시간들 = [...new Set(덩이들.map(x => normTimeText(x.time)).filter(Boolean))];
   if(시간들.length <= 1) return 시간들[0] || '';
   return 덩이들.filter(x => x.time).map(x =>
-    (x.days.length ? x.days.map(d => WEEKDAY_LABEL[d]).join('·') + ' ' : '') + x.time).join(' · ');
+    (x.days.length ? x.days.map(d => WEEKDAY_LABEL[d]).join('·') + ' ' : '')
+    + normTimeText(x.time)).join(' · ');
 }
 /* 그 요일의 시작 시각. 요일을 안 주면 **가장 이른** 것 — 수업 목록을 시간순으로 세울 때 쓴다.
    ⚠ 예전에는 «마지막 덩이»의 시각이었다. 토요일이 뒤에 붙었다는 이유로 화요일 반이
@@ -15073,7 +15135,10 @@ function teacherSessionHTML(){
               (sm.cnt['결석'] ? ` · 결석 ${sm.cnt['결석']}` : '');
           return `
           <div class="cls-sess ${c.id === classId ? 'on' : ''}" onclick="pickSession('${c.id}')">
-            <div class="t">${escHtml(sessionTimeText(c.schedule) || '시간 미정')}</div>
+            ${/* 🔴 **«그 날»의 시간이라야 한다** (2026-09-08 · 사용자가 짚었다 —
+                 「오늘은 화요일인데 시간이 토요일시간으로 뜨고」). 이 목록은 날짜 하나를
+                 보고 있으므로 요일을 안 넘기면 «전부»가 오거나 엉뚱한 것이 온다. */''}
+            <div class="t">${escHtml(sessionTimeText(c.schedule, new Date(date + 'T00:00:00').getDay()) || '시간 미정')}</div>
             <div class="n">${escHtml(c.name)}</div>
             <div class="m">${escHtml(detail)}</div>
             <span class="st badge ${st[0]}">${st[1]}</span>
@@ -24064,19 +24129,20 @@ function teacherSettingsClassesHTML(){
     form: !open ? '' : `<div class="st-form">
       <div class="cls-form">
         <label style="flex:1;min-width:170px;"><span>반 이름</span><input id="new-cname" placeholder="예: [특강]미적분"></label>
-        ${/* 🔴 **형식을 화면이 가르쳐야 한다** (2026-09-08) — 「/ 로 나눈다」는 것을
-             아무 데도 안 적으면 아무도 안 쓴다. 사용자가 실제로 겪은 반을 예로 든다. */''}
+        ${/* ⚠ **곁말을 label 안에 넣지 말 것** (2026-09-08 · 사용자가 짚었다 — 「줄도 안맞고
+             이상해졌어」). `.cls-form` 은 칸들을 한 줄에 세우는 flex 라, 한 칸만 키가 커지면
+             그 줄이 통째로 어긋난다. **설명은 아래 `st-note` 로 간다** — 원래 그러라고 있는 자리다. */''}
         <label style="flex:1;min-width:170px;"><span>강의 시간</span>
-          <input id="new-cschedule" placeholder="예: 월,수,금 7시~9시">
-          <s style="display:block;text-decoration:none;margin-top:4px;font-size:11px;color:var(--dim);">
-            요일마다 시간이 다르면 <b>/</b> 로 나눕니다 — 예: <b>화,목 17:00~19:30 / 토 10:00~14:00</b>
-          </s></label>
+          <input id="new-cschedule" placeholder="예: 화,목 19시반~22시, 토 2시~4시"></label>
         <label style="min-width:140px;"><span>기간</span><input id="new-cperiod" placeholder="예: 26.03~26.12"></label>
         <label style="min-width:110px;"><span>갈래</span>
           <select class="fm-sel" id="new-ckind"><option>정규</option><option>특강</option></select></label>
         <button class="btn p sm" onclick="addClass()">추가</button>
       </div>
-      <p class="st-note">요일 글자(월·화·수…)로 수업일이 정해집니다. 「월,수,금 7시~9시」처럼 적어 주세요.<br>
+      <p class="st-note">요일 글자(월·화·수…)로 수업일이 정해집니다.
+        <b>요일마다 시간이 달라도 그대로 적으시면 됩니다</b> — 「화,목 19시반~22시, 토 2시~4시」처럼요.
+        구분은 쉼표든 <b>/</b> 든 상관없고, <b>「7시」·「19시반」·「오후 2시」·「14:00」 무엇으로 적어도</b>
+        화면에는 <b>14:00~16:00</b> 같은 한 꼴로 보입니다.<br>
         <b>특강</b>으로 만들면 — 학생을 <b>정규반과 겹쳐서</b> 넣을 수 있고,
         <b>출석률이 정규반과 따로</b> 셈해집니다. 출결 · 과제 · 성적 · 진도 · 교재는 정규반과 똑같이 씁니다.</p></div>`,
     body: list.length===0 ? '<div class="st-empty">아직 만든 반이 없습니다.</div>'
@@ -24085,7 +24151,9 @@ function teacherSettingsClassesHTML(){
           const cp = getClassProgress(c.id);
           return `<div class="st-row">
             <div class="t"><b>${escHtml(c.name)}</b>
-              <span>${escHtml(c.schedule||'일정 미등록')}<s>·</s>${n}명${
+              ${/* ⚠ 원문을 그대로 뿌리지 않는다 — 「19시반~22시, 토 14시~16시」처럼 적어도
+                   목록에서는 「화·목 19:30~22:00 · 토 14:00~16:00」으로 한 꼴로 보인다. */''}
+              <span>${escHtml(classScheduleLabel(c) || '일정 미등록')}<s>·</s>${n}명${
                 c.period?`<s>·</s>${escHtml(c.period)}`:''}${cp.subject?`<s>·</s>${escHtml(cp.subject)} ${cp.percent}%`:''}</span></div>
             <div class="v">
               ${isSpecialClass(c.id) ? '<span class="badge consult">특강</span>' : ''}
