@@ -1319,6 +1319,35 @@
 .app .ist-msg{margin-top:7px;padding:8px 12px;font-size:11.5px;line-height:1.7;
   color:var(--sub);background:var(--note);border:1px dashed var(--note-dash);
   border-radius:var(--r-md);flex-shrink:0;}
+/* ── 직보 일정표 (2026-09-08) ──────────────────────────────────────────
+   🔴 **첫 칸 셋은 가로로 밀어도 붙어 있어야 한다** — 16일을 밀고 나면 누구 줄인지 잃는다.
+     그래서 sticky 로 붙이고 left 를 셋의 폭에 맞춰 쌓는다(52 · 130 → 66+64+92).
+   ⚠ 칸은 «작게» 둔다. 열여섯 날이 한 화면에 들어와야 표가 표 노릇을 한다. */
+.app .pl-wrap{overflow:auto;border:1px solid var(--line);border-radius:var(--r-md);background:var(--card);}
+.app .pl-t2{border-collapse:separate;border-spacing:0;font-size:11px;white-space:nowrap;}
+.app .pl-t2 th,.app .pl-t2 td{border-right:1px solid var(--line);border-bottom:1px solid var(--line);
+  padding:4px 6px;font-weight:500;text-align:center;background:var(--card);}
+.app .pl-t2 thead th{position:sticky;top:0;z-index:3;background:var(--sunk);color:var(--sub);}
+.app .pl-t2 .pl-cls{position:sticky;left:0;z-index:2;width:66px;min-width:66px;color:var(--sub);background:var(--sunk);}
+.app .pl-t2 .pl-nm{position:sticky;left:66px;z-index:2;width:64px;min-width:64px;cursor:pointer;}
+.app .pl-t2 .pl-sc{position:sticky;left:130px;z-index:2;width:92px;min-width:92px;color:var(--dim);}
+.app .pl-t2 thead .pl-cls,.app .pl-t2 thead .pl-nm,.app .pl-t2 thead .pl-sc{z-index:4;}
+.app .pl-t2 .pl-cp{margin-left:4px;color:var(--dim);cursor:pointer;font-weight:700;}
+.app .pl-t2 .pl-cp:hover{color:var(--brand);}
+.app .pl-dh{min-width:62px;font-variant-numeric:tabular-nums;}
+.app .pl-dh s{display:block;text-decoration:none;font-size:10px;color:var(--dim);}
+.app .pl-dh.sun,.app .pl-dh.sun s{color:var(--no);}
+.app .pl-dh.sat,.app .pl-dh.sat s{color:var(--blue);}
+.app .pl-c{cursor:pointer;min-width:62px;height:24px;}
+.app .pl-c:hover{background:var(--sunk);}
+/* 색은 종류가 정한다 — ds.css 의 상태색 셋만 쓴다(새 색을 만들지 않는다). */
+.app .pl-c.k-no{color:var(--no);background:var(--nobg);}
+.app .pl-c.k-blue{color:var(--blue);background:var(--bluebg);}
+.app .pl-c.k-gone{color:var(--ink);background:var(--gonebg);}
+.app .pl-d{padding:4px 7px;border:1px solid var(--line);border-radius:var(--r-sm);
+  background:var(--card);color:var(--ink);font-size:11.5px;}
+.app .pl-t{width:66px;padding:4px 7px;border:1px solid var(--line);border-radius:var(--r-sm);
+  background:var(--card);color:var(--ink);font-size:11.5px;}
 .app .ist-books{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;flex-shrink:0;}
 .app .ist-books .pill b{font-variant-numeric:tabular-nums;color:var(--dim);font-weight:600;}
 .app .ist-books .pill.on b{color:#fff;}
@@ -5379,6 +5408,172 @@ function gradeCutCount(seasonKey){
     { k += Object.keys(bySj || {}).length; }));
   return k;
 }
+/* =================== 직보 일정표 (2026-09-08 · 사용자 요청) ===================
+   사용자가 시험기간마다 엑셀로 만들어 학생에게 나눠 주던 표를 여기로 옮긴다 —
+   «학생 × 날짜» 격자에 「등원X」·「직보2시」·「수학시험」 같은 말을 찍는다.
+   🔵 **옮기는 값은 «한 번 만들면 학생 달력에 저절로 뜬다»는 것이다.** 엑셀은 만든 뒤
+     따로 나눠 줘야 하고, 고치면 또 나눠 줘야 한다. 여기서는 고치는 즉시 그 학생 달력이 바뀐다.
+
+   ⚠ **저장은 등급컷과 같은 결이다** — `kv` 문서 하나에 «시즌 한 판»을 열쇠로 담는다.
+     ① 컬렉션을 안 늘리므로 **Firestore 규칙을 한 줄도 안 건드린다**
+        (kv 는 「읽기는 진짜 계정, 쓰기는 강사」라 학생이 읽고 강사가 쓰는 이 표에 그대로 맞는다)
+     ② 시즌 초기화(`saveSeason`)에 안 휩쓸린다 — 지난 시험의 표가 남는다
+   🔴 **읽을 때는 시즌을 안 가린다.** 시즌을 넘기는 순간 학생 달력에서 「등원시작」이
+     사라지면 안 되기 때문이다 — 그 날짜는 대개 «시즌을 넘긴 뒤»에 온다.
+     쓸 때만 지금 시즌에 쓴다. 날짜가 열쇠라 시즌이 달라도 안 섞인다. */
+/* 🔴 **말은 «종류 + 시간»으로 짓는다** (사용자가 골랐다). 자유 글자가 아니다 —
+     ① 종류가 정해져 있어야 **색**이 저절로 맞고 ② 학생 달력에서 갈래로 보여 줄 수 있고
+     ③ 오타가 학생에게 그대로 가지 않는다.
+   ⚠ 붙여 쓰는 것과 띄어 쓰는 것이 갈린다 — 「직보2시」는 붙이고 「가능하면 5시」는 띄운다.
+     사용자의 엑셀이 그렇게 돼 있어서 그대로 따른다. */
+const PLAN_KINDS = [
+  ['jikbo',  '직보',      1, '',  'no'],      // 빨강 — 이 표의 주인공
+  ['start',  '등원시작',  0, '',  'no'],      // 빨강 — 시험 끝나고 돌아오는 날
+  ['off',    '등원X',     0, '',  'blue'],    // 파랑 — 오지 않는 날
+  ['maybe',  '가능하면',  1, ' ', 'blue'],    // 파랑 — 「가능하면 5시」
+  ['exam',   '수학시험',  0, '',  'gone'],
+  ['extra',  '보충',      1, '',  'gone'],    // 「보충10시」
+  ['consult','상담진행',  0, '',  'gone'],
+];
+const PLAN_KIND_MAP = PLAN_KINDS.reduce((m, k) => (m[k[0]] = {key:k[0], 이름:k[1], 시간:k[2], 사이:k[3], 색:k[4]}, m), {});
+/* 「직보」 + 「2시」 → 「직보2시」. 시간을 안 받는 종류는 시간을 버린다(칸이 거짓말하면 안 된다). */
+function planLabel(cell){
+  const k = cell && PLAN_KIND_MAP[cell.k];
+  if(!k) return '';
+  const t = k.시간 ? String(cell.t || '').trim() : '';
+  return k.이름 + (t ? k.사이 + t : '');
+}
+function examPlanAll(){
+  const by = state.examPlan && state.examPlan.byKey;
+  return by && typeof by === 'object' ? by : {};
+}
+function examPlanCur(){
+  const p = examPlanAll()[curSeasonKey()];
+  return (p && typeof p === 'object') ? p : {};
+}
+/* 이 학생의 «날짜 → 칸». 🔴 시즌을 안 가리고 다 훑는다(위 머리말의 까닭).
+   ⚠ 같은 날짜가 두 시즌에 있으면 **나중 시즌이 이긴다** — 열쇠가 시작일로 시작하므로 정렬이 곧 차례다. */
+function planCellsOfStudent(sid){
+  const by = examPlanAll();
+  const out = {};
+  Object.keys(by).sort().forEach(key => {
+    const rows = (by[key] && by[key].cells) || {};
+    const mine = rows[sid] || {};
+    for(const date in mine) if(mine[date] && mine[date].k) out[date] = mine[date];
+  });
+  return out;
+}
+function planCell(sid, date){ return (examPlanCur().cells || {})[sid] ? examPlanCur().cells[sid][date] : null; }
+
+/* 🔴 **칸을 하나 찍을 때마다 쓰면 안 된다** — 붓으로 칠하는 화면이라 한 번에 수십 칸이
+     바뀐다. 그대로 두면 쓰기 한도를 그만큼 태우고, 느려서 붓질이 밀린다.
+   🔵 그래서 **화면은 곧장 바꾸고 저장만 모아서 한 번** 한다(0.8초). 사람이 붓을 멈추면 나간다.
+   ⚠ 창을 닫아도 남은 것을 밀어 넣는다 — 안 그러면 마지막 붓질이 조용히 사라진다. */
+let planSaveTimer = null;
+function planSaveSoon(){
+  state.planDirty = 1;
+  if(planSaveTimer) clearTimeout(planSaveTimer);
+  planSaveTimer = setTimeout(planSaveNow, 800);
+}
+async function planSaveNow(){
+  if(planSaveTimer){ clearTimeout(planSaveTimer); planSaveTimer = null; }
+  if(!state.planDirty) return;
+  state.planDirty = 0;
+  await dbSet('exam-plan', state.examPlan);
+  render();
+}
+window.addEventListener('beforeunload', () => { if(state.planDirty) planSaveNow(); });
+
+/* 한 칸을 찍거나 지운다. 화면은 곧장 바뀌고 저장은 모아서 나간다. */
+function planSetCell(sid, date, kind, time){
+  if(!state.examPlan || !state.examPlan.byKey) state.examPlan = {byKey: {}};
+  const by = state.examPlan.byKey, key = curSeasonKey();
+  if(!by[key]) by[key] = {cells: {}};
+  if(!by[key].cells) by[key].cells = {};
+  const rows = by[key].cells;
+  if(!rows[sid]) rows[sid] = {};
+  if(!kind) delete rows[sid][date];
+  else {
+    const k = PLAN_KIND_MAP[kind];
+    if(!k) return false;
+    rows[sid][date] = k.시간 && String(time || '').trim()
+      ? {k: kind, t: String(time).trim()} : {k: kind};
+  }
+  /* 빈 껍데기를 걷는다 — 안 걷으면 「아무것도 안 적힌 학생」이 문서에 쌓인다. */
+  if(!Object.keys(rows[sid]).length) delete rows[sid];
+  planSaveSoon();
+  return true;
+}
+/* 날짜 줄을 손으로 정한다. 둘 다 비우면 «시험 일정에서 저절로» 로 돌아간다. */
+function planSetRange(from, to){
+  if(!state.examPlan || !state.examPlan.byKey) state.examPlan = {byKey: {}};
+  const by = state.examPlan.byKey, key = curSeasonKey();
+  if(!by[key]) by[key] = {cells: {}};
+  by[key].from = from || ''; by[key].to = to || '';
+  planSaveSoon();
+}
+/* 표가 보여 줄 «날짜 줄». 안 정해 뒀으면 시험 일정에서 낸다. */
+function planRange(){
+  const p = examPlanCur();
+  if(p.from && p.to) return {from: p.from, to: p.to};
+  const auto = planAutoRange();
+  return auto || {from: '', to: ''};
+}
+/* 🔵 **날짜 줄도 시험 일정에서 낸다** — 학교마다 시험이 갈리므로 «제일 이른 것부터
+     제일 늦은 것까지»를 잡고 앞뒤로 이틀씩 둔다(직보는 시험 전날, 등원시작은 끝난 뒤라서).
+   ⚠ 시험 일정이 하나도 없으면 `null` 이다 — 화면이 그 사실을 말한다. 빈 표를 그리지 않는다. */
+function planAutoRange(){
+  const 날들 = [];
+  (DATA.students || []).forEach(s => {
+    const d = examDatesOf(s.school || '', s.grade || '');
+    if(!d) return;
+    [d.start, d.end, d.math].forEach(x => { if(x) 날들.push(x); });
+  });
+  if(!날들.length) return null;
+  날들.sort();
+  return {from: dateShift(날들[0], -2), to: dateShift(날들[날들.length - 1], 2)};
+}
+/* 날짜 글자를 며칠 민다. ⚠ UTC 로 셈한다 — 로컬 자정으로 만들면 KST 에서 하루가 깎인다
+   (`examDdayOf` 가 같은 함정을 적어 두었다). */
+function dateShift(date, days){
+  const t = Date.parse(String(date) + 'T00:00:00Z');
+  if(!Number.isFinite(t)) return '';
+  return new Date(t + days * 86400000).toISOString().slice(0, 10);
+}
+function planDaysOf(from, to){
+  const out = [];
+  if(!from || !to || from > to) return out;
+  for(let d = from, i = 0; d <= to && i < 60; d = dateShift(d, 1), i++) out.push(d);
+  return out;   // ⚠ 60일에서 끊는다 — 날짜를 잘못 치면 화면이 통째로 멎는다
+}
+
+/* 🔴 **밑그림은 «확실한 것»만 깐다** (사용자가 골랐다 — 「밑그림을 깔아 준다」).
+   시험 일정에서 틀림없이 나오는 것은 **둘뿐**이다:
+     · 수학 시험일 → 「수학시험」   · 그 전날 → 「직보2시」
+   나머지(등원X·보충·가능하면·상담진행·등원시작)는 **학생마다 갈린다.**
+   실제로 사용자의 표를 보면 같은 반 같은 날에 한 학생은 「등원X」, 다른 학생은 「가능하면 5시」다 —
+   제 시험이 가까운가 먼가로 갈리는 «판단»이라 자동으로 찍으면 조용히 틀린다.
+   🔵 **그래서 짐작은 안 한다.** 두 칸을 깔아 주고 나머지는 붓으로 찍게 둔다.
+   🔴 **손으로 고친 칸은 안 건드린다** — 다시 깔아도 사람이 정한 것이 이긴다. */
+function planSeed(){
+  const days = planDaysOf(planRange().from, planRange().to);
+  if(!days.length) return {깐것: 0, 건너뜀: 0, 없음: 0};
+  const 있는날 = new Set(days);
+  let 깐것 = 0, 건너뜀 = 0, 없음 = 0;
+  (DATA.students || []).forEach(s => {
+    const sid = s.studentId;
+    const d = examDatesOf(s.school || '', s.grade || '');
+    if(!d || !d.math){ 없음++; return; }
+    const 넣기 = (date, kind, time) => {
+      if(!date || !있는날.has(date)) return;
+      if(planCell(sid, date)){ 건너뜀++; return; }        // 이미 적힌 칸은 사람의 것이다
+      if(planSetCell(sid, date, kind, time)) 깐것++;
+    };
+    넣기(d.math, 'exam');
+    넣기(dateShift(d.math, -1), 'jikbo', '2시');
+  });
+  return {깐것, 건너뜀, 없음};
+}
 function schoolBookOf(school, grade){
   const b = state.schoolBooks;
   return (b && b[school] && b[school][grade]) || '';
@@ -5459,14 +5654,17 @@ async function loadStudentData(uid){
      시험 D-day(`studentExamDday`)·범위 거르기(`studentRange`)·데일리퀴즈가 쓴다.
      안 읽으면 «시험이 없는 것처럼» 보이고, 화면은 멀쩡해서 알아채기 어렵다.
      ⚠ 읽는 것을 좁힐 때는 **좁히고 나서 «무엇이 안 보이나»를 세어 볼 것.** */
-  [state.season, state.examRanges, state.schoolBooks, state.gradeCuts] = await Promise.all([
+  /* ⚠ 직보 일정표도 여기서 같이 받는다 — 학생 달력이 첫 렌더에서 바로 본다.
+     🔵 kv 문서 하나라 «읽기 한 건»만 는다(로그인 144 → 145). */
+  [state.season, state.examRanges, state.schoolBooks, state.gradeCuts, state.examPlan] = await Promise.all([
     dbGet('season', null), dbGet('exam-ranges', null), dbGet('school-books', null),
-    dbGet('grade-cuts', null)
+    dbGet('grade-cuts', null), dbGet('exam-plan', null)
   ]);
   if(!state.examRanges) state.examRanges = {season: currentSeason(), bySchool: {}};
   if(!state.examRanges.dates) state.examRanges.dates = {};
   if(!state.schoolBooks) state.schoolBooks = {};
   if(!state.gradeCuts || !state.gradeCuts.byKey) state.gradeCuts = {byKey: {}};
+  if(!state.examPlan || !state.examPlan.byKey) state.examPlan = {byKey: {}};
 }
 
 async function loadAllData(){
@@ -5511,14 +5709,17 @@ async function loadAllData(){
      한 번 그렸다가 바뀌는 깜빡임이 생기므로 여기서 같이 받는다. */
   /* ⚠ 등급컷도 여기서 같이 받는다 — 시험 범위 화면이 첫 렌더에서 바로 본다.
      늦게 오면 「적어 둔 곳 0」을 한 번 그렸다가 바뀐다 (G-1). */
-  [state.season, state.examRanges, state.schoolBooks, state.gradeCuts] = await Promise.all([
+  /* ⚠ 직보 일정표도 여기서 같이 받는다 — 학생 달력이 첫 렌더에서 바로 본다.
+     🔵 kv 문서 하나라 «읽기 한 건»만 는다(로그인 144 → 145). */
+  [state.season, state.examRanges, state.schoolBooks, state.gradeCuts, state.examPlan] = await Promise.all([
     dbGet('season', null), dbGet('exam-ranges', null), dbGet('school-books', null),
-    dbGet('grade-cuts', null)
+    dbGet('grade-cuts', null), dbGet('exam-plan', null)
   ]);
   if(!state.examRanges) state.examRanges = {season: currentSeason(), bySchool: {}};
   if(!state.examRanges.dates) state.examRanges.dates = {};
   if(!state.schoolBooks) state.schoolBooks = {};
   if(!state.gradeCuts || !state.gradeCuts.byKey) state.gradeCuts = {byKey: {}};
+  if(!state.examPlan || !state.examPlan.byKey) state.examPlan = {byKey: {}};
 
 }
 
@@ -12998,6 +13199,10 @@ const CAL_KINDS = {
   hw:     {이름: '과제',    색: 'var(--late)',  바탕: 'var(--latebg)'},
   video:  {이름: '영상',    색: 'var(--blue)',  바탕: 'var(--bluebg)'},
   clinic: {이름: '클리닉',  색: 'var(--leave)', 바탕: 'var(--leavebg)'},
+  /* 🔵 **일곱째 갈래 — 직보 일정표** (2026-09-08). 강사가 「설정 › 직보 일정표」에서 찍는 것이
+     그대로 여기로 온다. 시험기간에 학생이 가장 자주 묻는 「나 언제 와?」의 답이다.
+     ⚠ 색은 ds.css 에 «있는» 것만 쓴다 — 여섯 중 유일하게 안 쓰고 있던 gone 을 쓴다. */
+  plan:   {이름: '직보',    색: 'var(--gone)',  바탕: 'var(--gonebg)'},
   mine:   {이름: '내 일정', 색: 'var(--dim)',   바탕: 'var(--sunk)'},
 };
 
@@ -13054,6 +13259,25 @@ function stuMonthEvents(c, ym){
     넣기(cl.day, {kind: 'clinic', title: '클리닉', sub: cl.topic || '',
       time: slotTimeLabel(cl.time) || ''});
   });
+
+  /* ⑦ 직보 일정표 — 강사가 「설정 › 직보 일정표」에서 찍은 것 (2026-09-08 · 사용자 요청).
+     🔵 **이 한 덩이가 「고치면 바로 뜬다」를 이룬다** — 표를 고치는 즉시 그 학생 달력이 바뀐다.
+       엑셀로 만들던 표는 만든 뒤 따로 나눠 줘야 했고, 고치면 또 나눠 줘야 했다.
+     ⚠ `planCellsOfStudent` 가 **시즌을 안 가리고** 준다 — 시즌을 넘긴 뒤에 오는 「등원시작」이
+       달력에서 사라지면 안 되기 때문이다. 자세한 것은 그 함수의 머리말에.
+     ⚠ 이 달의 것만 남는 것은 `넣기` 가 알아서 한다(`ym` 이 다르면 안 넣는다). */
+  const 내직보 = planCellsOfStudent(c.sid);
+  for(const date in 내직보){
+    /* 🔴 **같은 말을 두 번 하지 않는다** (2026-09-08 · 만들면서 화면에서 봤다).
+       표의 「수학시험」 칸은 **강사가 표를 읽을 때의 기준점**이라 표에는 있어야 한다.
+       그런데 학생 달력에는 ②가 이미 «시험» 갈래로 굵게 적어 두었다 —
+       그대로 두면 6/25 에 「수학 시험」과 「수학시험」이 나란히 뜬다.
+       ⚠ **«시험 일정이 그 날을 수학 시험일이라 말할 때»만 뺀다.** 그냥 갈래로 빼면,
+         시험 일정을 안 적고 표에만 찍은 경우 학생 달력에서 통째로 사라진다. */
+    if(내직보[date].k === 'exam' && d && d.math === date) continue;
+    const 말 = planLabel(내직보[date]);
+    if(말) 넣기(date, {kind: 'plan', title: 말, sub: '직보 일정표'});
+  }
 
   /* ⑥ 내 일정 — 학생이 스스로 적은 것(다른 학원·개인 일정).
      🔵 **«매주»도 된다** (2026-09-08 · 사용자 요청) — 「영어학원 월·수 6시」처럼 되풀이하는 것이
@@ -23299,12 +23523,176 @@ function teacherCleanupHTML(){
   return `${card('answer')}${card('score')}${card('sqrt')}`;
 }
 
+/* =================== 직보 일정표 화면 (2026-09-08 · 사용자 요청) ===================
+   사용자가 엑셀로 만들던 표 그대로다 — 왼쪽에 반·이름·학교, 위에 날짜, 칸에 할 말.
+
+   🔵 **«붓»으로 칠한다.** 칸마다 팝업을 띄우면 40명 × 16일 = 640칸을 못 채운다.
+     위에서 종류를 한 번 고르고 칸을 누르면 찍힌다. 같은 것을 다시 누르면 지워진다(토글).
+     사용자의 표를 보면 **같은 값이 세로로 죽 이어진다**(광남고 아이들 전부 「직보2시」) —
+     붓이 그 결에 맞는다.
+   ⚠ **저장은 모아서 한 번** 한다(0.8초). 붓질마다 쓰면 한도를 태우고 붓이 밀린다.
+   ⚠ 첫 칸 셋(반·이름·학교)은 가로로 밀어도 **붙어 있어야** 한다 — 16일을 밀고 나면
+     누구 줄인지 알 수 없게 된다. `position:sticky` 로 붙인다. */
+function teacherExamPlanHTML(){
+  const 범위 = planRange();
+  const days = planDaysOf(범위.from, 범위.to);
+  const 자동 = planAutoRange();
+  const p = examPlanCur();
+  const 손으로 = !!(p.from && p.to);
+
+  /* 반으로 묶는다 — 사용자의 표가 그렇게 생겼다. 반이 없는 학생은 맨 뒤에 따로 선다.
+     ⚠ **퇴원생은 뺀다** — 이 표는 «앞으로의 일»이다. 노트가 적어 둔 그 갈림이고,
+       `DATA.students` 를 그냥 거르면 퇴원생이 딸려 온다(`isWithdrawn` 을 쓸 것). */
+  const 학생들 = (DATA.students || []).filter(s => s.studentId && !isWithdrawn(s));
+  const 묶음 = {};
+  학생들.forEach(s => {
+    const 반 = classNameOf(s.classId) || '반 없음';
+    (묶음[반] = 묶음[반] || []).push(s);
+  });
+  const 반이름들 = Object.keys(묶음).sort((a, b) =>
+    (a === '반 없음') - (b === '반 없음') || a.localeCompare(b, 'ko'));
+  반이름들.forEach(n => 묶음[n].sort((a, b) => String(a.name||'').localeCompare(String(b.name||''), 'ko')));
+
+  const 붓 = state.planBrush || {k: 'jikbo', t: '2시'};
+  const 붓종류 = PLAN_KIND_MAP[붓.k];
+
+  const 찍힌수 = Object.values(p.cells || {}).reduce((n, r) => n + Object.keys(r || {}).length, 0);
+
+  const 머리 = `<div class="rst-hrow" style="flex-shrink:0;">
+    <h1 class="t-title">직보 일정표<s>${escHtml(currentSeason())} · ${학생들.length}명 · 찍은 칸 ${찍힌수}개${
+      state.planDirty ? ' · 저장 중…' : ''}</s></h1>
+  </div>`;
+
+  /* ── 날짜 줄 ── */
+  const 줄 = `<div class="ist-bar">
+    <span class="ic-k">날짜</span>
+    <input type="date" class="pl-d" value="${escHtml(범위.from)}"
+      onchange="planSetRange(this.value, planRange().to); render();">
+    <span>~</span>
+    <input type="date" class="pl-d" value="${escHtml(범위.to)}"
+      onchange="planSetRange(planRange().from, this.value); render();">
+    ${손으로 ? `<button class="btn q sm" title="시험 일정에서 다시 잡습니다"
+        onclick="planSetRange('',''); render();">시험 일정에 맡기기</button>`
+      : `<span class="ic-hint">시험 일정에서 저절로 잡았습니다${
+          자동 ? '' : ' — 🔴 <b>시험 일정이 비어 있어 잡을 것이 없습니다</b>'}</span>`}
+    <span class="spacer"></span>
+    <button class="btn q sm" title="수학 시험일과 그 전날 직보만 깝니다 — 손으로 고친 칸은 안 건드립니다"
+      onclick="planSeedRun()">밑그림 깔기</button>
+  </div>`;
+
+  /* ── 붓 ── */
+  const 붓줄 = `<div class="ist-bar">
+    <span class="ic-k">붓</span>
+    ${PLAN_KINDS.map(([k, 이름]) => `<button class="btn ${붓.k===k?'p':'q'} sm"
+      onclick="state.planBrush={k:'${k}',t:state.planBrush&&state.planBrush.t||''};render()">${escHtml(이름)}</button>`).join('')}
+    <button class="btn ${붓.k===''?'p':'q'} sm" title="칸을 비웁니다"
+      onclick="state.planBrush={k:'',t:''};render()">지우개</button>
+    ${붓종류 && 붓종류.시간 ? `<input class="pl-t" placeholder="2시" value="${escHtml(붓.t||'')}"
+      oninput="liveEdit(event, v=>{ state.planBrush={k:'${붓.k}',t:v}; })">` : ''}
+    <span class="ic-hint">칸을 누르면 <b>${escHtml(붓.k ? planLabel({k:붓.k,t:붓.t}) || '—' : '비우기')}</b> 가 찍힙니다 ·
+      같은 것을 다시 누르면 지워집니다 · 이름 옆 <b>⇊</b> 는 그 줄을 <b>같은 반·같은 학교</b>에 그대로 옮깁니다</span>
+  </div>`;
+
+  if(!days.length) return `<div class="ex-main">${머리}${줄}
+    <div class="ist-empty">날짜 줄이 없습니다 — 위에서 날짜를 정하거나,
+      「설정 › 시험 일정」에 학교별 시험 날짜를 먼저 적어 주세요.</div></div>`;
+
+  /* ── 표 ── */
+  const 요일 = ['일','월','화','수','목','금','토'];
+  const 날머리 = days.map(d => {
+    const w = new Date(d + 'T00:00:00Z').getUTCDay();
+    return `<th class="pl-dh ${w===0?'sun':w===6?'sat':''}">
+      <s>${요일[w]}</s>${Number(d.slice(5,7))}/${Number(d.slice(8,10))}</th>`;
+  }).join('');
+
+  const 줄들 = 반이름들.map(반 => 묶음[반].map((s, i) => {
+    const sid = s.studentId;
+    return `<tr>
+      ${i === 0 ? `<th class="pl-cls" rowspan="${묶음[반].length}">${escHtml(반)}</th>` : ''}
+      ${/* 🔵 이름 옆의 «⇊» 하나가 이 표에서 가장 많은 손을 던다 — 같은 반·같은 학교면
+             줄이 통째로 같기 때문이다. 이름 자체를 누르면 아무 일도 안 나게 둔다(실수 방지). */''}
+      <th class="pl-nm">${escHtml(s.name || sid)}${
+        planRowTwins(sid).length ? `<b class="pl-cp" title="이 줄을 같은 반·같은 학교 ${
+          planRowTwins(sid).length}명에게 그대로 옮깁니다"
+          onclick="planCopyRow('${escHtml(sid)}')">⇊</b>` : ''}</th>
+      <th class="pl-sc">${escHtml(s.school || '')}</th>
+      ${days.map(d => {
+        const c = planCell(sid, d);
+        const k = c && PLAN_KIND_MAP[c.k];
+        return `<td class="pl-c ${k ? 'k-' + k.색 : ''}"
+          onclick="planPaint('${escHtml(sid)}','${d}')">${k ? escHtml(planLabel(c)) : ''}</td>`;
+      }).join('')}
+    </tr>`;
+  }).join('')).join('');
+
+  return `<div class="ex-main">${머리}${줄}${붓줄}
+    ${state.planMsg ? `<div class="ist-msg">${escHtml(state.planMsg)}</div>` : ''}
+    <div class="ex-body"><div class="pl-wrap"><table class="pl-t2">
+      <thead><tr><th class="pl-cls">반</th><th class="pl-nm">이름</th><th class="pl-sc">학교</th>${날머리}</tr></thead>
+      <tbody>${줄들}</tbody>
+    </table></div><div class="rst-pad"></div></div>
+  </div>`;
+}
+/* 칸 하나를 붓으로 찍는다. 🔵 **같은 것을 다시 누르면 지운다** — 잘못 찍었을 때
+   지우개로 바꿨다가 다시 돌아오는 것은 붓질의 결을 끊는다. */
+function planPaint(sid, date){
+  const 붓 = state.planBrush || {k: 'jikbo', t: '2시'};
+  const 지금 = planCell(sid, date);
+  const 같나 = 지금 && 붓.k && 지금.k === 붓.k
+    && String(지금.t || '') === String((PLAN_KIND_MAP[붓.k] || {}).시간 ? (붓.t || '') : '');
+  planSetCell(sid, date, 같나 ? '' : 붓.k, 붓.t);
+  state.planMsg = '';
+  render();
+}
+/* 🔵 **줄 하나를 «같은 반 · 같은 학교»에 복사한다** (2026-09-08).
+   ⚠ 처음에는 「이름을 누르면 그 줄이 통째로 한 값으로 칠해진다」로 만들었는데,
+     **사용자의 실제 표를 보니 그런 줄이 하나도 없었다** — 줄은 대개 서너 칸만 차 있다.
+     쓸모없는 것을 만들 뻔했다.
+   🔵 표에서 실제로 되풀이되는 결은 이것이다 — **같은 반이면서 같은 학교면 줄이 똑같다.**
+     0.5B 의 광남고 열 명이 글자 하나까지 같고, 같은 광남고라도 GA1 은 상담·등원시작 날이 다르다.
+     🔴 그러니 «학교만» 보고 복사하면 안 된다. **반과 학교를 함께** 봐야 한다.
+   ⚠ 덮어쓰는 일이라 반드시 묻는다 — 몇 명에게 가는지 세어서 보여 준다. */
+function planRowTwins(sid){
+  const me = (DATA.students || []).find(s => s.studentId === sid);
+  if(!me) return [];
+  return (DATA.students || []).filter(s => s.studentId !== sid && !isWithdrawn(s)
+    && s.classId === me.classId && (s.school || '') === (me.school || ''));
+}
+function planCopyRow(sid){
+  const days = planDaysOf(planRange().from, planRange().to);
+  const 쌍둥이 = planRowTwins(sid);
+  const me = (DATA.students || []).find(s => s.studentId === sid) || {};
+  if(!쌍둥이.length){
+    state.planMsg = `${me.name || sid} 과 «같은 반·같은 학교»인 학생이 없습니다 — 복사할 곳이 없습니다.`;
+    render(); return;
+  }
+  const 찬칸 = days.filter(d => planCell(sid, d)).length;
+  if(!confirm(`${me.name || sid} 의 줄(${찬칸}칸)을 같은 반·같은 학교 학생 ${쌍둥이.length}명에게 그대로 옮깁니다.\n`
+    + `받는 학생의 이 기간 칸은 «덮어씁니다».\n\n` + 쌍둥이.map(s => s.name || s.studentId).join(' · '))) return;
+  쌍둥이.forEach(s => days.forEach(d => {
+    const c = planCell(sid, d);
+    planSetCell(s.studentId, d, c ? c.k : '', c ? c.t : '');
+  }));
+  state.planMsg = `${me.name || sid} 의 줄을 ${쌍둥이.length}명에게 옮겼습니다 — ${
+    쌍둥이.map(s => s.name || s.studentId).join(' · ')}`;
+  render();
+}
+function planSeedRun(){
+  const r = planSeed();
+  state.planMsg = `밑그림 — ${r.깐것}칸을 깔았습니다`
+    + (r.건너뜀 ? ` · 이미 적혀 있어 그대로 둔 칸 ${r.건너뜀}개` : '')
+    + (r.없음 ? ` · 🔴 수학 시험일이 없어 못 깐 학생 ${r.없음}명 (설정 › 시험 일정)` : '')
+    + ' · 나머지(등원X·보충·가능하면·상담진행·등원시작)는 학생마다 갈려서 붓으로 찍어 주세요.';
+  render();
+}
+
 /* ---------- 설정 (조교 + 관리자) ---------- */
 function teacherSettingsHTML(){
   if(state.studentDetailId) return teacherStudentDetailHTML(state.studentDetailId);
   const tab = state.settingsSubTab || 'assistants';
   const subtabs = [['assistants','조교'],['students','학생'],['classes','반'],['consults','상담'],
-    ['examrange','시험 일정'],['signalrules','신호 규칙'],['auditlog','변경 이력'],
+    ['examrange','시험 일정'],['examplan','직보 일정표'],
+    ['signalrules','신호 규칙'],['auditlog','변경 이력'],
     ['admin','관리자']];
   /* 🔵 **«데이터 정리»를 서브탭에서 뺐다** (2026-09-05 · 사용자 요청 — 「내가 쓸 일이 없는거면 화면에서 가려줘」).
      세 가지(배점·sqrt·정답 속 해설)가 전부 «쓰는 자리»에서 막혔고, 저장된 기록에도 남은 것이 0건이다.
@@ -23317,6 +23705,7 @@ function teacherSettingsHTML(){
     classes: teacherSettingsClassesHTML,
     consults: teacherSettingsConsultsHTML,
     examrange: teacherExamRangeHTML,
+    examplan: teacherExamPlanHTML,
     signalrules: teacherSignalRulesHTML,
     auditlog: teacherAuditLogHTML,
     cleanup: teacherCleanupHTML,
@@ -23334,6 +23723,7 @@ function teacherSettingsHTML(){
     students:'학생 계정을 만들고 · 정보와 비밀번호를 고치고 · 지운다',
     classes:'반을 만든다', consults:'홈페이지로 들어온 상담 신청', signalrules:'위험·주의를 가르는 임계값',
     examrange:'데일리퀴즈가 낼 단원을 시즌과 학교·학년으로 정한다',
+    examplan:'시험기간에 누가 언제 오는지 — 찍는 즉시 그 학생 달력에 뜬다',
     auditlog:'누가 무엇을 바꿨는지', cleanup:'옛 기록을 한 번에 손본다 — 살펴본 뒤에만 고친다',
     admin:'관리자 비밀번호' };
   return `<div class="ex-screen ex-nosub">

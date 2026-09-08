@@ -40,9 +40,13 @@ const 갈래표 = html.slice(html.indexOf('const CAL_KINDS = {'),
                           html.indexOf('};', html.indexOf('const CAL_KINDS = {')) + 2);
 const 조각 = [갈래표, 떠내기('stuMonthEvents'), 떠내기('ymd'), 떠내기('myEventsOf')].join('\n');
 
-function 모은다(DATA, c, ym) {
+/* ⚠ 2026-09-08에 일곱째 갈래(직보 일정표)가 붙으면서 `stuMonthEvents` 가 둘을 더 부른다.
+   여기서는 «표에 무엇이 찍혀 있나»를 밖에서 넣어 준다 — 표를 «만드는» 길은
+   `tools/exam-plan-test.mjs` 가 따로 잰다. 세는 자리를 두 벌로 두지 않는다. */
+function 모은다(DATA, c, ym, 직보 = {}) {
   return new Function('DATA', 'c', 'ym',
     'parseScheduleDays', 'sessionTimeText', 'examDatesOf', 'classNameOf', 'slotTimeLabel',
+    'planCellsOfStudent', 'planLabel',
     조각 + '; return stuMonthEvents(c, ym);')(
     DATA, c, ym,
     (sch) => (sch || '').includes('월') ? [1] : [],        // 「월」이 있으면 월요일
@@ -50,6 +54,11 @@ function 모은다(DATA, c, ym) {
     (school) => (school === '광남고' ? { start: '2026-09-14', end: '2026-09-18', math: '2026-09-16' } : null),
     (cid) => '고1A',
     (t) => t || '',
+    (sid) => 직보[sid] || {},
+    /* ⚠ 칸의 «모양»을 실제와 같게 둔다 — `{k, t}` 다. 예전에 `{말}` 로 흉내 냈더니
+       겹침을 막는 줄(`내직보[date].k === 'exam'`)이 **아예 발동하지 않아** 검사가 눈이 멀었다. */
+    (cell) => { const 이름 = {off:'등원X', exam:'수학시험', jikbo:'직보', start:'등원시작'}[cell && cell.k];
+                return 이름 ? 이름 + (cell.t || '') : ''; },
   );
 }
 
@@ -174,6 +183,29 @@ const 제목 = (date) => (결과[date] || []).map(e => e.title);
   봄('🔵 시험기간의 처음과 끝을 준다', [sp.from, sp.to], ['2026-09-14', '2026-09-18']);
   봄('   수학 시험일도 따로 준다', sp.math, '2026-09-16');
   봄('시험 날짜가 없으면 null — 칸을 안 칠한다', stuExamSpan({ me: { school: '딴학교' } }), null);
+}
+
+// ── 직보 일정표가 달력에 뜨는가 (2026-09-08) ─────────────────────────
+console.log('\n직보 일정표 — 강사가 찍은 것이 이 달력에 오는가\n');
+{
+  const 표 = { s1: { '2026-09-15': {k:'off'}, '2026-09-16': {k:'exam'},
+                     '2026-09-17': {k:'jikbo', t:'2시'} } };
+  const got = 모은다(기본DATA(), 기본c(), '2026-09', 표);
+  const 갈래 = (d, o) => ((o || got)[d] || []).map(e => e.kind + ':' + e.title);
+  const 직보만 = (d, o) => 갈래(d, o).filter(x => x.startsWith('plan:'));
+  봄('🔵 강사가 찍은 것이 그대로 온다', 직보만('2026-09-15'), ['plan:등원X']);
+  봄('   시간이 붙은 것도 그대로', 직보만('2026-09-17'), ['plan:직보2시']);
+  /* 🔴 만들면서 화면에서 봤다 — 시험 일정이 이미 「수학 시험」이라 적어 둔 날에
+     표의 「수학시험」까지 넣으면 **같은 말이 나란히 두 줄** 뜬다. */
+  봄('🔴 수학 시험일에 같은 말을 두 번 하지 않는다', 직보만('2026-09-16'), []);
+  봄('   그래도 시험 자체는 그대로 있다', 갈래('2026-09-16'), ['exam:수학 시험']);
+  /* 🔴 갈래로 뭉뚱그려 뺐다면 «시험 일정이 없는 학교»는 이 날이 통째로 사라진다. */
+  const 남 = 모은다(기본DATA(), Object.assign(기본c(), {me:{school:'딴학교'}}),
+                   '2026-09', { s1: { '2026-09-16': {k:'exam'} } });
+  봄('🔴 시험 일정이 없으면 손으로 찍은 「수학시험」이 그대로 뜬다',
+     직보만('2026-09-16', 남), ['plan:수학시험']);
+  const 남표 = 모은다(기본DATA(), 기본c(), '2026-09', { s99: { '2026-09-15': {k:'off'} } });
+  봄('⚠ 남의 표는 안 온다', 직보만('2026-09-15', 남표), []);
 }
 
 console.log(틀림 ? '\n  🔴 ' + 통과 + ' 통과 · ' + 틀림 + ' 실패\n' : '\n  ✅ ' + 통과 + ' 통과 · 0 실패\n');
