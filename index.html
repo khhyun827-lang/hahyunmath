@@ -21980,6 +21980,11 @@ function itemCodeStripHTML(b){
     ${vs.map(v=>`<div class="ic-row">
       <b class="mono">${escHtml(v.code)}</b>
       <span class="ic-kind">${escHtml((VARIANT_KINDS.find(x=>x[0]===v.variantKind)||['','?'])[1])}</span>
+      ${/* 🔴 **어느 쪽이 만든 변형인지 여기서도 말한다** (2026-09-08).
+           창고 드로어에는 이 딱지가 있었는데 **가져오는 자리인 여기에는 없었다** —
+           정작 고르는 것은 이 줄에서다. 우리가/AI 가 만든 것과 «교재가 이미 실어 준 것»이
+           한 줄로 섞이면 어느 쪽인지 알 길이 없다. */''}
+      ${v.fromBook ? '<span class="ic-kind">교재가 준 것</span>' : ''}
       ${/* 🔴 **보여야 하는 것은 «문제»다.** 예전엔 정답 칸에 해설이 통째로 들어 있어
              줄마다 풀이가 쏟아졌고, **가져와도 되는 문제인지 알 수가 없었다**(사용자가 겪었다).
              그래서 문제를 넓게 두고 정답은 짧게 자른다. */''}
@@ -22086,16 +22091,35 @@ const STORE_PER_PAGE = 30;
      이 목록은 ①만 보고 있었다. 그래서 **브라우저로 올린 모의고사 기출이 목록에 아예 안 떴다**
      — 담기는 됐는데 보이지 않으니 「안 담겼다」로 읽힌다. 가장 나쁜 종류의 거짓말이다.
    ⚠ 합치는 것은 `itemOfCode` 하나로 한다 — 모양을 여기서 따로 지어내면 둘이 갈린다. */
-function storeItems(){
+/* 🔴 **창고에는 «원본만» 세운다** (2026-09-08 · 09-07에 사용자가 정한 결이다 —
+     「원본 위주로 깔끔하게 보관 창고를 구성하는 게 낫다」).
+   변형이 없어지는 것이 아니라 **원본 카드의 「코드 화면」 드로어 안**에 있다.
+   ⚠ **안 거르면 어떻게 되는가** — `ITEM_CODE_RE` 가 `-N01` 꼬리를 «허용»하므로
+     주기나 교재를 심는 순간 `1050919-N01` 이 원본 옆에 **제 카드로 선다.**
+     지금(엔딩크레딧 564제)은 전부 원본이라 한 건도 안 걸린다 — **심기 «전»에 막아 두는 것**이다.
+   🔴 **원본이 창고에 없는 변형은 안 거른다** — 거르면 그 문항을 어디서도 못 보게 된다.
+     드로어는 «원본 카드»를 통해서만 열리기 때문이다.
+     🔵 **조용히 사라지는 것이 목록이 조금 지저분한 것보다 나쁘다.** 대신 카드에 딱지를 단다.
+   🔵 **가르는 자리는 여기 하나다** — 이 노트가 세 번 물린 「세는 자리를 두 벌로 두지 말 것」. */
+function storeSplitVariants(){
   const codes = new Set(Object.keys(state.itemByCode || {}));
   /* ⚠ 창고에서 가져오는 것은 **코드 «꼴»이 맞는 것만**이다. 창고는 우리가 아닌 것도 담길 수
      있는 자리라, 아무 열쇠나 들이면 «과목 없음» 무리가 생겨 화면에 빈 칸이 선다. */
   for(const c in (state.itemBody || {}))
     if(ITEM_CODE_RE.test(c) || srcCodeInfo(c)) codes.add(c);
-  const out = [];
-  for(const c of codes){ const it = itemOfCode(c); if(it && it.code) out.push(it); }
-  return out;
+  const items = [], hidden = [];
+  for(const c of codes){
+    const it = itemOfCode(c); if(!it || !it.code) continue;
+    const sp = splitItemCode(c);
+    /* 🔴 `itemOfCode` 는 장부에 있으면 **장부 객체를 그대로** 돌려준다.
+       그러니 여기서 항목에 표시를 달면 안 된다 — `state.itemByCode` 가 더럽혀진다.
+       «고아 변형인가»는 카드가 코드만 보고 스스로 안다(거른 뒤 남은 변형이 곧 고아다). */
+    if(sp && sp.isVariant && codes.has(sp.origin)){ hidden.push(it); continue; }
+    items.push(it);
+  }
+  return { items, hidden };
 }
+function storeItems(){ return storeSplitVariants().items; }
 /* 코드의 «과목 자리»(K2 · C1 …). 이름이 아니라 «코드»를 열쇠로 쓴다 —
    이름은 교육과정이 바뀌면 갈리지만 코드는 안 갈린다. */
 function storeSubjectCode(x){
@@ -22199,7 +22223,9 @@ function teacherItemStoreHTML(){
   /* ⚠ 다 실리면 «다시 그려야» 한다 — 안 그리면 처음 연 사람은 빈 창고를 본다
      (문항 코드 화면이 쓰는 것과 같은 장치다). */
   if(!state.itemByCode) loadItemStoreIfNeeded().then(()=>{ if(state.itemByCode) render(); });
-  const items = storeItems();
+  /* 🔵 **한 번만 가른다** — 「원본만 세운다」와 「몇 개를 접었나」가 같은 셈에서 나와야
+     둘이 어긋나지 않는다(`storeSplitVariants` 의 머리말을 볼 것). */
+  const { items, hidden } = storeSplitVariants();
   const subj = state.storeSubject || '';
   const ch   = state.storeChapter || '';
   /* 과목별 개수, 그리고 과목마다 단원별 개수. 코드에 박힌 자리라 이름이 바뀌어도 안 흔들린다. */
@@ -22236,10 +22262,18 @@ function teacherItemStoreHTML(){
       const n = vs.filter(v=>(v.variantKind||'N')===k).length;
       return n ? `<span class="ist-vk">${label} ${n}</span>` : '';
     }).join('');
+    /* 🔴 **여기 남아 있는 변형은 «고아»다** — 원본이 창고에 있는 변형은 목록에서 이미 빠졌다
+         (`storeSplitVariants`). 남았다는 것은 **원본을 못 찾았다**는 뜻이고, 그러면
+         「코드 화면」 드로어로 갈 길이 없다. 그러니 그 말을 카드에 적는다.
+       ⚠ 이 딱지가 보이면 대개 **심다가 원본이 빠진 것**이다 — 교재를 다시 올리면 사라진다. */
+    const sp고아 = splitItemCode(it.code);
     return `<div class="ist-item">
       <div class="ist-ih">
         <b class="mono">${escHtml(it.code)}</b>
         <span class="ist-src">${escHtml((it.source && it.source.book) || '출처없음')}</span>
+        ${sp고아 && sp고아.isVariant
+          ? `<span class="ist-scene" title="이 변형의 원본(${escHtml(sp고아.origin)})이 창고에 없습니다 — 교재를 올리면 원본 카드 안으로 들어갑니다">변형 · 원본 없음</span>`
+          : ''}
         ${it.scene ? `<span class="ist-scene">${escHtml(it.scene)}</span>` : ''}
         <span class="spacer"></span>
         <button class="btn q sm" onclick="icOpenDrawer('${escHtml(it.code)}')"
@@ -22330,6 +22364,10 @@ function teacherItemStoreHTML(){
           oncompositionend="liveEdit(event, v=>{ state.storeQuery=v; state.storePage=1; })">
         ${state.storeQuery ? `<button class="x" title="지우기" onclick="state.storeQuery='';render()">×</button>` : ''}
       </span>${찾는말 ? `<span class="ist-bnum"><b class="mono">${list.length}</b>개</span>` : ''}`)}
+      ${/* 🔴 **접은 것은 «말해» 준다** — 안 적으면 「담았는데 목록에 안 뜬다」가 다시 난다.
+           그때(09-06) 사람에게는 «안 담긴 것»으로 읽혔다. 수가 0이면 줄 자체가 없다. */''}
+      ${hidden.length ? `<div class="ist-msg">변형 <b class="mono">${hidden.length}</b>개는
+        목록에 따로 안 세웁니다 — <b>원본 카드의 「코드 화면」</b> 안에 있습니다.</div>` : ''}
       ${books.length > 1 ? `<div class="ist-books">
         <a class="pill ${state.storeBook===''?'on':''}" onclick="storeGoBook('')">교재 전체</a>
         ${books.map(b=>`<a class="pill ${state.storeBook===b?'on':''}" onclick="storeGoBook('${escHtml(b)}')">

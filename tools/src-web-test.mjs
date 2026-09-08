@@ -135,13 +135,15 @@ if(!SRC){
 // ── 창고 목록이 장부와 창고를 «둘 다» 보는가 ────────────────────────────
 console.log(NL + '③ 창고 목록 — 브라우저로 올린 기출이 목록에 서는가' + NL);
 {
-  const 짐 = 떠오기('const ITEM_CODE_RE', NL) + NL +
+  const 짐뼈대 = (몸) => 떠오기('const ITEM_CODE_RE', NL) + NL +
              떠오기('const SRC_CODE_RE', "DW:'하향' };") + NL +
-             lift('srcCodeInfo') + NL + lift('chapterInfoFromItemCode') + NL +
-             lift('itemOfCode') + NL + lift('storeItems') + NL +
+             lift('srcCodeInfo') + NL + lift('splitItemCode') + NL +
+             lift('chapterInfoFromItemCode') + NL +
+             lift('itemOfCode') + NL + 몸 + NL + lift('storeItems') + NL +
              lift('storeSubjectCode') + NL + lift('storeMatches');
-  const 만들기 = (state) => new Function('state', 'CODE_SUBJECTS', 'chapterNameOfNo', 'BOOK_OF_CODE',
-    짐 + NL + 'return { storeItems, storeSubjectCode, storeMatches };')(
+  const 짐 = 짐뼈대(lift('storeSplitVariants'));
+  const 만들기 = (state, 짐것) => new Function('state', 'CODE_SUBJECTS', 'chapterNameOfNo', 'BOOK_OF_CODE',
+    (짐것 || 짐) + NL + 'return { storeItems, storeSplitVariants, storeSubjectCode, storeMatches };')(
     state, { K2: '공통수학2' }, () => '평면좌표', { E: '엔딩크레딧', J: '모의고사 기출' });
 
   const 장부 = { 'K2-01-E-0001': { code: 'K2-01-E-0001', subject: 'K2', chapter: '01', source: { book: '엔딩크레딧' } } };
@@ -157,14 +159,64 @@ console.log(NL + '③ 창고 목록 — 브라우저로 올린 기출이 목록�
   const 목록 = F.storeItems();
   /* 🔴 여기가 09-06에 고친 자리 — 목록이 장부만 보고 있어서, 브라우저로 올린 기출은
      **담기는 됐는데 목록에 안 떴다.** 사람에게는 「안 담겼다」로 읽힌다. */
-  봄('🔴 창고에만 있는 기출도 목록에 선다', 목록.map(x => x.code).sort(), ['1230928', '1230928-N01', 'K2-01-E-0001']);
+  봄('🔴 창고에만 있는 기출도 목록에 선다', 목록.map(x => x.code).sort(), ['1230928', 'K2-01-E-0001']);
   봄('🔴 장부와 창고에 다 있는 것은 한 번만', 목록.filter(x => x.code === 'K2-01-E-0001').length, 1);
   봄('⚠ 코드 꼴이 아닌 열쇠는 안 들인다', 목록.some(x => x.code === 'kv:something'), false);
-  봄('②꼴도 과목이 K2 로 잡힌다', 목록.filter(x => F.storeSubjectCode(x) === 'K2').length, 3);
+  봄('②꼴도 과목이 K2 로 잡힌다', 목록.filter(x => F.storeSubjectCode(x) === 'K2').length, 2);
   /* 🔴 `chapter` 가 이름('평면좌표')이면 여기서 0개가 나온다 — 단원을 고르면 통째로 사라진다. */
-  봄('🔴 단원 01 로 걸러도 셋 다 남는다', 목록.filter(x => F.storeMatches(x, 'K2', '01')).length, 3);
-  봄('🔵 「모의고사 기출」로 거르면 둘', 목록.filter(x => (x.source || {}).book === '모의고사 기출').length, 2);
-  봄('장부가 비어 있어도 창고만으로 선다', 만들기({ itemByCode: {}, itemBody: 창고 }).storeItems().length, 3);
+  봄('🔴 단원 01 로 걸러도 둘 다 남는다', 목록.filter(x => F.storeMatches(x, 'K2', '01')).length, 2);
+  봄('🔵 「모의고사 기출」로 거르면 하나(원본)', 목록.filter(x => (x.source || {}).book === '모의고사 기출').length, 1);
+  봄('장부가 비어 있어도 창고만으로 선다', 만들기({ itemByCode: {}, itemBody: 창고 }).storeItems().length, 2);
+}
+
+// ── 창고는 «원본만» 세운다 ──────────────────────────────────────────────
+console.log(NL + '④ 창고 목록 — 변형은 원본 카드 안으로 접힌다 (2026-09-08)' + NL);
+{
+  /* 🔴 **왜 재는가** — `ITEM_CODE_RE` 가 `-N01` 꼬리를 «허용»한다. 그래서 주기나 교재를
+     심는 순간 `1050919-N01` 이 원본 옆에 제 카드로 선다. 사용자가 09-07에 「원본 위주로
+     깔끔하게」로 정했으므로 **심기 전에** 막아 둔 것이고, 이 검사가 그것을 붙든다.
+   ⚠ 지금 창고(엔딩크레딧 564제)는 전부 원본이라 **화면으로는 아무것도 안 보인다** —
+     그래서 눈이 아니라 이 검사가 유일한 확인 방법이다. */
+  const 짐 = 떠오기('const ITEM_CODE_RE', NL) + NL +
+             떠오기('const SRC_CODE_RE', "DW:'하향' };") + NL +
+             lift('srcCodeInfo') + NL + lift('splitItemCode') + NL +
+             lift('chapterInfoFromItemCode') + NL + lift('itemOfCode') + NL;
+  const 만들기 = (state, 몸) => new Function('state', 'CODE_SUBJECTS', 'chapterNameOfNo', 'BOOK_OF_CODE',
+    짐 + (몸 || lift('storeSplitVariants')) + NL + 'return { storeSplitVariants };')(
+    state, { K2: '공통수학2' }, () => '평면좌표', { E: '엔딩크레딧', J: '모의고사 기출' });
+
+  const 몸 = (code, 더) => Object.assign({ code, content: '본문', subject: 'K2', chapter: '01' }, 더 || {});
+  const 창고 = {
+    'K2-01-E-0010':     몸('K2-01-E-0010'),        // 원본 ①꼴
+    'K2-01-E-0010-N01': 몸('K2-01-E-0010-N01'),    // 그 변형 ①꼴 — 접혀야 한다
+    '1050919':          몸('1050919'),             // 원본 ②꼴(교재 기출)
+    '1050919-N01':      몸('1050919-N01'),         // 그 변형 ②꼴 — 접혀야 한다
+    '1050919-N02':      몸('1050919-N02'),
+  };
+  const r = 만들기({ itemByCode: {}, itemBody: 창고 }).storeSplitVariants();
+  봄('🔴 ①꼴 변형은 목록에 안 선다', r.items.some(x => x.code === 'K2-01-E-0010-N01'), false);
+  봄('🔴 ②꼴 변형도 목록에 안 선다', r.items.some(x => x.code === '1050919-N01'), false);
+  봄('🔵 원본은 둘 다 남는다', r.items.map(x => x.code).sort(), ['1050919', 'K2-01-E-0010']);
+  봄('🔵 접은 것을 «세어 둔다» — 화면이 그 수를 말한다', r.hidden.map(x => x.code).sort(),
+     ['1050919-N01', '1050919-N02', 'K2-01-E-0010-N01']);
+  봄('⚠ 접은 것 + 세운 것 = 통째', r.items.length + r.hidden.length, Object.keys(창고).length);
+
+  /* 🔴 **원본이 없는 변형까지 거르면 그 문항은 어디서도 못 보게 된다.**
+     드로어는 «원본 카드»로만 열리기 때문이다. 조용히 사라지는 것이 제일 나쁘다. */
+  const 고아 = 만들기({ itemByCode: {}, itemBody: { 'K2-02-E-0077-N01': 몸('K2-02-E-0077-N01') } })
+    .storeSplitVariants();
+  봄('🔴 원본이 창고에 없는 변형은 그대로 선다', 고아.items.map(x => x.code), ['K2-02-E-0077-N01']);
+  봄('🔴 그런 것은 «접은 것»으로 안 센다', 고아.hidden.length, 0);
+
+  /* ⚠ **망가뜨려 무는지 본다** — 거르는 줄을 빼고 같은 것을 재면 위 검사가 도로 통과하면 안 된다.
+     (이 노트가 여러 번 적어 둔 「검사가 눈이 멀어 있었다」를 막는 자리다.) */
+  const 거르는줄 = 'if(sp && sp.isVariant && codes.has(sp.origin)){ hidden.push(it); continue; }';
+  const 원본몸 = lift('storeSplitVariants');
+  봄('⚠ 거르는 줄이 실제로 그 글자다', 원본몸.includes(거르는줄), true);
+  const 망가진 = 만들기({ itemByCode: {}, itemBody: 창고 },
+                     원본몸.split(거르는줄).join('')).storeSplitVariants();
+  봄('⚠ 거르기를 빼면 변형이 도로 선다(=검사가 문다)',
+     망가진.items.some(x => x.code === '1050919-N01'), true);
 }
 
 console.log(`${NL}  ${fail ? '🔴' : '✅'} ${pass} 통과 · ${fail} 실패${NL}`);
