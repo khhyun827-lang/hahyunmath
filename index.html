@@ -1340,6 +1340,11 @@
 .app .pl-dh.sat,.app .pl-dh.sat s{color:var(--blue);}
 .app .pl-c{cursor:pointer;min-width:62px;height:24px;}
 .app .pl-c:hover{background:var(--sunk);}
+/* 🔵 시험기간은 «면»이다 — 학생 달력이 쓰는 것과 같은 장치. 찍은 칸이 그 위에 얹힌다.
+   ⚠ 색을 덮지 않게 «찍힌 칸(k-*)»의 규칙을 뒤에 두었다(위 k- 규칙보다 먼저 온다). */
+.app .pl-c.sp{background:var(--nobg);}
+.app .pl-c.mth{box-shadow:inset 0 -2px 0 var(--no);}
+.app .pl-c s{text-decoration:none;color:var(--no);opacity:.5;}
 /* 색은 종류가 정한다 — ds.css 의 상태색 셋만 쓴다(새 색을 만들지 않는다). */
 .app .pl-c.k-no{color:var(--no);background:var(--nobg);}
 .app .pl-c.k-blue{color:var(--blue);background:var(--bluebg);}
@@ -2477,6 +2482,8 @@
   margin-top:12px;padding:9px 11px;background:var(--nobg);border-radius:var(--r-sm);
   font-size:11.5px;color:var(--sub);line-height:1.5;}
 .app.sap .scal-examline b{color:var(--no);}
+/* 「정규 수업은 안 뜹니다」 — 붉은 띠 안에서 한 겹 물러선 곁말이라 줄을 바꿔 옅게 둔다. */
+.app.sap .scal-examline s{flex-basis:100%;text-decoration:none;color:var(--dim);font-size:11px;}
 
 /* ---------- 매주 반복 (2026-09-08) ---------- */
 .app.sap .scal-seg{display:flex;gap:0;margin:0 0 12px;border:1px solid var(--line);
@@ -5548,13 +5555,17 @@ function planDaysOf(from, to){
 }
 
 /* 🔴 **밑그림은 «확실한 것»만 깐다** (사용자가 골랐다 — 「밑그림을 깔아 준다」).
-   시험 일정에서 틀림없이 나오는 것은 **둘뿐**이다:
-     · 수학 시험일 → 「수학시험」   · 그 전날 → 「직보2시」
+   시험 일정에서 틀림없이 나오는 것은 **직보(수학 시험 전날)** 하나뿐이다.
    나머지(등원X·보충·가능하면·상담진행·등원시작)는 **학생마다 갈린다.**
    실제로 사용자의 표를 보면 같은 반 같은 날에 한 학생은 「등원X」, 다른 학생은 「가능하면 5시」다 —
    제 시험이 가까운가 먼가로 갈리는 «판단»이라 자동으로 찍으면 조용히 틀린다.
-   🔵 **그래서 짐작은 안 한다.** 두 칸을 깔아 주고 나머지는 붓으로 찍게 둔다.
-   🔴 **손으로 고친 칸은 안 건드린다** — 다시 깔아도 사람이 정한 것이 이긴다. */
+   🔵 **그래서 짐작은 안 한다.** 한 칸을 깔아 주고 나머지는 붓으로 찍게 둔다.
+   🔴 **손으로 고친 칸은 안 건드린다** — 다시 깔아도 사람이 정한 것이 이긴다.
+
+   🔴 **「수학시험」은 여기서 «안» 깐다** (2026-09-08 · 사용자가 「미리 표시」를 요청하면서 갈렸다).
+     그 날은 시험 일정에서 나오는 값이라 **표가 바탕으로 미리 보여 준다**(`teacherExamPlanHTML`).
+     찍어서 담으면 같은 사실이 두 군데 살고, **시험 날짜를 고쳤을 때 표가 옛말을 한다.**
+     ⚠ 종류 자체는 남겨 둔다 — 시험 일정에 없는 시험을 손으로 적을 길은 있어야 한다. */
 function planSeed(){
   const days = planDaysOf(planRange().from, planRange().to);
   if(!days.length) return {깐것: 0, 건너뜀: 0, 없음: 0};
@@ -5569,7 +5580,6 @@ function planSeed(){
       if(planCell(sid, date)){ 건너뜀++; return; }        // 이미 적힌 칸은 사람의 것이다
       if(planSetCell(sid, date, kind, time)) 깐것++;
     };
-    넣기(d.math, 'exam');
     넣기(dateShift(d.math, -1), 'jikbo', '2시');
   });
   return {깐것, 건너뜀, 없음};
@@ -13218,6 +13228,14 @@ function stuMonthEvents(c, ym){
   /* ① 수업 — 반의 «요일»에서 그 달의 날짜를 뽑는다. */
   const [y, m] = ym.split('-').map(Number);
   const 날수 = new Date(y, m, 0).getDate();
+  /* 🔴 **시험기간에는 정규 수업을 안 세운다** (2026-09-08 · 사용자 요청 —
+       「시험기간 전날부터 시험보는 끝날까지는 그 안에 수업 일정이 안떴으면 좋겠어」).
+     달력은 반의 «요일»에서 수업을 뽑으므로, 그대로 두면 **시험 보는 날에도 수업이 있다고 말한다.**
+     학원이 실제로는 쉬는데 화면만 그렇게 말하는 것이라, 학생이 가장 헷갈릴 거짓말이다.
+     ⚠ **직보·보충·상담은 그대로 뜬다**(⑦) — 그것이 이 기간에 «진짜로 오는» 날이고,
+       직보 일정표가 바로 그 말을 하려고 있는 것이다. 가리는 것은 «정규 수업»뿐이다.
+     ⚠ 시험 날짜가 없으면 아무것도 안 가린다 — 멀쩡한 학생의 수업을 지우면 안 된다. */
+  const 휴강 = stuClassOffSpan(c);
   (c.classIds || []).forEach(cid => {
     const cls = DATA.classes.find(x => x.id === cid);
     if(!cls) return;
@@ -13225,7 +13243,9 @@ function stuMonthEvents(c, ym){
     if(!요일들.length) return;
     for(let d = 1; d <= 날수; d++){
       if(!요일들.includes(new Date(y, m - 1, d).getDay())) continue;
-      넣기(ymd(y, m, d), {kind: 'class', title: cls.name || '수업',
+      const date = ymd(y, m, d);
+      if(휴강 && date >= 휴강.from && date <= 휴강.to) continue;
+      넣기(date, {kind: 'class', title: cls.name || '수업',
         sub: sessionTimeText(cls.schedule) || ''});
     }
   });
@@ -13309,6 +13329,16 @@ function stuMonthEvents(c, ym){
    시작·끝·수학 시험일 세 점만 찍으면 «그 사이가 시험기간»이라는 것이 안 보인다.
    학생이 달력에서 가장 먼저 알아야 하는 것이 「언제부터 언제까지 시험이냐」다.
    ⚠ 그래서 칸 배경을 옅게 깐다. 점은 그대로 둔다 — 면은 «기간», 점은 «그날 무엇»이다. */
+/* 🔴 **정규 수업이 «안 서는» 구간** (2026-09-08 · 사용자 요청).
+   「시험기간 전날부터 시험 끝나는 날까지」다 — 전날이 들어가는 것은 그 날 이미 시험 준비를
+   하기 때문이고, 사용자의 직보일정표에서도 그 날이 「등원X」·「직보」로 채워져 있다.
+   🔵 **`stuExamSpan` 위에 세운다** — 시험기간의 처음·끝을 두 벌로 셈하지 않는다.
+   ⚠ 시험 날짜가 하나도 없으면 `null` 이다. 그때는 아무것도 안 가린다. */
+function stuClassOffSpan(c){
+  const sp = stuExamSpan(c);
+  if(!sp || !sp.from) return null;
+  return {from: dateShift(sp.from, -1), to: sp.to};
+}
 function stuExamSpan(c){
   const me = (c && c.me) || {};
   const d = examDatesOf(me.school || '', me.grade || '');
@@ -13338,6 +13368,7 @@ function stuCalendarHTML(c){
   const 날수 = new Date(y, m, 0).getDate();
   const 일정 = stuMonthEvents(c, ym);
   const 시험 = stuExamSpan(c);
+  const 휴강 = stuClassOffSpan(c);
   /* 이 달이 «이번 달»이면 오늘을 고른 것으로 시작한다 — 들어오자마자 오늘 것이 보여야 한다. */
   const 고른날 = (state.stuCalDay && state.stuCalDay.slice(0, 7) === ym) ? state.stuCalDay
                : (오늘.slice(0, 7) === ym ? 오늘 : '');
@@ -13392,9 +13423,13 @@ function stuCalendarHTML(c){
     + '</div>'
     + '<div class="scal-grid">' + 칸.join('') + '</div>'
     /* ⚠ 색만으로 말하지 않는다 — 색을 못 가리는 사람도 있고, 띠가 달을 넘어가면 안 보인다. */
+    /* 🔴 **가린 것은 «말해» 준다** (2026-09-08). 시험기간에 정규 수업을 안 세우는데,
+       아무 말이 없으면 학생은 「내 수업이 왜 없지」가 된다 — 조용히 사라지는 것이 제일 나쁘다. */
     + (시험 ? '<div class="scal-examline">' + iconSvg('bell', 12)
         + '<b>시험기간</b> ' + stuDayLabel(시험.from) + ' ~ ' + stuDayLabel(시험.to)
         + (시험.math ? ' · <b style="color:var(--no);">수학 ' + stuDayLabel(시험.math) + '</b>' : '')
+        + (휴강 ? '<s>' + stuDayLabel(휴강.from) + '부터 정규 수업은 안 뜹니다 — '
+                + '직보·보충은 그대로 보입니다</s>' : '')
         + '</div>' : '')
     + '<div class="scal-legend">'
     + Object.keys(CAL_KINDS).map(k =>
@@ -23576,7 +23611,7 @@ function teacherExamPlanHTML(){
       : `<span class="ic-hint">시험 일정에서 저절로 잡았습니다${
           자동 ? '' : ' — 🔴 <b>시험 일정이 비어 있어 잡을 것이 없습니다</b>'}</span>`}
     <span class="spacer"></span>
-    <button class="btn q sm" title="수학 시험일과 그 전날 직보만 깝니다 — 손으로 고친 칸은 안 건드립니다"
+    <button class="btn q sm" title="수학 시험 전날에 직보2시만 깝니다 — 손으로 고친 칸은 안 건드립니다"
       onclick="planSeedRun()">밑그림 깔기</button>
   </div>`;
 
@@ -23590,7 +23625,10 @@ function teacherExamPlanHTML(){
     ${붓종류 && 붓종류.시간 ? `<input class="pl-t" placeholder="2시" value="${escHtml(붓.t||'')}"
       oninput="liveEdit(event, v=>{ state.planBrush={k:'${붓.k}',t:v}; })">` : ''}
     <span class="ic-hint">칸을 누르면 <b>${escHtml(붓.k ? planLabel({k:붓.k,t:붓.t}) || '—' : '비우기')}</b> 가 찍힙니다 ·
-      같은 것을 다시 누르면 지워집니다 · 이름 옆 <b>⇊</b> 는 그 줄을 <b>같은 반·같은 학교</b>에 그대로 옮깁니다</span>
+      같은 것을 다시 누르면 지워집니다 · 이름 옆 <b>⇊</b> 는 그 줄을 <b>같은 반·같은 학교</b>에 그대로 옮깁니다
+      <s style="display:block;text-decoration:none;margin-top:3px;">⚠ 옅게 깔린 바탕은 <b>시험기간</b>,
+        밑줄 그어진 칸은 <b>수학 시험일</b>입니다 — 「설정 › 시험 일정」에서 오는 값이라
+        여기서 찍는 것이 아니고, 시험 날짜를 고치면 여기도 따라 바뀝니다.</s></span>
   </div>`;
 
   if(!days.length) return `<div class="ex-main">${머리}${줄}
@@ -23607,6 +23645,13 @@ function teacherExamPlanHTML(){
 
   const 줄들 = 반이름들.map(반 => 묶음[반].map((s, i) => {
     const sid = s.studentId;
+    /* 🔵 **시험기간과 수학 시험일은 «미리» 깔려 있다** (2026-09-08 · 사용자 요청 —
+         「시험일정 수집한거 토대로 시험기간과 수학시험일은 미리 표시가 되어있으면 좋겠어」).
+       🔴 이것은 «찍는 값»이 아니라 **시험 일정에서 나오는 값**이다. 그래서 칸에 담지 않고
+         **바탕으로만** 깐다 — 담으면 같은 사실이 두 군데 살게 되고, 시험 날짜를 고쳤을 때
+         표가 옛말을 하게 된다(이 노트가 「세는 자리를 두 벌로 두지 말 것」이라 적어 둔 그것).
+       ⚠ 학교·학년마다 다르므로 **줄마다** 다시 본다. */
+    const 시험 = examDatesOf(s.school || '', s.grade || '');
     return `<tr>
       ${i === 0 ? `<th class="pl-cls" rowspan="${묶음[반].length}">${escHtml(반)}</th>` : ''}
       ${/* 🔵 이름 옆의 «⇊» 하나가 이 표에서 가장 많은 손을 던다 — 같은 반·같은 학교면
@@ -23619,8 +23664,18 @@ function teacherExamPlanHTML(){
       ${days.map(d => {
         const c = planCell(sid, d);
         const k = c && PLAN_KIND_MAP[c.k];
-        return `<td class="pl-c ${k ? 'k-' + k.색 : ''}"
-          onclick="planPaint('${escHtml(sid)}','${d}')">${k ? escHtml(planLabel(c)) : ''}</td>`;
+        /* 시험기간이면 바탕을 옅게, 수학 시험일이면 한 겹 더 진하게. */
+        const 안 = 시험 && 시험.start && 시험.end && d >= 시험.start && d <= 시험.end;
+        const 수학 = 시험 && 시험.math === d;
+        /* 🔵 **아무것도 안 찍힌 수학 시험일에는 「수학시험」이 옅게 미리 적힌다.**
+           찍은 것이 있으면 그것이 이긴다 — 미리 적힌 것은 «사실을 보여 주는 것»이지
+           «강사가 정한 것»이 아니므로 사람이 정한 값을 밀어내면 안 된다. */
+        const 미리 = !k && 수학 ? '수학시험' : '';
+        return `<td class="pl-c ${k ? 'k-' + k.색 : ''}${안 ? ' sp' : ''}${수학 ? ' mth' : ''}"
+          ${수학 ? 'title="수학 시험일 — 설정 › 시험 일정에서 온 값입니다"'
+            : 안 ? 'title="시험기간 — 설정 › 시험 일정에서 온 값입니다"' : ''}
+          onclick="planPaint('${escHtml(sid)}','${d}')">${
+            k ? escHtml(planLabel(c)) : 미리 ? `<s>${미리}</s>` : ''}</td>`;
       }).join('')}
     </tr>`;
   }).join('')).join('');
@@ -23682,6 +23737,7 @@ function planSeedRun(){
   state.planMsg = `밑그림 — ${r.깐것}칸을 깔았습니다`
     + (r.건너뜀 ? ` · 이미 적혀 있어 그대로 둔 칸 ${r.건너뜀}개` : '')
     + (r.없음 ? ` · 🔴 수학 시험일이 없어 못 깐 학생 ${r.없음}명 (설정 › 시험 일정)` : '')
+    + ' · 시험기간과 수학 시험일은 «바탕»으로 이미 깔려 있습니다(시험 일정에서 옵니다)'
     + ' · 나머지(등원X·보충·가능하면·상담진행·등원시작)는 학생마다 갈려서 붓으로 찍어 주세요.';
   render();
 }
