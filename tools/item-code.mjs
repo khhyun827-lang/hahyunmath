@@ -24,6 +24,7 @@ import fs from 'fs';
 import path from 'path';
 import os from 'os';
 import { execFileSync } from 'child_process';
+import { 푼다 } from './hwpx-zip.mjs';
 
 // ── 인자 ──────────────────────────────────────────────────────────────
 const argv = process.argv.slice(2);
@@ -48,11 +49,11 @@ if (!src || !SUBJECT || !BOOK || !CHAPTER) {
 
 // ── hwpx 는 ZIP 이다. 폴더를 주면 그대로 쓰고, 파일을 주면 임시로 푼다 ──
 // ⚠ 푸는 곳은 언제나 임시 폴더다. 원본 옆에 아무것도 안 남긴다.
+/* 🔴 푸는 일은 hwpx-zip.mjs 하나로 모았다 (2026-09-10) — 여기서 따로 풀던 것이
+   아무도 안 지우는 임시 폴더를 남겼다. 79GB 가 쌓여 디스크가 찼다. */
 function contentsDir(p) {
   if (fs.statSync(p).isDirectory()) return path.join(p, 'Contents');
-  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'itemcode-'));
-  execFileSync('unzip', ['-qo', p, '-d', tmp]);
-  return path.join(tmp, 'Contents');
+  return 푼다(p).cdir;
 }
 
 // ── 문서 차례대로 «미주»와 «출처 딱지»를 줄 세운다 ──────────────────────

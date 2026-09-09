@@ -13,11 +13,43 @@ import os from 'os';
 import zlib from 'zlib';
 import { execFileSync } from 'child_process';
 
+/* 🔴 **푼 폴더는 프로그램이 끝날 때 스스로 지운다** (2026-09-10에 디스크를 채우고 나서 넣었다).
+   여태 아무도 안 지웠다. hwpx 하나가 풀리면 80MB 남짓인데 검사와 훑기가 파일마다 한 번씩
+   부르니, 하루 돌려 보는 사이에 **임시 폴더 933개 · 79GB 가 쌓여 C: 가 100% 로 찼다.**
+   (그 자리에서 「No space left on device」로 검사가 넘어졌다.)
+   🔵 부르는 쪽에 «지워라»를 맡기지 않는다 — 부르는 곳이 여럿이고, 한 곳만 잊어도 다시 샌다.
+     여기서 목록을 들고 있다가 끝날 때 한꺼번에 지운다.
+   ⚠ 낸 파일(`묶는다`)은 임시 폴더 «밖»에 쓰이므로 이 청소에 안 걸린다. */
+const 푼것들 = [];
+let 청소걸었나 = false;
+function 청소를건다(){
+  if(청소걸었나) return;
+  청소걸었나 = true;
+  const 쓸다 = () => {
+    for(const d of 푼것들.splice(0)) { try{ fs.rmSync(d, { recursive:true, force:true }); }catch(e){} }
+  };
+  process.on('exit', 쓸다);
+  /* ⚠ Ctrl+C 로 멈춰도 지운다 — 사람이 멈춘 날에만 새면 그게 제일 안 보인다. */
+  for(const sig of ['SIGINT', 'SIGTERM']) process.on(sig, () => { 쓸다(); process.exit(130); });
+}
+
 /* 임시 폴더에 푼다. **원본 옆에는 아무것도 안 남긴다.** */
 export function 푼다(src){
+  청소를건다();
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'hwpx-'));
+  푼것들.push(tmp);
   execFileSync('unzip', ['-qo', src, '-d', tmp]);
   return { tmp, cdir: path.join(tmp, 'Contents') };
+}
+
+/* 다 쓴 것을 «지금» 지운다 — 한 프로그램이 파일 여럿을 훑을 때 쓴다.
+   🔵 안 불러도 끝날 때 지워지지만, 다섯 파일을 도는 동안 400MB 를 들고 있을 까닭이 없다. */
+export function 치운다(것){
+  const tmp = 것 && 것.tmp ? 것.tmp : 것;
+  if(!tmp) return;
+  const i = 푼것들.indexOf(tmp);
+  if(i >= 0) 푼것들.splice(i, 1);
+  try{ fs.rmSync(tmp, { recursive:true, force:true }); }catch(e){}
 }
 
 /* `Contents/section0.xml`, `section1.xml` … 을 번호 차례로. */

@@ -18,6 +18,8 @@ import path from 'path';
 import { execFileSync } from 'child_process';
 import crypto from 'crypto';
 import { fileURLToPath } from 'url';
+/* 🔴 푸는 일은 한 곳뿐이다 — 임시 폴더 청소가 거기 붙어 있다 (2026-09-10). */
+import { 푼다 } from './hwpx-zip.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..');
@@ -171,11 +173,13 @@ export function parseXml(text) {
 // ── hwpx(zip) 를 풀어 구역 XML 을 차례대로 준다 ────────────────────────
 // ⚠ 푸는 곳은 언제나 임시 폴더다. 원본 옆에 아무것도 안 남긴다.
 //   (item-code.mjs 와 같은 방식이다 — 이 컴퓨터에는 `unzip` 이 있다.)
+/* 🔴 **푸는 일은 `hwpx-zip.mjs` 하나로 모았다** (2026-09-10).
+   여기서 따로 풀던 것이 **아무도 안 지우는 임시 폴더**를 남겼다. 이 함수는 파서의 입구라
+   파일마다 한 번씩 불리고 하나가 80MB 라, 하루 검사를 돌리는 사이 **933개 · 79GB 가 쌓여**
+   **C: 가 100% 로 찼다.** `푼다()` 는 프로그램이 끝날 때 스스로 지운다. */
 export function contentsDir(p) {
   if (fs.statSync(p).isDirectory()) return path.join(p, 'Contents');
-  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'hwpx-'));
-  execFileSync('unzip', ['-qo', p, '-d', tmp]);
-  return path.join(tmp, 'Contents');
+  return 푼다(p).cdir;
 }
 
 export function sectionDocs(fileOrDir) {
