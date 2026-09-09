@@ -561,6 +561,115 @@ function hwpItemFpText(content){
   return String(content == null ? '' : content).replace(/\s+/g, ' ').trim();
 }
 
+/* ── 창고와 맞대 여덟 갈래로 가른다 (2026-09-09) ──────────────────────────────
+   🔴 **판정은 여기 한 곳뿐이다.** 도구(`tools/store-diff.mjs`)도 웹(「교재에서 본문 채우기」)도
+     이 함수를 부른다. 두 벌로 두면 «도구로는 막혔는데 웹으로는 들어간» 문항이 생긴다 —
+     창고에 쓰는 문이 셋이라(docs/코드-숨기기.md 0-E) 실제로 날 수 있는 일이다.
+   갈래와 까닭은 [`docs/코드-숨기기.md`](docs/코드-숨기기.md) **0-B**.
+
+     문항들 : [{code, content}]  — 🔴 **코드 없는 것도 빼지 말고 넣는다.** ⑤⑥이 그것이다
+     창고   : {코드: {code, content, …}}
+
+   ⚠ **견줄 때는 반드시 `hwpItemFpText()` 를 지난다** — 안 그러면 줄바꿈 하나에 「고쳤다」가 뜬다.
+   🔵 이 함수는 **아무것도 안 쓰고 아무것도 안 찍는다.** 무엇을 할지는 부르는 쪽이 정한다. */
+function hwpItemVerdicts(문항들, 창고){
+  const 잣대 = hwpItemFpText;
+  const 것들 = (문항들 || []).map(p => ({
+    code: String((p && p.code) || '').trim(),
+    content: (p && p.content) || '',
+    글: 잣대((p && p.content) || ''),
+    p: p,
+  })).filter(x => x.글);
+
+  /* 창고를 «본문 → 코드들»로도 뒤집어 둔다 — ⑤(코드를 잃었다)가 이것을 본다. */
+  const 창고글별 = new Map();
+  for(const code in (창고 || {})){
+    const 글 = 잣대((창고[code] || {}).content || '');
+    if(!글) continue;
+    if(!창고글별.has(글)) 창고글별.set(글, []);
+    창고글별.get(글).push(code);
+  }
+
+  const 코드별 = new Map();
+  for(const x of 것들){
+    if(!x.code) continue;
+    if(!코드별.has(x.code)) 코드별.set(x.code, []);
+    코드별.get(x.code).push(x);
+  }
+  const 파일이든코드 = new Set(코드별.keys());
+
+  const 그대로 = [], 고쳤다 = [], 복사됨 = [], 모르는코드 = [],
+        코드잃음 = [], 새문항 = [], 겹침 = [], 빠졌다 = [];
+
+  /* ①~④ — 코드가 있는 것 */
+  for(const 것 of 코드별){
+    const code = 것[0], 무리 = 것[1];
+    if(무리.length > 1){ 복사됨.push({ code: code, 무리: 무리.map(x => x.p) }); continue; }   // ①
+    const x = 무리[0];
+    const 옛 = (창고 || {})[code];
+    if(!옛 || !옛.content){ 모르는코드.push({ code: code, 문항: x.p }); continue; }           // ④
+    if(잣대(옛.content) === x.글){ 그대로.push({ code: code, 문항: x.p }); continue; }        // ②
+    고쳤다.push({ code: code, 문항: x.p, 옛글: 옛.content, 새글: x.content });                // ③
+  }
+
+  /* ⑤⑥ — 코드가 없는 것 */
+  for(const x of 것들){
+    if(x.code) continue;
+    const 후보전부 = 창고글별.get(x.글) || [];
+    if(!후보전부.length){ 새문항.push({ 문항: x.p }); continue; }                             // ⑥
+    /* 🔴 **이미 이 파일이 들고 있는 코드는 후보가 아니다** (2026-09-09에 짓다가 찾았다).
+       코드를 «지운» 복사본이 여기로 들어온다 — 그 코드를 도로 주면 한 코드가 두 문항을
+       가리키게 되어, ⑤(되찾기)가 스스로 ①(복사)을 만드는 꼴이 된다. */
+    const 후보 = 후보전부.filter(c => !파일이든코드.has(c));
+    if(!후보.length){ 복사됨.push({ code: 후보전부[0], 무리: [x.p], 코드지움: true }); continue; }
+    코드잃음.push({ 후보: 후보, 문항: x.p, 갈림: 후보.length > 1 });                          // ⑤
+  }
+
+  /* ⑦ — 코드는 다른데 본문이 같다 (한 파일 안) */
+  {
+    const 글별 = new Map();
+    for(const x of 것들){
+      if(!x.code) continue;
+      if(!글별.has(x.글)) 글별.set(x.글, new Set());
+      글별.get(x.글).add(x.code);
+    }
+    for(const 것 of 글별) if(것[1].size > 1) 겹침.push([...것[1]]);
+  }
+
+  /* ⑧ — 창고에 있는데 파일에 없다.
+     🔴 **테두리를 그어 놓고 센다.** 파일 하나는 보통 한 단원이라, 창고 전체와 맞대면
+       「488개가 빠졌다」는 말이 나온다 — 참말이지만 쓸모가 없고, 참말인 경보는 무시된다.
+       그래서 **이 파일에 실제로 나온 (과목·단원·책)** 안에서만 센다.
+     ⚠ ②꼴 코드(`1230928OR`)에는 그런 자리가 없어 테두리를 못 긋는다 — 세지 않는다. */
+  {
+    const 테 = new Set();
+    const 앞 = (code) => (String(code).match(/^([A-Z]{1,2}\d?-\d{2}-[A-Z])-\d{4}/) || [])[1] || '';
+    for(const code of 파일이든코드){ const t = 앞(code); if(t) 테.add(t); }
+    if(테.size) for(const code in (창고 || {})){
+      const t = 앞(code);
+      if(t && 테.has(t) && !파일이든코드.has(code)) 빠졌다.push(code);
+    }
+  }
+
+  return { 그대로: 그대로, 고쳤다: 고쳤다, 복사됨: 복사됨, 모르는코드: 모르는코드,
+           코드잃음: 코드잃음, 새문항: 새문항, 겹침: 겹침, 빠졌다: 빠졌다 };
+}
+
+/* 🔴 **올려도 되는가** — 0-C 의 잠금 하나를 여기 둔다.
+   코드가 빠진 «데다» 고쳐지기까지 한 문항은 기계가 못 잇는다(닮음으로 안 갈린다 · 실측 2026-09-09).
+   그대로 두면 ⑥으로 들어가 **창고에 중복이 생긴다** — 사용자가 제일 피하고 싶다고 말한 그 일이다.
+   그래서 «사람이 답해야 하는 것»이 하나라도 남아 있으면 **아무것도 안 올린다.**
+   🔵 나머지는 다 셈이다. 이 함수가 이 체계의 유일한 잠금이다. */
+function hwpVerdictBlockers(v){
+  const 막 = [];
+  if(v.복사됨.length)    막.push({ 갈래:'복사됨',    n:v.복사됨.length,    말:'한 코드가 두 문항을 가리킵니다 — 어느 쪽이 원본인지 사람이 골라야 합니다' });
+  if(v.모르는코드.length) 막.push({ 갈래:'모르는코드', n:v.모르는코드.length, 말:'창고에 없는 코드입니다 — 장부를 보거나 오타를 고쳐야 합니다' });
+  const 갈린것 = v.코드잃음.filter(x => x.갈림).length;
+  if(갈린것)             막.push({ 갈래:'갈린 되찾기', n:갈린것,            말:'본문이 같은 창고 문항이 둘 이상이라 어느 코드인지 기계가 못 정합니다' });
+  return 막;
+}
+
+
 /* 문제 끝의 배점 표기를 걷어낸다 — 「[5.0점]」·「[4점]」·「(3점)」 (2026-09-04 · 사용자 요청).
    🔵 배점은 **그 시험지에서만 참인 값**이다. 문항을 창고에 담아 다른 시험지로 돌려 쓰면
      거짓말이 되고, 학생 화면에도 남의 시험 배점이 따라다닌다.

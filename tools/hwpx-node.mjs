@@ -29,7 +29,7 @@ const RULE_NAMES = [
   'HP_NS', 'HWP_CORE_NS', 'HWP_CODE_RE', 'HWP_FP_RE', 'HWP_WATERMARK_PATTERNS',
   'convertHwpEq', 'cleanHwpPlainText', 'hwpWalkParagraphs',
   'stripScoreMarks', 'fixBareSqrt', 'stripTrailingTypeTitle',
-  'hwpEndnoteParts', 'hwpEndnoteText', 'hwpCellToBlock', 'hwpParseBlocks', 'hwpItemFpText',
+  'hwpEndnoteParts', 'hwpEndnoteText', 'hwpCellToBlock', 'hwpParseBlocks', 'hwpItemFpText', 'hwpItemVerdicts', 'hwpVerdictBlockers',
   'hwpxMarkDecorPics', 'hwpxProblemsFromDocs', 'hwpxAnswerKeyFromDocs', '수식낱말펴기', 'hwpxExamKeyFromText', 'hwpxLooksExamKey', 'hwpxSourceBadges', 'hwpxMakeSourceCodes', 'hwpxParseSourceTag', 'hwpxGradeOfMonth', 'hwpxRepairEqText', 'hwpxBalanceBraces', 'hwpxBalanceLeftRight',
 ];
 export function loadHwpxRules() {
