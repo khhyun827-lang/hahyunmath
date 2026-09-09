@@ -37,6 +37,9 @@ const BOOK    = opt('book', '');
 const CHAPTER = opt('chapter', '');
 const START   = parseInt(opt('start', '1'), 10);
 const OUT     = opt('out', '');
+/* 🔴 **--again — 고친 파일을 «다시» 넣는다** (2026-09-09 · 내년 판이 이것이다).
+   심긴 코드는 그대로 두고, 코드 없는 것만 창고와 맞대 «되찾거나 새로 준다» → docs/코드-숨기기.md 0-A */
+const AGAIN   = argv.includes('--again');
 
 if (!src || !SUBJECT || !BOOK || !CHAPTER) {
   console.error('쓰는 법: node tools/item-code.mjs <파일.hwpx|폴더> --subject K2 --book E --chapter 01 [--start 1] [--out 표.json]');
@@ -205,26 +208,84 @@ if (OUT && fs.existsSync(OUT)) {
     console.error(`멈춘다 — 장부는 ${ledger.subject}-${ledger.book} 인데 ${SUBJECT}-${BOOK} 을 넣으려 한다.`);
     process.exit(2);
   }
-  if (ledger.items.some((x) => x.chapter === CHAPTER) && !argv.includes('--replace')) {
+  if (ledger.items.some((x) => x.chapter === CHAPTER) && !argv.includes('--replace') && !AGAIN) {
     console.error(`멈춘다 — 장부에 ${CHAPTER} 단원이 이미 있다 (${ledger.items.filter((x) => x.chapter === CHAPTER).length}제).`);
-    console.error('   다시 매기면 이미 파일에 심은 코드와 어긋난다. 정말 다시 매기려면 --replace 를 준다.');
+    console.error('   ▶ **내년 판처럼 «고친 파일을 다시 넣는» 것이라면 `--again` 을 준다.**');
+    console.error('     심긴 코드는 그대로 두고 «코드 없는 것»에만 새 번호를 준다 (docs/코드-숨기기.md 0-A).');
+    console.error('   ⚠ --replace 는 그 단원을 통째로 다시 매긴다 — 앞에 문항 하나만 끼워도 뒤가 전부 밀린다.');
     process.exit(2);
   }
-  if (argv.includes('--replace')) ledger.items = ledger.items.filter((x) => x.chapter !== CHAPTER);
+  if (argv.includes('--replace') && !AGAIN) ledger.items = ledger.items.filter((x) => x.chapter !== CHAPTER);
 }
 // 이어서 매긴다 — 장부에서 제일 큰 번호 다음부터. --start 를 주면 그것을 쓴다.
 const maxSeq = ledger.items.reduce((m, x) => Math.max(m, x.seq || 0), 0);
 const FROM = argv.includes('--start') ? START : maxSeq + 1;
 
+/* ── 🔴 다시 돌릴 때 — «이미 있는 코드가 진실이다» (2026-09-09) ──────────
+   여태 이 도구는 «처음 한 번»만 되는 도구였다. 코드를 **문서에 놓인 차례**로 매기고
+   (`seq = FROM + i`), 이미 매긴 단원은 아예 막았다. `--replace` 는 더 나빴다 —
+   통째로 다시 매기니 **앞에 문항 하나만 끼워 넣어도 뒤가 전부 한 칸씩 밀려**,
+   파일·창고·학생 오답기록과 통째로 어긋난다. 「내년 버전」이 막히던 자리가 여기다.
+
+   ▶ **뼈대를 뒤집었다** — 「문서 차례」는 판단에서 통째로 빠진다.
+     ① 미주에 코드가 이미 있으면  → **그 코드가 진실이다.** 어디로 옮겼든 그대로 둔다
+     ② 코드가 없으면              → 창고 본문과 맞대 본다 (docs/코드-숨기기.md 0-B)
+        · ⑤ 창고 어딘가와 본문이 «똑같다» → **잃어버린 코드를 돌려준다.** 새 코드를 안 준다
+        · ⑥ 창고 어디와도 다르다        → **새 문항이다.** 장부 맨 뒤 +1
+     ③ 사람이 답해야 하는 것(①복사·④모르는 코드·갈린 되찾기)이 있으면 **한 글자도 안 적는다**
+
+   ⚠ **두 파서를 나란히 걷는다.** 이 파일의 `scan()` 은 미주에서 출처·SCENE 을 읽고,
+     `hwpx.js` 는 본문을 읽는다. 둘 다 «미주 차례»로 걷지만 그것은 **전제일 뿐이라**
+     아래에서 **개수가 같은지 확인하고, 다르면 멈춘다.** 짐작으로 짝지으면 코드가 밀린다. */
+const pad = (n) => String(n).padStart(4, '0');
+let 되찾음 = 0, 새로줌 = 0, 그대로둠 = 0;
+let 코드들 = null;
+
+if (AGAIN) {
+  const { loadHwpxRules } = await import('./hwpx-node.mjs');
+  const { 교재읽기, 창고읽기, 창고읽기_손에있는것 } = await import('./store-diff.mjs');
+  const rules = loadHwpxRules();
+  const { 문항 } = 교재읽기([src], rules);
+  if (문항.length !== items.length) {
+    console.error(`멈춘다 — 미주로 센 문항이 ${items.length}제인데 본문 파서는 ${문항.length}제라고 한다.`);
+    console.error('   두 파서가 어긋났다. 짝을 짐작으로 맞추면 코드가 통째로 한 칸씩 밀린다.');
+    process.exit(2);
+  }
+  const { 창고 } = argv.includes('--local') ? 창고읽기_손에있는것() : await 창고읽기();
+  const v = rules.hwpItemVerdicts(문항, 창고);
+  const 막힘 = rules.hwpVerdictBlockers(v, { 심을수있나: true });
+  if (막힘.length) {
+    console.error('\n🔴 멈춘다 — 사람이 답해야 할 것이 남았다 (docs/코드-숨기기.md 0-C)');
+    for (const m of 막힘) console.error('  · ' + m.갈래 + ' ' + m.n + '건 — ' + m.말);
+    if (v.복사됨.length) console.error('    복사된 코드: ' + v.복사됨.map((x) => x.code).slice(0, 8).join(', '));
+    if (v.모르는코드.length) console.error('    모르는 코드: ' + v.모르는코드.map((x) => x.code).slice(0, 8).join(', '));
+    console.error('');
+    process.exit(1);
+  }
+  /* 되찾은 코드를 «그 문항»에 붙여 둔다 — 판정이 돌려준 것은 문항 객체 그대로다. */
+  const 되찾은코드 = new Map();
+  for (const x of v.코드잃음) 되찾은코드.set(x.문항, x.후보[0]);
+  let 다음 = FROM;
+  코드들 = 문항.map((m) => {
+    if (m.code) { 그대로둠++; return m.code; }
+    const 되찾 = 되찾은코드.get(m);
+    if (되찾) { 되찾음++; return 되찾; }
+    새로줌++;
+    return `${SUBJECT}-${CHAPTER}-${BOOK}-${pad(다음++)}`;
+  });
+  console.log(`\n  다시 매김 — 그대로 둔 코드 ${그대로둠} · 되찾은 코드 ${되찾음} · 새로 준 코드 ${새로줌}`);
+  if (새로줌) console.log(`    새 번호는 ${pad(FROM)} 부터다 (장부 맨 뒤 ${pad(maxSeq)} 다음).`);
+}
+
 // ── 코드를 매긴다 ─────────────────────────────────────────────────────
 // 자리 차례: 과목 - 단원 - 책 - 일련번호.  학생은 앞 둘을 고르고 뒤 다섯 자만 친다(E0123).
 // 단원이 앞에 오면 정렬이 «단원»으로 모인다 — 진도·시험범위·오답이 전부 단원 단위다.
-const pad = (n) => String(n).padStart(4, '0');
 const rows = items.map((it, i) => {
-  const seq = FROM + i;
+  const code = 코드들 ? 코드들[i] : `${SUBJECT}-${CHAPTER}-${BOOK}-${pad(FROM + i)}`;
+  const seq = +(String(code).match(/(\d{4})$/) || [0, FROM + i])[1];
   const a = readAnswer(it.note);
   return {
-    code: `${SUBJECT}-${CHAPTER}-${BOOK}-${pad(seq)}`,
+    code,
     chapter: CHAPTER,
     seq,
     scene: it.scene,
@@ -296,7 +357,19 @@ function forLedger(r){
 if (OUT) {
   ledger.subject = SUBJECT;
   ledger.book = BOOK;
-  ledger.items = ledger.items.concat(rows.map(forLedger)).sort((a, b) => a.seq - b.seq);
+  /* 🔴 **다시 돌릴 때는 «코드»로 갈아 끼운다 — 이어 붙이지 않는다** (2026-09-09).
+     `--again` 이면 rows 의 대부분이 «이미 장부에 있는 코드»다. 그대로 concat 하면
+     같은 코드가 두 줄이 되어 장부가 곧 거짓말이 된다.
+     🔵 코드가 열쇠다 — 같은 코드는 새 줄로 덮고(출처·SCENE 이 고쳐졌을 수 있다),
+       없던 코드만 는다. **한 번 준 번호는 여기서도 안 바뀐다.** */
+  let 더할것 = rows.map(forLedger);
+  if (AGAIN) {
+    const 이번 = new Map(더할것.map((r) => [r.code, r]));
+    ledger.items = ledger.items.map((x) => 이번.get(x.code) || x);   // 있던 줄은 «갈아 끼운다»
+    const 있는코드 = new Set(ledger.items.map((x) => x.code));
+    더할것 = 더할것.filter((r) => !있는코드.has(r.code));            // 없던 코드만 는다
+  }
+  ledger.items = ledger.items.concat(더할것).sort((a, b) => a.seq - b.seq);
   ledger.count = ledger.items.length;
   ledger.updatedAt = new Date().toISOString().slice(0, 10);
   ledger.chapters = [...new Set(ledger.items.map((x) => x.chapter))].sort();
