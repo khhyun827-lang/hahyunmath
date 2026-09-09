@@ -64,8 +64,17 @@ const 소스 = lift('icFillBodies', 'async function');
 봄('🔴 어긋나면 표를 «안 담고» 본문만 담는다', /표가 이 교재의 것이 아니거나/.test(소스), true);
 봄('🔴 세로 표면 표를 안 담는다', /번호가 이어지지 않습니다/.test(소스), true);
 봄('맞았으면 몇 개를 맞대 봤는지 말한다', /미주와 맞대 봐서 다 맞았습니다/.test(소스), true);
-봄('그림 여럿(선지 그림)은 그대로 지킨다', /alreadyMany/.test(소스), true);
-봄('있던 정답을 빈 것으로 안 덮는다', /itemAnswerToKeep/.test(소스), true);
+/* 🔴 **2026-09-09에 읽기와 쓰기를 갈랐다** — `icFillBodies` 는 읽고 창고와 맞대 보여만 주고,
+   실제로 쓰는 것은 `icFillCommit` 이다 (창고 대조 → docs/코드-숨기기.md 0-B · 0-E).
+   ⚠ 그래서 아래 둘은 **쓰는 쪽**에서 찾아야 한다. 여기 있던 검사가 실제로 그렇게 물어서,
+     «흠»이 아니라 «주소가 바뀐 것»임을 확인하고 자리를 옮겼다. 지키는 값은 그대로다. */
+const 쓰는쪽 = lift('icFillCommit', 'async function');
+봄('그림 여럿(선지 그림)은 그대로 지킨다', /alreadyMany/.test(쓰는쪽), true);
+봄('있던 정답을 빈 것으로 안 덮는다', /itemAnswerToKeep/.test(쓰는쪽), true);
+봄('🔵 «그대로»인 것은 다시 안 쓴다 — 중복 업로드를 막는 자리', /icNeedsWrite/.test(쓰는쪽), true);
+봄('🔴 읽는 쪽은 이제 «쓰지» 않는다', /dbSetDoc\('items'/.test(소스), false);
+봄('🔴 읽는 쪽이 창고와 맞대 본다', /icVerdict\(/.test(소스), true);
+봄('🔴 막을 것이 있으면 한 건도 안 담는다', /담지 않았습니다 — /.test(소스), true);
 봄('여러 파일을 받는다', /Array\.from\(\(input && input\.files\) \|\| \[\]\)/.test(소스), true);
 봄('화면도 여러 파일을 고를 수 있다', html.includes('accept=".hwpx" multiple'), true);
 

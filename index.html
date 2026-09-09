@@ -20713,8 +20713,55 @@ function itemDocKey(code){
   return (splitItemCode(code) || {}).origin || code;        // ①꼴 — 변형은 variants 로 간다
 }
 function icClassify(problems){
-  const withCode = problems.filter(p => p.itemCode && p.content);
-  return { 교재: withCode.length > 0, withCode };
+  /* 🔴 **«무엇이 문항인가»를 코드로 가르지 않는다 — 미주로 가른다** (2026-09-09).
+     여태 `p.itemCode` 가 있는 것만 골랐다. 그러면 **코드 없는 문항이 말없이 사라진다** —
+     사용자가 「내년 버전」에 새로 넣은 문항이 바로 그것이라, 화면은 「n개 담았습니다」라고만
+     하고 **몇 개가 빠졌는지 말하지 않았다.** 「추가된 문제만 받아들인다」의 정반대다.
+     ⚠ 그렇다고 아무것도 안 가르면 **목차·표지가 문항으로 들어온다.**
+     ✅ 잰 값 (564제 · 2026-09-09): 코드 있고 미주 있음 564 · 코드 없고 미주 없음 5(목차) ·
+       나머지 둘 다 0. **미주로 깨끗하게 갈린다** — `tools/item-code.mjs` 가 처음부터 쓰던 전제다.
+     🔴 node 쪽 `tools/store-diff.mjs` 의 `교재읽기()` 와 **같은 잣대다.** 갈리면 안 된다. */
+  const 문항 = problems.filter(p => p.content && p.content.trim()
+    && ((p.answer && String(p.answer).trim()) || (p.solution && String(p.solution).trim())));
+  const withCode = 문항.filter(p => p.itemCode);
+  const 코드없음 = 문항.filter(p => !p.itemCode);
+  const 앞장 = problems.filter(p => p.content && p.content.trim()).length - 문항.length;
+  return { 교재: 문항.length > 0, withCode, 문항, 코드없음, 앞장 };
+}
+
+/* 창고와 맞대 여덟 갈래로 가른다 — 판정 규칙은 `hwpx.js` 하나뿐이다 (0-B).
+   🔴 **`심을수있나:false`** — 브라우저는 hwpx 파일을 못 고친다. 코드를 창고에만 매겨
+     넣으면 파일은 여전히 코드가 없고, **내년에 그 문항이 또 새 코드를 받는다.**
+     그래서 코드 없는 것은 웹에서 아예 안 받고, `tools/item-code.mjs` 로 보낸다. */
+function icVerdict(문항){
+  const v = hwpItemVerdicts(문항.map(p => ({ code: p.itemCode || '', content: p.content, p })), state.itemBody || {});
+  return { v, 막힘: hwpVerdictBlockers(v, { 심을수있나: false }) };
+}
+/* 「…구하시오.」 → 「…구하여라.」 — **달라진 자리만** 잘라 준다.
+   🔵 본문이 최대 961자다. 통째로 보여 주면 사람이 뭐가 달라졌는지 못 찾는다.
+   ⚠ node 쪽 `store-diff.mjs` 의 `달라진자리()` 와 같은 셈이다. */
+/* 🔵 **판정 ②(그대로)는 안 쓴다** — 사용자가 말한 「기존 문제랑 중복해서 올려지지 않고」가
+   이 함수다 (2026-09-09). 여태 561제를 매번 다시 썼다.
+   ⚠ **본문만 보고 건너뛰면 안 된다** — 정답이 이번에 새로 왔거나 그림이 이번에 붙을 수도 있다.
+     그래서 «쓸 까닭이 하나도 없을 때»만 건너뛴다. 하나라도 있으면 쓴다.
+   ⚠ 견줄 때 `hwpItemFpText()` 를 지난다 — 안 그러면 줄바꿈 하나에 561제를 다시 쓴다. */
+function icNeedsWrite(옛것, p, 새정답){
+  const 옛 = 옛것 || {};
+  if(!옛.content) return true;                                     // 창고에 없다 — 써야 한다
+  if(hwpItemFpText(옛.content) !== hwpItemFpText(p.content)) return true;   // ③ 고쳤다
+  if(새정답 && 새정답 !== 옛.answer) return true;                   // 정답이 새로 왔다
+  if(p.image && !옛.image && !옛.images) return true;               // 그림이 이번에 붙는다
+  return false;                                                    // ② 그대로
+}
+function icDiffBit(옛, 새, 폭){
+  폭 = 폭 || 40;
+  const a = String(옛 || ''), b = String(새 || '');
+  let i = 0; while(i < a.length && i < b.length && a[i] === b[i]) i++;
+  let j = 0; while(j < a.length - i && j < b.length - i && a[a.length-1-j] === b[b.length-1-j]) j++;
+  const 자르 = s => s.length > 폭 ? s.slice(0, 폭) + '…' : s;
+  return { 앞: 자르(a.slice(Math.max(0, i - 14), i).replace(/\s+/g, ' ')),
+           옛: 자르(a.slice(i, a.length - j).replace(/\s+/g, ' ')),
+           새: 자르(b.slice(i, b.length - j).replace(/\s+/g, ' ')) };
 }
 
 /* =========== ②꼴은 «파일 이름»이 단원을 말한다 (2026-09-06) ===========
@@ -20768,7 +20815,8 @@ async function icFillBodies(input){
     for(const f of files){
       state.icFill = { running:true, msg:`${f.name} 을(를) 읽는 중…` }; render();
       const problems = await parseHwpxToProblems(f);
-      const { 교재, withCode } = icClassify(problems);
+      const 갈린것 = icClassify(problems);
+      const { 교재, withCode } = 갈린것;
       if(교재){
         /* 🔵 **②꼴(모의고사 기출)이면 과목·단원을 파일 이름에서 읽어 문항에 붙인다** (2026-09-06).
            ①꼴은 코드가 스스로 말해 주지만 ②꼴은 아니다 — 안 실으면 창고에서 «과목 없음»이
@@ -20783,7 +20831,7 @@ async function icFillBodies(input){
             p.subject = 자리.subject; p.chapter = 자리.chapter; p.chapterName = 자리.chapterName;
           }
         }
-        교재들.push({ name:f.name, withCode, 딱지말: problems.srcNote || '' });
+        교재들.push({ name:f.name, withCode, 문항: 갈린것.문항, 앞장: 갈린것.앞장, 딱지말: problems.srcNote || '' });
         continue;
       }
       const byNo = await parseHwpxAnswerKey(f);
@@ -20792,10 +20840,29 @@ async function icFillBodies(input){
     if(!교재들.length){
       state.icFill = { running:false, msg: 정답표
         ? '빠른정답표만 있습니다 — 코드를 심은 교재 hwpx 도 같이 올려주세요.'
-        : '코드가 심긴 문항을 못 찾았습니다 — 코드를 심은 파일이 맞는지 봐주세요.' };
+        : '문항을 못 찾았습니다 — 미주가 달린 교재 hwpx 가 맞는지 봐주세요.' };
       render(); return;
     }
     const withCode = 교재들.flatMap(x => x.withCode);
+
+    /* ── 🔴 창고와 맞대 본다 — 여기가 이 화면의 «문»이다 (2026-09-09) ──────────────
+       여태 이 자리는 **코드 붙은 문항을 조건 없이 전부 덮어썼다.** 그래서
+       ① 안 바뀐 561제도 매번 다시 쓰고(중복 업로드) ② 뭐가 달라졌는지 볼 길이 없고
+       ③ 코드 없는 새 문항은 말없이 사라졌다. 사용자가 말한 세 가지가 전부 여기였다.
+       판정과 까닭 → docs/코드-숨기기.md **0-B** · 잠금 → **0-C** · 문이 셋인 것 → **0-E** */
+    const { v: 판정, 막힘 } = icVerdict(교재들.flatMap(x => x.문항));
+    const 앞장수 = 교재들.reduce((a, x) => a + (x.앞장 || 0), 0);
+
+    /* 🔴 **사람이 답해야 할 것이 남아 있으면 아무것도 안 담는다.** 여기가 유일한 잠금이다. */
+    if(막힘.length){
+      state.icFill = { running:false, ready:false, msg:
+        '🔴 담지 않았습니다 — ' + 막힘.map(m => m.갈래 + ' ' + m.n + '건').join(' · ') + '.\n'
+        + 막힘.map(m => '· ' + m.말).join('\n')
+        + (판정.복사됨.length ? '\n· 복사된 코드: ' + 판정.복사됨.map(x => x.code).slice(0, 6).join(', ') : '')
+        + (판정.모르는코드.length ? '\n· 모르는 코드: ' + 판정.모르는코드.map(x => x.code).slice(0, 6).join(', ') : '') };
+      render(); return;
+    }
+
 
     /* ── 정답표가 같이 왔으면 «이 교재 안에서» 짝짓고 검사한다 ── */
     let 정답 = {}, 검사말 = '';
@@ -20840,11 +20907,47 @@ async function icFillBodies(input){
       }
     }
 
-    /* ── 담는다 ── */
-    let saved = 0, failed = 0, figures = 0, figFailed = 0;
+    /* 🔵 **여기서 멈추고 사람에게 보여 준다** (2026-09-09). 창고 수식 제자리 고치기와
+       같은 결이다 — 모달을 안 쓴다. 화면에 적어 두면 사람이 읽고 판단할 시간이 생긴다.
+       ⚠ **읽은 것을 들고 있어야 한다** — 파일 입력은 맨 위에서 이미 비웠고(`input.value=''`),
+         파일을 다시 고르게 하면 사람이 방금 읽은 판정을 잃는다. 그래서 상태에 재워 둔다. */
+    state.icFillPending = { withCode, 정답, 검사말, 판정, 앞장수,
+      딱지말: 교재들.map(x => x.딱지말).filter(Boolean).join(' ') };
+    const 줄 = ['🔵 그대로 ' + 판정.그대로.length + '개 — 올리지 않습니다'];
+    if(판정.고쳤다.length) 줄.push('⚠ 고쳤다 ' + 판정.고쳤다.length + '개 — 아래를 보고 「담기」를 누르시면 갱신합니다');
+    if(판정.겹침.length)   줄.push('⚠ 코드는 다른데 본문이 같은 것 ' + 판정.겹침.length + '무리 — ' + 판정.겹침.map(c=>c.join(' = ')).join(' · '));
+    if(판정.빠졌다.length) 줄.push('ⓘ 이 단원 창고에 있는데 파일에 없는 것 ' + 판정.빠졌다.length + '개 — 🔵 지우지 않습니다');
+    if(앞장수)            줄.push('ⓘ 미주 없는 앞장(목차 등) ' + 앞장수 + '개는 문항에서 뺐습니다');
+    const 보기 = 판정.고쳤다.slice(0, 5).map(x => {
+      const d = icDiffBit(x.옛글, x.새글);
+      return x.code + '\n    옛  …' + d.앞 + '「' + d.옛 + '」\n    새  …' + d.앞 + '「' + d.새 + '」';
+    }).join('\n  ');
+    state.icFill = { running:false, ready:true, n:판정.고쳤다.length, msg:
+      줄.join('\n') + (보기 ? '\n\n  ' + 보기 : '')
+      + (판정.고쳤다.length > 5 ? '\n  … 외 ' + (판정.고쳤다.length - 5) + '개' : '') };
+    render();
+  }catch(e){
+    state.icFill = { running:false, msg:'읽지 못했습니다 — ' + (e.message || e) };
+    state.icFillPending = null;
+    render();
+  }
+}
+
+/* 🔴 **쓰는 자리는 여기 하나다.** `icFillBodies` 는 읽고 가르고 보여 줄 뿐이다 (2026-09-09).
+   ⚠ **판정 ②(그대로)는 여기서 «건너뛴다»** — 창고에 이미 같은 것이 있는데 다시 쓰면
+     쓰기 값만 치르고 `updatedAt` 만 바뀐다. 561제를 매번 다시 쓰던 것이 이 자리였다.
+     🔵 시험지 등록 자리(`icSaveExam`)에는 이 한 줄이 처음부터 있었다 — 그것을 여기로 옮긴 셈이다. */
+async function icFillCommit(){
+  const 재운것 = state.icFillPending;
+  if(!재운것 || (state.icFill && state.icFill.running)) return;
+  const { withCode, 정답, 검사말, 판정, 딱지말 } = 재운것;
+  state.icFill = { running:true, ready:true, msg:'담는 중…' }; render();
+  try{
+    let saved = 0, failed = 0, figures = 0, figFailed = 0, 그대로건너뜀 = 0;
     for(let i=0;i<withCode.length;i++){
       const p = withCode[i];
       const root = itemDocKey(p.itemCode);
+      if(!icNeedsWrite(state.itemBody[root], p, 정답[root])){ 그대로건너뜀++; continue; }
       const doc = { code: root, content: p.content, updatedAt: nowStamp() };
       /* 🔴 **②꼴은 과목·단원·출처를 «여기»에 실어야 한다** (2026-09-06).
          ①꼴은 코드가 `K2-01-E-…` 로 다 말해 주지만 ②꼴(`1230928OR`)에는 그 자리가 없다.
@@ -20885,13 +20988,17 @@ async function icFillBodies(input){
     /* 🔵 **코드를 «여기서 매겼다»는 것은 말해 줘야 한다** (2026-09-06).
        코드가 심긴 교재를 올린 것과 딱지를 읽어 갓 매긴 것은 **사람이 확인할 것이 다르다** —
        뒤엣것은 코드가 맞는지 눈으로 봐야 한다. 조용히 같아 보이면 안 본다. */
-    const 딱지말 = 교재들.map(x => x.딱지말).filter(Boolean).join(' ');
-    state.icFill = { running:false,
+    const 건너뜀말 = 그대로건너뜀 ? ` 🔵 그대로인 ${그대로건너뜀}개는 다시 안 썼습니다.` : '';
+    const 빠짐말 = 판정 && 판정.빠졌다.length ? ` (이 단원 창고에 있지만 파일에 없던 ${판정.빠졌다.length}개는 그대로 뒀습니다)` : '';
+    /* 🔴 **재운 것을 놓는다** — 안 놓으면 「담기」 단추가 남아 같은 것을 또 쓴다. */
+    state.icFillPending = null;
+    state.icFill = { running:false, ready:false,
       msg: failed ? `${saved}개를 담았고 ${failed}개는 막혔습니다 — 설정 › 관리자에서 확인해주세요.`
-                  : `${saved}개 문항의 본문을 담았습니다.${검사말}${figMsg}${figBad}${딱지말 ? ' ' + 딱지말 : ''}` };
+                  : `${saved}개 문항의 본문을 담았습니다.${검사말}${건너뜀말}${figMsg}${figBad}${빠짐말}${딱지말 ? ' ' + 딱지말 : ''}` };
     render();
   }catch(e){
-    state.icFill = { running:false, msg:'읽지 못했습니다 — ' + (e.message || e) };
+    state.icFill = { running:false, ready:false, msg:'담지 못했습니다 — ' + (e.message || e) };
+    state.icFillPending = null;
     render();
   }
 }
@@ -21341,6 +21448,14 @@ function icToolsHTML(앞){
       title="코드를 심어 둔 교재 hwpx 와 빠른정답표를 «함께» 고르면 정답까지 한 번에 담습니다"
       onclick="document.getElementById('ic-fill').click()">
       ${state.icFill && state.icFill.running ? '담는 중…' : '＋ 교재 올리기'}</button>
+    ${/* 🔴 **읽기와 쓰기를 갈랐다** (2026-09-09). 「교재 올리기」는 읽고 창고와 맞대 보여만 주고,
+         쓰는 것은 이 단추다. 창고 수식 제자리 고치기와 같은 결이다.
+         ⚠ 파일 입력을 다시 열게 하면 안 된다 — 방금 읽은 판정을 잃는다. 그래서 «따로 선» 단추다.
+         🔵 재운 것이 없으면 아예 안 보인다. 누를 것이 없는 단추를 두지 않는다. */''}
+    ${state.icFillPending ? `<button class="btn p sm" ${state.icFill && state.icFill.running ? 'disabled' : ''}
+      title="위에 보이는 대로 창고에 담습니다 — «그대로»인 것은 다시 쓰지 않습니다"
+      onclick="icFillCommit()">${state.icFill && state.icFill.running ? '담는 중…'
+        : `✓ 담기${state.icFill && state.icFill.n ? ` (고친 것 ${state.icFill.n})` : ''}`}</button>` : ''}
     <input type="file" accept=".hwpx,.json" id="ic-ans" style="display:none;" onchange="icFillAnswers(this)">
     <button class="btn q sm" ${state.icAns && state.icAns.running ? 'disabled' : ''}
       title="빠른정답표 hwpx 를 올리면 정답을 담습니다"
@@ -21360,7 +21475,12 @@ function icToolsHTML(앞){
       ${state.aiQuotaUsed !== null ? `<s>·</s> 오늘 <b class="mono">${state.aiQuotaUsed}/${AI_DAILY_LIMIT}</b>` : ''}
       ${(af.done || af.skipped || af.failed) ? `<s>·</s> 담은 것 <b class="mono">${af.done}</b>${af.skipped?` · 건너뜀 ${af.skipped}`:''}${af.failed?` · 실패 ${af.failed}`:''}` : ''}</span>
   </div>
-  ${말.length ? `<div class="ist-msg">${말.map(m=>escHtml(m)).join('<br>')}</div>` : ''}`;
+  ${/* ⚠ **줄바꿈을 살린다** (2026-09-09). 여태 메시지 «사이»에만 <br> 를 넣었는데,
+       창고 대조 판정은 여러 줄이고 «옛/새»를 위아래로 놓아야 읽힌다 — 안 살리면
+       판정표가 한 줄로 뭉쳐 사람이 못 읽는다. 앞 공백도 지켜야 들여쓴 것이 들여써 보인다. */''}
+  ${/* ⚠ 앞 공백을 «줄바꿈을 없애기 전에» 바꾼다 — 순서를 바꾸면 ^ 가 물 자리가 없어진다. */''}
+  ${말.length ? `<div class="ist-msg">${말.map(m => escHtml(m)
+      .replace(/^ +/gm, s => '&nbsp;'.repeat(s.length)).replace(/\n/g, '<br>')).join('<br>')}</div>` : ''}`;
 }
 
 /* 한 기출에서 나온 형제들. **앞 7자리가 열쇠다** — 원본이 먼저, 그다음 갈래·번호 순.
