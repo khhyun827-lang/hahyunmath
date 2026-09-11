@@ -12,7 +12,9 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <!-- 구버전(Noto Sans KR·Serif 900)과 ds.css(Serif 600·Mono 500)가 쓰는 굵기를 한 요청에 합쳤다.
      이행이 끝나 구버전 화면이 사라지면 Noto Sans KR과 Serif 900은 빼면 된다. -->
-<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;600;700;900&family=Noto+Sans+KR:wght@400;500;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<!-- Noto+Serif(라틴·이탤릭)은 그림(figure.js)의 글자다 — 기기 글꼴을 쓰면 강사 PC 와 학생 태블릿에서
+     글자 폭이 달라 이름표가 «여기선 안 겹치는데 거기선 겹친다». 모두가 같은 파일을 받게 한다 (2026-09-11). -->
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif:ital,wght@0,400;1,400&family=Noto+Serif+KR:wght@500;600;700;900&family=Noto+Sans+KR:wght@400;500;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
 <link rel="stylesheet" href="ds.css">
 
@@ -964,6 +966,19 @@
 .app .rv-draft.ok > b{color:var(--ok,#2c6b3f);}
 .app .rv-draft.no > b{color:var(--no);}
 .app .rv-draftfail{margin:6px 0 0;padding-left:17px;font-size:11.5px;line-height:1.8;color:var(--no);}
+/* 그림 이름표 편집기 (2026-09-11 · docs/그림-편집기-계획.md). 잡기 상자는 figure.js 가 편집 모드에서만 깐다. */
+.app .fig-edit svg{touch-action:none;user-select:none;-webkit-user-select:none;}
+.app .fig-edit g[data-lbl]{cursor:grab;}
+.app .fig-edit g[data-lbl] rect{fill:transparent;stroke:none;}
+.app .fig-edit g[data-lbl]:hover rect{fill:rgba(0,0,0,.04);}
+.app .fig-edit g.sel rect{stroke:var(--accent-line);stroke-width:1;stroke-dasharray:3 3;fill:rgba(0,0,0,.03);}
+.app .fig-edit g.sel text{fill:var(--accent);}
+.app .fig-edit g.hit text{fill:var(--no);}
+.app .fig-edit g.hit.sel text{fill:var(--accent);}
+.app .fig-tools{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:8px;font-size:11.5px;color:var(--sub);}
+.app .fig-tools input{border:1px solid var(--line);border-radius:var(--r-sm);padding:4px 8px;font-size:12px;
+  font-family:'Noto Serif','Noto Serif KR',serif;width:150px;background:var(--paper);color:var(--ink);}
+.app .fig-tools .k{font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--dim);}
 @media (max-width:1240px){ .app .rv-queues{display:none;} }
 
 /* ============================================================
@@ -10663,6 +10678,8 @@ function render(){
   /* 🔵 **고리는 여기서 깨운다** (2026-09-06) — 「앱을 열어 둔 동안 돈다」가 이 한 줄이다.
      render() 는 자주 불리지만 이미 돌고 있으면 곧장 빠져나온다(값 셋만 본다). */
   if(state.autoFill && state.autoFill.on) autoFillKick();
+  /* 그림 편집기 — 그린 뒤에야 getBBox 로 겹침을 잴 수 있다 (2026-09-11). */
+  if(state.figureDraft && window.Figure) figEditMark();
   if(window.renderMathInElement){
     try{
       renderMathInElement(app, {
@@ -21703,6 +21720,10 @@ function variantFigureNoteHTML(b){
       ${pbImageHTML(b.id, 'var', 'pb-fig')}
       <div class="rv-figact">${busy?'<span class="hx">올리는 중…</span>':fileInput}
         ${draftBtn}
+        ${/* 장면이 있는 SVG 그림이면 한도 없이 이름표를 옮길 수 있다 (2026-09-11) */
+          (()=>{ const v = state.pbImageCache[pbImgCacheKey(b.id,'var')];
+                 return (v && typeof v==='object' && v.kind==='svg' && v.scene && !(state.figureDraft && state.figureDraft.bankId===b.id))
+                   ? `<button class="btn sm" onclick="openFigureEditorFromSaved('${b.id}')">이름표 옮기기</button>` : ''; })()}
         <button class="btn no sm" onclick="removeVariantFigure('${b.id}')">그림 지우기</button></div>
       ${figureDraftHTML(b)}
       ${specBox}
@@ -21750,7 +21771,7 @@ async function requestFigureDraft(bankId){
   const used = await getAIQuotaUsed();
   if(used >= AI_DAILY_LIMIT){ showToast('오늘 AI 생성 한도('+AI_DAILY_LIMIT+'건)를 모두 사용했습니다.'); return; }
   state.figureDrafting = bankId;
-  state.figureDraft = null;
+  state.figureDraft = null; state.figureSel = null;             // 핀은 «이 장면»의 것 — 새 장면에 안 남긴다
   render();
   const image = b.hasImage ? await dbGet('pbimg:'+b.id, null) : null;
   const r = await fetchFigureSceneViaAI(b.variantFigureSpec||'', b.variantContent||'', image);
@@ -21775,7 +21796,7 @@ async function requestFigureDraft(bankId){
   state.figureDraft = { bankId, scene:r.scene, svg, ok:v.ok, failures:v.failures };
   render();
 }
-function discardFigureDraft(){ state.figureDraft = null; render(); }
+function discardFigureDraft(){ state.figureDraft = null; state.figureSel = null; render(); }
 
 /* 초안을 이 변형의 그림으로 삼는다. 손으로 올린 것과 **같은 문서·같은 플래그**를 쓴다 —
    그래야 「그림 필요」 큐·공개 잠금·다시 생성 시 버리기가 전부 그대로 동작한다.
@@ -21789,15 +21810,17 @@ async function acceptFigureDraft(bankId){
   render();
   try{
     if(b.hasVariantImage) await dropVariantFigure(b);
-    const doc = { kind:'svg', svg:d.svg, scene:d.scene, at:new Date().toISOString() };
+    /* 🔴 저장 직전에 장면에서 «새로» 그린다 — 편집기가 보여 주던 것은 잡기 상자가 든 편집용이다.
+       핀은 장면 안(scene.pins)에 있으니 같은 그림이 나온다. */
+    const doc = { kind:'svg', svg:Figure.renderScene(d.scene), scene:d.scene, at:new Date().toISOString() };
     await dbSet('pbvimg:'+bankId, doc);
     state.pbImageCache[pbImgCacheKey(bankId, 'var')] = doc;
     b.hasVariantImage = true;
     await dbSetDoc('problembank', b.id, b);
     /* 손으로 올릴 때와 같은 이유로 큐를 문항 따라 옮긴다 — 붙인 사람이 빈 큐를 마주하면 안 된다. */
     followBankToQueue(b);
-    state.figureDraft = null;
-    showToast('그림을 붙였습니다. 이제 공개할 수 있습니다.');
+    state.figureDraft = null; state.figureSel = null;
+    showToast(d.saved ? '그림을 고쳐 저장했습니다.' : '그림을 붙였습니다. 이제 공개할 수 있습니다.');
   }catch(e){
     console.error('초안 저장 실패', e);
     showToast('그림을 붙이지 못했습니다. 다시 시도해주세요.');
@@ -21817,20 +21840,163 @@ function figureDraftHTML(b){
     return `<div class="rv-draft no"><b>기계가 그릴 수 없는 그림입니다</b>
       <span class="hx">${escHtml(d.reason||'')} — <b>직접 그려서 올려주세요.</b></span>
       <div class="rv-figact"><button class="btn sm" onclick="discardFigureDraft()">닫기</button></div></div>`;
+  /* 검산을 통과한 초안은 **편집기**로 보인다 — 이름표를 끌어 옮기고 글자를 고친다 (figEditorHTML).
+     `saved` 는 이미 붙은 그림을 다시 연 것이다 — 「다시 받기」(한도)를 안 보인다. */
   return `<div class="rv-draft ${d.ok?'ok':'no'}">
-    <b>${d.ok ? '초안 — 검산을 통과했습니다' : '초안 — 검산에 걸렸습니다'}</b>
-    <span class="hx">${d.ok
+    <b>${d.saved ? '붙어 있는 그림 — 이름표를 옮깁니다' : d.ok ? '초안 — 검산을 통과했습니다' : '초안 — 검산에 걸렸습니다'}</b>
+    <span class="hx">${d.saved
+      ? '옮기거나 고친 뒤 <b>「이 그림으로 하겠습니다」</b>를 눌러야 저장됩니다. AI 한도는 안 씁니다.'
+      : d.ok
       ? '지침에 적힌 값이 그림에서 실제로 그렇게 되는지 확인했습니다. <b>문제에 맞는지는 눈으로 보고 정해주세요.</b>'
       : '아래가 어긋납니다. <b>이대로 붙일 수 없습니다</b> — 다시 받거나 직접 그려주세요.'}</span>
     ${d.ok ? '' : `<ul class="rv-draftfail">${d.failures.map(f=>`<li>${escHtml(f.msg)}</li>`).join('')}</ul>`}
-    <div class="pb-svg">${d.svg}</div>
+    ${d.ok ? figEditorHTML(d) : `<div class="pb-svg">${d.svg}</div>`}
     <div class="rv-figact">
       ${d.ok ? `<button class="btn p sm" onclick="acceptFigureDraft('${b.id}')">이 그림으로 하겠습니다</button>` : ''}
-      <button class="btn sm" onclick="requestFigureDraft('${b.id}')">다시 받기</button>
-      <button class="btn sm" onclick="discardFigureDraft()">버리기</button>
-      <span class="hx">다시 받으면 한도를 하나 더 씁니다.</span>
+      ${d.saved ? '' : `<button class="btn sm" onclick="requestFigureDraft('${b.id}')">다시 받기</button>`}
+      <button class="btn sm" onclick="discardFigureDraft()">${d.saved ? '닫기' : '버리기'}</button>
+      ${d.saved ? '' : '<span class="hx">다시 받으면 한도를 하나 더 씁니다.</span>'}
     </div>
   </div>`;
+}
+
+/* =================== 그림 이름표 편집기 (2026-09-11 · docs/그림-편집기-계획.md) ===================
+   «SVG 편집기»가 아니다 — 만지는 것은 장면(scene)의 `pins` 뿐이고, SVG 는 언제나
+   `Figure.renderScene(scene)` 의 결과다. 곡선·점·눈금의 «값»은 여기서 못 건드린다.
+
+   🔴 `render()` 는 #app 을 통째로 갈아 끼운다. 그래서 끄는 동안(pointermove)은 render 를 안 부르고
+     살아 있는 <g> 에 transform 만 준다. pointerup 에서 핀을 적고 한 번 그린다.
+   🔴 첫 손길에 **전부 핀** — 하나만 핀하면 나머지 자동 이름표가 잉크가 달라졌다고 딴 데로 옮겨 앉는다.
+   ⚠ 손길은 문서에 «위임»으로 단다 — render() 가 DOM 을 갈아도 살아남는다. */
+const FIG_EDIT = { drag: null };
+function figEditDraft(){ const d = state.figureDraft; return (d && d.scene && d.ok) ? d : null; }
+function figEditRedraw(d){
+  d.svg = Figure.renderScene(d.scene);                 // 저장용 — 잡기 상자 없음
+}
+function figEditPin(d, id, x, y, anchor){
+  if(!d.scene.pins) d.scene.pins = Figure.pinAll(d.scene);
+  d.scene.pins.at[id] = { x, y, anchor };
+  d.scene.pins = Figure.cleanPins(d.scene.pins, 560, 430);
+}
+function figSvgPoint(svg, e){
+  const pt = svg.createSVGPoint(); pt.x = e.clientX; pt.y = e.clientY;
+  return pt.matrixTransform(svg.getScreenCTM().inverse());
+}
+document.addEventListener('pointerdown', e => {
+  const g = e.target.closest && e.target.closest('.fig-edit g[data-lbl]');
+  if(!g || !figEditDraft()) return;
+  const svg = g.ownerSVGElement;
+  const p = figSvgPoint(svg, e);
+  FIG_EDIT.drag = { id: g.dataset.lbl, g, svg, x0: p.x, y0: p.y, dx: 0, dy: 0, moved: false, pointerId: e.pointerId };
+  try{ svg.setPointerCapture(e.pointerId); }catch(_){}
+  e.preventDefault();
+});
+document.addEventListener('pointermove', e => {
+  const dr = FIG_EDIT.drag;
+  if(!dr) return;
+  const p = figSvgPoint(dr.svg, e);
+  dr.dx = p.x - dr.x0; dr.dy = p.y - dr.y0;
+  if(!dr.moved && Math.hypot(dr.dx, dr.dy) < 3) return;        // 보려고 만진 것이지 끈 것이 아니다
+  dr.moved = true;
+  dr.g.setAttribute('transform', `translate(${dr.dx.toFixed(1)} ${dr.dy.toFixed(1)})`);
+});
+function figEditEnd(e){
+  const dr = FIG_EDIT.drag;
+  if(!dr) return;
+  FIG_EDIT.drag = null;
+  try{ dr.svg.releasePointerCapture(dr.pointerId); }catch(_){}
+  const d = figEditDraft();
+  if(!d) return;
+  state.figureSel = dr.id;
+  if(dr.moved){
+    figEditPin(d, dr.id, +dr.g.dataset.x + dr.dx, +dr.g.dataset.y + dr.dy, dr.g.dataset.anchor);
+    figEditRedraw(d);
+  }
+  render();
+}
+document.addEventListener('pointerup', figEditEnd);
+document.addEventListener('pointercancel', figEditEnd);
+/* 화살표 키 — 태블릿에서 끌기는 거칠다. 1px, Shift 면 5px. 입력칸에 있을 때는 안 받는다. */
+document.addEventListener('keydown', e => {
+  const d = figEditDraft();
+  if(!d || !state.figureSel) return;
+  const tag = (document.activeElement && document.activeElement.tagName) || '';
+  if(tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+  const step = e.shiftKey ? 5 : 1;
+  const mv = { ArrowLeft:[-step,0], ArrowRight:[step,0], ArrowUp:[0,-step], ArrowDown:[0,step] }[e.key];
+  if(!mv) return;
+  const l = Figure.layoutLabels(d.scene).find(x => x.id === state.figureSel);
+  if(!l) return;
+  figEditPin(d, l.id, l.x + mv[0], l.y + mv[1], l.anchor);
+  figEditRedraw(d); render();
+  e.preventDefault();
+});
+function figEditText(v){
+  const d = figEditDraft();
+  if(!d || !state.figureSel) return;
+  const t = String(v || '').trim();
+  if(!t){ showToast('이름표를 비울 수는 없습니다.'); render(); return; }
+  if(!Figure.setLabelText(d.scene, state.figureSel, t)){ showToast('이 글자는 값이라 고칠 수 없습니다.'); return; }
+  figEditRedraw(d); render();
+}
+function figEditHome(id){
+  const d = figEditDraft();
+  if(!d || !d.scene.pins) return;
+  delete d.scene.pins.at[id];
+  figEditRedraw(d); render();
+}
+function figEditReset(){
+  const d = figEditDraft();
+  if(!d) return;
+  delete d.scene.pins;
+  state.figureSel = null;
+  figEditRedraw(d); render();
+}
+/* 그린 뒤 — 겹치는 이름표를 붉게. 어림 상자가 아니라 **이 기기의 getBBox** 로 잰다.
+   ⚠ 글꼴은 모두에게 같은 파일(Noto Serif)이라 다른 기기에서도 같은 결과다. render() 끝에서 부른다. */
+function figEditMark(){
+  const host = document.querySelector('.fig-edit svg');
+  if(!host) return;
+  const gs = [...host.querySelectorAll('g[data-lbl]')];
+  const boxes = gs.map(g => { try{ const b = g.querySelector('text').getBBox(); return { g, x0:b.x-2, y0:b.y-2, x1:b.x+b.width+2, y1:b.y+b.height+2 }; }catch(_){ return null; } }).filter(Boolean);
+  for(let i=0;i<boxes.length;i++) for(let j=i+1;j<boxes.length;j++){
+    const a = boxes[i], b = boxes[j];
+    if(a.x0 < b.x1 && b.x0 < a.x1 && a.y0 < b.y1 && b.y0 < a.y1){ a.g.classList.add('hit'); b.g.classList.add('hit'); }
+  }
+}
+const FIG_ID_KO = { curve:'곡선 이름', point:'점 이름', xtick:'x눈금', ytick:'y눈금', label:'라벨' };
+function figLabelName(l){
+  if(l.id === 'axis:x') return 'x축 이름'; if(l.id === 'axis:y') return 'y축 이름'; if(l.id === 'axis:origin') return '원점';
+  const [k, i] = l.id.split(':');
+  return (FIG_ID_KO[k] || k) + ' ' + (+i + 1);
+}
+/* 편집기 상자 — 초안 상자 안에 산다. svg 는 편집 모드로 그린다(잡기 상자 + data-lbl). */
+function figEditorHTML(d){
+  const labels = Figure.layoutLabels(d.scene);
+  const sel = labels.find(l => l.id === state.figureSel) || null;
+  let svg = Figure.renderScene(d.scene, { edit:true });
+  if(sel) svg = svg.replace(`<g data-lbl="${escHtml(sel.id)}"`, `<g class="sel" data-lbl="${escHtml(sel.id)}"`);
+  const pinned = !!(d.scene.pins && Object.keys(d.scene.pins.at || {}).length);
+  return `<div class="pb-svg fig-edit">${svg}</div>
+    <div class="fig-tools">
+      ${sel ? `<b>${escHtml(figLabelName(sel))}</b>
+        ${sel.editable
+          ? `<input value="${escHtml(sel.text)}" onchange="figEditText(this.value)" title="글자 · x_1 은 아래첨자, x^2 는 위첨자">`
+          : `<span class="k">${escHtml(sel.text)} — 값이라 글자는 못 고칩니다</span>`}
+        ${sel.pinned ? `<button class="btn q sm" onclick="figEditHome('${escHtml(sel.id)}')">원래 자리로</button>` : ''}`
+        : `<span>이름표를 <b>끌어서</b> 옮기고, 누르면 <b>화살표 키</b>로 1px씩(Shift 5px) 밉니다. 겹치면 붉게 보입니다.</span>`}
+      ${pinned ? `<button class="btn q sm" onclick="figEditReset()">전부 되돌리기</button>` : ''}
+    </div>`;
+}
+/* 이미 붙어 있는 SVG 그림의 이름표를 옮긴다 — 한도 0. 같은 초안 상자를 쓰고 같은 문으로 저장한다. */
+function openFigureEditorFromSaved(bankId){
+  const doc = state.pbImageCache[pbImgCacheKey(bankId, 'var')];
+  if(!doc || typeof doc !== 'object' || doc.kind !== 'svg' || !doc.scene){ showToast('장면이 없는 그림이라 옮길 수 없습니다.'); return; }
+  const scene = JSON.parse(JSON.stringify(doc.scene));
+  const v = Figure.verifyScene(scene);
+  state.figureDraft = { bankId, scene, svg: Figure.renderScene(scene), ok: v.ok, failures: v.failures, saved: true };
+  state.figureSel = null;
+  render();
 }
 
 /* 그린 그림을 붙인다. 원본 그림과 같은 길(압축 → 드라이브)을 쓰고 문서만 pbvimg:{id}로 따로 둔다. */
@@ -24687,9 +24853,8 @@ function teacherSettingsStudentsHTML(){
         <input id="stu-search" value="${escHtml(state.stuQuery||'')}"
           placeholder="이름 · 아이디 · 학교 · 학년 · 반"
           oninput="stuSearch(event)" oncompositionend="stuSearch(event)"></span>
-      ${/* 학업은 여기 없다 — 찾으러 온 사람을 명단으로 보내는 문 하나는 남긴다.
-           ⚠ 그 명단은 이제 「반 › 학생」이다 (2026-09-01 · C-13). */''}
-      <button class="btn sm" onclick="goTeacherTab('classhub','students')">성적·출결은 학생 명단에서 ${iconSvg('arrowR',13)}</button>
+      ${/* 학업은 여기 없다. 한때 「성적·출결은 학생 명단에서 →」 단추를 뒀는데
+           2026-09-11에 사용자가 뺐다 — 계정을 다루는 곳에 학업으로 가는 문이 있을 까닭이 없다. */''}
     </div>
     ${rows}`
   })}
@@ -24700,8 +24865,15 @@ function teacherSettingsStudentsHTML(){
       <div class="cls-form">
         <label style="min-width:170px;"><span>배정할 반</span><select class="fm-sel" id="import-sclass">${classOptionsHTML(null)}</select></label>
         <button class="btn sm" onclick="downloadStudentExcelTemplate()">${iconSvg('download',14)} 양식 내려받기</button>
-        <label class="btn sm" style="cursor:pointer;">${iconSvg('file',14)} 엑셀 올리기<input type="file" accept=".xlsx,.xls"
-          style="display:none;" onchange="handleStudentExcelFile(this.files)"></label>
+        ${/* 🔴 «양식 내려받기»와 **같은 단추**로 둔다 (2026-09-11 · 사용자가 짚었다).
+             예전에는 `<label class="btn">` 안에 파일 입력을 숨겼는데, `.cls-form label` 이
+             세로 flex 라 그 단추만 아이콘이 위·글자가 아래로 서서 옆 단추와 달라 보였다.
+             파일 입력은 폼 밖에 따로 두고 단추가 그것을 누른다.
+           🔴 반은 «파일을 고른 순간» 읽는다 — 예전에는 `this.files` 를 첫 인자(classId)로
+             넘겨 파일이 둘째 인자로 안 가 **아무 일도 안 일어났다.** */''}
+        <button class="btn sm" onclick="document.getElementById('import-file').click()">${iconSvg('file',14)} 엑셀 올리기</button>
+        <input type="file" id="import-file" accept=".xlsx,.xls" hidden
+          onchange="handleStudentExcelFile(document.getElementById('import-sclass').value, this.files)">
       </div></div>`,
     body: studentImportPreviewHTML()
   })}

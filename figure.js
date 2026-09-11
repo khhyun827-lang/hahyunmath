@@ -347,11 +347,103 @@
   }
   function n(v) { return Math.round(v * 100) / 100; }
 
+  /* ==================== 글자 조판 — 이탤릭과 로만 ====================
+     수학 조판의 오랜 규칙 (2026-09-11 · 사용자가 시켰다) —
+       · 변수(x, y, f, P, O …)는 **이탤릭**
+       · 숫자·연산자·괄호·등호는 **로만(세움)**
+       · 이름 있는 함수(sin, log, lim …)는 **로만**
+       · 그리스 소문자는 이탤릭, 대문자·한글은 로만
+       · `x_1`·`x^2`·`_{12}`·`^{-1}` 는 아래·위첨자 (글자 70%)
+     예전에는 <g font-style="italic"> 하나로 전부 기울였다 — 「5」도 「=」도 기울어 있었다.
+
+     ⚠ 여기서 나온 조각은 전부 esc() 를 지난다. 장면의 글자는 워커(모델)가 낸 것이다. */
+  var UPRIGHT_FN = { sin: 1, cos: 1, tan: 1, cot: 1, sec: 1, csc: 1, log: 1, ln: 1, exp: 1, lim: 1, max: 1, min: 1, det: 1, arg: 1, mod: 1 };
+  function mathRuns(raw) {
+    var s = String(raw == null ? '' : raw);
+    var runs = [];
+    var i = 0;
+    function push(t, it, sh) {
+      if (!t) return;
+      var last = runs[runs.length - 1];
+      if (last && last.it === it && last.sh === sh) last.t += t;
+      else runs.push({ t: t, it: it, sh: sh });
+    }
+    function classify(t) {                       // 한 덩이의 «기울임»을 정한다
+      if (t === '-') return [['−', false]];         // 보기용 마이너스
+      if (/^[a-z]+$/i.test(t)) return UPRIGHT_FN[t.toLowerCase()] ? [[t, false]] :
+        t.split('').map(function (ch) { return [ch, true]; });
+      if (/^[α-ω]$/.test(t)) return [[t, true]];
+      return [[t, false]];
+    }
+    function emit(t, sh) {
+      var re = /[a-z]+|[0-9.]+|[α-ωΑ-Ω]|-|[^a-z0-9.α-ωΑ-Ω-]+/gi, m;
+      while ((m = re.exec(t))) classify(m[0]).forEach(function (c) { push(c[0], c[1], sh); });
+    }
+    while (i < s.length) {
+      var ch = s[i];
+      if ((ch === '_' || ch === '^') && i + 1 < s.length) {
+        var sh = ch === '_' ? 'sub' : 'sup', j = i + 1, body;
+        if (s[j] === '{') {
+          var k = s.indexOf('}', j + 1);
+          if (k < 0) k = s.length;
+          body = s.slice(j + 1, k); i = k + 1;
+        } else { body = s[j]; i = j + 1; }
+        emit(body, sh);
+        continue;
+      }
+      var j2 = i;
+      while (j2 < s.length && s[j2] !== '_' && s[j2] !== '^') j2++;
+      emit(s.slice(i, j2), null);
+      i = j2;
+    }
+    return runs;
+  }
+  /* 글자 폭 어림 — 잉크·겹침 검사가 쓴다. 첨자는 0.7배. */
+  function visLen(raw) {
+    return mathRuns(raw).reduce(function (a, r) { return a + r.t.length * (r.sh ? 0.7 : 1); }, 0);
+  }
+  function runsToSVG(raw, size) {
+    var out = '', pending = 0;                   // 첨자 뒤에는 기준선을 되돌려야 한다
+    mathRuns(raw).forEach(function (r) {
+      var attrs = ' font-style="' + (r.it ? 'italic' : 'normal') + '"';
+      var dy = pending; pending = 0;
+      if (r.sh) {
+        var shift = r.sh === 'sub' ? size * 0.28 : -size * 0.45;
+        dy += shift; pending = -shift;
+        attrs += ' font-size="' + n(size * 0.7) + '"';
+      }
+      if (dy) attrs += ' dy="' + n(dy) + '"';
+      out += '<tspan' + attrs + '>' + esc(r.t) + '</tspan>';
+    });
+    return out;
+  }
+
+  /* ==================== 핀 — 이름표를 «종이 위 어디»에 ====================
+     scene.pins = { size:[560,430], at:{ 'curve:0':{x,y,anchor}, … } }
+     좌표는 viewBox 의 px 다. 핀이 없는 이름표는 지금처럼 자동으로 앉는다.
+     🔴 숫자 셋과 anchor 열거값뿐이다 — 글자는 여기 없다 (docs/그림-편집기-계획.md 1-1). */
+  var ANCHORS = { start: 1, middle: 1, end: 1 };
+  function cleanPins(pins, W, H) {
+    if (!pins || typeof pins !== 'object' || !pins.at || typeof pins.at !== 'object') return null;
+    var sz = pins.size;
+    if (!Array.isArray(sz) || sz[0] !== W || sz[1] !== H) return null;    // 다른 크기에서 찍은 핀은 안 믿는다
+    var at = {};
+    Object.keys(pins.at).forEach(function (id) {
+      var p = pins.at[id];
+      if (!p || typeof p !== 'object') return;
+      var x = Number(p.x), y = Number(p.y);
+      if (!isFinite(x) || !isFinite(y)) return;
+      at[id] = { x: clamp(x, 0, W), y: clamp(y, 0, H), anchor: ANCHORS[p.anchor] ? p.anchor : 'middle' };
+    });
+    return { size: [W, H], at: at };
+  }
+
   /* ⚠ 기본 크기가 «화면에서 글자가 읽히는가»를 정한다.
      학생 앱은 폭 480px 열이라 카드 안이 약 400px다. 캔버스를 720으로 잡으면 0.56배로 줄어
      18px 글자가 10px이 되어 **눈금 숫자를 못 읽는다** (실제로 그랬다).
-     560으로 좁히면 0.72배라 13px로 읽힌다 — 벡터라 폭을 좁혀도 선은 그대로 선명하다. */
-  function renderScene(scene, opt) {
+     560으로 좁히면 0.72배라 13px로 읽힌다 — 벡터라 폭을 좁혀도 선은 그대로 선명하다.
+     🔴 그리고 핀이 이 px 위에 찍히므로 **560×430 은 약속이다** — 바꾸면 핀이 전부 버려진다(cleanPins). */
+  function build(scene, opt) {
     var o = opt || {};
     var W = o.width || 560, H = o.height || 430;
     var pad = o.pad || { l: 38, r: 42, t: 30, b: 38 };
@@ -359,6 +451,8 @@
     var xr = win.xRange, yr = win.yRange;
     var cs = compileCurves(scene);
     var plotW = W - pad.l - pad.r, plotH = H - pad.t - pad.b;
+    var pins = cleanPins(scene.pins, W, H);
+    var at = pins ? pins.at : {};
 
     var PX = function (x) { return pad.l + (x - xr[0]) / (xr[1] - xr[0]) * plotW; };
     var PY = function (y) { return pad.t + (yr[1] - y) / (yr[1] - yr[0]) * plotH; };
@@ -369,23 +463,40 @@
 
     /* «잉크»가 있는 자리를 모아 둔다 — 곡선 이름표는 이 자리를 피해 앉는다.
        축·눈금 숫자·원점 표시까지 전부 넣어야 한다. 곡선만 피하게 했더니
-       이름표가 눈금 숫자 위에 앉았다 (실제로 그랬다). */
+       이름표가 눈금 숫자 위에 앉았다 (실제로 그랬다). 핀으로 고정된 이름표도 잉크다. */
     var ink = [];
     var fs0 = o.fontSize || 18;
     function inkBox(x0, y0, x1, y1) {
       for (var gx = 0; gx <= 5; gx++) for (var gy = 0; gy <= 2; gy++)
         ink.push([x0 + (x1 - x0) * gx / 5, y0 + (y1 - y0) * gy / 2]);
     }
-    function inkText(x, y, s, anchor, size) {
-      var w = String(s).length * (size || fs0) * 0.52, h = (size || fs0) * 1.15;
-      var x0 = anchor === 'end' ? x - w : (anchor === 'middle' ? x - w / 2 : x);
-      inkBox(x0 - 3, y - h + 2, x0 + w + 3, y + 4);
+    function textBox(l) {
+      var size = l.size || fs0;
+      var w = visLen(l.text) * size * 0.52, h = size * 1.15;
+      var x0 = l.anchor === 'end' ? l.x - w : (l.anchor === 'middle' ? l.x - w / 2 : l.x);
+      return { x0: x0 - 3, y0: l.y - h + 2, x1: x0 + w + 3, y1: l.y + 4 };
+    }
+
+    /* 이름표는 먼저 «집»(자동 자리)을 정하고, 핀이 있으면 그리로 옮긴다.
+       집을 같이 돌려주는 이유 — 편집기의 「원래 자리로」가 그것이다. */
+    var labels = [];
+    function lab(id, x, y, text, anchor, size, editable) {
+      var home = { x: n(x), y: n(y), anchor: anchor || 'middle' };
+      var p = at[id];
+      var l = { id: id, text: String(text), size: size || null, editable: !!editable,
+        home: home, x: p ? p.x : home.x, y: p ? p.y : home.y, anchor: p ? p.anchor : home.anchor, pinned: !!p };
+      labels.push(l);
+      var b = textBox(l); inkBox(b.x0, b.y0, b.x1, b.y1);
+      return l;
     }
 
     var out = [];
     out.push('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + W + ' ' + H + '" width="' + W + '" height="' + H + '" role="img">');
+    /* 🔵 글꼴은 앱이 모두에게 내려 주는 Noto Serif (Google Fonts) 다 — 기기 글꼴을 쓰면
+       강사 PC 와 학생 태블릿에서 글자 폭이 달라 «여기선 안 겹치는데 거기선 겹친다»가 된다.
+       기울임은 <g> 가 아니라 글자 조각(tspan)마다 정한다 — 위 mathRuns. */
     out.push('<g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" ' +
-      'font-family="Georgia, \'Times New Roman\', serif" font-style="italic" font-size="' + (o.fontSize || 18) + '">');
+      'font-family="\'Noto Serif\', \'Noto Serif KR\', Georgia, \'Times New Roman\', serif" font-size="' + fs0 + '">');
 
     /* 축 + 화살촉 */
     var axis = (scene.axis || {});
@@ -393,24 +504,22 @@
     out.push('<path d="M' + n(W - pad.r + 12) + ' ' + n(oy) + 'l-9 -5v10z" fill="currentColor" stroke="none"/>');
     out.push('<path d="M' + n(ox) + ' ' + n(H - pad.b + 6) + 'V' + n(pad.t - 12) + '"/>');
     out.push('<path d="M' + n(ox) + ' ' + n(pad.t - 12) + 'l-5 9h10z" fill="currentColor" stroke="none"/>');
-    if (axis.xLabel !== null) { out.push(text(W - pad.r + 8, oy - 12, esc(axis.xLabel || 'x'), 'start')); inkText(W - pad.r + 8, oy - 12, axis.xLabel || 'x', 'start'); }
-    if (axis.yLabel !== null) { out.push(text(ox + 10, pad.t - 14, esc(axis.yLabel || 'y'), 'start')); inkText(ox + 10, pad.t - 14, axis.yLabel || 'y', 'start'); }
-    if (axis.origin !== null) { out.push(text(ox - 8, oy + 20, esc(axis.origin || 'O'), 'end')); inkText(ox - 8, oy + 20, axis.origin || 'O', 'end'); }
+    if (axis.xLabel !== null) lab('axis:x', W - pad.r + 8, oy - 12, axis.xLabel || 'x', 'start', null, true);
+    if (axis.yLabel !== null) lab('axis:y', ox + 10, pad.t - 14, axis.yLabel || 'y', 'start', null, true);
+    if (axis.origin !== null) lab('axis:origin', ox - 8, oy + 20, axis.origin || 'O', 'end', null, true);
 
-    /* 눈금 */
-    (scene.xTicks || []).forEach(function (v) {
+    /* 눈금 — 숫자는 «값»이라 글자를 못 고친다 (editable:false) */
+    (scene.xTicks || []).forEach(function (v, i) {
       if (v === ax.x) return;
       var px = PX(v);
       out.push('<path d="M' + n(px) + ' ' + n(oy - 5) + 'v10"/>');
-      out.push(text(px, oy + 24, esc(fmt(v)), 'middle', 17));
-      inkText(px, oy + 24, fmt(v), 'middle', 17);
+      lab('xtick:' + i, px, oy + 24, fmt(v), 'middle', 17, false);
     });
-    (scene.yTicks || []).forEach(function (v) {
+    (scene.yTicks || []).forEach(function (v, i) {
       if (v === ax.y) return;
       var py = PY(v);
       out.push('<path d="M' + n(ox - 5) + ' ' + n(py) + 'h10"/>');
-      out.push(text(ox - 10, py + 6, esc(fmt(v)), 'end', 17));
-      inkText(ox - 10, py + 6, fmt(v), 'end', 17);
+      lab('ytick:' + i, ox - 10, py + 6, fmt(v), 'end', 17, false);
     });
 
     /* 곡선 — 창 밖으로 나가면 선을 끊는다. 잘린 자리가 자연스러워 보인다.
@@ -428,22 +537,13 @@
       drawn.push({ c: c, segs: segs });
     });
 
-    /* 축선과 곡선도 잉크다 (눈금 숫자·축 이름은 그리면서 이미 넣었다). */
+    /* 축선과 곡선도 잉크다 (눈금 숫자·축 이름은 lab() 이 이미 넣었다). */
     for (var ax1 = pad.l - 6; ax1 <= W - pad.r + 12; ax1 += 8) ink.push([ax1, oy]);
     for (var ay1 = pad.t - 12; ay1 <= H - pad.b + 6; ay1 += 8) ink.push([ox, ay1]);
     drawn.forEach(function (dc) { dc.segs.forEach(function (s) { ink = ink.concat(s.pts); }); });
 
-    var placed = [];
-    drawn.forEach(function (dc) {
-      if (!dc.c.def.label) return;
-      var spot = labelSpot(dc.c, dc.segs, PX, PY, ink, placed, W, H, pad, fs0);
-      if (!spot) return;
-      placed.push(spot);
-      out.push(text(spot.x, spot.y, esc(dc.c.def.label), spot.anchor));
-    });
-
-    /* 점 · 내린 점선 */
-    (scene.points || []).forEach(function (pt) {
+    /* 점 · 내린 점선 — 점 이름표를 곡선 이름표보다 먼저 앉힌다. 그래야 곡선 이름표가 그것을 피한다. */
+    (scene.points || []).forEach(function (pt, i) {
       var y = pointY(pt, cs);
       if (!isFinite(y)) return;
       var px = PX(pt.x), py = PY(y);
@@ -458,22 +558,88 @@
         if (pt.labelPos === 'below') dy = 24;
         else if (pt.labelPos === 'left') { dx = -10; dy = 6; anc = 'end'; }
         else if (pt.labelPos === 'right') { dx = 10; dy = 6; anc = 'start'; }
-        out.push(text(px + dx, py + dy, esc(pt.label), anc));
+        lab('point:' + i, px + dx, py + dy, pt.label, anc, null, true);
       }
     });
 
     /* 자유 배치 라벨 */
-    (scene.labels || []).forEach(function (l) {
-      out.push(text(PX(l.x), PY(l.y), esc(l.text), l.anchor || 'middle'));
+    (scene.labels || []).forEach(function (l, i) {
+      lab('label:' + i, PX(l.x), PY(l.y), l.text, l.anchor || 'middle', null, true);
+    });
+
+    /* 곡선 이름표 — 핀이 있으면 그 자리, 없으면 잉크를 피해 자동으로 */
+    var placed = [];
+    /* placed 는 «곡선 이름표끼리» 떨어뜨리는 값이다 — 다른 이름표는 잉크로 이미 피한다.
+       점·눈금까지 넣으면 핀을 찍는 순간 자동 자리가 달라져 「원래 자리로」가 딴 데로 간다. */
+    labels.forEach(function (l) { if (l.pinned && l.id.indexOf('curve:') === 0) placed.push({ x: l.x, y: l.y }); });
+    drawn.forEach(function (dc) {
+      if (!dc.c.def.label) return;
+      var id = 'curve:' + dc.c.i;
+      var spot = labelSpot(dc.c, dc.segs, PX, PY, ink, placed, W, H, pad, fs0);
+      if (!spot && !at[id]) return;                 // 앉힐 자리도 핀도 없다
+      var hm = spot || at[id];
+      var l = lab(id, hm.x, hm.y, dc.c.def.label, hm.anchor, null, true);
+      placed.push({ x: l.x, y: l.y });
+    });
+
+    /* 글자는 맨 뒤에 — 편집 모드면 잡기 상자를 깔고 <g data-lbl> 로 싼다 */
+    labels.forEach(function (l) {
+      var size = l.size || fs0;
+      var t = '<text x="' + n(l.x) + '" y="' + n(l.y) + '" text-anchor="' + l.anchor + '"' +
+        (l.size ? ' font-size="' + l.size + '"' : '') + ' fill="currentColor" stroke="none">' + runsToSVG(l.text, size) + '</text>';
+      if (!o.edit) { out.push(t); return; }
+      var b = textBox(l);
+      out.push('<g data-lbl="' + esc(l.id) + '" data-x="' + n(l.x) + '" data-y="' + n(l.y) + '" data-anchor="' + l.anchor + '">' +
+        '<rect x="' + n(b.x0 - 5) + '" y="' + n(b.y0 - 5) + '" width="' + n(b.x1 - b.x0 + 10) + '" height="' + n(b.y1 - b.y0 + 10) +
+        '" rx="4" fill="transparent" stroke="none" pointer-events="all"/>' + t + '</g>');
     });
 
     out.push('</g></svg>');
-    return out.join('\n');
+    return { svg: out.join('\n'), labels: labels, size: [W, H], pinned: !!pins };
+  }
 
-    function text(x, y, s, anchor, size) {
-      return '<text x="' + n(x) + '" y="' + n(y) + '" text-anchor="' + (anchor || 'middle') + '"' +
-        (size ? ' font-size="' + size + '"' : '') + ' fill="currentColor" stroke="none">' + s + '</text>';
+  function renderScene(scene, opt) { return build(scene, opt).svg; }
+  function layoutLabels(scene, opt) { return build(scene, opt).labels; }
+
+  /* 「첫 손길에 전부 핀」 — 하나만 핀하면 나머지 자동 이름표가 잉크가 달라졌다고 딴 데로 옮겨 앉는다. */
+  function pinAll(scene, opt) {
+    var r = build(scene, opt);
+    var at = {};
+    r.labels.forEach(function (l) { at[l.id] = { x: l.x, y: l.y, anchor: l.anchor }; });
+    return { size: r.size, at: at };
+  }
+
+  /* 이름표 «글자»를 장면의 원래 자리에 쓴다. 눈금은 값이라 안 된다. */
+  function setLabelText(scene, id, text) {
+    var m = /^(curve|point|label|axis):(.+)$/.exec(String(id));
+    if (!m) return false;
+    var t = String(text == null ? '' : text);
+    if (m[1] === 'curve') { var c = (scene.curves || [])[+m[2]]; if (!c) return false; c.label = t; return true; }
+    if (m[1] === 'point') { var p = (scene.points || [])[+m[2]]; if (!p) return false; p.label = t; return true; }
+    if (m[1] === 'label') { var l = (scene.labels || [])[+m[2]]; if (!l) return false; l.text = t; return true; }
+    scene.axis = scene.axis || {};
+    if (m[2] === 'x') scene.axis.xLabel = t; else if (m[2] === 'y') scene.axis.yLabel = t;
+    else if (m[2] === 'origin') scene.axis.origin = t; else return false;
+    return true;
+  }
+
+  /* 겹침 — 어림 글자 상자끼리. 브라우저에서는 getBBox 가 더 정확하지만 node 검사는 이걸로 잰다. */
+  function labelBoxes(scene, opt) {
+    var o = opt || {}, fs0 = o.fontSize || 18;
+    return layoutLabels(scene, opt).map(function (l) {
+      var size = l.size || fs0;
+      var w = visLen(l.text) * size * 0.52, h = size * 1.15;
+      var x0 = l.anchor === 'end' ? l.x - w : (l.anchor === 'middle' ? l.x - w / 2 : l.x);
+      return { id: l.id, x0: x0, y0: l.y - h + 2, x1: x0 + w, y1: l.y + 4 };
+    });
+  }
+  function overlaps(boxes) {
+    var hits = [];
+    for (var i = 0; i < boxes.length; i++) for (var j = i + 1; j < boxes.length; j++) {
+      var a = boxes[i], b = boxes[j];
+      if (a.x0 < b.x1 && b.x0 < a.x1 && a.y0 < b.y1 && b.y0 < a.y1) hits.push([a.id, b.id]);
     }
+    return hits;
   }
 
   function clamp(v, a, b) { return v < a ? a : (v > b ? b : v); }
@@ -507,7 +673,7 @@
     var seg = segs.reduce(function (m, s) { return s.pts.length > m.pts.length ? s : m; }, segs[0]);
     var pts = seg.pts;
     var label = String(c.def.label);
-    var tw = label.length * fs * 0.52, th = fs * 1.15;      // 글자 상자 어림값
+    var tw = visLen(label) * fs * 0.52, th = fs * 1.15;     // 글자 상자 어림값 (첨자는 0.7)
 
     function box(cd) {
       var x0 = cd.anchor === 'end' ? cd.x - tw : (cd.anchor === 'middle' ? cd.x - tw / 2 : cd.x);
@@ -557,6 +723,14 @@
     parseExpr: parseExpr,
     autoWindow: autoWindow,
     verifyScene: verifyScene,
-    renderScene: renderScene
+    renderScene: renderScene,
+    /* 이름표 편집기 (2026-09-11 · docs/그림-편집기-계획.md) */
+    layoutLabels: layoutLabels,
+    pinAll: pinAll,
+    cleanPins: cleanPins,
+    setLabelText: setLabelText,
+    labelBoxes: labelBoxes,
+    overlaps: overlaps,
+    mathRuns: mathRuns
   };
 })();

@@ -30,6 +30,15 @@ const 한도 = async () => {
 
 const 전 = await 한도();
 console.log('\n  워커는 살아 있습니다 · 오늘 쓴 것 ' + 전.used + '/' + 전.limit + ' (남은 것 ' + 전.remaining + ')');
+/* 🔴 «어느 판이 도는가» — 저장소의 WORKER_VERSION 과 배포본이 돌려준 version 을 견준다 (2026-09-11).
+   살아 있다는 것과 새 판이라는 것은 다른 말이다. 붙여넣기를 빠뜨리면 여기서 걸린다. */
+{
+  const src = (await import('fs')).readFileSync(new URL('../worker/gemini-proxy.js', import.meta.url), 'utf8');
+  const 저장소판 = (src.match(/WORKER_VERSION = '([^']+)'/) || [])[1] || '?';
+  const 배포판 = 전.version || '(없음 — 09-11 이전 판)';
+  if (배포판 === 저장소판) console.log('  ✅ 배포본이 저장소와 같은 판입니다 (' + 저장소판 + ')');
+  else console.log('  🔴 배포본 판 ' + 배포판 + ' ≠ 저장소 판 ' + 저장소판 + ' — worker/gemini-proxy.js 를 대시보드에 다시 붙여넣어야 합니다');
+}
 if (!재볼까) {
   console.log('\n  ⓘ 되돌려주기가 도는지까지 보려면 --try 를 붙이세요 (한 건을 쓸 수도 있습니다).\n');
   process.exit(0);

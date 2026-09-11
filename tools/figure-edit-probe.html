@@ -1,0 +1,85 @@
+<!doctype html><meta charset="utf-8"><title>figure-edit-probe</title>
+<!-- 그림 이름표 편집기를 «확장 없이» 헤드리스 크롬으로 굴려 본다 (2026-09-11).
+     실서비스(index.html)를 iframe 에 띄우고, 로그인 없이 편집기 상자만 붙인 뒤
+     끌기·화살표 키·글자 고치기를 진짜 PointerEvent/KeyboardEvent 로 흉내 낸다. 실 DB 0줄.
+
+     node tools/serve.js
+     chrome --headless=new --hide-scrollbars --virtual-time-budget=20000 --window-size=760,900 \
+       --screenshot=out.png --dump-dom "http://127.0.0.1:8777/tools/figure-edit-probe.html" | grep -o "RESULT.*"
+
+     ⚠ state/render 는 let/function 전역이라 프레임 안에서 eval 로 만진다 (screen-shot.html 과 같다).
+     ⚠ DATA.students 를 안 기다린다 — 로그인 없이도 편집기는 돈다는 것이 요점이다. -->
+<style>html,body{margin:0;background:#fff}iframe{border:0;display:block}</style>
+<pre id="o" style="font:12px monospace;color:#333;margin:0;padding:4px;white-space:pre-wrap;">…</pre>
+<script>
+const fr=document.createElement('iframe'); fr.width=760; fr.height=820; fr.src='/index.html';
+document.body.appendChild(fr);
+const o=document.getElementById('o');
+let n=0;
+const t=setInterval(()=>{
+  n++;
+  let ready=false;
+  try{ ready = fr.contentWindow.eval('typeof figureDraftHTML==="function" && typeof Figure!=="undefined" && typeof render==="function"'); }catch(_){}
+  if(!ready){ if(n>200){ clearInterval(t); o.textContent='RESULT timeout'; } return; }
+  clearInterval(t);
+  const w=fr.contentWindow;
+  const out = w.eval(`(function(){
+    const R = {};
+    const SCENE = {kind:'graph',
+      curves:[{expr:'-(x-2)*(x-6)',label:'y=f(x)'},{expr:'2x-3',label:'y=g(x)'}],
+      points:[{x:1,curve:0,dot:true,dropTo:'axis',label:'P_1',labelPos:'above'}],
+      xTicks:[1,2,5,6], axis:{xLabel:'x',yLabel:'y',origin:'O'},
+      checks:[{type:'root',curve:0,x:2},{type:'root',curve:0,x:6}]};
+    state.currentUser={type:'teacher'}; state.view='teacher'; state.teacherTab='settings';
+    const b={id:'probe',hasImage:false,variantNeedsFigure:true};
+    state.figureDraft={bankId:'probe',scene:SCENE,svg:Figure.renderScene(SCENE),ok:true,failures:[]};
+    const _r=render;
+    render=function(){ _r(); const h=document.createElement('div'); h.className='app'; h.id='probe';
+      h.style.cssText='max-width:600px;margin:12px auto;'; h.innerHTML=figureDraftHTML(b);
+      document.getElementById('app').prepend(h); figEditMark(); };   // 맨 위에 — 찍을 때 보이게
+    render();
+    const g = () => document.querySelector('#probe .fig-edit g[data-lbl="curve:0"]');
+    const svg = () => document.querySelector('#probe .fig-edit svg');
+    R.hasEditor = !!g();
+    R.tspan = !!document.querySelector('#probe .fig-edit text tspan[font-style="italic"]');
+    /* 끌기 — 화면 px 를 viewBox px 로 되돌려 기대값을 낸다 */
+    const r0 = g().querySelector('text').getBoundingClientRect();
+    const cx = r0.left + r0.width/2, cy = r0.top + r0.height/2;
+    const ctm = svg().getScreenCTM();
+    const before = +g().dataset.x;
+    const ev = (type, x, y, target) => target.dispatchEvent(new PointerEvent(type, {clientX:x, clientY:y, bubbles:true, cancelable:true, pointerId:1, isPrimary:true}));
+    ev('pointerdown', cx, cy, g());
+    ev('pointermove', cx+40, cy+30, document.body);
+    ev('pointermove', cx+80, cy+60, document.body);
+    ev('pointerup', cx+80, cy+60, document.body);
+    const pins = state.figureDraft.scene.pins;
+    R.pinnedAll = pins && Object.keys(pins.at).length;
+    R.moveExpected = Math.round(80/ctm.a); R.moveGot = Math.round(pins.at['curve:0'].x - before);
+    R.selected = state.figureSel;
+    R.selClass = !!document.querySelector('#probe .fig-edit g.sel[data-lbl="curve:0"]');
+    /* 화살표 키 */
+    const x1 = pins.at['curve:0'].x;
+    document.dispatchEvent(new KeyboardEvent('keydown', {key:'ArrowRight', bubbles:true, cancelable:true}));
+    document.dispatchEvent(new KeyboardEvent('keydown', {key:'ArrowDown', shiftKey:true, bubbles:true, cancelable:true}));
+    R.nudge = [Math.round(state.figureDraft.scene.pins.at['curve:0'].x - x1), Math.round(state.figureDraft.scene.pins.at['curve:0'].y - pins.at['curve:0'].y)];
+    /* 글자 고치기 */
+    const inp = document.querySelector('#probe .fig-tools input');
+    R.inputValue = inp && inp.value;
+    inp.value = 'y=h(x)'; inp.dispatchEvent(new Event('change', {bubbles:true}));
+    R.textNow = state.figureDraft.scene.curves[0].label;
+    R.textInSvg = /h<\\/tspan>/.test(document.querySelector('#probe .fig-edit g[data-lbl="curve:0"] text').innerHTML);
+    /* 겹치게 두면 붉어지나 — 점 이름표를 곡선 이름표 위에 */
+    const c0 = state.figureDraft.scene.pins.at['curve:0'];
+    state.figureDraft.scene.pins.at['point:0'] = {x:c0.x, y:c0.y, anchor:c0.anchor};
+    state.figureDraft.svg = Figure.renderScene(state.figureDraft.scene); render();
+    R.hitMarked = document.querySelectorAll('#probe .fig-edit g.hit').length;
+    /* 원래 자리로 · 전부 되돌리기 */
+    figEditHome('point:0'); R.homeBack = !state.figureDraft.scene.pins.at['point:0'];
+    figEditReset(); R.reset = !state.figureDraft.scene.pins && document.querySelectorAll('#probe .fig-edit g.hit').length===0;
+    /* 저장용 svg 에 잡기 상자가 없다 */
+    R.savedClean = !/data-lbl|pointer-events/.test(Figure.renderScene(state.figureDraft.scene));
+    return JSON.stringify(R);
+  })()`);
+  o.textContent = 'RESULT ' + out;
+}, 100);
+</script>
