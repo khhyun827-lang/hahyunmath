@@ -123,6 +123,31 @@ const t=setInterval(async()=>{
     R.autoMsg = /Groq 로 만드는 중|를 만들었습니다/.test(state.autoFill.msg);
     state.autoFill.on = false;
     state.teacherTab='unitbank'; render();
+    /* 갈래 바꾸기 — N01 을 D 로 옮기면 D01 이 새로 서고 N01 은 «뺐다·옮겼다»가 된다 (2026-09-12) */
+    window.confirm = () => true;
+    state.icOpen = 'K2-01-E-0001'; render();
+    vEditOpen('K2-01-E-0001-N01'); document.getElementById('v-edit-kind').value = 'D'; await vEditSave();   // 고르개를 실제로 바꾼다(vEditSync 가 DOM 을 읽는다)
+    const 새 = 저장.find(x => x[1] === 'K2-01-E-0001-D01'), 옛 = 저장.filter(x => x[1] === 'K2-01-E-0001-N01').pop();
+    R.kindMoved = !!(새 && 새[2].variantKind === 'D' && 새[2].movedFrom === 'K2-01-E-0001-N01' && 새[2].content === '있던 것' && 새[2].answer === '3');
+    R.kindOldRetired = !!(옛 && 옛[2].deleted && 옛[2].movedTo === 'K2-01-E-0001-D01');
+    R.kindInState = state.variants['K2-01-E-0001'].some(v => v.code === 'K2-01-E-0001-D01') && !variantsOfCode('K2-01-E-0001').some(v => v.code === 'K2-01-E-0001-N01');
+    /* 선지 격자 — 문장 선지는 한 줄에 하나, 짧은 선지는 여러 칸 */
+    const NL = String.fromCharCode(10);
+    R.chLong = /class="pb-ch long"/.test(problemHTML(['문제?', '① 선분 $AB$를 $2 : 1$로 내분하는 점', '② 선분 $BC$의 중점', '③ 선분 $AC$를 $3 : 2$로 내분하는 점'].join(NL)));
+    R.chShort = /class="pb-ch"/.test(problemHTML(['문제?', '① $80$', '② $85$', '③ $90$'].join(NL)));
+    /* 정답 없는 문항 — 단추가 잠기고 아무것도 안 나간다 */
+    state.icOpen = 'K2-01-E-0003'; render();
+    R.noAnswerDisabled = btn().disabled;
+    const before = 저장.length; await requestVariantForCode('K2-01-E-0003');
+    R.noAnswerNoCall = 저장.length === before;
+
+    state.icOpen = 'K2-01-E-0001'; render();
+    return JSON.stringify(R);
+  })()`);
+  o.textContent = 'RESULT ' + out;
+}, 100);
+</script>
+));
     /* 정답 없는 문항 — 단추가 잠기고 아무것도 안 나간다 */
     state.icOpen = 'K2-01-E-0003'; render();
     R.noAnswerDisabled = btn().disabled;
