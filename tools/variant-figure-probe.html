@@ -1,0 +1,95 @@
+<!doctype html><meta charset="utf-8"><title>variant-figure-probe</title>
+<!-- 창고 변형 (B)에 그림을 붙이는 길을 «확장 없이» 헤드리스 크롬으로 굴려 본다 (2026-09-12).
+     검토 › AI가 만든 변형 → 「초안 그려 보기」(워커는 흉내) → 검산 → 편집기 → 「이 그림으로 하겠습니다」
+     → v.image 에 SVG → 통과 → 학생 얼굴(dqFaces)이 그 그림을 든다. 실 DB 0줄 · 한도 0건.
+
+     node tools/serve.js
+     chrome --headless=new --hide-scrollbars --virtual-time-budget=25000 --window-size=760,900 \
+       --screenshot=out.png --dump-dom "http://127.0.0.1:8777/tools/variant-figure-probe.html" | grep -o "RESULT.*" -->
+<style>html,body{margin:0;background:#fff}iframe{border:0;display:block}</style>
+<pre id="o" style="font:12px monospace;color:#333;margin:0;padding:4px;white-space:pre-wrap;">…</pre>
+<script>
+const fr=document.createElement('iframe'); fr.width=760; fr.height=820; fr.src='/index.html';
+document.body.appendChild(fr);
+const o=document.getElementById('o');
+let n=0;
+const t=setInterval(async()=>{
+  n++;
+  let ready=false;
+  try{ ready = fr.contentWindow.eval('typeof requestFigureDraft==="function" && typeof figureTargetOf==="function" && typeof Figure!=="undefined"'); }catch(_){}
+  if(!ready){ if(n>200){ clearInterval(t); o.textContent='RESULT timeout'; } return; }
+  clearInterval(t);
+  const w=fr.contentWindow;
+  const out = await w.eval(`(async function(){
+    const R = {};
+    state.currentUser={type:'teacher'}; state.view='teacher';
+    const ROOT = 'K2-01-E-0001';
+    state.itemByCode = { [ROOT]:{} };
+    state.itemBody = { [ROOT]: { content:'그림에서 f(x)=0 의 두 근의 합은?', answer:'8', image:{url:'https://example.invalid/a.jpg', fileId:'f1'} } };
+    const v = { code:ROOT+'-N01', originCode:ROOT, variantKind:'N', content:'그림에서 f(x)=0 의 두 근의 합은? (변형)', answer:'7',
+                needsFigure:true, figureSpec:'1. 달라지는 것: x절편이 2, 5 로', auto:true, asked:true, pending:true, createdAt:'2026-09-12' };
+    state.variants = { [ROOT]: [v] };
+    state.aiQuotaUsed = 3;
+    const 저장 = [];
+    getAIQuotaUsed = async () => 3;
+    dbSetDoc = async (c, id, d) => { 저장.push([c, id, JSON.parse(JSON.stringify(d))]); return true; };
+    fetchFigureSceneViaAI = async (spec, content, image) => { R.workerGot = { spec, hasFileId: !!(image && image.fileId) };
+      return { scene:{ kind:'graph', curves:[{expr:'-(x-2)*(x-5)', label:'y=f(x)'}], xTicks:[2,5], checks:[{type:'root',curve:0,x:2},{type:'root',curve:0,x:5}] } }; };
+
+    /* 검토 화면 — (B) 상자와 「초안 그려 보기」 */
+    state.teacherTab='review'; state.reviewQueue='pending'; selectAutoVariant(v.code);
+    R.boxShown = /그림을 새로 그려서 붙여야 하는 변형입니다/.test(document.body.innerText);
+    R.draftBtn = !!document.querySelector('.rv-fig button');
+    /* 통과는 아직 막혀 있다 */
+    const n0 = 저장.length; await approveAutoVariant(v.code); R.approveBlockedBefore = 저장.length === n0;
+
+    /* 초안 → 검산 통과 → 편집기 */
+    await requestFigureDraft(v.code);
+    R.draftOk = !!(state.figureDraft && state.figureDraft.ok && state.figureDraft.bankId === v.code);
+    R.editorShown = !!document.querySelector('.fig-edit g[data-lbl="curve:0"]');
+    /* 이름표 하나를 핀으로 옮긴 뒤 붙인다 */
+    state.figureDraft.scene.pins = Figure.pinAll(state.figureDraft.scene);
+    state.figureDraft.scene.pins.at['curve:0'] = { x: 300, y: 80, anchor: 'start' };
+    await acceptFigureDraft(v.code);
+    const saved = 저장.find(x => x[0]==='variants' && x[1]===v.code);
+    R.imageSaved = !!(saved && saved[2].image && saved[2].image.kind==='svg' && saved[2].image.scene.pins);
+    R.savedSvgClean = !!(saved && !/data-lbl|pointer-events/.test(saved[2].image.svg));
+    R.imageOnState = !!(v.image && v.image.kind === 'svg');
+    R.boxNowHas = /이 변형에 붙은 그림/.test(document.body.innerText) && !!document.querySelector('.rv-fig .pb-svg svg');
+    R.moveBtn = /이름표 옮기기/.test(document.body.innerText);
+
+    /* 붙은 그림을 다시 열어 옮긴다 — 한도 0 */
+    openFigureEditorFromSaved(v.code);
+    R.reopen = !!(state.figureDraft && state.figureDraft.saved && document.querySelector('.fig-edit g[data-lbl="curve:0"]'));
+    R.reopenPinKept = state.figureDraft.scene.pins.at['curve:0'].x === 300;
+    discardFigureDraft();
+
+    /* 이제 통과된다 → 학생 얼굴이 그림을 든다 */
+    const n1 = 저장.length; await approveAutoVariant(v.code);
+    R.approvedNow = 저장.length === n1 + 1 && !v.pending;
+    const b = { id:'bank1', itemCode: ROOT, originalContent:'', hasImage:false, status:'approved' };
+    const faces = dqFaces(b);
+    const face = faces.find(f => f.face === v.code);
+    R.faceHasImg = !!(face && face.img && face.img.kind === 'svg');
+    R.faceHtml = /class="sap-img pb-svg"><svg/.test(variantImageHTML(face.img, 'sap-img'));
+    /* (C) 참조 그림도 학생에게 간다 */
+    const vc = { code:ROOT+'-N02', originCode:ROOT, variantKind:'N', content:'다른 것', answer:'9', reuseFigure:true, image:{url:'https://example.invalid/a.jpg', fileId:'f1'} };
+    state.variants[ROOT].push(vc);
+    const fc = dqFaces(b).find(f => f.face === vc.code);
+    R.reuseFaceImg = !!(fc && fc.img && fc.img.url) && /<img class="sap-img" src="https:\\/\\/example\\.invalid\\/a\\.jpg">/.test(variantImageHTML(fc.img, 'sap-img'));
+    /* 그림 없는 (B)는 얼굴에 안 든다 */
+    const vb = { code:ROOT+'-N03', originCode:ROOT, variantKind:'N', content:'셋째', answer:'1', needsFigure:true, figureSpec:'x' };
+    state.variants[ROOT].push(vb);
+    R.noImgFaceHidden = !dqFaces(b).some(f => f.face === vb.code);
+
+    /* 창고 드로어 카드에 그림이 보인다 */
+    state.teacherTab='unitbank'; state.icOpen = ROOT; render();
+    R.drawerImg = !!document.querySelector('.ic-vcard .pb-svg svg');
+
+    /* 찍을 때는 붙은 그림이 있는 검토 화면을 보인다 — 통과된 것은 큐에 없으니 잠깐 대기로 되돌린다 */
+    v.pending = true; state.teacherTab='review'; state.reviewQueue='pending'; state.icOpen=''; selectAutoVariant(v.code);
+    return JSON.stringify(R);
+  })()`);
+  o.textContent = 'RESULT ' + out;
+}, 100);
+</script>

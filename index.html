@@ -7597,11 +7597,13 @@ function dqFaces(b){
   /* 창고의 변형들. ⚠ **그림이 있어야 푸는데 아직 안 그려진 것은 뺀다** — 학생이 못 푼다. */
   const root = dqRootCode(b);
   if(root) for(const v of variantsLive(root)){        // ⚠ 검토 대기는 안 나간다
-    if(v.needsFigure) continue;
+    if(v.needsFigure && !v.image) continue;           // 그림이 있어야 푸는데 아직 안 그려진 것
     const a = dqAnswerable(v.content, v.answer);
     if(!a) continue;
+    /* 🔵 창고 변형은 «자기 그림»을 든다 (2026-09-12) — (C)는 원본 그림의 참조({url}), (B)는 장면에서
+       그린 SVG({kind:'svg'}), 교재가 준 변형은 교재 그림. 전에는 imgKind:null 로 그림을 통째로 잃었다. */
     all.push({ face:v.code, kind:(v.variantKind || 'N'), content:v.content, answer:a,
-               bankId:b.id, imgKind:null });
+               bankId:b.id, imgKind:null, img: v.image || null });
   }
 
   const norm = s => String(s || '').replace(/\s+/g, ' ').trim();
@@ -9940,6 +9942,13 @@ function pbImageSrc(bankId, kind){
    ⚠ SVG를 innerHTML로 넣는다. **모델이 낸 SVG는 절대 저장하지 않는다** — 저장하는 것은
    figure.js의 renderScene()이 «장면»에서 만들어 낸 것뿐이고, 거기서 글자는 전부 이스케이프된다.
    이 불변식이 깨지면 그 자리가 곧 스크립트 주입 구멍이다. */
+/* 창고 변형이 «자기 안에» 든 그림 — {kind:'svg', svg} 또는 {url}. 문서 하나에 다 있어 캐시가 필요 없다. */
+function variantImageHTML(img, cls){
+  if(!img || typeof img !== 'object') return '';
+  if(img.kind === 'svg' && img.svg) return `<div class="${cls} pb-svg">${img.svg}</div>`;
+  if(img.url) return `<img class="${cls}" src="${escHtml(img.url)}">`;
+  return '';
+}
 function pbImageHTML(bankId, kind, cls){
   ensurePbImage(bankId, kind);
   const v = state.pbImageCache[pbImgCacheKey(bankId, kind)];
@@ -12058,7 +12067,8 @@ function stuQuizHTML(c){
 
   /* 어느 그림을 붙일지는 얼굴이 안다 (오답숙제와 같은 규칙이다).
      ⚠ 창고 변형은 아직 자기 그림을 안 갖는다 — 그때는 안 붙는다. */
-  const imgHTML = face.imgKind ? pbImageHTML(face.bankId, face.imgKind, 'sap-img') : '';
+  const imgHTML = face.imgKind ? pbImageHTML(face.bankId, face.imgKind, 'sap-img')
+    : face.img ? variantImageHTML(face.img, 'sap-img') : '';
 
   /* 갈래를 학생 말로. **«하향»이라고 쓰지 않는다** — 내려갔다는 말을 학생에게 할 필요가 없다.
      맞히면 다시 올라가는 발판일 뿐이고, 이름표가 기를 꺾을 이유가 없다. */
@@ -21465,7 +21475,7 @@ async function requestVariantForCode(code){
         state.variants[code].sort((a,b)=> a.code < b.code ? -1 : 1);
         const 어디 = '<b>검토 › AI가 만든 변형</b>';
         state.icAsk = { code, done: vcode, msg:
-          v.needsFigure ? `${vcode} 를 만들었습니다 — <b>그림을 새로 그려야 하는 변형</b>입니다. ${어디}에서 지침을 보세요. 그림이 붙기 전에는 통과할 수 없습니다.`
+          v.needsFigure ? `${vcode} 를 만들었습니다 — <b>그림을 새로 그려야 하는 변형</b>입니다. ${어디}에서 「초안 그려 보기」로 그림을 붙인 뒤 통과시키세요.`
           : v.reuseFigure ? `${vcode} 를 만들었습니다 — 원본 그림을 그대로 씁니다. ${어디}에서 봐주세요.`
           : !dqAnswerable(v.content, v.answer) ? `${vcode} 를 만들었습니다 — ⚠ 정답이 ①~⑤·정수가 아니라 데일리퀴즈에는 못 나갑니다. ${어디}에서 봐주세요.`
           : `${vcode} 를 만들었습니다 — ${어디}에서 통과시키면 학생에게 나갑니다.` };
@@ -21532,7 +21542,7 @@ function icDetailHTML(root){
               <button class="btn q sm" title="창고에서 뺍니다"
                 onclick="deleteVariantFromStore('${escHtml(v.code)}')">빼기</button>
             </div>
-            <div class="ic-vb">${v.content ? problemHTML(icKeepLines(v.content)) : '(문제 내용이 없습니다)'}</div>
+            <div class="ic-vb">${variantImageHTML(v.image, 'pb-fig')}${v.content ? problemHTML(icKeepLines(v.content)) : '(문제 내용이 없습니다)'}</div>
             ${vEditHTML(v.code)}
           </div>`).join('')}
         </div>` : `<div class="rst-empty" style="margin-top:12px;">아직 이 문항의 변형이 없습니다 —
@@ -21661,6 +21671,8 @@ function autoVariantWorkHTML(v){
         <b>원본과 서식이 달라졌습니다.</b> ${escHtml(흠)}
         <s style="display:block;margin-top:4px;font-size:11px;color:var(--dim);">
           공개는 막지 않습니다 — 그대로 둘지 다시 만들지는 검토자가 정합니다.</s></div></div>` : ''; })()}
+    ${/* (B) 그림 상자는 두 칸 «위»에 통째로 — 반 폭 칸에 넣으면 그래프 이름표를 못 읽는다 (헤드리스로 보고 옮겼다). */''}
+    ${v.needsFigure ? variantFigureBoxHTML(v) : ''}
     <div class="cmp" style="margin-top:${답?'0':'14px'};">
       <div class="side">
         <div class="lab">원본 <b class="mono lab-code">${escHtml(v.originCode)}</b></div>
@@ -21672,12 +21684,7 @@ function autoVariantWorkHTML(v){
       <div class="side ai">
         <div class="lab">AI가 만든 것 <b class="mono lab-code">${escHtml(v.code)}</b></div>
         ${/* 갈래 (2026-09-11) — 강사가 창고에서 시킨 변형은 (B)·(C)로도 온다. 고리가 만든 것은 (A)뿐이다. */''}
-        ${v.needsFigure ? `<div class="rv-fig">
-          <b>그림을 새로 그려서 붙여야 하는 변형입니다</b>
-          <span class="hx">AI가 «그림이 있어야 푸는 문제»로 만들었습니다. <b>그림이 붙기 전에는 통과할 수 없습니다.</b>
-            ⚠ 창고 변형에 그림을 붙이는 길(초안 그려 보기)은 아직 문제은행 쪽에만 있습니다 — 그때까지는 버리거나 그대로 두세요.</span>
-          <div class="rv-spec">${escHtml(v.figureSpec || '(지침이 오지 않았습니다)')}</div>
-        </div>` : v.reuseFigure ? `<div class="rv-fignote">${v.image && v.image.url ? `<img class="pb-fig" src="${escHtml(v.image.url)}" alt="">` : ''}
+        ${v.reuseFigure ? `<div class="rv-fignote">${v.image && v.image.url ? `<img class="pb-fig" src="${escHtml(v.image.url)}" alt="">` : ''}
           <b>왼쪽 원본 그림을 그대로</b> 씁니다 — 그림은 배치만 보여 주고 바뀐 수는 본문에 있습니다.
           <b>그림에 적힌 수치가 본문과 어긋나지 않는지</b>만 확인해 주세요.</div>` : ''}
         <div class="q-body">${problemHTML(v.content||'(내용 없음)')}</div>
@@ -21867,17 +21874,38 @@ function variantFigureNoteHTML(b){
 
    초안은 **저장하지 않는다.** state에만 담아 두고 검토자가 「이 그림으로 하겠습니다」를
    눌러야 붙는다 — 검산을 통과했다는 것과 «이 문제에 맞다»는 것은 다른 판단이다. */
-async function requestFigureDraft(bankId){
+/* 🔵 **초안·편집기는 «과녁» 하나로 두 곳을 본다** (2026-09-12) — 문제은행의 변형(`b.id` · 그림은 `pbvimg:`)과
+   창고의 변형(`v.code` · 그림은 `v.image`). 09-11에 «함수 그래프면 (B) 먼저»로 바꾸고 09-12에 창고에서 변형을
+   시킬 수 있게 되자, 창고 변형이 (B)를 들고 오는데 그림을 붙일 길이 문제은행 쪽에만 있었다.
+   ⚠ 두 벌로 베끼지 않는다 — 같은 초안 상자·같은 편집기·같은 검산이 두 곳에 그대로 선다. */
+function variantByCode(code){
+  for(const r in (state.variants || {})){ const v = state.variants[r].find(x => x.code === code); if(v) return v; }
+  return null;
+}
+function figureTargetOf(key){
+  const b = DATA.problemBank.find(x=>x.id===key);
+  if(b) return { kind:'bank', key, b, spec: b.variantFigureSpec||'', content: b.variantContent||'',
+    image: async()=> b.hasImage ? await dbGet('pbimg:'+b.id, null) : null,
+    saved: ()=>{ const v = state.pbImageCache[pbImgCacheKey(b.id,'var')]; return (v && typeof v==='object' && v.kind==='svg') ? v : null; } };
+  const v = variantByCode(key);
+  if(v) return { kind:'variant', key, v, spec: v.figureSpec||'', content: v.content||'',
+    /* 원본 그림은 창고 본문(items)의 것 — {url, fileId}. 워커는 fileId 로 드라이브에서 받는다. */
+    image: async()=> ((state.itemBody||{})[v.originCode]||{}).image || null,
+    saved: ()=> (v.image && v.image.kind==='svg') ? v.image : null };
+  return null;
+}
+async function requestFigureDraft(key){
   if(state.aiProcessing || state.figureDrafting){ showToast('다른 AI 작업이 진행 중입니다.'); return; }
-  const b = DATA.problemBank.find(x=>x.id===bankId);
-  if(!b) return;
+  const t = figureTargetOf(key);
+  if(!t) return;
   const used = await getAIQuotaUsed();
   if(used >= AI_DAILY_LIMIT){ showToast('오늘 AI 생성 한도('+AI_DAILY_LIMIT+'건)를 모두 사용했습니다.'); return; }
+  const bankId = key;
   state.figureDrafting = bankId;
   state.figureDraft = null; state.figureSel = null;             // 핀은 «이 장면»의 것 — 새 장면에 안 남긴다
   render();
-  const image = b.hasImage ? await dbGet('pbimg:'+b.id, null) : null;
-  const r = await fetchFigureSceneViaAI(b.variantFigureSpec||'', b.variantContent||'', image);
+  const image = await t.image();
+  const r = await fetchFigureSceneViaAI(t.spec, t.content, image);
   state.figureDrafting = null;
   if(!r){ showToast('초안을 받지 못했습니다. 다시 시도하거나 직접 그려 올려주세요.'); render(); return; }
   if(r.quotaExceeded){ showToast('오늘 AI 생성 한도를 모두 사용했습니다.'); render(); return; }
@@ -21907,8 +21935,23 @@ function discardFigureDraft(){ state.figureDraft = null; state.figureSel = null;
    렌더러를 손보는 날 **검토자가 승인한 그림이 조용히 달라진다.** */
 async function acceptFigureDraft(bankId){
   const d = state.figureDraft;
-  const b = DATA.problemBank.find(x=>x.id===bankId);
-  if(!d || d.bankId!==bankId || !d.svg || !b) return;
+  const t = figureTargetOf(bankId);
+  if(!d || d.bankId!==bankId || !d.svg || !t) return;
+  /* 창고 변형 — 그림은 변형 문서 «안»에 산다(v.image). 문서 하나로 학생에게 통째로 나간다. */
+  if(t.kind === 'variant'){
+    const v = t.v;
+    const doc = { kind:'svg', svg:Figure.renderScene(d.scene), scene:d.scene, at:new Date().toISOString() };
+    const nv = Object.assign({}, v, { image: doc });
+    state.figureUploading = bankId; render();
+    const ok = await dbSetDoc('variants', v.code, nv);
+    state.figureUploading = null;
+    if(!ok){ showToast('그림을 붙이지 못했습니다 — 저장이 막혀 있습니다.'); render(); return; }
+    Object.assign(v, nv);
+    state.figureDraft = null; state.figureSel = null;
+    showToast(d.saved ? '그림을 고쳐 저장했습니다.' : v.code + ' 에 그림을 붙였습니다. 이제 통과시킬 수 있습니다.');
+    render(); return;
+  }
+  const b = t.b;
   state.figureUploading = bankId;
   render();
   try{
@@ -22093,8 +22136,9 @@ function figEditorHTML(d){
 }
 /* 이미 붙어 있는 SVG 그림의 이름표를 옮긴다 — 한도 0. 같은 초안 상자를 쓰고 같은 문으로 저장한다. */
 function openFigureEditorFromSaved(bankId){
-  const doc = state.pbImageCache[pbImgCacheKey(bankId, 'var')];
-  if(!doc || typeof doc !== 'object' || doc.kind !== 'svg' || !doc.scene){ showToast('장면이 없는 그림이라 옮길 수 없습니다.'); return; }
+  const t = figureTargetOf(bankId);
+  const doc = t ? t.saved() : null;
+  if(!doc || doc.kind !== 'svg' || !doc.scene){ showToast('장면이 없는 그림이라 옮길 수 없습니다.'); return; }
   const scene = JSON.parse(JSON.stringify(doc.scene));
   const v = Figure.verifyScene(scene);
   state.figureDraft = { bankId, scene, svg: Figure.renderScene(scene), ok: v.ok, failures: v.failures, saved: true };
@@ -22702,6 +22746,35 @@ function reviewMiniHTML(v){
     : '';
   return '<s>·</s><span class="badge ' + 배지 + '" title="' + escHtml(d.풀이) + '">'
        + escHtml(d.말) + '</span>' + 곁;
+}
+
+/* (B) 창고 변형의 그림 상자 (2026-09-12) — 문제은행의 variantFigureNoteHTML 과 같은 일을 한다.
+   초안 상자(figureDraftHTML)와 편집기는 «과녁»(figureTargetOf) 덕에 그대로 쓴다.
+   ⚠ 사진 올리기는 여기 없다 — 창고 변형의 그림은 «장면에서 그린 SVG»뿐이다. 손으로 그린 사진을
+     붙이려면 문제은행 쪽 길(드라이브)을 이어야 하는데, 함수 그래프가 아닌 것은 애초에 (B)로 잘 안 온다. */
+function variantFigureBoxHTML(v){
+  const busy = state.figureUploading === v.code || state.figureDrafting === v.code;
+  const has = !!(v.image && v.image.kind === 'svg');
+  const editing = state.figureDraft && state.figureDraft.bankId === v.code;
+  const draftBtn = busy ? '' : `<button class="btn sm" onclick="requestFigureDraft('${escHtml(v.code)}')">${iconSvg('sparkle',13)} ${has ? '다시 그려 보기' : '초안 그려 보기'}</button>`;
+  const spec = `<div class="rv-spec">${escHtml(v.figureSpec || '지침이 오지 않았습니다.')}</div>`;
+  if(has) return `<div class="rv-fig on">
+      <b>이 변형에 붙은 그림</b>
+      ${editing ? '' : `<div class="pb-fig pb-svg">${v.image.svg}</div>`}
+      <div class="rv-figact">${draftBtn}
+        ${(editing || busy) ? '' : `<button class="btn sm" onclick="openFigureEditorFromSaved('${escHtml(v.code)}')">이름표 옮기기</button>`}
+        <span class="hx">다시 그리면 한도를 하나 씁니다 · 이름표 옮기기는 안 씁니다</span></div>
+      ${figureDraftHTML({ id: v.code })}
+      ${spec}
+    </div>`;
+  return `<div class="rv-fig">
+      <b>그림을 새로 그려서 붙여야 하는 변형입니다</b>
+      <span class="hx">AI가 «그림이 있어야 푸는 문제»로 만들었습니다. <b>그림이 붙기 전에는 통과할 수 없습니다.</b>
+        <b>「초안 그려 보기」</b>를 누르면 기계가 그려 검산합니다 — 함수 그래프라면 대개 됩니다.</span>
+      ${spec}
+      <div class="rv-figact">${busy ? '<span class="hx">그리는 중…</span>' : draftBtn}</div>
+      ${figureDraftHTML({ id: v.code })}
+    </div>`;
 }
 
 /* 아랫띠 — 「내용 없음」 줄의 `reviewActbarHTML` 과 «같은 꼴»이라야 한다.
