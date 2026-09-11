@@ -22,14 +22,16 @@ async function 토큰() {
   return (await r.json()).idToken;
 }
 const H = { Authorization: 'Bearer ' + (await 토큰()) };
-const 한도 = async () => {
-  const r = await fetch(WORKER + '/quota', { method: 'POST', headers: H });
+const 한도 = async (bucket) => {
+  const r = await fetch(WORKER + '/quota' + (bucket ? '?bucket=' + bucket : ''), { method: 'POST', headers: H });
   if (!r.ok) { console.error('🔴 워커가 대답을 안 합니다 — http ' + r.status); process.exit(1); }
   return JSON.parse(await r.text());
 };
 
 const 전 = await 한도();
 console.log('\n  워커는 살아 있습니다 · 오늘 쓴 것 ' + 전.used + '/' + 전.limit + ' (남은 것 ' + 전.remaining + ')');
+/* 둘째 엔진(Groq 로 만드는 변형)과 검토 통도 같이 (2026-09-12). 옛 판 워커는 twin-groq 를 모르니 ai 통을 돌려준다 — 그때는 같은 수가 보인다 */
+try { const g = await 한도('twin-groq'), rv = await 한도('review'); console.log('  Groq 변형 ' + g.used + '/' + g.limit + ' · Groq 검토 ' + rv.used + '/' + rv.limit); } catch (_) {}
 /* 🔴 «어느 판이 도는가» — 저장소의 WORKER_VERSION 과 배포본이 돌려준 version 을 견준다 (2026-09-11).
    살아 있다는 것과 새 판이라는 것은 다른 말이다. 붙여넣기를 빠뜨리면 여기서 걸린다. */
 {

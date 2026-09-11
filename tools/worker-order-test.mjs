@@ -11,7 +11,8 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const src = fs.readFileSync(path.join(ROOT, 'worker/gemini-proxy.js'), 'utf8');
 
 function body(name) {
-  const at = src.indexOf('async function ' + name + '(');
+  let at = src.indexOf('async function ' + name + '(');
+  if (at < 0) at = src.indexOf('function ' + name + '(');
   if (at < 0) throw new Error(name + ' 못 찾음');
   let depth = 0;
   for (let j = src.indexOf('{', at); j < src.length; j++) {
@@ -29,7 +30,7 @@ function strip(s) {
           .replace(/"(?:\\.|[^"\\\n])*"/g, m => ' '.repeat(m.length));
 }
 let n = 0, bad = 0;
-for (const fn of ['handleGeminiTwin', 'handleFigureScene', 'handleReview']) {
+for (const fn of ['handleGeminiTwin', 'handleGroqTwin', 'twinPrompt', 'handleFigureScene', 'handleReview']) {
   let b;
   try { b = strip(body(fn)); } catch (e) { console.log('  ⚠', e.message); continue; }
   const decl = /\b(?:const|let)\s+([A-Za-z_$][\w$]*)\s*=/g;

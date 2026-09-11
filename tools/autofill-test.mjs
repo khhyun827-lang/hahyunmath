@@ -37,9 +37,10 @@ const 봄 = (무엇, 나온것, 나와야할것) => {
 };
 
 /* 스텁 세상. twin 은 «다음에 무엇을 돌려줄지»를 시험이 정한다. */
-function makeWorld({ itemBody = {}, variants = {}, twin = null, used = 0, saveOk = true, 오류 = 'AI 가 안 됐다' } = {}) {
+/* groqUsed — 둘째 엔진(Groq) 통. 기본은 «다 찼다»(25)로 두어 옛 검사의 뜻(한도 다 쓰면 멈춘다)이 그대로 선다. */
+function makeWorld({ itemBody = {}, variants = {}, twin = null, used = 0, groqUsed = 25, saveOk = true, 오류 = 'AI 가 안 됐다' } = {}) {
   const store = new Map();
-  const w = { 부른AI: [], 쓴것: [], 예약: [], twin, used, saveOk };
+  const w = { 부른AI: [], 쓴것: [], 예약: [], twin, used, groqUsed, saveOk };
   const itemByCode = {};
   for (const c in itemBody) itemByCode[c] = { code: c };
   const state = {
@@ -48,7 +49,7 @@ function makeWorld({ itemBody = {}, variants = {}, twin = null, used = 0, saveOk
   };
   const api = new Function(
     'state', 'render', 'localStorage', 'setTimeout', 'clearTimeout',
-    'splitItemCode', 'loadItemStoreIfNeeded', 'getAIQuotaUsed', 'AI_DAILY_LIMIT',
+    'splitItemCode', 'loadItemStoreIfNeeded', 'getAIQuotaUsed', 'AI_DAILY_LIMIT', 'GROQ_TWIN_DAILY_LIMIT', 'twinFigureDoc',
     'generateTwinViaAI', 'dqAnswerable', 'nextVariantCode', 'dbSetDoc', 'nowStamp',
     'escHtml', '마지막AI오류', 'console',
     /* 🔵 «변형 세기»가 두 곳(variants 컬렉션 + 교재가 준 items 변형)을 합쳐 본다 (2026-09-06).
@@ -63,9 +64,10 @@ function makeWorld({ itemBody = {}, variants = {}, twin = null, used = 0, saveOk
     () => {},
     (c) => ({ origin: c.replace(/-[NUD]\d+$/, ''), isVariant: /-[NUD]\d+$/.test(c) }),
     async () => {},
-    async () => w.used,
-    20,
-    async (content, answer) => { w.부른AI.push({ content, answer }); return w.twin; },
+    async (bucket) => bucket === 'twin-groq' ? w.groqUsed : w.used,
+    20, 25,
+    (twin) => ({ doc: null, why: '' }),
+    async (content, answer, image, engine) => { w.부른AI.push({ content, answer, engine: engine || '' }); return w.twin; },
     (content, answer) => (/^[①②③④⑤]$/.test(answer) || /^-?\d+$/.test(answer)) ? answer : null,
     (root, kind) => root + '-' + kind + '01',
     async (coll, id, doc) => { if (!w.saveOk) return null; w.쓴것.push({ coll, id, doc }); return true; },
@@ -151,6 +153,29 @@ console.log('\n남는 한도로 창고 채우기\n');
   봄('🔴 한도를 다 쓰면 스스로 멈춘다', w.autoFillState().on, false);
   봄('다음 바퀴를 예약하지 않는다', w.예약.length, 0);
   봄('왜 멈췄는지 말한다', /다 썼습니다/.test(w.autoFillState().msg), true);
+}
+// ── ④-b Gemini 가 다 차면 «글만 있는» 문항은 Groq 로 이어 간다 (2026-09-12 · 둘째 엔진) ──
+{
+  const body = 본문(2); body['K2-01-E-0003'] = { content: '그림 문항', answer: '③', image: { fileId: 'f' } };
+  const w = makeWorld({ itemBody: body, used: 20, groqUsed: 0, twin: { content: 'x', answer: '②', engine: 'groq' } });
+  await w.autoFillTick();
+  봄('Gemini 가 찼어도 글 문항은 Groq 로 한 건 만든다', w.부른AI.length, 1);
+  봄('그때 엔진은 groq 다', w.부른AI[0].engine, 'groq');
+  봄('그림 문항이 아니라 글 문항을 골랐다', w.부른AI[0].content !== '그림 문항', true);
+  봄('만든 변형에 engine 이 남는다', w.쓴것[0].doc.engine, 'groq');
+  봄('멈추지 않고 다음 바퀴를 예약한다', w.autoFillState().on && w.예약.length === 1, true);
+}
+{
+  const body = { 'K2-01-E-0003': { content: '그림 문항', answer: '③', image: { fileId: 'f' } } };
+  const w = makeWorld({ itemBody: body, used: 20, groqUsed: 0 });
+  await w.autoFillTick();
+  봄('글 문항이 없으면 Groq 로도 안 간다 — 멈춘다', w.부른AI.length === 0 && w.autoFillState().on === false, true);
+}
+{
+  const w = makeWorld({ itemBody: 본문(2), used: 20, groqUsed: 25 });
+  await w.autoFillTick();
+  봄('Groq 통도 찼으면 멈춘다', w.부른AI.length === 0 && w.autoFillState().on === false, true);
+  봄('둘 다 찼다고 말한다', /Gemini 20건 · Groq 25건/.test(w.autoFillState().msg), true);
 }
 {
   const w = makeWorld({ itemBody: 본문(3), twin: { content: 'x', answer: '②' }, saveOk: false });

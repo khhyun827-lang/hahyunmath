@@ -28,10 +28,17 @@ const JWKS_URL = 'https://www.googleapis.com/service_accounts/v1/jwk/securetoken
 
 // index.html의 AI_DAILY_LIMIT과 같은 값이어야 한다. 어긋나면 «남았다고 떠 있는데 429»가 된다.
 const AI_DAILY_LIMIT = 20;
+/* Groq 로 만드는 쌍둥이 — «둘째 엔진» (2026-09-12 · 사용자가 골랐다: 「2번으로 일단 하고, 추후에 유료로 전환하면 그때」).
+   AI Studio 가 보여 준 진실: gemini-3.6-flash 무료는 **RPD 20 · RPM 5**. 20은 우리 뚜껑이 아니라 구글의 벽이었다.
+   ⚠ gpt-oss-120b 는 그림을 못 본다 — 글만 있는 문항만. 통은 따로(twin-groq). 진짜 천장은 Groq 하루 20만 토큰이고
+     검토(/review)와 나눠 쓴다 — 변형 1건 ≈ 검토 3건. 그래서 25로 뚜껑을 둔다. */
+const TWIN_GROQ_DAILY_LIMIT = 25;
+const TWIN_GROQ_MODEL = 'openai/gpt-oss-120b';
+const TWIN_GROQ_MAX_TOKENS = 7000;   // 추론 + JSON. 검토(6000)보다 답이 길다
 /* 🔴 «올렸는지 짐작하지 않는다» — 이 워커는 대시보드에 붙여넣어 올리므로 밖에서는 어느 판이 도는지
    알 길이 없었다(2026-09-11에 사용자가 올리고 「도는지 확인은 못 해봤어」). /quota 가 이 값을 같이
    돌려주고 tools/worker-check.mjs 가 저장소의 값과 견준다. **프롬프트나 규칙을 바꾸면 이 날짜를 올릴 것.** */
-const WORKER_VERSION = '2026-09-12c';
+const WORKER_VERSION = '2026-09-12d';
 // 이미지 업로드는 학생도 쓴다(질의응답 사진). 비용이 드는 쪽은 Gemini라 여기는 넉넉하게,
 // 다만 «한 명이 무한히»는 막는다. 전체 상한은 걸지 않는다 — 걸면 바쁜 날 학생이 막힌다.
 const UPLOAD_PER_USER_DAILY = 200;
@@ -72,8 +79,9 @@ export default {
     if (url.pathname === '/quota') {
       /* ⚠ 검토는 «다른 통»이다 — 같은 통으로 보이면 화면이 남은 생성을 틀리게 띄운다.
          ?bucket=review 로 물으면 검토 통을 본다. 안 주면 예전대로 생성 통이다. */
-      const bucket = url.searchParams.get('bucket') === 'review' ? 'review' : 'ai';
-      const limit = bucket === 'review' ? REVIEW_DAILY_LIMIT : AI_DAILY_LIMIT;
+      const bk = url.searchParams.get('bucket');
+      const bucket = bk === 'review' ? 'review' : bk === 'twin-groq' ? 'twin-groq' : 'ai';
+      const limit = bucket === 'review' ? REVIEW_DAILY_LIMIT : bucket === 'twin-groq' ? TWIN_GROQ_DAILY_LIMIT : AI_DAILY_LIMIT;
       return new Response(JSON.stringify({ ...(await peekQuota(env, bucket, who.uid, limit)), version: WORKER_VERSION }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -89,6 +97,9 @@ export default {
          한 문항 검토는 위쪽 요청 1~2건이다(답이 갈릴 때만 둘째 모델을 부른다). */
       const q = await bumpQuota(env, 'review', who.uid, REVIEW_DAILY_LIMIT, REVIEW_DAILY_LIMIT);
       if (!q.ok) return quotaExceeded(q, corsHeaders);
+    } else if (url.pathname === '/twin-groq') {
+      const q = await bumpQuota(env, 'twin-groq', who.uid, TWIN_GROQ_DAILY_LIMIT, TWIN_GROQ_DAILY_LIMIT);
+      if (!q.ok) return quotaExceeded(q, corsHeaders);
     } else if (url.pathname !== '/delete' && !url.pathname.startsWith('/admin/')) {
       /* 🔴 **관리자 길을 여기서 빼지 않으면 «비밀번호 재설정»이 AI 한도를 먹는다.**
          아래 라우팅이 catch-all 이라, 새 길을 낼 때마다 이 줄을 같이 봐야 한다.
@@ -102,6 +113,14 @@ export default {
     if (url.pathname === '/delete') return handleDelete(request, env, corsHeaders);
     if (url.pathname === '/figure') return handleFigureScene(request, env, corsHeaders, who.uid);
     if (url.pathname === '/review') return handleReview(request, env, corsHeaders, who.uid);
+    if (url.pathname === '/twin-groq') {
+      try { return await handleGroqTwin(request, env, corsHeaders, who.uid); }
+      catch (e) {
+        try { await refundQuota(env, 'twin-groq', who.uid); } catch (_) {}
+        return new Response(JSON.stringify({ error: 'worker exception', detail: String((e && e.stack) || e).slice(0, 600), refunded: true }), {
+          status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      }
+    }
     /* 🔴 **관리자 길은 «강사인지»를 서버에서 본다** — 화면에서 단추를 감추는 것으로는 못 막는다.
        학생도 토큰이 있으니 이 주소를 그대로 부를 수 있다. */
     if (url.pathname === '/admin/reset-pw') return handleAdminResetPw(request, env, corsHeaders, who.uid);
@@ -613,24 +632,9 @@ function parseModelJson(text) {
 
 /* =================== 기존 Gemini 쌍둥이문제 생성 (imageFileId 지원 추가) =================== */
 
-async function handleGeminiTwin(request, env, corsHeaders, uid) {
-  let body;
-  try {
-    body = await request.json();
-  } catch (e) {
-    return new Response(JSON.stringify({ error: 'invalid json' }), {
-      status: 400,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
-  }
-  const { content, answer, image, imageFileId } = body;
-  if (!content || !answer) {
-    return new Response(JSON.stringify({ error: 'missing content/answer' }), {
-      status: 400,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
-  }
-
+/* 쌍둥이 프롬프트 — «한 벌»이다. Gemini(그림 됨)와 Groq(글만)가 같은 글을 본다 (2026-09-12).
+   ⚠ hasImage 가 false 면 갈래 규칙·장면 형식이 안 들어간다 — Groq 길은 언제나 false 다. */
+function twinPrompt(content, answer, hasImage) {
   const persona = `당신은 대한민국 고등학교 수학 교육과정에 완벽하게 통달한 수석 출제 위원입니다.`;
 
   /* 학생 답안 입력칸이 받을 수 있는 것은 딱 둘이다 — «숫자 입력» 아니면 «①~⑤ 보기 버튼»
@@ -669,15 +673,6 @@ async function handleGeminiTwin(request, env, corsHeaders, uid) {
   const jsonSchemaRule = `반드시 아래 JSON 형식으로만 답하세요. 다른 설명, 인사말, 코드블록 기호는 절대 포함하지 마세요.
 {"mode": "text" 또는 "figure" 또는 "reuse" (그림이 없는 문제면 언제나 "text"), "problem": "새 문제 내용 (객관식이면 보기 ①~⑤까지 이 안에 포함)", "answer": "999 이하 자연수 또는 보기 기호 ①~⑤ 중 하나", "solution": "단계별 풀이 과정을 1. 2. 3. 처럼 번호를 매겨 서술 (검토자가 정답을 검증할 수 있도록, 마크다운 기호 없이 일반 텍스트로). **여섯 단계 이내로, 각 단계는 두 줄을 넘기지 마세요.**", "figureSpec": "mode가 figure일 때만 채우고, 아니면 빈 문자열", "scene": mode가 figure이고 그림이 ①(좌표평면 위의 그림)이면 아래 [장면 형식]의 JSON 객체, 그 밖에는 null}`;
 
-  let effectiveImage = image;
-  if ((!effectiveImage || typeof effectiveImage !== 'string') && imageFileId) {
-    try {
-      effectiveImage = await fetchDriveFileAsDataUrl(imageFileId, env);
-    } catch (e) {
-      console.error('drive image fetch failed', e);
-    }
-  }
-  const hasImage = typeof effectiveImage === 'string' && effectiveImage.startsWith('data:');
   /* 🔵 **(B)의 그림은 쌍둥이를 만드는 «그 자리»에서 낸다** (2026-09-12 · 사용자 제안 — 「문항을 제작할 땐 답까지 산출하면서
      모든 문제의 상황을 인지한 상태니까 그당시에 그리게 하면 더 정확」). 따로 부르는 /figure 는 네 줄 지침만 보고 그리므로
      본문·정답과 어긋날 수 있었고, 한도도 둘 들었다. 검산은 여전히 화면(figure.js)이 한다 — 걸리면 그림 없이 (B)로 남고
@@ -765,7 +760,7 @@ ${SCENE_FORMAT}` : '';
 4. 그리는 방법: 어떤 범위로 어떻게 그리면 되는지 한 줄 (예: 모눈종이에 x축 -1~5, y축 -10~2 범위로)`
     : `다음은 고등학교 수학 문제와 정답입니다. 문제의 풀이 구조, 유형, 난이도는 그대로 유지하되 숫자(계수, 상수, 조건 값 등)만 바꾸어 "쌍둥이 문제" 1개를 새로 만들어주세요. 이 문제에는 그림이 없으므로 "mode"는 "text"입니다.`;
 
-  const prompt = `${persona}
+  return `${persona}
 ${taskRule}
 ${answerFormRule}
 ${safetyRule}
@@ -779,6 +774,36 @@ ${content}
 
 [원본 정답]
 ${answer}`;
+}
+
+async function handleGeminiTwin(request, env, corsHeaders, uid) {
+  let body;
+  try {
+    body = await request.json();
+  } catch (e) {
+    return new Response(JSON.stringify({ error: 'invalid json' }), {
+      status: 400,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+  const { content, answer, image, imageFileId } = body;
+  if (!content || !answer) {
+    return new Response(JSON.stringify({ error: 'missing content/answer' }), {
+      status: 400,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+
+  let effectiveImage = image;
+  if ((!effectiveImage || typeof effectiveImage !== 'string') && imageFileId) {
+    try {
+      effectiveImage = await fetchDriveFileAsDataUrl(imageFileId, env);
+    } catch (e) {
+      console.error('drive image fetch failed', e);
+    }
+  }
+  const hasImage = typeof effectiveImage === 'string' && effectiveImage.startsWith('data:');
+  const prompt = twinPrompt(content, answer, hasImage);
 
   const parts = [{ text: prompt }];
   if (hasImage) {
@@ -873,6 +898,56 @@ ${answer}`;
     quotaUsed: q.used, quotaLimit: q.limit,
   }), {
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  });
+}
+
+/* =================== 둘째 엔진 — Groq 로 만드는 쌍둥이 (글만) ===================
+   같은 프롬프트(twinPrompt · hasImage=false)를 Groq 의 gpt-oss-120b 에 준다. 응답 꼴도 Gemini 길과 같다 —
+   클라이언트가 두 길을 구분할 일이 없게. `engine:'groq'` 만 붙여 검토 화면이 누가 만들었는지 적는다.
+   ⚠ 그림이 오면 400 — 이 모델은 못 본다. 클라이언트가 먼저 거르지만 문에서도 막는다. */
+async function handleGroqTwin(request, env, corsHeaders, uid) {
+  const send = (body, status) => new Response(JSON.stringify(body), {
+    status: status || 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+  if (!env.GROQ_KEY) { await refundQuota(env, 'twin-groq', uid); return send({ error: 'no key', detail: 'GROQ_KEY 비밀이 워커에 없습니다' }, 500); }
+  let body; try { body = await request.json(); } catch (e) { await refundQuota(env, 'twin-groq', uid); return send({ error: 'invalid json' }, 400); }
+  const { content, answer, image, imageFileId } = body || {};
+  if (!content || !answer) { await refundQuota(env, 'twin-groq', uid); return send({ error: 'missing content/answer' }, 400); }
+  if (image || imageFileId) { await refundQuota(env, 'twin-groq', uid); return send({ error: 'groq cannot see images', detail: 'Groq 길은 글만 있는 문항용입니다' }, 400); }
+
+  const prompt = twinPrompt(content, answer, false);
+  let res;
+  try {
+    res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + env.GROQ_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: TWIN_GROQ_MODEL, max_tokens: TWIN_GROQ_MAX_TOKENS,
+        response_format: { type: 'json_object' },
+        messages: [{ role: 'user', content: prompt }],
+      }),
+    });
+  } catch (e) {
+    await refundQuota(env, 'twin-groq', uid);
+    return send({ error: 'groq request failed', detail: String(e) }, 502);
+  }
+  const text = await res.text();
+  if (!res.ok) {
+    if (upstreamRefused(res.status)) await refundQuota(env, 'twin-groq', uid);
+    return send({ error: 'groq error', detail: text.slice(0, 300) }, 502);
+  }
+  let j; try { j = JSON.parse(text); } catch (e) { return send({ error: 'parse failed', raw: text.slice(0, 300) }, 502); }
+  const ch = j.choices && j.choices[0];
+  const out = (ch && ch.message && ch.message.content) || '';
+  let parsed;
+  try { parsed = parseModelJson(out); }
+  catch (e) { return send({ error: ch && ch.finish_reason === 'length' ? 'truncated' : 'parse failed', finishReason: ch && ch.finish_reason, raw: out.slice(0, 400) }, 502); }
+  if (!parsed.problem || !parsed.answer) return send({ error: 'incomplete result', raw: parsed }, 502);
+  const q = await peekQuota(env, 'twin-groq', uid, TWIN_GROQ_DAILY_LIMIT);
+  return send({
+    content: parsed.problem, answer: parsed.answer, solution: parsed.solution || '',
+    figureFree: false, needsFigure: false, reuseFigure: false, figureSpec: '', scene: null,
+    engine: 'groq', tokens: (j.usage && j.usage.total_tokens) || 0,
+    quotaUsed: q.used, quotaLimit: q.limit,
   });
 }
 

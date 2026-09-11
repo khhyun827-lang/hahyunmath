@@ -96,6 +96,33 @@ const t=setInterval(async()=>{
     await approveAutoVariant('K2-01-E-0002-N01');
     R.a_live = variantsLive('K2-01-E-0002').some(v => v.code === 'K2-01-E-0002-N01');
 
+    /* 둘째 엔진 — Groq (2026-09-12). 글만 있는 문항에만 단추가 있고, 그림 문항엔 없다 */
+    let engineSeen = null; generateTwinViaAI = async (content, answer, image, engine) => { engineSeen = engine || ''; return 다음; };
+    state.icOpen = 'K2-01-E-0001'; render();
+    R.groqBtnHiddenForImage = !/Groq 로/.test(document.querySelector('.ic-ask').textContent);
+    const bImg = 저장.length; await requestVariantForCode('K2-01-E-0001', 'groq');
+    R.groqRefusesImage = 저장.length === bImg && /그림을 못 봅니다/.test(state.toast || '');
+    state.icOpen = 'K2-01-E-0002'; render();
+    R.groqBtnShown = /Groq 로/.test(document.querySelector('.ic-ask').textContent);
+    다음 = { content:'x^2-9x+20=0 의 두 근의 합은?', answer:'9', solution:'', engine:'groq' };
+    await requestVariantForCode('K2-01-E-0002', 'groq');
+    const vG = 저장[저장.length-1][2];
+    R.groqSaved = engineSeen === 'groq' && vG.engine === 'groq' && vG.pending === true;
+    state.teacherTab='review'; state.reviewQueue='pending'; selectAutoVariant(vG.code);
+    R.groqLabeled = /Groq 가 만든 변형/.test(document.body.innerText);
+    /* 자동 채우기 — Gemini 가 다 찼으면 글 문항은 Groq 로 이어 간다 */
+    getAIQuotaUsed = async (bucket) => bucket === 'twin-groq' ? 0 : 20;
+    state.itemBody['K2-01-E-0005'] = { content:'글만 있는 새 문항', answer:'3' }; state.itemByCode['K2-01-E-0005'] = {};
+    state.itemBody['K2-01-E-0006'] = { content:'그림 있는 새 문항', answer:'3', image:{url:'u', fileId:'f6'} }; state.itemByCode['K2-01-E-0006'] = {};
+    state.autoFill = { on:true, busy:'', done:0, skipped:0, failed:0, msg:'' };
+    다음 = { content:'자동으로 만든 것', answer:'4', solution:'', engine:'groq' };
+    const bAuto = 저장.length; engineSeen = null;
+    await autoFillTick();
+    const vA = 저장[저장.length-1] && 저장[저장.length-1][2];
+    R.autoGroq = 저장.length === bAuto + 1 && engineSeen === 'groq' && vA.originCode === 'K2-01-E-0005' && vA.engine === 'groq';
+    R.autoMsg = /Groq 로 만드는 중|를 만들었습니다/.test(state.autoFill.msg);
+    state.autoFill.on = false;
+    state.teacherTab='unitbank'; render();
     /* 정답 없는 문항 — 단추가 잠기고 아무것도 안 나간다 */
     state.icOpen = 'K2-01-E-0003'; render();
     R.noAnswerDisabled = btn().disabled;
