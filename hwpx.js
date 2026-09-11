@@ -361,6 +361,17 @@ function hwpWalkParagraphs(paras, tokens){
           const imgEl = child.getElementsByTagNameNS(HWP_CORE_NS,'img')[0];
           const ref = imgEl ? imgEl.getAttribute('binaryItemIDRef') : null;
           if(ref) tokens.push({type:'pic', v: ref});
+          /* 🔵 **문항 코드를 «개체 설명문»에서도 읽는다** (2026-09-10 · 사용자 요청).
+             설명문은 화면에도 인쇄에도 안 보이지만 파일에는 남는 자리다. 교재에는 문항마다
+             그림 딱지가 정확히 하나씩 있어(564제에 564개) **문항당 한 칸**이 이미 있다.
+             🔴 **설명문 글을 본문에 섞지 않는다.** 「그림입니다. 원본 그림의 이름: …」이 통째로
+               본문에 새어 들면 564제가 다 더러워진다 — 그래서 **코드 꼴일 때만** 토큰을 낸다.
+               (바로 아래 rect 자리에 「shapeComment 는 가져오면 안 된다」고 적어 둔 그 까닭이다.) */
+          const cmtEl = child.getElementsByTagNameNS(HP_NS,'shapeComment')[0];
+          if(cmtEl){
+            const 짚 = String(cmtEl.textContent||'').match(HWP_SHAPE_CODE_RE);
+            if(짚) tokens.push({type:'shapecode', v: 짚[1]});
+          }
         } else if(local === 'rect'){
           /* 🔴 **«(가)» 같은 빈칸은 «사각형 도형»이다** (2026-09-04 · 사용자가 K2-01-E-0013 에서 짚었다).
              교재는 빈칸을 글자가 아니라 **테두리 있는 네모 개체**로 그리고 그 안에 (가)·(나)를 넣는다.
@@ -548,6 +559,13 @@ function hwpWalkParagraphs(paras, tokens){
 const HWP_CODE_RE = /^\s*\[([A-Z]{1,2}\d?-\d{2}-[A-Z]-\d{4}(?:-[NUD]\d{2})?|[12]\d{6}[AB]?(?:OR|NC|UP|DW)(?:\d{2})?)(?:\|([^\]\s]{0,32}))?\]\s*/;
 /* 지문으로 쳐 주는 꼴 — 소문자 16진수 8자리. 이것 말고는 «없음»으로 본다. */
 const HWP_FP_RE = /^[0-9a-f]{8}$/;
+
+/* 🔵 **개체 설명문에 심긴 코드** (2026-09-10) — `[K2-01-E-0001]` 을 «글 어디에서든» 찾는다.
+   🔴 미주(`HWP_CODE_RE`)와 달리 **맨 앞에 못을 안 박는다.** 설명문에는 이미
+     「그림입니다. 원본 그림의 이름: 자산 12@4x.png …」가 들어 있고, 그 뒤에 코드를 덧붙이기
+     때문이다 — 있던 안내문을 지우면 화면 낭독기가 그림을 못 읽어 준다.
+   ⚠ 그래서 `^` 가 없다. 대신 코드 꼴을 그대로 물어 **아무 글에서나 헛짚지 않게** 한다. */
+const HWP_SHAPE_CODE_RE = /\[([A-Z]{1,2}\d?-\d{2}-[A-Z]-\d{4}(?:-[NUD]\d{2})?|[12]\d{6}[AB]?(?:OR|NC|UP|DW)(?:\d{2})?)\]/;
 
 /* 지문을 뜰 때 «무엇을 견줄 것인가» — 잣대는 여기 한 곳뿐이다 (2026-09-09).
    🔴 **두 벌로 두면 반드시 어긋난다.** 웹도 도구도 이 함수를 부른다.
@@ -747,14 +765,16 @@ function hwpEndnoteText(endNoteEl){ return hwpEndnoteParts(endNoteEl).answer; }
 function hwpCellToBlock(cellParas){
   const tokens = [];
   hwpWalkParagraphs(cellParas, tokens);
-  let text = '', answer = null, pics = [], itemCode = '', itemFp = '', solution = '';
+  let text = '', answer = null, pics = [], itemCode = '', itemFp = '', solution = '', shapeCode = '';
   for(const tok of tokens){
     if(tok.type === 'endnote'){ answer = tok.v; if(tok.code) itemCode = tok.code; if(tok.fp) itemFp = tok.fp; if(tok.sol) solution = tok.sol; }
     else if(tok.type === 'text' || tok.type === 'eq') text += tok.v;
     else if(tok.type === 'pic') pics.push(tok.v);
+    /* ⚠ 첫 것만 — 표 한 칸에 그림이 여럿이면 뒤엣것이 앞엣것을 덮어 «남의 코드»가 된다. */
+    else if(tok.type === 'shapecode'){ if(!shapeCode) shapeCode = tok.v; }
     else if(tok.type === 'break') text += '\n';
   }
-  return { text, answer, pics, itemCode, itemFp, solution };
+  return { text, answer, pics, itemCode, itemFp, solution, shapeCode };
 }
 /* 최상위 표를 «문항 컨테이너»로 볼 것인가, «문항 안의 상자»로 볼 것인가.
 
@@ -782,6 +802,9 @@ function hwpParseBlocks(topParas, tablesAsProblems){
       } else if(tok.type === 'text') cur.text += tok.v;
       else if(tok.type === 'eq') cur.text += tok.v;
       else if(tok.type === 'pic') cur.pics.push(tok.v);
+      /* 설명문에 심긴 코드. ⚠ **첫 것만 잡는다** — 한 문항에 그림이 여럿이면 뒤엣것이
+         앞엣것을 덮어써 «남의 코드»가 될 수 있다. 붙이는 것은 저 아래에서, 미주가 없을 때만. */
+      else if(tok.type === 'shapecode'){ if(!cur.shapeCode) cur.shapeCode = tok.v; }
       else if(tok.type === 'break') cur.text += '\n';
     }
     if(cur.text.trim()) blocks.push(cur);
@@ -1308,6 +1331,15 @@ function hwpxProblemsFromDocs(docs, opts){
       if(미주덩이.length === 밖코드.length)
         미주덩이.forEach((b,i)=>{ if(!b.itemCode && 밖코드[i]) b.itemCode = 밖코드[i]; });
     }
+    /* 🔴 **미주가 먼저, 설명문은 그다음이다** (2026-09-10 · 사용자가 정했다).
+       「나는 매번 하나하나 개체설명문 열어서 코드를 쓸 수 없으니까 문제 미주에 적어도
+        읽어낼 수 있게도 해줘.」 — 미주는 **사람이 손으로 적는 자리**고 설명문은 **도구가
+       적는 자리**다. 사람이 적은 것이 이긴다. 둘이 다르면 사람 쪽이 뜻이 있는 것이다.
+       🔵 **뒤로도 앞으로도 호환된다** — 미주에만 있는 옛 파일도, 설명문에만 있는 숨긴 파일도,
+         둘 다 있는 파일도 전부 읽힌다. 어느 하나를 버리지 않는다.
+       ⚠ **반드시 여기, 위의 세 채우기가 «다 끝난 뒤»여야 한다.** 앞에 두면 설명문이
+         미주를 이겨 버린다. */
+    bs.forEach(b => { if(!b.itemCode && b.shapeCode) b.itemCode = b.shapeCode; });
     return bs;
   };
   const candidates = [
