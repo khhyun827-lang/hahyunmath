@@ -75,6 +75,14 @@
      직각이 예각으로 보인다. 함수 그래프만 있을 때는 예전처럼 창을 따로 잡는다 — 포물선은 눌러도 된다.
      scene.equalAxes 로 강제할 수도 있다.
 
+   ## 숨기기 (2026-09-12 · 사용자 — 「에디터에서 불필요한 걸 삭제하는 기능」)
+
+     scene.hidden = { 'curve:1': true, 'lbl:point:0': true, 'xtick:2': true }
+
+   요소 id 를 열쇠로 «안 그린다». `lbl:<id>` 면 그 요소의 **이름표만** 숨긴다.
+   🔴 배열에서 «빼지» 않는다 — 빼면 checks·pins 가 가리키는 번호가 밀린다. 검산은 숨겨도 그대로 한다
+     (숨긴 곡선의 식은 여전히 산다) — 다만 숨긴 점의 «창 안인가»는 안 본다.
+
    checks 에 더해진 것:
      { type:'dist',      a:[0,0], b:[4,3], d:5 }                 |AB| = 5
      { type:'oncircle',  circle:0, p:[4,1] }                     점이 원 위에 있다
@@ -221,10 +229,14 @@
   function autoWindow(scene, opt) {
     var cs = compileCurves(scene);
     var xs = [], ys = [];
+    /* 숨긴 요소는 창을 안 넓힌다 — 「불필요한 것을 지운다」의 절반은 «그것 때문에 커진 창»을 도로 줄이는 것이다 */
+    var hid = (scene.hidden && typeof scene.hidden === 'object') ? scene.hidden : {};
+    var vis = function (id) { return hid[id] !== true; };
 
-    (scene.xTicks || []).forEach(function (v) { xs.push(v); });
-    (scene.yTicks || []).forEach(function (v) { ys.push(v); });
-    (scene.points || []).forEach(function (pt) {
+    (scene.xTicks || []).forEach(function (v, i) { if (vis('xtick:' + i)) xs.push(v); });
+    (scene.yTicks || []).forEach(function (v, i) { if (vis('ytick:' + i)) ys.push(v); });
+    (scene.points || []).forEach(function (pt, i) {
+      if (!vis('point:' + i)) return;
       xs.push(pt.x);
       var y = pointY(pt, cs);
       if (isFinite(y)) ys.push(y);
@@ -233,12 +245,12 @@
       if (typeof ck.x === 'number') xs.push(ck.x);
       if (typeof ck.y === 'number') ys.push(ck.y);
     });
-    (scene.labels || []).forEach(function (l) { xs.push(l.x); ys.push(l.y); });
+    (scene.labels || []).forEach(function (l, i) { if (vis('label:' + i)) { xs.push(l.x); ys.push(l.y); } });
     /* v2 — 도형의 끝점·꼭짓점·원의 네 끝 */
-    (scene.segments || []).forEach(function (s) { [s.from, s.to].forEach(function (p) { if (p) { xs.push(p[0]); ys.push(p[1]); } }); });
-    (scene.polygons || []).forEach(function (pg) { (pg.pts || []).forEach(function (p) { xs.push(p[0]); ys.push(p[1]); }); });
-    (scene.circles || []).forEach(function (c) { if (c.c) { xs.push(c.c[0] - c.r); xs.push(c.c[0] + c.r); ys.push(c.c[1] - c.r); ys.push(c.c[1] + c.r); } });
-    (scene.angles || []).forEach(function (a) { [a.at, a.from, a.to].forEach(function (p) { if (p) { xs.push(p[0]); ys.push(p[1]); } }); });
+    (scene.segments || []).forEach(function (s, i) { if (vis('seg:' + i)) [s.from, s.to].forEach(function (p) { if (p) { xs.push(p[0]); ys.push(p[1]); } }); });
+    (scene.polygons || []).forEach(function (pg, i) { if (vis('poly:' + i)) (pg.pts || []).forEach(function (p) { xs.push(p[0]); ys.push(p[1]); }); });
+    (scene.circles || []).forEach(function (c, i) { if (vis('circle:' + i) && c.c) { xs.push(c.c[0] - c.r); xs.push(c.c[0] + c.r); ys.push(c.c[1] - c.r); ys.push(c.c[1] + c.r); } });
+    (scene.angles || []).forEach(function (a, i) { if (vis('angle:' + i)) [a.at, a.from, a.to].forEach(function (p) { if (p) { xs.push(p[0]); ys.push(p[1]); } }); });
     xs.push(0); ys.push(0);                              // 원점은 늘 보인다
 
     var x0 = Math.min.apply(null, xs), x1 = Math.max.apply(null, xs);
@@ -251,7 +263,7 @@
        바로 그 끝자락이고, 원본 시험지 그림도 거기서 잘려 있다. */
     var ends = [];
     cs.forEach(function (c) {
-      if (!c.fn) return;
+      if (!c.fn || !vis('curve:' + c.i)) return;
       var d = c.def.domain || xRange;
       var a = Math.max(d[0], xRange[0]), b = Math.min(d[1], xRange[1]);
       var N = 240, prevV = null, prevS = null, firstV = null, lastV = null;
@@ -296,7 +308,9 @@
   function hasShapes(scene) {
     if (scene.equalAxes === true) return true;
     if (scene.equalAxes === false) return false;
-    return !!((scene.segments || []).length || (scene.polygons || []).length || (scene.circles || []).length || (scene.angles || []).length);
+    var hid = (scene.hidden && typeof scene.hidden === 'object') ? scene.hidden : {};
+    var any = function (arr, key) { return (scene[arr] || []).some(function (_, i) { return hid[key + ':' + i] !== true; }); };
+    return any('segments', 'seg') || any('polygons', 'poly') || any('circles', 'circle') || any('angles', 'angle');
   }
   function dist(a, b) { return Math.hypot(a[0] - b[0], a[1] - b[1]); }
   function polyArea(pts) {
@@ -407,6 +421,7 @@
         fails.push({ type: 'visible', msg: 'x눈금 ' + fmt(v) + '이 창 밖이다' });
     });
     (scene.points || []).forEach(function (pt, i) {
+      if (scene.hidden && scene.hidden['point:' + i] === true) return;   // 숨긴 점은 안 보여도 된다
       ran++;
       var y = pointY(pt, cs);
       if (pt.x < win.xRange[0] || pt.x > win.xRange[1] || !(y >= win.yRange[0] && y <= win.yRange[1]))
@@ -539,6 +554,8 @@
     var plotW = W - pad.l - pad.r, plotH = H - pad.t - pad.b;
     var pins = cleanPins(scene.pins, W, H);
     var at = pins ? pins.at : {};
+    var hid = (scene.hidden && typeof scene.hidden === 'object') ? scene.hidden : {};
+    var hidden = function (id) { return hid[id] === true; };
 
     var PX = function (x) { return pad.l + (x - xr[0]) / (xr[1] - xr[0]) * plotW; };
     var PY = function (y) { return pad.t + (yr[1] - y) / (yr[1] - yr[0]) * plotH; };
@@ -567,6 +584,7 @@
        집을 같이 돌려주는 이유 — 편집기의 「원래 자리로」가 그것이다. */
     var labels = [];
     function lab(id, x, y, text, anchor, size, editable) {
+      if (hidden('lbl:' + id)) return null;                 // 이름표만 숨긴 것
       var home = { x: n(x), y: n(y), anchor: anchor || 'middle' };
       var p = at[id];
       var l = { id: id, text: String(text), size: size || null, editable: !!editable,
@@ -596,13 +614,13 @@
 
     /* 눈금 — 숫자는 «값»이라 글자를 못 고친다 (editable:false) */
     (scene.xTicks || []).forEach(function (v, i) {
-      if (v === ax.x) return;
+      if (v === ax.x || hidden('xtick:' + i)) return;
       var px = PX(v);
       out.push('<path d="M' + n(px) + ' ' + n(oy - 5) + 'v10"/>');
       lab('xtick:' + i, px, oy + 24, fmt(v), 'middle', 17, false);
     });
     (scene.yTicks || []).forEach(function (v, i) {
-      if (v === ax.y) return;
+      if (v === ax.y || hidden('ytick:' + i)) return;
       var py = PY(v);
       out.push('<path d="M' + n(ox - 5) + ' ' + n(py) + 'h10"/>');
       lab('ytick:' + i, ox - 10, py + 6, fmt(v), 'end', 17, false);
@@ -613,9 +631,9 @@
     for (var ay1 = pad.t - 12; ay1 <= H - pad.b + 6; ay1 += 8) ink.push([ox, ay1]);
     /* 점이 «있을 자리»를 먼저 잉크로 넣는다 — 점은 나중에 그리지만(맨 위에 보이게), 도형 이름표가
        그 자리를 피해야 한다. 점 이름표의 집도 같이(글자만 어림). */
-    (scene.points || []).forEach(function (pt) {
+    (scene.points || []).forEach(function (pt, pi) {
       var y0 = pointY(pt, cs);
-      if (!isFinite(y0)) return;
+      if (!isFinite(y0) || hidden('point:' + pi)) return;
       var qx = PX(pt.x), qy = PY(y0);
       inkBox(qx - 5, qy - 5, qx + 5, qy + 5);
       if (pt.label) {
@@ -629,14 +647,14 @@
     function inkLine(a, b) { var L = Math.hypot(b[0] - a[0], b[1] - a[1]), k = Math.max(2, Math.round(L / 8)); for (var i = 0; i <= k; i++) ink.push([a[0] + (b[0] - a[0]) * i / k, a[1] + (b[1] - a[1]) * i / k]); }
     (scene.polygons || []).forEach(function (pg, i) {
       var ps = (pg.pts || []).map(P2);
-      if (ps.length < 3) return;
+      if (ps.length < 3 || hidden('poly:' + i)) return;
       out.push('<path d="M' + ps.map(function (p) { return n(p[0]) + ' ' + n(p[1]); }).join('L') + 'Z"' +
         (pg.fill ? ' fill="currentColor" fill-opacity="0.08"' : '') + ' stroke-width="2"/>');
       for (var k = 0; k < ps.length; k++) inkLine(ps[k], ps[(k + 1) % ps.length]);
       if (pg.label) { var cx = 0, cy = 0; ps.forEach(function (p) { cx += p[0]; cy += p[1]; }); lab('poly:' + i, cx / ps.length, cy / ps.length + 6, pg.label, 'middle', null, true); }
     });
     (scene.segments || []).forEach(function (s, i) {
-      if (!s.from || !s.to) return;
+      if (!s.from || !s.to || hidden('seg:' + i)) return;
       var a = P2(s.from), b = P2(s.to);
       out.push('<path d="M' + n(a[0]) + ' ' + n(a[1]) + 'L' + n(b[0]) + ' ' + n(b[1]) + '"' + (s.dash ? ' stroke-dasharray="7 6"' : '') + ' stroke-width="2"/>');
       if (s.arrow) { var ang = Math.atan2(b[1] - a[1], b[0] - a[0]); out.push('<path d="M' + n(b[0]) + ' ' + n(b[1]) + 'l' + n(-10 * Math.cos(ang - 0.45)) + ' ' + n(-10 * Math.sin(ang - 0.45)) + 'M' + n(b[0]) + ' ' + n(b[1]) + 'l' + n(-10 * Math.cos(ang + 0.45)) + ' ' + n(-10 * Math.sin(ang + 0.45)) + '"/>'); }
@@ -649,7 +667,7 @@
       }
     });
     (scene.circles || []).forEach(function (c, i) {
-      if (!c.c || !(c.r > 0)) return;
+      if (!c.c || !(c.r > 0) || hidden('circle:' + i)) return;
       var cc = P2(c.c), rpx = c.r * plotW / (xr[1] - xr[0]);
       out.push('<circle cx="' + n(cc[0]) + '" cy="' + n(cc[1]) + '" r="' + n(rpx) + '"' + (c.dash ? ' stroke-dasharray="7 6"' : '') + ' stroke-width="2"/>');
       for (var t = 0; t < 40; t++) ink.push([cc[0] + rpx * Math.cos(t / 40 * 2 * Math.PI), cc[1] + rpx * Math.sin(t / 40 * 2 * Math.PI)]);
@@ -666,7 +684,7 @@
       }
     });
     (scene.angles || []).forEach(function (g, i) {
-      if (!g.at || !g.from || !g.to) return;
+      if (!g.at || !g.from || !g.to || hidden('angle:' + i)) return;
       var v0 = P2(g.at), a1 = Math.atan2(P2(g.from)[1] - v0[1], P2(g.from)[0] - v0[0]), a2 = Math.atan2(P2(g.to)[1] - v0[1], P2(g.to)[0] - v0[0]);
       var d = a2 - a1; while (d <= -Math.PI) d += 2 * Math.PI; while (d > Math.PI) d -= 2 * Math.PI;
       var R = 18;
@@ -685,7 +703,7 @@
        아직 안 그려진 곡선 위에 앉는다 (실제로 그렇게 됐다). */
     var drawn = [];
     cs.forEach(function (c) {
-      if (!c.fn) return;
+      if (!c.fn || hidden('curve:' + c.i)) return;
       var d = c.def.domain || xr;
       var a = Math.max(d[0], xr[0]), b = Math.min(d[1], xr[1]);
       var segs = sample(c.fn, a, b, xr, yr, PX, PY, plotW);
@@ -701,7 +719,7 @@
     /* 점 · 내린 점선 — 점 이름표를 곡선 이름표보다 먼저 앉힌다. 그래야 곡선 이름표가 그것을 피한다. */
     (scene.points || []).forEach(function (pt, i) {
       var y = pointY(pt, cs);
-      if (!isFinite(y)) return;
+      if (!isFinite(y) || hidden('point:' + i)) return;
       var px = PX(pt.x), py = PY(y);
       if (pt.dropTo === 'axis' || pt.dropTo === 'x')
         out.push('<path d="M' + n(px) + ' ' + n(py) + 'V' + n(oy) + '" stroke-dasharray="6 5" stroke-width="1.3"/>');
@@ -720,6 +738,7 @@
 
     /* 자유 배치 라벨 */
     (scene.labels || []).forEach(function (l, i) {
+      if (hidden('label:' + i)) return;
       lab('label:' + i, PX(l.x), PY(l.y), l.text, l.anchor || 'middle', null, true);
     });
 
@@ -735,7 +754,7 @@
       if (!spot && !at[id]) return;                 // 앉힐 자리도 핀도 없다
       var hm = spot || at[id];
       var l = lab(id, hm.x, hm.y, dc.c.def.label, hm.anchor, null, true);
-      placed.push({ x: l.x, y: l.y });
+      if (l) placed.push({ x: l.x, y: l.y });
     });
 
     /* 글자는 맨 뒤에 — 편집 모드면 잡기 상자를 깔고 <g data-lbl> 로 싼다 */
@@ -805,6 +824,26 @@
       });
       scene.pins.at = next;
     }
+    return true;
+  }
+
+  /* 그림의 «요소» 목록 — 편집기의 「숨기기」 고르개가 쓴다. 이름은 사람 말로. */
+  function elements(scene) {
+    var out = [];
+    (scene.curves || []).forEach(function (c, i) { out.push({ id: 'curve:' + i, name: '곡선 ' + (i + 1) + (c.label ? ' (' + c.label + ')' : ' ' + c.expr) }); });
+    (scene.points || []).forEach(function (p, i) { out.push({ id: 'point:' + i, name: '점 ' + (p.label || (i + 1)) }); });
+    (scene.segments || []).forEach(function (s, i) { out.push({ id: 'seg:' + i, name: '선분 ' + (s.label || (i + 1)) }); });
+    (scene.polygons || []).forEach(function (p, i) { out.push({ id: 'poly:' + i, name: '다각형 ' + (p.label || (i + 1)) }); });
+    (scene.circles || []).forEach(function (c, i) { out.push({ id: 'circle:' + i, name: '원 ' + (c.label || (i + 1)) }); });
+    (scene.angles || []).forEach(function (a, i) { out.push({ id: 'angle:' + i, name: '각 ' + (a.label || (i + 1)) }); });
+    (scene.xTicks || []).forEach(function (v, i) { out.push({ id: 'xtick:' + i, name: 'x눈금 ' + fmt(v) }); });
+    (scene.yTicks || []).forEach(function (v, i) { out.push({ id: 'ytick:' + i, name: 'y눈금 ' + fmt(v) }); });
+    return out;
+  }
+  function setHidden(scene, id, on) {
+    scene.hidden = scene.hidden || {};
+    if (on) scene.hidden[id] = true; else delete scene.hidden[id];
+    if (!Object.keys(scene.hidden).length) delete scene.hidden;
     return true;
   }
 
@@ -916,6 +955,8 @@
     setLabelText: setLabelText,
     addLabel: addLabel,
     removeLabel: removeLabel,
+    elements: elements,
+    setHidden: setHidden,
     hasShapes: hasShapes,
     labelBoxes: labelBoxes,
     overlaps: overlaps,

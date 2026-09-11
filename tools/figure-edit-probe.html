@@ -16,14 +16,14 @@ const fr=document.createElement('iframe'); fr.width=760; fr.height=820; fr.src='
 document.body.appendChild(fr);
 const o=document.getElementById('o');
 let n=0;
-const t=setInterval(()=>{
+const t=setInterval(async()=>{
   n++;
   let ready=false;
   try{ ready = fr.contentWindow.eval('typeof figureDraftHTML==="function" && typeof Figure!=="undefined" && typeof render==="function"'); }catch(_){}
   if(!ready){ if(n>200){ clearInterval(t); o.textContent='RESULT timeout'; } return; }
   clearInterval(t);
   const w=fr.contentWindow;
-  const out = w.eval(`(function(){
+  let out; try { out = await w.eval(`(async function(){
     const R = {};
     const SCENE = {kind:'graph',
       curves:[{expr:'-(x-2)*(x-6)',label:'y=f(x)'},{expr:'2x-3',label:'y=g(x)'}],
@@ -96,10 +96,34 @@ const t=setInterval(()=>{
     const cb = circ.getBoundingClientRect();
     R.circleIsRound = Math.abs(cb.width - cb.height) < 1.5;
     R.shapeLabels = ['poly:0','circle:0','point:0','point:1'].every(id => !!document.querySelector('#probe .fig-edit g[data-lbl="'+id+'"]'));
+    /* 숨기기 — 요소를 골라 숨기고 되살린다 (2026-09-12) */
+    state.figureDraft.scene = { kind:'graph', curves:[{expr:'-(x-2)*(x-6)', label:'y=f(x)'},{expr:'2x-3', label:'y=g(x)'}],
+      points:[{x:1, curve:0, label:'P'}], xTicks:[1,2,5,6], checks:[{type:'root',curve:0,x:2}] };
+    state.figureDraft.svg = Figure.renderScene(state.figureDraft.scene); state.figureSel = null; render();
+    R.hideSelShown = !!document.getElementById('fig-hide-sel') && document.getElementById('fig-hide-sel').options.length === 7;
+    const pathsBefore = document.querySelectorAll('#probe .fig-edit path[stroke-width="2.1"]').length;
+    figEditHide('curve:1');
+    R.hiddenCurve = document.querySelectorAll('#probe .fig-edit path[stroke-width="2.1"]').length < pathsBefore && !document.querySelector('#probe .fig-edit g[data-lbl="curve:1"]');
+    R.hiddenListed = /숨긴 것/.test(document.querySelector('#probe .fig-hide').textContent) && /곡선 2/.test(document.querySelector('#probe .fig-hide').textContent);
+    figEditHide('curve:1', false);
+    R.restored = !!document.querySelector('#probe .fig-edit g[data-lbl="curve:1"]') && !state.figureDraft.scene.hidden;
+    /* 점의 이름표만 빼기 — 점은 남는다 */
+    state.figureSel = 'point:0'; render(); figEditRemoveLabel();
+    R.labelOnlyHidden = !document.querySelector('#probe .fig-edit g[data-lbl="point:0"]') && document.querySelectorAll('#probe .fig-edit circle[r="4"]').length === 1 && state.figureDraft.scene.hidden['lbl:point:0'] === true;
+    figEditHide('lbl:point:0', false);
+    /* 내려받기 — SVG 는 그대로, PNG 는 글꼴을 실어 굽는다 */
+    const got = {};
+    await figDownload('probe', 'svg', (blob, ext) => { got[ext] = blob; });
+    R.dlSvg = got.svg && got.svg.type === 'image/svg+xml' && got.svg.size > 1000;
+    await new Promise(res => { figDownload('probe', 'png', (blob, ext) => { got[ext] = blob; res(); }); setTimeout(res, 15000); });
+    R.dlPng = !!(got.png && got.png.type === 'image/png' && got.png.size > 5000);
+    R.fontEmbedded = typeof figFontCss === 'string' && figFontCss.includes('data:font/woff2;base64,');
+    /* 구운 PNG 를 바깥 문서 맨 위에 붙인다 — 스크린샷으로 글꼴이 실렸는지 눈으로 본다 */
+    if(got.png){ const im = parent.document.createElement('img'); im.src = URL.createObjectURL(got.png); im.style.cssText='width:560px;display:block;border:1px solid #ccc'; parent.document.body.insertBefore(im, parent.document.body.firstChild.nextSibling); await new Promise(r => { im.onload = r; setTimeout(r, 3000); }); }
     /* 저장용 svg 에 잡기 상자가 없다 */
     R.savedClean = !/data-lbl|pointer-events/.test(Figure.renderScene(state.figureDraft.scene));
     return JSON.stringify(R);
-  })()`);
+  })()`); } catch(e){ out = 'ERR ' + ((e && e.stack) || e); }
   o.textContent = 'RESULT ' + out;
 }, 100);
 </script>

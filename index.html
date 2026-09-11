@@ -987,6 +987,8 @@
 .app .fig-tools input{border:1px solid var(--line);border-radius:var(--r-sm);padding:4px 8px;font-size:12px;
   font-family:'Noto Serif','Noto Serif KR',serif;width:150px;background:var(--paper);color:var(--ink);}
 .app .fig-tools .k{font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--dim);}
+.app .fig-hide{margin-top:6px;padding-top:6px;border-top:1px dashed var(--line);}
+.app .fig-hide .spacer{flex:1;}
 @media (max-width:1240px){ .app .rv-queues{display:none;} }
 
 /* ============================================================
@@ -21866,6 +21868,8 @@ function variantFigureNoteHTML(b){
       ${pbImageHTML(b.id, 'var', 'pb-fig')}
       <div class="rv-figact">${busy?'<span class="hx">올리는 중…</span>':fileInput}
         ${draftBtn}
+        ${(()=>{ const v = state.pbImageCache[pbImgCacheKey(b.id,'var')];
+                 return (v && typeof v==='object' && v.kind==='svg') ? `<button class="btn q sm" onclick="figDownload('${b.id}','svg')">SVG</button><button class="btn q sm" onclick="figDownload('${b.id}','png')">PNG</button>` : ''; })()}
         ${/* 장면이 있는 SVG 그림이면 한도 없이 이름표를 옮길 수 있다 (2026-09-11) */
           (()=>{ const v = state.pbImageCache[pbImgCacheKey(b.id,'var')];
                  return (v && typeof v==='object' && v.kind==='svg' && v.scene && !(state.figureDraft && state.figureDraft.bankId===b.id))
@@ -22169,10 +22173,44 @@ function figEditorHTML(d){
           : `<span class="k">${escHtml(sel.text)} — 값이라 글자는 못 고칩니다</span>`}
         ${sel.pinned ? `<button class="btn q sm" onclick="figEditHome('${escHtml(sel.id)}')">원래 자리로</button>` : ''}`
         : `<span>이름표를 <b>끌어서</b> 옮기고, 누르면 <b>화살표 키</b>로 1px씩(Shift 5px) 밉니다. 겹치면 붉게 보입니다.</span>`}
-      ${sel && /^label:/.test(sel.id) ? `<button class="btn q sm" onclick="figEditRemoveLabel()">이 글자 빼기</button>` : ''}
+      ${sel ? `<button class="btn q sm" onclick="figEditRemoveLabel()" title="${/^label:/.test(sel.id) ? '이 글자를 지웁니다' : '이름표만 숨깁니다 — 점·곡선은 남습니다'}">이 글자 빼기</button>` : ''}
       <button class="btn q sm" onclick="figEditAddLabel()" title="글자(점 이름·수식·설명)를 하나 더해 끌어다 놓습니다">＋ 글자 더하기</button>
       ${pinned ? `<button class="btn q sm" onclick="figEditReset()">전부 되돌리기</button>` : ''}
+    </div>
+    ${figEditHideBarHTML(d)}`;
+}
+/* 「불필요한 것을 지운다」 (2026-09-12 · 사용자 요청) — 요소(곡선·점·선분·원·눈금…)를 골라 숨긴다.
+   🔴 배열에서 빼지 않고 `scene.hidden` 에 표시만 한다 — 빼면 checks·pins 가 가리키는 번호가 밀린다.
+   숨긴 것은 아래 줄에 남아 「되살리기」로 돌아온다. 저장·학생 화면에도 숨긴 채로 나간다(같은 장면이니까). */
+function figEditHideBarHTML(d){
+  const els = Figure.elements(d.scene);
+  const hid = d.scene.hidden || {};
+  const hiddenIds = Object.keys(hid).filter(k => hid[k] === true);
+  const name = id => id.startsWith('lbl:') ? '이름표 · ' + ((els.find(e => e.id === id.slice(4)) || {}).name || id.slice(4))
+    : id.startsWith('label:') ? '글자 ' + (+id.split(':')[1] + 1)
+    : ((els.find(e => e.id === id) || {}).name || id);
+  const 후보 = els.filter(e => !hid[e.id]);
+  return `<div class="fig-tools fig-hide">
+      <select id="fig-hide-sel" class="fm-sel" style="max-width:220px;" ${후보.length ? '' : 'disabled'}>
+        ${후보.length ? 후보.map(e => `<option value="${escHtml(e.id)}">${escHtml(e.name)}</option>`).join('') : '<option>숨길 것이 없습니다</option>'}</select>
+      <button class="btn q sm" onclick="figEditHide(document.getElementById('fig-hide-sel').value)" ${후보.length ? '' : 'disabled'}
+        title="고른 요소를 안 그립니다 — 지우는 게 아니라 숨기는 것이라 되살릴 수 있습니다">숨기기</button>
+      ${hiddenIds.length ? `<span class="k">숨긴 것:</span> ${hiddenIds.map(id => `<button class="btn q sm" onclick="figEditHide('${escHtml(id)}', false)" title="되살리기">${escHtml(name(id))} ↺</button>`).join('')}` : ''}
+      <span class="spacer"></span>
+      <button class="btn q sm" onclick="figDownload('${escHtml(d.bankId)}', 'svg')" title="벡터 그대로 — 일러스트레이터에서 열어 고칠 수 있습니다">SVG 내려받기</button>
+      <button class="btn q sm" onclick="figDownload('${escHtml(d.bankId)}', 'png')" title="2배 크기 PNG">PNG 내려받기</button>
     </div>`;
+}
+function figEditHide(id, on){
+  const d = figEditDraft();
+  if(!d || !id) return;
+  const before = Figure.autoWindow(d.scene);
+  Figure.setHidden(d.scene, id, on !== false);
+  const after = Figure.autoWindow(d.scene);
+  /* 숨겨서 창이 달라졌으면 핀(px)은 옛 창의 자리다 — 붙들고 있으면 이름표가 엉뚱한 데 선다. 자동 배치로 되돌린다. */
+  if(JSON.stringify(before) !== JSON.stringify(after) && d.scene.pins){ delete d.scene.pins; showToast('창이 달라져 이름표를 자동 자리로 되돌렸습니다.'); }
+  if(state.figureSel === id || state.figureSel === (id || '').replace(/^lbl:/, '')) state.figureSel = null;
+  figEditRedraw(d); render();
 }
 /* 글자를 더한다 — 창 한가운데에 «A» 로 서고 곧바로 골라져 입력칸이 뜬다 (2026-09-12 · 사용자 요청).
    ⚠ 데이터 좌표(scene.labels)에 들어가므로 저장·다시 그리기에도 남는다. 핀은 끌 때 생긴다. */
@@ -22188,9 +22226,64 @@ function figEditAddLabel(){
 function figEditRemoveLabel(){
   const d = figEditDraft();
   if(!d || !state.figureSel) return;
-  if(!Figure.removeLabel(d.scene, state.figureSel)) return;
+  const id = state.figureSel;
+  if(/^label:/.test(id)){ if(!Figure.removeLabel(d.scene, id)) return; }
+  else Figure.setHidden(d.scene, 'lbl:' + id, true);        // 점·곡선·눈금의 이름표 — 요소는 두고 글자만
   state.figureSel = null;
   figEditRedraw(d); render();
+}
+/* =================== 내려받기 — SVG(벡터) · PNG(2배) (2026-09-12 · 사용자 — 「png로 저장해서 일러스트레이터로 수정」) ===================
+   SVG 가 본체다 — 일러스트레이터는 SVG 를 그대로 열어 선·글자를 만질 수 있다. PNG 는 붙여넣기용.
+   ⚠ 글꼴 — SVG 는 글꼴 파일을 안 담는다. 일러스트레이터에 Noto Serif 가 없으면 다른 세리프로 대체된다(자리는 같다).
+     PNG 는 여기서 굽는 것이라 글꼴을 «실어» 굽는다: Google Fonts 에서 woff2 를 받아 @font-face 로 SVG 안에 넣은 뒤
+     캔버스에 그린다 — 안 그러면 <img> 로 읽힌 SVG 는 바깥 글꼴을 못 써 기본 세리프로 찍힌다. 못 받으면 그냥 굽는다. */
+function figSvgFor(key){
+  const d = state.figureDraft;
+  if(d && d.bankId === key && d.scene) return Figure.renderScene(d.scene);
+  const t = figureTargetOf(key); const s = t && t.saved();
+  return s && s.svg || '';
+}
+let figFontCss = null;   // 한 번 받은 @font-face(데이터 URI) — 세션 동안 다시 안 받는다
+async function figEmbeddedFontCss(){
+  if(figFontCss !== null) return figFontCss;
+  try{
+    const css = await (await fetch('https://fonts.googleapis.com/css2?family=Noto+Serif:ital,wght@0,400;1,400&display=swap',
+      )).text();
+    /* 라틴 조각만 — 이름표는 라틴·숫자·그리스뿐이다. 한글이 섞이면 대체 글꼴로 찍힌다(드물다). */
+    const blocks = [...css.matchAll(/@font-face\s*{[^}]*}/g)].map(m => m[0]).filter(b => /\/\* latin \*\//.test(b) || !/\/\* /.test(b));
+    const out = [];
+    for(const b of blocks){
+      const url = (b.match(/url\(([^)]+\.woff2)\)/) || [])[1];
+      if(!url) continue;
+      const bin = await (await fetch(url)).arrayBuffer();
+      let s = ''; const u8 = new Uint8Array(bin); for(let i = 0; i < u8.length; i += 8192) s += String.fromCharCode(...u8.subarray(i, i + 8192));
+      out.push(b.replace(/url\([^)]+\)\s*format\([^)]+\)/, "url(data:font/woff2;base64," + btoa(s) + ") format('woff2')"));
+    }
+    figFontCss = out.join('\n');
+  }catch(e){ console.warn('글꼴을 못 실었다 — 기본 세리프로 굽는다', e); figFontCss = ''; }
+  return figFontCss;
+}
+async function figDownload(key, kind, sink){                 // sink 는 검사용 — 파일 대신 받아 간다
+  const svg = figSvgFor(key);
+  if(!svg){ showToast('내려받을 그림이 없습니다.'); return; }
+  const name = String(key || 'figure').replace(/[^\w.-]+/g, '_');
+  const save = sink || ((blob, ext) => { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name + '.' + ext; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); });
+  if(kind === 'svg'){ save(new Blob([svg], { type:'image/svg+xml' }), 'svg'); return; }
+  showToast('PNG 를 굽는 중…');
+  const css = await figEmbeddedFontCss();
+  const withFont = css ? svg.replace('<g fill="none"', '<style>' + css + '</style><g fill="none"') : svg;
+  const img = new Image();
+  const url = URL.createObjectURL(new Blob([withFont], { type:'image/svg+xml' }));
+  img.onload = () => {
+    const SCALE = 2, c = document.createElement('canvas');
+    c.width = 560 * SCALE; c.height = 430 * SCALE;
+    const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height);
+    g.drawImage(img, 0, 0, c.width, c.height);
+    URL.revokeObjectURL(url);
+    c.toBlob(b => { if(b) save(b, 'png'); else showToast('PNG 를 만들지 못했습니다.'); }, 'image/png');
+  };
+  img.onerror = () => { URL.revokeObjectURL(url); showToast('PNG 를 만들지 못했습니다 — SVG 로 받아 주세요.'); };
+  img.src = url;
 }
 /* 이미 붙어 있는 SVG 그림의 이름표를 옮긴다 — 한도 0. 같은 초안 상자를 쓰고 같은 문으로 저장한다. */
 function openFigureEditorFromSaved(bankId){
@@ -22824,7 +22917,9 @@ function variantFigureBoxHTML(v){
       <b>이 변형에 붙은 그림</b>
       ${editing ? '' : `<div class="pb-fig pb-svg">${v.image.svg}</div>`}
       <div class="rv-figact">${draftBtn}
-        ${(editing || busy) ? '' : `<button class="btn sm" onclick="openFigureEditorFromSaved('${escHtml(v.code)}')">이름표 옮기기</button>`}
+        ${(editing || busy) ? '' : `<button class="btn sm" onclick="openFigureEditorFromSaved('${escHtml(v.code)}')">이름표 옮기기</button>
+          <button class="btn q sm" onclick="figDownload('${escHtml(v.code)}','svg')" title="벡터 — 일러스트레이터에서 열립니다">SVG</button>
+          <button class="btn q sm" onclick="figDownload('${escHtml(v.code)}','png')">PNG</button>`}
         <span class="hx">다시 그리면 한도를 하나 씁니다 · 이름표 옮기기는 안 씁니다</span></div>
       ${figureDraftHTML({ id: v.code })}
       ${spec}
