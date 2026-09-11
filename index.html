@@ -876,6 +876,11 @@
 /* «다음 번호» 표 — 이 화면의 주인공이라 코드를 크게 세운다 */
 .app .ic-next{margin-top:10px;border:1px solid var(--line);border-radius:var(--r-md);
   background:var(--card);overflow:hidden;}
+.app .ic-ask{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:10px;padding:10px 12px;
+  border:1px solid var(--line);border-radius:var(--r-md);background:var(--note);}
+.app .ic-ask .hx{font-size:11px;color:var(--sub);line-height:1.6;}
+.app .ic-askmsg{flex-basis:100%;font-size:11.5px;line-height:1.7;color:var(--sub);}
+.app .ic-askmsg.ok{color:var(--ok,#2c6b3f);}
 .app .ic-nrow{display:flex;align-items:center;gap:12px;padding:11px 14px;
   border-bottom:1px solid var(--line2);}
 .app .ic-nrow:last-child{border-bottom:0;}
@@ -4088,7 +4093,9 @@ function variantsOfCode(code){ return variantsOfCodeAll(code).filter(v => !v.del
      여기 이 문은 **학생에게 나가는 길에서만** 쓴다(데일리퀴즈·오답숙제 둘뿐이다).
    ⚠ 번호 매기기(`nextVariantCode`)는 `variantsOfCodeAll` 을 본다 — 검토 대기 것도 세야
      같은 번호가 두 번 나오지 않는다. */
-function variantsLive(code){ return variantsOfCode(code).filter(v => !v.pending); }
+/* ⚠ 그림이 필요한데 아직 안 붙은 것도 안 나간다 (2026-09-11) — 강사가 고른 문항의 변형은
+   (B)로 올 수 있고, 그림 없이 나가면 학생은 「다음 그림과 같이」를 보고도 그림이 없다. */
+function variantsLive(code){ return variantsOfCode(code).filter(v => !v.pending && !(v.needsFigure && !v.image)); }
 function variantIsPending(v){ return !!(v && v.pending && !v.deleted); }
 /* 검토를 기다리는 것 전부 — 창고를 통째로 훑는다(Firestore 를 안 읽는다). */
 function pendingVariants(){
@@ -21405,6 +21412,90 @@ function icPartialHTML(raw){
      문항 코드 화면(09-03)이 먼저 있었고 창고(09-04)가 나중에 붙었다.
    🔵 **오른쪽 드로어로 연다** — 이 앱이 이미 여섯 군데서 쓰는 손버릇이고(과제·출결·클리닉·
      학생 상세·리포트), 무엇보다 **목록이 뒤에 남는다.** 코드를 여럿 훑을 때 닫고 다시 찾지 않아도 된다. */
+/* =================== 창고에서 문항 하나를 골라 변형을 «시킨다» (2026-09-11 · 사용자 요청) ===================
+   「문항창고에서 특정문제를 골라서 변형요청할 수 있게 해줘」.
+   자동 채우기(autoFillTick)는 «N 변형이 없는 것»을 저 혼자 고르지만, 여기는 강사가 고른다 —
+   이미 N01 이 있어도 N02 를 만든다. 결과는 자동 채우기와 **같은 곳**으로 간다: `variants` 에
+   `pending` 으로 들어가 「검토 › AI가 만든 변형」에서 통과시켜야 학생에게 나간다.
+
+   🔴 자동 채우기와 다른 것 하나 — **(B)·(C)를 버리지 않는다.** 고리는 그림이 필요한 변형을
+     건너뛰지만(다음 바퀴에 또 뽑히니까), 강사가 «이 문항»을 골랐을 때 「그림 필요라 버렸다」고
+     하면 한도만 나가고 아무것도 안 남는다. 그래서
+       · (C) 원본 그림 그대로 → 원본의 그림(`body.image`)을 변형에 그대로 단다
+       · (B) 새로 그려야 함 → `needsFigure` + `figureSpec` 을 들고 검토 대기로 간다.
+         ⚠ **그림이 붙기 전에는 통과도 안 되고 학생에게도 안 나간다** (approveAutoVariant · variantsLive).
+         ⚠ 창고 변형에 «초안 그려 보기»를 붙이는 길은 아직 없다 — 문제은행(pbvimg) 쪽에만 있다. 다음 일이다.
+   ⚠ 한 건에 한도 하나. 다른 AI 작업과 겹치면 비켜선다(state.aiProcessing). */
+async function requestVariantForCode(code){
+  if(state.aiProcessing){ showToast('다른 AI 작업이 진행 중입니다. 끝난 뒤 다시 눌러주세요.'); return; }
+  const body = (state.itemBody || {})[code];
+  if(!body || !body.content || !body.answer){
+    showToast('본문과 정답이 창고에 있어야 변형을 만들 수 있습니다 — ＋교재 올리기 · ＋빠른정답표'); return;
+  }
+  const used = await getAIQuotaUsed();
+  state.aiQuotaUsed = used;
+  if(used >= AI_DAILY_LIMIT){ showToast('오늘 AI 생성 한도(' + AI_DAILY_LIMIT + '건)를 모두 사용했습니다.'); return; }
+  state.aiProcessing = true;
+  state.icAsk = { code, busy:true, msg:`${code} 변형을 만드는 중… (오늘 ${used}/${AI_DAILY_LIMIT} · 13초쯤)` };
+  render();
+  try{
+    const twin = await generateTwinViaAI(body.content, body.answer, body.image || null);
+    if(!twin){
+      const 까닭 = 마지막AI오류 || '까닭을 못 받았습니다';
+      const 위쪽 = aiUpstreamKind(마지막AI오류);
+      state.icAsk = { code, msg: `${code} — 만들지 못했습니다: ${까닭}`
+        + (위쪽 ? ' (Gemini 쪽이 엎어진 것입니다 — 우리 흠이 아니니 조금 뒤에 다시 눌러주세요)' : '') };
+    }
+    else if(twin.quotaExceeded){ state.icAsk = { code, msg:`오늘 몫(${AI_DAILY_LIMIT}건)을 다 썼습니다.` }; }
+    else {
+      const vcode = nextVariantCode(code, 'N');
+      const v = { code: vcode, originCode: code, variantKind: 'N',
+                  content: twin.content, answer: twin.answer, solution: twin.solution || '',
+                  needsFigure: !!twin.needsFigure, figureSpec: twin.needsFigure ? String(twin.figureSpec || '') : '',
+                  reuseFigure: !!twin.reuseFigure,
+                  auto: true, asked: true, pending: true, createdAt: nowStamp() };
+      /* (C) — 그림은 원본 것 그대로. 원본 그림의 «참조»를 단다(드라이브 파일 하나를 둘이 가리킨다).
+         ⚠ 원본을 지울 때 이 참조도 죽는다 — 원본 그림을 지우는 문은 창고에 없으니 지금은 괜찮다. */
+      if(v.reuseFigure && body.image) v.image = body.image;
+      const ok = await dbSetDoc('variants', vcode, v);
+      if(!ok){ state.icAsk = { code, msg:`${vcode} 를 저장하지 못했습니다 — 설정 › 관리자를 봐주세요.` }; }
+      else {
+        if(!state.variants) state.variants = {};
+        (state.variants[code] = state.variants[code] || []).push(v);
+        state.variants[code].sort((a,b)=> a.code < b.code ? -1 : 1);
+        const 어디 = '<b>검토 › AI가 만든 변형</b>';
+        state.icAsk = { code, done: vcode, msg:
+          v.needsFigure ? `${vcode} 를 만들었습니다 — <b>그림을 새로 그려야 하는 변형</b>입니다. ${어디}에서 지침을 보세요. 그림이 붙기 전에는 통과할 수 없습니다.`
+          : v.reuseFigure ? `${vcode} 를 만들었습니다 — 원본 그림을 그대로 씁니다. ${어디}에서 봐주세요.`
+          : !dqAnswerable(v.content, v.answer) ? `${vcode} 를 만들었습니다 — ⚠ 정답이 ①~⑤·정수가 아니라 데일리퀴즈에는 못 나갑니다. ${어디}에서 봐주세요.`
+          : `${vcode} 를 만들었습니다 — ${어디}에서 통과시키면 학생에게 나갑니다.` };
+      }
+    }
+  }catch(e){
+    console.error('변형 요청 실패', e);
+    state.icAsk = { code, msg:`${code} — 만들지 못했습니다: ${(e && e.message) || e}` };
+  }
+  state.aiProcessing = false;
+  state.aiQuotaUsed = await getAIQuotaUsed();      // 한 건 나갔으니 «오늘 n/20» 을 새로 본다
+  render();
+}
+function icAskHTML(root){
+  const body = (state.itemBody || {})[root];
+  const 되나 = !!(body && body.content && body.answer);
+  const a = state.icAsk && state.icAsk.code === root ? state.icAsk : null;
+  const busy = !!(a && a.busy);
+  return `<div class="ic-ask">
+    <button class="btn ${busy ? '' : 'p'} sm" ${(busy || !되나 || state.aiProcessing) ? 'disabled' : ''}
+      title="${되나 ? '이 문항의 N 변형을 AI에게 하나 시킵니다 — 한도 1건 · 검토 대기로 들어갑니다' : '본문과 정답이 창고에 있어야 합니다'}"
+      onclick="requestVariantForCode('${escHtml(root)}')">${busy ? '만드는 중…' : '✦ AI 변형 만들기'}</button>
+    <span class="hx">${되나
+      ? `한도 1건 <s>·</s> 다음 번호 <b class="mono">${escHtml(nextVariantCode(root,'N'))}</b> <s>·</s> 검토를 거쳐야 학생에게 나갑니다${
+          state.aiQuotaUsed !== null ? ` <s>·</s> 오늘 <b class="mono">${state.aiQuotaUsed}/${AI_DAILY_LIMIT}</b>` : ''}`
+      : '본문과 정답이 아직 창고에 없습니다 — ＋교재 올리기 · ＋빠른정답표'}</span>
+    ${a && a.msg ? `<div class="ic-askmsg${a.done ? ' ok' : ''}">${a.msg}${a.done
+      ? ` <button class="btn q sm" onclick="goTeacherTab('review'); state.reviewQueue='pending'; selectAutoVariant('${escHtml(a.done)}')">검토로 →</button>` : ''}</div>` : ''}
+  </div>`;
+}
 function icDetailHTML(root){
   const it = root ? itemOfCode(root) : null;
   const vs = root ? variantsOfCode(root) : [];
@@ -21424,6 +21515,7 @@ function icDetailHTML(root){
             </div>`;
           }).join('')}
         </div>
+        ${icAskHTML(root)}
         ${vs.length ? `<div style="margin-top:12px;">
           ${vs.map(v=>`<div class="ic-vcard">
             <div class="ic-vh">
@@ -21431,6 +21523,7 @@ function icDetailHTML(root){
               <span class="ic-kind">${escHtml((VARIANT_KINDS.find(x=>x[0]===v.variantKind)||['','?'])[1])}</span>
               ${/* 🔴 «창고에 있다»와 «학생에게 나간다»는 다른 말이다 — 안 적으면 «있다»로 읽힌다. */''}
               ${variantIsPending(v) ? '<span class="badge late">검토 대기</span>' : ''}
+              ${v.needsFigure && !v.image ? '<span class="badge no" title="그림이 붙기 전에는 학생에게 안 나갑니다">그림 필요</span>' : ''}
               ${v.fromBook ? '<span class="ic-kind">교재가 준 것</span>' : ''}
               <span class="spacer"></span>
               <span class="ic-va">정답 <b>${escHtml(icShortAnswer(v.answer))}</b></span>
@@ -21571,12 +21664,22 @@ function autoVariantWorkHTML(v){
     <div class="cmp" style="margin-top:${답?'0':'14px'};">
       <div class="side">
         <div class="lab">원본 <b class="mono lab-code">${escHtml(v.originCode)}</b></div>
+        ${원본.image && 원본.image.url ? `<img class="pb-fig" src="${escHtml(원본.image.url)}" alt="">` : ''}
         <div class="q-body">${원본.content ? problemHTML(원본.content)
           : '(본문이 없습니다 — 문항 코드 › 교재에서 본문 채우기)'}</div>
         ${원본.answer ? `<div class="q-ans">정답 <b>${escHtml(원본.answer)}</b></div>` : ''}
       </div>
       <div class="side ai">
         <div class="lab">AI가 만든 것 <b class="mono lab-code">${escHtml(v.code)}</b></div>
+        ${/* 갈래 (2026-09-11) — 강사가 창고에서 시킨 변형은 (B)·(C)로도 온다. 고리가 만든 것은 (A)뿐이다. */''}
+        ${v.needsFigure ? `<div class="rv-fig">
+          <b>그림을 새로 그려서 붙여야 하는 변형입니다</b>
+          <span class="hx">AI가 «그림이 있어야 푸는 문제»로 만들었습니다. <b>그림이 붙기 전에는 통과할 수 없습니다.</b>
+            ⚠ 창고 변형에 그림을 붙이는 길(초안 그려 보기)은 아직 문제은행 쪽에만 있습니다 — 그때까지는 버리거나 그대로 두세요.</span>
+          <div class="rv-spec">${escHtml(v.figureSpec || '(지침이 오지 않았습니다)')}</div>
+        </div>` : v.reuseFigure ? `<div class="rv-fignote">${v.image && v.image.url ? `<img class="pb-fig" src="${escHtml(v.image.url)}" alt="">` : ''}
+          <b>왼쪽 원본 그림을 그대로</b> 씁니다 — 그림은 배치만 보여 주고 바뀐 수는 본문에 있습니다.
+          <b>그림에 적힌 수치가 본문과 어긋나지 않는지</b>만 확인해 주세요.</div>` : ''}
         <div class="q-body">${problemHTML(v.content||'(내용 없음)')}</div>
         <div class="q-ans">정답 <b>${escHtml(v.answer||'—')}</b></div>
       </div>
@@ -22650,6 +22753,9 @@ function reviewBarHTML(autos){
 async function approveAutoVariant(code){
   const v = pendingVariants().find(x => x.code === code);
   if(!v) return;
+  /* 🔴 그림이 필요한데 없는 것은 통과 못 한다 (2026-09-11) — 통과시켜도 학생에게 안 나가는데(variantsLive)
+     화면은 「창고에 넣었습니다 — 이제 학생에게 나갑니다」라고 거짓말하게 된다. */
+  if(v.needsFigure && !v.image){ showToast(code + ' 는 그림이 붙기 전에는 통과할 수 없습니다.'); return; }
   const nv = Object.assign({}, v); delete nv.pending; nv.approvedAt = nowStamp();
   const ok = await dbSetDoc('variants', code, nv);
   if(!ok){ showToast(code + ' 를 저장하지 못했습니다 — 저장이 막혀 있습니다.'); return; }

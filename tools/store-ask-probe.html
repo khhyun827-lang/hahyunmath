@@ -1,0 +1,90 @@
+<!doctype html><meta charset="utf-8"><title>store-ask-probe</title>
+<!-- 창고의 「AI 변형 만들기」를 «확장 없이» 헤드리스 크롬으로 굴려 본다 (2026-09-12).
+     실서비스(index.html)를 iframe 에 띄우고, 창고를 가짜로 채운 뒤 AI·저장을 «흉내»로 바꿔
+     (A)·(B)·(C) 세 갈래가 각각 어디로 가는지 본다. 실 DB 0줄 · 한도 0건.
+
+     node tools/serve.js
+     chrome --headless=new --hide-scrollbars --virtual-time-budget=20000 --window-size=760,900 \
+       --screenshot=out.png --dump-dom "http://127.0.0.1:8777/tools/store-ask-probe.html" | grep -o "RESULT.*" -->
+<style>html,body{margin:0;background:#fff}iframe{border:0;display:block}</style>
+<pre id="o" style="font:12px monospace;color:#333;margin:0;padding:4px;white-space:pre-wrap;">…</pre>
+<script>
+const fr=document.createElement('iframe'); fr.width=760; fr.height=820; fr.src='/index.html';
+document.body.appendChild(fr);
+const o=document.getElementById('o');
+let n=0;
+const t=setInterval(async()=>{
+  n++;
+  let ready=false;
+  try{ ready = fr.contentWindow.eval('typeof requestVariantForCode==="function" && typeof icDetailHTML==="function"'); }catch(_){}
+  if(!ready){ if(n>200){ clearInterval(t); o.textContent='RESULT timeout'; } return; }
+  clearInterval(t);
+  const w=fr.contentWindow;
+  const out = await w.eval(`(async function(){
+    const R = {};
+    state.currentUser={type:'teacher'}; state.view='teacher'; state.teacherTab='unitbank';
+    /* 가짜 창고 — 코드 셋. 하나는 정답이 없다. */
+    state.itemByCode = { 'K2-01-E-0001':{}, 'K2-01-E-0002':{}, 'K2-01-E-0003':{} };
+    state.itemBody = {
+      'K2-01-E-0001': { content:'두 점 A(1,2), B(4,6) 사이의 거리는?', answer:'5', image:{url:'https://example.invalid/a.jpg', fileId:'f1'} },
+      'K2-01-E-0002': { content:'x^2-5x+6=0 의 두 근의 합은?', answer:'5' },
+      'K2-01-E-0003': { content:'정답 없음', answer:'' } };
+    state.variants = { 'K2-01-E-0001': [ { code:'K2-01-E-0001-N01', originCode:'K2-01-E-0001', variantKind:'N', content:'있던 것', answer:'3' } ] };
+    state.aiQuotaUsed = 3;
+    /* AI·한도·저장을 흉내로 — 한 건도 안 나가고 한 줄도 안 쓴다 */
+    const 저장 = [];
+    getAIQuotaUsed = async () => 3;
+    dbSetDoc = async (c, id, d) => { 저장.push([c, id, JSON.parse(JSON.stringify(d))]); return true; };
+    let 다음 = null;
+    generateTwinViaAI = async (content, answer, image) => { R.imageSent = image; return 다음; };
+
+    state.icOpen = 'K2-01-E-0001'; render();
+    const btn = () => document.querySelector('.ic-ask button');
+    R.buttonShown = !!btn() && btn().textContent.includes('AI 변형 만들기');
+    R.nextCodeShown = /K2-01-E-0001-N02/.test(document.querySelector('.ic-ask').textContent);
+
+    /* (C) 원본 그림 그대로 */
+    다음 = { content:'두 점 A(2,3), B(5,7) 사이의 거리는?', answer:'5', solution:'1. 거리 공식', reuseFigure:true };
+    await requestVariantForCode('K2-01-E-0001');
+    R.c_saved = 저장[0] && 저장[0][1];
+    R.c_image = !!(저장[0] && 저장[0][2].image && 저장[0][2].image.fileId === 'f1');
+    R.c_pending = !!(저장[0] && 저장[0][2].pending);
+    R.c_msg = (state.icAsk && state.icAsk.msg || '').slice(0, 40);
+    R.c_inState = state.variants['K2-01-E-0001'].length === 2;
+
+    /* (B) 새로 그려야 함 — 학생에게 안 나가고, 통과도 안 된다 */
+    다음 = { content:'그림에서 f(x)=0 의 해의 합은?', answer:'7', solution:'', needsFigure:true, figureSpec:'1. 달라지는 것: 절편이 2,5 로' };
+    await requestVariantForCode('K2-01-E-0001');
+    const vB = 저장[1] && 저장[1][2];
+    R.b_saved = 저장[1] && 저장[1][1];
+    R.b_flags = vB && vB.needsFigure && vB.figureSpec.length > 0 && !vB.image;
+    R.b_notLive = !variantsLive('K2-01-E-0001').some(v => v.code === 'K2-01-E-0001-N03');
+    R.c_live_after_approve = null;
+    const n저장 = 저장.length;
+    await approveAutoVariant('K2-01-E-0001-N03');
+    R.b_approveBlocked = 저장.length === n저장 && !!state.toast;
+    /* 검토 화면에 지침이 보이나 */
+    state.teacherTab='review'; state.reviewQueue='pending'; selectAutoVariant('K2-01-E-0001-N03');
+    R.b_specShown = /절편이 2,5 로/.test(document.body.innerText) && /그림이 붙기 전에는 통과할 수 없습니다/.test(document.body.innerText);
+    R.b_origImageShown = !!document.querySelector('.cmp .side img.pb-fig');
+
+    /* (A) 글로 — 통과하면 나간다 */
+    state.teacherTab='unitbank'; render();
+    다음 = { content:'x^2-7x+12=0 의 두 근의 합은?', answer:'7', solution:'' };
+    await requestVariantForCode('K2-01-E-0002');
+    R.a_saved = 저장[2] && 저장[2][1];
+    await approveAutoVariant('K2-01-E-0002-N01');
+    R.a_live = variantsLive('K2-01-E-0002').some(v => v.code === 'K2-01-E-0002-N01');
+
+    /* 정답 없는 문항 — 단추가 잠기고 아무것도 안 나간다 */
+    state.icOpen = 'K2-01-E-0003'; render();
+    R.noAnswerDisabled = btn().disabled;
+    const before = 저장.length; await requestVariantForCode('K2-01-E-0003');
+    R.noAnswerNoCall = 저장.length === before;
+
+    state.icOpen = 'K2-01-E-0001'; render();
+    return JSON.stringify(R);
+  })()`);
+  o.textContent = 'RESULT ' + out;
+}, 100);
+</script>
