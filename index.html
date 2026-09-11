@@ -21483,8 +21483,12 @@ async function requestVariantForCode(code){
     if(!twin){
       const 까닭 = 마지막AI오류 || '까닭을 못 받았습니다';
       const 위쪽 = aiUpstreamKind(마지막AI오류);
+      /* 「Failed to fetch」는 워커가 «답을 아예 못 준» 것이다 — 터졌거나(CORS 머리 없는 1101 페이지) 연결이 끊긴 것.
+         09-12에 실제로 겪었다: 워커 코드의 TDZ 로 매 호출이 터지면서 한 건씩 태웠다. 그 뒤로 워커는 터져도 JSON 으로 까닭을 주고 한도를 돌려준다. */
+      const 못받음 = /Failed to fetch|NetworkError|Load failed/i.test(까닭);
       state.icAsk = { code, msg: `${code} — 만들지 못했습니다: ${까닭}`
-        + (위쪽 ? ' (Gemini 쪽이 엎어진 것입니다 — 우리 흠이 아니니 조금 뒤에 다시 눌러주세요)' : '') };
+        + (위쪽 ? ' (Gemini 쪽이 엎어진 것입니다 — 우리 흠이 아니니 조금 뒤에 다시 눌러주세요)' : '')
+        + (못받음 ? ' (워커가 답을 못 줬습니다 — 워커가 옛 판이거나 연결이 끊긴 것입니다. node tools/worker-check.mjs 로 판을 확인하세요)' : '') };
     }
     else if(twin.quotaExceeded){ state.icAsk = { code, msg:`오늘 몫(${AI_DAILY_LIMIT}건)을 다 썼습니다.` }; }
     else {

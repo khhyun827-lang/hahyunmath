@@ -31,7 +31,7 @@ const AI_DAILY_LIMIT = 20;
 /* 🔴 «올렸는지 짐작하지 않는다» — 이 워커는 대시보드에 붙여넣어 올리므로 밖에서는 어느 판이 도는지
    알 길이 없었다(2026-09-11에 사용자가 올리고 「도는지 확인은 못 해봤어」). /quota 가 이 값을 같이
    돌려주고 tools/worker-check.mjs 가 저장소의 값과 견준다. **프롬프트나 규칙을 바꾸면 이 날짜를 올릴 것.** */
-const WORKER_VERSION = '2026-09-12b';
+const WORKER_VERSION = '2026-09-12c';
 // 이미지 업로드는 학생도 쓴다(질의응답 사진). 비용이 드는 쪽은 Gemini라 여기는 넉넉하게,
 // 다만 «한 명이 무한히»는 막는다. 전체 상한은 걸지 않는다 — 걸면 바쁜 날 학생이 막힌다.
 const UPLOAD_PER_USER_DAILY = 200;
@@ -106,7 +106,18 @@ export default {
        학생도 토큰이 있으니 이 주소를 그대로 부를 수 있다. */
     if (url.pathname === '/admin/reset-pw') return handleAdminResetPw(request, env, corsHeaders, who.uid);
     if (url.pathname === '/admin/delete-user') return handleAdminDeleteUser(request, env, corsHeaders, who.uid);
-    return handleGeminiTwin(request, env, corsHeaders, who.uid);
+    /* 🔴 **터져도 한도는 돌려주고, 까닭은 CORS 머리를 달고 나간다** (2026-09-12).
+       Cloudflare 의 1101 페이지에는 CORS 머리가 없어 브라우저에는 「Failed to fetch」 다섯 글자만 남는다 —
+       고칠 실마리가 하나도 없고, 한도는 부르기 «전»에 세니 누를 때마다 한 건씩 나갔다(실제로 그랬다).
+       ⚠ 위쪽(Gemini)의 거절은 handleGeminiTwin 안에서 따로 되돌린다 — 여기는 «우리 코드가 터진 것»만 받는다. */
+    try {
+      return await handleGeminiTwin(request, env, corsHeaders, who.uid);
+    } catch (e) {
+      try { await refundQuota(env, 'ai', who.uid); } catch (_) {}
+      return new Response(JSON.stringify({ error: 'worker exception', detail: String((e && e.stack) || e).slice(0, 600), refunded: true }), {
+        status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
   },
 };
 
@@ -657,13 +668,6 @@ async function handleGeminiTwin(request, env, corsHeaders, uid) {
 4. 객관식 보기 ①~⑤ 는 상자 밖에, 각각 새 줄에 쓰세요.`;
   const jsonSchemaRule = `반드시 아래 JSON 형식으로만 답하세요. 다른 설명, 인사말, 코드블록 기호는 절대 포함하지 마세요.
 {"mode": "text" 또는 "figure" 또는 "reuse" (그림이 없는 문제면 언제나 "text"), "problem": "새 문제 내용 (객관식이면 보기 ①~⑤까지 이 안에 포함)", "answer": "999 이하 자연수 또는 보기 기호 ①~⑤ 중 하나", "solution": "단계별 풀이 과정을 1. 2. 3. 처럼 번호를 매겨 서술 (검토자가 정답을 검증할 수 있도록, 마크다운 기호 없이 일반 텍스트로). **여섯 단계 이내로, 각 단계는 두 줄을 넘기지 마세요.**", "figureSpec": "mode가 figure일 때만 채우고, 아니면 빈 문자열", "scene": mode가 figure이고 그림이 ①(좌표평면 위의 그림)이면 아래 [장면 형식]의 JSON 객체, 그 밖에는 null}`;
-  /* 🔵 **(B)의 그림은 쌍둥이를 만드는 «그 자리»에서 낸다** (2026-09-12 · 사용자 제안 — 「문항을 제작할 땐 답까지 산출하면서
-     모든 문제의 상황을 인지한 상태니까 그당시에 그리게 하면 더 정확」). 따로 부르는 /figure 는 네 줄 지침만 보고 그리므로
-     본문·정답과 어긋날 수 있었고, 한도도 둘 들었다. 검산은 여전히 화면(figure.js)이 한다 — 걸리면 그림 없이 (B)로 남고
-     「초안 그려 보기」가 다시 시도하는 길로 남는다. */
-  const sceneRule = hasImage ? `
-[장면 형식] — "scene" 에 넣을 것. mode가 figure이고 그림이 ①이면 **반드시** 채우세요. 새 문제의 본문·정답과 같은 수로.
-${SCENE_FORMAT}` : '';
 
   let effectiveImage = image;
   if ((!effectiveImage || typeof effectiveImage !== 'string') && imageFileId) {
@@ -674,6 +678,15 @@ ${SCENE_FORMAT}` : '';
     }
   }
   const hasImage = typeof effectiveImage === 'string' && effectiveImage.startsWith('data:');
+  /* 🔵 **(B)의 그림은 쌍둥이를 만드는 «그 자리»에서 낸다** (2026-09-12 · 사용자 제안 — 「문항을 제작할 땐 답까지 산출하면서
+     모든 문제의 상황을 인지한 상태니까 그당시에 그리게 하면 더 정확」). 따로 부르는 /figure 는 네 줄 지침만 보고 그리므로
+     본문·정답과 어긋날 수 있었고, 한도도 둘 들었다. 검산은 여전히 화면(figure.js)이 한다 — 걸리면 그림 없이 (B)로 남고
+     「초안 그려 보기」가 다시 시도하는 길로 남는다. */
+  /* 🔴 **여기가 hasImage «뒤»여야 한다** — 09-12b 에서 앞에 두어 ReferenceError(TDZ)로 **모든 쌍둥이 호출이 터졌고**,
+     한도는 부르기 전에 세니 한 번 누를 때마다 한 건씩 태웠다. 브라우저에는 CORS 머리 없는 1101 페이지라 「Failed to fetch」로만 보였다. */
+  const sceneRule = hasImage ? `
+[장면 형식] — "scene" 에 넣을 것. mode가 figure이고 그림이 ①이면 **반드시** 채우세요. 새 문제의 본문·정답과 같은 수로.
+${SCENE_FORMAT}` : '';
   /* ⚠ 그림 문항의 «변형»은 두 길 중 하나다. 모델이 고르되, 고를 «기준»을 준다.
 
      이 규칙은 두 번 뒤집혔다. 처음에는 「그림은 두고 숫자만 바꾸거나, **또는** 그림에
