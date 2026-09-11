@@ -31,7 +31,7 @@ const AI_DAILY_LIMIT = 20;
 /* 🔴 «올렸는지 짐작하지 않는다» — 이 워커는 대시보드에 붙여넣어 올리므로 밖에서는 어느 판이 도는지
    알 길이 없었다(2026-09-11에 사용자가 올리고 「도는지 확인은 못 해봤어」). /quota 가 이 값을 같이
    돌려주고 tools/worker-check.mjs 가 저장소의 값과 견준다. **프롬프트나 규칙을 바꾸면 이 날짜를 올릴 것.** */
-const WORKER_VERSION = '2026-09-12';
+const WORKER_VERSION = '2026-09-12b';
 // 이미지 업로드는 학생도 쓴다(질의응답 사진). 비용이 드는 쪽은 Gemini라 여기는 넉넉하게,
 // 다만 «한 명이 무한히»는 막는다. 전체 상한은 걸지 않는다 — 걸면 바쁜 날 학생이 막힌다.
 const UPLOAD_PER_USER_DAILY = 200;
@@ -656,7 +656,14 @@ async function handleGeminiTwin(request, env, corsHeaders, uid) {
 3. [보기] 상자가 원본에 있으면 첫 줄을 "| [보기] |" 로 두고 그 아래 줄들을 이어 쓰세요.
 4. 객관식 보기 ①~⑤ 는 상자 밖에, 각각 새 줄에 쓰세요.`;
   const jsonSchemaRule = `반드시 아래 JSON 형식으로만 답하세요. 다른 설명, 인사말, 코드블록 기호는 절대 포함하지 마세요.
-{"mode": "text" 또는 "figure" 또는 "reuse" (그림이 없는 문제면 언제나 "text"), "problem": "새 문제 내용 (객관식이면 보기 ①~⑤까지 이 안에 포함)", "answer": "999 이하 자연수 또는 보기 기호 ①~⑤ 중 하나", "solution": "단계별 풀이 과정을 1. 2. 3. 처럼 번호를 매겨 서술 (검토자가 정답을 검증할 수 있도록, 마크다운 기호 없이 일반 텍스트로). **여섯 단계 이내로, 각 단계는 두 줄을 넘기지 마세요.**", "figureSpec": "mode가 figure일 때만 채우고, 아니면 빈 문자열"}`;
+{"mode": "text" 또는 "figure" 또는 "reuse" (그림이 없는 문제면 언제나 "text"), "problem": "새 문제 내용 (객관식이면 보기 ①~⑤까지 이 안에 포함)", "answer": "999 이하 자연수 또는 보기 기호 ①~⑤ 중 하나", "solution": "단계별 풀이 과정을 1. 2. 3. 처럼 번호를 매겨 서술 (검토자가 정답을 검증할 수 있도록, 마크다운 기호 없이 일반 텍스트로). **여섯 단계 이내로, 각 단계는 두 줄을 넘기지 마세요.**", "figureSpec": "mode가 figure일 때만 채우고, 아니면 빈 문자열", "scene": mode가 figure이고 그림이 ①(좌표평면 위의 그림)이면 아래 [장면 형식]의 JSON 객체, 그 밖에는 null}`;
+  /* 🔵 **(B)의 그림은 쌍둥이를 만드는 «그 자리»에서 낸다** (2026-09-12 · 사용자 제안 — 「문항을 제작할 땐 답까지 산출하면서
+     모든 문제의 상황을 인지한 상태니까 그당시에 그리게 하면 더 정확」). 따로 부르는 /figure 는 네 줄 지침만 보고 그리므로
+     본문·정답과 어긋날 수 있었고, 한도도 둘 들었다. 검산은 여전히 화면(figure.js)이 한다 — 걸리면 그림 없이 (B)로 남고
+     「초안 그려 보기」가 다시 시도하는 길로 남는다. */
+  const sceneRule = hasImage ? `
+[장면 형식] — "scene" 에 넣을 것. mode가 figure이고 그림이 ①이면 **반드시** 채우세요. 새 문제의 본문·정답과 같은 수로.
+${SCENE_FORMAT}` : '';
 
   let effectiveImage = image;
   if ((!effectiveImage || typeof effectiveImage !== 'string') && imageFileId) {
@@ -752,6 +759,7 @@ ${safetyRule}
 ${formatRule}
 ${layoutRule}
 ${jsonSchemaRule}
+${sceneRule}
 
 [원본 문제]
 ${content}
@@ -847,54 +855,18 @@ ${answer}`;
     needsFigure,
     reuseFigure,
     figureSpec: needsFigure ? String(parsed.figureSpec || '') : '',
+    /* (B)면 함께 온 장면. 검산은 화면이 한다 — 여기서는 «꼴»만 본다(객체이고 kind 가 graph). */
+    scene: (needsFigure && parsed.scene && typeof parsed.scene === 'object' && parsed.scene.kind === 'graph') ? parsed.scene : null,
     quotaUsed: q.used, quotaLimit: q.limit,
   }), {
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   });
 }
 
-/* =================== 그림 «장면(scene)» 생성 — (B)의 초안 ===================
-
-   ⚠ 여기서 만드는 것은 **그림이 아니라 «무엇을 그릴지»를 적은 데이터**다.
-   모델에게 그리게 하면 그럴듯한데 좌표가 틀린 그림이 나오고, 그 순간 문제가 거짓이 된다.
-   그리는 것은 클라이언트의 figure.js이고, 이 응답은 그 입력일 뿐이다.
-
-   **검산은 여기서 하지 않는다.** 규칙이 두 벌이 되면 워커와 화면이 다른 판정을 내리는데,
-   막는 쪽은 화면이므로 진실도 거기 하나여야 한다 → index.html이 Figure.verifyScene()으로
-   받자마자 검문하고, 통과 못 한 초안은 버린다 (「그림 필요」에 그대로 남는다).
-
-   ⚠ 이 경로도 **하루 20건 한도를 하나 쓴다** (위 라우팅의 else-if가 /upload·/delete만 비켜 간다).
-   그래서 클라이언트는 «일괄 생성»에서 이걸 부르지 않는다 — 검토자가 「초안 그려 보기」를
-   누를 때만 부른다. 안 그러면 (B) 하나가 한도를 둘씩 먹는다. */
-
-async function handleFigureScene(request, env, corsHeaders, uid) {
-  let body;
-  try {
-    body = await request.json();
-  } catch (e) {
-    return new Response(JSON.stringify({ error: 'invalid json' }), {
-      status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
-  }
-  const { spec, content, image, imageFileId } = body;
-  if (!spec) {
-    return new Response(JSON.stringify({ error: 'missing spec' }), {
-      status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
-  }
-
-  let effectiveImage = image;
-  if ((!effectiveImage || typeof effectiveImage !== 'string') && imageFileId) {
-    try { effectiveImage = await fetchDriveFileAsDataUrl(imageFileId, env); }
-    catch (e) { console.error('drive image fetch failed', e); }
-  }
-  const hasImage = typeof effectiveImage === 'string' && effectiveImage.startsWith('data:');
-
-  /* 스키마는 figure.js 머리말과 **같은 것**이어야 한다. 한쪽만 고치면 조용히 어긋난다.
-     여기 적는 것은 «모델에게 시킬 만큼»으로 줄인 판이다 — v1에서 실제로 쓰는 갈래만 남겼다. */
-  const schemaRule = `아래 JSON 형식으로만 답하세요. 설명·인사말·코드블록 기호를 절대 붙이지 마세요.
-
-{"kind": "graph" 또는 "unsupported",
+/* 장면(scene) 형식 — «무엇을 그릴지»의 데이터. 🔴 두 곳이 같은 글을 본다: (1) 쌍둥이를 만들 때 (B)면 함께 내고,
+   (2) 「초안 그려 보기」/「다시 그려 보기」로 지침만 보고 따로 낸다. 한 벌만 고치면 조용히 어긋난다.
+   스키마의 진실은 figure.js 머리말이다 — 여기는 «모델에게 시킬 만큼»으로 줄인 판. */
+const SCENE_FORMAT = `{"kind": "graph" 또는 "unsupported",
  "reason": "kind가 unsupported일 때만, 왜 못 그리는지 한 문장",
  "curves": [{"expr": "x에 대한 산술식", "label": "y=f(x)"}],
  "points": [{"x": 숫자, "curve": 곡선번호, "dot": true, "dropTo": "axis" 또는 null, "label": "P", "labelPos": "above"}],
@@ -951,6 +923,49 @@ async function handleFigureScene(request, env, corsHeaders, uid) {
 지도·구역도·인접 관계도 · 대진표·수형도 · 입체도형 · 사진이나 실물 그림 · 표 ·
 좌표평면이 **없는** 도형(좌표 없이 길이·각만 적힌 삼각형, 전개도) · 좌표를 계산해 낼 수 없는 그림.
 **그럴듯하게 비슷한 것을 지어내지 마세요.** 못 그린다고 답하면 사람이 그립니다 — 그것이 옳습니다.`;
+
+/* =================== 그림 «장면(scene)» 생성 — (B)의 초안 ===================
+
+   ⚠ 여기서 만드는 것은 **그림이 아니라 «무엇을 그릴지»를 적은 데이터**다.
+   모델에게 그리게 하면 그럴듯한데 좌표가 틀린 그림이 나오고, 그 순간 문제가 거짓이 된다.
+   그리는 것은 클라이언트의 figure.js이고, 이 응답은 그 입력일 뿐이다.
+
+   **검산은 여기서 하지 않는다.** 규칙이 두 벌이 되면 워커와 화면이 다른 판정을 내리는데,
+   막는 쪽은 화면이므로 진실도 거기 하나여야 한다 → index.html이 Figure.verifyScene()으로
+   받자마자 검문하고, 통과 못 한 초안은 버린다 (「그림 필요」에 그대로 남는다).
+
+   ⚠ 이 경로도 **하루 20건 한도를 하나 쓴다** (위 라우팅의 else-if가 /upload·/delete만 비켜 간다).
+   그래서 클라이언트는 «일괄 생성»에서 이걸 부르지 않는다 — 검토자가 「초안 그려 보기」를
+   누를 때만 부른다. 안 그러면 (B) 하나가 한도를 둘씩 먹는다. */
+
+async function handleFigureScene(request, env, corsHeaders, uid) {
+  let body;
+  try {
+    body = await request.json();
+  } catch (e) {
+    return new Response(JSON.stringify({ error: 'invalid json' }), {
+      status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+  const { spec, content, image, imageFileId } = body;
+  if (!spec) {
+    return new Response(JSON.stringify({ error: 'missing spec' }), {
+      status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+
+  let effectiveImage = image;
+  if ((!effectiveImage || typeof effectiveImage !== 'string') && imageFileId) {
+    try { effectiveImage = await fetchDriveFileAsDataUrl(imageFileId, env); }
+    catch (e) { console.error('drive image fetch failed', e); }
+  }
+  const hasImage = typeof effectiveImage === 'string' && effectiveImage.startsWith('data:');
+
+  /* 스키마는 figure.js 머리말과 **같은 것**이어야 한다. 한쪽만 고치면 조용히 어긋난다.
+     여기 적는 것은 «모델에게 시킬 만큼»으로 줄인 판이다 — v1에서 실제로 쓰는 갈래만 남겼다. */
+  const schemaRule = `아래 JSON 형식으로만 답하세요. 설명·인사말·코드블록 기호를 절대 붙이지 마세요.
+
+${SCENE_FORMAT}`;
 
   const prompt = `당신은 고등학교 수학 문제의 그림을 «좌표평면 위의 함수 그래프와 도형»으로 옮겨 적는 사람입니다.
 아래는 원본 문제의 그림${hasImage ? '(첨부)' : ''}과, 그 그림을 어떻게 바꿔 그려야 하는지 적은 지침,

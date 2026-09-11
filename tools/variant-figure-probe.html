@@ -82,6 +82,17 @@ const t=setInterval(async()=>{
     state.variants[ROOT].push(vb);
     R.noImgFaceHidden = !dqFaces(b).some(f => f.face === vb.code);
 
+    /* 문제은행 쪽 — 쌍둥이와 함께 온 장면이 applyTwinToBank 에서 바로 붙는다 (2026-09-12) */
+    const kv = {}; dbSet = async (k, val) => { kv[k] = JSON.parse(JSON.stringify(val)); return true; };
+    /* 둘째 호출이 dropVariantFigure 를 타므로 읽기·지우기도 흉내로 — 실 DB 에 한 줄도 안 닿게 */
+    dbGet = async (k) => kv[k] || null; dbDelete = async (k) => { delete kv[k]; return true; }; deleteFromDrive = () => {};
+    const bk = { id:'bank9', itemCode: ROOT, hasImage:true, hasVariantImage:false };
+    await applyTwinToBank(bk, { content:'변형', answer:'7', solution:'', needsFigure:true, figureSpec:'절편 2,5',
+      scene:{ kind:'graph', curves:[{expr:'-(x-2)*(x-5)', label:'y=f(x)'}], xTicks:[2,5], checks:[{type:'root',curve:0,x:2},{type:'root',curve:0,x:5}] } });
+    R.bank_inline = bk.hasVariantImage === true && !!(kv['pbvimg:bank9'] && kv['pbvimg:bank9'].kind === 'svg') && !bk.variantSceneFail;
+    await applyTwinToBank(bk, { content:'변형2', answer:'7', solution:'', needsFigure:true, figureSpec:'절편 2,5',
+      scene:{ kind:'graph', curves:[{expr:'-(x-2)*(x-6)', label:'y=f(x)'}], xTicks:[2,5], checks:[{type:'root',curve:0,x:5}] } });
+    R.bank_fail = bk.hasVariantImage === false && /x=5/.test(bk.variantSceneFail || '');
     /* 창고 드로어 카드에 그림이 보인다 */
     state.teacherTab='unitbank'; state.icOpen = ROOT; render();
     R.drawerImg = !!document.querySelector('.ic-vcard .pb-svg svg');

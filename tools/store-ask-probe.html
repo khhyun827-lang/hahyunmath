@@ -68,11 +68,31 @@ const t=setInterval(async()=>{
     R.b_specShown = /절편이 2,5 로/.test(document.body.innerText) && /그림이 붙기 전에는 통과할 수 없습니다/.test(document.body.innerText);
     R.b_origImageShown = !!document.querySelector('.cmp .side img.pb-fig');
 
+    /* (B) 인데 장면이 «함께» 왔다 — 검산을 통과하면 그 자리에서 그림이 붙는다 (2026-09-12) */
+    state.teacherTab='unitbank'; state.icOpen='K2-01-E-0001'; render();
+    다음 = { content:'그림에서 g(x)=0 의 두 근의 합은?', answer:'7', solution:'', needsFigure:true, figureSpec:'절편 2,5',
+            scene:{ kind:'graph', curves:[{expr:'-(x-2)*(x-5)', label:'y=g(x)'}], xTicks:[2,5], checks:[{type:'root',curve:0,x:2},{type:'root',curve:0,x:5}] } };
+    await requestVariantForCode('K2-01-E-0001');
+    const vS = 저장[저장.length-1][2];
+    R.inline_saved = vS.code === 'K2-01-E-0001-N04' && !!(vS.image && vS.image.kind === 'svg' && vS.image.withTwin);
+    R.inline_msg = /그림까지 함께/.test(state.icAsk.msg);
+    R.inline_live_after_approve = false;
+    await approveAutoVariant('K2-01-E-0001-N04');
+    R.inline_live_after_approve = variantsLive('K2-01-E-0001').some(v => v.code === 'K2-01-E-0001-N04');
+    /* (B) 인데 함께 온 장면이 검산에 걸렸다 — 그림 없이 남고 까닭이 보인다 */
+    state.icOpen='K2-01-E-0001'; render();
+    다음 = { content:'걸리는 것', answer:'7', solution:'', needsFigure:true, figureSpec:'절편 2,5',
+            scene:{ kind:'graph', curves:[{expr:'-(x-2)*(x-6)', label:'y=g(x)'}], xTicks:[2,5], checks:[{type:'root',curve:0,x:5}] } };
+    await requestVariantForCode('K2-01-E-0001');
+    const vF = 저장[저장.length-1][2];
+    R.fail_noImage = !vF.image && /x=5에서 x축을 안 만난다/.test(vF.sceneFail || '');
+    state.teacherTab='review'; state.reviewQueue='pending'; selectAutoVariant(vF.code);
+    R.fail_shown = /검산에 걸렸습니다/.test(document.body.innerText);
     /* (A) 글로 — 통과하면 나간다 */
     state.teacherTab='unitbank'; render();
     다음 = { content:'x^2-7x+12=0 의 두 근의 합은?', answer:'7', solution:'' };
     await requestVariantForCode('K2-01-E-0002');
-    R.a_saved = 저장[2] && 저장[2][1];
+    R.a_saved = (저장.find(x => x[1]==='K2-01-E-0002-N01')||[])[1];
     await approveAutoVariant('K2-01-E-0002-N01');
     R.a_live = variantsLive('K2-01-E-0002').some(v => v.code === 'K2-01-E-0002-N01');
 
