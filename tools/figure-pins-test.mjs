@@ -103,6 +103,53 @@ console.log('⑥ 겹침');
   ok(hits.some(h => h.includes('curve:0') && h.includes('point:0')), '같은 자리에 두면 겹침으로 잡힌다');
 }
 
+
+console.log('⑧ 장면 v2 — 좌표평면 위의 도형');
+{
+  const geo = () => ({ kind:'graph',
+    polygons:[{ pts:[[0,0],[4,0],[4,3]], fill:true, label:'S' }], segments:[{ from:[0,0], to:[4,3], label:'c' }],
+    circles:[{ c:[2,1.5], r:2.5, label:'C' }], angles:[{ at:[4,0], from:[0,0], to:[4,3], right:true }],
+    points:[{ x:0, y:0, label:'A', labelPos:'left' }, { x:4, y:3, label:'B', labelPos:'above' }],
+    checks:[{ type:'dist', a:[0,0], b:[4,3], d:5 }, { type:'right', at:[4,0], from:[0,0], to:[4,3] },
+            { type:'oncircle', circle:0, p:[0,0] }, { type:'area', polygon:0, a:6 },
+            { type:'midpoint', m:[2,1.5], a:[0,0], b:[4,3] }, { type:'collinear', pts:[[0,0],[2,1.5],[4,3]] }] });
+  const v = F.verifyScene(geo());
+  ok(v.ok, '도형 검산 여섯 가지가 다 통과한다 — ' + v.failures.map(x => x.msg).join(' / '));
+  const w = F.autoWindow(geo());
+  const sx = 480 / (w.xRange[1] - w.xRange[0]), sy = 362 / (w.yRange[1] - w.yRange[0]);
+  ok(Math.abs(sx - sy) < 1e-9, '도형이 있으면 x·y 한 칸이 같은 px 다 (원이 원으로)');
+  const g2 = scene(); const w2 = F.autoWindow(g2);
+  ok(Math.abs(480 / (w2.xRange[1] - w2.xRange[0]) - 362 / (w2.yRange[1] - w2.yRange[0])) > 1e-6, '함수 그래프만 있으면 예전처럼 창을 따로 잡는다');
+  ok(F.hasShapes(Object.assign(scene(), { equalAxes:true })) && !F.hasShapes(Object.assign(geo(), { equalAxes:false })), 'equalAxes 로 강제·해제');
+  const svg = F.renderScene(geo());
+  ok(/<circle cx=/.test(svg) && /fill-opacity="0.08"/.test(svg) && (svg.match(/<path/g) || []).length >= 6, '원·칠한 다각형·선분·직각 표시가 그려진다');
+  ok(F.layoutLabels(geo()).map(l => l.id).join(' ').includes('poly:0 seg:0 circle:0 point:0 point:1'), '도형 이름표에 id 가 있다');
+  const bad = geo(); bad.checks = [{ type:'dist', a:[0,0], b:[4,3], d:6 }];
+  ok(!F.verifyScene(bad).ok && /6가 아니다/.test(F.verifyScene(bad).failures[0].msg), '거리가 틀리면 문다');
+  const bad2 = geo(); bad2.checks = [{ type:'right', at:[4,0], from:[0,0], to:[5,4] }];   // (-4,0)·(1,4) ≠ 0
+  ok(!F.verifyScene(bad2).ok, '직각이 아니면 문다');
+  const bad3 = geo(); bad3.checks = [{ type:'oncircle', circle:0, p:[9,9] }];
+  ok(!F.verifyScene(bad3).ok, '원 밖의 점이면 문다');
+  const bad4 = geo(); bad4.polygons[0].pts = [[0,0],[4,0]];
+  ok(!F.verifyScene(bad4).ok && /셋 미만/.test(F.verifyScene(bad4).failures.map(x => x.msg).join()), '꼭짓점 둘짜리 다각형은 문다');
+  const sc = geo();
+  ok(F.setLabelText(sc, 'seg:0', 'AB') && sc.segments[0].label === 'AB' && F.setLabelText(sc, 'circle:0', 'O') && sc.circles[0].label === 'O', '도형 이름표 글자를 고친다');
+}
+
+console.log('⑨ 글자 더하기·빼기');
+{
+  const sc = scene();
+  const id = F.addLabel(sc, 'AB');
+  ok(id === 'label:0' && sc.labels.length === 1 && sc.labels[0].text === 'AB', '창 한가운데에 글자가 선다');
+  const w0 = F.autoWindow(scene()), w1 = F.autoWindow(sc);
+  ok(w0.xRange[0] === w1.xRange[0] && w0.yRange[1] === w1.yRange[1], '가운데라 창이 안 넓어진다');
+  const id2 = F.addLabel(sc, 'CD');
+  sc.pins = F.pinAll(sc); sc.pins.at[id2] = { x:50, y:50, anchor:'end' };
+  ok(F.removeLabel(sc, id) && sc.labels.length === 1 && sc.labels[0].text === 'CD', '첫째를 빼면 둘째가 남는다');
+  ok(sc.pins.at['label:0'] && sc.pins.at['label:0'].x === 50 && !sc.pins.at['label:1'], '뒤 번호의 핀이 한 칸 당겨진다');
+  ok(!F.removeLabel(sc, 'curve:0') && !F.removeLabel(sc, 'label:9'), '자유 글자가 아닌 것은 못 뺀다');
+}
+
 console.log('⑦ 망가뜨려 무는지');
 {
   /* 핀을 «적용»하는 자리를 끊어 놓으면 ② 가 물어야 한다 — 여기서는 같은 판정을 흉내 내어 확인한다 */

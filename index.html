@@ -972,7 +972,10 @@
 .app .rv-draft.no > b{color:var(--no);}
 .app .rv-draftfail{margin:6px 0 0;padding-left:17px;font-size:11.5px;line-height:1.8;color:var(--no);}
 /* 그림 이름표 편집기 (2026-09-11 · docs/그림-편집기-계획.md). 잡기 상자는 figure.js 가 편집 모드에서만 깐다. */
-.app .fig-edit svg{touch-action:none;user-select:none;-webkit-user-select:none;}
+/* 🔴 편집기의 그림은 «한눈에» 들어와야 한다 (2026-09-12 · 사용자 — 「도형이 너무 크게 그려져서 한눈에 보이지가 않아」).
+   .pb-svg svg 의 width:100% 가 검토 화면 폭을 다 먹어 세로 스크롤이 생겼다. 높이를 잡고 폭은 따라오게 한다. */
+.app .fig-edit svg{touch-action:none;user-select:none;-webkit-user-select:none;
+  width:auto;height:auto;max-width:100%;max-height:min(58vh,380px);display:block;margin:0 auto;}
 .app .fig-edit g[data-lbl]{cursor:grab;}
 .app .fig-edit g[data-lbl] rect{fill:transparent;stroke:none;}
 .app .fig-edit g[data-lbl]:hover rect{fill:rgba(0,0,0,.04);}
@@ -22110,7 +22113,7 @@ function figEditMark(){
     if(a.x0 < b.x1 && b.x0 < a.x1 && a.y0 < b.y1 && b.y0 < a.y1){ a.g.classList.add('hit'); b.g.classList.add('hit'); }
   }
 }
-const FIG_ID_KO = { curve:'곡선 이름', point:'점 이름', xtick:'x눈금', ytick:'y눈금', label:'라벨' };
+const FIG_ID_KO = { curve:'곡선 이름', point:'점 이름', xtick:'x눈금', ytick:'y눈금', label:'글자', seg:'선분 이름', poly:'도형 이름', circle:'원 이름', angle:'각 이름' };
 function figLabelName(l){
   if(l.id === 'axis:x') return 'x축 이름'; if(l.id === 'axis:y') return 'y축 이름'; if(l.id === 'axis:origin') return '원점';
   const [k, i] = l.id.split(':');
@@ -22131,8 +22134,28 @@ function figEditorHTML(d){
           : `<span class="k">${escHtml(sel.text)} — 값이라 글자는 못 고칩니다</span>`}
         ${sel.pinned ? `<button class="btn q sm" onclick="figEditHome('${escHtml(sel.id)}')">원래 자리로</button>` : ''}`
         : `<span>이름표를 <b>끌어서</b> 옮기고, 누르면 <b>화살표 키</b>로 1px씩(Shift 5px) 밉니다. 겹치면 붉게 보입니다.</span>`}
+      ${sel && /^label:/.test(sel.id) ? `<button class="btn q sm" onclick="figEditRemoveLabel()">이 글자 빼기</button>` : ''}
+      <button class="btn q sm" onclick="figEditAddLabel()" title="글자(점 이름·수식·설명)를 하나 더해 끌어다 놓습니다">＋ 글자 더하기</button>
       ${pinned ? `<button class="btn q sm" onclick="figEditReset()">전부 되돌리기</button>` : ''}
     </div>`;
+}
+/* 글자를 더한다 — 창 한가운데에 «A» 로 서고 곧바로 골라져 입력칸이 뜬다 (2026-09-12 · 사용자 요청).
+   ⚠ 데이터 좌표(scene.labels)에 들어가므로 저장·다시 그리기에도 남는다. 핀은 끌 때 생긴다. */
+function figEditAddLabel(){
+  const d = figEditDraft();
+  if(!d) return;
+  const id = Figure.addLabel(d.scene, 'A');
+  state.figureSel = id;
+  figEditRedraw(d); render();
+  const inp = document.querySelector('.fig-tools input');
+  if(inp){ inp.focus(); inp.select(); }
+}
+function figEditRemoveLabel(){
+  const d = figEditDraft();
+  if(!d || !state.figureSel) return;
+  if(!Figure.removeLabel(d.scene, state.figureSel)) return;
+  state.figureSel = null;
+  figEditRedraw(d); render();
 }
 /* 이미 붙어 있는 SVG 그림의 이름표를 옮긴다 — 한도 0. 같은 초안 상자를 쓰고 같은 문으로 저장한다. */
 function openFigureEditorFromSaved(bankId){

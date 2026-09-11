@@ -61,6 +61,29 @@
    xTicks와 points는 **자동으로 «창 안에 들어오는가»가 검사된다** — 「반드시 표시할 값」이
    화면 밖에 있으면 그 그림은 지침을 안 지킨 것이다.
 
+   ## 장면 스키마 v2 — 좌표평면 위의 도형 (2026-09-12 · 사용자 — 「좌표화된 도형의 상황도 충분히 할 수 있지 않아?」)
+
+   위 v1 에 아래 배열을 **더한다** (kind 는 그대로 'graph'. 곡선이 없어도 된다):
+
+     segments: [ { from:[0,0], to:[4,3], dash:false, label:'AB', arrow:false } ],
+     polygons: [ { pts:[[0,0],[4,0],[4,3]], fill:true, label:'S' } ],      // 닫힌 도형. fill 이면 옅게 칠한다
+     circles:  [ { c:[2,1], r:2, dash:false, label:'C' } ],
+     angles:   [ { at:[4,0], from:[0,0], to:[4,3], right:true, label:'' } ],   // right 면 직각 표시(작은 네모), 아니면 호
+     points:   [ { x:4, y:3, label:'A', labelPos:'above' } ],                  // y 를 주면 곡선과 무관한 점이다
+
+   🔴 **도형이 하나라도 있으면 x·y 축의 비율을 같게 잡는다** (equalAxes). 안 그러면 원이 타원으로,
+     직각이 예각으로 보인다. 함수 그래프만 있을 때는 예전처럼 창을 따로 잡는다 — 포물선은 눌러도 된다.
+     scene.equalAxes 로 강제할 수도 있다.
+
+   checks 에 더해진 것:
+     { type:'dist',      a:[0,0], b:[4,3], d:5 }                 |AB| = 5
+     { type:'oncircle',  circle:0, p:[4,1] }                     점이 원 위에 있다
+     { type:'right',     at:[4,0], from:[0,0], to:[4,3] }        ∠ 가 직각이다
+     { type:'collinear', pts:[[0,0],[2,1],[4,2]] }               세 점이 한 직선 위
+     { type:'midpoint',  m:[2,1.5], a:[0,0], b:[4,3] }           중점
+     { type:'area',      polygon:0, a:6 }                        다각형 넓이
+     { type:'oncurve',   curve:0, p:[1,-5] }                     점이 곡선 위 (value 와 같다)
+
    ## 식(expr)
 
    `Function`도 `eval`도 쓰지 않는다. 모델이 낸 문자열을 그대로 실행하면
@@ -195,7 +218,7 @@
      손으로 그릴 때 제일 오래 걸리는 일이 이것이다 — 산수가 아니라 «어디까지 보여 줄까».
      규칙: ① 이름 붙은 값(눈금·점·checks의 x)은 반드시 들어온다
            ② 곡선도 되도록 담되, 가파른 포물선 하나 때문에 나머지가 납작해지지 않게 **가둔다** */
-  function autoWindow(scene) {
+  function autoWindow(scene, opt) {
     var cs = compileCurves(scene);
     var xs = [], ys = [];
 
@@ -211,6 +234,11 @@
       if (typeof ck.y === 'number') ys.push(ck.y);
     });
     (scene.labels || []).forEach(function (l) { xs.push(l.x); ys.push(l.y); });
+    /* v2 — 도형의 끝점·꼭짓점·원의 네 끝 */
+    (scene.segments || []).forEach(function (s) { [s.from, s.to].forEach(function (p) { if (p) { xs.push(p[0]); ys.push(p[1]); } }); });
+    (scene.polygons || []).forEach(function (pg) { (pg.pts || []).forEach(function (p) { xs.push(p[0]); ys.push(p[1]); }); });
+    (scene.circles || []).forEach(function (c) { if (c.c) { xs.push(c.c[0] - c.r); xs.push(c.c[0] + c.r); ys.push(c.c[1] - c.r); ys.push(c.c[1] + c.r); } });
+    (scene.angles || []).forEach(function (a) { [a.at, a.from, a.to].forEach(function (p) { if (p) { xs.push(p[0]); ys.push(p[1]); } }); });
     xs.push(0); ys.push(0);                              // 원점은 늘 보인다
 
     var x0 = Math.min.apply(null, xs), x1 = Math.max.apply(null, xs);
@@ -253,7 +281,28 @@
     var padY = (hi - lo) * 0.16;
     var yRange = scene.yRange ? scene.yRange.slice() : [lo - padY, hi + padY];
 
+    /* 🔴 도형이 있으면 «한 칸»이 가로세로 같은 px 여야 한다 — 원이 원으로, 직각이 직각으로 보이려면.
+       좁은 쪽 범위를 넓혀 맞춘다(잘라 내지 않는다 — 잘라 내면 「반드시 보일 값」이 밖으로 나간다). */
+    if (hasShapes(scene)) {
+      var o2 = opt || {}, W = o2.width || 560, H = o2.height || 430, pad = o2.pad || { l: 38, r: 42, t: 30, b: 38 };
+      var plotW = W - pad.l - pad.r, plotH = H - pad.t - pad.b;
+      var sx = plotW / (xRange[1] - xRange[0]), sy = plotH / (yRange[1] - yRange[0]);
+      if (sx > sy) { var needX = plotW / sy, mx = (xRange[0] + xRange[1]) / 2; xRange = [mx - needX / 2, mx + needX / 2]; }
+      else if (sy > sx) { var needY = plotH / sx, my = (yRange[0] + yRange[1]) / 2; yRange = [my - needY / 2, my + needY / 2]; }
+    }
+
     return { xRange: xRange, yRange: yRange };
+  }
+  function hasShapes(scene) {
+    if (scene.equalAxes === true) return true;
+    if (scene.equalAxes === false) return false;
+    return !!((scene.segments || []).length || (scene.polygons || []).length || (scene.circles || []).length || (scene.angles || []).length);
+  }
+  function dist(a, b) { return Math.hypot(a[0] - b[0], a[1] - b[1]); }
+  function polyArea(pts) {
+    var s = 0;
+    for (var i = 0; i < pts.length; i++) { var p = pts[i], q = pts[(i + 1) % pts.length]; s += p[0] * q[1] - q[0] * p[1]; }
+    return Math.abs(s) / 2;
   }
 
   function pointY(pt, cs) {
@@ -267,7 +316,7 @@
   function verifyScene(scene, opt) {
     var o = opt || {};
     var cs = compileCurves(scene);
-    var win = autoWindow(scene);
+    var win = autoWindow(scene, o);
     var span = Math.max(Math.abs(win.yRange[1] - win.yRange[0]), 1);
     var tol = o.tol != null ? o.tol : 1e-4 * span;
     var fails = [];
@@ -309,10 +358,47 @@
         }
         if (tot && bad > tot * 0.05)
           fails.push({ type: 'convex', msg: '곡선' + (ck.curve || 0) + '의 볼록 방향이 «' + ck.dir + '»가 아니다' });
+      } else if (ck.type === 'dist') {
+        var dd = dist(ck.a, ck.b);
+        if (!(Math.abs(dd - ck.d) <= tol)) fails.push({ type: 'dist', msg: '두 점 (' + ck.a + ')·(' + ck.b + ') 사이가 ' + fmt(ck.d) + '가 아니다 (' + fmt(dd) + ')' });
+      } else if (ck.type === 'oncircle') {
+        var cc = (scene.circles || [])[ck.circle || 0];
+        if (!cc) { fails.push({ type: 'oncircle', msg: '원 ' + (ck.circle || 0) + '이 없다' }); return; }
+        var dr = dist(ck.p, cc.c) - cc.r;
+        if (!(Math.abs(dr) <= tol)) fails.push({ type: 'oncircle', msg: '점 (' + ck.p + ')이 원' + (ck.circle || 0) + ' 위에 없다 (반지름과 차 ' + fmt(dr) + ')' });
+      } else if (ck.type === 'right') {
+        var u = [ck.from[0] - ck.at[0], ck.from[1] - ck.at[1]], w2 = [ck.to[0] - ck.at[0], ck.to[1] - ck.at[1]];
+        var dot = u[0] * w2[0] + u[1] * w2[1], nn = Math.hypot(u[0], u[1]) * Math.hypot(w2[0], w2[1]) || 1;
+        if (!(Math.abs(dot / nn) <= 1e-4)) fails.push({ type: 'right', msg: '(' + ck.at + ')에서의 각이 직각이 아니다' });
+      } else if (ck.type === 'collinear') {
+        var p0 = ck.pts[0], p1 = ck.pts[1], bad2 = false;
+        for (var k = 2; k < ck.pts.length; k++) {
+          var cr = (p1[0] - p0[0]) * (ck.pts[k][1] - p0[1]) - (p1[1] - p0[1]) * (ck.pts[k][0] - p0[0]);
+          if (Math.abs(cr) > tol * 10) bad2 = true;
+        }
+        if (bad2) fails.push({ type: 'collinear', msg: '점들이 한 직선 위에 있지 않다: ' + JSON.stringify(ck.pts) });
+      } else if (ck.type === 'midpoint') {
+        var mm = [(ck.a[0] + ck.b[0]) / 2, (ck.a[1] + ck.b[1]) / 2];
+        if (!(dist(mm, ck.m) <= tol)) fails.push({ type: 'midpoint', msg: '(' + ck.m + ')이 (' + ck.a + ')·(' + ck.b + ')의 중점이 아니다 (' + mm + ')' });
+      } else if (ck.type === 'area') {
+        var pg = (scene.polygons || [])[ck.polygon || 0];
+        if (!pg) { fails.push({ type: 'area', msg: '다각형 ' + (ck.polygon || 0) + '이 없다' }); return; }
+        var ar = polyArea(pg.pts || []);
+        if (!(Math.abs(ar - ck.a) <= tol * 10)) fails.push({ type: 'area', msg: '다각형' + (ck.polygon || 0) + '의 넓이가 ' + fmt(ck.a) + '가 아니다 (' + fmt(ar) + ')' });
+      } else if (ck.type === 'oncurve') {
+        var fc = fn(ck.curve || 0);
+        if (!fc) return;
+        var vv = fc(ck.p[0]);
+        if (!(Math.abs(vv - ck.p[1]) <= tol)) fails.push({ type: 'oncurve', msg: '점 (' + ck.p + ')이 곡선' + (ck.curve || 0) + ' 위에 없다 (' + fmt(vv) + ')' });
       } else {
         fails.push({ type: 'unknown', msg: '모르는 검사 «' + ck.type + '»' });
       }
     });
+    /* 도형의 꼭짓점·끝점도 «반드시 보일 값»이다 */
+    var inWin = function (p) { return p[0] >= win.xRange[0] && p[0] <= win.xRange[1] && p[1] >= win.yRange[0] && p[1] <= win.yRange[1]; };
+    (scene.segments || []).forEach(function (s, i) { ran++; if (!s.from || !s.to) fails.push({ type: 'shape', msg: '선분 ' + i + '에 from/to 가 없다' }); else if (!inWin(s.from) || !inWin(s.to)) fails.push({ type: 'visible', msg: '선분 ' + i + '이 창 밖이다' }); });
+    (scene.polygons || []).forEach(function (pg, i) { ran++; if (!pg.pts || pg.pts.length < 3) fails.push({ type: 'shape', msg: '다각형 ' + i + '의 꼭짓점이 셋 미만이다' }); else if (!pg.pts.every(inWin)) fails.push({ type: 'visible', msg: '다각형 ' + i + '이 창 밖이다' }); });
+    (scene.circles || []).forEach(function (c, i) { ran++; if (!c.c || !(c.r > 0)) fails.push({ type: 'shape', msg: '원 ' + i + '에 중심이나 반지름이 없다' }); });
 
     /* 「반드시 표시할 값」이 창 밖이면 그린 것과 시킨 것이 다르다 — 자동으로 본다. */
     (scene.xTicks || []).forEach(function (v) {
@@ -447,7 +533,7 @@
     var o = opt || {};
     var W = o.width || 560, H = o.height || 430;
     var pad = o.pad || { l: 38, r: 42, t: 30, b: 38 };
-    var win = autoWindow(scene);
+    var win = autoWindow(scene, { width: W, height: H, pad: pad });
     var xr = win.xRange, yr = win.yRange;
     var cs = compileCurves(scene);
     var plotW = W - pad.l - pad.r, plotH = H - pad.t - pad.b;
@@ -522,6 +608,78 @@
       lab('ytick:' + i, ox - 10, py + 6, fmt(v), 'end', 17, false);
     });
 
+    /* 축선은 잉크다 — 도형 이름표보다 먼저 넣어야 원 이름이 y축 위에 앉지 않는다. */
+    for (var ax1 = pad.l - 6; ax1 <= W - pad.r + 12; ax1 += 8) ink.push([ax1, oy]);
+    for (var ay1 = pad.t - 12; ay1 <= H - pad.b + 6; ay1 += 8) ink.push([ox, ay1]);
+    /* 점이 «있을 자리»를 먼저 잉크로 넣는다 — 점은 나중에 그리지만(맨 위에 보이게), 도형 이름표가
+       그 자리를 피해야 한다. 점 이름표의 집도 같이(글자만 어림). */
+    (scene.points || []).forEach(function (pt) {
+      var y0 = pointY(pt, cs);
+      if (!isFinite(y0)) return;
+      var qx = PX(pt.x), qy = PY(y0);
+      inkBox(qx - 5, qy - 5, qx + 5, qy + 5);
+      if (pt.label) {
+        var ddx = 0, ddy = -12, aa = 'middle';
+        if (pt.labelPos === 'below') ddy = 24; else if (pt.labelPos === 'left') { ddx = -10; ddy = 6; aa = 'end'; } else if (pt.labelPos === 'right') { ddx = 10; ddy = 6; aa = 'start'; }
+        var tb0 = textBox({ x: qx + ddx, y: qy + ddy, anchor: aa, text: pt.label }); inkBox(tb0.x0, tb0.y0, tb0.x1, tb0.y1);
+      }
+    });
+    /* v2 — 도형. 칠하는 것(다각형)을 먼저, 선을 그 위에. 잉크로도 센다(이름표가 피하게). */
+    var P2 = function (p) { return [PX(p[0]), PY(p[1])]; };
+    function inkLine(a, b) { var L = Math.hypot(b[0] - a[0], b[1] - a[1]), k = Math.max(2, Math.round(L / 8)); for (var i = 0; i <= k; i++) ink.push([a[0] + (b[0] - a[0]) * i / k, a[1] + (b[1] - a[1]) * i / k]); }
+    (scene.polygons || []).forEach(function (pg, i) {
+      var ps = (pg.pts || []).map(P2);
+      if (ps.length < 3) return;
+      out.push('<path d="M' + ps.map(function (p) { return n(p[0]) + ' ' + n(p[1]); }).join('L') + 'Z"' +
+        (pg.fill ? ' fill="currentColor" fill-opacity="0.08"' : '') + ' stroke-width="2"/>');
+      for (var k = 0; k < ps.length; k++) inkLine(ps[k], ps[(k + 1) % ps.length]);
+      if (pg.label) { var cx = 0, cy = 0; ps.forEach(function (p) { cx += p[0]; cy += p[1]; }); lab('poly:' + i, cx / ps.length, cy / ps.length + 6, pg.label, 'middle', null, true); }
+    });
+    (scene.segments || []).forEach(function (s, i) {
+      if (!s.from || !s.to) return;
+      var a = P2(s.from), b = P2(s.to);
+      out.push('<path d="M' + n(a[0]) + ' ' + n(a[1]) + 'L' + n(b[0]) + ' ' + n(b[1]) + '"' + (s.dash ? ' stroke-dasharray="7 6"' : '') + ' stroke-width="2"/>');
+      if (s.arrow) { var ang = Math.atan2(b[1] - a[1], b[0] - a[0]); out.push('<path d="M' + n(b[0]) + ' ' + n(b[1]) + 'l' + n(-10 * Math.cos(ang - 0.45)) + ' ' + n(-10 * Math.sin(ang - 0.45)) + 'M' + n(b[0]) + ' ' + n(b[1]) + 'l' + n(-10 * Math.cos(ang + 0.45)) + ' ' + n(-10 * Math.sin(ang + 0.45)) + '"/>'); }
+      inkLine(a, b);
+      if (s.label) {   /* 중점에서 수직 방향으로 12px 비켜 앉힌다 */
+        var mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2, L = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1;
+        var nx = -(b[1] - a[1]) / L, ny = (b[0] - a[0]) / L;
+        if (ny > 0) { nx = -nx; ny = -ny; }                       // 위쪽으로
+        lab('seg:' + i, mx + nx * 14, my + ny * 14 + 6, s.label, 'middle', null, true);
+      }
+    });
+    (scene.circles || []).forEach(function (c, i) {
+      if (!c.c || !(c.r > 0)) return;
+      var cc = P2(c.c), rpx = c.r * plotW / (xr[1] - xr[0]);
+      out.push('<circle cx="' + n(cc[0]) + '" cy="' + n(cc[1]) + '" r="' + n(rpx) + '"' + (c.dash ? ' stroke-dasharray="7 6"' : '') + ' stroke-width="2"/>');
+      for (var t = 0; t < 40; t++) ink.push([cc[0] + rpx * Math.cos(t / 40 * 2 * Math.PI), cc[1] + rpx * Math.sin(t / 40 * 2 * Math.PI)]);
+      if (c.label) {   /* 네 귀퉁이 중 잉크가 없는 첫 자리 — 꼭짓점이 오른쪽 위에 오는 일이 잦다 */
+        var cands = [[0.72, -0.72, 'start'], [-0.72, -0.72, 'end'], [0.72, 0.72, 'start'], [-0.72, 0.72, 'end']];
+        var pick = cands[0];
+        for (var q = 0; q < cands.length; q++) {
+          var tb = textBox({ x: cc[0] + rpx * cands[q][0] + (cands[q][2] === 'start' ? 8 : -8), y: cc[1] + rpx * cands[q][1] + (cands[q][1] < 0 ? -6 : 18), anchor: cands[q][2], text: c.label });
+          var hit = false;
+          for (var z = 0; z < ink.length && !hit; z++) if (ink[z][0] >= tb.x0 && ink[z][0] <= tb.x1 && ink[z][1] >= tb.y0 && ink[z][1] <= tb.y1) hit = true;
+          if (!hit) { pick = cands[q]; break; }
+        }
+        lab('circle:' + i, cc[0] + rpx * pick[0] + (pick[2] === 'start' ? 8 : -8), cc[1] + rpx * pick[1] + (pick[1] < 0 ? -6 : 18), c.label, pick[2], null, true);
+      }
+    });
+    (scene.angles || []).forEach(function (g, i) {
+      if (!g.at || !g.from || !g.to) return;
+      var v0 = P2(g.at), a1 = Math.atan2(P2(g.from)[1] - v0[1], P2(g.from)[0] - v0[0]), a2 = Math.atan2(P2(g.to)[1] - v0[1], P2(g.to)[0] - v0[0]);
+      var d = a2 - a1; while (d <= -Math.PI) d += 2 * Math.PI; while (d > Math.PI) d -= 2 * Math.PI;
+      var R = 18;
+      if (g.right) {
+        var e1 = [Math.cos(a1) * 13, Math.sin(a1) * 13], e2 = [Math.cos(a2) * 13, Math.sin(a2) * 13];
+        out.push('<path d="M' + n(v0[0] + e1[0]) + ' ' + n(v0[1] + e1[1]) + 'l' + n(e2[0]) + ' ' + n(e2[1]) + 'l' + n(-e1[0]) + ' ' + n(-e1[1]) + '" stroke-width="1.4"/>');
+      } else {
+        var s1 = [v0[0] + R * Math.cos(a1), v0[1] + R * Math.sin(a1)], s2 = [v0[0] + R * Math.cos(a2), v0[1] + R * Math.sin(a2)];
+        out.push('<path d="M' + n(s1[0]) + ' ' + n(s1[1]) + 'A' + R + ' ' + R + ' 0 0 ' + (d > 0 ? 1 : 0) + ' ' + n(s2[0]) + ' ' + n(s2[1]) + '" stroke-width="1.4"/>');
+      }
+      if (g.label) { var am = a1 + d / 2; lab('angle:' + i, v0[0] + (R + 16) * Math.cos(am), v0[1] + (R + 16) * Math.sin(am) + 6, g.label, 'middle', null, true); }
+    });
+
     /* 곡선 — 창 밖으로 나가면 선을 끊는다. 잘린 자리가 자연스러워 보인다.
        이름표는 **두 번째 바퀴에서** 놓는다. 그리면서 놓으면 첫 곡선의 이름표가
        아직 안 그려진 곡선 위에 앉는다 (실제로 그렇게 됐다). */
@@ -537,9 +695,7 @@
       drawn.push({ c: c, segs: segs });
     });
 
-    /* 축선과 곡선도 잉크다 (눈금 숫자·축 이름은 lab() 이 이미 넣었다). */
-    for (var ax1 = pad.l - 6; ax1 <= W - pad.r + 12; ax1 += 8) ink.push([ax1, oy]);
-    for (var ay1 = pad.t - 12; ay1 <= H - pad.b + 6; ay1 += 8) ink.push([ox, ay1]);
+    /* 곡선도 잉크다 (축선은 도형 앞에서, 눈금 숫자·축 이름은 lab() 이 이미 넣었다). */
     drawn.forEach(function (dc) { dc.segs.forEach(function (s) { ink = ink.concat(s.pts); }); });
 
     /* 점 · 내린 점선 — 점 이름표를 곡선 이름표보다 먼저 앉힌다. 그래야 곡선 이름표가 그것을 피한다. */
@@ -611,15 +767,44 @@
 
   /* 이름표 «글자»를 장면의 원래 자리에 쓴다. 눈금은 값이라 안 된다. */
   function setLabelText(scene, id, text) {
-    var m = /^(curve|point|label|axis):(.+)$/.exec(String(id));
+    var m = /^(curve|point|label|axis|seg|poly|circle|angle):(.+)$/.exec(String(id));
     if (!m) return false;
     var t = String(text == null ? '' : text);
+    var arr = { seg: 'segments', poly: 'polygons', circle: 'circles', angle: 'angles' }[m[1]];
+    if (arr) { var el = (scene[arr] || [])[+m[2]]; if (!el) return false; el.label = t; return true; }
     if (m[1] === 'curve') { var c = (scene.curves || [])[+m[2]]; if (!c) return false; c.label = t; return true; }
     if (m[1] === 'point') { var p = (scene.points || [])[+m[2]]; if (!p) return false; p.label = t; return true; }
     if (m[1] === 'label') { var l = (scene.labels || [])[+m[2]]; if (!l) return false; l.text = t; return true; }
     scene.axis = scene.axis || {};
     if (m[2] === 'x') scene.axis.xLabel = t; else if (m[2] === 'y') scene.axis.yLabel = t;
     else if (m[2] === 'origin') scene.axis.origin = t; else return false;
+    return true;
+  }
+
+  /* 자유 라벨을 «창 한가운데»에 더한다 — 끌어서 놓으면 된다. 데이터 좌표라 창을 안 넓힌다(가운데니까).
+     돌려주는 것은 새 이름표의 id. */
+  function addLabel(scene, text, opt) {
+    var win = autoWindow(scene, opt);
+    scene.labels = scene.labels || [];
+    scene.labels.push({ x: (win.xRange[0] + win.xRange[1]) / 2, y: (win.yRange[0] + win.yRange[1]) / 2, text: String(text || 'A'), anchor: 'middle' });
+    return 'label:' + (scene.labels.length - 1);
+  }
+  /* 자유 라벨을 뺀다. 뒤 번호의 핀을 한 칸씩 당긴다 — 안 당기면 남의 핀을 쓴다. */
+  function removeLabel(scene, id) {
+    var m = /^label:(\d+)$/.exec(String(id));
+    if (!m || !scene.labels || !scene.labels[+m[1]]) return false;
+    var i = +m[1];
+    scene.labels.splice(i, 1);
+    if (scene.pins && scene.pins.at) {
+      var at = scene.pins.at, next = {};
+      Object.keys(at).forEach(function (k) {
+        var mm = /^label:(\d+)$/.exec(k);
+        if (!mm) { next[k] = at[k]; return; }
+        var j = +mm[1];
+        if (j < i) next[k] = at[k]; else if (j > i) next['label:' + (j - 1)] = at[k];
+      });
+      scene.pins.at = next;
+    }
     return true;
   }
 
@@ -719,7 +904,7 @@
   }
 
   globalThis.Figure = {
-    SCHEMA_VERSION: 1,
+    SCHEMA_VERSION: 2,
     parseExpr: parseExpr,
     autoWindow: autoWindow,
     verifyScene: verifyScene,
@@ -729,6 +914,9 @@
     pinAll: pinAll,
     cleanPins: cleanPins,
     setLabelText: setLabelText,
+    addLabel: addLabel,
+    removeLabel: removeLabel,
+    hasShapes: hasShapes,
     labelBoxes: labelBoxes,
     overlaps: overlaps,
     mathRuns: mathRuns
