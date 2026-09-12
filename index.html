@@ -502,6 +502,37 @@
   background:var(--note);padding:15px 17px;font-family:inherit;font-size:13.5px;line-height:1.75;
   color:var(--ink);outline:none;resize:vertical;}
 .app .cls-memo:focus{border-color:var(--accent-line);}
+/* 진도 기록 (2026-09-12 · P-1 · 사용자가 시켰다: 「진도쓰는 곳에 교재선택하는 것과
+   텍스트로 디테일하게 어디까지 했는지 뭐했는지 적는곳이 있었으면 좋겠어」).
+   ⚠ **메모(.cls-memo)보다 낮게 잡는다** — 진도는 두세 줄이 보통이다. 220px 짜리 칸을
+     수업 중에 세워 두면 「많이 적어야 하는 곳」으로 보이고, 그러면 아무도 안 적는다.
+   ⚠ 바탕도 메모와 다르게 둔다 — 메모는 var(--note)(누런 쪽지), 진도는 var(--sunk)(파인 칸).
+     둘이 같은 색이면 나란히 섰을 때 어느 쪽에 무엇을 적는지가 안 갈린다. */
+.app .prog-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:11px;}
+.app .prog-row .field{width:230px;}
+.app .prog-row .field input{flex:1;min-width:0;border:0;background:transparent;outline:none;
+  font-family:inherit;font-size:12.5px;color:var(--ink);}
+.app .prog-note{width:100%;min-height:96px;border:1px solid var(--line);border-radius:var(--r-lg);
+  background:var(--sunk);padding:13px 15px;font-family:inherit;font-size:13px;line-height:1.75;
+  color:var(--ink);outline:none;resize:vertical;}
+.app .prog-note:focus{border-color:var(--accent-line);}
+/* 지난 회차 — 「지난번에 어디까지」가 오늘을 적는 손 바로 아래 있어야 한다. */
+.app .prog-past{margin-top:15px;display:flex;flex-direction:column;gap:8px;}
+.app .prog-past .r{display:flex;gap:11px;font-size:12px;color:var(--sub);line-height:1.65;}
+.app .prog-past .d{flex-shrink:0;color:var(--dim);font-variant-numeric:tabular-nums;}
+.app .prog-past .b{flex-shrink:0;color:var(--ink);font-weight:600;max-width:150px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.app .prog-past .x{flex:1;min-width:0;white-space:pre-wrap;}
+/* 반 › 진도의 «진도 일지» — 날짜마다 한 줄. 고치기·빼기가 오른쪽에 붙는다. */
+.app .prog-log{display:flex;flex-direction:column;}
+.app .prog-log .l{display:flex;gap:13px;align-items:flex-start;padding:11px 2px;
+  border-bottom:1px solid var(--line2);}
+.app .prog-log .l .dt{flex-shrink:0;width:62px;font-size:12px;color:var(--dim);
+  font-variant-numeric:tabular-nums;padding-top:1px;}
+.app .prog-log .l .bd{flex:1;min-width:0;font-size:12.5px;line-height:1.7;color:var(--sub);}
+.app .prog-log .l .bd b{color:var(--ink);font-weight:600;}
+.app .prog-log .l .bd .x{white-space:pre-wrap;margin-top:2px;}
+.app .prog-log .l .ac{flex-shrink:0;display:flex;gap:6px;}
 
 .app .cls-chaps{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;}
 .app .cls-chap{display:flex;align-items:center;gap:10px;background:var(--card);
@@ -5004,6 +5035,13 @@ let state = {
   sessionNotes: {},        // 반id -> {날짜: 메모}
   sessionNoteLoading: {},
   sessionNoteDraft: null,  // {key, text} — 단계를 옮겨도 쓰던 글이 날아가지 않게
+  /* 진도 기록 (2026-09-12 · P-1) — 수업 메모와 «같은 결»로 둔다: 반마다 kv 문서 하나에 {날짜: {...}}.
+     ⚠ 메모와 «다른 통»이다 — 메모는 있었던 일, 진도는 어디까지 나갔나. 섞으면 둘 다 못 훑는다. */
+  classProgLogs: {},        // 반id -> {날짜: {book, detail, subject, at}}
+  classProgLogLoading: {},
+  classProgDraft: null,     // {key, book, detail} — 단계를 옮겨도 쓰던 글이 안 날아간다
+  classProgEditDate: '',    // 반 › 진도 일지에서 펴 놓은 날짜
+  classProgBookAdd: false,  // 교재 고르개가 «더하는 칸»으로 서 있나
   /* 학생 마이페이지(20-student-app) — 11개 화면이 4개 탭 안에 들어간다.
      state.studentTab은 «화면 id»를 그대로 들고, 탭은 STUDENT_TAB_SECTION이 되찾아 준다. */
   stuQuizId: null,        // 크게 펼쳐 푸는 회차. 없으면 가장 최근 미제출
@@ -15284,6 +15322,158 @@ async function saveSessionNote(classId, date){
   render();
 }
 
+/* ═══════════════ 진도 기록 (2026-09-12 · P-1) ═══════════════
+   사용자가 시켰다 — 「**진도쓰는 곳에 교재선택하는 것과 텍스트로 디테일하게 어디까지 했는지
+   뭐했는지 적는곳이 있었으면 좋겠어**」.
+
+   🔴 **단원 체크(`getClassProgress`)로는 그 말을 못 담는다.** 그것은 **반 단위**이고
+     «그 단원을 마쳤나» 참/거짓뿐이다. 「쎈 p.45~62 · 3단원 예제까지, 유형 7은 숙제로」는
+     **그날에 매인 문장**이라 날짜가 있어야 한다. 그래서 체크리스트를 건드리지 않고 따로 둔다.
+     (18970의 「진도는 반 단위지 날짜 단위가 아니다」는 이제 **체크리스트에만** 해당한다.)
+   🔵 **수업 메모와 같은 결로 짓는다** — 새 컬렉션을 늘리지 않고 반마다 kv 문서 하나에
+     `{날짜: {...}}`. `firestore.rules` 를 안 건드린다(09-08에 닫은 인증을 다시 여는 일이 없다).
+   ⚠ **메모와 섞지 않는다.** 메모는 «있었던 일»(누가 늦었나·무엇을 물었나)이고 진도는
+     «어디까지 나갔나»다. 한 칸에 몰면 지난 수업에서 진도만 훑어볼 수가 없고,
+     학부모에게 보일 수 있는 것과 아닌 것이 한 덩어리가 된다.
+   ⚠ **교재는 «적어 둔 것 중에서» 고른다**(사용자가 골랐다). 매번 손으로 치면
+     「쎈 수학(상)」과 「쎈수학 상」이 서로 다른 책이 되어 일지가 못 쓰게 된다.
+     없으면 그 자리에서 더하고, 더한 것은 반 › 진도의 교재 목록에 그대로 들어간다. */
+async function loadClassProgLogIfNeeded(classId){
+  if(!classId || state.classProgLogs[classId] || state.classProgLogLoading[classId]) return;
+  state.classProgLogLoading[classId] = true;
+  const v = await dbGet('classprog:' + classId, {});
+  state.classProgLogs[classId] = (v && typeof v === 'object') ? v : {};
+  state.classProgLogLoading[classId] = false;
+  render();
+}
+function classProgKey(classId, date){ return classId + '|' + date; }
+/* 🔴 **«저장된 것»만 본다 — 초안은 안 센다.** 일지 목록과 「지난번」 카드가 이것을 쓴다.
+   초안을 세면 아직 저장 안 한 글이 이미 남은 것인 양 목록에 뜬다
+   (메모가 15518에서 같은 이유로 `sessionNoteText` 를 안 쓰고 갈라 두었다). */
+function classProgSaved(classId, date){
+  const e = (state.classProgLogs[classId] || {})[date];
+  return (e && typeof e === 'object') ? e : null;
+}
+/* 화면이 그리는 값 — 쓰던 초안이 있으면 그것이 이긴다(단계를 옮겨도 안 날아간다). */
+function classProgEntry(classId, date){
+  const d = state.classProgDraft;
+  if(d && d.key === classProgKey(classId, date)) return { book: d.book || '', detail: d.detail || '' };
+  const e = classProgSaved(classId, date);
+  return { book: (e && e.book) || '', detail: (e && e.detail) || '' };
+}
+/* 🔴 **글자마다 render()를 부르지 않는다 — 한글 조합이 끊긴다**(W-3). 초안만 담아 둔다. */
+function classProgInput(classId, date, field, value){
+  const key = classProgKey(classId, date);
+  const cur = (state.classProgDraft && state.classProgDraft.key === key)
+    ? state.classProgDraft
+    : Object.assign({ key: key }, classProgEntry(classId, date));
+  cur.key = key;
+  cur[field] = value;
+  state.classProgDraft = cur;
+}
+/* 저장한다. ⚠ **둘 다 비면 그날 것을 지운다** — 빈 껍데기가 남으면 일지에 빈 줄이 서고
+   「진도 있음」이 거짓이 된다(메모가 `saveSessionNote` 에서 하는 것과 같다). */
+async function saveClassProg(classId, date, quiet){
+  const el = document.getElementById('prog-detail');
+  if(el) classProgInput(classId, date, 'detail', el.value);
+  const e = classProgEntry(classId, date);
+  const book = String(e.book || '').trim();
+  const detail = String(e.detail || '').trim();
+  const map = Object.assign({}, state.classProgLogs[classId] || {});
+  if(book || detail){
+    /* 과목도 함께 적어 둔다 — 나중에 과목을 바꿔도 «그때 무슨 과목이었나»가 남는다. */
+    map[date] = { book: book, detail: detail, subject: getClassProgress(classId).subject || '', at: new Date().toISOString() };
+  } else delete map[date];
+  state.classProgLogs[classId] = map;
+  state.classProgDraft = null;
+  await dbSet('classprog:' + classId, map);
+  if(!quiet) showToast(book || detail ? '진도를 저장했습니다.' : '그날 진도를 비웠습니다.');
+  render();
+}
+/* 🔴 **단계를 옮기거나 반·날짜를 바꿀 때 «저절로» 저장한다.**
+   진도 단계가 하는 약속은 「체크하면 바로 저장됩니다」인데, 글칸만 단추를 기다리면
+   그 약속이 반쪽이 된다 — 적고 「시험으로」를 누르면 조용히 사라진다.
+   ⚠ **초안의 key 가 진실이다** — 화면은 이미 다른 반·다른 날로 옮겨 갔을 수 있다.
+   ⚠ 바뀐 것이 없으면 쓰지 않는다. 단계를 옮길 때마다 쓰면 읽기·쓰기가 공짜로 나간다. */
+async function sessionAutoSaveProg(){
+  const d = state.classProgDraft;
+  if(!d || !d.key) return;
+  const parts = String(d.key).split('|');
+  const classId = parts[0], date = parts[1];
+  if(!classId || !date){ state.classProgDraft = null; return; }
+  const saved = classProgSaved(classId, date) || { book:'', detail:'' };
+  if(String(saved.book || '') === String(d.book || '').trim()
+  && String(saved.detail || '') === String(d.detail || '').trim()){ state.classProgDraft = null; return; }
+  await saveClassProg(classId, date, true);
+}
+async function removeClassProgEntry(classId, date){
+  const map = Object.assign({}, state.classProgLogs[classId] || {});
+  if(!map[date]) return;
+  delete map[date];
+  state.classProgLogs[classId] = map;
+  if(state.classProgDraft && state.classProgDraft.key === classProgKey(classId, date)) state.classProgDraft = null;
+  if(state.classProgEditDate === date) state.classProgEditDate = '';
+  await dbSet('classprog:' + classId, map);
+  await logAudit('진도 삭제', '', '', classNameOf(classId) + ' · ' + date);
+  showToast('그날 진도를 뺐습니다.');
+  render();
+}
+/* 일지 — 최근 순. `before` 를 주면 그날«보다 앞»의 것만(수업 단계의 「지난번에 어디까지」). */
+function classProgRecent(classId, before, n){
+  const map = state.classProgLogs[classId] || {};
+  return Object.keys(map)
+    .filter(d => map[d] && (!before || d < before))
+    .sort().reverse()
+    .slice(0, n || 999)
+    .map(d => Object.assign({ date: d }, map[d]));
+}
+/* 🔴 **교재 고르개는 한 벌이다** — 수업 단계와 반 관리가 같은 것을 쓴다.
+   두 벌로 두면 한쪽만 고쳐지고, 그것이 이 화면들이 내내 앓던 병이다.
+   ⚠ **적어 둔 책이 없으면 고르개 대신 «더하는 칸»을 낸다** — 빈 드롭다운은 막다른 길이다. */
+function progBookPickerHTML(classId, date, books, inputId){
+  const cur = classProgEntry(classId, date).book;
+  const adding = state.classProgBookAdd || !books.length;
+  /* 그날 적어 둔 책이 목록에서 빠졌어도(교재를 뺀 뒤) **그 값은 지킨다** — 일지가 거짓이 되면 안 된다. */
+  const opts = (cur && books.indexOf(cur) < 0) ? books.concat([cur]) : books;
+  if(adding){
+    return '<span class="field">'
+      + '<input id="' + inputId + '" placeholder="예: [2026] 쎈 수학(상)" '
+      + 'onkeydown="if(event.key===\'Enter\' &amp;&amp; !event.isComposing){ event.preventDefault(); addProgBook(\'' + classId + '\',\'' + date + '\',\'' + inputId + '\'); }"></span>'
+      + '<button class="btn p sm" onclick="addProgBook(\'' + classId + '\',\'' + date + '\',\'' + inputId + '\')">교재 더하기</button>'
+      + (books.length ? '<button class="btn q sm" onclick="state.classProgBookAdd=false; render()">고르던 것으로</button>' : '');
+  }
+  return '<span class="field rst-selwrap">'
+    + '<select class="rst-sel" style="flex:1;" onchange="classProgInput(\'' + classId + '\',\'' + date + '\',\'book\', this.value)">'
+    + '<option value="">-- 교재 --</option>'
+    + opts.map(b => '<option value="' + escHtml(b) + '"' + (b === cur ? ' selected' : '') + '>' + escHtml(b) + '</option>').join('')
+    + '</select></span>'
+    + '<button class="btn q sm" title="쓰는 교재를 새로 더합니다" onclick="state.classProgBookAdd=true; render()">＋ 교재</button>';
+}
+/* 그 자리에서 교재를 더한다 — 반 › 진도의 목록(`booksBySubject`)에 그대로 들어간다.
+   🔴 **더한 것을 «오늘 것으로 골라 둔 채»로 돌아온다.** 더해 놓고 다시 고르게 하면 한 걸음이 는다.
+   ⚠ `!event.isComposing` 은 여기서도 지킨다 — 「개념서」를 치고 조합을 끝내려고 누른 Enter가
+     그대로 등록을 쏘면, 이어 치려던 글자가 갈 곳을 잃는다(T-1에서 실제로 걸렸다). */
+async function addProgBook(classId, date, inputId){
+  const el = document.getElementById(inputId);
+  const title = (el ? el.value : '').trim();
+  if(!title){ showToast('교재 이름을 적어 주세요.'); return; }
+  const c = DATA.classes.find(x => x.id === classId);
+  if(!c || !c.progress || !c.progress.subject){ showToast('과목을 먼저 고르세요.'); return; }
+  const subject = c.progress.subject;
+  if(!c.progress.booksBySubject) c.progress.booksBySubject = {};
+  if(!c.progress.booksBySubject[subject]) c.progress.booksBySubject[subject] = [];
+  const list = c.progress.booksBySubject[subject];
+  if(list.indexOf(title) < 0){
+    list.push(title);
+    await dbSetDoc('classes', c.id, c);
+    await logAudit('교재 등록', '', '', c.name + ' · ' + subject + ' · ' + title);
+  }
+  classProgInput(classId, date, 'book', title);
+  state.classProgBookAdd = false;
+  showToast('교재를 더했습니다.');
+  render();
+}
+
 /* 🔴 **지금 화면에 선 반은 여기 한 곳이 정한다** (2026-09-01 · C-20).
    `teacherSessionHTML`이 «고른 반이 그날 수업에 없으면 첫 수업으로» 되돌리는 판단을
    화면 안에서만 하고 있었다. «나갈 때 저장»이 그 판단을 다시 하면 두 벌이 되고,
@@ -15350,6 +15540,8 @@ async function sessionAutoSaveScores(){
 async function sessionAutoSave(){
   await sessionAutoSaveAtt();
   await sessionAutoSaveScores();
+  /* 진도 글칸도 함께 (P-1) — 적고 「시험으로」를 눌렀을 때 조용히 사라지면 안 된다. */
+  await sessionAutoSaveProg();
 }
 async function goSessionDate(delta){
   await sessionAutoSave();
@@ -15408,6 +15600,7 @@ function teacherSessionHTML(){
   const cls = DATA.classes.find(c=>c.id === classId);
   if(classId){
     loadSessionNoteIfNeeded(classId);
+    loadClassProgLogIfNeeded(classId);
     if(state.allRecordsLoaded) ensureAttDraft(classId, date);
   }
 
@@ -15533,7 +15726,7 @@ function teacherSessionHTML(){
   if(step === 'prev')      { const r = sessionPrevHTML(classId, date);  body = r.body; bar = r.bar; }
   else if(step === 'att')  { const r = sessionAttHTML(classId, date); body = r.body; bar = r.bar; }
   else if(step === 'hwcheck'){ const r = sessionHwCheckHTML(classId, date); body = r.body; bar = r.bar; }
-  else if(step === 'prog') { const r = sessionProgHTML(classId);      body = r.body; bar = r.bar; }
+  else if(step === 'prog') { const r = sessionProgHTML(classId, date);body = r.body; bar = r.bar; }
   else if(step === 'exam') { const r = sessionExamHTML(classId, date);body = r.body; bar = r.bar; }
   else if(step === 'hw')   { const r = sessionHwHTML(classId, date);  body = r.body; bar = r.bar; }
   else                     { const r = sessionMemoHTML(classId, date);body = r.body; bar = r.bar; }
@@ -15584,6 +15777,8 @@ function sessionPrevHTML(classId, date){
   if(!prev) return { bar, body:`<div style="padding:48px 0;text-align:center;color:var(--dim);font-size:12.5px;">반 일정이 없어 지난 수업을 찾을 수 없습니다.</div>` };
   const sm = sessionSavedSummary(classId, prev);
   const note = (state.sessionNotes[classId] || {})[prev] || '';
+  /* 그날 진도 (P-1) — 「지난번에 어디까지」가 이 화면의 본래 질문이다. */
+  const prevProg = classProgSaved(classId, prev);
   const hws = DATA.assignments.filter(a=>(!a.classId || a.classId===classId) && a.createdAt===prev);
   return { bar, body: `
   <div class="t-sec">${prev} (${WEEKDAY_LABEL[new Date(prev+'T00:00:00').getDay()]})</div>
@@ -15596,6 +15791,13 @@ function sessionPrevHTML(classId, date){
     <div class="n" style="margin-bottom:9px;">그날 낸 과제</div>
     <div style="font-size:12.5px;color:var(--sub);">${hws.length === 0 ? '없습니다.'
       : hws.map(h=>escHtml(h.title)).join(' · ')}</div>
+  </div>
+  <div class="cls-hw" style="display:block;">
+    <div class="n" style="margin-bottom:9px;">그날 진도</div>
+    <div style="font-size:12.5px;color:var(--sub);line-height:1.75;white-space:pre-wrap;">${
+      prevProg && (prevProg.book || prevProg.detail)
+        ? (prevProg.book ? '<b style="color:var(--ink);">'+escHtml(prevProg.book)+'</b><br>' : '') + escHtml(prevProg.detail || '—')
+        : '<span class="muted">적어 둔 진도가 없습니다.</span>'}</div>
   </div>
   <div class="cls-hw" style="display:block;background:var(--note);border-color:var(--note-line);">
     <div class="n" style="margin-bottom:9px;">그날 수업 메모</div>
@@ -15646,8 +15848,13 @@ function sessionAttHTML(classId, date){
 }
 
 /* ── 2단계. 진도 — 반 관리의 진도 체크리스트와 같은 데이터를 본다 ── */
-function sessionProgHTML(classId){
+function sessionProgHTML(classId, date){
   const { subject, chapters, doneMap, doneCount, percent, books } = getClassProgress(classId);
+  /* 진도 기록 (P-1) — 오늘 적을 것과 «지난 회차» 셋. 지난 것이 보여야 이어 적을 수 있다. */
+  const progLoading = state.classProgLogLoading[classId] || !state.classProgLogs[classId];
+  const today = classProgEntry(classId, date);
+  const past = classProgRecent(classId, date, 3);
+  const progSaved = classProgSaved(classId, date);
   const body = !subject
     ? `<div style="max-width:280px;">
         <div class="t-sec">과목</div>
@@ -15668,13 +15875,32 @@ function sessionProgHTML(classId){
         <span class="bar" style="flex:1;min-width:120px;max-width:280px;"><i style="width:${percent}%"></i></span>
         <span class="sub" style="font-size:12.5px;"><span class="mono">${doneCount} / ${chapters.length}</span>단원 · <span class="mono">${percent}%</span></span>
       </div>
-      ${/* 교재 (2026-09-01 · T-1c · 사용자가 시켰다: 「수업탭에서도 진도를 입력할때 교재도 표시」).
-           🔴 **여기는 «보는» 자리다 — 넣는 문은 만들지 않았다.** 이 화면의 기준은 사용자가 준
-             그 문장이다: 「빠르게 체크하고 입력하고 넘어가야 … **작은 글들이 너무 많으면 좋지 않을**」.
-             교재를 여기서도 고칠 수 있게 하면 칸과 단추가 둘 더 늘고, 반 › 진도와 «두 곳»이 된다.
-           ⚠ 적어 둔 책이 없으면 **줄째로 뺀다** — 「미등록」이라고 적으면 그것이 곧 작은 글 하나다. */''}
-      ${books && books.length ? `<div style="margin:-8px 0 16px;font-size:12.5px;color:var(--sub);">
-        교재 · ${books.map(b=>escHtml(b)).join(' · ')}</div>` : ''}
+      ${/* ── 오늘 진도 (2026-09-12 · P-1 · 사용자가 시켰다) ──────────────────────────────
+           🔵 **09-01에는 여기를 «보는» 자리로 두었다**(T-1c). 까닭은 사용자가 준 그 문장이었다 —
+             「빠르게 체크하고 입력하고 넘어가야 … 작은 글들이 너무 많으면 좋지 않을」.
+             **사용자가 이제 적는 자리로 바꿔 달라고 했다.** 그래서 칸을 늘리되 **둘만** 세운다:
+             교재 하나(고르는 것이라 손이 한 번) · 글칸 하나(두세 줄. `.prog-note` 가 96px 인 까닭).
+           🔴 **단원 체크와 «다른 것»이다** — 체크는 「그 단원을 마쳤나」(반 단위 · 참/거짓),
+             이것은 「오늘 어디까지 뭐했나」(그날 · 문장). 한 화면에 두되 섞지 않는다.
+           ⚠ **불러오는 중에는 글칸을 세우지 않는다** — 빈 칸을 먼저 보이면 사용자가 거기에
+             쓰기 시작하고, 뒤늦게 온 저장본이 화면을 갈아 버린다(메모가 같은 이유로 그렇게 한다). */''}
+      <div class="t-sec" style="margin:0 0 9px;">오늘 진도
+        <span style="font-weight:400;color:var(--dim);">${date} · 넘어갈 때 저절로 저장됩니다</span></div>
+      ${progLoading
+        ? '<div class="cb-none" style="margin-bottom:8px;">진도를 불러오는 중입니다…</div>'
+        : `<div class="prog-row">${progBookPickerHTML(classId, date, books || [], 'prog-book-new')}</div>
+           <textarea class="prog-note" id="prog-detail"
+             placeholder="어디까지 · 무엇을 했는지 — 예) 쎈 p.45~62 · 3단원 예제 전부 · 유형 7은 숙제로 남김"
+             oninput="classProgInput('${classId}','${date}','detail', this.value)">${escHtml(today.detail)}</textarea>
+           ${past.length ? `<div class="prog-past">
+             <div class="t-sec" style="margin:4px 0 2px;">지난 회차</div>
+             ${past.map(p=>`<div class="r">
+               <span class="d">${p.date.slice(5).replace('-','/')}</span>
+               ${p.book ? `<span class="b">${escHtml(p.book)}</span>` : ''}
+               <span class="x">${escHtml(p.detail || '—')}</span></div>`).join('')}
+           </div>` : ''}`}
+      <div class="t-sec" style="margin:26px 0 9px;">단원 체크
+        <span style="font-weight:400;color:var(--dim);">마친 단원을 눌러 둡니다 · 누르면 바로 저장됩니다</span></div>
       <div class="cls-chaps">${chapters.map(u=>`
         <label class="cls-chap ${doneMap[u]?'on':''}">
           <span class="cb ${doneMap[u]?'on':''}"></span>
@@ -15684,8 +15910,9 @@ function sessionProgHTML(classId){
         </label>`).join('')}</div>`;
   const bar = `<div class="actbar">
     <span class="sum">${subject ? `${escHtml(subject)} · <b class="mono">${doneCount}/${chapters.length}</b>단원` : '과목 미지정'}</span>
-    <span class="hint">체크하면 바로 저장됩니다</span>
+    <span class="hint">${progSaved && (progSaved.book || progSaved.detail) ? '오늘 진도 적힘 · ' : ''}넘어갈 때 저절로 저장됩니다</span>
     <span class="spacer"></span>
+    <button class="btn q" onclick="saveClassProg('${classId}','${date}')">진도 저장</button>
     <button class="btn p" onclick="goSessionStep('exam')">시험으로 ${iconSvg('arrowR',15)}</button>
   </div>`;
   return { body, bar };
@@ -16989,6 +17216,7 @@ function chubAttendanceHTML(classId){
 function chubLogHTML(classId){
   loadAllRecordsIfNeeded();
   loadSessionNoteIfNeeded(classId);
+  loadClassProgLogIfNeeded(classId);
   const c = DATA.classes.find(x=>x.id===classId);
   if(!(c && parseScheduleDays(c.schedule).length)){
     return `<div style="padding:56px 0;text-align:center;color:var(--dim);font-size:12.5px;line-height:1.8;">
@@ -16999,7 +17227,8 @@ function chubLogHTML(classId){
   const dates = classSessionDatesInMonth(c.schedule, chubYm()).filter(d=>d<=todayStr()).reverse();
   const facts = dates.map(d=>({ date:d, f:chubSessionFacts(classId, d) }));
   const filter = state.classHubLogFilter || '';
-  const match = x => filter==='memo' ? !!x.f.memo
+  const match = x => filter==='prog' ? !!(x.f.prog && (x.f.prog.book || x.f.prog.detail))
+                   : filter==='memo' ? !!x.f.memo
                    : filter==='absent' ? x.f.absent>0
                    : filter==='hw' ? x.f.hws.length>0
                    : true;
@@ -17012,6 +17241,7 @@ function chubLogHTML(classId){
   ${chubMonthBarHTML(`수업 <b>${dates.length}</b>회`)}
   <div class="chub-fbar">
     ${pill('', '전체', facts.length)}
+    ${pill('prog', '진도 적힘', facts.filter(x=>x.f.prog && (x.f.prog.book || x.f.prog.detail)).length)}
     ${pill('memo', '메모 있음', facts.filter(x=>x.f.memo).length)}
     ${pill('absent', '결석 발생', facts.filter(x=>x.f.absent>0).length)}
     ${pill('hw', '과제 배포', facts.filter(x=>x.f.hws.length>0).length)}
@@ -17135,7 +17365,12 @@ function chubClassListHTML(activeId){
    그건 실제로 도출되는 값이라 거짓이 아니다. */
 function chubProgressHTML(classId){
   loadAllRecordsIfNeeded();
+  loadClassProgLogIfNeeded(classId);
   const { subject, chapters, doneMap, doneCount, percent, books } = getClassProgress(classId);
+  /* 진도 일지 (P-1) — 수업 탭에서 적은 것이 여기 쌓이고, 여기서 고치거나 채워 넣는다. */
+  const progLoading = state.classProgLogLoading[classId] || !state.classProgLogs[classId];
+  const editDate = state.classProgEditDate || '';
+  const log = classProgRecent(classId, '', 0);
   const roster = classRoster(classId);
   const stats = roster.map(s=>rosterStats(s));
   const live = stats.filter(st=>!st.withdrawn);
@@ -17215,6 +17450,46 @@ function chubProgressHTML(classId){
           : i===nextIdx ? '<span class="badge consult">다음</span>' : ''}</span>
       </label>`;
     }).join('')}
+  </div>
+  ${/* ── 진도 일지 (2026-09-12 · P-1) ─────────────────────────────────────────────
+       수업 탭에서 그날그날 적은 것이 **여기 쌓인다.** 사용자가 「둘 다」를 골랐다 —
+       적는 곳은 수업 흐름 안, 쌓인 것을 보고 고치는 곳은 여기.
+       🔴 **날짜를 여기서도 고를 수 있게 둔다** — 수업을 놓친 날이나 보충처럼
+         «그날 그 자리»에서 못 적은 것을 나중에 채워 넣을 길이 없으면 일지에 구멍이 남는다.
+       ⚠ 단원 체크 **아래**에 둔다. 일지는 자라는 목록이라 위에 두면 체크리스트가 밀려 내려간다. */''}
+  <div style="margin-top:28px;max-width:760px;">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap;">
+      <span class="t-sec" style="margin:0;">진도 일지
+        <span style="font-weight:400;color:var(--dim);">날짜마다 «무슨 책으로 어디까지»</span></span>
+      <span style="flex:1;"></span>
+      ${editDate ? `<span class="field rst-selwrap" style="width:auto;">${iconSvg('calendar',13)}
+        <input type="date" class="rst-sel" style="width:132px;" value="${escHtml(editDate)}"
+          onchange="if(this.value){ state.classProgEditDate=this.value; state.classProgDraft=null; state.classProgBookAdd=false; render(); }"></span>` : ''}
+      <button class="btn ${editDate?'q':'p'} sm"
+        onclick="state.classProgEditDate='${editDate?'':todayStr()}'; state.classProgDraft=null; state.classProgBookAdd=false; render()">${editDate?'닫기':'＋ 진도 적기'}</button>
+    </div>
+    ${progLoading ? '<div class="cb-none">진도를 불러오는 중입니다…</div>' : `
+      ${editDate ? `<div class="cls-hw" style="display:block;margin-bottom:16px;">
+        <div class="n" style="margin-bottom:11px;">${escHtml(editDate)} 진도</div>
+        <div class="prog-row">${progBookPickerHTML(classId, editDate, books || [], 'prog-book-new')}</div>
+        <textarea class="prog-note" id="prog-detail"
+          placeholder="어디까지 · 무엇을 했는지 — 예) 쎈 p.45~62 · 3단원 예제 전부 · 유형 7은 숙제로 남김"
+          oninput="classProgInput('${classId}','${editDate}','detail', this.value)">${escHtml(classProgEntry(classId, editDate).detail)}</textarea>
+        <div style="margin-top:11px;display:flex;gap:8px;">
+          <button class="btn p sm" onclick="saveClassProg('${classId}','${editDate}')">저장</button>
+          <button class="btn q sm" onclick="state.classProgEditDate=''; state.classProgDraft=null; render()">취소</button>
+        </div>
+      </div>` : ''}
+      ${log.length ? `<div class="prog-log">${log.map(p=>`<div class="l">
+        <div class="dt">${p.date.slice(5).replace('-','/')}</div>
+        <div class="bd">${p.book ? `<b>${escHtml(p.book)}</b>` : '<span class="cb-none">교재 안 적음</span>'}
+          <div class="x">${escHtml(p.detail || '—')}</div></div>
+        <div class="ac">
+          <button class="btn q sm" onclick="state.classProgEditDate='${p.date}'; state.classProgDraft=null; state.classProgBookAdd=false; render()">고치기</button>
+          <button class="btn q sm" onclick="removeClassProgEntry('${classId}','${p.date}')">빼기</button>
+        </div></div>`).join('')}</div>`
+      : `<div class="cb-none">아직 적어 둔 진도가 없습니다 — <b>수업 탭 › 2. 진도</b>에서 그날그날 적으면 여기 쌓입니다.</div>`}
+    `}
   </div>`;
 }
 
@@ -18992,6 +19267,7 @@ function chubSessionFacts(classId, date){
     total: roster.length, filled, cnt, scored, marks,
     absent: cnt['결석'] || 0,
     memo: (state.sessionNotes[classId] || {})[date] || '',
+    prog: classProgSaved(classId, date),
     hws: DATA.assignments.filter(a=>(!a.classId || a.classId===classId) && a.createdAt===date)
   };
 }
