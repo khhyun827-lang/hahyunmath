@@ -8984,6 +8984,20 @@ async function addVideo(){
   showToast('영상이 등록되었습니다.');
   render();
 }
+/* 마감 바꾸기 (2026-09-13 · K-3). 저장이 된 «뒤에» 메모리를 고친다 — withdrawStudent 와 같은 규칙. */
+async function setVideoDue(vid, due){
+  const v = DATA.videos.find(x=>x.id===vid);
+  if(!v) return;
+  due = due || '';
+  if((v.dueDate||'') === due){ showToast('마감일이 그대로입니다.'); return; }
+  const next = Object.assign({}, v, { dueDate: due });
+  const ok = await dbSetDoc('videos', vid, next);
+  if(ok === null){ showToast('마감일을 저장하지 못했습니다.'); return; }
+  v.dueDate = due;
+  await logAudit('영상 마감 변경', '', '', v.title + ' · ' + (due || '마감 없음'));
+  showToast(due ? '마감일을 ' + due + ' 로 바꿨습니다.' : '마감일을 없앴습니다.');
+  render();
+}
 async function deleteVideo(vid){
   if(!confirm('이 영상을 삭제할까요?')) return;
   DATA.videos = DATA.videos.filter(v=>v.id!==vid);
@@ -11677,15 +11691,19 @@ function stuTodo(c){
         + (a.dueDate ? ' · '+a.dueDate+'까지' : ''),
     due:a.dueDate || '', dday:stuDday(a.dueDate), tab:'progress'
   }));
+  /* 🔵 **영상도 마감이 있다** (2026-09-13 · K-3 · 사용자 — 「영상 제공해주는거에 대해서도 마감기한이 있었으면 좋겠어」).
+     칸은 09-08부터 있었는데 달력에만 섰다. 이제 과제와 같은 자리에 D-day 를 달고 같은 줄로 선다. */
   c.videos.filter(v=>!((c.rec.videoProgress[v.id]||{}).completed)).forEach(v=>{
     const p = c.rec.videoProgress[v.id];
     items.push({
       icon:'video', bg:'var(--accent-bg)', fg:'var(--accent)',
-      title:v.title, sub:'강의' + (p ? ` · ${p.percent}%까지 봄` : ' · 아직 안 봄'),
+      title:v.title, sub:'강의' + (p ? ` · ${p.percent}%까지 봄` : ' · 아직 안 봄')
+        + (v.dueDate ? ' · '+v.dueDate+'까지' : ''),
+      due:v.dueDate || '', dday:stuDday(v.dueDate),
       tab:'video', pre:`state.stuVideoId='${v.id}';`
     });
   });
-  /* 마감이 가까운 것이 위로 온다. 마감이 없는 것(퀴즈·오답·영상)은 그 아래에 원래 순서대로. */
+  /* 마감이 가까운 것이 위로 온다. 마감이 없는 것(퀴즈·오답·마감 없는 영상)은 그 아래에 원래 순서대로. */
   return items.sort((a,b)=>{
     if(a.due && b.due) return a.due.localeCompare(b.due);
     return (a.due ? 0 : 1) - (b.due ? 0 : 1);
@@ -13211,6 +13229,9 @@ function stuVideoHTML(c){
           ${v.studentId ? '<span class="badge late">개인 배정</span>' : ''}
         </div>
         ${v.unit ? `<div style="font-size:11.5px;color:var(--dim);margin-top:5px;">${escHtml(v.unit)}</div>` : ''}
+        ${/* 마감 (K-3). 다 본 영상에는 D-day 를 안 단다 — 끝난 일에 「지남」이 붙으면 꾸중처럼 읽힌다. */
+          v.dueDate ? `<div style="font-size:11.5px;color:var(--dim);margin-top:5px;">마감 <span class="mono">${escHtml(v.dueDate)}</span>${
+            (p && p.completed) ? '' : (d => d ? ` <span class="badge ${d.tone}">${d.label}</span>` : '')(stuDday(v.dueDate))}</div>` : ''}
         ${/* 열려 있으면 진도 표시는 영상 아래 것 하나만 둔다 — 그쪽이 재생 중에 살아 움직인다 */
           isOpen ? '' : `<div class="sap-prog">
           <span class="bar"><i style="width:${pct}%"></i></span>
@@ -20350,7 +20371,7 @@ function chubVideoHTML(classId){
       <input id="video-url" placeholder="https://youtu.be/..."></label></div>
     <button class="btn p sm" style="margin-top:11px;" onclick="addVideo()">등록</button>
     <p class="st-note">등록하면 학생 앱 <b>학습 > 강의</b>에 뜨고, 여기서 «어디까지 보고 멈췄는지»가 쌓입니다.
-      <b>마감일을 넣으면 학생 달력(일정)에도 함께 뜹니다.</b></p>
+      <b>마감일을 넣으면 학생 홈의 할 일에 D-day 로 서고, 달력에도 뜹니다.</b> 지나면 학생·강사 화면에 «마감 지남»으로 붉게 보입니다.</p>
   </div>`}`;
 
   if(vids.length===0){
@@ -20364,7 +20385,8 @@ function chubVideoHTML(classId){
       const a = avgOf(v);
       return `<div class="vd-item ${v.id===sel.id?'on':''}" onclick="state.videoSelectedId='${v.id}'; render()">
         <div class="t">${escHtml(v.title)}</div>
-        <div class="m">${escHtml(v.unit||'단원 미지정')}${v.classId?'':' · 전체'}</div>
+        <div class="m">${escHtml(v.unit||'단원 미지정')}${v.classId?'':' · 전체'}${
+          v.dueDate ? ' · 마감 <span class="mono">'+escHtml(v.dueDate.slice(5))+'</span>'+(v.dueDate < todayStr() ? ' <span class="badge no">지남</span>' : '') : ''}</div>
         <div class="p"><span class="bar"><i style="width:${a}%"></i></span><b>${a}%</b></div>
       </div>`;
     }).join('')}
@@ -20413,6 +20435,7 @@ function chubVideoHTML(classId){
       <span class="track"><i style="width:${p.pct}%"></i></span>
       <span class="pct">${p.seen ? p.pct+'%' : '—'}</span>
       <span class="st">${p.done ? '<span class="badge ok">완주</span>'
+        : (sel.dueDate && sel.dueDate < todayStr()) ? `<span class="badge no">${p.seen ? '시청 중' : '미시청'} · 마감 지남</span>`
         : !p.seen ? '<span class="badge">미시청</span>'
         : '<span class="badge late">시청 중</span>'}</span>
     </div>`).join('')}`;
@@ -20421,6 +20444,14 @@ function chubVideoHTML(classId){
     <div class="vd-main">
       <div class="t-sec" style="margin:0 0 12px;">${escHtml(sel.title)}
         <span style="font-weight:400;color:var(--dim);">${escHtml(sel.unit||'')}</span></div>
+      ${/* 마감 (K-3) — 등록할 때 못 넣었거나 미루게 되면 여기서 바꾼다. 비우고 누르면 마감이 없어진다. */''}
+      <div class="cls-form" style="margin:0 0 14px;align-items:flex-end;">
+        <span style="font-size:12.5px;color:var(--sub);align-self:center;">${sel.dueDate
+          ? `마감 <span class="mono">${escHtml(sel.dueDate)}</span>${sel.dueDate < todayStr() ? ' <span class="badge no">지남</span>' : ''}`
+          : '마감 없음'}</span>
+        <label style="min-width:150px;"><span>마감일</span><input id="video-due-edit" type="date" value="${escHtml(sel.dueDate||'')}"></label>
+        <button class="btn q sm" onclick="setVideoDue('${sel.id}', document.getElementById('video-due-edit').value)">마감 바꾸기</button>
+      </div>
       ${drop}${students}
       <div style="margin-top:16px;">
         <button class="btn q sm" onclick="deleteVideo('${sel.id}')">이 영상 삭제</button>
