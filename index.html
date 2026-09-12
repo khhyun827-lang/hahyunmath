@@ -3466,10 +3466,10 @@
      아래 AI_DAILY_LIMIT은 이제 «표시용»이고 진짜 한도는 워커가 쥔다 (gemini-proxy.js:30과 같아야 한다). */
   const AI_DAILY_LIMIT = 20;
   /* 둘째 엔진 — Groq(gpt-oss-120b)로 만드는 쌍둥이. 글만 있는 문항용. 통은 따로(worker twin-groq). (2026-09-12) */
-  const GROQ_TWIN_DAILY_LIMIT = 25;
+  const GROQ_TWIN_DAILY_LIMIT = 20;   // 워커와 같은 값. 검토와 한 통(60÷3) — 2026-09-13
   /* ⚠ worker/gemini-proxy.js 의 REVIEW_DAILY_LIMIT 과 «같은 값»이라야 한다 —
      어긋나면 「남았다고 떠 있는데 429」가 된다 (AI_DAILY_LIMIT 이 겪은 그대로다). */
-  const REVIEW_DAILY_LIMIT = 60;
+  const REVIEW_DAILY_LIMIT = 60;   // ⚠ Groq 변형(GROQ_TWIN_DAILY_LIMIT)과 «한 통»이다 — 변형 1건이 검토 3건 몫을 먹는다 (2026-09-13)
   async function getAuthToken(){
     if(!fbAuth.currentUser){
       await new Promise(resolve=>{
@@ -4939,6 +4939,7 @@ let state = {
   aiRegeneratingId: null,
   /* AI 검토(다른 모델이 혼자 풀어 맞대 보기) — 한도 통이 생성과 다르다 */
   reviewQuotaUsed: null,
+  reviewQuotaTwins: 0,        // 오늘 Groq 로 만든 변형 수 — 검토 한도에서 3건씩 먹는다 (2026-09-13 · 워커가 준다)
   reviewBusy: '',            // 지금 검토 중인 변형 코드 (단추 잠금)
   reviewProgress: null,       // {done,total,갈림,못함}
   reviewCancel: false,
@@ -23257,6 +23258,8 @@ async function getReviewQuotaUsed(){
     }), 8000);
     if(!res.ok) throw new Error('quota http ' + res.status);
     const q = await res.json();
+    /* 🔵 워커의 used 는 «검토 환산»이다 — 변형이 먹은 몫이 이미 들어 있다. 몇 건이 변형 몫인지만 곁에 둔다. */
+    state.reviewQuotaTwins = typeof q.twins === 'number' ? q.twins : 0;
     return typeof q.used === 'number' ? q.used : 0;
   }catch(e){
     console.warn('검토 한도 조회 실패 — 0으로 본다', e);
@@ -23455,7 +23458,8 @@ function reviewBarHTML(autos){
          <button class="btn q sm" ${state.reviewCancel?'disabled':''} onclick="cancelReviewBatch()">
            ${state.reviewCancel ? '멈추는 중…' : '멈춤'}</button>`
       : `AI 검토 안 한 변형 <b class="mono">${할것.length}</b>개
-         <s>·</s> ${남음===null ? '한도 확인 중…' : '오늘 남은 검토 ' + 남음 + '/' + REVIEW_DAILY_LIMIT}
+         <s>·</s> ${남음===null ? '한도 확인 중…' : '오늘 남은 검토 ' + 남음 + '/' + REVIEW_DAILY_LIMIT
+           + (state.reviewQuotaTwins ? ` <span style="color:var(--dim);">(Groq 변형 ${state.reviewQuotaTwins}건이 ${state.reviewQuotaTwins*3}건 몫)</span>` : '')}
          <span class="spacer"></span>
          <button class="btn sm" ${남음===0?'disabled':''} onclick="reviewAllPending()">한꺼번에 검토</button>`}
   </div>`;

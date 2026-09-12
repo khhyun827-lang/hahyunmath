@@ -31,7 +31,8 @@ const 한도 = async (bucket) => {
 const 전 = await 한도();
 console.log('\n  워커는 살아 있습니다 · 오늘 쓴 것 ' + 전.used + '/' + 전.limit + ' (남은 것 ' + 전.remaining + ')');
 /* 둘째 엔진(Groq 로 만드는 변형)과 검토 통도 같이 (2026-09-12). 옛 판 워커는 twin-groq 를 모르니 ai 통을 돌려준다 — 그때는 같은 수가 보인다 */
-try { const g = await 한도('twin-groq'), rv = await 한도('review'); console.log('  Groq 변형 ' + g.used + '/' + g.limit + ' · Groq 검토 ' + rv.used + '/' + rv.limit); } catch (_) {}
+try { const g = await 한도('twin-groq'), rv = await 한도('review'); console.log('  Groq 변형 ' + g.used + '/' + g.limit + ' · Groq 검토 ' + rv.used + '/' + rv.limit
+    + (typeof rv.raw === 'number' ? '  (한 통이다 — 실제로 검토 ' + rv.raw + '건 · 변형 ' + rv.twins + '건×' + rv.cost + ')' : '  (옛 판 — 통이 따로다)')); } catch (_) {}
 /* 🔴 «어느 판이 도는가» — 저장소의 WORKER_VERSION 과 배포본이 돌려준 version 을 견준다 (2026-09-11).
    살아 있다는 것과 새 판이라는 것은 다른 말이다. 붙여넣기를 빠뜨리면 여기서 걸린다. */
 {

@@ -32,13 +32,19 @@ const AI_DAILY_LIMIT = 20;
    AI Studio 가 보여 준 진실: gemini-3.6-flash 무료는 **RPD 20 · RPM 5**. 20은 우리 뚜껑이 아니라 구글의 벽이었다.
    ⚠ gpt-oss-120b 는 그림을 못 본다 — 글만 있는 문항만. 통은 따로(twin-groq). 진짜 천장은 Groq 하루 20만 토큰이고
      검토(/review)와 나눠 쓴다 — 변형 1건 ≈ 검토 3건. 그래서 25로 뚜껑을 둔다. */
-const TWIN_GROQ_DAILY_LIMIT = 25;
+const TWIN_GROQ_DAILY_LIMIT = 20;   // = 검토 60 ÷ 3. 25 였는데 한 통이 되면서 닿을 수 없는 수가 됐다 (2026-09-13)
+/* 🔴 **Groq 는 통이 하나다** (2026-09-13 · 사용자가 짚었다 — 「그록 중 일부를 문항제작으로 돌렸으니까 좀더
+   줄어들어야 하는 거 아니야?」). 검토(review)와 변형(twin-groq)을 **따로 세면서** 화면은 «남은 검토 60/60»이라
+   적었는데, 둘 다 같은 Groq 열쇠·같은 하루 20만 토큰을 쓴다. 변형을 만들면 검토가 줄어야 맞다.
+   그래서 «검토 환산»으로 한 통을 본다 — 변형 1건 ≈ 검토 3건(변형은 추론+JSON 7000, 검토는 1250~3700 토큰).
+   ⚠ 통마다 세는 것(bumpQuota)은 그대로 둔다 — 되돌려주기가 통 이름으로 도니까. 한 통으로 «보고 막는» 것만 여기다. */
+const GROQ_TWIN_COST = 3;
 const TWIN_GROQ_MODEL = 'openai/gpt-oss-120b';
 const TWIN_GROQ_MAX_TOKENS = 7000;   // 추론 + JSON. 검토(6000)보다 답이 길다
 /* 🔴 «올렸는지 짐작하지 않는다» — 이 워커는 대시보드에 붙여넣어 올리므로 밖에서는 어느 판이 도는지
    알 길이 없었다(2026-09-11에 사용자가 올리고 「도는지 확인은 못 해봤어」). /quota 가 이 값을 같이
    돌려주고 tools/worker-check.mjs 가 저장소의 값과 견준다. **프롬프트나 규칙을 바꾸면 이 날짜를 올릴 것.** */
-const WORKER_VERSION = '2026-09-12d';
+const WORKER_VERSION = '2026-09-13a';
 // 이미지 업로드는 학생도 쓴다(질의응답 사진). 비용이 드는 쪽은 Gemini라 여기는 넉넉하게,
 // 다만 «한 명이 무한히»는 막는다. 전체 상한은 걸지 않는다 — 걸면 바쁜 날 학생이 막힌다.
 const UPLOAD_PER_USER_DAILY = 200;
@@ -81,8 +87,11 @@ export default {
          ?bucket=review 로 물으면 검토 통을 본다. 안 주면 예전대로 생성 통이다. */
       const bk = url.searchParams.get('bucket');
       const bucket = bk === 'review' ? 'review' : bk === 'twin-groq' ? 'twin-groq' : 'ai';
-      const limit = bucket === 'review' ? REVIEW_DAILY_LIMIT : bucket === 'twin-groq' ? TWIN_GROQ_DAILY_LIMIT : AI_DAILY_LIMIT;
-      return new Response(JSON.stringify({ ...(await peekQuota(env, bucket, who.uid, limit)), version: WORKER_VERSION }), {
+      /* 🔵 Groq 두 통은 «한 통으로 환산해» 답한다 — used 가 «검토 환산으로 쓴 것»이라 화면의 셈(한도 − used)이 그대로 맞는다. */
+      const q = (bucket === 'review' || bucket === 'twin-groq')
+        ? (await groqQuota(env, who.uid))[bucket]
+        : await peekQuota(env, bucket, who.uid, AI_DAILY_LIMIT);
+      return new Response(JSON.stringify({ ...q, version: WORKER_VERSION }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
@@ -95,9 +104,13 @@ export default {
     } else if (url.pathname === '/review') {
       /* 🔴 검토가 «만들기» 한도를 먹으면 안 된다 — 통을 따로 둔다.
          한 문항 검토는 위쪽 요청 1~2건이다(답이 갈릴 때만 둘째 모델을 부른다). */
+      const 통 = (await groqQuota(env, who.uid)).review;
+      if (!통.remaining) return quotaExceeded(통, corsHeaders);      // 변형이 먹은 몫까지 센다
       const q = await bumpQuota(env, 'review', who.uid, REVIEW_DAILY_LIMIT, REVIEW_DAILY_LIMIT);
       if (!q.ok) return quotaExceeded(q, corsHeaders);
     } else if (url.pathname === '/twin-groq') {
+      const 통 = (await groqQuota(env, who.uid))['twin-groq'];
+      if (!통.remaining) return quotaExceeded(통, corsHeaders);      // 검토가 먹은 몫까지 센다
       const q = await bumpQuota(env, 'twin-groq', who.uid, TWIN_GROQ_DAILY_LIMIT, TWIN_GROQ_DAILY_LIMIT);
       if (!q.ok) return quotaExceeded(q, corsHeaders);
     } else if (url.pathname !== '/delete' && !url.pathname.startsWith('/admin/')) {
@@ -405,6 +418,22 @@ async function peekQuota(env, bucket, uid, limit) {
   /* 개인 한도와 전체 한도 중 «더 많이 찬 쪽»이 실제로 막는 쪽이다. */
   const used = Math.max(Number(uRaw || 0), Number(gRaw || 0));
   return { used, limit, remaining: Math.max(0, limit - used) };
+}
+/* Groq 두 통을 «검토 환산» 한 통으로 본다 (2026-09-13). 돌려주는 꼴은 peekQuota 와 같다 —
+   `used` 는 «그 통의 뚜껑에서 남은 것을 뺀 값»이라, 화면이 하던 `한도 − used` 셈이 그대로 맞는다.
+   실제로 몇 건 했는지는 `raw` 에 따로 둔다(도구가 보여 준다). */
+async function groqQuota(env, uid) {
+  const [rv, tw] = await Promise.all([
+    peekQuota(env, 'review', uid, REVIEW_DAILY_LIMIT),
+    peekQuota(env, 'twin-groq', uid, TWIN_GROQ_DAILY_LIMIT),
+  ]);
+  const 쓴것 = rv.used + GROQ_TWIN_COST * tw.used;                         // 검토 환산
+  const 남은검토 = Math.max(0, REVIEW_DAILY_LIMIT - 쓴것);
+  const 남은변형 = Math.max(0, Math.min(TWIN_GROQ_DAILY_LIMIT - tw.used, Math.floor(남은검토 / GROQ_TWIN_COST)));
+  return {
+    review:      { used: REVIEW_DAILY_LIMIT - 남은검토,    limit: REVIEW_DAILY_LIMIT,    remaining: 남은검토, raw: rv.used, twins: tw.used, cost: GROQ_TWIN_COST },
+    'twin-groq': { used: TWIN_GROQ_DAILY_LIMIT - 남은변형, limit: TWIN_GROQ_DAILY_LIMIT, remaining: 남은변형, raw: tw.used, reviews: rv.used, cost: GROQ_TWIN_COST },
+  };
 }
 async function bumpQuota(env, bucket, uid, perUserLimit, globalLimit) {
   if (!env.QUOTA) {
