@@ -1,0 +1,124 @@
+<!doctype html><meta charset="utf-8"><title>student-bulk-probe</title>
+<!-- 설정 › 학생의 «고르기 · 일괄 삭제»(S-1)를 확장 없이 헤드리스 크롬으로 굴려 본다 (2026-09-12).
+     실서비스(index.html)를 iframe 에 띄우고 **지우는 길을 통째로 흉내로 바꾼 뒤**
+     줄을 찍고 · 전체 선택하고 · 거르고 · 실제로 지워 본다.
+
+       node tools/serve.js
+       chrome --headless=new --hide-scrollbars --virtual-time-budget=25000 --window-size=1280,1500 \
+         --screenshot=out.png --dump-dom "http://127.0.0.1:8777/tools/student-bulk-probe.html" \
+         | grep -o 'RESULT [{].*' | sed 's|</pre>.*||'
+
+     · `?w=390` 을 붙이면 폰 폭에서 넘치는지 잰다(--window-size 도 함께 줄일 것).
+     · `?shot=filtered` 면 «거른 채로 안 보이는 것이 골라져 있는» 경고 상태를 찍는다.
+
+     🔴 **실 DB 0줄** — dbDeleteDoc·adminDeleteUser·logAudit 를 프레임 안에서 갈아 끼운다.
+       진짜 학생을 지우는 프로브는 있어선 안 된다.
+     🔴 **confirm 도 갈아 끼운다** — 헤드리스에서 모달이 뜨면 그 뒤가 통째로 멈춘다.
+       대신 «무엇을 물었는지» 글자를 받아 둔다(이름을 다 보여 주는지가 이 기능의 핵심이라 그것도 잰다). -->
+<style>html,body{margin:0;background:#fff}iframe{border:0;display:block}
+pre{font:12px monospace;color:#333;margin:0;padding:4px;white-space:pre-wrap;}</style>
+<pre id="o">…</pre>
+<script>
+const fr = document.createElement('iframe');
+const W = Number((parent.location.search.match(/[?&]w=([0-9]+)/) || [])[1]) || 1280;
+fr.width = W; fr.height = 1400; fr.style.width = W + 'px'; fr.src = '/index.html';
+document.body.appendChild(fr);
+const o = document.getElementById('o');
+let n = 0;
+const t = setInterval(async () => {
+  n++;
+  let ready = false;
+  try { ready = fr.contentWindow.eval('typeof teacherSettingsStudentsHTML==="function" && typeof render==="function" && typeof state!=="undefined"'); } catch (_) {}
+  if (!ready) { if (n > 200) { clearInterval(t); o.textContent = 'RESULT timeout'; } return; }
+  clearInterval(t);
+  const w = fr.contentWindow;
+  let out;
+  try {
+    out = await w.eval(`(async function(){
+  const R = {}; const 지운것 = [], 물음 = [];
+  /* ── 지우는 길을 끊는다 ──────────────────────────────────────── */
+  window.dbDeleteDoc = async (c,k) => { 지운것.push(c+'/'+k); };
+  window.dbSetDoc = async () => true;
+  window.adminDeleteUser = async () => {};
+  window.logAudit = async () => {};
+  window.showToast = (m) => { R.마지막말 = m; };
+  window.confirm = (q) => { 물음.push(q); return true; };
+  window.loadAllRecordsIfNeeded = () => {};
+
+  /* ── 흉내 명단 — 「잘못 올린 엑셀」 6명 + 원래 있던 2명 ─────────── */
+  DATA.classes = [{ id:'c1', name:'고1A', status:'진행중' }, { id:'c2', name:'고2B', status:'진행중' }];
+  DATA.students = [
+    { studentId:'ok1', name:'원래학생', classId:'c1', school:'광남고', grade:'고1' },
+    { studentId:'ok2', name:'원래둘', classId:'c1', school:'광남고', grade:'고1' },
+    { studentId:'bad1', name:'잘못올림가', classId:'c2', school:'건대부고', grade:'고2' },
+    { studentId:'bad2', name:'잘못올림나', classId:'c2', school:'건대부고', grade:'고2' },
+    { studentId:'bad3', name:'잘못올림다', classId:'c2', school:'건대부고', grade:'고2' },
+    { studentId:'bad4', name:'잘못올림라', classId:'c2', school:'건대부고', grade:'고2' },
+    { studentId:'bad5', name:'잘못올림마', classId:'c2', school:'건대부고', grade:'고2' },
+    { studentId:'gone1', name:'그만둔이', classId:'c1', school:'광남고', grade:'고3', withdrawnAt:'2026-08-01' },
+  ];
+  state.currentUser = { type:'teacher' }; state.view = 'teacher';
+  state.teacherTab = 'settings'; state.settingsSubTab = 'students';
+  state.stuChecked = {}; state.stuBulkBusy = null; state.stuQuery = '';
+  state.allRecordsLoaded = true;
+  render(); await new Promise(r=>setTimeout(r,120));
+  const d = document;
+  const 글 = el => (el && el.textContent || '').replace(/\\s+/g,' ').trim();
+
+  /* ── ① 줄마다 고르개가 섰는가 ────────────────────────────────── */
+  R.줄수 = d.querySelectorAll('.stu-row').length;
+  R.고르개수 = d.querySelectorAll('.stu-row .stu-pick').length;
+  R.띠_처음 = 글(d.querySelector('.stu-bulk'));
+  R.삭제단추_잠김 = !!d.querySelector('.stu-bulk .btn.no[disabled]');
+
+  /* ── ② 줄을 눌러 고른다 ─────────────────────────────────────── */
+  const 찍기 = sid => { const e = [...d.querySelectorAll('.stu-row')]
+    .find(r => (r.textContent||'').indexOf(sid) >= 0); if(e) e.querySelector('.stu-pick').click(); };
+  찍기('bad1'); await new Promise(r=>setTimeout(r,40));
+  찍기('bad2'); await new Promise(r=>setTimeout(r,40));
+  R.둘고름 = 글(d.querySelector('.stu-bulk'));
+  R.고른줄_표시 = d.querySelectorAll('.stu-row.picked').length;
+  R.삭제단추_풀림 = !d.querySelector('.stu-bulk .btn.no[disabled]');
+
+  /* ── ③ 전체 선택이 «보이는 것»만 켜는가 — 걸러 놓고 본다 ───────── */
+  state.stuChecked = {}; state.stuQuery = '건대부고';
+  render(); await new Promise(r=>setTimeout(r,80));
+  R.거른뒤_줄수 = d.querySelectorAll('.stu-row').length;
+  d.querySelector('.stu-bulk .all').click();
+  await new Promise(r=>setTimeout(r,60));
+  R.전체선택_수 = Object.keys(state.stuChecked).length;
+  R.전체선택_누구 = Object.keys(state.stuChecked).sort();
+
+  /* ── ④ 거르기를 풀면 «안 보이는 것이 골라져 있다»고 말하는가 ───── */
+  state.stuQuery = '광남고';
+  render(); await new Promise(r=>setTimeout(r,80));
+  R.경고 = 글(d.querySelector('.stu-bulk .hidden-warn')) || '(없음)';
+
+  /* ── ⑤ 실제로 지운다 ────────────────────────────────────────── */
+  if(!/shot=filtered/.test(parent.location.search)){
+    state.stuQuery = '건대부고';
+    render(); await new Promise(r=>setTimeout(r,60));
+    d.querySelector('.stu-bulk .btn.no').click();
+    /* 삭제는 async 라 끝날 때까지 기다린다. */
+    for(let i=0;i<80 && (state.stuBulkBusy || DATA.students.length>3);i++) await new Promise(r=>setTimeout(r,50));
+    R.물음_한번만 = 물음.length;
+    R.물음_이름있나 = /잘못올림가 \\(bad1\\)/.test(물음[0]||'');
+    R.물음_되돌릴수없다 = /되돌릴 수 없습니다/.test(물음[0]||'');
+    R.남은학생 = DATA.students.map(s=>s.studentId);
+    R.지운문서 = 지운것.length;
+    state.stuQuery = '';
+    render(); await new Promise(r=>setTimeout(r,80));
+    R.띠_끝 = 글(d.querySelector('.stu-bulk'));
+  }
+
+  /* ── ⑥ 좁은 폭에서 넘치는가 ─────────────────────────────────── */
+  R.폭 = window.innerWidth;
+  R.가로넘침 = document.documentElement.scrollWidth > window.innerWidth + 1;
+  R.넘친요소 = [...document.querySelectorAll('.stu-bulk,.stu-row,.stu-pick')]
+    .filter(e=>e.getBoundingClientRect().right > window.innerWidth + 1).map(e=>e.className);
+  return R;
+})()`);
+  } catch (e) { out = { 터짐: String(e && e.message || e) }; }
+  o.textContent = 'RESULT ' + JSON.stringify(out);
+}, 100);
+</script>

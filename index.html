@@ -283,6 +283,27 @@
   font-size:11.5px;color:var(--dim);}
 .app .stu-sep::after{content:'';flex:1;height:1px;background:var(--line);}
 .app .stu-sep span{flex-shrink:0;}
+/* 설정 › 학생 — 고르기와 일괄 삭제 (2026-09-12 · S-1 · 사용자가 시켰다:
+   「명단을 잘못추가해서 삭제하고싶은데 한명한명 눌러서 삭제해야하네.
+     앞에 체크해서 일괄삭제하는게 가능하도록 해줘」).
+   ⚠ 고르개는 **누르는 자리를 넓게** 잡는다 — 14px 짜리 네모만 과녁이면 여러 명을 이어 찍을 때 자꾸 빗나간다.
+   ⚠ 고른 줄은 바탕으로 말한다 — 체크만으로는 여러 줄을 훑을 때 «어디까지 골랐나»가 안 보인다. */
+.app .stu-pick{flex-shrink:0;display:flex;align-items:center;justify-content:center;
+  width:30px;height:30px;margin:-4px 0 0 -6px;cursor:pointer;border-radius:var(--r-sm);
+  transition:background var(--t);}
+.app .stu-pick:hover{background:var(--hover);}
+.app .st-row.picked{background:var(--accent-bg);}
+.app .st-row.picked:hover{background:var(--accent-bg);}
+/* 고르기 띠 — 「전체 선택」과 「선택 n명 삭제」가 한 줄에. 고른 것이 없으면 삭제는 안 선다. */
+.app .stu-bulk{display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  padding:9px 10px;margin:0 0 10px;border:1px solid var(--line);border-radius:var(--r-md);
+  background:var(--sunk);font-size:12.5px;color:var(--sub);}
+.app .stu-bulk.on{border-color:var(--accent-line);background:var(--accent-bg);}
+.app .stu-bulk .all{display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none;}
+.app .stu-bulk .n{color:var(--ink);font-weight:600;}
+/* 🔴 안 보이는 것이 골라져 있으면 **소리 내어** 말한다 — 거르고 나서 삭제를 누르면
+   화면에 없는 사람이 함께 지워진다. 그 사실을 숨기면 그것이 사고가 된다. */
+.app .stu-bulk .hidden-warn{color:var(--no);font-weight:600;}
 
 /* 학적 상자 — 퇴원과 삭제가 나란히 사는 곳 (2026-08-26 · W-1).
    ⚠ **테두리로 «따로 떼어» 둔다.** 위의 이름·비밀번호와 같은 평면에 두면
@@ -4866,6 +4887,10 @@ let state = {
   studentDetailTab: 'timeline',
   wrongExamId: null,
   wrongChecked: {},
+  /* 설정 › 학생에서 고른 사람 (2026-09-12 · S-1) — 아이디 -> true. 오답 숙제와 같은 결이다.
+     ⚠ 지운 사람은 `deleteStudentWork` 가 여기서도 뺀다 — 안 빼면 「선택 n명」이 거짓이 된다. */
+  stuChecked: {},
+  stuBulkBusy: null,       // {done, total} — 일괄 삭제가 도는 동안만
   examImagesCache: {},
   qnaQuestionImage: null,
   qnaAnswerImage: {},
@@ -6922,24 +6947,123 @@ async function addStudent(){
   showToast('학생이 추가되었습니다.');
   render();
 }
-async function deleteStudent(sid){
-  if(!confirm(sid+' 학생을 삭제할까요? 기록도 함께 삭제됩니다.')) return;
+/* 🔴 **한 명을 지우는 «실제 일»은 여기 하나다** (2026-09-12 · S-1).
+   묻기·알리기·다시 그리기는 **부르는 쪽**이 한다 — 일괄 삭제가 N번 묻고 N번 토스트를 띄우면 못 쓴다.
+   ⚠ 두 벌로 두면 한쪽만 고쳐진다. 이 저장소가 반복해서 겪은 그 사고다
+     (`signalOf`·`assistantClassIds`·`pbImageHTML` 을 하나로 합친 그것).
+
+   🔴 **차례를 바로잡았다 (2026-09-12)** — 예전에는 `DATA.students` 를 **먼저** 걸러 내고
+     그다음에 문서를 지웠다. 그러면 지우기가 터졌을 때 **화면에서만 사라지고 다음 새로고침에
+     되살아난다** — `withdrawStudent` 가 「저장이 성공한 뒤에 메모리를 고친다」로 못 박아 둔
+     바로 그 규칙의 반대였다. 한 명일 때는 눈에 잘 안 띄지만 **일괄 삭제가 그 어긋남을 N배로 키운다.**
+   ⚠ **`students` 문서 하나가 «지워졌다»의 기준이다.** 그것이 지워진 뒤에 메모리를 고치고,
+     딸린 것(연락처·기록)은 그 뒤에 따라간다.
+   ⚠ **딸린 것이 터져도 조용히 삼키지 않는다** — `records` 가 남으면 같은 아이디로 새로 만든
+     학생이 **옛 성적을 물려받는다.** 무엇이 남았는지 돌려주고, 부르는 쪽이 말한다. */
+async function deleteStudentWork(sid){
   const s = DATA.students.find(x=>x.studentId===sid);
   const key = studentKeyOfSid(sid);
-  DATA.students = DATA.students.filter(x=>x.studentId!==sid);
   await dbDeleteDoc('students', key);
-  await dbDeleteDoc('contacts', key);
-  await dbDeleteDoc('records', key);
-  /* 🔵 **계정도 같이 지운다** — 안 지우면 같은 아이디를 다시 못 쓴다.
-     ⚠ 계정 지우기가 실패해도 문서는 이미 지워졌다. 그건 되돌릴 수 없으니 «남았다»고 말한다 —
-       조용히 두면 나중에 「지웠는데 왜 못 만들지」가 된다. */
+  DATA.students = DATA.students.filter(x=>x.studentId!==sid);
+  /* 🔴 고른 것에서도 뺀다 — 안 빼면 이미 지운 사람이 「선택 n명」에 계속 세어진다. */
+  if(state.stuChecked) delete state.stuChecked[sid];
+  const 남은것 = [];
+  for(const col of ['contacts','records']){
+    try{ await dbDeleteDoc(col, key); }
+    catch(e){ 남은것.push(col); console.error('딸린 문서 삭제 실패', col, sid, e); }
+  }
+  /* 🔵 **계정도 같이 지운다** — 안 지우면 같은 아이디를 다시 못 쓴다. */
   let 계정흠 = null;
   try{ await adminDeleteUser('student', sid); }
   catch(e){ 계정흠 = e.message; }
-  await logAudit('학생 삭제', sid, s ? s.name : '', 계정흠 ? '계정은 못 지웠다: ' + 계정흠 : '계정도 함께 지웠다');
-  showToast(계정흠
-    ? '정보는 삭제했으나 로그인 계정이 남았습니다 — ' + 계정흠
-    : '삭제되었습니다.');
+  await logAudit('학생 삭제', sid, s ? s.name : '',
+    [계정흠 ? '계정은 못 지웠다: ' + 계정흠 : '계정도 함께 지웠다',
+     남은것.length ? '남은 문서: ' + 남은것.join(',') : ''].filter(Boolean).join(' · '));
+  return { 계정흠, 남은것 };
+}
+async function deleteStudent(sid){
+  if(!confirm(sid+' 학생을 삭제할까요? 기록도 함께 삭제됩니다.')) return;
+  const { 계정흠, 남은것 } = await deleteStudentWork(sid);
+  const 말 = [계정흠 ? '정보는 삭제했으나 로그인 계정이 남았습니다 — ' + 계정흠 : '삭제되었습니다.'];
+  if(남은것.length) 말.push('못 지운 문서: ' + 남은것.join(', '));
+  showToast(말.join(' · '));
+  render();
+}
+
+/* ═══════ 고르기 · 일괄 삭제 (2026-09-12 · S-1) ═══════
+   사용자가 시켰다 — 「**명단을 잘못추가해서 삭제하고싶은데 한명한명 눌러서 삭제해야하네.
+   앞에 체크해서 일괄삭제하는게 가능하도록 해줘**」. 엑셀 일괄 등록을 잘못한 뒤의 자리다.
+   🔵 고르는 꼴은 이미 있는 것을 따른다 — 오답 숙제의 `wrongChecked` 와 같은 결(맵 하나).
+   🔴 **되돌릴 수 없는 일이라 안전장치를 셋 둔다:**
+     ① **수가 아니라 이름을 보여 주고 묻는다** — 「12명 삭제할까요」로는 무엇이 지워지는지 알 길이 없다.
+     ② **안 보이는 것이 골라져 있으면 화면이 소리 내어 말한다** — 거르고 나서 누르면
+        화면에 없는 사람이 함께 지워진다. 그 사실을 숨기면 그것이 사고가 된다.
+     ③ **하나가 터져도 멈추지 않고, 무엇이 안 됐는지 끝에 말한다** — 멈추면 앞의 것은
+        이미 지워졌는데 화면은 아무 말도 안 한다. */
+function stuToggleCheck(sid){
+  if(!state.stuChecked) state.stuChecked = {};
+  if(state.stuChecked[sid]) delete state.stuChecked[sid];
+  else state.stuChecked[sid] = true;
+  render();
+}
+/* ⚠ **지금 «보이는» 것만** 한꺼번에 켜고 끈다. 안 보이는 것까지 켜면 ②가 막으려는 그 사고를 우리가 만든다. */
+function stuCheckAll(sids, on){
+  if(!state.stuChecked) state.stuChecked = {};
+  (sids || []).forEach(sid => { if(on) state.stuChecked[sid] = true; else delete state.stuChecked[sid]; });
+  render();
+}
+/* 🔴 **«있는 사람»만 센다** — 지워졌거나 사라진 아이디가 맵에 남아 수를 부풀리면,
+   「선택 12명」이라 적어 놓고 10명을 지우게 된다. 화면의 수와 하는 일이 늘 같아야 한다. */
+function stuCheckedSids(){
+  const m = state.stuChecked || {};
+  return DATA.students.filter(s => m[s.studentId]).map(s => s.studentId);
+}
+async function deleteCheckedStudents(){
+  if(state.stuBulkBusy) return;                       // 두 번 누르는 것을 막는다
+  const sids = stuCheckedSids();
+  if(!sids.length){ showToast('고른 학생이 없습니다.'); return; }
+  const NL = String.fromCharCode(10);
+  const 사람 = sids.map(sid => DATA.students.find(x => x.studentId === sid)).filter(Boolean);
+  const 퇴원 = 사람.filter(isWithdrawn).length;
+  /* ⚠ `confirm` 은 HTML 을 못 그린다 — 글자만 쓴다. 너무 길면 앞 20명만 보이고 나머지는 수로 말한다. */
+  const 보일것 = 사람.slice(0, 20).map(s =>
+    '· ' + s.name + ' (' + s.studentId + ')' + (isWithdrawn(s) ? ' [퇴원]' : ''));
+  if(사람.length > 20) 보일것.push('  … 외 ' + (사람.length - 20) + '명');
+  const 물음 = ['학생 ' + 사람.length + '명을 삭제합니다.', ''].concat(보일것).concat([
+    '',
+    '기록(성적·출결·과제)과 로그인 계정도 함께 사라집니다.',
+    '되돌릴 수 없습니다.',
+  ]).concat(퇴원 ? ['', '이 중 ' + 퇴원 + '명은 퇴원 처리된 학생입니다.'] : [])
+    .concat(['', '그대로 삭제할까요?']).join(NL);
+  if(!confirm(물음)) return;
+
+  state.stuBulkBusy = { done: 0, total: 사람.length };
+  render();
+  const 계정남음 = [], 문서남음 = [], 못지움 = [];
+  for(const sid of sids){
+    try{
+      const { 계정흠, 남은것 } = await deleteStudentWork(sid);
+      if(계정흠) 계정남음.push(sid);
+      if(남은것.length) 문서남음.push(sid);
+    }catch(e){
+      /* 🔴 여기 걸린 것은 «학생 문서조차 못 지운» 것이다 — 그 사람은 그대로 남아 있다. */
+      못지움.push(sid);
+      console.error('학생 삭제 실패', sid, e);
+    }
+    state.stuBulkBusy.done++;
+    render();                                          // 목록이 줄어드는 것이 눈에 보인다
+  }
+  state.stuBulkBusy = null;
+  await logAudit('학생 일괄 삭제', '', '', 사람.length + '명 고름'
+    + ' · 지움 ' + (사람.length - 못지움.length)
+    + (계정남음.length ? ' · 계정 남음 ' + 계정남음.length : '')
+    + (문서남음.length ? ' · 문서 남음 ' + 문서남음.length : '')
+    + (못지움.length ? ' · 못 지움 ' + 못지움.length : ''));
+  const 말 = [(사람.length - 못지움.length) + '명을 삭제했습니다.'];
+  if(계정남음.length) 말.push('로그인 계정이 남은 학생 ' + 계정남음.length + '명 — ' + 계정남음.join(', '));
+  if(문서남음.length) 말.push('기록이 남은 학생 ' + 문서남음.length + '명 — ' + 문서남음.join(', '));
+  if(못지움.length) 말.push('못 지운 학생 ' + 못지움.length + '명 — ' + 못지움.join(', '));
+  showToast(말.join(' · '));
   render();
 }
 
@@ -25481,7 +25605,12 @@ function teacherSettingsStudentsHTML(){
   const line = s => {
     const on = state.stuEditId===s.studentId;
     const gone = isWithdrawn(s);
-    return `<div class="st-row stu-row${gone?' gone':''}" style="align-items:flex-start;">
+    /* 고르개 (2026-09-12 · S-1). ⚠ 「계정 수정」과 달리 **줄을 안 편다** —
+       여러 명을 이어 찍는 동작이라 화면이 움직이면 다음 과녁을 잃는다. */
+    const picked = !!(state.stuChecked||{})[s.studentId];
+    return `<div class="st-row stu-row${gone?' gone':''}${picked?' picked':''}" style="align-items:flex-start;">
+      <span class="stu-pick" title="고르기" onclick="stuToggleCheck('${s.studentId}')">
+        <span class="cb ${picked?'on':''}"></span></span>
       <div class="t">
         <div class="stu-line">
           <b class="nm">${escHtml(s.name)}</b>
@@ -25539,6 +25668,32 @@ function teacherSettingsStudentsHTML(){
       ${/* 학업은 여기 없다. 한때 「성적·출결은 학생 명단에서 →」 단추를 뒀는데
            2026-09-11에 사용자가 뺐다 — 계정을 다루는 곳에 학업으로 가는 문이 있을 까닭이 없다. */''}
     </div>
+    ${/* ── 고르기 띠 (2026-09-12 · S-1) ───────────────────────────────────────
+         🔴 **「전체 선택」은 «지금 보이는 것»만 켠다** — 거른 화면에서 안 보이는 사람까지
+           켜면, 그 뒤의 삭제가 무엇을 지우는지 아무도 모르게 된다.
+         🔴 **안 보이는 것이 골라져 있으면 붉게 말한다** — 「1반」을 골라 놓고 「2반」으로
+           검색을 바꾼 채 삭제를 누르면 1반이 함께 지워진다. 그 사실을 숨기지 않는다.
+         ⚠ 지우는 동안은 단추를 잠그고 몇/몇인지 보여 준다 — 여러 명이면 시간이 걸리는데
+           아무 말이 없으면 한 번 더 누르게 된다. */''}
+    ${(() => {
+      const picked = stuCheckedSids();
+      const 보이는것 = listed.map(s => s.studentId);
+      const 보이는데고름 = 보이는것.filter(sid => (state.stuChecked || {})[sid]).length;
+      const 안보이는고름 = picked.length - 보이는데고름;
+      const 다골랐나 = listed.length > 0 && 보이는데고름 === listed.length;
+      const busy = state.stuBulkBusy;
+      return `<div class="stu-bulk ${picked.length ? 'on' : ''}">
+        <span class="all" onclick="stuCheckAll(${JSON.stringify(보이는것).replace(/"/g, '&quot;')}, ${!다골랐나})">
+          <span class="cb ${다골랐나 ? 'on' : ''}"></span>
+          ${다골랐나 ? '전체 해제' : '전체 선택'}${listed.length ? ` <span class="mono">(${listed.length})</span>` : ''}</span>
+        ${picked.length ? `<span class="n">${picked.length}명 고름</span>` : '<span>지울 학생을 앞에서 고르세요</span>'}
+        ${안보이는고름 ? `<span class="hidden-warn">⚠ 이 중 ${안보이는고름}명은 지금 목록에 없습니다</span>` : ''}
+        <span style="flex:1;"></span>
+        ${picked.length ? `<button class="btn q sm" onclick="stuCheckAll(${JSON.stringify(picked).replace(/"/g, '&quot;')}, false)">고른 것 놓기</button>` : ''}
+        <button class="btn no sm" ${picked.length && !busy ? '' : 'disabled'} onclick="deleteCheckedStudents()">${
+          busy ? `지우는 중 ${busy.done}/${busy.total}` : `선택 ${picked.length}명 삭제`}</button>
+      </div>`;
+    })()}
     ${rows}`
   })}
   ${stSec({
