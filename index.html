@@ -7088,7 +7088,7 @@ async function withdrawStudent(sid){
   /* 저장이 성공한 «뒤에» 메모리를 고친다 — 실패했는데 화면만 퇴원으로 바뀌면
      다음 새로고침에 되살아나서 «퇴원시킨 줄 알았던» 학생에게 알림이 나간다 (P-1과 같은 규칙). */
   const next = Object.assign({}, s, { withdrawnAt: date, withdrawnReason: reason });
-  await dbSetDoc('students', sid, next);
+  await dbSetDoc('students', studentKeyOfSid(sid), next);
   s.withdrawnAt = date;
   s.withdrawnReason = reason;
   await logAudit('퇴원 처리', sid, s.name, date + (reason ? ' · ' + reason : ''));
@@ -7102,7 +7102,7 @@ async function restoreStudent(sid){
   const next = Object.assign({}, s);
   delete next.withdrawnAt;
   delete next.withdrawnReason;
-  await dbSetDoc('students', sid, next);
+  await dbSetDoc('students', studentKeyOfSid(sid), next);
   delete s.withdrawnAt;
   delete s.withdrawnReason;
   await logAudit('재원 복귀', sid, s.name, '');
@@ -14979,7 +14979,7 @@ async function rosterBulkMoveClass(){
     if(!s || s.classId===classId) continue;
     const before = s.classId ? classNameOf(s.classId) : '미배정';
     s.classId = classId;
-    await dbSetDoc('students', sid, s);
+    await dbSetDoc('students', studentKeyOfSid(sid), s);
     await logAudit('반 이동', sid, s.name, `${before} → ${label}`);
     moved++;
   }
