@@ -19335,7 +19335,17 @@ async function saveClassAttendance(classId, date){
     else rec.attendance.push(row);
     rec.attendance.sort((a,b)=>a.date.localeCompare(b.date));
     await saveRecord(s.studentId);
-    if(state.allRecords[s.studentId]) state.allRecords[s.studentId] = rec;
+    /* 🔴 **가드를 뺐다** (2026-09-13 · A-1 · 사용자 신고: 「출결 저장이 잘안되는것 같아.
+       저장버튼을 눌러도 초기화 되는경우가 있는것 같고」).
+       예전에는 `if(state.allRecords[sid])` 일 때만 얹었다. 그런데 `loadAllRecordsIfNeeded` 는
+       **기록 문서가 있는 학생만** 담는다(`if(rec)`) — 그래서 **기록이 아직 없는 학생**(갓 만든 계정,
+       엑셀로 막 올린 학생)은 저장해도 이 칸이 끝내 비어 있었다. 서버에는 **잘 저장돼 있었다.
+       화면만 못 따라온 것이다.** 그 하나가 세 가지 얼굴로 나타났다:
+         · 「안 넣은 변경 n명분」이 저장한 뒤에도 안 사라진다 → 단계를 옮길 때마다 또 저장하고 토스트가 또 뜬다
+         · 「지난 수업 확인」·수업 기록이 그 학생을 계속 «미입력»으로 본다
+         · 🔴 **반·날짜를 옮겼다 돌아오면 `ensureAttDraft` 가 이 빈 칸에서 다시 그려 화면이 초기화된다**
+       ⚠ 조건 없이 얹는다 — `state.allRecords` 는 강사 화면의 «지금 값»이고, 방금 쓴 것이 그 값이다. */
+    state.allRecords[s.studentId] = rec;
     await logAudit('출석 기록', s.studentId, s.name, `${date} ${d.status}`);
     // 결석 처리하면서 보충 영상 링크를 같이 넣었으면, 그 학생에게만 보이는 개인 영상으로 등록한다.
     if(d.status==='결석' && d.videoUrl && d.videoUrl.trim()){

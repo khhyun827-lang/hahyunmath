@@ -1,0 +1,126 @@
+<!doctype html><meta charset="utf-8"><title>att-save-probe</title>
+<!-- 수업 › 출결 저장이 «화면에서» 되돌아오는지 본다 (2026-09-13 · A-1).
+     사용자 신고 — 「출결 저장이 잘안되는것 같아. 저장버튼을 눌러도 초기화 되는경우가 있는것 같고,
+     그리고 과제검사로 넘어가면 알아서 저장되었으면 좋겠어」.
+
+       node tools/serve.js
+       chrome --headless=new --hide-scrollbars --virtual-time-budget=25000 --window-size=1280,1200 \
+         --screenshot=out.png --dump-dom "http://127.0.0.1:8777/tools/att-save-probe.html" \
+         | grep -o 'RESULT [{].*' | sed 's|</pre>.*||'
+
+     🔴 **실 DB 0줄** — dbGetDoc/dbSetDoc/dbGet 을 프레임 안에서 가짜 창고로 갈아 끼운다.
+       그 가짜 창고가 «서버»다. 저장이 진짜로 갔는지는 거기에 남았는지로 본다.
+     🔵 **요점은 두 학생을 가르는 것이다** —
+       `있던이` 는 이미 기록이 있는 학생(state.allRecords 에 들어 있다),
+       `새내기` 는 **기록이 아직 없는 학생**(`loadAllRecordsIfNeeded` 가 `if(rec)` 로 걸러 안 담는다).
+       둘을 같이 찍어 저장한 뒤, 화면이 둘을 같게 보는지 본다. -->
+<style>html,body{margin:0;background:#fff}iframe{border:0;display:block}
+pre{font:12px monospace;color:#333;margin:0;padding:4px;white-space:pre-wrap;}</style>
+<pre id="o">…</pre>
+<script>
+const fr = document.createElement('iframe');
+fr.width = 1280; fr.height = 1200; fr.src = '/index.html';
+document.body.appendChild(fr);
+const o = document.getElementById('o');
+let n = 0;
+const t = setInterval(async () => {
+  n++;
+  let ready = false, 왜 = '';
+  try { ready = fr.contentWindow.eval('typeof saveClassAttendance==="function" && typeof render==="function" && typeof state!=="undefined"'); }
+  catch (e) { 왜 = String(e && e.message || e); }
+  /* ⚠ 「안 떴다」로 끝내지 않는다 — 왜 못 붙었는지 말해야 고칠 수 있다. */
+  if (!ready) { if (n > 200) { clearInterval(t);
+    let 있는것 = '?';
+    try { 있는것 = fr.contentWindow.eval('[typeof saveClassAttendance, typeof render, typeof state].join(",")'); } catch (e2) { 있는것 = 'eval 못 함: ' + (e2 && e2.message); }
+    o.textContent = 'RESULT ' + JSON.stringify({ 터짐: 'timeout', 왜: 왜, 있는것: 있는것 });
+  } return; }
+  clearInterval(t);
+  const w = fr.contentWindow;
+  let out;
+  try {
+    out = await w.eval(`(async function(){
+  const R = {};
+  /* ── 가짜 서버 — 이것이 «진짜로 저장됐나»의 잣대다 ───────────────── */
+  const 서버 = {};
+  window.dbGetDoc = async (col, key, dflt) => {
+    const v = 서버[col + '/' + key];
+    return v === undefined ? dflt : JSON.parse(JSON.stringify(v));
+  };
+  window.dbSetDoc = async (col, key, val) => { 서버[col+'/'+key] = JSON.parse(JSON.stringify(val)); return true; };
+  window.dbGet = async (k, d) => d;
+  window.dbSet = async () => true;
+  window.dbDeleteDoc = async () => true;
+  window.logAudit = async () => {};
+  window.showToast = (m) => { (R.말 = R.말 || []).push(m); };
+
+  /* ── 반 하나 · 학생 둘 ─────────────────────────────────────────── */
+  const CID = 'c1', DATE = '2026-09-14';
+  DATA.classes = [{ id:CID, name:'고1A', schedule:'월,수,금 19시~21시', status:'진행중', kind:'정규' }];
+  DATA.students = [
+    { studentId:'old1', name:'있던이', classId:CID, school:'광남고', grade:'고1' },
+    { studentId:'new1', name:'새내기', classId:CID, school:'광남고', grade:'고1' },
+  ];
+  DATA.records = {};
+  /* 있던이에게만 «옛 기록»을 심는다 — 새내기는 records 문서가 아예 없다. */
+  서버['records/old1'] = { attendance:[{date:'2026-09-09', status:'출석', classId:CID}], scores:[], wrongHomework:[] };
+
+  /* 🔵 진짜와 같은 길로 채운다 — loadAllRecordsIfNeeded 가 «rec 가 있을 때만» 담는다.
+     ⚠ 이 덩이는 통째로 템플릿 문자열이다 — 주석에도 백틱을 쓰면 거기서 템플릿이 닫힌다(실제로 당했다). */
+  state.allRecordsLoaded = false; state.allRecordsLoading = false; state.allRecords = {};
+  await loadAllRecordsIfNeeded();
+  R.불러온뒤_allRecords = Object.keys(state.allRecords);
+
+  state.currentUser = { type:'teacher' }; state.view = 'teacher';
+  state.teacherTab = 'session'; state.sessionDate = DATE; state.sessionClassId = CID;
+  state.sessionStep = 'att'; state.attDraftKey = null; state.attDraft = {};
+  render(); await new Promise(r=>setTimeout(r,120));
+
+  /* ── ① 둘 다 출석으로 찍는다 ───────────────────────────────────── */
+  setAttStatus('old1','출석');
+  setAttStatus('new1','출석');
+  R.찍은뒤_안넣은변경 = sessionUnsavedCount(CID, DATE);
+
+  /* ── ② 「저장」을 누른다 ───────────────────────────────────────── */
+  await saveClassAttendance(CID, DATE);
+  R.서버에_남았나 = {
+    있던이: !!(서버['records/old1']||{}).attendance.find(a=>a.date===DATE),
+    새내기: !!((서버['records/new1']||{}).attendance||[]).find(a=>a.date===DATE),
+  };
+  /* 🔴 여기가 갈리는 자리 — 저장한 뒤에도 화면이 «안 넣었다»고 하면 그것이 신고된 그 흠이다. */
+  R.저장뒤_안넣은변경 = sessionUnsavedCount(CID, DATE);
+  R.저장뒤_allRecords에_새내기 = !!state.allRecords['new1'];
+  R.저장뒤_요약 = sessionSavedSummary(CID, DATE);
+
+  /* ── ③ 반을 옮겼다 돌아오면 화면이 초기화되나 ──────────────────── */
+  state.attDraftKey = null;                 // 반·날짜를 옮겼다 돌아온 것과 같은 일
+  ensureAttDraft(CID, DATE);
+  R.돌아온뒤_초안 = { 있던이:(state.attDraft.old1||{}).status, 새내기:(state.attDraft.new1||{}).status };
+
+  /* ── ④ 「과제 검사로」가 저절로 저장하나 ───────────────────────── */
+  state.attDraftKey = null; ensureAttDraft(CID, DATE);
+  setAttStatus('old1','지각');
+  setAttStatus('new1','결석');
+  state.sessionStep = 'att';
+  await goSessionStep('hwcheck');
+  R.넘어간뒤_단계 = state.sessionStep;
+  R.넘어간뒤_서버 = {
+    있던이: ((서버['records/old1']||{}).attendance.find(a=>a.date===DATE)||{}).status,
+    새내기: (((서버['records/new1']||{}).attendance||[]).find(a=>a.date===DATE)||{}).status,
+  };
+  /* ── 스스로 판정한다 — 값만 뱉으면 사람이 매번 눈으로 견줘야 한다 ───────── */
+  R.판정 = [];
+  const 봄 = (무엇, 나온것, 나와야) => R.판정.push(
+    (JSON.stringify(나온것) === JSON.stringify(나와야) ? '✅ ' : '🔴 ') + 무엇);
+  봄('저장이 서버에 간다', R.서버에_남았나, { 있던이:true, 새내기:true });
+  봄('저장 뒤 「안 넣은 변경」이 0', R.저장뒤_안넣은변경, 0);
+  봄('기록 없던 학생도 화면 캐시에 얹힌다', R.저장뒤_allRecords에_새내기, true);
+  봄('요약이 둘 다 «입력됨»', [R.저장뒤_요약.total, R.저장뒤_요약.filled], [2, 2]);
+  봄('돌아와도 초기화 안 된다', R.돌아온뒤_초안, { 있던이:'출석', 새내기:'출석' });
+  봄('「과제 검사로」가 저절로 저장한다', R.넘어간뒤_서버, { 있던이:'지각', 새내기:'결석' });
+  R.넘어짐 = R.판정.filter(x => x.indexOf('🔴') === 0).length;
+  return R;
+})()`);
+  } catch (e) { out = { 터짐: String(e && e.message || e) }; }
+  o.textContent = 'RESULT ' + JSON.stringify(out);
+}, 100);
+</script>
