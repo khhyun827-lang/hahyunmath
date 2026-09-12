@@ -97,5 +97,73 @@ const stuVideo = lift('stuVideoHTML'), chubVideo = lift('chubVideoHTML');
 봄('학생별 진행 — 지났는데 안 봤으면 «마감 지남»', chubVideo.includes('· 마감 지남</span>'), true);
 봄('등록 폼에도 마감 칸이 있다', chubVideo.includes('id="video-due"'), true);
 
+
+/* ═══ K-4 (2026-09-13) — 결석 보충 +7일 · 한 명에게 보내기 · 개인 배정 시청 확인 ═══ */
+console.log(NL + '개인 배정 — 결석 보충 +7일 · 한 명에게 · 봤는지' + NL);
+const MAKEUP = Number((html.match(/const MAKEUP_VIDEO_DAYS = (\d+);/) || [])[1]);
+봄('결석 보충 마감은 +7일로 못 박혀 있다', MAKEUP, 7);
+const dates = new Function(lift('ymdPlusDays') + NL + 'return { ymdPlusDays };')();
+봄('날짜 더하기 — 달을 넘긴다', dates.ymdPlusDays('2026-09-28', 7), '2026-10-05');
+봄('날짜 더하기 — 해를 넘긴다', dates.ymdPlusDays('2026-12-30', 7), '2027-01-06');
+봄('이상한 날짜면 빈 값', dates.ymdPlusDays('', 7), '');
+const saveAtt = lift('saveClassAttendance');
+봄('출결 저장이 보충 영상에 마감 +7일을 단다', saveAtt.includes('dueDate: ymdPlusDays(date, MAKEUP_VIDEO_DAYS)'), true);
+봄('보충 영상에 반도 적는다 (탭이 모아 보이도록)', /studentId:s\.studentId, dueDate/.test(saveAtt) && /url, classId,\s*$/m.test(saveAtt), true);
+
+/* addVideo — 대상을 고르면 그 학생에게만 */
+const 폼 = { 'video-unit': '', 'video-title': '보충 4강', 'video-url': 'https://youtu.be/abcdefgh', 'video-class': 'c1', 'video-due': '2026-09-25', 'video-target': '' };
+const 저장2 = [];
+const 곁2 = {
+  document: { getElementById: id => id in 폼 ? { get value(){ return 폼[id]; }, set value(v){ 폼[id] = v; } } : null },
+  DATA: { videos: [], students: [{ studentId: 'st01', name: '가나' }] },
+  extractYouTubeId: u => /youtu\.be\//.test(u) ? 'x' : null,
+  dbSetDoc: async (col, id, data) => { 저장2.push(data); return true; },
+  showToast: () => {}, render: () => {},
+};
+const api2 = new Function(...Object.keys(곁2), lift('addVideo') + NL + 'return { addVideo };')(...Object.values(곁2));
+await api2.addVideo();
+봄('대상이 «반 전체»면 studentId 가 없다', 'studentId' in 저장2[0], false);
+봄('반·마감은 그대로 붙는다', [저장2[0].classId, 저장2[0].dueDate], ['c1', '2026-09-25']);
+폼['video-title'] = '보충 5강'; 폼['video-url'] = 'https://youtu.be/abcdefgh'; 폼['video-due'] = ''; 폼['video-target'] = 'st01';
+await api2.addVideo();
+봄('한 명을 고르면 그 학생에게만 (studentId)', 저장2[1].studentId, 'st01');
+봄('개인 배정도 반을 적는다', 저장2[1].classId, 'c1');
+봄('보낸 뒤 대상 고르개는 «반 전체»로 돌아간다', 폼['video-target'], '');
+봄('메모리에도 둘 다 (새것이 앞)', 곁2.DATA.videos.map(v=>v.title), ['보충 5강', '보충 4강']);
+
+/* 강사 영상 탭 — 글자로 */
+봄('등록 폼에 «대상» 고르개', chubVideo.includes('id="video-target"') && chubVideo.includes('반 전체'), true);
+봄('개인 배정은 명단(학생)으로 모은다 — classId 가 빈 옛 결석 영상도 든다', chubVideo.includes('rosterIds.has(v.studentId)'), true);
+봄('목록에 «개인 배정» 구역', chubVideo.includes('개인 배정 <span class="mono">'), true);
+봄('개인 배정 줄에 완주/％/미시청과 마감 지남', chubVideo.includes("p.done ? '완주' : p.seen ? p.pct+'%' : '미시청'") && chubVideo.includes('personalItem'), true);
+봄('개인 배정 상세는 히스토그램 대신 그 한 명', chubVideo.includes("sel.studentId ? one : drop + students"), true);
+봄('둘 다 비어야 «없습니다»', chubVideo.includes('vids.length===0 && personal.length===0'), true);
+
+
+/* 강사 영상 탭 — «돌려서» (템플릿이 실제로 그려지는가) */
+const 곁3 = {
+  loadAllRecordsIfNeeded: () => {}, classRoster: () => [{ studentId: 'st01', name: '가나' }, { studentId: 'st02', name: '다라' }],
+  state: { allRecords: { st01: { videoProgress: { p1: { percent: 100, completed: true } } }, st02: { videoProgress: { p2: { percent: 30, completed: false } } } },
+           allRecordsLoaded: true, allRecordsLoading: false, videoAdding: true, videoSelectedId: 'p2' },
+  DATA: { students: [{ studentId: 'st01', name: '가나' }, { studentId: 'st02', name: '다라' }], classes: [{ id: 'c1', name: '1반' }],
+          videos: [
+            { id: 'a1', title: '반 영상', unit: '', url: 'u', classId: 'c1', dueDate: '2026-09-20' },
+            { id: 'p1', title: '09-01 결석 보충 영상', url: 'u', classId: '', studentId: 'st01', dueDate: '2026-09-08' },
+            { id: 'p2', title: '보충 5강', url: 'u', classId: 'c1', studentId: 'st02', dueDate: '2026-09-10' },
+            { id: 'p9', title: '남의 반', url: 'u', classId: '', studentId: 'st99' },
+          ] },
+  escHtml: x => String(x == null ? '' : x), iconSvg: () => '', todayStr: () => TODAY,
+};
+const api3 = new Function(...Object.keys(곁3), lift('chubVideoHTML') + NL + 'return { chubVideoHTML };')(...Object.values(곁3));
+const out = api3.chubVideoHTML('c1');
+봄('그려진다 — 반 전체 구역과 개인 배정 2 (남의 반 것은 안 든다)', [out.includes('>반 전체</div>'), out.includes('개인 배정 <span class="mono">2</span>'), out.includes('남의 반')], [true, true, false]);
+봄('결석 보충(classId 빈 것)이 «완주»로', out.includes('가나 <span style="font-weight:400;color:var(--sub);">· 09-01 결석 보충 영상') && out.includes('>완주</b>'), true);
+봄('보충 5강은 30% 에 마감 지남', out.includes('30%</b>') && out.includes('다라') && out.includes('<span class="badge no">지남</span>'), true);
+봄('고른 것이 개인 배정이면 상세는 «받은 학생» 한 줄', out.includes('받은 학생') && out.includes('개인 배정 · 다라') && !out.includes('이탈 지점'), true);
+봄('대상 고르개에 명단 둘', (out.match(/<option value="st0[12]">/g) || []).length, 2);
+곁3.state.videoSelectedId = 'a1';
+const out2 = api3.chubVideoHTML('c1');
+봄('반 영상을 고르면 이탈 지점이 돌아온다', out2.includes('이탈 지점') && !out2.includes('받은 학생'), true);
+
 console.log(NL + (fail ? '🔴 ' + fail + '개 실패 · ' : '✓ 전부 통과 · ') + pass + '개' + NL);
 process.exit(fail ? 1 : 0);
