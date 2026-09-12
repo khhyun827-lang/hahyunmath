@@ -59,7 +59,7 @@ function 뼈대(content){
   if (선지at > 0) s = s.slice(0, 선지at);
   s = s.replace(/\|[^\n]*\|/g, ' ');                 // 표 줄은 뺀다(조건 상자는 문제마다 붙는다)
   const 토큰 = [];
-  for (const m of s.matchAll(/\[a-zA-Z]+/g)) 토큰.push(m[0]);          // 수식 명령
+  for (const m of s.matchAll(/\\[a-zA-Z]+/g)) 토큰.push(m[0]);         // 수식 명령(\sqrt · \frac)
   for (const m of s.matchAll(/[가-힣]{2,}/g)) 토큰.push(m[0]);          // 한글 낱말
   for (const m of s.matchAll(/\^\{?[0-9]\}?/g)) 토큰.push('^' + m[0].replace(/[^0-9]/g, ''));
   return 토큰;
