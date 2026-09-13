@@ -2904,7 +2904,7 @@
 
 /* 접히는 입력 — 「추가」를 눌러야 열린다.
    상시 펼쳐 둔 폼은 화면에서 제일 큰 자리를 차지하면서 제일 가끔 쓰인다.
-   (시험지 「새 시험지」· 창고 「문항 추가」· 학생앱 「틀린 문제 등록」과 같은 장치다.) */
+   (시험지 「새 시험지」· 창고 「문항 추가」· 학생앱 「시험지 오답」과 같은 장치다.) */
 .app .st-form{padding:16px 0 6px;border-bottom:1px solid var(--line2);}
 .app .st-form .cls-form{margin-top:0;}
 /* 조교의 담당 반 고르개 — 반이 여럿이라 select가 아니라 체크상자를 편다 (2026-08-11).
@@ -5268,7 +5268,7 @@ let state = {
   /* 학생 마이페이지(20-student-app) — 11개 화면이 4개 탭 안에 들어간다.
      state.studentTab은 «화면 id»를 그대로 들고, 탭은 STUDENT_TAB_SECTION이 되찾아 준다. */
   stuQuizId: null,        // 크게 펼쳐 푸는 회차. 없으면 가장 최근 미제출
-  stuWrongMode: false,    // 「틀린 문제 등록」 패널이 열려 있나
+  stuWrongMode: false,    // 「시험지 오답」 패널이 열려 있나
   stuVideoId: null,       // iframe을 실제로 붙일 영상 하나. 목록 전체를 임베드하지 않는다
   stuAttMonth: '',        // 출석 달력이 보고 있는 달 'YYYY-MM'. 빈 값이면 이번 달
   stuClinicSlotIds: [],   // 신청하려고 고른 시간대들 (여러 시간 이어서 신청할 수 있다)
@@ -10730,7 +10730,7 @@ function findBankEntry(examId, no){
 /* wrongSubmitWidgetHTML(시험 선택 + 번호 체크 그리드)은 지웠다.
    예전에는 «홈»과 «오답숙제» 두 화면에 같은 것이 동시에 그려져 있었다 —
    state.wrongExamId·wrongChecked를 공유하니 한쪽에서 고른 것이 다른 쪽에 비쳤다.
-   지금은 오답숙제의 「틀린 문제 등록」 하나뿐이다 (stuWrongHTML). */
+   지금은 오답숙제의 「시험지 오답」 하나뿐이다 (stuWrongHTML). */
 function toggleWrongCheck(no){
   state.wrongChecked[no] = !state.wrongChecked[no];
   render();
@@ -12309,14 +12309,17 @@ function goLoginMode(mode){
 const STUDENT_NAV = [
   ['홈',   'home',     'home'],
   ['일정', 'calendar', 'calendar'],
-  ['학습', 'quiz',     'book'],
+  /* 🔵 **「학습」을 누르면 오답숙제로 간다** (2026-09-13 · 사용자 요청 — 차례를 바꿨다).
+     ⚠ 여기와 아래 갈래의 **첫 칸은 늘 같아야 한다** — 다르면 탭을 눌렀는데 둘째 칸이 켜져 있다
+       (다른 탭 넷은 전부 첫 칸으로 간다). 차례를 또 바꿀 때 이 두 줄을 같이 고칠 것. */
+  ['학습', 'wronghw',  'book'],
   ['기록', 'grades',   'chart'],
   ['소통', 'notice',   'chat']
 ];
 /* 탭 안의 갈래. 관리자와 달리 «목록 화면»을 한 겹 더 두지 않는다 —
    넷을 한 줄에 세울 수 있는데 굳이 한 번 더 누르게 할 이유가 없다. */
 const STUDENT_SUBNAV = {
-  '학습': [['데일리퀴즈','quiz'], ['오답숙제','wronghw'], ['진도·과제','progress'], ['강의','video'], ['자료','material']],
+  '학습': [['오답숙제','wronghw'], ['데일리퀴즈','quiz'], ['진도·과제','progress'], ['강의','video'], ['자료','material']],
   '일정': [['달력','calendar'], ['내 일정','myplan']],
   '기록': [['성적','grades'], ['출석','attendance']],
   '소통': [['공지','notice'], ['질의응답','qna'], ['클리닉','clinic'], ['채팅','chat']]
@@ -13071,7 +13074,7 @@ function stuQuizHTML(c){
       : `아직 풀 문제가 없습니다.<br>시험에서 틀린 번호를 등록하고 오답숙제를 끝내면 그 문제가 여기로 돌아옵니다.`}
       ${outOfRange ? '' : `<div style="margin-top:14px;"><button class="mbtn" style="max-width:220px;margin:0 auto;"
         onclick="state.studentTab='wronghw'; ${left?'':'state.stuWrongMode=true; '}render()"
-        >${left ? '오답숙제 풀러 가기' : '틀린 문제 등록하러 가기'}</button></div>`}
+        >${left ? '오답숙제 풀러 가기' : '시험지 오답 등록하러 가기'}</button></div>`}
     </div>`;
   }
   if(cards.length===0){
@@ -13219,7 +13222,12 @@ function stuWrongHTML(c){
                   : `<span class="badge late">풀 차례</span>`}
       </div>
       <div class="sap-q" style="margin-top:11px;">${problemHTML(bank.variantContent)}</div>
-      ${reportHintHTML(bank.id, 'legacy')}
+      ${/* 🔴 **안내 줄(「문제가 이상한가요?」)을 걷었다** (2026-09-13 · 사용자 —
+           「우측상단에 오류 신고가 있으니까 안떠도 될 것 같아」). 맞는 말이다 — 같은 카드 안에서
+           같은 일을 두 번 권하고 있었다(위 `reportBtnHTML`).
+           ⚠ **왜 «모든» 문제에 떴나**: 그 줄은 «한 번도 신고 안 해 본 학생»에게만 뜨게 해 뒀는데,
+             신고가 여태 저장이 안 되고 있었다(K-19). 그래서 아무도 «신고해 본 학생»이 안 됐다.
+           🔵 데일리퀴즈 카드에는 그대로 둔다 — 거기서는 아직 신고를 권할 자리가 필요하다. */''}
       ${reportFormHTML(bank.id, 'legacy')}
       ${reportAckHTML(bank.id)}
       ${vk ? pbImageHTML(bank.id, vk, 'sap-img') : ''}
@@ -13244,7 +13252,7 @@ function stuWrongHTML(c){
   return `
   ${state.stuWrongMode ? `
   <div class="mc hi">
-    <div style="font-size:13px;font-weight:700;">틀린 문제 등록</div>
+    <div style="font-size:13px;font-weight:700;">시험지 오답</div>
     <div style="font-size:12px;color:var(--sub);margin-top:6px;line-height:1.7;">
       시험지를 고르고 틀린 번호를 모두 누르세요. 같은 단원의 쌍둥이 문제가 숙제로 나갑니다.</div>
     ${c.exams.length===0
@@ -13286,7 +13294,10 @@ function stuWrongHTML(c){
     <button class="mbtn q" style="margin-top:6px;" onclick="state.stuWrongMode=false; render()">닫기</button>
   </div>`
   : `<div class="row" style="gap:7px;margin-bottom:4px;">
-      <button class="mbtn" style="flex:1;" onclick="state.stuWrongMode=true; render()">${iconSvg('plus',16)} 틀린 문제 등록</button>
+      ${/* 🔵 **이름이 「시험지 오답」이다** (2026-09-13 · 사용자 요청). 곁의 「교재 문제 요청」과
+           **무엇으로 부르는가**로 갈린다 — 시험지의 번호냐, 교재의 번호냐. 「틀린 문제 등록」은
+           둘 다에 해당하는 말이라 어느 단추를 눌러야 할지가 안 보였다. */''}
+      <button class="mbtn" style="flex:1;" onclick="state.stuWrongMode=true; render()">${iconSvg('plus',16)} 시험지 오답</button>
       ${/* 🔵 **교재 문제 요청** (2026-09-13 · K-17) — 시험지 없이도 부를 수 있는 길이다.
            책과 번호만 알면 되므로 시험을 안 본 단원도 요청할 수 있다. */''}
       <button class="mbtn" style="flex:1;" onclick="state.bookReqMode=true; state.bookReqPicked=[]; render()">${iconSvg('book',16)} 교재 문제 요청</button>
