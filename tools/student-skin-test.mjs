@@ -325,7 +325,7 @@ console.log(NL + '⑦ 좌상단 심볼 — 이름을 두 번 말하지 않는다
   /* 🔴 **로고를 통째로 넣으면 「김하현수학연구소」를 두 번 말한다** — 심볼만 잘라 쓴다.
      자르는 잣대는 «폭 ≥ 높이 × (523/223)» 하나다. 높이를 바꾸면 폭도 따라와야 한다. */
   const 잣대 = 523 / 223;
-  const 상자 = [...html.matchAll(/\.app\.sap \.topbar \.bm::before\{[^}]*?width:(\d+)px;height:(\d+)px/g)]
+  const 상자 = [...html.matchAll(/\.topbar \.bm::before\{[^}]*?width:(\d+)px;height:(\d+)px/g)]
     .map(m => [+m[1], +m[2]]);
   봄('심볼 상자가 둘이다 (기본 · 좁은 폰)', 상자.length, 2);
   봄('🔴 폭이 «높이 × 2.35» 이상이라 심볼이 안 잘린다',
@@ -338,10 +338,13 @@ console.log(NL + '⑦ 좌상단 심볼 — 이름을 두 번 말하지 않는다
   봄('🔴 좁은 폰에서도 이름을 지우지 않는다', /\.bm\{[^}]*font-size:0/.test(좁은판), false);
   봄('대신 심볼을 줄인다', /\.bm::before\{width:45px;height:19px/.test(좁은판), true);
 
-  /* 🔴 관리자 상단바는 이번에도 안 건드린다 */
-  봄('🔴 심볼은 학생 앱 상단바에만 붙는다',
-    (html.match(/\.topbar \.bm::before/g) || []).every(_ => true)
-    && !/(^|[^.])\.topbar \.bm::before/.test(html.replace(/\.app\.sap \.topbar \.bm::before/g, '')), true);
+  /* 🔵 2026-09-14 에 사용자가 「관리자페이지도 로고 넣어주고」라 해서 선택자를 넓혔다. */
+  봄('🔴 심볼이 관리자·학생 상단바에 같이 붙는다',
+    /\n\.app \.topbar \.bm::before\{/.test(html), true);
+  /* ⚠ 좁은 화면에서 관리자는 브랜드를 통째로 접는다 — 메뉴 일곱 개가 자리를 못 잡기 때문이고,
+     이미 그렇게 정해 둔 자리다. 심볼도 같이 접힌다. */
+  봄('⚠ 좁은 화면에서 관리자는 브랜드를 접는다 (심볼도 같이)',
+    html.includes('.app:not(.sap) .topbar .bm{display:none;}'), true);
   봄('관리자 상단바 글자는 그대로다',
     (html.match(/<div class="bm">김하현수학연구소<\/div>/g) || []).length, 3);
 }

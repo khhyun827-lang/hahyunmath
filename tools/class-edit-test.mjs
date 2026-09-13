@@ -43,8 +43,10 @@ function 판(반들, 칸){
   const 쓴것 = [], 기록 = [], 말 = [];
   const DATA = {classes: 반들};
   const state = {classEditId: 반들[0] && 반들[0].id};
-  const F = new Function('DATA', 'state', 'document', 'dbSetDoc', 'logAudit', 'showToast', 'render', 'escHtml',
-    lift('saveClassEdit') + NL + lift('classEditOpen') + NL + lift('classEditHTML')
+  const F = new Function('DATA', 'state', 'document', 'dbSetDoc', 'logAudit', 'showToast', 'render', 'escHtml', 'WEEKDAY_MAP', 'WEEKDAY_LABEL',
+    /* ⚠ 2026-09-14 에 강의실이 붙으면서 셋이 더 필요해졌다 — 옮겨 적지 않고 같이 뜬다. */
+    lift('parseSchedule') + NL + lift('classRoomOf') + NL + lift('classRoomChunks') + NL
+    + lift('saveClassEdit') + NL + lift('classEditOpen') + NL + lift('classEditHTML')
     + NL + 'return {saveClassEdit, classEditOpen, classEditHTML};')(
     DATA, state,
     {getElementById: (id) => (id in 칸) ? {value: 칸[id]} : null},
@@ -52,7 +54,9 @@ function 판(반들, 칸){
     async (a, b, c, d) => 기록.push(d),
     (m) => 말.push(m),
     () => {},
-    (s) => String(s == null ? '' : s));
+    (s) => String(s == null ? '' : s),
+    { 일:0, 월:1, 화:2, 수:3, 목:4, 금:5, 토:6 },
+    ['일','월','화','수','목','금','토']);
   return {F, DATA, state, 쓴것, 기록, 말};
 }
 const 반하나 = () => [{id:'c1', name:'고10.5B', schedule:'화,목 19시반~22시, 토 14시~16시',
@@ -143,7 +147,9 @@ console.log(NL + '④ 폼은 «지금 값»을 들고 열린다' + NL);
 console.log(NL + '⑤ ⚠ 망가뜨려 무는지 본다' + NL);
 {
   /* 딸린 것을 지키는 것은 «덮어쓰기»(Object.assign)다. 통째로 갈아 끼우면 다 날아간다. */
-  const 지키는줄 = 'Object.assign(c, 후);';
+  /* ⚠ 2026-09-14 에 강의실이 붙으면서 이 줄이 `Object.assign(c, 후, {rooms});` 가 됐다.
+     닻은 «덮어쓰기가 아니라 얹기»라는 뜻을 붙드는 것이지 글자 자체가 아니다. */
+  const 지키는줄 = 'Object.assign(c, 후, {rooms});';
   봄('⚠ 덮어쓰는 줄이 실제로 그 글자다', lift('saveClassEdit').includes(지키는줄), true);
   /* «통째로 갈아 끼운다»를 흉내 낸다 — id 만 남기고 나머지를 지운 뒤 새 값을 얹는다. */
   const 망친 = lift('saveClassEdit').split(지키는줄)
@@ -152,11 +158,14 @@ console.log(NL + '⑤ ⚠ 망가뜨려 무는지 본다' + NL);
   const 쓴것 = [];
   const state = {classEditId:'c1'};
   const G = new Function('DATA','state','document','dbSetDoc','logAudit','showToast','render','escHtml',
-    망친 + NL + 'return {saveClassEdit};')(
+    'WEEKDAY_MAP','WEEKDAY_LABEL',
+    lift('parseSchedule') + NL + lift('classRoomOf') + NL + lift('classRoomChunks') + NL
+    + 망친 + NL + 'return {saveClassEdit};')(
     {classes: 반들}, state,
     {getElementById:(id)=>({value:({'ce-namec1':'새이름','ce-schedc1':'월 1시~2시',
       'ce-periodc1':'','ce-kindc1':'정규'})[id] || ''})},
-    async (col,id,doc)=>쓴것.push(doc), async ()=>{}, ()=>{}, ()=>{}, (s)=>String(s==null?'':s));
+    async (col,id,doc)=>쓴것.push(doc), async ()=>{}, ()=>{}, ()=>{}, (s)=>String(s==null?'':s),
+    { 일:0, 월:1, 화:2, 수:3, 목:4, 금:5, 토:6 }, ['일','월','화','수','목','금','토']);
   await G.saveClassEdit('c1');
   봄('⚠ 통째로 갈아 끼우면 진도가 날아간다(=검사가 문다)',
      반들[0].progress === undefined, true);

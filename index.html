@@ -1453,9 +1453,23 @@
 .app .pl-c.mth{box-shadow:inset 0 -2px 0 var(--no);}
 .app .pl-c s{text-decoration:none;color:var(--no);opacity:.5;}
 /* 색은 종류가 정한다 — ds.css 의 상태색 셋만 쓴다(새 색을 만들지 않는다). */
-.app .pl-c.k-no{color:var(--no);background:var(--nobg);}
-.app .pl-c.k-blue{color:var(--blue);background:var(--bluebg);}
-.app .pl-c.k-gone{color:var(--ink);background:var(--gonebg);}
+/* 🔴 **찍은 칸은 «면»이 아니라 «알약»이다** (2026-09-14 · 사용자가 짚었다).
+   예전에는 찍은 칸도 바탕을 칠했는데, 그 색이 시험기간과 **같은 `--nobg`** 라
+   시험 전날에 직보를 찍으면 **시험기간이 하루 늘어난 것처럼** 보였다.
+   ⇒ 바탕을 칠하는 것은 **시험기간 하나뿐**이고, 찍은 것은 칸 안에 알약으로 앉는다.
+   🔵 일곱 종류가 색 셋을 나눠 쓰던 것도 이참에 갈랐다 — **직보만 «채운» 알약**이다(이 표의 주인공).
+   ⚠ 테두리는 `box-shadow` 로 그린다 — `border` 로 하면 알약이 커져 칸이 밀린다. */
+.app .pl-p{display:inline-block;padding:1px 7px;border-radius:999px;
+  font-size:10.5px;font-weight:700;line-height:1.65;white-space:nowrap;}
+.app .pl-p.p-jikbo  {background:var(--accent);color:#fff;}
+.app .pl-p.p-start  {background:var(--okbg);   color:var(--ok);   box-shadow:inset 0 0 0 1px var(--ok-line);}
+.app .pl-p.p-off    {background:var(--card);   color:var(--dim);  box-shadow:inset 0 0 0 1px var(--line);}
+/* 「가능하면」은 **확실하지 않다**는 뜻이다 — 점선이 그 말을 한다(색만으로는 안 보인다). */
+.app .pl-p.p-maybe  {background:var(--card);   color:var(--blue); box-shadow:inset 0 0 0 1px var(--blue);
+  border-radius:var(--r-xs);border:1px dashed var(--blue);padding:0 6px;}
+.app .pl-p.p-exam   {background:var(--card);   color:var(--no);   box-shadow:inset 0 0 0 1px var(--no-line);}
+.app .pl-p.p-extra  {background:var(--latebg); color:var(--late); box-shadow:inset 0 0 0 1px var(--late-line);}
+.app .pl-p.p-consult{background:var(--leavebg);color:var(--leave);box-shadow:inset 0 0 0 1px var(--leave-line);}
 .app .pl-d{padding:4px 7px;border:1px solid var(--line);border-radius:var(--r-sm);
   background:var(--card);color:var(--ink);font-size:11.5px;}
 .app .pl-t{width:66px;padding:4px 7px;border:1px solid var(--line);border-radius:var(--r-sm);
@@ -2463,7 +2477,10 @@
        24px 높이에서는 **57px** 이라야 523 까지 다 나온다. 높이를 바꾸면 이 곱을 다시 해야 한다.
    ⚠ 좁은 폰에서는 **이름을 지우지 않고 심볼을 줄인다** — 360px 에서 상단바가 8px 넘쳤는데,
      이름을 접으면 대부분의 폰(360~412)에서 학원 이름이 영영 안 보인다. 줄여서 둘 다 남긴다. */
-.app.sap .topbar .bm::before{
+/* 🔵 **관리자 상단바에도 붙인다** (2026-09-14 · 사용자 요청 — 「관리자페이지도 로고 넣어주고」).
+   ⚠ 좁은 화면(≤560)에서 관리자는 **브랜드 글자를 통째로 접는다**(`.app:not(.sap) .topbar .bm`) —
+     그때는 심볼도 같이 접힌다. 메뉴 일곱 개가 자리를 못 잡기 때문이고, 이미 그렇게 정해 둔 자리다. */
+.app .topbar .bm::before{
   content:"";flex:none;width:57px;height:24px;
   background:var(--logo-h1) left center/auto 100% no-repeat;
 }
@@ -7193,12 +7210,19 @@ async function addClass(){
   /* 갈래 (2026-09-01 · E-1). 특강도 «반»이다 — 출결·과제·성적·진도를 그대로 물려받는다.
      다른 점은 «누가 듣는가»(여럿을 겹쳐 듣는다)와 «출석률을 따로 센다» 둘뿐이다. */
   const kind = (document.getElementById('new-ckind') || {}).value || '정규';
-  const cls = {id:'c'+Date.now(), name, schedule, period, status:'진행중', kind};
+  /* 🔵 **만들 때는 한 칸으로 받는다** — 요일마다 다른 경우는 드물고, 다르면 고치기에서 가른다.
+     ⚠ 적은 요일에만 넣는다(`parseScheduleDays`) — 안 쓰는 요일에 값을 심어 두면
+       나중에 시간을 고쳤을 때 엉뚱한 요일의 강의실이 살아난다. */
+  const room = ((document.getElementById('new-croom') || {}).value || '').trim();
+  const rooms = {};
+  if(room) parseScheduleDays(schedule).forEach(d => { rooms[String(d)] = room; });
+  const cls = {id:'c'+Date.now(), name, schedule, period, status:'진행중', kind, rooms};
   DATA.classes.push(cls);
   await dbSetDoc('classes', cls.id, cls);
   document.getElementById('new-cname').value='';
   document.getElementById('new-cschedule').value='';
   document.getElementById('new-cperiod').value='';
+  if(document.getElementById('new-croom')) document.getElementById('new-croom').value='';
   showToast('반이 추가되었습니다.');
   render();
 }
@@ -7218,16 +7242,26 @@ async function saveClassEdit(cid){
   const 값 = (id) => (document.getElementById(id + cid) || {}).value || '';
   const name = 값('ce-name').trim();
   if(!name){ showToast('반 이름을 비울 수 없습니다.'); return; }
-  const 전 = {name: c.name, schedule: c.schedule || '', period: c.period || '', kind: c.kind || '정규'};
+  /* 🔵 **강의실은 시간 덩이마다 하나** — 화면에 그린 칸과 같은 차례로 읽는다.
+     ⚠ 시간 글자를 «같이» 고쳤다면 덩이가 달라졌을 수 있다. 그때는 **고치기 전 덩이**로 읽고
+       요일에 얹는다 — 칸은 그 덩이로 그려져 있었기 때문이다. 새 시간은 다음에 열 때 갈린다. */
+  const rooms = {};
+  classRoomChunks(c).forEach((덩이, i) => {
+    const v = 값('ce-room' + i + '-').trim();
+    if(v) 덩이.days.forEach(d => { rooms[String(d)] = v; });
+  });
+  const 방글 = (r) => Object.keys(r).sort().map(d => WEEKDAY_LABEL[+d] + ' ' + r[d]).join(' · ');
+  const 전 = {name: c.name, schedule: c.schedule || '', period: c.period || '', kind: c.kind || '정규',
+              rooms: 방글(c.rooms || {})};
   const 후 = {name, schedule: 값('ce-sched').trim(), period: 값('ce-period').trim(),
-              kind: 값('ce-kind') || '정규'};
+              kind: 값('ce-kind') || '정규', rooms: 방글(rooms)};
   const 바뀐 = Object.keys(후).filter(k => 전[k] !== 후[k]);
   if(!바뀐.length){ state.classEditId = ''; showToast('바뀐 값이 없습니다.'); render(); return; }
-  Object.assign(c, 후);
+  Object.assign(c, 후, {rooms});
   await dbSetDoc('classes', c.id, c);
   /* 🔴 **시간을 고치면 학생 달력이 통째로 달라진다** — 누가 언제 바꿨는지 남을 값이 있다.
      ⚠ 학생 한 명의 일이 아니므로 학생 자리는 비운다(`logAudit` 의 둘째·셋째). */
-  const 이름 = {name:'이름', schedule:'시간', period:'기간', kind:'갈래'};
+  const 이름 = {name:'이름', schedule:'시간', period:'기간', kind:'갈래', rooms:'강의실'};
   await logAudit('반 정보 수정', '', '',
     `${후.name} — ` + 바뀐.map(k => `${이름[k]} ${전[k] || '(빈칸)'}→${후[k] || '(빈칸)'}`).join(' · '));
   state.classEditId = '';
@@ -7243,6 +7277,14 @@ function classEditHTML(c){
       <input id="ce-name${c.id}" value="${v(c.name)}"></label>
     <label style="flex:1;min-width:190px;"><span>강의 시간</span>
       <input id="ce-sched${c.id}" value="${v(c.schedule)}" placeholder="예: 화,목 19시반~22시, 토 2시~4시"></label>
+    ${/* 🔵 **강의실 칸은 «시간 덩이»마다 하나다** (2026-09-14 · 사용자 요청) — 「월·금」 한 칸,
+         「토」 한 칸. 요일 일곱 개를 늘어놓지 않는 까닭은, 사용자가 실제로 가르는 단위가
+         «같이 수업하는 요일 묶음»이기 때문이다.
+       ⚠ 요일이 안 적힌 반은 칸을 안 낸다 — 어느 요일에 넣을지 알 수 없다. */''}
+    ${classRoomChunks(c).map((덩이, i) => `<label style="min-width:150px;">
+      <span>강의실 · ${덩이.days.map(d => WEEKDAY_LABEL[d]).join('·')}</span>
+      <input id="ce-room${i}-${c.id}" value="${v(classRoomOf(c, 덩이.days[0]))}"
+        placeholder="예: 2관 대강의실"></label>`).join('')}
     <label style="min-width:130px;"><span>기간</span>
       <input id="ce-period${c.id}" value="${v(c.period)}" placeholder="예: 26.03~26.12"></label>
     <label style="min-width:100px;"><span>갈래</span>
@@ -7253,7 +7295,9 @@ function classEditHTML(c){
     <button class="btn q sm" onclick="state.classEditId=''; render()">취소</button>
   </div>
   ${/* ⚠ 갈래를 바꾸면 출석률 셈이 갈린다 — 조용히 바뀌면 안 되니 적어 둔다. */''}
-  <p class="st-note" style="margin-top:6px;">시간을 고치면 <b>학생 달력과 출결 화면이 바로 따라</b> 바뀝니다 ·
+  <p class="st-note" style="margin-top:6px;">${classRoomChunks(c).length
+    ? '<b>강의실은 요일 묶음마다 따로</b> 적을 수 있습니다 — 학생 홈의 「다음 수업」과 달력에 그대로 뜹니다 · '
+    : '<b>강의실 칸은 시간에 요일을 적으면 생깁니다</b> — 어느 요일의 강의실인지 알아야 하기 때문입니다 · '}시간을 고치면 <b>학생 달력과 출결 화면이 바로 따라</b> 바뀝니다 ·
     갈래를 바꾸면 <b>출석률 셈이 갈립니다</b> · 바꾼 것은 <b>변경 이력</b>에 남습니다.</p>`;
 }
 /* =================== 휴강 · 보강 (2026-09-08 · 사용자 요청) ===================
@@ -12823,7 +12867,17 @@ const GAMES = [
 /* 주차를 세는 기준. ⚠ 이 날짜를 옮기면 «이번 주 게임»이 통째로 바뀐다 — 주 중에 옮기면
    그 주에 이미 올라간 점수가 다른 게임 것이 되어 순위에서 빠진다. 월요일에만 옮길 것. */
 const GAME_EPOCH = '2026-08-31';
+/* 🔵 **한 주를 콕 집어 정한다** (2026-09-14 · 사용자 요청 — 「이번주 게임 똥피하기로 바꿔주고」).
+   🔴 **`GAME_EPOCH` 를 옮기면 안 된다** — 그건 로테이션 «전체»를 뒤집어서, 지난 주들의
+     게임까지 바뀐다(그 주 순위가 다른 게임 것으로 읽힌다).
+   ⇒ **그 주 월요일 하나만** 적는다. 안 적힌 주는 예전대로 돌아간다.
+   ⚠ 열쇠는 반드시 **월요일**이다(`weekStartOf`). */
+const GAME_PICKS = {
+  '2026-09-14': 'dodge',     // 사용자가 이 주만 똥피하기로 정했다
+};
 function gameOfWeek(monday){
+  const 콕 = GAME_PICKS[monday];
+  if(콕 && GAMES.some(g => g.key === 콕)) return gameByKey(콕);
   const a = new Date(GAME_EPOCH + 'T00:00:00'), b = new Date((monday||GAME_EPOCH) + 'T00:00:00');
   const wk = Math.round((b - a) / 604800000);
   return GAMES[((wk % GAMES.length) + GAMES.length) % GAMES.length];
@@ -13297,6 +13351,11 @@ function stuHomeHTML(c){
               new Date(next.date + 'T00:00:00').getDay()))}</b>
           <span style="font-size:12.5px;color:var(--sub);">${escHtml(next.cls.name)}</span>
         </div>
+        ${/* 🔵 **강의실** (2026-09-14 · 사용자 요청) — «그 날»의 강의실이라야 한다.
+             월·금과 토요일이 다른 반이 있어서, 반 하나에 강의실 하나로 적으면 거짓말이 된다. */''}
+        ${(()=>{ const 방 = classRoomOf(next.cls, new Date(next.date + 'T00:00:00').getDay());
+          return 방 ? `<div style="font-size:12.5px;font-weight:600;color:var(--point-d);margin-top:8px;">
+            ${iconSvg('building',13)} ${escHtml(방)}</div>` : ''; })()}
         ${cp.subject ? `<div style="font-size:12px;color:var(--dim);margin-top:8px;">
           진도 · ${escHtml(cp.subject)}${nextUnit ? ' — '+escHtml(nextUnit) : ' — 모든 단원 완료'}</div>` : ''}
         ${/* 교재 (2026-09-01 · T-1b) — «다음 수업» 카드에 둔다. 학생에게 이 줄은
@@ -14951,8 +15010,11 @@ function stuMonthEvents(c, ym){
          그것이 「날짜 변경」의 뜻이다. 원래 요일이 아닌 날이므로 요일 검사보다 «먼저» 본다. */
       const 옮겨옴 = movedInto(cid, date);
       if(옮겨옴 && !(휴강 && date >= 휴강.from && date <= 휴강.to)){
+        /* ⚠ 보강은 «원래 날»의 시간표를 그대로 옮겨 온 것이라 강의실도 그 요일 것이다. */
         넣기(date, {kind: 'class', title: (cls.name || '수업') + ' (보강)',
-          sub: [옮겨옴.label, sessionTimeText(cls.schedule, new Date(옮겨옴.date + 'T00:00:00').getDay())]
+          sub: [옮겨옴.label,
+            sessionTimeText(cls.schedule, new Date(옮겨옴.date + 'T00:00:00').getDay()),
+            classRoomOf(cls, new Date(옮겨옴.date + 'T00:00:00').getDay())]
             .filter(Boolean).join(' · ')});
       }
       if(!요일들.includes(dow)) continue;
@@ -14968,8 +15030,9 @@ function stuMonthEvents(c, ym){
       }
       /* 🔴 **그 «요일»의 시간을 말한다** (2026-09-08) — 화·목과 토의 시간이 다른 반이 있다.
          요일을 안 주면 「화·목 17:00~19:30 · 토 10:00~14:00」이 통째로 칸에 들어가 안 읽힌다. */
+      /* 🔵 강의실도 «그 요일»의 것을 붙인다 (2026-09-14) — 요일마다 다른 반이 있다. */
       넣기(date, {kind: 'class', title: cls.name || '수업',
-        sub: sessionTimeText(cls.schedule, dow) || ''});
+        sub: [sessionTimeText(cls.schedule, dow), classRoomOf(cls, dow)].filter(Boolean).join(' · ')});
     }
   });
 
@@ -16655,6 +16718,39 @@ function sessionTimeText(schedule, dow){
     (x.days.length ? x.days.map(d => WEEKDAY_LABEL[d]).join('·') + ' ' : '')
     + normTimeText(x.time)).join(' · ');
 }
+/* =================== 강의실 (2026-09-14 · 사용자 요청) ===================
+   「관리자페이지에서 강의실 정할 수 있게해주고 학생페이지에서 강의실도 보이도록해줘
+     (근데 강의실이 월금토반 수업중에서 **월금 강의실과 토요일 강의실이 달라서** 그거 고려해줘)」
+   🔵 **시간이 이미 요일 덩이로 갈려 있다**(`parseSchedule` — 「월·금 19:00~22:00 · 토 14:00~16:00」).
+     강의실도 **같은 결**로 둔다 — 새 구조를 만들지 않는다.
+   🔵 그래서 저장은 **요일 → 강의실** 하나다(`cls.rooms = {"1":"2관 대강의실","6":"별관"}`).
+     덩이 «차례»로 저장하면 시간 글자를 고칠 때마다 강의실이 엉뚱한 요일로 밀린다.
+   ⚠ 옛 반에는 `rooms` 가 없다 — 그때는 **빈 글자**다. 짐작해서 채우지 않는다. */
+function classRoomOf(cls, dow){
+  const r = cls && cls.rooms;
+  if(!r || dow === undefined || dow === null || dow === '') return '';
+  return String(r[String(dow)] || '').trim();
+}
+/* 반 하나를 한 줄로 — 다 같으면 「2관 대강의실」, 갈리면 「월·금 2관 대강의실 · 토 별관」.
+   ⚠ 수업이 있는 요일만 본다 — 안 쓰는 요일에 남아 있는 옛 값이 화면에 나오면 안 된다. */
+function classRoomLabel(cls){
+  const 있는것 = parseScheduleDays(cls && cls.schedule)
+    .map(d => [d, classRoomOf(cls, d)]).filter(x => x[1]);
+  if(!있는것.length) return '';
+  const 값들 = [...new Set(있는것.map(x => x[1]))];
+  if(값들.length === 1) return 값들[0];
+  return 값들.map(v => 있는것.filter(x => x[1] === v).map(x => WEEKDAY_LABEL[x[0]]).join('·')
+    + ' ' + v).join(' · ');
+}
+/* 강의실을 «적는 칸»의 모양 — 시간 덩이마다 하나다(월·금 한 칸, 토 한 칸).
+   🔴 **요일이 안 적힌 반은 칸이 없다** — 어느 요일에 넣을지 알 수 없고, 달력에도 안 선다.
+     ⚠ 처음엔 `.filter(x => x.days.length)` 를 달았는데 **한 번도 거르지 못하는 가지**였다 —
+       `parseSchedule` 은 요일 글자를 만나야 덩이를 열기 때문에 «요일 없는 덩이»가 아예 안 나온다
+       (「19:00~22:00」 → `[]`). 덫이 안 물어서 드러났다. 같은 답을 내는 가지는 남겨 두지 않는다. */
+function classRoomChunks(cls){
+  return parseSchedule(cls && cls.schedule);
+}
+
 /* 그 요일의 시작 시각. 요일을 안 주면 **가장 이른** 것 — 수업 목록을 시간순으로 세울 때 쓴다.
    ⚠ 예전에는 «마지막 덩이»의 시각이었다. 토요일이 뒤에 붙었다는 이유로 화요일 반이
      10시로 정렬되던 자리다. */
@@ -18045,7 +18141,9 @@ function teacherClassHubHTML(){
           <h1 class="t-title">${escHtml(c.name)}</h1>
           <div class="t-meta" style="margin-top:6px;">
             ${/* ⚠ 원문이 아니라 다듬은 말을 쓴다 — 반 목록과 같은 꼴이라야 같은 반으로 읽힌다. */''}
-            ${escHtml(classScheduleLabel(c)||'일정 미정')}<s>·</s>${roster.length}명<s>·</s>${escHtml(c.period||'기간 미정')}
+            ${escHtml(classScheduleLabel(c)||'일정 미정')}${
+              classRoomLabel(c) ? `<s>·</s>${escHtml(classRoomLabel(c))}` : ''
+            }<s>·</s>${roster.length}명<s>·</s>${escHtml(c.period||'기간 미정')}
             ${c.status==='진행중' ? '' : '<s>·</s><span class="badge gone">종료</span>'}
           </div>
         </div>
@@ -26954,10 +27052,13 @@ function teacherExamPlanHTML(){
 
   const 찍힌수 = Object.values(p.cells || {}).reduce((n, r) => n + Object.keys(r || {}).length, 0);
 
-  const 머리 = `<div class="rst-hrow" style="flex-shrink:0;">
-    <h1 class="t-title">직보 일정표<s>${escHtml(currentSeason())} · ${학생들.length}명 · 찍은 칸 ${찍힌수}개${
-      state.planDirty ? ' · 저장 중…' : ''}</s></h1>
-  </div>`;
+  /* 🔴 **제목을 두 번 쓰지 않는다** (2026-09-14 · 사용자가 짚었다 — 「직보일정표 말이 반복」).
+     설정 껍데기가 이미 `<h1>직보 일정표</h1>` 를 그린다(`teacherSettingsHTML`).
+     ⇒ 여기서는 **셈만** 말한다 — 시즌·인원·찍은 칸·저장 중은 화면마다 달라지는 값이라
+       껍데기의 붙박이 설명이 대신 못 한다. 날짜 줄 오른쪽에 얹는다. */
+  const 셈 = `<span class="ic-hint" style="margin-left:auto;">${escHtml(currentSeason())}
+    · ${학생들.length}명 · 찍은 칸 <b>${찍힌수}</b>개${
+    state.planDirty ? ' · <b style="color:var(--brand-d);">저장 중…</b>' : ''}</span>`;
 
   /* ── 날짜 줄 ── */
   const 줄 = `<div class="ist-bar">
@@ -26971,9 +27072,9 @@ function teacherExamPlanHTML(){
         onclick="planSetRange('',''); render();">시험 일정에 맡기기</button>`
       : `<span class="ic-hint">시험 일정에서 저절로 잡았습니다${
           자동 ? '' : ' — 🔴 <b>시험 일정이 비어 있어 잡을 것이 없습니다</b>'}</span>`}
-    <span class="spacer"></span>
     <button class="btn q sm" title="수학 시험 전날에 직보2시만 깝니다 — 손으로 고친 칸은 안 건드립니다"
       onclick="planSeedRun()">밑그림 깔기</button>
+    ${셈}
   </div>`;
 
   /* ── 붓 ── */
@@ -26985,14 +27086,16 @@ function teacherExamPlanHTML(){
       onclick="state.planBrush={k:'',t:''};render()">지우개</button>
     ${붓종류 && 붓종류.시간 ? `<input class="pl-t" placeholder="2시" value="${escHtml(붓.t||'')}"
       oninput="liveEdit(event, v=>{ state.planBrush={k:'${붓.k}',t:v}; })">` : ''}
-    <span class="ic-hint">칸을 누르면 <b>${escHtml(붓.k ? planLabel({k:붓.k,t:붓.t}) || '—' : '비우기')}</b> 가 찍힙니다 ·
+    <span class="ic-hint">칸을 누르면 ${붓.k
+      ? `<b class="pl-p p-${escHtml(붓.k)}">${escHtml(planLabel({k:붓.k,t:붓.t}) || '—')}</b>`
+      : '<b>비우기</b>'} 가 찍힙니다 ·
       같은 것을 다시 누르면 지워집니다 · 이름 옆 <b>⇊</b> 는 그 줄을 <b>같은 반·같은 학교</b>에 그대로 옮깁니다
-      <s style="display:block;text-decoration:none;margin-top:3px;">⚠ 옅게 깔린 바탕은 <b>시험기간</b>,
-        밑줄 그어진 칸은 <b>수학 시험일</b>입니다 — 「설정 › 시험 일정」에서 오는 값이라
-        여기서 찍는 것이 아니고, 시험 날짜를 고치면 여기도 따라 바뀝니다.</s></span>
+      <s style="display:block;text-decoration:none;margin-top:3px;">⚠ <b>바탕을 칠하는 것은 시험기간 하나뿐</b>입니다
+        (밑줄 그어진 칸은 <b>수학 시험일</b>) — 「설정 › 시험 일정」에서 오는 값이라 여기서 찍는 것이 아니고,
+        시험 날짜를 고치면 여기도 따라 바뀝니다. <b>찍은 것은 알약</b>으로 앉으므로 시험기간과 안 섞입니다.</s></span>
   </div>`;
 
-  if(!days.length) return `<div class="ex-main">${머리}${줄}
+  if(!days.length) return `<div class="ex-main">${줄}
     <div class="ist-empty">날짜 줄이 없습니다 — 위에서 날짜를 정하거나,
       「설정 › 시험 일정」에 학교별 시험 날짜를 먼저 적어 주세요.</div></div>`;
 
@@ -27032,16 +27135,24 @@ function teacherExamPlanHTML(){
            찍은 것이 있으면 그것이 이긴다 — 미리 적힌 것은 «사실을 보여 주는 것»이지
            «강사가 정한 것»이 아니므로 사람이 정한 값을 밀어내면 안 된다. */
         const 미리 = !k && 수학 ? '수학시험' : '';
-        return `<td class="pl-c ${k ? 'k-' + k.색 : ''}${안 ? ' sp' : ''}${수학 ? ' mth' : ''}"
+        /* 🔴 **바탕색은 «시험기간»에만 쓴다** (2026-09-14 · 사용자가 짚었다).
+             「직보시간에 배경색이 시험기간과 동일한 배경색이 들어가면서 첫시험날 전날에 직보를
+             넣으면 **시험기간이 연장된 것처럼 보여**」 — 그대로였다. 찍은 칸(`k-no`)과
+             시험기간(`sp`)이 **둘 다 `--nobg`** 여서 칸만 보고는 가를 수가 없었다.
+           ⇒ **면은 시험기간 하나뿐이다.** 찍은 것은 칸 «안»의 알약으로 그린다 —
+             면은 «기간»이고 알약은 «그 날 적어 둔 것»이라, 꼴이 다르면 뜻도 안 섞인다.
+           🔵 종류마다 알약을 달리한다 — 예전엔 일곱 종류가 색 셋을 나눠 쓰고 있었다. */
+        return `<td class="pl-c${안 ? ' sp' : ''}${수학 ? ' mth' : ''}"
           ${수학 ? 'title="수학 시험일 — 설정 › 시험 일정에서 온 값입니다"'
             : 안 ? 'title="시험기간 — 설정 › 시험 일정에서 온 값입니다"' : ''}
           onclick="planPaint('${escHtml(sid)}','${d}')">${
-            k ? escHtml(planLabel(c)) : 미리 ? `<s>${미리}</s>` : ''}</td>`;
+            k ? `<b class="pl-p p-${escHtml(c.k)}">${escHtml(planLabel(c))}</b>`
+              : 미리 ? `<s>${미리}</s>` : ''}</td>`;
       }).join('')}
     </tr>`;
   }).join('')).join('');
 
-  return `<div class="ex-main">${머리}${줄}${붓줄}
+  return `<div class="ex-main">${줄}${붓줄}
     ${state.planMsg ? `<div class="ist-msg">${escHtml(state.planMsg)}</div>` : ''}
     <div class="ex-body"><div class="pl-wrap"><table class="pl-t2">
       <thead><tr><th class="pl-cls">반</th><th class="pl-nm">이름</th><th class="pl-sc">학교</th>${날머리}</tr></thead>
@@ -27381,12 +27492,16 @@ function teacherSettingsClassesHTML(){
              그 줄이 통째로 어긋난다. **설명은 아래 `st-note` 로 간다** — 원래 그러라고 있는 자리다. */''}
         <label style="flex:1;min-width:170px;"><span>강의 시간</span>
           <input id="new-cschedule" placeholder="예: 화,목 19시반~22시, 토 2시~4시"></label>
+        <label style="min-width:150px;"><span>강의실</span>
+          <input id="new-croom" placeholder="예: 2관 대강의실"></label>
         <label style="min-width:140px;"><span>기간</span><input id="new-cperiod" placeholder="예: 26.03~26.12"></label>
         <label style="min-width:110px;"><span>갈래</span>
           <select class="fm-sel" id="new-ckind"><option>정규</option><option>특강</option></select></label>
         <button class="btn p sm" onclick="addClass()">추가</button>
       </div>
-      <p class="st-note">요일 글자(월·화·수…)로 수업일이 정해집니다.
+      <p class="st-note"><b>강의실은 모든 요일에 같이 들어갑니다</b> — 요일마다 다르면 만든 뒤
+        <b>고치기</b>에서 요일별로 가를 수 있습니다(월·금과 토요일이 다른 반처럼요).<br>
+        요일 글자(월·화·수…)로 수업일이 정해집니다.
         <b>요일마다 시간이 달라도 그대로 적으시면 됩니다</b> — 「화,목 19시반~22시, 토 2시~4시」처럼요.
         구분은 쉼표든 <b>/</b> 든 상관없고, <b>「7시」·「19시반」·「오후 2시」·「14:00」 무엇으로 적어도</b>
         화면에는 <b>14:00~16:00</b> 같은 한 꼴로 보입니다.<br>
@@ -27400,7 +27515,8 @@ function teacherSettingsClassesHTML(){
             <div class="t"><b>${escHtml(c.name)}</b>
               ${/* ⚠ 원문을 그대로 뿌리지 않는다 — 「19시반~22시, 토 14시~16시」처럼 적어도
                    목록에서는 「화·목 19:30~22:00 · 토 14:00~16:00」으로 한 꼴로 보인다. */''}
-              <span>${escHtml(classScheduleLabel(c) || '일정 미등록')}<s>·</s>${n}명${
+              <span>${escHtml(classScheduleLabel(c) || '일정 미등록')}${
+                classRoomLabel(c) ? `<s>·</s>${escHtml(classRoomLabel(c))}` : ''}<s>·</s>${n}명${
                 c.period?`<s>·</s>${escHtml(c.period)}`:''}${cp.subject?`<s>·</s>${escHtml(cp.subject)} ${cp.percent}%`:''}</span></div>
             <div class="v">
               ${isSpecialClass(c.id) ? '<span class="badge consult">특강</span>' : ''}

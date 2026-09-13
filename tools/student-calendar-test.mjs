@@ -53,7 +53,7 @@ function 모은다(DATA, c, ym, 직보 = {}, 쉼 = []) {
     && (!o.classIds || !o.classIds.length || o.classIds.includes(cid))) || null;
   return new Function('DATA', 'c', 'ym',
     'parseScheduleDays', 'sessionTimeText', 'examDatesOf', 'classNameOf', 'slotTimeLabel',
-    'planCellsOfStudent', 'planLabel', 'offDayFor', 'movedInto', 'stuDayLabel',
+    'planCellsOfStudent', 'planLabel', 'offDayFor', 'movedInto', 'stuDayLabel', 'classRoomOf',
     조각 + '; return stuMonthEvents(c, ym);')(
     DATA, c, ym,
     (sch) => (sch || '').includes('월') ? [1] : [],        // 「월」이 있으면 월요일
@@ -69,6 +69,8 @@ function 모은다(DATA, c, ym, 직보 = {}, 쉼 = []) {
     (cid, date) => 찾기(cid, date, 'date'),
     (cid, date) => 찾기(cid, date, 'moveTo'),
     (date) => date,
+    /* ⚠ 2026-09-14 에 강의실이 붙었다 — 반에 적어 두면 «그 요일» 것이 줄에 딸려 온다. */
+    (cls, dow) => String(((cls && cls.rooms) || {})[String(dow)] || ''),
   );
 }
 
