@@ -2627,6 +2627,41 @@
   overflow:hidden;background:#000;margin-top:11px;}
 .sap-vwrap iframe{position:absolute;inset:0;width:100%;height:100%;border:0;}
 
+/* ---------- 영상 조작줄 — 우리가 짓는다 (2026-09-13 · K-8) ----------
+   유튜브 조작줄을 `controls=0` 으로 아예 안 띄운다(제목 띠·공유·YouTube 로고·전체화면이 통째로 사라진다).
+   그 대신 재생·탐색·배속·소리·전체화면을 여기서 준다. 까닭은 stuVideoHTML 의 embed 주석에. */
+.vc-shell{margin-top:11px;}
+.vc-shell .sap-vwrap{margin-top:0;border-radius:var(--r-md) var(--r-md) 0 0;}
+/* 투명한 판 — 우클릭(동영상 URL 복사)·길게 누르기·끝 화면의 관련 영상 클릭을 붙든다.
+   ⚠ 배경을 완전 투명(transparent)으로 두면 사파리에서 클릭이 통과하는 일이 있다 — 거의 안 보이는 색을 깐다. */
+.vc-veil{position:absolute;inset:0;cursor:pointer;background:rgba(0,0,0,.001);
+  -webkit-touch-callout:none;user-select:none;-webkit-user-select:none;}
+.vc{display:flex;align-items:center;gap:9px;padding:8px 11px;background:#1B1A17;
+  border-radius:0 0 var(--r-md) var(--r-md);}
+.vc-b{flex-shrink:0;width:30px;height:30px;display:flex;align-items:center;justify-content:center;
+  border:0;background:transparent;color:#EDEAE3;border-radius:var(--r-sm);cursor:pointer;padding:0;}
+.vc-b:hover{background:rgba(255,255,255,.12);}
+/* 배속은 글자다 — 칸을 조금 넓게 잡아야 「1.25x」가 안 접힌다. */
+.vc-b.rate{width:auto;padding:0 8px;font-family:'JetBrains Mono',monospace;font-size:11.5px;font-weight:600;}
+.vc-t{flex-shrink:0;font-family:'JetBrains Mono',monospace;font-size:11px;color:#B9B4A9;min-width:34px;text-align:center;}
+/* 누르는 자리를 넓게 — 막대가 6px 이면 손가락으로 못 짚는다. 보이는 굵기는 안쪽 선이 진다. */
+.vc-bar{flex:1;min-width:0;height:18px;position:relative;cursor:pointer;touch-action:none;}
+.vc-bar::before{content:'';position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);
+  height:5px;border-radius:3px;background:rgba(255,255,255,.18);}
+.vc-bar i{position:absolute;left:0;top:50%;transform:translateY(-50%);height:5px;width:0;
+  border-radius:3px;background:var(--accent);}
+/* 전체 화면 — 우리 상자가 통째로 커진다(유튜브 fs=0 이라 저쪽 단추는 없다). */
+.vc-shell:fullscreen{margin:0;display:flex;flex-direction:column;background:#000;}
+.vc-shell:fullscreen .sap-vwrap{flex:1;min-height:0;aspect-ratio:auto;border-radius:0;}
+.vc-shell:fullscreen .vc{border-radius:0;}
+.vc-shell:-webkit-full-screen{margin:0;display:flex;flex-direction:column;background:#000;}
+.vc-shell:-webkit-full-screen .sap-vwrap{flex:1;min-height:0;aspect-ratio:auto;border-radius:0;}
+/* 400px 안팎에서는 시간 두 칸이 막대를 잡아먹는다 — 지나간 시간만 남긴다. */
+@media (max-width:420px){
+  .vc{gap:6px;padding:7px 8px;}
+  .vc-t.dur{display:none;}
+}
+
 /* ============================================================
    출석 도장 — 접두사 gm-  (2026-08-21 · 시안 design-v1/21-checkin.html)
    ⚠ **이것은 출결이 아니다.** 강사가 「수업 > 출결」에 넣는 출석·지각·조퇴·결석은
@@ -9024,6 +9059,97 @@ function videoProgressBlockHTML(studentId, videoId){
       : '시청 중 — <b>'+VIDEO_GOAL_PCT+'%</b>를 보면 완주'} · 최근 <span class="mono">${(p.updatedAt||'').slice(0,10)}</span></div>`;
 }
 // 재생 중이던 구간의 벽시계 경과 시간을 정산해서 누적한다(멈춤/종료/화면전환 시 남은 조각까지 반영).
+/* =============== 영상 조작줄 — 우리가 짓는다 (2026-09-13 · K-8) ===============
+   왜 직접 짓는지는 `stuVideoHTML` 의 embed 주석에 있다 — 유튜브 조작줄을 `controls=0` 으로 아예 안 띄운다.
+   🔴 **여기서 render() 를 절대 부르지 않는다.** render() 는 app.innerHTML 을 통째로 갈아서
+     iframe 이 새로 생기고 **재생이 처음으로 돌아간다.** 그래서 조작줄은 제 칸만 직접 고쳐 그린다
+     (`videoProgressBlockHTML` 이 진도 칸에 하는 것과 같은 규칙이다).
+   ⚠ 배속은 «시청 시간»에 그대로 들어간다(K-7) — 2배속으로 다 보면 완주다.
+   ⚠ 플레이어를 못 잡는 순간이 있다(아직 준비 전 · 다른 화면으로 떠난 뒤) — 그때는 조용히 아무것도 안 한다. */
+const VC_RATES = [1, 1.25, 1.5, 2];
+function vcPlayer(vid){ const e = state.ytPlayers && state.ytPlayers[vid]; return e && e.player; }
+function vcAsk(vid, fn, 없으면){ const p = vcPlayer(vid); if(!p) return 없으면;
+  try{ const v = fn(p); return (v === undefined || v === null) ? 없으면 : v; }catch(err){ return 없으면; } }
+function vcTime(sec){
+  sec = Math.max(0, Math.floor(sec || 0));
+  const h = Math.floor(sec/3600), m = Math.floor(sec%3600/60), s = sec%60;
+  return (h ? h + ':' + String(m).padStart(2,'0') : String(m)) + ':' + String(s).padStart(2,'0');
+}
+function videoControlsHTML(vid){
+  return `<div class="vc" id="vc-${vid}">
+    <button class="vc-b play" onclick="vcToggle('${vid}')" title="재생 / 멈춤" aria-label="재생">${iconSvg('playBare',16)}</button>
+    <span class="vc-t cur" id="vc-cur-${vid}">0:00</span>
+    <span class="vc-bar" id="vc-bar-${vid}" title="누르면 그 자리로 갑니다"><i></i></span>
+    <span class="vc-t dur" id="vc-dur-${vid}">0:00</span>
+    <button class="vc-b rate" onclick="vcNextRate('${vid}')" title="배속 — 빠르게 봐도 시청 시간은 영상 기준으로 셉니다">1x</button>
+    <button class="vc-b mute" onclick="vcMute('${vid}')" title="소리 끄기 / 켜기" aria-label="소리">${iconSvg('sound',16)}</button>
+    <button class="vc-b full" onclick="vcFull('${vid}')" title="전체 화면" aria-label="전체 화면">${iconSvg('expand',16)}</button>
+  </div>`;
+}
+function vcToggle(vid){
+  const p = vcPlayer(vid); if(!p) return;
+  try{ (p.getPlayerState() === 1 ? p.pauseVideo() : p.playVideo()); }catch(err){}
+}
+/* 배속은 «다음 것»으로 돈다 — 목록을 펴면 조작줄이 길어지고, 이 줄은 모바일 폭이 기준이다. */
+function vcNextRate(vid){
+  const p = vcPlayer(vid); if(!p) return;
+  const now = vcAsk(vid, x=>x.getPlaybackRate(), 1);
+  const 가까운 = VC_RATES.reduce((a,b)=> Math.abs(b-now) < Math.abs(a-now) ? b : a, VC_RATES[0]);
+  try{ p.setPlaybackRate(VC_RATES[(VC_RATES.indexOf(가까운) + 1) % VC_RATES.length]); }catch(err){}
+  vcPaint(vid);
+}
+function vcMute(vid){
+  const p = vcPlayer(vid); if(!p) return;
+  try{ (p.isMuted() ? p.unMute() : p.mute()); }catch(err){}
+  vcPaint(vid);
+}
+function vcFull(vid){
+  const el = document.getElementById('vshell-' + vid); if(!el) return;
+  const 지금 = document.fullscreenElement || document.webkitFullscreenElement;
+  if(지금){ (document.exitFullscreen || document.webkitExitFullscreen).call(document); }
+  else { (el.requestFullscreen || el.webkitRequestFullscreen || function(){}).call(el); }
+}
+/* 막대 — 누르면 그 자리로, 끌어도 따라온다.
+   ⚠ `setPointerCapture` 가 있어야 막대 밖으로 손이 나가도 끌기가 이어진다. */
+function vcBindBar(vid){
+  const bar = document.getElementById('vc-bar-' + vid);
+  if(!bar || bar.dataset.on) return;
+  bar.dataset.on = '1';
+  const 가기 = ev => {
+    const r = bar.getBoundingClientRect(); if(!r.width) return;
+    const 비율 = Math.max(0, Math.min(1, (ev.clientX - r.left) / r.width));
+    const p = vcPlayer(vid); if(!p) return;
+    try{ const d = p.getDuration() || 0; if(d > 0) p.seekTo(d * 비율, true); }catch(err){}
+    vcPaint(vid);
+  };
+  bar.addEventListener('pointerdown', ev => { try{ bar.setPointerCapture(ev.pointerId); }catch(err){} 가기(ev); });
+  bar.addEventListener('pointermove', ev => { if(ev.buttons) 가기(ev); });
+}
+/* 제 칸만 고쳐 그린다 — render() 는 안 부른다.
+   ⚠ 같은 값이면 DOM 을 안 건드린다. 0.25초마다 innerHTML 을 갈면 그 단추는 누를 수가 없다. */
+function vcPaint(vid){
+  const box = document.getElementById('vc-' + vid);
+  if(!box){
+    /* 화면을 떠났다 — 제 타이머를 스스로 거둔다(안 거두면 영영 돈다). */
+    const e = state.ytPlayers && state.ytPlayers[vid];
+    if(e && e.ui){ clearInterval(e.ui); e.ui = null; }
+    return;
+  }
+  if(!vcPlayer(vid)) return;
+  const cur = vcAsk(vid, x=>x.getCurrentTime(), 0);
+  const dur = vcAsk(vid, x=>x.getDuration(), 0);
+  const 아이콘 = (el, name) => { if(el && el.dataset.ic !== name){ el.dataset.ic = name; el.innerHTML = iconSvg(name, 16); } };
+  const 글자 = (el, t) => { if(el && el.textContent !== t) el.textContent = t; };
+  글자(document.getElementById('vc-cur-' + vid), vcTime(cur));
+  글자(document.getElementById('vc-dur-' + vid), vcTime(dur));
+  const fill = box.querySelector('.vc-bar i');
+  if(fill) fill.style.width = (dur > 0 ? Math.min(100, cur / dur * 100) : 0) + '%';
+  아이콘(box.querySelector('.vc-b.play'), vcAsk(vid, x=>x.getPlayerState(), -1) === 1 ? 'pause' : 'playBare');
+  아이콘(box.querySelector('.vc-b.mute'), vcAsk(vid, x=>x.isMuted(), false) ? 'mute' : 'sound');
+  아이콘(box.querySelector('.vc-b.full'),
+    (document.fullscreenElement || document.webkitFullscreenElement) ? 'shrink' : 'expand');
+  글자(box.querySelector('.vc-b.rate'), (Math.round(vcAsk(vid, x=>x.getPlaybackRate(), 1) * 100) / 100) + 'x');
+}
 /* 배속 (2026-09-13 · K-7) — 벽시계 1분은 2배속이면 «영상 2분»이다.
    안 곱하면 2배속으로 다 본 학생이 50%로 남는다. 4배를 넘는 값은 유튜브에 없으니 믿지 않는다. */
 function videoPlaybackRate(player){
@@ -9057,6 +9183,7 @@ function mountVideoTrackers(studentId){
          기록되지 않았다. 학생 화면이 영상을 하나씩 열고 닫게 되면서 매번 걸리는 길이 됐다. */
       if(prev){
         if(prev.timer) clearInterval(prev.timer);
+        if(prev.ui) clearInterval(prev.ui);   /* 조작줄 타이머 (2026-09-13 · K-8) */
         flushWatchTick(prev, studentId, videoId, prev.player);
         try{ prev.player.destroy(); }catch(err){}
         delete state.ytPlayers[videoId];
@@ -9065,6 +9192,9 @@ function mountVideoTrackers(studentId){
       try{
         player = new YT.Player(frame.id, {
           events: {
+            /* 조작줄은 플레이어가 «준비된 뒤»에 맨다 (2026-09-13 · K-8) — 그전에는 길이도 못 묻는다. */
+            onReady: () => { vcBindBar(videoId); vcPaint(videoId); },
+            onPlaybackRateChange: () => vcPaint(videoId),
             onStateChange: (e) => {
               const entry = state.ytPlayers[videoId];
               if(!entry) return;
@@ -9084,11 +9214,16 @@ function mountVideoTrackers(studentId){
                 if(entry.timer){ clearInterval(entry.timer); entry.timer = null; }
                 flushWatchTick(entry, studentId, videoId, player);
               }
+              vcPaint(videoId);   /* 재생/멈춤 표시가 0.25초를 기다리지 않게 (K-8) */
             }
           }
         });
       }catch(err){ return; }
-      state.ytPlayers[videoId] = { player, timer: null, el: frame };
+      const entry = { player, timer: null, ui: null, el: frame };
+      state.ytPlayers[videoId] = entry;
+      /* 조작줄을 0.25초마다 고쳐 그린다 (K-8). ⚠ 값이 같으면 DOM 을 안 건드린다 — vcPaint 안에 있다.
+         화면을 떠나면 vcPaint 가 제 타이머를 스스로 거둔다. */
+      entry.ui = setInterval(() => vcPaint(videoId), 250);
     });
   });
 }
@@ -10441,6 +10576,13 @@ const ICON_PATHS = {
   sparkle: '<path d="M12 3.5l1.9 4.9 4.9 1.9-4.9 1.9-1.9 4.9-1.9-4.9-4.9-1.9 4.9-1.9z"/><path d="M18.5 16.5l.7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7z"/>',
   pencil: '<path d="M16.5 4.5l3 3L8 19H5v-3z"/><path d="M14.5 6.5l3 3"/>',
   play: '<circle cx="12" cy="12" r="8.5"/><path d="M10.2 8.6l5.4 3.4-5.4 3.4z"/>',
+  /* 우리가 짓는 영상 조작줄이 쓰는 넷 (2026-09-13 · K-8) — 유튜브 조작줄을 안 띄우므로 이만큼이 필요하다. */
+  playBare: '<path d="M7.5 5.5l11 6.5-11 6.5z"/>',
+  pause: '<path d="M9 5.5v13M15 5.5v13"/>',
+  sound: '<path d="M11 5.5L6.5 9.5H3.5v5h3L11 18.5z"/><path d="M14.8 9.2a4 4 0 0 1 0 5.6"/><path d="M17.4 6.6a7.6 7.6 0 0 1 0 10.8"/>',
+  mute: '<path d="M11 5.5L6.5 9.5H3.5v5h3L11 18.5z"/><path d="M15.5 10l5 4M20.5 10l-5 4"/>',
+  expand: '<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>',
+  shrink: '<path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/>',
   // 로그인 오류 · 조교 권한 안내
   alert: '<path d="M12 4.5L21 19.5H3z"/><path d="M12 10v4M12 17h.01"/>',
   shield: '<path d="M12 3.5l7 2.8v5.2c0 4-2.9 7.4-7 8.5-4.1-1.1-7-4.5-7-8.5V6.3z"/><path d="M9.3 12l1.9 1.9 3.5-3.8"/>'
@@ -13349,17 +13491,36 @@ function stuVideoHTML(c){
   const resume = c.videos.find(v=>{ const p = pg(v.id); return p && !videoDone(p); });
   const open = c.videos.find(v=>v.id===state.stuVideoId);
 
+  /* 🔴 **유튜브 조작줄을 안 띄운다 — 조작줄은 우리가 짓는다** (2026-09-13 · K-8 · 사용자 —
+       「영상 링크 복사하는 좌측하단 버튼 막아줄 수 있어?」).
+     iframe 안은 **구글 도메인**이라 우리 JS 로 그 안의 단추를 지우거나 우클릭을 막을 수 없다
+     (2026-08-01에 한 번 확인하고 보류했던 것이 이 이야기다). 길은 둘뿐이었다 —
+     ① 단추 자리를 투명하게 «덮거나» ② 아예 **안 띄우거나**. 사용자가 ②를 골랐다.
+     · `controls=0` 이면 제목 띠·공유·나중에 보기·YouTube 로고·전체화면이 **통째로 안 나온다.**
+     · `disablekb=1` 로 iframe 안 단축키를, `fs=0` 으로 유튜브 전체화면을 끈다(전체화면은 우리가 준다).
+     · `playsinline=1` — 없으면 iOS 가 **네이티브 전체화면 플레이어**로 띄워 유튜브 UI 가 도로 나온다. 학생 화면은 모바일이 기준이다.
+     · 그 위에 투명한 판(`.vc-veil`)을 덮어 **우클릭(동영상 URL 복사)과 끝 화면의 관련 영상 클릭**을 막는다.
+       판을 누르면 재생/멈춤이다 — 유튜브에서 화면을 누르던 버릇이 그대로 산다.
+     ⚠ **이것은 «막는 것»이 아니라 «어렵게 하는 것»이다.** 영상 id 는 이 페이지의 HTML 안에 있고,
+       개발자 도구를 열 줄 아는 학생은 언제든 꺼낸다. 그 말을 코드에 적어 둔다 — 나중에 «막았다»고 믿지 않도록. */
   const embed = v => {
     const vid = extractYouTubeId(v.url);
     if(!vid) return `<div class="note" style="margin-top:11px;">유튜브 링크 형식을 인식하지 못했습니다.
       선생님께 알려 주세요.</div>`;
     const src = 'https://www.youtube-nocookie.com/embed/' + vid +
-      '?enablejsapi=1&modestbranding=1&rel=0&iv_load_policy=3&origin=' + encodeURIComponent(location.origin);
-    return `<div class="sap-vwrap"><iframe id="yt-frame-${v.id}" class="yt-tracked-frame"
-      data-bank-vid="${v.id}" src="${src}" title="${escHtml(v.title)}"
-      sandbox="allow-scripts allow-same-origin allow-presentation allow-forms"
-      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-      referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></div>
+      '?enablejsapi=1&controls=0&disablekb=1&fs=0&playsinline=1&modestbranding=1&rel=0&iv_load_policy=3&origin='
+      + encodeURIComponent(location.origin);
+    return `<div class="vc-shell" id="vshell-${v.id}">
+      <div class="sap-vwrap"><iframe id="yt-frame-${v.id}" class="yt-tracked-frame"
+        data-bank-vid="${v.id}" src="${src}" title="${escHtml(v.title)}"
+        sandbox="allow-scripts allow-same-origin allow-presentation allow-forms"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+        referrerpolicy="strict-origin-when-cross-origin"></iframe>
+        ${/* 투명한 판 — 우클릭·길게 누르기·끝 화면 클릭이 유튜브에 안 닿는다. */''}
+        <div class="vc-veil" oncontextmenu="return false;" onclick="vcToggle('${v.id}')"></div>
+      </div>
+      ${videoControlsHTML(v.id)}
+    </div>
       <div id="vprog-${v.id}">${videoProgressBlockHTML(c.sid, v.id)}</div>`;
   };
 

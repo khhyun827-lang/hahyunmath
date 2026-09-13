@@ -1,0 +1,173 @@
+<!doctype html><meta charset="utf-8"><title>video-controls-probe</title>
+<!-- 우리가 지은 영상 조작줄을 «확장 없이» 헤드리스 크롬으로 굴려 본다 (2026-09-13 · K-8).
+     실서비스(index.html)를 iframe 에 띄우고, 유튜브 대신 «가짜 플레이어»를 state.ytPlayers 에 꽂은 뒤
+     진짜 PointerEvent 로 단추와 막대를 누른다. 유튜브를 한 번도 안 부르고, 실 DB 0줄.
+
+     node tools/video-controls-test.mjs        (서버를 켜고 크롬을 굴리고 RESULT 를 읽는다)
+
+     🔴 **요점은 둘이다.**
+       ① 조작줄이 실제로 «작동»하는가 — 재생/멈춤·탐색·배속·소리·시간·막대.
+       ② 투명한 판이 실제로 «클릭을 가로채는가» — elementFromPoint 로 본다.
+          이것은 글자로는 못 잰다. 판이 있어도 크기가 0이거나 뒤에 깔리면 아무것도 못 막는다.
+     ⚠ state/render 는 let/function 전역이라 프레임 안에서 eval 로 만진다 (figure-edit-probe 와 같다).
+     ⚠ eval 로 넘기는 덩이는 통째로 템플릿 문자열이다 — **주석에도 백틱을 쓰면 거기서 닫힌다.** -->
+<style>html,body{margin:0;background:#fff}iframe{border:0;display:block}</style>
+<pre id="o" style="font:12px monospace;color:#333;margin:0;padding:4px;white-space:pre-wrap;">…</pre>
+<script>
+const fr = document.createElement('iframe'); fr.width = 480; fr.height = 700; fr.src = '/index.html';
+document.body.appendChild(fr);
+const o = document.getElementById('o');
+let n = 0;
+const t = setInterval(async () => {
+  n++;
+  let ready = false;
+  try { ready = fr.contentWindow.eval('typeof videoControlsHTML==="function" && typeof vcPaint==="function" && typeof render==="function"'); } catch (_) {}
+  if (!ready) { if (n > 200) { clearInterval(t); o.textContent = 'RESULT ' + JSON.stringify({ err: 'timeout' }); } return; }
+  clearInterval(t);
+  const w = fr.contentWindow;
+  let out;
+  try {
+    out = await w.eval(`(async function(){
+  const R = {};
+  const 잠깐 = ms => new Promise(r=>setTimeout(r, ms));
+
+  /* ── 가짜 유튜브 플레이어 — JS API 가 주는 것만 흉내 낸다 ── */
+  let st = 2, cur = 0, dur = 600, muted = false, rate = 1;
+  const 한일 = [];
+  const 가짜 = {
+    getPlayerState: () => st, getCurrentTime: () => cur, getDuration: () => dur,
+    isMuted: () => muted, getPlaybackRate: () => rate,
+    playVideo(){ st = 1; 한일.push('play'); },
+    pauseVideo(){ st = 2; 한일.push('pause'); },
+    mute(){ muted = true; }, unMute(){ muted = false; },
+    setPlaybackRate(r){ rate = r; 한일.push('rate:' + r); },
+    seekTo(t){ cur = t; 한일.push('seek:' + Math.round(t)); }
+  };
+  state.ytPlayers = { V: { player: 가짜, timer: null, ui: null, el: null } };
+
+  /* ── 실서비스와 «같은 뼈대»로 상자를 짓는다(embed 가 내는 것과 같은 모양) ── */
+  const host = document.createElement('div');
+  host.className = 'app sap'; host.id = 'probe';
+  /* 🔴 **화면에서 떼어 놓고 잰다.** 실서비스 셸의 상단바·토스트가 «가끔» 위 띠를 덮어
+     elementFromPoint 가 그것을 집었다 — 한 번은 통과하고 한 번은 아니었다(플레이키).
+     여기서 재려는 것은 «판이 iframe 위에 있나»뿐이므로, 상관없는 층을 비켜 세운다. */
+  host.style.cssText = 'position:fixed;top:60px;left:20px;width:400px;z-index:99999;background:#fff;';
+  host.innerHTML =
+    '<div class="vc-shell" id="vshell-V">' +
+      '<div class="sap-vwrap">' +
+        '<iframe id="yt-frame-V" src="about:blank"></iframe>' +
+        '<div class="vc-veil" oncontextmenu="return false;" onclick="vcToggle(\\'V\\')"></div>' +
+      '</div>' +
+      videoControlsHTML('V') +
+    '</div>';
+  const _r = render;
+  render = function(){ _r(); document.getElementById('app').prepend(host); };
+  render();
+  vcBindBar('V'); vcPaint('V');
+  await 잠깐(50);
+
+  const $ = s => host.querySelector(s);
+  const 아이콘 = s => { const el = $(s); return el ? (el.dataset.ic || '') : '(없음)'; };
+  const 누르기 = (el, type, x, y) => el.dispatchEvent(new PointerEvent(type,
+    { clientX: x, clientY: y, bubbles: true, cancelable: true, pointerId: 1, isPrimary: true, buttons: 1 }));
+
+  /* ── ① 판이 실제로 클릭을 가로채는가 ── */
+  const wrap = $('.sap-vwrap'), veil = $('.vc-veil'), frame = $('#yt-frame-V');
+  const wr = wrap.getBoundingClientRect(), vr = veil.getBoundingClientRect();
+  R.wrapBox = [Math.round(wr.width) > 200, Math.round(wr.height) > 100];
+  R.veilCoversWrap = [Math.round(vr.width) === Math.round(wr.width), Math.round(vr.height) === Math.round(wr.height)];
+  const 가운데 = document.elementFromPoint(wr.left + wr.width/2, wr.top + wr.height/2);
+  R.centerHitsVeil = !!(가운데 && 가운데.classList && 가운데.classList.contains('vc-veil'));
+  /* 🔴 **유튜브 단추가 «실제로 서던» 자리를 짚는다.**
+       위 띠 = 제목 링크(왼쪽)·공유/나중에 보기(오른쪽) · 아래 띠 = 조작줄(왼쪽)·YouTube 로고/전체화면(오른쪽).
+     ⚠ 모서리에서 6px 같은 «귀퉁이 점»으로 재면 안 된다 — 상자가 9px 둥글어서
+       그 점은 아무 요소에도 안 닿고, 그러면 «구멍»이 아닌데 구멍처럼 보인다. (처음에 그렇게 재서 헛짚었다.) */
+  const 짚기 = (dx, dy) => {
+    const el = document.elementFromPoint(wr.left + dx, wr.top + dy);
+    return !!(el && el.classList && el.classList.contains('vc-veil'));
+  };
+  R.buttonZonesHitVeil = [
+    짚기(40, 18),               // 위 왼쪽 — 제목(유튜브로 가는 링크)
+    짚기(wr.width - 40, 18),    // 위 오른쪽 — 공유 · 나중에 보기
+    짚기(40, wr.height - 18),   // 아래 왼쪽 — 재생/볼륨/시간
+    짚기(wr.width - 40, wr.height - 18), // 아래 오른쪽 — 설정 · YouTube 로고 · 전체화면
+  ];
+  /* 가장자리를 촘촘히 — 띠 전체가 덮였나 (둥근 모서리 9px 만 비켜서) */
+  const 띠 = [];
+  for(let x = 12; x < wr.width - 12; x += Math.max(8, (wr.width-24)/12)){
+    띠.push(짚기(x, 10), 짚기(x, wr.height - 10));
+  }
+  R.edgeStripAllVeil = 띠.every(Boolean);
+  R.edgeStripCount = 띠.length;
+  /* 안 잡히면 «무엇이 가로막았는지»를 말한다 — 안 그러면 왜 실패했는지 영영 모른다. */
+  if(!R.edgeStripAllVeil || !R.buttonZonesHitVeil.every(Boolean)){
+    const el = document.elementFromPoint(wr.left + 40, wr.top + 18);
+    R.topBlocker = el ? (el.tagName + '.' + (el.className || '') + '#' + (el.id || '')) : '(없음)';
+  }
+  /* 둥근 모서리는 판도 «영상도» 안 닿는다 — 거기로는 아무것도 못 누른다는 뜻이다 */
+  const 귀 = document.elementFromPoint(wr.left + 2, wr.top + 2);
+  R.cornerReachesFrame = !!(귀 && 귀.id === 'yt-frame-V');
+  R.frameIsBehind = frame.getBoundingClientRect().width > 0;   /* 그래도 영상은 거기 있다 */
+  /* 우클릭이 막히는가 */
+  const cm = new MouseEvent('contextmenu', { bubbles: true, cancelable: true });
+  veil.dispatchEvent(cm);
+  R.contextBlocked = cm.defaultPrevented;
+
+  /* ── ② 판을 누르면 재생/멈춤 ── */
+  R.icon0 = 아이콘('.vc-b.play');
+  veil.click(); vcPaint('V'); await 잠깐(20);
+  R.icon1 = 아이콘('.vc-b.play');
+  R.state1 = st;
+  $('.vc-b.play').click(); vcPaint('V');
+  R.icon2 = 아이콘('.vc-b.play');
+  R.state2 = st;
+
+  /* ── ③ 막대를 눌러 그 자리로 ── */
+  const bar = $('.vc-bar'), br = bar.getBoundingClientRect();
+  /* ⚠ 너비만 재면 «얇아진 것»을 못 본다 — 누르는 자리는 굵기가 정한다.
+     보이는 선은 5px 지만 손가락이 짚는 칸은 그보다 훨씬 두꺼워야 한다. */
+  R.barBox = [Math.round(br.width) > 80, Math.round(br.height) >= 16];
+  누르기(bar, 'pointerdown', br.left + br.width * 0.75, br.top + br.height/2);
+  R.seek75 = Math.round(cur);
+  vcPaint('V');
+  R.fill75 = $('.vc-bar i').style.width;
+  R.curText = $('.vc-t.cur').textContent;
+  R.durText = $('.vc-t.dur').textContent;
+  /* 끌기 — 버튼을 누른 채 움직이면 따라온다 */
+  누르기(bar, 'pointermove', br.left + br.width * 0.25, br.top + br.height/2);
+  R.dragTo25 = Math.round(cur);
+
+  /* ── ④ 배속 — 다음 것으로 돈다 ── */
+  const 배속들 = [];
+  for(let i=0;i<5;i++){ vcNextRate('V'); 배속들.push($('.vc-b.rate').textContent); }
+  R.rates = 배속들;
+
+  /* ── ⑤ 소리 ── */
+  R.mute0 = 아이콘('.vc-b.mute');
+  vcMute('V'); R.mute1 = 아이콘('.vc-b.mute'); R.muted1 = muted;
+  vcMute('V'); R.mute2 = 아이콘('.vc-b.mute'); R.muted2 = muted;
+
+  /* ── ⑥ 플레이어가 없어도 안 터진다 ── */
+  delete state.ytPlayers.V;
+  let 터짐 = null;
+  try { vcToggle('V'); vcNextRate('V'); vcMute('V'); vcPaint('V'); } catch(e){ 터짐 = String(e); }
+  R.safeWithoutPlayer = 터짐;
+
+  /* ── ⑦ 화면을 떠나면 제 타이머를 거둔다 ── */
+  state.ytPlayers = { V: { player: 가짜, timer: null, ui: setInterval(()=>{}, 9999), el: null } };
+  host.remove();
+  vcPaint('V');
+  R.uiTimerCleared = state.ytPlayers.V.ui === null;
+
+  /* 마지막으로 다시 붙여 둔다 — `--screenshot` 으로 찍을 때 조작줄이 보이게.
+     (판정은 위에서 다 끝났다. 여기서부터는 «눈으로 볼 그림»만 만든다.) */
+  st = 1; cur = 372; rate = 1.25; muted = false;
+  document.getElementById('app').prepend(host);
+  vcPaint('V');
+
+  return R;
+})()`);
+  } catch (e) { out = { err: String(e) }; }
+  o.textContent = 'RESULT ' + JSON.stringify(out);
+}, 100);
+</script>
