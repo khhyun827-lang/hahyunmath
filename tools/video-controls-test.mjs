@@ -52,26 +52,36 @@ console.log(NL + '① 임베드 주소 — 유튜브 UI 를 안 띄운다' + NL)
   const src = (embed.match(/const src = ([\s\S]*?);\n/) || [])[1] || '';
   봄('주소 문자열을 떠 왔다', src.includes('youtube-nocookie.com/embed/'), true);
   봄('🔴 주소에 주석이 안 섞였다', /[«»🔴⚠]/.test(src), false);
-  const 매개 = ['enablejsapi=1', 'controls=0', 'disablekb=1', 'fs=0', 'playsinline=1', 'rel=0'];
+  const 매개 = ['enablejsapi=1', 'controls=0', 'disablekb=1', 'fs=0', 'playsinline=1', 'rel=0', 'cc_load_policy=0'];
   매개.forEach(p => 봄('주소에 ' + p, src.includes(p), true));
   봄('🔴 controls=0 — 제목 띠·공유·YouTube 로고·전체화면이 통째로 안 나온다', src.includes('controls=0'), true);
   봄('🔴 playsinline=1 — 없으면 iOS 가 네이티브 전체화면으로 띄워 유튜브 UI 가 도로 나온다',
     src.includes('playsinline=1'), true);
   봄('🔴 allowfullscreen 을 뗐다 — 전체화면은 우리 상자가 진다', embed.includes('allowfullscreen'), false);
   봄('투명한 판이 우클릭을 붙든다', embed.includes('oncontextmenu="return false;"'), true);
-  봄('판을 누르면 재생/멈춤', /class="vc-veil"[^>]*onclick="vcToggle/.test(embed), true);
+  봄('판을 누르면 재생/멈춤', /class="vc-veil"[^>]*onclick="vcVeilTap/.test(embed), true);
   봄('조작줄이 상자 안에 붙는다', embed.includes('videoControlsHTML(v.id)'), true);
   봄('전체화면이 잡을 상자에 id 가 있다', embed.includes('id="vshell-${v.id}"'), true);
   봄('진도 칸은 그대로 남는다', embed.includes('videoProgressBlockHTML(c.sid, v.id)'), true);
+  /* 확대 · 자막 (2026-09-13 · K-10) */
+  봄('🔴 자막을 안 켠다 — cc_load_policy=0', src.includes('cc_load_policy=0'), true);
+  봄('🔴 주소만 믿지 않는다 — 준비되면 unloadModule 로 한 번 더 끈다',
+    (lift('mountVideoTrackers').match(/unloadModule\('(captions|cc)'\)/g) || []).length >= 4, true);
+  봄('🔴 모듈이 뒤늦게 실려도 다시 끈다 (onApiChange)', lift('mountVideoTrackers').includes('onApiChange:'), true);
+  봄('확대되는 칸이 iframe 을 감싼다', /<div class="vc-zoom" id="vzoom-\$\{v\.id\}">[\s\S]*?<iframe/.test(embed), true);
+  봄('판에 id 가 있다 (손짓을 매는 자리)', embed.includes('id="vveil-${v.id}"'), true);
+  봄('붙일 때 손짓을 맨다', lift('mountVideoTrackers').includes('vzBindVeil(videoId)'), true);
 }
 
 /* ═══ ② 조작줄이 render() 를 안 부른다 ═══ */
 console.log(NL + '② 조작줄은 제 칸만 고쳐 그린다 (render 는 재생을 끊는다)' + NL);
 {
-  const 것들 = ['vcToggle', 'vcNextRate', 'vcMute', 'vcFull', 'vcPaint', 'vcBindBar', 'videoControlsHTML'];
+  const 것들 = ['vcToggle', 'vcNextRate', 'vcMute', 'vcFull', 'vcPaint', 'vcBindBar', 'videoControlsHTML',
+    'vzApply', 'vzSet', 'vzReset', 'vzNext', 'vzBindVeil', 'vcVeilTap'];
   const 부르는것 = 것들.filter(n => /(^|[^a-zA-Z])render\(\)/.test(lift(n)));
   봄('🔴 어느 것도 render() 를 안 부른다 — 부르면 iframe 이 새로 생겨 재생이 처음으로 간다', 부르는것, []);
-  봄('붙일 때 조작줄을 맨다 (onReady)', /onReady: \(\) => \{ vcBindBar\(videoId\); vcPaint\(videoId\); \}/.test(html), true);
+  봄('붙일 때 조작줄과 손짓을 맨다 (onReady)',
+    /onReady: \(\) => \{[\s\S]{0,200}?vcBindBar\(videoId\); vzBindVeil\(videoId\); vcPaint\(videoId\);/.test(html), true);
   봄('뗄 때 조작줄 타이머를 거둔다', lift('mountVideoTrackers').includes('if(prev.ui) clearInterval(prev.ui);'), true);
   봄('상태가 바뀌면 바로 다시 그린다', lift('mountVideoTrackers').includes('vcPaint(videoId);'), true);
   봄('화면을 떠나면 스스로 거둔다', /if\(e && e\.ui\)\{ clearInterval\(e\.ui\); e\.ui = null; \}/.test(lift('vcPaint')), true);
@@ -148,6 +158,24 @@ if (!CHROME) {
     봄('배속이 다음 것으로 돈다', R.rates, ['1.25x', '1.5x', '2x', '1x', '1.25x']);
     봄('소리 끄기·켜기', [R.mute0, R.mute1, R.muted1, R.mute2, R.muted2],
       ['sound', 'mute', true, 'sound', false]);
+    /* 확대 (2026-09-13 · K-10) — 판이 손가락을 먼저 받으므로 확대는 우리가 진다 */
+    봄('처음엔 확대가 안 걸려 있다 · 단추는 돋보기 그림', [R.zoom0, R.zoomBtn0], ['', ['', true]]);
+    봄('🔴 단추로 다음 배율 — 끝에서 되돌아온다', R.zoomSteps, [1.5, 2, 3, 1]);
+    봄('🔴 2배로 두면 칸이 실제로 커진다', R.zoomAt2, true);
+    봄('단추가 지금 배율을 적는다', R.zoomLabel, '2x');
+    봄('확대 중이면 판이 손짓을 다 받는다', R.veilZoomedClass, true);
+    /* 🔴 클래스가 붙었나가 아니라 브라우저가 실제로 무엇을 하기로 했나를 본다. */
+    봄('🔴 평소에는 영상 위에서도 화면이 내려간다 (pan-y)', R.touchPlain, 'pan-y');
+    봄('🔴 확대한 뒤에는 손짓을 우리가 다 받는다 (none)', R.touchZoomed, 'none');
+    봄('🔴 확대한 뒤에는 끌어서 옮긴다', R.panned, [-50, -30]);
+    봄('🔴 오른쪽·아래로는 안 샌다 (0 을 넘지 않는다)', R.panClampHigh, [0, 0]);
+    봄('🔴 왼쪽·위로도 안 샌다 (2배면 딱 한 칸까지)', R.panClampLow, [true, true]);
+    봄('🔴 옮긴 직후의 클릭은 삼킨다 — 안 그러면 확대할 때마다 영상이 멈춘다', R.tapSwallowedAfterGesture, true);
+    봄('🔴 두 손가락으로 벌리면 커진다 (100px → 200px = 2배)', R.pinchScale, 2);
+    봄('Ctrl+휠로도 커진다 · 화면 스크롤은 안 일어난다', [R.wheelZoomed, R.wheelPrevented], [true, true]);
+    봄('🔴 그냥 휠은 안 건드린다 (화면 스크롤로 둔다)', R.plainWheelIgnored, true);
+    봄('되돌리면 transform 을 아예 뗀다', R.zoomReset, ['', 1, false]);
+    봄('1배 아래로도, 4배 위로도 안 간다', [R.zoomMin, R.zoomMax], [1, 4]);
     봄('🔴 플레이어가 아직 없어도 안 터진다 (준비 전 · 떠난 뒤)', R.safeWithoutPlayer, null);
     봄('🔴 화면을 떠나면 조작줄 타이머를 스스로 거둔다', R.uiTimerCleared, true);
   }

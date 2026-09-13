@@ -55,21 +55,24 @@ const t = setInterval(async () => {
   host.innerHTML =
     '<div class="vc-shell" id="vshell-V">' +
       '<div class="sap-vwrap">' +
-        '<iframe id="yt-frame-V" src="about:blank"></iframe>' +
-        '<div class="vc-veil" oncontextmenu="return false;" onclick="vcToggle(\\'V\\')"></div>' +
+        '<div class="vc-zoom" id="vzoom-V"><iframe id="yt-frame-V" src="about:blank"></iframe></div>' +
+        '<div class="vc-veil" id="vveil-V" oncontextmenu="return false;" onclick="vcVeilTap(\\'V\\')"></div>' +
       '</div>' +
       videoControlsHTML('V') +
     '</div>';
   const _r = render;
   render = function(){ _r(); document.getElementById('app').prepend(host); };
   render();
-  vcBindBar('V'); vcPaint('V');
+  vcBindBar('V'); vzBindVeil('V'); vcPaint('V');
   await 잠깐(50);
 
   const $ = s => host.querySelector(s);
   const 아이콘 = s => { const el = $(s); return el ? (el.dataset.ic || '') : '(없음)'; };
   const 누르기 = (el, type, x, y) => el.dispatchEvent(new PointerEvent(type,
     { clientX: x, clientY: y, bubbles: true, cancelable: true, pointerId: 1, isPrimary: true, buttons: 1 }));
+  /* 두 손가락 — pointerId 를 갈라 줘야 핀치로 잡힌다 */
+  const 누르기2 = (el, type, x, y, id) => el.dispatchEvent(new PointerEvent(type,
+    { clientX: x, clientY: y, bubbles: true, cancelable: true, pointerId: id, isPrimary: id === 1, buttons: 1 }));
 
   /* ── ① 판이 실제로 클릭을 가로채는가 ── */
   const wrap = $('.sap-vwrap'), veil = $('.vc-veil'), frame = $('#yt-frame-V');
@@ -146,6 +149,73 @@ const t = setInterval(async () => {
   R.mute0 = 아이콘('.vc-b.mute');
   vcMute('V'); R.mute1 = 아이콘('.vc-b.mute'); R.muted1 = muted;
   vcMute('V'); R.mute2 = 아이콘('.vc-b.mute'); R.muted2 = muted;
+
+  /* ── ⑤-b 확대 (K-10) ── */
+  const zoomBox = $('#vzoom-V');
+  R.zoom0 = zoomBox.style.transform;                       /* 처음엔 아무것도 안 건다 */
+  R.touchPlain = getComputedStyle(veil).touchAction;       /* 확대 전 — 화면은 내려가야 한다 */
+  /* ⚠ 확대 단추는 dataset.ic 가 아니라 dataset.z 로 «지금 배율»을 적는다(비면 돋보기 그림). */
+  R.zoomBtn0 = [$('.vc-b.zoom').dataset.z, !!$('.vc-b.zoom').querySelector('svg')];
+  /* 단추로 다음 배율 */
+  const 배율들 = [];
+  for(let i=0;i<4;i++){ $('.vc-b.zoom').click(); 배율들.push(state.videoZoom.V.s); }
+  R.zoomSteps = 배율들;
+  /* 2배로 두고 — 칸이 실제로 커지는가 */
+  vzSet('V', 2);
+  R.zoomAt2 = /scale\\(2\\)/.test(zoomBox.style.transform);
+  R.zoomLabel = ($('.vc-b.zoom').textContent || '').trim();
+  R.veilZoomedClass = veil.classList.contains('zoomed');
+  /* 🔴 «클래스가 붙었나»가 아니라 **브라우저가 실제로 무엇을 하기로 했나**를 본다.
+     평소에는 세로 스크롤을 브라우저에 넘기고(pan-y), 확대 뒤에는 우리가 다 받는다(none). */
+  R.touchZoomed = getComputedStyle(veil).touchAction;
+  /* 끌어서 옮기기 — 2배일 때만. ⚠ 시작 자리는 vzSet 이 «가운데를 잡아» 정한 값이라
+     절대값이 아니라 **움직인 만큼**을 본다. */
+  const vr2 = veil.getBoundingClientRect();
+  const 옮기기전 = [state.videoZoom.V.x, state.videoZoom.V.y];
+  누르기(veil, 'pointerdown', vr2.left + 200, vr2.top + 100);
+  누르기(veil, 'pointermove', vr2.left + 150, vr2.top + 70);
+  R.panned = [Math.round(state.videoZoom.V.x - 옮기기전[0]), Math.round(state.videoZoom.V.y - 옮기기전[1])];
+  /* 아무리 끌어도 상자 밖으로는 안 샌다 */
+  누르기(veil, 'pointermove', vr2.left + 9999, vr2.top + 9999);
+  R.panClampHigh = [state.videoZoom.V.x, state.videoZoom.V.y];
+  누르기(veil, 'pointermove', vr2.left - 9999, vr2.top - 9999);
+  const w2 = zoomBox.offsetWidth, h2 = zoomBox.offsetHeight;
+  R.panClampLow = [Math.round(state.videoZoom.V.x) === Math.round(-w2), Math.round(state.videoZoom.V.y) === Math.round(-h2)];
+  누르기(veil, 'pointerup', vr2.left - 9999, vr2.top - 9999);
+  /* 옮긴 «직후»의 클릭은 삼킨다 — 안 그러면 확대할 때마다 영상이 멈춘다 */
+  const 앞상태 = st;
+  veil.click();
+  R.tapSwallowedAfterGesture = (st === 앞상태);
+  /* 두 손가락으로 벌리면 커진다 */
+  vzReset('V');
+  누르기2(veil, 'pointerdown', vr2.left + 150, vr2.top + 100, 1);
+  누르기2(veil, 'pointerdown', vr2.left + 250, vr2.top + 100, 2);
+  누르기2(veil, 'pointermove', vr2.left + 100, vr2.top + 100, 1);
+  누르기2(veil, 'pointermove', vr2.left + 300, vr2.top + 100, 2);
+  R.pinchScale = Math.round(state.videoZoom.V.s * 100) / 100;   /* 100px → 200px = 2배 */
+  누르기2(veil, 'pointerup', vr2.left + 100, vr2.top + 100, 1);
+  누르기2(veil, 'pointerup', vr2.left + 300, vr2.top + 100, 2);
+  /* Ctrl + 휠 */
+  vzReset('V');
+  const we = new WheelEvent('wheel', { deltaY: -100, ctrlKey: true, bubbles: true, cancelable: true,
+    clientX: vr2.left + 200, clientY: vr2.top + 100 });
+  veil.dispatchEvent(we);
+  R.wheelZoomed = state.videoZoom.V.s > 1;
+  R.wheelPrevented = we.defaultPrevented;
+  const we2 = new WheelEvent('wheel', { deltaY: -100, ctrlKey: false, bubbles: true, cancelable: true,
+    clientX: vr2.left + 200, clientY: vr2.top + 100 });
+  const 앞배율 = state.videoZoom.V.s;
+  veil.dispatchEvent(we2);
+  R.plainWheelIgnored = state.videoZoom.V.s === 앞배율;   /* 그냥 휠은 화면 스크롤로 둔다 */
+  /* 되돌리면 transform 을 아예 뗀다 */
+  vzReset('V');
+  R.zoomReset = [zoomBox.style.transform, state.videoZoom.V.s, veil.classList.contains('zoomed')];
+  /* 1배 아래로는 안 내려간다 */
+  vzSet('V', 0.2);
+  R.zoomMin = state.videoZoom.V.s;
+  vzSet('V', 99);
+  R.zoomMax = state.videoZoom.V.s;
+  vzReset('V');
 
   /* ── ⑥ 플레이어가 없어도 안 터진다 ── */
   delete state.ytPlayers.V;

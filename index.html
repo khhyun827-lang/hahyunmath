@@ -2634,8 +2634,21 @@
 .vc-shell .sap-vwrap{margin-top:0;border-radius:var(--r-md) var(--r-md) 0 0;}
 /* 투명한 판 — 우클릭(동영상 URL 복사)·길게 누르기·끝 화면의 관련 영상 클릭을 붙든다.
    ⚠ 배경을 완전 투명(transparent)으로 두면 사파리에서 클릭이 통과하는 일이 있다 — 거의 안 보이는 색을 깐다. */
+/* 확대되는 칸 (2026-09-13 · K-10) — 유튜브 iframe 을 그대로 둔 채 이 상자만 키우고 옮긴다.
+   ⚠ `transform-origin` 은 왼쪽 위다 — vzSet 의 셈이 그 기준으로 되어 있다. */
+.vc-zoom{position:absolute;inset:0;transform-origin:0 0;will-change:transform;}
 .vc-veil{position:absolute;inset:0;cursor:pointer;background:rgba(0,0,0,.001);
-  -webkit-touch-callout:none;user-select:none;-webkit-user-select:none;}
+  -webkit-touch-callout:none;user-select:none;-webkit-user-select:none;
+  /* 🔴 **평소에는 `pan-y` 다** — 영상이 화면의 절반을 덮으므로, 여기를 `none` 으로 두면
+       영상 위에서 손가락을 올려도 **화면이 안 내려간다.** 세로로 미는 것만 브라우저에 넘긴다.
+     🔴 **확대한 뒤에는 `none`** — 그때는 끌기가 «그림 옮기기»라 브라우저가 가져가면 안 된다. */
+  touch-action:pan-y;}
+.vc-veil.zoomed{touch-action:none;cursor:grab;}
+/* 전체 화면에서는 내릴 화면이 없다 — 손짓을 전부 우리가 받는다. */
+.vc-shell:fullscreen .vc-veil{touch-action:none;}
+.vc-shell:-webkit-full-screen .vc-veil{touch-action:none;}
+.vc-b.zoom.on{background:rgba(255,255,255,.14);width:auto;padding:0 8px;
+  font-family:'JetBrains Mono',monospace;font-size:11.5px;font-weight:600;}
 .vc{display:flex;align-items:center;gap:9px;padding:8px 11px;background:#1B1A17;
   border-radius:0 0 var(--r-md) var(--r-md);}
 .vc-b{flex-shrink:0;width:30px;height:30px;display:flex;align-items:center;justify-content:center;
@@ -9111,6 +9124,9 @@ function videoControlsHTML(vid){
     <span class="vc-t cur" id="vc-cur-${vid}">0:00</span>
     <span class="vc-bar" id="vc-bar-${vid}" title="누르면 그 자리로 갑니다"><i></i></span>
     <span class="vc-t dur" id="vc-dur-${vid}">0:00</span>
+    ${/* 확대 (K-10) — 핀치가 안 되는 기기·데스크톱에도 길이 있어야 한다. 배율이 1이면 돋보기, 아니면 «2.0x». */''}
+    <button class="vc-b zoom" onclick="vzNext('${vid}')" title="확대 — 두 손가락으로 벌려도 되고, 확대한 뒤에는 끌어서 옮깁니다"
+      aria-label="확대">${iconSvg('search',16)}</button>
     <button class="vc-b rate" onclick="vcNextRate('${vid}')" title="배속 — 빠르게 봐도 시청 시간은 영상 기준으로 셉니다">1x</button>
     <button class="vc-b mute" onclick="vcMute('${vid}')" title="소리 끄기 / 켜기" aria-label="소리">${iconSvg('sound',16)}</button>
     <button class="vc-b full" onclick="vcFull('${vid}')" title="전체 화면" aria-label="전체 화면">${iconSvg('expand',16)}</button>
@@ -9119,6 +9135,123 @@ function videoControlsHTML(vid){
 function vcToggle(vid){
   const p = vcPlayer(vid); if(!p) return;
   try{ (p.getPlayerState() === 1 ? p.pauseVideo() : p.playVideo()); }catch(err){}
+}
+/* ---------- 확대 (2026-09-13 · K-10) ----------
+   🔴 **왜 우리가 지는가** — K-8 에서 영상 위에 덮은 투명한 판이 **손가락을 먼저 받아**
+     브라우저의 핀치 확대가 유튜브에 안 닿는다. 판을 걷을 수는 없다(그것이 링크를 막는 장치다).
+     그래서 확대를 **우리가 진다** — `.vc-zoom` 을 `transform` 으로 키우고 옮긴다. 유튜브는 손 안 댄다.
+   🔵 **길을 셋 둔다** — 두 손가락 핀치(휴대폰) · Ctrl/⌘ + 휠(데스크톱·트랙패드) · 조작줄의 확대 단추.
+     ⚠ 단추가 꼭 있어야 한다 — 핀치가 안 되는 기기에서 «확대할 길이 아예 없는» 일이 생기면 안 된다.
+   ⚠ **두 번 톡(더블탭)은 안 쓴다.** 판의 한 번 톡이 재생/멈춤이라, 더블탭을 넣으면
+     확대할 때마다 영상이 한 번 멈췄다 켜진다. 손짓 하나를 아끼는 것보다 그 흔들림이 크다. */
+const VZ_MAX = 4;
+const VZ_STEPS = [1, 1.5, 2, 3];
+function vzOf(vid){
+  if(!state.videoZoom) state.videoZoom = {};
+  return state.videoZoom[vid] || (state.videoZoom[vid] = { s:1, x:0, y:0 });
+}
+/* 🔴 **배율의 위아래는 여기 한 곳에서만 정한다.** 처음엔 `vzSet` 과 `vzClamp` 두 곳에 적었는데,
+   그러면 한쪽을 망가뜨려도 다른 쪽이 받아 줘서 **검사가 멀쩡히 통과한다**(덫을 놓고 확인하다 드러났다). */
+function vzClampScale(s){ return Math.max(1, Math.min(VZ_MAX, s || 1)); }
+/* 확대한 그림이 «늘 상자를 덮고 있게» 가둔다 — 안 가두면 옆에 검은 여백이 생긴다. */
+function vzClamp(vid){
+  const z = vzOf(vid), box = document.getElementById('vzoom-' + vid);
+  z.s = vzClampScale(z.s);
+  if(!box){ return z; }
+  const w = box.offsetWidth || 0, h = box.offsetHeight || 0;
+  z.x = Math.max(w * (1 - z.s), Math.min(0, z.x || 0));
+  z.y = Math.max(h * (1 - z.s), Math.min(0, z.y || 0));
+  return z;
+}
+function vzApply(vid){
+  const z = vzClamp(vid), box = document.getElementById('vzoom-' + vid);
+  if(box) box.style.transform = z.s > 1 ? `translate(${z.x}px, ${z.y}px) scale(${z.s})` : '';
+  const veil = document.getElementById('vveil-' + vid);
+  if(veil) veil.classList.toggle('zoomed', z.s > 1);
+  vcPaint(vid);
+}
+/* cx·cy 는 상자 안 좌표 — 손가락이 짚은 자리가 «제자리에» 있도록 옮긴다. */
+function vzSet(vid, s, cx, cy){
+  const z = vzOf(vid), box = document.getElementById('vzoom-' + vid);
+  if(!box) return;
+  const 앞 = z.s || 1;
+  const 뒤 = vzClampScale(s);
+  if(cx === undefined){ cx = box.offsetWidth / 2; cy = box.offsetHeight / 2; }
+  z.x = cx - (cx - (z.x || 0)) * (뒤 / 앞);
+  z.y = cy - (cy - (z.y || 0)) * (뒤 / 앞);
+  z.s = 뒤;
+  vzApply(vid);
+}
+function vzReset(vid){ const z = vzOf(vid); z.s = 1; z.x = 0; z.y = 0; vzApply(vid); }
+/* 단추 — 다음 배율로 돌고, 끝에서 되돌아온다. 길게 누를 것도 없이 한 손가락으로 된다. */
+function vzNext(vid){
+  const now = vzOf(vid).s || 1;
+  const 다음 = VZ_STEPS.find(v => v > now + 0.01);
+  if(다음 === undefined) vzReset(vid); else vzSet(vid, 다음);
+}
+/* 판의 한 번 톡 = 재생/멈춤. ⚠ 핀치·옮기기 «직후»의 클릭은 삼킨다 —
+   손가락을 뗄 때 브라우저가 click 을 한 번 더 주는데, 그것까지 받으면 확대할 때마다 영상이 멈춘다. */
+function vcVeilTap(vid){
+  const z = vzOf(vid);
+  if(z.gestureAt && Date.now() - z.gestureAt < 400) return;
+  vcToggle(vid);
+}
+function vzBindVeil(vid){
+  const veil = document.getElementById('vveil-' + vid);
+  if(!veil || veil.dataset.on) return;
+  veil.dataset.on = '1';
+  vzReset(vid);   /* 영상을 새로 열면 배율도 처음으로 */
+  const 손 = new Map();
+  let 핀치 = null, 끌기 = null;
+  const 안자리 = (x, y) => { const r = veil.getBoundingClientRect(); return { x: x - r.left, y: y - r.top }; };
+  const 손짓끝 = () => { vzOf(vid).gestureAt = Date.now(); };
+  veil.addEventListener('pointerdown', ev => {
+    try{ veil.setPointerCapture(ev.pointerId); }catch(err){}
+    손.set(ev.pointerId, ev);
+    if(손.size === 2){
+      const [a, b] = [...손.values()];
+      핀치 = { d: Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY), s: vzOf(vid).s || 1 };
+      끌기 = null;
+    } else if(손.size === 1 && (vzOf(vid).s || 1) > 1){
+      const z = vzOf(vid);
+      끌기 = { x: ev.clientX, y: ev.clientY, ox: z.x || 0, oy: z.y || 0, moved: 0 };
+    }
+  });
+  veil.addEventListener('pointermove', ev => {
+    if(!손.has(ev.pointerId)) return;
+    손.set(ev.pointerId, ev);
+    if(핀치 && 손.size === 2){
+      const [a, b] = [...손.values()];
+      const d = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+      if(핀치.d > 0){
+        const m = 안자리((a.clientX + b.clientX) / 2, (a.clientY + b.clientY) / 2);
+        vzSet(vid, 핀치.s * (d / 핀치.d), m.x, m.y);
+      }
+      손짓끝();
+    } else if(끌기 && 손.size === 1){
+      const z = vzOf(vid);
+      z.x = 끌기.ox + (ev.clientX - 끌기.x);
+      z.y = 끌기.oy + (ev.clientY - 끌기.y);
+      끌기.moved += Math.abs(ev.clientX - 끌기.x) + Math.abs(ev.clientY - 끌기.y);
+      if(끌기.moved > 8) 손짓끝();   /* 살짝 흔들린 것은 «톡»으로 남겨 둔다 */
+      vzApply(vid);
+    }
+  });
+  const 뗌 = ev => {
+    손.delete(ev.pointerId);
+    if(손.size < 2) 핀치 = null;
+    if(손.size === 0) 끌기 = null;
+  };
+  veil.addEventListener('pointerup', 뗌);
+  veil.addEventListener('pointercancel', 뗌);
+  /* 데스크톱 — Ctrl/⌘ + 휠. 트랙패드의 핀치도 브라우저가 이 꼴로 준다. */
+  veil.addEventListener('wheel', ev => {
+    if(!(ev.ctrlKey || ev.metaKey)) return;
+    ev.preventDefault();
+    const m = 안자리(ev.clientX, ev.clientY);
+    vzSet(vid, (vzOf(vid).s || 1) * (ev.deltaY < 0 ? 1.12 : 1 / 1.12), m.x, m.y);
+    손짓끝();
+  }, { passive: false });
 }
 /* 배속은 «다음 것»으로 돈다 — 목록을 펴면 조작줄이 길어지고, 이 줄은 모바일 폭이 기준이다. */
 function vcNextRate(vid){
@@ -9179,6 +9312,19 @@ function vcPaint(vid){
   아이콘(box.querySelector('.vc-b.full'),
     (document.fullscreenElement || document.webkitFullscreenElement) ? 'shrink' : 'expand');
   글자(box.querySelector('.vc-b.rate'), (Math.round(vcAsk(vid, x=>x.getPlaybackRate(), 1) * 100) / 100) + 'x');
+  /* 확대 단추 (K-10) — 배율이 1이면 돋보기, 확대 중이면 «2.0x» 와 누르면 되돌아온다는 말. */
+  const zb = box.querySelector('.vc-b.zoom');
+  if(zb){
+    const s = (state.videoZoom && state.videoZoom[vid] && state.videoZoom[vid].s) || 1;
+    const 표 = s > 1.01 ? (Math.round(s * 10) / 10) + 'x' : '';
+    if(zb.dataset.z !== 표){
+      zb.dataset.z = 표;
+      zb.classList.toggle('on', !!표);
+      zb.innerHTML = 표 || iconSvg('search', 16);
+      zb.title = 표 ? '확대 ' + 표 + ' — 누르면 다음 배율, 끝에서 원래대로. 끌어서 옮깁니다'
+                    : '확대 — 두 손가락으로 벌려도 되고, 확대한 뒤에는 끌어서 옮깁니다';
+    }
+  }
 }
 /* 배속 (2026-09-13 · K-7) — 벽시계 1분은 2배속이면 «영상 2분»이다.
    안 곱하면 2배속으로 다 본 학생이 50%로 남는다. 4배를 넘는 값은 유튜브에 없으니 믿지 않는다. */
@@ -9223,7 +9369,18 @@ function mountVideoTrackers(studentId){
         player = new YT.Player(frame.id, {
           events: {
             /* 조작줄은 플레이어가 «준비된 뒤»에 맨다 (2026-09-13 · K-8) — 그전에는 길이도 못 묻는다. */
-            onReady: () => { vcBindBar(videoId); vcPaint(videoId); },
+            onReady: () => {
+              vcBindBar(videoId); vzBindVeil(videoId); vcPaint(videoId);
+              /* 🔴 **자막을 끈다** (2026-09-13 · K-10) — 주소의 `cc_load_policy=0` 만으로는
+                 계정 설정이 이기는 경우가 있다. 조작줄을 없앤 뒤로는 학생이 끌 길이 없으므로 여기서 한 번 더 끈다.
+                 ⚠ 모듈 이름이 판에 따라 다르다(옛 판은 'cc') — 둘 다 부른다. 없는 것을 부르면 조용히 넘어간다. */
+              try{ player.unloadModule('captions'); }catch(err){}
+              try{ player.unloadModule('cc'); }catch(err){}
+            },
+            onApiChange: () => {   /* 모듈이 뒤늦게 실리면 자막이 다시 켜진다 — 그때 또 끈다 */
+              try{ player.unloadModule('captions'); }catch(err){}
+              try{ player.unloadModule('cc'); }catch(err){}
+            },
             onPlaybackRateChange: () => vcPaint(videoId),
             onStateChange: (e) => {
               const entry = state.ytPlayers[videoId];
@@ -13537,17 +13694,28 @@ function stuVideoHTML(c){
     const vid = extractYouTubeId(v.url);
     if(!vid) return `<div class="note" style="margin-top:11px;">유튜브 링크 형식을 인식하지 못했습니다.
       선생님께 알려 주세요.</div>`;
+    /* 🔵 **`cc_load_policy=0` — 자막을 안 켠다** (2026-09-13 · K-10 · 사용자 — 「자막이 강제로 뜨고있는데 자막을 껐으면 좋겠어」).
+       🔴 **K-8 이 만든 흠이다.** `controls=0` 으로 조작줄을 없애면서 **자막을 끌 단추도 같이 사라졌다** —
+         계정이나 기기에 자막 켜기가 걸려 있으면 학생은 끌 길이 없이 강제로 보게 된다.
+       ⚠ 주소만으로는 모자란다 — 계정 설정이 이기는 경우가 있어 **플레이어가 준비되면 `unloadModule` 로 한 번 더 끈다**(mountVideoTrackers). */
     const src = 'https://www.youtube-nocookie.com/embed/' + vid +
-      '?enablejsapi=1&controls=0&disablekb=1&fs=0&playsinline=1&modestbranding=1&rel=0&iv_load_policy=3&origin='
+      '?enablejsapi=1&controls=0&disablekb=1&fs=0&playsinline=1&cc_load_policy=0&modestbranding=1&rel=0&iv_load_policy=3&origin='
       + encodeURIComponent(location.origin);
+    /* 🔵 **확대** (2026-09-13 · K-10 · 사용자 — 「전체화면 하고나서도 더 확대해서 자주보는데 확대가 되지않아」).
+       🔴 **이것도 K-8 이 만든 흠이다.** 영상 위에 덮은 투명한 판이 **손가락을 먼저 받아** 브라우저의
+         핀치 확대가 안 닿는다. 판을 걷을 수는 없다(그것이 링크를 막는 장치다) — 그래서 **확대를 우리가 진다.**
+       · 화면을 감싸는 `.vc-zoom` 을 `transform` 으로 키우고 옮긴다(유튜브는 손 안 댄다).
+       · 판에서 **두 손가락 핀치 · 두 번 톡 · 끌어서 옮기기 · Ctrl+휠**을 받는다.
+       · 조작줄에도 **확대 단추**를 둔다 — 핀치가 안 되는 기기·데스크톱에서도 확대할 길이 있어야 한다. */
     return `<div class="vc-shell" id="vshell-${v.id}">
-      <div class="sap-vwrap"><iframe id="yt-frame-${v.id}" class="yt-tracked-frame"
-        data-bank-vid="${v.id}" src="${src}" title="${escHtml(v.title)}"
-        sandbox="allow-scripts allow-same-origin allow-presentation allow-forms"
-        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-        referrerpolicy="strict-origin-when-cross-origin"></iframe>
-        ${/* 투명한 판 — 우클릭·길게 누르기·끝 화면 클릭이 유튜브에 안 닿는다. */''}
-        <div class="vc-veil" oncontextmenu="return false;" onclick="vcToggle('${v.id}')"></div>
+      <div class="sap-vwrap">
+        <div class="vc-zoom" id="vzoom-${v.id}"><iframe id="yt-frame-${v.id}" class="yt-tracked-frame"
+          data-bank-vid="${v.id}" src="${src}" title="${escHtml(v.title)}"
+          sandbox="allow-scripts allow-same-origin allow-presentation allow-forms"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          referrerpolicy="strict-origin-when-cross-origin"></iframe></div>
+        ${/* 투명한 판 — 우클릭·길게 누르기·끝 화면 클릭이 유튜브에 안 닿는다. 손짓(확대·옮기기·재생)도 여기서 받는다. */''}
+        <div class="vc-veil" id="vveil-${v.id}" oncontextmenu="return false;" onclick="vcVeilTap('${v.id}')"></div>
       </div>
       ${videoControlsHTML(v.id)}
     </div>
