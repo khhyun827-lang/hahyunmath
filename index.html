@@ -2640,6 +2640,13 @@
 /* ---------- 클리닉 > 온 학생 기록의 학생 고르개 (2026-09-13 · K-12) ----------
    🔵 줄 목록이 아니라 «칩»이다 — 40명을 세로로 세우면 화면을 계속 굴려야 하고,
      이 화면에서 하는 일은 «몇 명을 콕 집어 누르기»뿐이다. 담긴 것은 색으로 바로 보인다. */
+/* 반 묶음 (2026-09-13 · K-13) — 머리에 반 이름과 «담긴 수/전체», 그 아래에 칩. */
+.app .cln-grp{margin-bottom:14px;}
+.app .cln-grp:last-child{margin-bottom:0;}
+.app .cln-gh{display:flex;align-items:baseline;gap:8px;margin-bottom:7px;
+  font-size:12px;font-weight:700;color:var(--sub);}
+.app .cln-gh span{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:400;color:var(--dim);}
+.app .cln-gh span b{color:var(--accent);font-weight:700;}
 .app .cln-pick{display:flex;flex-wrap:wrap;gap:8px;}
 .app .cln-p{display:flex;align-items:baseline;gap:6px;padding:8px 12px;font-size:13px;font-weight:600;
   border:1px solid var(--line);background:var(--paper);color:var(--ink);
@@ -20513,10 +20520,24 @@ function clinicCamePanelHTML(){
   const date = clinicCameDate();
   const 온사람 = clinicCameOn(date);
   const 온사람ids = new Set(온사람.map(c => c.studentId));
-  /* 🔵 **반을 안 가른다** — 사용자가 그렇게 정했다. 이름 순 하나로 세운다. */
-  const 전체 = DATA.students.filter(s => !isWithdrawn(s)).slice().sort((a, b) => a.name.localeCompare(b.name));
+  /* 🔵 **전체가 나오되 «반별로 묶어» 세운다** (2026-09-13 · K-13 · 사용자 —
+       「학생을 체크하긴 해야해서 전체학생이 나와있더라도 반별로 정렬은 되어있었으면 좋겠어」).
+     🔴 이름 순 한 줄로만 세웠더니 **40명이 한 덩이**가 됐다 — 명단을 보며 하나씩 짚는 일에는
+       «어느 반 아이들을 다 봤나»가 눈에 보여야 한다. 반 이름을 머리로 얹고 그 아래에 칩을 담는다.
+     ⚠ 묶는 잣대는 **주 반**(`studentMainClassId`)이다 — 겹쳐 듣는 반까지 세면 한 학생이 두 번 선다.
+     ⚠ 반 차례는 `DATA.classes` 에 적힌 차례 그대로다(설정에서 세운 차례). 반 없는 학생은 맨 뒤 «미배정».
+     ⚠ 반 이름이 머리에 있으므로 칩에는 곁말을 안 붙인다 — 같은 말을 두 번 적으면 칩만 커진다. */
+  const 재원 = DATA.students.filter(s => !isWithdrawn(s));
   const q = (state.clinicCameQ || '').trim().toLowerCase();
-  const 보일것 = q ? 전체.filter(s => (s.name + ' ' + s.studentId).toLowerCase().includes(q)) : 전체;
+  const 맞나 = s => !q || (s.name + ' ' + s.studentId).toLowerCase().includes(q);
+  const 반차례 = DATA.classes.map(c => c.id).concat(['']);
+  const 묶음 = 반차례.map(cid => ({
+    cid,
+    이름: classNameOf(cid),
+    아이들: 재원.filter(s => (반차례.includes(studentMainClassId(s)) ? studentMainClassId(s) : '') === cid)
+             .slice().sort((a, b) => a.name.localeCompare(b.name))
+  })).filter(g => g.아이들.length);
+  const 보일것 = 재원.filter(맞나);
   const 요일 = WEEKDAY_LABEL[new Date(date + 'T00:00:00').getDay()];
 
   const 줄 = c => {
@@ -20559,13 +20580,22 @@ function clinicCamePanelHTML(){
         <input id="cn-came-q" placeholder="이름 또는 아이디" value="${escHtml(state.clinicCameQ || '')}"
           oninput="clinicCameFilter(this.value)"></span>
       ${state.clinicCameQ ? `<button class="btn sm" onclick="state.clinicCameQ=''; render()">지우기</button>` : ''}
-      <span class="muted" style="font-size:11.5px;">재원생 <b class="mono">${전체.length}</b>명</span>
+      <span class="muted" style="font-size:11.5px;">재원생 <b class="mono">${재원.length}</b>명</span>
     </div>
-    <div id="cn-came-pick" class="cln-pick">
-      ${보일것.map(s => `<button class="cln-p ${온사람ids.has(s.studentId) ? 'on' : ''}"
-        data-nm="${escHtml((s.name + ' ' + s.studentId).toLowerCase())}"
-        onclick="clinicCameToggle('${s.studentId}','${date}')">
-        ${escHtml(s.name)}<i>${escHtml(studentClassTitle(s))}</i></button>`).join('')}
+    <div id="cn-came-pick">
+      ${묶음.map(g => {
+        const 보임 = g.아이들.filter(맞나);
+        const 담긴 = g.아이들.filter(s => 온사람ids.has(s.studentId)).length;
+        return `<div class="cln-grp" data-grp ${보임.length ? '' : 'hidden'}>
+          <div class="cln-gh">${escHtml(g.이름)}
+            <span>${담긴 ? '<b>' + 담긴 + '</b>/' : ''}${g.아이들.length}</span></div>
+          <div class="cln-pick">${g.아이들.map(s => `<button class="cln-p ${
+            온사람ids.has(s.studentId) ? 'on' : ''}"
+            data-nm="${escHtml((s.name + ' ' + s.studentId).toLowerCase())}"
+            ${맞나(s) ? '' : 'hidden'}
+            onclick="clinicCameToggle('${s.studentId}','${date}')">${escHtml(s.name)}</button>`).join('')}</div>
+        </div>`;
+      }).join('')}
     </div>
     ${보일것.length === 0 ? '<div class="st-empty">찾는 학생이 없습니다.</div>' : ''}
   </div>`;
@@ -20577,6 +20607,11 @@ function clinicCameFilter(q){
   if(!box) return;
   const 말 = String(q || '').trim().toLowerCase();
   box.querySelectorAll('[data-nm]').forEach(el => { el.hidden = !!말 && !el.dataset.nm.includes(말); });
+  /* ⚠ **빈 반 머리도 같이 숨긴다** (2026-09-13 · K-13) — 칩만 숨기면 아무도 없는 반 이름이
+     줄줄이 남아 «찾은 것이 없는 것처럼» 보인다. 그 묶음에 보이는 칩이 하나라도 있나로 정한다. */
+  box.querySelectorAll('[data-grp]').forEach(g => {
+    g.hidden = ![...g.querySelectorAll('[data-nm]')].some(el => !el.hidden);
+  });
 }
 /* 누르면 담기고 다시 누르면 빠진다.
    🔴 **저장이 된 «뒤»에 메모리를 고친다** (withdrawStudent 와 같은 규칙) — 저장이 엎어졌는데

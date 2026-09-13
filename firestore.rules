@@ -103,9 +103,16 @@ service cloud.firestore {
        이 앱은 내용을 `value` 한 칸에 JSON 글자로 넣는데, 규칙도 질의도 그 «안»은 못 본다.
        그래서 `dbSetDoc` 이 `data.uid` 를 밖에도 한 벌 적는다(index.html `docFields`).
        ⚠ 그 둘이 어긋날 수 없게 «언제나 data.uid 에서 뜬다» — 부르는 쪽이 따로 챙기지 않는다. */
+    /* 🔴 **강사도 «만들» 수 있어야 한다** (2026-09-13 · K-13 · 사용자 신고 — 「누르면 담지못했다고 떠」).
+       이 줄이 `realAccount() && data.uid == auth.uid` 하나뿐이라, 강사가 **학생 몫으로** 만드는 것이
+       전부 막혔다 — 그 문서의 `uid` 는 «그 학생» 것이라 강사 uid 와 안 맞는다.
+       ⚠ `allow update` 가 강사에게 열려 있어도 소용없다. **없는 문서에 PATCH 하는 것은 `create` 다.**
+       ⚠ 이것은 새 기능만의 일이 아니다 — 「학생 직접 배정」(`assignClinic`)도 같은 꼴이라
+         **처음부터 안 되고 있었다.** 아무도 안 써서 안 드러났을 뿐이다.
+       🔵 학생 쪽 조건은 그대로 둔다 — 학생은 여전히 «제 것»만 만들 수 있다. */
     match /clinics/{doc} {
       allow read:   if isTeacher() || (realAccount() && resource.data.uid == request.auth.uid);
-      allow create: if realAccount() && request.resource.data.uid == request.auth.uid;
+      allow create: if isTeacher() || (realAccount() && request.resource.data.uid == request.auth.uid);
       allow update, delete: if isTeacher();
     }
     match /qnas/{doc} {

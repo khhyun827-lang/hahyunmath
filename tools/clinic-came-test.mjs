@@ -135,23 +135,44 @@ console.log(NL + '③ 클리닉 › 온 학생 기록 — 수업도 반도 안 �
     /<button class="cn-add came" onclick="clinicOpenCame\('\$\{d\}'\)"/.test(lift('teacherClinicHTML')), true);
   봄('날짜를 안 고르면 오늘이다', lift('clinicCameDate').includes('state.clinicCameDate || todayStr()'), true);
 
+  /* 🔴 **여기가 「담지 못했습니다」의 뿌리였다** (2026-09-13 · K-13 · 사용자 신고).
+     `clinics` 의 create 규칙이 «만드는 사람 = 문서의 uid» 하나뿐이라,
+     강사가 **학생 몫으로** 만드는 것이 통째로 막혔다(그 문서의 uid 는 «그 학생» 것이다).
+     ⚠ `allow update` 가 강사에게 열려 있어도 소용없다 — **없는 문서에 PATCH 하는 것은 create 다.**
+     ⚠ 규칙은 콘솔에 «게시»해야 도는 것이라, 이 덫이 통과해도 **게시 전에는 화면이 여전히 막힌다.** */
+  const rules = fs.readFileSync(path.join(ROOT, 'firestore.rules'), 'utf8').replace(/\r\n/g, '\n');
+  const 클리닉규칙 = (rules.match(/match \/clinics\/\{doc\} \{([\s\S]*?)\n    \}/) || [])[1] || '';
+  봄('🔴 강사도 클리닉을 «만들» 수 있다', /allow create: if isTeacher\(\) \|\|/.test(클리닉규칙), true);
+  봄('🔵 학생은 여전히 «제 것»만 만든다',
+    클리닉규칙.includes('request.resource.data.uid == request.auth.uid'), true);
+  봄('읽기·고치기는 그대로', [/allow read:\s+if isTeacher\(\)/.test(클리닉규칙),
+    /allow update, delete: if isTeacher\(\);/.test(클리닉규칙)], [true, true]);
+  봄('🔴 같은 흠이 「학생 직접 배정」에도 있었다 — 그것도 이 한 줄로 풀린다',
+    lift('assignClinic').includes('uid: studentKeyOfSid(sid)'), true);
+
   /* 화면을 실제로 그려 본다 */
+  /* ⚠ 같은 반의 둘을 **이름 순과 반대로** 적어 둔다 — 명단 차례 그대로 나오면
+     반 안에서 이름 순으로 세우는 일이 빠진 것이다(그대로 두면 두 잣대가 같은 답을 낸다). */
   const 학생들 = [
-    { studentId: 'a1', uid: 'u1', name: '가나', classId: 'c1' },
     { studentId: 'a2', uid: 'u2', name: '다라', classId: 'c1' },
+    { studentId: 'a1', uid: 'u1', name: '가나', classId: 'c1' },
     { studentId: 'a3', uid: 'u3', name: '가가', classId: 'c2' },
     { studentId: 'a9', uid: 'u9', name: '퇴원', classId: 'c1', withdrawnAt: '2026-08-01' },
   ];
-  const DATA = { students: 학생들, clinics: [
+  /* ⚠ 반 차례는 «설정에 세운 차례» 그대로다 — 이름 순이 아니다. 그래서 c2 를 먼저 적어 둔다:
+     이름 순으로만 세우면 고1GA1 이 먼저일 텐데, 실제로는 c2 묶음이 먼저 서야 한다. */
+  const DATA = { classes: [{ id: 'c2', name: '고2GB1' }, { id: 'c1', name: '고1GA1' }],
+    students: 학생들, clinics: [
     { id: 'cl1', studentId: 'a3', name: '가가', day: '2026-09-13', status: '승인', slotIds: [], walkIn: true },
     { id: 'cl2', studentId: 'a2', name: '다라', day: '2026-09-13', status: '승인', slotIds: ['s1'] },
     { id: 'cl3', studentId: 'a1', name: '가나', day: '2026-09-13', status: '취소', slotIds: [], walkIn: true },
     { id: 'cl4', studentId: 'a1', name: '가나', day: '2026-09-12', status: '승인', slotIds: [], walkIn: true },
   ], clinicSlots: [{ id: 's1', date: '2026-09-13', time: '16:00' }] };
   const state = { clinicCameQ: '', clinicCameDate: '2026-09-13', clinicPanel: 'came' };
-  const 곁 = ['DATA', 'state', 'isWithdrawn', 'studentClassTitle', 'clinicWhenLabel', 'escHtml', 'iconSvg',
-    'todayStr', 'WEEKDAY_LABEL'];
+  const 곁 = ['DATA', 'state', 'isWithdrawn', 'studentClassTitle', 'studentMainClassId', 'classNameOf',
+    'clinicWhenLabel', 'escHtml', 'iconSvg', 'todayStr', 'WEEKDAY_LABEL'];
   const 값 = [DATA, state, s => !!s.withdrawnAt, s => s.classId === 'c1' ? '고1GA1' : '고2GB1',
+    s => s.classId || '', cid => (DATA.classes.find(c => c.id === cid) || {}).name || '미배정',
     c => (c.slotIds || []).length ? '16:00' : '', esc, () => '', () => '2026-09-20',
     ['일', '월', '화', '수', '목', '금', '토']];
   const C = new Function(...곁,
@@ -170,11 +191,16 @@ console.log(NL + '③ 클리닉 › 온 학생 기록 — 수업도 반도 안 �
     /가가[\s\S]*?>빼기</.test(그림) && /다라[\s\S]*?시간대 신청/.test(그림), true);
   /* ⚠ 칩의 이름 앞에 줄바꿈이 있다 — «>이름<» 으로 찾으면 없는데도 -1 끼리 비교해 통과한다. */
   const 칩 = [...그림.matchAll(/data-nm="([^"]*)"/g)].map(m => m[1]);
-  봄('🔴 반을 안 가르고 이름 순 하나로 세운다 (사용자가 그렇게 정했다)',
-    칩, ['가가 a3', '가나 a1', '다라 a2']);
+  /* 🔴 전체가 나오되 **반별로 묶여** 있어야 한다 (사용자가 바로잡았다).
+     반 차례는 DATA.classes 차례(c2 → c1)이고, 그 안에서만 이름 순이다 —
+     이름 순 하나였다면 «가가 · 가나 · 다라» 였을 것이다. */
+  봄('🔴 반 차례대로, 반 안에서 이름 순', 칩, ['가가 a3', '가나 a1', '다라 a2']);
+  const 머리 = [...그림.matchAll(/class="cln-gh">([^<]*)/g)].map(m => m[1].trim());
+  봄('🔴 반 이름이 머리로 선다 (설정에 세운 차례 그대로)', 머리, ['고2GB1', '고1GA1']);
+  봄('머리에 «담긴 수/전체»가 적힌다', /고1GA1[\s\S]{0,80}<b>1<\/b>\/2/.test(그림), true);
   봄('🔴 퇴원생은 안 든다', 칩.some(x => x.startsWith('퇴원')), false);
   봄('담긴 학생은 켜져 보인다 (가가 · 다라)', (그림.match(/class="cln-p on"/g) || []).length, 2);
-  봄('어느 반인지 곁말이 붙는다', 그림.includes('<i>고1GA1</i>') && 그림.includes('<i>고2GB1</i>'), true);
+  봄('🔴 칩에는 곁말을 안 붙인다 (반 이름이 머리에 있다)', /<i>고1GA1<\/i>/.test(그림), false);
 
   /* 날짜를 옮기면 그날 것만 */
   state.clinicCameDate = '2026-09-12';
@@ -183,18 +209,48 @@ console.log(NL + '③ 클리닉 › 온 학생 기록 — 수업도 반도 안 �
   봄('그날 칸 값도 따라간다', 어제.includes('value="2026-09-12"'), true);
   state.clinicCameDate = '2026-09-13';
 
-  /* 찾기 */
+  /* 찾기 — 🔴 이제 칩은 «빠지는» 것이 아니라 `hidden` 으로 숨는다(반 묶음이 생기면서 바뀌었다).
+     그러니 «있나»가 아니라 **«보이나»**를 봐야 한다 — 안 그러면 걸러도 통과한다. */
+  const 보이는칩 = h => [...h.matchAll(/<button class="cln-p[\s\S]*?data-nm="([^"]*)"([\s\S]*?)onclick/g)]
+    .filter(m => !/\bhidden\b/.test(m[2])).map(m => m[1]);
+  const 보이는반 = h => [...h.matchAll(/<div class="cln-grp" data-grp ([^>]*)>[\s\S]*?class="cln-gh">([^<]*)/g)]
+    .filter(m => !/\bhidden\b/.test(m[1])).map(m => m[2].trim());
   state.clinicCameQ = '가나';
   const 걸러낸 = C.clinicCamePanelHTML();
-  봄('찾으면 그 학생만', [/data-nm="가나 a1"/.test(걸러낸), /data-nm="다라 a2"/.test(걸러낸)], [true, false]);
+  봄('🔴 찾으면 그 학생만 보인다', 보이는칩(걸러낸), ['가나 a1']);
+  봄('🔴 아무도 안 남은 반은 머리까지 숨는다 (빈 반 이름만 줄줄이 남으면 안 된다)',
+    보이는반(걸러낸), ['고1GA1']);
   state.clinicCameQ = 'a2';
-  봄('아이디로도 찾는다', /data-nm="다라 a2"/.test(C.clinicCamePanelHTML()), true);
+  봄('아이디로도 찾는다', 보이는칩(C.clinicCamePanelHTML()), ['다라 a2']);
   state.clinicCameQ = '없는이름';
   봄('없으면 없다고 말한다', C.clinicCamePanelHTML().includes('찾는 학생이 없습니다'), true);
+  봄('그때는 반 머리도 다 숨는다', 보이는반(C.clinicCamePanelHTML()), []);
   state.clinicCameQ = '';
+  봄('지우면 다 돌아온다', 보이는칩(C.clinicCamePanelHTML()), ['가가 a3', '가나 a1', '다라 a2']);
   봄('🔴 글자마다 render() 를 안 부른다 — 한글 조합이 끊긴다',
     /(^|[^a-zA-Z])render\(\)/.test(lift('clinicCameFilter')), false);
-  봄('대신 그 자리에서 숨긴다', lift('clinicCameFilter').includes('el.hidden'), true);
+  /* 🔴 **그 자리에서 숨기는 일을 «돌려서» 본다.** 글자로 `el.hidden` 만 보면
+     빈 반 머리를 숨기는 줄을 통째로 지워도 통과한다(덫을 확인하다 드러났다).
+     가짜 DOM 을 하나 지어 실제로 불러 본다 — 칩과 반 머리가 어떻게 숨는지가 요점이다. */
+  {
+    const 칩만들기 = nm => ({ dataset: { nm }, hidden: false });
+    const 반만들기 = (...칩들) => ({ hidden: false, 칩들, querySelectorAll: () => 칩들 });
+    const 반1 = 반만들기(칩만들기('가나 a1'), 칩만들기('다라 a2'));
+    const 반2 = 반만들기(칩만들기('가가 a3'));
+    const box = { querySelectorAll: sel => sel === '[data-grp]' ? [반1, 반2] : [...반1.칩들, ...반2.칩들] };
+    const st2 = {};
+    const F = new Function('state', 'document',
+      lift('clinicCameFilter') + NL + 'return clinicCameFilter;')(st2, { getElementById: () => box });
+    F('가나');
+    봄('🔴 돌려 보면 — 안 맞는 칩이 숨는다',
+      [...반1.칩들, ...반2.칩들].map(c => c.hidden), [false, true, true]);
+    봄('🔴 돌려 보면 — 아무도 안 남은 반 머리까지 숨는다', [반1.hidden, 반2.hidden], [false, true]);
+    봄('친 글자는 state 에 담긴다', st2.clinicCameQ, '가나');
+    F('');
+    봄('지우면 다 돌아온다 (칩도 반 머리도)',
+      [...[...반1.칩들, ...반2.칩들].map(c => c.hidden), 반1.hidden, 반2.hidden],
+      [false, false, false, false, false]);
+  }
 
   /* 담기·빼기를 실제로 돌린다 */
   const 쓴것 = [], 지운것 = [], 장부 = [], 말 = [];
