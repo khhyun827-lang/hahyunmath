@@ -357,30 +357,6 @@
    좁은 화면에서 괜히 가로 스크롤이 남는다. */
 .app .rst-wrap table.grid.narrow{min-width:1260px;}
 .app .rst-wrap td{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-/* ── 명단의 «계층» (2026-09-14 · S-10) ─────────────────────────────────────
-   🔴 **색은 한 톨도 안 바꾼다.** 이 표에서 색은 «뜻»을 나른다(출석 초록 · 결석 빨강 · 신호 배지) —
-     거기에 꾸밈색을 더하면 뜻이 흐려진다. 바꾸는 것은 **크기와 무게**뿐이다.
-   🔴 **지금은 열 열네 개가 전부 같은 소리로 말한다.** 46줄을 훑는 눈이 어디를 붙들지 모르는데,
-     이름(누구냐)과 숫자(어떤가)가 학교·전화번호와 같은 크기라서다.
-   ⇒ 세 덩이로 읽히게 한다 — **«누구인가 | 어떤 상태인가 | 숫자»**.
-     · 이름은 표의 닻이다. 한 단계 키우고 굵힌다.
-     · 학교·학년·반·전화번호는 **찾을 때만** 보는 것이다. 한 단계 줄이고 잉크를 뺀다.
-     · 숫자 넷(출석률·과제·오답·시청률)은 **훑는 것**이다. 무게를 주고, 덩이가 어디서
-       시작하는지 옅은 선 하나로 말한다 — 열 이름을 다시 안 읽어도 된다.
-   ⚠ `.rst-wrap` 안에만 건다 — `table.grid` 는 다른 화면도 쓴다. 여기서 보고 좋으면 넓힌다. */
-.app .rst-wrap table.grid .nm{font-size:13.5px;font-weight:700;letter-spacing:-.01em;}
-.app .rst-wrap table.grid tbody td.sub{font-size:11.5px;}
-.app .rst-wrap table.grid tbody td.r.mono{font-weight:600;}
-/* 숫자 덩이의 첫 칸에만 선을 세운다 — 칸마다 그으면 그물이 되어 아무것도 안 나눈다.
-   ⚠ **줄 구분선(`--line2`)보다 한 단계 진해야 한다** — 같은 톤이면 가로선에 묻혀 안 보인다
-     (화면에서 봤다). 세로선은 가로선을 «가로지르는» 것이라 조금 더 말해야 한다. */
-.app .rst-wrap table.grid th.grp,
-.app .rst-wrap table.grid tbody td.grp{box-shadow:inset 1px 0 0 var(--line);}
-/* 빈 화면 — 한 줄로 끝내지 않고 «무엇을 하면 되는지»까지 세운다. */
-.app .rst-empty{padding:44px 16px;display:flex;flex-direction:column;align-items:center;gap:9px;text-align:center;}
-.app .rst-empty b{font-size:14px;font-weight:700;color:var(--ink);}
-.app .rst-empty span{font-size:12.5px;color:var(--dim);line-height:1.75;max-width:46ch;}
-.app .rst-empty .btn{margin-top:5px;}
 .app .rst-wrap .cb{cursor:pointer;}
 
 .app .rst-sig{display:flex;align-items:center;gap:6px;min-width:0;}
@@ -16207,13 +16183,13 @@ function teacherRosterHTML(){
       <td>${rosterDots(st.att8)}</td>
       ${/* 빨강은 «무거운 신호가 켜졌다»와 같은 뜻이어야 한다 — 그래서 설정의 임계값을 그대로 본다.
            노랑(cau)은 신호가 아니라 «가까워지고 있다»는 넓은 띠라 고정값이다. */''}
-      <td class="r mono grp ${st.attPct===null ? 'muted' : (st.attPct<R.attPct ? 'warn' : (st.attPct<90 ? 'cau' : ''))}">${st.attPct===null ? '—' : st.attPct + '%'}</td>
+      <td class="r mono ${st.attPct===null ? 'muted' : (st.attPct<R.attPct ? 'warn' : (st.attPct<90 ? 'cau' : ''))}">${st.attPct===null ? '—' : st.attPct + '%'}</td>
       ${/* ⚠ 숫자는 «전부» 이야기고, 붉은 것은 «지난 것»이 있을 때뿐이다 (K-16).
            과제를 내자마자 반 전체가 붉어지면 그 색은 아무 말도 안 하게 된다. */''}
       <td class="r mono ${st.hwLate ? 'cau' : ''}" title="${st.hwLate ? '마감 지난 과제 ' + st.hwLate + '건 미제출' : '마감 지난 미제출 없음'}">${st.hwTotal ? st.hwDone + '/' + st.hwTotal : '—'}</td>
       <td class="r mono ${st.wrongLeft>0 ? 'warn' : ''}">${st.wrongLeft || '—'}</td>
       <td class="r mono ${st.vidPct===null ? 'muted' : (st.vidPct<R.vidHeavy ? 'warn' : (st.vidPct<R.vidLight ? 'cau' : ''))}">${st.vidPct===null ? '—' : st.vidPct + '%'}</td>
-      <td class="sub mono">${escHtml(phoneLabel(s.parentPhone)||'—')}</td>
+      <td class="sub mono" style="font-size:11.5px;">${escHtml(phoneLabel(s.parentPhone)||'—')}</td>
       <td><span class="rst-act">
         <button class="btn sm p" onclick="rosterOpen('${s.studentId}','info')">열기</button>
         <button class="btn sm" onclick="rosterOpen('${s.studentId}','attendance')">출결</button>
@@ -16234,7 +16210,7 @@ function teacherRosterHTML(){
         ${wide ? '<th style="width:88px;">반 진도</th>' : ''}
         <th style="width:132px;">성적 추이</th>
         <th style="width:118px;">출결 최근 8회</th>
-        <th class="r grp" style="width:60px;">출석률</th>
+        <th class="r" style="width:60px;">출석률</th>
         <th class="r" style="width:54px;">과제</th>
         <th class="r" style="width:50px;">오답</th>
         <th class="r" style="width:60px;">시청률</th>
@@ -16243,17 +16219,8 @@ function teacherRosterHTML(){
       </tr></thead>
       <tbody>${rows}</tbody>
     </table>
-    ${/* 🔴 **«없습니다»로 끝내지 않는다** (2026-09-14 · S-10). 빈 화면은 막다른 골목이 아니라
-         **다음 할 일을 말하는 자리**다. 까닭이 둘이라 말도 둘이어야 한다 —
-         «아직 아무도 없다»와 «있는데 지금 거르개에 안 걸린다»는 할 일이 완전히 다르다. */''}
-    ${m.rows.length===0 ? `<div class="rst-empty">${DATA.students.length===0
-      ? `<b>아직 등록된 학생이 없습니다.</b>
-         <span>학생 계정을 만들면 여기에 섭니다 — 출결·성적·과제가 전부 이 명단에서 갈라집니다.</span>
-         <button class="btn p sm" onclick="state.teacherTab='settings'; state.settingsSubTab='students'; state.studentDetailId=null; render()">
-           ${iconSvg('plus',13)} 학생 만들러 가기</button>`
-      : `<b>지금 조건에 맞는 학생이 없습니다.</b>
-         <span>${escHtml(m.pool.length + '명 중 0명')} — 위의 검색어나 거르개를 지우면 다시 보입니다.</span>
-         <button class="btn sm" onclick="rosterClearFilters()">${iconSvg('x',13)} 조건 지우기</button>`}</div>` : ''}
+    ${m.rows.length===0 ? `<div style="padding:40px 0;text-align:center;color:var(--dim);font-size:12.5px;">${
+      DATA.students.length===0 ? '등록된 학생이 없습니다.' : '조건에 맞는 학생이 없습니다.'}</div>` : ''}
     ${(state.rosterSelected||[]).length>0 ? '<div class="rst-pad"></div>' : ''}
   </div>`;
 
@@ -16285,28 +16252,6 @@ function rosterSetView(v){
   state.rosterSelected = [];      // 모집단이 바뀌면 선택은 의미를 잃는다
   state.rosterLastIndex = null;
   render();
-}
-/* 🔵 **빈 화면에서 빠져나오는 문** (2026-09-14 · S-10) — 검색어와 거르개만 지운다.
-   ⚠ **모집단(`rosterView`)은 안 건드린다** — 「퇴원」을 보고 있었다면 그것은 «거르개»가 아니라
-     «지금 보려고 고른 것»이다. 그것까지 되돌리면 화면이 말없이 딴 데로 간다. */
-function rosterClearFilters(){
-  state.rosterQuery = '';
-  state.rosterFlags = {};
-  state.rosterLastIndex = null;
-  render();
-}
-/* 🔴 **같은 막다른 말이 일곱 군데에 흩어져 있었다** (2026-09-14 · S-10) —
-   「이 반에 배정된 학생이 없습니다.」 반의 아홉 탭이 저마다 그 말을 하고 끝냈는데,
-   **거기서 무엇을 해야 하는지는 어디에도 없었다**(명단에 가서 반을 정해 줘야 한다).
-   ⇒ 말도 문도 **한 벌**로 모은다. 다음에 또 같은 자리가 생기면 이것을 쓴다. */
-function emptyNoRoster(classId){
-  return `<div class="rst-empty">
-    <b>${escHtml(classNameOf(classId) || '이 반')}에 아직 학생이 없습니다.</b>
-    <span>명단에서 학생의 반을 이 반으로 정하면 여기에 섭니다 —
-      출결·성적·과제·영상이 전부 그 명단을 따라갑니다.</span>
-    <button class="btn p sm" onclick="goTeacherTab('classhub'); state.classHubTab='students'; state.studentDetailId=null; render()">
-      ${iconSvg('users',13)} 명단에서 반 정하기</button>
-  </div>`;
 }
 function rosterToggleFlag(k){
   const f = state.rosterFlags || (state.rosterFlags = {});
@@ -17395,7 +17340,7 @@ function sessionPrevHTML(classId, date){
 function sessionAttHTML(classId, date){
   if(!state.allRecordsLoaded) return { body:'<div style="padding:48px 0;text-align:center;color:var(--dim);font-size:12.5px;">학생 기록을 불러오는 중입니다…</div>', bar:'' };
   const { roster, cnt, none } = sessionDraftSummary(classId);
-  if(roster.length === 0) return { body: emptyNoRoster(classId), bar:'' };
+  if(roster.length === 0) return { body:'<div style="padding:48px 0;text-align:center;color:var(--dim);font-size:12.5px;">이 반에 배정된 학생이 없습니다.</div>', bar:'' };
 
   const tiles = roster.map(s=>{
     const d = state.attDraft[s.studentId] || {status:null, reason:'', videoUrl:''};
@@ -18238,7 +18183,7 @@ function teacherClassHubHTML(){
      그 물음이 이 화면의 전부라 **전 기간**으로 둔다(출결 누적 표와 같은 판단). */
 function chubConsultHTML(classId){
   const roster = classRoster(classId);
-  if(roster.length===0) return emptyNoRoster(classId);
+  if(roster.length===0) return '<div class="fm-empty">이 반에 배정된 학생이 없습니다.</div>';
   loadConsultLogsForClass(classId);
   const loading = roster.some(s=>state.consultLogLoading[s.studentId] || !state.consultLogs[s.studentId]);
   if(loading) return '<div class="fm-empty">상담 기록을 불러오는 중입니다…</div>';
@@ -18430,7 +18375,7 @@ function chubScoresHTML(classId){
     return addBar + `<div class="fm-empty">${ymLabel(ym)}에 본 시험이 없습니다.
       「시험 추가」로 만들거나, 문항이 있는 시험지는 <b>오답 &gt; 시험지</b>에서 만듭니다.</div>`;
   if(roster.length===0)
-    return addBar + emptyNoRoster(classId);
+    return addBar + `<div class="fm-empty">이 반에 배정된 학생이 없습니다.</div>`;
 
   /* 학생 한 줄의 평균 — 만점이 시험마다 다르므로 «%»로 환산해서 잇는다. */
   const pctOf = (sid, ex) => {
@@ -18733,7 +18678,7 @@ function chubAttendanceHTML(classId){
   }
   if(!state.allRecordsLoaded) return `<div class="fm-empty">학생 기록을 불러오는 중입니다…</div>`;
   const roster = classRoster(classId);
-  if(roster.length===0) return emptyNoRoster(classId);
+  if(roster.length===0) return `<div class="fm-empty">이 반에 배정된 학생이 없습니다.</div>`;
 
   const today = todayStr();
   const ym = chubYm();
@@ -20792,7 +20737,7 @@ function attDateDrawerHTML(){
 
   const body = !state.allRecordsLoaded
     ? '<div class="fm-empty">학생 기록을 불러오는 중입니다…</div>'
-    : roster.length===0 ? emptyNoRoster(classId)
+    : roster.length===0 ? '<div class="fm-empty">이 반에 배정된 학생이 없습니다.</div>'
     : `<div class="att-d">${roster.map(s=>{
         const d = state.attDraft[s.studentId] || {status:null, reason:'', videoUrl:'', note:''};
         const gone = d.status==='결석';
@@ -21317,7 +21262,7 @@ function chubQuizHTML(classId){
     <div class="qz-q">
       <div class="t-sec">학생별 현황</div>
       ${!state.allRecordsLoaded ? '<div style="font-size:12.5px;color:var(--dim);">기록 불러오는 중…</div>'
-      : roster.length===0 ? emptyNoRoster(classId)
+      : roster.length===0 ? '<div style="font-size:12.5px;color:var(--dim);">이 반에 배정된 학생이 없습니다.</div>'
       : `<table class="grid"><thead><tr>
           <th>학생</th><th>학교 · 학년 · 범위</th><th>오늘</th><th class="r">복습 대기</th>
           <th class="r">범위 밖</th><th class="r">누적 정답률</th></tr></thead><tbody>
@@ -22238,7 +22183,7 @@ function chubVideoHTML(classId){
   <div class="t-sec" style="margin-top:22px;">학생별 진행
     <span style="font-weight:400;color:var(--sub);">완주 <b class="mono">${doneCnt}/${roster.length}</b>${notSeen?` · 미시청 <b class="mono">${notSeen}</b>`:''}</span></div>
   ${!state.allRecordsLoaded ? '<div style="font-size:12.5px;color:var(--dim);">기록 불러오는 중…</div>'
-  : roster.length===0 ? emptyNoRoster(classId)
+  : roster.length===0 ? '<div style="font-size:12.5px;color:var(--dim);">이 반에 배정된 학생이 없습니다.</div>'
   : rows.slice().sort((a,b)=>a.p.pct-b.p.pct).map(({s,p})=>`
     <div class="vd-sv ${p.done?'done':''} ${!p.done&&p.pct<50?'low':''}">
       <div class="who"><span class="av">${escHtml((s.name||'?').slice(0,1))}</span><b>${escHtml(s.name)}</b></div>
