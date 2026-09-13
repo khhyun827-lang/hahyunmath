@@ -63,6 +63,21 @@ body:has(> .chrome){background:#101114;}
   --gone:#96968C;  --gonebg:#F1EFE9;  --gone-line:#DDDAD1;  /* 퇴원 */
   --blue:#39607F;  --bluebg:#E8EFF4;                        /* 성적 */
 
+  /* 학생 앱 포인트색 — 자두 (2026-09-14 · S-1) ------------------------------
+     🔴 **관리자에는 안 쓴다.** 여기 :root 에 «값»으로만 두고, 실제로 덮는 것은
+       `index.html` 의 `.app.sap{}` 한 곳뿐이다 — 그 바깥(관리자)은 한 글자도 안 바뀐다.
+     🔵 **왜 로고 와인이 아니라 자두인가** — 와인(`--brand #BA5054`)은 결석(`--no #B03A2E`)과
+       색상이 가까워 «선택»과 «위험»이 안 갈린다(위 --brand 주석). 그 제약은 **고밀도 표**의
+       것이고 학생 앱에는 그런 표가 없지만, 같은 화면에 결석 배지는 뜬다.
+       ⇒ 와인을 **자홍 쪽으로 밀어** 갈라 둔다 — 결석은 주황 쪽(색상 5°), 자두는 자홍 쪽(342°).
+     ⚠ **보라는 쓸 수 없다** — `--leave`(조퇴)가 이미 보라다. 포인트로 쓰면 뜻이 겹친다. */
+  --point:#A83E5E;       /* 단추·선택·진행바·켜진 탭. 흰 글자 대비 5.9:1 */
+  --point-lt:#BC4A6E;    /* 그라데이션 시작점 — 단색으로는 쓰지 않는다 */
+  --point-d:#8A2F4C;     /* 눌린 상태·그라데이션 끝점 */
+  --point-bg:#FAEEF2;    /* 아이콘 칩·코드 배지·켜진 칸 바탕 */
+  --point-line:#EFD3DD;
+  --point-ring:rgba(168,62,94,.16);   /* 입력칸 포커스 고리 */
+
   /* 메모 — A3 시그니처. 손으로 적어둔 것은 전부 이 종이색 */
   --note:#FDFAEF; --note-line:#EDE3C6; --note-dash:#D8CFA8;
 
@@ -420,7 +435,11 @@ table.grid .nm s{text-decoration:none;color:var(--dim);font-weight:400;
   display:flex;align-items:center;justify-content:center;}
 .todo .t{flex:1;min-width:0;}
 .todo .t b{display:block;font-size:14px;font-weight:600;}
-.todo .t span{display:block;font-size:11.5px;color:var(--dim);margin-top:3px;}
+/* 🔴 **`>` 가 빠져 있었다** (2026-09-14에 화면에서 봤다). 이 선택자가 «안쪽» span 까지 잡아,
+   제목 옆에 붙는 배지(`<b>제목 <span class="badge no">오늘</span></b>`)가 **줄 전체로 늘어나고
+   회색으로 칠해졌다.** 「.tile .who span」과 **똑같은 사고**다(그 주석이 이 파일에 이미 있다).
+   ⚠ 뜻은 처음부터 «바로 아래 한 줄»이었다 — 자식으로 좁힌다. */
+.todo .t > span{display:block;font-size:11.5px;color:var(--dim);margin-top:3px;}
 .todo .go{color:var(--dim);flex-shrink:0;}
 
 /* 출석 달력 */

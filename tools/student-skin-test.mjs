@@ -1,0 +1,206 @@
+// 학생 앱 자두판 — 포인트색 · 가운데 홈 · 부품 · 홈 차례 (2026-09-14 · S-1~S-4)
+//
+//   node tools/student-skin-test.mjs
+//
+// 사용자 — 「**학생들 페이지는 조금더 보기도 좋고 이목이 집중되는 디자인과 색상포인트가 있으면
+//   좋을 것 같아. 학생홈도 가운데 왔으면 포인트색상으로 왔으면 좋겠고**」
+//
+// 🔴 **이 판의 전부는 «관리자를 안 건드린다»이다.** 포인트색도 부품도 전부 `.app.sap` 아래에만
+//   산다. 그 경계가 무너지면 관리자 표가 통째로 자두가 된다 — 맨 앞 덫이 그것이다.
+// ⚠ 함수·CSS 를 여기에 옮겨 적지 않는다 — index.html · ds.css 에서 그대로 뜬다.
+
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8').replace(/\r\n/g, '\n');
+const ds = fs.readFileSync(path.join(ROOT, 'ds.css'), 'utf8').replace(/\r\n/g, '\n');
+const NL = String.fromCharCode(10);
+
+function lift(name) {
+  let at = html.indexOf('function ' + name + '(');
+  if (at < 0) throw new Error(name + ' 를 못 찾았습니다');
+  if (html.slice(at - 6, at) === 'async ') at -= 6;
+  let depth = 0;
+  for (let j = html.indexOf('{', at); j < html.length; j++) {
+    if (html[j] === '{') depth++;
+    else if (html[j] === '}') { depth--; if (!depth) return html.slice(at, j + 1); }
+  }
+  throw new Error(name + ' 의 끝을 못 찾았습니다');
+}
+/* 깊이가 0 인 `;` 까지 — 몸통 안에 `;` 가 든 것도 통째로 뜬다 */
+function liftConst(n) {
+  const at = html.search(new RegExp('^const ' + n + '\\s*=', 'm'));
+  if (at < 0) throw new Error(n + ' 를 못 찾았습니다');
+  let 깊이 = 0;
+  for (let j = at; j < html.length; j++) {
+    const ch = html[j];
+    if (ch === '{' || ch === '(' || ch === '[') 깊이++;
+    else if (ch === '}' || ch === ')' || ch === ']') 깊이--;
+    else if (ch === ';' && 깊이 === 0) return html.slice(at, j + 1);
+  }
+  throw new Error(n + ' 의 끝을 못 찾았습니다');
+}
+/* CSS 규칙 하나를 통째로 뜬다 — 선택자부터 닫는 `}` 까지 */
+function rule(css, selector) {
+  const at = css.indexOf(selector + '{');
+  if (at < 0) return '';
+  const end = css.indexOf('}', at);
+  return end < 0 ? '' : css.slice(at, end + 1);
+}
+const 알맹이 = s => s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+
+let pass = 0, fail = 0;
+const 봄 = (무엇, 나온것, 나와야) => {
+  const ok = JSON.stringify(나온것) === JSON.stringify(나와야);
+  if (ok) pass++; else fail++;
+  console.log((ok ? '  ✓ ' : '  🔴 ') + 무엇 +
+    (ok ? '' : NL + '      나온 것 ' + JSON.stringify(나온것) + NL + '      나와야 ' + JSON.stringify(나와야)));
+};
+
+/* ═══ ① 포인트색 — 학생 앱 «안»에서만 ═══ */
+console.log(NL + '① 자두는 학생 앱 안에서만 산다' + NL);
+{
+  const 셸 = rule(html, '.app.sap');
+  봄('토큰이 ds.css 에 있다',
+    ['--point:', '--point-lt:', '--point-d:', '--point-bg:', '--point-line:', '--point-ring:']
+      .every(t => ds.includes(t)), true);
+  봄('자두는 #A83E5E 다', /--point:\s*#A83E5E/.test(ds), true);
+
+  /* 🔴 **맨 앞 덫** — 덮는 자리가 `.app.sap{}` 블록 «안»이라야 한다.
+     :root 에서 덮으면 관리자 표가 통째로 자두가 된다. */
+  봄('🔴 --accent 를 덮는 자리는 `.app.sap{}` 안이다',
+    ['--accent:var(--point)', '--accent-d:var(--point-d)',
+     '--accent-bg:var(--point-bg)', '--accent-line:var(--point-line)']
+      .every(t => 셸.includes(t)), true);
+  봄('🔴 :root 에서는 --accent 를 안 덮는다',
+    /:root\{[\s\S]*?--accent:\s*var\(--point\)/.test(ds), false);
+  봄('🔴 ds.css 의 --accent 는 차콜 그대로다', /--accent:\s*#3F3537/.test(ds), true);
+
+  /* 🔴 상태색은 뜻이 있는 색이다 — 포인트색이 먹으면 뜻이 흐려진다 */
+  봄('🔴 상태색은 안 덮는다',
+    ['--ok:', '--late:', '--leave:', '--no:'].some(t => 셸.includes(t)), false);
+  봄('🔴 조퇴가 보라라서 포인트로 못 쓴다 (그 색은 임자가 있다)',
+    /--leave:\s*#6B46A8/.test(ds), true);
+  /* ⚠ 박힌 차콜 그림자는 관리자 입력칸에도 여럿 있다 — 여기서 보는 것은 **학생 입력칸 하나**다.
+     html 전체에서 찾으면 관리자 것 때문에 늘 실패한다(실제로 그랬다). */
+  봄('학생 입력칸의 포커스 고리가 박힌 색이 아니라 토큰이다',
+    rule(html, '.sap-in:focus').includes('var(--point-ring)'), true);
+  봄('🔴 관리자 입력칸은 차콜 그대로다',
+    rule(html, '.lo-in:focus').includes('rgba(60,48,52,.12)'), true);
+}
+
+/* ═══ ② 가운데 홈 ═══ */
+console.log(NL + '② 홈이 가운데 · 떠 있는 원' + NL);
+{
+  const N = new Function([liftConst('STUDENT_NAV'), liftConst('STUDENT_NAV_FAB'),
+    liftConst('STUDENT_SUBNAV')].join(NL) + NL +
+    'return { STUDENT_NAV, STUDENT_NAV_FAB, STUDENT_SUBNAV };')();
+
+  봄('탭 차례는 일정 · 학습 · 홈 · 기록 · 소통',
+    N.STUDENT_NAV.map(n => n[0]), ['일정', '학습', '홈', '기록', '소통']);
+  봄('🔴 홈이 «가운데» 칸이다', N.STUDENT_NAV.findIndex(n => n[1] === N.STUDENT_NAV_FAB), 2);
+  봄('🔴 가운데 칸은 다섯 중 한가운데라야 한다 (탭이 다섯이다)', N.STUDENT_NAV.length, 5);
+  봄('화면 id 는 그대로다 (해시·알림 링크가 산다)',
+    N.STUDENT_NAV.map(n => n[1]), ['calendar', 'wronghw', 'home', 'grades', 'notice']);
+
+  /* 🔴 어느 칸이 FAB 인지를 «한 곳»에서 정한다 — 그리는 쪽과 CSS 가 갈리면 엉뚱한 칸에 얹힌다 */
+  const 셸그리기 = lift('studentHTML');
+  봄('🔴 그리는 쪽이 그 상수를 본다', 셸그리기.includes("n[1] === STUDENT_NAV_FAB"), true);
+  봄('가운데 칸만 아이콘을 한 겹 싼다', 셸그리기.includes("가운데 ? `<i>${iconSvg(n[2],23)}</i>`"), true);
+
+  /* 여전히 지켜져야 하는 옛 규칙 */
+  const 어긋난것 = N.STUDENT_NAV.filter(n => N.STUDENT_SUBNAV[n[0]])
+    .filter(n => N.STUDENT_SUBNAV[n[0]][0][1] !== n[1]).map(n => n[0]);
+  봄('🔴 「탭이 가는 곳 = 첫 칸」은 그대로 지킨다', 어긋난것, []);
+
+  const 탭바 = rule(html, '.sap-tabs');
+  봄('탭바가 높아졌다 (58 → 66)', /height:66px/.test(탭바), true);
+  /* 🔴 **넘쳐 나오는 것이 이 부품의 전부다** — overflow 를 걸면 원이 잘린다 */
+  봄('🔴 탭바에 overflow 를 안 건다', /overflow/.test(탭바), false);
+  봄('🔴 본문 아래 여백이 바보다 넓다 (마지막 줄이 가리면 안 된다)',
+    html.includes('.app.sap .body{padding:16px 16px 88px;}'), true);
+  const fab = rule(html, '.sap-tabs a.fab i');
+  봄('원이 바 위로 떠 있다', /top:-26px/.test(fab) && /width:56px/.test(fab), true);
+  봄('종이색 테를 둘러 «떠 있는» 것으로 보인다', /0 0 0 5px var\(--paper\)/.test(fab), true);
+  봄('원도 자두 그라데이션이다', /var\(--point-lt\),\s*var\(--point-d\)/.test(fab), true);
+}
+
+/* ═══ ③ 부품 ═══ */
+console.log(NL + '③ 부품 — ds.css 원본은 안 고친다' + NL);
+{
+  /* 🔴 학생 앱 부품 덮기는 전부 `.app.sap` 아래라야 한다 */
+  /* ⚠ `{` 를 붙여 찾으면 안 된다 — 묶어 쓴 선택자(`.app.sap .mc,` 다음 줄에 `.app.sap .todo{`)는
+     그 꼴이 아니다. 선택자 «자체»가 있는지만 본다. */
+  const 덮은것 = ['.app.sap .mc', '.app.sap .msec', '.app.sap .mbtn.p', '.app.sap .bar',
+                  '.app.sap .todo .ic', '.app.sap .subnav a.on', '.app.sap .kpi'];
+  for (const s of 덮은것) 봄('🔴 ' + s + ' — 학생 앱 아래에 있다', html.includes(s), true);
+  봄('🔴 학생 앱 카드만 반경 16 · 그림자',
+    /\.app\.sap \.mc,\s*\n\.app\.sap \.todo\{border-radius:16px/.test(html), true);
+
+  봄('🔴 ds.css 의 카드 반경은 그대로다 (관리자가 쓴다)',
+    rule(ds, '.mc').includes('border-radius:var(--r-lg)'), true);
+  봄('🔴 ds.css 의 구획머리도 그대로다',
+    rule(ds, '.msec').includes('font-size:11.5px'), true);
+
+  /* 🔴 상태 배지는 뜻이 있는 색이다 — 손대지 않는다 */
+  봄('🔴 배지는 학생 앱에서도 안 덮는다', html.includes('.app.sap .badge{'), false);
+
+  /* 🔴 화면에서 잡은 흠 — 「.todo .t span」이 안쪽 배지까지 잡았다 */
+  봄('🔴 할 일 줄의 밑줄은 «바로 아래» span 만이다',
+    ds.includes('.todo .t > span{display:block'), true);
+  봄('🔴 옛 선택자가 안 남았다', /\.todo \.t span\{display:block/.test(ds), false);
+
+  봄('개수는 붉은 글자가 아니라 알약이다',
+    html.includes('.app.sap .msec .n{') && !html.includes(`<span style="color:var(--no);">\${todo.length}</span>`), true);
+  봄('진행바가 8px 다', rule(html, '.app.sap .bar').includes('height:8px'), true);
+  봄('갈래 줄이 알약이 됐다', rule(html, '.app.sap .subnav a.on').includes('background:var(--point-bg)'), true);
+}
+
+/* ═══ ④ 홈 차례 ═══ */
+console.log(NL + '④ 홈 — 시험이 맨 위' + NL);
+{
+  const 홈원본 = lift('stuHomeHTML');
+  /* 🔴 **덫이 또 «내 주석»을 물었다**(이 저장소에서 일곱 번째다) — 차례를 설명하려고 적은
+     「여태 오늘 할 일 아래 셋째에 묻혀 있었다」가 잡혀서, **주석이 먼저 나온다**는 이유로
+     실패했다. ⇒ 위치를 재기 전에 **주석을 걷고**, 글자가 아니라 **그리는 markup**을 닻으로 쓴다. */
+  const 홈 = 알맹이(홈원본);
+  const 자리 = s => 홈.indexOf(s);
+  봄('🔴 시험 히어로가 «오늘 할 일»보다 위다',
+    자리('class="sap-hero"') > 0 && 자리('class="sap-hero"') < 자리('<div class="msec">오늘 할 일'), true);
+  봄('🔴 차례가 인사 → 히어로 → 출석 → 두 칸 → 빠른 이동 → 할 일',
+    [자리('class="sap-hi"'), 자리('class="sap-hero"'), 자리('ckCardHTML(c)'),
+     자리('class="sap-duo"'), 자리('class="sap-quick"'), 자리('<div class="msec">오늘 할 일')]
+      .every((v, i, a) => v > 0 && (i === 0 || v > a[i - 1])), true);
+
+  /* 🔴 **계산은 하나도 새로 안 만들었다** — 있는 값을 자리만 옮겨 그린다 */
+  봄('🔴 이미 있는 계산을 쓴다',
+    ['stuTodo(c)', 'studentExamDday(c.sid)', 'dqTodayCards(c.rec)', 'wrongHomeworkLeft(c.rec)']
+      .every(f => 홈.includes(f)), true);
+  봄('🔴 끝난 시험은 안 그린다 (지난 시험이 남으면 «아직 안 끝났나»가 된다)',
+    홈.includes("if(!dd || dd.state==='after') return ''"), true);
+
+  /* 🔴 채운 색은 한 화면에 하나뿐이라야 «누를 것»으로 읽힌다 */
+  const 두칸 = 홈.slice(자리('class="sap-duo"'), 자리('class="sap-quick"'));
+  봄('🔴 두 칸 중 채운 것은 하나뿐이다',
+    [(두칸.match(/class="fill"/g) || []).length, (두칸.match(/class="plain"/g) || []).length], [1, 1]);
+  봄('남은 쪽으로 보낸다', 홈.includes("const 풀러갈곳 = dqLeft ? 'quiz' : 'wronghw'"), true);
+  봄('다 했으면 그렇게 말한다', 홈.includes('오늘 것 다 했어요'), true);
+
+  /* 🔵 그라데이션은 «히어로»와 «FAB» 둘뿐이다 — 우리 화면은 문제 본문이 주인공이다 */
+  const 학생CSS = html.slice(html.indexOf('.app.sap{--sap-w'), html.indexOf('/* 알림 벨'));
+  봄('🔵 그라데이션은 히어로와 FAB 둘뿐이다',
+    (학생CSS.match(/linear-gradient/g) || []).length, 2);
+
+  /* 빠른 이동 넷이 «진짜 있는» 화면으로 가야 한다 */
+  const 섹션 = new Function(liftConst('STUDENT_TAB_SECTION') + NL + 'return STUDENT_TAB_SECTION;')();
+  const 가는곳 = [...홈.matchAll(/\['(?:video|file|clinic|calendar)','[^']+','([a-z]+)'\]/g)].map(m => m[1]);
+  봄('빠른 이동은 넷이다', 가는곳.length, 4);
+  봄('🔴 넷 다 실제로 있는 화면이다', 가는곳.filter(t => !섹션[t]), []);
+  봄('탭에 없는 것만 여기 둔다 (탭은 다섯이 천장이다)',
+    가는곳, ['video', 'material', 'clinic', 'myplan']);
+}
+
+console.log(NL + (fail ? '🔴 ' + fail + '개 실패 · ' : '✓ 전부 통과 · ') + pass + '개' + NL);
+process.exit(fail ? 1 : 0);
