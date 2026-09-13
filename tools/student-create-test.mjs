@@ -48,7 +48,19 @@ function 세상({ 칸 = {}, 계정흠 = null, 저장흠 = false, 이미있나 = 
     'new-sphone': '010-3333-4444', 'new-sclass': 'c1',
   }, 칸);
   const DATA = { students: 이미있나 ? [{ studentId: 'ab12', uid: 'old' }] : [] };
-  const 조각 = 떠내기('addStudent');
+  /* ⚠ **번호 다듬는 함수도 함께 떠 온다** (2026-09-13 · K-15) — `addStudent` 가 `phoneLabel` 을 부른다.
+     여기에 옮겨 적으면 검사와 화면이 갈린다(이 저장소가 반복해서 겪은 자리다). */
+  const 번호 = ['phoneDigits', 'phoneLabel'].map(n => {
+    const at = html.indexOf('function ' + n + '(');
+    if (at < 0) throw new Error(n + ' 를 못 찾았습니다');
+    let 깊이 = 0;
+    for (let j = html.indexOf('{', at); j < html.length; j++) {
+      if (html[j] === '{') 깊이++;
+      else if (html[j] === '}') { 깊이--; if (!깊이) return html.slice(at, j + 1); }
+    }
+    throw new Error(n + ' 의 끝을 못 찾았습니다');
+  }).join('\n');
+  const 조각 = 번호 + '\n' + 떠내기('addStudent');
   const fn = new Function(
     'document', 'DATA', 'showToast', 'authIdOk', 'authIdWhyBad', 'authCreateAccount',
     'authWhyFailed', 'dbSetDoc', 'adoptRecord', 'emptyRecord', 'saveRecord', 'logAudit', 'render',
