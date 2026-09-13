@@ -642,6 +642,14 @@
 .app .chub-sess .att{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
 .app .chub-sess .att .sum{font-size:12.5px;color:var(--sub);}
 .app .chub-sess .att .sum b{font-family:'JetBrains Mono',monospace;font-weight:600;color:var(--ink);}
+/* 진도 한 줄 (2026-09-13 · K-6) — 메모 «위»에 선다.
+   🔴 **메모와 다른 통이다**(09-12 P-1의 결정) — 그래서 상자도 다르다.
+     메모는 노란 종이(--note), 진도는 줄 하나. 한 상자에 몰면 «무엇이 진도인지»를 매번 읽어야 한다. */
+.app .chub-sess .prog{margin-top:10px;display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;
+  font-size:12.5px;color:var(--sub);line-height:1.7;}
+.app .chub-sess .prog i{font-style:normal;font-size:11px;color:var(--dim);flex-shrink:0;}
+.app .chub-sess .prog b{color:var(--ink);font-weight:600;}
+.app .chub-sess .prog span{min-width:0;white-space:pre-wrap;}
 .app .chub-sess .memo{margin-top:10px;background:var(--note);border:1px solid var(--note-line);
   border-radius:var(--r-md);padding:9px 12px;font-size:12.5px;color:var(--sub);line-height:1.7;
   white-space:pre-wrap;}
@@ -1938,6 +1946,12 @@
 .hwg-col .n{display:block;font-size:10.5px;margin-top:4px;color:var(--sub);
   font-weight:400;}
 .hwg-col .n.wait{color:var(--late);font-weight:700;}
+/* 🔵 **표를 세우는 잣대가 «마감»이 됐다** (2026-09-13 · K-6) — 그러면 마감이 머리에서
+   조용한 곁말로 있으면 안 된다. 차례의 까닭이 눈에 보여야 한다.
+   ⚠ 아무도 안 낸 열(.empty)은 흐린 채로 둔다 — 그 어법이 먼저다. */
+.app .hg .hwg-col:not(.empty) .due.k{color:var(--sub);font-weight:600;}
+.app .hg th.who i.hg-ord{display:block;font-style:normal;font-weight:400;font-size:10.5px;
+  color:var(--dim);margin-top:3px;}
 .hwg td{padding:0 6px;text-align:center;}
 /* ⚠ 한 줄로 못 박는다 — 두 자리 번호(10~13)에서 «1 / 0»으로 줄바꿈되어
    그 행만 키가 커지고 표의 리듬이 깨졌다. */
@@ -5064,6 +5078,7 @@ let state = {
   sessionStep: 'att',
   sessionHwId: '',           // 수업 > 과제 검사에서 보고 있는 과제 (2026-09-01 · C-19)
   sessionHwEditId: null,     // 수업 > 과제에서 고치는 중인 과제 (2026-09-13 · K-5)
+  hwEditId: null,            // 반 관리 > 과제 · 수업 기록 > 그날에서 고치는 중인 과제 (2026-09-13 · K-6)
   sessionExamId: '',         // 수업 > 시험에서 점수를 치고 있는 시험 (C-19)
   sessionExamNew: false,     // 「새 시험」 폼을 편 상태 (C-19)
   sessionNotes: {},        // 반id -> {날짜: 메모}
@@ -7256,6 +7271,10 @@ async function updateHomework(hwId, prefix){
   Object.assign(hw, next);
   await logAudit('과제 수정', '', '', title + (바뀐것.length ? ' · ' + 바뀐것.map(k=>({title:'과제명',description:'설명',dueDate:'마감 '+(dueDate||'없음'),createdAt:'낸 날 '+createdAt})[k]).join(' · ') : ' · 그대로'));
   state.sessionHwEditId = null;
+  /* 반 관리 › 과제(드로어)와 「수업 기록 › 그날」(아래로 편 폼)도 같이 닫는다 (2026-09-13 · K-6).
+     ⚠ 셋이 «같은 함수»를 부르므로 어디서 불렸는지 묻지 않고 다 닫는다 — 안 열린 것을 닫아도 탈이 없다. */
+  state.hwEditId = null; state.hwNewOpen = null;
+  if(state.settingsForm==='dhw') state.settingsForm = '';
   showToast(바뀐것.length ? '과제를 고쳤습니다.' : '바뀐 것이 없습니다.');
   render();
 }
@@ -12755,7 +12774,8 @@ function hwRosterReviewHTML(a, roster){
 
    ⚠ **표 골격을 새로 짜지 않는다** — `table.grid`(ds.css)를 그대로 쓴다.
    ⚠ **판정은 `hwState` 하나만 부른다.** 격자라고 상태를 새로 해석하지 않는다.
-   ⚠ **최신 과제가 왼쪽이다.** 지금 밀린 것을 먼저 보는 화면이지 연대기가 아니다. */
+   ⚠ **마감이 늦은 과제가 왼쪽이다** (2026-09-13 · K-6에 바뀌었다 — 그전에는 «낸 날»이었다).
+     지금 밀린 것을 먼저 보는 화면이지 연대기가 아니다. */
 /* 세 번째 값이 «칸에 적히는 것»이다 (2026-09-01).
    🔴 **줄여 쓰지 말 것.** 한 번 「완·대·반」으로 줄였다가 사용자가 「대 한글자가 뭘 말하는지
      모르겠다」고 해서 되돌렸다. 열 폭은 제목이 정하므로(96px) 말을 다 적어도 표는 안 넓어진다.
@@ -12768,6 +12788,20 @@ const HWG_CELL = {
   [HW_REJECTED]:  ['no',   '반려',      '반려'],
   [HW_NONE]:      ['none', '미제출',    '·']
 };
+/* =================== 과제를 세우는 잣대 (2026-09-13 · K-6) ===================
+   사용자의 말 — 「**반-과제 탭의 과제를 마감일 기준으로 표를 정렬하는것**」.
+   🔴 **잣대는 하나여야 한다.** 09-13 낮에 수업 › 과제 검사가 이미 «마감(없으면 낸 날)»로
+     바뀌었는데(C-19 아래), 반 관리의 격자만 «낸 날»에 남아 있었다.
+     같은 과제 묶음이 화면마다 다른 차례로 서면 강사는 매번 «어느 쪽이 맞나»를 다시 읽는다.
+     그래서 잣대를 **함수로 뽑아** 두 곳이 같이 부른다 — 한쪽만 고쳐지는 길을 닫는다.
+   ⚠ 마감도 낸 날도 없는 과제는 빈 문자열이라 **맨 뒤**로 밀린다. 그것이 맞다 — 언제 것인지
+     알 수 없는 과제를 맨 앞에 세울 까닭이 없다. */
+function hwOrderKey(a){ return String(a.dueDate || a.createdAt || ''); }
+/* 늦은 것이 먼저(격자에서는 왼쪽, 목록에서는 위). 마감이 같으면 낸 날로 가른다. */
+function hwOrderDesc(x, y){
+  return hwOrderKey(y).localeCompare(hwOrderKey(x))
+      || String(y.createdAt||'').localeCompare(String(x.createdAt||''));
+}
 function hwGridHTML(classId, list, roster){
   if(!state.allRecordsLoaded)
     return '<div class="hwg-empty">학생 기록을 불러오는 중…</div>';
@@ -12776,8 +12810,9 @@ function hwGridHTML(classId, list, roster){
 
   const recOf = s => state.allRecords[s.studentId];
   const named = roster.slice().sort((x,y)=>x.name.localeCompare(y.name));
-  /* 최신이 왼쪽 — 등록일이 없으면 뒤로 민다. */
-  const cols = list.slice().sort((x,y)=>String(y.createdAt||'').localeCompare(String(x.createdAt||'')));
+  /* 🔵 **마감이 늦은 것이 왼쪽** (2026-09-13 · K-6) — 잣대는 `hwOrderKey`(마감 없으면 낸 날)이고
+     수업 › 과제 검사가 쓰는 것과 **같은 함수**다. 마감도 낸 날도 없으면 뒤로 밀린다. */
+  const cols = list.slice().sort(hwOrderDesc);
 
   const cell = (s, a) => {
     const rec = recOf(s);
@@ -12826,10 +12861,12 @@ function hwGridHTML(classId, list, roster){
     return `<th class="hwg-col${on?' on':''}${(done+wait)===0?' empty':''}" onclick="hwToggleCol('${a.id}')"
       title="${escHtml(a.title)}
 ${cd ? '낸 날 '+escHtml(cd)+' ('+wd+')' : '낸 날 모름'}${a.dueDate?' · 마감 '+escHtml(a.dueDate):' · 마감 없음'}
-완료 ${done}/${named.length}${wait?' · 확인 대기 '+wait:''} — 누르면 오른쪽에 열립니다">
+완료 ${done}/${named.length}${wait?' · 확인 대기 '+wait:''}
+표는 마감(없으면 낸 날) 늦은 순으로 섭니다 — 누르면 오른쪽에 열립니다">
       ${cd ? `<b><span class="mono">${dNum}</span><i>${wd}</i></b>`
            : `<b>${escHtml(a.title)}</b>`}
-      <span class="due">${a.dueDate ? `마감 <span class="mono">${escHtml(a.dueDate.slice(5))}</span>` : '마감 없음'}</span>
+      ${/* 마감이 있는 열은 그 마감이 «이 차례의 까닭»이라 조금 진하게 적는다 (K-6). */''}
+      <span class="due${a.dueDate?' k':''}">${a.dueDate ? `마감 <span class="mono">${escHtml(a.dueDate.slice(5))}</span>` : '마감 없음'}</span>
     </th>`;
   }).join('');
 
@@ -12853,7 +12890,7 @@ ${cd ? '낸 날 '+escHtml(cd)+' ('+wd+')' : '낸 날 모름'}${a.dueDate?' · �
      «눌러도 되는 것»인지도 한 번이면 안다.
      ⚠ 다시 세우고 싶어지면 «·»(미제출) 하나만 두는 것이 맞다 — 나머지 셋은 칸에 적혀 있다. */
   return `<div class="hwg-wrap"><table class="hwg hg">
-    <thead><tr><th class="who">이름</th>${head}<th class="hg-done">제출</th></tr></thead>
+    <thead><tr><th class="who">이름<i class="hg-ord">마감 늦은 순</i></th>${head}<th class="hg-done">제출</th></tr></thead>
     <tbody>${rows}</tbody>
   </table></div>`;
 }
@@ -12954,6 +12991,10 @@ function hwNoticeDrawerHTML(){
         ${body}
       </div>
       <div class="hwd-f">
+        ${/* 🔵 **반 관리 › 과제에서 «고치기»로 가는 문은 여기다** (2026-09-13 · K-6).
+             그 화면의 본문은 격자라 «과제 한 줄»이 없다 — 과제 하나를 붙드는 자리가
+             열 머리로 여는 이 판뿐이다. 삭제가 여기 있는 것과 같은 까닭이다. */''}
+        <button class="btn sm" onclick="hwOpenEdit('${a.id}', true)">고치기</button>
         <button class="btn q sm" onclick="deleteHomework('${a.id}')">과제 삭제</button>
         <div class="nav"><button class="btn sm" onclick="hwCloseNotice()">닫기</button></div>
       </div>
@@ -16150,10 +16191,10 @@ function sessionHwCheckHTML(classId, date){
      학생 하나를 「제출」로 찍는 순간 그 과제가 목록 아래로 내려가고 **보고 있던 과제가
      조용히 다른 것으로 바뀌었다.** 화면에서 실제로 그렇게 나왔다.
      이제 **차례는 날짜로 고정**하고, «급한 것»은 **처음 한 번 고르는 데만** 쓴다. */
-  /* 🔵 차례는 «마감»(없으면 낸 날) 순 — 오늘이 마감인 것이 맨 앞이다. */
-  const 기준 = a => String(a.dueDate || a.createdAt || '');
-  const rows = all.map(a=>({a, ...stat(a)}))
-    .sort((x,y)=> 기준(y.a).localeCompare(기준(x.a)) || String(y.a.createdAt||'').localeCompare(String(x.a.createdAt||'')));
+  /* 🔵 차례는 «마감»(없으면 낸 날) 순 — 오늘이 마감인 것이 맨 앞이다.
+     ⚠ **잣대는 `hwOrderDesc` 하나다** (2026-09-13 · K-6) — 반 관리의 과제 격자도 이것을 부른다.
+       여기에 다시 적어 두면 둘 중 하나만 고쳐지는 날이 온다. */
+  const rows = all.map(a=>({a, ...stat(a)})).sort((x,y)=>hwOrderDesc(x.a, y.a));
   if(state.sessionHwId && !all.some(a=>a.id===state.sessionHwId)) state.sessionHwId = '';
   /* 🔴 **고른 것을 못 박는다.** 안 박으면 위와 같은 «떠다니는 기본값» 문제가 되돌아온다. */
   if(!state.sessionHwId && rows.length){
@@ -17486,6 +17527,15 @@ function chubLogHTML(classId){
                 f.absent?` · 결석 <b>${f.absent}</b>`:''}</span>
                ${f.filled<f.total?`<span class="badge late">미입력 ${f.total-f.filled}</span>`:'<span class="badge ok">완료</span>'}`}
         </div>
+        ${/* 🔵 **진도 (2026-09-13 · K-6 · 사용자가 시켰다 — 「수업기록탭에 수업내용(진도)도 표기하는것」).**
+             거르개에는 「진도 적힘」이 09-12부터 있었는데 **줄에는 안 그렸다** — 걸러 놓고도
+             무엇을 나갔는지는 그날을 펴야 알 수 있었다. `f.prog`는 chubSessionFacts가 이미 들고 온다.
+             ⚠ 메모와 «한 줄에 몰지 않는다»(09-12 P-1의 결정) — 다른 통이고, 다른 상자다.
+             ⚠ 책도 글도 없으면 아예 안 그린다 — 빈 「진도」 딱지는 «안 적었다»보다 나쁘다. */''}
+        ${(f.prog && (f.prog.book || f.prog.detail)) ? `<div class="prog"><i>진도</i>${
+            f.prog.book ? `<b>${escHtml(f.prog.book)}</b>` : ''}${
+            (f.prog.book && f.prog.detail) ? '<s>·</s>' : ''}${
+            f.prog.detail ? `<span>${escHtml(f.prog.detail)}</span>` : ''}</div>` : ''}
         ${f.memo ? `<div class="memo">${escHtml(f.memo)}</div>` : ''}
       </div>
       <div class="tags">
@@ -19518,6 +19568,10 @@ function teacherClassDailyHomeworkHTML(classId, date){
                 : all.filter(a=>a.createdAt===date || a.dueDate===date);
   const roster = classRoster(classId);
   const open = state.settingsForm==='dhw';
+  /* 고치는 중인 과제 (2026-09-13 · K-6). **이 반 것만** 본다(`all`) — 다른 반으로 옮겨 가거나
+     지워졌으면 스스로 푼다. 안 풀면 엉뚱한 반 화면에 「고치기 취소」가 서 있게 된다. */
+  const editing = state.hwEditId ? all.find(a=>a.id===state.hwEditId) : null;
+  if(state.hwEditId && !editing) state.hwEditId = null;
   /* ⚠ **여기에 과제 등록 폼이 두 벌 있었다.** body의 「이 반에 과제 등록」(addHomework)과
      extra의 「새 과제 등록」(addDailyHomework)이 같은 화면에 나란히 그려지고 있었다.
      한쪽만 고쳐지는 것은 시간 문제였다. addDailyHomework 쪽으로 합쳤다 —
@@ -19537,13 +19591,26 @@ function teacherClassDailyHomeworkHTML(classId, date){
              이 화면에서 가장 자주 보는 것이 그 격자다. D-1이 과제 검토에서 내린 결론과 같다.
              ⚠ 반 화면(standalone)에서만 드로어다. 「수업 기록 › 그날」 안에서는 화면 셸이
                달라 드로어 가드(`+"`classHubTab==='homework'`"+`)가 안 서므로 예전처럼 아래로 편다. */''}
-        <button class="btn ${open?'':'p'} sm" onclick="${standalone
-          ? `hwOpenNew('${classId}','${date}')` : `stOpen('dhw')`}">${
-          open && !standalone ? '닫기' : iconSvg('plus',13)+' 과제 등록'}</button>
+        ${/* ⚠ 고치는 중에 이 단추가 「과제 등록」으로 남아 있으면, 눌렀을 때 고치던 폼이
+             등록 폼처럼 보이면서 값만 차 있는 «무엇인지 모를 판»이 된다. 그래서 취소로 바뀐다. */''}
+        <button class="btn ${(open && !standalone) || editing ? '' : 'p'} sm" onclick="${editing
+          ? 'hwCloseEdit()'
+          : (standalone ? `hwOpenNew('${classId}','${date}')` : `stOpen('dhw')`)}">${
+          editing ? '고치기 취소' : ((open && !standalone) ? '닫기' : iconSvg('plus',13)+' 과제 등록')}</button>
       </span>
     </div>
-    ${(!open || standalone) ? '' : `<div class="st-form">
-      ${hwNewFormHTML(classId, date)}
+    ${((!open && !editing) || standalone) ? '' : `<div class="st-form">
+      ${hwNewFormHTML(classId, date, false, editing)}
+      ${/* 🔴 **여기에 저장 단추가 없었다** (2026-09-13 · K-6에 드러났다) — 폼은 펴지는데
+           addDailyHomework 를 부르는 자리가 드로어의 hwSaveNew 뿐이었다. C-15로 폼을 한 벌로
+           합칠 때 단추만 드로어에 두고 온 것이다. 고치기를 붙이는 김에 등록 단추도 함께 세운다. */''}
+      <div style="display:flex;align-items:center;gap:9px;margin-top:11px;flex-wrap:wrap;">
+        ${editing
+          ? `<button class="btn p sm" onclick="updateHomework('${editing.id}','d')">고친 것 저장</button>
+             <button class="btn sm" onclick="hwCloseEdit()">취소</button>`
+          : `<button class="btn p sm" onclick="hwSaveInline('${classId}','${date}')">등록</button>
+             <button class="btn sm" onclick="stOpen('dhw')">닫기</button>`}
+      </div>
     </div>`}
     ${/* 「반 관리 > 과제」(standalone)에서는 **격자**가 본문이다 — 반 전체 × 과제 전체를
          한 판에 올린다. 열 머리를 누르면 그 과제의 «미제출 알림»이 격자 아래로 열린다.
@@ -19586,6 +19653,10 @@ function teacherClassDailyHomeworkHTML(classId, date){
         </div>
         <div class="v">
           <button class="btn sm" onclick="state.homeworkDetailId = state.homeworkDetailId==='${a.id}' ? null : '${a.id}'; state.hwRejectOpen=null; render()">${on?'접기':'확인하기'}</button>
+          ${/* 고치기 (2026-09-13 · K-6) — 폼은 이 목록 «위»에서 펴진다. 반 관리(격자)에는
+               이 줄이 없어 열 머리 판의 발판에 같은 단추가 서 있다. */''}
+          <button class="btn ${state.hwEditId===a.id?'p':''} sm" onclick="hwOpenEdit('${a.id}')">${
+            state.hwEditId===a.id ? '고치는 중' : '고치기'}</button>
           <button class="btn q sm" onclick="deleteHomework('${a.id}')">삭제</button>
         </div>
       </div>`;
@@ -19605,29 +19676,80 @@ function teacherClassDailyHomeworkHTML(classId, date){
      낸 날이 이미 정해져 있다. 고르게 하면 그 화면이 스스로를 부정한다.
    🔵 **「낸 날」이 무엇인지 말해 준다** — C-16으로 이 값이 **표의 열 머리**가 됐다.
      예전에는 아무 데도 안 보이는 값이라 설명할 필요가 없었지만 이제는 매일 보인다. */
-function hwNewFormHTML(classId, date, pickCreated){
+/* 🔵 **네 번째 인자 `editing`이면 «고치기» 폼이다** (2026-09-13 · K-6 · 사용자가 시켰다 —
+     「반관리-과제탭에도 고치기 넣어주는거」). 수업 탭에는 09-13 낮에 넣었다(K-5).
+   🔴 **폼을 두 벌로 만들지 않는다** — 등록 폼이 이미 한 벌로 합쳐져 있고(C-15),
+     고치기용을 따로 지으면 다음에 한쪽만 고쳐진다. 값이 차 있느냐만 다르다.
+   🔴 **「낸 날」 칸 id 가 둘이다** — 등록은 `dhw-created`(addDailyHomework 가 읽는다),
+     고치기는 `dhw-at`(updateHomework 가 `<접두사>hw-at` 를 읽는다 · 접두사 'd').
+     ⚠ 고칠 때는 `pickCreated` 와 무관하게 **늘 보여 준다** — 낸 날이 곧 과제 표의 열이라
+       오타를 고칠 자리가 여기밖에 없다(수업 탭 K-5도 같다).
+   ⚠ 한 화면에 등록 폼과 고치기 폼이 동시에 서지 않으므로 id 가 겹칠 일이 없다 — 그 전제는 그대로다. */
+function hwNewFormHTML(classId, date, pickCreated, editing){
+  const v = editing || {};
+  const atId = editing ? 'dhw-at' : 'dhw-created';
+  const showAt = editing ? true : !!pickCreated;
   return `<div class="cls-form">
       <label style="flex:2;min-width:180px;"><span>과제명</span>
-        <input id="dhw-title" placeholder="예: 3단원 오답노트 정리"></label>
+        <input id="dhw-title" placeholder="예: 3단원 오답노트 정리" value="${escHtml(v.title||'')}"></label>
     </div>
     <div class="cls-form">
-      ${pickCreated ? `<label style="flex:1;min-width:150px;"><span>낸 날</span>
-        <input id="dhw-created" type="date" value="${date}"
+      ${showAt ? `<label style="flex:1;min-width:150px;"><span>낸 날</span>
+        <input id="${atId}" type="date" value="${escHtml(v.createdAt || date)}"
           title="이 과제를 내준 수업 날짜입니다. 과제 표의 열 머리가 이 날짜로 섭니다."></label>` : ''}
       <label style="flex:1;min-width:150px;"><span>마감일</span>
-        <input id="dhw-due" type="date" value="${date}"></label>
+        <input id="dhw-due" type="date" value="${editing ? escHtml(v.dueDate||'') : date}"></label>
     </div>
     <div class="cls-form"><label style="flex:1;"><span>설명 (선택)</span>
-      <textarea id="dhw-desc" rows="3" placeholder="과제 상세 내용"></textarea></label></div>
-    <p class="st-note">이 반 학생 전원에게 나갑니다.${pickCreated
-      ? ' <b>낸 날</b>은 이 과제를 내준 <b>수업 날짜</b>입니다 — 과제 표의 열 머리가 그 날짜로 섭니다.'
-      : ` 낸 날은 <b>${date}</b>로 남습니다.`}</p>`;
+      <textarea id="dhw-desc" rows="3" placeholder="과제 상세 내용">${escHtml(v.description||'')}</textarea></label></div>
+    <p class="st-note">${editing
+      ? '이미 나간 과제를 고칩니다 — 학생들의 <b>제출·완료 표시는 그대로</b> 남습니다. <b>낸 날</b>을 바꾸면 과제 표에서 <b>그 날짜 열</b>로 옮겨 섭니다.'
+      : `이 반 학생 전원에게 나갑니다.${pickCreated
+        ? ' <b>낸 날</b>은 이 과제를 내준 <b>수업 날짜</b>입니다 — 과제 표의 열 머리가 그 날짜로 섭니다.'
+        : ` 낸 날은 <b>${date}</b>로 남습니다.`}`}</p>`;
 }
 function hwOpenNew(classId, date){
+  state.hwEditId = null;   /* 새로 내는 것과 고치는 것이 한 판에 겹치지 않게 (2026-09-13 · K-6) */
   state.hwNewOpen = state.hwNewOpen ? null : {classId, date};
   render();
 }
-function hwCloseNew(){ state.hwNewOpen = null; render(); }
+function hwCloseNew(){ state.hwNewOpen = null; state.hwEditId = null; render(); }
+/* ---------- 과제 «고치기» (2026-09-13 · K-6) ----------
+   🔴 **수업 탭의 `state.sessionHwEditId` 와 따로 둔다.** 상태는 한 통에 살고, 수업 화면과
+     반 관리는 서로 모르는 채 동시에 열려 있을 수 있다. 하나로 묶으면 한쪽을 닫을 때
+     다른 쪽이 조용히 닫히고, 그 자리는 «왜 사라졌지»로만 보인다.
+   🔵 **자리가 둘이라 여는 모양도 둘이다** — 등록이 그런 것과 같은 갈림이다(C-15):
+     · 반 관리 › 과제(standalone) → 오른쪽 **드로어**. 본문이 격자라 아래로 펴면 격자가 밀려 내려간다.
+     · 수업 기록 › 그날 → 그 자리에서 **아래로** 편다. 거기는 드로어 가드가 안 서는 화면 셸이다.
+   ⚠ 드로어로 열 때 열 머리 판(hwNoticeId)·칸 상세(hwCell)를 먼저 닫는다 — 같은 자리에 둘이 겹친다. */
+function hwOpenEdit(hwId, standalone){
+  const hw = DATA.assignments.find(a=>a.id===hwId);
+  if(!hw) return;
+  if(state.hwEditId === hwId){ hwCloseEdit(); return; }   /* 같은 것을 다시 누르면 닫힌다 */
+  state.hwEditId = hwId;
+  if(standalone){
+    state.hwNoticeId = null; state.hwCell = null;
+    state.hwNewOpen = {classId: hw.classId, date: hw.createdAt || todayStr()};
+  } else {
+    state.hwNewOpen = null;
+    state.settingsForm = 'dhw';
+  }
+  render();
+}
+function hwCloseEdit(){
+  state.hwEditId = null; state.hwNewOpen = null;
+  if(state.settingsForm==='dhw') state.settingsForm = '';
+  render();
+}
+/* 🔴 **「수업 기록 › 그날」의 등록 폼에는 저장 단추가 아예 없었다** (2026-09-13 · K-6에 드러났다).
+   C-15로 등록 폼을 한 벌로 합칠 때 **단추만 드로어(hwSaveNew)에 두고 왔다** — 그 뒤로 그 화면은
+   폼을 펴 놓고도 등록할 길이 없었다. 고치기를 그 자리에 붙이는 김에 함께 세운다.
+   ⚠ 이름이 비면 안 닫는다 — hwSaveNew 와 같은 규칙이다(에러 토스트만 뜨고 적던 것이 남아야 한다). */
+async function hwSaveInline(classId, date){
+  const before = DATA.assignments.length;
+  await addDailyHomework(classId, date);
+  if(DATA.assignments.length > before){ state.settingsForm = ''; render(); }
+}
 /* 등록하고 닫는다 — 「등록」은 이 판에 온 이유이고, 끝났으면 격자로 돌아가는 것이 맞다.
    ⚠ `addDailyHomework`는 「수업 기록 › 그날」도 쓰는 함수라 거기에 «닫기»를 넣지 않는다. */
 async function hwSaveNew(){
@@ -19636,23 +19758,30 @@ async function hwSaveNew(){
   await addDailyHomework(o.classId, o.date);
   if(DATA.assignments.length > before){ state.hwNewOpen = null; render(); }  // 이름이 비면 안 닫는다
 }
+/* 🔵 **한 판이 둘을 진다 — 등록과 고치기** (2026-09-13 · K-6). 폼은 같고 머리말·발판만 다르다. */
 function hwNewDrawerHTML(){
   const o = state.hwNewOpen; if(!o) return '';
   const c = DATA.classes.find(x=>x.id===o.classId); if(!c) return '';
+  const editing = state.hwEditId ? DATA.assignments.find(a=>a.id===state.hwEditId) : null;
   return `<div class="hwd-back" onclick="hwCloseNew()"></div>
     <aside class="hwd wide">
       <div class="hwd-h" style="position:relative;">
-        <div class="t">과제 등록</div>
-        <div class="m">${escHtml(c.name)}<s>·</s>${classRoster(o.classId).length}명에게 나갑니다</div>
+        <div class="t">${editing ? '과제 고치기' : '과제 등록'}</div>
+        <div class="m">${editing
+          ? escHtml(editing.title)+'<s>·</s>'+escHtml(c.name)+'<s>·</s>제출·완료 표시는 그대로 남습니다'
+          : escHtml(c.name)+'<s>·</s>'+classRoster(o.classId).length+'명에게 나갑니다'}</div>
         <button class="x" onclick="hwCloseNew()" title="닫기 (Esc)">×</button>
       </div>
       <div class="hwd-b"><div class="st-form" style="margin-top:10px;">
-        ${hwNewFormHTML(o.classId, o.date, true)}
+        ${hwNewFormHTML(o.classId, o.date, true, editing)}
       </div></div>
       <div class="hwd-f">
+        ${editing ? `<button class="btn q sm" onclick="deleteHomework('${editing.id}')">과제 삭제</button>` : ''}
         <div class="nav">
           <button class="btn sm" onclick="hwCloseNew()">닫기</button>
-          <button class="btn p sm" onclick="hwSaveNew()">등록</button>
+          ${editing
+            ? `<button class="btn p sm" onclick="updateHomework('${editing.id}','d')">고친 것 저장</button>`
+            : `<button class="btn p sm" onclick="hwSaveNew()">등록</button>`}
         </div>
       </div>
     </aside>`;
