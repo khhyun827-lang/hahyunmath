@@ -2582,9 +2582,15 @@
    ⚠ `div` 에 `onclick` 을 단 자리(할 일 줄·두 칸)는 **tabindex 가 없어 애초에 초점이 안 간다** —
      그것까지 고치는 것은 이 판의 몫이 아니라 따로 한 벌이다. 여기서는 «가는 것»에 테를 준다. */
 .app.sap .mbtn:focus-visible,
-.app.sap .pill:focus-visible,
-.app.sap .subnav a:focus-visible,
-.app.sap .flaw-btn:focus-visible{outline:2px solid var(--point);outline-offset:2px;}
+.app.sap .flaw-btn:focus-visible,
+.app.sap [data-tap]:focus-visible{outline:2px solid var(--point);outline-offset:2px;}
+/* ⚠ 달력 칸은 서로 2px 밖에 안 떨어져 있다 — 테를 밖으로 내면 옆 칸을 덮는다. 안쪽으로 그린다. */
+.app.sap .scal-c[data-tap]:focus-visible{outline-offset:-2px;}
+/* 하단 탭은 칸이 붙어 있어 밖으로 내면 옆 칸을 먹는다 (위 `.sap-tabs a:focus-visible` 와 같은 까닭) */
+.app.sap .sap-tabs a[data-tap]:focus-visible{outline-offset:-3px;border-radius:var(--r-sm);}
+/* 🔵 가운데 원은 «칸»이 아니라 «원»이 초점을 받아야 한다 — 칸에 테를 두르면 원과 어긋나 보인다. */
+.app.sap .sap-tabs a.fab[data-tap]:focus-visible{outline:0;}
+.app.sap .sap-tabs a.fab[data-tap]:focus-visible i{outline:2px solid var(--point);outline-offset:3px;}
 
 /* ⓔ **움직임을 끄고 싶다는 사람의 말을 듣는다** (2026-09-14 점검).
    학생 앱은 눌렀을 때 살짝 줄어드는 것이 전부라 꺼도 잃는 것이 없다. */
@@ -2608,7 +2614,9 @@
    🔵 종이색 테를 둘러 바 위에 «떠 있는» 것으로 보이게 한다 — 그림자만으로는 바에 붙어 보인다. */
 .sap-tabs a.fab{position:relative;}
 .sap-tabs a.fab i{
-  position:absolute;left:50%;top:-26px;transform:translateX(-50%);
+  /* ⚠ 글자를 뺀 뒤(2026-09-14) 원이 혼자 너무 높이 떠 보였다 — 글자가 아래를 붙들고 있었던 것이다.
+     8px 내린다. **나란히는 안 만든다** — 완전히 내려앉으면 «떠 있는 단추»가 아니라 그냥 탭이 된다. */
+  position:absolute;left:50%;top:-18px;transform:translateX(-50%);
   width:56px;height:56px;border-radius:50%;
   background:linear-gradient(150deg,var(--point-lt),var(--point-d));
   box-shadow:0 0 0 5px var(--paper), 0 12px 22px -8px rgba(138,47,76,.55);
@@ -11795,6 +11803,18 @@ function closeHwPhoto(){
   state.hwPhotoView = null;
   render();
 }
+/* 🔴 **누르는 자리의 손잡이 — 한 벌** (2026-09-14 · S-6). `TAP` 이 붙은 것은 Enter·Space 로도 눌린다.
+   ⚠ **진짜 단추·입력칸은 그냥 지나간다** — 브라우저가 이미 그 일을 한다. 여기서 또 하면 두 번 눌린다.
+   ⚠ Space 는 **눌린 자리에서만** 기본 동작(스크롤)을 막는다 — 아무 데서나 막으면 화면이 안 내려간다. */
+document.addEventListener('keydown', e => {
+  if(e.key !== 'Enter' && e.key !== ' ' && e.key !== 'Spacebar') return;
+  const el = e.target && e.target.closest && e.target.closest('[data-tap]');
+  if(!el) return;
+  /* 안쪽에 진짜 단추가 있으면 그쪽이 임자다 (할 일 줄 안의 «지우기» 같은 것) */
+  if(e.target !== el && e.target.closest('button, a[href], input, textarea, select')) return;
+  e.preventDefault();
+  el.click();
+});
 /* ESC는 «떠 있을 때만» 듣는다. 안 떠 있으면 다른 화면의 ESC를 가로채지 않는다.
    ⚠ **겹친 순서대로 닫는다** — 사진을 크게 본 채로 ESC를 누르면 사진만 닫히고
      오른쪽 상세는 남아야 한다. 둘이 한꺼번에 닫히면 어디까지 보던 중이었는지 잃는다. */
@@ -12534,6 +12554,17 @@ const STUDENT_NAV = [
 /* 가운데에 떠 있는 칸이 어느 것인지 **한 곳에서** 정한다 — 그리는 자리와 CSS 가 갈리면
    FAB 이 엉뚱한 칸에 얹힌다. */
 const STUDENT_NAV_FAB = 'home';
+/* =============== 누르는 자리는 «키»로도 간다 (2026-09-14 · S-6) ===============
+   🔴 **`div` 나 `href` 없는 `a` 에 `onclick` 만 달면 키로는 못 간다** — 초점이 안 가고
+     Enter·Space 도 안 먹는다. 학생 앱의 누르는 자리가 거의 다 그랬다(할 일 줄 · 두 칸 ·
+     빠른 이동 · 달력 날짜 · 회차 고르개 · 클리닉 슬롯 · 출석 도장).
+   ⇒ **표시 한 벌**(`TAP`)을 붙이고, **손잡이 한 벌**(아래 `document` keydown)이 그것을 받는다.
+   🔵 **단추로 바꾸지 않는다** — `.todo`·`.mc`·`.pill`·`.scal-c` 의 생김새가 전부 그 태그에
+     맞춰져 있어서, 태그를 갈면 화면 열한 개를 다시 손봐야 한다. 얻는 것은 같고 위험만 크다.
+   ⚠ 영상 위의 «가림막»(`.vc-veil`)에는 안 붙인다 — 초점이 투명한 판에 내려앉을 뿐이고,
+     재생·멈춤은 아래 조작 바에 **진짜 단추**로 이미 있다. */
+const TAP = 'data-tap tabindex="0" role="button"';
+
 /* 탭 안의 갈래. 관리자와 달리 «목록 화면»을 한 겹 더 두지 않는다 —
    넷을 한 줄에 세울 수 있는데 굳이 한 번 더 누르게 할 이유가 없다. */
 const STUDENT_SUBNAV = {
@@ -12892,7 +12923,7 @@ function ckCardHTML(c){
         <span class="t"><b>오늘 도장을 찍었습니다 — ${todayScore.toLocaleString()}점</b>
         <span>내일 다시 열립니다 · ${escHtml(gameThisWeek().name)} 최고 ${
           ckBestOf(c.rec, gameThisWeek().key).toLocaleString()}점</span></span></div>`
-    : `<div class="gm-run" onclick="openGame()">
+    : `<div class="gm-run" ${TAP} onclick="openGame()">
         <span class="ic">${gameThisWeek().icon}</span>
         <span class="t"><b>이번 주 게임 — ${escHtml(gameThisWeek().name)}</b>
         <span>하루 한 판입니다 · ${escHtml(gameThisWeek().name)} 최고 ${
@@ -13189,13 +13220,13 @@ function stuHomeHTML(c){
   ${/* 🔵 **두 칸** — 왼쪽은 «지금 해야 하는 것»(채운 색 하나), 오른쪽은 «보러 가는 것».
        ⚠ 채운 색은 화면에 **하나뿐**이라야 한다. 둘 다 채우면 어느 쪽을 눌러야 할지 사라진다. */''}
   <div class="sap-duo">
-    <div class="fill" onclick="goStudentTab('${풀것 ? 풀러갈곳 : 'wronghw'}')">
+    <div class="fill" ${TAP} onclick="goStudentTab('${풀것 ? 풀러갈곳 : 'wronghw'}')">
       <s>TODAY</s>
       <b>${풀것 ? '오늘 풀 것 ' + 풀것 : '오늘 것 다 했어요'}</b>
       <em>${풀것 ? [dqLeft ? '데일리퀴즈 '+dqLeft : '', hwLeft ? '오답숙제 '+hwLeft : ''].filter(Boolean).join(' · ')
                  : '내일 또 나옵니다'}</em>
     </div>
-    <div class="plain" onclick="goStudentTab('grades')">
+    <div class="plain" ${TAP} onclick="goStudentTab('grades')">
       <s>SCORE</s>
       <b>성적 확인</b>
       <em>${c.rec && (c.rec.scores||[]).length ? '최근 '+(c.rec.scores||[]).length+'회' : '아직 기록 없음'}</em>
@@ -13207,7 +13238,7 @@ function stuHomeHTML(c){
   <div class="sap-quick">
     ${[['video','강의','video'],['file','자료','material'],
        ['clinic','클리닉','clinic'],['calendar','내 일정','myplan']].map(q=>
-      `<a onclick="goStudentTab('${q[2]}')"><i>${iconSvg(q[0],20)}</i><em>${q[1]}</em></a>`).join('')}
+      `<a ${TAP} onclick="goStudentTab('${q[2]}')"><i>${iconSvg(q[0],20)}</i><em>${q[1]}</em></a>`).join('')}
   </div>
 
   <div class="msec">오늘 할 일
@@ -13216,7 +13247,7 @@ function stuHomeHTML(c){
     ? `<div class="mc"><div class="mrow" style="justify-content:center;font-size:13px;color:var(--dim);">
          지금 밀린 것이 없습니다.</div></div>`
     : todo.slice(0,6).map(t=>`
-      <div class="todo" onclick="${t.pre||''} goStudentTab('${t.tab}')" style="cursor:pointer;">
+      <div class="todo" ${TAP} onclick="${t.pre||''} goStudentTab('${t.tab}')" style="cursor:pointer;">
         <span class="ic" style="background:${t.bg};color:${t.fg};">${iconSvg(t.icon,18)}</span>
         <span class="t">
           <b>${escHtml(t.title)}${t.dday?` <span class="badge ${t.dday.tone}">${t.dday.label}</span>`:''}</b>
@@ -13411,7 +13442,7 @@ function stuQuizHTML(c){
   ${cards.map((x,i)=>{
     const d = dqDoneToday(c.rec, x.id);
     const xf = dqFaceOf(c.rec, x);   // 목록도 «오늘 낼 얼굴»을 보여야 한다
-    return `<div class="mc" onclick="state.stuQuizId='${x.id}'; render(); window.scrollTo(0,0)"
+    return `<div class="mc" ${TAP} onclick="state.stuQuizId='${x.id}'; render(); window.scrollTo(0,0)"
         style="cursor:pointer;${x.id===cur.id ? 'border-color:var(--accent);' : (d?'opacity:.7;':'')}">
       <div class="mrow" style="min-height:38px;gap:8px;">
         <span class="mono" style="font-size:11px;color:var(--dim);">${i+1}</span>
@@ -13541,7 +13572,7 @@ function stuWrongHTML(c){
                 return `${한형뿐 ? '' : `<div class="sap-lab" style="margin-top:10px;">TYPE ${escHtml(t)}${t==='0'?' <s>공통</s>':''}</div>`}
                   <div class="row" style="flex-wrap:wrap;gap:7px;">
                     ${이줄.map(q => { const key = q.qkey || ('0-' + q.no);
-                      return `<a class="pill ${state.wrongChecked[key]?'on':''}"
+                      return `<a class="pill ${state.wrongChecked[key]?'on':''}" ${TAP}
                         onclick="toggleWrongCheck('${escHtml(key)}')">${escHtml(q.label || q.no)}</a>`; }).join('')}
                   </div>`;
               }).join('');
@@ -13588,7 +13619,7 @@ function stuWrongHTML(c){
                   const m = String(code).match(ITEM_CODE_RE) || [];
                   const it = (state.itemByCode || {})[code] || {};
                   const 단원 = chapterNameOf(m[1], m[2]);
-                  return `<a class="pill on" onclick="bookReqDrop('${code}')"
+                  return `<a class="pill on" ${TAP} onclick="bookReqDrop('${code}')"
                     title="${escHtml((단원||'') + (it.scene ? ' · ' + it.scene : ''))} — 누르면 뺍니다">${
                     escHtml(BOOK_OF_CODE[m[3]] || m[3])} ${+m[4] || 0} ✕</a>`;
                 }).join('')}
@@ -14359,7 +14390,7 @@ function stuVideoHTML(c){
 
   return `
   ${resume && (!open || open.id!==resume.id) ? `
-  <div class="mc go" onclick="state.stuVideoId='${resume.id}'; render()" style="cursor:pointer;">
+  <div class="mc go" ${TAP} onclick="state.stuVideoId='${resume.id}'; render()" style="cursor:pointer;">
     <div style="font-size:11.5px;font-weight:700;color:var(--accent);">이어보기</div>
     <div style="font-size:14.5px;font-weight:700;margin-top:7px;">${escHtml(resume.title)}</div>
     <div class="sap-prog">
@@ -14375,7 +14406,7 @@ function stuVideoHTML(c){
     const pct = videoPct(p), done = videoDone(p);
     const isOpen = open && open.id===v.id;
     return `<div class="mc ${isOpen?'go':''}">
-      <div onclick="state.stuVideoId=${isOpen?'null':`'${v.id}'`}; render()" style="cursor:pointer;">
+      <div ${TAP} onclick="state.stuVideoId=${isOpen?'null':`'${v.id}'`}; render()" style="cursor:pointer;">
         <div class="row" style="gap:8px;">
           <span style="flex:1;min-width:0;font-size:13.5px;font-weight:600;">${escHtml(v.title)}</span>
           ${v.studentId ? '<span class="badge late">개인 배정</span>' : ''}
@@ -14691,9 +14722,9 @@ function stuClinicHTML(c){
 
   <div class="msec">새로 신청</div>
   <div class="row" style="gap:7px;margin-bottom:12px;">
-    <a class="pill ${mode==='slot'?'on':''}" onclick="state.clinicApplyMode='slot'; render()">
+    <a class="pill ${mode==='slot'?'on':''}" ${TAP} onclick="state.clinicApplyMode='slot'; render()">
       열린 시간대${slots.length?` <b>${slots.length}</b>`:''}</a>
-    <a class="pill ${mode==='free'?'on':''}" onclick="state.clinicApplyMode='free'; render()">희망 시간 제안</a>
+    <a class="pill ${mode==='free'?'on':''}" ${TAP} onclick="state.clinicApplyMode='free'; render()">희망 시간 제안</a>
   </div>
 
   ${mode==='slot' ? (slots.length===0
@@ -14704,7 +14735,7 @@ function stuClinicHTML(c){
       ${slots.map(s=>{
         const left = s.capacity - clinicSlotBookedCount(s.id);
         const on = pickedIds.includes(s.id);
-        return `<div class="mc ${on?'go':''}" onclick="stuToggleSlot('${s.id}')" style="cursor:pointer;">
+        return `<div class="mc ${on?'go':''}" ${TAP} onclick="stuToggleSlot('${s.id}')" style="cursor:pointer;">
           <div class="mrow" style="min-height:30px;gap:10px;">
             <span style="width:20px;height:20px;border-radius:var(--r-xs);flex-shrink:0;
               display:flex;align-items:center;justify-content:center;
@@ -15057,6 +15088,7 @@ function stuCalendarHTML(c){
         + (date === 시험.math ? ' exam-m' : '');
     }
     칸.push('<div class="scal-c' + 시험칸 + (date === 오늘 ? ' today' : '') + (date === 고른날 ? ' on' : '') + '"'
+      + ' ' + TAP + ' aria-label="' + stuDayLabel(date) + '"'
       + ' onclick="state.stuCalDay=\'' + date + '\'; render()">'
       + '<span class="d" style="' + 요일색 + '">' + d + '</span>'
       + '<span class="dots">'
@@ -15344,7 +15376,7 @@ function studentHTML(){
       </div>
     </div>
     ${subs ? `<div class="subnav">${subs.map(s=>
-      `<a class="${state.studentTab===s[1]?'on':''}" onclick="goStudentTab('${s[1]}')">${s[0]}${
+      `<a class="${state.studentTab===s[1]?'on':''}" ${TAP} onclick="goStudentTab('${s[1]}')">${s[0]}${
         counts[s[1]] ? `<b>${counts[s[1]]}</b>` : ''}</a>`
     ).join('')}</div>` : ''}
     <div class="body">${studentTabBodyHTML(c)}</div>
@@ -15357,7 +15389,7 @@ function studentHTML(){
            원이 이미 «집»을 말하고 있어서 글자가 덧말이 된다.
            ⚠ 그래도 **이름은 남긴다**(`aria-label`) — 화면을 소리로 읽는 사람에게 이 칸은
              글자가 사라지면 «이름 없는 단추»가 된다. */
-        return `<a class="${n[0]===section?'on':''}${가운데?' fab':''}" onclick="goStudentTab('${n[1]}')"
+        return `<a class="${n[0]===section?'on':''}${가운데?' fab':''}" ${TAP} onclick="goStudentTab('${n[1]}')"
           ${가운데 ? `aria-label="${n[0]}"` : ''}>
           ${가운데 ? `<i>${iconSvg(n[2],23)}</i>` : iconSvg(n[2],20) + `<span>${n[0]}</span>`}</a>`;
       }).join('')}

@@ -122,7 +122,8 @@ console.log(NL + '② 홈이 가운데 · 떠 있는 원' + NL);
   봄('🔴 본문 아래 여백이 바보다 넓다 (마지막 줄이 가리면 안 된다)',
     html.includes('.app.sap .body{padding:16px 16px 88px;}'), true);
   const fab = rule(html, '.sap-tabs a.fab i');
-  봄('원이 바 위로 떠 있다', /top:-26px/.test(fab) && /width:56px/.test(fab), true);
+  /* ⚠ 높이는 ⑥에서 따로 붙든다 — 여기에 숫자를 박아 두면 한 번 다듬을 때마다 두 곳이 어긋난다. */
+  봄('원이 바 위로 떠 있다', /top:-\d+px/.test(fab) && /width:56px/.test(fab), true);
   봄('종이색 테를 둘러 «떠 있는» 것으로 보인다', /0 0 0 5px var\(--paper\)/.test(fab), true);
   봄('원도 자두 그라데이션이다', /var\(--point-lt\),\s*var\(--point-d\)/.test(fab), true);
 }
@@ -258,6 +259,51 @@ console.log(NL + '⑤ 점검 — 잔재 · 뜻이 어긋난 색 · 손 말고 �
   const 셸 = lift('studentHTML');
   봄('🔴 가운데 칸에 글자를 안 그린다', 셸.includes('iconSvg(n[2],20) + `<span>${n[0]}</span>`'), true);
   봄('🔴 그래도 소리로 읽는 사람에게 이름을 남긴다', 셸.includes('aria-label="${n[0]}"'), true);
+}
+
+/* ═══ ⑥ 누르는 자리는 «키»로도 간다 (2026-09-14 · S-6) ═══ */
+console.log(NL + '⑥ 손가락 말고 키로도 — 누르는 자리마다' + NL);
+{
+  봄('🔴 표시는 한 곳에서 짓는다', /const TAP = 'data-tap tabindex="0" role="button"';/.test(html), true);
+  const 손잡이 = (html.match(/document\.addEventListener\('keydown', e => \{[\s\S]*?\n\}\);/) || [''])[0];
+  봄('🔴 손잡이가 Enter·Space 를 받는다',
+    /e\.key !== 'Enter' && e\.key !== ' '/.test(손잡이), true);
+  봄('🔴 표시가 붙은 것만 받는다', 손잡이.includes("closest('[data-tap]')"), true);
+  봄('🔴 안쪽의 «진짜» 단추·입력칸은 그쪽이 임자다',
+    손잡이.includes("closest('button, a[href], input, textarea, select')"), true);
+  봄('🔴 눌린 자리에서만 기본 동작을 막는다 (아무 데서나 막으면 화면이 안 내려간다)',
+    손잡이.indexOf('e.preventDefault()') > 손잡이.indexOf('if(!el) return'), true);
+
+  /* 🔴 **이 덫이 핵심이다** — 학생 화면에 누르는 자리를 새로 만들 때마다 여기서 걸린다. */
+  const 학생화면 = ['stuHomeHTML', 'stuQuizHTML', 'stuWrongHTML', 'stuVideoHTML', 'stuCalendarHTML',
+    'stuMyPlanHTML', 'stuClinicHTML', 'ckCardHTML', 'studentHTML', 'stuProgressHTML',
+    'stuNoticeHTML', 'stuQnaHTML', 'stuMaterialHTML', 'stuChatHTML', 'stuAttendanceHTML'];
+  const 안붙은것 = [];
+  for (const n of 학생화면) {
+    let f = '';
+    try { f = lift(n); } catch (_) { continue; }
+    for (const m of f.matchAll(/<(div|span|a)\b(?:(?!>)[\s\S])*?onclick=(?:(?!>)[\s\S])*?>/g))
+      if (!/data-tap|TAP/.test(m[0])) 안붙은것.push(n + ':' + (m[0].match(/class="([^"$]*)/) || [, m[1]])[1]);
+  }
+  /* ⚠ 영상 위의 «가림막» 하나만 일부러 뺐다 — 초점이 투명한 판에 내려앉을 뿐이고,
+     재생·멈춤은 아래 조작 바에 진짜 단추로 이미 있다. */
+  봄('🔴 학생 화면의 누르는 자리에 표시가 다 붙었다 (가림막 하나만 뺀다)',
+    안붙은것, ['stuVideoHTML:vc-veil']);
+  봄('⚠ 왜 가림막만 뺐는지 적어 두었다', html.includes('가림막»(`.vc-veil`)에는 안 붙인다'), true);
+
+  봄('🔴 초점 테가 표시를 따라간다', html.includes('.app.sap [data-tap]:focus-visible'), true);
+  봄('⚠ 달력 칸은 테를 «안쪽»에 그린다 (2px 간격이라 옆 칸을 덮는다)',
+    rule(html, '.app.sap .scal-c[data-tap]:focus-visible').includes('outline-offset:-2px'), true);
+  봄('🔵 가운데 칸은 «원»이 초점을 받는다',
+    html.includes('.app.sap .sap-tabs a.fab[data-tap]:focus-visible i{outline:2px solid var(--point)'), true);
+  봄('달력 칸이 몇 월 며칠인지 소리로도 말한다',
+    lift('stuCalendarHTML').includes("' aria-label=\"' + stuDayLabel(date) + '\"'"), true);
+
+  /* 🔵 글자를 뺀 뒤 원이 혼자 너무 높이 떠 보였다 — 8px 내렸다(사용자 요청) */
+  봄('🔴 가운데 원을 조금 내렸다 (-26 → -18)',
+    rule(html, '.sap-tabs a.fab i').includes('top:-18px'), true);
+  봄('⚠ 그래도 나란히는 아니다 (내려앉으면 «떠 있는 단추»가 아니다)',
+    /top:-1[0-9]px/.test(rule(html, '.sap-tabs a.fab i')), true);
 }
 
 console.log(NL + (fail ? '🔴 ' + fail + '개 실패 · ' : '✓ 전부 통과 · ') + pass + '개' + NL);
