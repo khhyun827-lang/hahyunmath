@@ -1,6 +1,6 @@
 // 클리닉 › 온 학생 기록 · 연락처 · 확대 단추 빼기 (2026-09-13 · K-11 → K-12)
 //
-//   node tools/session-clinic-test.mjs
+//   node tools/clinic-came-test.mjs
 //
 // 🔴 **왜 재는가** — 사용자가 셋을 짚었다:
 //   ① 「배율(돋보기모양)버튼의 숫자랑 배속 숫자랑 비슷해서 … 안필요할 것 같아」
@@ -135,6 +135,24 @@ console.log(NL + '③ 클리닉 › 온 학생 기록 — 수업도 반도 안 �
     /<button class="cn-add came" onclick="clinicOpenCame\('\$\{d\}'\)"/.test(lift('teacherClinicHTML')), true);
   봄('날짜를 안 고르면 오늘이다', lift('clinicCameDate').includes('state.clinicCameDate || todayStr()'), true);
 
+  /* 🔴 **주간 판에는 이름을 한 명씩 세우지 않는다** (2026-09-13 · K-14 · 사용자 —
+     「그 명단이 학생 클리닉 시간별로 정리된 부분에 이름이름으로 추가되는것도 불편해」).
+     그 판은 «시간대»를 보는 곳이다. 하루에 열 장이 쌓이면 정작 시간대가 안 보인다.
+     ⚠ 「학생 직접 제안」처럼 «자리를 잡은» 시간대 밖 신청은 그대로 칸으로 세운다 —
+       그것은 이중 배정을 막아야 하는 것이라 접으면 안 된다. */
+  const week = lift('teacherClinicHTML');
+  봄('🔴 온 학생은 «수 한 줄»로 접는다', /class="cn-came" onclick="clinicOpenCame/.test(week), true);
+  봄('🔴 시간대 밖 «신청»은 접지 않는다 (이중 배정을 막아야 한다)',
+    week.includes('const loose = DATA.clinics.filter(c=>!c.walkIn && clinicSlotIds(c).length===0'), true);
+  봄('온 학생을 loose 에서 갈라 낸다', week.includes('const 온학생 = DATA.clinics.filter(c=>c.walkIn'), true);
+  봄('이름은 마우스를 올리면 나온다', /title="\$\{escHtml\(온학생\.map\(c=>c\.name\)\.join\(', '\)\)\}"/.test(week), true);
+  봄('아무것도 없는 날만 «—» 다', week.includes('list.length===0 && loose.length===0 && 온학생.length===0'), true);
+  /* 🔴 담는 것이 곧 «출석 확인»이다 — 승인으로 두면 그날 점이 영영 주황이고
+     출석 확인 판이 이미 온 학생에게 「출석했나요」를 다시 묻는다. */
+  봄('🔴 온 학생은 «완료»로 태어난다', lift('clinicCameToggle').includes("status: '완료', requestedAt: todayStr(), walkIn: true"), true);
+  봄('그래서 그날 점이 초록이 된다 (미확인으로 안 남는다)',
+    lift('clinicDayCheckState').includes("c.status==='완료' || c.status==='불참'"), true);
+
   /* 🔴 **여기가 「담지 못했습니다」의 뿌리였다** (2026-09-13 · K-13 · 사용자 신고).
      `clinics` 의 create 규칙이 «만드는 사람 = 문서의 uid» 하나뿐이라,
      강사가 **학생 몫으로** 만드는 것이 통째로 막혔다(그 문서의 uid 는 «그 학생» 것이다).
@@ -185,10 +203,15 @@ console.log(NL + '③ 클리닉 › 온 학생 기록 — 수업도 반도 안 �
   봄('고른 날짜가 칸에 박힌다', 그림.includes('id="cn-came-date" type="date" value="2026-09-13"'), true);
   봄('요일도 적는다 (2026-09-13 은 일요일)', 그림.includes('>일요일<s>·</s>'), true);
   봄('🔴 수업이 없어도 된다고 말한다', 그림.includes('수업이 없는 날에도 됩니다'), true);
-  봄('머리에 온 사람 수', 그림.includes('클리닉에 온 학생 <span class="mono">2</span>'), true);
-  봄('🔴 여기서 담은 것만 «빼기»가 선다', (그림.match(/>빼기</g) || []).length, 1);
-  봄('🔴 시간대를 잡아 둔 것은 «시간대 신청»으로 서고 못 뺀다',
-    /가가[\s\S]*?>빼기</.test(그림) && /다라[\s\S]*?시간대 신청/.test(그림), true);
+  봄('머리에 온 사람 수', 그림.includes('온 학생 <b class="mono">2</b>명'), true);
+  /* 🔴 **온 사람 «명단»을 위에 따로 안 그린다** (2026-09-13 · K-14 · 사용자가 짚었다 —
+     「이미 체크를해서 색칠되었는데 굳이 위에 이름명단이 다시 추가되는것도 두번반복되는 것 같아서」).
+     켜진 칩이 곧 그 명단이다. 같은 것을 두 번 적으면 어느 쪽이 진짜인지를 매번 고르게 만든다. */
+  봄('🔴 온 사람 명단을 위에 또 안 그린다 (켜진 칩이 그 명단이다)',
+    [/>빼기</.test(그림), 그림.includes('클리닉에 온 학생')], [false, false]);
+  봄('🔴 대신 «시간대 신청»은 칩에 표시된다 — 켜져 있어도 여기서는 못 뺀다',
+    /class="cln-p on slot"[\s\S]*?data-nm="다라 a2"[\s\S]*?여기서는 못 뺍니다/.test(그림), true);
+  봄('여기서 담은 칩에는 그 표시가 없다', /class="cln-p on"[\s\S]{0,120}?data-nm="가가 a3"/.test(그림), true);
   /* ⚠ 칩의 이름 앞에 줄바꿈이 있다 — «>이름<» 으로 찾으면 없는데도 -1 끼리 비교해 통과한다. */
   const 칩 = [...그림.matchAll(/data-nm="([^"]*)"/g)].map(m => m[1]);
   /* 🔴 전체가 나오되 **반별로 묶여** 있어야 한다 (사용자가 바로잡았다).
@@ -199,13 +222,13 @@ console.log(NL + '③ 클리닉 › 온 학생 기록 — 수업도 반도 안 �
   봄('🔴 반 이름이 머리로 선다 (설정에 세운 차례 그대로)', 머리, ['고2GB1', '고1GA1']);
   봄('머리에 «담긴 수/전체»가 적힌다', /고1GA1[\s\S]{0,80}<b>1<\/b>\/2/.test(그림), true);
   봄('🔴 퇴원생은 안 든다', 칩.some(x => x.startsWith('퇴원')), false);
-  봄('담긴 학생은 켜져 보인다 (가가 · 다라)', (그림.match(/class="cln-p on"/g) || []).length, 2);
+  봄('담긴 학생은 켜져 보인다 (가가 · 다라)', (그림.match(/class="cln-p on/g) || []).length, 2);
   봄('🔴 칩에는 곁말을 안 붙인다 (반 이름이 머리에 있다)', /<i>고1GA1<\/i>/.test(그림), false);
 
   /* 날짜를 옮기면 그날 것만 */
   state.clinicCameDate = '2026-09-12';
   const 어제 = C.clinicCamePanelHTML();
-  봄('🔴 날짜를 옮기면 그날 것만 선다', 어제.includes('클리닉에 온 학생 <span class="mono">1</span>'), true);
+  봄('🔴 날짜를 옮기면 그날 것만 선다', 어제.includes('온 학생 <b class="mono">1</b>명'), true);
   봄('그날 칸 값도 따라간다', 어제.includes('value="2026-09-12"'), true);
   state.clinicCameDate = '2026-09-13';
 
@@ -264,7 +287,7 @@ console.log(NL + '③ 클리닉 › 온 학생 기록 — 수업도 반도 안 �
   await T.clinicCameToggle('a1', '2026-09-13');
   봄('🔴 담으면 클리닉 문서가 하나 생긴다',
     [쓴것.length, 쓴것[0].studentId, 쓴것[0].day, 쓴것[0].status, 쓴것[0].walkIn, 쓴것[0].slotIds],
-    [1, 'a1', '2026-09-13', '승인', true, []]);
+    [1, 'a1', '2026-09-13', '완료', true, []]);
   봄('🔴 uid 는 «그 학생» 것이다 (강사 것을 박으면 학생이 제 클리닉을 못 본다)', 쓴것[0].uid, 'u1');
   봄('🔴 «신청한 날»은 오늘이고 «클리닉 날»은 고른 날이다 (지난 날도 적을 수 있다)',
     [쓴것[0].requestedAt, 쓴것[0].day], ['2026-09-20', '2026-09-13']);

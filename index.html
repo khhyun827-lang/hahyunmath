@@ -2637,6 +2637,16 @@
 /* 날짜 칸의 둘째 단추 — 「+ 온 학생」 (2026-09-13 · K-12). 첫째(「+ 시간대」)와 같은 꼴이되
    시간대를 여는 일이 아니므로 조금 조용하게 둔다. */
 .app .cn-add.came{margin-top:5px;}
+/* 「온 학생 n명」 한 줄 (2026-09-13 · K-14) — 이름을 한 명씩 칸으로 세우지 않는다.
+   ⚠ 시간대 칸(.cn-slot)과 «다르게» 보여야 한다 — 자리를 잡은 것이 아니라 왔다 간 기록이다.
+     그래서 테두리 없이 옅은 바탕 한 줄로 둔다. 이름은 마우스를 올리면 나온다. */
+.app .cn-came{margin-top:6px;padding:6px 9px;border-radius:var(--r-sm);background:var(--accent-bg);
+  color:var(--accent);font-size:11px;cursor:pointer;text-align:center;}
+.app .cn-came b{font-family:'JetBrains Mono',monospace;font-weight:700;}
+.app .cn-came:hover{filter:brightness(.97);}
+/* 시간대를 잡아 둔 학생의 칩 — 켜져 있어도 여기서는 못 뺀다(눌러 보면 그렇게 말한다). */
+.app .cln-p.slot{border-style:dashed;}
+.app .cln-p.on.slot{background:var(--ok);border-color:var(--ok);}
 /* ---------- 클리닉 > 온 학생 기록의 학생 고르개 (2026-09-13 · K-12) ----------
    🔵 줄 목록이 아니라 «칩»이다 — 40명을 세로로 세우면 화면을 계속 굴려야 하고,
      이 화면에서 하는 일은 «몇 명을 콕 집어 누르기»뿐이다. 담긴 것은 색으로 바로 보인다. */
@@ -20539,19 +20549,13 @@ function clinicCamePanelHTML(){
   })).filter(g => g.아이들.length);
   const 보일것 = 재원.filter(맞나);
   const 요일 = WEEKDAY_LABEL[new Date(date + 'T00:00:00').getDay()];
-
-  const 줄 = c => {
-    const s = DATA.students.find(x => x.studentId === c.studentId);
-    const 때 = clinicWhenLabel(c);
-    return `<div class="st-row">
-      <div class="t"><b>${escHtml(c.name || (s && s.name) || c.studentId)}</b>
-        <span>${escHtml(s ? studentClassTitle(s) : '명단에 없음')}${
-          때 ? '<s>·</s>' + escHtml(때) : ''}${c.status === '대기' ? '<s>·</s>승인 대기' : ''}</span></div>
-      <div class="v">${c.walkIn
-        ? `<button class="btn q sm" onclick="clinicCameToggle('${c.studentId}','${date}')">빼기</button>`
-        : `<span class="badge">시간대 신청</span>`}</div>
-    </div>`;
-  };
+  /* 🔴 **온 사람 «명단»을 위에 따로 안 그린다** (2026-09-13 · K-14 · 사용자 —
+       「이미 체크를해서 색칠되었는데 굳이 위에 이름명단이 다시 추가되는것도 두번반복되는 것 같아서」).
+     맞는 말이다 — 켜진 칩이 곧 그 명단이다. 같은 것을 두 번 적으면 **어느 쪽이 진짜인지**를
+     매번 고르게 만들고, 판만 길어진다. 남기는 것은 **수 하나**뿐이다.
+   ⚠ 그래서 «시간대를 잡아 둔 신청»은 칩에 표시해 둔다 — 위 명단이 지던 말을 칩이 대신 져야 한다.
+     그 칩은 켜져 있어도 여기서 못 뺀다(눌러 보면 그렇게 말한다). */
+  const 시간대신청 = new Set(온사람.filter(c => !c.walkIn).map(c => c.studentId));
 
   return `<div class="st-form" style="flex-shrink:0;">
     <div class="cls-form" style="margin-top:0;align-items:flex-end;">
@@ -20566,13 +20570,8 @@ function clinicCamePanelHTML(){
     <p class="st-note">수업이 없는 날에도 됩니다. <b>반을 가리지 않고</b> 재원생 전체에서 고릅니다 —
       담은 학생은 위 주간 판의 그 날짜 칸에 <b>「시간대 밖」</b>으로 함께 섭니다.</p>
 
-    <div class="t-sec" style="margin-top:16px;">${date} 클리닉에 온 학생 <span class="mono">${온사람.length}</span></div>
-    ${온사람.length === 0
-      ? `<div style="padding:18px 0;text-align:center;color:var(--dim);font-size:12.5px;">아직 없습니다 — 아래에서 눌러 담으세요.</div>`
-      : 온사람.slice().sort((a, b) => String(a.name).localeCompare(String(b.name))).map(줄).join('')}
-
-    <div class="t-sec" style="margin-top:20px;">학생 고르기
-      <span style="font-weight:400;color:var(--sub);">누르면 담기고, 다시 누르면 빠집니다</span></div>
+    <div class="t-sec" style="margin-top:18px;">온 학생 누르기
+      <span style="font-weight:400;color:var(--sub);">누르면 담기고(색이 찹니다), 다시 누르면 빠집니다</span></div>
     ${/* 🔴 **글자마다 render() 를 부르지 않는다 — 한글 조합이 끊긴다**(W-3에서 겪은 것).
          칸에 친 글자는 state 에 담아만 두고, 보이고 숨기는 것은 이 자리에서 직접 한다. */''}
     <div class="row" style="margin-bottom:10px;">
@@ -20589,11 +20588,15 @@ function clinicCamePanelHTML(){
         return `<div class="cln-grp" data-grp ${보임.length ? '' : 'hidden'}>
           <div class="cln-gh">${escHtml(g.이름)}
             <span>${담긴 ? '<b>' + 담긴 + '</b>/' : ''}${g.아이들.length}</span></div>
-          <div class="cln-pick">${g.아이들.map(s => `<button class="cln-p ${
-            온사람ids.has(s.studentId) ? 'on' : ''}"
+          <div class="cln-pick">${g.아이들.map(s => {
+            const 잡힘 = 시간대신청.has(s.studentId);
+            return `<button class="cln-p ${온사람ids.has(s.studentId) ? 'on' : ''}${잡힘 ? ' slot' : ''}"
             data-nm="${escHtml((s.name + ' ' + s.studentId).toLowerCase())}"
             ${맞나(s) ? '' : 'hidden'}
-            onclick="clinicCameToggle('${s.studentId}','${date}')">${escHtml(s.name)}</button>`).join('')}</div>
+            title="${잡힘 ? '시간대를 잡아 둔 신청입니다 — 여기서는 못 뺍니다'
+                          : (온사람ids.has(s.studentId) ? '담겨 있습니다 — 누르면 빠집니다' : '누르면 담깁니다')}"
+            onclick="clinicCameToggle('${s.studentId}','${date}')">${escHtml(s.name)}</button>`;
+          }).join('')}</div>
         </div>`;
       }).join('')}
     </div>
@@ -20636,7 +20639,10 @@ async function clinicCameToggle(sid, date){
        (assignClinic 이 같은 자리에서 겪은 것). */
     const clinic = { id: 'cl' + Date.now(), uid: studentKeyOfSid(sid), studentId: sid, name: s.name,
       topic: '클리닉', slotId: '', slotIds: [], day: date, time: '', timeEnd: '',
-      status: '승인', requestedAt: todayStr(), walkIn: true };
+      /* 🔴 **«완료»로 태어난다** (2026-09-13 · K-14) — 이 기록은 «왔다»는 말 그 자체다.
+         «승인»으로 두면 그날 칸의 점이 영영 주황(«미확인»)으로 남고, 출석 확인 판이
+         **이미 온 학생에게 「출석했나요」를 다시 묻는다.** 담는 것이 곧 확인이다. */
+      status: '완료', requestedAt: todayStr(), walkIn: true };
     const ok = await dbSetDoc('clinics', clinic.id, clinic);
     if(ok === null){ showToast('담지 못했습니다. 잠시 뒤 다시 시도해 주세요.'); return; }
     DATA.clinics.unshift(clinic);
@@ -20668,8 +20674,15 @@ function teacherClinicHTML(){
         .slice().sort((a,b)=>slotTimeKey(a.time).localeCompare(slotTimeKey(b.time)));
       const isToday = d===todayStr();
       /* 슬롯 없이 잡힌 것(학생 직접 제안 · 교사 직접 배정)도 그날 칸에 세운다 —
-         판에 안 보이면 교사가 이미 잡아 둔 시간을 모르고 이중으로 앉힌다. */
-      const loose = DATA.clinics.filter(c=>clinicSlotIds(c).length===0 && c.day===d && c.status!=="취소");
+         판에 안 보이면 교사가 이미 잡아 둔 시간을 모르고 이중으로 앉힌다.
+         🔴 **다만 «온 학생 기록»은 여기서 이름으로 안 세운다** (2026-09-13 · K-14 · 사용자 —
+           「그 명단이 학생 클리닉 시간별로 정리된 부분에 이름이름으로 추가되는것도 불편해」).
+           이 판은 «시간대»를 보는 곳이다. 시간이 없는 출석 기록을 한 명씩 칸으로 세우면
+           **하루에 열 장이 쌓여** 정작 시간대가 안 보인다. 그리고 그것은 «자리를 잡은 것»이
+           아니라 «왔다 간 기록»이라 이중 배정을 막을 까닭도 없다.
+           ⇒ **수 한 줄로 접는다.** 누르면 그날의 「온 학생 기록」 판이 열린다. */
+      const 온학생 = DATA.clinics.filter(c=>c.walkIn && c.day===d && c.status!=="취소");
+      const loose = DATA.clinics.filter(c=>!c.walkIn && clinicSlotIds(c).length===0 && c.day===d && c.status!=="취소");
       /* 🔵 **날짜 머리를 누르면 그날의 출석 확인 판이 열린다** (2026-09-05).
          「시간대별로」가 아니라 «날짜를 택해서» 확인하고 싶다고 했다 — 슬롯을 하나씩
          누르게 하면 결국 시간 단위로 다그치는 것과 같아진다. 점 하나로 «미확인이 남았나»만
@@ -20679,7 +20692,9 @@ function teacherClinicHTML(){
         <div class="cn-ch ${isToday?'today':''}" style="cursor:pointer;" onclick="clinicOpenDayDrawer('${d}')" title="${d} 출석 확인">
           ${WEEKDAY_LABEL[new Date(d+'T00:00:00').getDay()]}<s>${d.slice(5).replace('-','/')}</s>
           ${dayState ? `<i class="cn-dot ${dayState}"></i>` : ''}</div>
-        ${list.length===0 && loose.length===0 ? '<div class="cn-none">—</div>' : ''}
+        ${list.length===0 && loose.length===0 && 온학생.length===0 ? '<div class="cn-none">—</div>' : ''}
+        ${온학생.length===0 ? '' : `<div class="cn-came" onclick="clinicOpenCame('${d}')"
+          title="${escHtml(온학생.map(c=>c.name).join(', '))}">온 학생 <b>${온학생.length}</b>명</div>`}
         ${list.map(s=>{
             const n = clinicSlotBookedCount(s.id); const full = n >= s.capacity;
             const who = DATA.clinics.filter(c=>clinicSlotIds(c).includes(s.id) && c.status!=="취소");
