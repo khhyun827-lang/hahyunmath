@@ -16,6 +16,8 @@ import { fileURLToPath } from 'url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8').replace(/\r\n/g, '\n');
+/* ⚠ ds.css 도 읽는다 — 묶음 열쇠가 거기 «부품 이름»과 겹치는지 봐야 한다(아래 ③). */
+const ds = fs.readFileSync(path.join(ROOT, 'ds.css'), 'utf8').replace(/\r\n/g, '\n');
 const NL = String.fromCharCode(10);
 
 function lift(name) {
@@ -116,8 +118,18 @@ console.log(NL + '③ 화면 — 달력 칸과 라벨' + NL);
   봄('🔴 점을 키웠다 (4.5px 는 폰에서 안 보였다)',
     html.includes('.app.sap .scal-c .dots i{width:6.5px;height:6.5px;'), true);
   봄('🔴 회색인 「내 일정」은 속을 비워 «꼴»로도 가른다',
-    html.includes('.app.sap .scal-c .dots i.mine{background:transparent'), true);
-  봄('그러려면 칸이 묶음 이름을 class 로 달아야 한다', 달력.includes("'<i class=\"' + g + '\""), true);
+    html.includes('.app.sap .scal-c .dots i.dot-mine{background:transparent'), true);
+  /* 🔴 **이름을 `dot-` 로 싼다** (2026-09-14 · 사용자 신고). 묶음 열쇠를 그대로 class 로 쓰니
+     `todo` 가 **ds.css 의 `.todo`(할 일 «카드»)** 와 부딪혀, 6.5px 짜리 점이 그 카드의
+     padding 과 테두리를 받아 **34px 짜리 덩어리**가 됐다 — 날짜를 통째로 덮었다.
+     ⚠ 이 저장소에서 여덟 번째 이름 충돌이다. */
+  봄('🔴 점 class 는 `dot-` 로 싸서 ds.css 의 이름과 안 부딪힌다',
+    달력.includes("'<i class=\"dot-' + g + '\""), true);
+  봄('🔴 묶음 열쇠가 ds.css 의 부품 이름과 겹친다는 것을 붙든다',
+    Object.keys(F.CAL_GROUPS).filter(g => new RegExp('^\\.' + g + '[{ ,:]', 'm').test(ds)),
+    ['todo']);
+  봄('🔴 그래서 «맨» class 로는 절대 안 쓴다',
+    /'<i class="' \+ g \+ '"/.test(달력), false);
 }
 
 console.log(NL + (fail ? '🔴 ' + fail + '개 실패 · ' : '✓ 전부 통과 · ') + pass + '개' + NL);

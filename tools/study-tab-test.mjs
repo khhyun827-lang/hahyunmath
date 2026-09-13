@@ -134,7 +134,11 @@ console.log(NL + '④ 「엔딩크레딧 431번 변형 문항」 — 지금 보�
     (오답.match(/\$\{qLabelOf\(hw\)\} 변형 문항/g) || []).length, 2);
   봄('🔴 앞에 「원본」을 안 붙인다', 오답.includes('원본 ${qLabelOf(hw)}'), false);
   봄('검토 중인 카드에도 같은 이름표다',
-    오답.includes('<span class="badge score">${qLabelOf(hw)} 변형 문항</span>\n          <span class="spacer"></span><span class="badge">검토 중</span>'), true);
+    오답.includes('<span class="q-kind new">${qLabelOf(hw)} 변형 문항</span>\n          <span class="spacer"></span><span class="badge">검토 중</span>'), true);
+  /* 🔴 **갈래를 상태색으로 말하지 않는다** (2026-09-14 점검) — `badge score` 는 «성적»의 파랑이다.
+     이름표는 「이것이 어떤 문제인가」지 상태가 아니다. */
+  봄('🔴 이름표가 상태 배지를 안 쓴다', 오답.includes('badge score'), false);
+  봄('갈래는 갈래의 옷을 입는다', html.includes('.app.sap .q-kind{'), true);
 }
 
 console.log(NL + (fail ? '🔴 ' + fail + '개 실패 · ' : '✓ 전부 통과 · ') + pass + '개' + NL);

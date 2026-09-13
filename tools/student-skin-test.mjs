@@ -202,5 +202,63 @@ console.log(NL + '④ 홈 — 시험이 맨 위' + NL);
     가는곳, ['video', 'material', 'clinic', 'myplan']);
 }
 
+/* ═══ ⑤ 점검에서 나온 것 (2026-09-14 · 사용자 요청 — 「꼼꼼히 점검해줘요」) ═══ */
+console.log(NL + '⑤ 점검 — 잔재 · 뜻이 어긋난 색 · 손 말고 키' + NL);
+{
+  /* 🔴 **없는 토큰은 조용히 «0»·«투명»이 된다** — 값이 틀린 것이 아니라 이름이 없는 것이라
+     아무 데서도 안 튄다. 데일리퀴즈 머리띠가 각졌던 것이 그 때문이었다(`var(--r)`).
+     ⇒ 두 파일을 통째로 훑어 **정의 안 된 토큰이 하나도 없는지** 본다. */
+  const 정의 = new Set([...(ds + html).matchAll(/(--[a-z0-9-]+)\s*:/g)].map(m => m[1]));
+  const 쓴것 = [...new Set([...(ds + html).matchAll(/var\((--[a-z0-9-]+)/g)].map(m => m[1]))];
+  봄('🔴 정의 안 된 토큰이 하나도 없다', 쓴것.filter(t => !정의.has(t)), []);
+
+  /* 🔴 상태색은 상태에만 쓴다 — 갈래에 쓰면 같은 색이 두 뜻으로 읽힌다 */
+  const 퀴즈 = 알맹이(lift('stuQuizHTML'));
+  봄('🔴 갈래 이름표가 상태 배지를 안 쓴다',
+    퀴즈.includes('badge no') || 퀴즈.includes('badge score'), false);
+  봄('갈래는 제 옷을 입는다 (q-kind)', 퀴즈.includes('class="q-kind'), true);
+  봄('🔵 「한 단계 위」만 노란빛을 남긴다 (올라갔다는 뜻이 실제로 있다)',
+    퀴즈.includes('class="q-kind up"'), true);
+  /* ⚠ 오답숙제 이름표는 **두 자리**(푸는 카드 · 검토 중 카드)에 같은 꼴로 있어야 한다 —
+     한쪽만 되돌려도 잡히게 «둘 다» 센다(덫을 확인하다 한쪽이 새는 것을 봤다). */
+  봄('🔴 오답숙제 이름표 두 자리가 같은 옷이다',
+    (알맹이(lift('stuWrongHTML')).match(/class="q-kind new"/g) || []).length >= 2, true);
+  /* 🔵 이름은 「테스트 학생」 — 「님」이 아니다 (2026-09-14 · 사용자 요청) */
+  봄('🔴 인사가 「… 학생」이다',
+    알맹이(lift('stuHomeHTML')).includes('<em>학생</em>'), true);
+  봄('🔴 「님」으로 안 부른다',
+    /state\.currentUser\.name\)\}님/.test(lift('stuHomeHTML')), false);
+  /* ⚠ 출석 화면은 배지가 아니라 달력 칸 색으로 말한다(`.cal .d.ok` …) — 그것은 **진짜 상태**라
+     자두가 먹으면 안 된다. 잣대를 부르는지와, 학생 앱이 그 칸을 안 덮는지 둘 다 본다. */
+  봄('⚠ 출석 화면은 여전히 상태 잣대로 칠한다',
+    알맹이(lift('stuAttendanceHTML')).includes('attStatusClass('), true);
+  봄('🔴 학생 앱이 출석 칸 색을 안 덮는다',
+    html.includes('.app.sap .cal .d.ok') || html.includes('.app.sap .cal .d.no'), false);
+  봄('출석 칸은 상태색 그대로다', rule(ds, '.cal .d.ok').includes('var(--okbg)'), true);
+
+  /* 🔴 학생 앱 «안»에 박힌 색이 남아 있으면 포인트색이 거기서 끊긴다 */
+  봄('🔴 출석 도장 카드의 hover 가 박힌 회색이 아니다',
+    html.includes('.gm-run:hover{background:var(--point-line);}'), true);
+  /* ⚠ `rule()` 은 «첫 번째» 같은 이름을 집는다 — `.app.sap .sap-hi b{` 가 먼저 나와서
+     밑에 있는 원본 규칙의 세리프를 놓쳤다(덫을 확인하다 드러났다). 모든 `.sap-hi b{` 를 본다. */
+  봄('🔴 학생 앱 머리글에 관리자 표제 서체가 안 남았다',
+    /.sap-hi b{[^}]*Noto Serif/.test(html), false);
+  봄('🔴 데일리퀴즈 머리띠가 메모지 노랑이 아니다',
+    rule(html, '.sap-range').includes('var(--note)'), false);
+  봄('그 자리는 자두 알약이다',
+    rule(html, '.sap-range').includes('var(--point-bg)'), true);
+
+  /* 🔴 손가락 말고 키로도 다닌다 · 움직임을 끄고 싶다는 말도 듣는다 */
+  봄('🔴 학생 앱에 초점 테가 있다', html.includes('.app.sap .mbtn:focus-visible'), true);
+  봄('🔴 움직임 줄이기를 지킨다',
+    /@media \(prefers-reduced-motion: reduce\)\{\s*\n\s*\.app\.sap \*/.test(html), true);
+  봄('하단 탭도 초점이 보인다', html.includes('.sap-tabs a:focus-visible'), true);
+
+  /* 🔵 가운데 칸은 글자가 없다 — 그래도 «이름»은 남는다 */
+  const 셸 = lift('studentHTML');
+  봄('🔴 가운데 칸에 글자를 안 그린다', 셸.includes('iconSvg(n[2],20) + `<span>${n[0]}</span>`'), true);
+  봄('🔴 그래도 소리로 읽는 사람에게 이름을 남긴다', 셸.includes('aria-label="${n[0]}"'), true);
+}
+
 console.log(NL + (fail ? '🔴 ' + fail + '개 실패 · ' : '✓ 전부 통과 · ') + pass + '개' + NL);
 process.exit(fail ? 1 : 0);

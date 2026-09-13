@@ -1732,7 +1732,9 @@
   border-bottom:1px solid var(--line);padding:0 8px;white-space:nowrap;}
 .app .es-tb td{height:40px;padding:0 8px;border-bottom:1px solid var(--line2);font-size:12.5px;}
 .app .es-tb tr:hover td{background:var(--hover);}
-.app .es-tb input{height:28px;padding:0 8px;border:1px solid var(--line);border-radius:var(--r);
+/* ⚠ `--r` 이라는 토큰은 없다 — 반경이 0 으로 떨어져 각진 상자였다(2026-09-14 점검에서 셋을 찾았다).
+   **값이 틀린 것이 아니라 «없는 이름»이라 조용히 0 이 된다.** 토큰은 `--r-xs`…`--r-pill` 이다. */
+.app .es-tb input{height:28px;padding:0 8px;border:1px solid var(--line);border-radius:var(--r-xs);
   background:var(--card);color:var(--ink);font-family:'JetBrains Mono',monospace;font-size:12.5px;}
 .app .es-tb input:focus{outline:none;border-color:var(--accent);}
 /* 머리말 줄 — 「전체 저장」을 오른쪽 끝이 아니라 만점 바로 옆에 둔다. 둘은 한 동작이다. */
@@ -2567,6 +2569,31 @@
   text-align:center;line-height:1.3;}
 .app.sap .sap-quick a:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:12px;}
 
+/* ⓒ 갈래 이름표 — «어떤 문제인가»는 상태가 아니다 (2026-09-14 점검).
+   상태색(출석·지각·결석)을 갈래에 쓰면 같은 화면에서 같은 색이 두 뜻으로 읽힌다.
+   ⚠ 크기·반경은 `.badge` 와 같게 둔다 — 나란히 서는 자리라 꼴이 달라지면 어긋나 보인다. */
+.app.sap .q-kind{display:inline-block;font-size:10.5px;font-weight:700;
+  padding:2px 8px;border-radius:var(--r-xs);line-height:1.65;
+  background:var(--sunk);border:1px solid var(--line);color:var(--sub);}
+.app.sap .q-kind.new{background:var(--point-bg);border-color:var(--point-line);color:var(--point-d);}
+.app.sap .q-kind.up{background:var(--latebg);border-color:var(--late-line);color:var(--late);}
+
+/* ⓓ **손가락 말고 «키»로도 다닌다** (2026-09-14 점검) — 누를 수 있는 것에 초점 테가 없었다.
+   ⚠ `div` 에 `onclick` 을 단 자리(할 일 줄·두 칸)는 **tabindex 가 없어 애초에 초점이 안 간다** —
+     그것까지 고치는 것은 이 판의 몫이 아니라 따로 한 벌이다. 여기서는 «가는 것»에 테를 준다. */
+.app.sap .mbtn:focus-visible,
+.app.sap .pill:focus-visible,
+.app.sap .subnav a:focus-visible,
+.app.sap .flaw-btn:focus-visible{outline:2px solid var(--point);outline-offset:2px;}
+
+/* ⓔ **움직임을 끄고 싶다는 사람의 말을 듣는다** (2026-09-14 점검).
+   학생 앱은 눌렀을 때 살짝 줄어드는 것이 전부라 꺼도 잃는 것이 없다. */
+@media (prefers-reduced-motion: reduce){
+  .app.sap *,
+  .app.sap *::before,
+  .app.sap *::after{transition-duration:1ms !important;animation-duration:1ms !important;}
+}
+
 /* 하단 탭 — 엄지가 닿는 자리. 뷰포트에 고정하되 폭은 앱 열에 맞춘다.
    ds.css의 .ph-tabs는 폰 액자 «안»의 것이라 position이 다르다. */
 .sap-tabs{position:fixed;bottom:0;left:50%;transform:translateX(-50%);
@@ -2588,8 +2615,7 @@
   display:flex;align-items:center;justify-content:center;color:#fff;
   transition:transform var(--t),box-shadow var(--t);
 }
-.sap-tabs a.fab span{position:absolute;left:50%;top:40px;transform:translateX(-50%);white-space:nowrap;}
-.sap-tabs a.fab.on span{color:var(--point);}
+/* 가운데 칸은 글자가 없다 — 원이 칸 전체를 대신한다. */
 .sap-tabs a.fab:active i{transform:translateX(-50%) scale(.94);}
 .sap-tabs a:focus-visible{outline:2px solid var(--accent);outline-offset:-3px;border-radius:var(--r-sm);}
 
@@ -2611,8 +2637,12 @@
 .ds-drop .em{padding:14px;font-size:12px;color:var(--dim);text-align:center;}
 
 /* 화면 머리 — 「누구의 화면인가」. serif는 학생 이름에만 쓴다 (시스템 규칙) */
-.sap-hi b{display:block;font-family:'Noto Serif KR',serif;font-size:21px;font-weight:600;
-  letter-spacing:-.02em;}
+/* 🔴 **세리프를 벗긴다** (2026-09-14 · 사용자 — 「폰트가 어울리지 않는 것 같다」).
+   'Noto Serif KR' 은 **관리자 시안의 표제 서체**다. 학생 앱은 나머지가 전부 산세리프라
+   이 한 줄만 다른 세상에서 온 것처럼 보였다. **서체가 아니라 굵기로** 세운다. */
+.sap-hi b{display:block;font-size:25px;font-weight:800;letter-spacing:-.03em;}
+/* 「테스트 학생」 — 이름이 주인공이고 «학생»은 그것을 받쳐 주는 말이다(2026-09-14 · 사용자 요청). */
+.sap-hi b em{font-style:normal;font-size:15px;font-weight:500;color:var(--sub);letter-spacing:-.01em;}
 .sap-hi span{display:block;font-size:12.5px;color:var(--dim);margin-top:5px;}
 
 /* 화면 안내문 — 「여기서 무엇을 하는가」 한 줄 */
@@ -2687,7 +2717,7 @@
      색이 아니라 **꼴**로도 갈리므로 색을 못 가리는 사람도 읽는다. */
 .app.sap .scal-c .dots{display:flex;gap:3.5px;height:7px;align-items:center;}
 .app.sap .scal-c .dots i{width:6.5px;height:6.5px;border-radius:50%;display:block;}
-.app.sap .scal-c .dots i.mine{background:transparent !important;box-shadow:inset 0 0 0 1.5px var(--dim);}
+.app.sap .scal-c .dots i.dot-mine{background:transparent !important;box-shadow:inset 0 0 0 1.5px var(--dim);}
 /* ⚠ 오늘 칸은 바탕이 진하다 — 점이 묻히지 않게 테를 두른다. */
 .app.sap .scal-c.today .dots i{box-shadow:0 0 0 1px rgba(255,255,255,.55);}
 
@@ -2766,10 +2796,17 @@
 .app.sap .scal-lab{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px;
   font-size:11px;color:var(--sub);}
 
-/* 지금 시험 범위 — «왜 이 문제만 나오나»를 학생이 알아야 납득한다 */
-.sap-range{display:flex;align-items:center;gap:6px;margin:0 0 12px;font-size:11.5px;color:var(--sub);
-  background:var(--note);border:1px solid var(--note-line);border-radius:var(--r);padding:7px 11px;}
-.sap-range s{text-decoration:none;color:var(--dim);}
+/* 지금 시험 범위 — «왜 이 문제만 나오나»를 학생이 알아야 납득한다.
+   🔴 **옛 디자인의 잔재였다** (2026-09-14 · 사용자가 짚었다) — 메모지 노랑(`--note`)을 깔고
+     있어서 새 화면에서 혼자 떠 있었다. 그 색은 «손으로 적어 둔 것»의 색이지 «지금 범위»가 아니다.
+   🔴 **그리고 `--r` 이라는 토큰은 없다** — 반경이 0 으로 떨어져 각진 상자였다
+     (토큰은 `--r-xs`…`--r-pill` 이다). 값이 아니라 **없는 이름**이라 조용히 0 이 됐다.
+   ⇒ 자두 tint 알약으로 바꾼다 — «지금 무엇을 준비하는 중인가»를 말하는 라벨이다. */
+.sap-range{display:inline-flex;align-items:center;gap:6px;margin:0 0 14px;
+  font-size:11.5px;font-weight:600;color:var(--point-d);
+  background:var(--point-bg);border:1px solid var(--point-line);
+  border-radius:var(--r-pill);padding:6px 13px;}
+.sap-range s{text-decoration:none;color:var(--point);opacity:.55;}
 .sap-img{max-width:100%;border:1px solid var(--line);border-radius:var(--r-md);display:block;margin-top:10px;}
 
 /* 강의 임베드 — 16:9 비율 상자 */
@@ -2905,7 +2942,8 @@
 .gm-run{display:flex;align-items:center;gap:12px;margin-top:14px;padding:13px 14px;
   border:1px solid var(--accent-line);background:var(--accent-bg);border-radius:var(--r-lg);
   cursor:pointer;transition:background var(--t);}
-.gm-run:hover{background:#E3DFDA;}
+/* ⚠ 박힌 회색이라 자두 tint 위에 **옛 색이 덮이고** 있었다 (2026-09-14 점검). 토큰으로 바꾼다. */
+.gm-run:hover{background:var(--point-line);}
 .gm-run .ic{width:34px;height:34px;border-radius:var(--r-md);flex-shrink:0;background:var(--card);
   display:flex;align-items:center;justify-content:center;font-size:17px;}
 .gm-run .ic img{width:32px;height:32px;object-fit:contain;display:block;}
@@ -2935,7 +2973,7 @@
 .gm-rk .nm i{font-style:normal;font-size:10.5px;color:var(--dim);margin-left:6px;}
 .gm-rk .sc{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--sub);
   font-variant-numeric:tabular-nums;}
-.gm-rk.me{background:var(--accent-bg);border-radius:var(--r);margin:0 -7px;padding:4px 7px;}
+.gm-rk.me{background:var(--accent-bg);border-radius:var(--r-sm);margin:0 -7px;padding:4px 7px;}
 .gm-rk.me .nm{font-weight:700;}
 .gm-rk.me .nm em{font-style:normal;font-size:10.5px;color:var(--accent);margin-left:5px;}
 /* ⚠ 5위 밖일 때 «몇 등»인지는 말하지 않는다 —
@@ -3117,7 +3155,7 @@
 .app .fm-row{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;margin-bottom:16px;}
 .app .fm-row .fm-field{margin-bottom:0;min-width:140px;flex:1;}
 /* 막지는 않고 «이렇게 됩니다»를 말해 주는 자리 */
-.app .fm-warn{background:var(--latebg);border:1px solid var(--late);border-radius:var(--r);
+.app .fm-warn{background:var(--latebg);border:1px solid var(--late);border-radius:var(--r-md);
   padding:9px 12px;font-size:12px;line-height:1.7;color:var(--ink);}
 .app .fm-empty{padding:34px 0;text-align:center;font-size:12.5px;color:var(--dim);line-height:1.8;}
 .app .fm-head{display:flex;justify-content:space-between;align-items:center;
@@ -13115,7 +13153,7 @@ function stuHomeHTML(c){
          이름보다 먼저 읽혀야 하는 정보가 아니라 «이름을 꾸며 주는» 라벨이다. */''}
     ${[c.me.grade, c.me.school].filter(Boolean).length
       ? `<span class="grade">${[c.me.grade, c.me.school].filter(Boolean).map(escHtml).join(' · ')}</span>` : ''}
-    <b>${escHtml(c.me.name || state.currentUser.name)}님</b>
+    <b>${escHtml(c.me.name || state.currentUser.name)} <em>학생</em></b>
     <span>${[subjectOfStudent(c.sid), classNameOf(c.classId)].filter(Boolean).map(escHtml).join(' · ')}</span>
   </div>
 
@@ -13315,9 +13353,14 @@ function stuQuizHTML(c){
 
   /* 갈래를 학생 말로. **«하향»이라고 쓰지 않는다** — 내려갔다는 말을 학생에게 할 필요가 없다.
      맞히면 다시 올라가는 발판일 뿐이고, 이름표가 기를 꺾을 이유가 없다. */
-  const faceBadge = f => f.kind==='orig' ? `<span class="badge no">원본</span>`
-    : f.kind==='U' ? `<span class="badge late">한 단계 위</span>`
-    : `<span class="badge score">변형</span>`;
+  /* 🔴 **상태색으로 «갈래»를 말하고 있었다** (2026-09-14 점검).
+     `badge no`(결석 빨강)로 「원본」을, `badge score`(성적 파랑)로 「변형」을 찍고 있었는데,
+     이 셋은 **상태가 아니라 «어떤 문제인가»**다. 상태색은 출석·결석에 쓰는 말이라
+     같은 화면에서 두 가지 뜻으로 읽힌다. ⇒ 갈래는 갈래의 옷을 입는다(`.q-kind`).
+     🔵 「한 단계 위」만 노란빛을 남긴다 — 그것은 «올라갔다»는 뜻이 실제로 있다. */
+  const faceBadge = f => f.kind==='orig' ? `<span class="q-kind">원본</span>`
+    : f.kind==='U' ? `<span class="q-kind up">한 단계 위</span>`
+    : `<span class="q-kind new">변형</span>`;
   const faceWord = f => f.kind==='orig' ? '· 그때 틀린 문제'
     : f.kind==='U' ? '· 한 단계 위의 문제'
     : f.kind==='D' ? '· 같은 유형을 다시'
@@ -13414,7 +13457,7 @@ function stuWrongHTML(c){
     if(bank.status!=='approved'){
       return `<div class="mc">
         <div class="row" style="gap:7px;">
-          <span class="badge score">${qLabelOf(hw)} 변형 문항</span>
+          <span class="q-kind new">${qLabelOf(hw)} 변형 문항</span>
           <span class="spacer"></span><span class="badge">검토 중</span>
         </div>
         <div style="font-size:12.5px;color:var(--sub);margin-top:10px;line-height:1.7;">
@@ -13430,7 +13473,7 @@ function stuWrongHTML(c){
         ${/* 🔵 **「엔딩크레딧 431번 변형 문항」** (2026-09-13 · 사용자 요청). 앞에 「원본」을 붙이면
              **지금 보고 있는 이것이 원본**인 것처럼 읽힌다 — 이 카드에 뜨는 것은 «변형»이다.
              ⇒ 원본을 «가리키는 말»을 앞에, 지금 무엇인지를 뒤에 둔다. */''}
-        <span class="badge score">${qLabelOf(hw)} 변형 문항</span>
+        <span class="q-kind new">${qLabelOf(hw)} 변형 문항</span>
         <span class="spacer"></span>
         ${reportBtnHTML(bank.id, 'legacy')}
         ${hw.done ? `<span class="badge ${correct?'ok':'no'}">${correct?'정답':'오답'}</span>`
@@ -13564,7 +13607,7 @@ function stuWrongHTML(c){
     return `<div class="msec">요청한 문제 <span class="mono">${요청.length}</span></div>
       ${요청.map(r=>`<div class="mc">
         <div class="row" style="gap:7px;">
-          <span class="badge score">${escHtml(bookReqLabelOf(r.code))}</span>
+          <span class="q-kind new">${escHtml(bookReqLabelOf(r.code))}</span>
           <span class="spacer"></span><span class="badge late">기다리는 중</span>
         </div>
         <div style="font-size:12.5px;color:var(--sub);margin-top:10px;line-height:1.7;">
@@ -15017,7 +15060,13 @@ function stuCalendarHTML(c){
       + ' onclick="state.stuCalDay=\'' + date + '\'; render()">'
       + '<span class="d" style="' + 요일색 + '">' + d + '</span>'
       + '<span class="dots">'
-      + 점들.map(g => '<i class="' + g + '" style="background:' + CAL_GROUPS[g].색 + '"></i>').join('')
+      /* 🔴 **이름을 `dot-` 로 싼다** (2026-09-14 · 사용자 신고 — 「과제제출하는 마크가 날짜를
+         다 덮을정도로 커진 버그」). 묶음 열쇠를 그대로 class 로 쓰니 `todo` 가
+         **ds.css 의 `.todo`(할 일 «카드»)** 와 부딪혀, 6.5px 짜리 점이 그 카드의
+         `padding:13px 15px` 와 테두리를 받아 **34px 짜리 덩어리**가 됐다.
+         ⚠ 이 저장소에서 **여덟 번째** 이름 충돌이다 — 새 class 는 index.html «과» ds.css 에서
+           한 번 찾아보는 것이 유일한 방어다. */
+      + 점들.map(g => '<i class="dot-' + g + '" style="background:' + CAL_GROUPS[g].색 + '"></i>').join('')
       + '</span></div>');
   }
 
@@ -15304,8 +15353,13 @@ function studentHTML(){
         const 가운데 = n[1] === STUDENT_NAV_FAB;
         /* ⚠ 가운데 칸만 아이콘을 `<i>` 로 한 겹 싼다 — 그 겹이 떠 있는 원이 된다.
            나머지 넷은 예전 그대로여야 한다(글자 크기·간격이 다 거기 맞춰져 있다). */
-        return `<a class="${n[0]===section?'on':''}${가운데?' fab':''}" onclick="goStudentTab('${n[1]}')">
-          ${가운데 ? `<i>${iconSvg(n[2],23)}</i>` : iconSvg(n[2],20)}<span>${n[0]}</span></a>`;
+        /* 🔵 **가운데 칸은 글자를 안 쓴다** (2026-09-14 · 사용자 요청 — 「홈글자 빼자」).
+           원이 이미 «집»을 말하고 있어서 글자가 덧말이 된다.
+           ⚠ 그래도 **이름은 남긴다**(`aria-label`) — 화면을 소리로 읽는 사람에게 이 칸은
+             글자가 사라지면 «이름 없는 단추»가 된다. */
+        return `<a class="${n[0]===section?'on':''}${가운데?' fab':''}" onclick="goStudentTab('${n[1]}')"
+          ${가운데 ? `aria-label="${n[0]}"` : ''}>
+          ${가운데 ? `<i>${iconSvg(n[2],23)}</i>` : iconSvg(n[2],20) + `<span>${n[0]}</span>`}</a>`;
       }).join('')}
     </div>
   </div>`;
