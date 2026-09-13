@@ -14849,10 +14849,10 @@ function assistantRosterHTML(cu){
     .filter(r=>!q || (r.s.name||'').toLowerCase().includes(q)
                   || (r.s.studentId||'').toLowerCase().includes(q));
 
-  const hwLeft   = rows.filter(r=>r.st.hwTotal && r.st.hwDone < r.st.hwTotal).length;
+  const hwLeft   = rows.filter(r=>r.st.hwLate > 0).length;   /* 마감 지난 것만 (K-16) */
   const wrongLeft= rows.filter(r=>r.st.wrongLeft > 0).length;
   const shown = rows.filter(r=>
-    flag==='hw'    ? (r.st.hwTotal && r.st.hwDone < r.st.hwTotal)
+    flag==='hw'    ? r.st.hwLate > 0
   : flag==='wrong' ? r.st.wrongLeft > 0
   : true);
 
@@ -15114,6 +15114,16 @@ function rosterStats(s){
   const myClasses = studentClassIds(s);
   const hws = DATA.assignments.filter(a=>!a.classId || myClasses.includes(a.classId));
   const hwDone = hws.filter(a=>hwIsDone(rec, a.id)).length;
+  /* 🔴 **«아직 마감 전인 과제»로 신호를 켜지 않는다** (2026-09-13 · K-16 · 사용자가 짚었다 —
+       「지금 현재 올라간 과제는 19일마감이어서 아직 19일 마감전까지는 … 과제누락으로 안잡혔으면」).
+     맞는 말이다. 오늘 낸 과제는 **오늘 안 했다고 나무랄 일이 아니다.**
+     그런데 신호는 `hwDone < hwTotal` 하나만 보고 있었다 — 과제를 내는 순간 반 전체가 «과제 누락»으로 켜졌다.
+     ⇒ **지난 것만 센다.** `hwLate` = 마감이 지났는데 아직 안 한 과제 수.
+   ⚠ **마감이 없는 과제는 «지났다»가 성립하지 않는다** — 격자가 붉은 「미제출」을 칠하는 잣대와 같다
+     (`hwGridHTML`: `a.dueDate && a.dueDate < todayStr()`). 여기서 다르게 세면 표와 신호가 어긋난다.
+   ⚠ **`hwDone`·`hwTotal` 은 그대로 둔다** — 명단의 「과제 3/5」는 «낸 과제 전부» 이야기다.
+     분모를 지난 것만으로 바꾸면 그 칸의 뜻이 조용히 달라진다. 신호만 `hwLate` 를 본다. */
+  const hwLate = hws.filter(a => a.dueDate && a.dueDate < todayStr() && !hwIsDone(rec, a.id)).length;
 
   /* ⚠ 없는 문항을 가리키는 숙제는 세지 않는다 — 학생이 손쓸 수 없는 것으로 「위험」을 만들면
      그 신호는 영원히 안 꺼진다. 실제로 고아 9건이 한 학생을 위험 1순위로 올려 두고 있었다.
@@ -15128,7 +15138,7 @@ function rosterStats(s){
 
   return {
     att8: att.slice(-8), attPct, scores, drop,
-    hwDone, hwTotal: hws.length, wrongLeft, vidPct,
+    hwDone, hwTotal: hws.length, hwLate, wrongLeft, vidPct,
     withdrawn: isWithdrawn(s, rec),
     /* 퇴원의 «언제·왜»를 말하려면 학생 자체가 필요하다 — `withdrawnAt`은 기록이 아니라
        학생 문서에 있다(W-1). 신호 열이 이걸 쓴다. */
@@ -15215,7 +15225,8 @@ function signalOf(st){
   else if(st.wrongLeft > 0)                       push('오답 미제출', false, `오답숙제 <b>${st.wrongLeft}건</b> 미제출`);
   if(st.vidPct !== null && st.vidPct < R.vidHeavy)      push('시청률 저조', true,  `강의 시청 <b>${st.vidPct}%</b>`);
   else if(st.vidPct !== null && st.vidPct < R.vidLight) push('시청률 저조', false, `강의 시청 <b>${st.vidPct}%</b>`);
-  if(st.hwTotal && st.hwDone < st.hwTotal) push('과제 누락',   false, `과제 <b>${st.hwDone}/${st.hwTotal}</b>`);
+  /* ⚠ 근거도 «지난 것»으로 적는다 — 「과제 3/5」라고 적으면 아직 마감 안 된 둘까지 탓하는 것처럼 읽힌다. */
+  if(st.hwLate) push('과제 누락',   false, `마감 지난 과제 <b>${st.hwLate}건</b> 미제출`);
 
   if(rules.length === 0) return null;
 
@@ -15231,7 +15242,7 @@ function signalOf(st){
   score += Math.max(0, st.drop) * 2;
   score += st.wrongLeft * 4;
   if(st.vidPct !== null) score += Math.max(0, 80 - st.vidPct) * 0.5;
-  if(st.hwTotal) score += (st.hwTotal - st.hwDone) * 3;
+  score += st.hwLate * 3;   /* ⚠ 마감 전 과제는 줄 세우기에도 안 넣는다 (K-16) */
 
   return { grade, rules, score: Math.min(99, Math.round(score)) };
 }
@@ -15294,7 +15305,7 @@ function rosterModel(){
   const flagged = {
     att:   s => stats[s.studentId].attPct!==null && stats[s.studentId].attPct<90,
     wrong: s => stats[s.studentId].wrongLeft>0,
-    hw:    s => stats[s.studentId].hwTotal>0 && stats[s.studentId].hwDone<stats[s.studentId].hwTotal
+    hw:    s => stats[s.studentId].hwLate > 0        /* 마감 지난 것만 (K-16) */
   };
   /* 🔴 **띄어쓰면 «둘 다 만족»이다** (2026-09-01 · C-14 · 사용자가 짚었다).
      사용자의 말 — 「**건대부고 고1 이 두가지 필터를 이용해서 보고싶을때도 있는데
@@ -15460,7 +15471,9 @@ function teacherRosterHTML(){
       ${/* 빨강은 «무거운 신호가 켜졌다»와 같은 뜻이어야 한다 — 그래서 설정의 임계값을 그대로 본다.
            노랑(cau)은 신호가 아니라 «가까워지고 있다»는 넓은 띠라 고정값이다. */''}
       <td class="r mono ${st.attPct===null ? 'muted' : (st.attPct<R.attPct ? 'warn' : (st.attPct<90 ? 'cau' : ''))}">${st.attPct===null ? '—' : st.attPct + '%'}</td>
-      <td class="r mono ${st.hwTotal && st.hwDone<st.hwTotal ? 'cau' : ''}">${st.hwTotal ? st.hwDone + '/' + st.hwTotal : '—'}</td>
+      ${/* ⚠ 숫자는 «전부» 이야기고, 붉은 것은 «지난 것»이 있을 때뿐이다 (K-16).
+           과제를 내자마자 반 전체가 붉어지면 그 색은 아무 말도 안 하게 된다. */''}
+      <td class="r mono ${st.hwLate ? 'cau' : ''}" title="${st.hwLate ? '마감 지난 과제 ' + st.hwLate + '건 미제출' : '마감 지난 미제출 없음'}">${st.hwTotal ? st.hwDone + '/' + st.hwTotal : '—'}</td>
       <td class="r mono ${st.wrongLeft>0 ? 'warn' : ''}">${st.wrongLeft || '—'}</td>
       <td class="r mono ${st.vidPct===null ? 'muted' : (st.vidPct<R.vidHeavy ? 'warn' : (st.vidPct<R.vidLight ? 'cau' : ''))}">${st.vidPct===null ? '—' : st.vidPct + '%'}</td>
       <td class="sub mono" style="font-size:11.5px;">${escHtml(phoneLabel(s.parentPhone)||'—')}</td>
@@ -26403,8 +26416,9 @@ function teacherSignalRulesHTML(){
         `<span class="sr-pre">무거움</span>${num('vidHeavy')}
          <span class="sr-pre">주의</span>${num('vidWarn')}
          <span class="sr-pre">경미</span>${num('vidLight','% 미만')}`) +
-      row('과제 누락', '하나라도 미완이면 경미한 신호입니다. 「몇 개부터」가 없으므로 고칠 값도 없습니다.',
-        '<span class="sr-fixed">미완 1건부터</span>') +
+      /* ⚠ 이 설명이 화면의 «실제 잣대»와 어긋나면 강사가 신호를 못 믿는다 (2026-09-13 · K-16). */
+      row('과제 누락', '<b>마감이 지났는데</b> 아직 안 낸 과제가 하나라도 있으면 경미한 신호입니다. 「몇 개부터」가 없으므로 고칠 값도 없습니다.<br>아직 마감 전인 과제는 세지 않습니다 — 마감일이 없는 과제도 「지났다」가 성립하지 않아 세지 않습니다.',
+        '<span class="sr-fixed">마감 지난 미제출 1건부터</span>') +
       /* ⚠ 이 한 줄만 «신호»가 아니다 — 그래서 이름에 「리포트」를 넣고 설명 첫머리에 밝힌다.
            그래도 여기 두는 까닭은 **임계값을 한 곳에서만 정하기 위해서**다. */
       row('리포트 색 기준', `<b>월간 리포트에서만</b> 쓰입니다 — <b>과제 제출 · 오답 정답률 · 데일리퀴즈</b>
