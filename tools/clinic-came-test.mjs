@@ -1,4 +1,4 @@
-// 수업 › 클리닉 · 연락처 · 확대 단추 빼기 (2026-09-13 · K-11)
+// 클리닉 › 온 학생 기록 · 연락처 · 확대 단추 빼기 (2026-09-13 · K-11 → K-12)
 //
 //   node tools/session-clinic-test.mjs
 //
@@ -6,7 +6,8 @@
 //   ① 「배율(돋보기모양)버튼의 숫자랑 배속 숫자랑 비슷해서 … 안필요할 것 같아」
 //   ② 「등록할떄 학부모 학생 전화번호 등록다했는데 번호등록이 안되었음」
 //      → 저장은 되고 있었다. **`contacts` 컬렉션을 아무도 읽지 않았다.**
-//   ③ 「수업탭에서 당일에 클리닉을 추가해서 전체 학생중 온 학생들을 간편하게 추가」
+//   ③ 「수업 없는날에도 클리닉을 추가해서 누가 온지 기록 … 반에 구분짓지 않고 특정요일에」
+//      ⚠ K-11에서 «수업 탭의 한 단계»로 지었다가 사용자가 바로잡았다 — 그러면 수업 없는 날은 못 연다.
 //
 // ⚠ 함수를 여기에 옮겨 적지 않는다 — index.html 에서 그대로 뜬다.
 // ⚠ 닻은 «함수 몸통»에 건다. 09-13에 네 번 주석을 물었다.
@@ -111,20 +112,33 @@ console.log(NL + '② 전화번호 — 저장은 됐는데 아무도 안 읽고 
     /const newStudent = \{studentId:sid, uid, name, grade, school, classId\}/.test(lift('addStudent')), true);
 }
 
-/* ═══ ③ 수업 › 클리닉 — 오늘 누가 왔나 ═══ */
-console.log(NL + '③ 수업 › 클리닉 — 온 학생을 눌러 담는다' + NL);
+/* ═══ ③ 클리닉 › 온 학생 기록 — 날짜만 있으면 된다 ═══ */
+console.log(NL + '③ 클리닉 › 온 학생 기록 — 수업도 반도 안 본다' + NL);
 {
-  봄('🔴 단계가 하나 늘었다 (맨 뒤)', /\['memo', '메모'\], \['clinic', '클리닉'\]/.test(html), true);
-  봄('셸이 그 단계를 그린다', /step === 'clinic'.*sessionClinicHTML\(classId, date\)/.test(html), true);
-  봄('메모에서 클리닉으로 가는 문', lift('sessionMemoHTML').includes("goSessionStep('clinic')"), true);
-  봄('한 명이라도 담기면 체크가 켜진다', /clinic: sessionClinicsOn\(date\)\.length > 0/.test(html), true);
+  /* 🔴 K-11에서 이것을 «수업 탭의 한 단계»로 지었다가 사용자가 바로잡았다 —
+     그러면 «반 + 그 반의 수업일»이 둘 다 있어야 열려서 **수업 없는 날은 아예 못 연다.**
+     그 자리가 정말로 걷혔는지부터 본다. */
+  봄('🔴 수업 단계에서 걷혔다 (수업 없는 날에도 열려야 한다)',
+    /\['clinic', '클리닉'\]/.test(html), false);
+  봄('🔴 수업 단계 함수도 안 남았다', /function sessionClinic/.test(html), false);
+  봄('메모 발판에 그 문이 안 남았다', lift('sessionMemoHTML').includes("goSessionStep('clinic')"), false);
+  봄('🔴 이제 클리닉 화면의 판이다', html.includes('function clinicCamePanelHTML()'), true);
+  /* ⚠ `clinicPanel==='came'` 만 보면 안 된다 — 그 글자는 단추의 «강조» 자리에도 있어서
+     단추를 통째로 지워도 남는다. **여는 동작과 이름**을 함께 본다. */
+  봄('머리말에 «온 학생 기록» 단추',
+    lift('teacherClinicHTML').includes("clinicOpenCame('')") && lift('teacherClinicHTML').includes('온 학생 기록</button>'), true);
+  /* 🔴 **단추가 있는 것과 판이 그려지는 것은 다른 말이다.** 그리는 자리를 통째로 지워도
+     단추만 보는 덫은 멀쩡히 통과했다(덫을 확인하다 드러났다). 부르는 자리를 직접 본다. */
+  봄('🔴 그 판을 실제로 그린다',
+    lift('teacherClinicHTML').includes("state.clinicPanel !== 'came' ? '' : clinicCamePanelHTML()"), true);
+  봄('🔴 주간 판의 날짜 칸마다 문이 있다 (특정 요일에 바로)',
+    /<button class="cn-add came" onclick="clinicOpenCame\('\$\{d\}'\)"/.test(lift('teacherClinicHTML')), true);
+  봄('날짜를 안 고르면 오늘이다', lift('clinicCameDate').includes('state.clinicCameDate || todayStr()'), true);
 
   /* 화면을 실제로 그려 본다 */
   const 학생들 = [
     { studentId: 'a1', uid: 'u1', name: '가나', classId: 'c1' },
     { studentId: 'a2', uid: 'u2', name: '다라', classId: 'c1' },
-    /* ⚠ 다른 반 학생의 이름을 «가장 앞»으로 둔다 — 이름 순으로만 세우면 맨 앞에 오므로,
-       이 반이 먼저 서는지를 이 한 명으로 가릴 수 있다(뒷이름으로 두면 두 잣대가 같은 답을 낸다). */
     { studentId: 'a3', uid: 'u3', name: '가가', classId: 'c2' },
     { studentId: 'a9', uid: 'u9', name: '퇴원', classId: 'c1', withdrawnAt: '2026-08-01' },
   ];
@@ -134,80 +148,93 @@ console.log(NL + '③ 수업 › 클리닉 — 온 학생을 눌러 담는다' +
     { id: 'cl3', studentId: 'a1', name: '가나', day: '2026-09-13', status: '취소', slotIds: [], walkIn: true },
     { id: 'cl4', studentId: 'a1', name: '가나', day: '2026-09-12', status: '승인', slotIds: [], walkIn: true },
   ], clinicSlots: [{ id: 's1', date: '2026-09-13', time: '16:00' }] };
-  const state = { sessionClinicQ: '' };
-  const C = new Function('DATA', 'state', 'classRoster', 'isWithdrawn', 'studentClassTitle',
-    'clinicWhenLabel', 'escHtml', 'iconSvg',
-    lift('sessionClinicsOn') + NL + lift('sessionClinicHTML') + NL + 'return { sessionClinicsOn, sessionClinicHTML };')(
-    DATA, state, cid => 학생들.filter(s => s.classId === cid && !s.withdrawnAt), s => !!s.withdrawnAt,
-    s => s.classId === 'c1' ? '고1GA1' : '고2GB1', c => (c.slotIds || []).length ? '16:00' : '', esc, () => '');
+  const state = { clinicCameQ: '', clinicCameDate: '2026-09-13', clinicPanel: 'came' };
+  const 곁 = ['DATA', 'state', 'isWithdrawn', 'studentClassTitle', 'clinicWhenLabel', 'escHtml', 'iconSvg',
+    'todayStr', 'WEEKDAY_LABEL'];
+  const 값 = [DATA, state, s => !!s.withdrawnAt, s => s.classId === 'c1' ? '고1GA1' : '고2GB1',
+    c => (c.slotIds || []).length ? '16:00' : '', esc, () => '', () => '2026-09-20',
+    ['일', '월', '화', '수', '목', '금', '토']];
+  const C = new Function(...곁,
+    lift('clinicCameDate') + NL + lift('clinicCameOn') + NL + lift('clinicCamePanelHTML') + NL +
+    'return { clinicCameDate, clinicCameOn, clinicCamePanelHTML };')(...값);
 
   봄('🔴 취소한 것은 안 센다 · 다른 날 것도 안 센다',
-    C.sessionClinicsOn('2026-09-13').map(c => c.id), ['cl1', 'cl2']);
-  const 그림 = C.sessionClinicHTML('c1', '2026-09-13').body;
-  봄('머리에 오늘 온 사람 수', 그림.includes('클리닉에 온 학생 <span class="mono">2</span>'), true);
+    C.clinicCameOn('2026-09-13').map(c => c.id), ['cl1', 'cl2']);
+  const 그림 = C.clinicCamePanelHTML();
+  봄('고른 날짜가 칸에 박힌다', 그림.includes('id="cn-came-date" type="date" value="2026-09-13"'), true);
+  봄('요일도 적는다 (2026-09-13 은 일요일)', 그림.includes('>일요일<s>·</s>'), true);
+  봄('🔴 수업이 없어도 된다고 말한다', 그림.includes('수업이 없는 날에도 됩니다'), true);
+  봄('머리에 온 사람 수', 그림.includes('클리닉에 온 학생 <span class="mono">2</span>'), true);
   봄('🔴 여기서 담은 것만 «빼기»가 선다', (그림.match(/>빼기</g) || []).length, 1);
   봄('🔴 시간대를 잡아 둔 것은 «시간대 신청»으로 서고 못 뺀다',
     /가가[\s\S]*?>빼기</.test(그림) && /다라[\s\S]*?시간대 신청/.test(그림), true);
-  /* ⚠ 칩의 이름 앞에 줄바꿈·들여쓰기가 있다 — «>이름<» 으로 찾으면 없는데도 -1 끼리 비교해
-     엉뚱하게 통과한다(실제로 한 번 그랬다). 칩마다 달린 `data-nm` 으로 본다. */
+  /* ⚠ 칩의 이름 앞에 줄바꿈이 있다 — «>이름<» 으로 찾으면 없는데도 -1 끼리 비교해 통과한다. */
   const 칩 = [...그림.matchAll(/data-nm="([^"]*)"/g)].map(m => m[1]);
-  봄('🔴 고르개는 «전체 학생»이다 (다른 반도 든다)', 칩, ['가나 a1', '다라 a2', '가가 a3']);
+  봄('🔴 반을 안 가르고 이름 순 하나로 세운다 (사용자가 그렇게 정했다)',
+    칩, ['가가 a3', '가나 a1', '다라 a2']);
   봄('🔴 퇴원생은 안 든다', 칩.some(x => x.startsWith('퇴원')), false);
-  봄('이 반 학생이 먼저 선다', 칩.indexOf('가가 a3'), 2);
   봄('담긴 학생은 켜져 보인다 (가가 · 다라)', (그림.match(/class="cln-p on"/g) || []).length, 2);
-  봄('이 반인지 아닌지 곁말이 붙는다', 그림.includes('<i>이 반</i>') && 그림.includes('<i>고2GB1</i>'), true);
+  봄('어느 반인지 곁말이 붙는다', 그림.includes('<i>고1GA1</i>') && 그림.includes('<i>고2GB1</i>'), true);
 
-  /* 찾기 — state 에 담긴 글자로 걸러 그린다 */
-  state.sessionClinicQ = '마';
-  const 걸러낸 = C.sessionClinicHTML('c1', '2026-09-13').body;
-  봄('찾으면 그 학생만', [/>가나</.test(걸러낸), />가가</.test(걸러낸)], [false, true]);
-  state.sessionClinicQ = 'a2';
-  봄('아이디로도 찾는다', />다라</.test(C.sessionClinicHTML('c1', '2026-09-13').body), true);
-  state.sessionClinicQ = '없는이름';
-  봄('없으면 없다고 말한다', C.sessionClinicHTML('c1', '2026-09-13').body.includes('찾는 학생이 없습니다'), true);
-  state.sessionClinicQ = '';
+  /* 날짜를 옮기면 그날 것만 */
+  state.clinicCameDate = '2026-09-12';
+  const 어제 = C.clinicCamePanelHTML();
+  봄('🔴 날짜를 옮기면 그날 것만 선다', 어제.includes('클리닉에 온 학생 <span class="mono">1</span>'), true);
+  봄('그날 칸 값도 따라간다', 어제.includes('value="2026-09-12"'), true);
+  state.clinicCameDate = '2026-09-13';
+
+  /* 찾기 */
+  state.clinicCameQ = '가나';
+  const 걸러낸 = C.clinicCamePanelHTML();
+  봄('찾으면 그 학생만', [/data-nm="가나 a1"/.test(걸러낸), /data-nm="다라 a2"/.test(걸러낸)], [true, false]);
+  state.clinicCameQ = 'a2';
+  봄('아이디로도 찾는다', /data-nm="다라 a2"/.test(C.clinicCamePanelHTML()), true);
+  state.clinicCameQ = '없는이름';
+  봄('없으면 없다고 말한다', C.clinicCamePanelHTML().includes('찾는 학생이 없습니다'), true);
+  state.clinicCameQ = '';
   봄('🔴 글자마다 render() 를 안 부른다 — 한글 조합이 끊긴다',
-    /(^|[^a-zA-Z])render\(\)/.test(lift('sessionClinicFilter')), false);
-  봄('대신 그 자리에서 숨긴다', lift('sessionClinicFilter').includes('el.hidden'), true);
+    /(^|[^a-zA-Z])render\(\)/.test(lift('clinicCameFilter')), false);
+  봄('대신 그 자리에서 숨긴다', lift('clinicCameFilter').includes('el.hidden'), true);
 
   /* 담기·빼기를 실제로 돌린다 */
   const 쓴것 = [], 지운것 = [], 장부 = [], 말 = [];
   const T = new Function('DATA', 'state', 'dbSetDoc', 'dbDeleteDoc', 'logAudit', 'showToast', 'render',
     'studentKeyOfSid', 'todayStr',
-    lift('sessionClinicsOn') + NL + lift('sessionClinicToggle') + NL + 'return { sessionClinicToggle };')(
+    lift('clinicCameOn') + NL + lift('clinicCameToggle') + NL + 'return { clinicCameToggle };')(
     DATA, state, async (c, id, v) => { 쓴것.push(v); return true; }, async (c, id) => { 지운것.push(id); },
     async (a, b, c, d) => 장부.push(a + '|' + d), m => 말.push(m), () => {},
-    sid => (학생들.find(s => s.studentId === sid) || {}).uid || sid, () => '2026-09-13');
+    sid => (학생들.find(s => s.studentId === sid) || {}).uid || sid, () => '2026-09-20');
 
-  await T.sessionClinicToggle('a1', '2026-09-13');
+  await T.clinicCameToggle('a1', '2026-09-13');
   봄('🔴 담으면 클리닉 문서가 하나 생긴다',
     [쓴것.length, 쓴것[0].studentId, 쓴것[0].day, 쓴것[0].status, 쓴것[0].walkIn, 쓴것[0].slotIds],
     [1, 'a1', '2026-09-13', '승인', true, []]);
   봄('🔴 uid 는 «그 학생» 것이다 (강사 것을 박으면 학생이 제 클리닉을 못 본다)', 쓴것[0].uid, 'u1');
-  봄('메모리에도 든다', C.sessionClinicsOn('2026-09-13').map(c => c.studentId).sort(), ['a1', 'a2', 'a3']);
+  봄('🔴 «신청한 날»은 오늘이고 «클리닉 날»은 고른 날이다 (지난 날도 적을 수 있다)',
+    [쓴것[0].requestedAt, 쓴것[0].day], ['2026-09-20', '2026-09-13']);
+  봄('메모리에도 든다', C.clinicCameOn('2026-09-13').map(c => c.studentId).sort(), ['a1', 'a2', 'a3']);
   봄('장부에 남는다', 장부[0], '클리닉 참여 담기|2026-09-13');
 
-  await T.sessionClinicToggle('a1', '2026-09-13');
-  봄('🔴 다시 누르면 빠진다', [지운것.length, C.sessionClinicsOn('2026-09-13').map(c => c.studentId).sort()],
+  await T.clinicCameToggle('a1', '2026-09-13');
+  봄('🔴 다시 누르면 빠진다', [지운것.length, C.clinicCameOn('2026-09-13').map(c => c.studentId).sort()],
     [1, ['a2', 'a3']]);
 
-  await T.sessionClinicToggle('a2', '2026-09-13');
+  await T.clinicCameToggle('a2', '2026-09-13');
   봄('🔴 시간대를 잡아 둔 신청은 여기서 안 지운다', [지운것.length, 말[말.length - 1]],
-    [1, '시간대를 잡아 둔 신청입니다 — 「클리닉」 메뉴에서 다루세요.']);
+    [1, '시간대를 잡아 둔 신청입니다 — 위 주간 판에서 다루세요.']);
   봄('명단에 없는 학생은 아무 일도 안 한다', await (async () => {
     const 앞 = [쓴것.length, 지운것.length];
-    await T.sessionClinicToggle('없는학생', '2026-09-13');
+    await T.clinicCameToggle('없는학생', '2026-09-13');
     return [쓴것.length, 지운것.length].join() === 앞.join();
   })(), true);
-  /* 🔴 저장이 엎어지면 메모리에 안 담는다 */
   봄('🔴 저장이 막히면 화면에도 안 담긴다', await (async () => {
     const U = new Function('DATA', 'state', 'dbSetDoc', 'dbDeleteDoc', 'logAudit', 'showToast', 'render',
       'studentKeyOfSid', 'todayStr',
-      lift('sessionClinicsOn') + NL + lift('sessionClinicToggle') + NL + 'return { sessionClinicToggle };')(
+      lift('clinicCameOn') + NL + lift('clinicCameToggle') + NL + 'return { clinicCameToggle };')(
       DATA, state, async () => null, async () => {}, async () => {}, m => 말.push(m), () => {},
-      sid => sid, () => '2026-09-13');
-    await U.sessionClinicToggle('a1', '2026-09-13');
-    return C.sessionClinicsOn('2026-09-13').map(c => c.studentId).sort();
+      sid => sid, () => '2026-09-20');
+    await U.clinicCameToggle('a1', '2026-09-13');
+    return C.clinicCameOn('2026-09-13').map(c => c.studentId).sort();
   })(), ['a2', 'a3']);
 }
 
