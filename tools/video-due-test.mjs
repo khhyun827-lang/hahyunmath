@@ -53,8 +53,17 @@ const 곁 = {
   logAudit: async () => {}, showToast: () => {}, render: () => {},
   저장실패: false,
 };
+/* 🔵 **영상 «얼마나 봤나»의 잣대도 함께 떠 온다** (2026-09-13 · K-7) —
+   `stuTodo` 가 `videoDone` 을 부르게 됐다. 여기에 옮겨 적으면 잣대가 두 벌이 되므로 index.html 에서 그대로 뜬다.
+   ⚠ 위 `videoProgress` 본보기에는 `duration` 이 없다 — **일부러다.** 길이를 모르는 옛 기록이
+     저장된 `percent`·`completed` 로 물러서는 길까지 여기서 함께 밟힌다(새 꼴은 video-watch-test 가 잰다). */
+const 잣대 = ['VIDEO_DONE_RATIO', 'VIDEO_GOAL_PCT'].map(n => {
+  const m = html.match(new RegExp('^const ' + n + ' = .*$', 'm'));
+  if (!m) throw new Error(n + ' 를 못 찾았습니다');
+  return m[0];
+}).join(NL) + NL + ['videoWatchRatio', 'videoPct', 'videoDone', 'videoSeen', 'videoScore'].map(lift).join(NL);
 const api = new Function(...Object.keys(곁),
-  lift('stuDday') + NL + lift('stuTodo') + NL + lift('setVideoDue') + NL + 'return { stuDday, stuTodo, setVideoDue };'
+  잣대 + NL + lift('stuDday') + NL + lift('stuTodo') + NL + lift('setVideoDue') + NL + 'return { stuDday, stuTodo, setVideoDue };'
 )(...Object.values(곁));
 
 /* ① 학생 홈 할 일 */
@@ -154,7 +163,8 @@ const 곁3 = {
           ] },
   escHtml: x => String(x == null ? '' : x), iconSvg: () => '', todayStr: () => TODAY,
 };
-const api3 = new Function(...Object.keys(곁3), lift('chubVideoHTML') + NL + 'return { chubVideoHTML };')(...Object.values(곁3));
+const api3 = new Function(...Object.keys(곁3),
+  잣대 + NL + lift('videoGoalMarkHTML') + NL + lift('chubVideoHTML') + NL + 'return { chubVideoHTML };')(...Object.values(곁3));
 const out = api3.chubVideoHTML('c1');
 봄('그려진다 — 반 전체 구역과 개인 배정 2 (남의 반 것은 안 든다)', [out.includes('>반 전체</div>'), out.includes('개인 배정 <span class="mono">2</span>'), out.includes('남의 반')], [true, true, false]);
 봄('결석 보충(classId 빈 것)이 «완주»로', out.includes('가나 <span style="font-weight:400;color:var(--sub);">· 09-01 결석 보충 영상') && out.includes('>완주</b>'), true);
