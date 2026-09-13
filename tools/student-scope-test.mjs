@@ -50,9 +50,12 @@ console.log('\n학생이 제 것만 읽는가\n');
   const w = { 문서: [], 컬렉션: [], 내것: [], 낱건: [] };
   const DATA = {};
   const state = {};
+  /* ⚠ 2026-09-13 부터 읽어 온 명단이 `normStudentGrades` 를 한 번 지난다(학년을 한 벌로) —
+     옮겨 적지 않고 그것도 같이 떠 온다. */
   const fn = new Function('DATA', 'state', 'dbReadClear', 'dbGetDoc', 'dbGetCollection',
     'dbGetCollectionByUid', 'dbGet', 'currentSeason',
-    떠내기('loadStudentData') + '; return loadStudentData;')(
+    떠내기('gradeLabel', 'function ') + 떠내기('normStudentGrades', 'function ')
+    + 떠내기('loadStudentData') + '; return loadStudentData;')(
     DATA, state,
     () => { w.지웠나 = true; },
     async (c, id, fb) => { w.문서.push(c + '/' + id); return { studentId: 's1', uid: id, name: '나' }; },

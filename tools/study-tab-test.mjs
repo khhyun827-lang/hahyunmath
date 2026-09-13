@@ -111,12 +111,30 @@ console.log(NL + '③ 「문제가 이상한가요?」 — 오답숙제에서는
     오답.includes('reportBtnHTML(bank.id'), true);
   봄('🔴 닫히면 답이 돌아오는 줄도 그대로다', 오답.includes('reportAckHTML(bank.id)'), true);
   봄('신고 폼도 그대로다', 오답.includes('reportFormHTML(bank.id'), true);
-  봄('🔵 데일리퀴즈 카드에는 안내 줄을 그대로 뒀다', 퀴즈.includes('reportHintHTML('), true);
-  /* ⚠ 안내 줄 «함수»는 살아 있어야 한다 — 데일리퀴즈가 쓴다 */
-  봄('⚠ 안내 줄 함수 자체는 지우지 않았다', html.includes('function reportHintHTML('), true);
+  /* 🔴 데일리퀴즈도 같이 걷었다 (2026-09-13 · 사용자 — 「데일리퀴즈도 걷어내주고」).
+     ⇒ 부르는 데가 없어졌으므로 **함수까지 뗐다.** 남겨 두면 «어디선가 쓰나» 하고 읽게 된다. */
+  봄('🔴 데일리퀴즈 카드에도 안내 줄이 없다', 퀴즈.includes('reportHintHTML('), false);
+  봄('🔴 부르는 데가 없으니 함수도 뗐다', html.includes('function reportHintHTML('), false);
+  봄('🔴 데일리퀴즈에도 오류 신고 단추는 그대로다', 퀴즈.includes('reportBtnHTML(face.bankId'), true);
   /* 🔴 왜 «모든» 문제에 떴는지 — 신고가 저장이 안 되고 있었다(K-19). 그 까닭을 적어 두었다. */
   봄('🔴 왜 모든 문제에 떴는지 적어 두었다',
     lift('stuWrongHTML').includes('신고가 여태 저장이 안 되고 있었다'), true);
+}
+
+/* ═══ ④ 오답숙제 카드의 이름표 ═══ */
+console.log(NL + '④ 「엔딩크레딧 431번 변형 문항」 — 지금 보는 것이 무엇인지' + NL);
+{
+  const 오답 = lift('stuWrongHTML');
+  const L = new Function(lift('qLabelOf') + NL + 'return qLabelOf;')();
+  봄('교재에서 온 것은 「엔딩크레딧 431번」',
+    L({ qlabel: '엔딩크레딧 431', qtype: '0' }), '엔딩크레딧 431번');
+  봄('형이 나뉜 시험지는 형까지', L({ qlabel: '15', qtype: 'B' }), 'TYPE B 15번');
+  /* 🔴 **「원본 …」이 앞에 붙으면 지금 보는 것이 원본인 줄 읽힌다** — 카드에 뜨는 것은 변형이다. */
+  봄('🔴 이름표가 「… 변형 문항」으로 끝난다',
+    (오답.match(/\$\{qLabelOf\(hw\)\} 변형 문항/g) || []).length, 2);
+  봄('🔴 앞에 「원본」을 안 붙인다', 오답.includes('원본 ${qLabelOf(hw)}'), false);
+  봄('검토 중인 카드에도 같은 이름표다',
+    오답.includes('<span class="badge score">${qLabelOf(hw)} 변형 문항</span>\n          <span class="spacer"></span><span class="badge">검토 중</span>'), true);
 }
 
 console.log(NL + (fail ? '🔴 ' + fail + '개 실패 · ' : '✓ 전부 통과 · ') + pass + '개' + NL);

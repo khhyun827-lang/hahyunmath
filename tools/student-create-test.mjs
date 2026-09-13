@@ -50,7 +50,8 @@ function 세상({ 칸 = {}, 계정흠 = null, 저장흠 = false, 이미있나 = 
   const DATA = { students: 이미있나 ? [{ studentId: 'ab12', uid: 'old' }] : [] };
   /* ⚠ **번호 다듬는 함수도 함께 떠 온다** (2026-09-13 · K-15) — `addStudent` 가 `phoneLabel` 을 부른다.
      여기에 옮겨 적으면 검사와 화면이 갈린다(이 저장소가 반복해서 겪은 자리다). */
-  const 번호 = ['phoneDigits', 'phoneLabel'].map(n => {
+  /* ⚠ 2026-09-13 에 `addStudent` 가 `gradeLabel` 도 부르게 됐다(학년을 한 벌로) — 같이 떠 온다. */
+  const 번호 = ['phoneDigits', 'phoneLabel', 'gradeLabel'].map(n => {
     const at = html.indexOf('function ' + n + '(');
     if (at < 0) throw new Error(n + ' 를 못 찾았습니다');
     let 깊이 = 0;

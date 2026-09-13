@@ -2539,15 +2539,22 @@
 .app.sap .scal-c.on{box-shadow:inset 0 0 0 2px var(--accent);}
 .app.sap .scal-c.today.on{box-shadow:inset 0 0 0 2px var(--accent),inset 0 0 0 4px var(--paper);}
 
-.app.sap .scal-c .dots{display:flex;gap:2.5px;height:5px;align-items:center;}
-.app.sap .scal-c .dots i{width:4.5px;height:4.5px;border-radius:50%;display:block;}
+/* 🔵 **점이 셋뿐이라 크게 찍을 수 있다** (2026-09-13) — 4.5px 짜리 일곱 색은 폰에서 못 가렸다.
+   ⚠ 「내 일정」은 회색이라 그대로 두면 묻힌다 — 그것만 속을 비워 «테두리»로 말한다.
+     색이 아니라 **꼴**로도 갈리므로 색을 못 가리는 사람도 읽는다. */
+.app.sap .scal-c .dots{display:flex;gap:3.5px;height:7px;align-items:center;}
+.app.sap .scal-c .dots i{width:6.5px;height:6.5px;border-radius:50%;display:block;}
+.app.sap .scal-c .dots i.mine{background:transparent !important;box-shadow:inset 0 0 0 1.5px var(--dim);}
 /* ⚠ 오늘 칸은 바탕이 진하다 — 점이 묻히지 않게 테를 두른다. */
 .app.sap .scal-c.today .dots i{box-shadow:0 0 0 1px rgba(255,255,255,.55);}
 
 .app.sap .scal-legend{display:flex;flex-wrap:wrap;gap:9px 13px;margin-top:14px;
   padding-top:12px;border-top:1px solid var(--line);}
 .app.sap .scal-legend span{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--sub);}
-.app.sap .scal-legend i{width:6px;height:6px;border-radius:50%;display:block;}
+.app.sap .scal-legend i{width:7px;height:7px;border-radius:50%;display:block;flex-shrink:0;}
+/* 묶음 안에 무엇이 드는지 옅게 덧붙인다 — 라벨은 셋이지만 «무엇이 묶였나»는 알려 줘야 한다. */
+.app.sap .scal-legend s{text-decoration:none;color:var(--dim);font-size:10.5px;margin-left:3px;}
+.app.sap .scal-legend span.band i{border-radius:2px;background:var(--nobg);box-shadow:inset 0 0 0 1px var(--no);}
 
 .app.sap .scal-daytitle{display:flex;align-items:center;gap:8px;}
 .app.sap .scal-daytitle b{font-size:15px;}
@@ -6025,6 +6032,7 @@ async function loadStudentData(uid){
       dbGetCollectionByUid('clinics', uid), dbGetCollectionByUid('qnas', uid),
     ]);
   DATA.students = me ? [me] : [];
+  normStudentGrades();     /* 「1」과 「고1」을 한 벌로 — 시험 일정의 열쇠다 */
   DATA.classes = classes; DATA.notices = notices; DATA.videos = videos;
   DATA.exams = exams; DATA.problemBank = problemBank; DATA.assignments = assignments;
   DATA.clinicSlots = clinicSlots; DATA.clinics = clinics; DATA.qnas = qnas;
@@ -6091,6 +6099,7 @@ async function loadAllData(){
          화면이 그 사실을 말한다 — 아무 말 없이 「0건」이라 적으면 그게 거짓말이다. */
     Promise.resolve([])
   ]);
+  normStudentGrades();     /* 「1」과 「고1」을 한 벌로 — 시험 일정의 열쇠다 */
   /* 시즌·범위는 데일리퀴즈가 첫 렌더에서 바로 본다. 늦게 오면 «범위 밖»으로 잘못 걸러
      한 번 그렸다가 바뀌는 깜빡임이 생기므로 여기서 같이 받는다. */
   /* ⚠ 등급컷도 여기서 같이 받는다 — 시험 범위 화면이 첫 렌더에서 바로 본다.
@@ -6225,6 +6234,34 @@ function phoneLabel(s){
   if(d.length === 11) return d.slice(0,3) + '-' + d.slice(3,7) + '-' + d.slice(7);   // 010-xxxx-xxxx · 지역번호 4자리
   if(d.length === 10) return d.slice(0,3) + '-' + d.slice(3,6) + '-' + d.slice(6);   // 011·016 등 옛 휴대폰 · 지역번호 3자리
   return raw;   /* 모르는 꼴은 그대로 — 지어내지 않는다 */
+}
+/* =============== 학년은 «한 벌»이다 (2026-09-13 · 사용자가 짚었다) ===============
+   「**일괄등록한 사람들은 학년에 1이라고 표시되는데 개별적으로 만들거나, 수정하면 「고1」이라고
+     표기되면서 서로 다른학년으로 인식되는 것 같아. 시험일정에도 서로 두번쓰여져있어.**」
+   🔴 **그대로였다.** 일괄 등록은 엑셀의 「학년」 칸을 **글자 그대로** 담았고(명단에는 「1」),
+     개별 등록·고치기는 고르개라 늘 「고1」이었다. 학년은 **시험 일정의 열쇠**이기도 해서
+     (`examDatesOf(school, grade)`) 한 학교가 「1」과 「고1」 두 줄로 갈라져 있었다 —
+     날짜를 한쪽에 적으면 다른 쪽 학생에게는 안 간다. **조용히 갈리는 열쇠가 제일 나쁘다.**
+   ⇒ **보는 꼴을 여기서 하나로 못 박는다.** 숫자만 적힌 것은 「고n」으로 읽는다(고등부 학원이다).
+   ⚠ **아는 꼴이 아니면 그대로 둔다** — 짐작해서 바꾸면 「중3(예비고1)」 같은 것이 뭉개진다.
+     `phoneLabel` 이 「없음」을 안 지우는 것과 같은 판단이다.
+   🔵 **읽어 올 때 한 번 거친다**(`normStudentGrades`) — 그래서 **DB 를 안 고쳐도** 화면과
+     시험 일정이 바로 합쳐진다. 그 학생을 한 번이라도 저장하면 DB 도 저절로 낫는다. */
+function gradeLabel(x){
+  const s = String(x == null ? '' : x).trim();
+  if(!s) return '';
+  let m = s.match(/^([1-3])\s*(학년)?$/);                 // 1 · 2학년
+  if(m) return '고' + m[1];
+  m = s.match(/^(고|중)\s*([1-3])\s*(학년)?$/);            // 고 1 · 중3학년
+  if(m) return m[1] + m[2];
+  m = s.match(/^(고등학교|중학교)\s*([1-3])\s*(학년)?$/);   // 고등학교 1학년
+  if(m) return m[1][0] + m[2];
+  return s;                 /* 모르는 꼴은 그대로 — 지어내지 않는다 */
+}
+/* 🔴 **자리마다 고치면 다음에 네 번째 자리가 생긴다** — 명단이 «들어오는 문»에서 한 번 고른다.
+   ⚠ 저장은 여기서 안 한다. 화면이 맞으면 된 것이고, DB 는 그 학생을 저장할 때 따라온다. */
+function normStudentGrades(){
+  (DATA.students || []).forEach(s => { if(s) s.grade = gradeLabel(s.grade); });
 }
 function studentKeyOfSid(sid){
   const s = (DATA.students || []).find(x => x.studentId === sid);
@@ -7141,7 +7178,7 @@ async function addStudent(){
   const sid = document.getElementById('new-sid').value.trim();
   const name = document.getElementById('new-sname').value.trim();
   const pw = document.getElementById('new-spw').value.trim();
-  const grade = document.getElementById('new-sgrade').value;
+  const grade = gradeLabel(document.getElementById('new-sgrade').value);
   const school = document.getElementById('new-sschool').value.trim();
   const parentPhone = phoneLabel(document.getElementById('new-sparentphone').value);   // K-15 — «-» 꼴로
   const phone = phoneLabel(document.getElementById('new-sphone').value);
@@ -7383,7 +7420,7 @@ async function updateStudentInfo(sid){
   if(!s) return;
   const name = document.getElementById('info-sname').value.trim();
   const pw = document.getElementById('info-spw').value.trim();
-  const grade = document.getElementById('info-sgrade').value;
+  const grade = gradeLabel(document.getElementById('info-sgrade').value);
   const school = document.getElementById('info-sschool').value.trim();
   /* ⚠ 저장할 때도 «-» 꼴로 적어 둔다 (2026-09-13 · K-15) — 화면이 읽을 때 또 세지 않아도 되고,
      엑셀로 내보낸 것도 사람이 보는 꼴 그대로 나간다. 모르는 꼴은 phoneLabel 이 그대로 돌려준다. */
@@ -7881,22 +7918,13 @@ function reportBtnHTML(bankId, face){
     aria-label="이 문제의 오류 신고">${open ? '닫기' : iconSvg('alert', 13) + ' 오류 신고'}</button>`;
 }
 
-/* 🔵 **한 번도 안 눌러 본 학생에게만** 한 줄로 알려 준다 (2026-09-05).
-   단추를 키워도 «저게 나를 위한 것»인 줄 모르면 안 누른다. 그런데 늘 띄우면 잔소리가 된다.
-   → **한 번이라도 신고해 본 학생에게는 안 보인다.** 스스로 사라지는 안내가 제일 낫다.
-   ⚠ 이것도 눌리는 자리다 — 「오른쪽 위를 누르세요」라고 글로만 가리키면 한 번 더 헤맨다. */
-function reportHintHTML(bankId, face){
-  const sid = state.currentUser && state.currentUser.studentId;
-  if(!sid) return '';
-  if(state.reportOpen === bankId + '|' + face) return '';
-  const b = DATA.problemBank.find(x=>x.id===bankId);
-  if(!b || myReport(b, face, sid)) return '';
-  const everReported = ((DATA.records[sid] || {}).reports || []).length > 0
-    || DATA.problemBank.some(x => (x.reports||[]).some(r => r.sid === sid));
-  if(everReported) return '';
-  return `<button class="flaw-hint" onclick="toggleReport('${escHtml(bankId + '|' + face)}')">
-    ${iconSvg('alert', 14)}<span><b>문제가 이상한가요?</b>알려주면 선생님이 확인해서 고쳐 줍니다</span></button>`;
-}
+/* 🔴 **`reportHintHTML` 은 뗐다** (2026-09-13 · 사용자 요청 — 오답숙제 · 데일리퀴즈 둘 다).
+   「우측상단에 오류 신고가 있으니까 안떠도 될 것 같아」 — 맞는 말이다. 한 카드에서 같은 일을
+   두 번 권하고 있었다.
+   🔴 **왜 «모든» 문제에 떴는지가 더 중요하다.** 그 줄은 «한 번도 안 눌러 본 학생»에게만 뜨게
+     해 둔 것이었는데(2026-09-05), **신고가 여태 저장이 안 되고 있었다(K-19)** — 그래서 아무도
+     «신고해 본 학생»이 되지 못했고 사라져야 할 안내가 영영 안 사라졌다.
+     ⇒ **스스로 사라지는 안내는 «사라지는 조건»이 실제로 도는지까지 봐야 한다.** */
 
 function toggleReport(key){
   state.reportOpen = state.reportOpen === key ? '' : key;
@@ -13135,7 +13163,9 @@ function stuQuizHTML(c){
     </div>
     <div class="sap-q" style="margin-top:11px;">${problemHTML(face.content)}</div>
     ${imgHTML}
-    ${reportHintHTML(face.bankId, face.face)}
+    ${/* 🔴 **안내 줄을 여기서도 걷었다** (2026-09-13 · 사용자 — 「데일리퀴즈도 걷어내주고」).
+         오답숙제와 같은 까닭이다 — 오른쪽 위에 이미 「오류 신고」가 있다(`reportBtnHTML`).
+         ⇒ 부르는 데가 없어져 `reportHintHTML` 자체도 뗐다. 되살릴 일이 생기면 git 에 있다. */''}
     ${reportFormHTML(face.bankId, face.face)}
     ${reportAckHTML(face.bankId)}
     <div style="margin-top:15px;">
@@ -13202,7 +13232,7 @@ function stuWrongHTML(c){
     if(bank.status!=='approved'){
       return `<div class="mc">
         <div class="row" style="gap:7px;">
-          <span class="badge score">원본 ${qLabelOf(hw)}</span>
+          <span class="badge score">${qLabelOf(hw)} 변형 문항</span>
           <span class="spacer"></span><span class="badge">검토 중</span>
         </div>
         <div style="font-size:12.5px;color:var(--sub);margin-top:10px;line-height:1.7;">
@@ -13215,7 +13245,10 @@ function stuWrongHTML(c){
     const correct = hw.done && hw.studentAnswer.trim()===bank.variantAnswer.trim();
     return `<div class="mc ${hw.done ? '' : 'go'}" style="${hw.done?'opacity:.75;':''}">
       <div class="row" style="gap:7px;">
-        <span class="badge score">원본 ${qLabelOf(hw)}</span>
+        ${/* 🔵 **「엔딩크레딧 431번 변형 문항」** (2026-09-13 · 사용자 요청). 앞에 「원본」을 붙이면
+             **지금 보고 있는 이것이 원본**인 것처럼 읽힌다 — 이 카드에 뜨는 것은 «변형»이다.
+             ⇒ 원본을 «가리키는 말»을 앞에, 지금 무엇인지를 뒤에 둔다. */''}
+        <span class="badge score">${qLabelOf(hw)} 변형 문항</span>
         <span class="spacer"></span>
         ${reportBtnHTML(bank.id, 'legacy')}
         ${hw.done ? `<span class="badge ${correct?'ok':'no'}">${correct?'정답':'오답'}</span>`
@@ -14574,6 +14607,35 @@ const CAL_KINDS = {
   mine:   {이름: '내 일정', 색: 'var(--dim)',   바탕: 'var(--sunk)'},
 };
 
+/* =============== 달력의 «점»은 갈래가 아니라 묶음이다 (2026-09-13 · 사용자가 짚었다) ===============
+   「**점이 너무 많기도 하고 색깔구분도 잘안가. 밑에 색 표시해주는 라벨도 너무많기도하고**」
+   🔴 **맞는 말이다.** 갈래가 일곱이라 한 칸에 점이 넷까지 찍혔고, 4.5px 짜리 점 일곱 색은
+     폰에서 못 가린다. 밑의 라벨도 일곱 줄이었다 — 일곱 개를 외워야 읽히는 달력은 안 읽힌다.
+   ⇒ **점은 «셋»으로 묶는다.** 학생이 칸 하나에서 알고 싶은 것은 셋뿐이다 —
+     «학원에 가는 날인가 · 낼 것이 있는 날인가 · 내가 적어 둔 것이 있는 날인가».
+   🔵 **자세한 것은 잃지 않는다** — 날짜를 누르면 아래 목록이 갈래 이름과 제 색으로 그대로 말한다.
+     달력 칸은 «훑는» 자리고 목록은 «읽는» 자리다.
+   🔴 **시험은 점에서 뺐다** — 시험기간은 이미 칸 배경(면)과 바로 밑의 「시험기간」 줄이 말한다.
+     같은 것을 세 번 말하면서 제일 중요한 점 자리를 먹고 있었다.
+   ⚠ 갈래를 더할 때는 **여기에도 적어야 한다** — 안 적으면 그 갈래는 점이 아예 안 찍힌다
+     (검사가 그것을 붙든다: 「모든 갈래가 묶음을 가진다」). */
+const CAL_GROUPS = {
+  come: {이름: '가는 날',   색: 'var(--ok)',   갈래: ['class', 'clinic', 'plan']},
+  todo: {이름: '낼 것',     색: 'var(--late)', 갈래: ['hw', 'video']},
+  mine: {이름: '내 일정',   색: 'var(--dim)',  갈래: ['mine']},
+};
+/* 갈래 → 묶음. 시험(exam)은 일부러 없다 — 면으로 말한다. */
+const CAL_GROUP_OF = (() => {
+  const m = {};
+  for(const g in CAL_GROUPS) for(const k of CAL_GROUPS[g].갈래) m[k] = g;
+  return m;
+})();
+/* 이 날 칸에 찍을 점 — 묶음마다 하나, 늘 같은 차례로. */
+function calDotGroups(evs){
+  const 있는것 = new Set((evs || []).map(e => CAL_GROUP_OF[e.kind]).filter(Boolean));
+  return Object.keys(CAL_GROUPS).filter(g => 있는것.has(g));
+}
+
 /* 그 달의 일정을 «날짜별»로 모아 준다 → { '2026-09-08': [ {kind, title, sub, time}, … ] } */
 function stuMonthEvents(c, ym){
   const out = {};
@@ -14756,8 +14818,9 @@ function stuCalendarHTML(c){
   for(let d = 1; d <= 날수; d++){
     const date = ymd(y, m, d);
     const evs = 일정[date] || [];
-    /* 점은 «갈래마다 하나»다 — 같은 갈래가 셋이어도 점 하나. 그래야 칸이 안 시끄럽다. */
-    const 갈래들 = [...new Set(evs.map(e => e.kind))];
+    /* 점은 «묶음마다 하나»다 — 갈래가 일곱이라 한 칸에 넷까지 찍히던 것을 셋으로 줄였다
+       (2026-09-13 · `CAL_GROUPS` 의 머리말). 자세한 것은 아래 목록이 말한다. */
+    const 점들 = calDotGroups(evs);
     const dow = new Date(y, m - 1, d).getDay();
     const 요일색 = dow === 0 ? 'color:var(--no);' : dow === 6 ? 'color:var(--blue);' : '';
     /* 🔵 기간의 «처음»과 «끝»만 모서리를 둥글린다 — 가운데는 이어져 하나의 띠로 보인다. */
@@ -14772,7 +14835,7 @@ function stuCalendarHTML(c){
       + ' onclick="state.stuCalDay=\'' + date + '\'; render()">'
       + '<span class="d" style="' + 요일색 + '">' + d + '</span>'
       + '<span class="dots">'
-      + 갈래들.slice(0, 4).map(k => '<i style="background:' + CAL_KINDS[k].색 + '"></i>').join('')
+      + 점들.map(g => '<i class="' + g + '" style="background:' + CAL_GROUPS[g].색 + '"></i>').join('')
       + '</span></div>');
   }
 
@@ -14810,8 +14873,11 @@ function stuCalendarHTML(c){
                 + '직보·보충은 그대로 보입니다</s>' : '')
         + '</div>' : '')
     + '<div class="scal-legend">'
-    + Object.keys(CAL_KINDS).map(k =>
-        '<span><i style="background:' + CAL_KINDS[k].색 + '"></i>' + CAL_KINDS[k].이름 + '</span>').join('')
+    + Object.keys(CAL_GROUPS).map(g =>
+        '<span><i style="background:' + CAL_GROUPS[g].색 + '"></i>' + CAL_GROUPS[g].이름
+        + '<s>' + CAL_GROUPS[g].갈래.map(k => CAL_KINDS[k].이름).join('·') + '</s></span>').join('')
+    /* ⚠ 시험은 점이 아니라 «면»이라고 여기서 말해 준다 — 안 말하면 「시험은 왜 점이 없지」가 된다. */
+    + '<span class="band"><i></i>시험기간<s>칸 바탕이 붉어집니다</s></span>'
     + '</div></div>';
 
   const 목록 = '<div class="mc" style="margin-top:12px;">'
@@ -17398,7 +17464,10 @@ async function handleStudentExcelFile(classId, fileList){
       studentId: String(r['아이디'] ?? r['studentId'] ?? '').trim(),
       name: String(r['이름'] ?? r['name'] ?? '').trim(),
       pw: String(r['비밀번호'] ?? r['pw'] ?? '').trim(),
-      grade: String(r['학년'] ?? '').trim() || '고1',
+      /* 🔴 **엑셀의 「1」을 그대로 담아 학년이 두 벌로 갈렸다** (2026-09-13 · 사용자가 짚었다) —
+         고르개로 만든 학생은 「고1」인데 여기 것은 「1」이라, 시험 일정이 한 학교에 두 줄로 섰다.
+         ⚠ 아래 미리 보기에도 **고친 꼴로** 뜬다 — 담기 전에 무엇이 들어가는지 보여야 한다. */
+      grade: gradeLabel(r['학년'] ?? '') || '고1',
       school: String(r['학교'] ?? '').trim(),
       /* 🔴 **열 머리 한 글자 때문에 한 반이 통째로 비어 들어갔다** (2026-09-13 · K-15).
          사용자가 올린 명단 하나의 머리가 **「학부전화번호」**(«모»가 빠졌다)여서
@@ -20074,7 +20143,11 @@ function studentAccountFormHTML(s){
         <label style="min-width:184px;">
           <span>비밀번호 ${pwRevealHTML('student', sid, s.pw)}</span>
           <input id="info-spw" placeholder="변경 시에만 입력"></label>
-        <label><span>학년</span><select id="info-sgrade" style="border:1px solid var(--line);border-radius:var(--r-sm);background:var(--paper);padding:8px 10px;font-family:inherit;font-size:12.5px;">${['고1','고2','고3'].map(g=>`<option ${s.grade===g?'selected':''}>${g}</option>`).join('')}</select></label>
+        <label><span>학년</span><select id="info-sgrade" style="border:1px solid var(--line);border-radius:var(--r-sm);background:var(--paper);padding:8px 10px;font-family:inherit;font-size:12.5px;">${/* ⚠ 고르개가 «지금 값»을 못 찾으면 첫 칸(고1)이 잡힌 채로 열린다 — 고치기를 눌렀다가
+     아무것도 안 건드리고 저장해도 학년이 조용히 바뀐다. 그래서 여기서도 같은 잣대로 본다.
+     🔵 그래도 못 찾는 값(예: 중3(예비고1))은 **그 값을 칸으로 얹어** 안 잃는다. */''}
+${[...new Set(['고1','고2','고3'].concat(gradeLabel(s.grade) ? [gradeLabel(s.grade)] : []))]
+  .map(g=>`<option ${gradeLabel(s.grade)===g?'selected':''}>${escHtml(g)}</option>`).join('')}</select></label>
         <label style="min-width:150px;"><span>학교</span><input id="info-sschool" value="${escHtml(s.school||'')}" placeholder="학교명 (선택)"></label>
       </div>
       <div class="cls-form">
