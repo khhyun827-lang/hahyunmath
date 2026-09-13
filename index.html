@@ -1459,6 +1459,10 @@
    ⇒ 바탕을 칠하는 것은 **시험기간 하나뿐**이고, 찍은 것은 칸 안에 알약으로 앉는다.
    🔵 일곱 종류가 색 셋을 나눠 쓰던 것도 이참에 갈랐다 — **직보만 «채운» 알약**이다(이 표의 주인공).
    ⚠ 테두리는 `box-shadow` 로 그린다 — `border` 로 하면 알약이 커져 칸이 밀린다. */
+/* 반별 내보내기 줄 — 반 이름과 두 단추가 한 덩이로 붙어 있어야 «이 반의 것»으로 읽힌다. */
+.app .pl-ex{display:inline-flex;align-items:center;gap:5px;padding:3px 4px 3px 9px;
+  border:1px solid var(--line);border-radius:var(--r-pill);background:var(--card);}
+.app .pl-ex b{font-size:11.5px;font-weight:700;}
 .app .pl-p{display:inline-block;padding:1px 7px;border-radius:999px;
   font-size:10.5px;font-weight:700;line-height:1.65;white-space:nowrap;}
 .app .pl-p.p-jikbo  {background:var(--accent);color:#fff;}
@@ -18929,9 +18933,18 @@ function chubClassListHTML(activeId){
           onclick="state.classHubId='${c.id}'; render()">
           <div class="n">${escHtml(c.name)}${
             wait ? `<span class="badge late" style="margin-left:6px;">과제 ${wait}</span>` : ''}</div>
-          <div class="m">${escHtml(c.schedule||'일정 미정')} · ${n}명${c.status==='진행중'?'':' · 종료'}</div>
-          <div class="p"><span class="bar"><i style="width:${pr.subject?pr.percent:0}%"></i></span>
-            <span>${pr.subject ? pr.percent+'%' : '—'}</span></div>
+          ${/* ⚠ 원문이 아니라 다듬은 말을 쓴다 — 반 머리·설정 목록과 같은 꼴이라야 같은 반으로 읽힌다. */''}
+          <div class="m">${escHtml(classScheduleLabel(c)||'일정 미정')} · ${n}명${c.status==='진행중'?'':' · 종료'}</div>
+          ${/* 🔴 **이름표 없는 퍼센트는 «지금 보는 탭»의 수로 읽힌다** (2026-09-14 · 사용자가 짚었다 —
+               「반-영상 탭에서 33%가 반마다 붙어있는데 반에 해당하는 시청률도 아니어서」).
+               그 수는 **진도**(단원 몇 개를 마쳤나)였는데, 이 레일은 영상·성적·출결 탭에서도
+               똑같이 떠 있어서 **어느 탭에 있느냐에 따라 다른 뜻으로 읽혔다.**
+             ⇒ 이름을 붙인다. 무엇의 퍼센트인지 화면이 스스로 말해야 한다. */''}
+          <div class="p" title="${pr.subject
+            ? escHtml(pr.subject + ' ' + pr.chapters.length + '단원 중 ' + pr.doneCount + '단원을 마쳤습니다')
+            : '반 › 진도에서 과목을 고르면 진도가 잡힙니다'}">
+            <span class="bar"><i style="width:${pr.subject?pr.percent:0}%"></i></span>
+            <span>진도 ${pr.subject ? pr.percent+'%' : '—'}</span></div>
         </div>`;
       }).join('')}
     </div>
@@ -27095,6 +27108,35 @@ function teacherExamPlanHTML(){
         시험 날짜를 고치면 여기도 따라 바뀝니다. <b>찍은 것은 알약</b>으로 앉으므로 시험기간과 안 섞입니다.</s></span>
   </div>`;
 
+  /* ── 반별로 내보내기 (2026-09-14 · 사용자 요청) ──
+     🔵 **반 단추를 그대로 늘어놓는다** — 고르개를 두면 «고르고 → 누른다» 두 걸음이 되는데,
+       반이 열 개 안쪽이라 한 걸음으로 끝내는 편이 낫다. */
+  const 반내보내기 = !반이름들.filter(n => n !== '반 없음').length ? '' : `<div class="ist-bar">
+    <span class="ic-k">반별로</span>
+    ${반이름들.filter(n => n !== '반 없음').map(n => {
+      const cid = (묶음[n][0] || {}).classId || '';
+      return `<span class="pl-ex"><b>${escHtml(n)}</b>
+        <button class="btn q sm" title="이 반의 표를 엑셀로 내려받습니다"
+          onclick="planExportClass('${escHtml(cid)}')">${iconSvg('download',12)} 파일</button>
+        <button class="btn q sm" title="학생별 한 줄로 바꿔 공지사항에 올립니다 — 올리기 전에 보여 줍니다"
+          onclick="planPostOpen('${escHtml(cid)}')">${iconSvg('megaphone',12)} 공지</button></span>`;
+    }).join('')}
+    <span class="ic-hint">파일은 <b>화면의 표 그대로</b>, 공지는 <b>학생별 한 줄</b>입니다 —
+      공지는 학생이 폰으로 읽는 글이라 16일짜리 표를 글자로 옮기면 줄이 접혀 안 읽힙니다.</span>
+  </div>`;
+
+  /* 공지 미리 보기 — 🔴 바로 게시하지 않는다. 반 전체에게 한 번에 가는 글이다. */
+  const 게시판 = !state.planPost ? '' : `<div class="ist-edit" style="margin:0 0 12px;">
+    <div class="ist-eb" style="margin:0 0 8px;">
+      <b style="font-size:13px;">${escHtml(classNameOf(state.planPost.classId))} 공지 미리 보기</b>
+      <span class="ic-hint">고쳐서 올릴 수 있습니다 · 이 반 학생에게만 보입니다</span>
+      <span class="spacer"></span>
+      <button class="btn p sm" onclick="planPostRun()">이대로 올리기</button>
+      <button class="btn q sm" onclick="planPostClose()">닫기</button>
+    </div>
+    <textarea id="plan-post-text" rows="12">${escHtml(state.planPost.text)}</textarea>
+  </div>`;
+
   if(!days.length) return `<div class="ex-main">${줄}
     <div class="ist-empty">날짜 줄이 없습니다 — 위에서 날짜를 정하거나,
       「설정 › 시험 일정」에 학교별 시험 날짜를 먼저 적어 주세요.</div></div>`;
@@ -27152,7 +27194,7 @@ function teacherExamPlanHTML(){
     </tr>`;
   }).join('')).join('');
 
-  return `<div class="ex-main">${줄}${붓줄}
+  return `<div class="ex-main">${줄}${붓줄}${반내보내기}${게시판}
     ${state.planMsg ? `<div class="ist-msg">${escHtml(state.planMsg)}</div>` : ''}
     <div class="ex-body"><div class="pl-wrap"><table class="pl-t2">
       <thead><tr><th class="pl-cls">반</th><th class="pl-nm">이름</th><th class="pl-sc">학교</th>${날머리}</tr></thead>
@@ -27211,6 +27253,94 @@ function planSeedRun(){
     + (r.없음 ? ` · 🔴 수학 시험일이 없어 못 깐 학생 ${r.없음}명 (설정 › 시험 일정)` : '')
     + ' · 시험기간과 수학 시험일은 «바탕»으로 이미 깔려 있습니다(시험 일정에서 옵니다)'
     + ' · 나머지(등원X·보충·가능하면·상담진행·등원시작)는 학생마다 갈려서 붓으로 찍어 주세요.';
+  render();
+}
+
+/* =============== 직보 일정표를 «반별로» 내보낸다 (2026-09-14 · 사용자 요청) ===============
+   「**반마다 위에 요일이랑 붙여서 공지사항에 게시한다거나 하고싶어. 반별로 파일로 저장 혹은
+     바로 공지사항에 게시할 수 있도록 만들어줘**」
+   🔵 **두 길은 꼴이 달라야 한다.**
+     · **파일** — 화면의 표 그대로(이름·학교 + 날짜 열, 머리에 요일). 인쇄·공유용이고 엑셀이 받는다.
+     · **공지** — **학생별 한 줄**이다. 공지는 학생이 **폰**으로 읽는 글이라, 16일짜리 표를
+       글자로 옮기면 줄이 접혀 아무도 못 읽는다. 학생은 제 이름 줄 하나만 찾으면 된다.
+   ⚠ 날짜에는 **요일을 붙인다** — 「10/1」만으로는 무슨 요일인지 세어 봐야 한다. */
+function planDateLabel(d){
+  const w = ['일','월','화','수','목','금','토'][new Date(d + 'T00:00:00Z').getUTCDay()];
+  return Number(d.slice(5,7)) + '/' + Number(d.slice(8,10)) + '(' + w + ')';
+}
+/* 그 반에서 «찍은 것이 있는» 학생만 모은다 — 빈 줄만 스무 개인 글은 아무 말도 안 한다. */
+function planClassRows(classId){
+  const days = planDaysOf(planRange().from, planRange().to);
+  return classRoster(classId).filter(s => !isWithdrawn(s)).map(s => ({
+    s, 칸: days.map(d => ({ d, c: planCell(s.studentId, d) })).filter(x => x.c && planLabel(x.c))
+  }));
+}
+function planClassText(classId){
+  const 범위 = planRange();
+  const rows = planClassRows(classId);
+  const 있는줄 = rows.filter(r => r.칸.length);
+  const 머리 = classNameOf(classId) + ' · ' + currentSeason() + ' 직보 일정'
+    + '\n' + planDateLabel(범위.from) + ' ~ ' + planDateLabel(범위.to);
+  if(!있는줄.length) return 머리 + '\n\n아직 찍어 둔 일정이 없습니다.';
+  const 몸 = 있는줄.map(r => r.s.name + (r.s.school ? ' (' + r.s.school + ')' : '') + '\n  '
+    + r.칸.map(x => planDateLabel(x.d) + ' ' + planLabel(x.c)).join(' · ')).join('\n\n');
+  const 빈줄 = rows.length - 있는줄.length;
+  return 머리 + '\n\n' + 몸
+    + (빈줄 ? '\n\n※ 이름이 없는 학생은 따로 정해진 일정이 없습니다.' : '');
+}
+/* 파일 — 화면의 표 그대로. 요일은 날짜 «위»가 아니라 같은 칸에 붙인다(엑셀은 머리줄이 하나다). */
+async function planExportClass(classId){
+  try{
+    await ensureXLSXLoaded();
+    const days = planDaysOf(planRange().from, planRange().to);
+    if(!days.length){ showToast('날짜 줄이 없습니다 — 위에서 기간을 먼저 정해 주세요.'); return; }
+    const rows = planClassRows(classId);
+    if(!rows.length){ showToast('이 반에 학생이 없습니다.'); return; }
+    const aoa = [['이름', '학교', ...days.map(planDateLabel)]];
+    rows.forEach(r => {
+      const 찍힘 = {}; r.칸.forEach(x => { 찍힘[x.d] = planLabel(x.c); });
+      aoa.push([r.s.name || r.s.studentId, r.s.school || '', ...days.map(d => 찍힘[d] || '')]);
+    });
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+    ws['!cols'] = [{wch:10}, {wch:10}, ...days.map(() => ({wch:11}))];
+    XLSX.utils.book_append_sheet(wb, ws, '직보일정');
+    XLSX.writeFile(wb, `직보일정_${classNameOf(classId)}_${planRange().from}.xlsx`);
+    showToast(classNameOf(classId) + ' 일정표를 내려받았습니다.');
+  }catch(e){
+    console.error(e);
+    showToast('파일을 만들지 못했습니다 — 잠시 뒤에 다시 눌러주세요.');
+  }
+}
+/* 🔴 **바로 게시하지 않는다** — 공지는 반 전체에게 한 번에 가는 글이라, 무엇이 나갈지
+   보고 손볼 수 있어야 한다. 판을 열어 글을 보여 주고, 고친 뒤에 누르면 나간다. */
+function planPostOpen(classId){
+  state.planPost = { classId, text: planClassText(classId) };
+  render();
+}
+function planPostClose(){ state.planPost = null; render(); }
+async function planPostRun(){
+  const p = state.planPost;
+  if(!p) return;
+  const el = document.getElementById('plan-post-text');
+  const content = ((el ? el.value : p.text) || '').trim();
+  if(!content){ showToast('내용이 비어 있습니다.'); return; }
+  /* ⚠ 공지를 «만드는 길»은 하나다 — `addNotice` 와 같은 모양으로 짓는다(통을 새로 안 판다). */
+  const notice = { id: Date.now(), date: todayStr(),
+    title: classNameOf(p.classId) + ' 직보 일정 (' + planDateLabel(planRange().from) + ' ~ '
+      + planDateLabel(planRange().to) + ')',
+    content, classIds: [p.classId] };
+  DATA.notices.unshift(notice);
+  const ok = await dbSetDoc('notices', notice.id, notice);
+  /* 🔴 저장이 됐는지 보고 말한다 — 안 보고 알리면 「올렸다」고 해 놓고 새로고침하면 사라진다. */
+  if(ok !== true){
+    DATA.notices = DATA.notices.filter(n => n.id !== notice.id);
+    showToast('게시하지 못했습니다 — 잠시 뒤에 다시 눌러주세요.');
+    render(); return;
+  }
+  await logAudit('직보 일정 공지', '', '', classNameOf(p.classId) + ' · ' + planRange().from);
+  state.planPost = null;
+  showToast(classNameOf(p.classId) + ' 공지사항에 올렸습니다.');
   render();
 }
 
