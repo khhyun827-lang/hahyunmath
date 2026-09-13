@@ -44,34 +44,40 @@ const 봄 = (무엇, 나온것, 나와야) => {
   console.log((ok ? '  ✓ ' : '  🔴 ') + 무엇 + (ok ? '' : NL + '      나온 것 ' + JSON.stringify(나온것) + NL + '      나와야 ' + JSON.stringify(나와야)));
 };
 
-const 잣대 = liftConst('VIDEO_DONE_RATIO') + NL + liftConst('VIDEO_GOAL_PCT') + NL +
-  lift('videoWatchRatio') + NL + lift('videoPct') + NL + lift('videoDone') + NL +
-  lift('videoSeen') + NL + lift('videoScore') + NL + lift('videoGoalMarkHTML');
+const 잣대 = ['VIDEO_DONE_RATIO', 'VIDEO_GOAL_PCT', 'VIDEO_DONE_SLACK_SEC'].map(liftConst).join(NL) + NL +
+  ['videoDurationSec', 'videoWatchedSec', 'videoWatchRatio', 'videoDone', 'videoPct',
+   'videoSeen', 'videoGoalLabel', 'videoScore', 'videoGoalMarkHTML'].map(lift).join(NL);
 const V = new Function(잣대 + NL +
-  'return { VIDEO_DONE_RATIO, VIDEO_GOAL_PCT, videoWatchRatio, videoPct, videoDone, videoSeen, videoScore, videoGoalMarkHTML };')();
+  'return { VIDEO_DONE_RATIO, VIDEO_GOAL_PCT, VIDEO_DONE_SLACK_SEC, videoWatchRatio, videoPct, videoDone, videoSeen, videoScore, videoGoalLabel, videoGoalMarkHTML };')();
 
-/* ═══ ① 잣대 — 영상 길이의 70% ═══ */
-console.log(NL + '① 잣대 — 영상 길이의 70%를 보면 완주' + NL);
+/* ═══ ① 잣대 — 끝까지 봐야 완주 ═══ */
+console.log(NL + '① 잣대 — 영상을 끝까지 실제로 재생해야 완주' + NL);
 {
-  봄('완주선은 0.7 이다', [V.VIDEO_DONE_RATIO, V.VIDEO_GOAL_PCT], [0.7, 70]);
+  봄('🔴 완주선은 100% 다 (K-9에서 70 → 100)', [V.VIDEO_DONE_RATIO, V.VIDEO_GOAL_PCT], [1, 100]);
   const p = (sec, dur) => ({ watchedSeconds: sec, duration: dur });
-  봄('10분짜리를 7분 보면 완주', [V.videoPct(p(420, 600)), V.videoDone(p(420, 600))], [70, true]);
-  봄('6분 59초면 아직 아니다', [V.videoPct(p(419, 600)), V.videoDone(p(419, 600))], [69, false]);
-  봄('🔴 «70%인데 시청 중»이 안 나온다 — 내림이라 두 말이 언제나 같다',
-    [419, 420, 421, 599, 600].map(s => V.videoPct(p(s, 600)) >= V.VIDEO_GOAL_PCT === V.videoDone(p(s, 600))),
-    [true, true, true, true, true]);
-  봄('다 보면 100%', [V.videoPct(p(600, 600)), V.videoDone(p(600, 600))], [100, true]);
+  봄('다 보면 100% · 완주', [V.videoPct(p(600, 600)), V.videoDone(p(600, 600))], [100, true]);
+  봄('🔴 10분짜리를 7분 보면 «시청 중»이다 (예전 잣대로는 완주였다)',
+    [V.videoPct(p(420, 600)), V.videoDone(p(420, 600))], [70, false]);
+  봄('90%도 아직 아니다', [V.videoPct(p(540, 600)), V.videoDone(p(540, 600))], [90, false]);
+  /* 몇 초 여유 — 끝까지 본 학생이 99%에서 멈추면 그것은 고장으로 보인다 */
+  봄('🔴 2초까지는 봐준다 (598초 = 완주)', [V.videoPct(p(598, 600)), V.videoDone(p(598, 600))], [100, true]);
+  봄('🔴 3초가 모자라면 아직이다 (597초)', [V.videoPct(p(597, 600)), V.videoDone(p(597, 600))], [99, false]);
+  봄('짧은 영상은 여유도 짧다 — 60초짜리는 2%인 1.2초까지만',
+    [V.videoDone(p(58.9, 60)), V.videoDone(p(58.7, 60))], [true, false]);
+  봄('🔴 «100%인데 시청 중»도 «99%인데 완주»도 안 나온다',
+    [400, 540, 596, 597, 598, 599, 600].map(s => (V.videoPct(p(s, 600)) === 100) === V.videoDone(p(s, 600))),
+    [true, true, true, true, true, true, true]);
   봄('아무것도 안 봤으면 0 · 미시청', [V.videoPct(p(0, 600)), V.videoDone(p(0, 600)), V.videoSeen(p(0, 600))], [0, false, false]);
   봄('기록이 아예 없으면 0 · 미시청', [V.videoPct(null), V.videoDone(null), V.videoSeen(null)], [0, false, false]);
   봄('🔴 %를 부풀리지 않는다 — 40%를 봤으면 40%다 (예전엔 ×1.5 로 60% 였다)', V.videoPct(p(240, 600)), 40);
   봄('길이보다 오래 세어도 100을 안 넘는다', V.videoPct(p(9999, 600)), 100);
-  /* 집계용 — 완주는 100으로 친다 */
-  봄('🔴 평균낼 때는 완주를 100으로 친다 (안 그러면 다 본 학생이 시청률 70%로 «주의»가 된다)',
-    [V.videoScore(p(420, 600)), V.videoScore(p(600, 600)), V.videoScore(p(300, 600))], [100, 100, 50]);
+  봄('집계용도 같은 말을 한다 (완주 100 · 아니면 실측)',
+    [V.videoScore(p(600, 600)), V.videoScore(p(420, 600)), V.videoScore(p(300, 600))], [100, 70, 50]);
   /* 길이를 모르는 아주 옛 기록 */
   봄('길이를 모르면 저장된 값으로 물러선다',
     [V.videoPct({ percent: 42, completed: true }), V.videoDone({ percent: 42, completed: true })], [42, true]);
-  봄('완주선이 CSS 가 아니라 잣대에서 나온다', V.videoGoalMarkHTML().includes('left:70%'), true);
+  봄('완주를 말로 적는 자리가 하나다', V.videoGoalLabel(), '영상을 끝까지 실제로 재생');
+  봄('🔴 완주선이 100% 면 막대에 선을 안 긋는다 (오른쪽 끝이 곧 완주선이다)', V.videoGoalMarkHTML(), '');
 }
 
 /* ═══ ② 끝으로 끌기 — 더는 완주가 아니다 ═══ */
@@ -94,15 +100,26 @@ console.log(NL + '② 재생바를 끝으로 끌어도 완주가 아니다' + NL
     /noteVideoWatchTime\(studentId, videoId, addSeconds, duration\)/.test(lift('noteVideoWatchTime')), true);
   봄('🔴 flushWatchTick 도 ended 를 안 넘긴다', lift('flushWatchTick').includes('ended'), false);
   봄('🔴 어디에서도 ENDED 를 완주의 근거로 안 쓴다', /PlayerState\.ENDED/.test(html), false);
-  /* 실제로 7분을 재생하면 완주 */
+  /* 5초 틱으로 끝까지 재생하면 완주 — 실제 화면이 쌓는 모양 그대로다 */
   const b = 만들기();
-  for (let i = 0; i < 84; i++) await b.F.noteVideoWatchTime('s1', 'v1', 5, 600);   // 5초 × 84 = 420초
-  봄('7분을 실제로 재생하면 완주',
-    [b.rec.videoProgress.v1.watchedSeconds, V.videoDone(b.rec.videoProgress.v1)], [420, true]);
+  for (let i = 0; i < 120; i++) await b.F.noteVideoWatchTime('s1', 'v1', 5, 600);   // 5초 × 120 = 600초
+  봄('끝까지 실제로 재생하면 완주',
+    [b.rec.videoProgress.v1.watchedSeconds, V.videoDone(b.rec.videoProgress.v1)], [600, true]);
+  봄('🔴 7분만 재생하면 아직이다 (같은 틱으로)', await (async () => {
+    const c = 만들기();
+    for (let i = 0; i < 84; i++) await c.F.noteVideoWatchTime('s1', 'v1', 5, 600);  // 420초
+    return [c.rec.videoProgress.v1.watchedSeconds, V.videoDone(c.rec.videoProgress.v1)];
+  })(), [420, false]);
+  봄('🔴 마지막 조각이 조금 덜 실려도 완주다 (598초 — 여유 2초)', await (async () => {
+    const c = 만들기();
+    for (let i = 0; i < 119; i++) await c.F.noteVideoWatchTime('s1', 'v1', 5, 600); // 595초
+    await c.F.noteVideoWatchTime('s1', 'v1', 3, 600);                               // 598초
+    return [c.rec.videoProgress.v1.watchedSeconds, V.videoDone(c.rec.videoProgress.v1)];
+  })(), [598, true]);
   봄('문서에 남는 것은 사실 넷뿐이다', Object.keys(b.rec.videoProgress.v1).sort(),
     ['completed', 'duration', 'percent', 'updatedAt', 'watchedSeconds']);
   봄('문서에 적어 둔 percent·completed 도 새 잣대를 따른다',
-    [b.rec.videoProgress.v1.percent, b.rec.videoProgress.v1.completed], [70, true]);
+    [b.rec.videoProgress.v1.percent, b.rec.videoProgress.v1.completed], [100, true]);
   봄('길이를 모르면 아무것도 안 쓴다', await (async () => {
     const c = 만들기(); await c.F.noteVideoWatchTime('s1', 'v1', 10, 0); return Object.keys(c.rec.videoProgress).length;
   })(), 0);
@@ -145,9 +162,9 @@ console.log(NL + '④ 반 › 영상 탭을 실제로 그려 본다' + NL);
     classes: [{ id: 'c1', name: '고1GA1' }],
     students: roster,
   };
-  /* 하나는 완주(72%), 하나는 30%에서 멈춤, 하나는 미시청 — 예전 화면이 「33%」라고만 하던 꼴이다. */
+  /* 하나는 완주(끝까지), 하나는 30%에서 멈춤, 하나는 미시청 — 예전 화면이 「33%」라고만 하던 꼴이다. */
   const allRecords = {
-    s1: { videoProgress: { v1: { watchedSeconds: 432, duration: 600 } } },
+    s1: { videoProgress: { v1: { watchedSeconds: 600, duration: 600 } } },
     s2: { videoProgress: { v1: { watchedSeconds: 180, duration: 600 } } },
     s3: { videoProgress: {} },
   };
@@ -161,33 +178,39 @@ console.log(NL + '④ 반 › 영상 탭을 실제로 그려 본다' + NL);
 
   봄('🔴 목록이 «완주 1/3» 이라고 말한다 (예전엔 「33%」 한 줄이었다)', 그림.includes('<b>완주 1/3</b>'), true);
   봄('🔴 그래도 평균은 안 잃는다 — tooltip 에 있다', /반 평균 시청률 43%/.test(그림), true);
-  봄('tooltip 이 완주의 뜻을 적는다', /영상 길이의 70% 이상 시청/.test(그림), true);
-  봄('머리말이 완주선을 밝힌다', 그림.includes('완주 = 영상 길이의 70% 이상 실제 재생'), true);
-  /* ⚠ 평균이 43인 것이 핵심이다 — 완주한 s1 은 실측 72%지만 «집계»에서는 100으로 센다.
-     실측 그대로 평균 내면 (72+30+0)/3 = 34 다. 둘이 다른 수라는 것이 videoScore 가 하는 일이다. */
+  봄('tooltip 이 완주의 뜻을 적는다', /완주 = 영상을 끝까지 실제로 재생/.test(그림), true);
+  봄('머리말이 완주선을 밝힌다', 그림.includes('완주 = 영상을 끝까지 실제로 재생'), true);
+  /* ⚠ 평균이 43인 것 — (100 + 30 + 0)/3. 안 본 학생도 0%로 함께 센다. */
   봄('이탈 지점 머리에 재원·완주·평균이 함께 선다', /재원 3명 · 완주 1 · 평균 43%/.test(그림), true);
 
-  /* 이탈 히스토그램 — 0~60 일곱 칸 + 완주 */
+  /* 이탈 히스토그램 — 0~90 열 칸 + 완주.
+     🔵 완주선이 100% 로 올라가면서(K-9) 칸이 다시 열하나가 된다 — 70·80·90 도 «멈춘 자리»라 이제 뜻이 있다. */
   const 축 = [...그림.matchAll(/<div class="vd-dax">([\s\S]*?)<\/div>/g)][0][1]
     .match(/<span>([^<]*)<\/span>/g).map(x => x.replace(/<\/?span>/g, ''));
-  봄('🔴 구간이 완주선에서 끊긴다 — 영영 빌 70·80·90 칸이 없다', 축, ['0', '10', '20', '30', '40', '50', '60', '완주']);
+  봄('🔴 구간이 완주선에서 끊긴다 (지금은 100% 라 0~90 + 완주)',
+    축, ['0', '10', '20', '30', '40', '50', '60', '70', '80', '90', '완주']);
   /* ⚠ 칸이 모자라도 «터지지» 말고 틀렸다고 말해야 한다 — 터지면 어느 덫이 문 것인지 안 보인다. */
   const 막대 = [...그림.matchAll(/title="([^"]*?) · (\d+)명"/g)].map(m => [m[1], +m[2]]);
   const 칸 = i => 막대[i] || ['(칸 없음)', -1];
-  봄('칸이 여덟이다', 막대.length, 8);
-  봄('완주 칸에 한 명', 칸(7), ['완주 (70% 이상 시청)', 1]);
+  봄('칸이 열하나다', 막대.length, 11);
+  봄('완주 칸에 한 명', 칸(10), ['완주 (영상을 끝까지 실제로 재생)', 1]);
   봄('30%에서 멈춘 한 명은 30~39 칸에', 칸(3), ['30~39%에서 멈춤', 1]);
   봄('미시청 한 명은 0~9 칸에', 칸(0), ['0~9%에서 멈춤', 1]);
-  봄('나머지 칸은 비었다', [1, 2, 4, 5, 6].map(i => 칸(i)[1]), [0, 0, 0, 0, 0]);
+  봄('나머지 칸은 비었다', [1, 2, 4, 5, 6, 7, 8, 9].map(i => 칸(i)[1]), [0, 0, 0, 0, 0, 0, 0, 0]);
 
   /* 학생별 진행 */
-  봄('완주한 학생은 «완주» 딱지 · 실제 비율 72%를 그대로 적는다',
-    /가나다<\/b>[\s\S]*?<span class="pct">72%<\/span>[\s\S]*?<span class="badge ok">완주<\/span>/.test(그림), true);
-  봄('🔴 완주라고 100%로 올려 적지 않는다 (이 화면의 본문은 «어디서 멈췄나»다)', 그림.includes('>100%<'), false);
+  봄('완주한 학생은 «완주» 딱지 · 100%',
+    /가나다<\/b>[\s\S]*?<span class="pct">100%<\/span>[\s\S]*?<span class="badge ok">완주<\/span>/.test(그림), true);
   봄('30%에서 멈춘 학생은 «시청 중»', /라마바<\/b>[\s\S]*?<span class="pct">30%<\/span>[\s\S]*?시청 중/.test(그림), true);
   봄('미시청은 «—» 와 «미시청»', /사아자<\/b>[\s\S]*?<span class="pct">—<\/span>[\s\S]*?미시청/.test(그림), true);
+  봄('🔴 90%에서 멈춘 학생은 «100%»로 적히지 않는다 (내림이라 99가 천장이다)', await (async () => {
+    allRecords.s2.videoProgress.v1 = { watchedSeconds: 597, duration: 600 };
+    const 다시 = C('c1');
+    allRecords.s2.videoProgress.v1 = { watchedSeconds: 180, duration: 600 };
+    return /라마바<\/b>[\s\S]*?<span class="pct">99%<\/span>[\s\S]*?시청 중/.test(다시);
+  })(), true);
   봄('학생별 진행 머리에 완주 1/3 · 미시청 1', /완주 <b class="mono">1\/3<\/b> · 미시청 <b class="mono">1<\/b>/.test(그림), true);
-  봄('막대마다 완주선이 그려진다 (3명 + 없음)', (그림.match(/<em class="g" style="left:70%;"><\/em>/g) || []).length, 3);
+  봄('🔴 완주선이 100% 면 막대에 선을 안 긋는다', (그림.match(/<em class="g"/g) || []).length, 0);
 }
 
 /* ═══ ⑤ 잣대가 한 벌인가 — 시청률을 세는 자리 전부 ═══ */

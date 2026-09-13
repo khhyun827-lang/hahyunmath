@@ -108,8 +108,12 @@ if (!CHROME) {
   let R = null, 왜 = '';
   try {
     await new Promise(r => setTimeout(r, 700));
+    /* ⚠ **가상 시간 예산을 넉넉히 준다.** 20초로 두었더니 **두 번에 한 번꼴로** RESULT 가 안 찍혔다 —
+       가상 시간은 «자원을 받는 동안» 멈췄다가 가므로, index.html 과 딸린 것들을 받는 사이에
+       예산이 바닥나면 프로브는 시작도 못 한 채 덤프된다. 겉으로는 「프로브가 못 돌았습니다」로만 보여서
+       엉뚱하게 index.html 을 의심하게 된다. 60초면 찬찬히 끝난다(빠르면 그만큼 일찍 끝난다). */
     const out = execFileSync(CHROME, ['--headless=new', '--disable-gpu', '--hide-scrollbars', '--no-sandbox',
-      '--virtual-time-budget=20000', '--window-size=520,760', '--dump-dom',
+      '--virtual-time-budget=60000', '--window-size=520,760', '--dump-dom',
       'http://127.0.0.1:' + PORT + '/tools/video-controls-probe.html'],
       { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024, timeout: 90000 });
     const m = out.match(/RESULT (\{[\s\S]*?\})<\/pre>/) || out.match(/RESULT (\{[\s\S]*\})/);

@@ -8993,35 +8993,60 @@ function ensureYouTubeAPI(cb){
    🔵 **배속은 세어 준다** — 2배속으로 다 본 학생은 벽시계로 «절반»이다. 곱하지 않으면 다 보고도 50%로 남는다.
      (`videoPlaybackRate` 가 틱마다 곱한다. 탐색·스킵은 재생 «상태»가 아니라 시간을 안 늘린다 — 그 성질은 그대로다.)
    ⚠ 길이를 모르는 아주 옛 기록(`duration` 없음)만 셀 수 없다 — 그때는 저장된 값으로 물러선다. */
-const VIDEO_DONE_RATIO = 0.7;
+/* 🔵 **완주선은 100% 다** (2026-09-13 · K-9 · 사용자가 고쳐 잡았다 —
+     「배속으로 듣는 학생까지 고려해서 시간을 영상길이 대비 70%로 잡은거였는데
+      배속듣는 학생까지 배율을 적용해서 하는거면 100퍼센트로 바꿔야할 것 같아」).
+   🔴 **70%는 «배속을 못 세던 시절의 여유»였다.** K-7에서 배속을 곱하기 시작하면서
+     2배속으로 다 본 학생도 «영상 60분»이 온전히 쌓인다 — 깎아 줄 까닭이 사라졌다.
+     여유를 그대로 두면 **영상의 3분의 1을 건너뛰어도 완주**가 된다. 그래서 잣대는 「다 봤나」다. */
+const VIDEO_DONE_RATIO = 1;
 const VIDEO_GOAL_PCT = Math.round(VIDEO_DONE_RATIO * 100);
+/* 🔴 **몇 초는 봐준다.** 시청 시간은 5초마다 «벽시계 × 배속»으로 쌓는 값이라
+     끝에서 한 조각이 덜 실리거나 배속을 바꾼 틱이 살짝 어긋나는 일이 있다.
+     여유가 0이면 **끝까지 다 본 학생이 99%에서 영영 안 끝나는** 일이 생긴다 —
+     그것은 잣대가 엄한 것이 아니라 **고장으로 보인다.** 2초는 «건너뛰기»로 쓸 수 없는 크기다.
+   ⚠ 완주선이 100% 미만이면 이 여유는 뜻이 없다(이미 그만큼 여유가 있다) — 그때는 안 쓴다. */
+const VIDEO_DONE_SLACK_SEC = 2;
+function videoDurationSec(p){ return p ? (+p.duration || 0) : 0; }
+function videoWatchedSec(p){
+  if(!p) return 0;
+  return p.watchedSeconds !== undefined ? (+p.watchedSeconds || 0) : (+p.maxSeconds || 0);
+}
 /* 0~1, 못 재면 null. */
 function videoWatchRatio(p){
-  if(!p) return null;
-  const dur = +p.duration || 0;
+  const dur = videoDurationSec(p);
   if(dur <= 0) return null;
-  const sec = p.watchedSeconds !== undefined ? (+p.watchedSeconds || 0) : (+p.maxSeconds || 0);
-  return Math.max(0, Math.min(1, sec / dur));
+  return Math.max(0, Math.min(1, videoWatchedSec(p) / dur));
+}
+function videoDone(p){
+  const dur = videoDurationSec(p);
+  if(dur <= 0) return !!(p && p.completed);   /* 길이를 모르는 아주 옛 기록 */
+  const 여유 = VIDEO_DONE_RATIO >= 1 ? Math.min(VIDEO_DONE_SLACK_SEC, dur * 0.02) : 0;
+  return videoWatchedSec(p) >= dur * VIDEO_DONE_RATIO - 여유;
 }
 /* «이 영상의 몇 %를 봤나» — 부풀리지 않는다. 한 영상을 보여 줄 때 쓰는 수다.
-   🔴 **반올림이 아니라 내림이다.** 반올림하면 69.8%가 «70%»로 적히는데 완주선은 못 넘어
-     화면에 **「70% · 시청 중」**이 뜬다 — 보는 사람은 그 한 줄을 믿을 수 없게 된다.
-     내림이면 `videoPct(p) >= VIDEO_GOAL_PCT` 와 `videoDone(p)` 가 **언제나 같은 말**이 된다. */
+   🔴 **반올림이 아니라 내림이다.** 반올림하면 99.6%가 «100%»로 적히는데 완주선은 못 넘어
+     화면에 **「100% · 시청 중」**이 뜬다 — 보는 사람은 그 한 줄을 믿을 수 없게 된다.
+   🔴 **다만 완주면 100 이다.** 위의 «몇 초 여유» 때문에 99.7%에서 완주가 될 수 있는데,
+     그때 「99% · 완주」라고 적으면 또 안 맞는 두 말이 한 줄에 선다.
+     ⇒ 이 둘로 `videoPct(p) === 100` 과 `videoDone(p)` 가 **언제나 같은 말**이 된다. */
 function videoPct(p){
   const r = videoWatchRatio(p);
   if(r === null) return p ? Math.max(0, Math.min(100, Math.round(p.percent || 0))) : 0;
-  return Math.min(100, Math.floor(r * 100));
-}
-function videoDone(p){
-  const r = videoWatchRatio(p);
-  if(r === null) return !!(p && p.completed);
-  return r >= VIDEO_DONE_RATIO;
+  if(videoDone(p)) return 100;
+  return Math.min(99, Math.floor(r * 100));
 }
 function videoSeen(p){ return !!(p && (videoPct(p) > 0 || videoDone(p))); }
-/* 🔵 **여럿을 «평균»낼 때만 완주를 100으로 친다** (시청률 · 신호 · 리포트 · 반 평균).
-   완주선이 70%라 실측 그대로 평균 내면 **다 본 학생도 70%대**가 되어
-   「시청률 70% 미만 = 주의」에 걸린다. 완주한 영상은 그 영상을 «다 한 것»이므로 100이다.
-   ⚠ 한 영상 하나를 보여 줄 때는 이것을 쓰지 않는다 — 거기서는 «실제로 몇 %»가 알고 싶은 값이다. */
+/* 완주선을 말로 적는다 — 화면 곳곳에서 같은 말을 써야 한다(머리말 · tooltip · 진도 칸). */
+function videoGoalLabel(){
+  return VIDEO_GOAL_PCT >= 100 ? '영상을 끝까지 실제로 재생' : '영상 길이의 ' + VIDEO_GOAL_PCT + '% 이상 실제 재생';
+}
+/* 🔵 **여럿을 «평균»낼 때 쓰는 수** (시청률 · 신호 · 리포트 · 반 평균) — 완주는 100이다.
+   ⚠ **완주선이 100% 가 된 지금(K-9)은 `videoPct` 와 같은 값이다.** 그래도 이름을 남겨 둔다 —
+     묻는 것이 다르기 때문이다(«이 영상을 몇 % 봤나» vs «이 영상을 얼마나 해냈나»).
+     완주선을 다시 100% 아래로 내리는 날, 이 둘은 곧바로 갈라진다.
+     🔴 그때 이것을 안 쓰면 **다 본 학생도 평균이 완주선 언저리**가 되어
+       「시청률 70% 미만 = 주의」 같은 규칙에 제 발로 걸린다. K-7 에 그 자리를 겪었다. */
 function videoScore(p){ return videoDone(p) ? 100 : videoPct(p); }
 async function noteVideoWatchTime(studentId, videoId, addSeconds, duration){
   if(!duration || duration<=0) return;
@@ -9044,7 +9069,11 @@ async function noteVideoWatchTime(studentId, videoId, addSeconds, duration){
    이모지 마일스톤(🌱🌿🔥⭐🎉)은 뺐다. 이 시스템은 이모지를 아이콘으로 쓰지 않는다. */
 /* 완주선 한 조각 (2026-09-13 · K-7) — 막대는 «실제로 본 비율»이고 이 선은 «완주 기준»이다.
    🔴 **자리는 JS 가 준다** — CSS 에 70%를 적어 두면 잣대가 두 곳이 되어 반드시 어긋난다. */
-function videoGoalMarkHTML(){ return `<em class="g" style="left:${VIDEO_GOAL_PCT}%;"></em>`; }
+/* ⚠ 완주선이 100% 면 선을 안 긋는다 (2026-09-13 · K-9) — 막대의 «오른쪽 끝»이 곧 완주선이라
+   거기 선을 그으면 테두리처럼 보일 뿐 아무것도 안 알려 준다. 칸이 꽉 차면 완주다. */
+function videoGoalMarkHTML(){
+  return VIDEO_GOAL_PCT >= 100 ? '' : `<em class="g" style="left:${VIDEO_GOAL_PCT}%;"></em>`;
+}
 function videoProgressBlockHTML(studentId, videoId){
   const rec = DATA.records[studentId];
   const p = rec && rec.videoProgress && rec.videoProgress[videoId];
@@ -9056,7 +9085,8 @@ function videoProgressBlockHTML(studentId, videoId){
     </div>
     <div style="font-size:11px;color:var(--dim);margin-top:6px;">${done
       ? '완주 — 영상의 <b>'+pct+'%</b>를 봤습니다'
-      : '시청 중 — <b>'+VIDEO_GOAL_PCT+'%</b>를 보면 완주'} · 최근 <span class="mono">${(p.updatedAt||'').slice(0,10)}</span></div>`;
+      : '시청 중 — ' + (VIDEO_GOAL_PCT >= 100 ? '<b>끝까지</b> 보면 완주' : '<b>'+VIDEO_GOAL_PCT+'%</b>를 보면 완주')
+      } · 최근 <span class="mono">${(p.updatedAt||'').slice(0,10)}</span></div>`;
 }
 // 재생 중이던 구간의 벽시계 경과 시간을 정산해서 누적한다(멈춤/종료/화면전환 시 남은 조각까지 반영).
 /* =============== 영상 조작줄 — 우리가 짓는다 (2026-09-13 · K-8) ===============
@@ -20863,7 +20893,7 @@ function chubVideoHTML(classId){
         <div class="t">${escHtml(v.title)}</div>
         <div class="m">${escHtml(v.unit||'단원 미지정')}${v.classId?'':' · 전체'}${
           v.dueDate ? ' · 마감 <span class="mono">'+escHtml(v.dueDate.slice(5))+'</span>'+(v.dueDate < todayStr() ? ' <span class="badge no">지남</span>' : '') : ''}</div>
-        <div class="p" title="재원 ${roster.length}명 중 ${d}명이 완주했습니다 (영상 길이의 ${VIDEO_GOAL_PCT}% 이상 시청).&#10;반 평균 시청률 ${a}% — 완주한 영상은 100으로 셉니다.">
+        <div class="p" title="재원 ${roster.length}명 중 ${d}명이 완주했습니다 (완주 = ${videoGoalLabel()}).&#10;반 평균 시청률 ${a}% — 안 본 학생은 0%로 함께 셉니다.">
           <span class="bar"><i style="width:${w}%"></i></span><b>완주 ${d}/${roster.length}</b></div>
       </div>`;
     }).join('')}
@@ -20892,14 +20922,14 @@ function chubVideoHTML(classId){
   const notSeen = rows.filter(r=>!r.p.seen).length;
 
   const drop = `<div class="vd-drop">
-    <div class="vd-dh"><b>이탈 지점</b><span>어디까지 보고 멈췄는가 · <b>완주 = 영상 길이의 ${VIDEO_GOAL_PCT}% 이상 실제 재생</b></span>
+    <div class="vd-dh"><b>이탈 지점</b><span>어디까지 보고 멈췄는가 · <b>완주 = ${videoGoalLabel()}</b></span>
       <span class="r">${state.allRecordsLoading ? '기록 불러오는 중…' : `재원 ${roster.length}명 · 완주 ${doneCnt} · 평균 ${avgSel}%`}</span></div>
     <div class="vd-bars">
       ${bins.map((n,i)=>{
         const isEnd = i===DROP_BINS;
         const isPeak = i===peakIdx;
         return `<div class="b ${isPeak?'peak':''} ${isEnd?'end':''}"
-          title="${isEnd?`완주 (${VIDEO_GOAL_PCT}% 이상 시청)`:`${i*10}~${i*10+9}%에서 멈춤`} · ${n}명">
+          title="${isEnd?`완주 (${videoGoalLabel()})`:`${i*10}~${i*10+9}%에서 멈춤`} · ${n}명">
           ${n>0 && (isPeak||isEnd) ? `<span class="v" style="color:${isEnd?'var(--ok)':'var(--no)'}">${n}</span>` : ''}
           <i style="height:${Math.round(n/barMax*100)}%"></i>
         </div>`;

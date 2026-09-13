@@ -57,11 +57,12 @@ const 곁 = {
    `stuTodo` 가 `videoDone` 을 부르게 됐다. 여기에 옮겨 적으면 잣대가 두 벌이 되므로 index.html 에서 그대로 뜬다.
    ⚠ 위 `videoProgress` 본보기에는 `duration` 이 없다 — **일부러다.** 길이를 모르는 옛 기록이
      저장된 `percent`·`completed` 로 물러서는 길까지 여기서 함께 밟힌다(새 꼴은 video-watch-test 가 잰다). */
-const 잣대 = ['VIDEO_DONE_RATIO', 'VIDEO_GOAL_PCT'].map(n => {
+const 잣대 = ['VIDEO_DONE_RATIO', 'VIDEO_GOAL_PCT', 'VIDEO_DONE_SLACK_SEC'].map(n => {
   const m = html.match(new RegExp('^const ' + n + ' = .*$', 'm'));
   if (!m) throw new Error(n + ' 를 못 찾았습니다');
   return m[0];
-}).join(NL) + NL + ['videoWatchRatio', 'videoPct', 'videoDone', 'videoSeen', 'videoScore'].map(lift).join(NL);
+}).join(NL) + NL + ['videoDurationSec', 'videoWatchedSec', 'videoWatchRatio', 'videoDone', 'videoPct',
+  'videoSeen', 'videoGoalLabel', 'videoScore'].map(lift).join(NL);
 const api = new Function(...Object.keys(곁),
   잣대 + NL + lift('stuDday') + NL + lift('stuTodo') + NL + lift('setVideoDue') + NL + 'return { stuDday, stuTodo, setVideoDue };'
 )(...Object.values(곁));
