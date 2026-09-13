@@ -78,6 +78,11 @@ body:has(> .chrome){background:#101114;}
   --point-line:#EFD3DD;
   --point-ring:rgba(168,62,94,.16);   /* 입력칸 포커스 고리 */
 
+  /* 로고 — 그림 «자리»만 둔다 (2026-09-14 · S-7).
+     ⚠ 값은 `index.html` 이 `LOGO_H1`(data URI) 로 한 번 얹는다 — 28KB 글자를 이 파일에 또
+       넣지 않는다(그림을 두 벌로 두지 않는다). 얹히기 전에는 아무것도 안 그린다. */
+  --logo-h1:none;
+
   /* 메모 — A3 시그니처. 손으로 적어둔 것은 전부 이 종이색 */
   --note:#FDFAEF; --note-line:#EDE3C6; --note-dash:#D8CFA8;
 

@@ -306,5 +306,45 @@ console.log(NL + '⑥ 손가락 말고 키로도 — 누르는 자리마다' + N
     /top:-1[0-9]px/.test(rule(html, '.sap-tabs a.fab i')), true);
 }
 
+/* ═══ ⑦ 상단바의 심볼 (2026-09-14 · S-7) ═══ */
+console.log(NL + '⑦ 좌상단 심볼 — 이름을 두 번 말하지 않는다' + NL);
+{
+  봄('로고는 한 벌이다 (data URI 하나)',
+    (html.match(/const LOGO_H1 = "data:image\/png;base64,/g) || []).length, 1);
+  봄('🔴 CSS 에서도 쓸 수 있게 토큰으로 얹는다',
+    html.includes(`document.documentElement.style.setProperty('--logo-h1', 'url("' + LOGO_H1 + '")')`), true);
+  /* 🔴 **JS 로만 얹는 토큰은 CSS 에서 «없는 이름»으로 보인다** — ④의 훑기가 실제로 잡았다.
+     ⇒ `:root` 에 «자리»를 선언해 둔다. 얹히기 전에는 `none` 이라 아무것도 안 그린다. */
+  봄('🔴 토큰 자리가 ds.css 에 선언돼 있다', /--logo-h1:\s*none;/.test(ds), true);
+  봄('⚠ 28KB 글자를 ds.css 에 또 넣지 않았다', ds.includes('data:image/png;base64'), false);
+  /* 🔴 학생 앱은 누를 때마다 다시 그린다 — 상단바에 28KB 글자를 실으면 그만큼 매번 실린다 */
+  봄('🔴 상단바가 innerHTML 로 28KB 를 안 싣는다', lift('studentHTML').includes('LOGO_H1'), false);
+  봄('⚠ 랜딩·로그인은 예전 그대로 <img> 로 둔다 (한 번 그리고 마는 화면이다)',
+    (html.match(/src="\$\{LOGO_H1\}"/g) || []).length >= 3, true);
+
+  /* 🔴 **로고를 통째로 넣으면 「김하현수학연구소」를 두 번 말한다** — 심볼만 잘라 쓴다.
+     자르는 잣대는 «폭 ≥ 높이 × (523/223)» 하나다. 높이를 바꾸면 폭도 따라와야 한다. */
+  const 잣대 = 523 / 223;
+  const 상자 = [...html.matchAll(/\.app\.sap \.topbar \.bm::before\{[^}]*?width:(\d+)px;height:(\d+)px/g)]
+    .map(m => [+m[1], +m[2]]);
+  봄('심볼 상자가 둘이다 (기본 · 좁은 폰)', 상자.length, 2);
+  봄('🔴 폭이 «높이 × 2.35» 이상이라 심볼이 안 잘린다',
+    상자.filter(([w, h]) => w < h * 잣대).map(([w, h]) => w + '×' + h), []);
+  봄('🔴 그렇다고 워드마크까지 보이면 안 된다 (x 556 부터가 글자다)',
+    상자.filter(([w, h]) => w * (223 / h) >= 556).map(([w, h]) => w + '×' + h), []);
+
+  /* ⚠ 좁은 폰에서 이름을 지우면 대부분의 폰(360~412)에서 학원 이름이 영영 안 보인다 */
+  const 좁은판 = (html.match(/@media \(max-width:400px\)\{[\s\S]*?\n\}/) || [''])[0];
+  봄('🔴 좁은 폰에서도 이름을 지우지 않는다', /\.bm\{[^}]*font-size:0/.test(좁은판), false);
+  봄('대신 심볼을 줄인다', /\.bm::before\{width:45px;height:19px/.test(좁은판), true);
+
+  /* 🔴 관리자 상단바는 이번에도 안 건드린다 */
+  봄('🔴 심볼은 학생 앱 상단바에만 붙는다',
+    (html.match(/\.topbar \.bm::before/g) || []).every(_ => true)
+    && !/(^|[^.])\.topbar \.bm::before/.test(html.replace(/\.app\.sap \.topbar \.bm::before/g, '')), true);
+  봄('관리자 상단바 글자는 그대로다',
+    (html.match(/<div class="bm">김하현수학연구소<\/div>/g) || []).length, 3);
+}
+
 console.log(NL + (fail ? '🔴 ' + fail + '개 실패 · ' : '✓ 전부 통과 · ') + pass + '개' + NL);
 process.exit(fail ? 1 : 0);
