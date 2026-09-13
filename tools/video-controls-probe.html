@@ -154,16 +154,12 @@ const t = setInterval(async () => {
   const zoomBox = $('#vzoom-V');
   R.zoom0 = zoomBox.style.transform;                       /* 처음엔 아무것도 안 건다 */
   R.touchPlain = getComputedStyle(veil).touchAction;       /* 확대 전 — 화면은 내려가야 한다 */
-  /* ⚠ 확대 단추는 dataset.ic 가 아니라 dataset.z 로 «지금 배율»을 적는다(비면 돋보기 그림). */
-  R.zoomBtn0 = [$('.vc-b.zoom').dataset.z, !!$('.vc-b.zoom').querySelector('svg')];
-  /* 단추로 다음 배율 */
-  const 배율들 = [];
-  for(let i=0;i<4;i++){ $('.vc-b.zoom').click(); 배율들.push(state.videoZoom.V.s); }
-  R.zoomSteps = 배율들;
+  /* 🔴 확대 «숫자» 단추는 2026-09-13(K-11)에 뺐다 — 배속 숫자와 헷갈린다고 사용자가 짚었다.
+     확대는 손가락(핀치)과 Ctrl+휠로만 한다. 조작줄에 그 단추가 «없는지»도 여기서 본다. */
+  R.noZoomButton = !$('.vc-b.zoom');
   /* 2배로 두고 — 칸이 실제로 커지는가 */
   vzSet('V', 2);
   R.zoomAt2 = /scale\\(2\\)/.test(zoomBox.style.transform);
-  R.zoomLabel = ($('.vc-b.zoom').textContent || '').trim();
   R.veilZoomedClass = veil.classList.contains('zoomed');
   /* 🔴 «클래스가 붙었나»가 아니라 **브라우저가 실제로 무엇을 하기로 했나**를 본다.
      평소에는 세로 스크롤을 브라우저에 넘기고(pan-y), 확대 뒤에는 우리가 다 받는다(none). */

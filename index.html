@@ -2634,6 +2634,17 @@
 .vc-shell .sap-vwrap{margin-top:0;border-radius:var(--r-md) var(--r-md) 0 0;}
 /* 투명한 판 — 우클릭(동영상 URL 복사)·길게 누르기·끝 화면의 관련 영상 클릭을 붙든다.
    ⚠ 배경을 완전 투명(transparent)으로 두면 사파리에서 클릭이 통과하는 일이 있다 — 거의 안 보이는 색을 깐다. */
+/* ---------- 수업 > 클리닉의 학생 고르개 (2026-09-13 · K-11) ----------
+   🔵 줄 목록이 아니라 «칩»이다 — 40명을 세로로 세우면 화면을 계속 굴려야 하고,
+     이 화면에서 하는 일은 «몇 명을 콕 집어 누르기»뿐이다. 담긴 것은 색으로 바로 보인다. */
+.app .cln-pick{display:flex;flex-wrap:wrap;gap:8px;}
+.app .cln-p{display:flex;align-items:baseline;gap:6px;padding:8px 12px;font-size:13px;font-weight:600;
+  border:1px solid var(--line);background:var(--paper);color:var(--ink);
+  border-radius:var(--r-pill);cursor:pointer;transition:background var(--t),border-color var(--t);}
+.app .cln-p:hover{background:var(--hover);}
+.app .cln-p i{font-style:normal;font-size:10.5px;font-weight:400;color:var(--dim);}
+.app .cln-p.on{background:var(--accent);border-color:var(--accent);color:#fff;}
+.app .cln-p.on i{color:rgba(255,255,255,.78);}
 /* 확대되는 칸 (2026-09-13 · K-10) — 유튜브 iframe 을 그대로 둔 채 이 상자만 키우고 옮긴다.
    ⚠ `transform-origin` 은 왼쪽 위다 — vzSet 의 셈이 그 기준으로 되어 있다. */
 .vc-zoom{position:absolute;inset:0;transform-origin:0 0;will-change:transform;}
@@ -4996,6 +5007,7 @@ let state = {
   importProgress: null,
   pbImageCache: {},
   allRecordsLoaded: false,
+  contactsLoaded: false, contactsLoading: false,   // 연락처(전화번호)를 받아 왔나 (2026-09-13 · K-11)
   allChatsLoaded: false,
   allChatsLoading: false,
   allRecordsLoading: false,
@@ -5134,6 +5146,7 @@ let state = {
   sessionDate: '',
   sessionClassId: '',
   sessionStep: 'att',
+  sessionClinicQ: '',        // 수업 > 클리닉의 학생 찾기 (2026-09-13 · K-11)
   sessionHwId: '',           // 수업 > 과제 검사에서 보고 있는 과제 (2026-09-01 · C-19)
   sessionHwEditId: null,     // 수업 > 과제에서 고치는 중인 과제 (2026-09-13 · K-5)
   hwEditId: null,            // 반 관리 > 과제 · 수업 기록 > 그날에서 고치는 중인 과제 (2026-09-13 · K-6)
@@ -7244,6 +7257,13 @@ async function updateStudentInfo(sid){
   });
   s.name = name; s.grade = grade; s.school = school; s.phone = phone; s.parentPhone = parentPhone;
   s.classId = classId; s.classIds = extra;
+  /* 🔴 **번호는 학생 문서에 안 쓴다** (2026-09-13 · K-11에 드러났다) — `addStudent` 가 지킨 규칙인데
+     여기서만 새고 있었다. 아래 `dbSetDoc('students', …, s)` 가 `s` 를 통째로 쓰므로
+     **화면에 쓸 것만 메모리에 남기고, 저장할 때는 번호를 뺀 사본을 보낸다.**
+     ⚠ 학생은 제 문서를 읽을 수 있다(firestore.rules) — 제 번호라 해도 쓰기로 한 자리가 아니다.
+     ⚠ 예전 수정으로 이미 들어간 번호도 이 저장에서 **같이 지워진다**(`contacts` 에는 그대로 남는다). */
+  const 저장할것 = Object.assign({}, s);
+  delete 저장할것.phone; delete 저장할것.parentPhone;
   /* 🔵 비밀번호는 Firestore 가 아니라 Auth 로 간다 — 워커가 대신 바꾼다.
      🔴 **바꾸다 실패하면 「바꿨다」고 말하지 않는다** — 그러면 강사가 학생에게
        새 비밀번호를 알려 주는데 학생은 옛것으로만 들어올 수 있다. */
@@ -7253,9 +7273,9 @@ async function updateStudentInfo(sid){
     try{ await adminResetPassword('student', sid, pw); 비번바꿈 = true; }
     catch(e){ showToast('비밀번호를 바꾸지 못했습니다 — ' + e.message + ' 나머지도 저장하지 않았습니다.'); return; }
   }
-  await dbSetDoc('students', studentKeyOfSid(sid), s);
-  if(phone || parentPhone)
-    await dbSetDoc('contacts', studentKeyOfSid(sid), {studentId:sid, phone, parentPhone});
+  await dbSetDoc('students', studentKeyOfSid(sid), 저장할것);
+  /* ⚠ **비워도 쓴다** — 예전에는 `if(phone || parentPhone)` 이라 **번호를 지우면 옛 번호가 그대로 남았다.** */
+  await dbSetDoc('contacts', studentKeyOfSid(sid), {studentId:sid, phone, parentPhone});
   await logAudit('학생 정보 수정', sid, s.name,
     (비번바꿈 ? '이름/학년/학교/연락처/반 · 비밀번호 변경' : '이름/학년/학교/연락처/반')
     + (extra.length ? ' · 추가 수강 ' + extra.map(classNameOf).join('·') : ''));
@@ -9124,9 +9144,11 @@ function videoControlsHTML(vid){
     <span class="vc-t cur" id="vc-cur-${vid}">0:00</span>
     <span class="vc-bar" id="vc-bar-${vid}" title="누르면 그 자리로 갑니다"><i></i></span>
     <span class="vc-t dur" id="vc-dur-${vid}">0:00</span>
-    ${/* 확대 (K-10) — 핀치가 안 되는 기기·데스크톱에도 길이 있어야 한다. 배율이 1이면 돋보기, 아니면 «2.0x». */''}
-    <button class="vc-b zoom" onclick="vzNext('${vid}')" title="확대 — 두 손가락으로 벌려도 되고, 확대한 뒤에는 끌어서 옮깁니다"
-      aria-label="확대">${iconSvg('search',16)}</button>
+    ${/* 🔴 **확대 단추는 뺐다** (2026-09-13 · K-11 · 사용자 — 「배율(돋보기모양)버튼의 숫자랑 배속 숫자랑
+         비슷해서 … 그냥 애들이 알아서 손가락으로 확대축소하면 되니까 안필요할 것 같아」).
+         조작줄에 **비슷하게 생긴 숫자 둘**(1.5x 배속 · 2.0x 배율)이 나란히 서면 어느 쪽이 무엇인지
+         매번 다시 읽어야 한다 — 길을 하나 더 주는 값보다 그 혼동이 크다.
+       ⚠ **확대 자체는 그대로 있다** — 두 손가락 핀치와 Ctrl/⌘+휠. `vzNext` 도 남겨 둔다(부르는 곳만 없다). */''}
     <button class="vc-b rate" onclick="vcNextRate('${vid}')" title="배속 — 빠르게 봐도 시청 시간은 영상 기준으로 셉니다">1x</button>
     <button class="vc-b mute" onclick="vcMute('${vid}')" title="소리 끄기 / 켜기" aria-label="소리">${iconSvg('sound',16)}</button>
     <button class="vc-b full" onclick="vcFull('${vid}')" title="전체 화면" aria-label="전체 화면">${iconSvg('expand',16)}</button>
@@ -9312,19 +9334,9 @@ function vcPaint(vid){
   아이콘(box.querySelector('.vc-b.full'),
     (document.fullscreenElement || document.webkitFullscreenElement) ? 'shrink' : 'expand');
   글자(box.querySelector('.vc-b.rate'), (Math.round(vcAsk(vid, x=>x.getPlaybackRate(), 1) * 100) / 100) + 'x');
-  /* 확대 단추 (K-10) — 배율이 1이면 돋보기, 확대 중이면 «2.0x» 와 누르면 되돌아온다는 말. */
-  const zb = box.querySelector('.vc-b.zoom');
-  if(zb){
-    const s = (state.videoZoom && state.videoZoom[vid] && state.videoZoom[vid].s) || 1;
-    const 표 = s > 1.01 ? (Math.round(s * 10) / 10) + 'x' : '';
-    if(zb.dataset.z !== 표){
-      zb.dataset.z = 표;
-      zb.classList.toggle('on', !!표);
-      zb.innerHTML = 표 || iconSvg('search', 16);
-      zb.title = 표 ? '확대 ' + 표 + ' — 누르면 다음 배율, 끝에서 원래대로. 끌어서 옮깁니다'
-                    : '확대 — 두 손가락으로 벌려도 되고, 확대한 뒤에는 끌어서 옮깁니다';
-    }
-  }
+  /* ⚠ 확대 단추는 2026-09-13(K-11)에 뺐다 — 까닭은 videoControlsHTML 의 주석에.
+     없는 단추를 0.25초마다 뒤질 이유가 없으므로 그리는 코드도 같이 걷었다.
+     🔵 이 주석에 그 선택자를 «글자로» 적지 않는다 — 덫이 주석을 물어 「아직 남아 있다」고 읽는다. */
 }
 /* 배속 (2026-09-13 · K-7) — 벽시계 1분은 2배속이면 «영상 2분»이다.
    안 곱하면 2배속으로 다 본 학생이 50%로 남는다. 4배를 넘는 값은 유튜브에 없으니 믿지 않는다. */
@@ -10692,6 +10704,41 @@ async function loadAllRecordsIfNeeded(){
   entries.forEach(([sid, rec]) => { if(rec) state.allRecords[sid] = rec; });
   state.allRecordsLoading = false;
   state.allRecordsLoaded = true;
+  render();
+}
+/* =============== 연락처 — 쓰기만 하고 «읽지는» 않고 있었다 (2026-09-13 · K-11) ===============
+   사용자 신고 — 「**등록할때 학부모 학생 전화번호 등록다했는데 번호등록이 안되었음**」.
+   🔴 **저장은 되고 있었다.** `addStudent` 가 `contacts/<uid>` 에 제대로 썼다.
+     그런데 **이 저장소 어디에서도 그 컬렉션을 읽지 않았다** — 화면은 `s.parentPhone`(학생 문서)을 보므로
+     등록한 번호는 영영 «—» 로만 보였다. **쓰기만 있고 읽기가 없는 통**이었다.
+     ⚠ 그래서 «고치기»로 다시 넣으면 되는 것처럼 보였다 — `updateStudentInfo` 가 번호를
+       **학생 문서에까지** 얹고 있었기 때문이다(그 자리도 이번에 같이 막았다).
+   🔵 **고친 뒤에 옛날 번호가 한꺼번에 살아난다** — 사라졌던 것이 아니라 안 읽고 있었을 뿐이다.
+   🔵 **로그인 때 같이 안 읽는다** — 학생 수만큼 읽기가 는다(46명이면 46건).
+     번호를 쓰는 화면은 몇 안 되므로 `loadAllRecordsIfNeeded`·`auditLogEnsureRecent` 와 같은 결로
+     **그 화면에서** 받는다.
+   ⚠ **문서 이름이 둘일 수 있다** — 새것은 `uid`, 09-07 열쇠 옮기기 전에 만든 것은 학번이다.
+     `dbGetCollection` 은 문서 «이름»을 안 주므로 **문서 안의 `studentId`** 로 맞춘다.
+     같은 학생 것이 여럿이면 **빈 칸만 메운다** — 어느 쪽이 새것인지 알 수 없으니 지우지는 않는다. */
+async function loadContactsIfNeeded(){
+  if(state.contactsLoaded || state.contactsLoading) return;
+  state.contactsLoading = true;
+  const rows = await dbGetCollection('contacts');
+  state.contactsLoading = false;
+  state.contactsLoaded = true;
+  const 짝 = {};
+  (rows || []).forEach(r => {
+    if(!r || !r.studentId) return;
+    const c = 짝[r.studentId] || (짝[r.studentId] = { phone:'', parentPhone:'' });
+    if(!c.phone && r.phone) c.phone = String(r.phone).trim();
+    if(!c.parentPhone && r.parentPhone) c.parentPhone = String(r.parentPhone).trim();
+  });
+  DATA.students.forEach(s => {
+    const c = 짝[s.studentId];
+    if(!c) return;
+    if(!s.phone) s.phone = c.phone;
+    if(!s.parentPhone) s.parentPhone = c.parentPhone;
+  });
   render();
 }
 // 문항 하나를 몇 명의 학생이 오답으로 제출했는지 센다 (제출 현황/검토 화면에서 재사용).
@@ -15256,6 +15303,9 @@ const ROSTER_FLAGS = [['att','출결 주의'], ['wrong','오답 미제출'], ['h
    ①②가 진 짐은 전부 **«반 머리와 명단이 서로 다른 말을 한다»**는 한 가지였다.
    반 머리를 치우자 그 짐이 통째로 사라졌다. **어긋남은 설명할 것이 아니라 없앨 것이었다.** */
 function teacherRosterHTML(){
+  /* ⚠ **상세로 빠지기 «전»에 부른다** (2026-09-13 · K-11) — 상세도 전화번호를 그린다.
+     아래 early return 뒤에 두면 명단에서만 번호가 뜨고 상세는 계속 «—» 다. */
+  loadContactsIfNeeded();
   if(state.studentDetailId) return teacherStudentDetailHTML(state.studentDetailId);
   loadAllRecordsIfNeeded();
 
@@ -15532,6 +15582,7 @@ async function exportRosterExcel(onlySelected){
   try{
     await ensureXLSXLoaded();
     await loadAllRecordsIfNeeded();
+    await loadContactsIfNeeded();   /* ⚠ 안 기다리면 전화번호 두 열이 통째로 빈 채로 나간다 (K-11) */
     const m = rosterModel();
     const picked = new Set(state.rosterSelected || []);
     const list = onlySelected ? m.rows.filter(s=>picked.has(s.studentId)) : m.rows;
@@ -15769,9 +15820,16 @@ function signalRowHTML(r, k, isMuted){
      «오늘 낼 과제를 적는 일» 둘을 같이 지고 있었다. **수업에서는 그 둘이 다른 시각에 일어난다** —
      검사는 시작할 때, 내주는 것은 끝날 때다. 한 단계에 묶여 있으면 두 번 들어가야 한다.
    ⚠ 번호는 배열 순서(`i`)가 매긴다. `prev`가 0이라 출결이 1, 과제 검사가 2… 로 맞는다. */
+/* 🔵 **클리닉이 마지막 단계로 붙었다** (2026-09-13 · K-11 · 사용자 —
+     「지금 현재는 현장조교가 없어서 시간대별 클리닉을 신청받거나 시간대별로 출석체크 할 수 없음.
+      그래서 참여한 학생이 누군지정도는 파악하기 위해서 수업탭에서 당일에 클리닉을 추가해서
+      전체 학생중 온 학생들을 간편하게 추가 할 수 있었으면 좋겠음」).
+   🔴 **클리닉 화면(시간대·정원·승인)은 그대로 둔다** — 조교가 생기면 다시 쓸 판이다.
+     여기는 그것을 대신하는 것이 아니라 **«오늘 누가 왔나»만 적는 빠른 문**이다.
+   ⚠ 맨 뒤에 둔다 — 클리닉은 수업이 끝난 뒤의 일이다. */
 const SESSION_STEPS = [
   ['prev', '지난 수업 확인'], ['att', '출결'], ['hwcheck', '과제 검사'],
-  ['prog', '진도'], ['exam', '시험'], ['hw', '과제'], ['memo', '메모']
+  ['prog', '진도'], ['exam', '시험'], ['hw', '과제'], ['memo', '메모'], ['clinic', '클리닉']
 ];
 const SESSION_SEG = [['출석','ok','출'], ['지각','late','지'], ['조퇴','leave','조'], ['결석','no','결']];
 
@@ -16375,6 +16433,9 @@ function teacherSessionHTML(){
        메모를 «치기만 하고 저장은 안 한» 상태에서도 체크가 뜬다. 새로고침하면 사라질 것을
        두고 «끝났다»고 말하면 안 된다(출결·시험 점수와 같은 원칙 — 저장된 기록만 믿는다). */
     memo: !!((state.sessionNotes[classId] || {})[date] || '').trim(),
+    /* ⚠ 클리닉이 없는 날도 있다 — 과제(등록)와 같은 사정이라 같은 어법으로 둔다:
+       «한 명이라도 담겼으면 끝난 것». 아무도 안 왔으면 체크는 안 켜진다. */
+    clinic: sessionClinicsOn(date).length > 0,
   };
   const stepsHTML = `<div class="steps" style="margin-top:18px;flex-shrink:0;">
     ${SESSION_STEPS.map((s,i)=>{
@@ -16391,6 +16452,7 @@ function teacherSessionHTML(){
   else if(step === 'prog') { const r = sessionProgHTML(classId, date);body = r.body; bar = r.bar; }
   else if(step === 'exam') { const r = sessionExamHTML(classId, date);body = r.body; bar = r.bar; }
   else if(step === 'hw')   { const r = sessionHwHTML(classId, date);  body = r.body; bar = r.bar; }
+  else if(step === 'clinic'){ const r = sessionClinicHTML(classId, date); body = r.body; bar = r.bar; }
   else                     { const r = sessionMemoHTML(classId, date);body = r.body; bar = r.bar; }
 
   return `<div class="cls-screen">${side}
@@ -16924,8 +16986,120 @@ function sessionMemoHTML(classId, date){
     <span class="sum">${loading ? '' : (text.trim() ? `<b class="mono">${text.trim().length}</b>자` : '아직 비어 있습니다')}</span>
     <span class="spacer"></span>
     <button class="btn p" ${loading?'disabled':''} onclick="saveSessionNote('${classId}','${date}')">메모 저장</button>
+    <button class="btn" onclick="goSessionStep('clinic')">클리닉으로 ${iconSvg('arrowR',15)}</button>
   </div>`;
   return { body, bar };
+}
+
+/* ── 8단계. 클리닉 — «오늘 누가 왔나»만 적는다 (2026-09-13 · K-11) ──
+   🔴 **시간대·정원·승인은 여기 없다.** 사용자의 사정이 그렇다 — 현장 조교가 없어서
+     시간대별로 신청을 받거나 출석을 찍을 수가 없다. 알고 싶은 것은 «참여한 학생이 누군지»뿐이다.
+     그래서 이 화면의 물음은 하나다 — **오늘 클리닉에 온 사람을 누르기.**
+   🔵 **반이 아니라 «전체 학생»에서 고른다** — 클리닉은 제 반 수업이 아닌 학생도 온다.
+     다만 지금 수업 중인 반 학생을 **위에 먼저** 세운다(대개 그들이 남는다).
+   🔴 **만드는 것은 «같은» 클리닉 문서다**(`DATA.clinics`) — 새 통을 파지 않는다.
+     시간대가 없는 클리닉은 이미 클리닉 화면이 «시간대 밖»으로 세워 준다(`loose`).
+     통을 하나 더 만들면 클리닉 화면과 이 화면이 서로 모르는 두 진실이 된다.
+   ⚠ `walkIn:true` 로 표시해 둔다 — **여기서 만든 것만 여기서 뺀다.**
+     시간대를 잡아 둔 신청까지 이 화면에서 지우면, 정원·승인을 아는 화면이 모르는 사이에 무너진다. */
+function sessionClinicsOn(date){
+  return DATA.clinics.filter(c => c.day === date && c.status !== '취소');
+}
+function sessionClinicHTML(classId, date){
+  const 온사람 = sessionClinicsOn(date);
+  const 온사람ids = new Set(온사람.map(c => c.studentId));
+  /* 고르개 — 재원생 전체. 이 반 학생이 먼저, 그다음 이름 순. */
+  const 이반 = new Set(classRoster(classId).map(s => s.studentId));
+  const 전체 = DATA.students.filter(s => !isWithdrawn(s)).slice().sort((a, b) =>
+    (이반.has(b.studentId) ? 1 : 0) - (이반.has(a.studentId) ? 1 : 0) || a.name.localeCompare(b.name));
+  const q = (state.sessionClinicQ || '').trim().toLowerCase();
+  const 보일것 = q ? 전체.filter(s => (s.name + ' ' + s.studentId).toLowerCase().includes(q)) : 전체;
+
+  const 줄 = c => {
+    const s = DATA.students.find(x => x.studentId === c.studentId);
+    const 때 = clinicWhenLabel(c);
+    return `<div class="st-row">
+      <div class="t"><b>${escHtml(c.name || (s && s.name) || c.studentId)}</b>
+        <span>${escHtml(s ? studentClassTitle(s) : '명단에 없음')}${
+          때 ? '<s>·</s>' + escHtml(때) : ''}${c.status === '대기' ? '<s>·</s>승인 대기' : ''}</span></div>
+      <div class="v">${c.walkIn
+        ? `<button class="btn q sm" onclick="sessionClinicToggle('${c.studentId}','${date}')">빼기</button>`
+        : `<span class="badge">시간대 신청</span>`}</div>
+    </div>`;
+  };
+
+  const body = `
+  <div class="t-sec">${date} 클리닉에 온 학생 <span class="mono">${온사람.length}</span></div>
+  ${온사람.length === 0
+    ? `<div style="padding:22px 0;text-align:center;color:var(--dim);font-size:12.5px;">아직 없습니다 — 아래에서 눌러 담으세요.</div>`
+    : 온사람.slice().sort((a, b) => String(a.name).localeCompare(String(b.name))).map(줄).join('')}
+
+  <div class="t-sec" style="margin-top:24px;">학생 고르기
+    <span style="font-weight:400;color:var(--sub);">누르면 담기고, 다시 누르면 빠집니다</span></div>
+  ${/* 🔴 **글자마다 render() 를 부르지 않는다 — 한글 조합이 끊긴다**(W-3에서 겪은 것).
+       칸에 친 글자는 state 에 담아만 두고, 보이고 숨기는 것은 이 자리에서 직접 한다. */''}
+  <div class="row" style="margin-bottom:10px;">
+    <span class="field" style="flex:1;max-width:260px;">${iconSvg('search', 13)}
+      <input id="cls-clinic-q" placeholder="이름 또는 아이디" value="${escHtml(state.sessionClinicQ || '')}"
+        oninput="sessionClinicFilter(this.value)"></span>
+    ${state.sessionClinicQ ? `<button class="btn sm" onclick="state.sessionClinicQ=''; render()">지우기</button>` : ''}
+    <span class="muted" style="font-size:11.5px;">재원생 <b class="mono">${전체.length}</b>명</span>
+  </div>
+  <div id="cls-clinic-pick" class="cln-pick">
+    ${보일것.map(s => {
+      const on = 온사람ids.has(s.studentId);
+      return `<button class="cln-p ${on ? 'on' : ''}" data-nm="${escHtml((s.name + ' ' + s.studentId).toLowerCase())}"
+        onclick="sessionClinicToggle('${s.studentId}','${date}')">
+        ${escHtml(s.name)}<i>${escHtml(이반.has(s.studentId) ? '이 반' : studentClassTitle(s))}</i></button>`;
+    }).join('')}
+  </div>
+  ${보일것.length === 0 ? '<div class="st-empty">찾는 학생이 없습니다.</div>' : ''}`;
+
+  const bar = `<div class="actbar">
+    <span class="sum">오늘 클리닉 <b class="mono">${온사람.length}</b>명</span>
+    <span class="spacer"></span>
+    <span class="muted" style="font-size:11.5px;">시간대·정원은 <b>클리닉</b> 메뉴에서 그대로 씁니다</span>
+  </div>`;
+  return { body, bar };
+}
+/* 칸에 친 글자는 담아만 두고 화면은 «여기서» 숨긴다 — render() 를 부르면 한글 조합이 끊긴다. */
+function sessionClinicFilter(q){
+  state.sessionClinicQ = q;
+  const box = document.getElementById('cls-clinic-pick');
+  if(!box) return;
+  const 말 = String(q || '').trim().toLowerCase();
+  box.querySelectorAll('[data-nm]').forEach(el => { el.hidden = !!말 && !el.dataset.nm.includes(말); });
+}
+/* 누르면 담기고 다시 누르면 빠진다.
+   🔴 **저장이 된 «뒤»에 메모리를 고친다** (withdrawStudent 와 같은 규칙) — 저장이 엎어졌는데
+     화면에만 담겨 있으면, 새로고침 한 번에 조용히 사라진다.
+   ⚠ **시간대를 잡아 둔 신청은 여기서 안 뺀다** — 정원·승인을 아는 화면이 모르는 사이에 무너진다. */
+async function sessionClinicToggle(sid, date){
+  const s = DATA.students.find(x => x.studentId === sid);
+  if(!s) return;
+  const 있던것 = sessionClinicsOn(date).find(c => c.studentId === sid);
+  if(있던것){
+    if(!있던것.walkIn){
+      showToast('시간대를 잡아 둔 신청입니다 — 「클리닉」 메뉴에서 다루세요.');
+      return;
+    }
+    /* ⚠ `dbDeleteDoc` 는 실패를 안 알린다(삼키고 로그만 남긴다) — 그래서 «저장 뒤 메모리»
+       규칙을 여기서는 지킬 수가 없다. `deleteClinic` 도 같은 자리다. 고치려면 그 함수부터다. */
+    await dbDeleteDoc('clinics', 있던것.id);
+    DATA.clinics = DATA.clinics.filter(c => c.id !== 있던것.id);
+    await logAudit('클리닉 참여 빼기', sid, s.name, date);
+  } else {
+    /* 🔴 uid 는 «그 학생» 것이어야 한다 — 강사 uid 를 박으면 정작 그 학생이 제 클리닉을 못 본다
+       (assignClinic 이 같은 자리에서 겪은 것). */
+    const clinic = { id: 'cl' + Date.now(), uid: studentKeyOfSid(sid), studentId: sid, name: s.name,
+      topic: '클리닉', slotId: '', slotIds: [], day: date, time: '', timeEnd: '',
+      status: '승인', requestedAt: todayStr(), walkIn: true };
+    const ok = await dbSetDoc('clinics', clinic.id, clinic);
+    if(ok === null){ showToast('담지 못했습니다. 잠시 뒤 다시 시도해 주세요.'); return; }
+    DATA.clinics.unshift(clinic);
+    await logAudit('클리닉 참여 담기', sid, s.name, date);
+  }
+  render();
 }
 
 /* ---------- 반 관리 ---------- */
@@ -16953,6 +17127,7 @@ async function exportClassExcel(classId){
   try{
     await ensureXLSXLoaded();
     await loadAllRecordsIfNeeded();
+    await loadContactsIfNeeded();   /* ⚠ 안 기다리면 전화번호 두 열이 통째로 빈 채로 나간다 (K-11) */
     const roster = classRoster(classId);
     const header = ['아이디','이름','학년','학교','학부모전화번호','학생전화번호','출석','지각','조퇴','결석','시험 응시 횟수','평균 점수(%)','최근 시험명','최근 점수'];
     const rows = roster.map(s=>{

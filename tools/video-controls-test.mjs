@@ -159,10 +159,9 @@ if (!CHROME) {
     봄('소리 끄기·켜기', [R.mute0, R.mute1, R.muted1, R.mute2, R.muted2],
       ['sound', 'mute', true, 'sound', false]);
     /* 확대 (2026-09-13 · K-10) — 판이 손가락을 먼저 받으므로 확대는 우리가 진다 */
-    봄('처음엔 확대가 안 걸려 있다 · 단추는 돋보기 그림', [R.zoom0, R.zoomBtn0], ['', ['', true]]);
-    봄('🔴 단추로 다음 배율 — 끝에서 되돌아온다', R.zoomSteps, [1.5, 2, 3, 1]);
+    봄('처음엔 확대가 안 걸려 있다', R.zoom0, '');
+    봄('🔴 조작줄에 확대 숫자 단추가 없다 (배속 숫자와 헷갈린다 · K-11)', R.noZoomButton, true);
     봄('🔴 2배로 두면 칸이 실제로 커진다', R.zoomAt2, true);
-    봄('단추가 지금 배율을 적는다', R.zoomLabel, '2x');
     봄('확대 중이면 판이 손짓을 다 받는다', R.veilZoomedClass, true);
     /* 🔴 클래스가 붙었나가 아니라 브라우저가 실제로 무엇을 하기로 했나를 본다. */
     봄('🔴 평소에는 영상 위에서도 화면이 내려간다 (pan-y)', R.touchPlain, 'pan-y');
