@@ -156,7 +156,9 @@ console.log(NL + '②-b 강사가 받아 문항을 세운다' + NL);
     const DATA = { problemBank: (이미있는것 || []).slice() };
     const state = { allRecords: recs, itemByCode: 장부 };
     const 쓴것 = [], 말 = [], 장부적음 = [];
-    const 곁 = ['DATA', 'state', 'loadItemStoreIfNeeded', 'codeVariantFor', 'loadRecord', 'saveRecord',
+    /* ⚠ 2026-09-13(K-19)부터 «강사가 학생 기록에 쓰는 문»이 따로다(`saveRecordAsTeacher`) —
+       쓰고 나서 `state.allRecords` 까지 같이 갈아 끼운다. 여기서도 그 문을 준다. */
+    const 곁 = ['DATA', 'state', 'loadItemStoreIfNeeded', 'codeVariantFor', 'loadRecord', 'saveRecordAsTeacher',
       'dbSetDoc', 'logAudit', 'showToast', 'render', 'todayStr', 'studentNameOf'];
     const 값 = [DATA, state, async () => {},
       code => 변형있나 ? { code: code + '-N01', content: '쌍둥이 본문', answer: '3' } : null,
@@ -202,7 +204,7 @@ console.log(NL + '②-b 강사가 받아 문항을 세운다' + NL);
 
   /* 문항을 못 세우면 요청을 안 지운다 */
   const c = 만들기(false);
-  const 곁2 = ['DATA', 'state', 'loadItemStoreIfNeeded', 'codeVariantFor', 'loadRecord', 'saveRecord',
+  const 곁2 = ['DATA', 'state', 'loadItemStoreIfNeeded', 'codeVariantFor', 'loadRecord', 'saveRecordAsTeacher',
     'dbSetDoc', 'logAudit', 'showToast', 'render', 'todayStr', 'studentNameOf'];
   const G = new Function(...곁2,
     잣대 + NL + lift('bookReqsOf') + NL + lift('bookReqPending') + NL + lift('bookReqLabelOf') + NL +
@@ -290,7 +292,9 @@ console.log(NL + '④ 화면 — 학생과 강사가 각각 무엇을 보는가'
      ⚠ 큐가 아니라 «띠»다: 요청은 아직 problembank 가 아니라 큐 조건으로 못 거른다. */
   const 검토 = lift('teacherReviewHTML');
   봄('🔴 검토 화면 맨 위에 요청 띠가 선다', 검토.includes('const reqBar = !요청들.length'), true);
-  봄('그 띠를 실제로 그린다', 검토.includes('${reqBar}${aiBar}'), true);
+  /* ⚠ 띠가 늘어난다 — 2026-09-13 에 「세워 주세요」(askBar)가 사이에 끼었다(K-19).
+     그래서 «맨 앞이 reqBar 인가»만 본다. 이어붙인 글자를 통째로 박아 두면 띠가 하나 늘 때마다 헛돈다. */
+  봄('그 띠를 실제로 «맨 앞에» 그린다', 검토.includes('<main class="rv-work">${reqBar}'), true);
   봄('누르면 받는다', 검토.includes('bookReqAccept('), true);
   봄('누가 불렀는지 이름으로 적는다', 검토.includes('r.who.map(studentNameOf)'), true);
   봄('요청이 없으면 띠를 아예 안 그린다', 검토.includes("!요청들.length ? '' :"), true);

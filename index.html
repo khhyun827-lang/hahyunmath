@@ -6294,6 +6294,15 @@ async function saveRecord(studentId){
   }
   return dbSetDoc('records', uid, rec);
 }
+/* 🔴 **강사가 학생 기록에 쓰고 나면 «강사가 보는 그 기록»도 같이 갈아 끼운다** (2026-09-13 · K-19).
+   강사 화면은 `state.allRecords` 를 보는데 쓰기는 `DATA.records` 를 지난다 — **두 벌이다.**
+   갈린 채로 두면 방금 처리한 것이 화면에 그대로 남아 «안 먹혔다»로 읽히고, 한 번 더 누르게 된다.
+   ⚠ 저장이 된 뒤에만 갈아 끼운다 — 못 쓴 것을 화면에서 지우면 그것이야말로 거짓말이다. */
+async function saveRecordAsTeacher(studentId){
+  const ok = await saveRecord(studentId);
+  if(ok === true && state.allRecords) state.allRecords[studentId] = DATA.records[studentId];
+  return ok;
+}
 async function loadChat(studentId){
   if(!DATA.chats[studentId]){
     DATA.chats[studentId] = await dbGetDoc('chats', studentKeyOfSid(studentId), []);
@@ -7821,7 +7830,35 @@ const REPORT_WHYS = [
 ];
 const REPORT_WHY_LABEL = Object.fromEntries(REPORT_WHYS.map(w=>[w[0], w[1]]));
 
-function openReports(b){ return ((b && b.reports) || []).filter(r=>!r.done); }
+/* =================== 신고가 사는 자리 (2026-09-13 · K-19) ===================
+   🔴 **여기도 K-18과 같은 흠이었다** — 신고는 `b.reports` 에 얹어 `problembank` 에 저장했는데,
+     그 통은 **`allow write: if isTeacher()`** 다. 학생이 「보내기」를 누르면 403 이 나고
+     화면은 「보내지 못했습니다」만 말한다 — **신고가 한 건도 안 들어오고 있었다.**
+     ⚠ 검토 화면의 **맨 앞 줄이 「신고됨」**이다(「학생이 못 푸는 채로 기다리고 있다」).
+       그 줄이 영영 0이었던 것이다. 소리 없이 비어 있는 줄이 제일 나쁘다.
+   ⇒ **학생 신고는 제 기록(`rec.reports`)에 쓴다** — 학생이 쓸 수 있는 유일한 자리다.
+   🔵 **읽을 때 둘을 합쳐 본다** — 옛 신고는 `b.reports` 에 남아 있다(막히기 전에 들어온 것).
+     한쪽만 보면 옛 신고가 통째로 사라진다. **옮기지 않고 합친다** — 옮기는 일은 또 다른 사고다.
+   ⚠ 강사가 기록을 안 읽은 화면에서는 학생 신고가 안 보인다 — 검토 화면은 `loadAllRecordsIfNeeded` 를 부른다. */
+function reportsOfRecords(bankId){
+  const out = [];
+  for(const sid in (state.allRecords || {})){
+    for(const r of ((state.allRecords[sid] || {}).reports || []))
+      if(r.bankId === bankId) out.push(r);
+  }
+  return out;
+}
+/* 이 문항에 달린 신고 전부 — 옛 자리(문항)와 새 자리(학생 기록)를 합친다.
+   ⚠ 학생 화면에서는 `state.allRecords` 가 비어 있다 — 그때는 «제 기록»만 얹는다. */
+function allReports(b){
+  if(!b) return [];
+  const 옛것 = b.reports || [];
+  const 새것 = (state.allRecords && Object.keys(state.allRecords).length)
+    ? reportsOfRecords(b.id)
+    : ((DATA.records[(state.currentUser || {}).studentId] || {}).reports || []).filter(r => r.bankId === b.id);
+  return 옛것.concat(새것);
+}
+function openReports(b){ return allReports(b).filter(r=>!r.done); }
 function faceReported(b, face){ return openReports(b).some(r=>r.face===face); }
 /* 이 학생이 이 얼굴을 이미 신고했나 — 두 번 누르게 두면 같은 말이 쌓인다. */
 function myReport(b, face, sid){ return openReports(b).find(r=>r.face===face && r.sid===sid); }
@@ -7854,7 +7891,8 @@ function reportHintHTML(bankId, face){
   if(state.reportOpen === bankId + '|' + face) return '';
   const b = DATA.problemBank.find(x=>x.id===bankId);
   if(!b || myReport(b, face, sid)) return '';
-  const everReported = DATA.problemBank.some(x => (x.reports||[]).some(r => r.sid === sid));
+  const everReported = ((DATA.records[sid] || {}).reports || []).length > 0
+    || DATA.problemBank.some(x => (x.reports||[]).some(r => r.sid === sid));
   if(everReported) return '';
   return `<button class="flaw-hint" onclick="toggleReport('${escHtml(bankId + '|' + face)}')">
     ${iconSvg('alert', 14)}<span><b>문제가 이상한가요?</b>알려주면 선생님이 확인해서 고쳐 줍니다</span></button>`;
@@ -7908,12 +7946,17 @@ async function sendReport(bankId, face){
     face, why: state.reportWhy || 'other', note,
     at: nowStamp(), done: false,
   };
-  b.reports = (b.reports || []).concat(r);
+  /* 🔴 **제 기록에 쓴다** (2026-09-13 · K-19) — `problembank` 는 강사만 쓸 수 있어서
+     여태 이 단추가 **한 번도 안 먹혔다.** 어느 문항에 대한 것인지는 `bankId` 로 남긴다. */
+  r.bankId = b.id;
+  const rec = await loadRecord(sid);
+  if(!rec){ showToast('보내지 못했습니다 — 잠시 뒤에 다시 눌러주세요.'); return; }
+  rec.reports = (rec.reports || []).concat(r);
   /* 🔴 **저장이 됐는지 보고 말한다** — 안 보고 알리면 「보냈다」고 해 놓고 새로고침하면 사라진다
      (2026-09-04 에 창고에서 똑같이 당했다). */
-  const ok = await dbSetDoc('problembank', b.id, b);
+  const ok = await saveRecord(sid);
   if(!ok){
-    b.reports = b.reports.filter(x=>x.id!==r.id);
+    rec.reports = rec.reports.filter(x=>x.id!==r.id);
     showToast('보내지 못했습니다 — 잠시 뒤에 다시 눌러주세요.');
     render(); return;
   }
@@ -7930,7 +7973,7 @@ function reportAckHTML(bankId){
   const b = DATA.problemBank.find(x=>x.id===bankId);
   const sid = state.currentUser && state.currentUser.studentId;
   if(!b || !sid) return '';
-  const mine = ((b.reports)||[]).filter(r=>r.sid===sid && r.done && !r.ack);
+  const mine = allReports(b).filter(r=>r.sid===sid && r.done && !r.ack);
   if(!mine.length) return '';
   /* ⚠ **«문제 없음»도 알려 준다.** 그쪽이 더 중요할 수 있다 — 학생은 자기가 뭘 잘못 봤는지
      모른 채로 남아 있다. 다만 말투는 나무라지 않는다. */
@@ -7943,24 +7986,60 @@ function reportAckHTML(bankId){
   </div>`;
 }
 async function ackReports(bankId){
-  const b = DATA.problemBank.find(x=>x.id===bankId);
   const sid = state.currentUser && state.currentUser.studentId;
-  if(!b || !sid) return;
-  for(const r of (b.reports||[])) if(r.sid===sid && r.done) r.ack = true;
-  await dbSetDoc('problembank', b.id, b);
+  if(!sid) return;
+  /* ⚠ 옛 신고는 문항에 붙어 있는데 학생은 그것을 못 쓴다 — 제 기록 것만 «봤다»로 찍는다.
+     옛것은 강사가 닫으면서 같이 정리한다(`resolveReports`). */
+  const rec = await loadRecord(sid);
+  if(!rec) return;
+  let 바뀜 = false;
+  for(const r of (rec.reports||[])) if(r.bankId===bankId && r.done && !r.ack){ r.ack = true; 바뀜 = true; }
+  if(바뀜) await saveRecord(sid);
   render();
 }
 
 /* ---------- 강사 쪽 ---------- */
 /* 신고를 처리한다. **두 갈래뿐이다** — 고쳤거나, 문제는 멀쩡했거나.
    ⚠ 어느 쪽이든 «닫는다». 열어 둔 채로 두면 그 얼굴이 영영 안 나간다. */
+/* 🔴 **신고는 «어디 사는지»가 둘이다** (2026-09-13 · K-19).
+   옛 신고는 문항(`b.reports`)에, 새 신고는 학생 제 기록(`rec.reports`)에 산다.
+   닫을 때도 **그 자리에** 적어야 한다 — 한쪽만 쓰면 다른 쪽은 영영 열린 채로 큐에 남는다.
+   ⚠ 저장이 된 것만 «닫혔다»로 친다. 못 쓴 것은 되돌려 열어 둔다 — 다시 처리할 수 있어야 한다.
+   `bankSave` 를 끄면 문항 저장은 부르는 쪽에 맡긴다(같은 문항을 두 번 쓰지 않으려는 것). */
+async function closeReports(b, how, pick, bankSave){
+  if(!b) return true;
+  const at = nowStamp();
+  const 열린것 = openReports(b).filter(r => !pick || pick(r));
+  if(!열린것.length) return true;
+  let 탈 = false;
+  const 찍기 = r => { r.done = true; r.how = how; r.doneAt = at; };
+  const 되돌리기 = r => { delete r.done; delete r.how; delete r.doneAt; };
+
+  /* ① 문항에 붙어 있는 옛 신고 */
+  const 옛것 = (b.reports || []).filter(r => 열린것.includes(r));
+  if(옛것.length){
+    옛것.forEach(찍기);
+    if(bankSave !== false && await dbSetDoc('problembank', b.id, b) !== true){
+      옛것.forEach(되돌리기); 탈 = true;
+    }
+  }
+  /* ② 학생 기록에 있는 새 신고 — 사람별로 모아 **한 번씩만** 쓴다 */
+  const 사람별 = {};
+  열린것.filter(r => !옛것.includes(r))
+        .forEach(r => { (사람별[r.sid] || (사람별[r.sid] = [])).push(r.id); });
+  for(const sid in 사람별){
+    const rec = await loadRecord(sid);
+    const 것들 = ((rec && rec.reports) || []).filter(r => 사람별[sid].includes(r.id));
+    if(!것들.length){ 탈 = true; continue; }
+    것들.forEach(찍기);
+    if(await saveRecordAsTeacher(sid) !== true){ 것들.forEach(되돌리기); 탈 = true; }
+  }
+  return !탈;
+}
 async function resolveReports(bankId, how){
   const b = DATA.problemBank.find(x=>x.id===bankId);
   if(!b) return;
-  const at = nowStamp();
-  for(const r of openReports(b)){ r.done = true; r.how = how; r.doneAt = at; }
-  const ok = await dbSetDoc('problembank', b.id, b);
-  if(!ok){ showToast('저장하지 못했습니다 — 다시 시도해주세요.'); return; }
+  if(!await closeReports(b, how)){ showToast('저장하지 못했습니다 — 다시 시도해주세요.'); render(); return; }
   logAudit('오류 신고 처리', '', '', `${b.itemCode || b.id} · ${how==='fixed'?'고쳤음':'문제 없음'}`);
   showToast(how==='fixed' ? '고친 것으로 표시했습니다.' : '문제 없음으로 닫았습니다.');
   followBankToQueue(b);
@@ -8116,6 +8195,12 @@ function dqFaces(b){
 
   /* 🔴 **신고된 얼굴은 안 낸다** (2026-09-05). 강사가 볼 때까지 다른 날 또 나가면,
      학생은 「말해도 소용없다」를 배운다. 그러면 두 번째부터는 아무도 안 누른다.
+
+     ⚠ **«남이 신고한 것»까지는 못 막는다** (2026-09-13 · K-19). 신고가 학생 제 기록으로
+       옮겨 간 뒤로, 학생 화면에서 보이는 신고는 **제 것뿐**이다 — 남의 기록은 못 읽는다
+       (`records/{uid}` 는 `isMine`). 이 경계는 넓힐 수 없으므로 받아들인다.
+       🔵 신고한 본인에게는 확실히 안 나간다(제일 중요한 것이다 — 그 학생은 그 문제를 못 푼다).
+       🔵 강사가 「이 문제 빼기」를 누르면 그때부터는 **모두에게** 안 나간다(`blockedFaces`).
 
      🔴 **그리고 «글자가 같은» 다른 얼굴도 같이 빼야 한다** (사용자가 실제로 겪었다).
        원본을 「글자가 깨져 보여요」로 신고했더니 **글이 완전히 같은 `-N01` 이 대신 나갔다.**
@@ -10715,6 +10800,19 @@ async function cancelBookRequest(code){
   await saveRecord(sid);
   render();
 }
+/* =============== 문항 줄을 «세워 달라»는 부름 (2026-09-13 · K-19) ===============
+   시험지를 등록하면 `saveExam` 이 문항마다 줄을 미리 세워 둔다. 그런데 옛 시험지·나중에 더한
+   번호에는 그 줄이 없을 수 있고, 그때 학생이 오답으로 내면 **여태 학생이 그 줄을 세우려 했다.**
+   `problembank` 는 강사만 쓴다 — 403 이 나고, 없는 문항을 가리키는 숙제만 남았다.
+   ⇒ 학생은 **제 기록에** 「이것 좀 세워 주세요」를 적는다. 세우는 일은 강사가 한다(`bankAskAccept`).
+   ⚠ 열쇠는 «시험지 + 형-번호»다 — 번호만으로는 형이 나뉜 시험지에서 어느 문제인지 모른다. */
+function bankAsksOf(rec){ return (rec && rec.bankAsks) || []; }
+function bankAskAdd(rec, examId, qkey){
+  if(!rec || !examId || !qkey) return false;
+  if(bankAsksOf(rec).some(a => a.examId === examId && a.qkey === qkey)) return false;
+  rec.bankAsks = bankAsksOf(rec).concat({ examId, qkey, at: todayStr() });
+  return true;
+}
 async function submitWrongAnswers(){
   const examId = state.wrongExamId;
   const exam = DATA.exams.find(e=>e.id===examId);
@@ -10722,104 +10820,49 @@ async function submitWrongAnswers(){
   /* 🔵 고른 것은 이제 «형-번호» 열쇠다(`A-15` · `0-단답형1`). 숫자로 바꾸지 않는다. */
   const wrongNos = Object.keys(state.wrongChecked).filter(k=>state.wrongChecked[k]);
   if(wrongNos.length===0){ showToast('틀린 문제 번호를 선택해주세요.'); return; }
-  await loadUnitBankIfNeeded();
-  await loadVariantsIfNeeded();
   const sid = state.currentUser.studentId;
   const rec = await loadRecord(sid);
-  let matchedFromBank = 0, newlyRequested = 0, matchedFromCode = 0;
+  /* 🔴 **학생은 문항 창고(`problembank`)에 못 쓴다** (2026-09-13 · K-19).
+     규칙이 `allow write: if isTeacher()` 이고 **그 규칙이 옳다** — 내용을 `value` 한 칸의 JSON
+     으로 넣으므로 규칙이 그 «안»을 못 본다(K-18). 그런데 여기서는 그 쓰기를 **반환값도 안 보고**
+     불렀다. 그래서 두 가지가 조용히 어긋나 있었다:
+       ① 문항 줄이 아직 없을 때 — 여기서 새로 세우려 했다. 403 이니 그 줄은 DB 에 없고,
+          학생 숙제만 **없는 문항을 가리킨 채** 남았다.
+       ② 줄은 있는데 변형이 빌 때 — 창고 변형으로 채우려 했다. 403 이니 화면에서만 채워진 듯
+          보이다가, 새로고침하면 「검토 중」으로 되돌아갔다.
+     ⇒ **학생은 제 기록에만 쓴다.** 세우는 것도 채우는 것도 강사가 한다 —
+       사용자가 정한 「내가 변형하고 검토하고 나갔으면 좋겠어」와 그대로 맞는다.
+     🔵 그래서 창고·보충문제를 여기서 안 읽는다(`loadUnitBankIfNeeded`·`loadVariantsIfNeeded` 뺐다).
+       학생이 오답을 낼 때마다 쓰지도 못할 것을 읽느라 한도를 태우고 있었다. */
+  let 바로나감 = 0, 기다림 = 0;
   for(const no of wrongNos){
-    let bank = findBankEntry(examId, no);
+    const bank = findBankEntry(examId, no);
     if(!bank){
+      /* 줄이 없다 — «세워 주세요»를 제 기록에 적는다. 강사 검토 화면 맨 위 띠에 뜬다. */
       const q = exam.questions.find(x => (x.qkey || ('0-' + x.no)) === String(no) || String(x.no) === String(no));
       if(!q) continue;
-      /* 시험지 등록 때와 같은 태그를 싣는다 — 이 길로 만들어진 항목만 태그가 없으면
-         그 학생만 조용히 범위 판정에서 빠진다 (문항 태그는 problembank가 진실이다).
-         ⚠ **코드도 같이 싣는다** — 예전에는 이 길로 만든 항목만 `itemCode` 가 비어서,
-           나중에 창고와 이어지지 않는 «떠 있는» 문항이 됐다 (2026-09-04). */
-      const tag = {subject:q.unit||'', chapter:q.chapter||'', itemCode:q.itemCode||''};
-      /* 🔵 **먼저 «그 문항의 변형»을 찾는다** (2026-09-04 · 사용자 결정).
-         예전에는 보충문제 창고(`unitbank`)에서 **과목이 같은 것 중 아무거나** 하나를
-         무작위로 집었다 — 「공통수학2를 틀렸다」에 공통수학2 아무 문제나 나가는 셈이다.
-         지금은 문항마다 코드가 있고 그 코드에 진짜 쌍둥이(`-N01`…)가 매달려 있으므로,
-         **같은 문항의 변형**을 먼저 쓴다. 창고는 코드가 없을 때의 뒷길로만 남긴다.
-         🔵 갈래는 N(숫자변형)을 먼저 본다 — 틀린 문제를 «같은 난이도로 한 번 더»가
-           오답숙제의 뜻이다. 없으면 하향(D), 그것도 없으면 남은 아무 변형. */
-      const codeMatch = codeVariantFor(q.itemCode);
-      const candidates = q.unit ? DATA.unitBank.filter(u=>u.unit===q.unit) : [];
-      const match = codeMatch ? null
-        : (candidates.length ? candidates[Math.floor(Math.random()*candidates.length)] : null);
-      if(codeMatch){
-        bank = {
-          id:'pb'+Date.now()+'_'+no, examId, questionNo: (q && q.no) || no,
-          /* 🔵 열쇠는 «형-번호»다 — 학생이 고른 그 열쇠를 그대로 싣는다. */
-          qkey: String(no), qtype: (q && q.type) || '0', qlabel: (q && q.label) || String(no),
-          originalContent:q.content, originalAnswer:q.answer,
-          variantContent: codeMatch.content, variantAnswer: codeMatch.answer,
-          status:'approved', source:'itemstore', variantCode: codeMatch.code, ...tag
-        };
-        matchedFromCode++;
-      } else if(match){
-        bank = {
-          id:'pb'+Date.now()+'_'+no, examId, questionNo: (q && q.no) || no,
-          /* 🔵 열쇠는 «형-번호»다 — 학생이 고른 그 열쇠를 그대로 싣는다. */
-          qkey: String(no), qtype: (q && q.type) || '0', qlabel: (q && q.label) || String(no),
-          originalContent:q.content, originalAnswer:q.answer,
-          variantContent: match.content, variantAnswer: match.answer,
-          status:'approved', source:'unitbank', unitBankId: match.id, ...tag
-        };
-        matchedFromBank++;
-      } else {
-        bank = {
-          id:'pb'+Date.now()+'_'+no, examId, questionNo: (q && q.no) || no,
-          /* 🔵 열쇠는 «형-번호»다 — 학생이 고른 그 열쇠를 그대로 싣는다. */
-          qkey: String(no), qtype: (q && q.type) || '0', qlabel: (q && q.label) || String(no),
-          originalContent:q.content, originalAnswer:q.answer,
-          variantContent: '', variantAnswer: '',
-          status:'pending', ...tag
-        };
-        newlyRequested++;
-      }
-      DATA.problemBank.push(bank);
-      await dbSetDoc('problembank', bank.id, bank);
-    } else if(!bank.variantContent && !bank.variantAnswer){
-      /* 🔴 **여기가 실제로 도는 자리다** (2026-09-04에 고쳤다).
-         위 `if(!bank)` 블록은 «문항 창고에 항목이 아직 없을 때»만 도는데,
-         `saveExam` 이 시험지를 등록하는 순간 **모든 문항에 대해 항목을 미리 만든다**
-         (status:'pending', 내용은 빈 채로). 그래서 정상 등록된 시험지에서는 위 블록에
-         영영 안 들어간다 — 코드 변형을 먼저 쓰게 해 놓고도 **옛 데이터에만 먹히고
-         있었다.** 빈 항목을 만나면 그 자리에서 창고의 변형으로 채운다.
-         ⚠ 이미 내용이 있는 항목은 안 건드린다 — 강사가 AI로 만들어 검토해 둔 것을
-           덮으면 안 된다. «비어 있을 때만»이 이 분기의 전부다. */
-      const v = codeVariantFor(bank.itemCode);
-      if(v){
-        bank.variantContent = v.content;
-        bank.variantAnswer  = v.answer;
-        bank.variantCode    = v.code;
-        bank.source         = 'itemstore';
-        /* 창고에 든 변형은 넣을 때 이미 검토를 거친 것이라 그대로 낸다
-           (보충문제 창고에서 뽑던 것도 같은 판단으로 approved 였다). */
-        bank.status         = 'approved';
-        await dbSetDoc('problembank', bank.id, bank);
-        matchedFromCode++;
-      } else {
-        /* 채울 것이 없으면 «선생님을 기다리는 것»이다 — 학생에게 그렇게 말해 준다. */
-        newlyRequested++;
-      }
+      bankAskAdd(rec, examId, String(no));
+      기다림++;
+      continue;
     }
     if(!rec.wrongHomework.some(h=>h.bankId===bank.id)){
       /* 🔵 숙제에도 열쇠를 남긴다 — 화면이 「B형 15번」으로 말할 수 있어야 한다. */
       rec.wrongHomework.push({bankId:bank.id, examId, questionNo: bank.questionNo, qkey: bank.qkey || String(no), qlabel: bank.qlabel || String(no), qtype: bank.qtype || '0', assignedAt:todayStr(), done:false, studentAnswer:''});
     }
+    /* 낼 것이 이미 들어 있으면 바로 나간다. 비어 있으면 강사가 채울 때까지 기다린다 —
+       그 문항은 이미 검토 화면 「내용 없음」 줄에 서 있으므로 따로 부를 것이 없다. */
+    if(bank.variantContent || bank.variantAnswer) 바로나감++;
+    else 기다림++;
   }
-  await saveRecord(sid);
+  /* 🔴 **저장이 된 뒤에 「제출되었습니다」라고 한다** — 안 보고 말하면 새로고침에서 사라진다. */
+  const ok = await saveRecord(sid);
+  if(!ok){ showToast('제출하지 못했습니다 — 잠시 뒤에 다시 눌러주세요.'); return; }
   state.wrongChecked = {};
   let msg = '제출되었습니다.';
-  /* 창고에서 나온 것은 «어느 창고»인지 학생에게 구별해 말하지 않는다 — 학생에게는
-     「바로 나왔다 / 기다려야 한다」 둘뿐이 뜻이 있다. 세는 것만 합쳐서 말한다. */
-  const ready = matchedFromCode + matchedFromBank;
-  if(ready>0 && newlyRequested>0) msg = `제출되었습니다. ${ready}개는 바로 숙제로 나갔고, ${newlyRequested}개는 선생님이 등록하면 나갑니다.`;
-  else if(ready>0) msg = '제출되었습니다. 문항 창고에서 바로 숙제로 나갔습니다.';
-  else if(newlyRequested>0) msg = '제출되었습니다. 선생님이 쌍둥이 문제를 등록하면 숙제로 나갑니다.';
+  /* 학생에게 뜻이 있는 것은 «바로 나왔다 / 기다려야 한다» 둘뿐이다 — 어디서 나왔는지는 안 말한다. */
+  if(바로나감>0 && 기다림>0) msg = `제출되었습니다. ${바로나감}개는 바로 숙제로 나갔고, ${기다림}개는 선생님이 등록하면 나갑니다.`;
+  else if(바로나감>0) msg = '제출되었습니다. 바로 숙제로 나갔습니다.';
+  else if(기다림>0) msg = '제출되었습니다. 선생님이 쌍둥이 문제를 등록하면 숙제로 나갑니다.';
   showToast(msg);
   render();
 }
@@ -22358,7 +22401,7 @@ async function bookReqAccept(code){
         assignedAt: todayStr(), done: false, studentAnswer: '' });
     }
     rec.bookRequests = bookReqsOf(rec).filter(r => r.code !== code);
-    if(await saveRecord(sid) === null){ 못한이.push(sid); continue; }
+    if(await saveRecordAsTeacher(sid) !== true){ 못한이.push(sid); continue; }
     붙임++;
   }
   await logAudit('교재 요청 받기', '', '', bookReqLabelOf(code) + ' · ' + 붙임 + '명');
@@ -22367,6 +22410,105 @@ async function bookReqAccept(code){
     : (bank.status === 'approved'
         ? `${붙임}명에게 바로 나갔습니다 — 창고에 검토된 변형이 있었습니다.`
         : `${붙임}명에게 붙였습니다. 이제 「내용 없음」 줄에서 변형을 만들어 검토해 주세요.`));
+  render();
+}
+/* =============== 학생이 «세워 달라»고 부른 시험지 문항 (2026-09-13 · K-19) ===============
+   `submitWrongAnswers` 가 제 기록(`rec.bankAsks`)에 적어 둔 것을 모은다. 모양은 교재 요청과 같다.
+   🔵 **이미 줄이 선 것은 저절로 빠진다** — 다른 길로 세워졌으면 더 물을 것이 없다. */
+function bankAskPending(){
+  const 모음 = {};
+  for(const sid in (state.allRecords || {})){
+    for(const a of bankAsksOf(state.allRecords[sid])){
+      const k = a.examId + '|' + a.qkey;
+      const g = 모음[k] || (모음[k] = { examId: a.examId, qkey: a.qkey, who: [], at: a.at });
+      g.who.push(sid);
+      if(a.at && (!g.at || a.at < g.at)) g.at = a.at;     /* 제일 먼저 부른 날을 남긴다 */
+    }
+  }
+  return Object.values(모음)
+    .filter(g => !findBankEntry(g.examId, g.qkey))
+    .sort((a, b) => String(a.at).localeCompare(String(b.at)));
+}
+function bankAskLabelOf(g){
+  const exam = DATA.exams.find(e => e.id === examRootId(g.examId));
+  const m = String(g.qkey).match(/^([^-]+)-(.+)$/);
+  return (exam ? exam.title : '(삭제된 시험지)') + ' · '
+       + (m && m[1] !== '0' ? 'TYPE ' + m[1] + ' ' : '') + (m ? m[2] : g.qkey) + '번';
+}
+/* 🔴 **한 번에 다 한다** — 줄을 세우고, 부른 학생 전원에게 숙제를 붙이고, 부름을 지운다.
+   ⚠ 줄을 못 세우면 부름은 **안 지운다**. 지워 놓고 못 세우면 그 부름은 어디에도 안 남는다.
+   🔵 창고에 **이미 검토된 변형**이 있으면 채워서 바로 낸다 — 그것은 이미 통과시킨 것이다. */
+async function bankAskAccept(examId, qkey){
+  await loadItemStoreIfNeeded();
+  const 부름 = bankAskPending().find(g => g.examId === examId && g.qkey === qkey);
+  if(!부름){ showToast('그 요청이 이제 없습니다.'); render(); return; }
+  const exam = DATA.exams.find(e => e.id === examRootId(examId));
+  const q = exam && (exam.questions || []).find(x => (x.qkey || ('0-' + x.no)) === qkey || String(x.no) === qkey);
+  if(!q){ showToast('시험지에서 그 번호를 못 찾았습니다.'); return; }
+  let bank = findBankEntry(examId, qkey);
+  if(!bank){
+    const v = codeVariantFor(q.itemCode);
+    bank = {
+      id: 'pb' + Date.now() + '_' + String(qkey).replace(/[^0-9A-Za-z]/g, ''),
+      examId: examRootId(examId), questionNo: q.no || 0,
+      qkey, qtype: q.type || '0', qlabel: q.label || String(q.no || qkey),
+      originalContent: q.content || '', originalAnswer: q.answer || '',
+      variantContent: v ? v.content : '', variantAnswer: v ? v.answer : '',
+      status: v ? 'approved' : 'pending', source: v ? 'itemstore' : '',
+      variantCode: v ? v.code : '',
+      subject: q.unit || '', chapter: q.chapter || '', itemCode: q.itemCode || ''
+    };
+    DATA.problemBank.push(bank);
+    if(await dbSetDoc('problembank', bank.id, bank) !== true){
+      DATA.problemBank = DATA.problemBank.filter(x => x.id !== bank.id);
+      showToast('문항을 세우지 못했습니다. 요청은 그대로 두었습니다.');
+      render(); return;
+    }
+  }
+  let 붙임 = 0, 못한이 = 0;
+  for(const sid of 부름.who){
+    const rec = await loadRecord(sid);
+    if(!rec){ 못한이++; continue; }
+    if(!rec.wrongHomework) rec.wrongHomework = [];
+    if(!rec.wrongHomework.some(h => h.bankId === bank.id)){
+      rec.wrongHomework.push({ bankId: bank.id, examId: bank.examId, questionNo: bank.questionNo,
+        qkey: bank.qkey, qlabel: bank.qlabel, qtype: bank.qtype,
+        assignedAt: todayStr(), done: false, studentAnswer: '' });
+    }
+    rec.bankAsks = bankAsksOf(rec).filter(a => !(a.examId === examId && a.qkey === qkey));
+    if(await saveRecordAsTeacher(sid) !== true){ 못한이++; continue; }
+    붙임++;
+  }
+  await logAudit('오답 문항 세우기', '', '', bankAskLabelOf(부름) + ' · ' + 붙임 + '명');
+  showToast(못한이
+    ? `${붙임}명에게 붙였습니다. ${못한이}명은 저장이 안 돼 요청이 남아 있습니다.`
+    : (bank.status === 'approved'
+        ? `${붙임}명에게 바로 나갔습니다 — 창고에 검토된 변형이 있었습니다.`
+        : `${붙임}명에게 붙였습니다. 이제 「내용 없음」 줄에서 변형을 만들어 검토해 주세요.`));
+  render();
+}
+
+/* 🔵 **창고에서 채우기** (2026-09-13 · K-19) — 「내용 없음」 줄의 문항 중 코드에 «검토된 창고 변형»이
+   있는 것을 한 번에 채운다. 여태 이 일을 **학생 쪽에서** 하려 했다(그리고 403 으로 막혀 있었다).
+   ⚠ 무엇이 비었나는 큐와 **같은 잣대**를 쓴다(`reviewQueueList('empty')`) — 두 벌로 두면 갈린다.
+   ⚠ 채울 것이 하나도 없으면 그렇게 말한다. 아무 말 없이 끝나면 «눌렀는데 아무 일도 안 났다»가 된다. */
+async function fillEmptyFromStore(){
+  await loadItemStoreIfNeeded();
+  let 채움 = 0, 못함 = 0;
+  for(const b of reviewQueueList('empty')){
+    const v = codeVariantFor(b.itemCode);
+    if(!v) continue;
+    const 되돌림 = { variantContent: b.variantContent, variantAnswer: b.variantAnswer,
+                     variantCode: b.variantCode, source: b.source, status: b.status };
+    b.variantContent = v.content; b.variantAnswer = v.answer; b.variantCode = v.code;
+    b.source = 'itemstore'; b.status = 'approved';
+    if(await dbSetDoc('problembank', b.id, b) !== true){ Object.assign(b, 되돌림); 못함++; continue; }
+    채움++;
+  }
+  if(채움) await logAudit('창고에서 채우기', '', '', 채움 + '문항');
+  showToast(채움
+    ? `${채움}문항을 창고 변형으로 채웠습니다.` + (못함 ? ` ${못함}문항은 저장이 막혔습니다.` : '')
+    : '창고에 쓸 변형이 있는 문항이 없습니다.');
   render();
 }
 function reviewQueueList(key){
@@ -23607,7 +23749,25 @@ function teacherReviewHTML(){
       </div>`).join('')}
     </div>`;
 
-  /* 내용이 빈 문항은 AI로 채우는 것이 첫 일이다. 그 큐에서만 생성 버튼을 띄운다. */
+  /* 🔵 **학생이 오답으로 냈는데 문항 줄이 없는 것** (2026-09-13 · K-19) — 교재 요청과 같은 «띠»다.
+     여태 학생이 그 줄을 직접 세우려다 403 으로 막혔고, 그래서 **여기 뜨는 것 자체가 없었다.**
+     ⚠ 없으면 아예 안 그린다. 빈 띠는 화면만 먹고 아무 말도 안 한다. */
+  const 부름들 = bankAskPending();
+  const askBar = !부름들.length ? '' : `
+    <div class="rv-reqbar">
+      <div class="h">${iconSvg('alert',13)} 학생이 오답으로 낸 문제 중 문항이 없는 것 <b>${부름들.length}</b>건
+        <span class="m">세우면 문항이 서고, 낸 학생 전원에게 숙제가 붙습니다</span></div>
+      ${부름들.map(g=>`<div class="row">
+        <b>${escHtml(bankAskLabelOf(g))}</b>
+        <span class="w">${escHtml(g.who.map(studentNameOf).join(', '))}</span>
+        <span class="spacer"></span>
+        <span class="mono d">${escHtml(g.at || '')}</span>
+        <button class="btn p sm" onclick="bankAskAccept('${escHtml(g.examId)}','${escHtml(g.qkey)}')">세우기</button>
+      </div>`).join('')}
+    </div>`;
+
+  /* 내용이 빈 문항은 채우는 것이 첫 일이다. 그 큐에서만 채우기 버튼을 띄운다.
+     🔵 **창고에서 채우기가 먼저다** — 이미 검토를 거친 변형이라 AI 한도를 안 쓴다 (2026-09-13 · K-19). */
   const aiBar = qkey==='empty' && list.length>0 ? `
     <div class="note" style="margin-bottom:14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;flex-shrink:0;">
       <span>내용이 빈 문항 <b class="mono" style="color:var(--ink);">${list.length}</b>개 ·
@@ -23617,7 +23777,8 @@ function teacherReviewHTML(){
         ? `<span style="font-size:12px;">생성 중… <span class="mono">${state.aiProgress.done}/${state.aiProgress.total}</span> (문항당 약 13초)</span>
            <button class="btn q sm" ${state.aiCancel?'disabled':''} onclick="cancelTwinBatch()">
              ${state.aiCancel ? '멈추는 중…' : '멈춤'}</button>`
-        : `<button class="btn p sm" ${remaining===0?'disabled':''} onclick="processAIQueue()">AI로 채우기 (${list.length}문항)</button>`}
+        : `<button class="btn sm" onclick="fillEmptyFromStore()">창고에서 채우기</button>
+           <button class="btn p sm" ${remaining===0?'disabled':''} onclick="processAIQueue()">AI로 채우기 (${list.length}문항)</button>`}
     </div>` : '';
 
   /* 🔵 AI 검토 띠는 «검토 대기»에서만 뜬다 — 거기에만 AI가 만든 변형이 있다. */
@@ -23655,7 +23816,7 @@ function teacherReviewHTML(){
   </div>`;
 
   return `<div class="rv-screen">${queues}${items}
-    <main class="rv-work">${reqBar}${aiBar}${rvBar}${selAuto ? autoVariantWorkHTML(selAuto) : sel ? reviewWorkHTML(sel, list) : `
+    <main class="rv-work">${reqBar}${askBar}${aiBar}${rvBar}${selAuto ? autoVariantWorkHTML(selAuto) : sel ? reviewWorkHTML(sel, list) : `
       <div style="padding:64px 0;text-align:center;color:var(--dim);font-size:12.5px;line-height:1.8;">
         ${list.length===0 ? '이 큐는 비어 있습니다.' : '왼쪽 목록에서 문항을 고르세요.'}</div>`}
     </main>
@@ -24292,11 +24453,12 @@ async function removeReportedFace(bankId, face){
     }else{
       b.blockedFaces = [...new Set([...(b.blockedFaces||[]), face])];
     }
-    /* 뺐으면 그 신고는 처리된 것이다 — 열어 둔 채 두면 큐에 계속 남는다. */
-    const at = nowStamp();
-    for(const r of openReports(b)) if(r.face === face){ r.done = true; r.how = 'removed'; r.doneAt = at; }
+    /* 뺐으면 그 신고는 처리된 것이다 — 열어 둔 채 두면 큐에 계속 남는다.
+       ⚠ 문항 저장은 여기서 **한 번만** 한다 — `blockedFaces` 도 같은 문서에 실려야 하므로
+         `closeReports` 에게는 문항을 쓰지 말라고 이른다(안 그러면 같은 문서를 두 번 쓴다). */
+    const 닫음 = await closeReports(b, 'removed', r => r.face === face, false);
     const ok2 = await dbSetDoc('problembank', b.id, b);
-    if(!ok2){ showToast('저장하지 못했습니다 — 다시 시도해주세요.'); return; }
+    if(!ok2 || !닫음){ showToast('저장하지 못했습니다 — 다시 시도해주세요.'); return; }
     logAudit('오류 신고 처리', '', '', `${b.itemCode || b.id} · ${isStore ? f.code : f.label} 뺌`);
     showToast(`${isStore ? f.code : f.label} 을(를) 뺐습니다.`);
     followBankToQueue(b);
