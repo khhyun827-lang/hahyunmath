@@ -1,0 +1,67 @@
+<!doctype html><meta charset="utf-8"><title>notice-edit-probe</title>
+<!-- 공지 고치기 · 설정 › 시험 일정 안의 「직보 일정표」 갈래 — 확장 없이 헤드리스 크롬으로 본다 (2026-09-14).
+     실서비스를 iframe 에 띄우고 가짜 공지·반을 채운 뒤 ① 공지 상세 → 고치기 폼(값이 차 있는지) ② 설정 › 시험 일정의
+     두 단추(시험 일정 / 직보 일정표)가 서고 옛 state(examplan)가 돌려세워지는지 본다. 저장은 안 누른다 — 실 DB 0줄.
+
+     node tools/serve.js
+     chrome --headless=new --hide-scrollbars --virtual-time-budget=30000 --window-size=1200,900 \
+       --screenshot=out.png --dump-dom "http://127.0.0.1:8777/tools/notice-edit-probe.html?view=notice|plan" | grep -o "RESULT.*" -->
+<style>html,body{margin:0;background:#888}iframe{border:0;display:block;background:#fff}</style>
+<pre id="o" style="font:12px monospace;color:#fff;margin:0;padding:4px;white-space:pre-wrap;">…</pre>
+<script>
+const q = new URLSearchParams(location.search);
+const VIEW = q.get('view') || 'notice';
+const fr=document.createElement('iframe'); fr.width=1200; fr.height=840; fr.src='/index.html';
+document.body.appendChild(fr);
+const o=document.getElementById('o');
+let n=0;
+const t=setInterval(async()=>{
+  n++;
+  let ready=false;
+  try{ ready = fr.contentWindow.eval('typeof teacherNoticesHTML==="function" && typeof render==="function"'); }catch(_){}
+  if(!ready){ if(n>200){ clearInterval(t); o.textContent='RESULT timeout'; } return; }
+  clearInterval(t);
+  const w=fr.contentWindow;
+  let out; try{ out = await w.eval(`(async function(){
+    const R = {};
+    const VIEW = ${JSON.stringify(VIEW)};
+    DATA.classes = [{id:'c1', name:'고1 0.5B'}, {id:'c2', name:'고2 A'}];
+    DATA.students = [];
+    DATA.notices = [
+      {id: 1001, date:'2026-09-14', title:'고1 0.5B 직보 일정표', content:'각자 본인 일정을 확인해 주세요.', classIds:['c1'], image:{url:'stamp.webp', fileId:'f1'}},
+      {id: 1000, date:'2026-09-10', title:'추석 휴강 안내', content:'# 추석 휴강\\n\\n**10/3(토)** 휴강입니다.', classIds:[]},
+    ];
+    state.currentUser = {type:'teacher'}; state.view='teacher';
+    const $ = sel => document.querySelector(sel);
+    if(VIEW === 'notice'){
+      state.teacherTab='notices'; state.noticeSelectedId = 1001;
+      render(); await new Promise(r => setTimeout(r, 2500));
+      R.buttons = [...document.querySelectorAll('.nt-dh button')].map(b => b.textContent.trim());
+      noticeEditOpen(1001); await new Promise(r => setTimeout(r, 200));
+      R.editTitle = ($('#notice-title')||{}).value;
+      R.editContent = ($('#notice-content')||{}).value;
+      R.editClasses = [...document.querySelectorAll('.nt-cls')].map(x => x.value + ':' + x.checked);
+      R.editButtons = [...document.querySelectorAll('.nt-dh button')].map(b => b.textContent.trim());
+      R.imageKept = !!$('.nt-dbody .nt-img');
+      /* 목록에서 다른 공지를 고르면 고치기가 접힌다 */
+      state.noticeSelectedId = 1000; noticeEditClose(false); render(); await new Promise(r => setTimeout(r, 200));
+      R.afterSwitch = [state.noticeEditId, !!$('#notice-title')];
+      noticeEditOpen(1001); await new Promise(r => setTimeout(r, 200));   // 스크린샷용
+    } else {
+      state.teacherTab='settings'; state.settingsSubTab='examplan';     // 옛 state — 돌려세워져야 한다
+      state.season = {name:'2학기 중간', startedAt:'2026-09-01'};
+      state.examRanges = {dates:{}, bySchool:{}}; state.examPlan = {byKey:{}};
+      render(); await new Promise(r => setTimeout(r, 2500));
+      R.subTab = [state.settingsSubTab, state.examSubTab];
+      R.listItems = [...document.querySelectorAll('.ex-nav .ex-item .n')].map(e => e.textContent.trim());
+      R.switch = [...document.querySelectorAll('.rst-hrow button')].map(b => b.textContent.trim() + (b.classList.contains('p') ? '*' : ''));
+      R.title = $('.rst-hrow h1').textContent.replace(/\\s+/g, ' ').trim();
+      state.examSubTab = 'range'; render(); await new Promise(r => setTimeout(r, 300));
+      R.rangeTitle = $('.rst-hrow h1').textContent.replace(/\\s+/g, ' ').trim();
+      R.rangeSwitch = [...document.querySelectorAll('.rst-hrow button')].map(b => b.textContent.trim() + (b.classList.contains('p') ? '*' : ''));
+    }
+    return R;
+  })()`); }catch(e){ o.textContent='RESULT ERROR '+(e&&e.stack||e); return; }
+  o.textContent = 'RESULT ' + JSON.stringify(out);
+}, 100);
+</script>

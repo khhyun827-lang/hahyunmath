@@ -221,7 +221,12 @@ console.log(NL + '③ 직보 일정표 — 면은 시험기간, 찍은 것은 �
   봄('🔴 그 셈을 실제로 그린다', 표.includes('${셈}'), true);
   봄('저장 중 표시도 남는다', 표.includes('state.planDirty'), true);
   봄('껍데기가 제목을 그린다',
-    lift('teacherSettingsHTML').includes('<h1 class="t-title">${(subtabs.find(t=>t[0]===tab)||subtabs[0])[1]}'), true);
+    /* ⚠ 2026-09-14 부터 직보 일정표가 「시험 일정」 안의 갈래라 제목이 examSub 를 본다 */
+    lift('teacherSettingsHTML').includes("<h1 class=\"t-title\">${examSub === 'plan' ? '직보 일정표' : (subtabs.find(t=>t[0]===tabNow)||subtabs[0])[1]}"), true);
+  봄('🔴 직보 일정표는 「시험 일정」 안의 갈래다 — 설정 목록에 따로 없다',
+    lift('teacherSettingsHTML').includes("['examplan','직보 일정표']"), false);
+  봄('옛 state(examplan)로 들어와도 돌려세운다',
+    lift('teacherSettingsHTML').includes("if(tab === 'examplan'){ state.settingsSubTab = 'examrange'; state.examSubTab = 'plan'; }"), true);
   /* ⚠ 설정 갈래 중에 제 `t-title` 을 또 그리는 화면이 없어야 한다 */
   const 또그림 = ['teacherAssistantsHTML', 'teacherSettingsStudentsHTML', 'teacherSettingsClassesHTML',
     'teacherSettingsConsultsHTML', 'teacherExamRangeHTML', 'teacherExamPlanHTML',

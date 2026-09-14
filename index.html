@@ -5572,6 +5572,7 @@ let state = {
   clinicDrawerDate: '',   // 날짜를 눌러 연 «출석 확인» 판 — 그 날짜 (2026-09-05)
   noticeWriting: false,   // 공지 «새 공지» 폼이 열려 있나
   noticeSelectedId: null, // 오른쪽에 펼쳐 놓은 공지
+  noticeEditId: null,     // 고치는 중인 공지 (2026-09-14)
   noticeDraft: '',        // 쓰는 중인 본문 — 미리보기가 이걸 본다
   videoAdding: false,     // 영상 «등록» 폼이 열려 있나
   auditLogSearchQuery: '',
@@ -8006,10 +8007,49 @@ async function addNotice(){
   showToast('공지사항이 등록되었습니다.');
   render();
 }
+/* 고치기 — 새 공지와 같은 폼·같은 칸(#notice-title · .nt-cls · #notice-content)을 읽는다. */
+function noticeEditOpen(id){
+  const n = DATA.notices.find(x => String(x.id) === String(id));
+  if(!n) return;
+  state.noticeEditId = n.id;
+  state.noticeSelectedId = n.id;
+  state.noticeWriting = false;
+  state.noticeDraft = n.content || '';
+  render();
+}
+function noticeEditClose(rerender){
+  if(state.noticeEditId == null) return;
+  state.noticeEditId = null;
+  state.noticeDraft = '';
+  if(rerender !== false) render();
+}
+async function saveNoticeEdit(id){
+  const n = DATA.notices.find(x => String(x.id) === String(id));
+  if(!n) return;
+  const title = (document.getElementById('notice-title') || {}).value || '';
+  const content = (document.getElementById('notice-content') || {}).value || '';
+  if(!title.trim()){ showToast('제목을 입력해주세요.'); return; }
+  /* 그림이 붙은 공지(직보 일정표)는 글이 비어도 된다 — 새 공지와 같은 결 */
+  if(!content.trim() && !n.image){ showToast('내용을 입력해주세요.'); return; }
+  const classIds = [...document.querySelectorAll('.nt-cls:checked')].map(x => x.value);
+  const before = JSON.stringify([n.title, n.content, n.classIds || []]);
+  Object.assign(n, { title: title.trim(), content: content.trim(), classIds });
+  const ok = await dbSetDoc('notices', n.id, n);
+  /* 🔴 저장이 됐는지 보고 말한다 — 안 되면 화면도 옛 값으로 돌린다 */
+  if(ok !== true){
+    const [t, c, ids] = JSON.parse(before); Object.assign(n, { title: t, content: c, classIds: ids });
+    showToast('고친 것을 저장하지 못했습니다 — 잠시 뒤에 다시 눌러주세요.'); render(); return;
+  }
+  await logAudit('공지 고침', '', '', n.title);
+  noticeEditClose(false);
+  showToast('공지를 고쳤습니다.');
+  render();
+}
 async function deleteNotice(id){
   if(!confirm('이 공지사항을 삭제할까요?')) return;
   const gone = DATA.notices.find(n=>n.id===id);
   if(gone && gone.image) deleteFromDrive(imgFileIdOf(gone.image));   // 붙은 그림도 같이 (2026-09-14)
+  noticeEditClose(false);
   DATA.notices = DATA.notices.filter(n=>n.id!==id);
   await dbDeleteDoc('notices', id);
   render();
@@ -21855,43 +21895,13 @@ function noticeMark(kind){
    ⚠ **시안의 세 번째 칸 「읽음 현황」은 만들 수 없다.** 공지 레코드는 {id, title, content, date}뿐이고,
    학생이 «읽었다»는 사실은 그 학생 브라우저의 localStorage에만 남는다(markSeen).
    서버에 없는 것을 화면에 그리면 그 줄만 거짓이 된다. 넣으려면 읽음 기록을 먼저 만들어야 한다. */
-function teacherNoticesHTML(){
-  const list = [...DATA.notices].sort((a,b)=>(b.date||'').localeCompare(a.date||''));
-  const cur = list.find(n=>String(n.id)===String(state.noticeSelectedId)) || list[0];
-  const draft = state.noticeDraft || '';
-
-  return `<div class="nt-screen">
-    <aside class="nt-list">
-      <div class="nt-lh">
-        <div class="t-sec" style="margin:0;">공지 ${list.length}</div>
-        <span class="spacer"></span>
-        <button class="btn ${state.noticeWriting?'':'p'} sm"
-          onclick="state.noticeWriting=!state.noticeWriting; render()">
-          ${state.noticeWriting ? '닫기' : iconSvg('pencil',13)+' 새 공지'}</button>
-      </div>
-      <div class="nt-lbody">
-        ${list.length===0 ? '<div style="font-size:12.5px;color:var(--dim);padding:8px 14px;">등록된 공지가 없습니다.</div>'
-        : list.map(n=>`<div class="nt-item ${!state.noticeWriting && cur && n.id===cur.id?'on':''}"
-            onclick="state.noticeSelectedId='${n.id}'; state.noticeWriting=false; render()">
-            ${/* ⚠ **누구에게 갔는지 목록에서 보여야 한다** — 안 보이면 반별 공지를 낸 뒤
-                 「이거 누구한테 갔더라」를 알 길이 없다. 전체는 굳이 안 적는다(대부분이라). */''}
-            <div class="d">${escHtml(n.date||'')}${
-              (n.classIds||[]).length ? ' · ' + escHtml(n.classIds.map(classNameOf).join('·')) : ''}</div>
-            <div class="t">${escHtml(n.title)}</div>
-            <div class="m">${escHtml((n.content||'').replace(/[#*\-]/g,'').replace(/\s+/g,' ').trim())}</div>
-          </div>`).join('')}
-      </div>
-    </aside>
-
-    <main class="nt-doc">
-    ${state.noticeWriting ? `
-      <div class="nt-dh"><h2>새 공지</h2>
-        <span class="spacer"></span>
-        <button class="btn p sm" onclick="addNotice()">등록</button></div>
-      <div class="nt-dbody">
+/* 공지 폼 — 새 공지(n=null)와 고치기(n=공지)가 같은 폼을 쓴다 (2026-09-14 · 고치기를 붙이며 뽑았다).
+   ⚠ 본문은 state.noticeDraft 하나가 든다 — 새 글도 고치는 글도 같은 칸이라 둘을 동시에 열지 않는다. */
+function noticeFormHTML(n, draft){
+  return `
         <div class="cls-form" style="margin-top:0;">
           <label style="flex:1;min-width:240px;"><span>제목</span>
-            <input id="notice-title" placeholder="공지 제목"></label>
+            <input id="notice-title" placeholder="공지 제목" value="${escHtml(n ? n.title || '' : '')}"></label>
         </div>
         ${/* 🔵 **받는 반을 고른다** (2026-09-08 · 사용자 요청). 아무것도 안 고르면 «전체»다 —
              대부분의 공지가 전체이므로 그것이 기본이라야 손이 덜 간다. */''}
@@ -21900,7 +21910,7 @@ function teacherNoticesHTML(){
             받는 반 <s style="text-decoration:none;font-weight:500;">— 아무것도 안 고르면 <b>전체</b>에게 갑니다</s></div>
           <div style="display:flex;gap:12px;flex-wrap:wrap;">
             ${DATA.classes.map(c => `<label style="display:flex;align-items:center;gap:5px;font-size:12px;">
-              <input type="checkbox" class="nt-cls" value="${c.id}">${escHtml(c.name)}</label>`).join('')
+              <input type="checkbox" class="nt-cls" value="${c.id}" ${n && (n.classIds||[]).includes(c.id) ? 'checked' : ''}>${escHtml(c.name)}</label>`).join('')
               || '<span style="font-size:12px;color:var(--dim);">먼저 반을 만들어 주세요.</span>'}
           </div>
         </div>
@@ -21917,18 +21927,69 @@ function teacherNoticesHTML(){
               >${escHtml(draft)}</textarea></label>
         </div>
         ${draft.trim() ? `<div class="t-sec" style="margin-top:22px;">미리보기</div>
-          <div class="ntx">${noticeBodyHTML(draft)}</div>` : ''}
+          <div class="ntx">${noticeBodyHTML(draft)}</div>` : ''}`;
+}
+function teacherNoticesHTML(){
+  const list = [...DATA.notices].sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+  const cur = list.find(n=>String(n.id)===String(state.noticeSelectedId)) || list[0];
+  const draft = state.noticeDraft || '';
+
+  return `<div class="nt-screen">
+    <aside class="nt-list">
+      <div class="nt-lh">
+        <div class="t-sec" style="margin:0;">공지 ${list.length}</div>
+        <span class="spacer"></span>
+        <button class="btn ${state.noticeWriting?'':'p'} sm"
+          onclick="state.noticeWriting=!state.noticeWriting; noticeEditClose(false); render()">
+          ${state.noticeWriting ? '닫기' : iconSvg('pencil',13)+' 새 공지'}</button>
+      </div>
+      <div class="nt-lbody">
+        ${list.length===0 ? '<div style="font-size:12.5px;color:var(--dim);padding:8px 14px;">등록된 공지가 없습니다.</div>'
+        : list.map(n=>`<div class="nt-item ${!state.noticeWriting && cur && n.id===cur.id?'on':''}"
+            onclick="state.noticeSelectedId='${n.id}'; state.noticeWriting=false; noticeEditClose(false); render()">
+            ${/* ⚠ **누구에게 갔는지 목록에서 보여야 한다** — 안 보이면 반별 공지를 낸 뒤
+                 「이거 누구한테 갔더라」를 알 길이 없다. 전체는 굳이 안 적는다(대부분이라). */''}
+            <div class="d">${escHtml(n.date||'')}${
+              (n.classIds||[]).length ? ' · ' + escHtml(n.classIds.map(classNameOf).join('·')) : ''}</div>
+            <div class="t">${escHtml(n.title)}</div>
+            <div class="m">${escHtml((n.content||'').replace(/[#*\-]/g,'').replace(/\s+/g,' ').trim())}</div>
+          </div>`).join('')}
+      </div>
+    </aside>
+
+    <main class="nt-doc">
+    ${state.noticeWriting ? `
+      <div class="nt-dh"><h2>새 공지</h2>
+        <span class="spacer"></span>
+        <button class="btn p sm" onclick="addNotice()">등록</button></div>
+      <div class="nt-dbody">
+        ${noticeFormHTML(null, draft)}
         <p class="st-note">등록하면 <b>학생 앱 소통 › 공지</b>에 붙습니다 —
           반을 고르면 <b>그 반 학생에게만</b> 보이고, 안 읽은 수(벨)도 그 학생들에게만 셉니다.</p>
         <div class="rst-pad"></div>
       </div>`
     : !cur ? `<div style="padding:64px 0;text-align:center;color:var(--dim);font-size:12.5px;">
         왼쪽에서 공지를 고르거나 「새 공지」로 하나 써 보세요.</div>`
+    : String(state.noticeEditId) === String(cur.id) ? `
+      ${/* 🔵 **나간 공지를 고친다** (2026-09-14 · 사용자 요청 — 「공지사항 나간 거 수정할 수 있으면 좋겠고」).
+           같은 문서에 덮어쓴다(id·날짜·그림은 그대로). 학생 화면은 다음에 열 때 고친 글을 본다.
+           ⚠ «안 읽음» 셈은 개수로 세므로 고쳐도 새 공지로 안 센다 — 고친 것을 알리려면 새로 올릴 것. */''}
+      <div class="nt-dh"><h2>공지 고치기</h2>
+        <span class="mono" style="font-size:12px;color:var(--dim);">${escHtml(cur.date||'')}</span>
+        <span class="spacer"></span>
+        <button class="btn p sm" onclick="saveNoticeEdit(${cur.id})">저장</button>
+        <button class="btn q sm" onclick="noticeEditClose()">취소</button></div>
+      <div class="nt-dbody">
+        ${noticeFormHTML(cur, draft)}
+        ${cur.image ? `<p class="st-note">붙어 있는 그림은 그대로 남습니다.</p>${noticeImageHTML(cur)}` : ''}
+        <div class="rst-pad"></div>
+      </div>`
     : `<div class="nt-dh"><h2>${escHtml(cur.title)}</h2>
         <span class="mono" style="font-size:12px;color:var(--dim);">${escHtml(cur.date||'')}</span>
         <span class="badge ${(cur.classIds||[]).length ? 'consult' : ''}">${
           (cur.classIds||[]).length ? escHtml(cur.classIds.map(classNameOf).join(' · ')) : '전체'}</span>
         <span class="spacer"></span>
+        <button class="btn q sm" onclick="noticeEditOpen(${cur.id})">${iconSvg('pencil',12)} 고치기</button>
         <button class="btn q sm" onclick="deleteNotice(${cur.id})">삭제</button></div>
       <div class="nt-dbody">
         <div class="ntx">${noticeBodyHTML(cur.content)}</div>
@@ -27524,7 +27585,7 @@ function teacherSettingsHTML(){
   if(state.studentDetailId) return teacherStudentDetailHTML(state.studentDetailId);
   const tab = state.settingsSubTab || 'assistants';
   const subtabs = [['assistants','조교'],['students','학생'],['classes','반'],['consults','상담'],
-    ['examrange','시험 일정'],['examplan','직보 일정표'],
+    ['examrange','시험 일정'],
     ['signalrules','신호 규칙'],['auditlog','변경 이력'],
     ['admin','관리자']];
   /* 🔵 **«데이터 정리»를 서브탭에서 뺐다** (2026-09-05 · 사용자 요청 — 「내가 쓸 일이 없는거면 화면에서 가려줘」).
@@ -27544,7 +27605,19 @@ function teacherSettingsHTML(){
     cleanup: teacherCleanupHTML,
     admin: teacherSettingsAdminHTML,
   };
-  const sub = (subMap[tab] || teacherAssistantsHTML)();
+  /* 🔵 **직보 일정표는 「시험 일정」 안의 둘째 갈래다** (2026-09-14 · 사용자 — 「시험일정 탭 안에 시험일정 /
+       직보일정표 두 가지가 들어갔으면」). 시즌·학교·날짜가 같은 뿌리라 한 문 안에 있는 것이 맞다.
+     ⚠ 옛 state(`examplan`)로 들어와도 빈 화면이 안 되게 여기서 돌려세운다. */
+  if(tab === 'examplan'){ state.settingsSubTab = 'examrange'; state.examSubTab = 'plan'; }
+  const examSub = state.settingsSubTab === 'examrange' ? (state.examSubTab || 'range') : '';
+  const tabNow = state.settingsSubTab || 'assistants';
+  const sub = (tabNow === 'examrange' && examSub === 'plan') ? teacherExamPlanHTML()
+            : (subMap[tabNow] || teacherAssistantsHTML)();
+  const examSwitch = tabNow !== 'examrange' ? '' : `<div class="row" style="gap:0;margin-left:14px;">
+      <button class="btn sm ${examSub === 'plan' ? 'q' : 'p'}" style="border-radius:var(--r-sm) 0 0 var(--r-sm);"
+        onclick="state.examSubTab='range'; render()">시험 일정</button>
+      <button class="btn sm ${examSub === 'plan' ? 'p' : 'q'}" style="border-radius:0 var(--r-sm) var(--r-sm) 0;"
+        onclick="state.examSubTab='plan'; render()">직보 일정표</button></div>`;
   /* =================== 설정 (design-v1/13-settings) ===================
      여섯 갈래가 서로 닮은 데가 없다 — 조교 계정, 학생 계정, 반 만들기, 상담 신청,
      변경 이력, 관리자 비밀번호. 하나의 형태로 묶을 이유가 없어서 **껍데기만 DS로 바꿨다.**
@@ -27563,7 +27636,7 @@ function teacherSettingsHTML(){
     <aside class="ex-list ex-nav">
       <div class="t-sec" style="margin:0 0 10px;flex-shrink:0;">설정</div>
       <div class="ex-lbody">
-        ${subtabs.map(t=>`<div class="ex-item ${tab===t[0]?'on':''}" onclick="state.settingsSubTab='${t[0]}'; render()">
+        ${subtabs.map(t=>`<div class="ex-item ${tabNow===t[0]?'on':''}" onclick="state.settingsSubTab='${t[0]}'; render()">
           <div class="n">${t[1]}</div>
           ${t[0]==='consults' && unseenConsultCount()>0 ? `<div class="m"><span class="badge no">새 ${unseenConsultCount()}건</span></div>` : ''}
         </div>`).join('')}
@@ -27571,7 +27644,9 @@ function teacherSettingsHTML(){
     </aside>
     <main class="ex-main">
       <div class="rst-hrow" style="flex-shrink:0;">
-        <h1 class="t-title">${(subtabs.find(t=>t[0]===tab)||subtabs[0])[1]}<s>${LABEL[tab]||''}</s></h1>
+        <h1 class="t-title">${examSub === 'plan' ? '직보 일정표' : (subtabs.find(t=>t[0]===tabNow)||subtabs[0])[1]}<s>${
+          LABEL[examSub === 'plan' ? 'examplan' : tabNow]||''}</s></h1>
+        ${examSwitch}
       </div>
       <div class="ex-body">${sub}
         <div class="rst-pad"></div></div>
