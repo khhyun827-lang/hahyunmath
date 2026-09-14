@@ -3079,7 +3079,11 @@
      갈아치우므로 안에 두면 렌더 한 번에 캔버스가 사라진다.
      그래서 덮개는 body 의 #gamehost 에 붙인다.
    ============================================================ */
-.gm-over{position:fixed;inset:0;z-index:55;background:var(--paper);
+/* 🔴 **아이폰에서 아래가 잘렸다** (2026-09-14 · 사용자가 학생 폰에서 봤다). `inset:0` 의 아래는 사파리의
+     «큰 뷰포트»(주소창·툴바가 접힌 상태) 기준이라, 툴바가 펴져 있으면 그만큼이 툴바 뒤로 들어간다 —
+     캔버스는 마운트할 때 clientHeight 로 한 번 재므로 사람이 서는 자리(h-58)가 통째로 가려졌다.
+     ⇒ 키를 `100dvh`(«지금 보이는» 뷰포트)로 준다. 모르는 브라우저는 앞줄 `100vh` 로 떨어진다. */
+.gm-over{position:fixed;top:0;left:0;right:0;height:100vh;height:100dvh;z-index:55;background:var(--paper);
   display:flex;flex-direction:column;align-items:center;}
 /* 🔵 **점수판을 캔버스 «위»로 띄운다** (2026-09-02 · S-D-11 · 사용자가 시켰다).
    예전에는 위에 52px 막대를 «칸으로» 두고 남는 데를 게임에 줬다. 폰에서 그만큼이
@@ -3837,7 +3841,7 @@
 <!-- ⚠ ?v= 를 붙이는 까닭 — 브라우저가 game-core.js 를 캐시해서, 올려도 학생 화면에는
      옛 게임이 그대로 돈다(Ctrl+Shift+R 을 해야 바뀐다 — 학생에게 그걸 시킬 수는 없다).
      🔴 **game-core.js 를 고칠 때마다 이 날짜를 같이 올린다.** 두 파일 다. -->
-<script src="game-core.js?v=2026-09-02b"></script>
+<script src="game-core.js?v=2026-09-14"></script>
 
 <script>
   const firebaseConfig = {

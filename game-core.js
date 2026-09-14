@@ -19,7 +19,10 @@ const CHAR_H = 46;
 const MODE_DODGE = {
   reset(g){
     g.spawnIn = .6; g.items = [];
-    g.px = g.w / 2; g.py = g.h - 58; g.face = 1;
+    /* 🔵 **바닥에서 «엄지 자리»만큼 띄운다** (2026-09-14 · 사용자 — 「보통 하단에 손을 터치하고 게임을 하는데
+         캐릭터가 손 때문에 안 보여」). 캔버스는 그대로 바닥까지 차지한다 — 손가락은 거기서도 먹어야 하니까.
+         사람만 g.pad 만큼 올라선다. 똥은 그 아래 빈 띠로 떨어져 사라진다(닿는 판정은 사람 자리에서 난다). */
+    g.px = g.w / 2; g.py = g.h - 58 - g.pad; g.face = 1;
   },
   step(g, dt){
     /* 손가락을 «따라가되» 즉시 붙지는 않는다. 붙여 버리면 조작감이 없다 */
@@ -875,6 +878,8 @@ const Game = {
     this.cx = cv.getContext('2d');
     this.cx.setTransform(dpr, 0, 0, dpr, 0, 0);
     this.w = w; this.h = h;
+    /* 엄지 자리 — 화면 키의 11%, 40~96px. 폰(≈800px)에서 88px 쯤이다. 갈래가 쓴다(똥피하기). */
+    this.pad = Math.round(Math.max(40, Math.min(96, h * 0.11)));
     this.onScore = o.onScore || null; this.onEnd = o.onEnd || null;
 
     this.started = false;
