@@ -3735,8 +3735,11 @@
      html2canvas가 빈 그림을 그린다. 그래서 왼쪽으로 멀리 밀어낸다.
    ⚠ 폭 703px은 **A4 본문 폭(210−12−12=186mm)을 96dpi로 옮긴 값**이다. 이 폭으로 그려야
      PDF에 넣을 때 늘리거나 줄이지 않아 글자가 안 뭉갠다. */
-.rpb-stage{position:fixed;left:-20000px;top:0;width:703px;background:#fff;z-index:-1;pointer-events:none;}
-.rpb-stage .rp-doc{width:703px;max-width:none;border:0;border-radius:0;padding:0;background:#fff;}
+   🔴 **여백을 다시 넣었다** (2026-09-14 · 사용자 — 「이미지 파일 왼쪽에 여백이 너무 없어」). PDF 시절엔
+     종이 여백이 따로 있어 padding 을 0 으로 뺐는데, 그림으로 바뀐 뒤(R-4)에도 그대로라 글이 가장자리에
+     붙어 나왔다. 본문 폭 703 은 지키고 **여백 28px 을 바깥으로** 더한다(759px). */
+.rpb-stage{position:fixed;left:-20000px;top:0;width:759px;background:#fff;z-index:-1;pointer-events:none;}
+.rpb-stage .rp-doc{width:759px;box-sizing:border-box;max-width:none;border:0;border-radius:0;padding:26px 28px 30px;background:#fff;}
 .rpb-row{display:flex;align-items:center;gap:10px;padding:9px 0;
   border-bottom:1px solid var(--line);font-size:12.5px;}
 .rpb-row:last-child{border-bottom:0;}
@@ -6095,12 +6098,12 @@ const PLAN_KINDS = [
   ['jikbo',  '직보',      1, '',  'no'],      // 빨강 — 이 표의 주인공
   ['start',  '등원시작',  0, '',  'no'],      // 빨강 — 시험 끝나고 돌아오는 날
   ['off',    '등원X',     0, '',  'blue'],    // 파랑 — 오지 않는 날
-  ['maybe',  '가능하면',  1, ' ', 'blue'],    // 파랑 — 「가능하면 5시」
+  ['maybe',  '가능하면',  1, ' ', 'blue', true], // 파랑 — 「가능하면 5시」 ⚠ 붓에서 뺐다(2026-09-14 · 사용자) — 찍힌 칸은 그대로 그린다
   ['exam',   '수학시험',  0, '',  'gone'],
   ['extra',  '보충',      1, '',  'gone'],    // 「보충10시」
   ['consult','상담진행',  0, '',  'gone'],
 ];
-const PLAN_KIND_MAP = PLAN_KINDS.reduce((m, k) => (m[k[0]] = {key:k[0], 이름:k[1], 시간:k[2], 사이:k[3], 색:k[4]}, m), {});
+const PLAN_KIND_MAP = PLAN_KINDS.reduce((m, k) => (m[k[0]] = {key:k[0], 이름:k[1], 시간:k[2], 사이:k[3], 색:k[4], 숨김:!!k[5]}, m), {});
 /* 「직보」 + 「2시」 → 「직보2시」. 시간을 안 받는 종류는 시간을 버린다(칸이 거짓말하면 안 된다). */
 function planLabel(cell){
   const k = cell && PLAN_KIND_MAP[cell.k];
@@ -27152,19 +27155,20 @@ function teacherExamPlanHTML(){
   /* ── 붓 ── */
   const 붓줄 = `<div class="ist-bar">
     <span class="ic-k">붓</span>
-    ${PLAN_KINDS.map(([k, 이름]) => `<button class="btn ${붓.k===k?'p':'q'} sm"
+    ${PLAN_KINDS.filter(k => !k[5]).map(([k, 이름]) => `<button class="btn ${붓.k===k?'p':'q'} sm"
       onclick="state.planBrush={k:'${k}',t:state.planBrush&&state.planBrush.t||''};render()">${escHtml(이름)}</button>`).join('')}
     <button class="btn ${붓.k===''?'p':'q'} sm" title="칸을 비웁니다"
       onclick="state.planBrush={k:'',t:''};render()">지우개</button>
-    ${붓종류 && 붓종류.시간 ? `<input class="pl-t" placeholder="2시" value="${escHtml(붓.t||'')}"
+    ${/* 🔴 id 가 있어야 한다 — liveEdit 은 다시 그린 뒤 **id 로** 초점을 돌려준다. 없으면 한 글자마다
+         칸을 다시 눌러야 했다 (2026-09-14 · 사용자가 짚었다). */''}
+    ${붓종류 && 붓종류.시간 ? `<input id="pl-brush-t" class="pl-t" placeholder="2시" value="${escHtml(붓.t||'')}"
       oninput="liveEdit(event, v=>{ state.planBrush={k:'${붓.k}',t:v}; })">` : ''}
     <span class="ic-hint">칸을 누르면 ${붓.k
       ? `<b class="pl-p p-${escHtml(붓.k)}">${escHtml(planLabel({k:붓.k,t:붓.t}) || '—')}</b>`
       : '<b>비우기</b>'} 가 찍힙니다 ·
-      같은 것을 다시 누르면 지워집니다 · 이름 옆 <b>⇊</b> 는 그 줄을 <b>같은 반·같은 학교</b>에 그대로 옮깁니다
-      <s style="display:block;text-decoration:none;margin-top:3px;">⚠ <b>바탕을 칠하는 것은 시험기간 하나뿐</b>입니다
-        (밑줄 그어진 칸은 <b>수학 시험일</b>) — 「설정 › 시험 일정」에서 오는 값이라 여기서 찍는 것이 아니고,
-        시험 날짜를 고치면 여기도 따라 바뀝니다. <b>찍은 것은 알약</b>으로 앉으므로 시험기간과 안 섞입니다.</s></span>
+      같은 것을 다시 누르면 지워집니다 · 이름 옆 <b>⇊</b> 는 그 줄을 <b>같은 반·같은 학교</b>에 그대로 옮깁니다</span>
+    ${/* ⚠ 「바탕을 칠하는 것은 시험기간 하나뿐…」 설명은 2026-09-14 에 걷었다(사용자 — 「이 텍스트도 지워도
+         될 것 같아」). 칸의 title 과 그림의 범례가 같은 말을 한다. */''}
   </div>`;
 
   /* ── 반별로 내보내기 (2026-09-14 · 사용자 요청) ──

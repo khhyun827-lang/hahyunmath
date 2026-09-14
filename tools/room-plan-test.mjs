@@ -189,8 +189,11 @@ console.log(NL + '③ 직보 일정표 — 면은 시험기간, 찍은 것은 �
   봄('🔴 바탕을 칠하는 것은 시험기간 하나뿐이다',
     rule('.app .pl-c.sp'), '.app .pl-c.sp{background:var(--nobg);}');
   봄('수학 시험일은 밑줄로 남는다', rule('.app .pl-c.mth').includes('inset 0 -2px 0 var(--no)'), true);
-  봄('🔴 찍은 것은 칸 안의 알약이다', 표.includes('<b class="pl-p p-${escHtml(c.k)}">'), true);
-  봄('🔴 칸 class 에서 색을 뗐다', 표.includes("'k-' + k.색"), false);
+  /* ⚠ 칸은 2026-09-14 에 planRowCellsHTML 로 나갔다(화면과 반별 그림이 같이 쓴다) */
+  const 칸 = 알맹이(lift('planRowCellsHTML'));
+  봄('🔴 찍은 것은 칸 안의 알약이다', 칸.includes('<b class="pl-p p-${escHtml(c.k)}">'), true);
+  봄('🔴 화면의 표가 그 칸 함수를 쓴다', 표.includes('planRowCellsHTML(s, days, true)'), true);
+  봄('🔴 칸 class 에서 색을 뗐다', 칸.includes("'k-' + k.색"), false);
 
   /* 🔴 일곱 종류가 색 셋을 나눠 쓰던 것을 갈랐다 — 종류마다 알약이 다르다 */
   const 종류 = new Function(liftConst('PLAN_KINDS') + NL + 'return PLAN_KINDS.map(k => k[0]);')();
