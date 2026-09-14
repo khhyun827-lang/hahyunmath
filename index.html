@@ -5591,7 +5591,7 @@ let state = {
 };
 let DATA = {
   students: [], notices: [], consults: [], teacherPw: null, records: {},
-  classes: [], clinics: [], clinicSlots: [], qnas: [], videos: [], assistants: [], chats: {},
+  classes: [], clinics: [], clinicSlots: [], qnas: [], qnaFollowups: [], videos: [], assistants: [], chats: {},
   exams: [], problemBank: [], unitBank: [], assignments: [], auditLog: []
 };
 const UNITS = ['공통수학1', '공통수학2', '대수', '미적분Ⅰ', '확률과통계', '기하', '미적분Ⅱ'];
@@ -6326,6 +6326,7 @@ async function loadStudentData(uid){
   DATA.classes = classes; DATA.notices = notices; DATA.videos = videos;
   DATA.exams = exams; DATA.problemBank = problemBank; DATA.assignments = assignments;
   DATA.clinicSlots = clinicSlots; DATA.clinics = clinics; DATA.qnas = qnas;
+  splitQnaFollowups();
   /* 🔴 **학생은 이 넷을 아예 안 읽는다** — 규칙이 막기도 하고, 학생 화면이 쓰지도 않는다.
      ⚠ `null` 이 아니라 «빈 것»으로 둔다. 화면이 `.filter` 를 부르다 터지면 안 된다. */
   DATA.consults = []; DATA.assistants = []; DATA.auditLog = []; DATA.teacherPw = null;
@@ -6389,6 +6390,7 @@ async function loadAllData(){
          화면이 그 사실을 말한다 — 아무 말 없이 「0건」이라 적으면 그게 거짓말이다. */
     Promise.resolve([])
   ]);
+  splitQnaFollowups();
   normStudentGrades();     /* 「1」과 「고1」을 한 벌로 — 시험 일정의 열쇠다 */
   /* 시즌·범위는 데일리퀴즈가 첫 렌더에서 바로 본다. 늦게 오면 «범위 밖»으로 잘못 걸러
      한 번 그렸다가 바뀌는 깜빡임이 생기므로 여기서 같이 받는다. */
@@ -8178,7 +8180,7 @@ function teacherNotifItems(){
      unseen: DATA.problemBank.filter(b=>b.status!=='approved').length,
      keepUnseen:true, gotoCode:"goTeacherTab('review');"},
     {key:'consult', label:'새 상담 신청', count: DATA.consults.length, gotoCode:"state.teacherTab='settings'; state.settingsSubTab='consults';"},
-    {key:'qna', label:'새 질문', count: DATA.qnas.length, gotoCode:"state.teacherTab='qna';"},
+    {key:'qna', label:'새 질문', count: DATA.qnas.length + (DATA.qnaFollowups||[]).length, gotoCode:"state.teacherTab='qna';"},
     {key:'clinic', label:'새 클리닉 신청', count: DATA.clinics.length, gotoCode:"state.teacherTab='clinic';"},
     /* 누르면 채팅 탭으로만 간다. «읽음»은 그 학생 대화를 실제로 열 때 찍힌다 —
        벨을 눌렀다고 읽은 것이 아니다. */
@@ -9517,11 +9519,54 @@ async function submitQuestion(){
   showToast('질문이 등록되었습니다.');
   render();
 }
+/* =================== 질의응답 — 추가 질문 (2026-09-15 · 사용자 요청) ===================
+   「답변을 했는데 보고도 이해 안 되는 학생들이 있어서 그 밑에 다시 또 추가적으로 댓글을 달 수 있도록」
+   🔴 **같은 문서에 못 얹는다** — Firestore 규칙이 학생에게 `qnas` 는 «만들기»만 준다(update 는 강사만).
+     답변 문서를 학생이 고칠 수 있게 열면 강사의 답을 학생이 지울 수 있다. 규칙은 안 건드린다(09-08 원칙).
+   ⇒ **추가 질문은 새 문서다** — 같은 통(`qnas`)에 `kind:'followup' · parentId` 를 달고, 꼴은 원래 질문과 같다
+     (question·image → answer·answerImage). 학생은 제 uid 로 만들고 제 것만 읽는다(있던 길). 강사는 그 문서에
+     답을 «update» 한다(있던 권한). 그래서 `submitAnswer` 가 그대로 쓰인다.
+   ⚠ 읽은 뒤 `splitQnaFollowups` 로 갈라 둔다 — DATA.qnas 를 세는 자리가 여럿이라(목록·벨·연대기) 섞이면
+     추가 질문이 «새 질문»으로 잡힌다. */
+function splitQnaFollowups(){
+  const all = DATA.qnas || [];
+  DATA.qnaFollowups = all.filter(q => q && q.kind === 'followup');
+  DATA.qnas = all.filter(q => !(q && q.kind === 'followup'));
+}
+function qnaFollowupsOf(qid){
+  return (DATA.qnaFollowups || []).filter(f => f.parentId === qid)
+    .sort((a, b) => String(a.id).localeCompare(String(b.id)));      // id 에 시각이 있다 — 오래된 것이 위
+}
+/* «기다리는 것»이 있나 — 첫 답이 없거나, 추가 질문 중 답 없는 것이 있거나 */
+function qnaHasOpen(q){ return !q.answer || qnaFollowupsOf(q.id).some(f => !f.answer); }
+function qnaFind(id){
+  return DATA.qnas.find(q => q.id === id) || (DATA.qnaFollowups || []).find(f => f.id === id) || null;
+}
+async function submitFollowup(parentId){
+  const sid = state.currentUser.studentId;
+  const el = document.getElementById('qna-follow');
+  const question = ((el && el.value) || '').trim();
+  if(!question){ showToast('추가 질문 내용을 입력해주세요.'); return; }
+  if(state.qnaQuestionImage && state.qnaQuestionImage.uploading){ showToast('이미지 업로드가 끝난 후 다시 시도해주세요.'); return; }
+  const f = { id:'qf'+Date.now(), kind:'followup', parentId, uid: authUid(), studentId:sid, studentName:state.currentUser.name,
+    question, image:state.qnaQuestionImage||null, date:todayStr(), answer:null, answerImage:null, answeredAt:null };
+  DATA.qnaFollowups.push(f);
+  const ok = await dbSetDoc('qnas', f.id, f);
+  /* 🔴 저장이 됐는지 보고 말한다 — 안 되면 목록에서 도로 뺀다 */
+  if(ok !== true){
+    DATA.qnaFollowups = DATA.qnaFollowups.filter(x => x.id !== f.id);
+    showToast('추가 질문을 보내지 못했습니다 — 잠시 뒤에 다시 눌러주세요.'); render(); return;
+  }
+  state.qnaQuestionImage = null;
+  state.stuQnaFollowFor = null;
+  showToast('추가 질문을 보냈습니다.');
+  render();
+}
 async function submitAnswer(qid){
   const val = document.getElementById('answer-'+qid).value.trim();
   if(!val){ showToast('답변을 입력해주세요.'); return; }
   if(state.qnaAnswerImage[qid] && state.qnaAnswerImage[qid].uploading){ showToast('이미지 업로드가 끝난 후 다시 시도해주세요.'); return; }
-  const q = DATA.qnas.find(q=>q.id===qid);
+  const q = qnaFind(qid);          // 원래 질문이든 추가 질문이든 같은 길 (2026-09-15)
   if(!q) return;
   q.answer = val; q.answerImage = state.qnaAnswerImage[qid]||null; q.answeredAt = todayStr();
   await dbSetDoc('qnas', q.id, q);
@@ -9536,6 +9581,12 @@ async function deleteQna(qid){
     deleteFromDrive(imgFileIdOf(q.image));
     deleteFromDrive(imgFileIdOf(q.answerImage));
   }
+  /* 추가 질문도 같이 — 부모 없는 댓글이 남으면 아무 데도 안 보이는 문서가 된다 (2026-09-15) */
+  for(const f of qnaFollowupsOf(qid)){
+    deleteFromDrive(imgFileIdOf(f.image)); deleteFromDrive(imgFileIdOf(f.answerImage));
+    await dbDeleteDoc('qnas', f.id);
+  }
+  DATA.qnaFollowups = (DATA.qnaFollowups || []).filter(f => f.parentId !== qid);
   DATA.qnas = DATA.qnas.filter(q=>q.id!==qid);
   await dbDeleteDoc('qnas', qid);
   render();
@@ -14909,14 +14960,14 @@ function stuQnaHTML(c){
     <button class="mbtn p" style="margin-top:14px;" onclick="submitQuestion()">질문 보내기</button>
     <button class="mbtn q" style="margin-top:6px;" onclick="state.stuQnaWriting=false; render()">닫기</button>
   </div>`
-  : `<button class="mbtn" onclick="state.stuQnaWriting=true; render()">${iconSvg('pencil',16)} 질문하기</button>`}
+  : `<button class="mbtn" onclick="state.stuQnaWriting=true; state.stuQnaFollowFor=null; render()">${iconSvg('pencil',16)} 질문하기</button>`}
 
   <div class="msec">내 질문 <span class="mono">${c.qnas.length}</span></div>
   ${c.qnas.length===0
     ? `<div class="sap-empty">아직 등록한 질문이 없습니다.</div>`
     : c.qnas.map(q=>`<div class="mc">
         <div class="row" style="gap:7px;">
-          <span class="badge ${q.answer?'ok':'late'}">${q.answer?'답변 완료':'답변 대기'}</span>
+          <span class="badge ${qnaHasOpen(q)?'late':'ok'}">${!q.answer ? '답변 대기' : qnaHasOpen(q) ? '추가 질문 대기' : '답변 완료'}</span>
           <span class="spacer"></span>
           <span class="mono" style="font-size:10.5px;color:var(--dim);">${escHtml(q.date||'')}</span>
         </div>
@@ -14931,6 +14982,31 @@ function stuQnaHTML(c){
                ${imgSrcOf(q.answerImage) ? `<img class="sap-img" src="${imgSrcOf(q.answerImage)}" onclick="openPhoto(this.src)">` : ''}
              </div>`
           : `<div style="font-size:11.5px;color:var(--dim);margin-top:11px;">아직 답변이 등록되지 않았습니다.</div>`}
+        ${/* 추가 질문 (2026-09-15) — 답을 보고도 모르겠으면 그 아래 또 묻는다. 답이 오면 같은 자리에 붙는다. */''}
+        ${qnaFollowupsOf(q.id).map(f => `
+        <div style="margin-top:12px;padding-top:12px;border-top:1px dashed var(--line);">
+          <div style="font-size:10.5px;color:var(--dim);margin-bottom:5px;">추가 질문 <span class="mono">${escHtml(f.date||'')}</span></div>
+          <div style="font-size:13px;line-height:1.7;white-space:pre-wrap;">${escHtml(f.question)}</div>
+          ${imgSrcOf(f.image) ? `<img class="sap-img" src="${imgSrcOf(f.image)}" onclick="openPhoto(this.src)">` : ''}
+          ${f.answer
+            ? `<div class="note" style="margin-top:10px;">
+                 <div style="font-size:10.5px;color:var(--dim);margin-bottom:5px;">답변 <span class="mono">${escHtml(f.answeredAt||'')}</span></div>
+                 <div style="white-space:pre-wrap;color:var(--ink);">${escHtml(f.answer)}</div>
+                 ${imgSrcOf(f.answerImage) ? `<img class="sap-img" src="${imgSrcOf(f.answerImage)}" onclick="openPhoto(this.src)">` : ''}
+               </div>`
+            : `<div style="font-size:11.5px;color:var(--dim);margin-top:8px;">아직 답변이 등록되지 않았습니다.</div>`}
+        </div>`).join('')}
+        ${!q.answer ? '' : state.stuQnaFollowFor === q.id ? `
+        <div style="margin-top:12px;padding-top:12px;border-top:1px dashed var(--line);">
+          <div class="sap-lab">추가 질문</div>
+          <textarea id="qna-follow" class="sap-in" rows="3"
+            placeholder="답변을 보고도 이해가 안 되는 부분을 적어 주세요."></textarea>
+          <div class="sap-lab" style="margin-top:13px;">사진 (선택)</div>
+          ${qnaImageFieldHTML(state.qnaQuestionImage, 'handleQnaQuestionImage(this.files)', 'removeQnaQuestionImage()', 'qna-f-stu')}
+          <button class="mbtn p" style="margin-top:12px;" onclick="submitFollowup('${q.id}')">보내기</button>
+          <button class="mbtn q" style="margin-top:6px;" onclick="state.stuQnaFollowFor=null; render()">닫기</button>
+        </div>`
+        : `<button class="mbtn" style="margin-top:12px;" onclick="state.stuQnaWriting=false; state.stuQnaFollowFor='${q.id}'; render()">${iconSvg('pencil',14)} 추가 질문</button>`}
       </div>`).join('')}`;
 }
 
@@ -15631,7 +15707,7 @@ function studentHTML(){
     wronghw: wrongHomeworkLeft(c.rec).length,
     progress: c.homework.filter(a=>hwNeedsAction(c.rec, a.id)).length,
     notice:  unseenCount('notice', noticesFor(c).length),
-    qna:     c.qnas.filter(q=>!q.answer).length
+    qna:     c.qnas.filter(q=>!q.answer).length + c.qnas.reduce((n,q)=> n + qnaFollowupsOf(q.id).filter(f=>!f.answer).length, 0)
   };
 
   return `
@@ -22025,9 +22101,10 @@ function teacherNoticesHTML(){
    답이 그 아래 붙는 글이지, 주고받는 말이 아니다. 형태를 맞추는 것은 일관성이 아니라 게으름이다.
    미답변을 위로 올린다 — 이 화면에 오는 이유가 그것이다. */
 function teacherQnaHTML(){
-  markSeen('qna', DATA.qnas.length);
-  const open = DATA.qnas.filter(q=>!q.answer);
-  const done = DATA.qnas.filter(q=>q.answer);
+  markSeen('qna', DATA.qnas.length + (DATA.qnaFollowups||[]).length);
+  /* «대기»는 첫 답이 없는 것 + 추가 질문에 답이 없는 것 (2026-09-15) */
+  const open = DATA.qnas.filter(qnaHasOpen);
+  const done = DATA.qnas.filter(q=>!qnaHasOpen(q));
   const f = state.qnaFilter || 'open';
   const list = f==='open' ? open : (f==='done' ? done : DATA.qnas);
 
@@ -22041,7 +22118,7 @@ function teacherQnaHTML(){
      여기서 새로 그리면 오답 검토의 큐와 미세하게 어긋난다. */
   const item = q => `<div class="qitem ${cur && q.id===cur.id ? 'on':''}" onclick="state.qnaSelectedId='${q.id}'; render()">
     <div class="h">
-      <span class="badge ${q.answer?'ok':'no'}">${q.answer?'완료':'대기'}</span>
+      <span class="badge ${qnaHasOpen(q)?'no':'ok'}">${qnaHasOpen(q) ? (q.answer ? '추가 질문' : '대기') : '완료'}</span>
       <span class="who">${escHtml(q.studentName||'')}</span>
       ${imgSrcOf(q.image) ? '<span class="muted" style="font-size:11px;">사진</span>' : ''}
       <span class="ago">${escHtml(q.date||'')}</span></div>
@@ -22058,7 +22135,7 @@ function teacherQnaHTML(){
         return `
         <div class="qn-dh">
           <div class="row" style="gap:8px;">
-            <span class="badge ${cur.answer?'ok':'no'}">${cur.answer?'답변 완료':'답변 대기'}</span>
+            <span class="badge ${qnaHasOpen(cur)?'no':'ok'}">${qnaHasOpen(cur) ? (cur.answer ? '추가 질문 대기' : '답변 대기') : '답변 완료'}</span>
             ${waited!==null ? `<span style="font-size:11.5px;color:${waited>=2?'var(--no)':'var(--dim)'};font-weight:${waited>=2?'600':'400'};">${
               waited===0 ? '오늘 들어온 질문' : `${waited}일째 기다리는 중`}</span>` : ''}
             <span class="spacer"></span>
@@ -22084,6 +22161,29 @@ function teacherQnaHTML(){
             <div class="x">${escHtml(cur.answer)}</div>
             ${imgSrcOf(cur.answerImage)?`<img class="qn-img" src="${imgSrcOf(cur.answerImage)}" title="누르면 크게 봅니다" onclick="openPhoto(this.src)">`:''}
           </div>` : ''}
+          ${/* 추가 질문 — 학생이 답을 보고 또 물은 것. 꼴이 같아 같은 말풍선을 쓴다. 답이 없는 것에는 답 칸이 바로 붙는다. */''}
+          ${qnaFollowupsOf(cur.id).map(f => `
+          <div class="qn-msg">
+            <div class="h"><span class="av" style="width:24px;height:24px;font-size:11px;">${escHtml((f.studentName||'?').slice(0,1))}</span>
+              <b>${escHtml(f.studentName||'')}</b><span class="badge late" style="margin-left:2px;">추가 질문</span><span class="t">${escHtml(f.date||'')}</span></div>
+            <div class="x">${escHtml(f.question)}</div>
+            ${imgSrcOf(f.image)?`<img class="qn-img" src="${imgSrcOf(f.image)}" title="누르면 크게 봅니다" onclick="openPhoto(this.src)">`:''}
+          </div>
+          ${f.answer ? `
+          <div class="qn-msg me">
+            <div class="h"><span class="av" style="width:24px;height:24px;font-size:11px;background:var(--accent);color:#fff;">김</span>
+              <b>김하현T</b><span class="t">${escHtml(f.answeredAt||'')}</span></div>
+            <div class="x">${escHtml(f.answer)}</div>
+            ${imgSrcOf(f.answerImage)?`<img class="qn-img" src="${imgSrcOf(f.answerImage)}" title="누르면 크게 봅니다" onclick="openPhoto(this.src)">`:''}
+          </div>` : `
+          <div class="qn-comp" style="margin:6px 0 14px;">
+            <div class="cls-form" style="align-items:flex-start;margin-top:0;">
+              <label style="flex:1;min-width:240px;"><span>추가 질문에 답변</span>
+                <textarea id="answer-${f.id}" rows="3" placeholder="답변 입력"></textarea></label>
+              ${qnaImageFieldHTML(state.qnaAnswerImage[f.id], `handleQnaAnswerImage('${f.id}',this.files)`, `removeQnaAnswerImage('${f.id}')`, `qna-a-${f.id}`)}
+              <button class="btn p sm" onclick="submitAnswer('${f.id}')">등록</button>
+            </div>
+          </div>`}`).join('')}
           <div class="rst-pad"></div>
         </div>
         ${cur.answer ? '' : `

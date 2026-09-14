@@ -303,7 +303,8 @@
       else if (sy > sx) { var needY = plotH / sx, my = (yRange[0] + yRange[1]) / 2; yRange = [my - needY / 2, my + needY / 2]; }
     }
 
-    return { xRange: xRange, yRange: yRange };
+    /* 내용(눈금·점·도형·이름표·원점)이 실제로 차지하는 끝 — 축을 거기까지만 긋는 데 쓴다(아래 build). */
+    return { xRange: xRange, yRange: yRange, content: { x0: x0, x1: x1, y0: lo, y1: hi } };
   }
   function hasShapes(scene) {
     if (scene.equalAxes === true) return true;
@@ -602,14 +603,28 @@
     out.push('<g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" ' +
       'font-family="\'Noto Serif\', \'Noto Serif KR\', Georgia, \'Times New Roman\', serif" font-size="' + fs0 + '">');
 
-    /* 축 + 화살촉 */
+    /* 축 + 화살촉
+       🔵 **축은 «내용이 있는 데»까지만 긋는다** (2026-09-15 · 사용자 — 「x축이 주된 그림 도형과 관계없이 좌우로
+         너무 길어서 보기 안 좋다」). 키 큰 그림(y 0~18 · x −5~3)은 equalAxes 가 x 창을 몇 배로 벌리는데,
+         축선까지 창 끝까지 그으면 도형 양옆이 빈 축으로 가득 찬다. 창은 그대로 두고(비율 약속) **선만 짧게** —
+         내용 끝에서 30px 남기고 화살촉을 단다. ⚠ 곡선이 보이면 예전처럼 창 끝까지 — 곡선은 창 끝까지 그려지므로
+         축이 곡선보다 짧으면 잘린 것처럼 읽힌다. */
     var axis = (scene.axis || {});
-    out.push('<path d="M' + n(pad.l - 6) + ' ' + n(oy) + 'H' + n(W - pad.r + 12) + '"/>');
-    out.push('<path d="M' + n(W - pad.r + 12) + ' ' + n(oy) + 'l-9 -5v10z" fill="currentColor" stroke="none"/>');
-    out.push('<path d="M' + n(ox) + ' ' + n(H - pad.b + 6) + 'V' + n(pad.t - 12) + '"/>');
-    out.push('<path d="M' + n(ox) + ' ' + n(pad.t - 12) + 'l-5 9h10z" fill="currentColor" stroke="none"/>');
-    if (axis.xLabel !== null) lab('axis:x', W - pad.r + 8, oy - 12, axis.xLabel || 'x', 'start', null, true);
-    if (axis.yLabel !== null) lab('axis:y', ox + 10, pad.t - 14, axis.yLabel || 'y', 'start', null, true);
+    var hasCurve = cs.some(function (c) { return c.fn && !hidden('curve:' + c.i); });
+    var ct = win.content || { x0: xr[0], x1: xr[1], y0: yr[0], y1: yr[1] };
+    var axL = pad.l - 6, axR = W - pad.r + 12, axT = pad.t - 12, axB = H - pad.b + 6;
+    if (!hasCurve) {
+      axL = clamp(Math.min(ox, PX(ct.x0)) - 30, axL, axR);
+      axR = clamp(Math.max(ox, PX(ct.x1)) + 46, axL, axR);
+      axT = clamp(Math.min(oy, PY(ct.y1)) - 36, axT, axB);
+      axB = clamp(Math.max(oy, PY(ct.y0)) + 26, axT, axB);
+    }
+    out.push('<path d="M' + n(axL) + ' ' + n(oy) + 'H' + n(axR) + '"/>');
+    out.push('<path d="M' + n(axR) + ' ' + n(oy) + 'l-9 -5v10z" fill="currentColor" stroke="none"/>');
+    out.push('<path d="M' + n(ox) + ' ' + n(axB) + 'V' + n(axT) + '"/>');
+    out.push('<path d="M' + n(ox) + ' ' + n(axT) + 'l-5 9h10z" fill="currentColor" stroke="none"/>');
+    if (axis.xLabel !== null) lab('axis:x', axR - 4, oy - 12, axis.xLabel || 'x', 'start', null, true);
+    if (axis.yLabel !== null) lab('axis:y', ox + 10, axT - 2, axis.yLabel || 'y', 'start', null, true);
     if (axis.origin !== null) lab('axis:origin', ox - 8, oy + 20, axis.origin || 'O', 'end', null, true);
 
     /* 눈금 — 숫자는 «값»이라 글자를 못 고친다 (editable:false) */
@@ -627,8 +642,8 @@
     });
 
     /* 축선은 잉크다 — 도형 이름표보다 먼저 넣어야 원 이름이 y축 위에 앉지 않는다. */
-    for (var ax1 = pad.l - 6; ax1 <= W - pad.r + 12; ax1 += 8) ink.push([ax1, oy]);
-    for (var ay1 = pad.t - 12; ay1 <= H - pad.b + 6; ay1 += 8) ink.push([ox, ay1]);
+    for (var ax1 = axL; ax1 <= axR; ax1 += 8) ink.push([ax1, oy]);
+    for (var ay1 = axT; ay1 <= axB; ay1 += 8) ink.push([ox, ay1]);
     /* 점이 «있을 자리»를 먼저 잉크로 넣는다 — 점은 나중에 그리지만(맨 위에 보이게), 도형 이름표가
        그 자리를 피해야 한다. 점 이름표의 집도 같이(글자만 어림). */
     (scene.points || []).forEach(function (pt, pi) {
@@ -653,9 +668,29 @@
       for (var k = 0; k < ps.length; k++) inkLine(ps[k], ps[(k + 1) % ps.length]);
       if (pg.label) { var cx = 0, cy = 0; ps.forEach(function (p) { cx += p[0]; cy += p[1]; }); lab('poly:' + i, cx / ps.length, cy / ps.length + 6, pg.label, 'middle', null, true); }
     });
+    /* 🔵 **점선 안내선은 축에 닿고 끝난다** (2026-09-15 · 사용자 — 「점선이 축을 살짝 넘어서까지 이어지는 것이
+         안 나오도록」). AI 가 준 점선 조각이 축을 반 칸쯤 넘기는 일이 있다(이름표 자리를 벌리려는 버릇). 축과 나란한
+         점선이 축을 건너되 **건넌 쪽이 종이 위 28px 이하**면 축에서 자른다 — 진짜로 축을 가로지르는 선은 그보다 멀리 간다.
+         ⚠ 잣대가 px 인 까닭: 좌표 단위는 그림마다 크기가 달라(1칸이 15px 일 수도 60px 일 수도) «살짝»을 못 잰다.
+       ⚠ 그림에서만 자른다. 장면(scene)은 안 고친다 — 검산·핀이 보는 값이다. */
+    function clipGuide(a, b) {
+      var f = a.slice(), t = b.slice();
+      [[0, ox], [1, oy]].forEach(function (k) {
+        var i = k[0], c = k[1], o = 1 - i;
+        if (Math.abs(f[o] - t[o]) > 0.5) return;                // 축과 나란한 것만
+        var lo = Math.min(f[i], t[i]), hi = Math.max(f[i], t[i]);
+        if (!(lo < c && hi > c)) return;                        // 축을 안 건넌다
+        var over = Math.min(c - lo, hi - c);
+        if (over > 28) return;                                  // 살짝이 아니다
+        if (c - lo < hi - c) { if (f[i] < c) f[i] = c; if (t[i] < c) t[i] = c; }
+        else { if (f[i] > c) f[i] = c; if (t[i] > c) t[i] = c; }
+      });
+      return [f, t];
+    }
     (scene.segments || []).forEach(function (s, i) {
       if (!s.from || !s.to || hidden('seg:' + i)) return;
-      var a = P2(s.from), b = P2(s.to);
+      var ab = s.dash ? clipGuide(P2(s.from), P2(s.to)) : [P2(s.from), P2(s.to)];
+      var a = ab[0], b = ab[1];
       out.push('<path d="M' + n(a[0]) + ' ' + n(a[1]) + 'L' + n(b[0]) + ' ' + n(b[1]) + '"' + (s.dash ? ' stroke-dasharray="7 6"' : '') + ' stroke-width="2"/>');
       if (s.arrow) { var ang = Math.atan2(b[1] - a[1], b[0] - a[0]); out.push('<path d="M' + n(b[0]) + ' ' + n(b[1]) + 'l' + n(-10 * Math.cos(ang - 0.45)) + ' ' + n(-10 * Math.sin(ang - 0.45)) + 'M' + n(b[0]) + ' ' + n(b[1]) + 'l' + n(-10 * Math.cos(ang + 0.45)) + ' ' + n(-10 * Math.sin(ang + 0.45)) + '"/>'); }
       inkLine(a, b);

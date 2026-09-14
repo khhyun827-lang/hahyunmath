@@ -1,0 +1,48 @@
+<!doctype html><meta charset="utf-8"><title>qna-followup-probe</title>
+<!-- 질의응답 «추가 질문» — 강사 스레드와 학생 화면을 확장 없이 헤드리스 크롬으로 본다 (2026-09-15). 실 DB 0줄.
+     node tools/serve.js
+     chrome --headless=new --hide-scrollbars --virtual-time-budget=20000 --window-size=1200,900 --screenshot=out.png --dump-dom "http://127.0.0.1:8777/tools/qna-followup-probe.html?view=teacher|student" | grep -o "RESULT.*" -->
+<style>html,body{margin:0;background:#888}iframe{border:0;display:block;background:#fff}</style>
+<pre id="o" style="font:12px monospace;color:#fff;margin:0;padding:4px;">…</pre>
+<script>
+const q = new URLSearchParams(location.search); const VIEW = q.get('view') || 'teacher';
+const fr=document.createElement('iframe'); fr.width = VIEW==='teacher' ? 1200 : 480; fr.height = VIEW==='teacher' ? 800 : 1300; fr.src='/index.html';
+document.body.appendChild(fr);
+const o=document.getElementById('o'); let n=0;
+const t=setInterval(async()=>{ n++; let ok=false;
+  try{ ok = fr.contentWindow.eval('typeof teacherQnaHTML==="function" && typeof submitFollowup==="function"'); }catch(_){}
+  if(!ok){ if(n>150){clearInterval(t); o.textContent='RESULT timeout';} return; }
+  clearInterval(t);
+  const w=fr.contentWindow;
+  let out; try{ out = await w.eval(`(async function(){
+    const R = {}; const VIEW = ${JSON.stringify(VIEW)};
+    DATA.classes = [{id:'c1', name:'고1 0.5B'}];
+    DATA.students = [{studentId:'s1', name:'김승우', classId:'c1', school:'광남고', grade:'1'}];
+    DATA.qnas = [
+      {id:'qn1', uid:'u1', studentId:'s1', studentName:'김승우', date:'2026-09-13', question:'이차방정식 근의 공식에서 판별식이 음수면 어떻게 되나요?', image:null, answer:'실근이 없습니다. 판별식 D<0 이면 허근 두 개입니다.', answerImage:null, answeredAt:'2026-09-14'},
+      {id:'qf1', kind:'followup', parentId:'qn1', uid:'u1', studentId:'s1', studentName:'김승우', date:'2026-09-15', question:'허근이 뭔지 잘 모르겠어요. 그럼 그래프는 x축이랑 안 만나는 건가요?', image:null, answer:null, answerImage:null, answeredAt:null},
+    ];
+    splitQnaFollowups();
+    const rec = emptyRecord(); DATA.records = {s1: rec}; state.allRecords = {s1: rec};
+    const $ = s => document.querySelector(s);
+    if(VIEW === 'teacher'){
+      state.currentUser = {type:'teacher'}; state.view='teacher'; state.teacherTab='qna'; state.qnaFilter='open'; state.qnaSelectedId='qn1';
+      render(); await new Promise(r => setTimeout(r, 2500));
+      R.waitCount = $('.qn-lh .pill.on b').textContent;
+      R.badge = $('.qitem .badge').textContent;
+      R.msgs = [...document.querySelectorAll('.qn-msg')].map(m => (m.classList.contains('me') ? 'T:' : 'S:') + m.querySelector('.x').textContent.slice(0, 12));
+      R.replyBox = !!$('#answer-qf1');
+    } else {
+      state.currentUser = {type:'student', studentId:'s1', name:'김승우'}; state.view='student'; state.studentTab='qna';
+      render(); await new Promise(r => setTimeout(r, 2500));
+      R.followShown = document.body.textContent.includes('허근이 뭔지');
+      const fb = [...document.querySelectorAll('button')].find(b => b.textContent.includes('추가 질문')); R.followBtn = !!fb;
+      R.pendingText = document.body.textContent.includes('아직 답변이 등록되지 않았습니다');
+      fb.click(); await new Promise(r => setTimeout(r, 300));
+      R.formOpen = !!$('#qna-follow');
+    }
+    return R;
+  })()`); }catch(e){ o.textContent='RESULT ERROR '+(e&&e.stack||e); return; }
+  o.textContent = 'RESULT ' + JSON.stringify(out);
+}, 100);
+</script>
