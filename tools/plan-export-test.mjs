@@ -6,6 +6,8 @@
 //   ① 「반-영상 탭에서 33%가 반마다 붙어있는데 반에 해당하는 시청률도 아니어서 … 수정해야할 것 같아」
 //      🔴 재 보니 그 수는 **진도**였다. 이름표가 없어서 «지금 보는 탭»의 수로 읽힌 것이다.
 //   ② 「반마다 위에 요일이랑 붙여서 공지사항에 게시 … 반별로 파일로 저장 혹은 바로 게시」
+//   ③ (같은 날 저녁) 「엑셀파일이 아니라 그냥 이미지 캡쳐로 … 공지 눌렀을 때도 그 이미지 파일을 넣고 싶다」
+//      ⇒ 파일은 PNG · 공지에는 글 + 그림. 그림은 워커 /upload 로 드라이브에 올라간다(질의응답 사진과 같은 길).
 //
 // ⚠ 함수를 여기에 옮겨 적지 않는다 — index.html 에서 그대로 뜬다.
 
@@ -50,13 +52,15 @@ function 판(옵션) {
     s1: { '2026-09-29':{k:'off'}, '2026-10-01':{k:'jikbo', t:'2시'} },
     s2: { '2026-10-01':{k:'jikbo', t:'2시'} },
   };
-  const 쓴것 = [], 말 = [], 기록 = [];
+  const 쓴것 = [], 말 = [], 기록 = [], 올린것 = [], 지운것 = [];
+  /* 그림은 가짜 캔버스다 — 여기서 html2canvas 를 돌릴 수는 없다. 올리는 길(uploadDataUrlToDrive)만 본다. */
   const F = new Function('DATA', 'state', 'document', 'classRoster', 'classNameOf', 'isWithdrawn',
     'currentSeason', 'todayStr', 'dateShift', 'planRange', 'planCell', 'planLabel',
-    'dbSetDoc', 'logAudit', 'showToast', 'render', 'escHtml', 'XLSX', 'ensureXLSXLoaded',
+    'dbSetDoc', 'logAudit', 'showToast', 'render', 'escHtml',
+    'planClassCanvas', 'uploadDataUrlToDrive', 'deleteFromDrive', 'imgFileIdOf', 'console',
     [lift('planDaysOf'), lift('planDateLabel'), lift('planClassRows'), lift('planClassText'),
-     lift('planPostOpen'), lift('planPostClose'), lift('planPostRun')].join(NL) + NL +
-    'return { planDateLabel, planClassRows, planClassText, planPostOpen, planPostClose, planPostRun };')(
+     lift('planFileName'), lift('planPostOpen'), lift('planPostClose'), lift('planPostRun')].join(NL) + NL +
+    'return { planDateLabel, planClassRows, planClassText, planFileName, planPostOpen, planPostClose, planPostRun };')(
     { notices: [] }, o.state || {}, { getElementById: () => (o.el === undefined ? null : { value: o.el }) },
     () => 학생들, () => '고10.5B', () => false,
     () => '2학기 중간', () => '2026-09-14',
@@ -66,8 +70,12 @@ function 판(옵션) {
     (c) => ({ off:'등원X', jikbo:'직보', start:'등원시작' }[c && c.k] || '') + ((c && c.t) || ''),
     async (col, id, doc) => { 쓴것.push({ col, id, doc }); return o.저장흠 ? null : true; },
     async (a, b, c, d) => 기록.push(d),
-    (m) => 말.push(m), () => {}, (s) => String(s == null ? '' : s), null, async () => {});
-  return { F, 쓴것, 말, 기록 };
+    (m) => 말.push(m), () => {}, (s) => String(s == null ? '' : s),
+    async () => (o.그림없음 ? null : { toDataURL: () => 'data:image/png;base64,AAAA' }),
+    async (dataUrl, name) => { 올린것.push({ dataUrl, name }); if (o.올리기흠) throw new Error('upload http 502'); return { url: 'https://drive/x', fileId: 'f1' }; },
+    (id) => 지운것.push(id), (v) => (v && v.fileId) || null,
+    { error(){}, warn(){}, log: console.log });   // 일부러 엎는 판의 console.error 를 삼킨다
+  return { F, 쓴것, 말, 기록, 올린것, 지운것 };
 }
 
 /* ═══ ① 날짜에 요일이 붙는다 ═══ */
@@ -105,25 +113,40 @@ console.log(NL + '② 공지는 «학생별 한 줄»이다 (표가 아니다)' 
 console.log(NL + '③ 게시 — 바로 안 올리고 먼저 보여 준다' + NL);
 {
   const state = {};
-  const { F, 쓴것, 말, 기록 } = 판({ state });
-  F.planPostOpen('c1');
-  봄('🔴 누르면 먼저 판이 열린다 (아직 안 올라간다)', [!!state.planPost, 쓴것.length], [true, 0]);
+  const { F, 쓴것, 말, 기록, 올린것 } = 판({ state });
+  await F.planPostOpen('c1');
+  봄('🔴 누르면 먼저 판이 열린다 (아직 안 올라간다 — 그림도)', [!!state.planPost, 쓴것.length, 올린것.length], [true, 0, 0]);
   봄('판에 글이 담겨 있다', state.planPost.text.startsWith('고10.5B · 2학기 중간 직보 일정'), true);
+  봄('판에 그림이 담겨 있다 (미리 보기용)', state.planPost.img, 'data:image/png;base64,AAAA');
 
-  const 고친판 = 판({ state: { planPost: { classId:'c1', text:'원래 글' } }, el: '내가 고친 글' });
+  const 고친판 = 판({ state: { planPost: { classId:'c1', text:'원래 글', img: 'data:image/png;base64,AAAA' } }, el: '내가 고친 글' });
   await 고친판.F.planPostRun();
   /* 🔵 고칠 수 있어야 한다 — 한 줄 덧붙이는 일이 잦다 */
   봄('🔴 판에서 고친 글이 그대로 올라간다', 고친판.쓴것[0].doc.content, '내가 고친 글');
   봄('그 반에게만 간다', 고친판.쓴것[0].doc.classIds, ['c1']);
+  /* 🔵 그림 — 드라이브에 올리고 그 주소를 공지에 붙인다 */
+  봄('🔴 그림을 드라이브에 올린다 (PNG 이름으로)', 고친판.올린것.map(x => x.name), ['직보일정_고10.5B_2026-09-28.png']);
+  봄('🔴 공지에 그림 주소가 붙는다', 고친판.쓴것[0].doc.image, { url: 'https://drive/x', fileId: 'f1' });
+
+  const 그림없는판 = 판({ state: { planPost: { classId:'c1', text:'글' } }, el: '글' });
+  await 그림없는판.F.planPostRun();
+  봄('그림이 없으면 글만 올린다 (image 칸을 안 만든다)',
+    [그림없는판.올린것.length, 'image' in 그림없는판.쓴것[0].doc], [0, false]);
+
+  /* 🔴 그림을 못 올리면 공지도 안 낸다 — 글만 나가면 강사는 붙은 줄 안다 */
+  const 못올린판 = 판({ state: { planPost: { classId:'c1', text:'글', img: 'data:image/png;base64,AAAA' } }, el: '글', 올리기흠: true });
+  await 못올린판.F.planPostRun();
+  봄('🔴 그림을 못 올리면 공지도 안 낸다', [못올린판.쓴것.length, 못올린판.말.some(m => m.includes('그림을 올리지 못했습니다'))], [0, true]);
   봄('제목에 반과 기간이 있다',
     고친판.쓴것[0].doc.title, '고10.5B 직보 일정 (9/28(월) ~ 10/4(일))');
   봄('공지 통에 쓴다', 고친판.쓴것[0].col, 'notices');
   봄('변경 이력에 남는다', 고친판.기록.length, 1);
 
   /* 🔴 저장이 됐는지 보고 말한다 — 안 보고 알리면 새로고침하면 사라진다 */
-  const 흠판 = 판({ state: { planPost: { classId:'c1', text:'글' } }, el: '글', 저장흠: true });
+  const 흠판 = 판({ state: { planPost: { classId:'c1', text:'글', img: 'data:image/png;base64,AAAA' } }, el: '글', 저장흠: true });
   await 흠판.F.planPostRun();
-  봄('🔴 저장이 막히면 «올렸다»고 안 한다', 흠판.말[0].includes('게시하지 못했습니다'), true);
+  봄('🔴 저장이 막히면 «올렸다»고 안 한다', 흠판.말.some(m => m.includes('게시하지 못했습니다')), true);
+  봄('🔴 그때는 올려 둔 그림도 도로 지운다 (고아 파일을 안 남긴다)', 흠판.지운것, ['f1']);
   봄('🔴 그리고 목록에서 도로 뺀다 (화면에만 남으면 안 된다)',
     알맹이(lift('planPostRun')).includes('DATA.notices.filter(n => n.id !== notice.id)'), true);
 
@@ -133,14 +156,33 @@ console.log(NL + '③ 게시 — 바로 안 올리고 먼저 보여 준다' + NL
 }
 
 /* ═══ ④ 파일 · 화면의 닻 ═══ */
-console.log(NL + '④ 파일은 «표 그대로» · 두 단추가 화면에 있다' + NL);
+console.log(NL + '④ 파일은 «그림» · 두 단추가 화면에 있다' + NL);
 {
+  const { F } = 판();
   const 파일 = 알맹이(lift('planExportClass'));
-  봄('🔴 날짜 머리에 요일이 붙는다', 파일.includes('days.map(planDateLabel)'), true);
-  봄('이름·학교가 앞에 선다', 파일.includes("[['이름', '학교', ..."), true);
-  봄('파일 이름에 반과 날짜가 들어간다', 파일.includes('`직보일정_${classNameOf(classId)}_${planRange().from}.xlsx`'), true);
-  봄('🔴 날짜 줄이 없으면 그렇게 말한다', 파일.includes('날짜 줄이 없습니다'), true);
-  봄('🔴 엎어지면 조용히 끝내지 않는다', 파일.includes('파일을 만들지 못했습니다'), true);
+  const 그림 = 알맹이(lift('planClassCanvas'));
+  const 표그림 = 알맹이(lift('planClassTableHTML'));
+  /* 🔴 엑셀이 아니라 PNG 다 (2026-09-14 · 사용자가 바꿨다) */
+  봄('🔴 PNG 로 내려받는다', 파일.includes("'image/png'") && 파일.includes(".png'"), true);
+  봄('🔴 엑셀 길은 남지 않았다', /XLSX|xlsx/.test(파일 + 그림 + 표그림), false);
+  봄('파일 이름에 반과 날짜가 들어간다', F.planFileName('c1'), '직보일정_고10.5B_2026-09-28');
+  봄('🔴 날짜 줄이 없으면 그렇게 말한다', 그림.includes('날짜 줄이 없습니다'), true);
+  봄('🔴 엎어지면 조용히 끝내지 않는다', 파일.includes('그림을 만들지 못했습니다'), true);
+  /* 🔴 화면의 표와 같은 CSS 로 굽는다 — 두 벌이 되면 알약 색 하나만 바뀌어도 어긋난다 */
+  봄('🔴 화면의 표와 같은 CSS(pl-t2)로 그린다', 표그림.includes('class="pl-t2"'), true);
+  봄('🔴 날짜 줄·칸을 화면과 «같은 함수»로 그린다',
+    표그림.includes('planDayHeadHTML(days)') && 표그림.includes('planRowCellsHTML(s, days, false)'), true);
+  봄('머리에 반·시즌·기간이 있다', 표그림.includes('직보 일정</b>') && 표그림.includes('planDateLabel(범위.from)'), true);
+  봄('🔴 그 반 학생만 (다른 반은 안 보인다)', 표그림.includes('classRoster(classId)'), true);
+  봄('그리는 무대는 화면 밖에 «보이게» 둔다', 그림.includes("'pl-stage'") && 그림.includes('stage.remove()'), true);
+  const 화면 = lift('teacherExamPlanHTML');
+  봄('🔴 화면의 표도 같은 두 함수를 쓴다',
+    화면.includes('planDayHeadHTML(days)') && 화면.includes('planRowCellsHTML(s, days, true)'), true);
+  봄('🔴 날짜 줄이 위아래 스크롤에 붙도록 표 상자를 굴린다 (pl-body)', 화면.includes('class="ex-body pl-body"'), true);
+  /* 공지 화면 둘에 그림이 붙는다 */
+  봄('🔴 학생 공지에 그림이 붙는다', lift('stuNoticeHTML').includes('noticeImageHTML(n)'), true);
+  봄('🔴 강사 공지 상세에 그림이 붙는다', lift('teacherNoticesHTML').includes('noticeImageHTML(cur)'), true);
+  봄('공지를 지우면 그림도 지운다', 알맹이(lift('deleteNotice')).includes('deleteFromDrive(imgFileIdOf(gone.image))'), true);
 
   const 표 = lift('teacherExamPlanHTML');
   봄('🔴 반마다 두 단추가 선다',
@@ -153,6 +195,7 @@ console.log(NL + '④ 파일은 «표 그대로» · 두 단추가 화면에 있
   봄('올리기·닫기가 둘 다 있다',
     표.includes('planPostRun()') && 표.includes('planPostClose()'), true);
   봄('두 길이 왜 다른지 화면이 말한다', 표.includes('공지는 <b>학생별 한 줄</b>'), true);
+  봄('미리 보기 판에 그림이 보인다', 표.includes('state.planPost.img'), true);
 }
 
 /* ═══ ⑤ 이름표 없는 퍼센트 ═══ */

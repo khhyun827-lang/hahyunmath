@@ -1431,6 +1431,48 @@
      그래서 sticky 로 붙이고 left 를 셋의 폭에 맞춰 쌓는다(52 · 130 → 66+64+92).
    ⚠ 칸은 «작게» 둔다. 열여섯 날이 한 화면에 들어와야 표가 표 노릇을 한다. */
 .app .pl-wrap{overflow:auto;border:1px solid var(--line);border-radius:var(--r-md);background:var(--card);}
+/* 🔴 **날짜 줄이 위아래로 굴려도 붙어 있으려면 «표 상자»가 굴러야 한다** (2026-09-14 · 사용자 요청).
+   thead 의 sticky 는 자기를 굴리는 상자 기준이다. 표 상자 키가 안 묶이면 바깥 `.ex-body` 가 굴러가고
+   날짜 줄은 표와 함께 사라졌다(가로는 `.pl-wrap` 자신이 굴러서 이름·학교가 붙어 있었던 것).
+   ⇒ `.ex-body` 를 세로 flex 로, 표 상자가 남은 키를 다 갖는다. 폰(560↓)에서는 `.ex-body` 가
+     풀려 있으므로 표 상자에 최대 키를 준다.
+   ⚠ 이 화면은 설정 껍데기의 `.ex-body` **안에** 또 `.ex-main` 을 세운다. 안쪽은 블록 자식이라 키가
+     안 묶인다. `height:100%` 는 안 선다(프로브에서 760px 로 남았다 — flex 로 얻은 키는 퍼센트의 기준이
+     못 된다). ⇒ 바깥 `.ex-body` 도 세로 flex 로 두고 안쪽이 `flex:1` 로 받는다 — flex 는 flex 로 잇는다.
+     껍데기가 `${sub}` 뒤에 붙이는 `.rst-pad` 64px 은 여기서는 군더더기다 — 그만큼 바깥이 굴러 버린다. */
+/* ⚠ overflow 는 auto — 공지 미리 보기(글 12줄 + 그림)가 펴지면 위쪽만으로 키를 넘길 수 있다. 그때는 바깥이
+   굴러 주고, 표는 최소 키(180px)를 지킨다. 그림 미리 보기도 220px 에서 끊는다. */
+.app .ex-body:has(> .pl-screen){display:flex;flex-direction:column;overflow:auto;}
+.app .pl-screen{flex:1;min-height:0;}
+.app .ex-body:has(> .pl-screen) > .rst-pad{display:none;}
+.app .ex-body.pl-body{display:flex;flex-direction:column;margin-top:10px;}
+.app .pl-body .pl-wrap{flex:1;min-height:180px;}
+@media (max-width:560px){ .app:not(.sap) .ex-body:has(> .pl-screen){display:block;overflow:visible;} .app:not(.sap) .pl-body .pl-wrap{max-height:72vh;} }
+/* 반별 그림 — 화면 밖에서 «보이게» 그리는 무대(리포트 PDF 와 같은 장치). sticky 는 여기서 푼다. */
+.app .pl-stage{position:fixed;left:-20000px;top:0;width:max-content;padding:14px 18px 12px;
+  background:#fff;z-index:-1;pointer-events:none;}
+.app .pl-stage .pl-t2 th,.app .pl-stage .pl-t2 td{position:static;}
+.app .pl-stage .pl-t2{border:1px solid var(--line);}
+/* 🔴 **html2canvas 는 `box-shadow: inset` 을 «면»으로 칠한다** (2026-09-14 · 프로브에서 봤다 — 수학 시험일
+   칸이 통째로 빨갛게, 「가능하면」알약이 남색 덩어리로 나왔다). 화면은 알약이 커지지 않게 box-shadow 로
+   테두리를 그리지만, 무대에서는 전부 진짜 border 로 바꾼다. 점선도 둥근 모서리와 만나면 엉키므로 실선으로. */
+.app .pl-stage .pl-c.mth{box-shadow:none;border-bottom:2px solid var(--no);}
+/* ⚠ 아래 알약 규칙(.app .pl-p.p-*)이 뒤에 오므로 같은 무게면 진다 — 한 단 더 무겁게(.pl-t2) 쓴다. */
+.app .pl-stage .pl-t2 .pl-p{box-shadow:none;border:1px solid transparent;padding:0 6px;line-height:1.5;}
+.app .pl-stage .pl-p.p-start  {border-color:var(--ok-line);}
+.app .pl-stage .pl-p.p-off    {border-color:var(--line);}
+.app .pl-stage .pl-p.p-maybe  {border:1px solid var(--blue);border-radius:var(--r-xs);}
+.app .pl-stage .pl-p.p-exam   {border-color:var(--no-line);}
+.app .pl-stage .pl-p.p-extra  {border-color:var(--late-line);}
+.app .pl-stage .pl-p.p-consult{border-color:var(--leave-line);}
+.app .pl-cap{display:flex;align-items:baseline;gap:10px;margin-bottom:9px;}
+.app .pl-cap b{font-size:14px;font-weight:800;color:var(--ink);}
+.app .pl-cap s{text-decoration:none;font-size:11.5px;color:var(--sub);}
+.app .pl-leg{margin-top:7px;font-size:10.5px;color:var(--dim);}
+.app .pl-prev{display:block;max-width:100%;max-height:220px;width:auto;margin-top:6px;border:1px solid var(--line);border-radius:var(--r-sm);}
+/* 공지에 붙은 그림 — 폭에 맞춰 줄이고, 누르면 원본이 새 창에 열린다 */
+.app .nt-img{display:block;margin-top:10px;}
+.app .nt-img img{display:block;max-width:100%;border:1px solid var(--line);border-radius:var(--r-sm);}
 .app .pl-t2{border-collapse:separate;border-spacing:0;font-size:11px;white-space:nowrap;}
 .app .pl-t2 th,.app .pl-t2 td{border-right:1px solid var(--line);border-bottom:1px solid var(--line);
   padding:4px 6px;font-weight:500;text-align:center;background:var(--card);}
@@ -7960,6 +8002,8 @@ async function addNotice(){
 }
 async function deleteNotice(id){
   if(!confirm('이 공지사항을 삭제할까요?')) return;
+  const gone = DATA.notices.find(n=>n.id===id);
+  if(gone && gone.image) deleteFromDrive(imgFileIdOf(gone.image));   // 붙은 그림도 같이 (2026-09-14)
   DATA.notices = DATA.notices.filter(n=>n.id!==id);
   await dbDeleteDoc('notices', id);
   render();
@@ -10093,10 +10137,10 @@ function dataUrlToBlob(dataUrl){
   return new Blob([bytes], { type: m[1] });
 }
 // hwpx 임포트 등으로 이미 base64 data URL 형태로 메모리에 있는 이미지를 드라이브에 올릴 때 사용
-async function uploadDataUrlToDrive(dataUrl){
+async function uploadDataUrlToDrive(dataUrl, name){
   const blob = dataUrlToBlob(dataUrl);
   const fd = new FormData();
-  fd.append('file', blob, 'img_' + Date.now() + '.jpg');
+  fd.append('file', blob, name || ('img_' + Date.now() + '.jpg'));
   const token = await withTimeout(getAuthToken(), 8000);
   const res = await withTimeout(fetch(AI_WORKER_URL + '/upload', {
     method: 'POST',
@@ -14725,6 +14769,7 @@ function stuNoticeHTML(){
       </div>
       <div style="font-size:13.5px;${i<unread?'font-weight:700;':''}margin-top:8px;line-height:1.55;">${escHtml(n.title)}</div>
       ${n.content ? `<div class="ntx" style="font-size:12.5px;margin-top:8px;">${noticeBodyHTML(n.content)}</div>` : ''}
+      ${noticeImageHTML(n)}
     </div>`).join('');
 }
 
@@ -21828,6 +21873,7 @@ function teacherNoticesHTML(){
         <button class="btn q sm" onclick="deleteNotice(${cur.id})">삭제</button></div>
       <div class="nt-dbody">
         <div class="ntx">${noticeBodyHTML(cur.content)}</div>
+        ${noticeImageHTML(cur)}
         <div class="rst-pad"></div>
       </div>`}
     </main>
@@ -27129,13 +27175,13 @@ function teacherExamPlanHTML(){
     ${반이름들.filter(n => n !== '반 없음').map(n => {
       const cid = (묶음[n][0] || {}).classId || '';
       return `<span class="pl-ex"><b>${escHtml(n)}</b>
-        <button class="btn q sm" title="이 반의 표를 엑셀로 내려받습니다"
-          onclick="planExportClass('${escHtml(cid)}')">${iconSvg('download',12)} 파일</button>
-        <button class="btn q sm" title="학생별 한 줄로 바꿔 공지사항에 올립니다 — 올리기 전에 보여 줍니다"
+        <button class="btn q sm" title="이 반의 표를 그림(PNG)으로 내려받습니다 — 날짜 줄이 함께 찍힙니다"
+          onclick="planExportClass('${escHtml(cid)}')">${iconSvg('download',12)} 그림</button>
+        <button class="btn q sm" title="학생별 한 줄 글 + 표 그림을 공지사항에 올립니다 — 올리기 전에 보여 줍니다"
           onclick="planPostOpen('${escHtml(cid)}')">${iconSvg('megaphone',12)} 공지</button></span>`;
     }).join('')}
-    <span class="ic-hint">파일은 <b>화면의 표 그대로</b>, 공지는 <b>학생별 한 줄</b>입니다 —
-      공지는 학생이 폰으로 읽는 글이라 16일짜리 표를 글자로 옮기면 줄이 접혀 안 읽힙니다.</span>
+    <span class="ic-hint">그림은 <b>이 반의 표만</b> 날짜 줄과 함께 찍은 PNG 입니다 · 공지는 <b>학생별 한 줄</b> 글에
+      그 그림이 붙습니다 — 글은 폰으로 읽고, 표 전체는 그림을 눌러 크게 봅니다.</span>
   </div>`;
 
   /* 공지 미리 보기 — 🔴 바로 게시하지 않는다. 반 전체에게 한 번에 가는 글이다. */
@@ -27148,6 +27194,8 @@ function teacherExamPlanHTML(){
       <button class="btn q sm" onclick="planPostClose()">닫기</button>
     </div>
     <textarea id="plan-post-text" rows="12">${escHtml(state.planPost.text)}</textarea>
+    ${state.planPost.img ? `<div class="ic-hint" style="margin-top:8px;">아래 그림이 글과 함께 붙습니다</div>
+      <img class="pl-prev" src="${state.planPost.img}" alt="표 그림">` : ''}
   </div>`;
 
   if(!days.length) return `<div class="ex-main">${줄}
@@ -27155,22 +27203,10 @@ function teacherExamPlanHTML(){
       「설정 › 시험 일정」에 학교별 시험 날짜를 먼저 적어 주세요.</div></div>`;
 
   /* ── 표 ── */
-  const 요일 = ['일','월','화','수','목','금','토'];
-  const 날머리 = days.map(d => {
-    const w = new Date(d + 'T00:00:00Z').getUTCDay();
-    return `<th class="pl-dh ${w===0?'sun':w===6?'sat':''}">
-      <s>${요일[w]}</s>${Number(d.slice(5,7))}/${Number(d.slice(8,10))}</th>`;
-  }).join('');
+  const 날머리 = planDayHeadHTML(days);
 
   const 줄들 = 반이름들.map(반 => 묶음[반].map((s, i) => {
     const sid = s.studentId;
-    /* 🔵 **시험기간과 수학 시험일은 «미리» 깔려 있다** (2026-09-08 · 사용자 요청 —
-         「시험일정 수집한거 토대로 시험기간과 수학시험일은 미리 표시가 되어있으면 좋겠어」).
-       🔴 이것은 «찍는 값»이 아니라 **시험 일정에서 나오는 값**이다. 그래서 칸에 담지 않고
-         **바탕으로만** 깐다 — 담으면 같은 사실이 두 군데 살게 되고, 시험 날짜를 고쳤을 때
-         표가 옛말을 하게 된다(이 노트가 「세는 자리를 두 벌로 두지 말 것」이라 적어 둔 그것).
-       ⚠ 학교·학년마다 다르므로 **줄마다** 다시 본다. */
-    const 시험 = examDatesOf(s.school || '', s.grade || '');
     return `<tr>
       ${i === 0 ? `<th class="pl-cls" rowspan="${묶음[반].length}">${escHtml(반)}</th>` : ''}
       ${/* 🔵 이름 옆의 «⇊» 하나가 이 표에서 가장 많은 손을 던다 — 같은 반·같은 학교면
@@ -27180,40 +27216,66 @@ function teacherExamPlanHTML(){
           planRowTwins(sid).length}명에게 그대로 옮깁니다"
           onclick="planCopyRow('${escHtml(sid)}')">⇊</b>` : ''}</th>
       <th class="pl-sc">${escHtml(s.school || '')}</th>
-      ${days.map(d => {
-        const c = planCell(sid, d);
-        const k = c && PLAN_KIND_MAP[c.k];
-        /* 시험기간이면 바탕을 옅게, 수학 시험일이면 한 겹 더 진하게. */
-        const 안 = 시험 && 시험.start && 시험.end && d >= 시험.start && d <= 시험.end;
-        const 수학 = 시험 && 시험.math === d;
-        /* 🔵 **아무것도 안 찍힌 수학 시험일에는 「수학시험」이 옅게 미리 적힌다.**
-           찍은 것이 있으면 그것이 이긴다 — 미리 적힌 것은 «사실을 보여 주는 것»이지
-           «강사가 정한 것»이 아니므로 사람이 정한 값을 밀어내면 안 된다. */
-        const 미리 = !k && 수학 ? '수학시험' : '';
-        /* 🔴 **바탕색은 «시험기간»에만 쓴다** (2026-09-14 · 사용자가 짚었다).
-             「직보시간에 배경색이 시험기간과 동일한 배경색이 들어가면서 첫시험날 전날에 직보를
-             넣으면 **시험기간이 연장된 것처럼 보여**」 — 그대로였다. 찍은 칸(`k-no`)과
-             시험기간(`sp`)이 **둘 다 `--nobg`** 여서 칸만 보고는 가를 수가 없었다.
-           ⇒ **면은 시험기간 하나뿐이다.** 찍은 것은 칸 «안»의 알약으로 그린다 —
-             면은 «기간»이고 알약은 «그 날 적어 둔 것»이라, 꼴이 다르면 뜻도 안 섞인다.
-           🔵 종류마다 알약을 달리한다 — 예전엔 일곱 종류가 색 셋을 나눠 쓰고 있었다. */
-        return `<td class="pl-c${안 ? ' sp' : ''}${수학 ? ' mth' : ''}"
-          ${수학 ? 'title="수학 시험일 — 설정 › 시험 일정에서 온 값입니다"'
-            : 안 ? 'title="시험기간 — 설정 › 시험 일정에서 온 값입니다"' : ''}
-          onclick="planPaint('${escHtml(sid)}','${d}')">${
-            k ? `<b class="pl-p p-${escHtml(c.k)}">${escHtml(planLabel(c))}</b>`
-              : 미리 ? `<s>${미리}</s>` : ''}</td>`;
-      }).join('')}
+      ${planRowCellsHTML(s, days, true)}
     </tr>`;
   }).join('')).join('');
 
-  return `<div class="ex-main">${줄}${붓줄}${반내보내기}${게시판}
+  return `<div class="ex-main pl-screen">${줄}${붓줄}${반내보내기}${게시판}
     ${state.planMsg ? `<div class="ist-msg">${escHtml(state.planMsg)}</div>` : ''}
-    <div class="ex-body"><div class="pl-wrap"><table class="pl-t2">
+    ${/* 🔵 **날짜 줄이 위아래 스크롤에도 붙어 있다** (2026-09-14 · 사용자 요청 — 「위아래 스크롤할 때도
+         위에 날짜는 고정된 채로」). thead 의 sticky 는 **자기를 굴리는 상자** 기준이라, 표 상자
+         (`.pl-wrap`)가 키가 안 묶여 있으면 바깥(`.ex-body`)이 굴러가고 날짜 줄은 같이 사라졌다.
+         ⇒ `.ex-body` 를 세로 flex 로 두고 표 상자가 남은 키를 다 갖게 한다 — 그러면 굴러가는 것이
+         표 상자 자신이 되어 sticky 가 일한다. `pl-body` 는 그 표시다. */''}
+    <div class="ex-body pl-body"><div class="pl-wrap"><table class="pl-t2">
       <thead><tr><th class="pl-cls">반</th><th class="pl-nm">이름</th><th class="pl-sc">학교</th>${날머리}</tr></thead>
       <tbody>${줄들}</tbody>
-    </table></div><div class="rst-pad"></div></div>
+    </table></div></div>
   </div>`;
+}
+/* 날짜 머리 한 줄 — 화면의 표와 반별 그림이 같이 쓴다. */
+function planDayHeadHTML(days){
+  const 요일 = ['일','월','화','수','목','금','토'];
+  return days.map(d => {
+    const w = new Date(d + 'T00:00:00Z').getUTCDay();
+    return `<th class="pl-dh ${w===0?'sun':w===6?'sat':''}">
+      <s>${요일[w]}</s>${Number(d.slice(5,7))}/${Number(d.slice(8,10))}</th>`;
+  }).join('');
+}
+/* 학생 한 줄의 날짜 칸들. `live` 가 아니면(반별 그림) 누르는 손잡이를 안 단다.
+   🔵 **시험기간과 수학 시험일은 «미리» 깔려 있다** (2026-09-08 · 사용자 요청 —
+       「시험일정 수집한거 토대로 시험기간과 수학시험일은 미리 표시가 되어있으면 좋겠어」).
+     🔴 이것은 «찍는 값»이 아니라 **시험 일정에서 나오는 값**이다. 그래서 칸에 담지 않고
+       **바탕으로만** 깐다 — 담으면 같은 사실이 두 군데 살게 되고, 시험 날짜를 고쳤을 때
+       표가 옛말을 하게 된다(이 노트가 「세는 자리를 두 벌로 두지 말 것」이라 적어 둔 그것).
+     ⚠ 학교·학년마다 다르므로 **줄마다** 다시 본다. */
+function planRowCellsHTML(s, days, live){
+  const sid = s.studentId;
+  const 시험 = examDatesOf(s.school || '', s.grade || '');
+  return days.map(d => {
+    const c = planCell(sid, d);
+    const k = c && PLAN_KIND_MAP[c.k];
+    /* 시험기간이면 바탕을 옅게, 수학 시험일이면 한 겹 더 진하게. */
+    const 안 = 시험 && 시험.start && 시험.end && d >= 시험.start && d <= 시험.end;
+    const 수학 = 시험 && 시험.math === d;
+    /* 🔵 **아무것도 안 찍힌 수학 시험일에는 「수학시험」이 옅게 미리 적힌다.**
+       찍은 것이 있으면 그것이 이긴다 — 미리 적힌 것은 «사실을 보여 주는 것»이지
+       «강사가 정한 것»이 아니므로 사람이 정한 값을 밀어내면 안 된다. */
+    const 미리 = !k && 수학 ? '수학시험' : '';
+    /* 🔴 **바탕색은 «시험기간»에만 쓴다** (2026-09-14 · 사용자가 짚었다).
+         「직보시간에 배경색이 시험기간과 동일한 배경색이 들어가면서 첫시험날 전날에 직보를
+         넣으면 **시험기간이 연장된 것처럼 보여**」 — 그대로였다. 찍은 칸(`k-no`)과
+         시험기간(`sp`)이 **둘 다 `--nobg`** 여서 칸만 보고는 가를 수가 없었다.
+       ⇒ **면은 시험기간 하나뿐이다.** 찍은 것은 칸 «안»의 알약으로 그린다 —
+         면은 «기간»이고 알약은 «그 날 적어 둔 것»이라, 꼴이 다르면 뜻도 안 섞인다.
+       🔵 종류마다 알약을 달리한다 — 예전엔 일곱 종류가 색 셋을 나눠 쓰고 있었다. */
+    return `<td class="pl-c${안 ? ' sp' : ''}${수학 ? ' mth' : ''}"
+      ${수학 ? 'title="수학 시험일 — 설정 › 시험 일정에서 온 값입니다"'
+        : 안 ? 'title="시험기간 — 설정 › 시험 일정에서 온 값입니다"' : ''}
+      ${live ? `onclick="planPaint('${escHtml(sid)}','${d}')"` : ''}>${
+        k ? `<b class="pl-p p-${escHtml(c.k)}">${escHtml(planLabel(c))}</b>`
+          : 미리 ? `<s>${미리}</s>` : ''}</td>`;
+  }).join('');
 }
 /* 칸 하나를 붓으로 찍는다. 🔵 **같은 것을 다시 누르면 지운다** — 잘못 찍었을 때
    지우개로 바꿨다가 다시 돌아오는 것은 붓질의 결을 끊는다. */
@@ -27301,34 +27363,74 @@ function planClassText(classId){
   return 머리 + '\n\n' + 몸
     + (빈줄 ? '\n\n※ 이름이 없는 학생은 따로 정해진 일정이 없습니다.' : '');
 }
-/* 파일 — 화면의 표 그대로. 요일은 날짜 «위»가 아니라 같은 칸에 붙인다(엑셀은 머리줄이 하나다). */
+/* 파일 — 🔴 **엑셀이 아니라 «그림»이다** (2026-09-14 · 사용자가 바꿨다 — 「엑셀파일이 아니라 그냥 이미지
+   캡쳐로」). 이 표는 학생·학부모에게 «보여 주는» 것이지 «셈하는» 것이 아니다 — 카톡에 그림으로
+   던지는 것이 실제 쓰임이다. 엑셀은 열어야 보이고, 폰에서는 열리지도 않는다.
+   🔵 **화면의 표를 그대로 굽는다** — 같은 CSS(`pl-t2`)로 그 반 줄만 다시 그려 html2canvas 로 찍는다.
+     그림을 따로 그리면 화면과 두 벌이 되어 알약 색 하나만 바뀌어도 어긋난다(리포트 이미지와 같은 길).
+   ⚠ 「다른 반 것은 가리고 위에 날짜가 같이 보이도록」 — 반 이름·시즌·기간을 머리에 적고 날짜 줄이 첫 줄이다.
+     반 열은 뺀다(한 반뿐이라 말할 것이 없다). */
+function planClassTableHTML(classId){
+  const 범위 = planRange();
+  const days = planDaysOf(범위.from, 범위.to);
+  const rows = classRoster(classId).filter(s => !isWithdrawn(s))
+    .sort((a, b) => String(a.name||'').localeCompare(String(b.name||''), 'ko'));
+  return `<div class="pl-cap"><b>${escHtml(classNameOf(classId))} · ${escHtml(currentSeason())} 직보 일정</b>
+      <s>${escHtml(planDateLabel(범위.from))} ~ ${escHtml(planDateLabel(범위.to))}</s></div>
+    <table class="pl-t2">
+      <thead><tr><th class="pl-nm">이름</th><th class="pl-sc">학교</th>${planDayHeadHTML(days)}</tr></thead>
+      <tbody>${rows.map(s => `<tr>
+        <th class="pl-nm">${escHtml(s.name || s.studentId)}</th>
+        <th class="pl-sc">${escHtml(s.school || '')}</th>
+        ${planRowCellsHTML(s, days, false)}
+      </tr>`).join('')}</tbody>
+    </table>
+    <div class="pl-leg">바탕색 = 시험기간 · 밑줄 = 수학 시험일</div>`;
+}
+/* 🔴 «그리는 자리»는 화면 밖에 두되 «보이게» 둔다 — `display:none` 이면 폭이 0이라 html2canvas 가
+   빈 그림을 그린다(리포트 PDF 가 밟은 함정). `.app` 안에 세워야 `.app .pl-t2` 규칙이 닿는다. */
+async function planClassCanvas(classId){
+  const days = planDaysOf(planRange().from, planRange().to);
+  if(!days.length){ showToast('날짜 줄이 없습니다 — 위에서 기간을 먼저 정해 주세요.'); return null; }
+  if(!classRoster(classId).filter(s => !isWithdrawn(s)).length){ showToast('이 반에 학생이 없습니다.'); return null; }
+  await ensureHtml2CanvasLoaded();
+  const stage = document.createElement('div');
+  stage.className = 'pl-stage';
+  stage.innerHTML = planClassTableHTML(classId);
+  (document.querySelector('.app') || document.body).appendChild(stage);
+  try{ return await html2canvas(stage, {scale: 2, backgroundColor: '#ffffff', logging: false}); }
+  finally{ stage.remove(); }
+}
+function planFileName(classId){
+  return ('직보일정_' + classNameOf(classId) + '_' + planRange().from).replace(/[\\/:*?"<>|]/g, '').replace(/\s+/g, '');
+}
 async function planExportClass(classId){
   try{
-    await ensureXLSXLoaded();
-    const days = planDaysOf(planRange().from, planRange().to);
-    if(!days.length){ showToast('날짜 줄이 없습니다 — 위에서 기간을 먼저 정해 주세요.'); return; }
-    const rows = planClassRows(classId);
-    if(!rows.length){ showToast('이 반에 학생이 없습니다.'); return; }
-    const aoa = [['이름', '학교', ...days.map(planDateLabel)]];
-    rows.forEach(r => {
-      const 찍힘 = {}; r.칸.forEach(x => { 찍힘[x.d] = planLabel(x.c); });
-      aoa.push([r.s.name || r.s.studentId, r.s.school || '', ...days.map(d => 찍힘[d] || '')]);
-    });
-    const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.aoa_to_sheet(aoa);
-    ws['!cols'] = [{wch:10}, {wch:10}, ...days.map(() => ({wch:11}))];
-    XLSX.utils.book_append_sheet(wb, ws, '직보일정');
-    XLSX.writeFile(wb, `직보일정_${classNameOf(classId)}_${planRange().from}.xlsx`);
-    showToast(classNameOf(classId) + ' 일정표를 내려받았습니다.');
+    const cv = await planClassCanvas(classId);
+    if(!cv) return;
+    const blob = await new Promise(r => cv.toBlob(r, 'image/png'));
+    if(!blob) throw new Error('toBlob');
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = planFileName(classId) + '.png';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    showToast(classNameOf(classId) + ' 일정표 그림을 내려받았습니다.');
   }catch(e){
     console.error(e);
-    showToast('파일을 만들지 못했습니다 — 잠시 뒤에 다시 눌러주세요.');
+    showToast('그림을 만들지 못했습니다 — 잠시 뒤에 다시 눌러주세요.');
   }
 }
 /* 🔴 **바로 게시하지 않는다** — 공지는 반 전체에게 한 번에 가는 글이라, 무엇이 나갈지
-   보고 손볼 수 있어야 한다. 판을 열어 글을 보여 주고, 고친 뒤에 누르면 나간다. */
-function planPostOpen(classId){
-  state.planPost = { classId, text: planClassText(classId) };
+   보고 손볼 수 있어야 한다. 판을 열어 글을 보여 주고, 고친 뒤에 누르면 나간다.
+   🔵 **그림도 같이 붙는다** (2026-09-14 · 사용자 요청 — 「공지 눌렀을 때도 그 이미지 파일을 넣고 싶다」).
+     공지에 그림 칸이 없었는데, 올리는 길은 이미 있었다(질의응답 사진이 쓰는 워커 `/upload` → 드라이브).
+     글은 폰에서 읽는 «학생별 한 줄»로 그대로 두고, 그림은 그 아래 붙는다 — 표 전체를 보고 싶은
+     학생·학부모는 그림을 누르면 크게 본다. */
+async function planPostOpen(classId){
+  let img = null;
+  try{ const cv = await planClassCanvas(classId); img = cv ? cv.toDataURL('image/png') : null; }
+  catch(e){ console.error(e); showToast('그림을 만들지 못해 글만 올립니다.'); }
+  state.planPost = { classId, text: planClassText(classId), img };
   render();
 }
 function planPostClose(){ state.planPost = null; render(); }
@@ -27338,16 +27440,26 @@ async function planPostRun(){
   const el = document.getElementById('plan-post-text');
   const content = ((el ? el.value : p.text) || '').trim();
   if(!content){ showToast('내용이 비어 있습니다.'); return; }
+  /* 그림은 «먼저» 올린다 — 못 올리면 공지도 안 낸다. 글만 나가고 그림이 빠진 것을 알리지 않으면
+     강사는 붙은 줄 안다(「저장했다고 말하는 기능은 저장이 됐는지 봐야 한다」). */
+  let image = null;
+  if(p.img){
+    showToast('그림을 올리는 중…');
+    try{ image = await uploadDataUrlToDrive(p.img, planFileName(p.classId) + '.png'); }
+    catch(e){ console.error(e); showToast('그림을 올리지 못했습니다 — 잠시 뒤에 다시 눌러주세요.'); return; }
+  }
   /* ⚠ 공지를 «만드는 길»은 하나다 — `addNotice` 와 같은 모양으로 짓는다(통을 새로 안 판다). */
   const notice = { id: Date.now(), date: todayStr(),
     title: classNameOf(p.classId) + ' 직보 일정 (' + planDateLabel(planRange().from) + ' ~ '
       + planDateLabel(planRange().to) + ')',
     content, classIds: [p.classId] };
+  if(image) notice.image = image;
   DATA.notices.unshift(notice);
   const ok = await dbSetDoc('notices', notice.id, notice);
   /* 🔴 저장이 됐는지 보고 말한다 — 안 보고 알리면 「올렸다」고 해 놓고 새로고침하면 사라진다. */
   if(ok !== true){
     DATA.notices = DATA.notices.filter(n => n.id !== notice.id);
+    deleteFromDrive(imgFileIdOf(image));
     showToast('게시하지 못했습니다 — 잠시 뒤에 다시 눌러주세요.');
     render(); return;
   }
@@ -27355,6 +27467,14 @@ async function planPostRun(){
   state.planPost = null;
   showToast(classNameOf(p.classId) + ' 공지사항에 올렸습니다.');
   render();
+}
+/* 공지에 붙은 그림 — 학생 화면과 강사 화면이 같이 쓴다. 폭에 맞춰 줄이되 누르면 원본을 새 창에 연다
+   (16일짜리 표를 폰 폭으로 줄이면 글자가 안 읽힌다). */
+function noticeImageHTML(n){
+  const src = imgSrcOf(n && n.image);
+  if(!src) return '';
+  return `<a class="nt-img" href="${escHtml(src)}" target="_blank" rel="noopener" title="누르면 크게 봅니다">
+    <img src="${escHtml(src)}" alt="첨부 그림" loading="lazy"></a>`;
 }
 
 /* ---------- 설정 (조교 + 관리자) ---------- */

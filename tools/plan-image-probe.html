@@ -1,0 +1,95 @@
+<!doctype html><meta charset="utf-8"><title>plan-image-probe</title>
+<!-- 직보 일정표 — «날짜 줄이 세로 스크롤에 붙는가»와 «반별 그림이 구워지는가»를 확장 없이
+     헤드리스 크롬으로 본다 (2026-09-14). 실서비스(index.html)를 iframe 에 띄우고 학생·반·시험 일정·
+     찍은 칸을 가짜로 채운 뒤 설정 › 직보 일정표를 그린다. 실 DB 0줄(저장 함수를 안 부른다).
+
+     node tools/serve.js
+     chrome --headless=new --hide-scrollbars --virtual-time-budget=30000 --window-size=1200,1500 \
+       --screenshot=out.png --dump-dom "http://127.0.0.1:8777/tools/plan-image-probe.html" | grep -o "RESULT.*"
+
+     아래 스크린샷의 위쪽은 화면(표 상자를 세로로 굴린 상태), 아래쪽은 구운 그림이다. -->
+<style>html,body{margin:0;background:#fff}iframe{border:0;display:block}
+#img{display:block;margin:6px;max-width:1180px;border:2px solid #c33;}</style>
+<pre id="o" style="font:12px monospace;color:#333;margin:0;padding:4px;white-space:pre-wrap;">…</pre>
+<script>
+const fr=document.createElement('iframe'); fr.width=1200; fr.height=700; fr.src='/index.html';
+document.body.appendChild(fr);
+const o=document.getElementById('o');
+let n=0;
+const t=setInterval(async()=>{
+  n++;
+  let ready=false;
+  try{ ready = fr.contentWindow.eval('typeof teacherExamPlanHTML==="function" && typeof render==="function"'); }catch(_){}
+  if(!ready){ if(n>200){ clearInterval(t); o.textContent='RESULT timeout'; } return; }
+  clearInterval(t);
+  const w=fr.contentWindow;
+  const out = await w.eval(`(async function(){
+    const R = {};
+    /* 가짜 명단 — 두 반, 광남고·대원고 */
+    DATA.classes = [{id:'c1', name:'고1 0.5B'}, {id:'c2', name:'고2 A'}];
+    DATA.students = [];
+    const names = ['김승우','윤건희','이승준','박서연','정민재','최지우','한도윤','오하은','서준혁','임채원','강민서','조유진','신예준','문서아','배지호','홍시우','권나윤','류준서'];
+    names.forEach((nm, i) => DATA.students.push({studentId:'s'+i, name:nm,
+      school: i%3===2 ? '대원고' : '광남고', grade: i<12 ? '1' : '2', classId: i<12 ? 'c1' : 'c2'}));
+    DATA.records = {}; state.allRecords = {};
+    state.season = {name:'2학기 중간', startedAt:'2026-09-01'};
+    state.examRanges = {dates:{ '광남고':{ '1':{start:'2026-10-01', end:'2026-10-07', math:'2026-10-02'},
+                                            '2':{start:'2026-10-05', end:'2026-10-09', math:'2026-10-06'} },
+                                '대원고':{ '1':{start:'2026-09-30', end:'2026-10-06', math:'2026-10-05'},
+                                            '2':{start:'2026-10-05', end:'2026-10-09', math:'2026-10-08'} } }};
+    const key = curSeasonKey();
+    const cells = {};
+    DATA.students.forEach((s, i) => {
+      const d = state.examRanges.dates[s.school][s.grade];
+      const c = {};
+      c[dateShift(d.math, -1)] = {k:'jikbo', t:'2시'};
+      c[dateShift(d.start, -2)] = {k:'off'};
+      if(i%2) c[dateShift(d.start, -1)] = {k:'maybe', t:'5시'};
+      if(i%4===0) c[dateShift(d.end, 1)] = {k:'start'};
+      if(i%5===0) c[dateShift(d.start, -3)] = {k:'extra', t:'10시'};
+      if(i%7===0) c[d.end] = {k:'consult'};
+      cells[s.studentId] = c;
+    });
+    state.examPlan = {byKey:{}}; state.examPlan.byKey[key] = {from:'2026-09-25', to:'2026-10-12', cells};
+    state.currentUser = {type:'teacher'}; state.view='teacher'; state.teacherTab='settings'; state.settingsSubTab='examplan';
+    render();
+    /* ⚠ 못 읽는 띠(db-trouble)가 뒤늦게 한 번 더 그린다 — 잡아 둔 요소가 떨어져 나가므로
+       가라앉을 때까지 기다린 뒤 «매번 새로» 찾는다. */
+    await new Promise(r => setTimeout(r, 2500));
+    const $ = sel => document.querySelector(sel);
+
+    /* ① 세로 스크롤 — 표 상자를 굴렸을 때 날짜 줄이 상자 위에 붙어 있는가 */
+    R.wrapH = $('.pl-wrap').clientHeight;
+    R.wrapScrollH = $('.pl-wrap').scrollHeight;
+    R.outerBodyScrollable = $('.ex-main > .ex-body').scrollHeight - $('.ex-main > .ex-body').clientHeight;
+    R.bodyDisplay = getComputedStyle($('.ex-body.pl-body')).display;
+    R.has = [CSS.supports('selector(:has(> a))'), getComputedStyle($('.ex-main > .ex-body')).display, getComputedStyle($('.pl-screen')).flexGrow, !!document.querySelector('.app .ex-body:has(> .pl-screen)')];
+    R.heights = ['.ex-screen','.ex-screen > .ex-main','.ex-main > .ex-body','.pl-screen','.pl-body'].map(q => q + '=' + Math.round($(q).getBoundingClientRect().height) + '/' + getComputedStyle($(q)).height);
+    const rel = () => Math.round($('.pl-t2 thead .pl-dh').getBoundingClientRect().top - $('.pl-wrap').getBoundingClientRect().top);
+    const before = rel();
+    $('.pl-wrap').scrollTop = 200;
+    await new Promise(r => setTimeout(r, 100));
+    R.stickyTop = [before, rel(), $('.pl-wrap').scrollTop];
+    /* 가로도 여전히 붙어 있는가 */
+    const relL = () => Math.round($('.pl-t2 tbody .pl-nm').getBoundingClientRect().left - $('.pl-wrap').getBoundingClientRect().left);
+    const nmBefore = relL();
+    $('.pl-wrap').scrollLeft = 300;
+    await new Promise(r => setTimeout(r, 100));
+    R.stickyLeft = [nmBefore, relL(), $('.pl-wrap').scrollLeft];
+
+    /* ② 반별 그림 */
+    const cv = await planClassCanvas('c1');
+    R.canvas = cv ? [cv.width, cv.height] : null;
+    R.stageLeft = !!document.querySelector('.pl-stage');
+    R.html = planClassTableHTML('c1');
+    R.rows = (R.html.match(/<tr>/g) || []).length;
+    R.hasOtherClass = R.html.includes('류준서');   // c2 학생 — 보이면 안 된다
+    R.hasOnclick = R.html.includes('onclick=');
+    R.dataUrl = cv ? cv.toDataURL('image/png') : '';
+    return R;
+  })()`);
+  const img = document.createElement('img'); img.id='img'; img.src = out.dataUrl; document.body.appendChild(img);
+  const {dataUrl, html, ...rest} = out;
+  o.textContent = 'RESULT ' + JSON.stringify(rest);
+}, 100);
+</script>
