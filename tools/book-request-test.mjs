@@ -263,7 +263,14 @@ console.log(NL + '④ 화면 — 학생과 강사가 각각 무엇을 보는가'
   봄('🔴 장부를 가볍게 싣는다 (창고 564건을 안 읽는다)',
     학생.includes('loadItemLedgerIfNeeded()') && !학생.includes('loadItemStoreIfNeeded'), true);
   봄('🔴 시험지가 아닌 묶음을 「교재에서 요청한 문제」로 부른다',
-    학생.includes("eid ? (exam ? exam.title : '삭제된 시험지') : '교재에서 요청한 문제'"), true);
+    /* ⚠ 2026-09-15 부터 한 함수(examTitleOf)로 모았다 — 빈 examId 는 «교재», 못 찾을 때만 «삭제됨» */
+    학생.includes('const 묶음이름 = examTitleOf(eid);'), true);
+  {
+    const F = new Function('DATA', lift('examTitleOf') + NL + 'return examTitleOf;')({ exams: [{ id: 'e1', title: '9월 모의' }] });
+    봄('🔴 examTitleOf — 빈 examId 는 「교재에서 요청한 문제」', F(''), '교재에서 요청한 문제');
+    봄('있는 시험지는 제목', F('e1'), '9월 모의');
+    봄('없는 시험지만 「(삭제된 시험지)」', F('e9'), '(삭제된 시험지)');
+  }
   봄('번호 칸에서 엔터로도 담긴다', 학생.includes("if(event.key==='Enter')"), true);
   봄('담은 것을 눌러 뺄 수 있다', 학생.includes('bookReqDrop('), true);
   /* 🔴 아직 안 나온 것은 학생에게 «검토 중»으로 보인다 — 이 길이 이미 있다(오답숙제와 공유) */

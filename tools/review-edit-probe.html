@@ -1,0 +1,40 @@
+<!doctype html><meta charset="utf-8"><title>review-edit-probe</title>
+<!-- 검토 대기의 AI 변형에 「고치기」가 서고 편집기가 열리는가 (2026-09-15). 가짜 변형 하나를 검토 대기에 세운다. 실 DB 0줄(저장은 안 누른다).
+     node tools/serve.js
+     chrome --headless=new --hide-scrollbars --virtual-time-budget=20000 --window-size=1300,900 --screenshot=out.png --dump-dom "http://127.0.0.1:8777/tools/review-edit-probe.html" | grep -o "RESULT.*" -->
+<style>html,body{margin:0;background:#888}iframe{border:0;display:block;background:#fff}</style>
+<pre id="o" style="font:12px monospace;color:#fff;margin:0;padding:4px;">…</pre>
+<script>
+const fr=document.createElement('iframe'); fr.width=1300; fr.height=860; fr.src='/index.html';
+document.body.appendChild(fr);
+const o=document.getElementById('o'); let n=0;
+const t=setInterval(async()=>{ n++; let ok=false;
+  try{ ok = fr.contentWindow.eval('typeof teacherReviewHTML==="function" && typeof vEditOpen==="function"'); }catch(_){}
+  if(!ok){ if(n>150){clearInterval(t); o.textContent='RESULT timeout';} return; }
+  clearInterval(t);
+  const w=fr.contentWindow;
+  let out; try{ out = await w.eval(`(async function(){
+    const R = {};
+    DATA.classes = []; DATA.students = []; DATA.problemBank = []; DATA.exams = [];
+    state.itemBody = { 'K2-05-E-0431': { code:'K2-05-E-0431', content:'$x^2-5x+6=0$ 의 두 근의 합은?', answer:'5' } };
+    state.variants = { 'K2-05-E-0431': [ { code:'K2-05-E-0431-N01', originCode:'K2-05-E-0431', variantKind:'N', pending:true,
+      content:'$x^2-7x+12=0$ 의 두 근의 합은?', answer:'12', solution:'근과 계수의 관계로 7', createdAt:'2026-09-15', engine:'groq' } ] };
+    state.aiQuotaUsed = 0; state.reviewQuotaUsed = 0;
+    state.currentUser = {type:'teacher'}; state.view='teacher'; state.teacherTab='review'; state.reviewQueue='pending';
+    render(); await new Promise(r => setTimeout(r, 2500));
+    const $ = s => document.querySelector(s);
+    R.actbar = [...document.querySelectorAll('.actbar button')].map(b => b.textContent.replace(/\s+/g,' ').trim());
+    R.editBtn = !!$('.rv-body button[onclick^="vEditOpen"]');
+    /* 단축키 D */
+    document.dispatchEvent(new KeyboardEvent('keydown', {key:'d', bubbles:true})); await new Promise(r => setTimeout(r, 300));
+    R.editorOpen = !!$('#v-edit-box'); R.editorText = ($('#v-edit-box')||{}).value; R.editorAns = ($('#v-edit-ans')||{}).value;
+    /* 편집기에 커서가 있을 때 E 가 통과로 안 튀는지 */
+    $('#v-edit-box').focus();
+    $('#v-edit-box').dispatchEvent(new KeyboardEvent('keydown', {key:'e', bubbles:true})); await new Promise(r => setTimeout(r, 200));
+    R.stillPending = !!(state.variants['K2-05-E-0431'][0].pending);
+    R.header = $('.rv-wh h1') ? $('.rv-wh h1').textContent.replace(/\s+/g,' ').trim() : '';
+    return R;
+  })()`); }catch(e){ o.textContent='RESULT ERROR '+(e&&e.stack||e); return; }
+  o.textContent = 'RESULT ' + JSON.stringify(out);
+}, 100);
+</script>
