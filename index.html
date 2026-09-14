@@ -6263,15 +6263,18 @@ async function saveSchoolBook(school, grade, text){
 function examDdayOf(school, grade){
   const d = examDatesOf(school, grade);
   if(!d) return null;
-  /* **수학 시험일이 있으면 그 날이 기준이다.** 시험기간은 닷새여도 이 사람에게 중요한 날은 하루다.
-     없을 때만 시험기간 시작일로 물러난다. */
-  const target = d.math || d.start;
+  /* 🔴 **시험기간 «시작일»이 기준이다** (2026-09-14 · 사용자가 바꿨다 — 「수학시험일 기준이 아니라
+       학교별 시험 시작일로부터 D-day」). 09-08까지는 수학 시험일이 기준이었다 — 「이 사람에게 중요한
+       날은 하루」라는 생각이었는데, 학생이 «준비를 끝내야 하는 날»은 첫 시험이다. 수학이 뒤쪽 날이면
+       첫 시험을 치르는 중에도 D-3 이 떠 있었다. 수학 시험일은 따로 들고 가 홈 카드가 한 줄로 말한다.
+     시작일이 없을 때만 수학 시험일로 물러난다. */
+  const target = d.start || d.math;
   if(!target) return null;
-  const end = d.end || d.start || target;
+  const end = d.end || d.math || target;
   const days = ymd => Math.round(Date.parse(ymd+'T00:00:00Z') / 86400000);
   const t = todayStr();
-  const basis = d.math ? 'math' : 'start';
-  const base = {basis, start:d.start, end:d.end, math:d.math, target};
+  const basis = d.start ? 'start' : 'math';
+  const base = {basis, start:d.start, end:d.end, math:d.math, target, mathToday: !!d.math && d.math === t};
   const left = days(target) - days(t);
   if(left > 0)             return Object.assign({state:'before', days:left}, base);
   if(days(t) <= days(end)) return Object.assign({state:'during', days:0},    base);
@@ -12780,7 +12783,8 @@ function stuDateLabel(ymd){
   const [y,m,d] = ymd.split('-').map(Number);
   return `${m}월 ${d}일 (${WEEKDAY_LABEL[new Date(ymd+'T00:00:00').getDay()]})`;
 }
-/* 다음 수업 — 반 일정에서 오늘 이후 첫 수업일. 시각은 자유 텍스트라 그대로 보여 준다. */
+/* 다음 수업 — 반 일정에서 오늘 이후 첫 수업일. 시각은 자유 텍스트라 그대로 보여 준다.
+   ⚠ 학생 홈은 2026-09-14 부터 `stuNextVisit` 을 쓴다(시험 창·휴강·직보 일정표를 본다). 이건 그 밑바탕이다. */
 /* 학생 홈에 보일 «다음 클리닉» 하나 — 확정(승인)된 것 중 가장 가까운 날짜만.
    🔵 **'대기'(아직 승인 전 제안)는 홈에 안 올린다** (2026-09-04). 확정 안 된 일정을
    홈 카드로 보여주면 «잡힌 일정»으로 오해하기 쉽다 — 그건 소통>클리닉 탭에서
@@ -12802,6 +12806,42 @@ function stuNextSession(classId){
     d.setDate(d.getDate()+1);
   }
   return null;
+}
+/* 🔵 **다음에 «가는 날»** (2026-09-14 · 사용자 — 「수학 직보는 그 시기가 되면 다음 수업으로 뜨던 부분에 직보로
+   뜨면 되지 않을까」). 반의 요일에서 뽑은 다음 수업 하나만 보던 것(`stuNextSession`)을 직보 일정표와 합친다.
+   · **일정표** — 오늘부터 «오는» 칸(직보·보충·상담진행·등원시작·가능하면)이 있으면 그것이 후보다.
+     「등원X」는 오는 날이 아니고, 「수학시험」은 학교에 가는 날이지 학원에 오는 날이 아니다.
+   · **정규 수업** — 시험 창(`stuClassOffSpan` · 달력이 정규 수업을 가리는 것과 같은 창)·휴강·「등원X」가
+     찍힌 날은 건너뛴다. 🔴 여태는 시험 중에도 「내일 수업」이라고 말하고 있었다 — 달력과 어긋난 거짓말.
+     옮겨 온 보강은 그 날에 선다(시간·강의실은 원래 요일 것).
+   · 둘 중 이른 것. **같은 날이면 일정표가 이긴다** — 그 날 «무엇을» 하는지를 말하는 쪽이라서.
+     ⚠ 다만 「등원시작」은 정규 수업으로 «돌아오는» 날이라, 같은 날에 수업이 있으면 수업(시간·강의실)이 이긴다. */
+const PLAN_VISIT_KINDS = {jikbo:1, extra:1, consult:1, start:1, maybe:1};
+function stuNextVisit(c){
+  const t = todayStr();
+  const plan = planCellsOfStudent(c.sid);
+  const 일정 = Object.keys(plan)
+    .filter(d => d >= t && PLAN_VISIT_KINDS[plan[d].k] && planLabel(plan[d])).sort()[0] || '';
+  const cls = DATA.classes.find(x => x.id === c.classId) || null;
+  let 수업 = null;
+  const days = cls ? parseScheduleDays(cls.schedule) : [];
+  if(cls && days.length){
+    const 창 = stuClassOffSpan(c);
+    const d = new Date();
+    for(let i = 0; i < 14 && !수업; i++, d.setDate(d.getDate() + 1)){
+      const date = ymdLocal(d);
+      const 보강 = movedInto(c.classId, date);
+      if(!days.includes(d.getDay()) && !보강) continue;
+      if(창 && date >= 창.from && date <= 창.to) continue;
+      if(offDayFor(c.classId, date)) continue;
+      if(plan[date] && plan[date].k === 'off') continue;
+      수업 = {kind: 'class', date, cls, 보강: !!보강,
+        dow: 보강 ? new Date(보강.date + 'T00:00:00').getDay() : d.getDay()};
+    }
+  }
+  const 일정이긴다 = 일정 && (!수업 || 일정 < 수업.date || (일정 === 수업.date && plan[일정].k !== 'start'));
+  if(일정이긴다) return {kind: 'plan', date: 일정, cls, k: plan[일정].k, label: planLabel(plan[일정])};
+  return 수업;
 }
 
 /* «오늘 뭐 해야 하지»에 답하는 한 줄들. 네 종류가 한 목록에 섞인다 —
@@ -13310,7 +13350,7 @@ async function finishGame(score){
    전부 제 화면이 따로 있는 것들이라 그리로 보냈다. 남은 것은 «할 일»과 그 주변뿐이다. */
 function stuHomeHTML(c){
   const todo = stuTodo(c);
-  const next = stuNextSession(c.classId);
+  const next = stuNextVisit(c);
   const cp = getClassProgress(c.classId);
   const nextUnit = cp.chapters.find(u=>!cp.doneMap[u]);
   const attRate = stuAttRate(c.rec, c.me);
@@ -13348,14 +13388,17 @@ function stuHomeHTML(c){
     const span = on.length===0 ? '' : on.length===1 ? on[0] : `${on[0]} ~ ${on[on.length-1]}`;
     return `
   <div class="sap-hero">
+    ${/* 🔴 D-day 는 시험기간 «시작일»까지다 (2026-09-14) — 수학 시험일은 아래 한 줄로 따로 말한다. */''}
     <span class="lab">${dd.basis==='math' ? '수학 시험' : '시험'}</span>
     <span class="dday">
-      <b>${dd.state==='during' ? (dd.basis==='math' ? '오늘 시험' : '시험 중') : 'D-'+dd.days}</b>
-      <span>${escHtml(stuDateLabel(dd.target))}</span>
+      <b>${dd.state==='during' ? (dd.mathToday ? '오늘 수학 시험' : '시험 중') : 'D-'+dd.days}</b>
+      ${/* 시험 중에는 시작일이 아니라 «언제까지»를 말한다 — 지난 날짜가 크게 박혀 있으면 헷갈린다. */''}
+      <span>${dd.state==='during'
+        ? (dd.end && dd.end !== todayStr() ? escHtml(stuDateLabel(dd.end)) + '까지' : '')
+        : escHtml(stuDateLabel(dd.target)) + (dd.end && dd.end!==dd.target ? ' ~ ' + escHtml(stuDateLabel(dd.end)) : '')}</span>
     </span>
-    ${(dd.basis==='math' && dd.start) || span ? `<i class="rule"></i>` : ''}
-    ${dd.basis==='math' && dd.start ? `<span class="sub">시험기간 ${escHtml(stuDateLabel(dd.start))}${
-      dd.end && dd.end!==dd.start ? ' ~ '+escHtml(stuDateLabel(dd.end)) : ''}</span>` : ''}
+    ${(dd.basis==='start' && dd.math) || span ? `<i class="rule"></i>` : ''}
+    ${dd.basis==='start' && dd.math ? `<span class="sub">수학 시험 ${escHtml(stuDateLabel(dd.math))}</span>` : ''}
     ${span ? `<span class="sub">${escHtml(currentSeason())} 범위 · ${escHtml(subject)} — ${escHtml(span)}</span>` : ''}
   </div>`;
   })()}
@@ -13403,21 +13446,34 @@ function stuHomeHTML(c){
   ${todo.length>6 ? `<div style="margin-top:10px;text-align:center;font-size:11.5px;color:var(--dim);">
     외 ${todo.length-6}건은 각 화면에 있습니다</div>` : ''}
 
-  <div class="msec">다음 수업</div>
+  <div class="msec">${next && next.kind==='plan' ? '다음 등원' : '다음 수업'}</div>
   ${!next
     ? `<div class="mc"><span style="font-size:12.5px;color:var(--dim);">
          ${c.classId ? '반 일정이 등록되어 있지 않습니다.' : '아직 반에 배정되지 않았습니다.'}</span></div>`
+    : next.kind==='plan' ? `<div class="mc">
+        ${/* 🔵 **직보 일정표의 칸이 «다음 수업» 자리에 선다** (2026-09-14 · 사용자 요청). 시험 창에는 정규 수업이
+             없고 강사가 찍은 「직보2시」가 그 학생이 «실제로 오는» 날이다. 알약은 강사 화면·그림과 같은 꼴. */''}
+        <div class="row b" style="gap:9px;flex-wrap:wrap;">
+          <b style="font-size:15px;font-weight:700;">${stuDateLabel(next.date)}
+            <b class="pl-p p-${escHtml(next.k)}" style="font-size:12.5px;vertical-align:2px;">${escHtml(next.label)}</b></b>
+          <span style="font-size:12.5px;color:var(--sub);">${escHtml(next.cls ? next.cls.name : '')}</span>
+        </div>
+        <div style="font-size:12px;color:var(--dim);margin-top:8px;">직보 일정표 · ${next.k==='start'
+          ? '이 날부터 정규 수업이 다시 시작됩니다' : '시험기간에는 정규 수업 대신 이 시간에 옵니다'}</div>
+        ${cp.books && cp.books.length ? `<div style="font-size:12px;color:var(--dim);margin-top:4px;">
+          교재 · ${cp.books.map(b=>escHtml(b)).join(' · ')}</div>` : ''}
+      </div>`
     : `<div class="mc">
         <div class="row b" style="gap:9px;flex-wrap:wrap;">
-          ${/* ⚠ «그 날»의 시간이라야 한다 — 요일마다 시간이 다른 반이 있다 (2026-09-08). */''}
+          ${/* ⚠ «그 날»의 시간이라야 한다 — 요일마다 시간이 다른 반이 있다 (2026-09-08).
+               보강이면 «원래 날»의 요일이다(`next.dow`). */''}
           <b style="font-size:15px;font-weight:700;">${stuDateLabel(next.date)}
-            ${escHtml(sessionTimeText(next.cls.schedule,
-              new Date(next.date + 'T00:00:00').getDay()))}</b>
-          <span style="font-size:12.5px;color:var(--sub);">${escHtml(next.cls.name)}</span>
+            ${escHtml(sessionTimeText(next.cls.schedule, next.dow))}</b>
+          <span style="font-size:12.5px;color:var(--sub);">${escHtml(next.cls.name)}${next.보강 ? ' (보강)' : ''}</span>
         </div>
         ${/* 🔵 **강의실** (2026-09-14 · 사용자 요청) — «그 날»의 강의실이라야 한다.
              월·금과 토요일이 다른 반이 있어서, 반 하나에 강의실 하나로 적으면 거짓말이 된다. */''}
-        ${(()=>{ const 방 = classRoomOf(next.cls, new Date(next.date + 'T00:00:00').getDay());
+        ${(()=>{ const 방 = classRoomOf(next.cls, next.dow);
           return 방 ? `<div style="font-size:12.5px;font-weight:600;color:var(--point-d);margin-top:8px;">
             ${iconSvg('building',13)} ${escHtml(방)}</div>` : ''; })()}
         ${cp.subject ? `<div style="font-size:12px;color:var(--dim);margin-top:8px;">
@@ -26577,8 +26633,8 @@ function teacherExamRangeHTML(){
         <td class="sub">${escHtml(grade || '—')}</td>
         <td class="sub">${escHtml(subject || '—')}</td>
         <td class="r mono">${n == null ? '<span style="color:var(--dim);">—</span>' : n}</td>
-        ${/* D-day는 «수학 시험일»이 기준이다. 없을 때만 시험기간 시작일로 물러난다. */''}
-        <td>${dd ? `<span class="badge ${ddTone}" title="${dd.basis === 'math' ? '수학 시험일 기준' : '시험기간 시작일 기준'}">${
+        ${/* D-day는 «시험기간 시작일»이 기준이다(2026-09-14). 없을 때만 수학 시험일로 물러난다. */''}
+        <td>${dd ? `<span class="badge ${ddTone}" title="${dd.basis === 'math' ? '수학 시험일 기준 (시작일이 없어서)' : '시험기간 시작일 기준'}">${
             dd.state === 'before' ? 'D-' + dd.days : dd.state === 'during' ? '시험 중' : '끝남'}</span>`
           : `<span style="color:var(--dim);">—</span>`}</td>
         ${/* 연도를 뗀다 — 두 날짜를 온전히 쓰면 이 폭에서 잘린다. 온전한 날짜는 title과 펼친 칸에 있다. */''}

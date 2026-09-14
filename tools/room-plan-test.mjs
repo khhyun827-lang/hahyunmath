@@ -108,7 +108,8 @@ console.log(NL + '② 강의실이 강사·학생 화면에 뜬다' + NL);
   /* 🔴 «그 날»의 강의실이라야 한다 — 반 하나에 강의실 하나로 적으면 거짓말이 된다 */
   const 홈 = 알맹이(lift('stuHomeHTML'));
   봄('🔴 학생 홈의 «다음 수업»이 그 요일의 강의실을 쓴다',
-    홈.includes("classRoomOf(next.cls, new Date(next.date + 'T00:00:00').getDay())"), true);
+    /* ⚠ 2026-09-14 부터 stuNextVisit 이 «그 날»(보강이면 원래 날)의 요일을 next.dow 로 넘긴다 */
+    홈.includes("classRoomOf(next.cls, next.dow)"), true);
   const 달력 = 알맹이(lift('stuMonthEvents'));
   봄('🔴 달력의 수업 줄도 그 요일의 것을 쓴다', 달력.includes('classRoomOf(cls, dow)'), true);
   봄('🔴 보강도 «원래 날»의 요일로 찾는다',

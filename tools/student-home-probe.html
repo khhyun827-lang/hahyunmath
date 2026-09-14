@@ -1,0 +1,51 @@
+<!doctype html><meta charset="utf-8"><title>student-home-probe</title>
+<!-- 학생 홈 — 시험 D-day 카드(시작일 기준)와 「다음 등원」(직보 일정표) 을 확장 없이 헤드리스 크롬으로 본다 (2026-09-14).
+     실서비스를 iframe 에 띄우고 가짜 학생·반·시험 일정·직보 칸을 채워 학생 홈을 그린다.
+     ⚠ 로그인 없이 그리므로 학생 화면의 «그리며 저장»(dqEnsureToday)은 403 으로 막힌다 — 실 DB 0줄.
+
+     node tools/serve.js
+     chrome --headless=new --hide-scrollbars --virtual-time-budget=30000 --window-size=480,1100 \
+       --screenshot=out.png --dump-dom "http://127.0.0.1:8777/tools/student-home-probe.html?today=2026-09-30" | grep -o "RESULT.*" -->
+<style>html,body{margin:0;background:#888}iframe{border:0;display:block;background:#fff}</style>
+<pre id="o" style="font:12px monospace;color:#fff;margin:0;padding:4px;white-space:pre-wrap;">…</pre>
+<script>
+const q = new URLSearchParams(location.search);
+const TODAY = q.get('today') || '2026-09-30';
+const fr=document.createElement('iframe'); fr.width=480; fr.height=+(q.get("h")||1040); fr.src='/index.html';
+document.body.appendChild(fr);
+const o=document.getElementById('o');
+let n=0;
+const t=setInterval(async()=>{
+  n++;
+  let ready=false;
+  try{ ready = fr.contentWindow.eval('typeof stuHomeHTML==="function" && typeof render==="function"'); }catch(_){}
+  if(!ready){ if(n>200){ clearInterval(t); o.textContent='RESULT timeout'; } return; }
+  clearInterval(t);
+  const w=fr.contentWindow;
+  let out; try{ out = await w.eval(`(async function(){
+    const R = {};
+    const TODAY = ${JSON.stringify(TODAY)};
+    /* 오늘을 못 박는다 — todayStr 과 new Date() 둘 다 */
+    todayStr = () => TODAY;
+    const RealDate = Date;
+    Date = class extends RealDate { constructor(...a){ if(a.length) super(...a); else super(TODAY + 'T09:00:00'); } static now(){ return new RealDate(TODAY + 'T09:00:00').getTime(); } };
+    DATA.classes = [{id:'c1', name:'고1 0.5B', schedule:'화·목 17:00~19:30', rooms:{}}];
+    DATA.students = [{studentId:'s1', name:'김승우', school:'광남고', grade:'1', classId:'c1'}];
+    const rec = emptyRecord(); DATA.records = {s1: rec}; state.allRecords = {s1: rec};
+    state.season = {name:'2학기 중간', startedAt:'2026-09-01'};
+    state.examRanges = {dates:{ '광남고':{ '1':{start:'2026-10-01', end:'2026-10-07', math:'2026-10-05'} } }, bySchool:{}};
+    state.examPlan = {byKey:{}}; state.examPlan.byKey[curSeasonKey()] = {from:'2026-09-25', to:'2026-10-12',
+      cells:{ s1:{ '2026-09-30':{k:'off'}, '2026-10-04':{k:'jikbo', t:'2시'}, '2026-10-08':{k:'start'} } }};
+    state.currentUser = {type:'student', studentId:'s1', name:'김승우'}; state.view='student'; state.studentTab='home';
+    render();
+    await new Promise(r => setTimeout(r, 2500));
+    const hero = document.querySelector('.sap-hero');
+    R.hero = hero ? hero.textContent.replace(/\\s+/g,' ').trim() : null;
+    const sec = [...document.querySelectorAll('.msec')].find(e => /다음 (수업|등원)/.test(e.textContent));
+    R.nextHead = sec ? sec.textContent.trim() : null;
+    R.nextCard = sec ? sec.nextElementSibling.textContent.replace(/\\s+/g,' ').trim() : null;
+    return R;
+  })()`); }catch(e){ o.textContent='RESULT ERROR '+(e&&e.stack||e); return; }
+  o.textContent = 'RESULT ' + JSON.stringify(out);
+}, 100);
+</script>
