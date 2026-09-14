@@ -86,6 +86,10 @@ const t=setInterval(async()=>{
     R.hasOtherClass = R.html.includes('류준서');   // c2 학생 — 보이면 안 된다
     R.hasOnclick = R.html.includes('onclick=');
     R.dataUrl = cv ? cv.toDataURL('image/png') : '';
+    /* ③ 공지 판 — 그림 + 덧붙일 말 칸만 */
+    await planPostOpen('c1');
+    await new Promise(r => setTimeout(r, 300));
+    R.postPanel = [!!$('#plan-post-text'), ($('#plan-post-text')||{}).value, !!$('.pl-prev')];
     return R;
   })()`);
   const img = document.createElement('img'); img.id='img'; img.src = out.dataUrl; document.body.appendChild(img);

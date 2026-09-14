@@ -7,7 +7,9 @@
 //      🔴 재 보니 그 수는 **진도**였다. 이름표가 없어서 «지금 보는 탭»의 수로 읽힌 것이다.
 //   ② 「반마다 위에 요일이랑 붙여서 공지사항에 게시 … 반별로 파일로 저장 혹은 바로 게시」
 //   ③ (같은 날 저녁) 「엑셀파일이 아니라 그냥 이미지 캡쳐로 … 공지 눌렀을 때도 그 이미지 파일을 넣고 싶다」
-//      ⇒ 파일은 PNG · 공지에는 글 + 그림. 그림은 워커 /upload 로 드라이브에 올라간다(질의응답 사진과 같은 길).
+//      ⇒ 파일은 PNG · 공지에도 그림. 그림은 워커 /upload 로 드라이브에 올라간다(질의응답 사진과 같은 길).
+//   ④ (같은 날 밤) 「이미지 안에 다 있기 때문에 "학생별 한 줄"이나 날짜 텍스트로 써지는 건 없는 게 좋겠다」
+//      ⇒ 공지는 그림 한 장. 글 칸은 «덧붙일 말»(선택). 제목에도 날짜 없음. 글 짓는 함수는 걷었다.
 //
 // ⚠ 함수를 여기에 옮겨 적지 않는다 — index.html 에서 그대로 뜬다.
 
@@ -58,9 +60,9 @@ function 판(옵션) {
     'currentSeason', 'todayStr', 'dateShift', 'planRange', 'planCell', 'planLabel',
     'dbSetDoc', 'logAudit', 'showToast', 'render', 'escHtml',
     'planClassCanvas', 'uploadDataUrlToDrive', 'deleteFromDrive', 'imgFileIdOf', 'console',
-    [lift('planDaysOf'), lift('planDateLabel'), lift('planClassRows'), lift('planClassText'),
+    [lift('planDaysOf'), lift('planDateLabel'),
      lift('planFileName'), lift('planPostOpen'), lift('planPostClose'), lift('planPostRun')].join(NL) + NL +
-    'return { planDateLabel, planClassRows, planClassText, planFileName, planPostOpen, planPostClose, planPostRun };')(
+    'return { planDateLabel, planFileName, planPostOpen, planPostClose, planPostRun };')(
     { notices: [] }, o.state || {}, { getElementById: () => (o.el === undefined ? null : { value: o.el }) },
     () => 학생들, () => '고10.5B', () => false,
     () => '2학기 중간', () => '2026-09-14',
@@ -88,25 +90,17 @@ console.log(NL + '① 날짜에 요일을 붙인다' + NL);
   봄('앞자리 0 을 안 붙인다 (읽는 글이다)', F.planDateLabel('2026-10-04'), '10/4(일)');
 }
 
-/* ═══ ② 공지 글 — 학생별 한 줄 ═══ */
-console.log(NL + '② 공지는 «학생별 한 줄»이다 (표가 아니다)' + NL);
+/* ═══ ② 공지는 그림 한 장 — 글을 짓지 않는다 ═══ */
+console.log(NL + '② 공지는 «그림 한 장»이다 — 글을 짓지 않는다' + NL);
 {
-  const { F } = 판();
-  const 글 = F.planClassText('c1');
-  봄('머리에 반·시즌·기간이 있다',
-    글.split('\n').slice(0, 2), ['고10.5B · 2학기 중간 직보 일정', '9/28(월) ~ 10/4(일)']);
-  봄('🔴 학생마다 한 덩이다', 글.includes('김승우 (광남고)\n  9/29(화) 등원X · 10/1(목) 직보2시'), true);
-  봄('찍은 칸이 하나뿐인 학생도 나온다', 글.includes('윤건희 (광남고)\n  10/1(목) 직보2시'), true);
-  /* 🔴 빈 줄만 스무 개인 글은 아무 말도 안 한다 */
-  봄('🔴 찍은 것이 없는 학생은 줄을 안 만든다', 글.includes('이승준'), false);
-  봄('대신 «없는 사람이 있다»고 한 줄로 말한다', 글.includes('※ 이름이 없는 학생은'), true);
-
-  const 빈판 = 판({ cells: {} });
-  봄('🔴 아무것도 안 찍혔으면 그렇게 말한다',
-    빈판.F.planClassText('c1').includes('아직 찍어 둔 일정이 없습니다'), true);
-
-  /* ⚠ 표를 글자로 옮기지 않는다 — 폰에서 줄이 접힌다 */
-  봄('⚠ 표를 글자로 옮기지 않는다 (칸 구분 글자가 없다)', /[|]/.test(글), false);
+  /* 🔴 09-14 낮에 만든 «학생별 한 줄» 글은 그림과 같은 말을 두 벌로 하는 것이었다 — 걷었다 */
+  봄('🔴 글 짓는 함수가 남지 않았다', /function planClassText\(|function planClassRows\(/.test(html), false);
+  const 열기 = 알맹이(lift('planPostOpen'));
+  봄('🔴 판을 열 때 글을 안 짓는다 (text 는 빈 값)', 열기.includes("text: ''"), true);
+  봄('🔴 그림을 못 만들면 판을 안 연다', 열기.includes('if(!img)') && 열기.includes('return;'), true);
+  const 올리기 = 알맹이(lift('planPostRun'));
+  봄('🔴 제목에 날짜를 안 적는다', 올리기.includes("' 직보 일정표'") && !올리기.includes('planDateLabel(planRange().from)'), true);
+  봄('글이 비어도 올라간다 (덧붙일 말은 선택)', 올리기.includes("'내용이 비어 있습니다.'"), false);
 }
 
 /* ═══ ③ 게시 — 보고 나서 올린다 ═══ */
@@ -116,29 +110,33 @@ console.log(NL + '③ 게시 — 바로 안 올리고 먼저 보여 준다' + NL
   const { F, 쓴것, 말, 기록, 올린것 } = 판({ state });
   await F.planPostOpen('c1');
   봄('🔴 누르면 먼저 판이 열린다 (아직 안 올라간다 — 그림도)', [!!state.planPost, 쓴것.length, 올린것.length], [true, 0, 0]);
-  봄('판에 글이 담겨 있다', state.planPost.text.startsWith('고10.5B · 2학기 중간 직보 일정'), true);
+  봄('🔴 판의 글 칸은 비어 있다 — 그림이 공지다', state.planPost.text, '');
   봄('판에 그림이 담겨 있다 (미리 보기용)', state.planPost.img, 'data:image/png;base64,AAAA');
+  const 못만든판 = 판({ state: {}, 그림없음: true });
+  await 못만든판.F.planPostOpen('c1');
+  봄('🔴 그림을 못 만들면 판이 안 열리고 말한다', [!!못만든판.F, 못만든판.말[0]], [true, '표 그림을 만들지 못했습니다 — 잠시 뒤에 다시 눌러주세요.']);
 
   const 고친판 = 판({ state: { planPost: { classId:'c1', text:'원래 글', img: 'data:image/png;base64,AAAA' } }, el: '내가 고친 글' });
   await 고친판.F.planPostRun();
-  /* 🔵 고칠 수 있어야 한다 — 한 줄 덧붙이는 일이 잦다 */
-  봄('🔴 판에서 고친 글이 그대로 올라간다', 고친판.쓴것[0].doc.content, '내가 고친 글');
+  /* 🔵 덧붙일 말 — 적었으면 그대로 올라간다 */
+  봄('덧붙인 말이 그대로 올라간다', 고친판.쓴것[0].doc.content, '내가 고친 글');
   봄('그 반에게만 간다', 고친판.쓴것[0].doc.classIds, ['c1']);
   /* 🔵 그림 — 드라이브에 올리고 그 주소를 공지에 붙인다 */
   봄('🔴 그림을 드라이브에 올린다 (PNG 이름으로)', 고친판.올린것.map(x => x.name), ['직보일정_고10.5B_2026-09-28.png']);
   봄('🔴 공지에 그림 주소가 붙는다', 고친판.쓴것[0].doc.image, { url: 'https://drive/x', fileId: 'f1' });
 
+  const 빈말판 = 판({ state: { planPost: { classId:'c1', text:'', img: 'data:image/png;base64,AAAA' } }, el: '   ' });
+  await 빈말판.F.planPostRun();
+  봄('🔴 글이 비어도 그림만으로 올라간다', [빈말판.쓴것.length, 빈말판.쓴것[0].doc.content], [1, '']);
   const 그림없는판 = 판({ state: { planPost: { classId:'c1', text:'글' } }, el: '글' });
   await 그림없는판.F.planPostRun();
-  봄('그림이 없으면 글만 올린다 (image 칸을 안 만든다)',
-    [그림없는판.올린것.length, 'image' in 그림없는판.쓴것[0].doc], [0, false]);
+  봄('🔴 그림이 없으면 안 올린다 (그림이 곧 공지다)', [그림없는판.쓴것.length, 그림없는판.올린것.length], [0, 0]);
 
   /* 🔴 그림을 못 올리면 공지도 안 낸다 — 글만 나가면 강사는 붙은 줄 안다 */
   const 못올린판 = 판({ state: { planPost: { classId:'c1', text:'글', img: 'data:image/png;base64,AAAA' } }, el: '글', 올리기흠: true });
   await 못올린판.F.planPostRun();
   봄('🔴 그림을 못 올리면 공지도 안 낸다', [못올린판.쓴것.length, 못올린판.말.some(m => m.includes('그림을 올리지 못했습니다'))], [0, true]);
-  봄('제목에 반과 기간이 있다',
-    고친판.쓴것[0].doc.title, '고10.5B 직보 일정 (9/28(월) ~ 10/4(일))');
+  봄('🔴 제목은 반 이름뿐 — 날짜는 그림에 있다', 고친판.쓴것[0].doc.title, '고10.5B 직보 일정표');
   봄('공지 통에 쓴다', 고친판.쓴것[0].col, 'notices');
   봄('변경 이력에 남는다', 고친판.기록.length, 1);
 
@@ -150,9 +148,6 @@ console.log(NL + '③ 게시 — 바로 안 올리고 먼저 보여 준다' + NL
   봄('🔴 그리고 목록에서 도로 뺀다 (화면에만 남으면 안 된다)',
     알맹이(lift('planPostRun')).includes('DATA.notices.filter(n => n.id !== notice.id)'), true);
 
-  const 빈글 = 판({ state: { planPost: { classId:'c1', text:'' } }, el: '   ' });
-  await 빈글.F.planPostRun();
-  봄('빈 글은 안 올린다', [빈글.쓴것.length, 빈글.말[0]], [0, '내용이 비어 있습니다.']);
 }
 
 /* ═══ ④ 파일 · 화면의 닻 ═══ */
@@ -194,8 +189,9 @@ console.log(NL + '④ 파일은 «그림» · 두 단추가 화면에 있다' + 
   봄('미리 보기 판을 그린다', 표.includes('id="plan-post-text"'), true);
   봄('올리기·닫기가 둘 다 있다',
     표.includes('planPostRun()') && 표.includes('planPostClose()'), true);
-  봄('두 길이 왜 다른지 화면이 말한다', 표.includes('공지는 <b>학생별 한 줄</b>'), true);
+  봄('🔴 «학생별 한 줄» 말이 화면에 안 남았다', 표.includes('학생별 한 줄'), false);
   봄('미리 보기 판에 그림이 보인다', 표.includes('state.planPost.img'), true);
+  봄('글 칸은 «덧붙일 말»이다', 표.includes('덧붙일 말 (선택)'), true);
 }
 
 /* ═══ ⑤ 이름표 없는 퍼센트 ═══ */
