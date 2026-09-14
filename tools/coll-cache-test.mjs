@@ -100,7 +100,7 @@ console.log(NL + '③ 쓰면 버전이 오른다 — 문 안에서, 모아서, �
   s.F.collectionTouched('problembank');
   봄('학생은 버전을 안 올린다 (kv 를 못 쓴다)', s.timers.length, 0);
   const x = 판({});
-  x.F.collectionTouched('exams');
+  x.F.collectionTouched('records');
   봄('재우지 않는 컬렉션은 아무 일도 없다', x.timers.length, 0);
 }
 

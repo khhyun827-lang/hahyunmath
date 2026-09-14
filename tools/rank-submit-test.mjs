@@ -40,7 +40,10 @@ const db = {};                          // 'ranks/2026-09-14__u1' → data
 const 쓴것 = [];
 const stubs = `
   const todayStr = () => '2026-09-16';
-  const weekStartOf = () => '2026-09-14';
+  const weekStartOf = (d) => (d && d < '2026-09-14') ? '2026-09-07' : '2026-09-14';
+  const shiftYmd = (d, n) => { const x = new Date(d + 'T00:00:00Z'); x.setUTCDate(x.getUTCDate() + n); return x.toISOString().slice(0, 10); };
+  const collectionReadFailed = new Set();
+  const localStorage = __ls;
   const gameOfWeek = () => ({ key: 'dodge', name: '똥피하기', icon: '💩' });
   const authUid = () => __uid;
   async function dbGetCollectionWhere(c, k, v){
@@ -50,13 +53,18 @@ const stubs = `
 `;
 const src = stubs + '\n'
   + 'const RANK_TOP = 5;\nconst rankCache = {};\n'
+  + "const RANK_STORE_KEY = 'khm-rank-cache-v1';\n"
+  + lift('rankStoreRead') + '\n' + lift('rankStoreWrite') + '\n'
   + lift('loadRank', 'async function') + '\n'
   + lift('rankRowsOf', 'async function') + '\n'
   + lift('rankSubmit', 'async function') + '\n'
   + 'return { rankSubmit, loadRank, rankCache };';
 
 const AsyncFn = Object.getPrototypeOf(async function(){}).constructor;
-const make = (uid) => new Function('__db', '__wrote', '__uid', src)(db, 쓴것, uid);
+/* 가짜 localStorage — 브라우저마다 하나이므로 판마다 새로 준다 */
+const 저장소 = () => { const m = {}; return { getItem: k => (k in m ? m[k] : null), setItem: (k, v) => { m[k] = String(v); }, removeItem: k => { delete m[k]; }, _m: m }; };
+let __ls = 저장소();
+const make = (uid, ls) => new Function('__db', '__wrote', '__uid', '__ls', src)(db, 쓴것, uid, ls || __ls);
 
 console.log('순위 저장 길 —');
 
@@ -88,6 +96,38 @@ console.log('순위 저장 길 —');
   const rows = await A.rankSubmit('s1', '김학생', '고1', 500);
   봄('③ 높은 점수는 내 문서를 덮는다', [쓴것.length, db['ranks/2026-09-14__u1'].score], [n + 1, 500]);
   봄('③ 그러면 1등이 된다', rows[0].sid, 's1');
+}
+
+/* ④ 재우기 — 홈을 다시 열면 DB 를 안 두드린다 · 한 판 뒤에는 새로 읽는다 */
+{
+  const ls = 저장소();
+  const 읽음 = [];
+  const C = make('u3', ls);
+  const 원래 = db; // 같은 db
+  /* dbGetCollectionWhere 를 세려고 한 번 더 감싼다 — loadRank 가 몇 번 DB 로 가는지 */
+  const src2 = src.replace('async function dbGetCollectionWhere(c, k, v){', "async function dbGetCollectionWhere(c, k, v){ __reads.push(c + ':' + v);");
+  const make2 = (uid, ls) => new Function('__db', '__wrote', '__uid', '__ls', '__reads', src2)(db, 쓴것, uid, ls, 읽음);
+  const D = make2('u3', ls);
+  await D.loadRank('2026-09-14'); await D.loadRank('2026-09-07');
+  봄('④ 처음엔 두 주를 DB 에서 읽는다', 읽음, ['ranks:2026-09-14', 'ranks:2026-09-07']);
+  봄('④ 읽은 것을 브라우저에 재웠다', Object.keys(JSON.parse(ls._m['khm-rank-cache-v1'])).sort(), ['2026-09-07', '2026-09-14']);
+  const E = make2('u3', ls);              // 앱을 다시 연 것과 같다 (rankCache 는 새것, localStorage 는 그대로)
+  await E.loadRank('2026-09-14'); await E.loadRank('2026-09-07');
+  봄('④ 🔴 다시 열면 DB 를 안 두드린다 (재운 것)', 읽음.length, 2);
+  봄('④ 재운 순위가 그대로 온다', E.rankCache['2026-09-14'].map(r => r.sid), ['s1', 's2']);
+  /* 한 판 끝 — rankSubmit 은 새로 읽고 재운 것도 갈아 끼운다 */
+  await E.rankSubmit('s3', '박학생', '고1', 700);
+  봄('④ 한 판 뒤에는 새로 읽는다', 읽음.length, 3);
+  const G = make2('u9', ls);
+  await G.loadRank('2026-09-14');
+  봄('④ 그 뒤 여는 사람은 새 순위(내 점수 포함)를 재운 것으로 본다', [읽음.length, G.rankCache['2026-09-14'][0].sid], [3, 's3']);
+  /* 10분이 지나면 다시 읽는다 */
+  const all = JSON.parse(ls._m['khm-rank-cache-v1']); all['2026-09-14'].at -= 31 * 60 * 1000; ls._m['khm-rank-cache-v1'] = JSON.stringify(all);
+  const H = make2('u9', ls); await H.loadRank('2026-09-14');
+  봄('④ 이번 주는 30분 지나면 다시 읽는다', 읽음.length, 4);
+  all['2026-09-07'].at -= 31 * 60 * 1000; ls._m['khm-rank-cache-v1'] = JSON.stringify(all);
+  const I = make2('u9', ls); await I.loadRank('2026-09-07');
+  봄('④ 지난 주는 30분으로는 안 다시 읽는다 (하루)', 읽음.length, 4);
 }
 
 console.log(`\n${pass} 통과 · ${fail} 실패`);
