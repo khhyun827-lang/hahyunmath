@@ -64,6 +64,7 @@ const t=setInterval(async()=>{
     R.outerBodyScrollable = $('.ex-main > .ex-body').scrollHeight - $('.ex-main > .ex-body').clientHeight;
     R.bodyDisplay = getComputedStyle($('.ex-body.pl-body')).display;
     R.has = [CSS.supports('selector(:has(> a))'), getComputedStyle($('.ex-main > .ex-body')).display, getComputedStyle($('.pl-screen')).flexGrow, !!document.querySelector('.app .ex-body:has(> .pl-screen)')];
+    R.has = [CSS.supports('selector(:has(> a))'), getComputedStyle($('.ex-main > .ex-body')).display, getComputedStyle($('.pl-screen')).flexGrow, !!document.querySelector('.app .ex-body:has(> .pl-screen)')];
     R.heights = ['.ex-screen','.ex-screen > .ex-main','.ex-main > .ex-body','.pl-screen','.pl-body'].map(q => q + '=' + Math.round($(q).getBoundingClientRect().height) + '/' + getComputedStyle($(q)).height);
     const rel = () => Math.round($('.pl-t2 thead .pl-dh').getBoundingClientRect().top - $('.pl-wrap').getBoundingClientRect().top);
     const before = rel();
