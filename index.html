@@ -27253,7 +27253,7 @@ function teacherExamPlanHTML(){
       <button class="btn q sm" onclick="planPostClose()">닫기</button>
     </div>
     <img class="pl-prev" src="${state.planPost.img}" alt="표 그림">
-    <textarea id="plan-post-text" rows="2" placeholder="덧붙일 말 (선택) — 비워 두면 그림만 올라갑니다"
+    <textarea id="plan-post-text" rows="3" placeholder="덧붙일 말 (선택) — 비워 두면 그림만 올라갑니다"
       style="margin-top:8px;">${escHtml(state.planPost.text)}</textarea>
   </div>`;
 
@@ -27466,12 +27466,16 @@ async function planExportClass(classId){
      그리고 밤에 「이미지 안에 다 있으니 글은 없는 게 좋겠다」). 공지에 그림 칸이 없었는데, 올리는 길은
      이미 있었다(질의응답 사진이 쓰는 워커 `/upload` → 드라이브). 글 칸은 «덧붙일 말»로 비워 둔다.
    🔴 **그림이 없으면 판을 안 연다** — 그림이 곧 공지라, 못 만들면 올릴 것이 없다. */
+/* 🔵 **덧붙일 말의 기본값** (2026-09-14 밤 · 사용자 — 「각자 일정표 확인해 보고 특이사항 발생 시(시험기간이
+   잘못 나왔다거나, 보충 일정이 다른 학원과 겹쳤다거나) 그런 학생들은 개별 연락 달라고」). 판에서 고칠 수 있다. */
+const PLAN_POST_NOTE = '각자 본인 일정을 확인해 주세요.\n'
+  + '시험기간이 잘못 나와 있거나, 보충 일정이 다른 학원과 겹치는 등 특이사항이 있는 학생은 개별로 연락 주세요.';
 async function planPostOpen(classId){
   let img = null;
   try{ const cv = await planClassCanvas(classId); img = cv ? cv.toDataURL('image/png') : null; }
   catch(e){ console.error(e); }
   if(!img){ showToast('표 그림을 만들지 못했습니다 — 잠시 뒤에 다시 눌러주세요.'); return; }
-  state.planPost = { classId, text: '', img };
+  state.planPost = { classId, text: PLAN_POST_NOTE, img };
   render();
 }
 function planPostClose(){ state.planPost = null; render(); }

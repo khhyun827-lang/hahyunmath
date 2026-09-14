@@ -32,6 +32,7 @@ function lift(name) {
   }
   throw new Error(name + ' 의 끝을 못 찾았습니다');
 }
+function liftConst(name){ const at = html.indexOf('const ' + name + ' = '); if(at < 0) throw new Error(name + ' 를 못 찾았습니다'); return html.slice(at, html.indexOf(';' + NL, at) + 1); }
 const 알맹이 = s => s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
 
 let pass = 0, fail = 0;
@@ -61,7 +62,7 @@ function 판(옵션) {
     'dbSetDoc', 'logAudit', 'showToast', 'render', 'escHtml',
     'planClassCanvas', 'uploadDataUrlToDrive', 'deleteFromDrive', 'imgFileIdOf', 'console',
     [lift('planDaysOf'), lift('planDateLabel'),
-     lift('planFileName'), lift('planPostOpen'), lift('planPostClose'), lift('planPostRun')].join(NL) + NL +
+     liftConst('PLAN_POST_NOTE'), lift('planFileName'), lift('planPostOpen'), lift('planPostClose'), lift('planPostRun')].join(NL) + NL +
     'return { planDateLabel, planFileName, planPostOpen, planPostClose, planPostRun };')(
     { notices: [] }, o.state || {}, { getElementById: () => (o.el === undefined ? null : { value: o.el }) },
     () => 학생들, () => '고10.5B', () => false,
@@ -96,7 +97,7 @@ console.log(NL + '② 공지는 «그림 한 장»이다 — 글을 짓지 않�
   /* 🔴 09-14 낮에 만든 «학생별 한 줄» 글은 그림과 같은 말을 두 벌로 하는 것이었다 — 걷었다 */
   봄('🔴 글 짓는 함수가 남지 않았다', /function planClassText\(|function planClassRows\(/.test(html), false);
   const 열기 = 알맹이(lift('planPostOpen'));
-  봄('🔴 판을 열 때 글을 안 짓는다 (text 는 빈 값)', 열기.includes("text: ''"), true);
+  봄('🔴 판을 열 때 표를 글로 안 짓는다 — 기본 안내문(PLAN_POST_NOTE)만', 열기.includes("text: PLAN_POST_NOTE"), true);
   봄('🔴 그림을 못 만들면 판을 안 연다', 열기.includes('if(!img)') && 열기.includes('return;'), true);
   const 올리기 = 알맹이(lift('planPostRun'));
   봄('🔴 제목에 날짜를 안 적는다', 올리기.includes("' 직보 일정표'") && !올리기.includes('planDateLabel(planRange().from)'), true);
@@ -110,7 +111,8 @@ console.log(NL + '③ 게시 — 바로 안 올리고 먼저 보여 준다' + NL
   const { F, 쓴것, 말, 기록, 올린것 } = 판({ state });
   await F.planPostOpen('c1');
   봄('🔴 누르면 먼저 판이 열린다 (아직 안 올라간다 — 그림도)', [!!state.planPost, 쓴것.length, 올린것.length], [true, 0, 0]);
-  봄('🔴 판의 글 칸은 비어 있다 — 그림이 공지다', state.planPost.text, '');
+  봄('🔴 판의 글은 «각자 확인·특이사항은 개별 연락» 안내문이다 (표를 옮긴 글이 아니다)',
+    [state.planPost.text.includes('각자 본인 일정을 확인'), state.planPost.text.includes('개별로 연락'), /\d+\/\d+\(/.test(state.planPost.text)], [true, true, false]);
   봄('판에 그림이 담겨 있다 (미리 보기용)', state.planPost.img, 'data:image/png;base64,AAAA');
   const 못만든판 = 판({ state: {}, 그림없음: true });
   await 못만든판.F.planPostOpen('c1');
