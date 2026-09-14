@@ -115,19 +115,19 @@ console.log('순위 저장 길 —');
   await E.loadRank('2026-09-14'); await E.loadRank('2026-09-07');
   봄('④ 🔴 다시 열면 DB 를 안 두드린다 (재운 것)', 읽음.length, 2);
   봄('④ 재운 순위가 그대로 온다', E.rankCache['2026-09-14'].map(r => r.sid), ['s1', 's2']);
-  /* 한 판 끝 — rankSubmit 은 새로 읽고 재운 것도 갈아 끼운다 */
+  /* 한 판 끝 — 새로 안 읽고 재운 순위에 내 줄만 고쳐 넣는다 (2026-09-15 저녁) */
   await E.rankSubmit('s3', '박학생', '고1', 700);
-  봄('④ 한 판 뒤에는 새로 읽는다', 읽음.length, 3);
+  봄('④ 🔴 한 판 뒤에도 DB 를 안 두드린다 (재운 것 + 내 줄)', 읽음.length, 2);
   const G = make2('u9', ls);
   await G.loadRank('2026-09-14');
-  봄('④ 그 뒤 여는 사람은 새 순위(내 점수 포함)를 재운 것으로 본다', [읽음.length, G.rankCache['2026-09-14'][0].sid], [3, 's3']);
+  봄('④ 그 뒤 여는 사람은 새 순위(내 점수 포함)를 재운 것으로 본다', [읽음.length, G.rankCache['2026-09-14'][0].sid], [2, 's3']);
   /* 10분이 지나면 다시 읽는다 */
   const all = JSON.parse(ls._m['khm-rank-cache-v1']); all['2026-09-14'].at -= 31 * 60 * 1000; ls._m['khm-rank-cache-v1'] = JSON.stringify(all);
   const H = make2('u9', ls); await H.loadRank('2026-09-14');
-  봄('④ 이번 주는 30분 지나면 다시 읽는다', 읽음.length, 4);
+  봄('④ 이번 주는 30분 지나면 다시 읽는다', 읽음.length, 3);
   all['2026-09-07'].at -= 31 * 60 * 1000; ls._m['khm-rank-cache-v1'] = JSON.stringify(all);
   const I = make2('u9', ls); await I.loadRank('2026-09-07');
-  봄('④ 지난 주는 30분으로는 안 다시 읽는다 (하루)', 읽음.length, 4);
+  봄('④ 지난 주는 30분으로는 안 다시 읽는다 (하루)', 읽음.length, 3);
 }
 
 console.log(`\n${pass} 통과 · ${fail} 실패`);

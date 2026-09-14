@@ -13234,7 +13234,10 @@ function rankStoreWrite(monday, rows){
 async function rankSubmit(sid, name, cls, score){
   const monday = weekStartOf(todayStr());
   const game = gameOfWeek(monday).key;
-  const rows = await rankRowsOf(monday);
+  /* 🔵 **한 판 끝에도 새로 안 읽는다** (2026-09-15 저녁 · 읽기 줄이기). 내 문서만 쓰므로 남의 줄을 새로 받을 까닭이
+     없다 — 재운 순위(≤30분 전)에 내 줄만 고쳐 넣어 보여 준다. 남이 그 사이 낸 점수는 다음 갱신에 보인다.
+     예전엔 여기서 매 판 학생 수만큼 읽었다(50명이면 하루 2,500건). */
+  const rows = await loadRank(monday);
   /* 🔴 **어느 게임의 점수인지 적어 둔다.** 게임은 주마다 바뀌므로 한 주 안에서는 섞일 일이
      없지만, **기준 주(GAME_EPOCH)를 옮기면** 옛 점수가 다른 게임 것이 된다.
      ⚠ 게임이 안 적힌 옛 줄은 「똥피하기」로 읽는다 — 그때는 그것뿐이었다. */
