@@ -12914,8 +12914,21 @@ async function loadRank(monday){
      **한 학생이 남의 점수를 통째로 지울 수 있었다** — 규칙으로는 못 막는 모양이었다.
      ⚠ 순위표에 이름이 보이는 것은 그대로다. 사용자가 「보여지는 게 맞다」고 정했다(09-08).
        닫은 것은 «보는 것»이 아니라 «남의 것을 쓰는 것»이다. */
-  if(!rankCache[monday]) rankCache[monday] = await dbGetCollectionWhere('ranks', 'week', monday);
+  if(!rankCache[monday]) await rankRowsOf(monday);
   return rankCache[monday];
+}
+/* 🔴 **읽을 때 점수순으로 세운다.** 예전 «배열 한 문서» 때는 쓰는 쪽이 세워 두었지만,
+   이제는 문서가 학생마다 흩어져 있어 Firestore 가 문서 이름(uid) 순으로 준다 — 그대로 앞 다섯을
+   자르면 엉뚱한 «상위 5명»이 된다. 그리는 쪽(학생·강사·결과 화면)은 모두 «세워진 배열»을 기대한다.
+ 🔴 **쓰기 전에는 캐시를 안 믿고 새로 읽는다** — 그 사이 올라온 남의 점수를 순위표에 같이 보이려고.
+   ⚠ 2026-09-08 옮길 때 이 함수를 «부르기만 하고 짓지 않았다». 그래서 09-08 이후 한 판 끝날 때마다
+     `rankSubmit` 이 ReferenceError 로 넘어져 `ranks` 에 아무 문서도 안 쌓였고, 순위가 빈 채로 떴다
+     (2026-09-14 발견). 학생 기록(도장·최고점)은 그 앞에서 저장돼 무사했다. */
+async function rankRowsOf(monday){
+  const rows = await dbGetCollectionWhere('ranks', 'week', monday);
+  rows.sort((a,b) => (b.score||0) - (a.score||0));
+  rankCache[monday] = rows;
+  return rows;
 }
 /* ⚠ **읽고 → 내 줄만 고치고 → 쓴다.** 들고 있던 배열로 통째로 덮으면
    그 사이에 올라온 «남의 점수»가 사라진다. */
