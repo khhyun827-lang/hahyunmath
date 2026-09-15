@@ -9865,9 +9865,105 @@ const VIDEO_GOAL_PCT = Math.round(VIDEO_DONE_RATIO * 100);
      그것은 잣대가 엄한 것이 아니라 **고장으로 보인다.** 2초는 «건너뛰기»로 쓸 수 없는 크기다.
    ⚠ 완주선이 100% 미만이면 이 여유는 뜻이 없다(이미 그만큼 여유가 있다) — 그때는 안 쓴다. */
 const VIDEO_DONE_SLACK_SEC = 2;
-function videoDurationSec(p){ return p ? (+p.duration || 0) : 0; }
+
+/* =============== 구간만 보라고 할 때 (2026-09-16 · 사용자 요청) ===============
+   「영상 전체가 아니라 특정 시간부터 특정 시간까지만 봐라 라고 할 때가 많은데, 그러면 전체 시청률이
+    잡혀서 안 본 학생으로 찍히고 신호판에도 뜬다 — 잘한 일인데 잘못한 것처럼 신호가 뜬다」
+
+   🔴 **학생 잘못도 셈 잘못도 아니었다 — «구간»이라는 말을 담을 곳이 없었다.**
+     완주의 «분모»가 언제나 영상 전체라, 시킨 대로 5분을 다 봐도 60분 중 5분이 됐다.
+   🔵 **그래서 분모를 바꾼다.** 배정(`videos` 문서)에 `fromSec`·`toSec` 을 달면 그 길이가 목표가 된다.
+     ⚠ **판단하는 함수를 하나도 안 고친다** — `videoDurationSec`·`videoWatchedSec` 둘이 이미
+       %·완주·신호·리포트·반 평균의 **뿌리**다. 여기서 갈라 주면 나머지가 저절로 따라온다.
+       (이 파일 맨 위의 「잣대는 한 곳에서만 정한다」가 이래서 값을 한다.)
+
+   🔵 **기록에는 «어느 대목을 봤나»를 남긴다** (사용자가 고른 쪽). 10초 칸 하나에 글자 하나 —
+     60분 영상이 360글자다. 사실을 남기므로 **나중에 구간을 고쳐도 옛 기록을 다시 셀 수 있다.**
+     🔵 덤으로 **재시청 뻥튀기가 막힌다** — 예전 `watchedSeconds` 는 «재생된 시간»을 그냥 더해서
+       앞 5분을 세 번 다시 보면 15분짜리가 «완주»가 됐다. 칸은 두 번 채워도 한 칸이다.
+   ⚠ **옛 기록의 %가 떨어지면 안 된다.** 커버리지가 없던 시절의 `watchedSeconds` 를 `base` 로
+     **한 번만 얼려** 바닥으로 쓴다 — 보던 학생의 숫자가 이 배포로 줄어들지 않는다. */
+const VIDEO_BUCKET_SEC = 10;              /* 칸 하나의 크기. 구간 끝에서 최대 이만큼 넉넉히 쳐 준다 */
+
+/* 「12:30」 ↔ 750. 시:분:초도 받는다. 못 읽으면 null — 빈 칸과 «0초»를 갈라야 한다. */
+function clockToSec(s){
+  const t = String(s == null ? '' : s).trim();
+  if(!t) return null;
+  if(!/^\d{1,2}(:\d{1,2}){0,2}$/.test(t)) return null;
+  const 조각 = t.split(':').map(Number);
+  if(조각.some(n => isNaN(n))) return null;
+  while(조각.length < 3) 조각.unshift(0);           /* 「12:30」은 12분 30초다 */
+  return 조각[0] * 3600 + 조각[1] * 60 + 조각[2];
+}
+function secToClock(n){
+  const s = Math.max(0, Math.round(+n || 0));
+  const 시 = Math.floor(s / 3600), 분 = Math.floor((s % 3600) / 60), 초 = s % 60;
+  const 두자리 = (x) => (x < 10 ? '0' : '') + x;
+  return (시 ? 시 + ':' + 두자리(분) : String(분)) + ':' + 두자리(초);
+}
+/* 이 배정이 구간을 달고 있나 — `{from, to, len}` 또는 null(전체를 보라는 뜻). */
+function videoGoalOfItem(v){
+  if(!v) return null;
+  const from = Math.max(0, +v.fromSec || 0);
+  const to = +v.toSec || 0;
+  if(!(to > from)) return null;
+  return { from, to, len: to - from };
+}
+/* 🔴 `p` 는 제 id 를 몰라서 배정을 못 찾는다 — 그래서 `noteVideoWatchTime` 이 쓸 때 `videoId` 를 같이 남긴다.
+   ⚠ 이 배포 «전»의 기록에는 그 칸이 없다 — 그때는 전체 기준으로 셈한다(지금과 똑같다).
+     학생이 1초만 더 보면 id 가 붙어 스스로 고쳐진다. */
+function videoItemById(videoId){
+  if(!videoId || typeof DATA === 'undefined' || !DATA.videos) return null;
+  for(const v of DATA.videos) if(v && v.id === videoId) return v;
+  return null;
+}
+function videoGoalOfProgress(p){
+  if(!p || !p.videoId) return null;
+  return videoGoalOfItem(videoItemById(p.videoId));
+}
+/* 화면에 적는 한 줄 — 「12:30 ~ 18:00 구간」. 구간이 없으면 빈 글자. */
+function videoGoalLabelOf(v){
+  const 구간 = videoGoalOfItem(v);
+  return 구간 ? (secToClock(구간.from) + ' ~ ' + secToClock(구간.to) + ' 구간') : '';
+}
+
+/* ---- 「본 자리」 — 10초 칸 하나에 글자 하나 ---- */
+function coverLen(durationSec){ return Math.max(0, Math.ceil((+durationSec || 0) / VIDEO_BUCKET_SEC)); }
+/* 재생으로 «지나간» 자리를 채운다. 탐색으로 건너뛴 곳은 안 채운다 — 그것은 본 것이 아니다. */
+function coverFill(seen, durationSec, 앞, 뒤){
+  const 칸수 = coverLen(durationSec);
+  if(칸수 <= 0) return seen || '';
+  let 글 = String(seen || '');
+  if(글.length < 칸수) 글 = 글 + new Array(칸수 - 글.length + 1).join('0');
+  else if(글.length > 칸수) 글 = 글.slice(0, 칸수);      /* 길이가 달라졌다(다른 영상으로 바뀐 것) */
+  const a = Math.max(0, Math.floor(Math.min(앞, 뒤) / VIDEO_BUCKET_SEC));
+  const b = Math.min(칸수 - 1, Math.floor(Math.max(앞, 뒤) / VIDEO_BUCKET_SEC));
+  if(b < a) return 글;
+  const 쪼갠것 = 글.split('');
+  for(let i = a; i <= b; i++) 쪼갠것[i] = '1';
+  return 쪼갠것.join('');
+}
+/* [from, to) 안에서 실제로 채워진 초. 칸 단위라 끝에서 조금 넉넉하다 — 그 편이 «억울함»이 없다. */
+function coverSec(seen, from, to){
+  const 글 = String(seen || '');
+  if(!글) return 0;
+  const a = Math.max(0, Math.floor(from / VIDEO_BUCKET_SEC));
+  const b = Math.min(글.length - 1, Math.ceil(to / VIDEO_BUCKET_SEC) - 1);
+  let n = 0;
+  for(let i = a; i <= b; i++) if(글.charAt(i) === '1') n++;
+  return Math.min(Math.max(0, to - from), n * VIDEO_BUCKET_SEC);
+}
+
+/* 🔵 **여기가 갈리는 자리다** — 구간이 있으면 목표는 «구간 길이»이고, 본 것은 «구간 안에서 본 것»이다. */
+function videoDurationSec(p){
+  const 구간 = videoGoalOfProgress(p);
+  if(구간) return 구간.len;
+  return p ? (+p.duration || 0) : 0;
+}
 function videoWatchedSec(p){
   if(!p) return 0;
+  const 구간 = videoGoalOfProgress(p);
+  if(구간) return coverSec(p.seen, 구간.from, 구간.to);
   return p.watchedSeconds !== undefined ? (+p.watchedSeconds || 0) : (+p.maxSeconds || 0);
 }
 /* 0~1, 못 재면 null. */
@@ -9906,13 +10002,25 @@ function videoGoalLabel(){
      🔴 그때 이것을 안 쓰면 **다 본 학생도 평균이 완주선 언저리**가 되어
        「시청률 70% 미만 = 주의」 같은 규칙에 제 발로 걸린다. K-7 에 그 자리를 겪었다. */
 function videoScore(p){ return videoDone(p) ? 100 : videoPct(p); }
-async function noteVideoWatchTime(studentId, videoId, addSeconds, duration){
+async function noteVideoWatchTime(studentId, videoId, addSeconds, duration, 앞자리, 뒷자리){
   if(!duration || duration<=0) return;
   const rec = await loadRecord(studentId);
   const prev = rec.videoProgress[videoId] || {};
   const prevWatched = prev.watchedSeconds!==undefined ? (+prev.watchedSeconds||0) : (+prev.maxSeconds||0);
-  const watchedSeconds = Math.min(duration, prevWatched + Math.max(0, addSeconds));
-  const next = { watchedSeconds, duration, updatedAt: new Date().toISOString() };
+  /* 🔵 **어느 대목을 봤나를 남긴다** (2026-09-16) — 구간만 보라고 했을 때 그 구간을 봤는지 재려면
+       «얼마나»가 아니라 «어디를»가 있어야 한다. 재생으로 지나간 칸만 채운다(탐색은 안 채운다). */
+  const seen = (앞자리 == null || 뒷자리 == null)
+    ? (prev.seen || '')
+    : coverFill(prev.seen, duration, 앞자리, 뒷자리);
+  /* 🔴 **커버리지가 없던 시절의 값을 한 번만 얼려 바닥으로 쓴다.**
+       안 그러면 이 배포 뒤로 보던 학생의 %가 «칸으로 다시 세느라» 뚝 떨어져 고장으로 보인다.
+       얼려 두므로 앞으로는 재시청으로 부풀지 않는다 — 그것이 이 갈림의 값이다. */
+  const base = prev.base !== undefined ? (+prev.base || 0) : prevWatched;
+  const 칸으로센것 = coverSec(seen, 0, duration);
+  const watchedSeconds = seen
+    ? Math.min(duration, Math.max(base, 칸으로센것))
+    : Math.min(duration, prevWatched + Math.max(0, addSeconds));
+  const next = { watchedSeconds, duration, videoId, seen, base, updatedAt: new Date().toISOString() };
   /* `percent`·`completed` 도 함께 적어 둔다 — 문서만 보는 도구(내보내기 등)가 있고, «그때 무엇으로 봤나»도 남아야 한다.
      ⚠ **화면은 이 값을 안 믿는다.** 위 `videoPct`·`videoDone` 이 사실에서 다시 센다. */
   next.percent = videoPct(next);
@@ -10170,6 +10278,22 @@ function videoPlaybackRate(player){
 }
 /* ⚠ **`ended` 를 더는 받지 않는다** — 끝으로 끌기만 해도 ENDED 가 떠서 완주가 됐다(K-7).
    끝까지 «실제로 재생»했다면 시간이 이미 차 있으므로 이 신호는 필요가 없다. */
+/* 🔵 **틱 한 번이 지나온 자리** (2026-09-16) — 「어디를 봤나」를 남기려면 위치가 있어야 한다.
+     앞자리(지난 틱)와 뒷자리(지금) 사이가 **재생으로 흘러간 만큼**일 때만 그 사이를 채운다.
+     ⚠ 건너뛰면 사이가 벌어진다 — 그때는 **지금 자리 한 칸만** 채운다. 안 그러면 재생바를 끌어
+       구간을 «본 것»으로 만들 수 있다(K-7 에서 ENDED 로 겪은 것과 같은 뒷문이다). */
+function tickSpan(entry, player, elapsed){
+  let 뒷자리 = null;
+  try{ 뒷자리 = +player.getCurrentTime(); }catch(err){ return null; }
+  if(뒷자리 == null || isNaN(뒷자리)) return null;
+  const 앞자리 = entry.lastPos;
+  entry.lastPos = 뒷자리;
+  if(앞자리 == null) return { 앞: 뒷자리, 뒤: 뒷자리 };
+  const 흘러간것 = 뒷자리 - 앞자리;
+  const 그럴듯한최대 = elapsed * videoPlaybackRate(player) + VIDEO_BUCKET_SEC;
+  if(흘러간것 < 0 || 흘러간것 > 그럴듯한최대) return { 앞: 뒷자리, 뒤: 뒷자리 };   /* 건너뛴 것 */
+  return { 앞: 앞자리, 뒤: 뒷자리 };
+}
 function flushWatchTick(entry, studentId, videoId, player){
   if(entry.lastTick==null) return;
   const now = Date.now();
@@ -10177,7 +10301,9 @@ function flushWatchTick(entry, studentId, videoId, player){
   entry.lastTick = null;
   try{
     const dur = player.getDuration();
-    noteVideoWatchTime(studentId, videoId, elapsed * videoPlaybackRate(player), dur);
+    const 자리 = tickSpan(entry, player, elapsed);
+    noteVideoWatchTime(studentId, videoId, elapsed * videoPlaybackRate(player), dur,
+                       자리 ? 자리.앞 : null, 자리 ? 자리.뒤 : null);
   }catch(err){}
 }
 // 학생이 '부교재 해설강의' 탭에 있을 때만 실제 유튜브 플레이어를 붙여서 재생 상태를 감시한다.
@@ -10208,6 +10334,10 @@ function mountVideoTrackers(studentId){
             /* 조작줄은 플레이어가 «준비된 뒤»에 맨다 (2026-09-13 · K-8) — 그전에는 길이도 못 묻는다. */
             onReady: () => {
               vcBindBar(videoId); vzBindVeil(videoId); vcPaint(videoId);
+              /* 🔵 **구간이 있으면 거기서 시작한다** (2026-09-16) — 「12분 30초로 넘기세요」라고
+                   적어 두는 것보다 낫다. 학생이 찾다가 앞부분을 틀어 놓는 일이 없어진다. */
+              const 구간 = videoGoalOfItem(videoItemById(videoId));
+              if(구간){ try{ player.seekTo(구간.from, true); }catch(err){} }
               /* 🔴 **자막을 끈다** (2026-09-13 · K-10) — 주소의 `cc_load_policy=0` 만으로는
                  계정 설정이 이기는 경우가 있다. 조작줄을 없앤 뒤로는 학생이 끌 길이 없으므로 여기서 한 번 더 끈다.
                  ⚠ 모듈 이름이 판에 따라 다르다(옛 판은 'cc') — 둘 다 부른다. 없는 것을 부르면 조용히 넘어간다. */
@@ -10231,7 +10361,16 @@ function mountVideoTrackers(studentId){
                   entry.lastTick = now;
                   try{
                     const dur = player.getDuration();
-                    noteVideoWatchTime(studentId, videoId, elapsed * videoPlaybackRate(player), dur);
+                    const 자리 = tickSpan(entry, player, elapsed);
+                    noteVideoWatchTime(studentId, videoId, elapsed * videoPlaybackRate(player), dur,
+                                       자리 ? 자리.앞 : null, 자리 ? 자리.뒤 : null);
+                    /* 🔵 **구간 끝에 닿으면 멈춘다** (2026-09-16 · 사용자가 고른 쪽) —
+                         「어디까지」를 학생이 헷갈리지 않게. 더 보고 싶으면 다시 누르면 된다. */
+                    const 구간 = videoGoalOfItem(videoItemById(videoId));
+                    if(구간 && 자리 && 자리.뒤 >= 구간.to){
+                      try{ player.pauseVideo(); }catch(err){}
+                      showToast('여기까지 보면 됩니다 — ' + secToClock(구간.from) + ' ~ ' + secToClock(구간.to));
+                    }
                   }catch(err){}
                 }, 5000);
               } else {
@@ -10264,8 +10403,20 @@ async function addVideo(){
      결석 보충 영상과 같은 꼴(`studentId`)이라 학생 화면은 손댈 것이 없다 — 이미 개인 배정을 먼저 본다. */
   const targetEl = document.getElementById('video-target');
   const studentId = (targetEl && targetEl.value) || '';
+  /* 구간 (2026-09-16) — 둘 다 비면 전체다. 하나만 적거나 거꾸로면 **넣지 않고 말해 준다** —
+     조용히 무시하면 「구간을 줬는데 왜 전체로 세지?」가 된다. */
+  const fromEl = document.getElementById('video-from'), toEl = document.getElementById('video-to');
+  const fromRaw = (fromEl && fromEl.value || '').trim(), toRaw = (toEl && toEl.value || '').trim();
+  let fromSec = null, toSec = null;
+  if(fromRaw || toRaw){
+    fromSec = fromRaw ? clockToSec(fromRaw) : 0;
+    toSec = clockToSec(toRaw);
+    if(fromSec === null || toSec === null){ showToast('구간은 12:30 처럼 적어 주세요.'); return; }
+    if(toSec <= fromSec){ showToast('구간 끝이 시작보다 뒤여야 합니다.'); return; }
+  }
   const video = {id:'v'+Date.now()+(studentId ? '_'+studentId : ''), unit, title, url, classId, dueDate};
   if(studentId) video.studentId = studentId;
+  if(toSec !== null){ video.fromSec = fromSec; video.toSec = toSec; }
   DATA.videos.unshift(video);
   await dbSetDoc('videos', video.id, video);
   if(targetEl) targetEl.value = '';
@@ -10273,6 +10424,7 @@ async function addVideo(){
   document.getElementById('video-title').value='';
   document.getElementById('video-url').value='';
   if(dueEl) dueEl.value='';
+  if(fromEl) fromEl.value=''; if(toEl) toEl.value='';
   const 받는이 = studentId ? (DATA.students.find(x=>x.studentId===studentId)||{}).name : '';
   showToast(받는이 ? 받는이 + ' 학생에게 영상을 보냈습니다.' : '영상이 등록되었습니다.');
   render();
@@ -14933,6 +15085,10 @@ function stuVideoHTML(c){
           ${v.studentId ? '<span class="badge late">개인 배정</span>' : ''}
         </div>
         ${v.unit ? `<div style="font-size:11.5px;color:var(--dim);margin-top:5px;">${escHtml(v.unit)}</div>` : ''}
+        ${/* 구간 (2026-09-16) — **눈에 띄어야 한다.** 학생이 이걸 못 보면 영상 전체를 보고
+             「다 봤는데 왜 안 끝나지」가 된다(반대 방향의 같은 억울함이다). */
+          videoGoalLabelOf(v) ? `<div style="font-size:11.5px;margin-top:5px;"><span class="badge ok">${escHtml(videoGoalLabelOf(v))}</span>
+            <span style="color:var(--dim);margin-left:4px;">이 부분만 보면 됩니다</span></div>` : ''}
         ${/* 마감 (K-3). 다 본 영상에는 D-day 를 안 단다 — 끝난 일에 「지남」이 붙으면 꾸중처럼 읽힌다. */
           v.dueDate ? `<div style="font-size:11.5px;color:var(--dim);margin-top:5px;">마감 <span class="mono">${escHtml(v.dueDate)}</span>${
             done ? '' : (d => d ? ` <span class="badge ${d.tone}">${d.label}</span>` : '')(stuDday(v.dueDate))}</div>` : ''}
@@ -22596,9 +22752,20 @@ function chubVideoHTML(classId){
     </div>
     <div class="cls-form"><label style="flex:1;"><span>유튜브 링크</span>
       <input id="video-url" placeholder="https://youtu.be/..."></label></div>
+    ${/* 🔵 **구간 (2026-09-16 · 사용자 요청)** — 「특정 시간부터 특정 시간까지만 봐라」를 담는 칸이다.
+           비워 두면 지금까지와 똑같이 «전체»가 목표다. 넣으면 **완주의 분모가 그 구간 길이로 바뀌어**,
+           시킨 만큼 본 학생이 100%가 되고 신호판에도 안 뜬다. */''}
+    <div class="cls-form" style="margin-top:9px;">
+      <label style="min-width:130px;"><span>구간 시작 (선택)</span>
+        <input id="video-from" class="mono" placeholder="12:30" inputmode="numeric"></label>
+      <label style="min-width:130px;"><span>구간 끝</span>
+        <input id="video-to" class="mono" placeholder="18:00" inputmode="numeric"></label>
+    </div>
     <button class="btn p sm" style="margin-top:11px;" onclick="addVideo()">등록</button>
     <p class="st-note">등록하면 학생 앱 <b>학습 > 강의</b>에 뜨고, 여기서 «어디까지 보고 멈췄는지»가 쌓입니다.
-      <b>마감일을 넣으면 학생 홈의 할 일에 D-day 로 서고, 달력에도 뜹니다.</b> 지나면 학생·강사 화면에 «마감 지남»으로 붉게 보입니다.</p>
+      <b>마감일을 넣으면 학생 홈의 할 일에 D-day 로 서고, 달력에도 뜹니다.</b> 지나면 학생·강사 화면에 «마감 지남»으로 붉게 보입니다.<br>
+      <b>구간을 넣으면 그 구간만 보면 «완주»입니다</b> — 학생 화면은 그 자리에서 시작해 끝에서 멈추고,
+      시청률·신호도 <b>전체가 아니라 구간을 기준으로</b> 셉니다. 비워 두면 영상 전체가 기준입니다.</p>
   </div>`}`;
 
   if(vids.length===0 && personal.length===0){
@@ -22612,7 +22779,8 @@ function chubVideoHTML(classId){
     const p = progOf(v, v.studentId);
     const over = v.dueDate && v.dueDate < todayStr() && !p.done;
     return `<div class="vd-item ${v.id===sel.id?'on':''}" onclick="state.videoSelectedId='${v.id}'; render()">
-      <div class="t">${escHtml(nameOf(v.studentId))} <span style="font-weight:400;color:var(--sub);">· ${escHtml(v.title)}</span></div>
+      <div class="t">${escHtml(nameOf(v.studentId))} <span style="font-weight:400;color:var(--sub);">· ${escHtml(v.title)}</span>${
+        videoGoalLabelOf(v) ? ` <span class="badge ok" style="font-weight:400;">${escHtml(videoGoalLabelOf(v))}</span>` : ''}</div>
       <div class="m">${v.dueDate ? '마감 <span class="mono">'+escHtml(v.dueDate.slice(5))+'</span>' : '마감 없음'}${over ? ' <span class="badge no">지남</span>' : ''}</div>
       <div class="p"><span class="bar"><i style="width:${p.pct}%"></i></span><b style="color:${p.done?'var(--ok)':over?'var(--no)':'inherit'}">${p.done ? '완주' : p.seen ? p.pct+'%' : '미시청'}</b></div>
     </div>`;
@@ -22628,7 +22796,7 @@ function chubVideoHTML(classId){
       const a = avgOf(v), d = doneOf(v);
       const w = roster.length ? Math.round(d / roster.length * 100) : 0;
       return `<div class="vd-item ${v.id===sel.id?'on':''}" onclick="state.videoSelectedId='${v.id}'; render()">
-        <div class="t">${escHtml(v.title)}</div>
+        <div class="t">${escHtml(v.title)}${videoGoalLabelOf(v) ? ` <span class="badge ok" style="font-weight:400;">${escHtml(videoGoalLabelOf(v))}</span>` : ''}</div>
         <div class="m">${escHtml(v.unit||'단원 미지정')}${v.classId?'':' · 전체'}${
           v.dueDate ? ' · 마감 <span class="mono">'+escHtml(v.dueDate.slice(5))+'</span>'+(v.dueDate < todayStr() ? ' <span class="badge no">지남</span>' : '') : ''}</div>
         <div class="p" title="재원 ${roster.length}명 중 ${d}명이 완주했습니다 (완주 = ${videoGoalLabel()}).&#10;반 평균 시청률 ${a}% — 안 본 학생은 0%로 함께 셉니다.">
