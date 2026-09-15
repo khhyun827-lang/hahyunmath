@@ -23182,7 +23182,13 @@ function chubVideoHTML(classId){
   : roster.length===0 ? '<div style="font-size:12.5px;color:var(--dim);">이 반에 배정된 학생이 없습니다.</div>'
   : rows.slice().sort((a,b)=>a.p.pct-b.p.pct).map(({s,p})=>`
     <div class="vd-sv ${p.done?'done':''} ${!p.done&&p.pct<50?'low':''}">
-      <div class="who"><span class="av">${escHtml((s.name||'?').slice(0,1))}</span><b>${escHtml(s.name)}</b></div>
+      ${/* 🔵 **이름 앞에 아바타 네모를 두지 않는다** (2026-09-16 · 사용자 — 「학생이름이 네모로 하얗게
+           뜨는게 좀 낯선데 다른 탭들이랑 달라서그런가?」 — 맞다).
+         반 관리 안에서 **이름 앞에 네모를 두던 것은 영상 탭 하나뿐**이었다 —
+         과제 표·출결·성적은 `.nm`, 명단·상담·클리닉은 굵은 글씨로 **이름만** 적는다.
+         ⚠ 아바타(`.av`)는 채팅·질의응답처럼 **말풍선에 «누가 말했나»를 붙이는 자리**의 것이다.
+           목록의 한 줄에는 이름이 이미 그 일을 한다 — 네모는 자리만 먹고 줄눈을 흐린다. */''}
+      <div class="who"><b>${escHtml(s.name)}</b></div>
       ${/* 막대 위의 가는 선이 «완주선»이다 (K-7) — 칸은 실제로 본 비율이라
            선을 안 그으면 「70%인데 왜 완주지」가 된다. */''}
       <span class="track vgoal"><i style="width:${p.pct}%"></i>${videoGoalMarkHTML()}</span>
@@ -23200,7 +23206,7 @@ function chubVideoHTML(classId){
     const over = sel.dueDate && sel.dueDate < todayStr() && !p.done;
     return `<div class="t-sec" style="margin-top:6px;">받은 학생</div>
     <div class="vd-sv ${p.done?'done':''} ${!p.done&&p.pct<50?'low':''}">
-      <div class="who"><span class="av">${escHtml((nameOf(sel.studentId)||'?').slice(0,1))}</span><b>${escHtml(nameOf(sel.studentId))}</b></div>
+      <div class="who"><b>${escHtml(nameOf(sel.studentId))}</b></div>
       <span class="track vgoal"><i style="width:${p.pct}%"></i>${videoGoalMarkHTML()}</span>
       <span class="pct">${p.pct}%</span>
       <span class="st">${p.done ? '<span class="badge ok">완주</span>'
