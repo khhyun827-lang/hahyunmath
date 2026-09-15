@@ -167,6 +167,39 @@ console.log('⑨ 구간이 있는데 옛 기록이라 videoId 가 없으면 — 
   봄('전체 기준으로 물러선다', V.videoDurationSec(p) === 3600 && V.videoPct(p) === 50);
 }
 
+console.log('⑪ 끝을 안 적으면 「시작부터 끝까지」 (2026-09-16 · 사용자가 물어서 열었다)');
+{
+  V.DATA.videos = [{ id:'w1', fromSec:7440 }];        /* 2:04:00 부터 끝까지 · toSec 없음 */
+  const 영상길이 = 9000;
+  const g = V.videoGoalOfItem(V.DATA.videos[0], 영상길이);
+  봄('영상 길이가 끝이 된다', g && g.to === 9000 && g.from === 7440, g ? g.from + '~' + g.to : '없음');
+  봄('「끝까지」라고 표시된다 (거기서 멈추지 않으려고)', g.끝까지 === true);
+  봄('길이 = 1560초', g.len === 1560);
+  봄('화면에 적을 말', V.videoGoalLabelOf(V.DATA.videos[0]) === '2:04:00 부터 끝까지',
+     V.videoGoalLabelOf(V.DATA.videos[0]));
+
+  const p = { videoId:'w1', duration:영상길이, seen:재생('', 영상길이, 7440, 9000), base:0 };
+  봄('시작부터 끝까지 보면 완주', V.videoDone(p) === true);
+  봄('100%', V.videoPct(p) === 100, V.videoPct(p) + '%');
+
+  const q = { videoId:'w1', duration:영상길이, seen:재생('', 영상길이, 0, 7440), base:0 };
+  봄('앞부분만 봤으면 0% (시킨 데가 아니다)', V.videoPct(q) === 0, V.videoPct(q) + '%');
+
+  봄('길이를 아직 모르면 구간이 안 선다(고장 안 난다)', V.videoGoalOfItem(V.DATA.videos[0], 0) === null);
+}
+
+console.log('⑫ 🔴 구간을 «밝히지 않은» 여느 영상은 구간이 아니다');
+{
+  /* ⚠ 이걸 놓치면 모든 영상이 「0초~끝」이라는 구간이 되어 **커버리지로 세게 되는데,
+       옛 기록에는 커버리지가 없어 멀쩡히 보던 학생이 0% 로 떨어진다.** */
+  V.DATA.videos = [{ id:'w2', title:'여느 영상' }];
+  봄('구간 없음', V.videoGoalOfItem(V.DATA.videos[0], 3600) === null);
+  const 옛기록 = { videoId:'w2', duration:3600, watchedSeconds:3600 };   /* seen 없음 */
+  봄('🔴 옛 기록이 100% 그대로 (0% 로 안 떨어진다)', V.videoPct(옛기록) === 100, V.videoPct(옛기록) + '%');
+  봄('완주 그대로', V.videoDone(옛기록) === true);
+  봄('딱지도 안 붙는다', V.videoGoalLabelOf(V.DATA.videos[0]) === '');
+}
+
 console.log('⑩ 일부러 망가뜨려 — 검사가 무는지');
 {
   V.DATA.videos = [{ id:'v8', fromSec:1080, toSec:750 }];   /* 거꾸로 */

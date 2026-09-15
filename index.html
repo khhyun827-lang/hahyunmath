@@ -9902,12 +9902,22 @@ function secToClock(n){
   return (시 ? 시 + ':' + 두자리(분) : String(분)) + ':' + 두자리(초);
 }
 /* 이 배정이 구간을 달고 있나 — `{from, to, len}` 또는 null(전체를 보라는 뜻). */
-function videoGoalOfItem(v){
+/* 🔵 **끝은 안 적어도 된다** (2026-09-16 · 사용자 — 「구간끝시간 입력해야해? 입력안하면 끝까지로
+     자동으로돼?」). 「12분 30초부터 끝까지」는 흔한 지시인데 처음 판은 끝을 «필수»로 받고
+     튕기면서 「12:30 처럼 적어 주세요」라고만 말했다 — **왜 안 되는지가 화면에 없었다.**
+   ⚠ 끝을 비우면 **영상 길이**가 끝이 된다. 그 길이는 배정할 때는 모르고 **재생기가 알려 준다** —
+     그래서 이 함수가 `durationSec` 을 받는다. 못 받으면(목록처럼) 길이를 모르는 채로 답한다.
+   🔴 **구간을 «밝힌» 배정만 구간이다.** 안 그러면 여느 영상까지 「0초~끝」이라는 구간이 되어
+     **커버리지로 세게 되는데, 옛 기록에는 커버리지가 없어 0%로 떨어진다.** */
+function videoGoalOfItem(v, durationSec){
   if(!v) return null;
+  const 밝힌것 = (+v.fromSec > 0) || (+v.toSec > 0);
+  if(!밝힌것) return null;
   const from = Math.max(0, +v.fromSec || 0);
-  const to = +v.toSec || 0;
-  if(!(to > from)) return null;
-  return { from, to, len: to - from };
+  const 끝까지 = !(+v.toSec > 0);
+  const to = 끝까지 ? Math.max(0, +durationSec || 0) : +v.toSec;
+  if(!(to > from)) return null;      /* 길이를 아직 모르면 여기서 null — 알게 되면 그때 산다 */
+  return { from, to, len: to - from, 끝까지 };
 }
 /* 🔴 `p` 는 제 id 를 몰라서 배정을 못 찾는다 — 그래서 `noteVideoWatchTime` 이 쓸 때 `videoId` 를 같이 남긴다.
    ⚠ 이 배포 «전»의 기록에는 그 칸이 없다 — 그때는 전체 기준으로 셈한다(지금과 똑같다).
@@ -9919,12 +9929,17 @@ function videoItemById(videoId){
 }
 function videoGoalOfProgress(p){
   if(!p || !p.videoId) return null;
-  return videoGoalOfItem(videoItemById(p.videoId));
+  /* 길이는 기록이 안다 — 「끝까지」인 배정도 여기서는 제대로 셈이 선다 */
+  return videoGoalOfItem(videoItemById(p.videoId), p.duration);
 }
-/* 화면에 적는 한 줄 — 「12:30 ~ 18:00 구간」. 구간이 없으면 빈 글자. */
+/* 화면에 적는 한 줄 — 「12:30 ~ 18:00 구간」 · 끝을 안 적었으면 「12:30 부터 끝까지」.
+   ⚠ 목록은 영상 길이를 모른다 — 그래서 `videoGoalOfItem` 을 안 거치고 배정을 그대로 읽는다. */
 function videoGoalLabelOf(v){
-  const 구간 = videoGoalOfItem(v);
-  return 구간 ? (secToClock(구간.from) + ' ~ ' + secToClock(구간.to) + ' 구간') : '';
+  if(!v) return '';
+  const from = Math.max(0, +v.fromSec || 0), to = +v.toSec || 0;
+  if(!(from > 0 || to > 0)) return '';
+  if(!(to > 0)) return secToClock(from) + ' 부터 끝까지';
+  return secToClock(from) + ' ~ ' + secToClock(to) + ' 구간';
 }
 
 /* ---- 「본 자리」 — 10초 칸 하나에 글자 하나 ---- */
@@ -10336,7 +10351,8 @@ function mountVideoTrackers(studentId){
               vcBindBar(videoId); vzBindVeil(videoId); vcPaint(videoId);
               /* 🔵 **구간이 있으면 거기서 시작한다** (2026-09-16) — 「12분 30초로 넘기세요」라고
                    적어 두는 것보다 낫다. 학생이 찾다가 앞부분을 틀어 놓는 일이 없어진다. */
-              const 구간 = videoGoalOfItem(videoItemById(videoId));
+              let 길이 = 0; try{ 길이 = player.getDuration(); }catch(err){}
+              const 구간 = videoGoalOfItem(videoItemById(videoId), 길이);
               if(구간){ try{ player.seekTo(구간.from, true); }catch(err){} }
               /* 🔴 **자막을 끈다** (2026-09-13 · K-10) — 주소의 `cc_load_policy=0` 만으로는
                  계정 설정이 이기는 경우가 있다. 조작줄을 없앤 뒤로는 학생이 끌 길이 없으므로 여기서 한 번 더 끈다.
@@ -10366,8 +10382,10 @@ function mountVideoTrackers(studentId){
                                        자리 ? 자리.앞 : null, 자리 ? 자리.뒤 : null);
                     /* 🔵 **구간 끝에 닿으면 멈춘다** (2026-09-16 · 사용자가 고른 쪽) —
                          「어디까지」를 학생이 헷갈리지 않게. 더 보고 싶으면 다시 누르면 된다. */
-                    const 구간 = videoGoalOfItem(videoItemById(videoId));
-                    if(구간 && 자리 && 자리.뒤 >= 구간.to){
+                    /* ⚠ 끝을 안 적은 배정(「…부터 끝까지」)은 여기서 멈출 자리가 없다 —
+                         영상이 제풀에 끝난다. 그래서 `끝까지` 면 손대지 않는다. */
+                    const 구간 = videoGoalOfItem(videoItemById(videoId), dur);
+                    if(구간 && !구간.끝까지 && 자리 && 자리.뒤 >= 구간.to){
                       try{ player.pauseVideo(); }catch(err){}
                       showToast('여기까지 보면 됩니다 — ' + secToClock(구간.from) + ' ~ ' + secToClock(구간.to));
                     }
@@ -10403,20 +10421,29 @@ async function addVideo(){
      결석 보충 영상과 같은 꼴(`studentId`)이라 학생 화면은 손댈 것이 없다 — 이미 개인 배정을 먼저 본다. */
   const targetEl = document.getElementById('video-target');
   const studentId = (targetEl && targetEl.value) || '';
-  /* 구간 (2026-09-16) — 둘 다 비면 전체다. 하나만 적거나 거꾸로면 **넣지 않고 말해 준다** —
-     조용히 무시하면 「구간을 줬는데 왜 전체로 세지?」가 된다. */
+  /* 구간 (2026-09-16) — 둘 다 비면 전체다. 잘못 적었으면 **넣지 않고 말해 준다** —
+     조용히 무시하면 「구간을 줬는데 왜 전체로 세지?」가 된다.
+     🔵 **끝은 비워도 된다** — 그러면 「…부터 끝까지」다(사용자가 물어서 열었다).
+     ⚠ **말은 무엇이 틀렸는지를 짚어야 한다.** 처음에는 무슨 잘못이든 「12:30 처럼 적어 주세요」
+       한 줄이라, 끝을 안 적어 튕긴 사람이 **꼴을 고치려 들게** 돼 있었다. */
   const fromEl = document.getElementById('video-from'), toEl = document.getElementById('video-to');
   const fromRaw = (fromEl && fromEl.value || '').trim(), toRaw = (toEl && toEl.value || '').trim();
   let fromSec = null, toSec = null;
   if(fromRaw || toRaw){
     fromSec = fromRaw ? clockToSec(fromRaw) : 0;
-    toSec = clockToSec(toRaw);
-    if(fromSec === null || toSec === null){ showToast('구간은 12:30 처럼 적어 주세요.'); return; }
-    if(toSec <= fromSec){ showToast('구간 끝이 시작보다 뒤여야 합니다.'); return; }
+    if(fromSec === null){ showToast('구간 시작을 12:30 처럼 적어 주세요. (2시간 4분이면 2:04:00)'); return; }
+    if(toRaw){
+      toSec = clockToSec(toRaw);
+      if(toSec === null){ showToast('구간 끝을 18:00 처럼 적어 주세요. (2시간 4분이면 2:04:00)'); return; }
+      if(toSec <= fromSec){ showToast('구간 끝이 시작보다 뒤여야 합니다.'); return; }
+    } else {
+      if(!(fromSec > 0)){ showToast('구간을 쓰려면 시작이나 끝 중 하나는 적어 주세요.'); return; }
+      toSec = 0;                     /* 0 = 끝까지. 영상 길이는 재생기가 알려 준다 */
+    }
   }
   const video = {id:'v'+Date.now()+(studentId ? '_'+studentId : ''), unit, title, url, classId, dueDate};
   if(studentId) video.studentId = studentId;
-  if(toSec !== null){ video.fromSec = fromSec; video.toSec = toSec; }
+  if(toSec !== null){ video.fromSec = fromSec; if(toSec > 0) video.toSec = toSec; }
   DATA.videos.unshift(video);
   await dbSetDoc('videos', video.id, video);
   if(targetEl) targetEl.value = '';
@@ -22758,14 +22785,16 @@ function chubVideoHTML(classId){
     <div class="cls-form" style="margin-top:9px;">
       <label style="min-width:130px;"><span>구간 시작 (선택)</span>
         <input id="video-from" class="mono" placeholder="12:30" inputmode="numeric"></label>
-      <label style="min-width:130px;"><span>구간 끝</span>
+      <label style="min-width:130px;"><span>구간 끝 (비우면 끝까지)</span>
         <input id="video-to" class="mono" placeholder="18:00" inputmode="numeric"></label>
     </div>
     <button class="btn p sm" style="margin-top:11px;" onclick="addVideo()">등록</button>
     <p class="st-note">등록하면 학생 앱 <b>학습 > 강의</b>에 뜨고, 여기서 «어디까지 보고 멈췄는지»가 쌓입니다.
       <b>마감일을 넣으면 학생 홈의 할 일에 D-day 로 서고, 달력에도 뜹니다.</b> 지나면 학생·강사 화면에 «마감 지남»으로 붉게 보입니다.<br>
       <b>구간을 넣으면 그 구간만 보면 «완주»입니다</b> — 학생 화면은 그 자리에서 시작해 끝에서 멈추고,
-      시청률·신호도 <b>전체가 아니라 구간을 기준으로</b> 셉니다. 비워 두면 영상 전체가 기준입니다.</p>
+      시청률·신호도 <b>전체가 아니라 구간을 기준으로</b> 셉니다. 둘 다 비우면 영상 전체가 기준입니다.<br>
+      <span style="color:var(--dim);">시:분:초로 적습니다 — <b class="mono">12:30</b>은 12분 30초,
+      2시간 4분이면 <b class="mono">2:04:00</b>. <b>끝을 비우면 「시작부터 끝까지」</b>가 됩니다.</span></p>
   </div>`}`;
 
   if(vids.length===0 && personal.length===0){
