@@ -25,16 +25,31 @@ function 함수뽑기(이름){
   throw new Error('끝을 못 찾았다: ' + 이름);
 }
 
-const 이름들 = ['qnaMoreAnswersOf', 'qnaHasAnyAnswer', 'qnaAnswerBubblesHTML', 'qnaAnswerFormHTML', 'qnaAnswerNotesHTML'];
+const 이름들 = ['qnaMoreAnswersOf', 'qnaHasAnyAnswer', 'qnaAnswerBubblesHTML', 'qnaAnswerFormHTML',
+                'qnaAnswerNotesHTML', 'qnaFollowupsOf', 'qnaThreadTail'];
+/* ⚠ `DATA.qnaFollowups` 를 여기서 갈아끼운다 — 타래 «맨 끝»을 재려면 추가 질문이 있어야 한다. */
 const 받침 = `
   const escHtml = s => String(s == null ? '' : s);
   const imgSrcOf = x => (x && x.src) || '';
   const state = { qnaAnswerImage: {} };
   const qnaImageFieldHTML = () => '<사진칸>';
+  const DATA = { qnaFollowups: [] };
 `;
 const 짓기 = new Function(받침 + 이름들.map(함수뽑기).join('\n') +
-  '\nreturn {' + 이름들.join(',') + '};');
+  '\nreturn {' + 이름들.join(',') + ', DATA};');
 const H = 짓기();
+
+/* 강사 화면의 타래를 «칸이 몇 개인가»만 볼 수 있게 간추린다.
+   🔴 index.html 의 그 자리와 **같은 규칙**이어야 한다 — 다르면 이 검사가 거짓말을 한다.
+     (맨 끝에 칸 하나 + 답 없이 묻힌 중간 추가 질문에만 제 칸) */
+function 타래칸수(cur){
+  const 꼬리 = H.qnaThreadTail(cur);
+  let 칸 = H.qnaFollowupsOf(cur.id)
+    .map(f => (f.id !== 꼬리.id && !f.answer) ? H.qnaAnswerFormHTML(f, '') : '').join('');
+  칸 += H.qnaAnswerFormHTML(꼬리);
+  return { html: 칸, 개수: (칸.match(/<textarea id="answer-/g) || []).length,
+           더달기: (칸.match(/답변 더 달기/g) || []).length };
+}
 
 let 틀린것 = 0;
 const 봄 = (이름, 참인가) => { if(!참인가) 틀린것++; console.log((참인가 ? '  ✅ ' : '  ❌ ') + 이름); };
@@ -83,6 +98,48 @@ const 봄 = (이름, 참인가) => { if(!참인가) 틀린것++; console.log((�
   봄('④ 추가 질문의 빈 칸 이름은 「추가 질문에 답변」', H.qnaAnswerFormHTML(f).includes('추가 질문에 답변'));
   f.answer = '이 부분을 보세요';
   봄('④ 답이 달리면 「답변 더 달기」로 바뀐다', H.qnaAnswerFormHTML(f).includes('답변 더 달기'));
+}
+
+/* ── ⑥ 타래에 칸이 몇 개 뜨나 — 사용자가 짚은 겹침 (2026-09-16) ── */
+console.log('⑥ 답 칸은 타래에 하나뿐인가');
+{
+  const q = { id:'qn9', question:'묻습니다', answer:'첫 답', answeredAt:'2026-09-16' };
+
+  H.DATA.qnaFollowups = [];
+  let r = 타래칸수(q);
+  봄('추가 질문이 없을 때 — 칸 하나', r.개수 === 1, '칸 ' + r.개수 + '개');
+  봄('그 칸은 「답변 더 달기」', r.더달기 === 1);
+
+  /* 🔴 여기가 사용자가 본 것 — 예전 판은 둘이 떴다 */
+  H.DATA.qnaFollowups = [{ id:'qf1', kind:'followup', parentId:'qn9', question:'또 묻습니다',
+                           answer:'거기에 답', answeredAt:'2026-09-16' }];
+  r = 타래칸수(q);
+  봄('🔴 추가 질문 하나에 둘 다 답이 있을 때 — 칸 하나', r.개수 === 1, '칸 ' + r.개수 + '개');
+  봄('🔴 「답변 더 달기」도 하나', r.더달기 === 1, r.더달기 + '개');
+  봄('그 칸은 맨 끝(추가 질문)에 붙는다', r.html.includes('answer-qf1'));
+
+  H.DATA.qnaFollowups = [{ id:'qf1', kind:'followup', parentId:'qn9', question:'또', answer:'답', answeredAt:'x' },
+                         { id:'qf2', kind:'followup', parentId:'qn9', question:'또또', answer:'답', answeredAt:'x' }];
+  r = 타래칸수(q);
+  봄('추가 질문이 둘이어도 칸 하나(예전엔 셋이었을 것)', r.개수 === 1, '칸 ' + r.개수 + '개');
+  봄('맨 끝은 qf2 다', r.html.includes('answer-qf2') && !r.html.includes('answer-qf1'));
+
+  /* 답을 기다리는 추가 질문은 제 칸을 가져야 한다 — 안 그러면 답할 길이 없다 */
+  H.DATA.qnaFollowups = [{ id:'qf1', kind:'followup', parentId:'qn9', question:'먼저 물음' },
+                         { id:'qf2', kind:'followup', parentId:'qn9', question:'잇달아 물음' }];
+  r = 타래칸수(q);
+  봄('잇달아 물어 중간이 답 없이 묻히면 — 칸 둘(각자 제 것)', r.개수 === 2, '칸 ' + r.개수 + '개');
+  봄('그때는 「답변 더 달기」가 아니다', r.더달기 === 0);
+  봄('묻힌 것과 맨 끝이 각각 있다', r.html.includes('answer-qf1') && r.html.includes('answer-qf2'));
+
+  /* 🔵 **이 검사가 옛 버그를 물었을까** — 옛 규칙(뿌리에도 칸, 추가 질문마다 칸)을 같은 시험에 넣는다.
+       여기서 「2」가 안 나오면 위의 ✅ 들은 아무것도 증명하지 않는 것이다. */
+  H.DATA.qnaFollowups = [{ id:'qf1', kind:'followup', parentId:'qn9', question:'또', answer:'답', answeredAt:'x' }];
+  const 옛규칙 = H.qnaFollowupsOf(q.id).map(f => H.qnaAnswerFormHTML(f, '')).join('') + H.qnaAnswerFormHTML(q);
+  const 옛더달기 = (옛규칙.match(/답변 더 달기/g) || []).length;
+  봄('🔵 옛 규칙을 같은 시험에 넣으면 「답변 더 달기」가 둘 — 검사가 문다',
+     옛더달기 === 2, 옛더달기 + '개 (사용자가 본 것이 이것이다)');
+  H.DATA.qnaFollowups = [];
 }
 
 /* ── ⑤ 일부러 망가뜨려 — 검사가 무는지 ── */
