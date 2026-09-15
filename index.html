@@ -5230,14 +5230,28 @@ async function generateTwinsForExam(examId){
 }
 /* confirm()은 HTML을 못 그린다. 태그가 섞이면 그대로 보이므로 표시용으로만 벗긴다. */
 function escHtmlPlain(s){ return String(s==null?'':s).replace(/<[^>]*>/g,''); }
+/* 🔵 **`??` 대신 쓴다** (2026-09-16 · 오래된 아이폰). `??` 는 iOS 13.4 부터라 그 아래에서는
+     **묶음 전체가 안 뜬다.** 🔴 **`||` 로 바꾸면 안 된다** — `??` 는 «null·undefined 일 때만»
+     넘어가는데 `||` 는 **0·''·false 까지** 넘어가서 뜻이 달라진다(출석률 0% 가 999 로 뒤집힌 적이 있다).
+   `node tools/old-safari-check.mjs` 가 `??` 를 다시 들이면 문다. */
+function 널아닌첫값(){
+  for(let i=0;i<arguments.length;i++){ if(arguments[i] != null) return arguments[i]; }
+  return undefined;
+}
 // AI가 프롬프트 지시를 놓쳐서 "times"/"le"/"ge" 같은 영단어를 LaTeX 명령어 대신 그대로
 // 쓰는 경우가 있어서(프롬프트 개선과 별개로) 이중 안전장치로 한 번 더 다듬는다.
+/* 🔴 **여기에 lookbehind `(?<!\\)` 를 쓰면 안 된다** (2026-09-16 · 오래된 아이폰이 「불러오기」에서 멈췄다).
+     사파리는 lookbehind 를 **16.4 에서야** 지원한다. 정규식 리터럴은 «읽을 때» 검사되므로
+     이 함수를 부르지 않아도 **묶음 전체가 문법 오류로 죽는다** — 화면은 처음 그림 그대로 멈춘다.
+     🔵 **앞 글자를 «보지 말고 먹는다»** — `(^|[^\\])` 로 잡아 `$1` 로 도로 뱉는다.
+       `\btimes\b` 가 앞에 낱말 경계를 요구하니 `[^\\]` 에 걸리는 것은 글자가 아닌 것뿐이다.
+     ⚠ lookahead `(?=` 는 괜찮다 — 막힌 것은 **뒤를 돌아보는 것**뿐이다. */
 function sanitizeAiMathText(s){
   if(!s) return s;
   return s
-    .replace(/(?<!\\)\btimes\b/gi, '\\times')
-    .replace(/(?<!\\)\bLEQ\b/gi, '\\leq')
-    .replace(/(?<!\\)\bGEQ\b/gi, '\\geq');
+    .replace(/(^|[^\\])\btimes\b/gi, '$1\\times')
+    .replace(/(^|[^\\])\bLEQ\b/gi, '$1\\leq')
+    .replace(/(^|[^\\])\bGEQ\b/gi, '$1\\geq');
 }
 /* 마지막으로 AI 를 부르다 난 흠. 고리가 «왜 멈췄는지»를 말할 때 쓴다. */
 let 마지막AI오류 = '';
@@ -5354,13 +5368,14 @@ async function fetchFigureSceneViaAI(spec, content, image){
    개수가 많이 늘어날 수 있는 데이터는 문서를 하나씩 따로 저장하는 이 방식을 쓴다. */
 function toFirestoreFields(obj){
   const fields = {};
-  for(const k in obj){ fields[k] = { stringValue: String(obj[k] ?? '') }; }
+  /* ⚠ `?? ''` 였다 — iOS 13.4 미만이 못 읽는다. `|| ''` 로 바꾸면 **0 이 빈 칸이 되어** 뜻이 달라진다. */
+  for(const k in obj){ fields[k] = { stringValue: String(obj[k] == null ? '' : obj[k]) }; }
   return fields;
 }
 function fromFirestoreDoc(doc){
   const obj = { id: doc.name.split('/').pop() };
   const fields = doc.fields || {};
-  for(const k in fields){ obj[k] = fields[k].stringValue ?? ''; }
+  for(const k in fields){ const v = fields[k].stringValue; obj[k] = v == null ? '' : v; }
   return obj;
 }
 async function collectionAdd(collectionName, data){
@@ -10466,9 +10481,12 @@ function problemHTML(text){
     /* 🔵 **한 선지 안에 답이 둘인 것이 있다** — (가)·(나) 를 같이 고르는 문제다.
        그냥 두면 두 수식이 붙어 보여 **어디까지가 (가)인지 알 수 없다**
        (사용자가 K2-01-E-0013 에서 겪었다). 수식 덩이 사이에서 가른다. */
+    /* 🔴 **lookbehind 금지** — 원래 `split(/(?<=\$)\s+(?=\$)/)` 였다. 사파리 16.4 미만에서 문법
+         오류가 나 **페이지 전체가 안 떴다**(2026-09-16). 앞의 `$` 를 먹었다가 도로 붙이고
+         가름표를 심어 그것으로 자른다. 결과는 같다. */
     const 쪼갠것 = 선지모음.map(c => ({
       mark: c.slice(0, 1),
-      parts: c.slice(1).trim().split(/(?<=\$)\s+(?=\$)/),
+      parts: c.slice(1).trim().replace(/\$\s+(?=\$)/g, '$$' + String.fromCharCode(0)).split(String.fromCharCode(0)),
     }));
     const 칸수 = 쪼갠것[0].parts.length;
     const 표꼴 = 칸수 > 1 && 쪼갠것.every(x => x.parts.length === 칸수);
@@ -10789,7 +10807,7 @@ function clearExamQuestions(){
   const n = examDraft.questions.filter(q=>(q.content||'').trim()).length;
   if(n === 0){ showToast('지울 문항이 없습니다.'); return; }
   if(!confirm(`문항 ${n}개를 모두 지울까요?\n되돌릴 수 없습니다. 시험명·반·첨부 이미지는 그대로 둡니다.`)) return;
-  examDraft.questions = [{content:'', answer:'', unit:examDraft.questions[0]?.unit || UNITS[0], chapter:''}];
+  examDraft.questions = [{content:'', answer:'', unit:(examDraft.questions[0]||{}).unit || UNITS[0], chapter:''}];
   state.examEditQ = null;
   showToast(`문항 ${n}개를 지웠습니다.`);
   render();
@@ -11930,9 +11948,9 @@ async function handleUnitBankExcelFile(fileList){
     const sheet = wb.Sheets[wb.SheetNames[0]];
     const rows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
     const parsed = rows.map(r => ({
-      unit: String(r['단원'] ?? r['unit'] ?? '').trim(),
-      content: String(r['문제'] ?? r['내용'] ?? r['content'] ?? '').trim(),
-      answer: String(r['정답'] ?? r['answer'] ?? '').trim()
+      unit: String(널아닌첫값(r['단원'], r['unit'], '')).trim(),
+      content: String(널아닌첫값(r['문제'], r['내용'], r['content'], '')).trim(),
+      answer: String(널아닌첫값(r['정답'], r['answer'], '')).trim()
     })).filter(r => r.content && r.answer);
     if(parsed.length === 0){
       showToast('읽을 수 있는 문항이 없습니다. "단원/문제/정답" 열 이름을 확인해주세요.');
@@ -14429,7 +14447,7 @@ function hwCellDrawerHTML(){
       <div class="hwd-h" style="position:relative;">
         <div class="t">${escHtml(a.title)}</div>
         <div class="m">${a.dueDate ? '마감 <span class="mono">'+escHtml(a.dueDate)+'</span>' : '마감 없음'}
-          <s>·</s>${escHtml(DATA.classes.find(x=>x.id===a.classId)?.name || '')}</div>
+          <s>·</s>${escHtml((DATA.classes.find(x=>x.id===a.classId)||{}).name || '')}</div>
         <button class="x" onclick="hwCloseCell()" title="닫기 (Esc)">×</button>
       </div>
       <div class="hwd-b">
@@ -14472,7 +14490,7 @@ function hwNoticeDrawerHTML(){
       <div class="hwd-h" style="position:relative;">
         <div class="t">${escHtml(a.title)}</div>
         <div class="m">${a.dueDate ? '마감 <span class="mono">'+escHtml(a.dueDate)+'</span>' : '마감 없음'}
-          <s>·</s>${escHtml(DATA.classes.find(x=>x.id===a.classId)?.name || '')}${
+          <s>·</s>${escHtml((DATA.classes.find(x=>x.id===a.classId)||{}).name || '')}${
           state.allRecordsLoaded ? '<s>·</s>미제출 <b class="mono">'+miss.length+'</b>명' : ''}</div>
         <button class="x" onclick="hwCloseNotice()" title="닫기 (Esc)">×</button>
       </div>
@@ -16402,7 +16420,8 @@ function rosterModel(){
   // 기록이 없는 학생을 «출석률 0%»로 두면 맨 위로 올라와 실제 위험을 가린다. 뒤로 보낸다.
   const cmp = {
     name:  byName,
-    att:   (a,b)=>((stats[a.studentId].attPct ?? 999) - (stats[b.studentId].attPct ?? 999)) || byName(a,b),
+    /* ⚠ `?? 999` 였다 — `|| 999` 로 바꾸면 **출석률 0% 인 학생이 맨 뒤로 뒤집힌다.** */
+    att:   (a,b)=>((널아닌첫값(stats[a.studentId].attPct, 999)) - (널아닌첫값(stats[b.studentId].attPct, 999))) || byName(a,b),
     drop:  (a,b)=>(stats[b.studentId].drop - stats[a.studentId].drop) || byName(a,b),
     wrong: (a,b)=>(stats[b.studentId].wrongLeft - stats[a.studentId].wrongLeft) || byName(a,b)
   }[sort] || byName;
@@ -18218,22 +18237,22 @@ async function handleStudentExcelFile(classId, fileList){
     const sheet = wb.Sheets[wb.SheetNames[0]];
     const rows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
     const parsed = rows.map(r => ({
-      studentId: String(r['아이디'] ?? r['studentId'] ?? '').trim(),
-      name: String(r['이름'] ?? r['name'] ?? '').trim(),
-      pw: String(r['비밀번호'] ?? r['pw'] ?? '').trim(),
+      studentId: String(널아닌첫값(r['아이디'], r['studentId'], '')).trim(),
+      name: String(널아닌첫값(r['이름'], r['name'], '')).trim(),
+      pw: String(널아닌첫값(r['비밀번호'], r['pw'], '')).trim(),
       /* 🔴 **엑셀의 「1」을 그대로 담아 학년이 두 벌로 갈렸다** (2026-09-13 · 사용자가 짚었다) —
          고르개로 만든 학생은 「고1」인데 여기 것은 「1」이라, 시험 일정이 한 학교에 두 줄로 섰다.
          ⚠ 아래 미리 보기에도 **고친 꼴로** 뜬다 — 담기 전에 무엇이 들어가는지 보여야 한다. */
-      grade: gradeLabel(r['학년'] ?? '') || '고1',
-      school: String(r['학교'] ?? '').trim(),
+      grade: gradeLabel(널아닌첫값(r['학년'], '')) || '고1',
+      school: String(널아닌첫값(r['학교'], '')).trim(),
       /* 🔴 **열 머리 한 글자 때문에 한 반이 통째로 비어 들어갔다** (2026-09-13 · K-15).
          사용자가 올린 명단 하나의 머리가 **「학부전화번호」**(«모»가 빠졌다)여서
          여기 `학부모전화번호` 와 안 맞았고, **아무 말 없이 빈 값**으로 여덟 명이 들어갔다.
          ⇒ 사람이 쓰는 몇 가지를 다 받는다. ⚠ 그래도 **아래 미리 보기에서 빈 칸을 세어 말한다** —
            열 이름은 얼마든지 더 달라질 수 있고, 조용히 빈 채로 들어가는 것이 이 흠의 본질이었다.
          🔵 `phoneLabel` 로 «-» 꼴을 맞춰 담는다 — 엑셀이 숫자로 들고 있어 앞의 0 이 떨어진 것도 여기서 돌아온다. */
-      parentPhone: phoneLabel(r['학부모전화번호'] ?? r['학부모 전화번호'] ?? r['학부전화번호'] ?? r['학부모연락처'] ?? ''),
-      phone: phoneLabel(r['학생전화번호'] ?? r['학생 전화번호'] ?? r['전화번호'] ?? r['학생연락처'] ?? '')
+      parentPhone: phoneLabel(널아닌첫값(r['학부모전화번호'], r['학부모 전화번호'], r['학부전화번호'], r['학부모연락처'], '')),
+      phone: phoneLabel(널아닌첫값(r['학생전화번호'], r['학생 전화번호'], r['전화번호'], r['학생연락처'], ''))
     })).filter(r => r.studentId && r.name && r.pw);
     if(parsed.length === 0){
       showToast('읽을 수 있는 학생 정보가 없습니다. "아이디/이름/비밀번호" 열을 확인해주세요.');
