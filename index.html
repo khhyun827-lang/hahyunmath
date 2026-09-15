@@ -14873,6 +14873,124 @@ function hwNoticePanelHTML(a, miss){
   </div>`;
 }
 
+/* =================== 강의 미시청 알림 (2026-09-16 · 사용자 요청 · N-2) ===================
+   「강의영상 안봤을때 알림톡 보낼 수 있는거 만들어줘. 강의 영상 마감 며칠전입니다. 이런식으로
+    (알림톡구현하면 보내려공)」
+
+   🔵 **숙제 미제출 알림(N-1)과 같은 어법으로 짓는다.** 위의 `HW_NOTICE_*` 를 그대로 따랐다 —
+     받는 사람 규칙 · 문안을 심사용 템플릿으로 두는 것 · 발송 버튼을 잠가 두는 것까지.
+     ⚠ **두 벌로 두면 다음에 한쪽만 고쳐진다.** 그래서 «다른 것»은 셋뿐이다 —
+       누가 대상인가(완주 못 한 사람) · 문안 · 붙는 자리.
+   🔴 **여기 있는 것도 «발송 직전»까지다.** 사업자등록 → 카카오 채널 → 대행사 → 템플릿 심사가
+     끝나야 이어진다(2026-09-16 현재 등록 전이다). N-1 의 「연결 전에 풀 것 둘」이 그대로 남아 있다 —
+     ① 워커가 강사인지 모른다 ② 중복 방지·발송 기록이 없다.
+   🔵 **그래서 지금 쓸 수 있게 «문안 복사»를 두었다** — 채널이 열리기 전까지는 눌러서 카톡에 붙여 넣는다.
+     ⚠ N-1(숙제)에는 아직 이 단추가 없다. 좋다 싶으면 거기도 같이 달 것 — **한쪽만 좋아지면 갈린다.** */
+const VID_NOTICE_TO = s => phoneLabel(s.phone);     /* 받는 사람 = 학생 본인 (N-1 과 같다) */
+
+/* ⚠ 이 문안도 **자리표시다 — 사용자의 말이 아니다.** 심사에 넣기 전에 문장을 확정해야 한다.
+   🔴 **하나의 템플릿이 «남았다 · 오늘까지 · 지났다»를 다 덮어야 한다** — 고정 문장은 심사를 받으므로
+     경우마다 다른 문장을 쓸 수 없다. 그래서 그 말을 `#{남은기간}` 이라는 **변수 안에** 넣었다. */
+const VID_NOTICE_TEMPLATE =
+`[김하현수학연구소]
+#{학생명} 학생, 아직 보지 않은 강의가 있습니다.
+강의: #{강의명}
+마감: #{마감일} (#{남은기간})
+앱 학습 > 강의에서 볼 수 있습니다.`;
+
+/* 「3일 남음」·「오늘까지」·「마감 지남」 — 한 변수가 셋을 다 맡는다. */
+function vidDuePhrase(dueDate){
+  if(!dueDate) return '마감 없음';
+  const 남은 = Math.round((Date.parse(dueDate) - Date.parse(todayStr())) / 86400000);
+  if(isNaN(남은)) return '마감 없음';
+  if(남은 > 0) return 남은 + '일 남음';
+  return 남은 === 0 ? '오늘까지' : '마감 지남';
+}
+function vidNoticeText(name, v){
+  return VID_NOTICE_TEMPLATE
+    .replace('#{학생명}', name || '')
+    .replace('#{강의명}', v.title || '')
+    .replace('#{마감일}', v.dueDate || '미정')
+    .replace('#{남은기간}', vidDuePhrase(v.dueDate));
+}
+/* 아직 «완주»가 아닌 학생. 🔵 **구간 배정이면 구간 기준으로 갈린다** — `videoDone` 이 이미 그렇다.
+   그래서 시킨 구간을 다 본 학생에게는 **이 알림이 안 간다**(K-11 이 고친 바로 그 억울함이다). */
+function vidNotWatched(v, roster){
+  return roster.filter(s => {
+    const rec = state.allRecords[s.studentId];
+    const p = rec && rec.videoProgress && rec.videoProgress[v.id];
+    return !videoDone(p);
+  });
+}
+/* 문안을 클립보드로. 채널이 열리기 전까지 이것이 «보내는» 길이다. */
+function copyVidNotice(sid, vid){
+  const s = DATA.students.find(x => x.studentId === sid);
+  const v = videoItemById(vid);
+  if(!s || !v) return;
+  const 글 = vidNoticeText(s.name, v);
+  const 됐나 = () => showToast(s.name + ' 학생 문안을 복사했습니다 — 카톡에 붙여 넣으세요.');
+  try{
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(글).then(됐나, () => showToast('복사하지 못했습니다.'));
+      return;
+    }
+  }catch(err){}
+  /* 옛 기기(오래된 사파리 포함)를 위한 물러섬 — 보이지 않는 칸에 넣고 실행 명령을 쓴다 */
+  try{
+    const 칸 = document.createElement('textarea');
+    칸.value = 글; 칸.style.position = 'fixed'; 칸.style.opacity = '0';
+    document.body.appendChild(칸); 칸.select();
+    document.execCommand('copy'); document.body.removeChild(칸); 됐나();
+  }catch(err){ showToast('복사하지 못했습니다.'); }
+}
+
+function vidNoticeBarHTML(v, roster){
+  if(!state.allRecordsLoaded) return '';
+  const miss = vidNotWatched(v, roster);
+  if(miss.length === 0) return '';
+  const open = state.vidNoticeFor === v.id;
+  return `<div class="hw-nbar" style="margin-top:14px;">
+    <span class="sub">아직 안 본 학생 <b class="mono">${miss.length}</b>명</span>
+    <span class="spacer"></span>
+    <button class="btn sm" onclick="state.vidNoticeFor = ${
+      open ? 'null' : `'${v.id}'`}; render()">${open ? '닫기' : '미시청 알림'}</button>
+  </div>${open ? vidNoticePanelHTML(v, miss) : ''}`;
+}
+function vidNoticePanelHTML(v, miss){
+  const withPhone = miss.filter(s => VID_NOTICE_TO(s));
+  const noPhone   = miss.filter(s => !VID_NOTICE_TO(s));
+  const sample    = withPhone[0] || miss[0];
+  return `<div class="hw-npanel">
+    <div class="t-sec" style="margin:0 0 9px;">보낼 사람 <span class="mono">${withPhone.length}</span>명</div>
+    ${withPhone.length === 0
+      ? `<div class="hw-nnone">보낼 수 있는 사람이 없습니다 — 아래 학생들의 <b>전화번호가 비어 있습니다.</b></div>`
+      : `<div class="hw-nlist">${withPhone.map(s => `<div class="hw-nrow">
+          <b>${escHtml(s.name)}</b><span class="mono">${escHtml(VID_NOTICE_TO(s))}</span>
+          <span class="spacer"></span>
+          <button class="btn q sm" onclick="copyVidNotice('${s.studentId}','${v.id}')">문안 복사</button>
+        </div>`).join('')}</div>`}
+
+    ${noPhone.length ? `
+      <div class="t-sec" style="margin:16px 0 7px;">번호가 없어 못 보냄 <span class="mono">${noPhone.length}</span>명</div>
+      <div class="hw-nlist off">${noPhone.map(s => `<div class="hw-nrow">
+        <b>${escHtml(s.name)}</b><span class="muted">전화번호 없음</span></div>`).join('')}</div>
+      <p class="st-note" style="margin-top:7px;">설정 &gt; 학생에서 <b>계정 수정</b>을 눌러 <b>전화번호</b>를 채우면 보낼 수 있습니다.</p>` : ''}
+
+    <div class="t-sec" style="margin:16px 0 7px;">보낼 문안</div>
+    ${/* 심사 전에 «실제로 나갈 문장»을 눈으로 확정하라는 자리다. 요약하지 않고 그대로 보여 준다. */''}
+    <div class="hw-nmsg">${escHtml(vidNoticeText(sample ? sample.name : '홍길동', v))}</div>
+    <p class="st-note" style="margin-top:7px;">
+      학생 이름·강의명·마감일·남은기간만 사람마다 바뀝니다. <b>나머지 문장은 심사받은 그대로 고정</b>입니다.
+      ${videoGoalLabelOf(v) ? `<br>이 강의는 <b>${escHtml(videoGoalLabelOf(v))}</b>이라 <b>그 부분만 본 학생에게는 가지 않습니다.</b>` : ''}</p>
+
+    <div class="hw-nact">
+      <button class="btn p" disabled title="아직 연결되지 않았습니다">카카오톡으로 보내기</button>
+      <span class="muted">아직 <b>실제로 보내지지 않습니다.</b> 사업자등록 · 채널 인증 · 발송 대행사 ·
+        템플릿 심사가 끝나야 연결됩니다. 그전에는 <b>문안 복사</b>로 보내세요.</span>
+    </div>
+  </div>`;
+}
+
 /* ---------- 진도 · 과제 ---------- */
 /* 과제 한 장. 예전에는 «학생이 직접 누르는 체크박스»였다 — 눌렀다는 말 말고는 아무 근거가
    없었다. 지금은 사진을 올려 내고, 강사·조교가 보고 수락해야 완료가 된다.
@@ -22922,6 +23040,8 @@ function chubVideoHTML(classId){
         <button class="btn q sm" onclick="setVideoDue('${sel.id}', document.getElementById('video-due-edit').value)">마감 바꾸기</button>
       </div>
       ${sel.studentId ? one : drop + students}
+      ${/* 미시청 알림 (N-2) — 학생 목록 «바로 아래»다. 누가 안 봤는지를 본 자리에서 바로 이어진다. */''}
+      ${vidNoticeBarHTML(sel, sel.studentId ? roster.filter(s => s.studentId === sel.studentId) : roster)}
       <div style="margin-top:16px;">
         <button class="btn q sm" onclick="deleteVideo('${sel.id}')">이 영상 삭제</button>
       </div>
