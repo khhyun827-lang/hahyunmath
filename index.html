@@ -790,6 +790,36 @@
 .app .vd-item .p b{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;}
 .app .vd-main{flex:1;min-width:0;}
 
+/* ---------- 영상 머리 카드 (2026-09-16 · 사용자 — 「보기 불편하고 많이 어색하다」) ----------
+   🔴 **영상 화면인데 영상이 없었다.** 어떤 영상인지 확인하려면 제목만 믿어야 했다.
+     썸네일 하나면 «그 영상이 맞나»가 한눈에 끝난다.
+   ⚠ **iframe 은 여전히 안 쓴다**(이 화면이 원래 세운 규칙) — 그림 한 장이고, 고른 하나뿐이다.
+   🔵 누르면 유튜브가 열린다. **구간이 있으면 그 자리에서 시작한다**(`&t=`) — 구간을 눈으로 검산하는 길. */
+.app .vd-hero{display:flex;gap:16px;align-items:flex-start;padding:14px 16px;margin-bottom:16px;
+  border:1px solid var(--line);border-radius:var(--r-lg);background:var(--card);}
+.app .vd-hero .th{position:relative;flex:0 0 auto;width:132px;aspect-ratio:16/9;border-radius:var(--r-md);
+  overflow:hidden;background:var(--sunk);display:block;}
+.app .vd-hero .th img{width:100%;height:100%;object-fit:cover;display:block;}
+.app .vd-hero .th:after{content:'';position:absolute;left:50%;top:50%;width:0;height:0;
+  transform:translate(-40%,-50%);border-style:solid;border-width:9px 0 9px 15px;
+  border-color:transparent transparent transparent #fff;filter:drop-shadow(0 1px 3px rgba(0,0,0,.45));}
+.app .vd-hero .th.none:after{display:none;}
+.app .vd-hero .meta{flex:1;min-width:0;}
+.app .vd-hero h3{font-size:16px;font-weight:700;line-height:1.35;margin:1px 0 0;
+  overflow-wrap:anywhere;}
+.app .vd-hero .sub{margin-top:6px;font-size:11.5px;color:var(--dim);
+  display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+.app .vd-hero .due{margin-top:11px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+  font-size:12px;color:var(--sub);}
+.app .vd-hero .del{flex:0 0 auto;align-self:flex-start;border:0;background:transparent;cursor:pointer;
+  color:var(--dim);font-size:16px;line-height:1;padding:3px 5px;border-radius:var(--r-sm);}
+.app .vd-hero .del:hover{background:var(--no-bg,var(--hover));color:var(--no);}
+@media (max-width:620px){
+  .app .vd-hero{gap:12px;padding:12px;}
+  .app .vd-hero .th{width:96px;}
+  .app .vd-hero h3{font-size:14.5px;}
+}
+
 /* 이탈 지점 — 학생이 «어디까지 보고 멈췄는가»의 분포. 10구간 + 완주 칸. */
 .app .vd-drop{padding:16px 18px 12px;border:1px solid var(--line);border-radius:var(--r-lg);
   background:var(--card);}
@@ -833,10 +863,32 @@
 .app .vd-sv.low .track i{background:var(--no);}
 .app .vd-sv .pct{width:46px;flex-shrink:0;text-align:right;font-family:'JetBrains Mono',monospace;font-size:12px;}
 .app .vd-sv .st{width:64px;flex-shrink:0;text-align:right;}
+/* ---------- 좁을 때 — 목록을 «가로 칩 줄»로 접는다 (2026-09-16) ----------
+   🔴 **여기가 사용자가 쓰는 판이다.** 이 화면은 반 목록(225px)을 낀 «본문 안»이라, 창이 1000px 만
+     넘어도 안쪽은 좁다. 브라우저 확대(125%)까지 겹치면 CSS 폭이 864px — 늘 이 판으로 떨어진다.
+   ⚠ 예전에는 목록이 **세로로 그대로 쌓여** 영상이 서넛만 돼도 상세가 한 화면 아래로 밀렸다.
+     「보기 불편하다」의 큰 몫이 이것이었다. 한 줄로 접으면 고른 것이 **바로 아래**에 선다.
+   🔵 칩에는 «제목 + 상태»만 둔다 — 마감·막대는 바로 아래 상세가 더 크게 말한다. */
 @media (max-width:1000px){
   .app .vd-screen{flex-direction:column;}
-  .app .vd-list{width:100%;border-right:0;border-bottom:1px solid var(--line);
-    padding-right:0;margin-right:0;margin-bottom:16px;}
+  .app .vd-list{width:100%;border-right:0;border-bottom:0;padding-right:0;margin:0 0 15px;
+    display:flex;gap:7px;overflow-x:auto;padding-bottom:6px;-webkit-overflow-scrolling:touch;
+    scrollbar-width:thin;scrollbar-color:var(--line) transparent;}
+  /* 굵은 회색 막대가 칩 밑에 그어지면 그것이 «줄»처럼 보인다 — 가늘게 두어 «넘길 수 있다»만 알린다 */
+  .app .vd-list::-webkit-scrollbar{height:5px;}
+  .app .vd-list::-webkit-scrollbar-track{background:transparent;}
+  .app .vd-list::-webkit-scrollbar-thumb{background:var(--line);border-radius:3px;}
+  .app .vd-list .t-sec{display:none;}
+  .app .vd-item{flex:0 0 auto;max-width:230px;display:flex;align-items:center;gap:8px;
+    padding:8px 13px;border:1px solid var(--line);border-left-width:1px;
+    border-bottom:1px solid var(--line);border-radius:999px;background:var(--card);}
+  .app .vd-item.on{border-color:var(--accent);background:var(--accent-bg);}
+  .app .vd-item .t{flex:1;min-width:0;font-size:12.5px;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .app .vd-item .t .badge{display:none;}          /* 칩에서는 접는다 — 상세가 크게 말한다 */
+  .app .vd-item .m{display:none;}
+  .app .vd-item .p{margin-top:0;flex:0 0 auto;}
+  .app .vd-item .p .bar{display:none;}
 }
 
 /* ---------- 오답 검토 (design-v1/04-review) ----------
@@ -14678,6 +14730,51 @@ ${cd ? '낸 날 '+escHtml(cd)+' ('+wd+')' : '낸 날 모름'}${a.dueDate?' · �
     <tbody>${rows}</tbody>
   </table></div>`;
 }
+/* =============== 영상 머리 카드 (2026-09-16 · 사용자 — 「보기 불편하고 많이 어색하다」) ===============
+   고친 것 넷 —
+   🔴 ① **영상 화면인데 영상이 없었다.** 제목만 믿고 «그 영상이 맞나»를 확인할 길이 없었다.
+      썸네일을 세운다. ⚠ iframe 은 여전히 안 쓴다(이 화면의 규칙) — 그림 한 장이고 고른 하나뿐이다.
+      🔵 누르면 유튜브가 열리고, **구간이 있으면 그 자리에서 시작한다**(`&t=`) — 구간을 눈으로 검산하는 길.
+   🔴 ② **마감이 한 줄에 두 번 나왔다** — 「마감 2026-09-20」 글씨와 같은 값의 입력칸이 나란히 서고,
+      「마감일」 라벨이 입력칸 위에 떠서 세로줄이 어긋났다. 이제 **평소엔 한 줄**, 「바꾸기」를 눌러야 칸이 뜬다.
+   🔴 ③ **제목이 본문과 같은 크기**라 머리글로 안 읽혔다.
+   🔴 ④ **삭제가 아무 구분 없이 덩그러니** 있었다 — 되돌릴 수 없는 일인데. 구석의 작은 ×로 옮겼다.
+   🔵 D-day 를 단다(`stuDday`) — 「마감 09-20」만으로는 **급한지 아닌지가 안 보였다.** 학생 화면과 같은 어법이다. */
+function videoHeroHTML(v, 받는이){
+  const yid = extractYouTubeId(v.url || '');
+  const 구간 = videoGoalLabelOf(v);
+  const d = stuDday(v.dueDate);
+  /* 구간이 있으면 그 자리에서 열리게 — 강사가 「거기 맞나」를 바로 본다 */
+  const 보러가기 = yid ? 'https://www.youtube.com/watch?v=' + yid + (v.fromSec > 0 ? '&t=' + Math.round(v.fromSec) : '') : (v.url || '');
+  const 고치는중 = state.videoDueEdit === v.id;
+  return `<div class="vd-hero">
+    ${yid
+      ? `<a class="th" href="${escHtml(보러가기)}" target="_blank" rel="noopener"
+           title="유튜브에서 엽니다${v.fromSec > 0 ? ' — ' + escHtml(secToClock(v.fromSec)) + ' 부터' : ''}">
+           <img src="https://img.youtube.com/vi/${escHtml(yid)}/mqdefault.jpg" alt="" loading="lazy"></a>`
+      : `<span class="th none"></span>`}
+    <div class="meta">
+      <h3>${escHtml(v.title)}</h3>
+      <div class="sub">
+        ${받는이 ? `<span class="badge late">개인 배정</span><b style="color:var(--sub);font-weight:600;">${escHtml(받는이)}</b>`
+                 : `<span>${escHtml(v.unit || '단원 미지정')}</span>`}
+        ${구간 ? `<span class="badge">${escHtml(구간)}</span>` : ''}
+      </div>
+      <div class="due">
+        ${고치는중
+          ? `<input id="video-due-edit" type="date" value="${escHtml(v.dueDate||'')}" style="width:150px;">
+             <button class="btn p sm" onclick="setVideoDue('${v.id}', document.getElementById('video-due-edit').value); state.videoDueEdit=null;">저장</button>
+             <button class="btn q sm" onclick="state.videoDueEdit=null; render()">취소</button>
+             <span class="muted" style="font-size:11px;">비우고 저장하면 마감이 없어집니다</span>`
+          : `<span>${v.dueDate ? '마감 <span class="mono">' + escHtml(v.dueDate) + '</span>' : '마감 없음'}</span>
+             ${d ? `<span class="badge ${d.tone}">${d.label}</span>` : ''}
+             <button class="btn q sm" onclick="state.videoDueEdit='${v.id}'; render()">마감 바꾸기</button>`}
+      </div>
+    </div>
+    <button class="del" title="이 영상을 지웁니다" onclick="deleteVideo('${v.id}')">×</button>
+  </div>`;
+}
+
 /* 칸을 누르면 오른쪽 상세를 연다. 같은 칸을 다시 누르면 닫힌다. */
 function hwOpenCell(sid, hwId){
   const cur = state.hwCell;
@@ -23004,10 +23101,17 @@ function chubVideoHTML(classId){
   const personalItem = v => {
     const p = progOf(v, v.studentId);
     const over = v.dueDate && v.dueDate < todayStr() && !p.done;
+    /* 🔵 **제목이 앞에 온다** (2026-09-16) — 예전에는 「한정우 · 집합(1)」처럼 **이름이 굵게 앞서고
+         제목이 부제처럼** 보였다. 영상 목록인데 학생이 주인공이 돼 있었다.
+       ⚠ 이름은 사라지지 않는다 — 같은 제목을 여러 학생에게 보내는 일이 많아(결석 보충) 둘째 줄에 굵게 둔다.
+       ⚠ 구간 뱃지는 **조용한 색**이다 — 예전에는 `badge ok`(초록)라 «좋은 상태»처럼 읽혔다. 그냥 사실이다. */
+    const d = stuDday(v.dueDate);
     return `<div class="vd-item ${v.id===sel.id?'on':''}" onclick="state.videoSelectedId='${v.id}'; render()">
-      <div class="t">${escHtml(nameOf(v.studentId))} <span style="font-weight:400;color:var(--sub);">· ${escHtml(v.title)}</span>${
-        videoGoalLabelOf(v) ? ` <span class="badge ok" style="font-weight:400;">${escHtml(videoGoalLabelOf(v))}</span>` : ''}</div>
-      <div class="m">${v.dueDate ? '마감 <span class="mono">'+escHtml(v.dueDate.slice(5))+'</span>' : '마감 없음'}${over ? ' <span class="badge no">지남</span>' : ''}</div>
+      <div class="t">${escHtml(v.title)}${
+        videoGoalLabelOf(v) ? ` <span class="badge" style="font-weight:400;">${escHtml(videoGoalLabelOf(v))}</span>` : ''}</div>
+      <div class="m"><b style="color:var(--sub);">${escHtml(nameOf(v.studentId))}</b>${
+        v.dueDate ? ' · 마감 <span class="mono">'+escHtml(v.dueDate.slice(5))+'</span>' : ' · 마감 없음'}${
+        d ? ` <span class="badge ${d.tone}">${d.label}</span>` : ''}</div>
       <div class="p"><span class="bar"><i style="width:${p.pct}%"></i></span><b style="color:${p.done?'var(--ok)':over?'var(--no)':'inherit'}">${p.done ? '완주' : p.seen ? p.pct+'%' : '미시청'}</b></div>
     </div>`;
   };
@@ -23022,9 +23126,10 @@ function chubVideoHTML(classId){
       const a = avgOf(v), d = doneOf(v);
       const w = roster.length ? Math.round(d / roster.length * 100) : 0;
       return `<div class="vd-item ${v.id===sel.id?'on':''}" onclick="state.videoSelectedId='${v.id}'; render()">
-        <div class="t">${escHtml(v.title)}${videoGoalLabelOf(v) ? ` <span class="badge ok" style="font-weight:400;">${escHtml(videoGoalLabelOf(v))}</span>` : ''}</div>
+        <div class="t">${escHtml(v.title)}${videoGoalLabelOf(v) ? ` <span class="badge" style="font-weight:400;">${escHtml(videoGoalLabelOf(v))}</span>` : ''}</div>
         <div class="m">${escHtml(v.unit||'단원 미지정')}${v.classId?'':' · 전체'}${
-          v.dueDate ? ' · 마감 <span class="mono">'+escHtml(v.dueDate.slice(5))+'</span>'+(v.dueDate < todayStr() ? ' <span class="badge no">지남</span>' : '') : ''}</div>
+          v.dueDate ? ' · 마감 <span class="mono">'+escHtml(v.dueDate.slice(5))+'</span>' : ''}${
+          (x => x ? ` <span class="badge ${x.tone}">${x.label}</span>` : '')(stuDday(v.dueDate))}</div>
         <div class="p" title="재원 ${roster.length}명 중 ${d}명이 완주했습니다 (완주 = ${videoGoalLabel()}).&#10;반 평균 시청률 ${a}% — 안 본 학생은 0%로 함께 셉니다.">
           <span class="bar"><i style="width:${w}%"></i></span><b>완주 ${d}/${roster.length}</b></div>
       </div>`;
@@ -23081,7 +23186,7 @@ function chubVideoHTML(classId){
       ${/* 막대 위의 가는 선이 «완주선»이다 (K-7) — 칸은 실제로 본 비율이라
            선을 안 그으면 「70%인데 왜 완주지」가 된다. */''}
       <span class="track vgoal"><i style="width:${p.pct}%"></i>${videoGoalMarkHTML()}</span>
-      <span class="pct">${p.seen ? p.pct+'%' : '—'}</span>
+      <span class="pct">${p.pct}%</span>
       <span class="st">${p.done ? '<span class="badge ok">완주</span>'
         : (sel.dueDate && sel.dueDate < todayStr()) ? `<span class="badge no">${p.seen ? '시청 중' : '미시청'} · 마감 지남</span>`
         : !p.seen ? '<span class="badge">미시청</span>'
@@ -23097,7 +23202,7 @@ function chubVideoHTML(classId){
     <div class="vd-sv ${p.done?'done':''} ${!p.done&&p.pct<50?'low':''}">
       <div class="who"><span class="av">${escHtml((nameOf(sel.studentId)||'?').slice(0,1))}</span><b>${escHtml(nameOf(sel.studentId))}</b></div>
       <span class="track vgoal"><i style="width:${p.pct}%"></i>${videoGoalMarkHTML()}</span>
-      <span class="pct">${p.seen ? p.pct+'%' : '—'}</span>
+      <span class="pct">${p.pct}%</span>
       <span class="st">${p.done ? '<span class="badge ok">완주</span>'
         : over ? `<span class="badge no">${p.seen ? '시청 중' : '미시청'} · 마감 지남</span>`
         : !p.seen ? '<span class="badge">미시청</span>'
@@ -23108,22 +23213,10 @@ function chubVideoHTML(classId){
 
   return form + `<div class="vd-screen">${list}
     <div class="vd-main">
-      <div class="t-sec" style="margin:0 0 12px;">${escHtml(sel.title)}
-        <span style="font-weight:400;color:var(--dim);">${sel.studentId ? '개인 배정 · ' + escHtml(nameOf(sel.studentId)) : escHtml(sel.unit||'')}</span></div>
-      ${/* 마감 (K-3) — 등록할 때 못 넣었거나 미루게 되면 여기서 바꾼다. 비우고 누르면 마감이 없어진다. */''}
-      <div class="cls-form" style="margin:0 0 14px;align-items:flex-end;">
-        <span style="font-size:12.5px;color:var(--sub);align-self:center;">${sel.dueDate
-          ? `마감 <span class="mono">${escHtml(sel.dueDate)}</span>${sel.dueDate < todayStr() ? ' <span class="badge no">지남</span>' : ''}`
-          : '마감 없음'}</span>
-        <label style="min-width:150px;"><span>마감일</span><input id="video-due-edit" type="date" value="${escHtml(sel.dueDate||'')}"></label>
-        <button class="btn q sm" onclick="setVideoDue('${sel.id}', document.getElementById('video-due-edit').value)">마감 바꾸기</button>
-      </div>
+      ${videoHeroHTML(sel, sel.studentId ? nameOf(sel.studentId) : '')}
       ${sel.studentId ? one : drop + students}
       ${/* 미시청 알림 (N-2) — 학생 목록 «바로 아래»다. 누가 안 봤는지를 본 자리에서 바로 이어진다. */''}
       ${vidNoticeBarHTML(sel, sel.studentId ? roster.filter(s => s.studentId === sel.studentId) : roster)}
-      <div style="margin-top:16px;">
-        <button class="btn q sm" onclick="deleteVideo('${sel.id}')">이 영상 삭제</button>
-      </div>
     </div>
   </div>`;
 }
