@@ -134,7 +134,8 @@ console.log(NL + '② 과제 고치기' + NL);
 console.log(NL + '④ 반 관리 › 과제 — 고치기 · 마감 순 · 진도' + NL);
 {
   /* ── 잣대 하나 — 실제로 세워 본다 ── */
-  const O = new Function(lift('hwOrderKey') + NL + lift('hwOrderDesc') + NL + 'return { hwOrderKey, hwOrderDesc };')();
+  const O = new Function(lift('hwOrderKey') + NL + lift('hwOrderDesc') + NL + lift('hwOrderAsc')
+    + NL + 'return { hwOrderKey, hwOrderDesc, hwOrderAsc };')();
   const 것들 = [
     { id: 'a', createdAt: '2026-09-12', dueDate: '2026-09-19' },
     { id: 'b', createdAt: '2026-09-20', dueDate: '' },
@@ -148,15 +149,33 @@ console.log(NL + '④ 반 관리 › 과제 — 고치기 · 마감 순 · 진�
     O.hwOrderDesc({ createdAt: '2026-09-18', dueDate: '2026-09-19' }, { createdAt: '2026-09-12', dueDate: '2026-09-19' }) < 0, true);
   봄('마감이 없으면 낸 날이 잣대다', O.hwOrderKey({ createdAt: '2026-09-20', dueDate: '' }), '2026-09-20');
 
-  /* 🔴 **두 화면이 «같은 함수»를 부르는지가 이 덫의 요점이다.** 잣대를 각자 적으면
-     한쪽만 고쳐지고, 같은 과제 묶음이 화면마다 다른 차례로 선다. */
+  /* 🔵 **표는 «빠른 순»이다** (2026-09-16 · `5bba443` · 사용자 —「과제 표 마감일 빠른순으로 정렬」,
+       2026-09-17에 다시 확인 —「빠른순이 맞아요」). 이 검사는 그때 안 따라와서 오래 빨갰다.
+     ⚠ **«잣대»와 «방향»을 갈라서 잰다** — 화면 둘이 다른 함수를 부르는 것은 «틀린 것이 아니다».
+       표는 한 달을 훑으니 왼→오른쪽으로 시간이 흘러야 하고(Asc), 수업의 고르개는 지금 것을
+       집는 자리라 최신이 위다(Desc). 지켜야 할 것은 **`hwOrderKey` 가 하나뿐인가**다.
+       키를 두 벌로 베끼는 순간 한쪽만 고쳐지고 같은 묶음이 화면마다 딴 차례로 선다. */
+  봄('빠른 순 — 마감 이른 것이 앞 · 둘 다 없으면 맨 앞(빈 키가 가장 작다)',
+    것들.slice().sort(O.hwOrderAsc).map(x => x.id), ['d', 'c', 'a', 'e', 'b']);
+  봄('🔴 빠른 순은 늦은 순을 뒤집은 것이다 (잣대가 하나라는 뜻)',
+    것들.slice().sort(O.hwOrderAsc).map(x => x.id),
+    것들.slice().sort(O.hwOrderDesc).map(x => x.id).reverse());
+  봄('🔴 방향은 둘이어도 «잣대»는 hwOrderKey 하나다',
+    [/hwOrderKey\(/.test(String(O.hwOrderAsc)), /hwOrderKey\(/.test(String(O.hwOrderDesc))], [true, true]);
+
+  /* ⚠ **주석을 지우고 본다** (2026-09-17) — 아래 「마감 늦은 순」 줄이 오래 «초록»이었는데,
+       정작 그 딱지는 09-16에 화면에서 지워졌고 **«지웠다»고 적어 둔 주석에만** 남아 있었다.
+       주석을 읽고 통과하는 검사는 아무것도 안 지킨다. 그런 줄은 빨간 줄보다 나쁘다. */
+  const 살 = s => s.replace(/\/\*[\s\S]*?\*\//g, '');
   const grid = lift('hwGridHTML'), check2 = lift('sessionHwCheckHTML');
-  봄('격자가 hwOrderDesc 로 세운다', /const cols = list\.slice\(\)\.sort\(hwOrderDesc\);/.test(grid), true);
-  봄('🔴 격자가 제 잣대를 따로 적고 있지 않다', /sort\(\(x,\s*y\)\s*=>\s*String\(y\.createdAt/.test(grid), false);
-  봄('과제 검사도 같은 함수를 부른다', /\.sort\(\(x,\s*y\)\s*=>\s*hwOrderDesc\(x\.a, y\.a\)\)/.test(check2), true);
-  봄('🔴 과제 검사 안에 옛 잣대(기준)가 남아 있지 않다', check2.includes('const 기준 = a =>'), false);
-  봄('열 머리에 마감이 «잣대»로 적힌다', /class="due\$\{a\.dueDate\?' k':''\}"/.test(grid), true);
-  봄('표 모서리가 차례를 말한다', grid.includes('마감 늦은 순'), true);
+  봄('🔴 격자가 hwOrderAsc 로 세운다 — 마감 «빠른» 순',
+    /const cols = list\.slice\(\)\.sort\(hwOrderAsc\);/.test(살(grid)), true);
+  봄('🔴 격자가 제 잣대를 따로 적고 있지 않다', /sort\(\(x,\s*y\)\s*=>\s*String\(y\.createdAt/.test(살(grid)), false);
+  봄('과제 검사는 Desc 다 — 지금 것이 맨 위', /\.sort\(\(x,\s*y\)\s*=>\s*hwOrderDesc\(x\.a, y\.a\)\)/.test(살(check2)), true);
+  봄('🔴 과제 검사 안에 옛 잣대(기준)가 남아 있지 않다', 살(check2).includes('const 기준 = a =>'), false);
+  봄('열 머리에 마감이 «잣대»로 적힌다', /class="due\$\{a\.dueDate\?' k':''\}"/.test(살(grid)), true);
+  봄('🔴 「마감 늦은 순」 딱지는 표에서 지워졌다 (09-16)', 살(grid).includes('마감 늦은 순'), false);
+  봄('규칙까지 걷은 i.hg-ord 도 안 선다', 살(grid).includes('hg-ord'), false);
 
   /* ── 고치기 폼 — 실제로 그려 본다 ── */
   const FF = new Function('escHtml', lift('hwNewFormHTML') + NL + 'return hwNewFormHTML;')(
@@ -244,7 +263,8 @@ console.log(NL + '⑤ 실제로 그려 본다 — 과제 격자의 차례 · 수
   const HW_NONE = 'none', HW_SUBMITTED = 'wait';
   const G = new Function('state', 'hwState', 'hwIsDone', 'HWG_CELL', 'HW_NONE', 'HW_SUBMITTED',
     'todayStr', 'escHtml', 'chubYm', 'WEEKDAY_LABEL',
-    lift('hwOrderKey') + NL + lift('hwOrderDesc') + NL + lift('hwGridHTML') + NL + 'return hwGridHTML;')(
+    lift('hwOrderKey') + NL + lift('hwOrderDesc') + NL + lift('hwOrderAsc') + NL
+      + lift('hwGridHTML') + NL + 'return hwGridHTML;')(
     { allRecordsLoaded: true, hwCell: null, hwNoticeId: null, allRecords: { s1: { attendance: [], homework: {} } } },
     () => ({ status: HW_NONE, photos: [] }), () => false,
     { [HW_NONE]: ['none', '미제출', '·'], [HW_SUBMITTED]: ['wait', '확인 대기', '확인 대기'] },
@@ -258,10 +278,12 @@ console.log(NL + '⑤ 실제로 그려 본다 — 과제 격자의 차례 · 수
   ];
   const 그림 = G('c1', 과제들, [{ studentId: 's1', name: '가나다' }]);
   const 열마감 = [...그림.matchAll(/마감 <span class="mono">(\d\d-\d\d)<\/span>/g)].map(m => m[1]);
-  봄('🔴 그려진 열이 마감 늦은 순이다 (낸 날 차례가 아니다)', 열마감, ['09-26', '09-12', '09-05']);
-  봄('🔵 낸 날 차례였다면 h2·h1·h3 이었을 것 — 그것과 다르다',
-    열마감[0] === '09-26' && 열마감[2] === '09-05', true);
-  봄('표 모서리가 차례를 말한다 (그려진 것으로)', 그림.includes('마감 늦은 순'), true);
+  /* 🔵 **왼쪽이 이른 마감이다** (2026-09-16 · `5bba443` · 사용자 —「과제 표 마감일 빠른순으로 정렬」).
+     표는 한 달을 훑는 것이라 왼→오른쪽으로 시간이 흘러야 출결·성적 격자와 같은 방향으로 읽힌다.
+     ⚠ 낸 날 차례가 아니라는 것이 여전히 요점이다 — 그랬다면 h3·h1·h2(09-12·09-05·09-26)였다. */
+  봄('🔴 그려진 열이 마감 «빠른» 순이다 (낸 날 차례가 아니다)', 열마감, ['09-05', '09-12', '09-26']);
+  봄('🔵 낸 날 차례였다면 09-12 가 맨 앞이었을 것 — 그것과 다르다',
+    열마감[0] === '09-05' && 열마감[2] === '09-26', true);
   봄('마감 있는 열은 잣대 표시가 붙는다', (그림.match(/class="due k"/g) || []).length, 3);
   const 마감없음 = G('c1', [{ id: 'x', classId: 'c1', title: 'x', createdAt: '2026-09-04', dueDate: '' }],
     [{ studentId: 's1', name: '가' }]);
