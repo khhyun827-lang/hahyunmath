@@ -545,14 +545,36 @@
      18px 글자가 10px이 되어 **눈금 숫자를 못 읽는다** (실제로 그랬다).
      560으로 좁히면 0.72배라 13px로 읽힌다 — 벡터라 폭을 좁혀도 선은 그대로 선명하다.
      🔴 그리고 핀이 이 px 위에 찍히므로 **560×430 은 약속이다** — 바꾸면 핀이 전부 버려진다(cleanPins). */
-  function build(scene, opt) {
+  /* 🔵 **종이와 값 사이를 오가는 잣대는 여기 하나다** (2026-09-18) — 편집기가 «끈 자리»를
+     값으로 되돌리려면 같은 셈이 필요한데, 거기에 다시 적으면 창을 손보는 날 둘이 갈린다.
+     `build` 도 이것을 쓴다. `toPx` 는 `PX`·`PY` 와 같은 식이고 `toData` 는 그 역이다. */
+  function mapper(scene, opt) {
     var o = opt || {};
     var W = o.width || 560, H = o.height || 430;
     var pad = o.pad || { l: 38, r: 42, t: 30, b: 38 };
     var win = autoWindow(scene, { width: W, height: H, pad: pad });
     var xr = win.xRange, yr = win.yRange;
-    var cs = compileCurves(scene);
     var plotW = W - pad.l - pad.r, plotH = H - pad.t - pad.b;
+    return {
+      W: W, H: H, pad: pad, win: win, xRange: xr, yRange: yr, plotW: plotW, plotH: plotH,
+      toPx: function (x, y) {
+        return [pad.l + (x - xr[0]) / (xr[1] - xr[0]) * plotW,
+                pad.t + (yr[1] - y) / (yr[1] - yr[0]) * plotH];
+      },
+      toData: function (px, py) {
+        return [xr[0] + (px - pad.l) / plotW * (xr[1] - xr[0]),
+                yr[1] - (py - pad.t) / plotH * (yr[1] - yr[0])];
+      }
+    };
+  }
+
+  function build(scene, opt) {
+    var o = opt || {};
+    var M = mapper(scene, opt);
+    var W = M.W, H = M.H, pad = M.pad, win = M.win;
+    var xr = M.xRange, yr = M.yRange;
+    var cs = compileCurves(scene);
+    var plotW = M.plotW, plotH = M.plotH;
     var pins = cleanPins(scene.pins, W, H);
     var at = pins ? pins.at : {};
     var hid = (scene.hidden && typeof scene.hidden === 'object') ? scene.hidden : {};
@@ -826,6 +848,23 @@
         '" rx="4" fill="transparent" stroke="none" pointer-events="all"/>' + t + '</g>');
     });
 
+    /* 🔵 **선분 끝의 «손잡이»** (2026-09-18) — 편집 모드에서만 선다. 이름표 잡기 상자와 같은 어법이라
+       끌기도 같은 길(pointerdown → data-*)을 탄다.
+       ⚠ 맨 뒤에 넣는다 — 곡선·도형·이름표 위에 있어야 잡힌다.
+       ⚠ 숨긴 선분에는 안 세운다 — 안 보이는 것을 끌게 하면 «어디서 왔는지» 알 길이 없다.
+       ⚠ 보이는 동그라미(r=4)보다 «잡는 자리»(r=11)를 넓게 둔다 — 태블릿 손가락이 그만큼이다. */
+    if (o.edit) {
+      (scene.segments || []).forEach(function (s, i) {
+        if (!s.from || !s.to || hidden('seg:' + i)) return;
+        [['from', s.from], ['to', s.to]].forEach(function (e) {
+          var q = P2(e[1]);
+          out.push('<g data-seg="' + i + '" data-end="' + e[0] + '" data-x="' + n(q[0]) + '" data-y="' + n(q[1]) + '">' +
+            '<circle cx="' + n(q[0]) + '" cy="' + n(q[1]) + '" r="11" fill="transparent" stroke="none" pointer-events="all"/>' +
+            '<circle cx="' + n(q[0]) + '" cy="' + n(q[1]) + '" r="4.5" fill="#fff" stroke="currentColor" stroke-width="1.6"/></g>');
+        });
+      });
+    }
+
     out.push('</g></svg>');
     return { svg: out.join('\n'), labels: labels, size: [W, H], pinned: !!pins };
   }
@@ -897,6 +936,78 @@
     (scene.yTicks || []).forEach(function (v, i) { out.push({ id: 'ytick:' + i, name: 'y눈금 ' + fmt(v) }); });
     return out;
   }
+  /* ── 선분 고치기 (2026-09-18 · 사용자 — 「실선을 점선으로 바꾸고 선 한쪽 끝을 다른곳으로
+     옮기고 실선이나 점선을 추가하는 것도 가능할까?」) ────────────────────────────────
+     🔵 **셋 다 «장면»만 만진다** — 편집기는 SVG 를 안 건드린다는 규칙 그대로다.
+       그래서 저장하면 학생 화면에도 같은 그림이 나가고, 검산도 그대로 돈다.
+     ⚠ **배열에서 빼지 않는다** — `checks`·`pins`·`hidden` 이 번호로 가리키므로 빼면 다 밀린다.
+       지우고 싶으면 `setHidden`(숨기기)이 그 자리다. 더하는 것은 «맨 뒤»라 안 밀린다. */
+  var DASHABLE = { seg: 'segments', curve: 'curves', circle: 'circles' };
+  function dashTarget(scene, id) {
+    var m = /^(seg|curve|circle):(\d+)$/.exec(String(id || ''));
+    if (!m) return null;
+    var arr = scene[DASHABLE[m[1]]];
+    return (arr && arr[+m[2]]) ? arr[+m[2]] : null;
+  }
+  /* 실선 ↔ 점선. on 을 안 주면 뒤집는다. 바꿀 수 없는 것(점·다각형·눈금)이면 false. */
+  function setDash(scene, id, on) {
+    var el = dashTarget(scene, id);
+    if (!el) return false;
+    var v = (on === undefined) ? !el.dash : !!on;
+    if (v) el.dash = true; else delete el.dash;
+    return true;
+  }
+  function canDash(scene, id) { return !!dashTarget(scene, id); }
+
+  /* 선분 하나를 더한다 — 맨 뒤에 붙으므로 앞 번호는 그대로다. 새 id 를 돌려준다. */
+  function addSegment(scene, from, to, dash) {
+    scene.segments = scene.segments || [];
+    var s = { from: [+from[0], +from[1]], to: [+to[0], +to[1]] };
+    if (dash) s.dash = true;
+    scene.segments.push(s);
+    return 'seg:' + (scene.segments.length - 1);
+  }
+
+  /* 한쪽 끝만 옮긴다. which 는 'from' | 'to'. */
+  function moveSegEnd(scene, id, which, x, y) {
+    var m = /^seg:(\d+)$/.exec(String(id || ''));
+    if (!m) return false;
+    var s = (scene.segments || [])[+m[1]];
+    if (!s || (which !== 'from' && which !== 'to')) return false;
+    if (!isFinite(x) || !isFinite(y)) return false;
+    s[which] = [x, y];
+    return true;
+  }
+
+  /* 🔵 **자석** — 끈 자리가 «이미 있는 점» 가까이면 거기에 정확히 붙인다.
+     수학 그림에서 선 끝은 대개 점·꼭짓점 위다. 눈으로 맞추면 한두 px 이 늘 어긋난다.
+     ⚠ 자기 자신(끌고 있는 그 끝)은 후보에서 뺀다 — 안 그러면 제자리에 붙어 안 움직인다.
+     붙을 것이 없으면 0.5 눈금에 맞춘다(그래도 소수점이 지저분해지지 않게). */
+  function snapPoint(scene, x, y, opt, except) {
+    var o = opt || {};
+    var M = mapper(scene, o);
+    var near = (o.snapPx === undefined ? 10 : o.snapPx);
+    var grid = (o.grid === undefined ? 0.5 : o.grid);
+    var cands = [];
+    (scene.points || []).forEach(function (p, i) { if (p && isFinite(p.x) && isFinite(p.y)) cands.push([p.x, p.y, 'point:' + i]); });
+    (scene.segments || []).forEach(function (s, i) {
+      ['from', 'to'].forEach(function (w) {
+        if (s && s[w] && !(except && except.id === 'seg:' + i && except.which === w)) cands.push([s[w][0], s[w][1], 'seg:' + i + ':' + w]);
+      });
+    });
+    (scene.polygons || []).forEach(function (g, i) {
+      (g.pts || []).forEach(function (p, k) { cands.push([p[0], p[1], 'poly:' + i + ':' + k]); });
+    });
+    var here = M.toPx(x, y), best = null, bd = near;
+    cands.forEach(function (c) {
+      var q = M.toPx(c[0], c[1]), dd = Math.hypot(q[0] - here[0], q[1] - here[1]);
+      if (dd <= bd) { bd = dd; best = c; }
+    });
+    if (best) return { x: best[0], y: best[1], to: best[2] };
+    if (!(grid > 0)) return { x: x, y: y, to: null };
+    return { x: Math.round(x / grid) * grid, y: Math.round(y / grid) * grid, to: null };
+  }
+
   function setHidden(scene, id, on) {
     scene.hidden = scene.hidden || {};
     if (on) scene.hidden[id] = true; else delete scene.hidden[id];
@@ -1014,6 +1125,13 @@
     removeLabel: removeLabel,
     elements: elements,
     setHidden: setHidden,
+    /* 선분 고치기 (2026-09-18) — 셋 다 «장면»만 만진다 */
+    mapper: mapper,
+    setDash: setDash,
+    canDash: canDash,
+    addSegment: addSegment,
+    moveSegEnd: moveSegEnd,
+    snapPoint: snapPoint,
     hasShapes: hasShapes,
     labelBoxes: labelBoxes,
     overlaps: overlaps,

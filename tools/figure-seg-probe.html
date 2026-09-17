@@ -1,0 +1,129 @@
+<!doctype html><meta charset="utf-8"><title>figure-seg-probe</title>
+<!-- 선분 고치기 — 실선↔점선 · 한쪽 끝 옮기기 · 선 더하기 (2026-09-18).
+     사용자 —「실선을 점선으로 바꾸고 선 한쪽 끝을 다른곳으로 옮기고 실선이나 점선을 추가하는 것도 가능할까?」
+
+       node tools/serve.js
+       http://127.0.0.1:8777/tools/figure-seg-probe.html
+
+     figure-edit-probe 와 같은 길이다 — 실서비스를 iframe 에 띄우고 편집기 상자만 붙인 뒤
+     진짜 PointerEvent 로 끌어 본다. 실 DB 0줄.
+     ⚠ 이 안에서는 백틱을 쓰지 말 것 — 바깥 파일의 템플릿 문자열이라 거기서 끊긴다. -->
+<style>html,body{margin:0;background:#fff}iframe{border:0;display:block}
+pre{font:12px monospace;color:#333;margin:0;padding:4px;white-space:pre-wrap;}</style>
+<pre id="o">…</pre>
+<script>
+const fr = document.createElement('iframe');
+fr.width = 760; fr.height = 900; fr.src = '/index.html';
+document.body.appendChild(fr);
+const o = document.getElementById('o');
+let n = 0;
+const t = setInterval(async () => {
+  n++;
+  let ready = false;
+  try { ready = fr.contentWindow.eval('typeof figureDraftHTML==="function" && typeof Figure!=="undefined" && typeof render==="function"'); } catch (_) {}
+  if (!ready) { if (n > 220) { clearInterval(t); o.textContent = 'RESULT timeout'; } return; }
+  clearInterval(t);
+  const w = fr.contentWindow;
+  let out;
+  try { out = await w.eval(`(async function(){
+    const R = {};
+    /* 선분 둘 · 점 하나(자석 과녁) — 값은 일부러 정수다 */
+    const SCENE = { kind:'graph',
+      points:[{x:6,y:4,dot:true,label:'Q'}],
+      segments:[{from:[0,0],to:[4,0],label:'AB'},{from:[0,0],to:[0,3],dash:true}],
+      xTicks:[2,4,6], yTicks:[3], axis:{xLabel:'x',yLabel:'y',origin:'O'} };
+    state.currentUser={type:'teacher'}; state.view='teacher'; state.teacherTab='settings';
+    const b={id:'probe',hasImage:false,variantNeedsFigure:true};
+    state.figureDraft={bankId:'probe',scene:SCENE,svg:Figure.renderScene(SCENE),ok:true,failures:[]};
+    const _r=render;
+    render=function(){ _r(); const h=document.createElement('div'); h.className='app'; h.id='probe';
+      h.style.cssText='max-width:600px;margin:12px auto;'; h.innerHTML=figureDraftHTML(b);
+      document.getElementById('app').prepend(h); figEditMark(); };
+    render();
+
+    const svg = () => document.querySelector('#probe .fig-edit svg');
+    const handle = (i,end) => document.querySelector('#probe .fig-edit g[data-seg="'+i+'"][data-end="'+end+'"]');
+    const tools = () => document.querySelector('#probe .fig-hide').textContent;
+    const ev = (type,x,y,target) => target.dispatchEvent(new PointerEvent(type,{clientX:x,clientY:y,bubbles:true,cancelable:true,pointerId:1,isPrimary:true}));
+
+    /* ── ① 손잡이가 선다 ── */
+    R.손잡이수 = document.querySelectorAll('#probe .fig-edit g[data-seg]').length;   // 선분 2 × 끝 2 = 4
+    R.숨긴것엔없다 = (()=>{ Figure.setHidden(state.figureDraft.scene,'seg:1',true);
+      state.figureDraft.svg=Figure.renderScene(state.figureDraft.scene); render();
+      const k = document.querySelectorAll('#probe .fig-edit g[data-seg]').length;
+      Figure.setHidden(state.figureDraft.scene,'seg:1',false);
+      state.figureDraft.svg=Figure.renderScene(state.figureDraft.scene); render();
+      return k; })();
+
+    /* ── ② 한쪽 끝을 끌어 옮긴다 — 점 Q(6,4) 가까이로 → 자석이 정확히 붙여야 한다 ── */
+    const M = Figure.mapper(state.figureDraft.scene, {edit:true});
+    const ctm = svg().getScreenCTM();
+    const 화면 = (vx,vy) => { const p=M.toPx(vx,vy); const s=svg().getBoundingClientRect();
+      return [s.left + p[0]*ctm.a, s.top + p[1]*ctm.d]; };
+    {
+      const h = handle(0,'to');
+      const from = 화면(4,0);
+      const 과녁 = 화면(6.06, 3.93);         // Q(6,4) 에서 살짝 빗나간 자리
+      ev('pointerdown', from[0], from[1], h);
+      ev('pointermove', 과녁[0], 과녁[1], document.body);
+      ev('pointerup',   과녁[0], 과녁[1], document.body);
+      R.끈뒤 = state.figureDraft.scene.segments[0].to;
+      R.자석이붙었다 = JSON.stringify(state.figureDraft.scene.segments[0].to) === JSON.stringify([6,4]);
+      R.반대쪽은그대로 = JSON.stringify(state.figureDraft.scene.segments[0].from) === JSON.stringify([0,0]);
+      R.끈뒤고른것 = state.figureElSel;
+    }
+
+    /* ── ③ 실선 ↔ 점선 ── */
+    {
+      state.figureElSel = 'seg:0'; render();
+      R.점선단추 = /점선으로/.test(tools());
+      figEditDash('seg:0');
+      R.점선됐다 = state.figureDraft.scene.segments[0].dash === true;
+      R.단추가바뀐다 = /실선으로/.test(tools());
+      figEditDash('seg:0');
+      R.되돌아온다 = !state.figureDraft.scene.segments[0].dash;
+      /* 점·눈금에는 «점선»이 없다 — 단추가 아예 안 서야 한다 */
+      state.figureElSel = 'point:0'; render();
+      R.점에는단추없다 = !/점선으로|실선으로/.test(tools());
+    }
+
+    /* ── ④ 선 더하기 ── */
+    {
+      const 전 = state.figureDraft.scene.segments.length;
+      figEditAddSeg(false);
+      figEditAddSeg(true);
+      const segs = state.figureDraft.scene.segments;
+      R.늘었다 = segs.length - 전;
+      R.더한것 = [ !!segs[전].dash, !!segs[전+1].dash ];      // [실선=false, 점선=true]
+      R.앞번호그대로 = JSON.stringify(segs[0].to) === JSON.stringify([6,4]);
+      R.새것이골라졌다 = state.figureElSel === 'seg:' + (segs.length-1);
+      R.창안에있다 = (Figure.verifyScene(state.figureDraft.scene).failures||[])
+        .filter(f=>/선분/.test(f.msg||'')).length;
+      R.손잡이도늘었다 = document.querySelectorAll('#probe .fig-edit g[data-seg]').length;
+    }
+
+    /* ── ⑤ 더한 선분도 끌린다 (새로 그린 손잡이가 살아 있는가) ── */
+    {
+      const i = state.figureDraft.scene.segments.length - 1;
+      const M2 = Figure.mapper(state.figureDraft.scene, {edit:true});
+      const s2 = svg().getBoundingClientRect(), c2 = svg().getScreenCTM();
+      const 화면2 = (vx,vy) => { const p=M2.toPx(vx,vy); return [s2.left+p[0]*c2.a, s2.top+p[1]*c2.d]; };
+      const 앞 = state.figureDraft.scene.segments[i].from.slice();
+      const h = handle(i,'from');
+      R.새선분손잡이 = !!h;
+      if(h){
+        const a = 화면2(앞[0], 앞[1]), t2 = 화면2(앞[0]+1.23, 앞[1]+0.77);
+        ev('pointerdown', a[0], a[1], h);
+        ev('pointermove', t2[0], t2[1], document.body);
+        ev('pointerup',   t2[0], t2[1], document.body);
+        const 뒤 = state.figureDraft.scene.segments[i].from;
+        R.새선분이끌렸다 = JSON.stringify(뒤) !== JSON.stringify(앞);
+        R.반칸눈금에붙는다 = (Math.round(뒤[0]*2)===뒤[0]*2) && (Math.round(뒤[1]*2)===뒤[1]*2);
+      }
+    }
+    R.그림은그대로선다 = !!svg() && document.querySelectorAll('#probe .fig-edit path').length > 5;
+    return R;
+  })()`); } catch (e) { out = { 터짐: String(e && e.message || e) }; }
+  o.textContent = 'RESULT ' + JSON.stringify(out, null, 1);
+}, 100);
+</script>
