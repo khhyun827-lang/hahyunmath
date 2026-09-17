@@ -119,9 +119,18 @@ console.log(NL + '── 🔴 그리고 «화면»으로도 돌아와야 한다 
   /* ① 저장했는데도 「안 넣은 변경」이 남으면, 단계를 옮길 때마다 또 저장하고 토스트가 또 뜬다. */
   봄('① 저장 뒤 「안 넣은 변경」이 0 이 된다', F.sessionUnsavedCount(CID, DATE), 0);
   봄('🔴 기록 없던 학생도 allRecords 에 얹힌다', !!state.allRecords.new1, true);
-  /* ② 지난 수업 확인·수업 기록이 보는 값. */
-  봄('② 요약이 둘 다 «입력됨»으로 센다', F.sessionSavedSummary(CID, DATE),
-     { total:2, filled:2, cnt:{ 출석:1, 지각:1 } });
+  /* ② 지난 수업 확인·수업 기록이 보는 값.
+     ⚠ **통째로 견주지 않는다** (2026-09-17) — 예전에는 요약 객체 전체를 맞대 놓아서,
+       「지난 수업 확인에 이름도 적어 달라」고 `who` 를 하나 더 얹은 날 이 줄이 넘어졌다.
+       세는 것이 틀린 것이 아니었는데 검사가 넘어지면, 다음 사람은 **검사를 의심하기 전에
+       고침을 의심한다.** 이 줄이 재려던 것은 «둘 다 입력됨으로 세는가» 그 하나다. */
+  {
+    const sm = F.sessionSavedSummary(CID, DATE);
+    봄('② 요약이 둘 다 «입력됨»으로 센다', { total:sm.total, filled:sm.filled, cnt:sm.cnt },
+       { total:2, filled:2, cnt:{ 출석:1, 지각:1 } });
+    /* 그 김에 «누가» 도 들고 오는지 재 둔다 — 지난 수업 확인이 이름을 이것으로 적는다. */
+    봄('② 요약이 «누가» 까지 들고 온다', (sm.who && sm.who['지각'] || []).map(p=>p.name), ['새내기']);
+  }
   /* ③ 반·날짜를 옮겼다 돌아온 것과 같은 일 — 여기가 「초기화」의 자리다. */
   state.attDraftKey = null;
   F.ensureAttDraft(CID, DATE);

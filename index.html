@@ -17781,13 +17781,21 @@ function sessionsOn(date){
    왼쪽 목록은 «이 수업 끝냈나»를 말해야 하므로 아직 저장 안 한 것을 완료로 세면 거짓말이 된다. */
 function sessionSavedSummary(classId, date){
   const roster = classRoster(classId);
-  const cnt = {}; let filled = 0;
+  /* 🔵 **누가 그랬는지도 함께 들고 온다** (2026-09-17 · 사용자가 시켰다 —
+       「결석이나 지각생에 대해 이름도 적어줬으면 좋겠어」).
+     세는 것과 같은 한 바퀴에서 담는다 — 이름을 쓰겠다고 명단을 한 번 더 돌면
+     날짜 목록이 반 수만큼 이 함수를 부르는 자리(왼쪽 수업 목록)에서 그만큼 비싸진다.
+     ⚠ «저장된 것»만 담는다 — 이 함수의 뜻이 원래 그것이다(초안은 sessionDraftSummary). */
+  const cnt = {}, who = {}; let filled = 0;
   roster.forEach(s=>{
     const rec = state.allRecords[s.studentId];
     const a = attOn(rec, date, classId, studentMainClassId(s));
-    if(a){ filled++; cnt[a.status] = (cnt[a.status]||0) + 1; }
+    if(a){
+      filled++; cnt[a.status] = (cnt[a.status]||0) + 1;
+      (who[a.status] || (who[a.status] = [])).push({ name: s.name || '', reason: (a.reason || '').trim() });
+    }
   });
-  return { total: roster.length, filled, cnt };
+  return { total: roster.length, filled, cnt, who };
 }
 function sessionDraftSummary(classId){
   const roster = classRoster(classId);
@@ -18280,6 +18288,28 @@ function sessionDateNavHTML(date){
   </div>`;
 }
 
+/* 「누가」 빠졌는지 — 숫자만으로는 되짚을 수가 없다 (2026-09-17 · 사용자가 시켰다).
+   「결석이나 지각생에 대해 이름도 적어줬으면 좋겠어」.
+   🔴 **출석은 안 적는다** — 이 줄의 뜻은 «챙길 사람»이다. 전원 출석이면 줄이 통째로 없다.
+     여덟 명 이름을 늘어놓는 순간 정작 결석 하나가 그 속에 묻힌다.
+   ⚠ **조퇴도 같이 적는다** — 「결석이나 지각」과 같은 자리의 말이다. 셋 중 하나만 빼면
+     그 학생만 화면에서 사라져 «없었던 일»이 된다.
+   ⚠ 사유는 «적어 둔 것이 있을 때만» 괄호로 붙인다 — 빈 괄호는 「사유를 안 적었다」가 아니라
+     「사유가 없다」로 읽힌다. */
+function attMissRowsHTML(sm){
+  const 줄 = ATT_STATUSES.filter(st => st !== '출석' && ((sm.who && sm.who[st]) || []).length);
+  if(!줄.length) return '';
+  return `<div style="margin-top:11px;display:flex;flex-direction:column;gap:7px;">${줄.map(st=>{
+    const cls = (SESSION_SEG.find(g=>g[0]===st) || [])[1] || '';
+    return `<div style="display:flex;gap:8px;align-items:flex-start;font-size:12.5px;line-height:1.75;">
+      <span class="badge ${cls}" style="flex:none;margin-top:2px;">${st}</span>
+      <span style="color:var(--ink);">${sm.who[st].map(p=>
+        escHtml(p.name) + (p.reason ? `<span style="color:var(--dim);font-weight:400;"> (${escHtml(p.reason)})</span>` : '')
+      ).join('<span style="color:var(--dim);"> · </span>')}</span>
+    </div>`;
+  }).join('')}</div>`;
+}
+
 /* ── 0단계. 지난 수업 확인 — 「저번에 어디까지 했더라」를 화면이 대신 기억한다 ── */
 function sessionPrevHTML(classId, date){
   const cls = DATA.classes.find(c=>c.id===classId);
@@ -18309,6 +18339,7 @@ function sessionPrevHTML(classId, date){
     <div class="n" style="margin-bottom:9px;">출결</div>
     <div style="font-size:12.5px;color:var(--sub);">${sm.filled === 0 ? '기록이 없습니다.'
       : `${sm.total}명 중 ${sm.filled}명 입력 · ` + ATT_STATUSES.filter(s=>sm.cnt[s]).map(s=>`${s} <b class="mono">${sm.cnt[s]}</b>`).join(' · ')}</div>
+    ${attMissRowsHTML(sm)}
   </div>
   <div class="cls-hw" style="display:block;">
     <div class="n" style="margin-bottom:9px;">그날 낸 과제</div>
