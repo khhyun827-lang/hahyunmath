@@ -171,6 +171,63 @@ console.log(NL + '⑤ 그림에 그대로 나온다' + NL);
   })(), 2);
 }
 
+console.log(NL + '⑥ 누르면 골라진다 — 잡기 층' + NL);
+{
+  /* 🔴 사용자 — 「선분7 이런게 어떤선분을 말하는지 모르겠어. 결국 빼봐야 알수있기도하고
+     그러니까 선을 선택하면 선분5 이렇게 자동으로 바꼈으면 좋겠고」.
+     고르개의 이름만으로는 그림의 어느 것인지 알 길이 없었다 — 숨겨 봐야 알았다. */
+  const s = {
+    kind: 'graph',
+    curves: [{ expr: '0.3*x+2' }],
+    segments: [{ from: [0, 0], to: [3, 1] }, { from: [4, 6], to: [4, 0], dash: true }],
+    polygons: [{ pts: [[0, 0], [2, 0], [2, 1]] }],
+    circles: [{ c: [5, 1], r: 1 }],
+    points: [{ x: 0, y: 2, label: 'D', dot: true }],
+    axis: {}
+  };
+  const 편집 = F.renderScene(s, { edit: true });
+  const 학생 = F.renderScene(s);
+  const 잡힌것 = [...편집.matchAll(/data-el="([^"]+)"/g)].map(m => m[1]);
+  봄('선·도형·점이 모두 잡힌다',
+    ['curve:0', 'seg:0', 'seg:1', 'poly:0', 'circle:0', 'point:0'].map(id => 잡힌것.indexOf(id) >= 0),
+    [true, true, true, true, true, true]);
+  봄('🔴 학생 화면에는 잡기 층이 없다', /data-el=/.test(학생), false);
+  /* ⚠ 속이 아니라 «테두리»만 잡힌다 — 큰 도형이 제 속의 점·선을 통째로 덮으면 아무것도 못 고른다. */
+  봄('🔴 다각형·원은 «테두리»만 잡는다 (속은 비켜 준다)',
+    (편집.match(/pointer-events="stroke"/g) || []).length >= 4, true);
+  봄('   점은 통째로 잡는다 (동그라미라 테두리만이면 못 누른다)',
+    /data-el="point:0"[\s\S]{0,160}?pointer-events="all"/.test(편집), true);
+  봄('잡는 폭이 실제 선보다 굵다 (2px 선을 손가락으로 짚어야 한다)',
+    /stroke-width="14"/.test(편집), true);
+  /* 숨긴 것에는 잡기 층도 없다 — 안 보이는 것을 고르면 「어디 있지」가 된다. */
+  봄('🔴 숨긴 것에는 잡기 층이 없다', (() => {
+    const t = JSON.parse(JSON.stringify(s)); F.setHidden(t, 'seg:1', true);
+    return /data-el="seg:1"/.test(F.renderScene(t, { edit: true }));
+  })(), false);
+  /* 손잡이는 색으로 갈린다 — 도형 꼭짓점에 찍은 점과 헷갈리지 않게 */
+  봄('손잡이에 제 이름표(class)가 있다 — 색을 따로 입힌다', /class="fig-handle"/.test(편집), true);
+  봄('🔴 손잡이는 흰 동그라미에 검은 테두리가 아니다 (점과 헷갈리던 그 꼴)',
+    /class="fig-handle"[^>]*fill="#fff"/.test(편집), false);
+}
+
+console.log(NL + '⑦ 점(동그라미)도 뺄 수 있다' + NL);
+{
+  /* 사용자 — 「도형위에 점을 표현하기위에 점을 동그라미로 넣었는데 그것도 뺄 수 있게해줘」.
+     🔵 숨기는 길은 예전부터 있었다 — 없던 것은 «어느 것이 점 3인지 아는 길»이었다(⑥이 그것이다). */
+  const s = { kind: 'graph', polygons: [{ pts: [[0, 0], [4, 0], [4, 3]] }],
+    points: [{ x: 4, y: 3, label: 'B', dot: true }, { x: 0, y: 0, label: 'A', dot: true }], axis: {} };
+  const 점갯수 = svg => (svg.match(/<circle [^>]*r="4"[^>]*fill="currentColor"/g) || []).length;
+  봄('점 둘이 그려진다', 점갯수(F.renderScene(s)), 2);
+  F.setHidden(s, 'point:0', true);
+  봄('🔴 숨기면 동그라미가 사라진다', 점갯수(F.renderScene(s)), 1);
+  봄('   이름표도 같이 간다 (점을 통째로 숨긴 것이다)', /<text[^>]*>[\s\S]*?B[\s\S]*?<\/text>/.test(F.renderScene(s)), false);
+  봄('   되살릴 수 있다', (() => { F.setHidden(s, 'point:0', false); return 점갯수(F.renderScene(s)); })(), 2);
+  /* ⚠ 「동그라미만 빼고 이름표는 남기기」는 이름표 빼기가 아니라 «점 숨기기»의 반대다 —
+     그 자리는 `dot:false` 이고 편집기에는 아직 길이 없다. 남은 것으로 적어 둔다. */
+  봄('점만 숨겨도 다각형은 그대로다',
+    (F.renderScene(s).match(/stroke-width="2"/g) || []).length > 0, true);
+}
+
 console.log(NL + '🪤 덫 — 옛 판으로 돌려 본다' + NL);
 let 덫물림 = 0;
 {

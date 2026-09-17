@@ -1216,6 +1216,18 @@
 .app .fig-edit g.sel text{fill:var(--accent);}
 .app .fig-edit g.hit text{fill:var(--no);}
 .app .fig-edit g.hit.sel text{fill:var(--accent);}
+/* 🔵 **만질 수 있는 것은 «파랑»이다** (2026-09-18 저녁).
+   🔴 처음에는 강조색(`--accent` = 차콜 #3F3537)으로 두었는데, **그림의 먹색과 같은 집안**이라
+     손잡이가 «도형 꼭짓점에 찍은 점»으로 읽혔다(사용자가 그 둘을 같은 것으로 보고 물었다).
+   🔵 그림에는 파랑이 없다 — 색 하나로 «만지는 것»과 «그려진 것»이 갈린다.
+     ⚠ 이 색은 편집 모드에만 산다. 학생 화면에는 잡기 층도 손잡이도 안 나간다. */
+.app .fig-edit circle.fig-handle{fill:var(--paper);stroke:var(--blue);cursor:grab;}
+.app .fig-edit g[data-seg]:hover circle.fig-handle{fill:var(--blue);}
+/* 🔵 **누르면 골라진다** (사용자 — 「선분7 이런게 어떤선분을 말하는지 모르겠어」).
+   잡기 층은 투명하다 — 고른 것만 파랗게 겹쳐 보여 «이것이 선분 7이다»를 눈으로 잇는다. */
+.app .fig-edit g.fig-hit{cursor:pointer;}
+.app .fig-edit g.fig-hit.on path,.app .fig-edit g.fig-hit.on circle{stroke:var(--blue);opacity:.38;}
+.app .fig-edit g.fig-hit.on circle[fill="transparent"]{fill:var(--blue);opacity:.28;}
 .app .fig-tools{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:8px;font-size:11.5px;color:var(--sub);}
 .app .fig-tools input{border:1px solid var(--line);border-radius:var(--r-sm);padding:4px 8px;font-size:12px;
   font-family:'Noto Serif','Noto Serif KR',serif;width:150px;background:var(--paper);color:var(--ink);}
@@ -4004,7 +4016,7 @@
      index.html 과 따로 받아지므로 물음표 뒤가 그대로면 브라우저가 옛 파일을 그냥 쓴다.
      ⚠ 그래서 09-15에 고친 «축 길이»가 사용자 브라우저에 며칠째 안 닿았을 수 있다
        (사용자 — 「수정했던것 같은데 … 이번에도 그림에서 축이 또 길게 나와서」). -->
-<script src="figure.js?v=2026-09-18c"></script>
+<script src="figure.js?v=2026-09-18d"></script>
 <!-- hwpx 문항 파서. 아래 인라인 스크립트가 전역으로 쓰므로 «그 앞»에 있어야 한다.
      도구(tools/hwpx-node.mjs)도 같은 파일을 읽는다 — 규칙을 두 벌로 두지 않는다. -->
 <!-- 🔴 **hwpx.js 를 고치면 `?v=` 도 같이 올릴 것** (2026-09-04에 하마터면 놓칠 뻔했다).
@@ -25730,7 +25742,17 @@ document.addEventListener('pointerdown', e => {
      눈에 보이는 차례와 잡히는 차례가 같아야 한다. 끄는 길은 둘이 같다(px 로 끌고 놓을 때 값으로). */
   const h = e.target.closest('.fig-edit g[data-seg]');
   const g = h || e.target.closest('.fig-edit g[data-lbl]');
-  if(!g) return;
+  if(!g){
+    /* 🔵 **그림에서 눌러 고른다** (2026-09-18 · 사용자 — 「선분7 이런게 어떤선분을 말하는지
+       모르겠어 … 선을 선택하면 선분5 이렇게 자동으로 바꼈으면」). 끄는 것이 아니라 «고르는» 것이라
+       여기서 끝낸다 — 고르개가 그 이름으로 바뀌고 그림에는 강조색이 얹힌다. */
+    const el = e.target.closest('.fig-edit g[data-el]');
+    if(el){
+      const d0 = figEditDraft();
+      if(d0){ state.figureElSel = el.dataset.el; render(); e.preventDefault(); }
+    }
+    return;
+  }
   const svg = g.ownerSVGElement;
   const p = figSvgPoint(svg, e);
   FIG_EDIT.drag = { id: h ? ('seg:' + h.dataset.seg) : g.dataset.lbl, end: h ? h.dataset.end : null,
@@ -25844,6 +25866,12 @@ function figEditorHTML(d){
   const sel = labels.find(l => l.id === state.figureSel) || null;
   let svg = Figure.renderScene(d.scene, { edit:true });
   if(sel) svg = svg.replace(`<g data-lbl="${escHtml(sel.id)}"`, `<g class="sel" data-lbl="${escHtml(sel.id)}"`);
+  /* 고른 요소를 그림에서도 짚어 준다 — 고르개의 「선분 7」과 그림의 그 선이 같은 것임을 눈으로 잇는다.
+     ⚠ 곡선은 토막이 여럿이라 «전부» 칠한다(replaceAll). 그래서 split/join 으로 갈아 끼운다. */
+  if(state.figureElSel){
+    const 표 = `<g data-el="${escHtml(state.figureElSel)}" class="fig-hit">`;
+    svg = svg.split(표).join(`<g data-el="${escHtml(state.figureElSel)}" class="fig-hit on">`);
+  }
   const pinned = !!(d.scene.pins && Object.keys(d.scene.pins.at || {}).length);
   return `<div class="pb-svg fig-edit">${svg}</div>
     <div class="fig-tools">

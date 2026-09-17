@@ -53,7 +53,12 @@ console.log('② 핀 — 있으면 그 자리, 없으면 자동');
   const back = F.layoutLabels(sc).find(l => l.id === 'curve:0');
   ok(back.x === c0.home.x && back.y === c0.home.y, '핀을 빼면 집으로 돌아간다');
   const svg = F.renderScene(sc, { edit: true });
-  ok((svg.match(/<g data-lbl=/g) || []).length === 10 && (svg.match(/pointer-events="all"/g) || []).length === 10, '편집 모드 — 잡기 상자 10개');
+  /* ⚠ **`pointer-events="all"` 을 통째로 세면 안 된다** (2026-09-18에 밟았다) —
+     그 뒤로 «점 잡기 층»이 같은 표를 쓰게 되면서 수가 늘어 이 줄이 넘어졌다.
+     재려던 것은 «이름표 잡기 상자»라 **`data-lbl` 묶음 안의 것만** 센다. */
+  const 잡기상자 = (svg.match(/<g data-lbl=[\s\S]*?<\/g>/g) || [])
+    .filter(g => /pointer-events="all"/.test(g)).length;
+  ok((svg.match(/<g data-lbl=/g) || []).length === 10 && 잡기상자 === 10, '편집 모드 — 잡기 상자 10개');
   ok(!/data-lbl/.test(F.renderScene(sc)), '저장용에는 잡기 상자가 없다');
 }
 

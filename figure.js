@@ -848,6 +848,50 @@
         '" rx="4" fill="transparent" stroke="none" pointer-events="all"/>' + t + '</g>');
     });
 
+    /* 🔵 **잡기 층** (2026-09-18 저녁 · 사용자 — 「선분7 이런게 어떤선분을 말하는지 모르겠어.
+       결국 빼봐야 알수있기도하고 그러니까 선을 선택하면 선분5 이렇게 자동으로 바꼈으면 좋겠고」).
+       고르개의 «선분 7»은 그림의 어느 선인지 말해 주지 않는다 — **숨겨 봐야** 알았다.
+       🔵 그래서 그림 위에 **투명하고 굵은 덧선**을 깐다. 누르면 그 요소가 골라진다.
+       ⚠ 굵기 14 는 «잡히는 폭»이다 — 실제 선은 2px 이라 그대로는 손가락으로 못 짚는다.
+       ⚠ `pointer-events="stroke"` — 다각형·원 속이 아니라 **테두리**만 잡힌다. 안 그러면
+         큰 도형이 제 속의 점·선을 통째로 덮어 아무것도 못 고른다.
+       ⚠ 손잡이보다 «먼저» 깐다 — 끝을 끄는 것이 고르는 것보다 위에 있어야 한다. */
+    if (o.edit) {
+      var hit = function (id, body) { out.push('<g data-el="' + esc(id) + '" class="fig-hit">' + body + '</g>'); };
+      drawn.forEach(function (dc) {
+        dc.segs.forEach(function (sg) {
+          hit('curve:' + dc.c.i, '<path d="' + sg.d + '" stroke="transparent" stroke-width="14" fill="none" pointer-events="stroke"/>');
+        });
+      });
+      (scene.segments || []).forEach(function (s, i) {
+        if (!s.from || !s.to || hidden('seg:' + i)) return;
+        var a = P2(s.from), b = P2(s.to);
+        hit('seg:' + i, '<path d="M' + n(a[0]) + ' ' + n(a[1]) + 'L' + n(b[0]) + ' ' + n(b[1]) +
+          '" stroke="transparent" stroke-width="14" fill="none" pointer-events="stroke"/>');
+      });
+      (scene.polygons || []).forEach(function (g, i) {
+        var ps = (g.pts || []).map(P2);
+        if (ps.length < 3 || hidden('poly:' + i)) return;
+        hit('poly:' + i, '<path d="M' + ps.map(function (p) { return n(p[0]) + ' ' + n(p[1]); }).join('L') +
+          'Z" stroke="transparent" stroke-width="14" fill="none" pointer-events="stroke"/>');
+      });
+      (scene.circles || []).forEach(function (c, i) {
+        if (!c.c || !(c.r > 0) || hidden('circle:' + i)) return;
+        var cc = P2(c.c), rpx = c.r * plotW / (xr[1] - xr[0]);
+        hit('circle:' + i, '<circle cx="' + n(cc[0]) + '" cy="' + n(cc[1]) + '" r="' + n(rpx) +
+          '" stroke="transparent" stroke-width="14" fill="none" pointer-events="stroke"/>');
+      });
+      /* 🔵 **점(동그라미)도 누르면 골라진다** (사용자 — 「도형위에 점을 표현하기위에 점을
+         동그라미로 넣었는데 그것도 뺄 수 있게해줘」). 숨기는 길은 예전부터 있었는데,
+         **어느 것이 «점 3»인지 알 길이 없어** 쓸 수가 없었다. 누르면 그것이 골라진다. */
+      (scene.points || []).forEach(function (pt, i) {
+        var y0 = pointY(pt, cs);
+        if (!isFinite(y0) || hidden('point:' + i)) return;
+        var q = [PX(pt.x), PY(y0)];
+        hit('point:' + i, '<circle cx="' + n(q[0]) + '" cy="' + n(q[1]) + '" r="11" fill="transparent" stroke="none" pointer-events="all"/>');
+      });
+    }
+
     /* 🔵 **선분 끝의 «손잡이»** (2026-09-18) — 편집 모드에서만 선다. 이름표 잡기 상자와 같은 어법이라
        끌기도 같은 길(pointerdown → data-*)을 탄다.
        ⚠ 맨 뒤에 넣는다 — 곡선·도형·이름표 위에 있어야 잡힌다.
@@ -860,7 +904,10 @@
           var q = P2(e[1]);
           out.push('<g data-seg="' + i + '" data-end="' + e[0] + '" data-x="' + n(q[0]) + '" data-y="' + n(q[1]) + '">' +
             '<circle cx="' + n(q[0]) + '" cy="' + n(q[1]) + '" r="11" fill="transparent" stroke="none" pointer-events="all"/>' +
-            '<circle cx="' + n(q[0]) + '" cy="' + n(q[1]) + '" r="4.5" fill="#fff" stroke="currentColor" stroke-width="1.6"/></g>');
+            /* ⚠ **손잡이는 «그림의 점»과 달라 보여야 한다** (2026-09-18 저녁) — 흰 동그라미에
+               검은 테두리로 두었더니 도형 꼭짓점에 찍은 점과 구별이 안 됐다. 색으로 가른다
+               (`.fig-handle` — index.html 이 강조색을 입힌다). 그림에는 그 색이 없다. */
+            '<circle class="fig-handle" cx="' + n(q[0]) + '" cy="' + n(q[1]) + '" r="4.5" stroke-width="1.6"/></g>');
         });
       });
     }
