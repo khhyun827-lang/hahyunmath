@@ -609,16 +609,40 @@
          축선까지 창 끝까지 그으면 도형 양옆이 빈 축으로 가득 찬다. 창은 그대로 두고(비율 약속) **선만 짧게** —
          내용 끝에서 30px 남기고 화살촉을 단다. ⚠ 곡선이 보이면 예전처럼 창 끝까지 — 곡선은 창 끝까지 그려지므로
          축이 곡선보다 짧으면 잘린 것처럼 읽힌다. */
+    /* 🔴 **곡선이 있어도 짧게 긋는다** (2026-09-18 · 사용자 — 「이번에도 그림에서 축이 또 길게 나와서」).
+       09-15 에 고친 것은 «곡선이 없는» 그림뿐이었다. 그때 곡선을 뺀 까닭은 「곡선은 창 끝까지
+       그려지니 축이 그보다 짧으면 잘린 것처럼 읽힌다」였는데, **그 전제가 틀렸다** — 곡선은
+       제 `domain` 과 창의 겹치는 데까지만 그려지고, 위아래로는 창 밖으로 나가면 거기서 끊긴다.
+       그러니 «창 끝»이 아니라 **«곡선이 실제로 그려진 끝»**에 맞추면 된다. 둘을 합쳐 잰다.
+     ⚠ 그래서 곡선을 **여기서 미리 뜬다** — 그리는 것은 여전히 도형 뒤(아래 `drawn`)다.
+       두 번 뜨면 값이 갈릴 수 있어 한 번 떠서 들고 간다.
+     ⚠ 네 쪽의 여백이 다른 것은 «거기 무엇이 붙는가»가 달라서다 — 오른쪽은 화살촉과 x 이름표(46),
+       위는 y 이름표(36), 왼쪽 30 · 아래 26 은 숨 쉴 자리다. */
     var axis = (scene.axis || {});
-    var hasCurve = cs.some(function (c) { return c.fn && !hidden('curve:' + c.i); });
     var ct = win.content || { x0: xr[0], x1: xr[1], y0: yr[0], y1: yr[1] };
+    var drawn = [];
+    cs.forEach(function (c) {
+      if (!c.fn || hidden('curve:' + c.i)) return;
+      var d = c.def.domain || xr;
+      var a = Math.max(d[0], xr[0]), b = Math.min(d[1], xr[1]);
+      drawn.push({ c: c, segs: sample(c.fn, a, b, xr, yr, PX, PY, plotW) });
+    });
+    var cx0 = Infinity, cx1 = -Infinity, cy0 = Infinity, cy1 = -Infinity;
+    drawn.forEach(function (dc) {
+      dc.segs.forEach(function (s) {
+        s.pts.forEach(function (p) {
+          if (p[0] < cx0) cx0 = p[0]; if (p[0] > cx1) cx1 = p[0];
+          if (p[1] < cy0) cy0 = p[1]; if (p[1] > cy1) cy1 = p[1];
+        });
+      });
+    });
     var axL = pad.l - 6, axR = W - pad.r + 12, axT = pad.t - 12, axB = H - pad.b + 6;
-    if (!hasCurve) {
-      axL = clamp(Math.min(ox, PX(ct.x0)) - 30, axL, axR);
-      axR = clamp(Math.max(ox, PX(ct.x1)) + 46, axL, axR);
-      axT = clamp(Math.min(oy, PY(ct.y1)) - 36, axT, axB);
-      axB = clamp(Math.max(oy, PY(ct.y0)) + 26, axT, axB);
-    }
+    var lo = function (a, b) { return isFinite(b) ? Math.min(a, b) : a; };
+    var hi = function (a, b) { return isFinite(b) ? Math.max(a, b) : a; };
+    axL = clamp(lo(Math.min(ox, PX(ct.x0)), cx0) - 30, axL, axR);
+    axR = clamp(hi(Math.max(ox, PX(ct.x1)), cx1) + 46, axL, axR);
+    axT = clamp(lo(Math.min(oy, PY(ct.y1)), cy0) - 36, axT, axB);
+    axB = clamp(hi(Math.max(oy, PY(ct.y0)), cy1) + 26, axT, axB);
     out.push('<path d="M' + n(axL) + ' ' + n(oy) + 'H' + n(axR) + '"/>');
     out.push('<path d="M' + n(axR) + ' ' + n(oy) + 'l-9 -5v10z" fill="currentColor" stroke="none"/>');
     out.push('<path d="M' + n(ox) + ' ' + n(axB) + 'V' + n(axT) + '"/>');
@@ -627,18 +651,20 @@
     if (axis.yLabel !== null) lab('axis:y', ox + 10, axT - 2, axis.yLabel || 'y', 'start', null, true);
     if (axis.origin !== null) lab('axis:origin', ox - 8, oy + 20, axis.origin || 'O', 'end', null, true);
 
-    /* 눈금 — 숫자는 «값»이라 글자를 못 고친다 (editable:false) */
+    /* 눈금 — 숫자는 «값»이라 글자를 못 고친다 (editable:false)
+       🔵 **축을 가로지르는 «작대기»는 안 긋는다** (2026-09-18 · 사용자 — 「축에 좌표를 표현할 때
+         축에 수직인 선분을 그려넣는데 그거 안그리도록 할 수 있어?」). 숫자가 축 바로 밑(옆)에
+         붙어 있으면 «어느 자리»인지는 그것으로 이미 읽힌다 — 작대기는 잉크만 더한다.
+       ⚠ **숫자는 그대로 둔다** — 없어지는 것은 선분뿐이다. 자리(oy+24 · ox−10)도 그대로다:
+         작대기가 반 칸(5px) 나오던 자리라 숫자를 당기면 축에 닿아 붙어 보인다.
+       ⚠ 숫자가 앉는 자리는 여전히 «잉크»로 센다(`lab` 이 넣는다) — 곡선 이름표가 그 위에 앉으면 안 된다. */
     (scene.xTicks || []).forEach(function (v, i) {
       if (v === ax.x || hidden('xtick:' + i)) return;
-      var px = PX(v);
-      out.push('<path d="M' + n(px) + ' ' + n(oy - 5) + 'v10"/>');
-      lab('xtick:' + i, px, oy + 24, fmt(v), 'middle', 17, false);
+      lab('xtick:' + i, PX(v), oy + 24, fmt(v), 'middle', 17, false);
     });
     (scene.yTicks || []).forEach(function (v, i) {
       if (v === ax.y || hidden('ytick:' + i)) return;
-      var py = PY(v);
-      out.push('<path d="M' + n(ox - 5) + ' ' + n(py) + 'h10"/>');
-      lab('ytick:' + i, ox - 10, py + 6, fmt(v), 'end', 17, false);
+      lab('ytick:' + i, ox - 10, PY(v) + 6, fmt(v), 'end', 17, false);
     });
 
     /* 축선은 잉크다 — 도형 이름표보다 먼저 넣어야 원 이름이 y축 위에 앉지 않는다. */
@@ -736,16 +762,12 @@
     /* 곡선 — 창 밖으로 나가면 선을 끊는다. 잘린 자리가 자연스러워 보인다.
        이름표는 **두 번째 바퀴에서** 놓는다. 그리면서 놓으면 첫 곡선의 이름표가
        아직 안 그려진 곡선 위에 앉는다 (실제로 그렇게 됐다). */
-    var drawn = [];
-    cs.forEach(function (c) {
-      if (!c.fn || hidden('curve:' + c.i)) return;
-      var d = c.def.domain || xr;
-      var a = Math.max(d[0], xr[0]), b = Math.min(d[1], xr[1]);
-      var segs = sample(c.fn, a, b, xr, yr, PX, PY, plotW);
-      segs.forEach(function (seg) {
-        out.push('<path d="' + seg.d + '"' + (c.def.dash ? ' stroke-dasharray="7 6"' : '') + ' stroke-width="2.1"/>');
+    /* ⚠ 곡선은 «축을 긋기 전»에 이미 떠 두었다(위 `drawn`) — 축이 곡선 끝에 맞춰야 해서다.
+       여기서는 그리기만 한다. 다시 뜨면 두 값이 갈려 축만 어긋난다. */
+    drawn.forEach(function (dc) {
+      dc.segs.forEach(function (seg) {
+        out.push('<path d="' + seg.d + '"' + (dc.c.def.dash ? ' stroke-dasharray="7 6"' : '') + ' stroke-width="2.1"/>');
       });
-      drawn.push({ c: c, segs: segs });
     });
 
     /* 곡선도 잉크다 (축선은 도형 앞에서, 눈금 숫자·축 이름은 lab() 이 이미 넣었다). */
