@@ -986,7 +986,10 @@
   function snapPoint(scene, x, y, opt, except) {
     var o = opt || {};
     var M = mapper(scene, o);
-    var near = (o.snapPx === undefined ? 10 : o.snapPx);
+    /* ⚠ **12px 은 «보이는 화면» 기준이 아니다** — 이 셈은 560×430 종이 위에서 도는데 화면에서는
+       0.72배쯤으로 줄어 보인다(카드 폭). 그러니 손에 잡히는 자리는 실제로 9px 남짓이다.
+       사용자가 「아무리해도 닿질 않는다」고 한 그림에서 10 이었다. */
+    var near = (o.snapPx === undefined ? 12 : o.snapPx);
     var grid = (o.grid === undefined ? 0.5 : o.grid);
     var cands = [];
     (scene.points || []).forEach(function (p, i) { if (p && isFinite(p.x) && isFinite(p.y)) cands.push([p.x, p.y, 'point:' + i]); });
@@ -1004,8 +1007,138 @@
       if (dd <= bd) { bd = dd; best = c; }
     });
     if (best) return { x: best[0], y: best[1], to: best[2] };
+
+    /* 🔴 **여기까지가 2026-09-18 아침 판이었다 — 그리고 그것이 모자랐다.**
+       사용자가 그림으로 짚었다 — 「파란색 표시부분에 선을 닿게 하고싶은데 저기에 아무리해도
+       닿질않고 그 위나 아래로 옮겨져」. 그 자리는 **점선과 사선이 만나는 자리**(교점)였다.
+       꼭짓점도 아니고 0.5 눈금 위도 아니라서, 눈금으로 튕겨 **늘 선 위나 아래**로 떨어졌다.
+     🔵 그래서 «선»을 과녁에 넣는다 — 차례가 있다:
+       ① 꼭짓점(위에서 이미 봤다) → ② **교점** → ③ **선 위 아무 데나** → ④ 0.5 눈금.
+       교점이 선 위보다 먼저인 까닭은, 두 선이 만나는 자리를 노리는 손이 «그 선 어딘가»를
+       노리는 손보다 더 또렷하기 때문이다. */
+    var lines = snapLines(scene, M, except);
+    /* 🔵 **교점은 조금 더 멀리서도 잡는다** — 두 선이 만나는 자리를 노리는 손은 «그 선 어딘가»를
+       노리는 손보다 겨냥이 또렷하다. 그 자리에 가고 싶은 것이 맞으면 반 뼘쯤은 당겨 주는 것이 낫다. */
+    var cross = snapCross(lines, here, near * 1.5);
+    if (cross) return dataOf(M, cross[0], cross[1], cross[2]);
+    var on = snapOnLine(lines, here, near);
+    if (on) return dataOf(M, on[0], on[1], on[2]);
+
     if (!(grid > 0)) return { x: x, y: y, to: null };
     return { x: Math.round(x / grid) * grid, y: Math.round(y / grid) * grid, to: null };
+  }
+
+  /* 종이 자리를 값으로 되돌린다. 셈은 «종이»에서 한다 — 곡선이 거기서 꺾은선이라 선분·원과 한 꼴이 된다.
+     🔵 **깔끔한 수가 «같은 자리»면 그 수를 쓴다** — 곡선을 꺾은선으로 뜨는 탓에 교점이 3 이 아니라
+       3.0001 로 나오는 일이 있다. 눈에는 0.005px 차이라 같은 자리인데 장면만 지저분해진다.
+       그래서 «반 칸 눈금으로 옮겨 봐서 종이에서 0.4px 도 안 움직이면» 그 수를 쓴다.
+       ⚠ 잣대가 «값»이 아니라 «종이»인 것이 요점이다 — 창이 넓든 좁든 «보기에 같은 자리»가 기준이다. */
+  /* 🔵 **가장 «깔끔한» 수를 고른다 — 종이에서 같은 자리인 한.**
+     처음에는 반 칸(0.5)만 봤는데, 교점이 3.2 인 그림에서 3.2001 이 남았다(곡선을 꺾은선으로
+     뜨는 탓에 만나는 자리가 머리카락만큼 어긋난다). 3.2 는 반 칸이 아니라 안 걸렸다.
+     그래서 **굵은 눈금부터 가는 눈금까지 훑어** 처음 걸리는 것을 쓴다.
+     ⚠ 잣대는 «값»이 아니라 «종이»다 — 0.4px 이면 어느 화면에서도 같은 자리다.
+     ⚠ x·y 를 따로 본다 — 세로 점선과 만나면 x 만 딱 떨어지고 y 는 어중간한 일이 흔하다. */
+  var 눈금사다리 = [1, 0.5, 0.25, 0.2, 0.1, 0.05, 0.02, 0.01];
+  function dataOf(M, px, py, to) {
+    var v = M.toData(px, py);
+    var 다듬기 = function (t, 축) {
+      for (var i = 0; i < 눈금사다리.length; i++) {
+        var g = 눈금사다리[i], r = Math.round(t / g) * g;
+        r = +r.toFixed(6);                                  // 0.1 을 더하면 생기는 찌꺼기를 턴다
+        var q = 축 === 'x' ? M.toPx(r, v[1])[0] : M.toPx(v[0], r)[1];
+        if (Math.abs(q - (축 === 'x' ? px : py)) < 0.4) return r;
+      }
+      return +t.toFixed(4);
+    };
+    return { x: 다듬기(v[0], 'x'), y: 다듬기(v[1], 'y'), to: to };
+  }
+
+  /* 장면의 «선»들을 종이 위 꺾은선으로 편다 — 선분·다각형 변·원·곡선이 다 같은 꼴이 된다.
+     ⚠ 숨긴 것은 안 넣는다(안 보이는 데 붙으면 «어디서 왔는지» 알 길이 없다).
+     ⚠ 끌고 있는 그 선분 자신도 뺀다 — 제 몸에 붙으면 손이 안 떨어진다. */
+  function snapLines(scene, M, except) {
+    var hid = (scene.hidden && typeof scene.hidden === 'object') ? scene.hidden : {};
+    var vis = function (id) { return hid[id] !== true; };
+    var P = function (p) { return M.toPx(p[0], p[1]); };
+    var out = [];
+    (scene.segments || []).forEach(function (s, i) {
+      if (!s.from || !s.to || !vis('seg:' + i)) return;
+      if (except && except.id === 'seg:' + i) return;
+      out.push({ id: 'seg:' + i, pts: [P(s.from), P(s.to)] });
+    });
+    (scene.polygons || []).forEach(function (g, i) {
+      var ps = (g.pts || []).map(P);
+      if (ps.length < 2 || !vis('poly:' + i)) return;
+      out.push({ id: 'poly:' + i, pts: ps.concat([ps[0]]) });
+    });
+    (scene.circles || []).forEach(function (c, i) {
+      if (!c.c || !(c.r > 0) || !vis('circle:' + i)) return;
+      var cc = P(c.c), rpx = c.r * M.plotW / (M.xRange[1] - M.xRange[0]), ps = [];
+      for (var t = 0; t <= 72; t++) ps.push([cc[0] + rpx * Math.cos(t / 72 * 2 * Math.PI), cc[1] + rpx * Math.sin(t / 72 * 2 * Math.PI)]);
+      out.push({ id: 'circle:' + i, pts: ps });
+    });
+    /* 곡선은 그리는 것과 «같은 길»로 뜬다 — 눈에 보이는 그 선에 붙어야 하므로 */
+    var PX = function (x) { return M.toPx(x, 0)[0]; }, PY = function (y) { return M.toPx(0, y)[1]; };
+    compileCurves(scene).forEach(function (c) {
+      if (!c.fn || !vis('curve:' + c.i)) return;
+      var d = c.def.domain || M.xRange;
+      var a = Math.max(d[0], M.xRange[0]), b = Math.min(d[1], M.xRange[1]);
+      sample(c.fn, a, b, M.xRange, M.yRange, PX, PY, M.plotW).forEach(function (sg) {
+        if (sg.pts && sg.pts.length > 1) out.push({ id: 'curve:' + c.i, pts: sg.pts });
+      });
+    });
+    return out;
+  }
+
+  /* 손 가까이(near)에 있는 토막만 본다 — 곡선은 꺾은선이라 토막이 수백 개다. */
+  function nearEdges(lines, here, near) {
+    var out = [];
+    lines.forEach(function (L) {
+      for (var i = 0; i + 1 < L.pts.length; i++) {
+        var a = L.pts[i], b = L.pts[i + 1];
+        if (Math.min(a[0], b[0]) - near > here[0] || Math.max(a[0], b[0]) + near < here[0]) continue;
+        if (Math.min(a[1], b[1]) - near > here[1] || Math.max(a[1], b[1]) + near < here[1]) continue;
+        out.push({ id: L.id, a: a, b: b });
+      }
+    });
+    return out;
+  }
+
+  /* 두 선이 «만나는 자리» — 가장 가까운 것 하나. */
+  function snapCross(lines, here, near) {
+    var es = nearEdges(lines, here, near), best = null, bd = near;
+    for (var i = 0; i < es.length; i++) for (var j = i + 1; j < es.length; j++) {
+      if (es[i].id === es[j].id) continue;                 // 제 몸끼리는 교점이 아니다
+      var p = segCross(es[i].a, es[i].b, es[j].a, es[j].b);
+      if (!p) continue;
+      var dd = Math.hypot(p[0] - here[0], p[1] - here[1]);
+      if (dd <= bd) { bd = dd; best = [p[0], p[1], es[i].id + '×' + es[j].id]; }
+    }
+    return best;
+  }
+  function segCross(a, b, c, d) {
+    var r0 = b[0] - a[0], r1 = b[1] - a[1], s0 = d[0] - c[0], s1 = d[1] - c[1];
+    var den = r0 * s1 - r1 * s0;
+    if (Math.abs(den) < 1e-9) return null;                 // 나란하다
+    var t = ((c[0] - a[0]) * s1 - (c[1] - a[1]) * s0) / den;
+    var u = ((c[0] - a[0]) * r1 - (c[1] - a[1]) * r0) / den;
+    if (t < 0 || t > 1 || u < 0 || u > 1) return null;      // 토막 «밖»에서 만난다
+    return [a[0] + t * r0, a[1] + t * r1];
+  }
+
+  /* 선 «위» 아무 데나 — 가장 가까운 발자리. */
+  function snapOnLine(lines, here, near) {
+    var es = nearEdges(lines, here, near), best = null, bd = near;
+    es.forEach(function (e) {
+      var r0 = e.b[0] - e.a[0], r1 = e.b[1] - e.a[1], L2 = r0 * r0 + r1 * r1;
+      var t = L2 ? ((here[0] - e.a[0]) * r0 + (here[1] - e.a[1]) * r1) / L2 : 0;
+      t = Math.max(0, Math.min(1, t));
+      var px = e.a[0] + t * r0, py = e.a[1] + t * r1;
+      var dd = Math.hypot(px - here[0], py - here[1]);
+      if (dd <= bd) { bd = dd; best = [px, py, e.id]; }
+    });
+    return best;
   }
 
   function setHidden(scene, id, on) {

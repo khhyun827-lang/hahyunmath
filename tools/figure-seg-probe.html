@@ -102,6 +102,28 @@ const t = setInterval(async () => {
       R.손잡이도늘었다 = document.querySelectorAll('#probe .fig-edit g[data-seg]').length;
     }
 
+    /* ── ⑥ 사용자가 그림으로 짚은 그 자리 — 점선과 사선이 «만나는 데»로 끌어 본다 ──
+       「파란색 표시부분에 선을 닿게 하고싶은데 저기에 아무리해도 닿질않고 그 위나 아래로 옮겨져」
+       ⚠ 교점을 눈금(0.5)에 «안» 걸리는 자리로 잡는다 — 안 그러면 자석이 없어도 통과한다. */
+    R.교점 = await (async () => {
+      const S2 = { kind:'graph',
+        curves:[{expr:'0.3*x+2', label:'y=f(x)'}],
+        segments:[{from:[4,6],to:[4,0],dash:true},{from:[0,0],to:[3,1]}],
+        points:[{x:0,y:2,label:'D'}], xTicks:[4], axis:{xLabel:'x',yLabel:'y',origin:'O'} };
+      state.figureDraft={bankId:'probe',scene:S2,svg:Figure.renderScene(S2),ok:true,failures:[]};
+      state.figureElSel=null; render();
+      const M3 = Figure.mapper(S2, {edit:true});
+      const sv = svg(), r3 = sv.getBoundingClientRect(), c3 = sv.getScreenCTM();
+      const 화면3 = (vx,vy) => { const p=M3.toPx(vx,vy); return [r3.left+p[0]*c3.a, r3.top+p[1]*c3.d]; };
+      const h = handle(1,'to');                         // 짧은 실선의 끝 (3,1)
+      const a = 화면3(3,1), 과녁 = 화면3(4.06, 3.13);     // 교점 (4, 3.2) 에서 살짝 빗나간 자리
+      ev('pointerdown', a[0], a[1], h);
+      ev('pointermove', 과녁[0], 과녁[1], document.body);
+      ev('pointerup',   과녁[0], 과녁[1], document.body);
+      return S2.segments[1].to;
+    })();
+    R.교점에닿았다 = JSON.stringify(R.교점) === JSON.stringify([4,3.2]);
+
     /* ── ⑤ 더한 선분도 끌린다 (새로 그린 손잡이가 살아 있는가) ── */
     {
       const i = state.figureDraft.scene.segments.length - 1;
