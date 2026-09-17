@@ -2144,8 +2144,14 @@
 .hwg-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--r-md);
   background:var(--card);width:max-content;max-width:100%;}
 .hwg{table-layout:fixed;min-width:max-content;}
-/* 이름 열은 왼쪽에 못 박는다 — 열을 오른쪽으로 밀다 보면 «누구 줄인지»를 잃는다. */
-.hwg th.who, .hwg td.who{position:sticky;left:0;z-index:1;width:158px;
+/* 이름 열은 왼쪽에 못 박는다 — 열을 오른쪽으로 밀다 보면 «누구 줄인지»를 잃는다.
+   🔵 **158 → 108** (2026-09-17 · 사용자 —「이름칸이 좌우로 좀 길어 알맞게 줄여주고」).
+     재 보니 **가장 긴 이름이 43px** 인데(「남궁하루」·「황보시우」 같은 넉 자 성씨) 칸은 158px 이라
+     **115px 가 빈 벌판**이었다(`tools/who-col-probe.html` 이 그것을 잰다).
+     108이면 안쪽이 96px 이라 — 다섯 자 이름(≈54)도, 성적 표의 «이름 + 퇴원 딱지»(≈84)도 든다.
+   ⚠ **셋이 같은 줄을 쓴다** — 과제(`.hg`)·출결(`.ag`)·성적(`.sg`). 일부러 그렇다(C-6):
+     셋이 같은 모양이어야 «반의 한 학기»가 한 눈이 된다. 한쪽만 줄이면 그 어법이 깨진다. */
+.hwg th.who, .hwg td.who{position:sticky;left:0;z-index:1;width:108px;
   background:var(--card);border-right:1px solid var(--line);}
 .hwg thead th.who{z-index:3;}
 .hwg tbody tr:hover td.who{background:var(--hover);}
@@ -2188,8 +2194,11 @@
 /* `i.hg-ord`(이름 밑의 「마감 늦은 순」)는 2026-09-16에 지웠다 — 쓰는 데가 없어 규칙도 걷었다. */
 .hwg td{padding:0 6px;text-align:center;}
 /* ⚠ 한 줄로 못 박는다 — 두 자리 번호(10~13)에서 «1 / 0»으로 줄바꿈되어
-   그 행만 키가 커지고 표의 리듬이 깨졌다. */
-.hwg td.who{text-align:left;white-space:nowrap;}
+   그 행만 키가 커지고 표의 리듬이 깨졌다.
+   🔵 **가운데로 모은다** (2026-09-17 · 사용자가 시켰다). 열 머리(「이름」)는 처음부터 가운데였는데
+     몸통만 왼쪽이라 **머리와 이름이 서로 다른 줄에 서 있었다.** 칸을 108로 줄이고 나면
+     왼쪽 정렬은 오른쪽에 남는 자리를 다시 만든다 — 줄이는 것과 모으는 것이 한 몸이다. */
+.hwg td.who{text-align:center;white-space:nowrap;}
 .hwg .nm{font-size:12.5px;}
 /* 「제출」 열 — 출결의 「출석률」·성적의 「평균」과 같은 자리다 (2026-09-01).
    ⚠ 예전에는 이 숫자가 «이름 칸 안에» float로 붙어 있었다. 표가 화면 끝까지 늘어나면서
@@ -14717,7 +14726,13 @@ const HWG_CELL = {
   [HW_PARTIAL]:   ['half', '보완 필요', '보완 필요'],
   [HW_SUBMITTED]: ['wait', '확인 대기', '확인 대기'],
   [HW_REJECTED]:  ['no',   '반려',      '반려'],
-  [HW_NONE]:      ['none', '미제출',    '·']
+  /* 🔵 **«·» 대신 「미제출」이라고 적는다** (2026-09-17 · 사용자 —「과제탭에 숙제 "미제출"도
+       표기되었으면 좋겠어」). 09-01(C-15)에는 마감 «전»을 점 하나로 조용히 두었는데,
+       그때 걱정한 것은 **「표가 매일 붉어진다」** — 색이었지 글자가 아니었다.
+     🔴 **그 걱정은 그대로 지킨다** — 마감 전은 `none`(흐린 회색·보통 굵기),
+       마감이 지나야 `over`(붉은 굵은 글씨)로 갈린다. 아래 `hwGridHTML` 이 그 갈림을 판다.
+       적힌 말은 같아도 **강사 손이 가야 할 곳은 여전히 붉은 것뿐**이다. */
+  [HW_NONE]:      ['none', '미제출',    '미제출']
 };
 /* =================== 과제를 세우는 잣대 (2026-09-13 · K-6) ===================
    사용자의 말 — 「**반-과제 탭의 과제를 마감일 기준으로 표를 정렬하는것**」.
@@ -14764,12 +14779,16 @@ function hwGridHTML(classId, list, roster){
     if(!rec) return '<td></td>';
     const st = hwState(rec, a.id);
     let [tone, label, mark] = HWG_CELL[st.status] || HWG_CELL[HW_NONE];
-    /* 🔴 **마감이 지난 미제출은 붉게 «미제출»이라고 적는다** (2026-09-01 · C-15 · 사용자가 시켰다).
-       마감 전에는 «·» 한 점으로 조용하다 — 아직 낼 시간이 있는 것을 할 일처럼 세우면
-       표가 매일 붉어진다. **지나야 비로소 할 일이 된다.**
-       ⚠ 마감일이 없는 과제는 «지났다»가 성립하지 않으므로 영영 «·»다. */
+    /* 🔴 **마감이 지난 미제출은 «붉게» 적는다** (2026-09-01 · C-15 · 사용자가 시켰다).
+       아직 낼 시간이 있는 것을 할 일처럼 세우면 표가 매일 붉어진다. **지나야 비로소 할 일이 된다.**
+       ⚠ 마감일이 없는 과제는 «지났다»가 성립하지 않으므로 영영 조용하다.
+     🔵 **2026-09-17에 갈림의 «자리»가 바뀌었다** — 예전에는 마감 전이 «·» 한 점이라
+       **글자와 색이 함께** 갈렸다. 이제 말은 둘 다 「미제출」이고 **색만** 갈린다
+       (사용자 —「숙제 "미제출"도 표기되었으면 좋겠어」). 걱정했던 것은 색이었지 글자가 아니었다.
+       ⚠ 그러니 여기서 `mark` 를 더 만지지 말 것 — 위 `HWG_CELL` 이 이미 「미제출」을 준다.
+         `tone` 과 `label`(마우스에 뜨는 말)만 갈린다. */
     if(st.status===HW_NONE && a.dueDate && a.dueDate < todayStr()){
-      tone = 'over'; mark = '미제출'; label = '미제출 · 마감 지남';
+      tone = 'over'; label = '미제출 · 마감 지남';
     }
     const sel = state.hwCell && state.hwCell.sid===s.studentId && state.hwCell.hwId===a.id;
     /* ⚠ 사진 장수는 «확인 대기»에서만 말한다 — 볼지 말지를 정하는 정보라서다.

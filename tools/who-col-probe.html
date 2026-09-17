@@ -1,0 +1,123 @@
+<!doctype html><meta charset="utf-8"><title>who-col-probe</title>
+<!-- 반 관리의 세 격자 — «이름 칸»이 얼마나 넓고 이름이 실제로 얼마나 차지하는가 (2026-09-17).
+     사용자 —「과제탭 출결 탭에 있는 학생표가 이름칸이 좌우로 좀 길어 알맞게 줄여주고
+              학생이름들 가운데 정렬해주고」.
+
+       node tools/serve.js
+       http://127.0.0.1:8777/tools/who-col-probe.html            ← 과제
+       ...?tab=attendance   ·   ?tab=scores                      ← 출결 · 성적
+       ...?w=390                                                 ← 폰 폭
+
+     🔵 **재는 것** — 이름 칸의 «정해진 폭»과 «글이 실제로 먹는 폭», 그리고 남는 빈 자리.
+       셋이 `.hwg th.who` 한 줄을 같이 쓰므로 한 곳을 고치면 셋이 같이 움직인다(설계가 그렇다).
+     🔴 실 DB 0줄 — class-prog-probe 와 같은 어법. -->
+<style>html,body{margin:0;background:#fff}iframe{border:0;display:block}
+pre{font:12px monospace;color:#333;margin:0;padding:4px;white-space:pre-wrap;}</style>
+<pre id="o">…</pre>
+<script>
+const Q = parent.location.search;
+const W = Number((Q.match(/[?&]w=([0-9]+)/) || [])[1]) || 1280;
+const TAB = (Q.match(/[?&]tab=(\w+)/) || [])[1] || 'homework';
+const fr = document.createElement('iframe');
+fr.width = W; fr.height = 1500; fr.style.width = W + 'px'; fr.src = '/index.html';
+document.body.appendChild(fr);
+const o = document.getElementById('o');
+let n = 0;
+const t = setInterval(async () => {
+  n++;
+  let ready = false;
+  try { ready = fr.contentWindow.eval('typeof teacherClassHubHTML==="function" && typeof render==="function" && typeof state!=="undefined"'); } catch (_) {}
+  if (!ready) { if (n > 220) { clearInterval(t); o.textContent = 'RESULT timeout'; } return; }
+  clearInterval(t);
+  const w = fr.contentWindow;
+  let out;
+  try {
+    out = await w.eval(`(async function(){
+  const R = {}; const 쓴것 = [];
+  window.dbSet = async (k) => { 쓴것.push(k); return true; };
+  window.dbGet = async (k,d) => d;
+  window.dbSetDoc = async (c,i) => { 쓴것.push(c+'/'+i); return true; };
+  window.dbDelete = async () => true;
+  window.logAudit = async () => {};
+  window.showToast = () => {};
+  window.loadAllRecordsIfNeeded = () => {};
+  window.loadConsultLogsForClass = () => {};
+
+  const CID = 'probe1', 오늘 = '2026-09-17';
+  DATA.classes = [{ id:CID, name:'고1 프로브반', schedule:'월,수,금 19시~21시',
+    period:'26.03~26.12', status:'진행중', kind:'정규' }];
+
+  /* ⚠ **이름 길이를 일부러 섞는다** — 두 글자부터 «남궁하루»(넉 자 성씨)까지.
+     이름 칸 폭은 «가장 긴 이름»이 정하므로, 짧은 이름만 넣고 재면 답이 틀린다. */
+  const 판 = ['김하', '이나린', '박다솔', '최라온', '남궁하루', '황보시우', '서연우', '한겨울', '정마루', '오여름'];
+  DATA.students = 판.map((name,i)=>({ studentId:'s'+i, name, classId:CID, status:'재원',
+    school:'프로브고', grade:'1학년' }));
+
+  /* 과제 넷 — 하나는 마감이 지났고(붉은 «미제출») 셋은 아직이다(지금은 «·») */
+  DATA.assignments = [
+    { id:'h1', classId:CID, title:'쎈 p.30~44', createdAt:'2026-09-07', dueDate:'2026-09-09' },
+    { id:'h2', classId:CID, title:'유형 7 다시', createdAt:'2026-09-09', dueDate:'2026-09-14' },
+    { id:'h3', classId:CID, title:'오답 10문항', createdAt:'2026-09-14', dueDate:'2026-09-19' },
+    { id:'h4', classId:CID, title:'인수분해 연습', createdAt:'2026-09-16', dueDate:'2026-09-21' },
+  ];
+  DATA.exams = [{ id:'e1', classId:CID, title:'9월 단원평가', date:'2026-09-10',
+                  questions:[{no:1,points:50},{no:2,points:50}] }];
+
+  state.allRecords = {};
+  DATA.students.forEach((s,i)=>{
+    /* ⚠ 칸은 rec.assignmentsDone 에서 온다 (hwState) — homework 가 아니다.
+       사진은 «드라이브 주소가 있는 것»만 사진으로 친다(p.url). 둘 다 한 번 틀렸다.
+       🔴 **이 안에서는 백틱을 쓰지 말 것** — 이 글 전체가 바깥 파일의 템플릿 문자열이라
+         백틱 하나가 그 자리에서 문자열을 끝낸다(「missing ) after argument list」로 뜬다). */
+    const hw = {};
+    if(i % 3 === 0) hw.h1 = { status:'approved' };
+    else if(i % 3 === 1) hw.h1 = { status:'submitted', photos:[{url:'https://x/1.jpg'}] };
+    else hw.h1 = { status:'partial' };
+    if(i % 2 === 0) hw.h2 = { status:'approved' };
+    if(i % 4 === 1) hw.h3 = { status:'rejected' };
+    state.allRecords[s.studentId] = {
+      assignmentsDone: hw,
+      attendance: [
+        { date:'2026-09-07', classId:CID, status: i%4===0 ? '결석' : '출석' },
+        { date:'2026-09-09', classId:CID, status: i%5===0 ? '지각' : '출석' },
+        { date:'2026-09-14', classId:CID, status:'출석' },
+      ],
+      scores: [{ examId:'e1', score: 60 + i*3, total:100 }]
+    };
+  });
+  state.allRecordsLoaded = true; state.allRecordsLoading = false;
+  state.currentUser = { type:'teacher' }; state.view = 'teacher';
+  state.teacherTab = 'classhub'; state.classHubId = CID;
+  state.classHubTab = ${JSON.stringify(TAB)};
+  render(); await new Promise(r=>setTimeout(r,200));
+
+  const d = document;
+  const 칸들 = [...d.querySelectorAll('.hwg td.who')];
+  if(!칸들.length){ R.없다 = '이 탭에 .hwg td.who 가 없다'; return R; }
+  const 잰것 = 칸들.map(td=>{
+    const box = td.getBoundingClientRect();
+    /* 글이 실제로 먹는 폭 — 칸 안의 것들을 통째로 감싼 너비 */
+    let 왼 = Infinity, 오 = -Infinity;
+    for(const el of td.children){ const r = el.getBoundingClientRect(); 왼 = Math.min(왼, r.left); 오 = Math.max(오, r.right); }
+    return { 이름: td.textContent.trim(), 칸: Math.round(box.width), 글: Math.round(오 - 왼) };
+  });
+  R.탭 = ${JSON.stringify(TAB)};
+  R.폭 = window.innerWidth;
+  R.칸폭 = 잰것[0].칸;
+  R.가장긴글 = Math.max(...잰것.map(x=>x.글));
+  R.남는자리 = R.칸폭 - R.가장긴글;
+  R.줄 = 잰것.map(x=> x.이름 + ' ' + x.글 + 'px');
+  /* 가운데 정렬인가 — 계산된 값을 그대로 읽는다 */
+  R.정렬 = getComputedStyle(칸들[0]).textAlign;
+  R.머리정렬 = (()=>{ const th = d.querySelector('.hwg th.who'); return th ? getComputedStyle(th).textAlign : '(없다)'; })();
+  /* 「미제출」이 글자로 서 있는가 (과제 탭) */
+  const 표식 = [...d.querySelectorAll('.hg-m')].map(b=>b.textContent.trim());
+  R.과제칸_표식 = [...new Set(표식)];
+  R.가로넘침 = d.documentElement.scrollWidth > window.innerWidth + 1;
+  R.실DB로_나간것 = 쓴것;
+  return R;
+})()`);
+  } catch (e) { out = { 터짐: String(e && e.message || e) }; }
+  o.textContent = 'RESULT ' + JSON.stringify(out, null, 1);
+}, 100);
+</script>
