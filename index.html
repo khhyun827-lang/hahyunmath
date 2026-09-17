@@ -921,7 +921,10 @@
   font-size:12px;color:var(--sub);}
 .app .vd-hero .del{flex:0 0 auto;align-self:flex-start;border:0;background:transparent;cursor:pointer;
   color:var(--dim);font-size:16px;line-height:1;padding:3px 5px;border-radius:var(--r-sm);}
-.app .vd-hero .del:hover{background:var(--no-bg,var(--hover));color:var(--no);}
+/* ⚠ 여기 `--no-bg` 라고 적혀 있었다 (2026-09-16 · 고침 09-17) — 그런 토큰은 없다(`--nobg` 다).
+   폴백(`var(--hover)`)이 있어 «안 깨진 것처럼» 보였다 — 삭제만 회색으로 뜨고 아무도 몰랐다.
+   `tools/student-skin-test.mjs` 의 「정의 안 된 토큰이 하나도 없다」가 이것을 물고 있었다. */
+.app .vd-hero .del:hover{background:var(--nobg,var(--hover));color:var(--no);}
 @media (max-width:620px){
   .app .vd-hero{gap:12px;padding:12px;}
   .app .vd-hero .th{width:96px;}

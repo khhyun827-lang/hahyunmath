@@ -38,7 +38,10 @@ function 판(o) {
   const state = { currentUser: { studentId: 's1', name: '김승우' }, qnaQuestionImage: o.image || null, qnaAnswerImage: {}, stuQnaFollowFor: 'qn1' };
   const 쓴것 = [], 지운것 = [], 말 = [];
   const F = new Function('DATA', 'state', 'document', 'authUid', 'todayStr', 'dbSetDoc', 'dbDeleteDoc', 'showToast', 'render', 'deleteFromDrive', 'imgFileIdOf', 'confirm',
-    [lift('splitQnaFollowups'), lift('qnaFollowupsOf'), lift('qnaHasOpen'), lift('qnaFind'), lift('submitFollowup'), lift('submitAnswer'), lift('deleteQna')].join(NL)
+    /* ⚠ `deleteQna` 가 «답에 붙은 사진»까지 걷느라 `qnaMoreAnswersOf` 를 부른다 —
+       목록에 없어 이 검사가 ReferenceError 로 터져 있었다. 옮겨 적지 않고 그대로 뜬다. */
+    [lift('splitQnaFollowups'), lift('qnaFollowupsOf'), lift('qnaMoreAnswersOf'), lift('qnaHasOpen'),
+     lift('qnaFind'), lift('submitFollowup'), lift('submitAnswer'), lift('deleteQna')].join(NL)
     + NL + 'return { splitQnaFollowups, qnaFollowupsOf, qnaHasOpen, qnaFind, submitFollowup, submitAnswer, deleteQna };')(
     DATA, state, { getElementById: id => ({ value: o.text === undefined ? '이 부분이 이해가 안 돼요' : o.text }) },
     () => 'uid-s1', () => '2026-09-15',
@@ -107,7 +110,13 @@ console.log(NL + '④ 화면과 규칙의 닻' + NL);
 {
   const 강사 = 알맹이(lift('teacherQnaHTML')), 학생 = 알맹이(lift('stuQnaHTML'));
   봄('강사 «대기» 갈래가 qnaHasOpen 을 쓴다', 강사.includes('DATA.qnas.filter(qnaHasOpen)'), true);
-  봄('강사 스레드에 추가 질문과 답 칸이 붙는다', 강사.includes('qnaFollowupsOf(cur.id).map') && 강사.includes("submitAnswer('${f.id}')"), true);
+  /* ⚠ 2026-09-16 에 답 칸이 «하나뿐인 함수»로 빠졌다 (`qnaAnswerFormHTML` — 「답이 있어도
+     사라지지 않는다」). 스레드는 이제 그 함수를 부른다. 붙는 자리와 만드는 자리를 갈라서 잰다. */
+  const 답칸 = 알맹이(lift('qnaAnswerFormHTML'));
+  봄('강사 스레드에 추가 질문과 답 칸이 붙는다',
+    [강사.includes('qnaFollowupsOf(cur.id).map'),
+     강사.includes('qnaAnswerFormHTML(f,'),
+     답칸.includes("submitAnswer('${q.id}')")], [true, true, true]);
   봄('학생 화면에 「추가 질문」 단추와 폼이 있다', 학생.includes("submitFollowup('${q.id}')") && 학생.includes('추가 질문</button>'), true);
   봄('답이 없는 질문에는 추가 질문 단추가 안 뜬다', 학생.includes("${!q.answer ? '' : state.stuQnaFollowFor === q.id"), true);
   const 규칙블록 = rules.slice(rules.indexOf('match /qnas/'), rules.indexOf('}', rules.indexOf('match /qnas/') + 20));

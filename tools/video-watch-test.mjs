@@ -44,8 +44,13 @@ const 봄 = (무엇, 나온것, 나와야) => {
   console.log((ok ? '  ✓ ' : '  🔴 ') + 무엇 + (ok ? '' : NL + '      나온 것 ' + JSON.stringify(나온것) + NL + '      나와야 ' + JSON.stringify(나와야)));
 };
 
-const 잣대 = ['VIDEO_DONE_RATIO', 'VIDEO_GOAL_PCT', 'VIDEO_DONE_SLACK_SEC'].map(liftConst).join(NL) + NL +
-  ['videoDurationSec', 'videoWatchedSec', 'videoWatchRatio', 'videoDone', 'videoPct',
+/* ⚠ **이 목록은 잣대가 깊어질 때마다 같이 자라야 한다** (2026-09-17에 한 번 밟았다).
+   09-15 의 「구간만 보라」(K-11)로 `videoDurationSec` 이 `videoGoalOfProgress`
+   → `videoItemById`·`videoGoalOfItem` 을, `videoWatchedSec` 이 `coverSec`(→ `VIDEO_BUCKET_SEC`)을
+   부르게 됐다. 목록이 안 따라와 이 검사가 ReferenceError 로 통째로 터져 있었다. */
+const 잣대 = ['VIDEO_DONE_RATIO', 'VIDEO_GOAL_PCT', 'VIDEO_DONE_SLACK_SEC', 'VIDEO_BUCKET_SEC'].map(liftConst).join(NL) + NL +
+  ['videoGoalOfItem', 'videoItemById', 'videoGoalOfProgress', 'coverLen', 'coverFill', 'coverSec',
+   'videoDurationSec', 'videoWatchedSec', 'videoWatchRatio', 'videoDone', 'videoPct',
    'videoSeen', 'videoGoalLabel', 'videoScore', 'videoGoalMarkHTML'].map(lift).join(NL);
 const V = new Function(잣대 + NL +
   'return { VIDEO_DONE_RATIO, VIDEO_GOAL_PCT, VIDEO_DONE_SLACK_SEC, videoWatchRatio, videoPct, videoDone, videoSeen, videoScore, videoGoalLabel, videoGoalMarkHTML };')();
@@ -96,8 +101,16 @@ console.log(NL + '② 재생바를 끝으로 끌어도 완주가 아니다' + NL
   await a.F.noteVideoWatchTime('s1', 'v1', 3, 600);
   봄('🔴 3초 보고 끝으로 끌어도 완주가 아니다',
     [V.videoDone(a.rec.videoProgress.v1), V.videoPct(a.rec.videoProgress.v1)], [false, 0]);
-  봄('🔴 noteVideoWatchTime 은 ended 를 아예 안 받는다 (뒷문이 닫혔다)',
-    /noteVideoWatchTime\(studentId, videoId, addSeconds, duration\)/.test(lift('noteVideoWatchTime')), true);
+  /* 🔴 **재려던 것은 «`ended` 라는 뒷문이 없다»다** — 예전에는 유튜브의 ENDED 하나로 완주가 됐다.
+     ⚠ 09-16 에 「어느 대목을 봤나」가 들어오며 `앞자리·뒷자리` 둘이 «정당하게» 붙었는데,
+       서명을 통째로 맞대 놓아서 이 줄이 그때부터 거짓이 됐다. 뒷문이 열린 것이 아니었다.
+     🔵 그래서 **서명을 적어 두되 `ended` 가 없다는 것을 따로 못 박는다** — 새 칸이 붙으면
+       여기서 한 번 걸리고(적어 두라는 뜻이다), 뒷문이 돌아오면 아래 줄이 문다. */
+  const 서명 = (lift('noteVideoWatchTime').match(/function noteVideoWatchTime\(([^)]*)\)/) || [])[1] || '';
+  봄('🔴 noteVideoWatchTime 이 받는 것 — 여기에 ended 는 없다 (뒷문이 닫혔다)',
+    서명.split(',').map(s => s.trim()),
+    ['studentId', 'videoId', 'addSeconds', 'duration', '앞자리', '뒷자리']);
+  봄('🔴 몸 어디에도 ended 를 안 읽는다', /\bended\b/.test(lift('noteVideoWatchTime')), false);
   봄('🔴 flushWatchTick 도 ended 를 안 넘긴다', lift('flushWatchTick').includes('ended'), false);
   봄('🔴 어디에서도 ENDED 를 완주의 근거로 안 쓴다', /PlayerState\.ENDED/.test(html), false);
   /* 5초 틱으로 끝까지 재생하면 완주 — 실제 화면이 쌓는 모양 그대로다 */
@@ -116,8 +129,15 @@ console.log(NL + '② 재생바를 끝으로 끌어도 완주가 아니다' + NL
     await c.F.noteVideoWatchTime('s1', 'v1', 3, 600);                               // 598초
     return [c.rec.videoProgress.v1.watchedSeconds, V.videoDone(c.rec.videoProgress.v1)];
   })(), [598, true]);
-  봄('문서에 남는 것은 사실 넷뿐이다', Object.keys(b.rec.videoProgress.v1).sort(),
-    ['completed', 'duration', 'percent', 'updatedAt', 'watchedSeconds']);
+  /* 🔵 **문서에 남는 칸을 못 박아 둔다** — 여기서 걸리면 «칸이 하나 늘었다»는 뜻이고,
+     늘릴 때는 까닭이 코드에 적혀 있어야 한다. 09-16 에 셋이 늘었고 셋 다 까닭이 있다:
+       · `seen`    — 어느 «대목»을 봤나(10초 칸 하나에 글자 하나). 구간만 보라는 배정을 재려면 필요하다.
+       · `base`    — 커버리지가 없던 시절의 값을 한 번만 얼린 바닥. 없으면 옛 기록의 %가 뚝 떨어진다.
+       · `videoId` — `p` 는 제 id 를 몰라서 배정(구간)을 못 찾는다. 그래서 쓸 때 같이 남긴다.
+     ⚠ `percent`·`completed` 는 «그때 무엇으로 봤나»의 자취다 — **화면은 이 둘을 안 믿는다.** */
+  봄('문서에 남는 칸 — 여덟 (09-16에 seen·base·videoId 가 늘었다)',
+    Object.keys(b.rec.videoProgress.v1).sort(),
+    ['base', 'completed', 'duration', 'percent', 'seen', 'updatedAt', 'videoId', 'watchedSeconds']);
   봄('문서에 적어 둔 percent·completed 도 새 잣대를 따른다',
     [b.rec.videoProgress.v1.percent, b.rec.videoProgress.v1.completed], [100, true]);
   봄('길이를 모르면 아무것도 안 쓴다', await (async () => {
@@ -136,7 +156,12 @@ console.log(NL + '② 재생바를 끝으로 끌어도 완주가 아니다' + NL
 console.log(NL + '③ 2배속으로 다 보면 완주다' + NL);
 {
   const 더한것 = [];
-  const F = new Function('noteVideoWatchTime', lift('videoPlaybackRate') + NL + lift('flushWatchTick') + NL +
+  /* 🔴 **`tickSpan` 을 안 넘겨 주면 이 대목이 «조용히» 거짓이 된다** (2026-09-17에 밟았다) —
+     `flushWatchTick` 의 몸이 통째로 `try{}catch(err){}` 안이라, 없는 이름을 부르면
+     터지지도 않고 그냥 아무것도 안 더한다. 셋이 나란히 `undefined` 로 나온 까닭이다.
+     ⚠ 09-16 에 「어느 대목을 봤나」(구간)가 들어오면서 붙은 이름이다. */
+  const F = new Function('noteVideoWatchTime',
+    lift('videoPlaybackRate') + NL + lift('tickSpan') + NL + lift('flushWatchTick') + NL +
     'return { flushWatchTick, videoPlaybackRate };')(
     (sid, vid, add, dur) => 더한것.push(Math.round(add)));
   const 가짜 = rate => ({ getDuration: () => 600, getPlaybackRate: () => rate });
@@ -169,11 +194,16 @@ console.log(NL + '④ 반 › 영상 탭을 실제로 그려 본다' + NL);
     s3: { videoProgress: {} },
   };
   const state = { allRecords, allRecordsLoaded: true, allRecordsLoading: false, videoAdding: false, videoSelectedId: 'v1' };
+  /* ⚠ 2026-09-16 에 «영상 머리 카드»(`videoHeroHTML`)와 알림 띠가 붙었다 — 띠는 이 검사가 볼 것이
+     아니라 빈 것으로 세우고, 머리 카드와 구간 딱지(`videoGoalLabelOf`)는 그대로 뜬다. */
   const C = new Function('DATA', 'state', 'loadAllRecordsIfNeeded', 'classRoster', 'escHtml', 'todayStr', 'iconSvg',
-    잣대 + NL + lift('chubVideoHTML') + NL + 'return chubVideoHTML;')(
+    'vidNoticeBarHTML', 'extractYouTubeId', 'stuDday', 'setVideoDue', 'deleteVideo', 'render',
+    잣대 + NL + lift('secToClock') + NL + lift('videoGoalLabelOf') + NL + lift('videoHeroHTML')
+      + NL + lift('chubVideoHTML') + NL + 'return chubVideoHTML;')(
     DATA, state, () => {}, () => roster,
     s => (s === null || s === undefined) ? '' : String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;'),
-    () => '2026-09-13', () => '');
+    () => '2026-09-13', () => '',
+    () => '', () => 'yt', () => null, () => {}, () => {}, () => {});
   const 그림 = C('c1');
 
   봄('🔴 목록이 «완주 1/3» 이라고 말한다 (예전엔 「33%」 한 줄이었다)', 그림.includes('<b>완주 1/3</b>'), true);
@@ -202,7 +232,10 @@ console.log(NL + '④ 반 › 영상 탭을 실제로 그려 본다' + NL);
   봄('완주한 학생은 «완주» 딱지 · 100%',
     /가나다<\/b>[\s\S]*?<span class="pct">100%<\/span>[\s\S]*?<span class="badge ok">완주<\/span>/.test(그림), true);
   봄('30%에서 멈춘 학생은 «시청 중»', /라마바<\/b>[\s\S]*?<span class="pct">30%<\/span>[\s\S]*?시청 중/.test(그림), true);
-  봄('미시청은 «—» 와 «미시청»', /사아자<\/b>[\s\S]*?<span class="pct">—<\/span>[\s\S]*?미시청/.test(그림), true);
+  /* ⚠ 2026-09-16(`7a090bd` · 「보기·관리하기 좋게 다듬었다」)에 «—» 를 «0%» 로 바꿨다 —
+     안 본 것은 «못 잰 것»이 아니라 진짜 0이다(반 평균도 0으로 함께 센다고 tooltip 이 말한다).
+     딱지는 그대로 «미시청» 이라 「0% 인데 아직 안 튼 것」임이 한 줄에서 읽힌다. */
+  봄('미시청은 «0%» 와 «미시청» 딱지', /사아자<\/b>[\s\S]*?<span class="pct">0%<\/span>[\s\S]*?<span class="badge">미시청<\/span>/.test(그림), true);
   봄('🔴 90%에서 멈춘 학생은 «100%»로 적히지 않는다 (내림이라 99가 천장이다)', await (async () => {
     allRecords.s2.videoProgress.v1 = { watchedSeconds: 597, duration: 600 };
     const 다시 = C('c1');

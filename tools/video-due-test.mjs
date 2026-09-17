@@ -57,12 +57,19 @@ const 곁 = {
    `stuTodo` 가 `videoDone` 을 부르게 됐다. 여기에 옮겨 적으면 잣대가 두 벌이 되므로 index.html 에서 그대로 뜬다.
    ⚠ 위 `videoProgress` 본보기에는 `duration` 이 없다 — **일부러다.** 길이를 모르는 옛 기록이
      저장된 `percent`·`completed` 로 물러서는 길까지 여기서 함께 밟힌다(새 꼴은 video-watch-test 가 잰다). */
-const 잣대 = ['VIDEO_DONE_RATIO', 'VIDEO_GOAL_PCT', 'VIDEO_DONE_SLACK_SEC'].map(n => {
+/* ⚠ **이 목록은 잣대가 깊어질 때마다 같이 자라야 한다** (2026-09-17에 한 번 밟았다).
+   09-15 에 「구간만 보라」(K-11)가 들어오면서 `videoDurationSec` 이 `videoGoalOfProgress`
+   → `videoItemById`·`videoGoalOfItem` 을, `videoWatchedSec` 이 `coverSec`(→ `VIDEO_BUCKET_SEC`)을
+   부르게 됐다. 목록이 안 따라와 이 검사가 **ReferenceError 로 통째로 터져 있었다.**
+   🔵 그래도 «옮겨 적기»보다는 이 편이 낫다 — 옮겨 적으면 잣대가 두 벌이 되어 조용히 갈린다.
+     터지는 것은 시끄럽기라도 하다. */
+const 잣대 = ['VIDEO_DONE_RATIO', 'VIDEO_GOAL_PCT', 'VIDEO_DONE_SLACK_SEC', 'VIDEO_BUCKET_SEC'].map(n => {
   const m = html.match(new RegExp('^const ' + n + ' = .*$', 'm'));
   if (!m) throw new Error(n + ' 를 못 찾았습니다');
   return m[0];
-}).join(NL) + NL + ['videoDurationSec', 'videoWatchedSec', 'videoWatchRatio', 'videoDone', 'videoPct',
-  'videoSeen', 'videoGoalLabel', 'videoScore'].map(lift).join(NL);
+}).join(NL) + NL + ['videoGoalOfItem', 'videoItemById', 'videoGoalOfProgress',
+  'coverLen', 'coverSec', 'videoDurationSec', 'videoWatchedSec', 'videoWatchRatio', 'videoDone',
+  'videoPct', 'videoSeen', 'secToClock', 'videoGoalLabel', 'videoGoalLabelOf', 'videoScore'].map(lift).join(NL);
 const api = new Function(...Object.keys(곁),
   잣대 + NL + lift('stuDday') + NL + lift('stuTodo') + NL + lift('setVideoDue') + NL + 'return { stuDday, stuTodo, setVideoDue };'
 )(...Object.values(곁));
@@ -103,7 +110,11 @@ await api.setVideoDue('v1', '2026-10-01');
 const stuVideo = lift('stuVideoHTML'), chubVideo = lift('chubVideoHTML');
 봄('④ 학생 강의 탭 카드에 마감·D-day', stuVideo.includes('마감 <span class="mono">${escHtml(v.dueDate)}') && stuVideo.includes('stuDday(v.dueDate)'), true);
 봄('강사 목록에 마감·지남', chubVideo.includes("' · 마감 <span class=\"mono\">'") && chubVideo.includes('지남'), true);
-봄('강사 상세에 「마감 바꾸기」', chubVideo.includes('setVideoDue(') && chubVideo.includes('video-due-edit'), true);
+/* ⚠ 2026-09-16 에 마감 바꾸기가 «영상 머리 카드»(`videoHeroHTML`)로 옮겨 갔다 —
+   `chubVideoHTML` 만 보던 이 줄이 그때부터 거짓이었다. 두 곳을 함께 본다. */
+const 머리카드 = lift('videoHeroHTML');
+봄('강사 상세에 「마감 바꾸기」 (2026-09-16부터 머리 카드에 있다)',
+  [(chubVideo + 머리카드).includes('setVideoDue('), (chubVideo + 머리카드).includes('video-due-edit')], [true, true]);
 봄('학생별 진행 — 지났는데 안 봤으면 «마감 지남»', chubVideo.includes('· 마감 지남</span>'), true);
 봄('등록 폼에도 마감 칸이 있다', chubVideo.includes('id="video-due"'), true);
 
@@ -163,14 +174,30 @@ const 곁3 = {
             { id: 'p9', title: '남의 반', url: 'u', classId: '', studentId: 'st99' },
           ] },
   escHtml: x => String(x == null ? '' : x), iconSvg: () => '', todayStr: () => TODAY,
+  /* ⚠ 2026-09-16 에 «영상 머리 카드»(`videoHeroHTML`)와 알림 띠(`vidNoticeBarHTML`)가 붙었다.
+     띠는 이 검사가 볼 것이 아니라 빈 것으로 세운다 — 머리 카드는 마감 딱지를 같이 지므로 그대로 뜬다. */
+  vidNoticeBarHTML: () => '', extractYouTubeId: () => 'yt',
 };
 const api3 = new Function(...Object.keys(곁3),
-  잣대 + NL + lift('videoGoalMarkHTML') + NL + lift('chubVideoHTML') + NL + 'return { chubVideoHTML };')(...Object.values(곁3));
+  /* ⚠ `chubVideoHTML` 이 마감 딱지를 `stuDday` 로 찍는다 — 위 ①의 것과 같은 함수다. */
+  잣대 + NL + lift('stuDday') + NL + lift('videoGoalMarkHTML') + NL + lift('videoHeroHTML')
+    + NL + lift('chubVideoHTML') + NL + 'return { chubVideoHTML };')(...Object.values(곁3));
 const out = api3.chubVideoHTML('c1');
 봄('그려진다 — 반 전체 구역과 개인 배정 2 (남의 반 것은 안 든다)', [out.includes('>반 전체</div>'), out.includes('개인 배정 <span class="mono">2</span>'), out.includes('남의 반')], [true, true, false]);
-봄('결석 보충(classId 빈 것)이 «완주»로', out.includes('가나 <span style="font-weight:400;color:var(--sub);">· 09-01 결석 보충 영상') && out.includes('>완주</b>'), true);
+/* 🔵 **제목이 앞, 이름은 둘째 줄이다** (2026-09-16) — 예전에는 「가나 · 09-01 결석 보충 영상」처럼
+   이름이 굵게 앞서고 제목이 부제처럼 보였다. 영상 목록인데 학생이 주인공이 돼 있었다.
+   ⚠ 이름이 «사라진» 것이 아니다 — 같은 제목을 여러 학생에게 보내는 일이 많아 둘째 줄에 굵게 둔다.
+     그래서 셋을 함께 잰다(제목 먼저 · 이름 남아 있음 · 완주). */
+봄('결석 보충(classId 빈 것)이 «완주»로 — 제목이 앞, 이름은 둘째 줄',
+  [out.includes('<div class="t">09-01 결석 보충 영상'),
+   out.includes('<b style="color:var(--sub);">가나</b>'),
+   out.includes('<b style="color:var(--ok)">완주</b>')], [true, true, true]);
 봄('보충 5강은 30% 에 마감 지남', out.includes('30%</b>') && out.includes('다라') && out.includes('<span class="badge no">지남</span>'), true);
-봄('고른 것이 개인 배정이면 상세는 «받은 학생» 한 줄', out.includes('받은 학생') && out.includes('개인 배정 · 다라') && !out.includes('이탈 지점'), true);
+/* ⚠ 머리 카드가 「개인 배정 · 다라」를 «딱지 + 굵은 이름»으로 바꿔 적는다 (2026-09-16). */
+봄('고른 것이 개인 배정이면 상세는 «받은 학생» 한 줄',
+  [out.includes('받은 학생'),
+   out.includes('<span class="badge late">개인 배정</span><b style="color:var(--sub);font-weight:600;">다라</b>'),
+   out.includes('이탈 지점')], [true, true, false]);
 봄('대상 고르개에 명단 둘', (out.match(/<option value="st0[12]">/g) || []).length, 2);
 곁3.state.videoSelectedId = 'a1';
 const out2 = api3.chubVideoHTML('c1');

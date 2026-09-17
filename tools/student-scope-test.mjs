@@ -47,22 +47,28 @@ console.log('\n학생이 제 것만 읽는가\n');
 
 /* ── ① 학생용 읽기가 «무엇을 물어보는가» ────────────────────── */
 {
-  const w = { 문서: [], 컬렉션: [], 내것: [], 낱건: [] };
+  /* ⚠ 2026-09-15 부터 «강사만 쓰는» 큰 통 일곱은 `loadCollectionCached` 를 지난다
+     (하루 읽기 5만 건의 벽 — 09-04·09-15 에 두 번 터졌다). 읽는 길이 갈렸을 뿐
+     «읽는다»는 사실은 그대로라, 재운 길도 따로 적어 두고 아래에서 함께 센다.
+     🔴 이것을 안 넘겨 줘서 이 검사가 09-15 부터 ReferenceError 로 통째로 터져 있었다. */
+  const w = { 문서: [], 컬렉션: [], 재운것: [], 내것: [], 낱건: [] };
   const DATA = {};
   const state = {};
   /* ⚠ 2026-09-13 부터 읽어 온 명단이 `normStudentGrades` 를 한 번 지난다(학년을 한 벌로) —
      옮겨 적지 않고 그것도 같이 떠 온다. */
   const fn = new Function('DATA', 'state', 'dbReadClear', 'dbGetDoc', 'dbGetCollection',
-    'dbGetCollectionByUid', 'dbGet', 'currentSeason',
+    'loadCollectionCached', 'dbGetCollectionByUid', 'dbGet', 'currentSeason', 'splitQnaFollowups',
     떠내기('gradeLabel', 'function ') + 떠내기('normStudentGrades', 'function ')
     + 떠내기('loadStudentData') + '; return loadStudentData;')(
     DATA, state,
     () => { w.지웠나 = true; },
     async (c, id, fb) => { w.문서.push(c + '/' + id); return { studentId: 's1', uid: id, name: '나' }; },
     async (c) => { w.컬렉션.push(c); return [{ id: 'x' }]; },
+    async (c) => { w.재운것.push(c); return [{ id: 'x' }]; },
     async (c, uid) => { w.내것.push(c + '@' + uid); return [{ id: 'y', uid }]; },
     async (k, fb) => { w.낱건.push(k); return null; },
     () => '1학기 기말',
+    () => { w.가른것 = true; },
   );
   await fn('U1');
 
@@ -98,8 +104,16 @@ console.log('\n학생이 제 것만 읽는가\n');
   봄('강사 비밀번호는 아예 안 쥔다', DATA.teacherPw, null);
 
   // 학생 화면이 실제로 쓰는 것들은 그대로 읽어야 한다.
+  /* ⚠ 2026-09-15 부터 이 일곱은 «재운 길»(`loadCollectionCached`)로 간다 — 하루 읽기의 벽 때문이다.
+     🔵 **여기서 재는 것은 여전히 「읽는가」다** — 길이 갈렸다고 이 줄의 뜻이 바뀌지는 않는다.
+       안 읽으면 학생 화면의 시험 D-day·범위 거르기·달력이 통째로 빈다(09-08 에 그랬다). */
   for (const c of ['classes', 'notices', 'videos', 'exams', 'problembank', 'assignments', 'clinicslots'])
-    봄('   ' + c + ' 는 읽는다', w.컬렉션.includes(c), true);
+    봄('   ' + c + ' 는 읽는다 (재운 길로)', w.재운것.includes(c), true);
+  /* 🔴 **재운 길이 «내 것만»의 담을 넘지 않는가** — 재우는 것은 통째로 읽는 것이다.
+     명단·클리닉·질문이 여기로 새면, 하루 읽기를 아끼려다 남의 이름·전화번호를 도로 내려보낸다. */
+  for (const c of ['students', 'clinics', 'qnas', 'contacts', 'auditlog', 'consults', 'assistants'])
+    봄('🔴 ' + c + ' 는 «재운 길로도» 안 읽는다', w.재운것.includes(c), false);
+  봄('   추가 질문은 읽고 나서 «갈라» 둔다 (새 질문으로 안 세게)', w.가른것, true);
 }
 
 /* ── ② 갈림길이 «토큰»으로 갈리는가 ─────────────────────────── */

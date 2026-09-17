@@ -87,8 +87,14 @@ console.log(NL + '② 읽어 올 때 한 번 — 자리마다 고치지 않는�
 /* ═══ ③ 쓰는 자리 셋 ═══ */
 console.log(NL + '③ 쓰는 자리 — 일괄 등록 · 개별 등록 · 고치기' + NL);
 {
-  봄('🔴 일괄 등록이 엑셀의 「1」을 그대로 안 담는다',
-    html.includes("grade: gradeLabel(r['학년'] ?? '') || '고1',"), true);
+  /* ⚠ **글자를 통째로 맞대 놓지 않는다** (2026-09-17에 한 번 밟았다) — 예전에는
+       `gradeLabel(r['학년'] ?? '')` 를 «그대로» 찾았는데, `d5311d1`(오래된 아이폰에서 페이지가
+       안 뜨던 것)이 `??` 를 걷고 `널아닌첫값(...)` 으로 바꾸면서 이 줄이 거짓이 됐다.
+       **고침이 옳았고 검사가 형태에 매여 있었다.** 재려던 것은 «`gradeLabel` 을 거치는가»와
+       «빈 칸이면 고1 인가» 둘이다 — 그 둘만 본다.
+     🔵 `??`·`?.` 를 다시 쓰면 `tools/old-safari-check.mjs` 가 문다. 여기서 또 잴 일이 아니다. */
+  봄('🔴 일괄 등록이 엑셀의 「1」을 그대로 안 담는다 (gradeLabel 을 거치고 빈 칸은 고1)',
+    /grade:\s*gradeLabel\([\s\S]{0,60}?'학년'[\s\S]{0,20}?\)\s*\|\|\s*'고1'/.test(html), true);
   봄('🔴 개별 등록도 거친다',
     알맹이(lift('addStudent')).includes("gradeLabel(document.getElementById('new-sgrade').value)"), true);
   봄('🔴 고치기도 거친다',
