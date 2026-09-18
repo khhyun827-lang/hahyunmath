@@ -7745,6 +7745,17 @@ function classNameOf(cid){
    「담당 반 변경」을 저장하는 순간 저절로 새 모양이 되기 때문이다 (그때 옛 필드는 지운다).
    읽는 곳이 다섯이라(로그인·세션 복원·명단·학생 상세 권한·설정 목록) 함수 하나로 모은다 —
    두 벌이면 한쪽만 고쳐지고, 그러면 «명단엔 보이는데 상세는 막히는» 학생이 생긴다. */
+/* 🔵 **지금 사람이 «볼 수 있는» 반** (2026-09-19) — 강사는 전부, 조교는 맡은 반만.
+   조교 화면이 강사의 반 관리 화면을 그대로 쓰게 되면서 필요해졌다(화면을 두 벌로 두지 않는다는
+   그 규칙 그대로다 — 두 벌이면 앞으로 모든 변경을 두 번 해야 하고 반드시 한쪽만 고쳐진다).
+   ⚠ 규칙(firestore.rules)은 «반»까지 가리지 않는다 — 조교는 모든 반의 명단을 읽을 수 있다.
+     여기서 좁히는 것은 **화면**이다. 그 둘을 헷갈리지 말 것. */
+function isAssistantNow(){ return !!(state.currentUser && state.currentUser.type === 'assistant'); }
+function myClassList(){
+  if(!isAssistantNow()) return DATA.classes;
+  const ids = assistantClassIds(state.currentUser);
+  return DATA.classes.filter(c => ids.includes(c.id));
+}
 function assistantClassIds(a){
   if(!a) return [];
   if(Array.isArray(a.classIds)) return a.classIds.filter(Boolean);
@@ -14025,6 +14036,30 @@ function ckCardHTML(c){
 
 /* 순위는 «읽어 온 뒤»에 그린다. 홈을 그릴 때 없으면 비어 보이므로,
    받아 오면 그 자리만 갈아 끼운다 (화면 전체를 다시 그리지 않는다). */
+/* 🔵 **조교도 게임을 한다** (2026-09-19 · 사용자 요청 — 「조교도 게임할 수 있도록 게임 하루에한번」).
+   도장이 사는 곳은 «기록 문서»이고, 규칙은 `records/<제 uid>` 를 제 것으로 열어 준다(`isMine`).
+   그래서 조교는 **제 uid 를 열쇠로** 기록 하나를 갖는다 — 학생 명단에 없는 열쇠라
+   `studentKeyOfSid` 가 그대로 uid 를 돌려주고, 나머지 길(불러오기·저장·도장·순위)은 그대로 산다.
+   ⚠ 이 기록에는 도장만 쌓인다 — 출결·성적은 조교에게 없는 것이다(빈 채로 둔다). */
+function gameSid(){
+  const cu = state.currentUser;
+  if(!cu) return '';
+  return cu.type === 'assistant' ? (authUid() || '') : (cu.studentId || '');
+}
+/* 순위에 적히는 «반» 자리 — 조교는 반이 아니라 조교다 (사용자가 정했다: 순위에도 같이 뜬다). */
+function gameClassLabel(sid){
+  if(isAssistantNow()) return '조교';
+  const me = DATA.students.find(s => s.studentId === sid) || {};
+  return classNameOf(me.classId) || '';
+}
+let ckMyRecordAsked = '';
+async function ckEnsureMyRecord(){
+  const sid = gameSid();
+  if(!sid || DATA.records[sid] || ckMyRecordAsked === sid) return;
+  ckMyRecordAsked = sid;               // 그리는 사이 두 번 읽지 않는다
+  await loadRecord(sid);
+  render();
+}
 async function ckEnsureRank(sid){
   const monday = weekStartOf(todayStr());
   const prev = weekStartOf(shiftYmd(monday, -7));
@@ -14147,7 +14182,7 @@ function teacherCheckinHTML(){
 /* 🔴 **이번 주의 게임을 연다.** 어느 갈래인지는 «주»가 정한다 — 학생이 고르지 않는다.
    고르게 하면 점수 잘 나오는 쪽으로 몰려 그 주 순위가 «누가 쉬운 걸 찾았나»가 된다. */
 function openGame(){
-  const sid = state.currentUser && state.currentUser.studentId;
+  const sid = gameSid();               // 학생은 학번 · 조교는 제 uid
   if(!sid) return;
   const rec = DATA.records[sid];
   /* ⚠ 하루 한 판. «끝난» 판이 있어야 소모된다 —
@@ -14189,7 +14224,7 @@ function closeGame(){
 /* ⚠ **저장은 여기 한 곳이다** — 판이 끝날 때 한 번.
    기록은 «읽어 온 그 객체»를 제자리에서 고친다 (saveRecord 가 객체 동일성을 본다). */
 async function finishGame(score){
-  const sid = state.currentUser && state.currentUser.studentId;
+  const sid = gameSid();               // 학생은 학번 · 조교는 제 uid
   if(!sid) return;
   const rec = DATA.records[sid];
   if(!rec) return;
@@ -14216,7 +14251,9 @@ async function finishGame(score){
   /* 순위 — 이름과 반만 올린다. 성적·출결은 넘기지 않는다 */
   const me = DATA.students.find(s => s.studentId === sid) || {};
   let rows = null;
-  try{ rows = await rankSubmit(sid, me.name || state.currentUser.name || '', classNameOf(me.classId) || '', score); }
+  /* 조교는 «반» 자리에 「조교」가 선다 — 반이 없는 사람이라 비워 두면 그 줄만 허전하다
+     (사용자가 정했다: 조교도 학생들과 같은 순위표에 뜬다). */
+  try{ rows = await rankSubmit(sid, me.name || state.currentUser.name || '', gameClassLabel(sid), score); }
   catch(e){ console.error('순위 저장 실패', e); }
 
   const stage = document.getElementById('gm-stage');
@@ -16751,12 +16788,23 @@ function attBadge(status){
 
    **상단바에 메뉴가 없다.** 갈 곳이 하나뿐인데 메뉴를 만들면 그게 거짓말이다.
    대신 「조교」 뱃지와 담당 반을 둔다 — 자기가 누구로 있는지가 늘 보여야 한다. */
+/* 🔵 **조교도 출결·성적·과제를 넣는다** (2026-09-19 · 사용자 요청 — 「조교도 출결이랑 과제체크
+     성적입력 해야할 때가 있어서 과제탭 출결탭 성적탭 열어줘야할 것 같아」).
+   🔴 **강사 화면을 그대로 쓴다** — 이 화면의 첫 규칙이 그것이다(화면을 두 벌로 두면 앞으로 모든
+     변경을 두 번 해야 하고 반드시 한쪽만 고쳐진다). 반 목록은 «맡은 반»으로 좁고(`myClassList`),
+     그 안에서 **강사가 못 하게 하는 것만 뺀다**(시험 만들기·과제 만들기·보충 영상 — 아래 각 화면).
+   ⚠ 조교에게 여는 탭은 **넷뿐**이다. 상담·수업기록·진도·퀴즈·영상·자료는 강사의 일이라 안 세운다. */
+const ASSISTANT_TABS = [['명단','students'], ['출결','sessions'], ['성적','scores'], ['과제','homework'],
+  ['출석 도장','checkin']];
 function assistantHTML(){
   const cu = state.currentUser;
   loadAllRecordsIfNeeded();   // 명단의 수치가 전부 여기서 나온다
+  const tab = ASSISTANT_TABS.some(t => t[1] === state.classHubTab) ? state.classHubTab : 'students';
   const body = state.studentDetailId
     ? teacherStudentDetailHTML(state.studentDetailId)
-    : assistantRosterHTML(cu);
+    : tab === 'students' ? assistantRosterHTML(cu)
+    : tab === 'checkin' ? assistantCheckinHTML()
+    : teacherClassHubHTML();
   return `
   <div class="app as">
     <div class="topbar">
@@ -16774,7 +16822,34 @@ function assistantHTML(){
         <button class="btn sm" onclick="logout()">로그아웃</button>
       </div>
     </div>
+    ${/* 서브탭 줄은 강사 화면과 «같은 꼴»(.subnav)이다 — 같은 곳을 가리키는 줄이 둘로 생기지 않게. */''}
+    <div class="subnav">${ASSISTANT_TABS.map(t=>
+      `<a class="${t[1]===tab && !state.studentDetailId ? 'on' : ''}" onclick="goAssistantTab('${t[1]}')">${t[0]}</a>`
+    ).join('')}</div>
     <div class="body">${body}</div>
+  </div>`;
+}
+/* ⚠ 탭을 옮기면 열어 둔 학생 상세를 닫는다 — 안 닫으면 탭만 바뀌고 화면은 그 학생이라
+   「눌렀는데 아무 일도 없다」가 된다(강사 `goTeacherTab` 과 같은 규칙). */
+function goAssistantTab(tab){
+  state.classHubTab = tab;
+  state.studentDetailId = null;
+  render();
+}
+/* 조교의 출석 도장 — **학생과 같은 카드 하나**를 쓴다(`ckCardHTML`). 도장·연속·하루 한 판·순위가
+   전부 그 안에 있어서, 여기서 따로 지으면 규칙이 두 벌이 되고 한쪽만 고쳐진다.
+   ⚠ 기록은 «제 uid» 문서다 — 열려면 한 번 읽어야 하므로 없으면 읽어 오고 다시 그린다. */
+function assistantCheckinHTML(){
+  const sid = gameSid();
+  if(!sid) return '<div class="st-empty">계정을 확인하는 중입니다…</div>';
+  ckEnsureMyRecord();
+  const rec = DATA.records[sid];
+  if(!rec) return '<div class="st-empty">불러오는 중…</div>';
+  ckEnsureRank(sid);
+  return `<div style="max-width:560px;margin:0 auto;padding:4px 0 24px;">
+    ${ckCardHTML({ sid, rec })}
+    <div style="font-size:11.5px;color:var(--dim);margin-top:12px;line-height:1.7;">
+      학생들과 <b>같은 순위표</b>에 오릅니다 — 반 자리에는 <b>조교</b>라고 섭니다.</div>
   </div>`;
 }
 
@@ -18627,7 +18702,7 @@ function sessionAttHTML(classId, date){
       ${d.status && d.status !== '출석' ? `<div class="cls-sub">
         <input placeholder="${d.status} 사유 (선택)" value="${escHtml(d.reason)}"
           oninput="state.attDraft['${s.studentId}'].reason=this.value">
-        ${flag ? `<input placeholder="보충 영상 유튜브 링크 (선택 · 마감 +${MAKEUP_VIDEO_DAYS}일)" value="${escHtml(d.videoUrl)}"
+        ${flag && !isAssistantNow() ? `<input placeholder="보충 영상 유튜브 링크 (선택 · 마감 +${MAKEUP_VIDEO_DAYS}일)" value="${escHtml(d.videoUrl)}"
           oninput="state.attDraft['${s.studentId}'].videoUrl=this.value">` : ''}
       </div>` : ''}
     </div>`;
@@ -19368,15 +19443,21 @@ function teacherClassHubHTML(){
     return teacherStudentDetailHTML(state.studentDetailId);
   const tab = state.classHubTab || 'sessions';
 
-  if(DATA.classes.length===0){
-    return `<div style="padding:64px 0;text-align:center;color:var(--dim);font-size:12.5px;line-height:1.8;">
+  /* ⚠ 조교는 «맡은 반»만 본다 — 반이 없으면 할 말도 다르다(설정으로 보내면 안 된다. 못 들어간다). */
+  const 반들 = myClassList();
+  if(반들.length===0){
+    return isAssistantNow()
+      ? `<div style="padding:64px 0;text-align:center;color:var(--dim);font-size:12.5px;line-height:1.8;">
+          맡은 반이 없습니다.<br>강사에게 담당 반을 받아야 합니다.</div>`
+      : `<div style="padding:64px 0;text-align:center;color:var(--dim);font-size:12.5px;line-height:1.8;">
       등록된 반이 없습니다.<br>반은 <b style="color:var(--sub);">설정 &gt; 반 추가</b>에서 만듭니다.
       <div style="margin-top:14px;"><button class="btn sm" onclick="goTeacherTab('settings'); state.settingsSubTab='classes'; render()">설정으로 가기</button></div>
     </div>`;
   }
-  /* 고른 반이 없거나 지워졌으면 첫 반으로. 목록이 늘 떠 있으므로 «선택 없음» 상태를 두지 않는다. */
-  let c = DATA.classes.find(x=>x.id===state.classHubId);
-  if(!c){ c = DATA.classes[0]; state.classHubId = c.id; }
+  /* 고른 반이 없거나 지워졌으면 첫 반으로. 목록이 늘 떠 있으므로 «선택 없음» 상태를 두지 않는다.
+     ⚠ 조교가 맡지 «않은» 반이 state 에 남아 있어도 여기서 제 반으로 되돌아온다. */
+  let c = 반들.find(x=>x.id===state.classHubId);
+  if(!c){ c = 반들[0]; state.classHubId = c.id; }
 
   /* 🔴 **「학생」 탭만은 반 껍데기를 안 쓴다** (2026-09-01 · C-13 · 사용자가 시켰다).
      사용자의 말 — 「**아예 명단탭이랑 동일하게 학생탭에서는 왼쪽 반목록이 없어도 될 것 같아**」.
@@ -19646,7 +19727,9 @@ function chubScoresHTML(classId){
         지금은 <b>점수만</b> 넣습니다. <b>문항은 나중에 붙여도 됩니다</b> —
         붙이면 넣어 둔 성적이 그대로 이어지고 오답 쌍둥이가 돕니다.</span>`
     : `
-      <button class="btn p sm" onclick="state.scoreAddFor='${classId}'; render()">${iconSvg('plus',13)} 시험 추가</button>
+      ${/* ⚠ 시험을 «만드는» 것은 강사의 일이다 — `exams` 쓰기가 강사만이라 조교가 눌러도 안 된다.
+           눌러도 아무 일 없는 단추는 거짓말이므로 아예 안 세운다. 점수 넣기는 기록(records)이라 된다. */''}
+      ${isAssistantNow() ? '' : `<button class="btn p sm" onclick="state.scoreAddFor='${classId}'; render()">${iconSvg('plus',13)} 시험 추가</button>`}
       ${exams.length ? `<button class="btn sm" onclick="saveClassScores('${classId}')">전체 저장</button>` : ''}
       <span style="font-size:11.5px;color:var(--dim);line-height:1.7;flex:1;min-width:220px;">
         <b>맞은 개수</b>를 넣으면 100점으로 환산해 보여 줍니다. 빈 칸은 <b>«안 봤다»</b>입니다 —
@@ -19683,14 +19766,20 @@ function chubScoresHTML(classId){
                  예전에는 「문항」과 「20」이 두 줄로 갈라졌다 — `.hwg-col b`가 `display:block`이라
                  안쪽 `<b class="mono">`가 통째로 줄을 바꿔 버렸다. 붙여 쓰면 그 사고도 같이 사라진다.
                ⚠ 한글이 섞이므로 `.mono`는 «숫자만» 감싼다. */''}
+          ${/* ⚠ 조교에게는 문항수를 «글자»로 보인다 — 고치면 `exams` 를 써야 하는데 그것은 강사만이다.
+               고칠 수 없는 칸을 입력칸으로 두면 고쳐 놓고 저장이 안 되는 것을 모른다.
+               🔴 그래서 `saveClassScores` 는 칸이 없으면 **적혀 있는 만점**으로 센다(아래). */''}
           <span class="n">${qn
             ? `<span class="mono">${qn}</span>문항`
+            : isAssistantNow()
+            ? `<span class="mono">${examTotalOf(ex)}</span>문항`
             : `<input class="sg-tot mono" type="number" min="1" title="이 시험의 총 문항수"
                  id="cst-${ex.id}" value="${examTotalOf(ex)}">문항`}</span>
           <span class="n ${avg!==null && avg<60 ? 'wait' : ''}">${avg===null ? '—' : '평균 '+avg+'%'}</span>
           ${qn
             ? `<button class="sg-x" title="문항과 오답률을 오른쪽에서 봅니다"
                  onclick="sgOpenQ('${ex.id}')">문항 보기</button>`
+            : isAssistantNow() ? ''      /* 문항 등록·시험 삭제는 강사만 (exams 쓰기) */
             : `<button class="sg-x on" title="이 시험에 문항을 붙입니다. 넣어 둔 성적은 그대로 이어집니다."
                  onclick="attachExamQuestions('${ex.id}')">문항 등록</button>
                <button class="sg-x" title="이 시험을 지웁니다" onclick="deleteExam('${ex.id}')">✕</button>`}
@@ -19844,6 +19933,10 @@ async function saveClassScores(classId, examList){
     const qn = (ex.questions||[]).length;
     if(qn){ totals[ex.id] = qn; continue; }
     const el = document.getElementById('cst-'+ex.id);
+    /* 🔵 **칸이 없으면 적혀 있는 만점으로 센다** (2026-09-19) — 조교 화면은 만점을 글자로만 보인다
+       (고치면 `exams` 를 써야 하는데 그것은 강사만이다). 칸이 없다고 저장을 통째로 막으면
+       조교는 점수를 **하나도** 못 넣는다. 만점이 아예 없으면 그때는 예전처럼 막는다. */
+    if(!el && examTotalOf(ex) > 0){ totals[ex.id] = examTotalOf(ex); continue; }
     const t = parseFloat(el ? el.value : '');
     if(isNaN(t) || t<=0){ showToast(`「${ex.title}」의 문항수를 확인해주세요.`); return; }
     totals[ex.id] = t;
@@ -19956,7 +20049,7 @@ function chubAttendanceHTML(classId){
   const c = DATA.classes.find(x=>x.id===classId);
   if(!(c && parseScheduleDays(c.schedule).length)){
     return `<div style="padding:56px 0;text-align:center;color:var(--dim);font-size:12.5px;line-height:1.8;">
-      반 일정(요일)이 없어 수업 날짜를 만들 수 없습니다.<br>설정 &gt; 반 추가에서 「월,수,금 7시~9시」처럼 넣어 주세요.</div>`;
+      반 일정(요일)이 없어 수업 날짜를 만들 수 없습니다.<br>${isAssistantNow() ? '강사가 반 일정을 넣어야 합니다.' : '설정 &gt; 반 추가에서 「월,수,금 7시~9시」처럼 넣어 주세요.'}</div>`;
   }
   if(!state.allRecordsLoaded) return `<div class="fm-empty">학생 기록을 불러오는 중입니다…</div>`;
   const roster = classRoster(classId);
@@ -20077,7 +20170,7 @@ function chubLogHTML(classId){
   const c = DATA.classes.find(x=>x.id===classId);
   if(!(c && parseScheduleDays(c.schedule).length)){
     return `<div style="padding:56px 0;text-align:center;color:var(--dim);font-size:12.5px;line-height:1.8;">
-      반 일정(요일)이 없어 수업 날짜를 만들 수 없습니다.<br>설정 &gt; 반 추가에서 「월,수,금 7시~9시」처럼 넣어 주세요.</div>`;
+      반 일정(요일)이 없어 수업 날짜를 만들 수 없습니다.<br>${isAssistantNow() ? '강사가 반 일정을 넣어야 합니다.' : '설정 &gt; 반 추가에서 「월,수,금 7시~9시」처럼 넣어 주세요.'}</div>`;
   }
   /* 🔵 한 달치만 (2026-08-31 · C-8). 목록은 «최근이 위»라 뒤집는다 — 격자와 방향이 다른 이유는
      격자가 «달력»이고 목록이 «일지»이기 때문이다. 일지는 최근 것부터 읽는다. */
@@ -20199,15 +20292,17 @@ function chubDayHTML(classId, date){
 }
 
 function chubClassListHTML(activeId){
+  const 반들 = myClassList();
   return `<aside class="chub-side">
     <div class="chub-lh">
-      <span class="t-sec" style="margin:0;">반 목록 ${DATA.classes.length}</span>
+      <span class="t-sec" style="margin:0;">반 목록 ${반들.length}</span>
       <span class="spacer"></span>
-      <button class="btn q sm" title="반은 설정에서 만듭니다"
-        onclick="goTeacherTab('settings'); state.settingsSubTab='classes'; render()">${iconSvg('plus',13)} 추가</button>
+      ${/* 반을 «만드는» 곳은 설정이고, 설정은 강사의 것이다 — 조교에게는 이 단추를 안 세운다 */''}
+      ${isAssistantNow() ? '' : `<button class="btn q sm" title="반은 설정에서 만듭니다"
+        onclick="goTeacherTab('settings'); state.settingsSubTab='classes'; render()">${iconSvg('plus',13)} 추가</button>`}
     </div>
     <div class="chub-lbody">
-      ${DATA.classes.map(c=>{
+      ${반들.map(c=>{
         const n = classRoster(c.id).length;
         const pr = getClassProgress(c.id);
         const wait = hwWaitingInClass(c.id);
@@ -22089,7 +22184,10 @@ function attDateDrawerHTML(){
             ${(d.status && d.status!=='출석') ? `<label><span>사유</span>
               <input placeholder="예: 병원 진료" value="${escHtml(d.reason)}"
                 oninput="state.attDraft['${s.studentId}'].reason=this.value"></label>` : ''}
-            ${gone ? `<label><span>보충 영상</span>
+            ${/* ⚠ 보충 영상은 «영상 문서»를 만드는 일이라 강사만 할 수 있다(`videos` 쓰기).
+                 조교에게 칸을 보이면 링크를 적어 두고 저장해도 조용히 안 만들어진다 — 그래서 안 보인다.
+                 출결 그 자체(결석·지각)는 기록이라 조교도 그대로 넣는다. */''}
+            ${gone && !isAssistantNow() ? `<label><span>보충 영상</span>
               <input placeholder="유튜브 링크 (선택 · 마감 +${MAKEUP_VIDEO_DAYS}일)" value="${escHtml(d.videoUrl)}"
                 oninput="state.attDraft['${s.studentId}'].videoUrl=this.value"></label>` : ''}
             <label><span>메모</span>
@@ -22268,10 +22366,12 @@ function teacherClassDailyHomeworkHTML(classId, date){
                달라 드로어 가드(`+"`classHubTab==='homework'`"+`)가 안 서므로 예전처럼 아래로 편다. */''}
         ${/* ⚠ 고치는 중에 이 단추가 「과제 등록」으로 남아 있으면, 눌렀을 때 고치던 폼이
              등록 폼처럼 보이면서 값만 차 있는 «무엇인지 모를 판»이 된다. 그래서 취소로 바뀐다. */''}
-        <button class="btn ${(open && !standalone) || editing ? '' : 'p'} sm" onclick="${editing
+        ${/* ⚠ 과제를 «내는» 것은 강사의 일이다 — `assignments` 쓰기가 강사만이라 조교가 눌러도 안 된다.
+             조교가 하는 것은 «확인»이고 그것은 학생 기록(records)이라 그대로 된다. */''}
+        ${isAssistantNow() ? '' : `<button class="btn ${(open && !standalone) || editing ? '' : 'p'} sm" onclick="${editing
           ? 'hwCloseEdit()'
           : (standalone ? `hwOpenNew('${classId}','${date}')` : `stOpen('dhw')`)}">${
-          editing ? '고치기 취소' : ((open && !standalone) ? '닫기' : iconSvg('plus',13)+' 과제 등록')}</button>
+          editing ? '고치기 취소' : ((open && !standalone) ? '닫기' : iconSvg('plus',13)+' 과제 등록')}</button>`}
       </span>
     </div>
     ${((!open && !editing) || standalone) ? '' : `<div class="st-form">
@@ -22330,9 +22430,9 @@ function teacherClassDailyHomeworkHTML(classId, date){
           <button class="btn sm" onclick="state.homeworkDetailId = state.homeworkDetailId==='${a.id}' ? null : '${a.id}'; state.hwRejectOpen=null; render()">${on?'접기':'확인하기'}</button>
           ${/* 고치기 (2026-09-13 · K-6) — 폼은 이 목록 «위»에서 펴진다. 반 관리(격자)에는
                이 줄이 없어 열 머리 판의 발판에 같은 단추가 서 있다. */''}
-          <button class="btn ${state.hwEditId===a.id?'p':''} sm" onclick="hwOpenEdit('${a.id}')">${
+          ${isAssistantNow() ? '' : `<button class="btn ${state.hwEditId===a.id?'p':''} sm" onclick="hwOpenEdit('${a.id}')">${
             state.hwEditId===a.id ? '고치는 중' : '고치기'}</button>
-          <button class="btn q sm" onclick="deleteHomework('${a.id}')">삭제</button>
+          <button class="btn q sm" onclick="deleteHomework('${a.id}')">삭제</button>`}
         </div>
       </div>`;
     }).join('')}
