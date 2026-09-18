@@ -91,8 +91,10 @@ console.log(NL + '② 요청은 학생 제 기록에 남는다' + NL);
   const rules = fs.readFileSync(path.join(ROOT, 'firestore.rules'), 'utf8').replace(/\r\n/g, '\n');
   봄('🔴 문항 창고는 강사만 쓴다 (그대로 둔다)',
     /match \/problembank\/\{doc\} \{ allow read: if realAccount\(\); allow write: if isTeacher\(\); \}/.test(rules), true);
+  /* ⚠ 규칙 «글자»를 통째로 박아 두면 다른 갈래가 늘 때마다 여기가 빨개진다 —
+     2026-09-19에 조교(`isStaff()`)가 들면서 한 번 그랬다. 재는 것은 «학생 제 것»이니 그것만 본다. */
   봄('🔵 학생이 제 기록에는 쓸 수 있다',
-    /match \/records\/\{uid\} \{\s*allow read, write: if isTeacher\(\) \|\| isMine\(uid\);/.test(rules), true);
+    /match \/records\/\{uid\} \{[\s\S]{0,300}?allow read, write:[^\n]*isMine\(uid\)/.test(rules), true);
   봄('🔴 그래서 요청은 problembank 를 안 건드린다',
     lift('submitBookRequests').includes('problembank'), false);
   봄('제 기록에만 쓴다', lift('submitBookRequests').includes('await saveRecord(sid)'), true);

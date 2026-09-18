@@ -52,16 +52,26 @@ function 판(opt) {
       간것.계정.push(role + ':' + id + ':' + pw); return 'UID-' + id;
     },
     adminDeleteUser: async (role, id) => { if (opt.계정지우기실패) throw new Error('없는 계정'); 간것.지운계정.push(role + ':' + id); },
-    dbSetDoc: async (col, id, d) => { if (opt.저장실패) return null; 간것.문서.push([col, id, d]); return true; },
+    /* 저장실패: true = 전부 실패 · 'staff' = 권한 문서만 실패 */
+    dbSetDoc: async (col, id, d) => {
+      if (opt.저장실패 === true || opt.저장실패 === col) return null;
+      간것.문서.push([col, id, d]); return true;
+    },
     dbDeleteDoc: async (col, id) => { 간것.지운문서.push([col, id]); return true; },
     logAudit: async (a, b, c, d) => 간것.기록.push([a, c, d]),
     showToast: m => 간것.말.push(m),
     render: () => {}, confirm: () => opt.확인 !== false, prompt: () => opt.물음답 || null,
     assistantClassLabel: () => '고1 A', assistantClassIds: a => a.classIds || [],
   };
-  const 이름들 = ['authIdOk', 'authIdWhyBad', 'authWhyFailed', 'addAssistant', 'deleteAssistant', 'fixAssistantAccount'];
+  const 이름들 = ['authIdOk', 'authIdWhyBad', 'authWhyFailed', 'addAssistant', 'deleteAssistant',
+    'fixAssistantAccount', 'staffEnsureLoaded', 'taHasStaff', 'taGrantStaff', 'taRevokeStaff'];
+  /* ⚠ 읽기 횟수는 여기서 센다 — `new Function` 이 값을 «그때» 받아 가므로 나중에 곁을 갈아도 안 먹는다 */
+  간것.읽기 = 0;
+  곁.dbGetCollection = async col => { 간것.읽기++; return (opt.권한들 || []).map(u => ({ uid: u })); };
+  곁.nowStamp = () => '2026-09-19 21:00';
   const api = new Function(...Object.keys(곁),
-    이름들.map(lift).join(NL) + NL + 'return { ' + 이름들.join(', ') + ' };')(...Object.values(곁));
+    'let staffUids = null;' + NL + 이름들.map(lift).join(NL)
+    + NL + 'return { ' + 이름들.join(', ') + ', 권한목록: () => staffUids };')(...Object.values(곁));
   return { api, 간것, 곁 };
 }
 
@@ -70,7 +80,8 @@ console.log(NL + '① 조교를 더하면 «계정»도 생긴다' + NL);
   const T = 판();
   await T.api.addAssistant();
   봄('🔴 Auth 계정을 만든다 (이것이 빠져서 로그인이 안 됐다)', T.간것.계정, ['assistant:ta01:secret1']);
-  봄('   계정을 «먼저» 만들고 문서를 나중에 쓴다', T.간것.문서.length, 1);
+  봄('   계정을 «먼저» 만들고 문서를 나중에 쓴다 (조교 문서 → 권한 문서)',
+    T.간것.문서.map(d => d[0]), ['assistants', 'staff']);
   봄('문서에 uid 가 적힌다', T.간것.문서[0][2].uid, 'UID-ta01');
   봄('🔴 문서에 비밀번호를 «안» 적는다 (학생도 읽는 자리다)', 'pw' in T.간것.문서[0][2], false);
   봄('이름·아이디·담당 반은 그대로 적는다',
@@ -110,7 +121,7 @@ console.log(NL + '② 문서만 있던 옛 조교 — 계정만 붙인다' + NL)
   봄('   담당 반·이름은 그대로 둔다 (지우고 다시 만들지 않는다)',
     [T.간것.문서[0][2].classIds, T.간것.문서[0][2].name], [['c1'], '조교하나']);
   봄('메모리에서도 비밀번호가 사라진다', 'pw' in T.곁.DATA.assistants[0], false);
-  봄('이제 로그인할 수 있다고 말해 준다', /로그인할 수 있습니다/.test(T.간것.말.join(' ')), true);
+  봄('이제 들어와서 볼 수 있다고 말해 준다', /담당 반을 볼 수 있습니다/.test(T.간것.말.join(' ')), true);
 }
 {
   const T = 판({ 조교들: [{ id: 'ta9', taId: 'ta01', name: '조교하나', classIds: ['c1'] }], 물음답: 'brandnew1' });
@@ -139,7 +150,7 @@ console.log(NL + '③ 지울 때 계정도 지운다 — 같은 아이디를 다
 {
   const T = 판({ 조교들: [{ id: 'ta9', taId: 'ta01', uid: 'UID-ta01', name: '조교하나' }] });
   await T.api.deleteAssistant('ta9');
-  봄('문서를 지운다', T.간것.지운문서, [['assistants', 'ta9']]);
+  봄('문서를 지운다 (권한 문서까지 — ④에서 따로 잰다)', T.간것.지운문서[0], ['assistants', 'ta9']);
   봄('🔴 계정도 지운다 (안 지우면 같은 아이디를 다시 못 쓴다)', T.간것.지운계정, ['assistant:ta01']);
 }
 {
@@ -152,6 +163,105 @@ console.log(NL + '③ 지울 때 계정도 지운다 — 같은 아이디를 다
   const T = 판({ 조교들: [{ id: 'ta9', taId: 'ta01', name: '조교하나' }], 확인: false });
   await T.api.deleteAssistant('ta9');
   봄('안 물으면 아무 일도 없다', [T.간것.지운문서.length, T.간것.지운계정.length], [0, 0]);
+}
+
+console.log(NL + '④ 권한 문서(staff) — 콘솔에 들어갈 일이 없다' + NL);
+{
+  /* 🔴 **계정만으로는 아무것도 못 본다** — 명단·기록은 규칙이 가리고, 그 문을 여는 것이 이 문서다.
+     어제까지 이것은 `teachers/<uid>` 였고 **콘솔에서 손으로** 만들어야 했다(조교마다 한 번씩).
+     이제 조교를 더할 때 앱이 같이 만든다 — 그것을 여기서 잰다. */
+  const T = 판();
+  await T.api.addAssistant();
+  const staff = T.간것.문서.filter(d => d[0] === 'staff');
+  봄('🔴 조교를 더하면 권한 문서도 함께 만든다 (콘솔 작업이 사라졌다)', staff.length, 1);
+  봄('   문서 이름은 uid 다 (규칙이 그 이름으로 찾는다)', staff[0][1], 'UID-ta01');
+  봄('   안에도 uid 를 적는다', staff[0][2].uid, 'UID-ta01');
+  봄('   누구인지 알아볼 칸도 둔다', [staff[0][2].taId, staff[0][2].name], ['ta01', '조교하나']);
+  봄('바로 로그인할 수 있다고 말해 준다', /바로 로그인할 수 있습니다/.test(T.간것.말.join(' ')), true);
+}
+{
+  /* ⚠ 권한 문서만 실패하면 «조교는 남기고» 다시 시킬 수 있어야 한다 — 계정까지 버리면 손이 두 번 간다 */
+  const T = 판({ 저장실패: 'staff' });
+  await T.api.addAssistant();
+  봄('권한 문서만 실패하면 조교는 남기고 알려 준다',
+    [T.곁.DATA.assistants.length, /「권한 주기」/.test(T.간것.말.join(' '))], [1, true]);
+}
+{
+  const T = 판({ 조교들: [{ id: 'ta9', taId: 'ta01', uid: 'UID-ta01', name: '조교하나' }], 권한들: [] });
+  await T.api.staffEnsureLoaded();
+  봄('권한 없는 조교를 알아낸다', T.api.taHasStaff(T.곁.DATA.assistants[0]), false);
+  await T.api.taGrantStaff('ta9');
+  봄('🔴 「권한 주기」가 문서를 만든다', T.간것.문서.filter(d => d[0] === 'staff').map(d => d[1]), ['UID-ta01']);
+  봄('   그 자리에서 «있음»으로 바뀐다 (다시 읽지 않는다)', T.api.taHasStaff(T.곁.DATA.assistants[0]), true);
+  봄('   이력에도 남는다', T.간것.기록.some(r => r[0] === '조교 권한 부여'), true);
+}
+{
+  const T = 판({ 조교들: [{ id: 'ta9', taId: 'ta01', uid: 'UID-ta01', name: '조교하나' }], 권한들: ['UID-ta01'] });
+  await T.api.staffEnsureLoaded();
+  봄('있는 권한을 읽어 온다', T.api.taHasStaff(T.곁.DATA.assistants[0]), true);
+  await T.api.taRevokeStaff('ta9');
+  봄('거두면 문서를 지운다', T.간것.지운문서.filter(d => d[0] === 'staff').map(d => d[1]), ['UID-ta01']);
+  봄('   그 자리에서 «없음»으로 바뀐다', T.api.taHasStaff(T.곁.DATA.assistants[0]), false);
+}
+{
+  const T = 판({ 조교들: [{ id: 'ta9', taId: 'ta01', uid: 'UID-ta01', name: '조교하나' }], 권한들: ['UID-ta01'], 확인: false });
+  await T.api.staffEnsureLoaded();
+  await T.api.taRevokeStaff('ta9');
+  봄('안 물으면 권한을 안 거둔다', [T.간것.지운문서.length, T.api.taHasStaff(T.곁.DATA.assistants[0])], [0, true]);
+}
+{
+  /* 🔴 조교를 지우면 권한 문서도 지운다 — 남겨 두면 «없는 조교»의 uid 가 규칙에서 계속 조교로 센다 */
+  const T = 판({ 조교들: [{ id: 'ta9', taId: 'ta01', uid: 'UID-ta01', name: '조교하나' }] });
+  await T.api.deleteAssistant('ta9');
+  봄('🔴 조교를 지우면 권한 문서도 지운다 (떠도는 권한이 남으면 안 된다)',
+    T.간것.지운문서.map(d => d[0] + ':' + d[1]), ['assistants:ta9', 'staff:UID-ta01']);
+}
+{
+  /* 옛 조교 고치기 — 계정과 권한을 한 번에 */
+  const T = 판({ 조교들: [{ id: 'ta9', taId: 'ta01', pw: 'oldpass1', name: '조교하나', classIds: ['c1'] }] });
+  await T.api.fixAssistantAccount('ta9');
+  봄('🔴 「로그인 계정 만들기」가 권한까지 붙인다', T.간것.문서.map(d => d[0]), ['assistants', 'staff']);
+  봄('   그래서 한 번 누르면 끝난다고 말한다', /담당 반을 볼 수 있습니다/.test(T.간것.말.join(' ')), true);
+}
+{
+  /* 읽기는 «화면을 열 때» 한 번뿐이다 — 로그인마다 읽으면 안 쓰는 사람에게도 읽기가 붙는다 */
+  const T = 판({ 조교들: [{ id: 'ta9', taId: 'ta01', uid: 'UID-ta01', name: '조교하나' }], 권한들: ['UID-ta01'] });
+  await T.api.staffEnsureLoaded();
+  await T.api.staffEnsureLoaded();
+  await T.api.staffEnsureLoaded();
+  봄('여러 번 불러도 한 번만 읽는다 (그리는 함수가 부르므로 render 마다 읽으면 안 된다)', T.간것.읽기, 1);
+}
+
+console.log(NL + '⑤ 규칙 — 조교에게 «딱 그만큼»만 열렸는가' + NL);
+{
+  /* 🔴 여기가 틀리면 조용히 너무 많이 열린다. 규칙 파일은 손으로 게시하는 것이라
+     검사가 대신 읽어 준다(게시했는지는 못 본다 — 그것은 콘솔의 일이다).
+     ⚠ `tools/rules-check.mjs` 는 «지금 게시된» 규칙을 실제로 두드린다. 이 절은 «적어 둔» 규칙을 읽는다. */
+  const rules = fs.readFileSync(path.join(ROOT, 'firestore.rules'), 'utf8').replace(/\r\n/g, '\n');
+  /* ⚠ 여는 중괄호로 끝을 찾으면 안 된다 — `match /students/{uid} {` 의 첫 `{` 는 **와일드카드**다.
+     그래서 「줄머리가 4칸인 닫는 중괄호」까지로 자른다(이 파일의 꼴이 그렇다). */
+  const 덩이 = 이름 => {
+    const at = rules.indexOf('match /' + 이름 + '/');
+    if (at < 0) return '';
+    const end = rules.indexOf(NL + '    }', at);
+    return end < 0 ? rules.slice(at) : rules.slice(at, end);
+  };
+  봄('🔴 조교를 가리는 함수가 있다', /function isStaff\(\)[\s\S]{0,200}documents\/staff\//.test(rules), true);
+  봄('🔴 명단은 조교도 읽는다', /allow read: if isTeacher\(\) \|\| isStaff\(\) \|\| isMine\(uid\)/.test(덩이('students')), true);
+  봄('🔴 명단 «쓰기»는 강사만 (반 이동·삭제는 강사의 일이다)', /allow write: if isTeacher\(\);/.test(덩이('students')), true);
+  봄('🔴 기록은 조교가 읽고 쓴다 (출결·과제를 넣는다)',
+    /allow read, write: if isTeacher\(\) \|\| isStaff\(\) \|\| isMine\(uid\)/.test(덩이('records')), true);
+  봄('🔴 전화번호는 조교에게 «안» 열린다 — 이것이 teachers 문서를 버린 까닭이다',
+    /isStaff\(\)/.test(덩이('contacts')), false);
+  봄('   채팅도 안 열린다', /isStaff\(\)/.test(덩이('chats')), false);
+  봄('   상담도 안 열린다', /isStaff\(\)/.test(덩이('consults')), false);
+  봄('   낱건(kv) 쓰기도 안 열린다', /isStaff\(\)/.test(덩이('kv')), false);
+  봄('🔴 권한 문서는 «강사»만 쓴다 (조교가 스스로 조교가 되면 안 된다)',
+    [/allow read:  if isTeacher\(\);/.test(덩이('staff')), /allow write: if isTeacher\(\);/.test(덩이('staff'))], [true, true]);
+  봄('🔴 강사를 만드는 문은 그대로 잠겨 있다 (콘솔에서만)', /allow write: if false;/.test(덩이('teachers')), true);
+  봄('변경 이력은 조교가 «남기기만» 한다',
+    [/allow create: if isTeacher\(\) \|\| isStaff\(\)/.test(덩이('auditlog')),
+     /allow read: if isTeacher\(\);/.test(덩이('auditlog'))], [true, true]);
 }
 
 console.log(NL + '🪤 덫 — 들어오는 문과 만드는 문이 어긋나 있지 않은가 (글로 잰다)' + NL);

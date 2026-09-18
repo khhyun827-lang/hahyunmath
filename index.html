@@ -12569,12 +12569,18 @@ async function addAssistant(){
     showToast('계정은 만들었으나 조교 정보를 저장하지 못했습니다. 같은 아이디로 다시 시도해 주세요.');
     render(); return;
   }
-  await logAudit('조교 추가', '', name, '계정도 함께 만들었다');
+  /* 🔵 **권한 문서도 함께 만든다** (2026-09-19) — 이것이 없으면 로그인만 되고 화면이 텅 빈다.
+     ⚠ 실패해도 조교는 남긴다(설정에서 「권한 주기」로 다시 할 수 있다) — 말만 갈라 한다. */
+  const 권한 = await dbSetDoc('staff', uid, { uid, taId, name, at:nowStamp() });
+  if(staffUids && 권한 === true) staffUids.add(uid);
+  await logAudit('조교 추가', '', name, 권한 === true ? '계정·권한도 함께 만들었다' : '계정은 만들었으나 권한 문서는 못 만들었다');
   document.getElementById('ta-id').value='';
   document.getElementById('ta-pw').value='';
   document.getElementById('ta-name').value='';
   document.getElementById('ta-phone').value='';
-  showToast(`${name} 조교를 추가했습니다 — 담당 ${assistantClassLabel(classIds)}`);
+  showToast(권한 === true
+    ? `${name} 조교를 추가했습니다 — 담당 ${assistantClassLabel(classIds)}. 바로 로그인할 수 있습니다.`
+    : `${name} 조교를 추가했으나 «권한 문서»를 못 만들었습니다 — 줄의 「권한 주기」를 눌러 주세요.`);
   render();
 }
 function taEditClasses(aid){
@@ -12620,19 +12626,50 @@ async function deleteAssistant(aid){
      ⚠ 계정이 없던 옛 조교는 「없다」로 튕기는데, 그것은 흠이 아니다 — 말만 갈라 한다. */
   let 계정흠 = null;
   if(a && a.taId){ try{ await adminDeleteUser('assistant', a.taId); }catch(e){ 계정흠 = e.message; } }
-  await logAudit('조교 삭제', '', a ? a.name : '', 계정흠 ? '계정은 못 지웠다: ' + 계정흠 : '계정도 함께 지웠다');
+  /* 권한 문서도 지운다 — 남겨 두면 «없는 조교»의 uid 가 규칙에서 계속 조교로 센다 */
+  if(a && a.uid){ await dbDeleteDoc('staff', a.uid); if(staffUids) staffUids.delete(a.uid); }
+  await logAudit('조교 삭제', '', a ? a.name : '', 계정흠 ? '계정은 못 지웠다: ' + 계정흠 : '계정·권한도 함께 지웠다');
   showToast(계정흠 ? '조교 정보는 지웠으나 로그인 계정이 남았습니다 — ' + 계정흠 : '삭제되었습니다.');
   render();
 }
-/* 🔴 **조교가 명단을 보려면 `teachers/<uid>` 문서가 하나 더 필요하다** (firestore.rules).
-   `students`·`records` 는 `isTeacher()` 만 읽고, **조교는 그 문서가 있어야 강사로 센다.**
-   그 문서는 **콘솔에서 사람이 손으로** 만든다 — 코드로 만들게 두면 아무나 강사가 된다.
-   ⚠ 그래서 uid 를 화면에 보이고 복사할 수 있게 둔다. 없으면 로그인은 되는데 **화면이 텅 빈다.** */
-function taCopyUid(aid){
+/* =================== 조교 권한 — `staff/<uid>` (2026-09-19) ===================
+   🔴 **조교는 계정만으로는 아무것도 못 본다.** 명단(`students`)과 기록(`records`)은 규칙이 가리고,
+     그 문을 여는 것은 «문서 하나»다. 어제까지 그것은 `teachers/<uid>` 였고 **콘솔에서 손으로**
+     만들어야 했다 — 조교마다 한 번씩, 잊으면 「로그인은 되는데 화면이 텅 빈다」.
+     게다가 그 문서는 조교를 **규칙상 강사**로 만들어 학생 전화번호까지 열었다.
+   🔵 그래서 `staff/<uid>` 를 따로 두었다 — **강사만 쓸 수 있고, 여는 것은 명단·기록뿐**이다.
+     쓰는 것이 앱이라 **콘솔에 들어갈 일이 없다**(규칙을 한 번 게시한 뒤로는).
+   ⚠ 「권한이 있나」는 **설정 › 조교를 열 때 한 번** 읽는다(`auditLogEnsureRecent` 와 같은 결) —
+     로그인마다 읽으면 안 쓰는 사람에게도 읽기 한 건이 붙는다. */
+let staffUids = null;                  // null = 아직 안 읽었다 · Set = 읽은 uid 들
+async function staffEnsureLoaded(){
+  if(staffUids) return;
+  staffUids = new Set();               // 먼저 세워 둔다 — 그리는 사이 두 번 읽지 않는다
+  const rows = await dbGetCollection('staff');
+  staffUids = new Set(rows.map(r => r && r.uid).filter(Boolean));
+  render();
+}
+function taHasStaff(a){ return !!(a && a.uid && staffUids && staffUids.has(a.uid)); }
+/* 권한 주기 — 문서 하나를 쓴다. 두 번 눌러도 같은 문서라 해롭지 않다. */
+async function taGrantStaff(aid){
   const a = DATA.assistants.find(x=>x.id===aid);
   if(!a || !a.uid) return;
-  if(navigator.clipboard) navigator.clipboard.writeText(a.uid);
-  showToast('uid 를 복사했습니다 — 콘솔 → Firestore → teachers 에 이 이름으로 문서를 만들어 주세요.');
+  const ok = await dbSetDoc('staff', a.uid, { uid:a.uid, taId:a.taId||'', name:a.name||'', at:nowStamp() });
+  if(ok !== true){ showToast('권한을 주지 못했습니다 — 저장이 막혀 있습니다.'); return; }
+  if(staffUids) staffUids.add(a.uid);
+  await logAudit('조교 권한 부여', '', a.name, '명단·기록을 볼 수 있게 했다');
+  showToast(a.name + ' 조교가 담당 반 명단을 볼 수 있습니다. (조교 화면에서 새로고침)');
+  render();
+}
+async function taRevokeStaff(aid){
+  const a = DATA.assistants.find(x=>x.id===aid);
+  if(!a || !a.uid) return;
+  if(!confirm(a.name + ' 조교의 명단·기록 권한을 거둘까요? 로그인은 되지만 화면이 비게 됩니다.')) return;
+  await dbDeleteDoc('staff', a.uid);
+  if(staffUids) staffUids.delete(a.uid);
+  await logAudit('조교 권한 회수', '', a.name, '명단·기록을 못 보게 했다');
+  showToast(a.name + ' 조교의 권한을 거뒀습니다.');
+  render();
 }
 /* 🔴 **문서만 있고 계정이 없는 조교를 고친다** (2026-09-19) — 위 `addAssistant` 의 구멍으로
    만들어진 조교다. 지우고 다시 만들면 담당 반을 다시 골라야 하니 **문서는 두고 계정만 붙인다.**
@@ -12663,8 +12700,14 @@ async function fixAssistantAccount(aid){
     showToast('계정은 만들었으나 저장하지 못했습니다. 다시 눌러 주세요.'); return;
   }
   Object.assign(a, next); delete a.pw;
-  await logAudit('조교 계정 만들기', '', a.name, '문서만 있던 조교에 로그인 계정을 붙였다');
-  showToast(a.name + ' 조교가 이제 로그인할 수 있습니다.');
+  /* 권한 문서도 같이 — 계정만 있고 권한이 없으면 로그인은 되는데 화면이 텅 빈다 */
+  const 권한 = await dbSetDoc('staff', uid, { uid, taId:a.taId||'', name:a.name||'', at:nowStamp() });
+  if(staffUids && 권한 === true) staffUids.add(uid);
+  await logAudit('조교 계정 만들기', '', a.name,
+    권한 === true ? '로그인 계정과 권한을 붙였다' : '로그인 계정만 붙였다(권한 문서 실패)');
+  showToast(권한 === true
+    ? a.name + ' 조교가 이제 로그인해서 담당 반을 볼 수 있습니다.'
+    : a.name + ' 조교의 계정은 만들었습니다 — 「권한 주기」를 한 번 더 눌러 주세요.');
   render();
 }
 
@@ -29036,6 +29079,9 @@ function stSec(o){
 
 /* ---------- 조교 ---------- */
 function teacherAssistantsHTML(){
+  /* 권한 문서는 **이 화면을 열 때** 한 번 읽는다 — 로그인마다 읽으면 안 쓰는 사람에게도 읽기가 붙는다
+     (`auditLogEnsureRecent` 와 같은 결). 다 읽으면 스스로 다시 그린다. */
+  if(DATA.assistants.length) staffEnsureLoaded();
   const open = state.settingsForm==='ta';
   const list = DATA.assistants;
   return `<div class="st-wrap">
@@ -29075,12 +29121,19 @@ function teacherAssistantsHTML(){
             ${/* 🔴 **비밀번호를 여기 안 보인다** (2026-09-19) — 비밀번호는 Auth 에만 산다.
                  대신 «로그인할 수 있는가»를 보인다. 계정이 없으면 그것이 이 줄의 알림이다
                  (그 조교는 아이디·비밀번호가 맞아도 못 들어온다). */''}
-            <span style="margin-top:5px;">${a.uid
-              ? `<span class="k" style="font-size:11px;">로그인 계정 있음 · uid <span class="mono" style="user-select:all;">${escHtml(a.uid)}</span>
-                 <button class="btn q sm" onclick="taCopyUid('${a.id}')" title="Firebase 콘솔의 teachers 문서 이름으로 씁니다">uid 복사</button></span>`
-              : '<b style="color:var(--no);font-size:11.5px;">로그인 계정이 없어 들어올 수 없습니다 — 「로그인 계정 만들기」를 눌러 주세요</b>'}</span></div>
+            ${/* 🔵 **들어올 수 있는가를 한 줄로 말한다** (2026-09-19) — 조교가 화면을 보려면 둘이 있어야 한다:
+                 ① 로그인 계정(Auth) ② 권한 문서(`staff/<uid>`). 하나만 있으면 «로그인은 되는데 텅 빈 화면»이라
+                 증상이 원인을 안 알려 준다. 그래서 어느 쪽이 없는지 여기서 짚어 준다. */''}
+            <span style="margin-top:5px;">${!a.uid
+              ? '<b style="color:var(--no);font-size:11.5px;">로그인 계정이 없어 들어올 수 없습니다 — 「로그인 계정 만들기」를 눌러 주세요</b>'
+              : staffUids === null ? '<span class="k" style="font-size:11px;">권한 확인 중…</span>'
+              : taHasStaff(a) ? '<span class="k" style="font-size:11px;">로그인 계정 있음 · 담당 반 명단을 봅니다</span>'
+              : '<b style="color:var(--no);font-size:11.5px;">권한이 없어 화면이 빕니다 — 「권한 주기」를 눌러 주세요</b>'}</span></div>
           <div class="v">
             ${a.uid ? '' : `<button class="btn p sm" onclick="fixAssistantAccount('${a.id}')">로그인 계정 만들기</button>`}
+            ${!a.uid || staffUids === null ? ''
+              : taHasStaff(a) ? `<button class="btn q sm" onclick="taRevokeStaff('${a.id}')" title="로그인은 되지만 명단이 안 보이게 됩니다">권한 거두기</button>`
+              : `<button class="btn p sm" onclick="taGrantStaff('${a.id}')" title="담당 반 명단·기록을 볼 수 있게 합니다">권한 주기</button>`}
             <button class="btn ${editing?'':'sm'} sm" onclick="taEditClasses('${a.id}')">${editing?'닫기':'담당 반 변경'}</button>
             <button class="btn sm" onclick="resetAssistantPw('${a.id}')">비밀번호 재설정</button>
             <button class="btn q sm" onclick="deleteAssistant('${a.id}')">삭제</button>
