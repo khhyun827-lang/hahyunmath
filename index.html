@@ -6634,6 +6634,16 @@ async function loadAllData(){
        그때는 거의 다 막히는데, 그게 맞다 — 공개 홈은 DB 를 볼 일이 없다. */
   const 나 = authIsReal() ? authWhoOf(fbAuth.currentUser.email) : null;
   if(나 && 나.role === 'student') return loadStudentData(fbAuth.currentUser.uid);
+  /* 🔴 **조교에게는 «조교 화면이 안 쓰는 것»을 아예 안 읽는다** (2026-09-19 · 사용자 신고 —
+       조교로 들어가니 「못 읽은 것 — clinics · consults · qnas」 빨간 딱지가 떴다).
+     규칙이 그 셋을 조교에게 안 열어 주는 것이 **맞다** — 질문·클리닉·상담은 강사의 일이고
+     조교 연대기는 그 갈래를 이미 걸러 낸다(`kind!=='qna'` · `kind!=='consult'`).
+     그런데 **읽기는 그대로 시도하고 있었다.** 막히면 그 컬렉션은 「못 읽었다」로 표시되고,
+     화면에 빨간 딱지가 뜨고 그 컬렉션 쓰기가 잠긴다 — **아무도 안 쓰는 것을 읽다가 그리 된 것이다.**
+     🔵 그래서 규칙을 여는 것이 아니라 **묻지 않는다.** 안 쓰는 것을 묻지 않으면 막힐 일도 없다.
+     ⚠ 새 컬렉션을 붙일 때 여기도 같이 볼 것 — 조교가 못 읽는 것을 읽으면 딱지가 또 뜬다. */
+  const 조교 = !!(나 && 나.role === 'assistant');
+  const 조교는건너뜀 = () => Promise.resolve([]);
   dbReadClear();          // ⚠ 앞사람(익명)의 실패를 물려받지 않는다
   [
     DATA.students, DATA.notices, DATA.consults, DATA.teacherPw,   // ⚠ teacherPw 는 이제 늘 null 이다 (아래 참고)
@@ -6643,16 +6653,16 @@ async function loadAllData(){
   ] = await Promise.all([
     migrateBlobToCollection('students', 'students', 'studentId'),
     migrateBlobToCollection('notices', 'notices', 'id'),
-    migrateBlobToCollection('consults', 'consults', 'id'),
+    조교 ? 조교는건너뜀() : migrateBlobToCollection('consults', 'consults', 'id'),   // 상담 — 강사만
     /* 🔴 **더 이상 안 읽는다** — 강사 비밀번호는 Firebase Auth 에 있다(2026-09-07).
        읽지 않으므로 내려가지도 않는다. 자리는 남겨 둔다 — 이 배열은 «자리»로 받는다. */
     Promise.resolve(null),
     migrateBlobToCollection('classes', 'classes', 'id'),
     /* quizzes는 더 이상 읽지 않는다 — 데일리퀴즈가 학생 기록에서 나온다.
        Firestore의 옛 문서는 지우지 않았다. 되돌릴 일이 생기면 그대로 있다. */
-    migrateBlobToCollection('clinics', 'clinics', 'id'),
+    조교 ? 조교는건너뜀() : migrateBlobToCollection('clinics', 'clinics', 'id'),      // 클리닉 — 강사만
     migrateBlobToCollection('clinic-slots', 'clinicslots', 'id'),
-    migrateBlobToCollection('qnas', 'qnas', 'id'),
+    조교 ? 조교는건너뜀() : migrateBlobToCollection('qnas', 'qnas', 'id'),           // 질문 — 강사만
     migrateBlobToCollection('videos', 'videos', 'id'),
     migrateBlobToCollection('assistants', 'assistants', 'id'),
     migrateBlobToCollection('exams', 'exams', 'id'),

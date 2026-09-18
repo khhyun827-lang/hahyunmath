@@ -232,6 +232,37 @@ console.log(NL + '④ 권한 문서(staff) — 콘솔에 들어갈 일이 없다
   봄('여러 번 불러도 한 번만 읽는다 (그리는 함수가 부르므로 render 마다 읽으면 안 된다)', T.간것.읽기, 1);
 }
 
+console.log(NL + '④-b 조교로 들어올 때 — «못 읽는 것»을 아예 안 묻는다' + NL);
+{
+  /* 🔴 사용자 신고 (2026-09-19) — 조교로 들어가니 빨간 딱지가 떴다:
+       「못 읽은 것 — clinics · consults · qnas」.
+     규칙이 그 셋을 조교에게 «안» 열어 주는 것이 맞다(질문·클리닉·상담은 강사의 일이고
+     조교 연대기는 그 갈래를 이미 걸러 낸다). 그런데 **읽기는 그대로 시도하고 있었다** —
+     막히면 딱지가 뜨고 그 컬렉션 쓰기가 잠긴다. 아무도 안 쓰는 것을 묻다가 그리 된 것이다.
+     🔵 그래서 재는 것은 «규칙을 열었나»가 아니라 **«묻지 않는가»**다. */
+  const 부르기 = lift('loadAllData');
+  const 학생갈래 = /나\.role === 'student'/.test(부르기);
+  봄('학생은 예전처럼 제 것만 받는다 (갈래가 살아 있다)', 학생갈래, true);
+  봄('🔴 조교 갈래가 있다', /const 조교 = .*나\.role === 'assistant'/.test(부르기), true);
+  for(const [col, 이름] of [['clinics', '클리닉'], ['consults', '상담'], ['qnas', '질문']]){
+    봄(`🔴 ${이름}(${col})은 조교에게 안 묻는다`,
+      new RegExp("조교 \\? 조교는건너뜀\\(\\) : migrateBlobToCollection\\('" + col + "'").test(부르기), true);
+  }
+  /* ⚠ 조교가 «쓰는» 것은 그대로 읽어야 한다 — 건너뛰면 명단이 빈다(그게 어제의 증상이다) */
+  for(const [col, 이름] of [['students', '명단'], ['classes', '반'], ['assignments', '과제']]){
+    봄(`   ${이름}(${col})은 조교도 읽는다 (건너뛰면 화면이 빈다)`,
+      new RegExp("조교 \\? 조교는건너뜀\\(\\) : migrateBlobToCollection\\('" + col + "'").test(부르기), false);
+  }
+  /* 규칙과 짝이 맞나 — 조교에게 안 여는 것과 안 묻는 것이 같은 목록이어야 한다 */
+  const rules0 = fs.readFileSync(path.join(ROOT, 'firestore.rules'), 'utf8');
+  const 안열린것 = ['clinics', 'consults', 'qnas'].filter(c => {
+    const at = rules0.indexOf('match /' + c + '/');
+    const end = rules0.indexOf('\n    }', at);
+    return at >= 0 && !/isStaff\(\)/.test(rules0.slice(at, end < 0 ? undefined : end));
+  });
+  봄('🔴 규칙이 안 여는 셋과 «안 묻는 셋»이 같다', 안열린것, ['clinics', 'consults', 'qnas']);
+}
+
 console.log(NL + '⑤ 규칙 — 조교에게 «딱 그만큼»만 열렸는가' + NL);
 {
   /* 🔴 여기가 틀리면 조용히 너무 많이 열린다. 규칙 파일은 손으로 게시하는 것이라
