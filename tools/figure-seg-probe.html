@@ -179,8 +179,10 @@ const t = setInterval(async () => {
       R.점숨기기 = (()=>{ figEditHide('dot:0');
         return !document.querySelector('#probe .fig-edit g[data-el="dot:0"]'); })();
       R.되살리기단추 = /↺/.test(document.querySelector('#probe .fig-hide').textContent);
-      R.되살리기이름 = (()=>{ const m = /([^·\s][^↺]*)↺/.exec(document.querySelector('#probe .fig-hide').textContent);
-        return m ? m[1].trim() : null; })();
+      /* ⚠ 줄 전체를 글로 긁으면 고르개·단추가 죄다 붙어 나와 «무엇이 되살려지는지» 못 읽는다.
+         단추를 집어서 본다 — 되살리기 단추는 끝에 ↺ 를 단다. */
+      R.되살릴것 = [...document.querySelectorAll('#probe .fig-hide button')]
+        .map(x => x.textContent.trim()).filter(t => /↺$/.test(t));
       figEditHide('dot:0', false);
 
       /* 다각형 «속»을 눌러도 다각형이 안 잡힌다 — 테두리만 잡는다 */
