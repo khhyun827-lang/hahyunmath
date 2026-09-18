@@ -10605,10 +10605,10 @@ async function addVideo(){
   if(!extractYouTubeId(url)){ showToast('유튜브 링크 형식이 맞는지 확인해주세요.'); return; }
   const dueEl = document.getElementById('video-due');
   const dueDate = (dueEl && dueEl.value) || '';
-  /* 🔵 **한 명에게도 보낸다** (2026-09-13 · K-4 · 사용자 — 「학생한명에게 영상 보내는것도 이페이지 안에서」).
-     결석 보충 영상과 같은 꼴(`studentId`)이라 학생 화면은 손댈 것이 없다 — 이미 개인 배정을 먼저 본다. */
-  const targetEl = document.getElementById('video-target');
-  const studentId = (targetEl && targetEl.value) || '';
+  /* 🔵 **한 명에게도, 여러 명에게도 보낸다** (2026-09-13 · K-4 / 2026-09-18 · 사용자 요청).
+     결석 보충 영상과 같은 꼴(`studentId`)이라 학생 화면은 손댈 것이 없다 — 이미 개인 배정을 먼저 본다.
+     ⚠ 아무도 안 고르면 «반 전체» 한 건이다(빈 목록이 그 뜻이다). */
+  const 받는이들 = [...new Set([...document.querySelectorAll('.vd-who:checked')].map(x => x.value))];
   /* 구간 (2026-09-16) — 둘 다 비면 전체다. 잘못 적었으면 **넣지 않고 말해 준다** —
      조용히 무시하면 「구간을 줬는데 왜 전체로 세지?」가 된다.
      🔵 **끝은 비워도 된다** — 그러면 「…부터 끝까지」다(사용자가 물어서 열었다).
@@ -10629,19 +10629,42 @@ async function addVideo(){
       toSec = 0;                     /* 0 = 끝까지. 영상 길이는 재생기가 알려 준다 */
     }
   }
-  const video = {id:'v'+Date.now()+(studentId ? '_'+studentId : ''), unit, title, url, classId, dueDate};
-  if(studentId) video.studentId = studentId;
-  if(toSec !== null){ video.fromSec = fromSec; if(toSec > 0) video.toSec = toSec; }
-  DATA.videos.unshift(video);
-  await dbSetDoc('videos', video.id, video);
-  if(targetEl) targetEl.value = '';
+  /* 한 사람마다 문서 하나 — id 에 학생을 달아 서로 다른 문서가 된다(옛 개인 배정과 같은 꼴).
+     🔴 **저장이 된 뒤에 메모리를 고친다** — 먼저 넣으면 저장이 막힌 반에서도 화면에는 있는 것처럼
+       보인다(`setVideoDue`·`withdrawStudent` 와 같은 규칙). 여럿일 때는 이것이 더 중요하다:
+       셋 중 하나만 실패했는데 셋 다 간 것처럼 보이면 그 학생만 영상 없이 남는다. */
+  const 기본 = {unit, title, url, classId, dueDate};
+  if(toSec !== null){ 기본.fromSec = fromSec; if(toSec > 0) 기본.toSec = toSec; }
+  const 도장 = Date.now();
+  const 만들것 = 받는이들.length
+    ? 받는이들.map(sid => Object.assign({}, 기본, { id:'v'+도장+'_'+sid, studentId:sid }))
+    : [Object.assign({}, 기본, { id:'v'+도장 })];
+  const 된것 = [], 안된것 = [];
+  for(const v of 만들것){
+    /* ⚠ `dbSetDoc` 은 «막힘»을 false, «실패»를 null 로 돌려준다 — 둘 다 안 간 것이다.
+       `=== null` 만 보면 규칙에 막힌 쓰기를 «됐다»로 세어 화면에만 영상이 생긴다. */
+    const ok = await dbSetDoc('videos', v.id, v);
+    if(ok !== true){ 안된것.push(v); continue; }
+    DATA.videos.unshift(v);
+    된것.push(v);
+  }
+  const 이름 = sid => (DATA.students.find(x=>x.studentId===sid)||{}).name || sid;
+  if(!된것.length){ showToast('영상을 등록하지 못했습니다 — 저장이 막혀 있습니다.'); render(); return; }
+  /* 하나라도 갔으면 폼을 비운다 — 안 비우면 다시 눌러 겹쳐 보내게 된다.
+     ⚠ 실패한 사람이 있으면 **누구인지 말해 준다** — 그 사람만 다시 골라 보내야 한다. */
+  document.querySelectorAll('.vd-who:checked').forEach(x => { x.checked = false; });
   document.getElementById('video-unit').value='';
   document.getElementById('video-title').value='';
   document.getElementById('video-url').value='';
   if(dueEl) dueEl.value='';
   if(fromEl) fromEl.value=''; if(toEl) toEl.value='';
-  const 받는이 = studentId ? (DATA.students.find(x=>x.studentId===studentId)||{}).name : '';
-  showToast(받는이 ? 받는이 + ' 학생에게 영상을 보냈습니다.' : '영상이 등록되었습니다.');
+  const 보낸이들 = 된것.filter(v => v.studentId).map(v => 이름(v.studentId));
+  showToast(
+    안된것.length ? `${보낸이들.length ? 보낸이들.join('·') + ' 에게 보냈습니다. ' : '일부만 등록됐습니다. '}${
+      안된것.map(v => v.studentId ? 이름(v.studentId) : '반 전체').join('·')} 은(는) 실패했습니다.`
+    : !보낸이들.length ? '영상이 등록되었습니다.'
+    : 보낸이들.length === 1 ? 보낸이들[0] + ' 학생에게 영상을 보냈습니다.'
+    : `${보낸이들.length}명에게 영상을 보냈습니다 — ${보낸이들.join('·')}.`);
   render();
 }
 /* 마감 바꾸기 (2026-09-13 · K-3). 저장이 된 «뒤에» 메모리를 고친다 — withdrawStudent 와 같은 규칙. */
@@ -10828,6 +10851,16 @@ async function loadMaterialsIfNeeded(classId){
   state.materialLoading[classId] = false;
   render();
 }
+/* 🔴 **얹기 전에 «진짜» 목록을 손에 쥔다** (2026-09-18) — 여러 반에 올리게 되면서 생긴 자리다.
+   지금 보고 있지 않은 반의 목록은 메모리에 없다. 그 상태로 `concat` 하면 **한 줄짜리 목록으로
+   그 반의 자료를 통째로 덮는다.** 그래서 읽어 오고, **읽기가 실패했으면 «모른다»고 답한다** —
+   `dbGet` 은 실패를 빈 배열로 위장하므로(읽기 실패 = fallback) 그것만 보고는 갈라낼 수 없다.
+   ⚠ `dbSet` 도 「읽다 실패한 문서」에는 안 쓴다(같은 까닭이다). 여기서 미리 걸러 **무엇이 안 갔는지 말해 준다.** */
+async function materialListOf(classId){
+  if(!state.materials[classId]) await loadMaterialsIfNeeded(classId);
+  if(dbReadFailed.has('material:' + classId)) return null;      // 못 읽었다 — 덮으면 안 된다
+  return state.materials[classId] || [];
+}
 async function uploadMaterial(classId, files){
   const f = files && files[0];
   if(!f) return;
@@ -10835,35 +10868,67 @@ async function uploadMaterial(classId, files){
     showToast(`파일이 너무 큽니다 (${fileSizeLabel(f.size)}). ${fileSizeLabel(MATERIAL_MAX_BYTES)}까지 올릴 수 있습니다.`);
     return;
   }
+  /* ⚠ 폼은 **건드리기 전에** 읽는다 — 아래 render() 가 상자를 다시 그려 체크가 사라진다. */
+  /* ⚠ **같은 반을 두 번 세지 않는다** — 상자가 두 벌 그려진 화면에서는 `querySelectorAll` 이
+     같은 값을 두 번 준다. 그대로 돌면 **한 반의 목록에 같은 자료가 두 줄** 선다(학생 화면에도 둘).
+     프로브가 그 꼴을 실제로 만들어 잡았다(2026-09-18). 값으로 걸러 두면 화면 사정과 무관해진다. */
+  const 고른반 = [...new Set([...document.querySelectorAll('.mt-cls:checked')].map(x => x.value))];
+  const 반들 = (고른반.length ? 고른반 : [classId]).filter(c => DATA.classes.some(x => x.id === c));
+  if(!반들.length){ showToast('올릴 반을 골라주세요.'); return; }
   const titleEl = document.getElementById('mt-title');
   const title = (titleEl && titleEl.value.trim()) || f.name;
-  state.materialUploading[classId] = true; render();
+  반들.forEach(c => { state.materialUploading[c] = true; }); render();
   try{
+    /* 🔵 드라이브에는 한 번만 올린다 — 반마다의 기록이 같은 `fileId` 를 가리킨다. */
     const { url, fileId } = await uploadFileToDrive(f);
-    const list = (state.materials[classId] || []).concat([{
-      id:'mt'+Date.now(), title, name:f.name, size:f.size, mime:f.type||'', url, fileId, at:nowStamp()
-    }]);
-    state.materials[classId] = list;
-    await dbSet('material:' + classId, list);
-    await logAudit('강의자료 등록', '', '', `${classNameOf(classId)} · ${title}`);
-    showToast(`「${title}」을 올렸습니다.`);
+    const 기록 = { id:'mt'+Date.now(), title, name:f.name, size:f.size, mime:f.type||'', url, fileId, at:nowStamp() };
+    /* 나눠 쓰는 파일임을 기록에 적어 둔다 — 지울 때 «드라이브에서도 지울지»가 여기서 갈린다. */
+    if(반들.length > 1) 기록.sharedWith = 반들.slice();
+    const 된반 = [], 안된반 = [];
+    for(const cid of 반들){
+      const list = await materialListOf(cid);
+      if(list === null){ 안된반.push(cid); continue; }           // 못 읽은 반은 건드리지 않는다
+      const next = list.concat([기록]);
+      const ok = await dbSet('material:' + cid, next);
+      if(ok !== true){ 안된반.push(cid); continue; }      /* null=실패 · false=막힘 — 둘 다 안 갔다 */
+      state.materials[cid] = next;
+      된반.push(cid);
+    }
+    if(된반.length) await logAudit('강의자료 등록', '', '', `${된반.map(classNameOf).join(' · ')} · ${title}`);
+    if(!된반.length) showToast('자료를 올리지 못했습니다 — 저장이 막혀 있습니다.');
+    else if(안된반.length) showToast(`「${title}」을 ${된반.length}개 반에 올렸습니다. ${안된반.map(classNameOf).join('·')} 은(는) 실패했습니다.`);
+    else showToast(된반.length > 1 ? `「${title}」을 ${된반.length}개 반에 올렸습니다.` : `「${title}」을 올렸습니다.`);
   }catch(e){
     /* ⚠ 로컬(127.0.0.1)에서는 ALLOW_ORIGIN 때문에 워커를 부를 수 없다 — 배포본에서 확인한다. */
     showToast('업로드에 실패했습니다. 잠시 뒤 다시 시도해 주세요.');
   }
-  state.materialUploading[classId] = false;
+  반들.forEach(c => { state.materialUploading[c] = false; });
   render();
 }
 async function deleteMaterial(classId, id){
   const m = (state.materials[classId] || []).find(x=>x.id===id);
   if(!m) return;
-  if(!confirm(`「${m.title}」을 지울까요? 학생 화면에서도 사라집니다.`)) return;
+  /* 🔵 **여러 반에 올린 파일은 «이 반에서만» 사라진다** (2026-09-18) — 묻는 말이 그렇게 달라야 한다. */
+  const 나눠쓴반 = (m.sharedWith || []).filter(c => c !== classId && DATA.classes.some(x => x.id === c));
+  if(!confirm(나눠쓴반.length
+    ? `「${m.title}」을 ${classNameOf(classId)} 에서 지울까요? 다른 반(${나눠쓴반.map(classNameOf).join('·')})에는 그대로 남습니다.`
+    : `「${m.title}」을 지울까요? 학생 화면에서도 사라집니다.`)) return;
   const list = (state.materials[classId] || []).filter(x=>x.id!==id);
+  const ok = await dbSet('material:' + classId, list);
+  if(ok !== true){ showToast('자료를 지우지 못했습니다 — 저장이 막혀 있습니다.'); return; }
   state.materials[classId] = list;
-  await dbSet('material:' + classId, list);
-  deleteFromDrive(m.fileId);          // 드라이브에서도 지운다 (결과를 기다리지 않는다)
+  /* 🔴 **아직 쓰는 반이 있으면 드라이브 파일을 지우지 않는다** — 지우면 그 반 학생의 「열기」가
+     조용히 죽는다(목록에는 남아 있는데 파일이 없다). 확인은 «아는 것»으로만 한다:
+     한 반이라도 못 읽었으면 «모른다»이고, 모를 때는 **안 지운다**. 드라이브에 남는 파일 하나가
+     학생이 못 여는 자료보다 낫다. ⚠ 지운 뒤 돌려받을 길이 없어 되돌릴 수 없는 쪽으로 기운다. */
+  let 지워도된다 = true;
+  for(const cid of 나눠쓴반){
+    const l = await materialListOf(cid);
+    if(l === null || l.some(x => x.fileId === m.fileId)){ 지워도된다 = false; break; }
+  }
+  if(지워도된다) deleteFromDrive(m.fileId);   // 드라이브에서도 지운다 (결과를 기다리지 않는다)
   await logAudit('강의자료 삭제', '', '', `${classNameOf(classId)} · ${m.title}`);
-  showToast('자료를 지웠습니다.');
+  showToast(지워도된다 ? '자료를 지웠습니다.' : `${classNameOf(classId)} 목록에서 뺐습니다 — 다른 반이 쓰는 파일이라 파일은 남깁니다.`);
   render();
 }
 
@@ -23170,9 +23235,26 @@ function chubMaterialHTML(classId){
   <div class="row" style="margin-bottom:14px;">
     <button class="btn ${open?'':'p'} sm" onclick="state.materialAdding=${!open}; render()">${
       open ? '닫기' : iconSvg('plus',13) + ' 자료 올리기'}</button>
-    <span class="muted" style="font-size:11.5px;">이 반 학생에게만 보입니다</span>
+    <span class="muted" style="font-size:11.5px;">고른 반 학생에게만 보입니다</span>
   </div>
   ${!open ? '' : `<div class="st-form" style="margin-bottom:16px;">
+    ${/* 🔵 **여러 반에 한 번에 올린다** (2026-09-18 · 사용자 — 「위에서 반 여러개 체크해서 한번에
+         여러반에 올릴수 있도록」). 같은 프린트를 반마다 다시 올리고 있었다.
+         고르개는 공지·휴강과 «같은 꼴»이다(체크상자 줄) — 다른 장치를 새로 만들지 않는다.
+       ⚠ 여기 기본은 «이 반»이다 — 공지처럼 「안 고르면 전체」로 하면 한 반에 올리려던 자료가
+         조용히 모든 반에 간다. 자료는 되돌리기가 반마다 따로라 그 실수가 비싸다.
+       🔴 드라이브에는 **한 번만** 올라간다 — 같은 파일을 반 수만큼 올리면 용량도 시간도 배로 든다.
+         그래서 반마다의 기록이 같은 `fileId` 를 가리키고, 지울 때 그것을 본다(deleteMaterial). */''}
+    <div style="margin-bottom:11px;">
+      <div style="font-size:11px;font-weight:600;color:var(--dim);margin-bottom:6px;">
+        올릴 반 <s style="text-decoration:none;font-weight:500;">— 여러 반을 골라 <b>한 번에</b> 올릴 수 있습니다</s></div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;">
+        ${DATA.classes.map(c => `<label style="display:flex;align-items:center;gap:5px;font-size:12px;">
+          <input type="checkbox" class="mt-cls" value="${c.id}" ${c.id===classId?'checked':''}
+            ${busy?'disabled':''}>${escHtml(c.name)}</label>`).join('')
+          || '<span style="font-size:12px;color:var(--dim);">먼저 반을 만들어 주세요.</span>'}
+      </div>
+    </div>
     <div class="cls-form" style="margin-top:0;">
       <label style="flex:1;min-width:200px;"><span>제목 (선택)</span>
         <input id="mt-title" placeholder="비우면 파일 이름을 씁니다"></label>
@@ -23182,7 +23264,8 @@ function chubMaterialHTML(classId){
       ${busy ? '<span class="muted" style="font-size:11.5px;align-self:center;">올리는 중…</span>' : ''}
     </div>
     <p class="st-note">PDF · 한글 · 이미지 무엇이든 올릴 수 있고, <b>${fileSizeLabel(MATERIAL_MAX_BYTES)}까지</b>입니다.
-      올린 파일은 <b>학생 앱 학습 &gt; 자료</b>에 바로 뜹니다.</p>
+      올린 파일은 <b>학생 앱 학습 &gt; 자료</b>에 바로 뜹니다.
+      <b>여러 반을 고르면 한 번 올려 그 반들에 함께 붙습니다</b> — 파일은 한 벌만 올라갑니다.</p>
   </div>`}
   ${state.materialLoading[classId] && !state.materials[classId]
     ? '<div class="st-empty">불러오는 중…</div>'
@@ -23232,15 +23315,28 @@ function chubVideoHTML(classId){
     <button class="btn ${state.videoAdding?'':'p'} sm"
       onclick="state.videoAdding=!state.videoAdding; render()">
       ${state.videoAdding ? '닫기' : iconSvg('plus',13)+' 영상 등록'}</button>
-    <span class="muted" style="font-size:11.5px;">반 전체에게, 또는 한 명에게만</span>
+    <span class="muted" style="font-size:11.5px;">반 전체에게, 또는 고른 학생들에게</span>
   </div>
   ${!state.videoAdding ? '' : `
   <div class="st-form" style="margin-bottom:16px;">
+    ${/* 대상 (K-4) — 기본은 반 전체. 고른 학생이 있으면 그 학생들에게만 보이고 목록의 «개인 배정»에 선다.
+         🔵 **여러 명에게 한 번에 보낸다** (2026-09-18 · 사용자 — 「지금 반전체 아니면 1명개인인데
+           여러명 체크해서 한번에 보내줄 수 있었으면」). 결석 보충을 세 명에게 보내려면 셋을 따로
+           등록하고 있었다 — 제목·링크·마감·구간을 세 번 적었다는 뜻이다.
+         🔵 **한 사람마다 문서 하나**로 나간다 — 개인 배정의 꼴이 원래 그것이라(`studentId`)
+           학생 화면도, 「누가 봤나」를 세는 자리도 손댈 것이 없다. 묶음이라는 표를 따로 두지 않는다.
+         ⚠ 고르개를 «상자 줄»로 바꿨다 — 공지·휴강·자료와 같은 꼴이다. 아무도 안 고르면 반 전체다. */''}
+    <div style="margin-bottom:11px;">
+      <div style="font-size:11px;font-weight:600;color:var(--dim);margin-bottom:6px;">
+        보낼 사람 <s style="text-decoration:none;font-weight:500;">— 아무도 안 고르면 <b>반 전체</b>에게 갑니다 ·
+        여러 명을 골라 <b>한 번에</b> 보낼 수 있습니다</s></div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;">
+        ${roster.map(s=>`<label style="display:flex;align-items:center;gap:5px;font-size:12px;">
+          <input type="checkbox" class="vd-who" value="${s.studentId}">${escHtml(s.name)}</label>`).join('')
+          || '<span style="font-size:12px;color:var(--dim);">이 반에 학생이 없습니다 — 반 전체로 등록됩니다.</span>'}
+      </div>
+    </div>
     <div class="cls-form">
-      ${/* 대상 (K-4) — 기본은 반 전체. 한 명을 고르면 그 학생에게만 보이고 목록의 «개인 배정»에 선다. */''}
-      <label style="min-width:150px;"><span>대상</span><select class="fm-sel" id="video-target">
-        <option value="">반 전체</option>
-        ${roster.map(s=>`<option value="${s.studentId}">${escHtml(s.name)}</option>`).join('')}</select></label>
       <label style="flex:2;min-width:180px;"><span>제목</span><input id="video-title" placeholder="예: 수학(상) 4강"></label>
       <label style="min-width:140px;"><span>단원 (선택)</span><input id="video-unit" placeholder="예: 대수 3단원"></label>
       ${/* 🔵 **마감일 (2026-09-08)** — 학생 달력에 뜨게 하려고 냈다. 없으면 달력에 안 뜬다.

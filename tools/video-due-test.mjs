@@ -131,11 +131,20 @@ const saveAtt = lift('saveClassAttendance');
 봄('출결 저장이 보충 영상에 마감 +7일을 단다', saveAtt.includes('dueDate: ymdPlusDays(date, MAKEUP_VIDEO_DAYS)'), true);
 봄('보충 영상에 반도 적는다 (탭이 모아 보이도록)', /studentId:s\.studentId, dueDate/.test(saveAtt) && /url, classId,\s*$/m.test(saveAtt), true);
 
-/* addVideo — 대상을 고르면 그 학생에게만 */
-const 폼 = { 'video-unit': '', 'video-title': '보충 4강', 'video-url': 'https://youtu.be/abcdefgh', 'video-class': 'c1', 'video-due': '2026-09-25', 'video-target': '' };
+/* addVideo — 대상을 고르면 그 학생에게만
+   ⚠ 2026-09-18 부터 대상은 고르개 하나가 아니라 «상자 줄»(`.vd-who`)이다. 여러 명에게 한 번에
+     보내는 것은 `tools/multi-send-test.mjs` 가 잰다 — 여기서는 옛 길(반 전체·한 명)이 그대로 도는지 본다. */
+const 폼 = { 'video-unit': '', 'video-title': '보충 4강', 'video-url': 'https://youtu.be/abcdefgh', 'video-class': 'c1', 'video-due': '2026-09-25' };
+let 체크 = [];
 const 저장2 = [];
 const 곁2 = {
-  document: { getElementById: id => id in 폼 ? { get value(){ return 폼[id]; }, set value(v){ 폼[id] = v; } } : null },
+  document: {
+    getElementById: id => id in 폼 ? { get value(){ return 폼[id]; }, set value(v){ 폼[id] = v; } } : null,
+    /* 체크된 상자만 돌려준다 — 코드가 보낸 뒤 `checked = false` 로 비우므로 그것도 받는다 */
+    querySelectorAll: sel => /vd-who/.test(sel)
+      ? 체크.map(sid => ({ value: sid, set checked(v){ if(!v) 체크 = 체크.filter(x => x !== sid); } }))
+      : [],
+  },
   DATA: { videos: [], students: [{ studentId: 'st01', name: '가나' }] },
   extractYouTubeId: u => /youtu\.be\//.test(u) ? 'x' : null,
   dbSetDoc: async (col, id, data) => { 저장2.push(data); return true; },
@@ -145,15 +154,15 @@ const api2 = new Function(...Object.keys(곁2), lift('addVideo') + NL + 'return 
 await api2.addVideo();
 봄('대상이 «반 전체»면 studentId 가 없다', 'studentId' in 저장2[0], false);
 봄('반·마감은 그대로 붙는다', [저장2[0].classId, 저장2[0].dueDate], ['c1', '2026-09-25']);
-폼['video-title'] = '보충 5강'; 폼['video-url'] = 'https://youtu.be/abcdefgh'; 폼['video-due'] = ''; 폼['video-target'] = 'st01';
+폼['video-title'] = '보충 5강'; 폼['video-url'] = 'https://youtu.be/abcdefgh'; 폼['video-due'] = ''; 체크 = ['st01'];
 await api2.addVideo();
 봄('한 명을 고르면 그 학생에게만 (studentId)', 저장2[1].studentId, 'st01');
 봄('개인 배정도 반을 적는다', 저장2[1].classId, 'c1');
-봄('보낸 뒤 대상 고르개는 «반 전체»로 돌아간다', 폼['video-target'], '');
+봄('보낸 뒤 고른 사람은 비워진다 (겹쳐 보내지 않도록)', 체크, []);
 봄('메모리에도 둘 다 (새것이 앞)', 곁2.DATA.videos.map(v=>v.title), ['보충 5강', '보충 4강']);
 
 /* 강사 영상 탭 — 글자로 */
-봄('등록 폼에 «대상» 고르개', chubVideo.includes('id="video-target"') && chubVideo.includes('반 전체'), true);
+봄('등록 폼에 «보낼 사람» 상자 줄', chubVideo.includes('class="vd-who"') && chubVideo.includes('반 전체'), true);
 봄('개인 배정은 명단(학생)으로 모은다 — classId 가 빈 옛 결석 영상도 든다', chubVideo.includes('rosterIds.has(v.studentId)'), true);
 봄('목록에 «개인 배정» 구역', chubVideo.includes('개인 배정 <span class="mono">'), true);
 봄('개인 배정 줄에 완주/％/미시청과 마감 지남', chubVideo.includes("p.done ? '완주' : p.seen ? p.pct+'%' : '미시청'") && chubVideo.includes('personalItem'), true);
@@ -198,7 +207,9 @@ const out = api3.chubVideoHTML('c1');
   [out.includes('받은 학생'),
    out.includes('<span class="badge late">개인 배정</span><b style="color:var(--sub);font-weight:600;">다라</b>'),
    out.includes('이탈 지점')], [true, true, false]);
-봄('대상 고르개에 명단 둘', (out.match(/<option value="st0[12]">/g) || []).length, 2);
+/* 명단이 «상자»로 선다 — 여럿을 고를 수 있다는 것이 이 줄의 뜻이다 (2026-09-18) */
+봄('보낼 사람 상자에 명단 둘', (out.match(/class="vd-who" value="st0[12]"/g) || []).length, 2);
+봄('   고르개(select)는 사라졌다 — 여럿을 고를 수 없던 자리다', out.includes('id="video-target"'), false);
 곁3.state.videoSelectedId = 'a1';
 const out2 = api3.chubVideoHTML('c1');
 봄('반 영상을 고르면 이탈 지점이 돌아온다', out2.includes('이탈 지점') && !out2.includes('받은 학생'), true);

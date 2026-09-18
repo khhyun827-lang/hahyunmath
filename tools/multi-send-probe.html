@@ -1,0 +1,117 @@
+<!doctype html><meta charset="utf-8"><title>multi-send-probe</title>
+<!-- 한 번에 여럿에게 — 자료는 여러 «반»에, 영상은 여러 «명»에게 (2026-09-18 · 사용자 요청).
+     실서비스(index.html)를 iframe 에 띄우고 **반 관리의 두 폼만** 붙여 실제로 체크해 본다.
+
+       node tools/serve.js
+       http://127.0.0.1:8777/tools/multi-send-probe.html
+
+     · `?w=390` 을 붙이면 폰 폭에서 상자 줄이 넘치는지 잰다.
+     🔴 **실 DB 0줄** — 올리는 길(uploadFileToDrive)·저장(dbSet·dbSetDoc)·기록(logAudit)을
+       프레임 안에서 갈아 끼운다. 진짜 드라이브에 올리는 프로브는 있어선 안 된다.
+     🔴 **confirm 도 갈아 끼운다** — 모달이 뜨면 그 뒤가 통째로 멈춘다.
+     ⚠ 셈(무엇이 어디로 갔나)은 tools/multi-send-test.mjs 가 잰다. 여기서 재는 것은
+       **상자가 실제로 서고, 체크한 것이 그대로 읽히는가**다 — 그것은 화면이 있어야 안다.
+     ⚠ 이 안에서는 백틱을 쓰지 말 것 — 바깥 파일의 템플릿 문자열이라 거기서 끊긴다. -->
+<style>html,body{margin:0;background:#fff}iframe{border:0;display:block}
+pre{font:12px monospace;color:#333;margin:0;padding:4px;white-space:pre-wrap;}</style>
+<pre id="o">…</pre>
+<script>
+const fr = document.createElement('iframe');
+const W = Number((location.search.match(/[?&]w=([0-9]+)/) || [])[1]) || 900;
+fr.width = W; fr.height = 1200; fr.style.width = W + 'px'; fr.src = '/index.html';
+document.body.appendChild(fr);
+const o = document.getElementById('o');
+let n = 0;
+const t = setInterval(async () => {
+  n++;
+  let ready = false;
+  try { ready = fr.contentWindow.eval('typeof chubMaterialHTML==="function" && typeof chubVideoHTML==="function" && typeof render==="function"'); } catch (_) {}
+  if (!ready) { if (n > 220) { clearInterval(t); o.textContent = 'RESULT timeout'; } return; }
+  clearInterval(t);
+  const w = fr.contentWindow;
+  let out;
+  try { out = await w.eval(`(async function(){
+    const R = {};
+    /* ── 판 차리기 — 반 셋 · 학생 셋. 실 DB 는 안 건드린다 ── */
+    DATA.classes = [{id:'c1',name:'고1 A',days:[1,3,5],time:'19:00'},
+                    {id:'c2',name:'고1 B',days:[2,4],time:'20:00'},
+                    {id:'c3',name:'고2',days:[6],time:'10:00'}];
+    DATA.students = [{studentId:'st01',name:'가나',classId:'c1',status:'active'},
+                     {studentId:'st02',name:'다라',classId:'c1',status:'active'},
+                     {studentId:'st03',name:'마바',classId:'c1',status:'active'}];
+    DATA.videos = [];
+    state.materials = { c1:[], c2:[{id:'old2',title:'c2 의 옛 자료',name:'b.pdf',size:20,fileId:'F-C2'}], c3:[] };
+    state.materialLoading = {}; state.materialUploading = {};
+    state.materialAdding = true; state.videoAdding = true;
+
+    /* ── 길 갈아 끼우기 ── */
+    const 간것 = { kv:{}, docs:[], 올린것:[], 지운것:[], 말:[] };
+    uploadFileToDrive = async f => { 간것.올린것.push(f.name); return { url:'https://u/'+f.name, fileId:'F-NEW' }; };
+    dbSet = async (k,v) => { 간것.kv[k] = JSON.parse(JSON.stringify(v)); return true; };
+    dbSetDoc = async (c,id,d) => { 간것.docs.push(d); return true; };
+    dbGet = async (k,f) => (state.materials[(k||'').slice(9)] || f);
+    deleteFromDrive = id => 간것.지운것.push(id);
+    logAudit = async () => {};
+    showToast = m => 간것.말.push(m);
+    window.confirm = () => true;
+
+    /* ── 두 폼을 붙인다 ──
+       🔴 **판은 #app «밖»에 세우고, 손으로 들고 있는다.** 처음에는 render 를 가로채 #app 안에
+         끼워 넣었는데, uploadMaterial 이 안에서 render 를 부르는 통에 상자 줄이 한 벌 더 붙어
+         «6개 반에 올렸습니다»가 나왔다 — 앱이 아니라 **프로브가 지어낸 두 벌**이었다.
+         (덕분에 값을 걸러 세지 않던 진짜 구멍이 드러나 그것은 고쳤다.)
+       ⚠ 그래서 셀 때도 id 가 아니라 «이 조각»에서 센다 — 두 벌이 생기면 그것이 그대로 드러난다. */
+    const host = document.createElement('div');
+    host.className = 'app'; host.id = 'probe';
+    host.style.cssText = 'max-width:820px;margin:12px auto;padding:0 12px;';
+    host.innerHTML = '<div class="t-sec">자료</div>' + chubMaterialHTML('c1')
+                   + '<div class="t-sec" style="margin-top:22px;">영상</div>' + chubVideoHTML('c1');
+    document.body.appendChild(host);
+
+    const $ = s => host.querySelector(s);
+    const $$ = s => [...host.querySelectorAll(s)];
+    R.판은한벌 = document.querySelectorAll('.mt-cls').length;      // 3 이어야 한다 (반 셋)
+
+    /* ── ① 자료 — 반 상자가 서는가 ── */
+    R.반상자 = $$('.mt-cls').map(x => x.value);
+    R.기본체크 = $$('.mt-cls').filter(x => x.checked).map(x => x.value);      // 보고 있는 반만
+    R.반이름도보인다 = $$('.mt-cls').map(x => (x.parentElement.textContent||'').trim());
+
+    /* ── ② 셋을 체크하고 실제로 올려 본다 (파일은 흉내) ── */
+    $$('.mt-cls').forEach(x => { x.checked = true; });
+    $('#mt-title').value = '3단원 프린트';
+    const 파일 = new File([new Uint8Array(8)], '오늘프린트.pdf', { type:'application/pdf' });
+    await uploadMaterial('c1', [파일]);
+    R.올린횟수 = 간것.올린것.length;                                            // 1 이어야 한다
+    R.간반 = Object.keys(간것.kv).sort();
+    R.c2옛것이살아있다 = (간것.kv['material:c2']||[]).map(m => m.title);
+    R.나눠쓴반 = ((간것.kv['material:c1']||[]).find(m => m.title === '3단원 프린트')||{}).sharedWith;
+    R.올린뒤말 = 간것.말.slice(-1)[0];
+
+    /* ── ③ 영상 — 사람 상자가 서는가 · 셋을 체크해 보낸다 ── */
+    R.사람상자 = $$('.vd-who').map(x => x.value);
+    R.고르개는없다 = !$('#video-target');
+    $$('.vd-who').forEach(x => { x.checked = true; });
+    $('#video-title').value = '보충 4강';
+    $('#video-url').value = 'https://youtu.be/abcdefgh';
+    $('#video-from').value = '12:30';
+    await addVideo();
+    R.나간문서 = 간것.docs.length;                                              // 3
+    R.받는이들 = 간것.docs.map(v => v.studentId);
+    R.id가다르다 = new Set(간것.docs.map(v => v.id)).size === 간것.docs.length;
+    R.구간이모두에게 = 간것.docs.map(v => v.fromSec);
+    R.보낸뒤말 = 간것.말.slice(-1)[0];
+    R.체크가비워졌다 = $$('.vd-who').filter(x => x.checked).length === 0;
+
+    /* ── ④ 폰 폭에서 줄이 넘치지 않는가 (?w=390) ── */
+    R.폭 = document.documentElement.clientWidth;
+    const 줄 = $('.mt-cls') && $('.mt-cls').closest('div');
+    R.자료줄넘침 = 줄 ? 줄.scrollWidth > 줄.clientWidth + 1 : null;
+    const 줄2 = $('.vd-who') && $('.vd-who').closest('div');
+    R.사람줄넘침 = 줄2 ? 줄2.scrollWidth > 줄2.clientWidth + 1 : null;
+    R.그려졌다 = !!$('.mt-cls') && !!$('.vd-who');
+    return R;
+  })()`); } catch (e) { out = { 터짐: String(e && e.message || e) }; }
+  o.textContent = 'RESULT ' + JSON.stringify(out, null, 1);
+}, 100);
+</script>
