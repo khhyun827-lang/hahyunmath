@@ -13632,7 +13632,23 @@ function ckState(rec){
   if(!c.bests || typeof c.bests !== 'object') c.bests = {};
   return c;
 }
-function ckDoneToday(rec){ return ckState(rec).last === todayStr(); }
+/* 🔵 **이번 주 토·일만 두 판** (2026-09-19 · 사용자 요청 — 「잠깐 토,일요일은 이번주만 2번씩」).
+   날짜를 콕 집는다 — `GAME_PICKS` 와 같은 어법이고, **안 적힌 날은 예전대로 하루 한 판**이다.
+   ⚠ 지난 날짜는 지우지 않아도 된다(지난 날의 `n` 은 이미 고정이라 아무 일도 없다).
+   🔵 한 판을 더 해도 도장·연속은 하루 한 번이고(`ck.last` 로 센다), 점수·순위는 **높은 쪽만**
+     남는다(`dayRec.score`·`ckSetBest`·`rankSubmit` 셋 다 낮은 점수로는 안 덮는다). */
+const CK_PLAYS = {
+  '2026-09-19': 2,   // 이번 주 토요일
+  '2026-09-20': 2,   // 이번 주 일요일
+};
+function ckPlaysAllowed(ymd){ return CK_PLAYS[ymd] || 1; }
+/* ⚠ `days` 가 없던 옛 기록은 `last` 로 물러선다 — 그러면 오늘 한 판 한 것으로 센다.
+   그 물러섬이 없으면 옛 기록이 오늘 한 판을 «덤으로» 얻는다. */
+function ckPlaysToday(rec){
+  const c = ckState(rec), t = todayStr();
+  return (c.days[t] && c.days[t].n) || (c.last === t ? 1 : 0);
+}
+function ckDoneToday(rec){ return ckPlaysToday(rec) >= ckPlaysAllowed(todayStr()); }
 /* 🔴 **«역대 최고»는 게임마다 따로다** (2026-09-01 · S-D-2).
    달리기 봇이 1840점, 똥피하기 봇이 350점대다 — **잣대가 다섯 배 다르다.**
    한 칸에 담으면 달리기 주에 찍은 수를 **똥피하기 주에는 영원히 못 깬다.**
@@ -13850,6 +13866,11 @@ function ckCardHTML(c){
   }
 
   const todayScore = (ck.days[today] && ck.days[today].score) || 0;
+  /* ⚠ 두 판인 날에 「하루 한 판입니다」가 그대로 서면 **화면이 거짓말을 한다.** 몇 판 남았는지 적는다. */
+  const 판수 = ckPlaysAllowed(today);
+  const 판말 = 판수 > 1
+    ? `오늘은 ${판수}판입니다 · ${판수 - ckPlaysToday(c.rec)}판 남았습니다`
+    : '하루 한 판입니다';
   const run = done
     ? `<div class="gm-run off">
         <span class="ic"><img src="stamp.webp" alt=""></span>
@@ -13859,7 +13880,7 @@ function ckCardHTML(c){
     : `<div class="gm-run" ${TAP} onclick="openGame()">
         <span class="ic">${gameThisWeek().icon}</span>
         <span class="t"><b>이번 주 게임 — ${escHtml(gameThisWeek().name)}</b>
-        <span>하루 한 판입니다 · ${escHtml(gameThisWeek().name)} 최고 ${
+        <span>${판말} · ${escHtml(gameThisWeek().name)} 최고 ${
           ckBestOf(c.rec, gameThisWeek().key).toLocaleString()}점</span></span>
         <span class="go">${iconSvg('chevR',16)}</span></div>`;
 
