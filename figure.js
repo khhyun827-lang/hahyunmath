@@ -698,7 +698,9 @@
       var y0 = pointY(pt, cs);
       if (!isFinite(y0) || hidden('point:' + pi)) return;
       var qx = PX(pt.x), qy = PY(y0);
-      inkBox(qx - 5, qy - 5, qx + 5, qy + 5);
+      /* ⚠ 동그라미를 감췄으면 그 자리는 «잉크»가 아니다 — 비켜 갈 까닭이 없어진 자리를
+         계속 피하면 이름표가 갈 데 없이 밀린다. */
+      if (pt.dot !== false && !hidden('dot:' + pi)) inkBox(qx - 5, qy - 5, qx + 5, qy + 5);
       if (pt.label) {
         var ddx = 0, ddy = -12, aa = 'middle';
         if (pt.labelPos === 'below') ddy = 24; else if (pt.labelPos === 'left') { ddx = -10; ddy = 6; aa = 'end'; } else if (pt.labelPos === 'right') { ddx = 10; ddy = 6; aa = 'start'; }
@@ -804,7 +806,12 @@
         out.push('<path d="M' + n(px) + ' ' + n(py) + 'V' + n(oy) + '" stroke-dasharray="6 5" stroke-width="1.3"/>');
       if (pt.dropTo === 'y')
         out.push('<path d="M' + n(px) + ' ' + n(py) + 'H' + n(ox) + '" stroke-dasharray="6 5" stroke-width="1.3"/>');
-      if (pt.dot !== false)
+      /* 🔵 **동그라미와 글자는 따로 고르고 따로 숨긴다** (2026-09-18 · 사용자 —
+         「동그라미랑 문자랑 분리해서 선택할 수 있도록 해주면 좋을 것 같아」).
+         `dot:i` 는 **동그라미만**, `lbl:point:i` 는 **글자만** 감춘다(이름표는 `lab` 이 이미 그렇게 한다).
+         ⚠ `point:i` 는 **점을 통째로** 감추는 옛 표다 — 이미 저장된 장면이 그것을 쓰고 있어
+           뜻을 바꾸지 않는다. 위쪽에서 이미 걸러 여기까지 안 온다. */
+      if (pt.dot !== false && !hidden('dot:' + i))
         out.push('<circle cx="' + n(px) + '" cy="' + n(py) + '" r="4" fill="currentColor" stroke="none"/>');
       if (pt.label) {
         var dx = 0, dy = -12, anc = 'middle';
@@ -886,9 +893,12 @@
          **어느 것이 «점 3»인지 알 길이 없어** 쓸 수가 없었다. 누르면 그것이 골라진다. */
       (scene.points || []).forEach(function (pt, i) {
         var y0 = pointY(pt, cs);
-        if (!isFinite(y0) || hidden('point:' + i)) return;
+        if (!isFinite(y0) || hidden('point:' + i) || hidden('dot:' + i) || pt.dot === false) return;
         var q = [PX(pt.x), PY(y0)];
-        hit('point:' + i, '<circle cx="' + n(q[0]) + '" cy="' + n(q[1]) + '" r="11" fill="transparent" stroke="none" pointer-events="all"/>');
+        /* ⚠ 잡는 것은 «동그라미»다 — 글자는 제 잡기 상자(`data-lbl`)가 따로 있다.
+           r=11 이라 둘이 겹칠 수 있는데, 글자 상자가 «뒤»에 깔려 위에 오므로 글자가 이긴다.
+           그것이 맞다 — 글자를 노린 손은 글자 한가운데를 짚는다. */
+        hit('dot:' + i, '<circle cx="' + n(q[0]) + '" cy="' + n(q[1]) + '" r="11" fill="transparent" stroke="none" pointer-events="all"/>');
       });
     }
 
@@ -974,7 +984,18 @@
   function elements(scene) {
     var out = [];
     (scene.curves || []).forEach(function (c, i) { out.push({ id: 'curve:' + i, name: '곡선 ' + (i + 1) + (c.label ? ' (' + c.label + ')' : ' ' + c.expr) }); });
-    (scene.points || []).forEach(function (p, i) { out.push({ id: 'point:' + i, name: '점 ' + (p.label || (i + 1)) }); });
+    /* 🔵 **점은 «동그라미»로 목록에 선다** (2026-09-18) — 글자는 글자대로 따로 고른다
+       (그림에서 글자를 누르면 골라지고 「이 글자 빼기」가 그것을 감춘다).
+       ⚠ 옛 표 `point:i`(점을 통째로)는 그리는 쪽이 여전히 지킨다 — 이미 저장된 장면이 쓰고 있다.
+         다만 **새로 고를 거리로는 안 내놓는다** — 둘을 가르자는 것이 이 판의 요점이라서다. */
+    var hid = scene.hidden || {};
+    (scene.points || []).forEach(function (p, i) {
+      if (p && p.dot === false) return;                    // 애초에 동그라미가 없는 점
+      /* ⚠ 옛 표로 점을 통째로 감춘 장면에서는 동그라미도 이미 없다 — 그래도 목록에 세우면
+         「숨기기」를 눌러도 그림이 안 달라지고 되살릴 단추만 둘로 늘어난다. */
+      if (hid['point:' + i] === true) return;
+      out.push({ id: 'dot:' + i, name: '점 ' + (p.label || (i + 1)) + ' 의 동그라미' });
+    });
     (scene.segments || []).forEach(function (s, i) { out.push({ id: 'seg:' + i, name: '선분 ' + (s.label || (i + 1)) }); });
     (scene.polygons || []).forEach(function (p, i) { out.push({ id: 'poly:' + i, name: '다각형 ' + (p.label || (i + 1)) }); });
     (scene.circles || []).forEach(function (c, i) { out.push({ id: 'circle:' + i, name: '원 ' + (c.label || (i + 1)) }); });

@@ -25533,13 +25533,14 @@ function variantFigureNoteHTML(b){
       <b>이 변형에 붙는 그림</b>
       ${pbImageHTML(b.id, 'var', 'pb-fig')}
       <div class="rv-figact">${busy?'<span class="hx">올리는 중…</span>':fileInput}
+        ${/* 장면이 있는 SVG 그림이면 한도 없이 그림을 고칠 수 있다 (2026-09-11).
+             🔵 한도를 안 쓰는 이 길이 «앞»이다 — 검토 화면과 차례를 맞춘다 (2026-09-18 · 사용자 요청). */
+          (()=>{ const v = state.pbImageCache[pbImgCacheKey(b.id,'var')];
+                 return (v && typeof v==='object' && v.kind==='svg' && v.scene && !(state.figureDraft && state.figureDraft.bankId===b.id))
+                   ? `<button class="btn sm" onclick="openFigureEditorFromSaved('${b.id}')">그림 편집</button>` : ''; })()}
         ${draftBtn}
         ${(()=>{ const v = state.pbImageCache[pbImgCacheKey(b.id,'var')];
                  return (v && typeof v==='object' && v.kind==='svg') ? `<button class="btn q sm" onclick="figDownload('${b.id}','svg')">SVG</button><button class="btn q sm" onclick="figDownload('${b.id}','png')">PNG</button>` : ''; })()}
-        ${/* 장면이 있는 SVG 그림이면 한도 없이 이름표를 옮길 수 있다 (2026-09-11) */
-          (()=>{ const v = state.pbImageCache[pbImgCacheKey(b.id,'var')];
-                 return (v && typeof v==='object' && v.kind==='svg' && v.scene && !(state.figureDraft && state.figureDraft.bankId===b.id))
-                   ? `<button class="btn sm" onclick="openFigureEditorFromSaved('${b.id}')">이름표 옮기기</button>` : ''; })()}
         <button class="btn no sm" onclick="removeVariantFigure('${b.id}')">그림 지우기</button></div>
       ${figureDraftHTML(b)}
       ${specBox}
@@ -25697,9 +25698,9 @@ function figureDraftHTML(b){
   /* 검산을 통과한 초안은 **편집기**로 보인다 — 이름표를 끌어 옮기고 글자를 고친다 (figEditorHTML).
      `saved` 는 이미 붙은 그림을 다시 연 것이다 — 「다시 받기」(한도)를 안 보인다. */
   return `<div class="rv-draft ${d.ok?'ok':'no'}">
-    <b>${d.saved ? '붙어 있는 그림 — 이름표를 옮깁니다' : d.ok ? '초안 — 검산을 통과했습니다' : '초안 — 검산에 걸렸습니다'}</b>
+    <b>${d.saved ? '붙어 있는 그림 — 편집합니다' : d.ok ? '초안 — 검산을 통과했습니다' : '초안 — 검산에 걸렸습니다'}</b>
     <span class="hx">${d.saved
-      ? '옮기거나 고친 뒤 <b>「이 그림으로 하겠습니다」</b>를 눌러야 저장됩니다. AI 한도는 안 씁니다.'
+      ? '고친 뒤 <b>「이 그림으로 하겠습니다」</b>를 눌러야 저장됩니다. AI 한도는 안 씁니다.'
       : d.ok
       ? '지침에 적힌 값이 그림에서 실제로 그렇게 되는지 확인했습니다. <b>문제에 맞는지는 눈으로 보고 정해주세요.</b>'
       : '아래가 어긋납니다. <b>이대로 붙일 수 없습니다</b> — 다시 받거나 직접 그려주세요.'}</span>
@@ -25724,6 +25725,38 @@ function figureDraftHTML(b){
    ⚠ 손길은 문서에 «위임»으로 단다 — render() 가 DOM 을 갈아도 살아남는다. */
 const FIG_EDIT = { drag: null };
 function figEditDraft(){ const d = state.figureDraft; return (d && d.scene && d.ok) ? d : null; }
+
+/* =================== 한 단계 실행취소 (2026-09-18 · 사용자 — 「전체 처음으로 되돌리는거 말고 한단계 실행취소」) ===
+   🔵 **만지기 «전»의 장면을 통째로 떠 둔다.** 손질마다 «거꾸로 가는 길»을 따로 짓지 않는다 —
+     편집기가 만지는 것은 장면 한 덩이(pins·hidden·segments·labels)이고 그 덩이는 작다.
+     거꾸로 가는 길을 열 가지 손질마다 짓는 쪽이 훨씬 잘 틀린다(숨기기는 창을 바꾸고 핀을 지운다).
+   🔵 **초안 객체에만 산다** — 저장되는 것은 `d.scene` 뿐이라 이 꾸러미는 DB 로 안 나간다.
+     초안을 닫으면(`state.figureDraft = null`) 같이 사라진다. 그것이 맞다 — 저장한 뒤의 되돌리기는
+     「그림 편집」을 다시 열어 고치는 길이다.
+   ⚠ 뜨는 자리는 «고치기 직전»이다. 고친 뒤에 뜨면 되돌릴 것이 고친 그것이 된다. */
+const FIG_UNDO_MAX = 40;
+function figEditPush(tag){
+  const d = figEditDraft();
+  if(!d) return;
+  if(!d.undo) d.undo = [];
+  /* 🔵 **이어지는 한 몸짓은 한 번으로 센다** — 화살표를 다섯 번 눌러 이름표를 5px 민 것은
+     사람에게 «한 번»의 손질이다. 같은 표(tag)가 이어지면 안 뜬다(맨 앞의 것이 이미 몸짓 전이다). */
+  if(tag && d.undoTag === tag) return;
+  d.undo.push({ scene: JSON.parse(JSON.stringify(d.scene)), sel: state.figureSel, elSel: state.figureElSel });
+  if(d.undo.length > FIG_UNDO_MAX) d.undo.shift();
+  d.undoTag = tag || null;
+}
+function figEditUndo(){
+  const d = figEditDraft();
+  if(!d) return;                                         // 편집기가 닫혀 있다 — 말할 자리조차 아니다
+  if(!d.undo || !d.undo.length){ showToast('되돌릴 것이 없습니다.'); return; }
+  const s = d.undo.pop();
+  d.scene = s.scene;
+  /* 고르개도 그때로 — 되돌린 뒤 엉뚱한 것이 골라져 있으면 다음 단추가 딴것을 민다. */
+  state.figureSel = s.sel; state.figureElSel = s.elSel;
+  d.undoTag = null;
+  figEditRedraw(d); render();
+}
 function figEditRedraw(d){
   d.svg = Figure.renderScene(d.scene);                 // 저장용 — 잡기 상자 없음
 }
@@ -25749,7 +25782,10 @@ document.addEventListener('pointerdown', e => {
     const el = e.target.closest('.fig-edit g[data-el]');
     if(el){
       const d0 = figEditDraft();
-      if(d0){ state.figureElSel = el.dataset.el; render(); e.preventDefault(); }
+      /* 🔴 **고른 것은 하나다** (2026-09-18) — 동그라미와 글자를 따로 고르게 되자 둘이 «동시에»
+         골라질 수 있게 됐다. 그러면 위 줄에는 글자 도구(「이 글자 빼기」)가, 아래 줄에는
+         동그라미가 떠서 **마지막에 누른 것과 단추가 미는 것이 달라진다.** 그래서 서로 놓아 준다. */
+      if(d0){ state.figureElSel = el.dataset.el; state.figureSel = null; render(); e.preventDefault(); }
     }
     return;
   }
@@ -25781,8 +25817,9 @@ function figEditEnd(e){
        ⚠ 되돌릴 때 쓰는 잣대는 **끌기 전 창**이다(지금 장면의 창). 값을 먼저 바꾸면 창이 달라져
          같은 px 이 딴 값이 된다. 그래서 자르는 차례가 이것이다: px → 값 → 자석 → 넣기.
        ⚠ 창이 달라지면 핀(px)은 옛 창의 자리다 — 숨기기와 같은 처방으로 자동 자리로 되돌린다. */
-    state.figureElSel = dr.id;
+    state.figureElSel = dr.id; state.figureSel = null;   // 고른 것은 하나다 (위 pointerdown 의 까닭과 같다)
     if(dr.moved){
+      figEditPush();                                     // 실행취소 — 끌기 «전»의 장면
       const M = Figure.mapper(d.scene, { edit:true });
       const [vx, vy] = M.toData(+dr.g.dataset.x + dr.dx, +dr.g.dataset.y + dr.dy);
       const sn = Figure.snapPoint(d.scene, vx, vy, { edit:true }, { id: dr.id, which: dr.end });
@@ -25797,8 +25834,9 @@ function figEditEnd(e){
     render();
     return;
   }
-  state.figureSel = dr.id;
+  state.figureSel = dr.id; state.figureElSel = null;     // 글자를 골랐으면 동그라미·선은 놓는다
   if(dr.moved){
+    figEditPush();                                       // 실행취소 — 끌기 «전»의 자리
     figEditPin(d, dr.id, +dr.g.dataset.x + dr.dx, +dr.g.dataset.y + dr.dy, dr.g.dataset.anchor);
     figEditRedraw(d);
   }
@@ -25809,14 +25847,23 @@ document.addEventListener('pointercancel', figEditEnd);
 /* 화살표 키 — 태블릿에서 끌기는 거칠다. 1px, Shift 면 5px. 입력칸에 있을 때는 안 받는다. */
 document.addEventListener('keydown', e => {
   const d = figEditDraft();
-  if(!d || !state.figureSel) return;
+  if(!d) return;
   const tag = (document.activeElement && document.activeElement.tagName) || '';
   if(tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+  /* Ctrl+Z (맥은 ⌘Z) — 한 단계 되돌린다. 입력칸 안에서는 위에서 걸렀다(거기서는 글자 되돌리기가 맞다). */
+  if((e.ctrlKey || e.metaKey) && !e.shiftKey && (e.key === 'z' || e.key === 'Z')){
+    if(d.undo && d.undo.length){ figEditUndo(); e.preventDefault(); }
+    return;
+  }
+  if(!state.figureSel) return;
   const step = e.shiftKey ? 5 : 1;
   const mv = { ArrowLeft:[-step,0], ArrowRight:[step,0], ArrowUp:[0,-step], ArrowDown:[0,step] }[e.key];
   if(!mv) return;
   const l = Figure.layoutLabels(d.scene).find(x => x.id === state.figureSel);
   if(!l) return;
+  /* ⚠ 화살표 한 벌은 «한 번»으로 센다 — 같은 이름표를 미는 동안은 표가 같아 안 쌓인다.
+     딴 이름표로 가거나 다른 손질을 하면 표가 달라져 거기서 새 단계가 열린다. */
+  figEditPush('arrow:' + l.id);
   figEditPin(d, l.id, l.x + mv[0], l.y + mv[1], l.anchor);
   figEditRedraw(d); render();
   e.preventDefault();
@@ -25826,18 +25873,24 @@ function figEditText(v){
   if(!d || !state.figureSel) return;
   const t = String(v || '').trim();
   if(!t){ showToast('이름표를 비울 수는 없습니다.'); render(); return; }
-  if(!Figure.setLabelText(d.scene, state.figureSel, t)){ showToast('이 글자는 값이라 고칠 수 없습니다.'); return; }
+  /* ⚠ 못 고치는 글자(값)도 있다 — 뜬 뒤에 막히면 «아무 일도 없는 단계»가 쌓인다. 그때는 걷어 낸다. */
+  figEditPush();
+  if(!Figure.setLabelText(d.scene, state.figureSel, t)){ d.undo.pop(); showToast('이 글자는 값이라 고칠 수 없습니다.'); return; }
   figEditRedraw(d); render();
 }
 function figEditHome(id){
   const d = figEditDraft();
   if(!d || !d.scene.pins) return;
+  figEditPush();
   delete d.scene.pins.at[id];
   figEditRedraw(d); render();
 }
+/* 「전부 되돌리기」 — 이름표 자리를 통째로 자동 배치로. ⚠ 실행취소(한 단계)와 다른 것이다.
+   이것도 한 «손질»이라 되돌릴 수 있다 — 눌러 놓고 아차 하는 자리가 여기다. */
 function figEditReset(){
   const d = figEditDraft();
   if(!d) return;
+  figEditPush();
   delete d.scene.pins;
   state.figureSel = null;
   figEditRedraw(d); render();
@@ -25885,7 +25938,11 @@ function figEditorHTML(d){
       <button class="btn q sm" onclick="figEditAddLabel()" title="글자(점 이름·수식·설명)를 하나 더해 끌어다 놓습니다">＋ 글자 더하기</button>
       <button class="btn q sm" onclick="figEditAddSeg(false)" title="창 한가운데에 선분을 하나 세웁니다. 양 끝의 동그라미를 끌어 옮기세요">＋ 실선</button>
       <button class="btn q sm" onclick="figEditAddSeg(true)" title="창 한가운데에 점선을 하나 세웁니다. 양 끝의 동그라미를 끌어 옮기세요">＋ 점선</button>
-      ${pinned ? `<button class="btn q sm" onclick="figEditReset()">전부 되돌리기</button>` : ''}
+      ${/* 🔴 **한 단계 실행취소** (2026-09-18 · 사용자 요청) — 「전부 되돌리기」와 다른 것이라 옆에 나란히 세운다.
+           남은 단계를 숫자로 보인다 — 몇 번 더 되돌릴 수 있는지 눌러 보기 전에 알 수 있다. */''}
+      ${(d.undo && d.undo.length) ? `<button class="btn q sm" onclick="figEditUndo()"
+        title="바로 앞 손질 하나를 되돌립니다 (Ctrl+Z) — 이름표 옮기기·숨기기·선 더하기·글자 고치기 전부">↶ 실행취소 ${d.undo.length}</button>` : ''}
+      ${pinned ? `<button class="btn q sm" onclick="figEditReset()" title="이름표 자리를 통째로 자동 배치로 되돌립니다 (실행취소로 다시 돌릴 수 있습니다)">이름표 자리 되돌리기</button>` : ''}
     </div>
     ${figEditHideBarHTML(d)}`;
 }
@@ -25896,9 +25953,20 @@ function figEditHideBarHTML(d){
   const els = Figure.elements(d.scene);
   const hid = d.scene.hidden || {};
   const hiddenIds = Object.keys(hid).filter(k => hid[k] === true);
-  const name = id => id.startsWith('lbl:') ? '이름표 · ' + ((els.find(e => e.id === id.slice(4)) || {}).name || id.slice(4))
+  /* ⚠ **목록에 없는 것도 이름이 있어야 한다** (2026-09-18) — 숨긴 것은 `els` 에서 빠지고,
+     점의 «이름표»(`lbl:point:3`)나 옛 표(`point:3`)는 애초에 목록에 없다.
+     이름을 못 찾아 «point:3» 같은 날것이 뜨면 되살릴지 말지를 못 정한다. */
+  const 점이름 = i => ((d.scene.points || [])[i] || {}).label || (+i + 1);
+  const 속이름 = id => {
+    const e = els.find(x => x.id === id);
+    if(e) return e.name;
+    const m = /^(dot|point):(\d+)$/.exec(id);
+    if(m) return '점 ' + 점이름(m[2]) + (m[1] === 'dot' ? ' 의 동그라미' : '');
+    return id;
+  };
+  const name = id => id.startsWith('lbl:') ? '이름표 · ' + 속이름(id.slice(4))
     : id.startsWith('label:') ? '글자 ' + (+id.split(':')[1] + 1)
-    : ((els.find(e => e.id === id) || {}).name || id);
+    : 속이름(id);
   const 후보 = els.filter(e => !hid[e.id]);
   /* 🔵 **고른 요소를 기억한다** (2026-09-18) — 선분 끝을 끌면 그 선분이 골라지므로,
      끌고 나서 곧바로 「점선으로」를 누를 수 있어야 한다. 고른 것이 없으면 첫째를 본다. */
@@ -25927,6 +25995,7 @@ function figEditHideBarHTML(d){
 function figEditHide(id, on){
   const d = figEditDraft();
   if(!d || !id) return;
+  figEditPush();                                         // 실행취소 — 숨기기·되살리기 둘 다 한 단계다
   const before = Figure.autoWindow(d.scene);
   Figure.setHidden(d.scene, id, on !== false);
   const after = Figure.autoWindow(d.scene);
@@ -25941,7 +26010,8 @@ function figEditHide(id, on){
 function figEditDash(id){
   const d = figEditDraft();
   if(!d || !id) return;
-  if(!Figure.setDash(d.scene, id)) return;
+  figEditPush();
+  if(!Figure.setDash(d.scene, id)){ d.undo.pop(); return; }    // 점선이 없는 것(점·다각형·눈금)
   state.figureElSel = id;
   figEditRedraw(d); render();
 }
@@ -25952,6 +26022,7 @@ function figEditDash(id){
 function figEditAddSeg(dash){
   const d = figEditDraft();
   if(!d) return;
+  figEditPush();                                         // 실행취소 — 세우기 «전»
   const M = Figure.mapper(d.scene, { edit:true });
   const [x0, x1] = M.xRange, [y0, y1] = M.yRange;
   const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2, half = (x1 - x0) / 8;
@@ -25971,6 +26042,7 @@ function figEditAddSeg(dash){
 function figEditAddLabel(){
   const d = figEditDraft();
   if(!d) return;
+  figEditPush();
   const id = Figure.addLabel(d.scene, 'A');
   state.figureSel = id;
   figEditRedraw(d); render();
@@ -25981,7 +26053,8 @@ function figEditRemoveLabel(){
   const d = figEditDraft();
   if(!d || !state.figureSel) return;
   const id = state.figureSel;
-  if(/^label:/.test(id)){ if(!Figure.removeLabel(d.scene, id)) return; }
+  figEditPush();
+  if(/^label:/.test(id)){ if(!Figure.removeLabel(d.scene, id)){ d.undo.pop(); return; } }
   else Figure.setHidden(d.scene, 'lbl:' + id, true);        // 점·곡선·눈금의 이름표 — 요소는 두고 글자만
   state.figureSel = null;
   figEditRedraw(d); render();
@@ -26683,11 +26756,15 @@ function variantFigureBoxHTML(v){
   if(has) return `<div class="rv-fig on">
       <b>이 변형에 붙은 그림</b>
       ${editing ? '' : `<div class="pb-fig pb-svg">${v.image.svg}</div>`}
-      <div class="rv-figact">${draftBtn}
-        ${(editing || busy) ? '' : `<button class="btn sm" onclick="openFigureEditorFromSaved('${escHtml(v.code)}')">이름표 옮기기</button>
-          <button class="btn q sm" onclick="figDownload('${escHtml(v.code)}','svg')" title="벡터 — 일러스트레이터에서 열립니다">SVG</button>
+      ${/* 🔵 **「그림 편집」이 앞이다** (2026-09-18 · 사용자 요청) — 한도를 안 쓰는 길이 먼저 오고,
+           한도를 먹는 「다시 그려 보기」가 뒤로 간다. 이름도 갈았다 — 이제 이름표만 옮기는 것이 아니다
+           (선을 더하고 지우고, 실선↔점선, 숨기기, 글자 고치기까지 한다). */''}
+      <div class="rv-figact">
+        ${(editing || busy) ? '' : `<button class="btn sm" onclick="openFigureEditorFromSaved('${escHtml(v.code)}')">그림 편집</button>`}
+        ${draftBtn}
+        ${(editing || busy) ? '' : `<button class="btn q sm" onclick="figDownload('${escHtml(v.code)}','svg')" title="벡터 — 일러스트레이터에서 열립니다">SVG</button>
           <button class="btn q sm" onclick="figDownload('${escHtml(v.code)}','png')">PNG</button>`}
-        <span class="hx">다시 그리면 한도를 하나 씁니다 · 이름표 옮기기는 안 씁니다</span></div>
+        <span class="hx">다시 그리면 한도를 하나 씁니다 · 그림 편집은 안 씁니다</span></div>
       ${figureDraftHTML({ id: v.code })}
       ${spec}
     </div>`;

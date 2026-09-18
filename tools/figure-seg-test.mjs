@@ -189,14 +189,15 @@ console.log(NL + '⑥ 누르면 골라진다 — 잡기 층' + NL);
   const 학생 = F.renderScene(s);
   const 잡힌것 = [...편집.matchAll(/data-el="([^"]+)"/g)].map(m => m[1]);
   봄('선·도형·점이 모두 잡힌다',
-    ['curve:0', 'seg:0', 'seg:1', 'poly:0', 'circle:0', 'point:0'].map(id => 잡힌것.indexOf(id) >= 0),
+    ['curve:0', 'seg:0', 'seg:1', 'poly:0', 'circle:0', 'dot:0'].map(id => 잡힌것.indexOf(id) >= 0),
     [true, true, true, true, true, true]);
+  봄('   🔴 옛 표(point:0)로는 안 잡힌다 — 동그라미와 글자를 가른 뒤라서다', 잡힌것.indexOf('point:0'), -1);
   봄('🔴 학생 화면에는 잡기 층이 없다', /data-el=/.test(학생), false);
   /* ⚠ 속이 아니라 «테두리»만 잡힌다 — 큰 도형이 제 속의 점·선을 통째로 덮으면 아무것도 못 고른다. */
   봄('🔴 다각형·원은 «테두리»만 잡는다 (속은 비켜 준다)',
     (편집.match(/pointer-events="stroke"/g) || []).length >= 4, true);
-  봄('   점은 통째로 잡는다 (동그라미라 테두리만이면 못 누른다)',
-    /data-el="point:0"[\s\S]{0,160}?pointer-events="all"/.test(편집), true);
+  봄('   동그라미는 통째로 잡는다 (동그라미라 테두리만이면 못 누른다)',
+    /data-el="dot:0"[\s\S]{0,160}?pointer-events="all"/.test(편집), true);
   봄('잡는 폭이 실제 선보다 굵다 (2px 선을 손가락으로 짚어야 한다)',
     /stroke-width="14"/.test(편집), true);
   /* 숨긴 것에는 잡기 층도 없다 — 안 보이는 것을 고르면 「어디 있지」가 된다. */
@@ -210,22 +211,73 @@ console.log(NL + '⑥ 누르면 골라진다 — 잡기 층' + NL);
     /class="fig-handle"[^>]*fill="#fff"/.test(편집), false);
 }
 
-console.log(NL + '⑦ 점(동그라미)도 뺄 수 있다' + NL);
+console.log(NL + '⑦ 동그라미와 글자를 «따로» 고르고 따로 숨긴다' + NL);
 {
-  /* 사용자 — 「도형위에 점을 표현하기위에 점을 동그라미로 넣었는데 그것도 뺄 수 있게해줘」.
-     🔵 숨기는 길은 예전부터 있었다 — 없던 것은 «어느 것이 점 3인지 아는 길»이었다(⑥이 그것이다). */
-  const s = { kind: 'graph', polygons: [{ pts: [[0, 0], [4, 0], [4, 3]] }],
-    points: [{ x: 4, y: 3, label: 'B', dot: true }, { x: 0, y: 0, label: 'A', dot: true }], axis: {} };
-  const 점갯수 = svg => (svg.match(/<circle [^>]*r="4"[^>]*fill="currentColor"/g) || []).length;
-  봄('점 둘이 그려진다', 점갯수(F.renderScene(s)), 2);
-  F.setHidden(s, 'point:0', true);
-  봄('🔴 숨기면 동그라미가 사라진다', 점갯수(F.renderScene(s)), 1);
-  봄('   이름표도 같이 간다 (점을 통째로 숨긴 것이다)', /<text[^>]*>[\s\S]*?B[\s\S]*?<\/text>/.test(F.renderScene(s)), false);
-  봄('   되살릴 수 있다', (() => { F.setHidden(s, 'point:0', false); return 점갯수(F.renderScene(s)); })(), 2);
-  /* ⚠ 「동그라미만 빼고 이름표는 남기기」는 이름표 빼기가 아니라 «점 숨기기»의 반대다 —
-     그 자리는 `dot:false` 이고 편집기에는 아직 길이 없다. 남은 것으로 적어 둔다. */
-  봄('점만 숨겨도 다각형은 그대로다',
-    (F.renderScene(s).match(/stroke-width="2"/g) || []).length > 0, true);
+  /* 🔴 사용자 —「동그라미만 빼고 이름만 남기기 라기보단 **동그라미랑 문자랑 분리해서
+     선택할 수 있도록** 해주면 좋을 것 같아」. 단추를 하나 더 다는 것이 아니라 **둘을 가르는** 일이다.
+       · `dot:i`       — 동그라미만
+       · `lbl:point:i` — 글자만 (이름표는 예전부터 이렇게 감췄다)
+       · `point:i`     — 점을 통째로. **옛 표라 뜻을 안 바꾼다** — 이미 저장된 장면이 쓰고 있다. */
+  const 짓기 = () => ({ kind: 'graph', polygons: [{ pts: [[0, 0], [4, 0], [4, 3]] }],
+    points: [{ x: 4, y: 3, label: 'B', dot: true }, { x: 0, y: 0, label: 'A', dot: true }], axis: {} });
+  const 동그라미 = svg => (svg.match(/<circle [^>]*r="4"[^>]*fill="currentColor"/g) || []).length;
+  /* ⚠ **정규식을 «문자열»로 짓다가 당했다** — `new RegExp('[\\s\\S]')` 를 옮기는 사이 백슬래시가
+       깎여 `[sS]` 가 되었고, 그러면 아무 글자도 못 찾아 **「글자가 없다」가 언제나 참**이었다.
+       「글자만 감춘다」가 조용히 초록이던 까닭이 그것이다. 여기서는 «자르기»로 푼다 — 백슬래시가 없다.
+       (이름표는 <text> 한 덩이 안에 tspan 조각으로 들어 있어 덩이째 봐야 한다.) */
+  const 글자조각 = svg => svg.split('<text').slice(1).map(x => x.split('</text>')[0]);
+  const 글자있나 = (svg, t) => 글자조각(svg).some(x => x.includes(t));
+
+  { const s = 짓기();
+    봄('처음엔 동그라미 둘 · 글자 둘', [동그라미(F.renderScene(s)), 글자있나(F.renderScene(s), 'B')], [2, true]); }
+
+  { const s = 짓기(); F.setHidden(s, 'dot:0', true);
+    const svg = F.renderScene(s);
+    봄('🔴 동그라미만 감춘다 — 글자 B 는 남는다', [동그라미(svg), 글자있나(svg, 'B')], [1, true]); }
+
+  { const s = 짓기(); F.setHidden(s, 'lbl:point:0', true);
+    const svg = F.renderScene(s);
+    봄('🔴 글자만 감춘다 — 동그라미는 남는다', [동그라미(svg), 글자있나(svg, 'B')], [2, false]); }
+
+  { const s = 짓기(); F.setHidden(s, 'dot:0', true); F.setHidden(s, 'lbl:point:0', true);
+    const svg = F.renderScene(s);
+    봄('둘 다 감추면 그 점은 통째로 없다', [동그라미(svg), 글자있나(svg, 'B')], [1, false]);
+    봄('   다른 점(A)은 그대로다', 글자있나(svg, 'A'), true); }
+
+  { const s = 짓기(); F.setHidden(s, 'point:0', true);
+    const svg = F.renderScene(s);
+    봄('⚠ 옛 표(point:0)는 여전히 «통째로» 감춘다 — 저장된 장면이 안 깨진다',
+      [동그라미(svg), 글자있나(svg, 'B')], [1, false]); }
+
+  { const s = 짓기(); F.setHidden(s, 'dot:0', true);
+    봄('되살릴 수 있다', (() => { F.setHidden(s, 'dot:0', false); return 동그라미(F.renderScene(s)); })(), 2); }
+
+  /* 목록·잡기 층도 «동그라미»를 가리킨다 */
+  { const s = 짓기();
+    const ids = F.elements(s).map(e => e.id);
+    봄('🔴 목록에 서는 것은 dot: 이다 (point: 가 아니다)',
+      [ids.indexOf('dot:0') >= 0, ids.indexOf('point:0') >= 0], [true, false]);
+    봄('   이름이 무엇인지 말해 준다', F.elements(s).find(e => e.id === 'dot:0').name, '점 B 의 동그라미');
+    봄('누르는 자리도 dot: 이다', /data-el="dot:0"/.test(F.renderScene(s, { edit: true })), true);
+    봄('   감춘 동그라미는 못 누른다', (() => {
+      const t = 짓기(); F.setHidden(t, 'dot:0', true);
+      return /data-el="dot:0"/.test(F.renderScene(t, { edit: true }));
+    })(), false);
+    /* 애초에 동그라미가 없는 점(dot:false)은 고를 거리가 아니다 — 눌러도 아무 데도 없다 */
+    봄('dot:false 인 점은 목록에 안 선다', (() => {
+      const t = 짓기(); t.points[0].dot = false;
+      return F.elements(t).map(e => e.id).indexOf('dot:0');
+    })(), -1);
+    /* ⚠ **옛 표로 통째로 감춘 점**도 목록에서 빠져야 한다 — 이미 안 보이는 것을 또 「숨기기」 하면
+       그림은 그대로인데 되살릴 단추만 둘로 늘어난다(「점 A ↺」 옆에 「점 A 의 동그라미 ↺」). */
+    봄('🔴 옛 표(point:0)로 감춘 점의 동그라미는 목록에 안 선다', (() => {
+      const t = 짓기(); F.setHidden(t, 'point:0', true);
+      const ids = F.elements(t).map(e => e.id);
+      return [ids.indexOf('dot:0'), ids.indexOf('dot:1') >= 0];
+    })(), [-1, true]); }
+
+  { const s = 짓기(); F.setHidden(s, 'dot:0', true);
+    봄('점만 숨겨도 다각형은 그대로다', (F.renderScene(s).match(/stroke-width="2"/g) || []).length > 0, true); }
 }
 
 console.log(NL + '🪤 덫 — 옛 판으로 돌려 본다' + NL);
