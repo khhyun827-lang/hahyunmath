@@ -10688,24 +10688,37 @@ async function addVideo(){
     : `${보낸이들.length}명에게 영상을 보냈습니다 — ${보낸이들.join('·')}.`);
   render();
 }
-/* 마감 바꾸기 (2026-09-13 · K-3). 저장이 된 «뒤에» 메모리를 고친다 — withdrawStudent 와 같은 규칙. */
+/* 마감 바꾸기 (2026-09-13 · K-3). 저장이 된 «뒤에» 메모리를 고친다 — withdrawStudent 와 같은 규칙.
+   🔵 **묶음이면 함께 바꾼다** (2026-09-19) — 같은 영상을 여러 명에게 보낸 것은 화면에 «한 줄»이다.
+     그 한 줄에서 누른 것이 한 사람 것만 바뀌면 **보이는 것과 된 것이 갈린다.** id 를 쉼표로 이어 받는다. */
 async function setVideoDue(vid, due){
-  const v = DATA.videos.find(x=>x.id===vid);
-  if(!v) return;
+  const 것들 = String(vid||'').split(',').map(id => DATA.videos.find(x=>x.id===id)).filter(Boolean);
+  if(!것들.length) return;
   due = due || '';
-  if((v.dueDate||'') === due){ showToast('마감일이 그대로입니다.'); return; }
-  const next = Object.assign({}, v, { dueDate: due });
-  const ok = await dbSetDoc('videos', vid, next);
-  if(ok === null){ showToast('마감일을 저장하지 못했습니다.'); return; }
-  v.dueDate = due;
-  await logAudit('영상 마감 변경', '', '', v.title + ' · ' + (due || '마감 없음'));
+  if(것들.every(v => (v.dueDate||'') === due)){ showToast('마감일이 그대로입니다.'); return; }
+  let 흠 = 0;
+  for(const v of 것들){
+    const ok = await dbSetDoc('videos', v.id, Object.assign({}, v, { dueDate: due }));
+    if(ok !== true){ 흠++; continue; }
+    v.dueDate = due;
+  }
+  if(흠){ showToast(`${흠}명분을 저장하지 못했습니다 — 다시 시도해 주세요.`); render(); return; }
+  await logAudit('영상 마감 변경', '', '', 것들[0].title + ' · ' + (due || '마감 없음')
+    + (것들.length > 1 ? ` · ${것들.length}명` : ''));
   showToast(due ? '마감일을 ' + due + ' 로 바꿨습니다.' : '마감일을 없앴습니다.');
   render();
 }
 async function deleteVideo(vid){
-  if(!confirm('이 영상을 삭제할까요?')) return;
-  DATA.videos = DATA.videos.filter(v=>v.id!==vid);
-  await dbDeleteDoc('videos', vid);
+  const 것들 = String(vid||'').split(',').map(id => DATA.videos.find(x=>x.id===id)).filter(Boolean);
+  if(!것들.length) return;
+  /* ⚠ 묶음이면 **몇 명 것을 지우는지** 말한다 — 한 줄로 보이던 것이 실은 여러 문서라서다. */
+  if(!confirm(것들.length > 1
+    ? `「${것들[0].title}」을 ${것들.length}명(${것들.map(v=>studentNameOf(v.studentId)).join('·')})에게서 지울까요?`
+    : '이 영상을 삭제할까요?')) return;
+  const 지울것 = new Set(것들.map(v=>v.id));
+  DATA.videos = DATA.videos.filter(v=>!지울것.has(v.id));
+  for(const v of 것들) await dbDeleteDoc('videos', v.id);
+  if(지울것.has(state.videoSelectedId)) state.videoSelectedId = null;
   render();
 }
 
@@ -15134,7 +15147,10 @@ ${cd ? '낸 날 '+escHtml(cd)+' ('+wd+')' : '낸 날 모름'}${a.dueDate?' · �
    🔴 ③ **제목이 본문과 같은 크기**라 머리글로 안 읽혔다.
    🔴 ④ **삭제가 아무 구분 없이 덩그러니** 있었다 — 되돌릴 수 없는 일인데. 구석의 작은 ×로 옮겼다.
    🔵 D-day 를 단다(`stuDday`) — 「마감 09-20」만으로는 **급한지 아닌지가 안 보였다.** 학생 화면과 같은 어법이다. */
-function videoHeroHTML(v, 받는이){
+/* ⚠ `묶음ids` — 같은 영상을 여러 명에게 보낸 것이면 그 id 를 쉼표로 이은 것이 온다.
+   마감 바꾸기·지우기가 **그 전부**에 가야 한다(화면에는 한 줄이라서다). 없으면 이 영상 하나다. */
+function videoHeroHTML(v, 받는이, 묶음ids){
+  const 손댈것 = 묶음ids || v.id;
   const yid = extractYouTubeId(v.url || '');
   const 구간 = videoGoalLabelOf(v);
   const d = stuDday(v.dueDate);
@@ -15157,7 +15173,7 @@ function videoHeroHTML(v, 받는이){
       <div class="due">
         ${고치는중
           ? `<input id="video-due-edit" type="date" value="${escHtml(v.dueDate||'')}" style="width:150px;">
-             <button class="btn p sm" onclick="setVideoDue('${v.id}', document.getElementById('video-due-edit').value); state.videoDueEdit=null;">저장</button>
+             <button class="btn p sm" onclick="setVideoDue('${손댈것}', document.getElementById('video-due-edit').value); state.videoDueEdit=null;">저장</button>
              <button class="btn q sm" onclick="state.videoDueEdit=null; render()">취소</button>
              <span class="muted" style="font-size:11px;">비우고 저장하면 마감이 없어집니다</span>`
           : `<span>${v.dueDate ? '마감 <span class="mono">' + escHtml(v.dueDate) + '</span>' : '마감 없음'}</span>
@@ -15165,7 +15181,7 @@ function videoHeroHTML(v, 받는이){
              <button class="btn q sm" onclick="state.videoDueEdit='${v.id}'; render()">마감 바꾸기</button>`}
       </div>
     </div>
-    <button class="del" title="이 영상을 지웁니다" onclick="deleteVideo('${v.id}')">×</button>
+    <button class="del" title="${묶음ids ? '받은 학생 모두에게서 지웁니다' : '이 영상을 지웁니다'}" onclick="deleteVideo('${손댈것}')">×</button>
   </div>`;
 }
 
@@ -23616,22 +23632,54 @@ function chubVideoHTML(classId){
 
   const sel = vids.find(v=>v.id===state.videoSelectedId) || personal.find(v=>v.id===state.videoSelectedId) || vids[0] || personal[0];
 
+  /* 🔴 **같은 영상을 여러 명에게 보냈으면 «한 줄»로 묶는다** (2026-09-19 · 사용자 신고 —
+       「학생 체크하고 같은영상 올렸는데 같이안묶이고 다 각자 생성되었어」).
+     🔵 **문서는 사람마다 하나가 맞다** — 학생 화면도, 「누가 어디까지 봤나」를 세는 자리도 그 꼴로 산다.
+       틀린 것은 **보여 주는 쪽**이었다: 셋에게 보내면 같은 제목이 세 줄로 서서 목록이 길어지고,
+       「누가 봤나」를 세 번 들어가 봐야 했다. 묶는 것은 화면이고, 저장은 그대로다.
+     ⚠ 묶는 잣대는 «같은 영상인가»다 — **링크·제목·마감·구간이 모두 같아야** 한 줄이다.
+       결석 보충처럼 학생마다 링크가 다르면 안 묶인다(그게 맞다 — 다른 영상이다).
+     ⚠ 그래서 줄에서 하는 일(마감 바꾸기·지우기)도 **묶음 전체**에 간다 — 안 그러면 한 줄로 보이는데
+       한 사람 것만 바뀐다. id 를 쉼표로 이어 넘긴다(`setVideoDue`·`deleteVideo`). */
+  const 묶음열쇠 = v => [v.url||'', v.title||'', v.dueDate||'', v.fromSec||'', v.toSec||''].join('|');
+  const 묶음들 = [];
+  {
+    const 자리 = {};
+    personal.forEach(v => {
+      const k = 묶음열쇠(v);
+      if(자리[k] === undefined){ 자리[k] = 묶음들.length; 묶음들.push([]); }
+      묶음들[자리[k]].push(v);
+    });
+  }
+  const 묶음of = v => 묶음들.find(g => g.some(x => x.id === v.id)) || [v];
+  /* 이름은 셋까지 적고 나머지는 센다 — 열 명이면 줄이 이름으로만 가득 찬다. */
+  const 이름들 = g => g.length <= 3 ? g.map(v=>nameOf(v.studentId)).join('·')
+    : g.slice(0,3).map(v=>nameOf(v.studentId)).join('·') + ` 외 ${g.length-3}명`;
+
   /* 개인 배정 줄 — 받은 학생 이름이 제목보다 먼저다. «누구에게 보낸 것이 어떻게 됐나»를 보는 줄이라서다. */
-  const personalItem = v => {
-    const p = progOf(v, v.studentId);
+  const personalItem = g => {
+    const v = g[0];
+    const ps = g.map(x => progOf(x, x.studentId));
+    const 완주 = ps.filter(p=>p.done).length;
+    const p = { pct: Math.round(ps.reduce((a,x)=>a+x.pct,0) / ps.length),
+                done: 완주 === g.length, seen: ps.some(x=>x.seen) };
     const over = v.dueDate && v.dueDate < todayStr() && !p.done;
     /* 🔵 **제목이 앞에 온다** (2026-09-16) — 예전에는 「한정우 · 집합(1)」처럼 **이름이 굵게 앞서고
          제목이 부제처럼** 보였다. 영상 목록인데 학생이 주인공이 돼 있었다.
        ⚠ 이름은 사라지지 않는다 — 같은 제목을 여러 학생에게 보내는 일이 많아(결석 보충) 둘째 줄에 굵게 둔다.
        ⚠ 구간 뱃지는 **조용한 색**이다 — 예전에는 `badge ok`(초록)라 «좋은 상태»처럼 읽혔다. 그냥 사실이다. */
     const d = stuDday(v.dueDate);
-    return `<div class="vd-item ${v.id===sel.id?'on':''}" onclick="state.videoSelectedId='${v.id}'; render()">
+    const 여럿 = g.length > 1;
+    return `<div class="vd-item ${g.some(x=>x.id===sel.id)?'on':''}" onclick="state.videoSelectedId='${v.id}'; render()">
       <div class="t">${escHtml(v.title)}${
-        videoGoalLabelOf(v) ? ` <span class="badge" style="font-weight:400;">${escHtml(videoGoalLabelOf(v))}</span>` : ''}</div>
-      <div class="m"><b style="color:var(--sub);">${escHtml(nameOf(v.studentId))}</b>${
+        videoGoalLabelOf(v) ? ` <span class="badge" style="font-weight:400;">${escHtml(videoGoalLabelOf(v))}</span>` : ''}${
+        여럿 ? ` <span class="badge late" style="font-weight:600;">${g.length}명</span>` : ''}</div>
+      <div class="m"><b style="color:var(--sub);">${escHtml(이름들(g))}</b>${
         v.dueDate ? ' · 마감 <span class="mono">'+escHtml(v.dueDate.slice(5))+'</span>' : ' · 마감 없음'}${
         d ? ` <span class="badge ${d.tone}">${d.label}</span>` : ''}</div>
-      <div class="p"><span class="bar"><i style="width:${p.pct}%"></i></span><b style="color:${p.done?'var(--ok)':over?'var(--no)':'inherit'}">${p.done ? '완주' : p.seen ? p.pct+'%' : '미시청'}</b></div>
+      ${/* 여럿이면 «몇 명이 끝냈나»가 그 줄의 수다 — 평균 퍼센트 하나로는 셋 중 둘이 안 본 것을 못 본다 */''}
+      <div class="p"><span class="bar"><i style="width:${p.pct}%"></i></span><b style="color:${p.done?'var(--ok)':over?'var(--no)':'inherit'}">${
+        여럿 ? `완주 ${완주}/${g.length}` : p.done ? '완주' : p.seen ? p.pct+'%' : '미시청'}</b></div>
     </div>`;
   };
   const list = `<div class="vd-list">
@@ -23653,8 +23701,8 @@ function chubVideoHTML(classId){
           <span class="bar"><i style="width:${w}%"></i></span><b>완주 ${d}/${roster.length}</b></div>
       </div>`;
     }).join('')}
-    ${personal.length ? `<div class="t-sec" style="padding:14px 12px 4px;margin:0;">개인 배정 <span class="mono">${personal.length}</span>
-      <span style="font-weight:400;color:var(--dim);">결석 보충 · 한 명에게 보낸 것</span></div>${personal.map(personalItem).join('')}` : ''}
+    ${묶음들.length ? `<div class="t-sec" style="padding:14px 12px 4px;margin:0;">개인 배정 <span class="mono">${묶음들.length}</span>
+      <span style="font-weight:400;color:var(--dim);">결석 보충 · 고른 학생에게 보낸 것</span></div>${묶음들.map(personalItem).join('')}` : ''}
   </div>`;
 
   /* 이탈 분포 — 0~9%, 10~19% … 60~69%, 그리고 «완주» 칸.
@@ -23718,30 +23766,41 @@ function chubVideoHTML(classId){
         : '<span class="badge late">시청 중</span>'}</span>
     </div>`).join('')}`;
 
-  /* 개인 배정 상세 — 이탈 분포는 한 명에겐 뜻이 없다. 그 학생 한 줄만. */
+  /* 개인 배정 상세 — 이탈 분포는 몇 사람에겐 뜻이 없다. 받은 학생들을 한 줄씩.
+     🔵 **묶음이면 그 줄이 전부 선다** (2026-09-19) — 목록이 한 줄로 묶였으니 상세도 그 묶음을 본다.
+       예전에는 한 명만 떠서, 셋에게 보낸 영상의 «누가 봤나»를 세 번 들어가 봐야 했다. */
+  const 받은묶음 = sel.studentId ? 묶음of(sel) : [];
   const one = sel.studentId ? (() => {
-    const st = DATA.students.find(x=>x.studentId===sel.studentId);
-    const p = progOf(sel, sel.studentId);
-    const over = sel.dueDate && sel.dueDate < todayStr() && !p.done;
-    return `<div class="t-sec" style="margin-top:6px;">받은 학생</div>
-    <div class="vd-sv ${p.done?'done':''} ${!p.done&&p.pct<50?'low':''}">
-      <div class="who"><b>${escHtml(nameOf(sel.studentId))}</b></div>
+    const 줄들 = 받은묶음.map(v => ({ v, p: progOf(v, v.studentId),
+      st: DATA.students.find(x=>x.studentId===v.studentId) }));
+    const 완주 = 줄들.filter(r=>r.p.done).length;
+    return `<div class="t-sec" style="margin-top:6px;">받은 학생${줄들.length > 1
+      ? ` <span style="font-weight:400;color:var(--sub);">완주 <b class="mono">${완주}/${줄들.length}</b></span>` : ''}</div>
+    ${줄들.slice().sort((a,b)=>a.p.pct-b.p.pct).map(({v,p,st})=>{
+      const over = v.dueDate && v.dueDate < todayStr() && !p.done;
+      return `<div class="vd-sv ${p.done?'done':''} ${!p.done&&p.pct<50?'low':''}">
+      <div class="who"><b>${escHtml(nameOf(v.studentId))}</b>${
+        !st ? ' <span class="badge gone">명단에 없음</span>' : ''}</div>
       <span class="track vgoal"><i style="width:${p.pct}%"></i>${videoGoalMarkHTML()}</span>
       <span class="pct">${p.pct}%</span>
       <span class="st">${p.done ? '<span class="badge ok">완주</span>'
         : over ? `<span class="badge no">${p.seen ? '시청 중' : '미시청'} · 마감 지남</span>`
         : !p.seen ? '<span class="badge">미시청</span>'
         : '<span class="badge late">시청 중</span>'}</span>
-    </div>
-    ${!st ? '<div style="font-size:12px;color:var(--dim);margin-top:8px;">이 학생은 이제 명단에 없습니다.</div>' : ''}`;
+    </div>`;}).join('')}`;
   })() : '';
 
+  /* ⚠ 머리말의 «마감 바꾸기·지우기»는 **묶음 전체**에 간다 — 한 줄로 보이던 것이라서다.
+     그래서 id 를 쉼표로 이어 넘긴다(`setVideoDue`·`deleteVideo` 가 그 꼴을 받는다). */
+  const 묶음ids = 받은묶음.length > 1 ? 받은묶음.map(v=>v.id).join(',') : '';
   return form + `<div class="vd-screen">${list}
     <div class="vd-main">
-      ${videoHeroHTML(sel, sel.studentId ? nameOf(sel.studentId) : '')}
+      ${videoHeroHTML(sel, sel.studentId ? 이름들(받은묶음) : '', 묶음ids)}
       ${sel.studentId ? one : drop + students}
       ${/* 미시청 알림 (N-2) — 학생 목록 «바로 아래»다. 누가 안 봤는지를 본 자리에서 바로 이어진다. */''}
-      ${vidNoticeBarHTML(sel, sel.studentId ? roster.filter(s => s.studentId === sel.studentId) : roster)}
+      ${vidNoticeBarHTML(sel, sel.studentId
+        ? roster.filter(s => 받은묶음.some(v => v.studentId === s.studentId))
+        : roster)}
     </div>
   </div>`;
 }
