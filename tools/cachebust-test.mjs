@@ -12,6 +12,7 @@
 
 import fs from 'fs';
 import path from 'path';
+import crypto from 'crypto';
 import { fileURLToPath } from 'url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -42,8 +43,45 @@ for (const 문서 of 문서들) {
   }
 }
 
-/* 🔵 **고친 파일과 그 ?v= 가 함께 움직였는가** — 여기까지는 못 잰다(그날의 일이라).
-   대신 «값이 서로 다르지 않은가»만 본다: 한 파일만 올리고 딴 파일을 잊는 일이 잦다. */
+/* 🔵 **고친 파일과 그 ?v= 가 함께 움직였는가** — 이제 «잰다» (2026-09-18).
+   ~~여기까지는 못 잰다(그날의 일이라)~~ 고 적어 두고 **바로 그날 또 놓쳤다** — figure.js 를
+   고쳐 배포하면서 `?v=` 를 `d` 그대로 두었다(09-15에 이어 두 번째다). 경고 주석도, 위의 검사도
+   그것을 못 막았다. 그래서 **파일의 지문을 적어 두고 견준다.**
+     · 지문이 달라졌는데 `?v=` 가 그대로면 **빨갛다** — 잊은 것이 이것이다.
+     · 둘이 «함께» 달라졌으면 통과하고, 새 지문을 적어 둔다(다음 번의 잣대가 된다).
+   ⚠ 그래서 이 검사는 `tools/cachebust-stamp.json` 을 «쓴다». 사람이 손으로 적을 것이 아니다 —
+     손으로 적게 하면 그것을 또 잊는다. 저장소에 함께 올라가야 다음 사람이 같은 잣대를 본다. */
+console.log(NL + '고친 파일과 ?v= 가 함께 움직였는가 — 지문으로 본다' + NL);
+{
+  const 도장길 = path.join(ROOT, 'tools', 'cachebust-stamp.json');
+  let 도장 = {};
+  try { 도장 = JSON.parse(fs.readFileSync(도장길, 'utf8')); } catch (_) {}
+  const 지문 = f => crypto.createHash('sha256').update(fs.readFileSync(path.join(ROOT, f))).digest('hex').slice(0, 16);
+  const 새도장 = {};
+  let 잊은것 = [];
+  for (const 문서 of 문서들) {
+    const 알맹이 = fs.readFileSync(path.join(ROOT, 문서), 'utf8').replace(/<!--[\s\S]*?-->/g, '');
+    for (const m of 알맹이.matchAll(/<script[^>]*\ssrc="([^"?]+)\?v=([^"]+)"/g)) {
+      const [, 파일, v] = m;
+      if (!fs.existsSync(path.join(ROOT, 파일))) continue;
+      const h = 지문(파일);
+      새도장[파일] = { 지문: h, v };
+      const 옛 = 도장[파일];
+      if (옛 && 옛.지문 !== h && 옛.v === v) 잊은것.push(파일 + ' (?v=' + v + ' 그대로)');
+    }
+  }
+  봄('파일이 달라졌으면 ?v= 도 달라졌다' + (잊은것.length ? ' — 🔴 ' + 잊은것.join(' / ') + ' → ?v= 를 올릴 것' : ''),
+    잊은것.length === 0);
+  /* 빨간 채로 도장을 갈면 다음 번에 조용해진다 — 고친 뒤에만 적는다. */
+  if (잊은것.length === 0) {
+    const 글 = JSON.stringify(새도장, null, 1) + NL;
+    let 옛글 = '';
+    try { 옛글 = fs.readFileSync(도장길, 'utf8'); } catch (_) {}
+    if (글 !== 옛글) { fs.writeFileSync(도장길, 글); console.log('  · 지문을 새로 적었다 — 이 파일도 함께 커밋할 것'); }
+  }
+}
+
+/* «값이 서로 다르지 않은가»도 본다: 한 파일만 올리고 딴 문서를 잊는 일이 잦다. */
 console.log(NL + '같은 파일은 어느 문서에서나 같은 ?v= 여야 한다' + NL);
 {
   const 본것 = {};
