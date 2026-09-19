@@ -92,9 +92,9 @@ console.log(NL + '③ 뺀 것 — 규칙이 안 열어 준 자리' + NL);
   /* ⚠ 출결을 «넣는» 칸은 `chubAttendanceHTML` 이 아니라 그것이 여는 **날짜 드로어**에 있다.
      처음에 엉뚱한 함수를 뒤져 한 번 빨개졌다 — 재는 자리를 이름으로 못 박아 둔다. */
   const 드로어 = lift('attDateDrawerHTML');
-  봄('🔴 보충 영상 칸은 조교에게 안 보인다 (videos 쓰기)', /gone && !isAssistantNow\(\)/.test(드로어), true);
+  봄('🔴 보충 영상 칸은 조교에게 안 보인다 (videos 쓰기) — 09-20부터 결석·지각·조퇴 다', /\(d\.status && d\.status!=='출석'\) && !isAssistantNow\(\)/.test(드로어), true);
   봄('   출결 그 자체는 조교도 넣는다', /setAttStatus/.test(드로어), true);
-  봄('   수업 화면의 같은 칸도 함께 막았다', /flag && !isAssistantNow\(\)/.test(lift('sessionAttHTML')), true);
+  봄('   수업 화면의 같은 칸도 함께 막았다', /링크칸 && !isAssistantNow\(\)/.test(lift('sessionAttHTML')), true);
 
   봄('반 만들기(설정으로 가기)도 조교에게는 안 보인다',
     /isAssistantNow\(\) \? '' : `<button[^`]*settingsSubTab='classes'/.test(lift('chubClassListHTML')), true);

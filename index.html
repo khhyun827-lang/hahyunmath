@@ -18889,6 +18889,9 @@ function sessionAttHTML(classId, date){
   const tiles = roster.map(s=>{
     const d = state.attDraft[s.studentId] || {status:null, reason:'', videoUrl:''};
     const flag = d.status === '결석';
+    /* 🔵 보충 영상 링크는 **결석뿐 아니라 지각·조퇴에도** (2026-09-20 · 사용자 — 「지각이나 조퇴 학생도 링크 전송할 수 있는 거」).
+       놓친 앞부분·뒷부분을 보라는 것이라 결석과 같은 일이다. 빨간 표시(flag)는 결석만 그대로다. */
+    const 링크칸 = !!d.status && d.status !== '출석';
     return `
     <div class="tile ${flag?'flag':''}">
       <div class="who"><b>${escHtml(s.name)}</b><span>${escHtml(s.school||'—')} ${escHtml(s.grade||'')}</span></div>
@@ -18898,7 +18901,7 @@ function sessionAttHTML(classId, date){
       ${d.status && d.status !== '출석' ? `<div class="cls-sub">
         <input placeholder="${d.status} 사유 (선택)" value="${escHtml(d.reason)}"
           oninput="state.attDraft['${s.studentId}'].reason=this.value">
-        ${flag && !isAssistantNow() ? `<input placeholder="보충 영상 유튜브 링크 (선택 · 마감 +${MAKEUP_VIDEO_DAYS}일)" value="${escHtml(d.videoUrl)}"
+        ${링크칸 && !isAssistantNow() ? `<input placeholder="보충 영상 유튜브 링크 (선택 · 마감 +${MAKEUP_VIDEO_DAYS}일)" value="${escHtml(d.videoUrl)}"
           oninput="state.attDraft['${s.studentId}'].videoUrl=this.value">` : ''}
       </div>` : ''}
     </div>`;
@@ -22437,7 +22440,7 @@ function ensureAttDraft(classId, date){
 }
 function setAttStatus(studentId, status){
   const cur = state.attDraft[studentId] || {reason:'', videoUrl:'', note:''};
-  state.attDraft[studentId] = {status, reason: status==='출석' ? '' : cur.reason, videoUrl: status==='결석' ? cur.videoUrl : '', note: cur.note||''};
+  state.attDraft[studentId] = {status, reason: status==='출석' ? '' : cur.reason, videoUrl: status==='출석' ? '' : cur.videoUrl, note: cur.note||''};
   render();
 }
 function setAllPresent(classId){
@@ -22450,7 +22453,7 @@ function setAllPresent(classId){
 function setAllStatus(classId, status){
   classRoster(classId).forEach(s=>{
     const cur = state.attDraft[s.studentId] || {reason:'', videoUrl:'', note:''};
-    state.attDraft[s.studentId] = {status, reason: status==='출석' ? '' : cur.reason, videoUrl: status==='결석' ? cur.videoUrl : '', note: cur.note||''};
+    state.attDraft[s.studentId] = {status, reason: status==='출석' ? '' : cur.reason, videoUrl: status==='출석' ? '' : cur.videoUrl, note: cur.note||''};
   });
   render();
 }
@@ -22499,7 +22502,7 @@ function attDateDrawerHTML(){
             ${/* ⚠ 보충 영상은 «영상 문서»를 만드는 일이라 강사만 할 수 있다(`videos` 쓰기).
                  조교에게 칸을 보이면 링크를 적어 두고 저장해도 조용히 안 만들어진다 — 그래서 안 보인다.
                  출결 그 자체(결석·지각)는 기록이라 조교도 그대로 넣는다. */''}
-            ${gone && !isAssistantNow() ? `<label><span>보충 영상</span>
+            ${(d.status && d.status!=='출석') && !isAssistantNow() ? `<label><span>보충 영상</span>
               <input placeholder="유튜브 링크 (선택 · 마감 +${MAKEUP_VIDEO_DAYS}일)" value="${escHtml(d.videoUrl)}"
                 oninput="state.attDraft['${s.studentId}'].videoUrl=this.value"></label>` : ''}
             <label><span>메모</span>
@@ -22569,18 +22572,20 @@ async function saveClassAttendance(classId, date){
        ⚠ 조건 없이 얹는다 — `state.allRecords` 는 강사 화면의 «지금 값»이고, 방금 쓴 것이 그 값이다. */
     state.allRecords[s.studentId] = rec;
     await logAudit('출석 기록', s.studentId, s.name, `${date} ${d.status}`);
-    // 결석 처리하면서 보충 영상 링크를 같이 넣었으면, 그 학생에게만 보이는 개인 영상으로 등록한다.
-    if(d.status==='결석' && d.videoUrl && d.videoUrl.trim()){
+    // 결석·지각·조퇴 처리하면서 보충 영상 링크를 같이 넣었으면, 그 학생에게만 보이는 개인 영상으로 등록한다.
+    // (지각·조퇴는 2026-09-20 부터 — 사용자: 「지각이나 조퇴 학생도 링크 전송할 수 있는 거」)
+    if(d.status && d.status!=='출석' && d.videoUrl && d.videoUrl.trim()){
       const url = d.videoUrl.trim();
       if(extractYouTubeId(url)){
         /* 🔴 **같은 날 같은 학생의 보충 영상은 하나다** (2026-09-13 · K-5 · 사용자 신고 — 「수업 탭에서 몇번
              왔다갔다 했더니 … 링크 보내준게 세개씩으로 여러번 등록되었어」). 수업 화면은 단계를 옮길 때마다
              출결을 저장하고(`sessionAutoSave`), 초안의 링크는 그대로 남아 있으니 **저장할 때마다 한 건씩 늘었다.**
              이제 그 날짜의 것이 있으면 새로 만들지 않는다 — 링크가 바뀌었으면 그것만 고친다. */
-        const 제목 = date+' 결석 보충 영상';
-        const 있던것 = DATA.videos.find(v=>v.studentId===s.studentId && v.title===제목);
+        const 제목 = date+' '+d.status+' 보충 영상';
+        /* 같은 날 것은 제목 앞뒤(날짜 · «보충 영상»)로 찾는다 — 결석을 지각으로 고쳐도 둘이 되지 않는다. 옛 「결석 보충 영상」도 같은 꼴이다. */
+        const 있던것 = DATA.videos.find(v=>v.studentId===s.studentId && String(v.title||'').startsWith(date+' ') && /보충 영상$/.test(v.title||''));
         if(있던것){
-          if(있던것.url !== url){ 있던것.url = url; await dbSetDoc('videos', 있던것.id, 있던것); }
+          if(있던것.url !== url || 있던것.title !== 제목){ 있던것.url = url; 있던것.title = 제목; await dbSetDoc('videos', 있던것.id, 있던것); }
         } else {
           /* 🔵 마감은 결석일 +7일 (K-4 · 사용자가 정했다). 반은 적어 둔다 — 반 › 영상 탭이 «이 반의 개인 배정»으로 모아 보인다. */
           newVideos.push({id:'v'+Date.now()+'_'+s.studentId, unit:'', title:제목, url, classId,

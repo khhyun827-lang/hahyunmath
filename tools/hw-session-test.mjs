@@ -65,6 +65,18 @@ console.log(NL + '① 결석 보충 영상 — 저장마다 늘지 않는가' + 
   /* 다른 날 결석은 다른 영상이다 */
   await F.saveClassAttendance(CID, '2026-09-14');
   봄('다른 날짜의 결석은 따로 하나 더', DATA.videos.length, 2);
+  /* 🔵 지각·조퇴도 링크가 간다 (2026-09-20 · 사용자 — 「지각이나 조퇴 학생도 링크 전송할 수 있는 거」) */
+  state.attDraft.st01 = { status: '지각', reason: '', videoUrl: 'https://youtu.be/late1234', note: '' };
+  await F.saveClassAttendance(CID, '2026-09-16');
+  봄('🔴 지각도 보충 영상을 만든다 — 제목에 상태가 적힌다', [DATA.videos.length, DATA.videos[0].title, DATA.videos[0].dueDate], [3, '2026-09-16 지각 보충 영상', '2026-09-23']);
+  state.attDraft.st01 = { status: '조퇴', reason: '', videoUrl: 'https://youtu.be/late1234', note: '' };
+  await F.saveClassAttendance(CID, '2026-09-16');
+  봄('🔴 같은 날 지각→조퇴로 고쳐도 영상은 하나 — 제목만 따라간다', [DATA.videos.length, DATA.videos[0].title], [3, '2026-09-16 조퇴 보충 영상']);
+  state.attDraft.st01 = { status: '출석', reason: '', videoUrl: '', note: '' };
+  await F.saveClassAttendance(CID, '2026-09-17');
+  봄('   출석이면 링크 칸이 비어 아무것도 안 만든다', DATA.videos.length, 3);
+  봄('   화면 — 결석·지각·조퇴에 링크 칸, 빨간 표시는 결석만', /const 링크칸 = !!d\.status && d\.status !== '출석';/.test(html) && /const flag = d\.status === '결석';/.test(html), true);
+  봄('   상태를 바꿔도 출석이 될 때만 링크를 비운다', (html.match(/videoUrl: status==='출석' \? '' : cur\.videoUrl/g) || []).length, 2);
 }
 
 /* ═══ ③ 과제 검사 — 마감일에 선다 ═══ */
