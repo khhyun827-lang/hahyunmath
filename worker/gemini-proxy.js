@@ -44,7 +44,7 @@ const TWIN_GROQ_MAX_TOKENS = 7000;   // 추론 + JSON. 검토(6000)보다 답이
 /* 🔴 «올렸는지 짐작하지 않는다» — 이 워커는 대시보드에 붙여넣어 올리므로 밖에서는 어느 판이 도는지
    알 길이 없었다(2026-09-11에 사용자가 올리고 「도는지 확인은 못 해봤어」). /quota 가 이 값을 같이
    돌려주고 tools/worker-check.mjs 가 저장소의 값과 견준다. **프롬프트나 규칙을 바꾸면 이 날짜를 올릴 것.** */
-const WORKER_VERSION = '2026-09-13a';
+const WORKER_VERSION = '2026-09-19a';
 // 이미지 업로드는 학생도 쓴다(질의응답 사진). 비용이 드는 쪽은 Gemini라 여기는 넉넉하게,
 // 다만 «한 명이 무한히»는 막는다. 전체 상한은 걸지 않는다 — 걸면 바쁜 날 학생이 막힌다.
 const UPLOAD_PER_USER_DAILY = 200;
@@ -113,7 +113,7 @@ export default {
       if (!통.remaining) return quotaExceeded(통, corsHeaders);      // 검토가 먹은 몫까지 센다
       const q = await bumpQuota(env, 'twin-groq', who.uid, TWIN_GROQ_DAILY_LIMIT, TWIN_GROQ_DAILY_LIMIT);
       if (!q.ok) return quotaExceeded(q, corsHeaders);
-    } else if (url.pathname !== '/delete' && !url.pathname.startsWith('/admin/')) {
+    } else if (url.pathname !== '/delete' && !url.pathname.startsWith('/admin/') && url.pathname !== '/notify' && url.pathname !== '/report-mms') {
       /* 🔴 **관리자 길을 여기서 빼지 않으면 «비밀번호 재설정»이 AI 한도를 먹는다.**
          아래 라우팅이 catch-all 이라, 새 길을 낼 때마다 이 줄을 같이 봐야 한다.
          (한도가 다 차면 비밀번호도 못 바꾸게 되는, 설명하기 어려운 상태가 된다.) */
@@ -138,6 +138,8 @@ export default {
        학생도 토큰이 있으니 이 주소를 그대로 부를 수 있다. */
     if (url.pathname === '/admin/reset-pw') return handleAdminResetPw(request, env, corsHeaders, who.uid);
     if (url.pathname === '/admin/delete-user') return handleAdminDeleteUser(request, env, corsHeaders, who.uid);
+    if (url.pathname === '/notify') return handleNotify(request, env, corsHeaders, who.uid);
+    if (url.pathname === '/report-mms') return handleReportMms(request, env, corsHeaders, who.uid);
     /* 🔴 **터져도 한도는 돌려주고, 까닭은 CORS 머리를 달고 나간다** (2026-09-12).
        Cloudflare 의 1101 페이지에는 CORS 머리가 없어 브라우저에는 「Failed to fetch」 다섯 글자만 남는다 —
        고칠 실마리가 하나도 없고, 한도는 부르기 «전»에 세니 누를 때마다 한 건씩 나갔다(실제로 그랬다).
@@ -251,13 +253,13 @@ function adminJson(obj, corsHeaders, status) {
 }
 
 /* 관리자 길의 «앞문» — 강사인지 보고, 부르는 값을 받아 낸다. */
-async function adminGate(request, env, corsHeaders, uid) {
+async function adminGate(request, env, corsHeaders, uid, who) {
   if (!env.FIREBASE_SA) {
     return { 흠: adminJson({ error: 'not_configured',
       detail: '워커에 FIREBASE_SA 비밀이 없습니다.' }, corsHeaders, 503) };
   }
   let ok;
-  try { ok = await isTeacher(env, uid); }
+  try { ok = await (who || isTeacher)(env, uid); }   // 안 넘기면 강사만 — 관리자 길은 그대로다
   catch (e) { return { 흠: adminJson({ error: 'admin_error', detail: String(e.message || e).slice(0, 200) }, corsHeaders, 500) }; }
   /* ⚠ 「강사가 아니다」와 「못 물어봤다」를 가른다 — 위에서 못 물어보면 500 으로 나갔다.
      여기 오면 물어봤고 아니라는 뜻이다. */
@@ -265,6 +267,180 @@ async function adminGate(request, env, corsHeaders, uid) {
   let body;
   try { body = await request.json(); } catch (e) { body = {}; }
   return { body };
+}
+
+/* =================== 알림톡 (2026-09-19 · N-1 숙제 · N-2 강의) =====================================
+   알리고 알림톡 — POST kakaoapi.aligo.in/akv10/alimtalk/send/ (form-urlencoded). 실패 시 SMS 대체발송(failover).
+   🔴 **강사만 부른다** (adminGate — teachers/{uid}). 돈이 나가고 학생에게 도달한다.
+   🔵 **번호는 화면이 보낸 것을 안 믿는다** — `contacts/{key}.phone` 을 워커가 읽는다. 화면의 명단은 «누구에게»(key)뿐이다.
+     그래서 이 주소로는 아무 번호에나 보낼 수 없다 — 우리 학생 문서에 적힌 번호로만 간다.
+   🔵 **문안은 화면이 채워 보낸다.** 심사받은 템플릿과 한 글자라도 다르면 알리고가 거절한다 — 그것이 검사다.
+     워커가 문안을 한 벌 더 들면 index.html 의 `HW_NOTICE_TEMPLATE` 과 갈린다.
+   🔵 **한 사람에 한 요청.** 알리고의 묶음 응답은 «몇 건 성공/실패»만 주고 누가 실패했는지는 안 준다.
+     「5명 중 4명 성공 · 1명 번호 오류」를 그대로 돌려주려면 이렇게 해야 한다. 학생 수십 명이라 요청 수는 문제가 아니다.
+   🔵 **중복 방지** — KV `sent:{kind}:{id}:{key}:{day}`. 같은 날 같은 과제·같은 학생에게는 안 나간다(`already`).
+     두 번 눌러도 두 번 안 간다. 화면은 이 답을 보고 「이미 보냄」을 적는다.
+   ⚠ **미제출 판정은 화면이 한다** (hwNeedsAction). 08-25 메모는 «서버가 다시 판정»이었지만, 그때는 워커가 강사인지
+     몰랐다. 지금은 강사만 부르므로 남는 것은 «강사 화면의 명단이 낡았을 수 있다»뿐이고, 그건 강사 본인의 일이다.
+     records 를 학생마다 다시 읽어 hwNeedsAction 을 워커에 한 벌 더 옮기면 그쪽이 먼저 갈린다.
+   비밀 — ALIGO_APIKEY · ALIGO_USERID · ALIGO_SENDERKEY · ALIGO_SENDER 넷 + 템플릿마다 하나(아래 NOTIFY_TPL) (전부 Secret)
+     ⚠ 템플릿 비밀은 «그 종류를 보낼 때»만 본다 — 심사가 늦은 템플릿 때문에 다른 알림이 막히면 안 된다.
+   ⚠ **버튼 이름·주소는 템플릿에 등록한 것과 «글자까지» 같아야 한다.** 다르면 알리고가 거절한다.
+   🔵 **조교도 이 문은 지난다** (09-20 · qna·wrong 은 답변·공개 «순간에 저절로» 나가는데, 답변은 조교도 단다).
+     다른 관리자 길(비번·삭제)은 여전히 강사만이다 — 문서 하나(staff/{uid})를 더 보는 것뿐, 잣대는 규칙과 같다. */
+const NOTIFY_DAILY_LIMIT = 200;      // 하루 전체 발송 상한(건). 학생 50명 × 넉 번이면 충분하다
+const NOTIFY_PER_CALL = 50;          // 한 번에 보낼 수 있는 사람 수
+const NOTIFY_LINK = 'https://khhyun827-lang.github.io/hahyunmath/index.html#student/home';
+const NOTIFY_BUTTON = { hw: '제출하기', vid: '강의보기', qna: '확인하기', wrong: '풀러가기' };   // 템플릿에 등록한 이름 그대로
+const NOTIFY_TPL = { hw: 'ALIGO_TPL_HW', vid: 'ALIGO_TPL_VID', qna: 'ALIGO_TPL_QNA', wrong: 'ALIGO_TPL_WRONG' };
+
+/* 강사 «또는 조교»인가 — 알림 문에서만 쓴다. */
+async function isTeacherOrStaff(env, uid) {
+  if (await isTeacher(env, uid)) return true;
+  if (!uid) return false;
+  const sa = JSON.parse(env.FIREBASE_SA);
+  const tok = await getServiceAccountToken(env);
+  const r = await fetch('https://firestore.googleapis.com/v1/projects/' + sa.project_id
+    + '/databases/(default)/documents/staff/' + encodeURIComponent(uid), { headers: { Authorization: 'Bearer ' + tok } });
+  return r.status === 200;
+}
+
+/* contacts/{key}.phone — 숫자만 남긴다. 없거나 못 읽으면 ''. */
+async function readContactPhone(env, key) {
+  const sa = JSON.parse(env.FIREBASE_SA);
+  const tok = await getServiceAccountToken(env);
+  const r = await fetch('https://firestore.googleapis.com/v1/projects/' + sa.project_id
+    + '/databases/(default)/documents/contacts/' + encodeURIComponent(key),
+    { headers: { Authorization: 'Bearer ' + tok } });
+  if (r.status !== 200) return '';
+  const d = await r.json();
+  const raw = (d.fields && d.fields.phone && d.fields.phone.stringValue) || '';
+  return String(raw).replace(/[^0-9]/g, '');
+}
+
+/* POST /notify  { kind:'hw'|'vid', id, items:[{ key, message }] }
+   → { ok, sent, results:[{ key, ok, why }] }   why = already | no_phone | quota | bad_item | aligo <code> <message> */
+async function handleNotify(request, env, corsHeaders, callerUid) {
+  const g = await adminGate(request, env, corsHeaders, callerUid, isTeacherOrStaff);
+  if (g.흠) return g.흠;
+  const { kind, id, items } = g.body;
+  if (!NOTIFY_BUTTON[kind] || !id || !Array.isArray(items) || !items.length)
+    return adminJson({ error: 'bad_request', detail: 'kind(hw|vid|qna|wrong) · id · items[{key,message}] 가 필요합니다.' }, corsHeaders, 400);
+  if (items.length > NOTIFY_PER_CALL)
+    return adminJson({ error: 'too_many', detail: '한 번에 ' + NOTIFY_PER_CALL + '명까지입니다.' }, corsHeaders, 400);
+  const missing = ['ALIGO_APIKEY', 'ALIGO_USERID', 'ALIGO_SENDERKEY', 'ALIGO_SENDER', NOTIFY_TPL[kind]].filter((k) => !env[k]);
+  if (missing.length)
+    return adminJson({ error: 'not_configured', detail: '워커 비밀이 없습니다: ' + missing.join(', ') }, corsHeaders, 503);
+
+  const tpl = env[NOTIFY_TPL[kind]];
+  const button = JSON.stringify({ button: [{
+    name: NOTIFY_BUTTON[kind], linkType: 'WL', linkTypeName: '웹링크', linkMo: NOTIFY_LINK, linkPc: NOTIFY_LINK }] });
+  const day = quotaDay();
+  const ttl = { expirationTtl: 60 * 60 * 48 };
+  const results = [];
+  for (const it of items) {
+    const key = String((it && it.key) || ''), message = String((it && it.message) || '');
+    const out = { key, ok: false, why: '' };
+    results.push(out);
+    if (!key || !message) { out.why = 'bad_item'; continue; }
+    const sentKey = `sent:${kind}:${id}:${key}:${day}`;
+    if (env.QUOTA && await env.QUOTA.get(sentKey)) { out.why = 'already'; continue; }
+    const phone = await readContactPhone(env, key);
+    if (!/^01[0-9]{8,9}$/.test(phone)) { out.why = 'no_phone'; continue; }
+    const q = await bumpQuota(env, 'notify', callerUid, NOTIFY_DAILY_LIMIT, NOTIFY_DAILY_LIMIT);
+    if (!q.ok) { out.why = 'quota'; continue; }
+
+    const form = new URLSearchParams({
+      apikey: env.ALIGO_APIKEY, userid: env.ALIGO_USERID, senderkey: env.ALIGO_SENDERKEY,
+      tpl_code: tpl, sender: env.ALIGO_SENDER,
+      receiver_1: phone, subject_1: '김하현수학연구소', message_1: message, button_1: button,
+      failover: 'Y', fsubject_1: '김하현수학연구소', fmessage_1: message,
+    });
+    let res;
+    try {
+      const r = await fetch('https://kakaoapi.aligo.in/akv10/alimtalk/send/', { method: 'POST', body: form });
+      res = await r.json();
+    } catch (e) { res = { code: -1, message: String((e && e.message) || e).slice(0, 120) }; }
+    if (Number(res.code) === 0) {
+      out.ok = true;
+      if (env.QUOTA) await env.QUOTA.put(sentKey, '1', ttl);
+    } else {
+      out.why = 'aligo ' + res.code + ' ' + (res.message || '');
+      try { await refundQuota(env, 'notify', callerUid); } catch (_) {}   // 안 나간 것은 안 센다
+    }
+  }
+  return adminJson({ ok: true, sent: results.filter((r) => r.ok).length, results }, corsHeaders);
+}
+
+/* =================== 월간 리포트 MMS (2026-09-20 · 사용자 — 「문자로 알리고 이용해서 자동화 할 수 있나?」「하고싶어!」) ===================
+   알리고 문자 API — POST apis.aligo.in/send/ (multipart) · msg_type=MMS · 사진 한 장(jpg). 템플릿 심사 없음(광고가 아닌 안내).
+   ⚠ 알림톡 쪽과 **칸 이름이 다르다** — 여기는 key·user_id, 저쪽은 apikey·userid. 값은 같은 비밀 셋이다.
+   🔴 **강사만** — 리포트는 강사의 것이다(조교에게 문을 안 연다 · R-1). 알림(/notify)과 달리 기본 adminGate 그대로.
+   🔵 받는 사람은 **학부모 번호**(`contacts/{key}.parentPhone`) — 워커가 읽는다. 숙제·강의 알림이 학생 번호로 가는 것과 다르다.
+   🔵 문구는 워커가 짓는다 — 화면이 아무 글이나 보내는 문이 되면 안 된다. 화면은 «누구(key) · 이름 · 달 · 사진»만 준다.
+   🔵 중복 막이는 «이 학생·이 달» — 한 달에 한 번이다(KV 40일). 두 번 눌러도 같은 달엔 두 번 안 간다.
+   ⚠ 사진은 300KB 를 넘지 않게 화면이 굽는다(알리고 MMS 상한 — 문서 기준). 넘어오면 여기서도 막는다. */
+const REPORT_MMS_DAILY_LIMIT = 300;
+const REPORT_MMS_MAX_BYTES = 300 * 1024;
+
+async function readContactParentPhone(env, key) {
+  const sa = JSON.parse(env.FIREBASE_SA);
+  const tok = await getServiceAccountToken(env);
+  const r = await fetch('https://firestore.googleapis.com/v1/projects/' + sa.project_id
+    + '/databases/(default)/documents/contacts/' + encodeURIComponent(key),
+    { headers: { Authorization: 'Bearer ' + tok } });
+  if (r.status !== 200) return '';
+  const d = await r.json();
+  const raw = (d.fields && d.fields.parentPhone && d.fields.parentPhone.stringValue) || '';
+  return String(raw).replace(/[^0-9]/g, '');
+}
+
+/* POST /report-mms  { key, name, ym:'2026-09', image:'data:image/jpeg;base64,…' }  → { ok, why }
+   why = already | no_phone | quota | bad_item | too_big | aligo <code> <message> */
+async function handleReportMms(request, env, corsHeaders, callerUid) {
+  const g = await adminGate(request, env, corsHeaders, callerUid);
+  if (g.흠) return g.흠;
+  const missing = ['ALIGO_APIKEY', 'ALIGO_USERID', 'ALIGO_SENDER'].filter((k) => !env[k]);
+  if (missing.length)
+    return adminJson({ error: 'not_configured', detail: '워커 비밀이 없습니다: ' + missing.join(', ') }, corsHeaders, 503);
+  const { key, name, ym, image } = g.body;
+  if (!key || !name || !/^\d{4}-\d{2}$/.test(String(ym || '')) || !/^data:image\/jpeg;base64,/.test(String(image || '')))
+    return adminJson({ error: 'bad_request', detail: 'key · name · ym(YYYY-MM) · image(jpeg dataURL) 가 필요합니다.' }, corsHeaders, 400);
+
+  const b64 = String(image).slice(String(image).indexOf(',') + 1);
+  const bin = atob(b64);
+  if (bin.length > REPORT_MMS_MAX_BYTES) return adminJson({ ok: false, why: 'too_big', bytes: bin.length }, corsHeaders);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+
+  const sentKey = `sent:report:${ym}:${key}`;
+  if (env.QUOTA && await env.QUOTA.get(sentKey)) return adminJson({ ok: false, why: 'already' }, corsHeaders);
+  const phone = await readContactParentPhone(env, key);
+  if (!/^01[0-9]{8,9}$/.test(phone)) return adminJson({ ok: false, why: 'no_phone' }, corsHeaders);
+  const q = await bumpQuota(env, 'report', callerUid, REPORT_MMS_DAILY_LIMIT, REPORT_MMS_DAILY_LIMIT);
+  if (!q.ok) return adminJson({ ok: false, why: 'quota' }, corsHeaders);
+
+  const [y, m] = ym.split('-');
+  const fd = new FormData();
+  fd.append('key', env.ALIGO_APIKEY);
+  fd.append('user_id', env.ALIGO_USERID);
+  fd.append('sender', env.ALIGO_SENDER);
+  fd.append('receiver', phone);
+  fd.append('msg_type', 'MMS');
+  fd.append('title', '김하현수학연구소 월간 리포트');
+  fd.append('msg', '[김하현수학연구소] ' + String(name).slice(0, 20) + ' 학생 ' + y + '년 ' + Number(m) + '월 월간 리포트입니다.');
+  fd.append('image', new Blob([bytes], { type: 'image/jpeg' }), 'report.jpg');
+  let res;
+  try {
+    const r = await fetch('https://apis.aligo.in/send/', { method: 'POST', body: fd });
+    res = await r.json();
+  } catch (e) { res = { result_code: -1, message: String((e && e.message) || e).slice(0, 120) }; }
+  if (Number(res.result_code) === 1) {
+    if (env.QUOTA) await env.QUOTA.put(sentKey, '1', { expirationTtl: 60 * 60 * 24 * 40 });
+    return adminJson({ ok: true, why: '' }, corsHeaders);
+  }
+  try { await refundQuota(env, 'report', callerUid); } catch (_) {}
+  return adminJson({ ok: false, why: 'aligo ' + res.result_code + ' ' + (res.message || '') }, corsHeaders);
 }
 
 /* 비밀번호 재설정 — { email } 또는 { uid } 와 { password } */

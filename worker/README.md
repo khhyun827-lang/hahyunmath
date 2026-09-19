@@ -222,3 +222,37 @@ await (await fetch(AI_WORKER_URL + '/review', {
 node tools/review-worker-test.mjs      판정 다섯 갈래 · 한도 되돌림 · 정답 유출 (13개)
 node tools/bench-grade-test.mjs        답 맞대기 — 「2」와 「②」, ①(=-10)과 「-10」, 분수 (17개)
 ```
+
+## /notify — 알림톡 (2026-09-19 · N-1 숙제 · N-2 강의)
+
+알리고 알림톡(`kakaoapi.aligo.in/akv10/alimtalk/send/`)으로 보낸다. 실패하면 문자로 대체발송(`failover=Y`).
+**강사만** 부른다(`adminGate`). 번호는 화면이 준 것을 안 쓰고 `contacts/{key}.phone` 을 워커가 읽는다.
+같은 날 같은 과제·같은 학생에게는 두 번 안 간다(KV `sent:…`). 하루 200건 · 한 번에 50명.
+한 사람에 한 요청이라 「5명 중 4명 성공 · 1명 번호 오류」가 그대로 돌아온다. 검사 → `node tools/notify-test.mjs`
+
+### 배포에 필요한 것 — 비밀 여섯 (전부 Secret)
+
+| 이름 | 값 |
+|---|---|
+| `ALIGO_USERID` | 알리고 아이디 |
+| `ALIGO_APIKEY` | 알리고 마이페이지의 API 키 — **채팅·저장소에 안 적는다** |
+| `ALIGO_SENDER` | 등록한 발신번호 (숫자만, 예 `01012345678`) |
+| `ALIGO_SENDERKEY` | 발신프로필 키 (알리고 > 알림톡 > 발신프로필) |
+| `ALIGO_TPL_HW` | 숙제 미제출 템플릿 코드 (예 `hw_notice_01`) |
+| `ALIGO_TPL_VID` | 강의 미시청 템플릿 코드 (예 `vid_notice_01`) |
+| `ALIGO_TPL_QNA` | 질문 답변 템플릿 코드 (예 `qna_notice_01`) — 답변 저장 순간 저절로 |
+| `ALIGO_TPL_WRONG` | 오답숙제 템플릿 코드 (예 `wrong_notice_01`) — 문항 공개 순간 저절로 · 학생마다 하루 한 번 |
+
+⚠ 넷 + «그 종류의 템플릿»이 없으면 `/notify` 는 503 에 `워커 비밀이 없습니다: …` — 심사가 늦은 템플릿은 그것만 막힌다.
+⚠ 이 문은 **조교도** 지난다(`staff/{uid}`) — 답변은 조교도 달기 때문. 비번·삭제는 여전히 강사만.
+⚠ **버튼 이름(`제출하기`·`강의보기`·`확인하기`·`풀러가기`)과 주소(`…#student/home`)는 템플릿에 등록한 것과 글자까지 같아야 한다** —
+  다르면 알리고가 거절한다. 바꾸려면 `NOTIFY_BUTTON`·`NOTIFY_LINK` 를 같이 고친다.
+⚠ 문안은 화면(`HW_NOTICE_TEMPLATE`·`VID_NOTICE_TEMPLATE`)이 채워 보낸다 — 심사받은 것과 다르면 알리고가 거절한다.
+
+## /report-mms — 월간 리포트를 학부모께 MMS 로 (2026-09-20)
+
+알리고 **문자** API(`apis.aligo.in/send/` · multipart · `msg_type=MMS`)로 리포트 사진 한 장을 보낸다. 템플릿 심사 없음.
+**강사만**(조교 안 됨 — 리포트는 강사의 것). 받는 사람은 `contacts/{key}.parentPhone`(**학부모**). 문구는 워커가 짓는다.
+«이 학생·이 달» 한 번(KV 40일) · 하루 300건 · 사진 300KB 상한(화면이 290KB 안으로 굽는다).
+비밀은 알림톡과 같은 셋 — `ALIGO_APIKEY`·`ALIGO_USERID`·`ALIGO_SENDER` (문자 API 는 칸 이름이 `key`·`user_id` 라 워커가 바꿔 넣는다).
+검사 → `node tools/report-mms-test.mjs`

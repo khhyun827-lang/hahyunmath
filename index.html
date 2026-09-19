@@ -9947,6 +9947,8 @@ async function submitAnswer(qid){
   delete state.qnaAnswerImage[qid];
   showToast(첫답인가 ? '답변이 등록되었습니다.' : '답변을 더 달았습니다.');
   render();
+  /* 알림톡 (09-20) — 답이 저장된 «뒤»에. 실은 «실»(원 질문) 단위로 하루 한 번 — 같은 날 더 달아도 두 번 안 간다. */
+  notifyAuto('qna', q.parentId || q.id, [{ sid: q.studentId, message: qnaNoticeText(q.studentName, q) }]);
 }
 async function deleteQna(qid){
   if(!confirm('이 질문을 삭제할까요?')) return;
@@ -10245,10 +10247,22 @@ async function noteVideoWatchTime(studentId, videoId, addSeconds, duration, 앞�
     ? Math.min(duration, Math.max(base, 칸으로센것))
     : Math.min(duration, prevWatched + Math.max(0, addSeconds));
   const next = { watchedSeconds, duration, videoId, seen, base, updatedAt: new Date().toISOString() };
+  /* 🔵 **«본 날»도 남긴다** (2026-09-20 · 사용자 — 「영상 시청 기록에 본 날짜도 남기게 해줘」).
+       `days{날짜: 그날 실제로 재생한 초}` · `firstAt`(처음 본 날) · `doneAt`(완주한 날).
+       여태 편별 «누적치» 하나뿐이라 지난 달 리포트에서 강의 시청이 통째로 빠졌다(08-27) — 이제 달로 자를 수 있다.
+       ⚠ 사실만 적는다 — 재시청도 그날 본 초로 쌓인다(그것이 한 일이다). %·완주는 여전히 읽을 때 센다.
+       ⚠ `doneAt` 은 **처음** 완주선을 넘은 날 하나다 — 다시 봐도 안 바뀐다. */
+  const 오늘 = todayStr();
+  const days = Object.assign({}, prev.days || {});
+  if(addSeconds > 0) days[오늘] = Math.round(((+days[오늘] || 0) + addSeconds) * 10) / 10;
+  next.days = days;
+  next.firstAt = prev.firstAt || 오늘;
   /* `percent`·`completed` 도 함께 적어 둔다 — 문서만 보는 도구(내보내기 등)가 있고, «그때 무엇으로 봤나»도 남아야 한다.
      ⚠ **화면은 이 값을 안 믿는다.** 위 `videoPct`·`videoDone` 이 사실에서 다시 센다. */
   next.percent = videoPct(next);
   next.completed = videoDone(next);
+  next.doneAt = prev.doneAt || (next.completed ? 오늘 : undefined);
+  if(next.doneAt === undefined) delete next.doneAt;
   rec.videoProgress[videoId] = next;
   await saveRecord(studentId);
   const label = document.getElementById('vprog-'+videoId);
@@ -12197,6 +12211,7 @@ async function advanceBankStatus(bankId, newStatus){
   await dbSetDoc('problembank', b.id, b);
   showToast(newStatus==='approved' ? '학생에게 공개되었습니다.' : '검토 상태가 업데이트되었습니다.');
   render();
+  if(newStatus==='approved') notifyWrongReady([b.id]);     // 알림톡 (09-20) — 공개는 «학생에게 보내는» 동작이다
 }
 async function deleteBankEntry(bankId){
   if(!confirm('이 문제를 DB에서 삭제할까요?')) return;
@@ -15345,6 +15360,104 @@ function hwUnsubmitted(a, roster){
   });
 }
 
+/* =================== 알림톡 보내기 (2026-09-19 · N-1·N-2 공용) ===================
+   워커 `/notify` 가 강사인지 · 번호(contacts) · 중복(같은 날 같은 학생) · 하루 상한을 본다.
+   화면은 «누구에게(key)»와 «무슨 문안»만 보낸다. 문안은 심사받은 템플릿과 같아야 알리고가 받는다 —
+   그래서 `hwNoticeText`/`vidNoticeText` 가 만든 것을 그대로 보낸다(워커는 문안을 따로 안 든다).
+   🔵 부분 실패는 사람마다 돌아온다 — 뭉뚱그리지 않고 한 줄씩 적는다.
+   ⚠ 명단은 studentId 를 쉼표로 이어 단추에 실었다 — 렌더 때의 명단이 곧 보낼 명단이다. */
+async function sendNotice(kind, id, sids){
+  const item = kind === 'hw' ? DATA.assignments.find(a => a.id === id) : videoItemById(id);
+  if(!item) return;
+  const items = String(sids).split(',').map(sid => {
+    const s = DATA.students.find(x => x.studentId === sid);
+    return s && { name: s.name, key: studentKeyOfSid(sid),
+                  message: kind === 'hw' ? hwNoticeText(s.name, item) : vidNoticeText(s.name, item) };
+  }).filter(Boolean);
+  if(!items.length) return;
+  if(!confirm(items.length + '명에게 카카오톡 알림을 보냅니다. 알림톡이 안 가면 문자로 대체 발송되어 건당 요금이 나갑니다.')) return;
+  state.noticeBusy = true; state.noticeResult = null; render();
+  try{
+    const j = await notifyPost(kind, id, items);
+    const lines = (j.results || []).map((r, i) => (items[i] ? items[i].name : r.key) + ' · ' + (r.ok ? '보냄' : notifyWhy(r.why)));
+    state.noticeResult = { kind, id, text: `${j.sent}/${items.length}명 보냄\n` + lines.join('\n') };
+  }catch(e){
+    state.noticeResult = { kind, id, text: '보내지 못했습니다 — ' + (e.message || e) };
+  }
+  state.noticeBusy = false; render();
+}
+const NOTIFY_WHY = { already:'오늘 이미 보냄', no_phone:'번호 없음', quota:'오늘 한도 초과', bad_item:'값 오류' };
+function notifyWhy(why){ return NOTIFY_WHY[why] || why; }
+/* 🔴 **워커가 아직 옛 판이면 새 길을 안 부른다** (2026-09-20). 옛 워커의 라우팅은 catch-all 이라 모르는 길(/notify ·
+   /report-mms)을 **Gemini 생성으로 받아 AI 한도를 한 건씩 태운다.** 화면을 먼저 올리고 워커를 나중에 붙이는 사이,
+   답변 한 번에 한도가 하나씩 나가는 일이 생긴다. /quota 가 돌려주는 WORKER_VERSION 으로 한 번만 묻고 기억한다. */
+const NOTIFY_WORKER_MIN = '2026-09-19a';
+async function notifyWorkerReady(){
+  if(state.notifyWorkerOk !== undefined) return state.notifyWorkerOk;
+  try{
+    const token = await withTimeout(getAuthToken(), 8000);
+    const res = await withTimeout(fetch(AI_WORKER_URL + '/quota', { method:'POST', headers:{ 'Authorization': 'Bearer ' + token } }), 8000);
+    const q = await res.json();
+    state.notifyWorkerOk = String(q.version || '') >= NOTIFY_WORKER_MIN;
+  }catch(e){ state.notifyWorkerOk = false; }
+  if(!state.notifyWorkerOk) console.warn('알림 — 워커가 아직 ' + NOTIFY_WORKER_MIN + ' 전이라 부르지 않는다');
+  return state.notifyWorkerOk;
+}
+/* 워커 /notify 를 부르는 하나. items = [{ key, message }]. 안 되면 던진다(까닭이 message 에). */
+async function notifyPost(kind, id, items){
+  if(!(await notifyWorkerReady())){ const e = new Error('워커가 아직 옛 판입니다 — 워커를 먼저 올려 주세요.'); e.code = 'old_worker'; throw e; }
+  const token = await withTimeout(getAuthToken(), 8000);
+  const res = await withTimeout(fetch(AI_WORKER_URL + '/notify', {
+    method:'POST', headers:{ 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ kind, id, items: items.map(({key, message}) => ({key, message})) })
+  }), 60000);
+  const j = await res.json().catch(() => ({}));
+  if(!res.ok){ const e = new Error(j.detail || j.error || ('http ' + res.status)); e.code = j.error || ''; e.status = res.status; throw e; }
+  return j;
+}
+/* «그 순간에 저절로» 나가는 알림 — 답변 저장 · 오답 공개. targets = [{ sid, message }].
+   ⚠ 본 흐름(저장)은 이미 끝난 뒤다 — 여기가 실패해도 저장은 되돌리지 않는다. 그래서 던지지 않는다.
+   ⚠ 워커 비밀이 아직 없으면(503 not_configured — 심사 전) **조용히** 넘어간다 — 답변할 때마다 빨간 토스트가 뜨면
+     강사가 알림 기능 자체를 꺼 달라고 한다. 그 밖의 실패(번호 없음·한도·알리고 거절)는 말한다 — 안 갔는데 간 줄 알면 안 된다. */
+async function notifyAuto(kind, id, targets){
+  const items = (targets || []).map(t => {
+    const s = DATA.students.find(x => x.studentId === t.sid);
+    return s && !isWithdrawn(s) && { name: s.name, key: studentKeyOfSid(t.sid), message: t.message };
+  }).filter(Boolean);
+  if(!items.length) return;
+  try{
+    const j = await notifyPost(kind, id, items);
+    const 못감 = (j.results || []).filter(r => !r.ok && r.why !== 'already');
+    if(j.sent) showToast(`알림톡 ${j.sent}명에게 보냈습니다.` + (못감.length ? ` ${못감.length}명은 못 갔습니다(${notifyWhy(못감[0].why)}).` : ''));
+    else if(못감.length) showToast(`알림톡이 못 갔습니다 — ${notifyWhy(못감[0].why)}`);
+  }catch(e){
+    if(e.code === 'not_configured' || e.code === 'old_worker') console.warn('알림톡 — 아직 못 보낸다 (' + kind + ')', e.message);
+    else showToast('알림톡을 보내지 못했습니다 — ' + (e.message || e));
+  }
+}
+/* 오답숙제가 «풀 수 있게 된» 순간 — 공개 · 창고 채우기 · 세워 주기(이미 검토된 변형).
+   그 문항을 안 푼 채 들고 있는 학생 전부에게. id 는 «오늘» — 하루 한 번. */
+async function notifyWrongReady(bankIds){
+  const ids = new Set((bankIds || []).filter(Boolean));
+  if(!ids.size || !state.allRecords) return;
+  const targets = [];
+  for(const s of DATA.students){
+    const rec = state.allRecords[s.studentId];
+    if(!rec) continue;
+    const left = wrongHomeworkLeft(rec);
+    const fresh = left.filter(h => ids.has(h.bankId));
+    if(!fresh.length) continue;
+    const b = DATA.problemBank.find(x => x.id === fresh[0].bankId);   // 출처는 문항이 안다(교재 요청이면 examId 가 빈다)
+    targets.push({ sid: s.studentId, message: wrongNoticeText(s.name, examTitleOf(fresh[0].examId || (b && b.examId)), left.length) });
+  }
+  await notifyAuto('wrong', todayStr(), targets);
+}
+function noticeResultHTML(kind, id){
+  const r = state.noticeResult;
+  if(!r || r.kind !== kind || r.id !== id) return '';
+  return `<div class="hw-nmsg" style="margin-top:10px;">${escHtml(r.text)}</div>`;
+}
+
 /* 펼친 과제 위에 붙는 한 줄. 수업 > 과제와 반 관리 > 과제가 **같은 것을 쓴다** —
    두 벌로 두면 다음에 반드시 한쪽만 고쳐진다(hwReviewRowHTML과 같은 이유). */
 function hwNoticeBarHTML(a, roster){
@@ -15388,10 +15501,11 @@ function hwNoticePanelHTML(a, miss){
       학생 이름·과제명·마감일만 사람마다 바뀝니다. <b>나머지 문장은 심사받은 그대로 고정</b>입니다.</p>
 
     <div class="hw-nact">
-      <button class="btn p" disabled title="아직 연결되지 않았습니다">카카오톡으로 보내기</button>
-      <span class="muted">아직 <b>실제로 보내지지 않습니다.</b> 채널 인증 · 발송 대행사 ·
-        템플릿 심사가 끝나야 연결됩니다.</span>
+      <button class="btn p" ${withPhone.length && !state.noticeBusy ? '' : 'disabled'}
+        onclick="event.stopPropagation(); sendNotice('hw','${a.id}','${withPhone.map(s=>s.studentId).join(',')}')">${state.noticeBusy ? '보내는 중…' : '카카오톡으로 보내기'}</button>
+      <span class="muted">알림톡이 안 가면 <b>문자로 대체 발송</b>됩니다(건당 요금). 같은 날 같은 학생에게는 <b>두 번 안 갑니다.</b></span>
     </div>
+    ${noticeResultHTML('hw', a.id)}
   </div>`;
 }
 
@@ -15403,9 +15517,8 @@ function hwNoticePanelHTML(a, miss){
      받는 사람 규칙 · 문안을 심사용 템플릿으로 두는 것 · 발송 버튼을 잠가 두는 것까지.
      ⚠ **두 벌로 두면 다음에 한쪽만 고쳐진다.** 그래서 «다른 것»은 셋뿐이다 —
        누가 대상인가(완주 못 한 사람) · 문안 · 붙는 자리.
-   🔴 **여기 있는 것도 «발송 직전»까지다.** 사업자등록 → 카카오 채널 → 대행사 → 템플릿 심사가
-     끝나야 이어진다(2026-09-16 현재 등록 전이다). N-1 의 「연결 전에 풀 것 둘」이 그대로 남아 있다 —
-     ① 워커가 강사인지 모른다 ② 중복 방지·발송 기록이 없다.
+   🔵 **09-19 · 발송을 붙였다** — `sendNotice(kind,id,sids)` 하나를 N-1·N-2 가 같이 쓴다(워커 `/notify`).
+     ① 강사 확인은 워커 adminGate ② 중복은 워커 KV(같은 날 같은 학생). 워커 비밀 여섯이 없으면 503 이 그대로 뜬다.
    🔵 **그래서 지금 쓸 수 있게 «문안 복사»를 두었다** — 채널이 열리기 전까지는 눌러서 카톡에 붙여 넣는다.
      ⚠ N-1(숙제)에는 아직 이 단추가 없다. 좋다 싶으면 거기도 같이 달 것 — **한쪽만 좋아지면 갈린다.** */
 const VID_NOTICE_TO = s => phoneLabel(s.phone);     /* 받는 사람 = 학생 본인 (N-1 과 같다) */
@@ -15434,6 +15547,38 @@ function vidNoticeText(name, v){
     .replace('#{강의명}', v.title || '')
     .replace('#{마감일}', v.dueDate || '미정')
     .replace('#{남은기간}', vidDuePhrase(v.dueDate));
+}
+
+/* =================== 질문 답변 · 오답숙제 알림 (2026-09-20 · 사용자 — 「질문 답변, 오답숙제는 하자」) ===================
+   🔵 **이 둘은 단추가 아니라 «그 순간에 저절로» 나간다** — 답변을 저장할 때 · 오답 문항을 공개할 때.
+     강사가 또 누르게 하면 「손이 불편하다」를 다시 만드는 것이다.
+   🔵 잣대는 «학생이 기다리던 답 / 기한 있는 할 일»뿐이다. 앱을 열면 벨에 뜨는 것(새 공지·새 영상)에는 안 붙인다 —
+     자주 오면 학생이 차단하고, 차단하면 숙제 알림도 못 간다.
+   ⚠ 문안은 자리표시다 — 심사에 넣기 전에 사용자가 확정한다. 변수는 «값»만(문장 통째 금지). */
+const QNA_NOTICE_TEMPLATE =
+`[김하현수학연구소]
+#{학생명} 학생, 질문에 답변이 달렸습니다.
+질문: #{질문}
+앱 소통 > 질문에서 확인할 수 있습니다.`;
+function qnaNoticeText(name, q){
+  const 글 = String(q.question || '').replace(/\s+/g, ' ').trim();
+  return QNA_NOTICE_TEMPLATE
+    .replace('#{학생명}', name || '')
+    .replace('#{질문}', 글.length > 30 ? 글.slice(0, 30) + '…' : (글 || '(사진 질문)'));
+}
+/* 🔴 하루에 한 번이다 — 같은 날 문항을 다섯 개 공개해도 알림은 첫 것 하나(워커의 중복 막이가 «오늘» 단위로 센다).
+   그래서 문항 수는 «지금 풀 수 있는 것 전부»로 적는다 — 나중 것은 알림이 안 가도 그 수에 이미 들어갈 자리다. */
+const WRONG_NOTICE_TEMPLATE =
+`[김하현수학연구소]
+#{학생명} 학생, 새 오답숙제가 나왔습니다.
+출처: #{출처}
+풀 수 있는 문항: #{문항수}개
+앱 학습 > 오답숙제에서 풀 수 있습니다.`;
+function wrongNoticeText(name, 출처, n){
+  return WRONG_NOTICE_TEMPLATE
+    .replace('#{학생명}', name || '')
+    .replace('#{출처}', 출처 || '')
+    .replace('#{문항수}', String(n || 0));
 }
 /* 아직 «완주»가 아닌 학생. 🔵 **구간 배정이면 구간 기준으로 갈린다** — `videoDone` 이 이미 그렇다.
    그래서 시킨 구간을 다 본 학생에게는 **이 알림이 안 간다**(K-11 이 고친 바로 그 억울함이다). */
@@ -15506,10 +15651,11 @@ function vidNoticePanelHTML(v, miss){
       ${videoGoalLabelOf(v) ? `<br>이 강의는 <b>${escHtml(videoGoalLabelOf(v))}</b>이라 <b>그 부분만 본 학생에게는 가지 않습니다.</b>` : ''}</p>
 
     <div class="hw-nact">
-      <button class="btn p" disabled title="아직 연결되지 않았습니다">카카오톡으로 보내기</button>
-      <span class="muted">아직 <b>실제로 보내지지 않습니다.</b> 사업자등록 · 채널 인증 · 발송 대행사 ·
-        템플릿 심사가 끝나야 연결됩니다. 그전에는 <b>문안 복사</b>로 보내세요.</span>
+      <button class="btn p" ${withPhone.length && !state.noticeBusy ? '' : 'disabled'}
+        onclick="event.stopPropagation(); sendNotice('vid','${v.id}','${withPhone.map(s=>s.studentId).join(',')}')">${state.noticeBusy ? '보내는 중…' : '카카오톡으로 보내기'}</button>
+      <span class="muted">알림톡이 안 가면 <b>문자로 대체 발송</b>됩니다(건당 요금). 같은 날 같은 학생에게는 <b>두 번 안 갑니다.</b></span>
     </div>
+    ${noticeResultHTML('vid', v.id)}
   </div>`;
 }
 
@@ -18405,15 +18551,49 @@ async function sessionAutoSaveScores(){
   if(sessionUnsavedScoreCount(classId, examId) === 0) return;
   await saveSessionScores(classId, examId);
 }
-/* 단계·날짜·반을 옮길 때 부르는 하나. 어느 단계에 있었든 그 단계 것만 저장된다. */
+/* 과제·메모도 «넘어가면 저절로 저장» (2026-09-19 · 사용자 — 「과제나 출결 등 시험 빼고는 아래 저장 없이
+   넘어가면 바로 저장되는걸로 … 과제 입력하고 넘어갔는데 등록을 안해서 사라지는 경우도 많고 … 손이 불편해」).
+   출결·점수·진도는 이미 그랬고(C-20·09-04·P-1) 과제와 메모만 손으로 눌러야 했다 — 한 화면에 두 규칙이 남아 있었다.
+   ⚠ **시험은 뺀다** — 사용자가 그렇게 말했다. 새 시험은 이름·만점이 확정돼야 만들어진다(점수는 이미 저절로다).
+   ⚠ 과제는 **등록 함수 하나(addHomework/updateHomework)를 그대로 부른다** — 검사(마감일이 낸 날보다 앞)도 그대로 돈다.
+     막히면 토스트가 뜨고 폼이 남는다. 그때는 **단계를 안 옮긴다** — 옮기면 적은 것이 사라지는, 바로 그 일이 된다.
+     그래서 이 함수들은 «옮겨도 되나»를 돌려주고, sessionAutoSave 가 그것을 모아 준다.
+   ⚠ 과제명이 비면 낼 것이 없다 — 아무 일도 안 한다(마감일만 만진 것은 «입력»이 아니다). */
+async function sessionAutoSaveHw(){
+  if((state.sessionStep || 'att') !== 'hw') return true;
+  const el = document.getElementById('cls-hw-title');
+  if(!el || !el.value.trim()) return true;
+  if(state.sessionHwEditId){
+    await updateHomework(state.sessionHwEditId, 'cls-');
+    return !state.sessionHwEditId;                       // 성공하면 고치기 상태가 풀린다
+  }
+  await addHomework('cls-', state.sessionDate || todayStr());
+  const after = document.getElementById('cls-hw-title');
+  return !(after && after.value.trim());                 // 성공하면 칸이 비고, 막히면 그대로 남는다
+}
+async function sessionAutoSaveMemo(){
+  if((state.sessionStep || 'att') !== 'memo') return true;
+  const el = document.getElementById('cls-memo');
+  if(!el) return true;
+  const date = state.sessionDate || todayStr();
+  const classId = sessionCurrentClassId(date);
+  if(!classId) return true;
+  if(el.value === ((state.sessionNotes[classId] || {})[date] || '')) return true;   // 바뀐 것이 없으면 안 쓴다
+  await saveSessionNote(classId, date);
+  return true;
+}
+/* 단계·날짜·반을 옮길 때 부르는 하나. 어느 단계에 있었든 그 단계 것만 저장된다.
+   돌려주는 값 — «옮겨도 되나». 과제가 검사에 막히면 false 다. */
 async function sessionAutoSave(){
   await sessionAutoSaveAtt();
   await sessionAutoSaveScores();
   /* 진도 글칸도 함께 (P-1) — 적고 「시험으로」를 눌렀을 때 조용히 사라지면 안 된다. */
   await sessionAutoSaveProg();
+  await sessionAutoSaveMemo();
+  return await sessionAutoSaveHw();
 }
 async function goSessionDate(delta){
-  await sessionAutoSave();
+  if(!(await sessionAutoSave())) return;
   state.sessionDate = shiftYmd(state.sessionDate || todayStr(), delta);
   state.sessionClassId = '';
   sessionForgetPicks();
@@ -18425,19 +18605,19 @@ function sessionForgetPicks(){
   state.sessionHwId = ''; state.sessionExamId = ''; state.sessionExamNew = false;
 }
 async function sessionGoToday(){
-  await sessionAutoSave();
+  if(!(await sessionAutoSave())) return;
   state.sessionDate = ''; state.sessionClassId = '';
   sessionForgetPicks();
   render();
 }
 async function goSessionStep(step){
-  if(step !== state.sessionStep) await sessionAutoSave();
+  if(step !== state.sessionStep && !(await sessionAutoSave())) return;   // 과제가 검사에 막히면 그 자리에 남는다
   state.sessionStep = step;
   render();
 }
 async function pickSession(classId){
   if(state.sessionClassId === classId){ render(); return; }
-  await sessionAutoSave();        // 반을 옮기기 «전»에 — 옮기고 나면 어느 반 것인지 모른다
+  if(!(await sessionAutoSave())) return;   // 반을 옮기기 «전»에 — 옮기고 나면 어느 반 것인지 모른다
   sessionForgetPicks();
   state.sessionClassId = classId;
   if(state.sessionStep === 'prev') state.sessionStep = 'att';
@@ -19109,7 +19289,8 @@ function sessionHwHTML(classId, date){
       <p class="cls-new-note">이 반 <b>${roster.length}명</b> 전원에게 나갑니다.
         <b>낸 날</b>은 이 수업 날짜(<span class="mono">${date}</span>)로 남습니다 —
         과제 표의 열 머리가 그 날짜로 섭니다.
-        낸 과제를 <b>검사</b>하는 곳은 <b>「2. 과제 검사」</b>입니다.</p>
+        낸 과제를 <b>검사</b>하는 곳은 <b>「2. 과제 검사」</b>입니다.
+        <b>적어 두고 넘어가면 저절로 등록됩니다.</b></p>
     </div>
   </div>
 
@@ -19155,8 +19336,8 @@ function sessionMemoHTML(classId, date){
   const bar = `<div class="actbar">
     <span class="sum">${loading ? '' : (text.trim() ? `<b class="mono">${text.trim().length}</b>자` : '아직 비어 있습니다')}</span>
     <span class="spacer"></span>
+    <span class="hint">넘어가면 저절로 저장됩니다</span>
     <button class="btn p" ${loading?'disabled':''} onclick="saveSessionNote('${classId}','${date}')">메모 저장</button>
-
   </div>`;
   return { body, bar };
 }
@@ -20688,10 +20869,15 @@ function studentTimeline(s, rec){
   return ev;
 }
 
+/* 🔵 **옆 목록에서 다른 학생을 누르면 «보던 갈래»를 이어 본다** (2026-09-20 · 사용자 — 「학생 이번달 리포트 보고
+     있다가 옆에 다른 학생 누르면 바로 이번달 리포트 이어서 볼 수 있으면」). 달(`state.reportYm`)은 학생과 무관하게
+     하나라 저절로 이어진다. 채팅도 같은 규칙이다 — 갈래마다 다르게 굴면 다음에 한쪽만 고쳐진다.
+   ⚠ 명단·신호에서 «들어올» 때는 예전대로 연대기다 — 그때는 아직 아무 학생도 안 보고 있었다(`studentDetailId` 가 빈다). */
 function sdOpen(sid, filter){
+  const 이어보기 = !!state.studentDetailId && !filter;
   state.studentDetailId = sid;
   state.teacherSelectedStudent = sid;
-  state.studentDetailTab = 'timeline';
+  if(!이어보기) state.studentDetailTab = 'timeline';
   if(filter) state.sdFilter = filter;
   render();
 }
@@ -20745,6 +20931,13 @@ function teacherStudentDetailHTML(sid){
    ⚠ **신호(위험·주의)도 넣지 않는다** — 내부 판단이다. 「위험」이 그대로 가면 안 된다. */
 
 function ymNow(){ return todayStr().slice(0,7); }
+/* 영상이 «언제 나갔나» — 문서에 날짜 칸이 없고 id 가 'v'+Date.now()(+'_'+학생)이라 거기서 읽는다. 못 읽으면 ''(모름 = 늘 나가 있던 것). */
+function videoAssignedYm(v){
+  const m = String(v && v.id || '').match(/^v(\d{12,})/);
+  if(!m) return '';
+  const d = new Date(+m[1]);
+  return isNaN(d) ? '' : d.toISOString().slice(0, 7);
+}
 function ymOf(d){ return String(d||'').slice(0,7); }
 function reportYm(){ return state.reportYm || ymNow(); }
 function ymLabel(ym){ const a=String(ym).split('-'); return a[0]+'년 '+Number(a[1])+'월'; }
@@ -20868,13 +21061,37 @@ function monthlyReportData(s, rec, ym, ctx){
   const qok = qlog.filter(e=>e.ok).length;
 
   const isNow = ctx.isThisMonth !== false;
-  const vids = !isNow ? [] : (ctx.videos||[]).filter(v=>!v.studentId || v.studentId===s.studentId);
+  /* 🔵 **강의 시청은 이제 달로 자른다** (2026-09-20) — 기록에 «본 날»(`days`·`doneAt`)이 생겼다.
+       그 달의 값 = 그 달에 완주했으면 100, 아니면 «그 달에 본 초 ÷ 길이»(99 까지). 그 달 전에 이미 끝낸 영상은
+       그 달의 일이 아니라 뺀다. ⚠ 옛 기록(days 없음)은 날짜를 모른다 — **이번 달에만** 예전 잣대(«지금까지»)로 싣고
+       지난 달에서는 빠진다. 잣대의 뿌리는 여전히 `videoDurationSec` 하나다(구간 배정도 거기서 갈린다). */
+  /* 🔴 **안 본 영상은 0 으로 «싣는다»** (2026-09-20 · 사용자 — 「이미 나간 강의가 있고 강의시청 0%인데 리포트에
+       강의시청이 안 쓰여져 있어」). 여태 «본 것»만 평균내서 하나도 안 보면 줄째로 빠졌다 — «없던 항목»과 «안 한 것»을
+       같은 것으로 다뤘다. 나간 강의를 안 본 것은 학부모가 제일 알아야 할 줄이다.
+     ⚠ 그래서 «나간 영상»을 제대로 골라야 한다 — ctx.videos 는 이 학생 것(개인 배정 + 제 반 것)만 와야 하고,
+       배정된 «달» 뒤의 리포트에만 선다(`videoAssignedYm` — id 의 시각에서 읽는다, 영상 문서에 날짜 칸이 없다).
+       옛 기록(days 없음)은 날짜를 몰라 이번 달에만 싣고, 기록이 아예 없는 것은 어느 달이든 0 이다(본 적이 없으니). */
+  const vids = (ctx.videos||[]).filter(v => (!v.studentId || v.studentId===s.studentId)
+      && (!(ctx.videoAssignedYm || videoAssignedYm)(v) || (ctx.videoAssignedYm || videoAssignedYm)(v) <= ym));
   const vp = rec.videoProgress || {};
-  /* ⚠ 잣대는 신호·학생 홈과 같은 `videoSeen`·`videoScore` 다 (2026-09-13 · K-7). */
-  const vidSeen = vids.filter(v=>videoSeen(vp[v.id]));
-  const vidPct = vidSeen.length
-    ? Math.round(vidSeen.reduce((n,v)=>n + videoScore(vp[v.id]), 0) / vidSeen.length)
-    : null;
+  const monthSecOf = p => Object.keys(p.days).filter(inMonth).reduce((n, d) => n + (+p.days[d] || 0), 0);
+  const vidScores = [];
+  let vidDone = 0;
+  for(const v of vids){
+    const p = vp[v.id];
+    if(!p){ vidScores.push(0); continue; }
+    if(p.days){
+      if(p.doneAt && ymOf(p.doneAt) < ym) continue;
+      if(p.doneAt && inMonth(p.doneAt)){ vidScores.push(100); vidDone++; continue; }
+      const sec = monthSecOf(p), dur = (ctx.videoDurationSec || videoDurationSec)(p);
+      vidScores.push(sec > 0 && dur > 0 ? Math.min(99, Math.floor(sec / dur * 100)) : 0);
+    }else if(isNow){
+      const sc = (ctx.videoScore || videoScore)(p);
+      vidScores.push(sc); if(sc >= 100) vidDone++;
+    }
+  }
+  const vidSeen = vidScores.filter(x => x > 0);
+  const vidPct = vidScores.length ? Math.round(vidScores.reduce((n, x) => n + x, 0) / vidScores.length) : null;
 
   return {
     ym: ym, name: s.name, school: s.school||'', grade: s.grade||'',
@@ -20888,7 +21105,7 @@ function monthlyReportData(s, rec, ym, ctx){
           pct: Math.round(wrong.filter(h=>h.done).length/wrong.length*100)} : null,
     quiz: qlog.length ? {n:qlog.length, ok:qok, days:Object.keys(qdays).length,
           pct: Math.round(qok/qlog.length*100)} : null,
-    video: vids.length ? {seen:vidSeen.length, total:vids.length, pct:vidPct} : null,
+    video: vidScores.length ? {seen:vidSeen.length, done:vidDone, total:vidScores.length, pct:vidPct} : null,
     unit: isNow ? ((rec.progress||{}).unit || '') : '',
     /* 특강 (2026-09-01 · E-1b · 사용자가 정했다: 「메인반 학생들이 추가로 특강을 수강한다면
        그달 리포트에 특강에 대한 내용도 추가되어 나갔으면 좋겠다」).
@@ -20957,7 +21174,9 @@ function reportDataOf(s, rec, ym){
     /* 🔴 «대표 반»을 본다 — 특강만 듣는 학생은 주 반이 없어 교재가 통째로 비어 있었다 (E-4). */
     books: studentPrimaryClassId(s) ? getClassProgress(studentPrimaryClassId(s)).books : [],
     allRecords: state.allRecords, assignments: DATA.assignments,
-    videos: DATA.videos, isDone: hwIsDone,
+    /* 🔴 이 학생 «것»만 — 학생 화면(13624행)과 같은 잣대. 통째로 주면 남의 반 영상이 «안 본 0%»로 실린다. */
+    videos: DATA.videos.filter(v => v.studentId ? v.studentId===s.studentId : (!v.classId || studentClassIds(s).includes(v.classId))),
+    isDone: hwIsDone,
     /* 🔴 학부모가 읽는 반 이름이다. 특강만 듣는 학생에게 「미배정」이라 적으면
        **그 집에서는 «우리 애가 반이 없다»로 읽힌다** (2026-09-01 · E-4). */
     className: studentPrimaryClassId(s) ? classNameOf(studentPrimaryClassId(s)) : '미배정',
@@ -21201,8 +21420,10 @@ const RPB_MAX_BYTES = 950 * 1024;      // MMS가 대개 1MB 언저리다. 그 �
 /* 캔버스를 «문자로 보낼 만한 크기»가 될 때까지 낮춰 가며 굽는다.
    ⚠ 품질만 낮추면 글자 가장자리가 먼저 뭉갠다. **크기를 줄이는 쪽이 글자에 덜 아프다** —
      그래서 품질을 두 번 낮춘 뒤에야 크기를 건드린다. */
-async function rptBakeImage(canvas){
-  const tries = [ {q:.92, s:1}, {q:.84, s:1}, {q:.86, s:.8}, {q:.8, s:.66} ];
+async function rptBakeImage(canvas, maxBytes){
+  const 상한 = maxBytes || RPB_MAX_BYTES;
+  /* 문자(MMS)용은 300KB 라 사다리가 더 내려간다 — 4배로 구운 309KB 가 한 칸만 내려가도 들어온다. */
+  const tries = [ {q:.92, s:1}, {q:.84, s:1}, {q:.86, s:.8}, {q:.8, s:.66}, {q:.78, s:.5}, {q:.7, s:.4} ];
   let last = null;
   for(const t of tries){
     let cv = canvas;
@@ -21219,7 +21440,7 @@ async function rptBakeImage(canvas){
     const url = cv.toDataURL('image/jpeg', t.q);
     const bytes = Math.round((url.length - url.indexOf(',') - 1) * 3 / 4);
     last = {url, bytes, q:t.q, scale:t.s, w:cv.width, h:cv.height};
-    if(bytes <= RPB_MAX_BYTES) return last;
+    if(bytes <= 상한) return last;
   }
   return last;                          // 끝까지 못 줄였으면 가장 작은 것을 준다
 }
@@ -21310,7 +21531,7 @@ async function runReportBatch(){
   const dir = await rptPickFolder();
   if(dir === 'CANCEL') return;               // 창을 닫으셨다 — 아무 일도 안 한다
   state.reportYm = b.ym;                     // sdReportHTML이 보는 달을 못박는다
-  b.phase = 'running'; b.cur = 0; b.saved = []; b.files = []; b.bytes = 0; b.err = '';
+  b.phase = 'running'; b.mode = 'save'; b.sent = {}; b.cur = 0; b.saved = []; b.files = []; b.bytes = 0; b.err = '';
   b.where = dir ? (dir.name || '고르신 폴더') : '';
   render();
   let stage = null;
@@ -21357,6 +21578,74 @@ async function runReportBatch(){
   }
 }
 
+/* ═══ 학부모께 문자(MMS)로 보내기 (2026-09-20 · 사용자 — 「전체 이미지 다운로드 받아서 하나씩 문자로 보내야 하는데 …
+     알림톡은 아니어도 문자로 알리고 이용해서 자동화 할 수 있나?」「하고싶어!」)
+   runReportBatch 와 같은 무대에서 같은 문서를 굽는다 — 목적지만 폴더가 아니라 워커 `/report-mms` 다.
+   🔵 한 명씩 보낸다(사진이 커서) — 결과가 사람마다 돌아온다. 🔵 학부모 번호가 없는 사람은 «누르기 전에» 보인다.
+   ⚠ 사진은 300KB 안으로 굽는다(REPORT_MMS_MAX_BYTES — 알리고 MMS 상한). 다운로드용(950KB)과 다르다. */
+const REPORT_MMS_MAX_BYTES = 290 * 1024;
+function rptSendable(b){
+  return b.ids.filter(id => !b.skipped.includes(id)).map(id => DATA.students.find(x=>x.studentId===id)).filter(Boolean);
+}
+async function runReportSend(){
+  const b = state.rptBatch;
+  if(!b || b.phase !== 'ready') return;
+  const list = rptSendable(b);
+  const 번호있음 = list.filter(s => phoneLabel(s.parentPhone));
+  if(!번호있음.length){ showToast('학부모 번호가 있는 학생이 없습니다 — 설정 › 학생에서 채워 주세요.'); return; }
+  if(!(await notifyWorkerReady())){ showToast('워커가 아직 옛 판입니다 — 워커를 먼저 올려 주세요.'); return; }
+  if(!confirm(번호있음.length + '명의 학부모께 ' + ymLabel(b.ym) + ' 리포트를 MMS로 보냅니다. 건당 요금이 나갑니다(같은 달에는 두 번 안 갑니다).')) return;
+  state.reportYm = b.ym;
+  b.phase = 'running'; b.mode = 'send'; b.cur = 0; b.saved = []; b.files = []; b.err = ''; b.sent = {};
+  render();
+  let stage = null;
+  try{
+    await ensureHtml2CanvasLoaded();
+    if(document.fonts && document.fonts.ready) await document.fonts.ready;
+    stage = document.createElement('div');
+    stage.className = 'rpb-stage';
+    document.body.appendChild(stage);
+    const token = await withTimeout(getAuthToken(), 8000);
+    for(let i=0;i<list.length;i++){
+      const st = list[i];
+      b.cur = i; render();
+      if(!phoneLabel(st.parentPhone)){ b.sent[st.studentId] = '번호 없음'; continue; }
+      const rec = DATA.records[st.studentId];
+      const doc = rec && rptDocEl(st, rec);
+      if(!doc){ b.sent[st.studentId] = '문서 없음'; continue; }
+      stage.innerHTML = '';
+      stage.appendChild(doc);
+      await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
+      const scale = doc.scrollHeight > 2600 ? 3 : 4;
+      const canvas = await html2canvas(doc, {scale, backgroundColor:'#ffffff', logging:false, useCORS:true});
+      const baked = await rptBakeImage(canvas, REPORT_MMS_MAX_BYTES);
+      let word;
+      try{
+        const res = await withTimeout(fetch(AI_WORKER_URL + '/report-mms', {
+          method:'POST', headers:{ 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ key: studentKeyOfSid(st.studentId), name: st.name, ym: b.ym, image: baked.url })
+        }), 60000);
+        const j = await res.json().catch(() => ({}));
+        if(!res.ok) throw new Error(j.detail || j.error || ('http ' + res.status));
+        word = j.ok ? '보냄 (' + Math.round(baked.bytes/1024) + 'KB)'
+             : ({ already:'이미 보낸 달', no_phone:'번호 없음', quota:'오늘 한도 초과', too_big:'사진이 너무 큼' })[j.why] || j.why;
+        if(j.ok) b.saved.push(st.studentId);
+      }catch(e){ word = '실패 — ' + (e.message || e); }
+      b.sent[st.studentId] = word;
+      render();
+    }
+    b.phase = 'done'; render();
+    showToast(b.saved.length + '명의 학부모께 보냈습니다.' + (list.length - b.saved.length ? ' ' + (list.length - b.saved.length) + '명은 못 갔습니다 — 줄마다 까닭이 있습니다.' : ''));
+  }catch(e){
+    b.phase = 'ready';
+    b.err = (e && e.message) ? e.message : String(e);
+    render();
+    showToast('리포트를 보내지 못했습니다 — ' + b.err);
+  }finally{
+    if(stage) stage.remove();
+  }
+}
+
 function rptBatchDrawerHTML(){
   const b = state.rptBatch; if(!b) return '';
   const live = b.ids.filter(id => !b.skipped.includes(id));
@@ -21366,8 +21655,11 @@ function rptBatchDrawerHTML(){
     const off  = b.skipped.includes(sid);
     const done = b.saved.includes(sid);
     const now  = running && live[b.cur] === sid;
-    const word = off ? '이 달 기록 없음' : done ? '저장됨' : now ? '만드는 중…'
-      : b.phase === 'loading' ? '읽는 중…' : '대기';
+    const word = off ? '이 달 기록 없음'
+      : (b.sent && b.sent[sid]) ? b.sent[sid]
+      : done ? '저장됨' : now ? (b.mode === 'send' ? '보내는 중…' : '만드는 중…')
+      : b.phase === 'loading' ? '읽는 중…'
+      : (st && !phoneLabel(st.parentPhone)) ? '대기 · 학부모 번호 없음' : '대기';
     return `<div class="rpb-row ${off ? 'off' : ''}${done ? ' ok' : ''}${now ? ' now' : ''}">
       <span class="n mono">${i + 1}</span>
       <span class="nm">${escHtml(st ? st.name : sid)}<s>${
@@ -21425,6 +21717,10 @@ function rptBatchDrawerHTML(){
       <div class="hwd-f">
         <div class="nav">
           <button class="btn sm" ${running ? 'disabled' : ''} onclick="closeReportBatch()">닫기</button>
+          <button class="btn sm" ${b.phase !== 'ready' || rptSendable(b).filter(s=>phoneLabel(s.parentPhone)).length === 0 ? 'disabled' : ''}
+            onclick="runReportSend()" title="학부모 번호(contacts)로 MMS · 같은 달에는 두 번 안 갑니다">${
+              b.mode === 'send' && running ? '보내는 중 ' + b.saved.length + '/' + rptSendable(b).length
+              : '학부모께 문자로 (' + rptSendable(b).filter(s=>phoneLabel(s.parentPhone)).length + '명)'}</button>
           <button class="btn p sm" ${b.phase !== 'ready' || live.length === 0 ? 'disabled' : ''}
             onclick="runReportBatch()">${
               b.phase === 'loading' ? '읽는 중…'
@@ -21512,7 +21808,7 @@ function sdReportHTML(s, rec){
     rpGrade(d.quiz.pct, "rate", R)));
   if(d.video && d.video.pct !== null)
     meters.push(meter("강의 시청", d.video.pct,
-      d.video.total + "편 중 " + d.video.seen + "편 시청",
+      d.video.total + "편 중 " + d.video.seen + "편 시청" + (d.video.done ? " · " + d.video.done + "편 완주" : ""),
       rpGrade(d.video.pct, "video", R)));
   /* 교재 (2026-09-01 · T-1b · 사용자가 「넓혀줘」로 시켰다). 진도 «위»에 둔다 —
      「무슨 책으로」가 「어디까지」보다 먼저다(반 › 진도에서 정한 순서와 같다).
@@ -24470,6 +24766,7 @@ async function bookReqAccept(code){
     붙임++;
   }
   await logAudit('교재 요청 받기', '', '', bookReqLabelOf(code) + ' · ' + 붙임 + '명');
+  if(붙임 && bank.status === 'approved') notifyWrongReady([bank.id]);   // 알림톡 (09-20) — «바로 나갔다»면 알린다
   showToast(못한이.length
     ? `${붙임}명에게 붙였습니다. ${못한이.length}명은 저장이 안 돼 요청이 남아 있습니다.`
     : (bank.status === 'approved'
@@ -24545,6 +24842,7 @@ async function bankAskAccept(examId, qkey){
     붙임++;
   }
   await logAudit('오답 문항 세우기', '', '', bankAskLabelOf(부름) + ' · ' + 붙임 + '명');
+  if(붙임 && bank.status === 'approved') notifyWrongReady([bank.id]);   // 알림톡 (09-20) — «바로 나갔다»면 알린다
   showToast(못한이
     ? `${붙임}명에게 붙였습니다. ${못한이}명은 저장이 안 돼 요청이 남아 있습니다.`
     : (bank.status === 'approved'
@@ -24560,6 +24858,7 @@ async function bankAskAccept(examId, qkey){
 async function fillEmptyFromStore(){
   await loadItemStoreIfNeeded();
   let 채움 = 0, 못함 = 0;
+  const 채운것 = [];
   for(const b of reviewQueueList('empty')){
     const v = codeVariantFor(b.itemCode);
     if(!v) continue;
@@ -24568,9 +24867,10 @@ async function fillEmptyFromStore(){
     b.variantContent = v.content; b.variantAnswer = v.answer; b.variantCode = v.code;
     b.source = 'itemstore'; b.status = 'approved';
     if(await dbSetDoc('problembank', b.id, b) !== true){ Object.assign(b, 되돌림); 못함++; continue; }
-    채움++;
+    채움++; 채운것.push(b.id);
   }
   if(채움) await logAudit('창고에서 채우기', '', '', 채움 + '문항');
+  if(채움) notifyWrongReady(채운것);                         // 알림톡 (09-20) — 채워지는 순간 공개다
   showToast(채움
     ? `${채움}문항을 창고 변형으로 채웠습니다.` + (못함 ? ` ${못함}문항은 저장이 막혔습니다.` : '')
     : '창고에 쓸 변형이 있는 문항이 없습니다.');

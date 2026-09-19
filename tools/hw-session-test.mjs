@@ -326,5 +326,44 @@ console.log(NL + '⑤ 실제로 그려 본다 — 과제 격자의 차례 · 수
   봄('🔴 둘 다 비면 아예 안 그린다', (L('c1').match(/class="prog"/g) || []).length, 1);
 }
 
+/* ═══ ⑥ 과제·메모 «넘어가면 저절로 저장» (2026-09-19) ═══
+   사용자의 말 — 「과제 입력하고 넘어갔는데 등록을 안해서 사라지는 경우도 많고해서. 손이 불편해」.
+   🔴 검사에 막히면(마감이 낸 날보다 앞) «옮기지 말라»가 돌아와야 한다 — 옮기면 적은 것이 사라진다. */
+console.log(NL + '⑥ 과제·메모 — 넘어가면 저절로 저장' + NL);
+{
+  const 폼 = { 'cls-hw-title': '새 과제', 'cls-hw-desc': '', 'cls-hw-due': '2026-09-20', 'cls-hw-class': 'c1' };
+  const 저장 = [], 말 = [];
+  const DATA = { assignments: [] };
+  const state = { sessionStep: 'hw', sessionDate: '2026-09-19', sessionHwEditId: null };
+  const doc = { getElementById: id => id in 폼 ? { get value(){ return 폼[id]; }, set value(v){ 폼[id] = v; } } : null };
+  const F = new Function('DATA', 'state', 'document', 'dbSetDoc', 'showToast', 'render', 'todayStr', 'updateHomework',
+    lift('addHomework') + NL + lift('sessionAutoSaveHw') + NL + 'return { sessionAutoSaveHw };')(
+    DATA, state, doc, async (col, id, v) => { 저장.push([col, id, v]); return true; }, m => 말.push(m), () => {}, () => '2026-09-19',
+    async () => {});
+  봄('🔴 과제명을 적어 두고 넘어가면 등록된다', [await F.sessionAutoSaveHw(), 저장.length, DATA.assignments[0].title, DATA.assignments[0].createdAt],
+    [true, 1, '새 과제', '2026-09-19']);
+  봄('   등록되면 칸이 비어 두 번 안 들어간다', [폼['cls-hw-title'], await F.sessionAutoSaveHw(), 저장.length], ['', true, 1]);
+  폼['cls-hw-title'] = '앞선 마감'; 폼['cls-hw-due'] = '2026-09-01';
+  봄('🔴 마감이 낸 날보다 앞서면 등록 안 되고 «옮기지 말라»', [await F.sessionAutoSaveHw(), 저장.length, 폼['cls-hw-title']],
+    [false, 1, '앞선 마감']);
+  봄('   그 까닭은 토스트로 말한다', /마감일.*앞섭니다/.test(말[말.length - 1]), true);
+  state.sessionStep = 'memo';
+  봄('   과제 단계가 아니면 아무 일도 안 한다', [await F.sessionAutoSaveHw(), 저장.length], [true, 1]);
+}
+{
+  const 저장 = [];
+  const state = { sessionStep: 'memo', sessionDate: '2026-09-19', sessionNotes: { c1: { '2026-09-19': '그대로' } }, sessionNoteDraft: null };
+  let 글 = '그대로';
+  const F = new Function('state', 'document', 'sessionCurrentClassId', 'saveSessionNote', 'todayStr',
+    lift('sessionAutoSaveMemo') + NL + 'return sessionAutoSaveMemo;')(
+    state, { getElementById: id => id === 'cls-memo' ? { get value(){ return 글; } } : null }, () => 'c1',
+    async (c, d) => 저장.push([c, d]), () => '2026-09-19');
+  봄('메모가 그대로면 안 쓴다', [await F(), 저장.length], [true, 0]);
+  글 = '바뀐 메모';
+  봄('🔴 메모를 고치고 넘어가면 저장된다', [await F(), 저장], [true, [['c1', '2026-09-19']]]);
+  봄('   발판에 «넘어가면 저절로 저장됩니다»', lift('sessionMemoHTML').includes('넘어가면 저절로 저장됩니다'), true);
+  봄('   시험은 뺐다 — 새 시험 만들기는 저절로 안 한다', /sessionAutoSaveExam/.test(html), false);
+}
+
 console.log(NL + (fail ? '🔴 ' + fail + '개 실패 · ' : '✓ 전부 통과 · ') + pass + '개' + NL);
 process.exit(fail ? 1 : 0);

@@ -37,7 +37,8 @@ function 판(o) {
   const DATA = { qnas: o.qnas || [], qnaFollowups: [] };
   const state = { currentUser: { studentId: 's1', name: '김승우' }, qnaQuestionImage: o.image || null, qnaAnswerImage: {}, stuQnaFollowFor: 'qn1' };
   const 쓴것 = [], 지운것 = [], 말 = [];
-  const F = new Function('DATA', 'state', 'document', 'authUid', 'todayStr', 'dbSetDoc', 'dbDeleteDoc', 'showToast', 'render', 'deleteFromDrive', 'imgFileIdOf', 'confirm',
+  const 알림 = [];
+  const F = new Function('DATA', 'state', 'document', 'authUid', 'todayStr', 'dbSetDoc', 'dbDeleteDoc', 'showToast', 'render', 'deleteFromDrive', 'imgFileIdOf', 'confirm', 'notifyAuto', 'qnaNoticeText',
     /* ⚠ `deleteQna` 가 «답에 붙은 사진»까지 걷느라 `qnaMoreAnswersOf` 를 부른다 —
        목록에 없어 이 검사가 ReferenceError 로 터져 있었다. 옮겨 적지 않고 그대로 뜬다. */
     [lift('splitQnaFollowups'), lift('qnaFollowupsOf'), lift('qnaMoreAnswersOf'), lift('qnaHasOpen'),
@@ -47,8 +48,9 @@ function 판(o) {
     () => 'uid-s1', () => '2026-09-15',
     async (col, id, doc) => { 쓴것.push({ col, id, doc: JSON.parse(JSON.stringify(doc)) }); return o.저장흠 ? null : true; },
     async (col, id) => { 지운것.push(col + '/' + id); },
-    m => 말.push(m), () => {}, () => {}, v => (v && v.fileId) || null, () => true);
-  return { F, DATA, state, 쓴것, 지운것, 말 };
+    m => 말.push(m), () => {}, () => {}, v => (v && v.fileId) || null, () => true,
+    (kind, id, targets) => 알림.push({ kind, id, targets }), (name, q) => name + ':' + q.id);
+  return { F, DATA, state, 쓴것, 지운것, 말, 알림 };
 }
 
 console.log(NL + '① 읽은 뒤 가른다' + NL);
@@ -93,17 +95,26 @@ console.log(NL + '② 학생이 추가 질문을 보낸다 — 새 문서' + NL)
 
 console.log(NL + '③ 강사는 같은 길로 답한다 · 지우면 같이 지운다' + NL);
 {
-  const { F, DATA, 쓴것, 지운것 } = 판({ qnas: [
+  const { F, DATA, 쓴것, 지운것, 알림 } = 판({ qnas: [
     { id: 'qn1', studentId: 's1', question: 'Q', answer: 'A', image: null, answerImage: null },
-    { id: 'qf1', kind: 'followup', parentId: 'qn1', studentId: 's1', question: '또?', answer: null },
+    { id: 'qf1', kind: 'followup', parentId: 'qn1', studentId: 's1', studentName: '김승우', question: '또?', answer: null },
   ], text: '이렇게 보면 됩니다' });
   F.splitQnaFollowups();
   await F.submitAnswer('qf1');
   봄('🔴 submitAnswer 가 추가 질문 문서에 답을 얹는다 (강사 update 권한)', [쓴것[0].id, 쓴것[0].doc.answer, 쓴것[0].doc.answeredAt], ['qf1', '이렇게 보면 됩니다', '2026-09-15']);
+  봄('🔵 답이 저장되면 알림톡이 «실»(원 질문) 단위로 그 학생에게 (09-20)', 알림.map(a => [a.kind, a.id, a.targets.map(t => t.sid + '/' + t.message)]),
+    [['qna', 'qn1', ['s1/김승우:qf1']]]);
   봄('그러면 그 질문은 완료다', F.qnaHasOpen(DATA.qnas[0]), false);
   await F.deleteQna('qn1');
   봄('🔴 질문을 지우면 추가 질문 문서도 지운다', 지운것, ['qnas/qf1', 'qnas/qn1']);
   봄('메모리에서도 빠진다', [DATA.qnas.length, DATA.qnaFollowups.length], [0, 0]);
+}
+{
+  /* 저장이 막히면 알림도 안 간다 — «간 줄 알았는데 답이 없다»가 제일 나쁘다 */
+  const { F, 알림 } = 판({ qnas: [{ id: 'qn1', studentId: 's1', question: 'Q', answer: null }], text: '답', 저장흠: true });
+  F.splitQnaFollowups();
+  await F.submitAnswer('qn1');
+  봄('🔴 저장이 막히면 알림톡도 안 나간다', 알림.length, 0);
 }
 
 console.log(NL + '④ 화면과 규칙의 닻' + NL);

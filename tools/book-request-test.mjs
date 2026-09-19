@@ -160,18 +160,19 @@ console.log(NL + '②-b 강사가 받아 문항을 세운다' + NL);
     const 쓴것 = [], 말 = [], 장부적음 = [];
     /* ⚠ 2026-09-13(K-19)부터 «강사가 학생 기록에 쓰는 문»이 따로다(`saveRecordAsTeacher`) —
        쓰고 나서 `state.allRecords` 까지 같이 갈아 끼운다. 여기서도 그 문을 준다. */
+    const 알림 = [];
     const 곁 = ['DATA', 'state', 'loadItemStoreIfNeeded', 'codeVariantFor', 'loadRecord', 'saveRecordAsTeacher',
-      'dbSetDoc', 'logAudit', 'showToast', 'render', 'todayStr', 'studentNameOf'];
+      'dbSetDoc', 'logAudit', 'showToast', 'render', 'todayStr', 'studentNameOf', 'notifyWrongReady'];
     const 값 = [DATA, state, async () => {},
       code => 변형있나 ? { code: code + '-N01', content: '쌍둥이 본문', answer: '3' } : null,
       async sid => recs[sid], async () => true,
       async (col, id, v) => { 쓴것.push(v); return true; },
       async (a, b, c, d) => 장부적음.push(d), m => 말.push(m), () => {}, () => '2026-09-13',
-      sid => ({ s1: '가나', s2: '다라' })[sid] || sid];
+      sid => ({ s1: '가나', s2: '다라' })[sid] || sid, ids => 알림.push(ids)];
     const F = new Function(...곁,
       잣대 + NL + lift('bookReqsOf') + NL + lift('bookReqPending') + NL + lift('bookReqLabelOf') + NL +
       lift('bookReqAccept') + NL + 'return { bookReqPending, bookReqAccept, bookReqLabelOf };')(...값);
-    return { recs, DATA, 쓴것, 말, 장부적음, F };
+    return { recs, DATA, 쓴것, 말, 장부적음, 알림, F };
   };
 
   const a = 만들기(false);
@@ -203,17 +204,19 @@ console.log(NL + '②-b 강사가 받아 문항을 세운다' + NL);
     [b.쓴것[0].status, b.쓴것[0].variantContent, b.쓴것[0].variantCode],
     ['approved', '쌍둥이 본문', 'K2-03-E-0431-N01']);
   봄('그때는 «바로 나갔다»고 말한다', /바로 나갔습니다/.test(b.말[0]), true);
+  봄('🔵 바로 나갔으면 알림톡도 그 문항으로 (09-20)', b.알림.length === 1 && b.알림[0].length === 1, true);
+  봄('   변형이 없어 기다리면 알림은 안 간다', a.알림.length, 0);
 
   /* 문항을 못 세우면 요청을 안 지운다 */
   const c = 만들기(false);
   const 곁2 = ['DATA', 'state', 'loadItemStoreIfNeeded', 'codeVariantFor', 'loadRecord', 'saveRecordAsTeacher',
-    'dbSetDoc', 'logAudit', 'showToast', 'render', 'todayStr', 'studentNameOf'];
+    'dbSetDoc', 'logAudit', 'showToast', 'render', 'todayStr', 'studentNameOf', 'notifyWrongReady'];
   const G = new Function(...곁2,
     잣대 + NL + lift('bookReqsOf') + NL + lift('bookReqPending') + NL + lift('bookReqLabelOf') + NL +
     lift('bookReqAccept') + NL + 'return bookReqAccept;')(
     c.DATA, { allRecords: c.recs, itemByCode: 장부 }, async () => {}, () => null,
     async sid => c.recs[sid], async () => true, async () => null,
-    async () => {}, m => c.말.push(m), () => {}, () => '2026-09-13', sid => sid);
+    async () => {}, m => c.말.push(m), () => {}, () => '2026-09-13', sid => sid, () => {});
   await G('K2-03-E-0431');
   봄('🔴 문항을 못 세우면 요청을 그대로 둔다 (지워 놓고 못 세우면 어디에도 안 남는다)',
     [c.recs.s1.bookRequests.length, c.DATA.problemBank.length,

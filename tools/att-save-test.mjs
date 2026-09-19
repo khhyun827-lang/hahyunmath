@@ -180,12 +180,14 @@ console.log(NL + '── 「과제 검사로」가 «저절로» 저장하는가
   /* 🔴 **글자로만 보면 못 잡는다** — `if(false) await sessionAutoSaveAtt();` 도 그 글자를 갖고 있다.
      그래서 `sessionAutoSave` 를 떠 와서 **실제로 부르고**, 출결 저장이 닿았는지 본다. */
   const 부른것 = [];
-  const 자동 = new Function('state','sessionAutoSaveAtt','sessionAutoSaveScores','sessionAutoSaveProg',
+  const 자동 = new Function('state','sessionAutoSaveAtt','sessionAutoSaveScores','sessionAutoSaveProg','sessionAutoSaveMemo','sessionAutoSaveHw',
     lift('sessionAutoSave') + NL + 'return sessionAutoSave;')(
-    {}, async () => 부른것.push('att'), async () => 부른것.push('score'), async () => 부른것.push('prog'));
-  await 자동();
+    {}, async () => 부른것.push('att'), async () => 부른것.push('score'), async () => 부른것.push('prog'),
+    async () => { 부른것.push('memo'); return true; }, async () => { 부른것.push('hw'); return false; });
+  const 옮겨도되나 = await 자동();
   봄('🔴 단계를 옮기면 출결 저장이 «실제로» 불린다', 부른것.indexOf('att') >= 0, true);
-  봄('진도·점수도 함께 불린다', 부른것.sort(), ['att','prog','score']);
+  봄('진도·점수·메모·과제도 함께 불린다 (09-19)', 부른것.sort(), ['att','hw','memo','prog','score']);
+  봄('🔴 과제가 검사에 막히면 «옮기지 말라»가 돌아온다', 옮겨도되나, false);
 }
 {
   /* `sessionAutoSaveAtt` 자체도 불러 본다 — 출결 단계에서만, 바뀐 것이 있을 때만. */

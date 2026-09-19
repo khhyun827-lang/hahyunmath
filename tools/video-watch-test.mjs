@@ -91,10 +91,11 @@ console.log(NL + '② 재생바를 끝으로 끌어도 완주가 아니다' + NL
   const 만들기 = () => {
     const rec = { videoProgress: {} };
     const 저장 = [];
-    const F = new Function('loadRecord', 'saveRecord', 'document', 잣대 + NL + lift('noteVideoWatchTime') + NL +
+    const 날 = { v: '2026-09-20' };
+    const F = new Function('loadRecord', 'saveRecord', 'document', 'todayStr', 잣대 + NL + lift('noteVideoWatchTime') + NL +
       'return { noteVideoWatchTime };')(
-      async () => rec, async () => { 저장.push(1); }, { getElementById: () => null });
-    return { rec, 저장, F };
+      async () => rec, async () => { 저장.push(1); }, { getElementById: () => null }, () => 날.v);
+    return { rec, 저장, F, 날 };
   };
   /* 3초만 재생하고 끝으로 끌었다 — 예전에는 ENDED 하나로 completed 가 됐다 */
   const a = 만들기();
@@ -134,10 +135,14 @@ console.log(NL + '② 재생바를 끝으로 끌어도 완주가 아니다' + NL
        · `seen`    — 어느 «대목»을 봤나(10초 칸 하나에 글자 하나). 구간만 보라는 배정을 재려면 필요하다.
        · `base`    — 커버리지가 없던 시절의 값을 한 번만 얼린 바닥. 없으면 옛 기록의 %가 뚝 떨어진다.
        · `videoId` — `p` 는 제 id 를 몰라서 배정(구간)을 못 찾는다. 그래서 쓸 때 같이 남긴다.
-     ⚠ `percent`·`completed` 는 «그때 무엇으로 봤나»의 자취다 — **화면은 이 둘을 안 믿는다.** */
-  봄('문서에 남는 칸 — 여덟 (09-16에 seen·base·videoId 가 늘었다)',
+     ⚠ `percent`·`completed` 는 «그때 무엇으로 봤나»의 자취다 — **화면은 이 둘을 안 믿는다.**
+     09-20 에 셋이 더 늘었다(사용자 — 「본 날짜도 남기게 해줘」). 지난 달 리포트가 강의 시청을 통째로 빼던 까닭이 «날짜가 없다»였다:
+       · `days`    — {날짜: 그날 실제로 재생한 초}. 달로 자르는 뿌리.
+       · `firstAt` — 처음 본 날.
+       · `doneAt`  — 처음 완주선을 넘은 날(완주 전에는 칸 자체가 없다). */
+  봄('문서에 남는 칸 — 열하나 (09-16 seen·base·videoId · 09-20 days·firstAt·doneAt)',
     Object.keys(b.rec.videoProgress.v1).sort(),
-    ['base', 'completed', 'duration', 'percent', 'seen', 'updatedAt', 'videoId', 'watchedSeconds']);
+    ['base', 'completed', 'days', 'doneAt', 'duration', 'firstAt', 'percent', 'seen', 'updatedAt', 'videoId', 'watchedSeconds']);
   봄('문서에 적어 둔 percent·completed 도 새 잣대를 따른다',
     [b.rec.videoProgress.v1.percent, b.rec.videoProgress.v1.completed], [100, true]);
   봄('길이를 모르면 아무것도 안 쓴다', await (async () => {
@@ -252,7 +257,8 @@ console.log(NL + '⑤ 시청률을 세는 자리가 다 같은 잣대를 쓰는�
   봄('학생 홈 시청률', lift('stuVideoAvg').includes('videoScore(c.rec.videoProgress[v.id])'), true);
   봄('강사 학생상세 요약', lift('studentVideoSummary').includes('sumPercent += videoScore(p)'), true);
   봄('신호(rosterStats)', /sum \+ videoScore\(rec\.videoProgress && rec\.videoProgress\[v\.id\]\)/.test(html), true);
-  봄('리포트', /videoSeen\(vp\[v\.id\]\)/.test(html) && /n \+ videoScore\(vp\[v\.id\]\)/.test(html), true);
+  /* 09-20 — 리포트는 달로 자르므로 옛 기록(days 없음)에만 그 잣대를 쓴다. 잣대 자체는 같은 것이다. */
+  봄('리포트', /\(ctx\.videoScore \|\| videoScore\)\(p\)/.test(lift('monthlyReportData')), true);
   봄('반 평균', lift('chubVideoHTML').includes('videoScore(rec && rec.videoProgress && rec.videoProgress[v.id])'), true);
   /* 🔴 옛 잣대가 한 톨도 안 남았는가 */
   /* ⚠ 닻을 html 전체에 걸면 **까닭을 적어 둔 주석**이 물린다 — 함수 몸통만 본다.
@@ -264,6 +270,67 @@ console.log(NL + '⑤ 시청률을 세는 자리가 다 같은 잣대를 쓰는�
   봄('🔴 저장된 completed 를 그대로 믿는 자리가 없다',
     /\bp\.completed\s*\?|\.completed\s*\?\s*100|!\(\(.*\|\|\{\}\)\.completed\)/.test(html), false);
   봄('🔴 저장된 percent 를 그대로 그리는 자리가 없다', /videoProgress\[[^\]]*\]\s*\|\|\s*\{\}\)\.percent/.test(html), false);
+}
+
+/* ═══ ⑥ «본 날»이 남는다 (2026-09-20 · 사용자 — 「영상 시청 기록에 본 날짜도 남기게 해줘」) ═══ */
+console.log(NL + '⑥ 본 날이 남는다 — days · firstAt · doneAt' + NL);
+{
+  const rec = { videoProgress: {} };
+  const 날 = { v: '2026-09-20' };
+  const F = new Function('loadRecord', 'saveRecord', 'document', 'todayStr', 잣대 + NL + lift('noteVideoWatchTime') + NL +
+    'return noteVideoWatchTime;')(async () => rec, async () => {}, { getElementById: () => null }, () => 날.v);
+  await F('s1', 'v1', 30, 100, 0, 30);
+  await F('s1', 'v1', 20, 100, 30, 50);
+  let p = rec.videoProgress.v1;
+  봄('🔴 그날 실제로 재생한 초가 날짜별로 쌓인다', p.days, { '2026-09-20': 50 });
+  봄('   처음 본 날', p.firstAt, '2026-09-20');
+  봄('   아직 완주가 아니면 doneAt 이 없다', 'doneAt' in p, false);
+  날.v = '2026-10-03';
+  await F('s1', 'v1', 50, 100, 50, 100);
+  p = rec.videoProgress.v1;
+  봄('🔴 다른 날은 다른 칸 — 처음 본 날은 그대로', [p.days, p.firstAt], [{ '2026-09-20': 50, '2026-10-03': 50 }, '2026-09-20']);
+  봄('🔴 완주한 날이 «처음 넘은 날»로 남는다', p.doneAt, '2026-10-03');
+  날.v = '2026-10-09';
+  await F('s1', 'v1', 40, 100, 0, 40);
+  p = rec.videoProgress.v1;
+  봄('   다시 봐도 doneAt 은 안 바뀐다 · 그날 본 초는 쌓인다', [p.doneAt, p.days['2026-10-09']], ['2026-10-03', 40]);
+  날.v = '2026-10-10';
+  await F('s1', 'v1', 0, 100, 40, 40);
+  봄('   재생이 0초면 칸을 안 만든다', Object.keys(rec.videoProgress.v1.days), ['2026-09-20', '2026-10-03', '2026-10-09']);
+  const r2 = { videoProgress: { v9: { watchedSeconds: 80, duration: 100 } } };
+  const G = new Function('loadRecord', 'saveRecord', 'document', 'todayStr', 잣대 + NL + lift('noteVideoWatchTime') + NL +
+    'return noteVideoWatchTime;')(async () => r2, async () => {}, { getElementById: () => null }, () => '2026-09-21');
+  await G('s1', 'v9', 5, 100, 80, 85);
+  봄('   옛 기록(days 없음)에 처음 쓰면 오늘부터 시작 · 옛 숫자는 안 떨어진다',
+    [r2.videoProgress.v9.days, r2.videoProgress.v9.firstAt, r2.videoProgress.v9.watchedSeconds >= 80], [{ '2026-09-21': 5 }, '2026-09-21', true]);
+}
+{
+  /* 리포트가 달로 자른다 — 9월 리포트·10월 리포트가 같은 기록에서 다른 답을 낸다 */
+  const M = new Function('videoDurationSec', 'videoSeen', 'videoScore',
+    [lift('ymOf'), lift('videoAssignedYm'), lift('monthlyReportData')].join(NL) + NL + 'return monthlyReportData;')(
+    p => +p.duration || 0, p => !!(p && p.watchedSeconds > 0), p => Math.min(100, Math.round(p.watchedSeconds / p.duration * 100)));
+  const rec = { videoProgress: {
+    a: { duration: 100, watchedSeconds: 100, days: { '2026-09-20': 50, '2026-10-03': 50 }, firstAt: '2026-09-20', doneAt: '2026-10-03' },
+    b: { duration: 200, watchedSeconds: 40, days: { '2026-09-25': 40 }, firstAt: '2026-09-25' },
+    c: { duration: 100, watchedSeconds: 100, days: { '2026-08-10': 100 }, firstAt: '2026-08-10', doneAt: '2026-08-10' },
+    d: { duration: 100, watchedSeconds: 70 },                                     // 옛 기록 — 날짜가 없다
+  } };
+  const s = { studentId: 's1', name: '가' };
+  /* e 는 나갔는데 한 번도 안 본 영상 · f 는 10월에야 나간 영상(id 의 시각 — 2026-10-15) */
+  const videos = [{ id: 'a' }, { id: 'b' }, { id: 'c' }, { id: 'd' }, { id: 'e' }, { id: 'v' + Date.UTC(2026, 9, 15) }];
+  const 구월 = M(s, rec, '2026-09', { videos, isThisMonth: false }).video;
+  봄('🔴 9월 — a 50% · b 20% · e 는 안 봐서 0 · c 는 8월에 끝나 뺀다 · d 는 날짜가 없어 뺀다 · f 는 아직 안 나갔다',
+    [구월.total, 구월.seen, 구월.done, 구월.pct], [3, 2, 0, Math.round((50 + 20 + 0) / 3)]);
+  const 시월 = M(s, rec, '2026-10', { videos, isThisMonth: false }).video;
+  봄('🔴 10월 — a 완주(100) · b 는 10월엔 안 봐서 0 · e 0 · f 는 이제 나가서 0', [시월.total, 시월.seen, 시월.done, 시월.pct], [4, 1, 1, 25]);
+  const 이번달 = M(s, rec, '2026-09', { videos, isThisMonth: true }).video;
+  봄('   이번 달이면 옛 기록(d)도 예전 잣대로 얹힌다 — a·b·e 는 그대로', [이번달.total, 이번달.seen, 이번달.pct], [4, 3, Math.round((50 + 20 + 70 + 0) / 4)]);
+  봄('🔴 나간 영상을 하나도 안 봤으면 «0%»로 싣는다 — 줄째로 빠지지 않는다 (조민서 · 09-20)',
+    M(s, { videoProgress: {} }, '2026-09', { videos: [{ id: 'a' }, { id: 'b' }], isThisMonth: true }).video, { seen: 0, done: 0, total: 2, pct: 0 });
+  봄('   영상이 하나도 안 나갔으면 그때만 줄째로 빠진다', M(s, rec, '2026-09', { videos: [], isThisMonth: true }).video, null);
+  봄('🔴 리포트에 주는 영상은 «이 학생 것»만 — 개인 배정이면 그 학생, 아니면 제 반',
+    /videos: DATA\.videos\.filter\(v => v\.studentId \? v\.studentId===s\.studentId : \(!v\.classId \|\| studentClassIds\(s\)\.includes\(v\.classId\)\)\)/.test(html), true);
+  봄('   화면 줄에 완주 편수가 붙는다', /편 시청" \+ \(d\.video\.done \? " · " \+ d\.video\.done \+ "편 완주"/.test(html), true);
 }
 
 console.log(NL + (fail ? '🔴 ' + fail + '개 실패 · ' : '✓ 전부 통과 · ') + pass + '개' + NL);
