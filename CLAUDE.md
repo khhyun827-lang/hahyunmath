@@ -2397,7 +2397,12 @@ state.view='assistant'; loadAllRecordsIfNeeded();
 >         워커에 한 벌 더 옮기면 그쪽이 먼저 갈린다(주석에 적어 뒀다).
 >       ▶ **남은 것** — 심사 통과 뒤 사용자가 Cloudflare Secret 여섯(ALIGO_USERID·APIKEY·SENDER·SENDERKEY·TPL_HW·TPL_VID)을 넣고
 >         워커를 다시 올린다(WORKER_VERSION 2026-09-19a · worker-check 로 확인). 그전엔 단추가 503 «워커 비밀이 없습니다»를 띄운다.
->         apikey 는 채팅에 안 받는다. 🔴 **index.html 은 아직 push 안 했다** — 단추가 살아 있으니 워커 먼저, 화면은 뒤에.
+>         apikey 는 채팅에 안 받는다. ✅ index.html 은 09-20 에 push 했다(`1339875`·`bc21bc0`) — 화면이 /quota 의 판을 보고 옛 워커면
+>         새 길을 안 부르므로 순서가 바뀌어도 한도가 안 탄다.
+>   🔴 **09-20 저녁 · 여기서 멈춰 있다 — 사용자 말: 「주말이라 사업자인증이 알리고에서 안 됐어. 그래서 아직 API key 가 없나봐」.**
+>     워커 코드 붙여넣기도 비밀 넣기도 **아직 안 됐다.** 다음에 할 일(순서대로) — ① 알리고 사업자 인증 완료(평일) → ② 워커 코드 붙여넣기(`2026-09-19a`)
+>     → ③ Secret 넷(ALIGO_USERID·APIKEY·SENDER·SENDERKEY) → ④ 리포트 MMS 를 본인 번호로 시험 → ⑤ 템플릿 심사 통과한 것부터 ALIGO_TPL_* 하나씩.
+>     확인은 `node tools/worker-check.mjs`. 사용자가 「붙였어」라고 하기 전엔 워커가 옛 판이라고 보고 움직일 것.
 >   🔵 **09-20 · 둘 더 — 질문 답변(qna) · 오답숙제(wrong)** (사용자 — 「질문 답변, 오답숙제는 하자」). 잣대는 «학생이 기다리던 답 /
 >     기한 있는 할 일»뿐 — 새 공지·새 영상은 안 붙인다(자주 오면 차단하고, 차단하면 숙제 알림도 못 간다). 단추가 아니라 **그 순간에
 >     저절로** — `submitAnswer` 뒤(실 단위 하루 한 번) · 공개하는 네 길(advanceBankStatus·fillEmptyFromStore·bankAskAccept·bookReqAccept)
