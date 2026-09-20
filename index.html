@@ -5333,7 +5333,7 @@ async function regenerateOneWithAI(bankId){
        것인지·워커가 옛 판인지가 여기서 갈린다. */
     const 까닭 = 마지막AI오류 || '까닭을 못 받았습니다';
     showToast('생성에 실패했습니다 — ' + 까닭
-      + (aiUpstreamKind(마지막AI오류) ? ' (Gemini 쪽이 엎어진 것입니다 — 조금 뒤에 다시 눌러주세요)' : '')
+      + aiUpstreamWhy(마지막AI오류)
       + (/Failed to fetch|NetworkError|Load failed/i.test(까닭) ? ' (워커가 답을 못 줬습니다 — 옛 판이거나 연결이 끊긴 것입니다)' : ''));
   }
   state.aiProcessing = false;
@@ -25944,12 +25944,11 @@ async function requestVariantForCode(code, engine){
     const twin = await generateTwinViaAI(body.content, body.answer, body.image || null, engine);
     if(!twin){
       const 까닭 = 마지막AI오류 || '까닭을 못 받았습니다';
-      const 위쪽 = aiUpstreamKind(마지막AI오류);
       /* 「Failed to fetch」는 워커가 «답을 아예 못 준» 것이다 — 터졌거나(CORS 머리 없는 1101 페이지) 연결이 끊긴 것.
          09-12에 실제로 겪었다: 워커 코드의 TDZ 로 매 호출이 터지면서 한 건씩 태웠다. 그 뒤로 워커는 터져도 JSON 으로 까닭을 주고 한도를 돌려준다. */
       const 못받음 = /Failed to fetch|NetworkError|Load failed/i.test(까닭);
       state.icAsk = { code, msg: `${code} — 만들지 못했습니다: ${까닭}`
-        + (위쪽 ? ' (Gemini 쪽이 엎어진 것입니다 — 우리 흠이 아니니 조금 뒤에 다시 눌러주세요)' : '')
+        + aiUpstreamWhy(마지막AI오류)   /* 하루 몫과 붐빔을 갈라 말한다 — 말은 한 곳에서 짓는다 */
         + (못받음 ? ' (워커가 답을 못 줬습니다 — 워커가 옛 판이거나 연결이 끊긴 것입니다. node tools/worker-check.mjs 로 판을 확인하세요)' : '') };
     }
     else if(twin.quotaExceeded){ state.icAsk = { code, msg:`오늘 몫(${AI_DAILY_LIMIT}건)을 다 썼습니다.` }; }
@@ -27207,6 +27206,19 @@ function aiUpstreamKind(말){
   const s = String(말 || '');
   if(/\b429\b|RESOURCE_EXHAUSTED|exceeded your current quota/i.test(s)) return 'rate';
   if(/\b50[034]\b|UNAVAILABLE|high demand|overloaded/i.test(s)) return 'busy';
+  return '';
+}
+/* 🔴 **«붐빔»과 «하루 몫»은 다른 일이다 — 한 줄로 뭉뚱그리지 않는다** (2026-09-21 · 실제로 받은 말 —
+     `워커 502 — gemini error — 429 … You exceeded your current quota`).
+   그런데 화면 둘이 다 「조금 뒤에 다시 눌러주세요」라고 했다. 하루 몫은 **날이 바뀌어야** 풀리는데,
+   그 말을 믿고 누르면 오늘 내내 실패하고 **누를 때마다 워커 몫만 탄다**(워커는 부르기 «전»에 센다).
+   🔵 그래서 «덧붙이는 말»을 여기 한 곳에서만 짓는다 — `autoFillTick` 은 쉬는 시간까지 갈라야 해서
+     제 말을 따로 쓴다(그쪽은 처음부터 갈라 놓았다). */
+function aiUpstreamWhy(말){
+  const k = aiUpstreamKind(말);
+  if(k === 'rate') return ' 🔴 구글의 하루 몫을 다 썼습니다 — 오늘은 몇 번을 눌러도 같습니다(워커 몫만 탑니다).'
+    + ' 내일 다시 해주세요. 글만 있는 문항이면 「Groq 로」 오늘도 만들 수 있습니다.';
+  if(k) return ' (Gemini 쪽이 붐비는 것입니다 — 우리 흠이 아니니 조금 뒤에 다시 눌러주세요)';
   return '';
 }
 const AUTOFILL_UPSTREAM_MAX = 5;      // 위쪽이 거듭 엎어지면 이만큼에서 멈춘다

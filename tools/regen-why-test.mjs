@@ -40,6 +40,8 @@ const 봄 = (무엇, 나온것, 나와야) => {
 };
 
 const 원문 = lift('async function regenerateOneWithAI(');
+/* 덧붙이는 말을 짓는 곳 — 화면 둘이 같이 쓴다 */
+const 말문 = lift('function aiUpstreamWhy(');
 
 /* 문 하나를 «진짜로» 돌린다 — 바깥것은 전부 가짜로 준다.
    돌려주는 것: 뜬 말들 · 워커를 불렀는가 · 한도를 물어봤는가 */
@@ -59,13 +61,14 @@ function 돌린다(원본, opts = {}){
     generateTwinViaAI: async () => { 본.워커++; return opts.twin || null; },
     applyTwinToBank: async () => {},
     followBankToQueue: () => {},
-    aiUpstreamKind: () => opts.upstream || '',
+    aiUpstreamKind: () => opts.upstream || '',   // «무슨 갈래인가»만 가짜로 — 말은 진짜를 쓴다
     마지막AI오류: opts.오류 || '',
   };
   delete stubs.bankOriginalSrc;
   const 이름 = Object.keys(stubs);
   const fn = new Function(...이름,
-    lift('function bankOriginal(') + NL + (opts.코드 || 원문) + NL + 'return regenerateOneWithAI;'
+    (opts.말코드 || 말문) + NL + lift('function bankOriginal(') + NL + (opts.코드 || 원문)
+      + NL + 'return regenerateOneWithAI;'
   )(...이름.map(k => stubs[k]));
   return fn(원본.문항.id).then(() => ({ 말, ...본 }));
 }
@@ -86,8 +89,14 @@ console.log(NL + '② 본문은 있는데 워커가 엎어졌을 때 — 까닭�
 const r2 = await 돌린다(본문있음, { 오류: '워커 502 — gemini error (SAFETY)' });
 봄('워커를 부른다', r2.워커, 1);
 봄('까닭이 화면에 뜬다', /gemini error \(SAFETY\)/.test(r2.말.join('')), true);
-const r3 = await 돌린다(본문있음, { 오류: '워커 429 — quota', upstream: 'rate' });
-봄('위쪽이 엎어진 것이면 그렇다고 덧붙인다', /Gemini 쪽이 엎어진/.test(r3.말.join('')), true);
+/* 🔴 «하루 한도»와 «붐빔»을 한 줄로 뭉뚱그리면 오늘 내내 헛손질을 시킨다 — 갈라 말하는가 */
+const r3 = await 돌린다(본문있음, { 오류: '워커 502 — gemini error — 429 exceeded your current quota', upstream: 'rate' });
+봄('하루 몫이면 «내일»이라고 말한다', /내일 다시/.test(r3.말.join('')), true);
+봄('오늘 갈 수 있는 다른 길도 적는다', /Groq/.test(r3.말.join('')), true);
+봄('하루 몫에 「조금 뒤에」라고 하지 않는다', /조금 뒤에/.test(r3.말.join('')), false);
+const r3b = await 돌린다(본문있음, { 오류: '워커 503 — overloaded', upstream: 'busy' });
+봄('붐비는 것이면 조금 뒤에 다시라고 한다', /붐비는 것입니다 —[^]*?조금 뒤에/.test(r3b.말.join('')), true);
+봄('붐빔에 「내일」이라고 하지 않는다', /내일 다시/.test(r3b.말.join('')), false);
 const r4 = await 돌린다(본문있음, { 오류: 'Failed to fetch' });
 봄('워커가 답을 못 준 것도 갈라 말한다', /옛 판이거나 연결이 끊긴/.test(r4.말.join('')), true);
 
@@ -122,7 +131,17 @@ await 재본다('까닭을 도로 버리면 화면에 안 보인다', async () =
   const r = await 돌린다(본문있음, { 코드: 버림, 오류: '워커 502 — gemini error (SAFETY)' });
   return /gemini error/.test(r.말.join(''));
 });
-console.log('  🪤 ' + 물음 + '/2 물었다');
+await 재본다('하루 몫과 붐빔을 도로 한 줄로 합치면 문다', async () => {
+  const 합침 = 말문.replace("k === 'rate'", 'false');
+  const r = await 돌린다(본문있음, { 말코드: 합침, 오류: '429 quota', upstream: 'rate' });
+  return /내일 다시/.test(r.말.join(''));
+});
+console.log('  🪤 ' + 물음 + '/3 물었다');
+
+console.log(NL + '④ 말은 «한 곳»에서만 짓는다 — 창고 화면도 같은 것을 쓴다');
+봄('창고 화면(`requestVariantForCode`)도 aiUpstreamWhy 를 쓴다',
+  lift('async function requestVariantForCode(').includes('aiUpstreamWhy(마지막AI오류)'), true);
+봄('「엎어진 것입니다」라는 뭉뚱그린 말이 안 남았다', html.includes('Gemini 쪽이 엎어진 것입니다'), false);
 
 console.log(NL + (fail ? '🔴 ' + fail + '개 틀렸다 · ' + pass + '개 통과'
                        : '✓ 전부 통과 · ' + pass + '개') + NL);
