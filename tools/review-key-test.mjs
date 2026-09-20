@@ -126,5 +126,45 @@ const bank = [{ id: 'pb1' }, { id: 'pb2' }];
     w.누름(-1); 봄('⚠ 맨 위에서 더 눌러도 안 튄다', w.지금(), 'K2-01-E-0001-N01');
   }
 }
+/* ═══ 손보고 난 뒤 «다음 것»으로 간다 (2026-09-20 · 사용자 —
+     「통과처리나 버리기 처리등 다른 처리를 했을때 다시 맨 위에 문제로 옮겨지는데」) ═══
+   🔴 `approveAutoVariant`·`discardAutoVariant` 가 `state.reviewVariantCode = ''` 로 고른 것을 비웠다.
+     비면 `reviewWalkCur` 가 **맨 위**를 집는다 — 큐를 비우는 화면에서 손이 매번 위로 튄다. */
+{
+  const N = (state, autos, bank) => new Function('state', 'pendingVariants', 'reviewQueueList',
+    lift('reviewWalkList') + NL2 + lift('reviewPickNext') + NL2 + lift('reviewSelectWalk')
+    + NL2 + 'return { reviewPickNext, reviewSelectWalk };')(state, () => autos, () => bank);
+  const st = { reviewQueue: 'pending', reviewVariantCode: '', reviewSelectedId: null };
+  const R = N(st, autos, bank);
+
+  봄('🔴 변형을 통과시키면 «그 다음» 변형으로 간다 (맨 위가 아니다)',
+     (R.reviewPickNext(true, 'K2-01-E-0001-N01') || {}).key, 'K2-01-E-0002-N01');
+  봄('🔴 마지막 변형이면 갈래를 넘어 시험지 문항으로 간다 — 목록이 한 줄이라서다',
+     (R.reviewPickNext(true, 'K2-01-E-0002-N01') || {}).key, 'pb1');
+  봄('🔴 맨 끝이면 «바로 앞»으로 물러선다 (빈 화면을 안 준다)',
+     (R.reviewPickNext(false, 'pb2') || {}).key, 'pb1');
+  봄('⚠ 목록에 없는 것을 물으면 null — 맨 위로 튀지 않고 아무것도 안 고른다',
+     R.reviewPickNext(true, '없는코드'), null);
+
+  R.reviewSelectWalk({ auto: true, key: 'K2-01-E-0002-N01' });
+  봄('   고르면 변형 쪽 칸에 들어간다', [st.reviewVariantCode, st.reviewSelectedId], ['K2-01-E-0002-N01', null]);
+  R.reviewSelectWalk({ auto: false, key: 'pb1' });
+  봄('   시험지 문항이면 반대 칸 — 두 칸이 동시에 차면 안 된다', [st.reviewVariantCode, st.reviewSelectedId], ['', 'pb1']);
+  R.reviewSelectWalk(null);
+  봄('   줄 것이 없으면 둘 다 비운다', [st.reviewVariantCode, st.reviewSelectedId], ['', null]);
+
+  /* 🔴 **빠지기 «전»에 불러야 한다** — 빠진 뒤에는 그 항목의 자리를 못 찾아 null 이 되고,
+       그러면 고치려던 증상(맨 위로 튐)이 그대로 돌아온다. 부르는 차례를 글로 확인한다. */
+  const 통과 = lift('approveAutoVariant'), 버리기 = lift('discardAutoVariant');
+  const 먼저부르나 = (몸) => 몸.indexOf('reviewPickNext') >= 0
+    && 몸.indexOf('reviewPickNext') < 몸.indexOf('dbSetDoc');
+  봄('🔴 통과는 저장 «전»에 다음 것을 정해 둔다', 먼저부르나(통과), true);
+  봄('🔴 버리기도 저장 «전»에 정해 둔다', 먼저부르나(버리기), true);
+  봄('🔴 통과가 고른 것을 그냥 비우지 않는다', /state\.reviewVariantCode = ''/.test(통과), false);
+  봄('🔴 버리기도 그냥 비우지 않는다', /state\.reviewVariantCode = ''/.test(버리기), false);
+  봄('🔴 시험지 문항 쪽(reviewAdvance)도 같은 목록을 본다 — 갈리면 또 어긋난다',
+     lift('reviewAdvance').includes('reviewPickNext(false, id)'), true);
+}
+
 console.log(NL2 + '  ' + (fail ? '🔴' : '✅') + ' ' + pass + ' 통과 · ' + fail + ' 실패' + NL2);
 process.exit(fail ? 1 : 0);

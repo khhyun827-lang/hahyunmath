@@ -133,5 +133,48 @@ console.log(NL + '④ ⚠ 망가뜨려 무는지 본다' + NL);
      H('c1', '2026-09-21'), null);
 }
 
+// ── ③ 옮긴 날의 «시간» (2026-09-20 · 사용자 요청) ───────────────────
+//   「다른날짜로 옮기는 경우에 시간도 기록하고 싶어」.
+//   🔴 여태 보강은 «원래 요일»의 시간표를 그대로 들고 갔다 — 목요일 수업을 토요일로 옮기면
+//     실제로는 오전에 하는데 달력은 저녁이라고 말했다. 옮긴 날은 대개 시간도 옮긴다.
+//   ⚠ 달력에 어떻게 그려지는가는 `student-calendar-test.mjs` 가 잰다. 여기는 «받아 적는 길»이다.
+console.log(NL + '③ 옮긴 날의 시간 — 받아 적고, 뜻 없는 자리에서는 막는다' + NL);
+{
+  const 칸 = {'od-date':'', 'od-move':'', 'od-move-time':'', 'od-label':''};
+  const 말 = [];
+  const 적힌것 = [];
+  const F = (값들) => {
+    Object.assign(칸, {'od-date':'', 'od-move':'', 'od-move-time':'', 'od-label':''}, 값들);
+    const state = {offDays:{days:[]}};
+    말.length = 0; 적힌것.length = 0;
+    const run = new Function('state', 'document', 'showToast', 'dbSet', 'logAudit', 'render',
+      'classNameOf',
+      lift('offDaysAll') + NL + lift('saveOffDay') + NL + 'return saveOffDay;')(
+      state,
+      { getElementById: (id) => (id in 칸 ? {value: 칸[id]} : null),
+        querySelectorAll: () => [] },
+      (t) => 말.push(t),
+      async (k, v) => { 적힌것.push(JSON.parse(JSON.stringify(v))); return true; },
+      async () => {}, () => {}, (c) => c);
+    return run().then(() => ({state, 말: 말.slice(), 적힌것: 적힌것.slice()}));
+  };
+
+  const a = await F({'od-date':'2026-09-21', 'od-move':'2026-09-23', 'od-move-time':'10:00~12:30'});
+  봄('🔵 옮긴 날의 시간이 그대로 적힌다',
+     ((a.적힌것[0]||{}).days||[])[0] && a.적힌것[0].days[0].moveTime, '10:00~12:30');
+  봄('   옮길 날도 함께 산다', a.적힌것[0].days[0].moveTo, '2026-09-23');
+
+  const b = await F({'od-date':'2026-09-21', 'od-move':'2026-09-23'});
+  봄('⚠ 안 적으면 빈 글자 — 화면이 원래 요일의 시간표로 물러선다', b.적힌것[0].days[0].moveTime, '');
+
+  /* 🔴 쉬기만 하는 날에 시간은 뜻이 없다. 조용히 버리면 「시간을 적었는데 왜 안 보이지」가 된다. */
+  const c = await F({'od-date':'2026-09-21', 'od-move-time':'10:00~12:30'});
+  봄('🔴 옮길 날 없이 시간만 적으면 «안 넣고» 까닭을 말한다', c.적힌것.length, 0);
+  봄('   그 말이 무엇이 틀렸는지 짚는다', /옮길 날/.test(c.말.join(' ')), true);
+
+  const d = await F({'od-date':'2026-09-21'});
+  봄('   시간을 안 적은 그냥 휴강은 그대로 들어간다', d.적힌것.length, 1);
+}
+
 console.log(`${NL}  ${fail ? '🔴' : '✅'} ${pass} 통과 · ${fail} 실패${NL}`);
 process.exit(fail ? 1 : 0);

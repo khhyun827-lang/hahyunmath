@@ -69,7 +69,8 @@ const 잣대 = ['VIDEO_DONE_RATIO', 'VIDEO_GOAL_PCT', 'VIDEO_DONE_SLACK_SEC', 'V
   return m[0];
 }).join(NL) + NL + ['videoGoalOfItem', 'videoItemById', 'videoGoalOfProgress',
   'coverLen', 'coverSec', 'videoDurationSec', 'videoWatchedSec', 'videoWatchRatio', 'videoDone',
-  'videoPct', 'videoSeen', 'secToClock', 'videoGoalLabel', 'videoGoalLabelOf', 'videoScore'].map(lift).join(NL);
+  'videoPct', 'videoSeen', 'secToClock', 'videoGoalLabel', 'videoGoalLabelOf', 'videoScore',
+  'videoCounted'].map(lift).join(NL);
 const api = new Function(...Object.keys(곁),
   잣대 + NL + lift('stuDday') + NL + lift('stuTodo') + NL + lift('setVideoDue') + NL + 'return { stuDday, stuTodo, setVideoDue };'
 )(...Object.values(곁));
