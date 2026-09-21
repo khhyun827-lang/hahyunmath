@@ -44,7 +44,7 @@ const TWIN_GROQ_MAX_TOKENS = 7000;   // 추론 + JSON. 검토(6000)보다 답이
 /* 🔴 «올렸는지 짐작하지 않는다» — 이 워커는 대시보드에 붙여넣어 올리므로 밖에서는 어느 판이 도는지
    알 길이 없었다(2026-09-11에 사용자가 올리고 「도는지 확인은 못 해봤어」). /quota 가 이 값을 같이
    돌려주고 tools/worker-check.mjs 가 저장소의 값과 견준다. **프롬프트나 규칙을 바꾸면 이 날짜를 올릴 것.** */
-const WORKER_VERSION = '2026-09-21c';
+const WORKER_VERSION = '2026-09-21d';
 // 이미지 업로드는 학생도 쓴다(질의응답 사진). 비용이 드는 쪽은 Gemini라 여기는 넉넉하게,
 // 다만 «한 명이 무한히»는 막는다. 전체 상한은 걸지 않는다 — 걸면 바쁜 날 학생이 막힌다.
 const UPLOAD_PER_USER_DAILY = 200;
@@ -303,7 +303,9 @@ const NOTIFY_TPL = { hw: 'ALIGO_TPL_HW', vid: 'ALIGO_TPL_VID', qna: 'ALIGO_TPL_Q
      IP 라고 단언은 못 하지만, 같은 데이터센터의 같은 대역일 확률이 높다. */
 /* ⚠ 09-21b 는 api.ipify.org 하나만 불렀고 빈 배열이 왔다(IPv6 로 붙었거나 막힌 것). IPv4 만 주는 곳 셋을 차례로 묻고,
    무엇이 왔는지(`raw`)도 남긴다 — 한 번 붙여넣을 때마다 강사 손이 가므로 «왜 안 됐나»까지 한 번에 보여야 한다. */
-const EGRESS_ECHOES = ['https://api4.ipify.org', 'https://ipv4.icanhazip.com', 'https://ifconfig.me/ip'];
+/* 🔴 **Cloudflare 위에 있는 곳(icanhazip·ipify)에 물으면 안쪽 길로 가서 다른 IP 가 보일 수 있다.** 알리고는 바깥 서버다 —
+   바깥에 있는 곳(AWS checkip)에 먼저 묻는다. api4.ipify 는 IPv6 로 답했다(09-21c 실측). */
+const EGRESS_ECHOES = ['https://checkip.amazonaws.com', 'https://ifconfig.me/ip', 'https://ipv4.icanhazip.com'];
 async function egressProbe(i) {
   const out = { ip: '', raw: '', err: '' };
   for (const base of EGRESS_ECHOES) {
