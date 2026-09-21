@@ -46,7 +46,10 @@ console.log('워커 리포트 MMS 길 — 막이가 제자리에 있는가\n');
 
 {
   /* 번호 읽기는 알림톡과 한 함수(readContact)로 합쳐져 위쪽에 산다 — 함께 떠 온다 (2026-09-21) */
-  const 몸 = 몸떠내기(worker, 'readContact') + String.fromCharCode(10) + 몸떠내기(worker, 'readContactParentPhone') + String.fromCharCode(10)
+  /* 발송 길이 지나는 것들을 함께 떠 온다 — 번호 읽기·중계 갈림(aligoTarget)·-101 IP 안내(whyWithEgress · 나가는 IP 재기는 가짜) */
+  const 함수떠내기 = (이름) => { const at = worker.indexOf('function ' + 이름 + '('); let d = 0; for (let j = worker.indexOf('{', at); j < worker.length; j++) { if (worker[j] === '{') d++; else if (worker[j] === '}') { d--; if (!d) return worker.slice(at, j + 1); } } };
+  const 몸 = [몸떠내기(worker, 'readContact'), 몸떠내기(worker, 'readContactParentPhone'), 함수떠내기('aligoTarget'), 몸떠내기(worker, 'whyWithEgress'),
+    'const egressIp = async () => "";'].join(String.fromCharCode(10)) + String.fromCharCode(10)
     + worker.slice(worker.indexOf('const REPORT_MMS_DAILY_LIMIT'), worker.indexOf('async function handleAdminResetPw('));
   const 보낸것 = [];
   const kv = new Map();
@@ -119,6 +122,19 @@ console.log('워커 리포트 MMS 길 — 막이가 제자리에 있는가\n');
   const C = 만들기({}, 404);
   봄('   문서가 없으면 빈 글자 (no_phone 으로 간다)', await C.readContactParentPhone(env, 'k'), '');
   봄('🔴 판을 올렸다 (09-19 판은 no_phone 을 낸다)', (worker.match(/WORKER_VERSION = '([^']+)'/) || [])[1] > '2026-09-21', true);
+}
+
+/* 🔴 **고정 IP 중계** (2026-09-21) — ALIGO_RELAY 가 있으면 그리로, 없으면 직접. 열쇠는 머리에. */
+{
+  const at = worker.indexOf('function aligoTarget(');
+  let 깊이 = 0, end = at;
+  for (let j = worker.indexOf('{', at); j < worker.length; j++) { if (worker[j] === '{') 깊이++; else if (worker[j] === '}') { 깊이--; if (!깊이) { end = j + 1; break; } } }
+  const T = new Function(worker.slice(at, end) + '; return aligoTarget;')();
+  봄('   중계가 없으면 알리고를 직접 부른다', T({}, 'sms', '/send/'), { url: 'https://apis.aligo.in/send/', headers: {} });
+  봄('🔴 중계가 있으면 /sms·/kakao 로 갈라 보내고 열쇠를 머리에 단다',
+    [T({ ALIGO_RELAY: 'https://1.2.3.4.sslip.io/', ALIGO_RELAY_KEY: 'k1' }, 'sms', '/send/'), T({ ALIGO_RELAY: 'https://r', ALIGO_RELAY_KEY: 'k1' }, 'kakao', '/akv10/alimtalk/send/').url],
+    [{ url: 'https://1.2.3.4.sslip.io/sms/send/', headers: { 'X-Relay-Key': 'k1' } }, 'https://r/kakao/akv10/alimtalk/send/']);
+  봄('   두 발송 길이 다 aligoTarget 을 지난다', (worker.match(/aligoTarget\(env, '(sms|kakao)'/g) || []).length, 2);
 }
 
 console.log('\n  ' + (틀림 ? '🔴 ' : '✅ ') + 통과 + ' 통과 · ' + 틀림 + ' 실패');

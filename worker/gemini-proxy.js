@@ -44,7 +44,7 @@ const TWIN_GROQ_MAX_TOKENS = 7000;   // 추론 + JSON. 검토(6000)보다 답이
 /* 🔴 «올렸는지 짐작하지 않는다» — 이 워커는 대시보드에 붙여넣어 올리므로 밖에서는 어느 판이 도는지
    알 길이 없었다(2026-09-11에 사용자가 올리고 「도는지 확인은 못 해봤어」). /quota 가 이 값을 같이
    돌려주고 tools/worker-check.mjs 가 저장소의 값과 견준다. **프롬프트나 규칙을 바꾸면 이 날짜를 올릴 것.** */
-const WORKER_VERSION = '2026-09-21d';
+const WORKER_VERSION = '2026-09-21e';
 // 이미지 업로드는 학생도 쓴다(질의응답 사진). 비용이 드는 쪽은 Gemini라 여기는 넉넉하게,
 // 다만 «한 명이 무한히»는 막는다. 전체 상한은 걸지 않는다 — 걸면 바쁜 날 학생이 막힌다.
 const UPLOAD_PER_USER_DAILY = 200;
@@ -319,10 +319,22 @@ async function egressProbe(i) {
   return out;
 }
 async function egressIp(i) { return (await egressProbe(i)).ip; }
-async function whyWithEgress(why) {
+async function whyWithEgress(env, why) {
   if (!/-101/.test(why) || !/IP/i.test(why)) return why;
+  if (env && env.ALIGO_RELAY) return why + ' (중계를 거쳤습니다 — 중계 서버의 IP 가 알리고 발신 IP 에 등록돼 있는지 보세요)';
   const ip = await egressIp(0);
   return why + (ip ? ' (나간 IP ' + ip + ' — 알리고 발신 IP 에 ' + ip.replace(/\.\d+$/, '.*') + ' 대역을 등록)' : '');
+}
+/* 🔴 **알리고는 등록된 IP 만 받는데 Cloudflare 워커는 IP 가 고정이 아니다** (2026-09-21 · 532번 재어 14개 대역을 등록했는데
+     다음 호출은 전부 다른 대역이었다 — 데이터센터가 바뀌면 풀이 통째로 바뀐다. 대역 등록은 길이 아니다).
+   ⇒ **고정 IP 중계**를 거친다 (worker/relay — Oracle 상시무료 VM 위의 Caddy 20줄). 알리고엔 그 IP 하나만 등록한다.
+   Secret 둘 — `ALIGO_RELAY`(예 https://1.2.3.4.sslip.io) · `ALIGO_RELAY_KEY`(중계와 맞춘 열쇠). 없으면 예전처럼 직접 부른다(그러면 -101 IP).
+   중계는 열쇠를 확인한 뒤 `/sms/*` → apis.aligo.in, `/kakao/*` → kakaoapi.aligo.in 으로 몸통을 그대로 넘긴다. */
+function aligoTarget(env, which, path) {
+  const direct = which === 'sms' ? 'https://apis.aligo.in' : 'https://kakaoapi.aligo.in';
+  if (!env.ALIGO_RELAY) return { url: direct + path, headers: {} };
+  return { url: String(env.ALIGO_RELAY).replace(/\/+$/, '') + '/' + which + path,
+           headers: { 'X-Relay-Key': env.ALIGO_RELAY_KEY || '' } };
 }
 /* POST /admin/egress-ip { n } → { ips:[…], ranges:[…] } — 강사만. n 번(≤20) 재어 `1.2.3.*` 대역으로 모아 준다. */
 async function handleEgressIp(request, env, corsHeaders, callerUid) {
@@ -411,14 +423,15 @@ async function handleNotify(request, env, corsHeaders, callerUid) {
     });
     let res;
     try {
-      const r = await fetch('https://kakaoapi.aligo.in/akv10/alimtalk/send/', { method: 'POST', body: form });
+      const t = aligoTarget(env, 'kakao', '/akv10/alimtalk/send/');
+      const r = await fetch(t.url, { method: 'POST', body: form, headers: t.headers });
       res = await r.json();
     } catch (e) { res = { code: -1, message: String((e && e.message) || e).slice(0, 120) }; }
     if (Number(res.code) === 0) {
       out.ok = true;
       if (env.QUOTA) await env.QUOTA.put(sentKey, '1', ttl);
     } else {
-      out.why = await whyWithEgress('aligo ' + res.code + ' ' + (res.message || ''));
+      out.why = await whyWithEgress(env, 'aligo ' + res.code + ' ' + (res.message || ''));
       try { await refundQuota(env, 'notify', callerUid); } catch (_) {}   // 안 나간 것은 안 센다
     }
   }
@@ -473,7 +486,8 @@ async function handleReportMms(request, env, corsHeaders, callerUid) {
   fd.append('image', new Blob([bytes], { type: 'image/jpeg' }), 'report.jpg');
   let res;
   try {
-    const r = await fetch('https://apis.aligo.in/send/', { method: 'POST', body: fd });
+    const t = aligoTarget(env, 'sms', '/send/');
+    const r = await fetch(t.url, { method: 'POST', body: fd, headers: t.headers });
     res = await r.json();
   } catch (e) { res = { result_code: -1, message: String((e && e.message) || e).slice(0, 120) }; }
   if (Number(res.result_code) === 1) {
@@ -481,7 +495,7 @@ async function handleReportMms(request, env, corsHeaders, callerUid) {
     return adminJson({ ok: true, why: '' }, corsHeaders);
   }
   try { await refundQuota(env, 'report', callerUid); } catch (_) {}
-  return adminJson({ ok: false, why: await whyWithEgress('aligo ' + res.result_code + ' ' + (res.message || '')) }, corsHeaders);
+  return adminJson({ ok: false, why: await whyWithEgress(env, 'aligo ' + res.result_code + ' ' + (res.message || '')) }, corsHeaders);
 }
 
 /* 비밀번호 재설정 — { email } 또는 { uid } 와 { password } */
