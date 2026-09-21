@@ -46,36 +46,39 @@ console.log('워커 알림톡 길 — 막이가 제자리에 있는가\n');
   봄('🔴 /notify 는 AI 한도(catch-all)에서 빠져 있다', /url\.pathname !== '\/notify'/.test(worker), true);
   봄('🔴 라우팅에 /notify 가 있다', /url\.pathname === '\/notify'\) return handleNotify\(/.test(worker), true);
   봄('🔴 번호는 화면이 준 것을 안 쓴다 — items 에 phone 을 읽는 자리가 없다', /it\.phone|item\.phone/.test(몸), false);
-  봄('   비밀 넷 + 그 종류의 템플릿만 본다', ['ALIGO_APIKEY', 'ALIGO_USERID', 'ALIGO_SENDERKEY', 'ALIGO_SENDER']
+  봄('   비밀 넷 + 그 종류의 템플릿만 본다', ['SOLAPI_API_KEY', 'SOLAPI_API_SECRET', 'SOLAPI_SENDER', 'SOLAPI_PFID']
     .every((k) => 몸.includes("'" + k + "'")) && /NOTIFY_TPL\[kind\]/.test(몸), true);
   봄('🔵 이 문은 조교도 지난다 — 다른 관리자 길은 강사만', /adminGate\(request, env, corsHeaders, callerUid, isTeacherOrStaff\)/.test(몸)
     && !/isTeacherOrStaff/.test(몸떠내기(worker, 'handleAdminResetPw')), true);
   봄('   조교 판단도 규칙과 같은 문서(staff/{uid})', /documents\/staff\//.test(몸떠내기(worker, 'isTeacherOrStaff')), true);
 }
 
-/* ── ② 돌려서 잰다 — 가짜 알리고·가짜 contacts ───────────────── */
+/* ── ② 돌려서 잰다 — 가짜 솔라피·가짜 contacts ───────────────── */
 {
   const 몸 = worker.slice(worker.indexOf('const NOTIFY_DAILY_LIMIT'), worker.indexOf('async function handleAdminResetPw('));
   const 보낸것 = [];
   const kv = new Map();
   const env = {
     FIREBASE_SA: '{}', QUOTA: { get: async (k) => kv.get(k) || null, put: async (k, v) => { kv.set(k, v); } },
-    ALIGO_APIKEY: 'k', ALIGO_USERID: 'u', ALIGO_SENDERKEY: 's', ALIGO_SENDER: '01000000000', ALIGO_TPL_HW: 'hw_01', ALIGO_TPL_VID: 'vid_01',
-    ALIGO_TPL_QNA: 'qna_01',
+    SOLAPI_API_KEY: 'k', SOLAPI_API_SECRET: 's', SOLAPI_SENDER: '01000000000', SOLAPI_PFID: 'pf1',
+    SOLAPI_TPL_HW: 'hw_01', SOLAPI_TPL_VID: 'vid_01', SOLAPI_TPL_QNA: 'qna_01',
   };
+  /* 화면이 쓰는 꼴 — 번호는 fields.value 안 JSON (09-21 에 이걸 몰라 no_phone 이 났다) */
   const 번호들 = { U1: '010-1111-2222', U2: '', U3: '010-3333-4444' };
+  const 헤더들 = [];
   const 만들기 = () => new Function(
-    'env', 'fetch', 'adminGate', 'adminJson', 'quotaDay', 'bumpQuota', 'refundQuota', 'getServiceAccountToken', 'JSON',
+    'env', 'fetch', 'adminGate', 'adminJson', 'quotaDay', 'bumpQuota', 'refundQuota', 'getServiceAccountToken', 'JSON', 'crypto',
     몸 + '; return handleNotify;')(
     env,
     async (url, opt) => {
-      if (/kakaoapi\.aligo\.in/.test(url)) {
-        const f = Object.fromEntries(new URLSearchParams(opt.body));
-        보낸것.push(f);
-        return { json: async () => (f.receiver_1 === '01033334444' ? { code: -101, message: '번호 오류' } : { code: 0, message: '성공' }) };
+      if (/api\.solapi\.com\/messages\/v4\/send-many\/detail/.test(url)) {
+        const m = JSON.parse(opt.body).messages[0];
+        보낸것.push(m); 헤더들.push(opt.headers.Authorization);
+        const failed = m.to === '01033334444' ? [{ to: m.to, statusCode: '1011', statusMessage: '수신번호 오류' }] : [];
+        return { status: 200, json: async () => ({ groupInfo: { count: { total: 1 } }, failedMessageList: failed }) };
       }
       const key = decodeURIComponent(url.split('/contacts/')[1]);
-      return { status: 200, json: async () => ({ fields: { phone: { stringValue: 번호들[key] || '' } } }) };
+      return { status: 200, json: async () => ({ fields: { value: { stringValue: JSON.stringify({ phone: 번호들[key] || '' }) } } }) };
     },
     async (request) => ({ body: await request.json() }),
     (obj, ch, status) => ({ 몸통: obj, status: status || 200 }),
@@ -83,43 +86,44 @@ console.log('워커 알림톡 길 — 막이가 제자리에 있는가\n');
     async () => ({ ok: true, used: 1 }),
     async () => {},
     async () => 'tok',
-    JSON,
+    JSON, globalThis.crypto,
   );
   const 부르기 = (body) => 만들기()({ json: async () => body }, env, {}, 'T1');
+  const 변수 = { '#{학생명}': '철수', '#{과제명}': '3단원', '#{마감일}': '2026-09-20' };
 
   const r1 = await 부르기({ kind: 'hw', id: 'A1', items: [
-    { key: 'U1', message: '[김하현수학연구소]\n철수 학생…' },
-    { key: 'U2', message: '…' },
-    { key: 'U3', message: '…' },
+    { key: 'U1', vars: 변수, message: '[김하현수학연구소]\n철수 학생…' },
+    { key: 'U2', vars: 변수, message: '…' },
+    { key: 'U3', vars: 변수, message: '…' },
   ] });
   const 결과 = r1.몸통.results.map((x) => [x.key, x.ok, x.why.split(' ')[0]]);
-  봄('🔵 부분 실패를 사람마다 돌려준다 — 보냄 · 번호 없음 · 알리고 거절', 결과,
-    [['U1', true, ''], ['U2', false, 'no_phone'], ['U3', false, 'aligo']]);
+  봄('🔵 부분 실패를 사람마다 돌려준다 — 보냄 · 번호 없음 · 솔라피 거절', 결과,
+    [['U1', true, ''], ['U2', false, 'no_phone'], ['U3', false, 'solapi']]);
   봄('   sent 는 성공한 수다', r1.몸통.sent, 1);
-  봄('🔴 번호는 contacts 에서 읽어 숫자만 보낸다', 보낸것[0].receiver_1, '01011112222');
-  봄('   템플릿은 kind 대로 고른다', 보낸것[0].tpl_code, 'hw_01');
-  봄('   문안은 화면이 준 것 그대로', 보낸것[0].message_1, '[김하현수학연구소]\n철수 학생…');
-  봄('   실패 시 문자 대체발송을 켠다', [보낸것[0].failover, boolean(보낸것[0].fmessage_1)], ['Y', true]);
-  봄('   버튼은 웹링크 하나, 주소는 학생 홈', JSON.parse(보낸것[0].button_1).button.map((b) => [b.name, b.linkType, b.linkMo]),
-    [['제출하기', 'WL', 'https://khhyun827-lang.github.io/hahyunmath/index.html#student/home']]);
-  봄('   번호 없는 사람에게는 알리고를 안 부른다', 보낸것.length, 2);
+  봄('   거절 까닭은 솔라피의 코드·말 그대로', r1.몸통.results[2].why, 'solapi 1011 수신번호 오류');
+  봄('🔴 번호는 contacts(fields.value 안 JSON)에서 읽어 숫자만 보낸다', 보낸것[0].to, '01011112222');
+  봄('   발신번호·채널·템플릿은 비밀에서, 템플릿은 kind 대로', [보낸것[0].from, 보낸것[0].kakaoOptions.pfId, 보낸것[0].kakaoOptions.templateId], ['01000000000', 'pf1', 'hw_01']);
+  봄('🔴 문안이 아니라 «변수»를 보낸다 — 솔라피가 템플릿으로 짓는다', [보낸것[0].kakaoOptions.variables, 보낸것[0].text], [변수, undefined]);
+  봄('   문자 대체발송을 끄지 않는다 (disableSms 없음)', 보낸것[0].kakaoOptions.disableSms, undefined);
+  봄('🔴 HMAC-SHA256 서명 머리 — apiKey · date · salt · signature(64 hex)', /^HMAC-SHA256 apiKey=k, date=\d{4}-\d\d-\d\dT[\d:.]+Z, salt=[0-9a-f]{32}, signature=[0-9a-f]{64}$/.test(헤더들[0]), true);
+  봄('   번호 없는 사람에게는 솔라피를 안 부른다', 보낸것.length, 2);
 
-  const r2 = await 부르기({ kind: 'hw', id: 'A1', items: [{ key: 'U1', message: '…' }] });
+  const r2 = await 부르기({ kind: 'hw', id: 'A1', items: [{ key: 'U1', vars: 변수 }] });
   봄('🔴 같은 날 같은 과제·같은 학생은 두 번 안 간다', [r2.몸통.results[0].why, 보낸것.length], ['already', 2]);
-  const r3 = await 부르기({ kind: 'vid', id: 'A1', message: '…', items: [{ key: 'U1', message: '…' }] });
-  봄('   다른 종류(강의)면 따로 센다', [r3.몸통.results[0].ok, 보낸것[2].tpl_code, JSON.parse(보낸것[2].button_1).button[0].name],
-    [true, 'vid_01', '강의보기']);
+  const r3 = await 부르기({ kind: 'vid', id: 'A1', items: [{ key: 'U1', vars: { '학생명': '철수' } }] });
+  봄('   다른 종류(강의)면 따로 센다 · 이름만 온 변수도 #{…} 로 감싼다', [r3.몸통.results[0].ok, 보낸것[2].kakaoOptions.templateId, 보낸것[2].kakaoOptions.variables],
+    [true, 'vid_01', { '#{학생명}': '철수' }]);
 
-  const r4 = await 부르기({ kind: 'sms', id: 'A1', items: [{ key: 'U1', message: '…' }] });
+  const r4 = await 부르기({ kind: 'sms', id: 'A1', items: [{ key: 'U1', vars: 변수 }] });
   봄('   모르는 kind 는 400', r4.status, 400);
-  const r6 = await 부르기({ kind: 'qna', id: 'Q1', items: [{ key: 'U1', message: '…' }] });
-  봄('   질문 답변(qna)도 간다 — 템플릿·버튼은 제 것', [r6.몸통.results[0].ok, 보낸것[3].tpl_code, JSON.parse(보낸것[3].button_1).button[0].name],
-    [true, 'qna_01', '확인하기']);
-  const r7 = await 부르기({ kind: 'wrong', id: '2026-09-19', items: [{ key: 'U1', message: '…' }] });
-  봄('🔴 심사 안 끝난 템플릿(wrong)만 503 — 다른 알림은 막히지 않는다', [r7.status, r7.몸통.detail], [503, '워커 비밀이 없습니다: ALIGO_TPL_WRONG']);
-  const r5 = await 부르기({ kind: 'hw', id: 'A1', items: Array.from({ length: 51 }, () => ({ key: 'U1', message: '…' })) });
+  const r8 = await 부르기({ kind: 'qna', id: 'Q0', items: [{ key: 'U1', message: '변수 없이 옛 꼴' }] });
+  봄('   변수가 없으면 bad_item (옛 화면이 문안만 보내면 안 나간다)', r8.몸통.results[0].why, 'bad_item');
+  const r6 = await 부르기({ kind: 'qna', id: 'Q1', items: [{ key: 'U1', vars: { '#{학생명}': '철수', '#{질문}': '왜요' } }] });
+  봄('   질문 답변(qna)도 간다 — 템플릿은 제 것', [r6.몸통.results[0].ok, 보낸것[3].kakaoOptions.templateId], [true, 'qna_01']);
+  const r7 = await 부르기({ kind: 'wrong', id: '2026-09-19', items: [{ key: 'U1', vars: 변수 }] });
+  봄('🔴 심사 안 끝난 템플릿(wrong)만 503 — 다른 알림은 막히지 않는다', [r7.status, r7.몸통.detail], [503, '워커 비밀이 없습니다: SOLAPI_TPL_WRONG']);
+  const r5 = await 부르기({ kind: 'hw', id: 'A1', items: Array.from({ length: 51 }, () => ({ key: 'U1', vars: 변수 })) });
   봄('   한 번에 ' + 상수('NOTIFY_PER_CALL') + '명까지', r5.status, 400);
-  function boolean(x) { return !!x; }
 }
 
 /* ── ③ 화면 쪽 ───────────────────────────────────────────────── */
@@ -128,9 +132,10 @@ console.log('워커 알림톡 길 — 막이가 제자리에 있는가\n');
   봄('   잠긴 단추(«아직 연결되지 않았습니다»)는 남아 있지 않다', /아직 연결되지 않았습니다/.test(html), false);
   봄('   답의 까닭을 사람 말로 옮긴다', /already:'오늘 이미 보냄'/.test(html) && /no_phone:'번호 없음'/.test(html), true);
   봄('   보내기 전에 묻는다 — 문자 요금이 나간다', /confirm\(items\.length \+ '명에게 카카오톡 알림을 보냅니다/.test(html), true);
-  봄('🔴 옛 워커면 새 길을 안 부른다 — catch-all 이 AI 한도를 태운다', /if\(!\(await notifyWorkerReady\(\)\)\)/.test(html.slice(html.indexOf('async function notifyPost'), html.indexOf('async function notifyPost')+400)) && /NOTIFY_WORKER_MIN = '2026-09-19a'/.test(html), true);
-  const 버튼 = html.match(/NOTIFY_BUTTON|sendNotice\('hw'/g) || [];
-  봄('   워커 버튼 이름이 안내서와 같다', [상수('NOTIFY_BUTTON')], ["{ hw: '제출하기', vid: '강의보기', qna: '확인하기', wrong: '풀러가기' }"]);
+  봄('🔴 옛 워커면 새 길을 안 부른다 — catch-all 이 AI 한도를 태운다 · 솔라피 판(22a)부터', /if\(!\(await notifyWorkerReady\(\)\)\)/.test(html.slice(html.indexOf('async function notifyPost'), html.indexOf('async function notifyPost')+400)) && /NOTIFY_WORKER_MIN = '2026-09-22a'/.test(html), true);
+  봄('🔴 화면은 워커에 vars 를 실어 보낸다 (솔라피는 변수를 받는다)', /items\.map\(\(\{key, vars, message\}\) => \(\{key, vars, message\}\)\)/.test(html), true);
+  봄('   네 문안이 다 «변수 → 글» 한 길로 지어진다', ['hw', 'vid', 'qna', 'wrong'].every(k => new RegExp('function ' + k + 'NoticeText\\([^)]*\\)\\{ return fillNotice\\(').test(html)), true);
+  봄('   보내는 세 자리가 다 vars 를 싣는다', (html.match(/vars:\s+kind === 'hw' \? hwNoticeVars|vars: qnaNoticeVars\(|vars: wrongNoticeVars\(/g) || []).length, 3);
 }
 
 /* ── ④ 오답숙제 «풀 수 있게 된 순간» — 실제로 돌려 본다 ───────── */
@@ -155,7 +160,7 @@ console.log('워커 알림톡 길 — 막이가 제자리에 있는가\n');
   } };
   const 나간것 = [];
   const F = new Function('DATA', 'state', 'wrongHomeworkLeft', 'examTitleOf', 'todayStr', 'notifyAuto', 'isWithdrawn', 'studentKeyOfSid', 'notifyPost', 'showToast', 'notifyWhy',
-    lift('wrongNoticeText') + '\n' + lift('notifyWrongReady') + '\n' + lift('notifyAuto') + '\n'
+    lift('fillNotice') + '\n' + lift('wrongNoticeVars') + '\n' + lift('wrongNoticeText') + '\n' + lift('notifyWrongReady') + '\n' + lift('notifyAuto') + '\n'
     + 'const WRONG_NOTICE_TEMPLATE = ' + JSON.stringify(html.match(/const WRONG_NOTICE_TEMPLATE =\n`([^`]*)`/)[1]) + ';\n'
     + 'return { notifyWrongReady, notifyAuto };')(
     DATA, state,
@@ -170,6 +175,7 @@ console.log('워커 알림톡 길 — 막이가 제자리에 있는가\n');
     나간것.map(n => [n.kind, n.id, n.items.map(i => i.key)]), [['wrong', '2026-09-20', ['uid-s1']]]);
   봄('   문안에는 출처와 «지금 풀 수 있는 문항 수»', 나간것[0].items[0].message,
     '[김하현수학연구소]\n가 학생, 새 오답숙제가 나왔습니다.\n출처: 9월 모의고사\n풀 수 있는 문항: 2개\n앱 학습 > 오답숙제에서 풀 수 있습니다.');
+  봄('   변수도 같이 간다 — 솔라피가 이걸로 짓는다', 나간것[0].items[0].vars, { '#{학생명}': '가', '#{출처}': '9월 모의고사', '#{문항수}': '2' });
   봄('   공개하는 네 길이 다 부른다', (html.match(/notifyWrongReady\(/g) || []).length, 5);   // 정의 1 + advanceBankStatus · fillEmptyFromStore · bookReqAccept · bankAskAccept
 }
 

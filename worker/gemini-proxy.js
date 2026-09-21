@@ -44,7 +44,7 @@ const TWIN_GROQ_MAX_TOKENS = 7000;   // 추론 + JSON. 검토(6000)보다 답이
 /* 🔴 «올렸는지 짐작하지 않는다» — 이 워커는 대시보드에 붙여넣어 올리므로 밖에서는 어느 판이 도는지
    알 길이 없었다(2026-09-11에 사용자가 올리고 「도는지 확인은 못 해봤어」). /quota 가 이 값을 같이
    돌려주고 tools/worker-check.mjs 가 저장소의 값과 견준다. **프롬프트나 규칙을 바꾸면 이 날짜를 올릴 것.** */
-const WORKER_VERSION = '2026-09-21e';
+const WORKER_VERSION = '2026-09-22a';
 // 이미지 업로드는 학생도 쓴다(질의응답 사진). 비용이 드는 쪽은 Gemini라 여기는 넉넉하게,
 // 다만 «한 명이 무한히»는 막는다. 전체 상한은 걸지 않는다 — 걸면 바쁜 날 학생이 막힌다.
 const UPLOAD_PER_USER_DAILY = 200;
@@ -138,7 +138,6 @@ export default {
        학생도 토큰이 있으니 이 주소를 그대로 부를 수 있다. */
     if (url.pathname === '/admin/reset-pw') return handleAdminResetPw(request, env, corsHeaders, who.uid);
     if (url.pathname === '/admin/delete-user') return handleAdminDeleteUser(request, env, corsHeaders, who.uid);
-    if (url.pathname === '/admin/egress-ip') return handleEgressIp(request, env, corsHeaders, who.uid);
     if (url.pathname === '/notify') return handleNotify(request, env, corsHeaders, who.uid);
     if (url.pathname === '/report-mms') return handleReportMms(request, env, corsHeaders, who.uid);
     /* 🔴 **터져도 한도는 돌려주고, 까닭은 CORS 머리를 달고 나간다** (2026-09-12).
@@ -270,81 +269,62 @@ async function adminGate(request, env, corsHeaders, uid, who) {
   return { body };
 }
 
-/* =================== 알림톡 (2026-09-19 · N-1 숙제 · N-2 강의) =====================================
-   알리고 알림톡 — POST kakaoapi.aligo.in/akv10/alimtalk/send/ (form-urlencoded). 실패 시 SMS 대체발송(failover).
-   🔴 **강사만 부른다** (adminGate — teachers/{uid}). 돈이 나가고 학생에게 도달한다.
-   🔵 **번호는 화면이 보낸 것을 안 믿는다** — `contacts/{key}.phone` 을 워커가 읽는다. 화면의 명단은 «누구에게»(key)뿐이다.
-     그래서 이 주소로는 아무 번호에나 보낼 수 없다 — 우리 학생 문서에 적힌 번호로만 간다.
-   🔵 **문안은 화면이 채워 보낸다.** 심사받은 템플릿과 한 글자라도 다르면 알리고가 거절한다 — 그것이 검사다.
-     워커가 문안을 한 벌 더 들면 index.html 의 `HW_NOTICE_TEMPLATE` 과 갈린다.
-   🔵 **한 사람에 한 요청.** 알리고의 묶음 응답은 «몇 건 성공/실패»만 주고 누가 실패했는지는 안 준다.
-     「5명 중 4명 성공 · 1명 번호 오류」를 그대로 돌려주려면 이렇게 해야 한다. 학생 수십 명이라 요청 수는 문제가 아니다.
+/* =================== 알림톡 · 문자 — Solapi (2026-09-22) =====================================
+   🔴 **왜 알리고에서 솔라피로 옮겼나** (09-21~22). 알리고 API 는 «등록된 발신 IP» 만 받는다(-101 -IP). Cloudflare 워커는
+     나가는 IP 가 고정이 아니다 — 532번 재어 14개 대역을 등록했는데 다음 호출은 전부 다른 대역이었고, 알리고 화면은 /24 만 받는다.
+     고정 IP 중계(Oracle VM)를 세우려다 가입 카드 심사에서 막혔다. 솔라피는 **IP 인증이 없다** — API 키 + HMAC 서명이라 어디서 부르든 된다.
+     서버리스에 맞는 쪽이 이것이다. 알리고에서 받은 템플릿 심사는 헛것이 됐고, 솔라피에 같은 문안을 다시 올린다.
+   🔴 **강사만 부른다** (adminGate — teachers/{uid} · 알림은 조교도). 돈이 나가고 학생에게 도달한다.
+   🔵 **번호는 화면이 보낸 것을 안 믿는다** — `contacts/{key}` 를 워커가 읽는다. 화면의 명단은 «누구에게»(key)뿐이다.
+   🔵 **문안은 템플릿 + 변수다.** 솔라피는 templateId 와 `variables`(`#{학생명}` …)를 받아 제 쪽에서 문안을 짓는다 —
+     화면은 `vars` 를 보낸다(`message` 는 사람이 읽을 사본·검사용). 템플릿의 변수 이름은 index.html 의 `*_NOTICE_TEMPLATE` 과 같아야 한다.
+     버튼은 템플릿에 등록된 것이 그대로 나간다(보낼 때 안 준다).
+   🔵 **한 사람에 한 요청** — 「5명 중 4명 성공 · 1명 번호 없음」을 그대로 돌려주려고.
    🔵 **중복 방지** — KV `sent:{kind}:{id}:{key}:{day}`. 같은 날 같은 과제·같은 학생에게는 안 나간다(`already`).
-     두 번 눌러도 두 번 안 간다. 화면은 이 답을 보고 「이미 보냄」을 적는다.
-   ⚠ **미제출 판정은 화면이 한다** (hwNeedsAction). 08-25 메모는 «서버가 다시 판정»이었지만, 그때는 워커가 강사인지
-     몰랐다. 지금은 강사만 부르므로 남는 것은 «강사 화면의 명단이 낡았을 수 있다»뿐이고, 그건 강사 본인의 일이다.
-     records 를 학생마다 다시 읽어 hwNeedsAction 을 워커에 한 벌 더 옮기면 그쪽이 먼저 갈린다.
-   비밀 — ALIGO_APIKEY · ALIGO_USERID · ALIGO_SENDERKEY · ALIGO_SENDER 넷 + 템플릿마다 하나(아래 NOTIFY_TPL) (전부 Secret)
+   ⚠ **미제출 판정은 화면이 한다** (hwNeedsAction) — 강사만 부르므로 남는 것은 «명단이 낡았을 수 있다»뿐이다.
+   비밀 — SOLAPI_API_KEY · SOLAPI_API_SECRET · SOLAPI_SENDER(발신번호) · SOLAPI_PFID(카카오 채널 pfId) + 템플릿마다 하나(아래 NOTIFY_TPL) (전부 Secret)
      ⚠ 템플릿 비밀은 «그 종류를 보낼 때»만 본다 — 심사가 늦은 템플릿 때문에 다른 알림이 막히면 안 된다.
-   ⚠ **버튼 이름·주소는 템플릿에 등록한 것과 «글자까지» 같아야 한다.** 다르면 알리고가 거절한다.
-   🔵 **조교도 이 문은 지난다** (09-20 · qna·wrong 은 답변·공개 «순간에 저절로» 나가는데, 답변은 조교도 단다).
-     다른 관리자 길(비번·삭제)은 여전히 강사만이다 — 문서 하나(staff/{uid})를 더 보는 것뿐, 잣대는 규칙과 같다. */
+   🔵 **조교도 이 문은 지난다** (09-20 · qna·wrong 은 답변·공개 «순간에 저절로» 나가는데, 답변은 조교도 단다). */
 const NOTIFY_DAILY_LIMIT = 200;      // 하루 전체 발송 상한(건). 학생 50명 × 넉 번이면 충분하다
 const NOTIFY_PER_CALL = 50;          // 한 번에 보낼 수 있는 사람 수
-const NOTIFY_LINK = 'https://khhyun827-lang.github.io/hahyunmath/index.html#student/home';
-const NOTIFY_BUTTON = { hw: '제출하기', vid: '강의보기', qna: '확인하기', wrong: '풀러가기' };   // 템플릿에 등록한 이름 그대로
-const NOTIFY_TPL = { hw: 'ALIGO_TPL_HW', vid: 'ALIGO_TPL_VID', qna: 'ALIGO_TPL_QNA', wrong: 'ALIGO_TPL_WRONG' };
+const NOTIFY_KINDS = ['hw', 'vid', 'qna', 'wrong'];
+const NOTIFY_TPL = { hw: 'SOLAPI_TPL_HW', vid: 'SOLAPI_TPL_VID', qna: 'SOLAPI_TPL_QNA', wrong: 'SOLAPI_TPL_WRONG' };
+const SOLAPI = 'https://api.solapi.com';
 
-/* 🔴 **워커가 «어느 IP 로» 나가는가** (2026-09-21 · 첫 MMS 시험이 `aligo -101 인증오류입니다.-IP` 로 걸렸다).
-   알리고는 등록된 발신 IP 만 받는데, Cloudflare 워커는 고정 IP 가 없다 — 요청마다 Cloudflare 대역 안에서 바뀐다.
-   알리고 화면은 마지막 자리를 비워 **한 대역**(`1.2.3.*` · 256개)으로 등록할 수 있으므로, 여기서 여러 번 재어 대역을 모아 등록한다.
-   ⚠ 표본이다 — 다른 데이터센터로 붙으면 새 대역이 나올 수 있다. 그래서 **-101 IP 가 나면 그 순간의 나간 IP 를 why 에 붙여 준다**
-     (아래 `whyWithEgress`). 강사는 그 대역을 알리고에 더 넣으면 된다. 같은 호출 안에서도 연결마다 IP 가 다를 수 있어 «그 요청»의
-     IP 라고 단언은 못 하지만, 같은 데이터센터의 같은 대역일 확률이 높다. */
-/* ⚠ 09-21b 는 api.ipify.org 하나만 불렀고 빈 배열이 왔다(IPv6 로 붙었거나 막힌 것). IPv4 만 주는 곳 셋을 차례로 묻고,
-   무엇이 왔는지(`raw`)도 남긴다 — 한 번 붙여넣을 때마다 강사 손이 가므로 «왜 안 됐나»까지 한 번에 보여야 한다. */
-/* 🔴 **Cloudflare 위에 있는 곳(icanhazip·ipify)에 물으면 안쪽 길로 가서 다른 IP 가 보일 수 있다.** 알리고는 바깥 서버다 —
-   바깥에 있는 곳(AWS checkip)에 먼저 묻는다. api4.ipify 는 IPv6 로 답했다(09-21c 실측). */
-const EGRESS_ECHOES = ['https://checkip.amazonaws.com', 'https://ifconfig.me/ip', 'https://ipv4.icanhazip.com'];
-async function egressProbe(i) {
-  const out = { ip: '', raw: '', err: '' };
-  for (const base of EGRESS_ECHOES) {
-    try {
-      const r = await fetch(base + '?n=' + (i || 0) + '&t=' + Date.now(), { headers: { 'User-Agent': 'curl/8' }, cf: { cacheTtl: 0 } });
-      const t = (await r.text()).trim();
-      out.raw = out.raw || (base + ' ' + r.status + ' ' + t.slice(0, 60));
-      if (/^\d{1,3}(\.\d{1,3}){3}$/.test(t)) { out.ip = t; return out; }
-    } catch (e) { out.err = out.err || (base + ' ' + String((e && e.message) || e).slice(0, 80)); }
+/* HMAC-SHA256 서명 — `HMAC-SHA256 apiKey=…, date=…, salt=…, signature=hex(hmac(date+salt, secret))`. 솔라피 공식 SDK 와 같은 식. */
+async function solapiAuth(env) {
+  const date = new Date().toISOString();
+  const salt = crypto.randomUUID().replace(/-/g, '');
+  const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(env.SOLAPI_API_SECRET),
+    { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  const sig = new Uint8Array(await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(date + salt)));
+  const hex = Array.from(sig, (b) => b.toString(16).padStart(2, '0')).join('');
+  return 'HMAC-SHA256 apiKey=' + env.SOLAPI_API_KEY + ', date=' + date + ', salt=' + salt + ', signature=' + hex;
+}
+async function solapiPost(env, path, body) {
+  const r = await fetch(SOLAPI + path, { method: 'POST', body: JSON.stringify(body),
+    headers: { Authorization: await solapiAuth(env), 'Content-Type': 'application/json' } });
+  const j = await r.json().catch(() => ({}));
+  return { status: r.status, j };
+}
+/* 한 통 — send-many/detail 에 하나만 싣는다. 성공은 failedMessageList 가 비었을 때. 까닭은 그 목록의 statusMessage. */
+async function solapiSendOne(env, message) {
+  let res;
+  try { res = await solapiPost(env, '/messages/v4/send-many/detail', { messages: [message] }); }
+  catch (e) { return { ok: false, why: 'solapi ' + String((e && e.message) || e).slice(0, 120) }; }
+  if (res.status !== 200) return { ok: false, why: 'solapi ' + res.status + ' ' + (res.j.errorCode || '') + ' ' + (res.j.errorMessage || '') };
+  const f = (res.j.failedMessageList || [])[0];
+  if (f) return { ok: false, why: 'solapi ' + (f.statusCode || '') + ' ' + (f.statusMessage || '') };
+  return { ok: true, why: '' };
+}
+/* 변수 이름은 `#{이름}` 꼴이어야 한다 — 화면이 이름만 보냈어도 감싼다. 값은 글자만. */
+function solapiVars(vars) {
+  const out = {};
+  for (const k of Object.keys(vars || {})) {
+    if (typeof vars[k] !== 'string' && typeof vars[k] !== 'number') continue;
+    out[/^#\{.*\}$/.test(k) ? k : '#{' + k + '}'] = String(vars[k]);
   }
   return out;
-}
-async function egressIp(i) { return (await egressProbe(i)).ip; }
-async function whyWithEgress(env, why) {
-  if (!/-101/.test(why) || !/IP/i.test(why)) return why;
-  if (env && env.ALIGO_RELAY) return why + ' (중계를 거쳤습니다 — 중계 서버의 IP 가 알리고 발신 IP 에 등록돼 있는지 보세요)';
-  const ip = await egressIp(0);
-  return why + (ip ? ' (나간 IP ' + ip + ' — 알리고 발신 IP 에 ' + ip.replace(/\.\d+$/, '.*') + ' 대역을 등록)' : '');
-}
-/* 🔴 **알리고는 등록된 IP 만 받는데 Cloudflare 워커는 IP 가 고정이 아니다** (2026-09-21 · 532번 재어 14개 대역을 등록했는데
-     다음 호출은 전부 다른 대역이었다 — 데이터센터가 바뀌면 풀이 통째로 바뀐다. 대역 등록은 길이 아니다).
-   ⇒ **고정 IP 중계**를 거친다 (worker/relay — Oracle 상시무료 VM 위의 Caddy 20줄). 알리고엔 그 IP 하나만 등록한다.
-   Secret 둘 — `ALIGO_RELAY`(예 https://1.2.3.4.sslip.io) · `ALIGO_RELAY_KEY`(중계와 맞춘 열쇠). 없으면 예전처럼 직접 부른다(그러면 -101 IP).
-   중계는 열쇠를 확인한 뒤 `/sms/*` → apis.aligo.in, `/kakao/*` → kakaoapi.aligo.in 으로 몸통을 그대로 넘긴다. */
-function aligoTarget(env, which, path) {
-  const direct = which === 'sms' ? 'https://apis.aligo.in' : 'https://kakaoapi.aligo.in';
-  if (!env.ALIGO_RELAY) return { url: direct + path, headers: {} };
-  return { url: String(env.ALIGO_RELAY).replace(/\/+$/, '') + '/' + which + path,
-           headers: { 'X-Relay-Key': env.ALIGO_RELAY_KEY || '' } };
-}
-/* POST /admin/egress-ip { n } → { ips:[…], ranges:[…] } — 강사만. n 번(≤20) 재어 `1.2.3.*` 대역으로 모아 준다. */
-async function handleEgressIp(request, env, corsHeaders, callerUid) {
-  const g = await adminGate(request, env, corsHeaders, callerUid);
-  if (g.흠) return g.흠;
-  const n = Math.max(1, Math.min(20, Number((g.body || {}).n) || 8));
-  const probes = await Promise.all(Array.from({ length: n }, (_, i) => egressProbe(i)));
-  const ips = probes.map((p) => p.ip).filter(Boolean);
-  const ranges = [...new Set(ips.map((ip) => ip.replace(/\.\d+$/, '.*')))];
-  return adminJson({ ips, ranges, raw: probes[0].raw, err: probes[0].err }, corsHeaders);
 }
 
 /* 강사 «또는 조교»인가 — 알림 문에서만 쓴다. */
@@ -383,31 +363,30 @@ async function readContact(env, key) {
 async function readContactPhone(env, key) { return (await readContact(env, key)).phone; }
 async function readContactParentPhone(env, key) { return (await readContact(env, key)).parentPhone; }
 
-/* POST /notify  { kind:'hw'|'vid', id, items:[{ key, message }] }
-   → { ok, sent, results:[{ key, ok, why }] }   why = already | no_phone | quota | bad_item | aligo <code> <message> */
+/* POST /notify  { kind:'hw'|'vid'|'qna'|'wrong', id, items:[{ key, vars, message }] }  → { ok, sent, results:[{ key, ok, why }] }
+   why = already | no_phone | quota | bad_item | solapi <code> <message> */
 async function handleNotify(request, env, corsHeaders, callerUid) {
   const g = await adminGate(request, env, corsHeaders, callerUid, isTeacherOrStaff);
   if (g.흠) return g.흠;
   const { kind, id, items } = g.body;
-  if (!NOTIFY_BUTTON[kind] || !id || !Array.isArray(items) || !items.length)
-    return adminJson({ error: 'bad_request', detail: 'kind(hw|vid|qna|wrong) · id · items[{key,message}] 가 필요합니다.' }, corsHeaders, 400);
+  if (!NOTIFY_KINDS.includes(kind) || !id || !Array.isArray(items) || !items.length)
+    return adminJson({ error: 'bad_request', detail: 'kind(hw|vid|qna|wrong) · id · items[{key,vars}] 가 필요합니다.' }, corsHeaders, 400);
   if (items.length > NOTIFY_PER_CALL)
     return adminJson({ error: 'too_many', detail: '한 번에 ' + NOTIFY_PER_CALL + '명까지입니다.' }, corsHeaders, 400);
-  const missing = ['ALIGO_APIKEY', 'ALIGO_USERID', 'ALIGO_SENDERKEY', 'ALIGO_SENDER', NOTIFY_TPL[kind]].filter((k) => !env[k]);
+  const missing = ['SOLAPI_API_KEY', 'SOLAPI_API_SECRET', 'SOLAPI_SENDER', 'SOLAPI_PFID', NOTIFY_TPL[kind]].filter((k) => !env[k]);
   if (missing.length)
     return adminJson({ error: 'not_configured', detail: '워커 비밀이 없습니다: ' + missing.join(', ') }, corsHeaders, 503);
 
   const tpl = env[NOTIFY_TPL[kind]];
-  const button = JSON.stringify({ button: [{
-    name: NOTIFY_BUTTON[kind], linkType: 'WL', linkTypeName: '웹링크', linkMo: NOTIFY_LINK, linkPc: NOTIFY_LINK }] });
   const day = quotaDay();
   const ttl = { expirationTtl: 60 * 60 * 48 };
   const results = [];
   for (const it of items) {
-    const key = String((it && it.key) || ''), message = String((it && it.message) || '');
+    const key = String((it && it.key) || '');
+    const vars = it && it.vars && typeof it.vars === 'object' ? it.vars : null;
     const out = { key, ok: false, why: '' };
     results.push(out);
-    if (!key || !message) { out.why = 'bad_item'; continue; }
+    if (!key || !vars) { out.why = 'bad_item'; continue; }
     const sentKey = `sent:${kind}:${id}:${key}:${day}`;
     if (env.QUOTA && await env.QUOTA.get(sentKey)) { out.why = 'already'; continue; }
     const phone = await readContactPhone(env, key);
@@ -415,46 +394,36 @@ async function handleNotify(request, env, corsHeaders, callerUid) {
     const q = await bumpQuota(env, 'notify', callerUid, NOTIFY_DAILY_LIMIT, NOTIFY_DAILY_LIMIT);
     if (!q.ok) { out.why = 'quota'; continue; }
 
-    const form = new URLSearchParams({
-      apikey: env.ALIGO_APIKEY, userid: env.ALIGO_USERID, senderkey: env.ALIGO_SENDERKEY,
-      tpl_code: tpl, sender: env.ALIGO_SENDER,
-      receiver_1: phone, subject_1: '김하현수학연구소', message_1: message, button_1: button,
-      failover: 'Y', fsubject_1: '김하현수학연구소', fmessage_1: message,
-    });
-    let res;
-    try {
-      const t = aligoTarget(env, 'kakao', '/akv10/alimtalk/send/');
-      const r = await fetch(t.url, { method: 'POST', body: form, headers: t.headers });
-      res = await r.json();
-    } catch (e) { res = { code: -1, message: String((e && e.message) || e).slice(0, 120) }; }
-    if (Number(res.code) === 0) {
+    /* disableSms 를 안 준다(기본 false) — 알림톡이 못 가면 문자로 대체 발송된다(요금). 예전 알리고의 failover=Y 와 같다. */
+    const r = await solapiSendOne(env, { to: phone, from: env.SOLAPI_SENDER,
+      kakaoOptions: { pfId: env.SOLAPI_PFID, templateId: tpl, variables: solapiVars(vars) } });
+    if (r.ok) {
       out.ok = true;
       if (env.QUOTA) await env.QUOTA.put(sentKey, '1', ttl);
     } else {
-      out.why = await whyWithEgress(env, 'aligo ' + res.code + ' ' + (res.message || ''));
+      out.why = r.why;
       try { await refundQuota(env, 'notify', callerUid); } catch (_) {}   // 안 나간 것은 안 센다
     }
   }
   return adminJson({ ok: true, sent: results.filter((r) => r.ok).length, results }, corsHeaders);
 }
 
-/* =================== 월간 리포트 MMS (2026-09-20 · 사용자 — 「문자로 알리고 이용해서 자동화 할 수 있나?」「하고싶어!」) ===================
-   알리고 문자 API — POST apis.aligo.in/send/ (multipart) · msg_type=MMS · 사진 한 장(jpg). 템플릿 심사 없음(광고가 아닌 안내).
-   ⚠ 알림톡 쪽과 **칸 이름이 다르다** — 여기는 key·user_id, 저쪽은 apikey·userid. 값은 같은 비밀 셋이다.
+/* =================== 월간 리포트 MMS (2026-09-20 · 사용자 — 「문자로 … 자동화 할 수 있나?」「하고싶어!」) ===================
+   솔라피 문자 — 사진을 먼저 올리고(POST /storage/v1/files · type MMS → fileId) 그 imageId 로 MMS 한 통. 템플릿 심사 없음(광고가 아닌 안내).
    🔴 **강사만** — 리포트는 강사의 것이다(조교에게 문을 안 연다 · R-1). 알림(/notify)과 달리 기본 adminGate 그대로.
    🔵 받는 사람은 **학부모 번호**(`contacts/{key}.parentPhone`) — 워커가 읽는다. 숙제·강의 알림이 학생 번호로 가는 것과 다르다.
    🔵 문구는 워커가 짓는다 — 화면이 아무 글이나 보내는 문이 되면 안 된다. 화면은 «누구(key) · 이름 · 달 · 사진»만 준다.
    🔵 중복 막이는 «이 학생·이 달» — 한 달에 한 번이다(KV 40일). 두 번 눌러도 같은 달엔 두 번 안 간다.
-   ⚠ 사진은 300KB 를 넘지 않게 화면이 굽는다(알리고 MMS 상한 — 문서 기준). 넘어오면 여기서도 막는다. */
+   ⚠ 사진은 **200KB** 를 넘지 않게 화면이 굽는다(솔라피 MMS 상한 · jpg). 넘어오면 여기서도 막는다. 알리고 때는 300KB 였다. */
 const REPORT_MMS_DAILY_LIMIT = 300;
-const REPORT_MMS_MAX_BYTES = 300 * 1024;
+const REPORT_MMS_MAX_BYTES = 200 * 1024;
 
 /* POST /report-mms  { key, name, ym:'2026-09', image:'data:image/jpeg;base64,…' }  → { ok, why }
-   why = already | no_phone | quota | bad_item | too_big | aligo <code> <message> */
+   why = already | no_phone | quota | bad_item | too_big | solapi <code> <message> */
 async function handleReportMms(request, env, corsHeaders, callerUid) {
   const g = await adminGate(request, env, corsHeaders, callerUid);
   if (g.흠) return g.흠;
-  const missing = ['ALIGO_APIKEY', 'ALIGO_USERID', 'ALIGO_SENDER'].filter((k) => !env[k]);
+  const missing = ['SOLAPI_API_KEY', 'SOLAPI_API_SECRET', 'SOLAPI_SENDER'].filter((k) => !env[k]);
   if (missing.length)
     return adminJson({ error: 'not_configured', detail: '워커 비밀이 없습니다: ' + missing.join(', ') }, corsHeaders, 503);
   const { key, name, ym, image } = g.body;
@@ -462,10 +431,8 @@ async function handleReportMms(request, env, corsHeaders, callerUid) {
     return adminJson({ error: 'bad_request', detail: 'key · name · ym(YYYY-MM) · image(jpeg dataURL) 가 필요합니다.' }, corsHeaders, 400);
 
   const b64 = String(image).slice(String(image).indexOf(',') + 1);
-  const bin = atob(b64);
-  if (bin.length > REPORT_MMS_MAX_BYTES) return adminJson({ ok: false, why: 'too_big', bytes: bin.length }, corsHeaders);
-  const bytes = new Uint8Array(bin.length);
-  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  const bytes = Math.floor(b64.length * 3 / 4) - (b64.endsWith('==') ? 2 : b64.endsWith('=') ? 1 : 0);
+  if (bytes > REPORT_MMS_MAX_BYTES) return adminJson({ ok: false, why: 'too_big', bytes }, corsHeaders);
 
   const sentKey = `sent:report:${ym}:${key}`;
   if (env.QUOTA && await env.QUOTA.get(sentKey)) return adminJson({ ok: false, why: 'already' }, corsHeaders);
@@ -475,27 +442,22 @@ async function handleReportMms(request, env, corsHeaders, callerUid) {
   if (!q.ok) return adminJson({ ok: false, why: 'quota' }, corsHeaders);
 
   const [y, m] = ym.split('-');
-  const fd = new FormData();
-  fd.append('key', env.ALIGO_APIKEY);
-  fd.append('user_id', env.ALIGO_USERID);
-  fd.append('sender', env.ALIGO_SENDER);
-  fd.append('receiver', phone);
-  fd.append('msg_type', 'MMS');
-  fd.append('title', '김하현수학연구소 월간 리포트');
-  fd.append('msg', '[김하현수학연구소] ' + String(name).slice(0, 20) + ' 학생 ' + y + '년 ' + Number(m) + '월 월간 리포트입니다.');
-  fd.append('image', new Blob([bytes], { type: 'image/jpeg' }), 'report.jpg');
-  let res;
+  let r;
   try {
-    const t = aligoTarget(env, 'sms', '/send/');
-    const r = await fetch(t.url, { method: 'POST', body: fd, headers: t.headers });
-    res = await r.json();
-  } catch (e) { res = { result_code: -1, message: String((e && e.message) || e).slice(0, 120) }; }
-  if (Number(res.result_code) === 1) {
+    const up = await solapiPost(env, '/storage/v1/files', { file: b64, type: 'MMS' });
+    if (up.status !== 200 || !up.j.fileId)
+      r = { ok: false, why: 'solapi 사진 올리기 ' + up.status + ' ' + (up.j.errorCode || '') + ' ' + (up.j.errorMessage || '') };
+    else
+      r = await solapiSendOne(env, { to: phone, from: env.SOLAPI_SENDER, type: 'MMS', imageId: up.j.fileId,
+        subject: '김하현수학연구소 월간 리포트',
+        text: '[김하현수학연구소] ' + String(name).slice(0, 20) + ' 학생 ' + y + '년 ' + Number(m) + '월 월간 리포트입니다.' });
+  } catch (e) { r = { ok: false, why: 'solapi ' + String((e && e.message) || e).slice(0, 120) }; }
+  if (r.ok) {
     if (env.QUOTA) await env.QUOTA.put(sentKey, '1', { expirationTtl: 60 * 60 * 24 * 40 });
     return adminJson({ ok: true, why: '' }, corsHeaders);
   }
   try { await refundQuota(env, 'report', callerUid); } catch (_) {}
-  return adminJson({ ok: false, why: await whyWithEgress(env, 'aligo ' + res.result_code + ' ' + (res.message || '')) }, corsHeaders);
+  return adminJson({ ok: false, why: r.why }, corsHeaders);
 }
 
 /* 비밀번호 재설정 — { email } 또는 { uid } 와 { password } */

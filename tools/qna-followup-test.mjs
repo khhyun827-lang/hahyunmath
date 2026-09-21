@@ -38,7 +38,7 @@ function 판(o) {
   const state = { currentUser: { studentId: 's1', name: '김승우' }, qnaQuestionImage: o.image || null, qnaAnswerImage: {}, stuQnaFollowFor: 'qn1' };
   const 쓴것 = [], 지운것 = [], 말 = [];
   const 알림 = [];
-  const F = new Function('DATA', 'state', 'document', 'authUid', 'todayStr', 'dbSetDoc', 'dbDeleteDoc', 'showToast', 'render', 'deleteFromDrive', 'imgFileIdOf', 'confirm', 'notifyAuto', 'qnaNoticeText',
+  const F = new Function('DATA', 'state', 'document', 'authUid', 'todayStr', 'dbSetDoc', 'dbDeleteDoc', 'showToast', 'render', 'deleteFromDrive', 'imgFileIdOf', 'confirm', 'notifyAuto', 'qnaNoticeText', 'qnaNoticeVars',
     /* ⚠ `deleteQna` 가 «답에 붙은 사진»까지 걷느라 `qnaMoreAnswersOf` 를 부른다 —
        목록에 없어 이 검사가 ReferenceError 로 터져 있었다. 옮겨 적지 않고 그대로 뜬다. */
     [lift('splitQnaFollowups'), lift('qnaFollowupsOf'), lift('qnaMoreAnswersOf'), lift('qnaHasOpen'),
@@ -49,7 +49,7 @@ function 판(o) {
     async (col, id, doc) => { 쓴것.push({ col, id, doc: JSON.parse(JSON.stringify(doc)) }); return o.저장흠 ? null : true; },
     async (col, id) => { 지운것.push(col + '/' + id); },
     m => 말.push(m), () => {}, () => {}, v => (v && v.fileId) || null, () => true,
-    (kind, id, targets) => 알림.push({ kind, id, targets }), (name, q) => name + ':' + q.id);
+    (kind, id, targets) => 알림.push({ kind, id, targets }), (name, q) => name + ':' + q.id, (name, q) => ({ '#{학생명}': name }));
   return { F, DATA, state, 쓴것, 지운것, 말, 알림 };
 }
 

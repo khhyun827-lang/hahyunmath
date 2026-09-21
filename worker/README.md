@@ -223,36 +223,43 @@ node tools/review-worker-test.mjs      판정 다섯 갈래 · 한도 되돌림 
 node tools/bench-grade-test.mjs        답 맞대기 — 「2」와 「②」, ①(=-10)과 「-10」, 분수 (17개)
 ```
 
-## /notify — 알림톡 (2026-09-19 · N-1 숙제 · N-2 강의)
+## /notify — 알림톡 (2026-09-19 · N-1 숙제 · N-2 강의 · 09-20 qna·wrong · **09-22 솔라피로**)
 
-알리고 알림톡(`kakaoapi.aligo.in/akv10/alimtalk/send/`)으로 보낸다. 실패하면 문자로 대체발송(`failover=Y`).
-**강사만** 부른다(`adminGate`). 번호는 화면이 준 것을 안 쓰고 `contacts/{key}.phone` 을 워커가 읽는다.
-같은 날 같은 과제·같은 학생에게는 두 번 안 간다(KV `sent:…`). 하루 200건 · 한 번에 50명.
-한 사람에 한 요청이라 「5명 중 4명 성공 · 1명 번호 오류」가 그대로 돌아온다. 검사 → `node tools/notify-test.mjs`
+**솔라피(Solapi)** 알림톡(`api.solapi.com/messages/v4/send-many/detail` · `kakaoOptions{pfId, templateId, variables}`)으로 보낸다.
+알림톡이 못 가면 문자로 대체발송(`disableSms` 기본 false · 요금). **강사만** 부른다(`adminGate` · 조교도). 번호는 화면이 준 것을
+안 쓰고 `contacts/{key}` 를 워커가 읽는다(문서는 `fields.value` 안 JSON — 09-21 에 이걸 몰라 no_phone 이 났다).
+같은 날 같은 과제·같은 학생에게는 두 번 안 간다(KV `sent:…`). 하루 200건 · 한 번에 50명. 검사 → `node tools/notify-test.mjs`
 
-### 배포에 필요한 것 — 비밀 여섯 (전부 Secret)
+🔴 **왜 알리고 → 솔라피 (09-21~22)** — 알리고 API 는 등록된 발신 IP 만 받는다(`-101 인증오류입니다.-IP`). Cloudflare 워커는
+나가는 IP 가 고정이 아니다(532번 재어 14개 대역을 등록했는데 다음 호출은 전부 다른 대역 · 화면은 /24 만). 고정 IP 중계(Oracle VM)는
+가입 카드 심사에서 막혔다. 솔라피는 IP 인증이 없고 API 키 + HMAC-SHA256 서명이라 서버리스에 맞는다. 알리고 템플릿 심사는 헛것이 됐다.
 
-| 이름 | 값 |
+🔵 **문안은 «변수»로 간다.** 솔라피는 templateId 와 `variables`(`#{학생명}`…)를 받아 제 쪽에서 문안을 짓는다. 화면은 `vars` 를
+보내고(`*NoticeVars`), `message` 는 사람이 읽는 사본이다. **솔라피에 올리는 템플릿 문안은 index.html 의 `*_NOTICE_TEMPLATE` 그대로**,
+변수 이름도 그대로(학생명·과제명·마감일 / 강의명·마감일·남은기간 / 질문 / 출처·문항수). 버튼은 템플릿에 등록한 것이 나간다
+(웹링크 · `…#student/home` · 제출하기·강의보기·확인하기·풀러가기). 옛(알리고) 워커는 `vars` 를 몰라 화면이 `2026-09-22a` 판부터만 부른다.
+
+### 배포에 필요한 것 — 비밀 넷 + 템플릿 넷 (전부 Secret)
+
+| 이름 | 값 · 솔라피 콘솔 어디 |
 |---|---|
-| `ALIGO_USERID` | 알리고 아이디 |
-| `ALIGO_APIKEY` | 알리고 마이페이지의 API 키 — **채팅·저장소에 안 적는다** |
-| `ALIGO_SENDER` | 등록한 발신번호 (숫자만, 예 `01012345678`) |
-| `ALIGO_SENDERKEY` | 발신프로필 키 (알리고 > 알림톡 > 발신프로필) |
-| `ALIGO_TPL_HW` | 숙제 미제출 템플릿 코드 (예 `hw_notice_01`) |
-| `ALIGO_TPL_VID` | 강의 미시청 템플릿 코드 (예 `vid_notice_01`) |
-| `ALIGO_TPL_QNA` | 질문 답변 템플릿 코드 (예 `qna_notice_01`) — 답변 저장 순간 저절로 |
-| `ALIGO_TPL_WRONG` | 오답숙제 템플릿 코드 (예 `wrong_notice_01`) — 문항 공개 순간 저절로 · 학생마다 하루 한 번 |
+| `SOLAPI_API_KEY` | 개발/연동 → API Key 관리 — **채팅·저장소에 안 적는다** |
+| `SOLAPI_API_SECRET` | 같은 화면의 API Secret (발급 때 한 번만 보인다) |
+| `SOLAPI_SENDER` | 등록·인증한 발신번호 (숫자만, 예 `01012345678`) |
+| `SOLAPI_PFID` | 카카오 → 채널 연동 뒤 뜨는 **채널 ID(pfId)** |
+| `SOLAPI_TPL_HW` | 숙제 미제출 템플릿 ID (`KA01TP…`) |
+| `SOLAPI_TPL_VID` | 강의 미시청 템플릿 ID |
+| `SOLAPI_TPL_QNA` | 질문 답변 템플릿 ID — 답변 저장 순간 저절로 |
+| `SOLAPI_TPL_WRONG` | 오답숙제 템플릿 ID — 문항 공개 순간 저절로 · 학생마다 하루 한 번 |
 
 ⚠ 넷 + «그 종류의 템플릿»이 없으면 `/notify` 는 503 에 `워커 비밀이 없습니다: …` — 심사가 늦은 템플릿은 그것만 막힌다.
 ⚠ 이 문은 **조교도** 지난다(`staff/{uid}`) — 답변은 조교도 달기 때문. 비번·삭제는 여전히 강사만.
-⚠ **버튼 이름(`제출하기`·`강의보기`·`확인하기`·`풀러가기`)과 주소(`…#student/home`)는 템플릿에 등록한 것과 글자까지 같아야 한다** —
-  다르면 알리고가 거절한다. 바꾸려면 `NOTIFY_BUTTON`·`NOTIFY_LINK` 를 같이 고친다.
-⚠ 문안은 화면(`HW_NOTICE_TEMPLATE`·`VID_NOTICE_TEMPLATE`)이 채워 보낸다 — 심사받은 것과 다르면 알리고가 거절한다.
+⚠ 실패 까닭은 `solapi <statusCode> <statusMessage>` 그대로 화면 줄에 뜬다.
 
-## /report-mms — 월간 리포트를 학부모께 MMS 로 (2026-09-20)
+## /report-mms — 월간 리포트를 학부모께 MMS 로 (2026-09-20 · 09-22 솔라피로)
 
-알리고 **문자** API(`apis.aligo.in/send/` · multipart · `msg_type=MMS`)로 리포트 사진 한 장을 보낸다. 템플릿 심사 없음.
+솔라피 문자 — 사진을 먼저 올리고(`POST /storage/v1/files` · `type: MMS` → `fileId`) 그 `imageId` 로 `type: MMS` 한 통. 템플릿 심사 없음.
 **강사만**(조교 안 됨 — 리포트는 강사의 것). 받는 사람은 `contacts/{key}.parentPhone`(**학부모**). 문구는 워커가 짓는다.
-«이 학생·이 달» 한 번(KV 40일) · 하루 300건 · 사진 300KB 상한(화면이 290KB 안으로 굽는다).
-비밀은 알림톡과 같은 셋 — `ALIGO_APIKEY`·`ALIGO_USERID`·`ALIGO_SENDER` (문자 API 는 칸 이름이 `key`·`user_id` 라 워커가 바꿔 넣는다).
+«이 학생·이 달» 한 번(KV 40일) · 하루 300건 · 사진 **200KB** 상한(솔라피 · 화면이 190KB 안으로 굽는다 — 알리고 때는 300).
+비밀은 알림톡의 셋 — `SOLAPI_API_KEY`·`SOLAPI_API_SECRET`·`SOLAPI_SENDER` (pfId·템플릿은 안 본다).
 검사 → `node tools/report-mms-test.mjs`

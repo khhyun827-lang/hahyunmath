@@ -9999,7 +9999,7 @@ async function submitAnswer(qid){
   showToast(첫답인가 ? '답변이 등록되었습니다.' : '답변을 더 달았습니다.');
   render();
   /* 알림톡 (09-20) — 답이 저장된 «뒤»에. 실은 «실»(원 질문) 단위로 하루 한 번 — 같은 날 더 달아도 두 번 안 간다. */
-  notifyAuto('qna', q.parentId || q.id, [{ sid: q.studentId, message: qnaNoticeText(q.studentName, q) }]);
+  notifyAuto('qna', q.parentId || q.id, [{ sid: q.studentId, vars: qnaNoticeVars(q.studentName, q), message: qnaNoticeText(q.studentName, q) }]);
 }
 async function deleteQna(qid){
   if(!confirm('이 질문을 삭제할까요?')) return;
@@ -15480,12 +15480,12 @@ const HW_NOTICE_TEMPLATE =
 마감: #{마감일}
 앱에서 사진으로 제출할 수 있습니다.`;
 
-function hwNoticeText(name, a){
-  return HW_NOTICE_TEMPLATE
-    .replace('#{학생명}', name || '')
-    .replace('#{과제명}', a.title || '')
-    .replace('#{마감일}', a.dueDate || '미정');
-}
+/* 🔵 **변수를 짓고, 글은 변수로 채운다** (2026-09-22 · 솔라피). 솔라피 알림톡은 문안이 아니라 templateId + `variables`(#{학생명}…)를
+   받아 제 쪽에서 문안을 짓는다. 그래서 워커에 `vars` 를 보내고, `message` 는 사람이 읽는 사본(결과 줄·검사)이다.
+   ⚠ 변수 이름은 솔라피에 올린 템플릿의 것과 «글자까지» 같아야 한다 — 템플릿 문안은 이 파일의 `*_NOTICE_TEMPLATE` 그대로 올린다. */
+function fillNotice(tpl, vars){ let t = tpl; for(const k in vars) t = t.split(k).join(vars[k]); return t; }
+function hwNoticeVars(name, a){ return { '#{학생명}': name || '', '#{과제명}': a.title || '', '#{마감일}': a.dueDate || '미정' }; }
+function hwNoticeText(name, a){ return fillNotice(HW_NOTICE_TEMPLATE, hwNoticeVars(name, a)); }
 
 /* 이 과제를 아직 «해야 할 일»로 들고 있는 학생 — 안 냈거나 반려됐거나.
    ⚠ 판정은 `hwNeedsAction` 하나만 부른다. 제출해 둔 것(확인 대기)은 미제출이 아니다 —
@@ -15509,6 +15509,7 @@ async function sendNotice(kind, id, sids){
   const items = String(sids).split(',').map(sid => {
     const s = DATA.students.find(x => x.studentId === sid);
     return s && { name: s.name, key: studentKeyOfSid(sid),
+                  vars:    kind === 'hw' ? hwNoticeVars(s.name, item) : vidNoticeVars(s.name, item),
                   message: kind === 'hw' ? hwNoticeText(s.name, item) : vidNoticeText(s.name, item) };
   }).filter(Boolean);
   if(!items.length) return;
@@ -15528,7 +15529,7 @@ function notifyWhy(why){ return NOTIFY_WHY[why] || why; }
 /* 🔴 **워커가 아직 옛 판이면 새 길을 안 부른다** (2026-09-20). 옛 워커의 라우팅은 catch-all 이라 모르는 길(/notify ·
    /report-mms)을 **Gemini 생성으로 받아 AI 한도를 한 건씩 태운다.** 화면을 먼저 올리고 워커를 나중에 붙이는 사이,
    답변 한 번에 한도가 하나씩 나가는 일이 생긴다. /quota 가 돌려주는 WORKER_VERSION 으로 한 번만 묻고 기억한다. */
-const NOTIFY_WORKER_MIN = '2026-09-19a';
+const NOTIFY_WORKER_MIN = '2026-09-22a';   // 솔라피 판부터 — 그 전 판은 vars 를 모른다
 async function notifyWorkerReady(){
   if(state.notifyWorkerOk !== undefined) return state.notifyWorkerOk;
   try{
@@ -15546,7 +15547,7 @@ async function notifyPost(kind, id, items){
   const token = await withTimeout(getAuthToken(), 8000);
   const res = await withTimeout(fetch(AI_WORKER_URL + '/notify', {
     method:'POST', headers:{ 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ kind, id, items: items.map(({key, message}) => ({key, message})) })
+    body: JSON.stringify({ kind, id, items: items.map(({key, vars, message}) => ({key, vars, message})) })
   }), 60000);
   const j = await res.json().catch(() => ({}));
   if(!res.ok){ const e = new Error(j.detail || j.error || ('http ' + res.status)); e.code = j.error || ''; e.status = res.status; throw e; }
@@ -15559,7 +15560,7 @@ async function notifyPost(kind, id, items){
 async function notifyAuto(kind, id, targets){
   const items = (targets || []).map(t => {
     const s = DATA.students.find(x => x.studentId === t.sid);
-    return s && !isWithdrawn(s) && { name: s.name, key: studentKeyOfSid(t.sid), message: t.message };
+    return s && !isWithdrawn(s) && { name: s.name, key: studentKeyOfSid(t.sid), vars: t.vars, message: t.message };
   }).filter(Boolean);
   if(!items.length) return;
   try{
@@ -15585,7 +15586,8 @@ async function notifyWrongReady(bankIds){
     const fresh = left.filter(h => ids.has(h.bankId));
     if(!fresh.length) continue;
     const b = DATA.problemBank.find(x => x.id === fresh[0].bankId);   // 출처는 문항이 안다(교재 요청이면 examId 가 빈다)
-    targets.push({ sid: s.studentId, message: wrongNoticeText(s.name, examTitleOf(fresh[0].examId || (b && b.examId)), left.length) });
+    const 출처 = examTitleOf(fresh[0].examId || (b && b.examId));
+    targets.push({ sid: s.studentId, vars: wrongNoticeVars(s.name, 출처, left.length), message: wrongNoticeText(s.name, 출처, left.length) });
   }
   await notifyAuto('wrong', todayStr(), targets);
 }
@@ -15678,13 +15680,8 @@ function vidDuePhrase(dueDate){
   if(남은 > 0) return 남은 + '일 남음';
   return 남은 === 0 ? '오늘까지' : '마감 지남';
 }
-function vidNoticeText(name, v){
-  return VID_NOTICE_TEMPLATE
-    .replace('#{학생명}', name || '')
-    .replace('#{강의명}', v.title || '')
-    .replace('#{마감일}', v.dueDate || '미정')
-    .replace('#{남은기간}', vidDuePhrase(v.dueDate));
-}
+function vidNoticeVars(name, v){ return { '#{학생명}': name || '', '#{강의명}': v.title || '', '#{마감일}': v.dueDate || '미정', '#{남은기간}': vidDuePhrase(v.dueDate) }; }
+function vidNoticeText(name, v){ return fillNotice(VID_NOTICE_TEMPLATE, vidNoticeVars(name, v)); }
 
 /* =================== 질문 답변 · 오답숙제 알림 (2026-09-20 · 사용자 — 「질문 답변, 오답숙제는 하자」) ===================
    🔵 **이 둘은 단추가 아니라 «그 순간에 저절로» 나간다** — 답변을 저장할 때 · 오답 문항을 공개할 때.
@@ -15697,12 +15694,11 @@ const QNA_NOTICE_TEMPLATE =
 #{학생명} 학생, 질문에 답변이 달렸습니다.
 질문: #{질문}
 앱 소통 > 질문에서 확인할 수 있습니다.`;
-function qnaNoticeText(name, q){
+function qnaNoticeVars(name, q){
   const 글 = String(q.question || '').replace(/\s+/g, ' ').trim();
-  return QNA_NOTICE_TEMPLATE
-    .replace('#{학생명}', name || '')
-    .replace('#{질문}', 글.length > 30 ? 글.slice(0, 30) + '…' : (글 || '(사진 질문)'));
+  return { '#{학생명}': name || '', '#{질문}': 글.length > 30 ? 글.slice(0, 30) + '…' : (글 || '(사진 질문)') };
 }
+function qnaNoticeText(name, q){ return fillNotice(QNA_NOTICE_TEMPLATE, qnaNoticeVars(name, q)); }
 /* 🔴 하루에 한 번이다 — 같은 날 문항을 다섯 개 공개해도 알림은 첫 것 하나(워커의 중복 막이가 «오늘» 단위로 센다).
    그래서 문항 수는 «지금 풀 수 있는 것 전부»로 적는다 — 나중 것은 알림이 안 가도 그 수에 이미 들어갈 자리다. */
 const WRONG_NOTICE_TEMPLATE =
@@ -15711,12 +15707,8 @@ const WRONG_NOTICE_TEMPLATE =
 출처: #{출처}
 풀 수 있는 문항: #{문항수}개
 앱 학습 > 오답숙제에서 풀 수 있습니다.`;
-function wrongNoticeText(name, 출처, n){
-  return WRONG_NOTICE_TEMPLATE
-    .replace('#{학생명}', name || '')
-    .replace('#{출처}', 출처 || '')
-    .replace('#{문항수}', String(n || 0));
-}
+function wrongNoticeVars(name, 출처, n){ return { '#{학생명}': name || '', '#{출처}': 출처 || '', '#{문항수}': String(n || 0) }; }
+function wrongNoticeText(name, 출처, n){ return fillNotice(WRONG_NOTICE_TEMPLATE, wrongNoticeVars(name, 출처, n)); }
 /* 아직 «완주»가 아닌 학생. 🔵 **구간 배정이면 구간 기준으로 갈린다** — `videoDone` 이 이미 그렇다.
    그래서 시킨 구간을 다 본 학생에게는 **이 알림이 안 간다**(K-11 이 고친 바로 그 억울함이다). */
 function vidNotWatched(v, roster){
@@ -21732,8 +21724,8 @@ async function runReportBatch(){
      알림톡은 아니어도 문자로 알리고 이용해서 자동화 할 수 있나?」「하고싶어!」)
    runReportBatch 와 같은 무대에서 같은 문서를 굽는다 — 목적지만 폴더가 아니라 워커 `/report-mms` 다.
    🔵 한 명씩 보낸다(사진이 커서) — 결과가 사람마다 돌아온다. 🔵 학부모 번호가 없는 사람은 «누르기 전에» 보인다.
-   ⚠ 사진은 300KB 안으로 굽는다(REPORT_MMS_MAX_BYTES — 알리고 MMS 상한). 다운로드용(950KB)과 다르다. */
-const REPORT_MMS_MAX_BYTES = 290 * 1024;
+   ⚠ 사진은 200KB 안으로 굽는다(REPORT_MMS_MAX_BYTES — 솔라피 MMS 상한 · 09-22 전엔 알리고 300KB). 다운로드용(950KB)과 다르다. */
+const REPORT_MMS_MAX_BYTES = 190 * 1024;   // 솔라피 MMS 상한 200KB 안으로 (2026-09-22 · 알리고 때는 290)
 function rptSendable(b){
   return b.ids.filter(id => !b.skipped.includes(id)).map(id => DATA.students.find(x=>x.studentId===id)).filter(Boolean);
 }

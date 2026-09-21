@@ -45,49 +45,49 @@ console.log('워커 리포트 MMS 길 — 막이가 제자리에 있는가\n');
 }
 
 {
-  /* 번호 읽기는 알림톡과 한 함수(readContact)로 합쳐져 위쪽에 산다 — 함께 떠 온다 (2026-09-21) */
-  /* 발송 길이 지나는 것들을 함께 떠 온다 — 번호 읽기·중계 갈림(aligoTarget)·-101 IP 안내(whyWithEgress · 나가는 IP 재기는 가짜) */
-  const 함수떠내기 = (이름) => { const at = worker.indexOf('function ' + 이름 + '('); let d = 0; for (let j = worker.indexOf('{', at); j < worker.length; j++) { if (worker[j] === '{') d++; else if (worker[j] === '}') { d--; if (!d) return worker.slice(at, j + 1); } } };
-  const 몸 = [몸떠내기(worker, 'readContact'), 몸떠내기(worker, 'readContactParentPhone'), 함수떠내기('aligoTarget'), 몸떠내기(worker, 'whyWithEgress'),
-    'const egressIp = async () => "";'].join(String.fromCharCode(10)) + String.fromCharCode(10)
+  /* 발송 길이 지나는 것들을 함께 떠 온다 — 번호 읽기(readContact)·솔라피 서명·보내기 */
+  const 몸 = [몸떠내기(worker, 'readContact'), 몸떠내기(worker, 'readContactParentPhone'),
+    몸떠내기(worker, 'solapiAuth'), 몸떠내기(worker, 'solapiPost'), 몸떠내기(worker, 'solapiSendOne'), "const SOLAPI = 'https://api.solapi.com';"]
+    .join(String.fromCharCode(10)) + String.fromCharCode(10)
     + worker.slice(worker.indexOf('const REPORT_MMS_DAILY_LIMIT'), worker.indexOf('async function handleAdminResetPw('));
-  const 보낸것 = [];
+  const 보낸것 = [], 올린것 = [];
   const kv = new Map();
   const env = {
     FIREBASE_SA: '{}', QUOTA: { get: async (k) => kv.get(k) || null, put: async (k, v, o) => { kv.set(k, [v, o]); } },
-    ALIGO_APIKEY: 'k', ALIGO_USERID: 'u', ALIGO_SENDER: '01000000000',
+    SOLAPI_API_KEY: 'k', SOLAPI_API_SECRET: 's', SOLAPI_SENDER: '01000000000',
   };
   const 번호들 = { U1: '010-9999-8888', U2: '' };
-  class FD { constructor() { this.m = {}; } append(k, v, name) { this.m[k] = name ? { blob: v, name } : v; } }
-  const F = new Function('env', 'fetch', 'FormData', 'Blob', 'adminGate', 'adminJson', 'bumpQuota', 'refundQuota', 'getServiceAccountToken', 'JSON', 'atob',
+  const F = new Function('env', 'fetch', 'adminGate', 'adminJson', 'bumpQuota', 'refundQuota', 'getServiceAccountToken', 'JSON', 'crypto',
     몸 + '; return handleReportMms;')(
     env,
     async (url, opt) => {
-      if (/apis\.aligo\.in\/send/.test(url)) { 보낸것.push(opt.body.m); return { json: async () => (opt.body.m.receiver === '01099998888' ? { result_code: 1, message: 'success' } : { result_code: -101, message: '번호' }) }; }
+      if (/api\.solapi\.com\/storage\/v1\/files/.test(url)) { const b = JSON.parse(opt.body); 올린것.push(b); return { status: 200, json: async () => ({ fileId: 'F' + 올린것.length }) }; }
+      if (/api\.solapi\.com\/messages\/v4\/send-many\/detail/.test(url)) {
+        const m = JSON.parse(opt.body).messages[0]; 보낸것.push(m);
+        return { status: 200, json: async () => ({ groupInfo: {}, failedMessageList: m.to === '01099998888' ? [] : [{ statusCode: '1011', statusMessage: '번호' }] }) };
+      }
       const key = decodeURIComponent(url.split('/contacts/')[1]);
-      return { status: 200, json: async () => ({ fields: { parentPhone: { stringValue: 번호들[key] || '' } } }) };
+      return { status: 200, json: async () => ({ fields: { value: { stringValue: JSON.stringify({ parentPhone: 번호들[key] || '' }) } } }) };
     },
-    FD, class { constructor(parts, o) { this.size = parts[0].length; this.type = o.type; } },
     async (request) => ({ body: await request.json() }),
     (obj, ch, status) => ({ 몸통: obj, status: status || 200 }),
-    async () => ({ ok: true, used: 1 }), async () => {}, async () => 'tok', JSON,
-    (s) => Buffer.from(s, 'base64').toString('binary'),
+    async () => ({ ok: true, used: 1 }), async () => {}, async () => 'tok', JSON, globalThis.crypto,
   );
   const 사진 = (kb) => 'data:image/jpeg;base64,' + Buffer.alloc(kb * 1024, 1).toString('base64');
   const 부르기 = (body) => F({ json: async () => body }, env, {}, 'T1');
 
-  const r1 = await 부르기({ key: 'U1', name: '가나', ym: '2026-09', image: 사진(200) });
-  봄('🔴 보낸다 — 학부모 번호(숫자만) · MMS · 워커가 지은 문구 · 사진 한 장', [r1.몸통.ok, 보낸것[0].receiver, 보낸것[0].msg_type, 보낸것[0].msg, 보낸것[0].image.name, 보낸것[0].image.blob.type],
-    [true, '01099998888', 'MMS', '[김하현수학연구소] 가나 학생 2026년 9월 월간 리포트입니다.', 'report.jpg', 'image/jpeg']);
-  봄('   알리고 «문자» API 의 칸 이름 — key · user_id · sender (알림톡의 apikey·userid 와 다르다)', [보낸것[0].key, 보낸것[0].user_id, 보낸것[0].sender], ['k', 'u', '01000000000']);
-  const r2 = await 부르기({ key: 'U1', name: '가나', ym: '2026-09', image: 사진(200) });
+  const r1 = await 부르기({ key: 'U1', name: '가나', ym: '2026-09', image: 사진(150) });
+  봄('🔴 사진을 먼저 올리고(type MMS · base64 그대로) 그 fileId 로 보낸다', [올린것[0].type, 올린것[0].file.slice(0, 8), 보낸것[0].imageId], ['MMS', 'AQEBAQEB', 'F1']);
+  봄('🔴 보낸다 — 학부모 번호(숫자만) · MMS · 워커가 지은 문구 · 제목', [r1.몸통.ok, 보낸것[0].to, 보낸것[0].from, 보낸것[0].type, 보낸것[0].text, 보낸것[0].subject],
+    [true, '01099998888', '01000000000', 'MMS', '[김하현수학연구소] 가나 학생 2026년 9월 월간 리포트입니다.', '김하현수학연구소 월간 리포트']);
+  const r2 = await 부르기({ key: 'U1', name: '가나', ym: '2026-09', image: 사진(150) });
   봄('🔴 같은 학생·같은 달은 두 번 안 간다 (40일)', [r2.몸통.why, 보낸것.length, kv.get('sent:report:2026-09:U1')[1].expirationTtl], ['already', 1, 60 * 60 * 24 * 40]);
-  const r3 = await 부르기({ key: 'U1', name: '가나', ym: '2026-10', image: 사진(200) });
+  const r3 = await 부르기({ key: 'U1', name: '가나', ym: '2026-10', image: 사진(150) });
   봄('   다른 달이면 간다', [r3.몸통.ok, 보낸것.length], [true, 2]);
-  const r4 = await 부르기({ key: 'U2', name: '다라', ym: '2026-09', image: 사진(200) });
-  봄('   학부모 번호가 없으면 알리고를 안 부른다', [r4.몸통.why, 보낸것.length], ['no_phone', 2]);
-  const r5 = await 부르기({ key: 'U1', name: '가나', ym: '2026-11', image: 사진(320) });
-  봄('🔴 사진이 300KB 를 넘으면 안 보낸다', [r5.몸통.why, 보낸것.length], ['too_big', 2]);
+  const r4 = await 부르기({ key: 'U2', name: '다라', ym: '2026-09', image: 사진(150) });
+  봄('   학부모 번호가 없으면 솔라피를 안 부른다(사진도 안 올린다)', [r4.몸통.why, 보낸것.length, 올린것.length], ['no_phone', 2, 2]);
+  const r5 = await 부르기({ key: 'U1', name: '가나', ym: '2026-11', image: 사진(210) });
+  봄('🔴 사진이 200KB 를 넘으면 안 보낸다 (솔라피 MMS 상한)', [r5.몸통.why, 보낸것.length], ['too_big', 2]);
   const r6 = await 부르기({ key: 'U1', name: '가나', ym: '2026/11', image: 사진(10) });
   봄('   달 꼴이 아니면 400', r6.status, 400);
   const r7 = await 부르기({ key: 'U1', name: '가나', ym: '2026-12', image: 'data:image/png;base64,AAAA' });
@@ -95,7 +95,7 @@ console.log('워커 리포트 MMS 길 — 막이가 제자리에 있는가\n');
 }
 
 {
-  봄('🔵 화면 — 문자용 사진 상한은 300KB 안(다운로드용 950KB 와 다르다)', /const REPORT_MMS_MAX_BYTES = 290 \* 1024;/.test(html) && /rptBakeImage\(canvas, REPORT_MMS_MAX_BYTES\)/.test(html), true);
+  봄('🔵 화면 — 문자용 사진 상한은 200KB 안(솔라피 · 다운로드용 950KB 와 다르다)', /const REPORT_MMS_MAX_BYTES = 190 \* 1024;/.test(html) && /rptBakeImage\(canvas, REPORT_MMS_MAX_BYTES\)/.test(html), true);
   봄('   굽기가 상한을 받는다 — 사다리가 더 내려간다', /async function rptBakeImage\(canvas, maxBytes\)/.test(html) && /\{q:\.7, s:\.4\}/.test(html), true);
   봄('   보내기 전에 묻는다 — 요금 · 한 달 한 번', /confirm\(번호있음\.length \+ '명의 학부모께 '/.test(html), true);
   봄('   화면은 key·name·ym·image 만 보낸다', /JSON\.stringify\(\{ key: studentKeyOfSid\(st\.studentId\), name: st\.name, ym: b\.ym, image: baked\.url \}\)/.test(html), true);
@@ -121,21 +121,9 @@ console.log('워커 리포트 MMS 길 — 막이가 제자리에 있는가\n');
   봄('   맨 칸에 든 옛 꼴도 읽는다', [await B.readContactParentPhone(env, 'k'), await B.readContactPhone(env, 'k')], ['01077776666', '01099998888']);
   const C = 만들기({}, 404);
   봄('   문서가 없으면 빈 글자 (no_phone 으로 간다)', await C.readContactParentPhone(env, 'k'), '');
-  봄('🔴 판을 올렸다 (09-19 판은 no_phone 을 낸다)', (worker.match(/WORKER_VERSION = '([^']+)'/) || [])[1] > '2026-09-21', true);
+  봄('🔴 판을 올렸다 (09-19 판은 no_phone 을 낸다)', (worker.match(/WORKER_VERSION = '([^']+)'/) || [])[1] >= '2026-09-22a', true);
 }
 
-/* 🔴 **고정 IP 중계** (2026-09-21) — ALIGO_RELAY 가 있으면 그리로, 없으면 직접. 열쇠는 머리에. */
-{
-  const at = worker.indexOf('function aligoTarget(');
-  let 깊이 = 0, end = at;
-  for (let j = worker.indexOf('{', at); j < worker.length; j++) { if (worker[j] === '{') 깊이++; else if (worker[j] === '}') { 깊이--; if (!깊이) { end = j + 1; break; } } }
-  const T = new Function(worker.slice(at, end) + '; return aligoTarget;')();
-  봄('   중계가 없으면 알리고를 직접 부른다', T({}, 'sms', '/send/'), { url: 'https://apis.aligo.in/send/', headers: {} });
-  봄('🔴 중계가 있으면 /sms·/kakao 로 갈라 보내고 열쇠를 머리에 단다',
-    [T({ ALIGO_RELAY: 'https://1.2.3.4.sslip.io/', ALIGO_RELAY_KEY: 'k1' }, 'sms', '/send/'), T({ ALIGO_RELAY: 'https://r', ALIGO_RELAY_KEY: 'k1' }, 'kakao', '/akv10/alimtalk/send/').url],
-    [{ url: 'https://1.2.3.4.sslip.io/sms/send/', headers: { 'X-Relay-Key': 'k1' } }, 'https://r/kakao/akv10/alimtalk/send/']);
-  봄('   두 발송 길이 다 aligoTarget 을 지난다', (worker.match(/aligoTarget\(env, '(sms|kakao)'/g) || []).length, 2);
-}
 
 console.log('\n  ' + (틀림 ? '🔴 ' : '✅ ') + 통과 + ' 통과 · ' + 틀림 + ' 실패');
 process.exit(틀림 ? 1 : 0);
