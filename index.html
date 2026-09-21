@@ -13052,6 +13052,11 @@ function render(){
      목록이 맨 위로 튀어 **어디까지 봤는지를 잃는다.** 「더 보기」에서 특히 나쁘다 —
      더 보려고 누른 순간 지금까지 내려온 만큼이 통째로 날아간다. */
   const exScroll = (app.querySelector('.ex-body') || {}).scrollTop;
+  /* 🔴 **검토 목록도 같다** (2026-09-21 · 사용자가 짚었다 — 「E누르면 다음문제로 가긴 하는데 스크롤이
+     제일 위로 다시올라가」). E·X 뒤에 render() 가 목록을 새로 그려 맨 위로 튀었다 — 서른 번째에서
+     통과하면 서른한 번째가 골라지지만 화면 밖이다. J/K 만 따로 `scrollIntoView` 를 하고 있었다.
+     자리를 되돌린 뒤 **골라진 줄이 보이게** 한 번 더 민다(nearest — 보이면 안 움직인다). */
+  const rvScroll = (app.querySelector('.rv-lbody') || {}).scrollTop;
   app.innerHTML = html;
   /* ⚠ 경고 띠는 `position:fixed` 라 **자리를 안 차지한다** — 그대로 두면 화면 맨 위
      (제목·탭)를 덮는다. 띠의 높이만큼 본문을 내려 준다. 글이 길어져 두 줄이 되어도
@@ -13061,6 +13066,11 @@ function render(){
   if(hwdScroll){ const nb = app.querySelector('.hwd-b'); if(nb) nb.scrollTop = hwdScroll; }
   if(clsScroll){ const cb = app.querySelector('.cls-body'); if(cb) cb.scrollTop = clsScroll; }
   if(exScroll){ const eb = app.querySelector('.ex-body'); if(eb) eb.scrollTop = exScroll; }
+  if(rvScroll){ const rb = app.querySelector('.rv-lbody'); if(rb) rb.scrollTop = rvScroll; }
+  { /* ⚠ scrollIntoView 는 창까지 민다 — 폰에서는 목록이 위, 판이 아래라 창이 튄다. 목록 상자만 민다. */
+    const rb = app.querySelector('.rv-lbody'), on = rb && rb.querySelector('.rv-item.on');
+    if(on){ const a = rb.getBoundingClientRect(), b = on.getBoundingClientRect();
+      if(b.top < a.top) rb.scrollTop -= a.top - b.top; else if(b.bottom > a.bottom) rb.scrollTop += b.bottom - a.bottom; } }
   /* 🔵 **고리는 여기서 깨운다** (2026-09-06) — 「앱을 열어 둔 동안 돈다」가 이 한 줄이다.
      render() 는 자주 불리지만 이미 돌고 있으면 곧장 빠져나온다(값 셋만 본다). */
   if(state.autoFill && state.autoFill.on) autoFillKick();
@@ -25110,9 +25120,7 @@ function reviewMove(delta){
   const x = 줄[i];
   if(x.auto){ state.reviewVariantCode = x.key; state.reviewSelectedId = null; }
   else { state.reviewSelectedId = x.key; state.reviewVariantCode = ''; }
-  render();
-  const el = document.querySelector('.rv-item.on');
-  if(el) el.scrollIntoView({ block:'nearest' });
+  render();                                  /* 골라진 줄은 render 가 보이게 민다 (2026-09-21) */
 }
 
 /* 승인/반려 뒤에는 «다음 것»으로 넘어간다 — 큐를 비우는 화면이라 손이 멈추면 안 된다.
