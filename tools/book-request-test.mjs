@@ -293,7 +293,7 @@ console.log(NL + '④ 화면 — 학생과 강사가 각각 무엇을 보는가'
   봄('그 줄은 교재 요청에만 선다', html.includes("b.source !== 'bookreq' ? '' :"), true);
   /* ⚠ `bankRequesterCount` 는 다른 화면도 쓴다 — 그 «줄 안»에서 부르는지를 본다.
      닻을 html 전체에 걸면 남의 자리 덕에 통과한다(덫을 확인하다 드러났다). */
-  const 요청줄 = (html.match(/b\.source !== 'bookreq'[\s\S]{0,600}?rv-req[\s\S]{0,400}?\}\)\(\)/) || [''])[0];
+  const 요청줄 = (html.match(/b\.source !== 'bookreq'[\s\S]{0,900}?rv-req[\s\S]{0,1600}?\}\)\(\)/) || [''])[0];
   봄('요청 줄을 떠 왔다', 요청줄.includes('rv-req'), true);
   봄('몇 명이 기다리는지도 적는다', 요청줄.includes('bankRequesterCount(b.id)'), true);
   봄('그 줄 안에 책 이름과 번호가 적힌다',

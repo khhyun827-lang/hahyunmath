@@ -61,6 +61,9 @@ function 돌린다(원본, opts = {}){
     generateTwinViaAI: async () => { 본.워커++; return opts.twin || null; },
     applyTwinToBank: async () => {},
     followBankToQueue: () => {},
+    bankIsBookReq: () => false,          // 교재 요청 길(창고로)은 bookreq-store-test 가 본다
+    bankRootOf: () => '',
+    requestVariantForCode: async () => {},
     aiUpstreamKind: () => opts.upstream || '',   // «무슨 갈래인가»만 가짜로 — 말은 진짜를 쓴다
     마지막AI오류: opts.오류 || '',
   };
