@@ -44,7 +44,7 @@ const stubs = `
   const shiftYmd = (d, n) => { const x = new Date(d + 'T00:00:00Z'); x.setUTCDate(x.getUTCDate() + n); return x.toISOString().slice(0, 10); };
   const collectionReadFailed = new Set();
   const localStorage = __ls;
-  const gameOfWeek = () => ({ key: 'dodge', name: '똥피하기', icon: '💩' });
+  const gameOfWeek = () => ({ key: __game, name: __game, icon: '💩' });
   const authUid = () => __uid;
   async function dbGetCollectionWhere(c, k, v){
     return Object.entries(__db).filter(([id, d]) => id.startsWith(c + '/') && d[k] === v).map(([, d]) => JSON.parse(JSON.stringify(d)));
@@ -64,7 +64,8 @@ const AsyncFn = Object.getPrototypeOf(async function(){}).constructor;
 /* 가짜 localStorage — 브라우저마다 하나이므로 판마다 새로 준다 */
 const 저장소 = () => { const m = {}; return { getItem: k => (k in m ? m[k] : null), setItem: (k, v) => { m[k] = String(v); }, removeItem: k => { delete m[k]; }, _m: m }; };
 let __ls = 저장소();
-const make = (uid, ls) => new Function('__db', '__wrote', '__uid', '__ls', src)(db, 쓴것, uid, ls || __ls);
+let __game = 'dodge';
+const make = (uid, ls, g) => new Function('__db', '__wrote', '__uid', '__ls', '__game', src)(db, 쓴것, uid, ls || __ls, g || __game);
 
 console.log('순위 저장 길 —');
 
@@ -106,7 +107,7 @@ console.log('순위 저장 길 —');
   const 원래 = db; // 같은 db
   /* dbGetCollectionWhere 를 세려고 한 번 더 감싼다 — loadRank 가 몇 번 DB 로 가는지 */
   const src2 = src.replace('async function dbGetCollectionWhere(c, k, v){', "async function dbGetCollectionWhere(c, k, v){ __reads.push(c + ':' + v);");
-  const make2 = (uid, ls) => new Function('__db', '__wrote', '__uid', '__ls', '__reads', src2)(db, 쓴것, uid, ls, 읽음);
+  const make2 = (uid, ls) => new Function('__db', '__wrote', '__uid', '__ls', '__reads', '__game', src2)(db, 쓴것, uid, ls, 읽음, __game);
   const D = make2('u3', ls);
   await D.loadRank('2026-09-14'); await D.loadRank('2026-09-07');
   봄('④ 처음엔 두 주를 DB 에서 읽는다', 읽음, ['ranks:2026-09-14', 'ranks:2026-09-07']);
@@ -128,6 +129,23 @@ console.log('순위 저장 길 —');
   all['2026-09-07'].at -= 31 * 60 * 1000; ls._m['khm-rank-cache-v1'] = JSON.stringify(all);
   const I = make2('u9', ls); await I.loadRank('2026-09-07');
   봄('④ 지난 주는 30분으로는 안 다시 읽는다 (하루)', 읽음.length, 3);
+}
+
+/* ⑤ 주 중에 게임이 바뀐 날 — 낮은 점수라도 «다른 게임»이면 덮는다 (2026-09-21)
+   🔴 잣대가 다섯 배 다르다(달리기 1840 · 똥피하기 350). 게임을 안 보고 견주면
+     바뀐 게임의 점수가 그 주 내내 «영영 안 올라간다» — 순위가 빈 채로 뜬다. */
+{
+  const A = make('u1', null, 'dodge');
+  await A.rankSubmit('s1', '김학생', '고1', 900);                 // 똥피하기로 900점
+  const n = 쓴것.length;
+  const B = make('u1', null, 'runner');
+  await B.rankSubmit('s1', '김학생', '고1', 80);                  // 달리기 첫 판 — 낮지만 다른 게임
+  const d = db['ranks/2026-09-14__u1'];
+  봄('⑤ 게임이 다르면 낮은 점수도 덮는다', [쓴것.length, d.score, d.game], [n + 1, 80, 'runner']);
+  const C = make('u1', null, 'runner');
+  const before = 쓴것.length;
+  await C.rankSubmit('s1', '김학생', '고1', 50);                  // 같은 게임 · 더 낮다
+  봄('⑤ 같은 게임이면 낮은 점수는 여전히 안 쓴다', [쓴것.length, db['ranks/2026-09-14__u1'].score], [before, 80]);
 }
 
 console.log(`\n${pass} 통과 · ${fail} 실패`);

@@ -13902,8 +13902,9 @@ function ckState(rec){
    🔵 한 판을 더 해도 도장·연속은 하루 한 번이고(`ck.last` 로 센다), 점수·순위는 **높은 쪽만**
      남는다(`dayRec.score`·`ckSetBest`·`rankSubmit` 셋 다 낮은 점수로는 안 덮는다). */
 const CK_PLAYS = {
-  '2026-09-19': 2,   // 이번 주 토요일
-  '2026-09-20': 2,   // 이번 주 일요일
+  '2026-09-19': 2,   // 지난 주 토요일
+  '2026-09-20': 2,   // 지난 주 일요일
+  '2026-09-21': 2,   // 오늘 아침엔 게임이 똥피하기로 떠 있었다 — 달리기로 한 판 더 준다
 };
 function ckPlaysAllowed(ymd){ return CK_PLAYS[ymd] || 1; }
 /* ⚠ `days` 가 없던 옛 기록은 `last` 로 물러선다 — 그러면 오늘 한 판 한 것으로 센다.
@@ -13953,14 +13954,19 @@ const GAMES = [
     tip:'손가락을 끌어 좌우로 피하세요',   tip2:'⭐ 를 먹으면 50점' }
 ];
 /* 주차를 세는 기준. ⚠ 이 날짜를 옮기면 «이번 주 게임»이 통째로 바뀐다 — 주 중에 옮기면
-   그 주에 이미 올라간 점수가 다른 게임 것이 되어 순위에서 빠진다. 월요일에만 옮길 것. */
-const GAME_EPOCH = '2026-08-31';
+   그 주에 이미 올라간 점수가 다른 게임 것이 되어 순위에서 빠진다. 월요일에만 옮길 것.
+   🔴 **한 주를 콕 집으면(GAME_PICKS) 그 다음 주부터 번갈이가 어긋난다** — 집은 게임이
+     자연 차례와 다르면 그 주와 다음 주가 같은 게임이 된다(2026-09-14 가 그랬다).
+     ⇒ 집은 뒤에는 **기준을 한 주 옮기고, 지나간 주들을 GAME_PICKS 에 못박는다.** */
+const GAME_EPOCH = '2026-09-07';
 /* 🔵 **한 주를 콕 집어 정한다** (2026-09-14 · 사용자 요청 — 「이번주 게임 똥피하기로 바꿔주고」).
    🔴 **`GAME_EPOCH` 를 옮기면 안 된다** — 그건 로테이션 «전체»를 뒤집어서, 지난 주들의
      게임까지 바뀐다(그 주 순위가 다른 게임 것으로 읽힌다).
    ⇒ **그 주 월요일 하나만** 적는다. 안 적힌 주는 예전대로 돌아간다.
    ⚠ 열쇠는 반드시 **월요일**이다(`weekStartOf`). */
 const GAME_PICKS = {
+  '2026-08-31': 'runner',    // 기준을 09-07 로 옮기며 지난 주들을 «있던 그대로» 못박는다
+  '2026-09-07': 'dodge',     //   (이 둘이 없으면 옛 주의 순위가 다른 게임 것으로 읽힌다)
   '2026-09-14': 'dodge',     // 사용자가 이 주만 똥피하기로 정했다
 };
 function gameOfWeek(monday){
@@ -14056,8 +14062,12 @@ async function rankSubmit(sid, name, cls, score){
   const uid = authUid();
   let mine = rows.find(r => r.sid === sid);
   if(mine){
-    /* 더 낮은 점수로는 안 덮는다 — 예전 결 그대로다. */
-    if(score <= mine.score){ rankCache[monday] = rows; return rows; }
+    /* 더 낮은 점수로는 안 덮는다 — 예전 결 그대로다.
+       🔴 **같은 게임일 때만이다** (2026-09-21). 한 주에 게임이 둘 섞이는 날이 있다 —
+         주 중에 그 주 게임을 바꾸면(GAME_PICKS) 앞서 낸 점수는 «다른 게임» 것이다.
+         잣대가 다섯 배 다르니(달리기 1840 · 똥피하기 350) 게임을 안 보고 견주면
+         **바뀐 게임의 점수가 영영 안 올라간다.** 문서는 학생마다 주에 하나라 덮어쓴다. */
+    if((mine.game || 'dodge') === game && score <= mine.score){ rankCache[monday] = rows; return rows; }
     Object.assign(mine, {score, at: todayStr(), name, cls, game});
   } else {
     mine = {uid, week: monday, sid, name, cls, score, at: todayStr(), game};
