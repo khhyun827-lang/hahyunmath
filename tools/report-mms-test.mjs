@@ -118,7 +118,7 @@ console.log('워커 리포트 MMS 길 — 막이가 제자리에 있는가\n');
   봄('   맨 칸에 든 옛 꼴도 읽는다', [await B.readContactParentPhone(env, 'k'), await B.readContactPhone(env, 'k')], ['01077776666', '01099998888']);
   const C = 만들기({}, 404);
   봄('   문서가 없으면 빈 글자 (no_phone 으로 간다)', await C.readContactParentPhone(env, 'k'), '');
-  봄('🔴 판을 올렸다 (붙여넣기 전엔 옛 판이 no_phone 을 낸다)', /WORKER_VERSION = '2026-09-21a'/.test(worker), true);
+  봄('🔴 판을 올렸다 (09-19 판은 no_phone 을 낸다)', (worker.match(/WORKER_VERSION = '([^']+)'/) || [])[1] > '2026-09-21', true);
 }
 
 console.log('\n  ' + (틀림 ? '🔴 ' : '✅ ') + 통과 + ' 통과 · ' + 틀림 + ' 실패');

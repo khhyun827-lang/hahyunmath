@@ -44,7 +44,7 @@ const TWIN_GROQ_MAX_TOKENS = 7000;   // 추론 + JSON. 검토(6000)보다 답이
 /* 🔴 «올렸는지 짐작하지 않는다» — 이 워커는 대시보드에 붙여넣어 올리므로 밖에서는 어느 판이 도는지
    알 길이 없었다(2026-09-11에 사용자가 올리고 「도는지 확인은 못 해봤어」). /quota 가 이 값을 같이
    돌려주고 tools/worker-check.mjs 가 저장소의 값과 견준다. **프롬프트나 규칙을 바꾸면 이 날짜를 올릴 것.** */
-const WORKER_VERSION = '2026-09-21a';
+const WORKER_VERSION = '2026-09-21b';
 // 이미지 업로드는 학생도 쓴다(질의응답 사진). 비용이 드는 쪽은 Gemini라 여기는 넉넉하게,
 // 다만 «한 명이 무한히»는 막는다. 전체 상한은 걸지 않는다 — 걸면 바쁜 날 학생이 막힌다.
 const UPLOAD_PER_USER_DAILY = 200;
@@ -138,6 +138,7 @@ export default {
        학생도 토큰이 있으니 이 주소를 그대로 부를 수 있다. */
     if (url.pathname === '/admin/reset-pw') return handleAdminResetPw(request, env, corsHeaders, who.uid);
     if (url.pathname === '/admin/delete-user') return handleAdminDeleteUser(request, env, corsHeaders, who.uid);
+    if (url.pathname === '/admin/egress-ip') return handleEgressIp(request, env, corsHeaders, who.uid);
     if (url.pathname === '/notify') return handleNotify(request, env, corsHeaders, who.uid);
     if (url.pathname === '/report-mms') return handleReportMms(request, env, corsHeaders, who.uid);
     /* 🔴 **터져도 한도는 돌려주고, 까닭은 CORS 머리를 달고 나간다** (2026-09-12).
@@ -294,6 +295,34 @@ const NOTIFY_LINK = 'https://khhyun827-lang.github.io/hahyunmath/index.html#stud
 const NOTIFY_BUTTON = { hw: '제출하기', vid: '강의보기', qna: '확인하기', wrong: '풀러가기' };   // 템플릿에 등록한 이름 그대로
 const NOTIFY_TPL = { hw: 'ALIGO_TPL_HW', vid: 'ALIGO_TPL_VID', qna: 'ALIGO_TPL_QNA', wrong: 'ALIGO_TPL_WRONG' };
 
+/* 🔴 **워커가 «어느 IP 로» 나가는가** (2026-09-21 · 첫 MMS 시험이 `aligo -101 인증오류입니다.-IP` 로 걸렸다).
+   알리고는 등록된 발신 IP 만 받는데, Cloudflare 워커는 고정 IP 가 없다 — 요청마다 Cloudflare 대역 안에서 바뀐다.
+   알리고 화면은 마지막 자리를 비워 **한 대역**(`1.2.3.*` · 256개)으로 등록할 수 있으므로, 여기서 여러 번 재어 대역을 모아 등록한다.
+   ⚠ 표본이다 — 다른 데이터센터로 붙으면 새 대역이 나올 수 있다. 그래서 **-101 IP 가 나면 그 순간의 나간 IP 를 why 에 붙여 준다**
+     (아래 `whyWithEgress`). 강사는 그 대역을 알리고에 더 넣으면 된다. 같은 호출 안에서도 연결마다 IP 가 다를 수 있어 «그 요청»의
+     IP 라고 단언은 못 하지만, 같은 데이터센터의 같은 대역일 확률이 높다. */
+async function egressIp(i) {
+  try {
+    const r = await fetch('https://api.ipify.org?n=' + (i || 0) + '&t=' + Date.now(), { cf: { cacheTtl: 0 } });
+    const ip = (await r.text()).trim();
+    return /^\d{1,3}(\.\d{1,3}){3}$/.test(ip) ? ip : '';
+  } catch (_) { return ''; }
+}
+async function whyWithEgress(why) {
+  if (!/-101/.test(why) || !/IP/i.test(why)) return why;
+  const ip = await egressIp(0);
+  return why + (ip ? ' (나간 IP ' + ip + ' — 알리고 발신 IP 에 ' + ip.replace(/\.\d+$/, '.*') + ' 대역을 등록)' : '');
+}
+/* POST /admin/egress-ip { n } → { ips:[…], ranges:[…] } — 강사만. n 번(≤20) 재어 `1.2.3.*` 대역으로 모아 준다. */
+async function handleEgressIp(request, env, corsHeaders, callerUid) {
+  const g = await adminGate(request, env, corsHeaders, callerUid);
+  if (g.흠) return g.흠;
+  const n = Math.max(1, Math.min(20, Number((g.body || {}).n) || 8));
+  const ips = (await Promise.all(Array.from({ length: n }, (_, i) => egressIp(i)))).filter(Boolean);
+  const ranges = [...new Set(ips.map((ip) => ip.replace(/\.\d+$/, '.*')))];
+  return adminJson({ ips, ranges }, corsHeaders);
+}
+
 /* 강사 «또는 조교»인가 — 알림 문에서만 쓴다. */
 async function isTeacherOrStaff(env, uid) {
   if (await isTeacher(env, uid)) return true;
@@ -377,7 +406,7 @@ async function handleNotify(request, env, corsHeaders, callerUid) {
       out.ok = true;
       if (env.QUOTA) await env.QUOTA.put(sentKey, '1', ttl);
     } else {
-      out.why = 'aligo ' + res.code + ' ' + (res.message || '');
+      out.why = await whyWithEgress('aligo ' + res.code + ' ' + (res.message || ''));
       try { await refundQuota(env, 'notify', callerUid); } catch (_) {}   // 안 나간 것은 안 센다
     }
   }
@@ -440,7 +469,7 @@ async function handleReportMms(request, env, corsHeaders, callerUid) {
     return adminJson({ ok: true, why: '' }, corsHeaders);
   }
   try { await refundQuota(env, 'report', callerUid); } catch (_) {}
-  return adminJson({ ok: false, why: 'aligo ' + res.result_code + ' ' + (res.message || '') }, corsHeaders);
+  return adminJson({ ok: false, why: await whyWithEgress('aligo ' + res.result_code + ' ' + (res.message || '')) }, corsHeaders);
 }
 
 /* 비밀번호 재설정 — { email } 또는 { uid } 와 { password } */
