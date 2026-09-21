@@ -100,6 +100,17 @@ console.log(NL + '③ 시간과 배속' + NL);
   봄('1:02:03', V.vcTime(3723), '1:02:03');
   봄('없는 값은 0:00', [V.vcTime(), V.vcTime(null), V.vcTime(-5)], ['0:00', '0:00', '0:00']);
   봄('배속은 넷', V.VC_RATES, [1, 1.25, 1.5, 2]);
+
+  /* 10초 건너뛰기 (2026-09-22) — 가짜 플레이어로 seekTo 가 어디로 가는지 본다. 끝을 넘기지 않고(끝-1) 0 아래로 안 간다. */
+  const 간곳 = [];
+  const 가짜 = (cur, dur) => ({ getCurrentTime: () => cur, getDuration: () => dur, seekTo: (t) => 간곳.push(Math.round(t * 10) / 10) });
+  const S = new Function('state', 'vcPaint', lift('vcPlayer') + NL + lift('vcSkip') + NL + 'return vcSkip;')(
+    { ytPlayers: { V: { player: 가짜(30, 100) }, E: { player: 가짜(95, 100) }, Z: { player: 가짜(4, 100) } } }, () => {});
+  S('V', 10); S('V', -10); S('E', 10); S('Z', -10);
+  봄('🔴 ±10초 — 앞으로·뒤로 · 끝을 넘기면 끝-1 · 0 아래는 0', 간곳, [40, 20, 99, 0]);
+  봄('   조작줄에 −10·+10 단추가 재생 양옆에 있다', /vc-b skip" onclick="vcSkip\('\$\{vid\}', -10\)[\s\S]{0,300}vc-b play[\s\S]{0,200}vcSkip\('\$\{vid\}', 10\)/.test(html), true);
+  봄('   판을 두 번 톡하면 건너뛴다 (왼쪽 뒤로·오른쪽 앞으로) · 좁은 화면에선 단추를 감춘다',
+    /z\.tapAt && now - z\.tapAt < 320/.test(html) && /ev\.clientX < r\.left \+ r\.width \/ 2 \? -10 : 10/.test(html) && /@media \(max-width:560px\)\{ \.vc-b\.skip\{display:none;\} \}/.test(html), true);
 }
 
 /* ═══ ④ 진짜 크롬으로 굴린다 ═══ */

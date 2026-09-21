@@ -3166,6 +3166,7 @@
 .vc-b:hover{background:rgba(255,255,255,.12);}
 /* 배속은 글자다 — 칸을 조금 넓게 잡아야 「1.25x」가 안 접힌다. */
 .vc-b.rate{width:auto;padding:0 8px;font-family:'JetBrains Mono',monospace;font-size:11.5px;font-weight:600;}
+.vc-b.skip{width:auto;padding:0 6px;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;color:#D9D4C9;}
 .vc-t{flex-shrink:0;font-family:'JetBrains Mono',monospace;font-size:11px;color:#B9B4A9;min-width:34px;text-align:center;}
 /* 누르는 자리를 넓게 — 막대가 6px 이면 손가락으로 못 짚는다. 보이는 굵기는 안쪽 선이 진다. */
 .vc-bar{flex:1;min-width:0;height:18px;position:relative;cursor:pointer;touch-action:none;}
@@ -3197,6 +3198,8 @@
   .vc{gap:6px;padding:7px 8px;}
   .vc-t.dur{display:none;}
 }
+/* 좁은 화면에선 −10/+10 단추를 감춘다 — 두 번 톡이 대신한다. 단추까지 두면 막대가 손가락 폭도 안 남는다(프로브가 400px 에서 잡았다). */
+@media (max-width:560px){ .vc-b.skip{display:none;} }
 
 /* ============================================================
    출석 도장 — 접두사 gm-  (2026-08-21 · 시안 design-v1/21-checkin.html)
@@ -5780,6 +5783,7 @@ let state = {
   season: null,                  // kv/season {name, startedAt} — 지금 시험 시즌
   examRanges: null,              // kv/exam-ranges {season, bySchool:{학교:{학년:{과목:[단원…]}}}, dates:{학교:{학년:{start,end}}}}
   schoolBooks: null,             // kv/school-books {학교:{학년:'미래엔 / 학교프린트'}} — 시즌과 무관하다
+  schoolFiles: null,             // kv/school-files {학교:{학년:[{name,fileId,mime,size,at,season}]}} — 학교 프린트(PDF) · 시즌을 넘겨도 남는다 · 강사 화면에서만 lazy 로 읽는다
   gradeCuts: null,               // kv/grade-cuts {byKey:{시즌판:{학교:{학년:{과목:{c1..c4}}}}}} — G-1
   examHistory: null,             // kv/exam-history {items:[…]} — 지난 시즌 보관본. 화면을 열 때 늦게 받는다
   examSeasonView: '',            // 시험 일정 화면이 보고 있는 시즌. '' = 지금, 숫자 = 보관본 index
@@ -6574,6 +6578,71 @@ async function saveSchoolBook(school, grade, text){
   if(!b[school]) b[school] = {};
   if(text) b[school][grade] = text; else delete b[school][grade];
   await dbSet('school-books', state.schoolBooks);
+}
+/* =================== 학교 프린트 (2026-09-22 · 사용자 — 「학교 프린트를 pdf로 올려둘 수 있었으면 (해가 바뀄을때 찾아볼 수 있도록)」) ===
+   교재·메모(school-books)와 같은 열쇠(학교·학년)로 kv/school-files 하나 — {학교:{학년:[{name,fileId,mime,size,at,season}]}}.
+   파일 «내용»은 드라이브에 있다(강의자료와 같은 문 `uploadFileToDrive`) — 여기 남는 것은 이름·크기·fileId 라 문서가 안 커진다.
+   🔵 **시즌을 넘겨도 남고, 시즌 넘기기가 건드리지 않는다** — 「해가 바뀌었을 때 찾아보려고」가 뜻이다. 어느 시험 것인지는 올릴 때의
+     시즌(`season` · 예 「2026 · 2학기 중간」)을 파일에 적어 둔다. 지난 기록을 볼 때도 같은 목록이 뜬다.
+   ⚠ 강사만 읽는다 — 시험 범위 화면에서 lazy(`loadSchoolFilesIfNeeded`). 학생 로그인의 읽기 한 건을 늘리지 않는다([[Firestore 무료 한도]]). */
+async function loadSchoolFilesIfNeeded(){
+  if(state.schoolFiles || state.schoolFilesLoading) return;
+  state.schoolFilesLoading = true;
+  state.schoolFiles = (await dbGet('school-files', null)) || {};
+  state.schoolFilesLoading = false;
+  render();
+}
+function schoolFilesOf(school, grade){
+  const f = state.schoolFiles;
+  return (f && f[school] && Array.isArray(f[school][grade])) ? f[school][grade] : [];
+}
+function schoolFileSeasonLabel(){ return todayStr().slice(0, 4) + ' · ' + currentSeason(); }
+async function addSchoolFile(school, grade, input){
+  const file = input && input.files && input.files[0];
+  if(!file) return;
+  if(file.size > MATERIAL_MAX_BYTES){ showToast('파일이 너무 큽니다 — ' + fileSizeLabel(MATERIAL_MAX_BYTES) + '까지입니다.'); input.value = ''; return; }
+  state.schoolFileBusy = school + '|' + grade; render();
+  try{
+    const up = await uploadFileToDrive(file);
+    if(!state.schoolFiles) state.schoolFiles = {};
+    const f = state.schoolFiles;
+    if(!f[school]) f[school] = {};
+    if(!Array.isArray(f[school][grade])) f[school][grade] = [];
+    f[school][grade].push({ name: file.name, fileId: up.fileId, url: up.url || '', mime: file.type || '', size: file.size,
+                            at: todayStr(), season: schoolFileSeasonLabel() });
+    const ok = await dbSet('school-files', state.schoolFiles);
+    if(ok === false || ok === null) throw new Error('저장이 막혀 있습니다');
+    showToast('「' + file.name + '」을 올렸습니다.');
+  }catch(e){ showToast('올리지 못했습니다 — ' + (e.message || e)); }
+  state.schoolFileBusy = '';
+  render();
+}
+/* ⚠ 지우면 드라이브 파일도 지운다 — 남겨 두면 어디서도 안 보이는 파일이 쌓인다(강의자료 `deleteMaterial` 과 같은 결). */
+async function removeSchoolFile(school, grade, i){
+  const list = schoolFilesOf(school, grade), f = list[i];
+  if(!f || !confirm('「' + f.name + '」을 지울까요? 드라이브의 파일도 함께 지워집니다.')) return;
+  list.splice(i, 1);
+  if(!list.length) delete state.schoolFiles[school][grade];
+  await dbSet('school-files', state.schoolFiles);
+  deleteFromDrive(f.fileId);
+  render();
+}
+function schoolFilesHTML(school, grade){
+  const sc = jsAttr(school), gr = jsAttr(grade);
+  const files = schoolFilesOf(school, grade);
+  const busy = state.schoolFileBusy === school + '|' + grade;
+  return `<div style="margin-top:12px;font-size:11.5px;color:var(--sub);">학교 프린트
+      <span style="color:var(--dim);font-weight:400;">— PDF·사진 · 시즌을 넘겨도 남습니다${state.schoolFilesLoading ? ' · 불러오는 중…' : ''}</span></div>
+    <div class="row" style="gap:6px;flex-wrap:wrap;margin-top:6px;align-items:center;">
+      ${files.map((f, i) => `<span class="pill" style="gap:6px;" onclick="event.stopPropagation()">
+        <a href="${materialLink(f)}" target="_blank" rel="noopener" style="color:inherit;">${escHtml(f.name)}</a>
+        <s style="text-decoration:none;color:var(--dim);">${escHtml(f.season || (f.at || '').slice(0, 4))} · ${fileSizeLabel(f.size)}</s>
+        <button type="button" class="btn q sm" style="padding:0 5px;min-height:0;line-height:1.6;" title="지우기"
+          onclick="removeSchoolFile('${sc}','${gr}',${i})">✕</button></span>`).join('')}
+      <label class="btn q sm" style="cursor:pointer;" onclick="event.stopPropagation()">${busy ? '올리는 중…' : '＋ 프린트 올리기'}
+        <input type="file" accept="application/pdf,image/*" style="display:none;" ${busy ? 'disabled' : ''}
+          onchange="addSchoolFile('${sc}','${gr}',this)"></label>
+    </div>`;
 }
 
 /* 시험까지 며칠. 셋을 가른다 — «아직»·«시험 중»·«끝남»은 학생에게 서로 다른 말이다.
@@ -10389,7 +10458,11 @@ function vcTime(sec){
 }
 function videoControlsHTML(vid){
   return `<div class="vc" id="vc-${vid}">
+    ${/* 🔵 **10초 건너뛰기** (2026-09-22 · 사용자 — 「10초건너뛰기 같은거 할 수 있도록」). 재생 단추 양옆에 −10 · +10.
+         시청 시간은 벽시계로 재므로(K-7) 건너뛰어도 «본 시간»이 늘지 않는다 — 막대 끌기와 같은 성질이다. 자판 ←/→ 도 같다. */''}
+    <button class="vc-b skip" onclick="vcSkip('${vid}', -10)" title="10초 뒤로 (←)" aria-label="10초 뒤로">−10</button>
     <button class="vc-b play" onclick="vcToggle('${vid}')" title="재생 / 멈춤" aria-label="재생">${iconSvg('playBare',16)}</button>
+    <button class="vc-b skip" onclick="vcSkip('${vid}', 10)" title="10초 앞으로 (→)" aria-label="10초 앞으로">+10</button>
     <span class="vc-t cur" id="vc-cur-${vid}">0:00</span>
     <span class="vc-bar" id="vc-bar-${vid}" title="누르면 그 자리로 갑니다"><i></i></span>
     <span class="vc-t dur" id="vc-dur-${vid}">0:00</span>
@@ -10407,6 +10480,25 @@ function vcToggle(vid){
   const p = vcPlayer(vid); if(!p) return;
   try{ (p.getPlayerState() === 1 ? p.pauseVideo() : p.playVideo()); }catch(err){}
 }
+/* ±초 — 0 과 끝 사이에서 자른다. 끝을 넘겨 seek 하면 유튜브가 «끝남»을 쏘아 완주 판정이 흔들릴 수 있어 1초 앞에서 멈춘다. */
+function vcSkip(vid, delta){
+  const p = vcPlayer(vid); if(!p) return;
+  try{
+    const d = p.getDuration() || 0, cur = p.getCurrentTime() || 0;
+    p.seekTo(Math.max(0, Math.min(d > 0 ? d - 1 : cur + delta, cur + delta)), true);
+  }catch(err){}
+  vcPaint(vid);
+}
+/* 자판 ←/→ — 영상 조작줄이 화면에 하나 떠 있을 때만. 입력칸에 커서가 있으면 손대지 않는다. */
+document.addEventListener('keydown', (e) => {   /* ⚠ (e) 로 쓴다 — student-skin-test 가 첫 «e => {» 손잡이를 찾는다 */
+  if(e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+  const t = e.target;
+  if(t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+  const boxes = document.querySelectorAll('.vc[id^="vc-"]');
+  if(boxes.length !== 1) return;
+  e.preventDefault();
+  vcSkip(boxes[0].id.slice(3), e.key === 'ArrowLeft' ? -10 : 10);
+});
 /* ---------- 확대 (2026-09-13 · K-10) ----------
    🔴 **왜 우리가 지는가** — K-8 에서 영상 위에 덮은 투명한 판이 **손가락을 먼저 받아**
      브라우저의 핀치 확대가 유튜브에 안 닿는다. 판을 걷을 수는 없다(그것이 링크를 막는 장치다).
@@ -10462,9 +10554,21 @@ function vzNext(vid){
 }
 /* 판의 한 번 톡 = 재생/멈춤. ⚠ 핀치·옮기기 «직후»의 클릭은 삼킨다 —
    손가락을 뗄 때 브라우저가 click 을 한 번 더 주는데, 그것까지 받으면 확대할 때마다 영상이 멈춘다. */
-function vcVeilTap(vid){
+function vcVeilTap(vid, ev){
   const z = vzOf(vid);
   if(z.gestureAt && Date.now() - z.gestureAt < 400) return;
+  /* 🔵 **두 번 톡 = 10초 건너뛰기** (2026-09-22) — 유튜브와 같은 손짓. 왼쪽 반이면 뒤로, 오른쪽 반이면 앞으로.
+     첫 톡은 이미 재생/멈춤을 토글했으므로 둘째 톡이 한 번 더 토글해 원상태로 돌리고 건너뛴다(짧은 깜빡임 — 미루면 재생/멈춤이 느려진다).
+     폰(≤420px)에선 조작줄의 −10/+10 을 감추고 이 손짓만 남긴다 — 막대가 손가락으로 짚을 만큼 남아야 한다. */
+  const now = Date.now();
+  if(ev && z.tapAt && now - z.tapAt < 320){
+    z.tapAt = 0;
+    vcToggle(vid);                                   // 첫 톡의 토글을 되돌린다
+    const r = ev.currentTarget ? ev.currentTarget.getBoundingClientRect() : null;
+    vcSkip(vid, r && ev.clientX < r.left + r.width / 2 ? -10 : 10);
+    return;
+  }
+  z.tapAt = now;
   vcToggle(vid);
 }
 function vzBindVeil(vid){
@@ -15997,7 +16101,7 @@ function stuVideoHTML(c){
           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
           referrerpolicy="strict-origin-when-cross-origin"></iframe></div>
         ${/* 투명한 판 — 우클릭·길게 누르기·끝 화면 클릭이 유튜브에 안 닿는다. 손짓(확대·옮기기·재생)도 여기서 받는다. */''}
-        <div class="vc-veil" id="vveil-${v.id}" oncontextmenu="return false;" onclick="vcVeilTap('${v.id}')"></div>
+        <div class="vc-veil" id="vveil-${v.id}" oncontextmenu="return false;" onclick="vcVeilTap('${v.id}', event)"></div>
       </div>
       ${videoControlsHTML(v.id)}
     </div>
@@ -19197,7 +19301,10 @@ function sessionHwCheckHTML(classId, date){
         오늘 검사할 과제가 없습니다.<br>과제는 <b style="color:var(--sub);">마감일</b>이 된 수업부터 여기 섭니다 · 내는 곳은 <b style="color:var(--sub);">「5. 과제」 단계</b>입니다.</div>` };
 
   const c = stat(cur);
-  const left = roster.length - c.done - roster.filter(s=>recOf(s) && hwState(recOf(s), cur.id).status===HW_NONE).length;
+  /* 🔴 **«남은 사람»에 아직 아무것도 안 낸 사람도 든다** (2026-09-22 · 사용자 — 「하단에 과제 전체 제출 버튼 있었으면」).
+     예전엔 사진 낸 사람(확인 대기·반려)만 세어서, 종이 과제라 아무도 안 올린 반에선 이 단추가 **아예 안 떴다** — 그래서 없는 줄 알았다.
+     수업에서 눈으로 확인한 과제는 사진 없이 «현장 확인»으로 제출 처리하는 것이 이 화면의 뜻이다(`hwQuickSet` 도 그렇게 한다). */
+  const left = roster.length - c.done;
 
   /* 과제 고르개 — 한 줄짜리 칩이다. 수업 중에 보는 것은 대개 «지난 시간에 낸 것» 하나라
      기본으로 그것이 골라져 있고, 여러 개가 걸쳐 있을 때만 옆으로 옮긴다. */
@@ -19258,13 +19365,15 @@ async function hwQuickSet(sid, hwId, kind){
   else                   await undoHwDecision(sid, hwId);
 }
 /* 남은 사람을 한 번에 «제출»로 — 출결의 「남은 N명 전체 출석 처리」와 같은 어법이다.
-   ⚠ **이미 정해 둔 사람은 안 건드린다.** 보완 필요·미제출로 찍어 둔 것을 덮으면
-     방금 한 판단이 조용히 사라진다. */
+   ⚠ **이미 «했다»로 정해 둔 사람(제출·보완 필요)은 안 건드린다** — 방금 한 판단이 조용히 사라지면 안 된다.
+   🔵 아무것도 안 낸 사람(HW_NONE)도 든다 (2026-09-22) — 종이 과제는 사진이 없다. 사진 없으면 «현장 확인»으로 남긴다.
+     ⚠ 「미제출」 단추는 상태를 NONE 으로 되돌리는 것이라 «찍어 둔 미제출»과 «아직 안 냄»을 가를 수 없다 —
+       그래서 이 단추는 «다 낸 반»에서 누르는 것이고, 안 낸 사람이 있으면 누르기 전에 그 사람만 빼 두는 길은 없다(누른 뒤 그 사람을 미제출로 되돌린다). */
 async function hwQuickAll(classId, hwId){
   const roster = classRoster(classId);
   const targets = roster.filter(s=>{
     const st = hwState(state.allRecords[s.studentId], hwId);
-    return st.status===HW_SUBMITTED || st.status===HW_REJECTED;
+    return st.status!==HW_APPROVED && st.status!==HW_PARTIAL;
   });
   if(!targets.length){ showToast('처리할 사람이 없습니다.'); return; }
   for(const s of targets){
@@ -28509,6 +28618,7 @@ function unitBankAddLegacyHTML(){
    이름을 두 곳에서 관리하면 오타 하나로 «다른 학교»가 된다. */
 function teacherExamRangeHTML(){
   loadExamHistoryIfNeeded();
+  loadSchoolFilesIfNeeded();      // 학교 프린트 — 이 화면에서만 읽는다 (2026-09-22)
   const season = currentSeason();
   const next = SEASONS[(SEASONS.indexOf(season) + 1) % SEASONS.length];
   /* 되돌리기 단추가 쓴다 — 「잘못 넘겼다」는 실제로 일어난다(2026-09-08). */
@@ -28817,6 +28927,7 @@ function teacherExamRangeHTML(){
               placeholder="미래엔 / 학교프린트" value="${escHtml(book)}" onclick="event.stopPropagation()"
               onchange="setSchoolBook('${sc}','${gr}',this.value)"></label>
         </div>
+        ${schoolFilesHTML(school, grade)}
         <div style="margin-top:5px;font-size:11px;color:var(--dim);">
           날짜와 교재는 <b>${escHtml(school || '(학교 미입력)')} ${escHtml(grade || '학년 미입력')}</b>의
           모든 과목 줄이 같이 씁니다. <b>D-day는 수학 시험일부터</b> 셉니다.

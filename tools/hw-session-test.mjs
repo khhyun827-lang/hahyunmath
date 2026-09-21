@@ -377,5 +377,35 @@ console.log(NL + '⑥ 과제·메모 — 넘어가면 저절로 저장' + NL);
   봄('   시험은 뺐다 — 새 시험 만들기는 저절로 안 한다', /sessionAutoSaveExam/.test(html), false);
 }
 
+/* ═══ 「남은 N명 전체 제출 처리」 — 아무것도 안 낸 사람도 든다 (2026-09-22) ═══
+   종이 과제라 아무도 사진을 안 올린 반에서 이 단추가 아예 안 떴다(확인 대기·반려만 세었다). 사용자가 「하단에 전체 제출 버튼 있었으면」. */
+console.log(NL + '⑥ 전체 제출 처리 — 안 낸 사람도 든다' + NL);
+{
+  const HW = { NONE: 'none', SUBMITTED: 'submitted', REJECTED: 'rejected', PARTIAL: 'partial', APPROVED: 'approved' };
+  const state = { allRecords: {
+    s1: { assignmentsDone: {} },                                                    // 아무것도 안 냄
+    s2: { assignmentsDone: { h1: { status: HW.SUBMITTED, photos: [{ url: 'u' }] } } },   // 사진 내고 대기
+    s3: { assignmentsDone: { h1: { status: HW.APPROVED } } },                        // 이미 제출 처리
+    s4: { assignmentsDone: { h1: { status: HW.PARTIAL } } },                         // 보완 필요로 찍어 둠
+    s5: { assignmentsDone: { h1: { status: HW.REJECTED, photos: [{ url: 'u' }] } } },
+  } };
+  const 쓴것 = [], 말 = [];
+  const Q = new Function('state', 'DATA', 'classRoster', 'setHwState', 'todayStr', 'actorLabel', 'logAudit', 'showToast', 'render',
+    'HW_NONE', 'HW_SUBMITTED', 'HW_REJECTED', 'HW_PARTIAL', 'HW_APPROVED',
+    lift('hwState') + NL + lift('hwQuickAll') + NL + 'return hwQuickAll;')(
+    state, { assignments: [{ id: 'h1', title: '3단원 숙제' }] },
+    () => ['s1', 's2', 's3', 's4', 's5'].map(id => ({ studentId: id })),
+    async (sid, hwId, patch) => { 쓴것.push([sid, patch.status, patch.onSite]); },
+    () => '2026-09-22', () => '강사', async () => {}, m => 말.push(m), () => {},
+    HW.NONE, HW.SUBMITTED, HW.REJECTED, HW.PARTIAL, HW.APPROVED);
+  await Q('c1', 'h1');
+  봄('🔴 안 낸 사람(s1)·대기(s2)·반려(s5)가 제출로 — 이미 제출·보완 필요는 안 건드린다',
+    쓴것.map(x => x[0]), ['s1', 's2', 's5']);
+  봄('   사진 없는 사람은 «현장 확인»으로 남는다', 쓴것.map(x => [x[1], x[2]]), [['approved', true], ['approved', false], ['approved', false]]);
+  봄('   몇 명 처리했는지 말한다', 말, ['3명을 제출로 처리했습니다.']);
+  const check = lift('sessionHwCheckHTML');
+  봄('🔴 단추가 «다 한 사람» 빼고 세운다 — 안 낸 사람만 있어도 뜬다', /const left = roster\.length - c\.done;/.test(check), true);
+}
+
 console.log(NL + (fail ? '🔴 ' + fail + '개 실패 · ' : '✓ 전부 통과 · ') + pass + '개' + NL);
 process.exit(fail ? 1 : 0);
