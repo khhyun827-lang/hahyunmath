@@ -13070,7 +13070,9 @@ function render(){
   { /* ⚠ scrollIntoView 는 창까지 민다 — 폰에서는 목록이 위, 판이 아래라 창이 튄다. 목록 상자만 민다. */
     const rb = app.querySelector('.rv-lbody'), on = rb && rb.querySelector('.rv-item.on');
     if(on){ const a = rb.getBoundingClientRect(), b = on.getBoundingClientRect();
-      if(b.top < a.top) rb.scrollTop -= a.top - b.top; else if(b.bottom > a.bottom) rb.scrollTop += b.bottom - a.bottom; } }
+      /* 아랫줄(.actbar)이 fixed 로 목록 밑을 덮는다 — 그 위까지만 «보이는 자리»다 (크롬으로 재서 알았다) */
+      const bar = document.querySelector('.actbar'), bottom = Math.min(a.bottom, bar ? bar.getBoundingClientRect().top : a.bottom);
+      if(b.top < a.top) rb.scrollTop -= a.top - b.top; else if(b.bottom > bottom) rb.scrollTop += b.bottom - bottom; } }
   /* 🔵 **고리는 여기서 깨운다** (2026-09-06) — 「앱을 열어 둔 동안 돈다」가 이 한 줄이다.
      render() 는 자주 불리지만 이미 돌고 있으면 곧장 빠져나온다(값 셋만 본다). */
   if(state.autoFill && state.autoFill.on) autoFillKick();
