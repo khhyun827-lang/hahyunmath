@@ -45,7 +45,9 @@ console.log('워커 리포트 MMS 길 — 막이가 제자리에 있는가\n');
 }
 
 {
-  const 몸 = worker.slice(worker.indexOf('const REPORT_MMS_DAILY_LIMIT'), worker.indexOf('async function handleAdminResetPw('));
+  /* 번호 읽기는 알림톡과 한 함수(readContact)로 합쳐져 위쪽에 산다 — 함께 떠 온다 (2026-09-21) */
+  const 몸 = 몸떠내기(worker, 'readContact') + String.fromCharCode(10) + 몸떠내기(worker, 'readContactParentPhone') + String.fromCharCode(10)
+    + worker.slice(worker.indexOf('const REPORT_MMS_DAILY_LIMIT'), worker.indexOf('async function handleAdminResetPw('));
   const 보낸것 = [];
   const kv = new Map();
   const env = {
@@ -96,6 +98,27 @@ console.log('워커 리포트 MMS 길 — 막이가 제자리에 있는가\n');
   봄('   화면은 key·name·ym·image 만 보낸다', /JSON\.stringify\(\{ key: studentKeyOfSid\(st\.studentId\), name: st\.name, ym: b\.ym, image: baked\.url \}\)/.test(html), true);
   봄('   번호 없는 학생은 누르기 «전»에 줄에 보인다', /'대기 · 학부모 번호 없음'/.test(html), true);
   봄('   서랍에 단추가 있다', /onclick="runReportSend\(\)"/.test(html), true);
+}
+
+/* 🔴 **번호를 «화면이 쓰는 꼴»에서 읽는가** (2026-09-21 · 첫 MMS 시험이 no_phone 으로 걸렸다).
+   index.html 의 docFields 는 문서를 { value: JSON.stringify(data), uid, week } 로 쓴다 — 번호는 `fields.value` 안 JSON 이다.
+   09-19 판은 `fields.parentPhone.stringValue` 를 읽어 번호가 있어도 언제나 '' 였다. 가짜 Firestore 로 두 꼴을 다 준다. */
+{
+  const 글 = 몸떠내기(worker, 'readContact') + '\n' + 몸떠내기(worker, 'readContactPhone') + '\n' + 몸떠내기(worker, 'readContactParentPhone')
+    + '\nreturn { readContact, readContactPhone, readContactParentPhone };';
+  const 문서 = { fields: { value: { stringValue: JSON.stringify({ studentId: 'test', phone: '010-1111-2222', parentPhone: '010-3322-1292' }) }, uid: { stringValue: 'u' } } };
+  const 옛꼴 = { fields: { phone: { stringValue: '01099998888' }, parentPhone: { stringValue: '010 7777 6666' } } };
+  const 만들기 = (doc, status = 200) => new Function('fetch', 'getServiceAccountToken', 글)(
+    async () => ({ status, json: async () => doc }), async () => 'tok');
+  const env = { FIREBASE_SA: JSON.stringify({ project_id: 'p' }) };
+  const A = 만들기(문서);
+  봄('🔴 화면이 쓴 꼴(fields.value 안 JSON)에서 학부모 번호를 읽는다 — 숫자만', await A.readContactParentPhone(env, 'k'), '01033221292');
+  봄('   학생 번호도 같은 자리에서', await A.readContactPhone(env, 'k'), '01011112222');
+  const B = 만들기(옛꼴);
+  봄('   맨 칸에 든 옛 꼴도 읽는다', [await B.readContactParentPhone(env, 'k'), await B.readContactPhone(env, 'k')], ['01077776666', '01099998888']);
+  const C = 만들기({}, 404);
+  봄('   문서가 없으면 빈 글자 (no_phone 으로 간다)', await C.readContactParentPhone(env, 'k'), '');
+  봄('🔴 판을 올렸다 (붙여넣기 전엔 옛 판이 no_phone 을 낸다)', /WORKER_VERSION = '2026-09-21a'/.test(worker), true);
 }
 
 console.log('\n  ' + (틀림 ? '🔴 ' : '✅ ') + 통과 + ' 통과 · ' + 틀림 + ' 실패');

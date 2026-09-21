@@ -44,7 +44,7 @@ const TWIN_GROQ_MAX_TOKENS = 7000;   // 추론 + JSON. 검토(6000)보다 답이
 /* 🔴 «올렸는지 짐작하지 않는다» — 이 워커는 대시보드에 붙여넣어 올리므로 밖에서는 어느 판이 도는지
    알 길이 없었다(2026-09-11에 사용자가 올리고 「도는지 확인은 못 해봤어」). /quota 가 이 값을 같이
    돌려주고 tools/worker-check.mjs 가 저장소의 값과 견준다. **프롬프트나 규칙을 바꾸면 이 날짜를 올릴 것.** */
-const WORKER_VERSION = '2026-09-19a';
+const WORKER_VERSION = '2026-09-21a';
 // 이미지 업로드는 학생도 쓴다(질의응답 사진). 비용이 드는 쪽은 Gemini라 여기는 넉넉하게,
 // 다만 «한 명이 무한히»는 막는다. 전체 상한은 걸지 않는다 — 걸면 바쁜 날 학생이 막힌다.
 const UPLOAD_PER_USER_DAILY = 200;
@@ -305,18 +305,30 @@ async function isTeacherOrStaff(env, uid) {
   return r.status === 200;
 }
 
-/* contacts/{key}.phone — 숫자만 남긴다. 없거나 못 읽으면 ''. */
-async function readContactPhone(env, key) {
+/* contacts/{key} — 학생 번호(phone)·학부모 번호(parentPhone). 숫자만 남긴다. 없거나 못 읽으면 ''.
+   🔴 **화면은 문서를 `{ value: JSON.stringify(data), uid, week }` 꼴로 쓴다** (index.html `docFields`) —
+     칸이 `fields.phone` 이 아니라 **`fields.value` 안의 JSON 글자** 다. 09-19 판은 `fields.phone.stringValue` 를
+     읽어 언제나 '' → **번호가 있어도 `no_phone`** 이었다(2026-09-21 · 첫 MMS 시험에서 걸렸다).
+   ⚠ 옛 꼴(맨 칸)도 함께 본다 — 다른 손으로 넣은 문서가 있을 수 있다. */
+async function readContact(env, key) {
   const sa = JSON.parse(env.FIREBASE_SA);
   const tok = await getServiceAccountToken(env);
   const r = await fetch('https://firestore.googleapis.com/v1/projects/' + sa.project_id
     + '/databases/(default)/documents/contacts/' + encodeURIComponent(key),
     { headers: { Authorization: 'Bearer ' + tok } });
-  if (r.status !== 200) return '';
+  if (r.status !== 200) return { phone: '', parentPhone: '' };
   const d = await r.json();
-  const raw = (d.fields && d.fields.phone && d.fields.phone.stringValue) || '';
-  return String(raw).replace(/[^0-9]/g, '');
+  const f = d.fields || {};
+  let inner = {};
+  try { inner = JSON.parse((f.value && f.value.stringValue) || '{}') || {}; } catch (_) { inner = {}; }
+  const digits = (v) => String(v || '').replace(/[^0-9]/g, '');
+  return {
+    phone: digits(inner.phone || (f.phone && f.phone.stringValue)),
+    parentPhone: digits(inner.parentPhone || (f.parentPhone && f.parentPhone.stringValue)),
+  };
 }
+async function readContactPhone(env, key) { return (await readContact(env, key)).phone; }
+async function readContactParentPhone(env, key) { return (await readContact(env, key)).parentPhone; }
 
 /* POST /notify  { kind:'hw'|'vid', id, items:[{ key, message }] }
    → { ok, sent, results:[{ key, ok, why }] }   why = already | no_phone | quota | bad_item | aligo <code> <message> */
@@ -382,18 +394,6 @@ async function handleNotify(request, env, corsHeaders, callerUid) {
    ⚠ 사진은 300KB 를 넘지 않게 화면이 굽는다(알리고 MMS 상한 — 문서 기준). 넘어오면 여기서도 막는다. */
 const REPORT_MMS_DAILY_LIMIT = 300;
 const REPORT_MMS_MAX_BYTES = 300 * 1024;
-
-async function readContactParentPhone(env, key) {
-  const sa = JSON.parse(env.FIREBASE_SA);
-  const tok = await getServiceAccountToken(env);
-  const r = await fetch('https://firestore.googleapis.com/v1/projects/' + sa.project_id
-    + '/databases/(default)/documents/contacts/' + encodeURIComponent(key),
-    { headers: { Authorization: 'Bearer ' + tok } });
-  if (r.status !== 200) return '';
-  const d = await r.json();
-  const raw = (d.fields && d.fields.parentPhone && d.fields.parentPhone.stringValue) || '';
-  return String(raw).replace(/[^0-9]/g, '');
-}
 
 /* POST /report-mms  { key, name, ym:'2026-09', image:'data:image/jpeg;base64,…' }  → { ok, why }
    why = already | no_phone | quota | bad_item | too_big | aligo <code> <message> */
