@@ -44,7 +44,7 @@ const TWIN_GROQ_MAX_TOKENS = 7000;   // 추론 + JSON. 검토(6000)보다 답이
 /* 🔴 «올렸는지 짐작하지 않는다» — 이 워커는 대시보드에 붙여넣어 올리므로 밖에서는 어느 판이 도는지
    알 길이 없었다(2026-09-11에 사용자가 올리고 「도는지 확인은 못 해봤어」). /quota 가 이 값을 같이
    돌려주고 tools/worker-check.mjs 가 저장소의 값과 견준다. **프롬프트나 규칙을 바꾸면 이 날짜를 올릴 것.** */
-const WORKER_VERSION = '2026-09-21b';
+const WORKER_VERSION = '2026-09-21c';
 // 이미지 업로드는 학생도 쓴다(질의응답 사진). 비용이 드는 쪽은 Gemini라 여기는 넉넉하게,
 // 다만 «한 명이 무한히»는 막는다. 전체 상한은 걸지 않는다 — 걸면 바쁜 날 학생이 막힌다.
 const UPLOAD_PER_USER_DAILY = 200;
@@ -301,13 +301,22 @@ const NOTIFY_TPL = { hw: 'ALIGO_TPL_HW', vid: 'ALIGO_TPL_VID', qna: 'ALIGO_TPL_Q
    ⚠ 표본이다 — 다른 데이터센터로 붙으면 새 대역이 나올 수 있다. 그래서 **-101 IP 가 나면 그 순간의 나간 IP 를 why 에 붙여 준다**
      (아래 `whyWithEgress`). 강사는 그 대역을 알리고에 더 넣으면 된다. 같은 호출 안에서도 연결마다 IP 가 다를 수 있어 «그 요청»의
      IP 라고 단언은 못 하지만, 같은 데이터센터의 같은 대역일 확률이 높다. */
-async function egressIp(i) {
-  try {
-    const r = await fetch('https://api.ipify.org?n=' + (i || 0) + '&t=' + Date.now(), { cf: { cacheTtl: 0 } });
-    const ip = (await r.text()).trim();
-    return /^\d{1,3}(\.\d{1,3}){3}$/.test(ip) ? ip : '';
-  } catch (_) { return ''; }
+/* ⚠ 09-21b 는 api.ipify.org 하나만 불렀고 빈 배열이 왔다(IPv6 로 붙었거나 막힌 것). IPv4 만 주는 곳 셋을 차례로 묻고,
+   무엇이 왔는지(`raw`)도 남긴다 — 한 번 붙여넣을 때마다 강사 손이 가므로 «왜 안 됐나»까지 한 번에 보여야 한다. */
+const EGRESS_ECHOES = ['https://api4.ipify.org', 'https://ipv4.icanhazip.com', 'https://ifconfig.me/ip'];
+async function egressProbe(i) {
+  const out = { ip: '', raw: '', err: '' };
+  for (const base of EGRESS_ECHOES) {
+    try {
+      const r = await fetch(base + '?n=' + (i || 0) + '&t=' + Date.now(), { headers: { 'User-Agent': 'curl/8' }, cf: { cacheTtl: 0 } });
+      const t = (await r.text()).trim();
+      out.raw = out.raw || (base + ' ' + r.status + ' ' + t.slice(0, 60));
+      if (/^\d{1,3}(\.\d{1,3}){3}$/.test(t)) { out.ip = t; return out; }
+    } catch (e) { out.err = out.err || (base + ' ' + String((e && e.message) || e).slice(0, 80)); }
+  }
+  return out;
 }
+async function egressIp(i) { return (await egressProbe(i)).ip; }
 async function whyWithEgress(why) {
   if (!/-101/.test(why) || !/IP/i.test(why)) return why;
   const ip = await egressIp(0);
@@ -318,9 +327,10 @@ async function handleEgressIp(request, env, corsHeaders, callerUid) {
   const g = await adminGate(request, env, corsHeaders, callerUid);
   if (g.흠) return g.흠;
   const n = Math.max(1, Math.min(20, Number((g.body || {}).n) || 8));
-  const ips = (await Promise.all(Array.from({ length: n }, (_, i) => egressIp(i)))).filter(Boolean);
+  const probes = await Promise.all(Array.from({ length: n }, (_, i) => egressProbe(i)));
+  const ips = probes.map((p) => p.ip).filter(Boolean);
   const ranges = [...new Set(ips.map((ip) => ip.replace(/\.\d+$/, '.*')))];
-  return adminJson({ ips, ranges }, corsHeaders);
+  return adminJson({ ips, ranges, raw: probes[0].raw, err: probes[0].err }, corsHeaders);
 }
 
 /* 강사 «또는 조교»인가 — 알림 문에서만 쓴다. */
