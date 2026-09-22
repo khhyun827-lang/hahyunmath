@@ -1,0 +1,26 @@
+{
+  "name": "hahyunmath-tools",
+  "version": "1.0.0",
+  "description": "김하현수학연구소 — 개발 도구만(검사·스크린샷). 배포본 index.html 은 의존성이 없다.",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "check": "node tools/check-all.mjs",
+    "shots": "node tools/shots.mjs",
+    "splice": "node tools/splice.mjs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/khhyun827-lang/hahyunmath.git"
+  },
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/khhyun827-lang/hahyunmath/issues"
+  },
+  "homepage": "https://github.com/khhyun827-lang/hahyunmath#readme",
+  "devDependencies": {
+    "playwright": "^1.63.0"
+  },
+  "private": true
+}

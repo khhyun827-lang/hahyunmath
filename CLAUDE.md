@@ -1,6 +1,13 @@
 # 김하현수학연구소 — 작업 노트
 
-마지막 갱신: **2026-09-23** — 🔵 **질의응답에 사진을 여러 장 올린다** (사용자 — 「질의응답에 사진이 하나밖에 안올라가는데 여러개 올리게해줘」).
+마지막 갱신: **2026-09-23** — 🔵 **일머리를 도구로 내렸다 — 슬래시 명령 둘 · Playwright** (사용자 — 「도움이 될만한 것들이 있어? … 필요한 것이 있다면 활용하고싶어」).
+  ① **`/patch`·`/deploy`** (`.claude/skills/`) — 늘 밟던 순서를 적어 뒀다. ⚠ `.gitignore` 의 `.claude/` 를 `.claude/*` + `!.claude/skills/` 로 갈랐다(로컬 설정은 빼고 스킬만 올린다).
+  ② **`tools/splice.mjs`** — 큰 파일을 닻과 닻 사이로 갈아 끼운다. 🔴 **조각은 `.txt` 파일로 읽어 셸을 안 지난다** — 백슬래시·달러·백틱이 깎이던 그 함정을 도구가 막는다. 자체 검사 5개.
+  ③ **`tools/shots.mjs`** + `shots-scenes.mjs` — **화면을 폭마다 찍는다**(Playwright). 무대 여섯 · 실 DB 0줄 · 가로 넘침과 JS 오류를 같이 잰다. `node tools/shots.mjs 영상상세 --w 864`.
+  🔵 **의존성이 생겼다 — 도구에만.** `playwright` 하나(node_modules 19MB · 브라우저는 저장소 밖 877MB). **배포본 `index.html` 은 여전히 의존성 0**이고 Pages 도 그대로다.
+  ⚠ 새 컴퓨터에서는 `npm i && npx playwright install chromium webkit` 을 한 번 돌려야 `shots.mjs` 가 돈다. 검사 97개는 그것 없이도 그대로 돈다.
+
+그 앞: **2026-09-23** — 🔵 **질의응답에 사진을 여러 장 올린다** (사용자 — 「질의응답에 사진이 하나밖에 안올라가는데 여러개 올리게해줘」).
   질문·추가 질문·답(첫 답과 더 단 답) 전부 **최대 6장**. 올린 것이 줄로 서고 ×로 뺀다 — **과제 제출(`.hw-shots`)과 같은 부품**이고, 여러 장 올리는 몸통(`stagePhotos`)도 그 둘이 함께 쓴다.
   🔴 **옛 문서를 한 줄도 안 고쳤다** — 지금까지 올라간 것은 `image` 한 장이다. 읽는 자리 여덟을 전부 `qnaImgList` 하나로 모아 **한 장짜리 목록**으로 읽는다(화면은 예전과 똑같이 보인다).
   ⚠ 새 문서는 `images` 에 전부 싣고 **첫 장은 `image` 에도 그대로 둔다** — 못 고친 자리가 있어도 «빈 칸»이 아니라 첫 장이 보이게. 그래서 지울 때는 fileId 로 추려 **같은 파일을 두 번 안 지운다**.
@@ -1879,6 +1886,32 @@ state.view='assistant'; loadAllRecordsIfNeeded();
 > 🔴 그 전에 잡은 진짜 버그 — 워커가 contacts 를 `fields.parentPhone` 에서 읽었다. 화면(docFields)은 `{value: JSON, uid, week}` 로 쓴다 → 번호가 있어도 늘 no_phone. `readContact` 하나로(옛 꼴도 본다). 가짜 Firestore 에 «화면이 쓰는 꼴»을 넣도록 검사를 고쳤다.
 > 비밀 8 — SOLAPI_API_KEY·API_SECRET·SENDER·PFID + TPL_HW/VID/QNA/WRONG. 09-22 밤 기준 VID 만 심사 대기. 검사 notify 36 · report-mms 24 · qna-followup 26.
 > ⚠ 솔라피 API Key 만들 때 「허용 IP」는 **모든 IP 허용**(라우트 범위 0.0.0.0/0) — 기본값은 집 IP 라 두면 알리고와 같은 벽이다.
+
+> ### 🔵 **09-23 (T-1) — 일머리를 도구로: `/patch`·`/deploy` · splice · shots** (사용자 — 「Perplexity·Firecrawl·Playwright·composio 중 도움이 될 게 있어? … 필요한 것이 있다면 활용하고싶어」)
+> 🔵 **넷 중 Playwright 하나만 골랐다.** 까닭 — Perplexity 는 이미 있는 웹 검색과 겹치고, Firecrawl 은 대량 크롤링 도구인데 여기선 문서 한 장씩이면 되고,
+>   composio 는 SaaS 수백 개를 한 겹으로 붙이는 것인데 이 시스템은 붙일 것(Firestore·드라이브·솔라피·GitHub)을 이미 직접 붙여 놨다. **새로 엮을 SaaS 가 생기면 그때 볼 것.**
+> 🔴 **고른 까닭은 «프로브 23개가 손으로만 돈다»였다.** 검사 97개는 자동인데, 「어색하다」를 보는 화면 검사는 사람이 크롬을 열어야 했다.
+>   그날 실제로 막힌 것도 전부 그 자리였다 — 스크린샷 CDP 타임아웃 · 자동재생 막이로 스크립트가 영상을 못 돌림 · **index.html 을 iframe 에 또 넣으면 유튜브가 안 섬**.
+>
+> **① `.claude/skills/patch` · `.claude/skills/deploy`**
+>   `/patch` — 조각은 `.txt` 로, 끼우는 것은 splice 로, 새 검사는 **덫을 놔 무는지 본다**, 폭 864 가 주력이라는 것.
+>   `/deploy` — 검사 → 푸시 전 검문 셋(정답·열쇠 / 줄끝 / `?v=`) → 커밋 → push → **배포본 글자수 대조** → 「눈 확인은 아직」이라고 말하기.
+>   ⚠ `.gitignore` 첫 줄을 `.claude/` 에서 `.claude/*` + `!.claude/skills/` 로 갈랐다 — **로컬 설정(`settings.local.json`)은 그대로 빼고 스킬만 올린다.**
+>
+> **② `tools/splice.mjs`** — `열기(파일)` → `한번(닻, 새것)` · `사이(앞, 뒤, 새것)` · `조각(이름)` · `저장()`.
+>   🔴 **닻이 둘이면 멈춘다** — 어느 쪽을 고쳤는지 모를 일은 안 한다. 🔴 **조각은 파일에서 읽는다** — 셸을 안 지나므로 백슬래시·달러·백틱이 한 글자도 안 깎인다.
+>   `node tools/splice.mjs` 로 자체 검사 5개(그 «안 깎인다»를 실제로 잰다).
+>
+> **③ `tools/shots.mjs` + `tools/shots-scenes.mjs`** — `node tools/shots.mjs <무대> [--w 864,390] [--webkit] [--full]`.
+>   무대 여섯(영상탭·영상상세·질의응답·학생질문·학생강의·과제표) · 폭 기본 1280/864/390(학생 화면은 430/390/360).
+>   🔴 **실 DB 0줄** — `씨앗()` 이 dbSet/dbGet/dbSetDoc/saveRecord/드라이브를 먼저 끊고 흉내 반·학생 열·영상 여섯·질문 둘을 심는다.
+>   🔵 그림만 찍는 것이 아니라 **가로 넘침과 JS 오류를 같이 재서** 빨간 것이 있으면 exit 1 이다 — 「폰에서 옆으로 밀린다」를 사람 눈 없이 잡는다.
+>   ⚠ 무대를 더하는 것은 `shots-scenes.mjs` 에 **한 덩이 적는 일**이다. 프로브 파일을 새로 짓지 않는다.
+>   ⚠ `--webkit` 은 진짜 WebKit 이라 크롬보다 사파리에 가깝지만 **iOS Safari 는 아니다** — 오래된 아이폰 문제를 여기서 «없다»고 결론 내리지 말 것.
+>
+> 🔵 **의존성은 도구에만 산다** — `package.json`(private) · `playwright` 하나. node_modules 19MB, 브라우저 본체 877MB 는 저장소 밖(`~/AppData/Local/ms-playwright`).
+>   **배포본 `index.html` 은 여전히 의존성 0 이고 GitHub Pages 도 그대로다.** 둘 다 `.gitignore` 에 넣었다(`node_modules/` · `tools/shots-out/`).
+> ✅ 무대 여섯 × 폭 셋 = 그림 열다섯을 뽑아 **JS 오류 0 · 가로 넘침 0** 을 확인했다. 검사 97개도 그대로 초록.
 
 > ### 🔵 **09-23 (Q-1) — 질의응답 사진을 여러 장** (사용자 — 「질의응답에 사진이 하나밖에 안올라가는데 여러개 올리게해줘」)
 > 🔵 **과제 제출이 이미 하던 일이다** — 노트 여러 쪽을 찍어 올리는 그 길(`.hw-shots` · 한 장씩 차례로 올리기 · 칸마다 «올리는 중…»)을 그대로 쓴다.

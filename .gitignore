@@ -1,4 +1,7 @@
-.claude/
+# 로컬 설정(권한 목록 등)은 빼고, «저장소 전용 스킬»은 올린다 (2026-09-23).
+# 스킬은 이 저장소에서만 쓰는 일머리라 코드와 같이 다녀야 한다.
+.claude/*
+!.claude/skills/
 
 # 실제 학교 시험지는 저장소에 넣지 않는다 — 남의 저작물이고 공개 저장소다.
 # 파서를 고칠 때 폴더에 두고 쓰는 것은 괜찮다 (2026-08-10에 광남고 1-1b로 그렇게 했다).
@@ -35,3 +38,9 @@ answer-key*.json
 # API 열쇠와 재워 둔 창고 — 저장소에 올리지 않는다 (2026-09-06)
 .keys/
 .bench/
+
+# Playwright (2026-09-23) — 개발 도구다. 배포본(index.html)은 이것에 기대지 않는다.
+#   설치:  npm i   &&   npx playwright install chromium webkit
+#   브라우저 본체는 저장소 밖(~/AppData/Local/ms-playwright, 877MB)에 산다.
+node_modules/
+tools/shots-out/
