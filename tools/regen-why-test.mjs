@@ -107,8 +107,10 @@ console.log(NL + '③ 긴 말이 2.2초 만에 사라지지 않는다');
 const 토스트 = lift('function showToast(');
 const 머문다 = (msg) => {
   let 몇ms;
-  new Function('state', 'setTimeout', 토스트.replace(/render\(\);/g, '') + NL + 'return showToast;')
-    ({}, (f, d) => { 몇ms = d; })(msg);
+  /* ⚠ 2026-09-23(V-3)부터 `showToast` 는 `render()` 가 아니라 `toastPaint()` 를 부른다 —
+     화면을 통째로 다시 그리면 학생의 유튜브 플레이어가 죽기 때문이다. 여기서 재는 것은 «머무는 시간»뿐이다. */
+  new Function('state', 'setTimeout', 'toastPaint', 토스트 + NL + 'return showToast;')
+    ({}, (f, d) => { 몇ms = d; }, () => {})(msg);
   return 몇ms;
 };
 봄('짧은 말은 예전 그대로 2.2초 남짓', 머문다('됐습니다'), 2200 + 4 * 60);

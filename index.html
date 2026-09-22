@@ -6673,14 +6673,27 @@ function studentExamDday(sid){
   return examDdayOf(s.school || '', s.grade || '');
 }
 
+/* 🔴 **토스트는 화면을 다시 그리지 않는다** (2026-09-23 · V-3 · 영상 버그의 뿌리).
+     여태 `showToast` 가 `render()` 를 **두 번** 불렀다(띄울 때 · 지울 때). 그런데 `render()` 는
+     `app.innerHTML` 을 통째로 갈아서 **학생이 보던 유튜브 iframe 이 새로 선다** —
+     `mountVideoTrackers` 가 옛 플레이어를 destroy 하고 새로 만들므로 **배속은 1x 로,
+     자리는 처음으로** 돌아간다. 「멈췄다 켜면 배속이 풀린다」가 이 길이었다:
+     멈추면 `flushWatchTick` → 저장이 막히면 `warnDbBlocked` → `showToast` → `render()`.
+   🔵 말 한마디는 제 칸만 고쳐 그린다 — `#app-toast` 는 `.app` **밖**에 살아서 innerHTML 갈이를 안 탄다.
+   ⚠ `.app` 클래스를 입혀야 서식이 닿는다(드로어 층과 같은 까닭). 배경·높이는 인라인이라 안 벗겨도 된다. */
+function toastPaint(){
+  let el = document.getElementById('app-toast');
+  if(!state.toast){ if(el) el.remove(); return; }
+  if(!el){ el = document.createElement('div'); el.id = 'app-toast'; el.className = 'app'; document.body.appendChild(el); }
+  el.innerHTML = `<div style="position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1B1B1D;color:#fff;padding:12px 22px;border-radius:30px;font-size:13px;box-shadow:0 6px 20px rgba(0,0,0,.2);z-index:999;">${state.toast}</div>`;
+}
 function showToast(msg){
   state.toast = msg;
-  render();
+  toastPaint();
   /* 🔴 **긴 말은 2.2초에 못 읽는다** (2026-09-21) — 실패의 «까닭»을 여기에 실으면서 걸렸다.
      짧은 말은 예전 그대로고, 길면 글자 수만큼 더 머문다(최대 9초). */
-  setTimeout(()=>{ state.toast=''; render(); }, Math.min(9000, 2200 + String(msg||'').length * 60));
+  setTimeout(()=>{ state.toast=''; toastPaint(); }, Math.min(9000, 2200 + String(msg||'').length * 60));
 }
-
 /* =================== 초기 로드 =================== */
 /* 🔵 **읽기와 «시작 절차»를 가른다** (2026-09-07 · 인증 옮기기 ④).
    `loadAllData()` 는 **읽기만** 한다. 로그인한 뒤에 «그 사람 토큰으로» 다시 읽어야 해서
@@ -10445,6 +10458,14 @@ function videoProgressBlockHTML(studentId, videoId){
    ⚠ 배속은 «시청 시간»에 그대로 들어간다(K-7) — 2배속으로 다 보면 완주다.
    ⚠ 플레이어를 못 잡는 순간이 있다(아직 준비 전 · 다른 화면으로 떠난 뒤) — 그때는 조용히 아무것도 안 한다. */
 const VC_RATES = [1, 1.25, 1.5, 2];
+/* 🔵 **학생이 «정해 둔 것»을 기억한다** (2026-09-23 · V-3) — 배속과 보던 자리.
+   render() 가 한 번 돌면 유튜브 플레이어는 destroy 되고 새로 선다(배속 1x · 자리 0).
+   그때 이 기억으로 도로 입힌다(onReady). 화면(state)에만 산다 — 새로고침하면 사라진다.
+   ⚠ 기록(videoProgress)과는 다른 것이다. 저것은 «무엇을 봤나»의 사실이고, 이것은 «어떻게 보고 있었나»다. */
+function vcPref(vid){
+  if(!state.videoPrefs) state.videoPrefs = {};
+  return state.videoPrefs[vid] || (state.videoPrefs[vid] = {});
+}
 function vcPlayer(vid){ const e = state.ytPlayers && state.ytPlayers[vid]; return e && e.player; }
 function vcAsk(vid, fn, 없으면){ const p = vcPlayer(vid); if(!p) return 없으면;
   try{ const v = fn(p); return (v === undefined || v === null) ? 없으면 : v; }catch(err){ return 없으면; } }
@@ -10630,7 +10651,9 @@ function vcNextRate(vid){
   const p = vcPlayer(vid); if(!p) return;
   const now = vcAsk(vid, x=>x.getPlaybackRate(), 1);
   const 가까운 = VC_RATES.reduce((a,b)=> Math.abs(b-now) < Math.abs(a-now) ? b : a, VC_RATES[0]);
-  try{ p.setPlaybackRate(VC_RATES[(VC_RATES.indexOf(가까운) + 1) % VC_RATES.length]); }catch(err){}
+  const 다음 = VC_RATES[(VC_RATES.indexOf(가까운) + 1) % VC_RATES.length];
+  try{ p.setPlaybackRate(다음); }catch(err){}
+  vcPref(vid).rate = 다음;      /* 플레이어가 다시 서도 이 값이 살아남는다 (V-3) */
   vcPaint(vid);
 }
 function vcMute(vid){
@@ -10692,6 +10715,7 @@ function vcPaint(vid){
   if(!vcPlayer(vid)) return;
   const cur = vcAsk(vid, x=>x.getCurrentTime(), 0);
   const dur = vcAsk(vid, x=>x.getDuration(), 0);
+  if(cur > 0) vcPref(vid).pos = cur;      /* 다시 설 때 여기로 돌아온다 (V-3) */
   const 아이콘 = (el, name) => { if(el && el.dataset.ic !== name){ el.dataset.ic = name; el.innerHTML = iconSvg(name, 16); } };
   const 글자 = (el, t) => { if(el && el.textContent !== t) el.textContent = t; };
   글자(document.getElementById('vc-cur-' + vid), vcTime(cur));
@@ -10778,6 +10802,16 @@ function mountVideoTrackers(studentId){
               let 길이 = 0; try{ 길이 = player.getDuration(); }catch(err){}
               const 구간 = videoGoalOfItem(videoItemById(videoId), 길이);
               if(구간){ try{ player.seekTo(구간.from, true); }catch(err){} }
+              /* 🔴 **다시 선 플레이어에 «학생이 정해 둔 것»을 도로 입힌다** (2026-09-23 · V-3).
+                   render() 한 번이면 이 플레이어는 새것이다 — 배속 1x, 자리 0. 학생은 아무것도
+                   안 했는데 배속이 풀리고 처음으로 돌아간다(「멈췄다 켜면 배속이 바뀐다」가 이것이었다).
+                 ⚠ 자리는 구간 «안»일 때만 되돌린다 — 구간 배정을 가로지르면 안 된다.
+                 ⚠ 끝자락(끝에서 2초 안)은 안 되돌린다 — 다 본 영상이 열리자마자 끝으로 가면 이상하다. */
+              const 기억 = vcPref(videoId);
+              const 안쪽 = 기억.pos > 1 && (!길이 || 기억.pos < 길이 - 2)
+                && (!구간 || (기억.pos >= 구간.from && (구간.끝까지 || 기억.pos <= 구간.to)));
+              if(안쪽){ try{ player.seekTo(기억.pos, true); }catch(err){} }
+              if(기억.rate){ try{ player.setPlaybackRate(기억.rate); }catch(err){} }
               /* 🔴 **자막을 끈다** (2026-09-13 · K-10) — 주소의 `cc_load_policy=0` 만으로는
                  계정 설정이 이기는 경우가 있다. 조작줄을 없앤 뒤로는 학생이 끌 길이 없으므로 여기서 한 번 더 끈다.
                  ⚠ 모듈 이름이 판에 따라 다르다(옛 판은 'cc') — 둘 다 부른다. 없는 것을 부르면 조용히 넘어간다. */
@@ -10793,6 +10827,13 @@ function mountVideoTrackers(studentId){
               const entry = state.ytPlayers[videoId];
               if(!entry) return;
               if(e.data === YT.PlayerState.PLAYING){
+                /* 🔵 **기기가 배속을 되돌리는 판이 있다** (2026-09-23 · V-3) — 멈췄다 켜면 1x 로
+                     돌아가는 기기가 있다고 학생들이 말했다. 재생이 시작될 때마다 «정해 둔 것»과
+                     견줘서 다르면 다시 건다. 정해 둔 적이 없으면(기억 없음) 손대지 않는다. */
+                const 정한배속 = vcPref(videoId).rate;
+                if(정한배속 && Math.abs(videoPlaybackRate(player) - 정한배속) > 0.01){
+                  try{ player.setPlaybackRate(정한배속); }catch(err){}
+                }
                 entry.lastTick = Date.now();
                 if(entry.timer) clearInterval(entry.timer);
                 entry.timer = setInterval(() => {
@@ -13135,7 +13176,8 @@ function render(){
     <button type="button" class="hw-close" aria-label="닫기"
       onclick="event.stopPropagation(); closeHwPhoto()">✕</button>
     <img src="${escHtml(state.hwPhotoView)}" alt="사진 크게 보기"></div>`;
-  if(state.toast) html += `<div style="position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1B1B1D;color:#fff;padding:12px 22px;border-radius:30px;font-size:13px;box-shadow:0 6px 20px rgba(0,0,0,.2);z-index:999;">${state.toast}</div>`;
+  /* ⚠ 토스트는 여기서 안 그린다 (2026-09-23 · V-3) — `toastPaint` 가 `.app` 밖의 `#app-toast` 를 맡는다.
+     여기서 그리면 innerHTML 갈이를 타고, 그 갈이가 학생의 유튜브 플레이어를 죽인다. */
   /* 🔴 **못 읽었으면 «못 읽었다»고 말한다** (2026-09-04 · 사용자가 겪고 나서 넣었다).
      읽기가 실패해도 `dbGetCollection` 은 빈 배열을 준다(앱이 서면 안 되니까). 그래서
      할당량이 소진된 날, 화면은 「학생 1명 · 기록 0건」으로 **아주 멀쩡하게** 그려졌고

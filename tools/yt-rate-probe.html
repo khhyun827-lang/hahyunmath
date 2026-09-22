@@ -1,0 +1,74 @@
+<!doctype html><meta charset="utf-8"><title>yt-rate-probe</title>
+<!-- 「멈췄다 다시 재생하면 배속이 풀린다」를 **유튜브 쪽인지 우리 쪽인지** 가른다 (2026-09-23).
+     학생 화면과 **똑같은 playerVars**(controls=0 · disablekb=1 · fs=0 · playsinline=1 …)로
+     플레이어를 맨손으로 하나 세우고, 배속을 2로 준 뒤 멈췄다 켜서 배속을 다시 읽는다.
+     여기서 2가 그대로면 유튜브는 죄가 없다 — 우리 쪽(render 로 iframe 이 새로 서는 것)이다.
+
+       node tools/serve.js
+       http://127.0.0.1:8777/tools/yt-rate-probe.html
+       …?v=<11자리 영상 id>   (기본값은 공개 테스트 영상)
+-->
+<style>body{font:13px/1.7 ui-monospace,monospace;margin:12px;}#yt{width:480px;height:270px;}
+pre{white-space:pre-wrap;background:#f5f4f0;padding:8px;}</style>
+<div id="yt"></div>
+<pre id="o">…</pre>
+<script src="https://www.youtube.com/iframe_api"></script>
+<script>
+const VID = (location.search.match(/[?&]v=([A-Za-z0-9_-]{11})/) || [])[1] || 'aqz-KE-bpKQ';
+const o = document.getElementById('o');
+const R = { 영상: VID };
+const 적기 = () => { o.textContent = 'RESULT ' + JSON.stringify(R, null, 1); };
+const 잠깐 = ms => new Promise(r => setTimeout(r, ms));
+const 재생될때까지 = p => new Promise(r => {
+  const t = setInterval(() => { if(p.getPlayerState() === 1 && p.getCurrentTime() > 0.4){ clearInterval(t); r(); } }, 120);
+  setTimeout(() => { clearInterval(t); r(); }, 12000);
+});
+let player;
+function onYouTubeIframeAPIReady(){
+  player = new YT.Player('yt', {
+    videoId: VID,
+    /* ⚠ 학생 화면과 같은 값이어야 뜻이 있다 (stuVideoHTML 의 embed) */
+    playerVars: { enablejsapi:1, controls:0, disablekb:1, fs:0, playsinline:1,
+                  cc_load_policy:0, modestbranding:1, rel:0, iv_load_policy:3 },
+    events: { onReady: 돌리기 }
+  });
+}
+async function 돌리기(){
+  try{
+    R.고를수있는배속 = player.getAvailablePlaybackRates();
+    player.mute();                      /* 자동재생 막이를 피한다 */
+    player.playVideo();
+    await 재생될때까지(player);
+    R.재생시작 = player.getPlayerState();
+    player.setPlaybackRate(2);
+    await 잠깐(1200);
+    R.배속_준뒤 = player.getPlaybackRate();
+
+    player.pauseVideo();
+    await 잠깐(1200);
+    R.배속_멈춘뒤 = player.getPlaybackRate();
+
+    player.playVideo();
+    await 잠깐(2500);
+    R.배속_다시재생뒤 = player.getPlaybackRate();
+
+    /* 건너뛰기(seek)도 배속을 흔드는가 — 우리 화면의 −10/+10 · 두 번 톡이 이 길이다 */
+    player.seekTo(Math.max(0, player.getCurrentTime() + 10), true);
+    await 잠깐(2000);
+    R.배속_건너뛴뒤 = player.getPlaybackRate();
+
+    /* 멈춘 «채로» 배속을 주면 그것이 살아남는가 — 우리 조작줄이 실제로 하는 짓이다 */
+    player.pauseVideo();
+    await 잠깐(600);
+    player.setPlaybackRate(1.5);
+    await 잠깐(600);
+    R.배속_멈춘채로_준직후 = player.getPlaybackRate();
+    player.playVideo();
+    await 잠깐(2500);
+    R.배속_그뒤_재생하면 = player.getPlaybackRate();
+    R.끝 = '됐다';
+  }catch(e){ R.흠 = String(e && e.message || e); }
+  적기();
+}
+적기();
+</script>
