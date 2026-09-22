@@ -215,8 +215,8 @@ console.log(NL + '⑤ 반 목록의 퍼센트 — 무엇의 수인지 말한다'
   /* 🔴 영상 탭의 목록은 K-7 에서 이미 «완주 n/m» 으로 바뀌었다 — 되돌아가지 않았는지 본다 */
   const 영상 = lift('chubVideoHTML');
   봄('🔴 영상 목록은 평균이 아니라 «완주 n/m» 이다', 영상.includes('<b>완주 ${d}/${roster.length}</b>'), true);
-  봄('평균은 tooltip 과 이탈 머리에 남는다',
-    영상.includes('반 평균 시청률 ${a}%') && 영상.includes('평균 ${avgSel}%'), true);
+  봄('평균은 tooltip 과 숫자 띠에 남는다 (2026-09-23 · 이탈 머리에서는 걷었다)',
+    영상.includes('반 평균 시청률 ${a}%') && 영상.includes("kpi('평균 시청률', avgSel"), true);
 }
 
 console.log(NL + (fail ? '🔴 ' + fail + '개 실패 · ' : '✓ 전부 통과 · ') + pass + '개' + NL);

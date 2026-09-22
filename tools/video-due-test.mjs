@@ -116,7 +116,8 @@ const stuVideo = lift('stuVideoHTML'), chubVideo = lift('chubVideoHTML');
 const 머리카드 = lift('videoHeroHTML');
 봄('강사 상세에 「마감 바꾸기」 (2026-09-16부터 머리 카드에 있다)',
   [(chubVideo + 머리카드).includes('setVideoDue('), (chubVideo + 머리카드).includes('video-due-edit')], [true, true]);
-봄('학생별 진행 — 지났는데 안 봤으면 «마감 지남»', chubVideo.includes('· 마감 지남</span>'), true);
+/* 2026-09-23 — 줄마다 딱지가 아니라 «묶음 머리»(미시청 · 마감 지남)에 붙는다. */
+봄('학생별 진행 — 지났는데 안 봤으면 «마감 지남»', chubVideo.includes("' · 마감 지남'"), true);
 봄('등록 폼에도 마감 칸이 있다', chubVideo.includes('id="video-due"'), true);
 
 
@@ -166,7 +167,7 @@ await api2.addVideo();
 봄('등록 폼에 «보낼 사람» 상자 줄', chubVideo.includes('class="vd-who"') && chubVideo.includes('반 전체'), true);
 봄('개인 배정은 명단(학생)으로 모은다 — classId 가 빈 옛 결석 영상도 든다', chubVideo.includes('rosterIds.has(v.studentId)'), true);
 봄('목록에 «개인 배정» 구역', chubVideo.includes('개인 배정 <span class="mono">'), true);
-봄('개인 배정 줄에 완주/％/미시청과 마감 지남', chubVideo.includes("p.done ? '완주' : p.seen ? p.pct+'%' : '미시청'") && chubVideo.includes('personalItem'), true);
+봄('개인 배정 줄에 완주/％/미시청과 마감 지남', chubVideo.includes("p.done ? '완주' : p.seen ? p.pct+'%' : '미시청'") && chubVideo.includes('personalRow'), true);
 봄('개인 배정 상세는 히스토그램 대신 그 한 명', chubVideo.includes("sel.studentId ? one : drop + students"), true);
 봄('둘 다 비어야 «없습니다»', chubVideo.includes('vids.length===0 && personal.length===0'), true);
 
@@ -186,7 +187,7 @@ const 곁3 = {
   escHtml: x => String(x == null ? '' : x), iconSvg: () => '', todayStr: () => TODAY,
   /* ⚠ 2026-09-16 에 «영상 머리 카드»(`videoHeroHTML`)와 알림 띠(`vidNoticeBarHTML`)가 붙었다.
      띠는 이 검사가 볼 것이 아니라 빈 것으로 세운다 — 머리 카드는 마감 딱지를 같이 지므로 그대로 뜬다. */
-  vidNoticeBarHTML: () => '', extractYouTubeId: () => 'yt',
+  vidNoticeBarHTML: () => '', vidNoticeBtnHTML: () => '', extractYouTubeId: () => 'yt',
 };
 const api3 = new Function(...Object.keys(곁3),
   /* ⚠ `chubVideoHTML` 이 마감 딱지를 `stuDday` 로 찍는다 — 위 ①의 것과 같은 함수다. */

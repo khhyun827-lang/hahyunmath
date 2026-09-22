@@ -102,7 +102,9 @@ console.log(NL + '④ 폼과 딱지' + NL);
      lift('addVideo').includes('notrackEl.checked = false'), true);
   봄('🔴 묶음 열쇠가 복습용 여부를 본다 — 세는 것과 안 세는 것이 한 줄로 묶이면 안 된다',
      폼.includes("v.noTrack?'R':''"), true);
-  봄('   목록 줄에 «복습용» 딱지가 선다', (폼.match(/복습용<\/span>/g) || []).length >= 2, true);
+  /* 2026-09-23 — 반 전체·개인 배정 줄이 딱지를 한 함수(딱지들)로 찍고, 머리 카드가 하나 더 찍는다. */
+  봄('   목록 줄과 머리 카드에 «복습용» 딱지가 선다',
+     [(폼.match(/복습용<\/span>/g) || []).length >= 1, lift('videoHeroHTML').includes('복습용</span>')], [true, true]);
   봄('🔴 학생 화면에도 적힌다 — 안 적으면 「안 보면 깎이나」로 읽는다',
      lift('stuVideoHTML').includes('복습용'), true);
   봄('🔴 진도 칸이 복습용에는 «완주»를 안 말한다',

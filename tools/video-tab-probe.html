@@ -1,0 +1,91 @@
+<!doctype html><meta charset="utf-8"><title>video-tab-probe</title>
+<!-- 반 관리 › 영상 탭을 «실 DB 없이» 그려 본다 (2026-09-23 · 영상 탭 다시 설계).
+     실서비스(index.html)를 iframe 에 띄우고 저장·읽기를 통째로 흉내로 바꾼 뒤
+     흉내 반 하나 · 학생 열 명 · 영상 여섯(반 전체 넷 · 개인 배정 둘)을 심어 그린다.
+
+       node tools/serve.js
+       http://127.0.0.1:8777/tools/video-tab-probe.html?w=864      (사용자 판 · 125% 확대)
+       http://127.0.0.1:8777/tools/video-tab-probe.html?w=1280     (넓은 판)
+       …?w=390                                                     (폰)
+       …&sel=p1   개인 배정 묶음을 고른 채로 그린다
+       …&add=1    「영상 등록」 폼을 편 채로 그린다
+
+     🔴 실 DB 0줄 · 읽기 0건 — dbSet/dbGet/dbSetDoc/logAudit 를 프레임 안에서 갈아 끼운다. -->
+<style>html,body{margin:0;background:#fff}iframe{border:0;display:block}
+pre{font:12px monospace;color:#333;margin:0;padding:4px;white-space:pre-wrap;}</style>
+<pre id="o">…</pre>
+<script>
+const fr = document.createElement('iframe');
+const Q = parent.location.search;
+const W = Number((Q.match(/[?&]w=([0-9]+)/) || [])[1]) || 1280;
+fr.width = W; fr.height = 1900; fr.style.width = W + 'px'; fr.src = '/index.html';
+document.body.appendChild(fr);
+const o = document.getElementById('o');
+let n = 0;
+const t = setInterval(async () => {
+  n++;
+  let ready = false;
+  try { ready = fr.contentWindow.eval('typeof chubVideoHTML==="function" && typeof render==="function" && typeof state!=="undefined"'); } catch (_) {}
+  if (!ready) { if (n > 200) { clearInterval(t); o.textContent = 'RESULT timeout'; } return; }
+  clearInterval(t);
+  const w = fr.contentWindow;
+  let out;
+  try {
+    out = await w.eval(`(async function(){
+  const R = {}; const 쓴것 = [];
+  window.dbSet = async (k,v) => { 쓴것.push(k); return true; };
+  window.dbGet = async (k,d) => d;
+  window.dbSetDoc = async (c,i,d) => { 쓴것.push(c+'/'+i); return true; };
+  window.dbDelete = async () => true;
+  window.logAudit = async () => {};
+  window.showToast = () => {};
+  window.loadAllRecordsIfNeeded = () => {};
+
+  const CID = 'probe1';
+  DATA.classes = [{ id:CID, name:'고1 프로브반', schedule:'월,수,금 19시~21시',
+    period:'26.03~26.12', status:'진행중', kind:'정규' }];
+  const 이름 = ['김민아','박서준','이도윤','최지우','정하은','강현우','윤서아','임준서','한지민','오예준'];
+  DATA.students = 이름.map((nm,i)=>({ studentId:'s'+i, name:nm, classId:CID, phone: i%3 ? '010-1234-00'+i : '' }));
+  DATA.assignments = []; DATA.exams = []; DATA.notices = [];
+  const today = todayStr();
+  const d = k => shiftYmd(today, k);
+  DATA.videos = [
+    { id:'v1', classId:CID, title:'수학(상) 4강 — 인수분해 공식 세 개', unit:'다항식', url:'https://youtu.be/dQw4w9WgXcQ', dueDate:d(2), createdAt: d(-3) },
+    { id:'v2', classId:CID, title:'수학(상) 3강 — 나머지정리', unit:'다항식', url:'https://youtu.be/9bZkp7q19f0', dueDate:d(-2), fromSec:750, toSec:1080, createdAt:d(-7) },
+    { id:'v3', classId:'', title:'복소수 개념 정리 (복습)', unit:'복소수', url:'https://youtu.be/kJQP7kiw5Fk', noTrack:true, createdAt:d(-10) },
+    { id:'v4', classId:CID, title:'수학(상) 2강 — 곱셈공식과 인수분해', unit:'다항식', url:'https://youtu.be/3JZ_D3ELwOQ', dueDate:d(12), createdAt:d(-14) },
+    { id:'p1', studentId:'s1', title:'9/15 결석 보충 — 4강', url:'https://youtu.be/dQw4w9WgXcQ', dueDate:d(1), createdAt:d(-2) },
+    { id:'p2', studentId:'s4', title:'9/15 결석 보충 — 4강', url:'https://youtu.be/dQw4w9WgXcQ', dueDate:d(1), createdAt:d(-2) },
+    { id:'p3', studentId:'s7', title:'약수·배수 다시 보기', url:'https://youtu.be/9bZkp7q19f0', fromSec:120, createdAt:d(-5) },
+  ];
+  /* 시청 기록 — 학생마다 다르게 */
+  const seen = {};
+  const 비율 = { v1:[1,0.95,0.62,0.3,0,0.88,0.15,1,0.45,0], v2:[1,1,0.8,1,0.5,1,0,1,1,0.2], v3:[0.3,0,0,1,0,0,0,0.5,0,0], v4:[1,1,1,1,1,1,0.9,1,1,0.7],
+                 p1:[0,0.4], p2:[0,0,0,0,1], p3:[0,0,0,0,0,0,0,0.6] };
+  state.allRecords = {};
+  DATA.students.forEach((s,i)=>{
+    const vp = {};
+    Object.keys(비율).forEach(vid=>{ const r = 비율[vid][i]; if(r===undefined) return;
+      vp[vid] = { videoId:vid, duration:1200, watchedSeconds: Math.round(1200*r) }; });
+    state.allRecords[s.studentId] = { videoProgress: vp, attendance: [] };
+  });
+  state.allRecordsLoaded = true; state.allRecordsLoading = false;
+  state.currentUser = { type:'teacher' }; state.view = 'teacher';
+  state.teacherTab = 'classhub'; state.classHubTab = 'video'; state.classHubId = CID;
+  const q = ${JSON.stringify(Q)};
+  const sel = (q.match(/[?&]sel=([a-z0-9]+)/)||[])[1]; if(sel) state.videoSelectedId = sel;
+  if(/add=1/.test(q)) state.videoAdding = true;
+  render(); await new Promise(r=>setTimeout(r,150));
+  const 글 = el => (el && el.textContent || '').replace(/\\s+/g,' ').trim();
+  R.폭 = window.innerWidth;
+  R.가로넘침 = document.documentElement.scrollWidth > window.innerWidth + 1;
+  R.넘친요소 = [...document.querySelectorAll('[class*="vd-"]')]
+    .filter(e=>e.getBoundingClientRect().right > window.innerWidth + 1).map(e=>e.className).slice(0,8);
+  R.항목수 = document.querySelectorAll('.vd-item, .vd-row').length;
+  R.실DB로_나간것 = 쓴것;
+  return R;
+})()`);
+  } catch (e) { out = { error: String(e && e.stack || e) }; }
+  o.textContent = 'RESULT ' + JSON.stringify(out);
+}, 100);
+</script>

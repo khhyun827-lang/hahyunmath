@@ -207,21 +207,24 @@ console.log(NL + '④ 반 › 영상 탭을 실제로 그려 본다' + NL);
   /* ⚠ 2026-09-16 에 «영상 머리 카드»(`videoHeroHTML`)와 알림 띠가 붙었다 — 띠는 이 검사가 볼 것이
      아니라 빈 것으로 세우고, 머리 카드와 구간 딱지(`videoGoalLabelOf`)는 그대로 뜬다. */
   const C = new Function('DATA', 'state', 'loadAllRecordsIfNeeded', 'classRoster', 'escHtml', 'todayStr', 'iconSvg',
-    'vidNoticeBarHTML', 'extractYouTubeId', 'stuDday', 'setVideoDue', 'deleteVideo', 'render',
+    'vidNoticeBarHTML', 'vidNoticeBtnHTML', 'extractYouTubeId', 'stuDday', 'setVideoDue', 'deleteVideo', 'render',
     잣대 + NL + lift('secToClock') + NL + lift('videoGoalLabelOf') + NL + lift('videoHeroHTML')
       + NL + lift('chubVideoHTML') + NL + 'return chubVideoHTML;')(
     DATA, state, () => {}, () => roster,
     s => (s === null || s === undefined) ? '' : String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;'),
     () => '2026-09-13', () => '',
-    () => '', () => 'yt', () => null, () => {}, () => {}, () => {});
+    () => '', () => '', () => 'yt', () => null, () => {}, () => {}, () => {});
   const 그림 = C('c1');
+  /* 2026-09-23 — 학생이 «묶음»(미시청 · 시청 중 · 완주)으로 나뉜다. 상태는 줄의 딱지가 아니라 묶음 머리다. */
+  const 묶음 = (html, 말) => (html.split('<div class="vd-grp').find(x => new RegExp('<div class="t-sec">' + 말 + ' <span').test(x)) || '');
 
   봄('🔴 목록이 «완주 1/3» 이라고 말한다 (예전엔 「33%」 한 줄이었다)', 그림.includes('<b>완주 1/3</b>'), true);
   봄('🔴 그래도 평균은 안 잃는다 — tooltip 에 있다', /반 평균 시청률 43%/.test(그림), true);
   봄('tooltip 이 완주의 뜻을 적는다', /완주 = 영상 길이의 90% 이상 실제 재생/.test(그림), true);
   봄('머리말이 완주선을 밝힌다', 그림.includes('완주 = 영상 길이의 90% 이상 실제 재생'), true);
   /* ⚠ 평균이 43인 것 — (100 + 30 + 0)/3. 안 본 학생도 0%로 함께 센다. */
-  봄('이탈 지점 머리에 재원·완주·평균이 함께 선다', /재원 3명 · 완주 1 · 평균 43%/.test(그림), true);
+  /* 2026-09-23 — 재원·완주·평균은 숫자 띠(.kpis)로 갔다. 이탈 머리에서 되풀이하지 않는다. */
+  봄('숫자 띠에 평균 43%', 그림.includes('<div class="k">평균 시청률</div><div class="v">43<s>%</s></div>'), true);
 
   /* 이탈 히스토그램 — 칸은 «완주선»에서 끊긴다(`DROP_BINS = VIDEO_GOAL_PCT / 10`).
      🔵 완주선이 90% 로 내려가면서(2026-09-20) 90~99 칸이 사라진다 — 그 위는 전부 완주라
@@ -240,26 +243,30 @@ console.log(NL + '④ 반 › 영상 탭을 실제로 그려 본다' + NL);
   봄('나머지 칸은 비었다', [1, 2, 4, 5, 6, 7, 8].map(i => 칸(i)[1]), [0, 0, 0, 0, 0, 0, 0]);
 
   /* 학생별 진행 */
-  봄('완주한 학생은 «완주» 딱지 · 100%',
-    /가나다<\/b>[\s\S]*?<span class="pct">100%<\/span>[\s\S]*?<span class="badge ok">완주<\/span>/.test(그림), true);
-  봄('30%에서 멈춘 학생은 «시청 중»', /라마바<\/b>[\s\S]*?<span class="pct">30%<\/span>[\s\S]*?시청 중/.test(그림), true);
+  봄('완주한 학생은 «완주» 묶음에 · 100%',
+    /가나다<\/b>[\s\S]*?<span class="pct">100%<\/span>/.test(묶음(그림, '완주')), true);
+  봄('30%에서 멈춘 학생은 «시청 중» 묶음에', /라마바<\/b>[\s\S]*?<span class="pct">30%<\/span>/.test(묶음(그림, '시청 중')), true);
   /* ⚠ 2026-09-16(`7a090bd` · 「보기·관리하기 좋게 다듬었다」)에 «—» 를 «0%» 로 바꿨다 —
      안 본 것은 «못 잰 것»이 아니라 진짜 0이다(반 평균도 0으로 함께 센다고 tooltip 이 말한다).
      딱지는 그대로 «미시청» 이라 「0% 인데 아직 안 튼 것」임이 한 줄에서 읽힌다. */
-  봄('미시청은 «0%» 와 «미시청» 딱지', /사아자<\/b>[\s\S]*?<span class="pct">0%<\/span>[\s\S]*?<span class="badge">미시청<\/span>/.test(그림), true);
+  봄('미시청은 «0%» 와 «미시청» 묶음', /사아자<\/b>[\s\S]*?<span class="pct">0%<\/span>/.test(묶음(그림, '미시청')), true);
   봄('🔴 완주선 코앞(89%)은 «100%»로 적히지 않는다 — 내림이고, 완주도 아니다', await (async () => {
     allRecords.s2.videoProgress.v1 = { watchedSeconds: 539, duration: 600 };
     const 다시 = C('c1');
     allRecords.s2.videoProgress.v1 = { watchedSeconds: 180, duration: 600 };
-    return /라마바<\/b>[\s\S]*?<span class="pct">89%<\/span>[\s\S]*?시청 중/.test(다시);
+    return /라마바<\/b>[\s\S]*?<span class="pct">89%<\/span>/.test(묶음(다시, '시청 중'));
   })(), true);
   봄('🔴 90% 만 봐도 «완주 · 100%» 다 (잡담을 건너뛴 학생이 억울하지 않다)', await (async () => {
     allRecords.s2.videoProgress.v1 = { watchedSeconds: 540, duration: 600 };
     const 다시 = C('c1');
     allRecords.s2.videoProgress.v1 = { watchedSeconds: 180, duration: 600 };
-    return /라마바<\/b>[\s\S]*?<span class="pct">100%<\/span>[\s\S]*?<span class="badge ok">완주<\/span>/.test(다시);
+    return /라마바<\/b>[\s\S]*?<span class="pct">100%<\/span>/.test(묶음(다시, '완주'));
   })(), true);
-  봄('학생별 진행 머리에 완주 1/3 · 미시청 1', /완주 <b class="mono">1\/3<\/b> · 미시청 <b class="mono">1<\/b>/.test(그림), true);
+  /* 2026-09-23 — 머리의 «완주 1/3 · 미시청 1»은 숫자 띠(.kpis)와 묶음 머리로 갈라졌다. */
+  봄('숫자 띠에 재원 3 · 완주 1 · 미시청 1', /<div class="k">재원<\/div><div class="v">3<\/div>/.test(그림)
+    && /<div class="k">완주<\/div><div class="v" style="color:var\(--ok\);">1<\/div>/.test(그림)
+    && /<div class="k">미시청<\/div><div class="v" style="color:var\(--no\);">1<\/div>/.test(그림), true);
+  봄('묶음 머리에 미시청 1 · 시청 중 1 · 완주 1', ['미시청','시청 중','완주'].map(말 => (묶음(그림, 말).match(/<span class="mono">(\d+)<\/span>/)||[])[1]), ['1','1','1']);
   /* 완주선이 100% 미만이라 막대마다 선이 하나씩 선다 — 재원 셋이면 셋이다. */
   봄('🔴 학생 막대마다 완주선을 긋는다 (90%)', (그림.match(/<em class="g"/g) || []).length, roster.length);
 }
