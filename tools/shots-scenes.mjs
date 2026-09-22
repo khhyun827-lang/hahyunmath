@@ -27,7 +27,9 @@ export function 씨앗(){
   const 오늘 = todayStr();
   const 날 = k => shiftYmd(오늘, k);
   const 이름 = ['김민아','박서준','이도윤','최지우','정하은','강현우','윤서아','임준서','한지민','오예준'];
-  const PIC = 'https://placehold.co/600x400/png';
+  /* 🔴 **바깥 망에 기대지 않는다** — placehold.co 가 느리면 사진이 2×2 로 찌그러져
+     «내가 고쳐서 깨진 것»처럼 보인다(2026-09-23에 실제로 헷갈렸다). 그림을 글자로 들고 있는다. */
+  const PIC = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='600' height='400'><rect width='600' height='400' fill='%23e3e0d9'/><text x='300' y='215' font-family='sans-serif' font-size='44' fill='%238d8a82' text-anchor='middle'>600 x 400</text></svg>";
 
   DATA.classes = [{ id:'c1', name:'고1 프로브반', schedule:'월,수,금 19시~21시',
                     period:'26.03~26.12', status:'진행중', kind:'정규' },
@@ -107,6 +109,12 @@ export const 무대들 = {
     폭: '430,390,360',
     세우기: () => { state.currentUser = { type:'student', studentId:'s0', name:'김민아' };
       state.view = 'student'; state.studentTab = 'video'; state.stuVideoId = null; render(); } },
+  학생홈: { 말: '학생 › 홈 (대시보드)', 폭: '430,390,360',
+    세우기: () => { state.currentUser = { type:'student', studentId:'s0', name:'김민아' };
+      state.view = 'student'; state.studentTab = 'home'; render(); } },
+  학생과제: { 말: '학생 › 학습 › 진도·과제', 폭: '430,390,360',
+    세우기: () => { state.currentUser = { type:'student', studentId:'s0', name:'김민아' };
+      state.view = 'student'; state.studentTab = 'progress'; render(); } },
   과제표: { 말: '반 관리 › 과제 (격자)',
     세우기: () => { state.currentUser = { type:'teacher', name:'김하현T' }; state.view = 'teacher';
       state.teacherTab = 'classhub'; state.classHubTab = 'homework'; state.classHubId = 'c1'; render(); } },
