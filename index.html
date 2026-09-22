@@ -4403,7 +4403,7 @@
 .app.app .mc[data-tap], .app.app .mc[onclick],
 .app.app .todo[data-tap], .app.app .todo[onclick],
 .app.app .mc [data-tap], .app.app .mc [onclick],
-.app.app .sap-duo > div, .app.app .sap-quick i, .app.app .sap-tabs a.fab i,
+.app.app .sap-duo > div, .app.app .sap-quick i,
 .app.app .vd-row, .app.app .qitem, .app.app .rv-item, .app.app .st-row,
 .app.app .hg-m, .app.app .subnav a, .app.app .topbar nav a{
   transform:scale(1);   /* 🔴 **항등값을 적어 둔다** — 안 적으면 돌아올 때가 `scale(.92)` → `none` 이라
@@ -4428,7 +4428,13 @@
 /* 아이콘 칩은 제 안에서만 눌린다 — 줄 전체가 들썩이면 목록이 흔들린다 */
 .app.app .sap-quick a:active i{transform:scale(var(--press));
   transition-duration:var(--t-press);transition-timing-function:var(--ease-squash);}
-.app.app.sap .sap-tabs a.fab:active i{transform:translateX(-50%) scale(var(--press));
+/* 🔴 **홈 단추는 따로 적는다.** 이것은 `translateX(-50%)` 로 가운데를 잡고 있어서
+     위의 두루뭉술한 `transform:scale(1)` 에 걸리면 **반 폭만큼 오른쪽으로 밀린다**(실제로 그랬다).
+     자리를 살린 채로만 눌린다. */
+.app.app .sap-tabs a.fab i{transform:translateX(-50%) scale(1);
+  transition-property:transform,box-shadow;
+  transition-duration:var(--t-back);transition-timing-function:var(--ease-spring);}
+.app.app .sap-tabs a.fab:active i{transform:translateX(-50%) scale(var(--press));
   transition-duration:var(--t-press);transition-timing-function:var(--ease-squash);}
 
 /* ⑪-b 덮개·모달 — 원래 자리를 지나쳐 떴다가 «팅» 하고 앉는다 ───────── */
