@@ -125,7 +125,9 @@ function 재기(){
     }
   }
 
-  /* ④ 눌림 값 — 스타일시트의 :active 규칙에서 scale 을 훑는다(상태를 만들 필요가 없다) */
+  /* ④ 눌림 값 — 스타일시트의 :active 규칙에서 scale 을 훑는다(상태를 만들 필요가 없다).
+     기준은 앱이 스스로 들고 있는 `--press` 다 — 도구에 숫자를 또 적으면 잣대가 두 곳이 된다. */
+  const 기준눌림 = parseFloat(getComputedStyle(앱).getPropertyValue('--press')) || 0.96;
   for(const ss of document.styleSheets){
     let rules; try{ rules = ss.cssRules; }catch(e){ continue; }
     for(const r of rules || []){
@@ -142,7 +144,11 @@ function 재기(){
         const m = String(rule.style.transform || '').match(/scale\(([\d.]+)\)/);
         if(!m) return;
         const v = parseFloat(m[1]);
-        if(v < 0.95 || v > 0.98) 결과.눌림값.push(rule.selectorText.slice(0, 54) + ' → scale(' + v + ')');
+        /* 🔴 **잣대는 «이 제품이 정한 값»이다** — 스킬의 0.95~0.98 이 아니다 (2026-09-23 · P-5).
+           사용자가 아이폰식 «튕기는 손맛»을 골라 0.92 로 정했다. 여기서 재는 것은
+           「스킬대로인가」가 아니라 **「한 값으로 쓰이는가」**다 — 값이 두 곳으로 갈리면 손맛이 어긋난다. */
+        if(Math.abs(v - 기준눌림) > 0.005)
+          결과.눌림값.push(rule.selectorText.slice(0, 54) + ' → scale(' + v + ') · 기준 ' + 기준눌림);
       };
       훑기(r);
     }
@@ -192,7 +198,7 @@ try{
 }
 
 const 칸 = [['겹친모서리','① 겹친 모서리'],['좁은손잡이','② 좁은 손잡이(44 미만)'],['겹친손잡이','②-b 손잡이끼리 겹침'],
-            ['전부전환','③ transition:all'],['눌림값','④ 눌림 값이 0.95~0.98 밖'],['글줄','⑤ 글줄 감싸기']];
+            ['전부전환','③ transition:all'],['눌림값','④ 눌림 값이 --press 와 다름'],['글줄','⑤ 글줄 감싸기']];
 let 합 = 0;
 for(const [이름, r] of Object.entries(모은것)){
   console.log('\n══ ' + 이름 + '  (' + 폭 + 'px · 요소 ' + r.잰것 + '개)');

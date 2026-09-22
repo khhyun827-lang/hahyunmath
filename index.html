@@ -4374,6 +4374,104 @@
   .rp-tb thead{ display:table-header-group; }   /* 넘어간 장에도 열 머리가 다시 선다 */
   .rp-h{ break-after:avoid !important; page-break-after:avoid !important; }
 }
+
+/* ============================================================
+   ⑪ 젤리 — 튕기는 손맛 (2026-09-23 · P-5 · 사용자 요청)
+   사용자 — 「너무 단정하고 빨라서 눈에 전혀 안 보이고 손맛이 없어. 아이폰 특유의 통통 튀는 튕김」.
+
+   🔴 **두 스킬의 값을 «일부러» 벗어난다.** Jakub 은 「누름은 언제나 0.96, 0.95 미만 금지」라 했고
+     Emil 은 0.95~0.98 을 권한다. 여기서는 **0.92** 다 — 사용자가 두 번 분명히 골랐다.
+     스킬은 «일반적으로 좋은 것»이고 이 제품의 감성은 사용자가 정한다. 되돌리려면 `--press` 한 줄이다.
+   🔵 **되튕김은 «곡선»이 만든다.** 0.92 에서 1 로 돌아올 때 cubic-bezier 의 y 를 1 위로 넘겨 두면
+     제자리를 지나쳐 1.03 언저리까지 갔다가 내려앉는다(고무줄).
+     누를 때는 되튕기면 안 되므로 **누를 때와 뗄 때의 곡선을 따로 준다** — 누름은 빠르고 곧게, 뗌은 느리고 튕기게.
+   ⚠ **선택자를 `.app.app` 으로 적는다** — 학생 앱 규칙이 `.app.sap`(무게 0,2,0)이라 그냥 `.app`(0,1,0)
+     으로는 **진다.** 처음에 그렇게 적었다가 눌림이 0.96 그대로였다(재서 알았다).
+   ⚠ 이 블록은 파일 «끝»에 둔다 — 같은 무게면 뒤에 오는 것이 이긴다.
+   ============================================================ */
+.app.app{
+  --press:.92;                                   /* 확 눌린다 */
+  --ease-spring:cubic-bezier(.34,1.8,.64,1);     /* 되튕김 — 제자리를 지나쳤다 내려앉는다 */
+  --ease-squash:cubic-bezier(.2,0,.2,1);         /* 눌리는 순간 — 곧고 빠르게 */
+  --t-press:110ms;                               /* 누르는 데 걸리는 시간 */
+  --t-back:340ms;                                /* 놓고 제자리로 돌아오며 튕기는 시간 */
+  --t-in:300ms;                                  /* 판이 들어오는 시간 — 눈에 보이라고 늘렸다 */
+}
+
+/* ⑪-a 누르는 것 전부 — 학생·강사 같은 손맛 ─────────────────────────── */
+.app.app .mbtn, .app.app .btn, .app.app .pill, .app.app .sap-navbtn,
+.app.app .mc[data-tap], .app.app .mc[onclick],
+.app.app .todo[data-tap], .app.app .todo[onclick],
+.app.app .mc [data-tap], .app.app .mc [onclick],
+.app.app .sap-duo > div, .app.app .sap-quick i, .app.app .sap-tabs a.fab i,
+.app.app .vd-row, .app.app .qitem, .app.app .rv-item, .app.app .st-row,
+.app.app .hg-m, .app.app .subnav a, .app.app .topbar nav a{
+  transform:scale(1);   /* 🔴 **항등값을 적어 둔다** — 안 적으면 돌아올 때가 `scale(.92)` → `none` 이라
+                           브라우저가 «이을 짝»을 못 찾아 그냥 튀어 버린다(재서 알았다. 되튕김이 아예 없었다). */
+  transition-property:transform,box-shadow,background-color,border-color,color;
+  transition-duration:var(--t-back);
+  transition-timing-function:var(--ease-spring);
+}
+.app.app .mbtn:not([disabled]):active, .app.app .btn:not([disabled]):active,
+.app.app .pill:active, .app.app .sap-navbtn:active,
+.app.app .mc[data-tap]:active, .app.app .mc[onclick]:active,
+.app.app .todo[data-tap]:active, .app.app .todo[onclick]:active,
+.app.app .mc [data-tap]:active, .app.app .mc [onclick]:active,
+.app.app .sap-duo > div:active,
+.app.app .vd-row:active, .app.app .qitem:active, .app.app .rv-item:active,
+.app.app .st-row:active,
+.app.app .hg-m:active, .app.app .subnav a:active, .app.app .topbar nav a:active{
+  transform:scale(var(--press));
+  transition-duration:var(--t-press);
+  transition-timing-function:var(--ease-squash);
+}
+/* 아이콘 칩은 제 안에서만 눌린다 — 줄 전체가 들썩이면 목록이 흔들린다 */
+.app.app .sap-quick a:active i{transform:scale(var(--press));
+  transition-duration:var(--t-press);transition-timing-function:var(--ease-squash);}
+.app.app.sap .sap-tabs a.fab:active i{transform:translateX(-50%) scale(var(--press));
+  transition-duration:var(--t-press);transition-timing-function:var(--ease-squash);}
+
+/* ⑪-b 덮개·모달 — 원래 자리를 지나쳐 떴다가 «팅» 하고 앉는다 ───────── */
+.hw-view img, .pwm{
+  transition-property:opacity,transform;
+  transition-duration:var(--t-in,300ms);
+  transition-timing-function:var(--ease-spring,cubic-bezier(.34,1.8,.64,1));}
+@starting-style{
+  .hw-view img, .pwm{opacity:0;transform:translateY(34px) scale(.88);}
+}
+
+/* ⑪-c 드로어 — 궤적이 보이게 멀리서 온다 (18px → 52px) ─────────────── */
+.hwd{transition-property:opacity,transform;
+  transition-duration:var(--t-in,300ms);
+  transition-timing-function:var(--ease-spring,cubic-bezier(.34,1.8,.64,1));}
+@starting-style{
+  .hwd:not(.nofx):not(.ic-hwd){opacity:0;transform:translateX(52px);}
+}
+@starting-style{
+  .hwd.ic-hwd:not(.nofx){opacity:0;transform:translateX(-50%) scale(.9);}
+}
+
+/* ⑪-d 드롭다운 — 누른 자리에서 «퐁» 하고 자란다 */
+.app.app .ds-drop{transform-origin:top right;
+  transition-property:opacity,transform;transition-duration:var(--t-in);
+  transition-timing-function:var(--ease-spring);}
+@starting-style{
+  .app.app .ds-drop{opacity:0;transform:translateY(-14px) scale(.85);}
+}
+
+/* ⑪-e 토스트 — 아래에서 튕겨 올라온다 */
+#app-toast .tst{transition-duration:300ms;
+  transition-timing-function:cubic-bezier(.34,1.8,.64,1);}
+#app-toast .tst.in{opacity:0;transform:translateX(-50%) translateY(28px) scale(.85);}
+
+/* ⑪-f 움직임을 줄여 달라는 기기 — 튕김은 통째로 끈다 */
+@media (prefers-reduced-motion:reduce){
+  .app.app *, #app-toast *{transition-duration:.01ms !important;animation:none !important;}
+  .app.app .mbtn:active, .app.app .btn:active,
+  .app.app .mc[data-tap]:active, .app.app .mc[onclick]:active,
+  .app.app .sap-duo > div:active, .app.app .vd-row:active,
+  .app.app .qitem:active, .app.app .hg-m:active{transform:none;}
+}
 </style>
 
 </head>
@@ -7096,20 +7194,20 @@ function 덮개닫기(선택자, 마무리){
   void el.offsetHeight;                           /* 🔴 여기서 «지금 값»을 확정한다 — 안 되씹으면
                                                      keyframe 을 걷는 것과 opacity 를 내리는 것이 한 번에
                                                      계산돼 «바뀐 것»이 없다고 보고 그냥 사라진다. */
-  el.style.transition = 'opacity 150ms cubic-bezier(.16,1,.3,1)';
+  el.style.transition = 'opacity 190ms cubic-bezier(.4,0,.6,1)';
   const 판 = el.querySelector('img, .pwm');
   if(판){
-    판.style.transition = 'opacity 150ms cubic-bezier(.16,1,.3,1), transform 150ms cubic-bezier(.16,1,.3,1)';
+    판.style.transition = 'opacity 190ms cubic-bezier(.4,0,.6,1), transform 190ms cubic-bezier(.4,0,.6,1)';
   }
   /* 한 프레임 뒤에 값을 바꿔야 «바뀐 것»으로 보고 전환이 돈다 */
   requestAnimationFrame(() => {
     el.style.opacity = '0';
-    if(판){ 판.style.opacity = '0'; 판.style.transform = 'translateY(6px) scale(.97)'; }
+    if(판){ 판.style.opacity = '0'; 판.style.transform = 'translateY(22px) scale(.9)'; }
   });
   /* 🔴 **`transitionend` 는 안 듣는다** — 안쪽 판의 전환까지 거품처럼 올라와서
      «시작하자마자» 끝난 것으로 읽히는 판이 있었다(비밀번호 모달이 한 프레임 만에 사라졌다).
      나가는 시간은 우리가 정한 150ms 고정이니 **시간 하나로 세는 것이 더 단순하고 확실하다.** */
-  setTimeout(마무리, 190);
+  setTimeout(마무리, 230);
 }
 
 /* 드로어를 «나가는 모습»으로 보낸 뒤에 진짜로 지운다 (2026-09-23 · P-4).
@@ -7130,14 +7228,14 @@ function 드로어닫기(마무리){
     if(!el) return;
     el.style.animation = 'none';
     void el.offsetHeight;                        /* 여기서 «지금 값»을 확정한다 (P-3 에서 배운 것) */
-    el.style.transition = 'opacity 160ms cubic-bezier(.16,1,.3,1), transform 160ms cubic-bezier(.16,1,.3,1)';
+    el.style.transition = 'opacity 200ms cubic-bezier(.4,0,.6,1), transform 200ms cubic-bezier(.4,0,.6,1)';
   });
   requestAnimationFrame(() => {
     if(뒤) 뒤.style.opacity = '0';
     if(판){ 판.style.opacity = '0';
-      판.style.transform = 가운데 ? 'translateX(-50%) scale(.97)' : 'translateX(18px)'; }
+      판.style.transform = 가운데 ? 'translateX(-50%) scale(.92)' : 'translateX(52px)'; }
   });
-  setTimeout(마무리, 200);
+  setTimeout(마무리, 240);
 }
 function showToast(msg){
   state.toast = msg;
