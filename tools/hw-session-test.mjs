@@ -236,10 +236,13 @@ console.log(NL + '④ 반 관리 › 과제 — 고치기 · 마감 순 · 진�
 
   /* ── 여닫기 ── */
   const S = { hwEditId: null, hwNewOpen: null, hwNoticeId: 'h1', hwCell: { sid: 's1' }, settingsForm: '' };
-  const OE = new Function('DATA', 'state', 'render', 'todayStr',
+  /* ⚠ 2026-09-23(P-4)부터 닫는 문은 `드로어닫기` 를 거친다 — 나가는 모습을 보인 뒤에 지운다.
+     여기서 재는 것은 «상태가 어떻게 바뀌나»뿐이라 그 자리는 곧장 실행하는 것으로 세운다. */
+  const OE = new Function('DATA', 'state', 'render', 'todayStr', '드로어닫기',
     lift('hwOpenEdit') + NL + lift('hwCloseEdit') + NL + lift('hwOpenNew') + NL + lift('hwCloseNew') + NL +
     'return { hwOpenEdit, hwCloseEdit, hwOpenNew, hwCloseNew };')(
-    { assignments: [{ id: 'h1', classId: 'c1', createdAt: '2026-09-12' }] }, S, () => {}, () => '2026-09-13');
+    { assignments: [{ id: 'h1', classId: 'c1', createdAt: '2026-09-12' }] }, S, () => {}, () => '2026-09-13',
+    (마무리) => 마무리());
   OE.hwOpenEdit('h1', true);
   봄('반 관리에서 열면 드로어가 서고 겹치는 판은 닫힌다',
     [S.hwEditId, S.hwNewOpen.date, S.hwNoticeId, S.hwCell], ['h1', '2026-09-12', null, null]);
