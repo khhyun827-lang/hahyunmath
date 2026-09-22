@@ -65,7 +65,7 @@ console.log(NL + '② 시청률을 세는 자리 다섯 곳 · 할 일 · 재촉
   /* 🔵 **반 › 영상 화면은 «일부러» 안 거른다** — 누가 봤는지는 강사가 봐야 한다.
      거기서 거르면 보낸 영상이 목록에서 사라져 「보냈는데 왜 없지」가 된다. */
   봄('🔵 반 › 영상 목록은 복습용도 그대로 보여 준다 (누가 봤는지는 봐야 한다)',
-     /DATA\.videos\.filter\(v=>!v\.studentId && \(!v\.classId \|\| v\.classId===classId\)\)/.test(lift('chubVideoHTML')), true);
+     /DATA\.videos\.filter\(v=>!v\.studentId && \(!v\.classId \|\| v\.classId===classId\)\)/.test(lift('chubVideoModel')), true);
 }
 
 /* ═══ ③ 정말로 평균에서 빠지는가 — 함수를 돌려 본다 ═══ */
@@ -95,7 +95,7 @@ console.log(NL + '③ 돌려 본다 — 안 본 복습용이 시청률을 안 �
 /* ═══ ④ 강사가 그것을 켤 수 있는가 · 학생이 그 사실을 아는가 ═══ */
 console.log(NL + '④ 폼과 딱지' + NL);
 {
-  const 폼 = lift('chubVideoHTML');
+  const 폼 = lift('chubVideoModel') + NL + lift('chubVideoHTML') + NL + lift('videoDrawerHTML');
   봄('🔴 등록 폼에 복습용 상자가 있다', 폼.includes('id="video-notrack"'), true);
   봄('🔴 켠 것만 적는다 (addVideo)', /notrackEl\.checked\) 기본\.noTrack = true/.test(lift('addVideo')), true);
   봄('🔴 보내고 나면 상자를 도로 끈다 — 안 끄면 다음 영상까지 조용히 복습용이 된다',

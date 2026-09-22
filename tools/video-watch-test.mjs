@@ -203,13 +203,13 @@ console.log(NL + '④ 반 › 영상 탭을 실제로 그려 본다' + NL);
     s2: { videoProgress: { v1: { watchedSeconds: 180, duration: 600 } } },
     s3: { videoProgress: {} },
   };
-  const state = { allRecords, allRecordsLoaded: true, allRecordsLoading: false, videoAdding: false, videoSelectedId: 'v1' };
+  const state = { allRecords, allRecordsLoaded: true, allRecordsLoading: false, videoAdding: false, videoSelectedId: 'v1', videoOpenId: 'v1', classHubId: 'c1' };
   /* ⚠ 2026-09-16 에 «영상 머리 카드»(`videoHeroHTML`)와 알림 띠가 붙었다 — 띠는 이 검사가 볼 것이
      아니라 빈 것으로 세우고, 머리 카드와 구간 딱지(`videoGoalLabelOf`)는 그대로 뜬다. */
   const C = new Function('DATA', 'state', 'loadAllRecordsIfNeeded', 'classRoster', 'escHtml', 'todayStr', 'iconSvg',
     'vidNoticeBarHTML', 'vidNoticeBtnHTML', 'extractYouTubeId', 'stuDday', 'setVideoDue', 'deleteVideo', 'render',
     잣대 + NL + lift('secToClock') + NL + lift('videoGoalLabelOf') + NL + lift('videoHeroHTML')
-      + NL + lift('chubVideoHTML') + NL + 'return chubVideoHTML;')(
+      + NL + lift('chubVideoModel') + NL + lift('chubVideoHTML') + NL + lift('videoDrawerHTML') + NL + 'return c => chubVideoHTML(c) + videoDrawerHTML();')(
     DATA, state, () => {}, () => roster,
     s => (s === null || s === undefined) ? '' : String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;'),
     () => '2026-09-13', () => '',
@@ -263,7 +263,8 @@ console.log(NL + '④ 반 › 영상 탭을 실제로 그려 본다' + NL);
     return /라마바<\/b>[\s\S]*?<span class="pct">100%<\/span>/.test(묶음(다시, '완주'));
   })(), true);
   /* 2026-09-23 — 머리의 «완주 1/3 · 미시청 1»은 숫자 띠(.kpis)와 묶음 머리로 갈라졌다. */
-  봄('숫자 띠에 재원 3 · 완주 1 · 미시청 1', /<div class="k">재원<\/div><div class="v">3<\/div>/.test(그림)
+  /* V-2b — 재원은 드로어 머리(「단원 · 재원 3명」)로 갔다. 띠는 완주·시청 중·미시청·평균 넷. */
+  봄('드로어 머리에 재원 3명 · 숫자 띠에 완주 1 · 미시청 1', 그림.includes('재원 3명')
     && /<div class="k">완주<\/div><div class="v" style="color:var\(--ok\);">1<\/div>/.test(그림)
     && /<div class="k">미시청<\/div><div class="v" style="color:var\(--no\);">1<\/div>/.test(그림), true);
   봄('묶음 머리에 미시청 1 · 시청 중 1 · 완주 1', ['미시청','시청 중','완주'].map(말 => (묶음(그림, 말).match(/<span class="mono">(\d+)<\/span>/)||[])[1]), ['1','1','1']);
@@ -279,7 +280,7 @@ console.log(NL + '⑤ 시청률을 세는 자리가 다 같은 잣대를 쓰는�
   봄('신호(rosterStats)', /sum \+ videoScore\(rec\.videoProgress && rec\.videoProgress\[v\.id\]\)/.test(html), true);
   /* 09-20 — 리포트는 달로 자르므로 옛 기록(days 없음)에만 그 잣대를 쓴다. 잣대 자체는 같은 것이다. */
   봄('리포트', /\(ctx\.videoScore \|\| videoScore\)\(p\)/.test(lift('monthlyReportData')), true);
-  봄('반 평균', lift('chubVideoHTML').includes('videoScore(rec && rec.videoProgress && rec.videoProgress[v.id])'), true);
+  봄('반 평균', lift('chubVideoModel').includes('videoScore(rec && rec.videoProgress && rec.videoProgress[v.id])'), true);
   /* 🔴 옛 잣대가 한 톨도 안 남았는가 */
   /* ⚠ 닻을 html 전체에 걸면 **까닭을 적어 둔 주석**이 물린다 — 함수 몸통만 본다.
      (09-13에 이미 한 번 밟았다: 닻이 다른 함수의 같은 줄을 쳤다.) */

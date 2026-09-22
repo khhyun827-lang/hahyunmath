@@ -108,7 +108,8 @@ await api.setVideoDue('v1', '2026-10-01');
 곁.저장실패 = false;
 
 /* ④ 글자로 — 화면 셋에 마감이 선다 */
-const stuVideo = lift('stuVideoHTML'), chubVideo = lift('chubVideoHTML');
+/* 2026-09-23 (V-2b) — 셈은 `chubVideoModel`, 목록은 `chubVideoHTML`, 상세는 드로어 `videoDrawerHTML`. 셋을 한 글로 본다. */
+const stuVideo = lift('stuVideoHTML'), chubVideo = lift('chubVideoModel') + NL + lift('chubVideoHTML') + NL + lift('videoDrawerHTML');
 봄('④ 학생 강의 탭 카드에 마감·D-day', stuVideo.includes('마감 <span class="mono">${escHtml(v.dueDate)}') && stuVideo.includes('stuDday(v.dueDate)'), true);
 봄('강사 목록에 마감·지남', chubVideo.includes("' · 마감 <span class=\"mono\">'") && chubVideo.includes('지남'), true);
 /* ⚠ 2026-09-16 에 마감 바꾸기가 «영상 머리 카드»(`videoHeroHTML`)로 옮겨 갔다 —
@@ -176,7 +177,7 @@ await api2.addVideo();
 const 곁3 = {
   loadAllRecordsIfNeeded: () => {}, classRoster: () => [{ studentId: 'st01', name: '가나' }, { studentId: 'st02', name: '다라' }],
   state: { allRecords: { st01: { videoProgress: { p1: { percent: 100, completed: true } } }, st02: { videoProgress: { p2: { percent: 30, completed: false } } } },
-           allRecordsLoaded: true, allRecordsLoading: false, videoAdding: true, videoSelectedId: 'p2' },
+           allRecordsLoaded: true, allRecordsLoading: false, videoAdding: true, videoSelectedId: 'p2', videoOpenId: 'p2', classHubId: 'c1' },
   DATA: { students: [{ studentId: 'st01', name: '가나' }, { studentId: 'st02', name: '다라' }], classes: [{ id: 'c1', name: '1반' }],
           videos: [
             { id: 'a1', title: '반 영상', unit: '', url: 'u', classId: 'c1', dueDate: '2026-09-20' },
@@ -192,8 +193,8 @@ const 곁3 = {
 const api3 = new Function(...Object.keys(곁3),
   /* ⚠ `chubVideoHTML` 이 마감 딱지를 `stuDday` 로 찍는다 — 위 ①의 것과 같은 함수다. */
   잣대 + NL + lift('stuDday') + NL + lift('videoGoalMarkHTML') + NL + lift('videoHeroHTML')
-    + NL + lift('chubVideoHTML') + NL + 'return { chubVideoHTML };')(...Object.values(곁3));
-const out = api3.chubVideoHTML('c1');
+    + NL + lift('chubVideoModel') + NL + lift('chubVideoHTML') + NL + lift('videoDrawerHTML') + NL + 'return { 그림: c => chubVideoHTML(c) + videoDrawerHTML() };')(...Object.values(곁3));
+const out = api3.그림('c1');
 봄('그려진다 — 반 전체 구역과 개인 배정 2 (남의 반 것은 안 든다)', [out.includes('>반 전체</div>'), out.includes('개인 배정 <span class="mono">2</span>'), out.includes('남의 반')], [true, true, false]);
 /* 🔵 **제목이 앞, 이름은 둘째 줄이다** (2026-09-16) — 예전에는 「가나 · 09-01 결석 보충 영상」처럼
    이름이 굵게 앞서고 제목이 부제처럼 보였다. 영상 목록인데 학생이 주인공이 돼 있었다.
@@ -212,8 +213,8 @@ const out = api3.chubVideoHTML('c1');
 /* 명단이 «상자»로 선다 — 여럿을 고를 수 있다는 것이 이 줄의 뜻이다 (2026-09-18) */
 봄('보낼 사람 상자에 명단 둘', (out.match(/class="vd-who" value="st0[12]"/g) || []).length, 2);
 봄('   고르개(select)는 사라졌다 — 여럿을 고를 수 없던 자리다', out.includes('id="video-target"'), false);
-곁3.state.videoSelectedId = 'a1';
-const out2 = api3.chubVideoHTML('c1');
+곁3.state.videoSelectedId = 'a1'; 곁3.state.videoOpenId = 'a1';
+const out2 = api3.그림('c1');
 봄('반 영상을 고르면 이탈 지점이 돌아온다', out2.includes('이탈 지점') && !out2.includes('받은 학생'), true);
 
 console.log(NL + (fail ? '🔴 ' + fail + '개 실패 · ' : '✓ 전부 통과 · ') + pass + '개' + NL);

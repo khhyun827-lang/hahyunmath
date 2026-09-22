@@ -7,7 +7,7 @@
        http://127.0.0.1:8777/tools/video-tab-probe.html?w=864      (사용자 판 · 125% 확대)
        http://127.0.0.1:8777/tools/video-tab-probe.html?w=1280     (넓은 판)
        …?w=390                                                     (폰)
-       …&sel=p1   개인 배정 묶음을 고른 채로 그린다
+       …&sel=v1   그 영상의 드로어를 연 채로 그린다 (p1 = 개인 배정 묶음)
        …&add=1    「영상 등록」 폼을 편 채로 그린다
 
      🔴 실 DB 0줄 · 읽기 0건 — dbSet/dbGet/dbSetDoc/logAudit 를 프레임 안에서 갈아 끼운다. -->
@@ -18,7 +18,8 @@ pre{font:12px monospace;color:#333;margin:0;padding:4px;white-space:pre-wrap;}</
 const fr = document.createElement('iframe');
 const Q = parent.location.search;
 const W = Number((Q.match(/[?&]w=([0-9]+)/) || [])[1]) || 1280;
-fr.width = W; fr.height = 1900; fr.style.width = W + 'px'; fr.src = '/index.html';
+const H = Number((Q.match(/[?&]h=([0-9]+)/) || [])[1]) || 900;   /* 드로어는 창 높이만큼이라 창을 실제 크기로 */
+fr.width = W; fr.height = H; fr.style.width = W + 'px'; fr.src = '/index.html';
 document.body.appendChild(fr);
 const o = document.getElementById('o');
 let n = 0;
@@ -73,7 +74,7 @@ const t = setInterval(async () => {
   state.currentUser = { type:'teacher' }; state.view = 'teacher';
   state.teacherTab = 'classhub'; state.classHubTab = 'video'; state.classHubId = CID;
   const q = ${JSON.stringify(Q)};
-  const sel = (q.match(/[?&]sel=([a-z0-9]+)/)||[])[1]; if(sel) state.videoSelectedId = sel;
+  const sel = (q.match(/[?&]sel=([a-z0-9]+)/)||[])[1]; if(sel){ state.videoSelectedId = sel; state.videoOpenId = sel; }   /* V-2b — 드로어를 연 채로 */
   if(/add=1/.test(q)) state.videoAdding = true;
   render(); await new Promise(r=>setTimeout(r,150));
   const 글 = el => (el && el.textContent || '').replace(/\\s+/g,' ').trim();

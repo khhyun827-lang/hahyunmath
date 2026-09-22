@@ -898,10 +898,9 @@
 .app .vd-top > .btn{margin-left:auto;}
 
 /* 목록 — 썸네일 줄. 높이를 묶고 안에서만 민다. */
-.app .vd-list{border:1px solid var(--line);border-radius:var(--r-lg);background:var(--card);
-  max-height:318px;overflow-y:auto;margin-bottom:16px;scrollbar-width:thin;scrollbar-color:var(--line) transparent;}
-.app .vd-list .t-sec{padding:10px 14px 5px;margin:0;position:sticky;top:0;z-index:1;
-  background:var(--card);border-bottom:1px solid var(--line2);}
+/* 🔵 목록이 화면의 전부다 (V-2b) — 높이를 안 묶는다. 상세는 드로어라 목록이 길어져도 상세가 밀리지 않는다. */
+.app .vd-list{border:1px solid var(--line);border-radius:var(--r-lg);background:var(--card);margin-bottom:16px;}
+.app .vd-list .t-sec{padding:10px 14px 5px;margin:0;background:var(--card);border-bottom:1px solid var(--line2);}
 .app .vd-list .t-sec .mono{color:var(--sub);}
 .app .vd-row{display:flex;align-items:center;gap:12px;padding:8px 14px 8px 11px;
   border-left:3px solid transparent;border-bottom:1px solid var(--line2);cursor:pointer;transition:background var(--t);}
@@ -923,10 +922,10 @@
 .app .vd-row .p b{display:block;font-size:11.5px;font-weight:600;line-height:1.3;font-variant-numeric:tabular-nums;}
 .app .vd-row .p .bar{display:block;margin-top:5px;height:5px;}   /* span 이라 block 을 줘야 높이가 선다 */
 
-/* 머리 카드 — 고른 영상 하나. 썸네일을 누르면 유튜브(구간이 있으면 그 자리)로 간다. iframe 은 여전히 안 쓴다. */
-.app .vd-hero{display:flex;gap:18px;align-items:flex-start;padding:16px;margin-bottom:12px;
-  border:1px solid var(--line);border-radius:var(--r-lg);background:var(--card);position:relative;}
-.app .vd-hero .th{position:relative;flex:0 0 auto;width:196px;aspect-ratio:16/9;border-radius:var(--r-md);
+/* 머리 카드 — 드로어 맨 위. 썸네일을 누르면 유튜브(구간이 있으면 그 자리)로 간다. iframe 은 여전히 안 쓴다. */
+.app .vd-hero{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-start;padding:12px;margin:10px 0 12px;
+  border:1px solid var(--line);border-radius:var(--r-lg);background:var(--sunk);}
+.app .vd-hero .th{position:relative;flex:0 0 auto;width:160px;aspect-ratio:16/9;border-radius:var(--r-md);
   overflow:hidden;background:var(--sunk);display:block;border:1px solid var(--line2);}
 .app .vd-hero .th img{width:100%;height:100%;object-fit:cover;display:block;}
 .app .vd-hero .th:after{content:'';position:absolute;left:50%;top:50%;width:0;height:0;
@@ -934,23 +933,19 @@
   border-color:transparent transparent transparent #fff;filter:drop-shadow(0 1px 3px rgba(0,0,0,.45));}
 .app .vd-hero .th.none:after{display:none;}
 .app .vd-hero .meta{flex:1;min-width:0;}
-.app .vd-hero h3{font-size:17px;font-weight:700;line-height:1.35;margin:0;padding-right:26px;overflow-wrap:anywhere;}
+.app .vd-hero h3{font-size:14.5px;font-weight:700;line-height:1.4;margin:0;overflow-wrap:anywhere;}
 .app .vd-hero .sub{margin-top:6px;font-size:12px;color:var(--dim);display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
 .app .vd-hero .due{margin-top:10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:12.5px;color:var(--sub);}
-.app .vd-hero .act{margin-top:13px;display:flex;align-items:center;gap:7px;flex-wrap:wrap;}
+.app .vd-hero .act{flex:1 0 100%;margin-top:-2px;display:flex;align-items:center;gap:7px;flex-wrap:wrap;}
 .app .vd-hero .act a.btn{text-decoration:none;}
-.app .vd-hero .del{position:absolute;top:10px;right:10px;border:0;background:transparent;cursor:pointer;
-  color:var(--dim);font-size:16px;line-height:1;padding:3px 6px;border-radius:var(--r-sm);}
-/* ⚠ 토큰은 `--nobg` 다(`--no-bg` 가 아니다 · 2026-09-17 에 한 번 틀렸다). */
-.app .vd-hero .del:hover{background:var(--nobg,var(--hover));color:var(--no);}
 .app .vd-kpis{margin-bottom:14px;}
-.app .vd-kpis .kpi{padding:10px 14px;}
-.app .vd-kpis .kpi .v{font-size:17px;}
+.app .vd-kpis .kpi{padding:9px 12px;}
+.app .vd-kpis .kpi .v{font-size:16px;}
 .app .vd-npanel{margin:0 0 14px;max-width:none;}
+/* 드로어 안의 알림 판은 껍데기 규칙(.hwd .hw-npanel)이 테두리를 벗긴다 — 여기서는 도로 입힌다(머리 카드와 구분). */
+.hwd .vd-npanel{border:1px solid var(--line);padding:13px 14px;margin:0 0 14px;}
 @media (max-width:620px){
-  .app .vd-hero{gap:12px;padding:12px;}
   .app .vd-hero .th{width:118px;}
-  .app .vd-hero h3{font-size:14.5px;}
   .app .vd-row .p{width:70px;}
 }
 
@@ -984,7 +979,7 @@
 .app .vd-sv{display:flex;align-items:center;gap:12px;padding:8px 2px;
   border-bottom:1px solid var(--line2);transition:background var(--t);}
 .app .vd-sv:hover{background:var(--hover);}
-.app .vd-sv .who{width:120px;flex-shrink:0;display:flex;align-items:center;gap:7px;min-width:0;}
+.app .vd-sv .who{width:96px;flex-shrink:0;display:flex;align-items:center;gap:7px;min-width:0;}
 .app .vd-sv .who b{font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .app .vd-sv .track{flex:1;min-width:0;height:14px;background:var(--line2);border-radius:4px;overflow:hidden;}
 /* ---------- 완주선 (2026-09-13 · K-7) ----------
@@ -1001,8 +996,7 @@
 .app .vd-sv.low .track i{background:var(--no);}
 .app .vd-sv .pct{width:44px;flex-shrink:0;text-align:right;font-family:'JetBrains Mono',monospace;font-size:12px;}
 @media (max-width:560px){
-  .app .vd-sv .who{width:88px;}
-  .app .vd-list{max-height:270px;}
+  .app .vd-sv .who{width:80px;}
 }
 
 /* ---------- 오답 검토 (design-v1/04-review) ----------
@@ -10944,6 +10938,7 @@ async function deleteVideo(vid){
   DATA.videos = DATA.videos.filter(v=>!지울것.has(v.id));
   for(const v of 것들) await dbDeleteDoc('videos', v.id);
   if(지울것.has(state.videoSelectedId)) state.videoSelectedId = null;
+  if(지울것.has(state.videoOpenId)) state.videoOpenId = null;      /* 드로어에서 지웠으면 드로어도 닫힌다 (V-2b) */
   render();
 }
 
@@ -12373,6 +12368,7 @@ const ICON_PATHS = {
      `iconSvg` 는 모르는 이름이면 `''` 로 «빈 SVG»를 그린다 — 터지지 않아서 눈에 안 띈다.
      시험지 폴더 머리(`ex-foldh`)가 펼쳐졌을 때 화살표가 사라지던 것이 이것 때문이다. */
   chevD: '<path d="M5 9l7 7 7-7"/>',
+  arrowL: '<path d="M20 12H5M11 6l-6 6 6 6"/>',
   arrowR: '<path d="M4 12h15M13 6l6 6-6 6"/>',
   // 학생 마이페이지(20-student-app)가 쓰는 것들. 역시 ds.js에서 가져왔다.
   chat: '<path d="M20.5 12.5c0 4.1-3.8 7.5-8.5 7.5a9.8 9.8 0 01-3-.45L4 21l1.3-3.4A7 7 0 013.5 12.5C3.5 8.4 7.3 5 12 5s8.5 3.4 8.5 7.5z"/>',
@@ -13056,6 +13052,7 @@ document.addEventListener('keydown', e=>{
   if(state.chubConsultId){ e.preventDefault(); chubCloseConsult(); return; }
   if(state.stuEditId){ e.preventDefault(); stuEdit(null); }
   if(state.clinicDrawerDate){ e.preventDefault(); clinicCloseDayDrawer(); return; }
+  if(state.videoOpenId){ e.preventDefault(); videoClose(); return; }
 });
 
 let lastSyncedHash = null;
@@ -13090,6 +13087,10 @@ function render(){
   if(state.hwNoticeId && state.view==='teacher'
      && state.teacherTab==='classhub' && state.classHubTab==='homework')
     drawers += hwNoticeDrawerHTML();
+  /* 반 › 영상의 상세 (2026-09-23 · V-2b). 다른 드로어와 같은 이유로 «화면을 함께 본다». */
+  if(state.videoOpenId && state.view==='teacher' && state.teacherTab==='classhub'
+     && state.classHubTab==='video' && !state.studentDetailId)
+    drawers += videoDrawerHTML();
   /* 반 › 상담의 «기록하는 판» (2026-09-01 · C-22). */
   if(state.chubConsultId && state.view==='teacher' && state.teacherTab==='classhub'
      && state.classHubTab==='consult' && !state.studentDetailId)
@@ -13164,8 +13165,6 @@ function render(){
      통과하면 서른한 번째가 골라지지만 화면 밖이다. J/K 만 따로 `scrollIntoView` 를 하고 있었다.
      자리를 되돌린 뒤 **골라진 줄이 보이게** 한 번 더 민다(nearest — 보이면 안 움직인다). */
   const rvScroll = (app.querySelector('.rv-lbody') || {}).scrollTop;
-  /* 영상 목록 상자도 같다 (2026-09-23) — 줄을 누르면 render() 가 상자를 새로 그린다. */
-  const vdScroll = (app.querySelector('.vd-list') || {}).scrollTop;
   app.innerHTML = html;
   /* ⚠ 경고 띠는 `position:fixed` 라 **자리를 안 차지한다** — 그대로 두면 화면 맨 위
      (제목·탭)를 덮는다. 띠의 높이만큼 본문을 내려 준다. 글이 길어져 두 줄이 되어도
@@ -13176,10 +13175,8 @@ function render(){
   if(clsScroll){ const cb = app.querySelector('.cls-body'); if(cb) cb.scrollTop = clsScroll; }
   if(exScroll){ const eb = app.querySelector('.ex-body'); if(eb) eb.scrollTop = exScroll; }
   if(rvScroll){ const rb = app.querySelector('.rv-lbody'); if(rb) rb.scrollTop = rvScroll; }
-  if(vdScroll){ const vb = app.querySelector('.vd-list'); if(vb) vb.scrollTop = vdScroll; }
-  { /* ⚠ scrollIntoView 는 창까지 민다 — 폰에서는 목록이 위, 판이 아래라 창이 튄다. 목록 상자만 민다.
-       영상 목록(.vd-list / .vd-row)도 같은 어법이다 (2026-09-23). */
-    [['.rv-lbody', '.rv-item.on'], ['.vd-list', '.vd-row.on']].forEach(([상자, 줄]) => {
+  { /* ⚠ scrollIntoView 는 창까지 민다 — 폰에서는 목록이 위, 판이 아래라 창이 튄다. 목록 상자만 민다. */
+    [['.rv-lbody', '.rv-item.on']].forEach(([상자, 줄]) => {
       const rb = app.querySelector(상자), on = rb && rb.querySelector(줄);
       if(!on) return;
       const a = rb.getBoundingClientRect(), b = on.getBoundingClientRect();
@@ -15415,7 +15412,7 @@ ${cd ? '낸 날 '+escHtml(cd)+' ('+wd+')' : '낸 날 모름'}${a.dueDate?' · �
 /* ⚠ `묶음ids` — 같은 영상을 여러 명에게 보낸 것이면 그 id 를 쉼표로 이은 것이 온다.
    마감 바꾸기·지우기가 **그 전부**에 가야 한다(화면에는 한 줄이라서다). 없으면 이 영상 하나다. */
 function videoHeroHTML(v, 받는이, 묶음ids, 덧단추){
-  const 손댈것 = 묶음ids || v.id;
+  const 손댈것 = 묶음ids || v.id;     /* 마감 바꾸기가 묶음 전체에 가도록 */
   const yid = extractYouTubeId(v.url || '');
   const 구간 = videoGoalLabelOf(v);
   const d = stuDday(v.dueDate);
@@ -15423,7 +15420,7 @@ function videoHeroHTML(v, 받는이, 묶음ids, 덧단추){
   const 보러가기 = yid ? 'https://www.youtube.com/watch?v=' + yid + (v.fromSec > 0 ? '&t=' + Math.round(v.fromSec) : '') : (v.url || '');
   const 고치는중 = state.videoDueEdit === v.id;
   /* 🔵 단추 줄 (2026-09-23) — «이 영상으로 하는 일»이 한 줄에 선다: 유튜브에서 열기 · 마감 바꾸기 ·
-       미시청 알림(덧단추 · 안 본 학생이 있을 때만). 삭제는 그대로 구석의 × 다(되돌릴 수 없는 일). */
+       미시청 알림(덧단추 · 안 본 학생이 있을 때만). 삭제는 여기 없다 — 드로어 발(`videoDrawerHTML`)에 있다(되돌릴 수 없는 일이라 구석으로). */
   return `<div class="vd-hero">
     ${yid
       ? `<a class="th" href="${escHtml(보러가기)}" target="_blank" rel="noopener"
@@ -15447,13 +15444,13 @@ function videoHeroHTML(v, 받는이, 묶음ids, 덧단추){
           : `<span>${v.dueDate ? '마감 <span class="mono">' + escHtml(v.dueDate) + '</span>' : '마감 없음'}</span>
              ${d ? `<span class="badge ${d.tone}">${d.label}</span>` : ''}`}
       </div>
-      <div class="act">
-        ${보러가기 ? `<a class="btn sm" href="${escHtml(보러가기)}" target="_blank" rel="noopener">${iconSvg('play',13)} 유튜브에서 열기</a>` : ''}
-        ${고치는중 ? '' : `<button class="btn q sm" onclick="state.videoDueEdit='${v.id}'; render()">마감 바꾸기</button>`}
-        ${덧단추 || ''}
-      </div>
     </div>
-    <button class="del" title="${묶음ids ? '받은 학생 모두에게서 지웁니다' : '이 영상을 지웁니다'}" onclick="deleteVideo('${손댈것}')">×</button>
+    ${/* 단추 줄은 썸네일 아래 한 줄 통째로 — 드로어 폭에서 썸네일 옆에 셋을 세우면 줄이 접힌다 */''}
+    <div class="act">
+      ${보러가기 ? `<a class="btn sm" href="${escHtml(보러가기)}" target="_blank" rel="noopener">${iconSvg('play',13)} 유튜브에서 열기</a>` : ''}
+      ${고치는중 ? '' : `<button class="btn q sm" onclick="state.videoDueEdit='${v.id}'; render()">마감 바꾸기</button>`}
+      ${덧단추 || ''}
+    </div>
   </div>`;
 }
 
@@ -24112,8 +24109,9 @@ function chubMaterialHTML(classId){
           </div></div>`).join('')}`;
 }
 
-function chubVideoHTML(classId){
-  loadAllRecordsIfNeeded();
+/* 🔵 **영상 탭의 «셈»은 여기 한 곳이다** (2026-09-23 · V-2b) — 목록(`chubVideoHTML`)과 오른쪽 상세
+     (`videoDrawerHTML`)가 같은 것을 본다. 둘로 베끼면 다음에 한쪽만 고쳐진다. */
+function chubVideoModel(classId){
   const roster = classRoster(classId);
   /* 반 영상 + 전체 배포 영상. */
   const vids = DATA.videos.filter(v=>!v.studentId && (!v.classId || v.classId===classId));
@@ -24125,7 +24123,7 @@ function chubVideoHTML(classId){
   const nameOf = sid => (DATA.students.find(x=>x.studentId===sid)||{}).name || sid;
 
   /* 🔵 **`pct` 는 «실제로 본 비율»이다** (2026-09-13 · K-7) — 완주라고 100으로 올리지 않는다.
-     이 화면의 본문은 «이탈 지점»이라, 완주를 100으로 밀면 히스토그램이 그 사실을 잃는다.
+     상세의 본문은 «이탈 지점»이라, 완주를 100으로 밀면 히스토그램이 그 사실을 잃는다.
      평균(`avgOf`)에서만 `videoScore` 로 완주를 100으로 친다 — 다른 화면의 시청률과 같은 잣대다. */
   const progOf = (v, sid) => {
     const rec = state.allRecords[sid];
@@ -24158,6 +24156,23 @@ function chubVideoHTML(classId){
       묶음들[자리[k]].push(v);
     });
   }
+  const 묶음of = v => 묶음들.find(g => g.some(x => x.id === v.id)) || [v];
+  /* 이름은 셋까지 적고 나머지는 센다 — 열 명이면 줄이 이름으로만 가득 찬다. */
+  const 이름들 = g => g.length <= 3 ? g.map(v=>nameOf(v.studentId)).join('·')
+    : g.slice(0,3).map(v=>nameOf(v.studentId)).join('·') + ` 외 ${g.length-3}명`;
+  /* 목록의 차례 — 반 전체, 그 다음 개인 배정 묶음(대표 하나씩). 드로어의 «이전·다음»이 이 차례를 탄다. */
+  const 차례 = vids.map(v=>v.id).concat(묶음들.map(g=>g[0].id));
+  const 찾기 = id => vids.find(v=>v.id===id) || personal.find(v=>v.id===id) || null;
+  return { roster, vids, personal, nameOf, progOf, doneOf, avgOf, 묶음들, 묶음of, 이름들, 차례, 찾기 };
+}
+
+/* 드로어 열고 닫기. ⚠ `videoSelectedId` 도 같이 둔다 — 옛 검사·다른 자리가 그 이름을 본다. */
+function videoOpen(id){ state.videoSelectedId = id; state.videoOpenId = id; state.vidNoticeFor = null; state.videoDueEdit = null; render(); }
+function videoClose(){ state.videoOpenId = null; state.vidNoticeFor = null; state.videoDueEdit = null; render(); }
+
+function chubVideoHTML(classId){
+  loadAllRecordsIfNeeded();
+  const { roster, vids, personal, progOf, doneOf, avgOf, 묶음들, 이름들 } = chubVideoModel(classId);
 
   /* 배포는 가끔, 보는 일은 매번이다. 상시 펼쳐 두면 이 화면의 본문이 한 화면 아래로 내려간다.
      🔵 머리 줄 (2026-09-23) — 왼쪽에 «영상 n · 개인 배정 m», 오른쪽에 「영상 등록」. */
@@ -24231,11 +24246,7 @@ function chubVideoHTML(classId){
     return form + `<div class="st-empty">이 반에 배포된 영상이 없습니다.<br>「영상 등록」으로 유튜브 링크를 보내면 여기서 «누가 어디까지 봤는지»가 쌓입니다.</div>`;
   }
 
-  const sel = vids.find(v=>v.id===state.videoSelectedId) || personal.find(v=>v.id===state.videoSelectedId) || vids[0] || personal[0];
-  const 묶음of = v => 묶음들.find(g => g.some(x => x.id === v.id)) || [v];
-  /* 이름은 셋까지 적고 나머지는 센다 — 열 명이면 줄이 이름으로만 가득 찬다. */
-  const 이름들 = g => g.length <= 3 ? g.map(v=>nameOf(v.studentId)).join('·')
-    : g.slice(0,3).map(v=>nameOf(v.studentId)).join('·') + ` 외 ${g.length-3}명`;
+  const 열린것 = state.videoOpenId;
   /* 목록 줄의 작은 썸네일 — 유튜브 default.jpg(120×90). 없으면 빈 칸. */
   const 썸네일 = v => { const y = extractYouTubeId(v.url || '');
     return y ? `<span class="th"><img src="https://img.youtube.com/vi/${escHtml(y)}/default.jpg" alt="" loading="lazy"></span>` : '<span class="th"></span>'; };
@@ -24245,11 +24256,11 @@ function chubVideoHTML(classId){
 
   /* 반 전체 줄 — 🔴 «몇 명이 봤나»가 이 줄의 수다 (2026-09-13 · K-7 · 사용자 — 「33퍼 라고떠있는게
        무슨의미인지도 모르겠어」). 그것은 재원 전체의 평균 시청률이었다. 완주 n/m 을 적고 막대도 그 비율로.
-       평균은 사라지지 않는다 — 이 줄의 tooltip 과 아래 숫자 띠·이탈 지점 머리에 있다. */
+       평균은 사라지지 않는다 — 이 줄의 tooltip 과 드로어의 숫자 띠에 있다. */
   const classRow = v => {
     const a = avgOf(v), d = doneOf(v);
     const w = roster.length ? Math.round(d / roster.length * 100) : 0;
-    return `<div class="vd-row ${v.id===sel.id?'on':''}" onclick="state.videoSelectedId='${v.id}'; render()"
+    return `<div class="vd-row ${v.id===열린것?'on':''}" onclick="videoOpen('${v.id}')"
       title="재원 ${roster.length}명 중 ${d}명이 완주했습니다 (완주 = ${videoGoalLabel()}).&#10;반 평균 시청률 ${a}% — 안 본 학생은 0%로 함께 셉니다.">
       ${썸네일(v)}
       <div class="b">
@@ -24270,7 +24281,7 @@ function chubVideoHTML(classId){
                 done: 완주 === g.length, seen: ps.some(x=>x.seen) };
     const over = v.dueDate && v.dueDate < todayStr() && !p.done;
     const 여럿 = g.length > 1;
-    return `<div class="vd-row ${g.some(x=>x.id===sel.id)?'on':''}" onclick="state.videoSelectedId='${v.id}'; render()">
+    return `<div class="vd-row ${g.some(x=>x.id===열린것)?'on':''}" onclick="videoOpen('${v.id}')">
       ${썸네일(v)}
       <div class="b">
         <div class="t">${escHtml(v.title)}${딱지들(v)}${여럿 ? ` <span class="badge late" style="font-weight:600;">${g.length}명</span>` : ''}</div>
@@ -24282,12 +24293,29 @@ function chubVideoHTML(classId){
         여럿 ? Math.round(완주 / g.length * 100) : p.pct}%"></i></span></div>
     </div>`;
   };
-  const list = `<div class="vd-list">
+  /* 🔵 **목록이 이 화면의 전부다** (2026-09-23 · V-2b · 사용자 — 「영상이 쌓일수록 아래로만 길게 스크롤」).
+       상세는 줄을 누르면 오른쪽 드로어(`videoDrawerHTML`)로 나온다 — 과제 칸·출결 날짜와 같은 어법. */
+  return form + `<div class="vd-list">
     ${vids.length && personal.length ? '<div class="t-sec">반 전체</div>' : ''}
     ${vids.map(classRow).join('')}
     ${묶음들.length ? `<div class="t-sec">개인 배정 <span class="mono">${묶음들.length}</span>
       <span style="font-weight:400;color:var(--dim);letter-spacing:0;">결석 보충 · 고른 학생에게 보낸 것</span></div>${묶음들.map(personalRow).join('')}` : ''}
   </div>`;
+}
+
+/* ---------- 영상 상세 드로어 (2026-09-23 · V-2b) ----------
+   사용자 — 「영상이 쌓일수록 아래로만 길게 스크롤 … 학생 시청률 띠도 옆으로 그렇게까지 길 필요가 없다 …
+   배치를 다시 하거나 일부를 드로어로」. 상세를 통째로 오른쪽 드로어(`.hwd.wide` · 520px)로 옮겼다.
+   목록은 화면에 남고, 드로어 안에서만 민다(render() 가 `.hwd-b` 자리를 지킨다). 막대는 드로어 폭이라 짧다.
+   머리: 제목 · 단원/받는이 · 마감 · × / 몸: 머리 카드(썸네일·딱지·단추 줄) → 알림 판 → 숫자 띠 → 이탈 지점 → 학생 묶음
+   / 발: 삭제 · 이전·다음 영상(목록 차례) · 닫기. */
+function videoDrawerHTML(){
+  const id = state.videoOpenId;
+  if(!id) return '';
+  const classId = state.classHubId;
+  const { roster, nameOf, progOf, avgOf, 묶음of, 이름들, 차례, 찾기 } = chubVideoModel(classId);
+  const sel = 찾기(id);
+  if(!sel){ return ''; }
 
   /* 이탈 분포 — 0~9%, 10~19% … 완주선 앞 칸까지, 그리고 «완주» 칸.
      🔵 **완주선에서 끊는다** (2026-09-13 · K-7). 그 위는 전부 완주라 빈 칸이 거짓 여백이 된다.
@@ -24328,7 +24356,7 @@ function chubVideoHTML(classId){
   </div>`;
 
   /* 🔵 **학생을 «묶음»으로 나눈다** (2026-09-23) — 미시청 · 시청 중 · 완주. 머리에 수를 적으니
-       줄마다 상태 딱지가 필요 없고, 570px 판에서 막대가 제 폭을 갖는다. 마감이 지났으면 안 끝낸 묶음
+       줄마다 상태 딱지가 필요 없고, 좁은 드로어에서 막대가 제 폭을 갖는다. 마감이 지났으면 안 끝낸 묶음
        머리에 «마감 지남»이 붙는다(예전의 「미시청 · 마감 지남」 딱지가 여기로 왔다).
      ⚠ 줄은 «이름 · 막대(완주선) · %»뿐이다. 이름 앞 아바타는 두지 않는다 (2026-09-16 · 형제 탭과 같다). */
   const 진행줄 = ({name, p, extra}) => `
@@ -24369,25 +24397,48 @@ function chubVideoHTML(classId){
     ${묶음판(받은줄들.map(({v,p,st}) => ({ name: nameOf(v.studentId), p,
         extra: !st ? ' <span class="badge gone">명단에 없음</span>' : '' })), 지남)}` : '';
 
-  /* 숫자 띠 — 반 전체면 재원·완주·시청 중·미시청·평균, 개인 배정이면 받은·완주·미시청. */
+  /* 숫자 띠 — 반 전체면 완주·시청 중·미시청·평균(재원은 머리에), 개인 배정이면 받은·완주·미시청. */
   const 받은완주 = 받은줄들.filter(r=>r.p.done).length, 받은미시청 = 받은줄들.filter(r=>!r.p.seen).length;
   const kpi = (k, v, tone) => `<div class="kpi"><div class="k">${k}</div><div class="v"${tone ? ' style="color:var(--'+tone+');"' : ''}>${v}</div></div>`;
   const kpis = !state.allRecordsLoaded ? '' : `<div class="kpis vd-kpis">${sel.studentId
     ? kpi('받은 학생', 받은줄들.length) + kpi('완주', 받은완주, 받은완주 ? 'ok' : '') + kpi('미시청', 받은미시청, 받은미시청 ? 'no' : '')
-    : kpi('재원', roster.length) + kpi('완주', doneCnt, doneCnt ? 'ok' : '') + kpi('시청 중', watching)
+    : kpi('완주', doneCnt, doneCnt ? 'ok' : '') + kpi('시청 중', watching)
       + kpi('미시청', notSeen, notSeen ? 'no' : '') + kpi('평균 시청률', avgSel + '<s>%</s>')}</div>`;
 
   /* ⚠ 머리말의 «마감 바꾸기·지우기»는 **묶음 전체**에 간다 — 한 줄로 보이던 것이라서다.
      그래서 id 를 쉼표로 이어 넘긴다(`setVideoDue`·`deleteVideo` 가 그 꼴을 받는다). */
   const 묶음ids = 받은묶음.length > 1 ? 받은묶음.map(v=>v.id).join(',') : '';
+  const 손댈것 = 묶음ids || sel.id;
   /* 미시청 알림 (N-2) — 단추는 머리 카드의 단추 줄, 판은 머리 카드 바로 아래. */
   const 알림대상 = sel.studentId ? roster.filter(s => 받은묶음.some(v => v.studentId === s.studentId)) : roster;
-  return form + list + `<div class="vd-main">
-      ${videoHeroHTML(sel, sel.studentId ? 이름들(받은묶음) : '', 묶음ids, vidNoticeBtnHTML(sel, 알림대상))}
-      ${vidNoticeBarHTML(sel, 알림대상)}
-      ${kpis}
-      ${sel.studentId ? one : drop + students}
-    </div>`;
+  /* 이전·다음 — 목록 차례를 탄다. 드로어가 목록을 덮고 있으니 닫지 않고도 옆 영상으로 간다. */
+  const at = 차례.indexOf(받은묶음.length ? 받은묶음[0].id : sel.id);
+  const 앞 = at > 0 ? 차례[at-1] : null, 뒤 = at >= 0 && at < 차례.length-1 ? 차례[at+1] : null;
+  const d = stuDday(sel.dueDate);
+  return `<div class="hwd-back" onclick="videoClose()"></div>
+    <aside class="hwd wide vd-hwd">
+      <div class="hwd-h" style="position:relative;">
+        <div class="t">${escHtml(sel.title)}</div>
+        <div class="m">${sel.studentId ? '개인 배정 · ' + escHtml(이름들(받은묶음)) : escHtml(sel.unit || '단원 미지정') + ' · 재원 ' + roster.length + '명'}
+          <s>·</s>${sel.dueDate ? '마감 <span class="mono">' + escHtml(sel.dueDate) + '</span>' : '마감 없음'}${
+          d ? ` <span class="badge ${d.tone}">${d.label}</span>` : ''}</div>
+        <button class="x" onclick="videoClose()" title="닫기 (Esc)">×</button>
+      </div>
+      <div class="hwd-b">
+        ${videoHeroHTML(sel, sel.studentId ? 이름들(받은묶음) : '', 묶음ids, vidNoticeBtnHTML(sel, 알림대상))}
+        ${vidNoticeBarHTML(sel, 알림대상)}
+        ${kpis}
+        ${sel.studentId ? one : drop + students}
+      </div>
+      <div class="hwd-f">
+        <button class="btn q sm" style="color:var(--no);" title="${묶음ids ? '받은 학생 모두에게서 지웁니다' : '이 영상을 지웁니다'}" onclick="deleteVideo('${손댈것}')">삭제</button>
+        <div class="nav">
+          <button class="btn sm" ${앞 ? `onclick="videoOpen('${앞}')"` : 'disabled'}>${iconSvg('arrowL',13)} 이전</button>
+          <button class="btn sm" ${뒤 ? `onclick="videoOpen('${뒤}')"` : 'disabled'}>다음 ${iconSvg('arrowR',13)}</button>
+          <button class="btn sm" onclick="videoClose()">닫기</button>
+        </div>
+      </div>
+    </aside>`;
 }
 
 // 반 상세("영상" 서브탭)에서는 fixedClassId가 오고, 등록 폼+그 반 영상 목록+학생별 시청현황을
