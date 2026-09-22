@@ -1447,6 +1447,13 @@
   font-size:10.5px;color:var(--dim);}
 .app .qn-msg .x{font-size:13.5px;line-height:1.9;white-space:pre-wrap;}
 .app .qn-comp{flex-shrink:0;border-top:1px solid var(--line);padding:14px 0 4px;}
+/* 사진이 여러 장이면 나란히 — 한 장이면 예전과 똑같이 보인다 (2026-09-23 · Q-1).
+   ⚠ 줄바꿈으로 둔다(가로 스크롤이 아니다). 질의응답은 «읽는» 화면이라 옆으로 숨으면 못 본다. */
+.qn-shots{display:flex;flex-wrap:wrap;gap:7px;align-items:flex-start;}
+.qn-shots .sap-img{margin-top:10px;max-width:calc(50% - 4px);}
+/* ⚠ :has() 는 안 쓴다 — 오래된 아이폰에서 규칙이 통째로 죽어 한 장짜리가 반쪽으로 남는다.
+   한 장이면 JS 가 «one» 을 붙인다(qnaImgsHTML). */
+.qn-shots.one .sap-img{max-width:100%;}
 .app .qn-img{max-width:260px;max-height:260px;margin-top:10px;border:1px solid var(--line);
   border-radius:var(--r-md);display:block;cursor:zoom-in;}
 /* ⚠ 좁은 창 폭은 이제 --co-side-w 가 통째로 맡는다(위) — 넷이 함께 줄어든다. */
@@ -5689,8 +5696,8 @@ let state = {
   stuChecked: {},
   stuBulkBusy: null,       // {done, total} — 일괄 삭제가 도는 동안만
   examImagesCache: {},
-  qnaQuestionImage: null,
-  qnaAnswerImage: {},
+  /* 질의응답 사진 — 아직 안 낸 것들. 열쇠는 'q'(질문·추가 질문) · 'a:<질문id>'(답). (2026-09-23 · Q-1) */
+  qnaPhotos: {},
   notifOpen: false,
   unitBankLoaded: false,
   unitBankLoading: false,
@@ -9838,15 +9845,16 @@ async function deleteClinic(cid){
      빼기(×)를 누르면 그 자리에서 드라이브에서도 지운다. */
 const HW_PHOTO_MAX = 6;
 function hwPhotoList(hwId){ return (state.hwPhotos && state.hwPhotos[hwId]) || []; }
-async function handleHwPhotos(hwId, fileList){
+/* 🔵 **«여러 장 올리기»는 한 몸이다** (2026-09-23 · Q-1) — 과제(노트 여러 쪽)와 질의응답(문제 여러 장)이
+     같은 일을 한다. 목록만 받아서 채운다 — 어느 칸의 목록인지는 부르는 쪽이 안다.
+   ⚠ **한 장씩 순서대로 올린다.** 한꺼번에 던지면 느린 회선에서 전부 타임아웃으로 죽는다.
+   ⚠ 실패한 칸은 목록에서 빼고 말해 준다 — 그냥 두면 «올리는 중…»이 영영 남는다. */
+async function stagePhotos(list, fileList, max){
   const files = Array.from(fileList||[]);
   if(!files.length) return;
-  state.hwPhotos = state.hwPhotos || {};
-  const list = state.hwPhotos[hwId] = hwPhotoList(hwId).slice();
-  const room = HW_PHOTO_MAX - list.length;
-  if(room <= 0){ showToast(`사진은 ${HW_PHOTO_MAX}장까지 올릴 수 있습니다.`); return; }
-  if(files.length > room) showToast(`${HW_PHOTO_MAX}장까지만 올라갑니다.`);
-  /* 한 장씩 순서대로 올린다. 한꺼번에 던지면 느린 회선에서 전부 타임아웃으로 죽는다. */
+  const room = max - list.length;
+  if(room <= 0){ showToast(`사진은 ${max}장까지 올릴 수 있습니다.`); return; }
+  if(files.length > room) showToast(`${max}장까지만 올라갑니다.`);
   for(const f of files.slice(0, room)){
     const previewUrl = URL.createObjectURL(f);
     const slot = { uploading:true, previewUrl };
@@ -9855,13 +9863,18 @@ async function handleHwPhotos(hwId, fileList){
       const { url, fileId } = await uploadImageToDrive(f);
       Object.assign(slot, { url, fileId, uploading:false });
     }catch(e){
-      console.error('과제 사진 업로드 실패', e);
+      console.error('사진 업로드 실패', e);
       showToast('사진 업로드에 실패했습니다. 다시 시도해주세요.');
       const i = list.indexOf(slot); if(i>=0) list.splice(i,1);
     }
     URL.revokeObjectURL(previewUrl);
     render();
   }
+}
+async function handleHwPhotos(hwId, fileList){
+  state.hwPhotos = state.hwPhotos || {};
+  const list = state.hwPhotos[hwId] = hwPhotoList(hwId).slice();
+  await stagePhotos(list, fileList, HW_PHOTO_MAX);
 }
 function removeHwPhoto(hwId, idx){
   const list = hwPhotoList(hwId).slice();
@@ -9873,77 +9886,83 @@ function removeHwPhoto(hwId, idx){
 }
 
 /* =================== 질의응답 =================== */
-function qnaImageFieldHTML(imageValue, onchangeCall, onremoveCall, fieldId){
+/* 🔵 **사진을 여러 장 올린다** (2026-09-23 · Q-1 · 사용자 — 「질의응답에 사진이 하나밖에 안올라가는데 여러개 올리게해줘」).
+   🔴 **옛 문서를 한 줄도 안 고친다** — 지금까지 올라간 질문·답은 `image`·`answerImage` 한 장을 들고 있다.
+     읽는 자리는 전부 이 함수 하나를 거치므로 옛것은 «한 장짜리 목록»으로 그대로 읽힌다.
+   ⚠ 새 문서는 `images`·`answerImages` 배열에 전부 싣고, **`image`·`answerImage` 에는 첫 장을 그대로 둔다** —
+     혹시 못 고친 자리가 있어도 «빈 칸»이 아니라 «첫 장»이 보이게. 지울 때는 fileId 로 겹치는 것을 추려 낸다. */
+function qnaImgList(x, 답){
+  if(!x) return [];
+  const 여럿 = x[답 ? 'answerImages' : 'images'];
+  if(Array.isArray(여럿) && 여럿.length) return 여럿.filter(Boolean);
+  const 하나 = x[답 ? 'answerImage' : 'image'];
+  return 하나 ? [하나] : [];
+}
+/* 올라가길 기다리는(=아직 문서에 안 실린) 사진들. `q` 는 질문·추가 질문이 함께 쓰고, `a:<질문id>` 는 답이다. */
+const QNA_PHOTO_MAX = 6;
+function qnaPhotos(key){ return (state.qnaPhotos && state.qnaPhotos[key]) || []; }
+function qnaPhotosBusy(key){ return qnaPhotos(key).some(p => p.uploading); }
+/* 문서에 실을 꼴 — 올라간 것만. 미리보기 blob 주소는 이 브라우저에서만 사는 것이라 절대 안 싣는다. */
+function qnaPhotoDocs(key){ return qnaPhotos(key).filter(p => p.url).map(p => ({ url:p.url, fileId:p.fileId })); }
+async function handleQnaPhotos(key, fileList){
+  state.qnaPhotos = state.qnaPhotos || {};
+  const list = state.qnaPhotos[key] = qnaPhotos(key).slice();
+  await stagePhotos(list, fileList, QNA_PHOTO_MAX);
+}
+function removeQnaPhoto(key, idx){
+  const list = qnaPhotos(key).slice();
+  const [gone] = list.splice(idx, 1);
+  if(gone && gone.fileId) deleteFromDrive(gone.fileId);   /* 아직 안 낸 사진도 드라이브엔 이미 있다 */
+  state.qnaPhotos = state.qnaPhotos || {};
+  state.qnaPhotos[key] = list;
+  render();
+}
+function clearQnaPhotos(key){ if(state.qnaPhotos) delete state.qnaPhotos[key]; }
+/* 사진 칸 — 올린 것들이 줄로 서고 그 아래 「파일·촬영」. 과제 제출(`.hw-shots`)과 **같은 부품**이다.
+   ⚠ `this.value=''` 를 꼭 둔다 — 안 두면 **같은 파일을 두 번 고를 수 없다**(change 가 안 뜬다). */
+function qnaImageFieldHTML(key, fieldId){
   const uid = fieldId || 'qimg';
-  const src = imgSrcOf(imageValue);
-  const uploading = imageValue && typeof imageValue === 'object' && imageValue.uploading;
-  return `<div style="max-width:150px;">
-    ${src ? `<div style="position:relative;display:inline-block;">
-      <img src="${src}" style="max-width:150px;max-height:150px;border-radius:var(--r-sm);border:1px solid var(--line);display:block;${uploading?'opacity:.5;':''}">
-      ${uploading ? `<span style="position:absolute;bottom:3px;left:3px;background:rgba(0,0,0,.6);color:#fff;font-size:10px;padding:2px 6px;border-radius:3px;">업로드 중…</span>` : `<button class="btn no sm" style="position:absolute;top:3px;right:3px;padding:2px 7px;" onclick="${onremoveCall}">×</button>`}
-    </div>` : `
-    <input type="file" accept="image/*" id="${uid}-file" style="display:none;" onchange="${onchangeCall}">
-    <input type="file" accept="image/*" capture="environment" id="${uid}-cam" style="display:none;" onchange="${onchangeCall}">
-    <div style="display:flex;gap:6px;">
-      <button type="button" class="btn sm" style="flex:1;" onclick="document.getElementById('${uid}-file').click()">${iconSvg('file',14)} 파일</button>
-      <button type="button" class="btn sm" style="flex:1;" onclick="document.getElementById('${uid}-cam').click()">${iconSvg('camera',14)} 촬영</button>
-    </div>`}
+  const list = qnaPhotos(key);
+  const 꽉 = list.length >= QNA_PHOTO_MAX;
+  return `<div style="flex:1 1 190px;min-width:170px;max-width:100%;">
+    ${list.length ? `<div class="hw-shots" style="margin-top:0;">${list.map((p,i)=>`
+      <span class="hw-shot">
+        <img src="${escHtml(p.url || p.previewUrl)}"${p.uploading?' style="opacity:.45;"':''} alt="올린 사진">
+        ${p.uploading ? `<b class="hw-upping">올리는 중…</b>`
+          : `<button class="hw-x" onclick="removeQnaPhoto('${key}',${i})">×</button>`}
+      </span>`).join('')}</div>` : ''}
+    <input type="file" accept="image/*" multiple id="${uid}-file" style="display:none;"
+      onchange="handleQnaPhotos('${key}', this.files); this.value='';">
+    <input type="file" accept="image/*" capture="environment" id="${uid}-cam" style="display:none;"
+      onchange="handleQnaPhotos('${key}', this.files); this.value='';">
+    <div style="display:flex;gap:6px;margin-top:${list.length?'8px':'0'};">
+      <button type="button" class="btn sm" style="flex:1;"${꽉?' disabled':''}
+        onclick="document.getElementById('${uid}-file').click()">${iconSvg('file',14)} 파일</button>
+      <button type="button" class="btn sm" style="flex:1;"${꽉?' disabled':''}
+        onclick="document.getElementById('${uid}-cam').click()">${iconSvg('camera',14)} 촬영</button>
+    </div>
+    ${list.length ? `<div style="font-size:10.5px;color:var(--dim);margin-top:5px;">
+      <span class="mono">${list.length}</span>/<span class="mono">${QNA_PHOTO_MAX}</span>장${꽉 ? ' — 더는 못 올립니다' : ''}</div>` : ''}
   </div>`;
 }
-async function handleQnaQuestionImage(fileList){
-  const f = (fileList||[])[0];
-  if(!f) return;
-  const previewUrl = URL.createObjectURL(f);
-  state.qnaQuestionImage = { uploading:true, previewUrl };
-  render();
-  try{
-    const { url, fileId } = await uploadImageToDrive(f);
-    state.qnaQuestionImage = { url, fileId };
-  }catch(e){
-    console.error('이미지 업로드 실패', e);
-    showToast('이미지 업로드에 실패했습니다.');
-    state.qnaQuestionImage = null;
-  }
-  URL.revokeObjectURL(previewUrl);
-  render();
-}
-function removeQnaQuestionImage(){
-  deleteFromDrive(imgFileIdOf(state.qnaQuestionImage));
-  state.qnaQuestionImage = null;
-  render();
-}
-async function handleQnaAnswerImage(qid, fileList){
-  const f = (fileList||[])[0];
-  if(!f) return;
-  const previewUrl = URL.createObjectURL(f);
-  state.qnaAnswerImage[qid] = { uploading:true, previewUrl };
-  render();
-  try{
-    const { url, fileId } = await uploadImageToDrive(f);
-    state.qnaAnswerImage[qid] = { url, fileId };
-  }catch(e){
-    console.error('이미지 업로드 실패', e);
-    showToast('이미지 업로드에 실패했습니다.');
-    delete state.qnaAnswerImage[qid];
-  }
-  URL.revokeObjectURL(previewUrl);
-  render();
-}
-function removeQnaAnswerImage(qid){
-  deleteFromDrive(imgFileIdOf(state.qnaAnswerImage[qid]));
-  delete state.qnaAnswerImage[qid];
-  render();
+/* 여러 장을 나란히 — 한 장이면 예전과 똑같이 보인다(줄이 하나뿐이다). */
+function qnaImgsHTML(list, cls){
+  if(!list.length) return '';
+  return `<div class="qn-shots${list.length === 1 ? ' one' : ''}">${list.map(x => `<img class="${cls}" src="${imgSrcOf(x)}"
+    title="누르면 크게 봅니다" onclick="openPhoto(this.src)">`).join('')}</div>`;
 }
 async function submitQuestion(){
   const sid = state.currentUser.studentId;
   const question = document.getElementById('qna-question').value.trim();
   if(!question){ showToast('질문 내용을 입력해주세요.'); return; }
-  if(state.qnaQuestionImage && state.qnaQuestionImage.uploading){ showToast('이미지 업로드가 끝난 후 다시 시도해주세요.'); return; }
-  const qna = {id:'qn'+Date.now(), uid: authUid(), studentId:sid, studentName:state.currentUser.name, question, image:state.qnaQuestionImage||null, date:todayStr(), answer:null, answerImage:null, answeredAt:null};
+  if(qnaPhotosBusy('q')){ showToast('사진 올리기가 끝난 뒤에 보내 주세요.'); return; }
+  const 사진들 = qnaPhotoDocs('q');
+  const qna = {id:'qn'+Date.now(), uid: authUid(), studentId:sid, studentName:state.currentUser.name, question,
+    image:사진들[0]||null, images:사진들, date:todayStr(), answer:null, answerImage:null, answeredAt:null};
   DATA.qnas.unshift(qna);
   await dbSetDoc('qnas', qna.id, qna);
   document.getElementById('qna-question').value='';
-  state.qnaQuestionImage = null;
+  clearQnaPhotos('q');
   showToast('질문이 등록되었습니다.');
   render();
 }
@@ -9983,9 +10002,10 @@ async function submitFollowup(parentId){
   const el = document.getElementById('qna-follow');
   const question = ((el && el.value) || '').trim();
   if(!question){ showToast('추가 질문 내용을 입력해주세요.'); return; }
-  if(state.qnaQuestionImage && state.qnaQuestionImage.uploading){ showToast('이미지 업로드가 끝난 후 다시 시도해주세요.'); return; }
+  if(qnaPhotosBusy('q')){ showToast('사진 올리기가 끝난 뒤에 보내 주세요.'); return; }
+  const 사진들 = qnaPhotoDocs('q');
   const f = { id:'qf'+Date.now(), kind:'followup', parentId, uid: authUid(), studentId:sid, studentName:state.currentUser.name,
-    question, image:state.qnaQuestionImage||null, date:todayStr(), answer:null, answerImage:null, answeredAt:null };
+    question, image:사진들[0]||null, images:사진들, date:todayStr(), answer:null, answerImage:null, answeredAt:null };
   DATA.qnaFollowups.push(f);
   const ok = await dbSetDoc('qnas', f.id, f);
   /* 🔴 저장이 됐는지 보고 말한다 — 안 되면 목록에서 도로 뺀다 */
@@ -9993,7 +10013,7 @@ async function submitFollowup(parentId){
     DATA.qnaFollowups = DATA.qnaFollowups.filter(x => x.id !== f.id);
     showToast('추가 질문을 보내지 못했습니다 — 잠시 뒤에 다시 눌러주세요.'); render(); return;
   }
-  state.qnaQuestionImage = null;
+  clearQnaPhotos('q');
   state.stuQnaFollowFor = null;
   showToast('추가 질문을 보냈습니다.');
   render();
@@ -10013,15 +10033,15 @@ function qnaHasAnyAnswer(q){ return !!(q && (q.answer || qnaMoreAnswersOf(q).len
 /* 강사 화면의 답 말풍선. 첫 답과 더 단 답이 꼴이 같아 한 군데서 짓는다 —
    원래 질문과 추가 질문이 같은 것을 쓴다(둘 다 그냥 `qnas` 문서다). */
 function qnaAnswerBubblesHTML(q){
-  const 하나 = (text, image, at, 더) => `
+  const 하나 = (text, imgs, at, 더) => `
           <div class="qn-msg me">
             <div class="h"><span class="av" style="width:24px;height:24px;font-size:11px;background:var(--accent);color:#fff;">김</span>
               <b>김하현T</b>${더 ? `<span class="badge ok" style="margin-left:2px;">답변 추가</span>` : ''}<span class="t">${escHtml(at||'')}</span></div>
             <div class="x">${escHtml(text)}</div>
-            ${imgSrcOf(image) ? `<img class="qn-img" src="${imgSrcOf(image)}" title="누르면 크게 봅니다" onclick="openPhoto(this.src)">` : ''}
+            ${qnaImgsHTML(imgs, 'qn-img')}
           </div>`;
-  return (q.answer ? 하나(q.answer, q.answerImage, q.answeredAt, false) : '')
-       + qnaMoreAnswersOf(q).map(a => 하나(a.text, a.image, a.at, true)).join('');
+  return (q.answer ? 하나(q.answer, qnaImgList(q, true), q.answeredAt, false) : '')
+       + qnaMoreAnswersOf(q).map(a => 하나(a.text, qnaImgList(a), a.at, true)).join('');
 }
 /* 답 칸. 🔵 **이제 답이 있어도 사라지지 않는다** — 그것이 09-16에 고친 바로 그것이다. */
 function qnaAnswerFormHTML(q, 겉){
@@ -10031,50 +10051,51 @@ function qnaAnswerFormHTML(q, 겉){
           <div class="cls-form" style="align-items:flex-start;margin-top:0;">
             <label style="flex:1;min-width:240px;"><span>${라벨}</span>
               <textarea id="answer-${q.id}" rows="3" placeholder="답변 입력"></textarea></label>
-            ${qnaImageFieldHTML(state.qnaAnswerImage[q.id], `handleQnaAnswerImage('${q.id}',this.files)`, `removeQnaAnswerImage('${q.id}')`, `qna-a-${q.id}`)}
+            ${qnaImageFieldHTML('a:' + q.id, `qna-a-${q.id}`)}
             <button class="btn p sm" onclick="submitAnswer('${q.id}')">등록</button>
           </div>
         </div>`;
 }
 /* 학생 화면의 답 — 강사 쪽과 달리 `.note` 상자다. 첫 답과 더 단 답을 같이 낸다. */
 function qnaAnswerNotesHTML(q){
-  const 하나 = (text, image, at, 더) => `
+  const 하나 = (text, imgs, at, 더) => `
              <div class="note" style="margin-top:${더 ? 8 : 12}px;">
                <div style="font-size:10.5px;color:var(--dim);margin-bottom:5px;">${더 ? '답변 추가' : '답변'}
                  <span class="mono">${escHtml(at||'')}</span></div>
                <div style="white-space:pre-wrap;color:var(--ink);">${escHtml(text)}</div>
-               ${imgSrcOf(image) ? `<img class="sap-img" src="${imgSrcOf(image)}" onclick="openPhoto(this.src)">` : ''}
+               ${qnaImgsHTML(imgs, 'sap-img')}
              </div>`;
   if(!qnaHasAnyAnswer(q)) return `<div style="font-size:11.5px;color:var(--dim);margin-top:11px;">아직 답변이 등록되지 않았습니다.</div>`;
-  return (q.answer ? 하나(q.answer, q.answerImage, q.answeredAt, false) : '')
-       + qnaMoreAnswersOf(q).map(a => 하나(a.text, a.image, a.at, true)).join('');
+  return (q.answer ? 하나(q.answer, qnaImgList(q, true), q.answeredAt, false) : '')
+       + qnaMoreAnswersOf(q).map(a => 하나(a.text, qnaImgList(a), a.at, true)).join('');
 }
 
 async function submitAnswer(qid){
   const 칸 = document.getElementById('answer-'+qid);
   const val = ((칸 && 칸.value) || '').trim();
   if(!val){ showToast('답변을 입력해주세요.'); return; }
-  if(state.qnaAnswerImage[qid] && state.qnaAnswerImage[qid].uploading){ showToast('이미지 업로드가 끝난 후 다시 시도해주세요.'); return; }
+  if(qnaPhotosBusy('a:'+qid)){ showToast('사진 올리기가 끝난 뒤에 등록해 주세요.'); return; }
   const q = qnaFind(qid);          // 원래 질문이든 추가 질문이든 같은 길 (2026-09-15)
   if(!q) return;
   const 첫답인가 = !q.answer;
   /* 🔵 되돌릴 수 있게 «바꾸기 전»을 쥐고 있는다 — 저장이 어긋나면 화면만 앞서 가면 안 된다. */
-  const 되돌리기 = { answer:q.answer, answerImage:q.answerImage, answeredAt:q.answeredAt,
+  const 되돌리기 = { answer:q.answer, answerImage:q.answerImage, answerImages:q.answerImages, answeredAt:q.answeredAt,
                      moreAnswers: q.moreAnswers ? q.moreAnswers.slice() : undefined };
+  const 사진들 = qnaPhotoDocs('a:'+qid);
   if(첫답인가){
-    q.answer = val; q.answerImage = state.qnaAnswerImage[qid]||null; q.answeredAt = todayStr();
+    q.answer = val; q.answerImage = 사진들[0]||null; q.answerImages = 사진들; q.answeredAt = todayStr();
   }else{
     if(!Array.isArray(q.moreAnswers)) q.moreAnswers = [];
-    q.moreAnswers.push({ text:val, image:state.qnaAnswerImage[qid]||null, at:todayStr() });
+    q.moreAnswers.push({ text:val, image:사진들[0]||null, images:사진들, at:todayStr() });
   }
   const ok = await dbSetDoc('qnas', q.id, q);
   /* 🔴 저장이 됐는지 보고 말한다 — 추가 질문을 보낼 때와 같은 몸가짐이다 */
   if(ok !== true){
-    q.answer = 되돌리기.answer; q.answerImage = 되돌리기.answerImage; q.answeredAt = 되돌리기.answeredAt;
+    q.answer = 되돌리기.answer; q.answerImage = 되돌리기.answerImage; q.answerImages = 되돌리기.answerImages; q.answeredAt = 되돌리기.answeredAt;
     if(되돌리기.moreAnswers) q.moreAnswers = 되돌리기.moreAnswers; else delete q.moreAnswers;
     showToast('답변을 저장하지 못했습니다 — 잠시 뒤에 다시 눌러주세요.'); render(); return;
   }
-  delete state.qnaAnswerImage[qid];
+  clearQnaPhotos('a:'+qid);
   showToast(첫답인가 ? '답변이 등록되었습니다.' : '답변을 더 달았습니다.');
   render();
   /* 알림톡 (09-20) — 답이 저장된 «뒤»에. 실은 «실»(원 질문) 단위로 하루 한 번 — 같은 날 더 달아도 두 번 안 간다. */
@@ -10084,11 +10105,15 @@ async function deleteQna(qid){
   if(!confirm('이 질문을 삭제할까요?')) return;
   const q = DATA.qnas.find(q=>q.id===qid);
   /* 더 단 답의 사진도 같이 지운다 (2026-09-16) — 안 그러면 드라이브에 주인 없는 사진이 남는다 */
+  /* ⚠ 새 문서는 첫 장을 `image` 에도 두므로 그대로 돌면 **같은 파일을 두 번** 지우러 간다.
+     fileId 로 한 번 추려서 보낸다 (2026-09-23 · Q-1). */
   const 사진털기 = (x) => {
     if(!x) return;
-    deleteFromDrive(imgFileIdOf(x.image));
-    deleteFromDrive(imgFileIdOf(x.answerImage));
-    qnaMoreAnswersOf(x).forEach(a => deleteFromDrive(imgFileIdOf(a.image)));
+    const ids = new Set();
+    qnaImgList(x).concat(qnaImgList(x, true))
+      .concat(qnaMoreAnswersOf(x).reduce((a, m) => a.concat(qnaImgList(m)), []))
+      .forEach(img => { const id = imgFileIdOf(img); if(id) ids.add(id); });
+    ids.forEach(id => deleteFromDrive(id));
   };
   사진털기(q);
   /* 추가 질문도 같이 — 부모 없는 댓글이 남으면 아무 데도 안 보이는 문서가 된다 (2026-09-15) */
@@ -16425,8 +16450,7 @@ function stuQnaHTML(c){
     <textarea id="qna-question" class="sap-in" rows="4"
       placeholder="문제 질문은 물론, 학습 상담 등 무엇이든 편하게 남겨주세요."></textarea>
     <div class="sap-lab" style="margin-top:13px;">사진 (선택)</div>
-    ${qnaImageFieldHTML(state.qnaQuestionImage,
-      'handleQnaQuestionImage(this.files)', 'removeQnaQuestionImage()', 'qna-q-stu')}
+    ${qnaImageFieldHTML('q', 'qna-q-stu')}
     <button class="mbtn p" style="margin-top:14px;" onclick="submitQuestion()">질문 보내기</button>
     <button class="mbtn q" style="margin-top:6px;" onclick="state.stuQnaWriting=false; render()">닫기</button>
   </div>`
@@ -16442,7 +16466,7 @@ function stuQnaHTML(c){
           <span class="mono" style="font-size:10.5px;color:var(--dim);">${escHtml(q.date||'')}</span>
         </div>
         <div style="font-size:13.5px;line-height:1.7;margin-top:9px;white-space:pre-wrap;">${escHtml(q.question)}</div>
-        ${imgSrcOf(q.image) ? `<img class="sap-img" src="${imgSrcOf(q.image)}" onclick="openPhoto(this.src)">` : ''}
+        ${qnaImgsHTML(qnaImgList(q), 'sap-img')}
         ${/* ds.css의 .note .d는 mono다. 「답변」 같은 낱말을 넣으면 글자가 벌어진다.
              답이 여럿일 수 있다(2026-09-16) — 첫 답 아래로 «답변 추가»가 쌓인다. */''}
         ${qnaAnswerNotesHTML(q)}
@@ -16451,7 +16475,7 @@ function stuQnaHTML(c){
         <div style="margin-top:12px;padding-top:12px;border-top:1px dashed var(--line);">
           <div style="font-size:10.5px;color:var(--dim);margin-bottom:5px;">추가 질문 <span class="mono">${escHtml(f.date||'')}</span></div>
           <div style="font-size:13px;line-height:1.7;white-space:pre-wrap;">${escHtml(f.question)}</div>
-          ${imgSrcOf(f.image) ? `<img class="sap-img" src="${imgSrcOf(f.image)}" onclick="openPhoto(this.src)">` : ''}
+          ${qnaImgsHTML(qnaImgList(f), 'sap-img')}
           ${qnaAnswerNotesHTML(f)}
         </div>`).join('')}
         ${!q.answer ? '' : state.stuQnaFollowFor === q.id ? `
@@ -16460,7 +16484,7 @@ function stuQnaHTML(c){
           <textarea id="qna-follow" class="sap-in" rows="3"
             placeholder="답변을 보고도 이해가 안 되는 부분을 적어 주세요."></textarea>
           <div class="sap-lab" style="margin-top:13px;">사진 (선택)</div>
-          ${qnaImageFieldHTML(state.qnaQuestionImage, 'handleQnaQuestionImage(this.files)', 'removeQnaQuestionImage()', 'qna-f-stu')}
+          ${qnaImageFieldHTML('q', 'qna-f-stu')}
           <button class="mbtn p" style="margin-top:12px;" onclick="submitFollowup('${q.id}')">보내기</button>
           <button class="mbtn q" style="margin-top:6px;" onclick="state.stuQnaFollowFor=null; render()">닫기</button>
         </div>`
@@ -23928,7 +23952,7 @@ function teacherQnaHTML(){
     <div class="h">
       <span class="badge ${qnaHasOpen(q)?'no':'ok'}">${qnaHasOpen(q) ? (q.answer ? '추가 질문' : '대기') : '완료'}</span>
       <span class="who">${escHtml(q.studentName||'')}</span>
-      ${imgSrcOf(q.image) ? '<span class="muted" style="font-size:11px;">사진</span>' : ''}
+      ${(n => n ? `<span class="muted" style="font-size:11px;">사진${n > 1 ? ' <b class="mono">' + n + '</b>' : ''}</span>` : '')(qnaImgList(q).length)}
       <span class="ago">${escHtml(q.date||'')}</span></div>
     <div class="x">${escHtml(q.question)}</div>
   </div>`;
@@ -23961,7 +23985,7 @@ function teacherQnaHTML(){
             <div class="h"><span class="av" style="width:24px;height:24px;font-size:11px;">${escHtml((cur.studentName||'?').slice(0,1))}</span>
               <b>${escHtml(cur.studentName||'')}</b><span class="t">${escHtml(cur.date||'')}</span></div>
             <div class="x">${escHtml(cur.question)}</div>
-            ${imgSrcOf(cur.image)?`<img class="qn-img" src="${imgSrcOf(cur.image)}" title="누르면 크게 봅니다" onclick="openPhoto(this.src)">`:''}
+            ${qnaImgsHTML(qnaImgList(cur), 'qn-img')}
           </div>
           ${qnaAnswerBubblesHTML(cur)}
           ${/* 추가 질문 — 학생이 답을 보고 또 물은 것. 꼴이 같아 같은 말풍선을 쓴다. 답이 없는 것에는 답 칸이 바로 붙는다. */''}
@@ -23970,7 +23994,7 @@ function teacherQnaHTML(){
             <div class="h"><span class="av" style="width:24px;height:24px;font-size:11px;">${escHtml((f.studentName||'?').slice(0,1))}</span>
               <b>${escHtml(f.studentName||'')}</b><span class="badge late" style="margin-left:2px;">추가 질문</span><span class="t">${escHtml(f.date||'')}</span></div>
             <div class="x">${escHtml(f.question)}</div>
-            ${imgSrcOf(f.image)?`<img class="qn-img" src="${imgSrcOf(f.image)}" title="누르면 크게 봅니다" onclick="openPhoto(this.src)">`:''}
+            ${qnaImgsHTML(qnaImgList(f), 'qn-img')}
           </div>
           ${qnaAnswerBubblesHTML(f)}
           ${/* 맨 끝의 것은 아래 «하나뿐인 칸»이 맡는다. 여기 칸이 붙는 것은 **답 없이 묻힌 중간

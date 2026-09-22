@@ -35,22 +35,26 @@ const 봄 = (무엇, 나온것, 나와야) => {
 function 판(o) {
   o = o || {};
   const DATA = { qnas: o.qnas || [], qnaFollowups: [] };
-  const state = { currentUser: { studentId: 's1', name: '김승우' }, qnaQuestionImage: o.image || null, qnaAnswerImage: {}, stuQnaFollowFor: 'qn1' };
-  const 쓴것 = [], 지운것 = [], 말 = [];
+  /* ⚠ 2026-09-23(Q-1)부터 «아직 안 낸 사진»은 state.qnaPhotos 한 곳에 목록으로 산다 —
+     열쇠는 'q'(질문·추가 질문) · 'a:<질문id>'(답). 옛 qnaQuestionImage·qnaAnswerImage 는 없어졌다. */
+  const state = { currentUser: { studentId: 's1', name: '김승우' },
+    qnaPhotos: o.photos || (o.image ? { q: [o.image] } : {}), stuQnaFollowFor: 'qn1' };
+  const 쓴것 = [], 지운것 = [], 말 = [], 지운사진 = [];
   const 알림 = [];
   const F = new Function('DATA', 'state', 'document', 'authUid', 'todayStr', 'dbSetDoc', 'dbDeleteDoc', 'showToast', 'render', 'deleteFromDrive', 'imgFileIdOf', 'confirm', 'notifyAuto', 'qnaNoticeText', 'qnaNoticeVars',
     /* ⚠ `deleteQna` 가 «답에 붙은 사진»까지 걷느라 `qnaMoreAnswersOf` 를 부른다 —
        목록에 없어 이 검사가 ReferenceError 로 터져 있었다. 옮겨 적지 않고 그대로 뜬다. */
     [lift('splitQnaFollowups'), lift('qnaFollowupsOf'), lift('qnaMoreAnswersOf'), lift('qnaHasOpen'),
-     lift('qnaFind'), lift('submitFollowup'), lift('submitAnswer'), lift('deleteQna')].join(NL)
+     lift('qnaFind'), lift('qnaImgList'), lift('qnaPhotos'), lift('qnaPhotosBusy'), lift('qnaPhotoDocs'),
+     lift('clearQnaPhotos'), lift('submitFollowup'), lift('submitAnswer'), lift('deleteQna')].join(NL)
     + NL + 'return { splitQnaFollowups, qnaFollowupsOf, qnaHasOpen, qnaFind, submitFollowup, submitAnswer, deleteQna };')(
     DATA, state, { getElementById: id => ({ value: o.text === undefined ? '이 부분이 이해가 안 돼요' : o.text }) },
     () => 'uid-s1', () => '2026-09-15',
     async (col, id, doc) => { 쓴것.push({ col, id, doc: JSON.parse(JSON.stringify(doc)) }); return o.저장흠 ? null : true; },
     async (col, id) => { 지운것.push(col + '/' + id); },
-    m => 말.push(m), () => {}, () => {}, v => (v && v.fileId) || null, () => true,
+    m => 말.push(m), () => {}, id => { if(id) 지운사진.push(id); }, v => (v && v.fileId) || null, () => true,
     (kind, id, targets) => 알림.push({ kind, id, targets }), (name, q) => name + ':' + q.id, (name, q) => ({ '#{학생명}': name }));
-  return { F, DATA, state, 쓴것, 지운것, 말, 알림 };
+  return { F, DATA, state, 쓴것, 지운것, 지운사진, 말, 알림 };
 }
 
 console.log(NL + '① 읽은 뒤 가른다' + NL);
@@ -79,8 +83,8 @@ console.log(NL + '② 학생이 추가 질문을 보낸다 — 새 문서' + NL)
   const w = 쓴것[0];
   봄('🔴 qnas 통에 «새 문서»로 쓴다 (부모를 안 고친다)', [w.col, w.id !== 'qn1', w.id.startsWith('qf')], ['qnas', true, true]);
   봄('🔴 kind·parentId·uid 가 있다 (규칙: 제 uid 로만 만든다)', [w.doc.kind, w.doc.parentId, w.doc.uid], ['followup', 'qn1', 'uid-s1']);
-  봄('꼴은 원래 질문과 같다 (question → answer 자리)', ['question', 'image', 'answer', 'answerImage', 'answeredAt'].every(k => k in w.doc), true);
-  봄('보낸 뒤 폼이 닫힌다', [state.stuQnaFollowFor, state.qnaQuestionImage], [null, null]);
+  봄('꼴은 원래 질문과 같다 (question → answer 자리)', ['question', 'image', 'images', 'answer', 'answerImage', 'answeredAt'].every(k => k in w.doc), true);
+  봄('보낸 뒤 폼이 닫힌다', [state.stuQnaFollowFor, state.qnaPhotos.q], [null, undefined]);
   봄('목록에 붙는다', DATA.qnaFollowups.length, 1);
 
   const 빈 = 판({ qnas: [{ id: 'qn1', answer: 'A' }], text: '   ' });
@@ -133,6 +137,63 @@ console.log(NL + '④ 화면과 규칙의 닻' + NL);
   const 규칙블록 = rules.slice(rules.indexOf('match /qnas/'), rules.indexOf('}', rules.indexOf('match /qnas/') + 20));
   봄('🔴 규칙은 안 건드렸다 — 학생은 여전히 만들기만', [규칙블록.includes('allow create: if realAccount() && request.resource.data.uid == request.auth.uid;'), 규칙블록.includes('allow update, delete: if isTeacher();')], [true, true]);
   봄('읽은 뒤 두 곳에서 가른다', (html.match(/splitQnaFollowups\(\);/g) || []).length, 2);
+}
+
+/* ═══ 사진 여러 장 (2026-09-23 · Q-1 · 사용자 — 「사진이 하나밖에 안올라가는데 여러개 올리게해줘」) ═══ */
+console.log(NL + '⑦ 사진 여러 장 — 질문에도, 답에도' + NL);
+{
+  const 석장 = [{ url: 'u1', fileId: 'f1' }, { url: 'u2', fileId: 'f2' }, { url: 'u3', fileId: 'f3' }];
+  const { F, 쓴것 } = 판({ qnas: [{ id: 'qn1', studentId: 's1', question: 'Q', answer: 'A' }],
+    photos: { q: 석장.slice() } });
+  F.splitQnaFollowups();
+  await F.submitFollowup('qn1');
+  봄('🔴 추가 질문에 세 장이 다 실린다', 쓴것[0].doc.images.map(x => x.fileId), ['f1', 'f2', 'f3']);
+  봄('🔴 첫 장은 image 에도 둔다 — 못 고친 자리가 있어도 «빈 칸»이 아니라 첫 장이 보이게',
+    쓴것[0].doc.image.fileId, 'f1');
+
+  /* 올리는 중인 칸이 섞여 있으면 보내지 않는다 — 주소가 없는 것을 문서에 실으면 안 된다 */
+  const 올리는중 = 판({ qnas: [{ id: 'qn1', answer: 'A' }],
+    photos: { q: [{ url: 'u1', fileId: 'f1' }, { uploading: true, previewUrl: 'blob:x' }] } });
+  올리는중.F.splitQnaFollowups();
+  await 올리는중.F.submitFollowup('qn1');
+  봄('🔴 올리는 중이면 안 보낸다', [올리는중.쓴것.length, 올리는중.말[0].includes('사진 올리기가 끝난 뒤')], [0, true]);
+
+  /* 답에도 여러 장 */
+  const 답 = 판({ qnas: [{ id: 'qn1', studentId: 's1', question: 'Q', answer: null }],
+    photos: { 'a:qn1': [{ url: 'a1', fileId: 'af1' }, { url: 'a2', fileId: 'af2' }] } });
+  답.F.splitQnaFollowups();
+  await 답.F.submitAnswer('qn1');
+  봄('🔴 첫 답에 두 장', 답.쓴것[0].doc.answerImages.map(x => x.fileId), ['af1', 'af2']);
+  봄('   첫 장은 answerImage 에도', 답.쓴것[0].doc.answerImage.fileId, 'af1');
+  봄('   보낸 뒤 칸을 비운다', 답.state.qnaPhotos['a:qn1'], undefined);
+
+  /* 두 번째 답(moreAnswers)에도 */
+  const 더 = 판({ qnas: [{ id: 'qn1', studentId: 's1', question: 'Q', answer: '첫 답' }],
+    photos: { 'a:qn1': [{ url: 'b1', fileId: 'bf1' }, { url: 'b2', fileId: 'bf2' }] } });
+  더.F.splitQnaFollowups();
+  await 더.F.submitAnswer('qn1');
+  봄('🔴 더 단 답에도 여러 장', 더.쓴것[0].doc.moreAnswers[0].images.map(x => x.fileId), ['bf1', 'bf2']);
+}
+
+console.log(NL + '⑧ 옛 문서(한 장짜리)를 그대로 읽는다 · 지울 때 두 번 안 지운다' + NL);
+{
+  const L = new Function(lift('qnaImgList') + NL + 'return qnaImgList;')();
+  봄('🔴 옛 꼴 — image 한 장이 목록 하나가 된다', L({ image: { fileId: 'x' } }).map(i => i.fileId), ['x']);
+  봄('🔴 옛 꼴 — answerImage 도', L({ answerImage: { fileId: 'y' } }, true).map(i => i.fileId), ['y']);
+  봄('새 꼴 — images 가 있으면 그쪽이 이긴다',
+    L({ image: { fileId: 'a' }, images: [{ fileId: 'a' }, { fileId: 'b' }] }).map(i => i.fileId), ['a', 'b']);
+  봄('사진이 없으면 빈 목록', [L(null).length, L({}).length, L({ image: null }).length], [0, 0, 0]);
+
+  /* 지우기 — 새 문서는 첫 장이 image 에도 있어, 그대로 돌면 «같은 파일을 두 번» 지우러 간다 */
+  const 지우기 = 판({ qnas: [{ id: 'qn1', studentId: 's1', question: 'Q',
+    image: { fileId: 'f1' }, images: [{ fileId: 'f1' }, { fileId: 'f2' }],
+    answer: 'A', answerImage: { fileId: 'g1' }, answerImages: [{ fileId: 'g1' }],
+    moreAnswers: [{ text: '더', image: { fileId: 'h1' }, images: [{ fileId: 'h1' }, { fileId: 'h2' }] }] }] });
+  지우기.F.splitQnaFollowups();
+  await 지우기.F.deleteQna('qn1');
+  봄('🔴 사진을 하나도 안 빠뜨리고 지운다', 지우기.지운사진.slice().sort(), ['f1', 'f2', 'g1', 'h1', 'h2']);
+  봄('🔴 같은 파일을 두 번 지우러 가지 않는다 (첫 장이 image 에도 있어 두 번 돌기 쉽다)',
+    지우기.지운사진.length, new Set(지우기.지운사진).size);
 }
 
 console.log(NL + (fail ? `🔴 ${fail}개 실패 · ${pass + fail}개` : `✓ 전부 통과 · ${pass}개`));
