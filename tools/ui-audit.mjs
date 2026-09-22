@@ -45,10 +45,18 @@ function 재기(){
   const 보이나 = el => { const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0; };
   const 이름 = el => el.tagName.toLowerCase() + (el.className && typeof el.className === 'string'
     ? '.' + el.className.trim().split(/\s+/).slice(0, 3).join('.') : '');
+  /* 「어느 줄의 무엇인가」 — 부모 클래스(없으면 태그)와 글자 몇 자를 같이 적는다.
+     이름만으로는 `a ↔ a` 처럼 나와 어느 것인지 못 찾는다. */
+  const 어디 = el => {
+    const p = el.parentElement;
+    const 부모 = p ? (String(p.className || '').trim().split(/\s+/)[0] || p.tagName.toLowerCase()) : '?';
+    return 이름(el) + '⟨' + 부모 + ':' + (el.textContent || '').trim().slice(0, 8) + '⟩';
+  };
   const 앱 = document.querySelector('.app');
   if(!앱) return { 흠: '.app 이 없다' };
   const 전부 = [...앱.querySelectorAll('*')].filter(보이나);
-  const 결과 = { 잰것: 전부.length, 겹친모서리: [], 좁은손잡이: [], 전부전환: [], 눌림값: [], 글줄: [] };
+  const 결과 = { 잰것: 전부.length, 겹친모서리: [], 좁은손잡이: [], 겹친손잡이: [], 전부전환: [], 눌림값: [], 글줄: [] };
+  const 손잡이들 = [];      /* 겹침을 보려고 «닿는 네모»를 모아 둔다 */
 
   for(const el of 전부){
     const cs = getComputedStyle(el);
@@ -86,6 +94,20 @@ function 재기(){
       const 있나 = af.content && af.content !== 'none';
       const h = Math.max(r.height, 있나 ? 수(af.height) : 0);
       const w = Math.max(r.width, 있나 ? 수(af.width) : 0);
+      /* 넓힌 «닿는 네모»를 요소 한가운데에 놓고 모아 둔다 — 아래에서 서로 겹치는지 본다.
+         🔴 **가로로 미는 띠에서 밀려난 것은 빼야 한다** — 상단바 메뉴(`overflow-x:auto`)에서
+           화면 밖으로 나간 탭이 오른쪽 단추와 «겹친다»고 나온다(거짓이다. 잘려서 안 보인다).
+           그래서 «가두는 조상»의 네모와 겹치는 만큼만 진짜 닿는 자리로 친다. */
+      let box = { x1: r.left + r.width/2 - w/2, x2: r.left + r.width/2 + w/2,
+                  y1: r.top + r.height/2 - h/2, y2: r.top + r.height/2 + h/2 };
+      for(let p = el.parentElement; p && p !== document.body; p = p.parentElement){
+        const ps = getComputedStyle(p);
+        if(!/auto|scroll|hidden/.test(ps.overflowX + ps.overflowY)) continue;
+        const pr = p.getBoundingClientRect();
+        box = { x1: Math.max(box.x1, pr.left), x2: Math.min(box.x2, pr.right),
+                y1: Math.max(box.y1, pr.top), y2: Math.min(box.y2, pr.bottom) };
+      }
+      if(box.x2 - box.x1 > 1 && box.y2 - box.y1 > 1) 손잡이들.push({ 이름: 이름(el), el, ...box });
       if(h < 44 || w < 44)
         결과.좁은손잡이.push(이름(el) + ' ' + Math.round(w) + '×' + Math.round(h)
           + ' ⟨' + String(el.parentElement && el.parentElement.className || '').trim().split(/\s+/)[0] + '⟩');
@@ -125,8 +147,21 @@ function 재기(){
       훑기(r);
     }
   }
+  /* 🔴 **넓힌 손잡이끼리 겹치면 안 된다** (Jakub ⑯) — 넓혀 놓고 이웃을 먹으면 엉뚱한 것이 눌린다.
+     ⚠ 서로 «품은» 사이(부모-자식)는 뺀다 — 그것은 겹침이 아니라 포함이다. */
+  for(let i = 0; i < 손잡이들.length; i++){
+    for(let j = i + 1; j < 손잡이들.length; j++){
+      const a = 손잡이들[i], b = 손잡이들[j];
+      if(a.el.contains(b.el) || b.el.contains(a.el)) continue;
+      const 가로 = Math.min(a.x2, b.x2) - Math.max(a.x1, b.x1);
+      const 세로 = Math.min(a.y2, b.y2) - Math.max(a.y1, b.y1);
+      if(가로 > 1 && 세로 > 1)
+        결과.겹친손잡이.push(어디(a.el) + ' ↔ ' + 어디(b.el)
+          + ' (' + Math.round(가로) + '×' + Math.round(세로) + ' 겹침)');
+    }
+  }
   /* 같은 것이 여러 번 나오면 한 줄로 */
-  for(const k of ['겹친모서리','좁은손잡이','전부전환','눌림값','글줄']){
+  for(const k of ['겹친모서리','좁은손잡이','겹친손잡이','전부전환','눌림값','글줄']){
     const 셈 = {};
     결과[k].forEach(x => { 셈[x] = (셈[x] || 0) + 1; });
     결과[k] = Object.entries(셈).sort((a,b) => b[1]-a[1]).map(([x,n]) => n > 1 ? x + '  ×' + n : x);
@@ -156,7 +191,7 @@ try{
   if(서버) 서버.kill();
 }
 
-const 칸 = [['겹친모서리','① 겹친 모서리'],['좁은손잡이','② 좁은 손잡이(44 미만)'],
+const 칸 = [['겹친모서리','① 겹친 모서리'],['좁은손잡이','② 좁은 손잡이(44 미만)'],['겹친손잡이','②-b 손잡이끼리 겹침'],
             ['전부전환','③ transition:all'],['눌림값','④ 눌림 값이 0.95~0.98 밖'],['글줄','⑤ 글줄 감싸기']];
 let 합 = 0;
 for(const [이름, r] of Object.entries(모은것)){

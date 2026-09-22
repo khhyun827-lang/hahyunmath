@@ -891,7 +891,7 @@
      묶음으로 나누니 상태 딱지 열이 필요 없어져 570px 에서 막대가 제 폭을 갖는다.
      「미시청 알림」 단추는 머리 카드의 단추 줄에 있고, 판은 그 카드 바로 아래 선다.
    ⚠ 새 색·서체는 없다 — 형제 탭(과제·출결)과 같은 토큰만 쓴다. */
-.app .vd-top{display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap;}
+.app .vd-top{display:flex;align-items:center;gap:10px;margin:6px 0 12px;flex-wrap:wrap;}
 .app .vd-top .n{font-size:12px;color:var(--sub);}
 .app .vd-top .n b{font-family:'JetBrains Mono',monospace;color:var(--ink);}
 .app .vd-top .n s{text-decoration:none;color:var(--line);margin:0 6px;}
@@ -2758,6 +2758,74 @@
 /* ⑤ 할 일 줄의 아이콘 칩 — 가져온 시안의 3D 아이콘이 주는 «칩» 느낌을 선으로 낸다. */
 .app.sap .todo .ic{width:38px;height:38px;border-radius:12px;}
 .app.sap .todo .t b{font-size:14px;letter-spacing:-.01em;}
+
+/* ============================================================
+   다듬기 2단계 — 강사·조교 화면 (2026-09-23 · P-2 · 사용자 요청)
+   1단계(학생 앱)와 **같은 잣대**다: `make-interfaces-feel-better` · `emil-design-eng`.
+   ⚠ 전부 `.app:not(.sap)` 아래다 — 학생 앱은 1단계에서 이미 제 값을 갖고 있어 두 번 안 건드린다.
+   ⚠ 잰 것: `node tools/ui-audit.mjs 영상탭 질의응답 과제표 --w=390` (폰) · `--w=1280` (데스크톱).
+     🔴 **강사 화면은 둘 다 쓴다** — 09-16에 사용자가 「관리자 페이지지만 모바일로도 자주자주 확인」이라
+       했다. 그래서 조밀한 데스크톱 기준(40)이 아니라 **터치 기준(44)**을 쓴다.
+   ============================================================ */
+/* 곡선·눌림 값은 학생 앱과 같은 것을 쓴다 — 한 시스템에 잣대가 둘이면 안 된다. */
+.app{--ease-out:cubic-bezier(.23,1,.32,1); --press:.96; --t-press:140ms;}
+
+/* P-2-a 글줄 — 제목은 고르게, 본문은 끝줄에 한 낱말만 남지 않게. */
+.app:not(.sap) h1, .app:not(.sap) h2, .app:not(.sap) h3,
+.app:not(.sap) .t-title, .app:not(.sap) .t-sec, .app:not(.sap) .hwd-h .t{text-wrap:balance;}
+.app:not(.sap) p, .app:not(.sap) .st-note, .app:not(.sap) .note,
+.app:not(.sap) .muted, .app:not(.sap) .hw-nnone, .app:not(.sap) .st-empty{text-wrap:pretty;}
+
+/* P-2-b 눌림 — 단추는 응답해야 한다 (Emil).
+   🔴 **격자 칸(`.hg-m`)에는 안 넣는다.** 과제 검사는 하루에 수십~수백 번 누르는 자리다 —
+     Emil 의 빈도표에서 「100+ 회/일 → 애니메이션 없음. 절대」에 해당한다. 움직임이 반복되면
+     그 주의 비용이 매번 다시 든다. 색(hover·상태)이 이미 되먹임을 준다.
+   ⚠ `transition:all` 을 쓰지 않는다 — 바뀌는 것만 적는다. */
+.app:not(.sap) .btn{transition-property:background-color,border-color,color,box-shadow,transform;
+  transition-duration:var(--t-press);transition-timing-function:var(--ease-out);}
+.app:not(.sap) .btn:not([disabled]):active{transform:scale(var(--press));}
+
+/* P-2-c `.pill` — 무엇이 바뀌는지 적는다(Jakub ⑭). 손잡이도 같이 넓힌다. */
+.app:not(.sap) .pill{transition-property:background-color,border-color,color;
+  transition-duration:var(--t-press);transition-timing-function:var(--ease-out);}
+.app:not(.sap) .pill:not([disabled]):active{transform:scale(var(--press));
+  transition-property:background-color,border-color,color,transform;}
+
+/* P-2-d 손잡이 44 — 보이는 크기는 그대로, «닿는 자리»만 넓힌다 (Jakub ⑯).
+   🔴 **서브탭 줄의 높이(42px)는 안 건드린다** — 그 수는 `.body.sub{top:94px}` 와
+     `calc(100vh - 134px)`(= 52+42+40) 여러 곳에 묶여 있다. 높이를 2px 올리면 그 계산이 전부 어긋난다.
+     대신 가짜 요소로 44 를 만든다 — 위아래로 1px 씩만 넘치고 그 자리엔 누를 것이 없다.
+   ⚠ 좌우로는 안 넓힌다 — 서브탭·상단바 탭은 서로 붙어 있어 겹친다(스킬이 금한다).
+     대신 **`min-width:44px`** 로 좁은 탭(한 글자짜리)만 제 폭을 갖게 한다. */
+.app:not(.sap) .topbar nav a,
+.app:not(.sap) .subnav a,
+.app:not(.sap) .topbar .right > button,
+.app:not(.sap) .topbar .right > .btn,
+.app:not(.sap) .ds-bell > button,
+.app:not(.sap) .qn-lh .pill,
+.app:not(.sap) .btn{position:relative;}
+/* 🔴 **좌우로 넓히는 폭은 «이웃과의 간격»이 정한다** — 한 값으로 뭉뚱그리면 붙어 있는 줄이 겹친다.
+     (실제로 서브탭(간격 0)까지 −2px 를 먹여 일곱 쌍이 4px 씩 겹쳤다 — 겹침 검사가 잡았다.) */
+/* ⓐ 붙어 있는 줄(서브탭 간격 0 · 상단바 메뉴 간격 3) — 위아래로만 넓힌다. */
+.app:not(.sap) .topbar nav a::after,
+.app:not(.sap) .subnav a::after{content:'';position:absolute;left:0;right:0;
+  top:50%;transform:translateY(-50%);height:44px;pointer-events:auto;}
+/* ⓑ 단추·알약 — 줄 간격이 6~11px 이라 좌우 2px 는 안전하다(테두리 1px 씩을 되찾는다). */
+.app:not(.sap) .qn-lh .pill::after,
+.app:not(.sap) .topbar .right > button::after,
+.app:not(.sap) .ds-bell > button::after,
+.app:not(.sap) .btn::after{content:'';position:absolute;left:-3px;right:-3px;
+  top:50%;transform:translateY(-50%);height:44px;pointer-events:auto;}
+/* 달 넘김 줄(◀▶)은 간격이 8px 이라 4px 까지 넓힐 수 있다. */
+.app:not(.sap) .chub-mbar > .btn::after{left:-4px;right:-4px;}
+/* 한 글자짜리 탭이 31px 밖에 안 됐다 — 폭도 44 를 채운다(줄이 가지런해지는 덤이 있다). */
+.app:not(.sap) .topbar nav a,
+.app:not(.sap) .subnav a{min-width:44px;justify-content:center;}
+/* 종·설정처럼 좁은 단추는 가짜 요소가 **패딩 박스** 기준이라 테두리 1px 씩이 빠진다 — 36 이라야 44 가 된다. */
+.app:not(.sap) .topbar .right > .btn.sm{min-width:36px;}
+.app:not(.sap) .ds-bell > button{width:38px;}   /* 38 + 좌우 3 + 3 = 44 */
+/* 달 넘기는 두 단추(◀▶)는 23px 이다 — 위아래로만 넓히고 폭은 36 으로. */
+.app:not(.sap) .chub-mbar > .btn.q.sm{min-width:38px;}   /* (38−2) + 4 + 4 = 44 */
 
 /* ============================================================
    ⑨ 다듬기 — 학생 앱 (2026-09-23 · P-1 · 사용자 요청)
