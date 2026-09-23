@@ -214,6 +214,7 @@ function 영상판(opt) {
     clockToSec: s => { const p = String(s).split(':').map(Number); return p.some(isNaN) ? null : p.reduce((a, b) => a * 60 + b, 0); },
     dbSetDoc: async (col, id, data) => { if (막힌학생.has(data.studentId)) return null; 저장.push(data); return true; },
     showToast: m => 말.push(m), render: () => {},
+    todayStr: () => '2026-09-24', shiftYmd: new Function(lift('shiftYmd') + NL + 'return shiftYmd;')(),
   };
   const api = new Function(...Object.keys(곁), lift('addVideo') + NL + 'return { addVideo };')(...Object.values(곁));
   return { api, 저장, 말, 곁, 남은체크: () => 체크 };

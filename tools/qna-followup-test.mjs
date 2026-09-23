@@ -46,7 +46,7 @@ function 판(o) {
        목록에 없어 이 검사가 ReferenceError 로 터져 있었다. 옮겨 적지 않고 그대로 뜬다. */
     [lift('splitQnaFollowups'), lift('qnaFollowupsOf'), lift('qnaMoreAnswersOf'), lift('qnaHasOpen'),
      lift('qnaFind'), lift('qnaImgList'), lift('qnaPhotos'), lift('qnaPhotosBusy'), lift('qnaPhotoDocs'),
-     lift('clearQnaPhotos'), lift('submitFollowup'), lift('submitAnswer'), lift('deleteQna')].join(NL)
+     lift('clearQnaPhotos'), lift('qnaDraftOf'), lift('qnaDraftSet'), lift('submitFollowup'), lift('submitAnswer'), lift('deleteQna')].join(NL)
     + NL + 'return { splitQnaFollowups, qnaFollowupsOf, qnaHasOpen, qnaFind, submitFollowup, submitAnswer, deleteQna };')(
     DATA, state, { getElementById: id => ({ value: o.text === undefined ? '이 부분이 이해가 안 돼요' : o.text }) },
     () => 'uid-s1', () => '2026-09-15',

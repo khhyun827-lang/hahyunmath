@@ -36,7 +36,7 @@ console.log('학교 프린트 —' + NL);
   const state = { schoolFiles: null, schoolFilesLoading: false, schoolFileBusy: '' };
   const F = new Function('state', 'dbGet', 'dbSet', 'uploadFileToDrive', 'deleteFromDrive', 'showToast', 'render', 'todayStr', 'currentSeason',
     'fileSizeLabel', 'MATERIAL_MAX_BYTES', 'confirm', 'jsAttr', 'escHtml', 'materialLink',
-    [lift('loadSchoolFilesIfNeeded'), lift('schoolFilesOf'), lift('schoolFileSeasonLabel'), lift('addSchoolFile'), lift('removeSchoolFile'), lift('schoolFilesHTML')].join(NL)
+    [lift('schoolFileDownload'), lift('loadSchoolFilesIfNeeded'), lift('schoolFilesOf'), lift('schoolFileSeasonLabel'), lift('addSchoolFile'), lift('removeSchoolFile'), lift('schoolFilesHTML')].join(NL)
     + NL + 'return { loadSchoolFilesIfNeeded, schoolFilesOf, addSchoolFile, removeSchoolFile, schoolFilesHTML };')(
     state, async () => ({ 광남고: { '고1': [{ name: '옛것.pdf', fileId: 'F0', size: 1000, at: '2025-10-01', season: '2025 · 2학기 중간' }] } }),
     async (k, v) => { 저장.push([k, JSON.parse(JSON.stringify(v))]); return true; },
@@ -52,7 +52,7 @@ console.log('학교 프린트 —' + NL);
   봄('   시즌은 올린 날의 것 — 「연도 · 시즌」', 문서.광남고.고1[1].season, '2026 · 2학기 중간');
   봄('   올렸다고 말한다', 말, ['「중간 프린트.pdf」을 올렸습니다.']);
   const 그림 = F.schoolFilesHTML('광남고', '고1');
-  봄('   판에 두 파일이 서고 여는 링크는 드라이브 보기 · 올리는 단추는 PDF·사진만', [(그림.match(/drive\.google\.com\/file\/d\/F[01]\/view/g) || []).length, /accept="application\/pdf,image\/\*"/.test(그림)], [2, true]);
+  봄('   판에 두 파일이 서고 누르면 드라이브에서 «내려받는다»(09-24) · 올리는 단추는 PDF·사진만', [(그림.match(/drive\.google\.com\/uc\?export=download&id=F[01]"/g) || []).length, /accept="application\/pdf,image\/\*"/.test(그림)], [2, true]);
   await F.removeSchoolFile('광남고', '고1', 0);
   봄('② 지우면 목록에서 빠지고 드라이브도 지운다', [F.schoolFilesOf('광남고', '고1').map(f => f.name), 지움], [['중간 프린트.pdf'], ['F0']]);
   await F.addSchoolFile('광남고', '고1', { files: [{ name: '큰것.pdf', type: 'application/pdf', size: 20 * 1024 * 1024 }], value: '' });

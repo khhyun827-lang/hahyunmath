@@ -152,9 +152,12 @@ const 곁2 = {
   extractYouTubeId: u => /youtu\.be\//.test(u) ? 'x' : null,
   dbSetDoc: async (col, id, data) => { 저장2.push(data); return true; },
   showToast: () => {}, render: () => {},
+  todayStr: () => '2026-09-24', shiftYmd: new Function(lift('shiftYmd') + NL + 'return shiftYmd;')(),
 };
 const api2 = new Function(...Object.keys(곁2), lift('addVideo') + NL + 'return { addVideo };')(...Object.values(곁2));
 await api2.addVideo();
+봄('🔵 등록 뒤 마감 칸은 다시 «일주일 뒤»로 선다 (2026-09-24 · 사용자 요청)', 폼['video-due'], '2026-10-01');
+봄('   폼의 첫 값도 일주일 뒤', html.includes('<input id="video-due" type="date" value="${shiftYmd(todayStr(), 7)}">'), true);
 봄('대상이 «반 전체»면 studentId 가 없다', 'studentId' in 저장2[0], false);
 봄('반·마감은 그대로 붙는다', [저장2[0].classId, 저장2[0].dueDate], ['c1', '2026-09-25']);
 폼['video-title'] = '보충 5강'; 폼['video-url'] = 'https://youtu.be/abcdefgh'; 폼['video-due'] = ''; 체크 = ['st01'];
@@ -186,6 +189,7 @@ const 곁3 = {
             { id: 'p9', title: '남의 반', url: 'u', classId: '', studentId: 'st99' },
           ] },
   escHtml: x => String(x == null ? '' : x), iconSvg: () => '', todayStr: () => TODAY,
+  shiftYmd: new Function(lift('shiftYmd') + NL + 'return shiftYmd;')(),
   /* ⚠ 2026-09-16 에 «영상 머리 카드»(`videoHeroHTML`)와 알림 띠(`vidNoticeBarHTML`)가 붙었다.
      띠는 이 검사가 볼 것이 아니라 빈 것으로 세운다 — 머리 카드는 마감 딱지를 같이 지므로 그대로 뜬다. */
   vidNoticeBarHTML: () => '', vidNoticeBtnHTML: () => '', extractYouTubeId: () => 'yt',
