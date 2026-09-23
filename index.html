@@ -2669,6 +2669,16 @@
 .hw-view{position:fixed;inset:0;z-index:60;background:rgba(20,18,17,.86);
   display:flex;align-items:center;justify-content:center;padding:22px;cursor:zoom-out;}
 .hw-view img{max-width:100%;max-height:100%;border-radius:var(--r-sm);display:block;}
+/* 확대 (2026-09-24) — 사진은 스크롤 상자 안에 선다. 가운데 맞춤은 margin:auto 로 한다 —
+   justify-content:center 로 두면 커졌을 때 왼쪽·위가 잘려 스크롤로도 못 간다. */
+.hw-view .hw-scroll{position:absolute;inset:0;overflow:auto;display:flex;padding:22px;
+  scrollbar-width:none;-webkit-overflow-scrolling:touch;}
+.hw-view .hw-scroll::-webkit-scrollbar{display:none;}
+.hw-view .hw-scroll img{margin:auto;cursor:zoom-in;user-select:none;}
+.hw-view .hw-scroll.zoom{cursor:grab;}
+.hw-view .hw-scroll.zoom:active{cursor:grabbing;}
+.hw-view .hw-scroll.zoom img{max-width:none;max-height:none;flex:none;cursor:zoom-out;}
+.hw-view .hw-close{z-index:1;}
 .hw-view .hw-close{position:absolute;top:14px;right:14px;width:40px;height:40px;
   display:flex;align-items:center;justify-content:center;cursor:pointer;
   border:1px solid rgba(255,255,255,.28);border-radius:50%;
@@ -13725,6 +13735,36 @@ function closeHwPhoto(){
   if(!state.hwPhotoView) return;
   덮개닫기('.hw-view', () => { state.hwPhotoView = null; render(); });
 }
+/* 🔵 **사진을 눌러 확대한다** (2026-09-24 · 사용자 — 「학생이 올린 사진을 확대하고싶어」).
+   누르면 누른 자리를 가운데로 2.5배 · 한 번 더 누르면 돌아온다. 커진 채로는 끌어서 옮긴다(휠·스크롤도 된다).
+   ⚠ render() 를 안 부른다 — DOM 만 바꾼다. 부르면 확대가 풀린다.
+   ⚠ 끌기와 누르기를 가른다 — 4px 넘게 움직였으면 «끈 것»이라 확대를 안 푼다. */
+const HW_ZOOM = 2.5;
+/* 끌기 상태는 스크롤 상자 «자신»이 든다(box._pan) — 전역 하나로 두면 타이머로 비우는 순간이 끌기와 엉켰다. */
+function hwPhotoZoom(ev){
+  ev.stopPropagation();
+  const img = ev.currentTarget, box = img.parentElement;
+  if(box._pan && box._pan.moved) return;             // 끌고 나서 뗀 것 — 누른 것이 아니다
+  if(box.classList.contains('zoom')){ box.classList.remove('zoom'); img.style.width = ''; return; }
+  const r = img.getBoundingClientRect();
+  const fx = (ev.clientX - r.left) / r.width, fy = (ev.clientY - r.top) / r.height;
+  const w = r.width * HW_ZOOM, h = r.height * HW_ZOOM;
+  box.classList.add('zoom'); img.style.width = w + 'px';
+  box.scrollLeft = img.offsetLeft + fx * w - box.clientWidth / 2;
+  box.scrollTop = img.offsetTop + fy * h - box.clientHeight / 2;
+}
+function hwPanStart(ev){
+  const box = ev.currentTarget;
+  box._pan = { x: ev.clientX, y: ev.clientY, l: box.scrollLeft, t: box.scrollTop, moved: false, down: true };
+}
+function hwPanMove(ev){
+  const box = ev.currentTarget, d = box._pan;
+  if(!d || !d.down || !box.classList.contains('zoom')) return;
+  const dx = ev.clientX - d.x, dy = ev.clientY - d.y;
+  if(Math.abs(dx) + Math.abs(dy) > 4) d.moved = true;
+  box.scrollLeft = d.l - dx; box.scrollTop = d.t - dy;
+}
+function hwPanEnd(ev){ if(ev.currentTarget._pan) ev.currentTarget._pan.down = false; }   // moved 는 남긴다 — 곧 올 click 이 본다
 /* 🔴 **누르는 자리의 손잡이 — 한 벌** (2026-09-14 · S-6). `TAP` 이 붙은 것은 Enter·Space 로도 눌린다.
    ⚠ **진짜 단추·입력칸은 그냥 지나간다** — 브라우저가 이미 그 일을 한다. 여기서 또 하면 두 번 눌린다.
    ⚠ Space 는 **눌린 자리에서만** 기본 동작(스크롤)을 막는다 — 아무 데서나 막으면 화면이 안 내려간다. */
@@ -13836,7 +13876,10 @@ function render(){
   if(state.hwPhotoView) html += `<div class="hw-view" onclick="closeHwPhoto()">
     <button type="button" class="hw-close" aria-label="닫기"
       onclick="event.stopPropagation(); closeHwPhoto()">✕</button>
-    <img src="${escHtml(state.hwPhotoView)}" alt="사진 크게 보기"></div>`;
+    <div class="hw-scroll" onpointerdown="hwPanStart(event)" onpointermove="hwPanMove(event)" onpointerup="hwPanEnd(event)" onpointercancel="hwPanEnd(event)"
+      onclick="if(this._pan && this._pan.moved) event.stopPropagation()">
+      <img src="${escHtml(state.hwPhotoView)}" alt="사진 크게 보기" title="누르면 확대 · 다시 누르면 원래대로"
+        draggable="false" onclick="hwPhotoZoom(event)"></div></div>`;
   /* ⚠ 토스트는 여기서 안 그린다 (2026-09-23 · V-3) — `toastPaint` 가 `.app` 밖의 `#app-toast` 를 맡는다.
      여기서 그리면 innerHTML 갈이를 타고, 그 갈이가 학생의 유튜브 플레이어를 죽인다. */
   /* 🔴 **못 읽었으면 «못 읽었다»고 말한다** (2026-09-04 · 사용자가 겪고 나서 넣었다).
@@ -29887,16 +29930,16 @@ function teacherExamRangeHTML(){
     ${/* ⚠ .app .rst-wrap table.grid의 min-width는 명단(1464px)의 것이다. 이 표는 더 좁으므로
          인라인으로 눌러 준다 — 인라인 style이 시트 규칙을 이긴다.
          sticky 헤더는 걸지 않는다. 줄이 적고, 가로 스크롤과 같이 쓰면 헤더가 첫 행을 덮는다 (0-B). */''}
-    ${/* 🔵 학교·과목 사이를 좁혔다(사용자 — 「학교나 과목 간격 조금 줄이고」) — 학년 60→44 · 과목 118→88 · 범위 222→200.
+    ${/* 🔵 학교·과목 사이를 좁혔다(사용자 — 「학교나 과목 간격 조금 줄이고」) — 학년 60→44 · 과목 118→80 · 시험 기간 150→122 · 범위 222→200 (09-24 두 번째 — 「과목 혹은 시험기간 조금 줄여도」).
          학교는 118 그대로 — 「경기여자고등학교」가 그 폭에서 딱 들어간다(줄이면 …로 잘린다). */''}
-    <table class="grid" style="min-width:1262px;">
+    <table class="grid" style="min-width:1226px;">
       <thead><tr>
         <th style="width:118px;">학교</th>
         <th style="width:44px;">학년</th>
-        <th style="width:88px;">과목</th>
+        <th style="width:80px;">과목</th>
         <th class="r" style="width:50px;">인원</th>
         <th style="width:78px;">D-day</th>
-        <th style="width:150px;">시험 기간</th>
+        <th style="width:122px;">시험 기간</th>
         <th style="width:92px;">수학</th>
         <th style="width:200px;">범위</th>
         <th style="width:140px;">교재 · 메모</th>
