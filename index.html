@@ -1623,6 +1623,17 @@
   background:var(--paper);padding:9px 12px;font-family:inherit;font-size:13px;color:var(--ink);outline:none;}
 .app .ch-in input:focus{border-color:var(--accent-line);}
 @media (max-width:1180px){ .app .co-side{display:none;} }
+/* 🔴 **클리닉 「승인 대기」는 감추면 안 된다** (2026-09-24 · M-2g · 사용자 요청) — 승인하는 문이 거기 하나뿐이라
+     1180 아래(사용자 주력 864 포함)에서는 학생이 직접 제안한 시간을 받을 길이 없었다.
+   ⇒ 옆 칸 대신 **대기가 있을 때만 주간 판 위에** 세운다(폰과 같은 판단 · 0건이면 머리말이 말한다).
+   ⚠ 폭을 561 부터로 끊는다 — 폰(≤560)은 위 M-2g 가 본문 패딩 13 으로 따로 앉힌다. 겹치면 이게 뒤라서 이긴다. */
+@media (min-width:561px) and (max-width:1180px){
+  .app .cn-screen{flex-direction:column;}
+  .app .cn-screen .co-side.left{display:flex;width:auto;flex-shrink:0;border-right:0;
+    border-bottom:1px solid var(--line);margin:-20px -20px 16px;padding:16px 20px 12px;}
+  .app .cn-screen .co-side.left.cn-idle{display:none;}
+  .app .cn-screen .co-sbody{max-height:180px;}
+}
 
 /* ---------- 시험지 (design-v1/07-exams) ----------
    역할은 «어느 문항이 무너졌는지 본다». 오답 파이프라인의 입구다. */
