@@ -129,6 +129,8 @@ export const 무대들 = {
       state.noticeWriting = false; render(); } },
   클리닉: { 말: '소통 › 클리닉 (주간 판 · 승인 대기 1)',
     세우기: () => { state.currentUser = { type:'teacher', name:'김하현T' }; state.view = 'teacher'; state.teacherTab = 'clinic'; state.clinicWeek = ''; state.clinicPanel = ''; render(); } },
+  설정알림: { 말: '설정 › 알림 (폰 알림 켜기)',
+    세우기: () => { state.currentUser = { type:'teacher', name:'김하현T' }; state.view = 'teacher'; state.teacherTab = 'settings'; state.settingsSubTab = 'push'; state.studentDetailId = null; render(); } },
   채팅: { 말: '소통 › 채팅 (강사)',
     세우기: () => { state.currentUser = { type:'teacher', name:'김하현T' }; state.view = 'teacher'; state.teacherTab = 'chat'; state.teacherSelectedStudent = 's0'; render(); } },
   학생질문: { 말: '학생 › 소통 › 질의응답',

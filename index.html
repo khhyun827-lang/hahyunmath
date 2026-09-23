@@ -7662,7 +7662,7 @@ async function loadChat(studentId){
   return DATA.chats[studentId];
 }
 async function saveChat(studentId){
-  await dbSetDoc('chats', studentKeyOfSid(studentId), DATA.chats[studentId]);
+  return dbSetDoc('chats', studentKeyOfSid(studentId), DATA.chats[studentId]);
 }
 
 
@@ -7889,6 +7889,7 @@ async function doTeacherLogin(){
   saveSession();
   await loadMineAfterLogin();
   goto('teacher');
+  pushRefreshQuiet();   // 폰 알림 — 켜 둔 기기면 토큰을 다시 맡긴다 (N-4)
 }
 async function changeTeacherPw(){
   const current = document.getElementById('pw-current').value;
@@ -8104,6 +8105,7 @@ async function restoreSession(){
   if(saved.type==='teacher'){
     state.currentUser = {type:'teacher', uid: fbAuth.currentUser.uid};
     state.view = 'teacher';
+    pushRefreshQuiet();   // 폰 알림 (N-4) — 기다리지 않는다
   } else if(saved.type==='student'){
     const found = DATA.students.find(s=>s.studentId===saved.studentId);
     if(!found){ clearSession(); return; }
@@ -10215,7 +10217,9 @@ async function submitClinicRequest(freeform){
                   slotId: slotIds[0] || '', slotIds,
                   day, time, timeEnd, status: freeform ? '대기' : '승인', requestedAt:todayStr()};
   DATA.clinics.unshift(clinic);
-  await dbSetDoc('clinics', clinic.id, clinic);
+  const 저장됨 = await dbSetDoc('clinics', clinic.id, clinic);
+  /* 폰 알림은 «직접 제안»만 — 열린 시간대는 바로 확정이라 선생님이 할 일이 없다 (N-4) */
+  if(freeform && 저장됨 === true) pushPing('clinic', `${day} ${clinicWhenLabel(clinic)} · ${topic}`);
   state.stuClinicSlotIds = [];
   showToast(freeform ? '희망 시간을 제안했습니다. 선생님 승인 후 확정됩니다.'
     : `클리닉이 확정되었습니다.${slotIds.length>1?` (${slotIds.length}개 시간대)`:''}`);
@@ -10569,7 +10573,8 @@ async function submitQuestion(){
   const qna = {id:'qn'+Date.now(), uid: authUid(), studentId:sid, studentName:state.currentUser.name, question,
     image:사진들[0]||null, images:사진들, date:todayStr(), answer:null, answerImage:null, answeredAt:null};
   DATA.qnas.unshift(qna);
-  await dbSetDoc('qnas', qna.id, qna);
+  const 저장됨 = await dbSetDoc('qnas', qna.id, qna);
+  if(저장됨 === true) pushPing('qna', question);   // 선생님 폰 알림 (N-4)
   document.getElementById('qna-question').value='';
   clearQnaPhotos('q');
   showToast('질문이 등록되었습니다.');
@@ -10624,6 +10629,7 @@ async function submitFollowup(parentId){
   }
   clearQnaPhotos('q');
   state.stuQnaFollowFor = null;
+  pushPing('qna', '(추가 질문) ' + question);   // 선생님 폰 알림 (N-4)
   showToast('추가 질문을 보냈습니다.');
   render();
 }
@@ -10762,7 +10768,8 @@ async function sendChatMessage(sid, from){
      고칠 때 놓친 곳이다. 학생 화면이 시각을 말풍선 옆에 크게 띄우면서 드러났다.
      이미 저장된 메시지의 시각은 그대로 둔다 — 어느 쪽 기준으로 찍힌 것인지 알 수 없다. */
   chat.push({from, text, at: nowStamp()});
-  await saveChat(sid);
+  const 저장됨 = await saveChat(sid);
+  if(from === 'student' && 저장됨 === true) pushPing('chat', text);   // 선생님 폰 알림 (N-4)
   el.value='';
   render();
 }
@@ -16324,16 +16331,132 @@ function notifyWhy(why){ return NOTIFY_WHY[why] || why; }
    /report-mms)을 **Gemini 생성으로 받아 AI 한도를 한 건씩 태운다.** 화면을 먼저 올리고 워커를 나중에 붙이는 사이,
    답변 한 번에 한도가 하나씩 나가는 일이 생긴다. /quota 가 돌려주는 WORKER_VERSION 으로 한 번만 묻고 기억한다. */
 const NOTIFY_WORKER_MIN = '2026-09-22a';   // 솔라피 판부터 — 그 전 판은 vars 를 모른다
-async function notifyWorkerReady(){
-  if(state.notifyWorkerOk !== undefined) return state.notifyWorkerOk;
+/* 워커 판을 한 번만 묻는다 — 알림톡(/notify)·폰 알림(/push-*)이 같이 쓴다. 못 물으면 '' (= 옛 판으로 본다). */
+async function workerVersion(){
+  if(state.workerVersion !== undefined) return state.workerVersion;
   try{
     const token = await withTimeout(getAuthToken(), 8000);
     const res = await withTimeout(fetch(AI_WORKER_URL + '/quota', { method:'POST', headers:{ 'Authorization': 'Bearer ' + token } }), 8000);
     const q = await res.json();
-    state.notifyWorkerOk = String(q.version || '') >= NOTIFY_WORKER_MIN;
-  }catch(e){ state.notifyWorkerOk = false; }
-  if(!state.notifyWorkerOk) console.warn('알림 — 워커가 아직 ' + NOTIFY_WORKER_MIN + ' 전이라 부르지 않는다');
-  return state.notifyWorkerOk;
+    state.workerVersion = String(q.version || '');
+  }catch(e){ state.workerVersion = ''; }
+  return state.workerVersion;
+}
+async function notifyWorkerReady(){
+  const ok = (await workerVersion()) >= NOTIFY_WORKER_MIN;
+  if(!ok) console.warn('알림 — 워커가 아직 ' + NOTIFY_WORKER_MIN + ' 전이라 부르지 않는다');
+  return ok;
+}
+
+/* =================== 선생님 폰 알림 — FCM 웹 푸시 (2026-09-24 · N-4) ===================
+   사용자 — 「학생이 질문을 남기거나 그랬을때 웹페이지에 들어가서 확인하지 않고 푸시 알림」 · 안드로이드 · 「fcm방법으로」.
+   🔵 강사 폰: 설정 › 알림 › 「이 기기로 알림 받기」 → 권한 → FCM 토큰 → 워커(/push-register)가 맡는다.
+     받는 쪽은 `push-sw.js`(index.html 옆). 누르면 그 탭(#teacher/qna 등)으로 연다.
+   🔵 학생: 질문·추가 질문·클리닉 직접 제안·채팅을 «저장한 뒤» pushPing — 기다리지 않고 실패도 삼킨다(본 흐름이 아니다).
+   ⚠ 이 기능은 SDK 를 늘 싣지 않는다 — 강사가 알림을 켤 때만 messaging-compat 를 부른다(학생 화면은 fetch 한 번뿐).
+   ⚠ VAPID 키를 따로 안 준다 — SDK 의 기본 키로 받는다(콘솔에서 만들 것이 없다).
+   ⚠ 아이폰은 «홈 화면에 추가»해야만 온다 — 사용자 폰이 안드로이드라 manifest 는 안 만들었다. */
+const PUSH_WORKER_MIN = '2026-09-24a';
+const PUSH_SUPPORTED = 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+const PUSH_LS = 'hm.pushToken';
+async function pushPost(path, body){
+  if((await workerVersion()) < PUSH_WORKER_MIN){ const e = new Error('워커가 아직 옛 판입니다 — 워커를 먼저 올려 주세요.'); e.code = 'old_worker'; throw e; }
+  const token = await withTimeout(getAuthToken(), 8000);
+  const res = await withTimeout(fetch(AI_WORKER_URL + path, {
+    method:'POST', headers:{ 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+    body: JSON.stringify(body || {}) }), 20000);
+  const j = await res.json().catch(() => ({}));
+  if(!res.ok){ const e = new Error(j.detail || j.error || ('http ' + res.status)); e.code = j.error || ''; throw e; }
+  return j;
+}
+/* 학생 쪽 — 저장이 끝난 뒤에 부른다. await 하지 않는다. */
+function pushPing(kind, text){
+  const u = state.currentUser;
+  if(!u || u.type !== 'student') return;
+  pushPost('/push-ping', { kind, name: u.name || '', text: String(text || '').slice(0, 200) })
+    .catch(e => console.warn('폰 알림 — 못 보냈다 (' + kind + ')', e.message));
+}
+/* 이 기기의 FCM 토큰 — SDK 를 그때 싣고, 받는 파일(push-sw.js)을 붙인다. */
+async function pushDeviceToken(){
+  if(!firebase.messaging) await new Promise((ok, no) => {
+    const s = document.createElement('script');
+    s.src = 'https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js';
+    s.onload = ok; s.onerror = () => no(new Error('알림 도구를 못 불러왔습니다'));
+    document.head.appendChild(s);
+  });
+  const reg = await navigator.serviceWorker.register('push-sw.js');
+  await navigator.serviceWorker.ready;
+  return firebase.messaging().getToken({ serviceWorkerRegistration: reg });
+}
+function pushDeviceLabel(){
+  const ua = navigator.userAgent;
+  return (/Android/.test(ua) ? '안드로이드' : /iPhone|iPad/.test(ua) ? '아이폰' : 'PC') + ' · ' + todayStr();
+}
+function pushSaved(){ try{ return localStorage.getItem(PUSH_LS) || ''; }catch(e){ return ''; } }
+function pushSave(t){ try{ t ? localStorage.setItem(PUSH_LS, t) : localStorage.removeItem(PUSH_LS); }catch(e){} }
+async function pushEnable(){
+  if(!PUSH_SUPPORTED){ showToast('이 브라우저는 알림을 받을 수 없습니다 — 안드로이드 크롬에서 열어 주세요.'); return; }
+  state.pushBusy = true; render();
+  try{
+    const p = await Notification.requestPermission();
+    if(p !== 'granted') throw new Error(p === 'denied' ? '알림이 차단돼 있습니다 — 크롬 › 사이트 설정 › 알림에서 허용해 주세요.' : '알림 허용을 누르지 않았습니다.');
+    const t = await pushDeviceToken();
+    await pushPost('/push-register', { token: t, label: pushDeviceLabel() });
+    pushSave(t);
+    showToast('이 기기로 알림을 받습니다. 「시험 알림」으로 확인해 보세요.');
+  }catch(e){ showToast('알림을 켜지 못했습니다 — ' + (e.message || e)); }
+  state.pushBusy = false; render();
+}
+async function pushDisable(){
+  const t = pushSaved();
+  state.pushBusy = true; render();
+  try{
+    if(t) await pushPost('/push-unregister', { token: t });
+    if(firebase.messaging) await firebase.messaging().deleteToken().catch(() => {});
+    pushSave('');
+    showToast('이 기기의 알림을 껐습니다.');
+  }catch(e){ showToast('알림을 끄지 못했습니다 — ' + (e.message || e)); }
+  state.pushBusy = false; render();
+}
+async function pushTest(){
+  state.pushBusy = true; render();
+  try{
+    const j = await pushPost('/push-test', {});
+    showToast(j.sent ? `시험 알림을 ${j.sent}대에 보냈습니다.` + (j.dropped ? ` (끊긴 기기 ${j.dropped}대는 뺐습니다)` : '')
+      : '보내지 못했습니다 — ' + (j.why === 'no_device' ? '알림을 켠 기기가 없습니다.' : j.why));
+  }catch(e){ showToast('보내지 못했습니다 — ' + (e.message || e)); }
+  state.pushBusy = false; render();
+}
+/* 강사로 열 때 한 번 — 켜 둔 기기면 토큰이 바뀌었는지 보고 조용히 다시 맡긴다(FCM 은 가끔 토큰을 갈아 준다). */
+async function pushRefreshQuiet(){
+  const old = pushSaved();
+  if(!old || !PUSH_SUPPORTED || Notification.permission !== 'granted') return;
+  try{
+    const t = await pushDeviceToken();
+    if(t && t !== old){ await pushPost('/push-register', { token: t, label: pushDeviceLabel() }); pushSave(t); }
+  }catch(e){ console.warn('폰 알림 — 토큰 확인 실패', e.message); }
+}
+/* 알림을 눌렀는데 창이 이미 열려 있으면 push-sw.js 가 탭 이름만 보낸다. */
+if(PUSH_SUPPORTED) navigator.serviceWorker.addEventListener('message', e => {
+  const go = e.data && e.data.pushGo;
+  if(go && state.currentUser && state.currentUser.type === 'teacher'){ state.view = 'teacher'; state.teacherTab = go; render(); }
+});
+function teacherPushHTML(){
+  const 켬 = !!pushSaved() && PUSH_SUPPORTED && Notification.permission === 'granted';
+  const 막힘 = PUSH_SUPPORTED && Notification.permission === 'denied';
+  const busy = state.pushBusy ? ' disabled' : '';
+  return stSec({ title:'이 기기로 알림 받기',
+    desc: 켬 ? '켜져 있습니다' : '꺼져 있습니다',
+    body: `<p class="st-note">학생이 <b>질문(추가 질문 포함)</b>을 올리거나 · <b>클리닉 시간을 직접 제안</b>하거나 · <b>채팅</b>을 보내면
+        이 기기에 알림이 옵니다. 누르면 그 화면이 바로 열립니다. 같은 학생의 채팅은 3분에 한 번으로 묶습니다.</p>
+      ${!PUSH_SUPPORTED ? `<p class="st-note"><b>이 브라우저는 알림을 받을 수 없습니다.</b> 폰의 크롬으로 열어 주세요.</p>` : ''}
+      ${막힘 ? `<p class="st-note"><b>알림이 차단돼 있습니다.</b> 크롬 주소창 왼쪽 자물쇠 › 권한 › 알림을 «허용»으로 바꾼 뒤 다시 눌러 주세요.</p>` : ''}
+      <div class="row" style="gap:6px;margin-top:12px;flex-wrap:wrap;">
+        ${켬 ? `<button class="btn p sm"${busy} onclick="pushTest()">시험 알림 보내기</button>
+                <button class="btn q sm"${busy} onclick="pushDisable()">이 기기 알림 끄기</button>`
+             : `<button class="btn p sm"${busy || (PUSH_SUPPORTED ? '' : ' disabled')} onclick="pushEnable()">이 기기로 알림 받기</button>`}
+      </div>
+      <p class="st-note" style="margin-top:12px;">기기마다 따로 켭니다(폰 · PC). 크롬의 사이트 데이터를 지우면 꺼지니 그때 다시 눌러 주세요.</p>` });
 }
 /* 워커 /notify 를 부르는 하나. items = [{ key, message }]. 안 되면 던진다(까닭이 message 에). */
 async function notifyPost(kind, id, items){
@@ -30524,7 +30647,7 @@ function teacherSettingsHTML(){
   const subtabs = [['assistants','조교'],['students','학생'],['classes','반'],['consults','상담'],
     ['examrange','시험 일정'],
     ['signalrules','신호 규칙'],['auditlog','변경 이력'],
-    ['admin','관리자']];
+    ['push','알림'],['admin','관리자']];
   /* 🔵 **«데이터 정리»를 서브탭에서 뺐다** (2026-09-05 · 사용자 요청 — 「내가 쓸 일이 없는거면 화면에서 가려줘」).
      세 가지(배점·sqrt·정답 속 해설)가 전부 «쓰는 자리»에서 막혔고, 저장된 기록에도 남은 것이 0건이다.
      그래서 평소에 쓸 일이 없다. **없애지는 않았다** — 옛 hwpx 를 다시 올리거나 변환기를 또 고치면
@@ -30540,6 +30663,7 @@ function teacherSettingsHTML(){
     signalrules: teacherSignalRulesHTML,
     auditlog: teacherAuditLogHTML,
     cleanup: teacherCleanupHTML,
+    push: teacherPushHTML,
     admin: teacherSettingsAdminHTML,
   };
   /* 🔵 **직보 일정표는 「시험 일정」 안의 둘째 갈래다** (2026-09-14 · 사용자 — 「시험일정 탭 안에 시험일정 /
@@ -30567,7 +30691,7 @@ function teacherSettingsHTML(){
     classes:'반을 만든다', consults:'홈페이지로 들어온 상담 신청', signalrules:'위험·주의를 가르는 임계값',
     examrange:'데일리퀴즈가 낼 단원을 시즌과 학교·학년으로 정한다',
     examplan:'시험기간에 누가 언제 오는지 — 찍는 즉시 그 학생 달력에 뜬다',
-    auditlog:'누가 무엇을 바꿨는지', cleanup:'옛 기록을 한 번에 손본다 — 살펴본 뒤에만 고친다',
+    auditlog:'누가 무엇을 바꿨는지', push:'학생이 질문·클리닉 제안·채팅을 보내면 이 기기로 알림', cleanup:'옛 기록을 한 번에 손본다 — 살펴본 뒤에만 고친다',
     admin:'관리자 비밀번호' };
   return `<div class="ex-screen ex-nosub">
     <aside class="ex-list ex-nav">

@@ -44,7 +44,7 @@ const TWIN_GROQ_MAX_TOKENS = 7000;   // 추론 + JSON. 검토(6000)보다 답이
 /* 🔴 «올렸는지 짐작하지 않는다» — 이 워커는 대시보드에 붙여넣어 올리므로 밖에서는 어느 판이 도는지
    알 길이 없었다(2026-09-11에 사용자가 올리고 「도는지 확인은 못 해봤어」). /quota 가 이 값을 같이
    돌려주고 tools/worker-check.mjs 가 저장소의 값과 견준다. **프롬프트나 규칙을 바꾸면 이 날짜를 올릴 것.** */
-const WORKER_VERSION = '2026-09-22a';
+const WORKER_VERSION = '2026-09-24a';
 // 이미지 업로드는 학생도 쓴다(질의응답 사진). 비용이 드는 쪽은 Gemini라 여기는 넉넉하게,
 // 다만 «한 명이 무한히»는 막는다. 전체 상한은 걸지 않는다 — 걸면 바쁜 날 학생이 막힌다.
 const UPLOAD_PER_USER_DAILY = 200;
@@ -113,7 +113,8 @@ export default {
       if (!통.remaining) return quotaExceeded(통, corsHeaders);      // 검토가 먹은 몫까지 센다
       const q = await bumpQuota(env, 'twin-groq', who.uid, TWIN_GROQ_DAILY_LIMIT, TWIN_GROQ_DAILY_LIMIT);
       if (!q.ok) return quotaExceeded(q, corsHeaders);
-    } else if (url.pathname !== '/delete' && !url.pathname.startsWith('/admin/') && url.pathname !== '/notify' && url.pathname !== '/report-mms') {
+    } else if (url.pathname !== '/delete' && !url.pathname.startsWith('/admin/') && url.pathname !== '/notify' && url.pathname !== '/report-mms'
+               && !PUSH_PATHS.includes(url.pathname)) {
       /* 🔴 **관리자 길을 여기서 빼지 않으면 «비밀번호 재설정»이 AI 한도를 먹는다.**
          아래 라우팅이 catch-all 이라, 새 길을 낼 때마다 이 줄을 같이 봐야 한다.
          (한도가 다 차면 비밀번호도 못 바꾸게 되는, 설명하기 어려운 상태가 된다.) */
@@ -140,6 +141,11 @@ export default {
     if (url.pathname === '/admin/delete-user') return handleAdminDeleteUser(request, env, corsHeaders, who.uid);
     if (url.pathname === '/notify') return handleNotify(request, env, corsHeaders, who.uid);
     if (url.pathname === '/report-mms') return handleReportMms(request, env, corsHeaders, who.uid);
+    /* 선생님 폰 알림 (N-4) — 앞의 셋은 강사만, /push-ping 은 학생이 부른다(안에서 익명을 막는다). */
+    if (url.pathname === '/push-register') return handlePushRegister(request, env, corsHeaders, who.uid, false);
+    if (url.pathname === '/push-unregister') return handlePushRegister(request, env, corsHeaders, who.uid, true);
+    if (url.pathname === '/push-test') return handlePushTest(request, env, corsHeaders, who.uid);
+    if (url.pathname === '/push-ping') return handlePushPing(request, env, corsHeaders, who);
     /* 🔴 **터져도 한도는 돌려주고, 까닭은 CORS 머리를 달고 나간다** (2026-09-12).
        Cloudflare 의 1101 페이지에는 CORS 머리가 없어 브라우저에는 「Failed to fetch」 다섯 글자만 남는다 —
        고칠 실마리가 하나도 없고, 한도는 부르기 «전»에 세니 누를 때마다 한 건씩 나갔다(실제로 그랬다).
@@ -505,6 +511,95 @@ async function handleAdminDeleteUser(request, env, corsHeaders, callerUid) {
   return adminJson({ ok: true, uid: localId }, corsHeaders);
 }
 
+/* =================== 선생님 폰 알림 — FCM 웹 푸시 (2026-09-24 · N-4) ===================
+   사용자 — 「학생이 질문을 남기거나 그랬을때 웹페이지에 들어가서 확인하지 않고 푸시 알림」 · 안드로이드 · 「fcm방법으로」.
+   🔵 흐름 — 강사 폰이 「알림 받기」로 FCM 토큰을 받아 /push-register 로 맡긴다(KV `push:tokens`).
+     학생이 질문·클리닉 제안·채팅을 «저장한 뒤» /push-ping 을 부르면 워커가 FCM HTTP v1 로 그 토큰들에 쏜다.
+   🔵 **FCM 열쇠는 따로 없다** — 관리자 길의 `FIREBASE_SA` access token(cloud-platform 범위)을 그대로 쓴다.
+   🔴 /push-ping 은 **학생이 부른다** — 익명 로그인(랜딩)은 막고, 한 사람·한 종류는 gap 초에 한 번, 하루 뚜껑을 둔다.
+     문구의 머리는 워커가 짓는다 — 화면이 주는 것은 이름·미리보기 글자뿐이고 길이를 자른다.
+     ponytail: 이름은 화면이 준 것을 믿는다(다른 학생 이름을 적을 수는 있다). 문제가 되면 contacts 로 uid→이름을 읽는다.
+   ⚠ 죽은 토큰(앱 데이터 지움·권한 끔)은 FCM 이 404 UNREGISTERED 로 알려 준다 — 그때 KV 에서 걷는다.
+   ⚠ data 만 보낸다(notification 칸 없음) — 알림은 push-sw.js 가 직접 띄운다(누르면 그 탭으로 간다). */
+const PUSH_PATHS = ['/push-register', '/push-unregister', '/push-test', '/push-ping'];
+const PUSH_KINDS = {
+  qna:    { title: '새 질문',          go: 'qna',    gap: 60 },
+  clinic: { title: '클리닉 시간 제안', go: 'clinic', gap: 60 },
+  chat:   { title: '새 채팅',          go: 'chat',   gap: 180 },   // 이어 보내는 말은 3분에 한 번으로 묶는다
+};
+const PUSH_PER_USER_DAILY = 40;
+const PUSH_DAILY_LIMIT = 500;
+const PUSH_MAX_DEVICES = 5;
+
+async function pushTokens(env) {
+  if (!env.QUOTA) return [];
+  try { return JSON.parse((await env.QUOTA.get('push:tokens')) || '[]') || []; } catch (_) { return []; }
+}
+
+/* 맡겨 둔 기기 전부에 한 통씩. → { sent, devices, dropped, why } */
+async function pushSend(env, msg) {
+  const list = await pushTokens(env);
+  if (!list.length) return { sent: 0, devices: 0, dropped: 0, why: 'no_device' };
+  const sa = JSON.parse(env.FIREBASE_SA);
+  const tok = await getServiceAccountToken(env);
+  const data = { title: String(msg.title), body: String(msg.body || ''), go: String(msg.go || ''), tag: String(msg.tag || '') };
+  let sent = 0, why = '';
+  const dead = [];
+  for (const d of list) {
+    const r = await fetch('https://fcm.googleapis.com/v1/projects/' + sa.project_id + '/messages:send', {
+      method: 'POST', headers: { Authorization: 'Bearer ' + tok, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: { token: d.token, data, webpush: { headers: { Urgency: 'high', TTL: '86400' } } } }),
+    });
+    if (r.ok) { sent++; continue; }
+    const t = await r.text();
+    if (r.status === 404 || /UNREGISTERED/.test(t)) dead.push(d.token);
+    else why = 'fcm ' + r.status + ' ' + t.slice(0, 160);
+  }
+  if (dead.length) await env.QUOTA.put('push:tokens', JSON.stringify(list.filter((d) => !dead.includes(d.token))));
+  return { sent, devices: list.length, dropped: dead.length, why };
+}
+
+/* POST /push-register · /push-unregister  { token, label }  — 강사만. 새 기기가 맨 앞, 다섯 대까지. */
+async function handlePushRegister(request, env, corsHeaders, callerUid, 끄기) {
+  const g = await adminGate(request, env, corsHeaders, callerUid);
+  if (g.흠) return g.흠;
+  if (!env.QUOTA) return adminJson({ error: 'not_configured', detail: '워커에 QUOTA KV 가 없습니다.' }, corsHeaders, 503);
+  const token = String(g.body.token || '');
+  if (!/^[\w:-]{20,4096}$/.test(token)) return adminJson({ error: 'bad_request', detail: 'token 이 필요합니다.' }, corsHeaders, 400);
+  let list = (await pushTokens(env)).filter((d) => d.token !== token);
+  if (!끄기) list = [{ token, label: String(g.body.label || '').slice(0, 60), at: new Date().toISOString() }, ...list].slice(0, PUSH_MAX_DEVICES);
+  await env.QUOTA.put('push:tokens', JSON.stringify(list));
+  return adminJson({ ok: true, devices: list.length }, corsHeaders);
+}
+
+/* POST /push-test — 강사만. 맡긴 기기 전부에 «시험 알림» 한 통. */
+async function handlePushTest(request, env, corsHeaders, callerUid) {
+  const g = await adminGate(request, env, corsHeaders, callerUid);
+  if (g.흠) return g.흠;
+  try { return adminJson({ ok: true, ...(await pushSend(env, { title: '시험 알림', body: '이 기기로 학생 알림이 옵니다.', tag: 'test' })) }, corsHeaders); }
+  catch (e) { return adminJson({ ok: false, why: String((e && e.message) || e).slice(0, 200) }, corsHeaders); }
+}
+
+/* POST /push-ping  { kind:'qna'|'clinic'|'chat', name, text }  — 학생이 부른다. → { ok, sent, why }
+   why = gap(방금 보냄 · 묶음) | quota | no_device | not_configured | fcm … */
+async function handlePushPing(request, env, corsHeaders, who) {
+  if (who.provider === 'anonymous') return adminJson({ error: 'forbidden' }, corsHeaders, 403);
+  if (!env.FIREBASE_SA || !env.QUOTA) return adminJson({ ok: false, why: 'not_configured' }, corsHeaders);
+  let body = {};
+  try { body = await request.json(); } catch (_) {}
+  const k = Object.prototype.hasOwnProperty.call(PUSH_KINDS, body.kind) ? PUSH_KINDS[body.kind] : null;
+  if (!k) return adminJson({ error: 'bad_request', detail: 'kind(qna|clinic|chat) 가 필요합니다.' }, corsHeaders, 400);
+  const gapKey = 'ping:' + body.kind + ':' + who.uid;
+  if (await env.QUOTA.get(gapKey)) return adminJson({ ok: true, sent: 0, why: 'gap' }, corsHeaders);
+  const q = await bumpQuota(env, 'push', who.uid, PUSH_PER_USER_DAILY, PUSH_DAILY_LIMIT);
+  if (!q.ok) return adminJson({ ok: false, sent: 0, why: 'quota' }, corsHeaders);
+  await env.QUOTA.put(gapKey, '1', { expirationTtl: k.gap });
+  const 이름 = String(body.name || '').replace(/\s+/g, ' ').trim().slice(0, 20) || '학생';
+  const 글 = String(body.text || '').replace(/\s+/g, ' ').trim().slice(0, 80);
+  try { return adminJson({ ok: true, ...(await pushSend(env, { title: k.title + ' — ' + 이름, body: 글, go: k.go, tag: body.kind + ':' + who.uid })) }, corsHeaders); }
+  catch (e) { return adminJson({ ok: false, sent: 0, why: String((e && e.message) || e).slice(0, 200) }, corsHeaders); }
+}
+
 /* =================== 인증 =================== */
 
 /* 인증은 Firebase ID 토큰 하나뿐이다.
@@ -514,7 +609,8 @@ async function authenticate(request, env) {
   const auth = request.headers.get('Authorization') || '';
   if (!auth.startsWith('Bearer ')) return null;
   const payload = await verifyFirebaseIdToken(auth.slice(7));
-  return payload ? { uid: payload.sub, via: 'firebase' } : null;
+  /* provider — 'anonymous'(랜딩)·'password'(학생·강사). /push-ping 이 익명을 가른다 (2026-09-24). */
+  return payload ? { uid: payload.sub, via: 'firebase', provider: (payload.firebase && payload.firebase.sign_in_provider) || '' } : null;
 }
 
 /* Firebase ID 토큰 검증 — 구글 공개키(JWKS)로 서명을 확인하고 iss/aud/exp를 본다.
