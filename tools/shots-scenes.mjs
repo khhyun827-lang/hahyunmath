@@ -64,7 +64,30 @@ export function 씨앗(){
       question:'옛 질문 — 사진 한 장짜리(옛 꼴이 그대로 읽히는지 본다)',
       image:{url:PIC,fileId:'z1'}, answer:null, answerImage:null, answeredAt:null },
   ];
-  DATA.notices = []; DATA.exams = []; DATA.clinics = []; DATA.materials = {};
+  DATA.notices = [
+    { id:101, date:날(-1), title:'추석 연휴 휴강 안내', classIds:[],
+      content:'# 휴강 일정\n\n**9월 28일(월)부터 10월 1일(목)**까지 휴강합니다.\n- 보강은 10월 첫 주 토요일\n- 과제는 그대로 제출' },
+    { id:102, date:날(-6), title:'2학기 중간고사 대비 특강', classIds:['c1'],
+      content:'고1 프로브반 대상 — 토요일 오후 2시부터 세 시간씩 진행합니다.' },
+  ];
+  DATA.exams = []; DATA.materials = {};
+  /* 클리닉 — 이번 주 판에 시간대가 서고, 승인 대기(직접 제안)가 하나 있게 */
+  const 주 = clinicWeekStart(오늘), 주날 = k => shiftYmd(주, k);
+  DATA.clinicSlots = [
+    { id:'sl1', date:주날(1), time:'18:00', capacity:3 }, { id:'sl2', date:주날(1), time:'19:00', capacity:3 },
+    { id:'sl3', date:주날(3), time:'19:00', capacity:2 }, { id:'sl4', date:주날(5), time:'14:00', capacity:4 },
+  ];
+  DATA.clinics = [
+    { id:'cl1', studentId:'s0', name:'김민아', day:주날(1), slotId:'sl1', status:'승인', topic:'이차방정식' },
+    { id:'cl2', studentId:'s2', name:'이도윤', day:주날(3), slotId:'sl3', status:'승인', topic:'' },
+    { id:'cl3', studentId:'s5', name:'강현우', day:주날(3), slotId:'sl3', status:'승인', topic:'' },
+    { id:'cl4', studentId:'s7', name:'임준서', day:주날(4), time:'20:30', status:'대기',
+      topic:'나머지정리 질문', requestedAt:오늘 },
+  ];
+  DATA.chats = { s0: [
+    { from:'student', text:'선생님 오늘 클리닉 몇 시까지 하나요?', at:오늘 + ' 17:02' },
+    { from:'teacher', text:'9시까지 있어요. 편할 때 오세요.', at:오늘 + ' 17:10' } ] };
+  window.loadAllChatsIfNeeded = () => {};
   if(window.splitQnaFollowups) splitQnaFollowups();
 
   /* 시청 기록 — 학생마다 다르게(이탈 분포가 한 칸에 몰리지 않게) */
@@ -101,6 +124,13 @@ export const 무대들 = {
   질의응답: { 말: '소통 › 질의응답 (강사 · 사진 여러 장)',
     세우기: () => { state.currentUser = { type:'teacher', name:'김하현T' }; state.view = 'teacher';
       state.teacherTab = 'qna'; state.qnaSelectedId = 'qn1'; state.qnaFilter = 'all'; render(); } },
+  공지: { 말: '소통 › 공지 (강사)',
+    세우기: () => { state.currentUser = { type:'teacher', name:'김하현T' }; state.view = 'teacher'; state.teacherTab = 'notices'; state.noticeSelectedId = '101';
+      state.noticeWriting = false; render(); } },
+  클리닉: { 말: '소통 › 클리닉 (주간 판 · 승인 대기 1)',
+    세우기: () => { state.currentUser = { type:'teacher', name:'김하현T' }; state.view = 'teacher'; state.teacherTab = 'clinic'; state.clinicWeek = ''; state.clinicPanel = ''; render(); } },
+  채팅: { 말: '소통 › 채팅 (강사)',
+    세우기: () => { state.currentUser = { type:'teacher', name:'김하현T' }; state.view = 'teacher'; state.teacherTab = 'chat'; state.teacherSelectedStudent = 's0'; render(); } },
   학생질문: { 말: '학생 › 소통 › 질의응답',
     폭: '430,390,360',
     세우기: () => { state.currentUser = { type:'student', studentId:'s0', name:'김민아' };
