@@ -131,6 +131,22 @@ export const 무대들 = {
     세우기: () => { state.currentUser = { type:'teacher', name:'김하현T' }; state.view = 'teacher'; state.teacherTab = 'clinic'; state.clinicWeek = ''; state.clinicPanel = ''; render(); } },
   설정알림: { 말: '설정 › 알림 (폰 알림 켜기)',
     세우기: () => { state.currentUser = { type:'teacher', name:'김하현T' }; state.view = 'teacher'; state.teacherTab = 'settings'; state.settingsSubTab = 'push'; state.studentDetailId = null; render(); } },
+  시험일정: { 말: '설정 › 시험 일정 (표 · 학교 프린트)',
+    세우기: () => { state.currentUser = { type:'teacher', name:'김하현T' }; state.view = 'teacher';
+      state.teacherTab = 'settings'; state.settingsSubTab = 'examrange'; state.examSubTab = 'range'; state.studentDetailId = null;
+      DATA.classes[0].progress = { subject: '공통수학1' }; DATA.classes[1].progress = { subject: '확률과통계' };
+      DATA.students.forEach((s, i) => { s.school = ['대원고등학교', '광남고', '경기여자고등학교'][i % 3]; s.grade = i < 7 ? '1' : '2';
+        if(i >= 7) s.classId = 'c2'; });
+      const 날 = k => shiftYmd(todayStr(), k);
+      state.examHistory = { items: [] };
+      state.examRanges = { dates: { '대원고등학교': { '1': { start: 날(8), end: 날(12), math: 날(9) } },
+                                    '광남고': { '1': { start: 날(15), end: 날(19), math: 날(17) }, '2': { start: 날(15), end: 날(19), math: 날(18) } } } };
+      state.schoolBooks = { '대원고등학교': { '1': '미래엔 / 학교프린트' } };
+      state.schoolFiles = { '대원고등학교': { '1': [
+          { name: '2학기 중간 대비 프린트 1회.pdf', fileId: 'f1', mime: 'application/pdf', size: 820000, at: 날(-3), season: '2026 · 2학기 중간' },
+          { name: '서술형 모음.pdf', fileId: 'f2', mime: 'application/pdf', size: 310000, at: 날(-1), season: '2026 · 2학기 중간' } ] },
+        '광남고': { '2': [ { name: '광남 2학년 기출.pdf', fileId: 'f3', mime: 'application/pdf', size: 1500000, at: 날(-2), season: '2026 · 2학기 중간' } ] } };
+      render(); } },
   채팅: { 말: '소통 › 채팅 (강사)',
     세우기: () => { state.currentUser = { type:'teacher', name:'김하현T' }; state.view = 'teacher'; state.teacherTab = 'chat'; state.teacherSelectedStudent = 's0'; render(); } },
   학생질문: { 말: '학생 › 소통 › 질의응답',

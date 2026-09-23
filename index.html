@@ -514,6 +514,13 @@
    좁은 화면에서 괜히 가로 스크롤이 남는다. */
 .app .rst-wrap table.grid.narrow{min-width:1260px;}
 .app .rst-wrap td{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+/* 시험 일정 표의 프린트 칸 — 파일 이름을 거는 고리 하나 + 「+n」 (2026-09-24). 이름은 칸 안에서 …로 잘린다. */
+.app .xr-print{display:inline-flex;align-items:center;gap:4px;max-width:calc(100% - 26px);vertical-align:middle;
+  color:var(--accent);text-decoration:none;overflow:hidden;text-overflow:ellipsis;}
+.app .xr-print svg{flex:none;}
+.app .xr-print span{min-width:0;overflow:hidden;text-overflow:ellipsis;}
+.app .xr-print:hover{text-decoration:underline;}
+.app .xr-more{margin-left:5px;font-size:11px;color:var(--dim);vertical-align:middle;}
 .app .rst-wrap .cb{cursor:pointer;}
 
 .app .rst-sig{display:flex;align-items:center;gap:6px;min-width:0;}
@@ -7161,6 +7168,9 @@ async function removeSchoolFile(school, grade, i){
   deleteFromDrive(f.fileId);
   render();
 }
+/* 누르면 «내려받는다» (2026-09-24 · 사용자 — 「누르면 다운로드받을수있도록」). 강의자료(materialLink)는 미리보기로 여는데
+   학교 프린트는 받아서 인쇄하는 것이라 드라이브의 내려받기 주소로 간다. */
+function schoolFileDownload(f){ return 'https://drive.google.com/uc?export=download&id=' + encodeURIComponent(f.fileId); }
 function schoolFilesHTML(school, grade){
   const sc = jsAttr(school), gr = jsAttr(grade);
   const files = schoolFilesOf(school, grade);
@@ -7169,7 +7179,7 @@ function schoolFilesHTML(school, grade){
       <span style="color:var(--dim);font-weight:400;">— PDF·사진 · 시즌을 넘겨도 남습니다${state.schoolFilesLoading ? ' · 불러오는 중…' : ''}</span></div>
     <div class="row" style="gap:6px;flex-wrap:wrap;margin-top:6px;align-items:center;">
       ${files.map((f, i) => `<span class="pill" style="gap:6px;" onclick="event.stopPropagation()">
-        <a href="${materialLink(f)}" target="_blank" rel="noopener" style="color:inherit;">${escHtml(f.name)}</a>
+        <a href="${schoolFileDownload(f)}" target="_blank" rel="noopener" style="color:inherit;" title="누르면 내려받습니다">${escHtml(f.name)}</a>
         <s style="text-decoration:none;color:var(--dim);">${escHtml(f.season || (f.at || '').slice(0, 4))} · ${fileSizeLabel(f.size)}</s>
         <button type="button" class="btn q sm" style="padding:0 5px;min-height:0;line-height:1.6;" title="지우기"
           onclick="removeSchoolFile('${sc}','${gr}',${i})">✕</button></span>`).join('')}
@@ -10533,11 +10543,13 @@ function removeQnaPhoto(key, idx){
 function clearQnaPhotos(key){ if(state.qnaPhotos) delete state.qnaPhotos[key]; }
 /* 사진 칸 — 올린 것들이 줄로 서고 그 아래 「파일·촬영」. 과제 제출(`.hw-shots`)과 **같은 부품**이다.
    ⚠ `this.value=''` 를 꼭 둔다 — 안 두면 **같은 파일을 두 번 고를 수 없다**(change 가 안 뜬다). */
-function qnaImageFieldHTML(key, fieldId){
+/* 작은 꼴(작게) — 강사 답변 입력줄(2026-09-24): 단추가 늘어나지 않고 왼쪽에 붙어 「등록」과 한 줄에 선다. */
+function qnaImageFieldHTML(key, fieldId, 작게){
   const uid = fieldId || 'qimg';
   const list = qnaPhotos(key);
   const 꽉 = list.length >= QNA_PHOTO_MAX;
-  return `<div style="flex:1 1 190px;min-width:170px;max-width:100%;">
+  const 넓게 = 작게 ? '' : 'flex:1;';
+  return `<div style="${작게 ? 'flex:1 1 auto;min-width:0;' : 'flex:1 1 190px;min-width:170px;max-width:100%;'}">
     ${list.length ? `<div class="hw-shots" style="margin-top:0;">${list.map((p,i)=>`
       <span class="hw-shot">
         <img src="${escHtml(p.url || p.previewUrl)}"${p.uploading?' style="opacity:.45;"':''} alt="올린 사진">
@@ -10549,9 +10561,9 @@ function qnaImageFieldHTML(key, fieldId){
     <input type="file" accept="image/*" capture="environment" id="${uid}-cam" style="display:none;"
       onchange="handleQnaPhotos('${key}', this.files); this.value='';">
     <div style="display:flex;gap:6px;margin-top:${list.length?'8px':'0'};">
-      <button type="button" class="btn sm" style="flex:1;"${꽉?' disabled':''}
+      <button type="button" class="btn sm" style="${넓게}"${꽉?' disabled':''}
         onclick="document.getElementById('${uid}-file').click()">${iconSvg('file',14)} 파일</button>
-      <button type="button" class="btn sm" style="flex:1;"${꽉?' disabled':''}
+      <button type="button" class="btn sm" style="${넓게}"${꽉?' disabled':''}
         onclick="document.getElementById('${uid}-cam').click()">${iconSvg('camera',14)} 촬영</button>
     </div>
     ${list.length ? `<div style="font-size:10.5px;color:var(--dim);margin-top:5px;">
@@ -10663,14 +10675,22 @@ function qnaAnswerFormHTML(q, 겉){
   const 라벨 = qnaHasAnyAnswer(q) ? '답변 더 달기' : (q.kind === 'followup' ? '추가 질문에 답변' : '답변');
   return `
         <div class="qn-comp"${겉 ? ` style="${겉}"` : ''}>
-          <div class="cls-form" style="align-items:flex-start;margin-top:0;">
-            <label style="flex:1;min-width:240px;"><span>${라벨}</span>
-              <textarea id="answer-${q.id}" rows="3" placeholder="답변 입력"></textarea></label>
-            ${qnaImageFieldHTML('a:' + q.id, `qna-a-${q.id}`)}
-            <button class="btn p sm" onclick="submitAnswer('${q.id}')">등록</button>
+          ${/* 🔵 **글 칸이 한 줄을 다 쓰고, 사진·파일·촬영·등록은 그 아래 한 줄** (2026-09-24 · 사용자 — 「답변과 파일, 촬영 구조가
+                 어우러지지 않고 이상하게 배열」). 예전에는 셋이 한 줄에 서서 단추가 글 칸 «머리» 높이에 떠 있었다.
+               🔴 **쓰던 답은 state 에 든다**(qnaDraft) — 학생 사진을 눌러 크게 보면 render() 가 돌아 글 칸이 새로 선다.
+                 예전에는 그때 쓰던 답이 비었다(사용자가 짚었다). 사진을 올릴 때도 같았다.
+               ⚠ oninput 에서 render 하지 않는다 — 한글 조합이 흩어진다(IME). 담기만 한다. */''}
+          <div class="cls-form" style="align-items:flex-end;margin-top:0;">
+            <label style="flex:1 1 100%;"><span>${라벨}</span>
+              <textarea id="answer-${q.id}" rows="3" placeholder="답변 입력"
+                oninput="qnaDraftSet('${q.id}', this.value)">${escHtml(qnaDraftOf(q.id))}</textarea></label>
+            ${qnaImageFieldHTML('a:' + q.id, `qna-a-${q.id}`, true)}
+            <button class="btn p sm" style="margin-left:auto;" onclick="submitAnswer('${q.id}')">등록</button>
           </div>
         </div>`;
 }
+function qnaDraftOf(qid){ return (state.qnaDraft && state.qnaDraft[qid]) || ''; }
+function qnaDraftSet(qid, v){ if(!state.qnaDraft) state.qnaDraft = {}; state.qnaDraft[qid] = v; }
 /* 학생 화면의 답 — 강사 쪽과 달리 `.note` 상자다. 첫 답과 더 단 답을 같이 낸다. */
 function qnaAnswerNotesHTML(q){
   const 하나 = (text, imgs, at, 더) => `
@@ -10711,6 +10731,7 @@ async function submitAnswer(qid){
     showToast('답변을 저장하지 못했습니다 — 잠시 뒤에 다시 눌러주세요.'); render(); return;
   }
   clearQnaPhotos('a:'+qid);
+  qnaDraftSet(qid, '');   // 등록된 답은 칸에서 걷는다
   showToast(첫답인가 ? '답변이 등록되었습니다.' : '답변을 더 달았습니다.');
   render();
   /* 알림톡 (09-20) — 답이 저장된 «뒤»에. 실은 «실»(원 질문) 단위로 하루 한 번 — 같은 날 더 달아도 두 번 안 간다. */
@@ -11577,7 +11598,7 @@ async function addVideo(){
   document.getElementById('video-unit').value='';
   document.getElementById('video-title').value='';
   document.getElementById('video-url').value='';
-  if(dueEl) dueEl.value='';
+  if(dueEl) dueEl.value = shiftYmd(todayStr(), 7);   // 다음 영상도 기본은 일주일 뒤
   if(fromEl) fromEl.value=''; if(toEl) toEl.value='';
   if(notrackEl) notrackEl.checked = false;
   const 보낸이들 = 된것.filter(v => v.studentId).map(v => 이름(v.studentId));
@@ -25005,8 +25026,9 @@ function chubVideoHTML(classId){
       <label style="flex:2;min-width:180px;"><span>제목</span><input id="video-title" placeholder="예: 수학(상) 4강"></label>
       <label style="min-width:140px;"><span>단원 (선택)</span><input id="video-unit" placeholder="예: 대수 3단원"></label>
       ${/* 🔵 **마감일 (2026-09-08)** — 학생 달력에 뜨게 하려고 냈다. 없으면 달력에 안 뜬다.
-             ⚠ «선택»이다 — 마감이 없는 영상이 더 많다. 있는 것만 달력에 선다. */''}
-      <label style="min-width:150px;"><span>마감일 (선택)</span><input id="video-due" type="date"></label>
+             ⚠ «선택»이다 — 마감이 없는 영상이 더 많다. 있는 것만 달력에 선다.
+           🔵 **기본은 일주일 뒤** (2026-09-24 · 사용자 요청 — 「기본세팅 마감일 일주일뒤로」). 지우면 마감 없음. */''}
+      <label style="min-width:150px;"><span>마감일 (선택)</span><input id="video-due" type="date" value="${shiftYmd(todayStr(), 7)}"></label>
       <select id="video-class" style="display:none;">${DATA.classes.map(c=>
         `<option value="${c.id}" ${classId===c.id?'selected':''}>${escHtml(c.name)}</option>`).join('')}</select>
     </div>
@@ -29735,6 +29757,7 @@ function teacherExamRangeHTML(){
     const sc = jsAttr(school), gr = jsAttr(grade), sj = jsAttr(subject);
     const dd = getDday(school, grade), dates = getDates(school, grade);
     const book = getBook(school, grade);
+    const prints = schoolFilesOf(school, grade);   // 시즌을 넘겨도 남는다 — 지난 기록에서도 같은 목록
     const cut = gradeCutOf(cutKey, school, grade, subject);
     const cutWarn = gradeCutWarn(cut);
     const ck = jsAttr(cutKey);
@@ -29749,7 +29772,7 @@ function teacherExamRangeHTML(){
       ${/* ⚠ .cb는 «체크박스 네모»의 클래스다(width·height가 박혀 있다). 행에 걸면 줄이 찌그러진다. */''}
       <tr style="cursor:pointer;${open ? 'background:var(--hover);' : ''}"
           onclick="toggleRangeOpen('${sc}','${gr}','${sj}')">
-        <td><b>${escHtml(school || '(학교 미입력)')}</b></td>
+        <td title="${escHtml(school)}"><b>${escHtml(school || '(학교 미입력)')}</b></td>
         <td class="sub">${escHtml(grade || '—')}</td>
         <td class="sub">${escHtml(subject || '—')}</td>
         <td class="r mono">${n == null ? '<span style="color:var(--dim);">—</span>' : n}</td>
@@ -29767,6 +29790,12 @@ function teacherExamRangeHTML(){
           span ? escHtml(span) : '<span style="color:var(--dim);">—</span>'}
           ${overridden ? '<span class="badge score" style="margin-left:6px;">수정됨</span>' : ''}</td>
         <td class="sub" title="${escHtml(book)}">${book ? escHtml(book) : '—'}</td>
+        ${/* 🔵 **학교 프린트를 표에서 바로 받는다** (2026-09-24 · 사용자 — 「프린트 등록한 것도 테이블에 같이 표시되게 해줘 누르면 다운로드」).
+             줄 높이(40px)를 지키려고 첫 파일 하나를 이름으로 걸고 나머지는 «+n» — 누르면 줄이 펼쳐져 전부 보인다. */''}
+        <td class="sub" title="${escHtml(prints.map(p => p.name).join(' · '))}">${!prints.length ? '<span style="color:var(--dim);">—</span>'
+          : `<a class="xr-print" href="${schoolFileDownload(prints[prints.length - 1])}" target="_blank" rel="noopener"
+               onclick="event.stopPropagation()">${iconSvg('file', 12)}<span>${escHtml(prints[prints.length - 1].name)}</span></a>${
+             prints.length > 1 ? `<span class="xr-more">+${prints.length - 1}</span>` : ''}`}</td>
         ${/* 등급컷 — 「88 · 79 · 71 · 64」. 적힌 것이 없으면 «—» (2026-09-02 · G-1) */''}
         <td class="mono sub" title="${cut ? escHtml('1~4등급컷 ' + gradeCutLabel(cut)) : ''}"
             style="${cutWarn ? 'color:var(--late);' : ''}">${
@@ -29774,7 +29803,7 @@ function teacherExamRangeHTML(){
         <td class="r sub" style="font-size:11px;">${open ? '접기' : '펼치기'}</td>
       </tr>
       ${!open ? '' : `
-      <tr><td colspan="11" style="white-space:normal;overflow:visible;background:var(--hover);padding:16px 14px;">
+      <tr><td colspan="12" style="white-space:normal;overflow:visible;background:var(--hover);padding:16px 14px;">
         ${/* ⚠ 날짜·교재는 change(칸을 떠날 때)에 저장한다. oninput으로 하면 render()가
              글자마다 돌아 커서가 끝으로 튄다 (9절 4번).
              ⚠ 안의 입력·버튼은 전부 stopPropagation — 안 그러면 줄의 onclick이 같이 터져 칸이 접힌다. */''}
@@ -29858,18 +29887,21 @@ function teacherExamRangeHTML(){
     ${/* ⚠ .app .rst-wrap table.grid의 min-width는 명단(1464px)의 것이다. 이 표는 더 좁으므로
          인라인으로 눌러 준다 — 인라인 style이 시트 규칙을 이긴다.
          sticky 헤더는 걸지 않는다. 줄이 적고, 가로 스크롤과 같이 쓰면 헤더가 첫 행을 덮는다 (0-B). */''}
-    <table class="grid" style="min-width:1242px;">
+    ${/* 🔵 학교·과목 사이를 좁혔다(사용자 — 「학교나 과목 간격 조금 줄이고」) — 학년 60→44 · 과목 118→88 · 범위 222→200.
+         학교는 118 그대로 — 「경기여자고등학교」가 그 폭에서 딱 들어간다(줄이면 …로 잘린다). */''}
+    <table class="grid" style="min-width:1262px;">
       <thead><tr>
         <th style="width:118px;">학교</th>
-        <th style="width:60px;">학년</th>
-        <th style="width:118px;">과목</th>
+        <th style="width:44px;">학년</th>
+        <th style="width:88px;">과목</th>
         <th class="r" style="width:50px;">인원</th>
         <th style="width:78px;">D-day</th>
         <th style="width:150px;">시험 기간</th>
         <th style="width:92px;">수학</th>
-        <th style="width:222px;">범위</th>
-        <th style="width:160px;">교재 · 메모</th>
-        <th style="width:132px;">등급컷 1~4</th>
+        <th style="width:200px;">범위</th>
+        <th style="width:140px;">교재 · 메모</th>
+        <th style="width:150px;">프린트</th>
+        <th style="width:124px;">등급컷 1~4</th>
         <th class="r" style="width:60px;"></th>
       </tr></thead>
       <tbody>${body}</tbody>
