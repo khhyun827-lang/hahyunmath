@@ -2995,9 +2995,9 @@
    🔵 바꾼 것 셋 — ① 줄 hover(누런 #FBFAF6 → 자두 옅은 면) ② 이름 머리글자 칩(베이지 → 자두 옅은 면)
      ③ 진행바 바탕(베이지 → 자두 옅은 면). 셋 다 «자두 선택 바로 옆»에 서서 색이 둘로 갈려 보이던 자리다.
    ⚠ `--hover` 는 새 색이 아니라 `--point-bg` 를 흰 면에 45% 섞은 값이다(#FAEEF2 × .45 + #FFF × .55).
-   ⚠ **종이(`--paper`)는 안 바꿨다** — 학생 앱과 같은 바탕이고, 그쪽은 이미 눈으로 확인받았다.
+     A-3 에서 ds.css `:root` 로 올렸다 — 학생 앱도 같은 바탕(자두 안개)을 쓰게 되어 두 벌일 까닭이 없다.
+   🔵 **종이(`--paper`)는 A-3 에서 바꿨다** — 사용자가 뜻한 «배경»이 이것이었다. ds.css 한 곳(#F8F4F5 자두 안개).
    ⚠ 메모(`--note`)의 노랑·상태색 바탕은 뜻이 있는 색이라 그대로다. */
-.app:not(.sap){--hover:#FDF7F9;}
 .app:not(.sap) .av{background:var(--point-bg);color:var(--point-d);}
 .app:not(.sap) .on .av{background:var(--accent);color:#fff;}
 .app:not(.sap) .bar{background:var(--point-bg);}
@@ -3886,7 +3886,7 @@
   height:calc(48px + env(safe-area-inset-top));
   padding:env(safe-area-inset-top) 10px 0;
   display:flex;align-items:center;gap:10px;pointer-events:none;
-  background:linear-gradient(180deg,rgba(250,249,246,.85) 0%,rgba(250,249,246,0) 100%);}
+  background:linear-gradient(180deg,rgba(248,244,245,.85) 0%,rgba(248,244,245,0) 100%);}
 .gm-x{width:36px;height:36px;border:0;background:transparent;color:var(--sub);cursor:pointer;
   border-radius:var(--r-md);font-size:16px;font-family:inherit;pointer-events:auto;}
 .gm-x:hover{background:var(--hover);}
@@ -3899,7 +3899,7 @@
 
 /* 결과 — 캔버스 위에 얹는다 */
 .gm-res{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
-  background:rgba(250,249,246,.93);overflow-y:auto;}
+  background:rgba(248,244,245,.93);overflow-y:auto;}
 .gm-res .in{width:82%;max-width:360px;text-align:center;padding:18px 0;}
 .gm-res .big{font-family:'Noto Serif KR',serif;font-size:40px;font-weight:600;letter-spacing:-.03em;
   line-height:1;}
@@ -4233,7 +4233,7 @@
 /* ---------- 상단 바 : 히어로를 지나면 나타난다 ---------- */
 .lp .l-bar{position:fixed;left:0;right:0;top:0;height:62px;z-index:50;
   display:flex;align-items:center;gap:16px;padding:0 28px;
-  background:rgba(250,249,246,.88);backdrop-filter:blur(10px);
+  background:rgba(248,244,245,.88);backdrop-filter:blur(10px);
   border-bottom:1px solid var(--line);
   transform:translateY(-100%);transition:transform .32s cubic-bezier(.4,0,.2,1);}
 .lp .l-bar.on{transform:translateY(0);}
