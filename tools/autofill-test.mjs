@@ -55,7 +55,7 @@ function makeWorld({ itemBody = {}, variants = {}, twin = null, used = 0, groqUs
     /* 🔵 «변형 세기»가 두 곳(variants 컬렉션 + 교재가 준 items 변형)을 합쳐 본다 (2026-09-06).
        여기서는 그 합침을 스텁으로 흉내 낸다 — 이 검사가 재는 것은 «고리»지 합침 규칙이 아니다. */
     'variantsOfCodeAll',
-    BLOCK + '\nreturn { autoFillTick, autoFillCandidates, autoFillState, autoFillToggle, autoFillWhyEmpty, skipped: autoFillSkipped };'
+    BLOCK + '\nreturn { autoFillTick, autoFillCandidates, autoFillState, autoFillToggle, autoFillWhyEmpty, skipped: autoFillSkipped, autoFillAsideNow, autoFillAsideBack };'
   )(
     state,
     () => {},
@@ -67,7 +67,9 @@ function makeWorld({ itemBody = {}, variants = {}, twin = null, used = 0, groqUs
     async (bucket) => bucket === 'twin-groq' ? w.groqUsed : w.used,
     20, 25,
     (twin) => ({ doc: null, why: '' }),
-    async (content, answer, image, engine) => { w.부른AI.push({ content, answer, engine: engine || '' }); return w.twin; },
+    /* groqTwin — Groq 로 물었을 때의 답(A-4). 안 정하면 twin 과 같다. */
+    async (content, answer, image, engine) => { w.부른AI.push({ content, answer, engine: engine || '' });
+      return engine === 'groq' && 'groqTwin' in w ? w.groqTwin : w.twin; },
     (content, answer) => (/^[①②③④⑤]$/.test(answer) || /^-?\d+$/.test(answer)) ? answer : null,
     (root, kind) => root + '-' + kind + '01',
     async (coll, id, doc) => { if (!w.saveOk) return null; w.쓴것.push({ coll, id, doc }); return true; },
@@ -78,7 +80,7 @@ function makeWorld({ itemBody = {}, variants = {}, twin = null, used = 0, groqUs
       ...Object.keys(itemBody).filter(c => c.startsWith(code + '-')).map(c => ({ code: c, variantKind: (c.match(/-([NUD])/) || [])[1] })) ],
   );
   api.autoFillState().on = true;
-  return Object.assign(w, api, { state });
+  return Object.assign(w, api, { state, 넘김: () => JSON.parse(store.get('khm-autofill-aside') || '{}') });
 }
 const 본문 = (n) => { const o = {}; for (let i = 1; i <= n; i++) o['K2-01-E-' + String(i).padStart(4,'0')] = { content: '본문' + i, answer: '③' }; return o; };
 
@@ -236,12 +238,20 @@ console.log('\n남는 한도로 창고 채우기\n');
   봄('그때도 까닭을 그대로 적는다', /AI 가 안 됐다/.test(w.autoFillState().msg), true);
   봄('«한 번 더 해 본다»고 말한다', /한 번 더/.test(w.autoFillState().msg), true);
 
+  /* 🔵 **2026-09-24(A-4) — 두 번째에는 «끄지 않고 그 문항을 넘긴다».** 사용자 — 「같은 문제에서 계속 막힐 때
+       특정 문제를 남긴 채로 넘길 방법」. 한 문항이 막혔다고 그날 치를 통째로 멈추면 나머지를 하나도 못 채운다.
+     🔴 그래도 09-04 의 교훈(스무 건 태움)은 지킨다 — **다른 문항에서도 또 엎어지면**(셋째) 멈춘다. 버리는 것 최대 세 건. */
   await w.autoFillTick();                                   // 두 번째도 엎어진다
-  봄('🔴 두 번째에 스스로 끈다', w.autoFillState().on, false);
-  봄('🔴 그래서 두 번만 부른다 (스무 번이 아니라)', w.부른AI.length, 2);
-  봄('🔴 그다음은 예약하지 않는다', w.예약.length, 1);
+  봄('🔵 두 번째에는 끄지 않는다', w.autoFillState().on, true);
+  봄('🔵 그 문항을 넘겨 둔다 (이 기기에 남는다)', Object.keys(w.넘김()), ['K2-01-E-0001']);
+  봄('🔵 그래서 다음 후보는 다음 문항이다', w.autoFillCandidates()[0], 'K2-01-E-0002');
+  봄('넘겼다고 말한다', /넘겨 두었습니다/.test(w.autoFillState().msg), true);
+  await w.autoFillTick();                                   // 다른 문항에서도 엎어진다
+  봄('🔴 셋째(다른 문항)에서도 엎어지면 스스로 끈다', w.autoFillState().on, false);
+  봄('🔴 그래서 세 번만 부른다 (스무 번이 아니라)', w.부른AI.length, 3);
+  봄('🔴 그다음은 예약하지 않는다', w.예약.length, 2);
   봄('왜 멈췄는지도 말한다', /하루치를 지키려고/.test(w.autoFillState().msg), true);
-  봄('두 번이었다고 말한다', /두 번/.test(w.autoFillState().msg), true);
+  봄('셋째 문항은 넘기지 않는다 (길의 흠이지 문항의 흠이 아니다)', Object.keys(w.넘김()), ['K2-01-E-0001']);
 }
 /* 🔵 **엎어졌다가 다시 하면 되는 경우** — 이것이 09-06에 실제로 겪은 모습이다.
    여기서 한 건도 못 담으면 고친 뜻이 없다. */
@@ -287,13 +297,87 @@ console.log('\n남는 한도로 창고 채우기\n');
     봄('🔴 그래서 다섯 건만 쓴다 (스무 건이 아니라)', w.부른AI.length, 5);
     봄('우리 흠이 아니라고 말한다', /우리 코드 흠이 아닙니다/.test(w.autoFillState().msg), true);
   }
-  /* ⚠ «우리 잘못»일 때는 예전 그대로 — 한 번 다시 해 보고 두 번째면 끈다. */
+  /* ⚠ «우리 잘못»일 때 — 한 번 다시 해 보고, 두 번째면 그 문항을 넘기고(A-4), 다른 문항도 안 되면 끈다. */
   {
     const w = makeWorld({ itemBody: 본문(5), twin: null, 오류: 'incomplete AI result' });
     await w.autoFillTick();
     봄('⚠ 우리 흠이면 곧바로 다시 해 본다', w.예약[0] < 60000, true);
     await w.autoFillTick();
-    봄('⚠ 그리고 두 번째면 끈다', w.autoFillState().on, false);
+    봄('⚠ 두 번째면 그 문항을 넘긴다', Object.keys(w.넘김()).length, 1);
+    await w.autoFillTick();
+    봄('⚠ 다른 문항도 안 되면 끈다', w.autoFillState().on, false);
+  }
+}
+
+// ⑧ 🔴 «붐빔»이 아니라 «무거움»이었다 (2026-09-24 · A-4)
+//    사용자 — 「붐빕니다 라는 이유로 너무 많이 실패해. 특히 조금 어려워진 문제에 대해서 더 심한 것 같아」.
+//    500 INTERNAL · 504 DEADLINE_EXCEEDED 는 모델이 생각하다 엎어진 것이다 — 같은 문항을 5분마다 다시 하면
+//    그 한 문항이 줄 전체를 막는다. ⇒ Groq 로 한 번 해 보고, 안 되면 넘기고 다음 문항으로.
+{
+  const 무거움 = '워커 502 — gemini error — { "error": { "code": 500, "message": "An internal error has occurred.", "status": "INTERNAL" } }';
+  const 시간다됨 = '워커 502 — gemini error — { "error": { "code": 504, "status": "DEADLINE_EXCEEDED" } }';
+  /* 글 문항 + Groq 통이 남았다 → 그 자리에서 Groq 로 만든다 */
+  {
+    const w = makeWorld({ itemBody: 본문(3), twin: null, groqUsed: 0, 오류: 무거움 });
+    w.groqTwin = { content: 'g', answer: '②', engine: 'groq' };
+    await w.autoFillTick();
+    봄('🔵 무거우면 같은 문항을 Groq 로 곧바로 한 번 더', w.부른AI.map(x => x.engine), ['', 'groq']);
+    봄('🔵 그래서 담긴다', w.쓴것.length === 1 && w.쓴것[0].doc.engine === 'groq', true);
+    봄('Groq 가 대신 만들었다고 말한다', /Groq 로 만들었습니다/.test(w.autoFillState().msg), true);
+    봄('아무것도 넘기지 않는다', Object.keys(w.넘김()), []);
+  }
+  /* Groq 통이 찼다 → 넘기고, 오래 쉬지 않고 다음 문항으로 */
+  {
+    const w = makeWorld({ itemBody: 본문(3), twin: null, 오류: 시간다됨 });   // groqUsed 25 = 찼다
+    await w.autoFillTick();
+    봄('🔴 무거운 문항은 곧바로 넘긴다 (같은 문항을 5분마다 다시 하지 않는다)', Object.keys(w.넘김()), ['K2-01-E-0001']);
+    봄('🔴 오래 쉬지 않는다 (붐빔이 아니다)', w.예약[0] < 60000, true);
+    봄('끄지 않는다', w.autoFillState().on, true);
+    봄('다음 후보는 다음 문항', w.autoFillCandidates()[0], 'K2-01-E-0002');
+    봄('«붐빕니다»라고 하지 않는다', /붐빕니다/.test(w.autoFillState().msg), false);
+    봄('«무거워»라고 말한다', /무거워/.test(w.autoFillState().msg), true);
+    await w.autoFillTick();
+    봄('🔴 다음 바퀴는 정말 다음 문항을 부른다', w.부른AI[1].content, '본문2');
+  }
+  /* 그림 문항은 Groq 로 못 간다 — 부르지 않고 넘긴다 */
+  {
+    const w = makeWorld({ itemBody: { 'K2-01-E-0000': { content: '그림 문항', answer: '③', image: { fileId: 'f' } } }, twin: null, groqUsed: 0, 오류: 무거움 });
+    await w.autoFillTick();
+    봄('🔴 그림 문항은 Groq 로 안 간다', w.부른AI.map(x => x.engine), ['']);
+    봄('넘긴 까닭에 «그림»이 적힌다', /그림/.test((w.넘김()['K2-01-E-0000'] || {}).why || ''), true);
+  }
+  /* 붐빔(503)은 예전처럼 쉬었다 같은 문항 — 두 번째면 «이번 세션»만 넘긴다(기기에 안 남긴다) */
+  {
+    const w = makeWorld({ itemBody: 본문(3), twin: null, 오류: '워커 502 — gemini error — { "code": 503, "message": "high demand" }' });
+    await w.autoFillTick(); await w.autoFillTick();
+    봄('붐빔 두 번이면 이번에는 넘긴다', w.skipped.has('K2-01-E-0001'), true);
+    봄('🔴 붐빔은 문항 탓이 아니라 기기에 남기지 않는다', Object.keys(w.넘김()), []);
+    봄('붐빔은 여전히 쉬었다 간다', w.예약.every(ms => ms >= 300000), true);
+  }
+  /* 🔵 손으로 넘기기 · 되돌리기 */
+  {
+    const w = makeWorld({ itemBody: 본문(3), twin: null, 오류: '워커 502 — gemini error — { "code": 503, "message": "high demand" }' });
+    await w.autoFillTick();                      // 1번 문항이 붐벼 쉬는 중
+    봄('지금 붙든 문항을 기억한다', w.autoFillState().last, 'K2-01-E-0001');
+    w.autoFillAsideNow();
+    봄('🔵 손으로 넘기면 기기에 남는다', (w.넘김()['K2-01-E-0001'] || {}).why, '손으로 넘김');
+    봄('🔵 쉬는 걸 기다리지 않고 곧 다음으로', w.예약[w.예약.length - 1] < 60000, true);
+    봄('다음 후보는 2번', w.autoFillCandidates()[0], 'K2-01-E-0002');
+    w.autoFillAsideBack('K2-01-E-0001');
+    봄('🔵 되돌리면 다시 후보가 된다', w.autoFillCandidates()[0], 'K2-01-E-0001');
+    w.autoFillAsideNow(); w.autoFillAsideBack('');
+    봄('🔵 «모두 다시 넣기»', Object.keys(w.넘김()), []);
+  }
+  {
+    const w = makeWorld({ itemBody: 본문(1) });
+    w.autoFillAsideNow();                         // 붙든 것이 없으면 아무 일도 안 한다
+    봄('붙든 문항이 없으면 넘기기는 아무 일도 안 한다', Object.keys(w.넘김()), []);
+  }
+  {
+    const w = makeWorld({ itemBody: 본문(2), twin: null, 오류: 무거움 });
+    await w.autoFillTick();
+    w.state.variants['K2-01-E-0002'] = [{ code: 'x', variantKind: 'N' }];
+    봄('다 찼을 때 «넘겨 둔 것»을 말해 준다', /넘겨 둔 1개/.test(w.autoFillWhyEmpty()), true);
   }
 }
 
