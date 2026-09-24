@@ -44,7 +44,7 @@ function 세상(답들) {
   };
   const fakeSleep = (fn, ms) => { 쉰것.push(ms); fn(); return 0; };
   const gen = new Function('fetch', 'setTimeout',
-    [constLine('GEMINI_TWIN_MODELS'), constLine('GEMINI_RPM_GAP'), constLine('GEMINI_NEXT_MODEL'), constLine('LIGHT_THINKING'), lift('geminiGenerate')].join('\n')
+    [constLine('GEMINI_TWIN_MODELS'), constLine('GEMINI_RPM_GAP'), constLine('GEMINI_NEXT_MODEL'), constLine('GEMINI_WORST_FIRST'), constLine('LIGHT_THINKING'), lift('geminiGenerate')].join('\n')
     + '\nreturn geminiGenerate;')(fakeFetch, fakeSleep);
   return { gen, 보낸것, 쉰것, 모델들: () => 보낸것.map(x => (x.url.match(/models\/([^:]+):/) || [])[1]) };
 }
@@ -72,14 +72,37 @@ console.log('\n① 막히면 같은 모델이 아니라 «다음 모델»로\n')
 {
   const w = 세상([[500, '{"error":{"code":500,"status":"INTERNAL"}}'], [504, '{}'], [404, '{}'], [200, '{}']]);
   const r = await w.gen(env, [{ text: 'x' }], false);
-  봄('500·504·404 도 다음 모델로', w.모델들(), ['gemini-3.6-flash', 'gemini-3.8-flash', 'gemini-3.7-flash', 'gemini-2.5-flash']);
-  봄('넷째에 들어갔다', [r.res.status, r.모델], [200, 'gemini-2.5-flash']);
+  봄('500·504·404 도 다음 모델로', w.모델들(), ['gemini-3.6-flash', 'gemini-3.8-flash', 'gemini-3.7-flash', 'gemini-3.5-flash']);
+  봄('넷째에 들어갔다', [r.res.status, r.모델], [200, 'gemini-3.5-flash']);
+}
+{
+  const w = 세상([[200, '{}']]);
+  await w.gen(env, [{ text: 'x' }], false);
+  /* 24e — 목록에는 뜨는데 부르면 404(「no longer available to new users」)였다. 도로 넣으면 여기서 문다. */
+  봄('🔴 2.5-flash 는 차례에 없다 (21:40 실측 404)', /2\.5-flash/.test(constLine('GEMINI_TWIN_MODELS')), false);
 }
 {
   const w = 세상([붐빔, 붐빔, 붐빔, 붐빔, [200, '{}']]);
   const r = await w.gen(env, [{ text: 'x' }], false);
   봄('🔴 모델이 다 막히면 거기서 그친다 (한 모델에 한 번씩만)', [r.res.status, w.보낸것.length, new Set(w.모델들()).size], [503, 4, 4]);
-  봄('다 막히면 마지막 모델의 답을 돌려준다', r.모델, 'gemini-2.5-flash');
+}
+/* 🔴 24e — 21:40 실제로 받은 꼴: 3.6 429 · 3.8 503 · 3.7 503 · 끝 404. 예전엔 끝의 404 를 돌려줘
+   화면이 «우리 흠»으로 읽고 셋이면 자동 채우기를 멈췄다. 가장 뜻이 있는 답(붐빔)을 돌려줘야 한다. */
+{
+  const w = 세상([몫참, 붐빔, 붐빔, [404, '{"error":{"code":404,"message":"no longer available to new users"}}']]);
+  const r = await w.gen(env, [{ text: 'x' }], false);
+  봄('🔴 다 막히면 «가장 뜻이 있는 답»(붐빔)을 돌려준다 — 끝의 404 가 아니라', [r.res.status, r.모델], [503, 'gemini-3.8-flash']);
+  봄('거절한 모델은 넷 다 적힌다', r.거절.length, 4);
+}
+{
+  const w = 세상([몫참, 몫참, 몫참, 몫참]);
+  const r = await w.gen(env, [{ text: 'x' }], false);
+  봄('전부 몫이 찼을 때만 429 (그때만 «오늘은 끝»)', r.res.status, 429);
+}
+{
+  const w = 세상([[404, '{}'], [500, '{}'], [429, '{}'], [404, '{}']]);
+  const r = await w.gen(env, [{ text: 'x' }], false);
+  봄('엎어짐(500)은 몫 참(429)·없음(404)보다 앞이다', r.res.status, 500);
 }
 {
   const w = 세상([[400, '{"error":{"message":"API key not valid"}}'], [200, '{}']]);
@@ -161,6 +184,17 @@ console.log('\n④ 화면이 워커에 «가볍게»를 실제로 말한다\n');
   const g = html.slice(at, html.indexOf('\n}\n', at));
   봄('🔴 engine 이 light 면 mode:light 를 싣는다', g.includes("if(engine === 'light') payload.mode = 'light';"), true);
   봄('가볍게는 Gemini 길(기본 주소)로 간다 — Groq 주소가 아니다', g.includes("(engine === 'groq' ? '/twin-groq' : '')"), true);
+
+  /* 🔴 거친 모델을 화면 말에 붙여도 갈래가 안 뒤집히는가 — 21:40 에 실제로 받은 꼴로 만들어 진짜 함수로 가른다 */
+  const at2 = html.indexOf('function aiUpstreamKind(');
+  const kind = new Function(html.slice(at2, html.indexOf('\n}\n', at2) + 2) + '\nreturn aiUpstreamKind;')();
+  const 붙임 = g.match(/b\.tried\.map\(t => String\(t\)([\s\S]*?)\)\s*\.join/);
+  const 낱말로 = 붙임 ? new Function('t', 'return String(t)' + 붙임[1] + ';') : null;
+  const 거친 = ['gemini-3.6-flash 429', 'gemini-3.8-flash 503', 'gemini-3.7-flash 503', 'gemini-3.5-flash 404'];
+  const 말 = '워커 502 — gemini error — { "error": { "code": 503, "status": "UNAVAILABLE" } } [거친 모델: '
+    + (낱말로 ? 거친.map(낱말로).join(' · ') : '') + ']';
+  봄('거친 모델을 낱말로 옮긴다', 낱말로 ? 거친.map(낱말로) : null, ['3.6-flash 몫 참', '3.8-flash 붐빔', '3.7-flash 붐빔', '3.5-flash 없음']);
+  봄('🔴 3.6 의 «몫 참»이 붙어도 갈래는 붐빔이다 (하루 한도로 안 읽는다)', kind(말), 'busy');
 }
 
 console.log('\n' + (fail ? '🔴 ' : '✓ ') + pass + ' 통과 · ' + fail + ' 실패\n');

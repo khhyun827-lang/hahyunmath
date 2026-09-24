@@ -44,7 +44,7 @@ const TWIN_GROQ_MAX_TOKENS = 7000;   // 추론 + JSON. 검토(6000)보다 답이
 /* 🔴 «올렸는지 짐작하지 않는다» — 이 워커는 대시보드에 붙여넣어 올리므로 밖에서는 어느 판이 도는지
    알 길이 없었다(2026-09-11에 사용자가 올리고 「도는지 확인은 못 해봤어」). /quota 가 이 값을 같이
    돌려주고 tools/worker-check.mjs 가 저장소의 값과 견준다. **프롬프트나 규칙을 바꾸면 이 날짜를 올릴 것.** */
-const WORKER_VERSION = '2026-09-24d';
+const WORKER_VERSION = '2026-09-24e';
 // 이미지 업로드는 학생도 쓴다(질의응답 사진). 비용이 드는 쪽은 Gemini라 여기는 넉넉하게,
 // 다만 «한 명이 무한히»는 막는다. 전체 상한은 걸지 않는다 — 걸면 바쁜 날 학생이 막힌다.
 const UPLOAD_PER_USER_DAILY = 200;
@@ -1153,15 +1153,22 @@ ${answer}`;
    🔵 가벼운 길(`light`)만 생각 상한을 건다. 이름이 모델마다 달라(thinkingLevel · thinkingBudget) **400 이면 다음 이름**,
      끝까지 안 받으면 상한 없이 — 상한을 못 걸었다고 문항을 버리지 않는다. 가벼운 길은 «막힌 직후»에 불리므로
      첫 넣기 전에 13초 쉰다(분당 5건 — 구글은 503 도 분당에 센다). */
-const GEMINI_TWIN_MODELS = ['gemini-3.6-flash', 'gemini-3.8-flash', 'gemini-3.7-flash', 'gemini-2.5-flash'];
+/* 🔴 24e — `gemini-2.5-flash` 를 뺐다. /models 목록에는 뜨는데 부르면 **404 「no longer available to new users」**였다(21:40 실측).
+     목록은 «열려 있다»의 증거가 아니다. 끝자리는 3.5-flash — ⚠ 아직 한 번도 답을 받아 본 적 없는 이름이다(404 면 그냥 끝난다). */
+const GEMINI_TWIN_MODELS = ['gemini-3.6-flash', 'gemini-3.8-flash', 'gemini-3.7-flash', 'gemini-3.5-flash'];
 const GEMINI_RPM_GAP = 13000;                                             // 분당 5건(RPM) 아래
 const GEMINI_NEXT_MODEL = [429, 500, 503, 504, 404];                      // 이 답이면 다음 모델로
+/* 🔴 **다 막혔을 때 «마지막» 답을 돌려주면 거짓말이 된다** (24e) — 21:40 에 3.6 429 · 3.8 503 · 3.7 503 · 2.5 404 였는데
+     돌려준 것은 끝의 404 였다. 화면은 404 를 «붐빔»으로도 «한도»로도 못 읽어 **우리 쪽 흠**으로 세고, 셋이면 자동 채우기를 멈춘다.
+   ⇒ 가장 뜻이 있는 답을 돌려준다: 붐빔(503) > 엎어짐(500·504) > 몫 참(429) > 없음(404). 붐빔이 하나라도 있으면
+     «조금 뒤면 된다»가 참이고, 전부 429 일 때만 «오늘은 끝»이다. */
+const GEMINI_WORST_FIRST = [503, 500, 504, 429, 404];
 const LIGHT_THINKING = [{ thinkingLevel: 'low' }, { thinkingBudget: 1024 }, null];
 async function geminiGenerate(env, parts, light, only) {
   const 모델들 = only ? [only] : GEMINI_TWIN_MODELS;
   const 생각들 = light ? LIGHT_THINKING : [null];
   let 시도 = 0, res, 모델 = '', 생각 = 'none';
-  const 거절 = [];
+  const 거절 = [], 답들 = [];
   if (light) await new Promise(r => setTimeout(r, GEMINI_RPM_GAP));   // 막힌 직후에 불린다 — 분당 한도를 지킨다
   for (const m of 모델들) {
     let k = 0;
@@ -1185,10 +1192,13 @@ async function geminiGenerate(env, parts, light, only) {
       break;
     }
     모델 = m; 생각 = 생각들[k] ? Object.keys(생각들[k])[0] : 'none';
-    if (!GEMINI_NEXT_MODEL.includes(res.status)) break;
+    if (!GEMINI_NEXT_MODEL.includes(res.status)) return { res, 시도, 생각, 모델, 거절 };
     거절.push(m + ' ' + res.status);
+    답들.push({ res, m });
   }
-  return { res, 시도, 생각, 모델, 거절 };
+  /* 다 막혔다 — 가장 뜻이 있는 답을 돌려준다(위 GEMINI_WORST_FIRST) */
+  const 대표 = 답들.slice().sort((a, b) => GEMINI_WORST_FIRST.indexOf(a.res.status) - GEMINI_WORST_FIRST.indexOf(b.res.status))[0];
+  return { res: 대표.res, 시도, 생각, 모델: 대표.m, 거절 };
 }
 
 async function handleGeminiTwin(request, env, corsHeaders, uid) {

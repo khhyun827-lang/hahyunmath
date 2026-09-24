@@ -6230,6 +6230,11 @@ async function generateTwinViaAI(content, answer, image, engine){
            틀렸는지 · 한도인지 · 안전 필터인지» 하나도 못 가른다 —
            09-04에 「왜 안 됐는지를 버리지 않는다」고 적어 놓고 한 칸 덜 간 자리다. */
         if(b.detail) 까닭 += ' — ' + String(b.detail).replace(/\s+/g, ' ').slice(0, 300);
+        /* 어느 모델을 거쳐 왔나 (워커 24d~) — «낱말»로 적는다. 429·503 같은 수를 그대로 싣으면
+           `aiUpstreamKind` 가 그 수를 보고 갈래를 잘못 읽는다(3.6 의 429 하나로 «하루 한도»가 된다). */
+        if(Array.isArray(b.tried) && b.tried.length) 까닭 += ' [거친 모델: ' + b.tried.map(t => String(t)
+          .replace(/^gemini-/, '').replace(/ 429$/, ' 몫 참').replace(/ 503$/, ' 붐빔').replace(/ 50[04]$/, ' 엎어짐').replace(/ 404$/, ' 없음'))
+          .join(' · ') + ']';
       }catch(e){}
       throw new Error('워커 ' + res.status + (까닭 ? ' — ' + 까닭 : ''));
     }
