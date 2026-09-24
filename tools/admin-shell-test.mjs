@@ -128,5 +128,30 @@ console.log('\n⑤ 자두판\n');
   봄('폰 하단 탭바는 고정 단추 줄(.actbar) 위에 선다', /:has\(\.tnav\) \.actbar\{bottom:calc\(58px/.test(html), true);
 }
 
+/* ═══ ⑥ A-2 — 대시보드 세 칸 · 질의응답 머리 · 남은 차콜 ═══ */
+console.log('\n⑥ A-2\n');
+{
+  const d = 알맹이(lift('teacherDashHTML'));
+  봄('대시보드는 세 칸(a·b·c)이다', ['dsh-a', 'dsh-b', 'dsh-c'].every(k => d.includes(k)), true);
+  봄('넓은 화면에서 셋이 나란히 선다', /min-width:1280px\)\{ \.app \.dsh-grid\{[^}]*"a b c"/.test(html), true);
+  봄('대시보드에 폭 상한이 없다 (오른쪽이 비지 않는다)', /\.app \.dsh\{max-width/.test(html), false);
+
+  const q = 알맹이(lift('teacherQnaHTML'));
+  const 본문 = q.slice(q.indexOf('const doc'));
+  /* 🔴 학생 이름은 본문(머리+타래)에서 «한 번»만 — 목록 줄은 따로다 */
+  봄('🔴 본문에 학생 이름이 한 번만 선다', (본문.match(/cur\.studentName\|\|''\)\}/g) || []).length, 1);
+  봄('🔴 추가 질문 말풍선에도 이름을 안 적는다', 본문.includes('f.studentName'), false);
+  봄('머리의 상태는 딱지가 아니라 한 줄이다', 본문.includes('qn-stt') && !본문.includes("'추가 질문 대기' : '답변 대기'"), true);
+  봄('폰 — 누르면 목록이 접히고 한 질문만', q.includes('state.qnaPicked=true') && q.includes("state.qnaPicked && cur ? 'picked'"), true);
+  봄('폰 — 돌아가는 단추가 있다', q.includes('state.qnaPicked=false'), true);
+  봄('CSS — 폰에서 picked 면 목록을, 아니면 본문을 감춘다',
+    html.includes('.qn-screen:not(.picked) .qn-doc{display:none;}') && html.includes('.qn-screen.picked .qn-list{display:none;}'), true);
+  봄('탭을 옮기면 폰 질의응답은 목록부터', 알맹이(lift('goTeacherTab')).includes('state.qnaPicked = false'), true);
+  봄('벨의 질문·클리닉·채팅도 goTeacherTab 을 지난다',
+    ["goTeacherTab('qna')", "goTeacherTab('clinic')", "goTeacherTab('chat')"].every(k => 알맹이(lift('teacherNotifItems')).includes(k)), true);
+
+  봄('🔴 박힌 차콜 고리가 하나도 안 남았다', /rgba\(60,48,52|rgba\(63,53,55/.test(알맹이(html)), false);
+}
+
 console.log('\n' + (fail ? '🔴 ' : '✓ ') + pass + ' 통과 · ' + fail + ' 실패\n');
 process.exit(fail ? 1 : 0);

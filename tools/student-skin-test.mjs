@@ -87,8 +87,9 @@ console.log(NL + '① 자두는 학생 앱 안에서만 산다' + NL);
      html 전체에서 찾으면 관리자 것 때문에 늘 실패한다(실제로 그랬다). */
   봄('학생 입력칸의 포커스 고리가 박힌 색이 아니라 토큰이다',
     rule(html, '.sap-in:focus').includes('var(--point-ring)'), true);
-  봄('🔴 관리자 입력칸은 차콜 그대로다',
-    rule(html, '.lo-in:focus').includes('rgba(60,48,52,.12)'), true);
+  /* 🔵 2026-09-24(A-2) — 관리자도 자두판으로 갔다(사용자가 정했다). 박힌 차콜 고리가 남으면 자두 옆에서 뜬다. */
+  봄('관리자 입력칸도 자두 고리 토큰이다 (A-2)',
+    rule(html, '.lo-in:focus').includes('var(--point-ring)'), true);
 }
 
 /* ═══ ② 가운데 홈 ═══ */

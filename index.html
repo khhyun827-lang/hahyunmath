@@ -592,7 +592,7 @@
   padding:13px 15px;margin-bottom:9px;position:relative;cursor:pointer;
   transition:border-color var(--t),background var(--t);}
 .app .cls-sess:hover{background:var(--hover);}
-.app .cls-sess.on{border-color:var(--accent);box-shadow:0 0 0 2px rgba(63,53,55,.1);}
+.app .cls-sess.on{border-color:var(--accent);box-shadow:0 0 0 2px var(--point-ring);}
 .app .cls-sess .t{font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--dim);font-weight:600;}
 .app .cls-sess .n{font-size:14px;font-weight:700;margin-top:5px;letter-spacing:-.02em;}
 .app .cls-sess .m{font-size:11.5px;color:var(--sub);margin-top:5px;}
@@ -1891,7 +1891,7 @@
   font-family:inherit;font-size:12.5px;color:var(--ink);outline:none;
   transition:border-color var(--t),box-shadow var(--t);}
 .app .exn-f input:focus,.app .exn-f select:focus{border-color:var(--accent);
-  box-shadow:0 0 0 3px rgba(60,48,52,.12);}
+  box-shadow:0 0 0 3px var(--point-ring);}
 /* hwpx 줄 — 주력이라 강조색을 쓰되 «한 줄»로 눕힌다 (예전엔 --nobg 빨강에 130px 높이였다) */
 .app .exn-hwpx{align-items:center;background:var(--accent-bg);border-color:var(--accent-line);}
 .app .exn-hwpx .exn-hi{display:flex;align-items:center;color:var(--accent);}
@@ -1928,7 +1928,7 @@
 .app .exn-q:hover{border-color:var(--accent-line);}
 /* 고치는 중인 한 장만 통째 폭을 쓴다 — 입력칸엔 폭이 필요하다 */
 .app .exn-q.editing{grid-column:1/-1;border-color:var(--accent);
-  box-shadow:0 0 0 3px rgba(60,48,52,.08);}
+  box-shadow:0 0 0 3px var(--point-ring);}
 .app .exn-qh{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-bottom:8px;}
 .app .exn-qh b{font-size:12.5px;color:var(--accent);}
 /* 단원 고르개 — 배지처럼 생겼지만 누르면 바로 바뀐다(펴지 않아도 된다).
@@ -2990,14 +2990,56 @@
 /* KPI 띠 — 테두리 대신 그림자(학생 앱 카드와 같은 깊이) */
 .app:not(.sap) .kpis{border-color:transparent;box-shadow:var(--shadow-card);border-radius:var(--r-xl);}
 
+/* ── A-2 바탕색 — 자두 옆에서 뜨던 «누런·베이지» 면을 자두 쪽으로 (관리자만 · 사용자 — 「기존 배경색상도
+   자두 색상과 어울리게 바꿀 만한 게 있으면」) ──
+   🔵 바꾼 것 셋 — ① 줄 hover(누런 #FBFAF6 → 자두 옅은 면) ② 이름 머리글자 칩(베이지 → 자두 옅은 면)
+     ③ 진행바 바탕(베이지 → 자두 옅은 면). 셋 다 «자두 선택 바로 옆»에 서서 색이 둘로 갈려 보이던 자리다.
+   ⚠ `--hover` 는 새 색이 아니라 `--point-bg` 를 흰 면에 45% 섞은 값이다(#FAEEF2 × .45 + #FFF × .55).
+   ⚠ **종이(`--paper`)는 안 바꿨다** — 학생 앱과 같은 바탕이고, 그쪽은 이미 눈으로 확인받았다.
+   ⚠ 메모(`--note`)의 노랑·상태색 바탕은 뜻이 있는 색이라 그대로다. */
+.app:not(.sap){--hover:#FDF7F9;}
+.app:not(.sap) .av{background:var(--point-bg);color:var(--point-d);}
+.app:not(.sap) .on .av{background:var(--accent);color:#fff;}
+.app:not(.sap) .bar{background:var(--point-bg);}
+
+/* ── A-2 질의응답 머리 — 이름은 한 번, 상태는 «딱지»가 아니라 한 줄 ── */
+.app .qn-back{display:none;margin:0 0 10px -6px;}
+.app .qn-who{display:flex;align-items:center;gap:11px;}
+.app .qn-who .av{width:36px;height:36px;border-radius:12px;font-size:14px;font-weight:700;flex:none;
+  display:flex;align-items:center;justify-content:center;}
+.app .qn-wt{display:flex;flex-direction:column;min-width:0;gap:1px;}
+.app .qn-wt a{font-size:16px;font-weight:800;letter-spacing:-.02em;color:var(--ink);cursor:pointer;}
+.app .qn-wt a:hover{color:var(--accent);}
+.app .qn-wt span{font-size:12px;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.app .qn-stt{display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin-top:11px;font-size:12px;font-weight:700;color:var(--no);}
+.app .qn-stt i{width:7px;height:7px;border-radius:50%;background:currentColor;flex:none;}
+.app .qn-stt.done{color:var(--ok);}
+.app .qn-stt span{font-weight:500;color:var(--dim);}
+.app .qn-stt span.late{color:var(--no);font-weight:600;}
+.app .qn-msg .h .qn-kind{font-size:12px;font-weight:700;color:var(--sub);}
+.app .qn-msg.me .h .qn-kind{color:var(--accent);}
+/* 폰 — 목록과 한 질문을 «넘겨» 본다 (`qnaPicked` 가 `.picked` 를 단다). 넓은 화면은 둘 다 보인다. */
+@media (max-width:560px){
+  .app:not(.sap) .qn-back{display:inline-flex;}
+  .app:not(.sap) .qn-screen:not(.picked) .qn-doc{display:none;}
+  .app:not(.sap) .qn-screen.picked .qn-list{display:none;}
+  /* 목록만 보일 때는 200px 로 묶을 까닭이 없다(M-2f 는 목록 «밑에» 본문이 있어서 묶었다). */
+  .app:not(.sap) .qn-lbody{max-height:none;}
+}
+
 /* ── 홈 › 오늘 (대시보드) ── `dsh-` 는 index.html·ds.css 어디에도 없던 이름이다(찾아봤다) */
-.app .dsh{max-width:1180px;}
 .app .dsh-top{margin-bottom:16px;}
 .app .dsh-kpis{margin-bottom:16px;}
 .app .dsh-kpi{text-decoration:none;color:inherit;cursor:pointer;transition:background-color var(--t);}
 .app .dsh-kpi:hover{background:var(--hover);}
 .app .dsh-kpi .v.hot{color:var(--accent);}
-.app .dsh-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;align-items:start;}
+.app .dsh-grid{display:grid;gap:16px;align-items:start;
+  grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-rows:auto 1fr;
+  grid-template-areas:"a b" "c b";}
+.app .dsh-a{grid-area:a;} .app .dsh-b{grid-area:b;} .app .dsh-c{grid-area:c;}
+/* 넓은 화면 — 셋이 나란히. 오른쪽이 비어 남던 자리를 «날짜» 칸이 쓴다 (A-2). */
+@media (min-width:1280px){ .app .dsh-grid{grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:auto;
+  grid-template-areas:"a b c";} }
 .app .dsh-col{display:flex;flex-direction:column;gap:16px;min-width:0;}
 .app .dsh-card{background:var(--card);border-radius:var(--r-xl);box-shadow:var(--shadow-card);padding:4px 6px 6px;}
 .app .dsh-h{display:flex;align-items:center;gap:7px;padding:11px 10px 7px;}
@@ -3026,7 +3068,8 @@
 .app .dsh-dd.on{background:var(--point);color:#fff;}
 .app .dsh-empty{padding:12px 10px 14px;font-size:12.5px;color:var(--dim);line-height:1.6;}
 /* ⚠ 사용자 주력 판은 125% 확대(CSS 864)다 — 거기서도 두 칸이라야 «먼저 볼 학생»이 첫 화면에 든다. */
-@media (max-width:760px){ .app .dsh-grid{grid-template-columns:minmax(0,1fr);} }
+@media (max-width:760px){ .app .dsh-grid{grid-template-columns:minmax(0,1fr);grid-template-rows:auto;
+  grid-template-areas:"a" "b" "c";} }
 
 /* ── 폰(≤560) — 상단 메뉴가 «하단 탭바»로 내려간다 (A-1) ──
    학생 앱과 같은 자리·같은 어법이다. 여섯 칸이라 가운데 떠 있는 원은 안 쓴다(학생 앱은 다섯이라 된다).
@@ -3956,7 +3999,7 @@
 .app .sr-num{width:62px;height:30px;border:1px solid var(--line);border-radius:var(--r-sm);
   background:var(--paper);padding:0 6px;font-size:12.5px;color:var(--ink);text-align:right;
   outline:none;transition:border-color var(--t),box-shadow var(--t);}
-.app .sr-num:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(60,48,52,.12);}
+.app .sr-num:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--point-ring);}
 .app .sr-u{min-width:60px;}
 .app .sr-pre{margin-left:6px;}
 .app .sr-pre:first-child{margin-left:0;}
@@ -3981,7 +4024,7 @@
   padding:8px 10px;font-family:inherit;font-size:12.5px;color:var(--ink);outline:none;
   transition:border-color var(--t),box-shadow var(--t);}
 .app .fm-field input:focus,.app .fm-field select:focus,.app .fm-field textarea:focus{
-  border-color:var(--accent);box-shadow:0 0 0 3px rgba(60,48,52,.12);}
+  border-color:var(--accent);box-shadow:0 0 0 3px var(--point-ring);}
 .app .fm-field textarea{min-height:78px;resize:vertical;}
 .app .fm-field input[type=file]{padding:6px;background:var(--card);}
 
@@ -4062,7 +4105,7 @@
 .lo-in{width:100%;height:48px;border:1px solid var(--line);border-radius:var(--r-md);
   background:var(--card);padding:0 14px;font-family:inherit;font-size:14.5px;color:var(--ink);
   outline:none;transition:border-color var(--t),box-shadow var(--t);}
-.lo-in:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(60,48,52,.12);}
+.lo-in:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--point-ring);}
 .lo-in::placeholder{color:var(--dim);}
 .lo-f+.lo-f{margin-top:16px;}
 .lo-go{display:flex;align-items:center;justify-content:center;width:100%;height:50px;
@@ -9344,11 +9387,11 @@ function teacherNotifItems(){
      unseen: DATA.problemBank.filter(b=>b.status!=='approved').length,
      keepUnseen:true, gotoCode:"goTeacherTab('review');"},
     {key:'consult', label:'새 상담 신청', count: DATA.consults.length, gotoCode:"goTeacherTab('consults');"},
-    {key:'qna', label:'새 질문', count: DATA.qnas.length + (DATA.qnaFollowups||[]).length, gotoCode:"state.teacherTab='qna';"},
-    {key:'clinic', label:'새 클리닉 신청', count: DATA.clinics.length, gotoCode:"state.teacherTab='clinic';"},
+    {key:'qna', label:'새 질문', count: DATA.qnas.length + (DATA.qnaFollowups||[]).length, gotoCode:"goTeacherTab('qna');"},
+    {key:'clinic', label:'새 클리닉 신청', count: DATA.clinics.length, gotoCode:"goTeacherTab('clinic');"},
     /* 누르면 채팅 탭으로만 간다. «읽음»은 그 학생 대화를 실제로 열 때 찍힌다 —
        벨을 눌렀다고 읽은 것이 아니다. */
-    {key:'chat', label:'새 채팅', count:0, unseen:chatN, keepUnseen:true, gotoCode:"state.teacherTab='chat';"},
+    {key:'chat', label:'새 채팅', count:0, unseen:chatN, keepUnseen:true, gotoCode:"goTeacherTab('chat');"},
   ];
 }
 function studentNotifItems(sid){
@@ -10770,8 +10813,7 @@ function qnaHasAnyAnswer(q){ return !!(q && (q.answer || qnaMoreAnswersOf(q).len
 function qnaAnswerBubblesHTML(q){
   const 하나 = (text, imgs, at, 더) => `
           <div class="qn-msg me">
-            <div class="h"><span class="av" style="width:24px;height:24px;font-size:11px;background:var(--accent);color:#fff;">김</span>
-              <b>김하현T</b>${더 ? `<span class="badge ok" style="margin-left:2px;">답변 추가</span>` : ''}<span class="t">${escHtml(at||'')}</span></div>
+            <div class="h"><b class="qn-kind">${더 ? '덧붙인 답변' : '내 답변'}</b><span class="t">${escHtml(at||'')}</span></div>
             <div class="x">${escHtml(text)}</div>
             ${qnaImgsHTML(imgs, 'qn-img')}
           </div>`;
@@ -18447,6 +18489,7 @@ async function goTeacherTab(tab, hubTab){
   if(state.teacherTab==='session' && tab!=='session' && !(await sessionAutoSave())) return;
   state.teacherTab = tab;
   state.studentDetailId = null;
+  state.qnaPicked = false;   /* 폰의 질의응답은 다시 들어오면 «목록»부터 (A-2) */
   if(hubTab) state.classHubTab = hubTab;
   /* 🔴 **여기서 `classHubId`를 비우지 않는다** (2026-09-01 · C-13에서 뺐다).
      예전에는 상단 「반」을 누를 때마다 첫 반으로 되돌렸다 — 그때는 반을 고르는 자리가
@@ -18603,7 +18646,7 @@ function teacherDashHTML(){
   const red = live.filter(r=>r.sg.grade==='r').length, yel = live.filter(r=>r.sg.grade==='y').length;
   const sigBody = loading ? empty('기록 불러오는 중…')
     : live.length === 0 ? empty('지금 신호가 잡힌 학생이 없습니다.')
-    : live.slice(0, 6).map(r=>`<a class="dsh-row" onclick="dashOpenStudent('${r.s.studentId}')">
+    : live.slice(0, 8).map(r=>`<a class="dsh-row" onclick="dashOpenStudent('${r.s.studentId}')">
         <span class="rk ${r.sg.grade}"></span>
         <span class="dsh-m"><b>${escHtml(r.s.name||'')}</b><em>${escHtml(classNameOf(r.s.classId)||'')} · ${
           r.sg.rules.map(x=>x.name).join(' · ')}</em></span>
@@ -18653,13 +18696,18 @@ function teacherDashHTML(){
       ${kpi('위험 · 주의', loading ? '…' : `<span class="${red ? 'down' : ''}">${red}</span><s> · </s><span style="${yel ? 'color:var(--late)' : ''}">${yel}</span>`, ' 명', "goTeacherTab('signals')")}
       ${kpi('7일 안 마감', due.length, ' 과제', "document.getElementById('dsh-due').scrollIntoView({behavior:'smooth',block:'center'})")}
     </div>
+    ${/* 🔵 **세 칸** (A-2 · 사용자 — 「컴퓨터로 열었을 때 오른쪽 공간이 너무 많이 남고 비효율적」).
+         넓은 화면(≥1280)은 셋이 나란히: 오늘(수업·할 일) | 사람(신호) | 날짜(마감·시험).
+         760~1279 는 두 칸 — 셋째 칸이 첫째 칸 «밑으로» 붙는다(grid-area · 신호 목록이 길어 오른쪽이 늘 더 길다). 760 아래는 한 칸. */''}
     <div class="dsh-grid">
-      <div class="dsh-col">
+      <div class="dsh-col dsh-a">
         ${sec('오늘 수업', sessions.length || '', sessBody, ['수업으로', "goTeacherTab('session')"])}
         <div id="dsh-todo">${sec('처리할 일', todoN || '', todoBody)}</div>
       </div>
-      <div class="dsh-col">
+      <div class="dsh-col dsh-b">
         ${sec('먼저 볼 학생', live.length || '', sigBody, ['신호 전체', "goTeacherTab('signals')"])}
+      </div>
+      <div class="dsh-col dsh-c">
         <div id="dsh-due">${sec('7일 안 마감 과제', due.length || '', dueBody)}</div>
         ${sec('다가오는 시험', exams.length || '', examBody, ['시험 일정', "state.settingsSubTab='examrange'; state.examSubTab='range'; goTeacherTab('settings')"])}
       </div>
@@ -25025,7 +25073,11 @@ function teacherQnaHTML(){
 
   /* 목록 항목은 ds.css의 «처리 큐» 부품(`.qitem`)을 그대로 쓴다 — 시안 11이 쓰는 것과 같은 것이다.
      여기서 새로 그리면 오답 검토의 큐와 미세하게 어긋난다. */
-  const item = q => `<div class="qitem ${cur && q.id===cur.id ? 'on':''}" onclick="state.qnaSelectedId='${q.id}'; render()">
+  /* 🔵 **폰에서는 «목록 → 한 질문»으로 넘겨 본다** (2026-09-24 · A-2 · 사용자 — 「대기 · 답변대기 · 질문까지
+       같은 학생 이름이 세 번 … 또 다른 질의응답인 것처럼 구분도 안 되고 헷갈려」).
+     목록 위·본문 아래로 쌓으면 목록의 줄과 본문의 머리가 «두 질문»처럼 읽혔다. 누르면(`qnaPicked`) 목록이 접히고
+     그 질문만 보이며, 「← 질문 목록」으로 돌아간다. ⚠ 넓은 화면은 예전처럼 둘 다 보인다(CSS 가 가른다). */
+  const item = q => `<div class="qitem ${cur && q.id===cur.id ? 'on':''}" onclick="state.qnaSelectedId='${q.id}'; state.qnaPicked=true; render(); window.scrollTo(0,0)">
     <div class="h">
       <span class="badge ${qnaHasOpen(q)?'no':'ok'}">${qnaHasOpen(q) ? (q.answer ? '추가 질문' : '대기') : '완료'}</span>
       <span class="who">${escHtml(q.studentName||'')}</span>
@@ -25042,25 +25094,28 @@ function teacherQnaHTML(){
         const 꼬리 = qnaThreadTail(cur);      /* 답 칸이 붙을 «맨 끝» — 칸은 이것 하나뿐이다 */
         /* ⚠ 「N시간째 미답변」은 만들 수 없다 — 질문에 날짜만 남고 시각이 없다. 날짜로 셀 수 있는 만큼만 말한다. */
         const waited = !cur.answer && cur.date ? Math.max(0, Math.round((Date.parse(todayStr()) - Date.parse(cur.date))/86400000)) : null;
+        /* 🔵 **학생 이름은 머리에 «한 번»만** (A-2) — 예전에는 목록 줄 · 머리의 붉은 딱지 줄 · 머리의 이름 줄 ·
+             말풍선 머리까지 네 번 섰고, 딱지 둘(목록 「대기」·머리 「답변 대기」)이 따로 떠서 두 질문처럼 보였다.
+           ⇒ 머리 = 누구(이름·학교·반) + 상태 한 줄(점 + 글). 말풍선은 «누가»가 아니라 «무엇»(질문 · 추가 질문)만 말한다. */
+        const 상태 = qnaHasOpen(cur) ? (cur.answer ? '추가 질문에 답할 차례' : '답변 대기') : '답변 완료';
         return `
         <div class="qn-dh">
-          <div class="row" style="gap:8px;">
-            <span class="badge ${qnaHasOpen(cur)?'no':'ok'}">${qnaHasOpen(cur) ? (cur.answer ? '추가 질문 대기' : '답변 대기') : '답변 완료'}</span>
-            ${waited!==null ? `<span style="font-size:11.5px;color:${waited>=2?'var(--no)':'var(--dim)'};font-weight:${waited>=2?'600':'400'};">${
-              waited===0 ? '오늘 들어온 질문' : `${waited}일째 기다리는 중`}</span>` : ''}
+          <button class="btn q sm qn-back" onclick="state.qnaPicked=false; render(); window.scrollTo(0,0)">${iconSvg('chevL',14)} 질문 목록</button>
+          <div class="qn-who">
+            <span class="av">${escHtml((cur.studentName||'?').slice(0,1))}</span>
+            <div class="qn-wt">
+              <a onclick="rosterOpen('${cur.studentId}','info')" title="학생 상세">${escHtml(cur.studentName||'')}</a>
+              <span>${stu ? `${escHtml(stu.school||'—')} ${escHtml(stu.grade||'')} · ${escHtml(classNameOf(stu.classId))}` : ''}</span>
+            </div>
             <span class="spacer"></span>
             <button class="btn q sm" onclick="deleteQna('${cur.id}')">삭제</button>
           </div>
-          <div class="t-meta" style="margin-top:10px;">
-            <a onclick="rosterOpen('${cur.studentId}','info')" style="color:var(--accent);font-weight:600;cursor:pointer;">${escHtml(cur.studentName||'')}</a>
-            ${stu ? `<s>·</s>${escHtml(stu.school||'—')} ${escHtml(stu.grade||'')}<s>·</s>${escHtml(classNameOf(stu.classId))}` : ''}
-            <s>·</s><span class="mono">${escHtml(cur.date||'')}</span>
-          </div>
+          <div class="qn-stt ${qnaHasOpen(cur) ? 'open' : 'done'}"><i></i>${상태}${
+            waited!==null ? `<span class="${waited>=2 ? 'late' : ''}"> · ${waited===0 ? '오늘 들어온 질문' : `${waited}일째 기다리는 중`}</span>` : ''}</div>
         </div>
         <div class="qn-thread">
           <div class="qn-msg">
-            <div class="h"><span class="av" style="width:24px;height:24px;font-size:11px;">${escHtml((cur.studentName||'?').slice(0,1))}</span>
-              <b>${escHtml(cur.studentName||'')}</b><span class="t">${escHtml(cur.date||'')}</span></div>
+            <div class="h"><b class="qn-kind">질문</b><span class="t">${escHtml(cur.date||'')}</span></div>
             <div class="x">${escHtml(cur.question)}</div>
             ${qnaImgsHTML(qnaImgList(cur), 'qn-img')}
           </div>
@@ -25068,8 +25123,7 @@ function teacherQnaHTML(){
           ${/* 추가 질문 — 학생이 답을 보고 또 물은 것. 꼴이 같아 같은 말풍선을 쓴다. 답이 없는 것에는 답 칸이 바로 붙는다. */''}
           ${qnaFollowupsOf(cur.id).map(f => `
           <div class="qn-msg">
-            <div class="h"><span class="av" style="width:24px;height:24px;font-size:11px;">${escHtml((f.studentName||'?').slice(0,1))}</span>
-              <b>${escHtml(f.studentName||'')}</b><span class="badge late" style="margin-left:2px;">추가 질문</span><span class="t">${escHtml(f.date||'')}</span></div>
+            <div class="h"><b class="qn-kind">추가 질문</b><span class="t">${escHtml(f.date||'')}</span></div>
             <div class="x">${escHtml(f.question)}</div>
             ${qnaImgsHTML(qnaImgList(f), 'qn-img')}
           </div>
@@ -25086,7 +25140,7 @@ function teacherQnaHTML(){
         ${qnaAnswerFormHTML(꼬리)}`;
       })();
 
-  return `<div class="qn-screen">
+  return `<div class="qn-screen ${state.qnaPicked && cur ? 'picked' : ''}">
     <aside class="qn-list">
       <div class="qn-lh">
         <a class="pill ${f==='open'?'on':''}" onclick="state.qnaFilter='open'; render()">대기 <b>${open.length}</b></a>

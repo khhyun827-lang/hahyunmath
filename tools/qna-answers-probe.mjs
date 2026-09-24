@@ -72,7 +72,7 @@ const 봄 = (이름, 참인가) => { if(!참인가) 틀린것++; console.log((�
   봄('🔴 답이 있어도 강사 칸이 남는다', 칸.includes('<textarea id="answer-qn2"'));
   봄('칸 이름이 「답변 더 달기」', 칸.includes('답변 더 달기'));
   봄('말풍선 하나', (H.qnaAnswerBubblesHTML(q).match(/qn-msg me/g) || []).length === 1);
-  봄('아직 「답변 추가」 딱지는 없다', !H.qnaAnswerBubblesHTML(q).includes('답변 추가'));
+  봄('아직 「덧붙인 답변」 머리는 없다', !H.qnaAnswerBubblesHTML(q).includes('덧붙인 답변'));
   봄('학생에게 답이 보인다', H.qnaAnswerNotesHTML(q).includes('이렇게 푸는 거예요'));
 }
 
@@ -84,7 +84,7 @@ const 봄 = (이름, 참인가) => { if(!참인가) 틀린것++; console.log((�
   const 풍선 = H.qnaAnswerBubblesHTML(q), 학생 = H.qnaAnswerNotesHTML(q);
   console.log('③ 답이 셋');
   봄('강사 말풍선 셋', (풍선.match(/qn-msg me/g) || []).length === 3);
-  봄('그중 둘에 「답변 추가」 딱지', (풍선.match(/답변 추가/g) || []).length === 2);
+  봄('그중 둘에 「덧붙인 답변」 머리', (풍선.match(/덧붙인 답변/g) || []).length === 2);
   봄('차례가 첫 답 → 덧붙이면 → 그리고 또',
      풍선.indexOf('첫 답') < 풍선.indexOf('덧붙이면') && 풍선.indexOf('덧붙이면') < 풍선.indexOf('그리고 또'));
   봄('학생도 셋 다 본다', ['첫 답','덧붙이면','그리고 또'].every(s => 학생.includes(s)));
