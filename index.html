@@ -2955,6 +2955,104 @@
 .app:not(.sap) .chub-mbar > .btn.q.sm{min-width:38px;}   /* (38−2) + 4 + 4 = 44 */
 
 /* ============================================================
+   관리자 자두판 (2026-09-24 · A-1 · 사용자 요청 — 「학생 페이지의 새 디자인 시스템을 기준으로,
+   관리자의 작업 효율을 우선하면서 같은 디자인 언어를」)
+   🔵 **학생 앱(S-1)과 같은 한 수로 입힌다** — `--accent` 계열을 자두로 덮으면 주요 단추·선택된 줄의
+     왼쪽 바·켜진 탭·진행바·포커스·「지금 살아 있는」 딱지가 **전부 따라온다.** 화면 코드는 안 건드린다.
+     09-14 에 이 경계(`.app.sap` 안에서만)를 일부러 세웠는데, 사용자가 이번에 관리자도 같은 언어로 가자고 정했다.
+   🔴 **상태색은 안 덮는다** — 출석·지각·조퇴·결석은 뜻이 있는 색이다(학생 앱과 같은 규칙).
+   ⚠ 09-14 노트가 걱정한 것 — «와인은 결석 빨강과 가까워 표에서 선택과 위험이 섞인다». 자두(342°)는
+     결석(5°)과 색상이 갈리게 고른 색이라 그 걱정을 비켜 간다. 그래도 선택된 줄은 **왼쪽 3px 바**가 말하고
+     바탕은 옅게만 깐다 — 결석은 늘 «글자색 + 딱지»로 말하므로 둘이 겹칠 자리가 없다(찍어서 봤다).
+   ⚠ 밀도는 관리자 것을 지킨다 — 본문 13px · 표 줄 높이 · 여백은 그대로. 학생 앱의 큰 카드·22px 반경은 안 가져온다.
+   ============================================================ */
+.app:not(.sap){
+  --accent:var(--point); --accent-d:var(--point-d);
+  --accent-bg:var(--point-bg); --accent-line:var(--point-line);
+  /* 깊이는 학생 앱과 같은 겹친 그림자 — 같은 수를 쓴다(S-1 ⑨-c). */
+  --shadow-card:0 0 0 1px rgba(0,0,0,.06), 0 1px 2px -1px rgba(0,0,0,.06), 0 2px 4px 0 rgba(0,0,0,.04);
+}
+/* 제목 — 학생 앱이 09-14 에 명조를 벗고 «굵기»로 섰다. 두 앱의 머리가 같은 목소리로 말한다. */
+.app:not(.sap) .t-title{font-family:'Pretendard',-apple-system,sans-serif;font-weight:800;font-size:23px;letter-spacing:-.035em;}
+/* 켜진 필터 알약 — 검정 → 자두 (학생 앱 `.pill.on` 과 같다) */
+.app:not(.sap) .pill.on{background:var(--accent);border-color:var(--accent);}
+/* 주요 단추는 한 화면에 하나 — 색을 몰아주고 살짝 띄운다(학생 앱 ③과 같은 결, 크기는 관리자 것) */
+.app:not(.sap) .btn.p{box-shadow:0 6px 14px -10px rgba(168,62,94,.9);}
+/* 포커스 고리 — 박혀 있던 차콜 12% 를 자두 고리 토큰으로 */
+.app:not(.sap) .field:focus-within{box-shadow:0 0 0 3px var(--point-ring);}
+.app:not(.sap) .card.sel{box-shadow:0 0 0 2px var(--point-ring);}
+.app:not(.sap) .topbar .tnav a i{display:none;}
+/* 서브탭 묶음 사이의 가는 선 (A-1 · `TEACHER_SUBNAV` 의 null) */
+.app .subnav .sn-sep{flex:none;align-self:center;width:1px;height:14px;background:var(--line);margin:0 8px;}
+/* 설정 왼쪽 목록의 묶음 머리 */
+.app .ex-nav .st-grp{margin:16px 0 6px;padding-left:10px;}
+.app .ex-nav .st-grp:first-child{margin-top:0;}
+/* KPI 띠 — 테두리 대신 그림자(학생 앱 카드와 같은 깊이) */
+.app:not(.sap) .kpis{border-color:transparent;box-shadow:var(--shadow-card);border-radius:var(--r-xl);}
+
+/* ── 홈 › 오늘 (대시보드) ── `dsh-` 는 index.html·ds.css 어디에도 없던 이름이다(찾아봤다) */
+.app .dsh{max-width:1180px;}
+.app .dsh-top{margin-bottom:16px;}
+.app .dsh-kpis{margin-bottom:16px;}
+.app .dsh-kpi{text-decoration:none;color:inherit;cursor:pointer;transition:background-color var(--t);}
+.app .dsh-kpi:hover{background:var(--hover);}
+.app .dsh-kpi .v.hot{color:var(--accent);}
+.app .dsh-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;align-items:start;}
+.app .dsh-col{display:flex;flex-direction:column;gap:16px;min-width:0;}
+.app .dsh-card{background:var(--card);border-radius:var(--r-xl);box-shadow:var(--shadow-card);padding:4px 6px 6px;}
+.app .dsh-h{display:flex;align-items:center;gap:7px;padding:11px 10px 7px;}
+.app .dsh-h b{font-size:14px;font-weight:700;letter-spacing:-.015em;}
+.app .dsh-n{font-size:11px;font-weight:700;min-width:20px;padding:1px 7px;border-radius:999px;
+  background:var(--point);color:#fff;text-align:center;line-height:1.6;}
+.app .dsh-more{margin-left:auto;display:inline-flex;align-items:center;gap:2px;font-size:12px;color:var(--sub);
+  cursor:pointer;padding:4px 6px;border-radius:var(--r-sm);}
+.app .dsh-more:hover{background:var(--hover);color:var(--accent);}
+.app .dsh-row{display:flex;align-items:center;gap:11px;min-height:44px;padding:8px 10px;border-radius:var(--r-sm);
+  color:inherit;text-decoration:none;cursor:pointer;transition:background-color var(--t);}
+.app .dsh-row + .dsh-row{box-shadow:0 -1px 0 var(--line2);}
+.app .dsh-row:hover{background:var(--hover);}
+.app .dsh-t{flex:none;min-width:44px;font-size:11.5px;color:var(--sub);}
+.app .dsh-m{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px;}
+.app .dsh-m b{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.app .dsh-m em{font-style:normal;font-size:11.5px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.app .dsh-m .bar{margin-top:5px;height:4px;max-width:200px;}
+.app .dsh-ic{flex:none;width:30px;height:30px;border-radius:var(--r-sm);display:flex;align-items:center;justify-content:center;
+  background:var(--point-bg);color:var(--point);}
+.app .dsh-ic svg{vertical-align:0 !important;}
+.app .dsh-cnt{flex:none;font-size:13px;font-weight:700;}
+.app .dsh-dd{flex:none;min-width:54px;text-align:center;font-size:11px;font-weight:700;padding:3px 8px;border-radius:999px;
+  background:var(--line2);color:var(--sub);}
+.app .dsh-dd.near{background:var(--point-bg);color:var(--point);}
+.app .dsh-dd.on{background:var(--point);color:#fff;}
+.app .dsh-empty{padding:12px 10px 14px;font-size:12.5px;color:var(--dim);line-height:1.6;}
+/* ⚠ 사용자 주력 판은 125% 확대(CSS 864)다 — 거기서도 두 칸이라야 «먼저 볼 학생»이 첫 화면에 든다. */
+@media (max-width:760px){ .app .dsh-grid{grid-template-columns:minmax(0,1fr);} }
+
+/* ── 폰(≤560) — 상단 메뉴가 «하단 탭바»로 내려간다 (A-1) ──
+   학생 앱과 같은 자리·같은 어법이다. 여섯 칸이라 가운데 떠 있는 원은 안 쓴다(학생 앱은 다섯이라 된다).
+   🔴 **상단바 높이는 그대로다** — `.subnav{top:52px}` 와 `calc(100vh - 92px)` 들이 그 수를 박아 쓴다.
+     메뉴가 빠진 자리엔 브랜드가 도로 선다(그 자리를 메뉴에 내주려고 접었던 것이다).
+   ⚠ 바닥에 고정된 `.actbar`(수업·검토 등의 확정 단추 줄)는 탭바 «위»로 올린다 — 안 올리면 둘이 겹친다.
+   ⚠ `.tnav` 는 강사 셸에만 있다 — 조교 셸(`.as`)은 메뉴가 없어 그대로다. */
+@media (max-width:560px){
+  .app:not(.sap) .topbar nav.tnav{position:fixed;left:0;right:0;bottom:0;z-index:30;margin:0;
+    height:calc(58px + env(safe-area-inset-bottom));padding:0 4px env(safe-area-inset-bottom);
+    display:flex;gap:0;overflow:visible;background:var(--card);
+    border-top:1px solid var(--line);box-shadow:0 -8px 20px -16px rgba(0,0,0,.35);}
+  .app:not(.sap) .topbar .tnav a{flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:2px;padding:0;border-radius:0;background:none;font-size:10.5px;font-weight:600;color:var(--dim);}
+  .app:not(.sap) .topbar .tnav a i{display:flex;align-items:center;justify-content:center;width:46px;height:28px;border-radius:14px;
+    transition:background-color var(--t),color var(--t);}
+  .app:not(.sap) .topbar .tnav a i svg{vertical-align:0 !important;}
+  .app:not(.sap) .topbar .tnav a.on{background:none;color:var(--point);font-weight:800;}
+  .app:not(.sap) .topbar .tnav a.on i{background:var(--point-bg);}
+  .app:not(.sap) .topbar:has(.tnav) .bm{display:flex;}
+  .app:not(.sap):has(.tnav) .body{padding-bottom:84px;}
+  .app:not(.sap):has(.tnav) .actbar{bottom:calc(58px + env(safe-area-inset-bottom));}
+  body:has(.tnav) #app-toast .tst{bottom:80px;}
+}
+
+/* ============================================================
    ⑨ 다듬기 — 학생 앱 (2026-09-23 · P-1 · 사용자 요청)
    두 스킬을 잣대로 삼았다: `make-interfaces-feel-better`(Jakub Krehel) · `emil-design-eng`(Emil Kowalski).
    ⚠ **전부 `.app.sap` 아래**다 — 강사 화면과 관리자의 폰 미리보기는 한 픽셀도 안 바뀐다.
@@ -6222,9 +6320,9 @@ let state = {
   loginError: '',
   currentUser: null,        // {type:'student', studentId, name} | {type:'teacher'}
   studentTab: 'home',
-  /* 🔵 **관리자의 첫 화면은 「반 › 학생」이다** (2026-09-01 · C-13 · 사용자가 정했다).
-     예전 'home'은 상단바에 없는 값이라 «신호»로 새고 있었다. 이제 자리가 분명하다. */
-  teacherTab: 'classhub',
+  /* 🔵 **관리자의 첫 화면은 「홈 › 오늘」(대시보드)이다** (2026-09-24 · A-1 · 관리자 새단장).
+     그 전(C-13)에는 「반 › 학생」이었다 — 오늘 수업·처리할 일·위험 학생·시험을 보려면 네 곳을 돌아야 했다. */
+  teacherTab: 'dash',
   settingsSubTab: 'assistants',
   /* 설정 > 학생 — 계정 목록에서 «지금 펴 놓은 학생» 하나와 검색어 (2026-08-26).
      ⚠ 하나만 두는 이유는 `info-*` id가 화면에 하나뿐이어야 하기 때문이다 → studentAccountFormHTML */
@@ -9245,7 +9343,7 @@ function teacherNotifItems(){
     {key:'review', label:'오답 문항 검토', count:0,
      unseen: DATA.problemBank.filter(b=>b.status!=='approved').length,
      keepUnseen:true, gotoCode:"goTeacherTab('review');"},
-    {key:'consult', label:'새 상담 신청', count: DATA.consults.length, gotoCode:"state.teacherTab='settings'; state.settingsSubTab='consults';"},
+    {key:'consult', label:'새 상담 신청', count: DATA.consults.length, gotoCode:"goTeacherTab('consults');"},
     {key:'qna', label:'새 질문', count: DATA.qnas.length + (DATA.qnaFollowups||[]).length, gotoCode:"state.teacherTab='qna';"},
     {key:'clinic', label:'새 클리닉 신청', count: DATA.clinics.length, gotoCode:"state.teacherTab='clinic';"},
     /* 누르면 채팅 탭으로만 간다. «읽음»은 그 학생 대화를 실제로 열 때 찍힌다 —
@@ -14130,7 +14228,7 @@ function homeHTML(){
       <span class="l-sp"></span>
       ${cu
         ? `<button class="l-btn l-sm l-ghost" onclick="${
-             cu.type==='teacher' ? "state.teacherTab='classhub'; state.classHubTab='students';"
+             cu.type==='teacher' ? "state.teacherTab='dash';"
              : cu.type==='assistant' ? "state.assistantTab='students';"
              : "state.studentTab='home';"} goto('${
              cu.type==='teacher' ? 'teacher' : cu.type==='assistant' ? 'assistant' : 'student'}')">${
@@ -18266,13 +18364,18 @@ function assistantRosterHTML(cu){
    실제로 사용자가 그것을 짚었다 — 「**반-학생탭이 검색창이 명단탭의 검색창이랑 이어지는 것 같아**」.
    ⚠ **순서도 사용자가 정했다** — 「반-수업-오답-소통-신호-설정」.
      «반»이 첫머리인 것은 로그인 첫 화면이 그리로 가기 때문이다(→ `teacherHTML`). */
+/* 🔵 **관리자 새단장 (2026-09-24 · A-1 · 사용자 요청 — 「관리자용 업무 시스템 자체를 한 단계 더 정리」)**.
+   「홈」이 맨 앞에 섰다 — 오늘 수업·처리할 일·신호·마감·시험을 한 화면에서 본다(`teacherDashHTML`).
+   「신호」는 상단에서 내려와 **홈의 둘째 갈래**가 됐다 — 대시보드가 그 요약을 늘 보여 주므로
+   상단 자리를 따로 차지할 까닭이 없다. 차례는 하루 흐름이다: 파악(홈) → 오늘 수업 → 관리.
+   셋째 칸은 폰 하단 탭바의 아이콘이다(넓은 화면에서는 안 보인다). */
 const TEACHER_NAV = [
-  ['반',   'classhub'],
-  ['수업', 'session'],
-  ['오답', 'review'],
-  ['소통', 'clinic'],
-  ['신호', 'signals'],
-  ['설정', 'settings']
+  ['홈',   'dash',     'home'],
+  ['수업', 'session',  'checklist'],
+  ['반',   'classhub', 'users'],
+  ['오답', 'review',   'clipboard'],
+  ['소통', 'clinic',   'messageCircle'],
+  ['설정', 'settings', 'settings']
 ];
 
 /* 서브탭 — [라벨, 탭, 반 관리 내부탭?]
@@ -18282,18 +18385,29 @@ const TEACHER_NAV = [
      ② 09-01(C-12) 반 안에 갇히니 **학교별로 훑을 수가 없었다**. 고르개를 살렸다
      ③ 09-01(C-13) **「명단」 탭을 없애고 이 자리 하나만 남겼다.** 문이 둘이면 검색칸이 샌다
    ⚠ **「학생」이 맨 앞인 것은 로그인 첫 화면이기 때문이다** (→ `state.classHubTab` 기본값). */
+/* 🔵 **`null` 은 묶음 사이의 가는 선이다** (2026-09-24 · A-1). 반의 열 갈래가 한 줄에 평평하게 서 있어
+     «기록을 넣는 것»과 «내보내는 것»이 섞여 읽혔다. 화면은 그대로 두고 **넷으로 묶어 보이게만** 한다 —
+     학생 | 출결·성적·과제(기록) | 진도·수업 기록·상담 기록(수업) | 영상·자료·데일리퀴즈(내보내기).
+   ⚠ 순서를 바꾼 것은 «상담»(기록 묶음 → 수업 묶음)뿐이고, 탭 id 는 하나도 안 바뀌었다(주소·알림 링크가 산다).
+   🔵 「상담」은 「상담 기록」이 됐다 — 소통의 「상담 신청」(홈페이지로 들어오는 새 상담)과 같은 말이었다. */
 const TEACHER_SUBNAV = {
+  '홈': [
+    ['오늘', 'dash'], ['신호', 'signals']
+  ],
   '반': [
     ['학생',       'classhub', 'students'],
+    null,
     ['출결',       'classhub', 'sessions'],
     ['성적',       'classhub', 'scores'],
     ['과제',       'classhub', 'homework'],
-    ['상담',       'classhub', 'consult'],
-    ['수업 기록',  'classhub', 'log'],
+    null,
     ['진도',       'classhub', 'progress'],
-    ['데일리퀴즈', 'classhub', 'quiz'],
+    ['수업 기록',  'classhub', 'log'],
+    ['상담 기록',  'classhub', 'consult'],
+    null,
     ['영상',       'classhub', 'video'],
-    ['자료',       'classhub', 'material']
+    ['자료',       'classhub', 'material'],
+    ['데일리퀴즈', 'classhub', 'quiz']
   ],
   /* 「제출 현황」은 시험지 화면의 우측 칸으로 흡수했다 (시안 07). 서브탭에서 뺐다. */
   '오답': [
@@ -18301,18 +18415,20 @@ const TEACHER_SUBNAV = {
   ],
   /* 「출석 도장」이 여기 있는 이유 — «신호»는 지표를 세우는 화면이고 «명단»은 평가하는
      화면이라, 놀이를 그 옆에 두면 놀이가 그 성격을 물려받는다. 소통이 제일 안 다치는 자리다. */
+  /* 🔵 「상담 신청」이 설정에서 여기로 왔다 (2026-09-24 · A-1) — 홈페이지로 들어온 새 상담은 «설정»이 아니라
+       답해야 할 «소통»이다. 벨도 여기로 보낸다. 화면은 그대로다(`teacherSettingsConsultsHTML`). */
   '소통': [
     ['클리닉', 'clinic'], ['공지', 'notices'],
-    ['질의응답', 'qna'], ['채팅', 'chat'], ['출석 도장', 'checkin']
+    ['질의응답', 'qna'], ['채팅', 'chat'], ['상담 신청', 'consults'], null, ['출석 도장', 'checkin']
   ]
 };
 
 /* 탭이 어느 상위 메뉴에 속하는지.
-   ⚠ `roster`·`home`은 여기 없다 — 둘 다 「반 › 학생」으로 옮겨졌고,
-     옛 세션·북마크가 들고 있으면 `teacherHTML`이 첫 줄에서 갈아 끼운다. */
+   ⚠ `roster`는 여기 없다 — 「반 › 학생」으로 옮겨졌고, 옛 세션·북마크가 들고 있으면
+     `teacherHTML`이 첫 줄에서 갈아 끼운다. 옛 `home`(C-13 전의 첫 화면)은 이제 대시보드(`dash`)로 간다. */
 const TEACHER_TAB_SECTION = {
-  signals:'신호',
-  classhub:'반', session:'수업',
+  dash:'홈', signals:'홈',
+  classhub:'반', session:'수업', consults:'소통',
   /* ⚠ 여기와 TEACHER_SUBNAV 는 **둘 다** 고쳐야 한다 — 노트가 적어 둔 그것이다.
      itemcode 를 서브탭에만 넣고 여기를 빠뜨렸더니 상단 메뉴가 「반」으로 잡히고
      서브탭 줄이 통째로 반의 것으로 그려졌다 (2026-09-03). */
@@ -18322,7 +18438,13 @@ const TEACHER_TAB_SECTION = {
 };
 
 
-function goTeacherTab(tab, hubTab){
+async function goTeacherTab(tab, hubTab){
+  /* 🔴 **수업을 «상단 메뉴로» 떠날 때도 저장한다** (2026-09-24 · A-1).
+     수업 안에서 날짜·반·단계를 옮기면 이미 저절로 저장됐는데(C-20·09-19), 상단 메뉴로 나가는 문만
+     열려 있어 적던 출결·점수·과제·메모가 조용히 사라졌다. 같은 함수 하나(`sessionAutoSave`)를 부른다 —
+     과제 검사에 막히면(false) 떠나지 않는다(날짜를 옮길 때와 같다).
+     ⚠ 수업을 «떠날 때만» await 한다 — 다른 탭끼리는 예전처럼 곧장(동기로) 넘어간다. */
+  if(state.teacherTab==='session' && tab!=='session' && !(await sessionAutoSave())) return;
   state.teacherTab = tab;
   state.studentDetailId = null;
   if(hubTab) state.classHubTab = hubTab;
@@ -18339,7 +18461,9 @@ function teacherTabBodyHTML(){
      기본값(반 관리)으로 떨어지므로 흡수된 곳으로 보낸다. */
   if(state.teacherTab==='submissions') state.teacherTab = 'exams';
   const t = state.teacherTab;
+  if(t==='dash')        return teacherDashHTML();
   if(t==='signals')     return teacherSignalsHTML();
+  if(t==='consults')    return teacherConsultsHTML();
   if(t==='session')     return teacherSessionHTML();
   if(t==='classhub')    return teacherClassHubHTML();
   if(t==='clinic')      return teacherClinicHTML();
@@ -18360,10 +18484,12 @@ function teacherHTML(){
      **「반 › 학생」이 받는다.** 저장된 세션·북마크(`#teacher/roster`)가 그 값을 들고 온다.
      ⚠ **여기서 한다** — 본문(`teacherTabBodyHTML`)에서 고치면 상단 메뉴는 이미
        옛 값으로 그려진 뒤라 «메뉴는 명단, 본문은 반»으로 한 판이 어긋난다. */
-  if(state.teacherTab==='roster' || state.teacherTab==='home'){
+  if(state.teacherTab==='roster'){
     state.teacherTab = 'classhub';
     state.classHubTab = 'students';
   }
+  /* 옛 `home` 은 «로그인 첫 화면»이라는 뜻이었다 — 그 자리가 이제 대시보드다 (A-1). */
+  if(state.teacherTab==='home') state.teacherTab = 'dash';
   const section = TEACHER_TAB_SECTION[state.teacherTab] || '반';
   const subs = TEACHER_SUBNAV[section];
   const subActive = s => state.teacherTab===s[1] && (!s[2] || state.classHubTab===s[2]);
@@ -18377,8 +18503,10 @@ function teacherHTML(){
   <div class="app">
     <div class="topbar">
       <div class="bm">김하현수학연구소</div>
-      <nav>${TEACHER_NAV.map(n=>
-        `<a class="${n[0]===section?'on':''}" onclick="goTeacherTab('${n[1]}')">${n[0]}</a>`
+      ${/* 🔵 폰(≤560)에서는 이 줄이 **하단 탭바**로 내려간다 — 학생 앱과 같은 어법 (A-1).
+           마크업은 하나다: 아이콘(`<i>`)은 넓은 화면에서 CSS 가 감춘다. */''}
+      <nav class="tnav">${TEACHER_NAV.map(n=>
+        `<a class="${n[0]===section?'on':''}" onclick="goTeacherTab('${n[1]}')"><i>${iconSvg(n[2],20)}</i><span>${n[0]}</span></a>`
       ).join('')}</nav>
       <div class="right">
         ${bellHTML(teacherNotifItems())}
@@ -18386,10 +18514,156 @@ function teacherHTML(){
         <button class="btn sm" onclick="logout()">로그아웃</button>
       </div>
     </div>
-    ${subs ? `<div class="subnav">${subs.map(s=>
+    ${subs ? `<div class="subnav">${subs.map(s=> !s ? '<i class="sn-sep" aria-hidden="true"></i>' :
       `<a class="${subActive(s)?'on':''}" onclick="goTeacherTab('${s[1]}'${s[2]?`,'${s[2]}'`:''})">${s[0]}</a>`
     ).join('')}</div>` : ''}
     <div class="body">${body}</div>
+  </div>`;
+}
+
+/* =================== 소통 › 상담 신청 (2026-09-24 · A-1) ===================
+   설정에 있던 그 화면을 그대로 싼다 — 머리만 이 자리의 것으로. 본문·저장·읽음 표시는 한 글자도 안 바뀌었다. */
+function teacherConsultsHTML(){
+  return `<div class="dsh">
+    <div class="rst-hrow" style="margin-bottom:16px;">
+      <h1 class="t-title">상담 신청<s>홈페이지 상담 폼으로 들어온 새 상담 · 연락한 뒤에 지웁니다</s></h1></div>
+    ${teacherSettingsConsultsHTML()}
+  </div>`;
+}
+
+/* =================== 홈 › 오늘 — 대시보드 (2026-09-24 · A-1 · 관리자 새단장) ===================
+   사용자 — 「관리자가 한눈에 상황을 파악해야 하는 정보는 대시보드 형태로」.
+   🔵 **여기는 «모으기»만 한다 — 새 셈을 하나도 만들지 않는다.** 숫자는 전부 이미 있는 함수에서 온다:
+     오늘 수업 `sessionsOn`·`sessionStatusOf` · 처리할 일 `teacherNotifItems`(벨과 «같은 목록») ·
+     신호 `signalsModel` · 마감 `hwIsDone` · 시험 `examDdayOf`.
+     그래서 대시보드의 숫자와 그 화면의 숫자가 갈릴 수 없다.
+   🔵 **모든 줄은 한 번 누르면 «그 일을 하는 자리»로 간다** — 보는 곳이 아니라 출발점이다.
+   ⚠ 벨 항목을 누르는 것은 벨에서 누르는 것과 같다(읽음 표시까지) — 두 문이 다르게 굴면 안 된다. */
+function dashNotifN(it){ return it.unseen !== undefined ? it.unseen : unseenCount(it.key, it.count); }
+function dashOpenSession(classId){
+  state.sessionDate = todayStr(); state.sessionClassId = classId; state.sessionStep = 'att';
+  sessionForgetPicks();
+  goTeacherTab('session');
+}
+function dashOpenStudent(sid){ goTeacherTab('signals'); rosterOpen(sid, 'info'); }
+function dashOpenHomework(classId){
+  if(classId) state.classHubId = classId;
+  state.classHubDate = '';
+  goTeacherTab('classhub', 'homework');
+}
+
+function teacherDashHTML(){
+  loadAllRecordsIfNeeded();
+  loadSignalMutesIfNeeded();
+  const today = todayStr();
+  const dow = WEEKDAY_LABEL[new Date(today + 'T00:00:00').getDay()];
+  const enrolled = DATA.students.filter(s=>!isWithdrawn(s)).length;
+  const loading = state.allRecordsLoading && !state.allRecordsLoaded;
+  const sec = (title, n, body, more) => `<section class="dsh-card">
+      <div class="dsh-h"><b>${title}</b>${n !== '' && n != null ? `<span class="dsh-n mono">${n}</span>` : ''}
+        ${more ? `<a class="dsh-more" onclick="${more[1]}">${more[0]} ${iconSvg('chevR',13)}</a>` : ''}</div>
+      ${body}</section>`;
+  const empty = t => `<div class="dsh-empty">${t}</div>`;
+
+  /* ── 오늘 수업 ── */
+  const sessions = sessionsOn(today);
+  let next = null;
+  if(!sessions.length) for(let k = 1; k <= 14 && !next; k++){
+    const d = shiftYmd(today, k), ss = sessionsOn(d);
+    if(ss.length) next = { d, ss };
+  }
+  const sessDone = sessions.filter(c=>sessionStatusOf(c, today).st[1] === '완료').length;
+  const sessBody = sessions.length
+    ? sessions.map(c=>{
+        const { st, detail } = sessionStatusOf(c, today);
+        return `<a class="dsh-row" onclick="dashOpenSession('${c.id}')">
+          <span class="dsh-t mono">${escHtml(sessionTimeText(c.schedule, new Date(today + 'T00:00:00').getDay()) || '—')}</span>
+          <span class="dsh-m"><b>${escHtml(c.name)}</b><em>${escHtml(detail)}</em></span>
+          <span class="badge ${st[0]}">${st[1]}</span></a>`;
+      }).join('')
+    : empty(next ? `오늘은 수업이 없습니다 · 다음 수업 <b>${escHtml(stuDayLabel(next.d))}</b> ${
+        next.ss.map(c=>escHtml(c.name)).join(', ')}` : '오늘은 수업이 없습니다.');
+
+  /* ── 처리할 일 (벨과 같은 목록) ── */
+  const todo = teacherNotifItems().filter(it=>dashNotifN(it) > 0);
+  const todoN = todo.reduce((s,it)=>s + dashNotifN(it), 0);
+  const TODO_ICON = { hwsub:'checkCircle', report:'alert', review:'clipboard', consult:'phone',
+                      qna:'messageSquare', clinic:'clinic', chat:'chat' };
+  const todoBody = todo.length
+    ? todo.map(it=>`<a class="dsh-row" onclick="${it.gotoCode} ${
+        it.keepUnseen ? '' : `markSeen('${it.key}', ${it.count});`} state.notifOpen=false; render()">
+        <span class="dsh-ic">${iconSvg(TODO_ICON[it.key] || 'bell', 16)}</span>
+        <span class="dsh-m"><b>${escHtml(it.label)}</b></span>
+        <span class="dsh-cnt mono">${dashNotifN(it)}</span></a>`).join('')
+    : empty('밀린 일이 없습니다.');
+
+  /* ── 신호 — 먼저 볼 학생 ── */
+  const live = signalsModel().rows.filter(r=>!r.mutedUntil)
+    .sort((a,b)=> 'ryg'.indexOf(a.sg.grade) - 'ryg'.indexOf(b.sg.grade) || b.sg.score - a.sg.score);
+  const red = live.filter(r=>r.sg.grade==='r').length, yel = live.filter(r=>r.sg.grade==='y').length;
+  const sigBody = loading ? empty('기록 불러오는 중…')
+    : live.length === 0 ? empty('지금 신호가 잡힌 학생이 없습니다.')
+    : live.slice(0, 6).map(r=>`<a class="dsh-row" onclick="dashOpenStudent('${r.s.studentId}')">
+        <span class="rk ${r.sg.grade}"></span>
+        <span class="dsh-m"><b>${escHtml(r.s.name||'')}</b><em>${escHtml(classNameOf(r.s.classId)||'')} · ${
+          r.sg.rules.map(x=>x.name).join(' · ')}</em></span>
+        <span class="badge ${SIGNAL_GRADE[r.sg.grade].badge}">${SIGNAL_GRADE[r.sg.grade].label}</span></a>`).join('');
+
+  /* ── 이번 주 마감 과제 ── */
+  const weekEnd = shiftYmd(today, 7);
+  const due = DATA.assignments.filter(a=>a.dueDate && a.dueDate >= today && a.dueDate <= weekEnd)
+    .sort((a,b)=>a.dueDate.localeCompare(b.dueDate));
+  const dueBody = due.length ? due.slice(0, 6).map(a=>{
+      const roster = a.classId ? classRoster(a.classId) : DATA.students.filter(s=>!isWithdrawn(s));
+      const done = roster.filter(s=>hwIsDone(state.allRecords[s.studentId] || {}, a.id)).length;
+      const pct = roster.length ? Math.round(done / roster.length * 100) : 0;
+      return `<a class="dsh-row" onclick="dashOpenHomework('${a.classId||''}')">
+        <span class="dsh-t mono">${escHtml(a.dueDate.slice(5).replace('-','/'))}</span>
+        <span class="dsh-m"><b>${escHtml(a.title||'')}</b><em>${escHtml(a.classId ? classNameOf(a.classId) : '전체 반')}</em>
+          <span class="bar"><i style="width:${pct}%"></i></span></span>
+        <span class="dsh-cnt mono">${loading ? '…' : done + '/' + roster.length}</span></a>`;
+    }).join('') : empty('7일 안에 마감되는 과제가 없습니다.');
+
+  /* ── 다가오는 시험 (학교·학년마다 한 줄) ── */
+  const seen = new Set(), exams = [];
+  DATA.students.forEach(s=>{
+    if(isWithdrawn(s)) return;
+    const k = (s.school||'') + '|' + (s.grade||'');
+    if(seen.has(k)) return; seen.add(k);
+    const dd = examDdayOf(s.school||'', s.grade||'');
+    if(dd && dd.state !== 'after') exams.push({ school: s.school||'', grade: s.grade||'', dd });
+  });
+  exams.sort((a,b)=>a.dd.days - b.dd.days || (a.dd.target||'').localeCompare(b.dd.target||''));
+  const examBody = exams.length ? exams.slice(0, 6).map(e=>`<a class="dsh-row" onclick="state.settingsSubTab='examrange'; state.examSubTab='range'; goTeacherTab('settings')">
+      <span class="dsh-dd mono ${e.dd.state === 'during' ? 'on' : e.dd.days <= 7 ? 'near' : ''}">${e.dd.state === 'during' ? '시험 중' : 'D-' + e.dd.days}</span>
+      <span class="dsh-m"><b>${escHtml(e.school || '학교 미정')} ${escHtml(gradeLabel(e.grade) || '')}</b><em>${
+        escHtml([e.dd.start && e.dd.end ? e.dd.start.slice(5) + ' ~ ' + e.dd.end.slice(5) : '', e.dd.math ? '수학 ' + e.dd.math.slice(5) : ''].filter(Boolean).join(' · '))}</em></span></a>`).join('')
+    : empty('잡힌 시험 일정이 없습니다. 설정 › 시험 일정에서 넣습니다.');
+
+  const kpi = (k, v, sub, code, tone) => `<a class="kpi dsh-kpi" onclick="${code}">
+      <div class="k">${k}</div><div class="v ${tone||''}">${v}${sub ? `<s>${sub}</s>` : ''}</div></a>`;
+
+  return `<div class="dsh">
+    <div class="rst-hrow dsh-top">
+      <h1 class="t-title">오늘<s><span class="mono">${today}</span> ${dow}요일 · 재원 ${enrolled}명</s></h1>
+    </div>
+    <div class="kpis dsh-kpis">
+      ${kpi('오늘 수업', sessions.length, sessions.length ? ` 반 · 완료 ${sessDone}` : ' 반', "goTeacherTab('session')")}
+      ${kpi('처리할 일', todoN, ' 건', "document.getElementById('dsh-todo').scrollIntoView({behavior:'smooth',block:'center'})", todoN ? 'hot' : '')}
+      ${kpi('위험 · 주의', loading ? '…' : `<span class="${red ? 'down' : ''}">${red}</span><s> · </s><span style="${yel ? 'color:var(--late)' : ''}">${yel}</span>`, ' 명', "goTeacherTab('signals')")}
+      ${kpi('7일 안 마감', due.length, ' 과제', "document.getElementById('dsh-due').scrollIntoView({behavior:'smooth',block:'center'})")}
+    </div>
+    <div class="dsh-grid">
+      <div class="dsh-col">
+        ${sec('오늘 수업', sessions.length || '', sessBody, ['수업으로', "goTeacherTab('session')"])}
+        <div id="dsh-todo">${sec('처리할 일', todoN || '', todoBody)}</div>
+      </div>
+      <div class="dsh-col">
+        ${sec('먼저 볼 학생', live.length || '', sigBody, ['신호 전체', "goTeacherTab('signals')"])}
+        <div id="dsh-due">${sec('7일 안 마감 과제', due.length || '', dueBody)}</div>
+        ${sec('다가오는 시험', exams.length || '', examBody, ['시험 일정', "state.settingsSubTab='examrange'; state.examSubTab='range'; goTeacherTab('settings')"])}
+      </div>
+    </div>
   </div>`;
 }
 
@@ -19405,6 +19679,34 @@ function sessionSavedSummary(classId, date){
   });
   return { total: roster.length, filled, cnt, who };
 }
+/* 그 날 그 반 수업의 딱지와 한 줄 — 수업 왼쪽 목록과 대시보드 「오늘 수업」이 **같이** 본다 (A-1).
+   두 곳이 따로 세면 「완료」와 「입력 중」이 화면끼리 갈린다. */
+function sessionStatusOf(c, date){
+  const sm = sessionSavedSummary(c.id, date);
+  /* 🔴 **휴강이어도 «숨기지» 않는다** (2026-09-08) — 강사 화면이다.
+     이미 출결을 찍어 둔 날을 나중에 휴강으로 넣으면, 숨기는 순간 그 기록에
+     닿을 길이 사라진다. 학생 달력에서는 안 보이지만 여기서는 딱지를 달고 남는다. */
+  const 쉼 = offDayFor(c.id, date);
+  const 보강 = movedInto(c.id, date);
+  const st = 쉼 ? ['gone', 쉼.moveTo ? '날짜 변경' : '휴강']
+           : 보강 ? ['consult', '보강']
+           : sm.total === 0 ? ['', '학생 없음']
+           : sm.filled === 0 ? ['', '시작 전']
+           : sm.filled < sm.total ? ['consult', '입력 중']
+           : ['ok', '완료'];
+  const detail = 쉼 ? [쉼.label, 쉼.moveTo ? stuDayLabel(쉼.moveTo) + '로 옮김' : '이 날은 쉽니다']
+                      .filter(Boolean).join(' · ')
+    : 보강 ? [보강.label, stuDayLabel(보강.date) + '에서 옮겨 온 수업',
+              보강.moveTime || ''].filter(Boolean).join(' · ')
+    : sm.total === 0 ? '배정된 학생이 없습니다'
+    : sm.filled === 0 ? `${sm.total}명 · 출결 미입력`
+    : sm.filled < sm.total ? `${sm.total}명 · 출결 ${sm.filled}/${sm.total}`
+    : `${sm.total}명 · 출석 ${sm.cnt['출석']||0}` +
+      (sm.cnt['지각'] ? ` · 지각 ${sm.cnt['지각']}` : '') +
+      (sm.cnt['조퇴'] ? ` · 조퇴 ${sm.cnt['조퇴']}` : '') +
+      (sm.cnt['결석'] ? ` · 결석 ${sm.cnt['결석']}` : '');
+  return { st, detail, sm };
+}
 function sessionDraftSummary(classId){
   const roster = classRoster(classId);
   const cnt = {}; let none = 0;
@@ -19786,29 +20088,7 @@ function teacherSessionHTML(){
     ${sessions.length === 0
       ? `<div style="font-size:12.5px;color:var(--dim);line-height:1.7;">이 날짜에 수업이 없습니다.<br>반 일정은 반 관리에서 정합니다.</div>`
       : sessions.map(c=>{
-          const sm = sessionSavedSummary(c.id, date);
-          /* 🔴 **휴강이어도 «숨기지» 않는다** (2026-09-08) — 강사 화면이다.
-             이미 출결을 찍어 둔 날을 나중에 휴강으로 넣으면, 숨기는 순간 그 기록에
-             닿을 길이 사라진다. 학생 달력에서는 안 보이지만 여기서는 딱지를 달고 남는다. */
-          const 쉼 = offDayFor(c.id, date);
-          const 보강 = movedInto(c.id, date);
-          const st = 쉼 ? ['gone', 쉼.moveTo ? '날짜 변경' : '휴강']
-                   : 보강 ? ['consult', '보강']
-                   : sm.total === 0 ? ['', '학생 없음']
-                   : sm.filled === 0 ? ['', '시작 전']
-                   : sm.filled < sm.total ? ['consult', '입력 중']
-                   : ['ok', '완료'];
-          const detail = 쉼 ? [쉼.label, 쉼.moveTo ? stuDayLabel(쉼.moveTo) + '로 옮김' : '이 날은 쉽니다']
-                              .filter(Boolean).join(' · ')
-            : 보강 ? [보강.label, stuDayLabel(보강.date) + '에서 옮겨 온 수업',
-                      보강.moveTime || ''].filter(Boolean).join(' · ')
-            : sm.total === 0 ? '배정된 학생이 없습니다'
-            : sm.filled === 0 ? `${sm.total}명 · 출결 미입력`
-            : sm.filled < sm.total ? `${sm.total}명 · 출결 ${sm.filled}/${sm.total}`
-            : `${sm.total}명 · 출석 ${sm.cnt['출석']||0}` +
-              (sm.cnt['지각'] ? ` · 지각 ${sm.cnt['지각']}` : '') +
-              (sm.cnt['조퇴'] ? ` · 조퇴 ${sm.cnt['조퇴']}` : '') +
-              (sm.cnt['결석'] ? ` · 결석 ${sm.cnt['결석']}` : '');
+          const { st, detail } = sessionStatusOf(c, date);
           return `
           <div class="cls-sess ${c.id === classId ? 'on' : ''}" onclick="pickSession('${c.id}')">
             ${/* 🔴 **«그 날»의 시간이라야 한다** (2026-09-08 · 사용자가 짚었다 —
@@ -30718,11 +30998,17 @@ function noticeImageHTML(n){
 /* ---------- 설정 (조교 + 관리자) ---------- */
 function teacherSettingsHTML(){
   if(state.studentDetailId) return teacherStudentDetailHTML(state.studentDetailId);
+  /* 🔵 「상담」(홈페이지 상담 신청)은 소통으로 갔다 (2026-09-24 · A-1). 옛 state 로 들어오면 그리로 보낸다. */
+  if(state.settingsSubTab === 'consults'){ state.teacherTab = 'consults'; state.settingsSubTab = 'assistants'; return teacherConsultsHTML(); }
   const tab = state.settingsSubTab || 'assistants';
-  const subtabs = [['assistants','조교'],['students','학생'],['classes','반'],['consults','상담'],
-    ['examrange','시험 일정'],
-    ['signalrules','신호 규칙'],['auditlog','변경 이력'],
-    ['push','알림'],['admin','관리자']];
+  /* 🔵 **아홉 갈래를 셋으로 묶어 보인다** (A-1) — 계정 · 운영 · 시스템. 자주 여는 «운영»(시험 일정·신호 규칙)이
+     계정 사이에 섞여 있어 매번 목록을 훑어야 했다. 갈래 id 는 하나도 안 바뀌었다. */
+  const SETTINGS_GROUPS = [
+    ['계정',   [['students','학생'],['assistants','조교'],['classes','반'],['admin','관리자']]],
+    ['운영',   [['examrange','시험 일정'],['signalrules','신호 규칙']]],
+    ['시스템', [['push','알림'],['auditlog','변경 이력']]]
+  ];
+  const subtabs = SETTINGS_GROUPS.flatMap(g => g[1]);
   /* 🔵 **«데이터 정리»를 서브탭에서 뺐다** (2026-09-05 · 사용자 요청 — 「내가 쓸 일이 없는거면 화면에서 가려줘」).
      세 가지(배점·sqrt·정답 속 해설)가 전부 «쓰는 자리»에서 막혔고, 저장된 기록에도 남은 것이 0건이다.
      그래서 평소에 쓸 일이 없다. **없애지는 않았다** — 옛 hwpx 를 다시 올리거나 변환기를 또 고치면
@@ -30770,12 +31056,11 @@ function teacherSettingsHTML(){
     admin:'관리자 비밀번호' };
   return `<div class="ex-screen ex-nosub">
     <aside class="ex-list ex-nav">
-      <div class="t-sec" style="margin:0 0 10px;flex-shrink:0;">설정</div>
       <div class="ex-lbody">
-        ${subtabs.map(t=>`<div class="ex-item ${tabNow===t[0]?'on':''}" onclick="state.settingsSubTab='${t[0]}'; render()">
+        ${SETTINGS_GROUPS.map(g=>`<div class="t-sec st-grp">${g[0]}</div>` + g[1].map(t=>
+          `<div class="ex-item ${tabNow===t[0]?'on':''}" onclick="state.settingsSubTab='${t[0]}'; render()">
           <div class="n">${t[1]}</div>
-          ${t[0]==='consults' && unseenConsultCount()>0 ? `<div class="m"><span class="badge no">새 ${unseenConsultCount()}건</span></div>` : ''}
-        </div>`).join('')}
+        </div>`).join('')).join('')}
       </div>
     </aside>
     <main class="ex-main">
