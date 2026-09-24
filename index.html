@@ -6188,6 +6188,8 @@ let 마지막AI오류 = '';
 async function generateTwinViaAI(content, answer, image, engine){
   try{
     const payload = { content, answer };
+    /* engine — '' Gemini · 'light' Gemini 가볍게(첫 시도가 막힌 문항만 · 워커 24b) · 'groq' 둘째 엔진 */
+    if(engine === 'light') payload.mode = 'light';
     /* 둘째 엔진(Groq)은 그림을 못 본다 — 그림이 있으면 부르는 쪽이 이미 걸렀지만 여기서도 막는다 */
     if(engine === 'groq' && image) throw new Error('Groq 길은 글만 있는 문항용입니다');
     if(image){
@@ -6250,6 +6252,7 @@ async function generateTwinViaAI(content, answer, image, engine){
       /* (B)면 쌍둥이와 «함께» 온 장면 (2026-09-12). 검산은 twinFigureDoc() 이 한다 — 여기서는 받기만. */
       scene: (data.scene && typeof data.scene === 'object') ? data.scene : null,
       engine: data.engine === 'groq' ? 'groq' : 'gemini',
+      light: !!data.light,     /* 가볍게 만든 것 — 검토에서 «원본과 너무 닮았나»를 볼 때 실마리 (24b) */
       quotaUsed: (typeof data.quotaUsed === 'number') ? data.quotaUsed : undefined
     };
   }catch(e){
@@ -28872,8 +28875,27 @@ async function autoFillTick(){
        ⚠ 글만 있는 문항만 — Groq 는 그림을 못 본다. 그림 문항은 아래 «넘기기»로 간다.
        ⚠ 한도(429)일 때는 안 간다 — 그건 아래가 «쉬기/멈추기»로 따로 다룬다(09-12 의 길이 이어 받는다). */
     let 대신 = '', 가름 = '';   /* 가름 — 갈래는 «Gemini 의 말»로만 가른다(Groq 말에 429 가 섞이면 하루 한도로 잘못 읽는다) */
-    if(!twin && engine !== 'groq' && !body.image && ['busy', 'heavy'].includes(aiUpstreamKind(마지막AI오류))){
+    /* 🔵 **먼저 Gemini 로 «가볍게» 한 번** (2026-09-24b · 사용자가 정했다 — 「생각 상한도 첫 시도가 실패한 문항에만」).
+         모델이 «들어가서» 엎어진 것(500·504)이나 생각이 출력 예산을 다 먹어 잘린 것(truncated)은 무거움의 표시다.
+         워커에 `mode:'light'` 로 다시 부르면 생각에 상한을 두고, 정답 꼴을 원본대로 둬 «역산» 탐색을 없앤다.
+       ⚠ 붐빔(503)은 여기로 안 온다 — 워커가 이미 문 앞에서 2.5초·6초 두 번 더 넣어 봤다(24b). 또 넣어 봐야 같은 문이다.
+       ⚠ Gemini 하루 몫을 한 건 더 쓴다 — 그래서 몫이 남았을 때만. 그림 문항도 된다(Gemini 는 그림을 본다). */
+    const 무거운표 = e => aiUpstreamKind(e) === 'heavy' || /truncated|parse failed|incomplete result/.test(String(e || ''));
+    let 가볍게해봄 = false;
+    if(!twin && engine !== 'groq' && 무거운표(마지막AI오류)){
       const 첫까닭 = 마지막AI오류; 가름 = 첫까닭;
+      const u2 = await getAIQuotaUsed();
+      if(u2 < AI_DAILY_LIMIT){
+        가볍게해봄 = true;
+        st.msg = `${code} — 한 번 막혀 Gemini 로 가볍게(생각을 줄여) 다시 만들어 봅니다… (오늘 ${u2}/${AI_DAILY_LIMIT})`;
+        render();
+        const l = await generateTwinViaAI(body.content, body.answer, body.image || null, 'light');
+        if(l && !l.quotaExceeded){ twin = l; 대신 = ' (한 번 막혀 가볍게 다시 만들었습니다)'; }
+        else 마지막AI오류 = 첫까닭 + ' / 가볍게 다시 해도 안 됐습니다' + (l && l.quotaExceeded ? ' (오늘 몫)' : 마지막AI오류 !== 첫까닭 ? ' — ' + 마지막AI오류 : '');
+      }
+    }
+    if(!twin && engine !== 'groq' && !body.image && (['busy', 'heavy'].includes(aiUpstreamKind(가름 || 마지막AI오류)) || 무거운표(가름 || 마지막AI오류))){
+      const 첫까닭 = 마지막AI오류; 가름 = 가름 || 첫까닭;
       const gUsed = await getAIQuotaUsed('twin-groq');
       state.groqTwinUsed = gUsed;
       if(gUsed < GROQ_TWIN_DAILY_LIMIT){
@@ -28909,7 +28931,9 @@ async function autoFillTick(){
       /* 같은 문항으로 몇 번째 엎어졌나 — 갈래와 상관없이 센다 (A-4). */
       const 처음 = autoFillRetry.code !== code;
       autoFillRetry = { code, n: 처음 ? 1 : autoFillRetry.n + 1 };
-      const 쉬고 = (ms) => { state.aiProcessing = false; st.busy = ''; render(); return autoFillLater(ms); };
+      /* 가볍게 다시 해 본 것도 «한 번 더»다 — 또 보통으로 넣어 봐야 같은 자리에서 막힌다. 곧장 넘기는 쪽으로. */
+      if(가볍게해봄) autoFillRetry.n = Math.max(autoFillRetry.n, 2);
+      const 쉬고 =(ms) => { state.aiProcessing = false; st.busy = ''; render(); return autoFillLater(ms); };
       if(위쪽){
         autoFillOurRun = 0;
         autoFillUpstream++;
@@ -28984,7 +29008,7 @@ async function autoFillTick(){
       const v = { code: vcode, originCode: code, variantKind: 'N',
                   content: twin.content, answer: twin.answer, solution: twin.solution || '',
                   needsFigure: !!twin.needsFigure, figureSpec: twin.needsFigure ? String(twin.figureSpec || '') : '',
-                  engine: twin.engine || 'gemini',
+                  engine: twin.engine || 'gemini', ...(twin.light ? { light: true } : {}),
                   auto: true, pending: true, createdAt: nowStamp() };
       if(twin.needsFigure) v.image = twinFigureDoc(twin).doc;    // 위에서 통과한 것만 여기 온다
       const ok = await dbSetDoc('variants', vcode, v);

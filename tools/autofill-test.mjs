@@ -69,7 +69,7 @@ function makeWorld({ itemBody = {}, variants = {}, twin = null, used = 0, groqUs
     (twin) => ({ doc: null, why: '' }),
     /* groqTwin — Groq 로 물었을 때의 답(A-4). 안 정하면 twin 과 같다. */
     async (content, answer, image, engine) => { w.부른AI.push({ content, answer, engine: engine || '' });
-      return engine === 'groq' && 'groqTwin' in w ? w.groqTwin : w.twin; },
+      return engine === 'groq' && 'groqTwin' in w ? w.groqTwin : engine === 'light' && 'lightTwin' in w ? w.lightTwin : w.twin; },
     (content, answer) => (/^[①②③④⑤]$/.test(answer) || /^-?\d+$/.test(answer)) ? answer : null,
     (root, kind) => root + '-' + kind + '01',
     async (coll, id, doc) => { if (!w.saveOk) return null; w.쓴것.push({ coll, id, doc }); return true; },
@@ -321,7 +321,7 @@ console.log('\n남는 한도로 창고 채우기\n');
     const w = makeWorld({ itemBody: 본문(3), twin: null, groqUsed: 0, 오류: 무거움 });
     w.groqTwin = { content: 'g', answer: '②', engine: 'groq' };
     await w.autoFillTick();
-    봄('🔵 무거우면 같은 문항을 Groq 로 곧바로 한 번 더', w.부른AI.map(x => x.engine), ['', 'groq']);
+    봄('🔵 무거우면 Gemini 로 가볍게 한 번 · 그래도 안 되면 Groq 로 (24b)', w.부른AI.map(x => x.engine), ['', 'light', 'groq']);
     봄('🔵 그래서 담긴다', w.쓴것.length === 1 && w.쓴것[0].doc.engine === 'groq', true);
     봄('Groq 가 대신 만들었다고 말한다', /Groq 로 만들었습니다/.test(w.autoFillState().msg), true);
     봄('아무것도 넘기지 않는다', Object.keys(w.넘김()), []);
@@ -337,13 +337,13 @@ console.log('\n남는 한도로 창고 채우기\n');
     봄('«붐빕니다»라고 하지 않는다', /붐빕니다/.test(w.autoFillState().msg), false);
     봄('«무거워»라고 말한다', /무거워/.test(w.autoFillState().msg), true);
     await w.autoFillTick();
-    봄('🔴 다음 바퀴는 정말 다음 문항을 부른다', w.부른AI[1].content, '본문2');
+    봄('🔴 다음 바퀴는 정말 다음 문항을 부른다', w.부른AI[2].content, '본문2');
   }
   /* 그림 문항은 Groq 로 못 간다 — 부르지 않고 넘긴다 */
   {
     const w = makeWorld({ itemBody: { 'K2-01-E-0000': { content: '그림 문항', answer: '③', image: { fileId: 'f' } } }, twin: null, groqUsed: 0, 오류: 무거움 });
     await w.autoFillTick();
-    봄('🔴 그림 문항은 Groq 로 안 간다', w.부른AI.map(x => x.engine), ['']);
+    봄('🔴 그림 문항은 Groq 로 안 간다 (가볍게 다시는 된다 — Gemini 는 그림을 본다)', w.부른AI.map(x => x.engine), ['', 'light']);
     봄('넘긴 까닭에 «그림»이 적힌다', /그림/.test((w.넘김()['K2-01-E-0000'] || {}).why || ''), true);
   }
   /* 붐빔(503)은 예전처럼 쉬었다 같은 문항 — 두 번째면 «이번 세션»만 넘긴다(기기에 안 남긴다) */
@@ -378,6 +378,44 @@ console.log('\n남는 한도로 창고 채우기\n');
     await w.autoFillTick();
     w.state.variants['K2-01-E-0002'] = [{ code: 'x', variantKind: 'N' }];
     봄('다 찼을 때 «넘겨 둔 것»을 말해 준다', /넘겨 둔 1개/.test(w.autoFillWhyEmpty()), true);
+  }
+}
+
+// ⑨ 가볍게 다시 (2026-09-24b · 사용자 — 「생각 상한도 첫 시도가 실패한 문항에만」)
+{
+  const 잘림 = '워커 502 — truncated (MAX_TOKENS)';
+  {
+    const w = makeWorld({ itemBody: 본문(3), twin: null, 오류: 잘림 });
+    w.lightTwin = { content: '가벼운 쌍둥이', answer: '②', light: true };
+    await w.autoFillTick();
+    봄('🔵 잘리면(생각이 예산을 다 먹었다) 가볍게 한 번 더', w.부른AI.map(x => x.engine), ['', 'light']);
+    봄('🔵 그래서 담긴다', w.쓴것.length, 1);
+    봄('가볍게 만든 것이라고 변형에 남긴다', w.쓴것[0].doc.light, true);
+    봄('가볍게 다시 만들었다고 말한다', /가볍게 다시 만들었습니다/.test(w.autoFillState().msg), true);
+  }
+  {
+    const w = makeWorld({ itemBody: 본문(3), twin: { content: 'x', answer: '②' } });
+    await w.autoFillTick();
+    봄('🔴 잘 되는 문항은 가볍게 안 부른다 (품질을 안 낮춘다)', w.부른AI.map(x => x.engine), ['']);
+    봄('그때 변형에 light 표시가 없다', 'light' in w.쓴것[0].doc, false);
+  }
+  {
+    const w = makeWorld({ itemBody: 본문(3), twin: null, 오류: '워커 502 — gemini error — { "code": 503, "status": "UNAVAILABLE", "message": "high demand" }' });
+    await w.autoFillTick();
+    봄('🔴 붐빔(503)에는 가볍게 안 부른다 — 워커가 이미 문 앞에서 두 번 더 넣었다', w.부른AI.map(x => x.engine), ['']);
+  }
+  {
+    const w = makeWorld({ itemBody: 본문(3), twin: null, used: 19, 오류: 잘림 });
+    const 원래 = w.부른AI.push.bind(w.부른AI);
+    w.부른AI.push = (x) => { w.used = 20; return 원래(x); };   // 첫 시도로 몫이 찼다 — 가볍게는 한 건을 더 쓴다
+    await w.autoFillTick();
+    봄('Gemini 몫이 찼으면 가볍게는 건너뛴다', w.부른AI.map(x => x.engine).includes('light'), false);
+  }
+  {
+    const w = makeWorld({ itemBody: 본문(3), twin: null, 오류: 잘림 });   // 가볍게도 안 되고 Groq 도 찼다
+    await w.autoFillTick();
+    봄('🔴 가볍게도 안 되면 그 문항은 곧장 넘긴다 (보통으로 또 넣지 않는다)', Object.keys(w.넘김()), ['K2-01-E-0001']);
+    봄('그 바퀴에 부른 것은 둘 (보통 + 가볍게)', w.부른AI.length, 2);
   }
 }
 

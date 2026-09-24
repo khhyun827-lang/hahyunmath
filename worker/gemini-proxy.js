@@ -44,7 +44,7 @@ const TWIN_GROQ_MAX_TOKENS = 7000;   // 추론 + JSON. 검토(6000)보다 답이
 /* 🔴 «올렸는지 짐작하지 않는다» — 이 워커는 대시보드에 붙여넣어 올리므로 밖에서는 어느 판이 도는지
    알 길이 없었다(2026-09-11에 사용자가 올리고 「도는지 확인은 못 해봤어」). /quota 가 이 값을 같이
    돌려주고 tools/worker-check.mjs 가 저장소의 값과 견준다. **프롬프트나 규칙을 바꾸면 이 날짜를 올릴 것.** */
-const WORKER_VERSION = '2026-09-24a';
+const WORKER_VERSION = '2026-09-24b';
 // 이미지 업로드는 학생도 쓴다(질의응답 사진). 비용이 드는 쪽은 Gemini라 여기는 넉넉하게,
 // 다만 «한 명이 무한히»는 막는다. 전체 상한은 걸지 않는다 — 걸면 바쁜 날 학생이 막힌다.
 const UPLOAD_PER_USER_DAILY = 200;
@@ -92,6 +92,20 @@ export default {
         ? (await groqQuota(env, who.uid))[bucket]
         : await peekQuota(env, bucket, who.uid, AI_DAILY_LIMIT);
       return new Response(JSON.stringify({ ...q, version: WORKER_VERSION }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    /* 🔵 **이 열쇠로 부를 수 있는 Gemini 모델 목록** (2026-09-24b · 진단 — 한도를 안 쓴다).
+       붐비는 날 «다른 모델로 물러설까»를 정하려면 무엇이 열려 있는지부터 알아야 한다. 짐작해서 이름을 적으면
+       없는 모델로 404 를 받는다. 이름·생각 여부만 돌려준다(열쇠는 안 나간다). */
+    if (url.pathname === '/models') {
+      const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?pageSize=200&key=${env.GEMINI_API_KEY}`);
+      const j = await r.json().catch(() => ({}));
+      const models = (j.models || [])
+        .filter(m => (m.supportedGenerationMethods || []).includes('generateContent'))
+        .map(m => ({ name: String(m.name || '').replace(/^models\//, ''), thinking: !!m.thinking, out: m.outputTokenLimit || 0 }));
+      return new Response(JSON.stringify({ status: r.status, models, version: WORKER_VERSION }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
@@ -952,7 +966,7 @@ function parseModelJson(text) {
 
 /* 쌍둥이 프롬프트 — «한 벌»이다. Gemini(그림 됨)와 Groq(글만)가 같은 글을 본다 (2026-09-12).
    ⚠ hasImage 가 false 면 갈래 규칙·장면 형식이 안 들어간다 — Groq 길은 언제나 false 다. */
-function twinPrompt(content, answer, hasImage) {
+function twinPrompt(content, answer, hasImage, light) {
   const persona = `당신은 대한민국 고등학교 수학 교육과정에 완벽하게 통달한 수석 출제 위원입니다.`;
 
   /* 학생 답안 입력칸이 받을 수 있는 것은 딱 둘이다 — «숫자 입력» 아니면 «①~⑤ 보기 버튼»
@@ -1078,6 +1092,34 @@ ${SCENE_FORMAT}` : '';
 4. 그리는 방법: 어떤 범위로 어떻게 그리면 되는지 한 줄 (예: 모눈종이에 x축 -1~5, y축 -10~2 범위로)`
     : `다음은 고등학교 수학 문제와 정답입니다. 문제의 풀이 구조, 유형, 난이도는 그대로 유지하되 숫자(계수, 상수, 조건 값 등)만 바꾸어 "쌍둥이 문제" 1개를 새로 만들어주세요. 이 문제에는 그림이 없으므로 "mode"는 "text"입니다.`;
 
+  /* 🔵 **가벼운 길** (2026-09-24b · 첫 시도가 막힌 문항에만) — 무거움의 뿌리는 «정답을 1~999 자연수로 먼저 정하고 조건을
+       거꾸로 짜 맞추기»다. 어려운 문항일수록 그 탐색이 길다. 가벼운 길은 **정답의 꼴을 원본대로** 두고
+       수 한두 개만 바꾼 뒤 «나오는 대로» 답을 적게 한다. 원본이 입력할 수 있는 꼴이면 변형도 그 꼴이라
+       학생 입력칸 규칙(자연수 · ①~⑤)은 그대로 지켜진다. 풀이도 세 단계로 줄인다. */
+  if (light) {
+    const lightAnswerRule = `정답의 형태 규칙입니다 — 원본을 따르세요.
+- 원본 정답이 ①~⑤ 기호이면: 새 문제도 보기 다섯 개(①~⑤, 각각 새 줄)를 둔 객관식으로 만들고 "answer"에는 기호 하나만 쓰세요.
+- 원본 정답이 자연수이면: 새 정답도 1 이상 999 이하의 자연수가 되게 하고 "answer"에는 숫자만 쓰세요.
+- 그 밖(분수·식·음수 등)이면: 객관식 보기 다섯 개를 만들고 기호 하나를 쓰세요.
+정답을 먼저 정해 놓고 조건을 거꾸로 맞추지 마세요. 원본 조건의 수 한두 개만 바꾸고, 그 결과로 나오는 정답을 쓰세요. 꼴이 어긋나면 바꾼 수를 조정하세요.`;
+    const lightTask = hasImage ? taskRule
+      : `다음은 고등학교 수학 문제와 정답입니다. 원본의 문장·구조·조건을 그대로 두고 **수 한두 개만** 바꾼 "쌍둥이 문제" 1개를 만드세요. 이 문제에는 그림이 없으므로 "mode"는 "text"입니다.`;
+    return `${persona}
+${lightTask}
+${lightAnswerRule}
+${safetyRule}
+${formatRule}
+${layoutRule}
+${jsonSchemaRule.replace('여섯 단계 이내로', '세 단계 이내로')}
+${sceneRule}
+
+[원본 문제]
+${content}
+
+[원본 정답]
+${answer}`;
+  }
+
   return `${persona}
 ${taskRule}
 ${answerFormRule}
@@ -1092,6 +1134,48 @@ ${content}
 
 [원본 정답]
 ${answer}`;
+}
+
+/* ======== Gemini 부르기 — 붐비면 «곧바로» 몇 번 더 · 가벼운 길이면 생각에 상한 (2026-09-24b) ========
+   🔴 **재 보고 알았다** (2026-09-24 20:50 · 무거운 4문항 + 쉬운 1문항): 실패는 전부 **503 UNAVAILABLE «high demand»**,
+     그것도 **2~6초 만에** 왔다 — 모델이 생각하기도 «전»에 문에서 돌려보낸 것이다. 쉬운 문항도 똑같이 막혔고,
+     같은 요청을 6초 간격으로 다시 넣으니 **넷째에 들어갔다.** 곧 «잠깐의 붐빔»이라 몇 초 뒤면 대개 된다.
+   ⇒ 여태는 화면이 5분을 쉬고 다시 왔다(그 사이 문항 하나가 줄을 막았다). 여기서 **2.5초 · 6초** 쉬고 두 번 더 넣는다.
+     한도는 이 요청 한 번(라우팅 문턱)으로만 센다 — 안에서 몇 번 넣든 우리 하루치는 하나다.
+   ⚠ 500(INTERNAL)도 같이 한 번 더 넣는다 — 모델이 도중에 엎어진 것은 다시 하면 되는 일이 많다.
+   🔵 가벼운 길(`light`)만 생각 상한을 건다. 이름이 모델마다 달라(thinkingLevel · thinkingBudget) **400 이면 다음 이름**,
+     끝까지 안 받으면 상한 없이 — 상한을 못 걸었다고 문항을 버리지 않는다. 어느 이름이 먹혔는지는 응답에 싣는다. */
+const GEMINI_TWIN_MODEL = 'gemini-3.6-flash';
+const GEMINI_BUSY_WAITS = [2500, 6000];                                   // 503·500 이면 이만큼 쉬고 다시 — 모두 세 번
+const LIGHT_THINKING = [{ thinkingLevel: 'low' }, { thinkingBudget: 1024 }, null];
+async function geminiGenerate(env, parts, light) {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_TWIN_MODEL}:generateContent?key=${env.GEMINI_API_KEY}`;
+  const 생각들 = light ? LIGHT_THINKING : [null];
+  let k = 0, 붐빔 = 0, 시도 = 0, res;
+  for (;;) {
+    const generationConfig = {
+      /* ⚠ maxOutputTokens를 반드시 명시한다. 안 걸어 두면 기본값에 걸려 **JSON이 중간에서 잘리고**,
+         그러면 JSON.parse가 터져 «parse failed»로만 보인다 — 실제로 겪었다 (2026-08-11,
+         갈래를 셋으로 늘려 프롬프트가 길어진 직후). 이 모델은 생각한 것도 출력 예산에서 쓴다.
+         잘린 것과 «모델이 JSON을 못 쓴 것»은 고치는 법이 다르므로 finishReason도 같이 본다. */
+      responseMimeType: 'application/json', maxOutputTokens: 16384,
+    };
+    if (생각들[k]) generationConfig.thinkingConfig = 생각들[k];
+    시도++;
+    res = await fetch(url, {
+      method: 'POST',
+      /* 서버 쪽 마감을 늘린다 — 긴 생각이 504(DEADLINE_EXCEEDED)로 끊기지 않게. 구글 SDK 가 쓰는 그 머리다. */
+      headers: { 'Content-Type': 'application/json', 'X-Server-Timeout': '170' },
+      body: JSON.stringify({ contents: [{ parts }], generationConfig }),
+    });
+    if (res.status === 400 && k < 생각들.length - 1 && /thinking/i.test(await res.clone().text())) { k++; continue; }
+    if ((res.status === 503 || res.status === 500) && 붐빔 < GEMINI_BUSY_WAITS.length) {
+      await new Promise(r => setTimeout(r, GEMINI_BUSY_WAITS[붐빔++]));
+      continue;
+    }
+    break;
+  }
+  return { res, 시도, 생각: 생각들[k] ? Object.keys(생각들[k])[0] : 'none' };
 }
 
 async function handleGeminiTwin(request, env, corsHeaders, uid) {
@@ -1121,7 +1205,11 @@ async function handleGeminiTwin(request, env, corsHeaders, uid) {
     }
   }
   const hasImage = typeof effectiveImage === 'string' && effectiveImage.startsWith('data:');
-  const prompt = twinPrompt(content, answer, hasImage);
+  /* 🔵 **가벼운 다시 하기** (2026-09-24b) — 화면이 «첫 시도가 막힌 문항»에만 `mode:'light'` 로 다시 부른다.
+       생각에 상한을 두고, 정답 꼴을 원본대로 두게 해 «역산» 탐색을 없앤다. 처음부터 쓰지 않는 까닭 —
+       잘 되던 문항의 품질까지 낮출 까닭이 없다(사용자가 정했다). */
+  const light = body.mode === 'light';
+  const prompt = twinPrompt(content, answer, hasImage, light);
 
   const parts = [{ text: prompt }];
   if (hasImage) {
@@ -1131,23 +1219,9 @@ async function handleGeminiTwin(request, env, corsHeaders, uid) {
     }
   }
 
-  let geminiRes;
+  let geminiRes, 시도 = 1, 생각 = '';
   try {
-    geminiRes = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${env.GEMINI_API_KEY}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts }],
-          /* ⚠ maxOutputTokens를 반드시 명시한다. 안 걸어 두면 기본값에 걸려 **JSON이 중간에서 잘리고**,
-             그러면 아래 JSON.parse가 터져 «parse failed»로만 보인다 — 실제로 겪었다 (2026-08-11,
-             갈래를 셋으로 늘려 프롬프트가 길어진 직후). 이 모델은 생각한 것도 출력 예산에서 쓴다.
-             잘린 것과 «모델이 JSON을 못 쓴 것»은 고치는 법이 다르므로 finishReason도 같이 본다. */
-          generationConfig: { responseMimeType: 'application/json', maxOutputTokens: 16384 },
-        }),
-      }
-    );
+    ({ res: geminiRes, 시도, 생각 } = await geminiGenerate(env, parts, light));
   } catch (e) {
     return new Response(JSON.stringify({ error: 'gemini request failed', detail: String(e) }), {
       status: 502,
@@ -1162,7 +1236,7 @@ async function handleGeminiTwin(request, env, corsHeaders, uid) {
        ⚠ 모델이 «이상한 답»을 낸 것은 쓴 것이다(돈이 나갔다) — 그건 안 돌려준다. */
     if (upstreamRefused(geminiRes.status)) await refundQuota(env, 'ai', uid);
     const errText = await geminiRes.text();
-    return new Response(JSON.stringify({ error: 'gemini error', detail: errText }), {
+    return new Response(JSON.stringify({ error: 'gemini error', detail: errText, attempts: 시도, light }), {
       status: 502,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
@@ -1170,8 +1244,12 @@ async function handleGeminiTwin(request, env, corsHeaders, uid) {
 
   const data = await geminiRes.json();
   const cand = data.candidates?.[0];
-  const text = cand?.content?.parts?.[0]?.text || '';
+  /* ⚠ 생각 조각(thought:true)이 섞여 올 수 있다 — 첫 조각만 집으면 생각을 JSON 으로 읽는다. 글 조각만 모은다. */
+  const text = (cand?.content?.parts || []).filter(p => !p.thought).map(p => p.text || '').join('');
   const finishReason = cand?.finishReason || '';
+  /* 얼마나 생각했나 — 「어려운 문항일수록 막힌다」를 숫자로 가르려고 싣는다(2026-09-24b). */
+  const um = data.usageMetadata || {};
+  const usage = { prompt: um.promptTokenCount || 0, thoughts: um.thoughtsTokenCount || 0, output: um.candidatesTokenCount || 0 };
   let parsed;
   try {
     parsed = parseModelJson(text);
@@ -1179,7 +1257,7 @@ async function handleGeminiTwin(request, env, corsHeaders, uid) {
     /* «잘렸다»와 «모델이 JSON을 못 썼다»는 고치는 법이 다르다. 어느 쪽인지 남긴다. */
     return new Response(JSON.stringify({
       error: finishReason === 'MAX_TOKENS' ? 'truncated' : 'parse failed',
-      finishReason, raw: text,
+      finishReason, raw: text, usage, attempts: 시도, light,
     }), {
       status: 502,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -1214,6 +1292,8 @@ async function handleGeminiTwin(request, env, corsHeaders, uid) {
     /* (B)면 함께 온 장면. 검산은 화면이 한다 — 여기서는 «꼴»만 본다(객체이고 kind 가 graph). */
     scene: (needsFigure && parsed.scene && typeof parsed.scene === 'object' && parsed.scene.kind === 'graph') ? parsed.scene : null,
     quotaUsed: q.used, quotaLimit: q.limit,
+    /* 진단 — 몇 번 만에 들어갔나 · 가벼운 길이었나 · 생각 상한을 어떤 이름으로 받았나 · 토큰 (2026-09-24b) */
+    attempts: 시도, light, thinking: 생각, usage,
   }), {
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   });
