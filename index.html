@@ -6253,6 +6253,8 @@ async function generateTwinViaAI(content, answer, image, engine){
       scene: (data.scene && typeof data.scene === 'object') ? data.scene : null,
       engine: data.engine === 'groq' ? 'groq' : 'gemini',
       light: !!data.light,     /* 가볍게 만든 것 — 검토에서 «원본과 너무 닮았나»를 볼 때 실마리 (24b) */
+      /* 어느 Gemini 모델이 만들었나 (24d) — 막히면 워커가 다음 모델로 넘어가므로 품질을 견줄 때 실마리다. */
+      model: typeof data.model === 'string' ? data.model : '',
       quotaUsed: (typeof data.quotaUsed === 'number') ? data.quotaUsed : undefined
     };
   }catch(e){
@@ -29008,7 +29010,7 @@ async function autoFillTick(){
       const v = { code: vcode, originCode: code, variantKind: 'N',
                   content: twin.content, answer: twin.answer, solution: twin.solution || '',
                   needsFigure: !!twin.needsFigure, figureSpec: twin.needsFigure ? String(twin.figureSpec || '') : '',
-                  engine: twin.engine || 'gemini', ...(twin.light ? { light: true } : {}),
+                  engine: twin.engine || 'gemini', ...(twin.light ? { light: true } : {}), ...(twin.model ? { model: twin.model } : {}),
                   auto: true, pending: true, createdAt: nowStamp() };
       if(twin.needsFigure) v.image = twinFigureDoc(twin).doc;    // 위에서 통과한 것만 여기 온다
       const ok = await dbSetDoc('variants', vcode, v);

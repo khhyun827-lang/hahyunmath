@@ -44,40 +44,58 @@ function 세상(답들) {
   };
   const fakeSleep = (fn, ms) => { 쉰것.push(ms); fn(); return 0; };
   const gen = new Function('fetch', 'setTimeout',
-    [constLine('GEMINI_TWIN_MODEL'), constLine('GEMINI_BUSY_WAITS'), constLine('LIGHT_THINKING'), lift('geminiGenerate')].join('\n')
+    [constLine('GEMINI_TWIN_MODELS'), constLine('GEMINI_RPM_GAP'), constLine('GEMINI_NEXT_MODEL'), constLine('LIGHT_THINKING'), lift('geminiGenerate')].join('\n')
     + '\nreturn geminiGenerate;')(fakeFetch, fakeSleep);
-  return { gen, 보낸것, 쉰것 };
+  return { gen, 보낸것, 쉰것, 모델들: () => 보낸것.map(x => (x.url.match(/models\/([^:]+):/) || [])[1]) };
 }
 const env = { GEMINI_API_KEY: 'k' };
 const 붐빔 = [503, '{"error":{"code":503,"status":"UNAVAILABLE","message":"high demand"}}'];
+const 몫참 = [429, '{"error":{"code":429,"details":[{"quotaId":"GenerateRequestsPerDayPerProjectPerModel-FreeTier"}]}}'];
 
-console.log('\n① 붐비면 곧바로 두 번 더\n');
+/* 🔴 **24d 의 요점** — 2026-09-24 저녁에 재 보니 구글은 **503 으로 돌려보낸 것도 하루 20건에 센다**
+   (429 의 이름이 `…PerDayPerProjectPerModel-FreeTier` · 20 이었는데 우리 셈은 2/20). 그래서 같은 모델을
+   다시 두드리면 그날 몫만 탄다. 그 몫은 «모델마다» 따로라 **다음 모델로** 간다. */
+console.log('\n① 막히면 같은 모델이 아니라 «다음 모델»로\n');
 {
-  const w = 세상([붐빔, 붐빔, [200, '{"ok":1}']]);
+  const w = 세상([붐빔, [200, '{"ok":1}']]);
   const r = await w.gen(env, [{ text: 'x' }], false);
-  봄('503 · 503 · 200 → 셋째에 들어간다', [r.res.status, r.시도], [200, 3]);
-  봄('쉬는 간격은 2.5초 · 6초', w.쉰것, [2500, 6000]);
+  봄('🔴 503 이면 같은 모델을 다시 안 두드리고 다음 모델로', w.모델들(), ['gemini-3.6-flash', 'gemini-3.8-flash']);
+  봄('들어간 모델을 돌려준다', [r.res.status, r.모델], [200, 'gemini-3.8-flash']);
+  봄('거절한 모델을 적어 둔다', r.거절, ['gemini-3.6-flash 503']);
+  봄('🔴 모델을 바꿀 때는 기다리지 않는다 (다른 통이다)', w.쉰것, []);
 }
 {
-  const w = 세상([붐빔, 붐빔, 붐빔, [200, '{}']]);
+  const w = 세상([몫참, [200, '{}']]);
   const r = await w.gen(env, [{ text: 'x' }], false);
-  봄('🔴 세 번 다 붐비면 거기서 그친다 (넷째는 안 넣는다)', [r.res.status, r.시도, w.보낸것.length], [503, 3, 3]);
+  봄('🔴 그 모델의 하루 몫이 찼으면(429) 다음 모델 — 몫은 모델마다 따로다', [r.res.status, r.모델], [200, 'gemini-3.8-flash']);
 }
 {
-  const w = 세상([[500, '{"error":{"code":500,"status":"INTERNAL"}}'], [200, '{}']]);
+  const w = 세상([[500, '{"error":{"code":500,"status":"INTERNAL"}}'], [504, '{}'], [404, '{}'], [200, '{}']]);
   const r = await w.gen(env, [{ text: 'x' }], false);
-  봄('500 도 한 번 더 넣는다', [r.res.status, r.시도], [200, 2]);
+  봄('500·504·404 도 다음 모델로', w.모델들(), ['gemini-3.6-flash', 'gemini-3.8-flash', 'gemini-3.7-flash', 'gemini-2.5-flash']);
+  봄('넷째에 들어갔다', [r.res.status, r.모델], [200, 'gemini-2.5-flash']);
 }
 {
-  const w = 세상([[429, '{"error":{"code":429}}'], [200, '{}']]);
+  const w = 세상([붐빔, 붐빔, 붐빔, 붐빔, [200, '{}']]);
   const r = await w.gen(env, [{ text: 'x' }], false);
-  봄('🔴 한도(429)는 다시 안 넣는다 — 하루 몫만 탄다', [r.res.status, r.시도], [429, 1]);
+  봄('🔴 모델이 다 막히면 거기서 그친다 (한 모델에 한 번씩만)', [r.res.status, w.보낸것.length, new Set(w.모델들()).size], [503, 4, 4]);
+  봄('다 막히면 마지막 모델의 답을 돌려준다', r.모델, 'gemini-2.5-flash');
+}
+{
+  const w = 세상([[400, '{"error":{"message":"API key not valid"}}'], [200, '{}']]);
+  const r = await w.gen(env, [{ text: 'x' }], false);
+  봄('🔴 400(우리 쪽 흠)이면 다른 모델로도 안 간다', [r.res.status, w.보낸것.length], [400, 1]);
+}
+{
+  const w = 세상([붐빔, [200, '{}']]);
+  const r = await w.gen(env, [{ text: 'x' }], false, 'gemini-3.7-flash');
+  봄('콕 집은 모델 하나만 (진단)', [w.모델들(), r.res.status], [['gemini-3.7-flash'], 503]);
 }
 {
   const w = 세상([[200, '{}']]);
-  await w.gen(env, [{ text: 'x' }], false);
+  const r = await w.gen(env, [{ text: 'x' }], false);
   봄('서버 쪽 마감 머리를 보낸다', w.보낸것[0].headers['X-Server-Timeout'], '170');
-  봄('모델은 한 곳에서 정한다', /models\/gemini-3\.6-flash:generateContent/.test(w.보낸것[0].url), true);
+  봄('첫 모델은 여태 쓰던 3.6 그대로 (검토 받아 온 품질이 기준)', r.모델, 'gemini-3.6-flash');
 }
 
 console.log('\n② 생각 상한 — 가벼운 길에서만\n');
@@ -85,6 +103,7 @@ console.log('\n② 생각 상한 — 가벼운 길에서만\n');
   const w = 세상([[200, '{}']]);
   const r = await w.gen(env, [{ text: 'x' }], false);
   봄('🔴 첫 시도(가벼운 길 아님)에는 생각 상한을 안 건다', 'thinkingConfig' in w.보낸것[0].body.generationConfig, false);
+  봄('첫 시도는 쉬지 않고 곧바로 넣는다', w.쉰것, []);
   봄('그때 생각 이름은 none', r.생각, 'none');
 }
 {
@@ -92,6 +111,7 @@ console.log('\n② 생각 상한 — 가벼운 길에서만\n');
   const r = await w.gen(env, [{ text: 'x' }], true);
   봄('가벼운 길은 thinkingLevel low 부터', w.보낸것[0].body.generationConfig.thinkingConfig, { thinkingLevel: 'low' });
   봄('먹힌 이름을 돌려준다', r.생각, 'thinkingLevel');
+  봄('🔴 가벼운 길은 첫 넣기 전에도 13초 쉰다 (막힌 직후에 불린다)', w.쉰것, [13000]);
 }
 {
   const w = 세상([[400, '{"error":{"message":"Unknown name \\"thinkingLevel\\" at generation_config.thinking_config"}}'], [200, '{}']]);
@@ -128,7 +148,9 @@ console.log('\n③ 가벼운 프롬프트\n');
 {
   const h = lift('handleGeminiTwin');
   봄('처리기가 mode:light 를 읽는다', /body\.mode === 'light'/.test(h), true);
-  봄('처리기가 geminiGenerate 를 지난다', /geminiGenerate\(env, parts, light\)/.test(h), true);
+  봄('처리기가 geminiGenerate 를 지난다', /geminiGenerate\(env, parts, light, only\)/.test(h), true);
+  봄('콕 집는 모델은 목록 안의 것만 받는다', /GEMINI_TWIN_MODELS\.includes\(body\.model\)/.test(h), true);
+  봄('누가 만들었는지(model)와 거절한 모델(tried)을 싣는다', /model: 모델, tried: 거절/.test(h), true);
   봄('생각 조각은 빼고 글만 모은다', /filter\(p => !p\.thought\)/.test(h), true);
 }
 

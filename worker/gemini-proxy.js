@@ -44,7 +44,7 @@ const TWIN_GROQ_MAX_TOKENS = 7000;   // 추론 + JSON. 검토(6000)보다 답이
 /* 🔴 «올렸는지 짐작하지 않는다» — 이 워커는 대시보드에 붙여넣어 올리므로 밖에서는 어느 판이 도는지
    알 길이 없었다(2026-09-11에 사용자가 올리고 「도는지 확인은 못 해봤어」). /quota 가 이 값을 같이
    돌려주고 tools/worker-check.mjs 가 저장소의 값과 견준다. **프롬프트나 규칙을 바꾸면 이 날짜를 올릴 것.** */
-const WORKER_VERSION = '2026-09-24b';
+const WORKER_VERSION = '2026-09-24d';
 // 이미지 업로드는 학생도 쓴다(질의응답 사진). 비용이 드는 쪽은 Gemini라 여기는 넉넉하게,
 // 다만 «한 명이 무한히»는 막는다. 전체 상한은 걸지 않는다 — 걸면 바쁜 날 학생이 막힌다.
 const UPLOAD_PER_USER_DAILY = 200;
@@ -1136,46 +1136,59 @@ ${content}
 ${answer}`;
 }
 
-/* ======== Gemini 부르기 — 붐비면 «곧바로» 몇 번 더 · 가벼운 길이면 생각에 상한 (2026-09-24b) ========
-   🔴 **재 보고 알았다** (2026-09-24 20:50 · 무거운 4문항 + 쉬운 1문항): 실패는 전부 **503 UNAVAILABLE «high demand»**,
-     그것도 **2~6초 만에** 왔다 — 모델이 생각하기도 «전»에 문에서 돌려보낸 것이다. 쉬운 문항도 똑같이 막혔고,
-     같은 요청을 6초 간격으로 다시 넣으니 **넷째에 들어갔다.** 곧 «잠깐의 붐빔»이라 몇 초 뒤면 대개 된다.
-   ⇒ 여태는 화면이 5분을 쉬고 다시 왔다(그 사이 문항 하나가 줄을 막았다). 여기서 **2.5초 · 6초** 쉬고 두 번 더 넣는다.
-     한도는 이 요청 한 번(라우팅 문턱)으로만 센다 — 안에서 몇 번 넣든 우리 하루치는 하나다.
-   ⚠ 500(INTERNAL)도 같이 한 번 더 넣는다 — 모델이 도중에 엎어진 것은 다시 하면 되는 일이 많다.
+/* ======== Gemini 부르기 — 막히면 «같은 모델을 다시» 가 아니라 «다음 모델로» (2026-09-24c) ========
+   🔴 **재 보고 알았다 — 세 판에 걸쳐** (2026-09-24 저녁 · 무거운 SCENE 3 넷 + 쉬운 문항):
+     ① 20:50 실패는 전부 **503 UNAVAILABLE «high demand»**, 그것도 **2~6초 만에**(모델이 생각하기 전 문 앞).
+        쉬운 문항도 막혔고, 6초 간격으로 다시 넣으니 넷째에 들어갔다.
+     ② 그래서 24b 에서 «503 이면 같은 모델에 두 번 더» 넣었더니 곧 **429** 가 났다.
+     ③ 그 429 의 이름이 **`GenerateRequestsPerDayPerProjectPerModel-FreeTier` · 20** 이었다 — 우리 셈은 2/20 인데.
+     ⇒ **구글은 503 으로 돌려보낸 것도 하루 20건에 센다.** 붐비는 저녁에는 «붐빔» 하나하나가 그날 몫을 한 건씩 태운다.
+       자동 채우기가 «너무 많이 실패»한 까닭이 이것이다 — 붐빔에 다시 넣을수록 그날 몫이 비고, 비면 뒤는 전부 실패다.
+       09-21 의 「워커 n/20 은 안 찼는데 구글이 429」도 같은 뿌리였다.
+   🔵 **그런데 그 몫은 «모델마다» 따로다**(이름에 PerModel). 이 열쇠로 부를 수 있는 flash 가 여럿이다(/models 로 확인).
+     ⇒ 같은 모델을 다시 두드리지 않고 **다음 모델로 곧바로 간다.** 모델이 바뀌면 붐빔도 몫도 다른 통이라 기다릴 까닭이 없다.
+       503 · 500 · 504 · 429(그 모델의 몫이 참) · 404(그 모델이 없음) 이면 다음 모델로. 그 밖(400 등)은 우리 쪽 흠이라 멈춘다.
+     첫 모델은 여태 쓰던 것 그대로(3.6) — 지금까지 검토를 받아 온 품질이 기준이다. 누가 만들었는지는 응답·변형에 남는다.
+   ⚠ 우리 셈(AI_DAILY_LIMIT)은 이 요청 한 번으로만 센다 — 안에서 모델을 몇 번 바꾸든 하나다.
    🔵 가벼운 길(`light`)만 생각 상한을 건다. 이름이 모델마다 달라(thinkingLevel · thinkingBudget) **400 이면 다음 이름**,
-     끝까지 안 받으면 상한 없이 — 상한을 못 걸었다고 문항을 버리지 않는다. 어느 이름이 먹혔는지는 응답에 싣는다. */
-const GEMINI_TWIN_MODEL = 'gemini-3.6-flash';
-const GEMINI_BUSY_WAITS = [2500, 6000];                                   // 503·500 이면 이만큼 쉬고 다시 — 모두 세 번
+     끝까지 안 받으면 상한 없이 — 상한을 못 걸었다고 문항을 버리지 않는다. 가벼운 길은 «막힌 직후»에 불리므로
+     첫 넣기 전에 13초 쉰다(분당 5건 — 구글은 503 도 분당에 센다). */
+const GEMINI_TWIN_MODELS = ['gemini-3.6-flash', 'gemini-3.8-flash', 'gemini-3.7-flash', 'gemini-2.5-flash'];
+const GEMINI_RPM_GAP = 13000;                                             // 분당 5건(RPM) 아래
+const GEMINI_NEXT_MODEL = [429, 500, 503, 504, 404];                      // 이 답이면 다음 모델로
 const LIGHT_THINKING = [{ thinkingLevel: 'low' }, { thinkingBudget: 1024 }, null];
-async function geminiGenerate(env, parts, light) {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_TWIN_MODEL}:generateContent?key=${env.GEMINI_API_KEY}`;
+async function geminiGenerate(env, parts, light, only) {
+  const 모델들 = only ? [only] : GEMINI_TWIN_MODELS;
   const 생각들 = light ? LIGHT_THINKING : [null];
-  let k = 0, 붐빔 = 0, 시도 = 0, res;
-  for (;;) {
-    const generationConfig = {
-      /* ⚠ maxOutputTokens를 반드시 명시한다. 안 걸어 두면 기본값에 걸려 **JSON이 중간에서 잘리고**,
-         그러면 JSON.parse가 터져 «parse failed»로만 보인다 — 실제로 겪었다 (2026-08-11,
-         갈래를 셋으로 늘려 프롬프트가 길어진 직후). 이 모델은 생각한 것도 출력 예산에서 쓴다.
-         잘린 것과 «모델이 JSON을 못 쓴 것»은 고치는 법이 다르므로 finishReason도 같이 본다. */
-      responseMimeType: 'application/json', maxOutputTokens: 16384,
-    };
-    if (생각들[k]) generationConfig.thinkingConfig = 생각들[k];
-    시도++;
-    res = await fetch(url, {
-      method: 'POST',
-      /* 서버 쪽 마감을 늘린다 — 긴 생각이 504(DEADLINE_EXCEEDED)로 끊기지 않게. 구글 SDK 가 쓰는 그 머리다. */
-      headers: { 'Content-Type': 'application/json', 'X-Server-Timeout': '170' },
-      body: JSON.stringify({ contents: [{ parts }], generationConfig }),
-    });
-    if (res.status === 400 && k < 생각들.length - 1 && /thinking/i.test(await res.clone().text())) { k++; continue; }
-    if ((res.status === 503 || res.status === 500) && 붐빔 < GEMINI_BUSY_WAITS.length) {
-      await new Promise(r => setTimeout(r, GEMINI_BUSY_WAITS[붐빔++]));
-      continue;
+  let 시도 = 0, res, 모델 = '', 생각 = 'none';
+  const 거절 = [];
+  if (light) await new Promise(r => setTimeout(r, GEMINI_RPM_GAP));   // 막힌 직후에 불린다 — 분당 한도를 지킨다
+  for (const m of 모델들) {
+    let k = 0;
+    for (;;) {
+      const generationConfig = {
+        /* ⚠ maxOutputTokens를 반드시 명시한다. 안 걸어 두면 기본값에 걸려 **JSON이 중간에서 잘리고**,
+           그러면 JSON.parse가 터져 «parse failed»로만 보인다 — 실제로 겪었다 (2026-08-11,
+           갈래를 셋으로 늘려 프롬프트가 길어진 직후). 이 모델은 생각한 것도 출력 예산에서 쓴다.
+           잘린 것과 «모델이 JSON을 못 쓴 것»은 고치는 법이 다르므로 finishReason도 같이 본다. */
+        responseMimeType: 'application/json', maxOutputTokens: 16384,
+      };
+      if (생각들[k]) generationConfig.thinkingConfig = 생각들[k];
+      시도++;
+      res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${env.GEMINI_API_KEY}`, {
+        method: 'POST',
+        /* 서버 쪽 마감을 늘린다 — 긴 생각이 504(DEADLINE_EXCEEDED)로 끊기지 않게. 구글 SDK 가 쓰는 그 머리다. */
+        headers: { 'Content-Type': 'application/json', 'X-Server-Timeout': '170' },
+        body: JSON.stringify({ contents: [{ parts }], generationConfig }),
+      });
+      if (res.status === 400 && k < 생각들.length - 1 && /thinking/i.test(await res.clone().text())) { k++; continue; }
+      break;
     }
-    break;
+    모델 = m; 생각 = 생각들[k] ? Object.keys(생각들[k])[0] : 'none';
+    if (!GEMINI_NEXT_MODEL.includes(res.status)) break;
+    거절.push(m + ' ' + res.status);
   }
-  return { res, 시도, 생각: 생각들[k] ? Object.keys(생각들[k])[0] : 'none' };
+  return { res, 시도, 생각, 모델, 거절 };
 }
 
 async function handleGeminiTwin(request, env, corsHeaders, uid) {
@@ -1219,9 +1232,11 @@ async function handleGeminiTwin(request, env, corsHeaders, uid) {
     }
   }
 
-  let geminiRes, 시도 = 1, 생각 = '';
+  /* 진단용 — 모델 하나만 콕 집어 재 볼 때(목록 안의 것만). 화면은 안 보낸다. */
+  const only = GEMINI_TWIN_MODELS.includes(body.model) ? body.model : '';
+  let geminiRes, 시도 = 1, 생각 = '', 모델 = '', 거절 = [];
   try {
-    ({ res: geminiRes, 시도, 생각 } = await geminiGenerate(env, parts, light));
+    ({ res: geminiRes, 시도, 생각, 모델, 거절 } = await geminiGenerate(env, parts, light, only));
   } catch (e) {
     return new Response(JSON.stringify({ error: 'gemini request failed', detail: String(e) }), {
       status: 502,
@@ -1236,7 +1251,7 @@ async function handleGeminiTwin(request, env, corsHeaders, uid) {
        ⚠ 모델이 «이상한 답»을 낸 것은 쓴 것이다(돈이 나갔다) — 그건 안 돌려준다. */
     if (upstreamRefused(geminiRes.status)) await refundQuota(env, 'ai', uid);
     const errText = await geminiRes.text();
-    return new Response(JSON.stringify({ error: 'gemini error', detail: errText, attempts: 시도, light }), {
+    return new Response(JSON.stringify({ error: 'gemini error', detail: errText, attempts: 시도, light, model: 모델, tried: 거절 }), {
       status: 502,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
@@ -1257,7 +1272,7 @@ async function handleGeminiTwin(request, env, corsHeaders, uid) {
     /* «잘렸다»와 «모델이 JSON을 못 썼다»는 고치는 법이 다르다. 어느 쪽인지 남긴다. */
     return new Response(JSON.stringify({
       error: finishReason === 'MAX_TOKENS' ? 'truncated' : 'parse failed',
-      finishReason, raw: text, usage, attempts: 시도, light,
+      finishReason, raw: text, usage, attempts: 시도, light, model: 모델, tried: 거절,
     }), {
       status: 502,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -1293,7 +1308,7 @@ async function handleGeminiTwin(request, env, corsHeaders, uid) {
     scene: (needsFigure && parsed.scene && typeof parsed.scene === 'object' && parsed.scene.kind === 'graph') ? parsed.scene : null,
     quotaUsed: q.used, quotaLimit: q.limit,
     /* 진단 — 몇 번 만에 들어갔나 · 가벼운 길이었나 · 생각 상한을 어떤 이름으로 받았나 · 토큰 (2026-09-24b) */
-    attempts: 시도, light, thinking: 생각, usage,
+    attempts: 시도, light, thinking: 생각, usage, model: 모델, tried: 거절,
   }), {
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   });
