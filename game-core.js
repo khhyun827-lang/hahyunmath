@@ -869,9 +869,9 @@ const MODE_JUMP = {
     { at: 9000, top: '#070B24', bot: '#232A63' },   // 우주
   ],
   /* ── 차오르는 물 — 한자리에서 무한히 버티지 못하게 (사용자 — 「뒤에서 뭐가 올라온다던지」) ──
-     2초 쉬고 30px/s 로 시작해 95px/s 까지. 🔴 상한은 «부지런히 오르면 앞설 수 있는» 빠르기라야 한다
+     2초 쉬고 24px/s 로 시작해 80px/s 까지. 🔴 상한은 «부지런히 오르면 앞설 수 있는» 빠르기라야 한다
      (봇의 평균 오름이 180px/s 대다). 멀리 떨어져도 화면 밑 FLOOD_LAG 까지는 따라붙는다. */
-  FLOOD_WAIT: 2, FLOOD_V0: 30, FLOOD_ACC: 1.6, FLOOD_MAX: 95, FLOOD_LAG: 160,
+  FLOOD_WAIT: 2, FLOOD_V0: 24, FLOOD_ACC: 1.3, FLOOD_MAX: 80, FLOOD_LAG: 160,   // 09-27 «조금만 늦춰» — 30·1.6·95 에서
   /* 층 번호를 소수로 — 2500 이면 1.5(나무와 새 사이 한가운데) */
   stageF(climb){
     const S = this.STAGES;
