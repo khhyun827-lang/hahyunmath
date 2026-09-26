@@ -89,5 +89,35 @@ for(const seed of [3, 11, 29]){
   봄(`봇(씨앗 ${seed}) — 2분 동안 ${J.score(g)}점까지 올랐다`, J.score(g) >= 400, '너무 못 오른다 — 발판이 닿는 자리에 없을 수 있다');
 }
 
+// ⑥ 한자리에서 버티면 물에 잠긴다 (사용자 — 「무한히 한자리에서 계속 쉴 수가 있어서」)
+{
+  const J = load(5), g = 판(J);
+  g.plats = [{ x: 195, y: 600, w: 300, kind: 'n', chain: true, vx: 0 }];
+  g.py = 600 - J.FEET; g.vy = -J.v0(); J.fill = () => {};
+  let 살아 = true; while(살아 && g.t < 60){ 살아 = J.step(g, 1 / 60); g.t += 1 / 60; }
+  봄(`제자리에서 튀기만 하면 ${g.t.toFixed(1)}초에 물에 잠긴다`, !살아 && g.t < 25, '너무 오래 버틴다');
+  봄('처음 몇 초는 물이 안 올라온다', (() => { const g2 = 판(load(5)); const f0 = g2.flood; J.step(g2, 1 / 60); return g2.flood === f0; })());
+}
+{
+  const J = load(5);
+  봄('물의 빠르기 상한은 봇의 평균 오름(≈180px/s)보다 한참 느리다', J.FLOOD_MAX < 130);
+}
+
+// ⑦ 배경 — 층이 경계에서 툭 바뀌지 않는다 (사용자 — 「그라데이션으로 서서히 블렌딩」)
+{
+  const J = load(1);
+  const rgb = s => s.match(/\d+/g).map(Number);
+  let 최대점프 = 0;
+  for(let y = 0; y < 11000; y += 10){
+    const a = rgb(J.skyAt(y).top), b = rgb(J.skyAt(y + 10).top);
+    최대점프 = Math.max(최대점프, ...a.map((v, k) => Math.abs(v - b[k])));
+  }
+  봄(`하늘색이 10px 오를 때 한 번에 바뀌는 폭 ≤ 2 (가장 큰 것 ${최대점프})`, 최대점프 <= 2);
+  const 층 = ['풀밭', '나무', '새', '하늘', '우주'];
+  const 가장센 = y => { const f = J.stageF(y); return 층[[0, 1, 2, 3, 4].reduce((m, i) => J.weight(f, i) > J.weight(f, m) ? i : m, 0)]; };
+  봄('높이마다 층이 차례로 — 풀밭→나무→새→하늘→우주', JSON.stringify([0, 1500, 3500, 6000, 9500].map(가장센)) === JSON.stringify(층));
+  봄('두 층 사이에서는 둘 다 보인다(섞인다)', (() => { const f = J.stageF(2500); return J.weight(f, 1) > .3 && J.weight(f, 2) > .3; })());
+}
+
 console.log(`\n  ${fail ? '🔴' : '✅'} ${pass} 통과 · ${fail} 실패\n`);
 process.exit(fail ? 1 : 0);

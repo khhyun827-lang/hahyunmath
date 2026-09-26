@@ -78,15 +78,14 @@
     <span class="sc" id="sc">0</span>
   </div>
   <details class="help">
-    <summary>조작법 · 장애물</summary>
-    <div class="in">
+    <summary>조작법</summary>
+    <div class="in" id="help-in">
       <b>PC</b> <span class="k">←</span> <span class="k">→</span> 레인 ·
       <span class="k">↑</span> <span class="k">Space</span> 점프 ·
       <span class="k">↓</span> 슬라이드<br>
       <b>폰</b> 옆으로 쓸기 = 레인 · 위로 = 점프 · 아래로 = 슬라이드 · 톡 누르면 점프<br>
       <b>자동차</b> 비켜 가기 · <b>물웅덩이</b> 뛰어넘기 ·
       <b>차단봉</b> 미끄러지기 · ★ 50점<br>
-      <b>점프</b> 좌우만 고르면 저절로 튄다 · <b>파랑</b> 움직임 · <b>노랑</b> 밟으면 부서짐 · <b>용수철</b> 높이 튄다<br>
       여기 점수는 <b>어디에도 저장되지 않습니다</b> — 마음껏 연습하세요.
     </div>
   </details>
@@ -95,20 +94,34 @@
 <!-- ⚠ ?v= 를 붙이는 까닭 — 브라우저가 game-core.js 를 캐시해서, 올려도 학생 화면에는
      옛 게임이 그대로 돈다(Ctrl+Shift+R 을 해야 바뀐다 — 학생에게 그걸 시킬 수는 없다).
      🔴 **game-core.js 를 고칠 때마다 이 날짜를 같이 올린다.** 두 파일 다. -->
-<script src="game-core.js?v=2026-09-27b"></script>
+<script src="game-core.js?v=2026-09-27c"></script>
 <script>
   const cv = document.getElementById('cv');
   const scEl = document.getElementById('sc');
   const stage = document.getElementById('stage');
   let mode = MODE_RUNNER, best = 0;
   /* 연습은 세 갈래를 돌아가며 — 달리기 → 똥피하기 → 점프 → 달리기 */
-  const 갈래들 = [{mode: MODE_RUNNER, name: '달리기', label: '3레인 러너'},
-                 {mode: MODE_DODGE, name: '똥피하기', label: '똥피하기'},
-                 {mode: MODE_JUMP, name: '점프', label: '점프'}];
+  /* 🔴 조작법 상자도 갈래마다 — 한 벌이던 때는 점프에서도 달리기 조작법이 떴다(2026-09-27 · 사용자가 짚었다) */
+  const 끝줄 = '여기 점수는 <b>어디에도 저장되지 않습니다</b> — 마음껏 연습하세요.';
+  const 갈래들 = [
+    {mode: MODE_RUNNER, name: '달리기', label: '3레인 러너', help:
+      '<b>PC</b> <span class="k">←</span> <span class="k">→</span> 레인 · <span class="k">↑</span> <span class="k">Space</span> 점프 · <span class="k">↓</span> 슬라이드<br>' +
+      '<b>폰</b> 옆으로 쓸기 = 레인 · 위로 = 점프 · 아래로 = 슬라이드 · 톡 누르면 점프<br>' +
+      '<b>자동차</b> 비켜 가기 · <b>물웅덩이</b> 뛰어넘기 · <b>차단봉</b> 미끄러지기 · ★ 50점<br>'},
+    {mode: MODE_DODGE, name: '똥피하기', label: '똥피하기', help:
+      '<b>PC</b> <span class="k">←</span> <span class="k">→</span> 좌우 · <b>폰</b> 손가락을 끌어 좌우로<br>' +
+      '떨어지는 💩 를 피하세요 · ⭐ 를 먹으면 50점<br>'},
+    {mode: MODE_JUMP, name: '하이퍼 점프', label: '하이퍼 점프', help:
+      '<b>PC</b> <span class="k">←</span> <span class="k">→</span> 좌우(끝을 넘으면 반대편으로) · <b>폰</b> 손가락을 끌어 좌우로<br>' +
+      '발판을 밟으면 저절로 튄다 · 오른 높이가 점수 · 아래에서 <b>물이 차오른다</b><br>' +
+      '<b>빨강</b> 보통 · <b>파랑</b> 움직임 · <b>노랑</b> 밟으면 부서짐 · <b>용수철</b> 높이 튄다<br>' +
+      '풀밭 → 나무 → 새 → 하늘 → 우주<br>'}];
+  const 도움말 = m => { document.getElementById('help-in').innerHTML = 갈래들.find(x => x.mode === m).help + 끝줄; };
   const 다음 = m => 갈래들[(갈래들.findIndex(x => x.mode === m) + 1) % 갈래들.length];
   const 이름 = m => 갈래들.find(x => x.mode === m).label;
 
   function start(){
+    도움말(mode);
     const old = stage.querySelector('.over');
     if(old) old.remove();
     scEl.textContent = '0';

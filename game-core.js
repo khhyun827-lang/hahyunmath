@@ -858,7 +858,39 @@ const MODE_RUNNER = {
 const MODE_JUMP = {
   JUMP_H: 150, GRAV: 1600, SPRING: 2.4, COL_W: 460, FEET: 23,
   GAP_MIN: 58, GAP_MAX: 124,            // 124 < 150 — 닿는 높이의 83%
-  tips: ['손가락을 끌어 좌우로 움직이세요 · ← →', '발판을 밟고 위로! 높이 오를수록 점수'],
+  tips: ['손가락을 끌어 좌우로 · PC는 ← →', '발판을 밟고 위로! 차오르는 물에 잠기면 끝'],
+  /* ── 배경 다섯 층 (2026-09-27 · 사용자 — 「풀밭→나무→새→하늘→우주 · 그라데이션으로 서서히」) ──
+     at 은 오른 높이(px · 점수×10). 층과 층 «사이»는 색도 장식도 섞인다 — 경계에서 툭 바뀌지 않는다. */
+  STAGES: [
+    { at: 0,    top: '#8FCBEF', bot: '#E3F3D6' },   // 풀밭
+    { at: 1500, top: '#6DB2E6', bot: '#CBE8F5' },   // 나무
+    { at: 3500, top: '#4B91D6', bot: '#A6D0F0' },   // 새
+    { at: 6000, top: '#2F66B3', bot: '#7FB0E0' },   // 하늘
+    { at: 9000, top: '#070B24', bot: '#232A63' },   // 우주
+  ],
+  /* ── 차오르는 물 — 한자리에서 무한히 버티지 못하게 (사용자 — 「뒤에서 뭐가 올라온다던지」) ──
+     2초 쉬고 30px/s 로 시작해 95px/s 까지. 🔴 상한은 «부지런히 오르면 앞설 수 있는» 빠르기라야 한다
+     (봇의 평균 오름이 180px/s 대다). 멀리 떨어져도 화면 밑 FLOOD_LAG 까지는 따라붙는다. */
+  FLOOD_WAIT: 2, FLOOD_V0: 30, FLOOD_ACC: 1.6, FLOOD_MAX: 95, FLOOD_LAG: 160,
+  /* 층 번호를 소수로 — 2500 이면 1.5(나무와 새 사이 한가운데) */
+  stageF(climb){
+    const S = this.STAGES;
+    for(let i = 1; i < S.length; i++) if(climb < S[i].at) return i - 1 + (climb - S[i - 1].at) / (S[i].at - S[i - 1].at);
+    return S.length - 1;
+  },
+  /* 층 i 의 무게 0~1 — 이웃 층과 삼각형으로 겹쳐 섞인다. 마지막(우주)은 넘어서도 1 */
+  weight(f, i){ return (i === this.STAGES.length - 1 && f >= i) ? 1 : Math.max(0, 1 - Math.abs(f - i)); },
+  mix(a, b, t){
+    const n = h => [1, 3, 5].map(k => parseInt(h.slice(k, k + 2), 16));
+    const A = n(a), B = n(b);
+    return 'rgb(' + A.map((v, k) => Math.round(v + (B[k] - v) * t)).join(',') + ')';
+  },
+  skyAt(climb){
+    const f = this.stageF(climb), i = Math.min(Math.floor(f), this.STAGES.length - 2), t = Math.min(1, f - i);
+    const e = t * t * (3 - 2 * t);                 // 부드럽게(smoothstep)
+    const A = this.STAGES[i], B = this.STAGES[i + 1];
+    return { top: this.mix(A.top, B.top, e), bot: this.mix(A.bot, B.bot, e) };
+  },
   v0(){ return Math.sqrt(2 * this.GRAV * this.JUMP_H); },
   colX(g){ return (g.w - Math.min(g.w, this.COL_W)) / 2; },
   colW(g){ return Math.min(g.w, this.COL_W); },
@@ -869,8 +901,13 @@ const MODE_JUMP = {
     const base = g.h - g.pad - 20;
     g.plats.push({ x: g.w / 2, y: base, w: 130, kind: 'n', chain: true, vx: 0 });
     g.px = g.w / 2; g.py = base - this.FEET; g.vy = -this.v0();
-    g.clouds = [];
-    for(let i = 0; i < 5; i++) g.clouds.push({ x: Math.random() * g.w, y: Math.random() * g.h, s: .6 + Math.random() * .8 });
+    g.flood = g.h + this.FLOOD_LAG; g.groundY = base + 26;
+    const R = () => Math.random();
+    g.clouds = []; g.trees = []; g.birds = []; g.stars = [];
+    for(let i = 0; i < 5; i++) g.clouds.push({ x: R() * g.w, y: R() * g.h, s: .6 + R() * .8 });
+    for(let i = 0; i < 6; i++) g.trees.push({ side: i % 2 ? 1 : -1, y: R() * g.h, s: .8 + R() * .6, dx: R() });
+    for(let i = 0; i < 5; i++) g.birds.push({ x: R() * g.w, y: R() * g.h, vx: (R() < .5 ? -1 : 1) * (30 + R() * 40), ph: R() * 6 });
+    for(let i = 0; i < 70; i++) g.stars.push({ x: R() * g.w, y: R() * g.h, r: .6 + R() * 1.4, tw: R() * 6 });
     this.fill(g);
   },
   /* 화면 위쪽 너머까지 발판을 채운다 */
@@ -926,32 +963,96 @@ const MODE_JUMP = {
       }
     }
 
+    /* 물이 차오른다 */
+    if(g.t > this.FLOOD_WAIT) g.flood -= Math.min(this.FLOOD_V0 + (g.t - this.FLOOD_WAIT) * this.FLOOD_ACC, this.FLOOD_MAX) * dt;
+    for(const b of g.birds){ b.x += b.vx * dt; b.ph += dt * 9;
+      if(b.x < -30) b.x = g.w + 30; else if(b.x > g.w + 30) b.x = -30; }
+
     /* 화면을 따라 올린다 — 사람이 위쪽 42% 를 넘으면 세상을 내린다 */
     const line = g.h * .42;
     if(g.py < line){
-      const dy = line - g.py;
-      g.py = line; g.climb += dy;
+      const dy = line - g.py, R = () => Math.random();
+      g.py = line; g.climb += dy; g.flood += dy; g.groundY += dy;
       for(const p of g.plats) p.y += dy;
-      for(const c of g.clouds){ c.y += dy * .35 * c.s; if(c.y > g.h + 40){ c.y = -40; c.x = Math.random() * g.w; } }
+      /* 장식은 멀수록 덜 움직인다(시차) — 화면 밑으로 빠지면 위로 되돌린다 */
+      const back = (o, k) => { o.y += dy * k; if(o.y > g.h + 60){ o.y = -60 - R() * g.h * .4; return true; } return false; };
+      for(const c of g.clouds) if(back(c, .35 * c.s)) c.x = R() * g.w;
+      for(const t of g.trees) if(back(t, .6)) t.dx = R();
+      for(const b of g.birds) if(back(b, .5)) b.x = R() * g.w;
+      for(const st of g.stars) if(back(st, .06)) st.x = R() * g.w;
       g.plats = g.plats.filter(p => p.y < g.h + 40);
       this.fill(g);
     }
+    g.flood = Math.min(g.flood, g.h + this.FLOOD_LAG);
+    if(g.py + this.FEET > g.flood + 4) return false;   // 물에 잠겼다
     return g.py - this.FEET * 2 < g.h;     // 화면 밑으로 빠지면 끝
   },
   score(g){ return Math.floor(g.climb / 10); },
   draw(g){
     const c = g.cx, C = g.col, w = g.w, h = g.h;
     /* 하늘은 «진짜 파랑» — 옅게 두면 흰 구름이 안 보이고 «오른다»가 안 느껴진다(사용자가 준 그림이 이 결이다).
-       디자인 시스템에 없는 색이지만 달리기의 빗줄 노랑처럼 «그것이어야만 하는» 색이다. */
+       디자인 시스템에 없는 색이지만 달리기의 빗줄 노랑처럼 «그것이어야만 하는» 색이다.
+       🔵 층마다 색이 있고 오른 높이로 섞는다 — 풀밭의 밝은 하늘에서 우주의 남색까지 서서히. */
+    const f = this.stageF(g.climb), W = i => this.weight(f, i), sk = this.skyAt(g.climb);
     const sky = c.createLinearGradient(0, 0, 0, h);
-    sky.addColorStop(0, '#4F7FB8'); sky.addColorStop(1, '#9CC0E2');
+    sky.addColorStop(0, sk.top); sky.addColorStop(1, sk.bot);
     c.fillStyle = sky; c.fillRect(0, 0, w, h);
-    c.fillStyle = 'rgba(255,255,255,.85)';
-    for(const cl of g.clouds){
-      const s = 22 * cl.s;
-      c.beginPath();
-      c.arc(cl.x, cl.y, s, 0, 6.2832); c.arc(cl.x + s * .9, cl.y + s * .2, s * .75, 0, 6.2832);
-      c.arc(cl.x - s * .9, cl.y + s * .25, s * .65, 0, 6.2832); c.fill();
+    const O = 6.2832;
+    /* 우주 — 반짝이는 별과 먼 행성 */
+    const ws = W(4);
+    if(ws > .01){
+      for(const st of g.stars){
+        c.globalAlpha = ws * (.55 + .45 * Math.sin(g.t * 2 + st.tw));
+        c.fillStyle = '#FFFFFF'; c.beginPath(); c.arc(st.x, st.y, st.r, 0, O); c.fill();
+      }
+      c.globalAlpha = ws * .9;
+      c.fillStyle = '#C98B5B'; c.beginPath(); c.arc(w * .78, h * .2, 26, 0, O); c.fill();
+      c.strokeStyle = '#E8C9A0'; c.lineWidth = 3;
+      c.beginPath(); c.ellipse(w * .78, h * .2, 42, 10, -.35, 0, O); c.stroke();
+      c.globalAlpha = 1;
+    }
+    /* 구름 — 새·하늘 층에서 짙고 우주로 가며 사라진다 */
+    const wc = Math.min(1, .35 * W(1) + W(2) + W(3));
+    if(wc > .01){
+      c.globalAlpha = wc * .88; c.fillStyle = '#FFFFFF';
+      for(const cl of g.clouds){
+        const s = 22 * cl.s;
+        c.beginPath();
+        c.arc(cl.x, cl.y, s, 0, O); c.arc(cl.x + s * .9, cl.y + s * .2, s * .75, 0, O);
+        c.arc(cl.x - s * .9, cl.y + s * .25, s * .65, 0, O); c.fill();
+      }
+      c.globalAlpha = 1;
+    }
+    /* 나무 — 화면 양옆에 선다 */
+    const wt = Math.min(1, W(1) + .6 * W(0));
+    if(wt > .01){
+      c.globalAlpha = wt;
+      for(const t of g.trees){
+        const r = 26 * t.s, x = t.side < 0 ? 8 + t.dx * 30 : w - 8 - t.dx * 30;
+        c.fillStyle = '#7A5230'; c.fillRect(x - 4 * t.s, t.y, 8 * t.s, 44 * t.s);
+        c.fillStyle = '#4E9A48'; c.beginPath(); c.arc(x, t.y, r, 0, O); c.fill();
+        c.fillStyle = '#3E8A3C'; c.beginPath(); c.arc(x + r * .45, t.y + r * .3, r * .7, 0, O); c.fill();
+      }
+      c.globalAlpha = 1;
+    }
+    /* 새 — 날갯짓하며 가로지른다 */
+    const wb = W(2);
+    if(wb > .01){
+      c.globalAlpha = wb; c.strokeStyle = '#2B2B26'; c.lineWidth = 2; c.lineCap = 'round';
+      for(const b of g.birds){
+        const fy = Math.sin(b.ph) * 5;
+        c.beginPath(); c.moveTo(b.x - 9, b.y - fy); c.quadraticCurveTo(b.x - 4, b.y - 6, b.x, b.y);
+        c.quadraticCurveTo(b.x + 4, b.y - 6, b.x + 9, b.y - fy); c.stroke();
+      }
+      c.globalAlpha = 1; c.lineCap = 'butt';
+    }
+    /* 풀밭 — 출발한 땅. 오르면 밑으로 사라진다 */
+    if(g.groundY < h){
+      c.fillStyle = '#7CC36A';
+      c.beginPath(); c.moveTo(0, g.groundY + 10);
+      for(let x = 0; x <= w; x += 20) c.lineTo(x, g.groundY + 6 * Math.sin(x * .04));
+      c.lineTo(w, h); c.lineTo(0, h); c.fill();
+      c.fillStyle = '#5FAE52'; c.fillRect(0, g.groundY + 18, w, h);
     }
     const colOf = { n: C.car, s: C.car, m: C.water, c: C.stripeA };
     for(const p of g.plats){
@@ -974,6 +1075,20 @@ const MODE_JUMP = {
         for(let i = 0; i <= 4; i++){ const yy = y - i * up / 4; c.moveTo(p.x - 7, yy); c.lineTo(p.x + 7, yy - up / 8); }
         c.stroke();
       }
+    }
+    /* 차오르는 물 — 발판을 덮고 올라온다 */
+    if(g.flood < h){
+      const wav = x => g.flood + 4 * Math.sin(x * .05 + g.t * 3);
+      const wg = c.createLinearGradient(0, g.flood, 0, h);
+      wg.addColorStop(0, 'rgba(62,142,208,.78)'); wg.addColorStop(1, 'rgba(30,86,150,.92)');
+      c.fillStyle = wg;
+      c.beginPath(); c.moveTo(0, h);
+      for(let x = 0; x <= w; x += 12) c.lineTo(x, wav(x));
+      c.lineTo(w, h); c.fill();
+      c.strokeStyle = 'rgba(255,255,255,.7)'; c.lineWidth = 2;
+      c.beginPath(); c.moveTo(0, wav(0));
+      for(let x = 12; x <= w; x += 12) c.lineTo(x, wav(x));
+      c.stroke();
     }
     g._player(g.px, g.py, g.face);
   }
