@@ -4741,11 +4741,11 @@
      화면만 보고서는 «고쳤는데 왜 안 되지»가 된다 — 파서가 바뀐 것을 아무 데서도 못 본다. -->
 <!-- 2026-09-10에 올렸다 — 창고 대조 판정과 «개체 설명문에서 코드 읽기»가 들어갔다. -->
 <script src="hwpx.js?v=2026-09-10a"></script>
-<!-- 출석 도장 게임(셸·똥피하기·달리기). 연습 페이지 game.html 도 같은 파일을 쓴다 -->
+<!-- 출석 도장 게임(셸·똥피하기·달리기·점프). 연습 페이지 game.html 도 같은 파일을 쓴다 -->
 <!-- ⚠ ?v= 를 붙이는 까닭 — 브라우저가 game-core.js 를 캐시해서, 올려도 학생 화면에는
      옛 게임이 그대로 돈다(Ctrl+Shift+R 을 해야 바뀐다 — 학생에게 그걸 시킬 수는 없다).
      🔴 **game-core.js 를 고칠 때마다 이 날짜를 같이 올린다.** 두 파일 다. -->
-<script src="game-core.js?v=2026-09-17b"></script>
+<script src="game-core.js?v=2026-09-27b"></script>
 
 <script>
   const firebaseConfig = {
@@ -14986,19 +14986,23 @@ function weekStartOf(ymd){
      한 주에 게임이 하나면 **그 주의 순위는 같은 잣대끼리만 겨룬다.**
      고르게 했으면 «점수 잘 나오는 쪽»으로 몰려 순위가 «누가 쉬운 걸 찾았나»가 됐을 것이다.
    ⚠ 도장·연속·하루 한 판은 **그대로 하나다** — 게임이 바뀌어도 출석의 뜻은 안 바뀐다. */
+/* 🔴 **이 배열의 차례가 곧 로테이션 차례다** (2026-09-27 · 점프를 더하며 — 점프 → 똥피하기 → 달리기).
+   차례를 바꾸거나 하나를 더하면 GAME_EPOCH 뒤의 주들이 전부 바뀐다 — 지난 주들을 GAME_PICKS 에 먼저 못박을 것. */
 const GAMES = [
+  { key:'jump',   name:'점프',     icon:'🦘',
+    tip:'손가락을 끌어 좌우로 움직이세요',  tip2:'발판을 밟고 위로! 높이 오를수록 점수' },
+  { key:'dodge',  name:'똥피하기', icon:'💩',
+    tip:'손가락을 끌어 좌우로 피하세요',   tip2:'⭐ 를 먹으면 50점' },
   { key:'runner', name:'달리기',   icon:'🏃',
     tip:'← → 옮기기 · ↑ 뛰기 · ↓ 미끄러지기',
-    tip2:'폰에서는 옆으로 · 위로 · 아래로 쓸어 넘기세요' },
-  { key:'dodge',  name:'똥피하기', icon:'💩',
-    tip:'손가락을 끌어 좌우로 피하세요',   tip2:'⭐ 를 먹으면 50점' }
+    tip2:'폰에서는 옆으로 · 위로 · 아래로 쓸어 넘기세요' }
 ];
 /* 주차를 세는 기준. ⚠ 이 날짜를 옮기면 «이번 주 게임»이 통째로 바뀐다 — 주 중에 옮기면
    그 주에 이미 올라간 점수가 다른 게임 것이 되어 순위에서 빠진다. 월요일에만 옮길 것.
    🔴 **한 주를 콕 집으면(GAME_PICKS) 그 다음 주부터 번갈이가 어긋난다** — 집은 게임이
      자연 차례와 다르면 그 주와 다음 주가 같은 게임이 된다(2026-09-14 가 그랬다).
      ⇒ 집은 뒤에는 **기준을 한 주 옮기고, 지나간 주들을 GAME_PICKS 에 못박는다.** */
-const GAME_EPOCH = '2026-09-07';
+const GAME_EPOCH = '2026-09-28';   // 점프가 첫선을 보이는 주(사용자 — 「데뷔는 바로 다음주부터」). 09-07 에서 옮기며 09-21 을 못박았다
 /* 🔵 **한 주를 콕 집어 정한다** (2026-09-14 · 사용자 요청 — 「이번주 게임 똥피하기로 바꿔주고」).
    🔴 **`GAME_EPOCH` 를 옮기면 안 된다** — 그건 로테이션 «전체»를 뒤집어서, 지난 주들의
      게임까지 바뀐다(그 주 순위가 다른 게임 것으로 읽힌다).
@@ -15008,6 +15012,7 @@ const GAME_PICKS = {
   '2026-08-31': 'runner',    // 기준을 09-07 로 옮기며 지난 주들을 «있던 그대로» 못박는다
   '2026-09-07': 'dodge',     //   (이 둘이 없으면 옛 주의 순위가 다른 게임 것으로 읽힌다)
   '2026-09-14': 'dodge',     // 사용자가 이 주만 똥피하기로 정했다
+  '2026-09-21': 'runner',    // 기준을 09-28 로 옮기며 «있던 그대로» 못박는다 (2026-09-27)
 };
 function gameOfWeek(monday){
   const 콕 = GAME_PICKS[monday];
@@ -15385,7 +15390,7 @@ function openGame(){
   </div>`;
   host.appendChild(ov);
   Game.mount(ov.querySelector('#gm-canvas'), {
-    mode: gw.key === 'runner' ? MODE_RUNNER : MODE_DODGE,
+    mode: gw.key === 'runner' ? MODE_RUNNER : gw.key === 'jump' ? MODE_JUMP : MODE_DODGE,
     tips: [gw.tip, gw.tip2],
     onScore(s){ const e = document.getElementById('gm-score'); if(e) e.textContent = s; },
     onEnd: finishGame

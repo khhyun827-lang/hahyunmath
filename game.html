@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
-<title>달리기 연습 · 김하현수학연구소</title>
+<title>게임 연습 · 김하현수학연구소</title>
 <meta name="theme-color" content="#FAF9F6">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
@@ -74,7 +74,7 @@
 <div id="wrap">
   <div class="stage" id="stage"><canvas id="cv"></canvas></div>
   <div class="bar">
-    <span class="t">달리기 연습<s id="which">3레인 러너</s></span>
+    <span class="t">게임 연습<s id="which">3레인 러너</s></span>
     <span class="sc" id="sc">0</span>
   </div>
   <details class="help">
@@ -86,6 +86,7 @@
       <b>폰</b> 옆으로 쓸기 = 레인 · 위로 = 점프 · 아래로 = 슬라이드 · 톡 누르면 점프<br>
       <b>자동차</b> 비켜 가기 · <b>물웅덩이</b> 뛰어넘기 ·
       <b>차단봉</b> 미끄러지기 · ★ 50점<br>
+      <b>점프</b> 좌우만 고르면 저절로 튄다 · <b>파랑</b> 움직임 · <b>노랑</b> 밟으면 부서짐 · <b>용수철</b> 높이 튄다<br>
       여기 점수는 <b>어디에도 저장되지 않습니다</b> — 마음껏 연습하세요.
     </div>
   </details>
@@ -94,12 +95,18 @@
 <!-- ⚠ ?v= 를 붙이는 까닭 — 브라우저가 game-core.js 를 캐시해서, 올려도 학생 화면에는
      옛 게임이 그대로 돈다(Ctrl+Shift+R 을 해야 바뀐다 — 학생에게 그걸 시킬 수는 없다).
      🔴 **game-core.js 를 고칠 때마다 이 날짜를 같이 올린다.** 두 파일 다. -->
-<script src="game-core.js?v=2026-09-17b"></script>
+<script src="game-core.js?v=2026-09-27b"></script>
 <script>
   const cv = document.getElementById('cv');
   const scEl = document.getElementById('sc');
   const stage = document.getElementById('stage');
   let mode = MODE_RUNNER, best = 0;
+  /* 연습은 세 갈래를 돌아가며 — 달리기 → 똥피하기 → 점프 → 달리기 */
+  const 갈래들 = [{mode: MODE_RUNNER, name: '달리기', label: '3레인 러너'},
+                 {mode: MODE_DODGE, name: '똥피하기', label: '똥피하기'},
+                 {mode: MODE_JUMP, name: '점프', label: '점프'}];
+  const 다음 = m => 갈래들[(갈래들.findIndex(x => x.mode === m) + 1) % 갈래들.length];
+  const 이름 = m => 갈래들.find(x => x.mode === m).label;
 
   function start(){
     const old = stage.querySelector('.over');
@@ -118,14 +125,13 @@
       '<div class="btns">' +
         '<button class="btn p" id="again">다시 하기</button>' +
         '<button class="btn" id="swap">' +
-          (mode === MODE_RUNNER ? '똥피하기로' : '달리기로') + '</button>' +
+          다음(mode).name + '로</button>' +
       '</div></div>';
     stage.appendChild(d);
     d.querySelector('#again').onclick = start;
     d.querySelector('#swap').onclick = () => {
-      mode = (mode === MODE_RUNNER) ? MODE_DODGE : MODE_RUNNER;
-      document.getElementById('which').textContent =
-        mode === MODE_RUNNER ? '3레인 러너' : '똥피하기';
+      mode = 다음(mode).mode;
+      document.getElementById('which').textContent = 이름(mode);
       start();
     };
   }

@@ -849,6 +849,136 @@ const MODE_RUNNER = {
   }
 };
 
+/* ---------- 갈래 ③ 점프 (2026-09-27 · 사용자 — 「위로 올라갈수록 점수를 받는 구조」) ----------
+   발판을 밟으면 저절로 튀어 오른다. 손가락(또는 ← →)으로 좌우만 고른다. 떨어지면 끝.
+   🔴 **점프 높이는 «제 키»로 적는다**(px) — 화면 높이로 적으면 폰마다 게임이 달라진다(달리기에서 겪었다).
+   🔴 **줄기(chain) 발판 사이는 언제나 닿는 높이다**(GAP_MAX < JUMP_H). 금 간 발판은 «덤»이라 줄기에 안 든다 —
+     그것만 남은 자리가 생기면 억울하게 죽는다.
+   ⚠ 넓은 화면에서는 가운데 기둥(COL_W)만 쓴다 — 끝없이 넓으면 옆 발판에 손이 못 간다. */
+const MODE_JUMP = {
+  JUMP_H: 150, GRAV: 1600, SPRING: 2.4, COL_W: 460, FEET: 23,
+  GAP_MIN: 58, GAP_MAX: 124,            // 124 < 150 — 닿는 높이의 83%
+  tips: ['손가락을 끌어 좌우로 움직이세요 · ← →', '발판을 밟고 위로! 높이 오를수록 점수'],
+  v0(){ return Math.sqrt(2 * this.GRAV * this.JUMP_H); },
+  colX(g){ return (g.w - Math.min(g.w, this.COL_W)) / 2; },
+  colW(g){ return Math.min(g.w, this.COL_W); },
+  /* 높이 d(0~1)에 따라 조인다 — 6000px(점수 600) 에서 끝까지 */
+  hard(g){ return Math.min(1, g.climb / 6000); },
+  reset(g){
+    g.climb = 0; g.plats = []; g.face = 1;
+    const base = g.h - g.pad - 20;
+    g.plats.push({ x: g.w / 2, y: base, w: 130, kind: 'n', chain: true, vx: 0 });
+    g.px = g.w / 2; g.py = base - this.FEET; g.vy = -this.v0();
+    g.clouds = [];
+    for(let i = 0; i < 5; i++) g.clouds.push({ x: Math.random() * g.w, y: Math.random() * g.h, s: .6 + Math.random() * .8 });
+    this.fill(g);
+  },
+  /* 화면 위쪽 너머까지 발판을 채운다 */
+  fill(g){
+    const cx = this.colX(g), cw = this.colW(g);
+    let top = g.plats.filter(p => p.chain).reduce((a, p) => p.y < a.y ? p : a);
+    while(top.y > -60){
+      const d = this.hard(g);
+      const gap = this.GAP_MIN + (this.GAP_MAX - this.GAP_MIN) * (d * .75 + Math.random() * .25);
+      const w = 72 - 16 * d;
+      const y = top.y - gap;
+      const r = Math.random();
+      const kind = r < .07 ? 's' : r < .07 + .35 * d ? 'm' : 'n';
+      const p = { x: cx + w / 2 + Math.random() * (cw - w), y, w, kind, chain: true,
+        vx: kind === 'm' ? (Math.random() < .5 ? -1 : 1) * (40 + 80 * d) : 0 };
+      g.plats.push(p);
+      /* 덤 — 금 간 발판. 줄기 사이 한가운데쯤에 둔다(밟으면 부서지고 안 튄다) */
+      if(Math.random() < .12 + .25 * d){
+        g.plats.push({ x: cx + 30 + Math.random() * (cw - 60), y: y + gap * (.35 + Math.random() * .3),
+          w: 64, kind: 'c', chain: false, vx: 0 });
+      }
+      top = p;
+    }
+  },
+  step(g, dt){
+    const cx = this.colX(g), cw = this.colW(g), was = g.px;
+    if(g.ptr !== null) g.px += (g.ptr - g.px) * Math.min(1, dt * 14);
+    const k = (g.keys.r ? 1 : 0) - (g.keys.l ? 1 : 0);
+    if(k) g.px += k * 360 * dt;
+    /* 기둥 끝을 넘으면 반대편으로 — 손가락으로 끌 때는 기둥 안에 가둔다(손가락 자리와 어긋나면 안 된다) */
+    if(g.ptr === null){
+      if(g.px < cx) g.px += cw; else if(g.px > cx + cw) g.px -= cw;
+    }else g.px = Math.max(cx + 12, Math.min(cx + cw - 12, g.px));
+    const moved = g.px - was;
+    if(moved > .5) g.face = 1; else if(moved < -.5) g.face = -1;
+
+    const feet0 = g.py + this.FEET;
+    g.vy += this.GRAV * dt;
+    g.py += g.vy * dt;
+    const feet = g.py + this.FEET;
+
+    for(const p of g.plats){
+      if(p.vx){ p.x += p.vx * dt;
+        if(p.x < cx + p.w / 2){ p.x = cx + p.w / 2; p.vx = Math.abs(p.vx); }
+        if(p.x > cx + cw - p.w / 2){ p.x = cx + cw - p.w / 2; p.vx = -Math.abs(p.vx); } }
+      if(p.broken){ p.fall = (p.fall || 0) + this.GRAV * dt; p.y += p.fall * dt; continue; }
+      /* 내려올 때만, 발이 발판 윗면을 «건너갈 때» 밟은 것이다 — 올라가며 지나치는 것은 안 친다 */
+      if(g.vy > 0 && feet0 <= p.y && feet >= p.y && Math.abs(g.px - p.x) < p.w / 2 + 8){
+        if(p.kind === 'c'){ p.broken = true; continue; }
+        g.py = p.y - this.FEET;
+        g.vy = -this.v0() * (p.kind === 's' ? Math.sqrt(this.SPRING) : 1);
+        if(p.kind === 's') p.sprung = g.t;
+      }
+    }
+
+    /* 화면을 따라 올린다 — 사람이 위쪽 42% 를 넘으면 세상을 내린다 */
+    const line = g.h * .42;
+    if(g.py < line){
+      const dy = line - g.py;
+      g.py = line; g.climb += dy;
+      for(const p of g.plats) p.y += dy;
+      for(const c of g.clouds){ c.y += dy * .35 * c.s; if(c.y > g.h + 40){ c.y = -40; c.x = Math.random() * g.w; } }
+      g.plats = g.plats.filter(p => p.y < g.h + 40);
+      this.fill(g);
+    }
+    return g.py - this.FEET * 2 < g.h;     // 화면 밑으로 빠지면 끝
+  },
+  score(g){ return Math.floor(g.climb / 10); },
+  draw(g){
+    const c = g.cx, C = g.col, w = g.w, h = g.h;
+    /* 하늘은 «진짜 파랑» — 옅게 두면 흰 구름이 안 보이고 «오른다»가 안 느껴진다(사용자가 준 그림이 이 결이다).
+       디자인 시스템에 없는 색이지만 달리기의 빗줄 노랑처럼 «그것이어야만 하는» 색이다. */
+    const sky = c.createLinearGradient(0, 0, 0, h);
+    sky.addColorStop(0, '#4F7FB8'); sky.addColorStop(1, '#9CC0E2');
+    c.fillStyle = sky; c.fillRect(0, 0, w, h);
+    c.fillStyle = 'rgba(255,255,255,.85)';
+    for(const cl of g.clouds){
+      const s = 22 * cl.s;
+      c.beginPath();
+      c.arc(cl.x, cl.y, s, 0, 6.2832); c.arc(cl.x + s * .9, cl.y + s * .2, s * .75, 0, 6.2832);
+      c.arc(cl.x - s * .9, cl.y + s * .25, s * .65, 0, 6.2832); c.fill();
+    }
+    const colOf = { n: C.car, s: C.car, m: C.water, c: C.stripeA };
+    for(const p of g.plats){
+      const x = p.x - p.w / 2, y = p.y, ph = 14;
+      c.fillStyle = colOf[p.kind];
+      MODE_RUNNER.box(c, x, y, p.w, ph, 4);
+      /* 벽돌 줄 */
+      c.strokeStyle = 'rgba(0,0,0,.22)'; c.lineWidth = 1;
+      c.beginPath(); c.moveTo(x + 3, y + ph / 2 + .5); c.lineTo(x + p.w - 3, y + ph / 2 + .5);
+      for(let bx = x + 14; bx < x + p.w - 6; bx += 18){ c.moveTo(bx + .5, y + 2); c.lineTo(bx + .5, y + ph / 2); }
+      c.stroke();
+      if(p.kind === 'c'){                       // 금
+        c.strokeStyle = 'rgba(0,0,0,.45)';
+        c.beginPath(); c.moveTo(p.x - 8, y + 1); c.lineTo(p.x - 2, y + 7); c.lineTo(p.x + 5, y + 4); c.lineTo(p.x + 9, y + ph - 1); c.stroke();
+      }
+      if(p.kind === 's'){                       // 용수철 — 밟으면 잠깐 늘어난다
+        const up = (g.t - (p.sprung || -9)) < .15 ? 16 : 9;
+        c.strokeStyle = C.chrome; c.lineWidth = 2;
+        c.beginPath();
+        for(let i = 0; i <= 4; i++){ const yy = y - i * up / 4; c.moveTo(p.x - 7, yy); c.lineTo(p.x + 7, yy - up / 8); }
+        c.stroke();
+      }
+    }
+    g._player(g.px, g.py, g.face);
+  }
+};
+
 const Game = {
   cv:null, cx:null, w:0, h:0,
   raf:0, running:false, started:false,
@@ -1023,7 +1153,8 @@ const Game = {
     /* 🔴 **갈래가 `false` 를 돌려주면 그 판은 끝이다.** 갈래 안에서 직접 끝내지 않는다 —
        끝내는 길이 둘이 되면 «저장을 한 번만»이라는 약속이 깨진다. */
     if(this.mode.step(this, dt) === false){ this._end(); return; }
-    const s = Math.floor(this.t * 10) + this.stars * 50;
+    /* 점수 셈을 갈래가 따로 가지면 그것을 쓴다(점프는 «오른 높이») */
+    const s = this.mode.score ? this.mode.score(this) : Math.floor(this.t * 10) + this.stars * 50;
     if(s !== this.score){ this.score = s; if(this.onScore) this.onScore(s); }
   },
 
@@ -1045,7 +1176,7 @@ const Game = {
       c.fillStyle = '#96968C'; c.font = '12.5px Pretendard, sans-serif';
       /* 🔵 안내 문구는 «받아서» 쓴다 — 이래야 게임 파일이 주 로테이션(GAMES)을 몰라도 된다.
          연습 페이지(game.html)도 같은 파일을 그대로 쓴다. */
-      const tp = this.tips || (this.mode === MODE_RUNNER
+      const tp = this.tips || this.mode.tips || (this.mode === MODE_RUNNER
         ? ['← → 옮기기 · ↑ 뛰기 · ↓ 미끄러지기', '폰에서는 옆으로 · 위로 · 아래로 쓸어 넘기세요']
         : ['손가락을 끌어 좌우로 피하세요', '⭐ 를 먹으면 50점']);
       c.fillText(tp[0], w/2, h/2 + 8);

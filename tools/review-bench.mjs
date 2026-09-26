@@ -58,6 +58,8 @@ const 모델들 = 인자.filter((a, i) => !a.startsWith(String.fromCharCode(45, 
 const 곳들 = {
   groq:      { 이름: 'Groq',       url: 'https://api.groq.com/openai/v1', 파일: 'groq',      환경: 'GROQ_KEY' },
   cerebras:  { 이름: 'Cerebras',   url: 'https://api.cerebras.ai/v1',     파일: 'cerebras',  환경: 'CEREBRAS_KEY' },
+  // ⚠ NVIDIA 무료(build.nvidia.com)는 약관상 «개발·시험용»이다 — 여기서 재는 것까지만(2026-09-26).
+  nvidia:    { 이름: 'NVIDIA',     url: 'https://integrate.api.nvidia.com/v1', 파일: 'nvidia', 환경: 'NVIDIA_KEY' },
   openrouter:{ 이름: 'OpenRouter', url: BASE,                             파일: 'openrouter',환경: 'OPENROUTER_KEY' },
 };
 const 열쇠통 = {};
@@ -89,6 +91,12 @@ function 갈래(model) {
 }
 
 
+if (process.argv.includes('--list') && 모델들[0] === 'nvidia') {
+  const r = await fetch(곳들.nvidia.url + '/models', { headers: { Authorization: 'Bearer ' + 열쇠('nvidia') } });
+  const j = await r.json();
+  for (const m of j.data || []) console.log('    nvidia:' + m.id);
+  process.exit(0);
+}
 if (process.argv.includes('--list')) {
   const r = await fetch(BASE + '/models', { headers: { connection: 'close' } });
   const j = await r.json();
