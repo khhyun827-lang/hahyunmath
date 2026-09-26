@@ -932,15 +932,21 @@ const MODE_JUMP = {
       top = p;
     }
   },
+  /* 🔴 **손가락은 «끈 만큼»만 움직인다** (2026-09-27 · 사용자가 폰으로 해 보고 — 「왼쪽을 터치하면 순간적으로 왼쪽으로 가고
+       … 손가락을 떼었다 다시 하려니 컨트롤이 어렵다 · 어딜 터치하든 좌우 드래그로만」).
+     누른 순간의 손가락·사람 자리를 붙들어 두고 그 뒤로 «움직인 거리 × DRAG_GAIN» 만큼만 옮긴다. 누른 자리는 상관없다.
+     ⚠ 똥피하기는 그대로 «손가락 자리로 따라가기»다 — 이 갈래만의 일이다. */
+  DRAG_GAIN: 1.3,
   step(g, dt){
     const cx = this.colX(g), cw = this.colW(g), was = g.px;
-    if(g.ptr !== null) g.px += (g.ptr - g.px) * Math.min(1, dt * 14);
+    if(g.ptr === null) g.drag = null;
+    else if(!g.drag) g.drag = { f: g.ptr, p: g.px };
+    else g.px = g.drag.p + (g.ptr - g.drag.f) * this.DRAG_GAIN;
     const k = (g.keys.r ? 1 : 0) - (g.keys.l ? 1 : 0);
     if(k) g.px += k * 360 * dt;
-    /* 기둥 끝을 넘으면 반대편으로 — 손가락으로 끌 때는 기둥 안에 가둔다(손가락 자리와 어긋나면 안 된다) */
-    if(g.ptr === null){
-      if(g.px < cx) g.px += cw; else if(g.px > cx + cw) g.px -= cw;
-    }else g.px = Math.max(cx + 12, Math.min(cx + cw - 12, g.px));
+    /* 기둥 끝을 넘으면 반대편으로 — 끄는 중이면 붙든 자리도 같이 옮겨야 다음 걸음에 도로 튀지 않는다 */
+    if(g.px < cx){ g.px += cw; if(g.drag) g.drag.p += cw; }
+    else if(g.px > cx + cw){ g.px -= cw; if(g.drag) g.drag.p -= cw; }
     const moved = g.px - was;
     if(moved > .5) g.face = 1; else if(moved < -.5) g.face = -1;
 
@@ -1054,7 +1060,7 @@ const MODE_JUMP = {
       c.lineTo(w, h); c.lineTo(0, h); c.fill();
       c.fillStyle = '#5FAE52'; c.fillRect(0, g.groundY + 18, w, h);
     }
-    const colOf = { n: C.car, s: C.car, m: C.water, c: C.stripeA };
+    const colOf = { n: C.car, s: '#E2679A', m: C.water, c: C.stripeA };   // 용수철 발판은 분홍 — 사용자가 준 그림 결
     for(const p of g.plats){
       const x = p.x - p.w / 2, y = p.y, ph = 14;
       c.fillStyle = colOf[p.kind];
@@ -1069,11 +1075,17 @@ const MODE_JUMP = {
         c.beginPath(); c.moveTo(p.x - 8, y + 1); c.lineTo(p.x - 2, y + 7); c.lineTo(p.x + 5, y + 4); c.lineTo(p.x + 9, y + ph - 1); c.stroke();
       }
       if(p.kind === 's'){                       // 용수철 — 밟으면 잠깐 늘어난다
-        const up = (g.t - (p.sprung || -9)) < .15 ? 16 : 9;
-        c.strokeStyle = C.chrome; c.lineWidth = 2;
-        c.beginPath();
-        for(let i = 0; i <= 4; i++){ const yy = y - i * up / 4; c.moveTo(p.x - 7, yy); c.lineTo(p.x + 7, yy - up / 8); }
-        c.stroke();
+        /* 🔵 크게 · 테두리 · 윗판 (2026-09-27 · 사용자 — 「용수철이 잘 안 보여」). 가는 회색 줄은 벽돌에 묻혔다 */
+        const up = (g.t - (p.sprung || -9)) < .15 ? 26 : 16, sw = 11;
+        const coil = () => { c.beginPath(); c.moveTo(p.x - sw, y);
+          for(let i = 1; i <= 5; i++) c.lineTo(p.x + (i % 2 ? sw : -sw), y - i * up / 5);
+          c.stroke(); };
+        c.lineCap = 'round'; c.lineJoin = 'round';
+        c.strokeStyle = '#2B2B26'; c.lineWidth = 5; coil();
+        c.strokeStyle = '#F2F2EE'; c.lineWidth = 2.6; coil();
+        c.fillStyle = '#2B2B26'; MODE_RUNNER.box(c, p.x - 15, y - up - 5, 30, 6, 3);
+        c.fillStyle = '#FFD24A'; MODE_RUNNER.box(c, p.x - 14, y - up - 4, 28, 4, 2);
+        c.lineCap = 'butt'; c.lineJoin = 'miter';
       }
     }
     /* 차오르는 물 — 발판을 덮고 올라온다 */

@@ -83,7 +83,11 @@ for(const seed of [3, 11, 29]){
     const 목표 = g.vy > 0
       ? g.plats.filter(p => !p.broken && p.kind !== 'c' && p.y >= feet - 2).sort((a, b) => a.y - b.y)[0]
       : g.plats.filter(p => !p.broken && p.kind !== 'c' && p.y < feet - 20).sort((a, b) => b.y - a.y)[0];
-    g.ptr = 목표 ? 목표.x : null;
+    /* 손가락이 «끈 만큼»만 움직이므로(09-27) 봇도 손가락을 «끈다» — 사람 손처럼 초당 1200px 까지만 */
+    let dx = 목표 ? 목표.x - g.px : 0;
+    if(dx > g.w / 2) dx -= g.w; else if(dx < -g.w / 2) dx += g.w;   // 끝을 넘어 반대편으로 가는 쪽이 가까우면 그리로
+    if(g.ptr === null) g.ptr = g.w / 2;
+    g.ptr += Math.max(-20, Math.min(20, dx / J.DRAG_GAIN));
     살아 = J.step(g, 1 / 60); g.t += 1 / 60;
   }
   봄(`봇(씨앗 ${seed}) — 2분 동안 ${J.score(g)}점까지 올랐다`, J.score(g) >= 400, '너무 못 오른다 — 발판이 닿는 자리에 없을 수 있다');
@@ -117,6 +121,20 @@ for(const seed of [3, 11, 29]){
   const 가장센 = y => { const f = J.stageF(y); return 층[[0, 1, 2, 3, 4].reduce((m, i) => J.weight(f, i) > J.weight(f, m) ? i : m, 0)]; };
   봄('높이마다 층이 차례로 — 풀밭→나무→새→하늘→우주', JSON.stringify([0, 1500, 3500, 6000, 9500].map(가장센)) === JSON.stringify(층));
   봄('두 층 사이에서는 둘 다 보인다(섞인다)', (() => { const f = J.stageF(2500); return J.weight(f, 1) > .3 && J.weight(f, 2) > .3; })());
+}
+
+// ⑧ 손가락은 «끈 만큼»만 (사용자 — 「어딜 터치하든 좌우 드래그로만」)
+{
+  const J = load(1), g = 판(J);
+  J.fill = () => {};
+  const x0 = g.px, 한번 = () => J.step(g, 1 / 60);
+  g.ptr = 10; 한번();
+  봄('왼쪽 끝을 눌러도 사람이 순간이동하지 않는다', Math.abs(g.px - x0) < 1, `${x0} → ${g.px}`);
+  g.ptr = 60; 한번();
+  봄(`손가락을 50 끌면 ${50 * J.DRAG_GAIN} 만큼 간다`, Math.abs(g.px - (x0 + 50 * J.DRAG_GAIN)) < 1, `${g.px - x0}`);
+  const x1 = g.px;
+  g.ptr = null; 한번(); g.ptr = 380; 한번();
+  봄('떼었다가 오른쪽 끝을 다시 눌러도 그 자리 그대로', Math.abs(g.px - x1) < 1, `${x1} → ${g.px}`);
 }
 
 console.log(`\n  ${fail ? '🔴' : '✅'} ${pass} 통과 · ${fail} 실패\n`);
