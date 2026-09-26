@@ -38,9 +38,11 @@ const 봄 = (무엇, 나온것, 나와야할것) => {
 
 /* 스텁 세상. twin 은 «다음에 무엇을 돌려줄지»를 시험이 정한다. */
 /* groqUsed — 둘째 엔진(Groq) 통. 기본은 «다 찼다»(25)로 두어 옛 검사의 뜻(한도 다 쓰면 멈춘다)이 그대로 선다. */
-function makeWorld({ itemBody = {}, variants = {}, twin = null, used = 0, groqUsed = 25, saveOk = true, 오류 = 'AI 가 안 됐다' } = {}) {
+/* 렌더깨움 — 실제 render() 처럼 그릴 때마다 autoFillKick 을 부른다 (2026-09-26 · 이것이 없어서 «쉼이 1.5초로 덮이는» 흠을 못 봤다). */
+function makeWorld({ itemBody = {}, variants = {}, twin = null, used = 0, groqUsed = 25, saveOk = true, 오류 = 'AI 가 안 됐다', 렌더깨움 = false } = {}) {
   const store = new Map();
-  const w = { 부른AI: [], 쓴것: [], 예약: [], twin, used, groqUsed, saveOk };
+  const w = { 부른AI: [], 쓴것: [], 예약: [], 지움: [], 살아있는예약: new Map(), twin, used, groqUsed, saveOk };
+  let 번호 = 0;
   const itemByCode = {};
   for (const c in itemBody) itemByCode[c] = { code: c };
   const state = {
@@ -55,13 +57,13 @@ function makeWorld({ itemBody = {}, variants = {}, twin = null, used = 0, groqUs
     /* 🔵 «변형 세기»가 두 곳(variants 컬렉션 + 교재가 준 items 변형)을 합쳐 본다 (2026-09-06).
        여기서는 그 합침을 스텁으로 흉내 낸다 — 이 검사가 재는 것은 «고리»지 합침 규칙이 아니다. */
     'variantsOfCodeAll',
-    BLOCK + '\nreturn { autoFillTick, autoFillCandidates, autoFillState, autoFillToggle, autoFillWhyEmpty, skipped: autoFillSkipped, autoFillAsideNow, autoFillAsideBack };'
+    BLOCK + '\nreturn { autoFillTick, autoFillCandidates, autoFillState, autoFillToggle, autoFillWhyEmpty, skipped: autoFillSkipped, autoFillAsideNow, autoFillAsideBack, autoFillKick };'
   )(
     state,
-    () => {},
+    () => { if (렌더깨움 && w.autoFillKick) w.autoFillKick(); },
     { getItem: k => (store.has(k) ? store.get(k) : null), setItem: (k, v) => store.set(k, v), removeItem: k => store.delete(k) },
-    (fn, ms) => { w.예약.push(ms); return 1; },          // 타이머는 «걸었다»만 적고 안 돌린다
-    () => {},
+    (fn, ms) => { w.예약.push(ms); w.살아있는예약.set(++번호, ms); return 번호; },   // 타이머는 «걸었다»만 적고 안 돌린다
+    (id) => { w.지움.push(id); w.살아있는예약.delete(id); },
     (c) => ({ origin: c.replace(/-[NUD]\d+$/, ''), isVariant: /-[NUD]\d+$/.test(c) }),
     async () => {},
     async (bucket) => bucket === 'twin-groq' ? w.groqUsed : w.used,
@@ -416,6 +418,26 @@ console.log('\n남는 한도로 창고 채우기\n');
     await w.autoFillTick();
     봄('🔴 가볍게도 안 되면 그 문항은 곧장 넘긴다 (보통으로 또 넣지 않는다)', Object.keys(w.넘김()), ['K2-01-E-0001']);
     봄('그 바퀴에 부른 것은 둘 (보통 + 가볍게)', w.부른AI.length, 2);
+  }
+}
+
+// ── ⑩ 🔴 render 가 kick 을 불러도 쉼이 안 덮이는가 (2026-09-26 · 배포본에서 1.5초마다 다시 두드린 흠) ──
+{
+  const 붐빔 = '워커 502 — gemini error — { "error": { "code": 503, "status": "UNAVAILABLE" } }';
+  {
+    const w = makeWorld({ itemBody: { 'K2-01-E-0001': { content: '본문', answer: '③', image: 'x' } }, twin: null, 오류: 붐빔, 렌더깨움: true });
+    await w.autoFillTick();
+    봄('🔴 붐빔 — 살아 있는 예약은 하나고 그것이 5분이다', [...w.살아있는예약.values()], [300000]);
+  }
+  {
+    const w = makeWorld({ itemBody: 본문(1), twin: null, 오류: '워커 502 — 429 RESOURCE_EXHAUSTED', 렌더깨움: true });
+    await w.autoFillTick();
+    봄('🔴 한도 — 살아 있는 예약은 30분이다', [...w.살아있는예약.values()], [1800000]);
+  }
+  {
+    const w = makeWorld({ itemBody: 본문(3), twin: { content: '새 문제', answer: '②', solution: '풀이' }, 렌더깨움: true });
+    await w.autoFillTick();
+    봄('🔵 성공 — 다음 건은 13초 간격 그대로', [...w.살아있는예약.values()], [13000]);
   }
 }
 
