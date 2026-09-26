@@ -896,6 +896,10 @@ const MODE_JUMP = {
   colW(g){ return Math.min(g.w, this.COL_W); },
   /* 높이 d(0~1)에 따라 조인다 — 6000px(점수 600) 에서 끝까지 */
   hard(g){ return Math.min(1, g.climb / 6000); },
+  /* 🔵 **둘째 구간 — 600점 뒤로도 계속 조인다** (2026-09-27 · 사용자 — 「2000점이 넘었는데 … 난이도가 그대로면 계속 할 학생들도」).
+     6000px 에서 0, 20000px(점수 2000)에서 1. 발판이 더 좁고(→40) · 움직이는 것이 많고 빠르고 · 부서지는 덤이 늘고 ·
+     용수철이 줄고 · 물의 최고 속도가 오른다(+60). ⚠ 간격은 여전히 GAP_MAX 를 안 넘는다 — «닿는 높이» 약속은 그대로다. */
+  hard2(g){ return Math.max(0, Math.min(1, (g.climb - 6000) / 14000)); },
   reset(g){
     g.climb = 0; g.plats = []; g.face = 1;
     const base = g.h - g.pad - 20;
@@ -915,17 +919,17 @@ const MODE_JUMP = {
     const cx = this.colX(g), cw = this.colW(g);
     let top = g.plats.filter(p => p.chain).reduce((a, p) => p.y < a.y ? p : a);
     while(top.y > -60){
-      const d = this.hard(g);
-      const gap = this.GAP_MIN + (this.GAP_MAX - this.GAP_MIN) * (d * .75 + Math.random() * .25);
-      const w = 72 - 16 * d;
+      const d = this.hard(g), d2 = this.hard2(g);
+      const gap = this.GAP_MIN + (this.GAP_MAX - this.GAP_MIN) * (d * .75 + d2 * .2 + Math.random() * (.25 - d2 * .2));
+      const w = 72 - 16 * d - 16 * d2;
       const y = top.y - gap;
-      const r = Math.random();
-      const kind = r < .07 ? 's' : r < .07 + .35 * d ? 'm' : 'n';
+      const r = Math.random(), sp = .07 - .03 * d2;
+      const kind = r < sp ? 's' : r < sp + .35 * d + .3 * d2 ? 'm' : 'n';
       const p = { x: cx + w / 2 + Math.random() * (cw - w), y, w, kind, chain: true,
-        vx: kind === 'm' ? (Math.random() < .5 ? -1 : 1) * (40 + 80 * d) : 0 };
+        vx: kind === 'm' ? (Math.random() < .5 ? -1 : 1) * (40 + 80 * d + 80 * d2) : 0 };
       g.plats.push(p);
       /* 덤 — 금 간 발판. 줄기 사이 한가운데쯤에 둔다(밟으면 부서지고 안 튄다) */
-      if(Math.random() < .12 + .25 * d){
+      if(Math.random() < .12 + .25 * d + .2 * d2){
         g.plats.push({ x: cx + 30 + Math.random() * (cw - 60), y: y + gap * (.35 + Math.random() * .3),
           w: 64, kind: 'c', chain: false, vx: 0 });
       }
@@ -970,7 +974,7 @@ const MODE_JUMP = {
     }
 
     /* 물이 차오른다 */
-    if(g.t > this.FLOOD_WAIT) g.flood -= Math.min(this.FLOOD_V0 + (g.t - this.FLOOD_WAIT) * this.FLOOD_ACC, this.FLOOD_MAX) * dt;
+    if(g.t > this.FLOOD_WAIT) g.flood -= Math.min(this.FLOOD_V0 + (g.t - this.FLOOD_WAIT) * this.FLOOD_ACC, this.FLOOD_MAX + 60 * this.hard2(g)) * dt;   // 둘째 구간에서 최고 속도 80 → 140
     for(const b of g.birds){ b.x += b.vx * dt; b.ph += dt * 9;
       if(b.x < -30) b.x = g.w + 30; else if(b.x > g.w + 30) b.x = -30; }
 

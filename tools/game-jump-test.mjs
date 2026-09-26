@@ -28,7 +28,7 @@ console.log('\n점프 게임\n');
   const J = load(7), g = 판(J);
   let 최대 = 0, 셈 = 0, 나쁜 = 0;
   const 줄기높이 = [];
-  for(let i = 0; i < 60; i++){
+  for(let i = 0; i < 125; i++){
     for(const p of g.plats) if(p.chain && !p.seen){ p.seen = true; 줄기높이.push(p.y - g.climb); }
     for(const p of g.plats) p.y += 200; g.climb += 200; J.fill(g);
   }
@@ -104,7 +104,7 @@ for(const seed of [3, 11, 29]){
 }
 {
   const J = load(5);
-  봄('물의 빠르기 상한은 봇의 평균 오름(≈180px/s)보다 한참 느리다', J.FLOOD_MAX < 130);
+  봄(`물의 빠르기 상한(둘째 구간 끝 ${J.FLOOD_MAX + 60}px/s)도 봇의 평균 오름(≈180px/s)보다 느리다`, J.FLOOD_MAX + 60 < 170);
 }
 
 // ⑦ 배경 — 층이 경계에서 툭 바뀌지 않는다 (사용자 — 「그라데이션으로 서서히 블렌딩」)
@@ -121,6 +121,25 @@ for(const seed of [3, 11, 29]){
   const 가장센 = y => { const f = J.stageF(y); return 층[[0, 1, 2, 3, 4].reduce((m, i) => J.weight(f, i) > J.weight(f, m) ? i : m, 0)]; };
   봄('높이마다 층이 차례로 — 풀밭→나무→새→하늘→우주', JSON.stringify([0, 1500, 3500, 6000, 9500].map(가장센)) === JSON.stringify(층));
   봄('두 층 사이에서는 둘 다 보인다(섞인다)', (() => { const f = J.stageF(2500); return J.weight(f, 1) > .3 && J.weight(f, 2) > .3; })());
+}
+
+// ⑨ 600점 뒤로도 계속 어려워진다 (사용자 — 「2000점이 넘었는데 … 난이도가 그대로면」)
+{
+  const 재기 = (높이) => {
+    const J = load(9), g = 판(J);
+    g.climb = 높이; g.plats = [{ x: 195, y: 700, w: 60, kind: 'n', chain: true, vx: 0 }];
+    const 모은 = [];
+    for(let i = 0; i < 40; i++){ J.fill(g); for(const p of g.plats) if(!p.seen){ p.seen = true; 모은.push(p); } for(const p of g.plats) p.y += 200; }
+    const 줄기 = 모은.filter(p => p.chain);
+    return { 폭: 줄기.reduce((a, p) => a + p.w, 0) / 줄기.length,
+      움직임: 줄기.filter(p => p.kind === 'm').length / 줄기.length,
+      빠르기: Math.max(...줄기.map(p => Math.abs(p.vx))),
+      금: 모은.filter(p => p.kind === 'c').length / 줄기.length };
+  };
+  const a = 재기(6000), b = 재기(13000), c = 재기(20000);
+  봄(`발판 폭이 계속 준다 — 600점 ${a.폭.toFixed(0)} · 1300점 ${b.폭.toFixed(0)} · 2000점 ${c.폭.toFixed(0)}`, a.폭 > b.폭 && b.폭 > c.폭 && c.폭 >= 40);
+  봄(`움직이는 발판이 늘고 빨라진다 — ${(a.움직임 * 100).toFixed(0)}% → ${(c.움직임 * 100).toFixed(0)}% · 최고 ${a.빠르기.toFixed(0)} → ${c.빠르기.toFixed(0)}px/s`, c.움직임 > a.움직임 && c.빠르기 > a.빠르기);
+  봄(`부서지는 덤이 는다 — ${(a.금 * 100).toFixed(0)}% → ${(c.금 * 100).toFixed(0)}%`, c.금 > a.금);
 }
 
 // ⑧ 손가락은 «끈 만큼»만 (사용자 — 「어딜 터치하든 좌우 드래그로만」)
