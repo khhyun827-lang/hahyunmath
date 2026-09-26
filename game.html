@@ -119,6 +119,9 @@
   const 도움말 = m => { document.getElementById('help-in').innerHTML = 갈래들.find(x => x.mode === m).help + 끝줄; };
   const 다음 = m => 갈래들[(갈래들.findIndex(x => x.mode === m) + 1) % 갈래들.length];
   const 이름 = m => 갈래들.find(x => x.mode === m).label;
+  /* ?g=jump · ?g=dodge 로 그 게임부터 연다 (2026-09-27 · 폰에서 곧장 해 보려고) */
+  const 시작갈래 = { runner: MODE_RUNNER, dodge: MODE_DODGE, jump: MODE_JUMP }[new URLSearchParams(location.search).get('g')];
+  if(시작갈래){ mode = 시작갈래; document.getElementById('which').textContent = 이름(mode); }
 
   function start(){
     도움말(mode);
