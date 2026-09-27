@@ -4809,10 +4809,10 @@
      아래 AI_DAILY_LIMIT은 이제 «표시용»이고 진짜 한도는 워커가 쥔다 (gemini-proxy.js:30과 같아야 한다). */
   const AI_DAILY_LIMIT = 20;
   /* 둘째 엔진 — Groq(gpt-oss-120b)로 만드는 쌍둥이. 글만 있는 문항용. 통은 따로(worker twin-groq). (2026-09-12) */
-  const GROQ_TWIN_DAILY_LIMIT = 20;   // 워커와 같은 값. 검토와 한 통(60÷3) — 2026-09-13
+  const GROQ_TWIN_DAILY_LIMIT = 20;   // 워커와 같은 값. Groq 한 통(60÷3) — 09-28 부터 검토는 Groq 를 «부를 때만» 먹는다(대개 NVIDIA 가 본다)
   /* ⚠ worker/gemini-proxy.js 의 REVIEW_DAILY_LIMIT 과 «같은 값»이라야 한다 —
      어긋나면 「남았다고 떠 있는데 429」가 된다 (AI_DAILY_LIMIT 이 겪은 그대로다). */
-  const REVIEW_DAILY_LIMIT = 60;   // ⚠ Groq 변형(GROQ_TWIN_DAILY_LIMIT)과 «한 통»이다 — 변형 1건이 검토 3건 몫을 먹는다 (2026-09-13)
+  const REVIEW_DAILY_LIMIT = 60;   // 검토 «건수». 2026-09-28 부터 NVIDIA(DeepSeek)가 먼저 보고 갈릴 때만 Groq — Groq 변형과 더는 한 통이 아니다
   async function getAuthToken(){
     if(!fbAuth.currentUser){
       await new Promise(resolve=>{
@@ -6484,7 +6484,6 @@ let state = {
   aiRegeneratingId: null,
   /* AI 검토(다른 모델이 혼자 풀어 맞대 보기) — 한도 통이 생성과 다르다 */
   reviewQuotaUsed: null,
-  reviewQuotaTwins: 0,        // 오늘 Groq 로 만든 변형 수 — 검토 한도에서 3건씩 먹는다 (2026-09-13 · 워커가 준다)
   reviewBusy: '',            // 지금 검토 중인 변형 코드 (단추 잠금)
   reviewProgress: null,       // {done,total,갈림,못함}
   reviewCancel: false,
@@ -29102,8 +29101,6 @@ async function getReviewQuotaUsed(){
     }), 8000);
     if(!res.ok) throw new Error('quota http ' + res.status);
     const q = await res.json();
-    /* 🔵 워커의 used 는 «검토 환산»이다 — 변형이 먹은 몫이 이미 들어 있다. 몇 건이 변형 몫인지만 곁에 둔다. */
-    state.reviewQuotaTwins = typeof q.twins === 'number' ? q.twins : 0;
     return typeof q.used === 'number' ? q.used : 0;
   }catch(e){
     console.warn('검토 한도 조회 실패 — 0으로 본다', e);
@@ -29125,7 +29122,8 @@ async function askReview(content, answer){
     method:'POST',
     headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer ' + token },
     body: JSON.stringify({ content, answer }),
-  }), 120000);
+  /* 2026-09-28 — NVIDIA(DeepSeek)가 먼저 푼다: 한 건 평균 69초 · 길면 3분대. 워커가 200초에 끊고 Groq 로 넘기므로 넉넉히 300초. */
+  }), 300000);
   const j = await res.json().catch(()=>({}));
   if(res.status === 429) return { error:'quota', 말:'오늘 검토 한도를 다 썼습니다.' };
   if(res.status === 503) return { error:'busy',  말:'검토 AI가 지금 붐빕니다 — 한도는 돌려받았습니다.' };
@@ -29172,7 +29170,7 @@ async function reviewAllPending(){
   if(남음 === 0){ showToast('오늘 검토 한도(' + REVIEW_DAILY_LIMIT + '건)를 다 썼습니다.'); return; }
   const 할만큼 = Math.min(할것.length, 남음);
   if(!confirm(할만큼 + '개를 AI에게 검토시킵니다.\n\n'
-    + '문항당 3~10초 걸립니다 (어려운 문항은 두 모델을 부릅니다).\n'
+    + '문항당 30초~2분 걸립니다 (NVIDIA 가 풀고, 답이 갈리면 Groq 가 한 번 더 봅니다).\n'
     + (할것.length > 할만큼 ? '오늘 남은 한도가 ' + 남음 + '건이라 ' + (할것.length - 할만큼) + '개는 내일 이어서 봅니다.\n' : '')
     + '\n판정은 «참고»입니다 — 통과·버리기는 그대로 선생님이 누릅니다.\n\n시작할까요?')) return;
 
@@ -29307,8 +29305,7 @@ function reviewBarHTML(autos){
          <button class="btn q sm" ${state.reviewCancel?'disabled':''} onclick="cancelReviewBatch()">
            ${state.reviewCancel ? '멈추는 중…' : '멈춤'}</button>`
       : `AI 검토 안 한 변형 <b class="mono">${할것.length}</b>개
-         <s>·</s> ${남음===null ? '한도 확인 중…' : '오늘 남은 검토 ' + 남음 + '/' + REVIEW_DAILY_LIMIT
-           + (state.reviewQuotaTwins ? ` <span style="color:var(--dim);">(Groq 변형 ${state.reviewQuotaTwins}건이 ${state.reviewQuotaTwins*3}건 몫)</span>` : '')}
+         <s>·</s> ${남음===null ? '한도 확인 중…' : '오늘 남은 검토 ' + 남음 + '/' + REVIEW_DAILY_LIMIT}
          <span class="spacer"></span>
          <button class="btn sm" ${남음===0?'disabled':''} onclick="reviewAllPending()">한꺼번에 검토</button>`}
   </div>`;

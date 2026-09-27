@@ -44,7 +44,7 @@ const TWIN_GROQ_MAX_TOKENS = 7000;   // 추론 + JSON. 검토(6000)보다 답이
 /* 🔴 «올렸는지 짐작하지 않는다» — 이 워커는 대시보드에 붙여넣어 올리므로 밖에서는 어느 판이 도는지
    알 길이 없었다(2026-09-11에 사용자가 올리고 「도는지 확인은 못 해봤어」). /quota 가 이 값을 같이
    돌려주고 tools/worker-check.mjs 가 저장소의 값과 견준다. **프롬프트나 규칙을 바꾸면 이 날짜를 올릴 것.** */
-const WORKER_VERSION = '2026-09-24e';
+const WORKER_VERSION = '2026-09-28a';
 // 이미지 업로드는 학생도 쓴다(질의응답 사진). 비용이 드는 쪽은 Gemini라 여기는 넉넉하게,
 // 다만 «한 명이 무한히»는 막는다. 전체 상한은 걸지 않는다 — 걸면 바쁜 날 학생이 막힌다.
 const UPLOAD_PER_USER_DAILY = 200;
@@ -88,8 +88,11 @@ export default {
       const bk = url.searchParams.get('bucket');
       const bucket = bk === 'review' ? 'review' : bk === 'twin-groq' ? 'twin-groq' : 'ai';
       /* 🔵 Groq 두 통은 «한 통으로 환산해» 답한다 — used 가 «검토 환산으로 쓴 것»이라 화면의 셈(한도 − used)이 그대로 맞는다. */
-      const q = (bucket === 'review' || bucket === 'twin-groq')
-        ? (await groqQuota(env, who.uid))[bucket]
+      /* ⚠ 2026-09-28 부터 검토는 NVIDIA 가 먼저 본다 — 검토 통(review)은 «검토 건수»만 세고,
+         Groq 와 한 통인 것은 twin-groq 쪽이다(검토가 Groq 를 «부른 만큼»만 먹는다 · review-groq). */
+      const q = bucket === 'twin-groq' ? (await groqQuota(env, who.uid))['twin-groq']
+        : bucket === 'review' ? { ...(await peekQuota(env, 'review', who.uid, REVIEW_DAILY_LIMIT)),
+                                  groqCalls: (await groqQuota(env, who.uid)).review.raw }
         : await peekQuota(env, bucket, who.uid, AI_DAILY_LIMIT);
       return new Response(JSON.stringify({ ...q, version: WORKER_VERSION }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -118,8 +121,7 @@ export default {
     } else if (url.pathname === '/review') {
       /* 🔴 검토가 «만들기» 한도를 먹으면 안 된다 — 통을 따로 둔다.
          한 문항 검토는 위쪽 요청 1~2건이다(답이 갈릴 때만 둘째 모델을 부른다). */
-      const 통 = (await groqQuota(env, who.uid)).review;
-      if (!통.remaining) return quotaExceeded(통, corsHeaders);      // 변형이 먹은 몫까지 센다
+      /* 2026-09-28 — 검토는 NVIDIA(DeepSeek)가 먼저 본다. Groq 통은 검토 «안»에서 Groq 를 부를 때만 본다(reviewAsk). */
       const q = await bumpQuota(env, 'review', who.uid, REVIEW_DAILY_LIMIT, REVIEW_DAILY_LIMIT);
       if (!q.ok) return quotaExceeded(q, corsHeaders);
     } else if (url.pathname === '/twin-groq') {
@@ -727,7 +729,7 @@ async function peekQuota(env, bucket, uid, limit) {
    실제로 몇 건 했는지는 `raw` 에 따로 둔다(도구가 보여 준다). */
 async function groqQuota(env, uid) {
   const [rv, tw] = await Promise.all([
-    peekQuota(env, 'review', uid, REVIEW_DAILY_LIMIT),
+    peekQuota(env, 'review-groq', uid, REVIEW_DAILY_LIMIT),   // 검토가 Groq 를 «실제로 부른» 수 (2026-09-28)
     peekQuota(env, 'twin-groq', uid, TWIN_GROQ_DAILY_LIMIT),
   ]);
   const 쓴것 = rv.used + GROQ_TWIN_COST * tw.used;                         // 검토 환산
@@ -1580,9 +1582,23 @@ ${content || '(본문 없음)'}`;
    ⚠ 값은 «갈린 것»에만 든다 — 대부분은 한 번으로 끝난다. 전부 두 번 부르면 값이 두 배다. */
 
 const REVIEW_DAILY_LIMIT = 60;
-const REVIEW_MODEL_A = 'openai/gpt-oss-120b';
-const REVIEW_MODEL_B = 'qwen/qwen3.8-27b';
-const REVIEW_MAX_TOKENS = 4000;
+/* 🔵 **검토 사슬 — NVIDIA 가 먼저, Groq 가 뒤** (2026-09-28 · 사용자가 골랐다 — 「검토는 NVIDIA, 생성은 Gemini 다음 Groq」).
+   SCENE 3(실전) 60제 실측: DeepSeek V4.1 Flash **94.9%** · Groq gpt-oss-120b 84.5% (review-bench · 정답은 안 보여 줬다).
+   **답을 내는 첫 모델이 첫째, 그 뒤 모델이 둘째다** — NVIDIA 가 멈추거나(504·시간 넘김) 열쇠가 없으면 그냥 다음으로 간다.
+   ⚠ Nemotron 3 Ultra 는 둘째로 못 쓴다 — 어려운 문항에서 504·429·수 분 무응답(09-28 실측).
+   ⚠ NVIDIA 무료는 약관상 «개발·시험용»이다 — 그래서 Groq 가 늘 뒤에 선다.
+   ⚠ JSON 모드를 주지 않는다 — NVIDIA 는 그러면 답을 content 가 아니라 reasoning 칸에 담는다. */
+const REVIEW_CHAIN = [
+  { id: 'deepseek-ai/deepseek-v4.1-flash', via: 'nvidia' },
+  { id: 'openai/gpt-oss-120b', via: 'groq' },
+  { id: 'qwen/qwen3.8-27b', via: 'groq' },
+];
+const REVIEW_API = {
+  nvidia: { url: 'https://integrate.api.nvidia.com/v1/chat/completions', key: 'NVIDIA_KEY', max: 12000 },
+  groq:   { url: 'https://api.groq.com/openai/v1/chat/completions',     key: 'GROQ_KEY',   max: 4000 },
+};
+/* NVIDIA 는 한 건 평균 69초, 어려운 문항은 3분대였다. 넘기면 끊고 Groq 로 간다 — 화면은 300초를 기다린다. */
+const REVIEW_NVIDIA_TIMEOUT = 200000;
 /* ⚠ max_tokens 를 분당 한도(8000)와 같게 주면 «자리 예약»에 걸려 통이 비어 있지 않아도
      매 요청이 429 다 (2026-09-06 실측). 어려운 문항의 실제 필요치는 3,700 토큰이었다. */
 
@@ -1657,19 +1673,28 @@ function reviewSameAnswer(given, want, kind, text) {
 }
 
 /* 한 모델에게 «한 번» 풀린다. 돌아오는 것은 답 하나이거나, 왜 못 냈는지다. */
-async function reviewSolve(model, content, env) {
-  const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-    method: 'POST',
-    headers: { Authorization: 'Bearer ' + env.GROQ_KEY, 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      model,
-      max_tokens: REVIEW_MAX_TOKENS,
-      messages: [
-        { role: 'system', content: REVIEW_PROMPT },
-        { role: 'user', content },
-      ],
-    }),
-  });
+async function reviewSolve(m, content, env) {
+  const api = REVIEW_API[m.via];
+  let res;
+  try {
+    res = await fetch(api.url, {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + env[api.key], 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: m.id,
+        max_tokens: api.max,
+        messages: [
+          { role: 'system', content: REVIEW_PROMPT },
+          { role: 'user', content },
+        ],
+      }),
+      ...(m.via === 'nvidia' && typeof AbortSignal !== 'undefined' && AbortSignal.timeout
+        ? { signal: AbortSignal.timeout(REVIEW_NVIDIA_TIMEOUT) } : {}),
+    });
+  } catch (e) {
+    /* 시간 넘김·연결 끊김 — «못 받은 것»이다. 다음 모델로 간다. */
+    return { refused: true, status: 0, detail: String((e && e.message) || e).slice(0, 200) };
+  }
   const text = await res.text();
   if (!res.ok) return { refused: upstreamRefused(res.status), status: res.status, detail: text.slice(0, 200) };
   let j; try { j = JSON.parse(text); } catch (e) { return { detail: '응답을 못 읽음' }; }
@@ -1682,15 +1707,39 @@ async function reviewSolve(model, content, env) {
   return { answer, tokens: (j.usage && j.usage.total_tokens) || 0 };
 }
 
+/* 사슬의 한 칸에 묻는다 — 열쇠가 없거나 Groq 몫이 없으면 «건너뜀»이다.
+   🔴 Groq 는 변형(twin-groq)과 한 통이라, **검토가 Groq 를 부른 만큼만** 센다(review-groq). 거절되면 돌려준다. */
+async function reviewAsk(m, content, env, uid) {
+  if (!env[REVIEW_API[m.via].key]) return { skip: 'no-key' };
+  if (m.via === 'groq') {
+    if (!(await groqQuota(env, uid)).review.remaining) return { skip: 'groq-quota' };
+    await bumpQuota(env, 'review-groq', uid, null, null);
+  }
+  const r = await reviewSolve(m, content, env);
+  if (r.refused && m.via === 'groq') await refundQuota(env, 'review-groq', uid);
+  return r;
+}
+/* 사슬을 i 부터 훑어 «답을 낸» 첫 칸을 찾는다. 못 찾으면 왜 못 냈는지(잘림이 있었나 · 받긴 받았나)를 준다. */
+async function reviewNext(i, content, env, uid) {
+  let truncated = false, answered = false;
+  for (; i < REVIEW_CHAIN.length; i++) {
+    const r = await reviewAsk(REVIEW_CHAIN[i], content, env, uid);
+    if (r.answer) return { r, i, model: REVIEW_CHAIN[i].id };
+    if (r.truncated) truncated = true;
+    else if (!r.refused && !r.skip) answered = true;      // 받긴 받았는데 답 줄이 없었다
+  }
+  return { i, truncated, answered };
+}
+
 async function handleReview(request, env, corsHeaders, uid) {
   const send = (body, status) => new Response(JSON.stringify(body), {
     status: status || 200,
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   });
 
-  if (!env.GROQ_KEY) {
+  if (!env.NVIDIA_KEY && !env.GROQ_KEY) {
     await refundQuota(env, 'review', uid);
-    return send({ error: 'no key', detail: 'GROQ_KEY 비밀이 워커에 없습니다' }, 500);
+    return send({ error: 'no key', detail: 'NVIDIA_KEY·GROQ_KEY 비밀이 워커에 없습니다' }, 500);
   }
 
   let body;
@@ -1703,35 +1752,36 @@ async function handleReview(request, env, corsHeaders, uid) {
     return send({ error: 'bad request', detail: '본문과 «①~⑤ 또는 숫자» 정답이 있어야 검토합니다' }, 400);
   }
 
-  const a = await reviewSolve(REVIEW_MODEL_A, content, env);
-  if (a.refused) {
-    /* 🔵 못 받았으면 안 쓴 것이다 — 하루치를 돌려준다. */
-    await refundQuota(env, 'review', uid);
-    return send({ error: 'upstream', status: a.status, detail: a.detail }, 503);
+  const A = await reviewNext(0, content, env, uid);
+  if (!A.r) {
+    if (!A.truncated && !A.answered) {
+      /* 🔵 아무에게서도 못 받았으면 안 쓴 것이다 — 하루치를 돌려준다. */
+      await refundQuota(env, 'review', uid);
+      return send({ error: 'upstream', status: 503, detail: '검토 AI 가 모두 응답하지 않았습니다' }, 503);
+    }
+    return send({ verdict: 'unsure', reason: A.truncated ? 'truncated' : 'no-answer', models: [] });
   }
-  if (a.truncated || !a.answer) {
-    return send({ verdict: 'unsure', reason: a.truncated ? 'truncated' : 'no-answer', models: [REVIEW_MODEL_A] });
-  }
+  const a = A.r;
   if (reviewSameAnswer(a.answer, stored.v, stored.kind, content)) {
-    return send({ verdict: 'agree', answer: a.answer, models: [REVIEW_MODEL_A] });
+    return send({ verdict: 'agree', answer: a.answer, models: [A.model] });
   }
 
-  /* 여기서부터가 «갈린» 경우다. 계보가 다른 모델을 하나 더 부른다. */
-  const b = await reviewSolve(REVIEW_MODEL_B, content, env);
-  if (b.refused) {
-    return send({ verdict: 'unsure', reason: 'second-refused', first: a.answer, models: [REVIEW_MODEL_A] });
+  /* 여기서부터가 «갈린» 경우다. 사슬의 다음 모델(계보가 다르다)을 부른다. */
+  const B = await reviewNext(A.i + 1, content, env, uid);
+  if (!B.r) {
+    return send({ verdict: 'unsure', reason: B.answered || B.truncated ? 'second-no-answer' : 'second-refused',
+      first: a.answer, models: [A.model] });
   }
-  if (b.truncated || !b.answer) {
-    return send({ verdict: 'unsure', reason: 'second-no-answer', first: a.answer, models: [REVIEW_MODEL_A, REVIEW_MODEL_B] });
-  }
+  const b = B.r;
+  const 둘 = [A.model, B.model];
   if (reviewSameAnswer(b.answer, stored.v, stored.kind, content)) {
     /* 둘째가 창고와 맞았다 — 첫째가 혼자 틀린 것이다. 통과시키되 그 사실은 남긴다. */
-    return send({ verdict: 'agree', answer: b.answer, lone: a.answer, models: [REVIEW_MODEL_A, REVIEW_MODEL_B] });
+    return send({ verdict: 'agree', answer: b.answer, lone: a.answer, models: 둘 });
   }
   if (a.answer === b.answer || reviewSameAnswer(a.answer, b.answer, 'choice', content)) {
     /* 🔴 계보가 다른 두 모델이 «같은» 다른 답에 닿았다 — 문항이나 정답을 의심할 이유가 가장 크다. */
-    return send({ verdict: 'suspect', answer: a.answer, stored: stored.v, models: [REVIEW_MODEL_A, REVIEW_MODEL_B] });
+    return send({ verdict: 'suspect', answer: a.answer, stored: stored.v, models: 둘 });
   }
   /* 셋이 다 다르다 — 문항이 이상한 게 아니라 AI가 못 푼 것이다. 문항은 건드리지 않는다. */
-  return send({ verdict: 'unsure', reason: 'disagree', first: a.answer, second: b.answer, models: [REVIEW_MODEL_A, REVIEW_MODEL_B] });
+  return send({ verdict: 'unsure', reason: 'disagree', first: a.answer, second: b.answer, models: 둘 });
 }

@@ -4,6 +4,7 @@
 //   node tools/review-bench.mjs <모델id> [--n 40]         한 모델을 시험한다
 //   node tools/review-bench.mjs <모델A> <모델B> --n 30    여럿을 같은 시험지로
 //   node tools/review-bench.mjs <모델id> --scene 3 --resume   어제 받다 만 것을 «잇는다»
+//   node tools/review-bench.mjs <모델id> --codes K2-05-E-0560,K2-01-E-0073   그 문항만
 //
 // 🔵 **--resume** — `.bench/*.jsonl` 에 남겨 둔 답을 다시 쓴다(같은 모델·같은 곳만).
 //   하루 토큰(TPD)이 SCENE 3 을 한 번에 못 재게 하므로 이틀에 걸쳐 한 시험지를 끝낸다.
@@ -187,6 +188,8 @@ if (자리) {
 const 후보 = Object.values(items)
   .filter((x) => x.content && !x.image && !x.images && 정답꼴(x.answer))
   .filter((x) => !자리표 || 자리표.has(x.code))
+  // --codes A,B — 그 문항만(2026-09-28). 2차 검토자는 «갈린 문항»에서만 일하므로 거기만 재면 된다.
+  .filter((x) => !값('--codes', '') || 값('--codes', '').split(',').includes(x.code))
   .sort((a, b) => (a.code < b.code ? -1 : 1));
 /* 앞에서부터 자르면 01단원만 나온다 — 건너뛰며 뽑아 단원을 고루 섞는다. */
 const 걸음 = Math.max(1, Math.floor(후보.length / N));

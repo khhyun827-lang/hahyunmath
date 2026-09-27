@@ -37,11 +37,14 @@ const TWIN_GROQ_DAILY_LIMIT = num('TWIN_GROQ_DAILY_LIMIT');
 const GROQ_TWIN_COST = num('GROQ_TWIN_COST');
 
 /* KV 흉내 — 통마다 «오늘 쓴 수»를 넣어 두면 peekQuota 가 그대로 읽는다 */
-function envWith(review, twin) {
+/* ⚠ 2026-09-28 — 검토는 NVIDIA 가 먼저 본다. Groq 한 통에 드는 것은 «검토가 Groq 를 부른 수»(review-groq)다.
+   검토 «건수»(review)는 네 번째 값으로 따로 넣는다 — 그것이 Groq 몫을 먹으면 안 된다. */
+function envWith(review, twin, 검토건수) {
   const day = new Date().toISOString().slice(0, 10);
   const store = {
-    ['q:review:_all:' + day]: String(review),
+    ['q:review-groq:_all:' + day]: String(review),
     ['q:twin-groq:_all:' + day]: String(twin),
+    ['q:review:_all:' + day]: String(검토건수 || 0),
   };
   return { QUOTA: { get: async (k) => store[k] ?? null } };
 }
@@ -64,6 +67,11 @@ async function 봐(review, twin) {
            raw: [q.review.raw, q['twin-groq'].raw] };
 }
 
+/* 🔴 2026-09-28 — NVIDIA 가 본 검토(review 건수)는 Groq 몫을 안 먹는다. 검토 50건을 했어도 Groq 를 안 불렀으면 변형은 20 그대로. */
+{
+  const q = await api.groqQuota(envWith(0, 0, 50), 'u1');
+  봄('🔴 NVIDIA 가 본 검토 50건은 Groq 변형 몫을 안 먹는다', q['twin-groq'].remaining, 20);
+}
 봄('아무것도 안 썼다 → 검토 60 · 변형 20(=60/3)', await 봐(0, 0),
    { 검토남음: 60, 검토used: 0, 변형남음: 20, 변형used: 0, raw: [0, 0] });
 봄('🔴 사용자의 그 자리 — 변형 4건 → 검토는 60이 아니라 48', await 봐(0, 4),
