@@ -147,6 +147,27 @@ export const 무대들 = {
           { name: '서술형 모음.pdf', fileId: 'f2', mime: 'application/pdf', size: 310000, at: 날(-1), season: '2026 · 2학기 중간' } ] },
         '광남고': { '2': [ { name: '광남 2학년 기출.pdf', fileId: 'f3', mime: 'application/pdf', size: 1500000, at: 날(-2), season: '2026 · 2학기 중간' } ] } };
       render(); } },
+  /* 직보 일정표 «전체» 그림을 실제로 구워 화면에 붙인다 — html2canvas 결과를 눈으로 본다 (2026-09-27). */
+  직보일정표: { 말: '설정 › 직보 일정표 (화면)', 폭: '864',
+    세우기: () => { state.currentUser = { type:'teacher', name:'김하현T' }; state.view = 'teacher';
+      DATA.students.forEach((s, i) => { if(i >= 6) s.classId = 'c2'; });
+      const 날 = k => shiftYmd(todayStr(), k);
+      planSetRange(날(1), 날(14));
+      state.teacherTab = 'settings'; state.settingsSubTab = 'examrange'; state.examSubTab = 'plan'; render();
+    } },
+  직보전체그림: { 말: '설정 › 직보 일정표 › 전체 그림 (구운 PNG)', 폭: '864',
+    세우기: async () => { state.currentUser = { type:'teacher', name:'김하현T' }; state.view = 'teacher';
+      DATA.students.forEach((s, i) => { if(i >= 6) s.classId = 'c2'; });
+      const 날 = k => shiftYmd(todayStr(), k);
+      planSetRange(날(1), 날(14));
+      state.teacherTab = 'settings'; state.settingsSubTab = 'examrange'; state.examSubTab = 'plan'; render();
+      const cv = await planClassCanvas('');
+      const img = document.createElement('img'); const 뜸 = new Promise(r => img.onload = r); img.src = cv.toDataURL('image/png');
+      img.style.cssText = 'width:100%;border:2px solid red;display:block;';
+      const box = document.createElement('div');   // 앱은 그대로 두고 위에 덮는다(지우면 render 가 넘어진다)
+      box.style.cssText = 'position:fixed;inset:0;z-index:99999;background:#fff;overflow:auto;';
+      box.appendChild(img); document.body.appendChild(box);
+      await 뜸; } },
   채팅: { 말: '소통 › 채팅 (강사)',
     세우기: () => { state.currentUser = { type:'teacher', name:'김하현T' }; state.view = 'teacher'; state.teacherTab = 'chat'; state.teacherSelectedStudent = 's0'; render(); } },
   학생질문: { 말: '학생 › 소통 › 질의응답',

@@ -188,6 +188,13 @@ console.log(NL + '④ 파일은 «그림» · 두 단추가 화면에 있다' + 
      (덫을 확인하다 드러났다: `${반내보내기}${게시판}` 을 지워도 위 줄들은 그대로 통과했다). */
   봄('🔴 그 줄과 판을 실제로 그린다', 표.includes('${반내보내기}${게시판}'), true);
   봄('«반 없음»에는 단추를 안 낸다', 표.includes("반이름들.filter(n => n !== '반 없음')"), true);
+  /* 🔵 전체 그림 (2026-09-27 · 사용자 — 「강사가 직접 전체로 보고 싶을 때」) */
+  봄('🔴 전체 그림 단추가 선다', 표.includes("planExportClass('')"), true);
+  봄('🔴 전체에는 공지가 없다 (모든 학생 일정이 모두에게 보인다)', 표.includes("planPostOpen('')"), false);
+  봄('전체 그림 파일 이름', F.planFileName(''), '직보일정_전체_2026-09-28');
+  봄('🔴 전체 그림은 화면과 같은 묶음(planGroups)에 반 열을 세운다',
+    표그림.includes('planGroups()') && 표그림.includes('class="pl-cls"') && 표.includes('planGroups()'), true);
+  봄('🔴 큰 그림은 캔버스 넓이에 맞춰 배율을 낮춘다', 그림.includes('16e6'), true);
   봄('미리 보기 판을 그린다', 표.includes('id="plan-post-text"'), true);
   봄('올리기·닫기가 둘 다 있다',
     표.includes('planPostRun()') && 표.includes('planPostClose()'), true);

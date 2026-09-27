@@ -30910,15 +30910,7 @@ function teacherExamPlanHTML(){
   /* 반으로 묶는다 — 사용자의 표가 그렇게 생겼다. 반이 없는 학생은 맨 뒤에 따로 선다.
      ⚠ **퇴원생은 뺀다** — 이 표는 «앞으로의 일»이다. 노트가 적어 둔 그 갈림이고,
        `DATA.students` 를 그냥 거르면 퇴원생이 딸려 온다(`isWithdrawn` 을 쓸 것). */
-  const 학생들 = (DATA.students || []).filter(s => s.studentId && !isWithdrawn(s));
-  const 묶음 = {};
-  학생들.forEach(s => {
-    const 반 = classNameOf(s.classId) || '반 없음';
-    (묶음[반] = 묶음[반] || []).push(s);
-  });
-  const 반이름들 = Object.keys(묶음).sort((a, b) =>
-    (a === '반 없음') - (b === '반 없음') || a.localeCompare(b, 'ko'));
-  반이름들.forEach(n => 묶음[n].sort((a, b) => String(a.name||'').localeCompare(String(b.name||''), 'ko')));
+  const { 학생들, 묶음, 반이름들 } = planGroups();
 
   const 붓 = state.planBrush || {k: 'jikbo', t: '2시'};
   const 붓종류 = PLAN_KIND_MAP[붓.k];
@@ -30973,7 +30965,12 @@ function teacherExamPlanHTML(){
      🔵 **반 단추를 그대로 늘어놓는다** — 고르개를 두면 «고르고 → 누른다» 두 걸음이 되는데,
        반이 열 개 안쪽이라 한 걸음으로 끝내는 편이 낫다. */
   const 반내보내기 = !반이름들.filter(n => n !== '반 없음').length ? '' : `<div class="ist-bar">
-    <span class="ic-k">반별로</span>
+    <span class="ic-k">내보내기</span>
+    ${/* 🔵 **전체 그림** (2026-09-27 · 사용자 — 「강사가 직접 전체로 보고 싶을 때도 있어서」).
+         ⚠ 전체에는 «공지»를 안 단다 — 모든 학생의 일정이 모든 학생에게 보이게 된다. */''}
+    <span class="pl-ex"><b>전체</b>
+      <button class="btn q sm" title="모든 반의 표를 그림(PNG) 한 장으로 내려받습니다 — 강사가 한눈에 볼 때"
+        onclick="planExportClass('')">${iconSvg('download',12)} 그림</button></span>
     ${반이름들.filter(n => n !== '반 없음').map(n => {
       const cid = (묶음[n][0] || {}).classId || '';
       return `<span class="pl-ex"><b>${escHtml(n)}</b>
@@ -30982,7 +30979,7 @@ function teacherExamPlanHTML(){
         <button class="btn q sm" title="이 표 그림을 공지사항에 올립니다 — 올리기 전에 보여 줍니다"
           onclick="planPostOpen('${escHtml(cid)}')">${iconSvg('megaphone',12)} 공지</button></span>`;
     }).join('')}
-    <span class="ic-hint">둘 다 <b>이 반의 표만</b> 날짜 줄과 함께 찍은 그림입니다 — 그림은 내려받고, 공지는 그 그림을 올립니다.</span>
+    <span class="ic-hint">반별 둘은 <b>그 반의 표만</b> 날짜 줄과 함께 찍은 그림입니다 — 그림은 내려받고, 공지는 그 그림을 올립니다.</span>
   </div>`;
 
   /* 공지 미리 보기 — 🔴 바로 게시하지 않는다. 반 전체에게 한 번에 가는 글이다. */
@@ -31033,6 +31030,20 @@ function teacherExamPlanHTML(){
       <tbody>${줄들}</tbody>
     </table></div></div>
   </div>`;
+}
+/* 반으로 묶는다 — 화면의 표와 «전체» 그림이 같이 쓴다(두 벌로 두면 한쪽 차례만 바뀐다).
+   ⚠ 퇴원생은 뺀다(`isWithdrawn`) · 반 없는 학생은 맨 뒤 «반 없음». */
+function planGroups(){
+  const 학생들 = (DATA.students || []).filter(s => s.studentId && !isWithdrawn(s));
+  const 묶음 = {};
+  학생들.forEach(s => {
+    const 반 = classNameOf(s.classId) || '반 없음';
+    (묶음[반] = 묶음[반] || []).push(s);
+  });
+  const 반이름들 = Object.keys(묶음).sort((a, b) =>
+    (a === '반 없음') - (b === '반 없음') || a.localeCompare(b, 'ko'));
+  반이름들.forEach(n => 묶음[n].sort((a, b) => String(a.name||'').localeCompare(String(b.name||''), 'ko')));
+  return { 학생들, 묶음, 반이름들 };
 }
 /* 날짜 머리 한 줄 — 화면의 표와 반별 그림이 같이 쓴다. */
 function planDayHeadHTML(days){
@@ -31155,17 +31166,21 @@ function planDateLabel(d){
 function planClassTableHTML(classId){
   const 범위 = planRange();
   const days = planDaysOf(범위.from, 범위.to);
-  const rows = classRoster(classId).filter(s => !isWithdrawn(s))
-    .sort((a, b) => String(a.name||'').localeCompare(String(b.name||''), 'ko'));
-  return `<div class="pl-cap"><b>${escHtml(classNameOf(classId))} · ${escHtml(currentSeason())} 직보 일정</b>
+  /* classId 가 비면 «전체» — 화면의 표처럼 반 열을 세우고 반마다 묶는다(`planGroups`). */
+  const 전체 = !classId;
+  const 묶음들 = 전체 ? (g => g.반이름들.map(n => [n, g.묶음[n]]))(planGroups())
+    : [['', classRoster(classId).filter(s => !isWithdrawn(s))
+        .sort((a, b) => String(a.name||'').localeCompare(String(b.name||''), 'ko'))]];
+  return `<div class="pl-cap"><b>${escHtml(전체 ? '전체' : classNameOf(classId))} · ${escHtml(currentSeason())} 직보 일정</b>
       <s>${escHtml(planDateLabel(범위.from))} ~ ${escHtml(planDateLabel(범위.to))}</s></div>
     <table class="pl-t2">
-      <thead><tr><th class="pl-nm">이름</th><th class="pl-sc">학교</th>${planDayHeadHTML(days)}</tr></thead>
-      <tbody>${rows.map(s => `<tr>
+      <thead><tr>${전체 ? '<th class="pl-cls">반</th>' : ''}<th class="pl-nm">이름</th><th class="pl-sc">학교</th>${planDayHeadHTML(days)}</tr></thead>
+      <tbody>${묶음들.map(([반, rows]) => rows.map((s, i) => `<tr>
+        ${전체 && i === 0 ? `<th class="pl-cls" rowspan="${rows.length}">${escHtml(반)}</th>` : ''}
         <th class="pl-nm">${escHtml(s.name || s.studentId)}</th>
         <th class="pl-sc">${escHtml(s.school || '')}</th>
         ${planRowCellsHTML(s, days, false)}
-      </tr>`).join('')}</tbody>
+      </tr>`).join('')).join('')}</tbody>
     </table>
     <div class="pl-leg">바탕색 = 시험기간 · 밑줄 = 수학 시험일</div>`;
 }
@@ -31174,17 +31189,21 @@ function planClassTableHTML(classId){
 async function planClassCanvas(classId){
   const days = planDaysOf(planRange().from, planRange().to);
   if(!days.length){ showToast('날짜 줄이 없습니다 — 위에서 기간을 먼저 정해 주세요.'); return null; }
-  if(!classRoster(classId).filter(s => !isWithdrawn(s)).length){ showToast('이 반에 학생이 없습니다.'); return null; }
+  if(!(classId ? classRoster(classId) : DATA.students || []).filter(s => !isWithdrawn(s)).length){
+    showToast(classId ? '이 반에 학생이 없습니다.' : '학생이 없습니다.'); return null; }
   await ensureHtml2CanvasLoaded();
   const stage = document.createElement('div');
   stage.className = 'pl-stage';
   stage.innerHTML = planClassTableHTML(classId);
   (document.querySelector('.app') || document.body).appendChild(stage);
-  try{ return await html2canvas(stage, {scale: 2, backgroundColor: '#ffffff', logging: false}); }
+  /* ⚠ 캔버스에는 넓이 상한이 있다(아이폰 사파리 ≈ 1,670만 화소) — 넘으면 html2canvas 가 **빈 그림을 조용히**
+     돌려준다(리포트가 밟은 함정). 전체 그림은 학생 수만큼 길어지므로 넓이에 맞춰 배율을 낮춘다. */
+  const scale = Math.min(2, Math.sqrt(16e6 / Math.max(1, stage.scrollWidth * stage.scrollHeight)));
+  try{ return await html2canvas(stage, {scale, backgroundColor: '#ffffff', logging: false}); }
   finally{ stage.remove(); }
 }
 function planFileName(classId){
-  return ('직보일정_' + classNameOf(classId) + '_' + planRange().from).replace(/[\\/:*?"<>|]/g, '').replace(/\s+/g, '');
+  return ('직보일정_' + (classId ? classNameOf(classId) : '전체') + '_' + planRange().from).replace(/[\\/:*?"<>|]/g, '').replace(/\s+/g, '');
 }
 async function planExportClass(classId){
   try{
@@ -31196,7 +31215,7 @@ async function planExportClass(classId){
     a.href = URL.createObjectURL(blob); a.download = planFileName(classId) + '.png';
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(a.href), 4000);
-    showToast(classNameOf(classId) + ' 일정표 그림을 내려받았습니다.');
+    showToast((classId ? classNameOf(classId) : '전체') + ' 일정표 그림을 내려받았습니다.');
   }catch(e){
     console.error(e);
     showToast('그림을 만들지 못했습니다 — 잠시 뒤에 다시 눌러주세요.');
