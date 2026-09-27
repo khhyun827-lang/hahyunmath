@@ -197,16 +197,13 @@ console.log(NL + '④ 파일은 «그림» · 두 단추가 화면에 있다' + 
 }
 
 /* ═══ ⑤ 이름표 없는 퍼센트 ═══ */
-console.log(NL + '⑤ 반 목록의 퍼센트 — 무엇의 수인지 말한다' + NL);
+console.log(NL + '⑤ 반 목록에는 진도 퍼센트가 없다' + NL);
 {
   const 레일 = lift('chubClassListHTML');
-  /* 🔴 그 수는 시청률이 아니라 «진도»였다 — 레일은 모든 탭에서 떠 있어서
-     영상 탭에서 보면 시청률로 읽혔다. */
-  봄('🔴 퍼센트에 이름표가 붙었다', 레일.includes('진도 ${pr.subject ? pr.percent'), true);
-  봄('🔴 맨 퍼센트가 안 남았다', /<span>\$\{pr\.subject \? pr\.percent\+'%' : '—'\}<\/span>/.test(레일), false);
-  봄('무엇의 수인지 tooltip 이 자세히 말한다',
-    레일.includes("pr.chapters.length + '단원 중 ' + pr.doneCount + '단원을 마쳤습니다'"), true);
-  봄('과목이 없으면 어디서 정하는지 말한다', 레일.includes('반 › 진도에서 과목을 고르면'), true);
+  /* 09-14 에 이름표(「진도」)를 붙였던 수를 09-27 에 통째로 걷었다 — 학기 중엔 시험 범위만 나가서
+     과목 전체를 분모로 한 진도는 늘 50%대로 틀린 말을 했다(사용자). 교재별 진도가 생기기 전엔 되살리지 않는다. */
+  봄('🔴 반 목록이 진도를 안 센다', /getClassProgress|pr.percent/.test(레일), false);
+  봄('🔴 퍼센트 막대가 안 남았다', 레일.includes('class="p"'), false);
   /* ⚠ 시간도 원문이 아니라 다듬은 말이라야 «같은 반»으로 읽힌다 */
   봄('⚠ 시간도 다듬은 말을 쓴다 (반 머리와 같은 꼴)',
     레일.includes('classScheduleLabel(c)||'), true);

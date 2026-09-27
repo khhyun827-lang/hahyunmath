@@ -159,24 +159,27 @@
   .app:not(.sap) .chub-screen{display:block;height:auto;overflow:visible;}
   .app:not(.sap) .chub-side{width:auto;padding-right:0;border-right:0;
     border-bottom:1px solid var(--line);padding-bottom:12px;margin-bottom:14px;}
-  /* 🔵 **반 고르기는 폰에서 «고른 반 한 장»이다 — 수업·반 두 탭이 같은 카드** (2026-09-27 · 사용자 —
-       「수업탭에서 반 선택하는 ui와 반탭에서 선택하는 ui가 달라 … 수업탭 형태로 통일 · 다 보이는 게 아니라
-       … 아코디언 형태로 펼쳐졌다 접혔다」). 반이 여섯이면 수업 탭은 카드 여섯 장을 지나야 출결이 나왔고,
-       반 탭은 196px 상자 안에서 따로 스크롤했다. ⇒ 고른 카드만 서고, 그 카드를 누르면 나머지가 펼쳐진다.
-     ⚠ 반 탭 카드는 CSS 로만 수업 카드(`.cls-sess`) 꼴을 입힌다 — 줄(일정)을 위로, 이름을 굵게.
-     ⚠ 펼침은 `state.clsPickOpen` 하나를 두 탭이 같이 쓴다. 데스크톱은 이 값을 안 본다(목록이 늘 다 보인다). */
-  .app:not(.sap) .cls-side:not(.pick-open) .cls-sess:not(.on),
-  .app:not(.sap) .chub-lbody:not(.pick-open) .chub-cl:not(.on){display:none;}
-  .app:not(.sap) .chub-lbody{max-height:none;overflow:visible;margin-right:0;padding-right:0;}
-  .app:not(.sap) .chub-side{background:none;border-bottom:0;padding-bottom:0;margin-bottom:6px;}
-  .app:not(.sap) .chub-cl{display:flex;flex-direction:column;background:var(--card);
-    border:1px solid var(--line);border-radius:var(--r-lg);padding:13px 15px;margin-bottom:9px;}
-  .app:not(.sap) .chub-cl.on{background:var(--card);border-color:var(--accent);box-shadow:0 0 0 2px var(--point-ring);}
-  .app:not(.sap) .chub-cl .m{order:-1;margin:0;font-family:'JetBrains Mono',monospace;font-weight:600;}
-  .app:not(.sap) .chub-cl .n{font-size:14px;font-weight:700;margin-top:5px;letter-spacing:-.02em;}
+  /* 🔵 **수업 탭의 반 고르기는 폰에서 «고른 반 한 장»이다 — 아코디언** (2026-09-27 · 사용자 —
+       「수업탭 형태로 통일 · 다 보이는 게 아니라 … 아코디언 형태로 펼쳐졌다 접혔다」). 반이 여섯이면
+       카드 여섯 장을 지나야 출결이 나왔다. ⇒ 고른 카드만 서고, 그 카드를 누르면 나머지가 펼쳐진다(`state.clsPickOpen`). */
+  .app:not(.sap) .cls-side:not(.pick-open) .cls-sess:not(.on){display:none;}
   .app:not(.sap) [data-more]::after{content:attr(data-more) ' ▾';display:block;margin-top:9px;
     font-size:11.5px;font-weight:600;color:var(--accent);}
   .app:not(.sap) .pick-open [data-more]::after{content:'접기 ▴';}
+  /* 🔵 **반 탭의 반 고르기는 폰에서 «가로로 미는 칩 줄»이다** (2026-09-27 · 사용자 — 같은 날 아코디언 → 칩 줄).
+       일정·인원(반 머리가 똑같이 말한다)과 진도 막대를 걷고 나니 이름만 남아, 한 줄에 여럿이 선다 —
+       밀어서 바로 누르면 끝이다(아코디언은 두 번 누른다). 설정 갈래(`.st-nav`)·검토 큐와 같은 칩.
+     ⚠ 수업 탭은 아직 아코디언이다(사용자 — 「반탭만 먼저」). */
+  .app:not(.sap) .chub-side{background:none;border-bottom:0;padding-bottom:0;margin-bottom:6px;}
+  .app:not(.sap) .chub-lbody{display:flex;gap:7px;max-height:none;margin-right:0;padding:0 0 6px;
+    overflow-x:auto;overflow-y:hidden;scrollbar-width:none;-webkit-overflow-scrolling:touch;}
+  .app:not(.sap) .chub-lbody::-webkit-scrollbar{display:none;}
+  .app:not(.sap) .chub-cl{flex:none;white-space:nowrap;padding:7px 12px;border:1px solid var(--line);
+    border-radius:var(--r-pill);background:var(--card);}
+  .app:not(.sap) .chub-cl.on{border-color:var(--accent-line);background:var(--accent-bg);color:var(--accent);}
+  .app:not(.sap) .chub-cl .n{font-size:13px;}
+  .app:not(.sap) .chub-cl.on .n{font-weight:700;}
+  .app:not(.sap) .chub-cl .m{display:none;}
   .app:not(.sap) .chub-main{padding-left:0;}
   /* 반 이름과 오른쪽 버튼 묶음이 한 줄에 안 들어간다. 이름을 온전히 읽는 쪽을 택한다. */
   .app:not(.sap) .chub-mh{flex-wrap:wrap;}
@@ -14098,6 +14101,8 @@ function render(){
      통과하면 서른한 번째가 골라지지만 화면 밖이다. J/K 만 따로 `scrollIntoView` 를 하고 있었다.
      자리를 되돌린 뒤 **골라진 줄이 보이게** 한 번 더 민다(nearest — 보이면 안 움직인다). */
   const rvScroll = (app.querySelector('.rv-lbody') || {}).scrollTop;
+  /* 폰의 가로 칩 줄(설정 갈래 · 반 목록) — 밀어 둔 자리. 끝쪽 칩을 누르자마자 줄이 왼쪽 끝으로 튀지 않게. */
+  const chipX = ['.st-nav .ex-lbody', '.chub-lbody'].map(q => (app.querySelector(q) || {}).scrollLeft);
   app.innerHTML = html;
   /* ⚠ 경고 띠는 `position:fixed` 라 **자리를 안 차지한다** — 그대로 두면 화면 맨 위
      (제목·탭)를 덮는다. 띠의 높이만큼 본문을 내려 준다. 글이 길어져 두 줄이 되어도
@@ -14116,9 +14121,15 @@ function render(){
       /* 아랫줄(.actbar)이 fixed 로 목록 밑을 덮는다 — 그 위까지만 «보이는 자리»다 (크롬으로 재서 알았다) */
       const bar = document.querySelector('.actbar'), bottom = Math.min(a.bottom, bar ? bar.getBoundingClientRect().top : a.bottom);
       if(b.top < a.top) rb.scrollTop -= a.top - b.top; else if(b.bottom > bottom) rb.scrollTop += b.bottom - bottom; }); }
-  { /* 설정 갈래 칩 줄(폰) — 새로 그리면 왼쪽 끝으로 돌아가 «알림»·«변경 이력»이 고른 채로 화면 밖에 있었다. */
-    const nb = app.querySelector('.st-nav .ex-lbody'), on = nb && nb.querySelector('.ex-item.on');
-    if(on){ const over = on.getBoundingClientRect().right - nb.getBoundingClientRect().right; if(over > 0) nb.scrollLeft += over + 16; } }
+  /* 칩 줄(폰) — 자리를 되돌리고, 고른 칩이 화면 밖이면 보이게 민다(처음 열 때 «알림»·뒤쪽 반이 밖에 있었다).
+     ⚠ 데스크톱에서는 같은 상자가 세로 목록이라 넘침이 없어 아무 일도 안 한다. */
+  ['.st-nav .ex-lbody', '.chub-lbody'].forEach((q, k) => {
+    const nb = app.querySelector(q), on = nb && nb.querySelector('.on');
+    if(!nb) return;
+    if(chipX[k]) nb.scrollLeft = chipX[k];
+    if(!on) return;
+    const a = nb.getBoundingClientRect(), b = on.getBoundingClientRect();
+    if(b.right > a.right) nb.scrollLeft += b.right - a.right + 16; else if(b.left < a.left) nb.scrollLeft -= a.left - b.left + 16; });
   /* 🔵 **고리는 여기서 깨운다** (2026-09-06) — 「앱을 열어 둔 동안 돈다」가 이 한 줄이다.
      render() 는 자주 불리지만 이미 돌고 있으면 곧장 빠져나온다(값 셋만 본다). */
   if(state.autoFill && state.autoFill.on) autoFillKick();
@@ -22014,28 +22025,20 @@ function chubClassListHTML(activeId){
       ${isAssistantNow() ? '' : `<button class="btn q sm" title="반은 설정에서 만듭니다"
         onclick="goTeacherTab('settings'); state.settingsSubTab='classes'; render()">${iconSvg('plus',13)} 추가</button>`}
     </div>
-    <div class="chub-lbody ${state.clsPickOpen ? 'pick-open' : ''}">
+    <div class="chub-lbody">
       ${반들.map(c=>{
         const n = classRoster(c.id).length;
-        const pr = getClassProgress(c.id);
         const wait = hwWaitingInClass(c.id);
         return `<div class="chub-cl ${c.id===activeId?'on':''} ${c.status==='진행중'?'':'off'}"
-          ${c.id===activeId && 반들.length > 1 ? `data-more="다른 반 ${반들.length - 1}"` : ''}
-          onclick="${c.id===activeId ? 'state.clsPickOpen=!state.clsPickOpen' : `state.clsPickOpen=false; state.classHubId='${c.id}'`}; render()">
+          onclick="state.classHubId='${c.id}'; render()">
           <div class="n">${escHtml(c.name)}${
             wait ? `<span class="badge late" style="margin-left:6px;">과제 ${wait}</span>` : ''}</div>
           ${/* ⚠ 원문이 아니라 다듬은 말을 쓴다 — 반 머리·설정 목록과 같은 꼴이라야 같은 반으로 읽힌다. */''}
           <div class="m">${escHtml(classScheduleLabel(c)||'일정 미정')} · ${n}명${c.status==='진행중'?'':' · 종료'}</div>
-          ${/* 🔴 **이름표 없는 퍼센트는 «지금 보는 탭»의 수로 읽힌다** (2026-09-14 · 사용자가 짚었다 —
-               「반-영상 탭에서 33%가 반마다 붙어있는데 반에 해당하는 시청률도 아니어서」).
-               그 수는 **진도**(단원 몇 개를 마쳤나)였는데, 이 레일은 영상·성적·출결 탭에서도
-               똑같이 떠 있어서 **어느 탭에 있느냐에 따라 다른 뜻으로 읽혔다.**
-             ⇒ 이름을 붙인다. 무엇의 퍼센트인지 화면이 스스로 말해야 한다. */''}
-          <div class="p" title="${pr.subject
-            ? escHtml(pr.subject + ' ' + pr.chapters.length + '단원 중 ' + pr.doneCount + '단원을 마쳤습니다')
-            : '반 › 진도에서 과목을 고르면 진도가 잡힙니다'}">
-            <span class="bar"><i style="width:${pr.subject?pr.percent:0}%"></i></span>
-            <span>진도 ${pr.subject ? pr.percent+'%' : '—'}</span></div>
+          ${/* 🔵 **진도 막대를 걷었다** (2026-09-27 · 사용자 — 「학기 중엔 시험 범위만 해서 단원 절반만 하게 되는데
+               그럼 계속 50퍼대로 떠 있어 … 교재별로 진도율을 고치기 전까지는 핵심 정보가 아니라 반 리스트에 떠 있을 필요가 없다」).
+               과목 전체 단원을 분모로 삼는 셈이 학기 중에는 틀린 말을 한다. 진도 탭(`chubProgressHTML`)은 그대로다.
+               (09-14 에는 이 수에 「진도」 이름표를 붙였다 — 그 전엔 영상 탭에서 시청률로 읽혔다.) */''}
         </div>`;
       }).join('')}
     </div>
