@@ -159,7 +159,24 @@
   .app:not(.sap) .chub-screen{display:block;height:auto;overflow:visible;}
   .app:not(.sap) .chub-side{width:auto;padding-right:0;border-right:0;
     border-bottom:1px solid var(--line);padding-bottom:12px;margin-bottom:14px;}
-  .app:not(.sap) .chub-lbody{max-height:196px;}
+  /* 🔵 **반 고르기는 폰에서 «고른 반 한 장»이다 — 수업·반 두 탭이 같은 카드** (2026-09-27 · 사용자 —
+       「수업탭에서 반 선택하는 ui와 반탭에서 선택하는 ui가 달라 … 수업탭 형태로 통일 · 다 보이는 게 아니라
+       … 아코디언 형태로 펼쳐졌다 접혔다」). 반이 여섯이면 수업 탭은 카드 여섯 장을 지나야 출결이 나왔고,
+       반 탭은 196px 상자 안에서 따로 스크롤했다. ⇒ 고른 카드만 서고, 그 카드를 누르면 나머지가 펼쳐진다.
+     ⚠ 반 탭 카드는 CSS 로만 수업 카드(`.cls-sess`) 꼴을 입힌다 — 줄(일정)을 위로, 이름을 굵게.
+     ⚠ 펼침은 `state.clsPickOpen` 하나를 두 탭이 같이 쓴다. 데스크톱은 이 값을 안 본다(목록이 늘 다 보인다). */
+  .app:not(.sap) .cls-side:not(.pick-open) .cls-sess:not(.on),
+  .app:not(.sap) .chub-lbody:not(.pick-open) .chub-cl:not(.on){display:none;}
+  .app:not(.sap) .chub-lbody{max-height:none;overflow:visible;margin-right:0;padding-right:0;}
+  .app:not(.sap) .chub-side{background:none;border-bottom:0;padding-bottom:0;margin-bottom:6px;}
+  .app:not(.sap) .chub-cl{display:flex;flex-direction:column;background:var(--card);
+    border:1px solid var(--line);border-radius:var(--r-lg);padding:13px 15px;margin-bottom:9px;}
+  .app:not(.sap) .chub-cl.on{background:var(--card);border-color:var(--accent);box-shadow:0 0 0 2px var(--point-ring);}
+  .app:not(.sap) .chub-cl .m{order:-1;margin:0;font-family:'JetBrains Mono',monospace;font-weight:600;}
+  .app:not(.sap) .chub-cl .n{font-size:14px;font-weight:700;margin-top:5px;letter-spacing:-.02em;}
+  .app:not(.sap) [data-more]::after{content:attr(data-more) ' ▾';display:block;margin-top:9px;
+    font-size:11.5px;font-weight:600;color:var(--accent);}
+  .app:not(.sap) .pick-open [data-more]::after{content:'접기 ▴';}
   .app:not(.sap) .chub-main{padding-left:0;}
   /* 반 이름과 오른쪽 버튼 묶음이 한 줄에 안 들어간다. 이름을 온전히 읽는 쪽을 택한다. */
   .app:not(.sap) .chub-mh{flex-wrap:wrap;}
@@ -188,6 +205,18 @@
     border-bottom:1px solid var(--line);padding-bottom:12px;margin-bottom:14px;}
   .app:not(.sap) .ex-lbody{max-height:190px;margin-right:0;padding-right:0;}
   .app:not(.sap) .ex-body{overflow:visible;margin-top:14px;}
+  /* 🔵 **설정 갈래는 폰에서 «가로로 미는 칩 줄»이다** (2026-09-27 · 사용자 — 「설정탭 서브탭들이 여기만 혼자 수직」).
+     위아래로 푼 뒤에도 갈래 여덟이 세로 목록(190px 스크롤)으로 남아 있었다 — 형제 탭은 전부 칩 줄이다.
+     검토 큐(`.rv-queues`)와 같은 어법. 묶음 이름(계정·운영·시스템)은 칩 줄에선 뺀다.
+     ⚠ `.ex-nav` 는 시험지·창고도 쓴다 — **설정만**(`.st-nav`) 건드린다. */
+  .app:not(.sap) .st-nav{padding-bottom:0;border-bottom:0;margin-bottom:4px;background:none;}
+  .app:not(.sap) .st-nav .ex-lbody{display:flex;gap:7px;max-height:none;padding:0 0 6px;
+    overflow-x:auto;overflow-y:hidden;scrollbar-width:none;-webkit-overflow-scrolling:touch;}
+  .app:not(.sap) .st-nav .ex-lbody::-webkit-scrollbar{display:none;}
+  .app:not(.sap) .st-nav .st-grp{display:none;}
+  .app:not(.sap) .ex-list.st-nav .ex-item{flex:none;white-space:nowrap;padding:7px 12px;
+    border-radius:var(--r-pill);border:1px solid var(--line);background:var(--card);}
+  .app:not(.sap) .ex-list.st-nav .ex-item.on{border-color:var(--accent-line);background:var(--accent-bg);}
 
   /* ---------- 오답 › 검토를 폰용으로 푼다 (2026-09-16 · M-2e · 사용자 요청) ----------
      「관리자 페이지지만 모바일로도 자주자주 확인할 것 같아서」 — 검토와 질의응답 둘을 골랐다.
@@ -14087,6 +14116,9 @@ function render(){
       /* 아랫줄(.actbar)이 fixed 로 목록 밑을 덮는다 — 그 위까지만 «보이는 자리»다 (크롬으로 재서 알았다) */
       const bar = document.querySelector('.actbar'), bottom = Math.min(a.bottom, bar ? bar.getBoundingClientRect().top : a.bottom);
       if(b.top < a.top) rb.scrollTop -= a.top - b.top; else if(b.bottom > bottom) rb.scrollTop += b.bottom - bottom; }); }
+  { /* 설정 갈래 칩 줄(폰) — 새로 그리면 왼쪽 끝으로 돌아가 «알림»·«변경 이력»이 고른 채로 화면 밖에 있었다. */
+    const nb = app.querySelector('.st-nav .ex-lbody'), on = nb && nb.querySelector('.ex-item.on');
+    if(on){ const over = on.getBoundingClientRect().right - nb.getBoundingClientRect().right; if(over > 0) nb.scrollLeft += over + 16; } }
   /* 🔵 **고리는 여기서 깨운다** (2026-09-06) — 「앱을 열어 둔 동안 돈다」가 이 한 줄이다.
      render() 는 자주 불리지만 이미 돌고 있으면 곧장 빠져나온다(값 셋만 본다). */
   if(state.autoFill && state.autoFill.on) autoFillKick();
@@ -20149,7 +20181,7 @@ function teacherSessionHTML(){
   }
 
   const side = `
-  <aside class="cls-side">
+  <aside class="cls-side ${state.clsPickOpen ? 'pick-open' : ''}">
     ${/* 🔵 **날짜 고르개가 왼쪽 맨 위로 왔다** (2026-09-01 · C-18 · 사용자가 시켰다).
          이 화면의 1차 축은 «날짜와 시간»인데, 날짜를 고르는 곳은 오른쪽 머리말에 있고
          시간을 고르는 곳은 왼쪽에 있었다. **한 축을 두 곳에서 고르고 있었던 셈이다.**
@@ -20161,7 +20193,9 @@ function teacherSessionHTML(){
       : sessions.map(c=>{
           const { st, detail } = sessionStatusOf(c, date);
           return `
-          <div class="cls-sess ${c.id === classId ? 'on' : ''}" onclick="pickSession('${c.id}')">
+          ${/* 폰에서는 고른 반 한 장만 보인다 — 그 카드를 누르면 펼치고, 다른 반을 고르면 접힌다(아래 CSS · 반 탭과 같은 어법) */''}
+          <div class="cls-sess ${c.id === classId ? 'on' : ''}" ${c.id === classId && sessions.length > 1 ? `data-more="다른 반 ${sessions.length - 1}"` : ''}
+            onclick="${c.id === classId ? 'state.clsPickOpen=!state.clsPickOpen; render()' : `state.clsPickOpen=false; pickSession('${c.id}')`}">
             ${/* 🔴 **«그 날»의 시간이라야 한다** (2026-09-08 · 사용자가 짚었다 —
                  「오늘은 화요일인데 시간이 토요일시간으로 뜨고」). 이 목록은 날짜 하나를
                  보고 있으므로 요일을 안 넘기면 «전부»가 오거나 엉뚱한 것이 온다. */''}
@@ -21980,13 +22014,14 @@ function chubClassListHTML(activeId){
       ${isAssistantNow() ? '' : `<button class="btn q sm" title="반은 설정에서 만듭니다"
         onclick="goTeacherTab('settings'); state.settingsSubTab='classes'; render()">${iconSvg('plus',13)} 추가</button>`}
     </div>
-    <div class="chub-lbody">
+    <div class="chub-lbody ${state.clsPickOpen ? 'pick-open' : ''}">
       ${반들.map(c=>{
         const n = classRoster(c.id).length;
         const pr = getClassProgress(c.id);
         const wait = hwWaitingInClass(c.id);
         return `<div class="chub-cl ${c.id===activeId?'on':''} ${c.status==='진행중'?'':'off'}"
-          onclick="state.classHubId='${c.id}'; render()">
+          ${c.id===activeId && 반들.length > 1 ? `data-more="다른 반 ${반들.length - 1}"` : ''}
+          onclick="${c.id===activeId ? 'state.clsPickOpen=!state.clsPickOpen' : `state.clsPickOpen=false; state.classHubId='${c.id}'`}; render()">
           <div class="n">${escHtml(c.name)}${
             wait ? `<span class="badge late" style="margin-left:6px;">과제 ${wait}</span>` : ''}</div>
           ${/* ⚠ 원문이 아니라 다듬은 말을 쓴다 — 반 머리·설정 목록과 같은 꼴이라야 같은 반으로 읽힌다. */''}
@@ -31283,7 +31318,7 @@ function teacherSettingsHTML(){
     auditlog:'누가 무엇을 바꿨는지', push:'학생이 질문·클리닉 제안·채팅을 보내면 이 기기로 알림', cleanup:'옛 기록을 한 번에 손본다 — 살펴본 뒤에만 고친다',
     admin:'관리자 비밀번호' };
   return `<div class="ex-screen ex-nosub">
-    <aside class="ex-list ex-nav">
+    <aside class="ex-list ex-nav st-nav">
       <div class="ex-lbody">
         ${SETTINGS_GROUPS.map(g=>`<div class="t-sec st-grp">${g[0]}</div>` + g[1].map(t=>
           `<div class="ex-item ${tabNow===t[0]?'on':''}" onclick="state.settingsSubTab='${t[0]}'; render()">
