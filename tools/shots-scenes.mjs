@@ -210,7 +210,7 @@ export const 무대들 = {
     세우기: () => { state.currentUser = { type:'teacher', name:'김하현T' }; state.view = 'teacher';
       state.teacherTab = 'classhub'; state.classHubTab = 'homework'; state.classHubId = 'c1'; render(); } },
   /* 대원고 고1 공통수학1 에 등급컷을 적어 두어 «컷 기준» 등급이 서는지 본다 */
-  내신모의: { 말: '반 관리 › 내신·모의 (학교 시험 · 등급컷으로 센 등급)',
+  내신모의: { 말: '반 관리 › 성적 › 학교 시험 (학교 시험 · 등급컷으로 센 등급)',
     세우기: () => { state.currentUser = { type:'teacher', name:'김하현T' }; state.view = 'teacher';
       DATA.classes[0].progress = { subject:'공통수학1' };
       state.season = { name:'2학기 중간', startedAt:'2026-09-01' };
@@ -222,7 +222,7 @@ export const 무대들 = {
       r.s1.schoolExams = [{ term:'2026 · 2학기 중간', subject:'공통수학1', score:92, grade:1 }];
       r.s2.schoolExams = [{ term:'2026 · 2학기 중간', subject:'공통수학1', score:55 }];
       r.s0.mockExams = [{ ym:'2026-06', score:76, grade:3 }];
-      state.nsTerm = '2026 · 2학기 중간';
-      state.teacherTab = 'classhub'; state.classHubTab = 'school'; state.classHubId = 'c1'; render(); } },
+      state.nsTerm = '2026 · 2학기 중간'; state.nsMode = 'school';
+      state.teacherTab = 'classhub'; state.classHubTab = 'scores'; state.classHubId = 'c1'; render(); } },
 };
 void 강사; void 학생;

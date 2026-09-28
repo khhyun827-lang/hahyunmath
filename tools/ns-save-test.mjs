@@ -47,6 +47,13 @@ try{
   봄('모의고사 — 달마다 한 줄, 지난 달은 남는다', m.s0, [{ ym:'2026-06', score:76, grade:3 }, { ym:'2026-09', score:81, grade:2 }]);
   봄('등급 0 은 저장 안 한다', m.s1, []);
   봄('저장 뒤 다시 그려도 값이 보인다', m.shown, '81');
+  // 성적 탭 안의 갈래 — 학원 시험으로 돌아오면 원래 성적 화면(시험 추가)이다
+  await page.evaluate(() => { state.nsMode = ''; render(); });
+  봄('학원 시험 갈래는 원래 성적 화면', await page.evaluate(() => [
+    [...document.querySelectorAll('button')].some(b => b.textContent.includes('시험 추가')),
+    !!document.querySelector('#ns-s-s0')]), [true, false]);
+  await page.evaluate(() => { state.classHubTab = 'school'; state.nsMode = ''; render(); });
+  봄('옛 「school」 탭 id 는 성적 › 학교 시험으로', await page.evaluate(() => [state.classHubTab, state.nsMode]), ['scores', 'school']);
   봄('페이지 오류 없음', 탈, []);
   // 폰 폭 — 가로로 밀리는지
   await page.setViewportSize({ width: 390, height: 800 });

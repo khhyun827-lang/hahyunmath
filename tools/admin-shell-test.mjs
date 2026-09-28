@@ -52,7 +52,7 @@ console.log('\n① 메뉴 지도\n');
 const M = new Function([liftConst('TEACHER_NAV'), liftConst('TEACHER_SUBNAV'), liftConst('TEACHER_TAB_SECTION')].join('\n') +
   '\nreturn { TEACHER_NAV, TEACHER_SUBNAV, TEACHER_TAB_SECTION };')();
 {
-  봄('상단 차례는 홈 · 수업 · 반 · 오답 · 소통 · 설정', M.TEACHER_NAV.map(n => n[0]), ['홈', '수업', '반', '오답', '소통', '설정']);
+  봄('상단 차례는 홈 · 수업 · 반 · 소통 · 문항관리 · 설정', M.TEACHER_NAV.map(n => n[0]), ['홈', '수업', '반', '소통', '문항관리', '설정']);
   봄('상단 칸마다 아이콘이 있다 (폰 하단 탭바)', M.TEACHER_NAV.every(n => typeof n[2] === 'string' && n[2]), true);
   봄('🔴 상단 칸이 가는 탭은 제 칸에 속한다',
     M.TEACHER_NAV.filter(n => M.TEACHER_TAB_SECTION[n[1]] !== n[0]).map(n => n[0]), []);
@@ -66,9 +66,9 @@ const M = new Function([liftConst('TEACHER_NAV'), liftConst('TEACHER_SUBNAV'), l
     Object.keys(M.TEACHER_TAB_SECTION).filter(t => !본문.includes(`t==='${t}'`)), []);
   봄('신호는 홈 아래로 왔다', M.TEACHER_TAB_SECTION.signals, '홈');
   봄('상담 신청은 소통 아래로 왔다', M.TEACHER_TAB_SECTION.consults, '소통');
-  봄('반의 열한 갈래는 하나도 안 빠졌다',
+  봄('반의 열 갈래는 하나도 안 빠졌다',
     M.TEACHER_SUBNAV['반'].filter(Boolean).map(s => s[2]).sort(),
-    ['consult', 'homework', 'log', 'material', 'progress', 'quiz', 'school', 'scores', 'sessions', 'students', 'video']);
+    ['consult', 'homework', 'log', 'material', 'progress', 'quiz', 'scores', 'sessions', 'students', 'video']);
 }
 
 /* ═══ ② 옮긴 문이 옛 자리에서도 열린다 ═══ */

@@ -18481,8 +18481,10 @@ const TEACHER_NAV = [
   ['홈',   'dash',     'home'],
   ['수업', 'session',  'checklist'],
   ['반',   'classhub', 'users'],
-  ['오답', 'review',   'clipboard'],
+  /* 🔵 소통이 앞으로, 「오답」은 「문항관리」로 (2026-09-29 · 사용자 — 「오답탭은 시험지 오답에서 시작되어서
+     이름이 오답인데 생각해보면 문항관리 탭이 맞는것 같아」). 탭 id(review·exams·unitbank)는 그대로다. */
   ['소통', 'clinic',   'messageCircle'],
+  ['문항관리', 'review', 'clipboard'],
   ['설정', 'settings', 'settings']
 ];
 
@@ -18507,7 +18509,6 @@ const TEACHER_SUBNAV = {
     null,
     ['출결',       'classhub', 'sessions'],
     ['성적',       'classhub', 'scores'],
-    ['내신·모의',  'classhub', 'school'],
     ['과제',       'classhub', 'homework'],
     null,
     ['진도',       'classhub', 'progress'],
@@ -18519,7 +18520,7 @@ const TEACHER_SUBNAV = {
     ['데일리퀴즈', 'classhub', 'quiz']
   ],
   /* 「제출 현황」은 시험지 화면의 우측 칸으로 흡수했다 (시안 07). 서브탭에서 뺐다. */
-  '오답': [
+  '문항관리': [
     ['검토', 'review'], ['시험지', 'exams'], ['문항 창고', 'unitbank']
   ],
   /* 「출석 도장」이 여기 있는 이유 — «신호»는 지표를 세우는 화면이고 «명단»은 평가하는
@@ -18541,7 +18542,7 @@ const TEACHER_TAB_SECTION = {
   /* ⚠ 여기와 TEACHER_SUBNAV 는 **둘 다** 고쳐야 한다 — 노트가 적어 둔 그것이다.
      itemcode 를 서브탭에만 넣고 여기를 빠뜨렸더니 상단 메뉴가 「반」으로 잡히고
      서브탭 줄이 통째로 반의 것으로 그려졌다 (2026-09-03). */
-  review:'오답', exams:'오답', unitbank:'오답',
+  review:'문항관리', exams:'문항관리', unitbank:'문항관리',
   clinic:'소통', notices:'소통', qna:'소통', chat:'소통', checkin:'소통',
   settings:'설정'
 };
@@ -20718,7 +20719,7 @@ function sessionExamHTML(classId, date){
         <label><span>문항수</span><input id="qx-total" type="number" min="1" step="1" value="20"></label>
       </div>
       <p class="cls-new-note">만들면 <b>바로 아래에서 점수를 칩니다.</b>
-        <b>시험지(문항)는 나중에</b> 「오답 › 시험지」에서 붙여도 넣어 둔 성적이 그대로 이어집니다.</p>
+        <b>시험지(문항)는 나중에</b> 「문항관리 › 시험지」에서 붙여도 넣어 둔 성적이 그대로 이어집니다.</p>
     </div>
   </div>`;
 
@@ -21166,6 +21167,8 @@ function teacherClassHubHTML(){
      ⚠ 「명단으로」 버튼은 studentDetailId만 비우므로 그대로 이 반으로 돌아온다. */
   if(state.studentDetailId && (state.classHubTab||'sessions')==='students')
     return teacherStudentDetailHTML(state.studentDetailId);
+  /* 09-28 에 잠깐 따로 섰던 「내신·모의」 탭 — 성적 안으로 들어갔다(09-29). 들고 있던 세션을 그리로 보낸다. */
+  if(state.classHubTab==='school'){ state.classHubTab = 'scores'; state.nsMode = state.nsMode || 'school'; }
   const tab = state.classHubTab || 'sessions';
 
   /* ⚠ 조교는 «맡은 반»만 본다 — 반이 없으면 할 말도 다르다(설정으로 보내면 안 된다. 못 들어간다). */
@@ -21206,8 +21209,9 @@ function teacherClassHubHTML(){
        여기서 켜 두면 수업 기록에서 하루를 폈을 때까지 «전체»로 새어 나간다. */
     sub = (r => r.body + r.extra)(teacherClassDailyHomeworkHTML(c.id, todayStr()));
   }
-  else if(tab==='scores')     sub = chubScoresHTML(c.id);
-  else if(tab==='school')     sub = chubSchoolHTML(c.id);
+  /* 🔵 학교 시험·모의고사는 성적 «안»의 갈래다 (2026-09-29 · 사용자 — 「내신.모의 탭을 성적탭 안에」).
+     조교에게는 갈래 단추가 안 서므로 늘 학원 시험이다. */
+  else if(tab==='scores')     sub = (state.nsMode && !isAssistantNow()) ? chubSchoolHTML(c.id) : chubScoresHTML(c.id);
   else if(tab==='consult')    sub = chubConsultHTML(c.id);
   else if(tab==='log')        sub = chubLogHTML(c.id);
   else if(tab==='progress')   sub = chubProgressHTML(c.id);
@@ -21436,7 +21440,7 @@ function chubScoresHTML(classId){
   const roster = DATA.students.filter(s=>studentClassIds(s).includes(classId));
   const adding = state.scoreAddFor === classId;
 
-  const addBar = chubMonthBarHTML(`시험 <b>${exams.length}</b>개`)
+  const addBar = scoreKindSegHTML() + chubMonthBarHTML(`시험 <b>${exams.length}</b>개`)
   + `<div class="es-head" style="margin:0 0 14px;flex-wrap:wrap;">
     ${adding ? `
       <span class="field" style="width:auto;">시험명
@@ -21464,7 +21468,7 @@ function chubScoresHTML(classId){
 
   if(exams.length===0)
     return addBar + `<div class="fm-empty">${ymLabel(ym)}에 본 시험이 없습니다.
-      「시험 추가」로 만들거나, 문항이 있는 시험지는 <b>오답 &gt; 시험지</b>에서 만듭니다.</div>`;
+      「시험 추가」로 만들거나, 문항이 있는 시험지는 <b>문항관리 &gt; 시험지</b>에서 만듭니다.</div>`;
   if(roster.length===0)
     return addBar + `<div class="fm-empty">이 반에 배정된 학생이 없습니다.</div>`;
 
@@ -21545,7 +21549,7 @@ function chubScoresHTML(classId){
 
 /* =================== 반 › 내신·모의 — 학교 시험·교육청 모의고사 (2026-09-28 · 사용자 요청) ===================
    사용자 — 「학교 시험이나 교육청 모의고사 기록하는 곳이 있으면 좋겠어」. 물어서 정한 넷:
-     **새 탭** · 모의고사는 **원점수 + 등급** · **학생에게 안 보임** · **리포트에 안 실음**.
+     ~~새 탭~~ → 09-29 에 **성적 탭 안의 갈래**로 들어갔다 · 모의고사는 **원점수 + 등급** · **학생에게 안 보임** · **리포트에 안 실음**.
    🔵 **성적 탭(`rec.scores`)과 섞지 않는다** — 저기는 «우리 시험지»에 붙는 줄이라 반 평균·등수·오답이 돈다.
      학교 시험은 학교마다 시험지가 달라 그 셈에 들어가면 평균이 거짓이 된다.
    저장은 학생 기록의 두 줄이다 —
@@ -21557,6 +21561,16 @@ function chubScoresHTML(classId){
    ⚠ 열쇠는 등급컷의 `seasonKeyOf`(시작일|이름)가 아니라 **«연도 · 시즌»**이다 — 시작일을 고치면
      등급컷은 `setSeasonStart` 가 옮겨 주지만, 학생 기록을 다 고쳐 쓸 수는 없다. */
 const EXAM_SEASONS = SEASONS.filter(s => /중간|기말/.test(s));
+/* 성적 탭 맨 위의 갈래 — 학원 시험(`nsMode` 빈 값) · 학교 시험 · 모의고사. 조교에게는 안 세운다(강사만). */
+function scoreKindSegHTML(){
+  if(isAssistantNow()) return '';
+  const k = state.nsMode || '';
+  const items = [['', '학원 시험'], ['school', '학교 시험'], ['mock', '모의고사']];
+  return `<div class="row" style="gap:0;margin:0 0 14px;">${items.map(([v, label], i) => `<button
+    class="btn sm ${k === v ? 'p' : 'q'}" style="border-radius:${
+      i === 0 ? 'var(--r-sm) 0 0 var(--r-sm)' : i === items.length - 1 ? '0 var(--r-sm) var(--r-sm) 0' : '0'};"
+    onclick="state.nsMode='${v}'; render()">${label}</button>`).join('')}</div>`;
+}
 function nsTermOf(year, season){ return year + ' · ' + season; }
 /* 학기 순서 — 「기말」이 「중간」보다 글자로는 앞이라 글자 정렬을 못 쓴다. */
 function nsTermRank(term){
@@ -21607,14 +21621,7 @@ function chubSchoolHTML(classId){
   const y0 = Number(todayStr().slice(0,4));
   const years = [...new Set([y0, y0-1, y0-2, Number(year)])].sort((a,b)=>b-a);
 
-  const seg = (on, label, js, pos) => `<button class="btn sm ${on ? 'p' : 'q'}"
-    style="border-radius:${pos==='l' ? 'var(--r-sm) 0 0 var(--r-sm)' : '0 var(--r-sm) var(--r-sm) 0'};"
-    onclick="${js}; render()">${label}</button>`;
-  const bar = `<div class="es-head" style="margin:0 0 14px;flex-wrap:wrap;gap:10px;align-items:center;">
-    <div class="row" style="gap:0;">
-      ${seg(!mock, '학교 시험', "state.nsMode='school'", 'l')}
-      ${seg(mock, '모의고사', "state.nsMode='mock'", 'r')}
-    </div>
+  const bar = scoreKindSegHTML() + `<div class="es-head" style="margin:0 0 14px;flex-wrap:wrap;gap:10px;align-items:center;">
     ${mock
       ? `<span class="field" style="width:auto;">시행 달
           <input class="rst-sel" type="month" value="${ym}" onchange="state.nsYm=this.value || ''; render()"></span>`
