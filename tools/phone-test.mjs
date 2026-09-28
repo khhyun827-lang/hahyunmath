@@ -62,7 +62,8 @@ console.log(NL + '① 번호를 «-» 로 끊어 적는다' + NL);
 /* ═══ ② 보는 자리마다 그 함수를 거친다 ═══ */
 console.log(NL + '② 번호가 보이는 자리가 다 그 함수를 거치는가' + NL);
 {
-  봄('명단 표', lift('teacherRosterHTML').includes('phoneLabel(s.parentPhone)'), true);
+  /* 명단 표에서는 번호를 뺐다(09-29 · 사용자 요청) — 「열기」 해서 보는 학생 상세가 그 자리다(아래). */
+  봄('명단 표에는 학부모 번호가 없다', lift('teacherRosterHTML').includes('s.parentPhone'), false);
   봄('학생 상세',
     lift('sdScreenHTML').includes('phoneLabel(s.parentPhone)') && lift('sdScreenHTML').includes('phoneLabel(s.phone)'), true);
   봄('고치는 칸', lift('studentAccountFormHTML').includes('phoneLabel(s.parentPhone)'), true);

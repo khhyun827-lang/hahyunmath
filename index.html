@@ -541,10 +541,10 @@
    그래서 table-layout:fixed로 열 너비를 못 박고, 넘치는 글자는 …로 자른다.
    1440 캔버스를 전제로 그린 표다. 그보다 좁은 화면에서는 표«만» 가로로 스크롤한다
    (문서 전체가 밀리면 상단바까지 따라 움직여서 어디에 있는지 알 수 없게 된다). */
-.app .rst-wrap table.grid{table-layout:fixed;min-width:1464px;}
+.app .rst-wrap table.grid{table-layout:fixed;min-width:1324px;}
 /* 반을 고르면 「반」·「반 진도」 두 열이 빠진다. 그만큼 최소 너비도 줄여야
    좁은 화면에서 괜히 가로 스크롤이 남는다. */
-.app .rst-wrap table.grid.narrow{min-width:1260px;}
+.app .rst-wrap table.grid.narrow{min-width:1116px;}
 .app .rst-wrap td{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 /* 시험 일정 표의 프린트 칸 — 파일 이름을 거는 고리 하나 + 「+n」 (2026-09-24). 이름은 칸 안에서 …로 잘린다. */
 .app .xr-print{display:inline-flex;align-items:center;gap:4px;max-width:calc(100% - 26px);vertical-align:middle;
@@ -4185,7 +4185,7 @@
 /* 권한을 화면이 먼저 말한다 — 눌러 보고 나서야 «안 되는구나»를 알게 하지 않는다 */
 .as-lede{margin:11px 0 0;font-size:12.5px;color:var(--sub);line-height:1.75;max-width:78ch;}
 .as-lede b{color:var(--ink);font-weight:700;}
-/* 조교의 표는 열이 여덟이라 명단(1418px)보다 좁다. 그대로 두면 괜히 가로 스크롤이 남는다. */
+/* 조교의 표는 열이 여덟이라 명단(1324px)보다 좁다. 그대로 두면 괜히 가로 스크롤이 남는다. */
 .app .rst-wrap table.grid.as-narrow{min-width:1050px;}
 
 /* ---------- 시험 달력 (설정 > 시험 일정) ----------
@@ -15615,7 +15615,7 @@ function teacherCheckinHTML(){
            표에서 한참 떨어진 화면 바닥에 가서 붙어 안 읽힌다 → flex:none 으로 표 크기만큼만 쓴다.
          ⚠ table.grid 는 width:100% 라 열 다섯 개가 1500px 로 벌어진다. 이름과 점수가 화면
            양 끝으로 갈라져 눈이 따라가지 못하므로 max-width 로 묶는다.
-         ⚠ min-width(1464px)는 명단의 것이다 — 인라인 style 이 시트 규칙을 이긴다. */''}
+         ⚠ min-width(1324px)는 명단의 것이다 — 인라인 style 이 시트 규칙을 이긴다. */''}
       <table class="grid" style="min-width:620px;max-width:820px;">
         <thead><tr>
           <th class="r" style="width:58px;">등수</th>
@@ -19391,9 +19391,11 @@ function teacherRosterHTML(){
     const on = sel.has(s.studentId);
     return `<tr class="${on?'sel':''}">
       <td onclick="rosterToggle('${s.studentId}',${i},event)"><span class="cb ${on?'on':''}"></span></td>
-      <td><span class="nm">${escHtml(s.name)}<s>${escHtml(s.studentId)}</s></span></td>
+      ${/* 아이디는 뺐다 (2026-09-29 · 사용자 — 「이름 옆에 아이디와 제일 오른쪽 끝에 학부모 연락처는 안 보여도 될 것 같아.
+           필요할 때 열기해서 들어가면 되니까」). 검색은 여전히 아이디로도 된다. 둘 다 «열기»(학생 상세)에 있다. */''}
+      <td><span class="nm">${escHtml(s.name)}</span></td>
       ${/* D-day는 «학교 × 학년»의 값이라 열을 새로 세우지 않고 이 칸에 붙인다.
-           표가 이미 1418px라 열을 늘리면 좁은 화면에서 가로 스크롤이 더 길어진다.
+           표가 이미 1324px라 열을 늘리면 좁은 화면에서 가로 스크롤이 더 길어진다.
            끝난 시험은 안 그린다 — 지난 D-day는 명단을 어지럽히기만 한다. */''}
       <td class="sub">${escHtml(s.school||'—')} · ${escHtml(s.grade||'—')}${(()=>{
         const dd = studentExamDday(s.studentId);
@@ -19422,7 +19424,6 @@ function teacherRosterHTML(){
       <td class="r mono ${st.hwLate ? 'cau' : ''}" title="${st.hwLate ? '마감 지난 과제 ' + st.hwLate + '건 미제출' : '마감 지난 미제출 없음'}">${st.hwTotal ? st.hwDone + '/' + st.hwTotal : '—'}</td>
       <td class="r mono ${st.wrongLeft>0 ? 'warn' : ''}">${st.wrongLeft || '—'}</td>
       <td class="r mono ${st.vidPct===null ? 'muted' : (st.vidPct<R.vidHeavy ? 'warn' : (st.vidPct<R.vidLight ? 'cau' : ''))}">${st.vidPct===null ? '—' : st.vidPct + '%'}</td>
-      <td class="sub mono" style="font-size:11.5px;">${escHtml(phoneLabel(s.parentPhone)||'—')}</td>
       <td><span class="rst-act">
         <button class="btn sm p" onclick="rosterOpen('${s.studentId}','info')">열기</button>
         <button class="btn sm" onclick="rosterOpen('${s.studentId}','attendance')">출결</button>
@@ -19436,18 +19437,19 @@ function teacherRosterHTML(){
     <table class="grid ${wide?'':'narrow'}">
       <thead><tr>
         <th style="width:34px;" onclick="rosterToggleAll()"><span class="cb ${m.rows.length && selVisible===m.rows.length ? 'on' : ''}"></span></th>
-        <th style="width:138px;">학생</th>
-        <th style="width:170px;">학교 · 학년</th>
-        ${wide ? '<th style="width:116px;">반</th>' : ''}
-        <th style="width:180px;">신호</th>
+        ${/* 🔵 열 폭 (2026-09-29) — 아이디·학부모를 빼면서 다시 셈했다. 이름 칸은 이름만 들어가게 줄이고,
+             남은 자리는 «신호»에 준다(근거 문장이 …로 잘리는 유일한 칸이다). 합이 min-width 다(넓 1324 · 좁 1116). */''}
+        <th style="width:84px;">학생</th>
+        <th style="width:160px;">학교 · 학년</th>
+        ${wide ? '<th style="width:120px;">반</th>' : ''}
+        <th style="width:210px;">신호</th>
         ${wide ? '<th style="width:88px;">반 진도</th>' : ''}
-        <th style="width:132px;">성적 추이</th>
+        <th style="width:120px;">성적 추이</th>
         <th style="width:118px;">출결 최근 8회</th>
-        <th class="r" style="width:60px;">출석률</th>
-        <th class="r" style="width:54px;">과제</th>
+        <th class="r" style="width:64px;">출석률</th>
+        <th class="r" style="width:56px;">과제</th>
         <th class="r" style="width:50px;">오답</th>
-        <th class="r" style="width:60px;">시청률</th>
-        <th style="width:108px;">학부모</th>
+        <th class="r" style="width:64px;">시청률</th>
         <th style="width:156px;"></th>
       </tr></thead>
       <tbody>${rows}</tbody>
@@ -30889,7 +30891,7 @@ function teacherExamRangeHTML(){
 
   return seasonPicker + seasonBox + head + help + `
   <div class="rst-wrap" style="max-height:none;">
-    ${/* ⚠ .app .rst-wrap table.grid의 min-width는 명단(1464px)의 것이다. 이 표는 더 좁으므로
+    ${/* ⚠ .app .rst-wrap table.grid의 min-width는 명단(1324px)의 것이다. 이 표는 더 좁으므로
          인라인으로 눌러 준다 — 인라인 style이 시트 규칙을 이긴다.
          sticky 헤더는 걸지 않는다. 줄이 적고, 가로 스크롤과 같이 쓰면 헤더가 첫 행을 덮는다 (0-B). */''}
     ${/* 🔵 학교·과목 사이를 좁혔다(사용자 — 「학교나 과목 간격 조금 줄이고」) — 학년 60→44 · 과목 118→80 · 시험 기간 150→122 · 범위 222→200 (09-24 두 번째 — 「과목 혹은 시험기간 조금 줄여도」).

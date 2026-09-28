@@ -209,6 +209,10 @@ export const 무대들 = {
   과제표: { 말: '반 관리 › 과제 (격자)',
     세우기: () => { state.currentUser = { type:'teacher', name:'김하현T' }; state.view = 'teacher';
       state.teacherTab = 'classhub'; state.classHubTab = 'homework'; state.classHubId = 'c1'; render(); } },
+  학생명단: { 말: '반 관리 › 학생 (명단 표)', 폭: '1536,1280',
+    세우기: () => { state.currentUser = { type:'teacher', name:'김하현T' }; state.view = 'teacher';
+      DATA.students.forEach((s, i) => { s.parentPhone = '010-9876-54' + String(10 + i); });
+      state.teacherTab = 'classhub'; state.classHubTab = 'students'; state.classHubId = 'c1'; render(); } },
   /* 대원고 고1 공통수학1 에 등급컷을 적어 두어 «컷 기준» 등급이 서는지 본다 */
   내신모의: { 말: '반 관리 › 성적 › 학교 시험 (학교 시험 · 등급컷으로 센 등급)',
     세우기: () => { state.currentUser = { type:'teacher', name:'김하현T' }; state.view = 'teacher';
