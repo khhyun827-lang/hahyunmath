@@ -110,7 +110,8 @@ try {
     await ctx.addInitScript(사람); await 막기(ctx);
     const page = await ctx.newPage();
     await page.goto(URL);
-    봄('선이 이미 다 그려져 있다(그리기 없음)', await page.evaluate(() => getComputedStyle(document.querySelector('#intro .it-d1')).strokeDashoffset), '0px');
+    봄('로고가 이미 다 차 있다(차오르기 없음 · 윗끝이 안 잘린다)', await page.evaluate(() => getComputedStyle(document.querySelector('#intro .it-fill')).transform), 'matrix(1, 0, 0, 1, 0, -40)');
+    봄('설계선·어둠은 처음부터 안 보인다', await page.evaluate(() => [getComputedStyle(document.querySelector('#intro .it-wire')).opacity, getComputedStyle(document.querySelector('#intro .it-dark')).opacity]), ['0', '0']);
     await page.waitForFunction(() => typeof render === 'function' && typeof state !== 'undefined', null, { timeout: 15000 });
     await page.evaluate(() => { state.view = 'home'; render(); });
     await page.waitForFunction(() => !document.getElementById('intro'), null, { timeout: 9000 });

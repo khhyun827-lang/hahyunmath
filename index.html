@@ -4737,79 +4737,142 @@
   .app.app .qitem:active, .app.app .hg-m:active{transform:none;}
 }
 
-/* =================== 브랜드 인트로 (2026-09-29 · 사용자 요청) ===================
-   「메인페이지에 접속했을 때 … 짧은 브랜드 인트로」 — 로고가 선을 따라 그려지고, 아래에 이름이 뜨고,
-   마크가 히어로 로고 자리로 줄어들며 들어간다. 약 1.5초. 새로 들어왔을 때 한 번만(sessionStorage).
-   🔴 **로고를 다시 그리지 않는다.** 로고는 PNG 뿐이라(SVG 원본이 없다) 손으로 옮기면 모양이 바뀐다.
-     보이는 것은 늘 `세로형(1).png` 의 픽셀이고, SVG 선은 «가리개(mask)» 와 선 안을 흐르는 빛으로만 쓴다.
-     선은 PNG 에 수치로 맞췄다 — 로고의 모든 픽셀이 중심선에서 15.2px 안(획 두께 ≈30px).
-   ⚠ 숫자(924·245)는 두 선의 실제 길이다. `pathLength` 를 안 쓴 것은 옛 사파리가 그것을 점선에 안 먹여서다.
-   ⚠ 움직임을 줄여 달라는 기기는 그리기·빛·날아가기를 다 끄고 «잠깐 보였다 걷히는 것»만 남긴다. */
-#intro{position:fixed;top:0;left:0;right:0;bottom:0;z-index:10000;
+/* =================== 브랜드 인트로 (2026-09-29 · 2판 · 사용자 요청) ===================
+   1판(1.5초)은 「속도가 너무 빨라서 잘 안 보인다 · 천천히, 임팩트 있게」. 사용자가 준 참고 릴스
+   (DailyFlutterUI 로그인 인트로)를 프레임마다 잘라 시각을 쟀고, 그 리듬을 따른다 —
+     0.1 격자 · 0.45 불씨 → 0.6~1.85 가는 선이 그려지며 꼭짓점마다 «매듭»이 켜진다(펜 도구처럼)
+     → 2.05~2.75 로고가 아래에서 «차오른다» · 무대가 어둠에서 종이색으로 밝아진다
+     → 2.8 광택이 한 번 지나간다 → 3.05~3.95 마크가 올라가며 이름이 흐림에서 또렷해진다 → 4.35 히어로로 날아간다.
+   🔵 **설계선은 «진짜» 기하다** — 이 로고는 반지름이 같은 원 둘과 그 공통 내접선으로 되어 있다(수치로 맞춰 봤다).
+     참고 영상의 격자·보조선 자리에 그것을 그린다: 수학연구소의 로고가 «작도»로 서는 장면이다.
+   🔴 **로고를 다시 그리지 않는다** — 보이는 로고는 늘 `세로형(1).png` 의 픽셀. 선은 가리개·보조선으로만.
+   ⚠ **무대를 어둡게 두지 않는 까닭** — 로고의 짙은 반쪽(#3d3335)이 어둠에 묻힌다. 색을 바꾸는 것은 «변형»이라
+     안 된다. 그래서 설계는 어둠에서 하고, 로고가 차오르는 동안 무대가 종이색(--paper)으로 밝아진다.
+   ⚠ 숫자(924·245)는 두 선의 실제 길이다. `pathLength` 는 옛 사파리가 점선에 안 먹여서 안 쓴다.
+   ⚠ 움직임을 줄여 달라는 기기는 전부 끄고 «다 된 로고를 잠깐 보였다 걷는 것»만 남긴다(각 줄의 정지값이 그 모습이다). */
+#intro{position:fixed;top:0;left:0;right:0;bottom:0;z-index:10000;overflow:hidden;
   display:flex;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent;}
 #intro .it-bg{position:absolute;top:0;left:0;right:0;bottom:0;background:#F8F4F5;background:var(--paper,#F8F4F5);
-  transition:opacity .38s cubic-bezier(.4,0,.2,1) .06s;}
-#intro .it-logo{position:relative;display:block;width:58vw;max-width:330px;min-width:210px;height:auto;
-  margin-top:-3vh;overflow:visible;transform-origin:0 0;
-  transition:transform .46s cubic-bezier(.65,0,.25,1);}
-#intro .it-d1{stroke-dasharray:924 3000;animation:it-d1 .66s cubic-bezier(.55,.05,.3,1) .08s both;}
-#intro .it-d2{stroke-dasharray:245 3000;animation:it-d2 .27s cubic-bezier(.25,.6,.3,1) .282s both;}
-@keyframes it-d1{from{stroke-dashoffset:944;}to{stroke-dashoffset:0;}}
-@keyframes it-d2{from{stroke-dashoffset:265;}to{stroke-dashoffset:0;}}
-/* 선 안을 흐르는 빛 — 길이가 다른 조각 셋의 «앞 끝»을 맞춰 겹쳐 선 방향 그라데이션을 낸다
-   (SVG 선에는 선을 따라가는 그라데이션이 없다). 뒤는 로고 와인, 앞으로 갈수록 밝은 자두.
-   ⚠ 갈래(S2)는 큰 획의 앞이 갈림목(20.3%)에 닿는 때(.282s)에 떠난다. */
-#intro .it-glow{fill:none;stroke-linecap:round;stroke-linejoin:round;}
-#intro .it-ga{opacity:0;animation:it-out .26s ease .72s both;}
-#intro .it-gb{opacity:0;animation:it-out .2s ease .54s both;}
+  transition:opacity .45s cubic-bezier(.4,0,.2,1) .08s;}
+#intro .it-dark{position:absolute;top:0;left:0;right:0;bottom:0;
+  background:radial-gradient(ellipse at 50% 46%,#2a2024 0%,#171214 55%,#110d0f 100%);
+  opacity:0;animation:it-out 0.550s cubic-bezier(.7,0,.3,1) 2.350s both;}
+/* ⚠ 밝아지기는 «짧고 가파르게» — 느리게 섞으면 가운데에서 탁한 회색을 오래 지난다(2판 첫 캡처).
+   로고 뒤에서 번지는 원도 해 봤는데 손전등처럼 보였다(흰 원판 + 회색 고리). 그래서 한꺼번에, 0.55초에. */
+#intro .it-grid{position:absolute;top:0;left:0;right:0;bottom:0;
+  background-image:linear-gradient(rgba(255,255,255,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.05) 1px,transparent 1px);
+  background-size:44px 44px;background-position:center center;
+  -webkit-mask-image:radial-gradient(ellipse at 50% 46%,#000 20%,transparent 72%);
+          mask-image:radial-gradient(ellipse at 50% 46%,#000 20%,transparent 72%);
+  opacity:0;animation:it-grid 2.9s linear 0.100s both;}
+@keyframes it-grid{0%{opacity:0;}20%{opacity:1;}70%{opacity:1;}100%{opacity:0;}}
 @keyframes it-out{from{opacity:1;}to{opacity:0;}}
-/* 같은 굵기로 겹친다 — 굵기가 다르면 조각마다 테두리가 서서 «띠»로 읽힌다(09-29 첫 판에서 봤다). */
-#intro .it-glow path{stroke-width:26;}
-#intro .it-g1{stroke:#BA5054;stroke-opacity:.26;stroke-dasharray:320 3000;animation:it-g1 .66s cubic-bezier(.55,.05,.3,1) .08s both;}
-#intro .it-g2{stroke:#CC6F7E;stroke-opacity:.24;stroke-dasharray:200 3000;animation:it-g2 .66s cubic-bezier(.55,.05,.3,1) .08s both;}
-#intro .it-g3{stroke:#DD95A1;stroke-opacity:.26;stroke-dasharray:110 3000;animation:it-g3 .66s cubic-bezier(.55,.05,.3,1) .08s both;}
-#intro .it-g4{stroke:#EDBBC4;stroke-opacity:.3;stroke-dasharray:50 3000;animation:it-g4 .66s cubic-bezier(.55,.05,.3,1) .08s both;}
-#intro .it-g5{stroke:#F9E1E5;stroke-opacity:.38;stroke-dasharray:18 3000;animation:it-g5 .66s cubic-bezier(.55,.05,.3,1) .08s both;}
-#intro .it-g6{stroke:#DD95A1;stroke-opacity:.3;stroke-dasharray:90 3000;animation:it-g6 .27s cubic-bezier(.25,.6,.3,1) .282s both;}
-#intro .it-g7{stroke:#EDBBC4;stroke-opacity:.34;stroke-dasharray:40 3000;animation:it-g7 .27s cubic-bezier(.25,.6,.3,1) .282s both;}
-#intro .it-g8{stroke:#F9E1E5;stroke-opacity:.4;stroke-dasharray:16 3000;animation:it-g8 .27s cubic-bezier(.25,.6,.3,1) .282s both;}
-@keyframes it-g1{from{stroke-dashoffset:330;}to{stroke-dashoffset:-604;}}
-@keyframes it-g2{from{stroke-dashoffset:210;}to{stroke-dashoffset:-724;}}
-@keyframes it-g3{from{stroke-dashoffset:120;}to{stroke-dashoffset:-814;}}
-@keyframes it-g4{from{stroke-dashoffset:60;}to{stroke-dashoffset:-874;}}
-@keyframes it-g5{from{stroke-dashoffset:28;}to{stroke-dashoffset:-906;}}
-@keyframes it-g6{from{stroke-dashoffset:100;}to{stroke-dashoffset:-155;}}
-@keyframes it-g7{from{stroke-dashoffset:50;}to{stroke-dashoffset:-205;}}
-@keyframes it-g8{from{stroke-dashoffset:26;}to{stroke-dashoffset:-229;}}
-/* 점은 획이 다 그려진 뒤 «찍힌다» — 마침표처럼 */
-#intro .it-dot{animation:it-in .22s ease-out .66s both;}
 @keyframes it-in{from{opacity:0;}to{opacity:1;}}
-/* 이름 — 튀어나오지 않고 짧게 올라온다(SVG 단위 12 ≈ 화면 5~6px) */
-#intro .it-ko{animation:it-up .36s cubic-bezier(.2,.6,.2,1) .6s both;}
-#intro .it-en{animation:it-up .36s cubic-bezier(.2,.6,.2,1) .68s both;}
-@keyframes it-up{from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:none;}}
-#intro .it-word{transition:opacity .18s ease;}
+
+#intro .it-logo{position:relative;width:62vw;max-width:360px;min-width:220px;margin-top:-2vh;
+  transform-origin:0 0;transition:transform .6s cubic-bezier(.65,0,.25,1);}
+/* 처음에는 «마크»가 화면 한가운데 — 이름이 들어올 때 올라가 짝을 이룬다(참고 영상의 그것) */
+#intro .it-lift{position:relative;animation:it-lift .6s cubic-bezier(.45,0,.2,1) 3.050s both;}
+@keyframes it-lift{from{transform:translateY(25.87%);}to{transform:none;}}
+#intro .it-svg{display:block;width:100%;height:auto;overflow:visible;}
+
+/* ---- 설계선 ---- */
+#intro .it-wire{opacity:0;animation:it-wire .5s ease 2.350s both;}
+@keyframes it-wire{from{opacity:1;}to{opacity:0;}}
+#intro .it-c{stroke:rgba(255,255,255,.2);stroke-width:1.8;stroke-dasharray:503 1000;
+  animation:it-circ .8s cubic-bezier(.3,0,.2,1) 0.200s both;}
+#intro .it-c2{animation-delay:0.550s;}
+@keyframes it-circ{from{stroke-dashoffset:503;}to{stroke-dashoffset:0;}}
+#intro .it-t{stroke:rgba(255,255,255,.2);stroke-width:1.8;stroke-dasharray:249 1000;
+  animation:it-tan .6s cubic-bezier(.3,0,.2,1) .7s both;}
+@keyframes it-tan{from{stroke-dashoffset:249;}to{stroke-dashoffset:0;}}
+#intro .it-x{stroke:rgba(255,255,255,.45);stroke-width:1.8;animation:it-in .3s ease .3s both;}
+/* 흰 선(큰 획)과 자두 선(갈래) — 참고 영상의 «바깥 흰 선·안쪽 색 선» */
+#intro .it-s1{stroke:#fff;stroke-opacity:.92;stroke-width:3;stroke-dasharray:924 3000;
+  animation:it-s1 1.250s cubic-bezier(0.42,0,0.58,1) 0.600s both;}
+#intro .it-s2{stroke:#EAA9B6;stroke-width:3;stroke-dasharray:245 3000;
+  animation:it-s2 0.700s cubic-bezier(0.42,0,0.58,1) 0.990s both;}
+@keyframes it-s1{from{stroke-dashoffset:954;}to{stroke-dashoffset:0;}}
+@keyframes it-s2{from{stroke-dashoffset:275;}to{stroke-dashoffset:0;}}
+/* 빛나는 머리 — 선의 앞 끝을 따라간다 */
+#intro .it-h1a{stroke:#F3BCC8;stroke-opacity:.32;stroke-width:12;stroke-dasharray:90 3000;}
+#intro .it-h1b{stroke:#fff;stroke-width:5;stroke-dasharray:26 3000;}
+#intro .it-h2a{stroke:#F3BCC8;stroke-opacity:.32;stroke-width:12;stroke-dasharray:70 3000;}
+#intro .it-h2b{stroke:#fff;stroke-width:5;stroke-dasharray:22 3000;}
+#intro .it-h{opacity:0;}
+/* 머리는 선이 다 그려지면 꺼진다 — 끝에 남아 있으면 «덜 된 것»처럼 보인다 */
+#intro .it-h1a{animation:it-h1a 1.250s cubic-bezier(0.42,0,0.58,1) 0.600s both,it-hshow 1.250s linear 0.600s both;}
+#intro .it-h1b{animation:it-h1b 1.250s cubic-bezier(0.42,0,0.58,1) 0.600s both,it-hshow 1.250s linear 0.600s both;}
+#intro .it-h2a{animation:it-h2a 0.700s cubic-bezier(0.42,0,0.58,1) 0.990s both,it-hshow 0.700s linear 0.990s both;}
+#intro .it-h2b{animation:it-h2b 0.700s cubic-bezier(0.42,0,0.58,1) 0.990s both,it-hshow 0.700s linear 0.990s both;}
+@keyframes it-hshow{0%{opacity:0;}6%{opacity:1;}88%{opacity:1;}100%{opacity:0;}}
+/* 매듭 — 머리가 지나는 순간 켜진다 */
+#intro .it-n{fill:#171214;stroke:#fff;stroke-opacity:.85;stroke-width:1.6;
+  transform-box:fill-box;transform-origin:center;opacity:0;animation:it-node .28s cubic-bezier(.2,.8,.3,1.3) both;}
+@keyframes it-node{from{opacity:0;transform:scale(.2);}to{opacity:1;transform:none;}}
+#intro .it-n0{animation-delay:0.550s;}
+#intro .it-n1{animation-delay:0.728s;}
+#intro .it-n2{animation-delay:0.940s;}
+#intro .it-n3{animation-delay:1.046s;}
+#intro .it-n4{animation-delay:1.110s;}
+#intro .it-n5{animation-delay:1.196s;}
+#intro .it-n6{animation-delay:1.257s;}
+#intro .it-n7{animation-delay:1.315s;}
+#intro .it-n8{animation-delay:1.362s;}
+#intro .it-n9{animation-delay:1.431s;}
+#intro .it-n10{animation-delay:1.494s;}
+#intro .it-n11{animation-delay:1.602s;}
+#intro .it-n12{animation-delay:1.621s;}
+#intro .it-n13{animation-delay:1.784s;}
+/* 점 자리의 고리 — 획이 끝나면 «여기에 점이 찍힌다»를 먼저 그린다 */
+#intro .it-dr{fill:none;stroke:#EAA9B6;stroke-width:1.8;stroke-dasharray:110 300;animation:it-dr .35s ease-out 1.800s both;}
+@keyframes it-dr{from{stroke-dashoffset:110;}to{stroke-dashoffset:0;}}
+/* 불씨 — 선이 떠나기 직전 시작점에 켜진다 */
+#intro .it-spark{transform-box:fill-box;transform-origin:center;opacity:0;animation:it-spark .9s ease-out 0.450s both;}
+@keyframes it-spark{0%{opacity:0;transform:scale(.2);}25%{opacity:1;transform:scale(1.15);}100%{opacity:0;transform:scale(.6);}}
+
+/* ---- 로고가 차오른다 — 물결 끝이 아래에서 위로, 옆으로 조금 흐르며 ---- */
+/* 정지값은 «다 차오른» 자리 — 움직임을 끈 기기에서 로고 윗끝이 물결에 잘리지 않게 */
+#intro .it-fill{transform:translate(0,-40px);animation:it-fill 0.700s cubic-bezier(.45,.05,.35,1) 2.050s both;}
+@keyframes it-fill{from{transform:translate(-90px,238px);}to{transform:translate(0,-40px);}}
+/* 광택 한 번 */
+#intro .it-glint{opacity:0;animation:it-glint .75s cubic-bezier(.4,0,.2,1) 2.800s both;}
+@keyframes it-glint{0%{opacity:1;transform:translateX(0);}100%{opacity:1;transform:translateX(1020px);}}
+
+/* ---- 이름 — 흐림에서 또렷하게(참고 영상의 그것). HTML 이라야 사파리에서도 흐림이 먹는다 ---- */
+#intro .it-word{position:absolute;left:0;top:0;width:100%;height:100%;transition:opacity .2s ease;}
+#intro .it-ko,#intro .it-en{position:absolute;left:0;width:100%;background-repeat:no-repeat;background-size:100% auto;}
+#intro .it-ko{top:58.005%;height:30.626%;background-position:0 83.612%;
+  animation:it-blur .6s cubic-bezier(.2,.6,.2,1) 3.200s both;}
+#intro .it-en{top:89.095%;height:10.905%;background-position:0 100%;
+  animation:it-blur .6s cubic-bezier(.2,.6,.2,1) 3.360s both;}
+@keyframes it-blur{from{opacity:0;filter:blur(9px);transform:translateY(10px);}to{opacity:1;filter:none;transform:none;}}
+
 /* 넘겨주기 — 이름이 먼저 빠지고, 바탕이 걷히며 페이지가 드러난다 */
 #intro.it-go .it-word{opacity:0;}
 #intro.it-go .it-bg{opacity:0;}
-#intro.it-fade{opacity:0;transition:opacity .32s ease;}
+#intro.it-fade{opacity:0;transition:opacity .34s ease;}
 /* 히어로 로고 — 인트로 동안 숨기고(it-hold), 날아가는 동안에는 글자 쪽만 드러낸다(it-fly).
    가로형에서 마크는 54.1% 까지, 글자는 57.7% 부터 — 그 사이 56% 에서 자른다. */
 html.it-hold .lp .l-hero .l-logo{opacity:0 !important;transition:none !important;}
 html.it-fly .lp .l-hero .l-logo{opacity:1 !important;transform:none !important;
   -webkit-clip-path:inset(0 0 0 56%);clip-path:inset(0 0 0 56%);
-  transition:opacity .26s ease .2s !important;}
+  transition:opacity .3s ease .26s !important;}
 @media (prefers-reduced-motion:reduce){
   #intro *{animation:none !important;}
   #intro .it-logo{transition:none;}
 }
+@keyframes it-h1a{from{stroke-dashoffset:100;}to{stroke-dashoffset:-834;}}
+@keyframes it-h1b{from{stroke-dashoffset:36;}to{stroke-dashoffset:-898;}}
+@keyframes it-h2a{from{stroke-dashoffset:80;}to{stroke-dashoffset:-175;}}
+@keyframes it-h2b{from{stroke-dashoffset:32;}to{stroke-dashoffset:-223;}}
 </style>
 
 </head>
 <body>
 <script>
-/* 브랜드 인트로 — CSS 는 머리의 「브랜드 인트로」 절. **#app 보다 먼저** 여기 둔다:
-   아래 큰 스크립트를 읽기 전에 그려져야 «불러오는 중…» 대신 로고가 먼저 보인다.
+/* 브랜드 인트로 — CSS 는 머리의 「브랜드 인트로」 절(거기에 시간표가 있다). **#app 보다 먼저** 여기 둔다:
+   아래 큰 스크립트를 읽기 전에 그려져야 «불러오는 중…» 대신 인트로가 먼저 보인다.
    ⚠ 옛 사파리 규칙 — var·function 만 쓴다(`old-safari-check`).
    언제 도나 — 이 탭에서 처음일 때만(새로고침·안쪽 이동은 안 돈다). 로그인해 둔 사람(바로 제 화면으로 간다)·
    주소에 #가 붙은 링크·자동화 브라우저(검사)는 건너뛴다. `?intro=1` 이면 언제든 다시 본다. */
@@ -4828,7 +4891,9 @@ html.it-fly .lp .l-hero .l-logo{opacity:1 !important;transform:none !important;
   var root = document.createElement('div');
   root.id = 'intro';
   root.setAttribute('aria-hidden', 'true');
-  root.innerHTML = '<div class="it-bg"></div><svg class="it-logo" viewBox="0 0 708 431" width="708" height="431" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><defs><mask id="it-m" maskUnits="userSpaceOnUse" x="0" y="0" width="708" height="431"><g transform="' + M + '" fill="none" stroke="#fff" stroke-width="37" stroke-linecap="round" stroke-linejoin="round"><path class="it-d1" d="' + S1 + '"/><path class="it-d2" d="' + S2 + '"/></g><circle class="it-dot" cx="251.3" cy="193.3" r="19" fill="#fff"/></mask><clipPath id="it-ck"><rect x="0" y="250" width="708" height="132"/></clipPath><clipPath id="it-ce"><rect x="0" y="384" width="708" height="47"/></clipPath></defs><image xlink:href="' + V + '" width="708" height="431" mask="url(#it-m)"/><g class="it-glow" transform="' + M + '"><g class="it-ga"><path class="it-g1" d="' + S1 + '"/><path class="it-g2" d="' + S1 + '"/><path class="it-g3" d="' + S1 + '"/><path class="it-g4" d="' + S1 + '"/><path class="it-g5" d="' + S1 + '"/></g><g class="it-gb"><path class="it-g6" d="' + S2 + '"/><path class="it-g7" d="' + S2 + '"/><path class="it-g8" d="' + S2 + '"/></g></g><g class="it-word"><g class="it-ko"><image xlink:href="' + V + '" width="708" height="431" clip-path="url(#it-ck)"/></g><g class="it-en"><image xlink:href="' + V + '" width="708" height="431" clip-path="url(#it-ce)"/></g></g></svg>';
+  root.innerHTML = '<div class="it-bg"></div><div class="it-dark"></div><div class="it-grid"></div><div class="it-logo"><div class="it-lift"><svg class="it-svg" viewBox="0 0 708 431" width="708" height="431" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><defs><mask id="it-m" maskUnits="userSpaceOnUse" x="-40" y="-60" width="800" height="560"><g class="it-fill"><path fill="#fff" d="M-240 0 Q-195 -9 -150 0 T-60 0 T30 0 T120 0 T210 0 T300 0 T390 0 T480 0 T570 0 T660 0 T750 0 T840 0 V560 H-240 Z"/></g></mask><clipPath id="it-cm"><rect x="0" y="-10" width="708" height="240"/></clipPath><mask id="it-a" maskUnits="userSpaceOnUse" x="0" y="0" width="708" height="431" style="mask-type:alpha"><image xlink:href="' + V + '" width="708" height="431"/></mask><linearGradient id="it-gl" x1="0" x2="1" y1="0" y2="0"><stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset=".5" stop-color="#fff" stop-opacity=".85"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient><radialGradient id="it-sp"><stop offset="0" stop-color="#fff"/><stop offset=".25" stop-color="#FBE3E8" stop-opacity=".9"/><stop offset="1" stop-color="#E9A7B5" stop-opacity="0"/></radialGradient></defs><g class="it-wire"><g transform="' + M + '" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle class="it-c it-c1" cx="234.51" cy="107.70" r="79.95" transform="rotate(-90 234.51 107.70)"/><circle class="it-c it-c2" cx="427.70" cy="107.82" r="79.97" transform="rotate(90 427.70 107.82)"/><path class="it-t" d="M261.3 210.5L400.9 5.0"/><path class="it-x" d="M227.5 107.7h14M234.5 100.7v14"/><path class="it-x" d="M420.7 107.8h14M427.7 100.8v14"/><path class="it-s1" d="' + S1 + '"/><path class="it-s2" d="' + S2 + '"/><path class="it-h it-h1a" d="' + S1 + '"/><path class="it-h it-h1b" d="' + S1 + '"/><path class="it-h it-h2a" d="' + S2 + '"/><path class="it-h it-h2b" d="' + S2 + '"/><circle class="it-dr" cx="153.63" cy="203.15" r="17.61"/><rect class="it-n it-n0" x="8.2" y="23.8" width="11" height="11"/><rect class="it-n it-n1" x="45.7" y="23.8" width="11" height="11"/><rect class="it-n it-n2" x="149.9" y="113.8" width="11" height="11"/><rect class="it-n it-n3" x="229.0" y="182.2" width="11" height="11"/><rect class="it-n it-n4" x="295.2" y="147.1" width="11" height="11"/><rect class="it-n it-n5" x="356.0" y="57.4" width="11" height="11"/><rect class="it-n it-n6" x="422.2" y="22.3" width="11" height="11"/><rect class="it-n it-n7" x="229.0" y="22.2" width="11" height="11"/><rect class="it-n it-n8" x="502.2" y="102.3" width="11" height="11"/><rect class="it-n it-n9" x="284.7" y="44.8" width="11" height="11"/><rect class="it-n it-n10" x="422.2" y="182.3" width="11" height="11"/><rect class="it-n it-n11" x="367.6" y="160.7" width="11" height="11"/><rect class="it-n it-n12" x="310.5" y="7.2" width="11" height="11"/><rect class="it-n it-n13" x="341.1" y="199.0" width="11" height="11"/><circle class="it-spark" cx="13.72" cy="29.25" r="26" fill="url(#it-sp)"/></g></g><g clip-path="url(#it-cm)"><image xlink:href="' + V + '" width="708" height="431" mask="url(#it-m)"/></g><g clip-path="url(#it-cm)"><g mask="url(#it-a)"><g transform="rotate(18 354 110)"><rect class="it-glint" x="-160" y="-120" width="130" height="460" fill="url(#it-gl)"/></g></g></g></svg><div class="it-word"><div class="it-ko"></div><div class="it-en"></div></div></div></div>';
+  var ko = root.querySelector('.it-ko'), en = root.querySelector('.it-en');
+  ko.style.backgroundImage = en.style.backgroundImage = 'url(' + V + ')';
   document.body.insertBefore(root, document.body.firstChild);
   window.introOn = true;
   /* 히어로 로고는 <html> 의 반(class)으로 다룬다 — 인라인 스타일로 붙잡으면 페이지가 한 번 더 그려질 때
@@ -4841,9 +4906,9 @@ html.it-fly .lp .l-hero .l-logo{opacity:1 !important;transform:none !important;
   }
   cls('it-hold', '');
 
-  /* 넘겨주기는 1.04초에(움직임을 줄이면 0.65초에). 그때 히어로 로고가 화면에 있으면 «날아가고»,
-     없으면(로그인된 화면·아직 못 그림·스크롤됨) 부드럽게 걷힌다. 앱이 2.8초가 넘도록 안 서면 그냥 걷힌다. */
-  var HOLD = reduce ? 650 : 1040, CAP = 2800, t0 = Date.now(), started = false, done = false;
+  /* 넘겨주기는 4350ms 에(움직임을 줄이면 0.9초에). 그때 히어로 로고가 화면에 있으면 «날아가고»,
+     없으면(로그인된 화면·아직 못 그림·스크롤됨) 부드럽게 걷힌다. 앱이 7초가 넘도록 안 서면 그냥 걷힌다. */
+  var HOLD = reduce ? 900 : 4350, CAP = 7000, t0 = Date.now(), started = false, done = false;
   var raf = window.requestAnimationFrame || function(f){ return setTimeout(f, 16); };
   function heroLogo(){ return document.querySelector('.lp .l-hero .l-logo'); }
   function rise(){ var f = window.introRiseHero; window.introRiseHero = null; if(f) f(); }
@@ -4860,53 +4925,46 @@ html.it-fly .lp .l-hero .l-logo{opacity:1 !important;transform:none !important;
     cls('', 'it-hold');
     rise();
     root.className += ' it-fade';
-    setTimeout(finish, 340);
+    setTimeout(finish, 360);
   }
   /* 마크를 히어로 로고(가로형)의 마크 위에 겹친다. 두 PNG 의 마크는 같은 그림이다 —
      가로형 966×223 에서 마크는 1~523 × 1~217, 세로형 708×431 에서는 104~603 × 0~208.
      🔵 **날기는 CSS 전환에 맡긴다** — 앱이 한창 서는 때라 메인 스레드가 바쁘다. JS 로 프레임마다 옮겼더니
        0.46초에 10프레임밖에 못 그렸다(09-29 · 헤드리스). 전환은 합성기에서 돌아 그래도 매끄럽다.
-       과녁의 «자리»는 움직이지 않는다(재 봤다) — 움직이는 것은 떠오르기(14px)뿐이고 it-fly 가 그것을 끈다.
      ⚠ 진짜 로고는 **글자 쪽만** 드러낸다 — 마크까지 같이 흐려 보이면 다 겹치기 전 몇 프레임 동안 마크가
-       둘로 보인다. 마크는 끝에서 한 번에 바꾼다: 그때 두 마크는 같은 자리·같은 크기라 바뀌는 것이 안 보인다.
-     ⚠ 끝에서 한 번 더 잰다 — 0.75px 넘게 어긋났으면 짧게 바로잡고 바꾼다. */
-  function target(svg){
-    var s = svg.getBoundingClientRect(), r = heroLogo().getBoundingClientRect();
-    var ix = s.left + s.width * 104 / 708, iy = s.top, iw = s.width * 499 / 708;
-    var hx = r.left + r.width / 966, hy = r.top + r.height / 223, hw = r.width * 522 / 966;
-    return {ix: ix, iy: iy, k: hw / iw, hx: hx, hy: hy, sl: s.left, st: s.top};
-  }
+       둘로 보인다. 마크는 끝에서 한 번에 바꾼다: 그때 두 마크는 같은 자리·같은 크기라 바뀌는 것이 안 보인다. */
+  var box = root.querySelector('.it-logo'), svg = root.querySelector('.it-svg');
   function fly(){
     started = true;
-    var svg = root.querySelector('.it-logo');
     cls('it-fly', 'it-hold');
-    var g = target(svg);      /* 아직 옮기기 전 — 인트로 쪽은 제자리, 로고는 떠오르기가 꺼진 제자리 */
-    var tx = g.hx - g.sl - g.k * (g.ix - g.sl), ty = g.hy - g.st - g.k * (g.iy - g.st);
+    var s = svg.getBoundingClientRect(), r = heroLogo().getBoundingClientRect(), b = box.getBoundingClientRect();
+    var ix = s.left + s.width * 104 / 708, iy = s.top, iw = s.width * 499 / 708;
+    var hx = r.left + r.width / 966, hy = r.top + r.height / 223, k = (r.width * 522 / 966) / iw;
+    var tx = hx - b.left - k * (ix - b.left), ty = hy - b.top - k * (iy - b.top);
     root.className += ' it-go';
-    svg.style.transform = 'translate(' + tx + 'px,' + ty + 'px) scale(' + g.k + ')';
-    setTimeout(rise, 120);
+    box.style.transform = 'translate(' + tx + 'px,' + ty + 'px) scale(' + k + ')';
+    setTimeout(rise, 160);
     /* 🔴 **내려앉았는지는 «전환이 끝났다»는 소식으로 안다** — 날기 시작한 때부터 시계를 재면 안 된다.
        앱이 서느라 메인 스레드가 0.3초쯤 막히면 전환이 그만큼 «늦게» 시작하고, 시계가 먼저 끝나
-       날던 마크를 중간에 걷어 버렸다(09-29 · 헤드리스에서 쟀다). 소식이 안 오는 기기를 위해 안전 시계만 둔다. */
+       날던 마크를 중간에 걷어 버렸다(09-29 · 헤드리스에서 쟀다). 소식이 안 오는 기기를 위해 안전 시계만 둔다.
+       ⚠ 끝에서 한 번 더 잰다 — 첫 방문에 히어로 글꼴이 늦게 들어오면 로고가 14px 내려앉는다(864 폭에서 쟀다).
+         글꼴은 날기 시작한 «뒤»에야 받기 시작해 미리 기다릴 수도 없다. 0.75px 넘게 어긋났으면 짧게 바로잡는다. */
     var landed = false;
     function land(){
       if(landed) return; landed = true;
       if(!heroLogo()) return finish();
-      var s = svg.getBoundingClientRect(), r = heroLogo().getBoundingClientRect();
-      var dx = (r.left + r.width / 966) - (s.left + s.width * 104 / 708), dy = (r.top + r.height / 223) - s.top;
+      var s2 = svg.getBoundingClientRect(), r2 = heroLogo().getBoundingClientRect();
+      var dx = (r2.left + r2.width / 966) - (s2.left + s2.width * 104 / 708), dy = (r2.top + r2.height / 223) - s2.top;
       if(Math.abs(dx) < .75 && Math.abs(dy) < .75) return raf(function(){ raf(finish); });
-      svg.style.transition = 'transform .14s ease-out';
-      svg.style.transform = 'translate(' + (tx + dx) + 'px,' + (ty + dy) + 'px) scale(' + g.k + ')';
-      setTimeout(finish, 220);
+      box.style.transition = 'transform .16s ease-out';
+      box.style.transform = 'translate(' + (tx + dx) + 'px,' + (ty + dy) + 'px) scale(' + k + ')';
+      setTimeout(finish, 240);
     }
-    function ended(e){ if(/transform/.test(e.propertyName)) land(); }
-    svg.addEventListener('transitionend', ended);
-    svg.addEventListener('webkitTransitionEnd', ended);
-    setTimeout(land, 1800);
+    function ended(e){ if(e.target === box && /transform/.test(e.propertyName)) land(); }
+    box.addEventListener('transitionend', ended);
+    box.addEventListener('webkitTransitionEnd', ended);
+    setTimeout(land, 2000);
   }
-  /* ⚠ 날아가는 중에 과녁이 옮겨 가는 일은 실제로 있다 — 히어로 글꼴(Pretendard)이 첫 방문에 늦게 들어오면
-     글자 덩이가 27px 줄고, 가운데 맞춤이라 로고가 14px 내려앉는다(864 폭에서 쟀다). 글꼴은 «날기 시작한 뒤»에야
-     받기 시작해서 미리 기다릴 수도 없다(fonts.ready·status 둘 다 해 봤다). 그래서 끝에서 한 번 재고 바로잡는다(land). */
   function tick(){
     if(started) return;
     var t = Date.now() - t0, img = heroLogo();
@@ -4920,7 +4978,7 @@ html.it-fly .lp .l-hero .l-logo{opacity:1 !important;transform:none !important;
     raf(tick);
   }
   tick();
-  /* 기다리게 하지 않는다 — 누르거나·굴리거나·키를 치면 바로 걷힌다 */
+  /* 기다리게 하지 않는다 — 누르거나·굴리거나·키를 치면 바로 걷힌다(이제 5초라 더욱) */
   function skip(){ if(!started) fade(); }
   root.addEventListener('mousedown', skip);
   root.addEventListener('touchstart', skip, false);
