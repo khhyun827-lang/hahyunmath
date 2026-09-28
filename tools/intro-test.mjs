@@ -104,6 +104,14 @@ try {
     await ctx.close();
   }
 
+  {
+    const ctx = await br.newContext();
+    await ctx.addInitScript(사람); await 막기(ctx);
+    const page = await ctx.newPage();
+    await page.goto(URL + '#home'); await page.waitForTimeout(500);
+    봄('#home 은 첫 화면 주소다 — 인트로가 선다(즐겨찾기·공유 주소)', await page.evaluate(() => window.__saw), true);
+    await ctx.close();
+  }
   console.log(NL + '④ 움직임을 줄여 달라는 기기 · 누르면 바로 걷힘' + NL);
   {
     const ctx = await br.newContext({ reducedMotion: 'reduce' });
@@ -116,6 +124,15 @@ try {
     await page.evaluate(() => { state.view = 'home'; render(); });
     await page.waitForFunction(() => !document.getElementById('intro'), null, { timeout: 9000 });
     봄('날지 않고 걷히기만 한다', await page.evaluate(() => window.__gap), null);
+    await ctx.close();
+  }
+  {
+    const ctx = await br.newContext({ reducedMotion: 'reduce' });
+    await ctx.addInitScript(사람); await 막기(ctx);
+    const page = await ctx.newPage();
+    await page.goto(URL + '?intro=1');
+    await page.waitForSelector('#intro');
+    봄('미리 보기(?intro=1)는 움직임 줄이기 기기에서도 움직인다 — 설계선이 떠 있다', await page.evaluate(() => getComputedStyle(document.querySelector('#intro .it-wire')).opacity), '1');
     await ctx.close();
   }
   {
