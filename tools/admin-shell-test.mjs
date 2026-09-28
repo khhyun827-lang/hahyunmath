@@ -66,9 +66,9 @@ const M = new Function([liftConst('TEACHER_NAV'), liftConst('TEACHER_SUBNAV'), l
     Object.keys(M.TEACHER_TAB_SECTION).filter(t => !본문.includes(`t==='${t}'`)), []);
   봄('신호는 홈 아래로 왔다', M.TEACHER_TAB_SECTION.signals, '홈');
   봄('상담 신청은 소통 아래로 왔다', M.TEACHER_TAB_SECTION.consults, '소통');
-  봄('반의 열 갈래는 하나도 안 빠졌다',
+  봄('반의 열한 갈래는 하나도 안 빠졌다',
     M.TEACHER_SUBNAV['반'].filter(Boolean).map(s => s[2]).sort(),
-    ['consult', 'homework', 'log', 'material', 'progress', 'quiz', 'scores', 'sessions', 'students', 'video']);
+    ['consult', 'homework', 'log', 'material', 'progress', 'quiz', 'school', 'scores', 'sessions', 'students', 'video']);
 }
 
 /* ═══ ② 옮긴 문이 옛 자리에서도 열린다 ═══ */

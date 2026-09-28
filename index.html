@@ -7826,6 +7826,7 @@ function recordLooksEmpty(rec){
   if(!rec) return true;
   const c = rec.checkin || {};
   const n = (rec.attendance || []).length + (rec.scores || []).length
+          + (rec.schoolExams || []).length + (rec.mockExams || []).length
           + (rec.wrongHomework || []).length
           + Object.keys(c.days || {}).length
           + Object.keys(rec.videoProgress || {}).length
@@ -18506,6 +18507,7 @@ const TEACHER_SUBNAV = {
     null,
     ['출결',       'classhub', 'sessions'],
     ['성적',       'classhub', 'scores'],
+    ['내신·모의',  'classhub', 'school'],
     ['과제',       'classhub', 'homework'],
     null,
     ['진도',       'classhub', 'progress'],
@@ -21205,6 +21207,7 @@ function teacherClassHubHTML(){
     sub = (r => r.body + r.extra)(teacherClassDailyHomeworkHTML(c.id, todayStr()));
   }
   else if(tab==='scores')     sub = chubScoresHTML(c.id);
+  else if(tab==='school')     sub = chubSchoolHTML(c.id);
   else if(tab==='consult')    sub = chubConsultHTML(c.id);
   else if(tab==='log')        sub = chubLogHTML(c.id);
   else if(tab==='progress')   sub = chubProgressHTML(c.id);
@@ -21537,6 +21540,173 @@ function chubScoresHTML(classId){
       }).join('')}
     </tbody>
   </table></div>`;
+}
+
+
+/* =================== 반 › 내신·모의 — 학교 시험·교육청 모의고사 (2026-09-28 · 사용자 요청) ===================
+   사용자 — 「학교 시험이나 교육청 모의고사 기록하는 곳이 있으면 좋겠어」. 물어서 정한 넷:
+     **새 탭** · 모의고사는 **원점수 + 등급** · **학생에게 안 보임** · **리포트에 안 실음**.
+   🔵 **성적 탭(`rec.scores`)과 섞지 않는다** — 저기는 «우리 시험지»에 붙는 줄이라 반 평균·등수·오답이 돈다.
+     학교 시험은 학교마다 시험지가 달라 그 셈에 들어가면 평균이 거짓이 된다.
+   저장은 학생 기록의 두 줄이다 —
+     rec.schoolExams [{term:'2026 · 2학기 중간', subject, score, grade?}]   학기 하나에 한 줄
+     rec.mockExams   [{ym:'2026-09', score, grade?}]                         달 하나에 한 줄
+   ⚠ **kv 에 두지 않는다** — kv 는 학생도 읽는다. 한 문서에 모으면 남의 점수가 샌다.
+   ⚠ 학교 시험의 등급은 **비워 두면 등급컷으로 센다**(시험 일정 화면에 적은 그것).
+     적어 넣으면 그 값이 이긴다 — 학교 성적표의 등급이 제일 확실하다.
+   ⚠ 열쇠는 등급컷의 `seasonKeyOf`(시작일|이름)가 아니라 **«연도 · 시즌»**이다 — 시작일을 고치면
+     등급컷은 `setSeasonStart` 가 옮겨 주지만, 학생 기록을 다 고쳐 쓸 수는 없다. */
+const EXAM_SEASONS = SEASONS.filter(s => /중간|기말/.test(s));
+function nsTermOf(year, season){ return year + ' · ' + season; }
+/* 학기 순서 — 「기말」이 「중간」보다 글자로는 앞이라 글자 정렬을 못 쓴다. */
+function nsTermRank(term){
+  const [y, s] = String(term || '').split(' · ');
+  return Number(y || 0) * 10 + EXAM_SEASONS.indexOf(s);
+}
+function nsDefaultTerm(){
+  const cur = currentSeason();
+  /* 방학이면 바로 앞 시험이다 — 여름방학에 적는 것은 1학기 기말 점수다. */
+  const s = EXAM_SEASONS.includes(cur) ? cur
+          : SEASONS[(SEASONS.indexOf(cur) - 1 + SEASONS.length) % SEASONS.length];
+  return nsTermOf(todayStr().slice(0,4), EXAM_SEASONS.includes(s) ? s : EXAM_SEASONS[0]);
+}
+/* 그 학기의 등급컷 열쇠 — 시험 일정 화면이 쓰는 «지금 시즌»이나 «지난 기록» 중 이름이 같은 것. 없으면 null. */
+function nsCutKey(term){
+  const cur = {season: currentSeason(), startedAt: (state.season && state.season.startedAt) || '', endedAt: todayStr()};
+  if(examHistLabel(cur) === term) return curSeasonKey();
+  const h = ((state.examHistory && state.examHistory.items) || []).find(x => examHistLabel(x) === term);
+  return h ? seasonKeyOf(h.season, h.startedAt) : null;
+}
+/* 적어 넣은 등급이 있으면 그것, 없으면 등급컷으로 센 것(«컷»이라고 밝힌다). 둘 다 없으면 ''.
+   ⚠ 적어 둔 가장 낮은 컷보다 아래면 「5~」처럼 «그 밑»으로만 말한다 — 9등급제인지 5등급제인지 모른다. */
+function nsSchoolGrade(s, x){
+  if(x.grade) return {g: String(x.grade), cut: false};
+  const key = nsCutKey(x.term);
+  const cut = key && x.subject ? gradeCutOf(key, s.school || '', s.grade || '', x.subject) : null;
+  if(!cut) return {g: '', cut: false};
+  let last = 0;
+  for(const g of CUT_GRADES){
+    const c = cut['c' + g];
+    if(c == null) continue;
+    if(x.score >= c) return {g: String(g), cut: true};
+    last = g;
+  }
+  return {g: last ? (last + 1) + '~' : '', cut: true};
+}
+function chubSchoolHTML(classId){
+  loadAllRecordsIfNeeded();
+  loadExamHistoryIfNeeded();
+  if(!state.allRecordsLoaded)
+    return `<div class="fm-empty">학생 기록을 불러오는 중입니다…</div>`;
+  const mock = state.nsMode === 'mock';
+  const term = state.nsTerm || nsDefaultTerm();
+  const [year, season] = term.split(' · ');
+  const ym = state.nsYm || ymNow();
+  /* 성적 탭과 같다 — 이미 있었던 일이라 퇴원생도 남긴다. */
+  const roster = DATA.students.filter(s=>studentClassIds(s).includes(classId));
+  const y0 = Number(todayStr().slice(0,4));
+  const years = [...new Set([y0, y0-1, y0-2, Number(year)])].sort((a,b)=>b-a);
+
+  const seg = (on, label, js, pos) => `<button class="btn sm ${on ? 'p' : 'q'}"
+    style="border-radius:${pos==='l' ? 'var(--r-sm) 0 0 var(--r-sm)' : '0 var(--r-sm) var(--r-sm) 0'};"
+    onclick="${js}; render()">${label}</button>`;
+  const bar = `<div class="es-head" style="margin:0 0 14px;flex-wrap:wrap;gap:10px;align-items:center;">
+    <div class="row" style="gap:0;">
+      ${seg(!mock, '학교 시험', "state.nsMode='school'", 'l')}
+      ${seg(mock, '모의고사', "state.nsMode='mock'", 'r')}
+    </div>
+    ${mock
+      ? `<span class="field" style="width:auto;">시행 달
+          <input class="rst-sel" type="month" value="${ym}" onchange="state.nsYm=this.value || ''; render()"></span>`
+      : `<span class="field" style="width:auto;">학기
+          <select class="rst-sel" onchange="state.nsTerm=nsTermOf(this.value,'${season}'); render()">
+            ${years.map(y=>`<option ${String(y)===year?'selected':''}>${y}</option>`).join('')}</select>
+          <select class="rst-sel" onchange="state.nsTerm=nsTermOf('${year}',this.value); render()">
+            ${EXAM_SEASONS.map(s=>`<option ${s===season?'selected':''}>${s}</option>`).join('')}</select></span>`}
+    ${roster.length ? `<button class="btn p sm" onclick="saveSchoolScores('${classId}')">전체 저장</button>` : ''}
+    <span style="font-size:11.5px;color:var(--dim);line-height:1.7;flex:1;min-width:220px;">
+      <b>원점수</b>를 비우면 «안 봤다»이고, 있던 기록은 지워집니다.
+      ${mock ? '' : '<b>등급</b>을 비워 두면 시험 일정 화면에 적은 <b>등급컷</b>으로 셉니다. '}
+      학생 앱과 월간 리포트에는 나가지 않습니다.</span>
+  </div>`;
+  if(!roster.length) return bar + `<div class="fm-empty">이 반에 배정된 학생이 없습니다.</div>`;
+
+  /* ⚠ 과목 칸은 `mono` 를 빼고 부른다 — 한글이 「공 통 수 학」으로 벌어진다. */
+  const inp = (id, val, w, attrs, cls = 'mono') => `<input class="sg-in ${cls}" id="${id}" style="width:${w}px;" value="${val == null ? '' : escHtml(String(val))}" ${attrs}>`;
+  const rows = roster.map(s=>{
+    const rec = state.allRecords[s.studentId] || {};
+    const who = `<td class="who"><span class="nm">${escHtml(s.name)}</span>${
+      isWithdrawn(s) ? ' <span class="badge gone">퇴원</span>' : ''}</td>`;
+    if(mock){
+      const list = (rec.mockExams || []).slice().sort((a,b)=>String(b.ym).localeCompare(String(a.ym)));
+      const got = list.find(x=>x.ym===ym);
+      const past = list.filter(x=>x!==got).slice(0,4)
+        .map(x=>`<span class="mono">${escHtml(x.ym)}</span> <b class="mono">${x.score}</b>${x.grade ? `<span class="mono">(${x.grade})</span>` : ''}`);
+      return `<tr>${who}
+        <td style="color:var(--dim);">${escHtml(s.grade || '')}</td>
+        <td>${inp('ns-s-'+s.studentId, got && got.score, 64, 'type="number" min="0" max="100" step="1" placeholder="—"')}</td>
+        <td>${inp('ns-g-'+s.studentId, got && got.grade, 48, 'type="number" min="1" max="9" step="1" placeholder="—"')}</td>
+        <td style="font-size:11.5px;color:var(--sub);">${past.join(' · ') || '—'}</td></tr>`;
+    }
+    const list = (rec.schoolExams || []).slice().sort((a,b)=>nsTermRank(b.term)-nsTermRank(a.term));
+    const got = list.find(x=>x.term===term);
+    const auto = got ? nsSchoolGrade(s, got) : {g:''};
+    const past = list.filter(x=>x!==got).slice(0,4).map(x=>{
+      const g = nsSchoolGrade(s, x);
+      return `${escHtml(x.term)} <b class="mono">${x.score}</b>${g.g ? `<span class="mono">(${g.g})</span>` : ''}`;
+    });
+    return `<tr>${who}
+      <td style="color:var(--dim);white-space:nowrap;">${escHtml([s.school, s.grade].filter(Boolean).join(' ') || '—')}</td>
+      <td>${inp('ns-j-'+s.studentId, got ? got.subject : subjectOfStudent(s.studentId), 96, 'type="text" placeholder="과목"', '')}</td>
+      <td>${inp('ns-s-'+s.studentId, got && got.score, 64, 'type="number" min="0" max="100" step="0.1" placeholder="—"')}</td>
+      <td>${inp('ns-g-'+s.studentId, got && got.grade, 48, `type="number" min="1" max="9" step="1" placeholder="${auto.cut && auto.g ? escHtml(auto.g) : '—'}"`)}${
+        auto.cut && auto.g ? `<span class="sg-sub">컷 기준 <b>${escHtml(auto.g)}</b></span>` : ''}</td>
+      <td style="font-size:11.5px;color:var(--sub);">${past.join(' · ') || '—'}</td></tr>`;
+  }).join('');
+  return bar + `<div class="hwg-wrap"><table class="hwg sg">
+    <thead><tr><th class="who">이름</th>${mock
+      ? '<th>학년</th><th>원점수</th><th>등급</th>'
+      : '<th>학교·학년</th><th>과목</th><th>원점수</th><th>등급</th>'}<th style="text-align:left;">지난 기록</th></tr></thead>
+    <tbody>${rows}</tbody></table></div>`;
+}
+/* 한 판을 통째로 저장한다 — 성적 탭(`saveClassScores`)과 같은 까닭으로 칸마다 저장하지 않는다. */
+async function saveSchoolScores(classId){
+  const mock = state.nsMode === 'mock';
+  const term = state.nsTerm || nsDefaultTerm();
+  const ym = state.nsYm || ymNow();
+  const key = mock ? 'mockExams' : 'schoolExams';
+  const roster = DATA.students.filter(s=>studentClassIds(s).includes(classId));
+  let saved = 0, cleared = 0; const bad = [];
+  for(const st of roster){
+    const el = document.getElementById('ns-s-'+st.studentId);
+    if(!el) continue;
+    const raw = el.value.trim();
+    const gRaw = document.getElementById('ns-g-'+st.studentId).value.trim();
+    let entry = null;
+    if(raw !== ''){
+      const score = Number(raw), grade = gRaw === '' ? null : Number(gRaw);
+      /* 🔴 잘못 친 값은 «건너뛴다» — 저장하면 그대로 기록이 된다. */
+      if(!Number.isFinite(score) || score < 0 || score > 100
+         || (grade !== null && !(Number.isInteger(grade) && grade >= 1 && grade <= 9))){ bad.push(st.name); continue; }
+      entry = mock ? {ym, score}
+        : {term, subject: document.getElementById('ns-j-'+st.studentId).value.trim(), score};
+      if(grade !== null) entry.grade = grade;
+    }
+    const rec = await loadRecord(st.studentId);
+    if(!rec[key]) rec[key] = [];
+    const list = rec[key];
+    const idx = list.findIndex(x => mock ? x.ym === ym : x.term === term);
+    if(!entry && idx < 0) continue;                       // 원래 없던 칸은 건드리지 않는다
+    if(entry && idx >= 0 && JSON.stringify(list[idx]) === JSON.stringify(entry)) continue;
+    if(entry){ if(idx >= 0) list[idx] = entry; else list.push(entry); saved++; }
+    else { list.splice(idx, 1); cleared++; }
+    await saveRecordAsTeacher(st.studentId);
+  }
+  const what = mock ? ym + ' 모의고사' : term;
+  showToast(bad.length ? `저장하지 않은 줄이 있습니다 — 원점수 0~100, 등급 1~9 (${bad.join(', ')}).`
+    : (saved || cleared) ? `${what} — ${saved}명 저장${cleared ? ` · ${cleared}명 지움` : ''}.`
+    : '바뀐 것이 없습니다.');
+  render();
 }
 
 
