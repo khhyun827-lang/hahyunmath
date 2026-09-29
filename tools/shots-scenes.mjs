@@ -234,7 +234,22 @@ export const 무대들 = {
       DATA.classes[0].progress = { subject:'공통수학1', unitsBySubject: { '공통수학1': { '다항식의 연산':1, '항등식과 나머지정리':1, '인수분해':1, '복소수':1 } }, booksBySubject: {} };
       DATA.classes[1].progress = { subject:'확률과통계', unitsBySubject: { '확률과통계': { '경우의 수(순열과 조합)':1, '확률의 뜻과 활용':1, '조건부확률':1, '이산확률변수와 확률분포':1 } }, booksBySubject: {} };
       state.classProgLogs = { c1: {} };
+      /* 교재 셋 — 첫 교재는 옛 반 체크를 물려받고, 셋째는 1~6단원만 다룬다 (09-30 · 2단계 C) */
+      Object.assign(DATA.classes[0].progress, {
+        booksBySubject: { '공통수학1': ['[2026] 개념원리 공통수학1', '쎈 공통수학1', '블랙라벨 상'] },
+        unitsByBook: { '공통수학1': { '쎈 공통수학1': { '다항식의 연산':1, '항등식과 나머지정리':1 } } },
+        bookScope: { '공통수학1': { '블랙라벨 상': ['다항식의 연산', '이차함수'] } } });
       state.teacherTab = 'classhub'; state.classHubTab = 'progress'; state.classHubId = 'c1'; state.studentDetailId = null; render(); } },
+  수업진도: { 말: '수업 › 2. 진도 (오늘 고른 교재의 단원 체크)', 폭: '864,390',
+    세우기: () => { const 요일 = '일월화수목금토'[new Date().getDay()];
+      Object.assign(DATA.classes[0], { schedule: 요일 + ' 19시~21시', status:'진행중' });
+      DATA.classes[0].progress = { subject:'공통수학1', unitsBySubject: { '공통수학1': { '다항식의 연산':1 } },
+        booksBySubject: { '공통수학1': ['[2026] 개념원리 공통수학1', '쎈 공통수학1'] },
+        unitsByBook: { '공통수학1': { '쎈 공통수학1': { '다항식의 연산':1, '항등식과 나머지정리':1 } } } };
+      state.season = { name:'2학기 중간', startedAt:'2026-09-01' };
+      state.classProgLogs = { c1: { [todayStr()]: { book:'쎈 공통수학1', detail:'p.45~62' } } };
+      state.currentUser = { type:'teacher', name:'김하현T' }; state.view = 'teacher';
+      state.teacherTab = 'session'; state.sessionDate = todayStr(); state.sessionClassId = 'c1'; state.sessionStep = 'prog'; render(); } },
   학생상세성적: { 말: '학생 상세 › 연대기 › 성적 (학교 시험 · 모의고사 판)', 폭: '864,1536',
     세우기: () => { state.currentUser = { type:'teacher', name:'김하현T' }; state.view = 'teacher';
       state.season = { name:'2학기 중간', startedAt:'2026-09-01' }; state.examHistory = { items: [] };

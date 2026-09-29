@@ -818,6 +818,36 @@
 .app .chub-u.done .t{color:var(--sub);}
 .app .chub-u.wait .t{color:var(--dim);}
 .app .chub-u .st{flex-shrink:0;}
+/* 교재 한 줄 · 단원 × 교재 판 (2026-09-30 · 교재 진도율 2단계 C) */
+.app .bk-rows{display:flex;flex-direction:column;gap:6px;}
+.app .bk-row{display:flex;align-items:center;gap:8px;padding:8px 10px 8px 13px;
+  border:1px solid var(--line);border-radius:var(--r-md);background:var(--card);font-size:12.5px;}
+.app .bk-row .t{font-weight:600;color:var(--ink);max-width:180px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.app .bk-row .sc{display:flex;align-items:center;gap:4px;}
+.app .bk-row .sc s{text-decoration:none;color:var(--dim);}
+.app .bk-row .sc select.rst-sel{width:112px;flex:none;padding:4px 6px;font-size:11.5px;}
+.app .bk-row .bar{flex:1;min-width:40px;}
+.app .bk-row .n{font-size:11.5px;color:var(--sub);white-space:nowrap;}
+.app .bk-row .x{margin-left:auto;border:0;background:none;color:var(--dim);cursor:pointer;
+  font-size:15px;line-height:1;padding:0 2px;font-family:inherit;}
+.app .bk-row .x:hover{color:var(--no);}
+.app .chub-u.bk{cursor:default;}
+.app .chub-u.bk.hd{border-bottom-color:var(--line);padding-bottom:7px;}
+.app .chub-u.bk.hd:hover{background:none;}
+.app .chub-u.bk.dn .t{color:var(--sub);}
+.app .chub-u.bk.wt .t{color:var(--dim);}
+.app .chub-u .bk-c{width:72px;flex-shrink:0;display:flex;justify-content:center;cursor:pointer;}
+.app .chub-u.hd .bk-c{display:block;text-align:center;font-size:11px;color:var(--sub);cursor:default;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.app .chub-u .bk-c.out{color:var(--dim);opacity:.5;cursor:default;}
+.app .chub-u .ck.on{background:var(--accent);border-color:var(--accent);color:#fff;}
+@media (max-width:560px){ .app .chub-u .bk-c{width:52px;} 
+  /* 폰 — 세 줄로 가지런히: 이름 · × / 첫~끝 / 막대 · 수 */
+  .app .bk-row{flex-wrap:wrap;row-gap:8px;}
+  .app .bk-row .t{flex:1 1 0;max-width:none;} .app .bk-row .x{order:1;}
+  .app .bk-row .sc{order:2;flex-basis:100%;} .app .bk-row .bar{order:3;} .app .bk-row .n{order:4;}
+  .app .bk-row .sc select.rst-sel{width:auto;flex:1;min-width:0;} }
 
 /* 수업 기록 (design-v1/14-log) — 한 행이 한 번의 수업. 그날 남은 것이 전부 그 행 안에 있다. */
 .app .chub-fbar{display:flex;align-items:center;gap:7px;padding-bottom:13px;flex-wrap:wrap;
@@ -17333,7 +17363,7 @@ function stuProgressHTML(c){
           다음 · ${nextUnit ? escHtml(nextUnit) : '모든 단원을 끝냈습니다'}</div>
         ${cp.books && cp.books.length ? `<div style="font-size:12px;color:var(--sub);margin-top:9px;
           padding-top:9px;border-top:1px solid var(--line);">교재 · ${
-          cp.books.map(b=>escHtml(b)).join(' · ')}</div>` : ''}
+          cp.bookProg.map(bp=>escHtml(bookProgText(bp))).join(' · ')}</div>` : ''}
       </div>`}
 
   <div class="msec">과제 <span class="mono" style="color:${undone.length?'var(--late)':'var(--dim)'};">${doneCount}/${c.homework.length}</span></div>
@@ -20243,7 +20273,7 @@ function progBookPickerHTML(classId, date, books, inputId){
       + (books.length ? '<button class="btn q sm" onclick="state.classProgBookAdd=false; render()">고르던 것으로</button>' : '');
   }
   return '<span class="field rst-selwrap">'
-    + '<select class="rst-sel" style="flex:1;" onchange="classProgInput(\'' + classId + '\',\'' + date + '\',\'book\', this.value)">'
+    + '<select class="rst-sel" style="flex:1;" onchange="classProgInput(\'' + classId + '\',\'' + date + '\',\'book\', this.value); render()">'
     + '<option value="">-- 교재 --</option>'
     + opts.map(b => '<option value="' + escHtml(b) + '"' + (b === cur ? ' selected' : '') + '>' + escHtml(b) + '</option>').join('')
     + '</select></span>'
@@ -20743,15 +20773,21 @@ function sessionProgHTML(classId, date){
                ${p.book ? `<span class="b">${escHtml(p.book)}</span>` : ''}
                <span class="x">${escHtml(p.detail || '—')}</span></div>`).join('')}
            </div>` : ''}`}
-      <div class="t-sec" style="margin:26px 0 9px;">단원 체크
-        <span style="font-weight:400;color:var(--dim);">마친 단원을 눌러 둡니다 · 누르면 바로 저장됩니다</span></div>
-      <div class="cls-chaps">${chapters.map(u=>`
-        <label class="cls-chap ${doneMap[u]?'on':''}">
-          <span class="cb ${doneMap[u]?'on':''}"></span>
-          <input type="checkbox" style="display:none;" ${doneMap[u]?'checked':''}
-            onchange="toggleClassProgressUnit('${classId}','${escHtml(u)}', this.checked)">
+      ${/* 🔵 교재가 있으면 «오늘 고른 교재»의 단원 체크다 (2026-09-30 · 2단계 C). 안 골랐으면 첫 교재.
+           그 교재가 다루는 단원만 선다(`bookScope`). 교재가 없는 반은 예전 그대로 반 체크. */''}
+      ${(()=>{
+        const bp = cp.bookProg.find(x => x.book === today.book) || cp.bookProg[0];
+        const units = bp ? bp.units : chapters, dm = bp ? bp.doneMap : doneMap;
+        return `<div class="t-sec" style="margin:26px 0 9px;">단원 체크${bp ? ` · ${escHtml(bp.book)}` : ''}
+        <span style="font-weight:400;color:var(--dim);">${bp && cp.bookProg.length > 1 ? '위에서 고른 교재로 · ' : ''}마친 단원을 눌러 둡니다 · 누르면 바로 저장됩니다</span></div>
+      <div class="cls-chaps">${units.map(u=>`
+        <label class="cls-chap ${dm[u]?'on':''}">
+          <span class="cb ${dm[u]?'on':''}"></span>
+          <input type="checkbox" style="display:none;" ${dm[u]?'checked':''} ${bp ? `data-b="${escHtml(bp.book)}"` : ''}
+            onchange="${bp ? `toggleBookUnit('${classId}', this.dataset.b, '${escHtml(u)}', this.checked)`
+                            : `toggleClassProgressUnit('${classId}','${escHtml(u)}', this.checked)`}">
           ${u}
-        </label>`).join('')}</div>`;
+        </label>`).join('')}</div>`; })()}`;
   const bar = `<div class="actbar">
     <span class="sum">${subject ? `${escHtml(subject)} · <b class="mono">${doneCount}/${total}</b>단원` : '과목 미지정'}</span>
     <span class="hint">${progSaved && (progSaved.book || progSaved.detail) ? '오늘 진도 적힘 · ' : ''}넘어갈 때 저절로 저장됩니다</span>
@@ -21334,7 +21370,14 @@ function getClassProgress(classId){
   const c = DATA.classes.find(x=>x.id===classId);
   const subject = c && c.progress ? c.progress.subject : '';
   const chapters = UNIT_CHAPTERS[subject] || [];
-  const doneMap = (c && c.progress && c.progress.unitsBySubject && c.progress.unitsBySubject[subject]) || {};
+  /* 🔴 **교재도 과목별이다** (2026-09-01 · T-1) — 단원 체크(`unitsBySubject`)와 같은 모양으로 둔다.
+     반 단위로 두면 미적분Ⅰ을 마치고 확률과통계로 넘어갔을 때 **남의 과목 책이 그대로 남는다.**
+     되돌아오면 그 과목에 적어 둔 책이 다시 나온다 — 단원 체크가 그러는 것과 같다. */
+  const books = (c && c.progress && c.progress.booksBySubject && c.progress.booksBySubject[subject]) || [];
+  /* 🔵 **교재가 있으면 체크는 교재마다 한다** (2026-09-30 · 교재 진도율 2단계 C) — 반의 «마친 단원»은
+     어느 교재에서든 마친 단원이다(합집합). 교재가 없는 반은 예전 그대로 반 체크(`unitsBySubject`)다. */
+  const doneMap = books.length ? {} : ((c && c.progress && c.progress.unitsBySubject && c.progress.unitsBySubject[subject]) || {});
+  books.forEach(b => { const d = bookDoneOf(c, subject, b); bookUnitsOf(c, subject, b).forEach(u => { if(d[u]) doneMap[u] = true; }); });
   /* 🔵 **분모는 «이번 시즌 범위»다** (2026-09-29 · 사용자가 정했다 — 교재 진도율 1단계 A).
        방학 = 과목 전체 · 학기 = 기본 분할(`presetChapters` — 중간 앞 n단원 / 기말 나머지).
      예전엔 늘 과목 전체라 학기 중엔 범위를 다 나가도 50%대에 멈췄다(09-27 반 목록 막대를 걷은 까닭).
@@ -21350,12 +21393,63 @@ function getClassProgress(classId){
   const rangeLabel = total === chapters.length ? '과목 전체' : currentSeason() + ' 범위';
   /* 다음 단원 — 범위 안에서 먼저, 범위를 다 마쳤으면 범위 밖(선행)에서. */
   const next = range.find(u=>!doneMap[u]) || chapters.find(u=>!doneMap[u]) || '';
-  /* 🔴 **교재도 과목별이다** (2026-09-01 · T-1) — 단원 체크(`unitsBySubject`)와 같은 모양으로 둔다.
-     반 단위로 두면 미적분Ⅰ을 마치고 확률과통계로 넘어갔을 때 **남의 과목 책이 그대로 남는다.**
-     되돌아오면 그 과목에 적어 둔 책이 다시 나온다 — 단원 체크가 그러는 것과 같다. */
-  const books = (c && c.progress && c.progress.booksBySubject && c.progress.booksBySubject[subject]) || [];
-  return { subject, chapters, doneMap, doneCount, percent, books, range, total, ahead, rangeLabel, next };
+  /* 교재 한 권의 진도 — 분모는 «그 교재가 다루는 단원 ∩ 이번 범위». 겹치는 게 없으면(하권인데 중간고사) total 0. */
+  const bookProg = books.map(b => {
+    const d = bookDoneOf(c, subject, b), units = bookUnitsOf(c, subject, b);
+    const inR = units.filter(u => range.includes(u)), done = inR.filter(u => d[u]).length;
+    return { book: b, units, doneMap: d, total: inR.length, done, percent: inR.length ? Math.round(done/inR.length*100) : 0 };
+  });
+  return { subject, chapters, doneMap, doneCount, percent, books, range, total, ahead, rangeLabel, next, bookProg };
 }
+/* ---------- 교재별 단원 체크 (2026-09-30 · 교재 진도율 2단계 C · 사용자가 고른 기획) ----------
+   저장은 반 문서 안 두 칸이다 —
+     progress.unitsByBook[과목][교재] = {단원: true}      교재마다 마친 단원
+     progress.bookScope[과목][교재]   = [첫 단원, 끝 단원] 그 교재가 다루는 단원(없으면 과목 전체)
+   🔴 **옛 반 체크(`unitsBySubject`)는 «첫 교재»가 물려받는다** — 자기 체크가 아직 없는 첫 교재는 그것을 제 것으로 읽는다.
+     그래서 이 판을 올린 날 진도가 0 으로 떨어지지 않는다. 처음 누르는 순간 복사해 제 것으로 굳힌다(`toggleBookUnit`).
+   ⚠ 교재를 빼도 그 교재의 체크는 지우지 않는다 — 다시 더하면 돌아온다(책 이름이 열쇠). */
+function bookUnitsOf(c, subject, book){
+  const all = UNIT_CHAPTERS[subject] || [];
+  const sc = c && c.progress && c.progress.bookScope && c.progress.bookScope[subject] && c.progress.bookScope[subject][book];
+  const a = sc ? all.indexOf(sc[0]) : -1, b = sc ? all.indexOf(sc[1]) : -1;
+  return (a < 0 || b < a) ? all.slice() : all.slice(a, b + 1);
+}
+function bookDoneOf(c, subject, book){
+  const p = (c && c.progress) || {};
+  const own = p.unitsByBook && p.unitsByBook[subject] && p.unitsByBook[subject][book];
+  if(own) return own;
+  const books = (p.booksBySubject && p.booksBySubject[subject]) || [];
+  return books[0] === book ? ((p.unitsBySubject && p.unitsBySubject[subject]) || {}) : {};
+}
+async function toggleBookUnit(classId, book, unit, checked){
+  const c = DATA.classes.find(x=>x.id===classId);
+  if(!c || !c.progress || !c.progress.subject) return;
+  const p = c.progress, subject = p.subject;
+  if(!p.unitsByBook) p.unitsByBook = {};
+  if(!p.unitsByBook[subject]) p.unitsByBook[subject] = {};
+  if(!p.unitsByBook[subject][book]) p.unitsByBook[subject][book] = Object.assign({}, bookDoneOf(c, subject, book));
+  p.unitsByBook[subject][book][unit] = checked;
+  await dbSetDoc('classes', c.id, c);
+  render();
+}
+/* 다루는 단원 — 고르개 둘(첫·끝) 중 하나를 바꾼다. 거꾸로 고르면 둘을 바꿔 앉힌다. 과목 전체면 칸을 지운다. */
+async function setBookScope(classId, book, which, unit){
+  const c = DATA.classes.find(x=>x.id===classId);
+  if(!c || !c.progress || !c.progress.subject) return;
+  const p = c.progress, subject = p.subject, all = UNIT_CHAPTERS[subject] || [];
+  const cur = bookUnitsOf(c, subject, book);
+  const ends = [cur[0], cur[cur.length - 1]];
+  ends[which] = unit;
+  if(all.indexOf(ends[0]) > all.indexOf(ends[1])) ends.reverse();
+  if(!p.bookScope) p.bookScope = {};
+  if(!p.bookScope[subject]) p.bookScope[subject] = {};
+  if(ends[0] === all[0] && ends[1] === all[all.length - 1]) delete p.bookScope[subject][book];
+  else p.bookScope[subject][book] = ends;
+  await dbSetDoc('classes', c.id, c);
+  render();
+}
+/* 「개념서 83%」 — 학생 앱·학생 상세의 교재 줄. 이번 범위와 안 겹치는 책은 이름만. */
+function bookProgText(bp){ return bp.total ? `${bp.book} ${bp.percent}%` : bp.book; }
 /* 「6단원 중 4 · 선행 +1」 — 진도 숫자 옆에 붙는 말. 분모가 시즌마다 바뀌므로 «무엇 중»인지 늘 같이 말한다. */
 function progRangeText(cp){
   return `${cp.rangeLabel} ${cp.total}단원 중 ${cp.doneCount}${cp.ahead ? ` · 선행 +${cp.ahead}` : ''}`;
@@ -22570,13 +22664,25 @@ function chubProgressHTML(classId){
     <span class="t-meta">${nextIdx>=0 ? `다음 단원 <b>${escHtml(chapters[nextIdx])}</b>` : '<b>모든 단원을 마쳤습니다.</b>'} · ${escHtml(progRangeText(cp))}단원</span>
   </div>
   ${/* 교재 (2026-09-01 · T-1). 단원 목록 «위»에 둔다 — 「무슨 책으로」가 「어디까지」보다 먼저다. */''}
-  <div style="margin-top:20px;max-width:620px;">
+  <div style="margin-top:20px;max-width:760px;">
     <div class="t-sec" style="margin:0 0 8px;">교재
       <span style="font-weight:400;color:var(--dim);">${escHtml(subject)}에서 쓰는 책</span></div>
-    ${books.length ? `<div class="cb-list">${books.map(t=>`
-      <span class="cb-item"><span class="t">${escHtml(t)}</span>
-        <button type="button" class="x" data-b="${escHtml(t)}" title="빼기"
-          onclick="removeClassBook('${classId}', this.dataset.b)">×</button></span>`).join('')}</div>`
+    ${/* 🔵 교재 한 권 = 한 줄 (2026-09-30 · 2단계 C) — 이름 · 다루는 단원(첫~끝) · 이번 범위 진도 · 빼기.
+         ⚠ 책 이름은 `data-b` 로 넘긴다 — 따옴표 든 제목에서 onclick 이 깨진다(removeClassBook 머리말). */''}
+    ${books.length ? `<div class="bk-rows">${cp.bookProg.map(bp=>{
+      const b = escHtml(bp.book);
+      const pick = (which, cur) => `<select class="rst-sel" data-b="${b}" title="${which ? '끝 단원' : '첫 단원'}"
+          onchange="setBookScope('${classId}', this.dataset.b, ${which}, this.value)">${chapters.map((u,i)=>
+          `<option value="${escHtml(u)}" ${u===cur?'selected':''}>${String(i+1).padStart(2,'0')} ${escHtml(u)}</option>`).join('')}</select>`;
+      return `<div class="bk-row">
+        <span class="t" title="${b}">${b}</span>
+        <span class="sc">${pick(0, bp.units[0])}<s>~</s>${pick(1, bp.units[bp.units.length-1])}</span>
+        ${bp.total ? `<span class="bar"><i style="width:${bp.percent}%"></i></span>
+          <span class="n"><span class="mono">${bp.done}/${bp.total}</span> · <span class="mono">${bp.percent}%</span></span>`
+          : '<span class="n" style="color:var(--dim);">이번 범위 밖</span>'}
+        <button type="button" class="x" data-b="${b}" title="빼기"
+          onclick="removeClassBook('${classId}', this.dataset.b)">×</button></div>`;
+    }).join('')}</div>`
       : '<div class="cb-none">아직 적어 둔 교재가 없습니다.</div>'}
     ${/* 🔴 **`!event.isComposing`이 없으면 한글이 반쯤 든 채로 등록된다** (W-3의 새 얼굴).
          「개념서」를 치고 **조합을 끝내려고 누르는 Enter**도 keydown을 쏜다 — 그 한 번에
@@ -22592,7 +22698,21 @@ function chubProgressHTML(classId){
       돌아오면 그대로 있습니다.</p>
   </div>
   <div style="margin-top:20px;">
-    ${chapters.map((u,i)=>{
+    ${/* 🔵 교재가 있으면 단원 × 교재 판 (2026-09-30 · 2단계 C). 칸 하나 = 그 교재로 그 단원을 마쳤나.
+         그 교재가 안 다루는 단원은 「—」. 줄의 색은 반의 합(어느 교재에서든 마쳤나)이다.
+         ⚠ 줄에 `done`·`now` 를 안 붙인다 — `.chub-u.done .ck` 가 줄 안의 칸을 전부 칠해 버린다. */''}
+    ${books.length ? `<div class="chub-u bk hd"><span class="no"></span><span class="t"></span>${
+        cp.bookProg.map(bp=>`<span class="bk-c" title="${escHtml(bp.book)}">${escHtml(bp.book)}</span>`).join('')}</div>`
+      + chapters.map((u,i)=>`<div class="chub-u bk ${doneMap[u] ? 'dn' : i===nextIdx ? '' : 'wt'}">
+        <span class="no mono">${String(i+1).padStart(2,'0')}</span>
+        <span class="t">${escHtml(u)}${i===nextIdx ? ' <span class="badge consult">다음</span>' : ''}</span>
+        ${cp.bookProg.map(bp=> bp.units.includes(u)
+          ? `<label class="bk-c"><input type="checkbox" style="display:none;" ${bp.doneMap[u]?'checked':''}
+               data-b="${escHtml(bp.book)}" onchange="toggleBookUnit('${classId}', this.dataset.b, '${escHtml(u)}', this.checked)">
+               <span class="ck ${bp.doneMap[u]?'on':''}">✓</span></label>`
+          : '<span class="bk-c out">—</span>').join('')}
+      </div>`).join('')
+    : chapters.map((u,i)=>{
       const done = !!doneMap[u];
       const cls = done ? 'done' : (i===nextIdx ? 'now' : 'wait');
       return `<label class="chub-u ${cls}">
@@ -24029,7 +24149,7 @@ function sdScreenHTML(s, rec, isAssistant){
            표의 행 높이가 40px로 못박혀 있어, 책 이름이 들어가면 한 행만 두 줄이 되어 리듬이 깨진다
            (8절). 대신 «학생을 연» 이 칸에 둔다 — 여기는 세로로 얼마든지 늘어난다. */''}
       ${prog.books && prog.books.length ? `<div style="margin-top:7px;font-size:11.5px;color:var(--dim);
-        line-height:1.6;">교재 · ${prog.books.map(b=>escHtml(b)).join(' · ')}</div>` : ''}
+        line-height:1.6;">교재 · ${prog.bookProg.map(bp=>escHtml(bookProgText(bp))).join(' · ')}</div>` : ''}
     ` : '<div style="margin-top:10px;font-size:11.5px;color:var(--dim);">반 진도 과목이 정해지지 않았습니다.</div>'}
     <hr class="s">
     ${/* 빠른 작업 — 「기본정보」가 있던 자리가 「상담」이 됐다 (2026-08-26).
