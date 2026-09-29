@@ -228,6 +228,13 @@ export const 무대들 = {
       r.s0.mockExams = [{ ym:'2026-06', score:76, grade:3 }];
       state.nsTerm = '2026 · 2학기 중간'; state.nsMode = 'school';
       state.teacherTab = 'classhub'; state.classHubTab = 'scores'; state.classHubId = 'c1'; render(); } },
+  진도범위: { 말: '반 관리 › 진도 (분모 = 이번 시즌 범위 · 반 목록 막대)', 폭: '864,1536,390',
+    세우기: () => { state.currentUser = { type:'teacher', name:'김하현T' }; state.view = 'teacher';
+      state.season = { name:'2학기 중간', startedAt:'2026-09-01' };
+      DATA.classes[0].progress = { subject:'공통수학1', unitsBySubject: { '공통수학1': { '다항식의 연산':1, '항등식과 나머지정리':1, '인수분해':1, '복소수':1 } }, booksBySubject: {} };
+      DATA.classes[1].progress = { subject:'확률과통계', unitsBySubject: { '확률과통계': { '경우의 수(순열과 조합)':1, '확률의 뜻과 활용':1, '조건부확률':1, '이산확률변수와 확률분포':1 } }, booksBySubject: {} };
+      state.classProgLogs = { c1: {} };
+      state.teacherTab = 'classhub'; state.classHubTab = 'progress'; state.classHubId = 'c1'; state.studentDetailId = null; render(); } },
   학생상세성적: { 말: '학생 상세 › 연대기 › 성적 (학교 시험 · 모의고사 판)', 폭: '864,1536',
     세우기: () => { state.currentUser = { type:'teacher', name:'김하현T' }; state.view = 'teacher';
       state.season = { name:'2학기 중간', startedAt:'2026-09-01' }; state.examHistory = { items: [] };

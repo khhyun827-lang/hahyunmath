@@ -204,13 +204,34 @@ console.log(NL + '④ 파일은 «그림» · 두 단추가 화면에 있다' + 
 }
 
 /* ═══ ⑤ 이름표 없는 퍼센트 ═══ */
-console.log(NL + '⑤ 반 목록에는 진도 퍼센트가 없다' + NL);
+console.log(NL + '⑤ 반 목록의 진도 — 이름표를 달고, 분모는 «이번 시즌 범위»' + NL);
 {
   const 레일 = lift('chubClassListHTML');
-  /* 09-14 에 이름표(「진도」)를 붙였던 수를 09-27 에 통째로 걷었다 — 학기 중엔 시험 범위만 나가서
-     과목 전체를 분모로 한 진도는 늘 50%대로 틀린 말을 했다(사용자). 교재별 진도가 생기기 전엔 되살리지 않는다. */
-  봄('🔴 반 목록이 진도를 안 센다', /getClassProgress|pr.percent/.test(레일), false);
-  봄('🔴 퍼센트 막대가 안 남았다', 레일.includes('class="p"'), false);
+  /* 09-14 에 이름표(「진도」)를 붙였던 수를 09-27 에 걷었다 — 과목 전체가 분모라 학기 중엔 늘 50%대였다(사용자).
+     09-29 에 분모를 «이번 시즌 범위»로 바꾸고 되살렸다(교재 진도율 1단계 A). */
+  봄('반 목록 막대는 «진도» 이름표를 단다', 레일.includes('진도 <span class="mono">${pr.percent}%'), true);
+  봄('과목 없는 반은 막대를 안 세운다', 레일.includes("${pr.subject ? `<div class=\"p\""), true);
+
+  /* 셈 — getClassProgress 를 그대로 떠서 돌린다 */
+  const 셈 = new Function('DATA', 'state', 'UNIT_CHAPTERS', 'SEASON_SPLIT', 'SEASONS',
+    lift('isVacationSeason') + NL + lift('currentSeason') + NL + lift('presetChapters') + NL
+    + lift('getClassProgress') + NL + lift('progRangeText') + NL + 'return { getClassProgress, progRangeText };');
+  const 과목 = { '공통수학1': ['a','b','c','d','e','f','g','h','i','j'] };
+  const 반 = (시즌, 끝낸) => {
+    const done = Object.fromEntries(끝낸.map(u => [u, true]));
+    const { getClassProgress, progRangeText } = 셈(
+      { classes: [{ id:'c1', progress: { subject:'공통수학1', unitsBySubject: { '공통수학1': done } } }] },
+      { season: { name: 시즌 } }, 과목, { '공통수학1': 6 }, ['겨울방학','1학기 중간','1학기 기말','여름방학','2학기 중간','2학기 기말']);
+    const cp = getClassProgress('c1');
+    return [cp.percent, cp.doneCount, cp.total, cp.ahead, cp.next, progRangeText(cp)];
+  };
+  봄('🔴 중간 — 범위 6단원 중 4 → 67% (과목 전체면 40%)', 반('2학기 중간', ['a','b','c','d']),
+    [67, 4, 6, 0, 'e', '2학기 중간 범위 6단원 중 4']);
+  봄('🔴 범위를 다 마치고 선행 — 100% 를 안 넘고 «선행 +1», 다음은 범위 밖', 반('2학기 중간', ['a','b','c','d','e','f','g']),
+    [100, 6, 6, 1, 'h', '2학기 중간 범위 6단원 중 6 · 선행 +1']);
+  봄('🔴 기말 — 중간 범위에서 마친 것은 «선행»이 아니다(지난 것)', 반('2학기 기말', ['a','b','c','g']),
+    [25, 1, 4, 0, 'h', '2학기 기말 범위 4단원 중 1']);
+  봄('방학 — 과목 전체', 반('여름방학', ['a','b','c']), [30, 3, 10, 0, 'd', '과목 전체 10단원 중 3']);
   /* ⚠ 시간도 원문이 아니라 다듬은 말이라야 «같은 반»으로 읽힌다 */
   봄('⚠ 시간도 다듬은 말을 쓴다 (반 머리와 같은 꼴)',
     레일.includes('classScheduleLabel(c)||'), true);

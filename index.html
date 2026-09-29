@@ -179,7 +179,7 @@
   .app:not(.sap) .chub-cl.on{border-color:var(--accent-line);background:var(--accent-bg);color:var(--accent);}
   .app:not(.sap) .chub-cl .n{font-size:13px;}
   .app:not(.sap) .chub-cl.on .n{font-weight:700;}
-  .app:not(.sap) .chub-cl .m{display:none;}
+  .app:not(.sap) .chub-cl .m, .app:not(.sap) .chub-cl .p{display:none;}
   .app:not(.sap) .chub-main{padding-left:0;}
   /* 반 이름과 오른쪽 버튼 묶음이 한 줄에 안 들어간다. 이름을 온전히 읽는 쪽을 택한다. */
   .app:not(.sap) .chub-mh{flex-wrap:wrap;}
@@ -781,7 +781,8 @@
 .app .chub-cl .m{font-size:11.5px;color:var(--dim);margin-top:3px;}
 .app .chub-cl .p{display:flex;align-items:center;gap:8px;margin-top:8px;}
 .app .chub-cl .p .bar{flex:1;}
-.app .chub-cl .p span{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--sub);}
+/* ⚠ mono 는 숫자에만 — 「진도」까지 mono 면 「진 도」로 벌어진다(09-29 에 찍어 보고 걷었다). */
+.app .chub-cl .p > span:last-child{font-size:11px;color:var(--sub);white-space:nowrap;}
 .app .chub-cl.off .n{color:var(--dim);font-weight:500;}
 
 .app .chub-main{flex:1;min-width:0;padding-left:24px;display:flex;flex-direction:column;}
@@ -15751,7 +15752,7 @@ function stuHomeHTML(c){
   const todo = stuTodo(c);
   const next = stuNextVisit(c);
   const cp = getClassProgress(c.classId);
-  const nextUnit = cp.chapters.find(u=>!cp.doneMap[u]);
+  const nextUnit = cp.next;
   const attRate = stuAttRate(c.rec, c.me);
   const hwDone = c.homework.filter(a=>hwIsDone(c.rec, a.id)).length;
   const vidAvg = stuVideoAvg(c);
@@ -17307,7 +17308,7 @@ function stuHomeworkCardHTML(c, a){
 function stuProgressHTML(c){
   markSeen('homework', c.homework.length);
   const cp = getClassProgress(c.classId);
-  const nextUnit = cp.chapters.find(u=>!cp.doneMap[u]);
+  const nextUnit = cp.next;
   const undone = c.homework.filter(a=>!hwIsDone(c.rec, a.id));
   const doneCount = c.homework.length - undone.length;
   /* 마감이 가까운 미완료가 위로, 완료는 아래로. */
@@ -17327,7 +17328,7 @@ function stuProgressHTML(c){
         </div>
         <div class="bar" style="margin-top:11px;"><i style="width:${cp.percent}%"></i></div>
         <div style="font-size:12px;color:var(--sub);margin-top:11px;">
-          ${cp.doneCount} / ${cp.chapters.length}단원 완료</div>
+          ${escHtml(progRangeText(cp))}단원 완료</div>
         <div style="font-size:12px;color:var(--dim);margin-top:5px;">
           다음 · ${nextUnit ? escHtml(nextUnit) : '모든 단원을 끝냈습니다'}</div>
         ${cp.books && cp.books.length ? `<div style="font-size:12px;color:var(--sub);margin-top:9px;
@@ -17343,7 +17344,7 @@ function stuProgressHTML(c){
   ${/* 단원 체크리스트는 «읽는 것»이라 손이 닿는 자리(과제) 아래에 둔다.
        카드를 단원마다 하나씩 세우면 열 줄에 480px을 쓴다 — 한 카드 안의 줄로 접었다. */
     cp.chapters.length ? `
-  <div class="msec">단원 <span class="mono">${cp.doneCount}/${cp.chapters.length}</span></div>
+  <div class="msec">단원 <span class="mono">${cp.chapters.filter(u=>cp.doneMap[u]).length}/${cp.chapters.length}</span></div>
   <div class="mc" style="padding:4px 15px;">
     ${cp.chapters.map(u=>{
       const on = !!cp.doneMap[u];
@@ -20691,7 +20692,8 @@ function sessionAttHTML(classId, date){
 
 /* ── 2단계. 진도 — 반 관리의 진도 체크리스트와 같은 데이터를 본다 ── */
 function sessionProgHTML(classId, date){
-  const { subject, chapters, doneMap, doneCount, percent, books } = getClassProgress(classId);
+  const cp = getClassProgress(classId);
+  const { subject, chapters, doneMap, doneCount, percent, books, total } = cp;
   /* 진도 기록 (P-1) — 오늘 적을 것과 «지난 회차» 셋. 지난 것이 보여야 이어 적을 수 있다. */
   const progLoading = state.classProgLogLoading[classId] || !state.classProgLogs[classId];
   const today = classProgEntry(classId, date);
@@ -20715,7 +20717,7 @@ function sessionProgHTML(classId, date){
           </select>
         </span>
         <span class="bar" style="flex:1;min-width:120px;max-width:280px;"><i style="width:${percent}%"></i></span>
-        <span class="sub" style="font-size:12.5px;"><span class="mono">${doneCount} / ${chapters.length}</span>단원 · <span class="mono">${percent}%</span></span>
+        <span class="sub" style="font-size:12.5px;">${escHtml(progRangeText(cp))}단원 · <span class="mono">${percent}%</span></span>
       </div>
       ${/* ── 오늘 진도 (2026-09-12 · P-1 · 사용자가 시켰다) ──────────────────────────────
            🔵 **09-01에는 여기를 «보는» 자리로 두었다**(T-1c). 까닭은 사용자가 준 그 문장이었다 —
@@ -20751,7 +20753,7 @@ function sessionProgHTML(classId, date){
           ${u}
         </label>`).join('')}</div>`;
   const bar = `<div class="actbar">
-    <span class="sum">${subject ? `${escHtml(subject)} · <b class="mono">${doneCount}/${chapters.length}</b>단원` : '과목 미지정'}</span>
+    <span class="sum">${subject ? `${escHtml(subject)} · <b class="mono">${doneCount}/${total}</b>단원` : '과목 미지정'}</span>
     <span class="hint">${progSaved && (progSaved.book || progSaved.detail) ? '오늘 진도 적힘 · ' : ''}넘어갈 때 저절로 저장됩니다</span>
     <span class="spacer"></span>
     <button class="btn q" onclick="saveClassProg('${classId}','${date}')">진도 저장</button>
@@ -21333,13 +21335,30 @@ function getClassProgress(classId){
   const subject = c && c.progress ? c.progress.subject : '';
   const chapters = UNIT_CHAPTERS[subject] || [];
   const doneMap = (c && c.progress && c.progress.unitsBySubject && c.progress.unitsBySubject[subject]) || {};
-  const doneCount = chapters.filter(u=>doneMap[u]).length;
-  const percent = chapters.length ? Math.round(doneCount/chapters.length*100) : 0;
+  /* 🔵 **분모는 «이번 시즌 범위»다** (2026-09-29 · 사용자가 정했다 — 교재 진도율 1단계 A).
+       방학 = 과목 전체 · 학기 = 기본 분할(`presetChapters` — 중간 앞 n단원 / 기말 나머지).
+     예전엔 늘 과목 전체라 학기 중엔 범위를 다 나가도 50%대에 멈췄다(09-27 반 목록 막대를 걷은 까닭).
+     ⚠ **학교별 범위(`rangeChapters`)는 안 본다** — 한 반에 학교가 섞이면 반 하나에 분모가 여럿이 된다(사용자: 「기본 분할만」).
+     `chapters` 는 그대로 과목 전체다 — 체크리스트는 범위 밖 단원도 체크할 수 있어야 한다(선행).
+     범위 «뒤»에서 마친 단원은 `ahead`(선행)로 따로 센다 — 분모에 넣으면 100% 를 넘는다.
+     ⚠ 범위 «앞»(기말 때의 중간 범위)은 선행이 아니라 지난 것이다 — 세지 않는다. */
+  const range = presetChapters(subject);
+  const total = range.length;
+  const doneCount = range.filter(u=>doneMap[u]).length;
+  const ahead = total ? chapters.slice(chapters.indexOf(range[total-1]) + 1).filter(u=>doneMap[u]).length : 0;
+  const percent = total ? Math.round(doneCount/total*100) : 0;
+  const rangeLabel = total === chapters.length ? '과목 전체' : currentSeason() + ' 범위';
+  /* 다음 단원 — 범위 안에서 먼저, 범위를 다 마쳤으면 범위 밖(선행)에서. */
+  const next = range.find(u=>!doneMap[u]) || chapters.find(u=>!doneMap[u]) || '';
   /* 🔴 **교재도 과목별이다** (2026-09-01 · T-1) — 단원 체크(`unitsBySubject`)와 같은 모양으로 둔다.
      반 단위로 두면 미적분Ⅰ을 마치고 확률과통계로 넘어갔을 때 **남의 과목 책이 그대로 남는다.**
      되돌아오면 그 과목에 적어 둔 책이 다시 나온다 — 단원 체크가 그러는 것과 같다. */
   const books = (c && c.progress && c.progress.booksBySubject && c.progress.booksBySubject[subject]) || [];
-  return { subject, chapters, doneMap, doneCount, percent, books };
+  return { subject, chapters, doneMap, doneCount, percent, books, range, total, ahead, rangeLabel, next };
+}
+/* 「6단원 중 4 · 선행 +1」 — 진도 숫자 옆에 붙는 말. 분모가 시즌마다 바뀌므로 «무엇 중»인지 늘 같이 말한다. */
+function progRangeText(cp){
+  return `${cp.rangeLabel} ${cp.total}단원 중 ${cp.doneCount}${cp.ahead ? ` · 선행 +${cp.ahead}` : ''}`;
 }
 async function setClassProgressSubject(classId, subject){
   const c = DATA.classes.find(x=>x.id===classId);
@@ -22471,6 +22490,7 @@ function chubClassListHTML(activeId){
       ${반들.map(c=>{
         const n = classRoster(c.id).length;
         const wait = hwWaitingInClass(c.id);
+        const pr = getClassProgress(c.id);
         return `<div class="chub-cl ${c.id===activeId?'on':''} ${c.status==='진행중'?'':'off'}"
           onclick="state.classHubId='${c.id}'; render()">
           <div class="n">${escHtml(c.name)}${
@@ -22480,7 +22500,12 @@ function chubClassListHTML(activeId){
           ${/* 🔵 **진도 막대를 걷었다** (2026-09-27 · 사용자 — 「학기 중엔 시험 범위만 해서 단원 절반만 하게 되는데
                그럼 계속 50퍼대로 떠 있어 … 교재별로 진도율을 고치기 전까지는 핵심 정보가 아니라 반 리스트에 떠 있을 필요가 없다」).
                과목 전체 단원을 분모로 삼는 셈이 학기 중에는 틀린 말을 한다. 진도 탭(`chubProgressHTML`)은 그대로다.
-               (09-14 에는 이 수에 「진도」 이름표를 붙였다 — 그 전엔 영상 탭에서 시청률로 읽혔다.) */''}
+               (09-14 에는 이 수에 「진도」 이름표를 붙였다 — 그 전엔 영상 탭에서 시청률로 읽혔다.)
+             🔵 **09-29 에 되살렸다** — 분모가 «이번 시즌 범위»가 됐다(`getClassProgress`). 이름표는 그대로 붙인다.
+               과목을 안 정한 반은 막대를 안 세운다(「—」 막대는 볼 것이 없다). 폰 칩 줄에서는 CSS 로 감춘다. */''}
+          ${pr.subject ? `<div class="p" title="${escHtml(pr.subject + ' · ' + progRangeText(pr))}단원">
+            <span class="bar"><i style="width:${pr.percent}%"></i></span>
+            <span>진도 <span class="mono">${pr.percent}%</span></span></div>` : ''}
         </div>`;
       }).join('')}
     </div>
@@ -22495,7 +22520,8 @@ function chubClassListHTML(activeId){
 function chubProgressHTML(classId){
   loadAllRecordsIfNeeded();
   loadClassProgLogIfNeeded(classId);
-  const { subject, chapters, doneMap, doneCount, percent, books } = getClassProgress(classId);
+  const cp = getClassProgress(classId);
+  const { subject, chapters, doneMap, doneCount, percent, books, total } = cp;
   /* 진도 일지 (P-1) — 수업 탭에서 적은 것이 여기 쌓이고, 여기서 고치거나 채워 넣는다. */
   const progLoading = state.classProgLogLoading[classId] || !state.classProgLogs[classId];
   const editDate = state.classProgEditDate || '';
@@ -22508,11 +22534,11 @@ function chubProgressHTML(classId){
   const avgAtt   = avgOf(live.map(st=>st.attPct).filter(v=>v!==null));
   const flagged  = live.filter(st=>signalOf(st)).length;
   const loading  = !state.allRecordsLoaded;
-  const nextIdx  = chapters.findIndex(u=>!doneMap[u]);
+  const nextIdx  = chapters.indexOf(cp.next);        // 범위 안에서 먼저 (getClassProgress)
 
   const kpis = `<div class="kpis" style="flex-shrink:0;">
     <div class="kpi"><div class="k">진도</div><div class="v">${subject?percent:'—'}<s>${subject?'%':''}</s></div></div>
-    <div class="kpi"><div class="k">완료 단원</div><div class="v">${subject?doneCount:'—'}<s>${subject?'/'+chapters.length:''}</s></div></div>
+    <div class="kpi"><div class="k">${cp.total && cp.total < chapters.length ? '범위 단원' : '완료 단원'}</div><div class="v">${subject?doneCount:'—'}<s>${subject?'/'+total+(cp.ahead?' · 선행 +'+cp.ahead:''):''}</s></div></div>
     <div class="kpi"><div class="k">재원</div><div class="v">${live.length}<s>명</s></div></div>
     <div class="kpi"><div class="k">최근 성적 평균</div><div class="v">${loading?'…':(avgScore===null?'—':avgScore)}<s>${avgScore===null?'':'/100'}</s></div></div>
     <div class="kpi"><div class="k">평균 출석률</div><div class="v">${loading?'…':(avgAtt===null?'—':avgAtt)}<s>${avgAtt===null?'':'%'}</s></div></div>
@@ -22541,7 +22567,7 @@ function chubProgressHTML(classId){
       </select>
     </span>
     ${/* ⚠ 단원명은 낱말이라 mono에 넣지 않는다 — 「합 성 함 수」처럼 벌어진다 (8절) */''}
-    <span class="t-meta">${nextIdx>=0 ? `다음 단원 <b>${escHtml(chapters[nextIdx])}</b>` : '<b>모든 단원을 마쳤습니다.</b>'}</span>
+    <span class="t-meta">${nextIdx>=0 ? `다음 단원 <b>${escHtml(chapters[nextIdx])}</b>` : '<b>모든 단원을 마쳤습니다.</b>'} · ${escHtml(progRangeText(cp))}단원</span>
   </div>
   ${/* 교재 (2026-09-01 · T-1). 단원 목록 «위»에 둔다 — 「무슨 책으로」가 「어디까지」보다 먼저다. */''}
   <div style="margin-top:20px;max-width:620px;">
@@ -23995,8 +24021,9 @@ function sdScreenHTML(s, rec, isAssistant){
     ${prog && prog.subject ? `
       <div style="margin-top:12px;display:flex;justify-content:space-between;font-size:12.5px;">
         <span class="muted">${escHtml(prog.subject)} 진도</span><b class="mono">${prog.percent}%</b></div>
+      <div style="margin-top:4px;font-size:11.5px;color:var(--dim);">${escHtml(progRangeText(prog))}단원</div>
       <div class="bar" style="margin-top:8px;"><i style="width:${prog.percent}%"></i></div>
-      ${(()=>{ const nx = prog.chapters.find(u=>!prog.doneMap[u]);
+      ${(()=>{ const nx = prog.next;
         return nx ? `<div style="margin-top:7px;font-size:11.5px;color:var(--dim);">다음 단원 · ${escHtml(nx)}</div>` : ''; })()}
       ${/* 교재 (2026-09-01 · T-1b). 🔴 **명단의 「반 진도」 열에는 안 넣었다** — 그 열은 88px이고
            표의 행 높이가 40px로 못박혀 있어, 책 이름이 들어가면 한 행만 두 줄이 되어 리듬이 깨진다
