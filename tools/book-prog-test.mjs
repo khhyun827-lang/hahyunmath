@@ -102,5 +102,14 @@ console.log(NL + '⑤ 교재를 빼도 체크는 남는다' + NL);
   봄('다시 더하면 돌아온다', cp().doneCount, 1);
 }
 
+console.log(NL + '⑥ 월간 리포트 — 교재별 % 와 «무엇 중»을 싣는다 (09-30 · 사용자 — 「학부모님께 교재별 %로 보내자」)' + NL);
+{
+  const 판 = lift('reportDataOf'), 그림 = lift('sdReportHTML');
+  봄('🔴 정규 반 교재가 % 로 간다', 판.includes('books: pcp ? pcp.bookProg.map(bookProgText) : []'), true);
+  봄('🔴 특강 교재도 % 로 간다', 판.includes('books: cp.bookProg.map(bookProgText)'), true);
+  봄('% 가 있으면 분모 이름(범위)을 같이 넘긴다', 판.includes('pcp.bookProg.some(b => b.total) ? pcp.rangeLabel'), true);
+  봄('리포트가 「… 범위 진도」라고 밝힌다', 그림.includes('${escHtml(d.booksRange)} 진도'), true);
+}
+
 console.log(NL + (fail ? '🔴 ' + fail + '개 실패 · ' : '✓ 전부 통과 · ') + pass + '개' + NL);
 process.exit(fail ? 1 : 0);

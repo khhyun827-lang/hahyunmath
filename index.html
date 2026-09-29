@@ -23224,7 +23224,8 @@ function monthlyReportData(s, rec, ym, ctx){
     /* 교재 (2026-09-01 · T-1b). ⚠ **달치가 아니라 «지금» 값이다** — 반이 쓰는 책은 이력을 안 남긴다.
        그래서 지난 달 리포트에서는 화면이 «지금 쓰는 책»이라고 밝혀서 적는다
        (08-27에 정한 규칙 그대로: 지금 값을 실을 때는 «지금»이라고 밝힌다. 달치인 척하면 거짓이 된다). */
-    books: ctx.books || []
+    books: ctx.books || [],
+    booksRange: ctx.booksRange || ''     // 교재 % 의 분모 이름(「2학기 중간 범위」) — % 가 하나도 없으면 빈 값
   };
 }
 
@@ -23273,15 +23274,20 @@ function reportDataOf(s, rec, ym){
       attDays: rows.length, att,
       attPct: rows.length ? Math.round(rows.filter(a=>a.status!=='결석').length / rows.length * 100) : null,
       hw: asgs.length ? {done, total: asgs.length} : null,
-      scores, books: cp.books || [], unit: cp.subject || ''
+      /* 교재는 «개념서 67%» 꼴로 (2026-09-30 · 사용자 — 「학부모님께 교재별 %로 보내자」) */
+      scores, books: cp.bookProg.map(bookProgText), unit: cp.subject || ''
     };
   /* ⚠ **이 달에 아무 일도 없던 특강은 줄째로 뺀다** — 「특강 · 0건」은 학부모께
      «안 한 것»으로 읽힌다. 리포트 전체가 그 규칙 위에 서 있다. */
   }).filter(x => x.attDays || x.hw || x.scores.length);
+  const pcp = studentPrimaryClassId(s) ? getClassProgress(studentPrimaryClassId(s)) : null;
   return monthlyReportData(s, rec, ym, {
     attOfMain, extras, isExtraScore, primaryClassId: studentPrimaryClassId(s),
     /* 🔴 «대표 반»을 본다 — 특강만 듣는 학생은 주 반이 없어 교재가 통째로 비어 있었다 (E-4). */
-    books: studentPrimaryClassId(s) ? getClassProgress(studentPrimaryClassId(s)).books : [],
+    /* 🔵 교재별 진도 % 를 같이 싣는다 (2026-09-30 · 사용자 — 「학부모님께 교재별 %로 보내자」).
+         %가 무엇 중인지(「2학기 중간 범위」)도 같이 넘긴다 — 숫자만 가면 시험 점수로 읽힌다. */
+    books: pcp ? pcp.bookProg.map(bookProgText) : [],
+    booksRange: pcp && pcp.bookProg.some(b => b.total) ? pcp.rangeLabel : '',
     allRecords: state.allRecords, assignments: DATA.assignments,
     /* 🔴 이 학생 «것»만 — 학생 화면(13624행)과 같은 잣대. 통째로 주면 남의 반 영상이 «안 본 0%»로 실린다. */
     videos: DATA.videos.filter(v => v.studentId ? v.studentId===s.studentId : (!v.classId || studentClassIds(s).includes(v.classId))),
@@ -23925,7 +23931,10 @@ function sdReportHTML(s, rec){
        그 달에 그 책을 썼다고 말할 수 없다 — 달치인 척하면 거짓이 된다. */
   if(d.books && d.books.length) meters.push(
     `<div class="rp-m"><span class="k">교재</span><span class="x" style="color:var(--ink);">${
-      d.books.map(b=>escHtml(b)).join(' · ')}${isThisMonth ? '' : '<s>지금 쓰는 책</s>'}</span></div>`);
+      d.books.map(b=>escHtml(b)).join(' · ')}${
+      /* % 는 «지금» 값이다 — 지난 달 리포트면 그렇게 밝힌다(교재 이름과 같은 규칙). */
+      d.booksRange ? `<s>${isThisMonth ? '' : '지금 '}${escHtml(d.booksRange)} 진도</s>`
+      : isThisMonth ? '' : '<s>지금 쓰는 책</s>'}</span></div>`);
   /* ⚠ **진도는 눈금이 아니다** — 「어디까지 나갔나」라 %가 없다.
        눈금 줄만 만들다가 한 번 흘렸다(2026-08-27). 자리는 눈금 아래 텍스트 한 줄. */
   if(d.unit) meters.push(`<div class="rp-m"><span class="k">진도</span><span class="x" style="color:var(--ink);">${escHtml(d.unit)}</span></div>`);

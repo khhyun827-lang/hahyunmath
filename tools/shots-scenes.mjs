@@ -250,6 +250,14 @@ export const 무대들 = {
       state.classProgLogs = { c1: { [todayStr()]: { book:'쎈 공통수학1', detail:'p.45~62' } } };
       state.currentUser = { type:'teacher', name:'김하현T' }; state.view = 'teacher';
       state.teacherTab = 'session'; state.sessionDate = todayStr(); state.sessionClassId = 'c1'; state.sessionStep = 'prog'; render(); } },
+  리포트교재: { 말: '학생 상세 › 이번 달 리포트 (교재별 진도 %)', 폭: '864',
+    세우기: () => { state.currentUser = { type:'teacher', name:'김하현T' }; state.view = 'teacher';
+      state.season = { name:'2학기 중간', startedAt:'2026-09-01' };
+      DATA.classes[0].progress = { subject:'공통수학1', unitsBySubject: { '공통수학1': { '다항식의 연산':1, '항등식과 나머지정리':1, '인수분해':1, '복소수':1 } },
+        booksBySubject: { '공통수학1': ['[2026] 개념원리 공통수학1', '쎈 공통수학1'] },
+        unitsByBook: { '공통수학1': { '쎈 공통수학1': { '다항식의 연산':1, '항등식과 나머지정리':1 } } } };
+      state.teacherTab = 'classhub'; state.classHubId = 'c1'; state.studentDetailId = null;
+      sdOpen('s0'); state.studentDetailTab = 'report'; render(); } },
   학생상세성적: { 말: '학생 상세 › 연대기 › 성적 (학교 시험 · 모의고사 판)', 폭: '864,1536',
     세우기: () => { state.currentUser = { type:'teacher', name:'김하현T' }; state.view = 'teacher';
       state.season = { name:'2학기 중간', startedAt:'2026-09-01' }; state.examHistory = { items: [] };
