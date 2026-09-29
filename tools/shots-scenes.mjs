@@ -228,5 +228,14 @@ export const 무대들 = {
       r.s0.mockExams = [{ ym:'2026-06', score:76, grade:3 }];
       state.nsTerm = '2026 · 2학기 중간'; state.nsMode = 'school';
       state.teacherTab = 'classhub'; state.classHubTab = 'scores'; state.classHubId = 'c1'; render(); } },
+  학생상세성적: { 말: '학생 상세 › 연대기 › 성적 (학교 시험 · 모의고사 판)', 폭: '864,1536',
+    세우기: () => { state.currentUser = { type:'teacher', name:'김하현T' }; state.view = 'teacher';
+      state.season = { name:'2학기 중간', startedAt:'2026-09-01' }; state.examHistory = { items: [] };
+      state.gradeCuts = { byKey: { [curSeasonKey()]: { '대원고': { '1': { '공통수학1': { c1:90, c2:80, c3:70, c4:60 } } } } } };
+      for(const r of [state.allRecords.s0, DATA.records.s0].filter(Boolean)){
+        r.schoolExams = [{ term:'2026 · 1학기 기말', subject:'공통수학1', score:88, grade:2 },
+                         { term:'2026 · 2학기 중간', subject:'공통수학1', score:84 }];
+        r.mockExams = [{ ym:'2026-06', score:76, grade:3 }, { ym:'2026-09', score:81 }]; }
+      state.teacherTab = 'classhub'; state.classHubId = 'c1'; sdOpen('s0', 'score'); } },
 };
 void 강사; void 학생;

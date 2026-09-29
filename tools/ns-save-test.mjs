@@ -54,6 +54,26 @@ try{
     !!document.querySelector('#ns-s-s0')]), [true, false]);
   await page.evaluate(() => { state.classHubTab = 'school'; state.nsMode = ''; render(); });
   봄('옛 「school」 탭 id 는 성적 › 학교 시험으로', await page.evaluate(() => [state.classHubTab, state.nsMode]), ['scores', 'school']);
+  // 학생 상세 › 성적 갈래 — 학교·모의 판 (09-29)
+  const 판 = await page.evaluate(() => {
+    const d = document.createElement('div');
+    d.innerHTML = sdSchoolScoresHTML(DATA.students[0], {
+      schoolExams: [{ term:'2026 · 1학기 기말', subject:'공통수학1', score:88, grade:2 },
+                    { term:'2026 · 2학기 중간', subject:'공통수학1', score:84 }],
+      mockExams: [{ ym:'2026-06', score:76, grade:3 }, { ym:'2026-09', score:81 }] });
+    return [...d.querySelectorAll('.sd-crow')].map(r => [...r.children].map(c => c.textContent).join(' ').replace(/\s+/g, ' ').trim());
+  });
+  봄('학생 상세 — 최근 학기가 위 · 비운 등급은 컷으로 · 모의는 달 역순', 판, [
+    '2026 · 2학기 중간 공통수학1 84점 · 2등급 (컷 기준)', '2026 · 1학기 기말 공통수학1 88점 · 2등급',
+    '2026-09 81점', '2026-06 76점 · 3등급']);
+  봄('가장 낮은 컷보다 아래면 «n등급 이하»', await page.evaluate(() =>
+    sdSchoolScoresHTML(DATA.students[0], { schoolExams: [{ term:'2026 · 2학기 중간', subject:'공통수학1', score:50 }] }).includes('5등급 이하')), true);
+  봄('성적 갈래에 판이 붙는다', await page.evaluate(() => { state.sdFilter = 'score';
+    return sdTimelineHTML(DATA.students[0], 's0', DATA.records.s0, false).includes('모의고사'); }), true);
+  // 조교 — 갈래 단추가 선다 (09-29 · 사용자)
+  봄('조교에게도 학교·모의 갈래', await page.evaluate(() => { const 원래 = state.currentUser;
+    state.currentUser = { type:'assistant', name:'조교' }; const h = scoreKindSegHTML(); state.currentUser = 원래;
+    return h.includes('학교 시험') && h.includes('모의고사'); }), true);
   봄('페이지 오류 없음', 탈, []);
   // 폰 폭 — 가로로 밀리는지
   await page.setViewportSize({ width: 390, height: 800 });

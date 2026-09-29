@@ -21453,9 +21453,8 @@ function teacherClassHubHTML(){
        여기서 켜 두면 수업 기록에서 하루를 폈을 때까지 «전체»로 새어 나간다. */
     sub = (r => r.body + r.extra)(teacherClassDailyHomeworkHTML(c.id, todayStr()));
   }
-  /* 🔵 학교 시험·모의고사는 성적 «안»의 갈래다 (2026-09-29 · 사용자 — 「내신.모의 탭을 성적탭 안에」).
-     조교에게는 갈래 단추가 안 서므로 늘 학원 시험이다. */
-  else if(tab==='scores')     sub = (state.nsMode && !isAssistantNow()) ? chubSchoolHTML(c.id) : chubScoresHTML(c.id);
+  /* 🔵 학교 시험·모의고사는 성적 «안»의 갈래다 (2026-09-29 · 사용자 — 「내신.모의 탭을 성적탭 안에」). 조교도 본다. */
+  else if(tab==='scores')     sub = state.nsMode ? chubSchoolHTML(c.id) : chubScoresHTML(c.id);
   else if(tab==='consult')    sub = chubConsultHTML(c.id);
   else if(tab==='log')        sub = chubLogHTML(c.id);
   else if(tab==='progress')   sub = chubProgressHTML(c.id);
@@ -21805,9 +21804,10 @@ function chubScoresHTML(classId){
    ⚠ 열쇠는 등급컷의 `seasonKeyOf`(시작일|이름)가 아니라 **«연도 · 시즌»**이다 — 시작일을 고치면
      등급컷은 `setSeasonStart` 가 옮겨 주지만, 학생 기록을 다 고쳐 쓸 수는 없다. */
 const EXAM_SEASONS = SEASONS.filter(s => /중간|기말/.test(s));
-/* 성적 탭 맨 위의 갈래 — 학원 시험(`nsMode` 빈 값) · 학교 시험 · 모의고사. 조교에게는 안 세운다(강사만). */
+/* 성적 탭 맨 위의 갈래 — 학원 시험(`nsMode` 빈 값) · 학교 시험 · 모의고사.
+   🔵 **조교에게도 연다** (2026-09-29 · 사용자). 쓰는 곳이 학생 기록(records)뿐이라 규칙이 이미 조교에게 열려 있다.
+     등급컷·지난 시즌은 kv 읽기라 조교도 된다(쓰지 않는다). */
 function scoreKindSegHTML(){
-  if(isAssistantNow()) return '';
   const k = state.nsMode || '';
   const items = [['', '학원 시험'], ['school', '학교 시험'], ['mock', '모의고사']];
   return `<div class="row" style="gap:0;margin:0 0 14px;">${items.map(([v, label], i) => `<button
@@ -21850,6 +21850,28 @@ function nsSchoolGrade(s, x){
     last = g;
   }
   return {g: last ? (last + 1) + '~' : '', cut: true};
+}
+/* 학생 상세 › 연대기 › 성적 갈래에 붙는 «학교 시험 · 모의고사» 한 판 (2026-09-29 · 사용자).
+   ⚠ 연대기 줄로 섞지 않는다 — 학교 시험은 «학기», 모의고사는 «달»만 있어 날짜를 지어내야 한다. 판으로 따로 둔다.
+   보기만 한다. 넣는 곳은 반 › 성적 하나다(학원 시험과 같은 규칙). */
+function sdSchoolScoresHTML(s, rec){
+  const sc = (rec.schoolExams || []).slice().sort((a,b)=>nsTermRank(b.term)-nsTermRank(a.term));
+  const mk = (rec.mockExams || []).slice().sort((a,b)=>String(b.ym).localeCompare(String(a.ym)));
+  if(sc.some(x => !x.grade)) loadExamHistoryIfNeeded();     // 지난 학기 등급컷은 그 기록에 있다
+  const gl = g => !g ? '' : ' · ' + (g.endsWith('~') ? g.slice(0,-1) + '등급 이하' : g + '등급');
+  /* ⚠ mono 를 안 쓴다 — 「2학기 중간」이 벌어지고, b 안의 mono 숫자는 흐리게 떴다(864 로 찍어 봤다). */
+  const row = (when, what) => `<div class="sd-crow"><span>${escHtml(when)}</span><b>${what}</b></div>`;
+  const cid = studentPrimaryClassId(s);
+  const go = kind => cid ? `<button class="btn q sm" onclick="state.studentDetailId=null; state.classHubId='${cid}'; state.nsMode='${kind}'; goTeacherTab('classhub','scores')">넣기 ${iconSvg('arrowR',13)}</button>` : '';
+  const sec = (title, kind, rows) => `<div class="row" style="justify-content:space-between;align-items:center;margin:0 0 4px;">
+      <div class="t-sec" style="margin:0;">${title}</div>${go(kind)}</div>
+    ${rows.length ? rows.join('') : '<div style="font-size:11.5px;color:var(--dim);padding:4px 0 8px;">적어 둔 기록이 없습니다.</div>'}`;
+  return `<div class="sd-form">
+    ${sec('학교 시험', 'school', sc.map(x => { const g = nsSchoolGrade(s, x);
+      return row(x.term, `${escHtml(x.subject || '')} ${x.score}점${escHtml(gl(g.g))}${g.cut && g.g ? ' <span style="color:var(--dim);font-weight:400;">(컷 기준)</span>' : ''}`); }))}
+    <div style="height:10px;"></div>
+    ${sec('모의고사', 'mock', mk.map(x => row(x.ym, `${x.score}점${escHtml(gl(x.grade ? String(x.grade) : ''))}`)))}
+    <p class="st-note">학생 앱과 월간 리포트에는 나가지 않습니다.</p></div>`;
 }
 function chubSchoolHTML(classId){
   loadAllRecordsIfNeeded();
@@ -24076,9 +24098,9 @@ function sdTimelineHTML(s, sid, rec, isAssistant){
       <span style="font-size:12.5px;color:var(--sub);line-height:1.8;flex:1;min-width:200px;">
         성적은 <b>반 &gt; 성적</b>에서 반 전체를 한 번에 넣습니다.
         시험에 붙여 두어야 <b>반 평균과 등수</b>가 리포트에 정확히 실립니다.</span>
-      ${studentPrimaryClassId(s) ? `<button class="btn sm" onclick="state.studentDetailId=null; state.classHubId='${studentPrimaryClassId(s)}'; goTeacherTab('classhub','scores')"
+      ${studentPrimaryClassId(s) ? `<button class="btn sm" onclick="state.studentDetailId=null; state.classHubId='${studentPrimaryClassId(s)}'; state.nsMode=''; goTeacherTab('classhub','scores')"
         >${escHtml(classNameOf(s.classId))} 성적으로 ${iconSvg('arrowR',13)}</button>` : ''}
-    </div></div>`;
+    </div></div>` + sdSchoolScoresHTML(s, rec);
   } else if(f==='att'){
     form = `<div class="sd-form"><div class="cls-form" style="margin-top:0;">
       <label><span>날짜</span><input id="att-date" type="date"></label>
