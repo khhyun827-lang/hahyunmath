@@ -163,6 +163,17 @@ export const 무대들 = {
       state.teacherTab = 'settings'; state.settingsSubTab = 'examrange'; state.examSubTab = 'plan';
       state.planEdit = true; render();
     } },
+  홈달력: { 말: '강사 홈 — 달력 (수업·휴강·직보·시험·클리닉·상담)', 폭: '1280,864,390',
+    세우기: () => { state.currentUser = { type:'teacher', name:'김하현T' }; state.view = 'teacher';
+      const 날 = k => shiftYmd(todayStr(), k);
+      DATA.students.forEach((s, i) => { if(i >= 6) s.classId = 'c2'; });
+      state.examRanges = { dates: { '광남고': { '1': { start: 날(6), end: 날(10), math: 날(8) } },
+                                    '대원고': { '1': { start: 날(9), end: 날(13), math: 날(12) } } } };
+      DATA.students.forEach((s, i) => { if(i % 2) planSetCell(s.studentId, 날(7), 'jikbo', '2시'); });
+      ['s0', 's4'].forEach(id => planSetCell(id, 날(3), 'consult'));
+      state.offDays = { days: [{ date: 날(2), classIds: ['c1'], label: '학원 행사' }] };
+      state.allRecordsLoaded = true; state.teacherTab = 'dash'; state.tCalDay = 날(7); state.tCalMonth = 날(7).slice(0, 7); render();
+    } },
   수업직보: { 말: '수업 (오늘 직보 — 광남고 2시 · 대원고 5시)',
     세우기: () => { state.currentUser = { type:'teacher', name:'김하현T' }; state.view = 'teacher';
       DATA.students.forEach((s, i) => { if(i >= 6) s.classId = 'c2'; });

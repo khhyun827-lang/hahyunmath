@@ -3140,6 +3140,15 @@
   background:var(--line2);color:var(--sub);}
 .app .dsh-dd.near{background:var(--point-bg);color:var(--point);}
 .app .dsh-dd.on{background:var(--point);color:#fff;}
+/* 홈 달력 (2026-09-30) — 칸·점·목록은 학생 달력 규칙을 같이 쓴다(위 .scal-* 에 .tcal 을 붙였다) */
+.app .tcal{padding:12px 12px 10px;}
+.app .tcal .scal-head .btn.icon{flex:none;}
+.app .tcal .scal-c{aspect-ratio:auto;height:44px;}
+.app .tcal-day{margin-top:12px;padding-top:12px;border-top:1px solid var(--line);}
+.app .tcal .scal-item{padding-right:11px;}
+.app .tcal .scal-item[onclick]{cursor:pointer;}
+.app .tcal .scal-item[onclick]:hover{background:var(--hover);}
+.app .tcal .scal-item.off{opacity:.55;}
 .app .dsh-empty{padding:12px 10px 14px;font-size:12.5px;color:var(--dim);line-height:1.6;}
 /* ⚠ 사용자 주력 판은 125% 확대(CSS 864)다 — 거기서도 두 칸이라야 «먼저 볼 학생»이 첫 화면에 든다. */
 @media (max-width:760px){ .app .dsh-grid{grid-template-columns:minmax(0,1fr);grid-template-rows:auto;
@@ -3502,65 +3511,65 @@
    ⚠ 학생 화면은 390px 폭이 기준이다. 칸 하나가 48px 남짓이라 «글자»가 못 들어간다.
      그래서 칸은 날짜와 점만 담고, 읽는 것은 아래 목록이 한다.
    ⚠ 색은 ds.css 의 상태색만 쓴다 — 달력을 위해 새 색을 만들지 않는다. */
-.app.sap .scal-wrap{padding-bottom:14px;}
-.app.sap .scal-head{display:flex;align-items:center;gap:10px;}
-.app.sap .scal-ym{flex:1;text-align:center;line-height:1.25;}
-.app.sap .scal-ym b{display:block;font-size:19px;letter-spacing:-.01em;font-variant-numeric:tabular-nums;}
-.app.sap .scal-ym span{display:block;font-size:11px;color:var(--dim);margin-top:2px;}
+.app.sap .scal-wrap,.app .tcal .scal-wrap{padding-bottom:14px;}
+.app.sap .scal-head,.app .tcal .scal-head{display:flex;align-items:center;gap:10px;}
+.app.sap .scal-ym,.app .tcal .scal-ym{flex:1;text-align:center;line-height:1.25;}
+.app.sap .scal-ym b,.app .tcal .scal-ym b{display:block;font-size:19px;letter-spacing:-.01em;font-variant-numeric:tabular-nums;}
+.app.sap .scal-ym span,.app .tcal .scal-ym span{display:block;font-size:11px;color:var(--dim);margin-top:2px;}
 .app.sap .scal-back{text-align:center;margin-top:8px;}
 
-.app.sap .scal-dow{display:grid;grid-template-columns:repeat(7,1fr);margin-top:14px;}
-.app.sap .scal-dow span{text-align:center;font-size:11px;font-weight:700;color:var(--sub);padding-bottom:6px;}
+.app.sap .scal-dow,.app .tcal .scal-dow{display:grid;grid-template-columns:repeat(7,1fr);margin-top:14px;}
+.app.sap .scal-dow span,.app .tcal .scal-dow span{text-align:center;font-size:11px;font-weight:700;color:var(--sub);padding-bottom:6px;}
 
-.app.sap .scal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;}
-.app.sap .scal-c{position:relative;aspect-ratio:1/1.06;border-radius:var(--r-sm);
+.app.sap .scal-grid,.app .tcal .scal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;}
+.app.sap .scal-c,.app .tcal .scal-c{position:relative;aspect-ratio:1/1.06;border-radius:var(--r-sm);
   display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
   cursor:pointer;transition:background var(--t);}
-.app.sap .scal-c.out{pointer-events:none;}
-.app.sap .scal-c:hover{background:var(--hover);}
-.app.sap .scal-c .d{font-size:13.5px;font-variant-numeric:tabular-nums;color:var(--ink);line-height:1;}
+.app.sap .scal-c.out,.app .tcal .scal-c.out{pointer-events:none;}
+.app.sap .scal-c:hover,.app .tcal .scal-c:hover{background:var(--hover);}
+.app.sap .scal-c .d,.app .tcal .scal-c .d{font-size:13.5px;font-variant-numeric:tabular-nums;color:var(--ink);line-height:1;}
 /* 🔵 오늘은 «채워서», 고른 날은 «테두리»로 — 둘을 같은 꼴로 하면 어느 것이 오늘인지 잃는다. */
-.app.sap .scal-c.today{background:var(--accent);}
-.app.sap .scal-c.today .d{color:#fff;font-weight:700;}
-.app.sap .scal-c.on{box-shadow:inset 0 0 0 2px var(--accent);}
-.app.sap .scal-c.today.on{box-shadow:inset 0 0 0 2px var(--accent),inset 0 0 0 4px var(--paper);}
+.app.sap .scal-c.today,.app .tcal .scal-c.today{background:var(--accent);}
+.app.sap .scal-c.today .d,.app .tcal .scal-c.today .d{color:#fff;font-weight:700;}
+.app.sap .scal-c.on,.app .tcal .scal-c.on{box-shadow:inset 0 0 0 2px var(--accent);}
+.app.sap .scal-c.today.on,.app .tcal .scal-c.today.on{box-shadow:inset 0 0 0 2px var(--accent),inset 0 0 0 4px var(--paper);}
 
 /* 🔵 **점이 셋뿐이라 크게 찍을 수 있다** (2026-09-13) — 4.5px 짜리 일곱 색은 폰에서 못 가렸다.
    ⚠ 「내 일정」은 회색이라 그대로 두면 묻힌다 — 그것만 속을 비워 «테두리»로 말한다.
      색이 아니라 **꼴**로도 갈리므로 색을 못 가리는 사람도 읽는다. */
-.app.sap .scal-c .dots{display:flex;gap:3.5px;height:7px;align-items:center;}
-.app.sap .scal-c .dots i{width:6.5px;height:6.5px;border-radius:50%;display:block;}
-.app.sap .scal-c .dots i.dot-mine{background:transparent !important;box-shadow:inset 0 0 0 1.5px var(--dim);}
+.app.sap .scal-c .dots,.app .tcal .scal-c .dots{display:flex;gap:3.5px;height:7px;align-items:center;}
+.app.sap .scal-c .dots i,.app .tcal .scal-c .dots i{width:6.5px;height:6.5px;border-radius:50%;display:block;}
+.app.sap .scal-c .dots i.dot-mine,.app .tcal .scal-c .dots i.dot-mine{background:transparent !important;box-shadow:inset 0 0 0 1.5px var(--dim);}
 /* ⚠ 오늘 칸은 바탕이 진하다 — 점이 묻히지 않게 테를 두른다. */
-.app.sap .scal-c.today .dots i{box-shadow:0 0 0 1px rgba(255,255,255,.55);}
+.app.sap .scal-c.today .dots i,.app .tcal .scal-c.today .dots i{box-shadow:0 0 0 1px rgba(255,255,255,.55);}
 
-.app.sap .scal-legend{display:flex;flex-wrap:wrap;gap:9px 13px;margin-top:14px;
+.app.sap .scal-legend,.app .tcal .scal-legend{display:flex;flex-wrap:wrap;gap:9px 13px;margin-top:14px;
   padding-top:12px;border-top:1px solid var(--line);}
-.app.sap .scal-legend span{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--sub);}
-.app.sap .scal-legend i{width:7px;height:7px;border-radius:50%;display:block;flex-shrink:0;}
+.app.sap .scal-legend span,.app .tcal .scal-legend span{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--sub);}
+.app.sap .scal-legend i,.app .tcal .scal-legend i{width:7px;height:7px;border-radius:50%;display:block;flex-shrink:0;}
 /* 묶음 안에 무엇이 드는지 옅게 덧붙인다 — 라벨은 셋이지만 «무엇이 묶였나»는 알려 줘야 한다. */
-.app.sap .scal-legend s{text-decoration:none;color:var(--dim);font-size:10.5px;margin-left:3px;}
-.app.sap .scal-legend span.band i{border-radius:2px;background:var(--nobg);box-shadow:inset 0 0 0 1px var(--no);}
+.app.sap .scal-legend s,.app .tcal .scal-legend s{text-decoration:none;color:var(--dim);font-size:10.5px;margin-left:3px;}
+.app.sap .scal-legend span.band i,.app .tcal .scal-legend span.band i{border-radius:2px;background:var(--nobg);box-shadow:inset 0 0 0 1px var(--no);}
 
-.app.sap .scal-daytitle{display:flex;align-items:center;gap:8px;}
-.app.sap .scal-daytitle b{font-size:15px;}
-.app.sap .scal-badge{font-size:10.5px;font-weight:700;color:var(--accent);
+.app.sap .scal-daytitle,.app .tcal .scal-daytitle{display:flex;align-items:center;gap:8px;}
+.app.sap .scal-daytitle b,.app .tcal .scal-daytitle b{font-size:15px;}
+.app.sap .scal-badge,.app .tcal .scal-badge{font-size:10.5px;font-weight:700;color:var(--accent);
   background:var(--accent-bg);border-radius:var(--r-pill);padding:2px 8px;}
-.app.sap .scal-empty{font-size:12.5px;color:var(--dim);padding:18px 0 6px;text-align:center;}
+.app.sap .scal-empty,.app .tcal .scal-empty{font-size:12.5px;color:var(--dim);padding:18px 0 6px;text-align:center;}
 .app.sap .scal-help{font-size:12px;color:var(--sub);line-height:1.65;margin:8px 0 14px;}
 
-.app.sap .scal-list{display:flex;flex-direction:column;gap:7px;margin-top:12px;}
-.app.sap .scal-item{position:relative;display:flex;align-items:center;gap:10px;
+.app.sap .scal-list,.app .tcal .scal-list{display:flex;flex-direction:column;gap:7px;margin-top:12px;}
+.app.sap .scal-item,.app .tcal .scal-item{position:relative;display:flex;align-items:center;gap:10px;
   padding:10px 34px 10px 11px;background:var(--sunk);border-radius:var(--r-sm);
   border-left:3px solid var(--line);}
-.app.sap .scal-item .k{flex:0 0 auto;font-size:10.5px;font-weight:700;
+.app.sap .scal-item .k,.app .tcal .scal-item .k{flex:0 0 auto;font-size:10.5px;font-weight:700;
   border-radius:var(--r-xs);padding:3px 7px;white-space:nowrap;}
-.app.sap .scal-item .t{flex:1;min-width:0;line-height:1.35;}
-.app.sap .scal-item .t b{display:block;font-size:13px;color:var(--ink);
+.app.sap .scal-item .t,.app .tcal .scal-item .t{flex:1;min-width:0;line-height:1.35;}
+.app.sap .scal-item .t b,.app .tcal .scal-item .t b{display:block;font-size:13px;color:var(--ink);
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.app.sap .scal-item .t span{display:block;font-size:11px;color:var(--dim);margin-top:1px;
+.app.sap .scal-item .t span,.app .tcal .scal-item .t span{display:block;font-size:11px;color:var(--dim);margin-top:1px;
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.app.sap .scal-item .tm{flex:0 0 auto;font-size:11.5px;color:var(--sub);}
+.app.sap .scal-item .tm,.app .tcal .scal-item .tm{flex:0 0 auto;font-size:11.5px;color:var(--sub);}
 .app.sap .scal-del{position:absolute;right:6px;top:50%;transform:translateY(-50%);
   width:24px;height:24px;border:0;background:transparent;color:var(--dim);
   border-radius:var(--r-xs);cursor:pointer;display:flex;align-items:center;justify-content:center;}
@@ -3573,25 +3582,25 @@
    🔵 시작·끝·수학 시험일 세 «점»만 찍으면 그 사이가 시험기간이라는 것이 안 보인다.
      학생이 달력에서 가장 먼저 알아야 하는 것이 「언제부터 언제까지 시험이냐」다.
    ⚠ 옅게 깐다 — 진하면 그 주가 통째로 «경고»처럼 보여 다른 일정이 안 읽힌다. */
-.app.sap .scal-c.exam{background:var(--nobg);}
-.app.sap .scal-c.exam .d{color:var(--no);font-weight:700;}
+.app.sap .scal-c.exam,.app .tcal .scal-c.exam{background:var(--nobg);}
+.app.sap .scal-c.exam .d,.app .tcal .scal-c.exam .d{color:var(--no);font-weight:700;}
 /* 기간의 처음과 끝만 모서리를 둥글린다 — 가운데는 이어져 하나의 띠로 보인다. */
-.app.sap .scal-c.exam{border-radius:0;}
-.app.sap .scal-c.exam.exam-a{border-radius:var(--r-sm) 0 0 var(--r-sm);}
-.app.sap .scal-c.exam.exam-z{border-radius:0 var(--r-sm) var(--r-sm) 0;}
-.app.sap .scal-c.exam.exam-a.exam-z{border-radius:var(--r-sm);}
+.app.sap .scal-c.exam,.app .tcal .scal-c.exam{border-radius:0;}
+.app.sap .scal-c.exam.exam-a,.app .tcal .scal-c.exam.exam-a{border-radius:var(--r-sm) 0 0 var(--r-sm);}
+.app.sap .scal-c.exam.exam-z,.app .tcal .scal-c.exam.exam-z{border-radius:0 var(--r-sm) var(--r-sm) 0;}
+.app.sap .scal-c.exam.exam-a.exam-z,.app .tcal .scal-c.exam.exam-a.exam-z{border-radius:var(--r-sm);}
 /* 수학 시험일은 그 안에서 한 번 더 도드라진다 — 닷새 중 «그 하루»가 진짜 목표다. */
-.app.sap .scal-c.exam.exam-m{background:var(--no);}
-.app.sap .scal-c.exam.exam-m .d{color:#fff;}
+.app.sap .scal-c.exam.exam-m,.app .tcal .scal-c.exam.exam-m{background:var(--no);}
+.app.sap .scal-c.exam.exam-m .d,.app .tcal .scal-c.exam.exam-m .d{color:#fff;}
 /* ⚠ 오늘 표시가 시험 배경에 묻히면 안 된다 — 오늘이 더 위에 온다. */
-.app.sap .scal-c.exam.today{background:var(--accent);}
-.app.sap .scal-c.exam.today .d{color:#fff;}
-.app.sap .scal-examline{display:flex;align-items:center;gap:6px;flex-wrap:wrap;
+.app.sap .scal-c.exam.today,.app .tcal .scal-c.exam.today{background:var(--accent);}
+.app.sap .scal-c.exam.today .d,.app .tcal .scal-c.exam.today .d{color:#fff;}
+.app.sap .scal-examline,.app .tcal .scal-examline{display:flex;align-items:center;gap:6px;flex-wrap:wrap;
   margin-top:12px;padding:9px 11px;background:var(--nobg);border-radius:var(--r-sm);
   font-size:11.5px;color:var(--sub);line-height:1.5;}
-.app.sap .scal-examline b{color:var(--no);}
+.app.sap .scal-examline b,.app .tcal .scal-examline b{color:var(--no);}
 /* 「정규 수업은 안 뜹니다」 — 붉은 띠 안에서 한 겹 물러선 곁말이라 줄을 바꿔 옅게 둔다. */
-.app.sap .scal-examline s{flex-basis:100%;text-decoration:none;color:var(--dim);font-size:11px;}
+.app.sap .scal-examline s,.app .tcal .scal-examline s{flex-basis:100%;text-decoration:none;color:var(--dim);font-size:11px;}
 
 /* ---------- 매주 반복 (2026-09-08) ---------- */
 .app.sap .scal-seg{display:flex;gap:0;margin:0 0 12px;border:1px solid var(--line);
@@ -18930,8 +18939,138 @@ function teacherConsultsHTML(){
    🔵 **모든 줄은 한 번 누르면 «그 일을 하는 자리»로 간다** — 보는 곳이 아니라 출발점이다.
    ⚠ 벨 항목을 누르는 것은 벨에서 누르는 것과 같다(읽음 표시까지) — 두 문이 다르게 굴면 안 된다. */
 function dashNotifN(it){ return it.unseen !== undefined ? it.unseen : unseenCount(it.key, it.count); }
-function dashOpenSession(classId){
-  state.sessionDate = todayStr(); state.sessionClassId = classId; state.sessionStep = 'att';
+/* =================== 홈 달력 (2026-09-30 · 사용자 — 「관리자페이지 홈화면에 달력넣어줘」) ===================
+   사용자가 고른 것 셋 — **수업·휴강/보강·직보 · 학교 시험 일정 · 클리닉·상담** · 자리는 «왼쪽 칸 오늘 수업 위».
+   🔵 학생 달력(`stuCalendarHTML`)의 부품을 그대로 쓴다 — 칸은 날짜와 점, 읽는 것은 아래 목록. 칸에 반 이름을 욱여넣으면
+     왼쪽 칸 폭(≈380px)에서 안 읽힌다.
+   🔵 수업은 `sessionsOn` 하나에서 온다 — 수업 탭 왼쪽 목록과 «같은 말»을 한다(직보·보강 포함).
+     ⚠ 휴강을 빼지 않고 «휴강»이라고 적는다 — 수업 탭이 그렇게 한다(`sessionStatusOf`).
+   🔵 시험은 학교가 여럿이라 **학교들의 시험기간을 합친 면**이다 · 어느 학교든 수학 시험일이면 진하게.
+   🔵 상담 = 직보 일정표의 「상담진행」 칸이다. ⚠ 상담 «신청»(공개 폼)은 날짜가 접수일뿐이라 달력에 안 올린다. */
+const TCAL_GROUPS = {
+  class: {이름: '수업',          색: 'var(--ok)',    갈래: ['class']},
+  plan:  {이름: '직보',          색: 'var(--gone)',  갈래: ['plan']},
+  meet:  {이름: '클리닉·상담',   색: 'var(--leave)', 갈래: ['clinic']},
+};
+function teacherMonthEvents(ym){
+  const out = {}, 시험날 = {}, 수학날 = {};
+  const 넣기 = (date, ev) => {
+    if(!date || String(date).slice(0, 7) !== ym) return;
+    (out[date] = out[date] || []).push(ev);
+  };
+  const [y, m] = ym.split('-').map(Number);
+  const 날수 = new Date(y, m, 0).getDate();
+  const 이름 = sid => ((DATA.students || []).find(s => s.studentId === sid) || {}).name || '';
+
+  /* ① 수업 · 휴강/보강 · 직보 */
+  for(let d = 1; d <= 날수; d++){
+    const date = ymd(y, m, d), dow = new Date(y, m - 1, d).getDay();
+    sessionsOn(date).forEach(c => {
+      const 쉼 = !c.jikbo && offDayFor(c.id, date);
+      const 보강 = !c.jikbo && movedInto(c.id, date);
+      const 시간 = c.jikbo ? c.timeText
+        : 보강 ? (보강.moveTime || sessionTimeText(c.schedule, new Date(보강.date + 'T00:00:00').getDay()))
+        : sessionTimeText(c.schedule, dow);
+      넣기(date, {kind: c.jikbo ? 'plan' : 'class', title: c.name + (쉼 ? ' — 휴강' : 보강 ? ' (보강)' : ''),
+        sub: 쉼 ? [쉼.label, 쉼.moveTo ? stuDayLabel(쉼.moveTo) + '로 옮김' : ''].filter(Boolean).join(' · ')
+          : 보강 ? [보강.label, stuDayLabel(보강.date) + '에서 옮겨 옴'].filter(Boolean).join(' · ') : '',
+        time: 시간 || '', 흐림: !!쉼, open: `dashOpenSession('${c.id}','${date}')`});
+    });
+  }
+
+  /* ② 학교 시험 — 학교·학년마다 한 번 */
+  const 본것 = new Set();
+  (DATA.students || []).forEach(s => {
+    if(isWithdrawn(s)) return;
+    const 열쇠 = (s.school || '') + '|' + (s.grade || '');
+    if(본것.has(열쇠)) return; 본것.add(열쇠);
+    const dd = examDatesOf(s.school || '', s.grade || '');
+    if(!dd) return;
+    const 누구 = [s.school || '학교 미정', gradeLabel(s.grade) || ''].filter(Boolean).join(' ');
+    const 열기 = "state.settingsSubTab='examrange'; state.examSubTab='range'; goTeacherTab('settings')";
+    if(dd.start) 넣기(dd.start, {kind: 'exam', title: 누구 + ' 시험기간 시작', open: 열기});
+    if(dd.end && dd.end !== dd.start) 넣기(dd.end, {kind: 'exam', title: 누구 + ' 시험기간 끝', open: 열기});
+    if(dd.math){ 넣기(dd.math, {kind: 'exam', title: 누구 + ' 수학 시험', 굵게: 1, open: 열기}); 수학날[dd.math] = 1; }
+    const 끝들 = [dd.start, dd.end, dd.math].filter(Boolean).sort();
+    for(let x = 끝들[0], i = 0; x && x <= 끝들[끝들.length - 1] && i < 60; x = dateShift(x, 1), i++) 시험날[x] = 1;
+  });
+
+  /* ③ 클리닉 — 취소한 것만 뺀다 · 대기는 딱지를 단다 */
+  (DATA.clinics || []).forEach(cl => {
+    if(!cl.day || cl.status === '취소') return;
+    넣기(cl.day, {kind: 'clinic', title: '클리닉 · ' + (이름(cl.studentId) || cl.name || '학생'),
+      sub: [cl.status && cl.status !== '승인' ? cl.status : '', cl.topic || ''].filter(Boolean).join(' · '),
+      time: clinicWhenLabel(cl) || '', open: "goTeacherTab('clinic')"});
+  });
+
+  /* ④ 상담 — 직보 일정표의 「상담진행」. 같은 날은 한 줄로 모은다(열 명이면 열 줄이 된다). */
+  const 상담 = {};
+  (DATA.students || []).forEach(s => {
+    if(isWithdrawn(s)) return;
+    const cells = planCellsOfStudent(s.studentId);
+    for(const date in cells) if(cells[date].k === 'consult') (상담[date] = 상담[date] || []).push(s.name || '');
+  });
+  for(const date in 상담) 넣기(date, {kind: 'clinic', title: '상담진행 · ' + 상담[date].length + '명',
+    sub: 상담[date].join(' · '), open: "state.settingsSubTab='examrange'; state.examSubTab='plan'; goTeacherTab('settings')"});
+
+  /* 같은 날 안에서는 시각 순 — 「오후 2시」·「19:00~21:00」 이 섞이므로 시(時)만 뽑아 견준다 */
+  const 시각 = e => { const t = String(e.time || ''); const n = t.match(/\d+/);
+    if(!n) return 99; let h = parseInt(n[0], 10); if(/오후/.test(t) && h < 12) h += 12; else if(h < 9) h += 12; return h; };
+  Object.values(out).forEach(list => list.sort((a, b) => (a.kind === 'exam') - (b.kind === 'exam') || 시각(a) - 시각(b)));
+  return {out, 시험날, 수학날};
+}
+function teacherCalHTML(){
+  const 오늘 = todayStr();
+  const ym = state.tCalMonth || 오늘.slice(0, 7);
+  const [y, m] = ym.split('-').map(Number);
+  const 첫요일 = new Date(y, m - 1, 1).getDay();
+  const 날수 = new Date(y, m, 0).getDate();
+  const {out: 일정, 시험날, 수학날} = teacherMonthEvents(ym);
+  const 고른날 = (state.tCalDay && state.tCalDay.slice(0, 7) === ym) ? state.tCalDay : (오늘.slice(0, 7) === ym ? 오늘 : '');
+  const 묶음 = {}; for(const g in TCAL_GROUPS) TCAL_GROUPS[g].갈래.forEach(k => 묶음[k] = g);
+
+  const 칸 = [];
+  for(let i = 0; i < 첫요일; i++) 칸.push('<div class="scal-c out"></div>');
+  for(let d = 1; d <= 날수; d++){
+    const date = ymd(y, m, d), dow = new Date(y, m - 1, d).getDay();
+    const 있는것 = new Set((일정[date] || []).filter(e => !e.흐림).map(e => 묶음[e.kind]).filter(Boolean));
+    const 점들 = Object.keys(TCAL_GROUPS).filter(g => 있는것.has(g));
+    const 시험칸 = 시험날[date] ? ' exam' + (!시험날[dateShift(date, -1)] ? ' exam-a' : '')
+      + (!시험날[dateShift(date, 1)] ? ' exam-z' : '') + (수학날[date] ? ' exam-m' : '') : '';
+    칸.push(`<div class="scal-c${시험칸}${date === 오늘 ? ' today' : ''}${date === 고른날 ? ' on' : ''}" ${TAP}
+      aria-label="${stuDayLabel(date)}" onclick="state.tCalDay='${date}'; render()">
+      <span class="d" style="${dow === 0 ? 'color:var(--no);' : dow === 6 ? 'color:var(--blue);' : ''}">${d}</span>
+      <span class="dots">${점들.map(g => `<i style="background:${TCAL_GROUPS[g].색}"></i>`).join('')}</span></div>`);
+  }
+  const 그날 = 고른날 ? (일정[고른날] || []) : [];
+  const 목록 = !고른날 ? '<div class="scal-empty">날짜를 눌러 보세요.</div>'
+    : !그날.length ? '<div class="scal-empty">이 날은 일정이 없습니다.</div>'
+    : '<div class="scal-list">' + 그날.map(e => `<div class="scal-item${e.흐림 ? ' off' : ''}" style="border-left-color:${CAL_KINDS[e.kind].색}"
+        ${e.open ? `${TAP} onclick="${e.open}"` : ''}>
+        <div class="k" style="color:${CAL_KINDS[e.kind].색};background:${CAL_KINDS[e.kind].바탕};">${
+          e.kind === 'clinic' && /^상담/.test(e.title) ? '상담' : CAL_KINDS[e.kind].이름}</div>
+        <div class="t"><b${e.굵게 ? ' style="color:var(--no);"' : ''}>${escHtml(e.title)}</b>${e.sub ? `<span>${escHtml(e.sub)}</span>` : ''}</div>
+        ${e.time ? `<div class="tm">${escHtml(e.time)}</div>` : ''}</div>`).join('') + '</div>';
+
+  return `<section class="dsh-card tcal">
+    <div class="scal-head">
+      <button class="btn icon" title="지난달" onclick="state.tCalMonth='${stuShiftMonth(ym, -1)}'; state.tCalDay=''; render()">${iconSvg('chevL', 16)}</button>
+      <div class="scal-ym"><b>${y}. ${String(m).padStart(2, '0')}</b>${ym !== 오늘.slice(0, 7)
+        ? `<span><a class="dsh-more" onclick="state.tCalMonth=''; state.tCalDay=''; render()">오늘로</a></span>` : ''}</div>
+      <button class="btn icon" title="다음달" onclick="state.tCalMonth='${stuShiftMonth(ym, 1)}'; state.tCalDay=''; render()">${iconSvg('chevR', 16)}</button>
+    </div>
+    <div class="scal-dow">${['일','월','화','수','목','금','토'].map((n, i) =>
+      `<span style="${i === 0 ? 'color:var(--no);' : i === 6 ? 'color:var(--blue);' : ''}">${n}</span>`).join('')}</div>
+    <div class="scal-grid">${칸.join('')}</div>
+    <div class="scal-legend">${Object.keys(TCAL_GROUPS).map(g =>
+      `<span><i style="background:${TCAL_GROUPS[g].색}"></i>${TCAL_GROUPS[g].이름}</span>`).join('')}
+      <span class="band"><i></i>시험기간<s>진한 칸 = 수학 시험</s></span></div>
+    <div class="tcal-day"><div class="scal-daytitle"><b>${고른날 ? stuDayLabel(고른날) : ''}</b>${
+      고른날 === 오늘 ? '<span class="scal-badge">오늘</span>' : ''}</div>${목록}</div>
+  </section>`;
+}
+function dashOpenSession(classId, date){
+  state.sessionDate = date || todayStr(); state.sessionClassId = classId; state.sessionStep = 'att';
   sessionForgetPicks();
   goTeacherTab('session');
 }
@@ -19048,6 +19187,7 @@ function teacherDashHTML(){
          760~1279 는 두 칸 — 셋째 칸이 첫째 칸 «밑으로» 붙는다(grid-area · 신호 목록이 길어 오른쪽이 늘 더 길다). 760 아래는 한 칸. */''}
     <div class="dsh-grid">
       <div class="dsh-col dsh-a">
+        ${teacherCalHTML()}
         ${sec('오늘 수업', sessions.length || '', sessBody, ['수업으로', "goTeacherTab('session')"])}
         <div id="dsh-todo">${sec('처리할 일', todoN || '', todoBody)}</div>
       </div>

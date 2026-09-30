@@ -116,9 +116,9 @@ console.log(NL + '③ 화면 — 달력 칸과 라벨' + NL);
   봄('🔵 목록의 줄 색도 갈래 색 그대로다', 달력.includes("border-left-color:' + CAL_KINDS[e.kind].색"), true);
   /* 점을 키웠다 — 셋뿐이라 자리가 난다 */
   봄('🔴 점을 키웠다 (4.5px 는 폰에서 안 보였다)',
-    html.includes('.app.sap .scal-c .dots i{width:6.5px;height:6.5px;'), true);
+    html.includes('.app.sap .scal-c .dots i,.app .tcal .scal-c .dots i{width:6.5px;height:6.5px;'), true);
   봄('🔴 회색인 「내 일정」은 속을 비워 «꼴»로도 가른다',
-    html.includes('.app.sap .scal-c .dots i.dot-mine{background:transparent'), true);
+    html.includes('.app.sap .scal-c .dots i.dot-mine,.app .tcal .scal-c .dots i.dot-mine{background:transparent'), true);
   /* 🔴 **이름을 `dot-` 로 싼다** (2026-09-14 · 사용자 신고). 묶음 열쇠를 그대로 class 로 쓰니
      `todo` 가 **ds.css 의 `.todo`(할 일 «카드»)** 와 부딪혀, 6.5px 짜리 점이 그 카드의
      padding 과 테두리를 받아 **34px 짜리 덩어리**가 됐다 — 날짜를 통째로 덮었다.
