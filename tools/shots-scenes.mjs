@@ -155,6 +155,14 @@ export const 무대들 = {
       planSetRange(날(1), 날(14));
       state.teacherTab = 'settings'; state.settingsSubTab = 'examrange'; state.examSubTab = 'plan'; render();
     } },
+  직보일정표수정: { 말: '설정 › 직보 일정표 («수정»을 누른 뒤)', 폭: '864',
+    세우기: () => { state.currentUser = { type:'teacher', name:'김하현T' }; state.view = 'teacher';
+      DATA.students.forEach((s, i) => { if(i >= 6) s.classId = 'c2'; });
+      const 날 = k => shiftYmd(todayStr(), k);
+      planSetRange(날(1), 날(14));
+      state.teacherTab = 'settings'; state.settingsSubTab = 'examrange'; state.examSubTab = 'plan';
+      state.planEdit = true; render();
+    } },
   수업직보: { 말: '수업 (오늘 직보 — 광남고 2시 · 대원고 5시)',
     세우기: () => { state.currentUser = { type:'teacher', name:'김하현T' }; state.view = 'teacher';
       DATA.students.forEach((s, i) => { if(i >= 6) s.classId = 'c2'; });

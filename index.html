@@ -1856,6 +1856,9 @@
 .app .pl-dh.sat,.app .pl-dh.sat s{color:var(--blue);}
 .app .pl-c{cursor:pointer;min-width:62px;height:24px;}
 .app .pl-c:hover{background:var(--sunk);}
+.app .pl-lock .pl-c{cursor:default;}
+.app .pl-lock .pl-c:hover{background:none;}
+.app .pl-lock .pl-c.sp:hover{background:var(--nobg);}
 /* 🔵 시험기간은 «면»이다 — 학생 달력이 쓰는 것과 같은 장치. 찍은 칸이 그 위에 얹힌다.
    ⚠ 색을 덮지 않게 «찍힌 칸(k-*)»의 규칙을 뒤에 두었다(위 k- 규칙보다 먼저 온다). */
 .app .pl-c.sp{background:var(--nobg);}
@@ -31580,33 +31583,40 @@ function teacherExamPlanHTML(){
 
   const 찍힌수 = Object.values(p.cells || {}).reduce((n, r) => n + Object.keys(r || {}).length, 0);
 
+  /* 🔒 **기본은 잠김** (2026-09-30 · 사용자 — 「터치하다가 잘못해서 변경되는 경우가 많아」).
+     잠겨 있으면 칸·⇊·날짜·밑그림이 안 먹고 붓 줄도 없다. 「수정」을 눌러야 열린다.
+     ⚠ 이 갈래에 다시 들어오면 잠긴다(갈래 단추가 planEdit 을 놓는다) · 내보내기·공지는 잠겨도 된다(표를 안 바꾼다). */
+  const 편집 = !!state.planEdit;
+
   /* 🔴 **제목을 두 번 쓰지 않는다** (2026-09-14 · 사용자가 짚었다 — 「직보일정표 말이 반복」).
      설정 껍데기가 이미 `<h1>직보 일정표</h1>` 를 그린다(`teacherSettingsHTML`).
      ⇒ 여기서는 **셈만** 말한다 — 시즌·인원·찍은 칸·저장 중은 화면마다 달라지는 값이라
        껍데기의 붙박이 설명이 대신 못 한다. 날짜 줄 오른쪽에 얹는다. */
-  const 셈 = `<span class="ic-hint" style="margin-left:auto;">${escHtml(currentSeason())}
+  const 셈 = `<button class="btn p sm" style="order:9;"
+      onclick="state.planEdit=${편집 ? 'false' : 'true'}; state.planMsg=''; render()">${편집 ? '수정 끝' : '수정'}</button>
+    <span class="ic-hint" style="margin-left:auto;">${escHtml(currentSeason())}
     · ${학생들.length}명 · 찍은 칸 <b>${찍힌수}</b>개${
     state.planDirty ? ' · <b style="color:var(--brand-d);">저장 중…</b>' : ''}</span>`;
 
   /* ── 날짜 줄 ── */
   const 줄 = `<div class="ist-bar">
     <span class="ic-k">날짜</span>
-    <input type="date" class="pl-d" value="${escHtml(범위.from)}"
+    <input type="date" class="pl-d" value="${escHtml(범위.from)}" ${편집 ? '' : 'disabled'}
       onchange="planSetRange(this.value, planRange().to); render();">
     <span>~</span>
-    <input type="date" class="pl-d" value="${escHtml(범위.to)}"
+    <input type="date" class="pl-d" value="${escHtml(범위.to)}" ${편집 ? '' : 'disabled'}
       onchange="planSetRange(planRange().from, this.value); render();">
-    ${손으로 ? `<button class="btn q sm" title="시험 일정에서 다시 잡습니다"
+    ${!편집 ? '' : 손으로 ? `<button class="btn q sm" title="시험 일정에서 다시 잡습니다"
         onclick="planSetRange('',''); render();">시험 일정에 맡기기</button>`
       : `<span class="ic-hint">시험 일정에서 저절로 잡았습니다${
           자동 ? '' : ' — 🔴 <b>시험 일정이 비어 있어 잡을 것이 없습니다</b>'}</span>`}
-    <button class="btn q sm" title="수학 시험 전날에 직보2시만 깝니다 — 손으로 고친 칸은 안 건드립니다"
-      onclick="planSeedRun()">밑그림 깔기</button>
+    ${편집 ? `<button class="btn q sm" title="수학 시험 전날에 직보2시만 깝니다 — 손으로 고친 칸은 안 건드립니다"
+      onclick="planSeedRun()">밑그림 깔기</button>` : '<span class="ic-hint">🔒 잠겨 있습니다 — 고치려면 「수정」</span>'}
     ${셈}
   </div>`;
 
   /* ── 붓 ── */
-  const 붓줄 = `<div class="ist-bar">
+  const 붓줄 = !편집 ? '' : `<div class="ist-bar">
     <span class="ic-k">붓</span>
     ${PLAN_KINDS.filter(k => !k[5]).map(([k, 이름]) => `<button class="btn ${붓.k===k?'p':'q'} sm"
       onclick="state.planBrush={k:'${k}',t:state.planBrush&&state.planBrush.t||''};render()">${escHtml(이름)}</button>`).join('')}
@@ -31673,15 +31683,15 @@ function teacherExamPlanHTML(){
       ${/* 🔵 이름 옆의 «⇊» 하나가 이 표에서 가장 많은 손을 던다 — 같은 반·같은 학교면
              줄이 통째로 같기 때문이다. 이름 자체를 누르면 아무 일도 안 나게 둔다(실수 방지). */''}
       <th class="pl-nm">${escHtml(s.name || sid)}${
-        planRowTwins(sid).length ? `<b class="pl-cp" title="이 줄을 같은 반·같은 학교 ${
+        편집 && planRowTwins(sid).length ? `<b class="pl-cp" title="이 줄을 같은 반·같은 학교 ${
           planRowTwins(sid).length}명에게 그대로 옮깁니다"
           onclick="planCopyRow('${escHtml(sid)}')">⇊</b>` : ''}</th>
       <th class="pl-sc">${escHtml(s.school || '')}</th>
-      ${planRowCellsHTML(s, days, true)}
+      ${planRowCellsHTML(s, days, 편집)}
     </tr>`;
   }).join('')).join('');
 
-  return `<div class="ex-main pl-screen">${줄}${붓줄}${반내보내기}${게시판}
+  return `<div class="ex-main pl-screen${편집 ? '' : ' pl-lock'}">${줄}${붓줄}${반내보내기}${게시판}
     ${state.planMsg ? `<div class="ist-msg">${escHtml(state.planMsg)}</div>` : ''}
     ${/* 🔵 **날짜 줄이 위아래 스크롤에도 붙어 있다** (2026-09-14 · 사용자 요청 — 「위아래 스크롤할 때도
          위에 날짜는 고정된 채로」). thead 의 sticky 는 **자기를 굴리는 상자** 기준이라, 표 상자
@@ -31987,7 +31997,7 @@ function teacherSettingsHTML(){
       <button class="btn sm ${examSub === 'plan' ? 'q' : 'p'}" style="border-radius:var(--r-sm) 0 0 var(--r-sm);"
         onclick="state.examSubTab='range'; render()">시험 일정</button>
       <button class="btn sm ${examSub === 'plan' ? 'p' : 'q'}" style="border-radius:0 var(--r-sm) var(--r-sm) 0;"
-        onclick="state.examSubTab='plan'; render()">직보 일정표</button></div>`;
+        onclick="state.examSubTab='plan'; state.planEdit=false; render()">직보 일정표</button></div>`;
   /* =================== 설정 (design-v1/13-settings) ===================
      여섯 갈래가 서로 닮은 데가 없다 — 조교 계정, 학생 계정, 반 만들기, 상담 신청,
      변경 이력, 관리자 비밀번호. 하나의 형태로 묶을 이유가 없어서 **껍데기만 DS로 바꿨다.**

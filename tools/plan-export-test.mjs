@@ -174,7 +174,11 @@ console.log(NL + '④ 파일은 «그림» · 두 단추가 화면에 있다' + 
   봄('그리는 무대는 화면 밖에 «보이게» 둔다', 그림.includes("'pl-stage'") && 그림.includes('stage.remove()'), true);
   const 화면 = lift('teacherExamPlanHTML');
   봄('🔴 화면의 표도 같은 두 함수를 쓴다',
-    화면.includes('planDayHeadHTML(days)') && 화면.includes('planRowCellsHTML(s, days, true)'), true);
+    화면.includes('planDayHeadHTML(days)') && 화면.includes('planRowCellsHTML(s, days, 편집)'), true);
+  /* 🔒 기본은 잠김 (2026-09-30 · 사용자 — 「터치하다가 잘못해서 변경되는 경우가 많아」) */
+  봄('🔒 잠기면 칸이 안 먹는다(칸 함수에 편집을 넘긴다)', 화면.includes('planRowCellsHTML(s, days, 편집)'), true);
+  봄('🔒 잠기면 붓 줄·⇊ 가 없다', 화면.includes("const 붓줄 = !편집 ? ''") && 화면.includes('편집 && planRowTwins(sid).length'), true);
+  봄('🔒 다시 들어오면 잠긴다', html.includes("state.examSubTab='plan'; state.planEdit=false;"), true);
   봄('🔴 날짜 줄이 위아래 스크롤에 붙도록 표 상자를 굴린다 (pl-body)', 화면.includes('class="ex-body pl-body"'), true);
   /* 공지 화면 둘에 그림이 붙는다 */
   봄('🔴 학생 공지에 그림이 붙는다', lift('stuNoticeHTML').includes('noticeImageHTML(n)'), true);
