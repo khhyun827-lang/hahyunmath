@@ -79,6 +79,9 @@ html,body{height:100%;overflow:hidden;font-family:'Pretendard',-apple-system,san
 #set-items li{display:flex;align-items:center;gap:10px;padding:6px 4px;border-radius:var(--r-md);}
 #set-items li:hover{background:var(--hover);}
 #set-items .ic{width:28px;height:28px;flex:none;}
+/* 아이콘을 누르면 바꾼다 — 올리면 자두 고리 */
+#set-items .face{flex:none;padding:2px;border:0;background:none;border-radius:var(--r-sm);cursor:pointer;}
+#set-items .face:hover,#set-items .face:focus-visible{outline:none;box-shadow:0 0 0 2px var(--point);}
 #set-items .ic.tile{padding:4px;}
 #set-items .ic.letter{font-size:13px;}
 #set-items .nm{flex:1;min-width:0;}
@@ -162,8 +165,9 @@ html,body{height:100%;overflow:hidden;font-family:'Pretendard',-apple-system,san
 
 <script>
 /* 앱(C#)과 주고받는 말 — 이 페이지는 «id» 와 값만 보낸다. 경로는 앱이 제 파일 선택 창으로 받는다.
-   받는 것: {cmd:'config', settings, autostart, items:[{id,name,kind,target,icon}]} · {cmd:'error', text}
-   보내는 것: get · open{id} · pick{kind} · addUrl{name,url} · rename{id,name} · remove{id} · order{ids} · settings{settings} · autostart{on} */
+   받는 것: {cmd:'config', settings, autostart, items:[{id,name,kind,target,icon,custom}]} · {cmd:'error', text}
+   보내는 것: get · open{id} · pick{kind} · addUrl{name,url} · rename{id,name} · remove{id} · order{ids} · settings{settings} · autostart{on}
+             · pickIcon{id}(그림은 앱의 파일 선택 창에서) · resetIcon{id} */
 const $ = s => document.querySelector(s);
 const bridge = window.chrome && window.chrome.webview;
 const dock = $('#dock'), edge = $('#edge'), setBox = $('#set');
@@ -179,7 +183,8 @@ if(bridge){
   send({cmd:'get'});
 }
 
-/* ---------- 아이콘 — 프로그램·폴더·파일은 앱이 뽑아 준 그림, 웹사이트는 그 사이트의 아이콘, 없으면 글자 ---------- */
+/* ---------- 아이콘 — 사용자가 고른 그림 › 프로그램·폴더·파일은 앱이 뽑아 준 그림 › 웹사이트는 그 사이트의 아이콘 › 글자 ----------
+   웹사이트 아이콘: 사이트 뿌리의 apple-touch-icon → 구글 파비콘 모음(뿌리에 아이콘이 없는 사이트 — 제미나이 등) → 글자 */
 function letter(it){
   const d = document.createElement('span'); d.className = 'ic letter';
   d.textContent = (it.name || '?').trim().charAt(0).toUpperCase();
@@ -189,10 +194,11 @@ function iconEl(it){
   const im = document.createElement('img'); im.className = 'ic'; im.alt = '';
   if(it.icon){ im.src = it.icon; return im; }
   if(it.kind !== 'url') return letter(it);
-  let origin; try{ origin = new URL(it.target).origin; }catch(e){ return letter(it); }
+  let u; try{ u = new URL(it.target); }catch(e){ return letter(it); }
   im.className = 'ic tile';
-  im.onerror = () => { im.onerror = () => im.replaceWith(letter(it)); im.src = origin + '/favicon.ico'; };
-  im.src = origin + '/apple-touch-icon.png';
+  const srcs = [u.origin + '/apple-touch-icon.png', 'https://www.google.com/s2/favicons?sz=128&domain=' + u.hostname];
+  im.onerror = () => srcs.length ? (im.src = srcs.shift()) : im.replaceWith(letter(it));
+  im.src = srcs.shift();
   return im;
 }
 
@@ -269,7 +275,10 @@ function renderSettings(){
       const b = document.createElement('button'); b.className = 'btn q icon sm'; b.textContent = label;
       b.setAttribute('aria-label', aria); b.disabled = !!off; b.onclick = fn; return b;
     };
-    li.append(iconEl(it), nm,
+    const face = btn('', '아이콘 바꾸기', () => send({cmd:'pickIcon', id:it.id}));
+    face.className = 'face'; face.title = '아이콘 바꾸기'; face.append(iconEl(it));
+    li.append(face, nm,
+      ...(it.custom ? [btn('↺', '원래 아이콘으로', () => send({cmd:'resetIcon', id:it.id}))] : []),
       btn('↑', '앞으로', () => move(i, i - 1), i === 0),
       btn('↓', '뒤로', () => move(i, i + 1), i === ids.length - 1),
       btn('✕', '빼기', () => send({cmd:'remove', id:it.id})));
