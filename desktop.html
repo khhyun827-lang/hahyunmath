@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>김하현 Desktop</title>
+<!-- 김하현 Desktop(Windows 앱) 전용 껍데기 — 홈(index.html)을 «그대로» iframe 으로 띄우고 그 위에 Dock 만 얹는다.
+     🔴 index.html 은 한 글자도 안 건드린다. 이 파일은 앱(desktop-app, 저장소 밖) 안에서만 Dock 이 보이고,
+     일반 브라우저로 열면 홈만 보인다(window.chrome.webview 가 없으니까).
+     실행할 경로는 여기 없다 — 앱이 제 PC 에 적어 두고, 이 페이지는 «id» 만 보낸다. -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<link rel="stylesheet" href="ds.css">
+<style>
+html,body{height:100%;overflow:hidden;font-family:'Pretendard',-apple-system,sans-serif;color:var(--ink);}
+#site{position:fixed;inset:0;width:100%;height:100%;border:0;display:block;background:var(--paper);}
+
+/* ---------- Dock ---------- */
+#dock{--dk:48px;position:fixed;z-index:10;display:flex;align-items:flex-end;
+  gap:calc(var(--dk)*.2);padding:calc(var(--dk)*.17);box-sizing:border-box;
+  height:calc(var(--dk)*1.34);
+  background:rgba(255,255,255,.5);-webkit-backdrop-filter:blur(22px) saturate(1.6);backdrop-filter:blur(22px) saturate(1.6);
+  border:1px solid rgba(255,255,255,.75);border-radius:calc(var(--dk)*.44);
+  box-shadow:0 12px 32px rgba(34,34,30,.14),0 0 0 .5px rgba(34,34,30,.1);
+  transition:transform .32s cubic-bezier(.4,0,.2,1),opacity .32s;}
+#dock[hidden]{display:none;}
+#dock[data-pos=bottom]{left:50%;bottom:10px;transform:translateX(-50%);}
+#dock[data-pos=left],#dock[data-pos=right]{top:50%;flex-direction:column;height:auto;width:calc(var(--dk)*1.34);}
+#dock[data-pos=left]{left:10px;transform:translateY(-50%);align-items:flex-start;}
+#dock[data-pos=right]{right:10px;transform:translateY(-50%);align-items:flex-end;}
+#dock.autohide:not(.show)[data-pos=bottom]{transform:translate(-50%,calc(100% + 16px));}
+#dock.autohide:not(.show)[data-pos=left]{transform:translate(calc(-100% - 16px),-50%);}
+#dock.autohide:not(.show)[data-pos=right]{transform:translate(calc(100% + 16px),-50%);}
+#dk-list{display:contents;}
+.dk-sep{flex:none;align-self:stretch;width:1px;margin:calc(var(--dk)*.08) 0;background:rgba(34,34,30,.14);}
+#dock[data-pos=left] .dk-sep,#dock[data-pos=right] .dk-sep{width:auto;height:1px;margin:0 calc(var(--dk)*.08);}
+
+.dk-item{--z:1;position:relative;flex:none;container-type:size;
+  width:calc(var(--dk)*var(--z));height:calc(var(--dk)*var(--z));
+  padding:0;border:0;background:none;cursor:pointer;border-radius:22%;
+  transition:width var(--t),height var(--t);}
+.dk-item:focus-visible{outline:none;box-shadow:0 0 0 3px var(--point-ring);}
+.dk-item .ic{width:100%;height:100%;display:block;object-fit:contain;box-sizing:border-box;
+  filter:drop-shadow(0 2px 3px rgba(34,34,30,.2));pointer-events:none;}
+.dk-item .ic.tile{background:#fff;border-radius:22%;padding:17%;filter:none;
+  box-shadow:0 2px 5px rgba(34,34,30,.16),inset 0 0 0 .5px rgba(34,34,30,.08);}
+.dk-item .ic.letter{display:grid;place-items:center;border-radius:22%;filter:none;
+  background:linear-gradient(140deg,var(--point-lt),var(--point-d));color:#fff;font-weight:700;font-size:44cqw;
+  box-shadow:0 2px 5px rgba(138,47,76,.3);}
+.dk-item .ic.tile svg{width:100%;height:100%;color:var(--sub);}
+.dk-tip{position:absolute;left:50%;bottom:calc(100% + 12px);transform:translateX(-50%);
+  background:var(--accent);color:#fff;font-size:12px;font-weight:600;line-height:1;padding:6px 10px;
+  border-radius:var(--r-sm);white-space:nowrap;opacity:0;pointer-events:none;transition:opacity var(--t);}
+#dock[data-pos=left] .dk-tip{left:calc(100% + 12px);bottom:auto;top:50%;transform:translateY(-50%);}
+#dock[data-pos=right] .dk-tip{left:auto;right:calc(100% + 12px);bottom:auto;top:50%;transform:translateY(-50%);}
+.dk-item:hover .dk-tip,.dk-item:focus-visible .dk-tip{opacity:1;}
+/* 눌렀을 때 — 두 번 통통 · 자두 점 하나 */
+.dk-item.go{animation:dk-bounce .9s cubic-bezier(.3,0,.3,1);}
+.dk-item.go::after{content:'';position:absolute;left:50%;bottom:calc(var(--dk)*-.13);width:4px;height:4px;margin-left:-2px;
+  border-radius:50%;background:var(--point);}
+@keyframes dk-bounce{0%,50%,100%{translate:0 0}22%{translate:0 -38%}72%{translate:0 -16%}}
+#dock[data-pos=left] .dk-item.go,#dock[data-pos=right] .dk-item.go{animation:none;}
+#edge{position:fixed;z-index:9;display:none;}
+#edge.on{display:block;}
+#edge[data-pos=bottom]{left:0;right:0;bottom:0;height:4px;}
+#edge[data-pos=left]{top:0;bottom:0;left:0;width:4px;}
+#edge[data-pos=right]{top:0;bottom:0;right:0;width:4px;}
+
+/* ---------- 설정 ---------- */
+#set{position:fixed;inset:0;z-index:20;display:grid;place-items:center;background:rgba(34,34,30,.28);}
+#set[hidden]{display:none;}
+.set-card{width:min(560px,92vw);max-height:86vh;overflow:auto;box-sizing:border-box;padding:22px 24px 24px;
+  background:var(--card);border-radius:var(--r-xl);box-shadow:0 24px 60px rgba(34,34,30,.25);font-size:13px;}
+.set-card header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+.set-card h2{margin:0;font-size:17px;font-weight:700;letter-spacing:-.02em;}
+.set-card section{padding:14px 0;border-top:1px solid var(--line2);}
+.set-card .t-sec{margin-bottom:8px;}
+#set-items{list-style:none;margin:0;padding:0;}
+#set-items li{display:flex;align-items:center;gap:10px;padding:6px 4px;border-radius:var(--r-md);}
+#set-items li:hover{background:var(--hover);}
+#set-items .ic{width:28px;height:28px;flex:none;}
+#set-items .ic.tile{padding:4px;}
+#set-items .ic.letter{font-size:13px;}
+#set-items .nm{flex:1;min-width:0;}
+#set-items input{width:100%;box-sizing:border-box;border:1px solid transparent;border-radius:var(--r-sm);
+  background:transparent;font:inherit;font-weight:600;padding:3px 6px;color:var(--ink);}
+#set-items input:hover{border-color:var(--line);}
+#set-items input:focus{outline:none;border-color:var(--point);box-shadow:0 0 0 3px var(--point-ring);background:#fff;}
+#set-items .tg{display:block;padding:0 7px;font-size:11px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.set-card .ic{display:block;object-fit:contain;box-sizing:border-box;}
+.set-card .ic.tile{background:#fff;border-radius:22%;box-shadow:inset 0 0 0 1px var(--line);}
+.set-card .ic.letter{display:grid;place-items:center;border-radius:22%;color:#fff;font-weight:700;
+  background:linear-gradient(140deg,var(--point-lt),var(--point-d));}
+.set-add{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;}
+#url-form{display:flex;gap:6px;margin-top:8px;}
+#url-form[hidden]{display:none;}
+#url-form input{height:30px;box-sizing:border-box;border:1px solid var(--line);border-radius:var(--r-sm);
+  background:var(--sunk);font:inherit;padding:0 9px;min-width:0;}
+#url-form input:focus{outline:none;border-color:var(--point);box-shadow:0 0 0 3px var(--point-ring);}
+#url-form [name=name]{width:110px;} #url-form [name=url]{flex:1;}
+.btn.pt{background:var(--point);border-color:var(--point);color:#fff;font-weight:700;}
+.btn.pt:hover{background:var(--point-d);border-color:var(--point-d);}
+.row{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:6px 0;}
+.row span{display:flex;align-items:center;gap:10px;}
+.row output{width:40px;text-align:right;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--sub);}
+.row input[type=range]{width:180px;}
+.row select{height:30px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--sunk);font:inherit;padding:0 8px;}
+.set-card input[type=range],.set-card input[type=checkbox]{accent-color:var(--point);}
+.set-card input[type=checkbox]{width:16px;height:16px;}
+
+#toast{position:fixed;left:50%;bottom:96px;z-index:30;transform:translateX(-50%);
+  background:var(--accent);color:#fff;font-size:13px;padding:9px 14px;border-radius:var(--r-md);
+  box-shadow:0 8px 24px rgba(34,34,30,.25);opacity:0;pointer-events:none;transition:opacity .2s;}
+#toast.on{opacity:1;}
+</style>
+</head>
+<body>
+<iframe id="site" src="index.html" title="김하현수학연구소"></iframe>
+
+<div id="edge"></div>
+<nav id="dock" hidden aria-label="Dock">
+  <div id="dk-list"></div>
+  <div class="dk-sep"></div>
+  <button class="dk-item" id="dk-gear" aria-label="Dock 설정">
+    <span class="ic tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></span>
+    <span class="dk-tip">Dock 설정</span>
+  </button>
+</nav>
+
+<div id="set" hidden>
+  <div class="set-card" role="dialog" aria-label="Dock 설정">
+    <header><h2>Dock 설정</h2><button class="btn q icon" id="set-x" aria-label="닫기">✕</button></header>
+    <section>
+      <p class="t-sec">항목</p>
+      <ul id="set-items"></ul>
+      <div class="set-add">
+        <button class="btn sm" data-pick="program">+ 프로그램</button>
+        <button class="btn sm" data-pick="folder">+ 폴더</button>
+        <button class="btn sm" data-pick="file">+ 파일</button>
+        <button class="btn sm" id="add-url">+ 웹사이트</button>
+      </div>
+      <form id="url-form" hidden>
+        <input name="name" placeholder="이름" required>
+        <input name="url" placeholder="https://" required>
+        <button class="btn pt sm">추가</button>
+      </form>
+    </section>
+    <section>
+      <p class="t-sec">모양</p>
+      <label class="row">아이콘 크기<span><input type="range" id="s-size" min="32" max="72" step="2"><output id="o-size"></output></span></label>
+      <label class="row">확대 배율<span><input type="range" id="s-mag" min="1" max="2" step="0.1"><output id="o-mag"></output></span></label>
+      <label class="row">위치<select id="s-pos"><option value="bottom">아래</option><option value="left">왼쪽</option><option value="right">오른쪽</option></select></label>
+      <label class="row">자동 숨김<input type="checkbox" id="s-hide"></label>
+    </section>
+    <section>
+      <p class="t-sec">WINDOWS</p>
+      <label class="row">Windows 시작 시 자동 실행<input type="checkbox" id="s-auto"></label>
+    </section>
+  </div>
+</div>
+<div id="toast" role="status"></div>
+
+<script>
+/* 앱(C#)과 주고받는 말 — 이 페이지는 «id» 와 값만 보낸다. 경로는 앱이 제 파일 선택 창으로 받는다.
+   받는 것: {cmd:'config', settings, autostart, items:[{id,name,kind,target,icon}]} · {cmd:'error', text}
+   보내는 것: get · open{id} · pick{kind} · addUrl{name,url} · rename{id,name} · remove{id} · order{ids} · settings{settings} · autostart{on} */
+const $ = s => document.querySelector(s);
+const bridge = window.chrome && window.chrome.webview;
+const dock = $('#dock'), edge = $('#edge'), setBox = $('#set');
+let cfg = null;
+const send = m => bridge.postMessage(m);
+
+if(bridge){
+  bridge.addEventListener('message', e => {
+    const m = e.data;
+    if(m.cmd === 'config'){ cfg = m; renderDock(); if(!setBox.hidden) renderSettings(); }
+    else if(m.cmd === 'error') toast(m.text);
+  });
+  send({cmd:'get'});
+}
+
+/* ---------- 아이콘 — 프로그램·폴더·파일은 앱이 뽑아 준 그림, 웹사이트는 그 사이트의 아이콘, 없으면 글자 ---------- */
+function letter(it){
+  const d = document.createElement('span'); d.className = 'ic letter';
+  d.textContent = (it.name || '?').trim().charAt(0).toUpperCase();
+  return d;
+}
+function iconEl(it){
+  const im = document.createElement('img'); im.className = 'ic'; im.alt = '';
+  if(it.icon){ im.src = it.icon; return im; }
+  if(it.kind !== 'url') return letter(it);
+  let origin; try{ origin = new URL(it.target).origin; }catch(e){ return letter(it); }
+  im.className = 'ic tile';
+  im.onerror = () => { im.onerror = () => im.replaceWith(letter(it)); im.src = origin + '/favicon.ico'; };
+  im.src = origin + '/apple-touch-icon.png';
+  return im;
+}
+
+/* ---------- Dock ---------- */
+function renderDock(){
+  const s = cfg.settings;
+  dock.style.setProperty('--dk', s.size + 'px');
+  dock.dataset.pos = edge.dataset.pos = s.position;
+  dock.classList.toggle('autohide', s.autohide);
+  edge.classList.toggle('on', s.autohide);
+  $('#dk-list').replaceChildren(...cfg.items.map(it => {
+    const b = document.createElement('button');
+    b.className = 'dk-item'; b.setAttribute('aria-label', it.name);
+    const tip = document.createElement('span'); tip.className = 'dk-tip'; tip.textContent = it.name;
+    b.append(iconEl(it), tip);
+    b.onclick = () => { send({cmd:'open', id:it.id}); b.classList.remove('go'); void b.offsetWidth; b.classList.add('go'); };
+    return b;
+  }));
+  dock.hidden = false;
+}
+$('#dk-gear').onclick = openSettings;
+
+/* 확대 — 마우스에서 가까울수록 크게(코사인으로 부드럽게 줄어든다). 크기는 CSS 의 --z 한 값으로만 움직인다. */
+dock.addEventListener('mousemove', e => {
+  const s = cfg.settings, vert = s.position !== 'bottom';
+  const p = vert ? e.clientY : e.clientX, range = s.size * 2.6;
+  for(const el of dock.querySelectorAll('.dk-item')){
+    const r = el.getBoundingClientRect(), c = vert ? r.top + r.height / 2 : r.left + r.width / 2;
+    const d = Math.abs(p - c), k = d < range ? Math.cos(d / range * Math.PI / 2) : 0;
+    el.style.setProperty('--z', (1 + (s.magnify - 1) * k).toFixed(3));
+  }
+});
+dock.addEventListener('mouseleave', () => {
+  dock.querySelectorAll('.dk-item').forEach(el => el.style.setProperty('--z', 1));
+  hideSoon();
+});
+
+/* 자동 숨김 — 가장자리 4px 에 닿으면 나오고, 떠나면 0.5초 뒤 들어간다 */
+let hideT;
+const show = () => { clearTimeout(hideT); dock.classList.add('show'); };
+const hideSoon = () => { clearTimeout(hideT); hideT = setTimeout(() => dock.classList.remove('show'), 500); };
+edge.addEventListener('mouseenter', show);
+dock.addEventListener('mouseenter', show);
+
+let toastT;
+function toast(text){
+  const t = $('#toast'); t.textContent = text; t.classList.add('on');
+  clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('on'), 2600);
+}
+
+/* ---------- 설정 ---------- */
+function openSettings(){ renderSettings(); setBox.hidden = false; }
+function closeSettings(){ setBox.hidden = true; $('#url-form').hidden = true; }
+$('#set-x').onclick = closeSettings;
+setBox.addEventListener('mousedown', e => { if(e.target === setBox) closeSettings(); });
+addEventListener('keydown', e => { if(e.key === 'Escape' && !setBox.hidden) closeSettings(); });
+
+function renderSettings(){
+  const s = cfg.settings;
+  $('#s-size').value = s.size; $('#o-size').value = s.size;
+  $('#s-mag').value = s.magnify; $('#o-mag').value = '×' + s.magnify;
+  $('#s-pos').value = s.position; $('#s-hide').checked = s.autohide;
+  $('#s-auto').checked = cfg.autostart;
+  const ids = cfg.items.map(it => it.id);
+  const move = (i, j) => { const o = ids.slice(); [o[i], o[j]] = [o[j], o[i]]; send({cmd:'order', ids:o}); };
+  $('#set-items').replaceChildren(...cfg.items.map((it, i) => {
+    const li = document.createElement('li');
+    const nm = document.createElement('div'); nm.className = 'nm';
+    const inp = document.createElement('input'); inp.value = it.name; inp.setAttribute('aria-label', '이름');
+    inp.onchange = () => inp.value.trim() && send({cmd:'rename', id:it.id, name:inp.value.trim()});
+    const tg = document.createElement('small'); tg.className = 'tg'; tg.textContent = it.target; tg.title = it.target;
+    nm.append(inp, tg);
+    const btn = (label, aria, fn, off) => {
+      const b = document.createElement('button'); b.className = 'btn q icon sm'; b.textContent = label;
+      b.setAttribute('aria-label', aria); b.disabled = !!off; b.onclick = fn; return b;
+    };
+    li.append(iconEl(it), nm,
+      btn('↑', '앞으로', () => move(i, i - 1), i === 0),
+      btn('↓', '뒤로', () => move(i, i + 1), i === ids.length - 1),
+      btn('✕', '빼기', () => send({cmd:'remove', id:it.id})));
+    return li;
+  }));
+}
+
+/* 모양 — 끌 때는 바로 보여 주고(input), 놓을 때 저장한다(change) */
+function readSettings(){
+  return { size:+$('#s-size').value, magnify:+$('#s-mag').value, position:$('#s-pos').value, autohide:$('#s-hide').checked };
+}
+['#s-size', '#s-mag', '#s-pos', '#s-hide'].forEach(id => {
+  $(id).addEventListener('input', () => {
+    cfg.settings = readSettings();
+    $('#o-size').value = cfg.settings.size; $('#o-mag').value = '×' + cfg.settings.magnify;
+    renderDock();
+  });
+  $(id).addEventListener('change', () => send({cmd:'settings', settings:readSettings()}));
+});
+$('#s-auto').onchange = e => send({cmd:'autostart', on:e.target.checked});
+
+document.querySelectorAll('[data-pick]').forEach(b => b.onclick = () => send({cmd:'pick', kind:b.dataset.pick}));
+$('#add-url').onclick = () => { const f = $('#url-form'); f.hidden = !f.hidden; if(!f.hidden) f.elements['name'].focus(); };
+$('#url-form').onsubmit = e => {
+  e.preventDefault();
+  const f = e.target, el = f.elements; let url = el['url'].value.trim();
+  if(!/^https?:\/\//i.test(url)) url = 'https://' + url;
+  send({cmd:'addUrl', name:el['name'].value.trim(), url});
+  f.reset(); f.hidden = true;
+};
+</script>
+</body>
+</html>
