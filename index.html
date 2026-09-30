@@ -8300,6 +8300,7 @@ function attRateOf(list){
 }
 
 function classRoster(classId){
+  if(isJikboSession(classId)) return jikboRoster(classId);   // 직보는 반이 아니라 «그 날 그 학교»다
   return DATA.students.filter(s=>studentClassIds(s).includes(classId) && !isWithdrawn(s));
 }
 async function doStudentLogin(){
@@ -8961,6 +8962,8 @@ async function deleteClass(cid){
   render();
 }
 function classNameOf(cid){
+  const jb = jikboParse(cid);
+  if(jb) return jb.school + ' 직전보충';
   const c = DATA.classes.find(c=>c.id===cid);
   return c ? c.name : (cid ? '[삭제된 반]' : '미배정');
 }
@@ -18961,7 +18964,7 @@ function teacherDashHTML(){
     ? sessions.map(c=>{
         const { st, detail } = sessionStatusOf(c, today);
         return `<a class="dsh-row" onclick="dashOpenSession('${c.id}')">
-          <span class="dsh-t mono">${escHtml(sessionTimeText(c.schedule, new Date(today + 'T00:00:00').getDay()) || '—')}</span>
+          <span class="dsh-t ${c.jikbo ? '' : 'mono'}">${escHtml((c.jikbo ? c.timeText : sessionTimeText(c.schedule, new Date(today + 'T00:00:00').getDay())) || '—')}</span>
           <span class="dsh-m"><b>${escHtml(c.name)}</b><em>${escHtml(detail)}</em></span>
           <span class="badge ${st[0]}">${st[1]}</span></a>`;
       }).join('')
@@ -20046,9 +20049,51 @@ function sessionsOn(date){
     const m = movedInto(c.id, date);
     return m ? new Date(m.date + 'T00:00:00').getDay() : dow;
   };
+  const 시각 = (c) => c.jikbo ? c.hour : sessionStartHour(c.schedule, 그날요일(c));
   return DATA.classes.filter(c=>parseScheduleDays(c.schedule).includes(dow) || movedInto(c.id, date))
-    .sort((a,b)=> sessionStartHour(a.schedule, 그날요일(a)) - sessionStartHour(b.schedule, 그날요일(b))
-               || (a.name||'').localeCompare(b.name||'', 'ko'));
+    .concat(jikboSessionsOn(date))
+    .sort((a,b)=> 시각(a) - 시각(b) || (a.name||'').localeCompare(b.name||'', 'ko'));
+}
+/* ---------- 직보 → 수업 탭 (2026-09-30 · 사용자 — 「오늘 수업에 ○○고 직전보충이라고 뜨고
+     ○○고 학생들 명단이 출석에 띄워졌으면」) ----------
+   🔵 직보 일정표에 «직보»로 찍힌 칸이 그대로 그 날의 수업이 된다 — **학교 하나 = 수업 하나**.
+     반은 안 가린다(같은 학교면 반이 달라도 한 교실에 온다).
+   🔵 반이 아니라서 id 에 날짜·학교를 싣는다(`jikbo:2026-10-01:광남고` — 학교는 인코딩).
+     출결 줄의 classId 도 이것이다 → `attCountedOf` 가 주 반만 세므로 **출석률·신호에 안 섞인다**(특강과 같은 규칙).
+   ⚠ 명단은 «지금 표»에서 낸다 — 출결을 넣은 뒤 표에서 그 칸을 지우면 그 학생은 명단에서 빠진다(기록은 남는다). */
+const JIKBO_NO_SCHOOL = '학교 미입력';
+function isJikboSession(id){ return String(id || '').startsWith('jikbo:'); }
+function jikboParse(id){
+  const m = String(id || '').match(/^jikbo:(\d{4}-\d{2}-\d{2}):(.*)$/);
+  return m ? { date: m[1], school: decodeURIComponent(m[2]) } : null;
+}
+function jikboCellOn(s, date){
+  const cell = planCellsOfStudent(s.studentId)[date];
+  return cell && cell.k === 'jikbo' ? cell : null;
+}
+function jikboRoster(id){
+  const p = jikboParse(id);
+  if(!p) return [];
+  return DATA.students.filter(s => !isWithdrawn(s) && (s.school || JIKBO_NO_SCHOOL) === p.school && jikboCellOn(s, p.date));
+}
+function jikboSessionsOn(date){
+  const by = {};
+  DATA.students.forEach(s => {
+    if(isWithdrawn(s)) return;
+    const cell = jikboCellOn(s, date);
+    if(!cell) return;
+    const school = s.school || JIKBO_NO_SCHOOL;
+    const g = by[school] || (by[school] = []);
+    const t = String(cell.t || '').trim();
+    if(t && !g.includes(t)) g.push(t);
+  });
+  return Object.keys(by).map(school => {
+    const m = by[school].join(' ').match(/\d+/);
+    let hour = m ? parseInt(m[0], 10) : 99;
+    if(hour < 9) hour += 12;   // ponytail: 「2시」는 오후로 읽는다 — 오전 직보를 「9시」 앞으로 적는 일이 생기면 그때 가른다
+    return { id: 'jikbo:' + date + ':' + encodeURIComponent(school), jikbo: true, hour,
+             name: school + ' 직전보충', timeText: by[school].join(' · '), schedule: '' };
+  });
 }
 /* 저장된 기록 기준 요약. 초안(attDraft)이 아니라 «이미 저장된 것»만 센다 —
    왼쪽 목록은 «이 수업 끝냈나»를 말해야 하므로 아직 저장 안 한 것을 완료로 세면 거짓말이 된다. */
@@ -20077,8 +20122,8 @@ function sessionStatusOf(c, date){
   /* 🔴 **휴강이어도 «숨기지» 않는다** (2026-09-08) — 강사 화면이다.
      이미 출결을 찍어 둔 날을 나중에 휴강으로 넣으면, 숨기는 순간 그 기록에
      닿을 길이 사라진다. 학생 달력에서는 안 보이지만 여기서는 딱지를 달고 남는다. */
-  const 쉼 = offDayFor(c.id, date);
-  const 보강 = movedInto(c.id, date);
+  const 쉼 = !c.jikbo && offDayFor(c.id, date);      // 직보는 휴강·보강을 안 탄다 — 「전체 휴강」이 직보까지 지우면 안 된다
+  const 보강 = !c.jikbo && movedInto(c.id, date);
   const st = 쉼 ? ['gone', 쉼.moveTo ? '날짜 변경' : '휴강']
            : 보강 ? ['consult', '보강']
            : sm.total === 0 ? ['', '학생 없음']
@@ -20463,8 +20508,10 @@ function teacherSessionHTML(){
   const classId = sessionCurrentClassId(date);
   const cls = DATA.classes.find(c=>c.id === classId);
   if(classId){
-    loadSessionNoteIfNeeded(classId);
-    loadClassProgLogIfNeeded(classId);
+    if(!isJikboSession(classId)){           // 직보엔 메모·진도가 없다 — 없는 문서를 읽으러 가지 않는다
+      loadSessionNoteIfNeeded(classId);
+      loadClassProgLogIfNeeded(classId);
+    }
     if(state.allRecordsLoaded) ensureAttDraft(classId, date);
   }
 
@@ -20487,7 +20534,7 @@ function teacherSessionHTML(){
             ${/* 🔴 **«그 날»의 시간이라야 한다** (2026-09-08 · 사용자가 짚었다 —
                  「오늘은 화요일인데 시간이 토요일시간으로 뜨고」). 이 목록은 날짜 하나를
                  보고 있으므로 요일을 안 넘기면 «전부»가 오거나 엉뚱한 것이 온다. */''}
-            <div class="t">${escHtml(sessionTimeText(c.schedule, new Date(date + 'T00:00:00').getDay()) || '시간 미정')}</div>
+            <div class="t" ${c.jikbo ? 'style="font-family:inherit"' : ''}>${escHtml((c.jikbo ? c.timeText : sessionTimeText(c.schedule, new Date(date + 'T00:00:00').getDay())) || '시간 미정')}</div>
             <div class="n">${escHtml(c.name)}</div>
             <div class="m">${escHtml(detail)}</div>
             <span class="st badge ${st[0]}">${st[1]}</span>
@@ -20516,6 +20563,24 @@ function teacherSessionHTML(){
           ${DATA.classes.length === 0 ? '등록된 반이 없습니다.' : '이 날짜에 수업이 있는 반이 없습니다. 날짜를 옮겨 보세요.'}
         </div></div>
       </main></div>`;
+  }
+
+  /* 직보는 출결 하나뿐이다 — 과제·진도·시험·메모는 반의 것이라 여기 없다.
+     ⚠ 단계를 'att' 로 돌려 둔다 — 다른 단계에 머물러 있으면 «넘어갈 때 저장»(sessionAutoSaveAtt)이 안 돈다. */
+  if(isJikboSession(classId)){
+    state.sessionStep = 'att';
+    const jc = sessions.find(c=>c.id === classId);
+    const r = sessionAttHTML(classId, date);
+    return `<div class="cls-screen">${side}
+      <main class="cls-main">
+        <div class="cls-mh">
+          <h1 class="t-title">${escHtml(jc.name)}<s>${escHtml(jc.timeText || '시간 미정')} · 직보 일정표</s></h1>
+          <span class="cls-day">${date} <span class="muted" style="font-weight:400;">${dow}</span></span>
+        </div>
+        <div class="cls-body" style="margin-top:18px;">${r.body}<div class="rst-pad"></div></div>
+      </main>
+      ${r.bar}
+    </div>`;
   }
 
   const step = state.sessionStep || 'att';
@@ -20690,7 +20755,9 @@ function sessionAttHTML(classId, date){
     const 링크칸 = !!d.status && d.status !== '출석';
     return `
     <div class="tile ${flag?'flag':''}">
-      <div class="who"><b>${escHtml(s.name)}</b><span>${escHtml(s.school||'—')} ${escHtml(s.grade||'')}</span></div>
+      <div class="who"><b>${escHtml(s.name)}</b><span>${isJikboSession(classId)   /* 직보는 학교가 다 같다 — 반을 적는다 */
+        ? escHtml(studentClassLabel(s)) + ' ' + escHtml(s.grade||'')
+        : escHtml(s.school||'—') + ' ' + escHtml(s.grade||'')}</span></div>
       <div class="seg">${SESSION_SEG.map(g=>
         `<button class="${d.status===g[0] ? 'on '+g[1] : ''}" title="${g[0]}" onclick="setAttStatus('${s.studentId}','${g[0]}')">${g[2]}</button>`
       ).join('')}</div>
@@ -20715,7 +20782,7 @@ function sessionAttHTML(classId, date){
     ${unsaved > 0
       ? `<span class="hint" style="margin-left:0;color:var(--late);">안 넣은 변경 ${unsaved}명분 — 넘어갈 때 저장됩니다</span>`
       : '<span class="hint" style="margin-left:0;">넘어갈 때 저절로 저장됩니다</span>'}
-    <button class="btn p" onclick="goSessionStep('hwcheck')">과제 검사로 ${iconSvg('arrowR',15)}</button>
+    ${isJikboSession(classId) ? '' : `<button class="btn p" onclick="goSessionStep('hwcheck')">과제 검사로 ${iconSvg('arrowR',15)}</button>`}
   </div>`;
   return { body:`<div class="cls-tiles">${tiles}</div>`, bar };
 }

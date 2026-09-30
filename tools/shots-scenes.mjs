@@ -155,6 +155,16 @@ export const 무대들 = {
       planSetRange(날(1), 날(14));
       state.teacherTab = 'settings'; state.settingsSubTab = 'examrange'; state.examSubTab = 'plan'; render();
     } },
+  수업직보: { 말: '수업 (오늘 직보 — 광남고 2시 · 대원고 5시)',
+    세우기: () => { state.currentUser = { type:'teacher', name:'김하현T' }; state.view = 'teacher';
+      DATA.students.forEach((s, i) => { if(i >= 6) s.classId = 'c2'; });
+      const 오늘 = todayStr();
+      DATA.students.forEach((s, i) => { if(i % 2) planSetCell(s.studentId, 오늘, 'jikbo', '2시'); });
+      ['s0', 's2'].forEach(id => planSetCell(id, 오늘, 'jikbo', '5시'));
+      state.allRecordsLoaded = true;
+      state.teacherTab = 'session'; state.sessionDate = null;
+      state.sessionClassId = 'jikbo:' + 오늘 + ':' + encodeURIComponent('광남고'); render();
+    } },
   직보전체그림: { 말: '설정 › 직보 일정표 › 전체 그림 (구운 PNG)', 폭: '864',
     세우기: async () => { state.currentUser = { type:'teacher', name:'김하현T' }; state.view = 'teacher';
       DATA.students.forEach((s, i) => { if(i >= 6) s.classId = 'c2'; });
