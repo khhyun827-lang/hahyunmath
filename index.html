@@ -884,6 +884,18 @@
   align-items:flex-end;font-size:11.5px;color:var(--dim);text-align:right;}
 /* ---------- 반 > 출결 격자 (2026-08-30 · C-6) ----------
    과제·성적 격자(.hwg)의 뼈대를 그대로 쓴다. 셋이 같은 모양이어야 «반의 한 학기»가 한 눈이 된다. */
+/* 반 › 출결 — 이 달 숫자 카드 넷 (2026-10-02 · P-4) */
+.app .ag-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:4px 0 16px;}
+.app .ag-st{display:flex;align-items:center;gap:12px;padding:12px 16px;border-radius:20px;background:rgba(255,255,255,.92);border:1px solid #ECEEF3;}
+.app .ag-st .r{flex:none;width:44px;height:44px;border-radius:50%;background:#EEF0F4;display:flex;align-items:center;justify-content:center;}
+.app .ag-st .r i{width:17px;height:17px;border-radius:6px;background:#AEB4C2;}
+.app .ag-st b{display:block;font-size:23px;font-weight:800;letter-spacing:-.02em;line-height:1.1;color:#1E2433;}
+.app .ag-st s{display:block;text-decoration:none;font-size:12.5px;font-weight:600;color:#6A7186;}
+.app .ag-st.ok .r{background:#DDF1E4;} .app .ag-st.ok .r i{background:#2F9E5E;} .app .ag-st.ok b{color:#1F7A45;}
+.app .ag-st.late .r{background:#FBF0DA;} .app .ag-st.late .r i{background:#E0A21C;} .app .ag-st.late b{color:#8A5C08;}
+.app .ag-st.no{border:1.5px solid #F2B9BE;background:#fff;} .app .ag-st.no .r{background:#FBE3E5;} .app .ag-st.no .r i{background:#D93A45;} .app .ag-st.no b{color:#D93A45;}
+.app .ag-st.leave .r{background:#EEEAFB;} .app .ag-st.leave .r i{background:#8C74D9;} .app .ag-st.leave b{color:#4B3A99;}
+@media (max-width:560px){ .app .ag-stats{grid-template-columns:repeat(2,minmax(0,1fr));} }
 .app .ag-col{width:60px;cursor:pointer;}
 .app .ag-col.on{background:var(--accent-bg);}
 .app .ag td.on{background:var(--accent-bg);}
@@ -3112,14 +3124,15 @@
 .app .dsh-kpi{text-decoration:none;color:inherit;cursor:pointer;transition:background-color var(--t);}
 .app .dsh-kpi:hover{background:var(--hover);}
 .app .dsh-kpi .v.hot{color:var(--accent);}
+/* 🔵 시안 «D 차분» 홈 (2026-10-02 · P-4) — a 오늘 수업 · b 먼저 볼 학생·시험 · c 달력·메모.
+   두 칸(761~1279 · 사용자 864)은 왼쪽 a 위·b 아래, 오른쪽 c — 메모는 계속 «오른쪽 칸»에 있다. */
 .app .dsh-grid{display:grid;gap:16px;align-items:start;
-  grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-rows:auto auto 1fr;
-  grid-template-areas:"a m" "a b" "c b";}
-.app .dsh-a{grid-area:a;} .app .dsh-b{grid-area:b;} .app .dsh-c{grid-area:c;} .app .dsh-memo{grid-area:m;min-width:0;}
-/* 넓은 화면 — 셋이 나란히. 오른쪽이 비어 남던 자리를 «날짜» 칸이 쓴다 (A-2).
-   메모(m)는 늘 «오른쪽 칸 맨 위» (10-02 사용자 고름) — 넓으면 날짜 칸 위, 두 칸(864)이면 먼저 볼 학생 위. */
-@media (min-width:1280px){ .app .dsh-grid{grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:auto 1fr;
-  grid-template-areas:"a b m" "a b c";} }
+  grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-rows:auto 1fr;
+  grid-template-areas:"a c" "b c";}
+.app .dsh-a{grid-area:a;} .app .dsh-b{grid-area:b;} .app .dsh-c{grid-area:c;} .app .dsh-memo{min-width:0;}
+/* 넓은 화면 — 셋이 나란히. 달력·메모 칸은 좁게 고정 */
+@media (min-width:1280px){ .app .dsh-grid{grid-template-columns:minmax(0,1.2fr) minmax(0,1fr) 320px;grid-template-rows:auto;
+  grid-template-areas:"a b c";} }
 .app .dsh-col{display:flex;flex-direction:column;gap:16px;min-width:0;}
 .app .dsh-card{background:var(--card);border-radius:var(--r-xl);box-shadow:var(--shadow-card);padding:4px 6px 6px;}
 .app .dsh-h{display:flex;align-items:center;gap:7px;padding:11px 10px 7px;}
@@ -3177,7 +3190,75 @@
 .app .memo-note:focus{border-color:var(--accent-line);}
 /* ⚠ 사용자 주력 판은 125% 확대(CSS 864)다 — 거기서도 두 칸이라야 «먼저 볼 학생»이 첫 화면에 든다. */
 @media (max-width:760px){ .app .dsh-grid{grid-template-columns:minmax(0,1fr);grid-template-rows:auto;
-  grid-template-areas:"a" "b" "c" "m";} }
+  grid-template-areas:"a" "b" "c";} }
+/* ── 시안 «D 차분» 홈 부품 (2026-10-02 · P-4) — 색은 신호에만 ── */
+.app .hm{--hm-ok:#2F9E5E;--hm-okbg:#E6F4EB;--hm-oktx:#1F6B3F;--hm-late:#E0A21C;--hm-latebg:#FBF0DA;--hm-latetx:#7A5207;
+  --hm-no:#D93A45;--hm-nobg:#FBE6E8;--hm-notx:#A3222D;--hm-leave:#8C74D9;--hm-leavebg:#EEEAFB;--hm-ink:#1E2433;}
+.app .hm-head{margin-bottom:14px;}
+.app .hm-date{font-size:13.5px;font-weight:600;color:var(--sub);}
+.app .hm-hi{margin:2px 0 0;font-size:30px;letter-spacing:-.03em;}
+.app .hm-kpis{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;margin-bottom:16px;}
+.app .hm-kpi{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:20px;cursor:pointer;text-decoration:none;color:var(--hm-ink);
+  background:rgba(255,255,255,.92);border:1px solid #ECEEF3;transition:box-shadow var(--t);}
+.app .hm-kpi:hover{box-shadow:0 4px 14px rgba(30,36,51,.07);}
+.app .hm-ring{flex:none;width:44px;height:44px;border-radius:50%;background:#EEF0F4;display:flex;align-items:center;justify-content:center;}
+.app .hm-ring i{width:17px;height:17px;border-radius:6px;background:#AEB4C2;}
+.app .hm-kpi b{display:block;font-size:23px;font-weight:800;letter-spacing:-.02em;line-height:1.1;}
+.app .hm-kpi s{display:block;text-decoration:none;font-size:12.5px;font-weight:600;color:#6A7186;white-space:nowrap;}
+.app .hm-kpi.ok .hm-ring{background:var(--hm-okbg);} .app .hm-kpi.ok .hm-ring i{background:var(--hm-ok);} .app .hm-kpi.ok b{color:var(--hm-oktx);}
+.app .hm-kpi.no{background:#fff;border:1.5px solid #F2B9BE;} .app .hm-kpi.no .hm-ring{background:var(--hm-nobg);}
+.app .hm-kpi.no .hm-ring i{background:var(--hm-no);} .app .hm-kpi.no b{color:var(--hm-no);}
+.app .hm-kpi.todo .hm-ring{background:#E3E6EE;} .app .hm-kpi.todo .hm-ring i{background:var(--hm-ink);}
+.app .hm-card{border-radius:22px;background:rgba(255,255,255,.92);border:1px solid #ECEEF3;box-shadow:none;padding:6px 8px 10px;}
+.app .hm-n{font-size:11px;font-weight:800;min-width:20px;padding:1px 7px;border-radius:999px;background:var(--hm-ink);color:#fff;text-align:center;line-height:1.6;}
+.app .hm-chips{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;}
+.app .hm-chips:empty{display:none;}
+.app .hm-chips.r{margin-top:0;justify-content:flex-end;}
+.app .hm-chip{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:700;padding:2px 8px 2px 6px;border-radius:999px;
+  background:#EEF0F4;color:#3A4156;white-space:nowrap;}
+.app .hm-chip i{width:7px;height:7px;border-radius:50%;background:#AEB4C2;}
+.app .hm-chip.ok{background:var(--hm-okbg);color:var(--hm-oktx);} .app .hm-chip.ok i{background:var(--hm-ok);}
+.app .hm-chip.late{background:var(--hm-latebg);color:var(--hm-latetx);} .app .hm-chip.late i{background:var(--hm-late);}
+.app .hm-chip.no{background:var(--hm-nobg);color:var(--hm-notx);} .app .hm-chip.no i{background:var(--hm-no);}
+.app .hm-chip.leave{background:var(--hm-leavebg);color:#4B3A99;} .app .hm-chip.leave i{background:var(--hm-leave);}
+/* 오늘 수업 줄 — 시각 · 막대 · 이름/설명/칩 · 상태 */
+.app .hm-sess{display:flex;align-items:center;gap:12px;padding:11px 12px;margin:0 2px 6px;border-radius:16px;background:#F6F7FA;
+  text-decoration:none;color:var(--hm-ink);cursor:pointer;}
+.app .hm-sess:hover{background:#EEF1F6;}
+.app .hm-sess.now{background:#fff;box-shadow:inset 0 0 0 1.5px var(--hm-ink);}
+.app .hm-st{flex:none;width:48px;font-size:15px;font-weight:800;}
+.app .hm-bar{flex:none;width:4px;align-self:stretch;border-radius:2px;background:#C9CED9;}
+.app .hm-sess.now .hm-bar{background:var(--hm-ink);}
+.app .hm-sm{flex:1;min-width:0;display:flex;flex-direction:column;}
+.app .hm-sm b{font-size:15px;font-weight:800;}
+.app .hm-sm em{font-style:normal;font-size:12.5px;color:#6A7186;margin-top:1px;}
+.app .hm-go{display:flex;align-items:center;justify-content:center;gap:8px;height:44px;margin:8px 2px 2px;border-radius:14px;
+  background:var(--hm-ink);color:#fff;font-weight:700;font-size:14px;text-decoration:none;cursor:pointer;}
+/* 먼저 볼 학생 — 학교 두 글자 · 이름 · 등급 · 이유 칩 */
+.app .hm-stu{display:flex;align-items:center;gap:10px;padding:9px 8px;border-bottom:1px solid #F1F2F6;text-decoration:none;color:var(--hm-ink);cursor:pointer;}
+.app .hm-stu:last-child{border-bottom:0;}
+.app .hm-stu:hover{background:#F6F7FA;border-radius:12px;}
+.app .hm-sc{flex:none;width:34px;height:34px;border-radius:50%;background:#EEF0F4;color:#3A4156;display:flex;align-items:center;justify-content:center;
+  font-size:11.5px;font-weight:800;letter-spacing:-.04em;}
+.app .hm-sn{flex:none;width:76px;min-width:0;}
+.app .hm-sn b{display:block;font-size:14.5px;font-weight:800;}
+.app .hm-sn s{display:block;text-decoration:none;font-size:11.5px;color:#6A7186;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.app .hm-tag{flex:none;font-size:12px;font-weight:800;padding:3px 10px;border-radius:999px;}
+.app .hm-tag.no{background:var(--hm-no);color:#fff;} .app .hm-tag.late{background:var(--hm-latebg);color:var(--hm-latetx);}
+.app .hm-stu .hm-chips{flex:1;min-width:0;}
+/* 다가오는 시험 — D-day 상자 · 학교 · 수학 시험일 */
+.app .hm-exam{display:flex;align-items:center;gap:12px;padding:8px 8px;text-decoration:none;color:var(--hm-ink);cursor:pointer;border-radius:12px;}
+.app .hm-exam:hover{background:#F6F7FA;}
+.app .hm-dd{min-width:56px;height:34px;display:flex;align-items:center;justify-content:center;border-radius:11px;font-size:13.5px;font-weight:800;}
+.app .hm-dd.near{background:var(--hm-no);color:#fff;} .app .hm-dd.soon{background:var(--hm-latebg);color:var(--hm-latetx);}
+.app .hm-dd.on{background:var(--hm-ink);color:#fff;}
+.app .hm-math{flex:none;text-align:right;}
+.app .hm-math s{display:block;text-decoration:none;font-size:11px;color:#8A90A3;}
+.app .hm-math b{font-size:14px;font-weight:800;}
+/* 달력·메모 칸 — 같은 흰 카드 */
+.app .hm .dsh-c .dsh-card{border-radius:22px;background:rgba(255,255,255,.92);border:1px solid #ECEEF3;box-shadow:none;}
+@media (max-width:1279px){ .app .hm-kpis{grid-template-columns:repeat(3,minmax(0,1fr));} }
+@media (max-width:560px){ .app .hm-kpis{grid-template-columns:repeat(2,minmax(0,1fr));} .app .hm-hi{font-size:22px;} }
 
 /* ── 폰(≤560) — 상단 메뉴가 «하단 탭바»로 내려간다 (A-1) ──
    학생 앱과 같은 자리·같은 어법이다. 여섯 칸이라 가운데 떠 있는 원은 안 쓴다(학생 앱은 다섯이라 된다).
@@ -3494,7 +3575,52 @@
    ============================================================ */
 @media (min-width:1200px){
   .app:not(.sap):has(.tnav){--chrome:104px;--chrome-sub:104px;
-    background:linear-gradient(120deg,#E8EEF6 0%,#ECEAF6 45%,#F6F0E6 92%) fixed;}
+    background:linear-gradient(120deg,#E8EEF6 0%,#ECEAF6 45%,#F6F0E6 92%) fixed;
+    /* 🔵 «색은 신호에만» (2026-10-02 · P-4 · 사용자가 고른 시안) — 단추·켜진 알약·진행바의 자두를 남색으로.
+       상태색(--ok·--late·--leave·--no)은 안 건드린다. 학생 앱 미리보기는 아래에서 자두로 되돌린다. */
+    --point:#1E2433;--point-lt:#2E3650;--point-d:#141824;--point-bg:#E9EDF5;--point-line:#D2DCEC;--point-ring:rgba(30,36,51,.14);
+    --accent:#1E2433;--accent-d:#141824;--accent-bg:#E3EAF5;--accent-line:#D2DCEC;}
+  .app:not(.sap):has(.tnav) .app.sap{--point:#A83E5E;--point-lt:#BC4A6E;--point-d:#8A2F4C;--point-bg:#FAEEF2;--point-line:#EFD3DD;
+    --point-ring:rgba(168,62,94,.16);}
+  .app:not(.sap):has(.tnav) .btn.p{box-shadow:0 6px 14px -10px rgba(30,36,51,.7);}
+  /* 오른쪽 위 — 동그란 벨 · 동그란 «김»(누르면 로그아웃) */
+  .app:not(.sap) .topbar:has(.tnav) .who, .app:not(.sap) .topbar:has(.tnav) .tb-out{display:none;}
+  .app:not(.sap) .topbar:has(.tnav) .tb-acct{display:block;position:relative;}
+  .app:not(.sap) .topbar:has(.tnav) .ds-bell > button{width:44px;height:44px;border-radius:50%;border:1px solid #E3E6EE;background:#fff;
+    display:flex;align-items:center;justify-content:center;}
+  .app:not(.sap) .topbar:has(.tnav) .tb-av{width:44px;height:44px;border-radius:50%;border:0;background:#1E2433;color:#fff;
+    font:800 15px/1 'Pretendard',sans-serif;cursor:pointer;}
+  .app:not(.sap) .topbar:has(.tnav) .tb-menu{position:absolute;right:0;top:52px;z-index:40;min-width:170px;padding:12px;border-radius:16px;
+    background:#fff;border:1px solid #ECEEF3;box-shadow:0 12px 32px rgba(30,36,51,.14);display:flex;flex-direction:column;gap:2px;}
+  .app:not(.sap) .topbar:has(.tnav) .tb-menu b{font-size:14px;color:#1E2433;}
+  .app:not(.sap) .topbar:has(.tnav) .tb-menu s{text-decoration:none;font-size:12px;color:#6A7186;margin-bottom:8px;}
+  /* 수업 — 왼쪽 «날짜 + 그날 수업» 칸(.cls-side)이 곧 사이드다 (시안 «D 차분 · 수업») */
+  .app:not(.sap):has(.tnav) .cls-screen > .cls-side{position:fixed;top:80px;left:16px;bottom:16px;width:236px;z-index:4;margin:0;
+    padding:12px;box-sizing:border-box;background:rgba(255,255,255,.92);border:1px solid #ECEEF3;border-radius:24px;overflow-y:auto;}
+  .app:not(.sap):has(.tnav):has(.cls-screen > .cls-side) .body{padding-left:272px;}
+  .app:not(.sap):has(.tnav) .cls-screen > .cls-main{padding-left:0;}
+  .app:not(.sap):has(.tnav) .cls-tiles{grid-template-columns:repeat(auto-fill,minmax(340px,1fr));}
+  .app:not(.sap):has(.tnav):has(.cls-screen > .cls-side) .actbar{
+    left:272px;right:16px;bottom:16px;border:1px solid #ECEEF3;border-radius:18px;box-shadow:0 8px 24px rgba(30,36,51,.08);}
+  .app:not(.sap):has(.tnav) .cls-side > .cls-nav{border-bottom:0;padding:2px 2px 6px;}
+  .app:not(.sap):has(.tnav) .cls-side .cls-sess{border:0;background:#F6F7FA;border-radius:16px;margin-bottom:6px;}
+  .app:not(.sap):has(.tnav) .cls-side .cls-sess:hover{background:#EEF1F6;}
+  .app:not(.sap):has(.tnav) .cls-side .cls-sess.on{background:#E3EAF5;box-shadow:inset 0 0 0 1px #D2DCEC;}
+  /* 출·지·조·결 — 고른 칸은 신호색으로 «꽉» 칠한다 (시안) */
+  .app:not(.sap):has(.tnav) .seg button.on.ok{background:#2F9E5E;border-color:#2F9E5E;color:#fff;}
+  .app:not(.sap):has(.tnav) .seg button.on.late{background:#E0A21C;border-color:#E0A21C;color:#fff;}
+  .app:not(.sap):has(.tnav) .seg button.on.leave{background:#8C74D9;border-color:#8C74D9;color:#fff;}
+  .app:not(.sap):has(.tnav) .seg button.on.no{background:#D93A45;border-color:#D93A45;color:#fff;}
+  /* 화면 안의 흰 판들 — 시안의 둥근 흰 카드 */
+  .app:not(.sap):has(.tnav) .body .card, .app:not(.sap):has(.tnav) .body .panel{border-radius:20px;border-color:#ECEEF3;}
+  /* 반 › 출결 격자 — 칸을 «꽉 찬 작은 네모»로 (시안 22px). 출석은 한 단계 옅게 — 지각·결석이 먼저 걸린다 */
+  .app:not(.sap):has(.tnav) .ag-m{width:24px;height:24px;border-radius:7px;border:0;font-size:11px;font-weight:800;}
+  .app:not(.sap):has(.tnav) .ag-m.ok{background:#BFE5CD;color:#1F6B3F;}
+  .app:not(.sap):has(.tnav) .ag-m.late{background:#E0A21C;color:#fff;}
+  .app:not(.sap):has(.tnav) .ag-m.leave{background:#8C74D9;color:#fff;}
+  .app:not(.sap):has(.tnav) .ag-m.no{background:#D93A45;color:#fff;}
+  .app:not(.sap):has(.tnav) .ag-m.none{background:transparent;box-shadow:inset 0 0 0 1.5px #E3E6EE;color:transparent;}
+  .app:not(.sap):has(.tnav) .hwg-wrap{background:#fff;border-radius:20px;border:1px solid #ECEEF3;}
   .app:not(.sap) .topbar:has(.tnav){height:64px;padding:0 24px;background:rgba(255,255,255,.84);
     -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border-bottom:1px solid rgba(30,36,51,.06);}
   .app:not(.sap) .topbar .tnav{margin:0 auto;gap:4px;}
@@ -3612,6 +3738,7 @@
 /* 「AI 일치 모두 통과」 옆 — 그림이 있어 빠진 수 (줄 모드에서도 보인다) */
 .app .rv-figskip{display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--sub);}
 .app .rv-strip{display:none;}
+.app .tb-acct{display:none;}   /* 동그란 «김» — 넓은 화면에서만 (위 P-4) */
 /* 화면 머리 — 「누구의 화면인가」. serif는 학생 이름에만 쓴다 (시스템 규칙) */
 /* 🔴 **세리프를 벗긴다** (2026-09-14 · 사용자 — 「폰트가 어울리지 않는 것 같다」).
    'Noto Serif KR' 은 **관리자 시안의 표제 서체**다. 학생 앱은 나머지가 전부 산세리프라
@@ -19206,7 +19333,13 @@ function teacherHTML(){
       <div class="right">
         ${bellHTML(teacherNotifItems())}
         <span class="who">김하현T</span>
-        <button class="btn sm" onclick="logout()">로그아웃</button>
+        <button class="btn sm tb-out" onclick="logout()">로그아웃</button>
+        ${/* 넓은 화면(프로그램)에서는 이름·로그아웃 대신 동그란 «김» — 누르면 로그아웃이 펼쳐진다 (시안 «D 차분») */''}
+        <div class="tb-acct">
+          <button class="tb-av" onclick="state.acctOpen=!state.acctOpen; render()" title="김하현T" aria-expanded="${!!state.acctOpen}">김</button>
+          ${state.acctOpen ? `<div class="tb-menu"><b>김하현T</b><s>관리자</s>
+            <button class="btn sm" onclick="state.acctOpen=false; logout()">로그아웃</button></div>` : ''}
+        </div>
       </div>
     </div>
     ${subs ? `<div class="subnav">${사이드.top}${머리[0] ? 머리표(머리[0], true) : ''}${subs.map(s=> {
@@ -19425,122 +19558,135 @@ function teacherMemoHTML(){
 }
 
 function teacherDashHTML(){
+  /* 🔵 **시안 «D 차분» 홈** (2026-10-02 · P-4 — 캔버스 CbB9qkPr… 셋째 줄 「D 차분 · 홈」).
+     인사말 · 숫자 카드 여섯(색은 신호에만) · 오늘 수업(출결 칩) · 먼저 볼 학생(이유 칩) · 다가오는 시험(D-day 상자) · 달력 · 메모.
+     🔵 **여기는 «모으기»만 한다 — 새 셈을 거의 만들지 않는다.** 수업 `sessionsOn`·`sessionStatusOf` · 처리할 일 `teacherNotifItems`(벨과 «같은 목록») ·
+       신호 `signalsModel` · 시험 `examDdayOf` · 출석률 `attRateOf` · 과제 `hwIsDone`.
+     ⚠ 색 규칙 — 초록 좋음(출석·제출) · 노랑 애매(지각·주의·14일 안) · 빨강 문제(결석·미제출·위험·7일 안) · 남색 선생님이 할 일. 나머지는 무채색. */
   loadAllRecordsIfNeeded();
   loadSignalMutesIfNeeded();
   const today = todayStr();
-  const dow = WEEKDAY_LABEL[new Date(today + 'T00:00:00').getDay()];
-  const enrolled = DATA.students.filter(s=>!isWithdrawn(s)).length;
+  const 지금시 = new Date().getHours();
+  const 인사 = 지금시 < 12 ? '좋은 아침입니다' : 지금시 < 18 ? '좋은 오후입니다' : '좋은 저녁입니다';
+  const dowN = new Date(today + 'T00:00:00').getDay();
   const loading = state.allRecordsLoading && !state.allRecordsLoaded;
-  const sec = (title, n, body, more) => `<section class="dsh-card">
-      <div class="dsh-h"><b>${title}</b>${n !== '' && n != null ? `<span class="dsh-n mono">${n}</span>` : ''}
+  const sec = (title, n, body, more, cls) => `<section class="dsh-card hm-card ${cls || ''}">
+      <div class="dsh-h"><b>${title}</b>${n !== '' && n != null ? `<span class="hm-n mono">${n}</span>` : ''}
         ${more ? `<a class="dsh-more" onclick="${more[1]}">${more[0]} ${iconSvg('chevR',13)}</a>` : ''}</div>
       ${body}</section>`;
   const empty = t => `<div class="dsh-empty">${t}</div>`;
+  const 칩 = (t, k) => `<span class="hm-chip ${k}"><i></i>${t}</span>`;   /* k = ok · late · no · todo · '' */
 
-  /* ── 오늘 수업 ── */
+  /* ── 숫자 카드 여섯 ── */
+  const 재원 = DATA.students.filter(s => !isWithdrawn(s));
+  const 이번달 = today.slice(0, 7);
+  const 퇴원 = DATA.students.filter(s => String(s.withdrawnAt || '').startsWith(이번달)).length;
+  const 월요일 = shiftYmd(today, -((dowN + 6) % 7));
+  const 주출결 = 재원.flatMap(s => attCountedOf(state.allRecords[s.studentId], s).filter(a => a.date >= 월요일 && a.date <= today));
+  const 주출석률 = attRateOf(주출결);
+  /* 과제 미제출 — 지난 7일 안에 마감이 지났는데 안 낸 «학생 × 과제» 수 */
+  const 지난주 = shiftYmd(today, -7);
+  let 미제출 = 0;
+  DATA.assignments.filter(a => a.dueDate && a.dueDate < today && a.dueDate >= 지난주).forEach(a => {
+    const roster = a.classId ? classRoster(a.classId) : 재원;
+    미제출 += roster.filter(s => !hwIsDone(state.allRecords[s.studentId] || {}, a.id)).length;
+  });
+  const todo = teacherNotifItems().filter(it => dashNotifN(it) > 0);
+  const todoN = todo.reduce((s, it) => s + dashNotifN(it), 0);
+  const live = signalsModel().rows.filter(r => !r.mutedUntil)
+    .sort((a, b) => 'ryg'.indexOf(a.sg.grade) - 'ryg'.indexOf(b.sg.grade) || b.sg.score - a.sg.score);
+  const red = live.filter(r => r.sg.grade === 'r').length;
+  const kc = (v, label, kind, code, title) => `<a class="hm-kpi ${kind || ''}" onclick="${code}" title="${title || ''}">
+      <span class="hm-ring"><i></i></span>
+      <span><b>${v}</b><s>${label}</s></span></a>`;
+  const 출석톤 = 주출석률 == null ? '' : 주출석률 < 90 ? 'no' : 'ok';
+  const kpis = `<div class="hm-kpis">
+    ${kc(재원.length, '재원생', '', "goTeacherTab('classhub','students')")}
+    ${kc(퇴원, '이번 달 퇴원', '', "goTeacherTab('classhub','students')")}
+    ${kc(loading ? '…' : 주출석률 == null ? '—' : 주출석률 + '%', '이번 주 출석', 출석톤, "goTeacherTab('classhub','sessions')", '이번 주 월요일부터 오늘까지')}
+    ${kc(loading ? '…' : 미제출, '과제 미제출', 미제출 ? 'no' : '', "goTeacherTab('classhub','homework')", '지난 7일 안에 마감이 지난 과제 중 안 낸 것')}
+    ${kc(loading ? '…' : red, '위험 학생', red ? 'no' : '', "goTeacherTab('signals')")}
+    ${kc(todoN, '처리할 일', todoN ? 'todo' : '', "state.notifOpen=true; render()")}
+  </div>`;
+
+  /* ── 오늘 수업 — 줄마다 출결 칩 ── */
   const sessions = sessionsOn(today);
   let next = null;
   if(!sessions.length) for(let k = 1; k <= 14 && !next; k++){
     const d = shiftYmd(today, k), ss = sessionsOn(d);
     if(ss.length) next = { d, ss };
   }
-  const sessDone = sessions.filter(c=>sessionStatusOf(c, today).st[1] === '완료').length;
+  const 출결칩 = c => {
+    const n = { 출석:0, 지각:0, 조퇴:0, 결석:0 };
+    classRoster(c.id).forEach(s => {
+      const a = attOn(state.allRecords[s.studentId], today, c.id, studentMainClassId(s));
+      if(a && n[a.status] != null) n[a.status]++;
+    });
+    return [n.출석 ? 칩('출석 ' + n.출석, 'ok') : '', n.지각 ? 칩('지각 ' + n.지각, 'late') : '',
+            n.조퇴 ? 칩('조퇴 ' + n.조퇴, 'leave') : '', n.결석 ? 칩('결석 ' + n.결석, 'no') : ''].join('');
+  };
+  let 넣을곳 = null;
   const sessBody = sessions.length
-    ? sessions.map(c=>{
+    ? sessions.map(c => {
         const { st, detail } = sessionStatusOf(c, today);
-        return `<a class="dsh-row" onclick="dashOpenSession('${c.id}')">
-          <span class="dsh-t ${c.jikbo ? '' : 'mono'}">${escHtml((c.jikbo ? c.timeText : sessionTimeText(c.schedule, new Date(today + 'T00:00:00').getDay())) || '—')}</span>
-          <span class="dsh-m"><b>${escHtml(c.name)}</b><em>${escHtml(detail)}</em></span>
+        const 할일 = st[1] !== '완료' && st[1] !== '휴강';
+        if(할일 && !넣을곳) 넣을곳 = c;
+        const 시각 = (c.jikbo ? c.timeText : sessionTimeText(c.schedule, dowN)) || '—';
+        return `<a class="hm-sess ${할일 && 넣을곳 === c ? 'now' : ''}" onclick="dashOpenSession('${c.id}')">
+          <span class="hm-st mono">${escHtml(String(시각).split(/[~–-]/)[0])}</span>
+          <span class="hm-bar ${st[0]}"></span>
+          <span class="hm-sm"><b>${escHtml(c.name)}</b><em>${escHtml(detail)}</em><span class="hm-chips">${출결칩(c)}</span></span>
           <span class="badge ${st[0]}">${st[1]}</span></a>`;
       }).join('')
+    + (넣을곳 ? `<a class="hm-go" onclick="dashOpenSession('${넣을곳.id}')">${escHtml(넣을곳.name)} 출결 넣기 ${iconSvg('arrowR', 15)}</a>` : '')
     : empty(next ? `오늘은 수업이 없습니다 · 다음 수업 <b>${escHtml(stuDayLabel(next.d))}</b> ${
-        next.ss.map(c=>escHtml(c.name)).join(', ')}` : '오늘은 수업이 없습니다.');
+        next.ss.map(c => escHtml(c.name)).join(', ')}` : '오늘은 수업이 없습니다.');
 
-  /* ── 처리할 일 (벨과 같은 목록) ── */
-  const todo = teacherNotifItems().filter(it=>dashNotifN(it) > 0);
-  const todoN = todo.reduce((s,it)=>s + dashNotifN(it), 0);
-  const TODO_ICON = { hwsub:'checkCircle', report:'alert', review:'clipboard', consult:'phone',
-                      qna:'messageSquare', clinic:'clinic', chat:'chat' };
-  const todoBody = todo.length
-    ? todo.map(it=>`<a class="dsh-row" onclick="${it.gotoCode} ${
-        it.keepUnseen ? '' : `markSeen('${it.key}', ${it.count});`} state.notifOpen=false; render()">
-        <span class="dsh-ic">${iconSvg(TODO_ICON[it.key] || 'bell', 16)}</span>
-        <span class="dsh-m"><b>${escHtml(it.label)}</b></span>
-        <span class="dsh-cnt mono">${dashNotifN(it)}</span></a>`).join('')
-    : empty('밀린 일이 없습니다.');
-
-  /* ── 신호 — 먼저 볼 학생 ── */
-  const live = signalsModel().rows.filter(r=>!r.mutedUntil)
-    .sort((a,b)=> 'ryg'.indexOf(a.sg.grade) - 'ryg'.indexOf(b.sg.grade) || b.sg.score - a.sg.score);
-  const red = live.filter(r=>r.sg.grade==='r').length, yel = live.filter(r=>r.sg.grade==='y').length;
+  /* ── 먼저 볼 학생 — 이유를 칩으로 ── */
   const sigBody = loading ? empty('기록 불러오는 중…')
     : live.length === 0 ? empty('지금 신호가 잡힌 학생이 없습니다.')
-    : live.slice(0, 8).map(r=>`<a class="dsh-row" onclick="dashOpenStudent('${r.s.studentId}')">
-        <span class="rk ${r.sg.grade}"></span>
-        <span class="dsh-m"><b>${escHtml(r.s.name||'')}</b><em>${escHtml(classNameOf(r.s.classId)||'')} · ${
-          r.sg.rules.map(x=>x.name).join(' · ')}</em></span>
-        <span class="badge ${SIGNAL_GRADE[r.sg.grade].badge}">${SIGNAL_GRADE[r.sg.grade].label}</span></a>`).join('');
+    : live.slice(0, 6).map(r => `<a class="hm-stu" onclick="dashOpenStudent('${r.s.studentId}')">
+        <span class="hm-sc" title="${escHtml(r.s.school || '')}">${escHtml(schoolShort(r.s.school))}</span>
+        <span class="hm-sn"><b>${escHtml(r.s.name || '')}</b><s>${escHtml(classNameOf(r.s.classId) || '')}</s></span>
+        <span class="hm-tag ${r.sg.grade === 'r' ? 'no' : 'late'}">${SIGNAL_GRADE[r.sg.grade].label}</span>
+        <span class="hm-chips r">${r.sg.rules.map(x => 칩(x.name, r.sg.grade === 'r' ? 'no' : 'late')).join('')}</span></a>`).join('');
 
-  /* ── 이번 주 마감 과제 ── */
-  const weekEnd = shiftYmd(today, 7);
-  const due = DATA.assignments.filter(a=>a.dueDate && a.dueDate >= today && a.dueDate <= weekEnd)
-    .sort((a,b)=>a.dueDate.localeCompare(b.dueDate));
-  const dueBody = due.length ? due.slice(0, 6).map(a=>{
-      const roster = a.classId ? classRoster(a.classId) : DATA.students.filter(s=>!isWithdrawn(s));
-      const done = roster.filter(s=>hwIsDone(state.allRecords[s.studentId] || {}, a.id)).length;
-      const pct = roster.length ? Math.round(done / roster.length * 100) : 0;
-      return `<a class="dsh-row" onclick="dashOpenHomework('${a.classId||''}')">
-        <span class="dsh-t mono">${escHtml(a.dueDate.slice(5).replace('-','/'))}</span>
-        <span class="dsh-m"><b>${escHtml(a.title||'')}</b><em>${escHtml(a.classId ? classNameOf(a.classId) : '전체 반')}</em>
-          <span class="bar"><i style="width:${pct}%"></i></span></span>
-        <span class="dsh-cnt mono">${loading ? '…' : done + '/' + roster.length}</span></a>`;
-    }).join('') : empty('7일 안에 마감되는 과제가 없습니다.');
-
-  /* ── 다가오는 시험 (학교·학년마다 한 줄) ── */
+  /* ── 다가오는 시험 (학교·학년마다 한 줄) — D-day 상자: 7일 안 빨강 · 14일 안 노랑 ── */
   const seen = new Set(), exams = [];
-  DATA.students.forEach(s=>{
+  DATA.students.forEach(s => {
     if(isWithdrawn(s)) return;
-    const k = (s.school||'') + '|' + (s.grade||'');
+    const k = (s.school || '') + '|' + (s.grade || '');
     if(seen.has(k)) return; seen.add(k);
-    const dd = examDdayOf(s.school||'', s.grade||'');
-    if(dd && dd.state !== 'after') exams.push({ school: s.school||'', grade: s.grade||'', dd });
+    const dd = examDdayOf(s.school || '', s.grade || '');
+    if(dd && dd.state !== 'after') exams.push({ school: s.school || '', grade: s.grade || '', dd });
   });
-  exams.sort((a,b)=>a.dd.days - b.dd.days || (a.dd.target||'').localeCompare(b.dd.target||''));
-  const examBody = exams.length ? exams.slice(0, 6).map(e=>`<a class="dsh-row" onclick="state.settingsSubTab='examrange'; state.examSubTab='range'; goTeacherTab('settings')">
-      <span class="dsh-dd mono ${e.dd.state === 'during' ? 'on' : e.dd.days <= 7 ? 'near' : e.dd.days <= 14 ? 'soon' : ''}">${e.dd.state === 'during' ? '시험 중' : 'D-' + e.dd.days}</span>
-      <span class="dsh-m"><b>${escHtml(e.school || '학교 미정')} ${escHtml(gradeLabel(e.grade) || '')}</b><em>${
-        escHtml([e.dd.start && e.dd.end ? e.dd.start.slice(5) + ' ~ ' + e.dd.end.slice(5) : '', e.dd.math ? '수학 ' + e.dd.math.slice(5) : ''].filter(Boolean).join(' · '))}</em></span></a>`).join('')
+  exams.sort((a, b) => a.dd.days - b.dd.days || (a.dd.target || '').localeCompare(b.dd.target || ''));
+  const examBody = exams.length ? exams.slice(0, 5).map(e => `<a class="hm-exam" onclick="state.settingsSubTab='examrange'; state.examSubTab='range'; goTeacherTab('settings')">
+      <span class="dsh-dd hm-dd mono ${e.dd.state === 'during' ? 'on' : e.dd.days <= 7 ? 'near' : e.dd.days <= 14 ? 'soon' : ''}">${e.dd.state === 'during' ? '시험 중' : 'D-' + e.dd.days}</span>
+      <span class="hm-sm"><b>${escHtml(e.school || '학교 미정')} ${escHtml(gradeLabel(e.grade) || '')}</b><em>${
+        escHtml([e.dd.start && e.dd.end ? e.dd.start.slice(5) + ' ~ ' + e.dd.end.slice(5) : ''].filter(Boolean).join(''))}</em></span>
+      ${e.dd.math ? `<span class="hm-math"><s>수학</s><b class="mono">${escHtml(e.dd.math.slice(5).replace('-', '. '))}</b></span>` : ''}</a>`).join('')
     : empty('잡힌 시험 일정이 없습니다. 설정 › 시험 일정에서 넣습니다.');
 
-  const kpi = (k, v, sub, code, tone) => `<a class="kpi dsh-kpi" onclick="${code}">
-      <div class="k">${k}</div><div class="v ${tone||''}">${v}${sub ? `<s>${sub}</s>` : ''}</div></a>`;
-
-  return `<div class="dsh">
-    <div class="rst-hrow dsh-top">
-      <h1 class="t-title">오늘<s><span class="mono">${today}</span> ${dow}요일 · 재원 ${enrolled}명</s></h1>
+  return `<div class="dsh hm">
+    <div class="hm-head">
+      <div class="hm-date">${escHtml(stuDayLabel(today))} · 오늘 수업 ${sessions.length}반</div>
+      <h1 class="t-title hm-hi">${인사}, 김하현 선생님</h1>
     </div>
-    <div class="kpis dsh-kpis">
-      ${kpi('오늘 수업', sessions.length, sessions.length ? ` 반 · 완료 ${sessDone}` : ' 반', "goTeacherTab('session')")}
-      ${kpi('처리할 일', todoN, ' 건', "document.getElementById('dsh-todo').scrollIntoView({behavior:'smooth',block:'center'})", todoN ? 'hot' : '')}
-      ${kpi('위험 · 주의', loading ? '…' : `<span class="${red ? 'down' : ''}">${red}</span><s> · </s><span style="${yel ? 'color:var(--late)' : ''}">${yel}</span>`, ' 명', "goTeacherTab('signals')")}
-      ${kpi('7일 안 마감', due.length, ' 과제', "document.getElementById('dsh-due').scrollIntoView({behavior:'smooth',block:'center'})")}
-    </div>
-    ${/* 🔵 **세 칸** (A-2 · 사용자 — 「컴퓨터로 열었을 때 오른쪽 공간이 너무 많이 남고 비효율적」).
-         넓은 화면(≥1280)은 셋이 나란히: 오늘(수업·할 일) | 사람(신호) | 날짜(마감·시험).
-         760~1279 는 두 칸 — 셋째 칸이 첫째 칸 «밑으로» 붙는다(grid-area · 신호 목록이 길어 오른쪽이 늘 더 길다). 760 아래는 한 칸. */''}
-    <div class="dsh-grid">
+    ${kpis}
+    ${/* 🔵 **세 칸** — 넓은 화면(≥1280)은 a(오늘 수업) · b(먼저 볼 학생·시험) · c(달력·메모)가 나란히.
+         760~1279 는 두 칸 — 왼쪽 a 위·b 아래, 오른쪽 c(달력·메모 · 메모는 «오른쪽 칸»에 남는다). 760 아래는 한 칸. */''}
+    <div class="dsh-grid hm-grid">
       <div class="dsh-col dsh-a">
-        ${teacherCalHTML()}
         ${sec('오늘 수업', sessions.length || '', sessBody, ['수업으로', "goTeacherTab('session')"])}
-        <div id="dsh-todo">${sec('처리할 일', todoN || '', todoBody)}</div>
       </div>
       <div class="dsh-col dsh-b">
         ${sec('먼저 볼 학생', live.length || '', sigBody, ['신호 전체', "goTeacherTab('signals')"])}
-      </div>
-      ${isAssistantNow() ? '' : `<div class="dsh-memo">${teacherMemoHTML()}</div>`}
-      <div class="dsh-col dsh-c">
-        <div id="dsh-due">${sec('7일 안 마감 과제', due.length || '', dueBody)}</div>
         ${sec('다가오는 시험', exams.length || '', examBody, ['시험 일정', "state.settingsSubTab='examrange'; state.examSubTab='range'; goTeacherTab('settings')"])}
+      </div>
+      <div class="dsh-col dsh-c">
+        ${teacherCalHTML()}
+        ${isAssistantNow() ? '' : `<div class="dsh-memo">${teacherMemoHTML()}</div>`}
       </div>
     </div>
   </div>`;
@@ -22907,10 +23053,20 @@ function chubAttendanceHTML(classId){
   const MARK = {'출석':'출', '지각':'지', '조퇴':'조', '결석':'결', '퇴원':'퇴'};
 
   const filledCols = cols.filter(d=>roster.some(st=>attOf(st.studentId, d))).length;
+  /* 🔵 이 달 숫자 카드 넷 (2026-10-02 · P-4 · 시안 «D 차분 · 반 › 출결») — 출석 초록 · 지각 노랑 · 결석 빨강 · 조퇴 보라.
+     셈은 위 격자와 같은 것(이 반 · 이 달 · 지난 수업)이다. 출석은 «출석률»(결석이 아닌 비율)로 말한다. */
+  const 달 = { 출석:0, 지각:0, 조퇴:0, 결석:0 }, 달기록 = [];
+  cols.forEach(d => roster.forEach(st => { const a = attOf(st.studentId, d); if(a){ 달기록.push(a); if(달[a.status] != null) 달[a.status]++; } }));
+  const 달률 = attRateOf(달기록);
+  const 숫자카드 = (v, k, cls) => `<div class="ag-st ${cls}"><span class="r"><i></i></span><span><b>${v}</b><s>${k}</s></span></div>`;
   return `
   ${chubMonthBarHTML(cols.length
     ? `수업 <b>${cols.length}</b>회 · 출결 넣은 날 <b>${filledCols}</b>회`
     : '지난 수업이 없습니다')}
+  <div class="ag-stats">
+    ${숫자카드(달률 == null ? '—' : 달률 + '%', '출석', 'ok')}${숫자카드(달.지각, '지각', 달.지각 ? 'late' : '')}
+    ${숫자카드(달.결석, '결석', 달.결석 ? 'no' : '')}${숫자카드(달.조퇴, '조퇴', 달.조퇴 ? 'leave' : '')}
+  </div>
   <div class="es-head" style="margin:0 0 14px;flex-wrap:wrap;">
     <span class="spacer"></span>
     <span style="font-size:11.5px;color:var(--dim);line-height:1.7;text-align:right;">

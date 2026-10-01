@@ -63,13 +63,13 @@ try{
   await page.evaluate(() => { const n = document.getElementById('memo-note'); n.setSelectionRange(2, 2); render(); });
   봄('render 가 돌아도 커서 그대로', await page.evaluate(() => [document.activeElement.id, document.activeElement.selectionStart]), ['memo-note', 2]);
 
-  // 864 — 메모는 오른쪽 칸 맨 위 · 7일 마감은 왼쪽 칸 밑(메모에 밀리지 않는다)
+  // 864 — 시안 «D 차분» 홈(2026-10-02 · P-4): 메모는 «오른쪽 칸»(달력 밑) · 왼쪽은 오늘 수업 위 · 먼저 볼 학생 아래
   const 자리 = await page.evaluate(() => {
     const r = q => document.querySelector(q).getBoundingClientRect();
-    return { 메모오른쪽: r('.dsh-memo').left > r('.dsh-a').right, 맨위: Math.abs(r('.dsh-memo').top - r('.dsh-a').top) < 2,
-             학생은메모밑: r('.dsh-b').top > r('.dsh-memo').bottom, 마감은왼쪽밑: Math.abs(r('.dsh-c').top - r('.dsh-a').bottom - 16) < 2 };
+    return { 메모오른쪽: r('.dsh-memo').left > r('.dsh-a').right, 달력밑: r('.dsh-memo').top > r('.dsh-c .tcal').bottom - 1,
+             오른칸맨위는달력: Math.abs(r('.dsh-c').top - r('.dsh-a').top) < 2, 학생은수업밑: r('.dsh-b').top >= r('.dsh-a').bottom };
   });
-  봄('864 자리', 자리, { 메모오른쪽: true, 맨위: true, 학생은메모밑: true, 마감은왼쪽밑: true });
+  봄('864 자리', 자리, { 메모오른쪽: true, 달력밑: true, 오른칸맨위는달력: true, 학생은수업밑: true });
 
   await page.evaluate(() => { state.currentUser = { type: 'assistant', name: 'A' }; render(); });
   봄('조교 홈엔 메모가 없다', await page.$$eval('.dsh-memo', e => e.length), 0);
