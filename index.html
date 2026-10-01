@@ -3108,12 +3108,13 @@
 .app .dsh-kpi:hover{background:var(--hover);}
 .app .dsh-kpi .v.hot{color:var(--accent);}
 .app .dsh-grid{display:grid;gap:16px;align-items:start;
-  grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-rows:auto 1fr;
-  grid-template-areas:"a b" "c b";}
-.app .dsh-a{grid-area:a;} .app .dsh-b{grid-area:b;} .app .dsh-c{grid-area:c;}
-/* 넓은 화면 — 셋이 나란히. 오른쪽이 비어 남던 자리를 «날짜» 칸이 쓴다 (A-2). */
-@media (min-width:1280px){ .app .dsh-grid{grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:auto;
-  grid-template-areas:"a b c";} }
+  grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-rows:auto auto 1fr;
+  grid-template-areas:"a m" "a b" "c b";}
+.app .dsh-a{grid-area:a;} .app .dsh-b{grid-area:b;} .app .dsh-c{grid-area:c;} .app .dsh-memo{grid-area:m;min-width:0;}
+/* 넓은 화면 — 셋이 나란히. 오른쪽이 비어 남던 자리를 «날짜» 칸이 쓴다 (A-2).
+   메모(m)는 늘 «오른쪽 칸 맨 위» (10-02 사용자 고름) — 넓으면 날짜 칸 위, 두 칸(864)이면 먼저 볼 학생 위. */
+@media (min-width:1280px){ .app .dsh-grid{grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:auto 1fr;
+  grid-template-areas:"a b m" "a b c";} }
 .app .dsh-col{display:flex;flex-direction:column;gap:16px;min-width:0;}
 .app .dsh-card{background:var(--card);border-radius:var(--r-xl);box-shadow:var(--shadow-card);padding:4px 6px 6px;}
 .app .dsh-h{display:flex;align-items:center;gap:7px;padding:11px 10px 7px;}
@@ -3150,9 +3151,26 @@
 .app .tcal .scal-item[onclick]:hover{background:var(--hover);}
 .app .tcal .scal-item.off{opacity:.55;}
 .app .dsh-empty{padding:12px 10px 14px;font-size:12.5px;color:var(--dim);line-height:1.6;}
+/* 홈 메모 (2026-10-02) — 할 일 줄 · 더하기 · 글 칸(수업 메모 .cls-memo 의 종이색을 같이 쓴다) */
+.app .memo-todo{display:flex;align-items:center;gap:6px;min-height:40px;padding:0 4px 0 10px;border-radius:var(--r-sm);}
+.app .memo-todo + .memo-todo{box-shadow:0 -1px 0 var(--line2);}
+.app .memo-todo label{flex:1;min-width:0;display:flex;align-items:center;gap:9px;cursor:pointer;font-size:13px;}
+.app .memo-todo input{flex:none;width:16px;height:16px;accent-color:var(--accent);}
+.app .memo-todo span{min-width:0;overflow-wrap:anywhere;}
+.app .memo-todo.done span{color:var(--dim);text-decoration:line-through;}
+.app .memo-x{flex:none;width:32px;height:32px;border:0;background:none;color:var(--dim);border-radius:var(--r-sm);cursor:pointer;}
+.app .memo-x:hover{background:var(--hover);color:var(--ink);}
+.app .memo-add{display:flex;gap:6px;padding:6px 6px 8px 10px;}
+.app .memo-add input{flex:1;min-width:0;height:34px;border:1px solid var(--line);border-radius:var(--r-sm);padding:0 10px;
+  font:inherit;font-size:13px;background:var(--card);color:var(--ink);outline:none;}
+.app .memo-add input:focus{border-color:var(--accent-line);}
+.app .memo-note{display:block;width:calc(100% - 12px);margin:0 6px 4px;min-height:120px;border:1px solid var(--line);
+  border-radius:var(--r-lg);background:var(--note);padding:11px 13px;font-family:inherit;font-size:13px;line-height:1.7;
+  color:var(--ink);outline:none;resize:vertical;}
+.app .memo-note:focus{border-color:var(--accent-line);}
 /* ⚠ 사용자 주력 판은 125% 확대(CSS 864)다 — 거기서도 두 칸이라야 «먼저 볼 학생»이 첫 화면에 든다. */
 @media (max-width:760px){ .app .dsh-grid{grid-template-columns:minmax(0,1fr);grid-template-rows:auto;
-  grid-template-areas:"a" "b" "c";} }
+  grid-template-areas:"a" "b" "c" "m";} }
 
 /* ── 폰(≤560) — 상단 메뉴가 «하단 탭바»로 내려간다 (A-1) ──
    학생 앱과 같은 자리·같은 어법이다. 여섯 칸이라 가운데 떠 있는 원은 안 쓴다(학생 앱은 다섯이라 된다).
@@ -14383,7 +14401,12 @@ function render(){
   const rvScroll = (app.querySelector('.rv-lbody') || {}).scrollTop;
   /* 폰의 가로 칩 줄(설정 갈래 · 반 목록) — 밀어 둔 자리. 끝쪽 칩을 누르자마자 줄이 왼쪽 끝으로 튀지 않게. */
   const chipX = ['.st-nav .ex-lbody', '.chub-lbody'].map(q => (app.querySelector(q) || {}).scrollLeft);
+  /* 홈 메모 글 칸에서 쓰던 중이면(불러오기 끝 등으로 render 가 돌면) 커서를 되돌린다 (2026-10-02). */
+  const memoEl = document.activeElement && document.activeElement.id === 'memo-note' ? document.activeElement : null;
+  const memoSel = memoEl ? [memoEl.selectionStart, memoEl.selectionEnd, memoEl.scrollTop] : null;
   app.innerHTML = html;
+  if(memoSel){ const n = document.getElementById('memo-note');
+    if(n){ n.focus({preventScroll: true}); n.setSelectionRange(memoSel[0], memoSel[1]); n.scrollTop = memoSel[2]; } }
   /* ⚠ 경고 띠는 `position:fixed` 라 **자리를 안 차지한다** — 그대로 두면 화면 맨 위
      (제목·탭)를 덮는다. 띠의 높이만큼 본문을 내려 준다. 글이 길어져 두 줄이 되어도
      맞으라고 «재서» 넣는다 (2026-09-04). */
@@ -19081,6 +19104,49 @@ function dashOpenHomework(classId){
   goTeacherTab('classhub', 'homework');
 }
 
+/* 🔵 **강사 홈 메모** (2026-10-02 · 사용자 — 「할일이나 수업관련 기록용 개인용 메모장」 · 고른 것: 할 일 체크 + 자유 메모 · 오른쪽 칸 맨 위)
+   kv/memo:<uid> 한 문서 {todos:[{t,done}], note}. 사용자가 «규칙 안 건드림»을 골랐다 —
+   ⚠ kv 는 진짜 계정이면 «읽을 수» 있다(학생도 열쇠를 알면) · 쓰기는 강사만이라 조교 화면엔 안 띄운다.
+   글 칸은 render() 를 안 부른다(한글 조합) — 담아 두고 1초 쉬면 저장. render 가 갈아도 render() 가 커서를 되돌린다(#memo-note). */
+function memoKey(){ return 'memo:' + authUid(); }
+async function loadMemoIfNeeded(){
+  if(state.memo || state.memoLoading || !authUid()) return;
+  state.memoLoading = true;
+  const m = await dbGet(memoKey(), null);
+  state.memo = { todos: (m && Array.isArray(m.todos)) ? m.todos : [], note: (m && typeof m.note === 'string') ? m.note : '' };
+  state.memoLoading = false;
+  render();
+}
+async function memoSave(){
+  clearTimeout(state.memoTimer); state.memoTimer = null;
+  if(state.memo && await dbSet(memoKey(), state.memo) !== true) showToast('메모를 저장하지 못했습니다.');
+}
+function memoNoteInput(v){ state.memo.note = v; clearTimeout(state.memoTimer); state.memoTimer = setTimeout(memoSave, 1000); }
+function memoAdd(form){
+  const t = form.t.value.trim();
+  if(!t) return;
+  state.memo.todos.push({ t, done: false });
+  memoSave(); render();
+  const el = document.getElementById('memo-add'); if(el) el.focus();   // 이어서 적게
+}
+function memoToggle(i){ const x = state.memo.todos[i]; if(!x) return; x.done = !x.done; memoSave(); render(); }
+function memoDel(i){ state.memo.todos.splice(i, 1); memoSave(); render(); }
+function teacherMemoHTML(){
+  loadMemoIfNeeded();
+  const m = state.memo;
+  const body = !m ? '<div class="dsh-empty">불러오는 중…</div>' : `
+    ${m.todos.map((x, i) => `<div class="memo-todo${x.done ? ' done' : ''}">
+        <label><input type="checkbox" ${x.done ? 'checked' : ''} onchange="memoToggle(${i})"><span>${escHtml(x.t)}</span></label>
+        <button type="button" class="memo-x" title="지우기" onclick="memoDel(${i})">✕</button></div>`).join('')}
+    <form class="memo-add" onsubmit="memoAdd(this);return false;">
+      <input id="memo-add" name="t" placeholder="할 일 적고 Enter" autocomplete="off" maxlength="200">
+      <button type="submit" class="btn q sm">추가</button></form>
+    <textarea id="memo-note" class="memo-note" placeholder="수업 관련 메모 — 자동 저장"
+      oninput="memoNoteInput(this.value)" onblur="if(state.memoTimer) memoSave()">${escHtml(m.note)}</textarea>`;
+  const 남은 = m ? m.todos.filter(x => !x.done).length : 0;
+  return `<section class="dsh-card"><div class="dsh-h"><b>메모</b>${남은 ? `<span class="dsh-n mono">${남은}</span>` : ''}</div>${body}</section>`;
+}
+
 function teacherDashHTML(){
   loadAllRecordsIfNeeded();
   loadSignalMutesIfNeeded();
@@ -19194,6 +19260,7 @@ function teacherDashHTML(){
       <div class="dsh-col dsh-b">
         ${sec('먼저 볼 학생', live.length || '', sigBody, ['신호 전체', "goTeacherTab('signals')"])}
       </div>
+      ${isAssistantNow() ? '' : `<div class="dsh-memo">${teacherMemoHTML()}</div>`}
       <div class="dsh-col dsh-c">
         <div id="dsh-due">${sec('7일 안 마감 과제', due.length || '', dueBody)}</div>
         ${sec('다가오는 시험', exams.length || '', examBody, ['시험 일정', "state.settingsSubTab='examrange'; state.examSubTab='range'; goTeacherTab('settings')"])}
