@@ -214,7 +214,10 @@ function renderDock(){
     b.className = 'dk-item'; b.setAttribute('aria-label', it.name);
     const tip = document.createElement('span'); tip.className = 'dk-tip'; tip.textContent = it.name;
     b.append(iconEl(it), tip);
-    b.onclick = () => { send({cmd:'open', id:it.id}); b.classList.remove('go'); void b.offsetWidth; b.classList.add('go'); };
+    // 점은 «눌렀다»는 표시일 뿐 — 통통이 끝나면 걷는다(10-01 사용자 — 「꺼도 빨간 표시가 안 없어져」).
+    // ponytail: «켜져 있음» 점은 아니다(웹사이트는 크롬 탭이라 앱이 알 길이 없다). 프로그램만이라도 원하시면 앱이 프로세스를 봐야 한다
+    b.onclick = () => { send({cmd:'open', id:it.id}); b.classList.remove('go'); void b.offsetWidth; b.classList.add('go');
+      clearTimeout(b._go); b._go = setTimeout(() => b.classList.remove('go'), 1200); };
     return b;
   }));
   dock.hidden = false;
