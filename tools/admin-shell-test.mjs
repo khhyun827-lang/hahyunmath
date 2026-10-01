@@ -49,8 +49,8 @@ const 봄 = (무엇, 나온것, 나와야) => {
 
 /* ═══ ① 메뉴 지도 셋이 한 지도다 ═══ */
 console.log('\n① 메뉴 지도\n');
-const M = new Function([liftConst('TEACHER_NAV'), liftConst('TEACHER_SUBNAV'), liftConst('TEACHER_TAB_SECTION')].join('\n') +
-  '\nreturn { TEACHER_NAV, TEACHER_SUBNAV, TEACHER_TAB_SECTION };')();
+const M = new Function([liftConst('TEACHER_NAV'), liftConst('TEACHER_SUBNAV'), liftConst('TEACHER_TAB_SECTION'), lift('teacherSectionOf')].join('\n') +
+  '\nreturn { TEACHER_NAV, TEACHER_SUBNAV, TEACHER_TAB_SECTION, teacherSectionOf };')();
 {
   봄('상단 차례는 홈 · 수업 · 반 · 소통 · 문항관리 · 설정', M.TEACHER_NAV.map(n => n[0]), ['홈', '수업', '반', '소통', '문항관리', '설정']);
   봄('상단 칸마다 아이콘이 있다 (폰 하단 탭바)', M.TEACHER_NAV.every(n => typeof n[2] === 'string' && n[2]), true);
@@ -58,7 +58,10 @@ const M = new Function([liftConst('TEACHER_NAV'), liftConst('TEACHER_SUBNAV'), l
     M.TEACHER_NAV.filter(n => M.TEACHER_TAB_SECTION[n[1]] !== n[0]).map(n => n[0]), []);
   const 서브 = Object.entries(M.TEACHER_SUBNAV).flatMap(([k, v]) => v.filter(Boolean).map(s => [k, s]));
   봄('🔴 서브탭의 탭은 전부 제 상위 칸에 속한다 (SUBNAV ↔ SECTION)',
-    서브.filter(([k, s]) => M.TEACHER_TAB_SECTION[s[1]] !== k).map(([k, s]) => k + '›' + s[0]), []);
+    서브.filter(([k, s]) => M.teacherSectionOf(s[1], s[2]) !== k).map(([k, s]) => k + '›' + s[0]), []);
+  봄('「학생」(전체 명단)은 홈 아래다 (2026-10-02)', M.teacherSectionOf('classhub', 'students'), '홈');
+  봄('반의 다른 갈래는 반 아래다', M.teacherSectionOf('classhub', 'sessions'), '반');
+  봄('사이드 아이콘이 서브탭마다 있다', 서브.every(([, s]) => typeof s[3] === 'string' && s[3]), true);
   봄('🔴 서브탭이 있는 칸은 첫 서브탭이 상단 칸의 행선지다',
     M.TEACHER_NAV.filter(n => M.TEACHER_SUBNAV[n[0]] && M.TEACHER_SUBNAV[n[0]].find(Boolean)[1] !== n[1]).map(n => n[0]), []);
   const 본문 = 알맹이(lift('teacherTabBodyHTML'));
@@ -66,8 +69,8 @@ const M = new Function([liftConst('TEACHER_NAV'), liftConst('TEACHER_SUBNAV'), l
     Object.keys(M.TEACHER_TAB_SECTION).filter(t => !본문.includes(`t==='${t}'`)), []);
   봄('신호는 홈 아래로 왔다', M.TEACHER_TAB_SECTION.signals, '홈');
   봄('상담 신청은 소통 아래로 왔다', M.TEACHER_TAB_SECTION.consults, '소통');
-  봄('반의 열 갈래는 하나도 안 빠졌다',
-    M.TEACHER_SUBNAV['반'].filter(Boolean).map(s => s[2]).sort(),
+  봄('반의 열 갈래는 하나도 안 빠졌다 (학생은 홈으로 옮겼을 뿐)',
+    [...M.TEACHER_SUBNAV['반'], ...M.TEACHER_SUBNAV['홈']].filter(s => s && s[1] === 'classhub').map(s => s[2]).sort(),
     ['consult', 'homework', 'log', 'material', 'progress', 'quiz', 'scores', 'sessions', 'students', 'video']);
 }
 
@@ -105,6 +108,12 @@ console.log('\n③ 수업을 떠날 때 저장\n');
   다른탭.S.teacherTab = 'clinic';
   다른탭.f('review');   /* ⚠ await 없이 — 수업이 아니면 «곧장» 바뀌어야 한다 */
   봄('다른 탭끼리는 저장을 안 부르고 곧장 넘어간다', [다른탭.S.teacherTab, 다른탭.센것().저장], ['review', 0]);
+  const 반 = 만들기(true);
+  반.S.teacherTab = 'dash';
+  반.f('classhub');
+  봄('🔴 학생 명단을 보다가 상단 「반」을 누르면 출결로 (학생은 홈 소속)', 반.S.classHubTab, 'sessions');
+  반.f('classhub', 'students');
+  봄('홈 › 학생은 갈래를 집어 보내므로 학생으로 간다', 반.S.classHubTab, 'students');
 }
 
 /* ═══ ④ 대시보드는 «모으기»만 한다 ═══ */

@@ -44,7 +44,7 @@
    그래서 「소통·설정」과 오른쪽 블록이 화면 밖으로 잘리고 페이지가 통째로 옆으로 밀렸다.
 
    ⚠ **상단바 높이는 절대 늘리지 않는다.** `.subnav`가 `top:52px`에 붙어 있고
-     화면들이 `height:calc(100vh - 92px)` · `- 134px`로 그 숫자를 박아 쓰고 있다.
+     화면들이 `height:calc(100vh - var(--chrome,92px))` · `- 134px`로 그 숫자를 박아 쓰고 있다.
      두 줄로 만들면 그 계산이 전부 어긋난다 → **높이는 두고 «안에서» 접는다.**
    ⚠ **`.app.sap`(학생 앱)은 건드리지 않는다.** 학생 쪽은 이미 폰 우선으로 풀려 있다
      (`--sap-w` 620/680). 그래서 선택자를 `.app:not(.sap)`로 좁혔다.
@@ -533,7 +533,7 @@
 .app .co-body, .app .co-sbody, .app .ch-lbody, .app .ch-win,
 .app .ex-body, .app .ex-lbody, .app .vd-main{position:relative;}
 
-.app .rst-screen{display:flex;flex-direction:column;height:calc(100vh - 92px);}
+.app .rst-screen{display:flex;flex-direction:column;height:calc(100vh - var(--chrome,92px));}
 .app .rst-head{flex-shrink:0;}
 .app .rst-wrap{flex:1;min-height:0;overflow:auto;margin-top:2px;}
 .app .rst-wrap table.grid thead th{position:sticky;top:0;z-index:2;}
@@ -601,7 +601,7 @@
 /* ---------- 수업 (design-v1/02-class) ----------
    목업은 좌측 사이드바를 캔버스에 absolute로 붙였다. 실서비스는 그냥 두 칸 플렉스다.
    ds.css의 .steps / .tile / .seg / .actbar 는 그대로 쓴다 — 여기서 다시 정의하지 않는다. */
-.app .cls-screen{display:flex;height:calc(100vh - 92px);}
+.app .cls-screen{display:flex;height:calc(100vh - var(--chrome,92px));}
 .app .cls-side{width:270px;flex-shrink:0;padding-right:18px;border-right:1px solid var(--line);
   overflow-y:auto;}
 .app .cls-main{flex:1;min-width:0;padding-left:24px;display:flex;flex-direction:column;}
@@ -767,7 +767,7 @@
    시안의 핵심은 «좌측 반 목록이 네 화면 공통»이라는 것이다. 예전에는 목록 화면과 상세 화면이
    따로여서 반을 바꿀 때마다 «← 반 목록으로»를 눌러 돌아가야 했다. 목록을 늘 띄워 두면 그 왕복이 사라진다.
    높이 134px = 상단바 52 + 서브탭 42 + .body 상하 패딩 40. */
-.app .chub-screen{display:flex;height:calc(100vh - 134px);}
+.app .chub-screen{display:flex;height:calc(100vh - var(--chrome-sub,134px));}
 .app .chub-side{width:250px;flex-shrink:0;padding-right:16px;border-right:1px solid var(--line);
   display:flex;flex-direction:column;}
 .app .chub-lh{display:flex;align-items:center;flex-shrink:0;padding-bottom:10px;}
@@ -1171,7 +1171,7 @@
 /* ---------- 오답 검토 (design-v1/04-review) ----------
    시안이 A4에서 흡수한 것 셋 — 큐 · 2열 비교 · 키보드. 다크 테마는 버렸다.
    높이 134px = 상단바 52 + 서브탭 42 + .body 상하 패딩 40. */
-.app .rv-screen{display:flex;height:calc(100vh - 134px);}
+.app .rv-screen{display:flex;height:calc(100vh - var(--chrome-sub,134px));}
 /* 큐는 시안대로 종이색이지만 **경계선은 흰 면과 같은 높이로** 서야 한다.
    위아래 패딩만큼 짧으면 선이 중간에서 끊기고, 목록과 16px 떠 있으면 선이 어디에도 안 붙는다. */
 .app .rv-queues{width:196px;flex-shrink:0;padding-right:14px;border-right:1px solid var(--line);
@@ -1430,7 +1430,7 @@
 .app .sd-ctx, .app .co-side{margin-right:-20px;padding-right:20px;}
 
 /* ---------- 학생 상세 (design-v1/03-student) — 디자인 시스템의 기준 화면 ---------- */
-.app .sd-screen{display:flex;height:calc(100vh - 92px);}
+.app .sd-screen{display:flex;height:calc(100vh - var(--chrome,92px));}
 .app .sd-list{width:258px;flex-shrink:0;border-right:1px solid var(--line);
   display:flex;flex-direction:column;min-height:0;padding-right:14px;}
 .app .sd-lh{flex-shrink:0;padding-bottom:10px;}
@@ -1526,7 +1526,7 @@
        벌린다 — 만들어진 결이 달라서 그렇다. 값만 한곳에서 준다. */
 .app{--co-side-w:300px;--co-gap:24px;}
 @media (max-width:1080px){ .app{--co-side-w:250px;} }
-.app .co-screen{display:flex;height:calc(100vh - 134px);}
+.app .co-screen{display:flex;height:calc(100vh - var(--chrome-sub,134px));}
 .app .co-main{flex:1;min-width:0;min-height:0;display:flex;flex-direction:column;}
 .app .co-body{flex:1;min-height:0;overflow-y:auto;margin-top:16px;}
 .app .co-side{width:var(--co-side-w);flex-shrink:0;border-left:1px solid var(--line);padding-left:18px;
@@ -1596,7 +1596,7 @@
    예전에는 카드를 세로로 쌓았다. 그런데 수학 질문은 길고 사진이 붙어서, 하나를 읽는 동안
    다음 질문이 화면 밖으로 나갔다. **답하는 화면은 «다음 것으로 넘어가는» 화면이라
    목록이 늘 옆에 있어야 한다** — 오답 검토에서 내린 것과 같은 판단이다. */
-.app .qn-screen{display:flex;height:calc(100vh - 134px);}
+.app .qn-screen{display:flex;height:calc(100vh - var(--chrome-sub,134px));}
 .app .qn-list{width:var(--co-side-w);flex-shrink:0;border-right:1px solid var(--line);
   display:flex;flex-direction:column;}
 .app .qn-lh{display:flex;align-items:center;gap:6px;padding:0 14px 12px 0;flex-shrink:0;flex-wrap:wrap;}
@@ -1634,7 +1634,7 @@
    ⚠ 시안의 세 번째 칸 「읽음 현황」은 만들 수 없다 — 아래 nt-doc 주석 참고. */
 /* ⚠ 92가 아니라 134다 — 공지는 「소통」 서브탭 아래에 있다 (52 상단바 + 42 서브탭 + 40 패딩).
    92로 잡혀 있어 화면이 42px 길었는데, 칸에 배경이 깔리기 전에는 눈에 띄지 않았다. */
-.app .nt-screen{display:flex;height:calc(100vh - 134px);}
+.app .nt-screen{display:flex;height:calc(100vh - var(--chrome-sub,134px));}
 .app .nt-list{width:var(--co-side-w);flex-shrink:0;border-right:1px solid var(--line);
   display:flex;flex-direction:column;}
 .app .nt-lh{display:flex;align-items:center;gap:8px;padding:0 14px 12px 0;flex-shrink:0;}
@@ -1707,10 +1707,10 @@
 
 /* ---------- 시험지 (design-v1/07-exams) ----------
    역할은 «어느 문항이 무너졌는지 본다». 오답 파이프라인의 입구다. */
-.app .ex-screen{display:flex;height:calc(100vh - 134px);}
+.app .ex-screen{display:flex;height:calc(100vh - var(--chrome-sub,134px));}
 /* 설정은 서브탭이 없다 — 왼쪽 갈래 목록이 그 일을 한다. 그래서 42px을 돌려받는다.
    («칸»에 배경이 깔리기 전에는 아래쪽 빈자리로만 보여 눈에 띄지 않았다.) */
-.app .ex-screen.ex-nosub{height:calc(100vh - 92px);}
+.app .ex-screen.ex-nosub{height:calc(100vh - var(--chrome,92px));}
 .app .ex-list{width:262px;flex-shrink:0;border-right:1px solid var(--line);
   padding-right:14px;margin-right:20px;display:flex;flex-direction:column;min-height:0;}
 .app .ex-lbody{flex:1;min-height:0;overflow-y:auto;margin-right:-6px;padding-right:6px;}
@@ -3058,6 +3058,10 @@
 .app:not(.sap) .topbar .tnav a i{display:none;}
 /* 서브탭 묶음 사이의 가는 선 (A-1 · `TEACHER_SUBNAV` 의 null) */
 .app .subnav .sn-sep{flex:none;align-self:center;width:1px;height:14px;background:var(--line);margin:0 8px;}
+/* 줄 모드에서는 사이드용 아이콘을 숨기고, 맨 앞 묶음 머리(첫 토막 앞)는 선을 안 긋는다 */
+.app .subnav .sn-ic{display:none;}
+.app .subnav .sn-sep:first-child{display:none;}
+
 /* 설정 왼쪽 목록의 묶음 머리 */
 .app .ex-nav .st-grp{margin:16px 0 6px;padding-left:10px;}
 .app .ex-nav .st-grp:first-child{margin-top:0;}
@@ -3476,6 +3480,52 @@
 .ds-drop .it b{margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--no);}
 .ds-drop .em{padding:14px;font-size:12px;color:var(--dim);text-align:center;}
 
+/* ============================================================
+   관리 «프로그램» 껍데기 (2026-10-02 · P-1 — 시안 «D 차분», 캔버스 CbB9qkPr…)
+   넓은 화면(≥1200 — 김하현 Desktop 1872·브라우저 125% 1536)에서만:
+     위 = 메인 메뉴(아이콘+글자 알약) · 왼쪽 = 서브 사이드(.subnav 를 «줄»에서 «기둥»으로) · 옅은 바탕.
+   ⚠ DOM 은 그대로다 — 좁은 화면(864 포함)·폰은 예전 줄 그대로다.
+   🔴 높이를 박아 쓴 화면들(…-screen)은 `--chrome`·`--chrome-sub` 를 쓴다. 기본값이 예전 92·134 다.
+     여기서는 서브탭이 옆으로 빠지므로 둘 다 «상단바 64 + 본문 위아래 여백 40» = 104 다.
+   ⚠ 조교 셸(.tnav 없음)은 안 건드린다 — 전부 `:has(.tnav)` 아래다.
+   ============================================================ */
+@media (min-width:1200px){
+  .app:not(.sap):has(.tnav){--chrome:104px;--chrome-sub:104px;
+    background:linear-gradient(120deg,#E8EEF6 0%,#ECEAF6 45%,#F6F0E6 92%) fixed;}
+  .app:not(.sap) .topbar:has(.tnav){height:64px;padding:0 24px;background:rgba(255,255,255,.84);
+    -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border-bottom:1px solid rgba(30,36,51,.06);}
+  .app:not(.sap) .topbar .tnav{margin:0 auto;gap:4px;}
+  .app:not(.sap) .topbar .tnav a{display:flex;align-items:center;gap:8px;height:44px;padding:0 18px;border-radius:999px;
+    font-size:14.5px;font-weight:600;color:#4A5168;}
+  .app:not(.sap) .topbar .tnav a i{display:flex;}
+  .app:not(.sap) .topbar .tnav a:hover{background:rgba(30,46,82,.05);color:#1E2433;}
+  .app:not(.sap) .topbar .tnav a.on{background:#E3EAF5;color:#1E2E52;font-weight:800;box-shadow:inset 0 0 0 1px #D2DCEC;}
+  .app:not(.sap):has(.tnav) .subnav{position:fixed;top:80px;left:16px;bottom:16px;width:236px;height:auto;z-index:4;
+    flex-direction:column;align-items:stretch;gap:2px;padding:12px;box-sizing:border-box;overflow-y:auto;
+    background:rgba(255,255,255,.92);border:1px solid #ECEEF3;border-radius:24px;}
+  .app:not(.sap):has(.tnav) .subnav a{flex:none;justify-content:flex-start;height:40px;padding:0 12px;gap:11px;border-radius:14px;
+    border-bottom:0;margin:0;font-size:14.5px;font-weight:600;color:#3A4156;}
+  .app:not(.sap):has(.tnav) .subnav a:hover{background:#F3F5F9;color:#1E2433;}
+  .app:not(.sap):has(.tnav) .subnav a.on{background:#E3EAF5;color:#1E2E52;font-weight:800;box-shadow:inset 0 0 0 1px #D2DCEC;}
+  .app:not(.sap):has(.tnav) .subnav .sn-ic{display:flex;}
+  .app:not(.sap):has(.tnav) .subnav .sn-sep{display:block;align-self:stretch;width:auto;height:1px;background:#ECEEF3;margin:8px 10px;}
+  .app:not(.sap):has(.tnav) .subnav .sn-sep[data-t]{height:auto;background:none;margin:12px 0 3px;padding-left:12px;}
+  .app:not(.sap):has(.tnav) .subnav .sn-sep[data-t]:first-child{margin-top:4px;}
+  .app:not(.sap):has(.tnav) .subnav .sn-sep[data-t]::after{content:attr(data-t);font-style:normal;font-size:11.5px;
+    font-weight:800;color:#9AA0B0;letter-spacing:.06em;}
+  .app:not(.sap):has(.subnav):has(.tnav) .body{padding-left:272px;}
+  /* 설정은 서브탭 줄이 없고 제 왼쪽 목록(.st-nav)을 갖는다 — 그것을 같은 사이드 자리·모양으로 */
+  .app:not(.sap):has(.tnav) .st-nav{position:fixed;top:80px;left:16px;bottom:16px;width:236px;z-index:4;margin:0;
+    padding:12px;box-sizing:border-box;background:rgba(255,255,255,.92);border:1px solid #ECEEF3;border-radius:24px;}
+  .app:not(.sap):has(.tnav):has(.st-nav) .body{padding-left:272px;}
+  .app:not(.sap):has(.tnav) .st-nav .ex-lbody{margin-right:0;padding-right:0;}
+  .app:not(.sap):has(.tnav) .st-nav .st-grp{margin:12px 0 3px;padding-left:12px;font-size:11.5px;font-weight:800;color:#9AA0B0;letter-spacing:.06em;}
+  .app:not(.sap):has(.tnav) .st-nav .st-grp:first-child{margin-top:4px;}
+  .app:not(.sap):has(.tnav) .st-nav .ex-item{display:flex;align-items:center;height:40px;padding:0 12px;border-left:0;border-radius:14px;
+    font-size:14.5px;font-weight:600;color:#3A4156;}
+  .app:not(.sap):has(.tnav) .st-nav .ex-item:hover{background:#F3F5F9;}
+  .app:not(.sap):has(.tnav) .st-nav .ex-item.on{background:#E3EAF5;color:#1E2E52;font-weight:800;box-shadow:inset 0 0 0 1px #D2DCEC;}
+}
 /* 화면 머리 — 「누구의 화면인가」. serif는 학생 이름에만 쓴다 (시스템 규칙) */
 /* 🔴 **세리프를 벗긴다** (2026-09-14 · 사용자 — 「폰트가 어울리지 않는 것 같다」).
    'Noto Serif KR' 은 **관리자 시안의 표제 서체**다. 학생 앱은 나머지가 전부 산세리프라
@@ -18811,38 +18861,48 @@ const TEACHER_NAV = [
      학생 | 출결·성적·과제(기록) | 진도·수업 기록·상담 기록(수업) | 영상·자료·데일리퀴즈(내보내기).
    ⚠ 순서를 바꾼 것은 «상담»(기록 묶음 → 수업 묶음)뿐이고, 탭 id 는 하나도 안 바뀌었다(주소·알림 링크가 산다).
    🔵 「상담」은 「상담 기록」이 됐다 — 소통의 「상담 신청」(홈페이지로 들어오는 새 상담)과 같은 말이었다. */
+/* 🔵 넷째 칸 = 왼쪽 사이드의 아이콘 (2026-10-02 · P-1 «관리 프로그램» 껍데기). 줄 모드(좁은 화면)에서는 안 보인다.
+   🔵 **「학생」은 반 → 홈으로** (2026-10-02 · 사용자 — 「반별 관리가 아니니까」). 탭 id 는 그대로 classhub/students 다 —
+     어느 칸에 불이 들어오는지는 `teacherSectionOf` 가 정한다. */
 const TEACHER_SUBNAV = {
   '홈': [
-    ['오늘', 'dash'], ['신호', 'signals']
+    ['오늘', 'dash', null, 'calendar'], ['신호', 'signals', null, 'alert'],
+    ['학생', 'classhub', 'students', 'users']
   ],
   '반': [
-    ['학생',       'classhub', 'students'],
+    ['출결',       'classhub', 'sessions', 'checklist'],
+    ['성적',       'classhub', 'scores',   'chart'],
+    ['과제',       'classhub', 'homework', 'clipboard'],
     null,
-    ['출결',       'classhub', 'sessions'],
-    ['성적',       'classhub', 'scores'],
-    ['과제',       'classhub', 'homework'],
+    ['진도',       'classhub', 'progress', 'book'],
+    ['수업 기록',  'classhub', 'log',      'pencil'],
+    ['상담 기록',  'classhub', 'consult',  'chat'],
     null,
-    ['진도',       'classhub', 'progress'],
-    ['수업 기록',  'classhub', 'log'],
-    ['상담 기록',  'classhub', 'consult'],
-    null,
-    ['영상',       'classhub', 'video'],
-    ['자료',       'classhub', 'material'],
-    ['데일리퀴즈', 'classhub', 'quiz']
+    ['영상',       'classhub', 'video',    'video'],
+    ['자료',       'classhub', 'material', 'file'],
+    ['데일리퀴즈', 'classhub', 'quiz',     'bolt']
   ],
   /* 「제출 현황」은 시험지 화면의 우측 칸으로 흡수했다 (시안 07). 서브탭에서 뺐다. */
   '문항관리': [
-    ['검토', 'review'], ['시험지', 'exams'], ['문항 창고', 'unitbank']
+    ['검토', 'review', null, 'checkCircle'], ['시험지', 'exams', null, 'document'], ['문항 창고', 'unitbank', null, 'box']
   ],
   /* 「출석 도장」이 여기 있는 이유 — «신호»는 지표를 세우는 화면이고 «명단»은 평가하는
      화면이라, 놀이를 그 옆에 두면 놀이가 그 성격을 물려받는다. 소통이 제일 안 다치는 자리다. */
   /* 🔵 「상담 신청」이 설정에서 여기로 왔다 (2026-09-24 · A-1) — 홈페이지로 들어온 새 상담은 «설정»이 아니라
        답해야 할 «소통»이다. 벨도 여기로 보낸다. 화면은 그대로다(`teacherSettingsConsultsHTML`). */
   '소통': [
-    ['클리닉', 'clinic'], ['공지', 'notices'],
-    ['질의응답', 'qna'], ['채팅', 'chat'], ['상담 신청', 'consults'], null, ['출석 도장', 'checkin']
+    ['클리닉', 'clinic', null, 'clinic'], ['공지', 'notices', null, 'megaphone'],
+    ['질의응답', 'qna', null, 'messageSquare'], ['채팅', 'chat', null, 'messageCircle'], ['상담 신청', 'consults', null, 'phone'],
+    null, ['출석 도장', 'checkin', null, 'trophy']
   ]
 };
+/* 사이드의 묶음 머리 — 묶음(null 로 갈린 토막) 차례대로. 빈 글자면 머리 없이 가는 선만 */
+const TEACHER_SUBNAV_TITLES = { '반': ['기록', '수업', '내보내기'] };
+/* 지금 탭이 어느 상위 칸인가 — 표(TEACHER_TAB_SECTION)에 «반 › 학생 = 홈» 한 가지 예외를 얹는다 */
+function teacherSectionOf(tab, hub){
+  if(tab === 'classhub' && hub === 'students') return '홈';
+  return TEACHER_TAB_SECTION[tab] || '반';
+}
 
 /* 탭이 어느 상위 메뉴에 속하는지.
    ⚠ `roster`는 여기 없다 — 「반 › 학생」으로 옮겨졌고, 옛 세션·북마크가 들고 있으면
@@ -18870,6 +18930,8 @@ async function goTeacherTab(tab, hubTab){
   state.studentDetailId = null;
   state.qnaPicked = false;   /* 폰의 질의응답은 다시 들어오면 «목록»부터 (A-2) */
   if(hubTab) state.classHubTab = hubTab;
+  /* 「학생」이 홈으로 갔다 (2026-10-02) — 갈래 없이 「반」으로 오면(상단 메뉴·바로가기) 학생 명단 말고 출결로 */
+  else if(tab === 'classhub' && state.classHubTab === 'students') state.classHubTab = 'sessions';
   /* 🔴 **여기서 `classHubId`를 비우지 않는다** (2026-09-01 · C-13에서 뺐다).
      예전에는 상단 「반」을 누를 때마다 첫 반으로 되돌렸다 — 그때는 반을 고르는 자리가
      왼쪽 목록뿐이라 손해가 없었다. 지금은 **학생 명단의 고르개가 그 반을 정한다**.
@@ -18912,8 +18974,12 @@ function teacherHTML(){
   }
   /* 옛 `home` 은 «로그인 첫 화면»이라는 뜻이었다 — 그 자리가 이제 대시보드다 (A-1). */
   if(state.teacherTab==='home') state.teacherTab = 'dash';
-  const section = TEACHER_TAB_SECTION[state.teacherTab] || '반';
+  const section = teacherSectionOf(state.teacherTab, state.classHubTab);
   const subs = TEACHER_SUBNAV[section];
+  /* 사이드의 묶음 머리 — 첫 토막의 머리는 맨 앞에, 나머지는 null 자리에 (줄 모드에서는 그냥 가는 선) */
+  const 머리 = TEACHER_SUBNAV_TITLES[section] || [];
+  let 토막 = 0;
+  const 머리표 = t => `<i class="sn-sep"${t ? ` data-t="${t}"` : ''} aria-hidden="true"></i>`;
   const subActive = s => state.teacherTab===s[1] && (!s[2] || state.classHubTab===s[2]);
   /* 벨이 «새 채팅»을 세려면 대화를 알고 있어야 한다. 셸에서 한 번만 부른다. */
   loadAllChatsIfNeeded();
@@ -18936,8 +19002,8 @@ function teacherHTML(){
         <button class="btn sm" onclick="logout()">로그아웃</button>
       </div>
     </div>
-    ${subs ? `<div class="subnav">${subs.map(s=> !s ? '<i class="sn-sep" aria-hidden="true"></i>' :
-      `<a class="${subActive(s)?'on':''}" onclick="goTeacherTab('${s[1]}'${s[2]?`,'${s[2]}'`:''})">${s[0]}</a>`
+    ${subs ? `<div class="subnav">${머리[0] ? 머리표(머리[0]) : ''}${subs.map(s=> !s ? 머리표(머리[++토막]) :
+      `<a class="${subActive(s)?'on':''}" onclick="goTeacherTab('${s[1]}'${s[2]?`,'${s[2]}'`:''})"><i class="sn-ic">${iconSvg(s[3],18)}</i><span>${s[0]}</span></a>`
     ).join('')}</div>` : ''}
     <div class="body">${body}</div>
   </div>`;
