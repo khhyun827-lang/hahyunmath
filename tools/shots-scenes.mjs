@@ -174,6 +174,26 @@ export const 무대들 = {
       state.offDays = { days: [{ date: 날(2), classIds: ['c1'], label: '학원 행사' }] };
       state.allRecordsLoaded = true; state.teacherTab = 'dash'; state.tCalDay = 날(7); state.tCalMonth = 날(7).slice(0, 7); render();
     } },
+  검토: { 말: '문항관리 › 검토 (AI 변형 넷 — 같은 답 둘 · 그림 있는 같은 답 하나 · 답 다름 하나)', 폭: '1440,864',
+    세우기: () => { state.currentUser = { type:'teacher', name:'김하현T' }; state.view = 'teacher';
+      const 원본 = (code, content, answer, image) => ({ code, content, answer, image });
+      state.itemBody = {
+        'K2-05-E-0559': 원본('K2-05-E-0559', '전체집합 U = {1, 2, 3, 4, 5}의 두 부분집합 A, B에 대하여 A ∩ B = {3}, A ∪ B = {1, 3, 4, 5}일 때, 집합 A의 개수는?\n① 4  ② 6  ③ 8  ④ 10  ⑤ 12', '③'),
+        'K2-03-M-0210': 원본('K2-03-M-0210', '다항식 x³ − 2x + 1을 x − 1로 나눈 나머지는?\n① −1  ② 0  ③ 1  ④ 2  ⑤ 3', '②'),
+        'K2-04-M-0317': 원본('K2-04-M-0317', '그림과 같이 … 넓이를 구하시오.', '12', { url: 'https://placehold.co/300x200/png' }),
+        'K2-02-H-0149': 원본('K2-02-H-0149', 'x에 대한 항등식 a(x−1) + b(x+1) = 2x + 4 에서 a + b 의 값은?\n① 1  ② 2  ③ 3  ④ 4  ⑤ 5', '②')
+      };
+      const v = (code, originCode, content, answer, verdict, aiAns) => ({ code, originCode, content, answer, pending: true, engine: 'gemini',
+        createdAt: '2026-10-01', aiReview: verdict ? { verdict, answer: aiAns } : null });
+      state.variants = { K2: [
+        v('K2-05-E-0560', 'K2-05-E-0559', '전체집합 U = {1, 2, 3, 4, 5, 6}의 두 부분집합 A, B에 대하여 A ∩ B = {3}, A ∪ B = {1, 3, 4, 5, 6}일 때, 집합 A의 개수는?\n① 8  ② 12  ③ 16  ④ 20  ⑤ 24', '②', 'suspect', '③'),
+        v('K2-03-M-0211', 'K2-03-M-0210', '다항식 x³ − 3x + 2를 x − 1로 나눈 나머지는?\n① −1  ② 0  ③ 1  ④ 2  ⑤ 3', '②', 'agree', '②'),
+        v('K2-04-M-0318', 'K2-04-M-0317', '그림과 같이 … 넓이를 구하시오.', '18', 'agree', '18'),
+        v('K2-02-H-0150', 'K2-02-H-0149', 'x에 대한 항등식 a(x−1) + b(x+1) = 4x + 2 에서 a + b 의 값은?\n① 1  ② 2  ③ 3  ④ 4  ⑤ 5', '④', 'agree', '④')
+      ] };
+      state.reviewQuotaUsed = 23; state.aiQuotaUsed = 7;
+      state.teacherTab = 'review'; state.reviewQueue = 'pending'; state.reviewVariantCode = 'K2-05-E-0560'; render();
+    } },
   홈메모: { 말: '강사 홈 — 메모 (할 일 셋 · 하나 끝 · 글 메모)', 폭: '1280,864,390',
     세우기: () => { state.currentUser = { type:'teacher', name:'김하현T' }; state.view = 'teacher';
       state.memo = { todos: [{ t: '광남고 프린트 출력', done: false }, { t: '3반 단원평가 채점', done: true },

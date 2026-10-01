@@ -3144,7 +3144,9 @@
 .app .dsh-cnt{flex:none;font-size:13px;font-weight:700;}
 .app .dsh-dd{flex:none;min-width:54px;text-align:center;font-size:11px;font-weight:700;padding:3px 8px;border-radius:999px;
   background:var(--line2);color:var(--sub);}
-.app .dsh-dd.near{background:var(--point-bg);color:var(--point);}
+/* D-day 는 신호다 (2026-10-02 · P-3) — 7일 안 빨강 · 14일 안 노랑 (설정 › 시험 일정 · 명단과 같은 금) */
+.app .dsh-dd.near{background:var(--nobg);color:var(--no);}
+.app .dsh-dd.soon{background:var(--latebg);color:var(--late);}
 .app .dsh-dd.on{background:var(--point);color:#fff;}
 /* 홈 달력 (2026-09-30) — 칸·점·목록은 학생 달력 규칙을 같이 쓴다(위 .scal-* 에 .tcal 을 붙였다) */
 .app .tcal{padding:12px 12px 10px;}
@@ -3579,7 +3581,37 @@
   .app:not(.sap):has(.tnav) .sb-rn{min-width:0;}
   .app:not(.sap):has(.tnav) .sb-rn b{display:block;font:700 14px/1.3 'Pretendard',sans-serif;color:#1E2433;}
   .app:not(.sap):has(.tnav) .sb-rn s{display:block;text-decoration:none;font-size:12px;color:#6A7186;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+
+  /* ── P-3: 검토 — 큐는 사이드로, 목록은 위 «코드 띠»로, 원본·변형 대조가 화면을 차지한다 ── */
+  .app:not(.sap):has(.tnav) .rv-queues, .app:not(.sap):has(.tnav) .rv-list{display:none;}
+  .app:not(.sap):has(.tnav) .rv-work{padding-left:0;}
+  .app:not(.sap):has(.tnav) .subnav a.sn-q{display:flex;align-items:center;justify-content:flex-start;height:34px;margin-left:18px;padding:0 10px;gap:10px;font-size:13.5px;border-radius:12px;}
+  /* 아래 고정 띠(.actbar)는 사이드를 덮지 않게 본문 칸 위에만 뜬다 */
+  .app:not(.sap):has(.tnav):has(.subnav) .actbar, .app:not(.sap):has(.tnav):has(.st-nav) .actbar{
+    left:272px;right:16px;bottom:16px;border:1px solid #ECEEF3;border-radius:18px;box-shadow:0 8px 24px rgba(30,36,51,.08);}
+  .app:not(.sap):has(.tnav) .subnav a.sn-q.on{background:#fff;color:#1E2433;box-shadow:0 0 0 1px #D2DCEC;}
+  .app:not(.sap):has(.tnav) .sn-q b{margin-left:auto;font-weight:800;font-size:12.5px;color:#1E2433;}
+  .app:not(.sap):has(.tnav) .sn-q b.z{color:#B9C0D0;}
+  .app:not(.sap):has(.tnav) .sn-q .d, .app:not(.sap):has(.tnav) .rv-strip .d{flex:none;width:8px;height:8px;margin:0;border-radius:50%;background:#C9CED9;}
+  .app:not(.sap):has(.tnav) .d.r{background:var(--sig-no);} .app:not(.sap):has(.tnav) .d.y{background:#E0A21C;}
+  .app:not(.sap):has(.tnav) .d.g{background:var(--sig-ok);}
+  .app:not(.sap):has(.tnav) .rv-strip{display:flex;align-items:center;gap:6px;flex-shrink:0;margin-bottom:12px;padding-bottom:2px;
+    overflow-x:auto;scrollbar-width:thin;}
+  .app:not(.sap):has(.tnav) .rv-strip .rv-pos{flex:none;font-size:13px;font-weight:800;color:#4A5168;padding-right:6px;}
+  .app:not(.sap):has(.tnav) .rv-strip a{flex:none;display:flex;align-items:center;gap:7px;height:34px;padding:0 11px;border-radius:11px;cursor:pointer;
+    background:#fff;box-shadow:inset 0 0 0 1px #E6E8EE;font-size:12.5px;font-weight:700;color:#3A4156;}
+  .app:not(.sap):has(.tnav) .rv-strip a:hover{box-shadow:inset 0 0 0 1px #C9D3E3;}
+  .app:not(.sap):has(.tnav) .rv-strip a.on{background:#1E2433;color:#fff;box-shadow:none;}
+  .app:not(.sap):has(.tnav) .rv-strip a.on .d{box-shadow:0 0 0 2px #fff;}
+  /* 대조 — 글자를 키우고 두 판을 흰 카드로 */
+  .app:not(.sap):has(.tnav) .rv-work .cmp .side{border-radius:20px;padding:20px 22px;border-color:#ECEEF3;background:#fff;}
+  .app:not(.sap):has(.tnav) .rv-work .cmp .side.ai{border-color:#D2DCEC;box-shadow:0 0 0 1px #D2DCEC;}
+  .app:not(.sap):has(.tnav) .rv-work .cmp .q-body{font-size:16.5px;line-height:1.85;}
+  .app:not(.sap):has(.tnav) .rv-aibar{border-radius:16px;}
 }
+/* 「AI 일치 모두 통과」 옆 — 그림이 있어 빠진 수 (줄 모드에서도 보인다) */
+.app .rv-figskip{display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--sub);}
+.app .rv-strip{display:none;}
 /* 화면 머리 — 「누구의 화면인가」. serif는 학생 이름에만 쓴다 (시스템 규칙) */
 /* 🔴 **세리프를 벗긴다** (2026-09-14 · 사용자 — 「폰트가 어울리지 않는 것 같다」).
    'Noto Serif KR' 은 **관리자 시안의 표제 서체**다. 학생 앱은 나머지가 전부 산세리프라
@@ -18993,6 +19025,17 @@ function teacherSideCount(s, 벨){
   if(s[1] === 'classhub' && s[2] === 'homework' && state.classHubId) return hwWaitingInClass(state.classHubId);
   return 0;
 }
+/* 검토 큐를 사이드의 「검토」 밑에 들여 붙인다 — 본문 왼쪽 큐 칸(.rv-queues)이 사이드로 올라온 것.
+   수는 그 칸과 같은 셈(REVIEW_QUEUES 거르개 + 검토 대기에는 AI 변형)이다. */
+function reviewSideQueuesHTML(){
+  const qkey = state.reviewQueue || 'pending';
+  const autosN = pendingVariants().length;
+  return REVIEW_QUEUES.map(q => {
+    const n = DATA.problemBank.filter(q[3]).length + (q[0] === 'pending' ? autosN : 0);
+    return `<a class="sb-x sn-q ${qkey === q[0] ? 'on' : ''}" onclick="goReviewQueue('${q[0]}')">
+      <i class="d ${q[2]}"></i><span>${q[1]}</span><b class="${n ? '' : 'z'}">${n}</b></a>`;
+  }).join('');
+}
 function teacherSideExtrasHTML(section){
   const 카드 = (제목, 안) => `<section class="sb-x sb-card"><div class="sb-ct">${제목}</div>${안}</section>`;
   const 막대 = (k, v, p, c) => `<div class="sb-m"><div class="sb-mk"><span>${k}</span><b>${v}</b></div>
@@ -19170,7 +19213,8 @@ function teacherHTML(){
       if(!s) return 머리표(머리[++토막]);
       const n = teacherSideCount(s, 벨수);
       return `<a class="${subActive(s)?'on':''}" onclick="goTeacherTab('${s[1]}'${s[2]?`,'${s[2]}'`:''})"><i class="sn-ic">${iconSvg(s[3],18)}</i><span>${s[0]}</span>${
-        n ? `<b class="sb-x sn-n">${n}</b>` : ''}</a>`;
+        n ? `<b class="sb-x sn-n">${n}</b>` : ''}</a>${
+        s[1] === 'review' && state.teacherTab === 'review' ? reviewSideQueuesHTML() : ''}`;
     }).join('')}${사이드.bottom}</div>` : ''}
     <div class="body">${body}</div>
   </div>`;
@@ -19463,7 +19507,7 @@ function teacherDashHTML(){
   });
   exams.sort((a,b)=>a.dd.days - b.dd.days || (a.dd.target||'').localeCompare(b.dd.target||''));
   const examBody = exams.length ? exams.slice(0, 6).map(e=>`<a class="dsh-row" onclick="state.settingsSubTab='examrange'; state.examSubTab='range'; goTeacherTab('settings')">
-      <span class="dsh-dd mono ${e.dd.state === 'during' ? 'on' : e.dd.days <= 7 ? 'near' : ''}">${e.dd.state === 'during' ? '시험 중' : 'D-' + e.dd.days}</span>
+      <span class="dsh-dd mono ${e.dd.state === 'during' ? 'on' : e.dd.days <= 7 ? 'near' : e.dd.days <= 14 ? 'soon' : ''}">${e.dd.state === 'during' ? '시험 중' : 'D-' + e.dd.days}</span>
       <span class="dsh-m"><b>${escHtml(e.school || '학교 미정')} ${escHtml(gradeLabel(e.grade) || '')}</b><em>${
         escHtml([e.dd.start && e.dd.end ? e.dd.start.slice(5) + ' ~ ' + e.dd.end.slice(5) : '', e.dd.math ? '수학 ' + e.dd.math.slice(5) : ''].filter(Boolean).join(' · '))}</em></span></a>`).join('')
     : empty('잡힌 시험 일정이 없습니다. 설정 › 시험 일정에서 넣습니다.');
@@ -28943,8 +28987,22 @@ function teacherReviewHTML(){
     </div>
   </div>`;
 
+  /* 🔵 **코드 띠** (2026-10-02 · P-3 — 사용자 「검토는 목록이 아니라 문항을 보면서」) — 넓은 화면에서는 왼쪽 목록 칸 대신
+     위에 코드 한 줄. 칸마다 AI 판정 점(초록 같은 답 · 빨강 다름 · 노랑 못 함 · 회색 아직)과 그림 표시. 지금 것은 남색.
+     ⚠ 그리는 것만 다르다 — 고르는 길(selectAutoVariant·selectReviewItem)과 J/K 는 목록과 같다. 줄 모드에서는 CSS 가 감춘다. */
+  const 판정점 = v => ({ agree:'g', suspect:'r', unsure:'y' })[(v.aiReview || {}).verdict] || '';
+  const 전체 = autos.length + list.length;
+  const 몇째 = selAuto ? autos.findIndex(v => v.code === selAuto.code) + 1 : sel ? autos.length + list.findIndex(b => b.id === sel.id) + 1 : 0;
+  const strip = 전체 ? `<div class="rv-strip">
+    <span class="rv-pos mono">${몇째 || '—'} / ${전체}</span>
+    ${autos.map(v => `<a class="${selAuto && v.code === selAuto.code ? 'on' : ''}" onclick="selectAutoVariant('${escHtml(v.code)}')"
+        title="${escHtml(v.code)}"><i class="d ${판정점(v)}"></i><span class="mono">${escHtml(String(v.code).replace(/^[A-Z]\d-/, ''))}</span>${
+        variantHasFigure(v) ? iconSvg('camera', 12) : ''}</a>`).join('')}
+    ${list.map(b => `<a class="${sel && b.id === sel.id ? 'on' : ''}" onclick="selectReviewItem('${b.id}')"
+        title="${escHtml(examTitleOf(b.examId))}"><i class="d"></i><span>${escHtml(qLabelOf(b))}</span>${b.hasImage ? iconSvg('camera', 12) : ''}</a>`).join('')}
+  </div>` : '';
   return `<div class="rv-screen">${queues}${items}
-    <main class="rv-work">${reqBar}${askBar}${aiBar}${rvBar}${selAuto ? autoVariantWorkHTML(selAuto) : sel ? reviewWorkHTML(sel, list) : `
+    <main class="rv-work">${reqBar}${askBar}${aiBar}${strip}${rvBar}${selAuto ? autoVariantWorkHTML(selAuto) : sel ? reviewWorkHTML(sel, list) : `
       <div style="padding:64px 0;text-align:center;color:var(--dim);font-size:12.5px;line-height:1.8;">
         ${list.length===0 ? '이 큐는 비어 있습니다.' : '왼쪽 목록에서 문항을 고르세요.'}</div>`}
     </main>
@@ -30404,9 +30462,16 @@ function reviewBarHTML(autos){
   const 할것 = autos.filter(v => !v.aiReview && dqAnswerable(v.content, v.answer));
   const 남음 = state.reviewQuotaUsed===null ? null : Math.max(0, REVIEW_DAILY_LIMIT - state.reviewQuotaUsed);
   const p = state.reviewProgress;
+  const 일치 = agreedPassable(autos), 그림 = agreedWithFigure(autos);
   /* 🔵 **한 줄로 줄였다** (2026-09-07) — 한 건 검토는 아랫띠의 A 가 하므로
-     여기 남길 일은 «한꺼번에»와 «남은 한도» 둘뿐이다. */
-  if(!p && !할것.length) return '';
+     여기 남길 일은 «한꺼번에»와 «남은 한도» 둘뿐이다.
+     🔵 **「AI 일치 모두 통과」** (2026-10-02 · 사용자) — 검토를 돌려 «AI도 같은 답»이 나온 것만 한 번에.
+       🔴 그림이 있는 문항은 하나도 안 넣는다(사용자 — 「그림은 꼭 확인해봐야」) — 옆에 몇 개 빠졌는지 적는다. */
+  if(!p && !할것.length && !일치.length && !그림.length) return '';
+  const 통과 = (일치.length || 그림.length) && !p ? `
+    <button class="btn ok sm" ${(!일치.length || state.bulkPassing) ? 'disabled' : ''} onclick="approveAgreedVariants()">
+      ${iconSvg('check', 13)} ${state.bulkPassing ? '통과시키는 중…' : 'AI 일치 ' + 일치.length + '개 모두 통과'}</button>
+    ${그림.length ? `<span class="rv-figskip" title="그림이 있는 문항은 직접 열어 확인합니다">${iconSvg('camera', 13)} 그림 있는 ${그림.length}개는 직접</span>` : ''}` : '';
   return `<div class="rv-aibar">
     ${p
       ? `검토 중 <b class="mono">${p.done}/${p.total}</b>
@@ -30417,8 +30482,45 @@ function reviewBarHTML(autos){
       : `AI 검토 안 한 변형 <b class="mono">${할것.length}</b>개
          <s>·</s> ${남음===null ? '한도 확인 중…' : '오늘 남은 검토 ' + 남음 + '/' + REVIEW_DAILY_LIMIT}
          <span class="spacer"></span>
-         <button class="btn sm" ${남음===0?'disabled':''} onclick="reviewAllPending()">한꺼번에 검토</button>`}
+         ${할것.length ? `<button class="btn sm" ${남음===0?'disabled':''} onclick="reviewAllPending()">한꺼번에 검토</button>` : ''}
+         ${통과}`}
   </div>`;
+}
+/* 그림이 «있는» 변형인가 — 하나라도 걸리면 「AI 일치 모두 통과」에서 뺀다.
+   그려야 하는 것(needsFigure) · 원본 그림을 그대로 쓰는 것(reuseFigure) · 그림이 붙은 것 · 원본에 그림이 있는 것.
+   ⚠ 원본 본문을 아직 못 읽었으면 «모른다» — 그때도 뺀다(사람이 연다). */
+function variantHasFigure(v){
+  if(!v) return true;
+  if(v.needsFigure || v.reuseFigure || v.image) return true;
+  const o = (state.itemBody || {})[v.originCode];
+  if(!o) return true;
+  return !!(o.image || (o.images && o.images.length) || o.hasImage);
+}
+function agreedAll(autos){
+  return (autos || []).filter(v => v.aiReview && v.aiReview.verdict === 'agree' && dqAnswerable(v.content, v.answer));
+}
+function agreedPassable(autos){ return agreedAll(autos).filter(v => !variantHasFigure(v)); }
+function agreedWithFigure(autos){ return agreedAll(autos).filter(v => variantHasFigure(v)); }
+async function approveAgreedVariants(){
+  const 대상 = agreedPassable(pendingVariants());
+  if(!대상.length || state.bulkPassing) return;
+  const NL = String.fromCharCode(10);
+  if(!confirm('AI 일치 ' + 대상.length + '개를 통과시켜 창고에 넣습니다 — 바로 학생에게 나갑니다.' + NL
+      + '그림이 있는 문항은 빠집니다(직접 확인).')) return;
+  state.bulkPassing = true; render();
+  let 됨 = 0, 안됨 = 0, 채움 = 0;
+  for(const v of 대상){
+    /* approveAutoVariant 와 같은 일 — 한 건씩 저장하고, 기다리던 교재 요청이 있으면 채운다 */
+    const nv = Object.assign({}, v); delete nv.pending; nv.approvedAt = nowStamp();
+    if(await dbSetDoc('variants', v.code, nv)){
+      Object.assign(v, nv); delete v.pending; 됨++;
+      채움 += ((await fillEmptyFromStore(v.originCode)) || {}).채움 || 0;
+    } else 안됨++;
+  }
+  state.bulkPassing = false;
+  showToast('AI 일치 ' + 됨 + '개를 창고에 넣었습니다' + (안됨 ? ' · ' + 안됨 + '개는 저장하지 못했습니다' : '')
+    + (채움 ? ' · 기다리던 교재 요청 ' + 채움 + '문항도 채웠습니다' : '') + '.');
+  render();
 }
 
 async function approveAutoVariant(code){
