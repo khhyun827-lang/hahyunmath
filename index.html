@@ -3060,7 +3060,8 @@
 .app .subnav .sn-sep{flex:none;align-self:center;width:1px;height:14px;background:var(--line);margin:0 8px;}
 /* 줄 모드에서는 사이드용 아이콘을 숨기고, 맨 앞 묶음 머리(첫 토막 앞)는 선을 안 긋는다 */
 .app .subnav .sn-ic{display:none;}
-.app .subnav .sn-sep:first-child{display:none;}
+.app .subnav .sn-lead{display:none;}
+.app .subnav .sb-x{display:none;}
 
 /* 설정 왼쪽 목록의 묶음 머리 */
 .app .ex-nav .st-grp{margin:16px 0 6px;padding-left:10px;}
@@ -3510,7 +3511,7 @@
   .app:not(.sap):has(.tnav) .subnav .sn-ic{display:flex;}
   .app:not(.sap):has(.tnav) .subnav .sn-sep{display:block;align-self:stretch;width:auto;height:1px;background:#ECEEF3;margin:8px 10px;}
   .app:not(.sap):has(.tnav) .subnav .sn-sep[data-t]{height:auto;background:none;margin:12px 0 3px;padding-left:12px;}
-  .app:not(.sap):has(.tnav) .subnav .sn-sep[data-t]:first-child{margin-top:4px;}
+  .app:not(.sap):has(.tnav) .subnav .sn-lead{margin-top:4px;}
   .app:not(.sap):has(.tnav) .subnav .sn-sep[data-t]::after{content:attr(data-t);font-style:normal;font-size:11.5px;
     font-weight:800;color:#9AA0B0;letter-spacing:.06em;}
   .app:not(.sap):has(.subnav):has(.tnav) .body{padding-left:272px;}
@@ -3525,6 +3526,59 @@
     font-size:14.5px;font-weight:600;color:#3A4156;}
   .app:not(.sap):has(.tnav) .st-nav .ex-item:hover{background:#F3F5F9;}
   .app:not(.sap):has(.tnav) .st-nav .ex-item.on{background:#E3EAF5;color:#1E2E52;font-weight:800;box-shadow:inset 0 0 0 1px #D2DCEC;}
+
+  /* ── P-2: 사이드의 위(반 고르기)·아래(상태 카드)·서브탭 옆 숫자 ── */
+  .app:not(.sap):has(.tnav){--sig-ok:#2F9E5E;--sig-no:#D93A45;}
+  .app:not(.sap):has(.tnav) .subnav .sb-x{display:block;}
+  .app:not(.sap):has(.tnav) .subnav a .sn-n{display:flex;margin-left:auto;min-width:22px;height:22px;padding:0 7px;box-sizing:border-box;
+    align-items:center;justify-content:center;border-radius:11px;background:#1E2433;color:#fff;font:800 12px/1 'Pretendard',sans-serif;}
+  /* 반 고르기 — 사이드가 반을 고르므로 본문의 «반 목록» 칸은 접는다(줄 모드·폰에서는 그대로) */
+  .app:not(.sap):has(.tnav) .chub-side{display:none;}
+  .app:not(.sap):has(.tnav) .sb-pick{margin-bottom:6px;}
+  .app:not(.sap):has(.tnav) .sb-pk{display:flex;align-items:center;gap:11px;width:100%;padding:11px 12px;border:0;border-radius:18px;
+    background:#1E2433;color:#fff;text-align:left;cursor:pointer;font:inherit;}
+  .app:not(.sap):has(.tnav) .sb-pi{flex:none;width:38px;height:38px;border-radius:13px;background:rgba(255,255,255,.14);
+    display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;}
+  .app:not(.sap):has(.tnav) .sb-pn{flex:1;min-width:0;}
+  .app:not(.sap):has(.tnav) .sb-pn b{display:block;font-size:15px;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .app:not(.sap):has(.tnav) .sb-pn s{display:block;text-decoration:none;font-size:12px;color:rgba(255,255,255,.62);margin-top:2px;}
+  .app:not(.sap):has(.tnav) .sb-pl{display:flex;flex-direction:column;gap:2px;margin-top:6px;padding:6px;border-radius:16px;background:#F6F7FA;}
+  .app:not(.sap):has(.tnav) .sb-pl a{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;text-align:left;gap:1px;height:auto;padding:8px 10px;border-radius:12px;cursor:pointer;}
+  .app:not(.sap):has(.tnav) .sb-pl a b{font:700 14px/1.3 'Pretendard',sans-serif;color:#1E2433;}
+  .app:not(.sap):has(.tnav) .sb-pl a s{text-decoration:none;font-size:11.5px;color:#6A7186;}
+  .app:not(.sap):has(.tnav) .sb-pl a:hover{background:#fff;}
+  .app:not(.sap):has(.tnav) .sb-pl a.on{background:#E3EAF5;box-shadow:inset 0 0 0 1px #D2DCEC;}
+  /* 아래 카드 — 메뉴 밑 빈 자리를 «그 칸에서 지금 챙길 것»으로 */
+  .app:not(.sap):has(.tnav) .sb-card{margin-top:auto;padding:13px;border-radius:18px;background:#F6F7FA;}
+  .app:not(.sap):has(.tnav) .sb-ct{font-size:12px;font-weight:800;color:#6A7186;letter-spacing:.06em;margin-bottom:8px;}
+  .app:not(.sap):has(.tnav) .sb-kv{display:flex;align-items:center;padding:7px 10px;border-radius:12px;background:#fff;margin-bottom:8px;font-size:12.5px;}
+  .app:not(.sap):has(.tnav) .sb-kv span{color:#6A7186;font-weight:600;}
+  .app:not(.sap):has(.tnav) .sb-kv b{margin-left:auto;font-weight:800;color:#1E2433;}
+  .app:not(.sap):has(.tnav) .sb-kv b.hot{color:#fff;background:#1E2433;border-radius:9px;padding:1px 8px;}
+  .app:not(.sap):has(.tnav) .sb-m{margin-bottom:9px;}
+  .app:not(.sap):has(.tnav) .sb-mk{display:flex;font-size:12.5px;margin-bottom:5px;}
+  .app:not(.sap):has(.tnav) .sb-mk span{color:#4A5168;font-weight:600;}
+  .app:not(.sap):has(.tnav) .sb-mk b{margin-left:auto;font-weight:800;color:#1E2433;}
+  .app:not(.sap):has(.tnav) .sb-mb{height:6px;border-radius:3px;background:#E6E8EE;overflow:hidden;}
+  .app:not(.sap):has(.tnav) .sb-mb i{display:block;height:100%;border-radius:3px;}
+  .app:not(.sap):has(.tnav) .sb-w{display:flex;align-items:center;height:auto;padding:9px 10px;margin-bottom:6px;border-radius:12px;background:#fff;cursor:pointer;font-size:13.5px;}
+  .app:not(.sap):has(.tnav) .sb-w span{font-weight:700;color:#1E2433;}
+  .app:not(.sap):has(.tnav) .sb-w b{margin-left:auto;font-weight:800;color:#1E2433;}
+  .app:not(.sap):has(.tnav) .sb-none{font-size:12.5px;color:#6A7186;}
+  /* 홈 — 빠른 작업(가운데 정렬 · 사용자가 고름) · 최근 본 학생(동그라미 = 학교 두 글자) */
+  .app:not(.sap):has(.tnav) .sb-grp{font-size:11.5px;font-weight:800;color:#9AA0B0;letter-spacing:.06em;padding:16px 10px 6px;}
+  .app:not(.sap):has(.tnav) .subnav .sb-quick{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;}
+  .app:not(.sap):has(.tnav) .sb-quick a{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;height:auto;
+    padding:12px 6px;border-radius:16px;background:#F6F7FA;font-size:13px;font-weight:700;color:#1E2433;text-align:center;}
+  .app:not(.sap):has(.tnav) .sb-quick a i{width:30px;height:30px;border-radius:10px;background:#fff;box-shadow:0 0 0 1px #E6E8EE;
+    display:flex;align-items:center;justify-content:center;}
+  .app:not(.sap):has(.tnav) .sb-quick a:hover{background:#EEF1F6;}
+  .app:not(.sap):has(.tnav) .sb-recent a{display:flex;align-items:center;gap:10px;height:auto;padding:5px 8px;}
+  .app:not(.sap):has(.tnav) .sb-sc{flex:none;width:34px;height:34px;border-radius:50%;background:#EEF0F4;color:#3A4156;
+    display:flex;align-items:center;justify-content:center;font-size:11.5px;font-weight:800;letter-spacing:-.04em;}
+  .app:not(.sap):has(.tnav) .sb-rn{min-width:0;}
+  .app:not(.sap):has(.tnav) .sb-rn b{display:block;font:700 14px/1.3 'Pretendard',sans-serif;color:#1E2433;}
+  .app:not(.sap):has(.tnav) .sb-rn s{display:block;text-decoration:none;font-size:12px;color:#6A7186;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 }
 /* 화면 머리 — 「누구의 화면인가」. serif는 학생 이름에만 쓴다 (시스템 규칙) */
 /* 🔴 **세리프를 벗긴다** (2026-09-14 · 사용자 — 「폰트가 어울리지 않는 것 같다」).
@@ -18904,6 +18958,112 @@ function teacherSectionOf(tab, hub){
   return TEACHER_TAB_SECTION[tab] || '반';
 }
 
+/* =================== 사이드의 위·아래 (2026-10-02 · P-2 — 시안 «D 차분») ===================
+   위 = 반 고르기(반 칸만) · 아래 = 그 칸의 «지금 챙길 것» 카드 · 서브탭 옆 숫자.
+   🔴 **숫자는 이미 불러온 것만 쓴다** — 카드 때문에 DB 를 따로 읽지 않는다(하루 읽기 한도).
+     출석률은 셸이 이미 부르는 `loadAllRecordsIfNeeded` 의 것, AI 한도는 검토 화면이 부른 값이 있을 때만.
+   ⚠ 넓은 화면(사이드 모드)에서만 보인다 — 줄 모드에서는 CSS 가 감춘다(.sb-x). */
+/* 학교 두 글자 — 「광남고」→광남 · 「대원고등학교」→대원 · 「경기여자고등학교」→경여 (사용자가 고른 표시) */
+function schoolShort(name){
+  let n = String(name || '').replace(/\s/g, '').replace(/(고등학교|중학교|초등학교|고|중)$/, '').replace(/여자$/, '여');
+  if(/여$/.test(n) && n.length > 2) return n[0] + '여';
+  return n.slice(0, 2) || '—';
+}
+/* 최근 본 학생 — 이 기기에만 남는 편의(localStorage). 학생 상세가 그려질 때 맨 앞에 얹는다 */
+function recentStudentsPush(sid){
+  if(!sid) return;
+  let l = [];
+  try{ l = JSON.parse(localStorage.getItem('hh.recentStudents') || '[]'); }catch(e){}
+  if(l[0] === sid) return;
+  l = [sid, ...l.filter(x => x !== sid)].slice(0, 5);
+  try{ localStorage.setItem('hh.recentStudents', JSON.stringify(l)); }catch(e){}
+}
+function recentStudentsList(){
+  let l = [];
+  try{ l = JSON.parse(localStorage.getItem('hh.recentStudents') || '[]'); }catch(e){}
+  return l.map(id => DATA.students.find(s => s.studentId === id)).filter(Boolean);
+}
+/* 서브탭 옆 숫자 — 벨(teacherNotifItems)과 «같은 수»를 쓴다. 0 이면 안 붙인다 */
+function teacherSideCount(s, 벨){
+  if(s[1] === 'qna') return 벨.qna;
+  if(s[1] === 'chat') return 벨.chat;
+  if(s[1] === 'clinic') return 벨.clinic;
+  if(s[1] === 'consults') return 벨.consult;
+  if(s[1] === 'review') return (벨.review || 0) + (벨.report || 0);
+  if(s[1] === 'classhub' && s[2] === 'homework' && state.classHubId) return hwWaitingInClass(state.classHubId);
+  return 0;
+}
+function teacherSideExtrasHTML(section){
+  const 카드 = (제목, 안) => `<section class="sb-x sb-card"><div class="sb-ct">${제목}</div>${안}</section>`;
+  const 막대 = (k, v, p, c) => `<div class="sb-m"><div class="sb-mk"><span>${k}</span><b>${v}</b></div>
+    <div class="sb-mb"><i style="width:${Math.max(0, Math.min(100, p))}%;background:${c}"></i></div></div>`;
+  let top = '', bottom = '';
+  if(section === '반'){
+    const 반들 = myClassList();
+    const c = 반들.find(x => x.id === state.classHubId) || 반들[0];
+    if(c){
+      const 열림 = !!state.sidePickOpen;
+      top = `<div class="sb-x sb-pick">
+        <button class="sb-pk" onclick="state.sidePickOpen=${!열림}; render()" aria-expanded="${열림}">
+          <span class="sb-pi">${escHtml(String(c.name).slice(0, 2))}</span>
+          <span class="sb-pn"><b>${escHtml(c.name)}</b><s>${열림 ? '반 고르기' : '반 바꾸기 · ' + 반들.length + '개 반'}</s></span>
+          ${iconSvg('chevD', 16)}</button>
+        ${열림 ? `<div class="sb-pl">${반들.map(x => `<a class="${x.id === c.id ? 'on' : ''}"
+            onclick="state.classHubId='${x.id}'; state.sidePickOpen=false; render()">
+            <b>${escHtml(x.name)}</b><s>${escHtml(classScheduleLabel(x) || '일정 미정')} · ${classRoster(x.id).length}명</s></a>`).join('')}</div>` : ''}
+      </div>`;
+      /* 이 반 한눈에 — 다음 수업 · 이번 달 출석률 · 과제 확인 대기 · 진도 */
+      let 다음 = '';
+      for(let k = 0; k <= 21 && !다음; k++){
+        const d = shiftYmd(todayStr(), k);
+        if(sessionsOn(d).some(x => x.id === c.id))
+          다음 = (k === 0 ? '오늘 ' : '') + d.slice(5).replace('-', '/') + ' (' + WEEKDAY_LABEL[new Date(d + 'T00:00:00').getDay()] + ')';
+      }
+      const 이번달 = todayStr().slice(0, 7);
+      const 출결 = classRoster(c.id).flatMap(st => attOfClass(state.allRecords[st.studentId], c.id, studentMainClassId(st))
+        .filter(a => String(a.date || '').startsWith(이번달)));
+      const 출석률 = state.allRecordsLoaded ? attRateOf(출결) : null;
+      const 대기 = hwWaitingInClass(c.id);
+      const pr = getClassProgress(c.id);
+      bottom = 카드('이 반 한눈에', `
+        <div class="sb-kv"><span>다음 수업</span><b>${다음 || '—'}</b></div>
+        ${출석률 === null ? '' : 막대('이번 달 출석률', 출석률 + '%', 출석률, 출석률 < 90 ? 'var(--sig-no)' : 'var(--sig-ok)')}
+        <div class="sb-kv"><span>과제 확인 대기</span><b class="${대기 ? 'hot' : ''}">${대기}건</b></div>
+        ${pr.subject ? 막대('진도 · 이번 시즌 범위', pr.percent + '%', pr.percent, '#8E97AA') : ''}`);
+    }
+  }
+  if(section === '홈'){
+    const 빠른 = [
+      ['출결 넣기', 'checklist', "goTeacherTab('session')"],
+      ['과제 확인', 'clipboard', "gotoHwWaiting()"],
+      ['공지 쓰기', 'megaphone', "goTeacherTab('notices')"],
+      ['클리닉 열기', 'clinic', "goTeacherTab('clinic')"],
+      ['영상', 'video', "goTeacherTab('classhub','video')"],
+      ['학생 추가', 'users', "goTeacherTab('settings'); state.settingsSubTab='students'; render()"]
+    ];
+    const 최근 = recentStudentsList();
+    bottom = `<div class="sb-x sb-grp">빠른 작업</div>
+      <div class="sb-x sb-quick">${빠른.map(q => `<a onclick="${q[2]}"><i>${iconSvg(q[1], 16)}</i><span>${q[0]}</span></a>`).join('')}</div>
+      ${최근.length ? `<div class="sb-x sb-grp">최근 본 학생</div>
+      <div class="sb-x sb-recent">${최근.map(s => `<a onclick="goTeacherTab('classhub','students').then(()=>rosterOpen('${s.studentId}'))">
+        <span class="sb-sc" title="${escHtml(s.school || '')}">${escHtml(schoolShort(s.school))}</span>
+        <span class="sb-rn"><b>${escHtml(s.name)}</b><s>${escHtml(classNameOf(studentPrimaryClassId(s)) || '반 없음')}</s></span></a>`).join('')}</div>` : ''}`;
+  }
+  if(section === '소통'){
+    const 줄 = teacherNotifItems().filter(it => ['chat', 'qna', 'clinic', 'consult'].includes(it.key))
+      .map(it => [it, dashNotifN(it)]).filter(([, n]) => n > 0);
+    bottom = 카드('답 기다리는 것', 줄.length ? 줄.map(([it, n]) =>
+      `<a class="sb-w" onclick="${it.gotoCode}"><span>${escHtml(it.label)}</span><b>${n}</b></a>`).join('')
+      : '<div class="sb-none">지금 기다리는 것이 없습니다.</div>');
+  }
+  if(section === '문항관리' && (state.aiQuotaUsed != null || state.reviewQuotaUsed != null)){
+    bottom = 카드('오늘 AI 사용',
+      (state.aiQuotaUsed != null ? 막대('AI 변형', state.aiQuotaUsed + ' / ' + AI_DAILY_LIMIT, state.aiQuotaUsed / AI_DAILY_LIMIT * 100, '#8E97AA') : '')
+      + (state.reviewQuotaUsed != null ? 막대('AI 검토', state.reviewQuotaUsed + ' / ' + REVIEW_DAILY_LIMIT, state.reviewQuotaUsed / REVIEW_DAILY_LIMIT * 100, '#8E97AA') : ''));
+  }
+  return { top, bottom };
+}
+
 /* 탭이 어느 상위 메뉴에 속하는지.
    ⚠ `roster`는 여기 없다 — 「반 › 학생」으로 옮겨졌고, 옛 세션·북마크가 들고 있으면
      `teacherHTML`이 첫 줄에서 갈아 끼운다. 옛 `home`(C-13 전의 첫 화면)은 이제 대시보드(`dash`)로 간다. */
@@ -18979,13 +19139,17 @@ function teacherHTML(){
   /* 사이드의 묶음 머리 — 첫 토막의 머리는 맨 앞에, 나머지는 null 자리에 (줄 모드에서는 그냥 가는 선) */
   const 머리 = TEACHER_SUBNAV_TITLES[section] || [];
   let 토막 = 0;
-  const 머리표 = t => `<i class="sn-sep"${t ? ` data-t="${t}"` : ''} aria-hidden="true"></i>`;
+  const 머리표 = (t, lead) => `<i class="sn-sep${lead ? ' sn-lead' : ''}"${t ? ` data-t="${t}"` : ''} aria-hidden="true"></i>`;
   const subActive = s => state.teacherTab===s[1] && (!s[2] || state.classHubTab===s[2]);
   /* 벨이 «새 채팅»을 세려면 대화를 알고 있어야 한다. 셸에서 한 번만 부른다. */
   loadAllChatsIfNeeded();
   /* 「과제 제출 확인 대기」도 같은 이유로 기록이 있어야 센다 — 어느 화면에 있든 벨은 떠 있다. */
   loadAllRecordsIfNeeded();
   const body = teacherTabBodyHTML();
+  /* 사이드 위·아래와 서브탭 옆 숫자 — 본문을 그린 «뒤»에 짓는다(본문이 고른 반을 정한다) */
+  const 사이드 = subs ? teacherSideExtrasHTML(section) : { top: '', bottom: '' };
+  const 벨수 = {};
+  teacherNotifItems().forEach(it => { 벨수[it.key] = dashNotifN(it); });
 
   return `
   <div class="app">
@@ -19002,9 +19166,12 @@ function teacherHTML(){
         <button class="btn sm" onclick="logout()">로그아웃</button>
       </div>
     </div>
-    ${subs ? `<div class="subnav">${머리[0] ? 머리표(머리[0]) : ''}${subs.map(s=> !s ? 머리표(머리[++토막]) :
-      `<a class="${subActive(s)?'on':''}" onclick="goTeacherTab('${s[1]}'${s[2]?`,'${s[2]}'`:''})"><i class="sn-ic">${iconSvg(s[3],18)}</i><span>${s[0]}</span></a>`
-    ).join('')}</div>` : ''}
+    ${subs ? `<div class="subnav">${사이드.top}${머리[0] ? 머리표(머리[0], true) : ''}${subs.map(s=> {
+      if(!s) return 머리표(머리[++토막]);
+      const n = teacherSideCount(s, 벨수);
+      return `<a class="${subActive(s)?'on':''}" onclick="goTeacherTab('${s[1]}'${s[2]?`,'${s[2]}'`:''})"><i class="sn-ic">${iconSvg(s[3],18)}</i><span>${s[0]}</span>${
+        n ? `<b class="sb-x sn-n">${n}</b>` : ''}</a>`;
+    }).join('')}${사이드.bottom}</div>` : ''}
     <div class="body">${body}</div>
   </div>`;
 }
@@ -23341,6 +23508,7 @@ function sdConsult(){ state.studentDetailTab = 'timeline'; state.sdFilter = 'con
 function teacherStudentDetailHTML(sid){
   const s = DATA.students.find(s=>s.studentId===sid);
   if(!s){ state.studentDetailId=null; return state.teacherTab==='settings' ? teacherSettingsHTML() : teacherClassHubHTML(); }
+  recentStudentsPush(sid);   /* 홈 사이드의 「최근 본 학생」 (2026-10-02 · P-2) */
   const isAssistant = state.currentUser && state.currentUser.type==='assistant';
   if(isAssistant && !assistantClassIds(state.currentUser).includes(s.classId)){
     // 담당 반이 아닌 학생은 조교가 볼 수 없다. 담당 반은 여럿일 수 있다.

@@ -74,6 +74,13 @@ const M = new Function([liftConst('TEACHER_NAV'), liftConst('TEACHER_SUBNAV'), l
     ['consult', 'homework', 'log', 'material', 'progress', 'quiz', 'scores', 'sessions', 'students', 'video']);
 }
 
+/* ═══ ①-b 사이드 — 학교 두 글자 (2026-10-02 · P-2) ═══ */
+{
+  const 줄임 = new Function(lift('schoolShort') + '\nreturn schoolShort;')();
+  봄('학교 두 글자 — 광남고·대원고등학교·경기여자고등학교·명덕여고·빈칸',
+    ['광남고', '대원고등학교', '경기여자고등학교', '명덕여고', '', '건대부고'].map(줄임), ['광남', '대원', '경여', '명여', '—', '건대']);
+}
+
 /* ═══ ② 옮긴 문이 옛 자리에서도 열린다 ═══ */
 console.log('\n② 옛 자리 · 첫 화면\n');
 {
