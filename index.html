@@ -3847,12 +3847,13 @@
 .app .rv-figskip{display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--sub);}
 /* ============================================================
    시안 «D 차분»의 부품 한 벌 (2026-10-02 · 사용자 — 「이전 디자인의 잔재가 남지 않게 · 최대한 시안과 같게」)
-   넓은 화면 강사 셸에서만. `#app:has(.tnav)` 로 건다 — 본문 밖에 그려지는 드로어(.app.hwd-layer)까지 닿게.
+   강사 셸 «모든 폭»(2026-10-02 넷째 판에서 넓혔다 — 864·폰에도 옛 자두·장미빛이 남아 있었다). 배치는 폭마다 그대로, 부품·토큰·글꼴만 같다.
+   `#app:has(.tnav)` 로 건다 — 본문 밖에 그려지는 드로어(.app.hwd-layer)까지 닿게.
    학생 앱 미리보기(.app.sap)는 손대지 않는다(아래에서 옛 값으로 되돌린다).
    값은 시안 .dc.html 에서 그대로 옮겼다: 바탕 #F6F7FA · 선 #E3E6EE/#ECEEF3 · 글자 #1E2433/#3A4156/#6A7186 ·
    단추 높이 42(작은 것 34)·모서리 14 · 딱지 12px/800·알약 · 카드 모서리 22 · 글꼴 Manrope + Noto Sans KR.
    ============================================================ */
-@media (min-width:1200px){
+@media all{
   #app:has(.tnav){
     --paper:#F6F7FA;--card:#FFFFFF;--sunk:#F6F7FA;--hover:#F3F5F9;
     --ink:#1E2433;--sub:#4A5168;--dim:#8A90A3;--line:#E3E6EE;--line2:#ECEEF3;
@@ -3946,7 +3947,9 @@
   /* 드로어(오른쪽 판) — 같은 흰 판 */
   #app:has(.tnav) .app.hwd-layer .hwd{border-radius:22px 0 0 22px;border-left:1px solid #ECEEF3;box-shadow:-16px 0 48px rgba(40,50,80,.12);}
 
-  /* ── 소통 › 질의응답 (시안 «D 차분 · 소통») ── */
+}
+@media (min-width:1200px){
+  /* ── 소통 › 질의응답 (시안 «D 차분 · 소통») — 넓은 화면만(폰은 목록 → 한 질문으로 넘겨 본다) ── */
   #app:has(.tnav) .app:not(.sap) .qn-list{flex:0 0 340px;width:340px;padding:8px;}
   /* 대기·완료·전체 — 제목 줄 오른쪽 흰 묶음(본문 상자 기준 절대 자리 · 머리와 같이 굴러간다) */
   #app:has(.tnav) .app:not(.sap) .qn-lh{position:absolute;top:22px;right:6px;display:flex;gap:4px;padding:4px;margin:0;background:#fff;
@@ -4147,9 +4150,23 @@
   #app:has(.tnav) .app:not(.sap) .st-acct .t b{display:block;font-size:14px;font-weight:800;}
   #app:has(.tnav) .app:not(.sap) .st-acct .t s{display:block;text-decoration:none;font-size:11.5px;color:#6A7186;}
 }
+/* 시안 부품 — 줄 모드(760~1199)에도 같은 것: 출지조결 회색 네모 · 단계 판 한 줄.
+   ⚠ 학교 동그라미(.tl-sc)는 넓은 화면만 — 864 의 두 칸 카드(260)에 넣으면 출지조결이 다음 줄로 밀린다. */
+@media (min-width:760px){
+  #app:has(.tnav) .app:not(.sap) .seg{gap:6px;background:transparent;border:0;padding:0;}
+  #app:has(.tnav) .app:not(.sap) .seg button{width:38px;height:38px;border-radius:10px;border:0;background:#F1F2F5;color:#9AA0B0;font-weight:700;font-size:14px;}
+  #app:has(.tnav) .app:not(.sap) .seg button:hover{background:#E6E8EE;color:#4A5168;}
+  #app:has(.tnav) .app:not(.sap) .steps{overflow-x:auto;scrollbar-width:none;padding:6px;border-radius:18px;border:1px solid #ECEEF3;background:rgba(255,255,255,.92);}
+  #app:has(.tnav) .app:not(.sap) .steps .s{flex:0 0 auto;white-space:nowrap;padding:0 14px;height:46px;border-radius:13px;font-size:14px;font-weight:700;color:#4A5168;}
+  #app:has(.tnav) .app:not(.sap) .steps .s .b{width:24px;height:24px;background:#EEF0F4;color:#6A7186;font-size:12px;font-weight:800;}
+  #app:has(.tnav) .app:not(.sap) .steps .s.on{background:#1E2433;color:#fff;}
+  #app:has(.tnav) .app:not(.sap) .steps .s.on .b{background:#fff;color:#1E2433;}
+  #app:has(.tnav) .app:not(.sap) .steps .s.fin{color:#1F6B3F;} #app:has(.tnav) .app:not(.sap) .steps .s.fin .b{background:#E6F4EB;color:#1F6B3F;}
+}
+@media (min-width:1200px){ #app:has(.tnav) .app:not(.sap) .steps .s{flex:1;} }
 .app .rv-wpos, .app .rv-ours, .app .rv-vchip, .app .rv-solgo, .app .cls-prevgo, .app .st-acct{display:none;}
 .app .hm-chip.todo{background:#E3EAF5;color:#1E2E52;} .app .hm-chip.todo i{background:#1E2433;}
-/* 수업 아래 띠의 출결 셈 — 칩은 넓은 화면(시안)만. 줄 모드·폰은 예전처럼 글자 한 줄(띠가 세 줄로 불어나지 않게) */
+/* 수업 아래 띠의 출결 셈 — 칩은 넓은 화면(시안)만. 줄 모드·폰은 글자 한 줄(864 에서 칩이면 띠가 두 줄로 넘쳐 단추가 화면 밖으로 밀렸다) */
 @media (max-width:1199px){
   .app .actbar .sum.hm-chips{gap:0 10px;}
   .app .actbar .sum.hm-chips .hm-chip, .app .actbar .sum.hm-chips .hm-chip.todo{background:none;border:0;box-shadow:none;padding:0;color:var(--sub);font-weight:500;}
