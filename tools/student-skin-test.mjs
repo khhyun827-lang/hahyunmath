@@ -346,8 +346,9 @@ console.log(NL + '⑦ 좌상단 심볼 — 이름을 두 번 말하지 않는다
      이미 그렇게 정해 둔 자리다. 심볼도 같이 접힌다. */
   봄('⚠ 좁은 화면에서 관리자는 브랜드를 접는다 (심볼도 같이)',
     html.includes('.app:not(.sap) .topbar .bm{display:none;}'), true);
+  /* 2026-10-02 — 강사 셸의 로고는 «홈으로 가는 고리»(a.bm-home)가 됐다. 학생·조교 둘은 그대로 div */
   봄('관리자 상단바 글자는 그대로다',
-    (html.match(/<div class="bm">김하현수학연구소<\/div>/g) || []).length, 3);
+    [(html.match(/<div class="bm">김하현수학연구소<\/div>/g) || []).length, /<a class="bm bm-home"[^>]*>김하현수학연구소<\/a>/.test(html)], [2, true]);
 }
 
 console.log(NL + (fail ? '🔴 ' + fail + '개 실패 · ' : '✓ 전부 통과 · ') + pass + '개' + NL);

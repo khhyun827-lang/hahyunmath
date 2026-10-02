@@ -41,7 +41,11 @@ try{
   const 마지막 = () => page.evaluate(() => 저장.length ? 저장[저장.length - 1] : null);
 
   봄('불러온다', await page.$$eval('.memo-todo span', e => e.map(x => x.textContent)), ['첫 일']);
-  봄('글 칸에 불러온 글', await page.inputValue('#memo-note'), '처음 글');
+  /* 2026-10-02 — 글 칸은 홈에서 상단바 「메모」(어느 화면에서든 · notepadHTML)로 갔다. 홈은 할 일 체크만 */
+  봄('홈에는 글 칸이 없다', await page.$$eval('.dsh-memo #memo-note', e => e.length), 0);
+  await page.click('.tb-np');
+  await page.waitForTimeout(100);   // 펴면 30ms 뒤 글 칸에 커서를 둔다 — 그 뒤에 다른 칸을 만진다
+  봄('메모장을 펴면 같은 글', await page.inputValue('#memo-note'), '처음 글');
 
   await page.fill('#memo-add', '둘째 일'); await page.press('#memo-add', 'Enter');
   봄('Enter 로 더한다 · 저장', await 마지막(), ['memo:u1', { todos: [{ t: '첫 일', done: false }, { t: '둘째 일', done: false }], note: '처음 글' }]);
@@ -63,13 +67,13 @@ try{
   await page.evaluate(() => { const n = document.getElementById('memo-note'); n.setSelectionRange(2, 2); render(); });
   봄('render 가 돌아도 커서 그대로', await page.evaluate(() => [document.activeElement.id, document.activeElement.selectionStart]), ['memo-note', 2]);
 
-  // 864 — 시안 «D 차분» 홈(2026-10-02 · P-4): 메모는 «오른쪽 칸»(달력 밑) · 왼쪽은 오늘 수업 위 · 먼저 볼 학생 아래
+  // 864 — 2026-10-02 재배치: 왼쪽 = 먼저 볼 학생·시험 · 오른쪽 = 달력 · 할 일(달력 밑). «오늘 수업» 칸은 없다.
   const 자리 = await page.evaluate(() => {
     const r = q => document.querySelector(q).getBoundingClientRect();
-    return { 메모오른쪽: r('.dsh-memo').left > r('.dsh-a').right, 달력밑: r('.dsh-memo').top > r('.dsh-c .tcal').bottom - 1,
-             오른칸맨위는달력: Math.abs(r('.dsh-c').top - r('.dsh-a').top) < 2, 학생은수업밑: r('.dsh-b').top >= r('.dsh-a').bottom };
+    return { 할일오른쪽: r('.dsh-memo').left > r('.dsh-b').right, 달력밑: r('.dsh-memo').top > r('.dsh-c .tcal').bottom - 1,
+             같은높이에서시작: Math.abs(r('.dsh-c').top - r('.dsh-b').top) < 2, 오늘수업칸없음: !document.querySelector('.dsh-a') };
   });
-  봄('864 자리', 자리, { 메모오른쪽: true, 달력밑: true, 오른칸맨위는달력: true, 학생은수업밑: true });
+  봄('864 자리', 자리, { 할일오른쪽: true, 달력밑: true, 같은높이에서시작: true, 오늘수업칸없음: true });
 
   await page.evaluate(() => { state.currentUser = { type: 'assistant', name: 'A' }; render(); });
   봄('조교 홈엔 메모가 없다', await page.$$eval('.dsh-memo', e => e.length), 0);

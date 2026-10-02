@@ -3011,6 +3011,17 @@
   content:"";flex:none;width:57px;height:24px;
   background:var(--logo-h1) left center/auto 100% no-repeat;
 }
+/* 강사 로고 — 누르면 홈 · 조금 크게 (2026-10-02 · 사용자). 폭 = 높이 × 2.35 (위 주석) */
+.app .topbar a.bm-home{color:inherit;text-decoration:none;cursor:pointer;border-radius:12px;}
+.app .topbar a.bm-home:focus-visible{outline:2px solid var(--accent);outline-offset:4px;}
+@media (min-width:761px){
+  .app .topbar a.bm-home{font-size:16px;gap:10px;}
+  .app .topbar a.bm-home::before{width:66px;height:28px;}    /* 28 × 2.35 = 65.8 */
+}
+@media (min-width:1200px){
+  .app .topbar a.bm-home{font-size:17.5px;font-weight:800;}
+  .app .topbar a.bm-home::before{width:80px;height:34px;}    /* 34 × 2.35 = 79.9 */
+}
 @media (max-width:400px){
   .app.sap .topbar{padding:0 12px;gap:8px;}
   .app.sap .topbar .bm{gap:6px;font-size:12.5px;}
@@ -3208,12 +3219,12 @@
 /* 🔵 시안 «D 차분» 홈 (2026-10-02 · P-4) — a 오늘 수업 · b 먼저 볼 학생·시험 · c 달력·메모.
    두 칸(761~1279 · 사용자 864)은 왼쪽 a 위·b 아래, 오른쪽 c — 메모는 계속 «오른쪽 칸»에 있다. */
 .app .dsh-grid{display:grid;gap:16px;align-items:start;
-  grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-rows:auto 1fr;
-  grid-template-areas:"a c" "b c";}
+  grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-rows:auto;
+  grid-template-areas:"b c";}   /* 2026-10-02 — «오늘 수업»(a) 칸을 뺐다 */
 .app .dsh-a{grid-area:a;} .app .dsh-b{grid-area:b;} .app .dsh-c{grid-area:c;} .app .dsh-memo{min-width:0;}
 /* 넓은 화면 — 셋이 나란히. 달력·메모 칸은 좁게 고정 */
-@media (min-width:1280px){ .app .dsh-grid{grid-template-columns:minmax(0,1.2fr) minmax(0,1fr) 320px;grid-template-rows:auto;
-  grid-template-areas:"a b c";} }
+@media (min-width:1280px){ .app .dsh-grid{grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);grid-template-rows:auto;
+  grid-template-areas:"b c";} }
 .app .dsh-col{display:flex;flex-direction:column;gap:16px;min-width:0;}
 .app .dsh-card{background:var(--card);border-radius:var(--r-xl);box-shadow:var(--shadow-card);padding:4px 6px 6px;}
 .app .dsh-h{display:flex;align-items:center;gap:7px;padding:11px 10px 7px;}
@@ -3271,7 +3282,46 @@
 .app .memo-note:focus{border-color:var(--accent-line);}
 /* ⚠ 사용자 주력 판은 125% 확대(CSS 864)다 — 거기서도 두 칸이라야 «먼저 볼 학생»이 첫 화면에 든다. */
 @media (max-width:760px){ .app .dsh-grid{grid-template-columns:minmax(0,1fr);grid-template-rows:auto;
-  grid-template-areas:"a" "b" "c";} }
+  grid-template-areas:"b" "c";} }
+/* 홈 머리 오른쪽 — 출결 넣을 수업 하나 (2026-10-02) */
+.app .hm-head{position:relative;}
+.app .hm-next{display:inline-flex;align-items:center;gap:8px;margin-top:10px;height:42px;padding:0 16px;border-radius:14px;
+  background:var(--accent);color:#fff;font-weight:700;font-size:14px;cursor:pointer;text-decoration:none;}
+@media (min-width:761px){ .app .hm-next{position:absolute;right:0;bottom:2px;margin:0;} }
+/* 상담 약속 줄 (promiseRowHTML) */
+.app .pr-h{font-size:12px;font-weight:800;color:var(--sub);margin:12px 4px 4px;}
+.app .pr-box{background:var(--latebg);border-radius:12px;padding:6px 10px 8px;margin-bottom:10px;}
+.app .pr-box .pr-h{margin:2px 0 4px;color:var(--late);}
+.app .pr-row{display:flex;align-items:center;gap:8px;padding:5px 4px;font-size:13px;}
+.app .pr-row label{flex:1;min-width:0;display:flex;align-items:center;gap:8px;cursor:pointer;}
+.app .pr-row label span{min-width:0;}
+.app .pr-row.done label span{text-decoration:line-through;color:var(--dim);}
+.app .pr-who{font-weight:800;color:var(--ink);cursor:pointer;flex:none;}
+.app .pr-who:hover{text-decoration:underline;}
+.app .pr-d{text-decoration:none;font-size:11px;color:var(--dim);flex:none;}
+/* 메모장 — 상단바 단추 · 오른쪽 아래 접이 판 (notepadHTML · 2026-10-02) */
+.app .tb-np{display:inline-flex;align-items:center;gap:6px;height:36px;padding:0 12px;border-radius:999px;border:1px solid var(--line);
+  background:var(--card);color:var(--sub);font:inherit;font-size:13px;font-weight:700;cursor:pointer;}
+.app .tb-np.on{background:var(--accent);border-color:var(--accent);color:#fff;}
+@media (max-width:560px){ .app .tb-np span{display:none;} .app .tb-np{width:36px;padding:0;justify-content:center;} }
+.app .np{position:fixed;right:24px;bottom:24px;z-index:45;width:min(360px,calc(100vw - 32px));height:min(440px,calc(100vh - 140px));
+  display:flex;flex-direction:column;background:var(--card);border:1px solid var(--line);border-radius:18px;
+  box-shadow:0 18px 48px rgba(30,36,51,.18);padding:12px 14px 14px;box-sizing:border-box;}
+@media (max-width:560px){ .app .np{right:16px;bottom:82px;} }
+.app .np-h{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
+.app .np-h b{font-size:14px;display:inline-flex;align-items:center;gap:6px;}
+.app .np-h span{flex:1;font-size:11.5px;color:var(--dim);}
+.app .np-x{border:0;background:none;color:var(--dim);cursor:pointer;font-size:14px;padding:4px 6px;border-radius:8px;}
+.app .np-x:hover{background:var(--hover);color:var(--ink);}
+.app .np-note{flex:1;min-height:0;width:100%;box-sizing:border-box;resize:none;border:1px solid var(--line);border-radius:12px;
+  padding:10px 12px;font:inherit;font-size:13.5px;line-height:1.7;color:var(--ink);background:var(--sunk);outline:none;}
+.app .np-note:focus{border-color:var(--accent);}
+/* 넓은 화면 — 떠 있으면 달력·상담 칸을 덮었다(찍어서 봤다). 판 안 오른쪽에 «기둥»으로 붙이고 본문을 그만큼 좁힌다 */
+@media (min-width:1200px){
+  #app:has(.tnav) .app:not(.sap) > .np{top:110px;right:44px;bottom:44px;height:auto;width:300px;box-shadow:none;border-color:#ECEEF3;border-radius:22px;}
+  #app:has(.tnav) .app:not(.sap):has(> .np) > .body{right:358px;}
+  #app:has(.tnav) .app:not(.sap):has(> .np) .actbar{right:370px;}
+}
 /* ── 시안 «D 차분» 홈 부품 (2026-10-02 · P-4) — 색은 신호에만 ── */
 .app{--hm-ok:#2F9E5E;--hm-okbg:#E6F4EB;--hm-oktx:#1F6B3F;--hm-late:#E0A21C;--hm-latebg:#FBF0DA;--hm-latetx:#7A5207;
   --hm-no:#D93A45;--hm-nobg:#FBE6E8;--hm-notx:#A3222D;--hm-leave:#8C74D9;--hm-leavebg:#EEEAFB;--hm-ink:#1E2433;}
@@ -3334,6 +3384,10 @@
 .app .hm-tag{flex:none;font-size:12px;font-weight:800;padding:3px 10px;border-radius:999px;}
 .app .hm-tag.no{background:var(--hm-no);color:#fff;} .app .hm-tag.late{background:var(--hm-latebg);color:var(--hm-latetx);}
 .app .hm-stu .hm-chips{flex:1;min-width:0;}
+/* 칸이 좁으면(메모장을 펼친 1440 등) 이유 칩이 이름 밑 줄로 내려간다 — 한 줄에 우겨 넣어 칩끼리 겹쳤다 (2026-10-02) */
+.app .hm-stu{flex-wrap:wrap;}
+.app .hm-stu .hm-chips.r{flex:1 1 150px;}
+.app .hm-stu .hm-chip{flex:none;}
 /* 다가오는 시험 — D-day 상자 · 학교 · 수학 시험일 */
 .app .hm-exam{display:flex;align-items:center;gap:12px;padding:8px 8px;text-decoration:none;color:var(--hm-ink);cursor:pointer;border-radius:12px;}
 .app .hm-exam:hover{background:#F6F7FA;}
@@ -4137,8 +4191,8 @@
   #app:has(.tnav) .app:not(.sap) .hm{display:flex;flex-direction:column;height:calc(100vh - var(--chrome,178px));min-height:520px;}
   #app:has(.tnav) .app:not(.sap) .hm .hm-hi{font-size:32px;line-height:40px;}
   #app:has(.tnav) .app:not(.sap) .hm .hm-grid{flex:1;min-height:0;margin-top:14px;gap:14px;align-items:stretch;
-    grid-template-columns:minmax(0,1.2fr) minmax(0,1fr) 260px;grid-template-rows:minmax(0,1fr) minmax(0,1fr);
-    grid-template-areas:"a b c" "a e m";}
+    grid-template-columns:minmax(0,1.15fr) minmax(0,1fr) 300px;grid-template-rows:minmax(0,1fr) minmax(0,1fr);
+    grid-template-areas:"b e c" "b m c";}   /* 2026-10-02 재배치 — 먼저 볼 학생 · 시험/할 일 · 달력(두 줄) */
   #app:has(.tnav) .app:not(.sap) .hm .dsh-b, #app:has(.tnav) .app:not(.sap) .hm .dsh-c{display:contents;}
   #app:has(.tnav) .app:not(.sap) .hm .dsh-a{min-height:0;display:flex;}
   #app:has(.tnav) .app:not(.sap) .hm .dsh-a > section{flex:1;display:flex;flex-direction:column;min-height:0;overflow:auto;box-sizing:border-box;}
@@ -10574,6 +10628,8 @@ function teacherNotifItems(){
     /* 누르면 채팅 탭으로만 간다. «읽음»은 그 학생 대화를 실제로 열 때 찍힌다 —
        벨을 눌렀다고 읽은 것이 아니다. */
     {key:'chat', label:'새 채팅', count:0, unseen:chatN, keepUnseen:true, gotoCode:"goTeacherTab('chat');"},
+    /* 상담 약속 (2026-10-02) — 체크해야 줄어드는 수. 홈 「할 일」로 간다. */
+    {key:'promise', label:'상담 약속', count:0, unseen: isAssistantNow() ? 0 : openPromises().length, keepUnseen:true, gotoCode:"goTeacherTab('dash');"},
   ];
 }
 function studentNotifItems(sid){
@@ -19655,7 +19711,7 @@ const TEACHER_NAV = [
   /* 🔵 소통이 앞으로, 「오답」은 「문항관리」로 (2026-09-29 · 사용자 — 「오답탭은 시험지 오답에서 시작되어서
      이름이 오답인데 생각해보면 문항관리 탭이 맞는것 같아」). 탭 id(review·exams·unitbank)는 그대로다. */
   ['소통', 'clinic',   'messageCircle'],
-  ['문항관리', 'review', 'clipboard'],
+  ['문항관리', 'unitbank', 'clipboard'],   // 문항 창고가 첫 화면 (2026-10-02 · 사용자)
   ['설정', 'settings', 'settings']
 ];
 
@@ -19694,7 +19750,8 @@ const TEACHER_SUBNAV = {
   ],
   /* 「제출 현황」은 시험지 화면의 우측 칸으로 흡수했다 (시안 07). 서브탭에서 뺐다. */
   '문항관리': [
-    ['검토', 'review', null, 'checkCircle'], ['시험지', 'exams', null, 'document'], ['문항 창고', 'unitbank', null, 'box']
+    /* 문항 창고가 맨 앞 (2026-10-02 · 사용자 — 「문항관리에서 문항 창고가 가장 먼저」) */
+    ['문항 창고', 'unitbank', null, 'box'], ['검토', 'review', null, 'checkCircle'], ['시험지', 'exams', null, 'document']
   ],
   /* 「출석 도장」이 여기 있는 이유 — «신호»는 지표를 세우는 화면이고 «명단»은 평가하는
      화면이라, 놀이를 그 옆에 두면 놀이가 그 성격을 물려받는다. 소통이 제일 안 다치는 자리다. */
@@ -19911,6 +19968,7 @@ function teacherHTML(){
   const subActive = s => state.teacherTab===s[1] && (!s[2] || (state.classHubTab||'sessions')===s[2]);
   /* 벨이 «새 채팅»을 세려면 대화를 알고 있어야 한다. 셸에서 한 번만 부른다. */
   loadAllChatsIfNeeded();
+  if(!isAssistantNow()) loadPromisesIfNeeded();   // 벨의 「상담 약속」 (2026-10-02)
   /* 「과제 제출 확인 대기」도 같은 이유로 기록이 있어야 센다 — 어느 화면에 있든 벨은 떠 있다. */
   loadAllRecordsIfNeeded();
   const body = teacherTabBodyHTML();
@@ -19922,13 +19980,15 @@ function teacherHTML(){
   return `
   <div class="app">
     <div class="topbar">
-      <div class="bm">김하현수학연구소</div>
+      ${/* 로고를 누르면 홈 (2026-10-02 · 사용자 — 「나도 모르게 누르는 경우가 많아」) */''}
+      <a class="bm bm-home" href="#" title="홈으로" onclick="event.preventDefault(); goTeacherTab('dash')">김하현수학연구소</a>
       ${/* 🔵 폰(≤560)에서는 이 줄이 **하단 탭바**로 내려간다 — 학생 앱과 같은 어법 (A-1).
            마크업은 하나다: 아이콘(`<i>`)은 넓은 화면에서 CSS 가 감춘다. */''}
       <nav class="tnav">${TEACHER_NAV.map(n=>
         `<a class="${n[0]===section?'on':''}" onclick="goTeacherTab('${n[1]}')"><i>${iconSvg(n[2],20)}</i><span>${n[0]}</span></a>`
       ).join('')}</nav>
       <div class="right">
+        ${isAssistantNow() ? '' : `<button type="button" class="tb-np${(state.notepadOn != null ? state.notepadOn : notepadOpen()) ? ' on' : ''}" title="메모장 (어느 화면에서든)" aria-label="메모장" onclick="notepadToggle()">${iconSvg('pencil', 17)}<span>메모</span></button>`}
         ${bellHTML(teacherNotifItems())}
         <span class="who">김하현T</span>
         <button class="btn sm tb-out" onclick="logout()">로그아웃</button>
@@ -19948,6 +20008,7 @@ function teacherHTML(){
         s[1] === 'review' && state.teacherTab === 'review' ? reviewSideQueuesHTML() : ''}`;
     }).join('')}${사이드.bottom}</div>` : ''}
     <div class="body">${teacherPageHeadHTML(section, subs, 머리, subActive)}${body}</div>
+    ${notepadHTML()}
   </div>`;
 }
 /* 🔵 **넓은 화면의 «작은 경로 + 큰 제목»** (2026-10-02 · 시안 «D 차분» — 화면마다 「소통 · 질의응답 / 질의응답」).
@@ -20155,6 +20216,74 @@ function memoAdd(form){
 }
 function memoToggle(i){ const x = state.memo.todos[i]; if(!x) return; x.done = !x.done; memoSave(); render(); }
 function memoDel(i){ state.memo.todos.splice(i, 1); memoSave(); render(); }
+/* =================== 상담 약속 (2026-10-02 · 사용자 — 「넣으면 좋을 것 같아」) ===================
+   상담하다 생긴 «뒤에 챙길 일»(예: 「어머님께 클리닉 시간 문자」)을 내용 글에서 떼어 따로 챙긴다.
+   🔵 저장은 kv 문서 하나 `consultpromises` — 홈·벨이 전체를 한 번에 봐야 해서 학생마다 나누지 않는다(읽기 1건).
+     [{id, sid, t, date, logId, done, doneAt}] · logId 로 «어느 상담에서 나온 약속인가»를 잇는다.
+   보이는 곳 — 상담 작업대(쓰기 칸 위 «지난 약속» · 지난 상담 줄 밑) · 홈 「할 일」 · 학생 화면 오른쪽 · 벨 「상담 약속」.
+   ⚠ 학생·학부모에게는 안 보인다(강사 화면만 읽는다). */
+function loadPromisesIfNeeded(){
+  if(state.promises || state.promisesLoading) return;
+  state.promisesLoading = true;
+  dbGet('consultpromises', []).then(v => {
+    state.promises = Array.isArray(v) ? v : [];
+    state.promisesLoading = false;
+    render();
+  });
+}
+function openPromises(sid){ return (state.promises || []).filter(p => !p.done && (!sid || p.sid === sid)); }
+async function promisesSave(){
+  const ok = await dbSet('consultpromises', state.promises || []);
+  if(ok === false || ok === null) showToast('약속을 저장하지 못했습니다 — 잠시 뒤 다시 눌러 주세요.');
+}
+async function promiseToggle(id){
+  const p = (state.promises || []).find(x => x.id === id);
+  if(!p) return;
+  p.done = !p.done; p.doneAt = p.done ? todayStr() : null;
+  render();
+  await promisesSave();
+}
+async function promiseDel(id){
+  state.promises = (state.promises || []).filter(x => x.id !== id);
+  render();
+  await promisesSave();
+}
+/* 약속 한 줄 — 체크하면 끝, ✕ 는 지움. withName 이면 누구 약속인지 이름을 앞에 (홈) */
+function promiseRowHTML(p, withName){
+  const 이름 = withName ? `<a class="pr-who" onclick="event.preventDefault(); state.studentDetailTab='consult'; sdOpen('${p.sid}')">${escHtml(studentNameOf(p.sid) || '')}</a>` : '';
+  return `<div class="pr-row${p.done ? ' done' : ''}">
+      <label><input type="checkbox" ${p.done ? 'checked' : ''} onchange="promiseToggle('${p.id}')">${이름}<span>${escHtml(p.t)}</span></label>
+      <s class="pr-d">${escHtml((p.date || '').slice(5))}</s>
+      <button type="button" class="memo-x" title="지우기" onclick="promiseDel('${p.id}')">✕</button></div>`;
+}
+
+/* =================== 메모장 — 어느 화면에서든 (2026-10-02 · 사용자 — 「어떤 페이지에서든 볼 수 있는 메모장」) ===================
+   상단바 오른쪽 「메모」 단추로 접고 편다. 펼친 상태는 이 기기에 기억한다(localStorage — 기기마다의 편의).
+   🔵 글은 홈 메모의 «글 칸»이던 것 그대로다 — kv `memo:<uid>` 의 note. 그래서 옛 글이 그대로 이어진다.
+     칸 id 도 `memo-note` 그대로 — 저장(`memoNoteInput`·`memoSave`)과 render() 의 커서 되돌림이 그대로 일한다.
+   ⚠ 조교에게는 없다(쓰기가 강사만이다 — 홈 메모와 같은 판단). */
+function notepadOpen(){ try{ return localStorage.getItem('hh.notepad') === '1'; }catch(e){ return false; } }
+function notepadToggle(){
+  const v = !notepadOpen();
+  try{ localStorage.setItem('hh.notepad', v ? '1' : '0'); }catch(e){}
+  state.notepadOn = v;
+  render();
+  if(v) setTimeout(() => { const n = document.getElementById('memo-note'); if(n) n.focus(); }, 30);
+}
+function notepadHTML(){
+  if(isAssistantNow()) return '';
+  if(!(state.notepadOn != null ? state.notepadOn : notepadOpen())) return '';
+  loadMemoIfNeeded();
+  const m = state.memo;
+  return `<aside class="np" aria-label="메모장">
+    <div class="np-h"><b>${iconSvg('pencil', 14)} 메모장</b><span>1초 쉬면 저절로 저장</span>
+      <button type="button" class="np-x" title="접기" onclick="notepadToggle()">✕</button></div>
+    ${!m ? '<div class="dsh-empty">불러오는 중…</div>'
+      : `<textarea id="memo-note" class="np-note" placeholder="수업·학생 관련 메모 — 어느 화면에서든 적고, 1초 쉬면 저장됩니다"
+          oninput="memoNoteInput(this.value)" onblur="if(state.memoTimer) memoSave()">${escHtml(m.note)}</textarea>`}
+  </aside>`;
+}
+
 function teacherMemoHTML(){
   loadMemoIfNeeded();
   const m = state.memo;
@@ -20164,11 +20293,13 @@ function teacherMemoHTML(){
         <button type="button" class="memo-x" title="지우기" onclick="memoDel(${i})">✕</button></div>`).join('')}
     <form class="memo-add" onsubmit="memoAdd(this);return false;">
       <input id="memo-add" name="t" placeholder="할 일 적고 Enter" autocomplete="off" maxlength="200">
-      <button type="submit" class="btn q sm">추가</button></form>
-    <textarea id="memo-note" class="memo-note" placeholder="수업 관련 메모 — 자동 저장"
-      oninput="memoNoteInput(this.value)" onblur="if(state.memoTimer) memoSave()">${escHtml(m.note)}</textarea>`;
-  const 남은 = m ? m.todos.filter(x => !x.done).length : 0;
-  return `<section class="dsh-card"><div class="dsh-h"><b>메모</b>${남은 ? `<span class="dsh-n mono">${남은}</span>` : ''}</div>${body}</section>`;
+      <button type="submit" class="btn q sm">추가</button></form>`;
+  /* 🔵 글 메모는 상단바 「메모」(어느 화면에서든 — notepadHTML)로 옮겼다 (2026-10-02 · 사용자). 홈에는 할 일 체크만 + 상담 약속. */
+  loadPromisesIfNeeded();
+  const 약속 = openPromises().slice().sort((a,b)=>String(a.date||'').localeCompare(String(b.date||'')));
+  const 약속칸 = !약속.length ? '' : `<div class="pr-h">상담 약속 <b class="mono">${약속.length}</b></div>${약속.map(p => promiseRowHTML(p, true)).join('')}`;
+  const 남은 = (m ? m.todos.filter(x => !x.done).length : 0) + 약속.length;
+  return `<section class="dsh-card"><div class="dsh-h"><b>할 일</b>${남은 ? `<span class="dsh-n mono">${남은}</span>` : ''}</div>${body}${약속칸}</section>`;
 }
 
 function teacherDashHTML(){
@@ -20286,14 +20417,13 @@ function teacherDashHTML(){
     <div class="hm-head">
       <div class="hm-date">${escHtml(stuDayLabel(today))} · 오늘 수업 ${sessions.length}반</div>
       <h1 class="t-title hm-hi">${인사}, 김하현 선생님</h1>
+      ${넣을곳 ? `<a class="hm-next" onclick="dashOpenSession('${넣을곳.id}')">${escHtml(String((넣을곳.jikbo ? 넣을곳.timeText : sessionTimeText(넣을곳.schedule, dowN)) || '').split(/[~–-]/)[0])} ${escHtml(넣을곳.name)} · 출결 넣기 ${iconSvg('arrowR', 15)}</a>` : ''}
     </div>
     ${kpis}
-    ${/* 🔵 **세 칸** — 넓은 화면(≥1280)은 a(오늘 수업) · b(먼저 볼 학생·시험) · c(달력·메모)가 나란히.
-         760~1279 는 두 칸 — 왼쪽 a 위·b 아래, 오른쪽 c(달력·메모 · 메모는 «오른쪽 칸»에 남는다). 760 아래는 한 칸. */''}
+    ${/* 🔵 **재배치** (2026-10-02 · 사용자 — 「오늘 수업 공간이 너무 크고 달력 밑에 적혀 있어 중복」).
+         «오늘 수업» 칸을 뺐다 — 오늘 수업은 달력 밑 «고른 날 일정»에 있고, 출결 넣을 수업은 머리 오른쪽 단추가 맡는다.
+         넓은 화면: 먼저 볼 학생(두 줄) · 다가오는 시험 / 할 일 · 달력(두 줄 — 고른 날 일정까지). 좁으면 왼쪽(학생·시험) · 오른쪽(달력·할 일). */''}
     <div class="dsh-grid hm-grid">
-      <div class="dsh-col dsh-a">
-        ${sec('오늘 수업', sessions.length || '', sessBody, ['수업으로', "goTeacherTab('session')"])}
-      </div>
       <div class="dsh-col dsh-b">
         ${sec('먼저 볼 학생', live.length || '', sigBody, ['신호 전체', "goTeacherTab('signals')"])}
         ${sec('다가오는 시험', exams.length || '', examBody, ['시험 일정', "state.settingsSubTab='examrange'; state.examSubTab='range'; goTeacherTab('settings')"])}
@@ -24172,6 +24302,14 @@ async function addConsultLog(sid){
   const 주제 = consultTopicsRead('cs-topic'); if(주제.length) row.topics = 주제;
   if(s) row.snap = consultSnapOf(s);                  // 그때의 숫자 — 다음 상담에서 견준다
   const list = (state.consultLogs[sid] || []).concat([row]);
+  /* 약속 — 줄마다 하나 (2026-10-02) */
+  const prEl = document.getElementById('cs-promises');
+  const 약속들 = prEl ? prEl.value.split(/\r?\n/).map(x => x.trim()).filter(Boolean) : [];
+  if(약속들.length){
+    if(!state.promises) state.promises = (await dbGet('consultpromises', [])) || [];
+    약속들.forEach((t, k) => state.promises.push({ id: 'pr' + Date.now() + '_' + k, sid, t, date, logId: row.id, done: false }));
+    await promisesSave();
+  }
   state.consultLogs[sid] = list;
   await dbSet('consultlog:' + sid, list);
   /* 무엇을 나눴는지는 변경 이력에 남기지 않는다 — 상담에는 사적인 말이 들어가고
@@ -25557,6 +25695,8 @@ function sdScreenHTML(s, rec, isAssistant){
            혼자 갈아끼우지 말 것. */''}
     ${sdCtxScoresHTML(s, rec)}
     <hr class="s">
+    ${(() => { loadPromisesIfNeeded(); const 열린 = openPromises(sid); return !열린.length ? ''
+      : `<div class="t-sec">상담 약속 <span class="mono">${열린.length}</span></div>${열린.map(p => promiseRowHTML(p, false)).join('')}<hr class="s">`; })()}
     <div class="t-sec">빠른 작업</div>
     <div class="sd-qa">
       <button class="btn ${mode==='chat'?'p':''}" onclick="sdMode('${mode==='chat'?'timeline':'chat'}')">${mode==='chat'?'연대기로':'채팅'}</button>
@@ -25755,6 +25895,8 @@ function sdConsultDeskHTML(s, rec, st, sg){
   const log = (state.consultLogs[sid] || []).slice().sort((a,b)=>String(b.date||'').localeCompare(String(a.date||'')));
   const 오른쪽 = `<div class="cd-right">
     <section class="cd-box cd-write"><div class="cd-bh"><b>오늘 상담</b><span class="cd-cap">지금 ${escHtml(consultSnapText(지금) || '—')}</span></div>
+      ${(() => { loadPromisesIfNeeded(); const 열린 = openPromises(sid);
+        return 열린.length ? `<div class="pr-box"><div class="pr-h">지난 약속 <b class="mono">${열린.length}</b> — 지켰으면 체크</div>${열린.map(p => promiseRowHTML(p, false)).join('')}</div>` : ''; })()}
       <div class="cls-form" style="margin-top:0;">
         <label><span>날짜</span><input id="cs-date" type="date" value="${todayStr()}"></label>
         <label style="width:96px;"><span>방식</span><select class="fm-sel" id="cs-kind">${CONSULT_KINDS.map(k=>`<option>${k}</option>`).join('')}</select></label>
@@ -25763,6 +25905,8 @@ function sdConsultDeskHTML(s, rec, st, sg){
       <div class="cls-form"><label style="flex:1;"><span>내용</span>
         <textarea id="cs-text" rows="6" placeholder="나눈 이야기와 약속한 것&#10;예: 어머니 통화 — 9월부터 클리닉 주 2회 희망"></textarea></label></div>
       <div class="cd-sub" style="margin-top:8px;">주제</div>${consultTopicsHTML('cs-topic', [])}
+      <div class="cls-form"><label style="flex:1;"><span>약속 · 뒤에 챙길 일 <s class="cd-none" style="text-decoration:none;">— 줄마다 하나. 홈 「할 일」과 벨에 뜹니다</s></span>
+        <textarea id="cs-promises" rows="2" placeholder="예: 어머님께 클리닉 시간 문자&#10;다음 주까지 오답 정리 확인"></textarea></label></div>
       <div class="row" style="gap:8px;align-items:center;margin-top:8px;">
         <span class="cd-none" style="flex:1;">기록하면 지금 숫자도 같이 남아 다음 상담에서 견줍니다. 학생·학부모에게는 안 보입니다.</span>
         <button class="btn p" onclick="addConsultLog('${sid}')">기록</button></div>
@@ -25779,6 +25923,7 @@ function sdConsultDeskHTML(s, rec, st, sg){
                 <button class="btn q sm" onclick="deleteConsultLog('${sid}','${c.id}')">삭제</button></div>
               <div class="x">${escHtml(c.text || '')}</div>
               ${c.snap ? `<div class="cd-then">그때 ${escHtml(consultSnapText(c.snap))}</div>` : ''}
+              ${(state.promises || []).filter(p => p.logId === c.id).map(p => promiseRowHTML(p, false)).join('')}
             </div>`).join('')}
     </section>
   </div>`;
