@@ -6163,3 +6163,12 @@ claude work/
 - 과제 확인 버그: gotoHwWaiting 이 render() 를 안 불렀다(벨도 같은 길). 고침.
 - 공지 내용 칸이 글자마다 render(liveEdit) 해서 «제목»이 지워졌다 → 초안만 담는다(공지 화면에도 있던 흠).
 - 검사: quick-action-test (⑤는 render 를 빼면 문다 — 확인함).
+
+### 홈 달력 — 목록 이름 한 줄 · 강사 «내 일정» (2026-10-03 · 사용자 — 「반 이름이 두 줄로」 · 「개인 일정 추가가 안 된다」)
+- 고른 날 목록(.tcal-day): 시각을 이름 밑 작은 줄로 내리고 이름은 한 줄(넘치면 …, title 로 전체). 내 일정만 줄바꿈 허용.
+- 내 일정 = memo:uid 문서의 events [{id,date,t,time}] — 홈이 이미 읽는 문서라 읽기 안 는다. 조교엔 없다.
+  날짜를 고르면 목록 밑 「+ 이 날에 내 일정」 → 이름 + 시각(선택). × 로 지운다. 칸 안 이름 · 파란 점(TCAL_GROUPS.mine).
+  teacherMonthEvents(ym, mine) 로 넘긴다(state 를 안 본다 — tcal-test 가 따로 떠서 돌린다).
+- 🔴 loadMemoIfNeeded 가 events 를 들고 와야 한다 — 빠뜨리면 할 일 체크(memoSave 가 통째로 씀) 순간 일정이 지워진다. memo-test 가 문다(확인함).
+- 시각 순서: «08:30» 같은 두 자리 24시 꼴은 그대로(아침이 저녁으로 안 밀린다).
+- CAL_KINDS.mine 색 회색 → #3E64B3 (학생 달력 «내 일정»도 같이).

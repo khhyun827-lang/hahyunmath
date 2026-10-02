@@ -48,7 +48,7 @@ try{
   봄('메모장을 펴면 같은 글', await page.inputValue('#memo-note'), '처음 글');
 
   await page.fill('#memo-add', '둘째 일'); await page.press('#memo-add', 'Enter');
-  봄('Enter 로 더한다 · 저장', await 마지막(), ['memo:u1', { todos: [{ t: '첫 일', done: false }, { t: '둘째 일', done: false }], note: '처음 글' }]);
+  봄('Enter 로 더한다 · 저장', await 마지막(), ['memo:u1', { todos: [{ t: '첫 일', done: false }, { t: '둘째 일', done: false }], note: '처음 글', events: [] }]);
   봄('더한 뒤 입력칸은 비고 커서가 남는다', await page.evaluate(() => [document.activeElement.id, document.activeElement.value]), ['memo-add', '']);
   봄('남은 일 수', await page.textContent('.dsh-memo .dsh-n'), '2');
 
@@ -85,6 +85,21 @@ try{
     return { 수학: 이름들.includes('대원1 수학'), 수업이름없음: !이름들.some(t => /반$/.test(t)) };
   });
   봄('달력 칸 안 일정 이름', 칸, { 수학: true, 수업이름없음: true });
+
+  // 홈 달력 «내 일정» (2026-10-03) — 메모 문서에 같이 산다. 불러올 때 빠뜨리면 할 일 체크가 일정을 지운다
+  await page.evaluate(async () => {
+    const 옛 = window.dbGet; window.dbGet = async (k, d) => k === 'memo:u1' ? { todos: [{ t: '일', done: false }], note: '', events: [{ id: 'e1', date: todayStr(), t: '치과', time: '08:00' }] } : 옛(k, d);
+    state.notepadOn = false; state.memo = null; state.memoLoading = false; await loadMemoIfNeeded(); state.tCalDay = todayStr(); render(); });
+  봄('불러온 내 일정이 고른 날 목록에', await page.$$eval('.tcal-day .scal-item.mine b', e => e.map(x => x.textContent)), ['치과']);
+  await page.locator('.memo-todo input').first().click();
+  봄('할 일을 체크해도 일정이 같이 저장된다', (await 마지막())[1].events.map(e => e.t), ['치과']);
+  await page.click('.tcal-addbtn');
+  await page.fill('.tcal-add input[name=t]', '학부모 모임'); await page.fill('.tcal-add input[name=tm]', '19:30');
+  await page.click('.tcal-add .btn.p');
+  봄('이 날에 내 일정 추가 → 저장', (await 마지막())[1].events.map(e => [e.t, e.time, e.date === e.date]), [['치과', '08:00', true], ['학부모 모임', '19:30', true]]);
+  봄('칸 안에도 이름', await page.$$eval('.scal-c.on .evs i', e => e.map(x => x.textContent).includes('학부모 모임')), true);
+  await page.locator('.tcal-day .scal-item.mine .tcal-del').first().click();
+  봄('지우기', (await 마지막())[1].events.map(e => e.t), ['학부모 모임']);
 
   await page.evaluate(() => { state.currentUser = { type: 'assistant', name: 'A' }; render(); });
   봄('조교 홈엔 메모가 없다', await page.$$eval('.dsh-memo', e => e.length), 0);

@@ -3282,6 +3282,18 @@
 .app .tcal .scal-item[onclick]{cursor:pointer;}
 .app .tcal .scal-item[onclick]:hover{background:var(--hover);}
 .app .tcal .scal-item.off{opacity:.55;}
+/* 홈 달력 «내 일정» (2026-10-03) — 지우기 단추 · 이 날에 추가 */
+.app .tcal .scal-item .t b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.app .tcal .scal-item.mine{padding-right:34px;}
+#app:has(.tnav) .app:not(.sap) .tcal .tcal-day .scal-item.mine .t b{white-space:normal;}   /* 내 일정은 적은 말이 다 보이게(수업 이름만 한 줄) */
+.app .tcal .tcal-del{position:absolute;right:6px;top:50%;transform:translateY(-50%);width:24px;height:24px;border:0;background:transparent;
+  color:var(--dim);border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.app .tcal .tcal-del:hover{background:var(--nobg);color:var(--no);}
+.app .tcal .tcal-addbtn{width:100%;margin-top:10px;justify-content:center;}
+.app .tcal .tcal-add{display:flex;flex-direction:column;gap:6px;margin-top:10px;}
+.app .tcal .tcal-add input{width:100%;box-sizing:border-box;height:34px;padding:0 10px;border:1px solid var(--line);border-radius:10px;font:inherit;font-size:13px;background:var(--card);color:var(--ink);}
+.app .tcal .tcal-add-r{display:flex;gap:6px;align-items:center;}
+.app .tcal .tcal-add-r input{flex:1;min-width:0;}
 .app .dsh-empty{padding:12px 10px 14px;font-size:12.5px;color:var(--dim);line-height:1.6;}
 /* 홈 메모 (2026-10-02) — 할 일 줄 · 더하기 · 글 칸(수업 메모 .cls-memo 의 종이색을 같이 쓴다) */
 .app .memo-todo{display:flex;align-items:center;gap:6px;min-height:40px;padding:0 4px 0 10px;border-radius:var(--r-sm);}
@@ -3321,7 +3333,7 @@
   #app:has(.tnav) .app:not(.sap) .hm .tcal .scal-c .evs{display:flex;flex-direction:column;gap:2px;min-width:0;}
   #app:has(.tnav) .app:not(.sap) .hm .tcal .scal-c .evs i{font-style:normal;font-size:10.5px;font-weight:700;line-height:1.35;padding:0 4px;border-radius:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:left;}
   #app:has(.tnav) .app:not(.sap) .hm .tcal .scal-c .evs i.more{background:none;color:#6A7186;}
-  #app:has(.tnav) .app:not(.sap) .hm .tcal-day .scal-item .t b{white-space:normal;}
+  #app:has(.tnav) .app:not(.sap) .hm .tcal-day .scal-item .t b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   #app:has(.tnav) .app:not(.sap) .hm .tcal .scal-dow, #app:has(.tnav) .app:not(.sap) .hm .tcal .scal-grid{grid-template-columns:repeat(7,minmax(0,1fr));gap:2px;}
 }
 /* 864 언저리(761~1199) — 달력이 맨 위 한 줄을 다 쓰고, 그 밑에 먼저 볼 학생 · 할 일이 나란히 */
@@ -19086,7 +19098,7 @@ const CAL_KINDS = {
      그대로 여기로 온다. 시험기간에 학생이 가장 자주 묻는 「나 언제 와?」의 답이다.
      ⚠ 색은 ds.css 에 «있는» 것만 쓴다 — 여섯 중 유일하게 안 쓰고 있던 gone 을 쓴다. */
   plan:   {이름: '직보',    색: 'var(--gone)',  바탕: 'var(--gonebg)'},
-  mine:   {이름: '내 일정', 색: 'var(--dim)',   바탕: 'var(--sunk)'},
+  mine:   {이름: '내 일정', 색: '#3E64B3',      바탕: '#E8EEF9'},   /* 2026-10-03 회색 → 차분한 파랑(강사 달력에서 칸 안 이름으로도 보이므로) */
 };
 
 /* =============== 달력의 «점»은 갈래가 아니라 묶음이다 (2026-09-13 · 사용자가 짚었다) ===============
@@ -19104,7 +19116,7 @@ const CAL_KINDS = {
 const CAL_GROUPS = {
   come: {이름: '가는 날',   색: 'var(--ok)',   갈래: ['class', 'clinic', 'plan']},
   todo: {이름: '낼 것',     색: 'var(--late)', 갈래: ['hw', 'video']},
-  mine: {이름: '내 일정',   색: 'var(--dim)',  갈래: ['mine']},
+  mine: {이름: '내 일정',   색: '#3E64B3',     갈래: ['mine']},
 };
 /* 갈래 → 묶음. 시험(exam)은 일부러 없다 — 면으로 말한다. */
 const CAL_GROUP_OF = (() => {
@@ -20240,8 +20252,9 @@ const TCAL_GROUPS = {
   class: {이름: '수업',          색: 'var(--ok)',    갈래: ['class']},
   plan:  {이름: '직보',          색: 'var(--gone)',  갈래: ['plan']},
   meet:  {이름: '클리닉·상담',   색: 'var(--leave)', 갈래: ['clinic']},
+  mine:  {이름: '내 일정',       색: '#3E64B3',      갈래: ['mine']},
 };
-function teacherMonthEvents(ym){
+function teacherMonthEvents(ym, mine){
   const out = {}, 시험날 = {}, 수학날 = {};
   const 넣기 = (date, ev) => {
     if(!date || String(date).slice(0, 7) !== ym) return;
@@ -20304,11 +20317,35 @@ function teacherMonthEvents(ym){
   for(const date in 상담) 넣기(date, {kind: 'clinic', title: '상담진행 · ' + 상담[date].length + '명', short: '상담 ' + 상담[date].length + '명',
     sub: 상담[date].join(' · '), open: "state.settingsSubTab='examrange'; state.examSubTab='plan'; goTeacherTab('settings')"});
 
-  /* 같은 날 안에서는 시각 순 — 「오후 2시」·「19:00~21:00」 이 섞이므로 시(時)만 뽑아 견준다 */
+  /* ⑦ 내 일정 — 강사가 홈 달력에 적은 것 (2026-10-03 · 사용자 — 「달력에 개인 일정 추가」). 메모 문서(memo:uid)의 events 에 산다 */
+  (mine || []).forEach(e => 넣기(e.date, {kind: 'mine', title: e.t || '내 일정', short: e.t || '', time: e.time || '', id: e.id}));
+
+  /* 같은 날 안에서는 시각 순 — 「오후 2시」·「19:00~21:00」 이 섞이므로 시(時)만 뽑아 견준다.
+     ⚠ «08:30» 처럼 두 자리 24시 꼴(내 일정의 시각 칸)은 그대로 — 아침 일정이 저녁으로 밀리지 않게 */
   const 시각 = e => { const t = String(e.time || ''); const n = t.match(/\d+/);
-    if(!n) return 99; let h = parseInt(n[0], 10); if(/오후/.test(t) && h < 12) h += 12; else if(h < 9) h += 12; return h; };
+    if(!n) return 99; let h = parseInt(n[0], 10); if(/^\d\d:/.test(t)) return h; if(/오후/.test(t) && h < 12) h += 12; else if(h < 9) h += 12; return h; };
   Object.values(out).forEach(list => list.sort((a, b) => (a.kind === 'exam') - (b.kind === 'exam') || 시각(a) - 시각(b)));
   return {out, 시험날, 수학날};
+}
+/* 🔵 **강사 «내 일정»** (2026-10-03 · 사용자 — 「달력에 개인일정 추가 기능」).
+   memo:uid 문서의 events [{id, date, t, time}] — 홈에서 이미 읽는 문서라 읽기가 안 는다. 학생 달력의 내 일정과는 다른 것(그건 학생 기록).
+   ⚠ loadMemoIfNeeded 가 events 를 꼭 들고 와야 한다 — 빠뜨리면 할 일을 체크하는 순간 일정이 통째로 지워진다(검사가 붙든다). */
+function tcalAddOpen(date){
+  state.tCalAdd = date; render();
+  const i = document.querySelector('.tcal-add input[name=t]'); if(i) i.focus();
+}
+function tcalAddEvent(form, date){
+  const t = form.t.value.trim();
+  if(!t){ form.t.focus(); return; }
+  if(!state.memo) return;
+  (state.memo.events = state.memo.events || []).push({ id: 'e' + Date.now(), date, t, time: form.tm.value || '' });
+  state.tCalAdd = '';
+  memoSave(); render();
+}
+function tcalDelEvent(id){
+  if(!state.memo || !state.memo.events) return;
+  state.memo.events = state.memo.events.filter(e => e.id !== id);
+  memoSave(); render();
 }
 function teacherCalHTML(){
   const 오늘 = todayStr();
@@ -20316,7 +20353,8 @@ function teacherCalHTML(){
   const [y, m] = ym.split('-').map(Number);
   const 첫요일 = new Date(y, m - 1, 1).getDay();
   const 날수 = new Date(y, m, 0).getDate();
-  const {out: 일정, 시험날, 수학날} = teacherMonthEvents(ym);
+  const 내것 = !isAssistantNow() && state.memo ? (state.memo.events || []) : null;   // 조교에겐 없다(메모와 같다)
+  const {out: 일정, 시험날, 수학날} = teacherMonthEvents(ym, 내것);
   const 고른날 = (state.tCalDay && state.tCalDay.slice(0, 7) === ym) ? state.tCalDay : (오늘.slice(0, 7) === ym ? 오늘 : '');
   const 묶음 = {}; for(const g in TCAL_GROUPS) TCAL_GROUPS[g].갈래.forEach(k => 묶음[k] = g);
 
@@ -20341,12 +20379,21 @@ function teacherCalHTML(){
   const 그날 = 고른날 ? (일정[고른날] || []) : [];
   const 목록 = !고른날 ? '<div class="scal-empty">날짜를 눌러 보세요.</div>'
     : !그날.length ? '<div class="scal-empty">이 날은 일정이 없습니다.</div>'
-    : '<div class="scal-list">' + 그날.map(e => `<div class="scal-item${e.흐림 ? ' off' : ''}" style="border-left-color:${CAL_KINDS[e.kind].색}"
+    : '<div class="scal-list">' + 그날.map(e => `<div class="scal-item${e.흐림 ? ' off' : ''}${e.kind === 'mine' ? ' mine' : ''}" style="border-left-color:${CAL_KINDS[e.kind].색}"
         ${e.open ? `${TAP} onclick="${e.open}"` : ''}>
         <div class="k" style="color:${CAL_KINDS[e.kind].색};background:${CAL_KINDS[e.kind].바탕};">${
           e.kind === 'clinic' && /^상담/.test(e.title) ? '상담' : CAL_KINDS[e.kind].이름}</div>
-        <div class="t"><b${e.굵게 ? ' style="color:var(--no);"' : ''}>${escHtml(e.title)}</b>${e.sub ? `<span>${escHtml(e.sub)}</span>` : ''}</div>
-        ${e.time ? `<div class="tm">${escHtml(e.time)}</div>` : ''}</div>`).join('') + '</div>';
+        ${/* 이름은 한 줄(2026-10-03 · 사용자 — 「반 이름이 두 줄로」) — 시각은 그 밑 작은 줄로 내렸다 */''}
+        <div class="t"><b${e.굵게 ? ' style="color:var(--no);"' : ''} title="${escHtml(e.title)}">${escHtml(e.title)}</b>${
+          e.time || e.sub ? `<span>${escHtml([e.time, e.sub].filter(Boolean).join(' · '))}</span>` : ''}</div>
+        ${e.kind === 'mine' ? `<button class="tcal-del" title="지우기" onclick="event.stopPropagation(); tcalDelEvent('${e.id}')">${iconSvg('x', 13)}</button>` : ''}</div>`).join('') + '</div>';
+  /* 이 날에 내 일정 — 날짜를 고른 채 적는다. 쓰는 동안 다시 그리지 않는다(form 이 값을 들고 있다) */
+  const 추가 = !내것 || !고른날 ? ''
+    : state.tCalAdd === 고른날 ? `<form class="tcal-add" onsubmit="event.preventDefault(); tcalAddEvent(this, '${고른날}')">
+        <input name="t" placeholder="일정 (예: 치과 · 학부모 모임)" maxlength="40" autocomplete="off">
+        <div class="tcal-add-r"><input name="tm" type="time" title="시각 (선택)">
+          <button class="btn p sm">추가</button><button type="button" class="btn q sm" onclick="state.tCalAdd=''; render()">취소</button></div></form>`
+    : `<button class="btn q sm tcal-addbtn" onclick="tcalAddOpen('${고른날}')">${iconSvg('plus', 13)} 이 날에 내 일정</button>`;
 
   return `<section class="dsh-card tcal">
     <div class="scal-head">
@@ -20362,7 +20409,7 @@ function teacherCalHTML(){
       `<span><i style="background:${TCAL_GROUPS[g].색}"></i>${TCAL_GROUPS[g].이름}</span>`).join('')}
       <span class="band"><i></i>시험기간<s>진한 칸 = 수학 시험</s></span></div>
     <div class="tcal-day"><div class="scal-daytitle"><b>${고른날 ? stuDayLabel(고른날) : ''}</b>${
-      고른날 === 오늘 ? '<span class="scal-badge">오늘</span>' : ''}</div>${목록}</div>
+      고른날 === 오늘 ? '<span class="scal-badge">오늘</span>' : ''}</div>${목록}${추가}</div>
   </section>`;
 }
 function dashOpenSession(classId, date){
@@ -20386,7 +20433,8 @@ async function loadMemoIfNeeded(){
   if(state.memo || state.memoLoading || !authUid()) return;
   state.memoLoading = true;
   const m = await dbGet(memoKey(), null);
-  state.memo = { todos: (m && Array.isArray(m.todos)) ? m.todos : [], note: (m && typeof m.note === 'string') ? m.note : '' };
+  state.memo = { todos: (m && Array.isArray(m.todos)) ? m.todos : [], note: (m && typeof m.note === 'string') ? m.note : '',
+                 events: (m && Array.isArray(m.events)) ? m.events : [] };   // 홈 달력 «내 일정» (2026-10-03)
   state.memoLoading = false;
   render();
 }
