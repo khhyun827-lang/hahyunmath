@@ -606,6 +606,7 @@
 .app .sig-why b{font-family:'JetBrains Mono',monospace;font-weight:600;color:var(--ink);}
 .app .sig-num{width:104px;flex-shrink:0;text-align:right;}
 .app .sig-sc{font-size:15px;font-weight:600;letter-spacing:-.02em;}
+.app .sig-sc.warn{color:#A3222D;}   /* 2026-10-03 「빨강이 너무 강하다」 — 점수는 짙은 장미 */
 .app .sig-num .dots{justify-content:flex-end;margin-top:6px;}
 .app .sig-act{width:250px;flex-shrink:0;display:flex;gap:5px;justify-content:flex-end;flex-wrap:wrap;
   opacity:0;transition:opacity var(--t);}
@@ -3416,7 +3417,7 @@
 .app .hm-sn b{display:block;font-size:14.5px;font-weight:800;}
 .app .hm-sn s{display:block;text-decoration:none;font-size:11.5px;color:#6A7186;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .app .hm-tag{flex:none;font-size:12px;font-weight:800;padding:3px 10px;border-radius:999px;}
-.app .hm-tag.no{background:var(--hm-no);color:#fff;} .app .hm-tag.late{background:var(--hm-latebg);color:var(--hm-latetx);}
+.app .hm-tag.no{background:var(--hm-nobg);color:var(--hm-notx);}   /* 2026-10-03 꽉 찬 빨강 → 옅은 바탕(「빨강이 너무 강하다」) */ .app .hm-tag.late{background:var(--hm-latebg);color:var(--hm-latetx);}
 .app .hm-stu .hm-chips{flex:1;min-width:0;}
 /* 칸이 좁으면(메모장을 펼친 1440 등) 이유 칩이 이름 밑 줄로 내려간다 — 한 줄에 우겨 넣어 칩끼리 겹쳤다 (2026-10-02) */
 .app .hm-stu{flex-wrap:wrap;}
@@ -3878,7 +3879,7 @@
   .app:not(.sap):has(.tnav) .rst-wrap table.grid thead th{background:transparent;color:#8A90A3;font-size:12px;}
   .app:not(.sap):has(.tnav) .rst-wrap table.grid tbody td{height:50px;}
   .app:not(.sap):has(.tnav) .rst-wrap table.grid .badge{border-radius:999px;padding:3px 10px;font-weight:800;}
-  .app:not(.sap):has(.tnav) .rst-wrap table.grid .badge.no{background:#D93A45;color:#fff;}
+  .app:not(.sap):has(.tnav) .rst-wrap table.grid .badge.no{background:#FBE6E8;color:#A3222D;}   /* 2026-10-03 꽉 찬 빨강 → 옅은 바탕 */
   .app:not(.sap) .topbar:has(.tnav){position:fixed;top:38px;left:44px;right:44px;z-index:5;height:56px;padding:0;
     background:transparent;-webkit-backdrop-filter:none;backdrop-filter:none;border-bottom:0;}
   .app:not(.sap) .topbar:has(.tnav) .bm{width:250px;flex:none;}
@@ -4516,16 +4517,18 @@
    🔵 시작·끝·수학 시험일 세 «점»만 찍으면 그 사이가 시험기간이라는 것이 안 보인다.
      학생이 달력에서 가장 먼저 알아야 하는 것이 「언제부터 언제까지 시험이냐」다.
    ⚠ 옅게 깐다 — 진하면 그 주가 통째로 «경고»처럼 보여 다른 일정이 안 읽힌다. */
-.app.sap .scal-c.exam,.app .tcal .scal-c.exam{background:var(--nobg);}
-.app.sap .scal-c.exam .d,.app .tcal .scal-c.exam .d{color:var(--no);font-weight:700;}
+/* 2026-10-03 사용자 — 「빨강이 너무 강해 글자가 안 읽힌다」 → 바탕은 더 옅게 · 글자는 빨강 대신 짙은 장미색 */
+.app.sap .scal-c.exam,.app .tcal .scal-c.exam{background:#FDF1F2;}
+.app.sap .scal-c.exam .d,.app .tcal .scal-c.exam .d{color:#8E2A33;font-weight:700;}
 /* 기간의 처음과 끝만 모서리를 둥글린다 — 가운데는 이어져 하나의 띠로 보인다. */
 .app.sap .scal-c.exam,.app .tcal .scal-c.exam{border-radius:0;}
 .app.sap .scal-c.exam.exam-a,.app .tcal .scal-c.exam.exam-a{border-radius:var(--r-sm) 0 0 var(--r-sm);}
 .app.sap .scal-c.exam.exam-z,.app .tcal .scal-c.exam.exam-z{border-radius:0 var(--r-sm) var(--r-sm) 0;}
 .app.sap .scal-c.exam.exam-a.exam-z,.app .tcal .scal-c.exam.exam-a.exam-z{border-radius:var(--r-sm);}
 /* 수학 시험일은 그 안에서 한 번 더 도드라진다 — 닷새 중 «그 하루»가 진짜 목표다. */
-.app.sap .scal-c.exam.exam-m,.app .tcal .scal-c.exam.exam-m{background:var(--no);}
-.app.sap .scal-c.exam.exam-m .d,.app .tcal .scal-c.exam.exam-m .d{color:#fff;}
+/* 2026-10-03 — 꽉 찬 빨강 대신 한 톤 짙은 장미 바탕 + 테두리(그 안의 일정 이름까지 읽히게) */
+.app.sap .scal-c.exam.exam-m,.app .tcal .scal-c.exam.exam-m{background:#F7DADD;box-shadow:inset 0 0 0 1.5px #E29CA3;}
+.app.sap .scal-c.exam.exam-m .d,.app .tcal .scal-c.exam.exam-m .d{color:#7A1F29;font-weight:800;}
 /* ⚠ 오늘 표시가 시험 배경에 묻히면 안 된다 — 오늘이 더 위에 온다. */
 .app.sap .scal-c.exam.today,.app .tcal .scal-c.exam.today{background:var(--accent);}
 .app.sap .scal-c.exam.today .d,.app .tcal .scal-c.exam.today .d{color:#fff;}
@@ -18932,7 +18935,7 @@ function bellHTML(items){
    ds.css 의 상태색은 여섯이다: ok · late · leave · no · gone · blue. */
 const CAL_KINDS = {
   class:  {이름: '수업',    색: 'var(--ok)',    바탕: 'var(--okbg)'},
-  exam:   {이름: '시험',    색: 'var(--no)',    바탕: 'var(--nobg)'},
+  exam:   {이름: '시험',    색: '#8E2A33',      바탕: '#FBE3E6'},   /* 2026-10-03 — 빨강 글자가 안 읽힌다 → 짙은 장미 */
   hw:     {이름: '과제',    색: 'var(--late)',  바탕: 'var(--latebg)'},
   video:  {이름: '영상',    색: 'var(--blue)',  바탕: 'var(--bluebg)'},
   clinic: {이름: '클리닉',  색: 'var(--leave)', 바탕: 'var(--leavebg)'},
