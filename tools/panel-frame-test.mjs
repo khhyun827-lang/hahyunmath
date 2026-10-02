@@ -42,8 +42,10 @@ try{
   await page.evaluate(무대들.홈메모.세우기);
   봄('본문이 판 안에서 넘친다', await page.evaluate(() => { const b = document.querySelector('.app > .body'); return b.scrollHeight > b.clientHeight; }), true);
 
-  await page.evaluate(() => { document.querySelector('.app > .body').scrollTop = 120; render(); });
-  봄('🔴 다시 그려도 본문 스크롤이 제자리', await page.evaluate(() => document.querySelector('.app > .body').scrollTop), 120);
+  /* 민 만큼(홈은 판에 거의 맞아 많이 안 밀린다)을 재 두고, 다시 그린 뒤 같은지 본다 */
+  봄('🔴 다시 그려도 본문 스크롤이 제자리', await page.evaluate(() => {
+    const b = document.querySelector('.app > .body'); b.scrollTop = 120; const 민 = b.scrollTop; render();
+    return 민 > 0 && document.querySelector('.app > .body').scrollTop === 민; }), true);
   await page.evaluate(() => { state.teacherTab = 'signals'; render(); });
   봄('다른 화면은 맨 위에서', await page.evaluate(() => document.querySelector('.app > .body').scrollTop), 0);
 

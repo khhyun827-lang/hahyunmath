@@ -14,7 +14,7 @@
      이행이 끝나 구버전 화면이 사라지면 Noto Sans KR과 Serif 900은 빼면 된다. -->
 <!-- Noto+Serif(라틴·이탤릭)은 그림(figure.js)의 글자다 — 기기 글꼴을 쓰면 강사 PC 와 학생 태블릿에서
      글자 폭이 달라 이름표가 «여기선 안 겹치는데 거기선 겹친다». 모두가 같은 파일을 받게 한다 (2026-09-11). -->
-<link href="https://fonts.googleapis.com/css2?family=Noto+Serif:ital,wght@0,400;1,400&family=Noto+Serif+KR:wght@500;600;700;900&family=Noto+Sans+KR:wght@400;500;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif:ital,wght@0,400;1,400&family=Noto+Serif+KR:wght@500;600;700;900&family=Noto+Sans+KR:wght@400;500;600;700;800;900&family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
 <link rel="stylesheet" href="ds.css">
 
@@ -3210,7 +3210,7 @@
 @media (max-width:760px){ .app .dsh-grid{grid-template-columns:minmax(0,1fr);grid-template-rows:auto;
   grid-template-areas:"a" "b" "c";} }
 /* ── 시안 «D 차분» 홈 부품 (2026-10-02 · P-4) — 색은 신호에만 ── */
-.app .hm, .app .xs-season{--hm-ok:#2F9E5E;--hm-okbg:#E6F4EB;--hm-oktx:#1F6B3F;--hm-late:#E0A21C;--hm-latebg:#FBF0DA;--hm-latetx:#7A5207;
+.app{--hm-ok:#2F9E5E;--hm-okbg:#E6F4EB;--hm-oktx:#1F6B3F;--hm-late:#E0A21C;--hm-latebg:#FBF0DA;--hm-latetx:#7A5207;
   --hm-no:#D93A45;--hm-nobg:#FBE6E8;--hm-notx:#A3222D;--hm-leave:#8C74D9;--hm-leavebg:#EEEAFB;--hm-ink:#1E2433;}
 .app .hm-head{margin-bottom:14px;}
 .app .hm-date{font-size:13.5px;font-weight:600;color:var(--sub);}
@@ -3635,12 +3635,20 @@
   .app:not(.sap):has(.tnav):has(.pg-h) .chub-mh > div:first-child{display:none;}
   .app:not(.sap):has(.tnav):has(.pg-h) .chub-mh{height:0;min-height:0;margin:0;padding:0;}
   .app:not(.sap):has(.tnav):has(.pg-h) .chub-mh .r{position:absolute;top:22px;right:6px;}
-  .app:not(.sap):has(.tnav):has(.pg-h) .rst-hrow > h1.t-title{font-size:0;}
-  .app:not(.sap):has(.tnav):has(.pg-h) .rst-hrow > h1.t-title s{font-size:13px;margin-left:0;}
+  /* 큰 제목과 «같은 이름»인 화면 제 머리만 접는다(신호·학생 명단·출석 도장 · 클리닉 · 상담 신청 · 문항 창고) — 옆 셈 글은 남긴다.
+     ⚠ 채팅 머리(학생 이름)·시험지 머리(시험지 이름)는 다른 말이라 접지 않는다. */
+  .app:not(.sap):has(.tnav):has(.pg-h) .rst-head > .rst-hrow > h1.t-title,
+  .app:not(.sap):has(.tnav):has(.pg-h) .cn-screen .rst-hrow > h1.t-title,
+  .app:not(.sap):has(.tnav):has(.pg-h) .dsh > .rst-hrow > h1.t-title,
+  .app:not(.sap):has(.tnav):has(.pg-h) .ex-screen:has(.ist-find) .rst-hrow > h1.t-title{font-size:0;}
+  .app:not(.sap):has(.tnav):has(.pg-h) .rst-head > .rst-hrow > h1.t-title s,
+  .app:not(.sap):has(.tnav):has(.pg-h) .cn-screen .rst-hrow > h1.t-title s,
+  .app:not(.sap):has(.tnav):has(.pg-h) .dsh > .rst-hrow > h1.t-title s,
+  .app:not(.sap):has(.tnav):has(.pg-h) .ex-screen:has(.ist-find) .rst-hrow > h1.t-title s{font-size:13px;margin-left:0;}
   /* 설정 — 같은 머리(작은 경로 + 큰 제목) · 설명 글은 제목에 걸어 둔다(시안엔 없다) · 갈래 단추는 흰 묶음 */
   .app:not(.sap):has(.tnav) .st-crumb{display:block;text-decoration:none;font-size:13.5px;font-weight:600;color:#6A7186;line-height:20px;margin-bottom:2px;}
-  .app:not(.sap):has(.tnav) .ex-main > .rst-hrow h1.t-title{font-size:34px;font-weight:800;letter-spacing:-.03em;line-height:42px;}
-  .app:not(.sap):has(.tnav) .ex-main > .rst-hrow h1.t-title s{display:none;}
+  .app:not(.sap):has(.tnav):not(:has(.pg-h)) .ex-main > .rst-hrow h1.t-title{font-size:34px;font-weight:800;letter-spacing:-.03em;line-height:42px;}
+  .app:not(.sap):has(.tnav):not(:has(.pg-h)) .ex-main > .rst-hrow h1.t-title s{display:none;}
   .app:not(.sap):has(.tnav) .seg-w{display:flex;gap:4px;padding:4px;background:#fff;border:1px solid #E3E6EE;border-radius:14px;}
   .app:not(.sap):has(.tnav) .seg-w .btn{height:32px;min-height:0;padding:0 14px;border:0;border-radius:10px !important;background:transparent;
     box-shadow:none;font-size:13px;font-weight:600;color:#4A5168;}
@@ -3837,6 +3845,296 @@
 }
 /* 「AI 일치 모두 통과」 옆 — 그림이 있어 빠진 수 (줄 모드에서도 보인다) */
 .app .rv-figskip{display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--sub);}
+/* ============================================================
+   시안 «D 차분»의 부품 한 벌 (2026-10-02 · 사용자 — 「이전 디자인의 잔재가 남지 않게 · 최대한 시안과 같게」)
+   넓은 화면 강사 셸에서만. `#app:has(.tnav)` 로 건다 — 본문 밖에 그려지는 드로어(.app.hwd-layer)까지 닿게.
+   학생 앱 미리보기(.app.sap)는 손대지 않는다(아래에서 옛 값으로 되돌린다).
+   값은 시안 .dc.html 에서 그대로 옮겼다: 바탕 #F6F7FA · 선 #E3E6EE/#ECEEF3 · 글자 #1E2433/#3A4156/#6A7186 ·
+   단추 높이 42(작은 것 34)·모서리 14 · 딱지 12px/800·알약 · 카드 모서리 22 · 글꼴 Manrope + Noto Sans KR.
+   ============================================================ */
+@media (min-width:1200px){
+  #app:has(.tnav){
+    --paper:#F6F7FA;--card:#FFFFFF;--sunk:#F6F7FA;--hover:#F3F5F9;
+    --ink:#1E2433;--sub:#4A5168;--dim:#8A90A3;--line:#E3E6EE;--line2:#ECEEF3;
+    --accent:#1E2433;--accent-d:#141824;--accent-bg:#E3EAF5;--accent-line:#D2DCEC;
+    --point:#1E2433;--point-lt:#2E3650;--point-d:#141824;--point-bg:#E9EDF5;--point-line:#D2DCEC;--point-ring:rgba(30,36,51,.14);
+    --brand:#1E2433;--brand-d:#1E2433;
+    --ok:#1F6B3F;--okbg:#E6F4EB;--ok-line:#BFE0CB;
+    --late:#7A5207;--latebg:#FBF0DA;--late-line:#EED9A8;
+    --leave:#4B3A99;--leavebg:#EEEAFB;--leave-line:#D6CCF3;
+    --no:#C42F3A;--nobg:#FBE6E8;--no-line:#F2C2C7;
+    --gone:#8A90A3;--gonebg:#EEF0F4;--gone-line:#E3E6EE;
+    --blue:#2E4E7A;--bluebg:#E3EAF5;
+    --note:#F6F7FA;--note-line:#E3E6EE;--note-dash:#D2D6E0;
+    --r-xs:6px;--r-sm:10px;--r-md:12px;--r-lg:16px;--r-xl:22px;--r-pill:999px;
+    --shadow-card:none;}
+  /* 학생 앱 미리보기는 옛 값 그대로 */
+  #app:has(.tnav) .app.sap{--paper:#F8F4F5;--sunk:#FCFAFA;--hover:#FDF7F9;--ink:#22221E;--sub:#5C5C54;--dim:#96968C;
+    --line:#E7E5DE;--line2:#F1EFE9;--brand:#BA5054;--brand-d:#9E4246;--r-xs:5px;--r-sm:7px;--r-md:9px;--r-lg:12px;--r-xl:14px;--r-pill:20px;}
+
+  /* 글꼴 — 시안 그대로 Manrope(숫자·로마자) + Noto Sans KR(한글). 고정폭·명조로 박아 둔 옛 자리까지.
+     ⚠ 그림(SVG 글자)·수식(KaTeX)·그림 편집기 이름칸은 제 글꼴을 지킨다. */
+  #app:has(.tnav) .app:not(.sap),
+  #app:has(.tnav) .app:not(.sap) :not(svg):not(svg *):not(.katex):not(.katex *):not(.fig-tools input):not(.sap):not(.sap *){
+    font-family:'Manrope','Noto Sans KR',sans-serif;}
+  #app:has(.tnav) .app:not(.sap){font-size:14px;color:#1E2433;font-variant-numeric:tabular-nums;}
+
+  /* 단추 */
+  #app:has(.tnav) .app:not(.sap) .btn{min-height:42px;padding:0 16px;border-radius:14px;border:1px solid #E3E6EE;background:#fff;
+    color:#1E2433;font-size:14px;font-weight:700;gap:8px;box-shadow:none;}
+  #app:has(.tnav) .app:not(.sap) .btn:hover{background:#F6F7FA;border-color:#D7DBE4;}
+  #app:has(.tnav) .app:not(.sap) .btn.sm{min-height:34px;padding:0 12px;border-radius:12px;font-size:13px;}
+  #app:has(.tnav) .app:not(.sap) .btn.lg{min-height:48px;padding:0 20px;font-size:15px;}
+  #app:has(.tnav) .app:not(.sap) .btn.icon{min-height:0;width:38px;height:38px;padding:0;border-radius:12px;}
+  #app:has(.tnav) .app:not(.sap) .btn.p{background:#1E2433;border-color:#1E2433;color:#fff;box-shadow:0 6px 14px -10px rgba(30,36,51,.7);}
+  #app:has(.tnav) .app:not(.sap) .btn.p:hover{background:#141824;border-color:#141824;}
+  #app:has(.tnav) .app:not(.sap) .btn.q{background:transparent;border-color:transparent;color:#4A5168;}
+  #app:has(.tnav) .app:not(.sap) .btn.q:hover{background:#F3F5F9;color:#1E2433;}
+  #app:has(.tnav) .app:not(.sap) .btn.ok{background:#2F9E5E;border-color:#2F9E5E;color:#fff;}
+  #app:has(.tnav) .app:not(.sap) .btn.ok:hover{background:#278552;border-color:#278552;}
+  #app:has(.tnav) .app:not(.sap) .btn.no{background:#FBE6E8;border-color:#F2C2C7;color:#A3222D;}
+  #app:has(.tnav) .app:not(.sap) .btn .k, #app:has(.tnav) .app:not(.sap) .kbd{min-width:22px;height:22px;padding:0 6px;box-sizing:border-box;
+    display:inline-flex;align-items:center;justify-content:center;border-radius:6px;border:1px solid #E3E6EE;background:#fff;
+    color:#1E2433;font-size:11.5px;font-weight:800;margin:0;}
+  #app:has(.tnav) .app:not(.sap) .btn.ok .k{background:rgba(255,255,255,.22);border-color:transparent;color:#fff;}
+  #app:has(.tnav) .app:not(.sap) .btn.no .k{background:#fff;border-color:#F2C2C7;color:#A3222D;}
+  #app:has(.tnav) .app:not(.sap) .btn.p .k{background:rgba(255,255,255,.18);border-color:transparent;color:#fff;}
+
+  /* 딱지 · 알약 */
+  #app:has(.tnav) .app:not(.sap) .badge{font-size:12px;font-weight:800;padding:3px 10px;border-radius:999px;background:#EEF0F4;color:#4A5168;}
+  #app:has(.tnav) .app:not(.sap) .badge.ok{background:#E6F4EB;color:#1F6B3F;}
+  #app:has(.tnav) .app:not(.sap) .badge.late{background:#FBF0DA;color:#7A5207;}
+  #app:has(.tnav) .app:not(.sap) .badge.leave{background:#EEEAFB;color:#4B3A99;}
+  #app:has(.tnav) .app:not(.sap) .badge.no{background:#FBE6E8;color:#A3222D;}
+  #app:has(.tnav) .app:not(.sap) .badge.gone{background:#EEF0F4;color:#6A7186;}
+  #app:has(.tnav) .app:not(.sap) .badge.score{background:#E3EAF5;color:#1E2E52;}
+  #app:has(.tnav) .app:not(.sap) .pill{min-height:34px;box-sizing:border-box;padding:0 13px;border-radius:999px;border:1px solid #E3E6EE;
+    background:#fff;color:#3A4156;font-size:13px;font-weight:700;}
+  #app:has(.tnav) .app:not(.sap) .pill:hover{background:#F6F7FA;}
+  #app:has(.tnav) .app:not(.sap) .pill.on{background:#1E2433;border-color:#1E2433;color:#fff;}
+  #app:has(.tnav) .app:not(.sap) .pill b{opacity:.7;font-size:12px;font-weight:800;}
+
+  /* 입력 */
+  #app:has(.tnav) .app:not(.sap) .field{min-height:40px;height:auto;border-radius:12px;border:1px solid #E3E6EE;background:#fff;
+    color:#6A7186;font-size:14px;padding:0 12px;}
+  #app:has(.tnav) .app:not(.sap) .field:focus-within{border-color:#1E2433;box-shadow:0 0 0 3px rgba(30,36,51,.12);}
+  #app:has(.tnav) .app:not(.sap) .field input, #app:has(.tnav) .app:not(.sap) .field select{border:0;background:transparent;
+    font-size:14px;color:#1E2433;font-weight:600;outline:none;}
+  #app:has(.tnav) .app:not(.sap) .fm-in, #app:has(.tnav) .app:not(.sap) .lo-in,
+  #app:has(.tnav) .app:not(.sap) textarea{border:1px solid #E3E6EE;border-radius:12px;background:#fff;color:#1E2433;font-size:14px;}
+  #app:has(.tnav) .app:not(.sap) .fm-in:focus, #app:has(.tnav) .app:not(.sap) .lo-in:focus,
+  #app:has(.tnav) .app:not(.sap) textarea:focus{border-color:#1E2433;box-shadow:0 0 0 3px rgba(30,36,51,.12);outline:none;}
+  #app:has(.tnav) .app:not(.sap) select:not(.field select){border:1px solid #E3E6EE;border-radius:12px;background-color:#fff;
+    min-height:38px;padding:0 10px;color:#1E2433;font-size:13.5px;font-weight:700;}
+  #app:has(.tnav) .app:not(.sap) ::placeholder{color:#9AA0B0;}
+
+  /* 카드 · 판 · 머리 */
+  #app:has(.tnav) .app:not(.sap) .card, #app:has(.tnav) .app:not(.sap) .panel, #app:has(.tnav) .app:not(.sap) .cls-hw{
+    background:rgba(255,255,255,.92);border:1px solid #ECEEF3;border-radius:22px;box-shadow:none;}
+  #app:has(.tnav) .app:not(.sap) .t-sec{font-size:12px;font-weight:800;color:#6A7186;letter-spacing:.02em;}
+  #app:has(.tnav) .app:not(.sap) .t-title{font-weight:800;letter-spacing:-.03em;color:#1E2433;}
+  #app:has(.tnav) .app:not(.sap) .t-title s{font-size:13.5px;font-weight:600;color:#6A7186;letter-spacing:0;}
+  #app:has(.tnav) .app:not(.sap) .fm-warn{border-radius:16px;border:1px solid #EED9A8;background:#FBF0DA;color:#7A5207;}
+
+  /* 표 */
+  #app:has(.tnav) .app:not(.sap) table.grid thead th{height:42px;font-size:12px;font-weight:700;color:#8A90A3;background:transparent;
+    border-bottom:1px solid #ECEEF3;}
+  #app:has(.tnav) .app:not(.sap) table.grid tbody td{height:52px;font-size:14px;color:#1E2433;border-bottom:1px solid #ECEEF3;}
+  #app:has(.tnav) .app:not(.sap) table.grid tbody tr:hover td{background:#F6F7FA;}
+  #app:has(.tnav) .app:not(.sap) table.grid td.sub, #app:has(.tnav) .app:not(.sap) table.grid .sub{color:#3A4156;}
+
+  /* 드로어(오른쪽 판) — 같은 흰 판 */
+  #app:has(.tnav) .app.hwd-layer .hwd{border-radius:22px 0 0 22px;border-left:1px solid #ECEEF3;box-shadow:-16px 0 48px rgba(40,50,80,.12);}
+
+  /* ── 소통 › 질의응답 (시안 «D 차분 · 소통») ── */
+  #app:has(.tnav) .app:not(.sap) .qn-list{flex:0 0 340px;width:340px;padding:8px;}
+  /* 대기·완료·전체 — 제목 줄 오른쪽 흰 묶음(본문 상자 기준 절대 자리 · 머리와 같이 굴러간다) */
+  #app:has(.tnav) .app:not(.sap) .qn-lh{position:absolute;top:22px;right:6px;display:flex;gap:4px;padding:4px;margin:0;background:#fff;
+    border:1px solid #E3E6EE;border-radius:14px;}
+  #app:has(.tnav) .app:not(.sap) .qn-lh .pill{min-height:32px;border:0;border-radius:10px;background:transparent;color:#4A5168;font-weight:600;padding:0 12px;}
+  #app:has(.tnav) .app:not(.sap) .qn-lh .pill.on{background:#1E2433;color:#fff;font-weight:800;}
+  #app:has(.tnav) .app:not(.sap) .qn-lh .pill b{opacity:1;font-weight:inherit;font-size:13px;}
+  #app:has(.tnav) .app:not(.sap) .qn-lbody .qitem{display:flex;flex-direction:column;gap:6px;}
+  #app:has(.tnav) .app:not(.sap) .qn-lbody .qitem .h{display:flex;align-items:center;gap:8px;}
+  #app:has(.tnav) .app:not(.sap) .qn-lbody .qitem .h .ago{margin-left:auto;font-size:12px;color:#6A7186;}
+  #app:has(.tnav) .app:not(.sap) .qn-lbody .qitem .muted{font-size:12px !important;color:#6A7186;}
+  #app:has(.tnav) .app:not(.sap) .qn-lbody .qitem .x{font-size:13.5px;line-height:1.5;color:#3A4156;}
+  #app:has(.tnav) .app:not(.sap) .qn-doc{display:flex;flex-direction:column;gap:14px;}
+  #app:has(.tnav) .app:not(.sap) .qn-who{display:flex;align-items:center;gap:12px;}
+  #app:has(.tnav) .app:not(.sap) .qn-wt a{font-size:18px;font-weight:800;color:#1E2433;}
+  #app:has(.tnav) .app:not(.sap) .qn-wt span{font-size:12.5px;color:#6A7186;}
+  #app:has(.tnav) .app:not(.sap) .qn-stt{display:none;}
+  #app:has(.tnav) .app:not(.sap) .qn-stb{display:inline-block;margin-left:6px;}
+  #app:has(.tnav) .app:not(.sap) .qn-go{display:inline;font-size:13px;color:#6A7186;cursor:pointer;margin-right:4px;}
+  #app:has(.tnav) .app:not(.sap) .qn-go:hover{color:#1E2433;}
+  #app:has(.tnav) .app:not(.sap) .qn-msg{padding:14px 16px;}
+  #app:has(.tnav) .app:not(.sap) .qn-msg .h{margin-bottom:6px;}
+  #app:has(.tnav) .app:not(.sap) .qn-msg .qn-kind{font-size:12px;font-weight:800;color:#6A7186;}
+  #app:has(.tnav) .app:not(.sap) .qn-msg .h .t{font-size:12px;color:#8A90A3;}
+  #app:has(.tnav) .app:not(.sap) .qn-msg .x{font-size:14.5px;line-height:1.6;color:#1E2433;}
+  /* 사진은 세 칸 격자 · 150 높이 (시안) — 누르면 크게 보는 것은 그대로 */
+  #app:has(.tnav) .app:not(.sap) .qn-shots, #app:has(.tnav) .qn-shots.one{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:12px;}
+  #app:has(.tnav) .app:not(.sap) .qn-shots .qn-img{width:100%;height:150px;max-width:none;max-height:none;margin:0;object-fit:cover;border-radius:14px;border:0;cursor:zoom-in;}
+  #app:has(.tnav) .app:not(.sap) .qn-comp .cls-form label > span{font-size:12px;font-weight:800;color:#6A7186;}
+  #app:has(.tnav) .app:not(.sap) .qn-comp textarea{min-height:92px;padding:12px 14px;}
+}
+@media (min-width:1200px){
+  /* ── 문항관리 › 검토 (시안 «D 차분 · 문항관리 › 검토») ──
+     제목 줄 = 문항 코드(34px) + 오른쪽 AI 띠 · 그 밑 코드 띠 · 그 밑 상태 줄 · 두 카드.
+     ⚠ 마크업 차례는 검사가 붙잡고 있다(${reqBar}${askBar}${aiBar}${strip}${rvBar}) — 자리는 격자로 바꾼다. */
+  #app:has(.tnav) .app:not(.sap) .rv-work{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-auto-flow:row dense;
+    grid-template-rows:auto;align-content:start;column-gap:14px;}
+  #app:has(.tnav) .app:not(.sap) .rv-work > *{grid-column:1 / -1;}
+  #app:has(.tnav) .app:not(.sap) .rv-work > .rv-wh{display:contents;}
+  #app:has(.tnav) .app:not(.sap) .rv-work > .rv-wh > h1{order:1;grid-column:1;margin:0;font-size:34px;line-height:42px;align-self:center;}
+  #app:has(.tnav) .app:not(.sap) .rv-work .rv-wk{display:none;}
+  #app:has(.tnav) .app:not(.sap) .rv-work > .rv-aibar{order:1;grid-column:2;align-self:center;margin:0;display:flex;align-items:center;gap:8px;
+    padding:6px 8px 6px 14px;background:#fff;border:1px solid #E3E6EE;border-radius:16px;font-size:12.5px;color:#4A5168;}
+  #app:has(.tnav) .app:not(.sap) .rv-work > .rv-aibar b{color:#1E2433;}
+  #app:has(.tnav) .app:not(.sap) .rv-work > .rv-strip{order:2;margin:14px 0 0;}
+  #app:has(.tnav) .app:not(.sap) .rv-work > .rv-wh > .t-meta{order:3;grid-column:1 / -1;margin:12px 0 0 !important;font-size:12.5px;color:#6A7186;}
+  #app:has(.tnav) .app:not(.sap) .rv-work > .rv-body{order:4;margin-top:14px;}
+  /* 보기 — 회색 칸 다섯(시안) · 정답·우리 답·AI 답을 칠한다 */
+  #app:has(.tnav) .app:not(.sap) .rv-work .pb-ch:not(.mid):not(.long){grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;}
+  #app:has(.tnav) .app:not(.sap) .rv-work .pb-ch{gap:8px;margin-top:14px;}
+  #app:has(.tnav) .app:not(.sap) .rv-work .pb-ch .c{justify-content:center;align-items:center;min-height:40px;padding:6px 10px;box-sizing:border-box;
+    border-radius:12px;background:#F1F2F5;border:1.5px solid transparent;font-weight:700;font-size:15px;}
+  #app:has(.tnav) .app:not(.sap) .rv-work .side[data-ok="1"] .pb-ch .c:nth-child(1){background:#E6F4EB;border-color:#2F9E5E;color:#1F6B3F;}
+  #app:has(.tnav) .app:not(.sap) .rv-work .side[data-ours="1"] .pb-ch .c:nth-child(1){background:#1E2433;border-color:#1E2433;color:#fff;}
+  #app:has(.tnav) .app:not(.sap) .rv-work .side[data-ai="1"] .pb-ch .c:nth-child(1){background:#FBE6E8;border-color:#D93A45;color:#C42F3A;}
+  #app:has(.tnav) .app:not(.sap) .rv-work .side[data-ok="2"] .pb-ch .c:nth-child(2){background:#E6F4EB;border-color:#2F9E5E;color:#1F6B3F;}
+  #app:has(.tnav) .app:not(.sap) .rv-work .side[data-ours="2"] .pb-ch .c:nth-child(2){background:#1E2433;border-color:#1E2433;color:#fff;}
+  #app:has(.tnav) .app:not(.sap) .rv-work .side[data-ai="2"] .pb-ch .c:nth-child(2){background:#FBE6E8;border-color:#D93A45;color:#C42F3A;}
+  #app:has(.tnav) .app:not(.sap) .rv-work .side[data-ok="3"] .pb-ch .c:nth-child(3){background:#E6F4EB;border-color:#2F9E5E;color:#1F6B3F;}
+  #app:has(.tnav) .app:not(.sap) .rv-work .side[data-ours="3"] .pb-ch .c:nth-child(3){background:#1E2433;border-color:#1E2433;color:#fff;}
+  #app:has(.tnav) .app:not(.sap) .rv-work .side[data-ai="3"] .pb-ch .c:nth-child(3){background:#FBE6E8;border-color:#D93A45;color:#C42F3A;}
+  #app:has(.tnav) .app:not(.sap) .rv-work .side[data-ok="4"] .pb-ch .c:nth-child(4){background:#E6F4EB;border-color:#2F9E5E;color:#1F6B3F;}
+  #app:has(.tnav) .app:not(.sap) .rv-work .side[data-ours="4"] .pb-ch .c:nth-child(4){background:#1E2433;border-color:#1E2433;color:#fff;}
+  #app:has(.tnav) .app:not(.sap) .rv-work .side[data-ai="4"] .pb-ch .c:nth-child(4){background:#FBE6E8;border-color:#D93A45;color:#C42F3A;}
+  #app:has(.tnav) .app:not(.sap) .rv-work .side[data-ok="5"] .pb-ch .c:nth-child(5){background:#E6F4EB;border-color:#2F9E5E;color:#1F6B3F;}
+  #app:has(.tnav) .app:not(.sap) .rv-work .side[data-ours="5"] .pb-ch .c:nth-child(5){background:#1E2433;border-color:#1E2433;color:#fff;}
+  #app:has(.tnav) .app:not(.sap) .rv-work .side[data-ai="5"] .pb-ch .c:nth-child(5){background:#FBE6E8;border-color:#D93A45;color:#C42F3A;}
+  #app:has(.tnav) .app:not(.sap) .rv-work .cmp .side .lab{font-size:12.5px;font-weight:800;color:#3A4156;}
+  #app:has(.tnav) .app:not(.sap) .rv-work .cmp .side .lab-code{color:#1E2433;}
+  #app:has(.tnav) .app:not(.sap) .rv-work .cmp .side.ai{border:2px solid #D2DCEC;box-shadow:none;}
+  #app:has(.tnav) .app:not(.sap) .rv-work .q-ans{margin-top:16px;padding-top:12px;border-top:1px solid #ECEEF3;font-size:13.5px;color:#3A4156;}
+}
+@media (min-width:1200px){
+  /* ── 수업 (시안 «D 차분 · 수업») ── */
+  /* 사이드 — 날짜 머리 「10월 2일 (금) / 오늘 · 수업 5」 · 둥근 단추 · 수업 줄은 상태 칩을 아래로 */
+  #app:has(.tnav) .app:not(.sap) .cls-side > .cls-nav{border-bottom:0;padding:2px 2px 10px;}
+  #app:has(.tnav) .app:not(.sap) .cls-side .cls-nav .btn.icon{width:38px;height:38px;border-radius:50%;}
+  #app:has(.tnav) .app:not(.sap) .cls-day .cd-a{display:none;}
+  #app:has(.tnav) .app:not(.sap) .cls-day .cd-w{display:flex;flex-direction:column;align-items:center;line-height:1.25;}
+  #app:has(.tnav) .app:not(.sap) .cls-day .cd-w b{font-size:15.5px;font-weight:800;color:#1E2433;}
+  #app:has(.tnav) .app:not(.sap) .cls-day .cd-w s{text-decoration:none;font-size:12px;font-weight:600;color:#6A7186;}
+  #app:has(.tnav) .app:not(.sap) .cls-side .t-sec{margin:8px 4px 8px !important;}
+  #app:has(.tnav) .app:not(.sap) .cls-side .cls-sess{padding:12px 13px;}
+  #app:has(.tnav) .app:not(.sap) .cls-side .cls-sess .t{font-size:12.5px;font-weight:700;color:#6A7186;}
+  #app:has(.tnav) .app:not(.sap) .cls-side .cls-sess .n{font-size:15.5px;font-weight:800;margin-top:4px;}
+  #app:has(.tnav) .app:not(.sap) .cls-side .cls-sess .m{font-size:12px;color:#6A7186;margin-top:3px;}
+  #app:has(.tnav) .app:not(.sap) .cls-side .cls-sess .st{position:static;display:inline-flex;align-items:center;gap:5px;margin-top:8px;font-size:11.5px;padding:2px 8px 2px 6px;}
+  #app:has(.tnav) .app:not(.sap) .cls-side .cls-sess .st::before{content:'';width:7px;height:7px;border-radius:50%;background:currentColor;opacity:.85;}
+  /* 머리 — 작은 경로 + 34px 반 이름(옆 시간·날짜는 경로가 말한다) */
+  #app:has(.tnav) .app:not(.sap) .cls-mh{display:block;}
+  #app:has(.tnav) .app:not(.sap) .cls-mh .cls-crumb{display:block;text-decoration:none;font-size:13.5px;font-weight:600;color:#6A7186;line-height:20px;margin-bottom:2px;}
+  #app:has(.tnav) .app:not(.sap) .cls-mh h1.t-title s, #app:has(.tnav) .app:not(.sap) .cls-mh > .cls-day{display:none;}
+  /* 단계 — 흰 판 · 고른 단계는 남색 알약 · 끝낸 단계는 초록 체크 */
+  #app:has(.tnav) .app:not(.sap) .steps{margin-top:14px !important;padding:6px;border-radius:18px;border:1px solid #ECEEF3;background:rgba(255,255,255,.92);}
+  #app:has(.tnav) .app:not(.sap) .steps .s{padding:0 14px;height:46px;border-radius:13px;font-size:14px;font-weight:700;color:#4A5168;}
+  #app:has(.tnav) .app:not(.sap) .steps .s .b{width:24px;height:24px;background:#EEF0F4;color:#6A7186;font-size:12px;font-weight:800;}
+  #app:has(.tnav) .app:not(.sap) .steps .s.on{background:#1E2433;color:#fff;}
+  #app:has(.tnav) .app:not(.sap) .steps .s.on .b{background:#fff;color:#1E2433;}
+  #app:has(.tnav) .app:not(.sap) .steps .s.fin{color:#1F6B3F;} #app:has(.tnav) .app:not(.sap) .steps .s.fin .b{background:#E6F4EB;color:#1F6B3F;}
+  /* 본문 + 아래 띠 = 흰 판 한 장(시안) — 띠는 판의 바닥줄 */
+  #app:has(.tnav) .app:not(.sap) .cls-main > .cls-body{margin-top:14px;padding:14px 14px 0;background:rgba(255,255,255,.92);border:1px solid #ECEEF3;border-bottom:0;
+    border-radius:22px 22px 0 0;}
+  #app:has(.tnav) .app:not(.sap) .cls-main > .actbar{position:static;flex-shrink:0;margin:0;left:auto;right:auto;bottom:auto;padding:14px;
+    background:linear-gradient(#ECEEF3,#ECEEF3) no-repeat 14px 0 / calc(100% - 28px) 1px, rgba(255,255,255,.92);
+    border:1px solid #ECEEF3;border-top:0;border-radius:0 0 22px 22px;box-shadow:none;box-sizing:border-box;}
+  #app:has(.tnav) .app:not(.sap) .cls-main > .actbar .sum{display:flex;gap:6px;}
+  #app:has(.tnav) .app:not(.sap) .cls-main > .actbar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;}
+  #app:has(.tnav) .app:not(.sap) .cls-main > .actbar > *{margin-top:0;}
+  #app:has(.tnav) .app:not(.sap) .cls-main > .actbar .hint{font-size:12.5px;color:#6A7186;}
+  /* 출결 칸 — 회색 네모 넷(시안), 고른 것은 신호색으로 꽉 */
+  #app:has(.tnav) .app:not(.sap) .cls-tiles .tile{border:1px solid #ECEEF3;border-radius:16px;background:#fff;padding:12px 14px;align-items:center;}
+  #app:has(.tnav) .app:not(.sap) .cls-tiles .tile .who b{font-size:15px;font-weight:800;}
+  #app:has(.tnav) .app:not(.sap) .cls-tiles .tile .who span{font-size:12px;color:#6A7186;}
+  #app:has(.tnav) .app:not(.sap) .seg{gap:6px;background:transparent;border:0;padding:0;}
+  #app:has(.tnav) .app:not(.sap) .seg button{width:38px;height:38px;border-radius:10px;border:0;background:#F1F2F5;color:#9AA0B0;font-weight:700;font-size:14px;}
+  #app:has(.tnav) .app:not(.sap) .seg button:hover{background:#E6E8EE;color:#4A5168;}
+}
+@media (min-width:1200px){
+  /* ── 홈 (시안 «D 차분 · 홈») — 판 높이에 꼭 맞는 두 줄 격자
+       a 오늘 수업(두 줄을 다 쓰고 단추는 바닥) · b 먼저 볼 학생 · e 다가오는 시험 · c 달력(260) · m 메모.
+       ⚠ 카드마다 제 안에서 굴러간다 — 홈 전체가 굴러가지 않는다(창이 낮으면 520 에서 멈추고 본문이 굴러간다). */
+  #app:has(.tnav) .app:not(.sap) .hm{display:flex;flex-direction:column;height:calc(100vh - var(--chrome,178px));min-height:520px;}
+  #app:has(.tnav) .app:not(.sap) .hm .hm-hi{font-size:32px;line-height:40px;}
+  #app:has(.tnav) .app:not(.sap) .hm .hm-grid{flex:1;min-height:0;margin-top:14px;gap:14px;align-items:stretch;
+    grid-template-columns:minmax(0,1.2fr) minmax(0,1fr) 260px;grid-template-rows:minmax(0,1fr) minmax(0,1fr);
+    grid-template-areas:"a b c" "a e m";}
+  #app:has(.tnav) .app:not(.sap) .hm .dsh-b, #app:has(.tnav) .app:not(.sap) .hm .dsh-c{display:contents;}
+  #app:has(.tnav) .app:not(.sap) .hm .dsh-a{min-height:0;display:flex;}
+  #app:has(.tnav) .app:not(.sap) .hm .dsh-a > section{flex:1;display:flex;flex-direction:column;min-height:0;overflow:auto;box-sizing:border-box;}
+  #app:has(.tnav) .app:not(.sap) .hm .hm-go{margin-top:auto !important;}
+  #app:has(.tnav) .app:not(.sap) .hm .dsh-b > section:nth-child(1){grid-area:b;} #app:has(.tnav) .app:not(.sap) .hm .dsh-b > section:nth-child(2){grid-area:e;}
+  #app:has(.tnav) .app:not(.sap) .hm .dsh-c > .tcal{grid-area:c;} #app:has(.tnav) .app:not(.sap) .hm .dsh-c > .dsh-memo{grid-area:m;display:flex;min-height:0;}
+  #app:has(.tnav) .app:not(.sap) .hm .dsh-b > section, #app:has(.tnav) .app:not(.sap) .hm .dsh-c > .tcal, #app:has(.tnav) .app:not(.sap) .hm .dsh-memo > section{min-height:0;overflow:auto;box-sizing:border-box;}
+  #app:has(.tnav) .app:not(.sap) .hm .dsh-memo > section{flex:1;display:flex;flex-direction:column;}
+  #app:has(.tnav) .app:not(.sap) .hm .dsh-memo .memo-note{flex:1;min-height:60px;}
+  /* 달력은 260 칸에 작게(시안) — 범례는 접고, 고른 날의 일정은 카드 안에서 굴러간다 */
+  #app:has(.tnav) .app:not(.sap) .hm .tcal .scal-legend{display:none;}
+  #app:has(.tnav) .app:not(.sap) .hm .tcal .scal-head .btn.icon{width:30px;height:30px;}
+  #app:has(.tnav) .app:not(.sap) .hm .tcal .scal-ym b{font-size:15px;}
+  #app:has(.tnav) .app:not(.sap) .hm .tcal{padding:10px 10px 8px;}
+  #app:has(.tnav) .app:not(.sap) .hm .tcal .scal-dow, #app:has(.tnav) .app:not(.sap) .hm .tcal .scal-grid{grid-template-columns:repeat(7,minmax(0,1fr));gap:1px;}
+  #app:has(.tnav) .app:not(.sap) .hm .tcal .scal-dow{margin-top:8px;}
+  #app:has(.tnav) .app:not(.sap) .hm .tcal .scal-c{height:32px;min-width:0;font-size:12px;border-radius:9px;}
+}
+@media (min-width:1200px){
+  /* ── 반 (시안 «D 차분 · 반 › 출결») — 제목 줄 오른쪽 = 달 고르개(흰 알약) + 「내보내기」(남색) ──
+     ⚠ 달 고르개는 출결·성적·과제·영상이 같이 쓴다(chubMonthBarHTML). 내보내기 폭을 200 으로 박아 그 왼쪽에 세운다. */
+  #app:has(.tnav) .app:not(.sap):has(.pg-h) .chub-mh .r .btn{width:200px;background:#1E2433;border-color:#1E2433;color:#fff;}
+  #app:has(.tnav) .app:not(.sap):has(.pg-h) .chub-mbar{position:absolute;top:22px;right:214px;z-index:2;height:42px;box-sizing:border-box;gap:2px;padding:0 4px;
+    margin:0;border:1px solid #E3E6EE;border-radius:14px;background:#fff;}
+  #app:has(.tnav) .app:not(.sap):has(.pg-h) .chub-mbar b{font-size:14px;font-weight:800;min-width:0;padding:0 6px;}
+  #app:has(.tnav) .app:not(.sap):has(.pg-h) .chub-mbar > .btn.q.sm{min-width:32px;min-height:32px;padding:0;border-radius:10px;}
+  #app:has(.tnav) .app:not(.sap):has(.pg-h) .chub-mbar .mb-x{display:none;}
+  /* 반 화면은 판(.body)째 굴러간다 — 안쪽 굴림 상자(.chub-body · relative)를 풀어야 달 고르개가 제목 줄에 선다 */
+  #app:has(.tnav) .app:not(.sap):has(.pg-h) .chub-screen{height:auto;}
+  #app:has(.tnav) .app:not(.sap):has(.pg-h) .chub-body{position:static;overflow:visible;flex:none;}
+  #app:has(.tnav) .app:not(.sap) .hwg-wrap{padding:6px 10px;}
+  #app:has(.tnav) .app:not(.sap) .hwg-wrap{display:block;width:auto;}
+  #app:has(.tnav) .app:not(.sap) .hwg-wrap > table.hwg{min-width:100%;}
+}
+@media (min-width:1200px){
+  /* ── 머리줄(.rst-head > .rst-hrow)이 있는 화면(신호 · 학생 명단) — 셈 글과 단추를 제목 줄 오른쪽으로(시안의 머리 꼴) ── */
+  #app:has(.tnav) .app:not(.sap):has(.pg-h) .rst-head > .rst-hrow{position:absolute;top:22px;right:6px;left:auto;z-index:2;height:42px;margin:0;align-items:center;gap:8px;}
+  #app:has(.tnav) .app:not(.sap):has(.pg-h) .rst-head > .rst-hrow > .spacer{display:none;}
+  #app:has(.tnav) .app:not(.sap):has(.pg-h) .rst-head > .rst-hrow > h1.t-title s{margin-right:6px;}
+  /* 신호 — 목록을 흰 카드로 · 동그라미는 학교 두 글자 */
+  #app:has(.tnav) .app:not(.sap) .sig-list{background:rgba(255,255,255,.92);border:1px solid #ECEEF3;border-radius:22px;padding:6px 16px 10px;}
+  #app:has(.tnav) .app:not(.sap) .sig-row .av{border-radius:50%;font-size:11px;font-weight:800;letter-spacing:-.04em;background:#EEF0F4;color:#3A4156;}
+}
+@media (min-width:1200px){
+  /* ── 설정 갈래들 — 본문을 흰 판 한 장에(시안의 카드). 제 카드를 가진 갈래(시험 일정 표 · 등급컷 · 직보 일정표)는 그대로 ── */
+  #app:has(.tnav) .app:not(.sap) .ex-nosub > .ex-main > .ex-body:not(:has(.rst-wrap)):not(:has(.xs-season)):not(:has(.pl-t2)){
+    background:rgba(255,255,255,.92);border:1px solid #ECEEF3;border-radius:22px;padding:18px 22px;margin-top:14px;}
+  #app:has(.tnav) .app:not(.sap) .ex-nosub .st-wrap{max-width:none;}
+  /* ── 소통 — 채팅·클리닉의 오른쪽 판, 상담 신청 본문도 흰 판 ── */
+  #app:has(.tnav) .app:not(.sap) .co-screen > .co-main{background:rgba(255,255,255,.92);border:1px solid #ECEEF3;border-radius:22px;padding:16px 20px;min-width:0;}
+  #app:has(.tnav) .app:not(.sap) .dsh > .st-wrap{max-width:none;background:rgba(255,255,255,.92);border:1px solid #ECEEF3;border-radius:22px;padding:18px 22px;margin-top:14px;}
+}
+.app .hm-chip.todo{background:#E3EAF5;color:#1E2E52;} .app .hm-chip.todo i{background:#1E2433;}
+/* 수업 아래 띠의 출결 셈 — 칩은 넓은 화면(시안)만. 줄 모드·폰은 예전처럼 글자 한 줄(띠가 세 줄로 불어나지 않게) */
+@media (max-width:1199px){
+  .app .actbar .sum.hm-chips{gap:0 10px;}
+  .app .actbar .sum.hm-chips .hm-chip, .app .actbar .sum.hm-chips .hm-chip.todo{background:none;border:0;box-shadow:none;padding:0;color:var(--sub);font-weight:500;}
+  .app .actbar .sum.hm-chips .hm-chip i{display:none;}
+  .app .actbar .sum.hm-chips .hm-chip b{color:var(--ink);}
+}
+.app .cls-crumb, .app .cd-w{display:none;}
+.app .qn-stb, .app .qn-go{display:none;}
 .app .rv-strip{display:none;}
 .app .pg-h, .app .st-crumb, .app .st-ic, .app .tl-sc{display:none;}   /* 넓은 화면 강사 셸에서만 보인다 */
 .app .tb-acct{display:none;}   /* 동그란 «김» — 넓은 화면에서만 (위 P-4) */
@@ -18687,6 +18985,14 @@ function stuCalendarHTML(c){
   return 머리 + 목록;
 }
 /* 「9월 8일 (월)」 — 달력 밑에서 «어느 날을 보고 있는지»를 한 줄로 말한다. */
+/* 짧은 날 — 오늘 · 어제 · MM-DD (시안 «D 차분» 목록의 「어제」「10-01」 · 2026-10-02) */
+function shortDayLabel(ymd){
+  if(!ymd) return '';
+  const t = todayStr();
+  if(ymd === t) return '오늘';
+  if(ymd === shiftYmd(t, -1)) return '어제';
+  return ymd.slice(0, 4) === t.slice(0, 4) ? ymd.slice(5) : ymd;
+}
 function stuDayLabel(date){
   const [y, m, d] = date.split('-').map(Number);
   return m + '월 ' + d + '일 (' + ['일','월','화','수','목','금','토'][new Date(y, m - 1, d).getDay()] + ')';
@@ -19470,9 +19776,10 @@ function teacherPageHeadHTML(section, subs, 머리, subActive){
   if(!지금) return '';
   const 반들 = section === '반' ? myClassList() : [];
   const 반 = 반들.find(x => x.id === state.classHubId) || 반들[0];
-  const 경로 = [section, 반 && 반.name, 머리[토막]].filter(Boolean).join(' › ');
+  /* 시안의 꼴 그대로 — 반은 「반 › 고1 프로브반 › 기록」, 나머지는 「소통 · 질의응답」 */
+  const 경로 = 반 ? ['반', 반.name, 머리[토막]].filter(Boolean).join(' › ') : section + ' · ' + 지금[0];
   /* 검토는 문항 코드가 곧 제목이다(시안 「K2-05-E-0560」) — 경로만 단다 */
-  if(state.teacherTab === 'review') return `<header class="pg-h slim"><s>${escHtml(경로 + ' › ' + 지금[0])}</s></header>`;
+  if(state.teacherTab === 'review') return `<header class="pg-h slim"><s>${escHtml(경로)}</s></header>`;
   return `<header class="pg-h"><s>${escHtml(경로)}</s><h1>${escHtml(지금[0])}</h1></header>`;
 }
 
@@ -20563,7 +20870,7 @@ function signalRowHTML(r, k, isMuted){
   return `
   <div class="sig-row ${k === 'r' ? 'now' : ''} ${isMuted ? 'off' : ''}">
     <div class="sig-who" onclick="rosterOpen('${s.studentId}','info')">
-      <div class="av">${escHtml((s.name || '?').slice(0, 1))}</div>
+      <div class="av" title="${escHtml(s.school || '')}">${escHtml(s.school ? schoolShort(s.school) : (s.name || '?').slice(0, 1))}</div>
       <div class="sig-t"><b>${escHtml(s.name)}</b>
         <span>${escHtml(s.school || '—')} ${escHtml(s.grade || '')} · ${escHtml(classNameOf(s.classId))}</span></div>
     </div>
@@ -21277,7 +21584,7 @@ function teacherSessionHTML(){
          이 화면의 1차 축은 «날짜와 시간»인데, 날짜를 고르는 곳은 오른쪽 머리말에 있고
          시간을 고르는 곳은 왼쪽에 있었다. **한 축을 두 곳에서 고르고 있었던 셈이다.**
          이제 왼쪽 한 칸이 «언제»를 통째로 진다 — 날짜를 옮기면 바로 아래 수업 목록이 바뀐다. */''}
-    ${sessionDateNavHTML(date)}
+    ${sessionDateNavHTML(date, sessions.length)}
     <div class="t-sec" style="margin-top:14px;">${date === todayStr() ? '오늘의 수업' : dow + '요일 수업'}</div>
     ${sessions.length === 0
       ? `<div style="font-size:12.5px;color:var(--dim);line-height:1.7;">이 날짜에 수업이 없습니다.<br>반 일정은 반 관리에서 정합니다.</div>`
@@ -21402,6 +21709,7 @@ function teacherSessionHTML(){
   return `<div class="cls-screen">${side}
     <main class="cls-main">
       <div class="cls-mh">
+        <s class="cls-crumb">수업 · ${escHtml(stuDayLabel(date))} · ${escHtml(sessionTimeText(cls.schedule, new Date(date + 'T00:00:00').getDay()) || '시간 미정')}</s>
         ${/* schedule을 통째로 붙이면 시간이 두 번 나온다 — 요일만 따로 뽑아 잇는다. */''}
         <h1 class="t-title">${escHtml(cls.name)}<s>${escHtml(sessionTimeText(cls.schedule) || '시간 미정')}${
           parseScheduleDays(cls.schedule).length ? ' · ' + parseScheduleDays(cls.schedule).map(d=>WEEKDAY_LABEL[d]).join('·') : ''}</s></h1>
@@ -21410,16 +21718,17 @@ function teacherSessionHTML(){
       </div>
       ${stepsHTML}
       <div class="cls-body">${body}<div class="rst-pad"></div></div>
+      ${bar}
     </main>
-    ${bar}
   </div>`;
 }
 
-function sessionDateNavHTML(date){
+function sessionDateNavHTML(date, n){
   const isToday = date === todayStr();
   return `<div class="cls-nav">
     <button class="btn icon" title="이전 날" onclick="goSessionDate(-1)">${iconSvg('chevL',16)}</button>
-    <span class="cls-day">${date}<span class="muted" style="margin-left:7px;font-weight:400;">${WEEKDAY_LABEL[new Date(date+'T00:00:00').getDay()]}</span></span>
+    <span class="cls-day"><span class="cd-a">${date}<span class="muted" style="margin-left:7px;font-weight:400;">${WEEKDAY_LABEL[new Date(date+'T00:00:00').getDay()]}</span></span>${
+      n == null ? '' : `<span class="cd-w"><b>${escHtml(stuDayLabel(date))}</b><s>${isToday ? '오늘 · ' : ''}수업 ${n}</s></span>`}</span>
     <button class="btn icon" title="다음 날" onclick="goSessionDate(1)">${iconSvg('chevR',16)}</button>
     ${isToday ? '' : `<button class="btn sm" onclick="sessionGoToday()">오늘</button>`}
   </div>`;
@@ -21529,7 +21838,7 @@ function sessionAttHTML(classId, date){
 
   const unsaved = sessionUnsavedCount(classId, date);
   const bar = `<div class="actbar">
-    <span class="sum">${ATT_STATUSES.slice(0,4).map(s=>`${s} <b class="mono">${cnt[s]||0}</b>`).join(' · ')} · 미입력 <b class="mono">${none}</b></span>
+    <span class="sum hm-chips" style="margin:0;">${ATT_STATUSES.slice(0,4).map(s=>`<span class="hm-chip ${({출석:'ok',지각:'late',조퇴:'leave',결석:'no'})[s]}"><i></i>${s} <b class="mono">${cnt[s]||0}</b></span>`).join('')}<span class="hm-chip todo"><i></i>미입력 <b class="mono">${none}</b></span></span>
     ${none > 0 ? `<button class="btn sm" onclick="setAllRemainingPresent('${classId}')">남은 ${none}명 전체 출석 처리</button>` : ''}
     ${/* 🔵 **넘어가면 저절로 저장된다** (2026-09-01 · C-20) — 그래도 「저장」은 남긴다.
          수업 중에 «여기까지 넣어 뒀다»를 손으로 확인하고 싶을 때가 있고,
@@ -26576,7 +26885,7 @@ function teacherQnaHTML(){
       <span class="badge ${qnaHasOpen(q)?'late':'ok'}">${qnaHasOpen(q) ? (q.answer ? '추가 질문' : '대기') : '완료'}</span>
       <span class="who">${escHtml(q.studentName||'')}</span>
       ${(n => n ? `<span class="muted" style="font-size:11px;">사진${n > 1 ? ' <b class="mono">' + n + '</b>' : ''}</span>` : '')(qnaImgList(q).length)}
-      <span class="ago">${escHtml(q.date||'')}</span></div>
+      <span class="ago" title="${escHtml(q.date||'')}">${escHtml(shortDayLabel(q.date))}</span></div>
     <div class="x">${escHtml(q.question)}</div>
   </div>`;
 
@@ -26601,7 +26910,11 @@ function teacherQnaHTML(){
               <a onclick="rosterOpen('${cur.studentId}','info')" title="학생 상세">${escHtml(cur.studentName||'')}</a>
               <span>${stu ? `${escHtml(stu.school||'—')} ${escHtml(stu.grade||'')} · ${escHtml(classNameOf(stu.classId))}` : ''}</span>
             </div>
+            ${/* 넓은 화면 — 상태는 이름 옆 딱지로, 「학생 상세 ›」는 오른쪽 (시안). 줄 모드는 아래 .qn-stt 한 줄. */''}
+            <span class="badge ${qnaHasOpen(cur) ? 'late' : 'ok'} qn-stb">${qnaHasOpen(cur) ? (cur.answer ? '추가 질문' : '대기') : '완료'}${
+              cur.date ? ' · ' + escHtml(shortDayLabel(cur.date)) : ''}</span>
             <span class="spacer"></span>
+            <a class="qn-go" onclick="rosterOpen('${cur.studentId}','info')">학생 상세 ›</a>
             <button class="btn q sm" onclick="deleteQna('${cur.id}')">삭제</button>
           </div>
           <div class="qn-stt ${qnaHasOpen(cur) ? 'open' : 'done'}"><i></i>${상태}${
@@ -29084,13 +29397,19 @@ function icDrawerHTML(){
      ⚠ 풀이가 있어야 «정답이 맞는지»를 강사가 실제로 볼 수 있다 — 답만 보면 검증이 안 된다. */
 function selectAutoVariant(code){ state.reviewVariantCode = code; state.reviewSelectedId = null; render(); }
 
+/* 객관식 답 → 1~5 (①~⑤ 또는 1~5 한 글자). 아니면 0. 보기 칸을 칠할 때만 쓴다. */
+function choiceNo(a){
+  const t = String(a == null ? '' : a).trim();
+  const i = '①②③④⑤'.indexOf(t);
+  return i >= 0 ? i + 1 : /^[1-5]$/.test(t) ? Number(t) : 0;
+}
 function autoVariantWorkHTML(v){
   const 원본 = (state.itemBody || {})[v.originCode] || {};
   const 답 = dqAnswerable(v.content, v.answer);
   const open = !!state.solutionOpen[v.code];
   return `
   <div class="rv-wh">
-    <h1 class="t-title"><span class="mono">${escHtml(v.code)}</span> · ${v.engine === 'groq' ? 'Groq 가' : 'AI가'} 만든 변형</h1>
+    <h1 class="t-title"><span class="mono">${escHtml(v.code)}</span><span class="rv-wk"> · ${v.engine === 'groq' ? 'Groq 가' : 'AI가'} 만든 변형</span></h1>
     <div class="t-meta" style="margin-top:7px;">
       <span class="badge late">검토 대기</span>
       ${reviewMiniHTML(v)}
@@ -29113,14 +29432,15 @@ function autoVariantWorkHTML(v){
     ${/* (B) 그림 상자는 두 칸 «위»에 통째로 — 반 폭 칸에 넣으면 그래프 이름표를 못 읽는다 (헤드리스로 보고 옮겼다). */''}
     ${v.needsFigure ? variantFigureBoxHTML(v) : ''}
     <div class="cmp" style="margin-top:${답?'0':'14px'};">
-      <div class="side">
+      ${/* data-ok·ours·ai — 넓은 화면이 보기 칸을 칠한다(정답 초록 테 · 우리 답 남색 · AI 가 고른 다른 답 빨강 테 · 시안) */''}
+      <div class="side" data-ok="${choiceNo(원본.answer)}">
         <div class="lab">원본 <b class="mono lab-code">${escHtml(v.originCode)}</b></div>
         ${원본.image && 원본.image.url ? `<img class="pb-fig" src="${escHtml(원본.image.url)}" alt="">` : ''}
         <div class="q-body">${원본.content ? problemHTML(원본.content)
           : '(본문이 없습니다 — 문항 코드 › 교재에서 본문 채우기)'}</div>
         ${원본.answer ? `<div class="q-ans">정답 <b>${escHtml(원본.answer)}</b></div>` : ''}
       </div>
-      <div class="side ai">
+      <div class="side ai" data-ours="${choiceNo(v.answer)}" data-ai="${v.aiReview && v.aiReview.verdict === 'suspect' ? choiceNo(v.aiReview.answer) : 0}">
         <div class="lab">AI가 만든 것 <b class="mono lab-code">${escHtml(v.code)}</b></div>
         ${/* 갈래 (2026-09-11) — 강사가 창고에서 시킨 변형은 (B)·(C)로도 온다. 고리가 만든 것은 (A)뿐이다. */''}
         ${v.reuseFigure ? `<div class="rv-fignote">${v.image && v.image.url ? `<img class="pb-fig" src="${escHtml(v.image.url)}" alt="">` : ''}
@@ -32886,7 +33206,7 @@ function teacherSettingsHTML(){
       </div>
     </aside>
     <main class="ex-main">
-      <s class="st-crumb">설정 › ${escHtml((SETTINGS_GROUPS.find(g => g[1].some(t => t[0] === tabNow)) || ['설정'])[0])}</s>
+      <s class="st-crumb">설정 · ${escHtml((SETTINGS_GROUPS.find(g => g[1].some(t => t[0] === tabNow)) || ['설정'])[0])}</s>
       <div class="rst-hrow" style="flex-shrink:0;">
         <h1 class="t-title" title="${escHtml(LABEL[examSub === 'plan' ? 'examplan' : examSub === 'cut' ? 'gradecut' : tabNow]||'')}">${examSub === 'plan' ? '직보 일정표' : examSub === 'cut' ? '등급컷' : (subtabs.find(t=>t[0]===tabNow)||subtabs[0])[1]}<s>${
           LABEL[examSub === 'plan' ? 'examplan' : examSub === 'cut' ? 'gradecut' : tabNow]||''}</s></h1>
