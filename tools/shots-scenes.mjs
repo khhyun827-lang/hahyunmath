@@ -188,6 +188,39 @@ export const 무대들 = {
       state.offDays = { days: [{ date: 날(2), classIds: ['c1'], label: '학원 행사' }] };
       state.allRecordsLoaded = true; state.teacherTab = 'dash'; state.tCalDay = 날(7); state.tCalMonth = 날(7).slice(0, 7); render();
     } },
+  /* 시험지 한 장 — 원본·변형 그림이 문항 본문 안에 (2026-10-02) */
+  시험지그림: { 말: '문항관리 › 시험지 (그림 있는 문항)', 폭: '1440,864',
+    세우기: () => { state.currentUser = { type:'teacher', name:'김하현T' }; state.view = 'teacher';
+      const 장면 = (k) => ({ kind:'graph', curves:[{ expr:'-(x-1)*(x-' + k + ')', label:'y=f(x)', labelAt:k + 0.4 }, { expr:'x-1', label:'y=g(x)', labelAt:k + 0.6 }],
+        points:[{ x:1, curve:0, dot:true, label:'A', labelPos:'below' }, { x:k - 1, curve:1, dot:true, dropTo:'axis', label:'B', labelPos:'above' }],
+        xTicks:[1, k - 1, k], axis:{ xLabel:'x', yLabel:'y', origin:'O' } });
+      const 사진 = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(Figure.renderScene(장면(4)).replace('<svg ', '<svg style="background:#fff" '));
+      DATA.problemBank = [{ id:'pbF1', examId:'ex1', questionNo:7, status:'pending', itemCode:'K2-02-E-0139', hasImage:true,
+        content:'그림과 같이 이차함수 y = −(x−1)(x−4) 의 그래프와 직선 y = x − 1 이 두 점 A, B 에서 만난다. 삼각형 OAB 의 넓이는?\n① 1  ② 3/2  ③ 2  ④ 5/2  ⑤ 3', answer:'③',
+        variantContent:'그림과 같이 이차함수 y = −(x−1)(x−5) 의 그래프와 직선 y = x − 1 이 두 점 A, B 에서 만난다. 점 B 에서 x축에 내린 수선의 발을 H 라 할 때, 삼각형 ABH 의 넓이는?\n① 3  ② 7/2  ③ 4  ④ 9/2  ⑤ 5',
+        variantAnswer:'④', variantNeedsFigure:true, hasVariantImage:true, variantFigureSpec:'이차함수와 직선, 교점 A·B, B 에서 x축으로 점선' }];
+      state.pbImageCache = { pbF1: { url: 사진 }, 'v:pbF1': { kind:'svg', svg: Figure.renderScene(장면(5)), scene: 장면(5) } };
+      state.variants = { K2: [] }; state.reviewQuotaUsed = 23; state.aiQuotaUsed = 7;
+      state.teacherTab = 'review'; state.reviewQueue = 'pending'; state.reviewSelectedId = 'pbF1'; state.reviewVariantCode = ''; 
+      DATA.exams = [{ id:'ex1', title:'2학기 중간 대비', classId:'c1', date: todayStr(), hasFiles:false,
+        questions:[{ no:7, content: DATA.problemBank[0].content, answer:'③', chapter:'이차함수' }] }];
+      state.teacherTab = 'exams'; state.examGroupId = 'ex1'; state.examSelectedId = ''; render();
+    } },
+  /* 교재(시험지) 문항의 검토 — 원본 사진 + 변형 SVG 가 본문 안에 (2026-10-02 · 자동 변형 검토와 같은 꼴) */
+  검토교재그림: { 말: '문항관리 › 검토 대기 (시험지 문항 · 원본 사진 · 변형 그림)', 폭: '1440,864',
+    세우기: () => { state.currentUser = { type:'teacher', name:'김하현T' }; state.view = 'teacher';
+      const 장면 = (k) => ({ kind:'graph', curves:[{ expr:'-(x-1)*(x-' + k + ')', label:'y=f(x)', labelAt:k + 0.4 }, { expr:'x-1', label:'y=g(x)', labelAt:k + 0.6 }],
+        points:[{ x:1, curve:0, dot:true, label:'A', labelPos:'below' }, { x:k - 1, curve:1, dot:true, dropTo:'axis', label:'B', labelPos:'above' }],
+        xTicks:[1, k - 1, k], axis:{ xLabel:'x', yLabel:'y', origin:'O' } });
+      const 사진 = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(Figure.renderScene(장면(4)).replace('<svg ', '<svg style="background:#fff" '));
+      DATA.problemBank = [{ id:'pbF1', examId:'ex1', questionNo:7, status:'pending', itemCode:'K2-02-E-0139', hasImage:true,
+        content:'그림과 같이 이차함수 y = −(x−1)(x−4) 의 그래프와 직선 y = x − 1 이 두 점 A, B 에서 만난다. 삼각형 OAB 의 넓이는?\n① 1  ② 3/2  ③ 2  ④ 5/2  ⑤ 3', answer:'③',
+        variantContent:'그림과 같이 이차함수 y = −(x−1)(x−5) 의 그래프와 직선 y = x − 1 이 두 점 A, B 에서 만난다. 점 B 에서 x축에 내린 수선의 발을 H 라 할 때, 삼각형 ABH 의 넓이는?\n① 3  ② 7/2  ③ 4  ④ 9/2  ⑤ 5',
+        variantAnswer:'④', variantNeedsFigure:true, hasVariantImage:true, variantFigureSpec:'이차함수와 직선, 교점 A·B, B 에서 x축으로 점선' }];
+      state.pbImageCache = { pbF1: { url: 사진 }, 'v:pbF1': { kind:'svg', svg: Figure.renderScene(장면(5)), scene: 장면(5) } };
+      state.variants = { K2: [] }; state.reviewQuotaUsed = 23; state.aiQuotaUsed = 7;
+      state.teacherTab = 'review'; state.reviewQueue = 'pending'; state.reviewSelectedId = 'pbF1'; state.reviewVariantCode = ''; render();
+    } },
   /* 그림 있는 변형 (2026-10-02 · 사용자 — 「그림이 엄청 크게 그려져 문제와 같이 읽기 어렵다」) — 원본 사진 · 변형 SVG(figure.js 가 실제로 그린다) */
   검토그림: { 말: '문항관리 › 검토 (그림을 새로 그린 변형 — 그림이 본문 안 · 교재 크기)', 폭: '1440,864,390',
     세우기: () => { state.currentUser = { type:'teacher', name:'김하현T' }; state.view = 'teacher';

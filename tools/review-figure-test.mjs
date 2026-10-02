@@ -58,6 +58,17 @@ try{
 
   await page.evaluate(() => { state.figureDrafting = 'K2-02-E-0139-N01'; render(); });
   봄('편집·초안 중에는 넓은 편집 상자가 위에', await page.evaluate(() => document.querySelectorAll('.rv-body > .rv-fig').length), 1);
+
+  /* 시험지 문항 검토 · 시험지 화면도 같은 꼴 — 원본·변형 그림이 각 카드 본문 안, 폭 ≤ 340 */
+  const 두카드 = () => page.evaluate(() => [...document.querySelectorAll('.has-fig')].map(q => {
+    const f = q.querySelector(':scope > .rv-ifw .rv-ifig'); const st = q.querySelector(':scope > .pb-stem');
+    return !!f && !!st && st.getBoundingClientRect().bottom <= f.getBoundingClientRect().top + 1 && f.getBoundingClientRect().width <= 340;
+  }));
+  await page.evaluate(무대들.검토교재그림.세우기);
+  봄('시험지 문항 검토 — 원본·변형 둘 다 본문 안 · 교재 크기', await 두카드(), [true, true]);
+  봄('   그림 도구 상자엔 그림을 다시 안 그린다', await page.evaluate(() => document.querySelectorAll('.rv-fig .pb-fig').length), 0);
+  await page.evaluate(무대들.시험지그림.세우기);
+  봄('시험지 — 원본·변형 둘 다 본문 안 · 교재 크기', await 두카드(), [true, true]);
 } finally {
   await 브라우저.close(); 서버.kill();
 }

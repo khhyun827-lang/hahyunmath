@@ -34,7 +34,8 @@ for (const c of 칸) {
   /* 그 칸을 여는 줄들을 다 찾는다. 「내용 없음」만 적는 자리(none)는 뺀다. */
   const 자리 = [];
   lines.forEach((l, i) => {
-    if (!l.includes('class="' + c + '"')) return;
+    /* 2026-10-02 — 그림이 들면 `class="q-body${… ' has-fig'}"` 처럼 이어 붙는다. 그 꼴도 같은 칸이다. */
+    if (!l.includes('class="' + c + '"') && !l.includes('class="' + c + '${')) return;
     if (l.includes(c + ' none')) return;
     /* 삼항이라 다음 줄에 이어지는 자리가 있다 — 두 줄을 같이 본다. */
     자리.push({ no: i + 1, 글: l + (lines[i + 1] || '') });
