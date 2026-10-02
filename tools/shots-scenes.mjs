@@ -416,5 +416,15 @@ export const 무대들 = {
                          { term:'2026 · 2학기 중간', subject:'공통수학1', score:84 }];
         r.mockExams = [{ ym:'2026-06', score:76, grade:3 }, { ym:'2026-09', score:81 }]; }
       state.teacherTab = 'classhub'; state.classHubId = 'c1'; sdOpen('s0', 'score'); } },
+  /* 상담 작업대 (2026-10-02 · 기획 A) — 반 › 상담 기록에서 학생을 누른 자리. 지난 상담 하나(그때 숫자 있음) */
+  상담작업대: { 말: '반 › 상담 기록 › 상담 작업대 (학생 지금 · 쓰기)', 폭: '1440,864',
+    세우기: () => { state.currentUser = { type:'teacher', name:'김하현T' }; state.view = 'teacher';
+      for(const r of [state.allRecords.s0, DATA.records.s0].filter(Boolean)){
+        r.schoolExams = [{ term:'2026 · 1학기 기말', subject:'공통수학1', score:88, grade:2 }];
+        r.mockExams = []; }
+      state.consultLogs.s0 = [{ id:'cl1', date:'2026-09-20', kind:'전화', who:'학부모', text:'어머니 통화 — 9월부터 클리닉 주 2회 희망. 금요일 학교 보충으로 지각 잦다고 하심.',
+        snap:{ score:78, att:96, hw:'3/4', vid:82 } }];
+      state.studentNotes.s0 = { text:'형이 같은 반 · 금요일 학교 보충으로 지각 잦음' };
+      state.teacherTab = 'classhub'; state.classHubId = 'c1'; state.classHubTab = 'consult'; chubOpenConsult('s0'); } },
 };
 void 강사; void 학생;

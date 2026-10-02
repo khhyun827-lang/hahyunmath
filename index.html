@@ -1551,6 +1551,41 @@
 .app .sd-sub{font-size:11.5px;font-weight:700;color:var(--dim);margin:10px 0 2px;}
 .app .sd-more{font-size:12px;color:var(--sub);cursor:pointer;display:inline-flex;align-items:center;gap:2px;}
 .app .sd-more:hover{color:var(--ink);}
+/* 상담 작업대 (sdConsultDeskHTML · 2026-10-02) — 왼쪽 «학생 지금» · 오른쪽 «쓰기·지난 상담». 1200 아래는 위아래로 쌓는다(쓰기가 먼저 오게) */
+.app .sd-desk-doc{overflow-y:auto;}
+.app .cd-head{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:14px;}
+.app .cd-head .av.lg{border-radius:50%;font-size:14px;font-weight:800;letter-spacing:-.04em;}
+.app .cd-t2{font-size:.6em;font-weight:700;color:var(--dim);}
+.app .cd-desk{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:14px;align-items:start;}
+@media (max-width:1199px){ .app .cd-desk{grid-template-columns:minmax(0,1fr);} .app .cd-right{order:-1;} }
+.app .cd-left, .app .cd-right{display:flex;flex-direction:column;gap:12px;min-width:0;}
+.app .cd-kpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;}
+@media (max-width:640px){ .app .cd-kpis{grid-template-columns:repeat(3,minmax(0,1fr));} }
+.app .cd-k{background:var(--card);border:1px solid var(--line2);border-radius:14px;padding:10px 12px;min-width:0;}
+.app .cd-k s{display:block;text-decoration:none;font-size:11.5px;color:var(--dim);}
+.app .cd-k b{font-size:22px;font-weight:800;color:var(--ink);}
+.app .cd-k i{font-style:normal;font-size:12px;color:var(--dim);margin-left:1px;}
+.app .cd-k.bad b{color:var(--no);}
+.app .cd-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;}
+@media (max-width:640px){ .app .cd-grid{grid-template-columns:minmax(0,1fr);} }
+.app .cd-box{background:var(--card);border:1px solid var(--line2);border-radius:16px;padding:12px 14px;min-width:0;}
+.app .cd-bh{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:6px;}
+.app .cd-bh b{font-size:13.5px;font-weight:800;color:var(--ink);}
+.app .cd-sub{font-size:11.5px;font-weight:700;color:var(--dim);margin:6px 0 0;}
+.app .cd-none{font-size:12px;color:var(--dim);line-height:1.6;}
+.app .cd-cap{font-size:12px;color:var(--sub);}
+.app .cd-cap b{color:var(--ink);}
+.app .cd-spark{width:100%;height:56px;display:block;color:var(--ink);}
+.app .cd-bar{height:8px;border-radius:4px;background:var(--line2);overflow:hidden;margin:4px 0 6px;}
+.app .cd-bar i{display:block;height:100%;background:var(--ok);border-radius:4px;}
+.app .cd-memo{font-size:12.5px;line-height:1.7;white-space:pre-wrap;color:var(--ink);}
+.app .cd-add{margin-top:8px;}
+.app .cd-add summary{cursor:pointer;font-size:12.5px;font-weight:700;color:var(--sub);width:max-content;}
+.app .cd-af{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:8px;font-size:12px;}
+.app .cd-af b{width:62px;color:var(--sub);}
+.app .cd-af .fm-in, .app .cd-af .fm-sel{min-height:32px;padding:0 8px;font-size:13px;}
+.app .cd-write textarea{width:100%;box-sizing:border-box;}
+.app .cd-then{margin-top:6px;font-size:11.5px;color:var(--dim);}
 /* 넓은 화면 — 시안 꼴: 본문과 오른쪽 칸을 흰 판 둘로. 옛 «본문 패딩 되먹임»(-20px)이 판 위로 칸을 밀어 연락처가 잘렸다 */
 @media (min-width:1200px){
   #app:has(.tnav) .app:not(.sap) .sd-screen{gap:14px;}
@@ -22797,7 +22832,8 @@ function teacherClassHubHTML(){
   /* 🔵 학생 상세는 반 «안»에서도 열린다 (2026-08-30 · C-3) — 반 > 학생에서 한 명을 누르면
      여기로 온다. 이 줄이 없으면 명단 화면이 그대로 다시 그려져 학생이 안 열린다.
      ⚠ 「명단으로」 버튼은 studentDetailId만 비우므로 그대로 이 반으로 돌아온다. */
-  if(state.studentDetailId && (state.classHubTab||'sessions')==='students')
+  /* 반 › 상담 기록에서 학생을 누르면 상담 작업대(학생 상세의 'consult' 모드)로 연다 (2026-10-02) */
+  if(state.studentDetailId && ['students','consult'].includes(state.classHubTab||'sessions'))
     return teacherStudentDetailHTML(state.studentDetailId);
   /* 09-28 에 잠깐 따로 섰던 「내신·모의」 탭 — 성적 안으로 들어갔다(09-29). 들고 있던 세션을 그리로 보낸다. */
   if(state.classHubTab==='school'){ state.classHubTab = 'scores'; state.nsMode = state.nsMode || 'school'; }
@@ -22953,7 +22989,8 @@ async function loadConsultLogsForClass(classId){
   }));
   render();
 }
-function chubOpenConsult(sid){ state.chubConsultId = state.chubConsultId===sid ? '' : sid; render(); }
+/* 반 › 상담 기록에서 학생을 누르면 작업대로 연다 (2026-10-02 · 기획 A). 뒤로 가기는 이 화면으로 돌아온다. ⚠ 옛 서랍(chubConsultDrawerHTML)은 남겨 둔다. */
+function chubOpenConsult(sid){ state.chubConsultId = ''; state.studentDetailId = sid; state.teacherSelectedStudent = sid; state.studentDetailTab = 'consult'; render(); }
 function chubCloseConsult(){ 드로어닫기(() => { state.chubConsultId = ''; render(); }); }
 /* 오른쪽 판 — 그 학생의 상담 전부와, 새로 적는 칸.
    ⚠ 입력칸 id(`cs-*`)가 학생 상세의 상담 폼과 같다. **두 화면이 동시에 뜨지 않는다** —
@@ -24099,6 +24136,7 @@ const SD_FILTERS = [['all','전체'],['att','출결'],['score','성적'],['hw','
    **메모(한 덩어리)와 다른 것은 «날짜가 붙는다»는 점이다.** 상담은 사건이라 연대기에 쌓여야 하고,
    메모는 «늘 참인 한 가지»라 옆에 붙어 있어야 한다. 둘은 서로를 대신하지 못한다. */
 const CONSULT_KINDS = ['전화', '대면', '문자'];
+const CONSULT_WHO = ['학부모', '학생'];   // 상담 작업대의 «상대» (2026-10-02)
 
 async function loadConsultLogIfNeeded(sid){
   if(!sid || state.consultLogs[sid] || state.consultLogLoading[sid]) return;
@@ -24113,7 +24151,12 @@ async function addConsultLog(sid){
   const kind = document.getElementById('cs-kind').value;
   const text = document.getElementById('cs-text').value.trim();
   if(!text){ showToast('상담 내용을 적어 주세요.'); return; }
-  const list = (state.consultLogs[sid] || []).concat([{ id:'cl'+Date.now(), date, kind, text, at: nowStamp() }]);
+  const whoEl = document.getElementById('cs-who');
+  const s = DATA.students.find(x => x.studentId === sid);
+  const row = { id:'cl'+Date.now(), date, kind, text, at: nowStamp() };
+  if(whoEl) row.who = whoEl.value;                    // 작업대에서만 묻는다 (2026-10-02)
+  if(s) row.snap = consultSnapOf(s);                  // 그때의 숫자 — 다음 상담에서 견준다
+  const list = (state.consultLogs[sid] || []).concat([row]);
   state.consultLogs[sid] = list;
   await dbSet('consultlog:' + sid, list);
   /* 무엇을 나눴는지는 변경 이력에 남기지 않는다 — 상담에는 사적인 말이 들어가고
@@ -24308,7 +24351,7 @@ function sdMode(mode){ state.studentDetailTab = mode; render(); }
 function sdFilter(f){ state.sdFilter = f; render(); }
 /* 빠른 작업의 「상담」 — 연대기로 돌아가면서 갈래를 상담으로 맞춘다.
    ⚠ 둘을 «같이» 해야 한다. 채팅을 보던 중이면 갈래만 바꿔서는 화면이 안 바뀐다. */
-function sdConsult(){ state.studentDetailTab = 'timeline'; state.sdFilter = 'consult'; render(); }
+function sdConsult(){ state.studentDetailTab = 'consult'; render(); }   // 상담 작업대로 (2026-10-02)
 
 function teacherStudentDetailHTML(sid){
   const s = DATA.students.find(s=>s.studentId===sid);
@@ -25381,7 +25424,7 @@ function sdScreenHTML(s, rec, isAssistant){
   /* ⚠ **리포트는 강사의 것이다** (2026-08-27 · R-1) — 학부모에게 나갈 문서라
        조교에게는 문을 열지 않는다. 조교가 그 값을 들고 있어도 연대기로 떨어진다. */
   const mode = isAssistant ? 'timeline'
-    : (state.studentDetailTab==='chat' || state.studentDetailTab==='report')
+    : (state.studentDetailTab==='chat' || state.studentDetailTab==='report' || state.studentDetailTab==='consult')
       ? state.studentDetailTab : 'timeline';
   const st = rosterStats(s);
   const sg = signalOf(st);
@@ -25399,7 +25442,7 @@ function sdScreenHTML(s, rec, isAssistant){
   /* ⚠ 옛 왼쪽 명단(아래 list)은 더는 화면에 안 붙인다 — 지우지 않은 것은 조교 화면·인쇄 규칙이 클래스를 참조해서다 */
   const 찾기 = `<div class="sd-find">
     <button class="btn q sm" onclick="state.studentDetailId=null; render()">${iconSvg('chevL',13)} ${
-      state.teacherTab==='signals' ? '신호로' : '학생 명단으로'}</button>
+      state.teacherTab==='signals' ? '신호로' : state.teacherTab==='classhub' && state.classHubTab==='consult' ? '상담 기록으로' : '학생 명단으로'}</button>
     <span class="field sd-find-f">${iconSvg('search',14)}
       <input list="sd-find-list" placeholder="다른 학생 — 이름을 적고 Enter" autocomplete="off"
         onkeydown="if(event.keyCode===13){ sdSearchGo(this.value); }" onchange="sdSearchGo(this.value)"></span>
@@ -25556,10 +25599,180 @@ function sdScreenHTML(s, rec, isAssistant){
       <div><b style="color:var(--ink);">여기서 할 수 없는 것</b> — 기본정보 수정 · 반 이동 ·
       학생 삭제 · 채팅 · 클리닉 승인. 강사에게 요청해 주세요.</div></div>`;
 
+  /* 상담 작업대 (2026-10-02 · 기획 A) — 오른쪽 칸 없이 판 하나를 두 칸으로 쓴다 */
+  if(mode === 'consult') return `<div class="sd-screen">
+    <main class="sd-doc sd-desk-doc">${찾기}${sdConsultDeskHTML(s, rec, st, sg)}</main></div>`;
   return `<div class="sd-screen">
     <main class="sd-doc">${찾기}${head}${center}${lock}</main>
     ${isAssistant ? '' : ctx}
   </div>`;
+}
+
+/* =================== 상담 작업대 (2026-10-02 · 사용자가 기획 A 를 골랐다) ===================
+   「특정 학생을 상담하려고 기록하려 눌렀을 때 성적·출결·과제 등을 같이 한눈에 보면서 상담」 ·
+   「영상 시청률도」 · 「성적이 안 적혀 있으면 상담하면서 기록할 수도」.
+   🔵 학생 상세의 한 «모드»다(studentDetailTab='consult') — 위 이름 찾기·뒤로 가기·자료가 그대로 붙는다.
+     왼쪽 «학생 지금»(숫자 다섯 · 성적 추이 · 학교·모의 성적(여기서 적기) · 출결 · 과제 · 영상 · 신호·메모), 오른쪽 «상담 쓰기 · 지난 상담».
+   🔵 기록할 때 그때의 숫자(snap)를 같이 남긴다 — 다음 상담에서 «그때 → 지금»을 보인다.
+   ⚠ 상담 내용은 여전히 kv `consultlog:{sid}` 하나(학생·학부모에게 안 보임). 성적은 반 › 성적과 «같은 칸»(rec.schoolExams·mockExams)에 쓴다. */
+function consultSnapOf(s){
+  const st = rosterStats(s);
+  return { score: st.scores.length ? st.scores[st.scores.length-1] : null, att: st.attPct,
+    hw: st.hwTotal ? st.hwDone + '/' + st.hwTotal : null, vid: st.vidPct };
+}
+function consultSnapText(p){
+  if(!p) return '';
+  const 칸 = [p.score != null ? '반 시험 ' + p.score : '', p.att != null ? '출석 ' + p.att + '%' : '',
+    p.hw ? '과제 ' + p.hw : '', p.vid != null ? '영상 ' + p.vid + '%' : ''].filter(Boolean);
+  return 칸.join(' · ');
+}
+async function consultSaveScore(sid, kind){
+  const v = id => String((document.getElementById(id) || {}).value || '').trim();
+  const mock = kind === 'mock';
+  const raw = v(mock ? 'cd-mscore' : 'cd-sscore'), gRaw = v(mock ? 'cd-mgrade' : 'cd-sgrade');
+  const score = Number(raw), grade = gRaw === '' ? null : Number(gRaw);
+  if(raw === '' || !Number.isFinite(score) || score < 0 || score > 100
+     || (grade !== null && !(Number.isInteger(grade) && grade >= 1 && grade <= 9))){
+    showToast('원점수는 0~100, 등급은 1~9 로 적어 주세요.'); return;
+  }
+  const entry = mock ? { ym: v('cd-mym') || ymNow(), score } : { term: v('cd-sterm') || nsDefaultTerm(), subject: v('cd-ssubj'), score };
+  if(grade !== null) entry.grade = grade;
+  const rec = await loadRecord(sid);
+  const key = mock ? 'mockExams' : 'schoolExams';
+  if(!rec[key]) rec[key] = [];
+  /* 반 › 성적과 같은 잣대 — 한 학기(모의는 한 달)에 한 줄. 있으면 고친다. */
+  const idx = rec[key].findIndex(x => mock ? x.ym === entry.ym : x.term === entry.term);
+  if(idx >= 0) rec[key][idx] = entry; else rec[key].push(entry);
+  await saveRecordAsTeacher(sid);
+  state.allRecords[sid] = rec;
+  showToast((mock ? entry.ym + ' 모의고사' : entry.term) + ' 성적을 적었습니다.');
+  render();
+}
+function sdConsultDeskHTML(s, rec, st, sg){
+  const sid = s.studentId;
+  const 최근 = st.scores.length ? st.scores[st.scores.length-1] : null;
+  const SR = signalRules();
+  const kpi = (k, v, unit, bad) => `<div class="cd-k${bad ? ' bad' : ''}"><s>${k}</s><b>${v}</b>${unit ? `<i>${unit}</i>` : ''}</div>`;
+  const 칸 = (title, body, more) => `<section class="cd-box"><div class="cd-bh"><b>${title}</b>${more || ''}</div>${body}</section>`;
+
+  /* 성적 추이 — 반 시험 최근 여섯(100점 환산) */
+  const 점 = st.scores.slice(-6);
+  const 추이 = 점.length < 2 ? `<div class="cd-none">${점.length ? '반 시험이 한 번뿐입니다 — ' + 점[0] + '점' : '반 시험 기록이 아직 없습니다.'}</div>`
+    : `<svg class="cd-spark" viewBox="0 0 220 56" role="img" aria-label="반 시험 최근 ${점.length}회">
+        <polyline fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" points="${
+          점.map((p, i) => (10 + i * (200 / (점.length - 1))).toFixed(1) + ',' + (50 - p * 0.44).toFixed(1)).join(' ')}"/>
+        ${점.map((p, i) => `<circle cx="${(10 + i * (200 / (점.length - 1))).toFixed(1)}" cy="${(50 - p * 0.44).toFixed(1)}" r="${i === 점.length - 1 ? 4 : 2.6}" fill="currentColor"/>`).join('')}
+      </svg><div class="cd-cap">처음 ${점[0]} → 지금 <b>${최근}</b>${st.drop > 0 ? ` <span class="badge no">−${st.drop}</span>` : ''}</div>`;
+
+  /* 학교 시험 · 모의고사 — 보고, 없으면 여기서 적는다 */
+  const sc = (rec.schoolExams || []).slice().sort((a,b)=>nsTermRank(b.term)-nsTermRank(a.term)).slice(0, 3);
+  const mk = (rec.mockExams || []).slice().sort((a,b)=>String(b.ym).localeCompare(String(a.ym))).slice(0, 3);
+  const gl = g => !g ? '' : ' · ' + (String(g).endsWith('~') ? String(g).slice(0,-1) + '등급↓' : g + '등급');
+  const 줄 = (when, what) => `<div class="sd-crow"><span>${escHtml(when)}</span><b>${what}</b></div>`;
+  const y0 = Number(todayStr().slice(0,4)), 기본학기 = nsDefaultTerm();
+  const 학기들 = [y0, y0 - 1].flatMap(y => EXAM_SEASONS.map(x => nsTermOf(y, x)));
+  const 성적적기 = `<details class="cd-add"${!sc.length && !mk.length ? ' open' : ''}><summary>＋ 성적 적기</summary>
+      <div class="cd-af"><b>학교 시험</b>
+        <select id="cd-sterm" class="fm-sel">${학기들.map(t => `<option ${t === 기본학기 ? 'selected' : ''}>${escHtml(t)}</option>`).join('')}</select>
+        <input id="cd-ssubj" class="fm-in" placeholder="과목" value="${escHtml(subjectOfStudent(sid) || '')}" style="width:110px;">
+        <input id="cd-sscore" class="fm-in" inputmode="numeric" placeholder="원점수" style="width:72px;">
+        <input id="cd-sgrade" class="fm-in" inputmode="numeric" placeholder="등급" style="width:56px;">
+        <button class="btn sm" onclick="consultSaveScore('${sid}','school')">저장</button></div>
+      <div class="cd-af"><b>모의고사</b>
+        <input id="cd-mym" class="fm-in" type="month" value="${ymNow()}" style="width:150px;">
+        <input id="cd-mscore" class="fm-in" inputmode="numeric" placeholder="원점수" style="width:72px;">
+        <input id="cd-mgrade" class="fm-in" inputmode="numeric" placeholder="등급" style="width:56px;">
+        <button class="btn sm" onclick="consultSaveScore('${sid}','mock')">저장</button></div>
+      <p class="cd-none">등급을 비우면 학교 시험은 등급컷으로 셉니다. 같은 학기(모의는 같은 달)가 있으면 고쳐 씁니다 — 반 › 성적과 같은 칸입니다.</p>
+    </details>`;
+  const 성적 = `<div class="cd-sub">학교 시험</div>${sc.length ? sc.map(x => { const g = nsSchoolGrade(s, x);
+      return 줄(x.term, `${escHtml(x.subject || '')} ${x.score}점${escHtml(gl(g.g))}`); }).join('') : '<div class="cd-none">적어 둔 기록이 없습니다.</div>'}
+    <div class="cd-sub">모의고사</div>${mk.length ? mk.map(x => 줄(x.ym, `${x.score}점${escHtml(gl(x.grade || ''))}`)).join('') : '<div class="cd-none">적어 둔 기록이 없습니다.</div>'}
+    ${성적적기}`;
+
+  /* 출결 — 최근 8회 · 빠진 날의 사유 */
+  const 빠짐 = attCountedOf(rec, s).filter(a => a.status !== '출석').slice().sort((a,b)=>b.date.localeCompare(a.date)).slice(0, 3);
+  const 출결 = `<div>${rosterDots(st.att8)}</div>${빠짐.length ? 빠짐.map(a => 줄(a.date.slice(5) + ' ' + a.status, escHtml(a.reason || '사유 없음'))).join('') : '<div class="cd-none">빠진 날이 없습니다.</div>'}`;
+
+  /* 과제 — 아직 안 끝난 것 · 오답 · 퀴즈 */
+  const 반들 = studentClassIds(s), 오늘 = todayStr();
+  const 남은 = DATA.assignments.filter(a => (!a.classId || 반들.includes(a.classId)) && !hwIsDone(rec, a.id))
+    .sort((a,b)=>String(b.dueDate||'').localeCompare(String(a.dueDate||''))).slice(0, 5);
+  const 퀴즈 = ((rec.dailyQuiz && rec.dailyQuiz.log) || []).slice(-30);
+  const 과제 = (남은.length ? 남은.map(a => { const 지남 = a.dueDate && a.dueDate < 오늘;
+      return `<div class="sd-crow"><span>${escHtml(a.title)}</span><b>${a.dueDate ? escHtml(a.dueDate.slice(5)) + ' ' : ''}<span class="badge ${지남 ? 'no' : 'late'}">${지남 ? '미제출' : '마감 전'}</span></b></div>`; }).join('')
+      : '<div class="cd-none">밀린 과제가 없습니다.</div>')
+    + `<div class="cd-cap">오답 숙제 미제출 <b>${st.wrongLeft || 0}</b>${퀴즈.length ? ` · 데일리퀴즈 최근 ${퀴즈.length}문항 정답 <b>${Math.round(퀴즈.filter(e => e.ok).length / 퀴즈.length * 100)}%</b>` : ''}</div>`;
+
+  /* 영상 — 시청률 · 덜 본 영상 */
+  const vids = DATA.videos.filter(v => videoCounted(v) && (v.studentId ? v.studentId === sid : (!v.classId || 반들.includes(v.classId))));
+  const 덜 = vids.map(v => ({ v, p: videoScore(rec.videoProgress && rec.videoProgress[v.id]) })).filter(x => x.p < 70)
+    .sort((a,b)=>a.p - b.p).slice(0, 3);
+  const 영상 = st.vidPct == null ? '<div class="cd-none">배정된 영상이 없습니다.</div>'
+    : `<div class="cd-bar"><i style="width:${st.vidPct}%"></i></div><div class="cd-cap">영상 ${vids.length}개 평균 <b>${st.vidPct}%</b></div>`
+      + 덜.map(x => 줄(x.v.title || '영상', x.p + '%')).join('');
+
+  const 메모 = sdNoteText(sid);
+  const 왼쪽 = `<div class="cd-left">
+    <div class="cd-kpis">
+      ${kpi('반 시험', 최근 == null ? '—' : 최근, 최근 == null ? '' : '점', st.drop >= SR.drop)}
+      ${kpi('출석률', st.attPct == null ? '—' : st.attPct, st.attPct == null ? '' : '%', st.attPct != null && st.attPct < SR.attPct)}
+      ${kpi('과제', st.hwTotal ? st.hwDone : '—', st.hwTotal ? '/' + st.hwTotal : '', st.hwLate > 0)}
+      ${kpi('오답 미제출', st.wrongLeft || 0, '건', st.wrongLeft > 0)}
+      ${kpi('영상 시청', st.vidPct == null ? '—' : st.vidPct, st.vidPct == null ? '' : '%', st.vidPct != null && st.vidPct < SR.vidHeavy)}
+    </div>
+    ${sg ? `<div class="sd-sig ${sg.grade}"><span class="badge ${SIGNAL_GRADE[sg.grade].badge}">${SIGNAL_GRADE[sg.grade].label}</span>
+      <div class="x">${sg.rules.map(r=>r.why).join(' · ')}</div></div>` : ''}
+    <div class="cd-grid">
+      ${칸('성적 추이', 추이)}
+      ${칸('학교 · 모의고사', 성적)}
+      ${칸('출결 최근 8회', 출결)}
+      ${칸('과제 · 오답', 과제)}
+      ${칸('영상 시청', 영상)}
+      ${칸('고정 메모', 메모 ? `<div class="cd-memo">${escHtml(메모)}</div>` : '<div class="cd-none">메모가 없습니다 — 학생 화면 오른쪽에서 적습니다.</div>')}
+    </div>
+  </div>`;
+
+  /* 오른쪽 — 쓰기 · 지난 상담 */
+  const 지금 = consultSnapOf(s);
+  const log = (state.consultLogs[sid] || []).slice().sort((a,b)=>String(b.date||'').localeCompare(String(a.date||'')));
+  const 오른쪽 = `<div class="cd-right">
+    <section class="cd-box cd-write"><div class="cd-bh"><b>오늘 상담</b><span class="cd-cap">지금 ${escHtml(consultSnapText(지금) || '—')}</span></div>
+      <div class="cls-form" style="margin-top:0;">
+        <label><span>날짜</span><input id="cs-date" type="date" value="${todayStr()}"></label>
+        <label style="width:96px;"><span>방식</span><select class="fm-sel" id="cs-kind">${CONSULT_KINDS.map(k=>`<option>${k}</option>`).join('')}</select></label>
+        <label style="width:96px;"><span>상대</span><select class="fm-sel" id="cs-who">${CONSULT_WHO.map(k=>`<option>${k}</option>`).join('')}</select></label>
+      </div>
+      <div class="cls-form"><label style="flex:1;"><span>내용</span>
+        <textarea id="cs-text" rows="6" placeholder="나눈 이야기와 약속한 것&#10;예: 어머니 통화 — 9월부터 클리닉 주 2회 희망"></textarea></label></div>
+      <div class="row" style="gap:8px;align-items:center;margin-top:8px;">
+        <span class="cd-none" style="flex:1;">기록하면 지금 숫자도 같이 남아 다음 상담에서 견줍니다. 학생·학부모에게는 안 보입니다.</span>
+        <button class="btn p" onclick="addConsultLog('${sid}')">기록</button></div>
+    </section>
+    <section class="cd-box"><div class="cd-bh"><b>지난 상담</b><span class="cd-cap">${log.length}건</span></div>
+      ${state.consultLogLoading[sid] && !state.consultLogs[sid] ? '<div class="cd-none">불러오는 중…</div>'
+        : !log.length ? '<div class="cd-none">아직 기록이 없습니다.</div>'
+        : log.map(c => state.consultEditId === c.id
+          ? `<div class="cs-item">${consultEditFormHTML(sid, c)}<div class="row" style="gap:6px;margin-top:8px;"><span class="spacer"></span>${consultEditActHTML(sid, c)}</div></div>`
+          : `<div class="cs-item">
+              <div class="h"><b class="mono">${escHtml(c.date)}</b><span class="badge">${escHtml(c.kind || '')}</span>${c.who ? `<span class="badge">${escHtml(c.who)}</span>` : ''}
+                ${c.editedAt ? '<span class="muted" style="font-size:10.5px;">고침</span>' : ''}<span class="spacer"></span>
+                <button class="btn q sm" onclick="state.consultEditId='${c.id}'; render()">고치기</button>
+                <button class="btn q sm" onclick="deleteConsultLog('${sid}','${c.id}')">삭제</button></div>
+              <div class="x">${escHtml(c.text || '')}</div>
+              ${c.snap ? `<div class="cd-then">그때 ${escHtml(consultSnapText(c.snap))}</div>` : ''}
+            </div>`).join('')}
+    </section>
+  </div>`;
+
+  return `<div class="cd-head">
+      <div class="av lg" title="${escHtml(s.school || '')}">${escHtml(s.school ? schoolShort(s.school) : (s.name || '?').slice(0,1))}</div>
+      <div style="min-width:0;"><h1 class="t-title">${escHtml(s.name)} <span class="cd-t2">상담</span></h1>
+        <div class="t-meta" style="margin-top:4px;">${escHtml(s.school || '학교 미입력')} ${escHtml(s.grade || '')}<s>·</s>${escHtml(studentClassTitle(s))}</div></div>
+      <span class="spacer"></span>
+      <button class="btn" onclick="sdMode('timeline')">학생 화면으로</button>
+    </div>
+    <div class="cd-desk">${왼쪽}${오른쪽}</div>`;
 }
 
 function sdTimelineHTML(s, sid, rec, isAssistant){
