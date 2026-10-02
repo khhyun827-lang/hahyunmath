@@ -6155,3 +6155,11 @@ claude work/
 - 사이드 모드(≥1200)에서는 본문 안 «과목 · 단원» 칸(.ist-nav)을 CSS 가 접는다. 761~1199·폰은 그 칸 그대로(사이드가 줄이라).
 - 검사: promise-notepad-test ⑦.
 - ⚠ python 으로 index.html 을 쓰면(io.open 기본) 작업본이 CRLF 가 된다 — git 은 LF 로 담지만 다음 패치가 «0개 찾음»으로 헛돈다. 패치는 읽을 때 \r\n → \n.
+
+### 홈 빠른 작업 → 팝업 (2026-10-03 · 사용자 — 「홈에서 빠르게 할 것은 페이지 이동 없이」 · 「과제 확인은 두 번 눌러야 작동」)
+- 사이드 빠른 작업 다섯이 홈을 안 떠나고 팝업(quickModalHTML · state.quick)으로: 출결 · 과제 확인 · 공지 · 클리닉 시간 · 학생 추가. 영상은 칸이 많아 그 화면으로 간다.
+- 🔴 안은 원래 부품 그대로 — sessionAttHTML · hwReviewRowHTML · noticeFormHTML+addNotice · clinicSlotFormHTML(꺼냄)+addClinicSlots · studentAddFormHTML(꺼냄)+addStudent. 성공은 «늘었나»로 보고 닫는다.
+- 출결은 닫거나 반을 바꾸면 저절로 저장(수업 화면 규칙과 같다). 팝업은 셸 «안»(teacherHTML)에 그린다 — 밖에 두면 `.app …` 칸 꼴이 안 먹는다. 스크롤 자리는 render() 가 .qk-b 로 지킨다.
+- 과제 확인 버그: gotoHwWaiting 이 render() 를 안 불렀다(벨도 같은 길). 고침.
+- 공지 내용 칸이 글자마다 render(liveEdit) 해서 «제목»이 지워졌다 → 초안만 담는다(공지 화면에도 있던 흠).
+- 검사: quick-action-test (⑤는 render 를 빼면 문다 — 확인함).

@@ -2829,6 +2829,25 @@
 .pwm-err{font-size:12px;color:var(--no);background:var(--nobg);border-radius:var(--r-sm);
   padding:9px 11px;line-height:1.6;}
 .pwm-f{display:flex;gap:7px;margin-top:3px;}
+/* 홈 빠른 작업 팝업 (2026-10-03) — 비밀번호 창과 같은 막·같은 등장. 넓고, 머리·발은 서고 가운데만 구른다 */
+.pwm.qk{width:min(680px,100%);max-height:min(86vh,860px);display:flex;flex-direction:column;overflow:hidden;border-radius:22px;}
+.pwm.qk .pwm-h{flex:none;padding:18px 22px 14px;}
+.pwm.qk .pwm-h > b{font-size:17px;font-weight:800;}
+.qk-b{flex:1;min-height:0;overflow:auto;padding:16px 22px 18px;}
+.qk-b .cls-form{margin-top:0;}
+.qk-f{flex:none;display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:12px 22px;border-top:1px solid var(--line);}
+.qk-sum{margin-right:auto;font-size:12.5px;color:var(--sub);} .qk-sum b{color:var(--ink);font-weight:800;}
+.qk-more{margin-right:auto;font-size:12.5px;color:var(--sub);cursor:pointer;display:inline-flex;align-items:center;gap:3px;}
+.qk-none{padding:44px 0;text-align:center;color:var(--dim);font-size:13px;}
+.qk-cls{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;}
+.qk-grp{display:flex;align-items:baseline;gap:8px;margin:16px 0 6px;} .qk-grp:first-child{margin-top:0;}
+.qk-grp b{font-size:14px;font-weight:800;} .qk-grp s{text-decoration:none;font-size:12px;color:var(--dim);}
+.qk-slots{display:flex;flex-wrap:wrap;gap:6px;} .qk-slots span{font-size:12px;padding:3px 9px;border-radius:999px;background:var(--sunk);color:var(--sub);}
+.qk-att .cls-tiles{grid-template-columns:1fr;}
+.app .qk-student .cls-form, .app .qk-clinic .cls-form{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;align-items:end;}
+.app .qk .cls-form > label{min-width:0 !important;width:auto !important;}
+.app .sb-quick a .sb-qn{position:absolute;top:8px;right:10px;min-width:18px;height:18px;padding:0 5px;box-sizing:border-box;border-radius:9px;
+  background:#1E2433;color:#fff;font:800 11px/18px 'Pretendard',sans-serif;text-align:center;}
 .pwm-f .btn{flex:1;justify-content:center;}
 @media (max-width:560px){
   .pwm-back{align-items:flex-end;padding:0;}
@@ -3956,7 +3975,7 @@
   /* 홈 — 빠른 작업(가운데 정렬 · 사용자가 고름) · 최근 본 학생(동그라미 = 학교 두 글자) */
   .app:not(.sap):has(.tnav) .sb-grp{font-size:11.5px;font-weight:800;color:#9AA0B0;letter-spacing:.06em;padding:16px 10px 6px;}
   .app:not(.sap):has(.tnav) .subnav .sb-quick{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;}
-  .app:not(.sap):has(.tnav) .sb-quick a{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;height:auto;
+  .app:not(.sap):has(.tnav) .sb-quick a{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;height:auto;
     padding:12px 6px;border-radius:16px;background:#F6F7FA;font-size:13px;font-weight:700;color:#1E2433;text-align:center;}
   .app:not(.sap):has(.tnav) .sb-quick a i{width:30px;height:30px;border-radius:10px;background:#fff;box-shadow:0 0 0 1px #E6E8EE;
     display:flex;align-items:center;justify-content:center;}
@@ -9976,6 +9995,20 @@ function generateClassSessionDates(schedule, count){
 /* quizClassLabel은 지웠다 — 데일리퀴즈가 «반에 배포하는 것»이 아니게 되면서 쓰는 곳이 없어졌다. */
 
 /* =================== 학생 관리 (교사) =================== */
+/* 학생 추가 칸 — 설정 › 학생과 홈 빠른 작업(팝업)이 같이 쓴다. addStudent 가 이 id 들을 읽는다. */
+function studentAddFormHTML(withBtn){
+  return `<div class="cls-form">
+        <label style="min-width:120px;"><span>아이디</span><input id="new-sid" placeholder="예: st01"></label>
+        <label style="min-width:110px;"><span>이름</span><input id="new-sname" placeholder="이름"></label>
+        <label style="min-width:120px;"><span>비밀번호</span><input id="new-spw" placeholder="비밀번호"></label>
+        <label style="width:92px;"><span>학년</span><select class="fm-sel" id="new-sgrade"><option>고1</option><option>고2</option><option>고3</option></select></label>
+        <label style="min-width:130px;"><span>학교</span><input id="new-sschool" placeholder="학교명 (선택)"></label>
+        <label style="min-width:150px;"><span>학부모 전화</span><input id="new-sparentphone" placeholder="010-0000-0000 (선택)"></label>
+        <label style="min-width:150px;"><span>학생 전화</span><input id="new-sphone" placeholder="010-0000-0000 (선택)"></label>
+        <label style="min-width:150px;"><span>반</span><select class="fm-sel" id="new-sclass">${classOptionsHTML(null)}</select></label>
+        ${withBtn ? '<button class="btn p sm" onclick="addStudent()">추가</button>' : ''}
+      </div>`;
+}
 async function addStudent(){
   const sid = document.getElementById('new-sid').value.trim();
   const name = document.getElementById('new-sname').value.trim();
@@ -10640,6 +10673,108 @@ function gotoHwWaiting(){
     }));
   state.homeworkDetailId = first ? first.id : null;
   state.hwRejectOpen = null;
+  /* 🔴 **다시 그린다** (2026-10-03 · 사용자 — 「한번 누르고 다른 버튼을 클릭해야 작동해」). 상태만 바꾸고 끝났었다. */
+  render();
+}
+/* =================== 홈 빠른 작업 — 팝업 (2026-10-03) ===================
+   사용자 — 「홈화면에서 빠르게 작업할만한 것들은 페이지 이동하지 않고 빠르게 작업하고싶어」.
+   🔴 **안은 원래 화면의 부품 그대로다** — 출결 = sessionAttHTML(수업 화면의 타일) · 과제 = hwReviewRowHTML ·
+     공지 = noticeFormHTML + addNotice · 클리닉 = clinicSlotFormHTML + addClinicSlots · 학생 = studentAddFormHTML + addStudent.
+     두 벌로 두면 한쪽만 고쳐진다. 팝업이 하는 일은 «어느 반·무엇»을 고르고 끝나면 닫는 것뿐이다.
+   ⚠ 출결은 수업 화면처럼 «닫거나 반을 바꾸면 저절로 저장»된다(그 화면과 같은 규칙). */
+const QUICK_TITLES = { att:'출결 넣기', hw:'과제 확인', notice:'공지 쓰기', clinic:'클리닉 시간 열기', student:'학생 추가' };
+function quickOpen(k){ state.quick = k; state.quickClassId = null; state.hwRejectOpen = null; render(); }
+async function quickClose(){
+  if(state.quick === 'att' && state.quickClassId && state.allRecordsLoaded
+     && sessionUnsavedCount(state.quickClassId, todayStr()) > 0){
+    await saveClassAttendance(state.quickClassId, todayStr());
+    showToast('출결을 저장했습니다.');
+  }
+  덮개닫기('.qk-back', () => { state.quick = null; render(); });
+}
+function quickAttClass(){
+  const today = todayStr(), sessions = sessionsOn(today);
+  return sessions.find(c => c.id === state.quickClassId)
+    || sessions.find(c => { const st = sessionStatusOf(c, today).st[1]; return st !== '완료' && st !== '휴강'; })
+    || sessions[0] || null;
+}
+async function quickAttPick(classId){
+  const today = todayStr();
+  if(state.quickClassId && state.allRecordsLoaded && sessionUnsavedCount(state.quickClassId, today) > 0)
+    await saveClassAttendance(state.quickClassId, today);
+  state.quickClassId = classId; render();
+}
+async function quickAttSave(classId){
+  await saveClassAttendance(classId, todayStr());
+  showToast('출결을 저장했습니다.');
+  state.quick = null; render();
+}
+/* 넣는 일 셋 — 원래 함수가 성공했는지는 «늘었나»로 본다(실패면 그 함수가 이미 까닭을 토스트로 말했다) */
+async function quickNotice(){ const n = DATA.notices.length; await addNotice(); if(DATA.notices.length > n){ state.quick = null; render(); } }
+async function quickClinic(){ const n = DATA.clinicSlots.length; await addClinicSlots(); if(DATA.clinicSlots.length > n){ state.quick = null; render(); } }
+async function quickStudent(){ const n = DATA.students.length; await addStudent(); if(DATA.students.length > n){ state.quick = null; render(); } }
+function quickModalHTML(){
+  const k = state.quick, today = todayStr();
+  const 없음 = t => `<div class="qk-none">${t}</div>`;
+  const 불러오는중 = 없음('학생 기록을 불러오는 중…');
+  let sub = '', body = '', foot = '';
+  if(k === 'att'){
+    loadAllRecordsIfNeeded();
+    const sessions = sessionsOn(today), cur = quickAttClass();
+    if(!cur) body = 없음('오늘은 수업이 없습니다.');
+    else {
+      state.quickClassId = cur.id;
+      sub = escHtml(cur.name) + ' · ' + escHtml(today);
+      if(state.allRecordsLoaded) ensureAttDraft(cur.id, today);
+      body = (sessions.length > 1 ? `<div class="qk-cls">${sessions.map(c =>
+          `<a class="pill ${c.id === cur.id ? 'on' : ''}" onclick="quickAttPick('${c.id}')">${escHtml(c.name)}</a>`).join('')}</div>` : '')
+        + sessionAttHTML(cur.id, today).body;
+      if(state.allRecordsLoaded){
+        const { roster, cnt, none } = sessionDraftSummary(cur.id);
+        if(roster.length) foot = `<span class="qk-sum">${['출석','지각','조퇴','결석'].map(x => x + ' <b>' + (cnt[x] || 0) + '</b>').join(' · ')} · 미입력 <b>${none}</b></span>
+          ${none ? `<button class="btn sm" onclick="setAllRemainingPresent('${cur.id}')">남은 ${none}명 출석</button>` : ''}
+          <button class="btn p sm" onclick="quickAttSave('${cur.id}')">저장</button>`;
+      }
+    }
+  } else if(k === 'hw'){
+    loadAllRecordsIfNeeded();
+    if(!state.allRecordsLoaded) body = 불러오는중;
+    else {
+      /* 과제마다 묶는다 — 머리에 «과제 · 반 · 마감», 줄마다 학생(사진 · 수락/보완/반려). 수락하면 그 줄이 빠진다. */
+      let n = 0;
+      const 묶음 = [];
+      for(const c of DATA.classes) for(const a of DATA.assignments.filter(a => a.classId === c.id)){
+        const 기다림 = classRoster(c.id).filter(st => { const rec = state.allRecords[st.studentId]; return rec && hwState(rec, a.id).status === HW_SUBMITTED; });
+        if(!기다림.length) continue;
+        n += 기다림.length;
+        묶음.push(`<div class="qk-grp"><b>${escHtml(a.title)}</b><s>${escHtml(c.name)}${a.dueDate ? ' · 마감 ' + escHtml(a.dueDate) : ''}</s></div>`
+          + 기다림.map(st => hwReviewRowHTML(st.studentId, state.allRecords[st.studentId], a, { wide:true, tight:true, hideBadge:true, name: st.name })).join(''));
+      }
+      sub = n ? '확인 기다리는 것 ' + n + '건' : '';
+      body = 묶음.join('') || 없음('확인을 기다리는 과제가 없습니다.');
+    }
+    foot = `<a class="qk-more" onclick="state.quick=null; gotoHwWaiting()">반 › 과제에서 크게 보기 ${iconSvg('chevR', 12)}</a>`;
+  } else if(k === 'notice'){
+    body = noticeFormHTML(null, state.noticeDraft || '');
+    foot = '<button class="btn p sm" onclick="quickNotice()">등록</button>';
+  } else if(k === 'clinic'){
+    const 열린 = DATA.clinicSlots.filter(x => x.date >= today).slice(0, 8);
+    body = clinicSlotFormHTML(false)
+      + `<p class="st-note">「마지막」 시각에도 하나 섭니다 · 한 개만 열려면 마지막을 비우세요 · 이미 열린 시각은 건너뜁니다.</p>`
+      + (열린.length ? `<div class="qk-grp"><b>이미 열린 시간대</b></div><div class="qk-slots">${열린.map(x =>
+          `<span>${escHtml(x.date.slice(5).replace('-', '/'))} ${escHtml(slotTimeLabel(x.time))}</span>`).join('')}</div>` : '');
+    foot = '<button class="btn p sm" onclick="quickClinic()">시간대 만들기</button>';
+  } else if(k === 'student'){
+    body = studentAddFormHTML(false) + '<p class="st-note">계정도 함께 만들어집니다 · 반은 나중에 설정 › 학생에서 바꿀 수 있습니다.</p>';
+    foot = '<button class="btn p sm" onclick="quickStudent()">추가</button>';
+  } else return '';
+  return `<div class="pwm-back qk-back" onclick="if(event.target===this) quickClose()">
+    <div class="pwm qk qk-${k}" role="dialog" aria-label="${QUICK_TITLES[k]}">
+      <div class="pwm-h"><b>${QUICK_TITLES[k]}</b>${sub ? `<span>${sub}</span>` : ''}
+        <button class="x" onclick="quickClose()" aria-label="닫기">×</button></div>
+      <div class="qk-b">${body}</div>
+      ${foot ? `<div class="qk-f">${foot}</div>` : ''}
+    </div></div>`;
 }
 function teacherNotifItems(){
   const chatN = DATA.students.reduce((n,s)=>n + chatUnread(s.studentId), 0);
@@ -15214,6 +15349,7 @@ document.addEventListener('keydown', e=>{
   if(e.key!=='Escape') return;
   if(state.hwPhotoView){ e.preventDefault(); closeHwPhoto(); return; }
   if(state.pwModal){ e.preventDefault(); closePwChange(); return; }
+  if(state.quick){ e.preventDefault(); quickClose(); return; }
   if(state.hwCell){ e.preventDefault(); hwCloseCell(); return; }
   /* 2026-08-27 · D-1 — 오른쪽에서 열리는 것은 전부 ESC로 닫힌다.
      ⚠ 둘은 서로 다른 화면에 사니 겹칠 일이 없다. 순서는 형식적인 것이다. */
@@ -15327,6 +15463,7 @@ function render(){
      열여덟 번째 학생의 상태를 누르면 판이 맨 위로 튀어 «누구를 누르던 중»인지 잃는다.
      `app.innerHTML`을 갈기 직전 자리를 재고 갈아 끼운 뒤 되돌려 놓는다. */
   const hwdScroll = (app.querySelector('.hwd-b') || {}).scrollTop;
+  const qkScroll = (app.querySelector('.qk-b') || {}).scrollTop;   // 홈 빠른 작업 팝업 — 열여덟 번째 학생을 눌러도 제자리
   /* 🔴 **수업 화면도 같다** (2026-09-01 · C-19) — 과제 검사는 학생마다 한 번씩 누르고,
      누를 때마다 render()가 돈다. 스무 번째 학생을 누르면 목록이 맨 위로 튀어
      «어디까지 봤는지»를 잃는다. 손이 빨라야 하는 화면이라 이것이 곧 못 쓰는 화면이 된다. */
@@ -15360,6 +15497,7 @@ function render(){
   const troubleBar = app.querySelector('.db-trouble');
   app.style.paddingTop = troubleBar ? troubleBar.offsetHeight + 'px' : '';
   if(hwdScroll){ const nb = app.querySelector('.hwd-b'); if(nb) nb.scrollTop = hwdScroll; }
+  if(qkScroll){ const qb = app.querySelector('.qk-b'); if(qb) qb.scrollTop = qkScroll; }
   if(clsScroll){ const cb = app.querySelector('.cls-body'); if(cb) cb.scrollTop = clsScroll; }
   if(exScroll){ const eb = app.querySelector('.ex-body'); if(eb) eb.scrollTop = exScroll; }
   { const nb = app.querySelector('.app > .body'); if(nb){ nb.dataset.k = 본문열쇠; if(본문Y) nb.scrollTop = 본문Y; } }
@@ -19898,16 +20036,17 @@ function teacherSideExtrasHTML(section){
   }
   if(section === '홈'){
     const 빠른 = [
-      ['출결 넣기', 'checklist', "goTeacherTab('session')"],
-      ['과제 확인', 'clipboard', "gotoHwWaiting()"],
-      ['공지 쓰기', 'megaphone', "goTeacherTab('notices')"],
-      ['클리닉 열기', 'clinic', "goTeacherTab('clinic')"],
+      /* 2026-10-03 — 홈을 안 떠나고 팝업에서 (quickModalHTML). 영상은 칸이 많아(받는 학생·구간·마감) 그 화면으로 간다 */
+      ['출결 넣기', 'checklist', "quickOpen('att')"],
+      ['과제 확인', 'clipboard', "quickOpen('hw')", hwWaitingTotal()],
+      ['공지 쓰기', 'megaphone', "quickOpen('notice')"],
+      ['클리닉 열기', 'clinic', "quickOpen('clinic')"],
       ['영상', 'video', "goTeacherTab('classhub','video')"],
-      ['학생 추가', 'users', "goTeacherTab('settings'); state.settingsSubTab='students'; render()"]
+      ['학생 추가', 'users', "quickOpen('student')"]
     ];
     const 최근 = recentStudentsList();
     bottom = `<div class="sb-x sb-grp">빠른 작업</div>
-      <div class="sb-x sb-quick">${빠른.map(q => `<a onclick="${q[2]}"><i>${iconSvg(q[1], 16)}</i><span>${q[0]}</span></a>`).join('')}</div>
+      <div class="sb-x sb-quick">${빠른.map(q => `<a onclick="${q[2]}"><i>${iconSvg(q[1], 16)}</i><span>${q[0]}</span>${q[3] ? `<b class="sb-qn">${q[3]}</b>` : ''}</a>`).join('')}</div>
       ${최근.length ? `<div class="sb-x sb-grp">최근 본 학생</div>
       <div class="sb-x sb-recent">${최근.map(s => `<a onclick="goTeacherTab('classhub','students').then(()=>rosterOpen('${s.studentId}'))">
         <span class="sb-sc" title="${escHtml(s.school || '')}">${escHtml(schoolShort(s.school))}</span>
@@ -20050,6 +20189,7 @@ function teacherHTML(){
     }).join('')}${사이드.bottom}</div>` : ''}
     <div class="body">${teacherPageHeadHTML(section, subs, 머리, subActive)}${body}</div>
     ${notepadHTML()}
+    ${/* 홈 빠른 작업 팝업 — 셸 «안»에 둔다: 칸·타일 꼴(.app …)이 그대로 먹게 */ state.quick ? quickModalHTML() : ''}
   </div>`;
 }
 /* 🔵 **넓은 화면의 «작은 경로 + 큰 제목»** (2026-10-02 · 시안 «D 차분» — 화면마다 「소통 · 질의응답 / 질의응답」).
@@ -27129,6 +27269,23 @@ async function clinicCameToggle(sid, date){
   }
   render();
 }
+/* 클리닉 시간대 여는 칸 — 클리닉 화면과 홈 빠른 작업(팝업)이 같이 쓴다. withBtn=false 면 단추는 부르는 쪽이 단다. */
+function clinicSlotFormHTML(withBtn){
+  return `<div class="cls-form">
+          <label><span>날짜</span><input id="slot-date" type="date" value="${state.clinicSlotDate || todayStr()}"></label>
+          <label style="width:120px;"><span>시작</span><input id="slot-from" type="time" step="1800" value="14:00"></label>
+          <label style="width:130px;"><span>마지막</span><input id="slot-to" type="time" step="1800" value="21:00"></label>
+          <label style="width:110px;"><span>간격</span>
+            <select id="slot-step" class="fm-sel">
+              <option value="60" selected>1시간</option>
+              <option value="30">30분</option>
+              <option value="90">1시간 30분</option>
+              <option value="120">2시간</option>
+            </select></label>
+          <label style="width:90px;"><span>정원</span><input id="slot-capacity" type="number" min="1" value="20"></label>
+          ${withBtn ? '<button class="btn p sm" onclick="addClinicSlots()">시간대 만들기</button>' : ''}
+        </div>`;
+}
 function teacherClinicHTML(){
   markSeen('clinic', DATA.clinics.length);
   const start = state.clinicWeek || clinicWeekStart(todayStr());
@@ -27274,20 +27431,7 @@ function teacherClinicHTML(){
 
       ${state.clinicPanel!=='slot' ? '' : `
       <div class="st-form" style="flex-shrink:0;">
-        <div class="cls-form">
-          <label><span>날짜</span><input id="slot-date" type="date" value="${state.clinicSlotDate || todayStr()}"></label>
-          <label style="width:120px;"><span>시작</span><input id="slot-from" type="time" step="1800" value="14:00"></label>
-          <label style="width:130px;"><span>마지막</span><input id="slot-to" type="time" step="1800" value="21:00"></label>
-          <label style="width:110px;"><span>간격</span>
-            <select id="slot-step" class="fm-sel">
-              <option value="60" selected>1시간</option>
-              <option value="30">30분</option>
-              <option value="90">1시간 30분</option>
-              <option value="120">2시간</option>
-            </select></label>
-          <label style="width:90px;"><span>정원</span><input id="slot-capacity" type="number" min="1" value="20"></label>
-          <button class="btn p sm" onclick="addClinicSlots()">시간대 만들기</button>
-        </div>
+        ${clinicSlotFormHTML(true)}
         <p class="st-note"><b>「마지막」 시각에도 시간대가 하나 섭니다.</b>
           예를 들어 시작 <b>오후 2시</b> · 마지막 <b>오후 9시</b> · 간격 <b>1시간</b>이면
           2시부터 9시까지 <b>여덟 개</b>가 한 번에 열립니다.
@@ -27422,8 +27566,9 @@ function noticeFormHTML(n, draft){
               <button class="btn sm" title="목록" onclick="noticeMark('l')">목록</button>
               <span class="muted" style="font-size:11px;">＃ 큰 줄 · **굵게** · ­- 목록</span>
             </div>
+            ${/* 🔴 쓰는 중에 다시 그리지 않는다 (2026-10-03) — 예전엔 liveEdit 가 글자마다 render 해서 위에 적은 «제목»이 지워졌다(제목은 state 에 없다). 초안만 담는다. */''}
             <textarea id="notice-content" rows="9" placeholder="# 8월 특강 안내&#10;&#10;**8월 12일(수)**부터 시작합니다.&#10;- 준비물: 교재, 오답노트"
-              oninput="liveEdit(event, v=>state.noticeDraft=v)" oncompositionend="liveEdit(event, v=>state.noticeDraft=v)"
+              oninput="state.noticeDraft=this.value"
               >${escHtml(draft)}</textarea></label>
         </div>
         ${draft.trim() ? `<div class="t-sec" style="margin-top:22px;">미리보기</div>
@@ -34406,17 +34551,7 @@ function teacherSettingsStudentsHTML(){
     action:`<button class="btn ${open?'':'p'} sm" onclick="stOpen('stu')">${
       open ? '닫기' : iconSvg('plus',13)+' 학생 추가'}</button>`,
     form: !open ? '' : `<div class="st-form">
-      <div class="cls-form">
-        <label style="min-width:120px;"><span>아이디</span><input id="new-sid" placeholder="예: st01"></label>
-        <label style="min-width:110px;"><span>이름</span><input id="new-sname" placeholder="이름"></label>
-        <label style="min-width:120px;"><span>비밀번호</span><input id="new-spw" placeholder="비밀번호"></label>
-        <label style="width:92px;"><span>학년</span><select class="fm-sel" id="new-sgrade"><option>고1</option><option>고2</option><option>고3</option></select></label>
-        <label style="min-width:130px;"><span>학교</span><input id="new-sschool" placeholder="학교명 (선택)"></label>
-        <label style="min-width:150px;"><span>학부모 전화</span><input id="new-sparentphone" placeholder="010-0000-0000 (선택)"></label>
-        <label style="min-width:150px;"><span>학생 전화</span><input id="new-sphone" placeholder="010-0000-0000 (선택)"></label>
-        <label style="min-width:150px;"><span>반</span><select class="fm-sel" id="new-sclass">${classOptionsHTML(null)}</select></label>
-        <button class="btn p sm" onclick="addStudent()">추가</button>
-      </div>
+      ${studentAddFormHTML(true)}
       <p class="st-note">반을 안 고르셨거나 나중에 옮기고 싶으면 <b>아래 목록</b>에서 <b>계정 수정</b>을 눌러 언제든 바꿀 수 있습니다.</p></div>`,
     body: `<div class="st-fbar" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 10px;">
       <span class="field">${iconSvg('search',15)}
