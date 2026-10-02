@@ -41,6 +41,14 @@
      · ⚠ 저장 열쇠는 화면이 고른 시즌의 `cutKey` — `curSeasonKey()` 로 바꾸면 지난 시즌 값이 지금 시즌에 적힌다(검사가 문다).
      · 검사 `grade-cut-tab-test` 6 · 무대 `node tools/shots.mjs 등급컷`.
 
+  ✏️ **(10-02) 시험 일정 표 — 펼치기 없이 «칸을 누르면 그 칸만»** (사용자 — 「펼쳐서 입력하는 게 복잡 — 시험기간·수학은 달력, 범위는 색칠된 단원, 교재는 입력창, 프린트는 업로드」)
+     · `openExamPop(ev, k, school, grade, subject)` → `state.examPop` → `examPopHTML` 이 칸 밑(아래 자리 없으면 위)에 position:fixed 창. 뒤에 투명 막(.xp-back) — 누르면 닫힘.
+       k = period(날짜 둘) · math(하나, 고르면 닫힘) · range(단원 알약, 눌러도 창 유지) · book(Enter 저장·닫힘) · print(`schoolFilesHTML` · 프린트 없으면 곧장 파일 고르기).
+     · 누른 손길 안에서 `showPicker()`/`input.click()` — 브라우저가 «사용자가 누른 동안»만 달력·파일 창을 열어 준다.
+     · Esc 는 문서에서 받는다 — 저장이 render() 를 돌려 초점이 창 밖으로 빠진다. `goTeacherTab`·갈래 바꿈·시즌 바꿈·달력 보기에서 창을 지운다.
+     · 지운 것: 펼친 줄 · `toggleRangeOpen` · `applyRangeSpan`(시작~끝 구간 고르기) · `state.rangeSchool`. 지난 기록은 누를 칸이 없다.
+     · 검사 `exam-pop-test` 19(실제 크롬으로 칸을 누른다 · Esc 를 창에만 걸면 문다) · 무대 `node tools/shots.mjs 시험일정`.
+
   📝 **(10-02 · 배포 · 🔴 사용자 눈 확인 아직) 강사 홈 메모** (사용자 — 「할일이나 수업관련 기록용 개인용 메모장」)
      · 사용자가 고른 것: **할 일 체크 + 자유 메모** · **규칙 안 건드림(kv)** · **오른쪽 칸 맨 위**.
      · `kv/memo:<uid>` 한 문서 `{todos:[{t,done}], note}` · `teacherMemoHTML`·`loadMemoIfNeeded`·`memoSave`. 할 일은 누르면 곧 저장, 글 칸은 1초 쉬면(그리고 칸을 떠날 때).

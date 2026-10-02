@@ -553,6 +553,24 @@
 .app .xr-print span{min-width:0;overflow:hidden;text-overflow:ellipsis;}
 .app .xr-print:hover{text-decoration:underline;}
 .app .xr-more{margin-left:5px;font-size:11px;color:var(--dim);vertical-align:middle;}
+/* 시험 일정 — 누르면 그 칸만 고치는 칸 · 작은 창 (2026-10-02 · examPopHTML) */
+.app .rst-wrap td.xr-ed{cursor:pointer;border-radius:8px;transition:background .12s;}
+.app .rst-wrap td.xr-ed:hover,.app .rst-wrap td.xr-ed:focus-visible{background:var(--hover);outline:none;}
+.app .rst-wrap td.xr-ed.on{background:var(--hover);box-shadow:inset 0 0 0 1.5px var(--accent);}
+.app .xr-empty{color:var(--dim);opacity:.55;font-family:inherit;font-weight:400;}
+.app .rst-wrap td.xr-ed:hover .xr-empty{opacity:1;color:var(--accent);}
+.app .xp-back{position:fixed;inset:0;z-index:100;}
+.app .xp{position:fixed;z-index:101;width:min(360px,calc(100vw - 24px));box-sizing:border-box;padding:14px 16px;
+  background:#fff;border:1px solid var(--line);border-radius:16px;box-shadow:0 12px 32px rgba(20,24,40,.16);
+  font-size:12.5px;color:var(--ink);white-space:normal;}
+.app .xp-h{display:flex;align-items:baseline;gap:8px;margin-bottom:10px;}
+.app .xp-h b{font-size:14px;}
+.app .xp-h span{color:var(--dim);font-size:11.5px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.app .xp-x{padding:0 7px;min-height:0;line-height:1.7;}
+.app .xp-f{display:flex;flex-direction:column;gap:4px;font-size:11.5px;color:var(--sub);flex:1;}
+.app .xp-f .fm-in{width:100%;box-sizing:border-box;}
+.app .xp-pills{display:flex;flex-wrap:wrap;gap:6px;max-height:260px;overflow:auto;}
+.app .xp-m{margin-top:10px;font-size:11px;color:var(--dim);line-height:1.7;}
 .app .rst-wrap .cb{cursor:pointer;}
 
 .app .rst-sig{display:flex;align-items:center;gap:6px;min-width:0;}
@@ -7121,7 +7139,7 @@ let state = {
   examSeasonView: '',            // 시험 일정 화면이 보고 있는 시즌. '' = 지금, 숫자 = 보관본 index
   examViewMode: 'table',         // 'table' | 'cal'
   examCalMonth: '',              // 달력이 보고 있는 달 'YYYY-MM'. 빈 값이면 시험이 있는 첫 달
-  rangeSchool: '',               // 설정 > 시험 범위에서 펼쳐 보는 학교
+  examPop: null,                 // 설정 › 시험 일정 — 칸 하나 고치는 작은 창 (2026-10-02 · examPopHTML)
   quizStudentId: null,           // 데일리퀴즈 화면에서 «오늘 것을 펼쳐 볼» 학생 (예전엔 회차 id였다)
   videoSelectedId: null,
   classHubHomeworkShowAll: false,
@@ -19283,6 +19301,7 @@ const TEACHER_TAB_SECTION = {
 
 
 async function goTeacherTab(tab, hubTab){
+  state.examPop = null;          // 시험 일정 칸 창은 그 화면 것이다 — 돌아왔을 때 옛 자리에 떠 있지 않게
   /* 🔴 **수업을 «상단 메뉴로» 떠날 때도 저장한다** (2026-09-24 · A-1).
      수업 안에서 날짜·반·단계를 옮기면 이미 저절로 저장됐는데(C-20·09-19), 상단 메뉴로 나가는 문만
      열려 있어 적던 출결·점수·과제·메모가 조용히 사라졌다. 같은 함수 하나(`sessionAutoSave`)를 부른다 —
@@ -31603,7 +31622,6 @@ function teacherExamRangeHTML(view){
     const d = getDday(x.school, x.grade);
     return d && (d.state === 'during' || (d.state === 'before' && d.days <= 14));
   }).length;
-  const openKey = state.rangeSchool;
   const mode = state.examViewMode || 'table';
 
   /* ---- 시즌 고르개 + 보기 전환 ---- */
@@ -31636,7 +31654,7 @@ function teacherExamRangeHTML(view){
       <button class="btn sm ${mode === 'table' ? 'p' : 'q'}" style="border-radius:var(--r-sm) 0 0 var(--r-sm);"
         onclick="state.examViewMode='table'; render()">표</button>
       <button class="btn sm ${mode === 'cal' ? 'p' : 'q'}" style="border-radius:0 var(--r-sm) var(--r-sm) 0;"
-        onclick="state.examViewMode='cal'; render()">달력</button>
+        onclick="state.examViewMode='cal'; state.examPop=null; render()">달력</button>
     </div>`}
   </div>`;
   if(view === 'cut') return seasonPicker + gradeCutTableHTML(list, { past, cutKey, cutSeasonLabel, cutN });
@@ -31691,7 +31709,7 @@ function teacherExamRangeHTML(view){
   const help = past ? '' : `
   <div style="margin:0 0 12px;font-size:11.5px;color:var(--dim);line-height:1.8;">
     <b>가까운 시험이 위로 옵니다</b> — 기준은 <b>수학 시험일</b>이고, 없으면 시험기간 시작일입니다.
-    한 줄이 «학교 × 학년 × 과목»이고, 줄을 누르면 그 자리에서 고칠 수 있습니다.<br>
+    한 줄이 «학교 × 학년 × 과목»이고, <b>시험 기간·수학·범위·교재·프린트 칸을 누르면</b> 그 칸만 고치는 창이 뜹니다.<br>
     <b>날짜와 교재는 학교·학년 단위</b>라 같은 학교·학년의 다른 과목 줄에도 같이 반영됩니다.
     <b>범위는 과목마다 다릅니다.</b>
   </div>
@@ -31734,14 +31752,16 @@ function teacherExamRangeHTML(view){
     return seasonPicker + seasonBox + head
       + examCalendarHTML(list, getDates, viewSeason);
 
+  /* 🔵 **펼치지 않고 칸을 누르면 그 칸만 고친다** (2026-10-02 · 사용자 — 「표 펼쳐서 입력하는 부분이 복잡 —
+       시험기간·수학을 누르면 달력, 범위를 누르면 색칠된 단원, 교재·메모를 누르면 입력창, 프린트를 누르면 업로드」).
+     칸마다 `openExamPop(event, 종류, …)` → 칸 바로 밑에 작은 창(`examPopHTML`). 지난 기록은 읽기 전용이라 안 열린다. */
+  const pop = state.examPop;
   const body = list.map(({school, grade, subject, n}) => {
     const all = UNIT_CHAPTERS[subject] || [];
     const cur = new Set(getChaps(school, grade, subject));
     const overridden = past
       ? !!(past.bySchool && past.bySchool[school] && past.bySchool[school][grade] && past.bySchool[school][grade][subject])
       : hasRangeOverride(school, grade, subject);
-    /* 지난 기록은 펼치지 않는다 — 펼쳐서 고칠 것이 등급컷뿐이었는데 그건 «등급컷» 갈래로 갔다 (2026-10-02). */
-    const open = !past && openKey === rangeKey(school, grade, subject);
     const sc = jsAttr(school), gr = jsAttr(grade), sj = jsAttr(subject);
     const dd = getDday(school, grade), dates = getDates(school, grade);
     const book = getBook(school, grade);
@@ -31753,10 +31773,16 @@ function teacherExamRangeHTML(view){
     const ddTone = !dd ? '' : dd.state === 'during' ? 'no' : dd.state === 'after' ? 'gone'
       : dd.days <= 7 ? 'no' : dd.days <= 14 ? 'late' : '';
     const dow = ymd => WEEKDAY_LABEL[new Date(ymd + 'T00:00:00').getDay()];
+    const 이줄 = pop && pop.school === school && pop.grade === grade && pop.subject === subject;
+    const 켜짐 = k => 이줄 && pop.k === k ? ' on' : '';
+    const 빈 = t => `<span class="xr-empty">${past ? '—' : t}</span>`;
+    const 이름 = escHtml((school || '학교') + ' ' + (grade || '') + ' ');
+    /* 누를 수 있는 칸의 속성 — 지난 기록이면 서식만 */
+    const cell = (k, cls, label) => past ? `class="${cls}"` : `class="${cls} xr-ed${켜짐(k)}" tabindex="0" role="button" aria-label="${이름}${label}"
+        onclick="openExamPop(event,'${k}','${sc}','${gr}','${sj}')"
+        onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openExamPop(event,'${k}','${sc}','${gr}','${sj}')}"`;
     return `
-      ${/* ⚠ .cb는 «체크박스 네모»의 클래스다(width·height가 박혀 있다). 행에 걸면 줄이 찌그러진다. */''}
-      <tr style="${past ? '' : 'cursor:pointer;'}${open ? 'background:var(--hover);' : ''}"
-          ${past ? '' : `onclick="toggleRangeOpen('${sc}','${gr}','${sj}')"`}>
+      <tr>
         <td title="${escHtml(school)}"><b>${escHtml(school || '(학교 미입력)')}</b></td>
         <td class="sub">${escHtml(grade || '—')}</td>
         <td class="sub">${escHtml(subject || '—')}</td>
@@ -31765,81 +31791,28 @@ function teacherExamRangeHTML(view){
         <td>${dd ? `<span class="badge ${ddTone}" title="${dd.basis === 'math' ? '수학 시험일 기준 (시작일이 없어서)' : '시험기간 시작일 기준'}">${
             dd.state === 'before' ? 'D-' + dd.days : dd.state === 'during' ? '시험 중' : '끝남'}</span>`
           : `<span style="color:var(--dim);">—</span>`}</td>
-        ${/* 연도를 뗀다 — 두 날짜를 온전히 쓰면 이 폭에서 잘린다. 온전한 날짜는 title과 펼친 칸에 있다. */''}
-        <td class="mono sub" title="${dates && dates.start ? escHtml(dates.start + (dates.end ? ' ~ ' + dates.end : '')) : ''}">${
-          dates && dates.start ? escHtml(dates.start.slice(5)) + (dates.end ? ' ~ ' + escHtml(dates.end.slice(5)) : '') : '—'}</td>
-        <td class="mono" title="${dates && dates.math ? escHtml(dates.math) : ''}" style="${
-          dates && dates.math ? 'color:var(--brand-d);font-weight:700;' : 'color:var(--dim);'}">${
-          dates && dates.math ? escHtml(dates.math.slice(5)) + ' ' + dow(dates.math) : '—'}</td>
-        <td class="sub" title="${span ? escHtml(span) : ''}">${
+        ${/* 연도를 뗀다 — 두 날짜를 온전히 쓰면 이 폭에서 잘린다. 온전한 날짜는 title 에 있다. */''}
+        <td ${cell('period', 'mono sub', '시험 기간 고르기')}
+            title="${dates && dates.start ? escHtml(dates.start + (dates.end ? ' ~ ' + dates.end : '')) : ''}">${
+          dates && dates.start ? escHtml(dates.start.slice(5)) + (dates.end ? ' ~ ' + escHtml(dates.end.slice(5)) : '') : 빈('＋ 날짜')}</td>
+        <td ${cell('math', 'mono', '수학 시험일 고르기')}
+            title="${dates && dates.math ? escHtml(dates.math) : ''}" style="${
+          dates && dates.math ? 'color:var(--brand-d);font-weight:700;' : ''}">${
+          dates && dates.math ? escHtml(dates.math.slice(5)) + ' ' + dow(dates.math) : 빈('＋ 날짜')}</td>
+        <td ${subject ? cell('range', 'sub', '범위 고르기') : 'class="sub"'}
+            title="${span ? escHtml(span) : ''}">${
           span ? escHtml(span) : '<span style="color:var(--dim);">—</span>'}
           ${overridden ? '<span class="badge score" style="margin-left:6px;">수정됨</span>' : ''}</td>
-        <td class="sub" title="${escHtml(book)}">${book ? escHtml(book) : '—'}</td>
-        ${/* 🔵 **학교 프린트를 표에서 바로 받는다** (2026-09-24 · 사용자 — 「프린트 등록한 것도 테이블에 같이 표시되게 해줘 누르면 다운로드」).
-             줄 높이(40px)를 지키려고 첫 파일 하나를 이름으로 걸고 나머지는 «+n» — 누르면 줄이 펼쳐져 전부 보인다. */''}
-        <td class="sub" title="${escHtml(prints.map(p => p.name).join(' · '))}">${!prints.length ? '<span style="color:var(--dim);">—</span>'
+        <td ${cell('book', 'sub', '교재 메모 적기')}
+            title="${escHtml(book)}">${book ? escHtml(book) : 빈('＋ 메모')}</td>
+        ${/* 🔵 **학교 프린트를 표에서 바로 받는다** (2026-09-24) — 파일 이름은 누르면 내려받고(칸은 안 열린다),
+             칸의 빈 곳을 누르면 올리기 창이 뜬다(2026-10-02). */''}
+        <td ${cell('print', 'sub', '프린트 올리기')}
+            title="${escHtml(prints.map(p => p.name).join(' · '))}">${!prints.length ? 빈('＋ 올리기')
           : `<a class="xr-print" href="${schoolFileDownload(prints[prints.length - 1])}" target="_blank" rel="noopener"
                onclick="event.stopPropagation()">${iconSvg('file', 12)}<span>${escHtml(prints[prints.length - 1].name)}</span></a>${
              prints.length > 1 ? `<span class="xr-more">+${prints.length - 1}</span>` : ''}`}</td>
-        <td class="r sub" style="font-size:11px;">${past ? '' : open ? '접기' : '펼치기'}</td>
-      </tr>
-      ${!open ? '' : `
-      <tr><td colspan="11"style="white-space:normal;overflow:visible;background:var(--hover);padding:16px 14px;">
-        ${/* ⚠ 날짜·교재는 change(칸을 떠날 때)에 저장한다. oninput으로 하면 render()가
-             글자마다 돌아 커서가 끝으로 튄다 (9절 4번).
-             ⚠ 안의 입력·버튼은 전부 stopPropagation — 안 그러면 줄의 onclick이 같이 터져 칸이 접힌다. */''}
-        ${/* ⚠ 지난 기록에서는 날짜·교재·범위를 못 고친다 — 보관본 «안»의 스냅숏이다.
-             아래 «등급컷»만 지난 시즌에도 열린다 (2026-09-02 · G-1). */''}
-        ${past ? '' : `
-        <div class="row" style="gap:10px;flex-wrap:wrap;align-items:flex-end;">
-          <label style="font-size:11.5px;color:var(--sub);">시험 시작
-            <input type="date" class="fm-in" style="display:block;margin-top:4px;width:150px;"
-              value="${escHtml((dates && dates.start) || '')}" onclick="event.stopPropagation()"
-              onchange="setExamDate('${sc}','${gr}','start',this.value)"></label>
-          <label style="font-size:11.5px;color:var(--sub);">시험 끝
-            <input type="date" class="fm-in" style="display:block;margin-top:4px;width:150px;"
-              value="${escHtml((dates && dates.end) || '')}" onclick="event.stopPropagation()"
-              onchange="setExamDate('${sc}','${gr}','end',this.value)"></label>
-          <label style="font-size:11.5px;color:var(--brand-d);font-weight:700;">수학 시험일
-            <input type="date" class="fm-in" style="display:block;margin-top:4px;width:150px;border-color:var(--brand);"
-              value="${escHtml((dates && dates.math) || '')}" onclick="event.stopPropagation()"
-              onchange="setExamDate('${sc}','${gr}','math',this.value)"></label>
-          <label style="font-size:11.5px;color:var(--sub);flex:1;min-width:200px;">교재 · 메모
-            <input type="text" class="fm-in" style="display:block;margin-top:4px;width:100%;"
-              placeholder="미래엔 / 학교프린트" value="${escHtml(book)}" onclick="event.stopPropagation()"
-              onchange="setSchoolBook('${sc}','${gr}',this.value)"></label>
-        </div>
-        ${schoolFilesHTML(school, grade)}
-        <div style="margin-top:5px;font-size:11px;color:var(--dim);">
-          날짜와 교재는 <b>${escHtml(school || '(학교 미입력)')} ${escHtml(grade || '학년 미입력')}</b>의
-          모든 과목 줄이 같이 씁니다. <b>D-day는 수학 시험일부터</b> 셉니다.
-          교재는 시즌을 넘겨도 남습니다.
-        </div>
-
-        <div class="row" style="gap:8px;margin-top:14px;flex-wrap:wrap;align-items:flex-end;">
-          <label style="font-size:11.5px;color:var(--sub);">시작 단원
-            <select class="fm-in" id="rs-a" style="display:block;margin-top:4px;" onclick="event.stopPropagation()">
-              ${all.map((ch, i) => `<option value="${i}" ${on.length && all.indexOf(on[0]) === i ? 'selected' : ''}>${i + 1}. ${escHtml(ch)}</option>`).join('')}
-            </select></label>
-          <label style="font-size:11.5px;color:var(--sub);">끝 단원
-            <select class="fm-in" id="rs-b" style="display:block;margin-top:4px;" onclick="event.stopPropagation()">
-              ${all.map((ch, i) => `<option value="${i}" ${on.length && all.indexOf(on[on.length - 1]) === i ? 'selected' : ''}>${i + 1}. ${escHtml(ch)}</option>`).join('')}
-            </select></label>
-          <button class="btn sm" onclick="event.stopPropagation(); applyRangeSpan('${sc}','${gr}','${sj}')">이 구간으로</button>
-        </div>
-
-        <div style="margin-top:11px;display:flex;flex-wrap:wrap;gap:7px;">
-          ${all.map((ch, i) => `<a class="pill ${cur.has(ch) ? 'on' : ''}"
-            onclick="event.stopPropagation(); toggleRangeChapter('${sc}','${gr}','${sj}','${jsAttr(ch)}')"
-            >${i + 1}. ${escHtml(ch)}</a>`).join('')}
-        </div>
-        <div class="row" style="gap:8px;margin-top:11px;flex-wrap:wrap;">
-          <button class="btn q sm" onclick="event.stopPropagation(); resetSchoolRange('${sc}','${gr}','${sj}')">기본 범위로 되돌리기</button>
-          <span style="font-size:11.5px;color:var(--dim);">기본은 «${escHtml(season)}» 기준
-            ${presetChapters(subject).length}단원입니다.</span>
-        </div>`}
-
-      </td></tr>`}`;
+      </tr>`;
   }).join('');
 
   return seasonPicker + seasonBox + head + help + `
@@ -31849,7 +31822,7 @@ function teacherExamRangeHTML(view){
          sticky 헤더는 걸지 않는다. 줄이 적고, 가로 스크롤과 같이 쓰면 헤더가 첫 행을 덮는다 (0-B). */''}
     ${/* 🔵 학교·과목 사이를 좁혔다(사용자 — 「학교나 과목 간격 조금 줄이고」) — 학년 60→44 · 과목 118→80 · 시험 기간 150→122 · 범위 222→200 (09-24 두 번째 — 「과목 혹은 시험기간 조금 줄여도」).
          학교는 118 그대로 — 「경기여자고등학교」가 그 폭에서 딱 들어간다(줄이면 …로 잘린다). */''}
-    <table class="grid" style="min-width:1102px;">
+    <table class="grid" style="min-width:1042px;">
       <thead><tr>
         <th style="width:118px;">학교</th>
         <th style="width:44px;">학년</th>
@@ -31861,10 +31834,84 @@ function teacherExamRangeHTML(view){
         <th style="width:200px;">범위</th>
         <th style="width:140px;">교재 · 메모</th>
         <th style="width:150px;">프린트</th>
-        <th class="r" style="width:60px;"></th>
       </tr></thead>
       <tbody>${body}</tbody>
     </table>
+  </div>
+  ${past ? '' : examPopHTML(season)}`;
+}
+
+/* ---------- 칸 하나 고치는 작은 창 (2026-10-02) ----------
+   `state.examPop = { k, school, grade, subject, x, y, up }` — k 는 period · math · range · book · print.
+   🔵 창은 화면에 «고정»(position:fixed)으로 칸 바로 밑에 뜬다. 표 칸 안에 두면 칸의 overflow 에 잘린다.
+   뒤에 투명한 막을 깔아 바깥을 누르면 닫힌다(막이 스크롤도 잡아 창이 칸에서 떨어지지 않는다).
+   ⚠ 고치면 저장 함수가 render() 를 부른다 — 창은 state 에 살아 있어 그대로 다시 그려진다. */
+function openExamPop(ev, k, school, grade, subject){
+  const r = ev.currentTarget.getBoundingClientRect();
+  const W = Math.min(360, window.innerWidth - 24);
+  const up = r.bottom + 320 > window.innerHeight && r.top > 320;
+  state.examPop = { k, school, grade, subject, up,
+    x: Math.max(12, Math.min(r.left, window.innerWidth - W - 12)), y: up ? r.top - 6 : r.bottom + 6 };
+  render();
+  const first = document.querySelector('.xp [data-first]');
+  if(!first) return;
+  /* 누른 그 손길 안에서 달력·파일 창을 바로 연다 — 브라우저는 «사용자가 누른 동안»만 열어 준다 */
+  if(first.type === 'file'){ if(!schoolFilesOf(school, grade).length) first.click(); return; }
+  first.focus();
+  if(first.type === 'date') try{ first.showPicker(); }catch(e){}
+}
+function closeExamPop(){ if(!state.examPop) return; state.examPop = null; render(); }
+/* Esc 는 문서에서 받는다 — 고치면 render() 가 창을 새로 그려 초점이 창 밖(body)으로 빠진다 */
+document.addEventListener('keydown', ev => { if(ev.key === 'Escape' && state.examPop) closeExamPop(); });
+function examPopHTML(season){
+  const p = state.examPop;
+  if(!p) return '';
+  const { k, school, grade, subject } = p;
+  const sc = jsAttr(school), gr = jsAttr(grade), sj = jsAttr(subject);
+  const d = examDatesOf(school, grade) || {};
+  const 이름 = `${escHtml(school || '(학교 미입력)')} ${escHtml(grade || '')}${k === 'range' && subject ? ' · ' + escHtml(subject) : ''}`;
+  const 날 = (which, label, first) => `<label class="xp-f">${label}
+      <input type="date" class="fm-in" ${first ? 'data-first' : ''} value="${escHtml(d[which] || '')}"
+        onchange="setExamDate('${sc}','${gr}','${which}',this.value)${which === 'math' ? '; closeExamPop()' : ''}"></label>`;
+  let 제목 = '', 몸 = '', 말 = '';
+  if(k === 'period'){
+    제목 = '시험 기간';
+    몸 = `<div class="row" style="gap:8px;">${날('start', '시작', true)}${날('end', '끝')}</div>`;
+    말 = '날짜는 학교·학년 단위 — 같은 학교·학년의 다른 과목 줄에도 같이 들어갑니다. <b>D-day 는 시작일부터</b> 셉니다.';
+  } else if(k === 'math'){
+    제목 = '수학 시험일';
+    몸 = 날('math', '날짜', true);
+    말 = '고르면 바로 저장되고 창이 닫힙니다.';
+  } else if(k === 'range'){
+    const all = UNIT_CHAPTERS[subject] || [];
+    const cur = new Set(rangeChapters(school, grade, subject));
+    제목 = '시험 범위';
+    몸 = `<div class="xp-pills">${all.map((ch, i) => `<a class="pill ${cur.has(ch) ? 'on' : ''}" ${i === 0 ? 'data-first tabindex="0"' : 'tabindex="0"'}
+        onclick="toggleRangeChapter('${sc}','${gr}','${sj}','${jsAttr(ch)}')"
+        onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}">${i + 1}. ${escHtml(ch)}</a>`).join('')}</div>
+      <div class="row" style="gap:8px;margin-top:10px;align-items:center;">
+        <button class="btn q sm" onclick="resetSchoolRange('${sc}','${gr}','${sj}')">기본 범위로</button>
+        <span style="font-size:11px;color:var(--dim);">기본은 «${escHtml(season)}» 기준 ${presetChapters(subject).length}단원</span></div>`;
+    말 = '색칠된 단원이 범위입니다 — 누르면 넣고 뺍니다. 범위는 과목마다 따로입니다.';
+  } else if(k === 'book'){
+    제목 = '교재 · 메모';
+    몸 = `<input type="text" class="fm-in" data-first style="width:100%;box-sizing:border-box;" placeholder="미래엔 / 학교프린트"
+        value="${escHtml(schoolBookOf(school, grade))}"
+        onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()} else if(event.key==='Escape'){closeExamPop()}"
+        onchange="setSchoolBook('${sc}','${gr}',this.value); closeExamPop()">`;
+    말 = 'Enter 로 저장합니다. 학교·학년 단위이고, 시즌을 넘겨도 남습니다.';
+  } else if(k === 'print'){
+    제목 = '학교 프린트';
+    몸 = schoolFilesHTML(school, grade).replace('<input type="file"', '<input type="file" data-first');
+  }
+  return `<div class="xp-back" onclick="closeExamPop()"></div>
+  <div class="xp" role="dialog" aria-label="${이름} ${제목}"
+       style="left:${p.x}px;top:${p.y}px;${p.up ? 'transform:translateY(-100%);' : ''}"
+       onkeydown="if(event.key==='Escape') closeExamPop()">
+    <div class="xp-h"><b>${제목}</b><span>${이름}</span>
+      <button class="btn q sm xp-x" onclick="closeExamPop()" aria-label="닫기">✕</button></div>
+    ${몸}
+    ${말 ? `<div class="xp-m">${말}</div>` : ''}
   </div>`;
 }
 
@@ -31921,7 +31968,7 @@ function gradeCutTableHTML(list, { past, cutKey, cutSeasonLabel, cutN }){
 
 function goExamSeason(v){
   state.examSeasonView = (v === '') ? '' : Number(v);
-  state.rangeSchool = '';        // 보던 줄은 다른 시즌의 것이다
+  state.examPop = null;          // 열린 창은 다른 시즌의 줄이다
   state.examCalMonth = '';       // 달력도 그 시즌의 첫 달로 되돌린다
   render();
 }
@@ -31946,7 +31993,7 @@ function examCalendarHTML(list, getDates, viewSeason){
   });
 
   if(spans.length === 0) return `<div style="font-size:12.5px;color:var(--dim);">
-    날짜를 적어 둔 학교가 없습니다. «표»에서 줄을 눌러 시험 날짜를 넣어주세요.</div>`;
+    날짜를 적어 둔 학교가 없습니다. «표»에서 시험 기간 칸을 눌러 날짜를 넣어주세요.</div>`;
 
   /* 보고 있는 달 — 정해 두지 않았으면 «가장 이른 시험이 있는 달»에서 시작한다.
      오늘 달에서 시작하면 시험이 다음 달일 때 빈 달을 마주한다. */
@@ -32061,11 +32108,6 @@ function jsAttr(s){
   return js.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 function rangeKey(school, grade, subject){ return school + '\n' + grade + '\n' + subject; }
-function toggleRangeOpen(school, grade, subject){
-  const key = rangeKey(school, grade, subject);
-  state.rangeSchool = (state.rangeSchool === key) ? '' : key;
-  render();
-}
 /* 한 칸만 고쳐도 나머지는 그대로 둔다 — 셋이 한 값이라 통째로 다시 쓴다. */
 async function setExamDate(school, grade, which, value){
   const d = examDatesOf(school, grade) || {};
@@ -32095,19 +32137,6 @@ async function setSchoolBook(school, grade, text){
 async function setGradeCut(seasonKey, school, grade, subject, g, value){
   const ok = await saveGradeCut(seasonKey, school, grade, subject, g, value);
   if(!ok) showToast('등급컷은 0~100 사이의 원점수로 적어 주세요.');
-  render();
-}
-/* 노션 표가 «시작 단원 ~ 끝 단원» 두 칸이었다. 그 입력을 그대로 옮긴 것 —
-   단원을 열 개씩 하나하나 누르는 것보다 훨씬 빠르고, 실제 시험범위가 대개 연속 구간이다.
-   ⚠ 거꾸로 골라도 받는다. 사람이 순서를 바꿔 고르는 일이 잦아서 막기보다 뒤집는 편이 낫다. */
-async function applyRangeSpan(school, grade, subject){
-  const a = document.getElementById('rs-a'), b = document.getElementById('rs-b');
-  if(!a || !b) return;
-  const all = UNIT_CHAPTERS[subject] || [];
-  let i = Number(a.value), j = Number(b.value);
-  if(i > j) [i, j] = [j, i];
-  await saveSchoolRange(school, grade, subject, all.slice(i, j+1));
-  showToast(`${i+1}. ${all[i]} ~ ${j+1}. ${all[j]} — ${j-i+1}단원으로 정했습니다.`);
   render();
 }
 async function toggleRangeChapter(school, grade, subject, chapter){
@@ -32745,6 +32774,7 @@ function teacherSettingsHTML(){
      ⚠ 옛 state(`examplan`)로 들어와도 빈 화면이 안 되게 여기서 돌려세운다. */
   if(tab === 'examplan'){ state.settingsSubTab = 'examrange'; state.examSubTab = 'plan'; }
   const examSub = state.settingsSubTab === 'examrange' ? (state.examSubTab || 'range') : '';
+  if(examSub !== 'range') state.examPop = null;   // 칸 창은 «시험 일정» 표의 것이다
   const tabNow = state.settingsSubTab || 'assistants';
   /* 셋째 갈래 «등급컷» (2026-10-02) — 시험 일정 표가 넓어 오른쪽 칸이 잘렸다. 같은 시즌·같은 줄이라 이 문 안에 둔다. */
   const sub = (tabNow === 'examrange' && examSub === 'plan') ? teacherExamPlanHTML()

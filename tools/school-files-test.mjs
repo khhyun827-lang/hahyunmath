@@ -63,7 +63,8 @@ console.log('학교 프린트 —' + NL);
   봄('③ 시즌 넘기기는 학교 프린트를 건드리지 않는다', /schoolFiles|school-files/.test(넘기기), false);
   const 학생로딩 = lift('loadStudentData');
   봄('④ 학생 로그인은 이 문서를 안 읽는다 — 시험 범위 화면에서만 lazy', [/school-files/.test(학생로딩), /loadSchoolFilesIfNeeded\(\);/.test(lift('teacherExamRangeHTML'))], [false, true]);
-  봄('   교재·메모 칸 바로 아래에 선다', /onchange="setSchoolBook\('\$\{sc\}','\$\{gr\}',this\.value\)"><\/label>\s*<\/div>\s*\$\{schoolFilesHTML\(school, grade\)\}/.test(html), true);
+  /* 2026-10-02 — 펼친 줄이 사라지고 «프린트 칸을 누르면 뜨는 창»에 선다(exam-pop-test 가 실제로 누른다) */
+  봄('   프린트 칸 창에 선다', /k === 'print'[\s\S]{0,80}schoolFilesHTML\(school, grade\)/.test(lift('examPopHTML')), true);
 }
 
 console.log(틀림 ? NL + '  🔴 ' + 통과 + ' 통과 · ' + 틀림 + ' 실패' + NL : NL + '  ✅ ' + 통과 + ' 통과 · 0 실패' + NL);
