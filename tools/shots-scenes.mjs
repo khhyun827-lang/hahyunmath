@@ -188,6 +188,27 @@ export const 무대들 = {
       state.offDays = { days: [{ date: 날(2), classIds: ['c1'], label: '학원 행사' }] };
       state.allRecordsLoaded = true; state.teacherTab = 'dash'; state.tCalDay = 날(7); state.tCalMonth = 날(7).slice(0, 7); render();
     } },
+  /* 그림 있는 변형 (2026-10-02 · 사용자 — 「그림이 엄청 크게 그려져 문제와 같이 읽기 어렵다」) — 원본 사진 · 변형 SVG(figure.js 가 실제로 그린다) */
+  검토그림: { 말: '문항관리 › 검토 (그림을 새로 그린 변형 — 그림이 본문 안 · 교재 크기)', 폭: '1440,864,390',
+    세우기: () => { state.currentUser = { type:'teacher', name:'김하현T' }; state.view = 'teacher';
+      const 장면 = { kind:'graph', curves:[{ expr:'-(x-1)*(x-5)', label:'y=f(x)', labelAt:5.4 }, { expr:'x-1', label:'y=g(x)', labelAt:5.6 }],
+        points:[{ x:1, curve:0, dot:true, label:'A', labelPos:'below' }, { x:4, curve:1, dot:true, dropTo:'axis', label:'B', labelPos:'above' }],
+        xTicks:[1, 4, 5], axis:{ xLabel:'x', yLabel:'y', origin:'O' } };
+      /* 원본 그림은 사진(드라이브 주소)으로 온다 — 무대에서는 같은 크기의 그림을 data 주소로 흉내 낸다(밖으로 안 나간다) */
+      const 원본장면 = { kind:'graph', curves:[{ expr:'-(x-1)*(x-4)', label:'y=f(x)', labelAt:4.4 }, { expr:'x-1', label:'y=g(x)', labelAt:4.6 }],
+        points:[{ x:1, curve:0, dot:true, label:'A', labelPos:'below' }, { x:3, curve:1, dot:true, label:'B', labelPos:'above' }],
+        xTicks:[1, 3, 4], axis:{ xLabel:'x', yLabel:'y', origin:'O' } };
+      const 원본사진 = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(Figure.renderScene(원본장면).replace('<svg ', '<svg style="background:#fff" '));
+      state.itemBody = { 'K2-02-E-0139': { code:'K2-02-E-0139', answer:'③', image:{ url: 원본사진 },
+        content:'그림과 같이 이차함수 y = −(x−1)(x−4) 의 그래프와 직선 y = x − 1 이 두 점 A, B 에서 만난다. 삼각형 OAB 의 넓이는? (단, O 는 원점이다.)\n① 1  ② 3/2  ③ 2  ④ 5/2  ⑤ 3' } };
+      state.variants = { K2: [{ code:'K2-02-E-0139-N01', originCode:'K2-02-E-0139', pending:true, engine:'gemini', createdAt:'2026-10-02',
+        needsFigure:true, figureSpec:'이차함수 y=−(x−1)(x−5) 와 직선 y=x−1, 두 교점 A(1,0)·B(4,3) 표시, B 에서 x축으로 점선',
+        image:{ kind:'svg', svg: Figure.renderScene(장면), scene: 장면 },
+        content:'그림과 같이 이차함수 y = −(x−1)(x−5) 의 그래프와 직선 y = x − 1 이 두 점 A, B 에서 만난다. 점 B 에서 x축에 내린 수선의 발을 H 라 할 때, 삼각형 ABH 의 넓이는?\n① 3  ② 7/2  ③ 4  ④ 9/2  ⑤ 5',
+        answer:'④', aiReview:{ verdict:'agree', answer:'④' } }] };
+      state.reviewQuotaUsed = 23; state.aiQuotaUsed = 7;
+      state.teacherTab = 'review'; state.reviewQueue = 'pending'; state.reviewVariantCode = 'K2-02-E-0139-N01'; render();
+    } },
   검토: { 말: '문항관리 › 검토 (AI 변형 넷 — 같은 답 둘 · 그림 있는 같은 답 하나 · 답 다름 하나)', 폭: '1440,864',
     세우기: () => { state.currentUser = { type:'teacher', name:'김하현T' }; state.view = 'teacher';
       const 원본 = (code, content, answer, image) => ({ code, content, answer, image });

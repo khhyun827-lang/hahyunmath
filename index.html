@@ -4164,6 +4164,41 @@
   #app:has(.tnav) .app:not(.sap) .steps .s.fin{color:#1F6B3F;} #app:has(.tnav) .app:not(.sap) .steps .s.fin .b{background:#E6F4EB;color:#1F6B3F;}
 }
 @media (min-width:1200px){ #app:has(.tnav) .app:not(.sap) .steps .s{flex:1;} }
+/* 문제 안의 그림 (withFigure · 2026-10-02) — 발문 → 그림(≤300) → 보기로 쌓는다.
+   카드가 넉넉하면(본문 칸 ≥ 640 — 김하현 Desktop 1872 등) 발문 | 그림(300) · 보기는 아래(교재 꼴). 카드 폭으로 가른다(@container) —
+   화면 폭으로 가르면 1440 에서 카드가 484 라 발문 칸이 166 으로 찌그러졌다(찍어서 봤다).
+   SVG 는 560×430 으로 그려진다 — 300 이면 이름표(18px)가 ≈10px (1440×900 한 화면에 발문·그림·보기가 다 든다). 작게 보이면 누르면 크게(hw-view). */
+.app .side:has(> .q-body.has-fig){container-type:inline-size;}
+.app .q-body.has-fig{display:grid;grid-template-columns:minmax(0,1fr);row-gap:12px;}
+.app .q-body.has-fig > .rv-ifw{justify-self:center;width:min(100%,300px);}
+@container (min-width:640px){
+  .app .q-body.has-fig{grid-template-columns:minmax(0,1fr) 300px;column-gap:18px;align-items:start;}
+  .app .q-body.has-fig > .pb-stem{grid-column:1;grid-row:1;}
+  .app .q-body.has-fig > .rv-ifw{grid-column:2;grid-row:1;width:100%;}
+  .app .q-body.has-fig > .pb-ch{grid-column:1 / -1;}
+}
+.app .rv-ifig{position:relative;display:block;width:100%;max-width:100%;margin:0;padding:6px;box-sizing:border-box;
+  background:#fff;border:1px solid var(--line);border-radius:14px;cursor:zoom-in;}
+.app .rv-ifig img{display:block;max-width:100%;max-height:230px;width:auto;height:auto;margin:0 auto;}
+.app .rv-ifig.svg svg{display:block;width:100%;height:auto;color:var(--ink);}
+.app .rv-ifig .rv-ifz{position:absolute;right:8px;bottom:8px;display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:999px;
+  background:rgba(30,36,51,.72);color:#fff;font-size:11px;font-weight:700;opacity:0;transition:opacity .15s;}
+.app .rv-ifig:hover .rv-ifz, .app .rv-ifig:focus-visible .rv-ifz{opacity:1;}
+.app .rv-ifig.empty{cursor:default;padding:12px 14px;font-size:12.5px;line-height:1.7;color:var(--sub);background:var(--paper);border-style:dashed;}
+.app .rv-ifig.empty.need{border-color:var(--no-line);background:var(--nobg);color:var(--no);}
+/* ⚠ 문제 본문(.q-body)은 줄바꿈을 살린다(pre-wrap) — 그림 칸 안의 마크업 줄바꿈이 빈 줄로 서서 그림 밑이 67px 비었다. 그림 칸은 보통 글로 */
+.app .rv-ifw{white-space:normal;}
+.app .rv-ifact{display:flex;align-items:center;justify-content:center;gap:2px;flex-wrap:wrap;margin:4px 0 0;}
+.app .rv-ifact .btn{min-height:30px;padding:0 7px;font-size:12px;}
+.app .rv-ifig.need .rv-ifact{justify-content:flex-start;}
+/* 그림 지침 — 접혀 있을 때는 단추 줄 끝의 작은 고리, 펴면 한 줄을 다 쓴다(단추 줄이 두 줄이 되어 보기가 화면 밑으로 밀렸다) */
+.app .rv-ifspec{font-size:12px;color:var(--sub);line-height:1.7;padding:0 6px;}
+.app .rv-ifspec[open]{flex-basis:100%;padding:4px 2px 0;}
+.app .rv-ifspec summary{cursor:pointer;width:max-content;color:var(--dim);font-weight:700;list-style:none;}
+.app .rv-ifspec summary::-webkit-details-marker{display:none;}
+.app .rv-ifspec[open] summary{margin:0 auto 4px;}
+.app .rv-ifdl{display:flex;justify-content:center;gap:2px;margin-bottom:4px;}
+.app .rv-reuse{display:flex;align-items:center;gap:7px;margin:0 0 8px;font-size:12px;}
 .app .rv-wpos, .app .rv-ours, .app .rv-vchip, .app .rv-solgo, .app .cls-prevgo, .app .st-acct{display:none;}
 .app .hm-chip.todo{background:#E3EAF5;color:#1E2E52;} .app .hm-chip.todo i{background:#1E2433;}
 /* 수업 아래 띠의 출결 셈 — 칩은 넓은 화면(시안)만. 줄 모드·폰은 글자 한 줄(864 에서 칩이면 띠가 두 줄로 넘쳐 단추가 화면 밖으로 밀렸다) */
@@ -29444,10 +29479,56 @@ function choiceNo(a){
   const i = t.length === 1 ? '①②③④⑤'.indexOf(t) : -1;   // ⚠ 빈 글자는 indexOf 가 0 — 답이 없으면 ①이 칠해진다
   return i >= 0 ? i + 1 : /^[1-5]$/.test(t) ? Number(t) : 0;
 }
+/* 🔵 **그림은 문제 «안»에 — 발문 다음 · 보기 앞, 교재 크기로** (2026-10-02 · 사용자 — 「그림이 본문이랑 어울려서 나오지 못하고
+     엄청 크게 그려져 나와 같이 읽고 검토하기 어렵다」). 예전에는 두 칸 «위»에 화면 폭을 다 먹는 상자로 그려 560×430 그림이
+     1400px 넘게 부풀었다. 이제 그림은 그 카드 안에 — 넓은 화면은 발문 오른쪽 300px 칸(교재 꼴), 좁으면 발문과 보기 사이 — 앉고, 누르면 크게 본다.
+   ⚠ 편집기·초안을 여는 동안만 예전 큰 상자(variantFigureBoxHTML)가 위에 선다 — 이름표를 끌려면 자리가 넓어야 한다. */
+function withFigure(bodyHtml, figHtml){
+  if(!figHtml) return bodyHtml;
+  /* 발문 · 그림 · 보기 셋으로 가른다 — 넓은 화면은 발문 왼쪽·그림 오른쪽·보기 아래(교재 꼴), 좁으면 차례로 쌓는다(CSS .q-body.has-fig) */
+  const i = bodyHtml.indexOf('<div class="pb-ch');
+  const 발문 = (i < 0 ? bodyHtml : bodyHtml.slice(0, i)).replace(/\n+$/, '');
+  return '<div class="pb-stem">' + 발문 + '</div>' + '<div class="rv-ifw">' + figHtml + '</div>' + (i < 0 ? '' : bodyHtml.slice(i));
+}
+/* 크게 보기 — 사진 확대(hw-view)를 그대로 쓴다. SVG 는 글꼴을 품여 이미지로 바꿔 넘긴다. */
+async function openFigZoom(key, url){
+  if(url){ openPhoto(url); return; }
+  const svg = figSvgFor(key);
+  if(!svg) return;
+  const css = await figEmbeddedFontCss();
+  const withFont = (css ? svg.replace('<g fill="none"', '<style>' + css + '</style><g fill="none"') : svg)
+    .replace('<svg ', '<svg style="background:#fff;color:#1E2433" ');
+  openPhoto('data:image/svg+xml;charset=utf-8,' + encodeURIComponent(withFont));
+}
 function autoVariantWorkHTML(v){
   const 원본 = (state.itemBody || {})[v.originCode] || {};
   const 답 = dqAnswerable(v.content, v.answer);
   const open = !!state.solutionOpen[v.code];
+  const 그림작업 = state.figureDrafting === v.code || state.figureUploading === v.code
+    || !!(state.figureDraft && state.figureDraft.bankId === v.code);
+  const 크게 = '<span class="rv-ifz">' + iconSvg('expand', 13) + ' 크게</span>';
+  const 원본그림 = 원본.image && 원본.image.url ? `<figure class="rv-ifig" title="누르면 크게 봅니다"
+      onclick="openFigZoom('', '${escHtml(원본.image.url)}')"><img src="${escHtml(원본.image.url)}" alt="원본 그림">${크게}</figure>` : '';
+  const svg그림 = v.image && v.image.kind === 'svg' && v.image.svg;
+  const 변형그림 = v.needsFigure
+    ? (그림작업 ? '<div class="rv-ifig empty">그림은 위 편집 상자에서 고치는 중입니다</div>'
+      : svg그림 ? `<figure class="rv-ifig svg" title="누르면 크게 봅니다" onclick="openFigZoom('${escHtml(v.code)}')">${v.image.svg}${크게}</figure>
+          <div class="rv-ifact">
+            <button class="btn sm" onclick="openFigureEditorFromSaved('${escHtml(v.code)}')">${iconSvg('pencil', 12)} 그림 편집</button>
+            <button class="btn q sm" onclick="requestFigureDraft('${escHtml(v.code)}')" title="한도를 하나 씁니다">다시 그리기</button>
+            ${/* 내려받기·지침은 접는다 — 300 폭 한 줄에 다섯이 안 들어가 보기가 화면 밑으로 밀렸다 */''}
+            <details class="rv-ifspec"><summary>더 보기 ▾</summary>
+              <span class="rv-ifdl"><button class="btn q sm" onclick="figDownload('${escHtml(v.code)}','svg')" title="벡터 — 일러스트레이터에서 열립니다">SVG 내려받기</button>
+              <button class="btn q sm" onclick="figDownload('${escHtml(v.code)}','png')">PNG 내려받기</button></span>
+              ${v.figureSpec ? `<b>그림 지침</b> ${escHtml(v.figureSpec)}` : ''}</details>
+          </div>`
+      : `<div class="rv-ifig empty need">
+          <b>그림이 아직 없습니다</b> — 붙기 전에는 통과할 수 없습니다.${v.sceneFail ? ` 함께 온 그림이 <b>검산에 걸렸습니다</b>(${escHtml(v.sceneFail)}).` : ''}
+          <div class="rv-ifact"><button class="btn sm" onclick="requestFigureDraft('${escHtml(v.code)}')">${iconSvg('sparkle', 12)} 초안 그려 보기</button>
+            ${v.figureSpec ? `<details class="rv-ifspec"><summary>그림 지침</summary>${escHtml(v.figureSpec)}</details>` : ''}</div></div>`)
+    : v.reuseFigure && v.image && v.image.url ? `<figure class="rv-ifig" title="누르면 크게 봅니다"
+        onclick="openFigZoom('', '${escHtml(v.image.url)}')"><img src="${escHtml(v.image.url)}" alt="원본 그림 그대로">${크게}</figure>`
+    : v.reuseFigure ? 원본그림 : '';
   return `
   <div class="rv-wh">
     <h1 class="t-title"><span class="mono">${escHtml(v.code)}</span>${(() => { const 줄 = reviewWalkList(); const i = 줄.findIndex(x => x.auto && x.key === v.code);
@@ -29472,23 +29553,21 @@ function autoVariantWorkHTML(v){
         <s style="display:block;margin-top:4px;font-size:11px;color:var(--dim);">
           공개는 막지 않습니다 — 그대로 둘지 다시 만들지는 검토자가 정합니다.</s></div></div>` : ''; })()}
     ${/* (B) 그림 상자는 두 칸 «위»에 통째로 — 반 폭 칸에 넣으면 그래프 이름표를 못 읽는다 (헤드리스로 보고 옮겼다). */''}
-    ${v.needsFigure ? variantFigureBoxHTML(v) : ''}
+    ${v.needsFigure && 그림작업 ? variantFigureBoxHTML(v) : ''}
     <div class="cmp" style="margin-top:${답?'0':'14px'};">
       ${/* data-ok·ours·ai — 넓은 화면이 보기 칸을 칠한다(정답 초록 테 · 우리 답 남색 · AI 가 고른 다른 답 빨강 테 · 시안) */''}
       <div class="side" data-ok="${choiceNo(원본.answer)}">
         <div class="lab">원본 <b class="mono lab-code">${escHtml(v.originCode)}</b></div>
-        ${원본.image && 원본.image.url ? `<img class="pb-fig" src="${escHtml(원본.image.url)}" alt="">` : ''}
-        <div class="q-body">${원본.content ? problemHTML(원본.content)
-          : '(본문이 없습니다 — 문항 코드 › 교재에서 본문 채우기)'}</div>
+        <div class="q-body${원본그림 ? ' has-fig' : ''}">${원본.content ? withFigure(problemHTML(원본.content), 원본그림)
+          : '(본문이 없습니다 — 문항 코드 › 교재에서 본문 채우기)' + 원본그림}</div>
         ${원본.answer ? `<div class="q-ans">정답 <b>${escHtml(원본.answer)}</b></div>` : ''}
       </div>
       <div class="side ai" data-ours="${choiceNo(v.answer)}" data-ai="${v.aiReview && v.aiReview.verdict === 'suspect' ? choiceNo(v.aiReview.answer) : 0}">
         <div class="lab">AI가 만든 것 <b class="mono lab-code">${escHtml(v.code)}</b></div>
         ${/* 갈래 (2026-09-11) — 강사가 창고에서 시킨 변형은 (B)·(C)로도 온다. 고리가 만든 것은 (A)뿐이다. */''}
-        ${v.reuseFigure ? `<div class="rv-fignote">${v.image && v.image.url ? `<img class="pb-fig" src="${escHtml(v.image.url)}" alt="">` : ''}
-          <b>왼쪽 원본 그림을 그대로</b> 씁니다 — 그림은 배치만 보여 주고 바뀐 수는 본문에 있습니다.
-          <b>그림에 적힌 수치가 본문과 어긋나지 않는지</b>만 확인해 주세요.</div>` : ''}
-        <div class="q-body">${problemHTML(v.content||'(내용 없음)')}</div>
+        ${v.reuseFigure ? `<div class="rv-fignote rv-reuse">${iconSvg('camera', 13)}
+          <span><b>원본 그림을 그대로</b> 씁니다 — <b>그림의 수치가 본문과 어긋나지 않는지</b>만 확인해 주세요.</span></div>` : ''}
+        <div class="q-body${변형그림 ? ' has-fig' : ''}">${withFigure(problemHTML(v.content||'(내용 없음)'), 변형그림)}</div>
         <div class="q-ans"><span class="rv-ours">우리 </span>정답 <b>${escHtml(v.answer||'—')}</b>
           ${/* 넓은 화면 — AI 판정 칩 · 「풀이 보기 ›」를 카드 바닥줄에(시안). 줄 모드는 아래 접는 칸 그대로. */''}
           ${v.aiReview && REVIEW_VERDICT[v.aiReview.verdict] ? `<span class="hm-chip ${({agree:'ok',suspect:'no',unsure:'late'})[v.aiReview.verdict]} rv-vchip"><i></i>${
