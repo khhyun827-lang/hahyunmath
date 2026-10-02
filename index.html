@@ -3285,6 +3285,40 @@
   grid-template-areas:"b" "c";} }
 /* 홈 머리 오른쪽 — 출결 넣을 수업 하나 (2026-10-02) */
 .app .hm-head{position:relative;}
+/* 칸 안 일정 이름은 넓은 홈 달력에서만 (좁으면 점 그대로) */
+.app .scal-c .evs{display:none;}
+/* 큰 달력 (2026-10-02 · 사용자 — 「달력을 더 크게 · 일정이 생기면 칸에 표시」) — 761 이상 홈: 칸 격자 | 고른 날 일정, 칸 안에 일정 이름 */
+@media (min-width:761px){
+  #app:has(.tnav) .app:not(.sap) .hm .tcal .scal-legend{display:none;}
+  #app:has(.tnav) .app:not(.sap) .hm .tcal{display:grid;grid-template-columns:minmax(0,1fr) 230px;grid-template-rows:auto auto minmax(0,1fr);column-gap:14px;align-content:start;}
+  #app:has(.tnav) .app:not(.sap) .hm .tcal > .scal-head{grid-column:1;grid-row:1;}
+  #app:has(.tnav) .app:not(.sap) .hm .tcal > .scal-dow{grid-column:1;grid-row:2;}
+  #app:has(.tnav) .app:not(.sap) .hm .tcal > .scal-grid{grid-column:1;grid-row:3;align-content:start;}
+  #app:has(.tnav) .app:not(.sap) .hm .tcal > .tcal-day{grid-column:2;grid-row:1 / 4;min-height:0;overflow:auto;border-left:1px solid #ECEEF3;padding-left:14px;margin:0;}
+  #app:has(.tnav) .app:not(.sap) .hm .tcal .scal-c{height:auto;min-height:62px;min-width:0;font-size:12px;border-radius:10px;display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;padding:3px 3px 4px;gap:2px;}
+  #app:has(.tnav) .app:not(.sap) .hm .tcal .scal-c .d{align-self:center;}
+  #app:has(.tnav) .app:not(.sap) .hm .tcal .scal-c .dots{justify-content:center;}
+  #app:has(.tnav) .app:not(.sap) .hm .tcal .scal-c .evs{display:flex;flex-direction:column;gap:2px;min-width:0;}
+  #app:has(.tnav) .app:not(.sap) .hm .tcal .scal-c .evs i{font-style:normal;font-size:10.5px;font-weight:700;line-height:1.35;padding:0 4px;border-radius:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:left;}
+  #app:has(.tnav) .app:not(.sap) .hm .tcal .scal-c .evs i.more{background:none;color:#6A7186;}
+  #app:has(.tnav) .app:not(.sap) .hm .tcal-day .scal-item .t b{white-space:normal;}
+  #app:has(.tnav) .app:not(.sap) .hm .tcal .scal-dow, #app:has(.tnav) .app:not(.sap) .hm .tcal .scal-grid{grid-template-columns:repeat(7,minmax(0,1fr));gap:2px;}
+}
+/* 864 언저리(761~1199) — 달력이 맨 위 한 줄을 다 쓰고, 그 밑에 먼저 볼 학생 · 할 일이 나란히 */
+@media (min-width:761px) and (max-width:1199px){
+  #app:has(.tnav) .app:not(.sap) .hm .hm-grid{grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-areas:"c c" "b m";align-items:start;}
+  #app:has(.tnav) .app:not(.sap) .hm .dsh-b, #app:has(.tnav) .app:not(.sap) .hm .dsh-c{display:contents;}
+  #app:has(.tnav) .app:not(.sap) .hm .dsh-b > section:nth-child(1){grid-area:b;}
+  #app:has(.tnav) .app:not(.sap) .hm .dsh-c > .tcal{grid-area:c;}
+  #app:has(.tnav) .app:not(.sap) .hm .dsh-c > .dsh-memo{grid-area:m;}
+}
+/* 다가오는 시험 — 얇은 띠 (2026-10-02) */
+.app .hm-exstrip{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:12px;padding:8px 12px;border-radius:16px;background:var(--card);border:1px solid var(--line2);font-size:13px;}
+.app .hm-exstrip > b{font-size:13px;font-weight:800;margin-right:4px;}
+.app .hm-exchip{display:inline-flex;align-items:center;gap:6px;padding:2px 10px 2px 3px;border-radius:999px;background:var(--sunk);cursor:pointer;color:var(--ink);font-weight:700;text-decoration:none;}
+.app .hm-exchip .hm-dd{font-size:11.5px;padding:2px 7px;border-radius:999px;}
+.app .hm-exchip s{text-decoration:none;color:var(--dim);font-weight:500;}
+.app .hm-exmore{margin-left:auto;font-size:12px;color:var(--sub);cursor:pointer;display:inline-flex;align-items:center;gap:2px;}
 .app .hm-next{display:inline-flex;align-items:center;gap:8px;margin-top:10px;height:42px;padding:0 16px;border-radius:14px;
   background:var(--accent);color:#fff;font-weight:700;font-size:14px;cursor:pointer;text-decoration:none;}
 @media (min-width:761px){ .app .hm-next{position:absolute;right:0;bottom:2px;margin:0;} }
@@ -4191,8 +4225,8 @@
   #app:has(.tnav) .app:not(.sap) .hm{display:flex;flex-direction:column;height:calc(100vh - var(--chrome,178px));min-height:520px;}
   #app:has(.tnav) .app:not(.sap) .hm .hm-hi{font-size:32px;line-height:40px;}
   #app:has(.tnav) .app:not(.sap) .hm .hm-grid{flex:1;min-height:0;margin-top:14px;gap:14px;align-items:stretch;
-    grid-template-columns:minmax(0,1.15fr) minmax(0,1fr) 300px;grid-template-rows:minmax(0,1fr) minmax(0,1fr);
-    grid-template-areas:"b e c" "b m c";}   /* 2026-10-02 재배치 — 먼저 볼 학생 · 시험/할 일 · 달력(두 줄) */
+    grid-template-columns:minmax(0,.85fr) minmax(0,2fr);grid-template-rows:minmax(0,1.15fr) minmax(0,1fr);
+    grid-template-areas:"b c" "m c";}   /* 2026-10-02 둘째 재배치 — 먼저 볼 학생 / 할 일 · 큰 달력. 시험은 위 얇은 띠 */   /* 2026-10-02 재배치 — 먼저 볼 학생 · 시험/할 일 · 달력(두 줄) */
   #app:has(.tnav) .app:not(.sap) .hm .dsh-b, #app:has(.tnav) .app:not(.sap) .hm .dsh-c{display:contents;}
   #app:has(.tnav) .app:not(.sap) .hm .dsh-a{min-height:0;display:flex;}
   #app:has(.tnav) .app:not(.sap) .hm .dsh-a > section{flex:1;display:flex;flex-direction:column;min-height:0;overflow:auto;box-sizing:border-box;}
@@ -4203,13 +4237,11 @@
   #app:has(.tnav) .app:not(.sap) .hm .dsh-memo > section{flex:1;display:flex;flex-direction:column;}
   #app:has(.tnav) .app:not(.sap) .hm .dsh-memo .memo-note{flex:1;min-height:60px;}
   /* 달력은 260 칸에 작게(시안) — 범례는 접고, 고른 날의 일정은 카드 안에서 굴러간다 */
-  #app:has(.tnav) .app:not(.sap) .hm .tcal .scal-legend{display:none;}
   #app:has(.tnav) .app:not(.sap) .hm .tcal .scal-head .btn.icon{width:30px;height:30px;}
   #app:has(.tnav) .app:not(.sap) .hm .tcal .scal-ym b{font-size:15px;}
-  #app:has(.tnav) .app:not(.sap) .hm .tcal{padding:10px 10px 8px;}
+  #app:has(.tnav) .app:not(.sap) .hm .tcal{padding:12px 14px 10px;}
   #app:has(.tnav) .app:not(.sap) .hm .tcal .scal-dow, #app:has(.tnav) .app:not(.sap) .hm .tcal .scal-grid{grid-template-columns:repeat(7,minmax(0,1fr));gap:1px;}
   #app:has(.tnav) .app:not(.sap) .hm .tcal .scal-dow{margin-top:8px;}
-  #app:has(.tnav) .app:not(.sap) .hm .tcal .scal-c{height:32px;min-width:0;font-size:12px;border-radius:9px;}
 }
 @media (min-width:1200px){
   /* ── 반 (시안 «D 차분 · 반 › 출결») — 제목 줄 오른쪽 = 달 고르개(흰 알약) + 「내보내기」(남색) ──
@@ -20080,6 +20112,7 @@ function teacherMonthEvents(ym){
         : 보강 ? (보강.moveTime || sessionTimeText(c.schedule, new Date(보강.date + 'T00:00:00').getDay()))
         : sessionTimeText(c.schedule, dow);
       넣기(date, {kind: c.jikbo ? 'plan' : 'class', title: c.name + (쉼 ? ' — 휴강' : 보강 ? ' (보강)' : ''),
+        short: c.jikbo ? c.name : 쉼 ? c.name + ' 휴강' : 보강 ? c.name + ' 보강' : '',
         sub: 쉼 ? [쉼.label, 쉼.moveTo ? stuDayLabel(쉼.moveTo) + '로 옮김' : ''].filter(Boolean).join(' · ')
           : 보강 ? [보강.label, stuDayLabel(보강.date) + '에서 옮겨 옴'].filter(Boolean).join(' · ') : '',
         time: 시간 || '', 흐림: !!쉼, open: `dashOpenSession('${c.id}','${date}')`});
@@ -20095,10 +20128,11 @@ function teacherMonthEvents(ym){
     const dd = examDatesOf(s.school || '', s.grade || '');
     if(!dd) return;
     const 누구 = [s.school || '학교 미정', gradeLabel(s.grade) || ''].filter(Boolean).join(' ');
+    const 짧게 = (s.school ? schoolShort(s.school) : '학교') + (s.grade || '');
     const 열기 = "state.settingsSubTab='examrange'; state.examSubTab='range'; goTeacherTab('settings')";
-    if(dd.start) 넣기(dd.start, {kind: 'exam', title: 누구 + ' 시험기간 시작', open: 열기});
-    if(dd.end && dd.end !== dd.start) 넣기(dd.end, {kind: 'exam', title: 누구 + ' 시험기간 끝', open: 열기});
-    if(dd.math){ 넣기(dd.math, {kind: 'exam', title: 누구 + ' 수학 시험', 굵게: 1, open: 열기}); 수학날[dd.math] = 1; }
+    if(dd.start) 넣기(dd.start, {kind: 'exam', title: 누구 + ' 시험기간 시작', short: 짧게 + ' 시작', open: 열기});
+    if(dd.end && dd.end !== dd.start) 넣기(dd.end, {kind: 'exam', title: 누구 + ' 시험기간 끝', short: 짧게 + ' 끝', open: 열기});
+    if(dd.math){ 넣기(dd.math, {kind: 'exam', title: 누구 + ' 수학 시험', short: 짧게 + ' 수학', 굵게: 1, open: 열기}); 수학날[dd.math] = 1; }
     const 끝들 = [dd.start, dd.end, dd.math].filter(Boolean).sort();
     for(let x = 끝들[0], i = 0; x && x <= 끝들[끝들.length - 1] && i < 60; x = dateShift(x, 1), i++) 시험날[x] = 1;
   });
@@ -20106,7 +20140,7 @@ function teacherMonthEvents(ym){
   /* ③ 클리닉 — 취소한 것만 뺀다 · 대기는 딱지를 단다 */
   (DATA.clinics || []).forEach(cl => {
     if(!cl.day || cl.status === '취소') return;
-    넣기(cl.day, {kind: 'clinic', title: '클리닉 · ' + (이름(cl.studentId) || cl.name || '학생'),
+    넣기(cl.day, {kind: 'clinic', title: '클리닉 · ' + (이름(cl.studentId) || cl.name || '학생'), short: 이름(cl.studentId) || cl.name || '클리닉',
       sub: [cl.status && cl.status !== '승인' ? cl.status : '', cl.topic || ''].filter(Boolean).join(' · '),
       time: clinicWhenLabel(cl) || '', open: "goTeacherTab('clinic')"});
   });
@@ -20118,7 +20152,7 @@ function teacherMonthEvents(ym){
     const cells = planCellsOfStudent(s.studentId);
     for(const date in cells) if(cells[date].k === 'consult') (상담[date] = 상담[date] || []).push(s.name || '');
   });
-  for(const date in 상담) 넣기(date, {kind: 'clinic', title: '상담진행 · ' + 상담[date].length + '명',
+  for(const date in 상담) 넣기(date, {kind: 'clinic', title: '상담진행 · ' + 상담[date].length + '명', short: '상담 ' + 상담[date].length + '명',
     sub: 상담[date].join(' · '), open: "state.settingsSubTab='examrange'; state.examSubTab='plan'; goTeacherTab('settings')"});
 
   /* 같은 날 안에서는 시각 순 — 「오후 2시」·「19:00~21:00」 이 섞이므로 시(時)만 뽑아 견준다 */
@@ -20148,7 +20182,12 @@ function teacherCalHTML(){
     칸.push(`<div class="scal-c${시험칸}${date === 오늘 ? ' today' : ''}${date === 고른날 ? ' on' : ''}" ${TAP}
       aria-label="${stuDayLabel(date)}" onclick="state.tCalDay='${date}'; render()">
       <span class="d" style="${dow === 0 ? 'color:var(--no);' : dow === 6 ? 'color:var(--blue);' : ''}">${d}</span>
-      <span class="dots">${점들.map(g => `<i style="background:${TCAL_GROUPS[g].색}"></i>`).join('')}</span></div>`);
+      <span class="dots">${점들.map(g => `<i style="background:${TCAL_GROUPS[g].색}"></i>`).join('')}</span>
+      ${(() => { /* 칸 안 일정 이름 (2026-10-02 · 사용자 — 「달력에 일정이 생기면 일정을 표시」) — 정규 수업은 점만 · 넓은 홈에서만 보인다(CSS) */
+        const 이름들 = (일정[date] || []).filter(e => e.short);
+        return !이름들.length ? '' : '<span class="evs">' + 이름들.slice(0, 3).map(e =>
+          `<i style="color:${CAL_KINDS[e.kind].색};background:${CAL_KINDS[e.kind].바탕};">${escHtml(e.short)}</i>`).join('')
+          + (이름들.length > 3 ? `<i class="more">+${이름들.length - 3}</i>` : '') + '</span>'; })()}</div>`);
   }
   const 그날 = 고른날 ? (일정[고른날] || []) : [];
   const 목록 = !고른날 ? '<div class="scal-empty">날짜를 눌러 보세요.</div>'
@@ -20420,13 +20459,17 @@ function teacherDashHTML(){
       ${넣을곳 ? `<a class="hm-next" onclick="dashOpenSession('${넣을곳.id}')">${escHtml(String((넣을곳.jikbo ? 넣을곳.timeText : sessionTimeText(넣을곳.schedule, dowN)) || '').split(/[~–-]/)[0])} ${escHtml(넣을곳.name)} · 출결 넣기 ${iconSvg('arrowR', 15)}</a>` : ''}
     </div>
     ${kpis}
+    ${/* 다가오는 시험 — 칸 대신 얇은 띠 (2026-10-02 · 사용자 — 「시험기간에만 유용하고 크게 둘 일은 아니다」). 3주 안(또는 시험 중)일 때만 선다. */
+      (() => { const 가까운 = exams.filter(e => e.dd.state === 'during' || e.dd.days <= 21).slice(0, 6);
+        return !가까운.length ? '' : `<div class="hm-exstrip"><b>다가오는 시험</b>${가까운.map(e =>
+          `<a class="hm-exchip" onclick="state.settingsSubTab='examrange'; state.examSubTab='range'; goTeacherTab('settings')"><span class="dsh-dd hm-dd mono ${e.dd.state === 'during' ? 'on' : e.dd.days <= 7 ? 'near' : e.dd.days <= 14 ? 'soon' : ''}">${e.dd.state === 'during' ? '시험 중' : 'D-' + e.dd.days}</span>${escHtml((e.school ? schoolShort(e.school) : '학교') + ' ' + (gradeLabel(e.grade) || ''))}${e.dd.math ? ` <s>수학 ${escHtml(e.dd.math.slice(5).replace('-', '/'))}</s>` : ''}</a>`).join('')}
+          <a class="hm-exmore" onclick="state.settingsSubTab='examrange'; state.examSubTab='range'; goTeacherTab('settings')">시험 일정 ${iconSvg('chevR', 12)}</a></div>`; })()}
     ${/* 🔵 **재배치** (2026-10-02 · 사용자 — 「오늘 수업 공간이 너무 크고 달력 밑에 적혀 있어 중복」).
          «오늘 수업» 칸을 뺐다 — 오늘 수업은 달력 밑 «고른 날 일정»에 있고, 출결 넣을 수업은 머리 오른쪽 단추가 맡는다.
          넓은 화면: 먼저 볼 학생(두 줄) · 다가오는 시험 / 할 일 · 달력(두 줄 — 고른 날 일정까지). 좁으면 왼쪽(학생·시험) · 오른쪽(달력·할 일). */''}
     <div class="dsh-grid hm-grid">
       <div class="dsh-col dsh-b">
         ${sec('먼저 볼 학생', live.length || '', sigBody, ['신호 전체', "goTeacherTab('signals')"])}
-        ${sec('다가오는 시험', exams.length || '', examBody, ['시험 일정', "state.settingsSubTab='examrange'; state.examSubTab='range'; goTeacherTab('settings')"])}
       </div>
       <div class="dsh-col dsh-c">
         ${teacherCalHTML()}

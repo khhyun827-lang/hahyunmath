@@ -1,0 +1,1241 @@
+[
+ {
+  "id": "A-003",
+  "source": "고쟁이 3번",
+  "canon": "T02",
+  "canon_name": "도형의 평행이동 — 직선",
+  "difficulty": 0.95,
+  "status": "D",
+  "step": null,
+  "reason": "C-006 과 같다 — 옮긴 직선이 점을 지난다",
+  "대표": [
+   "C-006"
+  ]
+ },
+ {
+  "id": "A-004",
+  "source": "고쟁이 4번",
+  "canon": "T02",
+  "canon_name": "도형의 평행이동 — 직선",
+  "difficulty": 1,
+  "status": "D",
+  "step": null,
+  "reason": "D-002 와 같다 — 표기로 준 것뿐이고 표기 읽기는 A-001(T01)이 담당한다",
+  "대표": [
+   "D-002",
+   "A-001"
+  ]
+ },
+ {
+  "id": "A-007",
+  "source": "고쟁이 7번",
+  "canon": "T04",
+  "canon_name": "도형의 평행이동 — 포물선",
+  "difficulty": 2.33,
+  "status": "D",
+  "step": null,
+  "reason": "C-014(이동 역추적) 와 B-009(평행한 두 직선 사이의 거리)로 나뉜다",
+  "대표": [
+   "C-014",
+   "B-009"
+  ]
+ },
+ {
+  "id": "A-008",
+  "source": "고쟁이 8번",
+  "canon": "T09",
+  "canon_name": "평행이동과 대칭이동의 결합",
+  "difficulty": 1.03,
+  "status": "D",
+  "step": null,
+  "reason": "D-001 로 두 점을 옮긴 뒤 무게중심을 구할 뿐이다 — 무게중심은 이 단원의 도구가 아니다",
+  "대표": [
+   "D-001"
+  ]
+ },
+ {
+  "id": "A-009",
+  "source": "고쟁이 9번",
+  "canon": "T05",
+  "canon_name": "점의 대칭이동 (x축·y축·원점·y=x)",
+  "difficulty": 3.38,
+  "status": "D",
+  "step": null,
+  "reason": "D-017(T06) 과 같다 — 직선 위의 점을 두 번 대칭시켜 만든 삼각형의 넓이 조건",
+  "대표": [
+   "D-017"
+  ]
+ },
+ {
+  "id": "A-012",
+  "source": "고쟁이 12번",
+  "canon": "T13",
+  "canon_name": "대칭이동을 이용한 최단 거리",
+  "difficulty": 3.9,
+  "status": "D",
+  "step": null,
+  "reason": "D-009 와 같다 — 두 원 사이 거리, 최댓값을 묻는 것만 다르다",
+  "대표": [
+   "D-009"
+  ]
+ },
+ {
+  "id": "A-015",
+  "source": "고쟁이 15번",
+  "canon": "T12",
+  "canon_name": "직선 $y=ax+b$ 에 대한 대칭이동",
+  "difficulty": 4.18,
+  "status": "D",
+  "step": null,
+  "reason": "C-051 과 같다 — 대칭축이 $y=-x+2$ 일 뿐 세우는 두 조건이 같다",
+  "대표": [
+   "C-051"
+  ]
+ },
+ {
+  "id": "A-017",
+  "source": "고쟁이 17번",
+  "canon": "T13",
+  "canon_name": "대칭이동을 이용한 최단 거리",
+  "difficulty": 2.74,
+  "status": "D",
+  "step": null,
+  "reason": "B-045 와 같다 — 거치는 축이 y축일 뿐이고 대칭시키는 대상·방법이 같다",
+  "대표": [
+   "B-045"
+  ]
+ },
+ {
+  "id": "A-018",
+  "source": "고쟁이 18번",
+  "canon": "T13",
+  "canon_name": "대칭이동을 이용한 최단 거리",
+  "difficulty": 4.97,
+  "status": "D",
+  "step": null,
+  "reason": "A-046 과 같다 — x축과 $y=x$ 를 거치는 같은 배치",
+  "대표": [
+   "A-046"
+  ]
+ },
+ {
+  "id": "A-019",
+  "source": "고쟁이 19번",
+  "canon": "T13",
+  "canon_name": "대칭이동을 이용한 최단 거리",
+  "difficulty": 5.82,
+  "status": "D",
+  "step": null,
+  "reason": "B-045(값) + C-056(좌표) 둘로 나뉜다. 과정을 서술로 물을 뿐 새 발상이 없다",
+  "대표": [
+   "B-045",
+   "C-056"
+  ]
+ },
+ {
+  "id": "A-027",
+  "source": "고쟁이 27번",
+  "canon": "T06",
+  "canon_name": "도형의 대칭이동 — 직선",
+  "difficulty": 1.29,
+  "status": "D",
+  "step": null,
+  "reason": "규칙에 따라 대칭을 «되풀이»하는 것으로 A-020(T01)·C-067(T09)이 같은 추적을 담는다",
+  "대표": [
+   "A-020",
+   "C-067"
+  ]
+ },
+ {
+  "id": "A-031",
+  "source": "고쟁이 31번",
+  "canon": "T15",
+  "canon_name": "이동의 활용 (넓이·교점 등)",
+  "difficulty": 4.54,
+  "status": "D",
+  "step": null,
+  "reason": "B-018 과 같다 — 두 교점이 원점에 대하여 대칭이라는 것은 중점이 원점이라는 뜻이다",
+  "대표": [
+   "B-018"
+  ]
+ },
+ {
+  "id": "A-033",
+  "source": "고쟁이 33번",
+  "canon": "T08",
+  "canon_name": "도형의 대칭이동 — 포물선",
+  "difficulty": 4.01,
+  "status": "D",
+  "step": null,
+  "reason": "포물선 위 두 점이 직선에 대칭 — A-058(T12)이 일반 직선으로 같은 두 조건(중점이 축 위·수직)을 담는다",
+  "대표": [
+   "A-058"
+  ]
+ },
+ {
+  "id": "A-034",
+  "source": "고쟁이 34번",
+  "canon": "T10",
+  "canon_name": "$f(x,y)=0$ 꼴 도형의 이동",
+  "difficulty": 7.65,
+  "status": "D",
+  "step": null,
+  "reason": "B-039 와 같다 — 보기에서 옳은 변환식을 모두 고른다",
+  "대표": [
+   "B-039"
+  ]
+ },
+ {
+  "id": "A-039",
+  "source": "고쟁이 39번",
+  "canon": "T11",
+  "canon_name": "점 $(a,b)$ 에 대한 대칭이동",
+  "difficulty": 5.1,
+  "status": "D",
+  "step": null,
+  "reason": "A-016 과 같다 — 직선을 점에 대칭시켜 방정식을 쓴다",
+  "대표": [
+   "A-016"
+  ]
+ },
+ {
+  "id": "A-041",
+  "source": "고쟁이 41번",
+  "canon": "T12",
+  "canon_name": "직선 $y=ax+b$ 에 대한 대칭이동",
+  "difficulty": 5.02,
+  "status": "D",
+  "step": null,
+  "reason": "C-053 과 같다 — 원 -> 원 의 대칭축을 역추적하는 같은 사고",
+  "대표": [
+   "C-053"
+  ]
+ },
+ {
+  "id": "A-044",
+  "source": "고쟁이 44번",
+  "canon": "T13",
+  "canon_name": "대칭이동을 이용한 최단 거리",
+  "difficulty": 4.22,
+  "status": "D",
+  "step": null,
+  "reason": "A-045 와 같다 — 빛의 반사, 정사각형 두 변",
+  "대표": [
+   "A-045"
+  ]
+ },
+ {
+  "id": "A-048",
+  "source": "고쟁이 48번",
+  "canon": "T13",
+  "canon_name": "대칭이동을 이용한 최단 거리",
+  "difficulty": 6.38,
+  "status": "D",
+  "step": null,
+  "reason": "A-046 을 네 구간으로 늘린 것 — 정점마다 대칭시키는 규칙이 그대로 반복된다",
+  "대표": [
+   "A-046"
+  ]
+ },
+ {
+  "id": "A-050",
+  "source": "고쟁이 50번",
+  "canon": "T13",
+  "canon_name": "대칭이동을 이용한 최단 거리",
+  "difficulty": 5.4,
+  "status": "D",
+  "step": null,
+  "reason": "B-049 와 같다",
+  "대표": [
+   "B-049"
+  ]
+ },
+ {
+  "id": "A-051",
+  "source": "고쟁이 51번",
+  "canon": "T13",
+  "canon_name": "대칭이동을 이용한 최단 거리",
+  "difficulty": 8.5,
+  "status": "D",
+  "step": null,
+  "reason": "A-045 와 같다 — 두 도로가 이루는 각을 좌표로 옮기면 같은 배치가 된다",
+  "대표": [
+   "A-045"
+  ]
+ },
+ {
+  "id": "A-057",
+  "source": "고쟁이 57번",
+  "canon": "T11",
+  "canon_name": "점 $(a,b)$ 에 대한 대칭이동",
+  "difficulty": 9.2,
+  "status": "D",
+  "step": null,
+  "reason": "규칙에 따라 대칭을 «되풀이»하는 것으로 A-020(T01)·C-067(T09)이 같은 추적을 담는다",
+  "대표": [
+   "A-020",
+   "C-067"
+  ]
+ },
+ {
+  "id": "B-004",
+  "source": "올림포스 4번",
+  "canon": "T01",
+  "canon_name": "점의 평행이동",
+  "difficulty": 3.23,
+  "status": "D",
+  "step": null,
+  "reason": "세 점을 함께 옮길 뿐이다 — «도형이 모양을 지킨 채 움직인다»는 A-026(T15)이 넓이로 더 분명히 보여 준다",
+  "대표": [
+   "A-026"
+  ]
+ },
+ {
+  "id": "B-007",
+  "source": "올림포스 7번",
+  "canon": "T02",
+  "canon_name": "도형의 평행이동 — 직선",
+  "difficulty": 1.31,
+  "status": "D",
+  "step": null,
+  "reason": "C-005(일치) 와 B-003(이동량이 $a,a^2$ 으로 묶임)으로 나뉜다",
+  "대표": [
+   "C-005",
+   "B-003"
+  ]
+ },
+ {
+  "id": "B-008",
+  "source": "올림포스 8번",
+  "canon": "T02",
+  "canon_name": "도형의 평행이동 — 직선",
+  "difficulty": 1.3,
+  "status": "D",
+  "step": null,
+  "reason": "C-005 와 같다 — 일치 조건으로 계수를 비교한다",
+  "대표": [
+   "C-005"
+  ]
+ },
+ {
+  "id": "B-011",
+  "source": "올림포스 11번",
+  "canon": "T03",
+  "canon_name": "도형의 평행이동 — 원",
+  "difficulty": 1.56,
+  "status": "D",
+  "step": null,
+  "reason": "A-002(이동 읽기) + A-006(원 옮기기)로 나뉜다",
+  "대표": [
+   "A-002",
+   "A-006"
+  ]
+ },
+ {
+  "id": "B-012",
+  "source": "올림포스 12번",
+  "canon": "T03",
+  "canon_name": "도형의 평행이동 — 원",
+  "difficulty": 2.95,
+  "status": "D",
+  "step": null,
+  "reason": "A-021 과 같다 — 접함을 거리로 바꾼다",
+  "대표": [
+   "A-021"
+  ]
+ },
+ {
+  "id": "B-013",
+  "source": "올림포스 13번",
+  "canon": "T04",
+  "canon_name": "도형의 평행이동 — 포물선",
+  "difficulty": 1.66,
+  "status": "D",
+  "step": null,
+  "reason": "C-015 와 같다 — 접함을 판별식으로 바꾼다. x축에 접하는 것은 그 특수한 경우다",
+  "대표": [
+   "C-015"
+  ]
+ },
+ {
+  "id": "B-014",
+  "source": "올림포스 14번",
+  "canon": "T04",
+  "canon_name": "도형의 평행이동 — 포물선",
+  "difficulty": 2.6,
+  "status": "D",
+  "step": null,
+  "reason": "C-015(직선에 접함) 과 B-003(이동량이 $a,2a$ 로 묶임)으로 나뉜다",
+  "대표": [
+   "C-015",
+   "B-003"
+  ]
+ },
+ {
+  "id": "B-015",
+  "source": "올림포스 15번",
+  "canon": "T04",
+  "canon_name": "도형의 평행이동 — 포물선",
+  "difficulty": 7.59,
+  "status": "D",
+  "step": null,
+  "reason": "C-014(이동 역추적) 와 D-009(두 원 위 점 사이 거리, T13)로 나뉜다",
+  "대표": [
+   "C-014",
+   "D-009"
+  ]
+ },
+ {
+  "id": "B-019",
+  "source": "올림포스 19번",
+  "canon": "T09",
+  "canon_name": "평행이동과 대칭이동의 결합",
+  "difficulty": 1.79,
+  "status": "D",
+  "step": null,
+  "reason": "C-035 와 같다 — 옮긴 점이 직선 위에 있다는 조건을 대입할 뿐이다",
+  "대표": [
+   "C-035"
+  ]
+ },
+ {
+  "id": "B-025",
+  "source": "올림포스 25번",
+  "canon": "T07",
+  "canon_name": "도형의 대칭이동 — 원",
+  "difficulty": 3.13,
+  "status": "D",
+  "step": null,
+  "reason": "대칭한 원이 $x$ 축과 만나는 «현의 길이»를 재는 것으로 C-027(T09)이 같은 계산을 담는다",
+  "대표": [
+   "C-027"
+  ]
+ },
+ {
+  "id": "B-030",
+  "source": "올림포스 30번",
+  "canon": "T15",
+  "canon_name": "이동의 활용 (넓이·교점 등)",
+  "difficulty": 5.47,
+  "status": "D",
+  "step": null,
+  "reason": "B-018(교점의 조건) 과 C-027(현의 길이)로 나뉜다",
+  "대표": [
+   "B-018",
+   "C-027"
+  ]
+ },
+ {
+  "id": "B-038",
+  "source": "올림포스 38번",
+  "canon": "T10",
+  "canon_name": "$f(x,y)=0$ 꼴 도형의 이동",
+  "difficulty": 4.88,
+  "status": "D",
+  "step": null,
+  "reason": "B-037 과 같다 — 도형이 삼각형이냐 직사각형이냐만 다르다",
+  "대표": [
+   "B-037"
+  ]
+ },
+ {
+  "id": "B-043",
+  "source": "올림포스 43번",
+  "canon": "T12",
+  "canon_name": "직선 $y=ax+b$ 에 대한 대칭이동",
+  "difficulty": 4.87,
+  "status": "D",
+  "step": null,
+  "reason": "C-051 의 과정을 서술로 채워 넣게 한 것이다 — 세우는 식이 같다",
+  "대표": [
+   "C-051"
+  ]
+ },
+ {
+  "id": "B-046",
+  "source": "올림포스 46번",
+  "canon": "T13",
+  "canon_name": "대칭이동을 이용한 최단 거리",
+  "difficulty": 5.59,
+  "status": "D",
+  "step": null,
+  "reason": "A-046 과 같다 — 동점을 $P(a,0), Q(0,b)$ 로 적었을 뿐 배치가 같다",
+  "대표": [
+   "A-046"
+  ]
+ },
+ {
+  "id": "B-047",
+  "source": "올림포스 47번",
+  "canon": "T13",
+  "canon_name": "대칭이동을 이용한 최단 거리",
+  "difficulty": 5.29,
+  "status": "D",
+  "step": null,
+  "reason": "A-047 과 같다 — 동점이 $y=x$ 위에 있는 같은 배치",
+  "대표": [
+   "A-047"
+  ]
+ },
+ {
+  "id": "B-050",
+  "source": "올림포스 50번",
+  "canon": "T13",
+  "canon_name": "대칭이동을 이용한 최단 거리",
+  "difficulty": 8.92,
+  "status": "D",
+  "step": null,
+  "reason": "A-054 와 같다 — $P(a,0), Q(a+2,0)$ 로 간격이 2 로 묶여 있고, 그만큼 평행이동시켜 걷어낸다",
+  "대표": [
+   "A-054"
+  ]
+ },
+ {
+  "id": "B-058",
+  "source": "올림포스 58번",
+  "canon": "T13",
+  "canon_name": "대칭이동을 이용한 최단 거리",
+  "difficulty": 8.08,
+  "status": "D",
+  "step": null,
+  "reason": "D-025 와 같다 — 정점 하나 + $y=x$·x축 위 동점 둘",
+  "대표": [
+   "D-025"
+  ]
+ },
+ {
+  "id": "B-059",
+  "source": "올림포스 59번",
+  "canon": "T13",
+  "canon_name": "대칭이동을 이용한 최단 거리",
+  "difficulty": 8.14,
+  "status": "D",
+  "step": null,
+  "reason": "A-046 과 같다 — 거치는 직선이 x축·y축일 뿐",
+  "대표": [
+   "A-046"
+  ]
+ },
+ {
+  "id": "B-061",
+  "source": "올림포스 61번",
+  "canon": "T09",
+  "canon_name": "평행이동과 대칭이동의 결합",
+  "difficulty": 8,
+  "status": "D",
+  "step": null,
+  "reason": "B-057 과 같다 — 두 곡선이 오직 한 점에서 만나는 조건. 만나는 점이 주어진 것만 다르다",
+  "대표": [
+   "B-057"
+  ]
+ },
+ {
+  "id": "C-001",
+  "source": "유형반복R 1번",
+  "canon": "T01",
+  "canon_name": "점의 평행이동",
+  "difficulty": 0.69,
+  "status": "D",
+  "step": null,
+  "reason": "B-001 과 같다 — 묻는 것이 $a+b$ 냐 $ab$ 냐만 다르다",
+  "대표": [
+   "B-001"
+  ]
+ },
+ {
+  "id": "C-002",
+  "source": "유형반복R 2번",
+  "canon": "T01",
+  "canon_name": "점의 평행이동",
+  "difficulty": 0.71,
+  "status": "D",
+  "step": null,
+  "reason": "A-001 과 같다 — 표기에 이름($f$)을 붙였을 뿐이다",
+  "대표": [
+   "A-001"
+  ]
+ },
+ {
+  "id": "C-003",
+  "source": "유형반복R 3번",
+  "canon": "T01",
+  "canon_name": "점의 평행이동",
+  "difficulty": 1.4,
+  "status": "D",
+  "step": null,
+  "reason": "A-002 와 같다 — 두 점의 짝으로 이동을 읽어 적용한다",
+  "대표": [
+   "A-002"
+  ]
+ },
+ {
+  "id": "C-004",
+  "source": "유형반복R 4번",
+  "canon": "T02",
+  "canon_name": "도형의 평행이동 — 직선",
+  "difficulty": 1.18,
+  "status": "D",
+  "step": null,
+  "reason": "옮긴 «점»이 직선 위에 있는 문제다 — B-005(T01)와 같다",
+  "대표": [
+   "B-005"
+  ]
+ },
+ {
+  "id": "C-008",
+  "source": "유형반복R 8번",
+  "canon": "T02",
+  "canon_name": "도형의 평행이동 — 직선",
+  "difficulty": 1.85,
+  "status": "D",
+  "step": null,
+  "reason": "A-005 와 같다 — 옮긴 직선이 x축 위 한 점에서 수직으로 만난다",
+  "대표": [
+   "A-005"
+  ]
+ },
+ {
+  "id": "C-009",
+  "source": "유형반복R 9번",
+  "canon": "T03",
+  "canon_name": "도형의 평행이동 — 원",
+  "difficulty": 1.51,
+  "status": "D",
+  "step": null,
+  "reason": "A-006 과 같다 — 옮긴 원이 $x^2+y^2=r^2$ 이 되는 같은 대입",
+  "대표": [
+   "A-006"
+  ]
+ },
+ {
+  "id": "C-011",
+  "source": "유형반복R 11번",
+  "canon": "T03",
+  "canon_name": "도형의 평행이동 — 원",
+  "difficulty": 2.67,
+  "status": "D",
+  "step": null,
+  "reason": "A-024 와 같다 — 두 직선에 동시에 접하는 조건",
+  "대표": [
+   "A-024"
+  ]
+ },
+ {
+  "id": "C-016",
+  "source": "유형반복R 16번",
+  "canon": "T15",
+  "canon_name": "이동의 활용 (넓이·교점 등)",
+  "difficulty": 7.22,
+  "status": "D",
+  "step": null,
+  "reason": "B-018 과 같다 — 옮긴 곡선과 직선의 교점을 다룬다",
+  "대표": [
+   "B-018"
+  ]
+ },
+ {
+  "id": "C-019",
+  "source": "유형반복R 19번",
+  "canon": "T05",
+  "canon_name": "점의 대칭이동 (x축·y축·원점·y=x)",
+  "difficulty": 3.68,
+  "status": "D",
+  "step": null,
+  "reason": "C-017 과 같다 — 세 대칭점의 좌표를 구해 거리를 재는 것이고, 외접원 넓이는 그 거리에서 바로 나온다",
+  "대표": [
+   "C-017"
+  ]
+ },
+ {
+  "id": "C-021",
+  "source": "유형반복R 21번",
+  "canon": "T06",
+  "canon_name": "도형의 대칭이동 — 직선",
+  "difficulty": 1.83,
+  "status": "D",
+  "step": null,
+  "reason": "B-023(대칭) 과 A-005(T02, 수직 조건)로 나뉜다",
+  "대표": [
+   "B-023",
+   "A-005"
+  ]
+ },
+ {
+  "id": "C-022",
+  "source": "유형반복R 22번",
+  "canon": "T06",
+  "canon_name": "도형의 대칭이동 — 직선",
+  "difficulty": 2.28,
+  "status": "D",
+  "step": null,
+  "reason": "$x$ 축 대칭과 $y$ 축 대칭의 결과가 «평행»해지고, 그 사이 거리를 재는 것은 B-009(T02)가 담당한다",
+  "대표": [
+   "B-009"
+  ]
+ },
+ {
+  "id": "C-023",
+  "source": "유형반복R 23번",
+  "canon": "T09",
+  "canon_name": "평행이동과 대칭이동의 결합",
+  "difficulty": 2.03,
+  "status": "D",
+  "step": null,
+  "reason": "A-013 의 약한 판이다 — 「일치」 대신 「그 점을 다시 지난다」일 뿐이고 세우는 식이 같다",
+  "대표": [
+   "A-013"
+  ]
+ },
+ {
+  "id": "C-026",
+  "source": "유형반복R 26번",
+  "canon": "T09",
+  "canon_name": "평행이동과 대칭이동의 결합",
+  "difficulty": 2.32,
+  "status": "D",
+  "step": null,
+  "reason": "B-031 과 같다 — 옮긴 중심이 직선 위에 있다는 조건을 대입할 뿐이다",
+  "대표": [
+   "B-031"
+  ]
+ },
+ {
+  "id": "C-028",
+  "source": "유형반복R 28번",
+  "canon": "T07",
+  "canon_name": "도형의 대칭이동 — 원",
+  "difficulty": 4.56,
+  "status": "D",
+  "step": null,
+  "reason": "두 대칭상 위의 점 사이 거리로 D-009(T13, 두 원 위 점 사이 거리)가 담는다",
+  "대표": [
+   "D-009"
+  ]
+ },
+ {
+  "id": "C-031",
+  "source": "유형반복R 31번",
+  "canon": "T08",
+  "canon_name": "도형의 대칭이동 — 포물선",
+  "difficulty": 3.85,
+  "status": "D",
+  "step": null,
+  "reason": "$x$ 축 -> $y$ 축 연속 대칭 뒤 «직선과 만난다» — 연속 이동은 T09, 만남 조건은 A-029 가 담당한다",
+  "대표": [
+   "A-029"
+  ]
+ },
+ {
+  "id": "C-036",
+  "source": "유형반복R 36번",
+  "canon": "T09",
+  "canon_name": "평행이동과 대칭이동의 결합",
+  "difficulty": 7.42,
+  "status": "D",
+  "step": null,
+  "reason": "원 위의 점을 옮겨 두 정점과의 거리를 재는 문제다 — A-055(T13)가 같은 구조를 담는다",
+  "대표": [
+   "A-055"
+  ]
+ },
+ {
+  "id": "C-037",
+  "source": "유형반복R 37번",
+  "canon": "T03",
+  "canon_name": "도형의 평행이동 — 원",
+  "difficulty": 5.34,
+  "status": "D",
+  "step": null,
+  "reason": "A-021(원과 직선의 접함) 과 T09(대칭 후 관계)로 나뉜다",
+  "대표": [
+   "A-021"
+  ]
+ },
+ {
+  "id": "C-040",
+  "source": "유형반복R 40번",
+  "canon": "T10",
+  "canon_name": "$f(x,y)=0$ 꼴 도형의 이동",
+  "difficulty": 4.66,
+  "status": "D",
+  "step": null,
+  "reason": "B-039 와 같다 — 두 도형의 관계를 나타내는 식을 고른다",
+  "대표": [
+   "B-039"
+  ]
+ },
+ {
+  "id": "C-041",
+  "source": "유형반복R 41번",
+  "canon": "T10",
+  "canon_name": "$f(x,y)=0$ 꼴 도형의 이동",
+  "difficulty": 5.41,
+  "status": "D",
+  "step": null,
+  "reason": "A-035 와 같다 — 변환 도형 둘을 그려 넓이를 잰다",
+  "대표": [
+   "A-035"
+  ]
+ },
+ {
+  "id": "C-043",
+  "source": "유형반복R 43번",
+  "canon": "T11",
+  "canon_name": "점 $(a,b)$ 에 대한 대칭이동",
+  "difficulty": 3.49,
+  "status": "D",
+  "step": null,
+  "reason": "C-042(중점 관계) 와 C-027(현의 길이)로 나뉜다",
+  "대표": [
+   "C-042",
+   "C-027"
+  ]
+ },
+ {
+  "id": "C-044",
+  "source": "유형반복R 44번",
+  "canon": "T11",
+  "canon_name": "점 $(a,b)$ 에 대한 대칭이동",
+  "difficulty": 5.39,
+  "status": "D",
+  "step": null,
+  "reason": "A-013(T09) 과 같다 — 이어서 옮긴 뒤 «원래 도형이 그 점을 다시 지난다»는 조건을 세운다",
+  "대표": [
+   "A-013"
+  ]
+ },
+ {
+  "id": "C-046",
+  "source": "유형반복R 46번",
+  "canon": "T11",
+  "canon_name": "점 $(a,b)$ 에 대한 대칭이동",
+  "difficulty": 6.04,
+  "status": "D",
+  "step": null,
+  "reason": "원의 점 대칭은 «중심만» 옮기는 것(C-025, T07)이고, 원 위 점과의 거리 최대는 B-049(T13)가 담는다",
+  "대표": [
+   "C-025",
+   "B-049"
+  ]
+ },
+ {
+  "id": "C-050",
+  "source": "유형반복R 50번",
+  "canon": "T12",
+  "canon_name": "직선 $y=ax+b$ 에 대한 대칭이동",
+  "difficulty": 5.65,
+  "status": "D",
+  "step": null,
+  "reason": "A-042(직선 대칭) 뒤에 y축 대칭을 이어 붙인 것 — 결합은 T09 가 담당한다",
+  "대표": [
+   "A-042"
+  ]
+ },
+ {
+  "id": "C-052",
+  "source": "유형반복R 52번",
+  "canon": "T12",
+  "canon_name": "직선 $y=ax+b$ 에 대한 대칭이동",
+  "difficulty": 3.78,
+  "status": "D",
+  "step": null,
+  "reason": "C-047 과 같다 — 축의 미지수를 역추적하는 같은 사고",
+  "대표": [
+   "C-047"
+  ]
+ },
+ {
+  "id": "C-054",
+  "source": "유형반복R 54번",
+  "canon": "T13",
+  "canon_name": "대칭이동을 이용한 최단 거리",
+  "difficulty": 9.68,
+  "status": "D",
+  "step": null,
+  "reason": "A-058(T12) 과 같다 — 이차함수 위 두 점이 직선에 대칭. 대칭축의 기울기를 쓰는 같은 사고",
+  "대표": [
+   "A-058"
+  ]
+ },
+ {
+  "id": "C-055",
+  "source": "유형반복R 55번",
+  "canon": "T13",
+  "canon_name": "대칭이동을 이용한 최단 거리",
+  "difficulty": 4.24,
+  "status": "D",
+  "step": null,
+  "reason": "B-045 와 같다 — 거치는 직선이 $y=x$ 일 뿐. $y=x$ 대칭은 T06 에서 이미 익힌다",
+  "대표": [
+   "B-045"
+  ]
+ },
+ {
+  "id": "C-057",
+  "source": "유형반복R 57번",
+  "canon": "T13",
+  "canon_name": "대칭이동을 이용한 최단 거리",
+  "difficulty": 4.37,
+  "status": "D",
+  "step": null,
+  "reason": "B-049 와 같다 — 원 위 점 + 축 위 점",
+  "대표": [
+   "B-049"
+  ]
+ },
+ {
+  "id": "C-058",
+  "source": "유형반복R 58번",
+  "canon": "T13",
+  "canon_name": "대칭이동을 이용한 최단 거리",
+  "difficulty": 6.69,
+  "status": "D",
+  "step": null,
+  "reason": "두 직선을 거치므로 A-046 과 같다 — 거치는 직선 하나가 $y=2x-1$ 인 것은 T12(일반 직선 대칭)가 담당한다",
+  "대표": [
+   "A-046"
+  ]
+ },
+ {
+  "id": "C-059",
+  "source": "유형반복R 59번",
+  "canon": "T13",
+  "canon_name": "대칭이동을 이용한 최단 거리",
+  "difficulty": 9.03,
+  "status": "D",
+  "step": null,
+  "reason": "둘레를 길로 바꾸면(A-047) 동점 둘이 서로 다른 직선 위인 A-046 배치가 된다",
+  "대표": [
+   "A-047",
+   "A-046"
+  ]
+ },
+ {
+  "id": "C-060",
+  "source": "유형반복R 60번",
+  "canon": "T12",
+  "canon_name": "직선 $y=ax+b$ 에 대한 대칭이동",
+  "difficulty": 8.1,
+  "status": "D",
+  "step": null,
+  "reason": "(1) 평행이동 (2) 대칭이동을 차례로 묻는 서술형 — C-048 과 T01 로 나뉜다. 소문항이 단계를 나눠 줘 새 발상이 없다",
+  "대표": [
+   "C-048"
+  ]
+ },
+ {
+  "id": "C-061",
+  "source": "유형반복R 61번",
+  "canon": "T07",
+  "canon_name": "도형의 대칭이동 — 원",
+  "difficulty": 7.22,
+  "status": "D",
+  "step": null,
+  "reason": "(1) 원의 방정식 (2) 대칭이동을 차례로 묻는 서술형 — C-025 와 T03 로 나뉜다",
+  "대표": [
+   "C-025"
+  ]
+ },
+ {
+  "id": "C-063",
+  "source": "유형반복R 63번",
+  "canon": "T13",
+  "canon_name": "대칭이동을 이용한 최단 거리",
+  "difficulty": 9.51,
+  "status": "D",
+  "step": null,
+  "reason": "A-047 과 같다 — x축 위 동점 하나. 서술형일 뿐이다",
+  "대표": [
+   "A-047"
+  ]
+ },
+ {
+  "id": "C-068",
+  "source": "유형반복R 68번",
+  "canon": "T15",
+  "canon_name": "이동의 활용 (넓이·교점 등)",
+  "difficulty": 8.01,
+  "status": "D",
+  "step": null,
+  "reason": "A-026 과 같다 — 삼각형을 평행이동해 넓이를 본다",
+  "대표": [
+   "A-026"
+  ]
+ },
+ {
+  "id": "C-069",
+  "source": "유형반복R 69번",
+  "canon": "T13",
+  "canon_name": "대칭이동을 이용한 최단 거리",
+  "difficulty": 7.83,
+  "status": "D",
+  "step": null,
+  "reason": "A-036 과 같다 — 이동량 $(m,n)$ 이 조건에 묶이고 $m^2+n^2$ 을 잰다",
+  "대표": [
+   "A-036"
+  ]
+ },
+ {
+  "id": "C-070",
+  "source": "유형반복R 70번",
+  "canon": "T13",
+  "canon_name": "대칭이동을 이용한 최단 거리",
+  "difficulty": 6.52,
+  "status": "D",
+  "step": null,
+  "reason": "A-054 와 같다 — $\\bar{PQ}=\\sqrt5$ 로 묶인 두 점",
+  "대표": [
+   "A-054"
+  ]
+ },
+ {
+  "id": "C-071",
+  "source": "유형반복R 71번",
+  "canon": "T13",
+  "canon_name": "대칭이동을 이용한 최단 거리",
+  "difficulty": 7.84,
+  "status": "D",
+  "step": null,
+  "reason": "A-046 을 네 구간으로 늘린 것 — 정점마다 대칭시키는 규칙이 그대로 반복된다",
+  "대표": [
+   "A-046"
+  ]
+ },
+ {
+  "id": "C-073",
+  "source": "유형반복R 73번",
+  "canon": "T13",
+  "canon_name": "대칭이동을 이용한 최단 거리",
+  "difficulty": 9.56,
+  "status": "D",
+  "step": null,
+  "reason": "D-029 와 같다 — 삼각형 세 변 위의 세 점. 변의 길이가 수치로 주어질 뿐이다",
+  "대표": [
+   "D-029"
+  ]
+ },
+ {
+  "id": "D-004",
+  "source": "절대등급 4번",
+  "canon": "T12",
+  "canon_name": "직선 $y=ax+b$ 에 대한 대칭이동",
+  "difficulty": 2.06,
+  "status": "D",
+  "step": null,
+  "reason": "C-051 과 같다 — 두 점이 직선에 대칭이라는 같은 두 조건",
+  "대표": [
+   "C-051"
+  ]
+ },
+ {
+  "id": "D-005",
+  "source": "절대등급 5번",
+  "canon": "T13",
+  "canon_name": "대칭이동을 이용한 최단 거리",
+  "difficulty": 3.14,
+  "status": "D",
+  "step": null,
+  "reason": "B-060 과 같다 — 이동량이 만족하는 직선을 세우고 원점과의 거리를 잰다",
+  "대표": [
+   "B-060"
+  ]
+ },
+ {
+  "id": "D-007",
+  "source": "절대등급 7번",
+  "canon": "T06",
+  "canon_name": "도형의 대칭이동 — 직선",
+  "difficulty": 2.23,
+  "status": "D",
+  "step": null,
+  "reason": "원점 -> $y=x$ 연속 대칭 뒤 «원의 둘레를 이등분» — A-011(T09)이 같은 조건을 담고 연속 이동은 그쪽이 담당한다",
+  "대표": [
+   "A-011"
+  ]
+ },
+ {
+  "id": "D-010",
+  "source": "절대등급 10번",
+  "canon": "T12",
+  "canon_name": "직선 $y=ax+b$ 에 대한 대칭이동",
+  "difficulty": 3.88,
+  "status": "D",
+  "step": null,
+  "reason": "C-053 과 같다 — 두 원의 대칭축을 역추적한다",
+  "대표": [
+   "C-053"
+  ]
+ },
+ {
+  "id": "D-011",
+  "source": "절대등급 11번",
+  "canon": "T03",
+  "canon_name": "도형의 평행이동 — 원",
+  "difficulty": 2.97,
+  "status": "D",
+  "step": null,
+  "reason": "D-006 과 같다 — 두 원의 위치 관계로 이동량을 묶는다",
+  "대표": [
+   "D-006"
+  ]
+ },
+ {
+  "id": "D-012",
+  "source": "절대등급 12번",
+  "canon": "T13",
+  "canon_name": "대칭이동을 이용한 최단 거리",
+  "difficulty": 5.32,
+  "status": "D",
+  "step": null,
+  "reason": "B-045 와 같다 — 좌표만 다르다",
+  "대표": [
+   "B-045"
+  ]
+ },
+ {
+  "id": "D-013",
+  "source": "절대등급 13번",
+  "canon": "T13",
+  "canon_name": "대칭이동을 이용한 최단 거리",
+  "difficulty": 5.14,
+  "status": "D",
+  "step": null,
+  "reason": "A-049 와 같다 — 직사각형 안, 내분점만 다르다",
+  "대표": [
+   "A-049"
+  ]
+ },
+ {
+  "id": "D-014",
+  "source": "절대등급 14번",
+  "canon": "T06",
+  "canon_name": "도형의 대칭이동 — 직선",
+  "difficulty": 4.04,
+  "status": "D",
+  "step": null,
+  "reason": "A-028 과 같다 — 대칭축이 원점일 뿐이고 $x,y$ 에 부호를 넣어 식이 그대로인지 보는 같은 판정",
+  "대표": [
+   "A-028"
+  ]
+ },
+ {
+  "id": "D-016",
+  "source": "절대등급 16번",
+  "canon": "T03",
+  "canon_name": "도형의 평행이동 — 원",
+  "difficulty": 3.68,
+  "status": "D",
+  "step": null,
+  "reason": "A-002(T01, 점 -> 점 이동을 읽는다) 와 A-006(원 옮기기)으로 나뉜다",
+  "대표": [
+   "A-002",
+   "A-006"
+  ]
+ },
+ {
+  "id": "D-018",
+  "source": "절대등급 18번",
+  "canon": "T13",
+  "canon_name": "대칭이동을 이용한 최단 거리",
+  "difficulty": 6.49,
+  "status": "D",
+  "step": null,
+  "reason": "D-009(두 원) 와 B-049(점과 원)로 나뉜다",
+  "대표": [
+   "D-009",
+   "B-049"
+  ]
+ },
+ {
+  "id": "D-019",
+  "source": "절대등급 19번",
+  "canon": "T12",
+  "canon_name": "직선 $y=ax+b$ 에 대한 대칭이동",
+  "difficulty": 5.06,
+  "status": "D",
+  "step": null,
+  "reason": "$y$ 축 대칭 -> $y=-x$ 대칭 뒤 «원의 넓이를 이등분» — A-011(T09)과 같은 조건이고 결합은 그쪽이 담당한다",
+  "대표": [
+   "A-011"
+  ]
+ },
+ {
+  "id": "D-020",
+  "source": "절대등급 20번",
+  "canon": "T12",
+  "canon_name": "직선 $y=ax+b$ 에 대한 대칭이동",
+  "difficulty": 6.84,
+  "status": "D",
+  "step": null,
+  "reason": "C-048 과 같다 — 축이 $x+y-2=0$ 일 뿐이다",
+  "대표": [
+   "C-048"
+  ]
+ },
+ {
+  "id": "D-021",
+  "source": "절대등급 21번",
+  "canon": "T12",
+  "canon_name": "직선 $y=ax+b$ 에 대한 대칭이동",
+  "difficulty": 5.74,
+  "status": "D",
+  "step": null,
+  "reason": "A-058 과 같다 — 곡선이 $y=x^2$ 일 뿐 세우는 두 조건이 같다",
+  "대표": [
+   "A-058"
+  ]
+ },
+ {
+  "id": "D-024",
+  "source": "절대등급 24번",
+  "canon": "T15",
+  "canon_name": "이동의 활용 (넓이·교점 등)",
+  "difficulty": 10.43,
+  "status": "D",
+  "step": null,
+  "reason": "A-061 과 같다 — 두 도형을 옮겨 겹치는 부분을 본다",
+  "대표": [
+   "A-061"
+  ]
+ },
+ {
+  "id": "D-026",
+  "source": "절대등급 26번",
+  "canon": "T13",
+  "canon_name": "대칭이동을 이용한 최단 거리",
+  "difficulty": 10.94,
+  "status": "D",
+  "step": null,
+  "reason": "A-046 을 세 직선으로 늘린 것 — 늘어난 만큼 대칭을 더 할 뿐이다",
+  "대표": [
+   "A-046"
+  ]
+ },
+ {
+  "id": "D-027",
+  "source": "절대등급 27번",
+  "canon": "T13",
+  "canon_name": "대칭이동을 이용한 최단 거리",
+  "difficulty": 8.71,
+  "status": "D",
+  "step": null,
+  "reason": "A-049(도형 안 최단) + A-054(고정 길이 걷어내기)로 나뉜다 — 둘을 겹쳤을 뿐 새 발상이 없다",
+  "대표": [
+   "A-049",
+   "A-054"
+  ]
+ },
+ {
+  "id": "D-028",
+  "source": "절대등급 28번",
+  "canon": "T10",
+  "canon_name": "$f(x,y)=0$ 꼴 도형의 이동",
+  "difficulty": 6.01,
+  "status": "D",
+  "step": null,
+  "reason": "C-039 와 같다 — $f(y,\\ -x+1)=0$ 의 축 교환",
+  "대표": [
+   "C-039"
+  ]
+ }
+]

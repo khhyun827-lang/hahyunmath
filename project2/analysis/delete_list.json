@@ -1,0 +1,2501 @@
+[
+ {
+  "id": "A-005",
+  "source": "고쟁이 5번",
+  "canon": "T03",
+  "canon_name": "유한·무한집합과 원소의 개수",
+  "difficulty": 3.26,
+  "status": "D",
+  "step": null,
+  "reason": "$n(A)$ 의 뜻을 판정하는 것으로 C-013(T21)이 담당한다",
+  "대표": [
+   "C-013"
+  ]
+ },
+ {
+  "id": "A-015",
+  "source": "고쟁이 15번",
+  "canon": "T15",
+  "canon_name": "벤다이어그램",
+  "difficulty": 2.33,
+  "status": "D",
+  "step": null,
+  "reason": "D-006 과 같다 — 연산 결과를 보기에서 고르는 것만 다르다",
+  "대표": [
+   "D-006"
+  ]
+ },
+ {
+  "id": "A-016",
+  "source": "고쟁이 16번",
+  "canon": "T15",
+  "canon_name": "벤다이어그램",
+  "difficulty": 3.11,
+  "status": "D",
+  "step": null,
+  "reason": "D-006 과 같다 — 연산 여러 개를 차례로 구할 뿐이다",
+  "대표": [
+   "D-006"
+  ]
+ },
+ {
+  "id": "A-017",
+  "source": "고쟁이 17번",
+  "canon": "T15",
+  "canon_name": "벤다이어그램",
+  "difficulty": 3,
+  "status": "D",
+  "step": null,
+  "reason": "A-018 과 같다 — 조건을 그림에 그려 참·거짓을 가른다",
+  "대표": [
+   "A-018"
+  ]
+ },
+ {
+  "id": "A-034",
+  "source": "고쟁이 34번",
+  "canon": "T09",
+  "canon_name": "부분집합의 개수",
+  "difficulty": 1.47,
+  "status": "D",
+  "step": null,
+  "reason": "원소를 «반드시 넣고 빼는» 조건으로 A-032·C-049(T10)가 담당한다",
+  "대표": [
+   "A-032",
+   "C-049"
+  ]
+ },
+ {
+  "id": "A-040",
+  "source": "고쟁이 40번",
+  "canon": "T03",
+  "canon_name": "유한·무한집합과 원소의 개수",
+  "difficulty": 2.05,
+  "status": "D",
+  "step": null,
+  "reason": "$A_m=\\{x \\mid x \\leq \\sqrt m\\}$ 의 개수로 C-033(T07)이 담당한다",
+  "대표": [
+   "C-033"
+  ]
+ },
+ {
+  "id": "A-044",
+  "source": "고쟁이 44번",
+  "canon": "T08",
+  "canon_name": "서로 같은 집합",
+  "difficulty": 4.89,
+  "status": "D",
+  "step": null,
+  "reason": "$A \\subset B$ 가 성립할 조건으로 B-015(T07)가 담당한다",
+  "대표": [
+   "B-015"
+  ]
+ },
+ {
+  "id": "A-045",
+  "source": "고쟁이 45번",
+  "canon": "T07",
+  "canon_name": "포함 관계가 성립할 조건 (미지수)",
+  "difficulty": 1.79,
+  "status": "D",
+  "step": null,
+  "reason": "C-029 와 같다 — 조건을 만족하는 자연수를 센다",
+  "대표": [
+   "C-029"
+  ]
+ },
+ {
+  "id": "A-048",
+  "source": "고쟁이 48번",
+  "canon": "T22",
+  "canon_name": "원소의 개수의 최댓값·최솟값",
+  "difficulty": 8.17,
+  "status": "D",
+  "step": null,
+  "reason": "A-010(T08) 과 같다 — 원소의 미지수를 교집합 조건으로 확정한다",
+  "대표": [
+   "A-010"
+  ]
+ },
+ {
+  "id": "A-049",
+  "source": "고쟁이 49번",
+  "canon": "T11",
+  "canon_name": "부분집합의 원소의 합·곱",
+  "difficulty": 8.61,
+  "status": "D",
+  "step": null,
+  "reason": "A-047 과 같다 — 연산 결과의 합 조건에서 집합을 정한다",
+  "대표": [
+   "A-047"
+  ]
+ },
+ {
+  "id": "A-065",
+  "source": "고쟁이 65번",
+  "canon": "T22",
+  "canon_name": "원소의 개수의 최댓값·최솟값",
+  "difficulty": 11.05,
+  "status": "D",
+  "step": null,
+  "reason": "A-064 와 같다 — 「어느 것도 아닌」은 여집합이고 세는 법은 같다",
+  "대표": [
+   "A-064"
+  ]
+ },
+ {
+  "id": "A-074",
+  "source": "고쟁이 74번",
+  "canon": "T10",
+  "canon_name": "조건이 있는 부분집합의 개수",
+  "difficulty": 5.47,
+  "status": "D",
+  "step": null,
+  "reason": "A-073 과 같다 — $(A\\cup B)\\cap X=X$, $(A\\cap B)\\cup X=X$ 도 같은 번역이다",
+  "대표": [
+   "A-073"
+  ]
+ },
+ {
+  "id": "A-077",
+  "source": "고쟁이 77번",
+  "canon": "T10",
+  "canon_name": "조건이 있는 부분집합의 개수",
+  "difficulty": 3.76,
+  "status": "D",
+  "step": null,
+  "reason": "A-073 과 같다",
+  "대표": [
+   "A-073"
+  ]
+ },
+ {
+  "id": "A-078",
+  "source": "고쟁이 78번",
+  "canon": "T12",
+  "canon_name": "합집합과 교집합",
+  "difficulty": 6.57,
+  "status": "D",
+  "step": null,
+  "reason": "C-072(T10) 와 같다 — 두 부분집합의 «순서쌍»을 조건에 맞춰 센다",
+  "대표": [
+   "C-072"
+  ]
+ },
+ {
+  "id": "A-083",
+  "source": "고쟁이 83번",
+  "canon": "T10",
+  "canon_name": "조건이 있는 부분집합의 개수",
+  "difficulty": 10.05,
+  "status": "D",
+  "step": null,
+  "reason": "C-064(T09) 와 같다 — 부분집합 «전체»에 걸쳐 원소의 합을 더하는 같은 틀이다",
+  "대표": [
+   "C-064"
+  ]
+ },
+ {
+  "id": "A-084",
+  "source": "고쟁이 84번",
+  "canon": "T10",
+  "canon_name": "조건이 있는 부분집합의 개수",
+  "difficulty": 7.65,
+  "status": "D",
+  "step": null,
+  "reason": "C-053 과 같다 — 조건에서 집합을 먼저 만든 뒤 부분집합을 센다",
+  "대표": [
+   "C-053"
+  ]
+ },
+ {
+  "id": "A-093",
+  "source": "고쟁이 93번",
+  "canon": "T11",
+  "canon_name": "부분집합의 원소의 합·곱",
+  "difficulty": 11,
+  "status": "D",
+  "step": null,
+  "reason": "$B=\\{(x+k)/2 \\mid x \\in A\\}$ 로 A-091(T22)의 «상(像) 관계»와 같다",
+  "대표": [
+   "A-091"
+  ]
+ },
+ {
+  "id": "A-097",
+  "source": "고쟁이 97번",
+  "canon": "T09",
+  "canon_name": "부분집합의 개수",
+  "difficulty": 6.19,
+  "status": "D",
+  "step": null,
+  "reason": "C-064 와 같다 — 크기가 2인 부분집합 전체에 걸친 합",
+  "대표": [
+   "C-064"
+  ]
+ },
+ {
+  "id": "B-001",
+  "source": "올림포스 1번",
+  "canon": "T01",
+  "canon_name": "집합의 뜻과 원소",
+  "difficulty": 0.42,
+  "status": "D",
+  "step": null,
+  "reason": "A-001 과 같다",
+  "대표": [
+   "A-001"
+  ]
+ },
+ {
+  "id": "B-007",
+  "source": "올림포스 7번",
+  "canon": "T03",
+  "canon_name": "유한·무한집합과 원소의 개수",
+  "difficulty": 4.62,
+  "status": "D",
+  "step": null,
+  "reason": "격자점의 개수로 C-016(T21)이 담당한다",
+  "대표": [
+   "C-016"
+  ]
+ },
+ {
+  "id": "B-008",
+  "source": "올림포스 8번",
+  "canon": "T03",
+  "canon_name": "유한·무한집합과 원소의 개수",
+  "difficulty": 5.63,
+  "status": "D",
+  "step": null,
+  "reason": "A-004 와 같다 — 조건에서 원소를 나열해 센다",
+  "대표": [
+   "A-004"
+  ]
+ },
+ {
+  "id": "B-009",
+  "source": "올림포스 9번",
+  "canon": "T03",
+  "canon_name": "유한·무한집합과 원소의 개수",
+  "difficulty": 3.28,
+  "status": "D",
+  "step": null,
+  "reason": "A-004 와 같다",
+  "대표": [
+   "A-004"
+  ]
+ },
+ {
+  "id": "B-011",
+  "source": "올림포스 11번",
+  "canon": "T05",
+  "canon_name": "기호 ∈, ⊂의 구별",
+  "difficulty": 1.55,
+  "status": "D",
+  "step": null,
+  "reason": "A-009 와 같다",
+  "대표": [
+   "A-009"
+  ]
+ },
+ {
+  "id": "B-012",
+  "source": "올림포스 12번",
+  "canon": "T05",
+  "canon_name": "기호 ∈, ⊂의 구별",
+  "difficulty": 2.82,
+  "status": "D",
+  "step": null,
+  "reason": "A-009 와 같다 — 원소로 든 집합에 대한 판정",
+  "대표": [
+   "A-009"
+  ]
+ },
+ {
+  "id": "B-014",
+  "source": "올림포스 14번",
+  "canon": "T06",
+  "canon_name": "부분집합과 포함 관계",
+  "difficulty": 1.85,
+  "status": "D",
+  "step": null,
+  "reason": "B-013 과 같다 — 두 집합을 만들어 포함 관계를 본다",
+  "대표": [
+   "B-013"
+  ]
+ },
+ {
+  "id": "B-020",
+  "source": "올림포스 20번",
+  "canon": "T06",
+  "canon_name": "부분집합과 포함 관계",
+  "difficulty": 3.08,
+  "status": "D",
+  "step": null,
+  "reason": "멱집합 $P=\\{X \\mid X \\subset A\\}$ 의 성질로 A-086(T12)이 담당한다",
+  "대표": [
+   "A-086"
+  ]
+ },
+ {
+  "id": "B-021",
+  "source": "올림포스 21번",
+  "canon": "T08",
+  "canon_name": "서로 같은 집합",
+  "difficulty": 4.61,
+  "status": "D",
+  "step": null,
+  "reason": "A-010 과 같다 — 원소 둘씩인 두 집합을 짝짓는다",
+  "대표": [
+   "A-010"
+  ]
+ },
+ {
+  "id": "B-025",
+  "source": "올림포스 25번",
+  "canon": "T09",
+  "canon_name": "부분집합의 개수",
+  "difficulty": 2.76,
+  "status": "D",
+  "step": null,
+  "reason": "C-049(T10) 와 같다 — 넣을 것과 뺄 것이 지정된다",
+  "대표": [
+   "C-049"
+  ]
+ },
+ {
+  "id": "B-026",
+  "source": "올림포스 26번",
+  "canon": "T09",
+  "canon_name": "부분집합의 개수",
+  "difficulty": 0.91,
+  "status": "D",
+  "step": null,
+  "reason": "A-033(T10) 와 같다 — 「또는」은 여사건으로 센다",
+  "대표": [
+   "A-033"
+  ]
+ },
+ {
+  "id": "B-027",
+  "source": "올림포스 27번",
+  "canon": "T09",
+  "canon_name": "부분집합의 개수",
+  "difficulty": 1.37,
+  "status": "D",
+  "step": null,
+  "reason": "A-037 의 여사건 쪽이다 — 「모든 원소가 홀수」가 곧 빼는 대상이다",
+  "대표": [
+   "A-037"
+  ]
+ },
+ {
+  "id": "B-029",
+  "source": "올림포스 29번",
+  "canon": "T09",
+  "canon_name": "부분집합의 개수",
+  "difficulty": 3.07,
+  "status": "D",
+  "step": null,
+  "reason": "C-049(T10) 와 같다 — 포함·제외에 미지수 $k$ 가 붙는다",
+  "대표": [
+   "C-049"
+  ]
+ },
+ {
+  "id": "B-031",
+  "source": "올림포스 31번",
+  "canon": "T10",
+  "canon_name": "조건이 있는 부분집합의 개수",
+  "difficulty": 1.78,
+  "status": "D",
+  "step": null,
+  "reason": "B-030(양끝 고정) 과 A-032(특정 원소 제외)로 나뉜다",
+  "대표": [
+   "B-030",
+   "A-032"
+  ]
+ },
+ {
+  "id": "B-032",
+  "source": "올림포스 32번",
+  "canon": "T10",
+  "canon_name": "조건이 있는 부분집합의 개수",
+  "difficulty": 2.04,
+  "status": "D",
+  "step": null,
+  "reason": "C-048 과 같다 — $k$ 가 미지수인 양끝 고정의 역추적",
+  "대표": [
+   "C-048"
+  ]
+ },
+ {
+  "id": "B-033",
+  "source": "올림포스 33번",
+  "canon": "T10",
+  "canon_name": "조건이 있는 부분집합의 개수",
+  "difficulty": 1.88,
+  "status": "D",
+  "step": null,
+  "reason": "B-030 과 같다 — $B \\subset X \\subset A$ 형태로 정리된다",
+  "대표": [
+   "B-030"
+  ]
+ },
+ {
+  "id": "B-034",
+  "source": "올림포스 34번",
+  "canon": "T10",
+  "canon_name": "조건이 있는 부분집합의 개수",
+  "difficulty": 1.52,
+  "status": "D",
+  "step": null,
+  "reason": "B-030 과 같다 — $\\{1\\} \\subset X \\subset A$ 에 원소 조건이 붙을 뿐이다",
+  "대표": [
+   "B-030"
+  ]
+ },
+ {
+  "id": "B-037",
+  "source": "올림포스 37번",
+  "canon": "T12",
+  "canon_name": "합집합과 교집합",
+  "difficulty": 1.42,
+  "status": "D",
+  "step": null,
+  "reason": "약수 집합의 교집합을 최대공약수로 옮기는 것으로 A-023(T19)이 담당한다",
+  "대표": [
+   "A-023"
+  ]
+ },
+ {
+  "id": "B-040",
+  "source": "올림포스 40번",
+  "canon": "T13",
+  "canon_name": "여집합과 차집합",
+  "difficulty": 2.67,
+  "status": "D",
+  "step": null,
+  "reason": "B-039 와 같다 — 약수·배수로 만든 집합의 차집합",
+  "대표": [
+   "B-039"
+  ]
+ },
+ {
+  "id": "B-044",
+  "source": "올림포스 44번",
+  "canon": "T14",
+  "canon_name": "서로소",
+  "difficulty": 1.66,
+  "status": "D",
+  "step": null,
+  "reason": "서로소인 «부분집합의 개수»를 세는 것으로 A-033(T10)이 담당한다",
+  "대표": [
+   "A-033"
+  ]
+ },
+ {
+  "id": "B-048",
+  "source": "올림포스 48번",
+  "canon": "T15",
+  "canon_name": "벤다이어그램",
+  "difficulty": 1.48,
+  "status": "D",
+  "step": null,
+  "reason": "A-021 과 같다 — 색칠한 부분과 같은 집합을 고른다",
+  "대표": [
+   "A-021"
+  ]
+ },
+ {
+  "id": "B-051",
+  "source": "올림포스 51번",
+  "canon": "T15",
+  "canon_name": "벤다이어그램",
+  "difficulty": 3.7,
+  "status": "D",
+  "step": null,
+  "reason": "A-022 와 같다",
+  "대표": [
+   "A-022"
+  ]
+ },
+ {
+  "id": "B-056",
+  "source": "올림포스 56번",
+  "canon": "T17",
+  "canon_name": "연산과 포함 관계의 동치",
+  "difficulty": 3.33,
+  "status": "D",
+  "step": null,
+  "reason": "B-070(T19) 와 같다 — 배수 집합의 교집합을 최소공배수로 옮겨 센다",
+  "대표": [
+   "B-070"
+  ]
+ },
+ {
+  "id": "B-057",
+  "source": "올림포스 57번",
+  "canon": "T17",
+  "canon_name": "연산과 포함 관계의 동치",
+  "difficulty": 4.96,
+  "status": "D",
+  "step": null,
+  "reason": "C-107 과 같다 — $A \\cup B=A$ 를 포함 관계로 읽는다",
+  "대표": [
+   "C-107"
+  ]
+ },
+ {
+  "id": "B-059",
+  "source": "올림포스 59번",
+  "canon": "T10",
+  "canon_name": "조건이 있는 부분집합의 개수",
+  "difficulty": 1.86,
+  "status": "D",
+  "step": null,
+  "reason": "A-073 과 같다",
+  "대표": [
+   "A-073"
+  ]
+ },
+ {
+  "id": "B-060",
+  "source": "올림포스 60번",
+  "canon": "T10",
+  "canon_name": "조건이 있는 부분집합의 개수",
+  "difficulty": 2.96,
+  "status": "D",
+  "step": null,
+  "reason": "A-073 과 같다",
+  "대표": [
+   "A-073"
+  ]
+ },
+ {
+  "id": "B-062",
+  "source": "올림포스 62번",
+  "canon": "T10",
+  "canon_name": "조건이 있는 부분집합의 개수",
+  "difficulty": 3.21,
+  "status": "D",
+  "step": null,
+  "reason": "A-073 과 같다",
+  "대표": [
+   "A-073"
+  ]
+ },
+ {
+  "id": "B-063",
+  "source": "올림포스 63번",
+  "canon": "T10",
+  "canon_name": "조건이 있는 부분집합의 개수",
+  "difficulty": 3.36,
+  "status": "D",
+  "step": null,
+  "reason": "A-073 과 같다",
+  "대표": [
+   "A-073"
+  ]
+ },
+ {
+  "id": "B-064",
+  "source": "올림포스 64번",
+  "canon": "T16",
+  "canon_name": "집합의 연산 법칙 (드모르간 포함)",
+  "difficulty": 3.02,
+  "status": "D",
+  "step": null,
+  "reason": "A-020 과 같다",
+  "대표": [
+   "A-020"
+  ]
+ },
+ {
+  "id": "B-065",
+  "source": "올림포스 65번",
+  "canon": "T16",
+  "canon_name": "집합의 연산 법칙 (드모르간 포함)",
+  "difficulty": 1.51,
+  "status": "D",
+  "step": null,
+  "reason": "A-020 과 같다",
+  "대표": [
+   "A-020"
+  ]
+ },
+ {
+  "id": "B-066",
+  "source": "올림포스 66번",
+  "canon": "T16",
+  "canon_name": "집합의 연산 법칙 (드모르간 포함)",
+  "difficulty": 4.5,
+  "status": "D",
+  "step": null,
+  "reason": "$A-B$ 등 칸이 주어지고 집합을 복원하는 것으로 A-022(T15)가 담당한다",
+  "대표": [
+   "A-022"
+  ]
+ },
+ {
+  "id": "B-067",
+  "source": "올림포스 67번",
+  "canon": "T16",
+  "canon_name": "집합의 연산 법칙 (드모르간 포함)",
+  "difficulty": 4.02,
+  "status": "D",
+  "step": null,
+  "reason": "A-020 과 같다",
+  "대표": [
+   "A-020"
+  ]
+ },
+ {
+  "id": "B-068",
+  "source": "올림포스 68번",
+  "canon": "T16",
+  "canon_name": "집합의 연산 법칙 (드모르간 포함)",
+  "difficulty": 3.17,
+  "status": "D",
+  "step": null,
+  "reason": "A-020 과 같다",
+  "대표": [
+   "A-020"
+  ]
+ },
+ {
+  "id": "B-071",
+  "source": "올림포스 71번",
+  "canon": "T19",
+  "canon_name": "배수·약수의 집합",
+  "difficulty": 2.96,
+  "status": "D",
+  "step": null,
+  "reason": "A-051 과 같다 — 같은 꼴의 양끝 역추적",
+  "대표": [
+   "A-051"
+  ]
+ },
+ {
+  "id": "B-073",
+  "source": "올림포스 73번",
+  "canon": "T19",
+  "canon_name": "배수·약수의 집합",
+  "difficulty": 4.74,
+  "status": "D",
+  "step": null,
+  "reason": "C-128 과 같다 — 약수 집합의 성질을 보기에서 판정한다",
+  "대표": [
+   "C-128"
+  ]
+ },
+ {
+  "id": "B-078",
+  "source": "올림포스 78번",
+  "canon": "T18",
+  "canon_name": "새로 약속된 연산",
+  "difficulty": 3.25,
+  "status": "D",
+  "step": null,
+  "reason": "$A \\diamond B=\\{ab \\mid a\\in A, b\\in B\\}$ 는 «새 집합을 만드는» 것이라 C-017(T04)이 담당한다",
+  "대표": [
+   "C-017"
+  ]
+ },
+ {
+  "id": "B-079",
+  "source": "올림포스 79번",
+  "canon": "T18",
+  "canon_name": "새로 약속된 연산",
+  "difficulty": 4.02,
+  "status": "D",
+  "step": null,
+  "reason": "A-088 과 같다 — 정리하면 $A-B$ 가 되는 같은 사고",
+  "대표": [
+   "A-088"
+  ]
+ },
+ {
+  "id": "B-080",
+  "source": "올림포스 80번",
+  "canon": "T18",
+  "canon_name": "새로 약속된 연산",
+  "difficulty": 3.86,
+  "status": "D",
+  "step": null,
+  "reason": "대칭차를 다르게 쓴 것으로 A-058(T17)이 담당한다",
+  "대표": [
+   "A-058"
+  ]
+ },
+ {
+  "id": "B-081",
+  "source": "올림포스 81번",
+  "canon": "T21",
+  "canon_name": "원소의 개수 공식",
+  "difficulty": 2.57,
+  "status": "D",
+  "step": null,
+  "reason": "A-025 와 같다 — 주어진 칸이 $n(B-A)$ 일 뿐이다",
+  "대표": [
+   "A-025"
+  ]
+ },
+ {
+  "id": "B-082",
+  "source": "올림포스 82번",
+  "canon": "T21",
+  "canon_name": "원소의 개수 공식",
+  "difficulty": 3.44,
+  "status": "D",
+  "step": null,
+  "reason": "A-026 과 같다 — $A \\subset B^c$ 이 곧 서로소다",
+  "대표": [
+   "A-026"
+  ]
+ },
+ {
+  "id": "B-083",
+  "source": "올림포스 83번",
+  "canon": "T21",
+  "canon_name": "원소의 개수 공식",
+  "difficulty": 2.94,
+  "status": "D",
+  "step": null,
+  "reason": "A-026 과 같다",
+  "대표": [
+   "A-026"
+  ]
+ },
+ {
+  "id": "B-084",
+  "source": "올림포스 84번",
+  "canon": "T21",
+  "canon_name": "원소의 개수 공식",
+  "difficulty": 3.17,
+  "status": "D",
+  "step": null,
+  "reason": "A-026 과 같다",
+  "대표": [
+   "A-026"
+  ]
+ },
+ {
+  "id": "B-087",
+  "source": "올림포스 87번",
+  "canon": "T23",
+  "canon_name": "원소의 개수의 활용",
+  "difficulty": 4.48,
+  "status": "D",
+  "step": null,
+  "reason": "A-061 과 같다 — 어느 것도 갖지 않은 사람이 주어진다",
+  "대표": [
+   "A-061"
+  ]
+ },
+ {
+  "id": "B-088",
+  "source": "올림포스 88번",
+  "canon": "T23",
+  "canon_name": "원소의 개수의 활용",
+  "difficulty": 2.96,
+  "status": "D",
+  "step": null,
+  "reason": "A-028 과 같다 — 합집합과 교집합에서 한쪽을 구한다",
+  "대표": [
+   "A-028"
+  ]
+ },
+ {
+  "id": "B-090",
+  "source": "올림포스 90번",
+  "canon": "T22",
+  "canon_name": "원소의 개수의 최댓값·최솟값",
+  "difficulty": 4.49,
+  "status": "D",
+  "step": null,
+  "reason": "A-063 과 같다 — 숫자만 다르다",
+  "대표": [
+   "A-063"
+  ]
+ },
+ {
+  "id": "B-091",
+  "source": "올림포스 91번",
+  "canon": "T22",
+  "canon_name": "원소의 개수의 최댓값·최솟값",
+  "difficulty": 5.17,
+  "status": "D",
+  "step": null,
+  "reason": "A-064 와 같다",
+  "대표": [
+   "A-064"
+  ]
+ },
+ {
+  "id": "B-093",
+  "source": "올림포스 93번",
+  "canon": "T22",
+  "canon_name": "원소의 개수의 최댓값·최솟값",
+  "difficulty": 3.78,
+  "status": "D",
+  "step": null,
+  "reason": "$x \\in S$ 이면 $n/x \\in S$ 로 A-079(T10)의 «곱 짝짓기»와 같다 — 짝의 개수에서 $n$ 을 역추적하는 것만 다르다",
+  "대표": [
+   "A-079"
+  ]
+ },
+ {
+  "id": "B-094",
+  "source": "올림포스 94번",
+  "canon": "T22",
+  "canon_name": "원소의 개수의 최댓값·최솟값",
+  "difficulty": 2.84,
+  "status": "D",
+  "step": null,
+  "reason": "B-015(T07) 와 같다 — 원소가 구간에 들어갈 조건으로 미지수를 정한다",
+  "대표": [
+   "B-015"
+  ]
+ },
+ {
+  "id": "B-098",
+  "source": "올림포스 98번",
+  "canon": "T11",
+  "canon_name": "부분집합의 원소의 합·곱",
+  "difficulty": 5.64,
+  "status": "D",
+  "step": null,
+  "reason": "A-047 과 같다 — 연산 조건에서 집합을 정한다",
+  "대표": [
+   "A-047"
+  ]
+ },
+ {
+  "id": "B-099",
+  "source": "올림포스 99번",
+  "canon": "T19",
+  "canon_name": "배수·약수의 집합",
+  "difficulty": 4.77,
+  "status": "D",
+  "step": null,
+  "reason": "A-051 과 같다",
+  "대표": [
+   "A-051"
+  ]
+ },
+ {
+  "id": "B-101",
+  "source": "올림포스 101번",
+  "canon": "T14",
+  "canon_name": "서로소",
+  "difficulty": 6.77,
+  "status": "D",
+  "step": null,
+  "reason": "세 집합의 개수 공식으로 B-086(T21)이 담당한다",
+  "대표": [
+   "B-086"
+  ]
+ },
+ {
+  "id": "B-102",
+  "source": "올림포스 102번",
+  "canon": "T22",
+  "canon_name": "원소의 개수의 최댓값·최솟값",
+  "difficulty": 7.6,
+  "status": "D",
+  "step": null,
+  "reason": "A-064 와 같다",
+  "대표": [
+   "A-064"
+  ]
+ },
+ {
+  "id": "B-104",
+  "source": "올림포스 104번",
+  "canon": "T17",
+  "canon_name": "연산과 포함 관계의 동치",
+  "difficulty": 4.27,
+  "status": "D",
+  "step": null,
+  "reason": "조건을 포함 관계로 읽어 부분집합을 «세는» 것으로 A-073(T10)이 담당한다",
+  "대표": [
+   "A-073"
+  ]
+ },
+ {
+  "id": "B-106",
+  "source": "올림포스 106번",
+  "canon": "T12",
+  "canon_name": "합집합과 교집합",
+  "difficulty": 4.41,
+  "status": "D",
+  "step": null,
+  "reason": "D-034 와 같다 — 합집합·교집합 조건에서 이차식의 계수를 찾는다",
+  "대표": [
+   "D-034"
+  ]
+ },
+ {
+  "id": "B-108",
+  "source": "올림포스 108번",
+  "canon": "T11",
+  "canon_name": "부분집합의 원소의 합·곱",
+  "difficulty": 10.79,
+  "status": "D",
+  "step": null,
+  "reason": "A-047 과 같다",
+  "대표": [
+   "A-047"
+  ]
+ },
+ {
+  "id": "B-110",
+  "source": "올림포스 110번",
+  "canon": "T23",
+  "canon_name": "원소의 개수의 활용",
+  "difficulty": 8.39,
+  "status": "D",
+  "step": null,
+  "reason": "B-089 와 같다 — 조사 대상이 합집합으로 주어진다",
+  "대표": [
+   "B-089"
+  ]
+ },
+ {
+  "id": "C-001",
+  "source": "유형반복R 1번",
+  "canon": "T01",
+  "canon_name": "집합의 뜻과 원소",
+  "difficulty": 0.3,
+  "status": "D",
+  "step": null,
+  "reason": "A-001 과 같다",
+  "대표": [
+   "A-001"
+  ]
+ },
+ {
+  "id": "C-002",
+  "source": "유형반복R 2번",
+  "canon": "T01",
+  "canon_name": "집합의 뜻과 원소",
+  "difficulty": 1.6,
+  "status": "D",
+  "step": null,
+  "reason": "B-002 와 같다 — 나머지 조건으로 원소를 판정한다",
+  "대표": [
+   "B-002"
+  ]
+ },
+ {
+  "id": "C-003",
+  "source": "유형반복R 3번",
+  "canon": "T01",
+  "canon_name": "집합의 뜻과 원소",
+  "difficulty": 0.94,
+  "status": "D",
+  "step": null,
+  "reason": "B-003 과 같다 — 수 체계에서의 소속 판정",
+  "대표": [
+   "B-003"
+  ]
+ },
+ {
+  "id": "C-005",
+  "source": "유형반복R 5번",
+  "canon": "T02",
+  "canon_name": "집합의 표현 (원소나열법·조건제시법)",
+  "difficulty": 1.48,
+  "status": "D",
+  "step": null,
+  "reason": "B-004 와 같다 — 벤다이어그램을 조건제시법으로 옮긴다",
+  "대표": [
+   "B-004"
+  ]
+ },
+ {
+  "id": "C-007",
+  "source": "유형반복R 7번",
+  "canon": "T02",
+  "canon_name": "집합의 표현 (원소나열법·조건제시법)",
+  "difficulty": 0.93,
+  "status": "D",
+  "step": null,
+  "reason": "B-005 와 같다 — 같은 조건의 집합에서 원소를 판정한다",
+  "대표": [
+   "B-005"
+  ]
+ },
+ {
+  "id": "C-012",
+  "source": "유형반복R 12번",
+  "canon": "T21",
+  "canon_name": "원소의 개수 공식",
+  "difficulty": 1.28,
+  "status": "D",
+  "step": null,
+  "reason": "A-029 와 같다 — 범위 안 배수의 개수를 세어 연산한다",
+  "대표": [
+   "A-029"
+  ]
+ },
+ {
+  "id": "C-021",
+  "source": "유형반복R 21번",
+  "canon": "T04",
+  "canon_name": "새로 정의된 집합 구하기",
+  "difficulty": 2.3,
+  "status": "D",
+  "step": null,
+  "reason": "C-017 과 같다 — 두 집합에서 뽑아 곱한다. 미지수가 붙을 뿐이다",
+  "대표": [
+   "C-017"
+  ]
+ },
+ {
+  "id": "C-022",
+  "source": "유형반복R 22번",
+  "canon": "T05",
+  "canon_name": "기호 ∈, ⊂의 구별",
+  "difficulty": 4.37,
+  "status": "D",
+  "step": null,
+  "reason": "A-009 와 같다",
+  "대표": [
+   "A-009"
+  ]
+ },
+ {
+  "id": "C-023",
+  "source": "유형반복R 23번",
+  "canon": "T05",
+  "canon_name": "기호 ∈, ⊂의 구별",
+  "difficulty": 1.48,
+  "status": "D",
+  "step": null,
+  "reason": "A-008 과 같다 — 원소나열 집합에서 기호를 판정한다",
+  "대표": [
+   "A-008"
+  ]
+ },
+ {
+  "id": "C-024",
+  "source": "유형반복R 24번",
+  "canon": "T05",
+  "canon_name": "기호 ∈, ⊂의 구별",
+  "difficulty": 2.51,
+  "status": "D",
+  "step": null,
+  "reason": "B-010 과 같다 — 벤다이어그램에서 기호를 판정한다",
+  "대표": [
+   "B-010"
+  ]
+ },
+ {
+  "id": "C-027",
+  "source": "유형반복R 27번",
+  "canon": "T06",
+  "canon_name": "부분집합과 포함 관계",
+  "difficulty": 1.54,
+  "status": "D",
+  "step": null,
+  "reason": "B-013 과 같다 — 조건으로 만든 세 집합의 포함 관계",
+  "대표": [
+   "B-013"
+  ]
+ },
+ {
+  "id": "C-028",
+  "source": "유형반복R 28번",
+  "canon": "T06",
+  "canon_name": "부분집합과 포함 관계",
+  "difficulty": 2.15,
+  "status": "D",
+  "step": null,
+  "reason": "B-013 과 같다",
+  "대표": [
+   "B-013"
+  ]
+ },
+ {
+  "id": "C-030",
+  "source": "유형반복R 30번",
+  "canon": "T07",
+  "canon_name": "포함 관계가 성립할 조건 (미지수)",
+  "difficulty": 1.33,
+  "status": "D",
+  "step": null,
+  "reason": "C-029 와 같다 — 범위를 구해 정수를 센다(합을 묻는 것만 다르다)",
+  "대표": [
+   "C-029"
+  ]
+ },
+ {
+  "id": "C-031",
+  "source": "유형반복R 31번",
+  "canon": "T07",
+  "canon_name": "포함 관계가 성립할 조건 (미지수)",
+  "difficulty": 3.59,
+  "status": "D",
+  "step": null,
+  "reason": "B-015 와 같다 — 원소를 짝지어 미지수를 정한다",
+  "대표": [
+   "B-015"
+  ]
+ },
+ {
+  "id": "C-035",
+  "source": "유형반복R 35번",
+  "canon": "T06",
+  "canon_name": "부분집합과 포함 관계",
+  "difficulty": 4.48,
+  "status": "D",
+  "step": null,
+  "reason": "A-086(T12) 과 같다 — 멱집합",
+  "대표": [
+   "A-086"
+  ]
+ },
+ {
+  "id": "C-039",
+  "source": "유형반복R 39번",
+  "canon": "T08",
+  "canon_name": "서로 같은 집합",
+  "difficulty": 1.19,
+  "status": "D",
+  "step": null,
+  "reason": "B-022 와 같다 — 해집합과 원소나열 집합을 맞춘다",
+  "대표": [
+   "B-022"
+  ]
+ },
+ {
+  "id": "C-040",
+  "source": "유형반복R 40번",
+  "canon": "T08",
+  "canon_name": "서로 같은 집합",
+  "difficulty": 4.59,
+  "status": "D",
+  "step": null,
+  "reason": "A-010 과 같다",
+  "대표": [
+   "A-010"
+  ]
+ },
+ {
+  "id": "C-042",
+  "source": "유형반복R 42번",
+  "canon": "T09",
+  "canon_name": "부분집합의 개수",
+  "difficulty": 1.14,
+  "status": "D",
+  "step": null,
+  "reason": "A-030 과 같다 — 부분집합·진부분집합의 개수를 각각 센다",
+  "대표": [
+   "A-030"
+  ]
+ },
+ {
+  "id": "C-046",
+  "source": "유형반복R 46번",
+  "canon": "T10",
+  "canon_name": "조건이 있는 부분집합의 개수",
+  "difficulty": 3.25,
+  "status": "D",
+  "step": null,
+  "reason": "B-030 과 같다 — 방정식·부등식으로 집합을 먼저 구하는 것은 T20 이 담당한다",
+  "대표": [
+   "B-030"
+  ]
+ },
+ {
+  "id": "C-047",
+  "source": "유형반복R 47번",
+  "canon": "T10",
+  "canon_name": "조건이 있는 부분집합의 개수",
+  "difficulty": 2.25,
+  "status": "D",
+  "step": null,
+  "reason": "A-073 과 같다 — 약수 집합으로 양끝을 만든다",
+  "대표": [
+   "A-073"
+  ]
+ },
+ {
+  "id": "C-051",
+  "source": "유형반복R 51번",
+  "canon": "T10",
+  "canon_name": "조건이 있는 부분집합의 개수",
+  "difficulty": 2.12,
+  "status": "D",
+  "step": null,
+  "reason": "A-033 과 같다 — 「2 또는 5 를 갖는다」는 «둘 다 안 갖는 것»을 전체에서 빼는 것이고, 그 세기는 A-076 이 담는다",
+  "대표": [
+   "A-033",
+   "A-076"
+  ]
+ },
+ {
+  "id": "C-054",
+  "source": "유형반복R 54번",
+  "canon": "T10",
+  "canon_name": "조건이 있는 부분집합의 개수",
+  "difficulty": 5.16,
+  "status": "D",
+  "step": null,
+  "reason": "C-052 와 같다 — $n(A)=4$ 로 크기를 고정하고 조합으로 센다",
+  "대표": [
+   "C-052"
+  ]
+ },
+ {
+  "id": "C-058",
+  "source": "유형반복R 58번",
+  "canon": "T10",
+  "canon_name": "조건이 있는 부분집합의 개수",
+  "difficulty": 4.25,
+  "status": "D",
+  "step": null,
+  "reason": "A-079 와 같다 — $64/x$ 로 짝을 짓는다",
+  "대표": [
+   "A-079"
+  ]
+ },
+ {
+  "id": "C-061",
+  "source": "유형반복R 61번",
+  "canon": "T11",
+  "canon_name": "부분집합의 원소의 합·곱",
+  "difficulty": 2.68,
+  "status": "D",
+  "step": null,
+  "reason": "크기가 3인 부분집합 «전체»에 걸친 합으로 C-064(T09)가 담당한다",
+  "대표": [
+   "C-064"
+  ]
+ },
+ {
+  "id": "C-062",
+  "source": "유형반복R 62번",
+  "canon": "T11",
+  "canon_name": "부분집합의 원소의 합·곱",
+  "difficulty": 3.27,
+  "status": "D",
+  "step": null,
+  "reason": "C-064(T09) 와 같다 — 모든 부분집합에 걸친 합",
+  "대표": [
+   "C-064"
+  ]
+ },
+ {
+  "id": "C-063",
+  "source": "유형반복R 63번",
+  "canon": "T11",
+  "canon_name": "부분집합의 원소의 합·곱",
+  "difficulty": 9.54,
+  "status": "D",
+  "step": null,
+  "reason": "$x \\in X$ 이면 $36/x \\in X$ 로 A-079(T10)의 곱 짝짓기와 같다",
+  "대표": [
+   "A-079"
+  ]
+ },
+ {
+  "id": "C-066",
+  "source": "유형반복R 66번",
+  "canon": "T11",
+  "canon_name": "부분집합의 원소의 합·곱",
+  "difficulty": 7.56,
+  "status": "D",
+  "step": null,
+  "reason": "B-076(T20) 과 같다 — 이차부등식 해집합의 겹침을 다룬다",
+  "대표": [
+   "B-076"
+  ]
+ },
+ {
+  "id": "C-068",
+  "source": "유형반복R 68번",
+  "canon": "T11",
+  "canon_name": "부분집합의 원소의 합·곱",
+  "difficulty": 8.14,
+  "status": "D",
+  "step": null,
+  "reason": "C-052(T10) 와 같다 — 크기를 고정하고 조건에 맞춰 조합으로 센다",
+  "대표": [
+   "C-052"
+  ]
+ },
+ {
+  "id": "C-070",
+  "source": "유형반복R 70번",
+  "canon": "T18",
+  "canon_name": "새로 약속된 연산",
+  "difficulty": 5.23,
+  "status": "D",
+  "step": null,
+  "reason": "$N(S)$ 를 소수의 개수로 정의하는 것으로 A-081(T22)이 담당한다",
+  "대표": [
+   "A-081"
+  ]
+ },
+ {
+  "id": "C-073",
+  "source": "유형반복R 73번",
+  "canon": "T09",
+  "canon_name": "부분집합의 개수",
+  "difficulty": 10.48,
+  "status": "D",
+  "step": null,
+  "reason": "C-064 와 같다 — 모든 진부분집합에 걸친 합",
+  "대표": [
+   "C-064"
+  ]
+ },
+ {
+  "id": "C-077",
+  "source": "유형반복R 77번",
+  "canon": "T11",
+  "canon_name": "부분집합의 원소의 합·곱",
+  "difficulty": 12.42,
+  "status": "D",
+  "step": null,
+  "reason": "C-064(T09) 와 같다",
+  "대표": [
+   "C-064"
+  ]
+ },
+ {
+  "id": "C-081",
+  "source": "유형반복R 81번",
+  "canon": "T12",
+  "canon_name": "합집합과 교집합",
+  "difficulty": 2.28,
+  "status": "D",
+  "step": null,
+  "reason": "D-015 와 같다 — 조건제시법으로 쓴 세 집합의 연산",
+  "대표": [
+   "D-015"
+  ]
+ },
+ {
+  "id": "C-084",
+  "source": "유형반복R 84번",
+  "canon": "T14",
+  "canon_name": "서로소",
+  "difficulty": 3.46,
+  "status": "D",
+  "step": null,
+  "reason": "B-042 와 같다",
+  "대표": [
+   "B-042"
+  ]
+ },
+ {
+  "id": "C-085",
+  "source": "유형반복R 85번",
+  "canon": "T14",
+  "canon_name": "서로소",
+  "difficulty": 3.71,
+  "status": "D",
+  "step": null,
+  "reason": "B-042 와 같다 — 서로소인 것을 보기에서 센다",
+  "대표": [
+   "B-042"
+  ]
+ },
+ {
+  "id": "C-086",
+  "source": "유형반복R 86번",
+  "canon": "T14",
+  "canon_name": "서로소",
+  "difficulty": 3,
+  "status": "D",
+  "step": null,
+  "reason": "A-033(T10) 과 같다 — 서로소인 부분집합을 센다",
+  "대표": [
+   "A-033"
+  ]
+ },
+ {
+  "id": "C-087",
+  "source": "유형반복R 87번",
+  "canon": "T13",
+  "canon_name": "여집합과 차집합",
+  "difficulty": 2.27,
+  "status": "D",
+  "step": null,
+  "reason": "B-039 와 같다 — 주어진 두 칸에서 나머지를 구한다",
+  "대표": [
+   "B-039"
+  ]
+ },
+ {
+  "id": "C-088",
+  "source": "유형반복R 88번",
+  "canon": "T13",
+  "canon_name": "여집합과 차집합",
+  "difficulty": 3.12,
+  "status": "D",
+  "step": null,
+  "reason": "B-039 와 같다",
+  "대표": [
+   "B-039"
+  ]
+ },
+ {
+  "id": "C-089",
+  "source": "유형반복R 89번",
+  "canon": "T13",
+  "canon_name": "여집합과 차집합",
+  "difficulty": 3.64,
+  "status": "D",
+  "step": null,
+  "reason": "벤다이어그램에서 칸을 읽어 합을 구하는 것으로 B-047(T15)이 담당한다",
+  "대표": [
+   "B-047"
+  ]
+ },
+ {
+  "id": "C-091",
+  "source": "유형반복R 91번",
+  "canon": "T12",
+  "canon_name": "합집합과 교집합",
+  "difficulty": 2.09,
+  "status": "D",
+  "step": null,
+  "reason": "$A-B$, $A \\cap B$ 로 집합을 복원하는 것은 A-022(T15)가 벤다이어그램으로 담는다",
+  "대표": [
+   "A-022"
+  ]
+ },
+ {
+  "id": "C-092",
+  "source": "유형반복R 92번",
+  "canon": "T12",
+  "canon_name": "합집합과 교집합",
+  "difficulty": 2.75,
+  "status": "D",
+  "step": null,
+  "reason": "A-022(T15) 와 같다 — 주어진 칸에서 집합을 복원한다",
+  "대표": [
+   "A-022"
+  ]
+ },
+ {
+  "id": "C-094",
+  "source": "유형반복R 94번",
+  "canon": "T12",
+  "canon_name": "합집합과 교집합",
+  "difficulty": 5.47,
+  "status": "D",
+  "step": null,
+  "reason": "$A \\cup X^c = U$ 를 포함 관계로 읽어 세는 것으로 A-073(T10)이 담당한다",
+  "대표": [
+   "A-073"
+  ]
+ },
+ {
+  "id": "C-096",
+  "source": "유형반복R 96번",
+  "canon": "T12",
+  "canon_name": "합집합과 교집합",
+  "difficulty": 5.01,
+  "status": "D",
+  "step": null,
+  "reason": "B-036 과 같다 — 원소의 미지수를 교집합 조건으로 정한다",
+  "대표": [
+   "B-036"
+  ]
+ },
+ {
+  "id": "C-097",
+  "source": "유형반복R 97번",
+  "canon": "T13",
+  "canon_name": "여집합과 차집합",
+  "difficulty": 1.56,
+  "status": "D",
+  "step": null,
+  "reason": "B-041 과 같다 — 미지수 원소를 차집합 조건으로 정한다",
+  "대표": [
+   "B-041"
+  ]
+ },
+ {
+  "id": "C-098",
+  "source": "유형반복R 98번",
+  "canon": "T13",
+  "canon_name": "여집합과 차집합",
+  "difficulty": 2.16,
+  "status": "D",
+  "step": null,
+  "reason": "B-041 과 같다 — 대칭차로 주어질 뿐이다",
+  "대표": [
+   "B-041"
+  ]
+ },
+ {
+  "id": "C-100",
+  "source": "유형반복R 100번",
+  "canon": "T15",
+  "canon_name": "벤다이어그램",
+  "difficulty": 1.61,
+  "status": "D",
+  "step": null,
+  "reason": "C-102 와 같다 — 식에 맞는 벤다이어그램을 고른다",
+  "대표": [
+   "C-102"
+  ]
+ },
+ {
+  "id": "C-101",
+  "source": "유형반복R 101번",
+  "canon": "T15",
+  "canon_name": "벤다이어그램",
+  "difficulty": 1.17,
+  "status": "D",
+  "step": null,
+  "reason": "C-102 와 같다",
+  "대표": [
+   "C-102"
+  ]
+ },
+ {
+  "id": "C-103",
+  "source": "유형반복R 103번",
+  "canon": "T16",
+  "canon_name": "집합의 연산 법칙 (드모르간 포함)",
+  "difficulty": 2.7,
+  "status": "D",
+  "step": null,
+  "reason": "A-013 과 같다 — 항상 옳은 것을 고른다",
+  "대표": [
+   "A-013"
+  ]
+ },
+ {
+  "id": "C-108",
+  "source": "유형반복R 108번",
+  "canon": "T17",
+  "canon_name": "연산과 포함 관계의 동치",
+  "difficulty": 4.49,
+  "status": "D",
+  "step": null,
+  "reason": "B-058 과 같다 — 좌변을 정리해 포함 관계를 끌어낸다",
+  "대표": [
+   "B-058"
+  ]
+ },
+ {
+  "id": "C-109",
+  "source": "유형반복R 109번",
+  "canon": "T10",
+  "canon_name": "조건이 있는 부분집합의 개수",
+  "difficulty": 3.82,
+  "status": "D",
+  "step": null,
+  "reason": "A-073 과 같다 — 연산식을 포함 관계로 읽는 같은 번역",
+  "대표": [
+   "A-073"
+  ]
+ },
+ {
+  "id": "C-110",
+  "source": "유형반복R 110번",
+  "canon": "T10",
+  "canon_name": "조건이 있는 부분집합의 개수",
+  "difficulty": 4.21,
+  "status": "D",
+  "step": null,
+  "reason": "A-073 과 같다 — $A \\cap X=A$ 를 $A \\subset X$ 로 읽는다",
+  "대표": [
+   "A-073"
+  ]
+ },
+ {
+  "id": "C-111",
+  "source": "유형반복R 111번",
+  "canon": "T10",
+  "canon_name": "조건이 있는 부분집합의 개수",
+  "difficulty": 2.87,
+  "status": "D",
+  "step": null,
+  "reason": "A-076 과 같다 — 여사건으로 센다",
+  "대표": [
+   "A-076"
+  ]
+ },
+ {
+  "id": "C-112",
+  "source": "유형반복R 112번",
+  "canon": "T10",
+  "canon_name": "조건이 있는 부분집합의 개수",
+  "difficulty": 7.51,
+  "status": "D",
+  "step": null,
+  "reason": "A-073 과 같다",
+  "대표": [
+   "A-073"
+  ]
+ },
+ {
+  "id": "C-113",
+  "source": "유형반복R 113번",
+  "canon": "T10",
+  "canon_name": "조건이 있는 부분집합의 개수",
+  "difficulty": 2.9,
+  "status": "D",
+  "step": null,
+  "reason": "A-073 과 같다",
+  "대표": [
+   "A-073"
+  ]
+ },
+ {
+  "id": "C-114",
+  "source": "유형반복R 114번",
+  "canon": "T10",
+  "canon_name": "조건이 있는 부분집합의 개수",
+  "difficulty": 3.99,
+  "status": "D",
+  "step": null,
+  "reason": "A-073 과 같다",
+  "대표": [
+   "A-073"
+  ]
+ },
+ {
+  "id": "C-116",
+  "source": "유형반복R 116번",
+  "canon": "T16",
+  "canon_name": "집합의 연산 법칙 (드모르간 포함)",
+  "difficulty": 2.7,
+  "status": "D",
+  "step": null,
+  "reason": "A-020 과 같다",
+  "대표": [
+   "A-020"
+  ]
+ },
+ {
+  "id": "C-118",
+  "source": "유형반복R 118번",
+  "canon": "T16",
+  "canon_name": "집합의 연산 법칙 (드모르간 포함)",
+  "difficulty": 4.87,
+  "status": "D",
+  "step": null,
+  "reason": "A-020 과 같다",
+  "대표": [
+   "A-020"
+  ]
+ },
+ {
+  "id": "C-121",
+  "source": "유형반복R 121번",
+  "canon": "T16",
+  "canon_name": "집합의 연산 법칙 (드모르간 포함)",
+  "difficulty": 2.34,
+  "status": "D",
+  "step": null,
+  "reason": "C-120 과 같다 — 식을 정리해 같은 집합을 찾는다",
+  "대표": [
+   "C-120"
+  ]
+ },
+ {
+  "id": "C-123",
+  "source": "유형반복R 123번",
+  "canon": "T18",
+  "canon_name": "새로 약속된 연산",
+  "difficulty": 4.85,
+  "status": "D",
+  "step": null,
+  "reason": "A-058(T17) 과 같다 — 대칭차",
+  "대표": [
+   "A-058"
+  ]
+ },
+ {
+  "id": "C-124",
+  "source": "유형반복R 124번",
+  "canon": "T18",
+  "canon_name": "새로 약속된 연산",
+  "difficulty": 7.96,
+  "status": "D",
+  "step": null,
+  "reason": "A-088 과 같다",
+  "대표": [
+   "A-088"
+  ]
+ },
+ {
+  "id": "C-127",
+  "source": "유형반복R 127번",
+  "canon": "T19",
+  "canon_name": "배수·약수의 집합",
+  "difficulty": 4.51,
+  "status": "D",
+  "step": null,
+  "reason": "A-051 과 같다",
+  "대표": [
+   "A-051"
+  ]
+ },
+ {
+  "id": "C-129",
+  "source": "유형반복R 129번",
+  "canon": "T19",
+  "canon_name": "배수·약수의 집합",
+  "difficulty": 3.01,
+  "status": "D",
+  "step": null,
+  "reason": "B-072 와 같다 — 약수 집합의 연산 결과를 구한다",
+  "대표": [
+   "B-072"
+  ]
+ },
+ {
+  "id": "C-132",
+  "source": "유형반복R 132번",
+  "canon": "T20",
+  "canon_name": "방정식·부등식과 집합",
+  "difficulty": 8.73,
+  "status": "D",
+  "step": null,
+  "reason": "B-075 와 같다 — 해집합의 포함 관계로 계수를 정한다",
+  "대표": [
+   "B-075"
+  ]
+ },
+ {
+  "id": "C-133",
+  "source": "유형반복R 133번",
+  "canon": "T20",
+  "canon_name": "방정식·부등식과 집합",
+  "difficulty": 3.59,
+  "status": "D",
+  "step": null,
+  "reason": "B-077 과 같다 — 바깥쪽 구간과의 관계로 계수를 찾는다",
+  "대표": [
+   "B-077"
+  ]
+ },
+ {
+  "id": "C-135",
+  "source": "유형반복R 135번",
+  "canon": "T21",
+  "canon_name": "원소의 개수 공식",
+  "difficulty": 2.21,
+  "status": "D",
+  "step": null,
+  "reason": "A-025 와 같다 — 숫자만 다르다",
+  "대표": [
+   "A-025"
+  ]
+ },
+ {
+  "id": "C-136",
+  "source": "유형반복R 136번",
+  "canon": "T21",
+  "canon_name": "원소의 개수 공식",
+  "difficulty": 4.21,
+  "status": "D",
+  "step": null,
+  "reason": "A-025 와 같다",
+  "대표": [
+   "A-025"
+  ]
+ },
+ {
+  "id": "C-139",
+  "source": "유형반복R 139번",
+  "canon": "T22",
+  "canon_name": "원소의 개수의 최댓값·최솟값",
+  "difficulty": 8.01,
+  "status": "D",
+  "step": null,
+  "reason": "A-063 과 같다 — 숫자만 다르다",
+  "대표": [
+   "A-063"
+  ]
+ },
+ {
+  "id": "C-142",
+  "source": "유형반복R 142번",
+  "canon": "T23",
+  "canon_name": "원소의 개수의 활용",
+  "difficulty": 3.09,
+  "status": "D",
+  "step": null,
+  "reason": "A-028 과 같다",
+  "대표": [
+   "A-028"
+  ]
+ },
+ {
+  "id": "C-143",
+  "source": "유형반복R 143번",
+  "canon": "T23",
+  "canon_name": "원소의 개수의 활용",
+  "difficulty": 4.33,
+  "status": "D",
+  "step": null,
+  "reason": "A-028 과 같다",
+  "대표": [
+   "A-028"
+  ]
+ },
+ {
+  "id": "C-144",
+  "source": "유형반복R 144번",
+  "canon": "T23",
+  "canon_name": "원소의 개수의 활용",
+  "difficulty": 5.46,
+  "status": "D",
+  "step": null,
+  "reason": "A-028 과 같다",
+  "대표": [
+   "A-028"
+  ]
+ },
+ {
+  "id": "C-145",
+  "source": "유형반복R 145번",
+  "canon": "T23",
+  "canon_name": "원소의 개수의 활용",
+  "difficulty": 6.12,
+  "status": "D",
+  "step": null,
+  "reason": "A-068 과 같다 — 세 문제의 포함배제",
+  "대표": [
+   "A-068"
+  ]
+ },
+ {
+  "id": "C-147",
+  "source": "유형반복R 147번",
+  "canon": "T22",
+  "canon_name": "원소의 개수의 최댓값·최솟값",
+  "difficulty": 11.62,
+  "status": "D",
+  "step": null,
+  "reason": "A-064 와 같다",
+  "대표": [
+   "A-064"
+  ]
+ },
+ {
+  "id": "C-148",
+  "source": "유형반복R 148번",
+  "canon": "T22",
+  "canon_name": "원소의 개수의 최댓값·최솟값",
+  "difficulty": 6.56,
+  "status": "D",
+  "step": null,
+  "reason": "B-092 와 같다 — 신청자 수의 합만 주어진다",
+  "대표": [
+   "B-092"
+  ]
+ },
+ {
+  "id": "C-149",
+  "source": "유형반복R 149번",
+  "canon": "T22",
+  "canon_name": "원소의 개수의 최댓값·최솟값",
+  "difficulty": 9.74,
+  "status": "D",
+  "step": null,
+  "reason": "A-071 과 같다 — 세 장르, 정확히 둘에 드는 인원",
+  "대표": [
+   "A-071"
+  ]
+ },
+ {
+  "id": "C-151",
+  "source": "유형반복R 151번",
+  "canon": "T11",
+  "canon_name": "부분집합의 원소의 합·곱",
+  "difficulty": 11.4,
+  "status": "D",
+  "step": null,
+  "reason": "원소가 미지수인 두 집합을 맞추는 것으로 B-023(T08)이 담당한다",
+  "대표": [
+   "B-023"
+  ]
+ },
+ {
+  "id": "C-154",
+  "source": "유형반복R 154번",
+  "canon": "T18",
+  "canon_name": "새로 약속된 연산",
+  "difficulty": 8.64,
+  "status": "D",
+  "step": null,
+  "reason": "A-058(T17) 과 같다 — 대칭차",
+  "대표": [
+   "A-058"
+  ]
+ },
+ {
+  "id": "C-157",
+  "source": "유형반복R 157번",
+  "canon": "T19",
+  "canon_name": "배수·약수의 집합",
+  "difficulty": 9.87,
+  "status": "D",
+  "step": null,
+  "reason": "C-128 과 같다",
+  "대표": [
+   "C-128"
+  ]
+ },
+ {
+  "id": "C-159",
+  "source": "유형반복R 159번",
+  "canon": "T14",
+  "canon_name": "서로소",
+  "difficulty": 6.78,
+  "status": "D",
+  "step": null,
+  "reason": "B-105 와 같다 — 서로소를 소인수 조건으로 옮긴다",
+  "대표": [
+   "B-105"
+  ]
+ },
+ {
+  "id": "C-160",
+  "source": "유형반복R 160번",
+  "canon": "T12",
+  "canon_name": "합집합과 교집합",
+  "difficulty": 9.85,
+  "status": "D",
+  "step": null,
+  "reason": "A-100 과 같다 — 같은 조건의 집합족",
+  "대표": [
+   "A-100"
+  ]
+ },
+ {
+  "id": "C-161",
+  "source": "유형반복R 161번",
+  "canon": "T12",
+  "canon_name": "합집합과 교집합",
+  "difficulty": 9.76,
+  "status": "D",
+  "step": null,
+  "reason": "D-015 와 같다 — 조건제시법으로 쓴 두 집합의 연산",
+  "대표": [
+   "D-015"
+  ]
+ },
+ {
+  "id": "C-168",
+  "source": "유형반복R 168번",
+  "canon": "T20",
+  "canon_name": "방정식·부등식과 집합",
+  "difficulty": 9.22,
+  "status": "D",
+  "step": null,
+  "reason": "C-158 과 같다 — 이차함수의 계수를 집합 조건으로 정한다",
+  "대표": [
+   "C-158"
+  ]
+ },
+ {
+  "id": "D-002",
+  "source": "절대등급 2번",
+  "canon": "T04",
+  "canon_name": "새로 정의된 집합 구하기",
+  "difficulty": 5.1,
+  "status": "D",
+  "step": null,
+  "reason": "C-020 과 같다 — $i^n$ 의 주기를 찾아 새 집합을 만든다",
+  "대표": [
+   "C-020"
+  ]
+ },
+ {
+  "id": "D-004",
+  "source": "절대등급 4번",
+  "canon": "T18",
+  "canon_name": "새로 약속된 연산",
+  "difficulty": 1.28,
+  "status": "D",
+  "step": null,
+  "reason": "A-012 와 같다 — 표로 정의된 연산의 닫힘을 확인한다",
+  "대표": [
+   "A-012"
+  ]
+ },
+ {
+  "id": "D-007",
+  "source": "절대등급 7번",
+  "canon": "T19",
+  "canon_name": "배수·약수의 집합",
+  "difficulty": 2.84,
+  "status": "D",
+  "step": null,
+  "reason": "$n(A-B^c)$ 를 구하는 기본 연산으로 D-006(T15)이 담당한다",
+  "대표": [
+   "D-006"
+  ]
+ },
+ {
+  "id": "D-008",
+  "source": "절대등급 8번",
+  "canon": "T12",
+  "canon_name": "합집합과 교집합",
+  "difficulty": 1.72,
+  "status": "D",
+  "step": null,
+  "reason": "B-036 과 같다",
+  "대표": [
+   "B-036"
+  ]
+ },
+ {
+  "id": "D-009",
+  "source": "절대등급 9번",
+  "canon": "T15",
+  "canon_name": "벤다이어그램",
+  "difficulty": 1.86,
+  "status": "D",
+  "step": null,
+  "reason": "A-022 와 같다 — 한 칸이 주어지고 다른 칸을 구한다",
+  "대표": [
+   "A-022"
+  ]
+ },
+ {
+  "id": "D-011",
+  "source": "절대등급 11번",
+  "canon": "T15",
+  "canon_name": "벤다이어그램",
+  "difficulty": 2.18,
+  "status": "D",
+  "step": null,
+  "reason": "B-049 와 같다 — 세 집합의 연산 결과를 구한다",
+  "대표": [
+   "B-049"
+  ]
+ },
+ {
+  "id": "D-012",
+  "source": "절대등급 12번",
+  "canon": "T19",
+  "canon_name": "배수·약수의 집합",
+  "difficulty": 3.75,
+  "status": "D",
+  "step": null,
+  "reason": "A-051 과 같다 — 미지수 둘의 합의 최댓값을 묻는 것만 다르다",
+  "대표": [
+   "A-051"
+  ]
+ },
+ {
+  "id": "D-013",
+  "source": "절대등급 13번",
+  "canon": "T15",
+  "canon_name": "벤다이어그램",
+  "difficulty": 2.94,
+  "status": "D",
+  "step": null,
+  "reason": "A-022 와 같다 — 칸 여러 개가 주어질 뿐이다",
+  "대표": [
+   "A-022"
+  ]
+ },
+ {
+  "id": "D-014",
+  "source": "절대등급 14번",
+  "canon": "T13",
+  "canon_name": "여집합과 차집합",
+  "difficulty": 1.12,
+  "status": "D",
+  "step": null,
+  "reason": "B-039 와 같다",
+  "대표": [
+   "B-039"
+  ]
+ },
+ {
+  "id": "D-016",
+  "source": "절대등급 16번",
+  "canon": "T15",
+  "canon_name": "벤다이어그램",
+  "difficulty": 5.95,
+  "status": "D",
+  "step": null,
+  "reason": "A-010(T08) 과 같다 — 원소에 든 미지수를 확정하는 것이 본체다",
+  "대표": [
+   "A-010"
+  ]
+ },
+ {
+  "id": "D-018",
+  "source": "절대등급 18번",
+  "canon": "T16",
+  "canon_name": "집합의 연산 법칙 (드모르간 포함)",
+  "difficulty": 1.68,
+  "status": "D",
+  "step": null,
+  "reason": "C-120 과 같다",
+  "대표": [
+   "C-120"
+  ]
+ },
+ {
+  "id": "D-019",
+  "source": "절대등급 19번",
+  "canon": "T17",
+  "canon_name": "연산과 포함 관계의 동치",
+  "difficulty": 2.44,
+  "status": "D",
+  "step": null,
+  "reason": "B-058 과 같다",
+  "대표": [
+   "B-058"
+  ]
+ },
+ {
+  "id": "D-020",
+  "source": "절대등급 20번",
+  "canon": "T17",
+  "canon_name": "연산과 포함 관계의 동치",
+  "difficulty": 3.16,
+  "status": "D",
+  "step": null,
+  "reason": "B-058 과 같다 — $(A \\cup B^c)^c=B$ 를 드모르간으로 편다",
+  "대표": [
+   "B-058"
+  ]
+ },
+ {
+  "id": "D-022",
+  "source": "절대등급 22번",
+  "canon": "T15",
+  "canon_name": "벤다이어그램",
+  "difficulty": 1.21,
+  "status": "D",
+  "step": null,
+  "reason": "A-021 과 같다",
+  "대표": [
+   "A-021"
+  ]
+ },
+ {
+  "id": "D-023",
+  "source": "절대등급 23번",
+  "canon": "T12",
+  "canon_name": "합집합과 교집합",
+  "difficulty": 2.4,
+  "status": "D",
+  "step": null,
+  "reason": "세 집합의 대칭차로 A-090(T15)이 담는다",
+  "대표": [
+   "A-090"
+  ]
+ },
+ {
+  "id": "D-024",
+  "source": "절대등급 24번",
+  "canon": "T17",
+  "canon_name": "연산과 포함 관계의 동치",
+  "difficulty": 2.25,
+  "status": "D",
+  "step": null,
+  "reason": "A-058 과 같다 — $(X\\cup Y)-(X\\cap Y)$ 도 대칭차다",
+  "대표": [
+   "A-058"
+  ]
+ },
+ {
+  "id": "D-026",
+  "source": "절대등급 26번",
+  "canon": "T10",
+  "canon_name": "조건이 있는 부분집합의 개수",
+  "difficulty": 2.71,
+  "status": "D",
+  "step": null,
+  "reason": "A-073 과 같다 — $A \\cap X=\\varnothing$ 은 $X \\subset A^c$ 로 읽힌다",
+  "대표": [
+   "A-073"
+  ]
+ },
+ {
+  "id": "D-027",
+  "source": "절대등급 27번",
+  "canon": "T17",
+  "canon_name": "연산과 포함 관계의 동치",
+  "difficulty": 1.82,
+  "status": "D",
+  "step": null,
+  "reason": "A-073(T10) 과 같다 — $A \\cap X=X$ 를 $X \\subset A$ 로 읽는다",
+  "대표": [
+   "A-073"
+  ]
+ },
+ {
+  "id": "D-030",
+  "source": "절대등급 30번",
+  "canon": "T19",
+  "canon_name": "배수·약수의 집합",
+  "difficulty": 3.15,
+  "status": "D",
+  "step": null,
+  "reason": "$A \\cap X=A$ 를 포함 관계로 읽어 부분집합을 세는 것으로 A-073(T10)이 담당한다",
+  "대표": [
+   "A-073"
+  ]
+ },
+ {
+  "id": "D-031",
+  "source": "절대등급 31번",
+  "canon": "T10",
+  "canon_name": "조건이 있는 부분집합의 개수",
+  "difficulty": 5.68,
+  "status": "D",
+  "step": null,
+  "reason": "A-076 과 같다",
+  "대표": [
+   "A-076"
+  ]
+ },
+ {
+  "id": "D-035",
+  "source": "절대등급 35번",
+  "canon": "T21",
+  "canon_name": "원소의 개수 공식",
+  "difficulty": 2.83,
+  "status": "D",
+  "step": null,
+  "reason": "A-025 와 같다 — $n(A^c \\cap B^c)$ 를 전체에서 빼면 같은 계산이다",
+  "대표": [
+   "A-025"
+  ]
+ },
+ {
+  "id": "D-037",
+  "source": "절대등급 37번",
+  "canon": "T21",
+  "canon_name": "원소의 개수 공식",
+  "difficulty": 6.71,
+  "status": "D",
+  "step": null,
+  "reason": "모두 이용한 사람 수의 «최댓값·최솟값»으로 A-064(T22)가 담당한다",
+  "대표": [
+   "A-064"
+  ]
+ },
+ {
+  "id": "D-038",
+  "source": "절대등급 38번",
+  "canon": "T21",
+  "canon_name": "원소의 개수 공식",
+  "difficulty": 9.54,
+  "status": "D",
+  "step": null,
+  "reason": "한 문제도 못 맞힌 학생 수의 «최댓값·최솟값»으로 A-064(T22)가 담당한다",
+  "대표": [
+   "A-064"
+  ]
+ },
+ {
+  "id": "D-043",
+  "source": "절대등급 43번",
+  "canon": "T10",
+  "canon_name": "조건이 있는 부분집합의 개수",
+  "difficulty": 6.6,
+  "status": "D",
+  "step": null,
+  "reason": "A-079 와 같다 — $16/x$ 로 짝을 짓는다",
+  "대표": [
+   "A-079"
+  ]
+ },
+ {
+  "id": "D-044",
+  "source": "절대등급 44번",
+  "canon": "T04",
+  "canon_name": "새로 정의된 집합 구하기",
+  "difficulty": 3.88,
+  "status": "D",
+  "step": null,
+  "reason": "C-017 과 같다 — 두 집합에서 뽑아 더한다",
+  "대표": [
+   "C-017"
+  ]
+ },
+ {
+  "id": "D-047",
+  "source": "절대등급 47번",
+  "canon": "T16",
+  "canon_name": "집합의 연산 법칙 (드모르간 포함)",
+  "difficulty": 2.66,
+  "status": "D",
+  "step": null,
+  "reason": "C-120 과 같다",
+  "대표": [
+   "C-120"
+  ]
+ },
+ {
+  "id": "D-051",
+  "source": "절대등급 51번",
+  "canon": "T22",
+  "canon_name": "원소의 개수의 최댓값·최솟값",
+  "difficulty": 3.58,
+  "status": "D",
+  "step": null,
+  "reason": "C-126(T19) 와 같다 — 범위 안 배수 집합의 개수를 포함배제로 센다",
+  "대표": [
+   "C-126"
+  ]
+ },
+ {
+  "id": "D-053",
+  "source": "절대등급 53번",
+  "canon": "T19",
+  "canon_name": "배수·약수의 집합",
+  "difficulty": 6.39,
+  "status": "D",
+  "step": null,
+  "reason": "A-089 와 같다 — 서로소 집합의 성질을 보기에서 판정한다",
+  "대표": [
+   "A-089"
+  ]
+ },
+ {
+  "id": "D-054",
+  "source": "절대등급 54번",
+  "canon": "T15",
+  "canon_name": "벤다이어그램",
+  "difficulty": 4.77,
+  "status": "D",
+  "step": null,
+  "reason": "D-006 과 같다",
+  "대표": [
+   "D-006"
+  ]
+ },
+ {
+  "id": "D-055",
+  "source": "절대등급 55번",
+  "canon": "T09",
+  "canon_name": "부분집합의 개수",
+  "difficulty": 12.56,
+  "status": "D",
+  "step": null,
+  "reason": "A-030 과 같다",
+  "대표": [
+   "A-030"
+  ]
+ },
+ {
+  "id": "D-056",
+  "source": "절대등급 56번",
+  "canon": "T11",
+  "canon_name": "부분집합의 원소의 합·곱",
+  "difficulty": 5.03,
+  "status": "D",
+  "step": null,
+  "reason": "곱이 짝수인 것은 «모두 홀수»를 빼는 여사건으로 C-056(T10)이 담당한다",
+  "대표": [
+   "C-056"
+  ]
+ },
+ {
+  "id": "D-059",
+  "source": "절대등급 59번",
+  "canon": "T12",
+  "canon_name": "합집합과 교집합",
+  "difficulty": 7.01,
+  "status": "D",
+  "step": null,
+  "reason": "D-015 와 같다 — 원소가 주어진 집합의 연산",
+  "대표": [
+   "D-015"
+  ]
+ },
+ {
+  "id": "D-060",
+  "source": "절대등급 60번",
+  "canon": "T11",
+  "canon_name": "부분집합의 원소의 합·곱",
+  "difficulty": 7.65,
+  "status": "D",
+  "step": null,
+  "reason": "부분집합마다 «가장 큰 원소»를 모두 더하는 것으로 A-098(T22)이 담당한다",
+  "대표": [
+   "A-098"
+  ]
+ },
+ {
+  "id": "D-064",
+  "source": "절대등급 64번",
+  "canon": "T17",
+  "canon_name": "연산과 포함 관계의 동치",
+  "difficulty": 8.29,
+  "status": "D",
+  "step": null,
+  "reason": "A-058 과 같다 — 대칭차를 다른 식으로 쓴 것뿐이다",
+  "대표": [
+   "A-058"
+  ]
+ },
+ {
+  "id": "D-065",
+  "source": "절대등급 65번",
+  "canon": "T09",
+  "canon_name": "부분집합의 개수",
+  "difficulty": 8.22,
+  "status": "D",
+  "step": null,
+  "reason": "B-024 와 같다 — 개수에서 원소 수를 역추적한다",
+  "대표": [
+   "B-024"
+  ]
+ },
+ {
+  "id": "D-069",
+  "source": "절대등급 69번",
+  "canon": "T10",
+  "canon_name": "조건이 있는 부분집합의 개수",
+  "difficulty": 5.33,
+  "status": "D",
+  "step": null,
+  "reason": "B-030 과 같다 — 약수 집합을 위끝으로 삼는다",
+  "대표": [
+   "B-030"
+  ]
+ },
+ {
+  "id": "D-074",
+  "source": "절대등급 74번",
+  "canon": "T23",
+  "canon_name": "원소의 개수의 활용",
+  "difficulty": 7.43,
+  "status": "D",
+  "step": null,
+  "reason": "A-068 과 같다",
+  "대표": [
+   "A-068"
+  ]
+ },
+ {
+  "id": "D-075",
+  "source": "절대등급 75번",
+  "canon": "T23",
+  "canon_name": "원소의 개수의 활용",
+  "difficulty": 7.65,
+  "status": "D",
+  "step": null,
+  "reason": "A-096 과 같다 — 백분율로 주어진 세 집합",
+  "대표": [
+   "A-096"
+  ]
+ }
+]

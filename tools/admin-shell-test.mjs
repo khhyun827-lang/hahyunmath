@@ -150,7 +150,8 @@ console.log('\n⑥ A-2\n');
   const d = 알맹이(lift('teacherDashHTML'));
   /* 2026-10-02 재배치 — 「오늘 수업」(a) 칸을 뺐다(달력 밑 «고른 날 일정»과 겹쳤다 · 사용자). 출결 넣을 수업은 머리 오른쪽 단추 */
   봄('대시보드는 두 덩어리(b·c) — 오늘 수업 칸은 없다', ['dsh-b', 'dsh-c'].every(k => d.includes(k)) && !d.includes('dsh-a'), true);
-  봄('넓은 화면 — 먼저 볼 학생 · 시험/할 일 · 달력(두 줄)', html.includes('grid-template-areas:"b e c" "b m c"'), true);
+  봄('넓은 화면 — 먼저 볼 학생/할 일 · 큰 달력', html.includes('grid-template-areas:"b c" "m c"'), true);
+  봄('다가오는 시험은 칸이 아니라 얇은 띠', d.includes('hm-exstrip') && !d.includes("sec('다가오는 시험'"), true);
   봄('출결 넣을 수업은 머리 오른쪽 단추', d.includes('hm-next'), true);
   봄('대시보드에 폭 상한이 없다 (오른쪽이 비지 않는다)', /\.app \.dsh\{max-width/.test(html), false);
 

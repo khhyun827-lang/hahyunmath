@@ -1,0 +1,2742 @@
+[
+ {
+  "id": "A-001",
+  "source": "고쟁이 1번",
+  "canon": "T01",
+  "canon_name": "집합의 뜻과 원소",
+  "difficulty": 2.15,
+  "status": "K",
+  "step": 1,
+  "reason": "[기본] «집합인 것»을 고른다 — 기준이 «명확한가»를 가르는 자리"
+ },
+ {
+  "id": "A-002",
+  "source": "고쟁이 2번",
+  "canon": "T02",
+  "canon_name": "집합의 표현 (원소나열법·조건제시법)",
+  "difficulty": 1.71,
+  "status": "K",
+  "step": 1,
+  "reason": "[기본] 조건제시법을 «원소나열법»으로 바꾼다 — 두 표현을 오가는 자리"
+ },
+ {
+  "id": "A-003",
+  "source": "고쟁이 3번",
+  "canon": "T02",
+  "canon_name": "집합의 표현 (원소나열법·조건제시법)",
+  "difficulty": 5.95,
+  "status": "K",
+  "step": 2,
+  "reason": "원소나열법을 «조건제시법»으로 바꾼다 — 반대 방향이고, 조건이 그 원소만 정확히 집어내는지 확인해야 한다"
+ },
+ {
+  "id": "A-004",
+  "source": "고쟁이 4번",
+  "canon": "T03",
+  "canon_name": "유한·무한집합과 원소의 개수",
+  "difficulty": 1.36,
+  "status": "K",
+  "step": 1,
+  "reason": "[기본] 조건제시법으로 쓴 집합의 «원소를 나열해» 개수를 센다"
+ },
+ {
+  "id": "A-006",
+  "source": "고쟁이 6번",
+  "canon": "T06",
+  "canon_name": "부분집합과 포함 관계",
+  "difficulty": 2.57,
+  "status": "K",
+  "step": 1,
+  "reason": "[기본] 부분집합이 «아닌» 것을 고른다 — $\\varnothing$ 과 자기 자신도 부분집합임을 익히는 자리"
+ },
+ {
+  "id": "A-007",
+  "source": "고쟁이 7번",
+  "canon": "T06",
+  "canon_name": "부분집합과 포함 관계",
+  "difficulty": 1.44,
+  "status": "K",
+  "step": 2,
+  "reason": "$A \\subset B$ · $B \\subset A$ · $A=B$ «셋 중 하나»를 고른다 — 방향까지 판정해야 한다"
+ },
+ {
+  "id": "A-008",
+  "source": "고쟁이 8번",
+  "canon": "T05",
+  "canon_name": "기호 ∈, ⊂의 구별",
+  "difficulty": 2.77,
+  "status": "K",
+  "step": 1,
+  "reason": "[기본] $0 \\in \\varnothing$, $\\varnothing \\subset \\{0\\}$ 처럼 «공집합»이 걸린 판정 — 기호의 뜻을 가르는 뿌리"
+ },
+ {
+  "id": "A-009",
+  "source": "고쟁이 9번",
+  "canon": "T05",
+  "canon_name": "기호 ∈, ⊂의 구별",
+  "difficulty": 2.03,
+  "status": "K",
+  "step": 2,
+  "reason": "원소 중에 «집합»이 있다($\\{1,2\\}$) — 그때 $\\in$ 과 $\\subset$ 이 한 단계 밀린다"
+ },
+ {
+  "id": "A-010",
+  "source": "고쟁이 10번",
+  "canon": "T08",
+  "canon_name": "서로 같은 집합",
+  "difficulty": 1.14,
+  "status": "K",
+  "step": 1,
+  "reason": "[기본] $A=B$ 에서 미지수를 찾는다 — 원소를 «짝지어» 경우를 나누는 자리"
+ },
+ {
+  "id": "A-011",
+  "source": "고쟁이 11번",
+  "canon": "T20",
+  "canon_name": "방정식·부등식과 집합",
+  "difficulty": 0.95,
+  "status": "K",
+  "step": 1,
+  "reason": "[기본] $A \\subset B$ 이고 $B$ 가 방정식의 해집합 — 근과 계수의 관계로 넘어간다"
+ },
+ {
+  "id": "A-012",
+  "source": "고쟁이 12번",
+  "canon": "T18",
+  "canon_name": "새로 약속된 연산",
+  "difficulty": 2.94,
+  "status": "K",
+  "step": 1,
+  "reason": "[기본] «연산표»로 정의된 연산 — 표를 읽어 결과가 그 집합 안에 있는지(닫혀 있는지) 본다"
+ },
+ {
+  "id": "A-013",
+  "source": "고쟁이 13번",
+  "canon": "T16",
+  "canon_name": "집합의 연산 법칙 (드모르간 포함)",
+  "difficulty": 2.32,
+  "status": "K",
+  "step": 1,
+  "reason": "[기본] «항상 성립하는 것이 아닌» 것을 고른다 — 기본 법칙을 훑는 자리"
+ },
+ {
+  "id": "A-014",
+  "source": "고쟁이 14번",
+  "canon": "T13",
+  "canon_name": "여집합과 차집합",
+  "difficulty": 2.23,
+  "status": "K",
+  "step": 1,
+  "reason": "[기본] 합집합·교집합·여집합의 «정의»를 조건제시법으로 판정한다 — 기호의 뜻을 묻는 자리"
+ },
+ {
+  "id": "A-018",
+  "source": "고쟁이 18번",
+  "canon": "T15",
+  "canon_name": "벤다이어그램",
+  "difficulty": 5.19,
+  "status": "K",
+  "step": 1,
+  "reason": "[기본] «서로소»라는 조건 하나에서 보기가 항상 옳은지 판정한다 — 그림에 조건을 그려 놓고 본다"
+ },
+ {
+  "id": "A-019",
+  "source": "고쟁이 19번",
+  "canon": "T16",
+  "canon_name": "집합의 연산 법칙 (드모르간 포함)",
+  "difficulty": 2.91,
+  "status": "K",
+  "step": 3,
+  "reason": "⚠ 분배법칙이 성립함을 «증명»하는 과정의 빈칸을 채운다 — 결과가 아니라 «근거가 되는 법칙의 이름»을 묻는 유일한 자리"
+ },
+ {
+  "id": "A-020",
+  "source": "고쟁이 20번",
+  "canon": "T16",
+  "canon_name": "집합의 연산 법칙 (드모르간 포함)",
+  "difficulty": 1.67,
+  "status": "K",
+  "step": 1,
+  "reason": "[기본] $A\\cap B$, $A\\cap C$ 가 주어지고 $A\\cap(B\\cup C)$ — 분배법칙을 원소로 확인한다"
+ },
+ {
+  "id": "A-021",
+  "source": "고쟁이 21번",
+  "canon": "T15",
+  "canon_name": "벤다이어그램",
+  "difficulty": 2.41,
+  "status": "K",
+  "step": 1,
+  "reason": "[기본] 색칠한 부분을 «식»으로 나타낸다"
+ },
+ {
+  "id": "A-022",
+  "source": "고쟁이 22번",
+  "canon": "T15",
+  "canon_name": "벤다이어그램",
+  "difficulty": 2.46,
+  "status": "K",
+  "step": 1,
+  "reason": "[기본] $A^c \\cap B$, $A^c \\cap B^c$ 가 주어지고 «$A$ 와 $B$ 를 복원»한다 — 칸을 채워 거꾸로 올라간다"
+ },
+ {
+  "id": "A-023",
+  "source": "고쟁이 23번",
+  "canon": "T19",
+  "canon_name": "배수·약수의 집합",
+  "difficulty": 1.72,
+  "status": "K",
+  "step": 1,
+  "reason": "[기본] $A_p = A_6 \\cup A_{12}$, $A_q = A_{12} \\cap A_{18}$ — 합집합·교집합을 «최소공배수·최대공약수»로 옮기는 자리"
+ },
+ {
+  "id": "A-024",
+  "source": "고쟁이 24번",
+  "canon": "T19",
+  "canon_name": "배수·약수의 집합",
+  "difficulty": 4.44,
+  "status": "K",
+  "step": 3,
+  "reason": "⚠ 배수 집합의 포함 관계를 보기로 판정한다 — $A_4 \\subset A_2$ 처럼 «큰 수의 집합이 작다». 약수 집합과 방향이 반대인 것을 정면으로 묻는다"
+ },
+ {
+  "id": "A-025",
+  "source": "고쟁이 25번",
+  "canon": "T21",
+  "canon_name": "원소의 개수 공식",
+  "difficulty": 1.02,
+  "status": "K",
+  "step": 1,
+  "reason": "[기본] $n(A\\cup B)$ 와 $n(B)$ 로 $n(A-B)$ — 벤다이어그램의 칸을 빼는 자리"
+ },
+ {
+  "id": "A-026",
+  "source": "고쟁이 26번",
+  "canon": "T21",
+  "canon_name": "원소의 개수 공식",
+  "difficulty": 3.1,
+  "status": "K",
+  "step": 1,
+  "reason": "[기본] «서로소»와 $n(A^c \\cap B^c)$ — 조건을 드모르간으로 옮겨야 공식에 들어간다"
+ },
+ {
+  "id": "A-027",
+  "source": "고쟁이 27번",
+  "canon": "T21",
+  "canon_name": "원소의 개수 공식",
+  "difficulty": 2.07,
+  "status": "K",
+  "step": 2,
+  "reason": "$n(A^c \\cup B^c)$ 가 주어진다 — 드모르간으로 «교집합의 여집합»으로 바꿔야 비로소 $n(A\\cap B)$ 가 나온다"
+ },
+ {
+  "id": "A-028",
+  "source": "고쟁이 28번",
+  "canon": "T23",
+  "canon_name": "원소의 개수의 활용",
+  "difficulty": 2.57,
+  "status": "K",
+  "step": 1,
+  "reason": "[기본] $n(A\\cup B)$ 가 주어지고 «둘 다»를 묻는다 — 문장을 공식에 얹는 자리"
+ },
+ {
+  "id": "A-029",
+  "source": "고쟁이 29번",
+  "canon": "T21",
+  "canon_name": "원소의 개수 공식",
+  "difficulty": 2.8,
+  "status": "K",
+  "step": 1,
+  "reason": "[기본] 100 이하 3의 배수·5의 배수 — 개수를 직접 세어 공식에 넣는다. 배수의 개수가 나눗셈의 몫이다"
+ },
+ {
+  "id": "A-030",
+  "source": "고쟁이 30번",
+  "canon": "T09",
+  "canon_name": "부분집합의 개수",
+  "difficulty": 0.78,
+  "status": "K",
+  "step": 1,
+  "reason": "[기본] 부분집합의 개수 $2^n$ — 원소를 먼저 나열해 $n$ 을 세는 자리"
+ },
+ {
+  "id": "A-031",
+  "source": "고쟁이 31번",
+  "canon": "T09",
+  "canon_name": "부분집합의 개수",
+  "difficulty": 1.23,
+  "status": "K",
+  "step": 2,
+  "reason": "⚠ 원소 중에 «집합»이 있다($\\{1,2\\}$). 그것도 원소 하나로 세는지가 물음이다"
+ },
+ {
+  "id": "A-032",
+  "source": "고쟁이 32번",
+  "canon": "T10",
+  "canon_name": "조건이 있는 부분집합의 개수",
+  "difficulty": 1.19,
+  "status": "K",
+  "step": 1,
+  "reason": "[기본] 특정 원소를 «반드시 갖는» 부분집합 -> 그 원소를 빼고 $2^{n-1}$"
+ },
+ {
+  "id": "A-033",
+  "source": "고쟁이 33번",
+  "canon": "T10",
+  "canon_name": "조건이 있는 부분집합의 개수",
+  "difficulty": 1.8,
+  "status": "K",
+  "step": 2,
+  "reason": "⚠ 「서로소인 집합」을 «그 원소들을 빼는 것»으로 번역한다 — 조건이 개수 말로 주어지지 않는 자리"
+ },
+ {
+  "id": "A-035",
+  "source": "고쟁이 35번",
+  "canon": "T09",
+  "canon_name": "부분집합의 개수",
+  "difficulty": 1.41,
+  "status": "K",
+  "step": 2,
+  "reason": "홀수 «3개»와 «적어도» 짝수 2개 — 개수를 정확히 지정하는 것과 이상으로 지정하는 것이 한 문제에 함께 있다"
+ },
+ {
+  "id": "A-036",
+  "source": "고쟁이 36번",
+  "canon": "T10",
+  "canon_name": "조건이 있는 부분집합의 개수",
+  "difficulty": 2.21,
+  "status": "K",
+  "step": 2,
+  "reason": "양끝이 «연산 결과»로 주어진다($(B-A) \\subset X \\subset B$) — 먼저 집합을 구해야 양끝이 보인다"
+ },
+ {
+  "id": "A-037",
+  "source": "고쟁이 37번",
+  "canon": "T09",
+  "canon_name": "부분집합의 개수",
+  "difficulty": 1.41,
+  "status": "K",
+  "step": 2,
+  "reason": "[기본] «적어도 하나의 소수»를 갖는다 — 전체에서 «하나도 없는 것»을 빼는 여사건"
+ },
+ {
+  "id": "A-038",
+  "source": "고쟁이 38번",
+  "canon": "T10",
+  "canon_name": "조건이 있는 부분집합의 개수",
+  "difficulty": 1.61,
+  "status": "K",
+  "step": 3,
+  "reason": "⚠ $A \\subset B \\subset U$ 를 만족하는 «순서쌍 $(A,B)$» — 원소마다 «A에 · B에만 · 둘 다 아님» 세 갈래라 $3^n$ 이 된다. 세는 틀 자체가 다르다"
+ },
+ {
+  "id": "A-039",
+  "source": "고쟁이 39번",
+  "canon": "T04",
+  "canon_name": "새로 정의된 집합 구하기",
+  "difficulty": 6.5,
+  "status": "K",
+  "step": 2,
+  "reason": "$B=\\{a$ 를 5로 나눈 «나머지»$\\}$ — 원소를 옮기는 규칙이 나눗셈이라 값이 크게 겹친다"
+ },
+ {
+  "id": "A-041",
+  "source": "고쟁이 41번",
+  "canon": "T04",
+  "canon_name": "새로 정의된 집합 구하기",
+  "difficulty": 1.7,
+  "status": "K",
+  "step": 3,
+  "reason": "$A$ 의 원소가 «미지의 네 양수»다 — 만들어진 집합의 크기로 원래 원소들의 관계를 추론한다"
+ },
+ {
+  "id": "A-042",
+  "source": "고쟁이 42번",
+  "canon": "T11",
+  "canon_name": "부분집합의 원소의 합·곱",
+  "difficulty": 4.11,
+  "status": "K",
+  "step": 3,
+  "reason": "$A=\\{a,\\ b,\\ b-a,\\ (a+b)/5\\}$, $B$ 는 근호 — 두 집합이 같아지도록 «수를 찾아내는» 것이 본체다"
+ },
+ {
+  "id": "A-043",
+  "source": "고쟁이 43번",
+  "canon": "T08",
+  "canon_name": "서로 같은 집합",
+  "difficulty": 5.03,
+  "status": "K",
+  "step": 2,
+  "reason": "$A \\subset B$ 이고 $B \\subset A$ — 「서로 포함」을 «$A=B$»로 읽어야 시작된다. 조건이 한 겹 접혀 있다"
+ },
+ {
+  "id": "A-046",
+  "source": "고쟁이 46번",
+  "canon": "T10",
+  "canon_name": "조건이 있는 부분집합의 개수",
+  "difficulty": 7.09,
+  "status": "K",
+  "step": 3,
+  "reason": "$a \\in A$ 이면 $a^2-2 \\in A$ — 짝이 아니라 «되풀이»라 어디서 닫히는지 직접 굴려 봐야 한다"
+ },
+ {
+  "id": "A-047",
+  "source": "고쟁이 47번",
+  "canon": "T11",
+  "canon_name": "부분집합의 원소의 합·곱",
+  "difficulty": 3.75,
+  "status": "K",
+  "step": 2,
+  "reason": "[기본] $A \\cap B$ 조건에서 두 집합을 정하고 합을 구한다"
+ },
+ {
+  "id": "A-050",
+  "source": "고쟁이 50번",
+  "canon": "T14",
+  "canon_name": "서로소",
+  "difficulty": 2.68,
+  "status": "K",
+  "step": 2,
+  "reason": "$A-B=A$ 가 곧 서로소다 — 조건을 먼저 번역해야 하고, $A$ 가 절댓값 부등식이라 구간이 $a$ 에 따라 움직인다"
+ },
+ {
+  "id": "A-051",
+  "source": "고쟁이 51번",
+  "canon": "T19",
+  "canon_name": "배수·약수의 집합",
+  "difficulty": 4.46,
+  "status": "K",
+  "step": 2,
+  "reason": "$A_m \\subset (A_9 \\cap A_{15})$, $(A_{18} \\cup A_{36}) \\subset A_n$ — 미지수가 «양쪽 끝»에 있어 배수·약수 조건으로 각각 역추적한다"
+ },
+ {
+  "id": "A-053",
+  "source": "고쟁이 53번",
+  "canon": "T22",
+  "canon_name": "원소의 개수의 최댓값·최솟값",
+  "difficulty": 4.99,
+  "status": "K",
+  "step": 1,
+  "reason": "[기본] $A_k$ 가 연속한 자연수 $(2k+1)$ 개 — 번호가 커지며 집합이 어떻게 밀리는지 따라간다"
+ },
+ {
+  "id": "A-054",
+  "source": "고쟁이 54번",
+  "canon": "T15",
+  "canon_name": "벤다이어그램",
+  "difficulty": 7.17,
+  "status": "K",
+  "step": 2,
+  "reason": "세 집합의 항등식을 판정한다 — 칸이 여덟이라 그림으로 지우며 정리한다"
+ },
+ {
+  "id": "A-055",
+  "source": "고쟁이 55번",
+  "canon": "T15",
+  "canon_name": "벤다이어그램",
+  "difficulty": 6.7,
+  "status": "K",
+  "step": 3,
+  "reason": "⚠ 등식이 «성립할 때» 항상 옳은 것을 고른다 — 조건에서 포함 관계를 끌어내는 역방향이다"
+ },
+ {
+  "id": "A-056",
+  "source": "고쟁이 56번",
+  "canon": "T14",
+  "canon_name": "서로소",
+  "difficulty": 8.23,
+  "status": "K",
+  "step": 3,
+  "reason": "$A \\cap (C \\cup A^c)=\\varnothing$ — 서로소 조건이 «식 안에 접혀» 있어 정리부터 해야 한다"
+ },
+ {
+  "id": "A-057",
+  "source": "고쟁이 57번",
+  "canon": "T20",
+  "canon_name": "방정식·부등식과 집합",
+  "difficulty": 3.87,
+  "status": "K",
+  "step": 3,
+  "reason": "⚠ $ax^2+bx-6<0$ 에서 «$a$ 의 부호와 0 여부»로 해집합의 모양이 통째로 달라진다 — 이차인지부터 갈라야 한다"
+ },
+ {
+  "id": "A-058",
+  "source": "고쟁이 58번",
+  "canon": "T17",
+  "canon_name": "연산과 포함 관계의 동치",
+  "difficulty": 5.94,
+  "status": "K",
+  "step": 1,
+  "reason": "[기본] $X \\triangle Y=(X-Y)\\cup(Y-X)$ 로 대칭차를 정의하고 성질을 판정한다"
+ },
+ {
+  "id": "A-059",
+  "source": "고쟁이 59번",
+  "canon": "T11",
+  "canon_name": "부분집합의 원소의 합·곱",
+  "difficulty": 9.39,
+  "status": "K",
+  "step": 2,
+  "reason": "$A$ 가 «$k$ 의 약수»라 $k$ 에 따라 집합이 달라진다 — $n(A\\cap B)$ 조건으로 $k$ 를 모두 찾는다"
+ },
+ {
+  "id": "A-060",
+  "source": "고쟁이 60번",
+  "canon": "T13",
+  "canon_name": "여집합과 차집합",
+  "difficulty": 5.81,
+  "status": "K",
+  "step": 3,
+  "reason": "복소수 $z$ 와 «켤레»로 집합을 만든다 — 원소를 구하는 것 자체가 다른 단원의 일이다"
+ },
+ {
+  "id": "A-061",
+  "source": "고쟁이 61번",
+  "canon": "T23",
+  "canon_name": "원소의 개수의 활용",
+  "difficulty": 5.47,
+  "status": "K",
+  "step": 2,
+  "reason": "「둘 다 좋아하지 «않는»」 — 여집합이 주어지므로 전체에서 먼저 덜어 내야 합집합이 나온다"
+ },
+ {
+  "id": "A-062",
+  "source": "고쟁이 62번",
+  "canon": "T14",
+  "canon_name": "서로소",
+  "difficulty": 7.49,
+  "status": "K",
+  "step": 3,
+  "reason": "$S(A,B)=n(A^c \\cup B)$ 로 «개수를 함수»로 정의하고 성질을 판정한다"
+ },
+ {
+  "id": "A-063",
+  "source": "고쟁이 63번",
+  "canon": "T22",
+  "canon_name": "원소의 개수의 최댓값·최솟값",
+  "difficulty": 8.65,
+  "status": "K",
+  "step": 1,
+  "reason": "[기본] $n(U),n(A),n(B)$ 만으로 $n(A\\cap B)$ 의 범위 — 최소는 «$A\\cup B$ 가 $U$ 를 넘지 못해서», 최대는 «작은 쪽이 통째로 담겨서»"
+ },
+ {
+  "id": "A-064",
+  "source": "고쟁이 64번",
+  "canon": "T22",
+  "canon_name": "원소의 개수의 최댓값·최솟값",
+  "difficulty": 11.24,
+  "status": "K",
+  "step": 1,
+  "reason": "[기본] ①을 실생활 문장으로 — 「둘 다 이용한 사람」을 교집합으로 옮겨 읽는 자리"
+ },
+ {
+  "id": "A-066",
+  "source": "고쟁이 66번",
+  "canon": "T22",
+  "canon_name": "원소의 개수의 최댓값·최솟값",
+  "difficulty": 10.72,
+  "status": "K",
+  "step": 1,
+  "reason": "[기본] 개수만 정해진 두 집합에서 «교집합의 원소의 합»을 최대로 — 어느 원소를 겹치게 둘지 고른다"
+ },
+ {
+  "id": "A-067",
+  "source": "고쟁이 67번",
+  "canon": "T22",
+  "canon_name": "원소의 개수의 최댓값·최솟값",
+  "difficulty": 11.71,
+  "status": "K",
+  "step": 2,
+  "reason": "$n(A^c \\cap B^c \\cap C)$ — «어느 칸의 최대·최소인가»를 벤다이어그램에서 짚어야 한다. 교집합이 아닌 칸을 묻는 자리"
+ },
+ {
+  "id": "A-068",
+  "source": "고쟁이 68번",
+  "canon": "T23",
+  "canon_name": "원소의 개수의 활용",
+  "difficulty": 5.23,
+  "status": "K",
+  "step": 1,
+  "reason": "[기본] 세 집합 포함배제 + 「적어도 하루는」이 전체를 뜻한다"
+ },
+ {
+  "id": "A-069",
+  "source": "고쟁이 69번",
+  "canon": "T11",
+  "canon_name": "부분집합의 원소의 합·곱",
+  "difficulty": 5.95,
+  "status": "K",
+  "step": 3,
+  "reason": "$A$ 가 «사차방정식의 해집합»이다 — 인수분해로 근을 갈라 두 집합을 맞춘다"
+ },
+ {
+  "id": "A-070",
+  "source": "고쟁이 70번",
+  "canon": "T15",
+  "canon_name": "벤다이어그램",
+  "difficulty": 5.46,
+  "status": "K",
+  "step": 2,
+  "reason": "세 가지 기준을 세 집합으로 옮겨 별점을 매긴다 — 문장을 스스로 벤다이어그램으로 세우는 자리"
+ },
+ {
+  "id": "A-071",
+  "source": "고쟁이 71번",
+  "canon": "T22",
+  "canon_name": "원소의 개수의 최댓값·최솟값",
+  "difficulty": 6.48,
+  "status": "K",
+  "step": 1,
+  "reason": "[기본] 세 집합 + 「두 권만 읽은 학생」 — 정확히 둘에만 드는 인원을 따로 세는 자리"
+ },
+ {
+  "id": "A-072",
+  "source": "고쟁이 72번",
+  "canon": "T22",
+  "canon_name": "원소의 개수의 최댓값·최솟값",
+  "difficulty": 6.39,
+  "status": "K",
+  "step": 2,
+  "reason": "「진부분집합이 7개」에서 $n(A)=3$ 을 «먼저 끌어내고» 합을 최대로 — 조건이 개수로 바로 안 주어진다"
+ },
+ {
+  "id": "A-073",
+  "source": "고쟁이 73번",
+  "canon": "T10",
+  "canon_name": "조건이 있는 부분집합의 개수",
+  "difficulty": 5.07,
+  "status": "K",
+  "step": 1,
+  "reason": "[기본] $A \\cup X=A$, $B \\cap X=B$ -> $B \\subset X \\subset A$. 연산식을 포함 관계로 «읽는» 자리"
+ },
+ {
+  "id": "A-075",
+  "source": "고쟁이 75번",
+  "canon": "T10",
+  "canon_name": "조건이 있는 부분집합의 개수",
+  "difficulty": 2.66,
+  "status": "K",
+  "step": 3,
+  "reason": "⚠ 거꾸로다 — $A=B \\cup C$ 가 되도록 하는 «$C$»를 찾는다. $X$ 가 결과가 아니라 «재료»인 유일한 형태"
+ },
+ {
+  "id": "A-076",
+  "source": "고쟁이 76번",
+  "canon": "T10",
+  "canon_name": "조건이 있는 부분집합의 개수",
+  "difficulty": 2.74,
+  "status": "K",
+  "step": 3,
+  "reason": "⚠ $\\{1,2,4\\} \\cap X \\neq \\varnothing$ — 세려면 «전체에서 만나지 않는 것을 뺀다». 직접 세면 안 되는 자리"
+ },
+ {
+  "id": "A-079",
+  "source": "고쟁이 79번",
+  "canon": "T10",
+  "canon_name": "조건이 있는 부분집합의 개수",
+  "difficulty": 5.13,
+  "status": "K",
+  "step": 1,
+  "reason": "[기본] $x \\in A$ 이면 $36/x \\in A$ — 원소를 «짝»으로 묶어 짝 단위로 넣고 뺀다. 짝이 안 생기는 것($6$)이 홀로 남는다"
+ },
+ {
+  "id": "A-080",
+  "source": "고쟁이 80번",
+  "canon": "T22",
+  "canon_name": "원소의 개수의 최댓값·최솟값",
+  "difficulty": 6.28,
+  "status": "K",
+  "step": 2,
+  "reason": "부등식으로 두 집합을 만들고 «부분집합의 개수가 100 이상»에서 $k$ 를 찾는다 — 개수 조건이 부등식으로 역추적된다"
+ },
+ {
+  "id": "A-081",
+  "source": "고쟁이 81번",
+  "canon": "T22",
+  "canon_name": "원소의 개수의 최댓값·최솟값",
+  "difficulty": 8.7,
+  "status": "K",
+  "step": 2,
+  "reason": "$S(A)$ 를 「소수의 개수」로 정의하고 보기를 판정한다 — 함수로 정의된 개수의 성질을 따진다"
+ },
+ {
+  "id": "A-082",
+  "source": "고쟁이 82번",
+  "canon": "T15",
+  "canon_name": "벤다이어그램",
+  "difficulty": 6.09,
+  "status": "K",
+  "step": 2,
+  "reason": "$\\{(A-B)\\cup(B-A)\\}$ 에 조건이 걸린 «부분집합의 개수»를 센다 — 대칭차를 고정해 놓고 세는 자리"
+ },
+ {
+  "id": "A-085",
+  "source": "고쟁이 85번",
+  "canon": "T21",
+  "canon_name": "원소의 개수 공식",
+  "difficulty": 7.71,
+  "status": "K",
+  "step": 3,
+  "reason": "⚠ $A=\\{\\varnothing,\\ \\{\\varnothing\\},\\ \\cdots\\}$ — 원소가 «집합»이라 $\\varnothing$ 을 원소로 셀지 말지가 물음이다"
+ },
+ {
+  "id": "A-086",
+  "source": "고쟁이 86번",
+  "canon": "T12",
+  "canon_name": "합집합과 교집합",
+  "difficulty": 6.91,
+  "status": "K",
+  "step": 3,
+  "reason": "⚠ 멱집합 $P(A)=\\{X \\mid X \\subset A\\}$ — 원소가 «집합»이다. $\\in$ 과 $\\subset$ 이 한 단계 밀리는 유일한 자리"
+ },
+ {
+  "id": "A-087",
+  "source": "고쟁이 87번",
+  "canon": "T11",
+  "canon_name": "부분집합의 원소의 합·곱",
+  "difficulty": 10.21,
+  "status": "K",
+  "step": 3,
+  "reason": "복소수 조건($1/z$ 등)으로 집합이 닫히도록 만든다 — 원소가 복소수인 폐쇄성"
+ },
+ {
+  "id": "A-088",
+  "source": "고쟁이 88번",
+  "canon": "T18",
+  "canon_name": "새로 약속된 연산",
+  "difficulty": 8.6,
+  "status": "K",
+  "step": 1,
+  "reason": "[기본] $A*B=(A\\cap B)\\cup(A\\cup B)^c$ — 새 연산을 «정리해서» 익숙한 꼴로 바꾼 뒤 성질을 판정한다"
+ },
+ {
+  "id": "A-089",
+  "source": "고쟁이 89번",
+  "canon": "T19",
+  "canon_name": "배수·약수의 집합",
+  "difficulty": 6.57,
+  "status": "K",
+  "step": 1,
+  "reason": "[기본] $A_n=\\{x \\mid x$ 는 $n$ 과 서로소$\\}$ — 「서로소」를 소인수의 말로 옮긴다"
+ },
+ {
+  "id": "A-090",
+  "source": "고쟁이 90번",
+  "canon": "T15",
+  "canon_name": "벤다이어그램",
+  "difficulty": 7.32,
+  "status": "K",
+  "step": 1,
+  "reason": "[기본] $X \\odot Y=(X\\cup Y)\\cap(X^c \\cup Y^c)$ 가 «대칭차»임을 알아보고 원소를 센다"
+ },
+ {
+  "id": "A-091",
+  "source": "고쟁이 91번",
+  "canon": "T22",
+  "canon_name": "원소의 개수의 최댓값·최솟값",
+  "difficulty": 10.66,
+  "status": "K",
+  "step": 2,
+  "reason": "$B=\\{kx \\mid x \\in A\\}$ — 한 집합이 다른 집합의 «상(像)»이라 $k$ 배 관계가 원소를 묶는다"
+ },
+ {
+  "id": "A-092",
+  "source": "고쟁이 92번",
+  "canon": "T22",
+  "canon_name": "원소의 개수의 최댓값·최솟값",
+  "difficulty": 11.1,
+  "status": "K",
+  "step": 2,
+  "reason": "$a \\in A$ 이면 «$\\cdots \\in B$ 또는 $\\cdots \\in B$» — 갈래가 둘이라 원소마다 어느 쪽으로 보낼지 고른다"
+ },
+ {
+  "id": "A-094",
+  "source": "고쟁이 94번",
+  "canon": "T22",
+  "canon_name": "원소의 개수의 최댓값·최솟값",
+  "difficulty": 15.92,
+  "status": "K",
+  "step": 2,
+  "reason": "두 부분집합의 $S(A), S(B)$ 를 함께 걸어 조건을 만든다"
+ },
+ {
+  "id": "A-095",
+  "source": "고쟁이 95번",
+  "canon": "T22",
+  "canon_name": "원소의 개수의 최댓값·최솟값",
+  "difficulty": 13.08,
+  "status": "K",
+  "step": 2,
+  "reason": "$n(U)=5$ 로 «전체가 작다» — 공식이 아니라 벤다이어그램 칸을 직접 채워 맞춘다"
+ },
+ {
+  "id": "A-096",
+  "source": "고쟁이 96번",
+  "canon": "T23",
+  "canon_name": "원소의 개수의 활용",
+  "difficulty": 8.35,
+  "status": "K",
+  "step": 2,
+  "reason": "인원이 «백분율»로 주어지고 전체가 미지수다 — 「세 과목 중 오직 한 과목」의 최대·최소로 넘어간다"
+ },
+ {
+  "id": "A-098",
+  "source": "고쟁이 98번",
+  "canon": "T22",
+  "canon_name": "원소의 개수의 최댓값·최솟값",
+  "difficulty": 10.01,
+  "status": "K",
+  "step": 3,
+  "reason": "⚠ 부분집합마다 «최대 원소»를 뽑아 모두 더한다 — 한 집합의 극값이 아니라 «모든 부분집합에 걸친 합»이라 세는 틀이 다르다"
+ },
+ {
+  "id": "A-099",
+  "source": "고쟁이 99번",
+  "canon": "T10",
+  "canon_name": "조건이 있는 부분집합의 개수",
+  "difficulty": 6.66,
+  "status": "K",
+  "step": 2,
+  "reason": "세 부분집합에 미지수 원소($a,b$)가 섞인다 — 원소를 확정하는 일과 세는 일이 함께 온다"
+ },
+ {
+  "id": "A-100",
+  "source": "고쟁이 100번",
+  "canon": "T12",
+  "canon_name": "합집합과 교집합",
+  "difficulty": 9.86,
+  "status": "K",
+  "step": 3,
+  "reason": "부분집합을 원소로 갖는 집합족 $X$ 에 «연산에 대해 닫혀 있다»는 조건이 걸린다"
+ },
+ {
+  "id": "A-101",
+  "source": "고쟁이 101번",
+  "canon": "T10",
+  "canon_name": "조건이 있는 부분집합의 개수",
+  "difficulty": 10.14,
+  "status": "K",
+  "step": 3,
+  "reason": "⚠ 복소수 집합이다($x^3=1$, $i^n+1/i^n$) — 원소를 구하는 것 자체가 다른 단원(복소수)의 일이고, 그 뒤에 집합 연산이 온다"
+ },
+ {
+  "id": "A-102",
+  "source": "고쟁이 102번",
+  "canon": "T19",
+  "canon_name": "배수·약수의 집합",
+  "difficulty": 8.57,
+  "status": "K",
+  "step": 2,
+  "reason": "$n(A_{10} \\cap A_{\\cdots})$ — 집합이 아니라 «개수»를 묻는다. 최대공약수의 약수의 개수로 넘어간다"
+ },
+ {
+  "id": "A-103",
+  "source": "고쟁이 103번",
+  "canon": "T20",
+  "canon_name": "방정식·부등식과 집합",
+  "difficulty": 10.65,
+  "status": "K",
+  "step": 3,
+  "reason": "⚠ 원소가 «순서쌍 $(x,y)$» 다 — 집합이 곧 그래프이고 교집합이 «교점»이 된다"
+ },
+ {
+  "id": "A-104",
+  "source": "고쟁이 104번",
+  "canon": "T11",
+  "canon_name": "부분집합의 원소의 합·곱",
+  "difficulty": 12.97,
+  "status": "K",
+  "step": 3,
+  "reason": "전체집합이 «$k$ 이하»라 $k$ 가 커지며 짝수·홀수 부분집합의 크기가 함께 자란다"
+ },
+ {
+  "id": "A-106",
+  "source": "고쟁이 106번",
+  "canon": "T22",
+  "canon_name": "원소의 개수의 최댓값·최솟값",
+  "difficulty": 11.85,
+  "status": "K",
+  "step": 2,
+  "reason": "원소를 «나머지별로» 묶어 둔 표에서 고른다 — 나머지가 같은 것끼리는 함께 못 들어간다"
+ },
+ {
+  "id": "B-002",
+  "source": "올림포스 2번",
+  "canon": "T01",
+  "canon_name": "집합의 뜻과 원소",
+  "difficulty": 0.46,
+  "status": "K",
+  "step": 2,
+  "reason": "조건으로 준 집합에서 $\\in$ · $\\notin$ 을 판정한다 — 경계값(0, 8)이 걸린다"
+ },
+ {
+  "id": "B-003",
+  "source": "올림포스 3번",
+  "canon": "T01",
+  "canon_name": "집합의 뜻과 원소",
+  "difficulty": 0.94,
+  "status": "K",
+  "step": 2,
+  "reason": "$Z$ · $Q$ · $R$ 사이의 소속 — $\\sqrt4$ 처럼 «모양과 값이 다른» 수가 함정이다"
+ },
+ {
+  "id": "B-004",
+  "source": "올림포스 4번",
+  "canon": "T02",
+  "canon_name": "집합의 표현 (원소나열법·조건제시법)",
+  "difficulty": 1.72,
+  "status": "K",
+  "step": 2,
+  "reason": "벤다이어그램을 조건제시법으로 옮긴다 — 그림에서 조건으로 가는 통로"
+ },
+ {
+  "id": "B-005",
+  "source": "올림포스 5번",
+  "canon": "T02",
+  "canon_name": "집합의 표현 (원소나열법·조건제시법)",
+  "difficulty": 0.74,
+  "status": "K",
+  "step": 2,
+  "reason": "$A=\\{2^a \\times 3^b\\}$ 의 «원소가 아닌 것» — 조건($a,b$ 는 자연수)을 정확히 읽어야 1·2·3 이 빠지는 것을 안다"
+ },
+ {
+  "id": "B-006",
+  "source": "올림포스 6번",
+  "canon": "T04",
+  "canon_name": "새로 정의된 집합 구하기",
+  "difficulty": 1.81,
+  "status": "K",
+  "step": 1,
+  "reason": "[기본] $C=\\{2x-1 \\mid x \\in A\\}$ — «한 집합»의 원소를 옮겨 새 집합을 만든다"
+ },
+ {
+  "id": "B-010",
+  "source": "올림포스 10번",
+  "canon": "T05",
+  "canon_name": "기호 ∈, ⊂의 구별",
+  "difficulty": 2.72,
+  "status": "K",
+  "step": 2,
+  "reason": "벤다이어그램에서 $\\in$ · $\\subset$ 을 판정한다 — 그림으로 읽는 통로"
+ },
+ {
+  "id": "B-013",
+  "source": "올림포스 13번",
+  "canon": "T06",
+  "canon_name": "부분집합과 포함 관계",
+  "difficulty": 1.51,
+  "status": "K",
+  "step": 2,
+  "reason": "$B=\\{x^2-1\\}$, $C$ 는 «삼차방정식의 해집합» — 세 집합을 각각 만들어야 비교가 시작된다"
+ },
+ {
+  "id": "B-015",
+  "source": "올림포스 15번",
+  "canon": "T07",
+  "canon_name": "포함 관계가 성립할 조건 (미지수)",
+  "difficulty": 4.82,
+  "status": "K",
+  "step": 1,
+  "reason": "[기본] $A \\subset B$ 에서 원소의 미지수를 찾는다 — 경우를 나누고 «원소가 겹치지 않는지» 확인한다"
+ },
+ {
+  "id": "B-016",
+  "source": "올림포스 16번",
+  "canon": "T07",
+  "canon_name": "포함 관계가 성립할 조건 (미지수)",
+  "difficulty": 2.45,
+  "status": "K",
+  "step": 1,
+  "reason": "[기본] 두 «구간»의 포함 — 수직선에 그려 양끝을 견준다. ⚠ $A$ 가 공집합이 되는 경우까지 갈라야 한다"
+ },
+ {
+  "id": "B-017",
+  "source": "올림포스 17번",
+  "canon": "T07",
+  "canon_name": "포함 관계가 성립할 조건 (미지수)",
+  "difficulty": 1.07,
+  "status": "K",
+  "step": 3,
+  "reason": "$C \\subset B \\subset A$ — 구간 «셋»이 사슬로 걸려 양쪽 조건을 동시에 만족시켜야 한다"
+ },
+ {
+  "id": "B-018",
+  "source": "올림포스 18번",
+  "canon": "T11",
+  "canon_name": "부분집합의 원소의 합·곱",
+  "difficulty": 4.01,
+  "status": "K",
+  "step": 1,
+  "reason": "[기본] 진부분집합의 «원소의 합» — 부분집합마다 합을 재는 자리"
+ },
+ {
+  "id": "B-019",
+  "source": "올림포스 19번",
+  "canon": "T10",
+  "canon_name": "조건이 있는 부분집합의 개수",
+  "difficulty": 5.78,
+  "status": "K",
+  "step": 2,
+  "reason": "$n(X) \\geq 3$ 처럼 크기에 «부등호»가 걸린다 — 크기별로 나눠 더한다"
+ },
+ {
+  "id": "B-022",
+  "source": "올림포스 22번",
+  "canon": "T08",
+  "canon_name": "서로 같은 집합",
+  "difficulty": 2.61,
+  "status": "K",
+  "step": 2,
+  "reason": "$A$ 가 «방정식의 해집합»이다 — 근과 계수의 관계로 미지수를 정한다"
+ },
+ {
+  "id": "B-023",
+  "source": "올림포스 23번",
+  "canon": "T08",
+  "canon_name": "서로 같은 집합",
+  "difficulty": 4.75,
+  "status": "K",
+  "step": 3,
+  "reason": "원소가 «셋씩»이라 짝짓는 경우가 크게 늘고, 정한 뒤 «원소가 겹치지 않는지»까지 확인해야 한다"
+ },
+ {
+  "id": "B-024",
+  "source": "올림포스 24번",
+  "canon": "T09",
+  "canon_name": "부분집합의 개수",
+  "difficulty": 1.75,
+  "status": "K",
+  "step": 3,
+  "reason": "⚠ 거꾸로다 — 부분집합의 개수와 진부분집합의 개수의 «합이 191»에서 $n(A)+n(B)$ 를 찾는다. $2^n$ 을 역으로 쪼갠다"
+ },
+ {
+  "id": "B-028",
+  "source": "올림포스 28번",
+  "canon": "T10",
+  "canon_name": "조건이 있는 부분집합의 개수",
+  "difficulty": 1.23,
+  "status": "K",
+  "step": 2,
+  "reason": "교집합의 원소가 «정확히 1개» — ≠∅ 보다 강한 조건이라 어느 하나를 고르고 나머지를 빼야 한다"
+ },
+ {
+  "id": "B-030",
+  "source": "올림포스 30번",
+  "canon": "T10",
+  "canon_name": "조건이 있는 부분집합의 개수",
+  "difficulty": 1.63,
+  "status": "K",
+  "step": 1,
+  "reason": "[기본] $A \\subset X \\subset B$ -> 사이에 있는 원소만 자유롭다"
+ },
+ {
+  "id": "B-035",
+  "source": "올림포스 35번",
+  "canon": "T10",
+  "canon_name": "조건이 있는 부분집합의 개수",
+  "difficulty": 4.25,
+  "status": "K",
+  "step": 3,
+  "reason": "곱이 짝수 + 합에 관한 조건이 «겹친다» — 여사건을 두 번 쓰거나 갈라 세야 한다"
+ },
+ {
+  "id": "B-036",
+  "source": "올림포스 36번",
+  "canon": "T12",
+  "canon_name": "합집합과 교집합",
+  "difficulty": 6.33,
+  "status": "K",
+  "step": 2,
+  "reason": "[기본] $A=\\{a,\\ a+2\\}$ 처럼 원소에 미지수가 있고 $A \\cap B$ 가 주어진다 — 경우를 갈라 $a$ 를 정한 뒤 «집합이 성립하는지»(원소 중복) 확인해야 한다"
+ },
+ {
+  "id": "B-038",
+  "source": "올림포스 38번",
+  "canon": "T12",
+  "canon_name": "합집합과 교집합",
+  "difficulty": 2.03,
+  "status": "K",
+  "step": 2,
+  "reason": "두 집합의 «원소의 합» $a, b$ 가 미지수다 — 원소가 아니라 합으로 조건이 걸린다"
+ },
+ {
+  "id": "B-039",
+  "source": "올림포스 39번",
+  "canon": "T13",
+  "canon_name": "여집합과 차집합",
+  "difficulty": 2.39,
+  "status": "K",
+  "step": 2,
+  "reason": "$A \\cup B$ 와 $B^c$ 이 주어지고 «$A$ 를 복원»한다 — 여집합을 전체로 되돌리는 한 겹이 있다"
+ },
+ {
+  "id": "B-041",
+  "source": "올림포스 41번",
+  "canon": "T13",
+  "canon_name": "여집합과 차집합",
+  "difficulty": 1.27,
+  "status": "K",
+  "step": 2,
+  "reason": "원소에 미지수($a+b$, $a-b$)가 있고 $A-B$ 가 주어진다 — 어느 원소가 어느 칸에 가는지 경우를 갈라야 한다"
+ },
+ {
+  "id": "B-042",
+  "source": "올림포스 42번",
+  "canon": "T14",
+  "canon_name": "서로소",
+  "difficulty": 4.25,
+  "status": "K",
+  "step": 1,
+  "reason": "[기본] 두 집합이 서로소인 것을 고른다 — 「교집합이 공집합」을 원소로 확인하는 자리"
+ },
+ {
+  "id": "B-043",
+  "source": "올림포스 43번",
+  "canon": "T14",
+  "canon_name": "서로소",
+  "difficulty": 2.7,
+  "status": "K",
+  "step": 2,
+  "reason": "부등식으로 정의된 두 집합이 서로소 -> $k$ 의 «범위» — 수직선에서 겹치지 않을 조건이라 경계 포함 여부까지 따진다"
+ },
+ {
+  "id": "B-045",
+  "source": "올림포스 45번",
+  "canon": "T14",
+  "canon_name": "서로소",
+  "difficulty": 5.62,
+  "status": "K",
+  "step": 2,
+  "reason": "$B=\\{x+y\\}$, $C=\\{xy\\}$ 로 «새 집합을 만든 뒤» 서로소를 따진다"
+ },
+ {
+  "id": "B-046",
+  "source": "올림포스 46번",
+  "canon": "T14",
+  "canon_name": "서로소",
+  "difficulty": 5.97,
+  "status": "K",
+  "step": 2,
+  "reason": "서로소 조건 아래에서 «원소의 합»을 구한다 — 조건이 원소를 갈라 놓는다"
+ },
+ {
+  "id": "B-047",
+  "source": "올림포스 47번",
+  "canon": "T15",
+  "canon_name": "벤다이어그램",
+  "difficulty": 3.08,
+  "status": "K",
+  "step": 2,
+  "reason": "벤다이어그램에 «원소가 적혀» 있고 결과의 «원소의 합»까지 간다 — 식이 아니라 그림에서 바로 읽는다"
+ },
+ {
+  "id": "B-049",
+  "source": "올림포스 49번",
+  "canon": "T15",
+  "canon_name": "벤다이어그램",
+  "difficulty": 3.84,
+  "status": "K",
+  "step": 2,
+  "reason": "세 집합의 연산 — 칸이 여덟이라 «어느 칸에 드는가»를 그림으로 짚어야 한다"
+ },
+ {
+  "id": "B-050",
+  "source": "올림포스 50번",
+  "canon": "T15",
+  "canon_name": "벤다이어그램",
+  "difficulty": 4.88,
+  "status": "K",
+  "step": 3,
+  "reason": "⚠ 「$A$ 와 $B^c$ 이 서로소」 — 여집합과의 서로소라 «$A \\subset B$»로 번역해야 그림이 그려진다. 조건을 먼저 옮기는 한 겹이 있다"
+ },
+ {
+  "id": "B-052",
+  "source": "올림포스 52번",
+  "canon": "T15",
+  "canon_name": "벤다이어그램",
+  "difficulty": 4.03,
+  "status": "K",
+  "step": 2,
+  "reason": "$n(A \\cap B)=1$ 처럼 «개수»가 조건으로 섞인다 — 원소를 특정하지 못한 채 칸을 채운다"
+ },
+ {
+  "id": "B-053",
+  "source": "올림포스 53번",
+  "canon": "T17",
+  "canon_name": "연산과 포함 관계의 동치",
+  "difficulty": 2.3,
+  "status": "K",
+  "step": 3,
+  "reason": "⚠ «옳지 않은 것»을 고른다 — 맞는 하나가 아니라 틀린 하나라 다섯을 모두 확인하게 된다"
+ },
+ {
+  "id": "B-054",
+  "source": "올림포스 54번",
+  "canon": "T17",
+  "canon_name": "연산과 포함 관계의 동치",
+  "difficulty": 2.98,
+  "status": "K",
+  "step": 1,
+  "reason": "[기본] 조건 없이 항상 옳은 것을 고른다 — $A \\cup \\varnothing$, $B \\cap B^c$ 같은 항등식을 익히는 자리"
+ },
+ {
+  "id": "B-055",
+  "source": "올림포스 55번",
+  "canon": "T17",
+  "canon_name": "연산과 포함 관계의 동치",
+  "difficulty": 2.98,
+  "status": "K",
+  "step": 2,
+  "reason": "$(A\\cup B)-(A\\cap B)=\\varnothing$ — 대칭차가 비었다는 것에서 «$A=B$»를 끌어낸다. 포함이 아니라 상등이 나오는 자리"
+ },
+ {
+  "id": "B-058",
+  "source": "올림포스 58번",
+  "canon": "T17",
+  "canon_name": "연산과 포함 관계의 동치",
+  "difficulty": 4.14,
+  "status": "K",
+  "step": 2,
+  "reason": "$\\{(A\\cap B)\\cup(A-B)\\}\\cap B=A$ — 좌변을 «먼저 정리»해야 조건이 보인다. 조건 자체가 접혀 있는 형태"
+ },
+ {
+  "id": "B-061",
+  "source": "올림포스 61번",
+  "canon": "T10",
+  "canon_name": "조건이 있는 부분집합의 개수",
+  "difficulty": 1.46,
+  "status": "K",
+  "step": 2,
+  "reason": "$\\{1,2,3,4\\} \\cap X = \\{4\\}$ — 교집합이 «통째로 지정»된다. 넣을 것과 뺄 것이 그 식 하나에서 함께 나온다"
+ },
+ {
+  "id": "B-069",
+  "source": "올림포스 69번",
+  "canon": "T16",
+  "canon_name": "집합의 연산 법칙 (드모르간 포함)",
+  "difficulty": 5.87,
+  "status": "K",
+  "step": 2,
+  "reason": "세 집합의 항등식을 보기로 판정한다 — 칸이 여덟이라 두 집합 법칙으로는 안 나온다"
+ },
+ {
+  "id": "B-070",
+  "source": "올림포스 70번",
+  "canon": "T19",
+  "canon_name": "배수·약수의 집합",
+  "difficulty": 2.16,
+  "status": "K",
+  "step": 1,
+  "reason": "[기본] 100 이하로 «범위가 잘린» 배수 집합의 개수 — $A_6 \\cap A_8 = A_{24}$ 로 옮긴 뒤 센다"
+ },
+ {
+  "id": "B-072",
+  "source": "올림포스 72번",
+  "canon": "T19",
+  "canon_name": "배수·약수의 집합",
+  "difficulty": 3.08,
+  "status": "K",
+  "step": 2,
+  "reason": "연산 결과의 «원소의 합»까지 간다 — 집합을 실제로 나열해야 해서 번역만으로는 안 끝난다"
+ },
+ {
+  "id": "B-074",
+  "source": "올림포스 74번",
+  "canon": "T19",
+  "canon_name": "배수·약수의 집합",
+  "difficulty": 2.97,
+  "status": "K",
+  "step": 3,
+  "reason": "⚠ «약수 집합 $A_m$» 과 «배수 집합 $B_n$» 이 한 문제에 함께 나온다 — 방향이 반대인 둘을 동시에 다뤄야 하는 유일한 자리"
+ },
+ {
+  "id": "B-075",
+  "source": "올림포스 75번",
+  "canon": "T20",
+  "canon_name": "방정식·부등식과 집합",
+  "difficulty": 4.89,
+  "status": "K",
+  "step": 2,
+  "reason": "$A-B=\\{4\\}$ — 「한쪽에만 있다」는 조건이라 «$B$ 가 어떤 근을 가져야 하고 갖지 말아야 하는지»를 동시에 정한다"
+ },
+ {
+  "id": "B-076",
+  "source": "올림포스 76번",
+  "canon": "T20",
+  "canon_name": "방정식·부등식과 집합",
+  "difficulty": 4.06,
+  "status": "K",
+  "step": 2,
+  "reason": "두 이차부등식의 «교집합의 최솟값» — 구간을 겹쳐 경계를 읽는다"
+ },
+ {
+  "id": "B-077",
+  "source": "올림포스 77번",
+  "canon": "T20",
+  "canon_name": "방정식·부등식과 집합",
+  "difficulty": 2.65,
+  "status": "K",
+  "step": 2,
+  "reason": "$A$ 가 «바깥쪽» 구간($x^2-2x-8>0$)이다 — 해집합이 두 조각이라 포함 관계가 뒤집혀 보인다"
+ },
+ {
+  "id": "B-085",
+  "source": "올림포스 85번",
+  "canon": "T21",
+  "canon_name": "원소의 개수 공식",
+  "difficulty": 4.08,
+  "status": "K",
+  "step": 3,
+  "reason": "⚠ 「$A$ 와 $B^c$ 이 서로소」 — 여집합과의 서로소라 «$A \\subset B$»로 뒤집어야 한다. 서로소를 포함으로 옮기는 자리"
+ },
+ {
+  "id": "B-086",
+  "source": "올림포스 86번",
+  "canon": "T21",
+  "canon_name": "원소의 개수 공식",
+  "difficulty": 3.33,
+  "status": "K",
+  "step": 2,
+  "reason": "세 집합이고 «$B$ 와 $C$ 가 서로소» — 항 하나가 사라진 포함배제식을 세운다"
+ },
+ {
+  "id": "B-089",
+  "source": "올림포스 89번",
+  "canon": "T23",
+  "canon_name": "원소의 개수의 활용",
+  "difficulty": 4.49,
+  "status": "K",
+  "step": 2,
+  "reason": "「적어도 한 강좌를 수강한 100명»이 곧 전체집합이다 — 조사 대상이 이미 합집합인 자리"
+ },
+ {
+  "id": "B-092",
+  "source": "올림포스 92번",
+  "canon": "T22",
+  "canon_name": "원소의 개수의 최댓값·최솟값",
+  "difficulty": 5.98,
+  "status": "K",
+  "step": 3,
+  "reason": "⚠ 각각의 인원이 아니라 «합»만 주어진다($n(A)+n(B)$) — 개별 값을 모르는 채로 범위를 낸다"
+ },
+ {
+  "id": "B-095",
+  "source": "올림포스 95번",
+  "canon": "T17",
+  "canon_name": "연산과 포함 관계의 동치",
+  "difficulty": 3.36,
+  "status": "K",
+  "step": 2,
+  "reason": "원소가 주어진 두 집합에서 동치를 확인한다 — 식으로만 다루던 것을 수로 검산하는 자리"
+ },
+ {
+  "id": "B-096",
+  "source": "올림포스 96번",
+  "canon": "T11",
+  "canon_name": "부분집합의 원소의 합·곱",
+  "difficulty": 5.98,
+  "status": "K",
+  "step": 2,
+  "reason": "$\\{1,2,3\\} \\subset A$ 이고 $n(A)=4$ — 네 번째 원소 하나만 자유로워 합이 그 원소로 정해진다"
+ },
+ {
+  "id": "B-097",
+  "source": "올림포스 97번",
+  "canon": "T19",
+  "canon_name": "배수·약수의 집합",
+  "difficulty": 9.36,
+  "status": "K",
+  "step": 2,
+  "reason": "$21/x$ 가 자연수(= 약수) 인 집합과 «부등식»으로 정의된 집합이 함께 온다 — 두 통로가 한 문제에 있다"
+ },
+ {
+  "id": "B-100",
+  "source": "올림포스 100번",
+  "canon": "T13",
+  "canon_name": "여집합과 차집합",
+  "difficulty": 5.79,
+  "status": "K",
+  "step": 3,
+  "reason": "$A \\cap B^c = A$ 를 «서로소»로 읽고, $B$ 가 $(x-a)(x-a^2)>0$ 이라 $a$ 와 $a^2$ 의 대소로 경우가 갈린다"
+ },
+ {
+  "id": "B-103",
+  "source": "올림포스 103번",
+  "canon": "T19",
+  "canon_name": "배수·약수의 집합",
+  "difficulty": 5.03,
+  "status": "K",
+  "step": 2,
+  "reason": "$n(A)=7$ 이 되도록 하는 $k$ 를 «모두 찾아 더한다» — 서로소인 것의 개수에서 $k$ 를 역추적한다"
+ },
+ {
+  "id": "B-105",
+  "source": "올림포스 105번",
+  "canon": "T14",
+  "canon_name": "서로소",
+  "difficulty": 6.37,
+  "status": "K",
+  "step": 2,
+  "reason": "「14 와 서로소」를 소인수(2·7)를 피하는 것으로 옮긴다 — 수의 말로 번역하는 자리"
+ },
+ {
+  "id": "B-107",
+  "source": "올림포스 107번",
+  "canon": "T11",
+  "canon_name": "부분집합의 원소의 합·곱",
+  "difficulty": 7.26,
+  "status": "K",
+  "step": 2,
+  "reason": "세 집합 중 하나가 «$k$ 의 약수»라 $k$ 를 찾는 일과 합을 구하는 일이 이어진다"
+ },
+ {
+  "id": "B-109",
+  "source": "올림포스 109번",
+  "canon": "T22",
+  "canon_name": "원소의 개수의 최댓값·최솟값",
+  "difficulty": 6.8,
+  "status": "K",
+  "step": 2,
+  "reason": "$n(A-B)+n(B-A) \\leq 31$ — 조건이 «대칭차»에 걸린다. 합집합·교집합 말로 바꿔야 범위가 보인다"
+ },
+ {
+  "id": "C-004",
+  "source": "유형반복R 4번",
+  "canon": "T01",
+  "canon_name": "집합의 뜻과 원소",
+  "difficulty": 4.9,
+  "status": "K",
+  "step": 3,
+  "reason": "⚠ 원소가 «행렬»이다 — $a_{ij}=a_{ji}$ 조건을 만족하는지 보는 것이라 다른 단원(행렬)이 들어온다"
+ },
+ {
+  "id": "C-006",
+  "source": "유형반복R 6번",
+  "canon": "T02",
+  "canon_name": "집합의 표현 (원소나열법·조건제시법)",
+  "difficulty": 0.32,
+  "status": "K",
+  "step": 2,
+  "reason": "조건제시법으로 «옳지 않은» 것을 고른다 — 여러 표현이 같은 집합을 나타낼 수 있어 넷을 다 확인한다"
+ },
+ {
+  "id": "C-008",
+  "source": "유형반복R 8번",
+  "canon": "T03",
+  "canon_name": "유한·무한집합과 원소의 개수",
+  "difficulty": 1.17,
+  "status": "K",
+  "step": 2,
+  "reason": "«유한집합인 것»을 고른다 — 원소가 끝나는지를 조건에서 읽는 자리"
+ },
+ {
+  "id": "C-009",
+  "source": "유형반복R 9번",
+  "canon": "T03",
+  "canon_name": "유한·무한집합과 원소의 개수",
+  "difficulty": 1.95,
+  "status": "K",
+  "step": 2,
+  "reason": "⚠ 이차부등식의 해집합이 «유한»이 되려면 해가 한 점뿐이어야 한다 — 판별식이 0"
+ },
+ {
+  "id": "C-010",
+  "source": "유형반복R 10번",
+  "canon": "T03",
+  "canon_name": "유한·무한집합과 원소의 개수",
+  "difficulty": 1.01,
+  "status": "K",
+  "step": 2,
+  "reason": "집합이 «공집합»이 되도록 하는 $k$ — 조건을 만족하는 것이 하나도 없을 조건이라 부등호가 뒤집힌다"
+ },
+ {
+  "id": "C-011",
+  "source": "유형반복R 11번",
+  "canon": "T03",
+  "canon_name": "유한·무한집합과 원소의 개수",
+  "difficulty": 1.54,
+  "status": "K",
+  "step": 2,
+  "reason": "«무한집합»이 되려면 $x$ 의 계수가 모두 0 이어야 한다 — 방정식이 항등식이 되는 자리"
+ },
+ {
+  "id": "C-013",
+  "source": "유형반복R 13번",
+  "canon": "T21",
+  "canon_name": "원소의 개수 공식",
+  "difficulty": 1.32,
+  "status": "K",
+  "step": 2,
+  "reason": "$n(A)$ 의 뜻 자체를 보기로 판정한다 — 무한집합·공집합에서 개수가 어떻게 되는지"
+ },
+ {
+  "id": "C-014",
+  "source": "유형반복R 14번",
+  "canon": "T21",
+  "canon_name": "원소의 개수 공식",
+  "difficulty": 4.13,
+  "status": "K",
+  "step": 2,
+  "reason": "$A_k=\\{x \\mid x<\\sqrt{2k+1}\\}$ — 원소 개수가 $k$ 의 «식»으로 나온다. 수를 세는 것이 아니라 함수로 다룬다"
+ },
+ {
+  "id": "C-015",
+  "source": "유형반복R 15번",
+  "canon": "T21",
+  "canon_name": "원소의 개수 공식",
+  "difficulty": 4.89,
+  "status": "K",
+  "step": 2,
+  "reason": "이차방정식의 «해의 개수»가 곧 $n(A)$ — 판별식과 최고차항이 0 인 경우까지 갈라야 한다"
+ },
+ {
+  "id": "C-016",
+  "source": "유형반복R 16번",
+  "canon": "T21",
+  "canon_name": "원소의 개수 공식",
+  "difficulty": 7.15,
+  "status": "K",
+  "step": 2,
+  "reason": "격자점 $(x,y)$ 의 개수 — 원소가 «순서쌍»이라 가로세로를 곱해 센다"
+ },
+ {
+  "id": "C-017",
+  "source": "유형반복R 17번",
+  "canon": "T04",
+  "canon_name": "새로 정의된 집합 구하기",
+  "difficulty": 2.09,
+  "status": "K",
+  "step": 2,
+  "reason": "$X=\\{ab \\mid a\\in A,\\ b\\in B\\}$ — «두 집합»에서 하나씩 뽑아 만든다. 곱이 겹치는 것을 한 번만 세야 한다"
+ },
+ {
+  "id": "C-018",
+  "source": "유형반복R 18번",
+  "canon": "T04",
+  "canon_name": "새로 정의된 집합 구하기",
+  "difficulty": 2.13,
+  "status": "K",
+  "step": 2,
+  "reason": "$C=\\{|x-y|\\}$ — «절댓값»이라 순서가 뒤바뀐 짝이 같은 값을 낸다"
+ },
+ {
+  "id": "C-019",
+  "source": "유형반복R 19번",
+  "canon": "T04",
+  "canon_name": "새로 정의된 집합 구하기",
+  "difficulty": 1.93,
+  "status": "K",
+  "step": 2,
+  "reason": "$B=\\{(p,q)\\}$ — 원소가 «순서쌍»이라 $(2,3)$ 과 $(3,2)$ 가 다른 원소다"
+ },
+ {
+  "id": "C-020",
+  "source": "유형반복R 20번",
+  "canon": "T04",
+  "canon_name": "새로 정의된 집합 구하기",
+  "difficulty": 1.45,
+  "status": "K",
+  "step": 3,
+  "reason": "$A=\\{i^n\\}$ 에서 만든다 — 원소가 복소수라 «주기»를 먼저 찾아야 $A$ 가 정해진다"
+ },
+ {
+  "id": "C-025",
+  "source": "유형반복R 25번",
+  "canon": "T05",
+  "canon_name": "기호 ∈, ⊂의 구별",
+  "difficulty": 2.7,
+  "status": "K",
+  "step": 2,
+  "reason": "두 집합에 «$\\varnothing$ 과 $\\{\\varnothing\\}$»이 갈려 들어 있다 — 공집합 자체와 공집합을 원소로 갖는 집합을 구별하는 자리"
+ },
+ {
+  "id": "C-026",
+  "source": "유형반복R 26번",
+  "canon": "T06",
+  "canon_name": "부분집합과 포함 관계",
+  "difficulty": 2.32,
+  "status": "K",
+  "step": 2,
+  "reason": "벤다이어그램이 나타내는 포함 관계에 «맞는 집합 쌍»을 고른다 — 그림에서 식으로 가는 반대 방향"
+ },
+ {
+  "id": "C-029",
+  "source": "유형반복R 29번",
+  "canon": "T07",
+  "canon_name": "포함 관계가 성립할 조건 (미지수)",
+  "difficulty": 1.13,
+  "status": "K",
+  "step": 2,
+  "reason": "$A \\subset B$ 를 만족하는 «정수 $a$ 의 개수» — 범위를 구한 뒤 그 안의 정수를 센다"
+ },
+ {
+  "id": "C-032",
+  "source": "유형반복R 32번",
+  "canon": "T07",
+  "canon_name": "포함 관계가 성립할 조건 (미지수)",
+  "difficulty": 5.8,
+  "status": "K",
+  "step": 2,
+  "reason": "⚠ 「공집합이 «아닌»」 조건이 붙는다 — 그 한 줄 때문에 $a<b$ 라는 조건이 하나 더 생긴다"
+ },
+ {
+  "id": "C-033",
+  "source": "유형반복R 33번",
+  "canon": "T07",
+  "canon_name": "포함 관계가 성립할 조건 (미지수)",
+  "difficulty": 2.39,
+  "status": "K",
+  "step": 3,
+  "reason": "$A_n=\\{x \\mid x \\leq \\sqrt{n}\\}$ — 구간의 끝이 «무리수»라 $n$ 이 커지며 원소가 언제 늘어나는지를 따진다"
+ },
+ {
+  "id": "C-034",
+  "source": "유형반복R 34번",
+  "canon": "T06",
+  "canon_name": "부분집합과 포함 관계",
+  "difficulty": 3.65,
+  "status": "K",
+  "step": 2,
+  "reason": "$A=\\{n/2-1\\}$ — 원소가 분수·음수까지 나와 «어느 집합에 담기는지»가 물음이 된다"
+ },
+ {
+  "id": "C-036",
+  "source": "유형반복R 36번",
+  "canon": "T11",
+  "canon_name": "부분집합의 원소의 합·곱",
+  "difficulty": 5.91,
+  "status": "K",
+  "step": 2,
+  "reason": "합이 «25 이상»인 부분집합의 개수 — 부등호라 위에서부터 큰 것을 골라 세야 한다"
+ },
+ {
+  "id": "C-037",
+  "source": "유형반복R 37번",
+  "canon": "T11",
+  "canon_name": "부분집합의 원소의 합·곱",
+  "difficulty": 3.27,
+  "status": "K",
+  "step": 3,
+  "reason": "«곱»이 200 이상 — 원소가 $2^n$ 이라 곱이 지수의 «합»으로 바뀐다"
+ },
+ {
+  "id": "C-038",
+  "source": "유형반복R 38번",
+  "canon": "T08",
+  "canon_name": "서로 같은 집합",
+  "difficulty": 3.42,
+  "status": "K",
+  "step": 2,
+  "reason": "⚠ 원소나열법과 조건제시법으로 쓴 집합이 «같은가»를 고른다 — 미지수가 없고 «표현이 달라도 같은 집합»임을 보는 자리"
+ },
+ {
+  "id": "C-041",
+  "source": "유형반복R 41번",
+  "canon": "T08",
+  "canon_name": "서로 같은 집합",
+  "difficulty": 4.7,
+  "status": "K",
+  "step": 3,
+  "reason": "$B=\\{a+b,\\ \\sqrt{ab}\\}$ — 원소가 «합과 곱»이라 짝지은 뒤 연립방정식으로 넘어간다"
+ },
+ {
+  "id": "C-043",
+  "source": "유형반복R 43번",
+  "canon": "T09",
+  "canon_name": "부분집합의 개수",
+  "difficulty": 2.24,
+  "status": "K",
+  "step": 2,
+  "reason": "원소의 개수가 «짝수»인 부분집합 — 크기별로 세어 더한다(짝수 크기의 합이 절반이라는 성질까지)"
+ },
+ {
+  "id": "C-044",
+  "source": "유형반복R 44번",
+  "canon": "T09",
+  "canon_name": "부분집합의 개수",
+  "difficulty": 5.25,
+  "status": "K",
+  "step": 3,
+  "reason": "홀수 원소가 $k$ 개인 개수를 $a_k$ 로 두고 «합»을 구한다 — 개수를 수열로 다룬다"
+ },
+ {
+  "id": "C-045",
+  "source": "유형반복R 45번",
+  "canon": "T09",
+  "canon_name": "부분집합의 개수",
+  "difficulty": 9.22,
+  "status": "K",
+  "step": 3,
+  "reason": "$A \\subset B$ 이고 $B \\not\\subset A$ 인 «순서쌍» — 원소마다 세 갈래로 세고 같은 경우를 빼낸다"
+ },
+ {
+  "id": "C-048",
+  "source": "유형반복R 48번",
+  "canon": "T10",
+  "canon_name": "조건이 있는 부분집합의 개수",
+  "difficulty": 2.24,
+  "status": "K",
+  "step": 3,
+  "reason": "⚠ 위끝의 크기 $n$ 이 미지수이고 «개수»가 주어진다 — 양끝 고정을 거꾸로 세운다"
+ },
+ {
+  "id": "C-049",
+  "source": "유형반복R 49번",
+  "canon": "T10",
+  "canon_name": "조건이 있는 부분집합의 개수",
+  "difficulty": 1.37,
+  "status": "K",
+  "step": 2,
+  "reason": "넣을 것과 «뺄 것»이 함께 온다($1,3 \\in X$, $9 \\notin X$) — 넣기만 하는 A-032 와 달리 양쪽을 동시에 고정한다"
+ },
+ {
+  "id": "C-050",
+  "source": "유형반복R 50번",
+  "canon": "T10",
+  "canon_name": "조건이 있는 부분집합의 개수",
+  "difficulty": 1.86,
+  "status": "K",
+  "step": 3,
+  "reason": "⚠ 거꾸로다 — 개수가 32 라는 것에서 전체 원소 수 $n$ 을 역추적한다"
+ },
+ {
+  "id": "C-052",
+  "source": "유형반복R 52번",
+  "canon": "T10",
+  "canon_name": "조건이 있는 부분집합의 개수",
+  "difficulty": 1.74,
+  "status": "K",
+  "step": 2,
+  "reason": "$n(X)=5$ 로 «크기가 고정»되고 그중 몇 개는 반드시 들어간다 — 남은 자리를 고르는 조합 세기로 넘어간다"
+ },
+ {
+  "id": "C-053",
+  "source": "유형반복R 53번",
+  "canon": "T10",
+  "canon_name": "조건이 있는 부분집합의 개수",
+  "difficulty": 6.07,
+  "status": "K",
+  "step": 2,
+  "reason": "소수의 집합을 먼저 만들고 조건을 얹는다 — 원소를 스스로 나열해야 한다"
+ },
+ {
+  "id": "C-055",
+  "source": "유형반복R 55번",
+  "canon": "T10",
+  "canon_name": "조건이 있는 부분집합의 개수",
+  "difficulty": 2.68,
+  "status": "K",
+  "step": 3,
+  "reason": "⚠ 짝이 «곱»이 아니라 «합»이다($x \\leftrightarrow 8-x$). 게다가 $n(X)=5$ 로 홀수라 «자기 자신과 짝인 원소»가 반드시 들어간다"
+ },
+ {
+  "id": "C-056",
+  "source": "유형반복R 56번",
+  "canon": "T10",
+  "canon_name": "조건이 있는 부분집합의 개수",
+  "difficulty": 3.03,
+  "status": "K",
+  "step": 3,
+  "reason": "⚠ 「모든 원소의 곱이 짝수」 -> «모두 홀수인 것»을 전체에서 뺀다. 곱을 세지 않고 뒤집는 자리"
+ },
+ {
+  "id": "C-057",
+  "source": "유형반복R 57번",
+  "canon": "T10",
+  "canon_name": "조건이 있는 부분집합의 개수",
+  "difficulty": 5.18,
+  "status": "K",
+  "step": 2,
+  "reason": "$n(A)=4$ 이고 «최대 원소 × 최소 원소 = 18» — 양끝을 먼저 정하고 사이를 채운다"
+ },
+ {
+  "id": "C-059",
+  "source": "유형반복R 59번",
+  "canon": "T10",
+  "canon_name": "조건이 있는 부분집합의 개수",
+  "difficulty": 6.64,
+  "status": "K",
+  "step": 3,
+  "reason": "조건을 만족하는 «원소 개수의 최솟값» — 개수를 세는 것이 아니라 개수 자체를 최적화한다"
+ },
+ {
+  "id": "C-060",
+  "source": "유형반복R 60번",
+  "canon": "T11",
+  "canon_name": "부분집합의 원소의 합·곱",
+  "difficulty": 2.36,
+  "status": "K",
+  "step": 2,
+  "reason": "$S(X)$ 에 포함·제외 조건($1\\in X$, $6\\notin X$)이 함께 걸린다"
+ },
+ {
+  "id": "C-064",
+  "source": "유형반복R 64번",
+  "canon": "T09",
+  "canon_name": "부분집합의 개수",
+  "difficulty": 5.61,
+  "status": "K",
+  "step": 3,
+  "reason": "⚠ 부분집합 하나가 아니라 «모든 부분집합에 걸쳐» 무언가를 더한다 — 원소마다 «몇 번 나오는지»를 세는 다른 틀이다"
+ },
+ {
+  "id": "C-065",
+  "source": "유형반복R 65번",
+  "canon": "T19",
+  "canon_name": "배수·약수의 집합",
+  "difficulty": 5.92,
+  "status": "K",
+  "step": 2,
+  "reason": "공약수의 개수를 «함수 $N(a,b)$» 로 정의한다 — 개수를 함수로 보고 조건을 건다"
+ },
+ {
+  "id": "C-067",
+  "source": "유형반복R 67번",
+  "canon": "T18",
+  "canon_name": "새로 약속된 연산",
+  "difficulty": 6.49,
+  "status": "K",
+  "step": 2,
+  "reason": "연산표에 «미지수 $a$»가 들어 있다 — 표가 성립하도록 $a$ 를 거꾸로 정한다"
+ },
+ {
+  "id": "C-069",
+  "source": "유형반복R 69번",
+  "canon": "T10",
+  "canon_name": "조건이 있는 부분집합의 개수",
+  "difficulty": 3.36,
+  "status": "K",
+  "step": 3,
+  "reason": "⚠ $x \\in X$ 이면 $x+1 \\in X$ — 짝이 아니라 «연쇄»다. 한 번 들어가면 위로 다 끌려와 구간이 된다"
+ },
+ {
+  "id": "C-071",
+  "source": "유형반복R 71번",
+  "canon": "T20",
+  "canon_name": "방정식·부등식과 집합",
+  "difficulty": 6.6,
+  "status": "K",
+  "step": 2,
+  "reason": "절댓값이 든 집합과 정수 조건이 함께 온다"
+ },
+ {
+  "id": "C-072",
+  "source": "유형반복R 72번",
+  "canon": "T10",
+  "canon_name": "조건이 있는 부분집합의 개수",
+  "difficulty": 7.55,
+  "status": "K",
+  "step": 2,
+  "reason": "두 부분집합의 순서쌍에 조건이 얹힌다 — A-038 의 세 갈래를 조건에 맞춰 갈라 센다"
+ },
+ {
+  "id": "C-074",
+  "source": "유형반복R 74번",
+  "canon": "T22",
+  "canon_name": "원소의 개수의 최댓값·최솟값",
+  "difficulty": 11.69,
+  "status": "K",
+  "step": 2,
+  "reason": "$n(A)=4$ 이고 «합이 어떤 수의 배수»라는 조건 — 크기를 채우면서 합의 나머지까지 맞춰야 한다"
+ },
+ {
+  "id": "C-075",
+  "source": "유형반복R 75번",
+  "canon": "T22",
+  "canon_name": "원소의 개수의 최댓값·최솟값",
+  "difficulty": 10.95,
+  "status": "K",
+  "step": 1,
+  "reason": "[기본] $a \\in A$ 이면 $2a-1 \\notin A$ — 원소를 «사슬»로 묶어 걸러 하나씩 건너뛴다"
+ },
+ {
+  "id": "C-076",
+  "source": "유형반복R 76번",
+  "canon": "T10",
+  "canon_name": "조건이 있는 부분집합의 개수",
+  "difficulty": 6.06,
+  "status": "K",
+  "step": 2,
+  "reason": "«$n$ 을 최소 원소로 갖는» 집합의 개수를 $f(n)$ 으로 두고 다룬다 — 개수를 함수로 보는 자리"
+ },
+ {
+  "id": "C-078",
+  "source": "유형반복R 78번",
+  "canon": "T10",
+  "canon_name": "조건이 있는 부분집합의 개수",
+  "difficulty": 7.95,
+  "status": "K",
+  "step": 3,
+  "reason": "원소끼리 «$m^2$ 의 일의 자릿수»로 묶인다 — 짝짓는 규칙을 스스로 만들어야 한다"
+ },
+ {
+  "id": "C-079",
+  "source": "유형반복R 79번",
+  "canon": "T22",
+  "canon_name": "원소의 개수의 최댓값·최솟값",
+  "difficulty": 13.64,
+  "status": "K",
+  "step": 2,
+  "reason": "$A_n$ 과 $B_n$ «둘»이 같이 자란다 — 두 수열 집합의 겹침을 $n$ 의 식으로 써야 한다"
+ },
+ {
+  "id": "C-080",
+  "source": "유형반복R 80번",
+  "canon": "T12",
+  "canon_name": "합집합과 교집합",
+  "difficulty": 2.19,
+  "status": "K",
+  "step": 2,
+  "reason": "[기본] 부등식과 조건으로 집합을 «만든 뒤» 연산한다 — 푸는 일과 세는 일이 이어진다"
+ },
+ {
+  "id": "C-082",
+  "source": "유형반복R 82번",
+  "canon": "T12",
+  "canon_name": "합집합과 교집합",
+  "difficulty": 1.31,
+  "status": "K",
+  "step": 3,
+  "reason": "⚠ $A$ 와 $A \\cap B$ 가 주어지고 «$B$ 가 될 수 있는 것»을 고른다 — 하나로 정해지지 않는다. 가능성을 따지는 자리"
+ },
+ {
+  "id": "C-083",
+  "source": "유형반복R 83번",
+  "canon": "T12",
+  "canon_name": "합집합과 교집합",
+  "difficulty": 7.54,
+  "status": "K",
+  "step": 2,
+  "reason": "약수 집합과 «$a+b$ 꼴로 만든» 집합의 교집합 — 한쪽을 직접 만들어 내야 한다"
+ },
+ {
+  "id": "C-090",
+  "source": "유형반복R 90번",
+  "canon": "T13",
+  "canon_name": "여집합과 차집합",
+  "difficulty": 1.52,
+  "status": "K",
+  "step": 2,
+  "reason": "실수 «구간»의 차집합 — 경계의 포함 여부(등호)가 답을 가른다"
+ },
+ {
+  "id": "C-093",
+  "source": "유형반복R 93번",
+  "canon": "T12",
+  "canon_name": "합집합과 교집합",
+  "difficulty": 5.04,
+  "status": "K",
+  "step": 2,
+  "reason": "$B-A$ 가 주어지고 «원소의 합이 12» — 개수가 아니라 합으로 나머지 원소를 특정한다"
+ },
+ {
+  "id": "C-095",
+  "source": "유형반복R 95번",
+  "canon": "T12",
+  "canon_name": "합집합과 교집합",
+  "difficulty": 4.13,
+  "status": "K",
+  "step": 2,
+  "reason": "$A \\cap B$ 와 $A \\cup B$ 가 «함께» 주어진다 — 어느 원소를 어느 쪽에 둘지 갈라야 해서 답이 여럿이 된다"
+ },
+ {
+  "id": "C-099",
+  "source": "유형반복R 99번",
+  "canon": "T07",
+  "canon_name": "포함 관계가 성립할 조건 (미지수)",
+  "difficulty": 4.7,
+  "status": "K",
+  "step": 2,
+  "reason": "$B=\\{2x \\mid x \\in A\\}$ 로 만든 «상(像)»과 원래 집합 사이의 포함 조건 — 원소가 통째로 옮겨 간다"
+ },
+ {
+  "id": "C-102",
+  "source": "유형반복R 102번",
+  "canon": "T15",
+  "canon_name": "벤다이어그램",
+  "difficulty": 1.18,
+  "status": "K",
+  "step": 2,
+  "reason": "식이 주어지고 «그림»을 고른다 — ②의 반대 방향. 식을 칸으로 풀어야 한다"
+ },
+ {
+  "id": "C-104",
+  "source": "유형반복R 104번",
+  "canon": "T16",
+  "canon_name": "집합의 연산 법칙 (드모르간 포함)",
+  "difficulty": 2.61,
+  "status": "K",
+  "step": 2,
+  "reason": "$A \\cap B=\\varnothing$ «조건이 붙은 채» 성립하지 않는 것을 고른다 — 조건 없는 A-013 과 달리 조건을 그림에 그려 놓고 본다"
+ },
+ {
+  "id": "C-105",
+  "source": "유형반복R 105번",
+  "canon": "T16",
+  "canon_name": "집합의 연산 법칙 (드모르간 포함)",
+  "difficulty": 2.99,
+  "status": "K",
+  "step": 3,
+  "reason": "⚠ «나머지 넷과 다른 하나»를 찾는다 — 옳고 그름이 아니라 «다섯을 각각 정리해 서로 견주는» 물음이라 손이 다르다"
+ },
+ {
+  "id": "C-106",
+  "source": "유형반복R 106번",
+  "canon": "T17",
+  "canon_name": "연산과 포함 관계의 동치",
+  "difficulty": 4.04,
+  "status": "K",
+  "step": 2,
+  "reason": "$A \\subset B$ 일 때 «성립하지 «않는» 것» — 조건은 같지만 부정형이라 다섯을 다 본다"
+ },
+ {
+  "id": "C-107",
+  "source": "유형반복R 107번",
+  "canon": "T17",
+  "canon_name": "연산과 포함 관계의 동치",
+  "difficulty": 3.1,
+  "status": "K",
+  "step": 1,
+  "reason": "[기본] $A \\cup B = B$ 를 «$A \\subset B$»로 읽고 그와 같은 뜻인 식을 고른다 — 이 유형의 뿌리"
+ },
+ {
+  "id": "C-115",
+  "source": "유형반복R 115번",
+  "canon": "T10",
+  "canon_name": "조건이 있는 부분집합의 개수",
+  "difficulty": 6.91,
+  "status": "K",
+  "step": 2,
+  "reason": "원소의 합 $S(X)$ 에 조건이 걸린다 — 합은 여사건으로 안 뒤집히므로 경우를 갈라 센다"
+ },
+ {
+  "id": "C-117",
+  "source": "유형반복R 117번",
+  "canon": "T16",
+  "canon_name": "집합의 연산 법칙 (드모르간 포함)",
+  "difficulty": 6.79,
+  "status": "K",
+  "step": 2,
+  "reason": "벤다이어그램의 색칠한 부분과 «항상 같은 것»을 보기에서 «모두» 고른다 — 그림과 식을 왕복한다"
+ },
+ {
+  "id": "C-119",
+  "source": "유형반복R 119번",
+  "canon": "T16",
+  "canon_name": "집합의 연산 법칙 (드모르간 포함)",
+  "difficulty": 5,
+  "status": "K",
+  "step": 2,
+  "reason": "$A-B=A^c \\cup B$ 라는 «등식이 조건»이다 — 정리해서 $A$ 와 $B$ 의 관계를 끌어낸다"
+ },
+ {
+  "id": "C-120",
+  "source": "유형반복R 120번",
+  "canon": "T16",
+  "canon_name": "집합의 연산 법칙 (드모르간 포함)",
+  "difficulty": 2,
+  "status": "K",
+  "step": 1,
+  "reason": "[기본] $(A-C)\\cup(A-B^c)$ 를 «간단히» 한다 — 차집합을 여집합으로 바꾸고 분배법칙으로 묶는 자리"
+ },
+ {
+  "id": "C-122",
+  "source": "유형반복R 122번",
+  "canon": "T16",
+  "canon_name": "집합의 연산 법칙 (드모르간 포함)",
+  "difficulty": 7.23,
+  "status": "K",
+  "step": 2,
+  "reason": "「$A^c$ 과 $B$ 가 서로소」 + 「$A$ 와 $C^c$ 이 서로소」 — 조건 «둘»을 각각 포함 관계로 옮겨 세 집합을 한 줄로 세운다"
+ },
+ {
+  "id": "C-125",
+  "source": "유형반복R 125번",
+  "canon": "T18",
+  "canon_name": "새로 약속된 연산",
+  "difficulty": 3.14,
+  "status": "K",
+  "step": 2,
+  "reason": "전체집합의 «원소가 주어진 채» 새 연산을 계산한다 — 식으로만 다루던 것을 수로 확인하는 자리"
+ },
+ {
+  "id": "C-126",
+  "source": "유형반복R 126번",
+  "canon": "T19",
+  "canon_name": "배수·약수의 집합",
+  "difficulty": 2.53,
+  "status": "K",
+  "step": 2,
+  "reason": "전체집합이 100 이하이고 배수 집합 «여러 개»의 개수를 함께 다룬다 — 포함배제로 넘어간다"
+ },
+ {
+  "id": "C-128",
+  "source": "유형반복R 128번",
+  "canon": "T19",
+  "canon_name": "배수·약수의 집합",
+  "difficulty": 4.08,
+  "status": "K",
+  "step": 3,
+  "reason": "⚠ «옳지 않은 것»을 고른다 — 맞는 하나가 아니라 틀린 하나라 네 성질을 모두 확인하게 된다"
+ },
+ {
+  "id": "C-130",
+  "source": "유형반복R 130번",
+  "canon": "T20",
+  "canon_name": "방정식·부등식과 집합",
+  "difficulty": 3.45,
+  "status": "K",
+  "step": 2,
+  "reason": "$A$ 의 «구간 자체가 $k$ 에 따라 움직인다» — 고정 구간과의 관계를 $k$ 로 나눠 본다"
+ },
+ {
+  "id": "C-131",
+  "source": "유형반복R 131번",
+  "canon": "T20",
+  "canon_name": "방정식·부등식과 집합",
+  "difficulty": 4.66,
+  "status": "K",
+  "step": 2,
+  "reason": "두 이차부등식이 «둘 다» 미지수를 갖는다 — 두 구간이 동시에 움직인다"
+ },
+ {
+  "id": "C-134",
+  "source": "유형반복R 134번",
+  "canon": "T20",
+  "canon_name": "방정식·부등식과 집합",
+  "difficulty": 7.9,
+  "status": "K",
+  "step": 2,
+  "reason": "$x^2-3ax-x+2a^2-2 \\leq 0$ — 인수분해했을 때 두 근의 «대소가 $a$ 에 따라 뒤집혀» 경우가 갈린다"
+ },
+ {
+  "id": "C-137",
+  "source": "유형반복R 137번",
+  "canon": "T21",
+  "canon_name": "원소의 개수 공식",
+  "difficulty": 4.2,
+  "status": "K",
+  "step": 2,
+  "reason": "대칭차의 개수 $n((A-B)\\cup(B-A))$ 가 주어진다 — 합집합에서 교집합을 두 번 빼는 꼴이라 식이 한 겹 다르다"
+ },
+ {
+  "id": "C-138",
+  "source": "유형반복R 138번",
+  "canon": "T21",
+  "canon_name": "원소의 개수 공식",
+  "difficulty": 6.2,
+  "status": "K",
+  "step": 2,
+  "reason": "$n(A\\cup B)=n(A)+n(B)$ 라는 조건 «자체»가 서로소를 뜻한다 — 식에서 조건을 읽어 내는 역방향"
+ },
+ {
+  "id": "C-140",
+  "source": "유형반복R 140번",
+  "canon": "T22",
+  "canon_name": "원소의 개수의 최댓값·최솟값",
+  "difficulty": 7.04,
+  "status": "K",
+  "step": 3,
+  "reason": "⚠ $n(B) \\geq 8$ — 개수 자체가 «범위»로 주어진다. 고정된 수로 세던 A-063 과 달리 양끝을 각각 따져야 한다"
+ },
+ {
+  "id": "C-141",
+  "source": "유형반복R 141번",
+  "canon": "T22",
+  "canon_name": "원소의 개수의 최댓값·최솟값",
+  "difficulty": 6.04,
+  "status": "K",
+  "step": 2,
+  "reason": "$n(A-B)=n(B-A)+4$ 로 둘이 묶이고 «곱»의 최대를 묻는다 — 범위가 아니라 이차식의 극값으로 넘어간다"
+ },
+ {
+  "id": "C-146",
+  "source": "유형반복R 146번",
+  "canon": "T23",
+  "canon_name": "원소의 개수의 활용",
+  "difficulty": 6.6,
+  "status": "K",
+  "step": 3,
+  "reason": "⚠ 조건이 「$A$ 를 이수한 학생 «중»」처럼 «부분집합 안에서» 걸린다 — 벤다이어그램의 특정 칸을 지목하는 문장을 읽어야 한다"
+ },
+ {
+  "id": "C-150",
+  "source": "유형반복R 150번",
+  "canon": "T22",
+  "canon_name": "원소의 개수의 최댓값·최솟값",
+  "difficulty": 5.46,
+  "status": "K",
+  "step": 2,
+  "reason": "$B=\\{x+y \\mid x,y \\in A\\}$ — 집합에서 «새 집합을 만들어» 내는 자리 (T04 의 연산판)"
+ },
+ {
+  "id": "C-152",
+  "source": "유형반복R 152번",
+  "canon": "T22",
+  "canon_name": "원소의 개수의 최댓값·최솟값",
+  "difficulty": 12.52,
+  "status": "K",
+  "step": 2,
+  "reason": "$A_n$ 이 «부등식»으로 정의된다 — 두 근의 대소가 $n$ 에 따라 뒤집혀 경우가 갈린다"
+ },
+ {
+  "id": "C-153",
+  "source": "유형반복R 153번",
+  "canon": "T19",
+  "canon_name": "배수·약수의 집합",
+  "difficulty": 8.33,
+  "status": "K",
+  "step": 2,
+  "reason": "서로소 집합 $A_n$ 과 배수 집합 $B_n$ 을 함께 걸어 $n$ 을 찾는다"
+ },
+ {
+  "id": "C-155",
+  "source": "유형반복R 155번",
+  "canon": "T23",
+  "canon_name": "원소의 개수의 활용",
+  "difficulty": 6.34,
+  "status": "K",
+  "step": 2,
+  "reason": "대상이 «남자·여자 두 군»으로 갈려 있다 — 표를 두 벌 만들어 합쳐야 한다"
+ },
+ {
+  "id": "C-156",
+  "source": "유형반복R 156번",
+  "canon": "T22",
+  "canon_name": "원소의 개수의 최댓값·최솟값",
+  "difficulty": 11.07,
+  "status": "K",
+  "step": 2,
+  "reason": "$A_n$ 이 정수 «구간»이라 원소 개수가 $n$ 의 이차식이 된다 — 개수 자체를 함수로 다룬다"
+ },
+ {
+  "id": "C-158",
+  "source": "유형반복R 158번",
+  "canon": "T20",
+  "canon_name": "방정식·부등식과 집합",
+  "difficulty": 8.56,
+  "status": "K",
+  "step": 2,
+  "reason": "이차함수 $f$ 를 세우고 세 집합의 관계로 계수를 정한다 — 함수가 미지인 채로 조건을 건다"
+ },
+ {
+  "id": "C-162",
+  "source": "유형반복R 162번",
+  "canon": "T11",
+  "canon_name": "부분집합의 원소의 합·곱",
+  "difficulty": 14.27,
+  "status": "K",
+  "step": 2,
+  "reason": "$A^c \\cup \\cdots$ 조건에서 $B$ 를 복원해 합을 구한다"
+ },
+ {
+  "id": "C-163",
+  "source": "유형반복R 163번",
+  "canon": "T17",
+  "canon_name": "연산과 포함 관계의 동치",
+  "difficulty": 10.12,
+  "status": "K",
+  "step": 2,
+  "reason": "$X=\\{x \\mid (x-a)(x-b)\\geq 0\\}$ — 해집합이 «바깥쪽»이라 포함 관계가 뒤집혀 보인다"
+ },
+ {
+  "id": "C-164",
+  "source": "유형반복R 164번",
+  "canon": "T22",
+  "canon_name": "원소의 개수의 최댓값·최솟값",
+  "difficulty": 7.24,
+  "status": "K",
+  "step": 2,
+  "reason": "원 위의 점 «전체»가 원소이고 대칭이동까지 온다 — 원소가 무한하고 도형인 유일한 문항"
+ },
+ {
+  "id": "C-165",
+  "source": "유형반복R 165번",
+  "canon": "T22",
+  "canon_name": "원소의 개수의 최댓값·최솟값",
+  "difficulty": 12.76,
+  "status": "K",
+  "step": 2,
+  "reason": "$B=\\{4a,\\ 4b+1,\\ 4c+2,\\ 4d+3\\}$ — 원소가 «나머지로 갈려» 있어 4로 나눈 나머지를 축으로 삼아야 한다"
+ },
+ {
+  "id": "C-166",
+  "source": "유형반복R 166번",
+  "canon": "T13",
+  "canon_name": "여집합과 차집합",
+  "difficulty": 10.55,
+  "status": "K",
+  "step": 3,
+  "reason": "$n(A)=n(B-A)$ 처럼 «개수끼리» 묶이고 순서쌍을 센다"
+ },
+ {
+  "id": "C-167",
+  "source": "유형반복R 167번",
+  "canon": "T19",
+  "canon_name": "배수·약수의 집합",
+  "difficulty": 11.64,
+  "status": "K",
+  "step": 2,
+  "reason": "$x \\times (y-k)$ 꼴로 «표를 만들어» 약수 짝을 모두 훑는다 — 나열이 곧 풀이인 자리"
+ },
+ {
+  "id": "C-169",
+  "source": "유형반복R 169번",
+  "canon": "T12",
+  "canon_name": "합집합과 교집합",
+  "difficulty": 6.88,
+  "status": "K",
+  "step": 3,
+  "reason": "$P(X,Y,Z)=(X\\cup Y)\\cap Z$ — 세 집합을 받는 «새 연산»을 정의하고 개수를 다룬다"
+ },
+ {
+  "id": "C-171",
+  "source": "유형반복R 171번",
+  "canon": "T22",
+  "canon_name": "원소의 개수의 최댓값·최솟값",
+  "difficulty": 13.05,
+  "status": "K",
+  "step": 2,
+  "reason": "$n(A\\cup B)$ 와 $n(A-B)$ 가 함께 주어지고 «순서쌍의 개수»를 센다 — 개수 조건에서 집합을 세는 쪽으로 넘어간다"
+ },
+ {
+  "id": "D-001",
+  "source": "절대등급 1번",
+  "canon": "T08",
+  "canon_name": "서로 같은 집합",
+  "difficulty": 3.9,
+  "status": "K",
+  "step": 3,
+  "reason": "원소가 $x$ 의 «식»이라($x^2+x$ 등) 짝지으면 방정식이 여러 벌 나오고 공통해를 찾아야 한다"
+ },
+ {
+  "id": "D-003",
+  "source": "절대등급 3번",
+  "canon": "T19",
+  "canon_name": "배수·약수의 집합",
+  "difficulty": 2.37,
+  "status": "K",
+  "step": 2,
+  "reason": "$B=\\{x/2 \\mid x \\in A\\}$ — 약수 집합을 «변형»해 새 집합을 만든다. 원소가 자연수가 아닐 수 있어 걸러야 한다"
+ },
+ {
+  "id": "D-005",
+  "source": "절대등급 5번",
+  "canon": "T19",
+  "canon_name": "배수·약수의 집합",
+  "difficulty": 0.58,
+  "status": "K",
+  "step": 2,
+  "reason": "$B \\subset A$ 가 되도록 하는 $a$ 를 «모두» 찾는다 — 배수 조건을 약수 조건으로 뒤집어 6의 약수를 나열한다"
+ },
+ {
+  "id": "D-006",
+  "source": "절대등급 6번",
+  "canon": "T15",
+  "canon_name": "벤다이어그램",
+  "difficulty": 1.58,
+  "status": "K",
+  "step": 1,
+  "reason": "[기본] 원소가 주어진 두 집합의 $A \\cup B^c$ 를 구한다 — 여집합을 전체에서 덜어 내는 자리"
+ },
+ {
+  "id": "D-010",
+  "source": "절대등급 10번",
+  "canon": "T11",
+  "canon_name": "부분집합의 원소의 합·곱",
+  "difficulty": 2.86,
+  "status": "K",
+  "step": 3,
+  "reason": "$A \\cap (A-B)=A$ 와 $A \\cup B=U$ 두 조건 — 각각 서로소와 전체를 뜻해 $B$ 가 하나로 정해진다"
+ },
+ {
+  "id": "D-015",
+  "source": "절대등급 15번",
+  "canon": "T12",
+  "canon_name": "합집합과 교집합",
+  "difficulty": 1,
+  "status": "K",
+  "step": 1,
+  "reason": "[기본] $A \\cap B$, $A \\cap C$ 가 주어지고 $A \\cap (B \\cup C)$ — 분배법칙을 원소로 확인하는 자리"
+ },
+ {
+  "id": "D-017",
+  "source": "절대등급 17번",
+  "canon": "T14",
+  "canon_name": "서로소",
+  "difficulty": 6.98,
+  "status": "K",
+  "step": 2,
+  "reason": "$A-B$ 와 $A^c \\cup B^c$ 가 함께 주어진다 — 뒤엣것을 드모르간으로 풀어야 칸이 맞춰진다"
+ },
+ {
+  "id": "D-021",
+  "source": "절대등급 21번",
+  "canon": "T15",
+  "canon_name": "벤다이어그램",
+  "difficulty": 1.8,
+  "status": "K",
+  "step": 2,
+  "reason": "⚠ 색칠한 부분을 «나타내지 않는» 것을 고른다 — 맞는 하나가 아니라 «틀린 하나»를 찾아야 해서 네 개를 모두 확인하게 된다"
+ },
+ {
+  "id": "D-025",
+  "source": "절대등급 25번",
+  "canon": "T15",
+  "canon_name": "벤다이어그램",
+  "difficulty": 3.43,
+  "status": "K",
+  "step": 2,
+  "reason": "$A^c \\diamond B = U$ 라는 조건에서 $A \\diamond B$ 를 «추론»한다 — 값을 구하는 것이 아니라 관계를 옮긴다"
+ },
+ {
+  "id": "D-028",
+  "source": "절대등급 28번",
+  "canon": "T10",
+  "canon_name": "조건이 있는 부분집합의 개수",
+  "difficulty": 2.26,
+  "status": "K",
+  "step": 2,
+  "reason": "$B^c - A^c = \\{1\\}$ — 여집합끼리의 차를 원래 집합의 말로 되돌려야 양끝이 보인다"
+ },
+ {
+  "id": "D-029",
+  "source": "절대등급 29번",
+  "canon": "T15",
+  "canon_name": "벤다이어그램",
+  "difficulty": 3.64,
+  "status": "K",
+  "step": 2,
+  "reason": "$A \\cup C = B \\cup C$ 를 만족하는 «$C$»를 찾는다 — 미지의 집합이 등식 «양쪽»에 걸린다"
+ },
+ {
+  "id": "D-032",
+  "source": "절대등급 32번",
+  "canon": "T12",
+  "canon_name": "합집합과 교집합",
+  "difficulty": 2.27,
+  "status": "K",
+  "step": 3,
+  "reason": "삼차·사차 방정식의 «해집합»으로 대칭차를 구한다 — 인수분해가 먼저다"
+ },
+ {
+  "id": "D-033",
+  "source": "절대등급 33번",
+  "canon": "T07",
+  "canon_name": "포함 관계가 성립할 조건 (미지수)",
+  "difficulty": 1.36,
+  "status": "K",
+  "step": 3,
+  "reason": "$B$ 가 $(x-a)^2<4$ 꼴이라 «폭이 고정된 구간이 통째로 움직인다» — 미끄러지는 구간을 다루는 자리"
+ },
+ {
+  "id": "D-034",
+  "source": "절대등급 34번",
+  "canon": "T12",
+  "canon_name": "합집합과 교집합",
+  "difficulty": 1.99,
+  "status": "K",
+  "step": 2,
+  "reason": "$A \\cap B = \\varnothing$ 이고 $A \\cup B$ 가 주어져 «계수 $a,b$»를 찾는다 — 집합 조건을 근의 위치로 옮긴다"
+ },
+ {
+  "id": "D-036",
+  "source": "절대등급 36번",
+  "canon": "T23",
+  "canon_name": "원소의 개수의 활용",
+  "difficulty": 3.48,
+  "status": "K",
+  "step": 2,
+  "reason": "「축구«만»」 — 교집합이 아니라 «차집합»을 묻는다. 칸이 다르다"
+ },
+ {
+  "id": "D-039",
+  "source": "절대등급 39번",
+  "canon": "T23",
+  "canon_name": "원소의 개수의 활용",
+  "difficulty": 4.98,
+  "status": "K",
+  "step": 3,
+  "reason": "⚠ 각각의 인원이 아니라 «쌍의 합집합»만 주어진다(바둑 또는 서예 = 43) — 연립해서 개별 값을 끌어낸다"
+ },
+ {
+  "id": "D-040",
+  "source": "절대등급 40번",
+  "canon": "T09",
+  "canon_name": "부분집합의 개수",
+  "difficulty": 4.03,
+  "status": "K",
+  "step": 2,
+  "reason": "$A=\\{\\varnothing,\\ a,\\ \\{a,b\\}\\}$ 에서 $\\in$ 과 $\\subset$ 을 보기로 판정한다 — 개수가 아니라 «자격»을 묻는다"
+ },
+ {
+  "id": "D-041",
+  "source": "절대등급 41번",
+  "canon": "T04",
+  "canon_name": "새로 정의된 집합 구하기",
+  "difficulty": 5.52,
+  "status": "K",
+  "step": 3,
+  "reason": "⚠ 거꾸로다 — $B=\\{x+y\\}$ 의 «최솟값·최댓값·개수»가 주어지고 원래 집합 $A$ 를 찾는다"
+ },
+ {
+  "id": "D-042",
+  "source": "절대등급 42번",
+  "canon": "T08",
+  "canon_name": "서로 같은 집합",
+  "difficulty": 4.27,
+  "status": "K",
+  "step": 2,
+  "reason": "$B=\\{x \\mid x/n$ 이 $\\cdots\\}$ 처럼 조건으로 쓴 집합이 주어진 집합과 같아지도록 $n$ 을 찾는다"
+ },
+ {
+  "id": "D-045",
+  "source": "절대등급 45번",
+  "canon": "T15",
+  "canon_name": "벤다이어그램",
+  "difficulty": 4.28,
+  "status": "K",
+  "step": 2,
+  "reason": "세 집합의 «여덟 칸»을 복원한다 — 두 집합의 네 칸과 달리 칸이 서로 겹쳐 순서를 잡아야 한다"
+ },
+ {
+  "id": "D-046",
+  "source": "절대등급 46번",
+  "canon": "T12",
+  "canon_name": "합집합과 교집합",
+  "difficulty": 5.16,
+  "status": "K",
+  "step": 3,
+  "reason": "복소수 $x^3=1$ 의 해집합에서 «곱»과 «합»으로 새 집합을 만든다 — 원소를 구하는 것 자체가 다른 단원의 일이다"
+ },
+ {
+  "id": "D-048",
+  "source": "절대등급 48번",
+  "canon": "T17",
+  "canon_name": "연산과 포함 관계의 동치",
+  "difficulty": 5.83,
+  "status": "K",
+  "step": 2,
+  "reason": "세 집합의 항등식($A-(B\\cap C)$ 등)을 판정한다 — 칸이 여덟이라 두 집합 항등식으로는 안 나온다"
+ },
+ {
+  "id": "D-049",
+  "source": "절대등급 49번",
+  "canon": "T22",
+  "canon_name": "원소의 개수의 최댓값·최솟값",
+  "difficulty": 5.77,
+  "status": "K",
+  "step": 2,
+  "reason": "$A=\\{x \\mid f(x)=0\\}$ 처럼 «해집합»으로 주어진다 — 방정식의 근과 집합을 오간다"
+ },
+ {
+  "id": "D-050",
+  "source": "절대등급 50번",
+  "canon": "T17",
+  "canon_name": "연산과 포함 관계의 동치",
+  "difficulty": 7.69,
+  "status": "K",
+  "step": 2,
+  "reason": "$B=\\{x \\mid x^2-2ax+2a+3>0\\}$ 이 «모든 실수»가 되는 조건 등 — 판별식으로 넘어간다"
+ },
+ {
+  "id": "D-052",
+  "source": "절대등급 52번",
+  "canon": "T14",
+  "canon_name": "서로소",
+  "difficulty": 3.72,
+  "status": "K",
+  "step": 3,
+  "reason": "$A_n$(소수) 과 $B_n$ 이 «$n$ 에 따라 자라며» 서로소인지 따진다"
+ },
+ {
+  "id": "D-057",
+  "source": "절대등급 57번",
+  "canon": "T17",
+  "canon_name": "연산과 포함 관계의 동치",
+  "difficulty": 8.76,
+  "status": "K",
+  "step": 2,
+  "reason": "$n(A \\cap B \\cap X) \\geq 2$ — 포함 관계에 «개수 부등호»가 겹쳐 크기별로 갈라 세야 한다"
+ },
+ {
+  "id": "D-058",
+  "source": "절대등급 58번",
+  "canon": "T10",
+  "canon_name": "조건이 있는 부분집합의 개수",
+  "difficulty": 9.2,
+  "status": "K",
+  "step": 3,
+  "reason": "«최대 − 최소»가 함수 $f(A)$ 로 정의된다 — 양끝의 차로 집합을 분류해 센다"
+ },
+ {
+  "id": "D-061",
+  "source": "절대등급 61번",
+  "canon": "T13",
+  "canon_name": "여집합과 차집합",
+  "difficulty": 8.09,
+  "status": "K",
+  "step": 3,
+  "reason": "$A-B$ 만 주어지고 «순서쌍 $(A,B)$ 의 개수»를 센다 — 나머지 원소마다 갈래를 따진다"
+ },
+ {
+  "id": "D-062",
+  "source": "절대등급 62번",
+  "canon": "T17",
+  "canon_name": "연산과 포함 관계의 동치",
+  "difficulty": 7.1,
+  "status": "K",
+  "step": 2,
+  "reason": "$A \\cup B=U$ 이고 $A \\cap B \\neq \\varnothing$ 인 «순서쌍»의 개수 — 원소마다 갈래를 따지고 여사건으로 뺀다"
+ },
+ {
+  "id": "D-063",
+  "source": "절대등급 63번",
+  "canon": "T17",
+  "canon_name": "연산과 포함 관계의 동치",
+  "difficulty": 6.12,
+  "status": "K",
+  "step": 3,
+  "reason": "⚠ $A \\star B=A^c \\cap B^c$ 를 «두 번 겹쳐» $(A \\star B) \\star A=\\varnothing$ — 새 연산을 두 번 적용해 조건을 푸는 유일한 자리"
+ },
+ {
+  "id": "D-066",
+  "source": "절대등급 66번",
+  "canon": "T11",
+  "canon_name": "부분집합의 원소의 합·곱",
+  "difficulty": 7.7,
+  "status": "K",
+  "step": 3,
+  "reason": "$f(M)$ 을 «곱»으로 정의하고 2000 이하에서 다룬다 — 곱이 특정 꼴이 되는 조건을 소인수로 읽는다"
+ },
+ {
+  "id": "D-067",
+  "source": "절대등급 67번",
+  "canon": "T17",
+  "canon_name": "연산과 포함 관계의 동치",
+  "difficulty": 9.6,
+  "status": "K",
+  "step": 2,
+  "reason": "$A-B$ 가 주어진 채로 조건이 이어진다 — 칸을 고정하고 나머지를 센다"
+ },
+ {
+  "id": "D-068",
+  "source": "절대등급 68번",
+  "canon": "T12",
+  "canon_name": "합집합과 교집합",
+  "difficulty": 5.42,
+  "status": "K",
+  "step": 2,
+  "reason": "$B=\\{(x+a)/2 \\mid x \\in A\\}$ — 한 집합의 «상(像)»이라 원소가 통째로 옮겨 간다"
+ },
+ {
+  "id": "D-070",
+  "source": "절대등급 70번",
+  "canon": "T22",
+  "canon_name": "원소의 개수의 최댓값·최솟값",
+  "difficulty": 6.78,
+  "status": "K",
+  "step": 3,
+  "reason": "⚠ 서로 다른 두 원소의 «합이 5의 배수가 아니다» — 나머지끼리 짝이 되는 것을 통째로 못 쓴다. 사슬이 아니라 «나머지 묶음»이다"
+ },
+ {
+  "id": "D-071",
+  "source": "절대등급 71번",
+  "canon": "T23",
+  "canon_name": "원소의 개수의 활용",
+  "difficulty": 6,
+  "status": "K",
+  "step": 2,
+  "reason": "인원이 «분수(비율)»로 주어진다 — 전체를 미지수로 두고 정수 조건까지 따진다"
+ },
+ {
+  "id": "D-072",
+  "source": "절대등급 72번",
+  "canon": "T15",
+  "canon_name": "벤다이어그램",
+  "difficulty": 4.92,
+  "status": "K",
+  "step": 2,
+  "reason": "대칭차에 «개수»가 걸린다($n(A\\cup B\\cup C)$) — 그림의 칸을 세는 쪽으로 넘어간다"
+ },
+ {
+  "id": "D-073",
+  "source": "절대등급 73번",
+  "canon": "T22",
+  "canon_name": "원소의 개수의 최댓값·최솟값",
+  "difficulty": 7.79,
+  "status": "K",
+  "step": 2,
+  "reason": "세 집합의 쌍마다 교집합이 주어지고 «셋의 교집합»만 미지수 — 포함배제식을 부등식으로 쓴다"
+ },
+ {
+  "id": "D-076",
+  "source": "절대등급 76번",
+  "canon": "T19",
+  "canon_name": "배수·약수의 집합",
+  "difficulty": 11.17,
+  "status": "K",
+  "step": 2,
+  "reason": "전체집합 30 이하에서 조건으로 걸러 낸 집합을 다룬다"
+ },
+ {
+  "id": "D-078",
+  "source": "절대등급 78번",
+  "canon": "T14",
+  "canon_name": "서로소",
+  "difficulty": 9.57,
+  "status": "K",
+  "step": 3,
+  "reason": "서로소 조건 아래 부분집합의 «개수»를 센다 — 조건이 원소를 짝으로 묶는다"
+ },
+ {
+  "id": "D-079",
+  "source": "절대등급 79번",
+  "canon": "T11",
+  "canon_name": "부분집합의 원소의 합·곱",
+  "difficulty": 10.97,
+  "status": "K",
+  "step": 3,
+  "reason": "부분집합 «둘»의 $S(B)$, $S(C)$ 를 함께 건다 — 순서쌍을 세는 쪽으로 넘어간다"
+ },
+ {
+  "id": "D-080",
+  "source": "절대등급 80번",
+  "canon": "T18",
+  "canon_name": "새로 약속된 연산",
+  "difficulty": 11.68,
+  "status": "K",
+  "step": 2,
+  "reason": "집합 $X$ 에 조건을 걸어 «만족하는 $X$»를 찾는다 — 연산이 아니라 조건을 푸는 쪽으로 넘어간다"
+ },
+ {
+  "id": "D-081",
+  "source": "절대등급 81번",
+  "canon": "T22",
+  "canon_name": "원소의 개수의 최댓값·최솟값",
+  "difficulty": 13.46,
+  "status": "K",
+  "step": 2,
+  "reason": "$n(A)=n(B)$ 로 둘의 크기가 묶인 채 조건이 걸린다"
+ },
+ {
+  "id": "D-082",
+  "source": "절대등급 82번",
+  "canon": "T20",
+  "canon_name": "방정식·부등식과 집합",
+  "difficulty": 10.38,
+  "status": "K",
+  "step": 2,
+  "reason": "두 이차함수의 해집합을 함께 다룬다 — 최고차항 부호가 달라 구간의 방향이 반대다"
+ },
+ {
+  "id": "D-083",
+  "source": "절대등급 83번",
+  "canon": "T22",
+  "canon_name": "원소의 개수의 최댓값·최솟값",
+  "difficulty": 12.7,
+  "status": "K",
+  "step": 2,
+  "reason": "세 집합의 크기가 «모두 같고» 전체가 크다 — 겹침을 최대로 밀 때와 최소로 밀 때가 A-071 과 다른 모양이 된다"
+ }
+]

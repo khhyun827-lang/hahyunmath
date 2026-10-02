@@ -44,7 +44,7 @@ const 수업 = { '2026-10-05': [{ id: 'c1', name: '0.5B', schedule: '' }, { id: 
 
 const f = new Function('DATA', 'sessionsOn', 'offDayFor', 'movedInto', 'sessionTimeText', 'stuDayLabel', 'ymd',
   'examDatesOf', 'gradeLabel', 'dateShift', 'isWithdrawn', 'clinicWhenLabel', 'planCellsOfStudent',
-  lift('teacherMonthEvents') + NL + 'return teacherMonthEvents;')(
+  lift('schoolShort') + NL + lift('teacherMonthEvents') + NL + 'return teacherMonthEvents;')(
   DATA, d => 수업[d] || [], (id, d) => d === '2026-10-07' ? { label: '행사' } : null, () => null,
   () => '19:00~21:00', d => d, (y, m, d) => y + '-' + String(m).padStart(2, '0') + '-' + String(d).padStart(2, '0'),
   (s, g) => 시험[s + '|' + g] || null, g => g + '학년',
@@ -60,6 +60,8 @@ console.log('홈 달력');
 봄('수학 시험일', Object.keys(수학날), ['2026-10-11']);
 봄('상담진행은 날마다 한 줄', out['2026-10-03'].map(e => [e.title, e.sub]), [['상담진행 · 2명', '가 · 다']]);
 봄('학교·학년마다 한 번만', out['2026-10-10'].map(e => e.title), ['A고 1학년 시험기간 시작']);
+봄('칸 안 짧은 이름 — 정규 수업은 없다(점만)', out['2026-10-05'].map(e => e.short), ['A고 직전보충', '가', '']);
+봄('칸 안 짧은 이름 — 시험', [out['2026-10-10'][0].short, out['2026-10-11'][0].short], ['A1 시작', 'A1 수학']);
 봄('다른 달은 안 넣는다', Object.keys(f('2026-11').out).length, 0);
 
 console.log(NL + `${pass} 통과 · ${fail} 실패`);

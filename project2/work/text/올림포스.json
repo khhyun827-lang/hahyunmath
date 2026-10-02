@@ -1,0 +1,552 @@
+[
+ {
+  "n": 1,
+  "body": "다음 중 집합인 것은?\n① 축구를 좋아하는 학생의 모임\n② 작은 분수의 모임\n③ 태양계 행성의 모임\n④ 인구가 많은 도시의 모임\n⑤ 춤을 잘 추는 학생의 모임",
+  "answer": "[정답] ③\n①, ②, ④, ⑤ ‘좋아요하는’, ‘작은’, ‘ 많은’, ‘잘 추는’은 조건이 명확하지 않아 그 대상을 명확하게 구분할 수 없으므로 집합이 아니다.\n따라서 집합인 것은 ③이다."
+ },
+ {
+  "n": 2,
+  "body": "$8$ 보다 작은 짝수인 자연수 전체의 집합을 $A$ 라 할 때, 다음 중 옳은 것은?\n① $0 \\in A$ ② $3 \\in A$ ③ $4 \\in A$\n④ $6 \\notin A$ ⑤ $8 \\in A$",
+  "answer": "[정답] ③\n$A = \\left\\{2, 4, 6 \\right\\}$ 이므로\n① $0 \\notin A$\n② $3 \\notin A$\n④ $6 \\in A$\n⑤ $8 \\notin A$\n따라서 옳은 것은 ③이다."
+ },
+ {
+  "n": 3,
+  "body": "정수 전체의 집합을 $Z$ , 유리수 전체의 집합을 $Q$ , 실수 전체의 집합을 $R$ 이라 할 때, 다음 중 옳은 것은?\n① $\\sqrt {4} \\notin Z$ ② ${1} \\over {2} \\notin Q$ ③ $\\sqrt {2} \\in Q$\n④ $\\pi \\notin Q$ ⑤ $2+ \\sqrt {3} \\notin R$\n[그림3] 2\n집합을 나타내는 방법",
+  "answer": "[정답] ④\n① $\\sqrt {4}=2$ 는 정수이므로 $\\sqrt {4} \\in Z$\n② ${1} \\over {2}$ 은 유리수이므로 ${1} \\over {2} \\in Q$\n③ $\\sqrt {2}$ 는 무리수이므로 $\\sqrt {2} \\notin Q$\n④ $\\pi$ 는 무리수이므로 $\\pi \\notin Q$\n⑤ $2+ \\sqrt {3}$ 은 실수이므로 $2+ \\sqrt {3} \\in R$\n따라서 옳은 것은 ④이다."
+ },
+ {
+  "n": 4,
+  "body": "다음 벤 다이어그램으로 나타낸 집합 $A$ 를 조건제시법으로 바르게 나타낸 것은?\n[그림4]\n① $A = \\left\\{x \\left| x \\right. \\right.$ 는 $20$ 의 양의 약수 $\\left. \\right\\}$\n② $A = \\left\\{x \\left| x \\right. \\right.$ 는 짝수인 $20$ 의 양의 약수 $\\left. \\right\\}$\n③ $A = \\left\\{x \\left| x \\right. \\right.$ 는 $3$ 이상의 $20$ 의 양의 약수 $\\left. \\right\\}$\n④ $A = \\left\\{x \\left| x \\right. \\right.$ 는 $4$ 의 양의 배수 $\\left. \\right\\}$\n⑤ $A = \\left\\{x \\left| x \\right. \\right.$ 는 $20$ 이하의 $4$ 의 양의 배수 $\\left. \\right\\}$",
+  "answer": "[정답] ③\n① $A = \\left\\{1, 2, 4, 5, 10, 20 \\right\\}$\n② $A = \\left\\{2, 4, 10, 20 \\right\\}$\n③ $A = \\left\\{4, 5, 10, 20 \\right\\}$\n④ $A = \\left\\{4, 8, 12, 16, 20, \\cdots \\right\\}$\n⑤ $A = \\left\\{4, 8, 12, 16, 20 \\right\\}$\n따라서 벤 다이어그램으로 나타낸 집합 $A$ 를 조건제시법으로 바르게 나타낸 것은 ③이다."
+ },
+ {
+  "n": 5,
+  "body": "다음 중 집합 $A = \\left\\{x \\left| \\right.x=2^{a} \\times 3^{b} \\right.$ , $a$ , $b .$ 는 자연수 $\\left. \\right\\}$ 의 원소가 아닌 것은?\n① $18$ ② $24$ ③ $48$\n④ $72$ ⑤ $60$",
+  "answer": "[정답] ⑤\n각각의 수를 소인수분해 하면\n① $18=2 \\times 3^{2}$\n② $24=2^{3} \\times 3$\n③ $48=2^{4} \\times 3$\n④ $72=2^{3} \\times 3^{2}$\n⑤ $60=2^{2} \\times 3 \\times 5$\n따라서 집합 $A$ 의 원소가 아닌 것은 ⑤이다."
+ },
+ {
+  "n": 6,
+  "body": "두 집합 $A = \\left\\{1, 2, 3, 4, 5 \\right\\}$ , $B = \\left\\{2, 4 \\right\\}$ 에 대하여 집합 $C = \\left\\{2x-1 \\left| \\right.x \\in A , x \\notin B \\right\\}$ 의 모든 원소의 합은?\n① $11$ ② $13$ ③ $15$\n④ $17$ ⑤ $19$\n[그림5] 3\n집합의 원소의 개수",
+  "answer": "[정답] ③\n$x \\in A$ , $x \\notin B$ 이므로\n$C = \\{2x-1 | x$ 는 $1$ 또는 $3$ 또는 $5 \\}= \\{1, 5, 9 \\}$\n따라서 집합 $C$ 의 모든 원소의 합은\n$1+5+9=15$"
+ },
+ {
+  "n": 7,
+  "body": "집합 $A = \\{ (x, y ) | x^{2}+y^{2} \\leq 4 .$ , $x .$ 와 $y$ 는 정수 $\\left. \\right\\}$ 에 대하여 $n \\left(A \\right)$ 의 값은?\n① $11$ ② $12$ ③ $13$\n④ $14$ ⑤ $15$",
+  "answer": "[정답] ③\n$x^{2}+y^{2} \\leq 4$ 에서 $y^{2} \\geq 0$ 이므로 $0 \\leq x^{2} \\leq 4$\n(ⅰ) $x^{2}=0$ , 즉 $x=0$ 일 때, $y^{2} \\leq 4$ 에서 $-2 \\leq y \\leq 2$ 이므로 정수 $y$ 의 값은 $-2$ , $-1$ , $0$ , $1$ , $2$\n(ⅱ) $x^{2}=1$ , 즉 $x= -1$ 또는 $x=1$ 일 때, $y^{2} \\leq 3$ 에서 $- \\sqrt {3} \\leq y \\leq \\sqrt {3}$ 이므로정수 $y$ 의 값은 $-1$ , $0$ , $1$\n(ⅲ) $x^{2}=4$ , 즉 $x= -2$ 또는 $x=2$ 일 때, $y^{2} \\leq 0$ 이므로 $y=0$\n(ⅰ), (ⅱ), (ⅲ)에서 $n \\left(A \\right)=1 \\times 5+2 \\times 3+2 \\times 1=13$"
+ },
+ {
+  "n": 8,
+  "body": "두 집합\n$A = \\left\\{x^{2} \\left| \\right.x \\right.$ 는 $20$ 이하의 자연수 $\\left. \\right\\}$ ,\n$B = \\left\\{x \\left| \\right.x \\right.$ 는 $3$ 의 배수, $\\left.x \\in A \\right\\}$\n에 대하여 $n \\left(B \\right)$ 의 값은?\n① $5$ ② $6$ ③ $7$\n④ $8$ ⑤ $9$",
+  "answer": "[정답] ②\n집합 $B$ 의 원소는 집합 $A$ 의 원소 중 $3$ 의 배수인 수이다.\n자연수 $k$ 에 대하여\n(ⅰ) $x=3k-2$ 일 때 $x^{2}= \\left(3k-2 \\right)^{2}=9k^{2}-12k+4=3 \\left(3k^{2}-4k+1 \\right)+1$\n(ⅱ) $x=3k-1$ 일 때 $x^{2}= \\left(3k-1 \\right)^{2}=9k^{2}-6k+1=3 \\left(3k^{2}-2k \\right)+1$\n(ⅲ) $x=3k$ 일 때 $x^{2}= \\left(3k \\right)^{2}=9k^{2}=3 \\left(3k^{2} \\right)$\n(ⅰ), (ⅱ), (ⅲ)에서 $x=3k$ 일 때만 $x^{2}$ 이 $3$ 의 배수이므로\n$B= \\left\\{ 3 ^{2} , 6 ^{2} , 9 ^{2} , 12 ^{2} , 15 ^{2} , 18 ^{2} \\right\\}$\n따라서 $n \\left(B \\right)=6$"
+ },
+ {
+  "n": 9,
+  "body": "자연수 $m$ 에 대하여 두 집합\n$A = \\left\\{x \\left| \\right.x \\right.$ 는 $10$ 이하의 소수 $\\left. \\right\\}$\n$B = \\left\\{x \\left| x={k} \\over {m} \\right., x \\right.$ 는 자연수 $\\left. \\begin{matrix} \\\\ \\end{matrix} \\right\\}$\n가 있다. $n \\left(A \\right) < n \\left(B \\right)$ 가 되도록 하는 자연수 $k$ 의 최솟값을 구하시오.\n[그림6] 4\n기호 $\\in , \\subset$ 의 사용",
+  "answer": "[정답] $12$\n$A = \\left\\{2, 3, 5, 7 \\right\\}$ 이므로 $n \\left(A \\right)=4$\n$x={k} \\over {m}$ 에서 $k=xm$ 이고 $x$ , $k$ , $m$ 이 자연수이므로\n집합 $B$ 는 $k$ 의 양의 약수의 집합이다.\n$n \\left(B \\right) > n \\left(A \\right)=4$ 이므로 $k$ 의 양의 약수의 개수는 $4$ 보다 크다.\n양의 약수의 개수가 $5$ 인 가장 작은 수는 $2^{4}=16$ 이고,\n양의 약수의 개수가 $6$ 인 가장 작은 수는 $2^{2} \\times 3=12$ 이다.\n양의 약수의 개수가 $7$ 이상인 가장 작은 수는 $12$ 보다 크다.\n따라서 구하는 자연수 $k$ 의 최솟값은 $12$ 이다."
+ },
+ {
+  "n": 10,
+  "body": "다음 벤 다이어그램의 두 집합 $A$ , $B$ 에 대하여 다음 중 옳지 않은 것은?\n① $1 \\in B$ ② $5 \\notin A$ ③ $\\left\\{2 \\right\\} \\subset A$\n④ $\\left\\{2, 3 \\right\\} \\subset A$ ⑤ $\\left\\{2, 3, 4 \\right\\} \\subset B$\n[그림7]",
+  "answer": "[정답] ④\n벤 다이어그램으로 주어진 두 집합 $A$ , $B$ 를 원소나열법으로 나타내면\n$A = \\left\\{1, 2 \\right\\}$ , $B = \\left\\{1, 2, 3, 4, 5 \\right\\}$\n① $1$ 은 집합 $B$ 의 원소이므로 $1 \\in B$\n② $5$ 는 집합 $A$ 의 원소가 아니므로 $5 \\notin A$\n③ $2 \\in A$ 이므로 $\\left\\{2 \\right\\} \\subset A$\n④ $3 \\notin A$ 이므로 $\\left\\{2, 3 \\right\\} \\not\\subset A$\n⑤ $2 \\in B$ , $3 \\in B$ , $4 \\in B$ 이므로 $\\left\\{2, 3, 4 \\right\\} \\subset B$\n따라서 옳지 않은 것은 ④이다."
+ },
+ {
+  "n": 11,
+  "body": "집합 $A = \\left\\{1, 2, \\left\\{3 \\right\\} \\right\\}$ 에 대하여 다음 중 옳은 것은?\n① $\\left\\{2 \\right\\} \\in A$ ② $\\left\\{3 \\right\\} \\subset A$\n③ $\\left\\{1, 2 \\right\\} \\in A$ ④ $\\left\\{2, \\left\\{3 \\right\\} \\right\\} \\subset A$\n⑤ $\\left\\{1, 2, 3 \\right\\} \\subset A$",
+  "answer": "[정답] ④\n① $2$ 는 집합 $A$ 의 원소이므로 $\\left\\{2 \\right\\} \\subset A$\n② $\\left\\{3 \\right\\}$ 는 집합 $A$ 의 원소이므로 $\\left\\{3 \\right\\} \\in A$\n③ $1$ , $2$ 는 집합 $A$ 의 원소이므로 $\\left\\{1, 2 \\right\\} \\subset A$\n④ $2$ , $\\left\\{3 \\right\\}$ 은 집합 $A$ 의 원소이므로 $\\left\\{2, \\left\\{3 \\right\\} \\right\\} \\subset A$\n⑤ $3$ 은 집합 $A$ 의 원소가 아니므로 $\\left\\{1, 2, 3 \\right\\} \\not\\subset A$\n따라서 옳은 것은 ④이다."
+ },
+ {
+  "n": 12,
+  "body": "집합 $A = \\left\\{ \\varnothing , 1, \\left\\{1 \\right\\} \\right\\}$ 에 대하여 <보기>에서 옳은 것만을 있는 대로 고른 것은?\n|  | <보 기> |  |\n|  |  |\n| ㄱ. $\\varnothing \\subset A$ ㄴ. $\\left\\{1 \\right\\} \\in A$ ㄷ. $\\left\\{1, \\left\\{1 \\right\\} \\right\\} \\subset A$ |\n① ㄱ ② ㄱ, ㄴ ③ ㄱ, ㄷ\n④ ㄴ, ㄷ ⑤ ㄱ, ㄴ, ㄷ\n[그림8] 5\n집합 사이의 포함 관계",
+  "answer": "[정답] ⑤\n집합 $A = \\left\\{ \\varnothing , 1, \\left\\{1 \\right\\} \\right\\}$ 에서\nㄱ. 공집합은 모든 집합의 부분집합이므로 $\\varnothing \\subset A$\n(참)\nㄴ. $\\left\\{1 \\right\\}$ 은 집합 $A$ 의 원소이므로 $\\left\\{1 \\right\\} \\in A$ (참)\nㄷ. $1$ , $\\left\\{1 \\right\\}$ 은 집합 $A$ 의 원소이므로 $\\left\\{1, \\left\\{1 \\right\\} \\right\\} \\subset A$ (참)\n이상에서 옳은 것은 ㄱ, ㄴ, ㄷ이다"
+ },
+ {
+  "n": 13,
+  "body": "세 집합 $A = \\left\\{-1, 0, 1 \\right\\}$ , $B = \\{x^{2}-1 | x \\in A \\}$ , $C = \\{x | x^{3}+1=0$ , $x .$ 는 실수 $\\left. \\right\\}$ 에 대하여 세 집합 $A$ , $B$ , $C$ 의 포함 관계로 옳은 것은?\n① $A \\subset B \\subset C$ ② $A \\subset C \\subset B$\n③ $B \\subset A \\subset C$ ④ $B \\subset C \\subset A$\n⑤ $C \\subset B \\subset A$",
+  "answer": "[정답] ⑤\n$\\left(-1 \\right)^{2}-1=0$ , $0^{2}-1= -1$ , $1^{2}-1=0$ 이므로 $B = \\left\\{-1, 0 \\right\\}$\n$x^{3}+1= \\left(x+1 \\right) \\left(x^{2}-x+1 \\right)=0$ 에서 실수 $x$ 는 $x= -1$ 이므로\n$C = \\left\\{-1 \\right\\}$\n따라서 $C \\subset B \\subset A$"
+ },
+ {
+  "n": 14,
+  "body": "집합 $X = \\left\\{0, 1, 2 \\right\\}$ 에 대하여 두 집합\n$A = \\left\\{2x-y \\left| \\right.x \\in X , y \\in X \\right\\}$ , $B = \\left\\{xy \\left| \\right.x \\in X , y \\in X \\right\\}$\n를 벤다이어그램으로 바르게 나타낸 것은?\n| ① | [그림9] | ② | [그림10] |\n| ③ | [그림11] | ④ | [그림12] |\n| ⑤ | [그림13] |  |  |\n① ${1} \\over {2}$ ② ${1} \\over {3}$ ③ $1$\n④ ${1} \\over {5}$ ⑤ ${1} \\over {4}$",
+  "answer": "[정답] ③\n$A = \\left\\{-2, -1, 0, 1, 2, 3, 4 \\right\\}$ , $B = \\left\\{0, 1, 2, 4 \\right\\}$\n따라서 $B \\subset A$ 이므로 두 집합 $A$ , $B$ 를 나타낸 벤 다이어그램은 ③이다."
+ },
+ {
+  "n": 15,
+  "body": "두 집합 $A = \\left\\{2, a \\right\\}$ , $B = \\left\\{1, a^{2}+1, -a+7 \\right\\}$ 에 대하여 $A \\subset B$ 가 성립하도록 하는 상수 $a$ 의 값은?\n① $-3$ ② $-1$ ③ $1$\n④ $3$ ⑤ $5$",
+  "answer": "[정답] ③\n$2 \\in A$ 이고 $A \\subset B$ 이므로 $2 \\in B$ 이어야 한다.\n즉, $2=a^{2}+1$ 또는 $2= -a+7$\n(ⅰ) $2=a^{2}+1$ , 즉 $a= -1$ 또는 $a=1$ 일 때\n$a= -1$ 이면 $A = \\left\\{-1, 2 \\right\\}$ , $B = \\left\\{1, 2, 8 \\right\\}$ 이므로 $A \\not\\subset B$\n$a=1$ 이면 $A = \\left\\{1, 2 \\right\\}$ , $B = \\left\\{1, 2, 6 \\right\\}$ 이므로 $A \\subset B$\n(ⅱ) $2= -a+7$ , 즉 $a=5$ 일 때\n$A = \\left\\{2, 5 \\right\\}$ , $B = \\left\\{1, 2, 26 \\right\\}$ 이므로 $A \\not\\subset B$\n(ⅰ), (ⅱ)에서 $A \\subset B$ 가 성립하도록 하는 상수 $a$ 의 값은 $1$ 이다."
+ },
+ {
+  "n": 16,
+  "body": "두 집합 $A = \\{x | -3 \\leq x \\leq -k \\}$ , $B = \\{x | 2k \\leq x \\leq 8 \\}$ 에 대하여 $A \\subset B$ 가 성립하도록 하는 실수 $k$ 의 최댓값과 최솟값의 곱을 구하시오.",
+  "answer": "[정답] $12$\n두 집합 $A$ , $B$ 에 대하여 $A \\subset B$ 가 성립하도록 수직선 위에 나타내면 다음 그림과 같다.\n[그림14]\n$A \\subset B$ 이려면 $2k \\leq -3$ , $-k \\leq 8$ 이어야 하므로 $-8 \\leq k \\leq -{3} \\over {2}$\n실수 $k$ 의 최댓값은 $-{3} \\over {2}$ 이고 최솟값은 $-8$ 이므로\n그 곱은 $-{3} \\over {2} \\times \\left(-8 \\right)=12$"
+ },
+ {
+  "n": 17,
+  "body": "세 집합\n$A = \\{x | x \\geq {a} \\over {2} \\}$ , $B = \\{x | x > 4 \\}$ , $C = \\{x | x \\geq 2a \\}$\n에 대하여 $C \\subset B \\subset A$ 가 성립하도록 하는 정수 $a$ 의 개수는?\n① $5$ ② $6$ ③ $7$\n④ $8$ ⑤ $9$\n[그림16] 6\n부분집합",
+  "answer": "[정답] ②\n세 집합 $A$ , $B$ , $C$ 를 수직선을 이용하여 나타내면 다음 그림과 같다.\n[그림15]\n$C \\subset B$ 이려면 $4<2a$ 이어야 한다.\n즉, $a>2$\n$B \\subset A$ 이려면 ${a} \\over {2} \\leq 4$ 이어야 한다.\n즉, $a \\leq 8$\n따라서 $2 < a \\leq 8$ 이므로 구하는 정수 $a$ 의 개수는 $6$ 이다."
+ },
+ {
+  "n": 18,
+  "body": "집합 $A = \\left\\{x \\left| \\right.x \\right.$ 는 $12$ 의 양의 약수 $\\left. \\right\\}$ 에 대하여 집합 $A$ 의 진부분집합 $X$ 의 모든 원소의 합의 최댓값은?\n① $21$ ② $23$ ③ $25$\n④ $25$ ⑤ $27$",
+  "answer": "[정답] ⑤\n$A = \\left\\{1, 2, 3, 4, 6, 12 \\right\\}$\n$X = \\left\\{2, 3, 4, 6, 12 \\right\\}$ 일 때 집합 $X$ 의 모든 원소의 합이 최대이므로 구하는 집합 $X$ 의 모든 원소의 합의 최댓값은\n$2+3+4+6+12=27$"
+ },
+ {
+  "n": 19,
+  "body": "집합 $A = \\left\\{1, 2, 3, 4, 5, 6, 7 \\right\\}$ 에 대하여 다음 조건을 만족시키는 집합 $X$ 의 개수를 구하시오.\n| (가) $X \\subset A$ 이고 $n \\left(X \\right) \\geq 3$ 이다. (나) 집합 $X$ 의 모든 원소의 곱은 홀수이다. |",
+  "answer": "[정답] $5$\n조건 (가)에서 집합 $X$ 는 원소의 개수가 $3$ 이상인 집합 $A$ 의 부분집합이다.\n조건 (나)에서 집합 $X$ 의 모든 원소는 홀수이므로 집합 $X$ 는 집합 $\\left\\{1, 3, 5, 7 \\right\\}$ 의 부분집합이다.\n(ⅰ) $n \\left(X \\right)=3$ 일 때,\n$\\left\\{1, 3, 5 \\right\\}$ , $\\left\\{1, 3, 7 \\right\\}$ , $\\left\\{1, 5, 7 \\right\\}$ , $\\left\\{3, 5, 7 \\right\\}$\n(ⅱ) $n \\left(X \\right)=4$ 일 때\n$\\left\\{1, 3, 5, 7 \\right\\}$\n(ⅰ), (ⅱ)에서 구하는 집합 $X$ 의 개수는 $4+1=5$"
+ },
+ {
+  "n": 20,
+  "body": "집합 $A = \\left\\{1, 2, 3 \\right\\}$ 에 대하여 집합 $P = \\{X | X \\subset A \\}$ 라 할 때, <보기>에서 옳은 것만을 있는 대로 고른 것은?\n|  | <보 기> |  |\n|  |  |\n| ㄱ. $\\varnothing \\in P$ ㄴ. $A \\subset P$ ㄷ. $\\left\\{ \\left\\{1, 2 \\right\\}, \\left\\{3 \\right\\} \\right\\} \\subset P$ |\n① ㄱ ② ㄴ ③ ㄷ\n④ ㄱ, ㄷ ⑤ ㄴ, ㄷ\n[그림17] 7\n서로 같은 집합",
+  "answer": "[정답] ④\n$P = \\{X | X \\subset A \\}$ 이므로 집합 $P$ 는 집합 $A$ 의 부분집합을 원소로 갖는다.\nㄱ. $\\varnothing \\subset A$ 이므로 $\\varnothing \\in P$ (참)\nㄴ. 집합 $P$ 의 모든 원소가 집합이므로 $A \\in P$ , $A \\not\\subset P$ (거짓)\nㄷ. $\\left\\{1, 2 \\right\\} \\subset A$ , $\\left\\{3 \\right\\} \\subset A$ 이므로 $\\left\\{ \\left\\{1, 2 \\right\\}, \\left\\{3 \\right\\} \\right\\} \\subset P$ (참)\n따라서 옳은 것은 ㄱ, ㄷ이다."
+ },
+ {
+  "n": 21,
+  "body": "두 집합 $A = \\left\\{-1, a^{2}-2a-6 \\right\\}$ , $B = \\left\\{2 , a^{2}+a-3 \\right\\}$ 에 대하여 $A =B$ 가 성립할 때, 상수 $a$ 의 값은?\n① $-2$ ② $-1$ ③ $0$\n④ $1$ ⑤ $2$",
+  "answer": "[정답] ①\n$A =B$ 이므로 $A \\subset B$ 이고 $B \\subset A$\n$A \\subset B$ 이므로 $-1 \\in B$\n$a^{2}+a-3= -1$ , $a^{2}+a-2=0$ , $\\left(a-1 \\right) \\left(a+2 \\right)=0$ 이므로\n$a=1$ 또는 $a= -2$\n(ⅰ) $a=1$ 일 때\n$A = \\left\\{-1, -7 \\right\\}$ , $B = \\left\\{2, -1 \\right\\}$ 이므로 $A \\neq B$\n(ⅱ) $a= -2$ 일 때\n$A = \\left\\{-1, 2 \\right\\}$ , $B = \\left\\{2, -1 \\right\\}$ 이므로 $A =B$\n(ⅰ), (ⅱ)에서 $A =B$ 를 만족시키는 상수 $a$ 의 값은 $-2$ 이다."
+ },
+ {
+  "n": 22,
+  "body": "두 집합 $A = \\left\\{x \\left| \\right.x^{2}-ax+12=0 \\right\\}$ , $B = \\left\\{b, 6 \\right\\}$ 에 대하여 $A =B$ 일 때, $a+b$ 의 값은? (단, $a$ , $b$ 는 상수이다.)\n① $6$ ② $7$ ③ $8$\n④ $9$ ⑤ $10$",
+  "answer": "[정답] ⑤\n$6 \\in B$ 이고 $B \\subset A$ 이므로 $6 \\in A$ 이어야 한다.\n이차방정식 $x^{2}-ax+12=0$ 의 한 실근이 $6$ 이므로\n$36-6a+12=0$ , 즉 $a=8$\n$x^{2}-8x+12= \\left(x-2 \\right) \\left(x-6 \\right)=0$ 에서\n$x=2$ 또는 $x=6$ 이므로\n$A = \\left\\{2, 6 \\right\\}$ , 즉 $b=2$\n따라서 $a+b=8+2=10$"
+ },
+ {
+  "n": 23,
+  "body": "두 집합 $A = \\{1 ., a, a^{2}-1 \\}$ , $B = \\left\\{a+5, -a+4, 2a-3 \\right\\}$ 에 대하여 두 집합 $A$ , $B$ 가 서로 같을 때, 상수 $a$ 의 값을 구하시오.\n[그림18] 8\n부분집합의 개수",
+  "answer": "[정답] $3$\n$1 \\in A$ 이고 $A \\subset B$ 이므로 $1 \\in B$ 이어야 한다.\n(ⅰ) $a+5=1$ , 즉 $a= -4$ 일 때\n$A = \\left\\{-4, 1, 15 \\right\\}$ , $B = \\left\\{-11, 1, 8 \\right\\}$ 이므로 $A \\neq B$\n(ⅱ) $-a+4=1$ , 즉 $a=3$ 일 때\n$A = \\left\\{1, 3, 8 \\right\\}$ , $B = \\left\\{1, 3, 8 \\right\\}$ 이므로 $A =B$\n(ⅲ) $2a-3=1$ , 즉 $a=2$ 일 때\n$A = \\left\\{1, 2, 3 \\right\\}$ , $B = \\left\\{1, 2, 7 \\right\\}$ 이므로 $A \\neq B$\n(ⅰ), (ⅱ), (ⅲ)에서 $A =B$ 를 만족시키는 상수 $a$ 의 값은 $3$ 이다."
+ },
+ {
+  "n": 24,
+  "body": "집합 $A$ 의 부분집합의 개수와 집합 $B$ 의 진부분집합의 개수의 합이 $191$ 일 때, $n \\left(A \\right)+n \\left(B \\right)$ 의 값은?\n① $11$ ② $12$ ③ $13$\n④ $14$ ⑤ $15$",
+  "answer": "[정답] ③\n집합 $A$ 의 부분집합의 개수는 $2^{n \\left(A \\right)}$ 이고 집합 $B$ 의 진부분집합의 개수는 $2^{n \\left(B \\right)}-1$ 이므로\n$2^{n \\left(A \\right)}+2^{n \\left(B \\right)}-1=191$\n$2^{n \\left(A \\right)}+2^{n \\left(B \\right)}=192=128+64=2^{7}+2^{6}$\n$n \\left(A \\right)=7$ , $n \\left(B \\right)=6$ 또는 $n \\left(A \\right)=6$ , $n \\left(B \\right)=7$\n따라서 $n \\left(A \\right)+n \\left(B \\right)=13$"
+ },
+ {
+  "n": 25,
+  "body": "집합 $A = \\{x | x$ 는 $12$ 의 양의 약수 $\\left. \\right\\}$ 에 대하여 $1 \\in X$ , $12 \\notin X$ 를 만족시키는 집합 $A$ 의 부분집합 $X$ 의 개수를 구하시오.",
+  "answer": "[정답] $16$\n$A = \\left\\{1, 2, 3, 4, 6, 12 \\right\\}$ 이므로 $n \\left(A \\right)=6$\n집합 $A$ 의 부분집합 중에서 $1$ 을 반드시 포함하고\n$12$ 를 포함하지 않는 부분집합의 개수는\n$2^{6-1-1}=2^{4}=16$"
+ },
+ {
+  "n": 26,
+  "body": "집합 $A = \\left\\{1, 2, 3, 4, 5, 6 \\right\\}$ 의 부분집합 중 $2$ 또는 $3$ 을 원소로 갖는 부분집합의 개수는?\n① $24$ ② $30$ ③ $36$\n④ $42$ ⑤ $48$",
+  "answer": "[정답] ⑤\n집합 $A$ 의 부분집합의 개수는 $2^{6}$\n집합 $A$ 의 부분집합 중에서 $2$ , $3$ 을 포함하지 않는 부분집합의 개수는\n$2^{6-2}=2^{4}$\n따라서 구하는 부분집합의 개수는\n$2^{6}-2^{4}=64-16=48$"
+ },
+ {
+  "n": 27,
+  "body": "집합 $A = \\left\\{1, 2, 3, 4, 5, 6, 7 \\right\\}$ 의 공집합이 아닌 부분집합 중 모든 원소가 홀수인 부분집합의 개수를 구하시오.",
+  "answer": "[정답] $15$\n집합 $A$ 의 원소 중 홀수는 $1$ , $3$ , $5$ , $7$ 이므로 $4$ 개의 원소로 만들 수 있는 부분집합의 개수는\n$2^{4}=16$\n이 중에서 공집합은 제외해야 하므로 구하는 부분집합의 개수는\n$16-1=15$"
+ },
+ {
+  "n": 28,
+  "body": "두 집합 $A = \\left\\{1, 2, 3, 4, 5 \\right\\}$ , $B = \\left\\{4, 5, 6, 7 \\right\\}$ 에 대하여 $x \\in B$ , $x \\in X$ 를 만족시키는 자연수 $x$ 의 개수가 $1$ 이 되도록 하는 집합 $A$ 의 부분집합 $X$ 의 개수를 구하시오.",
+  "answer": "[정답] $16$\n$A \\cap B = \\left\\{4, 5 \\right\\}$ 이고 $x \\in B$ , $x \\in X$ 를 만족시키는 자연수 $x$ 의 개수가 $1$ 이므로 집합 $X$ 는 집합 $A$ 의 부분집합 중에서 $4$ , $5$ 중 $1$ 개만 포함한 것과 같다.\n따라서 구하는 집합 $X$ 의 개수는\n$2 \\times 2^{5-1-1}=2 \\times 2^{3}=16$"
+ },
+ {
+  "n": 29,
+  "body": "$5$ 이상의 자연수 $k$ 에 대하여 집합\n$A = \\{x | x$ 는 $k$ 이하의 소수 $\\left. \\right\\}$\n가 있다. 집합 $A$ 의 부분집합 중에서 $2$ , $5$ 를 반드시 포함하고, $3$ 을 포함하지 않는 부분집합의 개수가 $16$ 이 되도록 하는 모든 $k$ 의 값의 합은?\n① $31$ ② $33$ ③ $35$\n④ $37$ ⑤ $39$\n[그림19] 9\n조건이 있는 부분집합의 개수",
+  "answer": "[정답] ③\n집합 $A$ 의 부분집합 중에서 $2$ , $5$ 를 반드시 포함하고,\n$3$ 을 포함하지 않는 부분집합의 개수가 $16$ 이므로\n$2^{n \\left(A \\right)-2-1}=16$ , $2^{n \\left(A \\right)-3}=2^{4}$\n$n \\left(A \\right)-3=4$ , $n \\left(A \\right)=7$\n소수를 작은 수부터 크기순으로 나열하면\n$2$ , $3$ , $5$ , $7$ , $11$ , $13$ , $17$ , $19$ , $\\cdots$\n$n \\left(A \\right)=7$ 이려면 $17 \\leq k < 19$ 이어야 한다.\n따라서 구하는 모든 자연수 $k$ 의 값의 합은\n$17+18=35$"
+ },
+ {
+  "n": 30,
+  "body": "두 집합\n$A = \\{x | 8$ 보다 작은 짝수인 자연수 $\\left. \\right\\}$ ,\n$B = \\{x | x$ 는 $12$ 의 양의 약수 $\\left. \\right\\}$\n에 대하여 $A \\subset X \\subset B$ 를 만족시키는 집합 $X$ 의 개수를 구하시오.",
+  "answer": "[정답] $8$\n$A = \\left\\{2, 4, 6 \\right\\}$ , $B = \\left\\{1, 2, 3, 4, 6, 12 \\right\\}$\n$A \\subset X \\subset B$ 이므로 집합 $X$ 는 집합 $B$ 의 부분집합 중에서 집합 $A$ 를 포함하는 집합이다.\n따라서 구하는 집합 $X$ 의 개수는 $2^{6-3}=2^{3}=8$"
+ },
+ {
+  "n": 31,
+  "body": "다음 벤 다이어그램의 두 집합 $A$ , $B$ 에 대하여 $A \\subset X \\subset B$ 를 만족시키는 집합 $X$ 중에서 $7$ 을 포함하지 않는 집합의 개수는?\n[그림20]\n① $2$ ② $4$ ③ $8$\n④ $16$ ⑤ $32$",
+  "answer": "[정답] ③\n$A = \\left\\{1, 2, 3 \\right\\}$ , $B = \\left\\{1, 2, 3, 4, 5, 6, 7 \\right\\}$\n집합 $X$ 는 집합 $B$ 의 부분집합 중에서 집합 $A$ 를 포함하고 $7$ 을 포함하지 않는 집합이다.\n따라서 구하는 집합의 개수는 $2^{7-3-1}=2^{3}=8$"
+ },
+ {
+  "n": 32,
+  "body": "$4$ 이상의 자연수 $k$ 에 대하여 집합 $A = \\{x | x$ 는 $k$ 이하의 자연수 $\\left. \\right\\}$ 가 있다.\n$k \\notin X$ , $\\left\\{2, 4 \\right\\} \\subset X \\subset A$\n를 만족시키는 집합 $X$ 의 개수가 $64$ 일 때, $k$ 의 값을 구하시오.",
+  "answer": "[정답] $9$\n집합 $X$ 는 집합 $A$ 의 부분집합 중에서 $2$ , $4$ 를 반드시 포함하고 $k$ 를 포함하지 않는 집합이다.\n$n \\left(A \\right)=k$ 이고 집합 $X$ 의 개수가 $64$ 이므로\n$2^{k-2-1}=64$ , $2^{k-3}=2^{6}$ , $k-3=6$\n따라서 $k=9$"
+ },
+ {
+  "n": 33,
+  "body": "세 집합\n$A = \\{x | 10$ 보다 작은 자연수 $\\left. \\right\\}$ ,\n$B = \\{x | 10$ 보다 작은 홀수인 자연수 $\\left. \\right\\}$ ,\n$C = \\left\\{4, 8 \\right\\}$\n에 대하여 $B \\subset X$ , $C \\not\\subset X \\subset A$ 를 만족시키는 집합 $X$ 의 개수는?\n① $10$ ② $12$ ③ $14$\n④ $16$ ⑤ $18$",
+  "answer": "[정답] ②\n$A = \\left\\{1, 2, 3, 4, 5, 6, 7, 8, 9 \\right\\}$ , $B = \\left\\{1, 3, 5, 7, 9 \\right\\}$\n$B \\subset X$ , $C \\not\\subset X \\subset A$ 이므로 집합 $X$ 는 집합 $A$ 의 부분집합 중에서 집합 $B$ 를 포함하고 집합 $C$ 를 포함하지 않는 집합이다.\n집합 $A$ 의 부분집합 중에서 집합 $B$ 를 포함하는 집합의 개수는\n$2^{9-5}=2^{4}=16$\n집합 $A$ 의 부분집합 중에서 두 집합 $B$ , $C$ 를 모두 포함하는 집합의 개수는\n$2^{9-5-2}=2^{2}=4$\n따라서 구하는 집합 $X$ 의 개수는\n$16-4=12$"
+ },
+ {
+  "n": 34,
+  "body": "집합 $A = \\left\\{1, 2, 3, 4, 5, 6, 7, 8 \\right\\}$ 에 대하여 다음 조건을 만족시키는 집합 $X$ 의 개수를 구하시오.\n| (가) $\\left\\{1 \\right\\} \\subset X \\subset A$ (나) $x \\in X$ 이면 ${12} \\over {x}$ 는 자연수이다. |",
+  "answer": "[정답] $16$\n조건 (가)에서 집합 $X$ 는 원소 $1$ 을 반드시 포함하고, 조건 (나)에서 집합 $X$ 는 집합 $\\left\\{1, 2, 3, 4, 6 \\right\\}$ 의 부분집합이다.\n따라서 구하는 집합 $X$ 의 개수는\n$2^{5-1}=2^{4}=16$"
+ },
+ {
+  "n": 35,
+  "body": "집합 $A = \\left\\{1, 2, 3, 4, 5, 6, 7 \\right\\}$ 의 공집합이 아닌 부분집합 중 다음 조건을 만족시키는 집합 $X$ 의 개수는?\n| (가) 집합 $X$ 의 모든 원소의 곱이 짝수이다. (나) 집합 $X$ 의 모든 원소의 합은 $24$ 이하이다. |\n① $104$ ② $107$ ③ $110$\n④ $113$ ⑤ $116$\n[그림21] 10\n교집합과 합집합",
+  "answer": "[정답] ②\n집합 $A$ 의 부분집합의 개수는 $2^{7}=128$\n집합 $X$ 의 모든 원소의 곱이 짝수이므로 집합 $X$ 의 원소 중 적어도 하나는 짝수이어야 한다.\n집합 $A$ 의 부분집합 중에서 짝수가 한 개도 포함되지 않는 집합의 개수는 집합 $\\left\\{1, 3, 5, 7 \\right\\}$ 의 부분집합의 개수와 같으므로 $2^{4}=16$\n집합 $X$ 의 모든 원소의 합이 $24$ 이하이므로 모든 원소의 합이 $25$ 이상인 것을 제외해야 한다.\n$1+2+3+ \\cdots +7=28$ 이므로 모든 원소의 합이 $25$ 이상인 집합 $X$ 는 $\\left\\{1, 2, 3, 4, 5, 6, 7 \\right\\}$ , $\\left\\{2, 3, 4, 5, 6, 7 \\right\\}$ , $\\left\\{1, 3, 4, 5, 6, 7 \\right\\}$ , $\\left\\{1, 2, 4, 5, 6, 7 \\right\\}$ , $\\left\\{3, 4, 5, 6, 7 \\right\\}$\n따라서 구하는 집합 $X$ 의 개수는\n$128-16-5=107$"
+ },
+ {
+  "n": 36,
+  "body": "두 집합 $A = \\left\\{a, a+2 \\right\\}$ , $B = \\{2a-1$ , $a^{2}$ , $6 \\}$ 에 대하여 $A \\cap B = \\left\\{4 \\right\\}$ 일 때, 집합 $A \\cup B$ 의 모든 원소의 합을 구하시오.\n(단, $a$ 는 상수이다.)",
+  "answer": "[정답] $15$\n$A \\cap B = \\left\\{4 \\right\\}$ 이므로 $4 \\in A$\n(ⅰ) $a=4$ 일 때,\n$A = \\left\\{4, 6 \\right\\}$ , $B = \\left\\{6, 7, 16 \\right\\}$ 이므로 $A \\cap B = \\left\\{6 \\right\\}$\n조건을 만족시키지 않는다.\n(ⅱ) $a+2=4$ , 즉 $a=2$ 일 때,\n$A = \\left\\{2, 4 \\right\\}$ , $B = \\left\\{3, 4, 6 \\right\\}$ 이므로 $A \\cap B = \\left\\{4 \\right\\}$\n(ⅰ), (ⅱ)에서 $A = \\left\\{2, 4 \\right\\}$ , $B = \\left\\{3, 4, 6 \\right\\}$ 이므로\n$A \\cup B = \\left\\{2, 3, 4, 6 \\right\\}$\n따라서 집합 $A \\cup B$ 의 모든 원소의 합은\n$2+3+4+6=15$"
+ },
+ {
+  "n": 37,
+  "body": "두 집합\n$A = \\{x | x$ 는 $18$ 의 양의 약수 $\\left. \\right\\}$ ,\n$B = \\{x | x$ 는 $30$ 의 양의 약수 $\\left. \\right\\}$\n에 대하여 $A \\cap B = \\{x | x$ 는 $k$ 의 양의 약수 $\\left. \\right\\}$ 가 성립하도록 하는 자연수 $k$ 의 값을 구하시오.",
+  "answer": "[정답] $6$\n$A = \\left\\{1, 2, 3, 6, 9, 18 \\right\\}$ , $B = \\left\\{1, 2, 3, 5, 6, 10, 15, 30 \\right\\}$ 이므로 $A \\cap B = \\left\\{1, 2, 3, 6 \\right\\}$ , 즉 $A \\cap B = \\{x | x$ 는 $6$ 의 양의 약수 $\\left. \\right\\}$\n따라서 구하는 자연수 $k$ 의 값은 $6$ 이다."
+ },
+ {
+  "n": 38,
+  "body": "모든 원소의 합이 $a$ 인 집합 $A$ 와 모든 원소의 합이 $b$ 인 집합 $B$ 에 대하여\n$A \\cup B = \\left\\{1, 3, 5, 7 \\right\\}$ , $A \\cap B = \\left\\{5 \\right\\}$\n일 때, $a+b$ 의 값은? (단, $a$ , $b$ 는 상수이다.)\n① $15$ ② $17$ ③ $19$\n④ $21$ ⑤ $23$\n[그림22] 11\n여집합과 차집합",
+  "answer": "[정답] ④\n집합 $X$ 의 모든 원소의 합을 $S \\left(X \\right)$ 라 하면\n$S \\left(A \\right)+S \\left(B \\right)=S \\left(A \\cup B \\right)+S \\left(A \\cap B \\right)$ 이므로\n$a+b= \\left(1+3+5+7 \\right)+5=21$"
+ },
+ {
+  "n": 39,
+  "body": "전체집합 $U$ 의 두 부분집합 $A$ , $B$ 에 대하여\n$A \\cup B = \\left\\{2, 4, 6, 8 \\right\\}$ , $B ^{C }= \\left\\{4, 5, 6, 7 \\right\\}$\n일 때, 집합 $A -B$ 의 모든 원소의 합을 구하시오.",
+  "answer": "[정답] $10$\n$\\left(A \\cup B \\right) \\cap B ^{C }= \\left(A \\cup B \\right)-B =A -B$ 이므로\n$A -B = \\left\\{4, 6 \\right\\}$\n따라서 집합 $A -B$ 의 모든 원소의 합은\n$4+6=10$"
+ },
+ {
+  "n": 40,
+  "body": "전체집합 $U = \\{x | x$ 는 $12$ 이하의 자연수 $\\left. \\right\\}$ 의 두 부분집합\n$A = \\{x | x$ 는 $12$ 의 양의 약수 $\\left. \\right\\}$ ,\n$B = \\{2x-1 | x$ 는 $6$ 이하의 자연수 $\\left. \\right\\}$\n에 대하여 집합 $A ^{C }-B$ 의 모든 원소의 합은?\n① $12$ ② $14$ ③ $16$\n④ $18$ ⑤ $20$",
+  "answer": "[정답] ④\n$A = \\left\\{1, 2, 3, 4, 6, 12 \\right\\}$ 이므로 $A ^{C }= \\left\\{5, 7, 8, 9, 10, 11 \\right\\}$\n$B = \\left\\{1, 3, 5, 7, 9, 11 \\right\\}$ 이므로 $A ^{C }-B = \\left\\{8, 10 \\right\\}$\n따라서 집합 $A ^{C }-B$ 의 모든 원소의 합은\n$8+10=18$"
+ },
+ {
+  "n": 41,
+  "body": "두 집합 $A = \\left\\{1, 2, 4, a+b \\right\\}$ , $B = \\left\\{2, 5, a-b \\right\\}$ 에 대하여 $A -B = \\left\\{4 \\right\\}$ 일 때, $ab$ 의 값은? (단, $a$ , $b$ 는 상수이다.)\n① $6$ ② $7$ ③ $8$\n④ $9$ ⑤ $10$\n[그림23] 12\n서로소인 두 집합",
+  "answer": "[정답] ①\n$A -B = \\left\\{4 \\right\\}$ 이므로 $1$ , $2$ , $a+b$ 는 $A \\cap B$ 의 원소이다.\n$1 \\in B$ , $\\left(a+b \\right) \\in B$ 이므로\n$1=a-b$ , $a+b=5$ 에서 $a=3$ , $b=2$\n따라서 $ab=3 \\times 2=6$"
+ },
+ {
+  "n": 42,
+  "body": "다음 중 두 집합 $A$ , $B$ 가 서로소인 것은?\n① $A = \\left\\{3, 4, 5 \\right\\}$ , $B = \\left\\{2, 4, 6, 8 \\right\\}$\n② $A = \\left\\{x \\left| \\right.x \\right.$ 는 $9$ 의 양의 약수 $\\left. \\right\\}$ , $B = \\left\\{x \\left| \\right.x \\right.$ 는 $5$ 의 양의 약수 $\\left. \\right\\}$\n③ $A = \\left\\{x \\left| \\right.x < 2 \\right\\}$ , $B = \\left\\{x \\left| \\right.x^{2}-4=0 \\right\\}$\n④ $A = \\left\\{x \\left| \\right.x \\right.$ 는 $20$ 이하의 $3$ 의 양의 배수 $\\left. \\right\\}$ , $B = \\left\\{x \\left| \\right.x \\right.$ 는 $20$ 이하의 $7$ 의 양의 배수 $\\left. \\right\\}$\n⑤ $A = \\left\\{x \\left| \\right.x \\right.$ 는 $10$ 이하의 소수 $\\left. \\right\\}$ , $B = \\left\\{2^{x} \\left| \\right.x \\right.$ 는 자연수 $\\left. \\right\\}$",
+  "answer": "[정답] ④\n① $A \\cap B = \\left\\{4 \\right\\}$ $A \\cap B \\neq \\varnothing$ 이므로 두 집합 $A$ , $B$ 는 서로소가 아니다.\n② $A = \\left\\{1, 3, 9 \\right\\}$ , $B = \\left\\{1, 5 \\right\\}$ 이므로 $A \\cap B = \\left\\{1 \\right\\}$ $A \\cap B \\neq \\varnothing$ 이므로 두 집합 $A$ , $B$ 는 서로소가 아니다.\n③ $x^{2}-4=0$ 에서 $x= -2$ 또는 $x=2$ $B = \\left\\{-2, 2 \\right\\}$ 이므로 $A \\cap B = \\left\\{-2 \\right\\}$ $A \\cap B \\neq \\varnothing$ 이므로 두 집합 $A$ , $B$ 는 서로소가 아니다.\n④ $A = \\left\\{3, 6, 9, 12, 15, 18 \\right\\}$ , $B = \\left\\{7, 14 \\right\\}$ 이므로 $A \\cap B = \\varnothing$ 즉, 두 집합 $A$ , $B$ 는 서로소이다.\n⑤ $A = \\left\\{2, 3, 5, 7 \\right\\}$ , $B = \\left\\{2, 4, 8, 16, \\cdots \\right\\}$ 이므로 $A \\cap B = \\left\\{2 \\right\\}$ $A \\cap B \\neq \\varnothing$ 이므로 두 집합 $A$ , $B$ 는 서로소가 아니다."
+ },
+ {
+  "n": 43,
+  "body": "두 집합 $A = \\left\\{x \\left| \\right.x^{2}-x-2 \\leq 0 \\right\\}$ , $B = \\left\\{x \\left| \\right.x \\leq k \\right\\}$ 가 서로소일 때, 정수 $k$ 의 최댓값은?\n① $-2$ ② $-1$ ③ $0$\n④ $1$ ⑤ $2$",
+  "answer": "[정답] ①\n$x^{2}-x-2 \\leq 0$ 에서 $\\left(x+1 \\right) \\left(x-2 \\right) \\leq 0$ 이므로 $-1 \\leq x \\leq 2$\n즉, $A = \\{x | -1 \\leq x \\leq 2 \\}$\n두 집합 $A$ , $B$ 가 서로소가 되도록 수직선 위에 나타내면 다음 그림과 같으므로 $k < -1$\n[그림24]\n따라서 구하는 정수 $k$ 의 최댓값은 $-2$ 이다."
+ },
+ {
+  "n": 44,
+  "body": "집합 $A = \\left\\{1, 2, 3, 4, 5, 6 \\right\\}$ 의 부분집합 중 집합 $B = \\left\\{1, 4, 7 \\right\\}$ 과 서로소인 집합의 개수를 구하시오.",
+  "answer": "[정답] $16$\n$A \\cap B = \\left\\{1, 4 \\right\\}$ 이므로 집합 $A$ 의 부분집합 중 집합 $B$ 와 서로소인 집합은 $1$ , $4$ 를 포함하지 않는 집합 $A$ 의 부분집합이므로 구하는 집합의 개수는\n$2^{6-2}=2^{4}=16$"
+ },
+ {
+  "n": 45,
+  "body": "정수 전체의 집합의 세 부분집합\n$A = \\left\\{-1, 0, 1 \\right\\}$ ,\n$B = \\{x+y | x \\in A , y \\in A \\}$ ,\n$C = \\{xy | x \\in A , y \\in A \\}$\n에 대하여 <보기>에서 서로소인 두 집합인 것만을 있는 대로 고른 것은?\n|  | <보 기> |  |\n|  |  |\n| ㄱ. $A$ , $B$ ㄴ. $A ^{C }$ , $C$ ㄷ. $B$ , $C ^{C }$ |\n① ㄱ ② ㄴ ③ ㄷ\n④ ㄱ, ㄴ ⑤ ㄴ, ㄷ",
+  "answer": "[정답] ②\n$B = \\left\\{-2, -1, 0, 1, 2 \\right\\}$ , $C = \\left\\{-1, 0, 1 \\right\\}$\nㄱ. $A \\cap B = \\left\\{-1, 0, 1 \\right\\}$ 이므로 두 집합 $A$ , $B$ 는 서로소가 아니다.\nㄴ. $A ^{C } \\cap C =C -A = \\varnothing$ 이므로 두 집합 $A ^{C }$ , $C$ 는 서로소이다.\nㄷ. $B \\cap C ^{C }=B -C = \\left\\{-2, 2 \\right\\}$ 이므로 두 집합 $B$ , $C ^{C }$ 은 서로소가 아니다.\n따라서 서로소인 두 집합은 ㄴ이다."
+ },
+ {
+  "n": 46,
+  "body": "다음 조건을 만족시키는 전체집합 $U = \\left\\{1, 2, 3, 4, 5 \\right\\}$ 의 두 부분집합 $A$ , $B$ 에 대하여 집합 $A$ 의 모든 원소가 홀수일 때, 집합 $B$ 의 모든 원소의 합의 최솟값을 구하시오.\n| (가) $n \\left(A \\cup B \\right)=5$ 이고 $n \\left(B \\right)=3$ 이다. (나) 두 집합 $A$ 와 $B$ 는 서로소이다. |\n[그림25] 13\n벤 다이어그램으로 나타낸 집합",
+  "answer": "[정답] $7$\n두 집합 $A$ 와 $B$ 는 서로소이므로 $A \\cap B = \\varnothing$ 이다.\n$n \\left(A \\cup B \\right)=5$ 이고 $n \\left(B \\right)=3$ 이므로 $n \\left(A \\right)=2$ 이다.\n집합 $A$ 의 모든 원소가 홀수이므로\n$A = \\left\\{1, 3 \\right\\}$ 또는 $A = \\left\\{1, 5 \\right\\}$ 또는 $A = \\left\\{3, 5 \\right\\}$\n즉, $B = \\left\\{2, 4, 5 \\right\\}$ 또는 $B = \\left\\{2, 3, 4 \\right\\}$ 또는 $B = \\left\\{1, 2, 4 \\right\\}$\n따라서 집합 $B$ 의 모든 원소의 합의 최솟값은\n$1+2+4=7$"
+ },
+ {
+  "n": 47,
+  "body": "세 집합 $A$ , $B$ , $C$ 의 원소를 벤다이어그램으로 나타내면 다음 그림과 같다. 집합 $\\left(A -B \\right) \\cup \\left(C -A \\right)$ 의 모든 원소의 합을 구하시오.\n[그림26]",
+  "answer": "[정답] $25$\n주어진 벤다이어그램에서\n$A -B = \\left\\{1, 2, 5 \\right\\}$ , $C -A = \\left\\{8, 9 \\right\\}$ 이므로\n$\\left(A -B \\right) \\cup \\left(C -A \\right)= \\left\\{1, 2, 5, 8, 9 \\right\\}$\n따라서 집합 $\\left(A -B \\right) \\cup \\left(C -A \\right)$ 의 모든 원소의 합은 $1+2+5+8+9=25$"
+ },
+ {
+  "n": 48,
+  "body": "| ① | [그림27] | ② | [그림28] |\n| ③ | [그림29] | ④ | [그림30] |\n| ⑤ | [그림31] |  |  |\n다음 중 다음 벤다이어그램의 색칠한 부분을 나타내는 집합과 항상 같은 집합은?\n[그림32]\n① $A \\cap \\left(B \\cup C \\right)$ ② $A \\cup \\left(B \\cap C \\right)$ ③ $A \\cap \\left(B -C \\right)$\n④ $A - \\left(B \\cap C \\right)$ ⑤ $B \\cup \\left(C -A \\right)$",
+  "answer": "[정답] ⑤\n각 집합을 벤다이어그램으로 나타내면 다음과 같다."
+ },
+ {
+  "n": 49,
+  "body": "세 집합\n$A = \\{x | x$ 는 $10$ 보다 작은 자연수 $\\left. \\right\\}$ ,\n$B = \\{x | x$ 는 $18$ 의 약수 $\\left. \\right\\}$ ,\n$C = \\{x | x$ 는 $8$ 이하의 짝수인 자연수 $\\left. \\right\\}$\n에 대하여 다음 벤 다이어그램의 색칠한 부분을 나타내는 집합의 모든 원소의 합은?\n[그림33]\n① $11$ ② $12$ ③ $13$\n④ $14$ ⑤ $15$",
+  "answer": "[정답] ③\n$A = \\left\\{1, 2, 3, 4, 5, 6, 7, 8, 9 \\right\\}$ , $B = \\left\\{1, 2, 3, 6, 9, 18 \\right\\}$ , $C = \\left\\{2, 4, 6, 8 \\right\\}$\n벤다이어그램의 색칠한 부분을 나타내는 집합은 $\\left(A \\cap B \\right)-C$ 이다.\n$A \\cap B = \\left\\{1, 2, 3, 6, 9 \\right\\}$ 이므로 $\\left(A \\cap B \\right)-C = \\left\\{1, 3, 9 \\right\\}$\n따라서 구하는 집합의 모든 원소의 합은\n$1+3+9=13$"
+ },
+ {
+  "n": 50,
+  "body": "전체집합 $U$ 의 공집합이 아닌 두 부분집합 $A$ , $B$ 에 대하여 두 집합 $A$ , $B ^{C }$ 이 서로소일 때, <보기>에서 항상 옳은 것만을 있는 대로 고른 것은?\n|  | <보 기> |  |\n|  |  |\n| ㄱ. $A \\subset B$ ㄴ. $\\left(A -B \\right)^{C }=U$ ㄷ. $\\left(A \\cup B ^{C } \\right) \\cap B =A$ |\n① ㄱ ② ㄴ ③ ㄱ, ㄴ\n④ ㄴ, ㄷ ⑤ ㄱ, ㄴ, ㄷ",
+  "answer": "[정답] ⑤\n두 집합 $A$ , $B ^{C }$ 이 서로소이므로\n$A \\cap B ^{C }= \\varnothing$ , 즉 $A \\subset B$\n[그림34]\nㄱ. $A \\subset B$ (참)\nㄴ. $\\left(A -B \\right)^{C }= \\varnothing ^{C }=U$ (참)\nㄷ. $\\left(A \\cup B ^{C } \\right) \\cap B =A$ (참)\n이상에서 옳은 것은 ㄱ, ㄴ, ㄷ이다."
+ },
+ {
+  "n": 51,
+  "body": "전체집합 $U = \\{x | x$ 는 $10$ 이하의 자연수 $\\left. \\right\\}$ 의 두 부분집합 $A$ , $B$ 에 대하여\n$A = \\left\\{2, 4, 6, 8, 10 \\right\\}$ ,\n$\\left(A -B \\right) \\cup \\left(B -A \\right)= \\left\\{1, 4, 7, 10 \\right\\}$\n일 때, 집합 $\\left(A \\cup B \\right)^{C }$ 의 모든 원소의 합은?\n① $17$ ② $19$ ③ $21$\n④ $23$ ⑤ $25$",
+  "answer": "[정답] ①\n$U = \\left\\{1 2, 3, 4, 5, 6, 7, 8, 9, 10 \\right\\}$\n집합 $\\left(A -B \\right) \\cup \\left(B -A \\right)$ 는 벤다이어그램의 색칠한 부분과 같고 주어진 조건을 나타내면 다음 그림과 같다.\n[그림35]\n$A \\cup B = \\left\\{1, 2, 4, 6, 7, 8, 10 \\right\\}$ 이므로\n$\\left(A \\cup B \\right)^{C }= \\left\\{3, 5, 9 \\right\\}$\n따라서 집합 $\\left(A \\cup B \\right)^{C }$ 의 모든 원소의 합은\n$3+5+9=17$"
+ },
+ {
+  "n": 52,
+  "body": "전체집합 $U = \\left\\{1, 2, 3, 4, 5, 6, 7 \\right\\}$ 의 두 부분집합 $A$ , $B$ 에 대하여\n$n \\left(A \\cap B \\right)=1$ , $\\left(A \\cup B ^{C } \\right)- \\left(A \\cap B ^{C } \\right)= \\left\\{1, 2, 3 \\right\\}$\n을 만족시키는 두 집합 $A$ , $B$ 의 모든 순서쌍 $\\left(A , B \\right)$ 의 개수를 구하시오.\n[그림37] 14\n집합의 연산에 대한 성질과 포함 관계",
+  "answer": "[정답] $48$\n$\\left(A \\cup B ^{C } \\right)- \\left(A \\cap B ^{C } \\right)= \\left(A \\cup B ^{C } \\right)- \\left(A -B \\right)= \\left\\{1, 2, 3 \\right\\}$\n집합 $\\left(A \\cup B ^{C } \\right)- \\left(A -B \\right)$ 는 다음 벤다이어그램의 색칠한 부분과 같다.\n[그림36]\n$n \\left(A \\cap B \\right)=1$ 이므로 집합 $A \\cap B$ 의 원소는 $1$ , $2$ , $3$ 중의 하나이고 나머지 두 원소는 집합 $\\left(A \\cap B \\right)^{C }$ 의 원소이다.\n한편, $\\left(A -B \\right) \\cup \\left(B - A \\right)= \\left\\{4, 5, 6, 7 \\right\\}$ 이므로 집합 $A -B$ 는 집합 $\\left\\{4, 5, 6, 7 \\right\\}$ 의 부분집합이고 집합 $A -B$ 의 개수는 $2^{4}$ 이다.\n따라서 구하는 두 집합 $A$ , $B$ 의 모든 순서쌍 $\\left(A , B \\right)$ 의 개수는 $3 \\times 2^{4} = 3 \\times 16 = 48$"
+ },
+ {
+  "n": 53,
+  "body": "전체집합 $U$ 의 서로 다른 두 부분집합 $A$ , $B$ 에 대하여 다음 중 옳지 않은 것은?\n① $\\left(A \\cap B \\right) \\subset A$ ② $A -U = \\varnothing$\n③ $U -A =A ^{C }$ ④ $A ^{C } \\cap B =A -B$\n⑤ $\\left(B -A \\right) \\subset B$",
+  "answer": "[정답] ④\n④ $A ^{C } \\cap B =B \\cap A ^{C }=B -A$"
+ },
+ {
+  "n": 54,
+  "body": "전체집합 $U$ 의 두 부분집합 $A$ , $B$ 에 대하여 다음 중 항상 옳은 것은?\n① $A \\cup \\varnothing = \\varnothing$ ② $B \\cap B ^{C }=B$\n③ $U - \\left(A \\cap B \\right)=A \\cup B$ ④ $A -B ^{C }=A \\cap B$\n⑤ $A \\cup B =U$",
+  "answer": "[정답] ④\n① $A \\cup \\varnothing =A$\n② $B \\cap B ^{C }= \\varnothing$\n③ $U - \\left(A \\cap B \\right)= \\left(A \\cap B \\right)^{C }$\n④ $A -B ^{C }=A \\cap \\left(B ^{C } \\right)^{C }=A \\cap B$\n⑤ $\\left(A \\cup B \\right) \\subset U$"
+ },
+ {
+  "n": 55,
+  "body": "전체집합 $U$ 의 두 부분집합 $A$ , $B$ 에 대하여\n$\\left(A \\cup B \\right)- \\left(A \\cap B \\right)= \\varnothing$\n일 때, 다음 중 항상 옳은 것은?\n① $A ^{C } \\subset B$ ② $B ^{C } \\subset A$ ③ $A =B$\n④ $A \\cap B = \\varnothing$ ⑤ $A =B ^{C }$",
+  "answer": "[정답] ③\n$\\left(A \\cup B \\right)- \\left(A \\cap B \\right)= \\varnothing$ 에서 $\\left(A -B \\right) \\cup \\left(B -A \\right)= \\varnothing$\n즉, $A -B = \\varnothing$ , $B -A = \\varnothing$\n$A \\subset B$ , $B \\subset A$ 이므로 $A =B$"
+ },
+ {
+  "n": 56,
+  "body": "자연수 전체의 집합의 두 부분집합\n$A = \\{x | x$ 는 $15$ 의 양의 배수 $\\left. \\right\\}$ ,\n$B = \\{x | x$ 는 $k$ 의 양의 배수 $\\left. \\right\\}$\n에 대하여 $A \\cap B ^{C }= \\varnothing$ 이 되도록 하는 $2$ 이상의 모든 자연수 $k$ 의 값의 합은?\n① $21$ ② $23$ ③ $25$\n④ $27$ ⑤ $27$",
+  "answer": "[정답] ②\n$A \\cap B ^{C }=A -B = \\varnothing$ 이므로 $A \\subset B$\n$A \\subset B$ 가 성립하려면 $k$ 는 $15$ 의 약수이어야 한다.\n$15$ 의 약수는 $1$ , $3$ , $5$ , $15$ 이므로 구하는 $2$ 이상의 모든 자연수 $k$ 의 값의 합은\n$3+5+15=23$"
+ },
+ {
+  "n": 57,
+  "body": "전체집합 $U$ 의 두 부분집합 $A$ , $B$ 에 대하여 $A \\cup B =A$ 일 때, <보기>에서 항상 옳은 것만을 있는 대로 고른 것은?\n|  | <보 기> |  |\n|  |  |\n| ㄱ. $A ^{C } \\cap B = \\varnothing$ ㄴ. $\\left(A \\cap B \\right)^{C }=U -A$ ㄷ. $\\left(B -A \\right) \\cup \\left(A ^{C }-B ^{C } \\right)= \\varnothing$ |\n① ㄱ ② ㄷ ③ ㄱ, ㄴ\n④ ㄱ, ㄷ ⑤ ㄴ, ㄷ",
+  "answer": "[정답] ④\n$A \\cup B =A$ 이므로 $B \\subset A$\nㄱ. $A ^{C } \\cap B =B -A = \\varnothing$ (참)\nㄴ. $\\left(A \\cap B \\right)^{C }=B ^{C }=U -B$ (거짓)\nㄷ. $B -A = \\varnothing$ 이고 $A ^{C } \\subset B ^{C }$ 이므로 $A ^{C }-B ^{C }= \\varnothing$\n$\\left(B -A \\right) \\cup \\left(A ^{C }-B ^{C } \\right)= \\varnothing \\cup \\varnothing = \\varnothing$ (참)\n이상에서 항상 옳은 것은 ㄱ, ㄷ이다."
+ },
+ {
+  "n": 58,
+  "body": "전체집합 $U$ 의 두 부분집합 $A$ , $B$ 에 대하여\n$\\left\\{ \\left(A \\cap B \\right) \\cup \\left(A -B \\right) \\right\\} \\cap B =A$\n일 때, <보기>에서 항상 옳은 것만을 있는 대로 고른 것은?\n|  | <보 기> |  |\n|  |  |\n| ㄱ. $A -B = \\varnothing$ ㄴ. $A \\cup B =A$ ㄷ. $A ^{C } \\cap B ^{C }=A ^{C }$ |\n① ㄱ ② ㄷ ③ ㄱ, ㄴ\n④ ㄱ, ㄷ ⑤ ㄴ, ㄷ\n[그림38] 15\n집합의 연산과 부분집합의 개수",
+  "answer": "[정답] ①\n$\\left\\{ \\left(A \\cap B \\right) \\cup \\left(A -B \\right) \\right\\} \\cap B =A \\cap B =A$ 이므로 $A \\subset B$\nㄱ. $A -B = \\varnothing$ (참)\nㄴ. $A \\cup B =B$ (거짓)\nㄷ. $A ^{C } \\cap B ^{C }= \\left(A \\cup B \\right)^{C }=B ^{C }$ (거짓)\n이상에서 항상 옳은 것은 ㄱ이다."
+ },
+ {
+  "n": 59,
+  "body": "전체집합 $U = \\left\\{1, 2, 3, 4, 5, 6, 7 \\right\\}$ 에 대하여 다음 조건을 만족시키는 집합 $U$ 의 부분집합 $X$ 의 개수를 구하시오.\n| 집합 $A = \\left\\{1, 3, 5 \\right\\}$ 에 대하여 $A -X =A$ 이다. |",
+  "answer": "[정답] $16$\n$A -X =A$ 이므로 $A \\cap X = \\varnothing$ 이다.\n따라서 집합 $X$ 는 $1$ , $3$ , $5$ 를 원소로 갖지 않는 전체집합 $U$ 의 부분집합이므로 집합 $X$ 의 개수는\n$2^{7-3}=2^{4}=16$"
+ },
+ {
+  "n": 60,
+  "body": "두 집합 $A = \\left\\{1, 2, 3, 4, 5, 6 \\right\\}$ , $B = \\left\\{1, 2, 4, 5 \\right\\}$ 에 대하여\n$A \\cap X =X$ , $\\left(A -B \\right) \\cup X =X$\n를 만족시키는 집합 $X$ 의 개수는?\n① $2$ ② $4$ ③ $8$\n④ $16$ ⑤ $32$",
+  "answer": "[정답] ④\n$A \\cap X =X$ 에서 $X \\subset A$ 이고 $\\left(A -B \\right) \\cup X =X$ 에서\n$\\left(A -B \\right) \\subset X$ 이므로 $\\left(A -B \\right) \\subset X \\subset A$\n$A -B = \\left\\{3, 6 \\right\\}$ 이므로 집합 $X$ 는 집합 $\\left\\{1, 2, 3, 4, 5, 6 \\right\\}$ 의 부분집합 중 두 원소 $3$ , $6$ 을 반드시 포함하는 집합이다.\n따라서 집합 $X$ 의 개수는\n$2^{6-2}=2^{4}=16$"
+ },
+ {
+  "n": 61,
+  "body": "다음 조건을 만족시키는 집합 $X$ 의 개수는?\n| (가) 집합 $X$ 는 집합 $\\left\\{1, 2, 3, 4, 5, 6 \\right\\}$ 의 부분집합이다. (나) $\\left\\{1, 2, 3, 4 \\right\\} \\cap X = \\left\\{4 \\right\\}$ |\n① $1$ ② $2$ ③ $4$\n④ $8$ ⑤ $16$",
+  "answer": "[정답] ③\n집합 $X$ 는 집합 $\\left\\{1, 2, 3, 4, 5, 6 \\right\\}$ 의 부분집합 중 $4$ 는 반드시 원소로 갖고 $1$ , $2$ , $3$ 은 원소로 갖지 않는 집합이다.\n따라서 집합 $X$ 의 개수는\n$2^{6-1-3}=2^{2}=4$"
+ },
+ {
+  "n": 62,
+  "body": "전체집합 $U = \\{x | x$ 는 $10$ 이하의 자연수 $\\left. \\right\\}$ 의 두 부분집합\n$A = \\{x | x$ 는 $4$ 의 양의 약수 $\\left. \\right\\}$ ,\n$B = \\{x | x$ 는 $10$ 이하의 $3$ 의 양의 배수 $\\left. \\right\\}$\n에 대하여 $A \\cup X =B ^{C } \\cap X$ 를 만족시키는 집합 $U$ 의 부분집합 $X$ 의 개수를 구하시오.",
+  "answer": "[정답] $16$\n$A = \\left\\{1, 2, 4 \\right\\}$ , $B = \\left\\{3, 6, 9 \\right\\}$ 이므로\n$B ^{C }= \\left\\{1, 2, 4, 5, 7, 8, 10 \\right\\}$\n$A \\cup X =B ^{C } \\cap X$ 에서\n$\\left\\{1, 2, 4 \\right\\} \\cup X = \\left\\{1, 2, 4, 5, 7, 8, 10 \\right\\} \\cap X$\n이므로 집합 $X$ 는 집합 $\\left\\{1, 2, 4, 5, 7, 8, 10 \\right\\}$ 의 부분집합 중\n$1$ , $2$ , $4$ 를 반드시 원소로 갖는 집합이다.\n따라서 집합 $X$ 의 개수는\n$2^{7-3}=2^{4}=16$"
+ },
+ {
+  "n": 63,
+  "body": "전체집합 $U = \\{x | x$ 는 $15$ 이하의 자연수 $\\left. \\right\\}$ 의 두 부분집합 $A$ , $B$ 에 대하여\n$A = \\{x | x$ 는 $12$ 의 양의 약수 $\\left. \\right\\}$ ,\n$B = \\{x | x$ 는 $15$ 이하의 홀수인 자연수 $\\left. \\right\\}$\n일 때, $A \\cup X =B \\cup X$ 를 만족시키는 집합 $U$ 의 부분집합 $X$ 의 개수를 구하시오.\n[그림39] 16\n집합의 연산법칙",
+  "answer": "[정답] $32$\n$A = \\left\\{1, 2, 3, 4, 6, 12 \\right\\}$ , $B = \\left\\{1, 3, 5, 7, 9, 11, 13, 15 \\right\\}$\n$A \\cup X =B \\cup X$ 를 만족시키려면 집합 $X$ 는 두 집합 $A$ , $B$ 의 공통인 원소 $1$ , $3$ 을 제외한 나머지 $2$ , $4$ , $5$ , $6$ , $7$ , $9$ , $11$ , $12$ , $13$ , $15$ 를 반드시 원소로 가져야 한다.\n따라서 집합 $X$ 는 집합 $U$ 의 부분집합 중 $2$ , $4$ , $5$ , $6$ , $7$ , $9$ , $11$ , $12$ , $13$ , $15$ 를 반드시 원소로 갖는 부분집합이므로 그 개수는\n$2^{15-10}=2^{5}=32$"
+ },
+ {
+  "n": 64,
+  "body": "세 집합 $A$ , $B$ , $C$ 에 대하여\n$A = \\{x | x$ 는 $10$ 이하의 소수 $\\left. \\right\\}$ ,\n$B \\cup C = \\{x | x$ 는 $6$ 과 서로소인 $10$ 이하의 자연수 $\\left. \\right\\}$\n일 때, 집합 $\\left(A \\cap B \\right) \\cup \\left(A \\cap C \\right)$ 의 모든 원소의 합은?\n① $12$ ② $14$ ③ $16$\n④ $18$ ⑤ $20$",
+  "answer": "[정답] ①\n$A = \\left\\{2, 3, 5, 7 \\right\\}$ , $B \\cup C = \\left\\{1, 5, 7 \\right\\}$ 이므로\n$\\left(A \\cap B \\right) \\cup \\left(A \\cap C \\right)$ $=A \\cap \\left(B \\cup C \\right)$ $= \\left\\{2, 3, 5, 7 \\right\\} \\cap \\left\\{1, 5, 7 \\right\\}$ $= \\left\\{5, 7 \\right\\}$\n따라서 집합 $\\left(A \\cap B \\right) \\cup \\left(A \\cap C \\right)$ 의 모든 원소의 합은\n$5+7=12$"
+ },
+ {
+  "n": 65,
+  "body": "세 집합 $A$ , $B$ , $C$ 에 대하여\n$A \\cap B = \\left\\{1, 3, 5 \\right\\}$ , $C = \\left\\{2, 3, 4 \\right\\}$\n일 때, 집합 $A \\cap \\left(B \\cap C \\right)$ 의 원소는?\n① $1$ ② $2$ ③ $3$\n④ $4$ ⑤ $5$",
+  "answer": "[정답] ③\n$A \\cap \\left(B \\cap C \\right)$ $= \\left(A \\cap B \\right) \\cap C$ $= \\left\\{1, 3, 5 \\right\\} \\cap \\left\\{2, 3, 4 \\right\\}= \\left\\{3 \\right\\}$"
+ },
+ {
+  "n": 66,
+  "body": "전체집합 $U = \\left\\{1, 2, 3, 4, 5, 6, 7 \\right\\}$ 의 두 부분집합 $A$ , $B$ 에 대하여\n$A -B = \\left\\{4, 5 \\right\\}$ ,\n$\\left(A \\cap B \\right)^{C } \\cap \\left(A \\cup B ^{C } \\right)= \\left\\{4, 5, 6, 7 \\right\\}$\n일 때, 집합 $A \\cup B$ 의 모든 원소의 합을 구하시오.",
+  "answer": "[정답] $15$\n$\\left(A \\cap B \\right)^{C } \\cap \\left(A \\cup B ^{C } \\right)$ $= \\left(A ^{C } \\cup B ^{C } \\right) \\cap \\left(A \\cup B ^{C } \\right)$ $= \\left(A ^{C } \\cap A \\right) \\cup B ^{C }$ $= \\varnothing \\cup B ^{C }=B ^{C }$\n이므로 $B ^{C }= \\left\\{4, 5, 6, 7 \\right\\}$ , 즉 $B = \\left\\{1, 2, 3 \\right\\}$\n$A \\cup B$ $= \\left(A -B \\right) \\cup B$ $= \\left\\{4, 5 \\right\\} \\cup \\left\\{1, 2, 3 \\right\\}$ $= \\left\\{1, 2, 3, 4, 5 \\right\\}$\n따라서 집합 $A \\cup B$ 의 모든 원소의 합은\n$1+2+3+4+5=15$"
+ },
+ {
+  "n": 67,
+  "body": "전체집합 $U = \\{x | x$ 는 $10$ 이하의 자연수 $\\left. \\right\\}$ 의 두 부분집합 $A = \\left\\{1, 3, 5, 7, 9 \\right\\}$ , $B = \\left\\{3, 4, 7, 8 \\right\\}$ 에 대하여 집합 $\\left(A \\cup B \\right) \\cap \\left(A ^{C } \\cup B ^{C } \\right)$ 의 모든 원소의 합은?\n① $21$ ② $23$ ③ $25$\n④ $27$ ⑤ $29$",
+  "answer": "[정답] ④\n$\\left(A \\cup B \\right) \\cap \\left(A ^{C } \\cup B ^{C } \\right)$ $= \\left(A \\cup B \\right) \\cap \\left(A \\cap B \\right)^{C }$ $= \\left(A \\cup B \\right)- \\left(A \\cap B \\right)$\n이고 $A \\cup B = \\left\\{1, 3, 4, 5, 7, 8, 9 \\right\\}$ , $A \\cap B = \\left\\{3, 7 \\right\\}$ 이므로\n$\\left(A \\cup B \\right) \\cap \\left(A ^{C } \\cup B ^{C } \\right)$ $= \\left(A \\cup B \\right)- \\left(A \\cap B \\right)$ $= \\left\\{1, 3, 4, 5, 7, 8, 9 \\right\\}- \\left\\{3, 7 \\right\\}$ $= \\left\\{1, 4, 5, 8, 9 \\right\\}$\n따라서 집합 $\\left(A \\cup B \\right) \\cap \\left(A ^{C } \\cup B ^{C } \\right)$ 의 모든 원소의 합은\n$1+4+5+8+9=27$"
+ },
+ {
+  "n": 68,
+  "body": "전체집합 $U = \\{x | x$ 는 $10$ 이하의 자연수 $\\left. \\right\\}$ 의 세 부분집합 $A$ , $B$ , $C$ 에 대하여\n$A = \\left\\{1, 2, 3, 6, 9 \\right\\}$ , $B \\cap C = \\left\\{3, 9 \\right\\}$\n일 때, 집합 $\\left(A \\cap B ^{C } \\right) \\cup \\left(A \\cap C ^{C } \\right)$ 의 모든 원소의 합은?\n① $6$ ② $9$ ③ $12$\n④ $15$ ⑤ $18$",
+  "answer": "[정답] ②\n$\\left(A \\cap B ^{C } \\right) \\cup \\left(A \\cap C ^{C } \\right)$ $=A \\cap \\left(B ^{C } \\cup C ^{C } \\right)$ $=A \\cap \\left(B \\cap C \\right)^{C }=A - \\left(B \\cap C \\right)$ $= \\left\\{1, 2, 3, 6, 9 \\right\\}- \\left\\{3, 9 \\right\\}$ $= \\left\\{1, 2, 6 \\right\\}$\n따라서 집합 $\\left(A \\cap B ^{C } \\right) \\cup \\left(A \\cap C ^{C } \\right)$ 의 모든 원소의 합은\n$1+2+6=9$"
+ },
+ {
+  "n": 69,
+  "body": "전체집합 $U$ 의 세 부분집합 $A$ , $B$ , $C$ 에 대하여 <보기>에서 항상 옳은 것만을 있는 대로 고른 것은?\n|  | <보 기> |  |\n|  |  |\n| ㄱ. $\\left(A -B \\right)-C =A - \\left(B \\cup C \\right)$ ㄴ. $\\left(A -B \\right) \\cup \\left(A -C \\right)=A - \\left(B \\cup C \\right)$ ㄷ. $\\left(A \\cap B \\right)- \\left(A \\cap C \\right)= \\left(A \\cap B \\right)-C$ |\n① ㄱ ② ㄷ ③ ㄱ, ㄴ\n④ ㄱ, ㄷ ⑤ ㄴ, ㄷ\n[그림40] 17\n배수와 약수를 나타내는 집합",
+  "answer": "[정답] ④\nㄱ. $\\left(A -B \\right)-C$ $= \\left(A \\cap B ^{C } \\right) \\cap C ^{C }$ $=A \\cap \\left(B ^{C } \\cap C ^{C } \\right)$ $=A \\cap \\left(B \\cup C \\right)^{C }$ $=A - \\left(B \\cup C \\right)$ (참)\nㄴ. $\\left(A -B \\right) \\cup \\left(A -C \\right)$ $= \\left(A \\cap B ^{C } \\right) \\cup \\left(A \\cap C ^{C } \\right)$ $=A \\cap \\left(B ^{C } \\cup C ^{C } \\right)$ $=A \\cap \\left(B \\cap C \\right)^{C }$ $=A - \\left(B \\cap C \\right)$ (거짓)\nㄷ. $\\left(A \\cap B \\right)- \\left(A \\cap C \\right)$ $= \\left(A \\cap B \\right) \\cap \\left(A \\cap C \\right)^{C }$ $= \\left(A \\cap B \\right) \\cap \\left(A ^{C } \\cup C ^{C } \\right)$ $= \\left\\{ \\left(A \\cap B \\right) \\cap A ^{C } \\right\\} \\cup \\left\\{ \\left(A \\cap B \\right) \\cap C ^{C } \\right\\}$ $= \\varnothing \\cup \\left\\{ \\left(A \\cap B \\right) \\cap C ^{C } \\right\\}$ $= \\left(A \\cap B \\right) \\cap C ^{C }$ $= \\left(A \\cap B \\right)-C$ (참)\n이상에서 옳은 것은 ㄱ, ㄷ이다."
+ },
+ {
+  "n": 70,
+  "body": "자연수 $k$ 에 대하여 집합\n$A _{k}= \\{x | x$ 는 $100$ 이하의 $k$ 의 양의 배수 $\\left. \\right\\}$\n라 할 때, $n \\left(A _{6} \\cap A _{8} \\right)$ 의 값은?\n① $4$ ② $6$ ③ $8$\n④ $10$ ⑤ $12$",
+  "answer": "[정답] ①\n집합 $A _{6} \\cap A _{8}$ 은 $6$ 의 배수이면서 $8$ 의 배수인 $100$ 이하의 자연수를 원소로 가지므로 $A _{6} \\cap A _{8}=A _{24}$\n$100$ 이하의 $24$ 의 배수의 개수가 $4$ 이므로 $n \\left(A _{6} \\cap A _{8} \\right)=4$"
+ },
+ {
+  "n": 71,
+  "body": "자연수 $k$ 의 양의 배수를 원소로 하는 집합을 $A _{k}$ 라 하자.\n$A _{n} \\subset \\left(A _{2} \\cap A _{3} \\right)$ , $\\left(A _{24} \\cup A _{36} \\right) \\subset A _{n}$\n을 만족시키는 모든 자연수 $n$ 의 값의 합은?\n① $12$ ② $15$ ③ $18$\n④ $21$ ⑤ $24$",
+  "answer": "[정답] ③\n$A _{n} \\subset \\left(A _{2} \\cap A _{3} \\right)$ 에서 $A _{n} \\subset A _{2}$ , $A _{n} \\subset A _{3}$\n$n$ 은 $2$ 의 배수이면서 $3$ 의 배수이므로 $n$ 은 $6$ 의 배수이다.\n$\\left(A _{24} \\cup A _{36} \\right) \\subset A _{n}$ 에서 $A _{24} \\subset A _{n}$ , $A _{36} \\subset A _{n}$\n$n$ 은 $24$ 의 약수이면서 $36$ 의 약수이므로 $n$ 은 $12$ 의 약수이다.\n자연수 $n$ 은 $6$ 의 배수이면서 $12$ 의 약수이므로 구하는 모든 자연수 $n$ 의 값의 합은\n$6+12=18$"
+ },
+ {
+  "n": 72,
+  "body": "자연수 $k$ 에 대하여 집합\n$A _{k}= \\{x | x$ 는 $k$ 의 양의 약수 $\\left. \\right\\}$\n라 할 때, 집합 $\\left(A _{8} \\cup A _{9} \\right) \\cap A _{12}$ 의 모든 원소의 합을 구하시오.",
+  "answer": "[정답] $10$\n$\\left(A _{8} \\cup A _{9} \\right) \\cap A _{12}$ $= \\left(A _{8} \\cap A _{12} \\right) \\cup \\left(A _{9} \\cap A _{12} \\right)$ $=A _{4} \\cup A _{3}$ $= \\left\\{1, 2, 4 \\right\\} \\cup \\left\\{1, 3 \\right\\}$ $= \\left\\{1, 2, 3, 4 \\right\\}$\n따라서 집합 $\\left(A _{8} \\cup A _{9} \\right) \\cap A _{12}$ 의 모든 원소의 합은\n$1+2+3+4=10$"
+ },
+ {
+  "n": 73,
+  "body": "자연수 $n$ 에 대하여 집합\n$A _{n}= \\{x | x$ 는 $n$ 의 양의 약수 $\\left. \\right\\}$\n라 할 때, <보기>에서 옳은 것만을 있는 대로 고른 것은?\n|  | <보 기> |  |\n|  |  |\n| ㄱ. $A _{4} \\cap A _{6}=A _{2}$ ㄴ. $A _{4} \\cup A _{8}=A _{8}$ ㄷ. $\\left(A _{3} \\cup A _{4} \\right) \\subset A _{12}$ |\n① ㄱ ② ㄴ ③ ㄱ, ㄴ\n④ ㄴ, ㄷ ⑤ ㄱ, ㄴ, ㄷ",
+  "answer": "[정답] ⑤\nㄱ. $A _{4}= \\left\\{1, 2, 4 \\right\\}$ , $A _{6}= \\left\\{1, 2, 3, 6 \\right\\}$ 이므로\n$A _{4} \\cap A _{6}= \\left\\{1, 2 \\right\\}$ , 즉 $A _{4} \\cap A _{6}=A _{2}$ (참)\nㄴ. $A _{4}= \\left\\{1, 2, 4 \\right\\}$ , $A _{8}= \\left\\{1, 2, 4, 8 \\right\\}$ 이므로\n$A _{4} \\cup A _{8}= \\left\\{1, 2, 4, 8 \\right\\}$ , 즉 $A _{4} \\cup A _{8}=A _{8}$ (참)\nㄷ. $A _{3}= \\left\\{1, 3 \\right\\}$ , $A _{4}= \\left\\{1, 2, 4 \\right\\}$ 이므로\n$A _{3} \\cup A _{4}= \\left\\{1, 2, 3, 4 \\right\\}$\n$A _{12}= \\left\\{1, 2, 3, 4, 6, 12 \\right\\}$ 이므로 $\\left(A _{3} \\cup A _{4} \\right) \\subset A _{12}$ (참)\n이상에서 옳은 것은 ㄱ, ㄴ, ㄷ이다."
+ },
+ {
+  "n": 74,
+  "body": "두 자연수 $m$ , $n$ 에 대하여 두 집합\n$A _{m}= \\{x | x$ 는 $m$ 의 양의 약수 $\\left. \\right\\}$ ,\n$B _{n}= \\{x | x$ 는 $n$ 의 양의 배수 $\\left. \\right\\}$\n라 할 때, 다음 조건을 만족시키는 모든 자연수 $k$ 의 값의 합을 구하시오.\n| (가) 집합 $A _{12} \\cap A _{18}$ 은 집합 $A _{k}$ 의 부분집합이다. (나) 집합 $B _{6} \\cap B _{8}$ 은 집합 $B _{k}$ 의 부분집합이다. |\n[그림41] 18\n집합으로 나타낸 방정식 또는 부등식의 해",
+  "answer": "[정답] $42$\n$A _{12} \\cap A _{18}=A _{6}$ 이므로 $\\left(A _{12} \\cap A _{18} \\right) \\subset A _{k}$ 에서 $A _{6} \\subset A _{k}$\n즉, $k$ 는 $6$ 의 배수이다. $\\cdots$ $\\cdots$ ㉠\n$B _{6} \\cap B _{8}=B _{24}$ 이므로 $\\left(B _{6} \\cap B _{8} \\right) \\subset B _{k}$ 에서 $B _{24} \\subset B _{k}$\n즉, $k$ 는 $24$ 의 약수이다. $\\cdots$ $\\cdots$ ㉡\n㉠, ㉡에서 구하는 $k$ 의 값은 $6$ , $12$ , $24$ 이므로 그 합은 $6+12+24=42$"
+ },
+ {
+  "n": 75,
+  "body": "실수 전체의 집합의 두 부분집합\n$A = \\{x | x^{2}-2x-8=0 \\}$ , $B = \\{x | x^{2}+ax+a-1=0 \\}$\n에 대하여 $A -B = \\left\\{4 \\right\\}$ 일 때, 집합 $A \\cup B$ 의 모든 원소의 합을 구하시오. (단, $a$ 는 상수이다.)",
+  "answer": "[정답] $1$\n$x^{2}-2x-8=0$ , $\\left(x+2 \\right) \\left(x-4 \\right)=0$ , $x= -2$ 또는 $x=4$\n즉, $A = \\left\\{-2, 4 \\right\\}$\n$A -B = \\left\\{4 \\right\\}$ 이므로 $-2 \\in B$ 이다.\n방정식 $x^{2}+ax+a-1=0$ 의 한 실근이 $-2$ 이므로\n$4-2a+a-1=0$ , 즉 $a=3$\n$x^{2}+3x+2=0$ , $\\left(x+2 \\right) \\left(x+1 \\right)=0$ , $x= -2$ 또는 $x= -1$\n즉, $B = \\left\\{-2, -1 \\right\\}$\n$A \\cup B = \\left\\{-2, -1, 4 \\right\\}$ 이므로 집합 $A \\cup B$ 의 모든 원소의 합은 $-2+ \\left(-1 \\right)+4=1$"
+ },
+ {
+  "n": 76,
+  "body": "실수 전체의 집합의 두 부분집합\n$A = \\{x | x^{2}+3x-4 \\leq 0 \\}$ , $B = \\{x | x^{2}+8x+12 \\leq 0 \\}$\n에 대하여 집합 $A \\cap B$ 의 원소의 최솟값을 $m$ , 집합 $A \\cup B$ 의 원소의 최댓값을 $M$ 이라 할 때, $m+M$ 의 값은?\n① $-5$ ② $-3$ ③ $-1$\n④ $1$ ⑤ $3$",
+  "answer": "[정답] ②\n$x^{2}+3x-4 \\leq 0$ 에서 $\\left(x+4 \\right) \\left(x-1 \\right) \\leq 0$ 이므로\n$-4 \\leq x \\leq 1$ , 즉 $A = \\{x | -4 \\leq x \\leq 1 \\}$\n$x^{2}+8x+12 \\leq 0$ 에서 $\\left(x+6 \\right) \\left(x+2 \\right) \\leq 0$ 이므로\n$-6 \\leq x \\leq -2$ , 즉 $B = \\{x | -6 \\leq x \\leq -2 \\}$\n$A \\cap B = \\{x | -4 \\leq x \\leq -2 \\}$ , $A \\cup B = \\{x | -6 \\leq x \\leq 1 \\}$\n집합 $A \\cap B$ 의 원소의 최솟값이 $-4$ 이므로 $m= -4$ 이고,\n집합 $A \\cup B$ 의 원소의 최댓값이 $1$ 이므로 $M =1$ 이다.\n따라서 $m+M = -4+1= -3$"
+ },
+ {
+  "n": 77,
+  "body": "실수 전체의 집합 $R$ 의 두 부분집합\n$A = \\left\\{x \\left| \\right.x^{2}-2x-8 > 0 \\right\\}$ , $B = \\left\\{x \\left| \\right.x^{2}+ax+b \\leq 0 \\right\\}$\n이 다음 조건을 만족시킬 때, $ab$ 의 값을 구하시오.\n(단, $a$ , $b$ 는 상수이다.)\n| (가) $A \\cup B =R$ (나) $A \\cap B = \\left\\{x \\left| \\right.4 < x \\leq 7 \\right\\}$ |\n[그림43] 19\n새롭게 정의된 집합의 연산",
+  "answer": "[정답] $70$\n$x^{2}-2x-8 > 0$ 에서 $\\left(x+2 \\right) \\left(x-4 \\right) > 0$ 이므로\n$x < -2$ 또는 $x > 4$\n$A = \\{x | x < -2$ 또는 $x > 4 \\}$ 이므로\n집합 $A$ 를 수직선 위에 나타내면 다음 그림과 같다.\n[그림42]\n$A \\cup B =R$ 이고 $A \\cap B = \\{x | 4 < x \\leq 7 \\}$ 이므로\n$B = \\{x | -2 \\leq x \\leq 7 \\}$\n$x^{2}+ax+b= \\left(x+2 \\right) \\left(x-7 \\right)=x^{2}-5x-14$\n이므로 $a= -5$ , $b= -14$\n따라서 $ab= \\left(-5 \\right) \\times \\left(-14 \\right)=70$"
+ },
+ {
+  "n": 78,
+  "body": "두 집합 $A = \\left\\{-1, 0, 1 \\right\\}$ , $B = \\left\\{1, 2 \\right\\}$ 에 대하여 연산 $◆$ 를\n$A ◆B = \\{ab | a \\in A , b \\in B \\}$\n라 정의할 때, 집합 $\\left(A ◆B \\right)◆B$ 의 원소의 개수는?\n① $5$ ② $6$ ③ $7$\n④ $8$ ⑤ $9$",
+  "answer": "[정답] ③\n$a \\in A$ , $b \\in B$ 이므로 $ab$ 의 값은\n$-2$ , $-1$ , $0$ , $1$ , $2$\n이므로 $A ◆B = \\left\\{-2, -1, 0, 1, 2 \\right\\}$\n$a \\in A ◆B$ , $b \\in B$ 이므로 $ab$ 의 값은\n$-4$ , $-2$ , $-1$ , $0$ , $1$ , $2$ , $4$\n이므로 $\\left(A ◆B \\right)◆B = \\left\\{-4, -2, -1, 0, 1, 2, 4 \\right\\}$\n따라서 집합 $\\left(A ◆B \\right)◆B$ 의 원소의 개수는 $7$ 이다."
+ },
+ {
+  "n": 79,
+  "body": "전체집합 $U$ 의 두 부분집합 $A$ , $B$ 에 대하여 연산 $◎$ 를\n$A ◎B =A \\cap \\left(A ^{C } \\cup B ^{C } \\right)$\n로 정의한다. 전체집합 $U$ 의 세 부분집합\n$A = \\left\\{1, 2, 4, 8 \\right\\}$ , $B = \\left\\{1, 2, 3, 4, 5 \\right\\}$ , $C = \\left\\{2, 3, 5, 7 \\right\\}$\n에 대하여 집합 $A ◎ \\left(B ◎C \\right)$ 의 모든 원소의 합을 구하시오.",
+  "answer": "[정답] $10$\n$A ◎B$ $=A \\cap \\left(A ^{C } \\cup B ^{C } \\right)$ $=A \\cap \\left(A \\cap B \\right)^{C }$ $=A - \\left(A \\cap B \\right)=A -B$\n$A ◎ \\left(B ◎C \\right)$ $=A - \\left(B -C \\right)$ $= \\left\\{1, 2, 4, 8 \\right\\}- \\left[ \\left\\{1, 2, 3, 4, 5 \\right\\}- \\left\\{2, 3, 5, 7 \\right\\} \\right]$ $= \\left\\{1, 2, 4, 8 \\right\\}- \\left\\{1, 4 \\right\\}$ $= \\left\\{2, 8 \\right\\}$\n따라서 집합 $A ◎ \\left(B ◎C \\right)$ 의 모든 원소의 합은\n$2+8=10$"
+ },
+ {
+  "n": 80,
+  "body": "두 집합 $A$ , $B$ 에 대하여 연산 $\\triangle$ 를\n$A \\triangle B = \\left(A \\cup B \\right)- \\left(A \\cap B \\right)$\n로 정의한다.\n$A = \\left\\{1, 3, 5, 7 \\right\\}$ , $A \\triangle B = \\left\\{1, 2, 3, 4, 5 \\right\\}$\n일 때, 집합 $B$ 의 모든 원소의 합은?\n① $11$ ② $12$ ③ $13$\n④ $14$ ⑤ $15$\n[그림45] 20\n유한집합의 원소의 개수",
+  "answer": "[정답] ③\n$A \\triangle B = \\left(A \\cup B \\right)- \\left(A \\cap B \\right)= \\left\\{1, 2, 3, 4, 5 \\right\\}$\n$A = \\left\\{1, 3, 5, 7 \\right\\}$ 이므로 두 집합 $A$ , $B$ 의 원소를 벤다이어그램으로 나타내면 다음 그림과 같다.\n[그림44]\n따라서 $B = \\left\\{2, 4, 7 \\right\\}$ 이므로 집합 $B$ 의 모든 원소의 합은\n$2+4+7=13$"
+ },
+ {
+  "n": 81,
+  "body": "전체집합 $U$ 의 두 부분집합 $A$ , $B$ 에 대하여\n$n \\left(U \\right)=30$ , $n \\left(A \\right)=12$ , $n \\left(B -A \\right)=7$\n일 때, $n \\left(A ^{C } \\cap B ^{C } \\right)$ 의 값은?\n① $11$ ② $12$ ③ $13$\n④ $14$ ⑤ $15$",
+  "answer": "[정답] ①\n$n \\left(A \\right)=12$ , $n \\left(B -A \\right)=7$ 이므로\n$n \\left(A \\cup B \\right)=12+7=19$\n따라서\n$n \\left(A ^{C } \\cap B ^{C } \\right)$ $=n \\left( \\left(A \\cup B \\right)^{C } \\right)$ $=n \\left(U \\right)-n \\left(A \\cup B \\right)$ $=30-19=11$"
+ },
+ {
+  "n": 82,
+  "body": "전체집합 $U$ 의 두 부분집합 $A$ , $B$ 에 대하여 $A \\subset B ^{C }$ 이고 $n \\left(A \\right)=12$ , $n \\left(A \\cup B \\right)=20$ 일 때, $n \\left(B \\right)$ 의 값은?\n① $4$ ② $6$ ③ $8$\n④ $10$ ⑤ $12$",
+  "answer": "[정답] ③\n$A \\subset B ^{C }$ 에서 $A \\cap B = \\varnothing$ 이므로 $n \\left(A \\cap B \\right)=0$\n$n \\left(A \\cup B \\right)=n \\left(A \\right)+n \\left(B \\right)-n \\left(A \\cap B \\right)$ 에서\n$20=12+n \\left(B \\right)-0$\n따라서 $n \\left(B \\right)=8$"
+ },
+ {
+  "n": 83,
+  "body": "전체집합 $U$ 의 두 부분집합 $A$ , $B$ 에 대하여\n$n \\left(U \\right)=20$ , $n \\left(A ^{C } \\cap B ^{C } \\right)=7$ , $n \\left( \\left(A -B \\right) \\cup \\left(B -A \\right) \\right)=11$\n일 때, $n \\left(A \\cap B \\right)$ 의 값을 구하시오.",
+  "answer": "[정답] $2$\n$n \\left(A ^{C } \\cap B ^{C } \\right)=n \\left( \\left(A \\cup B \\right)^{C } \\right)=n \\left(U \\right)-n \\left(A \\cup B \\right)$ 에서\n$7=20-n \\left(A \\cup B \\right)$ 이므로 $n \\left(A \\cup B \\right)=13$\n따라서\n$n \\left(A \\cap B \\right)$ $=n \\left(A \\cup B \\right)-n \\left( \\left(A -B \\right) \\cup \\left(B -A \\right) \\right)$ $=13-11=2$"
+ },
+ {
+  "n": 84,
+  "body": "전체집합 $U$ 의 두 부분집합 $A$ , $B$ 에 대하여\n$n \\left(U \\right)=24$ , $n \\left(A \\cap B \\right)=6$ , $n \\left(A ^{C } \\cap B ^{C } \\right)=9$\n일 때, $n \\left(A \\right)+n \\left(B \\right)$ 의 값을 구하시오.",
+  "answer": "[정답] $21$\n$n \\left(A ^{C } \\cap B ^{C } \\right)=n \\left( \\left(A \\cup B \\right)^{C } \\right)=n \\left(U \\right)-n \\left(A \\cup B \\right)$ 에서\n$9=24-n \\left(A \\cup B \\right)$ 이므로\n$n \\left(A \\cup B \\right)=24-9=15$\n$n \\left(A \\cup B \\right)=n \\left(A \\right)+n \\left(B \\right)-n \\left(A \\cap B \\right)$ 에서\n$15=n \\left(A \\right)+n \\left(B \\right)-6$\n따라서 $n \\left(A \\right)+n \\left(B \\right)=21$"
+ },
+ {
+  "n": 85,
+  "body": "전체집합 $U$ 의 두 부분집합 $A$ , $B$ 에 대하여 $A$ 와 $B ^{C }$ 은 서로소이고\n$n \\left(U \\right)=30$ , $n \\left(A \\right)=16$ , $n \\left(B ^{C } \\right)=9$\n일 때, $n \\left(B -A \\right)$ 는?\n① $5$ ② $6$ ③ $7$\n④ $8$ ⑤ $9$",
+  "answer": "[정답] ①\n$A$ 와 $B ^{C }$ 은 서로소이므로 $A \\cap B ^{C }= \\varnothing$ , 즉 $A \\subset B$\n$n \\left(B \\right)=n \\left(U \\right)-n \\left(B ^{C } \\right)=30-9=21$ 이므로\n$n \\left(B -A \\right)$ $=n \\left(B \\right)-n \\left(A \\cap B \\right)$ $=n \\left(B \\right)-n \\left(A \\right)$ $=21-16=5$"
+ },
+ {
+  "n": 86,
+  "body": "세 집합 $A$ , $B$ , $C$ 에 대하여 $B$ 와 $C$ 는 서로소이고\n$n \\left(A \\cup B \\cup C \\right)=20$ , $n \\left(A \\right)=11$ , $n \\left(C \\right)=6$ , $n \\left(B -A \\right)=8$\n일 때, $n \\left(A \\cap C \\right)$ 의 값은?\n① $2$ ② $3$ ③ $4$\n④ $5$ ⑤ $6$\n[그림46] 21\n유한집합의 원소의 개수의 활용",
+  "answer": "[정답] ④\n$B$ 와 $C$ 는 서로소이므로 $B \\cap C = \\varnothing$\n$n \\left(A \\cup B \\cup C \\right)=20$ , $n \\left(B -A \\right)=8$ 이므로 $n \\left(A \\cup C \\right)=12$\n$n \\left(A \\cup C \\right)=n \\left(A \\right)+n \\left(C \\right)-n \\left(A \\cap C \\right)$ 에서\n$12=11+6-n \\left(A \\cap C \\right)$\n따라서 $n \\left(A \\cap C \\right)=5$"
+ },
+ {
+  "n": 87,
+  "body": "어느 학급의 학생 $25$ 명 중에서 디지털 카메라를 갖고 있는 학생이 $9$ 명, 플라로이드 카메라를 갖고 있는 학생이 $14$ 명, 디지털 카메라와 플라로이드 카메라 중 어느 것도 갖고 있지 않은 학생이 $8$ 명일 때, 디지털 카메라와 플라로이드 카메라를 모두 갖고 있는 학생 수는?\n① $6$ ② $7$ ③ $8$\n④ $9$ ⑤ $10$",
+  "answer": "[정답] ①\n학생 전체의 집합을 $U$ , 디지털 카메라를 갖고 있는 학생의 집합을 $A$ , 플라로이드 카메라를 갖고 있는 학생의 집합을 $B$ 라 하면\n$n \\left(U \\right)=25$ , $n \\left(A \\right)=9$ , $n \\left(B \\right)=14$ , $n \\left(A ^{C } \\cap B ^{C } \\right)=8$\n$n \\left(A ^{C } \\cap B ^{C } \\right)=n \\left( \\left(A \\cup B \\right)^{C } \\right)=n \\left(U \\right)-n \\left(A \\cup B \\right)$ 에서\n$8=25-n \\left(A \\cup B \\right)$ , 즉 $n \\left(A \\cup B \\right)=17$\n$n \\left(A \\cup B \\right)=n \\left(A \\right)+n \\left(B \\right)-n \\left(A \\cap B \\right)$ 에서\n$17=9+14-n \\left(A \\cap B \\right)$ , $n \\left(A \\cap B \\right)=6$\n따라서 디지털 카메라와 플라로이드 카메라를 모두 갖고 있는 학생의 수는 $6$ 이다."
+ },
+ {
+  "n": 88,
+  "body": "어느 동호회 회원 중에서 스키를 탈 수 있는 회원은 $21$ 명, 스키와 보드를 모두 탈 수 있는 회원은 $11$ 명, 스키 또는 보드를 탈 수 있는 회원은 $29$ 명일 때, 보드를 탈 수 있는 회원 수는?\n① $15$ ② $17$ ③ $19$\n④ $21$ ⑤ $23$",
+  "answer": "[정답] ③\n스키를 탈 수 있는 회원의 집합을 $A$ , 보드를 탈 수 있는 회원의 집합을 $B$ 라 하면\n$n \\left(A \\right)=21$ , $n \\left(A \\cap B \\right)=11$ , $n \\left(A \\cup B \\right)=29$\n$n \\left(A \\cup B \\right)=n \\left(A \\right)+n \\left(B \\right)-n \\left(A \\cap B \\right)$ 에서\n$29=21+n \\left(B \\right)-11$ , $n \\left(B \\right)=19$\n따라서 보드를 탈 수 있는 회원 수는 $19$ 이다."
+ },
+ {
+  "n": 89,
+  "body": "어느 학교의 방과후학교에 개설된 세 강좌 ${ {A}}$ , ${ {B}}$ , ${ {C}}$ 중 적어도 한 강좌를 수강한 학생 $100$ 명을 대상으로 방과후학교 수강 여부를 조사하였더니 강좌 ${ {A}}$ 를 수강한 학생은 $35$ 명, 강좌 ${ {B}}$ 를 수강한 학생은 $39$ 명, 강좌 ${ {C}}$ 를 수강한 학생은 $43$ 명, 세 강좌 ${ {A}}$ , ${ {B}}$ , ${ {C}}$ 를 모두 수강한 학생은 없었다. 세 강좌 ${ {A}}$ , ${ {B}}$ , ${ {C}}$ 중 한 강좌만 수강한 학생 수를 구하시오.\n[그림47] 22\n유한집합의 원소의 개수의 최댓값과 최솟값",
+  "answer": "[정답] $83$\n세 강좌 ${ {A}}$ , ${ {B}}$ , ${ {C}}$ 중 적어도 한 강좌를 수강한 학생 $100$ 명의 집합을 $U$ , 세 강좌 ${ {A}}$ , ${ {B}}$ , ${ {C}}$ 를 수강한 학생의 집합을 각각 $A$ , $B$ , $C$ 라 하고 한 강좌만 수강한 학생의 집합을 $S$ 라 하면 세 강좌 ${ {A}}$ , ${ {B}}$ , ${ {C}}$ 를 모두 수강한 학생은 없으므로 집합 $S ^{C }$ 은 두 강좌만 수강한 학생의 집합이다.\n$n \\left(A \\cup B \\cup C \\right)=n \\left(A \\right)+n \\left(B \\right)+n \\left(C \\right)-n \\left(S ^{C } \\right)$ 에서\n$100=35+39+43-n \\left(S ^{C } \\right)$ , $n \\left(S ^{C } \\right)=17$\n$n \\left(S \\right)=n \\left(U \\right)-n \\left(S ^{C } \\right)=100-17=83$\n따라서 세 강좌 ${ {A}}$ , ${ {B}}$ , ${ {C}}$ 중 한 강좌만 수강한 학생 수는 $83$ 이다."
+ },
+ {
+  "n": 90,
+  "body": "전체집합 $U$ 의 두 부분집합 $A$ , $B$ 에 대하여\n$n \\left(U \\right)=30$ , $n \\left(A \\right)=21$ , $n \\left(B \\right)=17$\n일 때, $n \\left(A \\cap B \\right)$ 의 최댓값과 최솟값의 합은?\n① $21$ ② $23$ ③ $25$\n④ $27$ ⑤ $29$",
+  "answer": "[정답] ③\n$n \\left(A \\cup B \\right)=n \\left(A \\right)+n \\left(B \\right)-n \\left(A \\cap B \\right)$ 에서\n$n \\left(A \\cup B \\right)$ $=21+17-n \\left(A \\cap B \\right)$ $=38-n \\left(A \\cap B \\right)$\n$21 \\leq n \\left(A \\cup B \\right) \\leq 30$ 이므로\n$21 \\leq 38-n \\left(A \\cap B \\right) \\leq 30$\n$8 \\leq n \\left(A \\cap B \\right) \\leq 17$\n따라서 $n \\left(A \\cap B \\right)$ 의 최댓값은 $17$ , 최솟값은 $8$ 이므로\n그 합은 $17+8=25$"
+ },
+ {
+  "n": 91,
+  "body": "어느 아파트의 주민 $50$ 명을 대상으로 두 편의점 ${ {A}}$ , ${ {B}}$ 를 이용해 본 경험이 있는지 조사하였더니 편의점 ${ {A}}$ 를 이용해 본 주민이 $37$ 명, 편의점 ${ {B}}$ 를 이용해 본 주민이 $23$ 명이었다. 두 편의점 ${ {A}}$ , ${ {B}}$ 를 모두 이용해 본 주민 수의 최솟값을 구하시오.",
+  "answer": "[정답] $10$\n$50$ 명의 주민 전체의 집합을 $U$ , 두 편의점 ${ {A}}$ , ${ {B}}$ 를 이용해 본 경험이 있는 주민의 집합을 각각 $A$ , $B$ 라 하면\n$n \\left(U \\right)=50$ , $n \\left(A \\right)=37$ , $n \\left(B \\right)=23$\n$n \\left(A \\cup B \\right) \\leq n \\left(U \\right)$ 이므로\n$n \\left(A \\right)+n \\left(B \\right)-n \\left(A \\cap B \\right) \\leq n \\left(U \\right)$\n$37+23-n \\left(A \\cap B \\right) \\leq 50$ , $n \\left(A \\cap B \\right) \\geq 10$\n따라서 두 편의점 ${ {A}}$ , ${ {B}}$ 를 모두 이용해 본 주민 수의 최솟값은 $10$ 이다."
+ },
+ {
+  "n": 92,
+  "body": "어느 수학 동호회 회원 $27$ 명을 대상으로 두 경시대회 ${ {A}}$ , ${ {B}}$ 에 대한 참가 신청을 받았다. 경시대회 ${ {A}}$ 에 참가 신청을 한 학생의 수와 경시대회 ${ {B}}$ 에 참가 신청을 한 학생의 수의 합이 $32$ 일 때, 두 경시대회 ${ {A}}$ , ${ {B}}$ 에 모두 참가 신청을 한 학생 수의 최댓값과 최솟값의 합은?\n① $21$ ② $23$ ③ $25$\n④ $27$ ⑤ $29$\n[그림48]",
+  "answer": "[정답] ①\n수학 동호회 회원 $27$ 명 전체의 집합을 $U$ , 두 경시대회 ${ {A}}$ , ${ {B}}$ 에 참가 신청을 한 학생의 집합을 각각 $A$ , $B$ 라 하면\n$n \\left(U \\right)=27$ , $n \\left(A \\right)+n \\left(B \\right)=32$\n$n \\left(A \\cup B \\right) \\leq n \\left(U \\right)$ 이므로\n$n \\left(A \\right)+n \\left(B \\right)-n \\left(A \\cap B \\right) \\leq n \\left(U \\right)$\n$32-n \\left(A \\cap B \\right) \\leq 27$ , $n \\left(A \\cap B \\right) \\geq 5$\n$n \\left(A \\right)+n \\left(B \\right)=32$ 에서 $n \\left(A \\cap B \\right) \\leq 16$\n$5 \\leq n \\left(A \\cap B \\right) \\leq 16$ 이므로 두 경시대회 ${ {A}}$ , ${ {B}}$ 에 모두 참가 신청을 한 학생 수의 최댓값은 $16$ , 최솟값은 $5$ 이다.\n따라서 구하는 최댓값과 최솟값의 합은\n$16+5=21$"
+ },
+ {
+  "n": 93,
+  "body": "다음 조건을 만족시키는 $100$ 이하의 모든 자연수 $n$ 의 값의 합을 구하시오.\n| (가) 집합 $S$ 의 모든 원소는 자연수이다. (나) $x \\in S$ 이면 ${n} \\over {x} \\in S$ 이다. (다) 집합 $S$ 의 원소의 개수는 $3$ 보다 큰 홀수이다. |",
+  "answer": "[정답] $297$\n$x \\in S$ 이면 ${n} \\over {x} \\in S$ 이고 집합 $S$ 의 원소의 개수가 홀수이려면 $x={n} \\over {x}$ 인 $x$ 가 집합 $S$ 의 원소이어야 한다.\n$n=x^{2}$ 이므로 $n$ 은 완전제곱수이어야 한다.\n집합 $S$ 의 원소의 개수가 $3$ 보다 크므로 $n$ 의 약수의 개수가 $3$ 보다 크다.\n이때 $n=x^{2}$ 에서 $x=1$ 이면 약수의 개수가 $1$ 이고,\n$x$ 가 소수이면 $x^{2}$ 의 약수가 $1$ , $x$ , $x^{2}$ 으로 $3$ 개이므로 $n=x^{2}$ 인 $x$ 는 $10$ 이하의 합성수이다.\n즉, $n=x^{2}$ 인 $x$ 의 값은\n$4$ , $6$ , $8$ , $9$ , $10$\n이때 조건을 만족시키는 모든 자연수 $n$ 의 값은\n$4^{2}$ , $6^{2}$ , $8^{2}$ , $9^{2}$ , $10^{2}$\n따라서 구하는 모든 자연수 $n$ 의 값의 합은\n$16+36+64+81+100=297$"
+ },
+ {
+  "n": 94,
+  "body": "두 집합\n$A = \\left\\{k, k+2 \\right\\}$ , $B = \\{x | x^{2}-3x-4 \\leq 0 \\}$\n에 대하여 $A \\subset B$ 가 성립하도록 하는 모든 정수 $k$ 의 값의 합을 구하시오.",
+  "answer": "[정답] $2$\n$x^{2}-3x-4 \\leq 0$ 에서 $\\left(x+1 \\right) \\left(x-4 \\right) \\leq 0$ 이므로\n$-1 \\leq x \\leq 4$ , 즉 $B = \\{x | -1 \\leq x \\leq 4 \\}$\n$A \\subset B$ 에서 $k \\in B$ , $k+2 \\in B$ 이므로 조건을 만족시키는 모든 정수 $k$ 의 값은\n$-1$ , $0$ , $1$ , $2$\n따라서 구하는 모든 정수 $k$ 의 값의 합은\n$-1+0+1+2=2$"
+ },
+ {
+  "n": 95,
+  "body": "전체집합 $U = \\{x | x$ 는 $8$ 이하의 자연수 $\\left. \\right\\}$ 의 두 부분집합 $A = \\left\\{1, 2, 4 \\right\\}$ , $B = \\left\\{2, 4, 8 \\right\\}$ 에 대하여 $A \\cup X =B \\cup X$ 를 만족시키는 집합 $U$ 의 부분집합 $X$ 의 개수를 구하시오.",
+  "answer": "[정답] $64$\n$U = \\left\\{1, 2, 3, 4, 5, 6, 7, 8 \\right\\}$\n집합 $U$ 의 부분집합 $X$ 가 $A \\cup X =B \\cup X$ 를 만족시키므로\n집합 $X$ 는 두 집합 $A$ , $B$ 의 공통인 원소 $2$ , $4$ 를 제외한\n나머지 원소인 $1$ , $8$ 을 반드시 원소로 가져야 한다.\n따라서 구하는 집합 $X$ 의 개수는\n$2^{8-2}=2^{6}=64$"
+ },
+ {
+  "n": 96,
+  "body": "자연수 전체의 집합의 부분집합 $A$ 가 다음 조건을 만족시킨다.\n| $\\left\\{1, 2, 3 \\right\\} \\subset A$ 이고 $n \\left(A \\right)=4$ 이다. |\n집합 $A$ 의 부분집합 중 원소의 개수가 $2$ 인 모든 부분집합을 각각 $A _{1}$ , $A _{2}$ , $A _{3}$ , $\\cdots$ , $A _{m}$ 이라 하고, 집합 $X$ 의 모든 원소의 합을 $S \\left(X \\right)$ 라 하자. $S \\left(A _{1} \\right)+S \\left(A _{2} \\right)+S \\left(A _{3} \\right)+ \\cdots +S \\left(A _{m} \\right)=36$ 일 때, $S \\left(A \\right)$ 의 값을 구하시오. (단, $m$ 은 자연수이다.)",
+  "answer": "[정답] $12$\n$\\left\\{1, 2, 3 \\right\\} \\subset A$ 이고 $n \\left(A \\right)=4$ 이므로\n$A = \\left\\{1, 2, 3, a \\right\\} \\left(a \\neq 1, a \\neq 2, a \\neq 3 \\right)$ 이라 놓을 수 있다.\n집합 $A$ 의 부분집합 중 원소의 개수가 $2$ 인 부분집합은\n$\\left\\{1, 2 \\right\\}$ , $\\left\\{1, 3 \\right\\}$ , $\\left\\{1, a \\right\\}$ , $\\left\\{2, 3 \\right\\}$ , $\\left\\{2, a \\right\\}$ , $\\left\\{3, a \\right\\}$\n$S \\left(A _{1} \\right)+S \\left(A _{2} \\right)+S \\left(A _{3} \\right)+ \\cdots +S \\left(A _{m} \\right)=3 \\left(1+2+3+a \\right)$\n이므로 $3 \\left(6+a \\right)=36$ , $a=6$\n따라서 $A = \\left\\{1, 2, 3, 6 \\right\\}$ 이므로\n$S \\left(A \\right)=1+2+3+6=12$"
+ },
+ {
+  "n": 97,
+  "body": "두 집합\n$A = \\{x | {21} \\over {x}$ 은 자연수, $x$ 는 자연수 $\\left. \\begin{matrix} \\\\ \\end{matrix} \\right\\}$ ,\n$B = \\{x | (x-k ) (x-2k ) \\leq 0 \\}$\n이 서로소가 되도록 하는 $20$ 이하의 모든 자연수 $k$ 의 값의 합을 구하시오.",
+  "answer": "[정답] $27$\n${21} \\over {x}$ 이 자연수이려면 $x$ 는 $21$ 의 약수이어야 하므로\n$A = \\left\\{1, 3, 7, 21 \\right\\}$\n$\\left(x-k \\right) \\left(x-2k \\right) \\leq 0$ 에서 $k \\leq x \\leq 2k$ 이므로\n$B = \\{x | k \\leq x \\leq 2k \\}$\n두 집합 $A$ , $B$ 가 서로소가 되려면 $A \\cap B = \\varnothing$ 이어야 한다.\n$k=1$ 일 때, $B = \\{x | 1 \\leq x \\leq 2 \\}$ 이므로 $A \\cap B = \\left\\{1 \\right\\}$\n$k=2$ 일 때, $B = \\{x | 2 \\leq x \\leq 4 \\}$ 이므로 $A \\cap B = \\left\\{3 \\right\\}$\n$k=3$ 일 때, $B = \\{x | 3 \\leq x \\leq 6 \\}$ 이므로 $A \\cap B = \\left\\{3 \\right\\}$\n$4 \\leq k \\leq 7$ 일 때, $B = \\{x | k \\leq x \\leq 2k \\}$ 이므로 $A \\cap B = \\left\\{7 \\right\\}$\n$8 \\leq k \\leq 10$ 일 때, $B = \\{x | k \\leq x \\leq 2k \\}$ 이므로 $A \\cap B = \\varnothing$\n$11 \\leq k \\leq 20$ 일 때, $B = \\{x | k \\leq x \\leq 2k \\}$ 이므로 $A \\cap B = \\left\\{21 \\right\\}$\n따라서 두 집합 $A$ , $B$ 가 서로소가 되도록 하는 모든 자연수 $k$ 의 값의 합은\n$8+9+10=27$"
+ },
+ {
+  "n": 98,
+  "body": "전체집합 $U = \\left\\{1, 2, 3, 4, 5, 6 \\right\\}$ 의 두 부분집합 $A$ , $B$ 에 대하여\n$A = \\left\\{1, 2, 3, 4 \\right\\}$ , $\\left(A \\cup B \\right) \\cap \\left(A ^{C } \\cup B ^{C } \\right)= \\left\\{2, 4, 6 \\right\\}$\n일 때, 집합 $A \\cap B$ 의 모든 원소의 합을 구하시오.",
+  "answer": "[정답] $4$\n$\\left(A \\cup B \\right) \\cap \\left(A ^{C } \\cup B ^{C } \\right)$ $= \\left(A \\cup B \\right) \\cap \\left(A \\cap B \\right)^{C }$ $= \\left(A \\cup B \\right)- \\left(A \\cap B \\right)$\n이므로 $\\left(A \\cup B \\right)- \\left(A \\cap B \\right)= \\left\\{2, 4, 6 \\right\\}$\n$A = \\left\\{1, 2, 3, 4 \\right\\}$ 이므로 $A -B = \\left\\{2, 4 \\right\\}$ ,\n$A \\cap B$ $=A - \\left(A -B \\right)$ $= \\left\\{1, 2, 3, 4 \\right\\}- \\left\\{2, 4 \\right\\}$ $= \\left\\{1, 3 \\right\\}$\n따라서 집합 $A \\cap B$ 의 모든 원소의 합은\n$1+3=4$"
+ },
+ {
+  "n": 99,
+  "body": "자연수 $k$ 에 대하여 집합\n$A _{k}= \\{x | x$ 는 $k$ 의 양의 배수 $\\left. \\right\\}$\n라 할 때, $\\left(A _{3} \\cap A _{4} \\right) \\subset A _{n}$ , $A _{3} \\cap A _{n}=A _{3n}$ 을 모두 만족시키는 $2$ 이상의 모든 자연수 $n$ 의 값의 합을 구하시오.",
+  "answer": "[정답] $6$\n$3$ 의 배수이면서 $4$ 의 배수는 $12$ 의 배수이므로\n$A _{3} \\cap A _{4}=A _{12}$\n$\\left(A _{3} \\cap A _{4} \\right) \\subset A _{n}$ 에서 $A _{12} \\subset A _{n}$ 이므로 $n$ 은 $12$ 의 약수이어야 한다.\n$A _{3} \\cap A _{n}=A _{3n}$ 에서 $3$ 과 $n$ 의 최소공배수가 $3n$ 이므로\n$3$ 과 $n$ 은 서로소이다.\n$12$ 의 약수 중에서 $3$ 과 서로소인 자연수는 $1$ , $2$ , $4$ 이므로\n구하는 $2$ 이상의 모든 자연수 $n$ 의 값의 합은\n$2+4=6$"
+ },
+ {
+  "n": 100,
+  "body": "실수 전체의 집합의 두 부분집합\n$A = \\{x | x^{2}-7x-18 \\leq 0 \\}$ ,\n$B = \\{x | (x-a ) (x-a^{2} ) > 0 \\}$\n에 대하여 $A \\cap B ^{C }=A$ 가 되도록 하는 실수 $a$ 의 최댓값을 구하시오.",
+  "answer": "[정답] $-3$\n$x^{2}-7x-18 \\leq 0$ , $\\left(x+2 \\right) \\left(x-9 \\right) \\leq 0$ 에서\n$-2 \\leq x \\leq 9$ , 즉 $A = \\{x | -2 \\leq x \\leq 9 \\}$\n$A \\cap B ^{C }=A$ 에서 $A -B =A$ 이므로\n$A \\cap B = \\varnothing$\n$a^{2} \\geq 0$ 이므로 $A \\cap B = \\varnothing$ 이려면\n$B = \\{x | x < a .$ 또는 $\\left.x > a^{2} \\right\\}$ 이고 집합 $B$ 는 다음 그림과\n같아야 한다.\n[그림49]\n즉, $a \\leq -2$ , $a^{2} \\geq 9$ 이어야 하므로\n$a \\leq -3$\n따라서 구하는 실수 $a$ 의 최댓값은 $-3$ 이다."
+ },
+ {
+  "n": 101,
+  "body": "전체집합 $U$ 의 세 부분집합 $A$ , $B$ , $C$ 에 대하여 $B$ 와 $C$ 가 서로소이고,\n$n \\left(U \\right)=30$ , $n \\left(A ^{C } \\cap C ^{C } \\right)=12$ , $n \\left(A ^{C } \\cap B \\right)=7$\n일 때, $n \\left(A \\cup B \\cup C \\right)$ 의 값을 구하시오.",
+  "answer": "[정답] $25$\n두 집합 $B$ , $C$ 가 서로소이므로 $B \\cap C = \\varnothing$\n$n \\left(A ^{C } \\cap C ^{C } \\right)=n \\left( \\left(A \\cup C \\right)^{C } \\right)=n \\left(U \\right)-n \\left(A \\cup C \\right)$ 이므로\n$12=30-n \\left(A \\cup C \\right)$ , 즉 $n \\left(A \\cup C \\right)=18$\n$n \\left(A ^{C } \\cap B \\right)$ $=n \\left(B -A \\right)$ $=n \\left(B \\right)-n \\left(A \\cap B \\right)$ $=7$\n따라서\n$n \\left(A \\cup B \\cup C \\right)$ $=n \\left( \\left(A \\cup C \\right) \\cup B \\right)$ $=n \\left(A \\cup C \\right)+n \\left(B \\right)-n \\left( \\left(A \\cup C \\right) \\cap B \\right)$ $=n \\left(A \\cup C \\right)+n \\left(B \\right)-n \\left( \\left(A \\cap B \\right) \\cup \\left(C \\cap B \\right) \\right)$ $=n \\left(A \\cup C \\right)+n \\left(B \\right)-n \\left(A \\cap B \\right)$ $=18+7=25$"
+ },
+ {
+  "n": 102,
+  "body": "어느 대학의 대학교 고사에 참여한 학생 $50$ 명을 대상으로 출제된 ${ {A}}$ , ${ {B}}$ 두 문제의 해결 여부를 조사하였더니, ${ {A}}$ 문제를 해결한 학생은 $26$ 명, ${ {B}}$ 문제를 해결한 학생은 $31$ 명이었다. ${ {B}}$ 문제만 해결한 학생 수의 최댓값과 최솟값의 합을 구하시오.\n[그림50]",
+  "answer": "[정답] $29$\n대학교 고사에 참여한 학생 $50$ 명 전체의 집합을 $U$ ,\n${ {A}}$ 문제를 해결한 학생의 집합을 $A$ , ${ {B}}$ 문제를 해결한 학생의 집합을 $B$ 라 하면\n$n \\left(U \\right)=50$ , $n \\left(A \\right)=26$ , $n \\left(B \\right)=31$\n$n \\left(A \\cup B \\right)=n \\left(A \\right)+n \\left(B \\right)-n \\left(A \\cap B \\right)$ 이고\n$n \\left(A \\cup B \\right) \\leq n \\left(U \\right)$ 이므로\n$26+31-n \\left(A \\cap B \\right) \\leq 50$ , $n \\left(A \\cap B \\right) \\geq 7$\n$n \\left(A \\right)=26$ , $n \\left(B \\right)=31$ 이므로 $7 \\leq n \\left(A \\cap B \\right) \\leq 26$\n${ {B}}$ 문제만 해결한 학생 수는\n$n \\left(B -A \\right)$ $=n \\left(B \\right)-n \\left(A \\cap B \\right)$ $=31-n \\left(A \\cap B \\right)$\n이므로 $n \\left(B -A \\right)$ 의 최댓값은 $24$ , 최솟값은 $5$ 이다.\n따라서 구하는 최댓값과 최솟값의 합은\n$24+5=29$"
+ },
+ {
+  "n": 103,
+  "body": "집합 $A = \\{x | x$ 와 $k$ 는 서로소, $x$ 는 $9$ 이하의 자연수 $\\left. \\right\\}$ 에 대하여 $n \\left(A \\right)=7$ 이 되도록 하는 $200$ 이하의 모든 자연수 $k$ 의 값의 합을 구하시오.",
+  "answer": "[정답] $210$\n$A \\subset \\left\\{1, 2, 3, 4, 5, 6, 7, 8, 9 \\right\\}$\n$n \\left(A \\right)=7$ 이므로 $k$ 와 서로소인 $9$ 이하의 자연수의 개수는 $7$ 이다.\n$2$ , $4$ , $6$ , $8$ 은 $2$ 의 배수이고, $3$ , $6$ , $9$ 는 $3$ 의 배수이므로 $n \\left(A \\right)=7$ 이려면 $k$ 는 $1$ , $2$ , $3$ , $4$ , $6$ , $8$ , $9$ 와 서로소이어야 한다.\n즉, $k$ 는 $5^{p} \\times 7^{q}$ ( $p$ , $q$ 는 자연수)꼴이다.\n따라서 구하는 $200$ 이하의 모든 자연수 $k$ 의 값은 $35$ , $175$ 이므로 그 합은 $35+175=210$"
+ },
+ {
+  "n": 104,
+  "body": "전체집합 $U = \\left\\{1, 2, 3, 4, 5, 6 \\right\\}$ 에 대하여 다음 조건을 만족시키는 집합 $U$ 의 부분집합 $X$ 의 개수는?\n| 두 집합 $A = \\left\\{1, 2, 4 \\right\\}$ , $B = \\left\\{2, 3, 4 \\right\\}$ 에 대하여 $A \\cup X =X$ , $\\left(B -A \\right) \\cup X =X$ 이다. |\n① $2$ ② $4$ ③ $8$\n④ $16$ ⑤ $32$",
+  "answer": "[정답] ②\n$A \\cup X =X$ 에서 $A \\subset X$ $\\cdots$ $\\cdots$ ㉠\n$\\left(B -A \\right) \\cup X =X$ 에서 $\\left(B -A \\right) \\subset X$ $\\cdots$ $\\cdots$ ㉡\n㉠, ㉡에서 $\\left(A \\cup B \\right) \\subset X$ 이고 $A \\cup B = \\left\\{1, 2, 3, 4 \\right\\}$ 이므로 집합 $X$ 는 $1$ , $2$ , $3$ , $4$ 를 반드시 원소로 가져야 한다.\n따라서 집합 $X$ 의 개수는 $2^{6-4}=2^{2}=4$"
+ },
+ {
+  "n": 105,
+  "body": "두 집합\n$A = \\{x | x$ 는 $100$ 이하의 홀수인 자연수 $\\left. \\right\\}$\n$B = \\{x | x$ 는 $14$ 와 서로소인 자연수 $\\left. \\right\\}$\n에 대하여 다음 조건을 만족시키는 공집합이 아닌 집합 $X$ 의 개수를 구하시오.\n| (가) $x \\in X$ 이면 $x \\in A$ 이다. (나) $x \\in B$ 이면 $x \\notin X$ 이다. |",
+  "answer": "[정답] $127$\n조건 (가)에서 $X \\subset A$ 이므로 집합 $X$ 의 원소는 $100$ 이하의 홀수인 자연수이다.\n집합 $B$ 의 원소는 $14$ 와 서로소인 자연수이므로\n집합 $B$ 의 모든 원소는 $2$ 와 $7$ 을 인수로 갖지 않는다.\n조건 (나)에서 집합 $X$ 의 모든 원소는 $2$ 의 배수 또는 $7$ 의 배수이다.\n$2$ 의 배수 또는 $7$ 의 배수인 $100$ 이하의 홀수는\n$7$ , $21$ , $35$ , $49$ , $63$ , $77$ , $91$\n따라서 집합 $X$ 는 집합 $\\left\\{7, 21, 35, 49, 63, 77, 91 \\right\\}$ 의 부분집합 중에서 공집합을 제외한 것과 같으므로 그 개수는\n$2^{7}-1=128-1=127$"
+ },
+ {
+  "n": 106,
+  "body": "실수 전체의 집합의 두 부분집합\n$A = \\{x | x^{2}-4x+3 \\geq 0 \\}$ , $B = \\{x | x^{2}+ax+b < 0 \\}$\n에 대하여\n$A \\cup B = \\{x | x$ 는 모든 실수 $\\}$ ,\n$A \\cap B = \\{x | -1 < x \\leq 1 \\}$\n일 때, $a+b$ 의 값은? (단, $a$ , $b$ 는 상수이다.)\n① $-5$ ② $-3$ ③ $-1$\n④ $1$ ⑤ $3$",
+  "answer": "[정답] ①\n$x^{2}-4x+3 \\geq 0$ , $\\left(x-1 \\right) \\left(x-3 \\right) \\geq 0$ , $x \\leq 1$ 또는 $x \\geq 3$\n즉, $A = \\{x | x \\leq 1 .$ 또는 $x \\geq 3 \\}$\n이때 $A \\cup B = \\{x | x$ 는 모든 실수 $\\left. \\right\\}$ ,\n$A \\cap B = \\{x | -1 < x \\leq 1 \\}$ 이려면 집합\n$B$ 는 다음 그림과 같아야 하므로\n[그림51]\n$B = \\{x | -1 < x < 3 \\}$\n$-1 < x < 3$ 에서 $\\left(x+1 \\right) \\left(x-3 \\right) < 0$ , $x^{2}-2x-3 < 0$ 이므로\n$B = \\{x | x^{2}-2x-3 < 0 \\}$\n따라서 $a= -2$ , $b= -3$ 이므로 $a+b= -2+ \\left(-3 \\right)= -5$"
+ },
+ {
+  "n": 107,
+  "body": "세 집합\n$A = \\{x | x$ 는 한 자리의 소수 $\\left. \\right\\}$ ,\n$B = \\{x | x$ 는 $k$ 의 양의 약수 $\\left. \\right\\}$ ,\n$C = \\{x | x$ 는 $k$ 이하의 $7$ 의 양의 배수 $\\left. \\right\\}$\n가 있다. 집합 $A \\cap B$ 의 모든 원소의 합이 $9$ 이고 $6 \\leq n \\left(A \\cup C \\right) \\leq 12$ 가 성립하도록 하는 모든 자연수 $k$ 의 값의 합은?\n① $66$ ② $72$ ③ $78$\n④ $84$ ⑤ $90$",
+  "answer": "[정답] ④\n$A = \\left\\{2, 3, 5, 7 \\right\\}$ 이고 집합 $A \\cap B$ 의 모든 원소의 합은 $9$ 이므로\n$A \\cap B = \\left\\{2, 7 \\right\\}$\n$3 \\notin B$ , $5 \\notin B$ , $2 \\in B$ , $7 \\in B$ 이므로 $k$ 는 $3$ 과 $5$ 의 배수가 아닌 $14$ 의 배수이다. $\\cdots$ $\\cdots$ ㉠\n$k \\geq 14$ 이므로 $7 \\in C$ , $14 \\in C$\n집합 $A \\cup C$ 의 $7$ 보다 작은 원소는 $2$ , $3$ , $5$ 로 그 개수가 $3$ 이고 $6 \\leq n \\left(A \\cup C \\right) \\leq 12$ 이므로 집합 $A \\cup C$ 의 $7$ 이상의 원소의 개수는 $3$ 이상 $9$ 이하이어야 한다.\n즉, $21 \\leq k < 70$ $\\cdots$ $\\cdots$ ㉡\n㉠, ㉡에서 구하는 모든 자연수 $k$ 의 값은 $28$ , $56$ 이므로\n그 합은 $28+56=84$"
+ },
+ {
+  "n": 108,
+  "body": "집합 $U = \\{x | x$ 는 $10$ 이하의 자연수 $\\left. \\right\\}$ 의 공집합이 아닌 두 부분집합 $A$ , $B$ 가 다음 조건을 만족시킨다.\n| (가) 두 집합 $A$ , $B$ 는 서로소이고, 두 집합 $A ^{C }$ , $B ^{C }$ 도 서로소이다. (나) 집합 $A$ 의 모든 원소는 집합 $B$ 의 모든 원소와 서로소이다. |\n$3 \\in B$ 일 때, 집합 $A$ 의 모든 원소의 합의 최댓값은?\n① $8$ ② $10$ ③ $12$\n④ $14$ ⑤ $16$",
+  "answer": "[정답] ①\n조건 (가)에서 $A \\cap B = \\varnothing$ , $A ^{C } \\cap B ^{C }= \\varnothing$\n$A ^{C } \\cap B ^{C }= \\left(A \\cup B \\right)^{C }= \\varnothing$ 이므로 $A \\cup B =U$\n$3 \\in B$ 이므로 조건 (나)에서 $3$ 의 배수인 $6$ , $9$ 도 집합 $B$ 의 원소이다. $6 \\in B$ 이므로 조건 (나)에서 $2$ 의 배수인 $2$ , $4$ , $8$ , $10$ 도 집합 $B$ 의 원소이다.\n$10 \\in B$ 이므로 조건 (나)에서 $5$ 의 배수인 $5$ 도 집합 $B$ 의 원소이다.\n따라서 $A \\subset \\left\\{1, 7 \\right\\}$ 이므로 집합 $A$ 의 모든 원소의 합의 최댓값은 $1+7=8$"
+ },
+ {
+  "n": 109,
+  "body": "두 집합 $A$ , $B$ 에 대하여\n$n \\left(A \\right)=25$ , $n \\left(B \\right)=18$ , $n \\left(A -B \\right)+n \\left(B -A \\right) \\leq 31$\n일 때, $n \\left(A \\cup B \\right)$ 의 최댓값과 최솟값의 합을 구하시오.",
+  "answer": "[정답] $62$\n$n \\left(A -B \\right)+n \\left(B -A \\right)$ $=n \\left(A \\cup B \\right)-n \\left(A \\cap B \\right)$ $=n \\left(A \\right)+n \\left(B \\right)-2 \\times n \\left(A \\cap B \\right)$ $=25+18-2 \\times n \\left(A \\cap B \\right)$ $=43-2 \\times n \\left(A \\cap B \\right)$\n이므로 $43-2 \\times n \\left(A \\cap B \\right) \\leq 31$ , 즉 $n \\left(A \\cap B \\right) \\geq 6$\n$n \\left(A \\right)=25$ , $n \\left(B \\right)=18$ 이므로 $6 \\leq n \\left(A \\cap B \\right) \\leq 18$\n$n \\left(A \\cup B \\right)$ $=n \\left(A \\right)+n \\left(B \\right)-n \\left(A \\cap B \\right)$ $=43-n \\left(A \\cap B \\right)$\n따라서 $n \\left(A \\cup B \\right)$ 의 최댓값은 $37$ , 최솟값은 $25$ 이므로\n그 합은 $37+25=62$"
+ },
+ {
+  "n": 110,
+  "body": "어느 고등학교에서는 미적분 ${ {II}}$ , 기하, 경제수학 중 적어도 한 과목을 이수하도록 교육과정이 편성되어 있다. 이 고등학교 졸업생 $100$ 명을 대상으로 조사한 결과가 다음과 같을 때, 미적분 ${ {II}}$ , 기하, 경제수학 중 두 과목만을 이수한 학생의 수를 구하시오.\n| (가) 기하를 이수한 모든 학생은 미적분 ${ {II}}$ 를 이수하였다. (나) 경제수학을 이수한 학생 중 기하를 이수한 학생은 없다. (다) 미적분 ${ {II}}$ , 기하, 경제수학 중 한 과목만을 이수한 학생은 $38$ 명이었다. |\n[그림1]",
+  "answer": "[정답] $62$\n이 고등학교 졸업생 $100$ 명 중 미적분 ${ {II}}$ , 기하, 경제수학을 추수한 학생의 집합을 각각 $A$ , $B$ , $C$ 라 하면\n$n \\left(A \\cup B \\cup C \\right)=100$\n조건 (가)에 의하여 $B \\subset A$ 이고, 조건 (나)에 의하여 $B \\cap C = \\varnothing$ 이므로 세 집합 $A$ , $B$ , $C$ 를 벤다이어그램으로 나타내면 다음 그림과 같다.\n[그림52]\n이 벤다이어그램에서 조건 (다)에 의하여\n$n \\left(A \\cap \\left(B \\cup C \\right)^{C } \\right)+n \\left(C -A \\right)=38$\n미적분 ${ {II}}$ , 기하, 경제수학 중 두 과목만을 이수한 학생의 수는 벤다이어그램에서\n$n \\left(A \\cap B \\right) +n \\left(A \\cap C \\right)$\n이때 벤다이어그램에 의하여\n$n \\left(A \\cap B \\right)+ n \\left(A \\cap C \\right)$\n$= n \\left(A \\cup B \\cup C \\right) - \\left\\{n \\left(A \\cap \\left(B \\cup C \\right)^{C } \\right)+n \\left(C -A \\right) \\right\\}$\n$= 100-38=62$\n미적분 ${ {II}}$ , 기하, 경제수학 중 두 과목만을 이수한 학생의 수는 $62$ 이다."
+ }
+]

@@ -1,0 +1,506 @@
+| 절대등급 공통수학2 |  | 4. 집합 |
+- -
+[그림1]
+[그림2] 집합, 원소, 부분집합
+01
+⟪ANS:1⟫
+집합
+$A= \left\{ x^2 +x , x+1 , 3 \right\}, B= \left\{ x^2 +2x , -2 , 6 \right\}$
+에 대하여 $A=B$ 일 때, $x$ 의 값을 구하시오.
+⟪ANS:2⟫
+집합
+$A= \{ z | z= i^n , n$ 은 자연수 $\}$
+$B= \{ 2z_1 ^2 + 5z_2 ^2 | z_1 \in A , z_2 \in A \}$
+일 때, $B$ 의 원소의 개수를 구하시오.
+⟪ANS:3⟫
+집합
+$A= \{ x | x$ 는 $56$ 의 양의 약수 $\}$
+$B= \{ y | y = x \over 2 , x \in A \}$
+일 때, 다음 중 옳지 않은 것을 모두 고르면? (정답 $2$ 개)
+① $7 \in A$ ② $\left\{ 1, 2, 4 \right\} \subset A$ ③ $\left\{ 1, 2, 4 \right\} \subset B$
+④ $n(A) >n(B)$ ⑤ $B \subset A$
+⟪ANS:4⟫
+| $+$ | $0$ | $1$ | $2$ |
+| $0$ | $0$ | $1$ | $2$ |
+| $1$ | $1$ | $2$ | $3$ |
+| $2$ | $2$ | $3$ | $4$ |
+|  | $0$ | $1$ | $2$ |
+| $0$ | $0$ | $0$ | $0$ |
+| $1$ | $0$ | $1$ | $2$ |
+| $2$ | $0$ | $2$ | $4$ |
+집합
+$A= \left\{ 0, 1, 2 \right\}$
+$B= \left\{ x+ y | x \in A, y \in A \right\}$
+$C= \left\{ xy | x \in A , y \in A \right\}$
+의 포함 관계로 옳은 것은?
+① $A \subset B \subset C$ ② $A \subset C \subset B$ ③ $B \subset A \subset C$
+④ $B \subset C \subset A$ ⑤ $C \subset A \subset B$
+⟪ANS:5⟫
+집합
+$A = \{ x | x$ 는 $a$ 의 배수 $\right\}, B = \left\{ x | x$ 는 $6$ 의 배수 $\}$
+에 대하여 $B \subset A$ 일 때, $1$ 보다 큰 자연수 $a$ 의 값의 합은?
+① $5$ ② $8$ ③ $9$
+④ $11$ ⑤ $13$
+[그림3] 집합의 연산
+02
+⟪ANS:6⟫
+전체집합이 $U= \left\{ 1, 2, 3, 4, 5, 6 \right\}$ 이고,
+$A= \left\{ 1, 2, 4 \right\} , B = \left\{ 4, 5, 6 \right\}$
+일 때, $A \cup B^C$ 를 구하시오.
+⟪ANS:7⟫
+전체집합이 $U= \{ x | x$ 는 $10$ 이하의 자연수 $\}$ 이고,
+$A= \{ x | x$ 는 홀수 $\}$ , $B= \{ x | x$ 는 $3$ 의 배수 $\}$
+일 때, $n(A-B^C )$ 는?
+① $1$ ② $2$ ③ $3$
+④ $4$ ⑤ $5$
+⟪ANS:8⟫
+집합
+$A= \left\{ 1, 3, a+2 \right\}, B= \left\{a, b, c \right\}$
+에 대하여 $A \cap B= \left\{ 3, 6 \right\}$ 일 때, $A \cup B$ 의 모든 원소의 합은?
+① $13$ ② $14$ ③ $15$
+④ $16$ ⑤ $17$
+⟪ANS:9⟫
+전체집합이 $U$ 이고, 집합 $A, B$ 에 대하여
+$A= \left\{ 2, 3, 4, 5, 6 \right\}, A \cap B^C = \left\{2, 6 \right\}$
+일 때, $A \cap B$ 를 구하시오.
+⟪ANS:10⟫
+전체집합이 $U= \left\{ 1, 2, 3, 4, 5 \right\}$ 이고, $A= \left\{ 1, 4, 5 \right\}$ 이다.
+$A \cap (A-B)= A, A \cup B = U$
+일 때, 집합 $B$ 의 모든 원소의 합은?
+① $2$ ② $3$ ③ $5$
+④ $7$ ⑤ $9$
+⟪ANS:11⟫
+전체집합이 $U= \{ x | x$ 는 자연수 $\}$ 이고,
+$P= \{ x | x$ 는 $10$ 이하의 자연수 $\}$
+$Q= \{ x | x$ 는 소수 $\}$
+$R= \{ x | x$ 는 홀수 $\}$
+일 때, $(P \cap Q^C )-R$ 을 구하시오.
+⟪ANS:12⟫
+자연수 $k$ 에 대하여 $A_k$ 는 $k$ 의 배수의 집합이라 하자.
+$A_ 4 \cap A_6 = A_ a , (A_6 \cup A_12 ) \subset A_b$
+일 때, $a+b$ 의 최댓값을 구하시오.
+[그림8] 집합의 연산 법칙
+03
+⟪ANS:13⟫
+전체집합이 $U= \{ x | x$ 는 $10$ 이하의 자연수 $\}$ 이고, 집합 $A, B$ 에 대하여
+$A^C \cap B^C = \left\{ 5, 7, 10 \right\}, A \cap B^C = \left\{ 2, 6, 8 \right\}$
+$A^C \cap B = \left\{ 4, 9 \right\}$
+일 때, $A$ 를 구하시오.
+⟪ANS:14⟫
+전체 집합이 $U= \left\{ 1, 2, 3, \cdots , 10 \right\}$ 이고,
+$A= \left\{ 2, 3, 4, 5 \right\}, B= \left\{ 1, 3, 5, 7 \right\}, C= \left\{5, 6, 7, 8 \right\}$
+일 때, $A \cap (B^C \cup C^C )$ 를 구하시오.
+⟪ANS:15⟫
+집합 $A, B, C$ 에 대하여
+$A \cap B= \left\{ 2, 3, 4, 5 \right\}, A \cap C = \left\{1, 3, 5 \right\}$
+일 때, $A \cap (B \cup C)$ 를 구하시오.
+⟪ANS:16⟫
+전체집합이 $U= \{ x | x$ 는 $20$ 이하의 소수 $\}$ 이고,
+$A= \left\{ 2, 11, a-7 \right\}, B= \left\{ a^2 - 10 a - 19 , a+ 5 \right\}$
+이다. $(A \cap B^C ) \cup (A^C \cap B)= \left\{ 2, 11, 17 \right\}$ 일 때, $a$ 의 값을 구하시오.
+⟪ANS:17⟫
+전체집합이 $U= \{ x | x$ 는 $6$ 과 서로소인 $15$ 이하의 자연수 $\}$ 이고 집합 $A, B$ 에 대하여
+$A-B = \left\{ 5, 7 \right\}, A^C \cup B^C = \left\{ 5, 7, 11 \right\}$
+이다. $B$ 의 모든 원소의 합의 최댓값을 $M$ , 최솟값을 $m$ 이라 할 때, $M+m$ 의 값을 구하시오.
+⟪ANS:18⟫
+전체집합이 $U$ 일 때, 집합 $A, B$ 에 대하여
+$(B \cup A^C )^C \cup (A-B^C )$
+를 간단히 하면?
+① $A$ ② $B$ ③ $A-B$
+④ $A \cap B$ ⑤ $A \cup B$
+⟪ANS:19⟫
+전체집합이 $U$ 이고 집합 $A, B$ 에 대하여
+$(A-B^C ) \cup (B^C -A^C )= A \cap B$
+일 때, 다음 중 항상 옳은 것을 모두 고르면? (정답 $2$ 개)
+① $B \subset A$ ② $B^C \subset A^C$ ③ $B-A = \varnothing$
+④ $A \cup B= A$ ⑤ $A \cap B^C = \varnothing$
+⟪ANS:20⟫
+전체집합이 $U$ 이고, 집합 $A, B$ 에 대하여
+$(A \cup B^C )^C = B$
+일 때, <보기>에서 항상 옳은 것만을 있는 대로 고른 것은?
+<보기>
+ㄱ. $B \subset A^C$ ㄴ. $A \cup B=U$ ㄷ. $A- B= A$
+① ㄱ ② ㄴ ③ ㄱ, ㄴ
+④ ㄱ, ㄷ ⑤ ㄴ, ㄷ
+[그림14] 벤 다이어 그램
+04
+⟪ANS:21⟫
+다 [그림16] 음 중 벤다이어그램의 색칠한 부분을 나타내지 않는 집합은?
+① $(A-B) \cap (A-C)$
+② $A-(B \cup C)$
+③ $(A-B)-C$
+④ $(A \cup B) \cap (A \cup C)$
+⑤ $A \cap (B \cup C)^C$
+⟪ANS:22⟫
+| ① | [그림17] | ③ | [그림18] |
+| ④ | [그림19] | ⑤ | [그림20] |
+다 [그림21] 음 중 벤다이어그램의 색칠한 부분을 나타내는 집합은?
+① $(A \cup B)-C$
+② $A-(B-C)$
+③ $(A \cup C)-B$
+④ $A- (B \cup C)$
+⑤ $A-(B \cap C)$
+[그림22] 새로 정의하는 집합
+05
+⟪ANS:23⟫
+집합
+$A= \left\{ 1, 2, 3, 4, 5 \right\}$
+$B= \{ x | x$ 는 $10$ 이하의 소수 $\}$
+$C= \{ 2n | 1 \leq n \leq 5, n$ 은 자연수 $\}$
+에 대하여 $A \triangle B = (A-B) \cup (B-A)$ 라 할 때, $A \triangle (B \triangle C)$ 를 구하시오.
+⟪ANS:24⟫
+전체집합이 자연수 전체의 집합일 때, 집합 $X, Y$ 에 대하여
+$X ◎Y= (X \cup Y)- (X \cap Y)$
+라 하자. 집합 $A, B$ 에 대하여 $A= \left\{ 1, 2, 3, 4, 5 \right\}$ 이고 $A ◎B= \varnothing$ 일 때, $B$ 를 구하시오.
+⟪ANS:25⟫
+전체집합이 $U$ 일 때, 집합 $A, B$ 에 대하여
+$A◇B= (A-B) \cup (B-A)$
+라 하자. $A^C ◇B= U$ 일 때, 다음 중 $A◇B$ 와 같은 집합은?
+① $\varnothing$ ② $A^C$ ③ $A \cap B$
+④ $B$ ⑤ $A \cup B$
+[그림24] 부분집합의 개수
+06
+⟪ANS:26⟫
+집합 $A = \left\{ 2, 3, 4, 5, 6, 7 \right\}, B = \left\{ 1, 2, 6, 8, 9 \right\}$ 에 대하여
+$B \cup X=B, A \cap X= \varnothing$
+일 때, 공집합이 아닌 집합 $X$ 의 개수는?
+① $4$ ② $7$ ③ $8$
+④ $15$ ⑤ $16$
+⟪ANS:27⟫
+집합 $A= \left\{ 1, 2, 3, 4 \right\}, B= \left\{ 2, 4, 6, 8, 10 \right\}$ 에 대하여
+$A \cap X=X, (A-B) \cup X= X$
+를 만족시키는 집합 $X$ 의 개수는?
+① $0$ ② $2$ ③ $4$
+④ $6$ ⑤ $8$
+⟪ANS:28⟫
+전체집합이 $U= \{ x | x$ 는 $8$ 이하의 자연수 $\}$ 이다.
+$A= \left\{ 1 3, 5, 7 \right\}, B^C -A^C = \left\{ 1 \right\}$
+을 만족시키는 집합 $B$ 의 개수를 구하시오.
+⟪ANS:29⟫
+전체집합이 $U= \left\{ 1, 2, 3, 4, 5, 6, 7 \right\}$ 이고,
+$A= \left\{ 2, 3, 4, 5 \right\}, B= \left\{ 1, 3 \right\}$
+일 때, $A \cup C = B \cup C$ 를 만족시키는 집합 $C$ 의 개수는?
+① $8$ ② $12$ ③ $16$
+④ $20$ ⑤ $24$
+⟪ANS:30⟫
+전체집합이 $U= \{x | x$ 는 $24$ 의 양의 약수 $\}$ 이고,
+$A= \{ x | x$ 는 $4$ 의 양의 약수 $\}$
+$B= \{ x | x$ 는 $12$ 의 양의 약수 $\}$
+이다. $A \cap X = A, B \not\subset X$ 를 만족시키는 집합 $X$ 의 개수는?
+① $16$ ② $20$ ③ $24$
+④ $28$ ⑤ $32$
+⟪ANS:31⟫
+전체집합이 $U= \left\{1, 2, 3, 4, 5, 6 \right\}$ 일 때, $\left\{ 3, 4 \right\} \cap A \neq \varnothing$ 을 만족시키는 집합 $A$ 의 개수는?
+① $24$ ② $36$ ③ $48$
+④ $60$ ⑤ $72$
+[그림28] 방정식, 부등식과 집합
+07
+⟪ANS:32⟫
+집합
+$A= \left\{ x | x^ 3 - 7x^2 +1 4x -8=0 \right\}$
+$B= \left\{ x | x^4 - 5x^2 + 4 =0 \right\}$
+에 대하여 $(A-B) \cup (B-A)$ 를 구하시오.
+⟪ANS:33⟫
+집합
+$A= \left\{ x | 1 \leq x < 3 \right\}$
+$B= \left\{x | x^2 - 2ax +a^2 - 4 < 0 \right\}$
+에 대하여 $A \subset B$ 일 때, 실수 $a$ 의 값의 범위를 구하시오.
+⟪ANS:34⟫
+집합
+$A= \left\{ x | x^2 - 8x +12 \leq 0 \right\}, B= \left\{ x | x^2 +ax+b <0 \right\}$
+에 대하여 $A \cap B = \varnothing , A \cup B = \left\{ x | -1 <x \leq 6 \right\}$ 일 때, $a+b$ 의 값은?
+① $-6$ ② $-5$ ③ $-4$
+④ $-3$ ⑤ $-2$
+[그림31] 원소의 개수
+08
+⟪ANS:35⟫
+전체집합이 $U$ 이고, 집합 $A, B$ 에 대하여
+$n(U)=50, n(A)=26$
+$n(B)= 33, n(A^C \cap B^C ) =6$
+일 때, $n(B-A)$ 는?
+① $10$ ② $12$ ③ $14$
+④ $16$ ⑤ $18$
+⟪ANS:36⟫
+어느 반 $40$ 명의 학생 중에서 축구를 좋아하는 학생이 $21$ 명, 야구를 좋아하는 학생이 $16$ 명, 축구와 야구 중 어느 것도 좋아하지 않는 학생이 $8$ 명이다. 축구만 좋아하는 학생 수는?
+① $12$ ② $13$ ③ $14$
+④ $15$ ⑤ $16$
+⟪ANS:37⟫
+어느 놀이공원 입장객 $100$ 명 중 롤러코스터를 이용한 사람 $72$ 명, 범퍼카를 이용한 사람은 $50$ 명이었다. 롤러코스터와 범퍼카를 모두 이용한 사람 수의 최댓값을 $M$ , 최솟값을 $m$ 이라 할 때, $M+m$ 의 값은?
+① $35$ ② $42$ ③ $50$
+④ $62$ ⑤ $72$
+⟪ANS:38⟫
+어느 반 학생 $32$ 명에게 수학 문제 $A, B$ 를 풀게 하였더니 $A$ 문제, $B$ 문제를 맞힌 학생은 각각 $17$ 명, $9$ 명이었다. 이때 한 문제도 맞히지 못한 학생 수의 최댓값과 최솟값을 구하시오.
+⟪ANS:39⟫
+어느 학교에서 방과 후 활동으로 바둑, 서예, 피아노 강좌를 개설하였다. 한 가지 이상 신청한 학생은 $70$ 명, 바둑 또는 서예를 신청한 학생은 $43$ 명, 서예 또는 피아노를 신청한 학생은 $51$ 명이라고 한다. 바둑과 피아노를 동시에 신청한 학생이 없을 때, 서예를 신청한 학생 수를 구하시오.
+[그림38]
+⟪ANS:40⟫
+집합 $A= \left\{ \varnothing , a, \left\{ a, b \right\} \right\}$ 에 대하여 <보기>에서 옳은 것만을 있는 대로 고른 것은?
+<보기>
+ㄱ. $\varnothing \in A$
+ㄴ. $\left\{a, b \right\} \subset A$
+ㄷ. $A$ 의 부분집합의 개수는 $16$ 이다.
+① ㄱ ② ㄴ ③ ㄷ
+④ ㄱ, ㄴ ⑤ ㄱ, ㄷ
+⟪ANS:41⟫
+집합 $A$ 의 원소는 서로 다른 세 자연수이고, 집합
+$B = \left\{ x+y | x \in A , y \in A \right\}$
+이다. $B$ 의 원소 중 최솟값은 $8$ , 최댓값은 $24$ , $n(B)= 5$ 일 때, $B-A$ 의 모든 원소의 합은?
+① $36$ ② $42$ ③ $48$
+④ $54$ ⑤ $60$
+[그림39]
+⟪ANS:42⟫
+$n$ 이 자연수이고,
+$A= \left\{ 1, 2, 4, 7, 8 \right\}$
+$B= \left\{ \begin{matrix} \\ \end{matrix} x \right| {x} \over {n}$ 는 기약분수, $x$ 는 한 자리 자연수 $\begin{matrix} \\ \end{matrix} \}$
+이다. $A=B$ 일 때, $n$ 의 최솟값을 구하시오.
+⟪ANS:43⟫
+전체집합이 자연수 전체의 집합이다.
+$x \in A$ 이면 ${16} \over {x} \in A$
+를 만족시키고 공집합이 아닌 집합 $A$ 의 개수는?
+① $7$ ② $8$ ③ $9$
+④ $10$ ⑤ $11$
+[그림40]
+⟪ANS:44⟫
+집합 $A= \left\{ 1, 2, 3, 4, a \right\}$ , $B= \left\{ 1, 3, 5 \right\}$ 에 대하여 집합
+$X= \{ x+y | x \in A, y \in B \}$
+라 하자. $n \left( X \right) =10$ 일 때, 모든 $a$ 의 값의 합은?
+① $-5$ ② $0$ ③ $5$
+④ $10$ ⑤ $15$
+⟪ANS:45⟫
+전체집합 $U= \left\{ 1, 2, 3, \ldots , 10 \right\}$ 이고,
+집합 $A, B, C$ 에 대하여
+$A- \left( B \cup C \right) = \left\{ 2, 5, 10 \right\}$
+$A- \left( B \cap C \right) = \left\{ 1, 2, 5, 9, 10 \right\}$
+$B-C= \left\{ 3, 6, 9 \right\}$
+일 때, $\left( A \cup B \right) -C$ 를 구하시오.
+[그림45]
+⟪ANS:46⟫
+전체집합이 복소수 전체의 집합이고,
+$A= \{ x | x ^{3} -1=0 \}$
+$B= \{ a \times b | a \in A, b \in A \}$
+$C= \{ a+ b | a \in A, b \in A \}$
+이다. $B \cup C$ 의 원소의 합을 구하시오.
+⟪ANS:47⟫
+전체집합이 $U$ 일 때, 집합 $A, B$ 에 대하여
+$\left. \left. \left\{ \left( A \cup B \right) \cap \left( A ^{C} \cup B \right) \right. \right\} \cup \left\{ \left( A ^{C} \cup B ^{C} \right) \cap \left( A \cup B ^{C} \right) \right. \right\}$
+를 간단히 하면?
+① $\varnothing$ ② $A$ ③ $B$
+④ $B ^{C}$ ⑤ $U$
+⟪ANS:48⟫
+전체집합이 $U$ 일 때, 집합 $A, B, C$ 에 대하여 다음 중 옳은 것을 모두 고르면? (정답 $2$ 개)
+① $\left( A-B \right) \cup \left( A-C \right) =A- \left( B \cap C \right)$
+② $\left( A-B \right) -C=A- \left( B \cap C \right)$
+③ $\left\{ \left( A-B \right) \cup \left( A ^{C} \cup B \right) \right\} \cap B=A$
+④ $\left\{ A \cap \left( A-B \right) ^{C} \right\} \cup \left\{ \left( B-A \right) \cap A \right\} =A$
+⑤ $\left( A \cup B \right) \cap \left( A \cap B \right) ^{C} = \left( A-B \right) \cup \left( B-A \right)$
+[그림46] [그림47]
+⟪ANS:49⟫
+함수 $f(x), g(x)$ 에 대하여 집합 $A, B, C$ 를
+$\left. A= \left\{ x \left| f(x)=0 \right. \right. \right\}$
+$\left. B= \left\{ x \left| g(x)=0 \right. \right. \right\}$
+$\left. C= \left\{ x \left| \left( f(x)+g(x) \right) ^{3} = \left( f(x) \right) ^{3} + \left( g(x) \right) ^{3} \right. \right. \right\}$
+이라 하자. $n \left( A \right) =4, n \left( B \right) =3$ 일 때, $n \left(C \right)$ 의 최솟값을 구하시오.
+⟪ANS:50⟫
+집합
+$\left. A= \left\{ x \left| x ^{2} -2x \leq 0 \right. \right. \right\}$
+$\left. B= \left\{ x \left| x ^{2} -2ax+2a+3>0 \right. \right. \right\}$
+에 대하여 $A-B= \varnothing$ 일 때, 실수 $a$ 의 값의 범위를 구하시오.
+⟪ANS:51⟫
+$100$ 이하의 자연수 중에서 자연수 $k$ 의 배수의 집합 $A _{k}$ 로 나타낼 때, $A _{2} \cap \left( A _{3} \cup A _{4} \right)$ 의 원소의 개수를 구하시오.
+⟪ANS:52⟫
+$n$ 이 자연수일 때, 집합 $A _{n} , B _{n}$ 을
+$. A _{n} = \{ x | x .$ 는 $n$ 이하의 소수 $.$
+$\left. B _{n} = \left\{ x \left| x \right. \right. \right.$ 는 $n$ 의 양의 약수 $.$
+라 하자. <보기>에서 옳은 것만을 있는 대로 고른 것은?
+<보기>
+ㄱ. $A _{3}$ 과 $B _{5}$ 는 서로소이다.
+ㄴ. $n \leq k$ 이면 $A _{n} \subset A _{k}$ 이다.
+ㄷ. $B _{m} \subset B _{n}$ 이면 $n$ 은 $m$ 의 배수이다.
+① ㄱ ② ㄱ, ㄴ ③ ㄱ, ㄷ
+④ ㄴ, ㄷ ⑤ ㄱ, ㄴ, ㄷ
+[그림51]
+⟪ANS:53⟫
+전체집합이 자연수 전체의 집합이고, 자연수 $k$ 에 대하여
+$\left. A _{k} = \left\{ x \left| x \right. \right. \right.$ 는 $k$ 와 서로소인 자연수 $.$
+라 할 때, <보기>에서 옳은 것만을 있는 대로 고른 것은?
+<보기>
+ㄱ. $A _{2} =A _{4}$
+ㄴ. $A _{3}^{C} \cap A _{4}^{C} =A _{6}^{C}$
+ㄷ. $m, n$ 의 최소공배수가 $l$ 일 때, $A _{m} \cap A _{n} =A _{k}$ 인 $k$ 의 최솟값은 $l$ 이다.
+① ㄱ ② ㄱ, ㄴ ③ ㄱ, ㄷ
+④ ㄴ, ㄷ ⑤ ㄱ, ㄴ, ㄷ
+⟪ANS:54⟫
+전체집합이 $. U= \{ x | x . .$ 는 $10$ 이하의 자연수 $.$ 이고,
+$\left. \left. A= \left\{ 2, 5, 8 \right. \right\} , B= \left\{ 1, 3, 5, 7, 9 \right. \right\}$
+일 때, $\left( C \cap A \right) \subset \left( C \cap B \right)$ 을 만족시키는 집합 $C$ 의 개수는?
+① $4$ ② $32$ ③ $64$
+④ $128$ ⑤ $256$
+[그림55]
+⟪ANS:55⟫
+전체집합이 $. U= \{ x | x . .$ 는 $10$ 보다 작은 자연수 $.$ 이고,
+$\left. A= \left\{ x \left| x \right. \right. \right.$ 는 소수 $.$ , $\left. B= \left\{ x \left| x \right. \right. \right.$ 는 홀수 $.$
+일 때, 다음 조건을 만족시키는 집합 $X$ 의 개수를 구하시오.
+(가) $A-X=B-X$
+(나) $\left( A \cap B \right) \subset \left\{ \left( A-X \right) \cup \left( B-X \right) \right\}$
+(다) $\left( X-A \right) \cap \left( X-B \right) \neq \varnothing$
+⟪ANS:56⟫
+전체집합이 $\left. U= \left\{ 1, 2, 3, 4, 5 \right. \right\}$ 일 때, 공집합이 아니고 모든 원소의 곱이 짝수인 집합의 개수를 구하시오.
+⟪ANS:57⟫
+집합
+$. . A= \{ 1, 2, 3, 4, 5 , 6 \} , B= \{ 1, 3, 5, 7, 9 . \}$
+에 대하여 $n \left( A \cap B \cap X \right) \geq 2$ 이고 $A \cap X=X$ 인 집합 $X$ 의 개수는?
+① $16$ ② $20$ ③ $24$
+④ $28$ ⑤ $32$
+⟪ANS:58⟫
+전체집합이 $\left. U= \left\{ 1, 2, 3, 4, 5, 6, 7 \right. \right\}$ 이다. 원소가 $2$ 개 이상인 집합 $A$ 에 대하여 $A$ 의 가장 큰 원소와 가장 작은 원소의 차를 $f \left( A \right)$ 라 하자. $f \left( A \right) \geq 4$ 인 $A$ 의 개수는?
+① $88$ ② $92$ ③ $96$
+④ $100$ ⑤ $104$
+[그림62]
+⟪ANS:59⟫
+전체집합이 $\left. U= \left\{ 1, 2, 3, 4, 5, 6, 7, 8 \right. \right\}$ 이고, $\left. A= \left\{ 1, 3 \right. \right\}$ , $\left. B= \left\{ 2, 4 \right. \right\}$ 일 때, $A \cup X$ 의 원소의 합이 $B \cup X$ 의 원소의 합보다 큰 집합 $X$ 의 개수를 구하시오.
+⟪ANS:60⟫
+집합 $A= \left\{ 1, 2, 3, 4, 5 \right\}$ 의 부분집합 중 원소가 $2$ 개 이상인 집합에 대하여 각 집합의 가장 큰 원소를 모두 더한 값을 구하시오.
+⟪ANS:61⟫
+전체집합이 $U= \left\{ 1, 3, 5, 7, 9, 11 \right\}$ 이고, 집합 $A, B$ 에 대하여
+$A-B= \left\{ 1, 3, 5 \right\}$ 일 때, 순서쌍 $\left( A, B \right)$ 의 개수는?
+① $17$ ② $21$ ③ $24$
+④ $27$ ⑤ $31$
+⟪ANS:62⟫
+전체집합이 $U= \left\{ 1, 2, 3, 4, 5 \right\}$ 일 때,
+$A \cup B=U, A \cap B \neq \varnothing$
+을 만족시키는 집합 $A, B$ 의 순서쌍 $\left( A, B \right)$ 의 개수를 구하시오.
+⟪ANS:63⟫
+전체집합이 $U$ 이고, 집합 $A, B$ 에 대하여
+$A★B=A ^{C} \cap B ^{C}$
+라 하자. $(A★B)★A= \varnothing$ 일 때, <보기>에서 옳은 것만을 있는 대로 고른 것은?
+<보기>
+ㄱ. $A= \left\{ 1, 2, 3, 4 \right\}$ 일 때, 가능한 $B$ 는 $16$ 개다.
+ㄴ. $A \cap B=A$
+ㄷ. $B ^{C} \cup A=U$
+① ㄱ ② ㄷ ③ ㄱ, ㄴ
+④ ㄴ, ㄷ ⑤ ㄱ, ㄷ
+⟪ANS:64⟫
+전체집합이 $U$ 이고, 집합 $A, B$ 에 대하여
+$A \triangle B=(A \cap B ^{C} ) \cup (B \cap A ^{C} )$
+라 하자. <보기>에서 항상 옳은 것만을 있는 대로 고른 것은?
+<보기>
+ㄱ. $A \triangle \varnothing =A$
+ㄴ. $A \subset B$ 이면 $A \triangle B=A$ 이다.
+ㄷ. $A \triangle B=A$ 이면 $B= \varnothing$ 이다.
+① ㄱ ② ㄱ, ㄴ ③ ㄱ, ㄷ ④ ㄴ, ㄷ ⑤ ㄱ, ㄴ, ㄷ
+⟪ANS:65⟫
+집합 $S$ 의 부분집합의 개수를 $P \left( S \right)$ , 원소의 개수를 $n \left( S \right)$ 라 하자.
+$P \left( A \right) +P \left( B \right)=P \left( A \cup B \right), n \left( A \right)=6$
+일 때, $n \left(A \cap B \right)$ 를 구하시오.
+⟪ANS:66⟫
+집합 $M$ 이 공집합이 아닐 때, $f \left(M \right)$ 을 $M$ 의 모든 원소의 곱이라 하자. 전체집합이 $U= \left\{ 1, 2, 3, \cdots , 2000 \right\}$ 이고 집합 $A, B$ 가 공집합이 아닐 때, <보기>에서 옳은 것만을 있는 대로 고른 것은?
+<보기>
+ㄱ. $A \subset B$ 이면 $f \left( A \right) \leq f \left( B \right)$ 이다.
+ㄴ. $A \cap B= \varnothing$ 이면 $f \left( A \cup B \right)=f \left( A \right)f \left( B \right)$ 이다.
+ㄷ. $f \left( A^{C} \right)= { f \left( U \right) } \over {f \left( A \right) }$
+① ㄱ ② ㄷ ③ ㄱ, ㄴ
+④ ㄴ, ㄷ ⑤ ㄱ, ㄴ, ㄷ
+[그림67]
+⟪ANS:67⟫
+자연수 $k$ 에 대하여 전체집합 $. U= \{ x | x . .$ 는 $k$ 이하의 자연수 $.$ 의 부분집합 $A, B$ 가 다음 조건을 만족시킨다.
+(가) $A-B= \left\{ 2, 7 \right\}$
+(나) $B$ 원소의 합은 $A-B$ 원소의 합의 $2$ 배이다.
+(다) $B \cup A ^{C}$ 원소의 합은 $A-B$ 원소의 합의 $3$ 배이다.
+가능한 $B$ 의 개수를 구하시오.
+[그림70]
+⟪ANS:68⟫
+집합 $A, B$ 의 원소가 실수이고,
+$n \left( A \right)=5,$ $B = \{ { x+a} \over { 2} | \begin{matrix} \\ \end{matrix} x \in A \}$
+이다. 다음이 성립할 때, 실수 $a$ 의 값을 구하시오.
+(가) $A$ 의 원소의 합은 $28$ 이다.
+(나) $A \cup B$ 의 원소의 합은 $49$ 이다.
+(다) $A \cap B= \left\{ 10, 13 \right\}$
+[그림71]
+⟪ANS:69⟫
+집합 $A= \left\{ 1, 2, 3, 4, 5, 6 \right\}$ , $\left. B= \left\{ x \left| x \right. \right. \right.$ 는 $8$ 의 양의 약수 $.$ 가 있다. $A$ 의 부분집합 중 $B$ 와 서로소인 집합을 $X _{1} , X _{2} , X _{3} ,$
+$\ldots ,$ $X_n$ 이라 하고, $X _{i}$ 의 원소의 합을 $S \left(X _{i} \right)$ $(i=1, 2, 3, \cdots ,$
+$n )$ 이라 하자. $S \left( X_1 \right)+S \left( X_2 \right)+S \left( X_3 \right)+ \cdots +S \left( X_n \right)$ 의 값은?
+(단, $S \left( \varnothing \right)=0$ )
+① $46$ ② $50$ ③ $53$
+④ $56$ ⑤ $60$
+⟪ANS:70⟫
+전체집합이 $. U= \{ x | x . .$ 는 $202$ 이하의 자연수 $.$ 이다.
+집합 $S$ 에 속하는 서로 다른 두 원소의 합이 $5$ 의 배수가 아닐 때,
+$n \left( S \right)$ 의 최댓값은?
+① $80$ ② $81$ ③ $82$
+④ $83$ ⑤ $84$
+[그림72]
+⟪ANS:71⟫
+어느 학급에서 방과 후 보충 수업으로 수학과 영어에 대한 참가 신청을 받았다. 수학, 영어를 신청한 학생 수는 각각 학급 전체의 ${5} \over {8} , {7} \over {10}$ 이고 두 과목 모두 신청한 학생 수는 학급 전체의 ${2} \over {5}$ 이었다. 한 과목도 신청하지 않은 학생이 $3$ 명일 때, 방과 후 보충 수업을 신청한 학생 수를 구하시오.
+⟪ANS:72⟫
+집합 $X, Y$ 에 대하여
+$X \triangle Y= \left(X-Y \right) \cup \left(Y-X \right)$
+라 하자. 집합 $A, B, C$ 에 대하여
+$n \left(A \cup B \cup C \right)=40$
+$n \left(A \triangle B \right)=n \left(B \triangle C \right)=20, n \left(C \triangle A \right)=22$
+일 때, $n \left(A \cap B \cap C \right)$ 는?
+① $8$ ② $9$ ③ $10$
+④ $11$ ⑤ $12$
+⟪ANS:73⟫
+집합 $A$ , $B$ , $C$ 에 대하여
+$n \left( A \right) =32$ , $n \left( B \right) =18$ , $n \left( C \right) =40$
+$n \left( A \cap B \right) =15$ , $n \left( A \cap B \cap C \right) =4$
+일 때, $n \left( C- \left( A \cup B \right) \right)$ 의 최솟값은?
+① $13$ ② $14$ ③ $15$
+④ $16$ ⑤ $17$
+⟪ANS:74⟫
+진우 반 학생 $40$ 명 중에서 탁구를 좋아하는 학생은 $21$ 명, 배드민턴을 좋아하는 학생은 $29$ 명, 테니스를 좋아하는 학생은 $16$ 명이고, 세 종목을 모두 좋아하는 학생은 $6$ 명이다. 진우 반 학생 모두는 탁구, 배드민턴, 테니스 중 적어도 하나는 좋아한다고 할 때, $2$ 종목만 좋아하는 학생 수는?
+① $11$ ② $14$ ③ $21$
+④ $26$ ⑤ $31$
+⟪ANS:75⟫
+어느 고등학교 $1$ 학년 학생을 대상으로 학교 축제 홍보 포스터를 선정하기 위하여 세 가지 안 $A$ , $B$ , $C$ 에 대해 선호도를 조사하였더니 $A$ 를 좋아하는 학생이 전체의 $62 %$ , $B$ 를 좋아하는 학생이 전체의 $42 %$ , $C$ 를 좋아하는 학생이 전체의 $52 %$ 이었다. 한 가지 안만 좋아하는 학생은 전체의 $48 %$ , 세 가지 안을 모두 좋아하는 학생은 전체의 $16 %$ , 세 가지 안을 모두 좋아하지 않는 학생이 $21$ 명이었다. 두 가지 안만 좋아하는 학생 수를 구하시오.
+[그림78]
+[그림79]
+⟪ANS:76⟫
+전체집합이 $U= \left\{ x \left| x \right. \right.$ 는 $30$ 이하의 자연수 $\}$ 이고,
+$\left. A= \left\{ \begin{matrix} \\ \end{matrix} x \right| {30-x} \over {6} \in U \right\}$
+$B _{k} = \left\{ x \left| \left( x-k \right) \left( y-k \right) =30, y-k \in U \right. \right\}$
+이다. $n \left( A \cap B _{k} \right) \geq 2$ 인 자연수 $k$ 의 값을 모두 구하시오.
+⟪ANS:77⟫
+전체집합이 양의 실수 전체의 집합일 때, 자연수 $n$ 에 대하여
+$\left. A_n = \left\{ \begin{matrix} \\ \end{matrix} x \right| x- \left[ x \right] = {1} \over {n} \right\}$
+$B _{n} = \left\{ x \left| x- \left.< x \right.> =n \right. \right\}$
+이라 하자. $B _{5} \cap \left( A _{5} \cup A _{6} \cup A _{7} \cup A _{8} \cup A _{9} \right)$ 의 모든 원소의 합을 $a$ 라 할 때, $\left[ a \right]$ 의 값을 구하시오. (단, $\left[ x \right]$ 는 $x$ 보다 크지 않은 최대 정수이고, $\left.< x \right.>$ 는 $x$ 의 소수 부분이다.)
+⟪ANS:78⟫
+집합 $S= \left\{ x \left| x \right. \right.$ 는 $9$ 이하의 자연수 $\}$ 의 부분집합 $X$ 가 다음 조건을 만족시킬 때, $X$ 의 개수를 구하시오.
+(가) $n \left( X \right) \geq 2$
+(나) $X$ 의 원소끼리는 서로소이다.
+⟪ANS:79⟫
+공집합이 아닌 집합 $X$ 의 원소의 합을 $S \left( X \right)$ 라 하자. 집합 $A= \left\{ 1, 2, 3, 4 \right\}$ 의 공집합이 아닌 부분집합 $B$ , $C$ 가 다음 조건을 만족시킬 때, 순서쌍 $\left( B, C \right)$ 의 개수는?
+(가) $B \subset C$
+(나) $S \left( B \right) +S \left( C \right)$ 의 값은 짝수이다.
+① $35$ ② $36$ ③ $37$
+④ $38$ ⑤ $39$
+[그림82]
+⟪ANS:80⟫
+집합 $S= \left\{ 1, 2, 3, 4, \cdots , 10 \right\}$ , $A= \left\{ 1, 2, 3 \right\}$ , $B= \left\{ 3, 4 \right\}$ 이다. $X$ 가 $S$ 의 부분집합일 때, $X-A$ 와 $X-B$ 의 원소의 합을 각각 $f _{A} \left( X \right)$ , $f _{B} \left( X \right)$ 라 하자.
+집합 $T= \left\{ X \left| X \right. \right.$ 는 $f _{A} \left( X \right) >f _{B} \left( X \right)$ $\}$ 로 정의할 때, <보기>에서 옳은 것만을 있는 대로 고른 것은?
+<보기>
+ㄱ. $S \in T$
+ㄴ. $X \in T$ 이면 $B \cap X\neq \varnothing$
+ㄷ. 집합 $T$ 의 원소의 개수는 $512$ 이다.
+① ㄱ ② ㄴ ③ ㄱ, ㄴ
+④ ㄱ, ㄷ ⑤ ㄱ, ㄴ, ㄷ
+[그림83]
+⟪ANS:81⟫
+전체집합 $U= \left\{ x \left| x \right. \right.$ 는 $20$ 이하의 자연수 $\}$ 의 부분집합 $A$ , $B$ 가 다음 조건을 만족시킨다.
+(가) $n \left( A \right) =n \left( B \right) =7$ , $n \left( A \cap B \right) =1$
+(나) $A$ 의 서로 다른 두 원소의 곱은 $6$ 의 배수가 아니다.
+(다) $B$ 의 서로 다른 두 원소의 합은 $8$ 의 배수가 아니다.
+$A$ , $B$ 의 모든 원소의 합은 각각 $S \left( A \right)$ , $S \left( B \right)$ 라 할 때, $S \left( A \right) -S \left( B \right)$ 의 최댓값을 구하시오.
+[그림84]
+⟪ANS:82⟫
+$f \left( x \right)$ 와 $g \left( x \right)$ 는 $x ^{2}$ 의 계수가 각각 $2$ , $-1$ 인 이차함수이다.
+전체집합이 실수 전체의 집합이고,
+$A= \left\{ x \left| f \left( x \right) =g \left( x \right) \right. \right\}$
+$B= \left\{ x \left| f \left( x \right) g \left( x \right) =0 \right. \right\}$
+$C= \left\{ x \left| \left( f \left( x \right) -k \right) \left( g \left( x \right) -k \right) =0 \right. \right.$ , $k$ 는 자연수 $\}$
+라 하자. $A= \left\{ \alpha , \beta \right\}$ , $B= \left\{ \alpha , \beta +4 \right\}$ , $n \left( C \right) =3$ 이고 $C$ 의 원소의 합이 $6$ 일 때, 가능한 $k$ 의 값을 모두 구하시오. (단, $\alpha < \beta$ )
+⟪ANS:83⟫
+어느 고등학교에서 $1$ 학년 학생 $300$ 명을 대상으로 봉사 활동 $A$ , $B$ , $C$ 에 대한 신청을 받았다. 봉사 활동 $A$ , $B$ , $C$ 를 신청한 학생은 각각 $110$ 명이고, 봉사 활동 $A$ , $B$ , $C$ 를 모두 신청한 학생은 $30$ 명이었다. 봉사 활동 $A$ , $B$ , $C$ 를 모두 신청하지 않은 학생 수의 최댓값과 최솟값을 구하시오.
+[그림1]

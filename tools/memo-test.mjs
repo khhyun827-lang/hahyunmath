@@ -67,13 +67,24 @@ try{
   await page.evaluate(() => { const n = document.getElementById('memo-note'); n.setSelectionRange(2, 2); render(); });
   봄('render 가 돌아도 커서 그대로', await page.evaluate(() => [document.activeElement.id, document.activeElement.selectionStart]), ['memo-note', 2]);
 
-  // 864 — 2026-10-02 재배치: 왼쪽 = 먼저 볼 학생·시험 · 오른쪽 = 달력 · 할 일(달력 밑). «오늘 수업» 칸은 없다.
+  // 864 — 2026-10-02 둘째 재배치: 맨 위 = 큰 달력(한 줄 다) · 밑에 먼저 볼 학생 | 할 일. «오늘 수업» 칸은 없다.
   const 자리 = await page.evaluate(() => {
     const r = q => document.querySelector(q).getBoundingClientRect();
-    return { 할일오른쪽: r('.dsh-memo').left > r('.dsh-b').right, 달력밑: r('.dsh-memo').top > r('.dsh-c .tcal').bottom - 1,
-             같은높이에서시작: Math.abs(r('.dsh-c').top - r('.dsh-b').top) < 2, 오늘수업칸없음: !document.querySelector('.dsh-a') };
+    const 학생 = r('.dsh-b > section'), 할일 = r('.dsh-memo'), 달력 = r('.dsh-c .tcal');
+    return { 달력맨위: 달력.bottom <= 학생.top + 1, 할일오른쪽: 할일.left > 학생.right, 나란히: Math.abs(할일.top - 학생.top) < 2,
+             오늘수업칸없음: !document.querySelector('.dsh-a') };
   });
-  봄('864 자리', 자리, { 할일오른쪽: true, 달력밑: true, 같은높이에서시작: true, 오늘수업칸없음: true });
+  봄('864 자리', 자리, { 달력맨위: true, 할일오른쪽: true, 나란히: true, 오늘수업칸없음: true });
+
+  // 큰 달력 — 칸 안에 일정 이름(시험은 «학교+학년 수학») · 정규 수업은 이름 없이 점만
+  const 칸 = await page.evaluate(() => {
+    const 날 = shiftYmd(todayStr(), 9);
+    DATA.students.forEach(s => { s.school = '대원고등학교'; s.grade = '1'; });
+    state.examRanges = { dates: { '대원고등학교': { '1': { start: 날, end: 날, math: 날 } } } }; render();
+    const 이름들 = [...document.querySelectorAll('.tcal .scal-c .evs i')].filter(i => i.offsetWidth).map(i => i.textContent);
+    return { 수학: 이름들.includes('대원1 수학'), 수업이름없음: !이름들.some(t => /반$/.test(t)) };
+  });
+  봄('달력 칸 안 일정 이름', 칸, { 수학: true, 수업이름없음: true });
 
   await page.evaluate(() => { state.currentUser = { type: 'assistant', name: 'A' }; render(); });
   봄('조교 홈엔 메모가 없다', await page.$$eval('.dsh-memo', e => e.length), 0);
