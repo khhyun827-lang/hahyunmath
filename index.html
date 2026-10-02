@@ -3621,6 +3621,39 @@
   .app:not(.sap):has(.tnav) .ag-m.no{background:#D93A45;color:#fff;}
   .app:not(.sap):has(.tnav) .ag-m.none{background:transparent;box-shadow:inset 0 0 0 1.5px #E3E6EE;color:transparent;}
   .app:not(.sap):has(.tnav) .hwg-wrap{background:#fff;border-radius:20px;border:1px solid #ECEEF3;}
+  /* 소통 › 질의응답 (시안 «D 차분 · 소통») — 목록·본문을 흰 카드로, 줄은 둥근 칸으로, 질문은 회색 · 답은 하늘 */
+  .app:not(.sap):has(.tnav) .qn-list{border-right:0;margin:0 14px 0 0;padding:10px;background:rgba(255,255,255,.92);
+    border:1px solid #ECEEF3;border-radius:22px;display:flex;flex-direction:column;min-height:0;}
+  .app:not(.sap):has(.tnav) .qn-lh{padding:2px 2px 10px;}
+  .app:not(.sap):has(.tnav) .qn-lbody{padding-right:0;}
+  .app:not(.sap):has(.tnav) .qn-lbody .qitem{border:0;border-radius:16px;margin-bottom:4px;padding:12px 14px;}
+  .app:not(.sap):has(.tnav) .qn-lbody .qitem.on{background:#E3EAF5;box-shadow:inset 0 0 0 1px #D2DCEC;}
+  .app:not(.sap):has(.tnav) .qn-lbody .qitem .h .who{font-size:14.5px;font-weight:800;}
+  .app:not(.sap):has(.tnav) .qn-lbody .qitem .x{font-size:13px;color:#3A4156;}
+  .app:not(.sap):has(.tnav) .qn-doc{padding:18px 20px;background:rgba(255,255,255,.92);border:1px solid #ECEEF3;border-radius:22px;}
+  .app:not(.sap):has(.tnav) .qn-dh{border-bottom:0;padding-bottom:6px;}
+  .app:not(.sap):has(.tnav) .qn-who .av{width:42px;height:42px;border-radius:50%;background:#EEF0F4;color:#3A4156;
+    font-size:12px;font-weight:800;letter-spacing:-.04em;display:flex;align-items:center;justify-content:center;}
+  .app:not(.sap):has(.tnav) .qn-wt a{font-size:18px;}
+  .app:not(.sap):has(.tnav) .qn-msg{border:0;background:#F6F7FA;border-radius:16px;}
+  .app:not(.sap):has(.tnav) .qn-msg.me{background:#EEF2F9;box-shadow:inset 0 0 0 1px #D2DCEC;}
+  .app:not(.sap):has(.tnav) .qn-msg .x{font-size:14.5px;}
+  .app:not(.sap):has(.tnav) .qn-comp{border-top:0;}
+  /* 같은 «가장자리에 붙은 흰 기둥» 무리(공지·채팅·클리닉·학생 상세·시험지/창고 목록)도 둥근 흰 카드로.
+     ⚠ `:is()` 를 안 쓴다 — 옛 사파리가 규칙째 버린다(노트 09-30). 쉼표로 나열한다. */
+  .app:not(.sap):has(.tnav) .nt-list, .app:not(.sap):has(.tnav) .ch-list, .app:not(.sap):has(.tnav) .sd-list,
+  .app:not(.sap):has(.tnav) .co-side.left, .app:not(.sap):has(.tnav) .ex-list:not(.st-nav){
+    margin:0 14px 0 0;padding:12px;border:1px solid #ECEEF3;border-radius:22px;background:rgba(255,255,255,.92);}
+  .app:not(.sap):has(.tnav) .co-side:not(.left){margin:0 0 0 14px;padding:12px;border:1px solid #ECEEF3;border-radius:22px;background:rgba(255,255,255,.92);}
+  .app:not(.sap):has(.tnav) .nt-doc{padding:18px 22px;background:rgba(255,255,255,.92);border:1px solid #ECEEF3;border-radius:22px;}
+  /* 채팅 목록 동그라미 = 학교 두 글자 (사용자가 정한 표시) */
+  .app:not(.sap):has(.tnav) .ch-list .av{border-radius:50%;font-size:11px;letter-spacing:-.04em;}
+  /* 표(설정 › 시험 일정 · 학생 명단 등) — 흰 카드 안 · 줄 높이 넉넉히 · D-day 7일 안은 꽉 찬 빨강 알약 */
+  .app:not(.sap):has(.tnav) .rst-wrap{background:rgba(255,255,255,.92);border:1px solid #ECEEF3;border-radius:20px;padding:4px 8px;}
+  .app:not(.sap):has(.tnav) .rst-wrap table.grid thead th{background:transparent;color:#8A90A3;font-size:12px;}
+  .app:not(.sap):has(.tnav) .rst-wrap table.grid tbody td{height:50px;}
+  .app:not(.sap):has(.tnav) .rst-wrap table.grid .badge{border-radius:999px;padding:3px 10px;font-weight:800;}
+  .app:not(.sap):has(.tnav) .rst-wrap table.grid .badge.no{background:#D93A45;color:#fff;}
   .app:not(.sap) .topbar:has(.tnav){height:64px;padding:0 24px;background:rgba(255,255,255,.84);
     -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border-bottom:1px solid rgba(30,36,51,.06);}
   .app:not(.sap) .topbar .tnav{margin:0 auto;gap:4px;}
@@ -26449,7 +26482,7 @@ function teacherQnaHTML(){
      그 질문만 보이며, 「← 질문 목록」으로 돌아간다. ⚠ 넓은 화면은 예전처럼 둘 다 보인다(CSS 가 가른다). */
   const item = q => `<div class="qitem ${cur && q.id===cur.id ? 'on':''}" onclick="state.qnaSelectedId='${q.id}'; state.qnaPicked=true; render(); window.scrollTo(0,0)">
     <div class="h">
-      <span class="badge ${qnaHasOpen(q)?'no':'ok'}">${qnaHasOpen(q) ? (q.answer ? '추가 질문' : '대기') : '완료'}</span>
+      <span class="badge ${qnaHasOpen(q)?'late':'ok'}">${qnaHasOpen(q) ? (q.answer ? '추가 질문' : '대기') : '완료'}</span>
       <span class="who">${escHtml(q.studentName||'')}</span>
       ${(n => n ? `<span class="muted" style="font-size:11px;">사진${n > 1 ? ' <b class="mono">' + n + '</b>' : ''}</span>` : '')(qnaImgList(q).length)}
       <span class="ago">${escHtml(q.date||'')}</span></div>
@@ -26472,7 +26505,7 @@ function teacherQnaHTML(){
         <div class="qn-dh">
           <button class="btn q sm qn-back" onclick="state.qnaPicked=false; render(); window.scrollTo(0,0)">${iconSvg('chevL',14)} 질문 목록</button>
           <div class="qn-who">
-            <span class="av">${escHtml((cur.studentName||'?').slice(0,1))}</span>
+            <span class="av">${escHtml(stu && stu.school ? schoolShort(stu.school) : (cur.studentName||'?').slice(0,1))}</span>
             <div class="qn-wt">
               <a onclick="rosterOpen('${cur.studentId}','info')" title="학생 상세">${escHtml(cur.studentName||'')}</a>
               <span>${stu ? `${escHtml(stu.school||'—')} ${escHtml(stu.grade||'')} · ${escHtml(classNameOf(stu.classId))}` : ''}</span>
@@ -26558,7 +26591,7 @@ function teacherChatHTML(){
         ${students.length===0 ? '<div style="font-size:12.5px;color:var(--dim);">등록된 학생이 없습니다.</div>'
         : students.map(({s, last, unread})=>`<div class="li ${s.studentId===sid?'on':''}"
             onclick="state.teacherSelectedStudent='${s.studentId}'; render()">
-            <span class="av">${escHtml((s.name||'?').slice(0,1))}</span>
+            <span class="av">${escHtml(s.school ? schoolShort(s.school) : (s.name||'?').slice(0,1))}</span>
             ${/* ⚠ **여기는 일부러 퇴원생을 안 뺀다** (W-1) — 이 목록은 «지난 대화로 가는 길»이다.
                  빼면 그만둔 학생과 나눴던 말에 닿을 방법이 없어진다.
                  대신 «퇴원»이라고 적어 준다 — **보내도 못 읽는다**(로그인이 막혀 있다). */''}
