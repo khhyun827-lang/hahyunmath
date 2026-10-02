@@ -80,7 +80,7 @@ try{
   봄('프린트 없는 칸 → 바로 파일 고르기', !!고르기, true);
   await page.keyboard.press('Escape');
   await page.evaluate(() => closeExamPop());
-  await 칸(1, '프린트 올리기').click({ position: { x: 140, y: 10 } });
+  await 칸(1, '프린트 올리기').click({ position: { x: 134, y: 10 } });   // 파일 이름 고리 옆 빈 자리(칸 폭 140)
   봄('프린트 있는 칸 → 목록과 올리기 단추', await page.evaluate(() => [document.querySelectorAll('.xp .pill').length, /프린트 올리기/.test(document.querySelector('.xp').textContent)]), [2, true]);
   await page.evaluate(() => closeExamPop());
   봄('파일 이름을 누르면 창 대신 내려받기(고리)', await page.$eval(`${줄(1)} .xr-print`, a => [a.target, /onclick="event\.stopPropagation\(\)"/.test(a.outerHTML)]), ['_blank', true]);

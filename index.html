@@ -3939,7 +3939,7 @@
   /* 표 */
   #app:has(.tnav) .app:not(.sap) table.grid thead th{height:42px;font-size:12px;font-weight:700;color:#8A90A3;background:transparent;
     border-bottom:1px solid #ECEEF3;}
-  #app:has(.tnav) .app:not(.sap) table.grid tbody td{height:52px;font-size:14px;color:#1E2433;border-bottom:1px solid #ECEEF3;}
+  #app:has(.tnav) .app:not(.sap) table.grid tbody td{height:52px;font-size:13.5px;color:#1E2433;border-bottom:1px solid #ECEEF3;}
   #app:has(.tnav) .app:not(.sap) table.grid tbody tr:hover td{background:#F6F7FA;}
   #app:has(.tnav) .app:not(.sap) table.grid td.sub, #app:has(.tnav) .app:not(.sap) table.grid .sub{color:#3A4156;}
 
@@ -4125,6 +4125,29 @@
   #app:has(.tnav) .app:not(.sap) .co-screen > .co-main{background:rgba(255,255,255,.92);border:1px solid #ECEEF3;border-radius:22px;padding:16px 20px;min-width:0;}
   #app:has(.tnav) .app:not(.sap) .dsh > .st-wrap{max-width:none;background:rgba(255,255,255,.92);border:1px solid #ECEEF3;border-radius:22px;padding:18px 22px;margin-top:14px;}
 }
+@media (min-width:1200px){
+  /* 검토 — 제목 옆 몇째/몇 · AI 카드 바닥줄 */
+  #app:has(.tnav) .app:not(.sap) .rv-wpos{display:inline;font-size:15px;font-weight:700;color:#6A7186;margin-left:10px;letter-spacing:0;}
+  #app:has(.tnav) .app:not(.sap) .rv-work .side.ai .q-ans{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+  #app:has(.tnav) .app:not(.sap) .rv-work .side.ai .q-ans .btn{order:3;}
+  #app:has(.tnav) .app:not(.sap) .rv-ours{display:inline;}
+  #app:has(.tnav) .app:not(.sap) .rv-vchip{display:inline-flex;}
+  #app:has(.tnav) .app:not(.sap) .rv-solgo{display:inline;margin-left:auto;order:4;font-size:13px;color:#6A7186;cursor:pointer;}
+  #app:has(.tnav) .app:not(.sap) .rv-solgo:hover{color:#1E2433;}
+  #app:has(.tnav) .app:not(.sap) .rv-fold .rv-fh{display:none;}
+  /* 수업 — 「지난 수업 보기」는 제목 줄 오른쪽 */
+  #app:has(.tnav) .app:not(.sap) .cls-mh{position:relative;}
+  #app:has(.tnav) .app:not(.sap) .cls-mh .cls-prevgo{display:inline-flex;position:absolute;right:0;top:12px;}
+  /* 설정 — 사이드 바닥 «내 계정» 카드 */
+  #app:has(.tnav) .app:not(.sap) .st-nav{display:flex;flex-direction:column;}
+  #app:has(.tnav) .app:not(.sap) .st-nav .ex-lbody{flex:1;min-height:0;overflow:auto;}
+  #app:has(.tnav) .app:not(.sap) .st-acct{display:flex;align-items:center;gap:10px;margin-top:10px;padding:13px;border-radius:18px;background:#F6F7FA;}
+  #app:has(.tnav) .app:not(.sap) .st-acct .av{flex:none;width:40px;height:40px;border-radius:50%;background:#1E2433;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;}
+  #app:has(.tnav) .app:not(.sap) .st-acct .t{flex:1;min-width:0;}
+  #app:has(.tnav) .app:not(.sap) .st-acct .t b{display:block;font-size:14px;font-weight:800;}
+  #app:has(.tnav) .app:not(.sap) .st-acct .t s{display:block;text-decoration:none;font-size:11.5px;color:#6A7186;}
+}
+.app .rv-wpos, .app .rv-ours, .app .rv-vchip, .app .rv-solgo, .app .cls-prevgo, .app .st-acct{display:none;}
 .app .hm-chip.todo{background:#E3EAF5;color:#1E2E52;} .app .hm-chip.todo i{background:#1E2433;}
 /* 수업 아래 띠의 출결 셈 — 칩은 넓은 화면(시안)만. 줄 모드·폰은 예전처럼 글자 한 줄(띠가 세 줄로 불어나지 않게) */
 @media (max-width:1199px){
@@ -21709,6 +21732,7 @@ function teacherSessionHTML(){
   return `<div class="cls-screen">${side}
     <main class="cls-main">
       <div class="cls-mh">
+        <button class="btn cls-prevgo" onclick="goSessionStep('prev')">지난 수업 보기</button>
         <s class="cls-crumb">수업 · ${escHtml(stuDayLabel(date))} · ${escHtml(sessionTimeText(cls.schedule, new Date(date + 'T00:00:00').getDay()) || '시간 미정')}</s>
         ${/* schedule을 통째로 붙이면 시간이 두 번 나온다 — 요일만 따로 뽑아 잇는다. */''}
         <h1 class="t-title">${escHtml(cls.name)}<s>${escHtml(sessionTimeText(cls.schedule) || '시간 미정')}${
@@ -29400,7 +29424,7 @@ function selectAutoVariant(code){ state.reviewVariantCode = code; state.reviewSe
 /* 객관식 답 → 1~5 (①~⑤ 또는 1~5 한 글자). 아니면 0. 보기 칸을 칠할 때만 쓴다. */
 function choiceNo(a){
   const t = String(a == null ? '' : a).trim();
-  const i = '①②③④⑤'.indexOf(t);
+  const i = t.length === 1 ? '①②③④⑤'.indexOf(t) : -1;   // ⚠ 빈 글자는 indexOf 가 0 — 답이 없으면 ①이 칠해진다
   return i >= 0 ? i + 1 : /^[1-5]$/.test(t) ? Number(t) : 0;
 }
 function autoVariantWorkHTML(v){
@@ -29409,7 +29433,8 @@ function autoVariantWorkHTML(v){
   const open = !!state.solutionOpen[v.code];
   return `
   <div class="rv-wh">
-    <h1 class="t-title"><span class="mono">${escHtml(v.code)}</span><span class="rv-wk"> · ${v.engine === 'groq' ? 'Groq 가' : 'AI가'} 만든 변형</span></h1>
+    <h1 class="t-title"><span class="mono">${escHtml(v.code)}</span>${(() => { const 줄 = reviewWalkList(); const i = 줄.findIndex(x => x.auto && x.key === v.code);
+      return i >= 0 ? `<span class="rv-wpos">${i + 1}/${줄.length}</span>` : ''; })()}<span class="rv-wk"> · ${v.engine === 'groq' ? 'Groq 가' : 'AI가'} 만든 변형</span></h1>
     <div class="t-meta" style="margin-top:7px;">
       <span class="badge late">검토 대기</span>
       ${reviewMiniHTML(v)}
@@ -29447,7 +29472,13 @@ function autoVariantWorkHTML(v){
           <b>왼쪽 원본 그림을 그대로</b> 씁니다 — 그림은 배치만 보여 주고 바뀐 수는 본문에 있습니다.
           <b>그림에 적힌 수치가 본문과 어긋나지 않는지</b>만 확인해 주세요.</div>` : ''}
         <div class="q-body">${problemHTML(v.content||'(내용 없음)')}</div>
-        <div class="q-ans">정답 <b>${escHtml(v.answer||'—')}</b>
+        <div class="q-ans"><span class="rv-ours">우리 </span>정답 <b>${escHtml(v.answer||'—')}</b>
+          ${/* 넓은 화면 — AI 판정 칩 · 「풀이 보기 ›」를 카드 바닥줄에(시안). 줄 모드는 아래 접는 칸 그대로. */''}
+          ${v.aiReview && REVIEW_VERDICT[v.aiReview.verdict] ? `<span class="hm-chip ${({agree:'ok',suspect:'no',unsure:'late'})[v.aiReview.verdict]} rv-vchip"><i></i>${
+            v.aiReview.verdict === 'suspect' ? 'AI는 ' + escHtml(v.aiReview.answer || '—') + ' — 우리와 다른 답'
+            : v.aiReview.verdict === 'agree' ? 'AI도 ' + escHtml(v.answer || '—') + ' — 같은 답' : escHtml(REVIEW_VERDICT[v.aiReview.verdict].말)}</span>` : ''}
+          ${v.solution ? `<a class="rv-solgo" onclick="state.solutionOpen['${escHtml(v.code)}']=!state.solutionOpen['${escHtml(v.code)}']; render()">${
+            open ? '풀이 접기 ‹' : '풀이 보기 ›'}</a>` : ''}
           ${/* 🔵 **여기서 바로 고친다** (2026-09-15 · 사용자 — 「정답이 잘못된 것들이 있어서 버리지 않고 직접 수정하고
                싶은데 고치기가 없어」). 창고의 편집기(vEditOpen · vEditHTML · vEditSave)를 그대로 연다 — 같은 문서에 얹으므로
                검토 대기 상태는 그대로고, 고친 뒤 「통과」하면 된다. 갈래 바꾸기도 거기 것이 그대로 온다. */''}
@@ -32158,8 +32189,11 @@ function teacherExamRangeHTML(view){
     const prints = schoolFilesOf(school, grade);   // 시즌을 넘겨도 남는다 — 지난 기록에서도 같은 목록
     /* 켜진 단원의 «처음과 끝». 노션 표가 그렇게 적혀 있었고, 그게 사람이 읽기 좋다. */
     const on = all.filter(ch => cur.has(ch));
-    const span = !subject ? '' : on.length === 0 ? '' : on.length === 1 ? `${all.indexOf(on[0]) + 1}. ${on[0]}`
+    /* 표에는 단원 이름만(시안 「다항식의 연산 ~ 행렬」) — 번호 붙은 온전한 말은 title 에 둔다 */
+    const spanFull = !subject ? '' : on.length === 0 ? '' : on.length === 1 ? `${all.indexOf(on[0]) + 1}. ${on[0]}`
       : `${all.indexOf(on[0]) + 1}. ${on[0]} ~ ${all.indexOf(on[on.length - 1]) + 1}. ${on[on.length - 1]}`;
+    const span = !spanFull ? '' : on.length === 1 ? on[0] : on[0] + ' ~ ' + on[on.length - 1];
+    const md = ymd => ymd.slice(5).replace('-', '/');
     const ddTone = !dd ? '' : dd.state === 'during' ? 'no' : dd.state === 'after' ? 'gone'
       : dd.days <= 7 ? 'no' : dd.days <= 14 ? 'late' : '';
     const dow = ymd => WEEKDAY_LABEL[new Date(ymd + 'T00:00:00').getDay()];
@@ -32184,13 +32218,13 @@ function teacherExamRangeHTML(view){
         ${/* 연도를 뗀다 — 두 날짜를 온전히 쓰면 이 폭에서 잘린다. 온전한 날짜는 title 에 있다. */''}
         <td ${cell('period', 'mono sub', '시험 기간 고르기')}
             title="${dates && dates.start ? escHtml(dates.start + (dates.end ? ' ~ ' + dates.end : '')) : ''}">${
-          dates && dates.start ? escHtml(dates.start.slice(5)) + (dates.end ? ' ~ ' + escHtml(dates.end.slice(5)) : '') : 빈('＋ 날짜')}</td>
+          dates && dates.start ? escHtml(md(dates.start)) + (dates.end ? ' – ' + escHtml(md(dates.end)) : '') : 빈('＋ 날짜')}</td>
         <td ${cell('math', 'mono', '수학 시험일 고르기')}
             title="${dates && dates.math ? escHtml(dates.math) : ''}" style="${
           dates && dates.math ? 'color:var(--brand-d);font-weight:700;' : ''}">${
-          dates && dates.math ? escHtml(dates.math.slice(5)) + ' ' + dow(dates.math) : 빈('＋ 날짜')}</td>
+          dates && dates.math ? escHtml(md(dates.math)) + ' (' + dow(dates.math) + ')' : 빈('＋ 날짜')}</td>
         <td ${subject ? cell('range', 'sub', '범위 고르기') : 'class="sub"'}
-            title="${span ? escHtml(span) : ''}">${
+            title="${spanFull ? escHtml(spanFull) : ''}">${
           span ? escHtml(span) : '<span style="color:var(--dim);">—</span>'}
           ${overridden ? '<span class="badge score" style="margin-left:6px;">수정됨</span>' : ''}</td>
         <td ${cell('book', 'sub', '교재 메모 적기')}
@@ -32212,18 +32246,18 @@ function teacherExamRangeHTML(view){
          sticky 헤더는 걸지 않는다. 줄이 적고, 가로 스크롤과 같이 쓰면 헤더가 첫 행을 덮는다 (0-B). */''}
     ${/* 🔵 학교·과목 사이를 좁혔다(사용자 — 「학교나 과목 간격 조금 줄이고」) — 학년 60→44 · 과목 118→80 · 시험 기간 150→122 · 범위 222→200 (09-24 두 번째 — 「과목 혹은 시험기간 조금 줄여도」).
          학교는 118 그대로 — 「경기여자고등학교」가 그 폭에서 딱 들어간다(줄이면 …로 잘린다). */''}
-    <table class="grid" style="min-width:1042px;">
+    <table class="grid" style="min-width:1052px;">
       <thead><tr>
-        <th style="width:118px;">학교</th>
+        <th style="width:132px;">학교</th>
         <th style="width:44px;">학년</th>
-        <th style="width:80px;">과목</th>
+        <th style="width:96px;">과목</th>
         <th class="r" style="width:50px;">인원</th>
         <th style="width:78px;">D-day</th>
         <th style="width:122px;">시험 기간</th>
         <th style="width:92px;">수학</th>
-        <th style="width:200px;">범위</th>
+        <th style="width:190px;">범위</th>
         <th style="width:140px;">교재 · 메모</th>
-        <th style="width:150px;">프린트</th>
+        <th style="width:140px;">프린트</th>
       </tr></thead>
       <tbody>${body}</tbody>
     </table>
@@ -33204,6 +33238,8 @@ function teacherSettingsHTML(){
           <i class="st-ic">${iconSvg(ST_ICONS[t[0]] || 'circle', 18)}</i><div class="n">${t[1]}</div>
         </div>`).join('')).join('')}
       </div>
+      <section class="st-acct"><span class="av">김</span><span class="t"><b>김하현T</b><s>관리자</s></span>
+        <button class="btn sm" onclick="logout()">로그아웃</button></section>
     </aside>
     <main class="ex-main">
       <s class="st-crumb">설정 · ${escHtml((SETTINGS_GROUPS.find(g => g[1].some(t => t[0] === tabNow)) || ['설정'])[0])}</s>

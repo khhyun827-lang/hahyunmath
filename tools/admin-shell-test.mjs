@@ -169,5 +169,15 @@ console.log('\n⑥ A-2\n');
   봄('🔴 박힌 차콜 고리가 하나도 안 남았다', /rgba\(60,48,52|rgba\(63,53,55/.test(알맹이(html)), false);
 }
 
+/* 시안 «D 차분» 3판 (2026-10-02) — 검토 보기 칸 칠하기의 답 번호 · 목록의 짧은 날 */
+{
+  const choiceNo = new Function(lift('choiceNo') + '; return choiceNo;')();
+  봄('choiceNo — ①~⑤·1~5 는 번호, 그 밖은 0', ['③', '2', ' ⑤ ', '12', 'x', '', null].map(choiceNo), [3, 2, 5, 0, 0, 0, 0]);
+  const short = new Function('todayStr', 'shiftYmd', lift('shortDayLabel') + '; return shortDayLabel;')(
+    () => '2026-10-02', (d, k) => k === -1 ? '2026-10-01' : d);
+  봄('shortDayLabel — 오늘 · 어제 · MM-DD · 다른 해는 온전히',
+    ['2026-10-02', '2026-10-01', '2026-09-29', '2025-12-30', ''].map(short), ['오늘', '어제', '09-29', '2025-12-30', '']);
+}
+
 console.log('\n' + (fail ? '🔴 ' : '✓ ') + pass + ' 통과 · ' + fail + ' 실패\n');
 process.exit(fail ? 1 : 0);
