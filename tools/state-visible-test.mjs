@@ -54,6 +54,26 @@ try{
             if(!형제) return;
             if(겉(e) === 겉(형제)) out.push(e.tagName.toLowerCase() + '.' + cls.join('.') + ' — 「' + (e.textContent || '').trim().slice(0, 14) + '」');
           });
+          /* 🔴 글자가 «세로로» 꺾인 단추·딱지·이름 (2026-10-02 · 과제 검사 「제출 · 보완 필요 · 미제출」이 38px 네모에 갇혀 한 자씩 꺾였다).
+               한 줄에 한두 자씩만 놓였으면(줄 수 ≥ 2 · 줄 수 ≥ 글자 수의 절반) 빨강. */
+          document.querySelectorAll('#app button, #app .btn, #app .pill, #app .badge, #app .cls-tiles .who > b').forEach(e => {
+            if(!e.offsetParent || e.closest('#scan-self')) return;
+            const 글 = (e.textContent || '').replace(/\s/g, '');
+            if(글.length < 2) return;
+            /* 글자 조각만 잰다(아이콘·키 딱지 상자는 높이가 달라 «줄»로 잘못 셌다) · 반 글자 높이 안의 차이는 같은 줄 */
+            const fs = parseFloat(getComputedStyle(e).fontSize) || 14;
+            const tops = [];
+            const tw = document.createTreeWalker(e, NodeFilter.SHOW_TEXT);
+            for(let t = tw.nextNode(); t; t = tw.nextNode()){
+              if(!t.textContent.trim()) continue;
+              const r = document.createRange(); r.selectNodeContents(t);
+              [...r.getClientRects()].filter(x => x.width > 0).forEach(x => tops.push(x.top));
+            }
+            tops.sort((a, b) => a - b);
+            let 줄 = 0, 앞 = -1e9;
+            for(const y of tops){ if(y - 앞 > fs * 0.6){ 줄++; 앞 = y; } }
+            if(줄 >= 2 && 줄 >= 글.length * 0.5) out.push('세로꺾임 ' + e.tagName.toLowerCase() + '.' + [...e.classList].join('.') + ' — 「' + 글.slice(0, 10) + '」');
+          });
           return [...new Set(out)];
         }, 상태);
         const 자기 = 결과.filter(x => x.startsWith('span.scan-x'));
@@ -66,7 +86,7 @@ try{
 } finally { await 브라우저.close(); 서버.kill(); }
 
 if(못잡음.length){ console.log('\n🔴 자기 검사 실패 — 심어 둔 안 보이는 상태를 못 잡았다: ' + 못잡음.join(', ')); process.exit(1); }
-if(!찾음.size){ console.log('\n✓ 안 보이는 상태가 없다 — 무대 ' + 강사무대.length + '개 × 2폭 (자기 검사 통과 · 출결 칸·거르개 눌러 봄)'); process.exit(0); }
+if(!찾음.size){ console.log('\n✓ 안 보이는 상태가 없다 — 무대 ' + 강사무대.length + '개 × 2폭 (자기 검사 통과 · 출결 칸·거르개 눌러 봄 · 글자 세로 꺾임도 없음)'); process.exit(0); }
 console.log('\n🔴 켜져도 꺼진 것과 똑같이 그려지는 것 ' + 찾음.size + '종');
 for(const [k, v] of 찾음) console.log('  ' + k + '\n      ' + [...new Set(v)].slice(0, 4).join('\n      '));
 process.exit(1);

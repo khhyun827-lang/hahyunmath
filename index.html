@@ -721,6 +721,10 @@
      「마감」과 「2026-09-01」이 두 값처럼 갈라졌다. 실제로 그렇게 나왔다.
      그래서 ① 바깥 한 겹만 자식 결합자로 집고 ② 안쪽은 inline으로 되돌린다. */
 .app .cls-tiles .tile .who > span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+/* 이름은 한 줄 — 칸이 좁으면 이름을 꺾지 말고 단추 묶음이 다음 줄로 내려간다 (2026-10-02 · 864 과제 검사에서 「김민/아」로 꺾였다).
+   ⚠ 글자 단추(.seg.wide)를 가진 칸에만 — 출결(네모 넷) 칸에 걸면 864 에서 네모가 괜히 다음 줄로 내려갔다(찍어서 봤다). */
+.app .cls-tiles .tile:has(.seg.wide) .who{min-width:4.6em;}
+.app .cls-tiles .tile .who > b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .app .cls-tiles .tile .who > span span{display:inline;}
 /* 지금 펴 놓은 과제 줄은 표가 나야 한다 — 아래 명단이 그 과제의 것이기 때문이다. */
 .app .cls-hw.on{border-color:var(--accent-line);background:var(--accent-bg);}
@@ -4173,6 +4177,9 @@
 #app:has(.tnav) .app:not(.sap) .seg button.on.late{background:#E0A21C;color:#fff;}
 #app:has(.tnav) .app:not(.sap) .seg button.on.leave{background:#8C74D9;color:#fff;}
 #app:has(.tnav) .app:not(.sap) .seg button.on.no{background:#D93A45;color:#fff;}
+/* 🔴 글자 단추 묶음(.seg.wide — 과제 검사의 「제출 · 보완 필요 · 미제출」) (2026-10-02 · 사용자 — 「과제 검사 탭도 버튼들 이상해졌어」).
+     위 38px 네모가 옛 `.app .seg.wide button{width:auto}` 보다 세서 글자가 한 자씩 세로로 꺾였다. 같은 무게로 되살린다. */
+#app:has(.tnav) .app:not(.sap) .seg.wide button{width:auto;min-width:48px;padding:0 12px;white-space:nowrap;font-size:13px;}
 /* 같은 까닭으로 덮였던 «켜짐·고름» 표시들 — 부품 한 벌(.pill · .badge · .card)이 옛 상태 규칙보다 세다. 뒤에서 같은 무게로 되살린다.
    · .pill.f — 명단의 «출결 주의 · 오답 미제출 · 과제 미제출» 거르개가 켜진 것(켜도 회색이라 켠 줄 몰랐다)
    · .badge.consult(다음 · 특강 · 날짜 변경) · .badge.qna · .badge.half · .card.sel · .cls-hw.on */

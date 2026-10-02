@@ -340,6 +340,14 @@ export const 무대들 = {
           period:'26.03~26.12', status:'진행중', kind:'정규' }));
       state.currentUser = { type:'teacher', name:'김하현T' }; state.view = 'teacher';
       state.teacherTab = 'classhub'; state.classHubTab = 'sessions'; state.classHubId = 'c1'; render(); } },
+  /* 수업 › 과제 검사 (2026-10-02 · 사용자 — 「과제 검사 탭도 버튼들 이상해졌어」 — 제출·보완 필요·미제출 글자가 세로로 꺾였다) */
+  수업과제검사: { 말: '수업 › 과제 검사 (오늘 마감 과제 · 학생 열)',
+    세우기: () => { const 요일 = '일월화수목금토'[new Date().getDay()];
+      DATA.classes = ['고1 프로브반','고2 특강'].map((name, i) => ({ id:'c'+(i+1), name, schedule: 요일 + ' ' + (14+i) + '시~' + (16+i) + '시',
+        period:'26.03~26.12', status:'진행중', kind:'정규' }));
+      DATA.assignments.push({ id:'aHW1', classId:'c1', title:'개념원리 p.30~41', dueDate: todayStr(), createdAt: shiftYmd(todayStr(), -3) });
+      state.currentUser = { type:'teacher', name:'김하현T' }; state.view = 'teacher';
+      state.allRecordsLoaded = true; state.teacherTab = 'session'; state.sessionClassId = 'c1'; state.sessionStep = 'hwcheck'; render(); } },
   반여럿펼침: { 말: '반 관리 › 출결 (반 여섯 · 반 고르기를 펼친 채)',
     세우기: () => { const 요일 = '일월화수목금토'[new Date().getDay()];
       DATA.classes = ['고1 프로브반','고2 특강','명덕여고 2차시','광남고 1-1','대원고 내신','중3 선행']
