@@ -222,8 +222,9 @@ console.log(NL + '── 화면이 이 값을 실제로 쓰는가 ──');
      몸통.indexOf('if(state.allRecords[s.studentId])') < 0, true);
   봄('🔴 방금 쓴 것을 조건 없이 얹는다',
      몸통.indexOf('state.allRecords[s.studentId] = rec;') >= 0, true);
-  봄('안 찍은 학생은 건너뛴다는 줄이 그대로 있다',
-     몸통.indexOf('if(!d || !d.status) return;') >= 0, true);
+  /* 2026-10-02 — 지운 칸(다시 눌러 뺀 것)은 저장된 줄을 빼야 해서 갈래가 둘이 됐다: 초안 없음 → 건너뜀 · 상태 없음 → 저장된 줄이 있을 때만 뺀다 */
+  봄('안 찍은 학생은 건너뛴다(저장된 줄이 없으면 아무것도 안 쓴다)',
+     몸통.indexOf('if(!d) return;') >= 0 && 몸통.indexOf('if(!attOn(state.allRecords[s.studentId], date, classId, main)) return;') >= 0, true);
   봄('「과제 검사로」 단추가 단계를 옮긴다', html.indexOf("goSessionStep('hwcheck')") >= 0, true);
 }
 

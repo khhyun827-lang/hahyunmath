@@ -43,6 +43,31 @@ try{
     봄(`${w} — 고르지 않은 칸은 색이 없다`, 나머지회색, true);
     봄(`${w} — 넷의 색이 서로 다르다`, new Set(결과.map((줄, k) => 줄[k][1])).size, 4);
 
+    /* 고른 칸을 한 번 더 누르면 지운다 (사용자 — 「눌렀다가 다시 뺄 방법이 없어」) */
+    const 첫칸 = page.locator('.cls-tiles .tile').first().locator('.seg button');
+    await 첫칸.nth(3).click();                       // 마지막으로 고른 「결」을 다시
+    봄(`${w} — 같은 칸을 다시 누르면 지워진다`, await page.evaluate(() =>
+      [...document.querySelector('.cls-tiles .tile .seg').querySelectorAll('button')].some(b => b.classList.contains('on'))), false);
+
+    if(w === 1440){
+      /* 지운 칸을 저장하면 그날 이 반 줄을 기록에서 뺀다(DB 는 흉내) */
+      const 남은 = await page.evaluate(async () => {
+        const s = classRoster('c1')[0], 오늘 = todayStr();
+        const rec = { attendance: [{ date: 오늘, status: '결석', reason: '', note: '', classId: 'c1' }, { date: '2026-09-01', status: '출석', classId: 'c1' }] };
+        state.allRecords[s.studentId] = rec;
+        window.loadRecord = async () => rec; window.saveRecord = async () => true; window.logAudit = async () => {};
+        state.attDraft[s.studentId] = { status: null, reason: '', videoUrl: '', note: '' };
+        await saveClassAttendance('c1', 오늘);
+        return state.allRecords[s.studentId].attendance.map(a => a.date + ':' + a.status);
+      });
+      봄('1440 — 지운 칸을 저장하면 그날 줄만 빠진다', 남은, ['2026-09-01:출석']);
+
+      /* 반 › 출결 표 — 열이 하나뿐인 달에도 판 폭으로 안 늘어난다(이름 열 고정 · 열이 쌓이는 만큼) */
+      await page.evaluate(무대들.반여럿.세우기);
+      봄('1440 — 반 › 출결 표가 내용만큼만(열 하나 → 400 안)', await page.$eval('.hwg-wrap', e => e.getBoundingClientRect().width < 400), true);
+      봄('   이름 열은 108 고정', await page.$eval('.hwg th.who', e => Math.round(e.getBoundingClientRect().width)), 108);
+    }
+
     /* 같은 까닭(부품 한 벌이 옛 상태 규칙을 덮음)으로 꺼진 것처럼 보이던 명단 거르개 — 켜면 꺼진 것과 달라야 한다 */
     await page.evaluate(무대들.학생명단.세우기);
     const 거르개 = page.locator('.rst-fbar .pill:not(.on)').filter({ hasText: '과제 미제출' }).first();

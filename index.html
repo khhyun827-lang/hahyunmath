@@ -4107,8 +4107,9 @@
   #app:has(.tnav) .app:not(.sap):has(.pg-h) .chub-screen{height:auto;}
   #app:has(.tnav) .app:not(.sap):has(.pg-h) .chub-body{position:static;overflow:visible;flex:none;}
   #app:has(.tnav) .app:not(.sap) .hwg-wrap{padding:6px 10px;}
-  #app:has(.tnav) .app:not(.sap) .hwg-wrap{display:block;width:auto;}
-  #app:has(.tnav) .app:not(.sap) .hwg-wrap > table.hwg{min-width:100%;}
+  /* ⚠ 표를 판 폭으로 늘리지 않는다 (2026-10-02 · 사용자 — 「월초에 출결이 별로 안 쌓였을 때 표 폭이 엄청 커져 예쁘지 않다 ·
+       이름 열은 폭을 고정해 왼쪽에, 출결을 넣는 대로 차곡차곡 붙어 쌓이게」). 새단장 때 `width:auto` · `min-width:100%` 를 걸어
+       열 두셋인 달에 칸이 수백 px 로 벌어졌다 — 원래 뼈대(.hwg-wrap max-content · 이름 108 고정 · 날짜 60)로 되돌린다. */
 }
 @media (min-width:1200px){
   /* ── 머리줄(.rst-head > .rst-hrow)이 있는 화면(신호 · 학생 명단) — 셈 글과 단추를 제목 줄 오른쪽으로(시안의 머리 꼴) ── */
@@ -25813,8 +25814,15 @@ function ensureAttDraft(classId, date){
     state.attDraft[s.studentId] = existing ? {status:existing.status, reason:existing.reason||'', videoUrl:'', note:existing.note||''} : {status:null, reason:'', videoUrl:'', note:''};
   });
 }
+/* 🔵 **고른 칸을 한 번 더 누르면 지운다** (2026-10-02 · 사용자 — 「출결 버튼을 눌렀다가 다시 뺄 방법이 없어」).
+     지운 칸은 «미입력»이 되고, 저장할 때 그날 이 반의 줄을 기록에서 뺀다(saveClassAttendance).
+     수업 화면과 반 › 출결의 날짜 판이 같이 쓴다. */
 function setAttStatus(studentId, status){
   const cur = state.attDraft[studentId] || {reason:'', videoUrl:'', note:''};
+  if(cur.status === status){
+    state.attDraft[studentId] = {status:null, reason:'', videoUrl:'', note: cur.note||''};
+    render(); return;
+  }
   state.attDraft[studentId] = {status, reason: status==='출석' ? '' : cur.reason, videoUrl: status==='출석' ? '' : cur.videoUrl, note: cur.note||''};
   render();
 }
@@ -25922,13 +25930,25 @@ async function saveClassAttendance(classId, date){
   const newVideos = [];
   await Promise.all(roster.map(async s => {
     const d = state.attDraft[s.studentId];
-    if(!d || !d.status) return; // 아무도 안 건드린 학생은 건너뛴다
+    if(!d) return;
+    const main = studentMainClassId(s);
+    if(!d.status){
+      /* 🔴 **지운 칸** (2026-10-02) — 저장된 그날 이 반 줄이 있으면 뺀다. 없으면(애초에 안 넣은 학생) 아무것도 안 쓴다. */
+      if(!attOn(state.allRecords[s.studentId], date, classId, main)) return;
+      const rec = await loadRecord(s.studentId);
+      const idx = rec.attendance.findIndex(a=>a.date===date && attClassOf(a, main)===classId);
+      if(idx < 0) return;
+      rec.attendance.splice(idx, 1);
+      await saveRecord(s.studentId);
+      state.allRecords[s.studentId] = rec;
+      await logAudit('출석 기록 지움', s.studentId, s.name, date);
+      return;
+    }
     const rec = await loadRecord(s.studentId);
     /* 🔴 **그 반의 줄만 찾아 고친다** (2026-09-01 · E-1). 날짜로만 찾으면 같은 날 정규와 특강이
        둘 다 있을 때 **한쪽이 다른 쪽을 덮어써서 기록이 사라진다.**
        ⚠ 반이 안 적힌 옛 줄은 주 반 것으로 읽히므로, 정규반을 저장하면 그 줄이 **제자리에서
          classId를 얻는다** — 옛 기록이 저절로 옮겨진다. */
-    const main = studentMainClassId(s);
     const row = {date, status:d.status, reason:d.reason||'', note:d.note||'', classId};
     const idx = rec.attendance.findIndex(a=>a.date===date && attClassOf(a, main)===classId);
     if(idx>=0) rec.attendance[idx] = row;
