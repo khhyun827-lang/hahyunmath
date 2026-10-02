@@ -41,9 +41,15 @@ try{
   /* 기록 */
   await page.selectOption('#cs-who', '학생');
   await page.fill('#cs-text', '시험 대비 계획 이야기');
+  /* 주제 칩 — 쓰던 글 뒤에 눌러도 글이 안 날아간다 */
+  await page.click('.cd-write .cd-tp:has-text("시험 대비")');
+  await page.click('.cd-write .cd-tp:has-text("진로")');
+  봄('주제 칩을 눌러도 쓰던 내용이 남는다', await page.inputValue('#cs-text'), '시험 대비 계획 이야기');
   await page.click('.cd-write .btn.p');
   await page.waitForFunction(() => 쓴것['consultlog:s0']);
   const 새것 = await page.evaluate(() => 쓴것['consultlog:s0'].at(-1));
+  봄('기록 — 주제가 남는다', 새것.topics, ['시험 대비', '진로']);
+  봄('지난 상담에 주제 딱지', await page.$$eval('.cd-right .cs-item .badge.score', e => e.map(x => x.textContent)), ['시험 대비', '진로']);
   봄('기록 — 상대가 남는다', 새것.who, '학생');
   봄('기록 — 그때의 숫자(영상 포함)가 남는다', !!새것.snap && 'vid' in 새것.snap && 'att' in 새것.snap, true);
 
