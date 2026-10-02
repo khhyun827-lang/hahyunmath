@@ -147,6 +147,20 @@ export const 무대들 = {
           { name: '서술형 모음.pdf', fileId: 'f2', mime: 'application/pdf', size: 310000, at: 날(-1), season: '2026 · 2학기 중간' } ] },
         '광남고': { '2': [ { name: '광남 2학년 기출.pdf', fileId: 'f3', mime: 'application/pdf', size: 1500000, at: 날(-2), season: '2026 · 2학기 중간' } ] } };
       render(); } },
+  /* 등급컷 갈래 (2026-10-02) — 시험 일정 표에서 떼어 냈다. 한 줄은 거꾸로 적어 경고 배지를 본다. */
+  등급컷: { 말: '설정 › 시험 일정 › 등급컷',
+    세우기: () => { state.currentUser = { type:'teacher', name:'김하현T' }; state.view = 'teacher';
+      state.teacherTab = 'settings'; state.settingsSubTab = 'examrange'; state.examSubTab = 'cut'; state.studentDetailId = null;
+      DATA.classes[0].progress = { subject: '공통수학1' }; DATA.classes[1].progress = { subject: '확률과통계' };
+      DATA.students.forEach((s, i) => { s.school = ['대원고등학교', '광남고', '경기여자고등학교'][i % 3]; s.grade = i < 7 ? '1' : '2';
+        if(i >= 7) s.classId = 'c2'; });
+      const 날 = k => shiftYmd(todayStr(), k);
+      state.examHistory = { items: [] };
+      state.examRanges = { dates: { '대원고등학교': { '1': { start: 날(8), end: 날(12), math: 날(9) } } } };
+      state.gradeCuts = { byKey: { [curSeasonKey()]: {
+        '대원고등학교': { '1': { '공통수학1': { c1:90, c2:81, c3:72, c4:63 } } },
+        '광남고': { '1': { '공통수학1': { c1:85, c2:88 } } } } } };
+      render(); } },
   /* 직보 일정표 «전체» 그림을 실제로 구워 화면에 붙인다 — html2canvas 결과를 눈으로 본다 (2026-09-27). */
   직보일정표: { 말: '설정 › 직보 일정표 (화면)', 폭: '864',
     세우기: () => { state.currentUser = { type:'teacher', name:'김하현T' }; state.view = 'teacher';
