@@ -6149,3 +6149,9 @@ claude work/
 - 달력 시험기간: 바탕 #FDF1F2 · 날짜 #8E2A33. 수학 시험일은 꽉 찬 --no 대신 #F7DADD + 안쪽 테두리 #E29CA3 · 날짜 #7A1F29.
 - CAL_KINDS.exam 색 #8E2A33 / 바탕 #FBE3E6 (칸 안 이름·점·범례). 신호 점수 .sig-sc.warn #A3222D.
 - 빨강은 «작은 점·KPI 숫자» 정도로만. 글자를 빨강 바탕 위에 다시 올리지 말 것.
+
+### 문항 창고 — 과목 · 단원을 왼쪽 사이드에서 펼친다 (2026-10-03 · 사용자 — 「검토처럼 왼쪽 탭 아래로」)
+- storeTree() 가 셈 하나(본문·사이드가 같은 숫자) · storeSideTreeHTML() 이 사이드 줄(.sn-q .sn-all/.sn-subj/.sn-ch) — 검토 큐와 같은 꼴.
+- 사이드 모드(≥1200)에서는 본문 안 «과목 · 단원» 칸(.ist-nav)을 CSS 가 접는다. 761~1199·폰은 그 칸 그대로(사이드가 줄이라).
+- 검사: promise-notepad-test ⑦.
+- ⚠ python 으로 index.html 을 쓰면(io.open 기본) 작업본이 CRLF 가 된다 — git 은 LF 로 담지만 다음 패치가 «0개 찾음»으로 헛돈다. 패치는 읽을 때 \r\n → \n.

@@ -3970,6 +3970,11 @@
 
   /* ── P-3: 검토 — 큐는 사이드로, 목록은 위 «코드 띠»로, 원본·변형 대조가 화면을 차지한다 ── */
   .app:not(.sap):has(.tnav) .rv-queues, .app:not(.sap):has(.tnav) .rv-list{display:none;}
+  /* 문항 창고 — 과목 · 단원도 사이드로(2026-10-03). 과목 줄은 검토 큐 자리, 단원은 한 칸 더 들여 */
+  .app:not(.sap):has(.tnav):has(.subnav) .ist-nav{display:none;}
+  .app:not(.sap):has(.tnav) .subnav a.sn-q.sn-ch{margin-left:40px;height:32px;font-size:13px;}
+  .app:not(.sap):has(.tnav) .subnav a.sn-q > span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:flex;align-items:center;gap:4px;}
+  .app:not(.sap):has(.tnav) .subnav a.sn-q.sn-subj > span{font-weight:700;}
   .app:not(.sap):has(.tnav) .rv-work{padding-left:0;}
   .app:not(.sap):has(.tnav) .subnav a.sn-q{display:flex;align-items:center;justify-content:flex-start;height:34px;margin-left:18px;padding:0 10px;gap:10px;font-size:13.5px;border-radius:12px;}
   /* 아래 고정 띠(.actbar)는 사이드를 덮지 않게 본문 칸 위에만 뜬다 */
@@ -20040,7 +20045,8 @@ function teacherHTML(){
       const n = teacherSideCount(s, 벨수);
       return `<a class="${subActive(s)?'on':''}" onclick="goTeacherTab('${s[1]}'${s[2]?`,'${s[2]}'`:''})"><i class="sn-ic">${iconSvg(s[3],18)}</i><span>${s[0]}</span>${
         n ? `<b class="sb-x sn-n">${n}</b>` : ''}</a>${
-        s[1] === 'review' && state.teacherTab === 'review' ? reviewSideQueuesHTML() : ''}`;
+        s[1] === 'review' && state.teacherTab === 'review' ? reviewSideQueuesHTML()
+        : s[1] === 'unitbank' && state.teacherTab === 'unitbank' ? storeSideTreeHTML() : ''}`;
     }).join('')}${사이드.bottom}</div>` : ''}
     <div class="body">${teacherPageHeadHTML(section, subs, 머리, subActive)}${body}</div>
     ${notepadHTML()}
@@ -32314,23 +32320,41 @@ function istEditHTML(code){
 }
 
 
-function teacherItemStoreHTML(){
-  /* ⚠ 다 실리면 «다시 그려야» 한다 — 안 그리면 처음 연 사람은 빈 창고를 본다
-     (문항 코드 화면이 쓰는 것과 같은 장치다). */
-  if(!state.itemByCode) loadItemStoreIfNeeded().then(()=>{ if(state.itemByCode) render(); });
-  /* 🔵 **한 번만 가른다** — 「원본만 세운다」와 「몇 개를 접었나」가 같은 셈에서 나와야
-     둘이 어긋나지 않는다(`storeSplitVariants` 의 머리말을 볼 것). */
+/* 과목별 개수, 그리고 과목마다 단원별 개수. 코드에 박힌 자리라 이름이 바뀌어도 안 흔들린다. */
+function storeTree(){
   const { items, hidden } = storeSplitVariants();
-  const subj = state.storeSubject || '';
-  const ch   = state.storeChapter || '';
-  /* 과목별 개수, 그리고 과목마다 단원별 개수. 코드에 박힌 자리라 이름이 바뀌어도 안 흔들린다. */
   const bySubj = {}, byChOf = {};
   for(const it of items){
     const s = storeSubjectCode(it);
     bySubj[s] = (bySubj[s] || 0) + 1;
     (byChOf[s] = byChOf[s] || {})[it.chapter] = ((byChOf[s] || {})[it.chapter] || 0) + 1;
   }
-  const subjects = Object.keys(bySubj).sort();
+  return { items, hidden, bySubj, byChOf, subjects: Object.keys(bySubj).sort() };
+}
+/* 🔵 **과목 · 단원은 왼쪽 사이드에서 펼친다** (2026-10-03 · 사용자 — 「검토처럼 왼쪽 탭 아래로 펼쳐지게」).
+   검토 큐(reviewSideQueuesHTML)와 같은 줄 모양(.sn-q). 넓은 화면(사이드 모드)에서만 보이고,
+   그때 본문 안 «과목 · 단원» 칸(.ist-nav)은 CSS 가 접는다. 줄 모드·폰은 그 칸 그대로. */
+function storeSideTreeHTML(){
+  if(!state.itemByCode) return '';
+  const { items, bySubj, byChOf, subjects } = storeTree();
+  const subj = state.storeSubject || '', ch = state.storeChapter || '';
+  const 줄 = (on, cls, go, 이름, n) => `<a class="sb-x sn-q ${cls} ${on ? 'on' : ''}" onclick="${go}"><span>${이름}</span><b>${n}</b></a>`;
+  return 줄(!subj, 'sn-all', 'storeGoAll()', '전체', items.length) + subjects.map(sc => {
+    const name = CODE_SUBJECTS[sc] || sc, open = subj === sc;
+    return 줄(open && !ch, 'sn-subj', `storeGoSubject('${sc}')`, iconSvg(open ? 'chevD' : 'chevR', 12) + ' ' + escHtml(name), bySubj[sc])
+      + (!open ? '' : Object.keys(byChOf[sc] || {}).sort().map(c =>
+        줄(ch === c, 'sn-ch', `storeGoChapter('${sc}','${c}')`, escHtml(chapterNameOfNo(name, c) || (c + '단원')), byChOf[sc][c])).join(''));
+  }).join('');
+}
+function teacherItemStoreHTML(){
+  /* ⚠ 다 실리면 «다시 그려야» 한다 — 안 그리면 처음 연 사람은 빈 창고를 본다
+     (문항 코드 화면이 쓰는 것과 같은 장치다). */
+  if(!state.itemByCode) loadItemStoreIfNeeded().then(()=>{ if(state.itemByCode) render(); });
+  /* 🔵 **한 번만 가른다** — 「원본만 세운다」와 「몇 개를 접었나」가 같은 셈에서 나와야
+     둘이 어긋나지 않는다(`storeSplitVariants` 의 머리말을 볼 것). */
+  const { items, hidden, bySubj, byChOf, subjects } = storeTree();
+  const subj = state.storeSubject || '';
+  const ch   = state.storeChapter || '';
   let list = items.filter(x => storeMatches(x, subj, ch));
   /* 출처 교재 — 고른 단원 «안에서» 센다. 전체 기준으로 세면 눌렀을 때 0건이 나온다. */
   const byBook = {};
@@ -32416,7 +32440,7 @@ function teacherItemStoreHTML(){
   };
 
   return `<div class="ex-screen">
-    <aside class="ex-list ex-nav">
+    <aside class="ex-list ex-nav ist-nav">
       <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;padding-bottom:10px;">
         <span class="t-sec" style="margin:0;">과목 · 단원</span>
       </div>

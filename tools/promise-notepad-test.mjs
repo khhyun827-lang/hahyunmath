@@ -71,6 +71,16 @@ try{
   await page.click('.topbar .tnav a:has-text("문항관리")');
   봄('⑥ 문항관리를 누르면 문항 창고', await page.evaluate(() => state.teacherTab), 'unitbank');
   봄('⑥ 서브탭 맨 앞이 문항 창고', await page.$$eval('.subnav > a', e => e.map(x => x.textContent.trim()).slice(0, 3)), ['문항 창고', '검토', '시험지']);
+
+  /* ⑦ 과목 · 단원은 사이드에서 펼친다(2026-10-03) — 본문 안 칸은 접힌다 */
+  await page.evaluate(무대들.창고그림.세우기);
+  await page.evaluate(() => { state.icOpen = null; state.storeSubject = ''; state.storeChapter = ''; render(); });
+  봄('⑦ 본문 안 «과목 · 단원» 칸은 안 보인다', await page.$eval('.ist-nav', e => e.offsetWidth), 0);
+  await page.locator('.subnav a.sn-subj').first().click();
+  const 단원 = await page.$$eval('.subnav a.sn-ch', e => e.length);
+  봄('⑦ 과목을 누르면 단원이 사이드에 펼쳐진다', 단원 > 0, true);
+  await page.locator('.subnav a.sn-ch').nth(1).click();
+  봄('⑦ 단원을 누르면 그 단원만', await page.evaluate(() => [state.storeSubject, !!state.storeChapter, document.querySelector('.subnav a.sn-ch.on') ? 1 : 0]), ['K2', true, 1]);
 } finally {
   await 브라우저.close(); 서버.kill();
 }
