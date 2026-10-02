@@ -79,6 +79,15 @@ try{
   /* ⑤ gotoHwWaiting 은 바로 그린다(벨) */
   await page.evaluate(() => gotoHwWaiting());
   봄('⑤ 반 › 과제가 바로 그려진다', await page.evaluate(() => [state.teacherTab, state.classHubTab, document.querySelector('.tnav a.on').textContent.trim()]), ['classhub', 'homework', '반']);
+  /* ⑥ 반 명단은 이름순 (2026-10-03) — 넣은 순서가 뒤섞여 있어도. 출결 판·성적 표가 이 순서를 그대로 쓴다 */
+  const 순서 = await page.evaluate(() => {
+    const c = DATA.classes[0]; DATA.students.reverse();
+    const 이름 = l => l.map(s => s.name), 정렬 = l => l.slice().sort((a, b) => a.localeCompare(b, 'ko'));
+    const 출결 = 이름(classRoster(c.id)), 성적 = 이름(classRosterAll(c.id));
+    state.teacherTab = 'classhub'; state.classHubId = c.id; state.classHubTab = 'scores'; render();
+    return [출결.length > 2 && JSON.stringify(출결) === JSON.stringify(정렬(출결)), JSON.stringify(성적) === JSON.stringify(정렬(성적))];
+  });
+  봄('⑥ 반 명단 이름순 (출결 · 성적)', 순서, [true, true]);
   봄('페이지 오류 없음', 오류, []);
 } finally {
   await 브라우저.close(); 서버.kill();

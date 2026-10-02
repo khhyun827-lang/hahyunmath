@@ -6172,3 +6172,8 @@ claude work/
 - 🔴 loadMemoIfNeeded 가 events 를 들고 와야 한다 — 빠뜨리면 할 일 체크(memoSave 가 통째로 씀) 순간 일정이 지워진다. memo-test 가 문다(확인함).
 - 시각 순서: «08:30» 같은 두 자리 24시 꼴은 그대로(아침이 저녁으로 안 밀린다).
 - CAL_KINDS.mine 색 회색 → #3E64B3 (학생 달력 «내 일정»도 같이).
+
+### 반 명단은 이름순 (2026-10-03 · 사용자 — 「반탭 성적·출결이 이름순인 줄 알았는데 아니네」)
+- classRosterAll(classId) = 반 학생 전부(퇴원 포함) 가나다순 · classRoster = 그중 재원생 · jikboRoster 도 이름순. 비교는 byKoName(함수 선언 — 검사가 떠 간다).
+- 예전엔 DATA.students 순서(넣은 순서). 성적·시험 쪽 7곳이 `DATA.students.filter(…includes(classId))` 를 따로 짓고 있었다 → 전부 classRosterAll.
+- 새 명단을 지을 때 filter 를 다시 쓰지 말 것 — 정렬이 빠진다. 검사: quick-action-test ⑥.

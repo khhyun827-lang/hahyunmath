@@ -9290,7 +9290,14 @@ function attRateOf(list){
 
 function classRoster(classId){
   if(isJikboSession(classId)) return jikboRoster(classId);   // 직보는 반이 아니라 «그 날 그 학교»다
-  return DATA.students.filter(s=>studentClassIds(s).includes(classId) && !isWithdrawn(s));
+  return classRosterAll(classId).filter(s=>!isWithdrawn(s));
+}
+/* 🔵 **반 명단은 늘 이름순** (2026-10-03 · 사용자 — 「반탭 성적·출결이 이름순인 줄 알았는데 아니네」).
+   예전엔 DATA.students 순서(넣은 순서)였다. 명단을 짓는 곳이 여럿이라 여기 한 곳에서 정렬한다 —
+   퇴원생까지 담는 명단(성적·시험 — «이미 있었던 일»이라 남아야 한다)도 이것을 쓴다. */
+function byKoName(a, b){ return String(a.name || '').localeCompare(String(b.name || ''), 'ko'); }
+function classRosterAll(classId){
+  return DATA.students.filter(s=>studentClassIds(s).includes(classId)).sort(byKoName);
 }
 async function doStudentLogin(){
   const idInput = document.getElementById('login-id').value.trim();
@@ -21691,7 +21698,7 @@ function jikboCellOn(s, date){
 function jikboRoster(id){
   const p = jikboParse(id);
   if(!p) return [];
-  return DATA.students.filter(s => !isWithdrawn(s) && (s.school || JIKBO_NO_SCHOOL) === p.school && jikboCellOn(s, p.date));
+  return DATA.students.filter(s => !isWithdrawn(s) && (s.school || JIKBO_NO_SCHOOL) === p.school && jikboCellOn(s, p.date)).sort(byKoName);
 }
 function jikboSessionsOn(date){
   const by = {};
@@ -22658,7 +22665,7 @@ async function hwQuickAll(classId, hwId){
 function sessionExamHTML(classId, date){
   const ym = String(date).slice(0,7);
   const exams = classExams(classId, ym);
-  const roster = DATA.students.filter(s=>studentClassIds(s).includes(classId));
+  const roster = classRosterAll(classId);
   const scored = ex => roster.filter(s=>examScoreOf(state.allRecords[s.studentId], ex.id)).length;
   if(state.sessionExamId && !exams.some(e=>e.id===state.sessionExamId)) state.sessionExamId = '';
   /* 오늘 본 시험이 있으면 그것부터. 없으면 그 달 마지막 시험.
@@ -23482,7 +23489,7 @@ function chubScoresHTML(classId){
   const ym = chubYm();
   const exams = classExams(classId, ym);
   /* ⚠ 여기도 `classRoster`를 안 쓴다 — 시험은 «이미 있었던 일»이라 퇴원생 점수도 남아야 한다. */
-  const roster = DATA.students.filter(s=>studentClassIds(s).includes(classId));
+  const roster = classRosterAll(classId);
   const adding = state.scoreAddFor === classId;
 
   const addBar = scoreKindSegHTML() + chubMonthBarHTML(`시험 <b>${exams.length}</b>개`)
@@ -23702,7 +23709,7 @@ function chubSchoolHTML(classId){
   const [year, season] = term.split(' · ');
   const ym = state.nsYm || ymNow();
   /* 성적 탭과 같다 — 이미 있었던 일이라 퇴원생도 남긴다. */
-  const roster = DATA.students.filter(s=>studentClassIds(s).includes(classId));
+  const roster = classRosterAll(classId);
   const y0 = Number(todayStr().slice(0,4));
   const years = [...new Set([y0, y0-1, y0-2, Number(year)])].sort((a,b)=>b-a);
 
@@ -23767,7 +23774,7 @@ async function saveSchoolScores(classId){
   const term = state.nsTerm || nsDefaultTerm();
   const ym = state.nsYm || ymNow();
   const key = mock ? 'mockExams' : 'schoolExams';
-  const roster = DATA.students.filter(s=>studentClassIds(s).includes(classId));
+  const roster = classRosterAll(classId);
   let saved = 0, cleared = 0; const bad = [];
   for(const st of roster){
     const el = document.getElementById('ns-s-'+st.studentId);
@@ -23910,7 +23917,7 @@ async function saveClassScores(classId, examList){
      🔵 수업 화면은 «그 시험 하나»만 넘긴다 (2026-09-01 · C-19) — 거기는 달 고르개가 없고
        한 번에 한 시험만 화면에 있다. 같은 규칙의 다른 표현이다: 화면에 있는 것만 읽는다. */
   const exams = examList || classExams(classId, chubYm());
-  const roster = DATA.students.filter(s=>studentClassIds(s).includes(classId));
+  const roster = classRosterAll(classId);
   /* 만점부터 거둔다 — 점수를 읽기 전에 시험마다 만점이 정해져 있어야 한다. */
   const totals = {};
   for(const ex of exams){
@@ -28340,7 +28347,7 @@ function examScoreOf(rec, examId){
 }
 function examScoreStats(ex){
   /* ⚠ 여기도 classRoster를 안 쓴다 — 시험은 «이미 있었던 일»이다 (W-1과 같은 이유). */
-  const roster = DATA.students.filter(s=>studentClassIds(s).includes(ex.classId));
+  const roster = classRosterAll(ex.classId);
   const pts = [];
   roster.forEach(s=>{
     const sc = examScoreOf(state.allRecords[s.studentId], ex.id);
@@ -28619,7 +28626,7 @@ function examSubmissionsHTML(ex){
   /* ⚠ **여기는 일부러 `classRoster`를 안 쓴다** (W-1 · 2026-08-26) — 시험은 «이미 있었던 일»이다.
      퇴원생을 빼면 **그때 20명이 봤던 시험이 나중에 18명으로 보인다.** 과거를 고쳐 쓰는 셈이다.
      사용자가 「앞으로의 일에서만 뺀다」로 정했다. */
-  const roster = DATA.students.filter(s=>studentClassIds(s).includes(ex.classId));
+  const roster = classRosterAll(ex.classId);
   const banks = examBanks(ex);
 
   const rows = roster.map(s=>{
