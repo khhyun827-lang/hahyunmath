@@ -1544,6 +1544,23 @@
   padding:13px 15px;margin-top:14px;flex-shrink:0;}
 @media (max-width:1280px){ .app .sd-ctx{display:none;} }
 @media (max-width:1020px){ .app .sd-list{display:none;} }
+/* 이름 찾기 줄 (2026-10-02) — 옛 왼쪽 명단 자리를 대신한다 */
+.app .sd-find{display:flex;align-items:center;gap:10px;flex-shrink:0;margin-bottom:14px;flex-wrap:wrap;}
+.app .sd-find-f{flex:1;min-width:200px;max-width:420px;}
+.app .sd-find-f input{flex:1;min-width:0;border:0;outline:none;background:transparent;font:inherit;color:var(--ink);}
+.app .sd-sub{font-size:11.5px;font-weight:700;color:var(--dim);margin:10px 0 2px;}
+.app .sd-more{font-size:12px;color:var(--sub);cursor:pointer;display:inline-flex;align-items:center;gap:2px;}
+.app .sd-more:hover{color:var(--ink);}
+/* 넓은 화면 — 시안 꼴: 본문과 오른쪽 칸을 흰 판 둘로. 옛 «본문 패딩 되먹임»(-20px)이 판 위로 칸을 밀어 연락처가 잘렸다 */
+@media (min-width:1200px){
+  #app:has(.tnav) .app:not(.sap) .sd-screen{gap:14px;}
+  #app:has(.tnav) .app:not(.sap) .sd-doc{padding:18px 22px 0;background:rgba(255,255,255,.92);border:1px solid #ECEEF3;border-radius:22px;}
+  #app:has(.tnav) .app:not(.sap) .sd-ctx{margin:0;padding:18px 18px 8px;border:1px solid #ECEEF3;border-radius:22px;background:rgba(255,255,255,.92);width:300px;}
+  #app:has(.tnav) .app:not(.sap) .sd-dh h1.t-title{font-size:30px;line-height:38px;}
+  #app:has(.tnav) .app:not(.sap) .sd-dh .av.lg{border-radius:50%;background:#EEF0F4;color:#3A4156;font-size:15px;font-weight:800;letter-spacing:-.04em;}
+  #app:has(.tnav) .app:not(.sap) .sd-day{background:#fff;}
+  #app:has(.tnav) .app:not(.sap) .sd-ev::before{border-color:#fff;}
+}
 
 /* ---------- 소통 4종 (design-v1/09~12) ----------
    네 화면이 성격이 다르다. 통일해야 하는 것은 색·서체·간격·버튼이지 «형태»가 아니다 —
@@ -4145,7 +4162,6 @@
   #app:has(.tnav) .app:not(.sap) .rv-fold .rv-fh{display:none;}
   /* 수업 — 「지난 수업 보기」는 제목 줄 오른쪽 */
   #app:has(.tnav) .app:not(.sap) .cls-mh{position:relative;}
-  #app:has(.tnav) .app:not(.sap) .cls-mh .cls-prevgo{display:inline-flex;position:absolute;right:0;top:12px;}
   /* 설정 — 사이드 바닥 «내 계정» 카드 */
   #app:has(.tnav) .app:not(.sap) .st-nav{display:flex;flex-direction:column;}
   #app:has(.tnav) .app:not(.sap) .st-nav .ex-lbody{flex:1;min-height:0;overflow:auto;}
@@ -4234,7 +4250,7 @@
 .app .rv-ifspec[open] summary{margin:0 auto 4px;}
 .app .rv-ifdl{display:flex;justify-content:center;gap:2px;margin-bottom:4px;}
 .app .rv-reuse{display:flex;align-items:center;gap:7px;margin:0 0 8px;font-size:12px;}
-.app .rv-wpos, .app .rv-ours, .app .rv-vchip, .app .rv-solgo, .app .cls-prevgo, .app .st-acct{display:none;}
+.app .rv-wpos, .app .rv-ours, .app .rv-vchip, .app .rv-solgo, .app .st-acct{display:none;}
 .app .hm-chip.todo{background:#E3EAF5;color:#1E2E52;} .app .hm-chip.todo i{background:#1E2433;}
 /* 수업 아래 띠의 출결 셈 — 칩은 넓은 화면(시안)만. 줄 모드·폰은 글자 한 줄(864 에서 칩이면 띠가 두 줄로 넘쳐 단추가 화면 밖으로 밀렸다) */
 @media (max-width:1199px){
@@ -5516,6 +5532,10 @@
   transition-duration:var(--t-press);
   transition-timing-function:var(--ease-squash);
 }
+/* 🔴 **강사 화면의 «긴 줄»은 안 눌린다** (2026-10-02 · 사용자 — 「설정 › 학생·조교·반에서 체크박스를 누르면 과도한 애니메이션」).
+     줄 하나가 판 폭(≈1000px)이라 0.92 면 양쪽이 40px 씩 오그라들었다 튕긴다 — 체크박스 하나 눌렀는데 목록이 출렁인다.
+     줄 안의 단추·체크는 제 손맛(아래 .btn 등)이 그대로 있다. 학생 앱(.sap)은 그대로다. */
+.app.app:not(.sap) .st-row, .app.app:not(.sap) .st-row:active{transform:none;}
 /* 아이콘 칩은 제 안에서만 눌린다 — 줄 전체가 들썩이면 목록이 흔들린다 */
 .app.app .sap-quick a:active i{transform:scale(var(--press));
   transition-duration:var(--t-press);transition-timing-function:var(--ease-squash);}
@@ -21831,7 +21851,6 @@ function teacherSessionHTML(){
   return `<div class="cls-screen">${side}
     <main class="cls-main">
       <div class="cls-mh">
-        <button class="btn cls-prevgo" onclick="goSessionStep('prev')">지난 수업 보기</button>
         <s class="cls-crumb">수업 · ${escHtml(stuDayLabel(date))} · ${escHtml(sessionTimeText(cls.schedule, new Date(date + 'T00:00:00').getDay()) || '시간 미정')}</s>
         ${/* schedule을 통째로 붙이면 시간이 두 번 나온다 — 요일만 따로 뽑아 잇는다. */''}
         <h1 class="t-title">${escHtml(cls.name)}<s>${escHtml(sessionTimeText(cls.schedule) || '시간 미정')}${
@@ -23223,6 +23242,23 @@ function nsSchoolGrade(s, x){
 /* 학생 상세 › 연대기 › 성적 갈래에 붙는 «학교 시험 · 모의고사» 한 판 (2026-09-29 · 사용자).
    ⚠ 연대기 줄로 섞지 않는다 — 학교 시험은 «학기», 모의고사는 «달»만 있어 날짜를 지어내야 한다. 판으로 따로 둔다.
    보기만 한다. 넣는 곳은 반 › 성적 하나다(학원 시험과 같은 규칙). */
+/* 오른쪽 칸의 성적 — 학교 시험 · 모의고사 최근 셋씩 (2026-10-02 · 사용자 — 「학교 또는 모의고사 성적이 기록되면 우측에」).
+   넣는 곳은 여전히 반 › 성적 하나다. 여기는 «본다» — 줄을 누르면 연대기의 성적 갈래로 간다. */
+function sdCtxScoresHTML(s, rec){
+  const sc = (rec.schoolExams || []).slice().sort((a,b)=>nsTermRank(b.term)-nsTermRank(a.term)).slice(0, 3);
+  const mk = (rec.mockExams || []).slice().sort((a,b)=>String(b.ym).localeCompare(String(a.ym))).slice(0, 3);
+  const gl = g => !g ? '' : ' · ' + (String(g).endsWith('~') ? String(g).slice(0,-1) + '등급↓' : g + '등급');
+  const row = (when, what) => `<div class="sd-crow"><span>${escHtml(when)}</span><b>${what}</b></div>`;
+  const 빈 = '<div class="sd-crow"><span>적어 둔 기록이 없습니다</span></div>';
+  return `<div class="row" style="justify-content:space-between;align-items:center;">
+      <div class="t-sec" style="margin:0;">성적</div>
+      <a class="sd-more" onclick="sdFilter('score')">전체 ${iconSvg('chevR',12)}</a></div>
+    <div class="sd-sub">학교 시험</div>
+    ${sc.length ? sc.map(x => { const g = nsSchoolGrade(s, x);
+      return row(String(x.term || '').replace(/^\d{4} · /, ''), `${escHtml(x.subject || '')} ${x.score}점${escHtml(gl(g.g))}`); }).join('') : 빈}
+    <div class="sd-sub">모의고사</div>
+    ${mk.length ? mk.map(x => row(x.ym, `${x.score}점${escHtml(gl(x.grade || ''))}`)).join('') : 빈}`;
+}
 function sdSchoolScoresHTML(s, rec){
   const sc = (rec.schoolExams || []).slice().sort((a,b)=>nsTermRank(b.term)-nsTermRank(a.term));
   const mk = (rec.mockExams || []).slice().sort((a,b)=>String(b.ym).localeCompare(String(a.ym)));
@@ -24181,7 +24217,7 @@ function studentTimeline(s, rec){
       pct!==null ? `<span class="badge score">${pct}%</span>` : '',
       `<button class="btn q sm" onclick="deleteScore('${sid}',${i})">삭제</button>`, 'k-score');
   });
-  DATA.assignments.filter(a=>!a.classId || a.classId===s.classId).forEach(a=>{
+  DATA.assignments.filter(a=>!a.classId || studentClassIds(s).includes(a.classId)).forEach(a=>{
     /* 연대기는 «무슨 일이 있었나»라 상태를 넷 그대로 보여 준다 —
        완료/미완료로 뭉개면 «냈는데 아직 확인 안 됨»이 미완료로 보인다. */
     const stt = hwState(rec, a.id);
@@ -24247,6 +24283,19 @@ function studentTimeline(s, rec){
      있다가 옆에 다른 학생 누르면 바로 이번달 리포트 이어서 볼 수 있으면」). 달(`state.reportYm`)은 학생과 무관하게
      하나라 저절로 이어진다. 채팅도 같은 규칙이다 — 갈래마다 다르게 굴면 다음에 한쪽만 고쳐진다.
    ⚠ 명단·신호에서 «들어올» 때는 예전대로 연대기다 — 그때는 아직 아무 학생도 안 보고 있었다(`studentDetailId` 가 빈다). */
+/* 학생 상세의 «이름 찾기» (2026-10-02 · 사용자 — 「같은 반 명단은 공간만 차지하고 불편 · 뒤로 나가지 않고 이름 적는 검색창」).
+   입력은 브라우저의 datalist 가 맡는다 — 글자마다 render() 를 돌리지 않아 한글 조합이 안전하다(노트 «한글 조합과 다시 그리기»).
+   후보 글은 「이름 · 학교 학년 · 반」 — 같은 이름이 둘이어도 고를 수 있다. 이름만 쳐도(Enter) 첫 사람이 열린다. */
+function sdSearchLabel(x){ return [x.name || '', [(x.school || ''), (x.grade || '')].join(' ').trim(), classNameOf(x.classId) || ''].filter(Boolean).join(' · '); }
+function sdSearchGo(v){
+  v = String(v || '').trim();
+  if(!v) return;
+  const 사람 = DATA.students.find(x => sdSearchLabel(x) === v) || DATA.students.find(x => x.name === v)
+    || DATA.students.find(x => (x.name || '').includes(v));
+  if(!사람){ showToast('「' + v + '」 학생을 찾지 못했습니다.'); return; }
+  if(사람.studentId === state.studentDetailId) return;
+  sdOpen(사람.studentId);
+}
 function sdOpen(sid, filter){
   const 이어보기 = !!state.studentDetailId && !filter;
   state.studentDetailId = sid;
@@ -25347,6 +25396,17 @@ function sdScreenHTML(s, rec, isAssistant){
   const peerCid = studentPrimaryClassId(s);
   const peers = (peerCid ? DATA.students.filter(x=>studentClassIds(x).includes(peerCid)) : DATA.students)
     .slice().sort((a,b)=>(a.name||'').localeCompare(b.name||'','ko'));
+  /* ⚠ 옛 왼쪽 명단(아래 list)은 더는 화면에 안 붙인다 — 지우지 않은 것은 조교 화면·인쇄 규칙이 클래스를 참조해서다 */
+  const 찾기 = `<div class="sd-find">
+    <button class="btn q sm" onclick="state.studentDetailId=null; render()">${iconSvg('chevL',13)} ${
+      state.teacherTab==='signals' ? '신호로' : '학생 명단으로'}</button>
+    <span class="field sd-find-f">${iconSvg('search',14)}
+      <input list="sd-find-list" placeholder="다른 학생 — 이름을 적고 Enter" autocomplete="off"
+        onkeydown="if(event.keyCode===13){ sdSearchGo(this.value); }" onchange="sdSearchGo(this.value)"></span>
+    <datalist id="sd-find-list">${DATA.students.filter(x => !isWithdrawn(x) || x.studentId === sid)
+      .slice().sort((a,b)=>(a.name||'').localeCompare(b.name||'','ko'))
+      .map(x => `<option value="${escHtml(sdSearchLabel(x))}"></option>`).join('')}</datalist>
+  </div>`;
   const list = `<aside class="sd-list">
     <div class="sd-lh">
       ${/* 돌아갈 곳의 «이름»을 그대로 적는다 — 반 안에서 열었으면 명단이 아니라 그 반으로 간다. */''}
@@ -25371,7 +25431,7 @@ function sdScreenHTML(s, rec, isAssistant){
 
   const head = `
   <div class="sd-dh">
-    <div class="av lg">${escHtml((s.name||'?').slice(0,1))}</div>
+    <div class="av lg" title="${escHtml(s.school||'')}">${escHtml(s.school ? schoolShort(s.school) : (s.name||'?').slice(0,1))}</div>
     <div style="min-width:0;">
       <h1 class="t-title">${escHtml(s.name)}</h1>
       <div class="t-meta" style="margin-top:6px;">${escHtml(s.school||'학교 미입력')} ${escHtml(s.grade||'')}<s>·</s>${escHtml(studentClassTitle(s))}<s>·</s><span class="mono">${escHtml(sid)}</span></div>
@@ -25435,6 +25495,8 @@ function sdScreenHTML(s, rec, isAssistant){
          ⚠ 나머지 셋(채팅·클리닉 배정·수업 화면)은 **아직 정하지 않은 자리다** —
            사용자가 「추후에 활용도가 높은 걸 다시 이야기하면 그때 수정하자」고 했다.
            혼자 갈아끼우지 말 것. */''}
+    ${sdCtxScoresHTML(s, rec)}
+    <hr class="s">
     <div class="t-sec">빠른 작업</div>
     <div class="sd-qa">
       <button class="btn ${mode==='chat'?'p':''}" onclick="sdMode('${mode==='chat'?'timeline':'chat'}')">${mode==='chat'?'연대기로':'채팅'}</button>
@@ -25494,8 +25556,8 @@ function sdScreenHTML(s, rec, isAssistant){
       <div><b style="color:var(--ink);">여기서 할 수 없는 것</b> — 기본정보 수정 · 반 이동 ·
       학생 삭제 · 채팅 · 클리닉 승인. 강사에게 요청해 주세요.</div></div>`;
 
-  return `<div class="sd-screen">${list}
-    <main class="sd-doc">${head}${center}${lock}</main>
+  return `<div class="sd-screen">
+    <main class="sd-doc">${찾기}${head}${center}${lock}</main>
     ${isAssistant ? '' : ctx}
   </div>`;
 }
@@ -25509,7 +25571,19 @@ function sdTimelineHTML(s, sid, rec, isAssistant){
   /* 갈래를 뺐으면 연대기에서도 빼야 한다. 「전체」에만 남겨 두면 갈래 합(24)과
      전체(27)가 어긋나고, 숫자가 안 맞는 화면은 그 순간부터 아무도 안 믿는다. */
   const all = studentTimeline(s, rec).filter(e=>!isAssistant || (e.kind!=='qna' && e.kind!=='consult'));
-  const ev = f==='all' ? all : all.filter(e=>e.kind===f);
+  /* 🔵 **「전체」에서는 데일리퀴즈를 그날 한 줄로 묶는다** (2026-10-02 · 사용자 — 「전체로 되어 있을 때 과제 등이 뜨지 않음」).
+       퀴즈는 하루에 여러 장이 쌓여 전체 목록이 퀴즈로 덮였고, 과제·출결이 한참 밑으로 밀렸다. 「과제·오답」 갈래에서는 낱장 그대로다. */
+  const 묶기 = list => { const out = [], 날 = {};
+    list.forEach(e => {
+      if(e.type !== '퀴즈'){ out.push(e); return; }
+      const ok = /badge ok/.test(e.badge || '');
+      if(!날[e.date]){ 날[e.date] = { date:e.date, kind:'hw', type:'퀴즈', n:0, ok:0 }; out.push(날[e.date]); }
+      날[e.date].n++; if(ok) 날[e.date].ok++;
+    });
+    Object.values(날).forEach(d => { d.title = '데일리퀴즈 ' + d.n + '문항'; d.desc = '';
+      d.badge = '<span class="badge ' + (d.ok === d.n ? 'ok' : d.ok ? 'late' : 'no') + '">정답 ' + d.ok + '/' + d.n + '</span>'; });
+    return out; };
+  const ev = f==='all' ? 묶기(all) : all.filter(e=>e.kind===f);
 
   /* 갈래를 고르면 그 갈래의 입력 폼이 붙는다. 예전 탭에만 있던 입력을 여기서 되살린다. */
   let form = '';
@@ -25532,7 +25606,7 @@ function sdTimelineHTML(s, sid, rec, isAssistant){
       <span class="muted" style="font-size:11.5px;align-self:center;">반 전체는 반 관리 &gt; 수업 기록에서 한 번에 넣습니다</span>
     </div></div>`;
   } else if(f==='hw'){
-    const myHw = DATA.assignments.filter(a=>!a.classId || a.classId===s.classId);
+    const myHw = DATA.assignments.filter(a=>!a.classId || studentClassIds(s).includes(a.classId));   // 겹쳐 듣는 반 것도 (2026-10-02)
     /* 낸 것이 위로 온다 — 이 화면에서 할 일은 «확인해 주는 것»이다. */
     const ordered = myHw.slice().sort((a,b)=>{
       const rank = x => hwState(rec, x.id).status===HW_SUBMITTED ? 0
