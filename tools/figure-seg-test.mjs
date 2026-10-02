@@ -156,7 +156,8 @@ console.log(NL + '⑤ 그림에 그대로 나온다' + NL);
   const svg = F.renderScene(s);
   const 점선수 = (svg.match(/stroke-dasharray="7 6"/g) || []).length;
   봄('점선 둘 (seg:0 · seg:1)', 점선수, 2);
-  봄('더한 실선이 그려진다', /<path d="M[\d.]+ [\d.]+L[\d.]+ [\d.]+" stroke-width="2"\/>/.test(svg), true);
+  /* 2026-10-02 도형 선 굵기 2 → 3.2 (사용자 — 「축 말고 도형 선을 굵게」) */
+  봄('더한 실선이 그려진다', /<path d="M[\d.]+ [\d.]+L[\d.]+ [\d.]+" stroke-width="3.2"\/>/.test(svg), true);
   봄('🔴 검산은 그대로 돈다 (창 밖으로 안 나갔다)',
     (F.verifyScene(s).failures || []).filter(f => /선분/.test(f.msg || '')).length, 0);
 
@@ -220,7 +221,7 @@ console.log(NL + '⑦ 동그라미와 글자를 «따로» 고르고 따로 숨�
        · `point:i`     — 점을 통째로. **옛 표라 뜻을 안 바꾼다** — 이미 저장된 장면이 쓰고 있다. */
   const 짓기 = () => ({ kind: 'graph', polygons: [{ pts: [[0, 0], [4, 0], [4, 3]] }],
     points: [{ x: 4, y: 3, label: 'B', dot: true }, { x: 0, y: 0, label: 'A', dot: true }], axis: {} });
-  const 동그라미 = svg => (svg.match(/<circle [^>]*r="4"[^>]*fill="currentColor"/g) || []).length;
+  const 동그라미 = svg => (svg.match(/<circle [^>]*r="5\.5"[^>]*fill="currentColor"/g) || []).length;   // 점 반지름 4 → 5.5 (2026-10-02)
   /* ⚠ **정규식을 «문자열»로 짓다가 당했다** — `new RegExp('[\\s\\S]')` 를 옮기는 사이 백슬래시가
        깎여 `[sS]` 가 되었고, 그러면 아무 글자도 못 찾아 **「글자가 없다」가 언제나 참**이었다.
        「글자만 감춘다」가 조용히 초록이던 까닭이 그것이다. 여기서는 «자르기»로 푼다 — 백슬래시가 없다.
@@ -277,7 +278,7 @@ console.log(NL + '⑦ 동그라미와 글자를 «따로» 고르고 따로 숨�
     })(), [-1, true]); }
 
   { const s = 짓기(); F.setHidden(s, 'dot:0', true);
-    봄('점만 숨겨도 다각형은 그대로다', (F.renderScene(s).match(/stroke-width="2"/g) || []).length > 0, true); }
+    봄('점만 숨겨도 다각형은 그대로다', (F.renderScene(s).match(/stroke-width="3\.2"/g) || []).length > 0, true); }
 }
 
 console.log(NL + '🪤 덫 — 옛 판으로 돌려 본다' + NL);

@@ -50,6 +50,12 @@ try{
   봄('누르면 크게 본다', await page.$eval('.hw-view img', e => e.src.startsWith('data:image/svg+xml')), true);
   await page.evaluate(() => closeHwPhoto());
 
+  /* 저장된 SVG 는 옛 크기로 굳어 있다 — 장면이 있으면 그 장면으로 다시 그린다(figSvgOf · 2026-10-02 글자·선 키움) */
+  await page.evaluate(() => { const v = state.variants.K2[0]; v.image = { ...v.image, svg: '<svg data-old="1"></svg>' }; render(); });
+  봄('🔴 저장된 옛 SVG 대신 장면으로 다시 그린다(새 선 굵기 3.4)', await page.$eval('.side.ai .rv-ifig', e => [!!e.querySelector('[data-old]'), /stroke-width="3\.4"/.test(e.innerHTML)]), [false, true]);
+  await page.evaluate(() => { const v = state.variants.K2[0]; v.image = { kind:'svg', svg: '<svg data-old="1"></svg>' }; render(); });
+  봄('장면이 없으면 저장된 SVG 그대로', await page.$eval('.side.ai .rv-ifig', e => !!e.querySelector('[data-old]')), true);
+
   await page.evaluate(() => { state.figureDrafting = 'K2-02-E-0139-N01'; render(); });
   봄('편집·초안 중에는 넓은 편집 상자가 위에', await page.evaluate(() => document.querySelectorAll('.rv-body > .rv-fig').length), 1);
 } finally {

@@ -5796,7 +5796,7 @@ html.it-fly .lp .l-hero .l-logo{opacity:1 !important;transform:none !important;
      index.html 과 따로 받아지므로 물음표 뒤가 그대로면 브라우저가 옛 파일을 그냥 쓴다.
      ⚠ 그래서 09-15에 고친 «축 길이»가 사용자 브라우저에 며칠째 안 닿았을 수 있다
        (사용자 — 「수정했던것 같은데 … 이번에도 그림에서 축이 또 길게 나와서」). -->
-<script src="figure.js?v=2026-09-18e"></script>
+<script src="figure.js?v=2026-10-02b"></script>
 <!-- hwpx 문항 파서. 아래 인라인 스크립트가 전역으로 쓰므로 «그 앞»에 있어야 한다.
      도구(tools/hwpx-node.mjs)도 같은 파일을 읽는다 — 규칙을 두 벌로 두지 않는다. -->
 <!-- 🔴 **hwpx.js 를 고치면 `?v=` 도 같이 올릴 것** (2026-09-04에 하마터면 놓칠 뻔했다).
@@ -14174,10 +14174,24 @@ function pbImageSrc(bankId, kind){
    ⚠ SVG를 innerHTML로 넣는다. **모델이 낸 SVG는 절대 저장하지 않는다** — 저장하는 것은
    figure.js의 renderScene()이 «장면»에서 만들어 낸 것뿐이고, 거기서 글자는 전부 이스케이프된다.
    이 불변식이 깨지면 그 자리가 곧 스크립트 주입 구멍이다. */
+/* 🔵 **저장된 SVG 는 «그 때의 크기»로 굳어 있다** (2026-10-02 · 사용자 — 「문자 더 키우고 축 말고 도형 선을 굵게」).
+     figure.js 의 글자·선 굵기를 키워도 저장된 문자열은 옛 모양 그대로라, 장면(scene)이 같이 저장돼 있으면 **그 장면으로 다시 그린다.**
+     같은 장면 객체는 한 번만 그린다(WeakMap). 장면이 없거나 그리다 걸리면 저장된 문자열을 쓴다.
+   ⚠ 여전히 figure.js 가 장면에서 만든 것만 넣는다 — 모델이 낸 SVG 는 들이지 않는다(아래 불변식). */
+const figSvgMemo = new WeakMap();
+function figSvgOf(img){
+  if(!img || typeof img !== 'object') return '';
+  const sc = img.scene;
+  if(sc && typeof sc === 'object' && typeof Figure !== 'undefined'){
+    if(figSvgMemo.has(sc)) return figSvgMemo.get(sc);
+    try{ const svg = Figure.renderScene(sc); figSvgMemo.set(sc, svg); return svg; }catch(e){}
+  }
+  return img.svg || '';
+}
 /* 창고 변형이 «자기 안에» 든 그림 — {kind:'svg', svg} 또는 {url}. 문서 하나에 다 있어 캐시가 필요 없다. */
 function variantImageHTML(img, cls){
   if(!img || typeof img !== 'object') return '';
-  if(img.kind === 'svg' && img.svg) return `<div class="${cls} pb-svg">${img.svg}</div>`;
+  if(img.kind === 'svg' && img.svg) return `<div class="${cls} pb-svg">${figSvgOf(img)}</div>`;
   if(img.url) return `<img class="${cls}" src="${escHtml(img.url)}">`;
   return '';
 }
@@ -14185,7 +14199,7 @@ function pbImageHTML(bankId, kind, cls){
   ensurePbImage(bankId, kind);
   const v = state.pbImageCache[pbImgCacheKey(bankId, kind)];
   if(v && typeof v === 'object' && v.kind === 'svg' && v.svg)
-    return `<div class="${cls} pb-svg">${v.svg}</div>`;
+    return `<div class="${cls} pb-svg">${figSvgOf(v)}</div>`;
   const src = pbImageSrc(bankId, kind);
   if(src) return `<img class="${cls}" src="${src}">`;
   return v==='empty' ? ''
@@ -29512,7 +29526,7 @@ function autoVariantWorkHTML(v){
   const svg그림 = v.image && v.image.kind === 'svg' && v.image.svg;
   const 변형그림 = v.needsFigure
     ? (그림작업 ? '<div class="rv-ifig empty">그림은 위 편집 상자에서 고치는 중입니다</div>'
-      : svg그림 ? `<figure class="rv-ifig svg" title="누르면 크게 봅니다" onclick="openFigZoom('${escHtml(v.code)}')">${v.image.svg}${크게}</figure>
+      : svg그림 ? `<figure class="rv-ifig svg" title="누르면 크게 봅니다" onclick="openFigZoom('${escHtml(v.code)}')">${figSvgOf(v.image)}${크게}</figure>
           <div class="rv-ifact">
             <button class="btn sm" onclick="openFigureEditorFromSaved('${escHtml(v.code)}')">${iconSvg('pencil', 12)} 그림 편집</button>
             <button class="btn q sm" onclick="requestFigureDraft('${escHtml(v.code)}')" title="한도를 하나 씁니다">다시 그리기</button>
@@ -30309,7 +30323,7 @@ function figSvgFor(key){
   const d = state.figureDraft;
   if(d && d.bankId === key && d.scene) return Figure.renderScene(d.scene);
   const t = figureTargetOf(key); const s = t && t.saved();
-  return s && s.svg || '';
+  return s ? figSvgOf(s) : '';
 }
 let figFontCss = null;   // 한 번 받은 @font-face(데이터 URI) — 세션 동안 다시 안 받는다
 async function figEmbeddedFontCss(){
@@ -31135,7 +31149,7 @@ function variantFigureBoxHTML(v){
   const spec = `<div class="rv-spec">${escHtml(v.figureSpec || '지침이 오지 않았습니다.')}</div>`;
   if(has) return `<div class="rv-fig on">
       <b>이 변형에 붙은 그림</b>
-      ${editing ? '' : `<div class="pb-fig pb-svg">${v.image.svg}</div>`}
+      ${editing ? '' : `<div class="pb-fig pb-svg">${figSvgOf(v.image)}</div>`}
       ${/* 🔵 **「그림 편집」이 앞이다** (2026-09-18 · 사용자 요청) — 한도를 안 쓰는 길이 먼저 오고,
            한도를 먹는 「다시 그려 보기」가 뒤로 간다. 이름도 갈았다 — 이제 이름표만 옮기는 것이 아니다
            (선을 더하고 지우고, 실선↔점선, 숨기기, 글자 고치기까지 한다). */''}

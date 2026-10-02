@@ -591,7 +591,7 @@
        축·눈금 숫자·원점 표시까지 전부 넣어야 한다. 곡선만 피하게 했더니
        이름표가 눈금 숫자 위에 앉았다 (실제로 그랬다). 핀으로 고정된 이름표도 잉크다. */
     var ink = [];
-    var fs0 = o.fontSize || 18;
+    var fs0 = o.fontSize || 26;   // 2026-10-02 18→26 (사용자 — 「문자 더 키워」 · 검토 카드는 300 폭으로 줄여 보인다 — 26 이면 ≈14px)
     function inkBox(x0, y0, x1, y1) {
       for (var gx = 0; gx <= 5; gx++) for (var gy = 0; gy <= 2; gy++)
         ink.push([x0 + (x1 - x0) * gx / 5, y0 + (y1 - y0) * gy / 2]);
@@ -682,11 +682,11 @@
        ⚠ 숫자가 앉는 자리는 여전히 «잉크»로 센다(`lab` 이 넣는다) — 곡선 이름표가 그 위에 앉으면 안 된다. */
     (scene.xTicks || []).forEach(function (v, i) {
       if (v === ax.x || hidden('xtick:' + i)) return;
-      lab('xtick:' + i, PX(v), oy + 24, fmt(v), 'middle', 17, false);
+      lab('xtick:' + i, PX(v), oy + 24, fmt(v), 'middle', 22, false);
     });
     (scene.yTicks || []).forEach(function (v, i) {
       if (v === ax.y || hidden('ytick:' + i)) return;
-      lab('ytick:' + i, ox - 10, PY(v) + 6, fmt(v), 'end', 17, false);
+      lab('ytick:' + i, ox - 10, PY(v) + 6, fmt(v), 'end', 22, false);
     });
 
     /* 축선은 잉크다 — 도형 이름표보다 먼저 넣어야 원 이름이 y축 위에 앉지 않는다. */
@@ -714,7 +714,7 @@
       var ps = (pg.pts || []).map(P2);
       if (ps.length < 3 || hidden('poly:' + i)) return;
       out.push('<path d="M' + ps.map(function (p) { return n(p[0]) + ' ' + n(p[1]); }).join('L') + 'Z"' +
-        (pg.fill ? ' fill="currentColor" fill-opacity="0.08"' : '') + ' stroke-width="2"/>');
+        (pg.fill ? ' fill="currentColor" fill-opacity="0.08"' : '') + ' stroke-width="3.2"/>');
       for (var k = 0; k < ps.length; k++) inkLine(ps[k], ps[(k + 1) % ps.length]);
       if (pg.label) { var cx = 0, cy = 0; ps.forEach(function (p) { cx += p[0]; cy += p[1]; }); lab('poly:' + i, cx / ps.length, cy / ps.length + 6, pg.label, 'middle', null, true); }
     });
@@ -741,7 +741,7 @@
       if (!s.from || !s.to || hidden('seg:' + i)) return;
       var ab = s.dash ? clipGuide(P2(s.from), P2(s.to)) : [P2(s.from), P2(s.to)];
       var a = ab[0], b = ab[1];
-      out.push('<path d="M' + n(a[0]) + ' ' + n(a[1]) + 'L' + n(b[0]) + ' ' + n(b[1]) + '"' + (s.dash ? ' stroke-dasharray="7 6"' : '') + ' stroke-width="2"/>');
+      out.push('<path d="M' + n(a[0]) + ' ' + n(a[1]) + 'L' + n(b[0]) + ' ' + n(b[1]) + '"' + (s.dash ? ' stroke-dasharray="7 6"' : '') + ' stroke-width="3.2"/>');
       if (s.arrow) { var ang = Math.atan2(b[1] - a[1], b[0] - a[0]); out.push('<path d="M' + n(b[0]) + ' ' + n(b[1]) + 'l' + n(-10 * Math.cos(ang - 0.45)) + ' ' + n(-10 * Math.sin(ang - 0.45)) + 'M' + n(b[0]) + ' ' + n(b[1]) + 'l' + n(-10 * Math.cos(ang + 0.45)) + ' ' + n(-10 * Math.sin(ang + 0.45)) + '"/>'); }
       inkLine(a, b);
       if (s.label) {   /* 중점에서 수직 방향으로 12px 비켜 앉힌다 */
@@ -754,7 +754,7 @@
     (scene.circles || []).forEach(function (c, i) {
       if (!c.c || !(c.r > 0) || hidden('circle:' + i)) return;
       var cc = P2(c.c), rpx = c.r * plotW / (xr[1] - xr[0]);
-      out.push('<circle cx="' + n(cc[0]) + '" cy="' + n(cc[1]) + '" r="' + n(rpx) + '"' + (c.dash ? ' stroke-dasharray="7 6"' : '') + ' stroke-width="2"/>');
+      out.push('<circle cx="' + n(cc[0]) + '" cy="' + n(cc[1]) + '" r="' + n(rpx) + '"' + (c.dash ? ' stroke-dasharray="7 6"' : '') + ' stroke-width="3.2"/>');
       for (var t = 0; t < 40; t++) ink.push([cc[0] + rpx * Math.cos(t / 40 * 2 * Math.PI), cc[1] + rpx * Math.sin(t / 40 * 2 * Math.PI)]);
       if (c.label) {   /* 네 귀퉁이 중 잉크가 없는 첫 자리 — 꼭짓점이 오른쪽 위에 오는 일이 잦다 */
         var cands = [[0.72, -0.72, 'start'], [-0.72, -0.72, 'end'], [0.72, 0.72, 'start'], [-0.72, 0.72, 'end']];
@@ -775,10 +775,10 @@
       var R = 18;
       if (g.right) {
         var e1 = [Math.cos(a1) * 13, Math.sin(a1) * 13], e2 = [Math.cos(a2) * 13, Math.sin(a2) * 13];
-        out.push('<path d="M' + n(v0[0] + e1[0]) + ' ' + n(v0[1] + e1[1]) + 'l' + n(e2[0]) + ' ' + n(e2[1]) + 'l' + n(-e1[0]) + ' ' + n(-e1[1]) + '" stroke-width="1.4"/>');
+        out.push('<path d="M' + n(v0[0] + e1[0]) + ' ' + n(v0[1] + e1[1]) + 'l' + n(e2[0]) + ' ' + n(e2[1]) + 'l' + n(-e1[0]) + ' ' + n(-e1[1]) + '" stroke-width="2.2"/>');
       } else {
         var s1 = [v0[0] + R * Math.cos(a1), v0[1] + R * Math.sin(a1)], s2 = [v0[0] + R * Math.cos(a2), v0[1] + R * Math.sin(a2)];
-        out.push('<path d="M' + n(s1[0]) + ' ' + n(s1[1]) + 'A' + R + ' ' + R + ' 0 0 ' + (d > 0 ? 1 : 0) + ' ' + n(s2[0]) + ' ' + n(s2[1]) + '" stroke-width="1.4"/>');
+        out.push('<path d="M' + n(s1[0]) + ' ' + n(s1[1]) + 'A' + R + ' ' + R + ' 0 0 ' + (d > 0 ? 1 : 0) + ' ' + n(s2[0]) + ' ' + n(s2[1]) + '" stroke-width="2.2"/>');
       }
       if (g.label) { var am = a1 + d / 2; lab('angle:' + i, v0[0] + (R + 16) * Math.cos(am), v0[1] + (R + 16) * Math.sin(am) + 6, g.label, 'middle', null, true); }
     });
@@ -790,7 +790,7 @@
        여기서는 그리기만 한다. 다시 뜨면 두 값이 갈려 축만 어긋난다. */
     drawn.forEach(function (dc) {
       dc.segs.forEach(function (seg) {
-        out.push('<path d="' + seg.d + '"' + (dc.c.def.dash ? ' stroke-dasharray="7 6"' : '') + ' stroke-width="2.1"/>');
+        out.push('<path d="' + seg.d + '"' + (dc.c.def.dash ? ' stroke-dasharray="7 6"' : '') + ' stroke-width="3.4"/>');
       });
     });
 
@@ -803,16 +803,16 @@
       if (!isFinite(y) || hidden('point:' + i)) return;
       var px = PX(pt.x), py = PY(y);
       if (pt.dropTo === 'axis' || pt.dropTo === 'x')
-        out.push('<path d="M' + n(px) + ' ' + n(py) + 'V' + n(oy) + '" stroke-dasharray="6 5" stroke-width="1.3"/>');
+        out.push('<path d="M' + n(px) + ' ' + n(py) + 'V' + n(oy) + '" stroke-dasharray="6 5" stroke-width="2"/>');
       if (pt.dropTo === 'y')
-        out.push('<path d="M' + n(px) + ' ' + n(py) + 'H' + n(ox) + '" stroke-dasharray="6 5" stroke-width="1.3"/>');
+        out.push('<path d="M' + n(px) + ' ' + n(py) + 'H' + n(ox) + '" stroke-dasharray="6 5" stroke-width="2"/>');
       /* 🔵 **동그라미와 글자는 따로 고르고 따로 숨긴다** (2026-09-18 · 사용자 —
          「동그라미랑 문자랑 분리해서 선택할 수 있도록 해주면 좋을 것 같아」).
          `dot:i` 는 **동그라미만**, `lbl:point:i` 는 **글자만** 감춘다(이름표는 `lab` 이 이미 그렇게 한다).
          ⚠ `point:i` 는 **점을 통째로** 감추는 옛 표다 — 이미 저장된 장면이 그것을 쓰고 있어
            뜻을 바꾸지 않는다. 위쪽에서 이미 걸러 여기까지 안 온다. */
       if (pt.dot !== false && !hidden('dot:' + i))
-        out.push('<circle cx="' + n(px) + '" cy="' + n(py) + '" r="4" fill="currentColor" stroke="none"/>');
+        out.push('<circle cx="' + n(px) + '" cy="' + n(py) + '" r="5.5" fill="currentColor" stroke="none"/>');
       if (pt.label) {
         var dx = 0, dy = -12, anc = 'middle';
         if (pt.labelPos === 'below') dy = 24;
@@ -1218,7 +1218,7 @@
 
   /* 겹침 — 어림 글자 상자끼리. 브라우저에서는 getBBox 가 더 정확하지만 node 검사는 이걸로 잰다. */
   function labelBoxes(scene, opt) {
-    var o = opt || {}, fs0 = o.fontSize || 18;
+    var o = opt || {}, fs0 = o.fontSize || 26;
     return layoutLabels(scene, opt).map(function (l) {
       var size = l.size || fs0;
       var w = visLen(l.text) * size * 0.52, h = size * 1.15;
