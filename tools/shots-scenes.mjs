@@ -268,14 +268,14 @@ export const 무대들 = {
         .map((name, i) => ({ id:'c'+(i+1), name, schedule: 요일 + ' ' + (14+i) + '시~' + (16+i) + '시',
           period:'26.03~26.12', status:'진행중', kind:'정규' }));
       state.currentUser = { type:'teacher', name:'김하현T' }; state.view = 'teacher';
-      state.teacherTab = 'classhub'; state.classHubTab = 'attendance'; state.classHubId = 'c1'; render(); } },
+      state.teacherTab = 'classhub'; state.classHubTab = 'sessions'; state.classHubId = 'c1'; render(); } },
   반여럿펼침: { 말: '반 관리 › 출결 (반 여섯 · 반 고르기를 펼친 채)',
     세우기: () => { const 요일 = '일월화수목금토'[new Date().getDay()];
       DATA.classes = ['고1 프로브반','고2 특강','명덕여고 2차시','광남고 1-1','대원고 내신','중3 선행']
         .map((name, i) => ({ id:'c'+(i+1), name, schedule: 요일 + ' ' + (14+i) + '시~' + (16+i) + '시',
           period:'26.03~26.12', status:'진행중', kind:'정규' }));
       state.currentUser = { type:'teacher', name:'김하현T' }; state.view = 'teacher';
-      state.teacherTab = 'classhub'; state.classHubTab = 'attendance'; state.classHubId = 'c1'; state.clsPickOpen = true; render(); } },
+      state.teacherTab = 'classhub'; state.classHubTab = 'sessions'; state.classHubId = 'c1'; state.clsPickOpen = true; render(); } },
   과제표: { 말: '반 관리 › 과제 (격자)',
     세우기: () => { state.currentUser = { type:'teacher', name:'김하현T' }; state.view = 'teacher';
       state.teacherTab = 'classhub'; state.classHubTab = 'homework'; state.classHubId = 'c1'; render(); } },

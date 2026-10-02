@@ -223,7 +223,8 @@ console.log(NL + '③ 직보 일정표 — 면은 시험기간, 찍은 것은 �
   봄('껍데기가 제목을 그린다',
     /* ⚠ 2026-09-14 부터 직보 일정표가 「시험 일정」 안의 갈래라 제목이 examSub 를 본다 */
     /* 2026-10-02 셋째 갈래 «등급컷» 이 붙었다 */
-    lift('teacherSettingsHTML').includes("<h1 class=\"t-title\">${examSub === 'plan' ? '직보 일정표' : examSub === 'cut' ? '등급컷' : (subtabs.find(t=>t[0]===tabNow)||subtabs[0])[1]}"), true);
+    /* 2026-10-02 h1 에 설명(title=)이 붙었다 — 넓은 화면은 설명 글을 접고 제목에 건다 */
+    /<h1 class="t-title"[^>]*>\$\{examSub === 'plan' \? '직보 일정표' : examSub === 'cut' \? '등급컷' : \(subtabs\.find/.test(lift('teacherSettingsHTML')), true);
   봄('🔴 직보 일정표는 「시험 일정」 안의 갈래다 — 설정 목록에 따로 없다',
     lift('teacherSettingsHTML').includes("['examplan','직보 일정표']"), false);
   봄('옛 state(examplan)로 들어와도 돌려세운다',

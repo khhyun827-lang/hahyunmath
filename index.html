@@ -3210,7 +3210,7 @@
 @media (max-width:760px){ .app .dsh-grid{grid-template-columns:minmax(0,1fr);grid-template-rows:auto;
   grid-template-areas:"a" "b" "c";} }
 /* ── 시안 «D 차분» 홈 부품 (2026-10-02 · P-4) — 색은 신호에만 ── */
-.app .hm{--hm-ok:#2F9E5E;--hm-okbg:#E6F4EB;--hm-oktx:#1F6B3F;--hm-late:#E0A21C;--hm-latebg:#FBF0DA;--hm-latetx:#7A5207;
+.app .hm, .app .xs-season{--hm-ok:#2F9E5E;--hm-okbg:#E6F4EB;--hm-oktx:#1F6B3F;--hm-late:#E0A21C;--hm-latebg:#FBF0DA;--hm-latetx:#7A5207;
   --hm-no:#D93A45;--hm-nobg:#FBE6E8;--hm-notx:#A3222D;--hm-leave:#8C74D9;--hm-leavebg:#EEEAFB;--hm-ink:#1E2433;}
 .app .hm-head{margin-bottom:14px;}
 .app .hm-date{font-size:13.5px;font-weight:600;color:var(--sub);}
@@ -3239,6 +3239,13 @@
 .app .hm-chip.late{background:var(--hm-latebg);color:var(--hm-latetx);} .app .hm-chip.late i{background:var(--hm-late);}
 .app .hm-chip.no{background:var(--hm-nobg);color:var(--hm-notx);} .app .hm-chip.no i{background:var(--hm-no);}
 .app .hm-chip.leave{background:var(--hm-leavebg);color:#4B3A99;} .app .hm-chip.leave i{background:var(--hm-leave);}
+/* 설정 › 시험 일정 — 지금 시즌 한 줄 상자 (2026-10-02 · 시안) */
+.app .xs-season{display:flex;align-items:center;flex-wrap:wrap;gap:10px 16px;margin-bottom:14px;padding:14px 18px;}
+.app .xs-name{display:block;font-size:22px;font-weight:800;margin-top:2px;letter-spacing:-.02em;}
+.app .xs-meta{display:flex;align-items:center;gap:5px;font-size:12.5px;color:var(--sub);}
+.app .xs-meta b{color:var(--ink);}
+.app .xs-help{flex-basis:100%;font-size:11.5px;color:var(--dim);line-height:1.8;}
+.app .xs-help summary{cursor:pointer;width:max-content;font-weight:700;color:var(--sub);}
 /* 오늘 수업 줄 — 시각 · 막대 · 이름/설명/칩 · 상태 */
 .app .hm-sess{display:flex;align-items:center;gap:12px;padding:11px 12px;margin:0 2px 6px;border-radius:16px;background:#F6F7FA;
   text-decoration:none;color:var(--hm-ink);cursor:pointer;}
@@ -3592,14 +3599,55 @@
    ⚠ 조교 셸(.tnav 없음)은 안 건드린다 — 전부 `:has(.tnav)` 아래다.
    ============================================================ */
 @media (min-width:1200px){
-  .app:not(.sap):has(.tnav){--chrome:104px;--chrome-sub:104px;
-    background:linear-gradient(120deg,#E8EEF6 0%,#ECEAF6 45%,#F6F0E6 92%) fixed;
+  /* 🔵 **«파스텔 바탕 위 둥근 흰 판 하나»** (2026-10-02 · 사용자 — 「시안은 파스텔 배경 위에 전체가 라운드된 흰 판 한 장 위에서 그려졌는데 그것부터 다르다」).
+       시안 그대로의 치수: 바탕 여백 22 · 판 모서리 30 · 판 안쪽 위 16 · 옆·아래 22 · 머리 56 · 머리와 본문 사이 16 · 사이드 250 · 사이와 본문 18.
+       ⇒ 머리 top 38 · 본문/사이드 top 110 · left 44 · 아래 44 · 본문 left 44+250+18 = 312.
+     🔴 본문(.body)이 «판 안에서» 굴러간다(fixed 상자 + overflow) — 문서가 굴러가면 판 바깥 여백으로 글자가 비친다.
+       그래서 render() 가 .body 의 스크롤을 재고 되돌린다(같은 화면일 때만).
+     --chrome = 110 + 44 + 아래 숨 24 = 178 (높이를 박아 쓴 …-screen 들이 판 안에 꼭 맞게). */
+  .app:not(.sap):has(.tnav){--chrome:178px;--chrome-sub:178px;min-height:100vh;
+    background:linear-gradient(120deg,#E4ECF6 0%,#E9E7F5 45%,#F5EEE3 92%) fixed;
     /* 🔵 «색은 신호에만» (2026-10-02 · P-4 · 사용자가 고른 시안) — 단추·켜진 알약·진행바의 자두를 남색으로.
        상태색(--ok·--late·--leave·--no)은 안 건드린다. 학생 앱 미리보기는 아래에서 자두로 되돌린다. */
     --point:#1E2433;--point-lt:#2E3650;--point-d:#141824;--point-bg:#E9EDF5;--point-line:#D2DCEC;--point-ring:rgba(30,36,51,.14);
     --accent:#1E2433;--accent-d:#141824;--accent-bg:#E3EAF5;--accent-line:#D2DCEC;}
   .app:not(.sap):has(.tnav) .app.sap{--point:#A83E5E;--point-lt:#BC4A6E;--point-d:#8A2F4C;--point-bg:#FAEEF2;--point-line:#EFD3DD;
     --point-ring:rgba(168,62,94,.16);}
+  .app:not(.sap):has(.tnav)::before{content:'';position:fixed;inset:22px;z-index:0;pointer-events:none;border-radius:30px;
+    background:rgba(255,255,255,.78);border:1px solid rgba(255,255,255,.95);box-shadow:0 16px 48px rgba(40,50,80,.10);
+    -webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);}
+  .app:not(.sap):has(.tnav) > .body{position:fixed;top:110px;left:44px;right:44px;bottom:44px;z-index:1;overflow:auto;
+    padding:0 6px 24px 0;box-sizing:border-box;}
+  /* 작은 경로 + 큰 제목(teacherPageHeadHTML) — 64 + 아래 14 = 78 을 높이 셈에 더한다 */
+  .app:not(.sap):has(.tnav) .pg-h{display:block;height:64px;margin:0 0 14px;}
+  .app:not(.sap):has(.tnav):has(.pg-h){--chrome:256px;--chrome-sub:256px;}
+  .app:not(.sap):has(.tnav) .pg-h.slim{height:20px;margin-bottom:10px;}
+  .app:not(.sap):has(.tnav):has(.pg-h.slim){--chrome:208px;--chrome-sub:208px;}
+  /* 수업 — 반 이름을 큰 제목으로 · 출결 칸에 학교 두 글자 동그라미(시안 «D 차분 · 수업») */
+  .app:not(.sap):has(.tnav) .cls-mh h1.t-title{font-size:34px;font-weight:800;letter-spacing:-.03em;line-height:42px;}
+  .app:not(.sap):has(.tnav) .tile .tl-sc{display:flex;flex:none;width:38px;height:38px;border-radius:50%;background:#EEF0F4;color:#3A4156;
+    align-items:center;justify-content:center;font-size:11px;font-weight:800;letter-spacing:-.04em;margin-right:10px;}
+  .app:not(.sap):has(.tnav) .pg-h s{display:block;text-decoration:none;font-size:13.5px;font-weight:600;color:#6A7186;line-height:20px;}
+  .app:not(.sap):has(.tnav) .pg-h h1{margin:2px 0 0;font-size:34px;font-weight:800;letter-spacing:-.03em;line-height:42px;color:#1E2433;}
+  /* 큰 제목이 섰으니 화면 제 머리의 «같은 이름»은 접는다 —
+     반: 반 이름·일정은 사이드(반 고르기·이 반 한눈에)와 경로에 있다 · 「내보내기」는 제목 줄 오른쪽으로(시안).
+     학생 명단: 「학생 명단」 글자만 접고 옆의 셈(재원 n명 · 반 n개)은 남긴다. */
+  .app:not(.sap):has(.tnav):has(.pg-h) .chub-mh > div:first-child{display:none;}
+  .app:not(.sap):has(.tnav):has(.pg-h) .chub-mh{height:0;min-height:0;margin:0;padding:0;}
+  .app:not(.sap):has(.tnav):has(.pg-h) .chub-mh .r{position:absolute;top:22px;right:6px;}
+  .app:not(.sap):has(.tnav):has(.pg-h) .rst-hrow > h1.t-title{font-size:0;}
+  .app:not(.sap):has(.tnav):has(.pg-h) .rst-hrow > h1.t-title s{font-size:13px;margin-left:0;}
+  /* 설정 — 같은 머리(작은 경로 + 큰 제목) · 설명 글은 제목에 걸어 둔다(시안엔 없다) · 갈래 단추는 흰 묶음 */
+  .app:not(.sap):has(.tnav) .st-crumb{display:block;text-decoration:none;font-size:13.5px;font-weight:600;color:#6A7186;line-height:20px;margin-bottom:2px;}
+  .app:not(.sap):has(.tnav) .ex-main > .rst-hrow h1.t-title{font-size:34px;font-weight:800;letter-spacing:-.03em;line-height:42px;}
+  .app:not(.sap):has(.tnav) .ex-main > .rst-hrow h1.t-title s{display:none;}
+  .app:not(.sap):has(.tnav) .seg-w{display:flex;gap:4px;padding:4px;background:#fff;border:1px solid #E3E6EE;border-radius:14px;}
+  .app:not(.sap):has(.tnav) .seg-w .btn{height:32px;min-height:0;padding:0 14px;border:0;border-radius:10px !important;background:transparent;
+    box-shadow:none;font-size:13px;font-weight:600;color:#4A5168;}
+  .app:not(.sap):has(.tnav) .seg-w .btn.p{background:#1E2433;color:#fff;font-weight:800;}
+  .app:not(.sap):has(.tnav) .ex-main > .rst-hrow .st-sw{margin-left:auto !important;}
+  .app:not(.sap):has(.tnav) .st-nav .st-ic{display:flex;margin-right:11px;color:#4A5168;}
+  .app:not(.sap):has(.tnav) .st-nav .ex-item.on .st-ic{color:#1E2E52;}
   .app:not(.sap):has(.tnav) .btn.p{box-shadow:0 6px 14px -10px rgba(30,36,51,.7);}
   /* 오른쪽 위 — 동그란 벨 · 동그란 «김»(누르면 로그아웃) */
   .app:not(.sap) .topbar:has(.tnav) .who, .app:not(.sap) .topbar:has(.tnav) .tb-out{display:none;}
@@ -3613,13 +3661,13 @@
   .app:not(.sap) .topbar:has(.tnav) .tb-menu b{font-size:14px;color:#1E2433;}
   .app:not(.sap) .topbar:has(.tnav) .tb-menu s{text-decoration:none;font-size:12px;color:#6A7186;margin-bottom:8px;}
   /* 수업 — 왼쪽 «날짜 + 그날 수업» 칸(.cls-side)이 곧 사이드다 (시안 «D 차분 · 수업») */
-  .app:not(.sap):has(.tnav) .cls-screen > .cls-side{position:fixed;top:80px;left:16px;bottom:16px;width:236px;z-index:4;margin:0;
+  .app:not(.sap):has(.tnav) .cls-screen > .cls-side{position:fixed;top:110px;left:44px;bottom:44px;width:250px;z-index:4;margin:0;
     padding:12px;box-sizing:border-box;background:rgba(255,255,255,.92);border:1px solid #ECEEF3;border-radius:24px;overflow-y:auto;}
-  .app:not(.sap):has(.tnav):has(.cls-screen > .cls-side) .body{padding-left:272px;}
+  .app:not(.sap):has(.tnav):has(.cls-screen > .cls-side) > .body{left:312px;}
   .app:not(.sap):has(.tnav) .cls-screen > .cls-main{padding-left:0;}
   .app:not(.sap):has(.tnav) .cls-tiles{grid-template-columns:repeat(auto-fill,minmax(340px,1fr));}
   .app:not(.sap):has(.tnav):has(.cls-screen > .cls-side) .actbar{
-    left:272px;right:16px;bottom:16px;border:1px solid #ECEEF3;border-radius:18px;box-shadow:0 8px 24px rgba(30,36,51,.08);}
+    left:312px;right:56px;bottom:56px;border:1px solid #ECEEF3;border-radius:18px;box-shadow:0 8px 24px rgba(30,36,51,.08);}
   .app:not(.sap):has(.tnav) .cls-side > .cls-nav{border-bottom:0;padding:2px 2px 6px;}
   .app:not(.sap):has(.tnav) .cls-side .cls-sess{border:0;background:#F6F7FA;border-radius:16px;margin-bottom:6px;}
   .app:not(.sap):has(.tnav) .cls-side .cls-sess:hover{background:#EEF1F6;}
@@ -3672,15 +3720,16 @@
   .app:not(.sap):has(.tnav) .rst-wrap table.grid tbody td{height:50px;}
   .app:not(.sap):has(.tnav) .rst-wrap table.grid .badge{border-radius:999px;padding:3px 10px;font-weight:800;}
   .app:not(.sap):has(.tnav) .rst-wrap table.grid .badge.no{background:#D93A45;color:#fff;}
-  .app:not(.sap) .topbar:has(.tnav){height:64px;padding:0 24px;background:rgba(255,255,255,.84);
-    -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border-bottom:1px solid rgba(30,36,51,.06);}
+  .app:not(.sap) .topbar:has(.tnav){position:fixed;top:38px;left:44px;right:44px;z-index:5;height:56px;padding:0;
+    background:transparent;-webkit-backdrop-filter:none;backdrop-filter:none;border-bottom:0;}
+  .app:not(.sap) .topbar:has(.tnav) .bm{width:250px;flex:none;}
   .app:not(.sap) .topbar .tnav{margin:0 auto;gap:4px;}
-  .app:not(.sap) .topbar .tnav a{display:flex;align-items:center;gap:8px;height:44px;padding:0 18px;border-radius:999px;
+  .app:not(.sap) .topbar .tnav a{display:flex;align-items:center;gap:8px;height:46px;padding:0 18px;border-radius:999px;
     font-size:14.5px;font-weight:600;color:#4A5168;}
   .app:not(.sap) .topbar .tnav a i{display:flex;}
   .app:not(.sap) .topbar .tnav a:hover{background:rgba(30,46,82,.05);color:#1E2433;}
   .app:not(.sap) .topbar .tnav a.on{background:#E3EAF5;color:#1E2E52;font-weight:800;box-shadow:inset 0 0 0 1px #D2DCEC;}
-  .app:not(.sap):has(.tnav) .subnav{position:fixed;top:80px;left:16px;bottom:16px;width:236px;height:auto;z-index:4;
+  .app:not(.sap):has(.tnav) .subnav{position:fixed;top:110px;left:44px;bottom:44px;width:250px;height:auto;z-index:4;
     flex-direction:column;align-items:stretch;gap:2px;padding:12px;box-sizing:border-box;overflow-y:auto;
     background:rgba(255,255,255,.92);border:1px solid #ECEEF3;border-radius:24px;}
   .app:not(.sap):has(.tnav) .subnav a{flex:none;justify-content:flex-start;height:40px;padding:0 12px;gap:11px;border-radius:14px;
@@ -3693,11 +3742,11 @@
   .app:not(.sap):has(.tnav) .subnav .sn-lead{margin-top:4px;}
   .app:not(.sap):has(.tnav) .subnav .sn-sep[data-t]::after{content:attr(data-t);font-style:normal;font-size:11.5px;
     font-weight:800;color:#9AA0B0;letter-spacing:.06em;}
-  .app:not(.sap):has(.subnav):has(.tnav) .body{padding-left:272px;}
+  .app:not(.sap):has(.subnav):has(.tnav) > .body{left:312px;}
   /* 설정은 서브탭 줄이 없고 제 왼쪽 목록(.st-nav)을 갖는다 — 그것을 같은 사이드 자리·모양으로 */
-  .app:not(.sap):has(.tnav) .st-nav{position:fixed;top:80px;left:16px;bottom:16px;width:236px;z-index:4;margin:0;
+  .app:not(.sap):has(.tnav) .st-nav{position:fixed;top:110px;left:44px;bottom:44px;width:250px;z-index:4;margin:0;
     padding:12px;box-sizing:border-box;background:rgba(255,255,255,.92);border:1px solid #ECEEF3;border-radius:24px;}
-  .app:not(.sap):has(.tnav):has(.st-nav) .body{padding-left:272px;}
+  .app:not(.sap):has(.tnav):has(.st-nav) > .body{left:312px;}
   .app:not(.sap):has(.tnav) .st-nav .ex-lbody{margin-right:0;padding-right:0;}
   .app:not(.sap):has(.tnav) .st-nav .st-grp{margin:12px 0 3px;padding-left:12px;font-size:11.5px;font-weight:800;color:#9AA0B0;letter-spacing:.06em;}
   .app:not(.sap):has(.tnav) .st-nav .st-grp:first-child{margin-top:4px;}
@@ -3765,7 +3814,7 @@
   .app:not(.sap):has(.tnav) .subnav a.sn-q{display:flex;align-items:center;justify-content:flex-start;height:34px;margin-left:18px;padding:0 10px;gap:10px;font-size:13.5px;border-radius:12px;}
   /* 아래 고정 띠(.actbar)는 사이드를 덮지 않게 본문 칸 위에만 뜬다 */
   .app:not(.sap):has(.tnav):has(.subnav) .actbar, .app:not(.sap):has(.tnav):has(.st-nav) .actbar{
-    left:272px;right:16px;bottom:16px;border:1px solid #ECEEF3;border-radius:18px;box-shadow:0 8px 24px rgba(30,36,51,.08);}
+    left:312px;right:56px;bottom:56px;border:1px solid #ECEEF3;border-radius:18px;box-shadow:0 8px 24px rgba(30,36,51,.08);}
   .app:not(.sap):has(.tnav) .subnav a.sn-q.on{background:#fff;color:#1E2433;box-shadow:0 0 0 1px #D2DCEC;}
   .app:not(.sap):has(.tnav) .sn-q b{margin-left:auto;font-weight:800;font-size:12.5px;color:#1E2433;}
   .app:not(.sap):has(.tnav) .sn-q b.z{color:#B9C0D0;}
@@ -3789,6 +3838,7 @@
 /* 「AI 일치 모두 통과」 옆 — 그림이 있어 빠진 수 (줄 모드에서도 보인다) */
 .app .rv-figskip{display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--sub);}
 .app .rv-strip{display:none;}
+.app .pg-h, .app .st-crumb, .app .st-ic, .app .tl-sc{display:none;}   /* 넓은 화면 강사 셸에서만 보인다 */
 .app .tb-acct{display:none;}   /* 동그란 «김» — 넓은 화면에서만 (위 P-4) */
 /* 화면 머리 — 「누구의 화면인가」. serif는 학생 이름에만 쓴다 (시스템 규칙) */
 /* 🔴 **세리프를 벗긴다** (2026-09-14 · 사용자 — 「폰트가 어울리지 않는 것 같다」).
@@ -14715,6 +14765,11 @@ function render(){
   const rvScroll = (app.querySelector('.rv-lbody') || {}).scrollTop;
   /* 폰의 가로 칩 줄(설정 갈래 · 반 목록) — 밀어 둔 자리. 끝쪽 칩을 누르자마자 줄이 왼쪽 끝으로 튀지 않게. */
   const chipX = ['.st-nav .ex-lbody', '.chub-lbody'].map(q => (app.querySelector(q) || {}).scrollLeft);
+  /* 넓은 화면 강사 셸은 본문이 «판 안에서» 굴러간다(2026-10-02 · 둥근 흰 판) — 문서 스크롤처럼 다시 그려도 제자리에 있게.
+     ⚠ «같은 화면»일 때만 — 다른 탭으로 가면 맨 위에서 시작한다. */
+  const 본문 = app.querySelector('.app > .body');
+  const 본문열쇠 = [state.view, state.teacherTab, state.classHubTab, state.settingsSubTab, state.examSubTab, state.studentDetailId].join('|');
+  const 본문Y = 본문 && 본문.dataset.k === 본문열쇠 ? 본문.scrollTop : 0;
   /* 홈 메모 글 칸에서 쓰던 중이면(불러오기 끝 등으로 render 가 돌면) 커서를 되돌린다 (2026-10-02). */
   const memoEl = document.activeElement && document.activeElement.id === 'memo-note' ? document.activeElement : null;
   const memoSel = memoEl ? [memoEl.selectionStart, memoEl.selectionEnd, memoEl.scrollTop] : null;
@@ -14729,6 +14784,7 @@ function render(){
   if(hwdScroll){ const nb = app.querySelector('.hwd-b'); if(nb) nb.scrollTop = hwdScroll; }
   if(clsScroll){ const cb = app.querySelector('.cls-body'); if(cb) cb.scrollTop = clsScroll; }
   if(exScroll){ const eb = app.querySelector('.ex-body'); if(eb) eb.scrollTop = exScroll; }
+  { const nb = app.querySelector('.app > .body'); if(nb){ nb.dataset.k = 본문열쇠; if(본문Y) nb.scrollTop = 본문Y; } }
   if(rvScroll){ const rb = app.querySelector('.rv-lbody'); if(rb) rb.scrollTop = rvScroll; }
   { /* ⚠ scrollIntoView 는 창까지 민다 — 폰에서는 목록이 위, 판이 아래라 창이 튄다. 목록 상자만 민다. */
     [['.rv-lbody', '.rv-item.on']].forEach(([상자, 줄]) => {
@@ -19362,7 +19418,7 @@ function teacherHTML(){
   const 머리 = TEACHER_SUBNAV_TITLES[section] || [];
   let 토막 = 0;
   const 머리표 = (t, lead) => `<i class="sn-sep${lead ? ' sn-lead' : ''}"${t ? ` data-t="${t}"` : ''} aria-hidden="true"></i>`;
-  const subActive = s => state.teacherTab===s[1] && (!s[2] || state.classHubTab===s[2]);
+  const subActive = s => state.teacherTab===s[1] && (!s[2] || (state.classHubTab||'sessions')===s[2]);
   /* 벨이 «새 채팅»을 세려면 대화를 알고 있어야 한다. 셸에서 한 번만 부른다. */
   loadAllChatsIfNeeded();
   /* 「과제 제출 확인 대기」도 같은 이유로 기록이 있어야 센다 — 어느 화면에 있든 벨은 떠 있다. */
@@ -19401,8 +19457,23 @@ function teacherHTML(){
         n ? `<b class="sb-x sn-n">${n}</b>` : ''}</a>${
         s[1] === 'review' && state.teacherTab === 'review' ? reviewSideQueuesHTML() : ''}`;
     }).join('')}${사이드.bottom}</div>` : ''}
-    <div class="body">${body}</div>
+    <div class="body">${teacherPageHeadHTML(section, subs, 머리, subActive)}${body}</div>
   </div>`;
+}
+/* 🔵 **넓은 화면의 «작은 경로 + 큰 제목»** (2026-10-02 · 시안 «D 차분» — 화면마다 「소통 · 질의응답 / 질의응답」).
+   서브탭이 있는 화면에서만 셸이 대신 그린다. 홈(인사말이 제목)·학생 상세는 제 머리가 있어 뺀다. 줄 모드·폰은 CSS 가 감춘다.
+   ⚠ 머리 높이(64+14)는 --chrome 셈에 들어간다 — CSS `.app…:has(.pg-h)` 를 같이 고칠 것. */
+function teacherPageHeadHTML(section, subs, 머리, subActive){
+  if(!subs || state.teacherTab === 'dash' || state.studentDetailId) return '';
+  let 토막 = 0, 지금 = null;
+  for(const s of subs){ if(!s){ 토막++; continue; } if(subActive(s)){ 지금 = s; break; } }
+  if(!지금) return '';
+  const 반들 = section === '반' ? myClassList() : [];
+  const 반 = 반들.find(x => x.id === state.classHubId) || 반들[0];
+  const 경로 = [section, 반 && 반.name, 머리[토막]].filter(Boolean).join(' › ');
+  /* 검토는 문항 코드가 곧 제목이다(시안 「K2-05-E-0560」) — 경로만 단다 */
+  if(state.teacherTab === 'review') return `<header class="pg-h slim"><s>${escHtml(경로 + ' › ' + 지금[0])}</s></header>`;
+  return `<header class="pg-h"><s>${escHtml(경로)}</s><h1>${escHtml(지금[0])}</h1></header>`;
 }
 
 /* =================== 소통 › 상담 신청 (2026-09-24 · A-1) ===================
@@ -21440,6 +21511,7 @@ function sessionAttHTML(classId, date){
     const 링크칸 = !!d.status && d.status !== '출석';
     return `
     <div class="tile ${flag?'flag':''}">
+      <span class="tl-sc" title="${escHtml(s.school || '')}">${escHtml(schoolShort(s.school))}</span>
       <div class="who"><b>${escHtml(s.name)}</b><span>${isJikboSession(classId)   /* 직보는 학교가 다 같다 — 반을 적는다 */
         ? escHtml(studentClassLabel(s)) + ' ' + escHtml(s.grade||'')
         : escHtml(s.school||'—') + ' ' + escHtml(s.grade||'')}</span></div>
@@ -31623,6 +31695,12 @@ function teacherExamRangeHTML(view){
     return d && (d.state === 'during' || (d.state === 'before' && d.days <= 14));
   }).length;
   const mode = state.examViewMode || 'table';
+  const 곳 = {};
+  if(!past) list.forEach(x => { const d = getDday(x.school, x.grade); if(!d) return;
+    const k = x.school + '|' + x.grade;
+    if(d.state === 'during' || (d.state === 'before' && d.days <= 7)) 곳[k] = 'r';
+    else if(d.state === 'before' && d.days <= 14 && !곳[k]) 곳[k] = 'y'; });
+  const near = Object.values(곳).filter(v => v === 'r').length, near14 = Object.values(곳).filter(v => v === 'y').length;
 
   /* ---- 시즌 고르개 + 보기 전환 ---- */
   const seasonPicker = `
@@ -31650,7 +31728,7 @@ function teacherExamRangeHTML(view){
           })()}</span>`
       : ''}
     <span class="spacer"></span>
-    ${view === 'cut' ? '' : `<div class="row" style="gap:0;">
+    ${view === 'cut' ? '' : `    <div class="row seg-w" style="gap:0;">
       <button class="btn sm ${mode === 'table' ? 'p' : 'q'}" style="border-radius:var(--r-sm) 0 0 var(--r-sm);"
         onclick="state.examViewMode='table'; render()">표</button>
       <button class="btn sm ${mode === 'cal' ? 'p' : 'q'}" style="border-radius:0 var(--r-sm) var(--r-sm) 0;"
@@ -31669,37 +31747,35 @@ function teacherExamRangeHTML(view){
     <br><b>다만 내신 등급컷은 위 «등급컷» 갈래에서 이 시즌 것도 적을 수 있습니다</b> — 등급컷은 시험이 끝난 뒤에
     나오기 때문입니다.
   </div>` : `
-  <div class="cls-hw" style="display:block;margin-bottom:18px;">
-    <div class="t-sec" style="margin:0;">지금 시즌</div>
-    <div class="row" style="gap:12px;align-items:center;margin-top:10px;flex-wrap:wrap;">
-      <b style="font-size:20px;">${escHtml(season)}</b>
-      ${/* 한글은 mono 밖에 둔다 — 「부터」가 「부 터」로 벌어진다 */''}
-      ${/* 🔵 **고칠 수 있게 둔다** (2026-09-08) — 여태 이 값은 «넘긴 날»이 그대로 박혀
-             사실이 아닌 날짜를 보여 줬다. 비우면 아예 안 뜬다.
-             ⚠ 등급컷이 이 날짜를 열쇠로 쓰므로, 바꾸면 등급컷도 «같이 옮긴다»(setSeasonStart). */''}
-      <span class="row" style="gap:5px;align-items:center;font-size:11.5px;color:var(--dim);">
-        <input type="date" class="lo-in" style="width:150px;padding:4px 8px;font-size:11.5px;"
-          value="${escHtml((state.season && state.season.startedAt) || '')}"
-          title="시즌이 시작된 날. 비워 두면 안 보입니다"
-          onchange="setSeasonStart(this.value)">부터
-      </span>
-      <span class="spacer"></span>
-      <button class="btn q sm" onclick="backSeason()"
-        title="잘못 넘겼을 때 앞 시즌으로 되돌립니다">← ${escHtml(prevSeason)}</button>
-      <button class="btn p sm" onclick="endSeason()">${escHtml(season)} 종료 → ${escHtml(next)}</button>
-    </div>
-    <div style="margin-top:10px;font-size:11.5px;color:var(--dim);line-height:1.8;">
+  <div class="cls-hw xs-season">
+    
+    <div><div class="t-sec" style="margin:0;">지금 시즌</div><b class="xs-name">${escHtml(season)}</b></div>
+    
+    <span class="xs-meta">
+      <input type="date" class="lo-in" style="width:140px;padding:4px 8px;font-size:11.5px;"
+        value="${escHtml((state.season && state.season.startedAt) || '')}"
+        title="시즌이 시작된 날. 비워 두면 안 보입니다"
+        onchange="setSeasonStart(this.value)">부터 · 날짜 있음 <b class="mono">${dated}</b>/<span class="mono">${list.length}</span></span>
+    <span class="hm-chips" style="margin:0;">${near ? `<span class="hm-chip no"><i></i>1주 안 ${near}곳</span>` : ''}${
+      near14 ? `<span class="hm-chip late"><i></i>2주 안 ${near14}곳</span>` : ''}</span>
+    <span class="spacer"></span>
+    <button class="btn q sm" onclick="backSeason()"
+      title="잘못 넘겼을 때 앞 시즌으로 되돌립니다">← ${escHtml(prevSeason)}</button>
+    <button class="btn p sm" onclick="endSeason()">${escHtml(season)} 종료 → ${escHtml(next)}</button>
+    <details class="xs-help"><summary>시즌이란?</summary>
       ${isVacationSeason(season)
         ? '방학에는 <b>과목의 모든 단원</b>이 나갑니다 — 그동안 범위 밖으로 접어 둔 문제가 다시 돌아옵니다.'
         : '시즌에 해당하는 단원만 데일리퀴즈로 나갑니다. 범위 밖 문제는 복습 시계가 멈춘 채 기다립니다.'}<br>
       순서 — ${SEASONS.map(s => s === season ? `<b>${escHtml(s)}</b>` : escHtml(s)).join(' → ')} → …<br>
-      <b>시즌을 넘기면 지금 일정은 «지난 기록»으로 보관되고, 학교·학년별 수정은 기본 범위로 돌아갑니다.</b>
-    </div>
+      <b>시즌을 넘기면 지금 일정은 «지난 기록»으로 보관되고, 학교·학년별 수정은 기본 범위로 돌아갑니다.</b><br>
+      <b>가까운 시험이 위로 옵니다</b> — 기준은 수학 시험일, 없으면 시험기간 시작일.
+      <b>날짜와 교재는 학교·학년 단위</b>(다른 과목 줄에도 같이) · <b>범위는 과목마다</b> · 칸을 누르면 그 칸만 고치는 창이 뜹니다.
+    </details>
   </div>`;
 
-  const head = `
+  const head = !past ? '' : `
   <div class="row" style="align-items:baseline;gap:12px;margin-bottom:4px;flex-wrap:wrap;">
-    <div class="t-sec" style="margin:0;">${past ? '지난 시험 일정' : '학교·학년별 시험 일정'}</div>
+    <div class="t-sec" style="margin:0;">지난 시험 일정</div>
     <span style="font-size:11.5px;color:var(--dim);">
       ${soon ? `<b style="color:var(--no);">2주 안 ${soon}곳</b> · ` : ''}날짜 있음
       <b class="mono" style="color:var(--ink);">${dated}</b>/<span class="mono">${list.length}</span>
@@ -31707,12 +31783,6 @@ function teacherExamRangeHTML(view){
   </div>`;
 
   const help = past ? '' : `
-  <div style="margin:0 0 12px;font-size:11.5px;color:var(--dim);line-height:1.8;">
-    <b>가까운 시험이 위로 옵니다</b> — 기준은 <b>수학 시험일</b>이고, 없으면 시험기간 시작일입니다.
-    한 줄이 «학교 × 학년 × 과목»이고, <b>시험 기간·수학·범위·교재·프린트 칸을 누르면</b> 그 칸만 고치는 창이 뜹니다.<br>
-    <b>날짜와 교재는 학교·학년 단위</b>라 같은 학교·학년의 다른 과목 줄에도 같이 반영됩니다.
-    <b>범위는 과목마다 다릅니다.</b>
-  </div>
   ${noSchool || noGrade || noSubject ? `<div class="fm-warn" style="margin-bottom:12px;">
     ${noSchool ? `학교를 입력하지 않은 학생이 <b>${noSchool}명</b> 있습니다. ` : ''}
     ${noGrade ? `학년을 입력하지 않은 학생이 <b>${noGrade}명</b> 있습니다. ` : ''}
@@ -32751,6 +32821,9 @@ function teacherSettingsHTML(){
     ['시스템', [['push','알림'],['auditlog','변경 이력']]]
   ];
   const subtabs = SETTINGS_GROUPS.flatMap(g => g[1]);
+  /* 사이드 아이콘 — 넓은 화면에서만 보인다(시안 «D 차분 · 설정»). 색 없는 선 아이콘. */
+  const ST_ICONS = { students:'users', assistants:'clipboard', classes:'building', admin:'shield',
+    examrange:'calendar', signalrules:'alert', push:'bell', auditlog:'document' };
   /* 🔵 **«데이터 정리»를 서브탭에서 뺐다** (2026-09-05 · 사용자 요청 — 「내가 쓸 일이 없는거면 화면에서 가려줘」).
      세 가지(배점·sqrt·정답 속 해설)가 전부 «쓰는 자리»에서 막혔고, 저장된 기록에도 남은 것이 0건이다.
      그래서 평소에 쓸 일이 없다. **없애지는 않았다** — 옛 hwpx 를 다시 올리거나 변환기를 또 고치면
@@ -32784,7 +32857,7 @@ function teacherSettingsHTML(){
   const EXAM_SUBS = [['range', '시험 일정', "state.examSubTab='range';"],
                      ['plan', '직보 일정표', "state.examSubTab='plan'; state.planEdit=false;"],
                      ['cut', '등급컷', "state.examSubTab='cut';"]];
-  const examSwitch = tabNow !== 'examrange' ? '' : `<div class="row" style="gap:0;margin-left:14px;">
+  const examSwitch = tabNow !== 'examrange' ? '' : `<div class="row seg-w st-sw" style="gap:0;margin-left:14px;">
       ${EXAM_SUBS.map(([k, t, go], i) => `<button class="btn sm ${examSub === k ? 'p' : 'q'}" style="border-radius:${
           i === 0 ? 'var(--r-sm) 0 0 var(--r-sm)' : i === EXAM_SUBS.length - 1 ? '0 var(--r-sm) var(--r-sm) 0' : '0'};"
         onclick="${go} render()">${t}</button>`).join('')}</div>`;
@@ -32808,13 +32881,14 @@ function teacherSettingsHTML(){
       <div class="ex-lbody">
         ${SETTINGS_GROUPS.map(g=>`<div class="t-sec st-grp">${g[0]}</div>` + g[1].map(t=>
           `<div class="ex-item ${tabNow===t[0]?'on':''}" onclick="state.settingsSubTab='${t[0]}'; render()">
-          <div class="n">${t[1]}</div>
+          <i class="st-ic">${iconSvg(ST_ICONS[t[0]] || 'circle', 18)}</i><div class="n">${t[1]}</div>
         </div>`).join('')).join('')}
       </div>
     </aside>
     <main class="ex-main">
+      <s class="st-crumb">설정 › ${escHtml((SETTINGS_GROUPS.find(g => g[1].some(t => t[0] === tabNow)) || ['설정'])[0])}</s>
       <div class="rst-hrow" style="flex-shrink:0;">
-        <h1 class="t-title">${examSub === 'plan' ? '직보 일정표' : examSub === 'cut' ? '등급컷' : (subtabs.find(t=>t[0]===tabNow)||subtabs[0])[1]}<s>${
+        <h1 class="t-title" title="${escHtml(LABEL[examSub === 'plan' ? 'examplan' : examSub === 'cut' ? 'gradecut' : tabNow]||'')}">${examSub === 'plan' ? '직보 일정표' : examSub === 'cut' ? '등급컷' : (subtabs.find(t=>t[0]===tabNow)||subtabs[0])[1]}<s>${
           LABEL[examSub === 'plan' ? 'examplan' : examSub === 'cut' ? 'gradecut' : tabNow]||''}</s></h1>
         ${examSwitch}
       </div>
