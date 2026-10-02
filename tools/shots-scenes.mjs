@@ -188,6 +188,23 @@ export const 무대들 = {
       state.offDays = { days: [{ date: 날(2), classIds: ['c1'], label: '학원 행사' }] };
       state.allRecordsLoaded = true; state.teacherTab = 'dash'; state.tCalDay = 날(7); state.tCalMonth = 날(7).slice(0, 7); render();
     } },
+  /* 문항 창고 — 그림 한 장 문항(목록 카드) + 코드 화면(오른쪽 판: 원본·변형 그림) (2026-10-02) — 장부는 배포의 codes/*.json 을 그대로 읽는다 */
+  창고그림: { 말: '문항관리 › 문항 창고 (그림 있는 문항 · 코드 화면 열림)', 폭: '1440',
+    세우기: async () => { state.currentUser = { type:'teacher', name:'김하현T' }; state.view = 'teacher';
+      const 장면 = (k) => ({ kind:'graph', curves:[{ expr:'-(x-1)*(x-' + k + ')', label:'y=f(x)', labelAt:k + 0.4 }, { expr:'x-1', label:'y=g(x)', labelAt:k + 0.6 }],
+        points:[{ x:1, curve:0, dot:true, label:'A', labelPos:'below' }, { x:k - 1, curve:1, dot:true, dropTo:'axis', label:'B', labelPos:'above' }],
+        xTicks:[1, k - 1, k], axis:{ xLabel:'x', yLabel:'y', origin:'O' } });
+      const 사진 = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(Figure.renderScene(장면(4)).replace('<svg ', '<svg style="background:#fff" '));
+      state.teacherTab = 'unitbank'; render();
+      await loadItemLedgerIfNeeded();
+      const code = Object.keys(state.itemByCode).find(c => /^K2-02-/.test(c) && !/-N\d+$/.test(c)) || Object.keys(state.itemByCode)[0];
+      state.itemBody = { [code]: { code, answer:'③', image:{ url: 사진 },
+        content:'그림과 같이 이차함수 y = −(x−1)(x−4) 의 그래프와 직선 y = x − 1 이 두 점 A, B 에서 만난다. 삼각형 OAB 의 넓이는?\n① 1  ② 3/2  ③ 2  ④ 5/2  ⑤ 3' } };
+      state.variants = { [code]: [{ code: code + '-N01', originCode: code, pending:false, needsFigure:true, answer:'④',
+        image:{ kind:'svg', svg: Figure.renderScene(장면(5)), scene: 장면(5) },
+        content:'그림과 같이 이차함수 y = −(x−1)(x−5) 의 그래프와 직선 y = x − 1 이 두 점 A, B 에서 만난다. 점 B 에서 x축에 내린 수선의 발을 H 라 할 때, 삼각형 ABH 의 넓이는?\n① 3  ② 7/2  ③ 4  ④ 9/2  ⑤ 5' }] };
+      state.storeSubject = 'K2'; state.storeChapter = '02'; state.storeFind = code; state.icOpen = code; render();
+    } },
   /* 시험지 한 장 — 원본·변형 그림이 문항 본문 안에 (2026-10-02) */
   시험지그림: { 말: '문항관리 › 시험지 (그림 있는 문항)', 폭: '1440,864',
     세우기: () => { state.currentUser = { type:'teacher', name:'김하현T' }; state.view = 'teacher';

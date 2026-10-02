@@ -4168,7 +4168,13 @@
    카드가 넉넉하면(본문 칸 ≥ 640 — 김하현 Desktop 1872 등) 발문 | 그림(300) · 보기는 아래(교재 꼴). 카드 폭으로 가른다(@container) —
    화면 폭으로 가르면 1440 에서 카드가 484 라 발문 칸이 166 으로 찌그러졌다(찍어서 봤다).
    SVG 는 560×430 으로 그려진다 — 300 이면 이름표(18px)가 ≈10px (1440×900 한 화면에 발문·그림·보기가 다 든다). 작게 보이면 누르면 크게(hw-view). */
-.app .side:has(> .has-fig), .app .exq-c:has(> .has-fig){container-type:inline-size;}
+.app .side:has(> .has-fig), .app .exq-c:has(> .has-fig), .app .ist-item:has(> .has-fig), .app .ic-vcard:has(> .has-fig){container-type:inline-size;}
+.app .rv-ifig .ist-fig{margin:0;max-width:100%;max-height:230px;border:0;}
+/* 창고 카드 머리 단추(코드 화면·고치기·복사) — 새 단추(34)로는 두 칸 카드에서 두 줄로 꺾였다. 줄 단추라 작게 */
+#app:has(.tnav) .app:not(.sap) .ist-ih .btn.sm{min-height:30px;padding:0 8px;font-size:12.5px;}
+#app:has(.tnav) .app:not(.sap) .ist-ih{gap:6px;flex-wrap:nowrap;}
+#app:has(.tnav) .app:not(.sap) .ist-ih > *{flex-shrink:0;}
+#app:has(.tnav) .app:not(.sap) .ist-ih > .ist-src, #app:has(.tnav) .app:not(.sap) .ist-ih > .ist-scene{flex-shrink:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .app .has-fig{display:grid;grid-template-columns:minmax(0,1fr);row-gap:12px;}
 .app .has-fig > .rv-ifw{justify-self:center;width:min(100%,300px);}
 .app .rv-ifig .pb-fig{margin:0;border:0;border-radius:8px;padding:0;background:none;max-width:100%;max-height:230px;}
@@ -29134,8 +29140,8 @@ function icItemCardHTML(root, it, vs){
         const fig = body && body.image && body.image.url
           ? `<img class="pb-fig" src="${escHtml(body.image.url)}" alt="">` : '';
         return `<div class="ic-crow"><span class="ic-cl">문제</span>
-          <span class="ic-cbody">${src ? problemHTML(icKeepLines(src))
-            : '<s class="ic-cs">아직 본문이 없습니다 — 아래 「교재에서 본문 채우기」로 hwpx 를 올리면 채워집니다</s>'}${fig}</span>
+          <span class="ic-cbody${src && fig ? ' has-fig' : ''}">${src ? withFigure(problemHTML(icKeepLines(src)), figFrameHTML(fig))
+            : '<s class="ic-cs">아직 본문이 없습니다 — 아래 「교재에서 본문 채우기」로 hwpx 를 올리면 채워집니다</s>' + figFrameHTML(fig)}</span>
         </div>`; })()}
       <div class="ic-crow"><span class="ic-cl">쓰인 곳</span>
         <span>${used.length
@@ -29362,7 +29368,7 @@ function icDetailHTML(root){
               <button class="btn q sm" title="창고에서 뺍니다"
                 onclick="deleteVariantFromStore('${escHtml(v.code)}')">빼기</button>
             </div>
-            <div class="ic-vb">${variantImageHTML(v.image, 'pb-fig')}${v.content ? problemHTML(icKeepLines(v.content)) : '(문제 내용이 없습니다)'}</div>
+            ${(fg => `<div class="ic-vb${fg && v.content ? ' has-fig' : ''}">${v.content ? withFigure(problemHTML(icKeepLines(v.content)), fg) : '(문제 내용이 없습니다)' + fg}</div>`)(figFrameHTML(variantImageHTML(v.image, 'pb-fig')))}
             ${vEditHTML(v.code)}
           </div>`).join('')}
         </div>` : `<div class="rst-empty" style="margin-top:12px;">아직 이 문항의 변형이 없습니다 —
@@ -31816,14 +31822,18 @@ function teacherItemStoreHTML(){
          「코드 화면」 드로어로 갈 길이 없다. 그러니 그 말을 카드에 적는다.
        ⚠ 이 딱지가 보이면 대개 **심다가 원본이 빠진 것**이다 — 교재를 다시 올리면 사라진다. */
     const sp고아 = splitItemCode(it.code);
+    /* 그림 «한 장»은 본문 안(발문 다음 · 보기 앞 · 2026-10-02). 선지가 통째로 그림(여러 장)이면 본문 밑 줄 그대로. */
+    const 그림들 = (body && body.images && body.images.length) ? body.images : (body && body.image && body.image.url) ? [body.image] : [];
+    const 한장 = 그림들.length === 1 && body.content && 그림들[0].url
+      ? figFrameHTML(`<img class="ist-fig" src="${escHtml(그림들[0].url)}" loading="lazy" alt="">`) : '';
     return `<div class="ist-item">
       <div class="ist-ih">
         <b class="mono">${escHtml(it.code)}</b>
-        <span class="ist-src">${escHtml((it.source && it.source.book) || '출처없음')}</span>
+        <span class="ist-src" title="${escHtml((it.source && it.source.book) || '출처없음')}">${escHtml((it.source && it.source.book) || '출처없음')}</span>
         ${sp고아 && sp고아.isVariant
           ? `<span class="ist-scene" title="이 변형의 원본(${escHtml(sp고아.origin)})이 창고에 없습니다 — 교재를 올리면 원본 카드 안으로 들어갑니다">변형 · 원본 없음</span>`
           : ''}
-        ${it.scene ? `<span class="ist-scene">${escHtml(it.scene)}</span>` : ''}
+        ${it.scene ? `<span class="ist-scene" title="${escHtml(it.scene)}">${escHtml(it.scene)}</span>` : ''}
         <span class="spacer"></span>
         <button class="btn q sm" onclick="icOpenDrawer('${escHtml(it.code)}')"
           title="이 문항의 변형과 다음 번호를 봅니다">코드 화면</button>
@@ -31835,7 +31845,9 @@ function teacherItemStoreHTML(){
              다른 화면(검토·문항 코드·학생 앱)은 다 그 함수를 거치는데 이 카드만 날글자였다.
              ⚠ 본문을 그리는 자리가 열 곳이 넘는다. 하나라도 빠지면 **그 화면에서만** 깨진다. */''}
       ${istEditHTML(it.code)}
-      ${body && body.content
+      ${한장
+        ? `<div class="ist-body has-fig">${withFigure(problemHTML(icKeepLines(body.content)), 한장)}</div>`
+        : body && body.content
         ? `<div class="ist-body">${problemHTML(icKeepLines(body.content))}</div>`
         : `<div class="ist-body none">${bodyLoaded
             ? '본문이 아직 없습니다 — 「문항 코드 › 교재에서 본문 채우기」로 hwpx 를 올리면 채워집니다.'
@@ -31846,9 +31858,8 @@ function teacherItemStoreHTML(){
            그러면 보여 준 그 한 장도 «문항 그림»이 아니라 ①번 선지라 오히려 틀린 그림이 된다.
            실측 3문항(5·6·6장)뿐이지만, 틀리게 보이는 쪽이 안 보이는 쪽보다 나쁘다. */''}
       ${(() => {
-        const figs = (body && body.images && body.images.length) ? body.images
-                   : (body && body.image && body.image.url) ? [body.image] : [];
-        if(!figs.length) return '';
+        const figs = 그림들;
+        if(!figs.length || 한장) return '';   // 한 장은 위 본문 안에 들었다
         return `<div class="ist-figs ${figs.length>1?'many':''}">` + figs.map((f,i) =>
           `<figure><img class="ist-fig" src="${escHtml(f.url)}" loading="lazy" alt="">`
           + (figs.length>1 ? `<figcaption>${'①②③④⑤⑥⑦⑧'[i] || (i+1)}</figcaption>` : '')

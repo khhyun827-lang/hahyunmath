@@ -59,7 +59,8 @@ const 저장 = 뜨기('async function vEditSave(){');
 
 // ⑧ 🔴 드로어가 본문을 «제 줄»에 그리는가 — 한 줄에 다 넣으면 글자가 세로로 선다
 봄('변형은 카드다', html.includes('class="ic-vcard"'), true);
-봄('본문이 제 줄을 갖는다', html.includes('class="ic-vb"'), true);
+/* 2026-10-02 — 그림이 들면 `class="ic-vb${… ' has-fig'}"` 로 이어 붙는다(그림을 본문 안에). 그 꼴도 같은 칸이다. */
+봄('본문이 제 줄을 갖는다', html.includes('class="ic-vb"') || html.includes('class="ic-vb${'), true);
 const ds = fs.readFileSync(path.join(ROOT, 'ds.css'), 'utf8');
 /* ⚠ 2026-09-07: 오른쪽 드로어를 «가운데 창»으로 바꿨다 — 폭만이 아니라 «자리»가 문제였다.
    그래서 재는 것도 폭 하나에서 「가운데에 서는가」로 옮긴다. */

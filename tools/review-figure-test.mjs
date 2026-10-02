@@ -69,6 +69,13 @@ try{
   봄('   그림 도구 상자엔 그림을 다시 안 그린다', await page.evaluate(() => document.querySelectorAll('.rv-fig .pb-fig').length), 0);
   await page.evaluate(무대들.시험지그림.세우기);
   봄('시험지 — 원본·변형 둘 다 본문 안 · 교재 크기', await 두카드(), [true, true]);
+
+  /* 문항 창고 — 목록 카드 · 코드 화면(원본 · 변형 카드) 셋 다 같은 꼴 */
+  await page.evaluate(무대들.창고그림.세우기);
+  봄('문항 창고 — 목록 카드 · 코드 화면 원본 · 변형 카드', await page.evaluate(() =>
+    ['.ist-body.has-fig', '.ic-cbody.has-fig', '.ic-vb.has-fig'].map(q => { const e = document.querySelector(q);
+      const f = e && e.querySelector(':scope > .rv-ifw .rv-ifig'); return !!f && f.getBoundingClientRect().width <= 340; })), [true, true, true]);
+  봄('   한 장은 본문 안에만 — 밑 줄(ist-figs)에 다시 안 그린다', await page.evaluate(() => document.querySelectorAll('.ist-figs').length), 0);
 } finally {
   await 브라우저.close(); 서버.kill();
 }
