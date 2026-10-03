@@ -264,6 +264,19 @@ console.log('');
   든가('모자라면 안 보이는 짝을 채운다', convertHwpEq('LEFT ( a'), B + 'right.');
 }
 
+/* ⑤ 한글의 첨자는 «띄어쓰기·{·} 까지»다 (2026-10-04 · 한글로 그려 보고 맞췄다 → hwpx.js hwpScriptGroupArgs) */
+{
+  봄('🔴 A_k+1 은 A_{k+1} (0541 — 한글이 그렇게 그린다)', convertHwpEq('A_k -A_k+1'), '$A_{k} -A_{k+1}$');
+  봄('🔴 2^5-3 은 2^{5-3} (예전엔 지수가 5 에서 잘렸다)', convertHwpEq('2^5-3'), '$2^{5-3}$');
+  봄('띄어쓰기에서 끊는다', convertHwpEq('x^2 +6x'), '$x^{2} +6x$');
+  봄('{ 에서 끊는다 — 조합 ₆C₂', convertHwpEq('{}_6{rmC}_2'), '${}_{6}{C}_{2}$');
+  봄('백틱에서도 끊는다', convertHwpEq('x^2`y'), '$x^{2} y$');
+  봄('UNDERBRACE {밑글} {본문} (0517)', convertHwpEq('UNDERBRACE {A가~99개} {A＊A＊ CDOTS ＊A} `=A'),
+     '$' + B + 'underbrace{A＊A＊ ' + B + 'cdots ＊A}_{A가~99개} =A$');
+  봄('🔴 prime 이 겹치면 한 덩이 — 위첨자 둘은 KaTeX 가 거절한다', convertHwpEq('rmP`primeprimeprime'), '$P^{' + B + 'prime' + B + 'prime' + B + 'prime}$');
+  봄('prime 하나는 그대로', convertHwpEq('OprimeAprimeBprime'), '$O^{' + B + 'prime}A^{' + B + 'prime}B^{' + B + 'prime}$');
+}
+
 console.log('');
 console.log('  ' + (fail ? '🔴' : '✅') + ' ' + pass + ' 통과 · ' + fail + ' 실패');
 console.log('');

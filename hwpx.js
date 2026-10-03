@@ -87,6 +87,21 @@ function convertOverToFrac(s){
   }
   return result;
 }
+/* `^`·`_` 뒤를 한글처럼 묶는다 — `{` 로 시작하면 그대로, 아니면 띄어쓰기·`{`·`}` 직전까지. */
+function hwpScriptGroupArgs(s){
+  let out = '', i = 0;
+  while(i < s.length){
+    const c = s[i]; out += c; i++;
+    if(c !== '_' && c !== '^') continue;
+    let j = i; while(j < s.length && s[j] === ' ') j++;
+    if(j >= s.length || s[j] === '{') continue;
+    let k = j;
+    while(k < s.length && !/[\s{}]/.test(s[k])) k++;
+    if(k - j <= 1) continue;
+    out += s.slice(i, j) + '{' + s.slice(j, k) + '}'; i = k;
+  }
+  return out;
+}
 function convertHwpEq(script){
   let s = script || '';
   if(!s.trim()) return '';
@@ -96,6 +111,17 @@ function convertHwpEq(script){
      `RIGHT` 의 낱말 경계를 못 찾아 **RIGHT 가 날글자로 남는다.** 그 수식은 안 그려진다.
      (사용자가 K2-01-E-0009 에서 `4RIGHT )` 로 겪었다 — 원본은 `4`right|` 꼴이었다.) */
   s = s.replace(/`/g, ' ');
+  /* 🔴 **한글의 첨자는 «띄어쓰기까지»다** (2026-10-04 · 한글로 그려 보고 확인했다).
+     `A_k+1` 을 한글은 A_(k+1) 로 그린다 — `{ }` 로 안 묶으면 `^`·`_` 뒤가 **띄어쓰기·`{`·`}` 까지** 한 덩이다
+     (`2^5-3` 은 2^(5-3), `a_k,b` 는 쉼표까지 첨자, `{}_6{rmC}_2` 는 ₆C₂).
+     예전 규칙(아래 296줄 언저리)은 영문·숫자만 묶어 `A_{k}+1` · `2^{5}-3` 처럼 **교재와 다른 식**을 냈다
+     (다섯 권 16,754식 중 13종 22자리 · 0541·0418 은 사용자가 «한글에선 제대로 보인다»고 짚었다).
+     ⚠ 여기서는 두 글자 이상만 묶는다 — 한 글자는 아래 옛 규칙이 똑같이 묶는다. */
+  s = hwpScriptGroupArgs(s);
+  /* 🔵 `UNDERBRACE {밑글} {본문}` — 한글은 «앞이 밑에 다는 글, 뒤가 본문»이다(한글로 그려 확인 · K2-05-E-0517).
+     그대로 두면 날글자로 뜬다. OVERBRACE 도 같은 꼴로 받는다. */
+  s = s.replace(/(?<![A-Za-z\\])(UNDER|OVER)BRACE\s*\{([^{}]*)\}\s*\{([^{}]*)\}/gi,
+    (m, 쪽, 글, 본문) => /^under$/i.test(쪽) ? '\\underbrace{' + 본문 + '}_{' + 글 + '}' : '\\overbrace{' + 본문 + '}^{' + 글 + '}');
   /* 🔴 **한글 전용 영역(PUA) 글자가 섞여 온다** (2026-09-06 · 사용자가 뜻을 확인해 주었다).
      실측 `N= LEFT { a_i +d <U+E04D> a_i IN M RIGHT }` — 조건제시법의 «such that» 세로줄이다.
      PUA 는 글꼴마다 뜻이 다른 자리라 **기계가 알아낼 길이 없다.** 그래서 짐작하지 않고 물었고,
@@ -176,7 +202,12 @@ function convertHwpEq(script){
   s = s.replace(/\s*(?<!\\)\bprime/g, '^{\\prime}');
   /* ⚠ **`prime` 도 붙여 쓴 꼴이 온다** — `OprimeAprimeBprime` (angle·bar 와 같은 사정이다).
      낱말 경계가 없어 위 규칙에 안 걸린다. 앞 글자를 남기고 프라임만 올린다. */
-  s = s.replace(/([A-Za-z}])prime/g, '$1^{\\prime}');
+  /* ⚠ 앞 글자는 «뒤돌아보기»로 본다 — 소비하면 `primeprimeprime` 의 셋째가 날글자로 남는다(앞 글자를 둘째가 먹었다). */
+  s = s.replace(/(?<=[A-Za-z}])prime/g, '^{\\prime}');
+  /* 🔴 **`P`primeprime` (P'') 은 위첨자가 둘이 된다** (2026-10-04 · KaTeX 로 다섯 권을 다 그려 보고 찾았다).
+     `P^{\prime}^{\prime}` 을 KaTeX 는 «Double superscript» 로 통째로 거절한다 — 깨진 19식 중 17식이 이것이었다.
+     잇따른 것을 한 덩이 `^{\prime\prime}` 로 합친다(띄어 쓴 `prime  prime` 도 위에서 공백째 먹혀 붙어 온다). */
+  s = s.replace(/(?:\^\{\\prime\}){2,}/g, m => '^{' + '\\prime'.repeat(m.length / 9) + '}');
   /* ⚠ **`it` 이 «맨 끝»에도 온다** — 위쪽 규칙은 뒤에 글자·숫자·괄호가 올 때만 걷어서
      `{{ABC}}it$` 처럼 끝에 붙은 것 54개가 그대로 남았다. 서체 지정이라 뜻이 없으니 걷는다. */
   s = s.replace(/\bit\b\s*/g, '');
@@ -423,6 +454,7 @@ function hwpWalkParagraphs(paras, tokens){
                광남고 시험지는 **0개**였다(= 시험지 쪽은 한 글자도 안 바뀐다). */
           const shellCells = [];
           let isProblemShell = false;
+          let 빈칸그림 = 0;   // 글 없이 그림만 든 칸 — 그림 보기 표를 좌석표와 가른다(아래 isSeatLike)
           for(const tr of trs){
             const tcs = Array.from(tr.childNodes).filter(n=>n.nodeType===1 && n.localName==='tc');
             const cells = [];
@@ -442,7 +474,7 @@ function hwpWalkParagraphs(paras, tokens){
                 if(t.type==='eq') s += String(t.v).replace(/\|/g, '\\vert ');
                 else if(t.type==='text') s += String(t.v).replace(/\|/g, '');
                 else if(t.type==='break') s += '\n';           // 줄바꿈을 살린다
-                else if(t.type==='pic') tokens.push(t);        // 그림은 표 밖으로 빼서 살린다
+                else if(t.type==='pic'){ tokens.push(t); 빈칸그림 += s.trim() ? 0 : 1; }  // 그림은 표 밖으로 빼서 살린다
                 else if(t.type==='endnote'){ isProblemShell = true; tokens.push(t); }  // 정답 미주도 마찬가지
               }
               cells.push(s.replace(/[ \t]+/g,' ').replace(/\n{2,}/g,'\n').trim());
@@ -491,6 +523,12 @@ function hwpWalkParagraphs(paras, tokens){
             const marked = rows.flat().filter(c => c.trim());
             const isSeatLike = marked.length > 0 && marked.every(isMark);
             const isChoiceTable = !isSeatLike && rows.some(cells => cells.some(isMark));
+            /* 🔵 **그림 보기 표** (2026-10-04 · K2-02-E-0083 「직선의 개형은?」) — 칸이 기호뿐인 것은 좌석표와 같지만
+               빈 칸마다 **그림**(보기 그래프)이 들어 있다. 그림은 위에서 표 밖으로 이미 뺐으므로, 칸을 그리면
+               `| ① | | ② | |` 빈 격자만 남는다. 좌석표는 빈 칸에 그림이 없다 — 그것으로 가른다.
+               창고가 들고 있던 모양(글 없이 그림만)을 지킨다. */
+            const isPicChoices = isSeatLike && 빈칸그림 > 0;
+            if(isPicChoices){ continue; }
             tokens.push({type:'break'});
             if(isChoiceTable){
               for(const cells of rows){
