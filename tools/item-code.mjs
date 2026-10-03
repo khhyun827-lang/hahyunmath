@@ -80,6 +80,8 @@ const BOOK_NAME = {
 const NOT_SOURCE = new Set(['보기', '다른 풀이', '정답', '참고']);
 
 function textOf(xml) {
+  /* 숨은 설명(코드를 숨긴 자리 · 2026-10-04)은 미주 글이 아니다 — 빼고 읽는다. */
+  xml = xml.replace(/<hp:hiddenComment>[\s\S]*?<\/hp:hiddenComment>/g, '');
   return [...xml.matchAll(/<hp:t(?:\s[^>]*)?>([\s\S]*?)<\/hp:t>/g)]
     .map((m) => m[1].replace(/<[^>]*>/g, ''))
     .join('');

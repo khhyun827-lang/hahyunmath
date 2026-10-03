@@ -39,6 +39,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { 푼다, 섹션들, 묶는다 } from './hwpx-zip.mjs';
 import { loadHwpxRules, problemsFromHwpx } from './hwpx-node.mjs';
+import { 교재읽기 } from './store-diff.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 export const 교재폴더 = path.join(ROOT, '교재 코드파일');
@@ -55,9 +56,13 @@ const 코드꼴 = '[A-Z]{1,2}\\d?-\\d{2}-[A-Z]-\\d{4}(?:-[NUD]\\d{2})?|[12]\\d{6
 const 묶은코드 = '(?:' + 코드꼴 + ')';
 /* 미주에 심긴 통째 꼴 — `[코드]` 또는 `[코드|지문]`. ⚠ 지문은 대괄호 «안»에 있다. */
 const 미주코드꼴 = '\\[' + 묶은코드 + '(?:\\|[^\\]\\s]{0,32})?\\]';
+const 숨은설명덩이 = /<hp:hiddenComment>[\s\S]*?<\/hp:hiddenComment>/g;
+const 수식덩이 = /<hp:equation\b[\s\S]*?<\/hp:equation>/g;
+const 딱지설명문 = /<hp:shapeComment>[^<]*자산 12@4x\.png[^<]*<\/hp:shapeComment>/;
 
 /* 미주 한 덩어리에서 심긴 코드를 뽑는다. 없으면 ''. */
 function 미주코드(덩이) {
+  덩이 = 덩이.replace(숨은설명덩이, '');   // 숨은 설명은 «보이는 미주 코드»가 아니다
   const m = 덩이.match(new RegExp('<hp:t(?:\\s[^>]*)?>\\s*\\[(' + 코드꼴 + ')(?:\\|[^\\]\\s]{0,32})?\\]'));
   return m ? m[1] : '';
 }
@@ -66,13 +71,101 @@ function 미주코드(덩이) {
 export function 훑는다(src) {
   const { cdir } = 푼다(src);
   let 미주 = 0, 설명문 = 0, 딱지 = 0;
+  const 자리별 = { 그림: [], 수식: [], 숨은설명: [] };   // 세 자리에 심긴 코드를 문서 차례대로
+  const 짚기 = (s) => (s.match(new RegExp('\\[(' + 코드꼴 + ')\\]')) || [])[1];
   for (const s of 섹션들(cdir)) {
     const xml = fs.readFileSync(s, 'utf8');
     for (const 덩이 of xml.match(미주덩이) || []) if (미주코드(덩이)) 미주++;
     설명문 += (xml.match(new RegExp('<hp:shapeComment>[^<]*\\[(?:' + 코드꼴 + ')\\][^<]*</hp:shapeComment>', 'g')) || []).length;
     딱지 += (xml.match(/<hp:shapeComment>[^<]*자산 12@4x\.png[^<]*<\/hp:shapeComment>/g) || []).length;
+    for (const m of xml.match(/<hp:shapeComment>[^<]*자산 12@4x\.png[^<]*<\/hp:shapeComment>/g) || []) if (짚기(m)) 자리별.그림.push(짚기(m));
+    for (const m of xml.replace(미주덩이, '').match(수식덩이) || []) {
+      const c = (m.match(/<hp:shapeComment>([^<]*)<\/hp:shapeComment>/) || [])[1] || '';
+      if (짚기(c)) 자리별.수식.push(짚기(c));
+    }
+    for (const m of xml.match(숨은설명덩이) || []) if (짚기(m)) 자리별.숨은설명.push(짚기(m));
   }
-  return { 미주, 설명문, 딱지 };
+  return { 미주, 설명문, 딱지, 자리별 };
+}
+
+/* ── 세 자리에 심는다 (2026-10-04 · 사용자가 정했다) ──────────────────────
+   「꼭 한군데 코드를 써놔야 할 이유는 없더라고. 다른 양식의 교재에 문제가 섞여 들어갈 수 있으니」
+     ① 딱지 그림의 개체 설명문   — 엔딩크레딧 틀에만 있다. 문제를 딴 교재로 옮기면 남는다
+     ② 본문 «첫 수식»의 설명문   — 본문과 같이 다닌다
+     ③ 미주의 «숨은 설명»        — 정답·해설과 같이 다닌다. 화면·인쇄·쪽 배치에 안 나온다
+   🔵 셋이 엇갈리면 그것이 곧 «틀만 복사해 다른 문제를 쓴» 흔적이다 — 판정은 사람이 한다.
+
+   코드는 «옛 코드 파일»에서 **자리 차례로** 가져온다. 사용자가 코드 없는 판을 고쳐 와서다(10-04).
+   ⚠ 차례로 잇는 것은 짐작이므로 **본문을 맞대 본다** — 문항 수가 다르거나 본문이 많이 갈리면 멈춘다.
+   ⚠ 미주 → 딱지 → 본문 수식 차례로 놓인다(실측). 그래서 «미주 뒤 첫 수식»이 그 문항의 첫 수식이다. */
+export function 세자리로(src, 옛파일, out) {
+  if (fs.existsSync(out)) throw new Error('이미 있는 파일입니다 — ' + out);
+  const rules = loadHwpxRules();
+  /* 미주 없는 앞장(목차·표지)은 빼고 잇는다 — 판정과 같은 잣대(store-diff 교재읽기). */
+  const 앞 = 교재읽기([src], rules).문항;
+  const 옛 = 교재읽기([옛파일], rules).문항;
+  const 앞전체 = problemsFromHwpx(src, rules).problems;
+  if (앞.length !== 옛.length) throw new Error('문항 수가 다릅니다 — 새 ' + 앞.length + ' · 옛 ' + 옛.length);
+  if (옛.some((p) => !p.code)) throw new Error('옛 파일에 코드 없는 문항이 있습니다');
+  const 코드들 = 옛.map((p) => p.code);
+  if (new Set(코드들).size !== 코드들.length) throw new Error('옛 파일에 같은 코드가 둘 있습니다');
+  const 본문다름 = 앞.map((p, i) => i).filter((i) => 앞[i].content !== 옛[i].content);
+  const 정답다름 = 앞.map((p, i) => i).filter((i) => (앞[i].answer || '') !== (옛[i].answer || ''));
+  /* 🔴 한 칸 밀리면 거의 전부가 갈린다. 고친 문항 몇 개는 정상이다. */
+  if (본문다름.length > 앞.length * 0.1) throw new Error('본문이 갈리는 문항이 ' + 본문다름.length + '제 — 차례가 밀렸을 수 있습니다');
+
+  const 숨은설명 = (code) => '<hp:ctrl><hp:hiddenComment><hp:subList id="" textDirection="HORIZONTAL" lineWrap="BREAK" vertAlign="TOP"'
+    + ' linkListIDRef="0" linkListNextIDRef="0" textWidth="0" textHeight="0" hasTextRef="0" hasNumRef="0">'
+    + '<hp:p id="0" paraPrIDRef="0" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">'
+    + '<hp:run charPrIDRef="0"><hp:t>[' + code + ']</hp:t></hp:run></hp:p></hp:subList></hp:hiddenComment></hp:ctrl>';
+
+  const { cdir, tmp } = 푼다(src);
+  let k = -1, 수식기다림 = false;          // 섹션을 건너도 이어진다
+  const 셈 = { 그림: 0, 수식: 0, 숨은설명: 0 };
+  const 덩이꼴 = new RegExp(미주덩이.source + '|' + 수식덩이.source + '|' + 딱지설명문.source, 'g');
+  for (const s of 섹션들(cdir)) {
+    let xml = fs.readFileSync(s, 'utf8');
+    xml = xml.replace(덩이꼴, (m) => {
+      if (m.startsWith('<hp:endNote')) {
+        k++; 수식기다림 = true;
+        if (k >= 코드들.length) return m;
+        /* 미주 번호(autoNum) 뒤, 첫 글자 앞에 넣는다 — 예전에 보이는 코드를 넣던 그 자리다. */
+        const 새 = m.replace(/<hp:t[\s>]/, (t) => 숨은설명(코드들[k]) + t);
+        if (새 !== m) 셈.숨은설명++;
+        return 새;
+      }
+      if (k < 0 || k >= 코드들.length) return m;           // 미주 없는 앞장
+      const 꼬리 = ' [' + 코드들[k] + ']';
+      if (m.startsWith('<hp:shapeComment>')) { 셈.그림++; return m.replace('</hp:shapeComment>', 꼬리 + '</hp:shapeComment>'); }
+      if (!수식기다림) return m;
+      수식기다림 = false;
+      const 새 = m.replace(/<\/hp:shapeComment>/, 꼬리 + '</hp:shapeComment>');
+      if (새 !== m) 셈.수식++;
+      return 새;
+    });
+    fs.writeFileSync(s, xml);
+  }
+  묶는다(tmp, out);
+
+  /* 🔴 **낸 파일을 다시 읽어 잰다** — 본문·정답·해설은 한 글자도 안 달라야 하고,
+     세 자리의 코드는 문서 차례대로 코드 목록과 같아야 한다. */
+  const 뒤 = problemsFromHwpx(out, rules).problems;
+  const 흠 = [];
+  if (앞전체.length !== 뒤.length) 흠.push('문항 수가 ' + 앞전체.length + ' → ' + 뒤.length);
+  else for (const 칸 of ['content', 'answer', 'solution']) {
+    const n = 앞전체.filter((p, i) => (p[칸] || '') !== (뒤[i][칸] || '')).length;
+    if (n) 흠.push(칸 + ' 이 달라진 문항 ' + n + '제');
+  }
+  if (교재읽기([out], rules).문항.map((p) => p.code).join() !== 코드들.join()) 흠.push('파서가 읽은 코드가 목록과 다릅니다');
+  const { 자리별, 미주 } = 훑는다(out);
+  if (미주) 흠.push('미주에 보이는 코드가 ' + 미주 + '개 생겼습니다');
+  if (자리별.그림.join() !== 코드들.join()) 흠.push('그림 설명문 차례가 다릅니다 (' + 자리별.그림.length + ')');
+  if (자리별.숨은설명.join() !== 코드들.join()) 흠.push('숨은 설명 차례가 다릅니다 (' + 자리별.숨은설명.length + ')');
+  const 수식목록 = 코드들.filter((c) => 자리별.수식.includes(c));
+  if (자리별.수식.join() !== 수식목록.join()) 흠.push('수식 설명문 차례가 다릅니다');
+  if (흠.length) { fs.unlinkSync(out); throw new Error('멈췄습니다 — ' + 흠.join(' · ') + '. 낸 파일은 지웠습니다.'); }
+  return { 셈, 문항: 앞.length, 수식없음: 코드들.filter((c) => !자리별.수식.includes(c)),
+           본문다름: 본문다름.map((i) => 코드들[i]), 정답다름: 정답다름.map((i) => [코드들[i], 옛[i].answer, 앞[i].answer]) };
 }
 
 /* ── 옮긴다 ───────────────────────────────────────────────────────────
@@ -167,17 +260,38 @@ if (나를직접부름) {
   const 재기만 = argv.includes('--check');
   const oi = argv.indexOf('--out');
   const OUT = oi >= 0 ? argv[oi + 1] : '';
-  const 준파일 = argv.filter((a, i) => !a.startsWith('--') && !(i > 0 && argv[i - 1] === '--out'));
+  const fi = argv.indexOf('--from');
+  const FROM = fi >= 0 ? argv[fi + 1] : '';
+  const 준파일 = argv.filter((a, i) => !a.startsWith('--') && !(i > 0 && ['--out', '--from'].includes(argv[i - 1])));
+
+  /* 세 자리에 심기 — node tools/item-code-hide.mjs <코드없는새파일.hwpx> --from <옛코드파일.hwpx> --out <낸파일.hwpx> */
+  if (FROM) {
+    if (준파일.length !== 1 || !OUT) { console.error('쓰는 법: … <새파일.hwpx> --from <옛코드파일.hwpx> --out <낸파일.hwpx>'); process.exit(1); }
+    fs.mkdirSync(path.dirname(OUT), { recursive: true });
+    try {
+      const r = 세자리로(준파일[0], FROM, OUT);
+      console.log('\n  ✅ ' + path.basename(OUT) + '   문항 ' + r.문항 + '제');
+      console.log('     그림 설명문 ' + r.셈.그림 + ' · 첫 수식 설명문 ' + r.셈.수식 + ' · 미주 숨은 설명 ' + r.셈.숨은설명);
+      if (r.수식없음.length) console.log('     ⓘ 본문에 수식이 없는 문항 ' + r.수식없음.length + ' — ' + r.수식없음.join(', '));
+      if (r.본문다름.length) console.log('     ⓘ 옛 파일과 본문이 다른 문항(고친 것) ' + r.본문다름.join(', '));
+      for (const [c, a, b] of r.정답다름) console.log('     ⓘ 정답이 바뀐 문항 ' + c + '  ' + String(a).slice(0, 20) + ' → ' + String(b).slice(0, 20));
+      console.log('');
+    } catch (e) { console.log('\n  🔴 ' + e.message + '\n'); process.exit(1); }
+    process.exit(0);
+  }
   const 파일들 = 준파일.length ? 준파일
     : fs.readdirSync(교재폴더).filter((x) => x.endsWith('.hwpx')).sort().map((x) => path.join(교재폴더, x));
 
   console.log('\n코드가 어디에 있나');
   for (const f of 파일들) {
-    const { 미주, 설명문, 딱지 } = 훑는다(f);
+    const { 미주, 설명문, 딱지, 자리별 } = 훑는다(f);
     console.log('  ' + path.basename(f).replace(/^.*\]/, '').padEnd(24)
       + '미주 ' + String(미주).padStart(4) + ' · 설명문 ' + String(설명문).padStart(4)
       + ' · 숨길 칸(딱지) ' + String(딱지).padStart(4)
       + (미주 && 딱지 && 미주 !== 딱지 ? '   🔴 미주와 칸 수가 다릅니다' : ''));
+    if (자리별.수식.length || 자리별.숨은설명.length)
+      console.log('  ' + ''.padEnd(24) + '그림 ' + String(자리별.그림.length).padStart(4)
+        + ' · 첫 수식 ' + String(자리별.수식.length).padStart(4) + ' · 숨은 설명 ' + String(자리별.숨은설명.length).padStart(4));
   }
 
   if (재기만) {

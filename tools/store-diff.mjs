@@ -91,7 +91,8 @@ export function 교재읽기(파일들, rules = loadHwpxRules()) {
       if (!p.content || !p.content.trim()) continue;
       const 미주 = !!((p.answer && String(p.answer).trim()) || (p.solution && String(p.solution).trim()));
       if (!미주) { 앞장++; continue; }                       // 목차·표지 — 문항이 아니다
-      문항.push({ code: p.itemCode || '', content: p.content, 파일: path.basename(f), answer: p.answer || '' });
+      문항.push({ code: p.itemCode || '', content: p.content, 파일: path.basename(f), answer: p.answer || '',
+                  ...(p.codeConflict ? { codeConflict: p.codeConflict } : {}) });
       if (p.itemCode) 코드있음++; else 코드없음++;
     }
     파일별.push({ 파일: path.basename(f), 코드있음, 코드없음, 앞장 });
@@ -159,6 +160,7 @@ if (나를직접부름) {
   console.log('  🔵 ⑥ 새 문항      ' + String(v.새문항.length).padStart(4) + '  — 새 코드를 줍니다');
   console.log('  🔴 ① 복사됨       ' + String(v.복사됨.length).padStart(4) + '무리');
   console.log('  🔴 ④ 모르는 코드   ' + String(v.모르는코드.length).padStart(4));
+  console.log('  🔴 ⑨ 코드 엇갈림   ' + String(v.엇갈림.length).padStart(4) + '  — 숨긴 세 자리가 서로 다릅니다');
   console.log('  ⚠  ⑦ 겹친 문항    ' + String(v.겹침.length).padStart(4) + '무리');
   console.log('  ⓘ  ⑧ 파일에 없음   ' + String(v.빠졌다.length).padStart(4) + '  — 🔵 지우지 않습니다');
 
@@ -185,6 +187,12 @@ if (나를직접부름) {
   }
   if (v.모르는코드.length)
     console.log('\n④ 창고에 없는 코드 — ' + v.모르는코드.map((x) => x.code).slice(0, 10).join(', '));
+  if (v.엇갈림.length) {
+    console.log('\n⑨ 코드 엇갈림 — 🔴 맞는 코드를 미주에 [코드]로 적어 주세요');
+    for (const x of v.엇갈림)
+      console.log('  그림 ' + (x.자리.그림 || '-') + ' · 첫 수식 ' + (x.자리.수식 || '-') + ' · 숨은 설명 ' + (x.자리.숨은설명 || '-')
+        + '   「' + x.문항.content.replace(/\s+/g, ' ').slice(0, 40) + '…」');
+  }
   if (v.겹침.length)
     console.log('\n⑦ 코드는 다른데 본문이 같음 — ' + v.겹침.map((c) => c.join(' = ')).join(' · '));
 

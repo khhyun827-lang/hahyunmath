@@ -26,6 +26,8 @@ const 브라우저 = await chromium.launch();
 try{
   const page = await 브라우저.newPage({ viewport: { width: 1440, height: 900 } });
   const 오류 = []; page.on('pageerror', e => 오류.push(e.message));
+  /* ⚠ 시계를 지은 날(토요일)에 묶는다 — 씨앗 반에 수업이 없는 요일(일요일)엔 «오늘 반»이 없어 넘어졌다(10-04) */
+  await page.clock.setFixedTime(new Date('2026-10-03T15:00:00'));
   for(let i = 0; i < 40; i++){ try{ await page.goto(`http://127.0.0.1:${PORT}/index.html`); break; }catch{ await page.waitForTimeout(250); } }
   await page.waitForFunction(() => typeof render === 'function' && typeof DATA !== 'undefined');
   await page.evaluate(씨앗); await page.evaluate(무대들.홈메모.세우기);

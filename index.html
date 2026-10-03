@@ -6044,7 +6044,7 @@ html.it-fly .lp .l-hero .l-logo{opacity:1 !important;transform:none !important;
      **캐시에 있는 옛 파서를 꺼내 쓴다.** 그러면 교재를 다시 올려도 옛 글이 그대로 담기고,
      화면만 보고서는 «고쳤는데 왜 안 되지»가 된다 — 파서가 바뀐 것을 아무 데서도 못 본다. -->
 <!-- 2026-09-10에 올렸다 — 창고 대조 판정과 «개체 설명문에서 코드 읽기»가 들어갔다. -->
-<script src="hwpx.js?v=2026-09-10a"></script>
+<script src="hwpx.js?v=2026-10-04a"></script>
 <!-- 출석 도장 게임(셸·똥피하기·달리기·점프). 연습 페이지 game.html 도 같은 파일을 쓴다 -->
 <!-- ⚠ ?v= 를 붙이는 까닭 — 브라우저가 game-core.js 를 캐시해서, 올려도 학생 화면에는
      옛 게임이 그대로 돈다(Ctrl+Shift+R 을 해야 바뀐다 — 학생에게 그걸 시킬 수는 없다).
@@ -29565,7 +29565,8 @@ async function icFillBodies(input){
         '🔴 담지 않았습니다 — ' + 막힘.map(m => m.갈래 + ' ' + m.n + '건').join(' · ') + '.\n'
         + 막힘.map(m => '· ' + m.말).join('\n')
         + (판정.복사됨.length ? '\n· 복사된 코드: ' + 판정.복사됨.map(x => x.code).slice(0, 6).join(', ') : '')
-        + (판정.모르는코드.length ? '\n· 모르는 코드: ' + 판정.모르는코드.map(x => x.code).slice(0, 6).join(', ') : '') };
+        + (판정.모르는코드.length ? '\n· 모르는 코드: ' + 판정.모르는코드.map(x => x.code).slice(0, 6).join(', ') : '')
+        + ((판정.엇갈림 || []).length ? '\n· 엇갈린 코드: ' + 판정.엇갈림.slice(0, 4).map(x => '그림 ' + (x.자리.그림 || '-') + ' / 첫 수식 ' + (x.자리.수식 || '-') + ' / 숨은 설명 ' + (x.자리.숨은설명 || '-')).join(' · ') : '') };
       render(); return;
     }
 

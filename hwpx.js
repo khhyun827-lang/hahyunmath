@@ -357,6 +357,12 @@ function hwpWalkParagraphs(paras, tokens){
         } else if(local === 'equation'){
           const scriptEl = child.getElementsByTagNameNS(HP_NS,'script')[0];
           tokens.push({type:'eq', v: convertHwpEq(scriptEl?scriptEl.textContent:'')});
+          /* 🔵 **본문 첫 수식의 설명문에도 코드를 심는다** (2026-10-04 · 사용자가 정했다).
+             딱지 그림은 엔딩크레딧 틀의 것이라 문제를 딴 교재로 옮기면 남는다 — 수식은 본문과 같이 다닌다.
+             ⚠ 설명문 글(「수식입니다.」)은 본문에 안 섞는다 — 코드 꼴일 때만 토큰을 낸다. */
+          const eqCmt = child.getElementsByTagNameNS(HP_NS,'shapeComment')[0];
+          const eq짚 = eqCmt && String(eqCmt.textContent||'').match(HWP_SHAPE_CODE_RE);
+          if(eq짚) tokens.push({type:'eqcode', v: eq짚[1]});
         } else if(local === 'pic'){
           const imgEl = child.getElementsByTagNameNS(HWP_CORE_NS,'img')[0];
           const ref = imgEl ? imgEl.getAttribute('binaryItemIDRef') : null;
@@ -517,7 +523,7 @@ function hwpWalkParagraphs(paras, tokens){
           const endNoteEl = child.getElementsByTagNameNS(HP_NS,'endNote')[0];
           if(endNoteEl){
             { const _p = hwpEndnoteParts(endNoteEl);
-              tokens.push({type:'endnote', v: _p.answer, code: _p.code, fp: _p.fp, sol: _p.solution}); }
+              tokens.push({type:'endnote', v: _p.answer, code: _p.code, fp: _p.fp, sol: _p.solution, hid: _p.hid}); }
           } else if(child.getElementsByTagNameNS(HP_NS,'autoNum')[0]?.getAttribute('numType')==='ENDNOTE'){
             // 문서 맨 뒤 "빠른정답" 요약처럼 진짜 hp:endNote가 아닌 평문 목록을 만나면
             // 문항 구간이 끝난 것으로 보고 멈춘다.
@@ -618,6 +624,9 @@ function hwpItemVerdicts(문항들, 창고){
 
   const 그대로 = [], 고쳤다 = [], 복사됨 = [], 모르는코드 = [],
         코드잃음 = [], 새문항 = [], 겹침 = [], 빠졌다 = [];
+  /* ⑨ 숨긴 세 자리의 코드가 엇갈린다 (2026-10-04) — 코드가 없는 것으로 읽혔으므로 아래 ⑤⑥에도 선다.
+     그래도 **막는다** — 본문으로 되찾는 것은 «틀을 복사한 쪽»을 원본으로 잘못 이을 수 있다. */
+  const 엇갈림 = 것들.filter(x => !x.code && 엇갈린자리(x.p)).map(x => ({ 문항: x.p, 자리: 엇갈린자리(x.p) }));
 
   /* ①~④ — 코드가 있는 것 */
   for(const 것 of 코드별){
@@ -670,8 +679,10 @@ function hwpItemVerdicts(문항들, 창고){
   }
 
   return { 그대로: 그대로, 고쳤다: 고쳤다, 복사됨: 복사됨, 모르는코드: 모르는코드,
-           코드잃음: 코드잃음, 새문항: 새문항, 겹침: 겹침, 빠졌다: 빠졌다 };
+           코드잃음: 코드잃음, 새문항: 새문항, 겹침: 겹침, 빠졌다: 빠졌다, 엇갈림: 엇갈림 };
 }
+/* 부르는 쪽마다 문항을 싸는 꼴이 다르다 — 웹은 {code, content, p:문제}, 도구는 문제 그 자체. */
+function 엇갈린자리(p){ return (p && (p.codeConflict || (p.p && p.p.codeConflict))) || null; }
 
 /* 🔴 **올려도 되는가** — 0-C 의 잠금 하나를 여기 둔다.
    코드가 빠진 «데다» 고쳐지기까지 한 문항은 기계가 못 잇는다(닮음으로 안 갈린다 · 실측 2026-09-09).
@@ -688,6 +699,7 @@ function hwpVerdictBlockers(v, 옵션){
   const 심을수있나 = !(옵션 && 옵션.심을수있나 === false);
   const 막 = [];
   if(v.복사됨.length)    막.push({ 갈래:'복사됨',    n:v.복사됨.length,    말:'한 코드가 두 문항을 가리킵니다 — 어느 쪽이 원본인지 사람이 골라야 합니다' });
+  if(v.엇갈림 && v.엇갈림.length) 막.push({ 갈래:'코드 엇갈림', n:v.엇갈림.length, 말:'숨긴 자리(그림·첫 수식·숨은 설명)의 코드가 서로 다릅니다 — 틀을 복사해 쓴 문항일 수 있습니다. 맞는 코드를 미주에 [코드]로 적어 주세요' });
   if(v.모르는코드.length) 막.push({ 갈래:'모르는코드', n:v.모르는코드.length, 말:'창고에 없는 코드입니다 — 장부를 보거나 오타를 고쳐야 합니다' });
   const 갈린것 = v.코드잃음.filter(x => x.갈림).length;
   if(갈린것)             막.push({ 갈래:'갈린 되찾기', n:갈린것,            말:'본문이 같은 창고 문항이 둘 이상이라 어느 코드인지 기계가 못 정합니다' });
@@ -735,6 +747,14 @@ function fixBareSqrt(s){
 }
 
 function hwpEndnoteParts(endNoteEl){
+  /* 🔵 **미주의 «숨은 설명»에서도 코드를 읽는다** (2026-10-04 · 사용자가 정했다).
+     화면·인쇄·쪽 배치에 안 나오고, 정답·해설과 같이 다닌다. 걸음(hwpWalkParagraphs)은 숨은 설명을
+     안 읽으므로 그 글이 정답에 섞일 일은 없다 — 여기서 따로 집는다. */
+  let hid = '';
+  for(const h of Array.from(endNoteEl.getElementsByTagNameNS(HP_NS,'hiddenComment'))){
+    const 짚 = String(h.textContent||'').match(HWP_SHAPE_CODE_RE);
+    if(짚){ hid = 짚[1]; break; }
+  }
   const subList = endNoteEl.getElementsByTagNameNS(HP_NS,'subList')[0];
   const innerParas = subList ? Array.from(subList.childNodes).filter(n=>n.nodeType===1 && n.localName==='p') : [];
   const innerTokens = [];
@@ -755,8 +775,8 @@ function hwpEndnoteParts(endNoteEl){
        주관식은 어디까지가 답인지 기계가 모르므로 **가르지 않고 그대로 둔다.**
        짐작으로 자르면 «답이 잘린» 문항이 조용히 생긴다. */
   const mk = rest.match(/^\s*([①②③④⑤])\s*/);
-  if(mk) return { code, fp, answer: mk[1], solution: rest.slice(mk[0].length).trim() };
-  return { code, fp, answer: rest, solution: '' };
+  if(mk) return { code, fp, hid, answer: mk[1], solution: rest.slice(mk[0].length).trim() };
+  return { code, fp, hid, answer: rest, solution: '' };
 }
 function hwpEndnoteText(endNoteEl){ return hwpEndnoteParts(endNoteEl).answer; }
 // 표의 셀 하나를 문제 하나로 취급해서 텍스트/그림/(있다면) 정답을 뽑는다.
@@ -765,16 +785,17 @@ function hwpEndnoteText(endNoteEl){ return hwpEndnoteParts(endNoteEl).answer; }
 function hwpCellToBlock(cellParas){
   const tokens = [];
   hwpWalkParagraphs(cellParas, tokens);
-  let text = '', answer = null, pics = [], itemCode = '', itemFp = '', solution = '', shapeCode = '';
+  let text = '', answer = null, pics = [], itemCode = '', itemFp = '', solution = '', shapeCode = '', eqCode = '', hidCode = '';
   for(const tok of tokens){
-    if(tok.type === 'endnote'){ answer = tok.v; if(tok.code) itemCode = tok.code; if(tok.fp) itemFp = tok.fp; if(tok.sol) solution = tok.sol; }
+    if(tok.type === 'endnote'){ answer = tok.v; if(tok.code) itemCode = tok.code; if(tok.fp) itemFp = tok.fp; if(tok.sol) solution = tok.sol; if(tok.hid) hidCode = tok.hid; }
+    else if(tok.type === 'eqcode'){ if(!eqCode) eqCode = tok.v; }
     else if(tok.type === 'text' || tok.type === 'eq') text += tok.v;
     else if(tok.type === 'pic') pics.push(tok.v);
     /* ⚠ 첫 것만 — 표 한 칸에 그림이 여럿이면 뒤엣것이 앞엣것을 덮어 «남의 코드»가 된다. */
     else if(tok.type === 'shapecode'){ if(!shapeCode) shapeCode = tok.v; }
     else if(tok.type === 'break') text += '\n';
   }
-  return { text, answer, pics, itemCode, itemFp, solution, shapeCode };
+  return { text, answer, pics, itemCode, itemFp, solution, shapeCode, eqCode, hidCode };
 }
 /* 최상위 표를 «문항 컨테이너»로 볼 것인가, «문항 안의 상자»로 볼 것인가.
 
@@ -798,13 +819,14 @@ function hwpParseBlocks(topParas, tablesAsProblems){
       if(tok.type === 'stop'){ stopped = true; break; }
       if(tok.type === 'endnote'){
         if(cur.text.trim()) blocks.push(cur);
-        cur = { text:'', answer: tok.v, itemCode: tok.code || '', itemFp: tok.fp || '', solution: tok.sol || '', pics:[] };
+        cur = { text:'', answer: tok.v, itemCode: tok.code || '', itemFp: tok.fp || '', solution: tok.sol || '', hidCode: tok.hid || '', pics:[] };
       } else if(tok.type === 'text') cur.text += tok.v;
       else if(tok.type === 'eq') cur.text += tok.v;
       else if(tok.type === 'pic') cur.pics.push(tok.v);
       /* 설명문에 심긴 코드. ⚠ **첫 것만 잡는다** — 한 문항에 그림이 여럿이면 뒤엣것이
          앞엣것을 덮어써 «남의 코드»가 될 수 있다. 붙이는 것은 저 아래에서, 미주가 없을 때만. */
       else if(tok.type === 'shapecode'){ if(!cur.shapeCode) cur.shapeCode = tok.v; }
+      else if(tok.type === 'eqcode'){ if(!cur.eqCode) cur.eqCode = tok.v; }   // 첫 수식의 것만
       else if(tok.type === 'break') cur.text += '\n';
     }
     if(cur.text.trim()) blocks.push(cur);
@@ -1316,6 +1338,7 @@ function hwpxProblemsFromDocs(docs, opts){
         if(!b.itemCode && orderedParts[i].code) b.itemCode = orderedParts[i].code;
         if(!b.itemFp && orderedParts[i].fp) b.itemFp = orderedParts[i].fp;
         if(!b.solution && orderedParts[i].solution) b.solution = orderedParts[i].solution;
+        if(!b.hidCode && orderedParts[i].hid) b.hidCode = orderedParts[i].hid;
       });
     }
     /* 🔴 **밖에서 매긴 코드는 «수가 같을 때만» 붙인다.** 하나라도 다르면 어디서 어긋났는지
@@ -1339,7 +1362,18 @@ function hwpxProblemsFromDocs(docs, opts){
          둘 다 있는 파일도 전부 읽힌다. 어느 하나를 버리지 않는다.
        ⚠ **반드시 여기, 위의 세 채우기가 «다 끝난 뒤»여야 한다.** 앞에 두면 설명문이
          미주를 이겨 버린다. */
-    bs.forEach(b => { if(!b.itemCode && b.shapeCode) b.itemCode = b.shapeCode; });
+    /* 🔵 **숨긴 자리가 셋이다** (2026-10-04) — 그림 설명문 · 첫 수식 설명문 · 미주 숨은 설명.
+       ▶ 코드가 든 자리끼리 **다 같으면** 그 코드다. 빈 자리는 괜찮다(딴 교재로 옮기면 그림이 빠진다).
+       🔴 **엇갈리면 아무것도 고르지 않는다** — 그것이 곧 «틀만 복사해 다른 문제를 쓴» 흔적이고,
+         어느 쪽이 맞는지는 기계가 모른다. `codeConflict` 로 남겨 판정(`hwpVerdictBlockers`)이 막는다.
+       ⚠ 미주에 «보이게» 적은 코드가 있으면 그것이 이긴다 — 엇갈림도 따지지 않는다(사람이 적은 것). */
+    bs.forEach(b => {
+      if(b.itemCode) return;
+      const 자리 = { 그림: b.shapeCode || '', 수식: b.eqCode || '', 숨은설명: b.hidCode || '' };
+      const 코드들 = [...new Set(Object.values(자리).filter(Boolean))];
+      if(코드들.length === 1) b.itemCode = 코드들[0];
+      else if(코드들.length > 1) b.codeConflict = 자리;
+    });
     return bs;
   };
   const candidates = [
@@ -1376,6 +1410,7 @@ let watermarkedCount = 0; const watermarked = [];
     /* 미주에 «심겨 있던» 지문. 지금 본문에서 뜬 값이 아니라 «지난번에 확인한 몸»이다 —
        둘을 견주는 것이 복사본·고침을 가리는 일 전부다 → tools/code-audit.mjs */
     itemFp: b.itemFp || '',
+    ...(b.codeConflict ? { codeConflict: b.codeConflict } : {}),
     solution: b.solution || '',
     pics: b.pics || [],
     image: null,
