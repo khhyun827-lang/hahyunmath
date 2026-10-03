@@ -52,7 +52,7 @@ console.log('\n① 메뉴 지도\n');
 const M = new Function([liftConst('TEACHER_NAV'), liftConst('TEACHER_SUBNAV'), liftConst('TEACHER_TAB_SECTION'), lift('teacherSectionOf')].join('\n') +
   '\nreturn { TEACHER_NAV, TEACHER_SUBNAV, TEACHER_TAB_SECTION, teacherSectionOf };')();
 {
-  봄('상단 차례는 홈 · 수업 · 반 · 소통 · 문항관리 · 설정', M.TEACHER_NAV.map(n => n[0]), ['홈', '수업', '반', '소통', '문항관리', '설정']);
+  봄('상단 차례는 홈 · 수업 · 반 · 소통 · 학교 · 문항관리 · 설정 (2026-10-03 학교)', M.TEACHER_NAV.map(n => n[0]), ['홈', '수업', '반', '소통', '학교', '문항관리', '설정']);
   봄('상단 칸마다 아이콘이 있다 (폰 하단 탭바)', M.TEACHER_NAV.every(n => typeof n[2] === 'string' && n[2]), true);
   봄('🔴 상단 칸이 가는 탭은 제 칸에 속한다',
     M.TEACHER_NAV.filter(n => M.TEACHER_TAB_SECTION[n[1]] !== n[0]).map(n => n[0]), []);
@@ -69,9 +69,14 @@ const M = new Function([liftConst('TEACHER_NAV'), liftConst('TEACHER_SUBNAV'), l
     Object.keys(M.TEACHER_TAB_SECTION).filter(t => !본문.includes(`t==='${t}'`)), []);
   봄('신호는 홈 아래로 왔다', M.TEACHER_TAB_SECTION.signals, '홈');
   봄('상담 신청은 소통 아래로 왔다', M.TEACHER_TAB_SECTION.consults, '소통');
-  봄('반의 열 갈래는 하나도 안 빠졌다 (학생은 홈으로 옮겼을 뿐)',
-    [...M.TEACHER_SUBNAV['반'], ...M.TEACHER_SUBNAV['홈']].filter(s => s && s[1] === 'classhub').map(s => s[2]).sort(),
-    ['consult', 'homework', 'log', 'material', 'progress', 'quiz', 'scores', 'sessions', 'students', 'video']);
+  봄('반의 갈래는 하나도 안 빠졌다 (학생은 홈 · 상담 기록은 소통으로 옮겼을 뿐 · 휴강·보강이 더해졌다)',
+    Object.values(M.TEACHER_SUBNAV).flat().filter(s => s && s[1] === 'classhub').map(s => s[2]).sort(),
+    ['consult', 'homework', 'log', 'material', 'offdays', 'progress', 'quiz', 'scores', 'sessions', 'students', 'video']);
+  /* 2026-10-03 사용자 — 상담 기록 → 소통 · 출석 도장 → 홈 · 휴강보강 → 반 · 학교 탭 */
+  봄('상담 기록은 소통 아래다', M.teacherSectionOf('classhub', 'consult'), '소통');
+  봄('출석 도장은 홈 아래다', M.TEACHER_TAB_SECTION.checkin, '홈');
+  봄('휴강·보강은 반 아래다', M.teacherSectionOf('classhub', 'offdays'), '반');
+  봄('학교 = 시험 일정 · 직보 일정표 · 등급컷', M.TEACHER_SUBNAV['학교'].map(s => s[0]), ['시험 일정', '직보 일정표', '등급컷']);
 }
 
 /* ═══ ①-b 사이드 — 학교 두 글자 (2026-10-02 · P-2) ═══ */
@@ -91,6 +96,14 @@ console.log('\n② 옛 자리 · 첫 화면\n');
   const 설정 = 알맹이(lift('teacherSettingsHTML'));
   봄('🔴 옛 설정 › 상담으로 들어와도 상담 신청이 열린다', 설정.includes("state.settingsSubTab === 'consults'") && 설정.includes('teacherConsultsHTML()'), true);
   봄('설정 목록에 상담이 더는 없다', /\['consults',/.test(설정), false);
+  봄('🔴 옛 설정 › 시험 일정으로 들어와도 학교로 간다 (셸이 메뉴를 그리기 «전»에)',
+    셸.indexOf("['examrange', 'examplan'].includes(state.settingsSubTab)") > 0
+      && 셸.indexOf("['examrange', 'examplan'].includes(state.settingsSubTab)") < 셸.indexOf('const section'), true);
+  봄('설정 목록에 시험 일정이 더는 없다', /\['examrange',/.test(설정), false);
+  봄('홈의 시험 링크는 학교로 간다', !html.includes("state.settingsSubTab='examrange'"), true);
+  봄('🔴 상단 「반」을 누르면 상담 기록(소통)에 머물지 않는다', 알맹이(lift('goTeacherTab')).includes("['students', 'consult'].includes(state.classHubTab)"), true);
+  봄('휴강·보강은 설정 › 반에서 빠졌다', 알맹이(lift('teacherSettingsClassesHTML')).includes('teacherOffDaysHTML('), false);
+  봄('반 › 휴강·보강은 그 반을 넘긴다', 알맹이(lift('teacherClassHubHTML')).includes("tab==='offdays')    sub = teacherOffDaysHTML(c.id)"), true);
   봄('벨의 상담 신청도 새 자리로 간다', /key:'consult'[^\n]*goTeacherTab\('consults'\)/.test(html), true);
 }
 
@@ -131,7 +144,7 @@ console.log('\n④ 대시보드\n');
   봄('🔴 처리할 일은 벨과 같은 목록이다', d.includes('teacherNotifItems()'), true);
   봄('오늘 수업의 딱지는 수업 화면과 같은 함수다', d.includes('sessionStatusOf('), true);
   봄('수업 화면 왼쪽 목록도 그 함수를 쓴다', 알맹이(lift('teacherSessionHTML')).includes('sessionStatusOf(c, date)'), true);
-  봄('시험은 examDdayOf 에서 온다', d.includes('examDdayOf('), true);
+  봄('시험은 examDdayOf 에서 온다 (학교 사이드와 같은 upcomingExams)', d.includes('upcomingExams()') && lift('upcomingExams').includes('examDdayOf('), true);
 }
 
 /* ═══ ⑤ 자두판 경계 ═══ */

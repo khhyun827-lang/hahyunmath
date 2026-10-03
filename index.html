@@ -3828,6 +3828,7 @@
   .app:not(.sap):has(.tnav):has(.pg-h) .cn-screen .rst-hrow > h1.t-title s,
   .app:not(.sap):has(.tnav):has(.pg-h) .dsh > .rst-hrow > h1.t-title s,
   .app:not(.sap):has(.tnav):has(.pg-h) .ex-screen:has(.ist-find) .rst-hrow > h1.t-title s{font-size:13px;margin-left:0;}
+  .app:not(.sap):has(.tnav):has(.pg-h) .sc-screen .sc-h{display:none;}   /* 학교 — 셸이 제목을 그린다 */
   /* 설정 — 같은 머리(작은 경로 + 큰 제목) · 설명 글은 제목에 걸어 둔다(시안엔 없다) · 갈래 단추는 흰 묶음 */
   .app:not(.sap):has(.tnav) .st-crumb{display:block;text-decoration:none;font-size:13.5px;font-weight:600;color:#6A7186;line-height:20px;margin-bottom:2px;}
   .app:not(.sap):has(.tnav):not(:has(.pg-h)) .ex-main > .rst-hrow h1.t-title{font-size:34px;font-weight:800;letter-spacing:-.03em;line-height:42px;}
@@ -3983,6 +3984,7 @@
   .app:not(.sap):has(.tnav) .sb-w{display:flex;align-items:center;height:auto;padding:9px 10px;margin-bottom:6px;border-radius:12px;background:#fff;cursor:pointer;font-size:13.5px;}
   .app:not(.sap):has(.tnav) .sb-w span{font-weight:700;color:#1E2433;}
   .app:not(.sap):has(.tnav) .sb-w b{margin-left:auto;font-weight:800;color:#1E2433;}
+  .app:not(.sap):has(.tnav) .sb-w b.hot{color:#A3222D;}   /* 학교 › 다가오는 시험 7일 안 */
   .app:not(.sap):has(.tnav) .sb-none{font-size:12.5px;color:#6A7186;}
   /* 홈 — 빠른 작업(가운데 정렬 · 사용자가 고름) · 최근 본 학생(동그라미 = 학교 두 글자) */
   .app:not(.sap):has(.tnav) .sb-grp{font-size:11.5px;font-weight:800;color:#9AA0B0;letter-spacing:.06em;padding:16px 10px 6px;}
@@ -14630,6 +14632,7 @@ function escHtml(s){
 // 이모지 대신 통일된 라인아트 아이콘을 쓰기 위한 SVG 라이브러리 (알림 벨과 같은 스타일: stroke 기반, currentColor)
 const ICON_PATHS = {
   home: '<path d="M3 11 12 4l9 7"/><path d="M5 10v10h14V10"/><path d="M9.5 20v-6h5v6"/>',
+  school: '<path d="M2 9.5 12 4.5l10 5-10 5-10-5z"/><path d="M6 11.5V16c0 1.4 2.7 3 6 3s6-1.6 6-3v-4.5"/><path d="M22 9.5v6"/>',
   building: '<rect x="4" y="3" width="16" height="18" rx="1"/><path d="M9 7h1M14 7h1M9 11h1M14 11h1M9 15h1M14 15h1"/><path d="M10 21v-4h4v4"/>',
   document: '<path d="M6 3h9l4 4v14H6V3z"/><path d="M14 3v5h5"/><path d="M9 12.5h6M9 15.5h6M9 18.5h3.5"/>',
   search: '<circle cx="10.5" cy="10.5" r="6.5"/><path d="M20 20l-5-5"/>',
@@ -19908,6 +19911,9 @@ const TEACHER_NAV = [
   /* 🔵 소통이 앞으로, 「오답」은 「문항관리」로 (2026-09-29 · 사용자 — 「오답탭은 시험지 오답에서 시작되어서
      이름이 오답인데 생각해보면 문항관리 탭이 맞는것 같아」). 탭 id(review·exams·unitbank)는 그대로다. */
   ['소통', 'clinic',   'messageCircle'],
+  /* 🔵 「학교」 (2026-10-03 · 사용자 — 「학교에 관련된 시험정보 또는 학교별로 학생을 다루는 탭을 새롭게」).
+     시험 일정·직보 일정표·등급컷이 설정에서 나왔다. 탭 id 셋(examrange·examplan·gradecut)은 새것이다. */
+  ['학교', 'examrange', 'school'],
   ['문항관리', 'unitbank', 'clipboard'],   // 문항 창고가 첫 화면 (2026-10-02 · 사용자)
   ['설정', 'settings', 'settings']
 ];
@@ -19930,7 +19936,9 @@ const TEACHER_NAV = [
 const TEACHER_SUBNAV = {
   '홈': [
     ['오늘', 'dash', null, 'calendar'], ['신호', 'signals', null, 'alert'],
-    ['학생', 'classhub', 'students', 'users']
+    ['학생', 'classhub', 'students', 'users'],
+    /* 🔵 「출석 도장」은 소통 → 홈 (2026-10-03 · 사용자). 학습 관리도 주고받기도 아닌 «학생이 앱을 꾸준히 여나»다. */
+    ['출석 도장', 'checkin', null, 'trophy']
   ],
   '반': [
     ['출결',       'classhub', 'sessions', 'checklist'],
@@ -19939,7 +19947,8 @@ const TEACHER_SUBNAV = {
     null,
     ['진도',       'classhub', 'progress', 'book'],
     ['수업 기록',  'classhub', 'log',      'pencil'],
-    ['상담 기록',  'classhub', 'consult',  'chat'],
+    /* 🔵 휴강·보강은 설정 › 반 → 여기 (2026-10-03 · 사용자 — 「휴강보강은 일반적으로 반별로 정해지는 것」) */
+    ['휴강·보강',  'classhub', 'offdays',  'calendar'],
     null,
     ['영상',       'classhub', 'video',    'video'],
     ['자료',       'classhub', 'material', 'file'],
@@ -19950,21 +19959,26 @@ const TEACHER_SUBNAV = {
     /* 문항 창고가 맨 앞 (2026-10-02 · 사용자 — 「문항관리에서 문항 창고가 가장 먼저」) */
     ['문항 창고', 'unitbank', null, 'box'], ['검토', 'review', null, 'checkCircle'], ['시험지', 'exams', null, 'document']
   ],
-  /* 「출석 도장」이 여기 있는 이유 — «신호»는 지표를 세우는 화면이고 «명단»은 평가하는
-     화면이라, 놀이를 그 옆에 두면 놀이가 그 성격을 물려받는다. 소통이 제일 안 다치는 자리다. */
   /* 🔵 「상담 신청」이 설정에서 여기로 왔다 (2026-09-24 · A-1) — 홈페이지로 들어온 새 상담은 «설정»이 아니라
-       답해야 할 «소통»이다. 벨도 여기로 보낸다. 화면은 그대로다(`teacherSettingsConsultsHTML`). */
+       답해야 할 «소통»이다. 벨도 여기로 보낸다. 화면은 그대로다(`teacherSettingsConsultsHTML`).
+     🔵 「상담 기록」도 반 → 여기 (2026-10-03 · 사용자). 탭 id 는 그대로 classhub/consult 라 반 고르기가 따라온다
+       (사이드 위 고르개 · `teacherSideExtrasHTML`). */
   '소통': [
     ['클리닉', 'clinic', null, 'clinic'], ['공지', 'notices', null, 'megaphone'],
-    ['질의응답', 'qna', null, 'messageSquare'], ['채팅', 'chat', null, 'messageCircle'], ['상담 신청', 'consults', null, 'phone'],
-    null, ['출석 도장', 'checkin', null, 'trophy']
+    ['질의응답', 'qna', null, 'messageSquare'], ['채팅', 'chat', null, 'messageCircle'],
+    null,
+    ['상담 기록', 'classhub', 'consult', 'chat'], ['상담 신청', 'consults', null, 'phone']
+  ],
+  '학교': [
+    ['시험 일정', 'examrange', null, 'calendar'], ['직보 일정표', 'examplan', null, 'document'], ['등급컷', 'gradecut', null, 'chart']
   ]
 };
 /* 사이드의 묶음 머리 — 묶음(null 로 갈린 토막) 차례대로. 빈 글자면 머리 없이 가는 선만 */
-const TEACHER_SUBNAV_TITLES = { '반': ['기록', '수업', '내보내기'] };
-/* 지금 탭이 어느 상위 칸인가 — 표(TEACHER_TAB_SECTION)에 «반 › 학생 = 홈» 한 가지 예외를 얹는다 */
+const TEACHER_SUBNAV_TITLES = { '반': ['기록', '수업', '내보내기'], '소통': ['', '상담'] };
+/* 지금 탭이 어느 상위 칸인가 — 표(TEACHER_TAB_SECTION)에 예외 둘을 얹는다: «반 › 학생 = 홈» · «반 › 상담 기록 = 소통» */
 function teacherSectionOf(tab, hub){
   if(tab === 'classhub' && hub === 'students') return '홈';
+  if(tab === 'classhub' && hub === 'consult') return '소통';
   return TEACHER_TAB_SECTION[tab] || '반';
 }
 
@@ -20014,12 +20028,26 @@ function reviewSideQueuesHTML(){
       <i class="d ${q[2]}"></i><span>${q[1]}</span><b class="${n ? '' : 'z'}">${n}</b></a>`;
   }).join('');
 }
+/* 다가오는 시험 — 재원생의 학교·학년마다 한 줄, 가까운 순. 홈과 학교 사이드가 같이 쓴다(이미 읽은 시험 일정만 본다). */
+function upcomingExams(){
+  const seen = new Set(), exams = [];
+  DATA.students.forEach(s => {
+    if(isWithdrawn(s)) return;
+    const k = (s.school || '') + '|' + (s.grade || '');
+    if(seen.has(k)) return; seen.add(k);
+    const dd = examDdayOf(s.school || '', s.grade || '');
+    if(dd && dd.state !== 'after') exams.push({ school: s.school || '', grade: s.grade || '', dd });
+  });
+  return exams.sort((a, b) => a.dd.days - b.dd.days || (a.dd.target || '').localeCompare(b.dd.target || ''));
+}
 function teacherSideExtrasHTML(section){
   const 카드 = (제목, 안) => `<section class="sb-x sb-card"><div class="sb-ct">${제목}</div>${안}</section>`;
   const 막대 = (k, v, p, c) => `<div class="sb-m"><div class="sb-mk"><span>${k}</span><b>${v}</b></div>
     <div class="sb-mb"><i style="width:${Math.max(0, Math.min(100, p))}%;background:${c}"></i></div></div>`;
   let top = '', bottom = '';
-  if(section === '반'){
+  /* 소통 › 상담 기록도 «반»을 고른다(탭 id 가 classhub/consult) — 고르개만 같이 쓰고, «이 반 한눈에» 카드는 반 칸의 것이다 */
+  const 상담기록 = state.teacherTab === 'classhub' && state.classHubTab === 'consult';
+  if(section === '반' || 상담기록){
     const 반들 = myClassList();
     const c = 반들.find(x => x.id === state.classHubId) || 반들[0];
     if(c){
@@ -20033,6 +20061,8 @@ function teacherSideExtrasHTML(section){
             onclick="state.classHubId='${x.id}'; state.sidePickOpen=false; render()">
             <b>${escHtml(x.name)}</b><s>${escHtml(classScheduleLabel(x) || '일정 미정')} · ${classRoster(x.id).length}명</s></a>`).join('')}</div>` : ''}
       </div>`;
+    }
+    if(c && !상담기록){
       /* 이 반 한눈에 — 다음 수업 · 이번 달 출석률 · 과제 확인 대기 · 진도 */
       let 다음 = '';
       for(let k = 0; k <= 21 && !다음; k++){
@@ -20078,6 +20108,14 @@ function teacherSideExtrasHTML(section){
       `<a class="sb-w" onclick="${it.gotoCode}"><span>${escHtml(it.label)}</span><b>${n}</b></a>`).join('')
       : '<div class="sb-none">지금 기다리는 것이 없습니다.</div>');
   }
+  if(section === '학교'){
+    const 시험 = upcomingExams();
+    const 꼴 = e => e.dd.state === 'during' ? '시험 중' : 'D-' + e.dd.days;
+    bottom = 카드('다가오는 시험', 시험.length ? 시험.slice(0, 6).map(e =>
+      `<a class="sb-w" onclick="goTeacherTab('examrange')"><span>${escHtml(schoolShort(e.school))} ${escHtml(gradeLabel(e.grade) || '')}</span><b class="${
+        e.dd.state === 'during' || e.dd.days <= 7 ? 'hot' : ''}">${꼴(e)}</b></a>`).join('')
+      : '<div class="sb-none">적어 둔 시험 날짜가 없습니다.</div>');
+  }
   if(section === '문항관리' && (state.aiQuotaUsed != null || state.reviewQuotaUsed != null)){
     bottom = 카드('오늘 AI 사용',
       (state.aiQuotaUsed != null ? 막대('AI 변형', state.aiQuotaUsed + ' / ' + AI_DAILY_LIMIT, state.aiQuotaUsed / AI_DAILY_LIMIT * 100, '#8E97AA') : '')
@@ -20096,7 +20134,8 @@ const TEACHER_TAB_SECTION = {
      itemcode 를 서브탭에만 넣고 여기를 빠뜨렸더니 상단 메뉴가 「반」으로 잡히고
      서브탭 줄이 통째로 반의 것으로 그려졌다 (2026-09-03). */
   review:'문항관리', exams:'문항관리', unitbank:'문항관리',
-  clinic:'소통', notices:'소통', qna:'소통', chat:'소통', checkin:'소통',
+  clinic:'소통', notices:'소통', qna:'소통', chat:'소통', checkin:'홈',
+  examrange:'학교', examplan:'학교', gradecut:'학교',
   settings:'설정'
 };
 
@@ -20114,7 +20153,10 @@ async function goTeacherTab(tab, hubTab){
   state.qnaPicked = false;   /* 폰의 질의응답은 다시 들어오면 «목록»부터 (A-2) */
   if(hubTab) state.classHubTab = hubTab;
   /* 「학생」이 홈으로 갔다 (2026-10-02) — 갈래 없이 「반」으로 오면(상단 메뉴·바로가기) 학생 명단 말고 출결로 */
-  else if(tab === 'classhub' && state.classHubTab === 'students') state.classHubTab = 'sessions';
+  /* 「상담 기록」도 소통으로 갔다 (2026-10-03) — 그대로 두면 상단 「반」을 눌렀는데 소통 › 상담 기록이 열린다 */
+  else if(tab === 'classhub' && ['students', 'consult'].includes(state.classHubTab)) state.classHubTab = 'sessions';
+  /* 직보 일정표는 들어올 때마다 잠근다(planEdit=false · 2026-09-30) — 손으로 풀어야 칸이 먹는다 */
+  if(tab === 'examplan') state.planEdit = false;
   /* 🔴 **여기서 `classHubId`를 비우지 않는다** (2026-09-01 · C-13에서 뺐다).
      예전에는 상단 「반」을 누를 때마다 첫 반으로 되돌렸다 — 그때는 반을 고르는 자리가
      왼쪽 목록뿐이라 손해가 없었다. 지금은 **학생 명단의 고르개가 그 반을 정한다**.
@@ -20141,6 +20183,9 @@ function teacherTabBodyHTML(){
   if(t==='exams')       return teacherExamsHTML();
   if(t==='review')      return teacherReviewHTML();
   if(t==='unitbank')    return teacherItemStoreHTML();
+  if(t==='examrange')   return teacherSchoolHTML('range');
+  if(t==='examplan')    return teacherSchoolHTML('plan');
+  if(t==='gradecut')    return teacherSchoolHTML('cut');
   if(t==='settings')    return teacherSettingsHTML();
   return teacherClassHubHTML();
 }
@@ -20157,7 +20202,12 @@ function teacherHTML(){
   }
   /* 옛 `home` 은 «로그인 첫 화면»이라는 뜻이었다 — 그 자리가 이제 대시보드다 (A-1). */
   if(state.teacherTab==='home') state.teacherTab = 'dash';
-  const section = teacherSectionOf(state.teacherTab, state.classHubTab);
+  /* 옛 «설정 › 시험 일정»(과 그 안의 직보·등급컷)은 「학교」로 갔다 (2026-10-03) */
+  if(state.teacherTab==='settings' && ['examrange', 'examplan'].includes(state.settingsSubTab)){
+    state.teacherTab = ({plan: 'examplan', cut: 'gradecut'})[state.settingsSubTab === 'examplan' ? 'plan' : state.examSubTab] || 'examrange';
+    state.settingsSubTab = 'assistants';
+  }
+  const section =teacherSectionOf(state.teacherTab, state.classHubTab);
   const subs = TEACHER_SUBNAV[section];
   /* 사이드의 묶음 머리 — 첫 토막의 머리는 맨 앞에, 나머지는 null 자리에 (줄 모드에서는 그냥 가는 선) */
   const 머리 = TEACHER_SUBNAV_TITLES[section] || [];
@@ -20298,7 +20348,7 @@ function teacherMonthEvents(ym, mine){
     if(!dd) return;
     const 누구 = [s.school || '학교 미정', gradeLabel(s.grade) || ''].filter(Boolean).join(' ');
     const 짧게 = (s.school ? schoolShort(s.school) : '학교') + (s.grade || '');
-    const 열기 = "state.settingsSubTab='examrange'; state.examSubTab='range'; goTeacherTab('settings')";
+    const 열기 = "goTeacherTab('examrange')";
     if(dd.start) 넣기(dd.start, {kind: 'exam', title: 누구 + ' 시험기간 시작', short: 짧게 + ' 시작', open: 열기});
     if(dd.end && dd.end !== dd.start) 넣기(dd.end, {kind: 'exam', title: 누구 + ' 시험기간 끝', short: 짧게 + ' 끝', open: 열기});
     if(dd.math){ 넣기(dd.math, {kind: 'exam', title: 누구 + ' 수학 시험', short: 짧게 + ' 수학', 굵게: 1, open: 열기}); 수학날[dd.math] = 1; }
@@ -20322,7 +20372,7 @@ function teacherMonthEvents(ym, mine){
     for(const date in cells) if(cells[date].k === 'consult') (상담[date] = 상담[date] || []).push(s.name || '');
   });
   for(const date in 상담) 넣기(date, {kind: 'clinic', title: '상담진행 · ' + 상담[date].length + '명', short: '상담 ' + 상담[date].length + '명',
-    sub: 상담[date].join(' · '), open: "state.settingsSubTab='examrange'; state.examSubTab='plan'; goTeacherTab('settings')"});
+    sub: 상담[date].join(' · '), open: "goTeacherTab('examplan')"});
 
   /* ⑦ 내 일정 — 강사가 홈 달력에 적은 것 (2026-10-03 · 사용자 — 「달력에 개인 일정 추가」). 메모 문서(memo:uid)의 events 에 산다 */
   (mine || []).forEach(e => 넣기(e.date, {kind: 'mine', title: e.t || '내 일정', short: e.t || '', time: e.time || '', id: e.id}));
@@ -20640,16 +20690,8 @@ function teacherDashHTML(){
         <span class="hm-chips r">${r.sg.rules.map(x => 칩(x.name, r.sg.grade === 'r' ? 'no' : 'late')).join('')}</span></a>`).join('');
 
   /* ── 다가오는 시험 (학교·학년마다 한 줄) — D-day 상자: 7일 안 빨강 · 14일 안 노랑 ── */
-  const seen = new Set(), exams = [];
-  DATA.students.forEach(s => {
-    if(isWithdrawn(s)) return;
-    const k = (s.school || '') + '|' + (s.grade || '');
-    if(seen.has(k)) return; seen.add(k);
-    const dd = examDdayOf(s.school || '', s.grade || '');
-    if(dd && dd.state !== 'after') exams.push({ school: s.school || '', grade: s.grade || '', dd });
-  });
-  exams.sort((a, b) => a.dd.days - b.dd.days || (a.dd.target || '').localeCompare(b.dd.target || ''));
-  const examBody = exams.length ? exams.slice(0, 5).map(e => `<a class="hm-exam" onclick="state.settingsSubTab='examrange'; state.examSubTab='range'; goTeacherTab('settings')">
+  const exams = upcomingExams();
+  const examBody = exams.length ? exams.slice(0, 5).map(e => `<a class="hm-exam" onclick="goTeacherTab('examrange')">
       <span class="dsh-dd hm-dd mono ${e.dd.state === 'during' ? 'on' : e.dd.days <= 7 ? 'near' : e.dd.days <= 14 ? 'soon' : ''}">${e.dd.state === 'during' ? '시험 중' : 'D-' + e.dd.days}</span>
       <span class="hm-sm"><b>${escHtml(e.school || '학교 미정')} ${escHtml(gradeLabel(e.grade) || '')}</b><em>${
         escHtml([e.dd.start && e.dd.end ? e.dd.start.slice(5) + ' ~ ' + e.dd.end.slice(5) : ''].filter(Boolean).join(''))}</em></span>
@@ -20666,8 +20708,8 @@ function teacherDashHTML(){
     ${/* 다가오는 시험 — 칸 대신 얇은 띠 (2026-10-02 · 사용자 — 「시험기간에만 유용하고 크게 둘 일은 아니다」). 3주 안(또는 시험 중)일 때만 선다. */
       (() => { const 가까운 = exams.filter(e => e.dd.state === 'during' || e.dd.days <= 21).slice(0, 6);
         return !가까운.length ? '' : `<div class="hm-exstrip"><b>다가오는 시험</b>${가까운.map(e =>
-          `<a class="hm-exchip" onclick="state.settingsSubTab='examrange'; state.examSubTab='range'; goTeacherTab('settings')"><span class="dsh-dd hm-dd mono ${e.dd.state === 'during' ? 'on' : e.dd.days <= 7 ? 'near' : e.dd.days <= 14 ? 'soon' : ''}">${e.dd.state === 'during' ? '시험 중' : 'D-' + e.dd.days}</span>${escHtml((e.school ? schoolShort(e.school) : '학교') + ' ' + (gradeLabel(e.grade) || ''))}${e.dd.math ? ` <s>수학 ${escHtml(e.dd.math.slice(5).replace('-', '/'))}</s>` : ''}</a>`).join('')}
-          <a class="hm-exmore" onclick="state.settingsSubTab='examrange'; state.examSubTab='range'; goTeacherTab('settings')">시험 일정 ${iconSvg('chevR', 12)}</a></div>`; })()}
+          `<a class="hm-exchip" onclick="goTeacherTab('examrange')"><span class="dsh-dd hm-dd mono ${e.dd.state === 'during' ? 'on' : e.dd.days <= 7 ? 'near' : e.dd.days <= 14 ? 'soon' : ''}">${e.dd.state === 'during' ? '시험 중' : 'D-' + e.dd.days}</span>${escHtml((e.school ? schoolShort(e.school) : '학교') + ' ' + (gradeLabel(e.grade) || ''))}${e.dd.math ? ` <s>수학 ${escHtml(e.dd.math.slice(5).replace('-', '/'))}</s>` : ''}</a>`).join('')}
+          <a class="hm-exmore" onclick="goTeacherTab('examrange')">시험 일정 ${iconSvg('chevR', 12)}</a></div>`; })()}
     ${/* 🔵 **재배치** (2026-10-02 · 사용자 — 「오늘 수업 공간이 너무 크고 달력 밑에 적혀 있어 중복」).
          «오늘 수업» 칸을 뺐다 — 오늘 수업은 달력 밑 «고른 날 일정»에 있고, 출결 넣을 수업은 머리 오른쪽 단추가 맡는다.
          넓은 화면: 먼저 볼 학생(두 줄) · 다가오는 시험 / 할 일 · 달력(두 줄 — 고른 날 일정까지). 좁으면 왼쪽(학생·시험) · 오른쪽(달력·할 일). */''}
@@ -23264,6 +23306,7 @@ function teacherClassHubHTML(){
   /* 🔵 학교 시험·모의고사는 성적 «안»의 갈래다 (2026-09-29 · 사용자 — 「내신.모의 탭을 성적탭 안에」). 조교도 본다. */
   else if(tab==='scores')     sub = state.nsMode ? chubSchoolHTML(c.id) : chubScoresHTML(c.id);
   else if(tab==='consult')    sub = chubConsultHTML(c.id);
+  else if(tab==='offdays')    sub = teacherOffDaysHTML(c.id);
   else if(tab==='log')        sub = chubLogHTML(c.id);
   else if(tab==='progress')   sub = chubProgressHTML(c.id);
   else if(tab==='quiz')  sub = chubQuizHTML(c.id);
@@ -34067,6 +34110,27 @@ function noticeImageHTML(n){
 }
 
 /* ---------- 설정 (조교 + 관리자) ---------- */
+/* =================== 학교 (2026-10-03 · 사용자 — 「학교에 관련된 시험정보 또는 학교별로 학생을 다루는 탭」) ===================
+   설정 › 시험 일정 안의 세 갈래(시험 일정 · 직보 일정표 · 등급컷)를 그대로 옮겼다 — 본문 함수는 한 글자도 안 바뀌었다.
+   갈래 고르기는 이제 셸의 서브탭이 한다(예전 «시험 일정 | 직보 일정표 | 등급컷» 단추 줄은 없앴다).
+   ⚠ `state.examSubTab` 은 남는다 — 본문(열쇠·칸 창)이 아직 그것을 본다. 여기서 맞춰 준다. */
+function teacherSchoolHTML(kind){
+  state.examSubTab = kind;
+  if(kind !== 'range') state.examPop = null;   // 칸 창은 «시험 일정» 표의 것이다
+  const 머리 = { range: ['시험 일정', '학교·학년마다 시험 날짜 · 범위 · 교재 · 프린트'],
+    plan: ['직보 일정표', '시험기간에 누가 언제 오는지 — 찍는 즉시 그 학생 달력에 뜬다'],
+    cut: ['등급컷', '학교·학년·과목마다 1~4등급컷 — 비워 둔 학교 시험 등급을 이걸로 센다'] }[kind];
+  const sub = kind === 'plan' ? teacherExamPlanHTML() : kind === 'cut' ? teacherExamRangeHTML('cut') : teacherExamRangeHTML();
+  /* 넓은 화면은 셸이 큰 제목을 그린다(.pg-h) — 이 머리(.sc-h)는 줄 모드·폰에서만 보인다 */
+  return `<div class="ex-screen ex-nosub sc-screen">
+    <main class="ex-main">
+      <div class="rst-hrow sc-h" style="flex-shrink:0;"><h1 class="t-title">${머리[0]}<s>${머리[1]}</s></h1></div>
+      <div class="ex-body">${sub}
+        <div class="rst-pad"></div></div>
+    </main>
+  </div>`;
+}
+
 function teacherSettingsHTML(){
   if(state.studentDetailId) return teacherStudentDetailHTML(state.studentDetailId);
   /* 🔵 「상담」(홈페이지 상담 신청)은 소통으로 갔다 (2026-09-24 · A-1). 옛 state 로 들어오면 그리로 보낸다. */
@@ -34076,13 +34140,14 @@ function teacherSettingsHTML(){
      계정 사이에 섞여 있어 매번 목록을 훑어야 했다. 갈래 id 는 하나도 안 바뀌었다. */
   const SETTINGS_GROUPS = [
     ['계정',   [['students','학생'],['assistants','조교'],['classes','반'],['admin','관리자']]],
-    ['운영',   [['examrange','시험 일정'],['signalrules','신호 규칙']]],
+    /* 시험 일정(+직보·등급컷)은 「학교」로 나갔다 (2026-10-03) — 운영에 남은 것은 신호 규칙 하나 */
+    ['운영',   [['signalrules','신호 규칙']]],
     ['시스템', [['push','알림'],['auditlog','변경 이력']]]
   ];
   const subtabs = SETTINGS_GROUPS.flatMap(g => g[1]);
   /* 사이드 아이콘 — 넓은 화면에서만 보인다(시안 «D 차분 · 설정»). 색 없는 선 아이콘. */
   const ST_ICONS = { students:'users', assistants:'clipboard', classes:'building', admin:'shield',
-    examrange:'calendar', signalrules:'alert', push:'bell', auditlog:'document' };
+    signalrules:'alert', push:'bell', auditlog:'document' };
   /* 🔵 **«데이터 정리»를 서브탭에서 뺐다** (2026-09-05 · 사용자 요청 — 「내가 쓸 일이 없는거면 화면에서 가려줘」).
      세 가지(배점·sqrt·정답 속 해설)가 전부 «쓰는 자리»에서 막혔고, 저장된 기록에도 남은 것이 0건이다.
      그래서 평소에 쓸 일이 없다. **없애지는 않았다** — 옛 hwpx 를 다시 올리거나 변환기를 또 고치면
@@ -34093,33 +34158,14 @@ function teacherSettingsHTML(){
     students: teacherSettingsStudentsHTML,
     classes: teacherSettingsClassesHTML,
     consults: teacherSettingsConsultsHTML,
-    examrange: teacherExamRangeHTML,
-    examplan: teacherExamPlanHTML,
     signalrules: teacherSignalRulesHTML,
     auditlog: teacherAuditLogHTML,
     cleanup: teacherCleanupHTML,
     push: teacherPushHTML,
     admin: teacherSettingsAdminHTML,
   };
-  /* 🔵 **직보 일정표는 「시험 일정」 안의 둘째 갈래다** (2026-09-14 · 사용자 — 「시험일정 탭 안에 시험일정 /
-       직보일정표 두 가지가 들어갔으면」). 시즌·학교·날짜가 같은 뿌리라 한 문 안에 있는 것이 맞다.
-     ⚠ 옛 state(`examplan`)로 들어와도 빈 화면이 안 되게 여기서 돌려세운다. */
-  if(tab === 'examplan'){ state.settingsSubTab = 'examrange'; state.examSubTab = 'plan'; }
-  const examSub = state.settingsSubTab === 'examrange' ? (state.examSubTab || 'range') : '';
-  if(examSub !== 'range') state.examPop = null;   // 칸 창은 «시험 일정» 표의 것이다
   const tabNow = state.settingsSubTab || 'assistants';
-  /* 셋째 갈래 «등급컷» (2026-10-02) — 시험 일정 표가 넓어 오른쪽 칸이 잘렸다. 같은 시즌·같은 줄이라 이 문 안에 둔다. */
-  const sub = (tabNow === 'examrange' && examSub === 'plan') ? teacherExamPlanHTML()
-            : (tabNow === 'examrange' && examSub === 'cut') ? teacherExamRangeHTML('cut')
-            : (subMap[tabNow] || teacherAssistantsHTML)();
-  /* 🔒 직보 일정표는 들어올 때마다 잠근다(planEdit=false · 2026-09-30) — plan-export-test 가 이 글자를 붙잡는다 */
-  const EXAM_SUBS = [['range', '시험 일정', "state.examSubTab='range';"],
-                     ['plan', '직보 일정표', "state.examSubTab='plan'; state.planEdit=false;"],
-                     ['cut', '등급컷', "state.examSubTab='cut';"]];
-  const examSwitch = tabNow !== 'examrange' ? '' : `<div class="row seg-w st-sw" style="gap:0;margin-left:14px;">
-      ${EXAM_SUBS.map(([k, t, go], i) => `<button class="btn sm ${examSub === k ? 'p' : 'q'}" style="border-radius:${
-          i === 0 ? 'var(--r-sm) 0 0 var(--r-sm)' : i === EXAM_SUBS.length - 1 ? '0 var(--r-sm) var(--r-sm) 0' : '0'};"
-        onclick="${go} render()">${t}</button>`).join('')}</div>`;
+  const sub = (subMap[tabNow] || teacherAssistantsHTML)();
   /* =================== 설정 (design-v1/13-settings) ===================
      여섯 갈래가 서로 닮은 데가 없다 — 조교 계정, 학생 계정, 반 만들기, 상담 신청,
      변경 이력, 관리자 비밀번호. 하나의 형태로 묶을 이유가 없어서 **껍데기만 DS로 바꿨다.**
@@ -34130,9 +34176,6 @@ function teacherSettingsHTML(){
   const LABEL = { assistants:'조교 계정을 만들고 담당 반을 정한다',
     students:'학생 계정을 만들고 · 정보와 비밀번호를 고치고 · 지운다',
     classes:'반을 만든다', consults:'홈페이지로 들어온 상담 신청', signalrules:'위험·주의를 가르는 임계값',
-    examrange:'데일리퀴즈가 낼 단원을 시즌과 학교·학년으로 정한다',
-    examplan:'시험기간에 누가 언제 오는지 — 찍는 즉시 그 학생 달력에 뜬다',
-    gradecut:'학교·학년·과목마다 1~4등급컷 — 비워 둔 학교 시험 등급을 이걸로 센다',
     auditlog:'누가 무엇을 바꿨는지', push:'학생이 질문·클리닉 제안·채팅을 보내면 이 기기로 알림', cleanup:'옛 기록을 한 번에 손본다 — 살펴본 뒤에만 고친다',
     admin:'관리자 비밀번호' };
   return `<div class="ex-screen ex-nosub">
@@ -34149,9 +34192,7 @@ function teacherSettingsHTML(){
     <main class="ex-main">
       <s class="st-crumb">설정 · ${escHtml((SETTINGS_GROUPS.find(g => g[1].some(t => t[0] === tabNow)) || ['설정'])[0])}</s>
       <div class="rst-hrow" style="flex-shrink:0;">
-        <h1 class="t-title" title="${escHtml(LABEL[examSub === 'plan' ? 'examplan' : examSub === 'cut' ? 'gradecut' : tabNow]||'')}">${examSub === 'plan' ? '직보 일정표' : examSub === 'cut' ? '등급컷' : (subtabs.find(t=>t[0]===tabNow)||subtabs[0])[1]}<s>${
-          LABEL[examSub === 'plan' ? 'examplan' : examSub === 'cut' ? 'gradecut' : tabNow]||''}</s></h1>
-        ${examSwitch}
+        <h1 class="t-title" title="${escHtml(LABEL[tabNow]||'')}">${(subtabs.find(t=>t[0]===tabNow)||subtabs[0])[1]}<s>${LABEL[tabNow]||''}</s></h1>
       </div>
       <div class="ex-body">${sub}
         <div class="rst-pad"></div></div>
@@ -34445,17 +34486,18 @@ function teacherSettingsClassesHTML(){
             </div></div>${classEditHTML(c)}`;
         }).join('')
   })}
-  ${/* 🔵 **휴강·보강을 같은 화면에 둔다** (2026-09-08) — 「반」 화면이 «반에 관한 모든 것»이 된다.
-       설정 서브탭을 하나 더 늘리는 것보다, 반을 만든 자리 바로 아래가 손에 맞는다. */''}
-  ${teacherOffDaysHTML()}
+  ${/* 휴강·보강은 여기 있다가(09-08) 반 › 휴강·보강으로 갔다 (2026-10-03 · 사용자 — 「반별로 정해지는 것」) */''}
   </div>`;
 }
 
-/* 휴강 · 보강 — 「반」 화면의 둘째 구역 (2026-09-08 · 사용자 요청) */
-function teacherOffDaysHTML(){
+/* 휴강 · 보강 — 반 › 휴강·보강 (2026-09-08 설정 › 반에서 시작 · 2026-10-03 반 탭으로).
+   classId 를 받으면 «이 반에 걸리는 것»(이 반을 고른 것 + 학원 전체)만 보이고, 새로 넣을 때 이 반이 미리 골라져 있다.
+   ⚠ 저장 꼴은 그대로다(classIds 가 비면 전체) — 다른 반 칸도 그대로 고를 수 있다. */
+function teacherOffDaysHTML(classId){
   const open = state.settingsForm === 'off';
   const 오늘 = todayStr();
-  const 것들 = offDaysAll().slice().sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+  const 것들 = offDaysAll().filter(o => !classId || !o.classIds || !o.classIds.length || o.classIds.includes(classId))
+    .slice().sort((a, b) => (a.date || '').localeCompare(b.date || ''));
   const 앞으로 = 것들.filter(o => (o.moveTo || o.date) >= 오늘);
   const 지난 = 것들.filter(o => (o.moveTo || o.date) < 오늘);
 
@@ -34469,7 +34511,7 @@ function teacherOffDaysHTML(){
     </div></div>`;
 
   return stSec({
-    title: '휴강 · 보강', desc: '추석·설날처럼 쉬는 날, 그리고 옮긴 수업',
+    title: '휴강 · 보강', desc: classId ? '이 반이 쉬는 날·옮긴 수업 — 학원 전체 휴강도 함께 보인다' : '추석·설날처럼 쉬는 날, 그리고 옮긴 수업',
     action: `<button class="btn ${open?'':'p'} sm" onclick="stOpen('off')">${
       open ? '닫기' : iconSvg('plus',13)+' 날짜 추가'}</button>`,
     form: !open ? '' : `<div class="st-form">
@@ -34494,7 +34536,7 @@ function teacherOffDaysHTML(){
           어느 반 <s style="text-decoration:none;font-weight:500;">— 아무것도 안 고르면 <b>전체</b>입니다</s></div>
         <div style="display:flex;gap:12px;flex-wrap:wrap;">
           ${DATA.classes.map(c => `<label style="display:flex;align-items:center;gap:5px;font-size:12px;">
-            <input type="checkbox" class="od-cls" value="${c.id}">${escHtml(c.name)}</label>`).join('')
+            <input type="checkbox" class="od-cls" value="${c.id}"${c.id === classId ? ' checked' : ''}>${escHtml(c.name)}</label>`).join('')
             || '<span style="font-size:12px;color:var(--dim);">먼저 반을 만들어 주세요.</span>'}
         </div>
       </div>

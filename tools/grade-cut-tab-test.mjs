@@ -31,7 +31,8 @@ try{
   await page.evaluate(무대들.등급컷.세우기);
   await page.evaluate(() => { window.저장 = []; window.saveGradeCut = async (...a) => { 저장.push(a); return true; }; });
 
-  봄('갈래 단추 셋', await page.$$eval('.rst-hrow .btn.sm', e => e.map(x => x.textContent.trim())), ['시험 일정', '직보 일정표', '등급컷']);
+  /* 2026-10-03 — 설정 안 단추 줄이 「학교」 탭의 서브탭이 됐다 */
+  봄('갈래 단추 셋', await page.$$eval('.subnav > a > span', e => e.map(x => x.textContent.trim())), ['시험 일정', '직보 일정표', '등급컷']);
   봄('등급컷 표 — 줄마다 칸 넷', await page.$$eval('.rst-wrap tbody tr', rs => rs.map(r => r.querySelectorAll('input.gc-in').length)), [4, 4, 4, 4, 4, 4]);
   봄('적힌 값이 칸에 뜬다', await page.$$eval('.rst-wrap tbody tr:first-child input.gc-in', e => e.map(x => x.value)), ['90', '81', '72', '63']);
 
@@ -49,7 +50,7 @@ try{
   await page.waitForFunction(() => 저장.length > 0);
   봄('지난 시즌은 그 시즌 열쇠로', await page.evaluate(() => 저장[0][0] === seasonKeyOf('2학기 중간', '2026-08-20')), true);
 
-  await page.evaluate(() => { state.examSubTab = 'range'; state.examSeasonView = ''; render(); });
+  await page.evaluate(() => { state.teacherTab = 'examrange'; state.examSeasonView = ''; render(); });
   봄('시험 일정 표엔 등급컷 칸이 없다', await page.$$eval('.rst-wrap thead th', e => e.some(x => /등급컷/.test(x.textContent))), false);
 } finally {
   await 브라우저.close(); 서버.kill();

@@ -220,15 +220,12 @@ console.log(NL + '③ 직보 일정표 — 면은 시험기간, 찍은 것은 �
      (덫을 확인하다 드러났다: 정의만 보면 지워도 통과했다). */
   봄('🔴 그 셈을 실제로 그린다', 표.includes('${셈}'), true);
   봄('저장 중 표시도 남는다', 표.includes('state.planDirty'), true);
-  봄('껍데기가 제목을 그린다',
-    /* ⚠ 2026-09-14 부터 직보 일정표가 「시험 일정」 안의 갈래라 제목이 examSub 를 본다 */
-    /* 2026-10-02 셋째 갈래 «등급컷» 이 붙었다 */
-    /* 2026-10-02 h1 에 설명(title=)이 붙었다 — 넓은 화면은 설명 글을 접고 제목에 건다 */
-    /<h1 class="t-title"[^>]*>\$\{examSub === 'plan' \? '직보 일정표' : examSub === 'cut' \? '등급컷' : \(subtabs\.find/.test(lift('teacherSettingsHTML')), true);
-  봄('🔴 직보 일정표는 「시험 일정」 안의 갈래다 — 설정 목록에 따로 없다',
-    lift('teacherSettingsHTML').includes("['examplan','직보 일정표']"), false);
-  봄('옛 state(examplan)로 들어와도 돌려세운다',
-    lift('teacherSettingsHTML').includes("if(tab === 'examplan'){ state.settingsSubTab = 'examrange'; state.examSubTab = 'plan'; }"), true);
+  /* 2026-10-03 — 설정 › 시험 일정에서 「학교」 탭으로 나왔다. 제목은 학교 껍데기(teacherSchoolHTML)가 그린다 */
+  봄('껍데기가 제목을 그린다', lift('teacherSchoolHTML').includes("plan: ['직보 일정표'"), true);
+  봄('🔴 직보 일정표는 학교 탭의 갈래다 — 설정 목록에 없다',
+    lift('teacherSettingsHTML').includes("'직보 일정표'"), false);
+  봄('옛 state(설정 › examplan)로 들어와도 돌려세운다',
+    lift('teacherHTML').includes("state.settingsSubTab === 'examplan' ? 'plan'"), true);
   /* ⚠ 설정 갈래 중에 제 `t-title` 을 또 그리는 화면이 없어야 한다 */
   const 또그림 = ['teacherAssistantsHTML', 'teacherSettingsStudentsHTML', 'teacherSettingsClassesHTML',
     'teacherSettingsConsultsHTML', 'teacherExamRangeHTML', 'teacherExamPlanHTML',

@@ -133,7 +133,7 @@ export const 무대들 = {
     세우기: () => { state.currentUser = { type:'teacher', name:'김하현T' }; state.view = 'teacher'; state.teacherTab = 'settings'; state.settingsSubTab = 'push'; state.studentDetailId = null; render(); } },
   시험일정: { 말: '설정 › 시험 일정 (표 · 학교 프린트)',
     세우기: () => { state.currentUser = { type:'teacher', name:'김하현T' }; state.view = 'teacher';
-      state.teacherTab = 'settings'; state.settingsSubTab = 'examrange'; state.examSubTab = 'range'; state.studentDetailId = null;
+      state.teacherTab = 'examrange'; state.studentDetailId = null;
       DATA.classes[0].progress = { subject: '공통수학1' }; DATA.classes[1].progress = { subject: '확률과통계' };
       DATA.students.forEach((s, i) => { s.school = ['대원고등학교', '광남고', '경기여자고등학교'][i % 3]; s.grade = i < 7 ? '1' : '2';
         if(i >= 7) s.classId = 'c2'; });
@@ -150,7 +150,7 @@ export const 무대들 = {
   /* 등급컷 갈래 (2026-10-02) — 시험 일정 표에서 떼어 냈다. 한 줄은 거꾸로 적어 경고 배지를 본다. */
   등급컷: { 말: '설정 › 시험 일정 › 등급컷',
     세우기: () => { state.currentUser = { type:'teacher', name:'김하현T' }; state.view = 'teacher';
-      state.teacherTab = 'settings'; state.settingsSubTab = 'examrange'; state.examSubTab = 'cut'; state.studentDetailId = null;
+      state.teacherTab = 'gradecut'; state.studentDetailId = null;
       DATA.classes[0].progress = { subject: '공통수학1' }; DATA.classes[1].progress = { subject: '확률과통계' };
       DATA.students.forEach((s, i) => { s.school = ['대원고등학교', '광남고', '경기여자고등학교'][i % 3]; s.grade = i < 7 ? '1' : '2';
         if(i >= 7) s.classId = 'c2'; });
@@ -167,14 +167,14 @@ export const 무대들 = {
       DATA.students.forEach((s, i) => { if(i >= 6) s.classId = 'c2'; });
       const 날 = k => shiftYmd(todayStr(), k);
       planSetRange(날(1), 날(14));
-      state.teacherTab = 'settings'; state.settingsSubTab = 'examrange'; state.examSubTab = 'plan'; render();
+      state.teacherTab = 'examplan'; render();
     } },
   직보일정표수정: { 말: '설정 › 직보 일정표 («수정»을 누른 뒤)', 폭: '864',
     세우기: () => { state.currentUser = { type:'teacher', name:'김하현T' }; state.view = 'teacher';
       DATA.students.forEach((s, i) => { if(i >= 6) s.classId = 'c2'; });
       const 날 = k => shiftYmd(todayStr(), k);
       planSetRange(날(1), 날(14));
-      state.teacherTab = 'settings'; state.settingsSubTab = 'examrange'; state.examSubTab = 'plan';
+      state.teacherTab = 'examplan';
       state.planEdit = true; render();
     } },
   홈달력: { 말: '강사 홈 — 달력 (수업·휴강·직보·시험·클리닉·상담)', 폭: '1280,864,390',
@@ -301,7 +301,7 @@ export const 무대들 = {
       DATA.students.forEach((s, i) => { if(i >= 6) s.classId = 'c2'; });
       const 날 = k => shiftYmd(todayStr(), k);
       planSetRange(날(1), 날(14));
-      state.teacherTab = 'settings'; state.settingsSubTab = 'examrange'; state.examSubTab = 'plan'; render();
+      state.teacherTab = 'examplan'; render();
       const cv = await planClassCanvas('');
       const img = document.createElement('img'); const 뜸 = new Promise(r => img.onload = r); img.src = cv.toDataURL('image/png');
       img.style.cssText = 'width:100%;border:2px solid red;display:block;';
@@ -426,5 +426,20 @@ export const 무대들 = {
         snap:{ score:78, att:96, hw:'3/4', vid:82 } }];
       state.studentNotes.s0 = { text:'형이 같은 반 · 금요일 학교 보충으로 지각 잦음' };
       state.teacherTab = 'classhub'; state.classHubId = 'c1'; state.classHubTab = 'consult'; chubOpenConsult('s0'); } },
+  /* 2026-10-03 메뉴 옮김 — 상담 기록(소통) · 휴강·보강(반) · 출석 도장(홈) */
+  상담기록: { 말: '소통 › 상담 기록 (반 고르기가 사이드에)', 폭: '1440,864,390',
+    세우기: () => { state.currentUser = { type:'teacher', name:'김하현T' }; state.view = 'teacher';
+      state.consultLogs.s0 = [{ id:'cl1', date:'2026-09-20', kind:'전화', who:'학부모', text:'클리닉 주 2회 희망' }];
+      state.teacherTab = 'classhub'; state.classHubId = 'c1'; state.classHubTab = 'consult'; state.studentDetailId = null; render(); } },
+  휴강보강: { 말: '반 › 휴강·보강 (이 반 + 전체)', 폭: '1440,864,390',
+    세우기: () => { state.currentUser = { type:'teacher', name:'김하현T' }; state.view = 'teacher';
+      const 날 = k => shiftYmd(todayStr(), k);
+      state.offDays = { days: [{ id:'od1', date: 날(2), classIds: ['c1'], label: '학원 행사' },
+        { id:'od2', date: 날(5), moveTo: 날(6), moveTime: '14:00~16:30', classIds: ['c1'], label: '' },
+        { id:'od3', date: 날(9), classIds: [], label: '추석 연휴' }] };
+      state.teacherTab = 'classhub'; state.classHubId = 'c1'; state.classHubTab = 'offdays'; state.settingsForm = 'off'; state.studentDetailId = null; render(); } },
+  출석도장: { 말: '홈 › 출석 도장', 폭: '1440,864,390',
+    세우기: () => { state.currentUser = { type:'teacher', name:'김하현T' }; state.view = 'teacher';
+      state.teacherTab = 'checkin'; state.studentDetailId = null; render(); } },
 };
 void 강사; void 학생;

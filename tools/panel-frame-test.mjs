@@ -34,7 +34,7 @@ try{
   await page.evaluate(무대들.시험일정.세우기);
   const 자리 = await page.evaluate(() => {
     const r = q => { const b = document.querySelector(q).getBoundingClientRect(); return [Math.round(b.left), Math.round(b.top)]; };
-    return { 머리: r('.app > .topbar'), 사이드: r('.st-nav'), 본문: r('.app > .body') };
+    return { 머리: r('.app > .topbar'), 사이드: r('.subnav'),   /* 2026-10-03 시험 일정은 「학교」 탭 — 셸 서브탭이 사이드다 */ 본문: r('.app > .body') };
   });
   봄('판 안 — 머리 (44,38) · 사이드 (44,110) · 본문 (312,110)', 자리, { 머리: [44, 38], 사이드: [44, 110], 본문: [312, 110] });
   봄('문서는 안 굴러간다', await page.evaluate(() => document.documentElement.scrollHeight <= innerHeight), true);
