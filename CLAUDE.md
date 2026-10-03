@@ -6188,6 +6188,24 @@ claude work/
   ④ 학교 편성(학교·학년·학기에 열리는 과목·교재)은 학교 쪽, 학생이 고른 과목·정시 여부는 학생 쪽.
   후보: 시험 준비 현황판 · 학교별 학생 · 등급컷 옆 우리 학생 결과 · 기출 보관 · 학교 메모. 새 학년도 넘기기(학년 +1)는 4단계에서 다시 묻기.
 
+### 학교 2단계 — 학교별 자동 시즌 · 시험 넷 · 학생별 과목 (2026-10-03 · 커밋 0a577f6·ca607eb · 🔴 배포는 사용자 허락 뒤)
+- 🔴 **저장 꼴이 바뀌었다** — kv/exam-ranges.years[학년도][학교][학년][시험(1-mid·1-fin·2-mid·2-fin)] = {start,end,math,ranges:{과목:[단원]}}.
+  옛 season·dates·bySchool·kv/exam-history 는 **지우지 않는다** — `migrated` 전에는 읽을 때마다 examYearsOf 가 옮겨 보고,
+  강사가 처음 고칠 때(examYearsForWrite) 옮긴 것이 저장된다. 화면을 그리기만 해서는 안 쓴다.
+  옛 문서에 시즌 이름이 없으면 «오늘로 본 다음 시험» 몫(examDefaultNext). 방학에 적힌 것은 다음 시험 몫.
+- **지금 시험은 학교·학년마다**(examSeasonOf) — 수학 시험일(없으면 끝날, 없으면 기본 날 05-15·07-31·10-31·12-31)이 «지나면» 다음.
+  3~8월 1학기 · 9~12월 2학기 · 둘 다 지나면 방학 · 1~2월 겨울방학. 학년도는 3월 시작(schoolYearOf).
+  examDatesOf = 다음(또는 지금) 시험 날짜 → 방학에도 D-day 가 미리 뜬다. rangeChapters = 그 학교 지금 시험 칸(방학은 과목 전체).
+  currentSeason() = 재원생 가운데 가장 앞선 시험(examTermNow) — 안내 글·직보 한 판·등급컷 기본 학기.
+- 등급컷·직보 열쇠 «시작일|시즌» → «학년도|시즌» — 읽을 때 examKeysNormalize 가 옮긴다(load 두 곳).
+- 시즌 종료·되돌리기·시작일 함수와 검사(season-back·season-start)는 지웠다. 화면은 «‹ 학년도 ›» + 시험 네 칸 펼치기(state.examYear·examOpen).
+  칸 창(state.examPop)이 year·slot 을 들고 뜬다 → setExamDate·toggleRangeChapter·resetSchoolRange 가 그 칸에 쓴다(examPopAt).
+- 학생 문서에 examSubjects(여럿) · track('' = 내신 · '정시' · '내신+정시'). 시험 일정 줄 = studentExamSubjects(없으면 반 과목).
+  정시는 **표시만**(사용자) — 인원 밑 «정시 n» · 명단·상세 딱지. 데일리퀴즈는 여전히 반 과목(studentRange).
+- 검사 school-season-test 30개(덫 확인: 수학 «당일» 비교). 무대 시험일정과목 · 학생과목.
+- ⚠ 남은 후보: 시험 준비 현황판 · 학교별 학생 · 등급컷 옆 우리 학생 결과 · 기출 보관 · 학교 메모 · 새 학년도 학년+1.
+- ⚠ rules-check 는 오늘 여러 번 돌려 «익명 로그인 실패»가 났다(변경 전 코드도 같음) — 시간을 두고 다시 볼 것.
+
 ### 반 명단은 이름순 (2026-10-03 · 사용자 — 「반탭 성적·출결이 이름순인 줄 알았는데 아니네」)
 - classRosterAll(classId) = 반 학생 전부(퇴원 포함) 가나다순 · classRoster = 그중 재원생 · jikboRoster 도 이름순. 비교는 byKoName(함수 선언 — 검사가 떠 간다).
 - 예전엔 DATA.students 순서(넣은 순서). 성적·시험 쪽 7곳이 `DATA.students.filter(…includes(classId))` 를 따로 짓고 있었다 → 전부 classRosterAll.
