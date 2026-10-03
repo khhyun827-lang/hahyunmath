@@ -8310,9 +8310,31 @@ async function saveSchoolRange(school, grade, subject, chapters, at){
      교재 → `kv/school-books` **따로**. 「미래엔」·「천재홍」은 학교의 «고정 속성»에 가까워
             매 시즌 다시 입력하게 하면 안 된다. 시즌 초기화에 휩쓸리지 않아야 한다. */
 function examDatesOf(school, grade){
-  /* 다음(또는 지금) 시험의 날짜 — 방학이면 다가오는 시험의 것(적어 뒀으면 D-day 가 뜬다) */
+  /* 다음(또는 지금) 시험의 날짜 — 방학이면 다가오는 시험의 것(적어 뒀으면 D-day 가 뜬다).
+     ⚠ D-day·홈 «다가오는 시험» 몫이다. 수학이 지나면 다음 시험으로 간다 — 달력·직보·등원 창은 아래 셋을 쓴다(2026-10-03 · 사용자가 짚었다
+       「수학시험이 끝난 애들 직보일정표도 시험기간 색상이 사라진 거겠지?」). */
   const nx = examSeasonOf(school, grade).next;
   return slotDatesOf(examSlotOf(nx.year, school, grade, nx.slot));
+}
+/* 이 학교·학년의 적어 둔 시험 «전부» — 달력이 쓴다(끝난 시험도 달력에 남아야 한다) */
+function examDatesAllOf(school, grade){
+  const out = [];
+  Object.entries(examYearsOf(state.examRanges)).forEach(([year, byS]) => {
+    const g = byS && byS[school] && byS[school][grade];
+    Object.entries(g || {}).forEach(([slot, c]) => { const d = slotDatesOf(c); if(d) out.push(Object.assign({year, slot}, d)); });
+  });
+  return out;
+}
+/* 직보 일정표가 보는 시험 — 학원 전체 «지금 시험» 한 판(examTermNow). 수학이 먼저 끝난 학교도 그 시험 날짜로 칠한다 */
+function planExamDatesOf(school, grade){
+  const t = examTermNow(), at = t.slot ? t : t.next;
+  return slotDatesOf(examSlotOf(at.year, school, grade, at.slot));
+}
+/* 지금 걸쳐 있는(또는 다가오는) 시험 — 끝날(없으면 수학·시작)이 아직 안 지난 첫 시험. 수학이 끝나도 시험기간은 남는다 */
+function examWindowOf(school, grade){
+  const t = todayStr(), 첫 = d => d.start || d.math || d.end;
+  return examDatesAllOf(school, grade).filter(d => (d.end || d.math || d.start) >= t)
+    .sort((a, b) => 첫(a).localeCompare(첫(b)))[0] || null;
 }
 /* 날짜 셋 — 시험기간 시작·끝, 그리고 **수학 시험일**.
    수학 시험일이 따로 있는 이유: 시험기간은 닷새인데 수학은 그중 하루다.
@@ -8536,7 +8558,7 @@ function planRange(){
 function planAutoRange(){
   const 날들 = [];
   (DATA.students || []).forEach(s => {
-    const d = examDatesOf(s.school || '', s.grade || '');
+    const d = planExamDatesOf(s.school || '', s.grade || '');
     if(!d) return;
     [d.start, d.end, d.math].forEach(x => { if(x) 날들.push(x); });
   });
@@ -8577,7 +8599,7 @@ function planSeed(){
   let 깐것 = 0, 건너뜀 = 0, 없음 = 0;
   (DATA.students || []).forEach(s => {
     const sid = s.studentId;
-    const d = examDatesOf(s.school || '', s.grade || '');
+    const d = planExamDatesOf(s.school || '', s.grade || '');
     if(!d || !d.math){ 없음++; return; }
     const 넣기 = (date, kind, time) => {
       if(!date || !있는날.has(date)) return;
@@ -19236,12 +19258,13 @@ function stuMonthEvents(c, ym){
 
   /* ② 시험 — 기간(시작~끝)과 «수학 시험일»을 갈라 적는다.
      ⚠ 수학 시험일이 따로 있는 까닭은 시험 일정 화면 주석에 있다(닷새 중 하루다). */
-  const d = examDatesOf(me.school || '', me.grade || '');
-  if(d){
+  const 내시험들 = examDatesAllOf(me.school || '', me.grade || '');
+  const 수학날들 = new Set(내시험들.map(d => d.math).filter(Boolean));   // 아래 ④ 직보 «수학시험» 칸이 겹치는지 본다
+  내시험들.forEach(d => {
     if(d.start) 넣기(d.start, {kind: 'exam', title: '시험기간 시작', sub: me.school || ''});
     if(d.end && d.end !== d.start) 넣기(d.end, {kind: 'exam', title: '시험기간 끝', sub: me.school || ''});
     if(d.math) 넣기(d.math, {kind: 'exam', title: '수학 시험', sub: me.school || '', 굵게: 1});
-  }
+  });
 
   /* ③ 과제 마감 — 내가 듣는 반의 것만. */
   (DATA.assignments || []).forEach(hw => {
@@ -19278,7 +19301,7 @@ function stuMonthEvents(c, ym){
        그대로 두면 6/25 에 「수학 시험」과 「수학시험」이 나란히 뜬다.
        ⚠ **«시험 일정이 그 날을 수학 시험일이라 말할 때»만 뺀다.** 그냥 갈래로 빼면,
          시험 일정을 안 적고 표에만 찍은 경우 학생 달력에서 통째로 사라진다. */
-    if(내직보[date].k === 'exam' && d && d.math === date) continue;
+    if(내직보[date].k === 'exam' && 수학날들.has(date)) continue;
     const 말 = planLabel(내직보[date]);
     if(말) 넣기(date, {kind: 'plan', title: 말, sub: '직보 일정표'});
   }
@@ -19325,7 +19348,7 @@ function stuClassOffSpan(c){
 }
 function stuExamSpan(c){
   const me = (c && c.me) || {};
-  const d = examDatesOf(me.school || '', me.grade || '');
+  const d = examWindowOf(me.school || '', me.grade || '');
   if(!d) return null;
   const 있는것 = [d.start, d.end, d.math].filter(Boolean).sort();
   if(!있는것.length) return null;
@@ -20377,8 +20400,7 @@ function teacherMonthEvents(ym, mine){
     if(isWithdrawn(s)) return;
     const 열쇠 = (s.school || '') + '|' + (s.grade || '');
     if(본것.has(열쇠)) return; 본것.add(열쇠);
-    const dd = examDatesOf(s.school || '', s.grade || '');
-    if(!dd) return;
+    examDatesAllOf(s.school || '', s.grade || '').forEach(dd => {
     const 누구 = [s.school || '학교 미정', gradeLabel(s.grade) || ''].filter(Boolean).join(' ');
     const 짧게 = (s.school ? schoolShort(s.school) : '학교') + (s.grade || '');
     const 열기 = "goTeacherTab('examrange')";
@@ -20387,6 +20409,7 @@ function teacherMonthEvents(ym, mine){
     if(dd.math){ 넣기(dd.math, {kind: 'exam', title: 누구 + ' 수학 시험', short: 짧게 + ' 수학', 굵게: 1, open: 열기}); 수학날[dd.math] = 1; }
     const 끝들 = [dd.start, dd.end, dd.math].filter(Boolean).sort();
     for(let x = 끝들[0], i = 0; x && x <= 끝들[끝들.length - 1] && i < 60; x = dateShift(x, 1), i++) 시험날[x] = 1;
+    });
   });
 
   /* ③ 클리닉 — 취소한 것만 뺀다 · 대기는 딱지를 단다 */
@@ -33893,7 +33916,7 @@ function planDayHeadHTML(days){
      ⚠ 학교·학년마다 다르므로 **줄마다** 다시 본다. */
 function planRowCellsHTML(s, days, live){
   const sid = s.studentId;
-  const 시험 = examDatesOf(s.school || '', s.grade || '');
+  const 시험 = planExamDatesOf(s.school || '', s.grade || '');
   return days.map(d => {
     const c = planCell(sid, d);
     const k = c && PLAN_KIND_MAP[c.k];

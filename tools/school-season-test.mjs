@@ -24,11 +24,12 @@ function lift(name) {
   }
 }
 const 층 = html.slice(html.indexOf('const EXAM_SLOTS ='), html.indexOf('/* 이 학생이 지금 배우는 과목'));
-const 이름들 = ['schoolYearOf', 'examSeasonOf', 'examYearsOf', 'examDatesOf', 'rangeChapters', 'examKeysNormalize',
+const 이름들 = ['schoolYearOf', 'examSeasonOf', 'examYearsOf', 'examDatesOf', 'examDatesAllOf', 'planExamDatesOf', 'examWindowOf', 'rangeChapters', 'examKeysNormalize',
   'currentSeason', 'examDefaultNext'];
 const 상자 = (state, 오늘, 학생들) => new Function('state', 'DATA', 'todayStr', 'isWithdrawn', 'dbGet',
   'UNIT_CHAPTERS', 'SEASON_SPLIT', 'isVacationSeason',
-  층 + NL + lift('examDatesOf') + NL + lift('seasonKeyOf') + NL + lift('examKeysNormalize') + NL
+  층 + NL + lift('examDatesOf') + NL + lift('examDatesAllOf') + NL + lift('planExamDatesOf') + NL + lift('examWindowOf') + NL
+  + lift('seasonKeyOf') + NL + lift('examKeysNormalize') + NL
   + 'return { ' + 이름들.join(', ') + ' };')(
   state, { students: 학생들 || [] }, () => 오늘, () => false, async () => null,
   { 대수: ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i'] }, { 대수: 6 }, n => /방학/.test(n));
@@ -124,6 +125,21 @@ console.log(NL + '⑥ 지금 범위' + NL);
   const years = { '2026': { 대원고: { '2': { '2-mid': { math: '2026-09-30' } } } } };
   const 학생 = [{ school: '광남고', grade: '2' }, { school: '대원고', grade: '2' }];
   봄('한 곳이라도 중간이면 학원 전체는 2학기 중간', 상자({ examRanges: { migrated: true, years } }, '2026-10-03', 학생).currentSeason(), '2학기 중간');
+}
+
+/* ⑦-b 수학이 먼저 끝난 학교 (2026-10-03 · 사용자가 짚었다 — 「수학시험이 끝난 애들 직보일정표도 시험기간 색상이 사라진 거겠지?」) */
+console.log(NL + '⑦-b 수학이 먼저 끝난 학교 — 직보·달력·등원 창은 그 시험을 계속 본다' + NL);
+{
+  const years = { '2026': {
+    광남고: { '2': { '2-mid': { start: '2026-10-05', end: '2026-10-09', math: '2026-10-07' } } },
+    대원고: { '2': { '2-mid': { start: '2026-10-01', end: '2026-10-06', math: '2026-10-02' },
+                    '2-fin': { start: '2026-12-01', math: '2026-12-03' } } } } };
+  const 학생 = [{ school: '광남고', grade: '2' }, { school: '대원고', grade: '2' }];
+  const F = 상자({ examRanges: { migrated: true, years } }, '2026-10-03', 학생);
+  봄('D-day 는 규칙대로 다음 시험(대원 → 기말)', (F.examDatesOf('대원고', '2') || {}).math, '2026-12-03');
+  봄('🔴 직보 일정표는 학원 전체 지금 시험(중간) 날짜로 칠한다', (F.planExamDatesOf('대원고', '2') || {}).math, '2026-10-02');
+  봄('🔴 등원 창 — 수학이 끝나도 시험기간(10/6까지)은 남는다', (F.examWindowOf('대원고', '2') || {}).end, '2026-10-06');
+  봄('🔴 달력 — 적어 둔 시험 전부(중간·기말)', F.examDatesAllOf('대원고', '2').map(d => d.slot).sort(), ['2-fin', '2-mid']);
 }
 
 /* ⑧ 학생마다 시험 과목 (2026-10-03) */

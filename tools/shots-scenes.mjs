@@ -166,7 +166,13 @@ export const 무대들 = {
     세우기: () => { state.currentUser = { type:'teacher', name:'김하현T' }; state.view = 'teacher';
       DATA.students.forEach((s, i) => { if(i >= 6) s.classId = 'c2'; });
       const 날 = k => shiftYmd(todayStr(), k);
-      planSetRange(날(1), 날(14));
+      planSetRange(날(-4), 날(9));
+      /* 2026-10-03 — 수학이 이미 끝난 학교(대원)와 아직인 학교(광남) — 둘 다 그 시험 색이 칠해져야 한다 */
+      const 해 = schoolYearOf(todayStr()), 학년 = DATA.students[0].grade || '';
+      DATA.students.forEach(s => { s.grade = 학년; });
+      state.examRanges = { migrated: true, years: { [해]: {
+        '대원고': { [학년]: { '2-mid': { start: 날(-3), end: 날(2), math: 날(-1) } } },
+        '광남고': { [학년]: { '2-mid': { start: 날(3), end: 날(7), math: 날(5) } } } } } };
       state.teacherTab = 'examplan'; render();
     } },
   직보일정표수정: { 말: '설정 › 직보 일정표 («수정»을 누른 뒤)', 폭: '864',

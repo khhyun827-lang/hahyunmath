@@ -43,11 +43,11 @@ const 수업 = { '2026-10-05': [{ id: 'c1', name: '0.5B', schedule: '' }, { id: 
                '2026-10-07': [{ id: 'c1', name: '0.5B', schedule: '' }] };
 
 const f = new Function('DATA', 'sessionsOn', 'offDayFor', 'movedInto', 'sessionTimeText', 'stuDayLabel', 'ymd',
-  'examDatesOf', 'gradeLabel', 'dateShift', 'isWithdrawn', 'clinicWhenLabel', 'planCellsOfStudent',
+  'examDatesAllOf', 'gradeLabel', 'dateShift', 'isWithdrawn', 'clinicWhenLabel', 'planCellsOfStudent',
   lift('schoolShort') + NL + lift('teacherMonthEvents') + NL + 'return teacherMonthEvents;')(
   DATA, d => 수업[d] || [], (id, d) => d === '2026-10-07' ? { label: '행사' } : null, () => null,
   () => '19:00~21:00', d => d, (y, m, d) => y + '-' + String(m).padStart(2, '0') + '-' + String(d).padStart(2, '0'),
-  (s, g) => 시험[s + '|' + g] || null, g => g + '학년',
+  (s, g) => 시험[s + '|' + g] ? [시험[s + '|' + g]] : [], g => g + '학년',
   (d, n) => new Date(Date.parse(d + 'T00:00:00Z') + n * 864e5).toISOString().slice(0, 10),
   () => false, cl => cl.t, sid => 칸[sid] || {});
 

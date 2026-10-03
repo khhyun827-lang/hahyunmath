@@ -72,7 +72,7 @@ console.log(NL + '② 「다음 수업」자리 — 시험 창에는 직보 일�
     const dates = o.dates === undefined ? { start: '2026-10-01', end: '2026-10-07', math: '2026-10-05' } : o.dates;
     const offDays = o.offDays || [];
     const F = new Function('DATA', 'todayStr', 'planCellsOfStudent', 'planLabel', 'parseScheduleDays', 'ymdLocal',
-      'movedInto', 'offDayFor', 'examDatesOf', 'dateShift', 'Date',
+      'movedInto', 'offDayFor', 'examWindowOf', 'dateShift', 'Date',
       liftConst('PLAN_VISIT_KINDS') + NL + lift('stuClassOffSpan') + NL + lift('stuExamSpan') + NL
       + lift('stuNextVisit') + NL + 'return stuNextVisit;')(
       { classes: [{ id: 'c1', name: '고1 0.5B', schedule: '화·목 17:00' }] },

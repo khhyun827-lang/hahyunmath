@@ -56,7 +56,7 @@ const 뼈대 = (몸) =>
   lift('seasonKeyOf') + NL + lift('curSeasonKey');
 
 /* 2026-10-03 — curSeasonKey 는 학교별 시즌(examTermNow)의 «학년도|시험»이다. 여기서는 시즌 이름만 대역으로 */
-const 만들기 = (state, DATA, 몸) => new Function('state', 'DATA', 'currentSeason', 'examDatesOf', 'examTermNow',
+const 만들기 = (state, DATA, 몸) => new Function('state', 'DATA', 'currentSeason', 'planExamDatesOf', 'examTermNow',
   뼈대(몸) + NL + `return { planLabel, planCell, planSetCell, planSetRange, planRange,
     planAutoRange, planCellsOfStudent, planDaysOf, dateShift, planSeed, curSeasonKey,
     examPlanCur, 저장부름: () => 저장부름, PLAN_KIND_MAP };`)(
@@ -205,7 +205,7 @@ console.log(NL + '⑥ ⚠ 망가뜨려 무는지 본다' + NL);
   const 몸끝 = (() => { let d = 0; const s0 = 망친.indexOf('{');
     for(let j = s0; j < 망친.length; j++){ if(망친[j]==='{') d++; else if(망친[j]==='}'){ d--; if(!d) return j+1; } } })();
   const 망친planSeed = 망친.slice(0, 몸끝).split(지키는줄).join('');
-  const F2 = new Function('state','DATA','currentSeason','examDatesOf','examTermNow',
+  const F2 = new Function('state','DATA','currentSeason','planExamDatesOf','examTermNow',
     뼈대(원본).replace(lift('planSeed'), 망친planSeed) + NL +
     'return { planCell, planSetCell, planSetRange, planSeed };')(
     판({examRanges: {dates: {'광남고': {'고1': {math:'2026-06-25'}}}}}),
@@ -232,9 +232,9 @@ console.log(NL + '⑦ 🔴 학생 달력 — 「수학 시험」을 두 번 말�
      그래서 여기서는 **그 줄이 실제로 그 꼴인지**를 소스에서 붙든다. */
   const 몸 = lift('stuMonthEvents');
   봄('🔴 겹침을 막는 줄이 있다',
-     몸.includes("if(내직보[date].k === 'exam' && d && d.math === date) continue;"), true);
+     몸.includes("if(내직보[date].k === 'exam' && 수학날들.has(date)) continue;"), true);   // 2026-10-03 — 그 해 시험 전부의 수학날
   봄('🔴 갈래만 보고 빼지 않는다 — 날짜를 함께 본다',
-     /내직보\[date\]\.k === 'exam' && d && d\.math === date/.test(몸), true);
+     /내직보\[date\]\.k === 'exam' && 수학날들\.has\(date\)/.test(몸), true);
   봄('⑦ 덩이가 학생 것만 가져온다', 몸.includes('planCellsOfStudent(c.sid)'), true);
   봄('직보는 제 갈래로 들어간다', 몸.includes("kind: 'plan'"), true);
 

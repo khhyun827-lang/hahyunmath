@@ -52,13 +52,14 @@ function 모은다(DATA, c, ym, 직보 = {}, 쉼 = []) {
   const 찾기 = (cid, date, 열쇠) => 쉼.find(o => o[열쇠] === date
     && (!o.classIds || !o.classIds.length || o.classIds.includes(cid))) || null;
   return new Function('DATA', 'c', 'ym',
-    'parseScheduleDays', 'sessionTimeText', 'examDatesOf', 'classNameOf', 'slotTimeLabel',
-    'planCellsOfStudent', 'planLabel', 'offDayFor', 'movedInto', 'stuDayLabel', 'classRoomOf',
+    'parseScheduleDays', 'sessionTimeText', 'examDatesAllOf', 'classNameOf', 'slotTimeLabel',
+    'planCellsOfStudent', 'planLabel', 'offDayFor', 'movedInto', 'stuDayLabel', 'classRoomOf', 'examWindowOf',
     조각 + '; return stuMonthEvents(c, ym);')(
     DATA, c, ym,
     (sch) => (sch || '').includes('월') ? [1] : [],        // 「월」이 있으면 월요일
     () => '19:00~21:00',
-    (school) => (school === '광남고' ? { start: '2026-09-14', end: '2026-09-18', math: '2026-09-16' } : null),
+    /* 2026-10-03 — 달력은 적어 둔 시험 «전부»(배열)를 본다 */
+    (school) => (school === '광남고' ? [{ start: '2026-09-14', end: '2026-09-18', math: '2026-09-16' }] : []),
     (cid) => '고1A',
     (t) => t || '',
     (sid) => 직보[sid] || {},
@@ -71,6 +72,8 @@ function 모은다(DATA, c, ym, 직보 = {}, 쉼 = []) {
     (date) => date,
     /* ⚠ 2026-09-14 에 강의실이 붙었다 — 반에 적어 두면 «그 요일» 것이 줄에 딸려 온다. */
     (cls, dow) => String(((cls && cls.rooms) || {})[String(dow)] || ''),
+    /* 등원 창 — 걸쳐 있는 시험 하나 (2026-10-03) */
+    (school) => (school === '광남고' ? { start: '2026-09-14', end: '2026-09-18', math: '2026-09-16' } : null),
   );
 }
 
@@ -190,7 +193,7 @@ const 제목 = (date) => (결과[date] || []).map(e => e.title);
 
 /* ── ⑧ 시험기간을 «면»으로 내주는가 ─────────────────────────── */
 {
-  const stuExamSpan = new Function('examDatesOf',
+  const stuExamSpan = new Function('examWindowOf',
     떠내기('stuExamSpan') + '; return stuExamSpan;')(
     (school) => (school === '광남고' ? { start: '2026-09-14', end: '2026-09-18', math: '2026-09-16' } : null));
   const sp = stuExamSpan(기본c());
@@ -246,7 +249,7 @@ console.log('\n시험기간 — 전날부터 끝날까지 정규 수업이 안 �
      월요일.filter(d => (시험없음[d]||[]).some(e => e.kind === 'class')), 월요일);
 
   /* 구간을 짓는 함수도 따로 잰다 — 전날부터라는 것이 요지다. */
-  const 구간 = new Function('examDatesOf',
+  const 구간 = new Function('examWindowOf',
     떠내기('stuClassOffSpan') + 떠내기('stuExamSpan') + 떠내기('dateShift')
     + '; return stuClassOffSpan;')(
     (school) => (school === '광남고' ? { start:'2026-09-14', end:'2026-09-18', math:'2026-09-16' } : null));
