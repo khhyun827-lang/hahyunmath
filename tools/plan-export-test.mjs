@@ -218,7 +218,7 @@ console.log(NL + '⑤ 반 목록의 진도 — 이름표를 달고, 분모는 «
 
   /* 셈 — getClassProgress 를 그대로 떠서 돌린다 */
   const 셈 = new Function('DATA', 'state', 'UNIT_CHAPTERS', 'SEASON_SPLIT', 'SEASONS',
-    lift('isVacationSeason') + NL + lift('currentSeason') + NL + lift('presetChapters') + NL
+    lift('isVacationSeason') + NL + "function currentSeason(){ return (state.season && state.season.name) || ''; }" + NL + lift('presetChapters') + NL
     + lift('getClassProgress') + NL + lift('progRangeText') + NL + 'return { getClassProgress, progRangeText };');
   const 과목 = { '공통수학1': ['a','b','c','d','e','f','g','h','i','j'] };
   const 반 = (시즌, 끝낸) => {

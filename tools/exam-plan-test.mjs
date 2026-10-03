@@ -55,14 +55,16 @@ const 뼈대 = (몸) =>
   (몸 || lift('planSetCell')) + NL + lift('planSeed') + NL +
   lift('seasonKeyOf') + NL + lift('curSeasonKey');
 
-const 만들기 = (state, DATA, 몸) => new Function('state', 'DATA', 'currentSeason', 'examDatesOf',
+/* 2026-10-03 — curSeasonKey 는 학교별 시즌(examTermNow)의 «학년도|시험»이다. 여기서는 시즌 이름만 대역으로 */
+const 만들기 = (state, DATA, 몸) => new Function('state', 'DATA', 'currentSeason', 'examDatesOf', 'examTermNow',
   뼈대(몸) + NL + `return { planLabel, planCell, planSetCell, planSetRange, planRange,
     planAutoRange, planCellsOfStudent, planDaysOf, dateShift, planSeed, curSeasonKey,
     examPlanCur, 저장부름: () => 저장부름, PLAN_KIND_MAP };`)(
   state, DATA,
   () => (state.season && state.season.name) || '2학기 중간',
   (school, grade) => ((state.examRanges || {}).dates || {})[school]
-    ? ((state.examRanges || {}).dates || {})[school][grade] || null : null);
+    ? ((state.examRanges || {}).dates || {})[school][grade] || null : null,
+  () => ({ name: (state.season && state.season.name) || '2학기 중간', year: '2026' }));
 
 const 판 = (더) => Object.assign({
   examPlan: {byKey: {}},
@@ -203,13 +205,14 @@ console.log(NL + '⑥ ⚠ 망가뜨려 무는지 본다' + NL);
   const 몸끝 = (() => { let d = 0; const s0 = 망친.indexOf('{');
     for(let j = s0; j < 망친.length; j++){ if(망친[j]==='{') d++; else if(망친[j]==='}'){ d--; if(!d) return j+1; } } })();
   const 망친planSeed = 망친.slice(0, 몸끝).split(지키는줄).join('');
-  const F2 = new Function('state','DATA','currentSeason','examDatesOf',
+  const F2 = new Function('state','DATA','currentSeason','examDatesOf','examTermNow',
     뼈대(원본).replace(lift('planSeed'), 망친planSeed) + NL +
     'return { planCell, planSetCell, planSetRange, planSeed };')(
     판({examRanges: {dates: {'광남고': {'고1': {math:'2026-06-25'}}}}}),
     DATA, () => '2학기 중간',
     (school, grade) => ({'광남고': {'고1': {math:'2026-06-25'}}})[school]
-      ? ({'광남고': {'고1': {math:'2026-06-25'}}})[school][grade] : null);
+      ? ({'광남고': {'고1': {math:'2026-06-25'}}})[school][grade] : null,
+    () => ({ name: '2학기 중간', year: '2026' }));
   F2.planSetRange('2026-06-22', '2026-06-30');
   F2.planSetCell('a', '2026-06-24', 'off');
   F2.planSeed();

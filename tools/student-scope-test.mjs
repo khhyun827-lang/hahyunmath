@@ -57,7 +57,7 @@ console.log('\n학생이 제 것만 읽는가\n');
   /* ⚠ 2026-09-13 부터 읽어 온 명단이 `normStudentGrades` 를 한 번 지난다(학년을 한 벌로) —
      옮겨 적지 않고 그것도 같이 떠 온다. */
   const fn = new Function('DATA', 'state', 'dbReadClear', 'dbGetDoc', 'dbGetCollection',
-    'loadCollectionCached', 'dbGetCollectionByUid', 'dbGet', 'currentSeason', 'splitQnaFollowups',
+    'loadCollectionCached', 'dbGetCollectionByUid', 'dbGet', 'currentSeason', 'splitQnaFollowups', 'examKeysNormalize',
     떠내기('gradeLabel', 'function ') + 떠내기('normStudentGrades', 'function ')
     + 떠내기('loadStudentData') + '; return loadStudentData;')(
     DATA, state,
@@ -69,6 +69,7 @@ console.log('\n학생이 제 것만 읽는가\n');
     async (k, fb) => { w.낱건.push(k); return null; },
     () => '1학기 기말',
     () => { w.가른것 = true; },
+    by => by,
   );
   await fn('U1');
 
@@ -89,7 +90,7 @@ console.log('\n학생이 제 것만 읽는가\n');
   봄('🔴 시즌·시험범위·교재·등급컷·직보일정표·휴강도 읽는다',
     w.낱건, ['season', 'exam-ranges', 'school-books', 'grade-cuts', 'exam-plan', 'class-offdays']);
   봄('   못 받아도 «빈 모양»을 세워 둔다 — 화면이 터지면 안 된다',
-    !!(state.examRanges && state.examRanges.dates && state.gradeCuts && state.gradeCuts.byKey
+    !!(state.examRanges && state.gradeCuts && state.gradeCuts.byKey
        && state.examPlan && state.examPlan.byKey
        && state.offDays && Array.isArray(state.offDays.days)), true);
 

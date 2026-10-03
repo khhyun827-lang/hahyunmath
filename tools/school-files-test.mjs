@@ -34,14 +34,14 @@ console.log('학교 프린트 —' + NL);
 {
   const 저장 = [], 지움 = [], 말 = [];
   const state = { schoolFiles: null, schoolFilesLoading: false, schoolFileBusy: '' };
-  const F = new Function('state', 'dbGet', 'dbSet', 'uploadFileToDrive', 'deleteFromDrive', 'showToast', 'render', 'todayStr', 'currentSeason',
+  const F = new Function('state', 'dbGet', 'dbSet', 'uploadFileToDrive', 'deleteFromDrive', 'showToast', 'render', 'todayStr', 'currentSeason', 'examSeasonOf', 'SLOT_NAME',
     'fileSizeLabel', 'MATERIAL_MAX_BYTES', 'confirm', 'jsAttr', 'escHtml', 'materialLink',
     [lift('schoolFileDownload'), lift('loadSchoolFilesIfNeeded'), lift('schoolFilesOf'), lift('schoolFileSeasonLabel'), lift('addSchoolFile'), lift('removeSchoolFile'), lift('schoolFilesHTML')].join(NL)
     + NL + 'return { loadSchoolFilesIfNeeded, schoolFilesOf, addSchoolFile, removeSchoolFile, schoolFilesHTML };')(
     state, async () => ({ 광남고: { '고1': [{ name: '옛것.pdf', fileId: 'F0', size: 1000, at: '2025-10-01', season: '2025 · 2학기 중간' }] } }),
     async (k, v) => { 저장.push([k, JSON.parse(JSON.stringify(v))]); return true; },
     async (file) => ({ fileId: 'F1', url: 'https://drive/thumb' }), (id) => 지움.push(id), m => 말.push(m), () => {},
-    () => '2026-09-22', () => '2학기 중간', n => n + 'B', 15 * 1024 * 1024, () => true, s => s, s => s, f => 'https://drive.google.com/file/d/' + f.fileId + '/view');
+    () => '2026-09-22', () => '2학기 중간', () => ({ next: { year: '2026', slot: '2-mid' } }), { '2-mid': '2학기 중간' }, n => n + 'B', 15 * 1024 * 1024, () => true, s => s, s => s, f => 'https://drive.google.com/file/d/' + f.fileId + '/view');
 
   await F.loadSchoolFilesIfNeeded();
   봄('① 지난해 것이 그대로 보인다 — 「해가 바뀌었을 때 찾아볼 수 있도록」', F.schoolFilesOf('광남고', '고1').map(f => f.season), ['2025 · 2학기 중간']);
@@ -59,8 +59,8 @@ console.log('학교 프린트 —' + NL);
   봄('   상한을 넘는 파일은 올리기 전에 막는다', [저장.length, /너무 큽니다/.test(말[말.length - 1])], [2, true]);
 }
 {
-  const 넘기기 = lift('archiveCurrentSeason');
-  봄('③ 시즌 넘기기는 학교 프린트를 건드리지 않는다', /schoolFiles|school-files/.test(넘기기), false);
+  /* 2026-10-03 — 시즌 넘기기 단추가 없어졌다(학교별로 저절로). 프린트는 지우는 길 자체가 없다 */
+  봄('③ 시즌을 넘기며 지우는 함수가 없다', /function (archiveCurrentSeason|saveSeason|endSeason)\(/.test(html), false);
   const 학생로딩 = lift('loadStudentData');
   봄('④ 학생 로그인은 이 문서를 안 읽는다 — 시험 범위 화면에서만 lazy', [/school-files/.test(학생로딩), /loadSchoolFilesIfNeeded\(\);/.test(lift('teacherExamRangeHTML'))], [false, true]);
   /* 2026-10-02 — 펼친 줄이 사라지고 «프린트 칸을 누르면 뜨는 창»에 선다(exam-pop-test 가 실제로 누른다) */

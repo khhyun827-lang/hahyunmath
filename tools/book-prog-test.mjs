@@ -32,10 +32,11 @@ const 봄 = (무엇, 나온것, 나와야) => {
     (ok ? '' : NL + '      나온 것 ' + JSON.stringify(나온것) + NL + '      나와야 ' + JSON.stringify(나와야)));
 };
 
-const 이름들 = ['isVacationSeason', 'currentSeason', 'presetChapters', 'getClassProgress', 'progRangeText',
+/* currentSeason 은 2026-10-03 부터 학교별 시즌에서 온다 — 여기서는 «시즌 이름»만 넘기면 되므로 작은 대역을 쓴다 */
+const 이름들 = ['isVacationSeason', 'presetChapters', 'getClassProgress', 'progRangeText',
   'bookUnitsOf', 'bookDoneOf', 'toggleBookUnit', 'setBookScope', 'bookProgText'];
 const 상자 = new Function('DATA', 'state', 'UNIT_CHAPTERS', 'SEASON_SPLIT', 'SEASONS', 'dbSetDoc', 'render',
-  이름들.map(lift).join(NL) + NL + 'return { ' + 이름들.join(', ') + ' };');
+  "function currentSeason(){ return (state.season && state.season.name) || ''; }" + NL + 이름들.map(lift).join(NL) + NL + 'return { ' + 이름들.join(', ') + ' };');
 
 /* 과목 하나(10단원 a~j) · 중간 = 앞 6단원 */
 function 판(progress, 시즌) {

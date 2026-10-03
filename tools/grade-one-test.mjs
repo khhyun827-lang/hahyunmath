@@ -114,9 +114,12 @@ console.log(NL + '④ 시험 일정 — 한 학교가 한 줄이다' + NL);
   const 일정 = 알맹이(lift('teacherExamRangeHTML'));
   봄('줄은 학교 × 학년 × 과목으로 선다', 일정.includes('rangeKey(school, grade, subject'), true);
   봄('열쇠는 학생의 학년 그대로다', 일정.includes("grade = s.grade || ''"), true);
-  const E = new Function('state',
-    lift('examDatesOf') + NL + 'return examDatesOf;')(
-    { examRanges: { dates: { '광남고': { '고1': { math: '2026-10-05' } } } } });
+  /* 2026-10-03 — 날짜는 «학년도 › 학교 › 학년 › 시험» 칸에 산다. 학교별 시즌 층을 통째로 떠 온다 */
+  const 층 = html.slice(html.indexOf('const EXAM_SLOTS ='), html.indexOf('function currentSeason(){'));
+  const E = new Function('state', 'DATA', 'todayStr', 'isWithdrawn', 'dbGet',
+    층 + NL + lift('examDatesOf') + NL + 'return examDatesOf;')(
+    { examRanges: { migrated: true, years: { '2026': { '광남고': { '고1': { '2-mid': { math: '2026-10-05' } } } } } } },
+    { students: [] }, () => '2026-10-01', () => false, async () => null);
   봄('🔴 「고1」로 적은 날짜를 「고1」이 찾는다', (E('광남고', '고1') || {}).math, '2026-10-05');
   봄('🔴 「1」로는 못 찾는다 — 그래서 한 벌로 만드는 것이다', E('광남고', '1'), null);
 }

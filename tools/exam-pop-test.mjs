@@ -85,10 +85,12 @@ try{
   await page.evaluate(() => closeExamPop());
   봄('파일 이름을 누르면 창 대신 내려받기(고리)', await page.$eval(`${줄(1)} .xr-print`, a => [a.target, /onclick="event\.stopPropagation\(\)"/.test(a.outerHTML)]), ['_blank', true]);
 
-  /* 지난 기록 — 읽기 전용이라 누를 칸이 없다 */
-  await page.evaluate(() => { state.examHistory = { items: [{ season: '2학기 중간', startedAt: '2026-08-20', endedAt: '2026-09-30',
-    dates: { '광남고': { '1': { start: '2026-09-01' } } } }] }; goExamSeason('0'); });
-  봄('지난 기록엔 누를 칸이 없다', await page.locator('.rst-wrap td.xr-ed').count(), 0);
+  /* 2026-10-03 — 칸 창은 «그 해 · 그 시험»을 들고 뜬다. 저장이 그 시험 칸으로 간다(지금 시험 = 펼쳐진 칸) */
+  const 지금 = await page.evaluate(() => examSeasonOf('경기여자고등학교', '1').next);
+  봄('🔴 날짜 저장은 펼친 시험 칸으로', (await page.evaluate(() => 저장.find(x => x[0] === '날짜')))[6], 지금);
+  봄('시험 넷이 펼침 칸으로 선다', await page.$$eval('.xs-sec .xs-sh b', e => e.map(x => x.textContent)), ['1학기 중간', '1학기 기말', '2학기 중간', '2학기 기말']);
+  await page.evaluate(() => examSlotToggle(schoolYearOf(todayStr()) + '|1-mid', true));
+  봄('다른 시험 칸을 펼치면 표가 하나 더', await page.locator('.xs-sec .rst-wrap').count(), 2);
 } finally {
   await 브라우저.close(); 서버.kill();
 }

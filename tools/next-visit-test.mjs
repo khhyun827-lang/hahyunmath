@@ -44,7 +44,7 @@ const 봄 = (무엇, 나온것, 나와야) => {
 console.log(NL + '① D-day 는 시험기간 «시작일»까지다' + NL);
 {
   const 판 = (today, dates) => new Function('todayStr', 'examDatesOf',
-    lift('examDdayOf') + NL + 'return examDdayOf;')(() => today, () => dates);
+    lift('examDdayOf') + NL + lift('examDdayOfDates') + NL + 'return examDdayOf;')(() => today, () => dates);
   const 시험 = { start: '2026-10-01', end: '2026-10-07', math: '2026-10-05' };
   const a = 판('2026-09-28', 시험)('광남고', '1');
   봄('🔴 D-day 가 시작일(10/1)까지다 — 수학(10/5)이 아니다', [a.state, a.days, a.target, a.basis], ['before', 3, '2026-10-01', 'start']);

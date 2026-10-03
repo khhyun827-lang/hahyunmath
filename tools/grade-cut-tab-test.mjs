@@ -42,13 +42,12 @@ try{
   await page.waitForFunction(() => 저장.length > 0);
   봄('지금 시즌 열쇠로 저장', await page.evaluate(() => 저장[0]), [열쇠, '경기여자고등학교', '1', '공통수학1', 1, '91']);
 
-  /* 지난 시즌을 보면 그 시즌 열쇠로 — curSeasonKey() 로 쓰면 지난 값이 지금 시즌에 적힌다 */
-  await page.evaluate(() => { state.examHistory = { items: [{ season: '2학기 중간', startedAt: '2026-08-20', endedAt: '2026-09-30', dates: { '광남고': { '1': {} } } }] };
-    state.examSeasonView = 0; 저장.length = 0; render(); });
-  await page.fill('.rst-wrap tbody tr:first-child input.gc-in >> nth=3', '60');
-  await page.press('.rst-wrap tbody tr:first-child input.gc-in >> nth=3', 'Tab');
+  /* 다른 시험 칸(1학기 기말)을 펼쳐 적으면 그 시험 열쇠로 — curSeasonKey() 로 쓰면 지금 시험에 적힌다 (2026-10-03) */
+  await page.evaluate(() => { 저장.length = 0; examSlotToggle(schoolYearOf(todayStr()) + '|1-fin', true); });
+  await page.fill('section.xs-sec:nth-of-type(2) tbody tr:first-child input.gc-in >> nth=3', '60');
+  await page.press('section.xs-sec:nth-of-type(2) tbody tr:first-child input.gc-in >> nth=3', 'Tab');
   await page.waitForFunction(() => 저장.length > 0);
-  봄('지난 시즌은 그 시즌 열쇠로', await page.evaluate(() => 저장[0][0] === seasonKeyOf('2학기 중간', '2026-08-20')), true);
+  봄('다른 시험은 그 시험 열쇠로', await page.evaluate(() => 저장[0][0] === seasonKeyOf('1학기 기말', schoolYearOf(todayStr()))), true);
 
   await page.evaluate(() => { state.teacherTab = 'examrange'; state.examSeasonView = ''; render(); });
   봄('시험 일정 표엔 등급컷 칸이 없다', await page.$$eval('.rst-wrap thead th', e => e.some(x => /등급컷/.test(x.textContent))), false);
