@@ -126,5 +126,20 @@ console.log(NL + '⑥ 지금 범위' + NL);
   봄('한 곳이라도 중간이면 학원 전체는 2학기 중간', 상자({ examRanges: { migrated: true, years } }, '2026-10-03', 학생).currentSeason(), '2학기 중간');
 }
 
+/* ⑧ 학생마다 시험 과목 (2026-10-03) */
+console.log(NL + '⑧ 학생마다 시험 과목 · 정시는 표시만' + NL);
+{
+  const F = new Function('subjectOfStudent', 'escHtml', lift('studentExamSubjects') + NL + lift('trackBadgeHTML') + NL
+    + 'return { studentExamSubjects, trackBadgeHTML };')(sid => sid === 'c' ? '대수' : '', x => x);
+  봄('🔴 고른 과목이 있으면 그것', F.studentExamSubjects({ studentId: 'c', examSubjects: ['대수', '기하'] }), ['대수', '기하']);
+  봄('없으면 반 과목 하나', F.studentExamSubjects({ studentId: 'c' }), ['대수']);
+  봄('둘 다 없으면 빈 것', F.studentExamSubjects({ studentId: 'x', examSubjects: [] }), []);
+  봄('정시 딱지 — 정시 · 내신+정시에만', [F.trackBadgeHTML({ track: '정시' }) !== '', F.trackBadgeHTML({ track: '내신+정시' }) !== '', F.trackBadgeHTML({})], [true, true, '']);
+  const 저장 = lift('updateStudentInfo');
+  봄('🔴 학생 정보 저장이 시험 과목 · 준비를 담는다', [/s\.examSubjects = /.test(저장), /s\.track = /.test(저장)], [true, true]);
+  봄('🔴 시험 일정 줄이 학생 과목으로 선다', /studentExamSubjects\(s\)/.test(lift('teacherExamRangeHTML')), true);
+  봄('데일리퀴즈는 여전히 반 과목', /subjectOfStudent\(sid\)/.test(lift('studentRange')), true);
+}
+
 console.log(NL + (fail ? '🔴 ' + fail + '개 실패 · ' : '✓ 전부 통과 · ') + pass + '개' + NL);
 process.exit(fail ? 1 : 0);

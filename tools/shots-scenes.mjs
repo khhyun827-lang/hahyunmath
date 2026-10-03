@@ -438,6 +438,20 @@ export const 무대들 = {
         { id:'od2', date: 날(5), moveTo: 날(6), moveTime: '14:00~16:30', classIds: ['c1'], label: '' },
         { id:'od3', date: 날(9), classIds: [], label: '추석 연휴' }] };
       state.teacherTab = 'classhub'; state.classHubId = 'c1'; state.classHubTab = 'offdays'; state.settingsForm = 'off'; state.studentDetailId = null; render(); } },
+  /* 2026-10-03 학교 2단계 — 학생마다 시험 과목 · 준비(정시는 표시만) */
+  학생과목: { 말: '설정 › 학생 › 편집 (시험 과목 · 준비)', 폭: '1440,864,390',
+    세우기: () => { state.currentUser = { type:'teacher', name:'김하현T' }; state.view = 'teacher';
+      const s = DATA.students[7]; s.school = '광남고'; s.grade = '고2'; s.examSubjects = ['대수', '기하']; s.track = '정시';
+      state.teacherTab = 'settings'; state.settingsSubTab = 'students'; state.stuEditId = s.studentId; state.studentDetailId = null; render(); } },
+  시험일정과목: { 말: '학교 › 시험 일정 — 같은 학교·학년에서 과목이 갈린다', 폭: '1440,390',
+    세우기: () => { state.currentUser = { type:'teacher', name:'김하현T' }; state.view = 'teacher';
+      DATA.classes[0].progress = { subject: '공통수학1' }; DATA.classes[1].progress = { subject: '대수' };
+      DATA.students.forEach((s, i) => { s.school = i % 2 ? '광남고' : '대원고'; s.grade = i < 6 ? '고1' : '고2'; if(i >= 6) s.classId = 'c2'; });
+      DATA.students[6].examSubjects = ['대수', '기하']; DATA.students[7].examSubjects = ['대수', '확률과통계'];
+      DATA.students[8].examSubjects = ['대수', '기하']; DATA.students[8].track = '정시';
+      DATA.students[9].examSubjects = ['대수', '확률과통계'];
+      state.examHistory = { items: [] }; state.examRanges = { migrated: true, years: {} };
+      state.teacherTab = 'examrange'; state.studentDetailId = null; render(); } },
   출석도장: { 말: '홈 › 출석 도장', 폭: '1440,864,390',
     세우기: () => { state.currentUser = { type:'teacher', name:'김하현T' }; state.view = 'teacher';
       state.teacherTab = 'checkin'; state.studentDetailId = null; render(); } },

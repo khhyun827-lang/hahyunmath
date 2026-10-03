@@ -32,13 +32,16 @@ const 끝 = html.indexOf('list = Object.values(combos);', 처음);
 if (처음 < 0 || 끝 < 0) { console.error('🔴 줄 세우는 토막을 못 찾았다'); process.exit(1); }
 const 토막 = html.slice(처음, 끝) + 'list = Object.values(combos); return list;';
 
+/* 2026-10-03 — 과목은 학생마다(studentExamSubjects · 없으면 반 과목). 그 함수도 떠 온다 · 퇴원생은 빠진다 */
+const 학생과목 = (() => { const a = html.indexOf('function studentExamSubjects('); return html.slice(a, html.indexOf('\n}', a) + 2); })();
 function 세운다(students, 과목표) {
   const DATA = { students };
-  return new Function('DATA', 'subjectOfStudent', 'rangeKey',
-    'let list = [];\n' + 토막)(
+  return new Function('DATA', 'subjectOfStudent', 'rangeKey', 'isWithdrawn',
+    학생과목 + '\nlet list = [];\n' + 토막)(
     DATA,
     (sid) => 과목표[sid] || '',
     (sc, gr, sj) => sc + '|' + gr + '|' + sj,
+    (s) => !!s.withdrawn,
   );
 }
 
