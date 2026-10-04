@@ -437,6 +437,21 @@ function hwpWalkParagraphs(paras, tokens){
             if(글) tokens.push({type:'text', v: 글});
           }
         } else if(local === 'tbl'){
+          /* 🔴 **묶음 표 — 문항 «여럿»을 담은 바깥 표** (2026-10-04 · 주기나 1-1).
+             한 기출의 문항들(OR·NC·UP)을 바깥 표 하나에 담고, 그 칸마다 문항 껍질(미주를 품은 표)이 또 있다.
+             바깥 표를 껍질로 읽으면 **미주를 모두 앞으로 끌어올려** 한 묶음이 덩이 하나로 뭉친다
+             (실측: 인수분해 40문항 → 덩이 17 · 코드 0개 붙음). 안쪽 껍질이 제 일을 하도록 칸을 차례대로 흘려보낸다.
+             ⚠ 엔딩크레딧·시험지에는 «미주를 품은 표를 품은 표»가 없다 — 그쪽은 한 글자도 안 바뀐다. */
+          const 묶음표 = Array.from(child.getElementsByTagNameNS(HP_NS,'tbl'))
+            .some(t => t.getElementsByTagNameNS(HP_NS,'endNote').length);
+          if(묶음표){
+            for(const tr of Array.from(child.childNodes).filter(n=>n.nodeType===1 && n.localName==='tr'))
+              for(const tc of Array.from(tr.childNodes).filter(n=>n.nodeType===1 && n.localName==='tc')){
+                const subList = Array.from(tc.childNodes).find(n=>n.nodeType===1 && n.localName==='subList');
+                if(subList) hwpWalkParagraphs(Array.from(subList.childNodes).filter(n=>n.nodeType===1 && n.localName==='p'), tokens);
+              }
+            continue;
+          }
           /* 표를 «줄 하나로 뭉개지» 않고 행·열을 살려 둔다.
              예전에는 셀을 공백으로 이어 붙여서, 대진표나 조건 표가 테두리도 칸도 없는
              글 뭉치가 됐다. 지금은 한 행을 `| 칸 | 칸 |` 한 줄로 적는다 —
@@ -492,8 +507,10 @@ function hwpWalkParagraphs(paras, tokens){
               let plain = '';
               for(const t of cellTokens) if(t.type==='text' || t.type==='eq') plain += String(t.v);
               plain = plain.trim();
-              const looksLikeSourceTag = plain.length > 0 && plain.replace(/^\[|\]$/g,'').length <= 14
-                && !/[.,?!()①②③④⑤]/.test(plain) && !/^\d+$/.test(plain);
+              /* ⚠ 「2016년 3월 21번 나형」·「2019년 고2 3월 29번」은 15자다 — 출처로 읽히는 짧은 칸은 길이와 상관없이 출처다. */
+              const looksLikeSourceTag = plain.length > 0 && (plain.replace(/^\[|\]$/g,'').length <= 14
+                && !/[.,?!()①②③④⑤]/.test(plain) && !/^\d+$/.test(plain)
+                || plain.length <= 24 && !!hwpxParseSourceTag(plain));
               /* 🔴 **버리기 전에 «무엇이었는지»는 남긴다** (2026-09-05).
                  여태는 출처 딱지를 그냥 흘려보냈다 — 「고쟁이」 같은 이름은 장부에 이미 있으니까.
                  그런데 주기나 교재는 그 자리에 **「2023년 09월 28번」**을 적어 두고,
@@ -1018,7 +1035,9 @@ const 딱지갈래 = { NC:'N', UP:'U', DW:'D' };    // 우리 창고의 변형 �
      즉 막고 있던 것은 이 한 줄뿐이었다(`1994` → `94` → 코드 `1941111OR`, 화면엔 「1994년 11월 11번」). */
 function hwpxParseSourceTag(s){
   const 글 = String(s || '');
-  const m = 글.match(/((?:19|20)[0-9]{2})\s*년\s*([0-9]{1,2})\s*월\s*([0-9]{1,2})\s*번/);
+  /* 🔵 **「2019년 고2 3월 29번」도 읽는다** (2026-10-04 · 주기나 1-1 02단원 다섯 문항이 이 꼴이었다).
+     적혀 있으면 그 학년이 «3월이면 2학년» 규칙을 이긴다 — 고1 3월 시행도 있기 때문이다. */
+  const m = 글.match(/((?:19|20)[0-9]{2})\s*년\s*(?:고\s*([123])\s*)?([0-9]{1,2})\s*월\s*([0-9]{1,2})\s*번/);
   if(!m) return null;
   /* 🔵 **형(가형·나형)도 읽는다** (2026-09-06 · 사용자가 정했다 — 「가=A · 나=B」).
      같은 「2016년 3월 21번」이 가형·나형 둘 다 있어서 **서로 다른 문제가 같은 코드**를 받았다.
@@ -1030,7 +1049,8 @@ function hwpxParseSourceTag(s){
        두 뜻이 겹칠 일이 없다(가/나형은 3·6·9·10월 교육청, A/B형은 11월 수능). */
   const f = 글.match(/([가나AB])\s*형/);
   const 형 = f ? ({ '가':'A', '나':'B', 'A':'A', 'B':'B' })[f[1]] : '';
-  return { 년: m[1].slice(2), 월: String(m[2]).padStart(2,'0'), 번: String(m[3]).padStart(2,'0'), 형 };
+  const 월 = String(m[3]).padStart(2,'0');
+  return { 년: m[1].slice(2), 월, 번: String(m[4]).padStart(2,'0'), 형, 학년: m[2] || hwpxGradeOfMonth(월) };
 }
 /* 🔵 **학년은 «몇 월 시행이냐»가 정한다** (2026-09-05 사용자가 정했다 —
      「3월이 출처인 것은 다 2학년으로 시작해주고 그외 나머지는 1학년으로」). */
@@ -1091,7 +1111,7 @@ function hwpxMakeSourceCodes(뽑은것){
   if(흠.length) return { ok:false, 흠, codes:[], 것들 };
   const 묶음 = {};
   for(const x of 것들){
-    const 뿌리 = hwpxGradeOfMonth(x.출처.월) + x.출처.년 + x.출처.월 + x.출처.번 + (x.출처.형 || '');
+    const 뿌리 = (x.출처.학년 || hwpxGradeOfMonth(x.출처.월)) + x.출처.년 + x.출처.월 + x.출처.번 + (x.출처.형 || '');
     (묶음[뿌리] = 묶음[뿌리] || []).push(x.딱지들[0]);
   }
   const 안맞음 = Object.entries(묶음).filter(([, v]) => v.filter(d => d === 'OR').length !== 1);
@@ -1113,7 +1133,7 @@ function hwpxMakeSourceCodes(뽑은것){
   const 갈래 = { NC: 'N', UP: 'U', DW: 'D' };
   const 센다 = {};
   const codes = 것들.map(x => {
-    const 뿌리 = hwpxGradeOfMonth(x.출처.월) + x.출처.년 + x.출처.월 + x.출처.번 + (x.출처.형 || '');
+    const 뿌리 = (x.출처.학년 || hwpxGradeOfMonth(x.출처.월)) + x.출처.년 + x.출처.월 + x.출처.번 + (x.출처.형 || '');
     if(x.딱지들[0] === 'OR') return 뿌리;
     const g = 갈래[x.딱지들[0]];
     const k = 뿌리 + '-' + g;
