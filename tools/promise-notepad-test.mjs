@@ -79,8 +79,11 @@ try{
   await page.locator('.subnav a.sn-subj').first().click();
   const 단원 = await page.$$eval('.subnav a.sn-ch', e => e.length);
   봄('⑦ 과목을 누르면 단원이 사이드에 펼쳐진다', 단원 > 0, true);
+  /* 장부가 늘면 맨 앞 과목이 바뀐다(10-04 공통수학1 이 들어와 K1 이 앞) — 누른 과목을 따른다 */
+  const 고른과목 = await page.evaluate(() => state.storeSubject);
+  봄('⑦ 과목을 누르면 그 과목', !!고른과목, true);
   await page.locator('.subnav a.sn-ch').nth(1).click();
-  봄('⑦ 단원을 누르면 그 단원만', await page.evaluate(() => [state.storeSubject, !!state.storeChapter, document.querySelector('.subnav a.sn-ch.on') ? 1 : 0]), ['K2', true, 1]);
+  봄('⑦ 단원을 누르면 그 단원만', await page.evaluate(() => [state.storeSubject, !!state.storeChapter, document.querySelector('.subnav a.sn-ch.on') ? 1 : 0]), [고른과목, true, 1]);
 } finally {
   await 브라우저.close(); 서버.kill();
 }

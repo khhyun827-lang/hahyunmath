@@ -208,7 +208,7 @@ const ledger = {
   count: r.codes.length, chapters: [CHAPTER],
   items: r.것들.map((x, i) => ({
     code: r.codes[i], chapter: CHAPTER, chapterName: 단원이름, subject: SUBJECT, seq: i + 1,
-    badge: x.딱지들[0], origin: r.codes[i].slice(0, 7) + 'OR',
+    badge: x.딱지들[0], origin: r.codes[i].split('-')[0],
     source: { book: 책이름,
               label: (+x.출처.년 <= 30 ? 2000 : 1900) + +x.출처.년 + '년 ' + x.출처.월 + '월 ' + (+x.출처.번) + '번' },
   })),
