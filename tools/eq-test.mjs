@@ -93,6 +93,10 @@ console.log('');
   든가('bar 는 윗줄이 된다', convertHwpEq('bar{AB}'), B + 'overline{AB}');
   든가('sqrt 는 근호가 된다', convertHwpEq('sqrt {29}'), B + 'sqrt{29}');
   봄('빈 수식은 빈 글자', convertHwpEq('   '), '');
+  /* 🔵 «To + 다섯 자리» — 한글이 안 그리는 군더더기 (2026-10-05 · 주기나 1-1) */
+  봄('「199 To 20012」는 199', convertHwpEq('199\n\nTo\n20012\n\n'), '$199$');
+  봄('「^{2}To03033」도 걷는다', convertHwpEq('2 LEFT ( x+1 RIGHT ) ^{2}To03033').includes('To'), false);
+  봄('낱말 속 To 는 그대로(Total)', convertHwpEq('Total 12345').includes('Total'), true);
 }
 
 

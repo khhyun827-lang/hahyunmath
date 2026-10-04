@@ -2,49 +2,1105 @@
   "subject": "K1",
   "book": "J",
   "kind": "source",
-  "sourceFile": "[2026][주기나][1-1][2.항등식과나머지정리].hwpx · [2026][주기나][1-1][4.복소수]_문항배치(완).hwpx · [2026][주기나][1-1][5.이차방정식]_문항배치(완).hwpx",
-  "updatedAt": "2026-10-04",
-  "count": 278,
+  "sourceFile": "[2026][주기나][1-1중간][1.다항식의연산].hwpx · [2026][주기나][1-1중간][2.항등식과나머지정리].hwpx · [2026][주기나][1-1중간][3.인수분해].hwpx · [2026][주기나][1-1중간][4.복소수].hwpx · [2026][주기나][1-1중간][5.이차방정식].hwpx · [2026][주기나][1-1중간][6.이차함수].hwpx",
+  "updatedAt": "2026-10-05",
+  "count": 608,
   "chapters": [
+    "01",
     "02",
+    "03",
     "04",
-    "05"
+    "05",
+    "06"
   ],
   "items": [
     {
-      "code": "2170314",
+      "code": "1120607",
+      "chapter": "01",
+      "chapterName": "다항식의연산",
+      "subject": "K1",
+      "seq": 1,
+      "badge": "OR",
+      "origin": "1120607",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2012년 06월 7번"
+      }
+    },
+    {
+      "code": "1120607-N01",
+      "chapter": "01",
+      "chapterName": "다항식의연산",
+      "subject": "K1",
+      "seq": 2,
+      "badge": "NC",
+      "origin": "1120607",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2012년 06월 7번"
+      }
+    },
+    {
+      "code": "1120607-U01",
+      "chapter": "01",
+      "chapterName": "다항식의연산",
+      "subject": "K1",
+      "seq": 3,
+      "badge": "UP",
+      "origin": "1120607",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2012년 06월 7번"
+      }
+    },
+    {
+      "code": "2130324",
+      "chapter": "01",
+      "chapterName": "다항식의연산",
+      "subject": "K1",
+      "seq": 4,
+      "badge": "OR",
+      "origin": "2130324",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2013년 03월 24번"
+      }
+    },
+    {
+      "code": "2130324-N01",
+      "chapter": "01",
+      "chapterName": "다항식의연산",
+      "subject": "K1",
+      "seq": 5,
+      "badge": "NC",
+      "origin": "2130324",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2013년 03월 24번"
+      }
+    },
+    {
+      "code": "2130324-N02",
+      "chapter": "01",
+      "chapterName": "다항식의연산",
+      "subject": "K1",
+      "seq": 6,
+      "badge": "NC",
+      "origin": "2130324",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2013년 03월 24번"
+      }
+    },
+    {
+      "code": "1200606",
+      "chapter": "01",
+      "chapterName": "다항식의연산",
+      "subject": "K1",
+      "seq": 7,
+      "badge": "OR",
+      "origin": "1200606",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2020년 06월 6번"
+      }
+    },
+    {
+      "code": "1200606-N01",
+      "chapter": "01",
+      "chapterName": "다항식의연산",
+      "subject": "K1",
+      "seq": 8,
+      "badge": "NC",
+      "origin": "1200606",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2020년 06월 6번"
+      }
+    },
+    {
+      "code": "1130628",
+      "chapter": "01",
+      "chapterName": "다항식의연산",
+      "subject": "K1",
+      "seq": 9,
+      "badge": "OR",
+      "origin": "1130628",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2013년 06월 28번"
+      }
+    },
+    {
+      "code": "1130628-N01",
+      "chapter": "01",
+      "chapterName": "다항식의연산",
+      "subject": "K1",
+      "seq": 10,
+      "badge": "NC",
+      "origin": "1130628",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2013년 06월 28번"
+      }
+    },
+    {
+      "code": "1130628-N02",
+      "chapter": "01",
+      "chapterName": "다항식의연산",
+      "subject": "K1",
+      "seq": 11,
+      "badge": "NC",
+      "origin": "1130628",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2013년 06월 28번"
+      }
+    },
+    {
+      "code": "1130628-U01",
+      "chapter": "01",
+      "chapterName": "다항식의연산",
+      "subject": "K1",
+      "seq": 12,
+      "badge": "UP",
+      "origin": "1130628",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2013년 06월 28번"
+      }
+    },
+    {
+      "code": "1080927",
+      "chapter": "01",
+      "chapterName": "다항식의연산",
+      "subject": "K1",
+      "seq": 13,
+      "badge": "OR",
+      "origin": "1080927",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2008년 09월 27번"
+      }
+    },
+    {
+      "code": "1080927-N01",
+      "chapter": "01",
+      "chapterName": "다항식의연산",
+      "subject": "K1",
+      "seq": 14,
+      "badge": "NC",
+      "origin": "1080927",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2008년 09월 27번"
+      }
+    },
+    {
+      "code": "1070521",
+      "chapter": "01",
+      "chapterName": "다항식의연산",
+      "subject": "K1",
+      "seq": 15,
+      "badge": "OR",
+      "origin": "1070521",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2007년 05월 21번"
+      }
+    },
+    {
+      "code": "1070521-N01",
+      "chapter": "01",
+      "chapterName": "다항식의연산",
+      "subject": "K1",
+      "seq": 16,
+      "badge": "NC",
+      "origin": "1070521",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2007년 05월 21번"
+      }
+    },
+    {
+      "code": "1070521-U01",
+      "chapter": "01",
+      "chapterName": "다항식의연산",
+      "subject": "K1",
+      "seq": 17,
+      "badge": "UP",
+      "origin": "1070521",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2007년 05월 21번"
+      }
+    },
+    {
+      "code": "1190619",
+      "chapter": "01",
+      "chapterName": "다항식의연산",
+      "subject": "K1",
+      "seq": 18,
+      "badge": "OR",
+      "origin": "1190619",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2019년 06월 19번"
+      }
+    },
+    {
+      "code": "1190619-D01",
+      "chapter": "01",
+      "chapterName": "다항식의연산",
+      "subject": "K1",
+      "seq": 19,
+      "badge": "DW",
+      "origin": "1190619",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2019년 06월 19번"
+      }
+    },
+    {
+      "code": "1190619-N01",
+      "chapter": "01",
+      "chapterName": "다항식의연산",
+      "subject": "K1",
+      "seq": 20,
+      "badge": "NC",
+      "origin": "1190619",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2019년 06월 19번"
+      }
+    },
+    {
+      "code": "1190619-U01",
+      "chapter": "01",
+      "chapterName": "다항식의연산",
+      "subject": "K1",
+      "seq": 21,
+      "badge": "UP",
+      "origin": "1190619",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2019년 06월 19번"
+      }
+    },
+    {
+      "code": "1150911",
+      "chapter": "01",
+      "chapterName": "다항식의연산",
+      "subject": "K1",
+      "seq": 22,
+      "badge": "OR",
+      "origin": "1150911",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2015년 09월 11번"
+      }
+    },
+    {
+      "code": "1150911-N01",
+      "chapter": "01",
+      "chapterName": "다항식의연산",
+      "subject": "K1",
+      "seq": 23,
+      "badge": "NC",
+      "origin": "1150911",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2015년 09월 11번"
+      }
+    },
+    {
+      "code": "1150911-U01",
+      "chapter": "01",
+      "chapterName": "다항식의연산",
+      "subject": "K1",
+      "seq": 24,
+      "badge": "UP",
+      "origin": "1150911",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2015년 09월 11번"
+      }
+    },
+    {
+      "code": "1210607",
+      "chapter": "01",
+      "chapterName": "다항식의연산",
+      "subject": "K1",
+      "seq": 25,
+      "badge": "OR",
+      "origin": "1210607",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2021년 06월 7번"
+      }
+    },
+    {
+      "code": "1210607-D01",
+      "chapter": "01",
+      "chapterName": "다항식의연산",
+      "subject": "K1",
+      "seq": 26,
+      "badge": "DW",
+      "origin": "1210607",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2021년 06월 7번"
+      }
+    },
+    {
+      "code": "1210607-N01",
+      "chapter": "01",
+      "chapterName": "다항식의연산",
+      "subject": "K1",
+      "seq": 27,
+      "badge": "NC",
+      "origin": "1210607",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2021년 06월 7번"
+      }
+    },
+    {
+      "code": "1210607-U01",
+      "chapter": "01",
+      "chapterName": "다항식의연산",
+      "subject": "K1",
+      "seq": 28,
+      "badge": "UP",
+      "origin": "1210607",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2021년 06월 7번"
+      }
+    },
+    {
+      "code": "1250614",
+      "chapter": "01",
+      "chapterName": "다항식의연산",
+      "subject": "K1",
+      "seq": 29,
+      "badge": "OR",
+      "origin": "1250614",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2025년 06월 14번"
+      }
+    },
+    {
+      "code": "1250614-N01",
+      "chapter": "01",
+      "chapterName": "다항식의연산",
+      "subject": "K1",
+      "seq": 30,
+      "badge": "NC",
+      "origin": "1250614",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2025년 06월 14번"
+      }
+    },
+    {
+      "code": "1140626",
+      "chapter": "01",
+      "chapterName": "다항식의연산",
+      "subject": "K1",
+      "seq": 31,
+      "badge": "OR",
+      "origin": "1140626",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2014년 06월 26번"
+      }
+    },
+    {
+      "code": "1140626-N01",
+      "chapter": "01",
+      "chapterName": "다항식의연산",
+      "subject": "K1",
+      "seq": 32,
+      "badge": "NC",
+      "origin": "1140626",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2014년 06월 26번"
+      }
+    },
+    {
+      "code": "1140626-U01",
+      "chapter": "01",
+      "chapterName": "다항식의연산",
+      "subject": "K1",
+      "seq": 33,
+      "badge": "UP",
+      "origin": "1140626",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2014년 06월 26번"
+      }
+    },
+    {
+      "code": "2170314B",
+      "chapter": "01",
+      "chapterName": "다항식의연산",
+      "subject": "K1",
+      "seq": 34,
+      "badge": "OR",
+      "origin": "2170314B",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2017년 03월 14번"
+      }
+    },
+    {
+      "code": "2170314B-D01",
+      "chapter": "01",
+      "chapterName": "다항식의연산",
+      "subject": "K1",
+      "seq": 35,
+      "badge": "DW",
+      "origin": "2170314B",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2017년 03월 14번"
+      }
+    },
+    {
+      "code": "2170314B-N01",
+      "chapter": "01",
+      "chapterName": "다항식의연산",
+      "subject": "K1",
+      "seq": 36,
+      "badge": "NC",
+      "origin": "2170314B",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2017년 03월 14번"
+      }
+    },
+    {
+      "code": "2170314B-U01",
+      "chapter": "01",
+      "chapterName": "다항식의연산",
+      "subject": "K1",
+      "seq": 37,
+      "badge": "UP",
+      "origin": "2170314B",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2017년 03월 14번"
+      }
+    },
+    {
+      "code": "2170314B-U02",
+      "chapter": "01",
+      "chapterName": "다항식의연산",
+      "subject": "K1",
+      "seq": 38,
+      "badge": "UP",
+      "origin": "2170314B",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2017년 03월 14번"
+      }
+    },
+    {
+      "code": "1070927",
+      "chapter": "01",
+      "chapterName": "다항식의연산",
+      "subject": "K1",
+      "seq": 39,
+      "badge": "OR",
+      "origin": "1070927",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2007년 09월 27번"
+      }
+    },
+    {
+      "code": "1070927-N01",
+      "chapter": "01",
+      "chapterName": "다항식의연산",
+      "subject": "K1",
+      "seq": 40,
+      "badge": "NC",
+      "origin": "1070927",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2007년 09월 27번"
+      }
+    },
+    {
+      "code": "1070927-U01",
+      "chapter": "01",
+      "chapterName": "다항식의연산",
+      "subject": "K1",
+      "seq": 41,
+      "badge": "UP",
+      "origin": "1070927",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2007년 09월 27번"
+      }
+    },
+    {
+      "code": "1231128",
+      "chapter": "01",
+      "chapterName": "다항식의연산",
+      "subject": "K1",
+      "seq": 42,
+      "badge": "OR",
+      "origin": "1231128",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2023년 11월 28번"
+      }
+    },
+    {
+      "code": "1231128-N01",
+      "chapter": "01",
+      "chapterName": "다항식의연산",
+      "subject": "K1",
+      "seq": 43,
+      "badge": "NC",
+      "origin": "1231128",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2023년 11월 28번"
+      }
+    },
+    {
+      "code": "1231128-U01",
+      "chapter": "01",
+      "chapterName": "다항식의연산",
+      "subject": "K1",
+      "seq": 44,
+      "badge": "UP",
+      "origin": "1231128",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2023년 11월 28번"
+      }
+    },
+    {
+      "code": "1120928",
+      "chapter": "01",
+      "chapterName": "다항식의연산",
+      "subject": "K1",
+      "seq": 45,
+      "badge": "OR",
+      "origin": "1120928",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2012년 09월 28번"
+      }
+    },
+    {
+      "code": "1120928-D01",
+      "chapter": "01",
+      "chapterName": "다항식의연산",
+      "subject": "K1",
+      "seq": 46,
+      "badge": "DW",
+      "origin": "1120928",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2012년 09월 28번"
+      }
+    },
+    {
+      "code": "1120928-N01",
+      "chapter": "01",
+      "chapterName": "다항식의연산",
+      "subject": "K1",
+      "seq": 47,
+      "badge": "NC",
+      "origin": "1120928",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2012년 09월 28번"
+      }
+    },
+    {
+      "code": "1120928-U01",
+      "chapter": "01",
+      "chapterName": "다항식의연산",
+      "subject": "K1",
+      "seq": 48,
+      "badge": "UP",
+      "origin": "1120928",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2012년 09월 28번"
+      }
+    },
+    {
+      "code": "1170629",
+      "chapter": "01",
+      "chapterName": "다항식의연산",
+      "subject": "K1",
+      "seq": 49,
+      "badge": "OR",
+      "origin": "1170629",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2017년 06월 29번"
+      }
+    },
+    {
+      "code": "1170629-N01",
+      "chapter": "01",
+      "chapterName": "다항식의연산",
+      "subject": "K1",
+      "seq": 50,
+      "badge": "NC",
+      "origin": "1170629",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2017년 06월 29번"
+      }
+    },
+    {
+      "code": "1130616",
+      "chapter": "01",
+      "chapterName": "다항식의연산",
+      "subject": "K1",
+      "seq": 51,
+      "badge": "OR",
+      "origin": "1130616",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2013년 06월 16번"
+      }
+    },
+    {
+      "code": "1130616-N01",
+      "chapter": "01",
+      "chapterName": "다항식의연산",
+      "subject": "K1",
+      "seq": 52,
+      "badge": "NC",
+      "origin": "1130616",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2013년 06월 16번"
+      }
+    },
+    {
+      "code": "1240619",
+      "chapter": "01",
+      "chapterName": "다항식의연산",
+      "subject": "K1",
+      "seq": 53,
+      "badge": "OR",
+      "origin": "1240619",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2024년 06월 19번"
+      }
+    },
+    {
+      "code": "1240619-N01",
+      "chapter": "01",
+      "chapterName": "다항식의연산",
+      "subject": "K1",
+      "seq": 54,
+      "badge": "NC",
+      "origin": "1240619",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2024년 06월 19번"
+      }
+    },
+    {
+      "code": "1201119",
+      "chapter": "01",
+      "chapterName": "다항식의연산",
+      "subject": "K1",
+      "seq": 55,
+      "badge": "OR",
+      "origin": "1201119",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2020년 11월 19번"
+      }
+    },
+    {
+      "code": "1201119-N01",
+      "chapter": "01",
+      "chapterName": "다항식의연산",
+      "subject": "K1",
+      "seq": 56,
+      "badge": "NC",
+      "origin": "1201119",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2020년 11월 19번"
+      }
+    },
+    {
+      "code": "1201119-U01",
+      "chapter": "01",
+      "chapterName": "다항식의연산",
+      "subject": "K1",
+      "seq": 57,
+      "badge": "UP",
+      "origin": "1201119",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2020년 11월 19번"
+      }
+    },
+    {
+      "code": "1150628",
+      "chapter": "01",
+      "chapterName": "다항식의연산",
+      "subject": "K1",
+      "seq": 58,
+      "badge": "OR",
+      "origin": "1150628",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2015년 06월 28번"
+      }
+    },
+    {
+      "code": "1150628-N01",
+      "chapter": "01",
+      "chapterName": "다항식의연산",
+      "subject": "K1",
+      "seq": 59,
+      "badge": "NC",
+      "origin": "1150628",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2015년 06월 28번"
+      }
+    },
+    {
+      "code": "1150628-U01",
+      "chapter": "01",
+      "chapterName": "다항식의연산",
+      "subject": "K1",
+      "seq": 60,
+      "badge": "UP",
+      "origin": "1150628",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2015년 06월 28번"
+      }
+    },
+    {
+      "code": "2240316",
+      "chapter": "01",
+      "chapterName": "다항식의연산",
+      "subject": "K1",
+      "seq": 61,
+      "badge": "OR",
+      "origin": "2240316",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2024년 03월 16번"
+      }
+    },
+    {
+      "code": "2240316-D01",
+      "chapter": "01",
+      "chapterName": "다항식의연산",
+      "subject": "K1",
+      "seq": 62,
+      "badge": "DW",
+      "origin": "2240316",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2024년 03월 16번"
+      }
+    },
+    {
+      "code": "2240316-N01",
+      "chapter": "01",
+      "chapterName": "다항식의연산",
+      "subject": "K1",
+      "seq": 63,
+      "badge": "NC",
+      "origin": "2240316",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2024년 03월 16번"
+      }
+    },
+    {
+      "code": "1221129",
+      "chapter": "01",
+      "chapterName": "다항식의연산",
+      "subject": "K1",
+      "seq": 64,
+      "badge": "OR",
+      "origin": "1221129",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2022년 11월 29번"
+      }
+    },
+    {
+      "code": "1221129-D01",
+      "chapter": "01",
+      "chapterName": "다항식의연산",
+      "subject": "K1",
+      "seq": 65,
+      "badge": "DW",
+      "origin": "1221129",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2022년 11월 29번"
+      }
+    },
+    {
+      "code": "1221129-N01",
+      "chapter": "01",
+      "chapterName": "다항식의연산",
+      "subject": "K1",
+      "seq": 66,
+      "badge": "NC",
+      "origin": "1221129",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2022년 11월 29번"
+      }
+    },
+    {
+      "code": "1241029",
+      "chapter": "01",
+      "chapterName": "다항식의연산",
+      "subject": "K1",
+      "seq": 67,
+      "badge": "OR",
+      "origin": "1241029",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2024년 10월 29번"
+      }
+    },
+    {
+      "code": "1241029-N01",
+      "chapter": "01",
+      "chapterName": "다항식의연산",
+      "subject": "K1",
+      "seq": 68,
+      "badge": "NC",
+      "origin": "1241029",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2024년 10월 29번"
+      }
+    },
+    {
+      "code": "1251029",
+      "chapter": "01",
+      "chapterName": "다항식의연산",
+      "subject": "K1",
+      "seq": 69,
+      "badge": "OR",
+      "origin": "1251029",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2025년 10월 29번"
+      }
+    },
+    {
+      "code": "1251029-N01",
+      "chapter": "01",
+      "chapterName": "다항식의연산",
+      "subject": "K1",
+      "seq": 70,
+      "badge": "NC",
+      "origin": "1251029",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2025년 10월 29번"
+      }
+    },
+    {
+      "code": "1110930",
+      "chapter": "01",
+      "chapterName": "다항식의연산",
+      "subject": "K1",
+      "seq": 71,
+      "badge": "OR",
+      "origin": "1110930",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2011년 09월 30번"
+      }
+    },
+    {
+      "code": "1110930-D01",
+      "chapter": "01",
+      "chapterName": "다항식의연산",
+      "subject": "K1",
+      "seq": 72,
+      "badge": "DW",
+      "origin": "1110930",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2011년 09월 30번"
+      }
+    },
+    {
+      "code": "1110930-N01",
+      "chapter": "01",
+      "chapterName": "다항식의연산",
+      "subject": "K1",
+      "seq": 73,
+      "badge": "NC",
+      "origin": "1110930",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2011년 09월 30번"
+      }
+    },
+    {
+      "code": "1210620",
+      "chapter": "01",
+      "chapterName": "다항식의연산",
+      "subject": "K1",
+      "seq": 74,
+      "badge": "OR",
+      "origin": "1210620",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2021년 06월 20번"
+      }
+    },
+    {
+      "code": "1210620-N01",
+      "chapter": "01",
+      "chapterName": "다항식의연산",
+      "subject": "K1",
+      "seq": 75,
+      "badge": "NC",
+      "origin": "1210620",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2021년 06월 20번"
+      }
+    },
+    {
+      "code": "1230619",
+      "chapter": "01",
+      "chapterName": "다항식의연산",
+      "subject": "K1",
+      "seq": 76,
+      "badge": "OR",
+      "origin": "1230619",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2023년 06월 19번"
+      }
+    },
+    {
+      "code": "1230619-N01",
+      "chapter": "01",
+      "chapterName": "다항식의연산",
+      "subject": "K1",
+      "seq": 77,
+      "badge": "NC",
+      "origin": "1230619",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2023년 06월 19번"
+      }
+    },
+    {
+      "code": "1080907",
+      "chapter": "01",
+      "chapterName": "다항식의연산",
+      "subject": "K1",
+      "seq": 78,
+      "badge": "OR",
+      "origin": "1080907",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2008년 09월 7번"
+      }
+    },
+    {
+      "code": "1080907-N01",
+      "chapter": "01",
+      "chapterName": "다항식의연산",
+      "subject": "K1",
+      "seq": 79,
+      "badge": "NC",
+      "origin": "1080907",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2008년 09월 7번"
+      }
+    },
+    {
+      "code": "1080907-N02",
+      "chapter": "01",
+      "chapterName": "다항식의연산",
+      "subject": "K1",
+      "seq": 80,
+      "badge": "NC",
+      "origin": "1080907",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2008년 09월 7번"
+      }
+    },
+    {
+      "code": "1080907-U01",
+      "chapter": "01",
+      "chapterName": "다항식의연산",
+      "subject": "K1",
+      "seq": 81,
+      "badge": "UP",
+      "origin": "1080907",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2008년 09월 7번"
+      }
+    },
+    {
+      "code": "2170314A",
       "chapter": "02",
       "chapterName": "항등식과나머지정리",
       "subject": "K1",
       "seq": 1,
       "badge": "OR",
-      "origin": "2170314",
+      "origin": "2170314A",
       "source": {
         "book": "모의고사 기출",
         "label": "2017년 03월 14번"
       }
     },
     {
-      "code": "2170314-N01",
+      "code": "2170314A-N01",
       "chapter": "02",
       "chapterName": "항등식과나머지정리",
       "subject": "K1",
       "seq": 2,
       "badge": "NC",
-      "origin": "2170314",
+      "origin": "2170314A",
       "source": {
         "book": "모의고사 기출",
         "label": "2017년 03월 14번"
       }
     },
     {
-      "code": "2170314-U01",
+      "code": "2170314A-U01",
       "chapter": "02",
       "chapterName": "항등식과나머지정리",
       "subject": "K1",
       "seq": 3,
       "badge": "UP",
-      "origin": "2170314",
+      "origin": "2170314A",
       "source": {
         "book": "모의고사 기출",
         "label": "2017년 03월 14번"
@@ -1637,6 +2693,526 @@
       }
     },
     {
+      "code": "1240615",
+      "chapter": "03",
+      "chapterName": "인수분해",
+      "subject": "K1",
+      "seq": 1,
+      "badge": "OR",
+      "origin": "1240615",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2024년 06월 15번"
+      }
+    },
+    {
+      "code": "1240615-N01",
+      "chapter": "03",
+      "chapterName": "인수분해",
+      "subject": "K1",
+      "seq": 2,
+      "badge": "NC",
+      "origin": "1240615",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2024년 06월 15번"
+      }
+    },
+    {
+      "code": "1240615-U01",
+      "chapter": "03",
+      "chapterName": "인수분해",
+      "subject": "K1",
+      "seq": 3,
+      "badge": "UP",
+      "origin": "1240615",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2024년 06월 15번"
+      }
+    },
+    {
+      "code": "1251018",
+      "chapter": "03",
+      "chapterName": "인수분해",
+      "subject": "K1",
+      "seq": 4,
+      "badge": "OR",
+      "origin": "1251018",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2025년 10월 18번"
+      }
+    },
+    {
+      "code": "1251018-N01",
+      "chapter": "03",
+      "chapterName": "인수분해",
+      "subject": "K1",
+      "seq": 5,
+      "badge": "NC",
+      "origin": "1251018",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2025년 10월 18번"
+      }
+    },
+    {
+      "code": "1100626",
+      "chapter": "03",
+      "chapterName": "인수분해",
+      "subject": "K1",
+      "seq": 6,
+      "badge": "OR",
+      "origin": "1100626",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2010년 06월 26번"
+      }
+    },
+    {
+      "code": "1100626-N01",
+      "chapter": "03",
+      "chapterName": "인수분해",
+      "subject": "K1",
+      "seq": 7,
+      "badge": "NC",
+      "origin": "1100626",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2010년 06월 26번"
+      }
+    },
+    {
+      "code": "1100626-U01",
+      "chapter": "03",
+      "chapterName": "인수분해",
+      "subject": "K1",
+      "seq": 8,
+      "badge": "UP",
+      "origin": "1100626",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2010년 06월 26번"
+      }
+    },
+    {
+      "code": "1211116",
+      "chapter": "03",
+      "chapterName": "인수분해",
+      "subject": "K1",
+      "seq": 9,
+      "badge": "OR",
+      "origin": "1211116",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2021년 11월 16번"
+      }
+    },
+    {
+      "code": "1211116-N01",
+      "chapter": "03",
+      "chapterName": "인수분해",
+      "subject": "K1",
+      "seq": 10,
+      "badge": "NC",
+      "origin": "1211116",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2021년 11월 16번"
+      }
+    },
+    {
+      "code": "1211116-N02",
+      "chapter": "03",
+      "chapterName": "인수분해",
+      "subject": "K1",
+      "seq": 11,
+      "badge": "NC",
+      "origin": "1211116",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2021년 11월 16번"
+      }
+    },
+    {
+      "code": "1210625",
+      "chapter": "03",
+      "chapterName": "인수분해",
+      "subject": "K1",
+      "seq": 12,
+      "badge": "OR",
+      "origin": "1210625",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2021년 06월 25번"
+      }
+    },
+    {
+      "code": "1210625-N01",
+      "chapter": "03",
+      "chapterName": "인수분해",
+      "subject": "K1",
+      "seq": 13,
+      "badge": "NC",
+      "origin": "1210625",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2021년 06월 25번"
+      }
+    },
+    {
+      "code": "1210625-U01",
+      "chapter": "03",
+      "chapterName": "인수분해",
+      "subject": "K1",
+      "seq": 14,
+      "badge": "UP",
+      "origin": "1210625",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2021년 06월 25번"
+      }
+    },
+    {
+      "code": "1090917",
+      "chapter": "03",
+      "chapterName": "인수분해",
+      "subject": "K1",
+      "seq": 15,
+      "badge": "OR",
+      "origin": "1090917",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2009년 09월 17번"
+      }
+    },
+    {
+      "code": "1090917-N01",
+      "chapter": "03",
+      "chapterName": "인수분해",
+      "subject": "K1",
+      "seq": 16,
+      "badge": "NC",
+      "origin": "1090917",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2009년 09월 17번"
+      }
+    },
+    {
+      "code": "1090917-U01",
+      "chapter": "03",
+      "chapterName": "인수분해",
+      "subject": "K1",
+      "seq": 17,
+      "badge": "UP",
+      "origin": "1090917",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2009년 09월 17번"
+      }
+    },
+    {
+      "code": "1130629",
+      "chapter": "03",
+      "chapterName": "인수분해",
+      "subject": "K1",
+      "seq": 18,
+      "badge": "OR",
+      "origin": "1130629",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2013년 06월 29번"
+      }
+    },
+    {
+      "code": "1130629-N01",
+      "chapter": "03",
+      "chapterName": "인수분해",
+      "subject": "K1",
+      "seq": 19,
+      "badge": "NC",
+      "origin": "1130629",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2013년 06월 29번"
+      }
+    },
+    {
+      "code": "1130629-U01",
+      "chapter": "03",
+      "chapterName": "인수분해",
+      "subject": "K1",
+      "seq": 20,
+      "badge": "UP",
+      "origin": "1130629",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2013년 06월 29번"
+      }
+    },
+    {
+      "code": "1130614",
+      "chapter": "03",
+      "chapterName": "인수분해",
+      "subject": "K1",
+      "seq": 21,
+      "badge": "OR",
+      "origin": "1130614",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2013년 06월 14번"
+      }
+    },
+    {
+      "code": "1130614-N01",
+      "chapter": "03",
+      "chapterName": "인수분해",
+      "subject": "K1",
+      "seq": 22,
+      "badge": "NC",
+      "origin": "1130614",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2013년 06월 14번"
+      }
+    },
+    {
+      "code": "1100927",
+      "chapter": "03",
+      "chapterName": "인수분해",
+      "subject": "K1",
+      "seq": 23,
+      "badge": "OR",
+      "origin": "1100927",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2010년 09월 27번"
+      }
+    },
+    {
+      "code": "1100927-N01",
+      "chapter": "03",
+      "chapterName": "인수분해",
+      "subject": "K1",
+      "seq": 24,
+      "badge": "NC",
+      "origin": "1100927",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2010년 09월 27번"
+      }
+    },
+    {
+      "code": "1060918",
+      "chapter": "03",
+      "chapterName": "인수분해",
+      "subject": "K1",
+      "seq": 25,
+      "badge": "OR",
+      "origin": "1060918",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2006년 09월 18번"
+      }
+    },
+    {
+      "code": "1060918-N01",
+      "chapter": "03",
+      "chapterName": "인수분해",
+      "subject": "K1",
+      "seq": 26,
+      "badge": "NC",
+      "origin": "1060918",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2006년 09월 18번"
+      }
+    },
+    {
+      "code": "1060918-N02",
+      "chapter": "03",
+      "chapterName": "인수분해",
+      "subject": "K1",
+      "seq": 27,
+      "badge": "NC",
+      "origin": "1060918",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2006년 09월 18번"
+      }
+    },
+    {
+      "code": "1201110",
+      "chapter": "03",
+      "chapterName": "인수분해",
+      "subject": "K1",
+      "seq": 28,
+      "badge": "OR",
+      "origin": "1201110",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2020년 11월 10번"
+      }
+    },
+    {
+      "code": "1201110-N01",
+      "chapter": "03",
+      "chapterName": "인수분해",
+      "subject": "K1",
+      "seq": 29,
+      "badge": "NC",
+      "origin": "1201110",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2020년 11월 10번"
+      }
+    },
+    {
+      "code": "1200909",
+      "chapter": "03",
+      "chapterName": "인수분해",
+      "subject": "K1",
+      "seq": 30,
+      "badge": "OR",
+      "origin": "1200909",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2020년 09월 9번"
+      }
+    },
+    {
+      "code": "1200909-N01",
+      "chapter": "03",
+      "chapterName": "인수분해",
+      "subject": "K1",
+      "seq": 31,
+      "badge": "NC",
+      "origin": "1200909",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2020년 09월 9번"
+      }
+    },
+    {
+      "code": "1200909-N02",
+      "chapter": "03",
+      "chapterName": "인수분해",
+      "subject": "K1",
+      "seq": 32,
+      "badge": "NC",
+      "origin": "1200909",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2020년 09월 9번"
+      }
+    },
+    {
+      "code": "1201115",
+      "chapter": "03",
+      "chapterName": "인수분해",
+      "subject": "K1",
+      "seq": 33,
+      "badge": "OR",
+      "origin": "1201115",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2020년 11월 15번"
+      }
+    },
+    {
+      "code": "1201115-N01",
+      "chapter": "03",
+      "chapterName": "인수분해",
+      "subject": "K1",
+      "seq": 34,
+      "badge": "NC",
+      "origin": "1201115",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2020년 11월 15번"
+      }
+    },
+    {
+      "code": "1201115-N02",
+      "chapter": "03",
+      "chapterName": "인수분해",
+      "subject": "K1",
+      "seq": 35,
+      "badge": "NC",
+      "origin": "1201115",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2020년 11월 15번"
+      }
+    },
+    {
+      "code": "1130630",
+      "chapter": "03",
+      "chapterName": "인수분해",
+      "subject": "K1",
+      "seq": 36,
+      "badge": "OR",
+      "origin": "1130630",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2013년 06월 30번"
+      }
+    },
+    {
+      "code": "1130630-N01",
+      "chapter": "03",
+      "chapterName": "인수분해",
+      "subject": "K1",
+      "seq": 37,
+      "badge": "NC",
+      "origin": "1130630",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2013년 06월 30번"
+      }
+    },
+    {
+      "code": "1180630",
+      "chapter": "03",
+      "chapterName": "인수분해",
+      "subject": "K1",
+      "seq": 38,
+      "badge": "OR",
+      "origin": "1180630",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2018년 06월 30번"
+      }
+    },
+    {
+      "code": "1180630-D01",
+      "chapter": "03",
+      "chapterName": "인수분해",
+      "subject": "K1",
+      "seq": 39,
+      "badge": "DW",
+      "origin": "1180630",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2018년 06월 30번"
+      }
+    },
+    {
+      "code": "1180630-N01",
+      "chapter": "03",
+      "chapterName": "인수분해",
+      "subject": "K1",
+      "seq": 40,
+      "badge": "NC",
+      "origin": "1180630",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2018년 06월 30번"
+      }
+    },
+    {
       "code": "1110628",
       "chapter": "04",
       "chapterName": "복소수",
@@ -2807,24 +4383,11 @@
       }
     },
     {
-      "code": "1251027-N02",
-      "chapter": "05",
-      "chapterName": "이차방정식",
-      "subject": "K1",
-      "seq": 24,
-      "badge": "NC",
-      "origin": "1251027",
-      "source": {
-        "book": "모의고사 기출",
-        "label": "2025년 10월 27번"
-      }
-    },
-    {
       "code": "1210628",
       "chapter": "05",
       "chapterName": "이차방정식",
       "subject": "K1",
-      "seq": 25,
+      "seq": 24,
       "badge": "OR",
       "origin": "1210628",
       "source": {
@@ -2837,7 +4400,7 @@
       "chapter": "05",
       "chapterName": "이차방정식",
       "subject": "K1",
-      "seq": 26,
+      "seq": 25,
       "badge": "DW",
       "origin": "1210628",
       "source": {
@@ -2850,7 +4413,7 @@
       "chapter": "05",
       "chapterName": "이차방정식",
       "subject": "K1",
-      "seq": 27,
+      "seq": 26,
       "badge": "NC",
       "origin": "1210628",
       "source": {
@@ -2863,7 +4426,7 @@
       "chapter": "05",
       "chapterName": "이차방정식",
       "subject": "K1",
-      "seq": 28,
+      "seq": 27,
       "badge": "OR",
       "origin": "1090912",
       "source": {
@@ -2876,7 +4439,7 @@
       "chapter": "05",
       "chapterName": "이차방정식",
       "subject": "K1",
-      "seq": 29,
+      "seq": 28,
       "badge": "NC",
       "origin": "1090912",
       "source": {
@@ -2889,7 +4452,7 @@
       "chapter": "05",
       "chapterName": "이차방정식",
       "subject": "K1",
-      "seq": 30,
+      "seq": 29,
       "badge": "OR",
       "origin": "1130919",
       "source": {
@@ -2902,7 +4465,7 @@
       "chapter": "05",
       "chapterName": "이차방정식",
       "subject": "K1",
-      "seq": 31,
+      "seq": 30,
       "badge": "NC",
       "origin": "1130919",
       "source": {
@@ -2915,7 +4478,7 @@
       "chapter": "05",
       "chapterName": "이차방정식",
       "subject": "K1",
-      "seq": 32,
+      "seq": 31,
       "badge": "UP",
       "origin": "1130919",
       "source": {
@@ -2928,7 +4491,7 @@
       "chapter": "05",
       "chapterName": "이차방정식",
       "subject": "K1",
-      "seq": 33,
+      "seq": 32,
       "badge": "OR",
       "origin": "1080619",
       "source": {
@@ -2941,7 +4504,7 @@
       "chapter": "05",
       "chapterName": "이차방정식",
       "subject": "K1",
-      "seq": 34,
+      "seq": 33,
       "badge": "NC",
       "origin": "1080619",
       "source": {
@@ -2954,7 +4517,7 @@
       "chapter": "05",
       "chapterName": "이차방정식",
       "subject": "K1",
-      "seq": 35,
+      "seq": 34,
       "badge": "UP",
       "origin": "1080619",
       "source": {
@@ -2967,7 +4530,7 @@
       "chapter": "05",
       "chapterName": "이차방정식",
       "subject": "K1",
-      "seq": 36,
+      "seq": 35,
       "badge": "OR",
       "origin": "1220929",
       "source": {
@@ -2980,7 +4543,7 @@
       "chapter": "05",
       "chapterName": "이차방정식",
       "subject": "K1",
-      "seq": 37,
+      "seq": 36,
       "badge": "NC",
       "origin": "1220929",
       "source": {
@@ -2993,7 +4556,7 @@
       "chapter": "05",
       "chapterName": "이차방정식",
       "subject": "K1",
-      "seq": 38,
+      "seq": 37,
       "badge": "NC",
       "origin": "1220929",
       "source": {
@@ -3006,7 +4569,7 @@
       "chapter": "05",
       "chapterName": "이차방정식",
       "subject": "K1",
-      "seq": 39,
+      "seq": 38,
       "badge": "OR",
       "origin": "2130319",
       "source": {
@@ -3019,7 +4582,7 @@
       "chapter": "05",
       "chapterName": "이차방정식",
       "subject": "K1",
-      "seq": 40,
+      "seq": 39,
       "badge": "NC",
       "origin": "2130319",
       "source": {
@@ -3032,7 +4595,7 @@
       "chapter": "05",
       "chapterName": "이차방정식",
       "subject": "K1",
-      "seq": 41,
+      "seq": 40,
       "badge": "UP",
       "origin": "2130319",
       "source": {
@@ -3045,7 +4608,7 @@
       "chapter": "05",
       "chapterName": "이차방정식",
       "subject": "K1",
-      "seq": 42,
+      "seq": 41,
       "badge": "OR",
       "origin": "2120318",
       "source": {
@@ -3058,7 +4621,7 @@
       "chapter": "05",
       "chapterName": "이차방정식",
       "subject": "K1",
-      "seq": 43,
+      "seq": 42,
       "badge": "NC",
       "origin": "2120318",
       "source": {
@@ -3071,7 +4634,7 @@
       "chapter": "05",
       "chapterName": "이차방정식",
       "subject": "K1",
-      "seq": 44,
+      "seq": 43,
       "badge": "OR",
       "origin": "1200626",
       "source": {
@@ -3084,7 +4647,7 @@
       "chapter": "05",
       "chapterName": "이차방정식",
       "subject": "K1",
-      "seq": 45,
+      "seq": 44,
       "badge": "NC",
       "origin": "1200626",
       "source": {
@@ -3097,7 +4660,7 @@
       "chapter": "05",
       "chapterName": "이차방정식",
       "subject": "K1",
-      "seq": 46,
+      "seq": 45,
       "badge": "UP",
       "origin": "1200626",
       "source": {
@@ -3110,7 +4673,7 @@
       "chapter": "05",
       "chapterName": "이차방정식",
       "subject": "K1",
-      "seq": 47,
+      "seq": 46,
       "badge": "OR",
       "origin": "1190616",
       "source": {
@@ -3123,7 +4686,7 @@
       "chapter": "05",
       "chapterName": "이차방정식",
       "subject": "K1",
-      "seq": 48,
+      "seq": 47,
       "badge": "NC",
       "origin": "1190616",
       "source": {
@@ -3136,20 +4699,7 @@
       "chapter": "05",
       "chapterName": "이차방정식",
       "subject": "K1",
-      "seq": 49,
-      "badge": "NC",
-      "origin": "1190616",
-      "source": {
-        "book": "모의고사 기출",
-        "label": "2019년 06월 16번"
-      }
-    },
-    {
-      "code": "1190616-N03",
-      "chapter": "05",
-      "chapterName": "이차방정식",
-      "subject": "K1",
-      "seq": 50,
+      "seq": 48,
       "badge": "NC",
       "origin": "1190616",
       "source": {
@@ -3162,7 +4712,7 @@
       "chapter": "05",
       "chapterName": "이차방정식",
       "subject": "K1",
-      "seq": 51,
+      "seq": 49,
       "badge": "UP",
       "origin": "1190616",
       "source": {
@@ -3175,7 +4725,7 @@
       "chapter": "05",
       "chapterName": "이차방정식",
       "subject": "K1",
-      "seq": 52,
+      "seq": 50,
       "badge": "OR",
       "origin": "1150617",
       "source": {
@@ -3188,20 +4738,7 @@
       "chapter": "05",
       "chapterName": "이차방정식",
       "subject": "K1",
-      "seq": 53,
-      "badge": "NC",
-      "origin": "1150617",
-      "source": {
-        "book": "모의고사 기출",
-        "label": "2015년 06월 17번"
-      }
-    },
-    {
-      "code": "1150617-N02",
-      "chapter": "05",
-      "chapterName": "이차방정식",
-      "subject": "K1",
-      "seq": 54,
+      "seq": 51,
       "badge": "NC",
       "origin": "1150617",
       "source": {
@@ -3214,7 +4751,7 @@
       "chapter": "05",
       "chapterName": "이차방정식",
       "subject": "K1",
-      "seq": 55,
+      "seq": 52,
       "badge": "OR",
       "origin": "1061116",
       "source": {
@@ -3227,7 +4764,7 @@
       "chapter": "05",
       "chapterName": "이차방정식",
       "subject": "K1",
-      "seq": 56,
+      "seq": 53,
       "badge": "NC",
       "origin": "1061116",
       "source": {
@@ -3240,7 +4777,7 @@
       "chapter": "05",
       "chapterName": "이차방정식",
       "subject": "K1",
-      "seq": 57,
+      "seq": 54,
       "badge": "UP",
       "origin": "1061116",
       "source": {
@@ -3253,7 +4790,7 @@
       "chapter": "05",
       "chapterName": "이차방정식",
       "subject": "K1",
-      "seq": 58,
+      "seq": 55,
       "badge": "UP",
       "origin": "1061116",
       "source": {
@@ -3266,7 +4803,7 @@
       "chapter": "05",
       "chapterName": "이차방정식",
       "subject": "K1",
-      "seq": 59,
+      "seq": 56,
       "badge": "OR",
       "origin": "1150929",
       "source": {
@@ -3279,7 +4816,7 @@
       "chapter": "05",
       "chapterName": "이차방정식",
       "subject": "K1",
-      "seq": 60,
+      "seq": 57,
       "badge": "DW",
       "origin": "1150929",
       "source": {
@@ -3292,7 +4829,7 @@
       "chapter": "05",
       "chapterName": "이차방정식",
       "subject": "K1",
-      "seq": 61,
+      "seq": 58,
       "badge": "NC",
       "origin": "1150929",
       "source": {
@@ -3305,7 +4842,7 @@
       "chapter": "05",
       "chapterName": "이차방정식",
       "subject": "K1",
-      "seq": 62,
+      "seq": 59,
       "badge": "UP",
       "origin": "1150929",
       "source": {
@@ -3318,7 +4855,7 @@
       "chapter": "05",
       "chapterName": "이차방정식",
       "subject": "K1",
-      "seq": 63,
+      "seq": 60,
       "badge": "OR",
       "origin": "1140908",
       "source": {
@@ -3331,7 +4868,7 @@
       "chapter": "05",
       "chapterName": "이차방정식",
       "subject": "K1",
-      "seq": 64,
+      "seq": 61,
       "badge": "NC",
       "origin": "1140908",
       "source": {
@@ -3344,7 +4881,7 @@
       "chapter": "05",
       "chapterName": "이차방정식",
       "subject": "K1",
-      "seq": 65,
+      "seq": 62,
       "badge": "UP",
       "origin": "1140908",
       "source": {
@@ -3357,7 +4894,7 @@
       "chapter": "05",
       "chapterName": "이차방정식",
       "subject": "K1",
-      "seq": 66,
+      "seq": 63,
       "badge": "OR",
       "origin": "1140620",
       "source": {
@@ -3370,7 +4907,7 @@
       "chapter": "05",
       "chapterName": "이차방정식",
       "subject": "K1",
-      "seq": 67,
+      "seq": 64,
       "badge": "NC",
       "origin": "1140620",
       "source": {
@@ -3383,7 +4920,7 @@
       "chapter": "05",
       "chapterName": "이차방정식",
       "subject": "K1",
-      "seq": 68,
+      "seq": 65,
       "badge": "UP",
       "origin": "1140620",
       "source": {
@@ -3396,7 +4933,7 @@
       "chapter": "05",
       "chapterName": "이차방정식",
       "subject": "K1",
-      "seq": 69,
+      "seq": 66,
       "badge": "OR",
       "origin": "1160619",
       "source": {
@@ -3409,7 +4946,7 @@
       "chapter": "05",
       "chapterName": "이차방정식",
       "subject": "K1",
-      "seq": 70,
+      "seq": 67,
       "badge": "NC",
       "origin": "1160619",
       "source": {
@@ -3422,7 +4959,7 @@
       "chapter": "05",
       "chapterName": "이차방정식",
       "subject": "K1",
-      "seq": 71,
+      "seq": 68,
       "badge": "OR",
       "origin": "2230317",
       "source": {
@@ -3435,7 +4972,7 @@
       "chapter": "05",
       "chapterName": "이차방정식",
       "subject": "K1",
-      "seq": 72,
+      "seq": 69,
       "badge": "NC",
       "origin": "2230317",
       "source": {
@@ -3448,7 +4985,7 @@
       "chapter": "05",
       "chapterName": "이차방정식",
       "subject": "K1",
-      "seq": 73,
+      "seq": 70,
       "badge": "UP",
       "origin": "2230317",
       "source": {
@@ -3457,29 +4994,29 @@
       }
     },
     {
-      "code": "1100927",
+      "code": "1220618",
       "chapter": "05",
       "chapterName": "이차방정식",
       "subject": "K1",
-      "seq": 74,
+      "seq": 71,
       "badge": "OR",
-      "origin": "1100927",
+      "origin": "1220618",
       "source": {
         "book": "모의고사 기출",
-        "label": "2010년 09월 27번"
+        "label": "2022년 06월 18번"
       }
     },
     {
-      "code": "1100927-N01",
+      "code": "1220618-N01",
       "chapter": "05",
       "chapterName": "이차방정식",
       "subject": "K1",
-      "seq": 75,
+      "seq": 72,
       "badge": "NC",
-      "origin": "1100927",
+      "origin": "1220618",
       "source": {
         "book": "모의고사 기출",
-        "label": "2010년 09월 27번"
+        "label": "2022년 06월 18번"
       }
     },
     {
@@ -3487,7 +5024,7 @@
       "chapter": "05",
       "chapterName": "이차방정식",
       "subject": "K1",
-      "seq": 76,
+      "seq": 73,
       "badge": "OR",
       "origin": "1170619",
       "source": {
@@ -3500,7 +5037,7 @@
       "chapter": "05",
       "chapterName": "이차방정식",
       "subject": "K1",
-      "seq": 77,
+      "seq": 74,
       "badge": "NC",
       "origin": "1170619",
       "source": {
@@ -3513,7 +5050,7 @@
       "chapter": "05",
       "chapterName": "이차방정식",
       "subject": "K1",
-      "seq": 78,
+      "seq": 75,
       "badge": "UP",
       "origin": "1170619",
       "source": {
@@ -3526,7 +5063,7 @@
       "chapter": "05",
       "chapterName": "이차방정식",
       "subject": "K1",
-      "seq": 79,
+      "seq": 76,
       "badge": "OR",
       "origin": "1160616",
       "source": {
@@ -3539,7 +5076,7 @@
       "chapter": "05",
       "chapterName": "이차방정식",
       "subject": "K1",
-      "seq": 80,
+      "seq": 77,
       "badge": "NC",
       "origin": "1160616",
       "source": {
@@ -3552,7 +5089,7 @@
       "chapter": "05",
       "chapterName": "이차방정식",
       "subject": "K1",
-      "seq": 81,
+      "seq": 78,
       "badge": "UP",
       "origin": "1160616",
       "source": {
@@ -3565,7 +5102,7 @@
       "chapter": "05",
       "chapterName": "이차방정식",
       "subject": "K1",
-      "seq": 82,
+      "seq": 79,
       "badge": "UP",
       "origin": "1160616",
       "source": {
@@ -3578,7 +5115,7 @@
       "chapter": "05",
       "chapterName": "이차방정식",
       "subject": "K1",
-      "seq": 83,
+      "seq": 80,
       "badge": "OR",
       "origin": "1150630",
       "source": {
@@ -3591,21 +5128,8 @@
       "chapter": "05",
       "chapterName": "이차방정식",
       "subject": "K1",
-      "seq": 84,
+      "seq": 81,
       "badge": "NC",
-      "origin": "1150630",
-      "source": {
-        "book": "모의고사 기출",
-        "label": "2015년 06월 30번"
-      }
-    },
-    {
-      "code": "1150630-D01",
-      "chapter": "05",
-      "chapterName": "이차방정식",
-      "subject": "K1",
-      "seq": 85,
-      "badge": "DW",
       "origin": "1150630",
       "source": {
         "book": "모의고사 기출",
@@ -3617,12 +5141,2781 @@
       "chapter": "05",
       "chapterName": "이차방정식",
       "subject": "K1",
-      "seq": 86,
+      "seq": 82,
       "badge": "UP",
       "origin": "1150630",
       "source": {
         "book": "모의고사 기출",
         "label": "2015년 06월 30번"
+      }
+    },
+    {
+      "code": "1150630-U02",
+      "chapter": "05",
+      "chapterName": "이차방정식",
+      "subject": "K1",
+      "seq": 83,
+      "badge": "UP",
+      "origin": "1150630",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2015년 06월 30번"
+      }
+    },
+    {
+      "code": "2140319",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 1,
+      "badge": "OR",
+      "origin": "2140319",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2014년 03월 19번"
+      }
+    },
+    {
+      "code": "2140319-N01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 2,
+      "badge": "NC",
+      "origin": "2140319",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2014년 03월 19번"
+      }
+    },
+    {
+      "code": "2140319-U01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 3,
+      "badge": "UP",
+      "origin": "2140319",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2014년 03월 19번"
+      }
+    },
+    {
+      "code": "1210915",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 4,
+      "badge": "OR",
+      "origin": "1210915",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2021년 09월 15번"
+      }
+    },
+    {
+      "code": "1210915-D01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 5,
+      "badge": "DW",
+      "origin": "1210915",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2021년 09월 15번"
+      }
+    },
+    {
+      "code": "1210915-N01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 6,
+      "badge": "NC",
+      "origin": "1210915",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2021년 09월 15번"
+      }
+    },
+    {
+      "code": "1181127",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 7,
+      "badge": "OR",
+      "origin": "1181127",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2018년 11월 27번"
+      }
+    },
+    {
+      "code": "1181127-N01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 8,
+      "badge": "NC",
+      "origin": "1181127",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2018년 11월 27번"
+      }
+    },
+    {
+      "code": "1181127-N02",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 9,
+      "badge": "NC",
+      "origin": "1181127",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2018년 11월 27번"
+      }
+    },
+    {
+      "code": "1170928",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 10,
+      "badge": "OR",
+      "origin": "1170928",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2017년 09월 28번"
+      }
+    },
+    {
+      "code": "1170928-N01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 11,
+      "badge": "NC",
+      "origin": "1170928",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2017년 09월 28번"
+      }
+    },
+    {
+      "code": "1170928-U01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 12,
+      "badge": "UP",
+      "origin": "1170928",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2017년 09월 28번"
+      }
+    },
+    {
+      "code": "1131114",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 13,
+      "badge": "OR",
+      "origin": "1131114",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2013년 11월 14번"
+      }
+    },
+    {
+      "code": "1131114-N01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 14,
+      "badge": "NC",
+      "origin": "1131114",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2013년 11월 14번"
+      }
+    },
+    {
+      "code": "1131114-U01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 15,
+      "badge": "UP",
+      "origin": "1131114",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2013년 11월 14번"
+      }
+    },
+    {
+      "code": "1200619",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 16,
+      "badge": "OR",
+      "origin": "1200619",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2020년 06월 19번"
+      }
+    },
+    {
+      "code": "1200619-N01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 17,
+      "badge": "NC",
+      "origin": "1200619",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2020년 06월 19번"
+      }
+    },
+    {
+      "code": "1200617",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 18,
+      "badge": "OR",
+      "origin": "1200617",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2020년 06월 17번"
+      }
+    },
+    {
+      "code": "1200617-N01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 19,
+      "badge": "NC",
+      "origin": "1200617",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2020년 06월 17번"
+      }
+    },
+    {
+      "code": "1200617-U01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 20,
+      "badge": "UP",
+      "origin": "1200617",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2020년 06월 17번"
+      }
+    },
+    {
+      "code": "1141113",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 21,
+      "badge": "OR",
+      "origin": "1141113",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2014년 11월 13번"
+      }
+    },
+    {
+      "code": "1141113-D01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 22,
+      "badge": "DW",
+      "origin": "1141113",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2014년 11월 13번"
+      }
+    },
+    {
+      "code": "1141113-N01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 23,
+      "badge": "NC",
+      "origin": "1141113",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2014년 11월 13번"
+      }
+    },
+    {
+      "code": "1170615",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 24,
+      "badge": "OR",
+      "origin": "1170615",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2017년 06월 15번"
+      }
+    },
+    {
+      "code": "1170615-N01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 25,
+      "badge": "NC",
+      "origin": "1170615",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2017년 06월 15번"
+      }
+    },
+    {
+      "code": "1161117",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 26,
+      "badge": "OR",
+      "origin": "1161117",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2016년 11월 17번"
+      }
+    },
+    {
+      "code": "1161117-D01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 27,
+      "badge": "DW",
+      "origin": "1161117",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2016년 11월 17번"
+      }
+    },
+    {
+      "code": "1161117-N01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 28,
+      "badge": "NC",
+      "origin": "1161117",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2016년 11월 17번"
+      }
+    },
+    {
+      "code": "1230617",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 29,
+      "badge": "OR",
+      "origin": "1230617",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2023년 06월 17번"
+      }
+    },
+    {
+      "code": "1230617-N01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 30,
+      "badge": "NC",
+      "origin": "1230617",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2023년 06월 17번"
+      }
+    },
+    {
+      "code": "1230617-U01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 31,
+      "badge": "UP",
+      "origin": "1230617",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2023년 06월 17번"
+      }
+    },
+    {
+      "code": "1240614",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 32,
+      "badge": "OR",
+      "origin": "1240614",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2024년 06월 14번"
+      }
+    },
+    {
+      "code": "1240614-N01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 33,
+      "badge": "NC",
+      "origin": "1240614",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2024년 06월 14번"
+      }
+    },
+    {
+      "code": "1200627",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 34,
+      "badge": "OR",
+      "origin": "1200627",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2020년 06월 27번"
+      }
+    },
+    {
+      "code": "1200627-N01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 35,
+      "badge": "NC",
+      "origin": "1200627",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2020년 06월 27번"
+      }
+    },
+    {
+      "code": "1140630",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 36,
+      "badge": "OR",
+      "origin": "1140630",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2014년 06월 30번"
+      }
+    },
+    {
+      "code": "1140630-D01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 37,
+      "badge": "DW",
+      "origin": "1140630",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2014년 06월 30번"
+      }
+    },
+    {
+      "code": "1140630-N01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 38,
+      "badge": "NC",
+      "origin": "1140630",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2014년 06월 30번"
+      }
+    },
+    {
+      "code": "1141126",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 39,
+      "badge": "OR",
+      "origin": "1141126",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2014년 11월 26번"
+      }
+    },
+    {
+      "code": "1141126-N01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 40,
+      "badge": "NC",
+      "origin": "1141126",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2014년 11월 26번"
+      }
+    },
+    {
+      "code": "1201127",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 41,
+      "badge": "OR",
+      "origin": "1201127",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2020년 11월 27번"
+      }
+    },
+    {
+      "code": "1201127-N01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 42,
+      "badge": "NC",
+      "origin": "1201127",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2020년 11월 27번"
+      }
+    },
+    {
+      "code": "1201127-U01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 43,
+      "badge": "UP",
+      "origin": "1201127",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2020년 11월 27번"
+      }
+    },
+    {
+      "code": "1121113",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 44,
+      "badge": "OR",
+      "origin": "1121113",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2012년 11월 13번"
+      }
+    },
+    {
+      "code": "1121113-N01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 45,
+      "badge": "NC",
+      "origin": "1121113",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2012년 11월 13번"
+      }
+    },
+    {
+      "code": "1121113-U01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 46,
+      "badge": "UP",
+      "origin": "1121113",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2012년 11월 13번"
+      }
+    },
+    {
+      "code": "1121113-U02",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 47,
+      "badge": "UP",
+      "origin": "1121113",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2012년 11월 13번"
+      }
+    },
+    {
+      "code": "2250317",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 48,
+      "badge": "OR",
+      "origin": "2250317",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2025년 03월 17번"
+      }
+    },
+    {
+      "code": "2250317-N01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 49,
+      "badge": "NC",
+      "origin": "2250317",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2025년 03월 17번"
+      }
+    },
+    {
+      "code": "1240919",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 50,
+      "badge": "OR",
+      "origin": "1240919",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2024년 09월 19번"
+      }
+    },
+    {
+      "code": "1240919-N01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 51,
+      "badge": "NC",
+      "origin": "1240919",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2024년 09월 19번"
+      }
+    },
+    {
+      "code": "1160921",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 52,
+      "badge": "OR",
+      "origin": "1160921",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2016년 09월 21번"
+      }
+    },
+    {
+      "code": "1160921-N01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 53,
+      "badge": "NC",
+      "origin": "1160921",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2016년 09월 21번"
+      }
+    },
+    {
+      "code": "1160921-U01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 54,
+      "badge": "UP",
+      "origin": "1160921",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2016년 09월 21번"
+      }
+    },
+    {
+      "code": "1160921-U02",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 55,
+      "badge": "UP",
+      "origin": "1160921",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2016년 09월 21번"
+      }
+    },
+    {
+      "code": "2170330",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 56,
+      "badge": "OR",
+      "origin": "2170330",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2017년 03월 30번"
+      }
+    },
+    {
+      "code": "2170330-N01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 57,
+      "badge": "NC",
+      "origin": "2170330",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2017년 03월 30번"
+      }
+    },
+    {
+      "code": "1210629",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 58,
+      "badge": "OR",
+      "origin": "1210629",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2021년 06월 29번"
+      }
+    },
+    {
+      "code": "1210629-D01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 59,
+      "badge": "DW",
+      "origin": "1210629",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2021년 06월 29번"
+      }
+    },
+    {
+      "code": "1210629-N01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 60,
+      "badge": "NC",
+      "origin": "1210629",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2021년 06월 29번"
+      }
+    },
+    {
+      "code": "1210629-U01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 61,
+      "badge": "UP",
+      "origin": "1210629",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2021년 06월 29번"
+      }
+    },
+    {
+      "code": "1220619",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 62,
+      "badge": "OR",
+      "origin": "1220619",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2022년 06월 19번"
+      }
+    },
+    {
+      "code": "1220619-N01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 63,
+      "badge": "NC",
+      "origin": "1220619",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2022년 06월 19번"
+      }
+    },
+    {
+      "code": "2230328",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 64,
+      "badge": "OR",
+      "origin": "2230328",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2023년 03월 28번"
+      }
+    },
+    {
+      "code": "2230328-N01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 65,
+      "badge": "NC",
+      "origin": "2230328",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2023년 03월 28번"
+      }
+    },
+    {
+      "code": "2100314",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 66,
+      "badge": "OR",
+      "origin": "2100314",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2010년 03월 14번"
+      }
+    },
+    {
+      "code": "2100314-N01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 67,
+      "badge": "NC",
+      "origin": "2100314",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2010년 03월 14번"
+      }
+    },
+    {
+      "code": "2110315",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 68,
+      "badge": "OR",
+      "origin": "2110315",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2011년 03월 15번"
+      }
+    },
+    {
+      "code": "2110315-U01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 69,
+      "badge": "UP",
+      "origin": "2110315",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2011년 03월 15번"
+      }
+    },
+    {
+      "code": "1181129",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 70,
+      "badge": "OR",
+      "origin": "1181129",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2018년 11월 29번"
+      }
+    },
+    {
+      "code": "1181129-N01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 71,
+      "badge": "NC",
+      "origin": "1181129",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2018년 11월 29번"
+      }
+    },
+    {
+      "code": "1170918",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 72,
+      "badge": "OR",
+      "origin": "1170918",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2017년 09월 18번"
+      }
+    },
+    {
+      "code": "1170918-N01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 73,
+      "badge": "NC",
+      "origin": "1170918",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2017년 09월 18번"
+      }
+    },
+    {
+      "code": "1150618",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 74,
+      "badge": "OR",
+      "origin": "1150618",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2015년 06월 18번"
+      }
+    },
+    {
+      "code": "1150618-N01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 75,
+      "badge": "NC",
+      "origin": "1150618",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2015년 06월 18번"
+      }
+    },
+    {
+      "code": "1200914",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 76,
+      "badge": "OR",
+      "origin": "1200914",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2020년 09월 14번"
+      }
+    },
+    {
+      "code": "1200914-N01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 77,
+      "badge": "NC",
+      "origin": "1200914",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2020년 09월 14번"
+      }
+    },
+    {
+      "code": "1140912",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 78,
+      "badge": "OR",
+      "origin": "1140912",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2014년 09월 12번"
+      }
+    },
+    {
+      "code": "1140912-D01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 79,
+      "badge": "DW",
+      "origin": "1140912",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2014년 09월 12번"
+      }
+    },
+    {
+      "code": "1140912-N01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 80,
+      "badge": "NC",
+      "origin": "1140912",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2014년 09월 12번"
+      }
+    },
+    {
+      "code": "1230621",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 81,
+      "badge": "OR",
+      "origin": "1230621",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2023년 06월 21번"
+      }
+    },
+    {
+      "code": "1230621-N01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 82,
+      "badge": "NC",
+      "origin": "1230621",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2023년 06월 21번"
+      }
+    },
+    {
+      "code": "2150320",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 83,
+      "badge": "OR",
+      "origin": "2150320",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2015년 03월 20번"
+      }
+    },
+    {
+      "code": "2150320-D01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 84,
+      "badge": "DW",
+      "origin": "2150320",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2015년 03월 20번"
+      }
+    },
+    {
+      "code": "2150320-N01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 85,
+      "badge": "NC",
+      "origin": "2150320",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2015년 03월 20번"
+      }
+    },
+    {
+      "code": "2150320-U01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 86,
+      "badge": "UP",
+      "origin": "2150320",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2015년 03월 20번"
+      }
+    },
+    {
+      "code": "1190621",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 87,
+      "badge": "OR",
+      "origin": "1190621",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2019년 06월 21번"
+      }
+    },
+    {
+      "code": "1190621-N01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 88,
+      "badge": "NC",
+      "origin": "1190621",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2019년 06월 21번"
+      }
+    },
+    {
+      "code": "1180920",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 89,
+      "badge": "OR",
+      "origin": "1180920",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2018년 09월 20번"
+      }
+    },
+    {
+      "code": "1180920-D01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 90,
+      "badge": "DW",
+      "origin": "1180920",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2018년 09월 20번"
+      }
+    },
+    {
+      "code": "1180920-N01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 91,
+      "badge": "NC",
+      "origin": "1180920",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2018년 09월 20번"
+      }
+    },
+    {
+      "code": "1151121",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 92,
+      "badge": "OR",
+      "origin": "1151121",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2015년 11월 21번"
+      }
+    },
+    {
+      "code": "1151121-D01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 93,
+      "badge": "DW",
+      "origin": "1151121",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2015년 11월 21번"
+      }
+    },
+    {
+      "code": "1151121-N01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 94,
+      "badge": "NC",
+      "origin": "1151121",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2015년 11월 21번"
+      }
+    },
+    {
+      "code": "2160315",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 95,
+      "badge": "OR",
+      "origin": "2160315",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2016년 03월 15번"
+      }
+    },
+    {
+      "code": "2160315-N01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 96,
+      "badge": "NC",
+      "origin": "2160315",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2016년 03월 15번"
+      }
+    },
+    {
+      "code": "1170627",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 97,
+      "badge": "OR",
+      "origin": "1170627",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2017년 06월 27번"
+      }
+    },
+    {
+      "code": "1170627-D01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 98,
+      "badge": "DW",
+      "origin": "1170627",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2017년 06월 27번"
+      }
+    },
+    {
+      "code": "1170627-N01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 99,
+      "badge": "NC",
+      "origin": "1170627",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2017년 06월 27번"
+      }
+    },
+    {
+      "code": "1240618",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 100,
+      "badge": "OR",
+      "origin": "1240618",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2024년 06월 18번"
+      }
+    },
+    {
+      "code": "1240618-N01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 101,
+      "badge": "NC",
+      "origin": "1240618",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2024년 06월 18번"
+      }
+    },
+    {
+      "code": "1180627",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 102,
+      "badge": "OR",
+      "origin": "1180627",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2018년 06월 27번"
+      }
+    },
+    {
+      "code": "1180627-N01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 103,
+      "badge": "NC",
+      "origin": "1180627",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2018년 06월 27번"
+      }
+    },
+    {
+      "code": "1180627-U01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 104,
+      "badge": "UP",
+      "origin": "1180627",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2018년 06월 27번"
+      }
+    },
+    {
+      "code": "1210626",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 105,
+      "badge": "OR",
+      "origin": "1210626",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2021년 06월 26번"
+      }
+    },
+    {
+      "code": "1210626-N01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 106,
+      "badge": "NC",
+      "origin": "1210626",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2021년 06월 26번"
+      }
+    },
+    {
+      "code": "1210626-N02",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 107,
+      "badge": "NC",
+      "origin": "1210626",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2021년 06월 26번"
+      }
+    },
+    {
+      "code": "1200628",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 108,
+      "badge": "OR",
+      "origin": "1200628",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2020년 06월 28번"
+      }
+    },
+    {
+      "code": "1200628-N01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 109,
+      "badge": "NC",
+      "origin": "1200628",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2020년 06월 28번"
+      }
+    },
+    {
+      "code": "1251017",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 110,
+      "badge": "OR",
+      "origin": "1251017",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2025년 10월 17번"
+      }
+    },
+    {
+      "code": "1251017-D01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 111,
+      "badge": "DW",
+      "origin": "1251017",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2025년 10월 17번"
+      }
+    },
+    {
+      "code": "1251017-N01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 112,
+      "badge": "NC",
+      "origin": "1251017",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2025년 10월 17번"
+      }
+    },
+    {
+      "code": "1200614",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 113,
+      "badge": "OR",
+      "origin": "1200614",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2020년 06월 14번"
+      }
+    },
+    {
+      "code": "1200614-N01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 114,
+      "badge": "NC",
+      "origin": "1200614",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2020년 06월 14번"
+      }
+    },
+    {
+      "code": "1200614-U01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 115,
+      "badge": "UP",
+      "origin": "1200614",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2020년 06월 14번"
+      }
+    },
+    {
+      "code": "1250627",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 116,
+      "badge": "OR",
+      "origin": "1250627",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2025년 06월 27번"
+      }
+    },
+    {
+      "code": "1250627-N01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 117,
+      "badge": "NC",
+      "origin": "1250627",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2025년 06월 27번"
+      }
+    },
+    {
+      "code": "1241017",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 118,
+      "badge": "OR",
+      "origin": "1241017",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2024년 10월 17번"
+      }
+    },
+    {
+      "code": "1241017-D01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 119,
+      "badge": "DW",
+      "origin": "1241017",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2024년 10월 17번"
+      }
+    },
+    {
+      "code": "1241017-N01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 120,
+      "badge": "NC",
+      "origin": "1241017",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2024년 10월 17번"
+      }
+    },
+    {
+      "code": "1230620",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 121,
+      "badge": "OR",
+      "origin": "1230620",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2023년 06월 20번"
+      }
+    },
+    {
+      "code": "1230620-N01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 122,
+      "badge": "NC",
+      "origin": "1230620",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2023년 06월 20번"
+      }
+    },
+    {
+      "code": "1240929",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 123,
+      "badge": "OR",
+      "origin": "1240929",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2024년 09월 29번"
+      }
+    },
+    {
+      "code": "1240929-N01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 124,
+      "badge": "NC",
+      "origin": "1240929",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2024년 09월 29번"
+      }
+    },
+    {
+      "code": "1140615",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 125,
+      "badge": "OR",
+      "origin": "1140615",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2014년 06월 15번"
+      }
+    },
+    {
+      "code": "1140615-N01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 126,
+      "badge": "NC",
+      "origin": "1140615",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2014년 06월 15번"
+      }
+    },
+    {
+      "code": "1140615-U01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 127,
+      "badge": "UP",
+      "origin": "1140615",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2014년 06월 15번"
+      }
+    },
+    {
+      "code": "1191120",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 128,
+      "badge": "OR",
+      "origin": "1191120",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2019년 11월 20번"
+      }
+    },
+    {
+      "code": "1191120-D01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 129,
+      "badge": "DW",
+      "origin": "1191120",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2019년 11월 20번"
+      }
+    },
+    {
+      "code": "1191120-N01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 130,
+      "badge": "NC",
+      "origin": "1191120",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2019년 11월 20번"
+      }
+    },
+    {
+      "code": "1190629",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 131,
+      "badge": "OR",
+      "origin": "1190629",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2019년 06월 29번"
+      }
+    },
+    {
+      "code": "1190629-N01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 132,
+      "badge": "NC",
+      "origin": "1190629",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2019년 06월 29번"
+      }
+    },
+    {
+      "code": "1190629-N02",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 133,
+      "badge": "NC",
+      "origin": "1190629",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2019년 06월 29번"
+      }
+    },
+    {
+      "code": "1190629-U01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 134,
+      "badge": "UP",
+      "origin": "1190629",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2019년 06월 29번"
+      }
+    },
+    {
+      "code": "1150620",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 135,
+      "badge": "OR",
+      "origin": "1150620",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2015년 06월 20번"
+      }
+    },
+    {
+      "code": "1150620-D01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 136,
+      "badge": "DW",
+      "origin": "1150620",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2015년 06월 20번"
+      }
+    },
+    {
+      "code": "1150620-N01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 137,
+      "badge": "NC",
+      "origin": "1150620",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2015년 06월 20번"
+      }
+    },
+    {
+      "code": "1101120",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 138,
+      "badge": "OR",
+      "origin": "1101120",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2010년 11월 20번"
+      }
+    },
+    {
+      "code": "1101120-N01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 139,
+      "badge": "NC",
+      "origin": "1101120",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2010년 11월 20번"
+      }
+    },
+    {
+      "code": "1101120-U01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 140,
+      "badge": "UP",
+      "origin": "1101120",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2010년 11월 20번"
+      }
+    },
+    {
+      "code": "2130318",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 141,
+      "badge": "OR",
+      "origin": "2130318",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2013년 03월 18번"
+      }
+    },
+    {
+      "code": "2130318-N01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 142,
+      "badge": "NC",
+      "origin": "2130318",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2013년 03월 18번"
+      }
+    },
+    {
+      "code": "2130318-U01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 143,
+      "badge": "UP",
+      "origin": "2130318",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2013년 03월 18번"
+      }
+    },
+    {
+      "code": "1210617",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 144,
+      "badge": "OR",
+      "origin": "1210617",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2021년 06월 17번"
+      }
+    },
+    {
+      "code": "1210617-N01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 145,
+      "badge": "NC",
+      "origin": "1210617",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2021년 06월 17번"
+      }
+    },
+    {
+      "code": "1210617-U01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 146,
+      "badge": "UP",
+      "origin": "1210617",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2021년 06월 17번"
+      }
+    },
+    {
+      "code": "1150619",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 147,
+      "badge": "OR",
+      "origin": "1150619",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2015년 06월 19번"
+      }
+    },
+    {
+      "code": "1150619-N01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 148,
+      "badge": "NC",
+      "origin": "1150619",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2015년 06월 19번"
+      }
+    },
+    {
+      "code": "1150619-U01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 149,
+      "badge": "UP",
+      "origin": "1150619",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2015년 06월 19번"
+      }
+    },
+    {
+      "code": "1230615",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 150,
+      "badge": "OR",
+      "origin": "1230615",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2023년 06월 15번"
+      }
+    },
+    {
+      "code": "1230615-N01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 151,
+      "badge": "NC",
+      "origin": "1230615",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2023년 06월 15번"
+      }
+    },
+    {
+      "code": "1240917",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 152,
+      "badge": "OR",
+      "origin": "1240917",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2024년 09월 17번"
+      }
+    },
+    {
+      "code": "1240917-N01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 153,
+      "badge": "NC",
+      "origin": "1240917",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2024년 09월 17번"
+      }
+    },
+    {
+      "code": "1121127",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 154,
+      "badge": "OR",
+      "origin": "1121127",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2012년 11월 27번"
+      }
+    },
+    {
+      "code": "1121127-N01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 155,
+      "badge": "NC",
+      "origin": "1121127",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2012년 11월 27번"
+      }
+    },
+    {
+      "code": "1121127-U01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 156,
+      "badge": "UP",
+      "origin": "1121127",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2012년 11월 27번"
+      }
+    },
+    {
+      "code": "1200620",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 157,
+      "badge": "OR",
+      "origin": "1200620",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2020년 06월 20번"
+      }
+    },
+    {
+      "code": "1200620-N01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 158,
+      "badge": "NC",
+      "origin": "1200620",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2020년 06월 20번"
+      }
+    },
+    {
+      "code": "1230628",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 159,
+      "badge": "OR",
+      "origin": "1230628",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2023년 06월 28번"
+      }
+    },
+    {
+      "code": "1230628-N01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 160,
+      "badge": "NC",
+      "origin": "1230628",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2023년 06월 28번"
+      }
+    },
+    {
+      "code": "1230928",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 161,
+      "badge": "OR",
+      "origin": "1230928",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2023년 09월 28번"
+      }
+    },
+    {
+      "code": "1230928-N01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 162,
+      "badge": "NC",
+      "origin": "1230928",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2023년 09월 28번"
+      }
+    },
+    {
+      "code": "1220616",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 163,
+      "badge": "OR",
+      "origin": "1220616",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2022년 06월 16번"
+      }
+    },
+    {
+      "code": "1220616-N01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 164,
+      "badge": "NC",
+      "origin": "1220616",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2022년 06월 16번"
+      }
+    },
+    {
+      "code": "1140619",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 165,
+      "badge": "OR",
+      "origin": "1140619",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2014년 06월 19번"
+      }
+    },
+    {
+      "code": "1140619-N01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 166,
+      "badge": "NC",
+      "origin": "1140619",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2014년 06월 19번"
+      }
+    },
+    {
+      "code": "1140619-U01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 167,
+      "badge": "UP",
+      "origin": "1140619",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2014년 06월 19번"
+      }
+    },
+    {
+      "code": "1160629",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 168,
+      "badge": "OR",
+      "origin": "1160629",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2016년 06월 29번"
+      }
+    },
+    {
+      "code": "1160629-N01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 169,
+      "badge": "NC",
+      "origin": "1160629",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2016년 06월 29번"
+      }
+    },
+    {
+      "code": "1160629-U01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 170,
+      "badge": "UP",
+      "origin": "1160629",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2016년 06월 29번"
+      }
+    },
+    {
+      "code": "1131129",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 171,
+      "badge": "OR",
+      "origin": "1131129",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2013년 11월 29번"
+      }
+    },
+    {
+      "code": "1131129-N01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 172,
+      "badge": "NC",
+      "origin": "1131129",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2013년 11월 29번"
+      }
+    },
+    {
+      "code": "1131129-U01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 173,
+      "badge": "UP",
+      "origin": "1131129",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2013년 11월 29번"
+      }
+    },
+    {
+      "code": "1200618",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 174,
+      "badge": "OR",
+      "origin": "1200618",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2020년 06월 18번"
+      }
+    },
+    {
+      "code": "1200618-N01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 175,
+      "badge": "NC",
+      "origin": "1200618",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2020년 06월 18번"
+      }
+    },
+    {
+      "code": "1140930",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 176,
+      "badge": "OR",
+      "origin": "1140930",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2014년 09월 30번"
+      }
+    },
+    {
+      "code": "1140930-D01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 177,
+      "badge": "DW",
+      "origin": "1140930",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2014년 09월 30번"
+      }
+    },
+    {
+      "code": "1140930-N01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 178,
+      "badge": "NC",
+      "origin": "1140930",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2014년 09월 30번"
+      }
+    },
+    {
+      "code": "1240629",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 179,
+      "badge": "OR",
+      "origin": "1240629",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2024년 06월 29번"
+      }
+    },
+    {
+      "code": "1240629-N01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 180,
+      "badge": "NC",
+      "origin": "1240629",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2024년 06월 29번"
+      }
+    },
+    {
+      "code": "1240629-U01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 181,
+      "badge": "UP",
+      "origin": "1240629",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2024년 06월 29번"
+      }
+    },
+    {
+      "code": "1170620",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 182,
+      "badge": "OR",
+      "origin": "1170620",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2017년 06월 20번"
+      }
+    },
+    {
+      "code": "1170620-N01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 183,
+      "badge": "NC",
+      "origin": "1170620",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2017년 06월 20번"
+      }
+    },
+    {
+      "code": "1221117",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 184,
+      "badge": "OR",
+      "origin": "1221117",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2022년 11월 17번"
+      }
+    },
+    {
+      "code": "1221117-N01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 185,
+      "badge": "NC",
+      "origin": "1221117",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2022년 11월 17번"
+      }
+    },
+    {
+      "code": "2140324",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 186,
+      "badge": "OR",
+      "origin": "2140324",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2014년 03월 24번"
+      }
+    },
+    {
+      "code": "2140324-N01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 187,
+      "badge": "NC",
+      "origin": "2140324",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2014년 03월 24번"
+      }
+    },
+    {
+      "code": "2140324-N02",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 188,
+      "badge": "NC",
+      "origin": "2140324",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2014년 03월 24번"
+      }
+    },
+    {
+      "code": "1230921",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 189,
+      "badge": "OR",
+      "origin": "1230921",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2023년 09월 21번"
+      }
+    },
+    {
+      "code": "1230921-N01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 190,
+      "badge": "NC",
+      "origin": "1230921",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2023년 09월 21번"
+      }
+    },
+    {
+      "code": "1240921",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 191,
+      "badge": "OR",
+      "origin": "1240921",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2024년 09월 21번"
+      }
+    },
+    {
+      "code": "1240921-N01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 192,
+      "badge": "NC",
+      "origin": "1240921",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2024년 09월 21번"
+      }
+    },
+    {
+      "code": "2250321",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 193,
+      "badge": "OR",
+      "origin": "2250321",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2025년 03월 21번"
+      }
+    },
+    {
+      "code": "2250321-N01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 194,
+      "badge": "NC",
+      "origin": "2250321",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2025년 03월 21번"
+      }
+    },
+    {
+      "code": "1210621",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 195,
+      "badge": "OR",
+      "origin": "1210621",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2021년 06월 21번"
+      }
+    },
+    {
+      "code": "1210621-D01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 196,
+      "badge": "DW",
+      "origin": "1210621",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2021년 06월 21번"
+      }
+    },
+    {
+      "code": "1210621-N01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 197,
+      "badge": "NC",
+      "origin": "1210621",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2021년 06월 21번"
+      }
+    },
+    {
+      "code": "1210621-U01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 198,
+      "badge": "UP",
+      "origin": "1210621",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2021년 06월 21번"
+      }
+    },
+    {
+      "code": "1250621",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 199,
+      "badge": "OR",
+      "origin": "1250621",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2025년 06월 21번"
+      }
+    },
+    {
+      "code": "1250621-N01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 200,
+      "badge": "NC",
+      "origin": "1250621",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2025년 06월 21번"
+      }
+    },
+    {
+      "code": "1220630",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 201,
+      "badge": "OR",
+      "origin": "1220630",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2022년 06월 30번"
+      }
+    },
+    {
+      "code": "1220630-D01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 202,
+      "badge": "DW",
+      "origin": "1220630",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2022년 06월 30번"
+      }
+    },
+    {
+      "code": "1220630-N01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 203,
+      "badge": "NC",
+      "origin": "1220630",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2022년 06월 30번"
+      }
+    },
+    {
+      "code": "1240630",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 204,
+      "badge": "OR",
+      "origin": "1240630",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2024년 06월 30번"
+      }
+    },
+    {
+      "code": "1240630-N01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 205,
+      "badge": "NC",
+      "origin": "1240630",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2024년 06월 30번"
+      }
+    },
+    {
+      "code": "1211130",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 206,
+      "badge": "OR",
+      "origin": "1211130",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2021년 11월 30번"
+      }
+    },
+    {
+      "code": "1211130-D01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 207,
+      "badge": "DW",
+      "origin": "1211130",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2021년 11월 30번"
+      }
+    },
+    {
+      "code": "1211130-N01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 208,
+      "badge": "NC",
+      "origin": "1211130",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2021년 11월 30번"
+      }
+    },
+    {
+      "code": "1210930",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 209,
+      "badge": "OR",
+      "origin": "1210930",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2021년 09월 30번"
+      }
+    },
+    {
+      "code": "1210930-D01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 210,
+      "badge": "DW",
+      "origin": "1210930",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2021년 09월 30번"
+      }
+    },
+    {
+      "code": "1210930-D02",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 211,
+      "badge": "DW",
+      "origin": "1210930",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2021년 09월 30번"
+      }
+    },
+    {
+      "code": "1210930-N01",
+      "chapter": "06",
+      "chapterName": "이차함수",
+      "subject": "K1",
+      "seq": 212,
+      "badge": "NC",
+      "origin": "1210930",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2021년 09월 30번"
       }
     }
   ]
