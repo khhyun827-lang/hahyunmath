@@ -29441,6 +29441,13 @@ function icClassify(problems){
      그래서 코드 없는 것은 웹에서 아예 안 받고, `tools/item-code.mjs` 로 보낸다. */
 function icVerdict(문항){
   const v = hwpItemVerdicts(문항.map(p => ({ code: p.itemCode || '', content: p.content, p })), state.itemBody || {});
+  /* 🔵 **장부에 있는데 창고에만 아직 없는 코드는 «처음 담는 것»이다** (2026-10-04 · 주기나 1-1).
+     «모르는 코드»는 오타를 막는 잠금인데, 장부(`codes/*.json`)에 이미 매겨 둔 코드까지 막아서
+     **새 교재를 웹으로 처음 담을 길이 없었다**(엔딩크레딧은 node 로 처음 담았다 — 그림은 웹만 올린다).
+     장부가 «이 코드는 매겼다»를 증언하므로 막지 않고 따로 세어 보여 준다. 장부에도 없으면 그대로 막는다. */
+  const 장부 = state.itemByCode || {};
+  v.처음 = v.모르는코드.filter(x => 장부[x.code]);
+  v.모르는코드 = v.모르는코드.filter(x => !장부[x.code]);
   return { v, 막힘: hwpVerdictBlockers(v, { 심을수있나: false }) };
 }
 /* 「…구하시오.」 → 「…구하여라.」 — **달라진 자리만** 잘라 준다.
@@ -29621,6 +29628,7 @@ async function icFillBodies(input){
     state.icFillPending = { withCode, 정답, 검사말, 판정, 앞장수,
       딱지말: 교재들.map(x => x.딱지말).filter(Boolean).join(' ') };
     const 줄 = ['🔵 그대로 ' + 판정.그대로.length + '개 — 올리지 않습니다'];
+    if((판정.처음 || []).length) 줄.push('🆕 처음 담는 것 ' + 판정.처음.length + '개 — 장부에 매겨 둔 코드입니다');
     if(판정.고쳤다.length) 줄.push('⚠ 고쳤다 ' + 판정.고쳤다.length + '개 — 아래를 보고 「담기」를 누르시면 갱신합니다');
     if(판정.겹침.length)   줄.push('⚠ 코드는 다른데 본문이 같은 것 ' + 판정.겹침.length + '무리 — ' + 판정.겹침.map(c=>c.join(' = ')).join(' · '));
     if(판정.빠졌다.length) 줄.push('ⓘ 이 단원 창고에 있는데 파일에 없는 것 ' + 판정.빠졌다.length + '개 — 🔵 지우지 않습니다');

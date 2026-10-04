@@ -97,6 +97,15 @@ const B = '직선 y=2x+1 에 평행한 직선의 방정식은?';
 
   const 모름 = 판.icVerdict([{ itemCode: 'K2-01-E-7777', content: B }]);
   잰다('🔴 ④ 모르는 코드 — 막는다', 모름.막힘.some(m => m.갈래 === '모르는코드'));
+
+  /* 🔵 장부에 매겨 둔 코드가 창고에만 없으면 «처음 담는 것» (2026-10-04 · 주기나 1-1 을 웹으로 처음 담다가) */
+  state.itemByCode = { '1100624': { code: '1100624' } };
+  const 처음 = 판.icVerdict([{ itemCode: '1100624', content: B }]);
+  잰다('🔵 장부에 있고 창고에 없으면 막지 않는다', 처음.막힘.length === 0);
+  잰다('🔵 «처음 담는 것»으로 센다', 처음.v.처음.length === 1 && 처음.v.모르는코드.length === 0);
+  const 장부에도없음 = 판.icVerdict([{ itemCode: '1100625', content: B }]);
+  잰다('🔴 장부에도 없으면 여전히 막는다', 장부에도없음.막힘.some(m => m.갈래 === '모르는코드'));
+  state.itemByCode = undefined;
 }
 
 // ── icNeedsWrite — 중복 업로드를 막는 한 줄 ───────────────────────────
