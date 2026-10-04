@@ -38,7 +38,8 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { 푼다, 섹션들, 묶는다 } from './hwpx-zip.mjs';
-import { loadHwpxRules, problemsFromHwpx } from './hwpx-node.mjs';
+import crypto from 'crypto';
+import { loadHwpxRules, problemsFromHwpx, sectionDocs } from './hwpx-node.mjs';
 import { 교재읽기 } from './store-diff.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -52,7 +53,7 @@ const 미주덩이 = /<hp:endNote\b[^>]*>[\s\S]*?<\/hp:endNote>/g;
    안 붙는다.** 그래서 `[K2-01-E-0001]` 에서 `[K2-01-E-0001` 만 지우고 `]` 가 남았고,
    미주가 「] [정답] ②…」로 시작해 **정답 76개가 통째로 어긋났다.**
    🔵 그래서 아예 «묶은 꼴»을 하나 더 두고 붙일 때는 이것만 쓴다. */
-const 코드꼴 = '[A-Z]{1,2}\\d?-\\d{2}-[A-Z]-\\d{4}(?:-[NUD]\\d{2})?|[12]\\d{6}[AB]?(?:OR|NC|UP|DW)(?:\\d{2})?';
+const 코드꼴 = '[A-Z]{1,2}\\d?-\\d{2}-[A-Z]-\\d{4}(?:-[NUD]\\d{2})?|[12]\\d{6}[AB]?(?:OR|NC|UP|DW)(?:\\d{2})?|[12]\\d{6}[AB]?(?:-[NUD]\\d{2})?';
 const 묶은코드 = '(?:' + 코드꼴 + ')';
 /* 미주에 심긴 통째 꼴 — `[코드]` 또는 `[코드|지문]`. ⚠ 지문은 대괄호 «안»에 있다. */
 const 미주코드꼴 = '\\[' + 묶은코드 + '(?:\\|[^\\]\\s]{0,32})?\\]';
@@ -168,6 +169,86 @@ export function 세자리로(src, 옛파일, out) {
            본문다름: 본문다름.map((i) => 코드들[i]), 정답다름: 정답다름.map((i) => [코드들[i], 옛[i].answer, 앞[i].answer]) };
 }
 
+/* ── 기출(주기나) 세 자리 (2026-10-05 · 사용자 요청 — 「원본파일에 코드심는 작업」) ──────────
+   기출은 코드가 «출처 + 딱지»에서 나온다 — 옛 코드 파일 대신 **그 자리에서 매긴 코드**를 심는다.
+   딱지 그림은 이름(`자산 12@4x.png`)이 아니라 **바이트의 sha256** 으로 알아본다(웹·source-code 와 같은 잣대).
+   🔵 짝짓기는 «n번째 미주 · n번째 딱지 = n번째 코드» — hwpxSourceBadges 의 지퍼와 같다.
+     (1-1 은 딱지가 미주 «앞»에, 1-2 는 «뒤»에 놓인다 — 차례로 세면 둘 다 맞다.)
+   첫 수식 = n번째 미주 뒤 · n+1번째 미주 앞의 첫 본문 수식. */
+export function 기출세자리(src, out) {
+  if (fs.existsSync(out)) throw new Error('이미 있는 파일입니다 — ' + out);
+  const rules = loadHwpxRules();
+  const { cdir, tmp } = 푼다(src);
+  const 해시 = {};
+  const hpf = fs.readFileSync(path.join(cdir, 'content.hpf'), 'utf8');
+  for (const m of hpf.matchAll(/id="([^"]+)"[^>]*href="([^"]+)"/g)) {
+    const f = path.join(tmp, decodeURIComponent(m[2]));
+    if (fs.existsSync(f) && fs.statSync(f).isFile()) 해시[m[1]] = crypto.createHash('sha256').update(fs.readFileSync(f)).digest('hex').slice(0, 32);
+  }
+  const r = rules.hwpxMakeSourceCodes(rules.hwpxSourceBadges(sectionDocs(src), (ref) => 해시[ref] || ''));
+  if (!r.ok) throw new Error('출처·딱지로 코드를 못 매깁니다 — ' + (r.흠 || [])[0]);
+  const 코드들 = r.codes;
+  const 딱지해시 = new Set(['264bb508409ed2736d541bc9f3d3e4e6', '22c12a6ee18385db377145fca66266b1', 'df0ac81572f0612dd9dee9aa0101679f', 'ba6e591c3e08ac6725ef1b7e6d9e33b5']);
+  const 앞전체 = problemsFromHwpx(src, rules).problems;
+  const 숨은설명 = (code) => '<hp:ctrl><hp:hiddenComment><hp:subList id="" textDirection="HORIZONTAL" lineWrap="BREAK" vertAlign="TOP"'
+    + ' linkListIDRef="0" linkListNextIDRef="0" textWidth="0" textHeight="0" hasTextRef="0" hasNumRef="0">'
+    + '<hp:p id="0" paraPrIDRef="0" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">'
+    + '<hp:run charPrIDRef="0"><hp:t>[' + code + ']</hp:t></hp:run></hp:p></hp:subList></hp:hiddenComment></hp:ctrl>';
+  const 그림덩이 = /<hp:pic\b[\s\S]*?<\/hp:pic>/;
+  const 덩이꼴 = new RegExp(미주덩이.source + '|' + 수식덩이.source + '|' + 그림덩이.source, 'g');
+  let k = -1, d = -1, 수식기다림 = false;
+  const 셈 = { 그림: 0, 수식: 0, 숨은설명: 0 };
+  for (const s of 섹션들(cdir)) {
+    let xml = fs.readFileSync(s, 'utf8');
+    if (/\[(?:[12]\d{6})/.test((xml.match(숨은설명덩이) || []).join(''))) throw new Error('이미 코드가 심긴 파일입니다');
+    xml = xml.replace(덩이꼴, (m) => {
+      if (m.startsWith('<hp:endNote')) {
+        k++; 수식기다림 = true;
+        const 새 = m.replace(/<hp:t[\s>]/, (t) => 숨은설명(코드들[k]) + t);
+        if (새 !== m) 셈.숨은설명++;
+        return 새;
+      }
+      if (m.startsWith('<hp:pic')) {
+        const ref = (m.match(/binaryItemIDRef="([^"]+)"/) || [])[1];
+        if (!딱지해시.has(해시[ref])) return m;
+        d++;
+        const 새 = m.replace(/<\/hp:shapeComment>/, ' [' + 코드들[d] + ']</hp:shapeComment>');
+        if (새 !== m) 셈.그림++;
+        return 새;
+      }
+      if (k < 0 || !수식기다림) return m;
+      수식기다림 = false;
+      /* ⚠ 01 다항식의 연산은 수식에 설명문 칸이 «아예» 없다(1194개 중 0) — 02 와 같은 자리(script 앞)에 새로 단다. */
+      const 새 = /<hp:shapeComment>/.test(m)
+        ? m.replace(/<\/hp:shapeComment>/, ' [' + 코드들[k] + ']</hp:shapeComment>')
+        : m.replace(/<hp:script\b/, '<hp:shapeComment>수식입니다. [' + 코드들[k] + ']</hp:shapeComment><hp:script');
+      if (새 !== m) 셈.수식++;
+      return 새;
+    });
+    fs.writeFileSync(s, xml);
+  }
+  묶는다(tmp, out);
+
+  /* 🔴 낸 파일을 다시 읽어 잰다 — 본문·정답·해설 불변 · 세 자리 차례 = 코드 목록 · 파서가 «숨긴 코드만으로» 같은 코드를 읽는가 */
+  const 흠 = [];
+  if (k + 1 !== 코드들.length) 흠.push('미주 ' + (k + 1) + ' ≠ 코드 ' + 코드들.length);
+  if (d + 1 !== 코드들.length) 흠.push('딱지 ' + (d + 1) + ' ≠ 코드 ' + 코드들.length);
+  const 뒤 = problemsFromHwpx(out, rules).problems;
+  if (앞전체.length !== 뒤.length) 흠.push('덩이 수가 ' + 앞전체.length + ' → ' + 뒤.length);
+  else for (const 칸 of ['content', 'answer', 'solution']) {
+    const n = 앞전체.filter((p, i) => (p[칸] || '') !== (뒤[i][칸] || '')).length;
+    if (n) 흠.push(칸 + ' 이 달라진 덩이 ' + n);
+  }
+  const 읽은 = 뒤.filter((p) => p.itemCode).map((p) => p.itemCode);
+  if (읽은.join() !== 코드들.join()) 흠.push('파서가 숨긴 코드로 읽은 것이 목록과 다릅니다 (' + 읽은.length + '/' + 코드들.length + ')');
+  if (뒤.some((p) => p.codeConflict)) 흠.push('세 자리가 엇갈린 문항이 있습니다');
+  const { 자리별, 미주 } = 훑는다(out);
+  if (미주) 흠.push('미주에 보이는 코드가 ' + 미주 + '개 생겼습니다');
+  if (자리별.숨은설명.join() !== 코드들.join()) 흠.push('숨은 설명 차례가 다릅니다');
+  if (흠.length) { fs.unlinkSync(out); throw new Error('멈췄습니다 — ' + 흠.join(' · ') + '. 낸 파일은 지웠습니다.'); }
+  return { 셈, 문항: 코드들.length, 수식없음: 코드들.filter((c) => !자리별.수식.includes(c)) };
+}
+
 /* ── 옮긴다 ───────────────────────────────────────────────────────────
    ⚠ **문항 차례를 짐작하지 않는다.** 미주와 딱지 그림은 문서에 나오는 차례가 같지만,
      그것을 «믿고» 짝지으면 하나만 어긋나도 코드가 통째로 밀린다.
@@ -264,6 +345,17 @@ if (나를직접부름) {
   const FROM = fi >= 0 ? argv[fi + 1] : '';
   const 준파일 = argv.filter((a, i) => !a.startsWith('--') && !(i > 0 && ['--out', '--from'].includes(argv[i - 1])));
 
+  /* 기출 세 자리 — node tools/item-code-hide.mjs <주기나.hwpx> --source --out <낸파일.hwpx> */
+  if (argv.includes('--source')) {
+    if (준파일.length !== 1 || !OUT) { console.error('쓰는 법: … <주기나.hwpx> --source --out <낸파일.hwpx>'); process.exit(1); }
+    fs.mkdirSync(path.dirname(OUT), { recursive: true });
+    try {
+      const r = 기출세자리(준파일[0], OUT);
+      console.log('  ✅ ' + path.basename(OUT) + '   문항 ' + r.문항 + '제 · 딱지 설명문 ' + r.셈.그림 + ' · 첫 수식 ' + r.셈.수식 + ' · 숨은 설명 ' + r.셈.숨은설명
+        + (r.수식없음.length ? ' · ⓘ 본문 수식 없음 ' + r.수식없음.join(', ') : ''));
+    } catch (e) { console.log('  🔴 ' + path.basename(준파일[0]) + ' — ' + e.message); process.exit(1); }
+    process.exit(0);
+  }
   /* 세 자리에 심기 — node tools/item-code-hide.mjs <코드없는새파일.hwpx> --from <옛코드파일.hwpx> --out <낸파일.hwpx> */
   if (FROM) {
     if (준파일.length !== 1 || !OUT) { console.error('쓰는 법: … <새파일.hwpx> --from <옛코드파일.hwpx> --out <낸파일.hwpx>'); process.exit(1); }
