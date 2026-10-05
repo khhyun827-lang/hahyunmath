@@ -474,18 +474,25 @@ function hwpWalkParagraphs(paras, tokens){
           const shellCells = [];
           let isProblemShell = false;
           let 빈칸그림 = 0;   // 글 없이 그림만 든 칸 — 그림 보기 표를 좌석표와 가른다(아래 isSeatLike)
+          /* 🔵 **격자 표 안의 그림은 «제자리»를 남긴다** (2026-10-05 · 사용자 — 1060918 「[그림1] ⇨ [그림2]」 표).
+               예전엔 칸의 그림을 표 밖으로 빼기만 해서 표에는 빈 칸만 남고, 올릴 때 첫 그림 하나만 붙어 둘째가 사라졌다.
+               이제 칸 글에 `⟦그림:참조⟧` 를 남긴다 — 웹이 올린 뒤 주소로 바꾸고, 화면(problemHTML)이 그 칸에 그린다.
+             ⚠ 표를 가르는 잣대(보기 표 · 그림 보기 표 · 상자)는 **표지 없는 글**(`cells`)로 잰다 — 그 판단은 한 글자도 안 바뀐다.
+               표지는 **진짜 격자로 그릴 때만**(`cellsFig`) 쓴다. 상자·보기 표의 그림은 예전처럼 표 밖으로 간다. */
+          const rowsFig = [];
           for(const tr of trs){
             const tcs = Array.from(tr.childNodes).filter(n=>n.nodeType===1 && n.localName==='tc');
-            const cells = [];
+            const cells = [], cellsFig = [];
             for(const tc of tcs){
               const subList = Array.from(tc.childNodes).find(n=>n.nodeType===1 && n.localName==='subList');
-              if(!subList){ cells.push(''); continue; }
+              if(!subList){ cells.push(''); cellsFig.push(''); continue; }
               const cellParas = Array.from(subList.childNodes).filter(n=>n.nodeType===1 && n.localName==='p');
               const cellTokens = [];
               hwpWalkParagraphs(cellParas, cellTokens);
               shellCells.push(cellTokens);
-              let s = '';
+              let s = '', sf = '', 옮김 = 0;   // sf = s 에 그림 표지를 끼운 것 · 옮김 = s 를 어디까지 sf 로 옮겼나
               for(const t of cellTokens){
+                if(t.type==='pic'){ sf += s.slice(옮김) + '⟦그림:' + t.v + '⟧'; 옮김 = s.length; }
                 /* ⚠ 세로줄(`|`)은 표 행 문법과 부딪힌다. 그런데 **그냥 지우면 안 된다** —
                    수식의 절댓값이 이미 `\left|…\right|`로 바뀌어 있어서 막대를 지우면
                    `\left ` 만 남아 수식 전체가 안 그려진다 (실제로 겪었다).
@@ -496,9 +503,11 @@ function hwpWalkParagraphs(paras, tokens){
                 else if(t.type==='pic'){ tokens.push(t); 빈칸그림 += s.trim() ? 0 : 1; }  // 그림은 표 밖으로 빼서 살린다
                 else if(t.type==='endnote'){ isProblemShell = true; tokens.push(t); }  // 정답 미주도 마찬가지
               }
+              sf += s.slice(옮김);
               cells.push(s.replace(/[ \t]+/g,' ').replace(/\n{2,}/g,'\n').trim());
+              cellsFig.push(sf.replace(/[ \t]+/g,' ').replace(/\n{2,}/g,'\n').trim());
             }
-            if(cells.some(c=>c)) rows.push(cells);
+            if(cellsFig.some(c=>c)){ rows.push(cells); rowsFig.push(cellsFig); }
           }
           if(isProblemShell){
             /* 껍질은 그리지 않는다 — 안의 토큰을 그대로 흘려보낸다.
@@ -567,15 +576,15 @@ function hwpWalkParagraphs(paras, tokens){
                    빈 칸이 앞에 오는 상자에서 `cells[0]` 을 쓰면 제목이 통째로 사라진다. */
               const filled = cells => cells.filter(c => c.trim());
               const isBox = rows.every(cells => filled(cells).length <= 1);
-              for(const cells of rows){
+              rows.forEach((cells, ri) => {
                 const out = isBox
                   ? (filled(cells)[0] || '').split('\n').map(l=>l.trim()).filter(Boolean).map(l=>[l])
-                  : [cells.map(c=>c.replace(/\s+/g,' ').trim())];
+                  : [rowsFig[ri].map(c=>c.replace(/\s+/g,' ').trim())];
                 for(const row of out){
                   tokens.push({type:'text', v:'| ' + row.join(' | ') + ' |'});
                   tokens.push({type:'break'});
                 }
-              }
+              });
             }
           }
         } else if(local === 'ctrl'){
@@ -643,7 +652,9 @@ const HWP_SHAPE_CODE_RE = /\[([A-Z]{1,2}\d?-\d{2}-[A-Z]-\d{4}(?:-[NUD]\d{2})?|[1
    ⚠ 여기서 해시를 뜨지 않는다. 브라우저는 `crypto.subtle`(비동기)이고 node 는 `createHash`(동기)라
      한 함수로 못 담는다. **가르는 규칙만 여기 두고, 해시는 부르는 쪽이 뜬다.** */
 function hwpItemFpText(content){
-  return String(content == null ? '' : content).replace(/\s+/g, ' ').trim();
+  /* 🔵 표 안 그림 표지(`⟦그림:참조⟧` · 올린 뒤 `⟦그림:주소⟧`)는 «글»이 아니다 — 지문에서 뺀다 (2026-10-05).
+     안 빼면 표지가 생긴 것만으로 그 문항이 «고쳤다»가 되고, 올린 뒤에는 참조↔주소가 달라 매번 «고쳤다»가 된다. */
+  return String(content == null ? '' : content).replace(/⟦그림:[^⟧]*⟧/g, '').replace(/\s+/g, ' ').trim();
 }
 
 /* ── 창고와 맞대 여덟 갈래로 가른다 (2026-09-09) ──────────────────────────────

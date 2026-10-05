@@ -27,7 +27,17 @@ function liftBlock() {
   }
   throw new Error('autoFillTick 의 끝을 못 찾았습니다');
 }
-const BLOCK = liftBlock();
+/* 🔵 «문항의 그림 하나»(itemFigureOf · 2026-10-05 표 안 그림)는 고리 밖에 있다 — 진짜 것을 떠 와 붙인다. */
+function liftFn(name) {
+  const at = html.indexOf('function ' + name + '(');
+  let depth = 0;
+  for (let j = html.indexOf('{', at); j < html.length; j++) {
+    if (html[j] === '{') depth++;
+    else if (html[j] === '}') { depth--; if (!depth) return html.slice(at, j + 1); }
+  }
+  throw new Error(name + ' 의 끝을 못 찾았습니다');
+}
+const BLOCK = liftFn('itemFigureOf') + '\n' + liftBlock();
 
 let pass = 0, fail = 0;
 const 봄 = (무엇, 나온것, 나와야할것) => {

@@ -32,6 +32,16 @@ try{
   봄('2027판을 고르면 그 판에 실린 것만', await page.$$eval('.ist-item', e => e.length), 1);
   await page.locator('.ist-books .pill', { hasText: '판 전체' }).click();
   봄('판 전체로 돌아간다', await page.evaluate(() => state.storeEdition), '');
+  /* 단원 앞 번호 (2026-10-05) */
+  봄('단원 이름 앞에 번호', await page.evaluate(() => storeChapterLabel('공통수학1', '03')), '3. 인수분해');
+  /* 자동 채우기 범위 (2026-10-05) — 창고에서 고른 판이 곧 범위 · 단추에 적힌다 · 그 판에 없는 문항은 빠진다 */
+  await page.locator('.ist-books .pill', { hasText: '2026' }).click();
+  봄('자동 채우기 단추에 범위가 적힌다', await page.locator('.ist-bar button', { hasText: '자동 채우기' }).innerText().then(t => t.includes('주기나 1-1중간 2026')), true);
+  봄('범위 — 그 판에 실린 문항만', await page.evaluate(() => {
+    const sc = autoFillScopeNow(), 실림 = Object.keys(state.itemBody)[0];
+    const 안실림 = Object.keys(state.itemByCode).find(c => !state.itemBody[c] && /^1\d{6}$/.test(c));
+    return [!!sc && sc.ed, autoFillScopeOk(실림, sc), autoFillScopeOk(안실림, sc), autoFillScopeOk(안실림, null)];
+  }), ['주기나 1-1중간 2026', true, false, true]);
 } finally {
   await 브라우저.close(); 서버.kill();
 }

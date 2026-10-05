@@ -41,7 +41,7 @@ const 창고 = {
 };
 const state = { variants: 창고 };
 const api = new Function('state',
-  lift('variantsOfCodeAll') + '\n' + lift('variantsOfCode') + '\n'
+  'let bookVariantIdx = null;\n' + lift('bookVariantIndex') + '\n' + lift('variantsOfCodeAll') + '\n' + lift('variantsOfCode') + '\n'
   + lift('variantsLive') + '\n' + lift('variantIsPending') + '\n' + lift('pendingVariants')
   + '\nreturn { variantsOfCodeAll, variantsOfCode, variantsLive, pendingVariants };')(state);
 

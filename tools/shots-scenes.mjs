@@ -211,6 +211,19 @@ export const 무대들 = {
         content:'그림과 같이 이차함수 y = −(x−1)(x−5) 의 그래프와 직선 y = x − 1 이 두 점 A, B 에서 만난다. 점 B 에서 x축에 내린 수선의 발을 H 라 할 때, 삼각형 ABH 의 넓이는?\n① 3  ② 7/2  ③ 4  ④ 9/2  ⑤ 5' }] };
       state.storeSubject = 'K2'; state.storeChapter = '02'; state.storeFind = code; state.icOpen = code; render();
     } },
+  /* 표 안 그림 — 1060918 「[그림1] ⇨ [그림2]」 꼴 · 공통수학1 › 인수분해 (2026-10-05) */
+  창고표그림: { 말: '문항관리 › 문항 창고 (표 칸 안 그림 둘 · 단원 번호)', 폭: '1440,864',
+    세우기: async () => { state.currentUser = { type:'teacher', name:'김하현T' }; state.view = 'teacher';
+      state.teacherTab = 'unitbank'; render();
+      await loadItemLedgerIfNeeded(); await loadItemStoreIfNeeded();   // 창고가 뒤늦게 실려 덮지 않게 먼저 싣는다
+      const 그림 = (n) => 'https://placehold.co/220x160/png?text=' + n;
+      state.itemBody = Object.assign(state.itemBody || {}, { '1060918': { code: '1060918', answer: '①', subject: 'K1', chapter: '03',
+        books: [{ name:'주기나', part:'1-1중간', year:2026, ch:'03', no:231 }],
+        content: '한 모서리의 길이가 $x$인 정육면체 모양의 나무토막이 있다. [그림$1$]과 같이 구멍을 뚫었다. 이와 같은 방법으로 각 면에서 구멍을 뚫어 [그림$2$]와 같은 입체를 얻었다.\n\n'
+          + '| ⟦그림:' + 그림('1') + '⟧ | ⇨ | ⟦그림:' + 그림('2') + '⟧ |\n| [그림 $1$] | | [그림 $2$] |\n\n이때, [그림2]의 입체의 부피를 $x$, $y$로 나타낸 것은?\n\n'
+          + '① $(x-y) ^{2} (x+2y)$ ② $(x-y) (x+2y)^{2}$\n③ $(x+y)^{2} (x-2y)$ ④ $(x+y) (x-2y)^{2}$\n⑤ $(x+y)^{2} (x+2y)$' } });
+      state.storeSubject = 'K1'; state.storeChapter = '03'; state.storeQuery = '1060918'; render();
+    } },
   /* 실린 교재·판 — 카드 딱지 · 판 고르기 · 교재 번호 차례 (2026-10-05) */
   창고교재판: { 말: '문항관리 › 문항 창고 (주기나 1-1중간 2026판 고름 · 교재 번호 차례)', 폭: '1440,864',
     세우기: async () => { state.currentUser = { type:'teacher', name:'김하현T' }; state.view = 'teacher';

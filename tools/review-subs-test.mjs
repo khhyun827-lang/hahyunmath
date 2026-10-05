@@ -72,6 +72,26 @@ try{
     await vEditSave();
     return [!!v.aiReview, 'aiReview' in 저장, 저장.content.endsWith('(고침)'), reviewSubOf(v)];
   }), [false, false, true, 'todo']);
+  /* 🔵 다시 변형 (2026-10-05) — 같은 코드 자리에 새 글 · 옛 판정은 버린다 · AI 가 만든 것(auto)만 */
+  page.on('dialog', (d) => d.accept());
+  봄('교재가 준 변형(auto 아님)에는 「다시 변형」이 없다', await page.evaluate(() => {
+    state.reviewSub = ''; state.reviewVariantCode = 'K2-05-E-0560'; render();
+    return document.querySelectorAll('.actbar button').length && [...document.querySelectorAll('.actbar button')].some(b => b.textContent.includes('다시 변형'));
+  }), false);
+  봄('🔴 다시 변형 — 코드 그대로 · 새 글 · 판정 지움 · 저장', await page.evaluate(async () => {
+    const v = pendingVariants().find(x => x.code === 'K2-05-E-0560');
+    v.auto = true; render();
+    const 단추 = [...document.querySelectorAll('.actbar button')].some(b => b.textContent.includes('다시 변형'));
+    window.generateTwinViaAI = async () => ({ content: '새로 만든 변형' + String.fromCharCode(10) + '① 1 ② 2 ③ 3 ④ 4 ⑤ 5', answer: '③', solution: '풀이' });
+    await regenerateAutoVariant('K2-05-E-0560');
+    const w = pendingVariants().find(x => x.code === 'K2-05-E-0560');
+    return [단추, w.content.split(String.fromCharCode(10))[0], w.answer, 'aiReview' in w, 저장.code, 저장.content.split(String.fromCharCode(10))[0], 'aiReview' in 저장, reviewSubOf(w)];
+  }), [true, '새로 만든 변형', '③', false, 'K2-05-E-0560', '새로 만든 변형', false, 'todo']);
+  봄('만들지 못하면 아무것도 안 바뀐다', await page.evaluate(async () => {
+    window.generateTwinViaAI = async () => null; window.저장 = null;
+    await regenerateAutoVariant('K2-05-E-0560');
+    return [pendingVariants().find(x => x.code === 'K2-05-E-0560').content.split(String.fromCharCode(10))[0], 저장];
+  }), ['새로 만든 변형', null]);
 } finally {
   await 브라우저.close(); 서버.kill();
 }
