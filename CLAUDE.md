@@ -2848,6 +2848,7 @@ state.view='assistant'; loadAllRecordsIfNeeded();
 > · 셋째 AI: 워커 `/review` 에 `skip`(이미 푼 모델)·`prior`(그 답) → 안 푼 모델 하나만 묻는다. 우리 답과 같으면 agree · 앞 답 하나와 같으면 suspect · 아니면 unsure(disagree3).
 >   화면: A 키·단추가 갈린 것이면 「셋째 AI」(`reviewAOne`) · 띠에 「갈린 n개 셋째 AI로」 · 판정 조각에 AI 답들(④·⑤ vs 우리 ③). 옛 워커면 안 부른다(`REVIEW_THIRD_WORKER_MIN`).
 >   ⚠ 옛 판정은 첫째 답(first)을 안 남겼다 — 그 문항은 둘째 답만 견준다. 이제 first 도 남긴다.
+> · 🔴 (1360446) «다른 AI로 한 번 더»는 reason 이 disagree·second-refused 인 것만 — 검토 못 함 16 = truncated 11(사슬 셋이 다 잘림 → 사람) + second-refused 5(1차만 다른 답 · 2차가 Groq 몫 바닥으로 거절). 옛 second-refused 는 1차 답이 안 남아 suspect 는 못 낸다.
 > · 🔴 본문·정답을 고치면 AI 판정을 지운다 → AI 검토 전(전에는 «검토 결과가 살아남는다»였다 — 옛 글을 푼 판정이 남았다).
 > · 🔴 864(561~1199)에 **큐를 고를 문이 아예 없었다**(1240 아래 큐 칸을 감추고 칩 줄은 폰만) → 칩 줄을 1199 아래 전부로 · 864 는 격자(칩 줄 + 목록|작업).
 > · 실측(10-05): 검토 대기 91 = 검토 전 23 · 일치 51(그림 10) · 갈림 16 · 같은 다른 답 1.
