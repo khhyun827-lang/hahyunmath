@@ -44,7 +44,7 @@ const TWIN_GROQ_MAX_TOKENS = 7000;   // 추론 + JSON. 검토(6000)보다 답이
 /* 🔴 «올렸는지 짐작하지 않는다» — 이 워커는 대시보드에 붙여넣어 올리므로 밖에서는 어느 판이 도는지
    알 길이 없었다(2026-09-11에 사용자가 올리고 「도는지 확인은 못 해봤어」). /quota 가 이 값을 같이
    돌려주고 tools/worker-check.mjs 가 저장소의 값과 견준다. **프롬프트나 규칙을 바꾸면 이 날짜를 올릴 것.** */
-const WORKER_VERSION = '2026-09-28a';
+const WORKER_VERSION = '2026-10-05a';
 // 이미지 업로드는 학생도 쓴다(질의응답 사진). 비용이 드는 쪽은 Gemini라 여기는 넉넉하게,
 // 다만 «한 명이 무한히»는 막는다. 전체 상한은 걸지 않는다 — 걸면 바쁜 날 학생이 막힌다.
 const UPLOAD_PER_USER_DAILY = 200;
@@ -749,7 +749,12 @@ async function bumpQuota(env, bucket, uid, perUserLimit, globalLimit) {
   const uKey = `q:${bucket}:${uid}:${day}`;
   const gKey = `q:${bucket}:_all:${day}`;
 
-  const [uRaw, gRaw] = await Promise.all([env.QUOTA.get(uKey), env.QUOTA.get(gKey)]);
+  /* 🔵 **사람별 한도만 있는 통(upload)은 «전체» 칸을 안 센다** (2026-10-05).
+     KV 무료 쓰기는 하루 1,000번이다. 10-04 에 그림 182장이 쓰기 364번(52%)을 먹었는데 그 절반은
+     아무도 안 읽는 `_all` 칸이었다. ⚠ review-groq(null, null)는 그대로 센다 — Groq 는 계정 하나라
+     `groqQuota` 가 `_all` 을 읽는다(groq-pool-test). */
+  const 전체도 = !(perUserLimit !== null && globalLimit === null);
+  const [uRaw, gRaw] = await Promise.all([env.QUOTA.get(uKey), 전체도 ? env.QUOTA.get(gKey) : null]);
   const used = Number(uRaw || 0);
   const total = Number(gRaw || 0);
   if (perUserLimit !== null && used >= perUserLimit) return { ok: false, used };
@@ -758,7 +763,7 @@ async function bumpQuota(env, bucket, uid, perUserLimit, globalLimit) {
   const opts = { expirationTtl: 60 * 60 * 48 }; // 이틀치만 남기면 지난 날짜 키는 알아서 사라진다
   await Promise.all([
     env.QUOTA.put(uKey, String(used + 1), opts),
-    env.QUOTA.put(gKey, String(total + 1), opts),
+    전체도 && env.QUOTA.put(gKey, String(total + 1), opts),
   ]);
   return { ok: true, used: used + 1 };
 }

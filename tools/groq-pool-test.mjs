@@ -99,5 +99,21 @@ const 앱변형 = Number((html.match(/const GROQ_TWIN_DAILY_LIMIT = (\d+);/) || 
   봄('화면의 셈(20 − used)이 남은 변형과 같다', 앱변형 - q.변형used, q.변형남음);
 }
 
+/* 🔵 KV 쓰기 아끼기 (2026-10-05) — 사람별 한도만 있는 upload 는 `_all` 을 안 쓴다(10-04 에 쓰기 52%).
+   ⚠ review-groq(null, null)는 `_all` 을 그대로 써야 한다 — 위 groqQuota 가 그것을 읽는다. */
+{
+  const bump = new Function(lift('quotaDay') + NL + lift('bumpQuota') + NL + 'return bumpQuota;')();
+  const 쓴것 = (store) => ({ QUOTA: { get: async (k) => store[k] ?? null, put: async (k, v) => { store[k] = v; } } });
+  const 열쇠 = (store) => Object.keys(store).map((k) => k.split(':').slice(0, 3).join(':')).sort();
+  const 올림 = {}; await bump(쓴것(올림), 'upload', 'u1', 200, null);
+  봄('upload — 사람별 칸 하나만 쓴다', 열쇠(올림), ['q:upload:u1']);
+  const 검토 = {}; await bump(쓴것(검토), 'review-groq', 'u1', null, null);
+  봄('review-groq — 전체 칸도 쓴다(Groq 몫이 읽는다)', 열쇠(검토), ['q:review-groq:_all', 'q:review-groq:u1']);
+  const 생성 = {}; await bump(쓴것(생성), 'ai', 'u1', 20, 20);
+  봄('ai — 두 칸 다 쓴다(전체 한도가 막는다)', 열쇠(생성), ['q:ai:_all', 'q:ai:u1']);
+  const 꽉 = {}; const day = new Date().toISOString().slice(0, 10); 꽉['q:upload:u1:' + day] = '200';
+  봄('upload — 사람별 200 이 차면 막는다', (await bump(쓴것(꽉), 'upload', 'u1', 200, null)).ok, false);
+}
+
 console.log(NL + (fail ? '🔴 ' + fail + '개 실패 · ' : '✓ 전부 통과 · ') + pass + '개' + NL);
 process.exit(fail ? 1 : 0);
