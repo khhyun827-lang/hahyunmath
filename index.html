@@ -32031,7 +32031,8 @@ async function reviewVariantOne(code){
     return r;
   }
   const 판정 = { verdict:r.verdict, answer:r.answer||'', reason:r.reason||'', lone:r.lone||'',
-                 first:r.first||'', second:r.second||'', models:r.models||[], at: nowStamp() };
+                 first:r.first||'', second:r.second||'', models:r.models||[], at: nowStamp(),
+                 ...(r.trail ? { trail: r.trail } : {}) };   // 모델마다 무엇이 돌아왔나(워커 2026-10-05d)
   const nv = Object.assign({}, v, { aiReview: 판정 });
   const ok = await dbSetDoc('variants', code, nv);
   if(!ok){ showToast(code + ' 검토 결과를 저장하지 못했습니다.'); return r; }

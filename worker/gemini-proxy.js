@@ -44,7 +44,7 @@ const TWIN_GROQ_MAX_TOKENS = 7000;   // 추론 + JSON. 검토(6000)보다 답이
 /* 🔴 «올렸는지 짐작하지 않는다» — 이 워커는 대시보드에 붙여넣어 올리므로 밖에서는 어느 판이 도는지
    알 길이 없었다(2026-09-11에 사용자가 올리고 「도는지 확인은 못 해봤어」). /quota 가 이 값을 같이
    돌려주고 tools/worker-check.mjs 가 저장소의 값과 견준다. **프롬프트나 규칙을 바꾸면 이 날짜를 올릴 것.** */
-const WORKER_VERSION = '2026-10-05c';
+const WORKER_VERSION = '2026-10-05d';
 // 이미지 업로드는 학생도 쓴다(질의응답 사진). 비용이 드는 쪽은 Gemini라 여기는 넉넉하게,
 // 다만 «한 명이 무한히»는 막는다. 전체 상한은 걸지 않는다 — 걸면 바쁜 날 학생이 막힌다.
 const UPLOAD_PER_USER_DAILY = 200;
@@ -1748,8 +1748,9 @@ async function reviewSolve(m, content, env) {
   const answer = reviewPickAnswer(body);
   /* ⚠ 답이 없는데 finish_reason 이 length 면 «못 푼 것»이 아니라 «적기 전에 잘린 것»이다.
      그걸 틀림으로 세면 모델을 억울하게 깎고, 없는 불일치를 만든다. */
-  if (!answer && ch && ch.finish_reason === 'length') return { truncated: true };
-  return { answer, tokens: (j.usage && j.usage.total_tokens) || 0 };
+  const 토큰 = (j.usage && (j.usage.completion_tokens || j.usage.total_tokens)) || 0;
+  if (!answer && ch && ch.finish_reason === 'length') return { truncated: true, tokens: 토큰 };
+  return { answer, tokens: 토큰, finish: (ch && ch.finish_reason) || '' };
 }
 
 /* 사슬의 한 칸에 묻는다 — 열쇠가 없거나 Groq 몫이 없으면 «건너뜀»이다.
@@ -1769,15 +1770,22 @@ async function reviewNext(i, content, env, uid) {
   return reviewTry(REVIEW_CHAIN.map((m, j) => j).filter((j) => j >= i), content, env, uid);
 }
 /* 사슬의 «고른 칸들»만 차례로 묻는다 — 셋째 AI(이미 푼 모델은 빼고)가 같이 쓴다. */
+/* 🔵 `trail` — 모델마다 «무엇이 돌아왔나» 한 줄 (2026-10-05). 「검토 못 함」의 까닭을 짐작하지 않고 보려고 응답에 싣는다.
+   (워커에서 잘림이 났는데 같은 코드를 로컬에서 돌리면 풀렸다 — 어디서 갈리는지 보려면 이것이 있어야 했다.) */
 async function reviewTry(list, content, env, uid) {
   let truncated = false, answered = false;
+  const trail = [];
   for (const i of list) {
+    const t0 = Date.now();
     const r = await reviewAsk(REVIEW_CHAIN[i], content, env, uid);
-    if (r.answer) return { r, i, model: REVIEW_CHAIN[i].id };
+    trail.push({ m: REVIEW_CHAIN[i].id.split('/').pop(), s: Math.round((Date.now() - t0) / 1000),
+      r: r.answer ? 'answer' : r.truncated ? 'truncated' : r.skip ? 'skip:' + r.skip : r.refused ? 'refused:' + r.status : 'no-line',
+      t: r.tokens || 0, ...(r.finish ? { f: r.finish } : {}), ...(r.detail ? { d: String(r.detail).slice(0, 80) } : {}) });
+    if (r.answer) return { r, i, model: REVIEW_CHAIN[i].id, trail };
     if (r.truncated) truncated = true;
     else if (!r.refused && !r.skip) answered = true;      // 받긴 받았는데 답 줄이 없었다
   }
-  return { i: REVIEW_CHAIN.length, truncated, answered };
+  return { i: REVIEW_CHAIN.length, truncated, answered, trail };
 }
 
 async function handleReview(request, env, corsHeaders, uid) {
@@ -1818,7 +1826,7 @@ async function handleReview(request, env, corsHeaders, uid) {
         await refundQuota(env, 'review', uid);
         return send({ error: 'upstream', status: 503, detail: '셋째 검토 AI 가 응답하지 않았습니다' }, 503);
       }
-      return send({ verdict: 'unsure', reason: 'third-no-answer', models: 모델 });
+      return send({ verdict: 'unsure', reason: 'third-no-answer', models: 모델, trail: C.trail });
     }
     const c = C.r.answer, 셋 = 모델.concat([C.model]);
     if (reviewSameAnswer(c, stored.v, stored.kind, content)) {
@@ -1837,7 +1845,7 @@ async function handleReview(request, env, corsHeaders, uid) {
       await refundQuota(env, 'review', uid);
       return send({ error: 'upstream', status: 503, detail: '검토 AI 가 모두 응답하지 않았습니다' }, 503);
     }
-    return send({ verdict: 'unsure', reason: A.truncated ? 'truncated' : 'no-answer', models: [] });
+    return send({ verdict: 'unsure', reason: A.truncated ? 'truncated' : 'no-answer', models: [], trail: A.trail });
   }
   const a = A.r;
   if (reviewSameAnswer(a.answer, stored.v, stored.kind, content)) {
@@ -1847,7 +1855,7 @@ async function handleReview(request, env, corsHeaders, uid) {
   /* 여기서부터가 «갈린» 경우다. 사슬의 다음 모델(계보가 다르다)을 부른다. */
   const B = await reviewNext(A.i + 1, content, env, uid);
   if (!B.r) {
-    return send({ verdict: 'unsure', reason: B.answered || B.truncated ? 'second-no-answer' : 'second-refused',
+    return send({ verdict: 'unsure', reason: B.answered || B.truncated ? 'second-no-answer' : 'second-refused', trail: A.trail.concat(B.trail),
       first: a.answer, models: [A.model] });
   }
   const b = B.r;
