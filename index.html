@@ -7718,6 +7718,7 @@ let state = {
   storeChapter: '',
   storeSubject: '',          // 왼쪽에서 펼쳐 고른 과목 코드('K2'…). ''이면 전체
   storeBook: '',             // 출처 교재로 좁히기 (''이면 전부)
+  storeEdition: '',          // 실린 교재·판으로 좁히기 (bookLabel · 2026-10-05)
   storePage: 1,              // 한 쪽에 STORE_PER_PAGE 개씩
   unitImportPreview: null,
   /* 학생 달력 (2026-09-08) — 보고 있는 달·고른 날·「내 일정」에 미리 채울 날짜 */
@@ -29458,12 +29459,34 @@ function icVerdict(문항){
    ⚠ **본문만 보고 건너뛰면 안 된다** — 정답이 이번에 새로 왔거나 그림이 이번에 붙을 수도 있다.
      그래서 «쓸 까닭이 하나도 없을 때»만 건너뛴다. 하나라도 있으면 쓴다.
    ⚠ 견줄 때 `hwpItemFpText()` 를 지난다 — 안 그러면 줄바꿈 하나에 561제를 다시 쓴다. */
+/* 🔵 **문항마다 «실린 교재 + 판(연도)»** (2026-10-05 · 사용자 — 「교재를 개정하면서 빠질 수도 있으니까
+   교재와 연도를 같이 기록해두는 게 좋을 것 같아」). 문서의 `books` = [{ name, part, year, ch, no }].
+   · 파일 이름이 말한다 — `[2026][주기나][1-1중간][1.다항식의연산]` · `[2026][엔딩크레딧][공통수학2]01.평면좌표_코드`.
+     못 읽으면 null — 기록 없이 담는다(막지 않는다).
+   · `no` 는 교재에 찍힌 **누적 번호**다. 미주 번호는 파일마다 1부터라, 앞 단원 수를 더해야 한다
+     (`icFillBodies` 가 매긴다 · 앞 단원을 모르면 `no` 를 비운다 — 틀린 번호보다 낫다).
+   🔴 **그 해 기록만 갈아 끼운다** — 옛 해는 남긴다. 개정판에서 빠진 문항은 «2026판에만 있음»으로 남는다. */
+function bookOfFileName(name){
+  const 이름 = String(name || '').replace(/\.hwpx$/i, '');
+  const 칸 = [...이름.matchAll(/\[([^\]]+)\]/g)].map(m => m[1].trim());
+  if(!/^20\d\d$/.test(칸[0] || '') || !칸[1] || !칸[2] || /^\d{1,2}\s*[.·]/.test(칸[2])) return null;
+  const 단원 = 이름.match(/[\[\]]\s*(\d{1,2})\s*[.·]/);
+  return { name: 칸[1], part: 칸[2], year: +칸[0], ch: 단원 ? 단원[1].padStart(2, '0') : '' };
+}
+function bookSame(a, b){ return a.name === b.name && a.part === b.part && a.year === b.year; }
+function bookMerge(옛, 새){
+  const 다 = (옛 || []).filter(b => !새 || !bookSame(b, 새)).concat(새 ? [새] : []);
+  return 다.length ? 다.sort((a, b) => a.year - b.year || (a.name + a.part < b.name + b.part ? -1 : 1)) : null;
+}
+function bookLabel(b){ return `${b.name} ${b.part} ${b.year}`; }
+
 function icNeedsWrite(옛것, p, 새정답){
   const 옛 = 옛것 || {};
   if(!옛.content) return true;                                     // 창고에 없다 — 써야 한다
   if(hwpItemFpText(옛.content) !== hwpItemFpText(p.content)) return true;   // ③ 고쳤다
   if(새정답 && 새정답 !== 옛.answer) return true;                   // 정답이 새로 왔다
   if(p.image && !옛.image && !옛.images) return true;               // 그림이 이번에 붙는다
+  if(p.book && JSON.stringify(bookMerge(옛.books, p.book)) !== JSON.stringify(옛.books || null)) return true;   // 교재 기록이 새로 왔다
   return false;                                                    // ② 그대로
 }
 function icDiffBit(옛, 새, 폭){
@@ -29544,11 +29567,28 @@ async function icFillBodies(input){
             p.subject = 자리.subject; p.chapter = 자리.chapter; p.chapterName = 자리.chapterName;
           }
         }
-        교재들.push({ name:f.name, withCode, 문항: 갈린것.문항, 앞장: 갈린것.앞장, 딱지말: problems.srcNote || '' });
+        교재들.push({ name:f.name, withCode, 문항: 갈린것.문항, 앞장: 갈린것.앞장, 딱지말: problems.srcNote || '',
+                     책: bookOfFileName(f.name) });
         continue;
       }
       const byNo = await parseHwpxAnswerKey(f);
       if(Object.keys(byNo).length >= 5){ 정답표 = byNo; 정답표이름 = f.name; }
+    }
+    /* 🔵 교재 번호(누적) = 앞 단원들의 문항 수 + 파일 안 차례. 앞 단원 수는 «같이 올린 파일»이 먼저,
+       없으면 창고에 이미 적힌 같은 판의 기록으로 센다. 하나라도 모르면 번호는 비운다. */
+    const 번호못매김 = [];
+    for(const x of 교재들){
+      if(!x.책) continue;
+      let 앞 = 0, 모름 = !x.책.ch;
+      for(let c = 1; !모름 && c < +x.책.ch; c++){
+        const cc = String(c).padStart(2, '0');
+        const 같이 = 교재들.find(y => y.책 && bookSame(y.책, x.책) && y.책.ch === cc);
+        const n = 같이 ? 같이.문항.length
+          : Object.values(state.itemBody || {}).filter(d => (d.books || []).some(b => bookSame(b, x.책) && b.ch === cc)).length;
+        if(n) 앞 += n; else 모름 = true;
+      }
+      if(모름) 번호못매김.push(x.name);
+      x.문항.forEach((p, i) => { p.book = 모름 ? { ...x.책 } : { ...x.책, no: 앞 + i + 1 }; });
     }
     if(!교재들.length){
       state.icFill = { running:false, msg: 정답표
@@ -29627,12 +29667,18 @@ async function icFillBodies(input){
          파일을 다시 고르게 하면 사람이 방금 읽은 판정을 잃는다. 그래서 상태에 재워 둔다. */
     state.icFillPending = { withCode, 정답, 검사말, 판정, 앞장수,
       딱지말: 교재들.map(x => x.딱지말).filter(Boolean).join(' ') };
-    const 줄 = ['🔵 그대로 ' + 판정.그대로.length + '개 — 올리지 않습니다'];
+    const 기록만 = 판정.그대로.filter(x => { const p = x.문항 && x.문항.p;
+      return p && p.book && icNeedsWrite(state.itemBody[itemDocKey(x.code)], p, ''); }).length;
+    const 줄 = ['🔵 그대로 ' + 판정.그대로.length + '개 — 올리지 않습니다' + (기록만 ? ` (그중 ${기록만}개는 교재 기록만 적습니다)` : '')];
     if((판정.처음 || []).length) 줄.push('🆕 처음 담는 것 ' + 판정.처음.length + '개 — 장부에 매겨 둔 코드입니다');
     if(판정.고쳤다.length) 줄.push('⚠ 고쳤다 ' + 판정.고쳤다.length + '개 — 아래를 보고 「담기」를 누르시면 갱신합니다');
     if(판정.겹침.length)   줄.push('⚠ 코드는 다른데 본문이 같은 것 ' + 판정.겹침.length + '무리 — ' + 판정.겹침.map(c=>c.join(' = ')).join(' · '));
     if(판정.빠졌다.length) 줄.push('ⓘ 이 단원 창고에 있는데 파일에 없는 것 ' + 판정.빠졌다.length + '개 — 🔵 지우지 않습니다');
     if(앞장수)            줄.push('ⓘ 미주 없는 앞장(목차 등) ' + 앞장수 + '개는 문항에서 뺐습니다');
+    const 책들 = [...new Set(교재들.filter(x => x.책).map(x => bookLabel(x.책)))];
+    if(책들.length)       줄.push('📖 교재 기록 — ' + 책들.join(' · ') + '판 (다른 해 기록은 그대로 둡니다)');
+    if(교재들.some(x => !x.책)) 줄.push('ⓘ 파일 이름에서 교재·연도를 못 읽은 것은 교재 기록 없이 담습니다 — 「[2026][주기나][1-1중간][1.…]」 꼴이어야 합니다');
+    if(번호못매김.length) 줄.push('ⓘ 앞 단원을 몰라 교재 번호는 비웁니다 — ' + 번호못매김.join(', ') + ' (앞 단원 파일을 같이 올리면 매깁니다)');
     const 보기 = 판정.고쳤다.slice(0, 5).map(x => {
       const d = icDiffBit(x.옛글, x.새글);
       return x.code + '\n    옛  …' + d.앞 + '「' + d.옛 + '」\n    새  …' + d.앞 + '「' + d.새 + '」';
@@ -29680,6 +29726,9 @@ async function icFillCommit(){
       /* 🔴 정답은 «표 → 있던 것 → 미주(객관식만)» 차례로 고른다. 있던 것을 빈 것으로 안 덮는다. */
       const answer = 정답[root] || itemAnswerToKeep(state.itemBody[root], p.answer);
       if(answer) doc.answer = answer;
+      /* 🔴 문서를 새로 짓는 자리라 옛 해 교재 기록을 «들고 와야» 한다 — 안 그러면 지워진다. */
+      const books = bookMerge((state.itemBody[root] || {}).books, p.book);
+      if(books) doc.books = books;
       const already = (state.itemBody[root] || {}).image;
       const alreadyMany = (state.itemBody[root] || {}).images;
       if(alreadyMany) doc.images = alreadyMany;              // 선지 그림 여럿은 그대로 지킨다
@@ -32693,12 +32742,22 @@ function teacherItemStoreHTML(){
     (byBook[(it.source && it.source.book) || '출처없음'] || 0) + 1;
   const books = Object.keys(byBook).sort((a,b)=> byBook[b] - byBook[a]);
   if(state.storeBook) list = list.filter(x => ((x.source && x.source.book) || '출처없음') === state.storeBook);
+  /* 📖 실린 교재·판(`books`)으로 거른다 (2026-10-05). 판을 고르면 숫자 검색 = 교재 번호, 차례도 교재 번호. */
+  const 판의 = (code, 판) => (((state.itemBody || {})[code] || {}).books || []).find(b => bookLabel(b) === 판);
+  const byEd = {};
+  for(const it of list) for(const b of (((state.itemBody || {})[it.code] || {}).books || [])) byEd[bookLabel(b)] = (byEd[bookLabel(b)] || 0) + 1;
+  const eds = Object.keys(byEd).sort();
+  const 판 = eds.includes(state.storeEdition) ? state.storeEdition : '';
+  if(판) list = list.filter(x => 판의(x.code, 판));
+  const 번호로 = 판 && /^\d{1,4}$/.test((state.storeQuery || '').trim());
   /* 🔵 **코드 검색을 창고로 올렸다** (2026-09-04 · 화면 둘을 합치면서).
      줄표 없이 `K201E0010` 도, `E0010` 처럼 일부만도 찾는다 — 옛 화면이 하던 그대로다.
      ⚠ 딱 하나로 좁혀지면 «찾기»가 아니라 **바로 그 문항을 여는 것**이 손에 맞는다. */
   const 찾는말 = (state.storeQuery || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
-  if(찾는말) list = list.filter(x => x.code.toUpperCase().replace(/[^A-Z0-9]/g, '').includes(찾는말));
-  list = list.slice().sort((a,b)=> a.code < b.code ? -1 : 1);
+  if(번호로) list = list.filter(x => 판의(x.code, 판).no === +찾는말);
+  else if(찾는말) list = list.filter(x => x.code.toUpperCase().replace(/[^A-Z0-9]/g, '').includes(찾는말));
+  list = list.slice().sort(판 ? (a,b)=> (판의(a.code, 판).no || 1e9) - (판의(b.code, 판).no || 1e9) || (a.code < b.code ? -1 : 1)
+                             : (a,b)=> a.code < b.code ? -1 : 1);
 
   const shown = list.slice(0, (state.storePage || 1) * STORE_PER_PAGE);
   const bodyLoaded = !!state.itemBody;
@@ -32724,8 +32783,7 @@ function teacherItemStoreHTML(){
     return `<div class="ist-item">
       <div class="ist-ih">
         <b class="mono">${escHtml(it.code)}</b>
-        <span class="ist-src" title="${escHtml((it.source && it.source.book) || '출처없음')}">${escHtml((it.source && it.source.book) || '출처없음')}</span>
-        ${sp고아 && sp고아.isVariant
+        <span class="ist-src" title="${escHtml((it.source && it.source.book) || '출처없음')}">${escHtml((it.source && it.source.book) || '출처없음')}</span>        ${sp고아 && sp고아.isVariant
           ? `<span class="ist-scene" title="이 변형의 원본(${escHtml(sp고아.origin)})이 창고에 없습니다 — 교재를 올리면 원본 카드 안으로 들어갑니다">변형 · 원본 없음</span>`
           : ''}
         ${it.scene ? `<span class="ist-scene" title="${escHtml(it.scene)}">${escHtml(it.scene)}</span>` : ''}
@@ -32764,6 +32822,8 @@ function teacherItemStoreHTML(){
         ${ans ? `<span class="ist-ans">정답 <b>${escHtml(ans)}</b></span>` : ''}
         ${vs.length ? `<span class="ist-vs">변형 <b>${vs.length}</b></span>${kinds}`
                     : `<span class="ist-vs none">변형 없음</span>`}
+        ${/* 📖 실린 교재·판 — 머리 줄은 nowrap 이라 넘친다(864) · 이 줄은 접힌다 */''}
+        ${((body && body.books) || []).map(b => `<span class="ist-vk" title="실린 교재 · 판">📖 ${escHtml(bookLabel(b))}${b.no ? ` · ${b.no}번` : ''}</span>`).join('')}
         ${used.length ? `<span class="ist-used">출제 ${used.length}회<s>${
             escHtml(used.slice(0,2).map(u=>`${u.title} ${u.no}번`).join(' · '))}${used.length>2?' 외':''}</s></span>` : ''}
       </div>
@@ -32814,7 +32874,7 @@ function teacherItemStoreHTML(){
            목록이 이 화면의 주인공이라 머리가 자리를 많이 먹으면 안 된다. */''}
       ${icToolsHTML(`<span class="ist-find">${iconSvg('search',13)}
         <input class="mono" id="ist-q" value="${escHtml(state.storeQuery||'')}"
-          placeholder="코드로 찾기 — E0431 처럼 일부만도"
+          placeholder="${판 ? '교재 번호(34) 또는 코드로 찾기' : '코드로 찾기 — E0431 처럼 일부만도'}"
           oninput="liveEdit(event, v=>{ state.storeQuery=v; state.storePage=1; })"
           oncompositionend="liveEdit(event, v=>{ state.storeQuery=v; state.storePage=1; })">
         ${state.storeQuery ? `<button class="x" title="지우기" onclick="state.storeQuery='';render()">×</button>` : ''}
@@ -32827,6 +32887,11 @@ function teacherItemStoreHTML(){
         <a class="pill ${state.storeBook===''?'on':''}" onclick="storeGoBook('')">교재 전체</a>
         ${books.map(b=>`<a class="pill ${state.storeBook===b?'on':''}" onclick="storeGoBook('${escHtml(b)}')">
           ${escHtml(b)} <b>${byBook[b]}</b></a>`).join('')}
+      </div>` : ''}
+      ${eds.length ? `<div class="ist-books">
+        <a class="pill ${판===''?'on':''}" onclick="state.storeEdition='';state.storePage=1;render()">판 전체</a>
+        ${eds.map(e=>`<a class="pill ${판===e?'on':''}" onclick="state.storeEdition='${escHtml(e)}';state.storePage=1;render()">
+          📖 ${escHtml(e)} <b>${byEd[e]}</b></a>`).join('')}
       </div>` : ''}
       <div class="ex-body">
         ${!state.itemByCode ? `<div class="ist-empty">장부를 불러오는 중…</div>`

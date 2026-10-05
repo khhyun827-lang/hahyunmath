@@ -211,6 +211,19 @@ export const 무대들 = {
         content:'그림과 같이 이차함수 y = −(x−1)(x−5) 의 그래프와 직선 y = x − 1 이 두 점 A, B 에서 만난다. 점 B 에서 x축에 내린 수선의 발을 H 라 할 때, 삼각형 ABH 의 넓이는?\n① 3  ② 7/2  ③ 4  ④ 9/2  ⑤ 5' }] };
       state.storeSubject = 'K2'; state.storeChapter = '02'; state.storeFind = code; state.icOpen = code; render();
     } },
+  /* 실린 교재·판 — 카드 딱지 · 판 고르기 · 교재 번호 차례 (2026-10-05) */
+  창고교재판: { 말: '문항관리 › 문항 창고 (주기나 1-1중간 2026판 고름 · 교재 번호 차례)', 폭: '1440,864',
+    세우기: async () => { state.currentUser = { type:'teacher', name:'김하현T' }; state.view = 'teacher';
+      state.teacherTab = 'unitbank'; render();
+      await loadItemLedgerIfNeeded();
+      const codes = Object.keys(state.itemByCode).filter(c => /^1\d{6}$/.test(c)).slice(0, 4);
+      const 판 = (no, 더) => [{ name:'주기나', part:'1-1중간', year:2026, ch:'01', no }].concat(더 || []);
+      state.itemBody = {};
+      codes.forEach((code, i) => { state.itemBody[code] = { code, answer:'③',
+        books: 판([34, 2, 81, 5][i], i === 0 ? [{ name:'주기나', part:'1-1중간', year:2027, ch:'01', no:36 }] : null),
+        content:'다항식 A = x² + 2x − 1, B = 2x² − x + 3 에 대하여 A + B 를 계산하시오.' }; });
+      state.storeSubject = ''; state.storeChapter = ''; state.storeEdition = '주기나 1-1중간 2026'; render();
+    } },
   /* 시험지 한 장 — 원본·변형 그림이 문항 본문 안에 (2026-10-02) */
   시험지그림: { 말: '문항관리 › 시험지 (그림 있는 문항)', 폭: '1440,864',
     세우기: () => { state.currentUser = { type:'teacher', name:'김하현T' }; state.view = 'teacher';

@@ -37,8 +37,8 @@ function 떠온다(name) {
 const state = { itemBody: {} };
 const 판 = new Function('state', 'rules',
   Object.keys(rules).map(k => 'const ' + k + ' = rules.' + k + ';').join('\n')
-  + '\n' + ['icClassify', 'icVerdict', 'icNeedsWrite', 'icDiffBit'].map(떠온다).join('\n')
-  + '\nreturn { icClassify, icVerdict, icNeedsWrite, icDiffBit };')(state, rules);
+  + '\n' + ['icClassify', 'icVerdict', 'icNeedsWrite', 'icDiffBit', 'bookOfFileName', 'bookSame', 'bookMerge'].map(떠온다).join('\n')
+  + '\nreturn { icClassify, icVerdict, icNeedsWrite, icDiffBit, bookOfFileName, bookMerge };')(state, rules);
 
 let 통과 = 0, 실패 = 0;
 const 잰다 = (이름, 참) => { 참 ? (통과++, console.log('  ✓ ' + 이름)) : (실패++, console.log('  ✗ ' + 이름)); };
@@ -126,6 +126,25 @@ const B = '직선 y=2x+1 에 평행한 직선의 방정식은?';
     판.icNeedsWrite({ content: A, images: ['x'] }, { content: A, image: 'data:…' }, '') === false);
   잰다('🔴 창고에 없으면 쓴다', 판.icNeedsWrite(null, { content: A }, '') === true);
   잰다('🔴 창고 문서에 본문이 없으면 쓴다', 판.icNeedsWrite({ answer: '①' }, { content: A }, '') === true);
+}
+
+// ── 실린 교재·판 (2026-10-05) ───────────────────────────────────────
+절('books — 「교재를 개정하면서 빠질 수도 있으니 교재와 연도를 같이」');
+{
+  const j = 판.bookOfFileName('[2026][주기나][1-1중간][2.항등식과나머지정리].hwpx');
+  잰다('주기나 파일 이름을 읽는다', j && j.name === '주기나' && j.part === '1-1중간' && j.year === 2026 && j.ch === '02');
+  const e = 판.bookOfFileName('[2026][엔딩크레딧][공통수학2]01.평면좌표_코드.hwpx');
+  잰다('엔딩크레딧 꼴도 읽는다', e && e.name === '엔딩크레딧' && e.part === '공통수학2' && e.ch === '01');
+  잰다('연도가 없으면 null', 판.bookOfFileName('주기나 1단원.hwpx') === null);
+  잰다('판 칸이 단원이면 null', 판.bookOfFileName('[2026][주기나][1.다항식].hwpx') === null);
+  const 옛해 = { name: '주기나', part: '1-1중간', year: 2026, ch: '02', no: 83 };
+  const 새해 = { name: '주기나', part: '1-1중간', year: 2027, ch: '02', no: 85 };
+  const m = 판.bookMerge([옛해], 새해);
+  잰다('🔴 새 해를 더해도 옛 해 기록은 남는다', m.length === 2 && m[0].year === 2026 && m[1].year === 2027);
+  const r = 판.bookMerge(m, { ...새해, no: 86 });
+  잰다('같은 해는 갈아 끼운다(겹치지 않는다)', r.length === 2 && r[1].no === 86);
+  잰다('🔴 기록이 새로 오면 «그대로»여도 쓴다', 판.icNeedsWrite({ content: A }, { content: A, book: 옛해 }, '') === true);
+  잰다('같은 기록이 또 오면 안 쓴다', 판.icNeedsWrite({ content: A, books: [옛해] }, { content: A, book: { ...옛해 } }, '') === false);
 }
 
 // ── icDiffBit — 달라진 자리만 ─────────────────────────────────────────
