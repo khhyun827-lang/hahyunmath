@@ -32003,8 +32003,9 @@ async function askReview(content, answer, 더){
     method:'POST',
     headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer ' + token },
     body: JSON.stringify({ content, answer, ...(더 || {}) }),
-  /* 2026-09-28 — NVIDIA(DeepSeek)가 먼저 푼다: 한 건 평균 69초 · 길면 3분대. 워커가 200초에 끊고 Groq 로 넘기므로 넉넉히 300초. */
-  }), 300000);
+  /* 2026-09-28 — NVIDIA(DeepSeek)가 먼저 푼다: 한 건 평균 69초 · 길면 3분대.
+     🔴 2026-10-05 — 붐빈 날 4~5분이 걸려 잘림이 반복됐다 → 워커가 흘려 받고 420초까지 기다린다(워커 2026-10-05c). 넉넉히 480초. */
+  }), 480000);
   const j = await res.json().catch(()=>({}));
   if(res.status === 429) return { error:'quota', 말:'오늘 검토 한도를 다 썼습니다.' };
   if(res.status === 503) return { error:'busy',  말:'검토 AI가 지금 붐빕니다 — 한도는 돌려받았습니다.' };
@@ -32129,7 +32130,7 @@ async function reviewAllPending(셋째){
   if(!confirm(할만큼 + (셋째 ? '개를 아직 안 푼 AI에게 한 번 더 풀립니다 (AI끼리 갈렸거나 1차 AI만 다른 답을 낸 것).\n\n'
                           : '개를 AI에게 검토시킵니다.\n\n')
     + (셋째 ? '아직 안 푼 모델이 풉니다 — Groq 몫을 씁니다.\n'
-           : '문항당 30초~2분 걸립니다 (NVIDIA 가 풀고, 답이 갈리면 Groq 가 한 번 더 봅니다).\n')
+           : '문항당 30초~2분, 어려운 문항은 7분까지 걸립니다 (NVIDIA 가 풀고, 답이 갈리면 Groq 가 한 번 더 봅니다).\n')
     + (할것.length > 할만큼 ? '오늘 남은 한도가 ' + 남음 + '건이라 ' + (할것.length - 할만큼) + '개는 내일 이어서 봅니다.\n' : '')
     + '\n판정은 «참고»입니다 — 통과·버리기는 그대로 선생님이 누릅니다.\n\n시작할까요?')) return;
 

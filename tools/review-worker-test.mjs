@@ -45,6 +45,19 @@ function 가짜(답들) {
     if (!이번) throw new Error('답들을 다 썼는데 또 불렀다 — ' + 몸.model);
     if (이번.던짐) throw new Error(이번.던짐);
     if (이번.status) return { ok: false, status: 이번.status, text: async () => 'busy' };
+    /* 🔵 NVIDIA 는 흘려 받는다(2026-10-05) — 생각 조각 여럿 → 답 → 끝(finish) → usage 를 SSE 로 흉내 낸다.
+       생각 조각을 300KB 넘게 쌓아 «끝 256KB 만 읽기»가 답을 놓치지 않는지도 본다. */
+    if (몸.stream) {
+      const 줄 = (o) => 'data: ' + JSON.stringify(o) + String.fromCharCode(10, 10);
+      const 생각 = 줄({ choices: [{ delta: { reasoning_content: '생각'.repeat(200) } }] });
+      const 글 = 생각.repeat(Math.ceil(300000 / 생각.length))
+        + 줄({ choices: [{ delta: { content: 이번.글 } }] })
+        + 줄({ choices: [{ delta: {}, finish_reason: 이번.끝 || 'stop' }] })
+        + 줄({ choices: [], usage: { completion_tokens: 100 } }) + 'data: [DONE]' + String.fromCharCode(10, 10);
+      const 바이트 = new TextEncoder().encode(글);
+      return { ok: true, status: 200, body: new ReadableStream({ start(c) {
+        for (let i = 0; i < 바이트.length; i += 4096) c.enqueue(바이트.slice(i, i + 4096)); c.close(); } }) };
+    }
     return {
       ok: true, status: 200,
       text: async () => JSON.stringify({

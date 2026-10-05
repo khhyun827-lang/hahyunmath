@@ -44,7 +44,7 @@ const TWIN_GROQ_MAX_TOKENS = 7000;   // 추론 + JSON. 검토(6000)보다 답이
 /* 🔴 «올렸는지 짐작하지 않는다» — 이 워커는 대시보드에 붙여넣어 올리므로 밖에서는 어느 판이 도는지
    알 길이 없었다(2026-09-11에 사용자가 올리고 「도는지 확인은 못 해봤어」). /quota 가 이 값을 같이
    돌려주고 tools/worker-check.mjs 가 저장소의 값과 견준다. **프롬프트나 규칙을 바꾸면 이 날짜를 올릴 것.** */
-const WORKER_VERSION = '2026-10-05b';
+const WORKER_VERSION = '2026-10-05c';
 // 이미지 업로드는 학생도 쓴다(질의응답 사진). 비용이 드는 쪽은 Gemini라 여기는 넉넉하게,
 // 다만 «한 명이 무한히»는 막는다. 전체 상한은 걸지 않는다 — 걸면 바쁜 날 학생이 막힌다.
 const UPLOAD_PER_USER_DAILY = 200;
@@ -1602,8 +1602,12 @@ const REVIEW_API = {
   nvidia: { url: 'https://integrate.api.nvidia.com/v1/chat/completions', key: 'NVIDIA_KEY', max: 12000 },
   groq:   { url: 'https://api.groq.com/openai/v1/chat/completions',     key: 'GROQ_KEY',   max: 4000 },
 };
-/* NVIDIA 는 한 건 평균 69초, 어려운 문항은 3분대였다. 넘기면 끊고 Groq 로 간다 — 화면은 300초를 기다린다. */
-const REVIEW_NVIDIA_TIMEOUT = 200000;
+/* NVIDIA 는 한 건 평균 69초, 어려운 문항은 3분대였다. 넘기면 끊고 Groq 로 간다 — 화면은 480초를 기다린다.
+   🔴 (2026-10-05) 200초 → 420초 · **흘려 받는다(stream)**. 「검토 못 함 · 잘림」 11제를 재 보니 원인은 «길이»가 아니라 «시간»이었다 —
+     DeepSeek 은 6~10천 토큰에 다 풀었는데(푼 5제 중 4제가 우리 답) 붐빈 날 초당 20토큰이라 4~5분이 걸렸고,
+     ① 워커가 200초에 끊어 Groq(4000 토큰)로 넘기면 Groq 는 생각만 하다 잘렸고 ② 기다려도 NVIDIA 가 **약 300초에 연결을 끊었다**(6제).
+     흘려 받으면 글자가 계속 오므로 그 끊김이 없다. */
+const REVIEW_NVIDIA_TIMEOUT = 420000;
 /* ⚠ max_tokens 를 분당 한도(8000)와 같게 주면 «자리 예약»에 걸려 통이 비어 있지 않아도
      매 요청이 429 다 (2026-09-06 실측). 어려운 문항의 실제 필요치는 3,700 토큰이었다. */
 
@@ -1678,6 +1682,35 @@ function reviewSameAnswer(given, want, kind, text) {
 }
 
 /* 한 모델에게 «한 번» 풀린다. 돌아오는 것은 답 하나이거나, 왜 못 냈는지다. */
+/* 흘려 받은 응답(SSE)을 «한 번에 받은 꼴»({choices:[{message:{content},finish_reason}],usage})로 접는다.
+   ⚠ 무료 워커는 CPU 가 요청당 10ms 다 — 생각(reasoning) 조각 수천 개를 하나하나 JSON 으로 읽으면 넘는다.
+     답 줄(「정답: …」)은 맨 끝에 오므로 **끝 256KB 만** 들고 있다가 그 안만 읽는다(받는 동안은 바이트를 넘기기만 한다).
+   ⚠ 끝 조각의 첫 줄은 중간이 잘려 있을 수 있다 — 못 읽는 줄은 건너뛴다. */
+const REVIEW_STREAM_TAIL = 262144;
+async function reviewReadStream(res) {
+  const reader = res.body.getReader();
+  const 꼬리 = []; let 크기 = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    꼬리.push(value); 크기 += value.length;
+    while (꼬리.length > 1 && 크기 - 꼬리[0].length >= REVIEW_STREAM_TAIL) 크기 -= 꼬리.shift().length;
+  }
+  const 바이트 = new Uint8Array(크기); let at = 0;
+  for (const c of 꼬리) { 바이트.set(c, at); at += c.length; }
+  let content = '', finish = null, usage = null;
+  for (const 줄 of new TextDecoder().decode(바이트).split(String.fromCharCode(10))) {
+    if (!줄.startsWith('data:')) continue;
+    const d = 줄.slice(5).trim();
+    if (d === '[DONE]') continue;
+    let j; try { j = JSON.parse(d); } catch (e) { continue; }
+    const ch = j.choices && j.choices[0];
+    if (ch && ch.delta && ch.delta.content) content += ch.delta.content;
+    if (ch && ch.finish_reason) finish = ch.finish_reason;
+    if (j.usage) usage = j.usage;
+  }
+  return { choices: [{ message: { content }, finish_reason: finish }], usage };
+}
 async function reviewSolve(m, content, env) {
   const api = REVIEW_API[m.via];
   let res;
@@ -1692,6 +1725,7 @@ async function reviewSolve(m, content, env) {
           { role: 'system', content: REVIEW_PROMPT },
           { role: 'user', content },
         ],
+        ...(m.via === 'nvidia' ? { stream: true, stream_options: { include_usage: true } } : {}),
       }),
       ...(m.via === 'nvidia' && typeof AbortSignal !== 'undefined' && AbortSignal.timeout
         ? { signal: AbortSignal.timeout(REVIEW_NVIDIA_TIMEOUT) } : {}),
@@ -1700,9 +1734,15 @@ async function reviewSolve(m, content, env) {
     /* 시간 넘김·연결 끊김 — «못 받은 것»이다. 다음 모델로 간다. */
     return { refused: true, status: 0, detail: String((e && e.message) || e).slice(0, 200) };
   }
-  const text = await res.text();
-  if (!res.ok) return { refused: upstreamRefused(res.status), status: res.status, detail: text.slice(0, 200) };
-  let j; try { j = JSON.parse(text); } catch (e) { return { detail: '응답을 못 읽음' }; }
+  if (!res.ok) { const t = await res.text(); return { refused: upstreamRefused(res.status), status: res.status, detail: t.slice(0, 200) }; }
+  let j;
+  if (m.via === 'nvidia') {
+    try { j = await reviewReadStream(res); }
+    catch (e) { return { refused: true, status: 0, detail: String((e && e.message) || e).slice(0, 200) }; }   // 흘려 받다 끊김·시간 넘김
+  } else {
+    const text = await res.text();
+    try { j = JSON.parse(text); } catch (e) { return { detail: '응답을 못 읽음' }; }
+  }
   const ch = j.choices && j.choices[0];
   const body = (ch && ch.message && ch.message.content) || '';
   const answer = reviewPickAnswer(body);
