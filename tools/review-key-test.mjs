@@ -24,7 +24,7 @@ console.log(NL2 + '검토 화면 — 키보드가 «보이는 것»을 따라가
 
 /* 화면이 그리는 차례와 «같은» 목록을 쓰는지 본다. */
 const F = (state, autos, bank) => new Function('state', 'pendingVariants', 'reviewQueueList',
-  lift('reviewWalkList') + NL2 + lift('reviewWalkCur') + NL2 + 'return { reviewWalkList, reviewWalkCur };')(
+  lift('reviewAutos') + NL2 + lift('reviewBankList') + NL2 + lift('reviewWalkList') + NL2 + lift('reviewWalkCur') + NL2 + 'return { reviewWalkList, reviewWalkCur };')(
   state, () => autos, () => bank);
 
 const autos = [{ code: 'K2-01-E-0001-N01' }, { code: 'K2-01-E-0002-N01' }];
@@ -75,7 +75,7 @@ const bank = [{ id: 'pb1' }, { id: 'pb2' }];
   봄('🔵 J·K 안내도 있다', 판.includes('kbd">J') && 판.includes('kbd">K'), true);
   /* 🔴 적어 둔 키와 «실제로 도는» 키가 어긋나면 안 된다 — 그게 제일 나쁜 거짓말이다. */
   const 손 = html.slice(html.indexOf('if(지금.auto){'), html.indexOf('const b = 지금.b;'));
-  봄('🔴 A 가 실제로 돈다', /k===.a./.test(손) && 손.includes('reviewVariantOne'), true);
+  봄('🔴 A 가 실제로 돈다', /k===.a./.test(손) && 손.includes('reviewAOne') && lift('reviewAOne').includes('reviewVariantOne'), true);   // 2026-10-05 — 갈린 것은 셋째 AI(reviewAOne 이 가른다)
   봄('🔴 아랫띠는 「내용 없음」과 같은 actbar 다', 판.includes('class="actbar"'), true);
 }
 {
@@ -103,7 +103,7 @@ const bank = [{ id: 'pb1' }, { id: 'pb2' }];
   const 걷기 = (autos, bank, 처음) => {
     const state = Object.assign({ reviewQueue: 'pending', reviewVariantCode: '', reviewSelectedId: null }, 처음);
     const R = new Function('state', 'pendingVariants', 'reviewQueueList', 'render', 'document',
-      lift('reviewWalkList') + NL2 + lift('reviewWalkCur') + NL2 + lift('reviewMove')
+      lift('reviewAutos') + NL2 + lift('reviewBankList') + NL2 + lift('reviewWalkList') + NL2 + lift('reviewWalkCur') + NL2 + lift('reviewMove')
       + NL2 + 'return { reviewMove, reviewWalkCur };')(
       state, () => autos, () => bank, () => {}, { querySelector: () => null });
     return { state, 누름: (d) => R.reviewMove(d), 지금: () => R.reviewWalkCur().key };
@@ -132,7 +132,7 @@ const bank = [{ id: 'pb1' }, { id: 'pb2' }];
      비면 `reviewWalkCur` 가 **맨 위**를 집는다 — 큐를 비우는 화면에서 손이 매번 위로 튄다. */
 {
   const N = (state, autos, bank) => new Function('state', 'pendingVariants', 'reviewQueueList',
-    lift('reviewWalkList') + NL2 + lift('reviewPickNext') + NL2 + lift('reviewSelectWalk')
+    lift('reviewAutos') + NL2 + lift('reviewBankList') + NL2 + lift('reviewWalkList') + NL2 + lift('reviewPickNext') + NL2 + lift('reviewSelectWalk')
     + NL2 + 'return { reviewPickNext, reviewSelectWalk };')(state, () => autos, () => bank);
   const st = { reviewQueue: 'pending', reviewVariantCode: '', reviewSelectedId: null };
   const R = N(st, autos, bank);

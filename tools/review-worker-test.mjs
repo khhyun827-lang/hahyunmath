@@ -161,5 +161,21 @@ await 봄('NVIDIA 도 없고 Groq 몫도 없으면 upstream + 하루치 되돌�
 await 봄('NVIDIA 열쇠만 있어도 돈다', [{ 글: '정답: ②' }], 문항, 'agree', () => !엔비(0) ? 'NVIDIA 를 안 불렀다' : '',
   { NVIDIA_KEY: 'n', QUOTA: null });
 
-console.log(흠 ? '🔴 ' + 흠 + '개 어긋남' : '통과 22개');
+// ⑬ 🔵 셋째 AI (2026-10-05) — 둘이 갈린 것만 «안 푼 모델»에게. skip = 이미 푼 모델 · prior = 그 답
+const 앞둘 = { ...문항, skip: ['deepseek-ai/deepseek-v4.1-flash', 'openai/gpt-oss-120b'], prior: ['④', '⑤'] };
+const 셋째만 = () => 부른것.length !== 1 ? '모델을 ' + 부른것.length + '번 불렀다' : 부른것[0].model !== 'qwen/qwen3.8-27b' ? '셋째가 qwen 이 아니다: ' + 부른것[0].model : '';
+await 봄('셋째가 우리 답이면 agree · 앞 답은 lone', [{ 글: '정답: ②' }], 앞둘, 'agree',
+  (p) => 셋째만() || (p.lone !== '④ · ⑤' ? 'lone: ' + p.lone : p.models.length !== 3 ? 'models: ' + p.models : p.third !== '②' ? 'third 없음' : ''), 둘다);
+await 봄('셋째가 앞 답 하나와 같으면 suspect', [{ 글: '정답: ⑤' }], 앞둘, 'suspect',
+  (p) => 셋째만() || (p.answer !== '⑤' ? 'answer: ' + p.answer : ''), 둘다);
+await 봄('셋째도 다르면 unsure(disagree3)', [{ 글: '정답: ①' }], 앞둘, 'unsure',
+  (p) => 셋째만() || (p.reason !== 'disagree3' ? '까닭: ' + p.reason : ''), 둘다);
+await 봄('셋 다 풀었으면 안 부르고 하루치 되돌림', [], { ...앞둘, skip: ['deepseek-ai/deepseek-v4.1-flash', 'openai/gpt-oss-120b', 'qwen/qwen3.8-27b'] }, 'bad request',
+  () => 부른것.length ? '위쪽에 괜히 물었다' : 되돌림 !== 1 ? '되돌리지 않았다' : '', 둘다);
+await 봄('셋째가 거절하면 upstream + 되돌림', [{ status: 429 }], 앞둘, 'upstream',
+  () => 되돌림 !== 1 ? '되돌리지 않았다' : '', 둘다);
+await 봄('첫째만 풀었으면(skip 하나) 다음 칸부터', [{ 글: '정답: ②' }], { ...문항, skip: ['deepseek-ai/deepseek-v4.1-flash'], prior: ['④'] }, 'agree',
+  () => 부른것[0] && 부른것[0].model !== 'openai/gpt-oss-120b' ? '다음 칸이 아니다: ' + 부른것[0].model : '', 둘다);
+
+console.log(흠 ? '🔴 ' + 흠 + '개 어긋남' : '통과 28개');
 process.exit(흠 ? 1 : 0);

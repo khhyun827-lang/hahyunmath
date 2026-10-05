@@ -238,18 +238,7 @@
        뒤에 있어서, 같은 무게로 쓰면 순서에 져서 안 먹는다.
      ⚠ 「보기」 아래 두 줄(`.rv-qn.go`)은 뺀다 — 시험지로 «나가는» 문이고, 그 문은 서브탭에 이미 있다.
        칩 줄은 좁으니 여기 남는 것은 «지금 고를 큐»뿐이어야 한다. */
-  .app:not(.sap) .rv-queues{display:flex;gap:7px;width:auto;margin:0 0 12px;
-    padding:0 0 6px;border-right:0;overflow-x:auto;overflow-y:hidden;
-    scrollbar-width:none;-ms-overflow-style:none;-webkit-overflow-scrolling:touch;}
-  .app:not(.sap) .rv-queues::-webkit-scrollbar{display:none;}
-  .app:not(.sap) .rv-queues .t-sec,
-  .app:not(.sap) .rv-queues .note,
-  .app:not(.sap) .rv-qn.go{display:none;}
-  .app:not(.sap) .rv-qn{flex:none;white-space:nowrap;padding:7px 12px;border-radius:var(--r-pill);
-    border:1px solid var(--line);background:var(--card);}
-  .app:not(.sap) .rv-qn.on{border-color:var(--accent-line);}
-  /* 칩 안에서는 개수가 «왼쪽 끝으로 밀 여백»을 못 쓴다 — 이름 바로 뒤에 붙인다. */
-  .app:not(.sap) .rv-qn b{margin-left:0;}
+  /* 칩 줄 규칙은 `@media (max-width:1199px)` 로 옮겼다(2026-10-05) — 864 에도 큐를 고를 문이 없었다. */
 
   /* 목록은 위, 작업 칸은 아래. 목록은 **높이를 묶는다** — 큐에 서른 건이 쌓이면
      목록만으로 화면이 차서 정작 보러 온 문항이 스크롤 밖으로 밀린다(반 196 · 설정 190과 같은 판단). */
@@ -1436,6 +1425,29 @@
 .app .fig-hide{margin-top:6px;padding-top:6px;border-top:1px dashed var(--line);}
 .app .fig-hide .spacer{flex:1;}
 @media (max-width:1240px){ .app .rv-queues{display:none;} }
+/* 🔴 **864 에는 큐를 고를 문이 없었다** (2026-10-05 · 검토 탭 개편 때 찍어 보고 알았다).
+   1240 아래에서 큐 칸을 감추고, 칩 줄은 폰(≤560)에만 있었다 — 561~1199 는 「검토 대기」에 갇혔다.
+   ⇒ 칩 줄을 1199 아래 전부로 넓히고, 561~1199 는 격자로 «칩 줄 한 줄 + 목록 | 작업»을 놓는다.
+   (1200 부터는 넓은 사이드가 큐를 든다.) */
+@media (max-width:1199px){
+  .app:not(.sap) .rv-queues{display:flex;gap:7px;width:auto;margin:0 0 12px;
+    padding:0 0 6px;border-right:0;overflow-x:auto;overflow-y:hidden;
+    scrollbar-width:none;-ms-overflow-style:none;-webkit-overflow-scrolling:touch;}
+  .app:not(.sap) .rv-queues::-webkit-scrollbar{display:none;}
+  .app:not(.sap) .rv-queues .t-sec,
+  .app:not(.sap) .rv-queues .note,
+  .app:not(.sap) .rv-qn.go{display:none;}
+  .app:not(.sap) .rv-qn{flex:none;white-space:nowrap;padding:7px 12px;border-radius:var(--r-pill);
+    border:1px solid var(--line);background:var(--card);}
+  .app:not(.sap) .rv-qn.on{border-color:var(--accent-line);}
+  .app:not(.sap) .rv-qn.rv-sub{font-size:12px;padding:6px 10px;background:var(--sunk);}
+  /* 칩 안에서는 개수가 «왼쪽 끝으로 밀 여백»을 못 쓴다 — 이름 바로 뒤에 붙인다. */
+  .app:not(.sap) .rv-qn b{margin-left:0;}
+}
+@media (min-width:561px) and (max-width:1199px){
+  .app:not(.sap) .rv-screen{display:grid;grid-template-columns:auto minmax(0,1fr);grid-template-rows:auto minmax(0,1fr);}
+  .app:not(.sap) .rv-queues{grid-column:1/-1;}
+}
 
 /* ============================================================
    화면의 «면» — 목록·문맥 칸은 종이 위에 뜬 흰 면이다 (2026-08-08)
@@ -7084,6 +7096,7 @@ async function vEditSave(){
       + '옛 번호는 다시 쓰지 않습니다. 내용·정답·그림은 그대로 갑니다.')) return;
     e.saving = true; render();
     const 새것 = Object.assign({}, v, { code: 새코드, variantKind: 새갈래, content: 새글, answer: 새답, movedFrom: e.code, updatedAt: nowStamp(), editedByHand: true });
+    if(새글 !== String(v.content || '').trim() || 새답 !== String(v.answer || '').trim()) delete 새것.aiReview;
     const ok1 = await dbSetDoc('variants', 새코드, 새것);
     if(!ok1){ e.saving = false; showToast(새코드 + ' 를 저장하지 못했습니다 — 설정 › 관리자를 봐주세요.'); render(); return; }
     const 옛것 = Object.assign({}, v, { deleted: true, deletedAt: nowStamp(), movedTo: 새코드 }); delete 옛것.pending;
@@ -7102,9 +7115,12 @@ async function vEditSave(){
         + String.fromCharCode(10) + String.fromCharCode(10) + '그래도 저장할까요?')) return;
   e.saving = true; render();
   const 곳 = v.fromBook ? 'items' : 'variants';
-  /* 🔴 있던 것 «위에» 얹는다 — 그림·풀이·검토 결과가 살아남는다. */
+  /* 🔴 있던 것 «위에» 얹는다 — 그림·풀이가 살아남는다.
+     🔴 **AI 판정은 지운다** (2026-10-05 · 검토 탭 개편) — 판정은 «옛 글»을 푼 것이다. 고친 글은
+       「AI 검토 전」으로 돌아가 다시 검토를 받는다(여기까지 왔으면 글이나 답이 바뀐 것이다). */
   const 바탕 = v.fromBook ? ((state.itemBody || {})[e.code] || {}) : v;
   const doc = Object.assign({}, 바탕, { content: 새글, answer: 새답, updatedAt: nowStamp(), editedByHand: true });
+  delete doc.aiReview;
   const ok = await dbSetDoc(곳, e.code, doc);
   if(!ok){ e.saving = false; showToast(e.code + ' 를 저장하지 못했습니다 — 설정 › 관리자를 봐주세요.'); render(); return; }
   if(v.fromBook){
@@ -7113,6 +7129,7 @@ async function vEditSave(){
     itemsCacheWrite(ver, Object.values(state.itemBody));
   } else {
     Object.assign(v, { content: 새글, answer: 새답, updatedAt: doc.updatedAt, editedByHand: true });
+    delete v.aiReview;
   }
   state.vEdit = null;
   showToast(e.code + ' 를 고쳤습니다.');
@@ -20079,10 +20096,13 @@ function teacherSideCount(s, 벨){
 function reviewSideQueuesHTML(){
   const qkey = state.reviewQueue || 'pending';
   const autosN = pendingVariants().length;
+  const 칸수 = reviewSubCounts(), sub = state.reviewSub || '';
   return REVIEW_QUEUES.map(q => {
     const n = DATA.problemBank.filter(q[3]).length + (q[0] === 'pending' ? autosN : 0);
-    return `<a class="sb-x sn-q ${qkey === q[0] ? 'on' : ''}" onclick="goReviewQueue('${q[0]}')">
-      <i class="d ${q[2]}"></i><span>${q[1]}</span><b class="${n ? '' : 'z'}">${n}</b></a>`;
+    return `<a class="sb-x sn-q ${qkey === q[0] && !(q[0] === 'pending' && sub) ? 'on' : ''}" onclick="goReviewQueue('${q[0]}')">
+      <i class="d ${q[2]}"></i><span>${q[1]}</span><b class="${n ? '' : 'z'}">${n}</b></a>`
+      + (q[0] !== 'pending' || qkey !== 'pending' ? '' : REVIEW_SUBS.map(([k, 이름]) =>
+        `<a class="sb-x sn-q sn-ch ${sub === k ? 'on' : ''}" onclick="goReviewSub('${k}')"><span>${이름}</span><b class="${칸수[k] ? '' : 'z'}">${칸수[k]}</b></a>`).join(''));
   }).join('');
 }
 /* 다가오는 시험 — 재원생의 학교·학년마다 한 줄, 가까운 순. 홈과 학교 사이드가 같이 쓴다(이미 읽은 시험 일정만 본다). */
@@ -29207,12 +29227,12 @@ function followBankToQueue(b){
   if(cur && cur[3](b)) return;                 // 아직 이 큐에 있다면 건드리지 않는다
   const next = REVIEW_QUEUES.find(q => q[3](b));
   if(!next) return;                            // 어느 줄에도 안 걸리면 그대로 둔다
-  state.reviewQueue = next[0];
+  state.reviewQueue = next[0]; state.reviewSub = '';   // 시험지 문항은 «전체»에만 선다
   state.reviewSelectedId = b.id;
 }
 
 function goReviewQueue(key){
-  state.reviewQueue = key;
+  state.reviewQueue = key; state.reviewSub = '';
   state.reviewSelectedId = null;   // 큐를 옮기면 선택도 옮긴다
   render();
 }
@@ -29229,10 +29249,10 @@ function selectReviewItem(id){ state.reviewSelectedId = id; state.reviewVariantC
      같은 목록을 봐야 어긋나지 않는다. */
 function reviewWalkList(){
   const qkey = state.reviewQueue || 'pending';
-  const autos = qkey === 'pending' ? pendingVariants() : [];
+  const autos = reviewAutos();
   return [
     ...autos.map(v => ({ auto:true, key:v.code, v })),
-    ...reviewQueueList(qkey).map(b => ({ auto:false, key:b.id, b })),
+    ...reviewBankList(qkey).map(b => ({ auto:false, key:b.id, b })),
   ];
 }
 /* 지금 무엇이 골라져 있나 — 화면(`selAuto`/`sel`)과 «같은 잣대»로 고른다. */
@@ -30572,17 +30592,20 @@ function teacherReviewHTML(){
   /* 🔵 **「검토 대기」에는 두 갈래가 같이 산다** (2026-09-06 · 사용자 요청).
      시험지 문항(problembank)과 AI 가 만든 창고 변형이다. 생김새는 다르지만 **기다리는 일은 같다.**
      ⚠ 그래서 목록은 한 줄에 섞어 그리고, 오른쪽 판만 갈래에 따라 갈아 끼운다. */
-  const autos = qkey === 'pending' ? pendingVariants() : [];
-  const list = reviewQueueList(qkey);
+  const autos = reviewAutos();
+  const list = reviewBankList(qkey);
   const remaining = state.aiQuotaUsed===null ? null : Math.max(0, AI_DAILY_LIMIT - state.aiQuotaUsed);
   const left = DATA.problemBank.filter(b=>b.status!=='approved').length;
 
   const queues = `<nav class="rv-queues">
     <div class="t-sec">검토 대기</div>
     ${REVIEW_QUEUES.map(q=>{
-      const n = DATA.problemBank.filter(q[3]).length + (q[0]==='pending' ? autos.length : 0);
-      return `<a class="rv-qn ${qkey===q[0]?'on':''}" onclick="goReviewQueue('${q[0]}')">
-        <span class="rk ${q[2]}"></span>${q[1]}<b>${n}</b></a>`;
+      const n = DATA.problemBank.filter(q[3]).length + (q[0]==='pending' ? pendingVariants().length : 0);
+      const 칸수 = q[0]==='pending' && qkey==='pending' ? reviewSubCounts() : null;
+      return `<a class="rv-qn ${qkey===q[0] && !(q[0]==='pending' && state.reviewSub)?'on':''}" onclick="goReviewQueue('${q[0]}')">
+        <span class="rk ${q[2]}"></span>${q[1]}<b>${n}</b></a>`
+        + (!칸수 ? '' : REVIEW_SUBS.map(([k, 이름]) =>
+          `<a class="rv-qn rv-sub ${state.reviewSub===k?'on':''}" onclick="goReviewSub('${k}')">${이름}<b>${칸수[k]}</b></a>`).join(''));
     }).join('')}
     <div class="t-sec" style="margin-top:22px;">보기</div>
     ${/* ⚠ `go` 는 «여기서 나가는 문»이라는 표시다 — 폰에서 큐가 칩 줄로 접힐 때 이 둘만 빠진다
@@ -30656,7 +30679,8 @@ function teacherReviewHTML(){
   const sel = 지금 && !지금.auto ? 지금.b : null;
   const items = `<div class="rv-list">
     <div class="rv-lh">
-      <span style="font-size:13px;font-weight:700;">${REVIEW_QUEUES.find(q=>q[0]===qkey)[1]}</span>
+      <span style="font-size:13px;font-weight:700;">${REVIEW_QUEUES.find(q=>q[0]===qkey)[1]}${
+        qkey==='pending' && state.reviewSub ? ' › ' + (REVIEW_SUBS.find(x=>x[0]===state.reviewSub) || [,''])[1] : ''}</span>
       <span class="muted" style="font-size:11.5px;">${list.length + autos.length}건</span>
     </div>
     <div class="rv-lbody">
@@ -31973,12 +31997,12 @@ async function loadReviewQuotaIfNeeded(){
 /* 워커에게 한 문항을 검토시킨다. 돌아오는 것은 판정 하나다.
    ⚠ 정답을 «보내기는» 한다 — 워커가 맞대 보려면 필요하다. 다만 워커는 그것을
      모델에게 넘기지 않는다 (worker/gemini-proxy.js 의 handleReview). */
-async function askReview(content, answer){
+async function askReview(content, answer, 더){
   const token = await withTimeout(getAuthToken(), 8000);
   const res = await withTimeout(fetch(AI_WORKER_URL + '/review', {
     method:'POST',
     headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer ' + token },
-    body: JSON.stringify({ content, answer }),
+    body: JSON.stringify({ content, answer, ...(더 || {}) }),
   /* 2026-09-28 — NVIDIA(DeepSeek)가 먼저 푼다: 한 건 평균 69초 · 길면 3분대. 워커가 200초에 끊고 Groq 로 넘기므로 넉넉히 300초. */
   }), 300000);
   const j = await res.json().catch(()=>({}));
@@ -32006,7 +32030,7 @@ async function reviewVariantOne(code){
     return r;
   }
   const 판정 = { verdict:r.verdict, answer:r.answer||'', reason:r.reason||'', lone:r.lone||'',
-                 second:r.second||'', models:r.models||[], at: nowStamp() };
+                 first:r.first||'', second:r.second||'', models:r.models||[], at: nowStamp() };
   const nv = Object.assign({}, v, { aiReview: 판정 });
   const ok = await dbSetDoc('variants', code, nv);
   if(!ok){ showToast(code + ' 검토 결과를 저장하지 못했습니다.'); return r; }
@@ -32016,18 +32040,90 @@ async function reviewVariantOne(code){
   return r;
 }
 
+/* =========== 셋째 AI (2026-10-05 · 사용자 — 「ai검토와 답이 다른거 모으고 → 다른 ai 이용해서 2차검토」) ===========
+   🔵 «다른 AI로 2차»는 워커가 이미 한 호출 안에서 한다(1차와 갈리면 계보가 다른 둘째). 그래도 둘이 서로 갈린 것
+     (unsure)은 사람 말고는 가를 수가 없었다 → **안 푼 모델 하나에게** 더 묻는다(사용자가 고른 안 · Groq 몫을 먹는다).
+   ⚠ 옛 판정은 첫째 답(first)을 안 남겼다 — 그때는 둘째 답만 견준다(같아도 suspect 를 못 낼 수 있다). */
+/* A 키·단추 하나 — 둘이 갈렸으면(셋째 안 함) 셋째 AI, 아니면 처음부터 다시 검토. */
+function reviewAOne(code){
+  const v = pendingVariants().find(x => x.code === code);
+  return reviewNeedsThird(v) ? reviewThirdOne(code) : reviewVariantOne(code);
+}
+const REVIEW_THIRD_WORKER_MIN = '2026-10-05b';
+function reviewNeedsThird(v){
+  const r = v && v.aiReview;
+  return !!(r && r.verdict === 'unsure' && !r.third && (r.models || []).length < 3 && dqAnswerable(v.content, v.answer));
+}
+async function reviewThirdOne(code){
+  const v = pendingVariants().find(x => x.code === code);
+  if(!v || !reviewNeedsThird(v)) return null;
+  /* 🔴 옛 워커는 skip 을 몰라 «처음부터» 다시 푼다(NVIDIA 를 또 부른다) — 새 판을 붙인 뒤에만 부른다. */
+  if((await workerVersion()) < REVIEW_THIRD_WORKER_MIN){
+    showToast('셋째 AI 는 새 워커(' + REVIEW_THIRD_WORKER_MIN + ')를 붙인 뒤에 됩니다 — 붙였으면 새로고침해 주세요.');
+    return { error:'old' };
+  }
+  const 옛 = v.aiReview;
+  state.reviewBusy = code; render();
+  const r = await askReview(v.content, v.answer, { skip: 옛.models || [], prior: [옛.first, 옛.second, 옛.answer].filter(Boolean) });
+  state.reviewBusy = '';
+  if(r.error){
+    if(r.error !== 'busy') state.reviewQuotaUsed = await getReviewQuotaUsed();
+    showToast(r.말); render();
+    return r;
+  }
+  const 판정 = { verdict:r.verdict, answer:r.answer||'', reason:r.reason||'', lone:r.lone||'',
+                 first:옛.first||'', second:옛.second||'', third:r.third||'', models:r.models||[], at: nowStamp() };
+  const nv = Object.assign({}, v, { aiReview: 판정 });
+  if(!(await dbSetDoc('variants', code, nv))){ showToast(code + ' 검토 결과를 저장하지 못했습니다.'); return r; }
+  Object.assign(v, nv);
+  state.reviewQuotaUsed = (state.reviewQuotaUsed || 0) + 1;
+  render();
+  return r;
+}
+
+/* =========== 검토 대기 안의 네 칸 (2026-10-05 · 사용자 개편) ===========
+   AI 검토 전 → (한꺼번에 검토) → 정답 일치(그림 없음 · 모두 통과) / 그림 확인(그림은 사람이) / 답 다름(셋째 AI · 사람).
+   🔴 답이 다르면 그림이 있어도 «답 다름»이 먼저다 — 답이 틀린 문항의 그림을 먼저 손볼 까닭이 없다.
+   ⚠ 칸은 AI 변형만 가른다. 시험지 문항(problembank)은 «전체»에서만 보인다(AI 검토가 안 걸린다). */
+const REVIEW_SUBS = [['todo', 'AI 검토 전'], ['agree', '정답 일치'], ['fig', '그림 확인'], ['diff', '답 다름']];
+function reviewSubOf(v){
+  const r = v && v.aiReview;
+  if(!r) return 'todo';
+  if(r.verdict !== 'agree') return 'diff';
+  return variantHasFigure(v) ? 'fig' : 'agree';
+}
+function reviewAutos(){
+  if((state.reviewQueue || 'pending') !== 'pending') return [];
+  const sub = state.reviewSub || '';
+  return sub ? pendingVariants().filter(v => reviewSubOf(v) === sub) : pendingVariants();
+}
+function reviewBankList(qkey){ return qkey === 'pending' && state.reviewSub ? [] : reviewQueueList(qkey); }
+function goReviewSub(sub){
+  state.reviewQueue = 'pending'; state.reviewSub = sub;
+  state.reviewSelectedId = null; state.reviewVariantCode = '';
+  render();
+}
+function reviewSubCounts(){
+  const n = { todo:0, agree:0, fig:0, diff:0 };
+  for(const v of pendingVariants()) n[reviewSubOf(v)]++;
+  return n;
+}
+
 /* 검토 대기에 쌓인 것을 한꺼번에 본다. 이미 판정이 있는 것은 건너뛴다 —
    한도가 하루 60건이라 같은 문항을 두 번 태우면 안 된다. */
-async function reviewAllPending(){
-  const 할것 = pendingVariants().filter(v => !v.aiReview && dqAnswerable(v.content, v.answer));
+async function reviewAllPending(셋째){
+  const 할것 = 셋째 ? pendingVariants().filter(reviewNeedsThird)
+                    : pendingVariants().filter(v => !v.aiReview && dqAnswerable(v.content, v.answer));
   if(!할것.length){ showToast('새로 검토할 것이 없습니다.'); return; }
   const used = await getReviewQuotaUsed();
   state.reviewQuotaUsed = used;
   const 남음 = Math.max(0, REVIEW_DAILY_LIMIT - used);
   if(남음 === 0){ showToast('오늘 검토 한도(' + REVIEW_DAILY_LIMIT + '건)를 다 썼습니다.'); return; }
   const 할만큼 = Math.min(할것.length, 남음);
-  if(!confirm(할만큼 + '개를 AI에게 검토시킵니다.\n\n'
-    + '문항당 30초~2분 걸립니다 (NVIDIA 가 풀고, 답이 갈리면 Groq 가 한 번 더 봅니다).\n'
+  if(!confirm(할만큼 + (셋째 ? '개를 셋째 AI에게 한 번 더 풀립니다 (앞의 두 AI가 서로 다른 답을 낸 것).\n\n'
+                          : '개를 AI에게 검토시킵니다.\n\n')
+    + (셋째 ? '아직 안 푼 모델이 풉니다 — Groq 몫을 씁니다.\n'
+           : '문항당 30초~2분 걸립니다 (NVIDIA 가 풀고, 답이 갈리면 Groq 가 한 번 더 봅니다).\n')
     + (할것.length > 할만큼 ? '오늘 남은 한도가 ' + 남음 + '건이라 ' + (할것.length - 할만큼) + '개는 내일 이어서 봅니다.\n' : '')
     + '\n판정은 «참고»입니다 — 통과·버리기는 그대로 선생님이 누릅니다.\n\n시작할까요?')) return;
 
@@ -32036,8 +32132,8 @@ async function reviewAllPending(){
   render();
   for(let i = 0; i < 할만큼; i++){
     if(state.reviewCancel) break;
-    const r = await reviewVariantOne(할것[i].code);
-    if(r && r.error === 'quota') break;          // 한도가 끝났으면 더 두드리지 않는다
+    const r = await (셋째 ? reviewThirdOne : reviewVariantOne)(할것[i].code);
+    if(r && (r.error === 'quota' || r.error === 'old')) break;          // 한도가 끝났거나 워커가 옛 판이면 더 두드리지 않는다
     if(r && r.verdict === 'suspect') state.reviewProgress.갈림++;
     if(r && r.verdict === 'unsure')  state.reviewProgress.못함++;
     state.reviewProgress.done = i + 1;
@@ -32078,8 +32174,11 @@ function reviewMiniHTML(v){
   const 배지 = { agree:'ok', suspect:'no', unsure:'late' }[r.verdict];
   const d = REVIEW_VERDICT[r.verdict];
   if(!배지 || !d) return '';
+  const 갈린답 = [r.first, r.second, r.third].filter(Boolean);
   const 곁 = r.verdict === 'suspect'
     ? ' AI ' + escHtml(r.answer||'—') + ' <s>vs</s> 우리 ' + escHtml(v.answer||'—')
+    : r.verdict === 'unsure' && 갈린답.length
+    ? ' AI ' + escHtml(갈린답.join(' · ')) + ' <s>vs</s> 우리 ' + escHtml(v.answer||'—')
     : '';
   return '<s>·</s><span class="badge ' + 배지 + '" title="' + escHtml(d.풀이) + '">'
        + escHtml(d.말) + '</span>' + 곁;
@@ -32137,9 +32236,9 @@ function autoVariantActbarHTML(v){
     <button class="btn ok" onclick="approveAutoVariant('${escHtml(v.code)}')"><span class="k">E</span> 통과 · 창고에 넣기</button>
     <button class="btn no" onclick="discardAutoVariant('${escHtml(v.code)}')"><span class="k">X</span> 버리기</button>
     <button class="btn" onclick="vEditOpen('${escHtml(v.code)}')"><span class="k">D</span> 고치기</button>
-    <button class="btn" ${(busy||!검토가능)?'disabled':''} title="${escHtml(검토말)}"
-      onclick="reviewVariantOne('${escHtml(v.code)}')">
-      <span class="k">A</span> ${busy ? '검토 중…' : (v.aiReview ? 'AI 다시 검토' : 'AI 검토')}</button>
+    <button class="btn" ${(busy||!검토가능)?'disabled':''} title="${escHtml(reviewNeedsThird(v) ? '앞의 두 AI가 서로 다른 답 — 아직 안 푼 AI에게 한 번 더 풀립니다' : 검토말)}"
+      onclick="reviewAOne('${escHtml(v.code)}')">
+      <span class="k">A</span> ${busy ? '검토 중…' : reviewNeedsThird(v) ? '셋째 AI' : (v.aiReview ? 'AI 다시 검토' : 'AI 검토')}</button>
     <span class="spacer"></span>
     <span class="hint" style="margin-left:0;">
       ${next ? (next.auto ? '다음 · ' + escHtml(next.key) : '다음 · ' + (next.b.questionNo||'') + '번') : '이 큐의 마지막'}
@@ -32152,11 +32251,12 @@ function reviewBarHTML(autos){
   const 남음 = state.reviewQuotaUsed===null ? null : Math.max(0, REVIEW_DAILY_LIMIT - state.reviewQuotaUsed);
   const p = state.reviewProgress;
   const 일치 = agreedPassable(autos), 그림 = agreedWithFigure(autos);
+  const 셋째 = autos.filter(reviewNeedsThird);
   /* 🔵 **한 줄로 줄였다** (2026-09-07) — 한 건 검토는 아랫띠의 A 가 하므로
      여기 남길 일은 «한꺼번에»와 «남은 한도» 둘뿐이다.
      🔵 **「AI 일치 모두 통과」** (2026-10-02 · 사용자) — 검토를 돌려 «AI도 같은 답»이 나온 것만 한 번에.
        🔴 그림이 있는 문항은 하나도 안 넣는다(사용자 — 「그림은 꼭 확인해봐야」) — 옆에 몇 개 빠졌는지 적는다. */
-  if(!p && !할것.length && !일치.length && !그림.length) return '';
+  if(!p && !할것.length && !일치.length && !그림.length && !셋째.length) return '';
   const 통과 = (일치.length || 그림.length) && !p ? `
     <button class="btn ok sm" ${(!일치.length || state.bulkPassing) ? 'disabled' : ''} onclick="approveAgreedVariants()">
       ${iconSvg('check', 13)} ${state.bulkPassing ? '통과시키는 중…' : 'AI 일치 ' + 일치.length + '개 모두 통과'}</button>
@@ -32172,6 +32272,8 @@ function reviewBarHTML(autos){
          <s>·</s> ${남음===null ? '한도 확인 중…' : '오늘 남은 검토 ' + 남음 + '/' + REVIEW_DAILY_LIMIT}
          <span class="spacer"></span>
          ${할것.length ? `<button class="btn sm" ${남음===0?'disabled':''} onclick="reviewAllPending()">한꺼번에 검토</button>` : ''}
+         ${셋째.length ? `<button class="btn sm" ${남음===0?'disabled':''} onclick="reviewAllPending(true)"
+           title="앞의 두 AI가 서로 다른 답을 낸 것 — 아직 안 푼 AI에게 한 번 더">갈린 ${셋째.length}개 셋째 AI로</button>` : ''}
          ${통과}`}
   </div>`;
 }
@@ -32531,7 +32633,7 @@ document.addEventListener('keydown', e=>{
       const v = 지금.v;
       if(k==='e'){ e.preventDefault(); approveAutoVariant(v.code); }
       else if(k==='x'){ e.preventDefault(); discardAutoVariant(v.code); }
-      else if(k==='a'){ e.preventDefault(); if(state.reviewBusy!==v.code) reviewVariantOne(v.code); }
+      else if(k==='a'){ e.preventDefault(); if(state.reviewBusy!==v.code) reviewAOne(v.code); }
       else if(k==='d'){ e.preventDefault(); vEditOpen(v.code); }     // 고치기 (2026-09-15)
       return;
     }

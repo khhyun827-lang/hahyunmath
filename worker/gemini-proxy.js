@@ -44,7 +44,7 @@ const TWIN_GROQ_MAX_TOKENS = 7000;   // 추론 + JSON. 검토(6000)보다 답이
 /* 🔴 «올렸는지 짐작하지 않는다» — 이 워커는 대시보드에 붙여넣어 올리므로 밖에서는 어느 판이 도는지
    알 길이 없었다(2026-09-11에 사용자가 올리고 「도는지 확인은 못 해봤어」). /quota 가 이 값을 같이
    돌려주고 tools/worker-check.mjs 가 저장소의 값과 견준다. **프롬프트나 규칙을 바꾸면 이 날짜를 올릴 것.** */
-const WORKER_VERSION = '2026-10-05a';
+const WORKER_VERSION = '2026-10-05b';
 // 이미지 업로드는 학생도 쓴다(질의응답 사진). 비용이 드는 쪽은 Gemini라 여기는 넉넉하게,
 // 다만 «한 명이 무한히»는 막는다. 전체 상한은 걸지 않는다 — 걸면 바쁜 날 학생이 막힌다.
 const UPLOAD_PER_USER_DAILY = 200;
@@ -1726,14 +1726,18 @@ async function reviewAsk(m, content, env, uid) {
 }
 /* 사슬을 i 부터 훑어 «답을 낸» 첫 칸을 찾는다. 못 찾으면 왜 못 냈는지(잘림이 있었나 · 받긴 받았나)를 준다. */
 async function reviewNext(i, content, env, uid) {
+  return reviewTry(REVIEW_CHAIN.map((m, j) => j).filter((j) => j >= i), content, env, uid);
+}
+/* 사슬의 «고른 칸들»만 차례로 묻는다 — 셋째 AI(이미 푼 모델은 빼고)가 같이 쓴다. */
+async function reviewTry(list, content, env, uid) {
   let truncated = false, answered = false;
-  for (; i < REVIEW_CHAIN.length; i++) {
+  for (const i of list) {
     const r = await reviewAsk(REVIEW_CHAIN[i], content, env, uid);
     if (r.answer) return { r, i, model: REVIEW_CHAIN[i].id };
     if (r.truncated) truncated = true;
     else if (!r.refused && !r.skip) answered = true;      // 받긴 받았는데 답 줄이 없었다
   }
-  return { i, truncated, answered };
+  return { i: REVIEW_CHAIN.length, truncated, answered };
 }
 
 async function handleReview(request, env, corsHeaders, uid) {
@@ -1755,6 +1759,35 @@ async function handleReview(request, env, corsHeaders, uid) {
     /* 위쪽에 아무것도 안 보냈으니 한도를 먹지 않는다. */
     await refundQuota(env, 'review', uid);
     return send({ error: 'bad request', detail: '본문과 «①~⑤ 또는 숫자» 정답이 있어야 검토합니다' }, 400);
+  }
+
+  /* 🔵 **셋째 AI** (2026-10-05 · 사용자 — 「ai검토와 답이 다른거 모으고 → 다른 ai 이용해서 2차검토」).
+     둘이 갈린(unsure) 문항을 화면이 다시 부른다 — `skip` = 이미 푼 모델, `prior` = 그 모델들의 답.
+     안 푼 모델에게만 묻는다. 우리 답과 같으면 agree(앞의 답은 lone) · 앞의 답 하나와 같으면 suspect(둘이 같은 다른 답) · 아니면 unsure. */
+  if (Array.isArray(body.skip)) {
+    const 남은 = REVIEW_CHAIN.map((m, i) => i).filter((i) => !body.skip.includes(REVIEW_CHAIN[i].id));
+    const prior = (Array.isArray(body.prior) ? body.prior : []).map((x) => String(x || '').trim()).filter(Boolean);
+    const 모델 = body.skip.map(String);
+    if (!남은.length) {
+      await refundQuota(env, 'review', uid);
+      return send({ error: 'bad request', detail: '남은 검토 모델이 없습니다' }, 400);
+    }
+    const C = await reviewTry(남은, content, env, uid);
+    if (!C.r) {
+      if (!C.truncated && !C.answered) {
+        await refundQuota(env, 'review', uid);
+        return send({ error: 'upstream', status: 503, detail: '셋째 검토 AI 가 응답하지 않았습니다' }, 503);
+      }
+      return send({ verdict: 'unsure', reason: 'third-no-answer', models: 모델 });
+    }
+    const c = C.r.answer, 셋 = 모델.concat([C.model]);
+    if (reviewSameAnswer(c, stored.v, stored.kind, content)) {
+      return send({ verdict: 'agree', answer: c, third: c, lone: prior.join(' · '), models: 셋 });
+    }
+    if (prior.some((p) => p === c || reviewSameAnswer(c, p, 'choice', content))) {
+      return send({ verdict: 'suspect', answer: c, third: c, stored: stored.v, models: 셋 });
+    }
+    return send({ verdict: 'unsure', reason: 'disagree3', third: c, models: 셋 });
   }
 
   const A = await reviewNext(0, content, env, uid);

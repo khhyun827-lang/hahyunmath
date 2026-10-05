@@ -298,6 +298,31 @@ export const 무대들 = {
       state.reviewQuotaUsed = 23; state.aiQuotaUsed = 7;
       state.teacherTab = 'review'; state.reviewQueue = 'pending'; state.reviewVariantCode = 'K2-05-E-0560'; render();
     } },
+  /* 검토 대기의 네 칸 (2026-10-05) — 검토 전 하나 · 일치 둘(그림 하나) · 답 다름 둘(둘이 같은 다른 답 · 서로 갈림) */
+  검토칸: { 말: '문항관리 › 검토 › 검토 대기 › 답 다름 (갈린 것 — 셋째 AI 단추)', 폭: '1440,864',
+    세우기: () => { state.currentUser = { type:'teacher', name:'김하현T' }; state.view = 'teacher';
+      const 원본 = (code, content, answer, image) => ({ code, content, answer, image });
+      state.itemBody = {
+        'K2-03-M-0210': 원본('K2-03-M-0210', '다항식 x³ − 2x + 1을 x − 1로 나눈 나머지는?\n① −1  ② 0  ③ 1  ④ 2  ⑤ 3', '②'),
+        'K2-04-M-0317': 원본('K2-04-M-0317', '그림과 같이 … 넓이를 구하시오.', '12', { url: 'https://placehold.co/300x200/png' }),
+        'K2-02-H-0149': 원본('K2-02-H-0149', 'x에 대한 항등식 a(x−1) + b(x+1) = 2x + 4 에서 a + b 의 값은?\n① 1  ② 2  ③ 3  ④ 4  ⑤ 5', '②'),
+        'K2-05-E-0559': 원본('K2-05-E-0559', '전체집합 U = {1, 2, 3, 4, 5}의 두 부분집합 A, B에 대하여 A ∩ B = {3}일 때, 집합 A의 개수는?\n① 4  ② 6  ③ 8  ④ 10  ⑤ 12', '③'),
+      };
+      const v = (code, originCode, content, answer, aiReview) => ({ code, originCode, content, answer, pending: true, engine: 'gemini', createdAt: '2026-10-01', aiReview });
+      state.variants = { K2: [
+        v('K2-05-E-0560', 'K2-05-E-0559', '전체집합 U = {1, 2, 3, 4, 5, 6}의 두 부분집합 A, B에 대하여 A ∩ B = {3}일 때, 집합 A의 개수는?\n① 8  ② 12  ③ 16  ④ 20  ⑤ 24', '②', { verdict: 'suspect', answer: '③' }),
+        v('K2-03-M-0211', 'K2-03-M-0210', '다항식 x³ − 3x + 2를 x − 1로 나눈 나머지는?\n① −1  ② 0  ③ 1  ④ 2  ⑤ 3', '②', { verdict: 'agree', answer: '②' }),
+        v('K2-04-M-0318', 'K2-04-M-0317', '그림과 같이 … 넓이를 구하시오.', '18', { verdict: 'agree', answer: '18' }),
+      ] };
+      state.reviewQuotaUsed = 23; state.aiQuotaUsed = 7; state.teacherTab = 'review'; state.reviewQueue = 'pending';
+      const 갈림 = { code: 'K2-03-M-0212', originCode: 'K2-03-M-0210', content: '다항식 x³ + x − 2를 x − 2로 나눈 나머지는?\n① 4  ② 6  ③ 8  ④ 10  ⑤ 12', answer: '③',
+        pending: true, engine: 'gemini', createdAt: '2026-10-01',
+        aiReview: { verdict: 'unsure', reason: 'disagree', first: '④', second: '⑤', models: ['deepseek-ai/deepseek-v4.1-flash', 'openai/gpt-oss-120b'] } };
+      const 전 = { code: 'K2-02-H-0151', originCode: 'K2-02-H-0149', content: 'x에 대한 항등식 a(x−1) + b(x+1) = 6x 에서 a − b 의 값은?\n① −1  ② 0  ③ 1  ④ 2  ⑤ 3', answer: '②',
+        pending: true, engine: 'gemini', createdAt: '2026-10-01', aiReview: null };
+      state.variants.K2.push(갈림, 전);
+      state.reviewSub = 'diff'; state.reviewVariantCode = 'K2-03-M-0212'; render();
+    } },
   홈메모: { 말: '강사 홈 — 메모 (할 일 셋 · 하나 끝 · 글 메모)', 폭: '1280,864,390',
     세우기: () => { state.currentUser = { type:'teacher', name:'김하현T' }; state.view = 'teacher';
       state.memo = { todos: [{ t: '광남고 프린트 출력', done: false }, { t: '3반 단원평가 채점', done: true },
