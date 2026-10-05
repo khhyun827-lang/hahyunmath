@@ -32050,9 +32050,15 @@ function reviewAOne(code){
   return reviewNeedsThird(v) ? reviewThirdOne(code) : reviewVariantOne(code);
 }
 const REVIEW_THIRD_WORKER_MIN = '2026-10-05b';
+/* 🔴 **«다른 AI 가 아직 안 본» 것만** (2026-10-05 · 사용자가 「검토 못 함은 어디로?」 물어 재 보니).
+   검토 못 함(unsure) 16개 중 11개는 truncated — **사슬 셋이 다 풀다 잘린 것**이다(`models` 가 비어도 다 해 봤다).
+   다시 부르면 셋을 처음부터 또 돌려 한도만 먹는다 → 사람이 본다. 부를 것은 둘:
+   disagree(둘이 서로 다른 답) · second-refused(1차만 다른 답 — 2차가 거절당해 아직 다른 AI 가 안 봤다). */
+const REVIEW_THIRD_REASONS = ['disagree', 'second-refused'];
 function reviewNeedsThird(v){
   const r = v && v.aiReview;
-  return !!(r && r.verdict === 'unsure' && !r.third && (r.models || []).length < 3 && dqAnswerable(v.content, v.answer));
+  return !!(r && r.verdict === 'unsure' && REVIEW_THIRD_REASONS.includes(r.reason) && !r.third
+    && (r.models || []).length < 3 && dqAnswerable(v.content, v.answer));
 }
 async function reviewThirdOne(code){
   const v = pendingVariants().find(x => x.code === code);
@@ -32120,7 +32126,7 @@ async function reviewAllPending(셋째){
   const 남음 = Math.max(0, REVIEW_DAILY_LIMIT - used);
   if(남음 === 0){ showToast('오늘 검토 한도(' + REVIEW_DAILY_LIMIT + '건)를 다 썼습니다.'); return; }
   const 할만큼 = Math.min(할것.length, 남음);
-  if(!confirm(할만큼 + (셋째 ? '개를 셋째 AI에게 한 번 더 풀립니다 (앞의 두 AI가 서로 다른 답을 낸 것).\n\n'
+  if(!confirm(할만큼 + (셋째 ? '개를 아직 안 푼 AI에게 한 번 더 풀립니다 (AI끼리 갈렸거나 1차 AI만 다른 답을 낸 것).\n\n'
                           : '개를 AI에게 검토시킵니다.\n\n')
     + (셋째 ? '아직 안 푼 모델이 풉니다 — Groq 몫을 씁니다.\n'
            : '문항당 30초~2분 걸립니다 (NVIDIA 가 풀고, 답이 갈리면 Groq 가 한 번 더 봅니다).\n')
@@ -32236,9 +32242,9 @@ function autoVariantActbarHTML(v){
     <button class="btn ok" onclick="approveAutoVariant('${escHtml(v.code)}')"><span class="k">E</span> 통과 · 창고에 넣기</button>
     <button class="btn no" onclick="discardAutoVariant('${escHtml(v.code)}')"><span class="k">X</span> 버리기</button>
     <button class="btn" onclick="vEditOpen('${escHtml(v.code)}')"><span class="k">D</span> 고치기</button>
-    <button class="btn" ${(busy||!검토가능)?'disabled':''} title="${escHtml(reviewNeedsThird(v) ? '앞의 두 AI가 서로 다른 답 — 아직 안 푼 AI에게 한 번 더 풀립니다' : 검토말)}"
+    <button class="btn" ${(busy||!검토가능)?'disabled':''} title="${escHtml(reviewNeedsThird(v) ? '아직 안 푼 AI에게 한 번 더 풀립니다' : 검토말)}"
       onclick="reviewAOne('${escHtml(v.code)}')">
-      <span class="k">A</span> ${busy ? '검토 중…' : reviewNeedsThird(v) ? '셋째 AI' : (v.aiReview ? 'AI 다시 검토' : 'AI 검토')}</button>
+      <span class="k">A</span> ${busy ? '검토 중…' : reviewNeedsThird(v) ? '다른 AI로 한 번 더' : (v.aiReview ? 'AI 다시 검토' : 'AI 검토')}</button>
     <span class="spacer"></span>
     <span class="hint" style="margin-left:0;">
       ${next ? (next.auto ? '다음 · ' + escHtml(next.key) : '다음 · ' + (next.b.questionNo||'') + '번') : '이 큐의 마지막'}
@@ -32273,7 +32279,7 @@ function reviewBarHTML(autos){
          <span class="spacer"></span>
          ${할것.length ? `<button class="btn sm" ${남음===0?'disabled':''} onclick="reviewAllPending()">한꺼번에 검토</button>` : ''}
          ${셋째.length ? `<button class="btn sm" ${남음===0?'disabled':''} onclick="reviewAllPending(true)"
-           title="앞의 두 AI가 서로 다른 답을 낸 것 — 아직 안 푼 AI에게 한 번 더">갈린 ${셋째.length}개 셋째 AI로</button>` : ''}
+           title="AI끼리 갈렸거나 1차 AI만 다른 답을 낸 것 — 아직 안 푼 AI에게 한 번 더">${셋째.length}개 다른 AI로 한 번 더</button>` : ''}
          ${통과}`}
   </div>`;
 }

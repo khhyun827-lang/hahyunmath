@@ -40,7 +40,14 @@ try{
   봄('그림 확인 — 그림 있는 일치', await page.evaluate(() => reviewWalkList().map(x => x.key)), ['K2-04-M-0318']);
   await page.locator('.subnav a.sn-ch', { hasText: '답 다름' }).click();
   봄('답 다름 — 둘이 같은 다른 답 + 서로 갈림', await page.evaluate(() => reviewWalkList().map(x => x.key).sort()), ['K2-03-M-0212', 'K2-05-E-0560']);
-  봄('띠에 「갈린 1개 셋째 AI로」', await page.locator('.rv-aibar button', { hasText: '셋째 AI로' }).count(), 1);
+  봄('띠에 「1개 다른 AI로 한 번 더」', await page.locator('.rv-aibar button', { hasText: '다른 AI로 한 번 더' }).count(), 1);
+
+  /* 🔴 잘린 것(truncated)은 사슬 셋이 다 해 본 것 — 다시 부르지 않는다 · 1차만 다르고 2차가 거절당한 것은 부른다 */
+  봄('잘린 것은 다른 AI 대상이 아니다 · 2차 거절은 대상', await page.evaluate(() => {
+    const 꼴 = (reason, models) => ({ content: '값은? ① 1 ② 2 ③ 3 ④ 4 ⑤ 5', answer: '②', aiReview: { verdict: 'unsure', reason, models } });
+    return [reviewNeedsThird(꼴('truncated', [])), reviewNeedsThird(꼴('second-no-answer', ['a'])),
+            reviewNeedsThird(꼴('second-refused', ['deepseek-ai/deepseek-v4.1-flash'])), reviewNeedsThird(꼴('disagree', ['a', 'b']))];
+  }), [false, false, true, true]);
 
   /* 옛 워커면 셋째를 안 부른다 */
   봄('🔴 옛 워커면 셋째를 안 부른다', await page.evaluate(async () => { window.워커판 = '2026-09-28a';
@@ -48,7 +55,7 @@ try{
 
   /* A — 갈린 것은 셋째 AI: 이미 푼 둘을 빼고, 그 둘의 답을 실어 보낸다 */
   await page.evaluate(() => { state.reviewVariantCode = 'K2-03-M-0212'; render(); });
-  봄('갈린 것의 A 단추는 「셋째 AI」', (await page.locator('.actbar button', { hasText: '셋째 AI' }).count()) === 1, true);
+  봄('갈린 것의 A 단추는 「다른 AI로 한 번 더」', (await page.locator('.actbar button', { hasText: '다른 AI로 한 번 더' }).count()) === 1, true);
   await page.keyboard.press('a');
   await page.waitForFunction(() => 보낸것.length === 1);
   봄('셋째 요청 — skip 둘 · prior 둘', await page.evaluate(() => 보낸것[0]),
