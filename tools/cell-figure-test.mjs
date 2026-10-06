@@ -36,12 +36,33 @@ else {
   봄('1060918 — 격자 칸에 그림 표지 둘(⇨ 양옆)', /^\| ⟦그림:[^⟧]+⟧ \| ⇨ \| ⟦그림:[^⟧]+⟧ \|$/.test(줄), 줄);
   봄('1060918 — 그림 둘 다 pics 에 남는다', p && p.pics && p.pics.length >= 2, JSON.stringify(p && p.pics));
 }
+봄('지문은 그림만 든 줄을 안 본다', fp('글\n| ⟦그림:a⟧ | ⟦그림:b⟧ |\n① 1') === fp('글\n① 1'));
+const 데코 = rules.hwpxMarkDecorPics([{ content: '| ⟦그림:x⟧ |\n본문 | ⟦그림:y⟧ |', pics: ['y'] }])[0].content;
+봄('제 그림이 아닌 표지는 지운다(딱지만 든 줄은 줄째)', 데코 === '\n본문 | ⟦그림:y⟧ |', JSON.stringify(데코));
+
+/* 2026-10-06 — 그림 든 표(한 줄 한 칸 「[그림 1]/[그림 2]」 · 글 없는 두 칸)를 상자로 펴서 첫 장만 붙던 것 */
+const 다항 = 파일(['주기나', 'hwpx2', '코드'], '[1.다항식의연산]');
+if (다항) {
+  const ps = problemsFromHwpx(다항, rules).problems;
+  const 표지수 = (c) => new Set((String(c || '').match(/⟦그림:[^⟧]*⟧/g) || [])).size;
+  for (const c of ['1190619', '1190619-N01', '2170314B', '2170314B-N01', '2170314B-U01', '1231128', '1231128-N01', '1231128-U01']) {
+    const p = ps.find((x) => x.itemCode === c);
+    봄(c + ' — 그림 둘 다 표 칸에', p && 표지수(p.content) === 2, p ? p.content.split('\n').filter((l) => l.includes('|')).join(' / ') : '못 찾음');
+  }
+  const u2 = ps.find((x) => x.itemCode === '2170314B-U02');
+  봄('2170314B-U02 — 한 그림을 칸마다 잘라 쓴 표는 예전대로(표지 없음)', u2 && !/⟦그림:/.test(u2.content));
+  const 뜬 = (p) => [...new Set(p.freePics)].filter((r) => p.pics.includes(r));
+  봄('본문에 떠 있는 그림 여럿 = 1170629·-N01 뿐(다항식)', ps.filter((p) => 뜬(p).length > 1).map((p) => p.itemCode).join(',') === '1170629,1170629-N01',
+    ps.filter((p) => 뜬(p).length > 1).map((p) => p.itemCode).join(','));
+  봄('다항식 — 제 것 아닌 표지(번호 딱지) 0', ps.every((x) => [...String(x.content).matchAll(/⟦그림:([^⟧]*)⟧/g)].every((m) => (x.pics || []).includes(m[1]))));
+}
 const 직선 = 파일(['숨김2', '코드'], '2.직선의방정식');
 if (!직선) console.log('  (엔딩크레딧 직선의 방정식이 없어 그림 보기 표를 건너뛴다)');
 else {
   const ps = problemsFromHwpx(직선, rules).problems;
   const q = ps.find((x) => x.itemCode === 'K2-02-E-0083');
   봄('그림 보기 표(K2-02-E-0083)는 예전 그대로 — 표지 없음', q && !/⟦그림:/.test(q.content), q ? q.content.slice(0, 80) : '못 찾음');
+  봄('그림 보기 표 그림은 «떠 있는 그림»이 아니다(K2-02-E-0083)', q && !(q.freePics || []).some((r) => q.pics.includes(r)), JSON.stringify(q && q.freePics));
   봄('엔딩크레딧 직선의 방정식 — 표지 든 문항 0', ps.every((x) => !/⟦그림:/.test(x.content || '')), ps.filter((x) => /⟦그림:/.test(x.content || '')).map((x) => x.itemCode).join(','));
 }
 console.log(fail ? `\n  🔴 ${fail}개 실패` : '\n  ✅ 다 통과');

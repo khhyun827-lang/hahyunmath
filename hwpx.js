@@ -472,6 +472,7 @@ function hwpWalkParagraphs(paras, tokens){
                실측: 교재 05 집합의 표 432개 중 미주를 품은 것이 **정확히 134개 = 문항 수**였고,
                광남고 시험지는 **0개**였다(= 시험지 쪽은 한 글자도 안 바뀐다). */
           const shellCells = [];
+          const 이표그림 = [];   // 이 표 칸에서 바로 나온 그림(안쪽 표 것은 빼고) — 껍질로 판명되면 «떠 있는 그림»으로 되돌린다
           let isProblemShell = false;
           let 빈칸그림 = 0;   // 글 없이 그림만 든 칸 — 그림 보기 표를 좌석표와 가른다(아래 isSeatLike)
           /* 🔵 **격자 표 안의 그림은 «제자리»를 남긴다** (2026-10-05 · 사용자 — 1060918 「[그림1] ⇨ [그림2]」 표).
@@ -500,7 +501,11 @@ function hwpWalkParagraphs(paras, tokens){
                 if(t.type==='eq') s += String(t.v).replace(/\|/g, '\\vert ');
                 else if(t.type==='text') s += String(t.v).replace(/\|/g, '');
                 else if(t.type==='break') s += '\n';           // 줄바꿈을 살린다
-                else if(t.type==='pic'){ tokens.push(t); 빈칸그림 += s.trim() ? 0 : 1; }  // 그림은 표 밖으로 빼서 살린다
+                else if(t.type==='pic'){   // 그림은 표 밖으로 빼서 살린다 — «표에서 왔다»(inTable)는 남긴다(껍질이면 아래에서 푼다)
+                  const 그림 = Object.assign({}, t, { inTable: true });
+                  if(!t.inTable) 이표그림.push(그림);
+                  tokens.push(그림); 빈칸그림 += s.trim() ? 0 : 1;
+                }
                 else if(t.type==='endnote'){ isProblemShell = true; tokens.push(t); }  // 정답 미주도 마찬가지
               }
               sf += s.slice(옮김);
@@ -510,6 +515,7 @@ function hwpWalkParagraphs(paras, tokens){
             if(cellsFig.some(c=>c)){ rows.push(cells); rowsFig.push(cellsFig); }
           }
           if(isProblemShell){
+            for(const 그림 of 이표그림) 그림.inTable = false;   // 문항 껍질은 표가 아니다 — 그 칸의 그림은 본문에 떠 있는 그림이다
             /* 껍질은 그리지 않는다 — 안의 토큰을 그대로 흘려보낸다.
                그러면 ① 발문이 표에 안 갇히고 ② **안쪽 보기 상자가 최상위 표가 되어 살아난다.**
                ⚠ 그림·미주는 위에서 이미 내보냈으므로 여기서 또 넣지 않는다.
@@ -575,7 +581,13 @@ function hwpWalkParagraphs(paras, tokens){
                  ⚠ 그리고 값은 `cells[0]` 이 아니라 **«값이 든 칸»**에서 가져와야 한다.
                    빈 칸이 앞에 오는 상자에서 `cells[0]` 을 쓰면 제목이 통째로 사라진다. */
               const filled = cells => cells.filter(c => c.trim());
-              const isBox = rows.every(cells => filled(cells).length <= 1);
+              /* 🔵 **그림이 든 표는 상자로 펴지 않는다** (2026-10-06 · 사용자 — 2170314B 「[그림 1]/[그림 2]」 한 줄 한 칸 표).
+                 상자로 펴면 칸 글만 남고 그림은 표 밖으로 빠져, 올릴 때 첫 장만 붙었다. 격자로 두어 칸에 표지를 남긴다.
+                 ⚠ 칸 글이 «캡션»만큼 짧을 때만 — 그림 든 증명·조건 상자(K2-01-E-0013)를 격자로 두면 줄이 접혀 한 줄이 된다. */
+              const 표지들 = rowsFig.flat().join('').match(/⟦그림:[^⟧]*⟧/g) || [];
+              const 그림표 = 표지들.length > 0 && new Set(표지들).size === 표지들.length   // 한 그림을 칸마다 잘라 쓴 표(2170314B-U02)는 예전대로
+                && rows.every(cells => cells.every(c => c.trim().length <= 20));
+              const isBox = !그림표 && rows.every(cells => filled(cells).length <= 1);
               rows.forEach((cells, ri) => {
                 const out = isBox
                   ? (filled(cells)[0] || '').split('\n').map(l=>l.trim()).filter(Boolean).map(l=>[l])
@@ -654,7 +666,9 @@ const HWP_SHAPE_CODE_RE = /\[([A-Z]{1,2}\d?-\d{2}-[A-Z]-\d{4}(?:-[NUD]\d{2})?|[1
 function hwpItemFpText(content){
   /* 🔵 표 안 그림 표지(`⟦그림:참조⟧` · 올린 뒤 `⟦그림:주소⟧`)는 «글»이 아니다 — 지문에서 뺀다 (2026-10-05).
      안 빼면 표지가 생긴 것만으로 그 문항이 «고쳤다»가 되고, 올린 뒤에는 참조↔주소가 달라 매번 «고쳤다»가 된다. */
-  return String(content == null ? '' : content).replace(/⟦그림:[^⟧]*⟧/g, '').replace(/\s+/g, ' ').trim();
+  /* 그림만 든 줄(`| ⟦그림:…⟧ | ⟦그림:…⟧ |` — 글 없는 그림 표 · 1190619 · 2026-10-06)은 줄째 뺀다. 예전엔 그 표가 빈 줄로 펴졌다. */
+  return String(content == null ? '' : content).replace(/^[|\s]*(⟦그림:[^⟧]*⟧[|\s]*)+$/gm, '')
+    .replace(/⟦그림:[^⟧]*⟧/g, '').replace(/\s+/g, ' ').trim();
 }
 
 /* ── 창고와 맞대 여덟 갈래로 가른다 (2026-09-09) ──────────────────────────────
@@ -894,7 +908,11 @@ function hwpParseBlocks(topParas, tablesAsProblems){
         cur = { text:'', answer: tok.v, itemCode: tok.code || '', itemFp: tok.fp || '', solution: tok.sol || '', hidCode: tok.hid || '', pics:[] };
       } else if(tok.type === 'text') cur.text += tok.v;
       else if(tok.type === 'eq') cur.text += tok.v;
-      else if(tok.type === 'pic') cur.pics.push(tok.v);
+      else if(tok.type === 'pic'){
+        cur.pics.push(tok.v);
+        /* 표 칸이 아니라 본문에 떠 있는 그림 — 여럿이면 웹이 한 줄로 세운다(1130629-U01 · 2026-10-06) */
+        if(!tok.inTable) (cur.freePics = cur.freePics || []).push(tok.v);
+      }
       /* 설명문에 심긴 코드. ⚠ **첫 것만 잡는다** — 한 문항에 그림이 여럿이면 뒤엣것이
          앞엣것을 덮어써 «남의 코드»가 될 수 있다. 붙이는 것은 저 아래에서, 미주가 없을 때만. */
       else if(tok.type === 'shapecode'){ if(!cur.shapeCode) cur.shapeCode = tok.v; }
@@ -965,6 +983,12 @@ function hwpxMarkDecorPics(problems, keyOf){
     const pics = p.pics || [];
     p.decorPics = pics.filter(ref => use[key(ref)] >= DECOR_MIN);
     p.pics      = pics.filter(ref => use[key(ref)] <  DECOR_MIN);
+    /* 제 그림이 아닌 표지는 지운다 — 딱지만 든 표는 줄째(2026-10-06 · 그림 든 표를 격자로 두면서 `| ⟦그림:image10⟧ |` 가 생겼다).
+       ⚠ «장식»만 보면 모자란다 — 번호 딱지 표는 미주보다 그림이 먼저라 그림은 앞 문항에, 표지는 이 문항에 붙는다. */
+    if(typeof p.content === 'string' && p.content.includes('⟦그림:')){
+      const 제것 = new Set(p.pics);
+      p.content = p.content.replace(/⟦그림:([^⟧]*)⟧/g, (m, r) => 제것.has(r) ? m : '').replace(/^[| \t]*\|[| \t]*$/gm, '');
+    }
   }
   return problems;
 }
@@ -1488,6 +1512,7 @@ let watermarkedCount = 0; const watermarked = [];
     ...(b.codeConflict ? { codeConflict: b.codeConflict } : {}),
     solution: b.solution || '',
     pics: b.pics || [],
+    freePics: b.freePics || [],
     image: null,
   }));
 

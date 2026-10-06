@@ -6059,7 +6059,7 @@ html.it-fly .lp .l-hero .l-logo{opacity:1 !important;transform:none !important;
      **캐시에 있는 옛 파서를 꺼내 쓴다.** 그러면 교재를 다시 올려도 옛 글이 그대로 담기고,
      화면만 보고서는 «고쳤는데 왜 안 되지»가 된다 — 파서가 바뀐 것을 아무 데서도 못 본다. -->
 <!-- 2026-09-10에 올렸다 — 창고 대조 판정과 «개체 설명문에서 코드 읽기»가 들어갔다. -->
-<script src="hwpx.js?v=2026-10-06a"></script>
+<script src="hwpx.js?v=2026-10-06c"></script>
 <!-- 출석 도장 게임(셸·똥피하기·달리기·점프). 연습 페이지 game.html 도 같은 파일을 쓴다 -->
 <!-- ⚠ ?v= 를 붙이는 까닭 — 브라우저가 game-core.js 를 캐시해서, 올려도 학생 화면에는
      옛 게임이 그대로 돈다(Ctrl+Shift+R 을 해야 바뀐다 — 학생에게 그걸 시킬 수는 없다).
@@ -13613,7 +13613,8 @@ function problemHTML(text){
     if(!row.length) return;
     /* 열이 하나뿐이면 «상자»(조건·증명 상자), 둘 이상이면 «격자»다. 그리는 법이 다르다 —
        상자는 한 덩어리인 글이라 줄마다 선을 그으면 표처럼 잘려 보인다. */
-    const kind = row.every(cells => cells.length === 1) ? 'box' : 'grid';
+    /* 그림 표지가 든 한 칸짜리 표(「[그림 1]/[그림 2]」 · 2170314B)는 격자다 — 상자로 그리면 그림이 글자로 보인다 (2026-10-06). */
+    const kind = row.every(cells => cells.length === 1) && !row.some(cells => cells.some(c => c.includes('⟦그림:'))) ? 'box' : 'grid';
     /* 🔵 **상자의 첫 줄이 `[보기]` 면 그것은 «내용»이 아니라 «제목»이다** (2026-09-04 · 사용자 요청 —
        「보기박스의 [보기]를 가운데정렬해주거나 아니면 보기박스 자체의 보기 글자를 디자인 해줘」).
        그냥 두면 첫 줄이 왼쪽에 붙은 평범한 글이라 **ㄱ·ㄴ·ㄷ 과 같은 무게로 읽힌다.**
@@ -15037,6 +15038,17 @@ async function parseHwpxToProblems(file){
        ⚠ 장식(딱지)으로 걸러진 그림의 표지는 지운다. */
     const 진짜 = new Set(problem.pics || []);
     problem.content = String(problem.content || '').replace(/⟦그림:([^⟧]*)⟧/g, (m, r) => 진짜.has(r) ? m : '');
+    /* 🔵 **본문에 떠 있는 그림이 여럿이면 한 줄 격자로** (2026-10-06 · 1130629-U01 의 C·D · 1170629 의 P·Q 그림이 빠져 있었다).
+       `image` 는 한 장뿐이라 둘째부터 사라졌다. 자리는 선지 바로 앞, 선지가 없으면 끝.
+       ⚠ 표 칸에서 온 그림(그림 보기 표 K2-02-E-0083 등)은 `freePics` 에 없다 — 그쪽은 예전대로. */
+    const 뜬것 = [...new Set(problem.freePics || [])].filter(r => 진짜.has(r) && !problem.content.includes('⟦그림:' + r + '⟧'));
+    if(뜬것.length > 1){
+      const ls = problem.content.split('\n');
+      const at = ls.findIndex(l => /^\s*①/.test(l));
+      const 줄 = '| ' + 뜬것.map(r => '⟦그림:' + r + '⟧').join(' | ') + ' |';
+      if(at < 0) ls.push('', 줄); else ls.splice(at, 0, 줄, '');
+      problem.content = ls.join('\n');
+    }
     const 칸 = new Set([...problem.content.matchAll(/⟦그림:([^⟧]*)⟧/g)].map(m => m[1]));
     const ref = (problem.pics || []).find(r => !칸.has(r));
     const u8 = ref ? refBytes.get(ref) : null;
@@ -15053,6 +15065,7 @@ async function parseHwpxToProblems(file){
       }
     }
     delete problem.pics;
+    delete problem.freePics;
     delete problem.decorPics;
   }
   problems.watermarkedCount = watermarkedCount;
