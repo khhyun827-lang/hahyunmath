@@ -230,7 +230,8 @@ console.log(NL + '⑧ 손길이 있어야 도는 자리 — 거기서도 뜨는�
   봄('🔴 이름표를 놓을 때 뜬다', 자리(놓기, 'figEditPush()', 'figEditPin('), true);
   봄('🔴 선분 끝을 놓을 때도 뜬다 — 그 전에 뜬다', 자리(놓기, 'figEditPush()', 'Figure.moveSegEnd('), true);
   봄('   끌지 «않았으면» 안 뜬다 (눌러만 본 것은 손질이 아니다)',
-    (놓기.match(/figEditPush\(\)/g) || []).length, 2);
+    (놓기.match(/figEditPush\(\)/g) || []).length, 3);   // 이름표 · 선분 끝 · 선분 평행이동(2026-10-06) — 셋 다 `if(dr.moved)` 안
+  봄('🔴 선분을 평행이동할 때도 뜬다 — 그 전에 뜬다', 자리(놓기.slice(놓기.indexOf('if(dr.move)')), 'figEditPush()', 'Figure.moveSegEnd('), true);
 
   /* 화살표 — 문서에 위임으로 단 손길이라 함수가 아니다. 그 덩이를 글로 뜬다. */
   const 키 = html.slice(html.indexOf("document.addEventListener('keydown'", html.indexOf('function figEditEnd(')));

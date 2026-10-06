@@ -4208,6 +4208,8 @@
   #app:has(.tnav) .app:not(.sap) .rv-work .pb-ch{gap:8px;margin-top:14px;}
   #app:has(.tnav) .app:not(.sap) .rv-work .pb-ch .c{justify-content:center;align-items:center;min-height:40px;padding:6px 10px;box-sizing:border-box;
     border-radius:12px;background:#F1F2F5;border:1.5px solid transparent;font-weight:700;font-size:15px;}
+  /* 한 줄에 하나인 긴(문장) 선지는 왼쪽 정렬 — 가운데면 두 줄로 접힐 때 읽기 어색하다 (2026-10-06 · K2-04-E-0379-N01) */
+  #app:has(.tnav) .app:not(.sap) .rv-work .pb-ch.long .c{justify-content:flex-start;text-align:left;}
   #app:has(.tnav) .app:not(.sap) .rv-work .side[data-ok="1"] .pb-ch .c:nth-child(1){background:#E6F4EB;border-color:#2F9E5E;color:#1F6B3F;}
   #app:has(.tnav) .app:not(.sap) .rv-work .side[data-ours="1"] .pb-ch .c:nth-child(1){background:#1E2433;border-color:#1E2433;color:#fff;}
   #app:has(.tnav) .app:not(.sap) .rv-work .side[data-ai="1"] .pb-ch .c:nth-child(1){background:#FBE6E8;border-color:#D93A45;color:#C42F3A;}
@@ -31092,6 +31094,16 @@ document.addEventListener('pointerdown', e => {
        모르겠어 … 선을 선택하면 선분5 이렇게 자동으로 바꼈으면」). 끄는 것이 아니라 «고르는» 것이라
        여기서 끝낸다 — 고르개가 그 이름으로 바뀌고 그림에는 강조색이 얹힌다. */
     const el = e.target.closest('.fig-edit g[data-el]');
+    /* 🔵 **선분 몸통을 끌면 평행이동** (2026-10-06 · 사용자 — 「선 평행하게 옮기기」) — 양 끝을 같은 만큼 옮긴다.
+       그냥 누르고 떼면 예전처럼 «고르기»다(figEditEnd 가 가른다). */
+    if(el && /^seg:\d+$/.test(el.dataset.el)){
+      const svg = el.ownerSVGElement, p = figSvgPoint(svg, e);
+      el.classList.add('on');
+      FIG_EDIT.drag = { id: el.dataset.el, move: true, g: el, svg, x0: p.x, y0: p.y, dx: 0, dy: 0, moved: false, pointerId: e.pointerId };
+      try{ svg.setPointerCapture(e.pointerId); }catch(_){}
+      e.preventDefault();
+      return;
+    }
     if(el){
       const d0 = figEditDraft();
       /* 🔴 **고른 것은 하나다** (2026-09-18) — 동그라미와 글자를 따로 고르게 되자 둘이 «동시에»
@@ -31135,6 +31147,27 @@ function figEditEnd(e){
   try{ dr.svg.releasePointerCapture(dr.pointerId); }catch(_){}
   const d = figEditDraft();
   if(!d) return;
+  if(dr.move){
+    state.figureElSel = dr.id; state.figureSel = null;   // 끌었든 눌렀든 그 선분이 골라진다
+    if(dr.moved){
+      figEditPush();                                     // 실행취소 — 옮기기 «전»의 장면
+      /* 끌기 전 창으로 px → 값 · 한쪽 끝(from)은 자석에 붙이고 다른 끝은 같은 만큼 — 그래야 평행이 지켜진다 */
+      const s = d.scene.segments[+dr.id.split(':')[1]];
+      const M = Figure.mapper(d.scene, { edit:true });
+      const [ax, ay] = M.toData(dr.x0, dr.y0), [bx, by] = M.toData(dr.x0 + dr.dx, dr.y0 + dr.dy);
+      const sn = Figure.snapPoint(d.scene, s.from[0] + bx - ax, s.from[1] + by - ay, { edit:true }, { id: dr.id, which: 'from' });
+      const ddx = sn.x - s.from[0], ddy = sn.y - s.from[1];
+      const before = Figure.autoWindow(d.scene);
+      Figure.moveSegEnd(d.scene, dr.id, 'to', +(s.to[0] + ddx).toFixed(4), +(s.to[1] + ddy).toFixed(4));
+      Figure.moveSegEnd(d.scene, dr.id, 'from', sn.x, sn.y);
+      if(JSON.stringify(before) !== JSON.stringify(Figure.autoWindow(d.scene)) && d.scene.pins){
+        delete d.scene.pins; showToast('창이 달라져 이름표를 자동 자리로 되돌렸습니다.');
+      }
+      figEditRedraw(d);
+    }
+    render();
+    return;
+  }
   if(dr.end){
     /* 선분 끝을 옮겼다 — 놓을 때 «값»으로 되돌린다.
        ⚠ 되돌릴 때 쓰는 잣대는 **끌기 전 창**이다(지금 장면의 창). 값을 먼저 바꾸면 창이 달라져
@@ -31260,6 +31293,8 @@ function figEditorHTML(d){
         ${sel.pinned ? `<button class="btn q sm" onclick="figEditHome('${escHtml(sel.id)}')">원래 자리로</button>` : ''}`
         : `<span>이름표를 <b>끌어서</b> 옮기고, 누르면 <b>화살표 키</b>로 1px씩(Shift 5px) 밉니다. 겹치면 붉게 보입니다.
             선 끝은 <b>Shift</b> 를 누른 채 끌면 기울기 그대로 늘이고 줄입니다.</span>`}
+      ${sel && /^point:\d+$/.test(sel.id) && FIG_NAME_COORD_RE.test(sel.text) ? `<button class="btn q sm" onclick="figEditSplitLabel()"
+        title="「C(0,4)」를 「C」와 「(0,4)」 두 글자로 나눠 따로 끌 수 있게 합니다">이름·좌표 나누기</button>` : ''}
       ${sel ? `<button class="btn q sm" onclick="figEditRemoveLabel()" title="${/^label:/.test(sel.id) ? '이 글자를 지웁니다' : '이름표만 숨깁니다 — 점·곡선은 남습니다'}">이 글자 빼기</button>` : ''}
       <button class="btn q sm" onclick="figEditAddLabel()" title="글자(점 이름·수식·설명)를 하나 더해 끌어다 놓습니다">＋ 글자 더하기</button>
       <button class="btn q sm" onclick="figEditAddSeg(false)" title="창 한가운데에 선분을 하나 세웁니다. 양 끝의 동그라미를 끌어 옮기세요">＋ 실선</button>
@@ -31374,6 +31409,30 @@ function figEditAddLabel(){
   figEditRedraw(d); render();
   const inp = document.querySelector('.fig-tools input');
   if(inp){ inp.focus(); inp.select(); }
+}
+/* 「C(0,4)」 같은 점 이름표를 «C» 와 «(0,4)» 두 글자로 가른다 — 따로 끌어 놓게 (2026-10-06 · 사용자 · K2-02-E-0177-N01).
+   이름은 점의 이름표로 남고, 좌표는 자유 글자(label:k)가 된다. 둘 다 지금 보이는 자리에 핀해 처음엔 그림이 그대로다. */
+const FIG_NAME_COORD_RE = /^(.+?)\s*(\([^()]*\))$/;
+function figEditSplitLabel(){
+  const d = figEditDraft();
+  const m = /^point:(\d+)$/.exec(state.figureSel || '');
+  const pt = d && m && (d.scene.points || [])[+m[1]];
+  const sp = pt && FIG_NAME_COORD_RE.exec(pt.label || '');
+  const g = sp && document.querySelector(`.fig-edit g[data-lbl="${state.figureSel}"]`);
+  if(!g) return;
+  const box = g.getBBox(), l = Figure.layoutLabels(d.scene, { edit:true }).find(x => x.id === state.figureSel);
+  const 가름 = box.x + box.width * sp[1].length / (sp[1].length + sp[2].length);   // 글자 수로 어림 — 어차피 끌어 맞춘다
+  figEditPush();
+  if(!d.scene.pins) d.scene.pins = Figure.pinAll(d.scene);   // 가르기 «전» 자리로 다른 이름표를 붙들어 둔다 — 안 그러면 잉크가 달라져 옮겨 앉는다
+  pt.label = sp[1];
+  const id = Figure.addLabel(d.scene, sp[2]);
+  const M = Figure.mapper(d.scene, { edit:true });
+  const [vx, vy] = M.toData(가름, l.y);
+  Object.assign(d.scene.labels[+id.split(':')[1]], { x: vx, y: vy, anchor: 'start' });
+  figEditPin(d, state.figureSel, 가름, l.y, 'end');
+  figEditPin(d, id, 가름, l.y, 'start');
+  state.figureSel = id;
+  figEditRedraw(d); render();
 }
 function figEditRemoveLabel(){
   const d = figEditDraft();
