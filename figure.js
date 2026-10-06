@@ -999,7 +999,12 @@
     (scene.segments || []).forEach(function (s, i) { out.push({ id: 'seg:' + i, name: '선분 ' + (s.label || (i + 1)) }); });
     (scene.polygons || []).forEach(function (p, i) { out.push({ id: 'poly:' + i, name: '다각형 ' + (p.label || (i + 1)) }); });
     (scene.circles || []).forEach(function (c, i) { out.push({ id: 'circle:' + i, name: '원 ' + (c.label || (i + 1)) }); });
-    (scene.angles || []).forEach(function (a, i) { out.push({ id: 'angle:' + i, name: '각 ' + (a.label || (i + 1)) }); });
+    /* 직각은 「직각 표시 A」로 — 「각 1」로는 무엇인지 몰라 못 찾았다 (2026-10-06 · K2-03-E-0318-N01) */
+    (scene.angles || []).forEach(function (a, i) {
+      var at = a.at || [];
+      var p = (scene.points || []).filter(function (q) { return q && q.label && q.x === at[0] && q.y === at[1]; })[0];
+      out.push({ id: 'angle:' + i, name: (a.right ? '직각 표시 ' : '각 ') + (a.label || (p ? p.label : (i + 1))) });
+    });
     (scene.xTicks || []).forEach(function (v, i) { out.push({ id: 'xtick:' + i, name: 'x눈금 ' + fmt(v) }); });
     (scene.yTicks || []).forEach(function (v, i) { out.push({ id: 'ytick:' + i, name: 'y눈금 ' + fmt(v) }); });
     return out;

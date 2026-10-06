@@ -6052,7 +6052,7 @@ html.it-fly .lp .l-hero .l-logo{opacity:1 !important;transform:none !important;
      index.html 과 따로 받아지므로 물음표 뒤가 그대로면 브라우저가 옛 파일을 그냥 쓴다.
      ⚠ 그래서 09-15에 고친 «축 길이»가 사용자 브라우저에 며칠째 안 닿았을 수 있다
        (사용자 — 「수정했던것 같은데 … 이번에도 그림에서 축이 또 길게 나와서」). -->
-<script src="figure.js?v=2026-10-02b"></script>
+<script src="figure.js?v=2026-10-06a"></script>
 <!-- hwpx 문항 파서. 아래 인라인 스크립트가 전역으로 쓰므로 «그 앞»에 있어야 한다.
      도구(tools/hwpx-node.mjs)도 같은 파일을 읽는다 — 규칙을 두 벌로 두지 않는다. -->
 <!-- 🔴 **hwpx.js 를 고치면 `?v=` 도 같이 올릴 것** (2026-09-04에 하마터면 놓칠 뻔했다).
@@ -13680,7 +13680,8 @@ function problemHTML(text){
       const 길이 = Math.max(...쪼갠것.map(x => x.parts.join(' ').replace(/\\[a-zA-Z]+|[${}~]/g, '').length));
       const 꼴 = 길이 > 18 ? ' long' : 길이 > 9 ? ' mid' : '';
       out += '<div class="pb-ch' + 꼴 + '">' + 쪼갠것.map(x =>
-        '<span class="c"><i>' + escHtml(x.mark) + '</i>' + escHtml(x.parts.join(' ')) + '</span>').join('') + '</div>';
+        /* 선지 글은 한 덩어리로 감싼다 — `.c` 가 flex 라 맨글·수식 조각이 저마다 칸이 되어, 줄이 넘치면 조각마다 따로 접혔다 (2026-10-06 · K2-04-E-0379-N01) */
+        '<span class="c"><i>' + escHtml(x.mark) + '</i><span>' + escHtml(x.parts.join(' ')) + '</span></span>').join('') + '</div>';
     }
     선지모음.length = 0; 앞줄 = ''; 앞줄길이 = 0;
   };
@@ -30670,6 +30671,8 @@ function teacherReviewHTML(){
   loadAIQuotaIfNeeded();
   loadAllRecordsIfNeeded();
   if(state.reviewQueue === 'pending') loadReviewQuotaIfNeeded();
+  /* 검토 탭으로 곧장 열면(새로고침 · #teacher/review) 변형을 싣는 곳이 없어 칸이 전부 0 이었다 (2026-10-06) */
+  if(!state.variants) loadItemStoreIfNeeded().then(()=>{ if(state.variants) render(); });
   const qkey = state.reviewQueue || 'pending';
   /* 🔵 **「검토 대기」에는 두 갈래가 같이 산다** (2026-09-06 · 사용자 요청).
      시험지 문항(problembank)과 AI 가 만든 창고 변형이다. 생김새는 다르지만 **기다리는 일은 같다.**
@@ -31102,6 +31105,15 @@ document.addEventListener('pointerdown', e => {
   const p = figSvgPoint(svg, e);
   FIG_EDIT.drag = { id: h ? ('seg:' + h.dataset.seg) : g.dataset.lbl, end: h ? h.dataset.end : null,
     g, svg, x0: p.x, y0: p.y, dx: 0, dy: 0, moved: false, pointerId: e.pointerId };
+  /* 선분 끝 — 그 선의 방향(px)을 잡아 둔다. Shift 를 누른 채 끌면 이 방향으로만 늘고 준다 (2026-10-06 · 사용자 — 「선을 평행하게 확장 혹은 축소」) */
+  const s = h && figEditDraft() && (figEditDraft().scene.segments || [])[+h.dataset.seg];
+  if(s){
+    const M = Figure.mapper(figEditDraft().scene, { edit:true });
+    const a = M.toPx(s.from[0], s.from[1]), b = M.toPx(s.to[0], s.to[1]);
+    const vx = h.dataset.end === 'to' ? b[0] - a[0] : a[0] - b[0], vy = h.dataset.end === 'to' ? b[1] - a[1] : a[1] - b[1];
+    const len = Math.hypot(vx, vy);
+    if(len > 0) FIG_EDIT.drag.dir = [vx / len, vy / len];
+  }
   try{ svg.setPointerCapture(e.pointerId); }catch(_){}
   e.preventDefault();
 });
@@ -31110,6 +31122,8 @@ document.addEventListener('pointermove', e => {
   if(!dr) return;
   const p = figSvgPoint(dr.svg, e);
   dr.dx = p.x - dr.x0; dr.dy = p.y - dr.y0;
+  dr.keep = !!(dr.dir && e.shiftKey);
+  if(dr.keep){ const t = dr.dx * dr.dir[0] + dr.dy * dr.dir[1]; dr.dx = t * dr.dir[0]; dr.dy = t * dr.dir[1]; }
   if(!dr.moved && Math.hypot(dr.dx, dr.dy) < 3) return;        // 보려고 만진 것이지 끈 것이 아니다
   dr.moved = true;
   dr.g.setAttribute('transform', `translate(${dr.dx.toFixed(1)} ${dr.dy.toFixed(1)})`);
@@ -31131,7 +31145,9 @@ function figEditEnd(e){
       figEditPush();                                     // 실행취소 — 끌기 «전»의 장면
       const M = Figure.mapper(d.scene, { edit:true });
       const [vx, vy] = M.toData(+dr.g.dataset.x + dr.dx, +dr.g.dataset.y + dr.dy);
-      const sn = Figure.snapPoint(d.scene, vx, vy, { edit:true }, { id: dr.id, which: dr.end });
+      /* 방향을 지킨 끌기(Shift)는 자석에 안 붙인다 — 붙으면 선 밖으로 비껴 기울기가 바뀐다 */
+      const sn = dr.keep ? { x: +vx.toFixed(4), y: +vy.toFixed(4) }
+        : Figure.snapPoint(d.scene, vx, vy, { edit:true }, { id: dr.id, which: dr.end });
       const before = Figure.autoWindow(d.scene);
       if(Figure.moveSegEnd(d.scene, dr.id, dr.end, sn.x, sn.y)){
         if(JSON.stringify(before) !== JSON.stringify(Figure.autoWindow(d.scene)) && d.scene.pins){
@@ -31242,7 +31258,8 @@ function figEditorHTML(d){
           ? `<input value="${escHtml(sel.text)}" onchange="figEditText(this.value)" title="글자 · x_1 은 아래첨자, x^2 는 위첨자">`
           : `<span class="k">${escHtml(sel.text)} — 값이라 글자는 못 고칩니다</span>`}
         ${sel.pinned ? `<button class="btn q sm" onclick="figEditHome('${escHtml(sel.id)}')">원래 자리로</button>` : ''}`
-        : `<span>이름표를 <b>끌어서</b> 옮기고, 누르면 <b>화살표 키</b>로 1px씩(Shift 5px) 밉니다. 겹치면 붉게 보입니다.</span>`}
+        : `<span>이름표를 <b>끌어서</b> 옮기고, 누르면 <b>화살표 키</b>로 1px씩(Shift 5px) 밉니다. 겹치면 붉게 보입니다.
+            선 끝은 <b>Shift</b> 를 누른 채 끌면 기울기 그대로 늘이고 줄입니다.</span>`}
       ${sel ? `<button class="btn q sm" onclick="figEditRemoveLabel()" title="${/^label:/.test(sel.id) ? '이 글자를 지웁니다' : '이름표만 숨깁니다 — 점·곡선은 남습니다'}">이 글자 빼기</button>` : ''}
       <button class="btn q sm" onclick="figEditAddLabel()" title="글자(점 이름·수식·설명)를 하나 더해 끌어다 놓습니다">＋ 글자 더하기</button>
       <button class="btn q sm" onclick="figEditAddSeg(false)" title="창 한가운데에 선분을 하나 세웁니다. 양 끝의 동그라미를 끌어 옮기세요">＋ 실선</button>
@@ -33049,8 +33066,10 @@ function teacherItemStoreHTML(){
     const sp고아 = splitItemCode(it.code);
     /* 그림 «한 장»은 본문 안(발문 다음 · 보기 앞 · 2026-10-02). 선지가 통째로 그림(여러 장)이면 본문 밑 줄 그대로. */
     const 그림들 = (body && body.images && body.images.length) ? body.images : (body && body.image && body.image.url) ? [body.image] : [];
-    const 한장 = 그림들.length === 1 && body.content && 그림들[0].url
-      ? figFrameHTML(`<img class="ist-fig" src="${escHtml(그림들[0].url)}" loading="lazy" alt="">`) : '';
+    /* 선지 그림(images)과 문항 그림(image)이 따로 있으면 문항 그림은 본문 안, 선지는 아래 줄 (2026-10-06 · K2-04-E-0379 — 여섯 장이 다 선지로 붙었다) */
+    const 본그림 = (그림들 === (body && body.images) && body.image && body.image.url) ? body.image : 그림들.length === 1 ? 그림들[0] : null;
+    const 한장 = 본그림 && body.content && 본그림.url
+      ? figFrameHTML(`<img class="ist-fig" src="${escHtml(본그림.url)}" loading="lazy" alt="">`) : '';
     return `<div class="ist-item">
       <div class="ist-ih">
         <b class="mono">${escHtml(it.code)}</b>
@@ -33082,8 +33101,8 @@ function teacherItemStoreHTML(){
            그러면 보여 준 그 한 장도 «문항 그림»이 아니라 ①번 선지라 오히려 틀린 그림이 된다.
            실측 3문항(5·6·6장)뿐이지만, 틀리게 보이는 쪽이 안 보이는 쪽보다 나쁘다. */''}
       ${(() => {
-        const figs = 그림들;
-        if(!figs.length || 한장) return '';   // 한 장은 위 본문 안에 들었다
+        const figs = 한장 && 그림들.length === 1 && 본그림 === 그림들[0] ? [] : 그림들;   // 한 장은 위 본문 안에 들었다
+        if(!figs.length) return '';
         return `<div class="ist-figs ${figs.length>1?'many':''}">` + figs.map((f,i) =>
           `<figure><img class="ist-fig" src="${escHtml(f.url)}" loading="lazy" alt="">`
           + (figs.length>1 ? `<figcaption>${'①②③④⑤⑥⑦⑧'[i] || (i+1)}</figcaption>` : '')
