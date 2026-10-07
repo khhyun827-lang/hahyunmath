@@ -102,6 +102,54 @@ function hwpScriptGroupArgs(s){
   }
   return out;
 }
+/* 🔴 **맨몸 `over` 도 «띄어쓰기까지»다** (2026-10-07 · 한글로 그려 보고 확인했다 · 사용자가 K2-04-E-0408 에서 짚었다).
+   `d-b overc-a` 를 한글은 (d−b)/(c−a) 로 그린다 — 앞뒤 덩이는 **띄어쓰기·`{`·`}`·`#`·`&` 까지**, 그리고 `left(`·`right)` 에서 끊긴다.
+   (`y=a+b over c+d` 는 (y=a+b)/(c+d) · `a~+b over c` 는 `~` 까지 분자 · `2times1+3over2` 는 2×1+3 전부 분자 ·
+    `left(-5+1over2 ,` 는 −5+1 만 분자.) 옛 규칙은 영문·숫자만 집어 d−b/c−a 를 냈다.
+   여기서 양쪽을 `{ }` 로 묶어 두면 `convertOverToFrac` 이 그대로 받는다.
+   ponytail: `sqrt 2 over 2`(한글은 √2/2)·`a over b over c` 처럼 낱말이 덩이를 만드는 꼴은 옛 동작 그대로다 — 나오면 그때. */
+function hwpOverGroupArgs(s){
+  const 끊 = /[\s{}#&]/;
+  let i = 0;
+  for(;;){
+    const m = /over(?!line|brace|arrow)/gi; m.lastIndex = i;
+    const f = m.exec(s); if(!f) return s;
+    i = f.index + 4;
+    if(f.index > 0 && /[A-Za-z\\]/.test(s[f.index - 1])) continue;          // 낱말 안(cover · \overline)
+    let a = f.index; while(a > 0 && s[a - 1] === ' ') a--;
+    let b = i; while(b < s.length && s[b] === ' ') b++;
+    /* `_{…}`·`^{…}` 로 붙은 묶음은 덩이 안이다(`a_{n+1} over b_{n}`) · 홀로 선 `{…}` 는 그것만 덩이다(`x={…} over 2a+1`) */
+    let l = a, r = b;
+    for(;;){
+      if(s[l - 1] === '}'){
+        let o = l - 1, d = 0;
+        for(; o >= 0; o--){ if(s[o] === '}') d++; else if(s[o] === '{' && !--d) break; }
+        if(o > 0 && /[_^]/.test(s[o - 1])){ l = o - 1; continue; }
+        if(l === a) l = -1;                                                   // 홀로 선 묶음 — convertOverToFrac 몫
+        break;
+      }
+      if(l > 0 && !끊.test(s[l - 1])){ l--; continue; }
+      break;
+    }
+    if(l < 0) l = a;
+    else { const 앞 = [...s.slice(l, a).matchAll(/left\s*[(\[|]/gi)].pop(); if(앞) l += 앞.index + 앞[0].length; }
+    for(;;){
+      if(s[r] === '{'){
+        if(r === b){ r = -1; break; }
+        if(/[_^]/.test(s[r - 1])){ const c = findMatchingBrace(s, r); if(c > 0){ r = c + 1; continue; } }
+        break;
+      }
+      if(r < s.length && !끊.test(s[r])){ r++; continue; }
+      break;
+    }
+    if(r < 0) r = b;
+    else { const 뒤 = s.slice(b, r).search(/right\s*[)\]|]/i); if(뒤 >= 0) r = b + 뒤; }
+    const L = l < a ? '{' + s.slice(l, a) + '}' : '';
+    const R = b < r ? '{' + s.slice(b, r) + '}' : '';
+    s = s.slice(0, l) + L + s.slice(a, b).replace(/over/i, 'over') + R + s.slice(r);   // `17OVER18` — 한글 낱말은 대소문자를 안 가린다
+    i = l + L.length + (b - a) + R.length;
+  }
+}
 function convertHwpEq(script){
   let s = script || '';
   /* 🔵 **「To03033」·「To 20012」는 한글이 안 그리는 군더더기다** (2026-10-05 · 주기나 1-1 여섯 자리).
@@ -122,6 +170,7 @@ function convertHwpEq(script){
      (다섯 권 16,754식 중 13종 22자리 · 0541·0418 은 사용자가 «한글에선 제대로 보인다»고 짚었다).
      ⚠ 여기서는 두 글자 이상만 묶는다 — 한 글자는 아래 옛 규칙이 똑같이 묶는다. */
   s = hwpScriptGroupArgs(s);
+  s = hwpOverGroupArgs(s);
   /* 🔵 `UNDERBRACE {밑글} {본문}` — 한글은 «앞이 밑에 다는 글, 뒤가 본문»이다(한글로 그려 확인 · K2-05-E-0517).
      그대로 두면 날글자로 뜬다. OVERBRACE 도 같은 꼴로 받는다. */
   s = s.replace(/(?<![A-Za-z\\])(UNDER|OVER)BRACE\s*\{([^{}]*)\}\s*\{([^{}]*)\}/gi,

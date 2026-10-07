@@ -245,6 +245,14 @@ console.log('');
   봄('중괄호 아래첨자도', convertHwpEq('a_{n+1} over b_{n}'),
      '$' + B + 'frac{a_{n+1}}{b_{n}}$');
   봄('🔵 예전 꼴은 그대로', convertHwpEq('1 over 2'), '$' + B + 'frac{1}{2}$');
+  /* ③ (2026-10-07 · K2-04-E-0408 · 한글로 그려 확인) 맨몸 over 의 덩이는 띄어쓰기까지 — `d-b overc-a` 는 (d−b)/(c−a) */
+  봄('🔴 맨몸 over 는 띄어쓰기까지 한 덩이', convertHwpEq('d-b overc-a'), '$' + B + 'frac{d-b}{c-a}$');
+  봄('🔴 left( · right) 에서는 끊긴다', convertHwpEq('left(-5+1over2 ,~ 7+(-1)over2 right)'),
+     '$' + B + 'left(' + B + 'frac{-5+1}{2} ,~ ' + B + 'frac{7+(-1)}{2} ' + B + 'right)$');
+  봄('🔴 홀로 선 {…} 는 그것만 분자 · 분모는 덩이 전부', convertHwpEq('x={-b+sqrt 5} over 2a+1'),
+     '$x=' + B + 'frac{-b+' + B + 'sqrt{5}}{2a+1}$');
+  봄('times 는 덩이를 안 끊는다', convertHwpEq('2times1+3over2'), '$' + B + 'frac{2' + B + 'times 1+3}{2}$');
+  봄('overline 은 over 가 아니다', convertHwpEq('overline{AB}').includes('frac'), false);
 
   /* ③ 🔴 **원본 자체가 깨져 있다** — 실측 `{rmA}it{(-1,~2)`. 한글은 너그럽게 그려 주지만
      KaTeX 는 못 읽는다. 원본을 못 고치니 읽는 쪽이 다듬는다. */
