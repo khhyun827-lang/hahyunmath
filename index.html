@@ -3320,6 +3320,14 @@
 .app .memo-todo.done span{color:var(--dim);text-decoration:line-through;}
 .app .memo-x{flex:none;width:32px;height:32px;border:0;background:none;color:var(--dim);border-radius:var(--r-sm);cursor:pointer;}
 .app .memo-x:hover{background:var(--hover);color:var(--ink);}
+/* 순서 ▲▼ — 한 칸에 위아래로 포갠다(폭 22) · 마우스가 있으면 줄에 올렸을 때만 (2026-10-08) */
+.app .memo-ord{flex:none;display:flex;flex-direction:column;width:22px;}
+.app .memo-mv{height:17px;border:0;background:none;padding:0;font-size:10px;line-height:1;color:var(--dim);border-radius:4px;cursor:pointer;}
+.app .memo-mv:hover{background:var(--hover);color:var(--ink);}
+.app .memo-mv:disabled{visibility:hidden;}
+@media (hover:hover){ .app .memo-todo .memo-ord{opacity:0;} .app .memo-todo:hover .memo-ord, .app .memo-todo:focus-within .memo-ord{opacity:1;} }
+.app .memo-dh{display:block;text-align:left;border:0;background:none;padding:8px 10px 4px;font:inherit;font-size:12px;font-weight:800;color:var(--sub);cursor:pointer;}
+.app .memo-dd{font-size:11.5px;color:var(--dim);margin:6px 10px 2px;}
 .app .memo-add{display:flex;gap:6px;padding:6px 6px 8px 10px;}
 .app .memo-add input{flex:1;min-width:0;height:34px;border:1px solid var(--line);border-radius:var(--r-sm);padding:0 10px;
   font:inherit;font-size:13px;background:var(--card);color:var(--ink);outline:none;}
@@ -4292,6 +4300,7 @@
   #app:has(.tnav) .app:not(.sap) .hm .dsh-c > .tcal{grid-area:c;} #app:has(.tnav) .app:not(.sap) .hm .dsh-c > .dsh-memo{grid-area:m;display:flex;min-height:0;}
   #app:has(.tnav) .app:not(.sap) .hm .dsh-b > section, #app:has(.tnav) .app:not(.sap) .hm .dsh-c > .tcal, #app:has(.tnav) .app:not(.sap) .hm .dsh-memo > section{min-height:0;overflow:auto;box-sizing:border-box;}
   #app:has(.tnav) .app:not(.sap) .hm .dsh-memo > section{flex:1;display:flex;flex-direction:column;}
+  #app:has(.tnav) .app:not(.sap) .hm .dsh-memo > section > *{flex-shrink:0;}   /* 넘치면 줄을 누르지 말고 카드가 스크롤 (2026-10-08) */
   #app:has(.tnav) .app:not(.sap) .hm .dsh-memo .memo-note{flex:1;min-height:60px;}
   /* 달력은 260 칸에 작게(시안) — 범례는 접고, 고른 날의 일정은 카드 안에서 굴러간다 */
   #app:has(.tnav) .app:not(.sap) .hm .tcal .scal-head .btn.icon{width:30px;height:30px;}
@@ -20634,8 +20643,11 @@ async function loadMemoIfNeeded(){
   if(state.memo || state.memoLoading || !authUid()) return;
   state.memoLoading = true;
   const m = await dbGet(memoKey(), null);
-  state.memo = { todos: (m && Array.isArray(m.todos)) ? m.todos : [], note: (m && typeof m.note === 'string') ? m.note : '',
-                 events: (m && Array.isArray(m.events)) ? m.events : [] };   // 홈 달력 «내 일정» (2026-10-03)
+  const todos = (m && Array.isArray(m.todos)) ? m.todos : [];
+  state.memo = { todos: todos.filter(x => !x.done), note: (m && typeof m.note === 'string') ? m.note : '',
+                 events: (m && Array.isArray(m.events)) ? m.events : [],   // 홈 달력 «내 일정» (2026-10-03)
+                 /* 끝낸 일 {t, at} — 새것이 앞 (2026-10-08). 옛 «체크만 해 둔» 줄은 끝낸 날을 몰라 오늘로 옮긴다(다음 저장 때 쓰인다). */
+                 done: ((m && Array.isArray(m.done)) ? m.done : []).concat(todos.filter(x => x.done).map(x => ({ t: x.t, at: todayStr() }))) };
   state.memoLoading = false;
   render();
 }
@@ -20651,8 +20663,25 @@ function memoAdd(form){
   memoSave(); render();
   const el = document.getElementById('memo-add'); if(el) el.focus();   // 이어서 적게
 }
-function memoToggle(i){ const x = state.memo.todos[i]; if(!x) return; x.done = !x.done; memoSave(); render(); }
+/* 체크 = 끝냄 → 「완료한 일」로 옮기고 그날 날짜를 단다 (2026-10-08 · 사용자 — 「끝난 거는 날짜별로 완료된 일정 기록하는 곳으로」) */
+function memoToggle(i){ const x = state.memo.todos.splice(i, 1)[0]; if(!x) return; (state.memo.done = state.memo.done || []).unshift({ t: x.t, at: todayStr() }); memoSave(); render(); }
 function memoDel(i){ state.memo.todos.splice(i, 1); memoSave(); render(); }
+function memoMove(i, d){ const a = state.memo.todos, j = i + d; if(j < 0 || j >= a.length) return; [a[i], a[j]] = [a[j], a[i]]; memoSave(); render(); }
+function memoUndo(j){ const x = state.memo.done.splice(j, 1)[0]; if(!x) return; state.memo.todos.push({ t: x.t, done: false }); memoSave(); render(); }
+function memoDoneDel(j){ state.memo.done.splice(j, 1); memoSave(); render(); }
+/* 완료한 일 — 날짜마다 묶는다(새 날이 위). j 는 done 배열의 자리 그대로(되돌리기·지우기가 쓴다) */
+function memoDoneHTML(done){
+  if(!done.length) return '';
+  const open = !!state.memoDoneOpen;
+  const 날 = [];
+  done.forEach((x, j) => { const k = x.at || ''; let g = 날.find(d => d.k === k); if(!g) 날.push(g = { k, rows: [] }); g.rows.push([x, j]); });
+  날.sort((a, b) => b.k.localeCompare(a.k));
+  return `<button type="button" class="memo-dh" aria-expanded="${open}" onclick="state.memoDoneOpen=!state.memoDoneOpen;render()">${open ? '▾' : '▸'} 완료한 일 <b class="mono">${done.length}</b></button>
+    ${!open ? '' : 날.map(g => `<div class="memo-dd mono">${escHtml(g.k ? g.k.slice(5).replace('-', '.') + ' (' + '일월화수목금토'[new Date(g.k + 'T00:00:00').getDay()] + ')' : '날짜 없음')}</div>
+      ${g.rows.map(([x, j]) => `<div class="memo-todo done">
+        <label><input type="checkbox" checked onchange="memoUndo(${j})" title="되돌리기"><span>${escHtml(x.t)}</span></label>
+        <button type="button" class="memo-x" title="지우기" onclick="memoDoneDel(${j})">✕</button></div>`).join('')}`).join('')}`;
+}
 /* =================== 상담 약속 (2026-10-02 · 사용자 — 「넣으면 좋을 것 같아」) ===================
    상담하다 생긴 «뒤에 챙길 일»(예: 「어머님께 클리닉 시간 문자」)을 내용 글에서 떼어 따로 챙긴다.
    🔵 저장은 kv 문서 하나 `consultpromises` — 홈·벨이 전체를 한 번에 봐야 해서 학생마다 나누지 않는다(읽기 1건).
@@ -20725,12 +20754,14 @@ function teacherMemoHTML(){
   loadMemoIfNeeded();
   const m = state.memo;
   const body = !m ? '<div class="dsh-empty">불러오는 중…</div>' : `
-    ${m.todos.map((x, i) => `<div class="memo-todo${x.done ? ' done' : ''}">
-        <label><input type="checkbox" ${x.done ? 'checked' : ''} onchange="memoToggle(${i})"><span>${escHtml(x.t)}</span></label>
+    ${m.todos.map((x, i) => `<div class="memo-todo">
+        <label><input type="checkbox" onchange="memoToggle(${i})"><span>${escHtml(x.t)}</span></label>
+        <div class="memo-ord"><button type="button" class="memo-mv" title="위로" aria-label="위로" ${i ? '' : 'disabled'} onclick="memoMove(${i},-1)">▲</button><button type="button" class="memo-mv" title="아래로" aria-label="아래로" ${i < m.todos.length - 1 ? '' : 'disabled'} onclick="memoMove(${i},1)">▼</button></div>
         <button type="button" class="memo-x" title="지우기" onclick="memoDel(${i})">✕</button></div>`).join('')}
     <form class="memo-add" onsubmit="memoAdd(this);return false;">
       <input id="memo-add" name="t" placeholder="할 일 적고 Enter" autocomplete="off" maxlength="200">
-      <button type="submit" class="btn q sm">추가</button></form>`;
+      <button type="submit" class="btn q sm">추가</button></form>
+    ${memoDoneHTML(m.done || [])}`;
   /* 🔵 글 메모는 상단바 「메모」(어느 화면에서든 — notepadHTML)로 옮겼다 (2026-10-02 · 사용자). 홈에는 할 일 체크만 + 상담 약속. */
   loadPromisesIfNeeded();
   const 약속 = openPromises().slice().sort((a,b)=>String(a.date||'').localeCompare(String(b.date||'')));
@@ -33955,7 +33986,18 @@ async function setSchoolBook(school, grade, text){
 async function setGradeCut(seasonKey, school, grade, subject, g, value){
   const ok = await saveGradeCut(seasonKey, school, grade, subject, g, value);
   if(!ok) showToast('등급컷은 0~100 사이의 원점수로 적어 주세요.');
+  /* Tab 으로 다음 칸에 간 뒤 render 가 칸을 새로 지으면 커서가 표 밖으로 샌다 (2026-10-08 · 사용자) —
+     같은 칸(aria-label)에 커서와 저장 전에 친 글자를 돌려놓는다. 포커스 «뒤»에 값을 넣어야 change 가 다시 뜬다. */
+  await new Promise(r => setTimeout(r));   // change 는 blur 와 다음 칸 focus «사이»에 뜬다 — 저장이 빠르면 아직 BODY 다
+  const a = document.activeElement;
+  const at = a && a.classList && a.classList.contains('gc-in') ? { label: a.getAttribute('aria-label'), v: a.value } : null;
   render();
+  if(!at) return;
+  const el = [...document.querySelectorAll('.gc-in')].find(x => x.getAttribute('aria-label') === at.label);
+  if(!el) return;
+  el.focus();
+  if(el.value !== at.v) el.value = at.v;
+  el.select();
 }
 async function toggleRangeChapter(school, grade, subject, chapter){
   const at = examPopAt(school, grade);

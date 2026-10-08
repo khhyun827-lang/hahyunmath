@@ -338,10 +338,11 @@ export const 무대들 = {
     } },
   홈메모: { 말: '강사 홈 — 메모 (할 일 셋 · 하나 끝 · 글 메모)', 폭: '1280,864,390',
     세우기: () => { state.currentUser = { type:'teacher', name:'김하현T' }; state.view = 'teacher';
-      state.memo = { todos: [{ t: '광남고 프린트 출력', done: false }, { t: '3반 단원평가 채점', done: true },
+      state.memo = { todos: [{ t: '광남고 프린트 출력', done: false },
         { t: '민수 어머님께 다음 주 결석 확인 전화 — 금요일 전에', done: false }],
+        done: [{ t: '3반 단원평가 채점', at: todayStr() }, { t: '대원고 범위 공지', at: shiftYmd(todayStr(), -1) }],
         note: '2반 진도 한 차시 밀림 — 다음 시간 30분 당겨서.\n대원고 범위 공지 아직.' };
-      state.allRecordsLoaded = true; state.teacherTab = 'dash'; render();
+      state.memoDoneOpen = true; state.allRecordsLoaded = true; state.teacherTab = 'dash'; render();
     } },
   수업직보: { 말: '수업 (오늘 직보 — 광남고 2시 · 대원고 5시)',
     세우기: () => { state.currentUser = { type:'teacher', name:'김하현T' }; state.view = 'teacher';

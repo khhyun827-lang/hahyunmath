@@ -25,6 +25,8 @@ const 봄 = (무엇, 나온것, 나와야) => {
 const 브라우저 = await chromium.launch();
 try{
   const page = await 브라우저.newPage({ viewport: { width: 864, height: 900 } });
+  /* 시계를 묶는다 — 씨앗 클리닉이 있는 요일(목)엔 달력 칸이 이름 셋에서 접혀 «칸 안에도 이름»이 빨갰다 (2026-10-08) */
+  await page.clock.setFixedTime(new Date('2026-10-03T15:00:00'));
   for(let i = 0; i < 40; i++){ try{ await page.goto(`http://127.0.0.1:${PORT}/index.html`); break; }catch{ await page.waitForTimeout(250); } }
   await page.waitForFunction(() => typeof render === 'function' && typeof DATA !== 'undefined');
   await page.evaluate(씨앗);
@@ -48,14 +50,30 @@ try{
   봄('메모장을 펴면 같은 글', await page.inputValue('#memo-note'), '처음 글');
 
   await page.fill('#memo-add', '둘째 일'); await page.press('#memo-add', 'Enter');
-  봄('Enter 로 더한다 · 저장', await 마지막(), ['memo:u1', { todos: [{ t: '첫 일', done: false }, { t: '둘째 일', done: false }], note: '처음 글', events: [] }]);
+  봄('Enter 로 더한다 · 저장', await 마지막(), ['memo:u1', { todos: [{ t: '첫 일', done: false }, { t: '둘째 일', done: false }], note: '처음 글', events: [], done: [] }]);
   봄('더한 뒤 입력칸은 비고 커서가 남는다', await page.evaluate(() => [document.activeElement.id, document.activeElement.value]), ['memo-add', '']);
   봄('남은 일 수', await page.textContent('.dsh-memo .dsh-n'), '2');
 
-  await page.locator('.memo-todo input').first().click();
-  봄('체크 → done', (await 마지막())[1].todos[0].done, true);
+  /* 순서 바꾸기 (2026-10-08) — 맨 위 ↑·맨 아래 ↓ 는 감춘다 */
+  봄('맨 위 ↑ · 맨 아래 ↓ 는 없다', await page.$$eval('.dsh-memo .memo-todo', rs => rs.map(r => [...r.querySelectorAll('.memo-mv')].map(b => b.disabled))), [[true, false], [false, true]]);
+  await page.locator('.dsh-memo .memo-todo').nth(1).locator('.memo-mv[title=위로]').click();
+  봄('↑ 로 올린다 · 저장', (await 마지막())[1].todos.map(x => x.t), ['둘째 일', '첫 일']);
+  await page.locator('.dsh-memo .memo-todo').first().locator('.memo-mv[title=아래로]').click();
+  봄('↓ 로 내린다', (await 마지막())[1].todos.map(x => x.t), ['첫 일', '둘째 일']);
+
+  /* 체크 = 끝냄 → 완료한 일로 (날짜 붙음) */
+  await page.locator('.dsh-memo .memo-todo input').first().click();
+  봄('체크 → 할 일에서 빠지고 완료에 오늘 날짜로', [(await 마지막())[1].todos.map(x => x.t), (await 마지막())[1].done], [['둘째 일'], [{ t: '첫 일', at: '2026-10-03' }]]);
   봄('남은 일 수 1', await page.textContent('.dsh-memo .dsh-n'), '1');
-  await page.locator('.memo-todo .memo-x').first().click();
+  봄('완료는 접혀 있다 · 수만', [await page.textContent('.dsh-memo .memo-dh'), await page.$$eval('.dsh-memo .memo-todo.done', e => e.length)], ['▸ 완료한 일 1', 0]);
+  await page.evaluate(() => { state.memo.done.push({ t: '어제 일', at: '2026-10-02' }); });
+  await page.click('.dsh-memo .memo-dh');
+  봄('펴면 날짜별(새 날 위)', await page.$$eval('.dsh-memo .memo-dd, .dsh-memo .memo-todo.done span', e => e.map(x => x.textContent)), ['10.03 (토)', '첫 일', '10.02 (금)', '어제 일']);
+  await page.locator('.dsh-memo .memo-todo.done input').first().click();
+  봄('완료에서 체크 풀면 할 일 맨 아래로', [(await 마지막())[1].todos.map(x => x.t), (await 마지막())[1].done.map(x => x.t)], [['둘째 일', '첫 일'], ['어제 일']]);
+  await page.locator('.dsh-memo .memo-todo.done .memo-x').first().click();
+  봄('완료 지우기', (await 마지막())[1].done, []);
+  await page.locator('.dsh-memo .memo-todo').last().locator('.memo-x[title=지우기]').click();
   봄('지우기', (await 마지막())[1].todos.map(x => x.t), ['둘째 일']);
 
   const 저장수 = await page.evaluate(() => 저장.length);
@@ -88,11 +106,12 @@ try{
 
   // 홈 달력 «내 일정» (2026-10-03) — 메모 문서에 같이 산다. 불러올 때 빠뜨리면 할 일 체크가 일정을 지운다
   await page.evaluate(async () => {
-    const 옛 = window.dbGet; window.dbGet = async (k, d) => k === 'memo:u1' ? { todos: [{ t: '일', done: false }], note: '', events: [{ id: 'e1', date: todayStr(), t: '치과', time: '08:00' }] } : 옛(k, d);
+    const 옛 = window.dbGet; window.dbGet = async (k, d) => k === 'memo:u1' ? { todos: [{ t: '일', done: false }, { t: '옛 체크', done: true }], note: '', events: [{ id: 'e1', date: todayStr(), t: '치과', time: '08:00' }], done: [{ t: '전에 끝냄', at: '2026-10-01' }] } : 옛(k, d);
     state.notepadOn = false; state.memo = null; state.memoLoading = false; await loadMemoIfNeeded(); state.tCalDay = todayStr(); render(); });
   봄('불러온 내 일정이 고른 날 목록에', await page.$$eval('.tcal-day .scal-item.mine b', e => e.map(x => x.textContent)), ['치과']);
   await page.locator('.memo-todo input').first().click();
   봄('할 일을 체크해도 일정이 같이 저장된다', (await 마지막())[1].events.map(e => e.t), ['치과']);
+  봄('옛 «체크만 해 둔» 줄은 완료로 옮겨지고 옛 완료는 남는다', (await 마지막())[1].done.map(x => x.t), ['일', '전에 끝냄', '옛 체크']);
   await page.click('.tcal-addbtn');
   await page.fill('.tcal-add input[name=t]', '학부모 모임'); await page.fill('.tcal-add input[name=tm]', '19:30');
   await page.click('.tcal-add .btn.p');

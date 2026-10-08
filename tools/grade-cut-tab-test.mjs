@@ -41,6 +41,13 @@ try{
   await page.press('.rst-wrap tbody tr:nth-child(2) input.gc-in >> nth=0', 'Tab');
   await page.waitForFunction(() => 저장.length > 0);
   봄('지금 시즌 열쇠로 저장', await page.evaluate(() => 저장[0]), [열쇠, '경기여자고등학교', '1', '공통수학1', 1, '91']);
+  /* Tab 뒤 render 가 칸을 새로 지어도 커서는 다음 칸에 (2026-10-08 · 사용자 — 「칸 밖으로 커서가 벗어남」) */
+  await page.waitForTimeout(50);
+  봄('Tab → 커서가 같은 줄 2등급컷에', await page.evaluate(() => (document.activeElement.getAttribute('aria-label') || '').endsWith('2등급컷') && document.activeElement.classList.contains('gc-in')), true);
+  await page.keyboard.type('82'); await page.keyboard.press('Tab');
+  await page.waitForFunction(() => 저장.length > 1);
+  await page.waitForTimeout(50);
+  봄('이어서 쳐도 들어가고 다시 다음 칸', [await page.evaluate(() => 저장[1].slice(4)), await page.evaluate(() => document.activeElement.getAttribute('aria-label').endsWith('3등급컷'))], [[2, '82'], true]);
 
   /* 다른 시험 칸(1학기 기말)을 펼쳐 적으면 그 시험 열쇠로 — curSeasonKey() 로 쓰면 지금 시험에 적힌다 (2026-10-03) */
   await page.evaluate(() => { 저장.length = 0; examSlotToggle(schoolYearOf(todayStr()) + '|1-fin', true); });
