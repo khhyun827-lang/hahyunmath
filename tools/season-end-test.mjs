@@ -133,6 +133,25 @@ try{
   await page.click('.stu-life button:has-text("수강 종료")');
   봄('한 명씩 수강 종료 — 날짜·종류·메모', await page.evaluate(sid => { const v = 쓴것[studentKeyOfSid(sid)]; return [v.endedAt, v.endType, v.endNote]; }, 한명), ['2027-01-05', '이관', '최 선생님']);
   봄('미래 날짜면 아직 재원 · 목록에 «예정» 배지', await page.evaluate(sid => [isWithdrawn(DATA.students.find(x => x.studentId === sid)), !!document.querySelector('.stu-row .badge') && [...document.querySelectorAll('.stu-row .badge')].some(e => /예정/.test(e.textContent))], 한명), [false, true]);
+  /* ⑦ 숨긴 학생(테스트 계정 · 2026-10-11) — 강사 화면 어디에도 없고 로그인은 그대로 · 되돌릴 수 있다 */
+  봄('🔴 불러올 때 한 문에서 가른다(강사·조교 쪽) · 학생 로그인은 제 문서만 읽어 영향 없음',
+     [/DATA\.hiddenStudents = \(DATA\.students \|\| \[\]\)\.filter\(s => s && s\.hidden\);\s*DATA\.students = \(DATA\.students \|\| \[\]\)\.filter\(s => !\(s && s\.hidden\)\);/.test(html),
+      /DATA\.students = me \? \[me\] : \[\];/.test(html)], [true, true]);
+  const 숨김 = 학생[6] || 학생[2];
+  await page.evaluate(sid => { state.teacherTab = 'settings'; state.settingsSubTab = 'students'; state.settingsForm = ''; state.stuEditId = null; stuEdit(sid); }, 숨김);
+  await page.click('.stu-life button:has-text("테스트 계정으로 숨기기")');
+  봄('숨기면 — 문서에 hidden · 명단에서 빠짐 · 맨 아래 «숨긴 계정»에 선다', await page.evaluate(sid => [
+      쓴것[DATA.hiddenStudents.find(s => s.studentId === sid).uid || sid].hidden, DATA.students.some(s => s.studentId === sid),
+      [...document.querySelectorAll('.st-sec')].some(e => /숨긴 계정/.test(e.textContent) && e.textContent.includes(sid))], 숨김), [true, false, true]);
+  봄('숨긴 아이디로 새 학생을 못 만든다(중복)', await page.evaluate(sid => DATA.students.concat(DATA.hiddenStudents || []).some(s => s.studentId === sid), 숨김), true);
+  봄('숨긴 학생은 출석 도장 순위에 줄을 안 쓴다', await page.evaluate(async sid => {
+    const s = DATA.hiddenStudents.find(x => x.studentId === sid); DATA.students.push(s);   /* 학생 로그인 때는 제 문서가 DATA.students 에 있다 */
+    window.loadRank = async () => []; let 썼다 = false; const 옛 = window.dbSetDoc; window.dbSetDoc = async (c) => { if(c === 'ranks') 썼다 = true; return true; };
+    await rankSubmit(sid, s.name, '', 100); window.dbSetDoc = 옛; DATA.students = DATA.students.filter(x => x !== s);
+    return 썼다;
+  }, 숨김), false);
+  await page.click('.st-sec button:has-text("다시 보이기")');
+  봄('다시 보이기 — hidden 지움 · 명단에 돌아옴', await page.evaluate(sid => [DATA.students.some(s => s.studentId === sid), 'hidden' in 쓴것[DATA.students.find(s => s.studentId === sid).uid || sid], (DATA.hiddenStudents || []).length], 숨김), [true, false, 0]);
 } finally {
   await 브라우저.close(); 서버.kill();
 }

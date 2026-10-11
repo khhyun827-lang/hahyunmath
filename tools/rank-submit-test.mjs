@@ -46,6 +46,7 @@ const stubs = `
   const localStorage = __ls;
   const gameOfWeek = () => ({ key: __game, name: __game, icon: '💩' });
   const authUid = () => __uid;
+  const DATA = { students: [] };   /* 10-11 — rankSubmit 이 «숨긴 학생»인지 본다. 여기선 아무도 안 숨김 */
   async function dbGetCollectionWhere(c, k, v){
     return Object.entries(__db).filter(([id, d]) => id.startsWith(c + '/') && d[k] === v).map(([, d]) => JSON.parse(JSON.stringify(d)));
   }
