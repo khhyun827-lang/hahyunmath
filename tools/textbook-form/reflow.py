@@ -136,8 +136,30 @@ for it in items:     # SCENE 머리 → 그 SCENE 첫 문항에
 sc_hdrs = {it['scene']: it for it in items if it['k'] == 'SCENE'}
 assert sorted(sc_hdrs) == [1, 2, 3], sorted(sc_hdrs)
 assert all(not (it['k'] == 'TYPE' and it is items[-1]) for it in items)
+def cells_of(tbl):
+    out = {}
+    for tc in tbl.findall(HP + 'tr/' + HP + 'tc'):
+        a = tc.find(HP + 'cellAddr'); out[(int(a.get('rowAddr')), int(a.get('colAddr')))] = tc
+    return out
+SOLVE_MIN = 2400     # SCENE1 을 줄일 때도 본문 밑에 남기는 풀이 칸
+PIC_MIN = 0.8        # 그림은 80% 까지만
 for pr in probs:
-    pr['H'] = int(pr['tbl'].find(HP + 'sz').get('height'))
+    pr['H'] = pr['Horig'] = int(pr['tbl'].find(HP + 'sz').get('height'))
+    cs = cells_of(pr['tbl']); body = cs[(2, 0)]
+    pr['Hhead'] = int(cs[(0, 0)].find(HP + 'cellSz').get('height')) + int(cs[(1, 0)].find(HP + 'cellSz').get('height'))
+    used = 0
+    for q in body.find(HP + 'subList').findall(HP + 'p'):
+        for l in q.findall(HP + 'linesegarray/' + HP + 'lineseg'):
+            used = max(used, int(l.get('vertpos')) + int(l.get('vertsize')))
+    mg = body.find(HP + 'cellMargin') if body.get('hasMargin') == '1' else pr['tbl'].find(HP + 'inMargin')
+    m = int(mg.get('top')) + int(mg.get('bottom')) if mg is not None else 0
+    # 본문에 글자처럼 든 그림 — SCENE1 이 세 문제 안 들어가면 PIC_MIN 배까지 줄인다
+    pr['pics'] = [c for q in body.find(HP + 'subList').findall(HP + 'p') for r in q.findall(HP + 'run') for c in r
+                  if ln(c) == 'pic' and c.find(HP + 'pos').get('treatAsChar') == '1']
+    picsum = sum(int(c.find(HP + 'sz').get('height')) for c in pr['pics'])
+    pr['Hmin1'] = min(pr['H'], pr['Hhead'] + used + m + SOLVE_MIN)          # 빈 풀이 칸만 줄여서
+    pr['Hmin'] = pr['Hmin1'] - int((1 - PIC_MIN) * picsum)                  # 그림까지 줄여서
+    pr['picsum'] = picsum
 note('문항', len(probs), '· SCENE별', [sum(1 for p in probs if p['scene'] == s) for s in (1, 2, 3)])
 
 # ───────────── 번호 칸 · 문단 번호 ─────────────
@@ -256,7 +278,28 @@ def take(q, i, scene, T):
         if n > 0 and col_end(seg, col_ys(seg, scene, T)) > COLCAP: break
         n += 1
     return n
+def fit_floor(L, R, scene, T):
+    """SCENE1 — 두 단이 들어가는 가장 큰 바닥 높이 F 로 문항 높이를 고른다(원래보다 크게는 안 한다)"""
+    grp = L + R
+    CAP = COLCAP - 200          # 빈 줄 높이 반올림 몫
+    def setF(F, key):
+        for pr in grp: pr['H'] = max(pr[key], min(pr['Horig'], F))
+    def ok(): return all(e <= CAP for e in align(L, R, scene, T)[2:])
+    hi0 = max(pr['Horig'] for pr in grp)
+    setF(hi0, 'Hmin1')
+    if ok(): return
+    for key in ('Hmin1', 'Hmin'):      # 빈 풀이 칸부터 줄이고, 그래도 모자라면 그림까지
+        setF(0, key)
+        if not ok() and key == 'Hmin1': continue
+        lo, hi = 0, hi0
+        while hi - lo > 50:
+            mid = (lo + hi) // 2; setF(mid, key)
+            if ok(): lo = mid
+            else: hi = mid
+        setF(lo, key); return
 def page_rules(q, i, scene, scene_top):
+    if scene == 1:
+        for pr in q[i:]: pr['H'] = pr['Hmin']      # 줄여서 몇 개 드나부터 본다
     T = top_need(q[i:i + 1], scene_top)
     for _ in range(4):
         nL = take(q, i, scene, T); nR = take(q, i + nL, scene, T)
@@ -271,14 +314,48 @@ def page_rules(q, i, scene, scene_top):
         if eR > COLCAP and nR > 1: nR -= 1; continue
         if eL > COLCAP and nL > 1: nL -= 1; nR = take(q, i + nL, scene, T); continue
         break
+    if scene == 1:
+        # 줄일 수 있는 데까지 줄인 높이로, 한 쪽에 가장 많이 드는 (왼, 오른) 나눔을 찾는다
+        best = None; rest = len(q) - i
+        for a in range(min(3, rest), 0, -1):
+            for b in range(min(3, rest - a), -1, -1):
+                if b == 0 and rest > a: continue
+                L2 = q[i:i + a]; R2 = q[i + a:i + a + b]
+                T2 = max(top_need(L2, scene_top), top_need(R2, False))
+                e = align(L2, R2, scene, T2)[2:]
+                if all(x <= COLCAP - 200 for x in e):
+                    key = (a + b, a, -abs(a - b))
+                    if best is None or key > best[0]: best = (key, L2, R2, T2)
+        if best: _, L, R, T = best
+        fit_floor(L, R, scene, T); yL, yR, eL, eR = align(L, R, scene, T)
+    if scene == 2: yL, yR = balance2(L, R, yL, yR, T)
     return dict(L=L, R=R, yL=yL, yR=yR, T=T, scene=scene, scene_top=scene_top)
+def balance2(L, R, yL, yR, T):
+    """SCENE2 두 문항 단 — 첫 문항 밑 빈자리와 둘째 문항 밑 빈자리를 같게"""
+    cols = [(c, y) for c, y in ((L, yL), (R, yR)) if len(c) == 2]
+    if not cols: return yL, yR
+    want = []; lo = 0; hi = COLCAP
+    for c, y in cols:
+        h2 = H_TYPE_HDR if c[1]['hdr'] is not None else 0
+        want.append((y[0] + c[0]['H'] + h2 + COLCAP - c[1]['H']) / 2)
+        lo = max(lo, y[0] + c[0]['H'] + LINE_GAP + natural_gap(c[1], 2)); hi = min(hi, COLCAP - c[1]['H'])
+    if lo > hi: return yL, yR
+    y2 = int(max(lo, min(hi, sum(want) / len(want))))
+    yL = yL[:1] + [y2] + yL[2:] if len(L) == 2 else yL
+    yR = yR[:1] + [y2] + yR[2:] if len(R) == 2 else yR
+    return yL, yR
 
 def layout_rules(q, scene, start_right=False):
     pages = []; i = 0
     while i < len(q):
         if start_right and not pages:
+            if scene == 1:
+                for pr in q[i:]: pr['H'] = pr['Hmin']
             T = top_need(q[i:i + 1], True); n = take(q, i, scene, T); R = q[i:i + n]; i += n
-            pages.append(dict(L=[], R=R, yL=[], yR=col_ys(R, scene, T), T=T, scene=scene, scene_top=True)); continue
+            if scene == 1: fit_floor([], R, scene, T)
+            yR = col_ys(R, scene, T)
+            if scene == 2: _, yR = balance2([], R, [], yR, T)
+            pages.append(dict(L=[], R=R, yL=[], yR=yR, T=T, scene=scene, scene_top=True)); continue
         pg = page_rules(q, i, scene, scene_top=(not pages)); pages.append(pg); i += len(pg['L']) + len(pg['R'])
     return pages
 
@@ -318,6 +395,32 @@ if A.mode == 'rules':
 else:
     P1 = layout_keep(Q[1], 1); P2 = layout_keep(Q[2], 2); P3 = layout_keep(Q[3], 3)
 assert len(P1) >= 2
+
+# 줄인 문항 표 높이를 표에 적는다 (본문 칸 «최소 높이»와 표 높이)
+HC = '{http://www.hancom.co.kr/hwpml/2011/core}'
+def scale_pic(c, k):
+    for tag in ('sz', 'curSz'):
+        e = c.find(HP + tag)
+        for a in ('width', 'height'): e.set(a, str(round(int(e.get(a)) * k)))
+    ri = c.find(HP + 'rotationInfo')
+    if ri is not None:
+        for a in ('centerX', 'centerY'): ri.set(a, str(round(int(ri.get(a)) * k)))
+    sm = c.find(HP + 'renderingInfo/' + HC + 'scaMatrix')
+    for a in ('e1', 'e5'): sm.set(a, f'{float(sm.get(a)) * k:.6g}')
+    # 그 문단의 줄 높이도 (한글이 다시 재지만 이 값으로 높이를 셈하므로)
+picscaled = []
+shrunk = 0
+for pr in probs:
+    if pr['H'] != pr['Horig']:
+        assert pr['H'] < pr['Horig']
+        pr['tbl'].find(HP + 'sz').set('height', str(pr['H']))
+        cellSz = cells_of(pr['tbl'])[(2, 0)].find(HP + 'cellSz'); cellSz.set('height', str(pr['H'] - pr['Hhead']))
+        shrunk += 1
+        need = pr['Hmin1'] - pr['H']               # 빈 칸만으로 모자란 만큼 그림을 줄인다
+        if need > 0:
+            k = max(PIC_MIN, 1 - need / pr['picsum']); picscaled.append((pr['num'], round(k, 2)))
+            for c in pr['pics']: scale_pic(c, k)
+note('SCENE1 줄인 문항', shrunk, '· 그림 줄임', picscaled)
 
 # ───────────── 문단 짓기 ─────────────
 def LSEG(h=1000):
@@ -404,12 +507,13 @@ for gp, ctrls in sorted(page_ctrls.items()):
     tseq = SEQ_OF[id(trun[0].find(HP + 'tbl'))] if trun else None
     before = [x for x in ctrls if tseq is None or x[2] < tseq]; after = [x for x in ctrls if tseq is not None and x[2] > tseq]
     first_run = tgt.findall(HP + 'run')[0]; idx = list(tgt).index(first_run)
+    host_cp = first_run.get('charPrIDRef')    # 빈 줄 문단이면 그 줄 높이를 바꾸지 않게 같은 글자 모양으로
     for cp, c, _ in before:
-        r = mk('run', charPrIDRef=cp); r.append(c); tgt.insert(idx, r); idx += 1
+        r = mk('run', charPrIDRef=host_cp); r.append(c); tgt.insert(idx, r); idx += 1
     if after:
         idx = list(tgt).index(trun[0]) + 1
         for cp, c, _ in after:
-            r = mk('run', charPrIDRef=cp); r.append(c); tgt.insert(idx, r); idx += 1
+            r = mk('run', charPrIDRef=host_cp); r.append(c); tgt.insert(idx, r); idx += 1
 
 # 구역: 첫 두 쪽 / 나머지
 flat = lambda pgs: [p for pg in pgs for c in pg['cols'] for p in c]
