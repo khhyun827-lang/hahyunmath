@@ -139,9 +139,15 @@ try{
   await page.click('.st-sec:has-text("시즌 마감") .st-h button');
   봄('누르면 펴진다(사람이 누르는 그대로)', await page.evaluate(() => [state.settingsForm, !!document.getElementById('st-open-season'), document.querySelectorAll('.ssn-row').length > 0]), ['season', true, true]);
   const 상세 = a;   // «계속»이라 재원 — 수강 종료 단추가 서야 한다
+  await page.setViewportSize({ width: 1440, height: 900 });   // 오른쪽 칸(메모·학적)은 1280 보다 넓을 때만 선다
   await page.evaluate(sid => { state.settingsForm = ''; state.teacherTab = 'classhub'; state.classHubTab = 'students'; rosterOpen(sid, 'info'); }, 상세);
-  await page.click('.sd-dh button:has-text("학적 · 수강 종료")');
-  봄('학생 상세 머리 «학적 · 수강 종료» → 같은 드로어 · 수강 종료 단추가 보인다', await page.evaluate(() => {
+  봄('학적 단추 — 오른쪽 칸에서 메모 «밑» · 붉은(.btn.no) · 머리에는 없다', await page.evaluate(() => {
+    const b = [...document.querySelectorAll('.sd-ctx button')].find(x => x.textContent.includes('학적 · 수강 종료')), 메모 = document.getElementById('sd-note');
+    return [!!b && !!메모 && !!(메모.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING), !!b && b.classList.contains('no'),
+            [...document.querySelectorAll('.sd-dh button')].some(x => x.textContent.includes('학적'))];
+  }), [true, true, false]);
+  await page.click('.sd-ctx button:has-text("학적 · 수강 종료")');   // 10-11 — 오른쪽 칸 맨 아래(메모 밑) · 붉은 단추
+  봄('학생 상세 오른쪽 칸 맨 아래(메모 밑) «학적 · 수강 종료»(붉은 단추) → 같은 드로어 · 수강 종료 단추가 보인다', await page.evaluate(() => {
     const d = document.querySelector('.hwd .stu-life');
     return [!!d, !!d && [...d.querySelectorAll('button')].some(b => b.textContent.trim() === '수강 종료'), !!document.querySelector('.sd-dh')];
   }), [true, true, true]);

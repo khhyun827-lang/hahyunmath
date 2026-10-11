@@ -26557,9 +26557,7 @@ function sdScreenHTML(s, rec, isAssistant){
            ⚠ 고치는 문은 여기 없다. 학적은 설정 > 학생의 일이다(A-1로 그렇게 갈랐다). */''}
       <span class="tag ${st.withdrawn ? 'warn' : ''}">${st.withdrawn
         ? goneLabel(s) + ((s.withdrawnAt || s.endedAt) ? ' · ' + escHtml(s.withdrawnAt || s.endedAt) : '')
-        : s.endedAt ? '재원 중 · ' + escHtml(s.endType || '수강 종료') + ' ' + escHtml(s.endedAt) + ' 예정' : '재원 중'}</span>
-      ${isAssistant ? '' : `<button class="btn sm" onclick="sdOpenLife('${sid}')" title="수강 종료(이관·졸업) · 퇴원 · 재원으로 되돌리기">학적 · 수강 종료</button>`}
-      ${sg ? `<span class="tag ${sg.grade==='r'?'warn':'cau'}">${SIGNAL_GRADE[sg.grade].label} 신호 ${sg.rules.length}</span>` : ''}
+        : s.endedAt ? '재원 중 · ' + escHtml(s.endType || '수강 종료') + ' ' + escHtml(s.endedAt) + ' 예정' : '재원 중'}</span>      ${sg ? `<span class="tag ${sg.grade==='r'?'warn':'cau'}">${SIGNAL_GRADE[sg.grade].label} 신호 ${sg.rules.length}</span>` : ''}
     </div>
   </div>
 
@@ -26660,6 +26658,10 @@ function sdScreenHTML(s, rec, isAssistant){
             ? `마지막 저장 <span class="sd-note-at">${escHtml((state.studentNotes[sid]||{}).at)}</span>` : '아직 메모가 없습니다'}</span>
           <button class="btn sm" onclick="saveStudentNote('${sid}')">저장</button>
         </div>`}
+    ${/* 학적 — 오른쪽 칸 맨 아래 · 메모 밑 (2026-10-11 · 사용자 — 「붉은색 계열 · 메모 밑」). 색은 시안의 옅은 빨강(.btn.no) */
+      isAssistant ? '' : `<hr class="s">
+    <div class="t-sec">학적</div>
+    <button class="btn no sm" style="width:100%;justify-content:center;margin-top:8px;" onclick="sdOpenLife('${sid}')" title="수강 종료(이관·졸업) · 퇴원 · 재원으로 되돌리기">학적 · 수강 종료</button>`}
     <div class="rst-pad"></div>
   </aside>`;
 
