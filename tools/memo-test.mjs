@@ -141,8 +141,24 @@ try{
   await page.locator('.tcal-day .scal-item.mine .tcal-del').first().click();
   봄('지우기', (await 마지막())[1].events.map(e => e.t), ['학부모 모임']);
 
+  /* 재원생 변화 (2026-10-11) — 등록일 없는 옛 학생은 처음부터 있던 것으로 · 신규는 joinedAt · 퇴원은 withdrawnAt */
+  봄('달마다 재원·신규·퇴원', await page.evaluate(() => enrollMonths([
+      { school: 'A' }, { school: 'A', joinedAt: '2026-09-05' }, { school: 'B', joinedAt: '2026-10-02' },
+      { school: 'A', withdrawnAt: '2026-10-01' }, { school: 'B', joinedAt: '2026-08-10', withdrawnAt: '2026-09-20' },
+    ], '2026-10-03', 3)), [
+      { ym: '2026-08', 재원: 3, 신규: 1, 퇴원: 0 }, { ym: '2026-09', 재원: 3, 신규: 1, 퇴원: 1 }, { ym: '2026-10', 재원: 3, 신규: 1, 퇴원: 1 }]);
+  const 재원카드 = await page.evaluate(() => {
+    DATA.students[0].joinedAt = todayStr(); DATA.students[0].school = '가람고'; state.enrollSchool = ''; render();
+    const 전체 = document.querySelector('.hm-enroll .en-sum b').textContent;
+    document.querySelector('.hm-enroll .en-sch[data-sc="가람고"]').click();
+    return { 전체: +전체 === DATA.students.filter(s => !isWithdrawn(s)).length, 학교: document.querySelector('.hm-enroll .en-sum b').textContent,
+             신규: document.querySelector('.hm-enroll .en-col.now em').textContent.trim(), 표없음: !document.querySelector('.hm-enroll .en-tbl') };
+  });
+  봄('재원생 카드 — 전체 수는 숫자 카드와 같고, 학교를 누르면 그 학교만', 재원카드, { 전체: true, 학교: String(await page.evaluate(() => DATA.students.filter(s => s.school === '가람고' && !isWithdrawn(s)).length)), 신규: '+1', 표없음: true });
+
   await page.evaluate(() => { state.currentUser = { type: 'assistant', name: 'A' }; render(); });
   봄('조교 홈엔 메모가 없다', await page.$$eval('.dsh-memo', e => e.length), 0);
+  봄('조교 홈엔 재원생 변화도 없다', await page.$$eval('.hm-enroll', e => e.length), 0);
 } finally {
   await 브라우저.close(); 서버.kill();
 }

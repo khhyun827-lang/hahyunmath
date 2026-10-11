@@ -47,7 +47,7 @@ function 세상({ rows, 계정결과 = {}, 저장흠 = new Set(), 있던학생 =
   const fn = new Function(
     'state', 'DATA', 'showToast', 'authBatchBegin', 'authBatchEnd', 'authBatchCreate',
     'authWhyFailed', 'dbSetDoc', 'adoptRecord', 'emptyRecord', 'saveRecord', 'logAudit', 'render',
-    떠내기('confirmStudentBulkImport') + '; return confirmStudentBulkImport;'
+    "const todayStr = () => '2026-10-11';" + 떠내기('confirmStudentBulkImport') + '; return confirmStudentBulkImport;'
   )(
     state, DATA,
     (t) => w.토스트.push(t),

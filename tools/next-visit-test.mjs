@@ -73,7 +73,7 @@ console.log(NL + '② 「다음 수업」자리 — 시험 창에는 직보 일�
     const offDays = o.offDays || [];
     const F = new Function('DATA', 'todayStr', 'planCellsOfStudent', 'planLabel', 'parseScheduleDays', 'ymdLocal',
       'movedInto', 'offDayFor', 'examWindowOf', 'dateShift', 'Date',
-      liftConst('PLAN_VISIT_KINDS') + NL + lift('stuClassOffSpan') + NL + lift('stuExamSpan') + NL
+      liftConst('PLAN_VISIT_KINDS') + NL + lift('planHidesClass') + NL + lift('stuClassOffSpan') + NL + lift('stuExamSpan') + NL
       + lift('stuNextVisit') + NL + 'return stuNextVisit;')(
       { classes: [{ id: 'c1', name: '고1 0.5B', schedule: '화·목 17:00' }] },
       () => today, () => plan,
@@ -121,7 +121,8 @@ console.log(NL + '② 「다음 수업」자리 — 시험 창에는 직보 일�
   const 등원시작만 = 판({ today: '2026-10-09', plan: { '2026-10-09': { k: 'start' } } });
   봄('수업이 없는 날의 「등원시작」은 그대로 선다', [등원시작만.kind, 등원시작만.label], ['plan', '등원시작']);
   const 시험칸 = 판({ plan: { '2026-09-29': { k: 'exam' } } });
-  봄('「수학시험」칸은 오는 날이 아니다 — 그 날 수업이 있으면 수업', [시험칸.kind, 시험칸.date], ['class', '2026-09-29']);
+  /* 2026-10-11 — 칸이 찍힌 날은 정규 수업을 안 말한다(planHidesClass). 「수학시험」은 오는 날도 아니라 다음 수업으로 넘어간다 */
+  봄('「수학시험」칸 날엔 수업도 없다 — 다음 수업은 창 뒤 10/8', [시험칸.kind, 시험칸.date], ['class', '2026-10-08']);
 }
 
 /* ═══ ③ 화면의 닻 ═══ */

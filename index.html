@@ -3361,9 +3361,9 @@
 }
 /* 864 언저리(761~1199) — 달력이 맨 위 한 줄을 다 쓰고, 그 밑에 먼저 볼 학생 · 할 일이 나란히 */
 @media (min-width:761px) and (max-width:1199px){
-  #app:has(.tnav) .app:not(.sap) .hm .hm-grid{grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-areas:"c c" "b m";align-items:start;}
+  #app:has(.tnav) .app:not(.sap) .hm .hm-grid{grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-areas:"c c" "b m" "e e";align-items:start;}   /* e = 재원생 변화 (2026-10-11) — 한 줄 다 */
   #app:has(.tnav) .app:not(.sap) .hm .dsh-b, #app:has(.tnav) .app:not(.sap) .hm .dsh-c{display:contents;}
-  #app:has(.tnav) .app:not(.sap) .hm .dsh-b > section:nth-child(1){grid-area:b;}
+  #app:has(.tnav) .app:not(.sap) .hm .dsh-b > section:nth-child(1){grid-area:b;} #app:has(.tnav) .app:not(.sap) .hm .dsh-b > section:nth-child(2){grid-area:e;}
   #app:has(.tnav) .app:not(.sap) .hm .dsh-c > .tcal{grid-area:c;}
   #app:has(.tnav) .app:not(.sap) .hm .dsh-c > .dsh-memo{grid-area:m;}
 }
@@ -3477,6 +3477,27 @@
 .app .hm-stu{flex-wrap:wrap;}
 .app .hm-stu .hm-chips.r{flex:1 1 150px;}
 .app .hm-stu .hm-chip{flex:none;}
+/* 재원생 변화 (2026-10-11) — 학교 칩 · 요약 한 줄 · 여섯 달 막대 · 학교별 표 */
+.app .en-schools{display:flex;flex-wrap:wrap;gap:5px;padding:2px 6px 8px;}
+.app .en-sch{border:1px solid #E3E6EE;background:#fff;border-radius:999px;padding:3px 10px;font:inherit;font-size:12px;font-weight:700;color:#3A4156;cursor:pointer;}
+.app .en-sch.on{background:var(--hm-ink);border-color:var(--hm-ink);color:#fff;}
+.app .en-sum{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 14px;padding:2px 8px 10px;font-size:12.5px;color:#6A7186;}
+.app .en-sum b{font-size:22px;font-weight:800;color:var(--hm-ink);letter-spacing:-.02em;}
+.app .en-up{color:var(--hm-oktx);font-weight:800;} .app .en-down{color:var(--hm-notx);font-weight:800;}
+.app .en-bars{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px;align-items:end;height:118px;padding:0 6px;}
+.app .en-col{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;font-size:11px;color:#6A7186;}
+.app .en-col i{display:block;width:60%;max-width:34px;border-radius:6px 6px 2px 2px;background:#C9CED9;margin:2px 0 4px;}
+.app .en-col.now{color:var(--hm-ink);font-weight:800;}
+.app .en-col.now i{background:var(--hm-ink);}
+.app .en-col b{font-size:12px;color:var(--hm-ink);}
+.app .en-col em{font-style:normal;font-size:10.5px;white-space:nowrap;min-height:14px;}
+.app .en-tbl{width:100%;border-collapse:collapse;margin-top:10px;font-size:12.5px;}
+.app .en-tbl th{font-weight:700;color:#6A7186;font-size:11.5px;text-align:right;padding:4px 8px;}
+.app .en-tbl td{text-align:right;padding:6px 8px;border-top:1px solid #F1F2F6;}
+.app .en-tbl th:first-child, .app .en-tbl td:first-child{text-align:left;}
+.app .en-tbl th:not(:first-child){width:96px;white-space:nowrap;}
+.app .en-tbl tr[onclick]{cursor:pointer;} .app .en-tbl tr[onclick]:hover td{background:#F6F7FA;}
+.app .en-note{padding:8px 8px 0;font-size:11.5px;color:var(--dim);line-height:1.6;}
 /* 다가오는 시험 — D-day 상자 · 학교 · 수학 시험일 */
 .app .hm-exam{display:flex;align-items:center;gap:12px;padding:8px 8px;text-decoration:none;color:var(--hm-ink);cursor:pointer;border-radius:12px;}
 .app .hm-exam:hover{background:#F6F7FA;}
@@ -4289,8 +4310,9 @@
   #app:has(.tnav) .app:not(.sap) .hm{display:flex;flex-direction:column;height:calc(100vh - var(--chrome,178px));min-height:520px;}
   #app:has(.tnav) .app:not(.sap) .hm .hm-hi{font-size:32px;line-height:40px;}
   #app:has(.tnav) .app:not(.sap) .hm .hm-grid{flex:1;min-height:0;margin-top:14px;gap:14px;align-items:stretch;
-    grid-template-columns:minmax(0,.85fr) minmax(0,2fr);grid-template-rows:minmax(0,1.15fr) minmax(0,1fr);
-    grid-template-areas:"b c" "m c";}   /* 2026-10-02 둘째 재배치 — 먼저 볼 학생 / 할 일 · 큰 달력. 시험은 위 얇은 띠 */   /* 2026-10-02 재배치 — 먼저 볼 학생 · 시험/할 일 · 달력(두 줄) */
+    grid-template-columns:minmax(0,.85fr) minmax(0,2fr);grid-template-rows:minmax(0,1.15fr) auto minmax(0,1fr);
+    grid-template-areas:"b c" "e c" "m c";}   /* 2026-10-11 — e 재원생 변화(제 키만큼 · 학교 표는 접는다 — 학교 칩이 거른다) */
+  #app:has(.tnav) .app:not(.sap) .hm .hm-enroll .en-tbl{display:none;}   /* 2026-10-02 둘째 재배치 — 먼저 볼 학생 / 할 일 · 큰 달력. 시험은 위 얇은 띠 */   /* 2026-10-02 재배치 — 먼저 볼 학생 · 시험/할 일 · 달력(두 줄) */
   #app:has(.tnav) .app:not(.sap) .hm .dsh-b, #app:has(.tnav) .app:not(.sap) .hm .dsh-c{display:contents;}
   #app:has(.tnav) .app:not(.sap) .hm .dsh-a{min-height:0;display:flex;}
   #app:has(.tnav) .app:not(.sap) .hm .dsh-a > section{flex:1;display:flex;flex-direction:column;min-height:0;overflow:auto;box-sizing:border-box;}
@@ -10157,7 +10179,7 @@ async function addStudent(){
   /* 🔴 **전화번호는 학생 문서에 안 넣는다** — 명단은 학생도 읽는 자리라, 같이 두면
      「명단을 보여 주려면 전화번호도 같이 내려간다」가 된다. contacts 로 갈라 둔다
      (firestore.rules 에서 강사만 읽는다). */
-  const newStudent = {studentId:sid, uid, name, grade, school, classId};
+  const newStudent = {studentId:sid, uid, name, grade, school, classId, joinedAt: todayStr()};   // 등록일 — 홈 «재원생 변화»의 신규 (2026-10-11)
   const 연락처 = {studentId:sid, phone, parentPhone};
 
   DATA.students.push(newStudent);
@@ -10398,6 +10420,8 @@ async function updateStudentInfo(sid){
   if(과목칸.some(([, b]) => b)) s.examSubjects = 과목칸.filter(([, b]) => b && b.checked).map(([sj]) => sj);
   const 준비칸 = document.getElementById('info-strack');
   if(준비칸) s.track = 준비칸.value === '내신' ? '' : 준비칸.value;
+  const 등록칸 = document.getElementById('info-sjoined');   /* 등록일 (2026-10-11) — 비우면 «처음부터 있던 학생» */
+  if(등록칸){ if(등록칸.value) s.joinedAt = 등록칸.value; else delete s.joinedAt; }
   /* 🔴 **번호는 학생 문서에 안 쓴다** (2026-09-13 · K-11에 드러났다) — `addStudent` 가 지킨 규칙인데
      여기서만 새고 있었다. 아래 `dbSetDoc('students', …, s)` 가 `s` 를 통째로 쓰므로
      **화면에 쓸 것만 메모리에 남기고, 저장할 때는 번호를 뺀 사본을 보낸다.**
@@ -16458,6 +16482,11 @@ function stuNextSession(classId){
    · 둘 중 이른 것. **같은 날이면 일정표가 이긴다** — 그 날 «무엇을» 하는지를 말하는 쪽이라서.
      ⚠ 다만 「등원시작」은 정규 수업으로 «돌아오는» 날이라, 같은 날에 수업이 있으면 수업(시간·강의실)이 이긴다. */
 const PLAN_VISIT_KINDS = {jikbo:1, extra:1, consult:1, start:1, maybe:1};
+/* 🔴 **일정표에 칸이 찍힌 날은 정규 수업을 안 띄운다** (2026-10-11 · 사용자 — 「등원X된 거나 시험기간 중에는 직보 또는 보충 외에 수업 표기 안 되도록.
+     수업이 표기되면서 오늘 뭐 해요·강의실 어디예요 연락이 많이 와서 불편했어」).
+   시험 창(전날~끝) 밖에 찍힌 「등원X」·「직보」·「보충」 날에 정규 수업이 같이 떴다(10-11 실데이터 · 등원X 날만 37번).
+   칸은 «그 날 이 학생이 무엇을 하는지»라서 칸이 있으면 그것이 이긴다. ⚠ 「등원시작」만은 정규 수업으로 «돌아오는» 날이라 수업을 둔다. */
+function planHidesClass(cell){ return !!(cell && cell.k && cell.k !== 'start'); }
 function stuNextVisit(c){
   const t = todayStr();
   const plan = planCellsOfStudent(c.sid);
@@ -16475,7 +16504,7 @@ function stuNextVisit(c){
       if(!days.includes(d.getDay()) && !보강) continue;
       if(창 && date >= 창.from && date <= 창.to) continue;
       if(offDayFor(c.classId, date)) continue;
-      if(plan[date] && plan[date].k === 'off') continue;
+      if(planHidesClass(plan[date])) continue;
       수업 = {kind: 'class', date, cls, 보강: !!보강,
         시간: (보강 && 보강.moveTime) || '',        /* 옮기며 시간도 바뀐 보강 (2026-09-20) */
         dow: 보강 ? new Date(보강.date + 'T00:00:00').getDay() : d.getDay()};
@@ -19320,6 +19349,7 @@ function stuMonthEvents(c, ym){
        직보 일정표가 바로 그 말을 하려고 있는 것이다. 가리는 것은 «정규 수업»뿐이다.
      ⚠ 시험 날짜가 없으면 아무것도 안 가린다 — 멀쩡한 학생의 수업을 지우면 안 된다. */
   const 휴강 = stuClassOffSpan(c);
+  const 내직보 = planCellsOfStudent(c.sid);   // ⑦에서도 쓴다 · 칸이 찍힌 날은 정규 수업을 안 세운다(planHidesClass)
   (c.classIds || []).forEach(cid => {
     const cls = DATA.classes.find(x => x.id === cid);
     if(!cls) return;
@@ -19330,6 +19360,7 @@ function stuMonthEvents(c, ym){
       const date = ymd(y, m, d);
       /* 🔵 **다른 날에서 «옮겨 온» 수업** (2026-09-08) — 요일이 안 맞아도 이 날에 선다.
          그것이 「날짜 변경」의 뜻이다. 원래 요일이 아닌 날이므로 요일 검사보다 «먼저» 본다. */
+      if(planHidesClass(내직보[date])) continue;
       const 옮겨옴 = movedInto(cid, date);
       if(옮겨옴 && !(휴강 && date >= 휴강.from && date <= 휴강.to)){
         /* ⚠ 보강은 «원래 날»의 시간표를 그대로 옮겨 온 것이라 강의실도 그 요일 것이다. */
@@ -19398,7 +19429,6 @@ function stuMonthEvents(c, ym){
      ⚠ `planCellsOfStudent` 가 **시즌을 안 가리고** 준다 — 시즌을 넘긴 뒤에 오는 「등원시작」이
        달력에서 사라지면 안 되기 때문이다. 자세한 것은 그 함수의 머리말에.
      ⚠ 이 달의 것만 남는 것은 `넣기` 가 알아서 한다(`ym` 이 다르면 안 넣는다). */
-  const 내직보 = planCellsOfStudent(c.sid);
   for(const date in 내직보){
     /* 🔴 **같은 말을 두 번 하지 않는다** (2026-09-08 · 만들면서 화면에서 봤다).
        표의 「수학시험」 칸은 **강사가 표를 읽을 때의 기준점**이라 표에는 있어야 한다.
@@ -20828,6 +20858,48 @@ function teacherMemoHTML(){
   return `<section class="dsh-card"><div class="dsh-h"><b>할 일</b>${남은 ? `<span class="dsh-n mono">${남은}</span>` : ''}</div>${body}${약속칸}</section>`;
 }
 
+/* =================== 재원생 변화 (2026-10-11 · 사용자 — 「홈에 신규생과 퇴원생 및 전체 재원생 변화를 볼 수 있으면 · 학교별로도」) ===================
+   달마다 «그 달 말의 재원 · 그 달 신규 · 그 달 퇴원». 신규는 등록일(joinedAt — 10-11 부터 만들 때 저절로 · 학생 정보에서 고친다),
+   퇴원은 withdrawnAt. ⚠ 등록일이 없는 옛 학생은 «처음부터 있던 학생»으로 센다(지어내지 않는다) — 카드가 그 수를 말한다.
+   재원 판정은 홈 숫자 카드와 같은 잣대(withdrawnAt 하나 · isWithdrawn). */
+function enrollMonths(students, today, n){
+  const ym0 = today.slice(0, 7), out = [];
+  for(let i = n - 1; i >= 0; i--){
+    const ym = shiftYm(ym0, -i), end = ym + '-31';
+    out.push({ ym,
+      재원: students.filter(s => String(s.joinedAt || '') <= end && !(s.withdrawnAt && s.withdrawnAt <= end)).length,
+      신규: students.filter(s => String(s.joinedAt || '').startsWith(ym)).length,
+      퇴원: students.filter(s => String(s.withdrawnAt || '').startsWith(ym)).length });
+  }
+  return out;
+}
+function enrollBodyHTML(){
+  const all = DATA.students || [], ym = todayStr().slice(0, 7);
+  const 학교들 = [...new Set(all.map(s => s.school).filter(Boolean))]
+    .map(sc => [sc, all.filter(s => s.school === sc && !isWithdrawn(s)).length])
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+  const 고른 = 학교들.some(([sc]) => sc === state.enrollSchool) ? state.enrollSchool : '';
+  const list = 고른 ? all.filter(s => s.school === 고른) : all;
+  const ms = enrollMonths(list, todayStr(), 6), 이번 = ms[ms.length - 1], 차 = 이번.재원 - ms[ms.length - 2].재원;
+  const max = Math.max(1, ...ms.map(m => m.재원));
+  const 칩 = (v, t) => `<button type="button" class="en-sch ${고른 === v ? 'on' : ''}" data-sc="${escHtml(v)}" onclick="state.enrollSchool=this.dataset.sc;render()">${escHtml(t)}</button>`;
+  const 증감 = (n, 표) => n ? `<span class="${n > 0 ? 'en-up' : 'en-down'}">${n > 0 ? '+' : '−'}${Math.abs(n)}${표 || ''}</span>` : '';
+  const 모름 = list.filter(s => !s.joinedAt && !isWithdrawn(s)).length;
+  return `<div class="en-schools">${칩('', '전체')}${학교들.map(([sc]) => 칩(sc, sc)).join('')}</div>
+    <div class="en-sum"><span>재원 <b class="mono">${이번.재원}</b>명</span>
+      <span>지난달보다 ${증감(차) || '그대로'}</span>
+      <span>이번 달 신규 <span class="en-up">${이번.신규}</span> · 퇴원 <span class="${이번.퇴원 ? 'en-down' : ''}">${이번.퇴원}</span></span></div>
+    <div class="en-bars">${ms.map(m => `<div class="en-col ${m.ym === ym ? 'now' : ''}" title="${m.ym} 말 재원 ${m.재원} · 신규 ${m.신규} · 퇴원 ${m.퇴원}">
+      <b class="mono">${m.재원}</b><i style="height:${Math.round(m.재원 / max * 64) + 2}px"></i>${Number(m.ym.slice(5))}월
+      <em>${[m.신규 ? `<span class="en-up">+${m.신규}</span>` : '', m.퇴원 ? `<span class="en-down">−${m.퇴원}</span>` : ''].filter(Boolean).join(' ')}</em></div>`).join('')}</div>
+    ${고른 ? '' : `<table class="en-tbl"><tr><th>학교</th><th>재원</th><th>이번 달 신규</th><th>퇴원</th></tr>${학교들.map(([sc, n]) => {
+      const 학 = all.filter(s => s.school === sc);
+      return `<tr data-sc="${escHtml(sc)}" onclick="state.enrollSchool=this.dataset.sc;render()"><td>${escHtml(sc)}</td><td class="mono">${n}</td>
+        <td class="mono">${학.filter(s => String(s.joinedAt || '').startsWith(ym)).length || ''}</td>
+        <td class="mono">${학.filter(s => String(s.withdrawnAt || '').startsWith(ym)).length || ''}</td></tr>`; }).join('')}</table>`}
+    ${모름 ? `<div class="en-note">등록일이 없는 재원생 ${모름}명은 «처음부터 있던 학생»으로 셉니다 — 학생 정보 › 등록일을 넣으면 지난 달 신규도 맞게 셉니다. 새로 등록하는 학생은 저절로 들어갑니다.</div>` : ''}`;
+}
+
 function teacherDashHTML(){
   /* 🔵 **시안 «D 차분» 홈** (2026-10-02 · P-4 — 캔버스 CbB9qkPr… 셋째 줄 「D 차분 · 홈」).
      인사말 · 숫자 카드 여섯(색은 신호에만) · 오늘 수업(출결 칩) · 먼저 볼 학생(이유 칩) · 다가오는 시험(D-day 상자) · 달력 · 메모.
@@ -20949,6 +21021,7 @@ function teacherDashHTML(){
     <div class="dsh-grid hm-grid">
       <div class="dsh-col dsh-b">
         ${sec('먼저 볼 학생', live.length || '', sigBody, ['신호 전체', "goTeacherTab('signals')"])}
+        ${isAssistantNow() ? '' : sec('재원생 변화', '', enrollBodyHTML(), ['명단', "goTeacherTab('classhub','students')"], 'hm-enroll')}
       </div>
       <div class="dsh-col dsh-c">
         ${teacherCalHTML()}
@@ -23303,7 +23376,7 @@ async function confirmStudentBulkImport(){
       }catch(e){ 안된것.push({ id: r.studentId, 까닭: authWhyFailed(e) }); continue; }
       if(!새것) 이어한것.push(r.studentId);   // 계정은 이미 있던 것 — 앞선 시도가 끊겼던 자리다
 
-      const ns = {studentId:r.studentId, uid, name:r.name, grade:r.grade, school:r.school, classId:imp.classId};
+      const ns = {studentId:r.studentId, uid, name:r.name, grade:r.grade, school:r.school, classId:imp.classId, joinedAt: todayStr()};
       const ok = await dbSetDoc('students', uid, ns);
       if(ok === null){ 안된것.push({ id: r.studentId, 까닭: '학생 정보를 저장하지 못했습니다' }); continue; }
       if(r.phone || r.parentPhone)
@@ -26678,6 +26751,7 @@ ${[...new Set(['고1','고2','고3'].concat(gradeLabel(s.grade) ? [gradeLabel(s.
         <label style="min-width:150px;"><span>학교</span><input id="info-sschool" value="${escHtml(s.school||'')}" placeholder="학교명 (선택)"></label>
         <label><span>준비</span><select id="info-strack" style="border:1px solid var(--line);border-radius:var(--r-sm);background:var(--paper);padding:8px 10px;font-family:inherit;font-size:12.5px;">${
           STUDENT_TRACKS.map(t => `<option ${(s.track || '내신') === t ? 'selected' : ''}>${t}</option>`).join('')}</select></label>
+        <label title="홈 «재원생 변화»의 신규가 이 날로 셉니다 · 비워 두면 처음부터 있던 학생"><span>등록일</span><input type="date" id="info-sjoined" value="${escHtml(s.joinedAt || '')}"></label>
       </div>
       ${/* 학교에서 시험 보는 과목 (2026-10-03) — 비워 두면 반의 진도 과목 하나로 친다 */''}
       <div class="st-form" style="margin-top:2px;">

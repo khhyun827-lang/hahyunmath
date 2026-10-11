@@ -109,7 +109,7 @@ console.log(NL + '② 전화번호 — 저장은 됐는데 아무도 안 읽고 
   봄('연락처는 그대로 contacts 로 간다', upd.includes("dbSetDoc('contacts', studentKeyOfSid(sid), {studentId:sid, phone, parentPhone})"), true);
   봄('학생을 만들 때도 여전히 contacts 로 간다', lift('addStudent').includes("dbSetDoc('contacts', uid, 연락처)"), true);
   봄('🔴 학생 문서에는 예나 지금이나 번호가 없다',
-    /const newStudent = \{studentId:sid, uid, name, grade, school, classId\}/.test(lift('addStudent')), true);
+    /const newStudent = \{studentId:sid, uid, name, grade, school, classId(, joinedAt: todayStr\(\))?\}/.test(lift('addStudent')), true);   // 10-11 등록일이 붙었다 — 번호는 여전히 없다
 }
 
 /* ═══ ③ 클리닉 › 온 학생 기록 — 날짜만 있으면 된다 ═══ */

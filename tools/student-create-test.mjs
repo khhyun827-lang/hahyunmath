@@ -65,7 +65,7 @@ function 세상({ 칸 = {}, 계정흠 = null, 저장흠 = false, 이미있나 = 
   const fn = new Function(
     'document', 'DATA', 'showToast', 'authIdOk', 'authIdWhyBad', 'authCreateAccount',
     'authWhyFailed', 'dbSetDoc', 'adoptRecord', 'emptyRecord', 'saveRecord', 'logAudit', 'render',
-    조각 + '; return addStudent;'
+    "const todayStr = () => '2026-10-11';" + 조각 + '; return addStudent;'
   )(
     { getElementById: (id) => ({ value: 값[id] != null ? 값[id] : '' }) },
     DATA,
