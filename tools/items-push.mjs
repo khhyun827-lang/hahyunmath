@@ -1,6 +1,6 @@
 // 교재 hwpx + 빠른정답표 → Firestore `items` 로 «판정을 거쳐» 올린다 (2026-09-04 · 09-09에 문을 세웠다)
 //
-//   node tools/items-push.mjs                ← 재보기만 한다(아무것도 안 쓴다)
+//   node tools/items-push.mjs <파일.hwpx> …  ← 재보기만 한다(아무것도 안 쓴다) · 파일을 꼭 준다(원본은 G:\내 드라이브\강의자료 · 2026-10-11)
 //   node tools/items-push.mjs --push         ← 판정대로 올린다
 //   node tools/items-push.mjs --push --only-new
 //        ← 🔵 「추가된 문제만 창고에 받아들인다」 — «고쳤다»는 손대지 않는다
@@ -35,10 +35,10 @@ const 새것만 = argv.includes('--only-new');
 const 준파일 = argv.filter((a) => !a.startsWith('--'));
 const 정답파일 = path.join(교재폴더, 'answer-key.json');
 
-const 파일들 = 준파일.length
-  ? 준파일
-  : fs.readdirSync(교재폴더).filter((x) => x.endsWith('.hwpx')).sort().map((x) => path.join(교재폴더, x));
-if (!파일들.length) { console.error('읽을 hwpx 가 없습니다.'); process.exit(2); }
+/* 🔴 파일을 꼭 준다 (2026-10-11) — 교재 원본이 `G:\내 드라이브\강의자료` 로 옮겨 갔다.
+   예전 기본값(「교재 코드파일」 폴더)에는 옛 판(`…_코드.hwpx`)이 남아 있어, 그대로 --push 하면 옛 본문으로 창고를 덮는다. */
+const 파일들 = 준파일;
+if (!파일들.length) { console.error('올릴 교재 hwpx 를 주세요 — 원본은 G:\\내 드라이브\\강의자료 에 있습니다.'); process.exit(2); }
 
 const rules = loadHwpxRules();
 

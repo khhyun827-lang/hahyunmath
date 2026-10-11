@@ -1,6 +1,6 @@
 // 교재 hwpx 를 «창고와 맞대» 여덟 갈래로 가른다 (2026-09-09)
 //
-//   node tools/store-diff.mjs                          ← 「교재 코드파일」 폴더를 통째로
+//   (파일을 꼭 준다 — 원본은 G:\내 드라이브\강의자료 · 2026-10-11)
 //   node tools/store-diff.mjs <파일.hwpx> [<파일2>…]   ← 고른 파일만
 //   node tools/store-diff.mjs … --json                 ← 다른 도구가 읽을 꼴로
 //
@@ -127,10 +127,9 @@ if (나를직접부름) {
   const argv = process.argv.slice(2);
   const JSON쓰기 = argv.includes('--json');
   const 준파일 = argv.filter((a) => !a.startsWith('--'));
-  const 파일들 = 준파일.length
-    ? 준파일
-    : fs.readdirSync(교재폴더).filter((x) => x.endsWith('.hwpx')).sort().map((x) => path.join(교재폴더, x));
-  if (!파일들.length) { console.error('읽을 hwpx 가 없습니다.'); process.exit(2); }
+  /* 파일을 꼭 준다 (2026-10-11) — 원본이 `G:\내 드라이브\강의자료` 로 옮겨 갔고, 「교재 코드파일」엔 옛 판이 남아 있다 */
+  const 파일들 = 준파일;
+  if (!파일들.length) { console.error('맞댈 교재 hwpx 를 주세요 — 원본은 G:\\내 드라이브\\강의자료 에 있습니다.'); process.exit(2); }
 
   const 손것 = argv.includes('--local');
   const rules = loadHwpxRules();
