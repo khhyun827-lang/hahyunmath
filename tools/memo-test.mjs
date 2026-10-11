@@ -59,11 +59,15 @@ try{
     const a = await page.locator('.dsh-memo .memo-todo span').nth(from).boundingBox();
     const b = await page.locator('.dsh-memo .memo-todo').nth(to).boundingBox();
     await page.mouse.move(a.x + 10, a.y + a.height / 2); await page.mouse.down();
-    await page.mouse.move(a.x + 10, b.y + b.height / 2 + dy, { steps: 8 }); await page.mouse.up();
+    await page.mouse.move(a.x + 10, b.y + b.height / 2 + dy, { steps: 8 });
+    const 모션 = await page.$$eval('.dsh-memo .memo-todo[data-i]', rs => [rs.some(r => !r.classList.contains('drag') && r.getAnimations().length), (rs.find(r => r.classList.contains('drag')) || {}).style.transform]);
+    await page.mouse.up(); await page.waitForTimeout(300);   // 내려앉은 뒤 render
+    return 모션;
   };
   await page.evaluate(() => { state.notepadOn = false; render(); });   // 864 에선 메모장이 할 일 칸을 덮는다
   const 저장수0 = await page.evaluate(() => 저장.length);
-  await 끌기(1, 0, -10);
+  const [비켜남, 따라옴] = await 끌기(1, 0, -10);
+  봄('끄는 동안 — 비켜 주는 줄은 미끄러지고 잡은 줄은 손을 따라온다', [!!비켜남, /translateY\(-?\d/.test(따라옴 || '')], [true, true]);
   봄('아래 줄을 위로 끌어 올린다 · 저장', (await 마지막())[1].todos.map(x => x.t), ['둘째 일', '첫 일']);
   await 끌기(0, 1, 10);
   봄('위 줄을 아래로 끌어 내린다', (await 마지막())[1].todos.map(x => x.t), ['첫 일', '둘째 일']);

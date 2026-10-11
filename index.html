@@ -20679,26 +20679,43 @@ function memoToggle(i){ const x = state.memo.todos.splice(i, 1)[0]; if(!x) retur
 function memoDel(i){ state.memo.todos.splice(i, 1); memoSave(); render(); }
 function memoMove(i, d){ const a = state.memo.todos, j = i + d; if(j < 0 || j >= a.length) return; [a[i], a[j]] = [a[j], a[i]]; memoSave(); render(); }
 /* 끌어서 순서 바꾸기 (2026-10-11 · 사용자 — 「▲▼ 말고 마우스로 누른 채 끌어서」). 끄는 동안은 줄만 옮기고, 놓을 때 한 번 저장.
-   마우스는 줄 어디서든 · 손가락은 ⠿ 에서만(줄에서 잡으면 화면이 안 굴러서) · 체크칸·✕ 에서 누르면 끌지 않는다 */
+   마우스는 줄 어디서든 · 손가락은 ⠿ 에서만(줄에서 잡으면 화면이 안 굴러서) · 체크칸·✕ 에서 누르면 끌지 않는다
+   모션 (10-11 · 사용자 — 「자리가 바뀌는 모션」): 잡은 줄은 손을 그대로 따라오고(transform), 비켜 주는 줄은 옛 자리에서 새 자리로 미끄러진다(FLIP).
+     자리 판정은 offsetTop(움직임에 안 흔들림)으로 · 놓으면 제자리로 내려앉은 뒤 render */
 function memoDrag(ev){
   const row = ev.currentTarget;
   if(ev.button || ev.target.closest('input, .memo-x')) return;
   if(ev.pointerType !== 'mouse' && !ev.target.closest('.memo-grip')) return;
-  const box = row.parentElement, y0 = ev.clientY, rowsOf = () => [...box.querySelectorAll(':scope > .memo-todo[data-i]')];
+  const box = row.parentElement, y0 = ev.clientY, top0 = row.offsetTop, h = row.offsetHeight,
+        rowsOf = () => [...box.querySelectorAll(':scope > .memo-todo[data-i]')],
+        ms = matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 160;
   let on = false;
   const move = e => {
     if(!on){ if(Math.abs(e.clientY - y0) < 5) return; on = true; row.classList.add('drag'); }
     e.preventDefault();
+    const dy = e.clientY - y0, mid = top0 + h / 2 + dy;
     const rows = rowsOf().filter(r => r !== row);
-    const next = rows.find(r => { const b = r.getBoundingClientRect(); return e.clientY < b.top + b.height / 2; });
-    if(next) box.insertBefore(row, next); else if(rows.length) rows[rows.length - 1].after(row);
+    const next = rows.find(r => mid < r.offsetTop + r.offsetHeight / 2);
+    if(next ? row.nextElementSibling !== next : rows.length && rows[rows.length - 1].nextElementSibling !== row){
+      const old = rows.map(r => r.getBoundingClientRect().top);
+      if(next) box.insertBefore(row, next); else rows[rows.length - 1].after(row);
+      rows.forEach((r, k) => {
+        r.getAnimations().forEach(a => a.cancel());
+        const d = old[k] - r.getBoundingClientRect().top;
+        if(d && ms) r.animate([{ transform: `translateY(${d}px)` }, { transform: 'none' }], { duration: ms, easing: 'ease-out' });
+      });
+    }
+    row.style.transform = `translateY(${top0 + dy - row.offsetTop}px)`;
   };
   const up = () => {
     removeEventListener('pointermove', move); removeEventListener('pointerup', up); removeEventListener('pointercancel', up);
     if(!on) return;
-    const order = rowsOf().map(r => +r.dataset.i), a = state.memo.todos.slice();
+    const rows = rowsOf(), order = rows.map(r => +r.dataset.i), a = state.memo.todos.slice();
     if(order.length === a.length && order.some((k, j) => k !== j)){ state.memo.todos = order.map(k => a[k]); memoSave(); }
-    render();
+    rows.forEach((r, j) => { r.dataset.i = j; });   // 내려앉는 동안 다시 잡아도 자리가 맞게
+    const land = row.animate([{ transform: row.style.transform || 'none' }, { transform: 'none' }], { duration: ms, easing: 'ease-out' });
+    row.style.transform = '';
+    land.finished.then(render, render);
   };
   addEventListener('pointermove', move, { passive: false }); addEventListener('pointerup', up); addEventListener('pointercancel', up);
 }
