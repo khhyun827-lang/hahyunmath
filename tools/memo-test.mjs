@@ -146,7 +146,7 @@ try{
       { school: 'A' }, { school: 'A', joinedAt: '2026-09-05' }, { school: 'B', joinedAt: '2026-10-02' },
       { school: 'A', withdrawnAt: '2026-10-01' }, { school: 'B', joinedAt: '2026-08-10', withdrawnAt: '2026-09-20' },
     ], '2026-10-03', 3)), [
-      { ym: '2026-08', 재원: 3, 신규: 1, 퇴원: 0 }, { ym: '2026-09', 재원: 3, 신규: 1, 퇴원: 1 }, { ym: '2026-10', 재원: 3, 신규: 1, 퇴원: 1 }]);
+      { ym: '2026-08', 재원: 3, 신규: 1, 퇴원: 0, 종료: 0 }, { ym: '2026-09', 재원: 3, 신규: 1, 퇴원: 1, 종료: 0 }, { ym: '2026-10', 재원: 3, 신규: 1, 퇴원: 1, 종료: 0 }]);
   const 재원카드 = await page.evaluate(() => {
     DATA.students[0].joinedAt = todayStr(); DATA.students[0].school = '가람고'; state.enrollSchool = ''; render();
     const 전체 = document.querySelector('.hm-enroll .en-sum b').textContent;

@@ -3483,7 +3483,21 @@
 .app .en-sch.on{background:var(--hm-ink);border-color:var(--hm-ink);color:#fff;}
 .app .en-sum{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 14px;padding:2px 8px 10px;font-size:12.5px;color:#6A7186;}
 .app .en-sum b{font-size:22px;font-weight:800;color:var(--hm-ink);letter-spacing:-.02em;}
-.app .en-up{color:var(--hm-oktx);font-weight:800;} .app .en-down{color:var(--hm-notx);font-weight:800;}
+.app .en-up{color:var(--hm-oktx);font-weight:800;} .app .en-down{color:var(--hm-notx);font-weight:800;} .app .en-end{color:#6A7186;font-weight:800;}
+/* 시즌 마감 (2026-10-11) — 반별 묶음 · 학생 줄(이름 · 학교 · 넷 중 하나 · 다음) */
+.app .ssn-cls{margin-top:12px;border:1px solid var(--line);border-radius:var(--r-sm);overflow:hidden;}
+.app .ssn-ch{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 12px;background:var(--hover);font-size:13px;}
+.app .ssn-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:8px 12px;border-top:1px solid var(--line2);font-size:13px;}
+.app .ssn-row > b{width:64px;flex:none;}
+.app .ssn-sch{width:110px;flex:none;color:var(--sub);font-size:12px;}
+.app .ssn-seg{display:inline-flex;border:1px solid var(--line);border-radius:999px;overflow:hidden;flex:none;}
+.app .ssn-seg button{border:0;background:var(--paper);padding:4px 11px;font:inherit;font-size:12px;color:var(--sub);cursor:pointer;}
+.app .ssn-seg button + button{border-left:1px solid var(--line);}
+.app .ssn-seg button.on{background:var(--ink);color:#fff;font-weight:700;}
+.app .ssn-seg button.on.k-계속{background:var(--ok);} .app .ssn-seg button.on.k-퇴원{background:var(--no);}
+.app .ssn-next{display:flex;align-items:center;gap:8px;font-size:12.5px;flex:1;min-width:180px;}
+.app .ssn-note{flex:1;min-width:160px;border:1px solid var(--line);border-radius:var(--r-sm);padding:5px 9px;font:inherit;font-size:12.5px;background:var(--paper);}
+.app .ssn-foot{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:14px;font-size:13px;}
 .app .en-bars{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px;align-items:end;height:118px;padding:0 6px;}
 .app .en-col{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;font-size:11px;color:#6A7186;}
 .app .en-col i{display:block;width:60%;max-width:34px;border-radius:6px 6px 2px 2px;background:#C9CED9;margin:2px 0 4px;}
@@ -9305,6 +9319,7 @@ function isWithdrawnRecord(rec){
 function isWithdrawn(s, rec){
   if(!s) return false;
   if(s.withdrawnAt) return true;
+  if(isEnded(s)) return true;   /* 수강 종료(이관·졸업 · 2026-10-11)도 «지금 다니지 않는» 학생이다 — 출석부·신호·로그인이 같은 문으로 거른다 */
   return isWithdrawnRecord(rec || state.allRecords[s.studentId] || DATA.records[s.studentId]);
 }
 /* **지금 이 반에 «다니는» 학생.** 출석부·과제·클리닉처럼 «앞으로의 일»을 다루는 자리는
@@ -9442,7 +9457,7 @@ async function doStudentLogin(){
     state.loginError = '계정은 있으나 학생 정보가 없습니다. 선생님께 문의해 주세요.'; render(); return;
   }
   const rec = await loadRecord(found.studentId);
-  if(isWithdrawn(found, rec)){ state.loginError = '퇴원 처리된 계정입니다. 문의사항은 선생님께 연락해주세요.'; render(); return; }
+  if(isWithdrawn(found, rec)){ state.loginError = (goneLabel(found) === '퇴원' ? '퇴원 처리된 계정입니다.' : `수강이 끝난 계정입니다 (${found.endedAt}).`) + ' 문의사항은 선생님께 연락해주세요.'; render(); return; }
   state.currentUser = {type:'student', studentId:found.studentId, name:found.name};
   saveSession();
   state.studentTab = 'home';
@@ -10278,7 +10293,7 @@ async function deleteCheckedStudents(){
   const 퇴원 = 사람.filter(isWithdrawn).length;
   /* ⚠ `confirm` 은 HTML 을 못 그린다 — 글자만 쓴다. 너무 길면 앞 20명만 보이고 나머지는 수로 말한다. */
   const 보일것 = 사람.slice(0, 20).map(s =>
-    '· ' + s.name + ' (' + s.studentId + ')' + (isWithdrawn(s) ? ' [퇴원]' : ''));
+    '· ' + s.name + ' (' + s.studentId + ')' + (isWithdrawn(s) ? ' [' + goneLabel(s) + ']' : ''));
   if(사람.length > 20) 보일것.push('  … 외 ' + (사람.length - 20) + '명');
   const 물음 = ['학생 ' + 사람.length + '명을 삭제합니다.', ''].concat(보일것).concat([
     '',
@@ -10351,15 +10366,165 @@ async function restoreStudent(sid){
   const s = DATA.students.find(x=>x.studentId===sid);
   if(!s) return;
   const next = Object.assign({}, s);
-  delete next.withdrawnAt;
-  delete next.withdrawnReason;
+  const 지울것 = ['withdrawnAt', 'withdrawnReason', 'endedAt', 'endType', 'endNote'];   /* 수강 종료도 같이 (2026-10-11) */
+  지울것.forEach(k => delete next[k]);
+  delete next.phone; delete next.parentPhone;
   await dbSetDoc('students', studentKeyOfSid(sid), next);
-  delete s.withdrawnAt;
-  delete s.withdrawnReason;
+  지울것.forEach(k => delete s[k]);
   await logAudit('재원 복귀', sid, s.name, '');
   showToast(s.name + ' 학생을 재원으로 되돌렸습니다.');
   render();
 }
+/* =================== 수강 종료 — 이관 · 졸업 (2026-10-11 · 사용자) ===================
+   「12월 말이면 시즌이 바뀌면서 새 학년 학생을 받고 내 학생들을 다른 선생님에게 보낸다 — 퇴원이 아니다」.
+   🔵 퇴원(그만둠)과 가른다 — 재원생 변화에서 퇴원은 빨강, 수강 종료는 회색으로 따로 센다.
+   필드: endedAt(YYYY-MM-DD) · endType('이관'|'졸업') · endNote(예: 「○○ 선생님 반」).
+   🔴 **그 날부터** 지난 학생이다(사용자 — 「종료한 날 기준으로 바로 로그인 막아」) — 날짜를 미리 적어 두면 그 전까지는 재원이다.
+   ⚠ 아무것도 지우지 않는다(퇴원과 같다) · 「재원으로 되돌리기」가 셋 다 지운다. */
+const END_TYPES = ['이관', '졸업'];
+function isEnded(s){ return !!(s && s.endedAt && s.endedAt <= todayStr()); }
+/* 배지 말 — 퇴원 · 이관 · 졸업. 옛 퇴원(출결 기록으로만 아는 것)도 «퇴원» */
+function goneLabel(s){ return s && !s.withdrawnAt && isEnded(s) ? (s.endType || '수강 종료') : '퇴원'; }
+async function endStudent(sid, date, type, note){
+  const s = DATA.students.find(x=>x.studentId===sid);
+  if(!s || !date) return false;
+  const next = Object.assign({}, s, { endedAt: date, endType: END_TYPES.includes(type) ? type : '이관', endNote: String(note || '').trim() });
+  delete next.phone; delete next.parentPhone;   /* 번호는 학생 문서에 안 쓴다(updateStudentInfo 의 규칙) */
+  if(await dbSetDoc('students', studentKeyOfSid(sid), next) === null) return false;
+  Object.assign(s, { endedAt: next.endedAt, endType: next.endType, endNote: next.endNote });
+  return true;
+}
+/* 학생 정보 «학적» 상자의 단추 — 한 명씩 */
+async function endStudentFromForm(sid){
+  const v = id => ((document.getElementById(id) || {}).value || '').trim();
+  const s = DATA.students.find(x=>x.studentId===sid);
+  if(!s || !await endStudent(sid, v('end-date') || todayStr(), v('end-type'), v('end-note'))){ showToast('저장하지 못했습니다.'); return; }
+  await logAudit('수강 종료', sid, s.name, s.endedAt + ' · ' + s.endType + (s.endNote ? ' · ' + s.endNote : ''));
+  state.stuEditId = null;
+  showToast(s.name + ' 학생을 ' + s.endType + '(' + s.endedAt + ')로 처리했습니다.');
+  render();
+}
+/* 학년 하나 올리기 — 고1→고2 · 중3→고1. 고3·모르는 꼴은 그대로(지어내지 않는다) */
+function gradeUp(g){
+  const m = String(gradeLabel(g)).match(/^(고|중)([1-3])$/);
+  if(!m) return g;
+  if(m[1] === '중' && m[2] === '3') return '고1';
+  return m[2] === '3' ? m[0] : m[1] + (Number(m[2]) + 1);
+}
+
+/* ---------- 시즌 마감 — 한꺼번에 (설정 › 학생) ----------
+   반별 명단에서 학생마다 계속(학년 올림 · 새 반) / 이관 / 졸업 / 퇴원을 고르고 날짜 하나로 적용한다.
+   기본은 이관(사용자 — 「내 학생들을 모두 다른 선생님에게 보내는 경우가 많다」). 고른 값은 state.season 에만 있고 «적용»에서 한 번 쓴다. */
+const SEASON_CHOICES = ['계속', '이관', '졸업', '퇴원'];
+function seasonState(){
+  if(!state.season) state.season = { date: todayStr().slice(0, 4) + '-12-31', pick: {}, note: {}, cls: {}, busy: null };
+  return state.season;
+}
+function seasonPickOf(sid){ return seasonState().pick[sid] || '이관'; }
+function seasonSet(sid, v){ seasonState().pick[sid] = v; render(); }
+function seasonSetClass(classId, v){ (classId ? classRoster(classId) : seasonStudents().filter(s => !studentClassIds(s).length)).forEach(s => { seasonState().pick[s.studentId] = v; }); render(); }
+function seasonStudents(){ return DATA.students.filter(s => !isWithdrawn(s) && !s.endedAt); }
+function seasonHTML(){
+  const ss = seasonState(), 학생 = seasonStudents();
+  if(!학생.length) return `<div class="st-note">지금 재원생이 없습니다.</div>`;
+  const 반들 = DATA.classes.filter(c => classRoster(c.id).some(s => !s.endedAt)).map(c => [c.id, c.name, classRoster(c.id).filter(s => !s.endedAt)]);
+  const 미배정 = 학생.filter(s => !studentClassIds(s).length);
+  if(미배정.length) 반들.push(['', '반 미배정', 미배정]);
+  const 본 = new Set();   /* 반이 여럿인 학생은 «처음 나온 반»에서만 고른다 — 두 번 고르면 어느 쪽이 이기는지 모른다 */
+  const 셈 = {}; SEASON_CHOICES.forEach(k => { 셈[k] = 학생.filter(s => seasonPickOf(s.studentId) === k).length; });
+  const seg = s => `<span class="ssn-seg">${SEASON_CHOICES.map(k => `<button type="button" class="${seasonPickOf(s.studentId) === k ? 'on k-' + k : ''}" onclick="seasonSet('${s.studentId}','${k}')">${k}</button>`).join('')}</span>`;
+  const 줄 = s => {
+    const k = seasonPickOf(s.studentId);
+    const 다음 = k === '계속'
+      ? `<span class="ssn-next">${escHtml(gradeLabel(s.grade) || '')} → <b>${escHtml(gradeUp(s.grade) || '')}</b>
+          <select class="fm-sel" onchange="seasonState().cls['${s.studentId}']=this.value"><option value="">반 그대로</option>${
+            DATA.classes.map(c => `<option value="${c.id}" ${ss.cls[s.studentId] === c.id ? 'selected' : ''}>${escHtml(c.name)}</option>`).join('')}</select></span>`
+      : k === '퇴원' ? '<span class="ssn-next st-note">시즌 중 그만둔 것으로 셉니다</span>'
+      : `<input class="ssn-note" placeholder="${k === '이관' ? '예: ○○ 선생님 반' : '메모 (선택)'}" value="${escHtml(ss.note[s.studentId] || '')}" oninput="seasonState().note['${s.studentId}']=this.value">`;
+    return `<div class="ssn-row"><b>${escHtml(s.name)}</b><span class="ssn-sch">${escHtml(s.school || '')} ${escHtml(s.grade || '')}</span>${seg(s)}${다음}</div>`;
+  };
+  return `<div class="st-form">
+    <div class="cls-form" style="margin-top:0;align-items:flex-end;">
+      <label style="min-width:160px;"><span>마감일</span><input type="date" value="${escHtml(ss.date)}" onchange="seasonState().date=this.value"></label>
+      <span class="st-note" style="flex:1;min-width:220px;">이 날부터 이관·졸업·퇴원 학생은 <b>로그인할 수 없고</b> 출석부·과제·신호에서 빠집니다. 기록은 지우지 않습니다.</span>
+    </div>
+    ${반들.map(([cid, 이름, 명단]) => {
+      const 이번 = 명단.filter(s => !본.has(s.studentId)); 이번.forEach(s => 본.add(s.studentId));
+      if(!이번.length) return '';
+      return `<div class="ssn-cls"><div class="ssn-ch"><b>${escHtml(이름)}</b><span class="mono">${이번.length}명</span><span style="flex:1"></span>
+          <span class="st-note">반 전체</span>${SEASON_CHOICES.map(k => `<button type="button" class="btn q sm" onclick="seasonSetClass('${cid}','${k}')">${k}</button>`).join('')}</div>
+        ${이번.sort(byKoName).map(줄).join('')}</div>`;
+    }).join('')}
+    <div class="ssn-foot">
+      <span>${SEASON_CHOICES.map(k => `${k} <b class="mono">${셈[k]}</b>`).join(' · ')}</span>
+      <span style="flex:1"></span>
+      <button class="btn sm" onclick="exportEndedExcel(seasonStudents().filter(s => ['이관','졸업'].includes(seasonPickOf(s.studentId))).map(s => s.studentId))">${iconSvg('download',14)} 이관·졸업 학생 성적·출결 엑셀</button>
+      <button class="btn p sm" ${ss.busy ? 'disabled' : ''} onclick="seasonApply()">${ss.busy ? `적용하는 중 ${ss.busy.done}/${ss.busy.total}` : `${escHtml(ss.date)} 로 적용`}</button>
+    </div></div>`;
+}
+async function seasonApply(){
+  const ss = seasonState(), 학생 = seasonStudents();
+  if(ss.busy || !ss.date) return;
+  const 셈 = SEASON_CHOICES.map(k => k + ' ' + 학생.filter(s => seasonPickOf(s.studentId) === k).length).join(' · ');
+  if(!confirm(`${ss.date} 로 시즌을 마감합니다.\n${셈}\n\n이관·졸업·퇴원 학생은 그 날부터 로그인할 수 없습니다. 기록은 지우지 않고, 학생 정보에서 «재원으로 되돌리기»로 언제든 되돌릴 수 있습니다.`)) return;
+  ss.busy = { done: 0, total: 학생.length }; render();
+  let 실패 = 0;
+  for(const s of 학생){
+    const k = seasonPickOf(s.studentId);
+    try{
+      if(k === '계속'){
+        const next = Object.assign({}, s, { grade: gradeUp(s.grade) });
+        const 새반 = ss.cls[s.studentId];
+        if(새반 && 새반 !== s.classId){ next.classId = 새반; next.classIds = (s.classIds || []).filter(id => id !== 새반); }
+        delete next.phone; delete next.parentPhone;
+        if(await dbSetDoc('students', studentKeyOfSid(s.studentId), next) === null) throw 0;
+        Object.assign(s, { grade: next.grade, classId: next.classId, classIds: next.classIds });
+      } else if(k === '퇴원'){
+        const next = Object.assign({}, s, { withdrawnAt: ss.date, withdrawnReason: '시즌 마감' });
+        delete next.phone; delete next.parentPhone;
+        if(await dbSetDoc('students', studentKeyOfSid(s.studentId), next) === null) throw 0;
+        Object.assign(s, { withdrawnAt: ss.date, withdrawnReason: '시즌 마감' });
+      } else if(!await endStudent(s.studentId, ss.date, k, ss.note[s.studentId])) throw 0;
+    }catch(e){ 실패++; }
+    ss.busy.done++; render();
+  }
+  await logAudit('시즌 마감', '', '', ss.date + ' · ' + 셈 + (실패 ? ' · 실패 ' + 실패 : ''));
+  state.season = null; state.settingsForm = '';
+  showToast(실패 ? `${실패}명을 저장하지 못했습니다 — 학생 계정 목록에서 확인해 주세요.` : '시즌을 마감했습니다 · ' + 셈);
+  render();
+}
+/* 이관·졸업 학생의 성적·출결 — 다음 선생님께 넘길 엑셀 (2026-10-11 · 사용자). 요약 · 성적 · 출결 세 장 */
+async function exportEndedExcel(sids){
+  const 학생 = (sids || []).map(sid => DATA.students.find(s => s.studentId === sid)).filter(Boolean);
+  if(!학생.length){ showToast('이관·졸업으로 고른 학생이 없습니다.'); return; }
+  try{
+    await ensureXLSXLoaded();
+    await Promise.all(학생.map(s => loadRecord(s.studentId)));
+    const 기록 = s => state.allRecords[s.studentId] || DATA.records[s.studentId] || {};
+    const 요약 = [['이름', '학교', '학년', '반', '출석', '지각', '조퇴', '결석', '출석률(%)', '시험 수', '평균(%)', '최근 시험', '최근 점수']];
+    const 성적 = [['이름', '날짜', '시험', '점수', '만점', '환산(%)']];
+    const 출결 = [['이름', '날짜', '반', '출결', '사유']];
+    학생.forEach(s => {
+      const rec = 기록(s), att = attCountedOf(rec, s), sc = (rec.scores || []).filter(x => x.total);
+      const n = { 출석: 0, 지각: 0, 조퇴: 0, 결석: 0 }; att.forEach(a => { if(n[a.status] != null) n[a.status]++; });
+      const 평균 = sc.length ? Math.round(sc.reduce((t, x) => t + x.score / x.total * 100, 0) / sc.length) : '';
+      const 끝 = sc[sc.length - 1];
+      요약.push([s.name, s.school || '', s.grade || '', studentClassTitle(s), n.출석, n.지각, n.조퇴, n.결석, attRateOf(att) == null ? '' : attRateOf(att), sc.length, 평균, 끝 ? 끝.name || '' : '', 끝 ? 끝.score + '/' + 끝.total : '']);
+      sc.forEach(x => 성적.push([s.name, x.date || '', x.name || '', x.score, x.total, Math.round(x.score / x.total * 100)]));
+      (rec.attendance || []).slice().sort((a, b) => String(a.date).localeCompare(String(b.date)))
+        .forEach(a => 출결.push([s.name, a.date || '', classNameOf(a.classId || s.classId) || '', a.status || '', a.reason || a.note || '']));
+    });
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(요약), '요약');
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(성적), '성적');
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(출결), '출결');
+    XLSX.writeFile(wb, `이관자료_${학생.length === 1 ? 학생[0].name + '_' : 학생.length + '명_'}${todayStr()}.xlsx`.replace(/[\\/:*?"<>|]/g, ''));
+  }catch(e){
+    console.error('이관 엑셀 실패', e);
+    showToast('엑셀 파일을 만들지 못했습니다.');
+  }
+}
+
 /* 명단·신호의 「퇴원」 배지 옆에 붙는 한 줄. 옛 데이터는 날짜를 모른다. */
 function withdrawnWhy(s){
   if(!s || !s.withdrawnAt) return '출결 기록의 마지막 상태';
@@ -20861,15 +21026,17 @@ function teacherMemoHTML(){
 /* =================== 재원생 변화 (2026-10-11 · 사용자 — 「홈에 신규생과 퇴원생 및 전체 재원생 변화를 볼 수 있으면 · 학교별로도」) ===================
    달마다 «그 달 말의 재원 · 그 달 신규 · 그 달 퇴원». 신규는 등록일(joinedAt — 10-11 부터 만들 때 저절로 · 학생 정보에서 고친다),
    퇴원은 withdrawnAt. ⚠ 등록일이 없는 옛 학생은 «처음부터 있던 학생»으로 센다(지어내지 않는다) — 카드가 그 수를 말한다.
-   재원 판정은 홈 숫자 카드와 같은 잣대(withdrawnAt 하나 · isWithdrawn). */
+   재원 판정은 홈 숫자 카드와 같은 잣대(withdrawnAt 하나 · isWithdrawn).
+   10-11 저녁 — 수강 종료(이관·졸업 · endedAt)는 «종료»로 따로 센다(회색). 12월에 넘어간 학생이 퇴원(빨강)으로 보이면 안 된다. */
 function enrollMonths(students, today, n){
   const ym0 = today.slice(0, 7), out = [];
   for(let i = n - 1; i >= 0; i--){
     const ym = shiftYm(ym0, -i), end = ym + '-31';
     out.push({ ym,
-      재원: students.filter(s => String(s.joinedAt || '') <= end && !(s.withdrawnAt && s.withdrawnAt <= end)).length,
+      재원: students.filter(s => String(s.joinedAt || '') <= end && !(s.withdrawnAt && s.withdrawnAt <= end) && !(s.endedAt && s.endedAt <= end)).length,
       신규: students.filter(s => String(s.joinedAt || '').startsWith(ym)).length,
-      퇴원: students.filter(s => String(s.withdrawnAt || '').startsWith(ym)).length });
+      퇴원: students.filter(s => String(s.withdrawnAt || '').startsWith(ym)).length,
+      종료: students.filter(s => !s.withdrawnAt && String(s.endedAt || '').startsWith(ym)).length });
   }
   return out;
 }
@@ -20888,10 +21055,10 @@ function enrollBodyHTML(){
   return `<div class="en-schools">${칩('', '전체')}${학교들.map(([sc]) => 칩(sc, sc)).join('')}</div>
     <div class="en-sum"><span>재원 <b class="mono">${이번.재원}</b>명</span>
       <span>지난달보다 ${증감(차) || '그대로'}</span>
-      <span>이번 달 신규 <span class="en-up">${이번.신규}</span> · 퇴원 <span class="${이번.퇴원 ? 'en-down' : ''}">${이번.퇴원}</span></span></div>
-    <div class="en-bars">${ms.map(m => `<div class="en-col ${m.ym === ym ? 'now' : ''}" title="${m.ym} 말 재원 ${m.재원} · 신규 ${m.신규} · 퇴원 ${m.퇴원}">
+      <span>이번 달 신규 <span class="en-up">${이번.신규}</span> · 퇴원 <span class="${이번.퇴원 ? 'en-down' : ''}">${이번.퇴원}</span>${이번.종료 ? ` · 이관·졸업 <span class="en-end">${이번.종료}</span>` : ''}</span></div>
+    <div class="en-bars">${ms.map(m => `<div class="en-col ${m.ym === ym ? 'now' : ''}" title="${m.ym} 말 재원 ${m.재원} · 신규 ${m.신규} · 퇴원 ${m.퇴원} · 이관·졸업 ${m.종료}">
       <b class="mono">${m.재원}</b><i style="height:${Math.round(m.재원 / max * 64) + 2}px"></i>${Number(m.ym.slice(5))}월
-      <em>${[m.신규 ? `<span class="en-up">+${m.신규}</span>` : '', m.퇴원 ? `<span class="en-down">−${m.퇴원}</span>` : ''].filter(Boolean).join(' ')}</em></div>`).join('')}</div>
+      <em>${[m.신규 ? `<span class="en-up">+${m.신규}</span>` : '', m.퇴원 ? `<span class="en-down">−${m.퇴원}</span>` : '', m.종료 ? `<span class="en-end" title="이관·졸업">종료 −${m.종료}</span>` : ''].filter(Boolean).join(' ')}</em></div>`).join('')}</div>
     ${고른 ? '' : `<table class="en-tbl"><tr><th>학교</th><th>재원</th><th>이번 달 신규</th><th>퇴원</th></tr>${학교들.map(([sc, n]) => {
       const 학 = all.filter(s => s.school === sc);
       return `<tr data-sc="${escHtml(sc)}" onclick="state.enrollSchool=this.dataset.sc;render()"><td>${escHtml(sc)}</td><td class="mono">${n}</td>
@@ -23060,7 +23227,7 @@ function sessionExamHTML(classId, date){
     const sc = examScoreOf(state.allRecords[s.studentId], cur.id);
     const pct = sc && sc.total ? Math.round(sc.score/sc.total*100) : null;
     return `<div class="tile">
-      <div class="who"><b>${escHtml(s.name)}${isWithdrawn(s)?' <span class="badge gone">퇴원</span>':''}</b>
+      <div class="who"><b>${escHtml(s.name)}${isWithdrawn(s)?` <span class="badge gone">${goneLabel(s)}</span>`:''}</b>
         <span>${pct===null ? '아직 안 넣었습니다' : `<b class="mono">${pct}</b>점 · ${
           Math.max(0, sc.total-sc.score)}개 틀림`}</span></div>
       <div class="cls-score">
@@ -23925,7 +24092,7 @@ function chubScoresHTML(classId){
         const avg = vals.length ? Math.round(vals.reduce((a,b)=>a+b,0)/vals.length) : null;
         return `<tr>
           <td class="who"><span class="nm">${escHtml(s.name)}</span>${
-            isWithdrawn(s) ? ' <span class="badge gone">퇴원</span>' : ''}</td>
+            isWithdrawn(s) ? ` <span class="badge gone">${goneLabel(s)}</span>` : ''}</td>
           ${exams.map(ex=>{
             const sc = examScoreOf(state.allRecords[s.studentId], ex.id);
             const tot = examTotalOf(ex);
@@ -24094,7 +24261,7 @@ function chubSchoolHTML(classId){
   const rows = roster.map(s=>{
     const rec = state.allRecords[s.studentId] || {};
     const who = `<td class="who"><span class="nm">${escHtml(s.name)}</span>${
-      isWithdrawn(s) ? ' <span class="badge gone">퇴원</span>' : ''}</td>`;
+      isWithdrawn(s) ? ` <span class="badge gone">${goneLabel(s)}</span>` : ''}</td>`;
     if(mock){
       const list = (rec.mockExams || []).slice().sort((a,b)=>String(b.ym).localeCompare(String(a.ym)));
       const got = list.find(x=>x.ym===ym);
@@ -26810,6 +26977,16 @@ ${[...new Set(['고1','고2','고3'].concat(gradeLabel(s.grade) ? [gradeLabel(s.
           </div>
           <p class="st-note">출석부 · 과제 · 미제출 알림 · 반 인원에서 빠져 있고,
             <b>이 학생은 로그인할 수 없습니다.</b> 지난 성적과 시험 기록은 그대로 남아 있습니다.</p>
+        ` : s.endedAt ? `
+          <div class="stu-life-now">
+            <span class="badge gone">${escHtml(s.endType || '수강 종료')}</span>
+            <span><span class="mono">${escHtml(s.endedAt)}</span>${isEnded(s) ? '' : ' 부터'}${s.endNote ? ' · ' + escHtml(s.endNote) : ''}</span>
+            <span class="spacer" style="flex:1;"></span>
+            <button class="btn sm" onclick="exportEndedExcel(['${sid}'])">${iconSvg('download',14)} 성적·출결 엑셀</button>
+            <button class="btn sm" onclick="restoreStudent('${sid}')">재원으로 되돌리기</button>
+          </div>
+          <p class="st-note">${isEnded(s) ? '수강이 끝난 학생입니다 — 출석부 · 과제 · 신호에서 빠져 있고 <b>로그인할 수 없습니다.</b>'
+            : '<b>이 날부터</b> 출석부 · 과제 · 신호에서 빠지고 로그인할 수 없습니다. 그 전까지는 재원입니다.'} 기록은 그대로 남아 있습니다.</p>
         ` : `
           <div class="cls-form" style="margin-top:0;">
             <label style="min-width:150px;"><span>퇴원일</span>
@@ -26821,6 +26998,14 @@ ${[...new Set(['고1','고2','고3'].concat(gradeLabel(s.grade) ? [gradeLabel(s.
           <p class="st-note"><b>아무것도 지우지 않습니다.</b> 명단에서 내려놓기만 하고,
             출석부 · 과제 · 미제출 알림 · 반 인원에서 빠집니다.
             <b>언제든 되돌릴 수 있습니다.</b></p>
+          ${/* 수강 종료 (2026-10-11) — 그만둔 게 아니라 시즌이 끝나 넘어간 학생. 여럿이면 설정 › 학생 «시즌 마감» */''}
+          <div class="cls-form" style="margin-top:12px;">
+            <label style="min-width:150px;"><span>수강 종료일</span><input id="end-date" type="date" value="${todayStr()}"></label>
+            <label><span>종류</span><select class="fm-sel" id="end-type">${END_TYPES.map(t => `<option>${t}</option>`).join('')}</select></label>
+            <label style="flex:1;min-width:180px;"><span>메모 (선택)</span><input id="end-note" placeholder="예: ○○ 선생님 반"></label>
+            <button class="btn sm" onclick="endStudentFromForm('${sid}')">수강 종료</button>
+          </div>
+          <p class="st-note">시즌이 끝나 다른 선생님 반으로 가거나(이관) 졸업한 학생. <b>퇴원으로 세지 않고</b>, 그 날부터 로그인이 막힙니다. 여러 명은 설정 › 학생의 <b>시즌 마감</b>에서 한꺼번에 합니다.</p>
         `}
         <div class="stu-life-danger">
           <button class="btn no sm" onclick="deleteStudent('${sid}')">이 학생 삭제</button>
@@ -26845,7 +27030,7 @@ function studentAccountDrawerHTML(){
   return `<div class="hwd-back" onclick="stuEdit(null)"></div>
     <aside class="hwd wide">
       <div class="hwd-h" style="position:relative;">
-        <div class="t">${escHtml(s.name)}${gone?' <span class="badge gone">퇴원</span>':''}</div>
+        <div class="t">${escHtml(s.name)}${gone?` <span class="badge gone">${goneLabel(s)}</span>`:''}</div>
         <div class="m"><span class="mono">${escHtml(s.studentId)}</span>
           <s>·</s>${escHtml(s.school||'학교 미입력')} ${escHtml(s.grade||'')}
           <s>·</s>${escHtml(studentClassTitle(s))}</div>
@@ -35210,7 +35395,7 @@ function teacherSettingsStudentsHTML(){
      퇴원끼리는 **늦게 그만둔 사람이 위**다 — 되돌릴 일이 있다면 대개 최근 사람이다. */
   const listed = DATA.students.filter(hit).slice().sort((a,b)=>
     (isWithdrawn(a) - isWithdrawn(b))
-    || (isWithdrawn(a) ? String(b.withdrawnAt||'').localeCompare(String(a.withdrawnAt||'')) : 0)
+    || (isWithdrawn(a) ? String(b.withdrawnAt||b.endedAt||'').localeCompare(String(a.withdrawnAt||a.endedAt||'')) : 0)
     || String(classNameOf(a.classId)).localeCompare(String(classNameOf(b.classId)),'ko')
     || String(a.name||'').localeCompare(String(b.name||''),'ko'));
   const goneCount = listed.filter(isWithdrawn).length;
@@ -35242,8 +35427,9 @@ function teacherSettingsStudentsHTML(){
           <span class="cls" title="${escHtml(studentClassTitle(s))}">${studentClassIds(s).length
             ? escHtml(studentClassLabel(s, {short:true}))
             : '<span class="badge">미배정</span>'}</span>
-          ${gone ? `<span class="badge gone">퇴원${
-            s.withdrawnAt ? ' <span class="mono">'+escHtml(s.withdrawnAt)+'</span>' : ''}</span>` : ''}
+          ${gone ? `<span class="badge gone">${goneLabel(s)}${
+            (s.withdrawnAt || s.endedAt) ? ' <span class="mono">'+escHtml(s.withdrawnAt || s.endedAt)+'</span>' : ''}</span>`
+            : s.endedAt ? `<span class="badge">${escHtml(s.endType || '수강 종료')} 예정 <span class="mono">${escHtml(s.endedAt)}</span></span>` : ''}
         </div>
         ${/* 🔴 **줄 아래에 폼을 펴지 않는다** (2026-08-27 · D-1) — 오른쪽 드로어로 갔다.
              사용자의 말 — **「아래 펼쳐지는게 아니라 오른쪽에 공간 많으니까」**.
@@ -35261,7 +35447,7 @@ function teacherSettingsStudentsHTML(){
         /* 재원과 퇴원 사이에 «금»을 하나 긋는다 — 아래로 내리기만 하면
            어디부터가 퇴원인지 한 줄씩 확인해야 한다. */
         const first = goneCount && isWithdrawn(s) && (i===0 || !isWithdrawn(listed[i-1]));
-        return (first ? `<div class="stu-sep"><span>퇴원 ${goneCount}명</span></div>` : '') + line(s);
+        return (first ? `<div class="stu-sep"><span>지난 학생(퇴원·이관·졸업) ${goneCount}명</span></div>` : '') + line(s);
       }).join('');
 
   return `<div class="st-wrap">
@@ -35308,6 +35494,11 @@ function teacherSettingsStudentsHTML(){
       </div>`;
     })()}
     ${rows}`
+  })}
+  ${stSec({
+    title:'시즌 마감', desc:'연말 — 학생마다 계속(학년 올림) · 이관 · 졸업 · 퇴원을 골라 한 날짜로 처리합니다',
+    action:`<button class="btn ${state.settingsForm==='season'?'':'p'} sm" onclick="stOpen('season')">${state.settingsForm==='season'?'닫기':'시즌 마감'}</button>`,
+    form: state.settingsForm==='season' ? seasonHTML() : ''
   })}
   ${stSec({
     title:'엑셀로 한꺼번에', desc:'양식을 채워 올리면 이미 있는 아이디는 건너뜁니다',

@@ -57,7 +57,7 @@ function 판(opts){
   const 답 = o.답 === undefined ? true : o.답;
   const F = new Function('DATA','state','confirm','dbDeleteDoc','adminDeleteUser','logAudit',
     'showToast','render','studentKeyOfSid','isWithdrawn','console',
-    이름들.map(lift).join(NL) + NL + 'return {' + 이름들.join(',') + '};')(
+    "const goneLabel = s => '퇴원';" + NL + 이름들.map(lift).join(NL) + NL + 'return {' + 이름들.join(',') + '};')(
     DATA, state,
     (q) => { 물음.push(q); return 답; },
     async (col, key) => {
