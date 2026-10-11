@@ -3345,12 +3345,12 @@
 /* 큰 달력 (2026-10-02 · 사용자 — 「달력을 더 크게 · 일정이 생기면 칸에 표시」) — 761 이상 홈: 칸 격자 | 고른 날 일정, 칸 안에 일정 이름 */
 @media (min-width:761px){
   #app:has(.tnav) .app:not(.sap) .hm .tcal .scal-legend{display:none;}
-  #app:has(.tnav) .app:not(.sap) .hm .tcal{display:grid;grid-template-columns:minmax(0,1fr) 230px;grid-template-rows:auto auto minmax(0,1fr);column-gap:14px;align-content:start;}
+  #app:has(.tnav) .app:not(.sap) .hm .tcal{display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:auto auto minmax(0,1fr);column-gap:14px;align-content:start;}
   #app:has(.tnav) .app:not(.sap) .hm .tcal > .scal-head{grid-column:1;grid-row:1;}
   #app:has(.tnav) .app:not(.sap) .hm .tcal > .scal-dow{grid-column:1;grid-row:2;}
   #app:has(.tnav) .app:not(.sap) .hm .tcal > .scal-grid{grid-column:1;grid-row:3;align-content:start;}
   #app:has(.tnav) .app:not(.sap) .hm .tcal > .tcal-day{grid-column:2;grid-row:1 / 4;min-height:0;overflow:auto;border-left:1px solid #ECEEF3;padding-left:14px;margin:0;}
-  #app:has(.tnav) .app:not(.sap) .hm .tcal .scal-c{height:auto;min-height:62px;min-width:0;font-size:12px;border-radius:10px;display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;padding:3px 3px 4px;gap:2px;}
+  #app:has(.tnav) .app:not(.sap) .hm .tcal .scal-c{aspect-ratio:auto;height:auto;min-height:62px;min-width:0;font-size:12px;border-radius:10px;display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;padding:3px 3px 4px;gap:2px;}
   #app:has(.tnav) .app:not(.sap) .hm .tcal .scal-c .d{align-self:center;}
   #app:has(.tnav) .app:not(.sap) .hm .tcal .scal-c .dots{justify-content:center;}
   #app:has(.tnav) .app:not(.sap) .hm .tcal .scal-c .evs{display:flex;flex-direction:column;gap:2px;min-width:0;}
@@ -3361,9 +3361,9 @@
 }
 /* 864 언저리(761~1199) — 달력이 맨 위 한 줄을 다 쓰고, 그 밑에 먼저 볼 학생 · 할 일이 나란히 */
 @media (min-width:761px) and (max-width:1199px){
-  #app:has(.tnav) .app:not(.sap) .hm .hm-grid{grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-areas:"c c" "b m" "e e";align-items:start;}   /* e = 재원생 변화 (2026-10-11) — 한 줄 다 */
+  #app:has(.tnav) .app:not(.sap) .hm .hm-grid{grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-areas:"c c" "b m";align-items:start;}
   #app:has(.tnav) .app:not(.sap) .hm .dsh-b, #app:has(.tnav) .app:not(.sap) .hm .dsh-c{display:contents;}
-  #app:has(.tnav) .app:not(.sap) .hm .dsh-b > section:nth-child(1){grid-area:b;} #app:has(.tnav) .app:not(.sap) .hm .dsh-b > section:nth-child(2){grid-area:e;}
+  #app:has(.tnav) .app:not(.sap) .hm .dsh-b > section:nth-child(1){grid-area:b;}
   #app:has(.tnav) .app:not(.sap) .hm .dsh-c > .tcal{grid-area:c;}
   #app:has(.tnav) .app:not(.sap) .hm .dsh-c > .dsh-memo{grid-area:m;}
 }
@@ -3417,7 +3417,7 @@
 .app .hm-head{margin-bottom:14px;}
 .app .hm-date{font-size:13.5px;font-weight:600;color:var(--sub);}
 .app .hm-hi{margin:2px 0 0;font-size:30px;letter-spacing:-.03em;}
-.app .hm-kpis{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;margin-bottom:16px;}
+.app .hm-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:16px;}   /* 10-11 여섯 → 넷 — 재원·퇴원은 위 «한 해 띠»로 */
 .app .hm-kpi{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:20px;cursor:pointer;text-decoration:none;color:var(--hm-ink);
   background:rgba(255,255,255,.92);border:1px solid #ECEEF3;transition:box-shadow var(--t);}
 .app .hm-kpi:hover{box-shadow:0 4px 14px rgba(30,36,51,.07);}
@@ -3483,6 +3483,57 @@
 .app .en-sch.on{background:var(--hm-ink);border-color:var(--hm-ink);color:#fff;}
 .app .en-sum{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 14px;padding:2px 8px 10px;font-size:12.5px;color:#6A7186;}
 .app .en-sum b{font-size:22px;font-weight:800;color:var(--hm-ink);letter-spacing:-.02em;}
+/* 홈 «한 해 띠» (2026-10-11 · 사용자 — F+E · 목표 50명) — 1~12월 달 말 재원 막대 + 목표선 · 누르면 «현황» */
+.app .hm-year{display:flex;align-items:stretch;gap:18px;margin:0 0 12px;padding:12px 16px;border-radius:20px;background:rgba(255,255,255,.92);border:1px solid #ECEEF3;
+  text-decoration:none;color:var(--hm-ink);cursor:pointer;}
+.app .hm-year:hover{box-shadow:0 4px 14px rgba(30,36,51,.07);}
+.app .hy-l{flex:none;display:flex;flex-direction:column;justify-content:center;gap:2px;min-width:150px;}
+.app .hy-l s{text-decoration:none;font-size:12px;font-weight:700;color:#6A7186;}
+.app .hy-l b{font-size:26px;font-weight:800;letter-spacing:-.02em;line-height:1.1;}
+.app .hy-l b small{font-size:13px;font-weight:700;color:#6A7186;margin-left:4px;}
+.app .hy-l em{font-style:normal;font-size:12px;color:#6A7186;}
+.app .hy-pct{display:inline-block;margin-left:6px;font-size:12px;font-weight:800;padding:1px 8px;border-radius:999px;background:var(--hm-latebg);color:var(--hm-latetx);vertical-align:middle;}
+.app .hy-pct.ok{background:var(--hm-okbg);color:var(--hm-oktx);}
+.app .hy-bars{flex:1;min-width:0;position:relative;display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:6px;align-items:end;height:74px;padding-top:4px;}
+.app .hy-col{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;min-width:0;font-size:10.5px;color:#8A90A2;}
+.app .hy-col i{display:block;width:70%;max-width:28px;border-radius:5px 5px 2px 2px;background:#C9CED9;margin-bottom:3px;}
+.app .hy-col.now i{background:var(--hm-ink);} .app .hy-col.now{color:var(--hm-ink);font-weight:800;}
+.app .hy-col.future i{background:transparent;border:1px dashed #D5D9E2;height:6px !important;}
+.app .hy-col b{font-size:10.5px;color:var(--hm-ink);font-weight:700;margin-bottom:1px;}
+.app .hy-goal{position:absolute;left:0;right:0;border-top:1.5px dashed var(--hm-no);pointer-events:none;}
+.app .hy-goal span{position:absolute;right:0;top:-15px;font-size:10.5px;font-weight:800;color:var(--hm-notx);background:rgba(255,255,255,.9);padding:0 4px;border-radius:4px;}
+.app .hy-more{flex:none;align-self:center;font-size:12.5px;font-weight:700;color:#6A7186;white-space:nowrap;}
+@media (max-width:760px){ .app .hm-year{flex-wrap:wrap;} .app .hy-bars{flex-basis:100%;} .app .hy-more{display:none;} }
+/* 홈 › 현황 (2026-10-11) — 한 해 큰 막대 · 숫자 다섯 · 학교별 · 달마다 출석률 · 떠난 학생 */
+.app .stx{display:flex;flex-direction:column;gap:14px;}
+.app .stx-tiles{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;}
+.app .stx-tile{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px 14px;}
+.app .stx-tile s{display:block;text-decoration:none;font-size:12px;font-weight:700;color:var(--sub);}
+.app .stx-tile b{display:block;font-size:24px;font-weight:800;letter-spacing:-.02em;}
+.app .stx-card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:14px 16px;min-width:0;}
+.app .stx-card > h3{margin:0 0 10px;font-size:14px;}
+.app .stx-big{position:relative;display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:8px;align-items:end;height:220px;padding-top:18px;}
+.app .stx-big .hy-col{font-size:12px;}
+.app .stx-big .hy-col i{max-width:44px;}
+.app .stx-big .hy-col b{font-size:12.5px;}
+.app .stx-big .hy-col em{font-style:normal;font-size:11px;min-height:15px;white-space:nowrap;}
+.app .stx-2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px;}
+.app .stx-att{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:4px;text-align:center;font-size:11.5px;}
+.app .stx-att div{padding:6px 0;border-radius:8px;background:var(--hover);}
+.app .stx-att div.lo{background:var(--nobg);color:var(--no);font-weight:800;}
+.app .stx-att div b{display:block;font-size:13px;}
+.app .stx-gone{width:100%;border-collapse:collapse;font-size:12.5px;}
+.app .stx-gone td{padding:6px 4px;border-top:1px solid var(--line2);}
+@media (max-width:900px){ .app .stx-tiles{grid-template-columns:repeat(3,minmax(0,1fr));} .app .stx-2{grid-template-columns:1fr;} }
+@media (max-width:560px){ .app .stx-tiles{grid-template-columns:repeat(2,minmax(0,1fr));} .app .stx-big{gap:3px;height:180px;} .app .stx-big .hy-col em{display:none;} }
+/* 홈 달력 — 고른 날은 칸 옆 작은 창 (761 이상 홈 · 2026-10-11 F+E) */
+.app .tcal .tcal-pop{position:absolute;z-index:30;top:0;width:250px;max-height:300px;overflow:auto;margin:0;padding:10px 12px;border-top:0;
+  background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:0 10px 28px rgba(20,24,40,.18);cursor:default;text-align:left;font-size:12.5px;}
+.app .tcal .tcal-pop.r{left:calc(100% + 6px);} .app .tcal .tcal-pop.l{right:calc(100% + 6px);}
+.app .tcal .tcal-pop.up{top:auto;bottom:0;}
+.app .tcal .tcal-pop .scal-daytitle{display:flex;align-items:center;gap:6px;}
+.app .tcal .tcal-x{margin-left:auto;width:26px;height:26px;border:0;background:none;border-radius:8px;color:var(--dim);font-size:16px;cursor:pointer;}
+.app .tcal .tcal-x:hover{background:var(--hover);color:var(--ink);}
 .app .en-up{color:var(--hm-oktx);font-weight:800;} .app .en-down{color:var(--hm-notx);font-weight:800;} .app .en-end{color:#6A7186;font-weight:800;}
 /* 시즌 마감 (2026-10-11) — 반별 묶음 · 학생 줄(이름 · 학교 · 넷 중 하나 · 다음) */
 .app .ssn-cls{margin-top:12px;border:1px solid var(--line);border-radius:var(--r-sm);overflow:hidden;}
@@ -3523,7 +3574,7 @@
 .app .hm-math b{font-size:14px;font-weight:800;}
 /* 달력·메모 칸 — 같은 흰 카드 */
 .app .hm .dsh-c .dsh-card{border-radius:22px;background:rgba(255,255,255,.92);border:1px solid #ECEEF3;box-shadow:none;}
-@media (max-width:1279px){ .app .hm-kpis{grid-template-columns:repeat(3,minmax(0,1fr));} }
+@media (max-width:1279px){ .app .hm-kpis{grid-template-columns:repeat(4,minmax(0,1fr));} }
 @media (max-width:560px){ .app .hm-kpis{grid-template-columns:repeat(2,minmax(0,1fr));} .app .hm-hi{font-size:22px;} }
 
 /* ── 폰(≤560) — 상단 메뉴가 «하단 탭바»로 내려간다 (A-1) ──
@@ -4324,9 +4375,8 @@
   #app:has(.tnav) .app:not(.sap) .hm{display:flex;flex-direction:column;height:calc(100vh - var(--chrome,178px));min-height:520px;}
   #app:has(.tnav) .app:not(.sap) .hm .hm-hi{font-size:32px;line-height:40px;}
   #app:has(.tnav) .app:not(.sap) .hm .hm-grid{flex:1;min-height:0;margin-top:14px;gap:14px;align-items:stretch;
-    grid-template-columns:minmax(0,.85fr) minmax(0,2fr);grid-template-rows:minmax(0,1.15fr) auto minmax(0,1fr);
-    grid-template-areas:"b c" "e c" "m c";}   /* 2026-10-11 — e 재원생 변화(제 키만큼 · 학교 표는 접는다 — 학교 칩이 거른다) */
-  #app:has(.tnav) .app:not(.sap) .hm .hm-enroll .en-tbl{display:none;}   /* 2026-10-02 둘째 재배치 — 먼저 볼 학생 / 할 일 · 큰 달력. 시험은 위 얇은 띠 */   /* 2026-10-02 재배치 — 먼저 볼 학생 · 시험/할 일 · 달력(두 줄) */
+    grid-template-columns:minmax(0,1fr) minmax(0,1.5fr);grid-template-rows:minmax(0,1.15fr) minmax(0,1fr);
+    grid-template-areas:"b c" "m c";}   /* 2026-10-11 F+E — 달력 오른쪽 «고른 날» 칸을 빼고(칸 옆 작은 창) 왼쪽을 넓혔다(.85:2 → 1:1.5) */   /* 2026-10-02 둘째 재배치 — 먼저 볼 학생 / 할 일 · 큰 달력. 시험은 위 얇은 띠 */   /* 2026-10-02 재배치 — 먼저 볼 학생 · 시험/할 일 · 달력(두 줄) */
   #app:has(.tnav) .app:not(.sap) .hm .dsh-b, #app:has(.tnav) .app:not(.sap) .hm .dsh-c{display:contents;}
   #app:has(.tnav) .app:not(.sap) .hm .dsh-a{min-height:0;display:flex;}
   #app:has(.tnav) .app:not(.sap) .hm .dsh-a > section{flex:1;display:flex;flex-direction:column;min-height:0;overflow:auto;box-sizing:border-box;}
@@ -20291,7 +20341,7 @@ const TEACHER_NAV = [
      어느 칸에 불이 들어오는지는 `teacherSectionOf` 가 정한다. */
 const TEACHER_SUBNAV = {
   '홈': [
-    ['오늘', 'dash', null, 'calendar'], ['신호', 'signals', null, 'alert'],
+    ['오늘', 'dash', null, 'calendar'], ['현황', 'stats', null, 'chart'], ['신호', 'signals', null, 'alert'],
     ['학생', 'classhub', 'students', 'users'],
     /* 🔵 「출석 도장」은 소통 → 홈 (2026-10-03 · 사용자). 학습 관리도 주고받기도 아닌 «학생이 앱을 꾸준히 여나»다. */
     ['출석 도장', 'checkin', null, 'trophy']
@@ -20487,7 +20537,7 @@ function teacherSideExtrasHTML(section){
    ⚠ `roster`는 여기 없다 — 「반 › 학생」으로 옮겨졌고, 옛 세션·북마크가 들고 있으면
      `teacherHTML`이 첫 줄에서 갈아 끼운다. 옛 `home`(C-13 전의 첫 화면)은 이제 대시보드(`dash`)로 간다. */
 const TEACHER_TAB_SECTION = {
-  dash:'홈', signals:'홈',
+  dash:'홈', stats:'홈', signals:'홈',   /* stats = 현황 (2026-10-11) */
   classhub:'반', session:'수업', consults:'소통',
   /* ⚠ 여기와 TEACHER_SUBNAV 는 **둘 다** 고쳐야 한다 — 노트가 적어 둔 그것이다.
      itemcode 를 서브탭에만 넣고 여기를 빠뜨렸더니 상단 메뉴가 「반」으로 잡히고
@@ -20530,6 +20580,7 @@ function teacherTabBodyHTML(){
   if(state.teacherTab==='submissions') state.teacherTab = 'exams';
   const t = state.teacherTab;
   if(t==='dash')        return teacherDashHTML();
+  if(t==='stats')       return teacherStatsHTML();
   if(t==='signals')     return teacherSignalsHTML();
   if(t==='consults')    return teacherConsultsHTML();
   if(t==='session')     return teacherSessionHTML();
@@ -20771,27 +20822,13 @@ function teacherCalHTML(){
   const 날수 = new Date(y, m, 0).getDate();
   const 내것 = !isAssistantNow() && state.memo ? (state.memo.events || []) : null;   // 조교에겐 없다(메모와 같다)
   const {out: 일정, 시험날, 수학날} = teacherMonthEvents(ym, 내것);
-  const 고른날 = (state.tCalDay && state.tCalDay.slice(0, 7) === ym) ? state.tCalDay : (오늘.slice(0, 7) === ym ? 오늘 : '');
+  /* 🔵 넓은 홈(761 이상)은 고른 날을 «칸 옆 작은 창»으로 (2026-10-11 · 사용자 — F+E). 오른쪽 230 칸을 빼서 왼쪽·달력 칸이 넓어졌다.
+       창은 «누른 날»에만 뜬다(들어오자마자 오늘을 펴지 않는다 — 오늘 것은 칸 안 이름으로 보인다). 좁으면 예전처럼 밑에 목록. */
+  const 띄움 = !!(window.matchMedia && matchMedia('(min-width:761px)').matches);
+  const 고른날 = (state.tCalDay && state.tCalDay.slice(0, 7) === ym) ? state.tCalDay : (!띄움 && 오늘.slice(0, 7) === ym ? 오늘 : '');
   const 묶음 = {}; for(const g in TCAL_GROUPS) TCAL_GROUPS[g].갈래.forEach(k => 묶음[k] = g);
+  const 줄수 = Math.ceil((첫요일 + 날수) / 7);
 
-  const 칸 = [];
-  for(let i = 0; i < 첫요일; i++) 칸.push('<div class="scal-c out"></div>');
-  for(let d = 1; d <= 날수; d++){
-    const date = ymd(y, m, d), dow = new Date(y, m - 1, d).getDay();
-    const 있는것 = new Set((일정[date] || []).filter(e => !e.흐림).map(e => 묶음[e.kind]).filter(Boolean));
-    const 점들 = Object.keys(TCAL_GROUPS).filter(g => 있는것.has(g));
-    const 시험칸 = 시험날[date] ? ' exam' + (!시험날[dateShift(date, -1)] ? ' exam-a' : '')
-      + (!시험날[dateShift(date, 1)] ? ' exam-z' : '') + (수학날[date] ? ' exam-m' : '') : '';
-    칸.push(`<div class="scal-c${시험칸}${date === 오늘 ? ' today' : ''}${date === 고른날 ? ' on' : ''}" ${TAP}
-      aria-label="${stuDayLabel(date)}" onclick="state.tCalDay='${date}'; render()">
-      <span class="d" style="${dow === 0 ? 'color:var(--no);' : dow === 6 ? 'color:var(--blue);' : ''}">${d}</span>
-      <span class="dots">${점들.map(g => `<i style="background:${TCAL_GROUPS[g].색}"></i>`).join('')}</span>
-      ${(() => { /* 칸 안 일정 이름 (2026-10-02 · 사용자 — 「달력에 일정이 생기면 일정을 표시」) — 정규 수업은 점만 · 넓은 홈에서만 보인다(CSS) */
-        const 이름들 = (일정[date] || []).filter(e => e.short);
-        return !이름들.length ? '' : '<span class="evs">' + 이름들.slice(0, 3).map(e =>
-          `<i style="color:${CAL_KINDS[e.kind].색};background:${CAL_KINDS[e.kind].바탕};">${escHtml(e.short)}</i>`).join('')
-          + (이름들.length > 3 ? `<i class="more">+${이름들.length - 3}</i>` : '') + '</span>'; })()}</div>`);
-  }
   const 그날 = 고른날 ? (일정[고른날] || []) : [];
   const 목록 = !고른날 ? '<div class="scal-empty">날짜를 눌러 보세요.</div>'
     : !그날.length ? '<div class="scal-empty">이 날은 일정이 없습니다.</div>'
@@ -20811,6 +20848,28 @@ function teacherCalHTML(){
           <button class="btn p sm">추가</button><button type="button" class="btn q sm" onclick="state.tCalAdd=''; render()">취소</button></div></form>`
     : `<button class="btn q sm tcal-addbtn" onclick="tcalAddOpen('${고른날}')">${iconSvg('plus', 13)} 이 날에 내 일정</button>`;
 
+  const 머리 = `<div class="scal-daytitle"><b>${고른날 ? stuDayLabel(고른날) : ''}</b>${고른날 === 오늘 ? '<span class="scal-badge">오늘</span>' : ''}`;
+  const 칸 = [];
+  for(let i = 0; i < 첫요일; i++) 칸.push('<div class="scal-c out"></div>');
+  for(let d = 1; d <= 날수; d++){
+    const date = ymd(y, m, d), dow = new Date(y, m - 1, d).getDay();
+    const 줄 = Math.floor((첫요일 + d - 1) / 7);
+    const 창 = 띄움 && date === 고른날 ? `<div class="tcal-day tcal-pop ${dow >= 4 ? 'l' : 'r'}${줄 >= 줄수 - 2 && 줄 > 1 ? ' up' : ''}" onclick="event.stopPropagation()">
+        ${머리}<button type="button" class="tcal-x" title="닫기" onclick="state.tCalDay=''; render()">×</button></div>${목록}${추가}</div>` : '';
+    const 있는것 = new Set((일정[date] || []).filter(e => !e.흐림).map(e => 묶음[e.kind]).filter(Boolean));
+    const 점들 = Object.keys(TCAL_GROUPS).filter(g => 있는것.has(g));
+    const 시험칸 = 시험날[date] ? ' exam' + (!시험날[dateShift(date, -1)] ? ' exam-a' : '')
+      + (!시험날[dateShift(date, 1)] ? ' exam-z' : '') + (수학날[date] ? ' exam-m' : '') : '';
+    칸.push(`<div class="scal-c${시험칸}${date === 오늘 ? ' today' : ''}${date === 고른날 ? ' on' : ''}" ${TAP}
+      aria-label="${stuDayLabel(date)}" onclick="tcalPick('${date}')">
+      <span class="d" style="${dow === 0 ? 'color:var(--no);' : dow === 6 ? 'color:var(--blue);' : ''}">${d}</span>
+      <span class="dots">${점들.map(g => `<i style="background:${TCAL_GROUPS[g].색}"></i>`).join('')}</span>
+      ${(() => { /* 칸 안 일정 이름 (2026-10-02 · 사용자 — 「달력에 일정이 생기면 일정을 표시」) — 정규 수업은 점만 · 넓은 홈에서만 보인다(CSS) */
+        const 이름들 = (일정[date] || []).filter(e => e.short);
+        return !이름들.length ? '' : '<span class="evs">' + 이름들.slice(0, 3).map(e =>
+          `<i style="color:${CAL_KINDS[e.kind].색};background:${CAL_KINDS[e.kind].바탕};">${escHtml(e.short)}</i>`).join('')
+          + (이름들.length > 3 ? `<i class="more">+${이름들.length - 3}</i>` : '') + '</span>'; })()}${창}</div>`);
+  }
   return `<section class="dsh-card tcal">
     <div class="scal-head">
       <button class="btn icon" title="지난달" onclick="state.tCalMonth='${stuShiftMonth(ym, -1)}'; state.tCalDay=''; render()">${iconSvg('chevL', 16)}</button>
@@ -20824,9 +20883,13 @@ function teacherCalHTML(){
     <div class="scal-legend">${Object.keys(TCAL_GROUPS).map(g =>
       `<span><i style="background:${TCAL_GROUPS[g].색}"></i>${TCAL_GROUPS[g].이름}</span>`).join('')}
       <span class="band"><i></i>시험기간<s>진한 칸 = 수학 시험</s></span></div>
-    <div class="tcal-day"><div class="scal-daytitle"><b>${고른날 ? stuDayLabel(고른날) : ''}</b>${
-      고른날 === 오늘 ? '<span class="scal-badge">오늘</span>' : ''}</div>${목록}${추가}</div>
+    ${띄움 ? '' : `<div class="tcal-day">${머리}</div>${목록}${추가}</div>`}
   </section>`;
+}
+/* 날짜를 누른다 — 넓은 홈에선 같은 날을 또 누르면 창이 닫힌다 */
+function tcalPick(date){
+  state.tCalDay = state.tCalDay === date && window.matchMedia && matchMedia('(min-width:761px)').matches ? '' : date;
+  render();
 }
 function dashOpenSession(classId, date){
   state.sessionDate = date || todayStr(); state.sessionClassId = classId; state.sessionStep = 'att';
@@ -21040,31 +21103,82 @@ function enrollMonths(students, today, n){
   }
   return out;
 }
-function enrollBodyHTML(){
-  const all = DATA.students || [], ym = todayStr().slice(0, 7);
+const ENROLL_GOAL = 50;   /* 올해 목표 재원 (2026-10-11 · 사용자 — 「목표선 50명」). 해마다 바뀌면 여기만 고친다 */
+/* 올해 1~12월 — 지난 달·이번 달은 셈, 앞으로 올 달은 null */
+function enrollYear(students, today){
+  const n = Number(today.slice(5, 7)), y = today.slice(0, 4);
+  const ms = enrollMonths(students, today, n);
+  for(let k = n + 1; k <= 12; k++) ms.push({ ym: y + '-' + String(k).padStart(2, '0'), 재원: null, 신규: 0, 퇴원: 0, 종료: 0 });
+  return ms;
+}
+function enrollSums(ms){ return ms.reduce((t, m) => ({ 신규: t.신규 + m.신규, 퇴원: t.퇴원 + m.퇴원, 종료: t.종료 + m.종료 }), { 신규: 0, 퇴원: 0, 종료: 0 }); }
+/* 막대 열둘 + 목표선 — 홈 띠와 현황이 같이 쓴다(big = 현황의 큰 판 · 달마다 +/− 까지) */
+function enrollBarsHTML(ms, big){
+  const ym = todayStr().slice(0, 7), max = Math.max(ENROLL_GOAL, ...ms.map(m => m.재원 || 0)) * 1.08;
+  const 높이 = v => Math.max(2, Math.round(v / max * (big ? 170 : 48)));
+  const 선 = Math.round(ENROLL_GOAL / max * (big ? 170 : 48));
+  return ms.map(m => `<div class="hy-col${m.ym === ym ? ' now' : ''}${m.재원 == null ? ' future' : ''}" title="${m.ym}${m.재원 == null ? '' : ` 말 재원 ${m.재원} · 신규 ${m.신규} · 퇴원 ${m.퇴원} · 이관·졸업 ${m.종료}`}">
+      ${m.재원 == null ? '' : `<b class="mono">${m.재원}</b>`}<i style="height:${m.재원 == null ? 6 : 높이(m.재원)}px"></i>${Number(m.ym.slice(5))}월
+      ${big ? `<em>${[m.신규 ? `<span class="en-up">+${m.신규}</span>` : '', m.퇴원 ? `<span class="en-down">−${m.퇴원}</span>` : '', m.종료 ? `<span class="en-end">종료 −${m.종료}</span>` : ''].filter(Boolean).join(' ')}</em>` : ''}</div>`).join('')
+    + `<div class="hy-goal" style="bottom:${선 + (big ? 33 : 17)}px"><span>목표 ${ENROLL_GOAL}</span></div>`;
+}
+/* 홈 맨 위 «한 해 띠» — 누르면 현황 */
+function enrollStripHTML(){
+  const today = todayStr(), ms = enrollYear(DATA.students || [], today), 지금 = DATA.students.filter(s => !isWithdrawn(s)).length;
+  const 합 = enrollSums(ms), 비율 = Math.round(지금 / ENROLL_GOAL * 100);
+  return `<a class="hm-year" onclick="goTeacherTab('stats')" title="현황 — 학교별 · 달마다 출석률 · 떠난 학생">
+    <div class="hy-l"><s>${today.slice(0, 4)} 재원</s><b class="mono">${지금}<small>/ 목표 ${ENROLL_GOAL}</small><span class="hy-pct ${비율 >= 100 ? 'ok' : ''}">${비율}%</span></b>
+      <em>올해 신규 <span class="en-up">+${합.신규}</span> · 퇴원 <span class="${합.퇴원 ? 'en-down' : ''}">−${합.퇴원}</span>${합.종료 ? ` · 이관·졸업 <span class="en-end">−${합.종료}</span>` : ''}</em></div>
+    <div class="hy-bars">${enrollBarsHTML(ms, false)}</div>
+    <span class="hy-more">현황 ${iconSvg('chevR', 12)}</span></a>`;
+}
+/* 홈 › 현황 — 한 해를 넉넉하게. 학교 칩은 큰 막대·숫자 다섯을 거른다 */
+function teacherStatsHTML(){
+  loadAllRecordsIfNeeded();
+  const all = DATA.students || [], today = todayStr(), 올해 = today.slice(0, 4);
   const 학교들 = [...new Set(all.map(s => s.school).filter(Boolean))]
     .map(sc => [sc, all.filter(s => s.school === sc && !isWithdrawn(s)).length])
     .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
   const 고른 = 학교들.some(([sc]) => sc === state.enrollSchool) ? state.enrollSchool : '';
   const list = 고른 ? all.filter(s => s.school === 고른) : all;
-  const ms = enrollMonths(list, todayStr(), 6), 이번 = ms[ms.length - 1], 차 = 이번.재원 - ms[ms.length - 2].재원;
-  const max = Math.max(1, ...ms.map(m => m.재원));
+  const ms = enrollYear(list, today), 합 = enrollSums(ms), 지금 = list.filter(s => !isWithdrawn(s)).length;
   const 칩 = (v, t) => `<button type="button" class="en-sch ${고른 === v ? 'on' : ''}" data-sc="${escHtml(v)}" onclick="state.enrollSchool=this.dataset.sc;render()">${escHtml(t)}</button>`;
-  const 증감 = (n, 표) => n ? `<span class="${n > 0 ? 'en-up' : 'en-down'}">${n > 0 ? '+' : '−'}${Math.abs(n)}${표 || ''}</span>` : '';
+  const 올해것 = v => String(v || '').startsWith(올해);
   const 모름 = list.filter(s => !s.joinedAt && !isWithdrawn(s)).length;
-  return `<div class="en-schools">${칩('', '전체')}${학교들.map(([sc]) => 칩(sc, sc)).join('')}</div>
-    <div class="en-sum"><span>재원 <b class="mono">${이번.재원}</b>명</span>
-      <span>지난달보다 ${증감(차) || '그대로'}</span>
-      <span>이번 달 신규 <span class="en-up">${이번.신규}</span> · 퇴원 <span class="${이번.퇴원 ? 'en-down' : ''}">${이번.퇴원}</span>${이번.종료 ? ` · 이관·졸업 <span class="en-end">${이번.종료}</span>` : ''}</span></div>
-    <div class="en-bars">${ms.map(m => `<div class="en-col ${m.ym === ym ? 'now' : ''}" title="${m.ym} 말 재원 ${m.재원} · 신규 ${m.신규} · 퇴원 ${m.퇴원} · 이관·졸업 ${m.종료}">
-      <b class="mono">${m.재원}</b><i style="height:${Math.round(m.재원 / max * 64) + 2}px"></i>${Number(m.ym.slice(5))}월
-      <em>${[m.신규 ? `<span class="en-up">+${m.신규}</span>` : '', m.퇴원 ? `<span class="en-down">−${m.퇴원}</span>` : '', m.종료 ? `<span class="en-end" title="이관·졸업">종료 −${m.종료}</span>` : ''].filter(Boolean).join(' ')}</em></div>`).join('')}</div>
-    ${고른 ? '' : `<table class="en-tbl"><tr><th>학교</th><th>재원</th><th>이번 달 신규</th><th>퇴원</th></tr>${학교들.map(([sc, n]) => {
-      const 학 = all.filter(s => s.school === sc);
-      return `<tr data-sc="${escHtml(sc)}" onclick="state.enrollSchool=this.dataset.sc;render()"><td>${escHtml(sc)}</td><td class="mono">${n}</td>
-        <td class="mono">${학.filter(s => String(s.joinedAt || '').startsWith(ym)).length || ''}</td>
-        <td class="mono">${학.filter(s => String(s.withdrawnAt || '').startsWith(ym)).length || ''}</td></tr>`; }).join('')}</table>`}
-    ${모름 ? `<div class="en-note">등록일이 없는 재원생 ${모름}명은 «처음부터 있던 학생»으로 셉니다 — 학생 정보 › 등록일을 넣으면 지난 달 신규도 맞게 셉니다. 새로 등록하는 학생은 저절로 들어갑니다.</div>` : ''}`;
+  /* 달마다 출석률 — 그 달에 재원이던 학생의 주 반 출결(attCountedOf · 홈 숫자 카드와 같은 셈) */
+  const 출석 = ms.map(m => {
+    if(m.재원 == null || !state.allRecordsLoaded) return null;
+    const end = m.ym + '-31';
+    const 그때 = list.filter(s => String(s.joinedAt || '') <= end && !(s.withdrawnAt && s.withdrawnAt < m.ym + '-01') && !(s.endedAt && s.endedAt < m.ym + '-01'));
+    return attRateOf(그때.flatMap(s => attCountedOf(state.allRecords[s.studentId], s).filter(a => String(a.date || '').startsWith(m.ym))));
+  });
+  const 떠남 = list.filter(s => 올해것(s.withdrawnAt) || 올해것(s.endedAt))
+    .map(s => ({ s, 날: s.withdrawnAt || s.endedAt, 왜: s.withdrawnAt ? ['퇴원', s.withdrawnReason || ''] : [s.endType || '수강 종료', s.endNote || ''] }))
+    .sort((a, b) => b.날.localeCompare(a.날));
+  return `<div class="stx">
+    <div class="en-schools" style="padding:0;">${칩('', '전체')}${학교들.map(([sc]) => 칩(sc, sc)).join('')}</div>
+    <div class="stx-tiles">
+      <div class="stx-tile"><s>지금 재원</s><b class="mono">${지금}</b></div>
+      <div class="stx-tile"><s>목표 ${ENROLL_GOAL}명 대비</s><b class="mono">${Math.round(지금 / ENROLL_GOAL * 100)}%</b></div>
+      <div class="stx-tile"><s>올해 신규</s><b class="mono en-up">+${합.신규}</b></div>
+      <div class="stx-tile"><s>올해 퇴원</s><b class="mono ${합.퇴원 ? 'en-down' : ''}">−${합.퇴원}</b></div>
+      <div class="stx-tile"><s>올해 이관·졸업</s><b class="mono en-end">−${합.종료}</b></div>
+    </div>
+    <div class="stx-card"><h3>${올해} 달 말 재원${고른 ? ' · ' + escHtml(고른) : ''}</h3><div class="stx-big">${enrollBarsHTML(ms, true)}</div>
+      ${모름 ? `<div class="en-note">등록일이 없는 재원생 ${모름}명은 «처음부터 있던 학생»으로 셉니다 — 학생 정보 › 등록일을 넣으면 지난 달 신규도 맞게 셉니다.</div>` : ''}</div>
+    <div class="stx-card"><h3>달마다 출석률${state.allRecordsLoaded ? '' : ' <span class="st-note">불러오는 중…</span>'}</h3>
+      <div class="stx-att">${ms.map((m, i) => `<div class="${출석[i] != null && 출석[i] < 90 ? 'lo' : ''}">${Number(m.ym.slice(5))}월<b class="mono">${출석[i] == null ? '—' : 출석[i] + '%'}</b></div>`).join('')}</div></div>
+    <div class="stx-2">
+      <div class="stx-card"><h3>학교별</h3><table class="en-tbl"><tr><th>학교</th><th>재원</th><th>올해 신규</th><th>퇴원</th><th>이관·졸업</th></tr>${학교들.map(([sc, n]) => {
+        const 학 = all.filter(s => s.school === sc);
+        return `<tr data-sc="${escHtml(sc)}" onclick="state.enrollSchool=this.dataset.sc;render()"><td>${escHtml(sc)}</td><td class="mono">${n}</td>
+          <td class="mono">${학.filter(s => 올해것(s.joinedAt)).length || ''}</td><td class="mono">${학.filter(s => 올해것(s.withdrawnAt)).length || ''}</td>
+          <td class="mono">${학.filter(s => !s.withdrawnAt && 올해것(s.endedAt)).length || ''}</td></tr>`; }).join('')}</table></div>
+      <div class="stx-card"><h3>올해 떠난 학생 <span class="st-note">${떠남.length}명</span></h3>${!떠남.length ? '<div class="dsh-empty">아직 없습니다.</div>'
+        : `<table class="stx-gone">${떠남.map(x => `<tr><td class="mono">${escHtml(x.날.slice(5))}</td><td><a onclick="dashOpenStudent('${x.s.studentId}')" style="cursor:pointer;font-weight:700;">${escHtml(x.s.name)}</a></td>
+          <td>${escHtml(x.s.school || '')}</td><td><span class="badge ${x.왜[0] === '퇴원' ? 'gone' : ''}">${escHtml(x.왜[0])}</span></td><td class="st-note">${escHtml(x.왜[1])}</td></tr>`).join('')}</table>`}</div>
+    </div>
+  </div>`;
 }
 
 function teacherDashHTML(){
@@ -21111,8 +21225,6 @@ function teacherDashHTML(){
       <span><b>${v}</b><s>${label}</s></span></a>`;
   const 출석톤 = 주출석률 == null ? '' : 주출석률 < 90 ? 'no' : 'ok';
   const kpis = `<div class="hm-kpis">
-    ${kc(재원.length, '재원생', '', "goTeacherTab('classhub','students')")}
-    ${kc(퇴원, '이번 달 퇴원', '', "goTeacherTab('classhub','students')")}
     ${kc(loading ? '…' : 주출석률 == null ? '—' : 주출석률 + '%', '이번 주 출석', 출석톤, "goTeacherTab('classhub','sessions')", '이번 주 월요일부터 오늘까지')}
     ${kc(loading ? '…' : 미제출, '과제 미제출', 미제출 ? 'no' : '', "goTeacherTab('classhub','homework')", '지난 7일 안에 마감이 지난 과제 중 안 낸 것')}
     ${kc(loading ? '…' : red, '위험 학생', red ? 'no' : '', "goTeacherTab('signals')")}
@@ -21176,6 +21288,7 @@ function teacherDashHTML(){
       <h1 class="t-title hm-hi">${인사}, 김하현 선생님</h1>
       ${넣을곳 ? `<a class="hm-next" onclick="dashOpenSession('${넣을곳.id}')">${escHtml(String((넣을곳.jikbo ? 넣을곳.timeText : sessionTimeText(넣을곳.schedule, dowN)) || '').split(/[~–-]/)[0])} ${escHtml(넣을곳.name)} · 출결 넣기 ${iconSvg('arrowR', 15)}</a>` : ''}
     </div>
+    ${isAssistantNow() ? '' : enrollStripHTML()}
     ${kpis}
     ${/* 다가오는 시험 — 칸 대신 얇은 띠 (2026-10-02 · 사용자 — 「시험기간에만 유용하고 크게 둘 일은 아니다」). 3주 안(또는 시험 중)일 때만 선다. */
       (() => { const 가까운 = exams.filter(e => e.dd.state === 'during' || e.dd.days <= 21).slice(0, 6);
@@ -21188,7 +21301,6 @@ function teacherDashHTML(){
     <div class="dsh-grid hm-grid">
       <div class="dsh-col dsh-b">
         ${sec('먼저 볼 학생', live.length || '', sigBody, ['신호 전체', "goTeacherTab('signals')"])}
-        ${isAssistantNow() ? '' : sec('재원생 변화', '', enrollBodyHTML(), ['명단', "goTeacherTab('classhub','students')"], 'hm-enroll')}
       </div>
       <div class="dsh-col dsh-c">
         ${teacherCalHTML()}

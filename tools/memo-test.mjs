@@ -147,18 +147,43 @@ try{
       { school: 'A', withdrawnAt: '2026-10-01' }, { school: 'B', joinedAt: '2026-08-10', withdrawnAt: '2026-09-20' },
     ], '2026-10-03', 3)), [
       { ym: '2026-08', 재원: 3, 신규: 1, 퇴원: 0, 종료: 0 }, { ym: '2026-09', 재원: 3, 신규: 1, 퇴원: 1, 종료: 0 }, { ym: '2026-10', 재원: 3, 신규: 1, 퇴원: 1, 종료: 0 }]);
-  const 재원카드 = await page.evaluate(() => {
-    DATA.students[0].joinedAt = todayStr(); DATA.students[0].school = '가람고'; state.enrollSchool = ''; render();
-    const 전체 = document.querySelector('.hm-enroll .en-sum b').textContent;
-    document.querySelector('.hm-enroll .en-sch[data-sc="가람고"]').click();
-    return { 전체: +전체 === DATA.students.filter(s => !isWithdrawn(s)).length, 학교: document.querySelector('.hm-enroll .en-sum b').textContent,
-             신규: document.querySelector('.hm-enroll .en-col.now em').textContent.trim(), 표없음: !document.querySelector('.hm-enroll .en-tbl') };
+  /* 10-11 F+E — 홈 맨 위 «한 해 띠»(1~12월 · 목표선 50) · 누르면 «현황» 탭 */
+  const 띠 = await page.evaluate(() => {
+    DATA.students[0].joinedAt = todayStr(); DATA.students[0].school = '가람고'; state.enrollSchool = ''; state.teacherTab = 'dash'; render();
+    const el = document.querySelector('.hm-year');
+    return { 수: +el.querySelector('.hy-l b').firstChild.textContent === DATA.students.filter(s => !isWithdrawn(s)).length,
+             목표: el.querySelector('.hy-l b small').textContent, 열두달: el.querySelectorAll('.hy-col').length,
+             앞으로: el.querySelectorAll('.hy-col.future').length, 이번달: el.querySelector('.hy-col.now').textContent.includes('10월'),
+             선: !!el.querySelector('.hy-goal'), 숫자카드: document.querySelectorAll('.hm-kpis .hm-kpi').length };
   });
-  봄('재원생 카드 — 전체 수는 숫자 카드와 같고, 학교를 누르면 그 학교만', 재원카드, { 전체: true, 학교: String(await page.evaluate(() => DATA.students.filter(s => s.school === '가람고' && !isWithdrawn(s)).length)), 신규: '+1', 표없음: true });
+  봄('한 해 띠 — 재원 수 · 목표 50 · 열두 달(11·12월은 앞으로) · 목표선 · 숫자 카드는 넷', 띠,
+     { 수: true, 목표: '/ 목표 50', 열두달: 12, 앞으로: 2, 이번달: true, 선: true, 숫자카드: 4 });
+  await page.click('.hm-year');
+  const 현황 = await page.evaluate(() => {
+    const r = { 탭: state.teacherTab, 타일: document.querySelectorAll('.stx-tile').length, 큰막대: document.querySelectorAll('.stx-big .hy-col').length,
+      출석칸: document.querySelectorAll('.stx-att > div').length };
+    document.querySelector('.stx .en-sch[data-sc="가람고"]').click();
+    r.학교만 = document.querySelector('.stx-tile b').textContent === String(DATA.students.filter(s => s.school === '가람고' && !isWithdrawn(s)).length);
+    r.신규 = document.querySelectorAll('.stx-tile b')[2].textContent;
+    return r;
+  });
+  봄('띠를 누르면 현황 — 숫자 다섯 · 큰 막대 열둘 · 달마다 출석률 · 학교를 누르면 그 학교만', 현황,
+     { 탭: 'stats', 타일: 5, 큰막대: 12, 출석칸: 12, 학교만: true, 신규: '+1' });
+  await page.evaluate(() => { state.teacherTab = 'dash'; state.enrollSchool = ''; render(); });
+
+  /* 10-11 F+E — 넓은 홈 달력: 고른 날은 칸 옆 작은 창 · 처음엔 안 뜬다 · 같은 날 또 누르면 닫힌다 */
+  const 창 = await page.evaluate(() => {
+    state.tCalDay = ''; render();
+    const r = [document.querySelectorAll('.tcal-pop').length, document.querySelectorAll('.tcal > .tcal-day').length];
+    tcalPick(todayStr()); r.push(!!document.querySelector('.scal-c.on .tcal-pop'));
+    tcalPick(todayStr()); r.push(document.querySelectorAll('.tcal-pop').length);
+    return r;
+  });
+  봄('달력 — 처음엔 창 없음 · 밑 목록 없음 · 누르면 그 칸 옆 · 또 누르면 닫힘', 창, [0, 0, true, 0]);
 
   await page.evaluate(() => { state.currentUser = { type: 'assistant', name: 'A' }; render(); });
   봄('조교 홈엔 메모가 없다', await page.$$eval('.dsh-memo', e => e.length), 0);
-  봄('조교 홈엔 재원생 변화도 없다', await page.$$eval('.hm-enroll', e => e.length), 0);
+  봄('조교 홈엔 한 해 띠도 없다', await page.$$eval('.hm-year', e => e.length), 0);
 } finally {
   await 브라우저.close(); 서버.kill();
 }
