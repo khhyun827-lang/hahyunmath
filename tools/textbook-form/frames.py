@@ -1,5 +1,5 @@
 # 문항마다 객관식 선지 틀(1·2·3·5행)이 규칙에 맞는지 본다 — 규칙은 build.py choose_frame 과 같다.
-#   1행 = 숫자 하나·둘 길이(루트 없음 · 가장 긴 선지 ≤ 2100) / 2행 = 그보다 길 때(≤ 5600) · ㄱㄴㄷ 조합 /
+#   1행 = 숫자 하나·둘 길이(루트 없음 · 세 자리 수 없음 · 가장 긴 선지 ≤ 2100) / 2행 = 그보다 길 때(≤ 5600) · ㄱㄴㄷ 조합 /
 #   3행 = 2행이 모자랄 때 / 5행 = 줄글 선지 · 3행도 모자랄 때(> 9200)
 # 쓰는 법: python3 -I frames.py <풀린 폴더> [--fix <나갈 폴더>]
 import sys, re, glob, copy, os, shutil
@@ -49,6 +49,8 @@ def want_frame(infos):
     if only_gnd: return 2          # ㄱㄴㄷ 조합 선지는 2행 (사용자 규칙)
     if mx > 9200: return 5
     if long_text: return 2 if mx <= 5600 else 3
+    # 세 자리 이상 수가 하나라도 있으면 2행 (사용자 — 「2행 기준은 보통 숫자 세 개부터」)
+    if any(re.search(r'\d{3}', i[1] + i[2]) for i in infos) and mx <= 5600: return 2
     if mx <= 2100 and not re.search(r'sqrt|root', scripts, re.I): return 1
     if mx <= 5600: return 2
     return 3
