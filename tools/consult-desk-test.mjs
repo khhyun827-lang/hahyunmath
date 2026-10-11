@@ -45,8 +45,15 @@ try{
   await page.click('.cd-write .cd-tp:has-text("시험 대비")');
   await page.click('.cd-write .cd-tp:has-text("진로")');
   봄('주제 칩을 눌러도 쓰던 내용이 남는다', await page.inputValue('#cs-text'), '시험 대비 계획 이야기');
+  /* 메모 단추를 껐다 켜도(render 가 화면을 통째로 갈아도) 쓰던 글·약속·상대·주제가 남는다 (2026-10-11 · 사용자) */
+  await page.fill('#cs-promises', '오답 정리 확인');
+  await page.click('.tb-np'); await page.waitForTimeout(80); await page.click('.tb-np');
+  봄('메모 껐다 켜도 쓰던 상담이 남는다', await page.evaluate(() => [...['cs-text', 'cs-promises', 'cs-who'].map(id => document.getElementById(id).value),
+    [...document.querySelectorAll('input[name="cs-topic"]:checked')].map(e => e.value)]), ['시험 대비 계획 이야기', '오답 정리 확인', '학생', ['시험 대비', '진로']]);
+  await page.fill('#cs-promises', '');
   await page.click('.cd-write .btn.p');
   await page.waitForFunction(() => 쓴것['consultlog:s0']);
+  봄('기록하면 글 칸은 빈다(되돌아오지 않는다)', await page.inputValue('#cs-text'), '');
   const 새것 = await page.evaluate(() => 쓴것['consultlog:s0'].at(-1));
   봄('기록 — 주제가 남는다', 새것.topics, ['시험 대비', '진로']);
   봄('지난 상담에 주제 딱지', await page.$$eval('.cd-right .cs-item .badge.score', e => e.map(x => x.textContent)), ['시험 대비', '진로']);
@@ -65,9 +72,11 @@ try{
   봄('잘못 친 점수는 저장 안 한다', await page.evaluate(() => (DATA.records.s0.schoolExams || []).some(x => x.score === 120)), false);
 
   /* 이름 찾기로 넘어가도 작업대 */
+  await page.fill('#cs-text', 's0 에게 쓰던 글');
   const 다른 = await page.evaluate(() => DATA.students.find(x => x.studentId !== 's0').name);
   await page.fill('.sd-find input', 다른); await page.press('.sd-find input', 'Enter');
   봄('이름 찾기로 넘어가도 작업대', await page.evaluate(() => [state.studentDetailId !== 's0', state.studentDetailTab]), [true, 'consult']);
+  봄('다른 학생으로 넘어가면 쓰던 글은 안 따라간다', await page.inputValue('#cs-text'), '');
 
   /* 학생 화면 「상담」 단추 */
   await page.evaluate(무대들.학생상세성적.세우기);

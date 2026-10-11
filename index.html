@@ -15657,11 +15657,23 @@ function render(){
   const 본문열쇠 = [state.view, state.teacherTab, state.classHubTab, state.settingsSubTab, state.examSubTab, state.studentDetailId].join('|');
   const 본문Y = 본문 && 본문.dataset.k === 본문열쇠 ? 본문.scrollTop : 0;
   /* 홈 메모 글 칸에서 쓰던 중이면(불러오기 끝 등으로 render 가 돌면) 커서를 되돌린다 (2026-10-02). */
-  const memoEl = document.activeElement && document.activeElement.id === 'memo-note' ? document.activeElement : null;
-  const memoSel = memoEl ? [memoEl.selectionStart, memoEl.selectionEnd, memoEl.scrollTop] : null;
+  const memoEl = document.activeElement && /^(memo-note|cs-text|cs-promises)$/.test(document.activeElement.id) ? document.activeElement : null;
+  const memoSel = memoEl ? [memoEl.id, memoEl.selectionStart, memoEl.selectionEnd, memoEl.scrollTop] : null;
+  /* 🔴 **상담 쓰던 글** (2026-10-11 · 사용자 — 「상담 쓰다가 메모 껐다 켜면 타이핑하던 게 다 없어져」).
+     상담 칸(cs-date·kind·who·text·promises · 주제)은 저장할 때 DOM 에서 읽으므로 글이 DOM 에만 있다 — innerHTML 갈이(메모 단추·불러오기 끝 등)가 지웠다.
+     같은 학생(data-sid) 칸이 다시 서면 값을 돌려놓는다. 기록하면 addConsultLog 가 먼저 비워 안 돌아온다. */
+  const csText = app.querySelector('#cs-text'), csPr = app.querySelector('#cs-promises');
+  const csDraft = csText && (csText.value || (csPr && csPr.value)) ? {
+    sid: csText.dataset.sid,
+    vals: [...app.querySelectorAll('#cs-date, #cs-kind, #cs-who, #cs-text, #cs-promises')].map(e => [e.id, e.value]),
+    topics: [...app.querySelectorAll('input[name="cs-topic"]:checked')].map(e => e.value) } : null;
   app.innerHTML = html;
-  if(memoSel){ const n = document.getElementById('memo-note');
-    if(n){ n.focus({preventScroll: true}); n.setSelectionRange(memoSel[0], memoSel[1]); n.scrollTop = memoSel[2]; } }
+  if(csDraft){ const t = document.getElementById('cs-text');
+    if(t && t.dataset.sid === csDraft.sid){
+      csDraft.vals.forEach(([id, v]) => { const e = document.getElementById(id); if(e) e.value = v; });
+      app.querySelectorAll('input[name="cs-topic"]').forEach(e => { e.checked = csDraft.topics.includes(e.value); }); } }
+  if(memoSel){ const n = document.getElementById(memoSel[0]);
+    if(n){ n.focus({preventScroll: true}); n.setSelectionRange(memoSel[1], memoSel[2]); n.scrollTop = memoSel[3]; } }
   /* ⚠ 경고 띠는 `position:fixed` 라 **자리를 안 차지한다** — 그대로 두면 화면 맨 위
      (제목·탭)를 덮는다. 띠의 높이만큼 본문을 내려 준다. 글이 길어져 두 줄이 되어도
      맞으라고 «재서» 넣는다 (2026-09-04). */
@@ -23620,7 +23632,7 @@ function chubConsultDrawerHTML(){
               CONSULT_KINDS.map(k=>`<option>${k}</option>`).join('')}</select></label>
           </div>
           <div class="cls-form"><label style="flex:1;"><span>내용</span>
-            <textarea id="cs-text" rows="4" placeholder="나눈 이야기와 약속한 것&#10;예: 어머니 통화 — 9월부터 클리닉 주 2회 희망"></textarea></label></div>
+            <textarea id="cs-text" data-sid="${sid}" rows="4" placeholder="나눈 이야기와 약속한 것&#10;예: 어머니 통화 — 9월부터 클리닉 주 2회 희망"></textarea></label></div>
           <p class="st-note">여기 적은 것은 <b>학생 연대기에 상담으로 쌓입니다.</b>
             학생·학부모에게는 보이지 않고, 변경 이력에도 «누구와 언제»까지만 남습니다.</p>
         </div>
@@ -24791,6 +24803,8 @@ async function addConsultLog(sid){
      변경 이력은 조교도 본다 (학생 메모와 같은 판단). */
   await logAudit('상담 기록', sid, studentNameOf(sid), `${date} ${kind}`);
   showToast('상담을 기록했습니다.');
+  /* 비워야 render 가 «쓰던 글»로 되돌려 놓지 않는다 (2026-10-11) */
+  ['cs-text', 'cs-promises'].forEach(id => { const e = document.getElementById(id); if(e) e.value = ''; });
   render();
 }
 /* =============== 상담 기록 고치기 (2026-09-16 · 사용자 — 「상담 수정할 수 있도록」) ===============
@@ -26379,7 +26393,7 @@ function sdConsultDeskHTML(s, rec, st, sg){
         <label style="width:96px;"><span>상대</span><select class="fm-sel" id="cs-who">${CONSULT_WHO.map(k=>`<option>${k}</option>`).join('')}</select></label>
       </div>
       <div class="cls-form"><label style="flex:1;"><span>내용</span>
-        <textarea id="cs-text" rows="6" placeholder="나눈 이야기와 약속한 것&#10;예: 어머니 통화 — 9월부터 클리닉 주 2회 희망"></textarea></label></div>
+        <textarea id="cs-text" data-sid="${sid}" rows="6" placeholder="나눈 이야기와 약속한 것&#10;예: 어머니 통화 — 9월부터 클리닉 주 2회 희망"></textarea></label></div>
       <div class="cd-sub" style="margin-top:8px;">주제</div>${consultTopicsHTML('cs-topic', [])}
       <div class="cls-form"><label style="flex:1;"><span>약속 · 뒤에 챙길 일 <s class="cd-none" style="text-decoration:none;">— 줄마다 하나. 홈 「할 일」과 벨에 뜹니다</s></span>
         <textarea id="cs-promises" rows="2" placeholder="예: 어머님께 클리닉 시간 문자&#10;다음 주까지 오답 정리 확인"></textarea></label></div>
@@ -26478,7 +26492,7 @@ function sdTimelineHTML(s, sid, rec, isAssistant){
       <label style="width:110px;"><span>방식</span><select class="fm-sel" id="cs-kind">${
         CONSULT_KINDS.map(k=>`<option>${k}</option>`).join('')}</select></label>
       <label style="flex:1;min-width:260px;"><span>내용</span>
-        <textarea id="cs-text" rows="3" placeholder="나눈 이야기와 약속한 것&#10;예: 어머니 통화 — 9월부터 클리닉 주 2회 희망, 금요일 학교 보충으로 지각 잦다고 하심"></textarea></label>
+        <textarea id="cs-text" data-sid="${sid}" rows="3" placeholder="나눈 이야기와 약속한 것&#10;예: 어머니 통화 — 9월부터 클리닉 주 2회 희망, 금요일 학교 보충으로 지각 잦다고 하심"></textarea></label>
       <button class="btn p sm" onclick="addConsultLog('${sid}')">기록</button>
     </div>
     <p class="st-note">여기 적은 것은 <b>연대기에 상담으로 쌓입니다.</b>
