@@ -54,12 +54,29 @@ try{
   봄('더한 뒤 입력칸은 비고 커서가 남는다', await page.evaluate(() => [document.activeElement.id, document.activeElement.value]), ['memo-add', '']);
   봄('남은 일 수', await page.textContent('.dsh-memo .dsh-n'), '2');
 
-  /* 순서 바꾸기 (2026-10-08) — 맨 위 ↑·맨 아래 ↓ 는 감춘다 */
-  봄('맨 위 ↑ · 맨 아래 ↓ 는 없다', await page.$$eval('.dsh-memo .memo-todo', rs => rs.map(r => [...r.querySelectorAll('.memo-mv')].map(b => b.disabled))), [[true, false], [false, true]]);
-  await page.locator('.dsh-memo .memo-todo').nth(1).locator('.memo-mv[title=위로]').click();
-  봄('↑ 로 올린다 · 저장', (await 마지막())[1].todos.map(x => x.t), ['둘째 일', '첫 일']);
-  await page.locator('.dsh-memo .memo-todo').first().locator('.memo-mv[title=아래로]').click();
-  봄('↓ 로 내린다', (await 마지막())[1].todos.map(x => x.t), ['첫 일', '둘째 일']);
+  /* 순서 바꾸기 (2026-10-11) — 마우스로 줄을 누른 채 끈다 · 키보드는 ⠿ 에서 ↑↓ */
+  const 끌기 = async (from, to, dy) => {
+    const a = await page.locator('.dsh-memo .memo-todo span').nth(from).boundingBox();
+    const b = await page.locator('.dsh-memo .memo-todo').nth(to).boundingBox();
+    await page.mouse.move(a.x + 10, a.y + a.height / 2); await page.mouse.down();
+    await page.mouse.move(a.x + 10, b.y + b.height / 2 + dy, { steps: 8 }); await page.mouse.up();
+  };
+  await page.evaluate(() => { state.notepadOn = false; render(); });   // 864 에선 메모장이 할 일 칸을 덮는다
+  const 저장수0 = await page.evaluate(() => 저장.length);
+  await 끌기(1, 0, -10);
+  봄('아래 줄을 위로 끌어 올린다 · 저장', (await 마지막())[1].todos.map(x => x.t), ['둘째 일', '첫 일']);
+  await 끌기(0, 1, 10);
+  봄('위 줄을 아래로 끌어 내린다', (await 마지막())[1].todos.map(x => x.t), ['첫 일', '둘째 일']);
+  봄('끌 때마다 한 번만 저장', await page.evaluate(() => 저장.length), 저장수0 + 2);
+  await page.locator('.dsh-memo .memo-todo .memo-grip').first().focus(); await page.keyboard.press('ArrowDown');
+  봄('⠿ 에서 ↓ 키 · 포커스가 따라간다', [(await 마지막())[1].todos.map(x => x.t), await page.evaluate(() => document.activeElement.closest('.memo-todo').dataset.i)], [['둘째 일', '첫 일'], '1']);
+  await page.keyboard.press('ArrowUp');
+  await page.evaluate(() => { state.notepadOn = true; render(); });
+
+  /* 글을 눌러도 끝나지 않는다 — 체크칸만 (2026-10-11 · 사용자) */
+  const 저장수1 = await page.evaluate(() => 저장.length);
+  await page.locator('.dsh-memo .memo-todo span').first().click();
+  봄('글 누르기는 완료가 아니다', [await page.evaluate(() => 저장.length), await page.$$eval('.dsh-memo .memo-todo:not(.done)', e => e.length)], [저장수1, 2]);
 
   /* 체크 = 끝냄 → 완료한 일로 (날짜 붙음) */
   await page.locator('.dsh-memo .memo-todo input').first().click();
