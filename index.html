@@ -10520,7 +10520,7 @@ function seasonHTML(){
       : `<input class="ssn-note" placeholder="${k === '이관' ? '예: ○○ 선생님 반' : '메모 (선택)'}" value="${escHtml(ss.note[s.studentId] || '')}" oninput="seasonState().note['${s.studentId}']=this.value">`;
     return `<div class="ssn-row"><b>${escHtml(s.name)}</b><span class="ssn-sch">${escHtml(s.school || '')} ${escHtml(s.grade || '')}</span>${seg(s)}${다음}</div>`;
   };
-  return `<div class="st-form">
+  return `<div class="st-form" id="st-open-season">
     <div class="cls-form" style="margin-top:0;align-items:flex-end;">
       <label style="min-width:160px;"><span>마감일</span><input type="date" value="${escHtml(ss.date)}" onchange="seasonState().date=this.value"></label>
       <span class="st-note" style="flex:1;min-width:220px;">이 날부터 이관·졸업·퇴원 학생은 <b>로그인할 수 없고</b> 출석부·과제·신호에서 빠집니다. 기록은 지우지 않습니다.</span>
@@ -15859,8 +15859,8 @@ function render(){
     drawers += rptBatchDrawerHTML();
   /* 설정 > 학생의 «계정 수정» (2026-08-27 · D-1). 같은 이유로 화면을 함께 본다. */
   if(state.stuEditId && state.view==='teacher'
-     && state.teacherTab==='settings' && (state.settingsSubTab||'assistants')==='students'
-     && !state.studentDetailId)
+     && ((state.teacherTab==='settings' && (state.settingsSubTab||'assistants')==='students' && !state.studentDetailId)
+         || state.studentDetailId === state.stuEditId))   /* 10-11 — 학생 상세의 «학적 · 수강 종료»도 같은 드로어 */
     drawers += studentAccountDrawerHTML();
   /* 클리닉 — 날짜를 눌러 여는 «출석 확인» 판 (2026-09-05). */
   if(state.clinicDrawerDate && state.view==='teacher' && state.teacherTab==='clinic')
@@ -26556,8 +26556,9 @@ function sdScreenHTML(s, rec, isAssistant){
       ${/* 퇴원이면 «언제»까지 말한다 — 이 화면에 온 이유가 대개 그것이다 (W-1).
            ⚠ 고치는 문은 여기 없다. 학적은 설정 > 학생의 일이다(A-1로 그렇게 갈랐다). */''}
       <span class="tag ${st.withdrawn ? 'warn' : ''}">${st.withdrawn
-        ? '퇴원' + (s.withdrawnAt ? ' · ' + escHtml(s.withdrawnAt) : '')
-        : '재원 중'}</span>
+        ? goneLabel(s) + ((s.withdrawnAt || s.endedAt) ? ' · ' + escHtml(s.withdrawnAt || s.endedAt) : '')
+        : s.endedAt ? '재원 중 · ' + escHtml(s.endType || '수강 종료') + ' ' + escHtml(s.endedAt) + ' 예정' : '재원 중'}</span>
+      ${isAssistant ? '' : `<button class="btn sm" onclick="sdOpenLife('${sid}')" title="수강 종료(이관·졸업) · 퇴원 · 재원으로 되돌리기">학적 · 수강 종료</button>`}
       ${sg ? `<span class="tag ${sg.grade==='r'?'warn':'cau'}">${SIGNAL_GRADE[sg.grade].label} 신호 ${sg.rules.length}</span>` : ''}
     </div>
   </div>
@@ -27184,6 +27185,12 @@ function studentAccountDrawerHTML(){
       </div>
       <div class="hwd-b">${studentAccountFormHTML(s)}</div>
     </aside>`;
+}
+/* 학생 상세에서 «학적» 열기 (2026-10-11 · 사용자 — 「학적 칸이 어딘지 모르겠다」) — 같은 드로어를 상세 위에 펴고 학적 상자로 내려간다 */
+function sdOpenLife(sid){
+  state.stuEditId = sid; state.pwReveal = null;
+  render();
+  setTimeout(() => { const e = document.querySelector('.hwd .stu-life'); if(e) e.scrollIntoView({ block: 'start' }); }, 30);
 }
 /* 한 번에 한 학생만 편다. 같은 학생을 다시 누르면 닫힌다.
    ⚠ 여는 김에 «비밀번호 보기»를 닫는다 — 열어 둔 채 다른 학생으로 옮기면
@@ -35170,6 +35177,8 @@ function teacherSettingsHTML(){
 function stOpen(key){
   state.settingsForm = state.settingsForm===key ? '' : key;
   render();
+  /* 편 칸으로 화면을 옮긴다 (10-11) — 긴 명단 아래에서 펴지면 «안 눌렸다»로 보인다 */
+  if(state.settingsForm === key) setTimeout(() => { const e = document.getElementById('st-open-' + key); if(e) e.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 30);
 }
 /* 구역 하나 — 제목 · 설명 · (우측 액션) · 본문 */
 function stSec(o){
@@ -35597,6 +35606,12 @@ function teacherSettingsStudentsHTML(){
       }).join('');
 
   return `<div class="st-wrap">
+  ${/* 10-11 — 시즌 마감을 맨 위로(사용자 — 「눌러도 동작하지 않는다」: 맨 아래에서 펴져 화면 밖이었다) */''}
+  ${stSec({
+    title:'시즌 마감', desc:'연말 — 학생마다 계속(학년 올림) · 이관 · 졸업 · 퇴원을 골라 한 날짜로 처리합니다',
+    action:`<button class="btn ${state.settingsForm==='season'?'':'p'} sm" onclick="stOpen('season')">${state.settingsForm==='season'?'닫기':'시즌 마감'}</button>`,
+    form: state.settingsForm==='season' ? seasonHTML() : ''
+  })}
   ${stSec({
     title:'학생 계정', desc:`전체 ${DATA.students.length}명${
       terms.length ? ` · <b class="mono">${listed.length}</b>명 표시` : ''}`,
@@ -35647,11 +35662,6 @@ function teacherSettingsStudentsHTML(){
       <div class="t"><b>${escHtml(s.name || '')}</b> <span class="mono">${escHtml(s.studentId)}</span> <span class="st-note">${escHtml(studentClassTitle(s) || '')}</span></div>
       <div class="v"><button class="btn sm" onclick="setStudentHidden('${s.studentId}', false)">다시 보이기</button></div></div>`).join('')
   }) : ''}
-  ${stSec({
-    title:'시즌 마감', desc:'연말 — 학생마다 계속(학년 올림) · 이관 · 졸업 · 퇴원을 골라 한 날짜로 처리합니다',
-    action:`<button class="btn ${state.settingsForm==='season'?'':'p'} sm" onclick="stOpen('season')">${state.settingsForm==='season'?'닫기':'시즌 마감'}</button>`,
-    form: state.settingsForm==='season' ? seasonHTML() : ''
-  })}
   ${stSec({
     title:'엑셀로 한꺼번에', desc:'양식을 채워 올리면 이미 있는 아이디는 건너뜁니다',
     action:`<button class="btn ${bulk?'':'p'} sm" onclick="stOpen('bulk')">${bulk?'닫기':'일괄 등록'}</button>`,

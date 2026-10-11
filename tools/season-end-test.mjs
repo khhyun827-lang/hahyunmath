@@ -133,6 +133,20 @@ try{
   await page.click('.stu-life button:has-text("수강 종료")');
   봄('한 명씩 수강 종료 — 날짜·종류·메모', await page.evaluate(sid => { const v = 쓴것[studentKeyOfSid(sid)]; return [v.endedAt, v.endType, v.endNote]; }, 한명), ['2027-01-05', '이관', '최 선생님']);
   봄('미래 날짜면 아직 재원 · 목록에 «예정» 배지', await page.evaluate(sid => [isWithdrawn(DATA.students.find(x => x.studentId === sid)), !!document.querySelector('.stu-row .badge') && [...document.querySelectorAll('.stu-row .badge')].some(e => /예정/.test(e.textContent))], 한명), [false, true]);
+  /* ⑧ 찾기 쉬운 자리 (10-11 · 사용자 — 「시즌 마감 눌러도 동작하지 않아」·「학적 칸이 어딘지 모르겠어」) */
+  await page.evaluate(() => { state.teacherTab = 'settings'; state.settingsSubTab = 'students'; state.settingsForm = ''; state.stuEditId = null; state.studentDetailId = null; render(); });
+  봄('시즌 마감이 설정 › 학생 맨 위 칸이다', await page.evaluate(() => document.querySelector('.st-wrap .st-sec .st-h b').textContent), '시즌 마감');
+  await page.click('.st-sec:has-text("시즌 마감") .st-h button');
+  봄('누르면 펴진다(사람이 누르는 그대로)', await page.evaluate(() => [state.settingsForm, !!document.getElementById('st-open-season'), document.querySelectorAll('.ssn-row').length > 0]), ['season', true, true]);
+  const 상세 = a;   // «계속»이라 재원 — 수강 종료 단추가 서야 한다
+  await page.evaluate(sid => { state.settingsForm = ''; state.teacherTab = 'classhub'; state.classHubTab = 'students'; rosterOpen(sid, 'info'); }, 상세);
+  await page.click('.sd-dh button:has-text("학적 · 수강 종료")');
+  봄('학생 상세 머리 «학적 · 수강 종료» → 같은 드로어 · 수강 종료 단추가 보인다', await page.evaluate(() => {
+    const d = document.querySelector('.hwd .stu-life');
+    return [!!d, !!d && [...d.querySelectorAll('button')].some(b => b.textContent.trim() === '수강 종료'), !!document.querySelector('.sd-dh')];
+  }), [true, true, true]);
+  await page.evaluate(() => { state.stuEditId = null; state.studentDetailId = null; render(); });
+
   /* ⑦ 숨긴 학생(테스트 계정 · 2026-10-11) — 강사 화면 어디에도 없고 로그인은 그대로 · 되돌릴 수 있다 */
   봄('🔴 불러올 때 한 문에서 가른다(강사·조교 쪽) · 학생 로그인은 제 문서만 읽어 영향 없음',
      [/DATA\.hiddenStudents = \(DATA\.students \|\| \[\]\)\.filter\(s => s && s\.hidden\);\s*DATA\.students = \(DATA\.students \|\| \[\]\)\.filter\(s => !\(s && s\.hidden\)\);/.test(html),
