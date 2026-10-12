@@ -51,7 +51,7 @@ console.log(NL + '① 마감이 지난 과제만 «누락»으로 센다' + NL);
     const F = new Function('DATA', 'state', 'studentClassIds', 'hwIsDone', 'liveWrongHomework', 'videoScore',
       'attCountedOf', 'attRateOf', 'scoresCountedOf', 'isWithdrawn', 'todayStr',
       'studentPrimaryClassId', 'getClassProgress',
-      lift('rosterStats') + NL + 'return rosterStats;')(
+      ['itemDay','beforeJoin','joinedRoster','classRosterOn'].map(lift).join(NL) + NL + lift('rosterStats') + NL + 'return rosterStats;')(
       DATA, { allRecords: { s1: rec } }, () => ['c1'], (r, id) => 한것.includes(id), () => [], () => 0,
       () => [], () => null, () => [], () => false, () => 오늘,
       s => s.classId || '', () => ({ subject: '', percent: 0 }));
@@ -123,6 +123,33 @@ console.log(NL + '③ 세는 자리가 전부 그 수를 보는가' + NL);
   봄('⚠ 「n/m」 숫자는 그대로 보인다', lift('teacherRosterHTML').includes("st.hwDone + '/' + st.hwTotal"), true);
   봄('설정의 설명도 같은 말을 한다', html.includes('<b>마감이 지났는데</b> 아직 안 낸 과제가'), true);
   봄('그 줄의 고정 값 딱지도', html.includes('마감 지난 미제출 1건부터'), true);
+}
+
+/* ═══ ④ 신규생 — 등록일 전에 낸 과제·영상은 그 학생 몫이 아니다 (2026-10-12 · 사용자 신고) ═══ */
+console.log(NL + '④ 신규생 — 등록 전 것은 안 센다' + NL);
+{
+  const H = new Function([lift('ymdLocal'), lift('itemDay'), lift('beforeJoin'), lift('joinedRoster')].join(NL)
+    + NL + 'return { itemDay, beforeJoin, joinedRoster };')();
+  const 새 = { studentId: 'n1', joinedAt: '2026-09-10' }, 옛 = { studentId: 'o1' };
+  봄('🔴 등록 전 날 낸 과제는 «전»이다', H.beforeJoin(새, { createdAt: '2026-09-05' }), true);
+  봄('등록한 날 낸 것은 받은 것이다', H.beforeJoin(새, { createdAt: '2026-09-10' }), false);
+  봄('🔴 등록일이 없는 학생(옛 학생)은 아무것도 안 걸러진다', H.beforeJoin(옛, { createdAt: '2000-01-01' }), false);
+  봄('영상은 id 의 시각으로 날을 안다', H.itemDay({ id: 'v' + new Date(2026, 8, 3, 12).getTime() + '_s1' }), '2026-09-03');
+  봄('날짜(문자열)도 받는다 — 출결 칸', [H.beforeJoin(새, '2026-09-09'), H.beforeJoin(새, '2026-09-10')], [true, false]);
+  봄('명단에서 신규생만 빠진다', H.joinedRoster([새, 옛], { createdAt: '2026-09-01' }).map(s => s.studentId), ['o1']);
+
+  const DATA = { assignments: [
+    { id: 'h3', classId: 'c1', title: '어제 마감', createdAt: '2026-09-05', dueDate: '2026-09-12' },
+  ], videos: [], students: [] };
+  const F = new Function('DATA', 'state', 'studentClassIds', 'hwIsDone', 'liveWrongHomework', 'videoScore',
+    'attCountedOf', 'attRateOf', 'scoresCountedOf', 'isWithdrawn', 'todayStr',
+    'studentPrimaryClassId', 'getClassProgress',
+    ['itemDay','beforeJoin','joinedRoster'].map(lift).join(NL) + NL + lift('rosterStats') + NL + 'return rosterStats;')(
+    DATA, { allRecords: {} }, () => ['c1'], () => false, () => [], () => 0,
+    () => [], () => null, () => [], () => false, () => 오늘,
+    s => s.classId || '', () => ({ subject: '', percent: 0 }));
+  봄('🔴 9/10 에 들어온 학생에게 9/5 과제는 «누락»이 아니다', F({ studentId: 'n1', classId: 'c1', joinedAt: '2026-09-10' }).hwLate, 0);
+  봄('같은 반 옛 학생은 그대로 누락이다', F({ studentId: 'o1', classId: 'c1' }).hwLate, 1);
 }
 
 console.log(NL + (fail ? '🔴 ' + fail + '개 실패 · ' : '✓ 전부 통과 · ') + pass + '개' + NL);

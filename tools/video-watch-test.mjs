@@ -208,7 +208,7 @@ console.log(NL + '④ 반 › 영상 탭을 실제로 그려 본다' + NL);
      아니라 빈 것으로 세우고, 머리 카드와 구간 딱지(`videoGoalLabelOf`)는 그대로 뜬다. */
   const C = new Function('DATA', 'state', 'loadAllRecordsIfNeeded', 'classRoster', 'escHtml', 'todayStr', 'iconSvg',
     'vidNoticeBarHTML', 'vidNoticeBtnHTML', 'extractYouTubeId', 'stuDday', 'setVideoDue', 'deleteVideo', 'render',
-    잣대 + NL + lift('secToClock') + NL + lift('videoGoalLabelOf') + NL + lift('videoHeroHTML')
+    ['itemDay','beforeJoin','joinedRoster','classRosterOn'].map(lift).join(NL) + NL + 잣대 + NL + lift('secToClock') + NL + lift('videoGoalLabelOf') + NL + lift('videoHeroHTML')
       + NL + lift('chubVideoModel') + NL + lift('chubVideoHTML') + NL + lift('videoDrawerHTML') + NL + 'return c => chubVideoHTML(c) + videoDrawerHTML();')(
     DATA, state, () => {}, () => roster,
     s => (s === null || s === undefined) ? '' : String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;'),
@@ -350,8 +350,8 @@ console.log(NL + '⑥ 본 날이 남는다 — days · firstAt · doneAt' + NL);
   봄('🔴 나간 영상을 하나도 안 봤으면 «0%»로 싣는다 — 줄째로 빠지지 않는다 (조민서 · 09-20)',
     M(s, { videoProgress: {} }, '2026-09', { videos: [{ id: 'a' }, { id: 'b' }], isThisMonth: true }).video, { seen: 0, done: 0, total: 2, pct: 0 });
   봄('   영상이 하나도 안 나갔으면 그때만 줄째로 빠진다', M(s, rec, '2026-09', { videos: [], isThisMonth: true }).video, null);
-  봄('🔴 리포트에 주는 영상은 «이 학생 것»만 — 개인 배정이면 그 학생, 아니면 제 반',
-    /videos: DATA\.videos\.filter\(v => v\.studentId \? v\.studentId===s\.studentId : \(!v\.classId \|\| studentClassIds\(s\)\.includes\(v\.classId\)\)\)/.test(html), true);
+  봄('🔴 리포트에 주는 영상은 «이 학생 것»만 — 개인 배정이면 그 학생, 아니면 제 반 · 등록 전 영상은 빼고(10-12)',
+    /videos: DATA\.videos\.filter\(v => \(v\.studentId \? v\.studentId===s\.studentId : \(!v\.classId \|\| studentClassIds\(s\)\.includes\(v\.classId\)\)\) && !beforeJoin\(s, v\)\)/.test(html), true);
   봄('   화면 줄에 완주 편수가 붙는다', /편 시청" \+ \(d\.video\.done \? " · " \+ d\.video\.done \+ "편 완주"/.test(html), true);
 }
 

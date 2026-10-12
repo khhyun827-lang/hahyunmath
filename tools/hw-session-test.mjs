@@ -278,7 +278,7 @@ console.log(NL + '⑤ 실제로 그려 본다 — 과제 격자의 차례 · 수
   const HW_NONE = 'none', HW_SUBMITTED = 'wait';
   const G = new Function('state', 'hwState', 'hwIsDone', 'HWG_CELL', 'HW_NONE', 'HW_SUBMITTED',
     'todayStr', 'escHtml', 'chubYm', 'WEEKDAY_LABEL',
-    lift('hwOrderKey') + NL + lift('hwOrderDesc') + NL + lift('hwOrderAsc') + NL
+    ['itemDay','beforeJoin','joinedRoster','classRosterOn'].map(lift).join(NL) + NL + lift('hwOrderKey') + NL + lift('hwOrderDesc') + NL + lift('hwOrderAsc') + NL
       + lift('hwGridHTML') + NL + 'return hwGridHTML;')(
     { allRecordsLoaded: true, hwCell: null, hwNoticeId: null, allRecords: { s1: { attendance: [], homework: {} } } },
     () => ({ status: HW_NONE, photos: [] }), () => false,
@@ -395,7 +395,7 @@ console.log(NL + '⑥ 전체 제출 처리 — 안 낸 사람도 든다' + NL);
   const 쓴것 = [], 말 = [];
   const Q = new Function('state', 'DATA', 'classRoster', 'setHwState', 'todayStr', 'actorLabel', 'logAudit', 'showToast', 'render',
     'HW_NONE', 'HW_SUBMITTED', 'HW_REJECTED', 'HW_PARTIAL', 'HW_APPROVED',
-    lift('hwState') + NL + lift('hwQuickAll') + NL + 'return hwQuickAll;')(
+    ['itemDay','beforeJoin','joinedRoster'].map(lift).join(NL) + NL + lift('hwState') + NL + lift('hwQuickAll') + NL + 'return hwQuickAll;')(
     state, { assignments: [{ id: 'h1', title: '3단원 숙제' }] },
     () => ['s1', 's2', 's3', 's4', 's5'].map(id => ({ studentId: id })),
     async (sid, hwId, patch) => { 쓴것.push([sid, patch.status, patch.onSite]); },

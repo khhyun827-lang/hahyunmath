@@ -4239,6 +4239,10 @@
   /* 표 */
   #app:has(.tnav) .app:not(.sap) table.grid thead th{height:42px;font-size:12px;font-weight:700;color:#8A90A3;background:transparent;
     border-bottom:1px solid #ECEEF3;}
+  /* 🔴 명단 머리줄은 스크롤에 붙어(sticky) 따라온다 — 위 transparent 를 받으면 그 밑으로 행 글자가 비쳐 겹친다
+     (2026-10-12 · 사용자 신고 · 864 판). 흰 카드(.rst-wrap) 안이라 흰 바탕이 곧 «안 보이는» 바탕이다.
+     ⚠ 1200 이상 블록(.rst-wrap 카드 규칙 옆)에 두면 864 에서 안 걸린다 — 여기(모든 폭)여야 한다. roster-head-test 가 잰다. */
+  #app:has(.tnav) .app:not(.sap) .rst-wrap table.grid thead th{background:#fff;}
   #app:has(.tnav) .app:not(.sap) table.grid tbody td{height:52px;font-size:13.5px;color:#1E2433;border-bottom:1px solid #ECEEF3;}
   #app:has(.tnav) .app:not(.sap) table.grid tbody tr:hover td{background:#F6F7FA;}
   #app:has(.tnav) .app:not(.sap) table.grid td.sub, #app:has(.tnav) .app:not(.sap) table.grid .sub{color:#3A4156;}
@@ -9482,6 +9486,12 @@ function attRateOf(list){
   return Math.round(counted.filter(a => a.status !== '결석').length / counted.length * 100);
 }
 
+/* 그 날 그 반에 «있던» 학생 (2026-10-12) — 등록일(joinedAt) 전 날짜면 빠진다.
+   ⚠ 그 날 기록이 이미 있으면 남긴다(체험 수업 등) — 안 그러면 격자에서 사라지고 저장 때 손을 못 댄다. */
+function classRosterOn(classId, date){
+  return classRoster(classId).filter(s => !beforeJoin(s, date)
+    || attOn(state.allRecords[s.studentId], date, classId, studentMainClassId(s)));
+}
 function classRoster(classId){
   if(isJikboSession(classId)) return jikboRoster(classId);   // 직보는 반이 아니라 «그 날 그 학교»다
   return classRosterAll(classId).filter(s=>!isWithdrawn(s));
@@ -11204,8 +11214,8 @@ function studentNotifItems(sid){
   /* 벨도 «듣는 반 전부»에서 센다 (2026-09-01 · E-1) — 특강 과제가 벨에 안 뜨면
      학생에게 그 과제는 없는 것이 된다. */
   const myClassIds = studentClassIds(me);
-  const hwCount = DATA.assignments.filter(a=>!a.classId || myClassIds.includes(a.classId)).length;
-  const vidCount = DATA.videos.filter(v=>v.studentId ? v.studentId===sid : (!v.classId || myClassIds.includes(v.classId))).length;
+  const hwCount = DATA.assignments.filter(a=>(!a.classId || myClassIds.includes(a.classId)) && !beforeJoin(me, a)).length;
+  const vidCount = DATA.videos.filter(v=>(v.studentId ? v.studentId===sid : (!v.classId || myClassIds.includes(v.classId))) && !beforeJoin(me, v)).length;
   return [
     {key:'homework', label:'새 과제', count: hwCount, gotoCode:"state.studentTab='progress';"},
     {key:'video', label:'새 영상', count: vidCount, gotoCode:"state.studentTab='video';"},
@@ -11537,6 +11547,23 @@ function hwState(rec, hwId){
      («blob:…» previewUrl만 든 것) 화면에서 깨진 그림으로 뜨지 않는다. */
   return { ...v, status: v.status || HW_NONE, photos: (v.photos || []).filter(p=>p && p.url) };
 }
+/* 🔴 **등록일 전의 것은 그 학생 몫이 아니다** (2026-10-12 · 사용자 — 「신규생을 추가했을때 신규생도 이전에
+     그 반에 기록된 과제가 모두 미제출이라고 뜨고 영상도 미시청이라고 떠. 입학전 내준 것에는 영향을 받지 않아야 해」).
+   과제(낸 날 createdAt)·영상(올린 때 — id 의 Date.now())·출결 날짜가 등록일(joinedAt)보다 앞서면
+   세지도, 칸을 칠하지도, 학생에게 보이지도 않는다. 같은 날은 «있었다»로 친다.
+   ⚠ 등록일이 없는 학생(10-11 전 등록)은 처음부터 있던 학생이다 — 아무것도 안 걸러진다. */
+function itemDay(x){
+  if(x && x.createdAt) return String(x.createdAt).slice(0, 10);
+  const m = /(\d{13})/.exec((x && x.id) || '');
+  return m ? ymdLocal(new Date(+m[1])) : '';
+}
+function beforeJoin(s, dayOrItem){
+  if(!s || !s.joinedAt) return false;
+  const d = typeof dayOrItem === 'string' ? dayOrItem : itemDay(dayOrItem);
+  return !!d && d < s.joinedAt;
+}
+/* 명단 중 «그것(과제·영상·날짜)이 있을 때 이미 있던» 학생만 */
+function joinedRoster(roster, dayOrItem){ return roster.filter(s => !beforeJoin(s, dayOrItem)); }
 /* «완료»는 오직 수락된 것이다. 제출만 해 둔 것은 아직 아니다 —
    그걸 완료로 세면 강사가 보기도 전에 숫자가 차서 검토할 이유가 사라진다. */
 /* ⚠ **「보완 필요」도 «한 것»이다** (2026-09-01 · C-15) — 여기 한 줄이 제출률·리포트·신호를
@@ -16646,8 +16673,8 @@ function stuCtx(){
     /* 듣는 반 전부에서 온다 — 특강 과제·영상·시험도 이 학생의 것이다 (2026-09-01 · E-1).
        ⚠ `classId`(주 반)는 그대로 둔다 — 「내 반」을 한 줄로 말하는 자리가 아직 여럿이다. */
     classIds: myClassIds,
-    homework: DATA.assignments.filter(a=>!a.classId || myClassIds.includes(a.classId)),
-    videos:   DATA.videos.filter(v=>v.studentId ? v.studentId===sid : (!v.classId || myClassIds.includes(v.classId))),
+    homework: DATA.assignments.filter(a=>(!a.classId || myClassIds.includes(a.classId)) && !beforeJoin(me, a)),
+    videos:   DATA.videos.filter(v=>(v.studentId ? v.studentId===sid : (!v.classId || myClassIds.includes(v.classId))) && !beforeJoin(me, v)),
     exams:    DATA.exams.filter(e=>myClassIds.includes(e.classId)),
     qnas:     DATA.qnas.filter(q=>q.studentId===sid),
     clinics:  DATA.clinics.filter(c=>c.studentId===sid)
@@ -17978,6 +18005,7 @@ function hwReviewRowHTML(sid, rec, a, opts){
    ⚠ **알림바는 맨 위에 그대로 둔다** (N-1에서 정한 자리). 「아직 안 냄」 묶음 머리로
      내리면 대기가 많은 날 화면 아래로 밀려 «또 올라와야» 한다. */
 function hwRosterReviewHTML(a, roster){
+  roster = joinedRoster(roster, a);
   if(!state.allRecordsLoaded)
     return '<span class="muted" style="font-size:12px;">학생 기록을 불러오는 중…</span>';
   if(roster.length === 0)
@@ -18121,6 +18149,7 @@ function hwGridHTML(classId, list, roster){
   const cell = (s, a) => {
     const rec = recOf(s);
     if(!rec) return '<td></td>';
+    if(beforeJoin(s, a)) return `<td title="${escHtml(s.name)} — 등록(${escHtml(s.joinedAt)}) 전에 낸 과제"></td>`;
     const st = hwState(rec, a.id);
     let [tone, label, mark] = HWG_CELL[st.status] || HWG_CELL[HW_NONE];
     /* 🔴 **마감이 지난 미제출은 «붉게» 적는다** (2026-09-01 · C-15 · 사용자가 시켰다).
@@ -18160,8 +18189,9 @@ function hwGridHTML(classId, list, roster){
      ⚠ 옛 과제에 `createdAt`이 없으면 날짜를 지어낼 수 없다 — 그때는 이름으로 되돌린다. */
   const ymNow2 = chubYm();
   const head = cols.map(a=>{
-    const done = named.filter(s=>recOf(s) && hwIsDone(recOf(s), a.id)).length;
-    const wait = named.filter(s=>recOf(s) && hwState(recOf(s), a.id).status===HW_SUBMITTED).length;
+    const 받은 = joinedRoster(named, a);
+    const done = 받은.filter(s=>recOf(s) && hwIsDone(recOf(s), a.id)).length;
+    const wait = 받은.filter(s=>recOf(s) && hwState(recOf(s), a.id).status===HW_SUBMITTED).length;
     const on = state.hwNoticeId===a.id;
     const cd = String(a.createdAt||'');
     const wd = cd ? WEEKDAY_LABEL[new Date(cd+'T00:00:00').getDay()] : '';
@@ -18169,7 +18199,7 @@ function hwGridHTML(classId, list, roster){
     return `<th class="hwg-col${on?' on':''}${(done+wait)===0?' empty':''}" onclick="hwToggleCol('${a.id}')"
       title="${escHtml(a.title)}
 ${cd ? '낸 날 '+escHtml(cd)+' ('+wd+')' : '낸 날 모름'}${a.dueDate?' · 마감 '+escHtml(a.dueDate):' · 마감 없음'}
-완료 ${done}/${named.length}${wait?' · 확인 대기 '+wait:''}
+완료 ${done}/${받은.length}${wait?' · 확인 대기 '+wait:''}
 표는 마감(없으면 낸 날) 빠른 순으로 섭니다 — 누르면 오른쪽에 열립니다">
       ${cd ? `<b><span class="mono">${dNum}</span><i>${wd}</i></b>`
            : `<b>${escHtml(a.title)}</b>`}
@@ -18185,7 +18215,7 @@ ${cd ? '낸 날 '+escHtml(cd)+' ('+wd+')' : '낸 날 모름'}${a.dueDate?' · �
     return `<tr>
       <td class="who"><span class="nm">${escHtml(s.name)}</span></td>
       ${cols.map(a=>cell(s, a)).join('')}
-      <td class="hg-done"><span class="mono">${mine}/${cols.length}</span></td>
+      <td class="hg-done"><span class="mono">${mine}/${cols.filter(a=>!beforeJoin(s, a)).length}</span></td>
     </tr>`;
   }).join('');
 
@@ -18415,7 +18445,7 @@ function hwNoticeText(name, a){ return fillNotice(HW_NOTICE_TEMPLATE, hwNoticeVa
    ⚠ 판정은 `hwNeedsAction` 하나만 부른다. 제출해 둔 것(확인 대기)은 미제출이 아니다 —
      그걸 섞으면 «낸 사람에게 안 냈다고 보내는» 일이 생긴다. */
 function hwUnsubmitted(a, roster){
-  return roster.filter(s=>{
+  return joinedRoster(roster, a).filter(s=>{
     const rec = state.allRecords[s.studentId];
     return rec && hwNeedsAction(rec, a.id);
   });
@@ -18753,7 +18783,7 @@ function wrongNoticeText(name, 출처, n){ return fillNotice(WRONG_NOTICE_TEMPLA
    그래서 시킨 구간을 다 본 학생에게는 **이 알림이 안 간다**(K-11 이 고친 바로 그 억울함이다). */
 function vidNotWatched(v, roster){
   if(!videoCounted(v)) return [];      /* 복습용은 재촉하지 않는다 (2026-09-20) */
-  return roster.filter(s => {
+  return joinedRoster(roster, v).filter(s => {
     const rec = state.allRecords[s.studentId];
     const p = rec && rec.videoProgress && rec.videoProgress[v.id];
     return !videoDone(p);
@@ -21242,7 +21272,7 @@ function teacherDashHTML(){
   const 지난주 = shiftYmd(today, -7);
   let 미제출 = 0;
   DATA.assignments.filter(a => a.dueDate && a.dueDate < today && a.dueDate >= 지난주).forEach(a => {
-    const roster = a.classId ? classRoster(a.classId) : 재원;
+    const roster = joinedRoster(a.classId ? classRoster(a.classId) : 재원, a);
     미제출 += roster.filter(s => !hwIsDone(state.allRecords[s.studentId] || {}, a.id)).length;
   });
   const todo = teacherNotifItems().filter(it => dashNotifN(it) > 0);
@@ -21372,7 +21402,7 @@ function rosterStats(s){
 
   /* 과제·영상은 «듣는 반 전부»에서 온다 — 특강 과제도 이 학생의 과제다 (E-1). */
   const myClasses = studentClassIds(s);
-  const hws = DATA.assignments.filter(a=>!a.classId || myClasses.includes(a.classId));
+  const hws = DATA.assignments.filter(a=>(!a.classId || myClasses.includes(a.classId)) && !beforeJoin(s, a));
   const hwDone = hws.filter(a=>hwIsDone(rec, a.id)).length;
   /* 🔴 **«아직 마감 전인 과제»로 신호를 켜지 않는다** (2026-09-13 · K-16 · 사용자가 짚었다 —
        「지금 현재 올라간 과제는 19일마감이어서 아직 19일 마감전까지는 … 과제누락으로 안잡혔으면」).
@@ -21390,7 +21420,7 @@ function rosterStats(s){
      («검토 중»인 것은 여기서 아직 센다 — 뜻이 다른 이야기라 따로 정한다.) */
   const wrongLeft = liveWrongHomework(rec).filter(h=>!h.done).length;
 
-  const vids = DATA.videos.filter(v=>videoCounted(v) && (v.studentId ? v.studentId===sid : (!v.classId || myClasses.includes(v.classId))));
+  const vids = DATA.videos.filter(v=>videoCounted(v) && !beforeJoin(s, v) && (v.studentId ? v.studentId===sid : (!v.classId || myClasses.includes(v.classId))));
   /* ⚠ 잣대는 `videoScore` 하나다 (2026-09-13 · K-7). 규칙의 50·70·80(`vidHeavy`·`vidWarn`·`vidLight`)이
      그 전에는 **1.5배 부푼 수**를 보고 있었다 — 「시청률 70% 미만」이 실은 «영상의 46.7% 미만»이었다. */
   const vidPct = vids.length ? Math.round(vids.reduce((sum,v)=>
@@ -22379,7 +22409,7 @@ function jikboSessionsOn(date){
 /* 저장된 기록 기준 요약. 초안(attDraft)이 아니라 «이미 저장된 것»만 센다 —
    왼쪽 목록은 «이 수업 끝냈나»를 말해야 하므로 아직 저장 안 한 것을 완료로 세면 거짓말이 된다. */
 function sessionSavedSummary(classId, date){
-  const roster = classRoster(classId);
+  const roster = classRosterOn(classId, date);
   /* 🔵 **누가 그랬는지도 함께 들고 온다** (2026-09-17 · 사용자가 시켰다 —
        「결석이나 지각생에 대해 이름도 적어줬으면 좋겠어」).
      세는 것과 같은 한 바퀴에서 담는다 — 이름을 쓰겠다고 명단을 한 번 더 돌면
@@ -22425,7 +22455,8 @@ function sessionStatusOf(c, date){
   return { st, detail, sm };
 }
 function sessionDraftSummary(classId){
-  const roster = classRoster(classId);
+  /* 초안에 든 사람만 — 초안(ensureAttDraft)이 이미 «그 날 있던» 학생만 담았다 (10-12) */
+  const roster = classRoster(classId).filter(s => state.attDraft[s.studentId]);
   const cnt = {}; let none = 0;
   roster.forEach(s=>{
     const d = state.attDraft[s.studentId];
@@ -22770,7 +22801,7 @@ async function saveSessionAttendance(classId, date, nextStep){
   render();
 }
 function setAllRemainingPresent(classId){
-  classRoster(classId).forEach(s=>{
+  sessionDraftSummary(classId).roster.forEach(s=>{
     const d = state.attDraft[s.studentId];
     if(d && d.status) return;                      // 이미 찍은 것은 건드리지 않는다
     state.attDraft[s.studentId] = {status:'출석', reason:'', videoUrl:'', note:(d&&d.note)||''};
@@ -23178,14 +23209,14 @@ function sessionHwList(classId, date){
   return DATA.assignments.filter(a=>(!a.classId || a.classId===classId) && sessionHwDue(a, date));
 }
 function sessionHwCheckHTML(classId, date){
-  const roster = classRoster(classId);
+  const 반명단 = classRoster(classId);
   const recOf = s => state.allRecords[s.studentId];
   const all = sessionHwList(classId, date);
-  const stat = a => ({
+  const stat = a => { const roster = joinedRoster(반명단, a); return {
     wait: roster.filter(s=>recOf(s) && hwState(recOf(s), a.id).status===HW_SUBMITTED).length,
     todo: roster.filter(s=>recOf(s) && hwNeedsAction(recOf(s), a.id)).length,
     done: roster.filter(s=>recOf(s) && hwIsDone(recOf(s), a.id)).length
-  });
+  }; };
   /* 🔴 **고르개는 «낸 날» 순으로만 세운다 — 상태로 다시 정렬하지 않는다** (2026-09-01 · C-19).
      처음에는 «할 일이 남은 것»을 위로 올렸는데, **누를 때마다 그 순서가 바뀌었다.**
      `state.sessionHwId`가 비어 있으면 `rows[0]`을 보고 있었으므로 —
@@ -23203,6 +23234,7 @@ function sessionHwCheckHTML(classId, date){
     state.sessionHwId = urgent.a.id;
   }
   const cur = all.find(a=>a.id===state.sessionHwId) || (rows[0] && rows[0].a);
+  const roster = cur ? joinedRoster(반명단, cur) : 반명단;   // 등록 전에 낸 과제엔 신규생 칸이 없다 (10-12)
 
   if(!state.allRecordsLoaded)
     return { bar:'', body:'<div style="padding:48px 0;text-align:center;color:var(--dim);font-size:12.5px;">학생 기록을 불러오는 중입니다…</div>' };
@@ -23282,7 +23314,7 @@ async function hwQuickSet(sid, hwId, kind){
      ⚠ 「미제출」 단추는 상태를 NONE 으로 되돌리는 것이라 «찍어 둔 미제출»과 «아직 안 냄»을 가를 수 없다 —
        그래서 이 단추는 «다 낸 반»에서 누르는 것이고, 안 낸 사람이 있으면 누르기 전에 그 사람만 빼 두는 길은 없다(누른 뒤 그 사람을 미제출로 되돌린다). */
 async function hwQuickAll(classId, hwId){
-  const roster = classRoster(classId);
+  const roster = joinedRoster(classRoster(classId), DATA.assignments.find(a=>a.id===hwId) || {});
   const targets = roster.filter(s=>{
     const st = hwState(state.allRecords[s.studentId], hwId);
     return st.status!==HW_APPROVED && st.status!==HW_PARTIAL;
@@ -24760,7 +24792,8 @@ function chubAttendanceHTML(classId){
     <thead><tr>
       <th class="who">이름</th>
       ${cols.map(d=>{
-        const filled = roster.filter(s=>attOf(s.studentId, d)).length;
+        const 그날 = classRosterOn(classId, d);
+        const filled = 그날.filter(s=>attOf(s.studentId, d)).length;
         const absent = roster.filter(s=>{ const a = attOf(s.studentId, d); return a && a.status==='결석'; }).length;
         const wd = WEEKDAY_LABEL[new Date(d+'T00:00:00').getDay()];
         /* 🔵 열 머리는 «한 줄»이다 (2026-09-01) — 날짜와 요일이 나란히 선다.
@@ -24774,7 +24807,7 @@ function chubAttendanceHTML(classId){
         return `<th class="hwg-col ag-col ${d===open?'on':''}${filled===0?' empty':''}"
           title="${d} · ${wd}요일 — 누르면 이 날짜를 고칩니다${
             filled===0 ? ' (아직 아무도 안 넣었습니다)'
-            : filled<roster.length ? ` (${filled}/${roster.length} 넣었습니다)`
+            : filled<그날.length ? ` (${filled}/${그날.length} 넣었습니다)`
             : (absent?` (결석 ${absent}명)`:'')}"
           onclick="state.attOpenDate='${d===open?'':d}'; render()">
           <b><span class="mono">${+d.slice(8)}</span><i>${wd}</i>${d===today?'<i class="td">오늘</i>':''}</b>
@@ -24794,7 +24827,7 @@ function chubAttendanceHTML(classId){
               ? `<span class="ag-m ${attStatusClass(a.status)}" title="${escHtml(
                   a.status + (a.reason?' · '+a.reason:'') + (a.note?' · '+a.note:'') + (a.videoUrl?' · 보충 영상 있음':''))}"
                   >${MARK[a.status]||a.status.slice(0,1)}${extra?'<i class="dotmark"></i>':''}</span>`
-              : '<span class="ag-m none" title="미입력">·</span>'}</td>`;
+              : beforeJoin(s, d) ? '' : '<span class="ag-m none" title="미입력">·</span>'}</td>`;
           }).join('')}
           <td class="ag-rate"><span class="mono ${r!==null && r<80 ? 'down':''}">${r===null?'—':r+'%'}</span></td>
         </tr>`;
@@ -25332,7 +25365,7 @@ function studentTimeline(s, rec){
       pct!==null ? `<span class="badge score">${pct}%</span>` : '',
       `<button class="btn q sm" onclick="deleteScore('${sid}',${i})">삭제</button>`, 'k-score');
   });
-  DATA.assignments.filter(a=>!a.classId || studentClassIds(s).includes(a.classId)).forEach(a=>{
+  DATA.assignments.filter(a=>(!a.classId || studentClassIds(s).includes(a.classId)) && !beforeJoin(s, a)).forEach(a=>{
     /* 연대기는 «무슨 일이 있었나»라 상태를 넷 그대로 보여 준다 —
        완료/미완료로 뭉개면 «냈는데 아직 확인 안 됨»이 미완료로 보인다. */
     const stt = hwState(rec, a.id);
@@ -25690,7 +25723,7 @@ function reportDataOf(s, rec, ym){
     const rows = attOfClass(rec, cid, main).filter(a=>String(a.date).slice(0,7)===ym && a.status!=='퇴원');
     const att = {'출석':0,'지각':0,'조퇴':0,'결석':0};
     rows.forEach(a=>{ if(att[a.status]!==undefined) att[a.status]++; });
-    const asgs = DATA.assignments.filter(a=>a.classId===cid
+    const asgs = DATA.assignments.filter(a=>a.classId===cid && !beforeJoin(s, a)
       && String(a.dueDate||a.createdAt||'').slice(0,7)===ym);
     const done = asgs.filter(a=>hwIsDone(rec, a.id)).length;
     const exs = DATA.exams.filter(e=>e.classId===cid && String(e.date||'').slice(0,7)===ym);
@@ -25719,9 +25752,9 @@ function reportDataOf(s, rec, ym){
          %가 무엇 중인지(「2학기 중간 범위」)도 같이 넘긴다 — 숫자만 가면 시험 점수로 읽힌다. */
     books: pcp ? pcp.bookProg.map(bookProgText) : [],
     booksRange: pcp && pcp.bookProg.some(b => b.total) ? pcp.rangeLabel : '',
-    allRecords: state.allRecords, assignments: DATA.assignments,
+    allRecords: state.allRecords, assignments: DATA.assignments.filter(a => !beforeJoin(s, a)),
     /* 🔴 이 학생 «것»만 — 학생 화면(13624행)과 같은 잣대. 통째로 주면 남의 반 영상이 «안 본 0%»로 실린다. */
-    videos: DATA.videos.filter(v => v.studentId ? v.studentId===s.studentId : (!v.classId || studentClassIds(s).includes(v.classId))),
+    videos: DATA.videos.filter(v => (v.studentId ? v.studentId===s.studentId : (!v.classId || studentClassIds(s).includes(v.classId))) && !beforeJoin(s, v)),
     isDone: hwIsDone,
     /* 🔴 학부모가 읽는 반 이름이다. 특강만 듣는 학생에게 「미배정」이라 적으면
        **그 집에서는 «우리 애가 반이 없다»로 읽힌다** (2026-09-01 · E-4). */
@@ -26774,7 +26807,7 @@ function sdConsultDeskHTML(s, rec, st, sg){
 
   /* 과제 — 아직 안 끝난 것 · 오답 · 퀴즈 */
   const 반들 = studentClassIds(s), 오늘 = todayStr();
-  const 남은 = DATA.assignments.filter(a => (!a.classId || 반들.includes(a.classId)) && !hwIsDone(rec, a.id))
+  const 남은 = DATA.assignments.filter(a => (!a.classId || 반들.includes(a.classId)) && !beforeJoin(s, a) && !hwIsDone(rec, a.id))
     .sort((a,b)=>String(b.dueDate||'').localeCompare(String(a.dueDate||''))).slice(0, 5);
   const 퀴즈 = ((rec.dailyQuiz && rec.dailyQuiz.log) || []).slice(-30);
   const 과제 = (남은.length ? 남은.map(a => { const 지남 = a.dueDate && a.dueDate < 오늘;
@@ -26783,7 +26816,7 @@ function sdConsultDeskHTML(s, rec, st, sg){
     + `<div class="cd-cap">오답 숙제 미제출 <b>${st.wrongLeft || 0}</b>${퀴즈.length ? ` · 데일리퀴즈 최근 ${퀴즈.length}문항 정답 <b>${Math.round(퀴즈.filter(e => e.ok).length / 퀴즈.length * 100)}%</b>` : ''}</div>`;
 
   /* 영상 — 시청률 · 덜 본 영상 */
-  const vids = DATA.videos.filter(v => videoCounted(v) && (v.studentId ? v.studentId === sid : (!v.classId || 반들.includes(v.classId))));
+  const vids = DATA.videos.filter(v => videoCounted(v) && !beforeJoin(s, v) && (v.studentId ? v.studentId === sid : (!v.classId || 반들.includes(v.classId))));
   const 덜 = vids.map(v => ({ v, p: videoScore(rec.videoProgress && rec.videoProgress[v.id]) })).filter(x => x.p < 70)
     .sort((a,b)=>a.p - b.p).slice(0, 3);
   const 영상 = st.vidPct == null ? '<div class="cd-none">배정된 영상이 없습니다.</div>'
@@ -26903,7 +26936,7 @@ function sdTimelineHTML(s, sid, rec, isAssistant){
       <span class="muted" style="font-size:11.5px;align-self:center;">반 전체는 반 관리 &gt; 수업 기록에서 한 번에 넣습니다</span>
     </div></div>`;
   } else if(f==='hw'){
-    const myHw = DATA.assignments.filter(a=>!a.classId || studentClassIds(s).includes(a.classId));   // 겹쳐 듣는 반 것도 (2026-10-02)
+    const myHw = DATA.assignments.filter(a=>(!a.classId || studentClassIds(s).includes(a.classId)) && !beforeJoin(s, a));   // 겹쳐 듣는 반 것도 (2026-10-02)
     /* 낸 것이 위로 온다 — 이 화면에서 할 일은 «확인해 주는 것»이다. */
     const ordered = myHw.slice().sort((a,b)=>{
       const rank = x => hwState(rec, x.id).status===HW_SUBMITTED ? 0
@@ -27227,7 +27260,7 @@ function ensureAttDraft(classId, date){
   if(state.attDraftKey === key) return;
   state.attDraftKey = key;
   state.attDraft = {};
-  classRoster(classId).forEach(s=>{
+  classRosterOn(classId, date).forEach(s=>{
     const rec = state.allRecords[s.studentId];
     const existing = attOn(rec, date, classId, studentMainClassId(s));
     state.attDraft[s.studentId] = existing ? {status:existing.status, reason:existing.reason||'', videoUrl:'', note:existing.note||''} : {status:null, reason:'', videoUrl:'', note:''};
@@ -27279,7 +27312,7 @@ function attDateDrawerHTML(){
        그대로 저장하면 «수업이 없는 날»에 출결이 적힌다. 그때는 아예 안 그린다 —
        격자 쪽도 같은 판정으로 그 열의 강조를 지운다(cols.includes). */
   if(!classSessionDatesInMonth(c.schedule, date.slice(0,7)).includes(date)) return '';
-  const roster = classRoster(classId);
+  const roster = classRosterOn(classId, date);
   if(state.allRecordsLoaded) ensureAttDraft(classId, date);
   const wd = WEEKDAY_LABEL[new Date(date+'T00:00:00').getDay()];
   const filled = roster.filter(s=>(state.attDraft[s.studentId]||{}).status).length;
@@ -27435,7 +27468,7 @@ const WEEKDAY_LABEL = ['일','월','화','수','목','금','토'];
 
 /* 그날 하나에 무엇이 남아 있는가. 목록과 필터가 같은 값을 본다. */
 function chubSessionFacts(classId, date){
-  const roster = classRoster(classId);
+  const roster = classRosterOn(classId, date);
   const cnt = {}; let filled = 0, scored = 0;
   roster.forEach(s=>{
     const rec = state.allRecords[s.studentId];
@@ -27540,17 +27573,18 @@ function teacherClassDailyHomeworkHTML(classId, date){
      visible.length===0 ? '<div class="st-empty">해당하는 과제가 없습니다.</div>' :
      visible.map(a=>{
       const recOf = s => state.allRecords[s.studentId];
+      const 받은 = joinedRoster(roster, a);
       const doneCount = state.allRecordsLoaded
-        ? roster.filter(s=>recOf(s) && hwIsDone(recOf(s), a.id)).length : null;
+        ? 받은.filter(s=>recOf(s) && hwIsDone(recOf(s), a.id)).length : null;
       /* 「몇 명이 냈고 아직 안 봤는가」가 이 줄에서 제일 급한 숫자다. */
       const waiting = state.allRecordsLoaded
-        ? roster.filter(s=>recOf(s) && hwState(recOf(s), a.id).status===HW_SUBMITTED).length : 0;
+        ? 받은.filter(s=>recOf(s) && hwState(recOf(s), a.id).status===HW_SUBMITTED).length : 0;
       const on = state.homeworkDetailId===a.id;
       return `<div class="st-row" style="align-items:flex-start;">
         <div class="t"><b>${escHtml(a.title)}</b>
           ${/* ⚠ 「등록」·「마감」이 `.mono` 안에 있어 두부 상자로 나왔다. 날짜만 mono로 둔다. */''}
           <span><span>${a.createdAt?`등록 <span class="mono">${a.createdAt}</span>`:''}${a.dueDate?` · 마감 <span class="mono">${a.dueDate}</span>`:''}</span>${
-            doneCount!==null?`<s>·</s>완료 ${doneCount}/${roster.length}`:''}${
+            doneCount!==null?`<s>·</s>완료 ${doneCount}/${받은.length}`:''}${
             waiting?`<s>·</s><b style="color:var(--late);">확인 대기 ${waiting}</b>`:''}</span>
           ${a.description?`<span style="color:var(--sub);margin-top:6px;white-space:pre-wrap;">${escHtml(a.description)}</span>`:''}
           ${/* 명단은 수업 화면과 «같은 것»을 쓴다 (hwRosterReviewHTML).
@@ -28694,12 +28728,14 @@ function chubVideoModel(classId){
     if(!p) return { pct:0, done:false, seen:false };
     return { pct: videoPct(p), done: videoDone(p), seen: videoSeen(p) };
   };
-  const doneOf = v => roster.filter(s=>progOf(v, s.studentId).done).length;
-  const avgOf = v => roster.length
-    ? Math.round(roster.reduce((sum,s)=>{
+  /* 등록 전에 올린 영상은 그 뒤에 온 학생을 안 센다 (10-12 · beforeJoin) */
+  const 받은 = v => joinedRoster(roster, v);
+  const doneOf = v => 받은(v).filter(s=>progOf(v, s.studentId).done).length;
+  const avgOf = v => 받은(v).length
+    ? Math.round(받은(v).reduce((sum,s)=>{
         const rec = state.allRecords[s.studentId];
         return sum + videoScore(rec && rec.videoProgress && rec.videoProgress[v.id]);
-      }, 0) / roster.length) : 0;
+      }, 0) / 받은(v).length) : 0;
 
   /* 🔴 **같은 영상을 여러 명에게 보냈으면 «한 줄»로 묶는다** (2026-09-19 · 사용자 신고 —
        「학생 체크하고 같은영상 올렸는데 같이안묶이고 다 각자 생성되었어」).
@@ -28726,7 +28762,7 @@ function chubVideoModel(classId){
   /* 목록의 차례 — 반 전체, 그 다음 개인 배정 묶음(대표 하나씩). 드로어의 «이전·다음»이 이 차례를 탄다. */
   const 차례 = vids.map(v=>v.id).concat(묶음들.map(g=>g[0].id));
   const 찾기 = id => vids.find(v=>v.id===id) || personal.find(v=>v.id===id) || null;
-  return { roster, vids, personal, nameOf, progOf, doneOf, avgOf, 묶음들, 묶음of, 이름들, 차례, 찾기 };
+  return { roster, 받은, vids, personal, nameOf, progOf, doneOf, avgOf, 묶음들, 묶음of, 이름들, 차례, 찾기 };
 }
 
 /* 드로어 열고 닫기. ⚠ `videoSelectedId` 도 같이 둔다 — 옛 검사·다른 자리가 그 이름을 본다. */
@@ -28822,17 +28858,17 @@ function chubVideoHTML(classId){
        무슨의미인지도 모르겠어」). 그것은 재원 전체의 평균 시청률이었다. 완주 n/m 을 적고 막대도 그 비율로.
        평균은 사라지지 않는다 — 이 줄의 tooltip 과 드로어의 숫자 띠에 있다. */
   const classRow = v => {
-    const a = avgOf(v), d = doneOf(v);
-    const w = roster.length ? Math.round(d / roster.length * 100) : 0;
+    const a = avgOf(v), d = doneOf(v), n = joinedRoster(roster, v).length;
+    const w = n ? Math.round(d / n * 100) : 0;
     return `<div class="vd-row ${v.id===열린것?'on':''}" onclick="videoOpen('${v.id}')"
-      title="재원 ${roster.length}명 중 ${d}명이 완주했습니다 (완주 = ${videoGoalLabel()}).&#10;반 평균 시청률 ${a}% — 안 본 학생은 0%로 함께 셉니다.">
+      title="재원 ${n}명 중 ${d}명이 완주했습니다 (완주 = ${videoGoalLabel()}).&#10;반 평균 시청률 ${a}% — 안 본 학생은 0%로 함께 셉니다.">
       ${썸네일(v)}
       <div class="b">
         <div class="t">${escHtml(v.title)}${딱지들(v)}</div>
         <div class="m">${escHtml(v.unit||'단원 미지정')}${v.classId?'':' · 전체'}${
           v.dueDate ? ' · 마감 <span class="mono">'+escHtml(v.dueDate.slice(5))+'</span>' : ''} ${디데이(v)}</div>
       </div>
-      <div class="p"><b>완주 ${d}/${roster.length}</b><span class="bar"><i style="width:${w}%"></i></span></div>
+      <div class="p"><b>완주 ${d}/${n}</b><span class="bar"><i style="width:${w}%"></i></span></div>
     </div>`;
   };
   /* 개인 배정 줄 — 제목이 앞, 받은 이름은 둘째 줄에 굵게 (2026-09-16 · 같은 제목을 여럿에게 보내는 일이 많다).
@@ -28885,7 +28921,7 @@ function videoDrawerHTML(){
      🔵 **완주선에서 끊는다** (2026-09-13 · K-7). 그 위는 전부 완주라 빈 칸이 거짓 여백이 된다.
      ⚠ 칸을 «완주»로 넣는 잣대는 `p.done` 이다. `p.pct>=100` 이 아니다 —
        완주선만 넘고 멈춘 학생은 100이 아니지만 완주다. */
-  const rows = roster.map(s=>({ s, p: progOf(sel, s.studentId) }));
+  const rows = joinedRoster(roster, sel).map(s=>({ s, p: progOf(sel, s.studentId) }));
   const DROP_BINS = Math.floor(VIDEO_GOAL_PCT / 10);
   const bins = new Array(DROP_BINS + 1).fill(0);
   rows.forEach(({p})=>{ bins[p.done ? DROP_BINS : Math.min(DROP_BINS-1, Math.floor(p.pct/10))]++; });

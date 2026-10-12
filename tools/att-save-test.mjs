@@ -68,7 +68,7 @@ function 판(opts){
   const DATA_records = {};
   const F = new Function('DATA','state','서버','DATA_records','classRoster','studentMainClassId',
     'loadRecord','saveRecord','logAudit','showToast','render','extractYouTubeId','dbSetDoc','장부','말',
-    이름들.map(lift).join(NL) + NL + 'return {' + 이름들.join(',') + '};')(
+    ['itemDay','beforeJoin','joinedRoster','classRosterOn'].map(lift).join(NL) + NL + 이름들.map(lift).join(NL) + NL + 'return {' + 이름들.join(',') + '};')(
     DATA, state, 서버, DATA_records,
     () => DATA.students,
     (s) => s.classId,

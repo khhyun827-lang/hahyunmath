@@ -51,7 +51,7 @@ const 줄짓기 = 짓기(원본);
 /* ── 요약 만들기 — sessionSavedSummary 를 index.html 에서 그대로 뜬다 ── */
 function 요약(명단, 기록) {
   const F = new Function('classRoster', 'state', 'attOn', 'studentMainClassId',
-    lift('sessionSavedSummary') + NL + 'return sessionSavedSummary;')(
+    ['itemDay','beforeJoin','joinedRoster','classRosterOn'].map(lift).join(NL) + NL + lift('sessionSavedSummary') + NL + 'return sessionSavedSummary;')(
     () => 명단,
     { allRecords: Object.fromEntries(명단.map(s => [s.studentId, { attendance: 기록[s.studentId] ? [기록[s.studentId]] : [] }])) },
     (rec, date) => ((rec && rec.attendance) || []).find(a => a.date === date) || null,

@@ -122,7 +122,7 @@ console.log(NL + '③ 과제 칸 — 「미제출」이 글자로 선다' + NL);
      소스를 읽는 것이 아니라 «그려서» 본다 — 09-13 에 밟은 함정이다(글자만 보면 if(false) 도 통과한다). */
   const G = new Function('state', 'hwState', 'hwIsDone', 'HWG_CELL', 'HW_NONE', 'HW_SUBMITTED',
     'todayStr', 'escHtml', 'chubYm', 'WEEKDAY_LABEL',
-    lift('hwOrderKey') + NL + lift('hwOrderDesc') + NL + lift('hwOrderAsc') + NL
+    ['itemDay','beforeJoin','joinedRoster','classRosterOn'].map(lift).join(NL) + NL + lift('hwOrderKey') + NL + lift('hwOrderDesc') + NL + lift('hwOrderAsc') + NL
       + lift('hwGridHTML') + NL + 'return hwGridHTML;')(
     { allRecordsLoaded: true, hwCell: null, hwNoticeId: null, allRecords: { s1: { assignmentsDone: {} } } },
     () => ({ status: HW.HW_NONE, photos: [] }), () => false, CELL, HW.HW_NONE, HW.HW_SUBMITTED,

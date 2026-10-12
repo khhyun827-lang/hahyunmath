@@ -196,7 +196,7 @@ const 곁3 = {
 };
 const api3 = new Function(...Object.keys(곁3),
   /* ⚠ `chubVideoHTML` 이 마감 딱지를 `stuDday` 로 찍는다 — 위 ①의 것과 같은 함수다. */
-  잣대 + NL + lift('stuDday') + NL + lift('videoGoalMarkHTML') + NL + lift('videoHeroHTML')
+  ['itemDay','beforeJoin','joinedRoster','classRosterOn'].map(lift).join(NL) + NL + 잣대 + NL + lift('stuDday') + NL + lift('videoGoalMarkHTML') + NL + lift('videoHeroHTML')
     + NL + lift('chubVideoModel') + NL + lift('chubVideoHTML') + NL + lift('videoDrawerHTML') + NL + 'return { 그림: c => chubVideoHTML(c) + videoDrawerHTML() };')(...Object.values(곁3));
 const out = api3.그림('c1');
 봄('그려진다 — 반 전체 구역과 개인 배정 2 (남의 반 것은 안 든다)', [out.includes('>반 전체</div>'), out.includes('개인 배정 <span class="mono">2</span>'), out.includes('남의 반')], [true, true, false]);
