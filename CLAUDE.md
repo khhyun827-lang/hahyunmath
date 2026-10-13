@@ -2845,7 +2845,8 @@ state.view='assistant'; loadAllRecordsIfNeeded();
 >   `addVideo` 가 줄 × 받는 사람만큼 문서를 만든다 · 하나라도 틀리면 아무것도 안 보내고 «링크 n — …» · id 시각은 첫 링크가 가장 늦게(최신 순에서 적은 차례 그대로).
 > ② 영상 상세(드로어) «다른 반에도 보내기»(`videoCopyPanelHTML`·`videoCopyTo` · `state.videoCopy`) — 반 고르기 → 그 반 학생 상자(안 고르면 반 전체) · 마감(기본 = 원본) → 새 문서(링크·제목·단원·구간·복습용 그대로 · 시청 기록은 새로).
 > ③ `videosNewestFirst` — 학생·강사 불러오기 두 곳에서 DATA.videos 를 id 시각 내림차순으로(시각 없는 옛것은 맨 아래). 반 › 영상·학생 강의 목록 모두 이것을 탄다.
-> 검사 multi-send-test +11 · 드로어를 뜨는 검사 넷·student-scope-test 상자에 이름. check-all 126 초록(rules-check 는 한 번 익명 가입 제한 — 따로 돌려 초록).
+> 검사 multi-send-test +11 · 드로어를 뜨는 검사 넷·student-scope-test 상자에 이름.
+> ↪ 같은 날 사용자 — 「유튜브에서 열기 버튼 지우고 그 자리에 다른 반에도 보내기」 → 머리 카드(`videoHeroHTML`) 단추 줄 첫 자리. 판(`videoCopyPanelHTML`)은 열렸을 때만 선다. 썸네일은 여전히 유튜브로 연다. (rules-check 는 TOO_MANY_ATTEMPTS — 나머지 125 초록) check-all 126 초록(rules-check 는 한 번 익명 가입 제한 — 따로 돌려 초록).
 
 > ### 🟢 **2026-10-13 (2) — 학교 › «시험 분석» 서브탭 (🔴 사용자 눈 확인 아직)** (사용자 — 「분석지를 pdf로 첨부하는 게 아니라 아예 탭을 하나 만들어서 직접적으로 거기서 볼 수 있으면」)
 > 탭 id `examanalysis`(TEACHER_SUBNAV·TEACHER_TAB_SECTION·teacherTabBodyHTML 셋 다) · `teacherSchoolHTML('ana')` → `teacherExamAnalysisHTML`.

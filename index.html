@@ -18388,7 +18388,7 @@ function videoHeroHTML(v, 받는이, 묶음ids, 덧단추){
   /* 구간이 있으면 그 자리에서 열리게 — 강사가 「거기 맞나」를 바로 본다 */
   const 보러가기 = yid ? 'https://www.youtube.com/watch?v=' + yid + (v.fromSec > 0 ? '&t=' + Math.round(v.fromSec) : '') : (v.url || '');
   const 고치는중 = state.videoDueEdit === v.id;
-  /* 🔵 단추 줄 (2026-09-23) — «이 영상으로 하는 일»이 한 줄에 선다: 유튜브에서 열기 · 마감 바꾸기 ·
+  /* 🔵 단추 줄 (2026-09-23) — «이 영상으로 하는 일»이 한 줄에 선다: 다른 반에도 보내기(10-13 · 옛 유튜브에서 열기 자리) · 마감 바꾸기 ·
        미시청 알림(덧단추 · 안 본 학생이 있을 때만). 삭제는 여기 없다 — 드로어 발(`videoDrawerHTML`)에 있다(되돌릴 수 없는 일이라 구석으로). */
   return `<div class="vd-hero">
     ${yid
@@ -18416,7 +18416,8 @@ function videoHeroHTML(v, 받는이, 묶음ids, 덧단추){
     </div>
     ${/* 단추 줄은 썸네일 아래 한 줄 통째로 — 드로어 폭에서 썸네일 옆에 셋을 세우면 줄이 접힌다 */''}
     <div class="act">
-      ${보러가기 ? `<a class="btn sm" href="${escHtml(보러가기)}" target="_blank" rel="noopener">${iconSvg('play',13)} 유튜브에서 열기</a>` : ''}
+      ${/* «유튜브에서 열기»는 뺐다 (2026-10-13 · 사용자 — 「영상 화면 체크하면 되어서 필요 없을 것 같아」). 그 자리에 «다른 반에도 보내기». 썸네일은 여전히 유튜브로 연다 */''}
+      ${state.videoCopy ? '' : `<button class="btn sm" onclick="state.videoCopy={classId:''}; render()">다른 반에도 보내기</button>`}
       ${고치는중 ? '' : `<button class="btn q sm" onclick="state.videoDueEdit='${v.id}'; render()">마감 바꾸기</button>`}
       ${덧단추 || ''}
     </div>
@@ -28922,7 +28923,7 @@ function videoClose(){ 드로어닫기(() => { state.videoOpenId = null; state.v
    영상 상세(드로어)에서 반을 고르고 → 그 반 학생을 고르면(안 고르면 반 전체) 같은 영상(링크·제목·단원·구간·복습용)을 새 문서로 만든다.
    🔵 새 문서다 — 시청 기록은 영상 id 마다라, 옮겨 가는 학생이 이 반 학생의 기록을 물려받지 않는다. 마감은 고를 수 있다(기본 = 이 영상 마감). */
 function videoCopyPanelHTML(sel, fromClassId){
-  if(!state.videoCopy) return `<button class="btn q sm" style="margin:2px 0 12px;" onclick="state.videoCopy={classId:''}; render()">다른 반에도 보내기</button>`;
+  if(!state.videoCopy) return '';      // 여는 단추는 머리 카드 단추 줄에 (videoHeroHTML)
   const cid = state.videoCopy.classId;
   const 반들 = DATA.classes.filter(c => c.id !== fromClassId);
   const 명단 = cid ? classRoster(cid) : [];
