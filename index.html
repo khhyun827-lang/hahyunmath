@@ -10344,6 +10344,7 @@ function studentAddFormHTML(withBtn){
         <label style="min-width:150px;"><span>학부모 전화</span><input id="new-sparentphone" placeholder="010-0000-0000 (선택)"></label>
         <label style="min-width:150px;"><span>학생 전화</span><input id="new-sphone" placeholder="010-0000-0000 (선택)"></label>
         <label style="min-width:150px;"><span>반</span><select class="fm-sel" id="new-sclass">${classOptionsHTML(null)}</select></label>
+        <label style="width:140px;" title="처음 온 날 — 계정을 늦게 만들어도 그날부터 출결·과제가 잡힙니다"><span>등록일</span><input type="date" id="new-sjoined" value="${todayStr()}"></label>
         ${withBtn ? '<button class="btn p sm" onclick="addStudent()">추가</button>' : ''}
       </div>`;
 }
@@ -10356,6 +10357,9 @@ async function addStudent(){
   const parentPhone = phoneLabel(document.getElementById('new-sparentphone').value);   // K-15 — «-» 꼴로
   const phone = phoneLabel(document.getElementById('new-sphone').value);
   const classId = document.getElementById('new-sclass').value;
+  /* 🔵 등록일은 고를 수 있다 (2026-10-13 · 사용자 — 「아이디를 늦게 등록한 애들은 이전에 온 날 출석체크를 못 하게 돼」).
+     기본은 오늘 · 비우면 오늘. */
+  const joinedAt = ((document.getElementById('new-sjoined') || {}).value || '').trim() || todayStr();
   if(!sid || !name || !pw){ showToast('아이디, 이름, 비밀번호는 필수입니다.'); return; }
   if(DATA.students.concat(DATA.hiddenStudents || []).some(s=>s.studentId===sid)){ showToast('이미 존재하는 아이디입니다.'); return; }
   /* 🔴 **아이디에 쓸 수 있는 글자가 정해져 있다** — 안 막으면 «만들 때»가 아니라
@@ -10374,7 +10378,7 @@ async function addStudent(){
   /* 🔴 **전화번호는 학생 문서에 안 넣는다** — 명단은 학생도 읽는 자리라, 같이 두면
      「명단을 보여 주려면 전화번호도 같이 내려간다」가 된다. contacts 로 갈라 둔다
      (firestore.rules 에서 강사만 읽는다). */
-  const newStudent = {studentId:sid, uid, name, grade, school, classId, joinedAt: todayStr()};   // 등록일 — 홈 «재원생 변화»의 신규 (2026-10-11)
+  const newStudent = {studentId:sid, uid, name, grade, school, classId, joinedAt};   // 등록일 — 홈 «재원생 변화»의 신규 (2026-10-11)
   const 연락처 = {studentId:sid, phone, parentPhone};
 
   DATA.students.push(newStudent);
