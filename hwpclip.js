@@ -91,6 +91,22 @@ function hwpClipDedupe(j){
 function hwpClipMerge(list){
   if(!list.length) throw new Error('빈 묶음');
   const parts = list.map((j, n) => hwpClipDropSection(hwpClipRekey(j, n)));
+  /* 번호 정의는 «시작 번호»를 교재 자리대로 들고 온다(주기나 401·315… · 엔크 431…) — 그대로면 단원이 섞일 때
+     번호가 들쭉날쭉하다. 담은 묶음은 1번부터 차례로 센다(시작을 맞춰야 아래 접기에서 하나로 접힌다). */
+  /* 🔵 교재는 번호 자리에 따라 정의를 갈아 끼워 세 자리를 맞춘다(00^1 → 001 · 0^1 → 045 · ^1 → 431) — 한 정의로는 못 한다.
+     그래서 문항 번호 정의(00^1·0^1·^1)는 모두 첫 것 하나로 같게 만들고(1·2·3…) 아래 접기가 하나로 접게 한다.
+     그 밖의 번호(^1. 같은 목록)는 건드리지 않는다. */
+  let 문항번호 = null;
+  for(const p of parts) for(const [k, v] of Object.entries(p.nu || {})){
+    if(!(v.ph && v.ph[0] && /^0*\^1$/.test(v.ph[0].sf))) continue;
+    if(!문항번호){
+      문항번호 = JSON.parse(JSON.stringify(v));
+      문항번호.sn = 1;
+      문항번호.ph[0].sf = '^1';
+      for(const ph of 문항번호.ph) ph.st = 1;   // 수준마다 시작값도 한 벌 더 있다(엔크 ph[0].st = 431)
+    }
+    p.nu[k] = Object.assign(JSON.parse(JSON.stringify(문항번호)), { id: v.id });
+  }
   const out = JSON.parse(JSON.stringify(parts[0]));
   for(const p of parts.slice(1)){
     for(const k of Object.keys(p)){

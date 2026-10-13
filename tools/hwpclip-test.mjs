@@ -13,7 +13,7 @@ const K = n => n.toString(16).toUpperCase().padStart(24, '0');
 // 한글이 내는 꼴을 줄인 것 — 문단 둘(p1→p2), 첫 문단에 secd·cold·표, 번호 정의 하나, 그림 하나
 const clip = (txt) => ({
   documentPr: {}, dh: {},
-  nu: { [K(1)]: { id: 1, sf: '00^1' } },
+  nu: { [K(1)]: { id: 1, sn: 1, ph: [{ st: 1, sf: '00^1' }, { st: 1, sf: '^2.' }] } },
   pp: { [K(2)]: { id: 0, hi: K(1) } },
   st: { [K(3)]: { id: 0, pp: K(2), ns: K(3) } },
   cs: { [K(4)]: { cc: 2, ci: 1936024420 }, [K(5)]: { cc: 2, ci: 1668246628 }, [K(6)]: { cc: 11, ci: 1952607264 } },
@@ -28,7 +28,10 @@ const clip = (txt) => ({
 let bad = 0;
 const ok = (c, m) => { if (!c) { bad++; console.log('✗', m); } else console.log('✓', m); };
 
-const m = H.hwpClipMerge([clip('하나 <a>'), clip('둘'), clip('셋')]);
+const 셋째 = clip('셋');   // 다른 단원 — 시작 번호도 번호 모양도 다르다
+Object.assign(Object.values(셋째.nu)[0], { sn: 431, ph: [{ st: 431, sf: '^1' }, { st: 1, sf: '^2.' }] });
+셋째.nu[K(10)] = { id: 2, sn: 1, ph: [{ st: 1, sf: '^1.' }] };   // 문항 번호가 아닌 목록 번호 — 안 건드린다
+const m = H.hwpClipMerge([clip('하나 <a>'), clip('둘'), 셋째]);
 // 사슬을 따라가며 글을 모은다
 const 글 = [];
 for (let k = m.ro.hp, n = 0; k && n < 50; k = m.ro[k].np, n++)
@@ -36,7 +39,11 @@ for (let k = m.ro.hp, n = 0; k && n < 50; k = m.ro[k].np, n++)
 ok(글.join('|') === '하나 <a>|둘|셋', '본문 사슬이 차례대로 이어진다 — ' + 글.join('|'));
 ok(!Object.values(m.cs).some(v => [1936024420, 1668246628].includes(v.ci)), '구역·단 정의(secd·cold)를 모두 뗐다');
 ok(Object.values(m.cs).filter(v => v.ci === 1952607264).length === 3, '표 셋은 남았다');
-ok(Object.keys(m.nu).length === 1, '번호 정의가 하나로 접혔다(001·002·003 으로 이어 세게)');
+ok(Object.keys(m.nu).length === 2, '문항 번호 정의가 하나로 접혔다(이어 세게) — 시작 번호·모양이 다른 단원이 섞여도');
+const 번호 = Object.values(m.nu).filter(v => v.ph[0].sf !== '^1.');
+ok(번호.length === 1 && 번호[0].sn === 1 && 번호[0].ph[0].st === 1, '묶음은 1번부터 센다(수준 시작값까지)');
+ok(번호[0].ph[0].sf === '^1', '번호 모양은 1·2·3 (교재의 00^1·0^1 자리 맞춤은 한 정의로 못 한다)');
+ok(Object.values(m.nu).some(v => v.ph[0].sf === '^1.'), '목록 번호(^1.)는 그대로 남는다');
 ok(Object.keys(m.pp).length === 1 && Object.keys(m.st).length === 1, '같은 문단 모양·스타일도 하나로');
 ok(Object.values(m.st)[0].ns === Object.keys(m.st)[0], '스타일의 «다음 스타일»은 제 열쇠를 가리킨다');
 ok(m.bi.length === 3 && m.bi.every(b => m.bidt[b.sr]), '그림 셋이 제 바이트와 이어진다');

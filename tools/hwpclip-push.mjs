@@ -15,7 +15,7 @@ import { 강사로로그인 } from './fb-login.mjs';
 const [dir, ...rest] = process.argv.slice(2);
 const go = rest.includes('--go');
 if (!dir) { console.error('폴더를 주세요'); process.exit(1); }
-const files = fs.readdirSync(dir).filter(f => /^\d{7}[A-Z]?(-[A-Z]\d\d)?\.json$/.test(f));
+const files = fs.readdirSync(dir).filter(f => /^(\d{7}[A-Z]?|K\d-\d\d-[A-Z]-\d{4})(-[A-Z]\d\d)?\.json$/.test(f));   // 주기나 1100624 · 엔크 K2-01-E-0001
 const 한도 = 1_000_000;
 const 큰것 = [];
 const 할것 = files.map(f => {
