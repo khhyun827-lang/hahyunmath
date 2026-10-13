@@ -2087,6 +2087,12 @@
 .app .ist-vk{font-size:10.5px;color:var(--sub);background:var(--sunk);
   border-radius:var(--r-sm);padding:1px 6px;}
 .app .ist-used s{text-decoration:none;color:var(--dim);margin-left:5px;}
+.app .ist-hwp{display:inline-flex;align-items:center;gap:4px;}
+.app .ist-hwp a{cursor:pointer;font-size:10.5px;border:1px solid var(--line);border-radius:var(--r-sm);padding:0 6px;color:var(--sub);}
+.app .ist-hwp a.on{background:var(--ink);border-color:var(--ink);color:#fff;}
+.app .ist-hwpbar{display:flex;align-items:center;gap:8px;flex-shrink:0;margin-bottom:10px;padding:8px 12px;
+  border:1px solid var(--line);border-radius:var(--r-sm);background:var(--sunk);font-size:12.5px;}
+.app .ist-hwpbar s{text-decoration:none;color:var(--dim);margin-left:6px;font-size:11px;}
 
 /* 못 읽고 있을 때의 띠. 화면 «위»에 고정한다 — 어느 화면에 있든 보여야 하고,
    비어 보이는 «이유»를 그 자리에서 말해 줘야 한다 (2026-09-04). */
@@ -6202,6 +6208,7 @@ html.it-fly .lp .l-hero .l-logo{opacity:1 !important;transform:none !important;
      화면만 보고서는 «고쳤는데 왜 안 되지»가 된다 — 파서가 바뀐 것을 아무 데서도 못 본다. -->
 <!-- 2026-09-10에 올렸다 — 창고 대조 판정과 «개체 설명문에서 코드 읽기»가 들어갔다. -->
 <script src="hwpx.js?v=2026-10-07a"></script>
+<script src="hwpclip.js?v=2026-10-14a"></script>
 <!-- 출석 도장 게임(셸·똥피하기·달리기·점프). 연습 페이지 game.html 도 같은 파일을 쓴다 -->
 <!-- ⚠ ?v= 를 붙이는 까닭 — 브라우저가 game-core.js 를 캐시해서, 올려도 학생 화면에는
      옛 게임이 그대로 돈다(Ctrl+Shift+R 을 해야 바뀐다 — 학생에게 그걸 시킬 수는 없다).
@@ -7900,6 +7907,8 @@ let state = {
   storeBook: '',             // 출처 교재로 좁히기 (''이면 전부)
   storeEdition: '',          // 실린 교재·판으로 좁히기 (bookLabel · 2026-10-05)
   storePage: 1,              // 한 쪽에 STORE_PER_PAGE 개씩
+  hwpPick: [],               // 한글로 복사할 문항 코드 — 누른 차례대로 (2026-10-14)
+  hwpCodes: undefined,       // 한글 원본(hwpclip)이 있는 코드 Set — kv/hwpclip-codes · undefined=안 읽음
   unitImportPreview: null,
   /* 학생 달력 (2026-09-08) — 보고 있는 달·고른 날·「내 일정」에 미리 채울 날짜 */
   stuCalMonth: '', stuCalDay: '', stuPlanDate: '',
@@ -31042,6 +31051,29 @@ function icLookup(){
   render();
 }
 function icPick(code){ state.icQuery = code; render(); }
+/* 📋 한글로 복사 (2026-10-14) — 담은 문항의 한글 원본(hwpclip/{코드})을 읽어 하나로 이어 클립보드에 넣는다.
+   한글에서 Ctrl+V → «원본 형식 유지». 합치는 일은 hwpclip.js.
+   🔴 클립보드 쓰기는 누른 그 순간에 불러야 한다 — 읽기를 기다린 뒤 부르면 크롬이 막는다. 그래서 내용을 «약속»으로 넘긴다. */
+function hwpPickToggle(code){
+  const i = state.hwpPick.indexOf(code);
+  if(i < 0) state.hwpPick.push(code); else state.hwpPick.splice(i, 1);
+  render();
+}
+function hwpCopyPicked(){
+  const codes = state.hwpPick.slice();
+  const miss = [];
+  const blob = Promise.all(codes.map(c => dbGetDoc('hwpclip', c, null))).then(docs => {
+    const list = [];
+    docs.forEach((d, i) => d && d.j ? list.push(d.j) : miss.push(codes[i]));
+    if(!list.length) throw new Error('한글 원본을 읽지 못했습니다');
+    return new Blob([hwpClipHTML(hwpClipMerge(list))], { type: 'text/html' });
+  });
+  showToast(codes.length + '문항 읽는 중…');
+  navigator.clipboard.write([new ClipboardItem({ 'text/html': blob })]).then(
+    () => showToast((codes.length - miss.length) + '문항을 복사했습니다 — 한글에서 Ctrl+V («원본 형식 유지»)'
+      + (miss.length ? ' · 못 읽은 것: ' + miss.join(', ') : '')),
+    e => showToast('복사하지 못했습니다 — ' + (e && e.message || e)));
+}
 function icCopy(text){
   if(navigator.clipboard) navigator.clipboard.writeText(text);
   showToast(text + ' 를 복사했습니다 — 한글 미주 맨 앞에 붙여넣으세요.');
@@ -34046,6 +34078,10 @@ function teacherItemStoreHTML(){
   /* ⚠ 다 실리면 «다시 그려야» 한다 — 안 그리면 처음 연 사람은 빈 창고를 본다
      (문항 코드 화면이 쓰는 것과 같은 장치다). */
   if(!state.itemByCode) loadItemStoreIfNeeded().then(()=>{ if(state.itemByCode) render(); });
+  if(state.hwpCodes === undefined){
+    state.hwpCodes = null;
+    dbGet('hwpclip-codes', []).then(a => { state.hwpCodes = new Set(a); render(); });
+  }
   /* 🔵 **한 번만 가른다** — 「원본만 세운다」와 「몇 개를 접었나」가 같은 셈에서 나와야
      둘이 어긋나지 않는다(`storeSplitVariants` 의 머리말을 볼 것). */
   const { items, hidden, bySubj, byChOf, subjects } = storeTree();
@@ -34142,6 +34178,12 @@ function teacherItemStoreHTML(){
                     : `<span class="ist-vs none">변형 없음</span>`}
         ${/* 📖 실린 교재·판 — 머리 줄은 nowrap 이라 넘친다(864) · 이 줄은 접힌다 */''}
         ${((body && body.books) || []).map(b => `<span class="ist-vk" title="실린 교재 · 판">📖 ${escHtml(bookLabel(b))}${b.no ? ` · ${b.no}번` : ''}</span>`).join('')}
+        ${(() => {
+          /* 📋 한글 원본이 있는 코드만 — 눌러 담고 위 띠의 «한글로 복사»로 한 번에 (2026-10-14) */
+          const 한글 = [it.code, ...vs.map(v => v.code)].filter(c => state.hwpCodes && state.hwpCodes.has(c));
+          return 한글.length ? `<span class="ist-hwp" title="눌러 담은 뒤 위의 «한글로 복사»">한글 ${한글.map(c =>
+            `<a class="${state.hwpPick.includes(c) ? 'on' : ''}" onclick="hwpPickToggle('${escHtml(c)}')">${c === it.code ? '원본' : escHtml(c.split('-').pop())}</a>`).join('')}</span>` : '';
+        })()}
         ${used.length ? `<span class="ist-used">출제 ${used.length}회<s>${
             escHtml(used.slice(0,2).map(u=>`${u.title} ${u.no}번`).join(' · '))}${used.length>2?' 외':''}</s></span>` : ''}
       </div>
@@ -34210,6 +34252,12 @@ function teacherItemStoreHTML(){
         <a class="pill ${판===''?'on':''}" onclick="state.storeEdition='';state.storePage=1;render()">판 전체</a>
         ${eds.map(e=>`<a class="pill ${판===e?'on':''}" onclick="state.storeEdition='${escHtml(e)}';state.storePage=1;render()">
           📖 ${escHtml(e)} <b>${byEd[e]}</b></a>`).join('')}
+      </div>` : ''}
+      ${state.hwpPick.length ? `<div class="ist-hwpbar">
+        <span>한글로 담음 <b class="mono">${state.hwpPick.length}</b>문항 <s>${escHtml(state.hwpPick.join(' · '))}</s></span>
+        <span class="spacer"></span>
+        <button class="btn q sm" onclick="state.hwpPick=[];render()">비우기</button>
+        <button class="btn sm" onclick="hwpCopyPicked()">한글로 복사</button>
       </div>` : ''}
       <div class="ex-body">
         ${!state.itemByCode ? `<div class="ist-empty">장부를 불러오는 중…</div>`
