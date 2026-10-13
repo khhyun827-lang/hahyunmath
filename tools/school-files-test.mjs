@@ -35,13 +35,14 @@ console.log('학교 프린트 —' + NL);
   const 저장 = [], 지움 = [], 말 = [];
   const state = { schoolFiles: null, schoolFilesLoading: false, schoolFileBusy: '' };
   const F = new Function('state', 'dbGet', 'dbSet', 'uploadFileToDrive', 'deleteFromDrive', 'showToast', 'render', 'todayStr', 'currentSeason', 'examSeasonOf', 'SLOT_NAME',
-    'fileSizeLabel', 'MATERIAL_MAX_BYTES', 'confirm', 'jsAttr', 'escHtml', 'materialLink',
-    [lift('schoolFileDownload'), lift('loadSchoolFilesIfNeeded'), lift('schoolFilesOf'), lift('schoolFileSeasonLabel'), lift('addSchoolFile'), lift('removeSchoolFile'), lift('schoolFilesHTML')].join(NL)
-    + NL + 'return { loadSchoolFilesIfNeeded, schoolFilesOf, addSchoolFile, removeSchoolFile, schoolFilesHTML };')(
+    'fileSizeLabel', 'MATERIAL_MAX_BYTES', 'confirm', 'jsAttr', 'escHtml', 'materialLink', 'SCHOOL_FILE_KINDS', 'SLOT_OF_NAME', 'schoolYearOf',
+    [lift('schoolFileSlotOf'), lift('schoolFileDownload'), lift('loadSchoolFilesIfNeeded'), lift('schoolFilesOf'), lift('schoolFileSeasonLabel'), lift('addSchoolFile'), lift('removeSchoolFile'), lift('schoolFilesHTML')].join(NL)
+    + NL + 'return { schoolFileSlotOf, loadSchoolFilesIfNeeded, schoolFilesOf, addSchoolFile, removeSchoolFile, schoolFilesHTML };')(
     state, async () => ({ 광남고: { '고1': [{ name: '옛것.pdf', fileId: 'F0', size: 1000, at: '2025-10-01', season: '2025 · 2학기 중간' }] } }),
     async (k, v) => { 저장.push([k, JSON.parse(JSON.stringify(v))]); return true; },
     async (file) => ({ fileId: 'F1', url: 'https://drive/thumb' }), (id) => 지움.push(id), m => 말.push(m), () => {},
-    () => '2026-09-22', () => '2학기 중간', () => ({ next: { year: '2026', slot: '2-mid' } }), { '2-mid': '2학기 중간' }, n => n + 'B', 15 * 1024 * 1024, () => true, s => s, s => s, f => 'https://drive.google.com/file/d/' + f.fileId + '/view');
+    () => '2026-09-22', () => '2학기 중간', () => ({ next: { year: '2026', slot: '2-mid' } }), { '2-mid': '2학기 중간' }, n => n + 'B', 15 * 1024 * 1024, () => true, s => s, s => s, f => 'https://drive.google.com/file/d/' + f.fileId + '/view',
+    { print: '프린트', paper: '시험지 원본', analysis: '분석자료' }, { '1학기 중간': '1-mid', '2학기 중간': '2-mid' }, d => String(d).slice(0, 4));
 
   await F.loadSchoolFilesIfNeeded();
   봄('① 지난해 것이 그대로 보인다 — 「해가 바뀌었을 때 찾아볼 수 있도록」', F.schoolFilesOf('광남고', '고1').map(f => f.season), ['2025 · 2학기 중간']);
@@ -57,6 +58,19 @@ console.log('학교 프린트 —' + NL);
   봄('② 지우면 목록에서 빠지고 드라이브도 지운다', [F.schoolFilesOf('광남고', '고1').map(f => f.name), 지움], [['중간 프린트.pdf'], ['F0']]);
   await F.addSchoolFile('광남고', '고1', { files: [{ name: '큰것.pdf', type: 'application/pdf', size: 20 * 1024 * 1024 }], value: '' });
   봄('   상한을 넘는 파일은 올리기 전에 막는다', [저장.length, /너무 큽니다/.test(말[말.length - 1])], [2, true]);
+
+  /* 2026-10-13 — 시험지 원본·분석자료 */
+  await F.addSchoolFile('광남고', '고1', { files: [{ name: '1쪽.jpg', type: 'image/jpeg', size: 9 }, { name: '2쪽.jpg', type: 'image/jpeg', size: 9 }], value: '' }, 'paper', '2026 · 1학기 중간');
+  await F.addSchoolFile('광남고', '고1', { files: [{ name: '분석.pdf', type: 'application/pdf', size: 9 }], value: '' }, 'analysis', '2025 · 2학기 중간');
+  const 목록 = F.schoolFilesOf('광남고', '고1');
+  봄('⑤ 시험지는 여러 장이 한 번에 · kind 와 «누른 칸의 시험»이 붙는다 · 프린트엔 kind 가 없다',
+    목록.map(f => [f.name, f.kind, f.season]), [['중간 프린트.pdf', undefined, '2026 · 2학기 중간'], ['1쪽.jpg', 'paper', '2026 · 1학기 중간'], ['2쪽.jpg', 'paper', '2026 · 1학기 중간'], ['분석.pdf', 'analysis', '2025 · 2학기 중간']]);
+  봄('   여러 장이면 「외 n개」', 말[말.length - 2], '「1쪽.jpg」 외 1개를 올렸습니다.');
+  const 판 = (k, s) => (F.schoolFilesHTML('광남고', '고1', k, s).match(/>[^<>]+\.(pdf|jpg)</g) || []);
+  봄('   창은 종류마다 · 시험지·분석은 그 시험 것만 (프린트는 예전처럼 전부)',
+    [판('print').length, 판('paper', '2026 · 1학기 중간').length, 판('paper', '2026 · 2학기 중간').length, 판('analysis', '2025 · 2학기 중간').length], [1, 2, 0, 1]);
+  봄('🔴 걸러 낸 창에서도 지우기는 «전체 자리»를 넘긴다', /removeSchoolFile\('광남고','고1',3\)/.test(F.schoolFilesHTML('광남고', '고1', 'analysis', '2025 · 2학기 중간')), true);
+  봄('   꼬리표의 해가 올린 날보다 먼저 — 작년 시험지를 올해 올려도 작년 칸', F.schoolFileSlotOf({ season: '2025 · 2학기 중간', at: '2026-10-13' }), '2025|2-mid');
 }
 {
   /* 2026-10-03 — 시즌 넘기기 단추가 없어졌다(학교별로 저절로). 프린트는 지우는 길 자체가 없다 */
@@ -64,7 +78,7 @@ console.log('학교 프린트 —' + NL);
   const 학생로딩 = lift('loadStudentData');
   봄('④ 학생 로그인은 이 문서를 안 읽는다 — 시험 범위 화면에서만 lazy', [/school-files/.test(학생로딩), /loadSchoolFilesIfNeeded\(\);/.test(lift('teacherExamRangeHTML'))], [false, true]);
   /* 2026-10-02 — 펼친 줄이 사라지고 «프린트 칸을 누르면 뜨는 창»에 선다(exam-pop-test 가 실제로 누른다) */
-  봄('   프린트 칸 창에 선다', /k === 'print'[\s\S]{0,80}schoolFilesHTML\(school, grade\)/.test(lift('examPopHTML')), true);
+  봄('   프린트 칸 창에 선다', /SCHOOL_FILE_KINDS\[k\][\s\S]{0,120}schoolFilesHTML\(school, grade, k, p\.year/.test(lift('examPopHTML')), true);
 }
 
 console.log(틀림 ? NL + '  🔴 ' + 통과 + ' 통과 · ' + 틀림 + ' 실패' + NL : NL + '  ✅ ' + 통과 + ' 통과 · 0 실패' + NL);

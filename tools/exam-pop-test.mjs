@@ -39,7 +39,7 @@ try{
   const 창 = () => page.$$eval('.xp .xp-h b', e => e.map(x => x.textContent));
 
   봄('펼치기 줄이 없다', await page.$$eval('.rst-wrap td[colspan]', e => e.length), 0);
-  봄('누를 수 있는 칸 — 줄마다 다섯', await page.locator(`${줄(1)} td.xr-ed`).count(), 5);
+  봄('누를 수 있는 칸 — 줄마다 일곱(10-13 시험지·분석 더함)', await page.locator(`${줄(1)} td.xr-ed`).count(), 7);
 
   /* 범위 — 색칠된 단원이 뜨고, 누르면 넣고 뺀다 */
   await 칸(1, '범위 고르기').click();
@@ -80,8 +80,13 @@ try{
   봄('프린트 없는 칸 → 바로 파일 고르기', !!고르기, true);
   await page.keyboard.press('Escape');
   await page.evaluate(() => closeExamPop());
-  await 칸(1, '프린트 올리기').click({ position: { x: 134, y: 10 } });   // 파일 이름 고리 옆 빈 자리(칸 폭 140)
+  await 칸(1, '프린트 올리기').click({ position: { x: 74, y: 10 } });   // 파일 이름 고리 옆 빈 자리(칸 폭 80)
   봄('프린트 있는 칸 → 목록과 올리기 단추', await page.evaluate(() => [document.querySelectorAll('.xp .pill').length, /프린트 올리기/.test(document.querySelector('.xp').textContent)]), [2, true]);
+  await page.evaluate(() => closeExamPop());
+  /* 2026-10-13 — 시험지 원본·분석자료: 같은 창, 프린트는 안 섞이고 «누른 칸의 시험»으로 올라간다 */
+  const [고르기2] = await Promise.all([page.waitForEvent('filechooser', { timeout: 3000 }).catch(() => null), 칸(1, '시험지 원본 올리기').click()]);
+  봄('시험지 칸 → 프린트는 안 보이고 바로 파일 고르기', [!!고르기2, await 창(), await page.evaluate(() => document.querySelectorAll('.xp .pill').length)], [true, ['시험지 원본'], 0]);
+  봄('   올리기는 그 시험·종류를 들고 간다 · 한글도 받는다', await page.$eval('.xp input[type=file]', i => [/'paper','20[0-9]{2} · 2학기 중간'\)$/.test(i.getAttribute('onchange')), i.multiple, /\.hwp/.test(i.accept)]), [true, true, true]);
   await page.evaluate(() => closeExamPop());
   봄('파일 이름을 누르면 창 대신 내려받기(고리)', await page.$eval(`${줄(1)} .xr-print`, a => [a.target, /onclick="event\.stopPropagation\(\)"/.test(a.outerHTML)]), ['_blank', true]);
 

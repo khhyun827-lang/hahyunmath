@@ -8782,22 +8782,30 @@ function schoolFileSeasonLabel(school, grade){
   const nx = examSeasonOf(school || '', grade || '').next;
   return nx.year + ' · ' + SLOT_NAME[nx.slot];
 }
-async function addSchoolFile(school, grade, input){
-  const file = input && input.files && input.files[0];
-  if(!file) return;
-  if(file.size > MATERIAL_MAX_BYTES){ showToast('파일이 너무 큽니다 — ' + fileSizeLabel(MATERIAL_MAX_BYTES) + '까지입니다.'); input.value = ''; return; }
+/* 🔵 **시험지 원본 · 분석자료** (2026-10-13 · 사용자 — 「학교탭에 시험지 원본과 시험지 분석자료를 올리는 곳」) — 같은 문서·같은 문에
+   `kind` 만 붙인다(없으면 프린트 — 옛 기록 그대로). 시험이 «끝난 뒤» 올리는 것이라 시즌은 올린 날이 아니라 «누른 칸»의 시험이다. */
+const SCHOOL_FILE_KINDS = { print: '프린트', paper: '시험지 원본', analysis: '분석자료' };
+async function addSchoolFile(school, grade, input, kind, season){
+  const files = [...((input && input.files) || [])];
+  if(!files.length) return;
+  const 큰 = files.find(file => file.size > MATERIAL_MAX_BYTES);
+  if(큰){ showToast('「' + 큰.name + '」이 너무 큽니다 — ' + fileSizeLabel(MATERIAL_MAX_BYTES) + '까지입니다.'); input.value = ''; return; }
   state.schoolFileBusy = school + '|' + grade; render();
   try{
-    const up = await uploadFileToDrive(file);
-    if(!state.schoolFiles) state.schoolFiles = {};
-    const f = state.schoolFiles;
-    if(!f[school]) f[school] = {};
-    if(!Array.isArray(f[school][grade])) f[school][grade] = [];
-    f[school][grade].push({ name: file.name, fileId: up.fileId, url: up.url || '', mime: file.type || '', size: file.size,
-                            at: todayStr(), season: schoolFileSeasonLabel(school, grade) });
-    const ok = await dbSet('school-files', state.schoolFiles);
-    if(ok === false || ok === null) throw new Error('저장이 막혀 있습니다');
-    showToast('「' + file.name + '」을 올렸습니다.');
+    for(const file of files){       // 스캔 여러 장을 한 번에 — 한 장씩 올리고 그때마다 적는다(가다 끊겨도 앞 것은 남는다)
+      const up = await uploadFileToDrive(file);
+      if(!state.schoolFiles) state.schoolFiles = {};
+      const f = state.schoolFiles;
+      if(!f[school]) f[school] = {};
+      if(!Array.isArray(f[school][grade])) f[school][grade] = [];
+      const 기록 = { name: file.name, fileId: up.fileId, url: up.url || '', mime: file.type || '', size: file.size,
+                     at: todayStr(), season: season || schoolFileSeasonLabel(school, grade) };
+      if(kind && kind !== 'print') 기록.kind = kind;
+      f[school][grade].push(기록);
+      const ok = await dbSet('school-files', state.schoolFiles);
+      if(ok === false || ok === null) throw new Error('저장이 막혀 있습니다');
+    }
+    showToast('「' + files[0].name + '」' + (files.length > 1 ? ' 외 ' + (files.length - 1) + '개를' : '을') + ' 올렸습니다.');
   }catch(e){ showToast('올리지 못했습니다 — ' + (e.message || e)); }
   state.schoolFileBusy = '';
   render();
@@ -8815,21 +8823,27 @@ async function removeSchoolFile(school, grade, i){
 /* 누르면 «내려받는다» (2026-09-24 · 사용자 — 「누르면 다운로드받을수있도록」). 강의자료(materialLink)는 미리보기로 여는데
    학교 프린트는 받아서 인쇄하는 것이라 드라이브의 내려받기 주소로 간다. */
 function schoolFileDownload(f){ return 'https://drive.google.com/uc?export=download&id=' + encodeURIComponent(f.fileId); }
-function schoolFilesHTML(school, grade){
-  const sc = jsAttr(school), gr = jsAttr(grade);
-  const files = schoolFilesOf(school, grade);
+/* kind 가 프린트면 예전처럼 그 학교·학년 것 «전부»(시즌을 넘겨 찾아보려고), 시험지·분석은 그 시험(season) 것만.
+   ⚠ 지우기는 «전체 목록의 자리»(i)로 한다 — 걸러 낸 목록의 자리를 넘기면 다른 파일이 지워진다. */
+function schoolFilesHTML(school, grade, kind, season){
+  kind = kind || 'print';
+  const sc = jsAttr(school), gr = jsAttr(grade), ss = jsAttr(season || ''), 이름 = SCHOOL_FILE_KINDS[kind];
+  const 칸 = season ? schoolFileSlotOf({ season }) : '';
+  const files = schoolFilesOf(school, grade).map((f, i) => ({ f, i }))
+    .filter(({ f }) => (f.kind || 'print') === kind && (kind === 'print' || schoolFileSlotOf(f) === 칸));
   const busy = state.schoolFileBusy === school + '|' + grade;
-  return `<div style="margin-top:12px;font-size:11.5px;color:var(--sub);">학교 프린트
-      <span style="color:var(--dim);font-weight:400;">— PDF·사진 · 시즌을 넘겨도 남습니다${state.schoolFilesLoading ? ' · 불러오는 중…' : ''}</span></div>
+  const accept = kind === 'print' ? 'application/pdf,image/*' : 'application/pdf,image/*,.hwp,.hwpx';
+  return `<div style="margin-top:12px;font-size:11.5px;color:var(--sub);">${kind === 'print' ? '학교 프린트' : 이름}
+      <span style="color:var(--dim);font-weight:400;">— ${kind === 'print' ? 'PDF·사진 · 시즌을 넘겨도 남습니다' : 'PDF·사진·한글 · 여러 장을 한 번에 고를 수 있습니다'}${state.schoolFilesLoading ? ' · 불러오는 중…' : ''}</span></div>
     <div class="row" style="gap:6px;flex-wrap:wrap;margin-top:6px;align-items:center;">
-      ${files.map((f, i) => `<span class="pill" style="gap:6px;" onclick="event.stopPropagation()">
-        <a href="${schoolFileDownload(f)}" target="_blank" rel="noopener" style="color:inherit;" title="누르면 내려받습니다">${escHtml(f.name)}</a>
-        <s style="text-decoration:none;color:var(--dim);">${escHtml(f.season || (f.at || '').slice(0, 4))} · ${fileSizeLabel(f.size)}</s>
+      ${files.map(({ f, i }) => `<span class="pill" style="gap:6px;max-width:100%;box-sizing:border-box;" onclick="event.stopPropagation()">
+        <a href="${schoolFileDownload(f)}" target="_blank" rel="noopener" style="color:inherit;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escHtml(f.name)} — 누르면 내려받습니다">${escHtml(f.name)}</a>
+        <s style="text-decoration:none;color:var(--dim);flex:none;">${escHtml(f.season || (f.at || '').slice(0, 4))} · ${fileSizeLabel(f.size)}</s>
         <button type="button" class="btn q sm" style="padding:0 5px;min-height:0;line-height:1.6;" title="지우기"
           onclick="removeSchoolFile('${sc}','${gr}',${i})">✕</button></span>`).join('')}
-      <label class="btn q sm" style="cursor:pointer;" onclick="event.stopPropagation()">${busy ? '올리는 중…' : '＋ 프린트 올리기'}
-        <input type="file" accept="application/pdf,image/*" style="display:none;" ${busy ? 'disabled' : ''}
-          onchange="addSchoolFile('${sc}','${gr}',this)"></label>
+      <label class="btn q sm" style="cursor:pointer;" onclick="event.stopPropagation()">${busy ? '올리는 중…' : '＋ ' + (kind === 'print' ? '프린트' : 이름) + ' 올리기'}
+        <input type="file" accept="${accept}" multiple style="display:none;" ${busy ? 'disabled' : ''}
+          onchange="addSchoolFile('${sc}','${gr}',this,'${kind}','${ss}')"></label>
     </div>`;
 }
 
@@ -34104,8 +34118,9 @@ function examSlotToggle(열쇠, open){
 /* 학교 프린트가 어느 시험 것인가 — 올릴 때 붙인 꼬리표(「2026 · 2학기 중간」)와 올린 날로 정한다.
    방학에 올린 것은 다음 시험 몫(옮겨 담기와 같은 규칙). 꼬리표가 없으면 올린 날의 다음 시험. */
 function schoolFileSlotOf(p){
-  const 이름 = String((p && p.season) || '').split(' · ')[1] || '';
-  let year = schoolYearOf(p && p.at), slot = SLOT_OF_NAME[이름];
+  const [연, 이름 = ''] = String((p && p.season) || '').split(' · ');
+  /* 꼬리표에 해가 있으면 그것 — 2월에 올린 「2026 · 1학기 중간」이나 작년 시험지를 올해 올린 것이 제 칸에 선다 */
+  let year = /^[0-9]{4}$/.test(연) && SLOT_OF_NAME[이름] ? 연 : schoolYearOf(p && p.at), slot = SLOT_OF_NAME[이름];
   if(이름 === '여름방학') slot = '2-mid';
   if(이름 === '겨울방학'){ slot = '1-mid'; year = String(Number(year) + 1); }
   if(!slot){ const nx = examSeasonOf('·학교 없음·', '', (p && p.at) || todayStr()).next; year = nx.year; slot = nx.slot; }
@@ -34125,7 +34140,15 @@ function examRangeTableHTML(list, year, slot){
     const sc = jsAttr(school), gr = jsAttr(grade), sj = jsAttr(subject);
     const dates = slotDatesOf(c), dd = examDdayOfDates(dates);
     const book = schoolBookOf(school, grade);
-    const prints = schoolFilesOf(school, grade).filter(p => schoolFileSlotOf(p) === year + '|' + slot);
+    /* 프린트·시험지 원본·분석자료 — 셋 다 «이 시험» 것만. 파일 이름은 누르면 내려받고(칸은 안 열린다), 빈 곳을 누르면 올리기 창 */
+    const 파일칸 = (k, 빈말) => {
+      const fs = schoolFilesOf(school, grade).filter(p => (p.kind || 'print') === k && schoolFileSlotOf(p) === year + '|' + slot);
+      const 끝 = fs[fs.length - 1];
+      return `<td ${cell(k, 'sub', SCHOOL_FILE_KINDS[k] + ' 올리기')} title="${escHtml(fs.map(p => p.name).join(' · '))}">${!fs.length ? 빈(빈말)
+        : `<a class="xr-print" href="${schoolFileDownload(끝)}" target="_blank" rel="noopener"
+             onclick="event.stopPropagation()"><span>${escHtml((String(끝.name).match(/\.([a-z0-9]{1,5})$/i) || ['', '파일'])[1].toUpperCase())}</span></a>${
+           fs.length > 1 ? `<span class="xr-more">+${fs.length - 1}</span>` : ''}`}</td>`;
+    };
     /* 켜진 단원의 «처음과 끝» — 표에는 단원 이름만, 번호 붙은 온전한 말은 title 에 */
     const on = all.filter(ch => cur.has(ch));
     const spanFull = !subject ? '' : on.length === 0 ? '' : on.length === 1 ? `${all.indexOf(on[0]) + 1}. ${on[0]}`
@@ -34164,29 +34187,26 @@ function examRangeTableHTML(list, year, slot){
           ${수정 ? '<span class="badge score" style="margin-left:6px;">수정됨</span>' : ''}</td>
         <td ${cell('book', 'sub', '교재 메모 적기')}
             title="${escHtml(book)}">${book ? escHtml(book) : 빈('＋ 메모')}</td>
-        ${/* 프린트는 «이 시험» 것만 — 파일 이름은 누르면 내려받고(칸은 안 열린다), 빈 곳을 누르면 올리기 창 */''}
-        <td ${cell('print', 'sub', '프린트 올리기')}
-            title="${escHtml(prints.map(p => p.name).join(' · '))}">${!prints.length ? 빈('＋ 올리기')
-          : `<a class="xr-print" href="${schoolFileDownload(prints[prints.length - 1])}" target="_blank" rel="noopener"
-               onclick="event.stopPropagation()">${iconSvg('file', 12)}<span>${escHtml(prints[prints.length - 1].name)}</span></a>${
-             prints.length > 1 ? `<span class="xr-more">+${prints.length - 1}</span>` : ''}`}</td>
+        ${파일칸('print', '＋ 올리기')}${파일칸('paper', '＋ 시험지')}${파일칸('analysis', '＋ 분석')}
       </tr>`;
   }).join('');
   return `
   <div class="rst-wrap" style="max-height:none;">
     ${/* ⚠ .app .rst-wrap table.grid의 min-width는 명단(1324px)의 것이다 — 이 표는 인라인으로 눌러 준다(인라인이 시트를 이긴다) */''}
-    <table class="grid" style="min-width:1052px;">
+    <table class="grid" style="min-width:1126px;">
       <thead><tr>
-        <th style="width:132px;">학교</th>
+        <th style="width:120px;">학교</th>
         <th style="width:44px;">학년</th>
         <th style="width:96px;">과목</th>
         <th class="r" style="width:50px;">인원</th>
-        <th style="width:78px;">D-day</th>
-        <th style="width:122px;">시험 기간</th>
+        <th style="width:70px;">D-day</th>
+        <th style="width:116px;">시험 기간</th>
         <th style="width:92px;">수학</th>
-        <th style="width:190px;">범위</th>
-        <th style="width:140px;">교재 · 메모</th>
-        <th style="width:140px;">프린트</th>
+        <th style="width:160px;">범위</th>
+        <th style="width:120px;">교재 · 메모</th>
+        <th style="width:86px;">프린트</th>
+        <th style="width:86px;">시험지 원본</th>
+        <th style="width:86px;">분석자료</th>
       </tr></thead>
       <tbody>${body}</tbody>
     </table>
@@ -34209,7 +34229,7 @@ function openExamPop(ev, k, school, grade, subject, year, slot){
   const first = document.querySelector('.xp [data-first]');
   if(!first) return;
   /* 누른 그 손길 안에서 달력·파일 창을 바로 연다 — 브라우저는 «사용자가 누른 동안»만 열어 준다 */
-  if(first.type === 'file'){ if(!schoolFilesOf(school, grade).length) first.click(); return; }
+  if(first.type === 'file'){ if(!document.querySelector('.xp .pill')) first.click(); return; }   // 올린 게 없으면 곧장 파일 창
   first.focus();
   if(first.type === 'date') try{ first.showPicker(); }catch(e){}
 }
@@ -34254,9 +34274,9 @@ function examPopHTML(){
         onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()} else if(event.key==='Escape'){closeExamPop()}"
         onchange="setSchoolBook('${sc}','${gr}',this.value); closeExamPop()">`;
     말 = 'Enter 로 저장합니다. 학교·학년 단위라 네 시험에 같이 보입니다.';
-  } else if(k === 'print'){
-    제목 = '학교 프린트';
-    몸 = schoolFilesHTML(school, grade).replace('<input type="file"', '<input type="file" data-first');
+  } else if(SCHOOL_FILE_KINDS[k]){
+    제목 = k === 'print' ? '학교 프린트' : SCHOOL_FILE_KINDS[k];
+    몸 = schoolFilesHTML(school, grade, k, p.year + ' · ' + 시험).replace('<input type="file"', '<input type="file" data-first');
   }
   return `<div class="xp-back" onclick="closeExamPop()"></div>
   <div class="xp" role="dialog" aria-label="${이름} ${제목}"
@@ -35116,7 +35136,7 @@ function noticeImageHTML(n){
 function teacherSchoolHTML(kind){
   state.examSubTab = kind;
   if(kind !== 'range') state.examPop = null;   // 칸 창은 «시험 일정» 표의 것이다
-  const 머리 = { range: ['시험 일정', '학교·학년마다 시험 날짜 · 범위 · 교재 · 프린트'],
+  const 머리 = { range: ['시험 일정', '학교·학년마다 시험 날짜 · 범위 · 교재 · 프린트 · 시험지 · 분석'],
     plan: ['직보 일정표', '시험기간에 누가 언제 오는지 — 찍는 즉시 그 학생 달력에 뜬다'],
     cut: ['등급컷', '학교·학년·과목마다 1~4등급컷 — 비워 둔 학교 시험 등급을 이걸로 센다'] }[kind];
   const sub = kind === 'plan' ? teacherExamPlanHTML() : kind === 'cut' ? teacherExamRangeHTML('cut') : teacherExamRangeHTML();
