@@ -96,6 +96,10 @@ try{
   봄('시험 넷이 펼침 칸으로 선다', await page.$$eval('.xs-sec .xs-sh b', e => e.map(x => x.textContent)), ['1학기 중간', '1학기 기말', '2학기 중간', '2학기 기말']);
   await page.evaluate(() => examSlotToggle(schoolYearOf(todayStr()) + '|1-mid', true));
   봄('다른 시험 칸을 펼치면 표가 하나 더', await page.locator('.xs-sec .rst-wrap').count(), 2);
+  /* 2026-10-13 버그 — 광남고(중간 끝남 → 다음은 기말)에 «2학기 중간» 칸에서 프린트를 올렸더니 기말 칸에 떴다(올린 날의 «다음 시험»으로 적던 옛 코드).
+     이제는 «누른 칸의 시험»이다 — 지난 시험 칸에서 올려도 그 칸 */
+  await page.locator('.xs-sec').first().locator('td.xr-ed[aria-label$="프린트 올리기"]').first().click({ position: { x: 74, y: 10 } });
+  봄('🔴 지난 시험(1학기 중간) 칸의 프린트 올리기는 그 시험을 들고 간다', await page.$eval('.xp input[type=file]', i => /'print','20[0-9]{2} · 1학기 중간'\)$/.test(i.getAttribute('onchange'))), true);
 } finally {
   await 브라우저.close(); 서버.kill();
 }
