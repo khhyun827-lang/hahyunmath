@@ -542,6 +542,27 @@
 .app .xr-print span{min-width:0;overflow:hidden;text-overflow:ellipsis;}
 .app .xr-print:hover{text-decoration:underline;}
 .app .xr-more{margin-left:5px;font-size:11px;color:var(--dim);vertical-align:middle;}
+/* 학교 › 시험 분석 (2026-10-13) — 왼쪽 목록 · 오른쪽 미리보기. 좁으면 위아래로 */
+.app .ea{display:grid;grid-template-columns:220px minmax(0,1fr);gap:16px;align-items:start;}
+.app .ea-list{display:flex;flex-direction:column;gap:4px;max-height:calc(100vh - 220px);overflow:auto;}
+.app .ea-gh{font-size:11.5px;color:var(--dim);font-weight:700;margin:10px 4px 2px;}
+.app .ea-gh:first-child{margin-top:0;}
+.app .ea-it{display:flex;align-items:baseline;justify-content:space-between;gap:8px;padding:9px 12px;border:1px solid var(--line);
+  border-radius:var(--r-sm);background:var(--card);color:var(--ink);text-align:left;cursor:pointer;font:inherit;font-size:13px;}
+.app .ea-it s{text-decoration:none;color:var(--dim);font-size:11.5px;white-space:nowrap;}
+.app .ea-it:hover{background:var(--hover);}
+.app .ea-it.on{border-color:var(--accent-line);background:var(--accent-bg);}
+.app .ea-view{min-width:0;border:1px solid var(--line);border-radius:var(--r-md);background:var(--card);overflow:hidden;}
+.app .ea-vh{display:flex;align-items:center;flex-wrap:wrap;gap:8px 10px;padding:10px 14px;border-bottom:1px solid var(--line);}
+.app .ea-chips{display:flex;gap:6px;flex-wrap:wrap;}
+.app .ea-frame{display:block;width:100%;height:max(480px,calc(100vh - 260px));border:0;background:var(--sunk);}
+.app .ea-empty{font-size:13px;color:var(--dim);line-height:1.8;padding:24px 4px;}
+@media (max-width:760px){
+  .app .ea{grid-template-columns:1fr;}
+  .app .ea-list{max-height:none;flex-direction:row;flex-wrap:wrap;}
+  .app .ea-gh{width:100%;}
+  .app .ea-frame{height:70vh;}
+}
 /* 시험 일정 — 누르면 그 칸만 고치는 칸 · 작은 창 (2026-10-02 · examPopHTML) */
 .app .rst-wrap td.xr-ed{cursor:pointer;border-radius:8px;transition:background .12s;}
 .app .rst-wrap td.xr-ed:hover,.app .rst-wrap td.xr-ed:focus-visible{background:var(--hover);outline:none;}
@@ -8845,6 +8866,62 @@ function schoolFilesHTML(school, grade, kind, season){
         <input type="file" accept="${accept}" multiple style="display:none;" ${busy ? 'disabled' : ''}
           onchange="addSchoolFile('${sc}','${gr}',this,'${kind}','${ss}')"></label>
     </div>`;
+}
+
+/* =================== 학교 › 시험 분석 (2026-10-13 · 사용자 — 「분석지를 pdf로 첨부하는 게 아니라 아예 탭을 하나 만들어서
+   직접적으로 거기서 볼 수 있으면」) ===================
+   🔵 «보는 곳»이다 — 올리는 곳은 그대로 시험 일정 표의 «분석자료»·«시험지 원본» 칸(kv/school-files · kind). 새 문서 없음.
+   파일은 드라이브에 «링크 있는 누구나»로 올라가 있어 드라이브 미리보기(/preview)를 iframe 으로 띄운다 — PDF·사진은 그 자리에서 보이고,
+   한글 파일은 드라이브가 못 그리면 «내려받기»로 본다. 시험 차례(새 시험 위) → 학교·학년. 고른 파일은 state.anaPick(fileId). */
+function examAnalysisGroups(){
+  const 묶음 = {};
+  Object.entries(state.schoolFiles || {}).forEach(([school, byG]) => Object.entries(byG || {}).forEach(([grade, list]) =>
+    (Array.isArray(list) ? list : []).forEach(f => {
+      if(f.kind !== 'analysis' && f.kind !== 'paper') return;
+      const 칸 = schoolFileSlotOf(f), k = 칸 + '|' + school + '|' + grade;
+      (묶음[k] = 묶음[k] || { 칸, school, grade, analysis: [], paper: [] })[f.kind].push(f);
+    })));
+  const 차례 = 칸 => { const [y, sl] = 칸.split('|'); return Number(y) * 10 + EXAM_SLOTS.findIndex(x => x[0] === sl); };
+  return Object.values(묶음).sort((a, b) => 차례(b.칸) - 차례(a.칸)
+    || a.school.localeCompare(b.school) || a.grade.localeCompare(b.grade));
+}
+function examAnalysisPick(fileId){ state.anaPick = fileId; render(); }
+function teacherExamAnalysisHTML(){
+  loadSchoolFilesIfNeeded();
+  const gs = examAnalysisGroups();
+  if(!gs.length) return `<div class="ea-empty">${!state.schoolFiles ? '불러오는 중…'
+    : '아직 올린 분석자료가 없습니다.<br><b>시험 일정</b> 표의 <b>«분석자료»·«시험지 원본»</b> 칸을 눌러 올리면 여기서 바로 봅니다.'}</div>`;
+  const 첫 = g => g.analysis[g.analysis.length - 1] || g.paper[0];
+  let g = gs.find(x => x.analysis.concat(x.paper).some(f => f.fileId === state.anaPick)) || gs[0];
+  const 고른 = g.analysis.concat(g.paper).find(f => f.fileId === state.anaPick) || 첫(g);
+  const 시험이름 = 칸 => { const [y, sl] = 칸.split('|'); return y + ' ' + (SLOT_NAME[sl] || ''); };
+  let 앞칸 = '';
+  const 목록 = gs.map(x => {
+    const 머리 = x.칸 !== 앞칸 ? `<div class="ea-gh">${escHtml(시험이름(x.칸))}</div>` : '';
+    앞칸 = x.칸;
+    return 머리 + `<button class="ea-it${x === g ? ' on' : ''}" onclick="examAnalysisPick('${jsAttr(첫(x).fileId)}')">
+      <b>${escHtml(schoolShort(x.school) || x.school)} ${escHtml(gradeLabel(x.grade) || x.grade)}</b>
+      <s>${x.analysis.length ? '분석' + (x.analysis.length > 1 ? ' ' + x.analysis.length : '') : ''}${
+        x.analysis.length && x.paper.length ? ' · ' : ''}${x.paper.length ? '원본 ' + x.paper.length : ''}</s></button>`;
+  }).join('');
+  /* 이 학교·시험의 파일들 — 분석이 앞, 원본이 뒤. 여럿이면 번호를 붙인다 */
+  const 칩 = (f, 이름) => `<button class="pill${f === 고른 ? ' on' : ''}" onclick="examAnalysisPick('${jsAttr(f.fileId)}')" title="${escHtml(f.name)}">${이름}</button>`;
+  const 칩들 = g.analysis.map((f, i) => 칩(f, '분석자료' + (g.analysis.length > 1 ? ' ' + (i + 1) : '')))
+    .concat(g.paper.map((f, i) => 칩(f, '시험지 원본' + (g.paper.length > 1 ? ' ' + (i + 1) : '')))).join('');
+  const id = encodeURIComponent(고른.fileId);
+  return `<div class="ea">
+    <nav class="ea-list" aria-label="분석자료 목록">${목록}</nav>
+    <section class="ea-view">
+      <div class="ea-vh">
+        <b>${escHtml(g.school)} ${escHtml(gradeLabel(g.grade) || g.grade)} · ${escHtml(시험이름(g.칸))}</b>
+        <div class="ea-chips">${칩들}</div>
+        <span class="spacer"></span>
+        <a class="btn q sm" href="https://drive.google.com/file/d/${id}/view" target="_blank" rel="noopener">새 창으로</a>
+        <a class="btn q sm" href="${schoolFileDownload(고른)}" target="_blank" rel="noopener">내려받기</a>
+      </div>
+      <iframe class="ea-frame" src="https://drive.google.com/file/d/${id}/preview" title="${escHtml(고른.name)}" allow="autoplay"></iframe>
+    </section>
+  </div>`;
 }
 
 /* 시험까지 며칠. 셋을 가른다 — «아직»·«시험 중»·«끝남»은 학생에게 서로 다른 말이다.
@@ -20450,7 +20527,8 @@ const TEACHER_SUBNAV = {
     ['상담 기록', 'classhub', 'consult', 'chat'], ['상담 신청', 'consults', null, 'phone']
   ],
   '학교': [
-    ['시험 일정', 'examrange', null, 'calendar'], ['직보 일정표', 'examplan', null, 'document'], ['등급컷', 'gradecut', null, 'chart']
+    ['시험 일정', 'examrange', null, 'calendar'], ['직보 일정표', 'examplan', null, 'document'], ['등급컷', 'gradecut', null, 'chart'],
+    ['시험 분석', 'examanalysis', null, 'search']
   ]
 };
 /* 사이드의 묶음 머리 — 묶음(null 로 갈린 토막) 차례대로. 빈 글자면 머리 없이 가는 선만 */
@@ -20618,7 +20696,7 @@ const TEACHER_TAB_SECTION = {
      서브탭 줄이 통째로 반의 것으로 그려졌다 (2026-09-03). */
   review:'문항관리', exams:'문항관리', unitbank:'문항관리',
   clinic:'소통', notices:'소통', qna:'소통', chat:'소통', checkin:'홈',
-  examrange:'학교', examplan:'학교', gradecut:'학교',
+  examrange:'학교', examplan:'학교', gradecut:'학교', examanalysis:'학교',
   settings:'설정'
 };
 
@@ -20670,6 +20748,7 @@ function teacherTabBodyHTML(){
   if(t==='examrange')   return teacherSchoolHTML('range');
   if(t==='examplan')    return teacherSchoolHTML('plan');
   if(t==='gradecut')    return teacherSchoolHTML('cut');
+  if(t==='examanalysis') return teacherSchoolHTML('ana');
   if(t==='settings')    return teacherSettingsHTML();
   return teacherClassHubHTML();
 }
@@ -34146,7 +34225,7 @@ function examRangeTableHTML(list, year, slot){
       const 끝 = fs[fs.length - 1];
       return `<td ${cell(k, 'sub', SCHOOL_FILE_KINDS[k] + ' 올리기')} title="${escHtml(fs.map(p => p.name).join(' · '))}">${!fs.length ? 빈(빈말)
         : `<a class="xr-print" href="${schoolFileDownload(끝)}" target="_blank" rel="noopener"
-             onclick="event.stopPropagation()"><span>${escHtml((String(끝.name).match(/\.([a-z0-9]{1,5})$/i) || ['', '파일'])[1].toUpperCase())}</span></a>${
+             onclick="event.stopPropagation()${k === 'analysis' ? `; event.preventDefault(); state.anaPick='${jsAttr(끝.fileId)}'; goTeacherTab('examanalysis')` : ''}"><span>${escHtml((String(끝.name).match(/\.([a-z0-9]{1,5})$/i) || ['', '파일'])[1].toUpperCase())}</span></a>${
            fs.length > 1 ? `<span class="xr-more">+${fs.length - 1}</span>` : ''}`}</td>`;
     };
     /* 켜진 단원의 «처음과 끝» — 표에는 단원 이름만, 번호 붙은 온전한 말은 title 에 */
@@ -35138,8 +35217,10 @@ function teacherSchoolHTML(kind){
   if(kind !== 'range') state.examPop = null;   // 칸 창은 «시험 일정» 표의 것이다
   const 머리 = { range: ['시험 일정', '학교·학년마다 시험 날짜 · 범위 · 교재 · 프린트 · 시험지 · 분석'],
     plan: ['직보 일정표', '시험기간에 누가 언제 오는지 — 찍는 즉시 그 학생 달력에 뜬다'],
-    cut: ['등급컷', '학교·학년·과목마다 1~4등급컷 — 비워 둔 학교 시험 등급을 이걸로 센다'] }[kind];
-  const sub = kind === 'plan' ? teacherExamPlanHTML() : kind === 'cut' ? teacherExamRangeHTML('cut') : teacherExamRangeHTML();
+    cut: ['등급컷', '학교·학년·과목마다 1~4등급컷 — 비워 둔 학교 시험 등급을 이걸로 센다'],
+    ana: ['시험 분석', '올린 분석지·원본 시험지를 화면 안에서 바로 본다'] }[kind];
+  const sub = kind === 'plan' ? teacherExamPlanHTML() : kind === 'cut' ? teacherExamRangeHTML('cut')
+    : kind === 'ana' ? teacherExamAnalysisHTML() : teacherExamRangeHTML();
   /* 넓은 화면은 셸이 큰 제목을 그린다(.pg-h) — 이 머리(.sc-h)는 줄 모드·폰에서만 보인다 */
   return `<div class="ex-screen ex-nosub sc-screen">
     <main class="ex-main">

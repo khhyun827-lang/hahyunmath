@@ -2840,6 +2840,13 @@ state.view='assistant'; loadAllRecordsIfNeeded();
 
 ### ▶ 다음 차례
 
+> ### 🟢 **2026-10-13 (2) — 학교 › «시험 분석» 서브탭 (🔴 사용자 눈 확인 아직)** (사용자 — 「분석지를 pdf로 첨부하는 게 아니라 아예 탭을 하나 만들어서 직접적으로 거기서 볼 수 있으면」)
+> 탭 id `examanalysis`(TEACHER_SUBNAV·TEACHER_TAB_SECTION·teacherTabBodyHTML 셋 다) · `teacherSchoolHTML('ana')` → `teacherExamAnalysisHTML`.
+> «보는 곳»만 — 올리기는 그대로 시험 일정 표 칸. 왼쪽 = 시험(새 것 위)별 학교·학년 묶음(`examAnalysisGroups` · 분석·원본만, 프린트 빼고) · 오른쪽 = 분석자료/시험지 원본 알약 + **드라이브 미리보기 iframe**(`/file/d/ID/preview` · 실제 광남고 PDF 로 864 에서 15쪽 넘기기까지 떴다) + 새 창으로·내려받기. 고른 것 `state.anaPick`(fileId).
+> 표의 «분석자료» 칸 고리는 이제 내려받기 대신 이 탭을 그 파일로 연다. 760 이하는 위아래로. 864 의 가로 14px 넘침은 원래부터(시험 일정도 878).
+> 검사 school-files-test +6 · 갈래 단추 넷(grade-cut-tab-test·admin-shell-test). check-all 126 초록.
+> ⚠ 같은 날 `git checkout -- index.html` 이 작업본을 CRLF 로 되돌려 다음 패치가 assert 에 걸렸다 — checkout 뒤엔 줄끝부터.
+
 > ### 🟢 **2026-10-13 — 학교 › 시험 일정에 «시험지 원본»·«분석자료» 칸 (배포 `bb30bd9` · 배포본 = 저장소 2,586,449자 · 🔴 사용자 눈 확인 아직)** (사용자 — 「학교탭에 시험지 원본과 시험지 분석자료를 올리는 곳」)
 > 새 문서·규칙·워커 없음 — 학교 프린트의 `kv/school-files` 기록에 `kind`('paper'|'analysis' · 없으면 프린트)만 붙였다(`SCHOOL_FILE_KINDS`). 칸을 누르면 프린트와 같은 작은 창.
 > 🔴 시험지·분석은 시험 «뒤»에 올린다 → 꼬리표(season)는 올린 날의 다음 시험이 아니라 **누른 칸의 시험**(프린트도 이제 그렇다). `schoolFileSlotOf` 는 꼬리표의 해를 먼저 믿는다(작년 시험지를 올해 올려도 작년 칸).

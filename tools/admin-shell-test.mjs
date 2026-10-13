@@ -76,7 +76,7 @@ const M = new Function([liftConst('TEACHER_NAV'), liftConst('TEACHER_SUBNAV'), l
   봄('상담 기록은 소통 아래다', M.teacherSectionOf('classhub', 'consult'), '소통');
   봄('출석 도장은 홈 아래다', M.TEACHER_TAB_SECTION.checkin, '홈');
   봄('휴강·보강은 반 아래다', M.teacherSectionOf('classhub', 'offdays'), '반');
-  봄('학교 = 시험 일정 · 직보 일정표 · 등급컷', M.TEACHER_SUBNAV['학교'].map(s => s[0]), ['시험 일정', '직보 일정표', '등급컷']);
+  봄('학교 = 시험 일정 · 직보 일정표 · 등급컷 · 시험 분석(10-13)', M.TEACHER_SUBNAV['학교'].map(s => s[0]), ['시험 일정', '직보 일정표', '등급컷', '시험 분석']);
 }
 
 /* ═══ ①-b 사이드 — 학교 두 글자 (2026-10-02 · P-2) ═══ */

@@ -81,5 +81,34 @@ console.log('학교 프린트 —' + NL);
   봄('   프린트 칸 창에 선다', /SCHOOL_FILE_KINDS\[k\][\s\S]{0,120}schoolFilesHTML\(school, grade, k, p\.year/.test(lift('examPopHTML')), true);
 }
 
+{
+  /* 2026-10-13 — 학교 › 시험 분석: 올린 분석지·원본을 화면 안에서 본다(드라이브 미리보기) */
+  console.log(NL + '시험 분석 —' + NL);
+  const state = { schoolFiles: {
+    광남고: { 고1: [{ name: '프린트.pdf', fileId: 'P0', season: '2026 · 2학기 중간' },
+                   { name: '원본.pdf', fileId: 'G1', season: '2026 · 2학기 중간', kind: 'paper' },
+                   { name: '분석.pdf', fileId: 'A1', season: '2026 · 2학기 중간', kind: 'analysis' },
+                   { name: '옛분석.pdf', fileId: 'A0', season: '2026 · 1학기 기말', kind: 'analysis' }] },
+    대원고: { 고1: [{ name: '대원분석.pdf', fileId: 'D1', season: '2026 · 2학기 중간', kind: 'analysis' }] } } };
+  const EXAM_SLOTS = [['1-mid'], ['1-fin'], ['2-mid'], ['2-fin']];
+  const F = new Function('state', 'EXAM_SLOTS', 'SLOT_NAME', 'SLOT_OF_NAME', 'schoolYearOf', 'examSeasonOf', 'todayStr', 'escHtml', 'jsAttr', 'schoolShort', 'gradeLabel', 'loadSchoolFilesIfNeeded', 'render',
+    [lift('schoolFileSlotOf'), lift('schoolFileDownload'), lift('examAnalysisGroups'), lift('examAnalysisPick'), lift('teacherExamAnalysisHTML')].join(NL)
+    + NL + 'return { examAnalysisGroups, examAnalysisPick, teacherExamAnalysisHTML };')(
+    state, EXAM_SLOTS, { '1-fin': '1학기 기말', '2-mid': '2학기 중간' }, { '1학기 기말': '1-fin', '2학기 중간': '2-mid' }, d => String(d).slice(0, 4),
+    () => ({ next: {} }), () => '2026-10-13', s => s, s => s, s => s.replace('고', ''), g => g, () => {}, () => {});
+  const gs = F.examAnalysisGroups();
+  봄('① 새 시험이 위 · 프린트는 안 든다 · 분석과 원본이 한 묶음', gs.map(g => [g.칸, g.school, g.analysis.length, g.paper.length]),
+    [['2026|2-mid', '광남고', 1, 1], ['2026|2-mid', '대원고', 1, 0], ['2026|1-fin', '광남고', 1, 0]]);
+  const 그림 = () => F.teacherExamAnalysisHTML();
+  봄('② 처음엔 맨 위 묶음의 분석지를 화면 안에(드라이브 미리보기)', /src="https:\/\/drive\.google\.com\/file\/d\/A1\/preview"/.test(그림()), true);
+  F.examAnalysisPick('G1');
+  봄('   원본을 고르면 원본이 · 묶음은 그대로', [/file\/d\/G1\/preview/.test(그림()), /class="ea-it on"[^>]*>\s*<b>광남/.test(그림())], [true, true]);
+  F.examAnalysisPick('A0');
+  봄('   지난 시험 묶음으로 옮겨 간다', [/file\/d\/A0\/preview/.test(그림()), /2026 1학기 기말<\/b>/.test(그림())], [true, true]);
+  state.schoolFiles = {};
+  봄('③ 없으면 어디서 올리는지 말한다', /시험 일정[\s\S]*분석자료/.test(그림()), true);
+  봄('④ 표의 «분석자료» 칸 고리는 내려받기 대신 이 탭으로', /k === 'analysis' \? `; event\.preventDefault\(\); state\.anaPick=[\s\S]{0,60}goTeacherTab\('examanalysis'\)/.test(lift('examRangeTableHTML')), true);
+}
+
 console.log(틀림 ? NL + '  🔴 ' + 통과 + ' 통과 · ' + 틀림 + ' 실패' + NL : NL + '  ✅ ' + 통과 + ' 통과 · 0 실패' + NL);
 process.exit(틀림 ? 1 : 0);

@@ -32,7 +32,7 @@ try{
   await page.evaluate(() => { window.저장 = []; window.saveGradeCut = async (...a) => { 저장.push(a); return true; }; });
 
   /* 2026-10-03 — 설정 안 단추 줄이 「학교」 탭의 서브탭이 됐다 */
-  봄('갈래 단추 셋', await page.$$eval('.subnav > a > span', e => e.map(x => x.textContent.trim())), ['시험 일정', '직보 일정표', '등급컷']);
+  봄('갈래 단추 넷(10-13 시험 분석)', await page.$$eval('.subnav > a > span', e => e.map(x => x.textContent.trim())), ['시험 일정', '직보 일정표', '등급컷', '시험 분석']);
   봄('등급컷 표 — 줄마다 칸 넷', await page.$$eval('.rst-wrap tbody tr', rs => rs.map(r => r.querySelectorAll('input.gc-in').length)), [4, 4, 4, 4, 4, 4]);
   봄('적힌 값이 칸에 뜬다', await page.$$eval('.rst-wrap tbody tr:first-child input.gc-in', e => e.map(x => x.value)), ['90', '81', '72', '63']);
 
