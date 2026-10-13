@@ -200,6 +200,7 @@ function 영상판(opt) {
   const 폼 = Object.assign({ 'video-unit': '', 'video-title': '보충 4강', 'video-url': 'https://youtu.be/abcdefgh',
     'video-class': 'c1', 'video-due': '2026-09-25', 'video-from': '', 'video-to': '' }, opt.폼 || {});
   let 체크 = (opt.체크 || []).slice();
+  let 더 = (opt.더 || []).slice();      // «＋ 링크 더 추가» 줄들 {url,title,from,to}
   const 저장 = [], 말 = [];
   const 막힌학생 = new Set(opt.막힌학생 || []);
   const 곁 = {
@@ -207,6 +208,8 @@ function 영상판(opt) {
       getElementById: id => id in 폼 ? { get value(){ return 폼[id]; }, set value(v){ 폼[id] = v; } } : null,
       querySelectorAll: sel => /vd-who/.test(sel)
         ? 체크.map(sid => ({ value: sid, set checked(v){ if (!v) 체크 = 체크.filter(x => x !== sid); } }))
+        : /vd-more/.test(sel)
+        ? 더.map(r => ({ querySelector: q => ({ value: r[q.replace('.vl-', '')] || '' }), remove(){ 더 = 더.filter(x => x !== r); } }))
         : [],
     },
     DATA: { videos: [], students: [{ studentId: 'st01', name: '가나' }, { studentId: 'st02', name: '다라' }, { studentId: 'st03', name: '마바' }] },
@@ -217,7 +220,7 @@ function 영상판(opt) {
     todayStr: () => '2026-09-24', shiftYmd: new Function(lift('shiftYmd') + NL + 'return shiftYmd;')(),
   };
   const api = new Function(...Object.keys(곁), lift('addVideo') + NL + 'return { addVideo };')(...Object.values(곁));
-  return { api, 저장, 말, 곁, 남은체크: () => 체크 };
+  return { api, 저장, 말, 곁, 남은체크: () => 체크, 남은줄: () => 더 };
 }
 
 {
@@ -281,6 +284,53 @@ function 영상판(opt) {
   await T.api.addVideo();
   봄('🔴 상자가 두 벌이어도 두 명에게 한 번씩만', T.저장.map(v => v.studentId), ['st01', 'st02']);
   봄('   말도 2명이라고 한다', /2명/.test(T.말.join(' ')), true);
+}
+{
+  /* 2026-10-13 사용자 — 「한번에 링크 더 추가할 수 있도록 (링크마다 시간설정도)」 */
+  const T = 영상판({ 체크: ['st01', 'st02'], 폼: { 'video-from': '1:00' },
+    더: [{ url: 'https://youtu.be/bbbbbbbb', from: '2:00', to: '3:00' }, { url: 'https://youtu.be/cccccccc', title: '따로 제목' }] });
+  await T.api.addVideo();
+  봄('🔴 링크 셋 × 두 명 = 문서 여섯 · id 가 다 다르다', [T.저장.length, new Set(T.저장.map(v => v.id)).size], [6, 6]);
+  const 링크별 = T.저장.filter(v => v.studentId === 'st01').map(v => [v.url.slice(-1), v.title, v.fromSec, v.toSec]);
+  봄('🔴 링크마다 제 구간 · 제목 안 적은 것은 «위 제목 (번호)» · 적은 것은 그대로', 링크별,
+    [['h', '보충 4강 (1)', 60, undefined], ['b', '보충 4강 (2)', 120, 180], ['c', '따로 제목', undefined, undefined]]);
+  봄('   마감·반은 같이 쓴다', [...new Set(T.저장.map(v => v.dueDate + v.classId))], ['2026-09-25c1']);
+  봄('   메모리에서 첫 링크가 맨 위(적은 차례)', T.곁.DATA.videos.filter(v => v.studentId === 'st01').map(v => v.url.slice(-1)), ['h', 'b', 'c']);
+  봄('   첫 링크가 가장 늦은 시각 — 불러와 최신 순으로 세워도 같은 차례', (() => { const 때 = v => +/v(\d+)_/.exec(v.id)[1];
+    const r = T.저장.filter(v => v.studentId === 'st01'); return 때(r[0]) > 때(r[1]) && 때(r[1]) > 때(r[2]); })(), true);
+  봄('   보낸 뒤 더한 줄은 걷힌다 · 몇 개인지 말한다', [T.남은줄().length, /영상 3개를/.test(T.말.join(' '))], [0, true]);
+}
+{
+  const T = 영상판({ 체크: [], 더: [{ url: 'https://youtu.be/bbbbbbbb', from: '5:00', to: '4:00' }] });
+  await T.api.addVideo();
+  봄('🔴 한 줄이라도 틀리면 아무것도 안 가고, 몇 번째인지 말한다', [T.저장.length, /링크 2 — 구간 끝이 시작보다/.test(T.말.join(' '))], [0, true]);
+  const U = 영상판({ 체크: [], 더: [{ title: '링크 없음' }] });
+  await U.api.addVideo();
+  봄('   링크 빠진 줄도 그렇다', [U.저장.length, /링크 2 — 유튜브 링크/.test(U.말.join(' '))], [0, true]);
+}
+{
+  /* 최근 것이 위 — 불러올 때 한 번 줄 세운다 */
+  const 줄세움 = new Function(lift('videosNewestFirst') + NL + 'return videosNewestFirst;')();
+  봄('🔴 영상은 최근 것이 위 (id 의 시각) · 시각 없는 옛것은 맨 아래', 줄세움([{ id: 'old' }, { id: 'v1700000000000' }, { id: 'v1760000000000_st01' }, { id: 'v1750000000000' }]).map(v => v.id),
+    ['v1760000000000_st01', 'v1750000000000', 'v1700000000000', 'old']);
+  봄('   학생·강사 불러오기 둘 다 거친다', (html.match(/videosNewestFirst\((videos|DATA\.videos)\)/g) || []).length, 2);
+}
+{
+  /* 2026-10-13 사용자 — 「특정반에 올려놓은 영상을 다른반에도 학생선택에서 넣어줄 수 있도록」 */
+  const 저장 = [], 말 = [];
+  const 원본 = { id: 'v1', title: '4강', url: 'https://youtu.be/aaaa', unit: '대수', classId: 'c1', dueDate: '2026-10-20', fromSec: 60, toSec: 120, noTrack: true };
+  const 곁 = { state: { videoCopy: { classId: 'c2' } }, DATA: { videos: [원본], classes: [{ id: 'c1', name: 'A반' }, { id: 'c2', name: 'B반' }] },
+    document: { querySelectorAll: () => [{ value: 'st07' }, { value: 'st08' }, { value: 'st07' }], getElementById: () => ({ value: '2026-10-25' }) },
+    dbSetDoc: async (c, id, v) => { 저장.push(v); return true; }, showToast: m => 말.push(m), render: () => {},
+    classRoster: () => [{ studentId: 'st07', name: '사아' }], escHtml: x => x };
+  const F = new Function(...Object.keys(곁), lift('videoCopyTo') + NL + lift('videoCopyPanelHTML') + NL + 'return { videoCopyTo, videoCopyPanelHTML };')(...Object.values(곁));
+  봄('다른 반 고르면 그 반 학생 상자가 서고 마감은 이 영상 것이 기본', [/class="vc-who" value="st07"/.test(F.videoCopyPanelHTML(원본, 'c1')), /value="2026-10-20"/.test(F.videoCopyPanelHTML(원본, 'c1')),
+    /value="c1"/.test(F.videoCopyPanelHTML(원본, 'c1'))], [true, true, false]);
+  await F.videoCopyTo('v1');
+  봄('🔴 고른 학생마다 새 문서 — 그 반 · 고른 마감 · 링크·제목·구간·복습용 그대로', 저장.map(v => [v.studentId, v.classId, v.dueDate, v.url, v.title, v.fromSec, v.toSec, v.noTrack]),
+    [['st07', 'c2', '2026-10-25', 'https://youtu.be/aaaa', '4강', 60, 120, true], ['st08', 'c2', '2026-10-25', 'https://youtu.be/aaaa', '4강', 60, 120, true]]);
+  봄('   원본은 그대로 · 새것은 맨 위 · 판은 닫힌다', [원본.classId, 곁.DATA.videos.map(v => v.studentId || '원본'), 곁.state.videoCopy, /B반 2명/.test(말[0])],
+    ['c1', ['st07', 'st08', '원본'], null, true]);
 }
 
 console.log(NL + '🪤 덫 — 옛 판으로 돌려 보고 무는지 본다' + NL);

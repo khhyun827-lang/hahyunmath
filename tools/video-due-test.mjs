@@ -109,7 +109,7 @@ await api.setVideoDue('v1', '2026-10-01');
 
 /* ④ 글자로 — 화면 셋에 마감이 선다 */
 /* 2026-09-23 (V-2b) — 셈은 `chubVideoModel`, 목록은 `chubVideoHTML`, 상세는 드로어 `videoDrawerHTML`. 셋을 한 글로 본다. */
-const stuVideo = lift('stuVideoHTML'), chubVideo = lift('chubVideoModel') + NL + lift('chubVideoHTML') + NL + lift('videoDrawerHTML');
+const stuVideo = lift('stuVideoHTML'), chubVideo = lift('chubVideoModel') + NL + lift('chubVideoHTML') + NL + lift('videoDrawerHTML') + NL + lift('videoCopyPanelHTML');
 봄('④ 학생 강의 탭 카드에 마감·D-day', stuVideo.includes('마감 <span class="mono">${escHtml(v.dueDate)}') && stuVideo.includes('stuDday(v.dueDate)'), true);
 봄('강사 목록에 마감·지남', chubVideo.includes("' · 마감 <span class=\"mono\">'") && chubVideo.includes('지남'), true);
 /* ⚠ 2026-09-16 에 마감 바꾸기가 «영상 머리 카드»(`videoHeroHTML`)로 옮겨 갔다 —
@@ -197,7 +197,7 @@ const 곁3 = {
 const api3 = new Function(...Object.keys(곁3),
   /* ⚠ `chubVideoHTML` 이 마감 딱지를 `stuDday` 로 찍는다 — 위 ①의 것과 같은 함수다. */
   ['itemDay','beforeJoin','joinedRoster','classRosterOn'].map(lift).join(NL) + NL + 잣대 + NL + lift('stuDday') + NL + lift('videoGoalMarkHTML') + NL + lift('videoHeroHTML')
-    + NL + lift('chubVideoModel') + NL + lift('chubVideoHTML') + NL + lift('videoDrawerHTML') + NL + 'return { 그림: c => chubVideoHTML(c) + videoDrawerHTML() };')(...Object.values(곁3));
+    + NL + lift('chubVideoModel') + NL + lift('chubVideoHTML') + NL + lift('videoDrawerHTML') + NL + lift('videoCopyPanelHTML') + NL + 'return { 그림: c => chubVideoHTML(c) + videoDrawerHTML() };')(...Object.values(곁3));
 const out = api3.그림('c1');
 봄('그려진다 — 반 전체 구역과 개인 배정 2 (남의 반 것은 안 든다)', [out.includes('>반 전체</div>'), out.includes('개인 배정 <span class="mono">2</span>'), out.includes('남의 반')], [true, true, false]);
 /* 🔵 **제목이 앞, 이름은 둘째 줄이다** (2026-09-16) — 예전에는 「가나 · 09-01 결석 보충 영상」처럼

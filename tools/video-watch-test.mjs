@@ -209,7 +209,7 @@ console.log(NL + '④ 반 › 영상 탭을 실제로 그려 본다' + NL);
   const C = new Function('DATA', 'state', 'loadAllRecordsIfNeeded', 'classRoster', 'escHtml', 'todayStr', 'iconSvg',
     'vidNoticeBarHTML', 'vidNoticeBtnHTML', 'extractYouTubeId', 'stuDday', 'setVideoDue', 'deleteVideo', 'render',
     ['itemDay','beforeJoin','joinedRoster','classRosterOn'].map(lift).join(NL) + NL + 잣대 + NL + lift('secToClock') + NL + lift('videoGoalLabelOf') + NL + lift('videoHeroHTML')
-      + NL + lift('chubVideoModel') + NL + lift('chubVideoHTML') + NL + lift('videoDrawerHTML') + NL + 'return c => chubVideoHTML(c) + videoDrawerHTML();')(
+      + NL + lift('chubVideoModel') + NL + lift('chubVideoHTML') + NL + lift('videoDrawerHTML') + NL + lift('videoCopyPanelHTML') + NL + 'return c => chubVideoHTML(c) + videoDrawerHTML();')(
     DATA, state, () => {}, () => roster,
     s => (s === null || s === undefined) ? '' : String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;'),
     () => '2026-09-13', () => '',

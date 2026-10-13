@@ -542,6 +542,10 @@
 .app .xr-print span{min-width:0;overflow:hidden;text-overflow:ellipsis;}
 .app .xr-print:hover{text-decoration:underline;}
 .app .xr-more{margin-left:5px;font-size:11px;color:var(--dim);vertical-align:middle;}
+/* 영상 등록 «＋ 링크 더 추가» 줄 · 상세의 «다른 반에도 보내기» 판 (2026-10-13) */
+.app .vd-more{margin-top:10px;padding-top:10px;border-top:1px dashed var(--line);align-items:flex-end;}
+.app .vd-more-x{align-self:flex-end;margin-bottom:2px;}
+.app .vd-copy{margin:2px 0 14px;padding:12px 14px;border:1px solid var(--line);border-radius:var(--r-md);background:var(--sunk);font-size:12.5px;}
 /* 학교 › 시험 분석 (2026-10-13) — 왼쪽 목록 · 오른쪽 미리보기. 좁으면 위아래로 */
 .app .ea{display:grid;grid-template-columns:220px minmax(0,1fr);gap:16px;align-items:start;}
 .app .ea-list{display:flex;flex-direction:column;gap:4px;max-height:calc(100vh - 220px);overflow:auto;}
@@ -9080,7 +9084,7 @@ async function loadStudentData(uid){
     ]);
   DATA.students = me ? [me] : [];
   normStudentGrades();     /* 「1」과 「고1」을 한 벌로 — 시험 일정의 열쇠다 */
-  DATA.classes = classes; DATA.notices = notices; DATA.videos = videos;
+  DATA.classes = classes; DATA.notices = notices; DATA.videos = videosNewestFirst(videos);
   DATA.exams = exams; DATA.problemBank = problemBank; DATA.assignments = assignments;
   DATA.clinicSlots = clinicSlots; DATA.clinics = clinics; DATA.qnas = qnas;
   splitQnaFollowups();
@@ -9164,6 +9168,7 @@ async function loadAllData(){
      되돌리는 길은 설정 › 학생 맨 아래 «숨긴 계정». 학생 로그인은 제 문서만 읽어서(loadStudentData) 영향이 없다. */
   DATA.hiddenStudents = (DATA.students || []).filter(s => s && s.hidden);
   DATA.students = (DATA.students || []).filter(s => !(s && s.hidden));
+  DATA.videos = videosNewestFirst(DATA.videos);
   splitQnaFollowups();
   normStudentGrades();     /* 「1」과 「고1」을 한 벌로 — 시험 일정의 열쇠다 */
   /* 시즌·범위는 데일리퀴즈가 첫 렌더에서 바로 본다. 늦게 오면 «범위 밖»으로 잘못 걸러
@@ -13608,6 +13613,12 @@ function mountVideoTrackers(studentId){
     });
   });
 }
+/* 🔵 **최근 영상이 위** (2026-10-13 · 사용자) — 불러올 때 한 번 줄 세운다. 새로 올리는 것은 unshift 라 그대로 맨 위.
+   시각은 id 의 13자리(Date.now()) — itemDay 와 같은 잣대. 없으면 맨 아래. */
+function videosNewestFirst(list){
+  const 때 = v => Number((/(\d{13})/.exec((v && v.id) || '') || [])[1]) || 0;
+  return (list || []).slice().sort((a, b) => 때(b) - 때(a));
+}
 async function addVideo(){
   const unit = document.getElementById('video-unit').value.trim();
   const title = document.getElementById('video-title').value.trim();
@@ -13615,6 +13626,16 @@ async function addVideo(){
   const classId = document.getElementById('video-class').value;
   if(!title || !url){ showToast('제목과 링크를 입력해주세요.'); return; }
   if(!extractYouTubeId(url)){ showToast('유튜브 링크 형식이 맞는지 확인해주세요.'); return; }
+  /* 🔵 **링크를 여럿 한 번에** (2026-10-13 · 사용자 — 「한번에 링크 더 추가할 수 있도록 (링크마다 시간설정도)」).
+     첫 링크는 예전 칸(video-url·from·to) 그대로, 더한 줄은 `.vd-more`. 줄마다 영상 하나 — 받는 사람·마감·복습용은 같이 쓴다.
+     ⚠ 하나라도 틀리면 «아무것도» 안 보낸다(몇 번째가 틀렸는지 말한다) — 반만 가면 다시 보낼 때 겹친다. */
+  const 더 = [...document.querySelectorAll('.vd-more')].map(el => ({
+      url: el.querySelector('.vl-url').value.trim(), title: el.querySelector('.vl-title').value.trim(),
+      from: el.querySelector('.vl-from').value.trim(), to: el.querySelector('.vl-to').value.trim() }))
+    .filter(r => r.url || r.title || r.from || r.to);
+  for(let i = 0; i < 더.length; i++){
+    if(!더[i].url || !extractYouTubeId(더[i].url)){ showToast(`링크 ${i + 2} — 유튜브 링크를 확인해 주세요.`); return; }
+  }
   const dueEl = document.getElementById('video-due');
   const dueDate = (dueEl && dueEl.value) || '';
   /* 🔵 **한 명에게도, 여러 명에게도 보낸다** (2026-09-13 · K-4 / 2026-09-18 · 사용자 요청).
@@ -13628,41 +13649,61 @@ async function addVideo(){
        한 줄이라, 끝을 안 적어 튕긴 사람이 **꼴을 고치려 들게** 돼 있었다. */
   const fromEl = document.getElementById('video-from'), toEl = document.getElementById('video-to');
   const fromRaw = (fromEl && fromEl.value || '').trim(), toRaw = (toEl && toEl.value || '').trim();
-  let fromSec = null, toSec = null;
-  if(fromRaw || toRaw){
-    fromSec = fromRaw ? clockToSec(fromRaw) : 0;
-    if(fromSec === null){ showToast('구간 시작을 12:30 처럼 적어 주세요. (2시간 4분이면 2:04:00)'); return; }
-    if(toRaw){
-      toSec = clockToSec(toRaw);
-      if(toSec === null){ showToast('구간 끝을 18:00 처럼 적어 주세요. (2시간 4분이면 2:04:00)'); return; }
-      if(toSec <= fromSec){ showToast('구간 끝이 시작보다 뒤여야 합니다.'); return; }
-    } else {
-      if(!(fromSec > 0)){ showToast('구간을 쓰려면 시작이나 끝 중 하나는 적어 주세요.'); return; }
-      toSec = 0;                     /* 0 = 끝까지. 영상 길이는 재생기가 알려 준다 */
+  /* 구간 하나 읽기 — 틀리면 말하고 null. 링크가 여럿이면 몇 번째인지 앞에 붙인다 */
+  const 구간읽기 = (fromRaw, toRaw, 앞말) => {
+    let fromSec = null, toSec = null;
+    if(fromRaw || toRaw){
+      fromSec = fromRaw ? clockToSec(fromRaw) : 0;
+      if(fromSec === null){ showToast(앞말 + '구간 시작을 12:30 처럼 적어 주세요. (2시간 4분이면 2:04:00)'); return null; }
+      if(toRaw){
+        toSec = clockToSec(toRaw);
+        if(toSec === null){ showToast(앞말 + '구간 끝을 18:00 처럼 적어 주세요. (2시간 4분이면 2:04:00)'); return null; }
+        if(toSec <= fromSec){ showToast(앞말 + '구간 끝이 시작보다 뒤여야 합니다.'); return null; }
+      } else {
+        if(!(fromSec > 0)){ showToast(앞말 + '구간을 쓰려면 시작이나 끝 중 하나는 적어 주세요.'); return null; }
+        toSec = 0;                     /* 0 = 끝까지. 영상 길이는 재생기가 알려 준다 */
+      }
     }
+    return { fromSec, toSec };
+  };
+  const 줄들 = [{ url, title: '', from: fromRaw, to: toRaw }].concat(더);
+  const 구간들 = [];
+  for(let i = 0; i < 줄들.length; i++){
+    const g = 구간읽기(줄들[i].from, 줄들[i].to, 줄들.length > 1 ? `링크 ${i + 1} — ` : '');
+    if(!g) return;
+    구간들.push(g);
   }
+  /* 제목 — 더한 줄에 제목을 안 적었으면 위 제목에 번호(「4강 (1)」「4강 (2)」). 하나뿐이면 번호 없음 */
+  const 빈제목 = 줄들.filter(r => !r.title).length;
+  let 번호 = 0;
+  const 제목들 = 줄들.map(r => r.title || (빈제목 > 1 ? `${title} (${++번호})` : title));
   /* 한 사람마다 문서 하나 — id 에 학생을 달아 서로 다른 문서가 된다(옛 개인 배정과 같은 꼴).
      🔴 **저장이 된 뒤에 메모리를 고친다** — 먼저 넣으면 저장이 막힌 반에서도 화면에는 있는 것처럼
        보인다(`setVideoDue`·`withdrawStudent` 와 같은 규칙). 여럿일 때는 이것이 더 중요하다:
        셋 중 하나만 실패했는데 셋 다 간 것처럼 보이면 그 학생만 영상 없이 남는다. */
-  const 기본 = {unit, title, url, classId, dueDate};
-  if(toSec !== null){ 기본.fromSec = fromSec; if(toSec > 0) 기본.toSec = toSec; }
   /* 복습용 (2026-09-20) — 켠 것만 적는다. 안 적으면 여태와 똑같이 «세는» 영상이다. */
   const notrackEl = document.getElementById('video-notrack');
-  if(notrackEl && notrackEl.checked) 기본.noTrack = true;
   const 도장 = Date.now();
-  const 만들것 = 받는이들.length
-    ? 받는이들.map(sid => Object.assign({}, 기본, { id:'v'+도장+'_'+sid, studentId:sid }))
-    : [Object.assign({}, 기본, { id:'v'+도장 })];
+  /* 링크마다 시각을 1ms 씩 — id 가 겹치지 않고, 목록에서도 «적은 차례»대로 선다 */
+  const 만들것 = 줄들.flatMap((r, i) => {
+    const 기본 = {unit, title: 제목들[i], url: r.url, classId, dueDate};
+    const { fromSec, toSec } = 구간들[i];
+    if(toSec !== null){ 기본.fromSec = fromSec; if(toSec > 0) 기본.toSec = toSec; }
+    if(notrackEl && notrackEl.checked) 기본.noTrack = true;
+    const t = 도장 + (줄들.length - 1 - i);      // 첫 링크가 가장 늦은 시각 → 최신 순 목록에서 맨 위
+    return 받는이들.length
+      ? 받는이들.map(sid => Object.assign({}, 기본, { id:'v'+t+'_'+sid, studentId:sid }))
+      : [Object.assign({}, 기본, { id:'v'+t })];
+  });
   const 된것 = [], 안된것 = [];
   for(const v of 만들것){
     /* ⚠ `dbSetDoc` 은 «막힘»을 false, «실패»를 null 로 돌려준다 — 둘 다 안 간 것이다.
        `=== null` 만 보면 규칙에 막힌 쓰기를 «됐다»로 세어 화면에만 영상이 생긴다. */
     const ok = await dbSetDoc('videos', v.id, v);
     if(ok !== true){ 안된것.push(v); continue; }
-    DATA.videos.unshift(v);
     된것.push(v);
   }
+  DATA.videos.unshift(...된것);      // 적은 차례 그대로 맨 위에
   const 이름 = sid => (DATA.students.find(x=>x.studentId===sid)||{}).name || sid;
   if(!된것.length){ showToast('영상을 등록하지 못했습니다 — 저장이 막혀 있습니다.'); render(); return; }
   /* 하나라도 갔으면 폼을 비운다 — 안 비우면 다시 눌러 겹쳐 보내게 된다.
@@ -13674,13 +13715,15 @@ async function addVideo(){
   if(dueEl) dueEl.value = shiftYmd(todayStr(), 7);   // 다음 영상도 기본은 일주일 뒤
   if(fromEl) fromEl.value=''; if(toEl) toEl.value='';
   if(notrackEl) notrackEl.checked = false;
-  const 보낸이들 = 된것.filter(v => v.studentId).map(v => 이름(v.studentId));
+  document.querySelectorAll('.vd-more').forEach(el => el.remove());
+  const 보낸이들 = [...new Set(된것.filter(v => v.studentId).map(v => 이름(v.studentId)))];
+  const 개 = 줄들.length > 1 ? `영상 ${줄들.length}개를 ` : '영상을 ';
   showToast(
     안된것.length ? `${보낸이들.length ? 보낸이들.join('·') + ' 에게 보냈습니다. ' : '일부만 등록됐습니다. '}${
-      안된것.map(v => v.studentId ? 이름(v.studentId) : '반 전체').join('·')} 은(는) 실패했습니다.`
-    : !보낸이들.length ? '영상이 등록되었습니다.'
-    : 보낸이들.length === 1 ? 보낸이들[0] + ' 학생에게 영상을 보냈습니다.'
-    : `${보낸이들.length}명에게 영상을 보냈습니다 — ${보낸이들.join('·')}.`);
+      [...new Set(안된것.map(v => (v.studentId ? 이름(v.studentId) : '반 전체') + (줄들.length > 1 ? '(' + v.title + ')' : '')))].join('·')} 은(는) 실패했습니다.`
+    : !보낸이들.length ? (줄들.length > 1 ? `영상 ${줄들.length}개가 등록되었습니다.` : '영상이 등록되었습니다.')
+    : 보낸이들.length === 1 ? 보낸이들[0] + ' 학생에게 ' + 개 + '보냈습니다.'
+    : `${보낸이들.length}명에게 ${개}보냈습니다 — ${보낸이들.join('·')}.`);
   render();
 }
 /* 마감 바꾸기 (2026-09-13 · K-3). 저장이 된 «뒤에» 메모리를 고친다 — withdrawStudent 와 같은 규칙.
@@ -28858,9 +28901,72 @@ function chubVideoModel(classId){
   return { roster, 받은, vids, personal, nameOf, progOf, doneOf, avgOf, 묶음들, 묶음of, 이름들, 차례, 찾기 };
 }
 
+/* 등록 폼 «＋ 링크 더 추가» (2026-10-13) — render() 없이 줄만 붙인다. render 하면 이미 적은 칸(제목·링크)이 지워진다. */
+function videoLinkAdd(){
+  const box = document.getElementById('vd-links');
+  if(!box) return;
+  const n = box.querySelectorAll('.vd-more').length + 2;
+  box.insertAdjacentHTML('beforeend', `<div class="vd-more cls-form">
+      <label style="flex:2;min-width:200px;"><span>링크 ${n}</span><input class="vl-url" placeholder="https://youtu.be/..."></label>
+      <label style="flex:1;min-width:150px;"><span>제목 (비우면 위 제목 + 번호)</span><input class="vl-title"></label>
+      <label style="width:96px;"><span>구간 시작</span><input class="vl-from mono" placeholder="12:30"></label>
+      <label style="width:96px;"><span>구간 끝</span><input class="vl-to mono" placeholder="18:00"></label>
+      <button type="button" class="btn q sm vd-more-x" title="이 링크 빼기" onclick="this.closest('.vd-more').remove()">✕</button>
+    </div>`);
+  box.lastElementChild.querySelector('.vl-url').focus();
+}
 /* 드로어 열고 닫기. ⚠ `videoSelectedId` 도 같이 둔다 — 옛 검사·다른 자리가 그 이름을 본다. */
-function videoOpen(id){ state.videoSelectedId = id; state.videoOpenId = id; state.vidNoticeFor = null; state.videoDueEdit = null; render(); }
-function videoClose(){ 드로어닫기(() => { state.videoOpenId = null; state.vidNoticeFor = null; state.videoDueEdit = null; render(); }); }
+function videoOpen(id){ state.videoSelectedId = id; state.videoOpenId = id; state.vidNoticeFor = null; state.videoDueEdit = null; state.videoCopy = null; render(); }
+function videoClose(){ 드로어닫기(() => { state.videoOpenId = null; state.vidNoticeFor = null; state.videoDueEdit = null; state.videoCopy = null; render(); }); }
+/* =================== 다른 반에도 보내기 (2026-10-13 · 사용자 — 「특정반에 올려놓은 영상을 다른반에도 학생선택에서 넣어줄 수 있도록」) ===
+   영상 상세(드로어)에서 반을 고르고 → 그 반 학생을 고르면(안 고르면 반 전체) 같은 영상(링크·제목·단원·구간·복습용)을 새 문서로 만든다.
+   🔵 새 문서다 — 시청 기록은 영상 id 마다라, 옮겨 가는 학생이 이 반 학생의 기록을 물려받지 않는다. 마감은 고를 수 있다(기본 = 이 영상 마감). */
+function videoCopyPanelHTML(sel, fromClassId){
+  if(!state.videoCopy) return `<button class="btn q sm" style="margin:2px 0 12px;" onclick="state.videoCopy={classId:''}; render()">다른 반에도 보내기</button>`;
+  const cid = state.videoCopy.classId;
+  const 반들 = DATA.classes.filter(c => c.id !== fromClassId);
+  const 명단 = cid ? classRoster(cid) : [];
+  return `<div class="vd-copy">
+    <div class="row" style="align-items:center;gap:8px;"><b>다른 반에도 보내기</b><span class="spacer"></span>
+      <button class="btn q sm" onclick="state.videoCopy=null; render()">닫기</button></div>
+    <select class="fm-in" style="margin-top:8px;width:100%;" onchange="state.videoCopy={classId:this.value}; render()">
+      <option value="">반 고르기</option>${반들.map(c => `<option value="${c.id}" ${c.id === cid ? 'selected' : ''}>${escHtml(c.name)}</option>`).join('')}</select>
+    ${!cid ? '' : `
+    <div style="font-size:11px;color:var(--dim);margin:10px 0 6px;">보낼 학생 — 아무도 안 고르면 <b>그 반 전체</b>에게 갑니다</div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;">${명단.map(s => `<label style="display:flex;align-items:center;gap:5px;font-size:12px;">
+        <input type="checkbox" class="vc-who" value="${s.studentId}">${escHtml(s.name)}</label>`).join('')
+      || '<span style="font-size:12px;color:var(--dim);">이 반에 학생이 없습니다 — 반 전체로 보냅니다.</span>'}</div>
+    <div class="row" style="gap:8px;align-items:flex-end;margin-top:10px;">
+      <label style="font-size:11px;color:var(--dim);">마감일<input id="vc-due" type="date" class="fm-in" value="${escHtml(sel.dueDate || '')}"></label>
+      <button class="btn p sm" onclick="videoCopyTo('${sel.id}')">보내기</button></div>`}
+  </div>`;
+}
+async function videoCopyTo(vid){
+  const sel = DATA.videos.find(v => v.id === vid);
+  const cid = state.videoCopy && state.videoCopy.classId;
+  if(!sel || !cid) return;
+  const 받는이들 = [...new Set([...document.querySelectorAll('.vc-who:checked')].map(x => x.value))];
+  const dueEl = document.getElementById('vc-due');
+  const 기본 = { unit: sel.unit || '', title: sel.title, url: sel.url, classId: cid, dueDate: (dueEl && dueEl.value) || '' };
+  ['fromSec', 'toSec', 'noTrack'].forEach(k => { if(sel[k] !== undefined) 기본[k] = sel[k]; });
+  const 도장 = Date.now();
+  const 만들것 = 받는이들.length
+    ? 받는이들.map(sid => Object.assign({}, 기본, { id: 'v' + 도장 + '_' + sid, studentId: sid }))
+    : [Object.assign({}, 기본, { id: 'v' + 도장 })];
+  const 된것 = [];
+  let 흠 = 0;
+  for(const v of 만들것){
+    const ok = await dbSetDoc('videos', v.id, v);
+    if(ok !== true){ 흠++; continue; }
+    된것.push(v);
+  }
+  DATA.videos.unshift(...된것);
+  const 반이름 = (DATA.classes.find(c => c.id === cid) || {}).name || '그 반';
+  if(!된것.length){ showToast('보내지 못했습니다 — 저장이 막혀 있습니다.'); render(); return; }
+  state.videoCopy = null;
+  showToast(`${반이름}${받는이들.length ? ' ' + 된것.length + '명' : ' 전체'}에게 「${sel.title}」을 보냈습니다.${흠 ? ` (${흠}명은 실패 — 다시 보내 주세요)` : ''}`);
+  render();
+}
 
 function chubVideoHTML(classId){
   loadAllRecordsIfNeeded();
@@ -28904,6 +29010,7 @@ function chubVideoHTML(classId){
       <select id="video-class" style="display:none;">${DATA.classes.map(c=>
         `<option value="${c.id}" ${classId===c.id?'selected':''}>${escHtml(c.name)}</option>`).join('')}</select>
     </div>
+    <div id="vd-links">
     <div class="cls-form"><label style="flex:1;"><span>유튜브 링크</span>
       <input id="video-url" placeholder="https://youtu.be/..."></label></div>
     ${/* 🔵 **구간 (2026-09-16 · 사용자 요청)** — 「특정 시간부터 특정 시간까지만 봐라」를 담는 칸이다.
@@ -28920,6 +29027,8 @@ function chubVideoHTML(classId){
       <label style="min-width:130px;"><span>구간 끝 (비우면 끝까지)</span>
         <input id="video-to" class="mono" placeholder="18:00"></label>
     </div>
+    </div>
+    <button type="button" class="btn q sm" style="margin-top:9px;" onclick="videoLinkAdd()">${iconSvg('plus',13)} 링크 더 추가</button>
     ${/* 🔵 **복습용 — 시청률에서 뺀다** (2026-09-20 · 사용자 요청). 까닭은 `videoCounted` 주석에. */''}
     <label style="display:flex;align-items:center;gap:6px;margin-top:11px;font-size:12px;">
       <input type="checkbox" id="video-notrack">
@@ -29120,6 +29229,7 @@ function videoDrawerHTML(){
       <div class="hwd-b">
         ${videoHeroHTML(sel, sel.studentId ? 이름들(받은묶음) : '', 묶음ids, vidNoticeBtnHTML(sel, 알림대상))}
         ${vidNoticeBarHTML(sel, 알림대상)}
+        ${videoCopyPanelHTML(sel, classId)}
         ${kpis}
         ${sel.studentId ? one : drop + students}
       </div>

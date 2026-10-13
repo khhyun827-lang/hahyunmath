@@ -58,7 +58,7 @@ console.log('\n학생이 제 것만 읽는가\n');
      옮겨 적지 않고 그것도 같이 떠 온다. */
   const fn = new Function('DATA', 'state', 'dbReadClear', 'dbGetDoc', 'dbGetCollection',
     'loadCollectionCached', 'dbGetCollectionByUid', 'dbGet', 'currentSeason', 'splitQnaFollowups', 'examKeysNormalize',
-    떠내기('gradeLabel', 'function ') + 떠내기('normStudentGrades', 'function ')
+    떠내기('gradeLabel', 'function ') + 떠내기('normStudentGrades', 'function ') + 떠내기('videosNewestFirst', 'function ')
     + 떠내기('loadStudentData') + '; return loadStudentData;')(
     DATA, state,
     () => { w.지웠나 = true; },

@@ -2840,6 +2840,13 @@ state.view='assistant'; loadAllRecordsIfNeeded();
 
 ### ▶ 다음 차례
 
+> ### 🟢 **2026-10-13 (3) — 영상: 링크 여럿 한 번에 · 다른 반에도 보내기 · 최근 것이 위 (🔴 사용자 눈 확인 아직)** (사용자 — 「한번에 링크 더 추가 (링크마다 시간설정도)」 · 「특정반에 올려놓은 영상을 다른반에도 학생선택에서」 · 「최근 것이 위에」)
+> ① 등록 폼 «＋ 링크 더 추가»(`videoLinkAdd` — render 없이 `.vd-more` 줄만 붙인다 · render 하면 적던 제목이 지워져서). 줄마다 링크·제목(비우면 «위 제목 (n)»)·구간. 받는 사람·마감·복습용은 같이.
+>   `addVideo` 가 줄 × 받는 사람만큼 문서를 만든다 · 하나라도 틀리면 아무것도 안 보내고 «링크 n — …» · id 시각은 첫 링크가 가장 늦게(최신 순에서 적은 차례 그대로).
+> ② 영상 상세(드로어) «다른 반에도 보내기»(`videoCopyPanelHTML`·`videoCopyTo` · `state.videoCopy`) — 반 고르기 → 그 반 학생 상자(안 고르면 반 전체) · 마감(기본 = 원본) → 새 문서(링크·제목·단원·구간·복습용 그대로 · 시청 기록은 새로).
+> ③ `videosNewestFirst` — 학생·강사 불러오기 두 곳에서 DATA.videos 를 id 시각 내림차순으로(시각 없는 옛것은 맨 아래). 반 › 영상·학생 강의 목록 모두 이것을 탄다.
+> 검사 multi-send-test +11 · 드로어를 뜨는 검사 넷·student-scope-test 상자에 이름. check-all 126 초록(rules-check 는 한 번 익명 가입 제한 — 따로 돌려 초록).
+
 > ### 🟢 **2026-10-13 (2) — 학교 › «시험 분석» 서브탭 (🔴 사용자 눈 확인 아직)** (사용자 — 「분석지를 pdf로 첨부하는 게 아니라 아예 탭을 하나 만들어서 직접적으로 거기서 볼 수 있으면」)
 > 탭 id `examanalysis`(TEACHER_SUBNAV·TEACHER_TAB_SECTION·teacherTabBodyHTML 셋 다) · `teacherSchoolHTML('ana')` → `teacherExamAnalysisHTML`.
 > «보는 곳»만 — 올리기는 그대로 시험 일정 표 칸. 왼쪽 = 시험(새 것 위)별 학교·학년 묶음(`examAnalysisGroups` · 분석·원본만, 프린트 빼고) · 오른쪽 = 분석자료/시험지 원본 알약 + **드라이브 미리보기 iframe**(`/file/d/ID/preview` · 실제 광남고 PDF 로 864 에서 15쪽 넘기기까지 떴다) + 새 창으로·내려받기. 고른 것 `state.anaPick`(fileId).
