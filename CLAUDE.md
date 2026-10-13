@@ -2840,6 +2840,36 @@ state.view='assistant'; loadAllRecordsIfNeeded();
 
 ### ▶ 다음 차례
 
+> ### ▶▶ **내일(10-15) 여기서 시작 — 한글로 복사 2단계: AI 변형 문항** (사용자 — 「엔딩크레딧에 ai가 변형한 문제는 안되는거야?」 · 「내일 여기서부터 이어서 할게」)
+> **지금 자리** — 1단계 끝·배포됨(`a714199`) · 사용자가 실제로 붙여 보고 「잘 붙어」(10-14). 교재 문항 1,172(주기나 1-1중간 608 + 엔크 1-2중간 564)만 된다.
+> AI 변형은 한글 원본이 없다 → **붙일 때 조각을 지어야** 한다. 사용자는 아직 «진행»을 안 했다 — 아래 계획을 보이고 시작 말을 받으면 1번부터.
+>
+> **① 변형 데이터 꼴** (`variants` 컬렉션 · 10-14 실측 576문서 · 엔크 K2 변형 573 · 그림 있는 것 35)
+>   칸: `code`(K2-01-E-0064-N02) · `originCode` · `variantKind` · `content`(글 + `$LaTeX$` · 줄은 \n) · `answer` · `solution`(«1. … 2. …» 단계 글 + $LaTeX$) · `image`{kind:'svg', svg} · `needsFigure`·`figureSpec`·`reuseFigure` · `aiReview` · `approvedAt` · 검토 대기(pending)·deleted 도 있다(강사 화면 `variantsOfCode` 는 deleted 만 뺀다).
+>   LaTeX 꼴 예: `\frac{S _{1}}{S _{2}}` · `\sqrt{…}` · `\left(…\right)` · `\text{Area}` · `\triangle` · `\times` · `S_1`(중괄호 없는 첨자) · `A(-2,~3)`.
+>
+> **② 길 — 원본 조각을 틀로 빌려 속만 갈아 끼운다** (원본 `hwpclip/{originCode}` · 데이터 사본 `~/.claude/tools/hwpclip/data/enk-1-2mid/`)
+>   엔크 원본 조각(K2-01-E-0064)의 뼈 — 10-14 실측:
+>   · `ro` = 최상위 문단 둘: [secd·cold·**표(상자, ci 1952607264 'tbl ')**] → [빈 문단]
+>   · `sl` 에 «목록 머리»(`co`=주인 개체 · `hp`=첫 문단 · 칸이면 `tc`)와 **문단 자체**가 같이 든다(문단 = `{np,id,pp,si,bf,ru:[{cp,ch:[…]}]}` · 글은 `{t}` · 개체는 `{cc,ci,co}`). 문단을 찾을 땐 `{...ro, ...sl}` 에서.
+>   · 상자 칸: ⓐ 빈 칸 ⓑ **미주 자리 칸**(`[미주][고쟁이]` — 미주 ci 1701716000 'en  ' · `cs[미주].en.so` = 미주 목록) ⓒ 그림 칸(번호 딱지 gso) ⓓ 빈 칸 ⓔ **본문 칸**(본문 문단들 + 끝에 그림 gso 1735618336)
+>   · 미주 목록 첫 문단 = `[자동번호 atno 1635020399][숨은 설명 tcmt 1952673140 → 그 목록에 «[코드]»] [정답] [수식]` · 다음 문단부터 해설(글+수식 섞임 · 그림 gso 도 낀다)
+>   · 수식 개체 = `cs[k].eq.sc`(한글 수식 스크립트 · 예 `{S _{1}} over {S _{2}}` · `rm A(-3,~1)` · `LEFT ( … RIGHT )` · `TIMES` · `THEREFORE`) · 개체의 `swi/she`(크기)는 한글이 다시 잰다(미리보기 `pi` 없어도 됨 — 10-14 실험).
+>   짓는 법: 원본 조각을 깊은 복사 → 본문 칸의 문단 사슬을 변형 `content` 로 새로 짓고(문단 하나를 본으로 모양 `pp/si/cp` 빌림 · 수식은 원본 수식 개체 하나를 본으로 `eq.sc` 만 갈고 새 열쇠) → 미주 첫 문단의 `[정답]` 뒤 수식/글을 `answer` 로 · 해설 문단들을 `solution` 줄마다로 → 숨은 설명 «[코드]»를 변형 코드로 → 그림 gso 는 변형 그림으로(없으면 뗀다).
+>   ⚠ 원본 그림 gso 를 지우면 그 `bi`·`bidt` 도 같이 떼야 한다(가리키는 열쇠가 다 있어야 — hwpclip-test 의 «열쇠 다 있다» 검사 꼴).
+>
+> **③ 할 일 차례**
+>   1. **LaTeX → 한글 수식 변환기** `latexToHwpEq()` (hwpclip.js 에) — 반대 방향은 이미 있다: `hwpx.js:153 convertHwpEq`(한글→LaTeX) → 그 표를 거꾸로 읽어 짝을 맞춘다. 
+>      `\frac{a}{b}`→`{a} over {b}` · `\sqrt{x}`→`sqrt {x}` · `\sqrt[n]{x}`→`root {n} of {x}` · `\left( \right)`→`LEFT ( RIGHT )` · `\le \ge \ne`→`LEQ GEQ !=` · `\times \div \pm \cdot`→`TIMES DIV +- cdot` · `\therefore`→`THEREFORE` · `\overline{AB}`→`bar{AB}` · `\text{…}`→`"…"` · `\triangle`→`triangle` · `\angle`→`angle` · `\infty` · 그리스 문자 · `~`·`\,`→`~`/`` ` `` · 로마체(rm)는 원본 교재처럼 대문자 점 이름에 붙일지 정할 것.
+>      검사: 573개 변형의 모든 `$…$` 를 돌려 «못 바꾼 \명령» 0 이 될 때까지 · 그리고 한글로 실제 그려 보기(`EquationCreate+CreatePageImage` — 메모리 hwp-automation-traps · 또는 조각에 넣어 pasteh.py 로 PDF).
+>   2. **조각 짓기** `hwpClipFromVariant(원본j, 변형)` (hwpclip.js) + node 검사(가짜 조각) + 실제 한글 붙이기 몇 개(그림 있는 것·선지 있는 것·해설 긴 것).
+>   3. **그림** — `image.svg` 를 브라우저 캔버스로 PNG(→ base64) · 원본 그림 gso 를 본으로 크기만 비율 맞춰. 그림 없는 변형은 원본 그림을 뗀다(`reuseFigure:true` 면 원본 그림 그대로).
+>   4. **화면** — 카드 `한글` 줄(`ist-hwp`)에 변형 단추: 지금은 `state.hwpCodes`(원본 있는 코드)만 거른다 → «원본이 hwpCodes 에 있는 변형»도 단추를 단다(검토 대기는 뺄지 사용자에게). `hwpCopyPicked` 에서 변형 코드는 원본 조각을 읽어 `hwpClipFromVariant` 로 지은 뒤 합친다(같은 원본 두 번 안 읽게).
+>   5. 선지(①~⑤)는 처음엔 본문 한 줄 글로. 원본처럼 표 줄맞춤은 뒤에.
+>
+> **④ 손에 있는 도구** — `~/.claude/tools/hwpclip/`: `merge.mjs`(hwpclip.js 로 합쳐 HTML) · `pasteh.py <html> <out.hwpx>`(클립보드에 넣고 한글 새 문서에 붙여 hwpx+PDF) · `pastecb.py`(지금 클립보드 그대로 붙이기 — 크롬에서 복사한 것 확인용) · PDF 보기는 `pymupdf`(설치됨). 한글 COM 은 영문 경로만.
+>   🔴 클립보드를 쓰는 동안(뽑기·붙이기) 다른 복사 금지. 정답 든 JSON 은 저장소에 넣지 말 것(공개).
+
 > ### 🟢 **2026-10-14 — 창고 → 한글 붙여넣기 1단계: 주기나 1-1중간 608제** (사용자 — 「내 창고에서 반대로 한글파일로 다시 복사붙여넣기」 · 「주기나부터 진행해줘」)
 > 길: 한글이 복사할 때 클립보드 HTML 주석에 싣는 `data-hwpjson` 을 문항마다 원본에서 뽑아 `hwpclip/{코드}`(값 `{at, j}`)에 둔다 → 창고 카드 «한글 원본·N01·U01…» 단추로 담고 → 위 띠 «한글로 복사» → 한글에서 Ctrl+V(«원본 형식 유지»).
 > · 뽑기(한글 COM · 저장소 밖 `~/.claude/tools/hwpclip/` 의 `capall.py`·`finalize.py` · 뽑은 608개는 그 아래 `data/jugina-1-1mid/`): 미주 앵커 → `MoveParentList` 한 번 = 문항 상자가 든 문단 → 선택·Copy. 주기나는 상자가 «기출+변형» 묶음 표 칸 안에 있다(엔크는 최상위). 608 = 장부 608 · 어긋남 0 · 수식 미리보기 그림은 뗌(한글이 다시 그린다) · 중간 46KB · 가장 큰 1120607-N01 933KB(1MB 한도 안).
