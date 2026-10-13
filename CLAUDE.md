@@ -2845,6 +2845,7 @@ state.view='assistant'; loadAllRecordsIfNeeded();
 > · 뽑기(한글 COM · 저장소 밖 `~/.claude/tools/hwpclip/` 의 `capall.py`·`finalize.py` · 뽑은 608개는 그 아래 `data/jugina-1-1mid/`): 미주 앵커 → `MoveParentList` 한 번 = 문항 상자가 든 문단 → 선택·Copy. 주기나는 상자가 «기출+변형» 묶음 표 칸 안에 있다(엔크는 최상위). 608 = 장부 608 · 어긋남 0 · 수식 미리보기 그림은 뗌(한글이 다시 그린다) · 중간 46KB · 가장 큰 1120607-N01 933KB(1MB 한도 안).
 > · 합치기 `hwpclip.js`(새 · node 검사 `hwpclip-test` 12): 문항마다 24자리 열쇠를 새로 갈고 · 첫 문단의 secd·cold 를 뗀다(안 떼면 문항마다 새 쪽) · 같은 모양(bf·tp·nu·bu·cp·pp·st)을 접는다(안 접으면 번호가 다 001). 실제 한글로 붙여 001·002·003 · 미주 1)2)3) 확인. **크롬 `clipboard.write` 로 넣은 것도 한글이 그대로 받았다**(약속(Promise) 으로 넘겨 누른 순간에 쓴다).
 > · 규칙: `match /hwpclip/{doc}` 읽기 강사·조교 · 쓰기 강사 (🔴 정답·해설 통째라 학생 금지). 화면은 `kv/hwpclip-codes`(코드 목록만)에 든 코드에만 단추를 단다.
+> · ✅ 10-14 규칙 게시(사용자) → 608/608 올림 · kv/hwpclip-codes 608 · 강사로 다시 읽힘(익명 확인은 가입 횟수 제한으로 못 함).
 > · 올리기 `node tools/hwpclip-push.mjs <폴더> --go`(강사 로그인 · 6개씩 · 끝에 kv 목록에 더함). 🔴 뽑은 JSON 폴더는 저장소에 넣지 말 것(공개).
 > ⏭ 다음: 엔크·다른 주기나 판도 같은 길(엔크는 `MoveParentList` 없이 `MoveTopLevelList` — 10-14 실험) · 2단계 AI 변형(LaTeX→한글 수식) · 판이 바뀌면 다시 뽑아 덮는다.
 
