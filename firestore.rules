@@ -188,8 +188,11 @@ service cloud.firestore {
     //   · 쓰기 — 강사만
     // 🔵 **2026-09-08에 `rank:` 예외를 걷어냈다** — 순위가 제 컬렉션으로 나갔기 때문이다.
     //   그 예외가 여기 남은 마지막 «학생 쓰기»였다. 이제 kv 는 강사만 쓴다.
+    // 🔴 **2026-10-13 — `school-files`(학교 프린트·시험지 원본·분석자료 목록)는 강사·조교만 읽는다** (보안 1단계).
+    //   화면은 원래 강사만 읽었지만, 규칙은 학생도 열어 두고 있었다 — 학생이 개발자 도구로 시험지·분석지 목록(파일 번호)을 얻을 수 있었다.
+    //   파일 자체도 이제 잠겨 있어(워커 /file 이 강사·조교에게만 내준다) 번호만으로는 못 연다. 둘 다 막아 둔다.
     match /kv/{doc} {
-      allow read: if realAccount();
+      allow read: if (realAccount() && doc != 'school-files') || isTeacher() || isStaff();
       allow write: if isTeacher();
     }
 

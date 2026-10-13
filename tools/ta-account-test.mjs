@@ -286,7 +286,8 @@ console.log(NL + '⑤ 규칙 — 조교에게 «딱 그만큼»만 열렸는가'
     /isStaff\(\)/.test(덩이('contacts')), false);
   봄('   채팅도 안 열린다', /isStaff\(\)/.test(덩이('chats')), false);
   봄('   상담도 안 열린다', /isStaff\(\)/.test(덩이('consults')), false);
-  봄('   낱건(kv) 쓰기도 안 열린다', /isStaff\(\)/.test(덩이('kv')), false);
+  /* 10-13 — kv 읽기에 isStaff 가 들어갔다(school-files 를 강사·조교만 읽게). 쓰기 줄만 본다 */
+  봄('   낱건(kv) 쓰기도 안 열린다', /allow write:[^;]*isStaff\(\)/.test(덩이('kv')), false);
   봄('🔴 권한 문서는 «강사»만 쓴다 (조교가 스스로 조교가 되면 안 된다)',
     [/allow read:  if isTeacher\(\);/.test(덩이('staff')), /allow write: if isTeacher\(\);/.test(덩이('staff'))], [true, true]);
   봄('🔴 강사를 만드는 문은 그대로 잠겨 있다 (콘솔에서만)', /allow write: if false;/.test(덩이('teachers')), true);

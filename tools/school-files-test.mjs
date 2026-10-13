@@ -36,7 +36,7 @@ console.log('학교 프린트 —' + NL);
   const state = { schoolFiles: null, schoolFilesLoading: false, schoolFileBusy: '' };
   const F = new Function('state', 'dbGet', 'dbSet', 'uploadFileToDrive', 'deleteFromDrive', 'showToast', 'render', 'todayStr', 'currentSeason', 'examSeasonOf', 'SLOT_NAME',
     'fileSizeLabel', 'MATERIAL_MAX_BYTES', 'confirm', 'jsAttr', 'escHtml', 'materialLink', 'SCHOOL_FILE_KINDS', 'SLOT_OF_NAME', 'schoolYearOf',
-    [lift('schoolFileSlotOf'), lift('schoolFileDownload'), lift('loadSchoolFilesIfNeeded'), lift('schoolFilesOf'), lift('schoolFileSeasonLabel'), lift('addSchoolFile'), lift('removeSchoolFile'), lift('schoolFilesHTML')].join(NL)
+    [lift('schoolFileSlotOf'), lift('loadSchoolFilesIfNeeded'), lift('schoolFilesOf'), lift('schoolFileSeasonLabel'), lift('addSchoolFile'), lift('removeSchoolFile'), lift('schoolFilesHTML')].join(NL)
     + NL + 'return { schoolFileSlotOf, loadSchoolFilesIfNeeded, schoolFilesOf, addSchoolFile, removeSchoolFile, schoolFilesHTML };')(
     state, async () => ({ 광남고: { '고1': [{ name: '옛것.pdf', fileId: 'F0', size: 1000, at: '2025-10-01', season: '2025 · 2학기 중간' }] } }),
     async (k, v) => { 저장.push([k, JSON.parse(JSON.stringify(v))]); return true; },
@@ -53,7 +53,7 @@ console.log('학교 프린트 —' + NL);
   봄('   시즌은 올린 날의 것 — 「연도 · 시즌」', 문서.광남고.고1[1].season, '2026 · 2학기 중간');
   봄('   올렸다고 말한다', 말, ['「중간 프린트.pdf」을 올렸습니다.']);
   const 그림 = F.schoolFilesHTML('광남고', '고1');
-  봄('   판에 두 파일이 서고 누르면 드라이브에서 «내려받는다»(09-24) · 올리는 단추는 PDF·사진만', [(그림.match(/drive\.google\.com\/uc\?export=download&id=F[01]"/g) || []).length, /accept="application\/pdf,image\/\*"/.test(그림)], [2, true]);
+  봄('   판에 두 파일이 서고 누르면 «화면 안에서» 연다(10-13 · 잠근 파일 — 드라이브 주소 없음) · 올리는 단추는 PDF·사진만', [(그림.match(/docvOpenSchool\('F[01]'\)/g) || []).length - (/drive\.google/.test(그림) ? 9 : 0), /accept="application\/pdf,image\/\*"/.test(그림)], [2, true]);
   await F.removeSchoolFile('광남고', '고1', 0);
   봄('② 지우면 목록에서 빠지고 드라이브도 지운다', [F.schoolFilesOf('광남고', '고1').map(f => f.name), 지움], [['중간 프린트.pdf'], ['F0']]);
   await F.addSchoolFile('광남고', '고1', { files: [{ name: '큰것.pdf', type: 'application/pdf', size: 20 * 1024 * 1024 }], value: '' });
@@ -92,7 +92,7 @@ console.log('학교 프린트 —' + NL);
     대원고: { 고1: [{ name: '대원분석.pdf', fileId: 'D1', season: '2026 · 2학기 중간', kind: 'analysis' }] } } };
   const EXAM_SLOTS = [['1-mid'], ['1-fin'], ['2-mid'], ['2-fin']];
   const F = new Function('state', 'EXAM_SLOTS', 'SLOT_NAME', 'SLOT_OF_NAME', 'schoolYearOf', 'examSeasonOf', 'todayStr', 'escHtml', 'jsAttr', 'schoolShort', 'gradeLabel', 'loadSchoolFilesIfNeeded', 'render',
-    [lift('schoolFileSlotOf'), lift('schoolFileDownload'), lift('examAnalysisGroups'), lift('examAnalysisPick'), lift('teacherExamAnalysisHTML')].join(NL)
+    [lift('schoolFileSlotOf'), lift('examAnalysisGroups'), lift('examAnalysisPick'), lift('teacherExamAnalysisHTML')].join(NL)
     + NL + 'return { examAnalysisGroups, examAnalysisPick, teacherExamAnalysisHTML };')(
     state, EXAM_SLOTS, { '1-fin': '1학기 기말', '2-mid': '2학기 중간' }, { '1학기 기말': '1-fin', '2학기 중간': '2-mid' }, d => String(d).slice(0, 4),
     () => ({ next: {} }), () => '2026-10-13', s => s, s => s, s => s.replace('고', ''), g => g, () => {}, () => {});
@@ -100,14 +100,14 @@ console.log('학교 프린트 —' + NL);
   봄('① 새 시험이 위 · 프린트는 안 든다 · 분석과 원본이 한 묶음', gs.map(g => [g.칸, g.school, g.analysis.length, g.paper.length]),
     [['2026|2-mid', '광남고', 1, 1], ['2026|2-mid', '대원고', 1, 0], ['2026|1-fin', '광남고', 1, 0]]);
   const 그림 = () => F.teacherExamAnalysisHTML();
-  봄('② 처음엔 맨 위 묶음의 분석지를 화면 안에(드라이브 미리보기)', /src="https:\/\/drive\.google\.com\/file\/d\/A1\/preview"/.test(그림()), true);
+  봄('② 처음엔 맨 위 묶음의 분석지를 화면 안에(드라이브 미리보기)', /data-file="A1"/.test(그림()), true);
   F.examAnalysisPick('G1');
-  봄('   원본을 고르면 원본이 · 묶음은 그대로', [/file\/d\/G1\/preview/.test(그림()), /class="ea-it on"[^>]*>\s*<b>광남/.test(그림())], [true, true]);
+  봄('   원본을 고르면 원본이 · 묶음은 그대로', [/data-file="G1"/.test(그림()), /class="ea-it on"[^>]*>\s*<b>광남/.test(그림())], [true, true]);
   F.examAnalysisPick('A0');
-  봄('   지난 시험 묶음으로 옮겨 간다', [/file\/d\/A0\/preview/.test(그림()), /2026 1학기 기말<\/b>/.test(그림())], [true, true]);
+  봄('   지난 시험 묶음으로 옮겨 간다', [/data-file="A0"/.test(그림()), /2026 1학기 기말<\/b>/.test(그림())], [true, true]);
   state.schoolFiles = {};
   봄('③ 없으면 어디서 올리는지 말한다', /시험 일정[\s\S]*분석자료/.test(그림()), true);
-  봄('④ 표의 «분석자료» 칸 고리는 내려받기 대신 이 탭으로', /k === 'analysis' \? `; event\.preventDefault\(\); state\.anaPick=[\s\S]{0,60}goTeacherTab\('examanalysis'\)/.test(lift('examRangeTableHTML')), true);
+  봄('④ 표의 «분석자료» 칸 고리는 내려받기 대신 이 탭으로', /event\.preventDefault\(\); \$\{k === 'analysis' \? `state\.anaPick=[\s\S]{0,60}goTeacherTab\('examanalysis'\)/.test(lift('examRangeTableHTML')), true);
 }
 
 console.log(틀림 ? NL + '  🔴 ' + 통과 + ' 통과 · ' + 틀림 + ' 실패' + NL : NL + '  ✅ ' + 통과 + ' 통과 · 0 실패' + NL);

@@ -88,7 +88,8 @@ try{
   봄('시험지 칸 → 프린트는 안 보이고 바로 파일 고르기', [!!고르기2, await 창(), await page.evaluate(() => document.querySelectorAll('.xp .pill').length)], [true, ['시험지 원본'], 0]);
   봄('   올리기는 그 시험·종류를 들고 간다 · 한글도 받는다', await page.$eval('.xp input[type=file]', i => [/'paper','20[0-9]{2} · 2학기 중간'\)$/.test(i.getAttribute('onchange')), i.multiple, /\.hwp/.test(i.accept)]), [true, true, true]);
   await page.evaluate(() => closeExamPop());
-  봄('파일 이름을 누르면 창 대신 내려받기(고리)', await page.$eval(`${줄(1)} .xr-print`, a => [a.target, /onclick="event\.stopPropagation\(\)"/.test(a.outerHTML)]), ['_blank', true]);
+  /* 2026-10-13 — 파일이 잠겨 드라이브 내려받기 주소는 안 열린다 → 화면 안 보기(docvOpenSchool). 칸 창은 안 열린다 */
+  봄('파일 이름을 누르면 칸 창 대신 화면 안 보기', await page.$eval(`${줄(1)} .xr-print`, a => [/event\.stopPropagation\(\)/.test(a.getAttribute('onclick')), /docvOpenSchool\('/.test(a.getAttribute('onclick')), /drive\.google/.test(a.outerHTML)]), [true, true, false]);
 
   /* 2026-10-03 — 칸 창은 «그 해 · 그 시험»을 들고 뜬다. 저장이 그 시험 칸으로 간다(지금 시험 = 펼쳐진 칸) */
   const 지금 = await page.evaluate(() => examSeasonOf('경기여자고등학교', '1').next);

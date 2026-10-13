@@ -542,6 +542,22 @@
 .app .xr-print span{min-width:0;overflow:hidden;text-overflow:ellipsis;}
 .app .xr-print:hover{text-decoration:underline;}
 .app .xr-more{margin-left:5px;font-size:11px;color:var(--dim);vertical-align:middle;}
+/* 화면 안 파일 보기 (2026-10-13 · docvBuild) — 모달은 #app 밖(body)이라 .app 를 안 붙인다 */
+.docv-wrap{position:fixed;inset:0;z-index:1000;background:rgba(18,20,28,.74);display:flex;justify-content:center;padding:22px;box-sizing:border-box;}
+.docv{display:flex;flex-direction:column;background:#eceef3;border-radius:14px;overflow:hidden;min-height:0;width:100%;height:100%;box-sizing:border-box;}
+.docv-wrap .docv{max-width:980px;}
+.docv-h{display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fff;border-bottom:1px solid #e2e4ea;font-size:13px;color:#22252e;}
+.docv-h b{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.docv-n{color:#8a8f9c;font-size:12px;white-space:nowrap;}
+.docv-sp{flex:1;}
+.docv-h button{flex:none;border:1px solid #dde0e7;background:#fff;border-radius:8px;padding:5px 11px;font:inherit;font-size:12.5px;cursor:pointer;color:#2a2f3a;}
+.docv-h button:hover{background:#f3f4f7;}
+.docv-b{flex:1;min-height:0;overflow:auto;padding:12px 8px;display:flex;flex-direction:column;align-items:center;gap:10px;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;}
+.docv-b canvas{flex:none;display:block;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.14);}
+.docv-msg{color:#6b7080;font-size:13px;line-height:1.7;padding:48px 16px;text-align:center;}
+.app .docv-slot.ea-frame{display:flex;padding:0;background:none;}
+.app .docv-slot .docv{border-radius:0;}
+@media (max-width:760px){ .docv-wrap{padding:0;} .docv-wrap .docv{border-radius:0;} .docv-h{padding:8px 10px;} }
 /* 영상 등록 «＋ 링크 더 추가» 줄 · 상세의 «다른 반에도 보내기» 판 (2026-10-13) */
 .app .vd-more{margin-top:10px;padding-top:10px;border-top:1px dashed var(--line);align-items:flex-end;}
 .app .vd-more-x{align-self:flex-end;margin-bottom:2px;}
@@ -8845,9 +8861,14 @@ async function removeSchoolFile(school, grade, i){
   deleteFromDrive(f.fileId);
   render();
 }
-/* 누르면 «내려받는다» (2026-09-24 · 사용자 — 「누르면 다운로드받을수있도록」). 강의자료(materialLink)는 미리보기로 여는데
-   학교 프린트는 받아서 인쇄하는 것이라 드라이브의 내려받기 주소로 간다. */
-function schoolFileDownload(f){ return 'https://drive.google.com/uc?export=download&id=' + encodeURIComponent(f.fileId); }
+/* 누르면 화면 안에서 연다 (2026-10-13 · 보안 2단계) — 예전엔 드라이브 내려받기 주소였다(09-24). 파일이 잠겨 그 주소는 안 열린다.
+   내려받기는 보기 창의 «내려받기»(강사·조교만). */
+function docvOpenSchool(fileId){
+  let 찾음 = null;
+  Object.values(state.schoolFiles || {}).forEach(byG => Object.values(byG || {}).forEach(list =>
+    (Array.isArray(list) ? list : []).forEach(f => { if(f.fileId === fileId) 찾음 = f; })));
+  if(찾음) docvOpen(찾음, { scope: 'school', download: true });
+}
 /* kind 가 프린트면 예전처럼 그 학교·학년 것 «전부»(시즌을 넘겨 찾아보려고), 시험지·분석은 그 시험(season) 것만.
    ⚠ 지우기는 «전체 목록의 자리»(i)로 한다 — 걸러 낸 목록의 자리를 넘기면 다른 파일이 지워진다. */
 function schoolFilesHTML(school, grade, kind, season){
@@ -8862,7 +8883,7 @@ function schoolFilesHTML(school, grade, kind, season){
       <span style="color:var(--dim);font-weight:400;">— ${kind === 'print' ? 'PDF·사진 · 시즌을 넘겨도 남습니다' : 'PDF·사진·한글 · 여러 장을 한 번에 고를 수 있습니다'}${state.schoolFilesLoading ? ' · 불러오는 중…' : ''}</span></div>
     <div class="row" style="gap:6px;flex-wrap:wrap;margin-top:6px;align-items:center;">
       ${files.map(({ f, i }) => `<span class="pill" style="gap:6px;max-width:100%;box-sizing:border-box;" onclick="event.stopPropagation()">
-        <a href="${schoolFileDownload(f)}" target="_blank" rel="noopener" style="color:inherit;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escHtml(f.name)} — 누르면 내려받습니다">${escHtml(f.name)}</a>
+        <a href="#" onclick="event.preventDefault(); docvOpenSchool('${jsAttr(f.fileId)}')" style="color:inherit;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escHtml(f.name)} — 누르면 화면에서 엽니다">${escHtml(f.name)}</a>
         <s style="text-decoration:none;color:var(--dim);flex:none;">${escHtml(f.season || (f.at || '').slice(0, 4))} · ${fileSizeLabel(f.size)}</s>
         <button type="button" class="btn q sm" style="padding:0 5px;min-height:0;line-height:1.6;" title="지우기"
           onclick="removeSchoolFile('${sc}','${gr}',${i})">✕</button></span>`).join('')}
@@ -8912,18 +8933,16 @@ function teacherExamAnalysisHTML(){
   const 칩 = (f, 이름) => `<button class="pill${f === 고른 ? ' on' : ''}" onclick="examAnalysisPick('${jsAttr(f.fileId)}')" title="${escHtml(f.name)}">${이름}</button>`;
   const 칩들 = g.analysis.map((f, i) => 칩(f, '분석자료' + (g.analysis.length > 1 ? ' ' + (i + 1) : '')))
     .concat(g.paper.map((f, i) => 칩(f, '시험지 원본' + (g.paper.length > 1 ? ' ' + (i + 1) : '')))).join('');
-  const id = encodeURIComponent(고른.fileId);
+  /* 보기 창은 render() 밖에서 산다 — 여기는 «자리»만. render 끝의 docvSyncInline 이 붙인다(캔버스를 다시 안 그리게) */
+  state.docvInlineReq = { f: 고른, opt: { scope: 'school', download: true } };
   return `<div class="ea">
     <nav class="ea-list" aria-label="분석자료 목록">${목록}</nav>
     <section class="ea-view">
       <div class="ea-vh">
         <b>${escHtml(g.school)} ${escHtml(gradeLabel(g.grade) || g.grade)} · ${escHtml(시험이름(g.칸))}</b>
         <div class="ea-chips">${칩들}</div>
-        <span class="spacer"></span>
-        <a class="btn q sm" href="https://drive.google.com/file/d/${id}/view" target="_blank" rel="noopener">새 창으로</a>
-        <a class="btn q sm" href="${schoolFileDownload(고른)}" target="_blank" rel="noopener">내려받기</a>
       </div>
-      <iframe class="ea-frame" src="https://drive.google.com/file/d/${id}/preview" title="${escHtml(고른.name)}" allow="autoplay"></iframe>
+      <div class="docv-slot ea-frame" data-file="${escHtml(고른.fileId)}"></div>
     </section>
   </div>`;
 }
@@ -13896,6 +13915,9 @@ const MATERIAL_MAX_BYTES = 15 * 1024 * 1024;   // 워커가 본문을 메모리�
 async function uploadFileToDrive(file){
   const fd = new FormData();
   fd.append('file', file, file.name);
+  /* 🔴 **잠가서 올린다** (2026-10-13 · 보안 2단계) — 이 문을 쓰는 것은 강의자료·학교 파일(프린트·시험지·분석)뿐이다.
+     드라이브에 «링크 있는 누구나»가 안 붙어 링크가 새도 안 열린다. 보는 길은 워커 /file(자격을 본다) — docvOpen. */
+  fd.append('private', '1');
   const token = await withTimeout(getAuthToken(), 8000);
   /* FormData다 — Content-Type을 직접 넣으면 안 된다. 브라우저가 boundary까지 붙여야 한다. */
   const res = await withTimeout(fetch(AI_WORKER_URL + '/upload', {
@@ -13906,9 +13928,206 @@ async function uploadFileToDrive(file){
   if(!res.ok) throw new Error('upload http ' + res.status);
   return res.json(); // {url, fileId}
 }
-function materialLink(m){
-  return (m.mime||'').indexOf('image/')===0 && m.url ? m.url
-       : `https://drive.google.com/file/d/${m.fileId}/view`;
+/* =================== 화면 안 파일 보기 (2026-10-13 · 보안 2·3단계 · 사용자 — 「시험분석탭뿐만이 아니라 학생들이 보는 자료탭도
+   브라우저 안의 PDF 보기로 · 다운받아서 보는 구조 말고」 · 「이름 워터마크랑 김하현수학연구소 로고 워터마크」) ===================
+   파일은 드라이브에 «잠겨» 있고(uploadFileToDrive · private) 워커 /file 이 자격을 보고 내준다. 받은 바이트를 PDF.js 로 캔버스에 그린다.
+   🔵 **워터마크는 캔버스에 «구워서» 찍는다** — 화면을 캡처해도 학생 이름과 로고가 남는다. 강사·조교 화면에는 안 찍는다.
+   ⚠ ponytail: 워터마크는 «보이는 그림»에만 있다 — 개발자 도구로 원본 바이트를 받아 가면 워터마크가 없다. 파일 자체에 찍으려면
+     서버가 PDF 를 고쳐야 하는데 무료 워커는 CPU 10ms 라 못 한다(유료 워커나 업로드 때 미리 찍기가 다음 길).
+   ⚠ 보기 창(.docv)은 **render() 밖**에서 산다 — 창(모달)은 body 에, 시험 분석 탭의 칸은 render 뒤 docvSyncInline 이 자리(.docv-slot)에 다시 붙인다.
+     innerHTML 안에 두면 render 마다 캔버스가 지워지고 PDF 를 처음부터 다시 그린다. */
+const PDFJS_URL = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/legacy/build/pdf.min.js';      // legacy = 옛 아이폰도 돈다
+const PDFJS_WORKER_URL = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/legacy/build/pdf.worker.min.js';
+let pdfjsWait = null;
+function loadPdfJs(){
+  if(window.pdfjsLib) return Promise.resolve(window.pdfjsLib);
+  if(!pdfjsWait) pdfjsWait = new Promise((ok, no) => {
+    const sc = document.createElement('script');
+    sc.src = PDFJS_URL;
+    sc.onload = () => { try{ window.pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS_WORKER_URL; ok(window.pdfjsLib); }catch(e){ no(e); } };
+    sc.onerror = () => { pdfjsWait = null; no(new Error('PDF 보기 도구를 못 불러왔습니다 — 인터넷을 확인해 주세요')); };
+    document.head.appendChild(sc);
+  });
+  return pdfjsWait;
+}
+/* 받은 파일은 이 탭이 열려 있는 동안만 메모리에 둔다 — 다시 열 때 워커를 또 안 부른다 */
+const fileBlobCache = {};
+function fetchLockedFile(fileId, scope, classId){
+  if(!fileBlobCache[fileId]) fileBlobCache[fileId] = (async () => {
+    const token = await withTimeout(getAuthToken(), 8000);
+    const res = await withTimeout(fetch(AI_WORKER_URL + '/file', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({ fileId, scope, classId: classId || '' })
+    }), DRIVE_UPLOAD_TIMEOUT_MS);
+    if(!res.ok) throw new Error(res.status === 403 ? '볼 수 있는 자료가 아닙니다.' : '파일을 받지 못했습니다 (' + res.status + ')');
+    return res.blob();
+  })().catch(e => { delete fileBlobCache[fileId]; throw e; });
+  return fileBlobCache[fileId];
+}
+let wmLogo = null;
+function docvLogoReady(){
+  if(!wmLogo){ wmLogo = new Image(); wmLogo.src = LOGO_H1; }
+  return wmLogo.complete ? Promise.resolve() : new Promise(ok => { wmLogo.onload = wmLogo.onerror = () => ok(); });
+}
+/* 워터마크 — 가운데 로고(옅게) + 「이름 · 김하현수학연구소」를 비스듬히 바둑판으로. 캔버스 픽셀 크기 기준 */
+function docvWatermark(ctx, w, h, name){
+  ctx.save();
+  if(wmLogo && wmLogo.naturalWidth){
+    const lw = w * 0.62, lh = lw * wmLogo.naturalHeight / wmLogo.naturalWidth;
+    ctx.globalAlpha = 0.08;
+    ctx.drawImage(wmLogo, (w - lw) / 2, (h - lh) / 2, lw, lh);
+  }
+  const fs = Math.max(12, Math.round(w * 0.024));
+  ctx.globalAlpha = 0.13;
+  ctx.fillStyle = '#3d4150';
+  ctx.font = '600 ' + fs + 'px "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif';
+  ctx.translate(w / 2, h / 2);
+  ctx.rotate(-Math.PI / 7);
+  const 글 = name + '  ·  김하현수학연구소';
+  const 칸 = ctx.measureText(글).width + fs * 4, R = Math.hypot(w, h) / 2;
+  for(let y = -R, 줄 = 0; y < R; y += fs * 7, 줄++)
+    for(let x = -R - (줄 % 2) * 칸 / 2; x < R; x += 칸) ctx.fillText(글, x, y);
+  ctx.restore();
+}
+/* 보기 하나 — { el, f, opt, zoom, pdf, cvs } · opt: { scope, classId, wm(학생 이름 · 있으면 워터마크), download(강사), modal } */
+function docvBuild(f, opt){
+  const el = document.createElement('div');
+  el.className = 'docv';
+  el.innerHTML = '<div class="docv-h"><b></b><span class="docv-n"></span><span class="docv-sp"></span>'
+    + '<button type="button" data-z="-1" aria-label="작게">−</button><button type="button" data-z="1" aria-label="크게">＋</button>'
+    + (opt.download ? '<button type="button" class="docv-dl">내려받기</button>' : '')
+    + (opt.modal ? '<button type="button" class="docv-x" aria-label="닫기">✕</button>' : '')
+    + '</div><div class="docv-b"><div class="docv-msg">불러오는 중…</div></div>';
+  el.querySelector('.docv-h b').textContent = f.title || f.name || '자료';
+  const v = { el, f, opt, zoom: 1, pdf: null, cvs: [], io: null, gone: false };
+  el.querySelectorAll('[data-z]').forEach(b => b.onclick = () => {
+    v.zoom = Math.max(0.6, Math.min(2.4, v.zoom + Number(b.dataset.z) * 0.2));
+    v.cvs.forEach(cv => { cv.dataset.done = ''; });
+    docvLayout(v);
+  });
+  if(opt.download) el.querySelector('.docv-dl').onclick = () => docvDownload(v);
+  if(opt.modal) el.querySelector('.docv-x').onclick = docvClose;
+  if(opt.wm) el.addEventListener('contextmenu', e => e.preventDefault());   // 그림 저장 메뉴를 안 띄운다(작은 문턱)
+  docvLoad(v);
+  return v;
+}
+function docvMsg(v, 글){ v.el.querySelector('.docv-b').innerHTML = '<div class="docv-msg"></div>'; v.el.querySelector('.docv-msg').textContent = 글; }
+async function docvLoad(v){
+  try{
+    const [blob] = await Promise.all([fetchLockedFile(v.f.fileId, v.opt.scope, v.opt.classId), docvLogoReady()]);
+    if(v.gone) return;
+    const 종류 = (blob.type || v.f.mime || '').toLowerCase(), 이름 = (v.f.name || '').toLowerCase();
+    if(종류.indexOf('pdf') >= 0 || /\.pdf$/.test(이름)){
+      const lib = await loadPdfJs();
+      v.pdf = await lib.getDocument({ data: new Uint8Array(await blob.arrayBuffer()) }).promise;
+      if(v.gone){ v.pdf.destroy(); return; }
+      v.pages = [];
+      for(let i = 1; i <= v.pdf.numPages; i++) v.pages.push(await v.pdf.getPage(i));
+    } else if(종류.indexOf('image/') === 0 || /\.(png|jpe?g|gif|webp)$/.test(이름)){
+      const img = new Image();
+      img.src = URL.createObjectURL(blob);
+      await new Promise((ok, no) => { img.onload = ok; img.onerror = () => no(new Error('그림을 못 읽었습니다')); });
+      v.img = img;
+      v.pages = [null];
+    } else {
+      docvMsg(v, v.opt.download ? '이 파일은 화면에서 볼 수 없습니다 — «내려받기»로 여세요.' : '이 파일은 화면에서 볼 수 없습니다 — 선생님께 PDF 로 받아 주세요.');
+      return;
+    }
+    v.el.querySelector('.docv-n').textContent = v.pages.length > 1 ? v.pages.length + '쪽' : '';
+    const b = v.el.querySelector('.docv-b');
+    b.innerHTML = '';
+    v.cvs = v.pages.map(() => { const cv = document.createElement('canvas'); b.appendChild(cv); return cv; });
+    v.io = 'IntersectionObserver' in window
+      ? new IntersectionObserver(es => es.forEach(e => { if(e.isIntersecting) docvPaint(v, v.cvs.indexOf(e.target)); }), { root: b, rootMargin: '800px 0px' })
+      : null;
+    docvLayout(v);
+  }catch(e){ if(!v.gone) docvMsg(v, e.message || String(e)); }
+}
+/* 쪽마다 자리(크기)를 잡고, 보이는 쪽만 그린다. 폭 = 창 폭(최대 900) × 확대 */
+function docvLayout(v){
+  const b = v.el.querySelector('.docv-b');
+  const 폭 = Math.max(240, Math.min(900, (b.clientWidth || 600) - 16)) * v.zoom;
+  v.cvs.forEach((cv, i) => {
+    const vp = v.pages[i] ? v.pages[i].getViewport({ scale: 1 }) : { width: v.img.naturalWidth, height: v.img.naturalHeight };
+    cv.style.width = Math.round(폭) + 'px';
+    cv.style.height = Math.round(폭 * vp.height / vp.width) + 'px';
+    if(v.io){ v.io.unobserve(cv); v.io.observe(cv); } else docvPaint(v, i);
+  });
+}
+async function docvPaint(v, i){
+  const cv = v.cvs[i];
+  if(!cv || cv.dataset.done || v.gone) return;
+  cv.dataset.done = '1';
+  const css = parseFloat(cv.style.width), dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const ctx = cv.getContext('2d');
+  try{
+    if(v.pages[i]){
+      const vp = v.pages[i].getViewport({ scale: css * dpr / v.pages[i].getViewport({ scale: 1 }).width });
+      cv.width = Math.round(vp.width); cv.height = Math.round(vp.height);
+      await v.pages[i].render({ canvasContext: ctx, viewport: vp }).promise;
+    } else {
+      cv.width = Math.round(css * dpr); cv.height = Math.round(cv.width * v.img.naturalHeight / v.img.naturalWidth);
+      ctx.drawImage(v.img, 0, 0, cv.width, cv.height);
+    }
+    if(v.opt.wm) docvWatermark(ctx, cv.width, cv.height, v.opt.wm);
+  }catch(e){ cv.dataset.done = ''; }
+}
+function docvStop(v){
+  if(!v) return;
+  v.gone = true;
+  if(v.io) v.io.disconnect();
+  if(v.pdf) try{ v.pdf.destroy(); }catch(e){}
+  if(v.img) URL.revokeObjectURL(v.img.src);
+}
+async function docvDownload(v){
+  try{
+    const blob = await fetchLockedFile(v.f.fileId, v.opt.scope, v.opt.classId);
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = v.f.name || 'file';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+  }catch(e){ showToast('내려받지 못했습니다 — ' + (e.message || e)); }
+}
+/* 창(모달) — body 에 붙는다. 바깥·✕·Esc 로 닫는다 */
+let docvModal = null;
+function docvOpen(f, opt){
+  docvClose();
+  const wrap = document.createElement('div');
+  wrap.className = 'docv-wrap';
+  wrap.onclick = e => { if(e.target === wrap) docvClose(); };
+  const v = docvBuild(f, Object.assign({ modal: true }, opt));
+  wrap.appendChild(v.el);
+  document.body.appendChild(wrap);
+  docvModal = { wrap, v };
+}
+function docvClose(){
+  if(!docvModal) return;
+  docvModal.wrap.remove();
+  docvStop(docvModal.v);
+  docvModal = null;
+}
+document.addEventListener('keydown', ev => { if(ev.key === 'Escape' && docvModal) docvClose(); });
+/* 강의자료 열기 — 학생이면 제 이름 워터마크·내려받기 없음, 강사·조교면 워터마크 없이 내려받기 */
+function docvOpenMaterial(classId, id){
+  const m = (state.materials[classId] || []).find(x => x.id === id);
+  if(!m) return;
+  const 학생 = state.view === 'student';
+  docvOpen(m, { scope: 'material', classId, download: !학생,
+    wm: 학생 ? ((DATA.students[0] || {}).name || '학생') : '' });
+}
+/* 시험 분석 탭의 칸 — render 뒤에 «같은 파일이면 있던 창을 그대로» 다시 붙인다 */
+let docvInline = null;
+function docvSyncInline(){
+  const slot = document.querySelector('#app .docv-slot');
+  const req = state.docvInlineReq;
+  if(!slot || !req){ if(docvInline){ docvStop(docvInline); docvInline = null; } return; }
+  if(!docvInline || docvInline.f.fileId !== slot.dataset.file){
+    docvStop(docvInline);
+    docvInline = docvBuild(req.f, req.opt);
+  }
+  slot.appendChild(docvInline.el);
 }
 function fileSizeLabel(n){
   if(!n && n!==0) return '';
@@ -16158,6 +16377,7 @@ function render(){
   if(chatBox) chatBox.scrollTop = chatBox.scrollHeight;
   /* 랜딩의 등장·상단바. 시안의 <script>는 innerHTML로 들어가면 실행되지 않는다. */
   if(state.view==='home') mountLanding();
+  docvSyncInline();
   syncHistory();
 }
 
@@ -19139,9 +19359,9 @@ function stuProgressHTML(c){
 /* 이어보기를 맨 위에 둔다. 중단 지점이 기록돼 있는데 목록 맨 아래에서 찾게 하면 결국 안 본다.
    **한 번에 하나만 임베드한다.** 예전에는 목록 수만큼 iframe이 떠서, 영상이 열 개면
    화면을 열자마자 유튜브를 열 번 불렀다. 누른 것 하나만 붙인다. */
-/* 학생 쪽 자료 — 받아 가는 곳이라 목록 하나면 된다.
-   ⚠ 파일을 앱 안에서 열지 않는다. 드라이브 링크를 새 창으로 넘긴다 —
-   PDF·한글을 폰에서 여는 것은 기기가 훨씬 잘한다. */
+/* 학생 쪽 자료 — 목록 하나. 🔵 **누르면 앱 «안»에서 본다** (2026-10-13 · 사용자 — 「다운받아서 보는 구조 말고」).
+   예전엔 드라이브 링크를 새 창으로 넘겼다(링크가 그대로 새어 나갔다). 이제 파일은 잠겨 있고, 워커가 «제 반 학생»에게만 내준다.
+   화면에는 학생 이름 + 로고 워터마크가 찍힌다(docvWatermark). 내려받기 단추는 없다. */
 function stuMaterialHTML(c){
   if(!c.classId) return '<div class="sap-empty">아직 반이 정해지지 않았습니다.</div>';
   loadMaterialsIfNeeded(c.classId);
@@ -19150,8 +19370,8 @@ function stuMaterialHTML(c){
     return '<div class="sap-empty">불러오는 중…</div>';
   if(list.length===0) return '<div class="sap-empty">아직 올라온 자료가 없습니다.</div>';
   return list.map(m=>`
-    <a class="mc" href="${materialLink(m)}" target="_blank" rel="noopener"
-       style="display:block;text-decoration:none;color:inherit;">
+    <div class="mc" ${TAP} onclick="docvOpenMaterial('${jsAttr(c.classId)}','${jsAttr(m.id)}')"
+       style="display:block;cursor:pointer;color:inherit;">
       <div class="row" style="gap:7px;">
         <span class="badge">${escHtml(((m.name||'').split('.').pop()||'파일').toUpperCase().slice(0,4))}</span>
         <span class="spacer"></span>
@@ -19160,7 +19380,7 @@ function stuMaterialHTML(c){
       <div style="font-size:13.5px;font-weight:700;margin-top:8px;line-height:1.5;">${escHtml(m.title)}</div>
       <div style="font-size:11.5px;color:var(--dim);margin-top:5px;">
         ${escHtml(m.name)} · <span class="mono">${fileSizeLabel(m.size)}</span></div>
-    </a>`).join('');
+    </div>`).join('');
 }
 
 function stuVideoHTML(c){
@@ -28822,12 +29042,12 @@ function chubMaterialHTML(classId){
       <label style="flex:1;min-width:200px;"><span>제목 (선택)</span>
         <input id="mt-title" placeholder="비우면 파일 이름을 씁니다"></label>
       <label style="min-width:220px;"><span>파일</span>
-        <input type="file" id="mt-file" ${busy?'disabled':''}
+        <input type="file" id="mt-file" accept="application/pdf,image/*" ${busy?'disabled':''}
           onchange="uploadMaterial('${classId}', this.files)"></label>
       ${busy ? '<span class="muted" style="font-size:11.5px;align-self:center;">올리는 중…</span>' : ''}
     </div>
-    <p class="st-note">PDF · 한글 · 이미지 무엇이든 올릴 수 있고, <b>${fileSizeLabel(MATERIAL_MAX_BYTES)}까지</b>입니다.
-      올린 파일은 <b>학생 앱 학습 &gt; 자료</b>에 바로 뜹니다.
+    <p class="st-note"><b>PDF · 사진</b>을 올릴 수 있고, <b>${fileSizeLabel(MATERIAL_MAX_BYTES)}까지</b>입니다(한글 파일은 PDF 로 바꿔 올려 주세요).
+      올린 파일은 <b>학생 앱 학습 &gt; 자료</b>에 바로 뜨고, 학생은 <b>앱 안에서만</b> 봅니다 — 내려받기 없이, <b>학생 이름과 로고 워터마크</b>가 찍힙니다.
       <b>여러 반을 고르면 한 번 올려 그 반들에 함께 붙습니다</b> — 파일은 한 벌만 올라갑니다.</p>
   </div>`}
   ${state.materialLoading[classId] && !state.materials[classId]
@@ -28838,7 +29058,7 @@ function chubMaterialHTML(classId){
           <div class="t"><b>${escHtml(m.title)}</b>
             <span>${escHtml(m.name)}<s>·</s><span class="mono">${fileSizeLabel(m.size)}</span><s>·</s><span class="mono">${escHtml((m.at||'').slice(0,10))}</span></span></div>
           <div class="v">
-            <a class="btn sm" href="${materialLink(m)}" target="_blank" rel="noopener">열기</a>
+            <button class="btn sm" onclick="docvOpenMaterial('${classId}','${m.id}')">열기</button>
             <button class="btn q sm" onclick="deleteMaterial('${classId}','${m.id}')">삭제</button>
           </div></div>`).join('')}`;
 }
@@ -34335,8 +34555,8 @@ function examRangeTableHTML(list, year, slot){
       const fs = schoolFilesOf(school, grade).filter(p => (p.kind || 'print') === k && schoolFileSlotOf(p) === year + '|' + slot);
       const 끝 = fs[fs.length - 1];
       return `<td ${cell(k, 'sub', SCHOOL_FILE_KINDS[k] + ' 올리기')} title="${escHtml(fs.map(p => p.name).join(' · '))}">${!fs.length ? 빈(빈말)
-        : `<a class="xr-print" href="${schoolFileDownload(끝)}" target="_blank" rel="noopener"
-             onclick="event.stopPropagation()${k === 'analysis' ? `; event.preventDefault(); state.anaPick='${jsAttr(끝.fileId)}'; goTeacherTab('examanalysis')` : ''}"><span>${escHtml((String(끝.name).match(/\.([a-z0-9]{1,5})$/i) || ['', '파일'])[1].toUpperCase())}</span></a>${
+        : `<a class="xr-print" href="#"
+             onclick="event.stopPropagation(); event.preventDefault(); ${k === 'analysis' ? `state.anaPick='${jsAttr(끝.fileId)}'; goTeacherTab('examanalysis')` : `docvOpenSchool('${jsAttr(끝.fileId)}')`}"><span>${escHtml((String(끝.name).match(/\.([a-z0-9]{1,5})$/i) || ['', '파일'])[1].toUpperCase())}</span></a>${
            fs.length > 1 ? `<span class="xr-more">+${fs.length - 1}</span>` : ''}`}</td>`;
     };
     /* 켜진 단원의 «처음과 끝» — 표에는 단원 이름만, 번호 붙은 온전한 말은 title 에 */
@@ -35325,6 +35545,7 @@ function noticeImageHTML(n){
    ⚠ `state.examSubTab` 은 남는다 — 본문(열쇠·칸 창)이 아직 그것을 본다. 여기서 맞춰 준다. */
 function teacherSchoolHTML(kind){
   state.examSubTab = kind;
+  state.docvInlineReq = null;          // 시험 분석이 다시 세운다 — 다른 갈래로 가면 보기 창을 거둔다
   if(kind !== 'range') state.examPop = null;   // 칸 창은 «시험 일정» 표의 것이다
   const 머리 = { range: ['시험 일정', '학교·학년마다 시험 날짜 · 범위 · 교재 · 프린트 · 시험지 · 분석'],
     plan: ['직보 일정표', '시험기간에 누가 언제 오는지 — 찍는 즉시 그 학생 달력에 뜬다'],

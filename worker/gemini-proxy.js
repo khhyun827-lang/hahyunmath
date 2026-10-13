@@ -44,7 +44,7 @@ const TWIN_GROQ_MAX_TOKENS = 7000;   // 추론 + JSON. 검토(6000)보다 답이
 /* 🔴 «올렸는지 짐작하지 않는다» — 이 워커는 대시보드에 붙여넣어 올리므로 밖에서는 어느 판이 도는지
    알 길이 없었다(2026-09-11에 사용자가 올리고 「도는지 확인은 못 해봤어」). /quota 가 이 값을 같이
    돌려주고 tools/worker-check.mjs 가 저장소의 값과 견준다. **프롬프트나 규칙을 바꾸면 이 날짜를 올릴 것.** */
-const WORKER_VERSION = '2026-10-05d';
+const WORKER_VERSION = '2026-10-13a';
 // 이미지 업로드는 학생도 쓴다(질의응답 사진). 비용이 드는 쪽은 Gemini라 여기는 넉넉하게,
 // 다만 «한 명이 무한히»는 막는다. 전체 상한은 걸지 않는다 — 걸면 바쁜 날 학생이 막힌다.
 const UPLOAD_PER_USER_DAILY = 200;
@@ -116,6 +116,9 @@ export default {
     /* 할당량은 «비용이 드는 것»에만 건다.
        /delete는 정리 작업이라 막으면 드라이브에 쓰레기가 쌓인다 — 그대로 통과시킨다. */
     if (url.pathname === '/upload') {
+      /* 🔴 **익명은 못 올린다** (2026-10-13 · 보안 1단계) — 사이트를 «열기만» 해도 익명 토큰이 생긴다.
+         그대로 두면 누구나 드라이브에 파일을 쌓고 KV 쓰기 한도(1,000/일)를 채울 수 있었다. 올리는 사람은 늘 학생·강사 계정이다. */
+      if (who.provider === 'anonymous') return fileJson({ error: 'forbidden', detail: '로그인한 계정만 올릴 수 있습니다.' }, corsHeaders, 403);
       const q = await bumpQuota(env, 'upload', who.uid, UPLOAD_PER_USER_DAILY, null);
       if (!q.ok) return quotaExceeded(q, corsHeaders);
     } else if (url.pathname === '/review') {
@@ -129,7 +132,7 @@ export default {
       if (!통.remaining) return quotaExceeded(통, corsHeaders);      // 검토가 먹은 몫까지 센다
       const q = await bumpQuota(env, 'twin-groq', who.uid, TWIN_GROQ_DAILY_LIMIT, TWIN_GROQ_DAILY_LIMIT);
       if (!q.ok) return quotaExceeded(q, corsHeaders);
-    } else if (url.pathname !== '/delete' && !url.pathname.startsWith('/admin/') && url.pathname !== '/notify' && url.pathname !== '/report-mms'
+    } else if (url.pathname !== '/delete' && !url.pathname.startsWith('/admin/') && url.pathname !== '/file' && url.pathname !== '/notify' && url.pathname !== '/report-mms'
                && !PUSH_PATHS.includes(url.pathname)) {
       /* 🔴 **관리자 길을 여기서 빼지 않으면 «비밀번호 재설정»이 AI 한도를 먹는다.**
          아래 라우팅이 catch-all 이라, 새 길을 낼 때마다 이 줄을 같이 봐야 한다.
@@ -139,8 +142,10 @@ export default {
       if (!q.ok) return quotaExceeded(q, corsHeaders);
     }
 
-    if (url.pathname === '/upload') return handleUpload(request, env, corsHeaders);
-    if (url.pathname === '/delete') return handleDelete(request, env, corsHeaders);
+    if (url.pathname === '/upload') return handleUpload(request, env, corsHeaders, who);
+    if (url.pathname === '/delete') return handleDelete(request, env, corsHeaders, who);
+    if (url.pathname === '/file') return handleFile(request, env, corsHeaders, who);
+    if (url.pathname === '/admin/lock-files') return handleAdminLockFiles(request, env, corsHeaders, who.uid);
     if (url.pathname === '/figure') return handleFigureScene(request, env, corsHeaders, who.uid);
     if (url.pathname === '/review') return handleReview(request, env, corsHeaders, who.uid);
     if (url.pathname === '/twin-groq') {
@@ -817,7 +822,7 @@ async function getDriveAccessToken(env) {
 
 /* =================== 구글 드라이브: 업로드 / 삭제 =================== */
 
-async function handleUpload(request, env, corsHeaders) {
+async function handleUpload(request, env, corsHeaders, who) {
   let form;
   try {
     form = await request.formData();
@@ -838,7 +843,12 @@ async function handleUpload(request, env, corsHeaders) {
 
   const boundary = 'wkr_' + crypto.randomUUID();
   const name = form.get('name') || ('img_' + Date.now() + '.jpg');
-  const metadata = { name, parents: [env.DRIVE_FOLDER_ID] };
+  /* 🔵 올린 사람(uid)을 드라이브 파일 속성에 적는다 (2026-10-13) — /delete 가 «제 것인가»를 이것으로 본다.
+     KV 가 아니라 파일에 적으므로 쓰기 한도를 안 먹는다. */
+  const metadata = { name, parents: [env.DRIVE_FOLDER_ID], appProperties: { uid: (who && who.uid) || '' } };
+  /* 🔴 **잠근 파일** (2026-10-13 · 보안 2단계) — 강의자료·학교 파일(프린트·시험지·분석)은 private=1 로 온다.
+     «링크 있는 누구나» 권한을 안 붙인다 → 링크가 새도 안 열린다. 보는 길은 /file 하나(자격을 본다). */
+  const 잠금 = form.get('private') === '1';
   const body = new Blob([
     `--${boundary}\r\n`,
     'Content-Type: application/json; charset=UTF-8\r\n\r\n',
@@ -867,7 +877,7 @@ async function handleUpload(request, env, corsHeaders) {
   }
   const doc = await uploadRes.json();
 
-  try {
+  if (!잠금) try {
     await fetch(`https://www.googleapis.com/drive/v3/files/${doc.id}/permissions`, {
       method: 'POST',
       headers: { Authorization: 'Bearer ' + accessToken, 'Content-Type': 'application/json' },
@@ -881,7 +891,7 @@ async function handleUpload(request, env, corsHeaders) {
   }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 }
 
-async function handleDelete(request, env, corsHeaders) {
+async function handleDelete(request, env, corsHeaders, who) {
   let body;
   try {
     body = await request.json();
@@ -898,6 +908,18 @@ async function handleDelete(request, env, corsHeaders) {
   } catch (e) {
     return new Response(JSON.stringify({ error: 'auth failed', detail: String(e) }), { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   }
+  /* 🔴 **아무나 아무 파일을 지우던 문** (2026-10-13 · 보안 1단계) — 로그인만 했으면 남의 파일 번호로 지울 수 있었다.
+     강사·조교는 무엇이든, 그 밖(학생)은 «제가 올린 것»(appProperties.uid)만. 옛 파일(uid 없음)은 강사·조교만 지운다. */
+  if (!(who && who.uid) || who.provider === 'anonymous') return fileJson({ error: 'forbidden' }, corsHeaders, 403);
+  let 강사쪽 = false;
+  try { 강사쪽 = await isTeacherOrStaff(env, who.uid); } catch (e) { 강사쪽 = false; }
+  if (!강사쪽) {
+    const m = await fetch(`https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}?fields=appProperties`, {
+      headers: { Authorization: 'Bearer ' + accessToken } });
+    if (m.status === 404) return fileJson({ ok: true }, corsHeaders);
+    const 속성 = m.ok ? ((await m.json()).appProperties || {}) : {};
+    if (속성.uid !== who.uid) return fileJson({ error: 'forbidden', detail: '내가 올린 파일만 지울 수 있습니다.' }, corsHeaders, 403);
+  }
   const res = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}`, {
     method: 'DELETE',
     headers: { Authorization: 'Bearer ' + accessToken },
@@ -906,6 +928,67 @@ async function handleDelete(request, env, corsHeaders) {
     return new Response(JSON.stringify({ ok: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   }
   return new Response(JSON.stringify({ error: 'delete failed', detail: await res.text() }), { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+}
+
+function fileJson(obj, corsHeaders, status) {
+  return new Response(JSON.stringify(obj), { status: status || 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+}
+/* Firestore 문서 하나의 «값» — 앱은 문서를 { value: JSON 글자, … } 꼴로 쓴다(index.html docFields). 없으면 null. */
+async function fsValue(env, path) {
+  const sa = JSON.parse(env.FIREBASE_SA);
+  const tok = await getServiceAccountToken(env);
+  const r = await fetch('https://firestore.googleapis.com/v1/projects/' + sa.project_id + '/databases/(default)/documents/'
+    + path.split('/').map(encodeURIComponent).join('/'), { headers: { Authorization: 'Bearer ' + tok } });
+  if (!r.ok) return null;
+  const f = (await r.json()).fields || {};
+  try { return f.value && f.value.stringValue != null ? JSON.parse(f.value.stringValue) : null; } catch (e) { return null; }
+}
+/* =================== 잠근 파일 내주기 (2026-10-13 · 보안 2단계) ===================
+   { fileId, scope: 'school' | 'material', classId } — 드라이브의 파일을 «자격이 있을 때만» 그대로 흘려보낸다.
+   🔴 자격: 강사·조교는 무엇이든 · 학생은 scope 'material' 이고 ① 그 반 학생이며(students/{uid}.classId·classIds)
+     ② 그 반 자료 목록(kv/material:{반})에 그 파일이 있을 때만. 학교 파일(시험지·분석·프린트)은 학생에게 안 나간다.
+   ⚠ 한도를 안 먹는다(위 라우팅) — 자료를 열 때마다 AI 한도가 깎이면 안 된다. Firestore 읽기는 학생 2~3건 · 강사 1~2건. */
+async function handleFile(request, env, corsHeaders, who) {
+  if (!(who && who.uid) || who.provider === 'anonymous') return fileJson({ error: 'forbidden' }, corsHeaders, 403);
+  let body;
+  try { body = await request.json(); } catch (e) { body = {}; }
+  const fileId = String(body.fileId || ''), classId = String(body.classId || '');
+  if (!/^[A-Za-z0-9_-]{10,}$/.test(fileId)) return fileJson({ error: 'bad fileId' }, corsHeaders, 400);
+  if (!env.FIREBASE_SA) return fileJson({ error: 'not_configured' }, corsHeaders, 503);
+  if (!(await isTeacherOrStaff(env, who.uid))) {
+    if (body.scope !== 'material' || !classId) return fileJson({ error: 'forbidden' }, corsHeaders, 403);
+    const 나 = await fsValue(env, 'students/' + who.uid);
+    const 반들 = 나 ? [나.classId].concat(Array.isArray(나.classIds) ? 나.classIds : []) : [];
+    if (!반들.includes(classId)) return fileJson({ error: 'forbidden', detail: '내 반 자료가 아닙니다.' }, corsHeaders, 403);
+    const 목록 = await fsValue(env, 'kv/material:' + classId);
+    if (!Array.isArray(목록) || !목록.some(m => m && m.fileId === fileId)) return fileJson({ error: 'forbidden' }, corsHeaders, 403);
+  }
+  const tok = await getDriveAccessToken(env);
+  const r = await fetch(`https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}?alt=media`, {
+    headers: { Authorization: 'Bearer ' + tok } });
+  if (!r.ok) return fileJson({ error: 'drive', status: r.status }, corsHeaders, r.status === 404 ? 404 : 502);
+  return new Response(r.body, { headers: { ...corsHeaders,
+    'Content-Type': r.headers.get('Content-Type') || 'application/octet-stream', 'Cache-Control': 'private, no-store' } });
+}
+/* 옛 파일 잠그기 — { fileIds: [...] } 의 «링크 있는 누구나» 권한을 뗀다. 강사만.
+   ⚠ 무료 워커는 요청 하나에 바깥 부름 50번까지다 — 파일 하나에 2번(권한 목록·지우기)이라 한 번에 15개까지만 받는다. */
+async function handleAdminLockFiles(request, env, corsHeaders, uid) {
+  const g = await adminGate(request, env, corsHeaders, uid);
+  if (g.흠) return g.흠;
+  const ids = (Array.isArray(g.body.fileIds) ? g.body.fileIds : []).map(String).filter(x => /^[A-Za-z0-9_-]{10,}$/.test(x));
+  if (ids.length > 15) return fileJson({ error: 'too_many', detail: '한 번에 15개까지' }, corsHeaders, 400);
+  const tok = await getDriveAccessToken(env);
+  const H = { Authorization: 'Bearer ' + tok };
+  const 결과 = {};
+  for (const id of ids) {
+    const r = await fetch(`https://www.googleapis.com/drive/v3/files/${id}/permissions?fields=permissions(id,type)`, { headers: H });
+    if (!r.ok) { 결과[id] = 'list ' + r.status; continue; }
+    const 공개 = ((await r.json()).permissions || []).filter(p => p.type === 'anyone');
+    if (!공개.length) { 결과[id] = 'already'; continue; }
+    const d = await fetch(`https://www.googleapis.com/drive/v3/files/${id}/permissions/${공개[0].id}`, { method: 'DELETE', headers: H });
+    결과[id] = d.ok || d.status === 204 ? 'locked' : 'delete ' + d.status;
+  }
+  return fileJson({ ok: true, 결과 }, corsHeaders);
 }
 
 async function fetchDriveFileAsDataUrl(fileId, env) {
