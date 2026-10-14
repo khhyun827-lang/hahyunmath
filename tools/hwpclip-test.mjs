@@ -8,7 +8,7 @@ import { 가짜원본, 가짜변형, CI } from './hwpclip-fake.mjs';
 import { fileURLToPath } from 'url';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const H = new Function(fs.readFileSync(path.join(ROOT, 'hwpclip.js'), 'utf8')
-  + '\nreturn {hwpClipMerge, hwpClipHTML, latexToHwpEq, hwpClipFromVariant};')();
+  + '\nreturn {hwpClipMerge, hwpClipHTML, latexToHwpEq, hwpClipFromVariant, hwpPointNames};')();
 
 const K = n => n.toString(16).toUpperCase().padStart(24, '0');
 // 한글이 내는 꼴을 줄인 것 — 문단 둘(p1→p2), 첫 문단에 secd·cold·표, 번호 정의 하나, 그림 하나
@@ -79,6 +79,12 @@ const R = String.raw;                                   // 역슬래시를 글�
 같다(R`\begin{pmatrix}0&1\\2&3\end{pmatrix}`, 'pmatrix{0 & 1 # 2 & 3}');
 같다(R`\underbrace{A}_{A가~2개}`, 'UNDERBRACE{A "가" ~ 2 "개"}{A}');
 같다(R`2\!:\!1`, '2 : 1');
+// 점 이름은 바로 선 글자 · 집합·원·최댓값 등은 기울임 (10-15 · 사용자 — 「점이름은 rm으로 다만 집합이나 이런건 다시 이탤릭체로」)
+const 점 = c => [...H.hwpPointNames({ content: c })].sort().join('');
+const 점글 = R`세 점 $A(4, -1)$, $B$, $C$에 대하여 $\overline{PQ}$, $\triangle DEF$, $\angle G$, 중점 $M$, 원 $K$, 최댓값 $N$`;
+ok(점(점글) === 'ABCDEFGMPQ', '점 이름 — 좌표·쉼표로 이어짐·선분·삼각형·각·중점 (원 K·최댓값 N 은 아님) — ' + 점(점글));
+ok(점(R`집합 $X, Y$에 대하여 $X \triangle Y$, $P(A, B)$, $_{7}\mathrm{C}_{2}$, $A \cap B$`) === '', '집합 문항엔 점이 없다(대칭차·함수 P(A, B)·조합 C)');
+ok(E(R`A(1, 2)x`, undefined, new Set(['A'])) === '{rm A} ( 1 , 2 ) x', '점 이름만 {rm } 으로 묶는다(뒤 x 는 기울임)');
 const 놓침 = []; E(R`\foo x`, 놓침);
 ok(놓침.join() === 'foo', '모르는 명령은 miss 에 담는다');
 
@@ -96,6 +102,7 @@ const 칸 = n => 글자(사슬(V.sl[K(60 + n)].hp)[0]);
 ok([1, 3, 5, 7, 9].map(칸).join('|') === '$1$|$2$|3|4|${{1} over {2}}$', '선지 표 값 칸만 갈았다(④ 뒤 제어 글자도) — ' + [1, 3, 5, 7, 9].map(칸).join('|'));
 ok(칸(0) === '①', '선지 표 번호 칸은 그대로');
 ok(알림.선지 === '표' && 알림.그림 === '뗌', 'info — 선지 표·그림 뗌');
+ok(글자(사슬(V.sl[K(20)].hp)[0]) === `[${CI.en}]`, '출처 딱지는 떼고 미주 기호만 둔다 — ' + 글자(사슬(V.sl[K(20)].hp)[0]));
 const 미주 = 사슬(V.sl[K(30)].hp);
 ok(글자(미주[0]) === `[${CI.atno}][${CI.tcmt}] [정답] ②`, '미주 첫 문단 = 자동번호·숨은 설명 + [정답] ② — ' + 글자(미주[0]));
 ok(미주.length === 3 && 글자(미주[1]) === '1. 첫 줄 $a$', '해설은 줄마다 문단');

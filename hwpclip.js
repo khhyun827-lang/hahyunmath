@@ -186,7 +186,7 @@ Object.assign(HWPEQ_SYM, { varepsilon:'epsilon', vartheta:'theta', varphi:'phi' 
 const HWPEQ_ROMAN = /^(max|min|det|gcd|lcm|arcsin|arccos|arctan|sinh|cosh|tanh|deg|dim|ker|arg)$/;
 const HWPEQ_ENV = { pmatrix:'pmatrix', bmatrix:'bmatrix', vmatrix:'dmatrix', matrix:'matrix', cases:'cases' };
 
-function latexToHwpEq(src, miss){
+function latexToHwpEq(src, miss, pts){
   const s = String(src || '');
   let i = 0;
   const sp = () => { while(i < s.length && /\s/.test(s[i])) i++; };
@@ -234,7 +234,7 @@ function latexToHwpEq(src, miss){
     if(c === '}'){ i++; return ''; }                   // 짝 없는 닫힘
     if(c === '^' || c === '_'){ i++; return script(c); }
     if(/[0-9]/.test(c)){ const a = i; while(/[0-9]/.test(s[i] || '')) i++; return s.slice(a, i); }
-    if(/[A-Za-z]/.test(c)){ i++; return c; }
+    if(/[A-Za-z]/.test(c)){ i++; return pts && pts.has(c) ? '{rm ' + c + '}' : c; }
     if(c === "'"){ i++; return 'prime'; }
     if(c === '·'){ i++; return 'cdot'; }
     if(c === '"'){ i++; return ''; }
@@ -282,7 +282,7 @@ function latexToHwpEq(src, miss){
         let body = s.slice(i, end < 0 ? s.length : end);
         i = end < 0 ? s.length : end + env.length + 6;
         if(env === 'array') body = body.replace(/^\s*\{[^}]*\}/, '');
-        const t = latexToHwpEq(body, miss);
+        const t = latexToHwpEq(body, miss, pts);
         return HWPEQ_ENV[env] ? HWPEQ_ENV[env] + '{' + t + '}' : t;
       }
       case 'end': raw(); return '';
@@ -293,6 +293,43 @@ function latexToHwpEq(src, miss){
     return n;
   }
   return seq(undefined).replace(/\s+/g, ' ').trim();
+}
+
+/* 변형 문항에서 «점 이름»인 대문자 (2026-10-15 · 사용자 — 「점이름은 rm으로 다만 집합이나 이런건 다시 이탤릭체로」)
+   교재 원본: 점·선분·삼각형은 바로 선 글자(rm A LEFT ( 4,~-1 RIGHT ) · bar{rm AB}) · 집합(A cap B · A^C)·원 C·최댓값 M·넓이 S 는 기울임.
+   변형 LaTeX 는 구별이 없다 → 점인 표시가 있는 글자만 모아 문항 전체에 rm 을 입힌다(나머지는 기울임 그대로):
+   \mathrm · 선분/벡터/삼각형/각 뒤 · 대문자 둘 이상 붙음(AB·ABC) · 좌표 A(1, 2) · 앞 글이 «점»(점·중점·교점·원점·중심·내심·발…)으로
+   끝남 · 그런 글자 바로 뒤 «, $B$»·«와 $B$» 로 이어진 것. */
+function hwpPointNames(v){
+  const pts = new Set();
+  const put = s => (s.match(/[A-Z]/g) || []).forEach(c => pts.add(c));
+  const lone = t => (t.replace(/\\[A-Za-z]+|[{}\s]|_\{?\d+\}?|'/g, '').match(/^[A-Z]$/) || [])[0];
+  for(const f of ['content', 'solution', 'answer']){
+    const p = String(v[f] || '').split('$');
+    let prev = false;
+    p.forEach((t, n) => {
+      if(!(n % 2)) return;
+      /* 뒤 글자 수: 삼각형·사각형 셋 넘게(집합의 대칭차 X triangle Y 는 하나) · 선분·벡터 둘 · 각 하나 */
+      (t.match(/\\(?:overline|bar|overrightarrow|vec|triangle|angle|square|Box)\s*\{?(?:\s*[A-Z](?:_\{?\d+\}?)?'?)+/g) || []).forEach(s => {
+        const n = (s.match(/[A-Z]/g) || []).length, cmd = s.match(/^\\([A-Za-z]+)/)[1];
+        if(n >= (/triangle|square|Box/.test(cmd) ? 3 : /angle/.test(cmd) ? 1 : 2)) put(s.replace(/^\\[A-Za-z]+/, ''));
+      });
+      const bare = t.replace(/\\[A-Za-z]+/g, ' ').replace(/_\{?\d+\}?|'/g, '');
+      (bare.match(/[A-Z]{2,}/g) || []).forEach(put);
+      /* 좌표 A(1, 2) — 괄호 속에 대문자가 있으면 함수(P(A, B)·S(A, B))다 · \mathrm 은 수식 변환이 스스로 세운다(₇C₂ 의 C 를 집합 C 에 옮기지 않게) */
+      (t.match(/[A-Z](?:_\{?\d+\}?)?'?\s*(?:\\left\s*)?\([^()]*\)/g) || []).forEach(s => {
+        const 속 = s.slice(s.indexOf('(') + 1).replace(/\\[A-Za-z]+/g, ' ');
+        if(속.includes(',') && !/[A-Z]/.test(속)) put(s[0]);
+      });
+      const c = lone(t), before = p[n - 1].trim(), after = p[n + 1] || '';
+      const 점 = c && (/(점|중심|내심|외심|수심|발)(을|를|은|는|이|가|의|과|와)?$/.test(before)
+                    || (prev && /^(,|와|과|및)?$/.test(before)) || /^\s*(은|는|이|가)\s*원점/.test(after));
+      if(점) pts.add(c);
+      const 머리 = (t.replace(/\\[A-Za-z]+|[{}\s]/g, '').match(/^[A-Z]/) || [])[0];   // $A$ · $A(4, -1)$ 처럼 점으로 시작하면 뒤 «, $B$» 도 점
+      prev = !!(머리 && pts.has(머리));
+    });
+  }
+  return pts;
 }
 
 /* AI 변형 문항 → 한글 조각 (2026-10-15). 변형은 한글 원본이 없다 → 원본 문항 조각을 틀로 빌려 속만 간다.
@@ -315,6 +352,7 @@ function hwpClipFromVariant(orig, v, fig, info){
   const ids = Object.values(j.cs).map(o => o.id || 0);
   let nextId = Math.max(0, ...ids) + 1;
   const eqTpl = Object.values(j.cs).find(o => o.ci === HWPCLIP_CI.eq);
+  const pts = hwpPointNames(v);
   /* 글 + $LaTeX$ → 문단의 ch 목록 */
   const runs = str => {
     const ch = [];
@@ -323,7 +361,7 @@ function hwpClipFromVariant(orig, v, fig, info){
       if(!t.trim()) return;
       const k = newKey();
       j.cs[k] = Object.assign(JSON.parse(JSON.stringify(eqTpl)), { id: nextId++, sc: '수식입니다.' });
-      j.cs[k].eq = Object.assign({}, eqTpl.eq, { sc: latexToHwpEq(t) });
+      j.cs[k].eq = Object.assign({}, eqTpl.eq, { sc: latexToHwpEq(t, undefined, pts) });
       ch.push({ cc: 11, ci: HWPCLIP_CI.eq, co: k });
     });
     if(!ch.length || ch[ch.length - 1].co) ch.push({ t: '' });
@@ -343,6 +381,9 @@ function hwpClipFromVariant(orig, v, fig, info){
   if(!top) throw new Error('원본 조각에 상자 표가 없다');
   const cells = listsOf(top.co);
   const body = cells.slice().sort((a, b) => textOf(j.sl[b].hp).length - textOf(j.sl[a].hp).length)[0];
+  /* 출처 딱지(«[고쟁이]»·«올림포스 » — 미주 기호와 한 문단)는 뗀다 · 미주 기호는 둔다 (10-15 · 사용자 — 「출처는 없이」) */
+  for(const c of cells) for(const k of chain(j.sl[c].hp))
+    if(chs(k).some(x => x.co && j.cs[x.co] && j.cs[x.co].ci === HWPCLIP_CI.en)) for(const x of chs(k)) if(x.t) x.t = '';
   const bodyKeys = chain(j.sl[body].hp);
   const isTbl = (k, ci) => chs(k).some(c => c.co && j.cs[c.co] && j.cs[c.co].ci === ci);
   const cellText = k => chs(k).filter(c => c.co).map(c => listsOf(c.co).map(h => textOf(j.sl[h].hp)).join('\n')).join('\n');   // 이 문단 속 표 칸 글

@@ -42,10 +42,11 @@ try{
     const root = 'K2-01-E-0999', code = root + '-N01';
     state.hwpCodes = new Set([root, 'K2-01-E-0998-N01']);
     state.variants = Object.assign({}, state.variants, {
-      [root]: [Object.assign({}, 변형, { code, originCode: root, image: { kind: 'svg', svg } })],
+      [root]: [Object.assign({}, 변형, { code, originCode: root, image: { kind: 'svg', svg } }),
+               { code: root + '-N02', originCode: root, content: '검토 대기', pending: true }],
       'K2-01-E-0998': [{ code: 'K2-01-E-0998-N01', originCode: 'K2-01-E-0998', content: '교재에 실린 변형' }],
     });
-    const 가름 = [code, root, 'K2-01-E-0998-N01', 'K2-01-E-0997-N01'].map(c => !!hwpVariantToBuild(c));
+    const 가름 = [code, root, 'K2-01-E-0998-N01', 'K2-01-E-0997-N01', root + '-N02'].map(c => !!hwpVariantToBuild(c));
     const 읽기 = [];
     window.dbGetDoc = (col, id) => { 읽기.push(col + '/' + id); return Promise.resolve(col === 'hwpclip' && id === root ? { j: 원본 } : null); };
     let 받음;
@@ -61,7 +62,7 @@ try{
         그림: j.bi.map(b => b.ty).sort(), 그림바이트: Object.keys(j.bidt).length };
     });
   }, { 원본: 가짜원본(), 변형: 가짜변형, svg });
-  봄('지을 것만 고른다 — [원본만 창고에 있는 변형, 원본, 교재에 실린 변형(제 원본 있음), 원본 없는 변형]', 결과.가름, [true, false, false, false]);
+  봄('지을 것만 고른다 — [원본만 창고에 있는 변형, 원본, 교재에 실린 변형(제 원본 있음), 원본 없는 변형, 검토 대기(10-15 «빼자»)]', 결과.가름, [true, false, false, false, false]);
   봄('같은 원본 조각은 한 번만 읽는다', 결과.읽기, ['hwpclip/K2-01-E-0999']);
   봄('변형(새 본문)과 원본(옛 본문)이 한 조각에 이어졌다', [결과.새본문, 결과.옛본문], [true, true]);
   /* 원본: jpg(본문)+png(해설) · 변형: SVG 에서 뽑은 png(본문 자리) — 변형의 옛 해설 그림은 걷혔다 */
