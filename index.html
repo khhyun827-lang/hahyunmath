@@ -6208,7 +6208,7 @@ html.it-fly .lp .l-hero .l-logo{opacity:1 !important;transform:none !important;
      화면만 보고서는 «고쳤는데 왜 안 되지»가 된다 — 파서가 바뀐 것을 아무 데서도 못 본다. -->
 <!-- 2026-09-10에 올렸다 — 창고 대조 판정과 «개체 설명문에서 코드 읽기»가 들어갔다. -->
 <script src="hwpx.js?v=2026-10-07a"></script>
-<script src="hwpclip.js?v=2026-10-14b"></script>
+<script src="hwpclip.js?v=2026-10-15a"></script>
 <!-- 출석 도장 게임(셸·똥피하기·달리기·점프). 연습 페이지 game.html 도 같은 파일을 쓴다 -->
 <!-- ⚠ ?v= 를 붙이는 까닭 — 브라우저가 game-core.js 를 캐시해서, 올려도 학생 화면에는
      옛 게임이 그대로 돈다(Ctrl+Shift+R 을 해야 바뀐다 — 학생에게 그걸 시킬 수는 없다).
@@ -31059,12 +31059,28 @@ function hwpPickToggle(code){
   if(i < 0) state.hwpPick.push(code); else state.hwpPick.splice(i, 1);
   render();
 }
+/* 🔵 AI 변형은 한글 원본이 없다 (2026-10-15) — 원본 문항의 조각을 틀로 빌려 속(본문·선지·보기·정답·해설·그림)만 갈아 짓는다
+   (hwpClipFromVariant). 교재에 실린 변형(주기나 N01 등)은 제 원본이 hwpCodes 에 있어 그대로 읽는다. 같은 원본은 한 번만 읽는다. */
+function hwpVariantToBuild(code){
+  if(!state.hwpCodes || state.hwpCodes.has(code)) return null;
+  const root = (splitItemCode(code) || {}).origin;
+  if(!root || !state.hwpCodes.has(root)) return null;
+  return variantsOfCode(root).find(v => v.code === code) || null;
+}
 function hwpCopyPicked(){
   const codes = state.hwpPick.slice();
   const miss = [];
-  const blob = Promise.all(codes.map(c => dbGetDoc('hwpclip', c, null))).then(docs => {
+  const 읽음 = {};
+  const 원본 = c => 읽음[c] || (읽음[c] = dbGetDoc('hwpclip', c, null));
+  const blob = Promise.all(codes.map(c => {
+    const v = hwpVariantToBuild(c);
+    if(!v) return 원본(c).then(d => d && d.j);
+    const svg = v.image && v.image.kind === 'svg' && v.image.svg;
+    return Promise.all([원본(v.originCode), svg ? hwpClipSvgToPng(svg).catch(() => null) : null])
+      .then(([d, fig]) => d && d.j ? hwpClipFromVariant(d.j, v, fig) : null);
+  }).map(p => p.catch(() => null))).then(docs => {
     const list = [];
-    docs.forEach((d, i) => d && d.j ? list.push(d.j) : miss.push(codes[i]));
+    docs.forEach((j, i) => j ? list.push(j) : miss.push(codes[i]));
     if(!list.length) throw new Error('한글 원본을 읽지 못했습니다');
     return new Blob([hwpClipHTML(hwpClipMerge(list))], { type: 'text/html' });
   });
@@ -34179,8 +34195,9 @@ function teacherItemStoreHTML(){
         ${/* 📖 실린 교재·판 — 머리 줄은 nowrap 이라 넘친다(864) · 이 줄은 접힌다 */''}
         ${((body && body.books) || []).map(b => `<span class="ist-vk" title="실린 교재 · 판">📖 ${escHtml(bookLabel(b))}${b.no ? ` · ${b.no}번` : ''}</span>`).join('')}
         ${(() => {
-          /* 📋 한글 원본이 있는 코드만 — 눌러 담고 위 띠의 «한글로 복사»로 한 번에 (2026-10-14) */
-          const 한글 = [it.code, ...vs.map(v => v.code)].filter(c => state.hwpCodes && state.hwpCodes.has(c));
+          /* 📋 한글 원본이 있는 코드만 — 눌러 담고 위 띠의 «한글로 복사»로 한 번에 (2026-10-14)
+             AI 변형은 원본 문항에 한글 원본이 있으면 그 틀로 지어 넣는다(10-15 · hwpVariantToBuild) */
+          const 한글 = [it.code, ...vs.map(v => v.code)].filter(c => state.hwpCodes && (state.hwpCodes.has(c) || hwpVariantToBuild(c)));
           return 한글.length ? `<span class="ist-hwp" title="눌러 담은 뒤 위의 «한글로 복사»">한글 ${한글.map(c =>
             `<a class="${state.hwpPick.includes(c) ? 'on' : ''}" onclick="hwpPickToggle('${escHtml(c)}')">${c === it.code ? '원본' : escHtml(c.split('-').pop())}</a>`).join('')}</span>` : '';
         })()}
