@@ -102,7 +102,6 @@ const 칸 = n => 글자(사슬(V.sl[K(60 + n)].hp)[0]);
 ok([1, 3, 5, 7, 9].map(칸).join('|') === '$1$|$2$|3|4|${{1} over {2}}$', '선지 표 값 칸만 갈았다(④ 뒤 제어 글자도) — ' + [1, 3, 5, 7, 9].map(칸).join('|'));
 ok(칸(0) === '①', '선지 표 번호 칸은 그대로');
 ok(알림.선지 === '표' && 알림.그림 === '뗌', 'info — 선지 표·그림 뗌');
-ok(글자(사슬(V.sl[K(20)].hp)[0]) === `[${CI.en}]`, '출처 딱지는 떼고 미주 기호만 둔다 — ' + 글자(사슬(V.sl[K(20)].hp)[0]));
 const 미주 = 사슬(V.sl[K(30)].hp);
 ok(글자(미주[0]) === `[${CI.atno}][${CI.tcmt}] [정답] ②`, '미주 첫 문단 = 자동번호·숨은 설명 + [정답] ② — ' + 글자(미주[0]));
 ok(미주.length === 3 && 글자(미주[1]) === '1. 첫 줄 $a$', '해설은 줄마다 문단');
@@ -117,6 +116,23 @@ const 그림 = Object.values(VF.cs).find(o => o.ci === CI.gso);
 ok(그림 && VF.bidt[그림.rc.img.bi] === 'NEW' && /\.png$/.test(그림.rc.img.bi) && VF.bi.length === 1, '그림을 주면 원본 그림 자리에 PNG 로');
 ok(그림.she === 500 && 그림.rc.oh === 50, '그림 크기 — 폭은 원본대로 · 높이는 비율대로');
 ok(H.hwpClipHTML(H.hwpClipMerge([V, VF])).includes('data-hwpjson'), '변형 조각도 합쳐진다');
+
+// 상자 틀은 버리고 «문제 + 미주»만 (10-15 · 사용자 — 「기존 문제넣는틀은 버리고 미주랑 문제만 가져오는걸로 … 코드가 미주안에」)
+const 원본조각 = 원본();
+const F = H.hwpClipMerge([원본조각, V]);
+const FP = { ...F.ro };
+const 본문 = []; for (let k = F.ro.hp; k && FP[k]; k = FP[k].np) 본문.push(FP[k]);
+const 첫 = 본문[0].ru[0].ch[0];
+ok(F.cs[첫.co] && F.cs[첫.co].ci === CI.en, '본문 첫 글자는 미주 기호');
+const 본문글 = 본문.map(p => p.ru[0].ch.map(c => c.t || '').join('')).join('|');
+ok(본문글 === '옛 본문 아주 긴 글 ||||새 본문 ||', '두 문항의 문제 문단만 이어지고 문항 끝마다 빈 줄 — ' + 본문글);
+ok(!JSON.stringify(F).includes('[출처]'), '상자의 다른 칸(번호·출처)은 걷혔다');
+const 미주첫 = Object.values(F.cs).filter(o => o.ci === CI.en).map(o => { const l = F.sl[o.en.so]; return F.sl[l.hp].ru.map(r => r.ch.map(c => c.t || '').join('')).join(''); });
+ok(미주첫.join('|') === ' [정답]   [ORIG]| [정답] ②  [ORIG-N01]', '미주 첫 줄 끝에 코드가 보인다 — ' + 미주첫.join('|'));
+ok(JSON.stringify(원본조각) === JSON.stringify(원본()), '받은 조각은 안 건드린다(같은 원본을 변형 짓기에도 쓴다)');
+const F참조 = JSON.stringify({ ...F, bidt: 0 }).match(/[0-9A-F]{24}/g);
+const F정의 = new Set([...Object.keys(F.ro), ...Object.keys(F.sl), ...Object.keys(F.cs), ...Object.keys(F.pp), ...Object.keys(F.st), ...Object.keys(F.cp), ...F.bi.map(b => b.sr.slice(0, 24))]);
+ok(F참조.every(k => F정의.has(k)), '틀을 푼 조각도 가리키는 열쇠가 다 있다');
 
 console.log(bad ? `\n🔴 ${bad}개 틀림` : '\n🟢 모두 맞음');
 process.exit(bad ? 1 : 0);

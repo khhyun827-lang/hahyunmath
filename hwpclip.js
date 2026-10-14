@@ -87,10 +87,48 @@ function hwpClipDedupe(j){
   return j;
 }
 
+/* 교재 상자 틀을 버리고 «문제 + 미주»만 남긴다 (2026-10-15 · 사용자 — 「기존 문제넣는틀은 버리고 미주랑 문제만 가져오는걸로」
+   · 틀째 붙이니 쓰는 문서에서 한 문항이 미주 안으로 들어갔고, 빼려고 잘라내다 한글이 멎었다).
+   교재 뼈(주기나·엔크 같다): 맨 위 문단 = [secd][cold][상자 표] · 상자 칸 중 글이 가장 긴 것 = 문제 칸 · 다른 칸에 [미주 기호](+출처 글·그림).
+   → 문제 칸 문단들을 본문 사슬로 꺼내고 첫 문단 앞에 미주 기호를 단다 · 나머지 칸(번호·출처·로고)은 걷힌다.
+   미주 첫 줄 끝에 코드를 보이게 적는다(「코드가 미주안에 삽입되면」) — 코드는 미주 속 숨은 설명 «[코드]» 에서 읽는다. 받은 것은 안 건드린다. */
+function hwpClipFlatten(src){
+  const j = JSON.parse(JSON.stringify(src));
+  const P = k => j.ro[k] || j.sl[k];
+  const chs = k => [].concat(...((P(k) || {}).ru || []).map(r => r.ch || []));
+  const chain = hp => { const a = []; for(let k = hp, g = 0; k && P(k) && g < 5000; k = P(k).np, g++) a.push(k); return a; };
+  const isCi = (c, ci) => c.co && j.cs[c.co] && j.cs[c.co].ci === ci;
+  const top = chs(j.ro.hp).find(c => isCi(c, HWPCLIP_CI.tbl));
+  if(!top) return j;
+  const cells = Object.keys(j.sl).filter(k => j.sl[k].co === top.co && j.sl[k].hp);
+  const textLen = c => chain(j.sl[c].hp).map(k => chs(k).map(x => x.t || (isCi(x, HWPCLIP_CI.eq) ? '§' : '')).join('')).join('').length;
+  const body = cells.slice().sort((a, b) => textLen(b) - textLen(a))[0];
+  let en = null;
+  for(const c of cells) for(const k of chain(j.sl[c].hp)) en = en || chs(k).find(x => isCi(x, HWPCLIP_CI.en));
+  if(!body || !en) return j;
+  const ks = chain(j.sl[body].hp);
+  for(const k of Object.keys(j.ro)) if(k !== 'hp') delete j.ro[k];
+  for(const k of ks){ j.ro[k] = j.sl[k]; delete j.sl[k]; }
+  j.ro.hp = ks[0];
+  const gap = 'FFFFFFFE' + '0'.repeat(16), p0 = j.ro[ks[0]];   // 문항 사이 빈 줄 하나
+  j.ro[gap] = { np: '', id: p0.id, pp: p0.pp, si: p0.si, bf: p0.bf, ru: [{ cp: p0.ru[0].cp, ch: [{ t: '' }] }] };
+  j.ro[ks[ks.length - 1]].np = gap;
+  const r0 = j.ro[ks[0]].ru[0];
+  r0.ch = [en].concat(r0.ch || []);
+  const head = j.sl[(j.cs[en.co].en || {}).so];
+  const 줄 = head && chain(head.hp).find(k => chs(k).some(x => isCi(x, HWPCLIP_CI.tcmt)));   // [자동번호][숨은 설명] [정답] 줄 — 앞에 빈 문단이 낀 것도 있다(주기나 1070521)
+  const first = 줄 && P(줄);
+  const tc = first && chs(줄).find(x => isCi(x, HWPCLIP_CI.tcmt));
+  const 숨은 = tc && j.cs[tc.co].hc && j.sl[j.cs[tc.co].hc.so];
+  const 코드 = 숨은 && (chain(숨은.hp).map(k => chs(k).map(x => x.t || '').join('')).join('').match(/\[[^\]\s]+\]/) || [])[0];
+  if(코드){ const ru = first.ru[first.ru.length - 1]; ru.ch = (ru.ch || []).concat([{ t: '  ' + 코드 }]); }
+  return hwpClipPrune(j);
+}
+
 /* 여러 문항을 차례대로 한 조각으로 잇는다. 모양 표는 합치고, 본문 사슬은 꼬리에 머리를 단다. */
 function hwpClipMerge(list){
   if(!list.length) throw new Error('빈 묶음');
-  const parts = list.map((j, n) => hwpClipDropSection(hwpClipRekey(j, n)));
+  const parts = list.map((j, n) => hwpClipDropSection(hwpClipRekey(hwpClipFlatten(j), n)));
   /* 번호 정의는 «시작 번호»를 교재 자리대로 들고 온다(주기나 401·315… · 엔크 431…) — 그대로면 단원이 섞일 때
      번호가 들쭉날쭉하다. 담은 묶음은 1번부터 차례로 센다(시작을 맞춰야 아래 접기에서 하나로 접힌다). */
   /* 🔵 교재는 번호 자리에 따라 정의를 갈아 끼워 세 자리를 맞춘다(00^1 → 001 · 0^1 → 045 · ^1 → 431) — 한 정의로는 못 한다.
@@ -381,9 +419,6 @@ function hwpClipFromVariant(orig, v, fig, info){
   if(!top) throw new Error('원본 조각에 상자 표가 없다');
   const cells = listsOf(top.co);
   const body = cells.slice().sort((a, b) => textOf(j.sl[b].hp).length - textOf(j.sl[a].hp).length)[0];
-  /* 출처 딱지(«[고쟁이]»·«올림포스 » — 미주 기호와 한 문단)는 뗀다 · 미주 기호는 둔다 (10-15 · 사용자 — 「출처는 없이」) */
-  for(const c of cells) for(const k of chain(j.sl[c].hp))
-    if(chs(k).some(x => x.co && j.cs[x.co] && j.cs[x.co].ci === HWPCLIP_CI.en)) for(const x of chs(k)) if(x.t) x.t = '';
   const bodyKeys = chain(j.sl[body].hp);
   const isTbl = (k, ci) => chs(k).some(c => c.co && j.cs[c.co] && j.cs[c.co].ci === ci);
   const cellText = k => chs(k).filter(c => c.co).map(c => listsOf(c.co).map(h => textOf(j.sl[h].hp)).join('\n')).join('\n');   // 이 문단 속 표 칸 글
