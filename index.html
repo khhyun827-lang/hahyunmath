@@ -4572,6 +4572,7 @@
 .app .rv-ifact{display:flex;align-items:center;justify-content:center;gap:2px;flex-wrap:wrap;margin:4px 0 0;}
 .app .rv-ifact .btn{min-height:30px;padding:0 7px;font-size:12px;}
 .app .rv-ifig.need .rv-ifact{justify-content:flex-start;}
+.app .rv-mdw{font-size:12px;color:var(--dim);}
 /* 그림 지침 — 접혀 있을 때는 단추 줄 끝의 작은 고리, 펴면 한 줄을 다 쓴다(단추 줄이 두 줄이 되어 보기가 화면 밑으로 밀렸다) */
 .app .rv-ifspec{font-size:12px;color:var(--sub);line-height:1.7;padding:0 6px;}
 .app .rv-ifspec[open]{flex-basis:100%;padding:4px 2px 0;}
@@ -31655,10 +31656,12 @@ function autoVariantWorkHTML(v){
     ? (그림작업 ? '<div class="rv-ifig empty">그림은 위 편집 상자에서 고치는 중입니다</div>'
       : svg그림 ? `<figure class="rv-ifig svg" title="누르면 크게 봅니다" onclick="openFigZoom('${escHtml(v.code)}')">${figSvgOf(v.image)}${크게}</figure>
           <div class="rv-ifact">
-            <button class="btn sm" onclick="openFigureEditorFromSaved('${escHtml(v.code)}')">${iconSvg('pencil', 12)} 그림 편집</button>
-            <button class="btn q sm" onclick="requestFigureDraft('${escHtml(v.code)}')" title="한도를 하나 씁니다">다시 그리기</button>
-            ${/* 내려받기·지침은 접는다 — 300 폭 한 줄에 다섯이 안 들어가 보기가 화면 밑으로 밀렸다 */''}
+            ${v.image.mdraw ? '' : `<button class="btn sm" onclick="openFigureEditorFromSaved('${escHtml(v.code)}')">${iconSvg('pencil', 12)} 그림 편집</button>`}
+            ${mathDrawBtnHTML(v, '매쓰드로')}
+            ${/* 내려받기·지침은 접는다 — 300 폭 한 줄에 다섯이 안 들어가 보기가 화면 밑으로 밀렸다.
+                 10-16 «매쓰드로»가 들어오며 한도를 먹는 «다시 그리기»도 접었다(그래도 «그림 편집» 뒤다). */''}
             <details class="rv-ifspec"><summary>더 보기 ▾</summary>
+              <button class="btn q sm" onclick="requestFigureDraft('${escHtml(v.code)}')" title="한도를 하나 씁니다">다시 그리기</button>
               <span class="rv-ifdl"><button class="btn q sm" onclick="figDownload('${escHtml(v.code)}','svg')" title="벡터 — 일러스트레이터에서 열립니다">SVG 내려받기</button>
               <button class="btn q sm" onclick="figDownload('${escHtml(v.code)}','png')">PNG 내려받기</button></span>
               ${v.figureSpec ? `<b>그림 지침</b> ${escHtml(v.figureSpec)}` : ''}</details>
@@ -31666,6 +31669,7 @@ function autoVariantWorkHTML(v){
       : `<div class="rv-ifig empty need">
           <b>그림이 아직 없습니다</b> — 붙기 전에는 통과할 수 없습니다.${v.sceneFail ? ` 함께 온 그림이 <b>검산에 걸렸습니다</b>(${escHtml(v.sceneFail)}).` : ''}
           <div class="rv-ifact"><button class="btn sm" onclick="requestFigureDraft('${escHtml(v.code)}')">${iconSvg('sparkle', 12)} 초안 그려 보기</button>
+            ${mathDrawBtnHTML(v, '매쓰드로로 그리기')}
             ${v.figureSpec ? `<details class="rv-ifspec"><summary>그림 지침</summary>${escHtml(v.figureSpec)}</details>` : ''}</div></div>`)
     : v.reuseFigure && v.image && v.image.url ? `<figure class="rv-ifig" title="누르면 크게 봅니다"
         onclick="openFigZoom('', '${escHtml(v.image.url)}')"><img src="${escHtml(v.image.url)}" alt="원본 그림 그대로">${크게}</figure>`
@@ -32559,7 +32563,7 @@ async function figDownload(key, kind, sink){                 // sink 는 검사�
   const url = URL.createObjectURL(new Blob([withFont], { type:'image/svg+xml' }));
   img.onload = () => {
     const SCALE = 2, c = document.createElement('canvas');
-    c.width = 560 * SCALE; c.height = 430 * SCALE;
+    c.width = (img.naturalWidth || 560) * SCALE; c.height = (img.naturalHeight || 430) * SCALE;   // 매쓰드로 그림은 비율이 다르다
     const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height);
     g.drawImage(img, 0, 0, c.width, c.height);
     URL.revokeObjectURL(url);
@@ -32572,12 +32576,76 @@ async function figDownload(key, kind, sink){                 // sink 는 검사�
 function openFigureEditorFromSaved(bankId){
   const t = figureTargetOf(bankId);
   const doc = t ? t.saved() : null;
+  if(doc && doc.mdraw && t.kind === 'variant'){ openInMathDraw(bankId); return; }   // 매쓰드로로 그린 것은 장면이 없다 — 매쓰드로로만 고친다
   if(!doc || doc.kind !== 'svg' || !doc.scene){ showToast('장면이 없는 그림이라 옮길 수 없습니다.'); return; }
   const scene = JSON.parse(JSON.stringify(doc.scene));
   const v = Figure.verifyScene(scene);
   state.figureDraft = { bankId, scene, svg: Figure.renderScene(scene), ok: v.ok, failures: v.failures, saved: true };
   state.figureSel = null;
   render();
+}
+
+/* =================== 매쓰드로로 편집 (2026-10-16 · 사용자 — 「검토탭에서 그림 편집할때 매쓰드로로 바로 연결」) ===================
+   매쓰드로 앱(Desktop\mathdraw · git 밖)이 켜져 있으면 localhost:47615 로 듣는다. 이 사이트(Origin)만 받는다.
+   POST /edit {id, title, svg?, mdraw?} → 매쓰드로가 연다 → 사용자가 «웹으로 보내기» → 여기서 GET /result?id= 로 받아 저장.
+   🔴 돌아온 것에서 쓰는 것은 «PNG 데이터 URI 하나»뿐이다 — 꼴을 검사하고, 감싸는 SVG 는 여기서 짓는다.
+     바깥에서 온 SVG 를 innerHTML 로 넣지 않는다는 불변식(figSvgOf 위 주석)은 그대로다.
+   원본(.mdraw 글)은 kv 의 mdraw:{코드} 에 따로 둔다 — 변형 문서는 학생에게 나가고 재워지니 가볍게. image.mdraw = 원본이 있다는 표. */
+const MDRAW_URL = 'http://localhost:47615';
+function mdrawFetch(path, opt){ return withTimeout(fetch(MDRAW_URL + path, opt), 3000).then(r => r.json()); }
+const MDRAW_PNG = /^data:image\/png;base64,[A-Za-z0-9+\/]+=*$/;
+function mdrawFigureDoc(r){
+  const okNum = x => typeof x === 'number' && x > 1 && x < 1000;
+  if(!r || typeof r.png !== 'string' || r.png.length > 700000 || !MDRAW_PNG.test(r.png) || !okNum(r.wmm) || !okNum(r.hmm)) return null;
+  const W = Math.round(r.wmm * 96 / 25.4), H = Math.round(r.hmm * 96 / 25.4);   // 제 크기(96dpi 화면 px) — 한글 복사가 이 비율을 쓴다
+  return { kind:'svg', mdraw:true, at:new Date().toISOString(),
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img"><image xlink:href="${r.png}" width="${W}" height="${H}"/></svg>` };
+}
+async function openInMathDraw(code){
+  const v = variantByCode(code);
+  if(!v) return;
+  try{ await mdrawFetch('/ping'); }
+  catch(e){ showToast('매쓰드로가 켜져 있지 않습니다 — 매쓰드로를 켠 뒤 다시 눌러 주세요.'); return; }
+  const img = v.image && v.image.kind === 'svg' ? v.image : null;
+  const mdraw = img && img.mdraw ? await dbGet('mdraw:' + code, null) : null;
+  try{
+    await mdrawFetch('/edit', { method:'POST', headers:{ 'Content-Type':'application/json' },
+      body: JSON.stringify({ id: code, title: code, mdraw: typeof mdraw === 'string' ? mdraw : null, svg: img ? figSvgOf(img) : '' }) });
+  }catch(e){ showToast('매쓰드로에 보내지 못했습니다 — ' + (e && e.message || e)); return; }
+  state.figureDraft = null;
+  state.mdrawWaiting = code; render();
+  showToast('매쓰드로에서 고친 뒤 «웹으로 보내기»를 눌러 주세요.');
+  let miss = 0;
+  while(state.mdrawWaiting === code){
+    await new Promise(ok => setTimeout(ok, 1000));
+    if(state.mdrawWaiting !== code) return;
+    let r;
+    try{ r = await mdrawFetch('/result?id=' + encodeURIComponent(code)); miss = 0; }
+    catch(e){ if(++miss < 5) continue; r = { state:'gone' }; }
+    if(r.state === 'wait') continue;
+    state.mdrawWaiting = null;
+    if(r.state === 'done') await saveMathDrawFigure(v, r);
+    else { showToast(r.state === 'cancel' ? '매쓰드로에서 취소했습니다.' : '매쓰드로와 연결이 끊겼습니다.'); render(); }
+  }
+}
+async function saveMathDrawFigure(v, r){
+  const doc = mdrawFigureDoc(r);
+  if(!doc){ showToast('매쓰드로에서 온 그림 꼴이 맞지 않아 저장하지 않았습니다.'); render(); return; }
+  /* 원본이 1MB(Firestore 문서 한도)를 넘으면 그림만 저장한다 — 다음엔 그림을 들여와 고친다 */
+  if(typeof r.mdraw !== 'string' || r.mdraw.length > 900000 || !(await dbSet('mdraw:' + v.code, r.mdraw))) doc.mdraw = false;
+  const nv = Object.assign({}, v, { image: doc });
+  state.figureUploading = v.code; render();
+  const ok = await dbSetDoc('variants', v.code, nv);
+  state.figureUploading = null;
+  if(!ok){ showToast('그림을 붙이지 못했습니다 — 저장이 막혀 있습니다.'); render(); return; }
+  Object.assign(v, nv);
+  showToast('매쓰드로 그림을 저장했습니다' + (doc.mdraw ? '.' : ' — 원본이 커서 그림만 저장했습니다.'));
+  render();
+}
+function mathDrawBtnHTML(v, label){
+  return state.mdrawWaiting === v.code
+    ? `<span class="rv-mdw">매쓰드로에서 고치는 중… <button class="btn q sm" onclick="state.mdrawWaiting=null;render()">그만 기다리기</button></span>`
+    : `<button class="btn sm" onclick="openInMathDraw('${escHtml(v.code)}')" title="매쓰드로 앱이 켜져 있어야 합니다">${label}</button>`;
 }
 
 /* 그린 그림을 붙인다. 원본 그림과 같은 길(압축 → 드라이브)을 쓰고 문서만 pbvimg:{id}로 따로 둔다. */
