@@ -83,9 +83,22 @@ try {
     const ctx = await br.newContext();
     await ctx.addInitScript(사람); await 막기(ctx);
     await ctx.addInitScript(() => localStorage.setItem('khm-session', '{"type":"student"}'));
+    /* 10-17 — 로그인해 둔 «학생»은 그날 처음 열 때 한 번 본다(사용자 — 「보는 학생이 별로 없다」) */
     const page = await ctx.newPage();
-    await page.goto(URL); await page.waitForTimeout(500);
-    봄('로그인해 둔 사람 — 인트로 없음(바로 제 화면으로 간다)', await page.evaluate(() => window.__saw), false);
+    await page.goto(URL + '#student/home'); await page.waitForTimeout(500);
+    봄('로그인해 둔 학생 — 그날 처음이면 인트로가 돈다', await page.evaluate(() => window.__saw), true);
+    const page2 = await ctx.newPage();
+    await page2.goto(URL + '#student/home'); await page2.waitForTimeout(500);
+    봄('같은 날 두 번째(새 탭) — 안 돈다', await page2.evaluate(() => window.__saw), false);
+    await ctx.close();
+  }
+  {
+    const ctx = await br.newContext();
+    await ctx.addInitScript(사람); await 막기(ctx);
+    await ctx.addInitScript(() => localStorage.setItem('khm-session', '{"type":"teacher"}'));
+    const page = await ctx.newPage();
+    await page.goto(URL + '#teacher/home'); await page.waitForTimeout(500);
+    봄('로그인해 둔 강사 — 인트로 없음(일하는 화면)', await page.evaluate(() => window.__saw), false);
     await ctx.close();
   }
   {

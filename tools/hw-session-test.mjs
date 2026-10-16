@@ -190,7 +190,8 @@ console.log(NL + '④ 반 관리 › 과제 — 고치기 · 마감 순 · 진�
   봄('규칙까지 걷은 i.hg-ord 도 안 선다', 살(grid).includes('hg-ord'), false);
 
   /* ── 고치기 폼 — 실제로 그려 본다 ── */
-  const FF = new Function('escHtml', lift('hwNewFormHTML') + NL + 'return hwNewFormHTML;')(
+  /* 10-17 — 폼 머리에 «다른 반 과제 불러오기»가 붙었다. 이 검사는 칸 id 를 보므로 빈 것으로 세운다 */
+  const FF = new Function('escHtml', 'const hwCopyPickerHTML = () => "";' + NL + lift('hwNewFormHTML') + NL + 'return hwNewFormHTML;')(
     s => (s === null || s === undefined) ? '' : String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;'));
   const 새폼 = FF('c1', '2026-09-13', true);
   const 고침 = FF('c1', '2026-09-13', true, { id: 'h1', title: '오타난 "과재"', description: '설명', dueDate: '2026-09-19', createdAt: '2026-09-12' });

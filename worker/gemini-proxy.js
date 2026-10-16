@@ -44,7 +44,7 @@ const TWIN_GROQ_MAX_TOKENS = 7000;   // 추론 + JSON. 검토(6000)보다 답이
 /* 🔴 «올렸는지 짐작하지 않는다» — 이 워커는 대시보드에 붙여넣어 올리므로 밖에서는 어느 판이 도는지
    알 길이 없었다(2026-09-11에 사용자가 올리고 「도는지 확인은 못 해봤어」). /quota 가 이 값을 같이
    돌려주고 tools/worker-check.mjs 가 저장소의 값과 견준다. **프롬프트나 규칙을 바꾸면 이 날짜를 올릴 것.** */
-const WORKER_VERSION = '2026-10-17a';
+const WORKER_VERSION = '2026-10-17b';
 // 이미지 업로드는 학생도 쓴다(질의응답 사진). 비용이 드는 쪽은 Gemini라 여기는 넉넉하게,
 // 다만 «한 명이 무한히»는 막는다. 전체 상한은 걸지 않는다 — 걸면 바쁜 날 학생이 막힌다.
 const UPLOAD_PER_USER_DAILY = 200;
@@ -94,7 +94,9 @@ export default {
         : bucket === 'review' ? { ...(await peekQuota(env, 'review', who.uid, REVIEW_DAILY_LIMIT)),
                                   groqCalls: (await groqQuota(env, who.uid)).review.raw }
         : await peekQuota(env, bucket, who.uid, AI_DAILY_LIMIT);
-      return new Response(JSON.stringify({ ...q, version: WORKER_VERSION }), {
+      /* 알림톡 종류마다 템플릿 비밀이 있나(값은 안 내보낸다 — 있다/없다만) · 10-17b */
+      const notifyTpl = Object.fromEntries(NOTIFY_KINDS.map((k) => [k, !!env[NOTIFY_TPL[k]]]));
+      return new Response(JSON.stringify({ ...q, version: WORKER_VERSION, notifyTpl }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
@@ -314,8 +316,10 @@ async function adminGate(request, env, corsHeaders, uid, who) {
    🔵 **조교도 이 문은 지난다** (09-20 · qna·wrong 은 답변·공개 «순간에 저절로» 나가는데, 답변은 조교도 단다). */
 const NOTIFY_DAILY_LIMIT = 200;      // 하루 전체 발송 상한(건). 학생 50명 × 넉 번이면 충분하다
 const NOTIFY_PER_CALL = 50;          // 한 번에 보낼 수 있는 사람 수
-const NOTIFY_KINDS = ['hw', 'vid', 'qna', 'wrong'];
-const NOTIFY_TPL = { hw: 'SOLAPI_TPL_HW', vid: 'SOLAPI_TPL_VID', qna: 'SOLAPI_TPL_QNA', wrong: 'SOLAPI_TPL_WRONG' };
+/* 10-17 — 공지(notice)·자료(mat) 올릴 때 알림. 심사 뒤 비밀 SOLAPI_TPL_NOTICE · SOLAPI_TPL_MAT 를 넣으면 켜진다(화면은 /quota 의 notifyTpl 로 안다). */
+const NOTIFY_KINDS = ['hw', 'vid', 'qna', 'wrong', 'notice', 'mat'];
+const NOTIFY_TPL = { hw: 'SOLAPI_TPL_HW', vid: 'SOLAPI_TPL_VID', qna: 'SOLAPI_TPL_QNA', wrong: 'SOLAPI_TPL_WRONG',
+                     notice: 'SOLAPI_TPL_NOTICE', mat: 'SOLAPI_TPL_MAT' };
 const SOLAPI = 'https://api.solapi.com';
 
 /* HMAC-SHA256 서명 — `HMAC-SHA256 apiKey=…, date=…, salt=…, signature=hex(hmac(date+salt, secret))`. 솔라피 공식 SDK 와 같은 식. */
