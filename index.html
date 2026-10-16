@@ -17071,6 +17071,28 @@ function goStudentTab(tab){
 }
 
 /* 한 화면이 쓰는 것을 한 곳에서 고른다. 열한 개가 저마다 같은 filter를 되풀이하고 있었다. */
+/* 지난 시즌의 끝 — 이 학교·학년에서 «이미 끝난» 시험 가운데 가장 늦은 날(수학 시험일 → 끝날 → 기본 날). 없으면 ''.
+   올해·작년 학년도 둘을 본다(3월 첫 주엔 작년 2학기 기말이 마지막이다). */
+function stuSeasonCut(school, grade, today){
+  today = today || todayStr();
+  const y = schoolYearOf(today), 작년 = String(Number(y) - 1);
+  let cut = '';
+  for(const yr of [작년, y]) for(const [slot, , 기본] of EXAM_SLOTS){
+    const cell = examSlotOf(yr, school, grade, slot);
+    if(!examSlotDone(yr, slot, cell, today)) continue;
+    const 끝 = (cell && (cell.math || cell.end)) || (yr + '-' + 기본);
+    if(끝 < today && 끝 > cut) cut = 끝;
+  }
+  return cut;
+}
+/* 지난 시즌 것 — 낸 날도 마감도 시즌 끝 이전(마감이 새 시즌까지 걸쳐 있으면 아직 보인다) */
+function stuPastSeason(x, cut){
+  if(!cut) return false;
+  const d = itemDay(x);
+  return !!d && d <= cut && (!x.dueDate || x.dueDate <= cut);
+}
+/* 새것이 위 — 낸 날 → 같은 날이면 id(만든 시각)로 */
+function 새것먼저(a, b){ return itemDay(b).localeCompare(itemDay(a)) || String(b.id || '').localeCompare(String(a.id || '')); }
 function stuCtx(){
   const sid = state.currentUser.studentId;
   const rec = DATA.records[sid] || emptyRecord();
@@ -17091,6 +17113,9 @@ function stuCtx(){
   if(state.variants || variantsLoadFailed()) dqEnsureToday(sid, rec);
   else loadVariantsIfNeeded([...new Set((rec.wrongHomework || []).map(h =>
          dqRootCode(DATA.problemBank.find(x => x.id === h.bankId))).filter(Boolean))].sort()).then(()=>render());
+  const 내과제 = DATA.assignments.filter(a=>(!a.classId || myClassIds.includes(a.classId)) && !beforeJoin(me, a));
+  const 내영상 = DATA.videos.filter(v=>(v.studentId ? v.studentId===sid : (!v.classId || myClassIds.includes(v.classId))) && !beforeJoin(me, v));
+  const 시즌끝 = stuSeasonCut(me.school || '', me.grade || '');
   return {
     sid, rec, me, classId,
     /* quizzes는 없앴다 — 데일리퀴즈가 반 배포물이 아니라 이 학생의 오답에서 뽑히므로
@@ -17098,8 +17123,13 @@ function stuCtx(){
     /* 듣는 반 전부에서 온다 — 특강 과제·영상·시험도 이 학생의 것이다 (2026-09-01 · E-1).
        ⚠ `classId`(주 반)는 그대로 둔다 — 「내 반」을 한 줄로 말하는 자리가 아직 여럿이다. */
     classIds: myClassIds,
-    homework: DATA.assignments.filter(a=>(!a.classId || myClassIds.includes(a.classId)) && !beforeJoin(me, a)),
-    videos:   DATA.videos.filter(v=>(v.studentId ? v.studentId===sid : (!v.classId || myClassIds.includes(v.classId))) && !beforeJoin(me, v)),
+    /* 🔵 **지난 시즌 것은 학생 화면에서 뺀다 · 새것이 위** (2026-10-17 · 사용자 — 「과제나 영상이 계속 쌓이기만 한다」
+         「최신이 아래 쌓인다」). 시즌의 끝 = 이 학생 학교·학년의 마지막으로 끝난 시험 날(stuSeasonCut).
+       ⚠ 지운 게 아니라 «안 보일 뿐»이다 — 기록·강사 화면·리포트는 그대로. 시청률 수(stuVideoAvg)는 강사 화면과 같게 *All 로 센다. */
+    homeworkAll: 내과제,
+    videosAll:   내영상,
+    homework: 내과제.filter(a => !stuPastSeason(a, 시즌끝)).sort(새것먼저),
+    videos:   내영상.filter(v => !stuPastSeason(v, 시즌끝)).sort(새것먼저),
     exams:    DATA.exams.filter(e=>myClassIds.includes(e.classId)),
     qnas:     DATA.qnas.filter(q=>q.studentId===sid),
     clinics:  DATA.clinics.filter(c=>c.studentId===sid)
@@ -17118,7 +17148,7 @@ function stuAttRate(rec, me){
    ⚠ 잣대는 `videoScore`(완주는 100 · 나머지는 실측) 하나다 — 2026-09-13 K-7 전에는
      여기만 저장된 `percent`(1.5배 부푼 값)를 그대로 더하고 있었다. */
 function stuVideoAvg(c){
-  const 셀것 = c.videos.filter(videoCounted);          /* 복습용은 빼고 센다 (2026-09-20) */
+  const 셀것 = (c.videosAll || c.videos).filter(videoCounted);   /* 복습용은 빼고 센다 (2026-09-20) · 지난 시즌 것도 센다 — 강사 화면과 같은 수 (10-17) */
   if(셀것.length===0) return null;
   const sum = 셀것.reduce((n,v)=> n + videoScore(c.rec.videoProgress[v.id]), 0);
   return Math.round(sum / 셀것.length);
@@ -19372,16 +19402,16 @@ function stuHomeworkCardHTML(c, a){
 /* 반 진도와 내 과제를 한 화면에 둔다. «어디까지 나갔는지»와 «내가 뭘 안 냈는지»는
    학생 입장에서 같은 질문이다. */
 function stuProgressHTML(c){
-  markSeen('homework', c.homework.length);
+  markSeen('homework', (c.homeworkAll || c.homework).length);   // 벨(studentNotifItems)은 전체를 센다 — 지난 시즌을 숨겨도 «본 수»는 전체로
   const cp = getClassProgress(c.classId);
   const nextUnit = cp.next;
   const undone = c.homework.filter(a=>!hwIsDone(c.rec, a.id));
   const doneCount = c.homework.length - undone.length;
-  /* 마감이 가까운 미완료가 위로, 완료는 아래로. */
+  /* 할 것(미완료)이 위로, 완료는 아래로 — 그 안에서는 **새것이 위** (2026-10-17 · 사용자 — 「최신이 아래 쌓인다」). */
   const sorted = c.homework.slice().sort((a,b)=>{
     const ad = hwIsDone(c.rec, a.id), bd = hwIsDone(c.rec, b.id);
     if(ad!==bd) return ad ? 1 : -1;
-    return (a.dueDate||'9999').localeCompare(b.dueDate||'9999');
+    return 새것먼저(a, b);
   });
 
   return `
@@ -19404,7 +19434,7 @@ function stuProgressHTML(c){
 
   <div class="msec">과제 <span class="mono" style="color:${undone.length?'var(--late)':'var(--dim)'};">${doneCount}/${c.homework.length}</span></div>
   ${c.homework.length===0
-    ? `<div class="mc"><span style="font-size:12.5px;color:var(--dim);">등록된 과제가 없습니다.</span></div>`
+    ? `<div class="mc"><span style="font-size:12.5px;color:var(--dim);">${(c.homeworkAll || []).length ? '이번 시즌에 낸 과제가 아직 없습니다.' : '등록된 과제가 없습니다.'}</span></div>`
     : sorted.map(a=>stuHomeworkCardHTML(c, a)).join('')}
 
   ${/* 단원 체크리스트는 «읽는 것»이라 손이 닿는 자리(과제) 아래에 둔다.
@@ -19455,8 +19485,8 @@ function stuMaterialHTML(c){
 }
 
 function stuVideoHTML(c){
-  markSeen('video', c.videos.length);
-  if(c.videos.length===0) return `<div class="sap-empty">등록된 강의가 없습니다.</div>`;
+  markSeen('video', (c.videosAll || c.videos).length);
+  if(c.videos.length===0) return `<div class="sap-empty">${(c.videosAll || []).length ? '이번 시즌에 올라온 강의가 아직 없습니다.' : '등록된 강의가 없습니다.'}</div>`;
   const pg = id => c.rec.videoProgress[id] || null;
   const resume = c.videos.find(v=>{ const p = pg(v.id); return p && !videoDone(p); });
   const open = c.videos.find(v=>v.id===state.stuVideoId);
