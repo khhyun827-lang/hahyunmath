@@ -32592,7 +32592,15 @@ function openFigureEditorFromSaved(bankId){
      바깥에서 온 SVG 를 innerHTML 로 넣지 않는다는 불변식(figSvgOf 위 주석)은 그대로다.
    원본(.mdraw 글)은 kv 의 mdraw:{코드} 에 따로 둔다 — 변형 문서는 학생에게 나가고 재워지니 가볍게. image.mdraw = 원본이 있다는 표. */
 const MDRAW_URL = 'http://localhost:47615';
-function mdrawFetch(path, opt){ return withTimeout(fetch(MDRAW_URL + path, opt), 3000).then(r => r.json()); }
+function mdrawFetch(path, opt, ms){ return withTimeout(fetch(MDRAW_URL + path, opt), ms || 3000).then(r => r.json()); }
+/* 크롬(10-16 실측 155)은 사이트 → 이 컴퓨터 연결을 처음에 묻는다(«로컬 네트워크 접근»). 묻는 동안 fetch 가 멈춰 있어
+   3초 만에 «꺼져 있다»고 하면 거짓말이 된다 — 물을 차례면 알려 주고 오래 기다린다. 이름이 판마다 달라 셋을 본다. */
+async function mdrawPermission(){
+  for(const name of ['local-network-access', 'loopback-network', 'local-network']){
+    try{ return (await navigator.permissions.query({ name })).state; }catch(e){}
+  }
+  return 'granted';
+}
 const MDRAW_PNG = /^data:image\/png;base64,[A-Za-z0-9+\/]+=*$/;
 function mdrawFigureDoc(r){
   const okNum = x => typeof x === 'number' && x > 1 && x < 1000;
@@ -32604,7 +32612,10 @@ function mdrawFigureDoc(r){
 async function openInMathDraw(code){
   const v = variantByCode(code);
   if(!v) return;
-  try{ await mdrawFetch('/ping'); }
+  const perm = await mdrawPermission();
+  if(perm === 'denied'){ showToast('크롬이 이 컴퓨터 연결을 막아 두었습니다 — 주소창 왼쪽 사이트 설정에서 «로컬 네트워크 접근»을 허용해 주세요.'); return; }
+  if(perm === 'prompt') showToast('크롬이 묻는 «이 기기의 다른 앱에 접근» 창에서 «허용»을 눌러 주세요.');
+  try{ await mdrawFetch('/ping', undefined, perm === 'prompt' ? 60000 : 3000); }
   catch(e){ showToast('매쓰드로가 켜져 있지 않습니다 — 매쓰드로를 켠 뒤 다시 눌러 주세요.'); return; }
   const img = v.image && v.image.kind === 'svg' ? v.image : null;
   const mdraw = img && img.mdraw ? await dbGet('mdraw:' + code, null) : null;
