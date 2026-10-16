@@ -114,5 +114,28 @@ console.log(NL + '④ 닻 — 문 둘에 걸렸고, 읽는 자리 셋이 바뀌�
   봄('🔴 통째로 읽는 옛 줄이 안 남았다', /dbGetCollection\('(variants|problembank)'/.test(알맹이(html)), false);
 }
 
+console.log(NL + '⑤ 학생은 제 오답 문항의 변형만 (2026-10-16 · 한도 #3 — 576개 통째가 하루 읽기의 62%)' + NL);
+{
+  const 질의 = [];
+  const 가짜fetch = async (url, o) => { const q = JSON.parse(o.body).structuredQuery; 질의.push(q);
+    return { ok: true, json: async () => [{ document: { fields: { value: { stringValue: '{"code":"X-N01"}' } } } }, { readTime: 1 }] }; };
+  const G = new Function('fetch', 'withTimeout', 'getAuthToken', 'FIRESTORE_ROOT', 'FIRESTORE_PATH',
+    lift('dbGetVariantsOfRoots') + NL + 'return dbGetVariantsOfRoots;')(가짜fetch, p => p, async () => 't', 'https://x', 'projects/p/databases/(default)/documents');
+  const roots = Array.from({ length: 16 }, (_, i) => 'K2-05-E-' + String(i).padStart(4, '0'));
+  const rows = await G(roots);
+  봄('16개 → 질의 둘(15 + 1)', 질의.length, 2);
+  봄('문서 하나씩 받는다', rows.length, 2);
+  const 하나 = 질의[1].where.compositeFilter;
+  봄('하나뿐이면 OR 없이 범위 AND', 하나.op, 'AND');
+  const [아래, 위] = 하나.filters.map(f => f.fieldFilter.value.referenceValue.split('/variants/')[1]);
+  const 든다 = c => c >= 아래 && c < 위;
+  봄('범위가 그 원본의 변형을 집는다', ['K2-05-E-0015-N01', 'K2-05-E-0015-D02', 'K2-05-E-0015-U01'].map(든다), [true, true, true]);
+  봄('원본 자신·이웃 원본은 안 집는다', ['K2-05-E-0015', 'K2-05-E-0016-N01', 'K2-05-E-00150-N01'].map(든다), [false, false, false]);
+  봄('첫 질의는 OR 열다섯', [질의[0].where.compositeFilter.op, 질의[0].where.compositeFilter.filters.length], ['OR', 15]);
+
+  봄('반쪽 창고는 학생에게만', 알맹이(lift('loadVariantsIfNeeded')).includes("state.currentUser.type === 'student')) roots = null"), true);
+  봄('학생 화면이 오답 원본을 넘긴다', 알맹이(lift('stuCtx')).includes('loadVariantsIfNeeded([...new Set((rec.wrongHomework'), true);
+}
+
 console.log(NL + (fail ? `🔴 ${fail}개 실패 · ${pass + fail}개` : `✓ 전부 통과 · ${pass}개`));
 process.exit(fail ? 1 : 0);

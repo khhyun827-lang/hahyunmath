@@ -140,7 +140,10 @@ export function 세자리로(src, 옛파일, out) {
       if (m.startsWith('<hp:shapeComment>')) { 셈.그림++; return m.replace('</hp:shapeComment>', 꼬리 + '</hp:shapeComment>'); }
       if (!수식기다림) return m;
       수식기다림 = false;
-      const 새 = m.replace(/<\/hp:shapeComment>/, 꼬리 + '</hp:shapeComment>');
+      /* 설명문 칸이 아예 없는 수식(엔크 1-2기말 06·08 · 10-16)은 기출세자리처럼 script 앞에 새로 단다. */
+      const 새 = /<hp:shapeComment>/.test(m)
+        ? m.replace(/<\/hp:shapeComment>/, 꼬리 + '</hp:shapeComment>')
+        : m.replace(/<hp:script\b/, '<hp:shapeComment>수식입니다.' + 꼬리 + '</hp:shapeComment><hp:script');
       if (새 !== m) 셈.수식++;
       return 새;
     });

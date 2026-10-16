@@ -114,7 +114,8 @@ console.log('\n🔴 코드를 셋 지운 파일 — 창고 본문으로 되찾�
   잰다('🔴 코드 차례가 한 칸도 안 밀렸다',
     새2.items.map((x) => x.code).join() === 옛.items.map((x) => x.code).join());
   잰다('지운 코드 셋이 장부에 그대로 있다', 지운코드.every((c) => 새2.items.some((x) => x.code === c)));
-  잰다('⚠ 0565(새 번호)를 준 적이 없다', !새2.items.some((x) => x.seq > 564));
+  const 끝번호 = Math.max(...옛.items.map((x) => x.seq));   // 장부가 늘어도(10-16 1,042제) 따라간다
+  잰다('⚠ 새 번호(' + (끝번호 + 1) + ')를 준 적이 없다', !새2.items.some((x) => x.seq > 끝번호));
 }
 
 fs.rmSync(뜰, { recursive: true, force: true });

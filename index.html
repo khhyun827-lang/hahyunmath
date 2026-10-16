@@ -6879,12 +6879,53 @@ function bookReqFind(bookCode, no){
    가 영영 `undefined` 였고, **창고에 쌓아 둔 `-N01`·`-D01` 이 한 번도 학생에게 안 나갔다.**
    데일리퀴즈를 코드 위에 다시 세우면서 그 길을 이어 두는 것을 빠뜨린 자리다(09-05).
    ⚠ 이 함수는 «있으면 안 읽는다» — 화면을 그릴 때마다 부르므로 다시 읽으면 안 된다. */
+/* 🔴 **학생은 «제 오답 문항의 변형»만 읽는다** (2026-10-16 · 읽기 한도 세 번째).
+   변형이 576개로 불어 학생이 그날 처음 열 때마다 통째로 받는 것이 하루 읽기의 62%였다.
+   학생이 쓰는 변형은 오답숙제 문항(dqPool)의 것뿐이다.
+   🔵 변형 코드는 늘 «원본 코드 + '-' + 갈래·번호»라(K2-05-E-0431-N01 · 1230928A-N01)
+     문서 이름 범위 [원본-, 원본.) 로 원본 하나의 변형을 다 집는다 — '.' 은 '-' 바로 다음 글자.
+     원본 15개씩 OR 로 묶어 한 번에 묻는다(빈 질의도 1건은 센다).
+   ⚠ strict — 실패하면 던진다(부르는 쪽이 «빈 창고»로 굳히지 않게). */
+async function dbGetVariantsOfRoots(roots){
+  const token = await withTimeout(getAuthToken(), 8000);
+  const 이름 = (op, id) => ({ fieldFilter: { field: { fieldPath: '__name__' }, op,
+                                             value: { referenceValue: FIRESTORE_PATH + '/variants/' + id } } });
+  const 범위 = r => ({ compositeFilter: { op: 'AND', filters: [이름('GREATER_THAN_OR_EQUAL', r + '-'), 이름('LESS_THAN', r + '.')] } });
+  const out = [];
+  for(let i = 0; i < roots.length; i += 15){
+    const 묶음 = roots.slice(i, i + 15);
+    const where = 묶음.length === 1 ? 범위(묶음[0]) : { compositeFilter: { op: 'OR', filters: 묶음.map(범위) } };
+    const res = await withTimeout(fetch(FIRESTORE_ROOT + ':runQuery', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ structuredQuery: { from: [{ collectionId: 'variants' }], where, limit: 1000 } })
+    }), 8000);
+    if(!res.ok) throw new Error('firestore http ' + res.status);
+    for(const row of (await res.json())){
+      if(!row || !row.document) continue;
+      try{ out.push(JSON.parse(row.document.fields.value.stringValue)); }catch(e){}
+    }
+  }
+  return out;
+}
+/* 재우기는 통째 것과 같은 꼴(collCacheRead/Write) — 버전에 «원본 목록»을 붙여, 오답이 늘면 다시 묻는다. */
+async function loadVariantsOfRoots(roots){
+  const cfg = { key: 'khm-my-variants-v1' };
+  const cached = collCacheRead(cfg);
+  const ver = (await dbGet('variantsVer', '')) + '|' + roots.join(',');   // ← 읽기 1건
+  if(cached && (cached.ver === ver || dbReadFailed.has('variantsVer'))) return cached.rows;
+  const rows = roots.length ? await dbGetVariantsOfRoots(roots) : [];
+  collCacheWrite(cfg, ver, rows);
+  return rows;
+}
 let variantsLoading = null, variantsFailedAt = 0;
 /* 읽기가 한 번이라도 엎어졌나. 엎어졌으면 «변형 없이라도» 퀴즈를 굴린다 —
    창고 하나 때문에 학생이 오늘 퀴즈를 통째로 못 보는 것이 더 나쁘다. */
 function variantsLoadFailed(){ return variantsFailedAt > 0; }
-async function loadVariantsIfNeeded(){
+async function loadVariantsIfNeeded(roots){
   if(state.variants) return true;
+  /* 일부만 싣는 것은 학생에게만 — 강사 화면이 반쪽 창고를 «전부»로 알면 번호가 겹친다. */
+  if(!(state.currentUser && state.currentUser.type === 'student')) roots = null;
   if(variantsLoading) return variantsLoading;
   /* ⚠ 실패 직후에 또 부르면 화면을 그릴 때마다 두드리게 된다(429 를 스스로 키운다). 잠깐 쉰다. */
   if(variantsFailedAt && Date.now() - variantsFailedAt < 60000) return false;
@@ -6894,7 +6935,8 @@ async function loadVariantsIfNeeded(){
          너그러운 기본값([])을 그대로 담으면 **읽기 실패가 «빈 창고»로 굳는다.**
          실제로 겪었다: 429(할당량)로 읽기가 다 엎어진 상태에서 `state.variants = {}` 가
          박혀, 그 세션 내내 변형이 하나도 안 나가고 다시 읽지도 않았다. */
-      const rows = await loadCollectionCached('variants', {strict:true});   // 버전 1건 + (바뀌었을 때만) 전부
+      const rows = roots ? await loadVariantsOfRoots(roots)
+                         : await loadCollectionCached('variants', {strict:true});   // 버전 1건 + (바뀌었을 때만) 전부
       const by = {};
       for(const v of rows) (by[v.originCode] = by[v.originCode] || []).push(v);
       for(const k in by) by[k].sort((a,b)=> a.code < b.code ? -1 : 1);
@@ -17032,7 +17074,8 @@ function stuCtx(){
        그래서 코드 위에 다시 세운 데일리퀴즈가 실은 **원본·옛 쌍둥이만** 내보내고 있었다.
      못 읽으면 `{}` 가 들어오므로(위 `loadVariantsIfNeeded`) 여기서 영영 막히지는 않는다. */
   if(state.variants || variantsLoadFailed()) dqEnsureToday(sid, rec);
-  else loadVariantsIfNeeded().then(()=>render());
+  else loadVariantsIfNeeded([...new Set((rec.wrongHomework || []).map(h =>
+         dqRootCode(DATA.problemBank.find(x => x.id === h.bankId))).filter(Boolean))].sort()).then(()=>render());
   return {
     sid, rec, me, classId,
     /* quizzes는 없앴다 — 데일리퀴즈가 반 배포물이 아니라 이 학생의 오답에서 뽑히므로
