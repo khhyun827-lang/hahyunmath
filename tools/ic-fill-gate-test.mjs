@@ -37,8 +37,8 @@ function 떠온다(name) {
 const state = { itemBody: {} };
 const 판 = new Function('state', 'rules',
   Object.keys(rules).map(k => 'const ' + k + ' = rules.' + k + ';').join('\n')
-  + '\n' + ['icClassify', 'icVerdict', 'icNeedsWrite', 'icDiffBit', 'bookOfFileName', 'bookSame', 'bookMerge'].map(떠온다).join('\n')
-  + '\nreturn { icClassify, icVerdict, icNeedsWrite, icDiffBit, bookOfFileName, bookMerge };')(state, rules);
+  + '\n' + ['icClassify', 'icVerdict', 'icNeedsWrite', 'icDiffBit', 'bookOfFileName', 'bookSame', 'bookMerge', 'icBookNumbers'].map(떠온다).join('\n')
+  + '\nreturn { icClassify, icVerdict, icNeedsWrite, icDiffBit, bookOfFileName, bookMerge, icBookNumbers };')(state, rules);
 
 let 통과 = 0, 실패 = 0;
 const 잰다 = (이름, 참) => { 참 ? (통과++, console.log('  ✓ ' + 이름)) : (실패++, console.log('  ✗ ' + 이름)); };
@@ -126,6 +126,25 @@ const B = '직선 y=2x+1 에 평행한 직선의 방정식은?';
     판.icNeedsWrite({ content: A, images: ['x'] }, { content: A, image: 'data:…' }, '') === false);
   잰다('🔴 창고에 없으면 쓴다', 판.icNeedsWrite(null, { content: A }, '') === true);
   잰다('🔴 창고 문서에 본문이 없으면 쓴다', 판.icNeedsWrite({ answer: '①' }, { content: A }, '') === true);
+}
+
+// ── 교재 번호 — 판이 6단원에서 시작해도 (2026-10-16 · 엔크 1-2기말) ──────────
+절('교재 번호 — 「1-2기말」은 6단원부터다');
+{
+  const 문항 = n => Array.from({ length: n }, () => ({}));
+  const 책 = ch => 판.bookOfFileName('[2026][엔딩크레딧][1-2기말]' + ch + '.무엇.hwpx');
+  const 여섯 = { name: '6', 책: 책(6), 문항: 문항(132) }, 일곱 = { name: '7', 책: 책(7), 문항: 문항(67) };
+  state.itemBody = {};
+  잰다('🔴 6단원만 올려도 1번부터 매긴다', 판.icBookNumbers([여섯]).length === 0 && 여섯.문항[0].book.no === 1 && 여섯.문항[131].book.no === 132);
+  state.itemBody = { a: { books: [{ ...책(6), no: 1 }] }, ...Object.fromEntries(Array.from({ length: 131 }, (_, i) => ['b' + i, { books: [{ ...책(6), no: i + 2 }] }])) };
+  잰다('7단원만 나중에 — 창고의 6단원 132제 뒤로', 판.icBookNumbers([일곱]).length === 0 && 일곱.문항[0].book.no === 133);
+  state.itemBody = {};
+  const 다섯 = [6, 7, 8].map(c => ({ name: String(c), 책: 책(c), 문항: 문항(10) }));
+  판.icBookNumbers(다섯);
+  잰다('같이 올리면 이어서', 다섯[2].문항[0].book.no === 21);
+  const 빈 = [{ name: '6', 책: 책(6), 문항: 문항(3) }, { name: '8', 책: 책(8), 문항: 문항(3) }];
+  잰다('🔴 가운데 단원이 비면 비운다(지어내지 않는다)', 판.icBookNumbers(빈).join() === '8' && 빈[1].문항[0].book.no === undefined);
+  state.itemBody = {};
 }
 
 // ── 실린 교재·판 (2026-10-05) ───────────────────────────────────────

@@ -30646,6 +30646,31 @@ function icKeyLooksRowMajor(byNo){
   return { ok: 빈칸 <= 최대 * 0.1, 빈칸, 최대 };
 }
 
+/* 🔵 교재 번호(누적) = 앞 단원들의 문항 수 + 파일 안 차례. 앞 단원 수는 «같이 올린 파일»이 먼저,
+   없으면 창고에 이미 적힌 같은 판의 기록으로 센다. 하나라도 모르면 번호는 비운다(못 매긴 파일 이름을 돌려준다).
+   🔵 세기는 «그 판의 첫 단원»부터 — 1-2기말은 6단원에서 시작한다(10-16 · 엔크 1-2기말 6~10).
+   ponytail: 첫 단원 = 같이 올린 것·창고에 있는 것 중 가장 앞. 뒷 단원만 먼저 올리면 그것이 1번이 된다 → 앞 단원부터 올릴 것 */
+function icBookNumbers(교재들){
+  const 번호못매김 = [];
+  const 창고 = Object.values(state.itemBody || {});
+  for(const x of 교재들){
+    if(!x.책) continue;
+    let 앞 = 0, 모름 = !x.책.ch;
+    const 같은판 = 교재들.filter(y => y.책 && bookSame(y.책, x.책));
+    const 첫단원 = Math.min(+x.책.ch, ...같은판.map(y => +y.책.ch).filter(Boolean),
+      ...창고.flatMap(d => (d.books || []).filter(b => bookSame(b, x.책)).map(b => +b.ch)).filter(Boolean));
+    for(let c = 첫단원; !모름 && c < +x.책.ch; c++){
+      const cc = String(c).padStart(2, '0');
+      const 같이 = 같은판.find(y => y.책.ch === cc);
+      const n = 같이 ? 같이.문항.length
+        : 창고.filter(d => (d.books || []).some(b => bookSame(b, x.책) && b.ch === cc)).length;
+      if(n) 앞 += n; else 모름 = true;
+    }
+    if(모름) 번호못매김.push(x.name);
+    x.문항.forEach((p, i) => { p.book = 모름 ? { ...x.책 } : { ...x.책, no: 앞 + i + 1 }; });
+  }
+  return 번호못매김;
+}
 async function icFillBodies(input){
   const files = Array.from((input && input.files) || []);
   if(!files.length) return;
@@ -30683,22 +30708,7 @@ async function icFillBodies(input){
       const byNo = await parseHwpxAnswerKey(f);
       if(Object.keys(byNo).length >= 5){ 정답표 = byNo; 정답표이름 = f.name; }
     }
-    /* 🔵 교재 번호(누적) = 앞 단원들의 문항 수 + 파일 안 차례. 앞 단원 수는 «같이 올린 파일»이 먼저,
-       없으면 창고에 이미 적힌 같은 판의 기록으로 센다. 하나라도 모르면 번호는 비운다. */
-    const 번호못매김 = [];
-    for(const x of 교재들){
-      if(!x.책) continue;
-      let 앞 = 0, 모름 = !x.책.ch;
-      for(let c = 1; !모름 && c < +x.책.ch; c++){
-        const cc = String(c).padStart(2, '0');
-        const 같이 = 교재들.find(y => y.책 && bookSame(y.책, x.책) && y.책.ch === cc);
-        const n = 같이 ? 같이.문항.length
-          : Object.values(state.itemBody || {}).filter(d => (d.books || []).some(b => bookSame(b, x.책) && b.ch === cc)).length;
-        if(n) 앞 += n; else 모름 = true;
-      }
-      if(모름) 번호못매김.push(x.name);
-      x.문항.forEach((p, i) => { p.book = 모름 ? { ...x.책 } : { ...x.책, no: 앞 + i + 1 }; });
-    }
+    const 번호못매김 = icBookNumbers(교재들);
     if(!교재들.length){
       state.icFill = { running:false, msg: 정답표
         ? '빠른정답표만 있습니다 — 코드를 심은 교재 hwpx 도 같이 올려주세요.'
