@@ -22,7 +22,7 @@ const lift = (n) => { const at = html.indexOf('function ' + n + '('); let d = 0;
   for (let j = html.indexOf('{', at); j < html.length; j++) {
     if (html[j] === '{') d++; else if (html[j] === '}') { d--; if (!d) return html.slice(at, j + 1); } } };
 const { problemHTML } = new Function('escHtml', 'CHOICE_MARKS',
-  lift('spaceChoices') + String.fromCharCode(10) + lift('빈칸세우기') + String.fromCharCode(10) + lift('problemHTML') + String.fromCharCode(10) + 'return { problemHTML };')(
+  lift('spaceChoices') + String.fromCharCode(10) + lift('칸나누기') + String.fromCharCode(10) + lift('빈칸세우기') + String.fromCharCode(10) + lift('problemHTML') + String.fromCharCode(10) + 'return { problemHTML };')(
   (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'), '①②③④⑤');
 const B = String.fromCharCode(92);
 let pass = 0, fail = 0;

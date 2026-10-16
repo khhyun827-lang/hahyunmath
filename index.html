@@ -2404,7 +2404,9 @@
 .pb-ch .c > i{font-style:normal;color:var(--dim);flex-shrink:0;min-width:14px;}
 /* 한 선지 안에 답이 둘일 때((가)·(나)) 그 사이를 갈라 띄운다. */
 .pb-ch .pp + .pp{margin-left:16px;padding-left:16px;border-left:1px solid var(--line2);}
-.pb-tbl{border-collapse:collapse;margin:9px 0;font-size:12.5px;max-width:100%;}
+/* 🔵 글씨는 본문을 따른다 (2026-10-17 · 사용자 — 「본문이랑 표 안에 글씨 크기가 달라」). 예전엔 12.5px 로 못박아
+   학생 본문(.sap-q 15px)·검토 넓은 화면(16.5px)에서 상자만 작아 보였다. */
+.pb-tbl{border-collapse:collapse;margin:9px 0;font-size:inherit;max-width:100%;}
 .pb-tbl td{padding:6px 11px;text-align:left;vertical-align:top;
   white-space:normal;word-break:break-word;line-height:1.75;}
 /* 열이 하나뿐인 «상자»(조건·증명 상자)는 바깥 테두리만 두른다 — 줄마다 선을 그으면
@@ -14318,6 +14320,18 @@ function itemFigureOf(body){
   const id = m && (m[1].match(/[?&]id=([^&]+)/) || [])[1];
   return id ? { fileId: id, url: m[1] } : null;
 }
+/* 표·상자 줄을 칸으로 — `|` 로 가르되 **수식(`$…$`) 안의 `|` 는 가르지 않는다** (2026-10-17 · 사용자가 깨진 수식을 짚었다).
+   상자 안의 절댓값 `$\left| x \right|$` 이나 조건제시법의 `|` 에서 잘려 수식이 반으로 갈라져 날 글자로 보였다. */
+function 칸나누기(s){
+  const out = [''];
+  let 수식 = false;
+  for(const ch of String(s)){
+    if(ch === '$') 수식 = !수식;
+    if(ch === '|' && !수식){ out.push(''); continue; }
+    out[out.length - 1] += ch;
+  }
+  return out;
+}
 function problemHTML(text){
   const src = String(text == null ? '' : text);
   const lines = src.split('\n');
@@ -14402,7 +14416,7 @@ function problemHTML(text){
     /* 표 줄 — `|`로 시작하고 `|`로 끝나며 칸이 둘 이상. 수식 줄은 `$`로 시작하므로 안 걸린다. */
     if(t.length > 2 && t.startsWith('|') && t.endsWith('|')){
       선지비우기();
-      row.push(t.slice(1, -1).split('|').map(c => c.trim()));
+      row.push(칸나누기(t.slice(1, -1)).map(c => c.trim()));
       continue;
     }
     flush();
