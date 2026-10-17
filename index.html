@@ -9297,12 +9297,13 @@ async function loadAllData(){
 /* 로그인한 «뒤»에 다시 읽는다.
    ⚠ 지금은 통째로 다시 읽는다 — 학생이 «제 것만» 읽게 가르는 일은 아직 안 했다
      (docs/인증-옮기기.md). 그래도 이번 일의 요지인 «비밀번호가 안 내려간다»는 이룬다. */
-async function loadMineAfterLogin(){ await loadAllData(); }
+async function loadMineAfterLogin(){ await loadAllData(); await archivePastBooks(); }
 
 async function loadAll(){
   await loadAllData();
   await seedTestAccountIfEmpty();
   await restoreSession();
+  await archivePastBooks();          // 시작 절차 — 강사일 때만 · 지난 시즌 교재를 기록으로 (10-18)
   applyHashOnLoad();
   render();
 }
@@ -23312,6 +23313,7 @@ async function addProgBook(classId, date, inputId){
   const list = c.progress.booksBySubject[subject];
   if(list.indexOf(title) < 0){
     list.push(title);
+    stampBookAdded(c.progress, subject, title);
     await dbSetDoc('classes', c.id, c);
     await logAudit('교재 등록', '', '', c.name + ' · ' + subject + ' · ' + title);
   }
@@ -24419,8 +24421,11 @@ function getClassProgress(classId){
      되돌아오면 그 과목에 적어 둔 책이 다시 나온다 — 단원 체크가 그러는 것과 같다. */
   const books = (c && c.progress && c.progress.booksBySubject && c.progress.booksBySubject[subject]) || [];
   /* 🔵 **교재가 있으면 체크는 교재마다 한다** (2026-09-30 · 교재 진도율 2단계 C) — 반의 «마친 단원»은
-     어느 교재에서든 마친 단원이다(합집합). 교재가 없는 반은 예전 그대로 반 체크(`unitsBySubject`)다. */
-  const doneMap = books.length ? {} : ((c && c.progress && c.progress.unitsBySubject && c.progress.unitsBySubject[subject]) || {});
+     어느 교재에서든 마친 단원이다(합집합). 교재가 없는 반은 예전 그대로 반 체크(`unitsBySubject`)다.
+     🔵 **지난 시즌 교재도 합친다** (10-18) — 시즌이 끝나 책을 기록으로 옮겨도 반이 «마친 단원»은 그대로다. */
+  const 지난책 = pastBookTitles(c, subject).filter(t => !books.includes(t));
+  const doneMap = (books.length || 지난책.length) ? {} : ((c && c.progress && c.progress.unitsBySubject && c.progress.unitsBySubject[subject]) || {});
+  지난책.forEach(b => { const d = bookDoneOf(c, subject, b); bookUnitsOf(c, subject, b).forEach(u => { if(d[u]) doneMap[u] = true; }); });
   books.forEach(b => { const d = bookDoneOf(c, subject, b); bookUnitsOf(c, subject, b).forEach(u => { if(d[u]) doneMap[u] = true; }); });
   /* 🔵 **분모는 «이번 시즌 범위»다** (2026-09-29 · 사용자가 정했다 — 교재 진도율 1단계 A).
        방학 = 과목 전체 · 학기 = 기본 분할(`presetChapters` — 중간 앞 n단원 / 기말 나머지).
@@ -24463,6 +24468,8 @@ function bookDoneOf(c, subject, book){
   const own = p.unitsByBook && p.unitsByBook[subject] && p.unitsByBook[subject][book];
   if(own) return own;
   const books = (p.booksBySubject && p.booksBySubject[subject]) || [];
+  /* 옛 반 체크는 «교재를 처음 적을 때»만 물려준다 — 지난 시즌 책이 있으면 새 시즌 첫 책이 옛 체크를 받지 않는다 (10-18) */
+  if(pastBookTitles(c, subject).length) return {};
   return books[0] === book ? ((p.unitsBySubject && p.unitsBySubject[subject]) || {}) : {};
 }
 async function toggleBookUnit(classId, book, unit, checked){
@@ -24509,6 +24516,105 @@ async function setClassProgressSubject(classId, subject){
 /* 교재를 더한다 (2026-09-01 · T-1 · 사용자가 시켰다: 「진도탭에 어떤교재 사용중인지 입력」).
    🔴 **글자마다 render()를 부르지 않는다** — 한글 조합이 끊긴다(W-3). 누를 때 DOM에서 읽는다.
    ⚠ 같은 책을 두 번 넣지 않는다 — 빼는 쪽이 이름으로 찾기 때문이다. */
+/* ---------- 교재는 시즌마다 (2026-10-18 · 사용자 — 「시즌이 끝나면 지난시즌 교재도 자동으로 정리 · 기록엔 남아 있어야 ·
+     이전에 어떤 반에서 어떤 교재 했는지 확인하러 갈 수 있게 · 시즌 시작할 때 반마다 교재를 입력」) ----------
+   저장은 반 문서 progress 의 두 칸이 더 는다 —
+     bookAdded[과목][교재] = 'YYYY-MM-DD'     그 책을 적은 날
+     bookHistory = [{subject, title, from, to, season}]   시즌이 끝나 옮긴 책
+   🔵 **시즌의 끝 = 그 반 학생 «모두»가 지나간 시험 날** — 학생마다 stuSeasonCut(학생 화면이 지난 과제를 숨기는 그 잣대) 가운데
+     가장 이른 것. 학교가 섞인 반에서 한 학교만 시험을 끝냈을 때 책을 옮기면, 아직 시험 보는 학생의 교재가 사라진다.
+   🔵 적은 날이 그 끝보다 앞이면 지난 책이다. ⚠ 날이 없는 옛 책은 BOOK_ADDED_DEFAULT(이 판을 올린 날)에 적은 것으로 친다 —
+     올리는 날 모든 반의 교재가 한꺼번에 사라지지 않게.
+   ⚠ **지우지 않고 옮긴다.** 단원 체크(unitsByBook)·다루는 단원(bookScope)은 책 이름이 열쇠라 그대로 남아,
+     같은 책을 다시 적으면 이어진다. 반의 «마친 단원»도 지난 책까지 합쳐 센다(getClassProgress). */
+const BOOK_ADDED_DEFAULT = '2026-10-18';
+function stampBookAdded(p, subject, title){
+  if(!p.bookAdded) p.bookAdded = {};
+  if(!p.bookAdded[subject]) p.bookAdded[subject] = {};
+  p.bookAdded[subject][title] = todayStr();
+}
+function pastBookTitles(c, subject){
+  const h = (c && c.progress && c.progress.bookHistory) || [];
+  return [...new Set(h.filter(x => x.subject === subject).map(x => x.title))];
+}
+/* 반의 «지난 시즌 끝» — 재원생 모두가 지나간 시험 날. 끝난 시험이 없는 학생이 하나라도 있으면 '' (아무것도 안 옮긴다) */
+function classSeasonCut(classId){
+  const r = classRoster(classId);
+  return (r.length ? r : [{}]).map(s => stuSeasonCut(s.school || '', s.grade || '')).reduce((a, b) => a < b ? a : b);
+}
+/* 그 책이 쓰인 시즌 이름 — 적은 날의 시즌(방학이면 다음 시험) · 「2026 2학기 중간」 */
+function bookSeasonLabel(classId, ymd){
+  const s = classRoster(classId)[0] || {};
+  const t = examSeasonOf(s.school || '', s.grade || '', ymd);
+  return t.slot ? t.year + ' ' + SLOT_NAME[t.slot] : t.next.year + ' ' + SLOT_NAME[t.next.slot];
+}
+function booksToArchive(c, cut){
+  const p = (c && c.progress) || {}, out = [];
+  if(!cut) return out;
+  Object.keys(p.booksBySubject || {}).forEach(subject => (p.booksBySubject[subject] || []).forEach(title => {
+    const from = (p.bookAdded && p.bookAdded[subject] && p.bookAdded[subject][title]) || BOOK_ADDED_DEFAULT;
+    if(from < cut) out.push({ subject, title, from });
+  }));
+  return out;
+}
+/* 강사로 들어올 때 한 번 — 지난 시즌 책을 기록으로 옮긴다.
+   ⚠ 시험 일정을 못 읽었으면 안 한다 — 기본 날로 셈하면 시험 «전»에 책이 사라질 수 있다.
+   ⚠ 저장이 된 «뒤»에 메모리를 바꾼다(실패하면 다음에 다시 한다). */
+let bookArchiveDone = false;
+async function archivePastBooks(){
+  const 나 = authIsReal() ? authWhoOf(fbAuth.currentUser.email) : null;
+  if(bookArchiveDone || !나 || 나.role !== 'teacher' || dbReadFailed.has('exam-ranges')) return;
+  bookArchiveDone = true;
+  let 옮긴 = 0;
+  for(const c of DATA.classes.slice()){
+    const cut = classSeasonCut(c.id);
+    const 옮길 = booksToArchive(c, cut);
+    if(!옮길.length) continue;
+    const next = JSON.parse(JSON.stringify(c)), p = next.progress;
+    if(!p.unitsByBook) p.unitsByBook = {};
+    if(!p.bookHistory) p.bookHistory = [];
+    for(const b of 옮길){
+      /* 옛 반 체크를 물려 읽던 첫 책은 그 체크를 제 것으로 굳혀 둔다 — 옮긴 뒤엔 물려 읽을 자리가 없다 */
+      if(!p.unitsByBook[b.subject]) p.unitsByBook[b.subject] = {};
+      if(!p.unitsByBook[b.subject][b.title]) p.unitsByBook[b.subject][b.title] = Object.assign({}, bookDoneOf(c, b.subject, b.title));
+      p.booksBySubject[b.subject] = p.booksBySubject[b.subject].filter(t => t !== b.title);
+      if(p.bookAdded && p.bookAdded[b.subject]) delete p.bookAdded[b.subject][b.title];
+      p.bookHistory.push({ subject: b.subject, title: b.title, from: b.from, to: cut, season: bookSeasonLabel(c.id, b.from) });
+    }
+    if(await dbSetDoc('classes', c.id, next) !== true) continue;
+    const i = DATA.classes.indexOf(c);
+    if(i >= 0) DATA.classes[i] = next;
+    옮긴 += 옮길.length;
+    await logAudit('교재 시즌 정리', '', '', next.name + ' · ' + 옮길.map(b => b.title).join(' · '));
+  }
+  if(옮긴) showToast(`지난 시즌 교재 ${옮긴}권을 기록으로 옮겼습니다 — 반 › 진도에서 새 시즌 교재를 적어 주세요.`);
+}
+/* 지난 교재 기록 — 반 › 진도 아래 접힌 칸. 시즌마다 묶고(최근 시즌이 위) «이 반만 / 모든 반»을 고른다.
+   🔵 «이전에 어떤 반에서 어떤 교재를 했나»를 보러 오는 자리라 모든 반이 한 표에 선다. */
+function bookHistoryHTML(classId){
+  const 모두 = [];
+  DATA.classes.forEach(c => (((c.progress || {}).bookHistory) || []).forEach(h => 모두.push(Object.assign({ c }, h))));
+  if(!모두.length) return '';
+  const 열림 = state.bookHistOpen || '';
+  const 보일 = 열림 === 'all' ? 모두 : 모두.filter(h => h.c.id === classId);
+  const 시즌들 = [];
+  보일.slice().sort((a, b) => String(b.to).localeCompare(String(a.to)) || String(a.c.name).localeCompare(String(b.c.name)))
+    .forEach(h => { let g = 시즌들.find(x => x.season === h.season); if(!g) 시즌들.push(g = { season: h.season, rows: [] }); g.rows.push(h); });
+  const 단추 = (v, 말) => `<button class="btn ${열림===v?'p':''} sm" onclick="state.bookHistOpen='${v}'; render()">${말}</button>`;
+  return `<div style="margin-top:14px;">
+    <div class="row" style="gap:6px;align-items:center;">
+      <span class="t-sec" style="margin:0;">지난 교재 기록</span>
+      ${열림 ? 단추('mine', '이 반만') + 단추('all', '모든 반') + `<button class="btn q sm" onclick="state.bookHistOpen=''; render()">접기</button>`
+             : `<button class="btn sm" onclick="state.bookHistOpen='mine'; render()">펼치기 (${모두.filter(h => h.c.id === classId).length} · 모든 반 ${모두.length})</button>`}
+    </div>
+    ${!열림 ? '' : !시즌들.length ? '<div class="cb-none" style="margin-top:8px;">이 반은 아직 지난 교재가 없습니다 — «모든 반»에서 다른 반 기록을 볼 수 있습니다.</div>'
+      : 시즌들.map(g => `<div style="margin-top:10px;">
+        <div style="font-size:11.5px;font-weight:700;color:var(--dim);margin-bottom:4px;">${escHtml(g.season)}</div>
+        ${g.rows.map(h => `<div class="st-row"><div class="t"><b>${escHtml(h.title)}</b>
+          <span>${h.c.id === classId ? '<b>' + escHtml(h.c.name) + '</b>' : escHtml(h.c.name)}<s>·</s>${escHtml(h.subject)}<s>·</s><span class="mono">${escHtml(h.from)} ~ ${escHtml(h.to)}</span></span></div></div>`).join('')}
+      </div>`).join('')}
+  </div>`;
+}
 /* 🔵 **다른 반에 적어 둔 교재를 바로 고른다** (2026-10-17 · 사용자 — 「한 반에서 새 교재를 추가하면 다른 반에서 바로 선택」).
    따로 «교재 목록»을 두지 않는다 — 반 문서들의 booksBySubject 가 이미 그 목록이다(같은 과목만: 교재는 과목의 단원을 다룬다).
    고르면 그 반이 정해 둔 «다루는 단원»(bookScope)도 같이 가져온다. */
@@ -24533,6 +24639,7 @@ async function addClassBook(classId, picked){
   const list = c.progress.booksBySubject[subject];
   if(list.indexOf(title) >= 0){ showToast('이미 적어 둔 교재입니다.'); return; }
   list.push(title);
+  stampBookAdded(c.progress, subject, title);
   /* 다른 반이 정해 둔 «다루는 단원»을 같이 (10-17) */
   const 원 = DATA.classes.find(x => x.id !== c.id && x.progress && x.progress.bookScope && x.progress.bookScope[subject] && x.progress.bookScope[subject][title]);
   if(원){
@@ -24557,6 +24664,7 @@ async function removeClassBook(classId, title){
   const i = list.indexOf(title);
   if(i < 0) return;
   list.splice(i, 1);
+  if(c.progress.bookAdded && c.progress.bookAdded[subject]) delete c.progress.bookAdded[subject][title];
   await dbSetDoc('classes', c.id, c);
   await logAudit('교재 삭제', '', '', c.name + ' · ' + subject + ' · ' + title);
   showToast('교재를 뺐습니다.');
@@ -25787,7 +25895,9 @@ function chubProgressHTML(classId){
         <button type="button" class="x" data-b="${b}" title="빼기"
           onclick="removeClassBook('${classId}', this.dataset.b)">×</button></div>`;
     }).join('')}</div>`
-      : '<div class="cb-none">아직 적어 둔 교재가 없습니다.</div>'}
+      : pastBookTitles(DATA.classes.find(x=>x.id===classId), subject).length
+        ? '<div class="cb-none"><b>새 시즌 교재를 적어 주세요.</b> 지난 시즌 교재는 기록으로 옮겼습니다(아래 «지난 교재 기록»).</div>'
+        : '<div class="cb-none">아직 적어 둔 교재가 없습니다.</div>'}
     ${/* 🔴 **`!event.isComposing`이 없으면 한글이 반쯤 든 채로 등록된다** (W-3의 새 얼굴).
          「개념서」를 치고 **조합을 끝내려고 누르는 Enter**도 keydown을 쏜다 — 그 한 번에
          책이 들어가 버리고, 이어 치려던 글자는 갈 곳을 잃는다. 영문만 쳐 보면 절대 안 걸린다. */''}
@@ -25800,9 +25910,15 @@ function chubProgressHTML(classId){
     ${(sh => sh.length ? `<div class="cb-shared"><span>다른 반에서 쓰는 교재</span>${sh.map(x =>
       `<button type="button" class="chip" data-b="${escHtml(x.title)}" title="${escHtml(x.from.name || '')}에서 씀"
         onclick="addClassBook('${classId}', this.dataset.b)">＋ ${escHtml(x.title)}</button>`).join('')}</div>` : '')(sharedBooksFor(classId, subject))}
+    ${(ps => ps.length ? `<div class="cb-shared"><span>이 반 지난 시즌 교재</span>${ps.map(t =>
+      `<button type="button" class="chip" data-b="${escHtml(t)}" title="이번 시즌에도 쓰면 눌러 다시 적습니다 — 단원 체크는 이어집니다"
+        onclick="addClassBook('${classId}', this.dataset.b)">＋ ${escHtml(t)}</button>`).join('')}</div>` : '')(
+      pastBookTitles(DATA.classes.find(x=>x.id===classId), subject).filter(t => !books.includes(t)))}
     <p class="st-note">여러 권이면 <b>하나씩 더합니다</b> — 개념서 · 워크북처럼 함께 쓰는 책을 나란히 둡니다.<br>
       <b>과목마다 따로 기억합니다</b> — 과목을 바꾸면 그 과목에 적어 둔 교재가 나오고,
-      돌아오면 그대로 있습니다.</p>
+      돌아오면 그대로 있습니다.<br>
+      <b>시즌마다 새로 적습니다</b> — 반 학생들의 시험이 모두 끝나면 그 시즌 교재는 «지난 교재 기록»으로 옮겨집니다.</p>
+    ${bookHistoryHTML(classId)}
   </div>
   <div style="margin-top:20px;">
     ${/* 🔵 교재가 있으면 단원 × 교재 판 (2026-09-30 · 2단계 C). 칸 하나 = 그 교재로 그 단원을 마쳤나.

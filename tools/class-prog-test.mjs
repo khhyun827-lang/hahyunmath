@@ -41,7 +41,7 @@ const 봄 = (무엇, 나온것, 나와야) => {
 };
 
 const 이름들 = ['classProgKey','classProgSaved','classProgEntry','classProgInput',
-  'saveClassProg','sessionAutoSaveProg','removeClassProgEntry','classProgRecent','addProgBook'];
+  'saveClassProg','sessionAutoSaveProg','removeClassProgEntry','classProgRecent','addProgBook','stampBookAdded'];
 
 /* 화면 밖의 것들을 흉내 낸다. 저장·기록·알림은 «무엇을 어디에 썼는지»를 모아 둔다. */
 function 판(opts){
@@ -57,7 +57,7 @@ function 판(opts){
     classProgBookAdd: false,
   };
   const F = new Function('DATA','state','document','dbSet','dbSetDoc','logAudit','showToast','render','getClassProgress','classNameOf',
-    이름들.map(lift).join(NL) + NL + 'return {' + 이름들.join(',') + '};')(
+    "function todayStr(){ return '2026-10-18'; }" + NL + 이름들.map(lift).join(NL) + NL + 'return {' + 이름들.join(',') + '};')(
     DATA, state,
     { getElementById: (id) => (id in 칸) ? { value: 칸[id] } : null },
     async (k, v) => 쓴것.push({ 문서:k, 값: JSON.parse(JSON.stringify(v)) }),

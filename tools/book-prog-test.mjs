@@ -34,7 +34,7 @@ const 봄 = (무엇, 나온것, 나와야) => {
 
 /* currentSeason 은 2026-10-03 부터 학교별 시즌에서 온다 — 여기서는 «시즌 이름»만 넘기면 되므로 작은 대역을 쓴다 */
 const 이름들 = ['isVacationSeason', 'presetChapters', 'getClassProgress', 'progRangeText',
-  'bookUnitsOf', 'bookDoneOf', 'toggleBookUnit', 'setBookScope', 'bookProgText'];
+  'bookUnitsOf', 'bookDoneOf', 'toggleBookUnit', 'setBookScope', 'bookProgText', 'pastBookTitles'];
 const 상자 = new Function('DATA', 'state', 'UNIT_CHAPTERS', 'SEASON_SPLIT', 'SEASONS', 'dbSetDoc', 'render',
   "function currentSeason(){ return (state.season && state.season.name) || ''; }" + NL + 이름들.map(lift).join(NL) + NL + 'return { ' + 이름들.join(', ') + ' };');
 
