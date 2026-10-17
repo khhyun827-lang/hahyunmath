@@ -208,7 +208,7 @@ console.log(NL + '④ 반 › 영상 탭을 실제로 그려 본다' + NL);
      아니라 빈 것으로 세우고, 머리 카드와 구간 딱지(`videoGoalLabelOf`)는 그대로 뜬다. */
   const C = new Function('DATA', 'state', 'loadAllRecordsIfNeeded', 'classRoster', 'escHtml', 'todayStr', 'iconSvg',
     'vidNoticeBarHTML', 'vidNoticeBtnHTML', 'extractYouTubeId', 'stuDday', 'setVideoDue', 'deleteVideo', 'render',
-    ['itemDay','beforeJoin','joinedRoster','classRosterOn','videoExcluded','videoTakers'].map(lift).join(NL) + NL + 잣대 + NL + lift('secToClock') + NL + lift('videoGoalLabelOf') + NL + lift('videoHeroHTML')
+    "function isJikboSession(){ return false; }" + NL + ['itemDay','beforeJoin','joinedRoster','studentClassIds','isWithdrawnRecord','goneDateOf','inClassOn','byKoName','classRosterOn','itemTakers','classRosterAll','classRosterEver','videoExcluded','videoTakers'].map(lift).join(NL) + NL + 잣대 + NL + lift('secToClock') + NL + lift('videoGoalLabelOf') + NL + lift('videoHeroHTML')
       + NL + lift('chubVideoModel') + NL + lift('chubVideoHTML') + NL + lift('videoDrawerHTML') + NL + lift('videoCopyPanelHTML') + NL + 'return c => chubVideoHTML(c) + videoDrawerHTML();')(
     DATA, state, () => {}, () => roster,
     s => (s === null || s === undefined) ? '' : String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;'),
@@ -328,7 +328,7 @@ console.log(NL + '⑥ 본 날이 남는다 — days · firstAt · doneAt' + NL);
 {
   /* 리포트가 달로 자른다 — 9월 리포트·10월 리포트가 같은 기록에서 다른 답을 낸다 */
   const M = new Function('videoDurationSec', 'videoSeen', 'videoScore',
-    [lift('ymOf'), lift('videoAssignedYm'), lift('videoCounted'), lift('monthlyReportData')].join(NL)
+    [lift('ymOf'), lift('videoAssignedYm'), lift('videoCounted'), lift('studentClassIds'), lift('studentMainClassId'), lift('monthlyReportData')].join(NL)   /* 10-18 — 과제는 «주 반으로 치는 반»에서 */
       + NL + 'return monthlyReportData;')(
     p => +p.duration || 0, p => !!(p && p.watchedSeconds > 0), p => Math.min(100, Math.round(p.watchedSeconds / p.duration * 100)));
   const rec = { videoProgress: {

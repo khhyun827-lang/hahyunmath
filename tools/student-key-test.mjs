@@ -67,7 +67,8 @@ const 곁 = {
   logAudit: async () => { }, showToast: () => { }, render: () => { },
   classNameOf: (id) => '1반', todayStr: () => '2026-09-13',
 };
-const src = lift('studentKeyOfSid') + NL + lift('rosterBulkMoveClass') + NL + lift('withdrawStudent') + NL + lift('restoreStudent')
+/* 10-18 — 반 옮기기는 반 이력(classChangeFields)을 지난다 */
+const src = lift('studentClassIds') + NL + lift('classChangeFields') + NL + lift('studentKeyOfSid') + NL + lift('rosterBulkMoveClass') + NL + lift('withdrawStudent') + NL + lift('restoreStudent')
   + NL + 'return { rosterBulkMoveClass, withdrawStudent, restoreStudent };';
 const api = new Function(...Object.keys(곁), src)(...Object.values(곁));
 

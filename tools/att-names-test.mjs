@@ -50,12 +50,13 @@ const 줄짓기 = 짓기(원본);
 
 /* ── 요약 만들기 — sessionSavedSummary 를 index.html 에서 그대로 뜬다 ── */
 function 요약(명단, 기록) {
-  const F = new Function('classRoster', 'state', 'attOn', 'studentMainClassId',
-    ['itemDay','beforeJoin','joinedRoster','classRosterOn'].map(lift).join(NL) + NL + lift('sessionSavedSummary') + NL + 'return sessionSavedSummary;')(
+  /* 10-18 — classRosterOn 은 이제 «그 날 그 반에 있었나»(inClassOn)로 DATA.students 를 거른다 · 명단은 모두 c1 반 학생 */
+  const F = new Function('classRoster', 'state', 'attOn', 'studentMainClassId', 'DATA', 'isJikboSession',
+    ['itemDay','beforeJoin','joinedRoster','studentClassIds','isWithdrawnRecord','goneDateOf','inClassOn','byKoName','classRosterOn'].map(lift).join(NL) + NL + lift('sessionSavedSummary') + NL + 'return sessionSavedSummary;')(
     () => 명단,
     { allRecords: Object.fromEntries(명단.map(s => [s.studentId, { attendance: 기록[s.studentId] ? [기록[s.studentId]] : [] }])) },
     (rec, date) => ((rec && rec.attendance) || []).find(a => a.date === date) || null,
-    () => 'c1');
+    () => 'c1', { students: 명단.map(s => Object.assign(s, { classId: s.classId || 'c1' })), records: {} }, () => false);
   return F('c1', '2026-09-15');
 }
 

@@ -34,7 +34,8 @@ const 봄 = (무엇, 나온것, 나와야) => {
 
 const 이름들 = ['examPlanAll', 'planCellsOfStudent', 'isJikboSession', 'jikboParse', 'jikboCellOn',
   'jikboRoster', 'jikboSessionsOn', 'classRoster', 'classRosterAll', 'byKoName', 'classNameOf', 'attClassOf', 'attOn', 'attCountedOf',
-  'studentMainClassId', 'saveClassAttendance'];
+  'studentMainClassId', 'saveClassAttendance',
+  'classRosterOn', 'inClassOn', 'goneDateOf', 'isWithdrawnRecord', 'beforeJoin', 'itemDay', 'mainClassesOf', 'studentExtraClassIds', 'isSpecialClass', 'classKindOf'];   // 10-18 — 저장은 «그 날 명단»으로
 const 몸 = 한줄('const JIKBO_NO_SCHOOL') + NL + 이름들.map(n => (n === 'saveClassAttendance' ? 'async ' : '') + lift(n)).join(NL) + NL +
   'return {' + 이름들.join(',') + '};';
 

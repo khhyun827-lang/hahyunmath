@@ -122,7 +122,7 @@ console.log(NL + '③ 과제 칸 — 「미제출」이 글자로 선다' + NL);
      소스를 읽는 것이 아니라 «그려서» 본다 — 09-13 에 밟은 함정이다(글자만 보면 if(false) 도 통과한다). */
   const G = new Function('state', 'hwState', 'hwIsDone', 'HWG_CELL', 'HW_NONE', 'HW_SUBMITTED',
     'todayStr', 'escHtml', 'chubYm', 'WEEKDAY_LABEL',
-    ['itemDay','beforeJoin','joinedRoster','classRosterOn'].map(lift).join(NL) + NL + lift('hwOrderKey') + NL + lift('hwOrderDesc') + NL + lift('hwOrderAsc') + NL
+    "function isJikboSession(){ return false; } var DATA = { students: [], records: {} };" + NL + ['itemDay','beforeJoin','joinedRoster','studentClassIds','isWithdrawnRecord','goneDateOf','inClassOn','byKoName','classRosterOn','itemTakers','classRosterAll','classRosterEver','isWithdrawn','isEnded','goneLabel','rosterLeftTagHTML'].map(lift).join(NL) + NL + lift('hwOrderKey') + NL + lift('hwOrderDesc') + NL + lift('hwOrderAsc') + NL
       + lift('hwGridHTML') + NL + 'return hwGridHTML;')(
     { allRecordsLoaded: true, hwCell: null, hwNoticeId: null, allRecords: { s1: { assignmentsDone: {} } } },
     () => ({ status: HW.HW_NONE, photos: [] }), () => false, CELL, HW.HW_NONE, HW.HW_SUBMITTED,
@@ -132,7 +132,7 @@ console.log(NL + '③ 과제 칸 — 「미제출」이 글자로 선다' + NL);
 
   const 그리기 = (dueDate) => G('c1',
     [{ id: 'h1', classId: 'c1', title: '과제', createdAt: '2026-09-10', dueDate }],
-    [{ studentId: 's1', name: '남궁하루' }]);
+    [{ studentId: 's1', name: '남궁하루', classId: 'c1' }]);   // 10-18 — 과제를 «받은» 학생은 낼 때 그 반에 있던 학생
 
   const 아직 = 그리기('2026-09-19');   // 마감 전
   const 지남 = 그리기('2026-09-14');   // 마감 지남

@@ -9658,7 +9658,15 @@ function attCountedOf(rec, s){
   const list = (rec && rec.attendance) || [];
   const main = studentMainClassId(s);
   if(!main) return list;
-  return list.filter(a => attClassOf(a, main) === main);
+  const mains = mainClassesOf(s);
+  return list.filter(a => mains.includes(attClassOf(a, main)));
+}
+/* «주 반» 기록으로 세는 반 — 지금 주 반 + 반 이력의 옛 정규 반 (10-18). 반을 옮겨도 옛 반 출결·점수가 출석률·신호·리포트에서 빠지지 않는다.
+   ⚠ 지금 듣는 특강, 갈래가 «특강»인 옛 반은 뺀다(특강을 가른 09-01 의 결정 그대로). */
+function mainClassesOf(s){
+  const main = studentMainClassId(s), extras = studentExtraClassIds(s);
+  return [...new Set([main].concat((s.classHist || []).map(h => h.classId)
+    .filter(c => c && !extras.includes(c) && !isSpecialClass(c))))];
 }
 /* 출석률의 정의는 **여기 하나뿐이다** — 「퇴원」을 뺀 것 중 「결석」이 아닌 비율. */
 /* 🔴 **점수도 반을 안다** (2026-09-01 · E-2). 씨앗 데이터를 심고 나서야 보였다 —
@@ -9675,7 +9683,8 @@ function scoresCountedOf(rec, s){
   const list = (rec && rec.scores) || [];
   const main = studentMainClassId(s);
   if(!main) return list;
-  return list.filter(sc => scoreClassOf(sc, main) === main);
+  const mains = mainClassesOf(s);
+  return list.filter(sc => mains.includes(scoreClassOf(sc, main)));
 }
 function attRateOf(list){
   const counted = (list || []).filter(a => a.status !== '퇴원');
@@ -9683,22 +9692,81 @@ function attRateOf(list){
   return Math.round(counted.filter(a => a.status !== '결석').length / counted.length * 100);
 }
 
-/* 그 날 그 반에 «있던» 학생 (2026-10-12) — 등록일(joinedAt) 전 날짜면 빠진다.
+/* =================== 그 날 그 반에 있었나 (2026-10-18 · 사용자 — 「반을 종료하거나 학생이 졸업해도 이전 기록을 다 볼 수 있게」) ===================
+   🔴 **지난 날짜 화면은 «그 날» 명단으로 그린다** — 예전엔 «지금 다니는» 명단(classRoster)이라 졸업·퇴원·반 이동을 하면
+     지난 달 출결표·수업 기록·과제·영상에서도 그 학생이 사라졌다(과거가 바뀌어 보였다).
+   그 날 있었나 = 등록일(joinedAt) 뒤 · 떠난 날(퇴원·수강 종료) 앞 · 그리고
+     ① 지금 반이면 들어온 날(classSince) 뒤 — 옛 학생은 들어온 날이 없어 처음부터 있던 것으로 친다
+     ② 옛 반이면 반 이력(classHist {classId, from, to})의 기간 안 — to 는 옮긴 날이라 그 날부터는 새 반이다.
+   ⚠ 반 이력은 2026-10-18 부터 쌓인다(classChangeFields) — 그 전에 옮긴 학생의 옛 반 기간은 알 길이 없다. */
+function goneDateOf(s){
+  const rec = state.allRecords[s.studentId] || (DATA.records || {})[s.studentId];
+  const 퇴원줄 = isWithdrawnRecord(rec) ? [...rec.attendance].sort((a,b)=>a.date.localeCompare(b.date)).pop().date : '';
+  return [s.withdrawnAt, s.endedAt, 퇴원줄].filter(Boolean).sort()[0] || '';
+}
+function inClassOn(s, classId, date){
+  if(!s || !classId || !date || beforeJoin(s, date)) return false;
+  const 끝 = goneDateOf(s);
+  if(끝 && 끝 <= date) return false;
+  if(studentClassIds(s).includes(classId)){
+    const 든날 = (s.classSince || {})[classId];
+    if(!든날 || 든날 <= date) return true;
+  }
+  return (s.classHist || []).some(h => h.classId === classId && (!h.from || h.from <= date) && date < h.to);
+}
+/* 반이 바뀔 때 저장할 칸 — 빠지는 반은 이력으로 닫고(classHist), 새로 드는 반은 든 날을 적는다(classSince).
+   🔴 반이 바뀌는 세 자리(학생 정보 고치기 · 명단 반 옮기기 · 시즌 마감)가 모두 이것을 지난다 — 한 곳이라도 빠지면 그 길로 옮긴 학생만 옛 반에서 사라진다. */
+function classChangeFields(s, classId, classIds, date){
+  const 전 = studentClassIds(s);
+  const 후 = [...new Set([classId].concat(classIds || []).filter(Boolean))];
+  const since = Object.assign({}, s.classSince || {}), hist = (s.classHist || []).slice();
+  전.filter(c => !후.includes(c)).forEach(c => {
+    const from = since[c] || s.joinedAt || '';
+    if(from !== date) hist.push({ classId: c, from, to: date });   // 든 날 바로 뺀 것은 남길 기간이 없다
+    delete since[c];
+  });
+  후.filter(c => !전.includes(c)).forEach(c => { since[c] = date; });
+  return { classId: classId || '', classIds: (classIds || []).filter(c => c && c !== classId), classSince: since, classHist: hist };
+}
+/* 그 날 그 반에 «있던» 학생 (2026-10-12 · 10-18 반 이력·떠난 날까지).
    ⚠ 그 날 기록이 이미 있으면 남긴다(체험 수업 등) — 안 그러면 격자에서 사라지고 저장 때 손을 못 댄다. */
 function classRosterOn(classId, date){
-  return classRoster(classId).filter(s => !beforeJoin(s, date)
-    || attOn(state.allRecords[s.studentId], date, classId, studentMainClassId(s)));
+  if(isJikboSession(classId)) return jikboRoster(classId);
+  return DATA.students.filter(s => inClassOn(s, classId, date)
+    || attOn(state.allRecords[s.studentId], date, classId, studentMainClassId(s))).sort(byKoName);
 }
+/* 기간 안 어느 날이라도 그 반에 있던 학생 — 달 격자·지난 과제·영상처럼 «날짜 여럿»을 한 판에 그리는 자리 */
+function classRosterDuring(classId, dates){
+  if(isJikboSession(classId)) return jikboRoster(classId);
+  return DATA.students.filter(s => dates.some(d => inClassOn(s, classId, d)
+    || attOn(state.allRecords[s.studentId], d, classId, studentMainClassId(s)))).sort(byKoName);
+}
+/* 지금 다니는 학생 — «앞으로의 일»(오늘 출결 넣기·알림·새 과제)을 다루는 자리 */
 function classRoster(classId){
   if(isJikboSession(classId)) return jikboRoster(classId);   // 직보는 반이 아니라 «그 날 그 학교»다
-  return classRosterAll(classId).filter(s=>!isWithdrawn(s));
+  return DATA.students.filter(s => studentClassIds(s).includes(classId) && !isWithdrawn(s)).sort(byKoName);
 }
 /* 🔵 **반 명단은 늘 이름순** (2026-10-03 · 사용자 — 「반탭 성적·출결이 이름순인 줄 알았는데 아니네」).
    예전엔 DATA.students 순서(넣은 순서)였다. 명단을 짓는 곳이 여럿이라 여기 한 곳에서 정렬한다 —
-   퇴원생까지 담는 명단(성적·시험 — «이미 있었던 일»이라 남아야 한다)도 이것을 쓴다. */
+   퇴원생까지 담는 명단(성적·시험 — «이미 있었던 일»이라 남아야 한다)도 이것을 쓴다.
+   🔵 10-18 — 다른 반으로 옮겨 간 학생도 담는다(반 이력) · 성적·시험 화면은 «이 반을 거쳐 간» 모두가 선다. */
 function byKoName(a, b){ return String(a.name || '').localeCompare(String(b.name || ''), 'ko'); }
 function classRosterAll(classId){
-  return DATA.students.filter(s=>studentClassIds(s).includes(classId)).sort(byKoName);
+  return DATA.students.filter(s => studentClassIds(s).includes(classId)
+    || (s.classHist || []).some(h => h.classId === classId)).sort(byKoName);
+}
+/* 시험 명단 — 지금 학생 + 그 시험을 볼 때 이 반에 있던 학생 + 점수가 남아 있는 학생 (10-18).
+   예전엔 «반에 적힌 모두»(퇴원생 포함)라, 반을 옮긴 학생은 옛 시험에서 사라지고 졸업생은 새 시험에도 빈 줄로 섰다. */
+function examRoster(classId, exams){
+  const now = classRoster(classId);
+  return classRosterAll(classId).filter(s => now.includes(s) || exams.some(ex =>
+    (ex.date ? inClassOn(s, classId, ex.date) : studentClassIds(s).includes(classId))
+    || examScoreOf(state.allRecords[s.studentId], ex.id)));
+}
+/* 지금은 이 반에 없는 학생에 붙는 작은 말 — 지난 날짜 화면에 선 «지난 학생»을 지금 학생과 가른다 (10-18) */
+function rosterLeftTagHTML(s, classId){
+  const t = isWithdrawn(s) ? goneLabel(s) : !studentClassIds(s).includes(classId) ? '반 이동' : '';
+  return t ? ` <span class="badge gone">${escHtml(t)}</span>` : '';
 }
 async function doStudentLogin(){
   const idInput = document.getElementById('login-id').value.trim();
@@ -10771,10 +10839,10 @@ async function seasonApply(){
       if(k === '계속'){
         const next = Object.assign({}, s, { grade: gradeUp(s.grade) });
         const 새반 = ss.cls[s.studentId];
-        if(새반 && 새반 !== s.classId){ next.classId = 새반; next.classIds = (s.classIds || []).filter(id => id !== 새반); }
+        if(새반 && 새반 !== s.classId) Object.assign(next, classChangeFields(s, 새반, (s.classIds || []).filter(id => id !== 새반), ss.date));   // 반 이력 (10-18)
         delete next.phone; delete next.parentPhone;
         if(await dbSetDoc('students', studentKeyOfSid(s.studentId), next) === null) throw 0;
-        Object.assign(s, { grade: next.grade, classId: next.classId, classIds: next.classIds });
+        Object.assign(s, { grade: next.grade, classId: next.classId, classIds: next.classIds, classSince: next.classSince, classHist: next.classHist });
       } else if(k === '퇴원'){
         const next = Object.assign({}, s, { withdrawnAt: ss.date, withdrawnReason: '시즌 마감' });
         delete next.phone; delete next.parentPhone;
@@ -10875,7 +10943,7 @@ async function updateStudentInfo(sid){
     return !!(box && box.checked);
   });
   s.name = name; s.grade = grade; s.school = school; s.phone = phone; s.parentPhone = parentPhone;
-  s.classId = classId; s.classIds = extra;
+  Object.assign(s, classChangeFields(s, classId, extra, todayStr()));   // 반 이력 (10-18)
   /* 시험 과목 · 준비 (2026-10-03) — 칸이 없는 화면에서 불려도 옛 값을 지우지 않게 칸이 있을 때만 */
   const 과목칸 = Object.keys(UNIT_CHAPTERS).map((sj, i) => [sj, document.getElementById('info-ssubj-' + i)]);
   if(과목칸.some(([, b]) => b)) s.examSubjects = 과목칸.filter(([, b]) => b && b.checked).map(([sj]) => sj);
@@ -11775,6 +11843,14 @@ function beforeJoin(s, dayOrItem){
 }
 /* 명단 중 «그것(과제·영상·날짜)이 있을 때 이미 있던» 학생만 */
 function joinedRoster(roster, dayOrItem){ return roster.filter(s => !beforeJoin(s, dayOrItem)); }
+/* 그 과제·영상을 «받은» 학생 — 낸 날 그 반에 있던 학생 (10-18 · inClassOn). 낸 날을 모르는 옛 것·직보는 등록일만 본다 */
+function itemTakers(classId, list, item){
+  if(isJikboSession(classId)) return joinedRoster(list, item);
+  const d = itemDay(item);
+  return d ? list.filter(s => inClassOn(s, classId, d)) : joinedRoster(list.filter(s => studentClassIds(s).includes(classId)), item);
+}
+/* 이 반을 거쳐 간 모두(직보는 그 날 명단) — 지난 과제·영상의 «받은 학생»을 고를 바탕 */
+function classRosterEver(classId){ return isJikboSession(classId) ? classRoster(classId) : classRosterAll(classId); }
 /* «완료»는 오직 수락된 것이다. 제출만 해 둔 것은 아직 아니다 —
    그걸 완료로 세면 강사가 보기도 전에 숫자가 차서 검토할 이유가 사라진다. */
 /* ⚠ **「보완 필요」도 «한 것»이다** (2026-09-01 · C-15) — 여기 한 줄이 제출률·리포트·신호를
@@ -18739,7 +18815,7 @@ function hwGridHTML(classId, list, roster){
   const cell = (s, a) => {
     const rec = recOf(s);
     if(!rec) return '<td></td>';
-    if(beforeJoin(s, a)) return `<td title="${escHtml(s.name)} — 등록(${escHtml(s.joinedAt)}) 전에 낸 과제"></td>`;
+    if(!itemTakers(classId, [s], a).length) return `<td title="${escHtml(s.name)} — 이 과제를 낼 때 이 반에 없었습니다"></td>`;
     const st = hwState(rec, a.id);
     let [tone, label, mark] = HWG_CELL[st.status] || HWG_CELL[HW_NONE];
     /* 🔴 **마감이 지난 미제출은 «붉게» 적는다** (2026-09-01 · C-15 · 사용자가 시켰다).
@@ -18779,7 +18855,7 @@ function hwGridHTML(classId, list, roster){
      ⚠ 옛 과제에 `createdAt`이 없으면 날짜를 지어낼 수 없다 — 그때는 이름으로 되돌린다. */
   const ymNow2 = chubYm();
   const head = cols.map(a=>{
-    const 받은 = joinedRoster(named, a);
+    const 받은 = itemTakers(classId, named, a);
     const done = 받은.filter(s=>recOf(s) && hwIsDone(recOf(s), a.id)).length;
     const wait = 받은.filter(s=>recOf(s) && hwState(recOf(s), a.id).status===HW_SUBMITTED).length;
     const on = state.hwNoticeId===a.id;
@@ -18803,9 +18879,9 @@ ${cd ? '낸 날 '+escHtml(cd)+' ('+wd+')' : '낸 날 모름'}${a.dueDate?' · �
     const rec = recOf(s);
     const mine = rec ? cols.filter(a=>hwIsDone(rec, a.id)).length : 0;
     return `<tr>
-      <td class="who"><span class="nm">${escHtml(s.name)}</span></td>
+      <td class="who"><span class="nm">${escHtml(s.name)}</span>${rosterLeftTagHTML(s, classId)}</td>
       ${cols.map(a=>cell(s, a)).join('')}
-      <td class="hg-done"><span class="mono">${mine}/${cols.filter(a=>!beforeJoin(s, a)).length}</span></td>
+      <td class="hg-done"><span class="mono">${mine}/${cols.filter(a=>itemTakers(classId, [s], a).length).length}</span></td>
     </tr>`;
   }).join('');
 
@@ -22583,8 +22659,10 @@ async function rosterBulkMoveClass(){
     const s = DATA.students.find(x=>x.studentId===sid);
     if(!s || s.classId===classId) continue;
     const before = s.classId ? classNameOf(s.classId) : '미배정';
-    s.classId = classId;
-    await dbSetDoc('students', studentKeyOfSid(sid), s);
+    Object.assign(s, classChangeFields(s, classId, s.classIds, todayStr()));   // 반 이력 (10-18)
+    /* 번호는 학생 문서에 안 쓴다(updateStudentInfo 의 규칙) — 메모리의 s 에는 번호가 붙어 있다 */
+    const 저장할것 = Object.assign({}, s); delete 저장할것.phone; delete 저장할것.parentPhone;
+    await dbSetDoc('students', studentKeyOfSid(sid), 저장할것);
     await logAudit('반 이동', sid, s.name, `${before} → ${label}`);
     moved++;
   }
@@ -24016,7 +24094,7 @@ async function hwQuickAll(classId, hwId){
 function sessionExamHTML(classId, date){
   const ym = String(date).slice(0,7);
   const exams = classExams(classId, ym);
-  const roster = classRosterAll(classId);
+  const roster = examRoster(classId, exams);
   const scored = ex => roster.filter(s=>examScoreOf(state.allRecords[s.studentId], ex.id)).length;
   if(state.sessionExamId && !exams.some(e=>e.id===state.sessionExamId)) state.sessionExamId = '';
   /* 오늘 본 시험이 있으면 그것부터. 없으면 그 달 마지막 시험.
@@ -24063,7 +24141,7 @@ function sessionExamHTML(classId, date){
     const sc = examScoreOf(state.allRecords[s.studentId], cur.id);
     const pct = sc && sc.total ? Math.round(sc.score/sc.total*100) : null;
     return `<div class="tile">
-      <div class="who"><b>${escHtml(s.name)}${isWithdrawn(s)?` <span class="badge gone">${goneLabel(s)}</span>`:''}</b>
+      <div class="who"><b>${escHtml(s.name)}${rosterLeftTagHTML(s, classId)}</b>
         <span>${pct===null ? '아직 안 넣었습니다' : `<b class="mono">${pct}</b>점 · ${
           Math.max(0, sc.total-sc.score)}개 틀림`}</span></div>
       <div class="cls-score">
@@ -24226,8 +24304,10 @@ async function exportClassExcel(classId){
     await ensureXLSXLoaded();
     await loadAllRecordsIfNeeded();
     await loadContactsIfNeeded();   /* ⚠ 안 기다리면 전화번호 두 열이 통째로 빈 채로 나간다 (K-11) */
-    const roster = classRoster(classId);
-    const header = ['아이디','이름','학년','학교','학부모전화번호','학생전화번호','출석','지각','조퇴','결석','시험 응시 횟수','평균 점수(%)','최근 시험명','최근 점수'];
+    /* 지금 학생 + 이 반 출결이 남은 지난 학생(졸업·퇴원·반 이동) — 맨 끝 «상태» 열로 가른다 (10-18) */
+    const 지금 = classRoster(classId);
+    const roster = classRosterAll(classId).filter(s => 지금.includes(s) || attOfClass(state.allRecords[s.studentId], classId, studentMainClassId(s)).length);
+    const header = ['아이디','이름','학년','학교','학부모전화번호','학생전화번호','출석','지각','조퇴','결석','시험 응시 횟수','평균 점수(%)','최근 시험명','최근 점수','상태'];
     const rows = roster.map(s=>{
       const rec = state.allRecords[s.studentId] || {scores:[],attendance:[]};
       const att = {출석:0, 지각:0, 조퇴:0, 결석:0};
@@ -24240,7 +24320,8 @@ async function exportClassExcel(classId){
         s.studentId, s.name, s.grade||'', s.school||'', phoneLabel(s.parentPhone), phoneLabel(s.phone),
         att.출석, att.지각, att.조퇴, att.결석,
         scores.length, avg,
-        last?last.name:'', last?`${last.score}/${last.total}`:''
+        last?last.name:'', last?`${last.score}/${last.total}`:'',
+        지금.includes(s) ? '재원' : isWithdrawn(s) ? goneLabel(s) : '반 이동'
       ];
     });
     const ws = XLSX.utils.aoa_to_sheet([header, ...rows]);
@@ -24797,7 +24878,9 @@ function teacherClassHubHTML(){
      그 물음이 이 화면의 전부라 **전 기간**으로 둔다(출결 누적 표와 같은 판단). */
 function chubConsultHTML(classId){
   const roster = classRoster(classId);
-  if(roster.length===0) return '<div class="fm-empty">이 반에 배정된 학생이 없습니다.</div>';
+  /* 지난 학생(졸업·퇴원·반 이동) — 누를 때만 읽는다(학생마다 문서 하나 · 해마다 는다) (10-18) */
+  const 지난 = classRosterAll(classId).filter(s => !roster.includes(s));
+  if(roster.length===0 && 지난.length===0) return '<div class="fm-empty">이 반에 배정된 학생이 없습니다.</div>';
   loadConsultLogsForClass(classId);
   const loading = roster.some(s=>state.consultLogLoading[s.studentId] || !state.consultLogs[s.studentId]);
   if(loading) return '<div class="fm-empty">상담 기록을 불러오는 중입니다…</div>';
@@ -24836,12 +24919,24 @@ function chubConsultHTML(classId){
         <span class="mono">${log.length}</span>건</span>
       <button class="btn q sm" style="flex-shrink:0;">기록</button>
     </div>`;
-  }).join('')}</div>`;
+  }).join('')}</div>
+  ${!지난.length ? '' : state.consultPastOpen !== classId
+    ? `<div style="margin-top:18px;"><button class="btn sm" onclick="state.consultPastOpen='${classId}'; loadConsultLogsFor(${escHtml(JSON.stringify(지난.map(s => s.studentId)))})">지난 학생 상담 기록 보기 (${지난.length}명)</button></div>`
+    : `<div class="t-sec" style="margin-top:22px;">지난 학생 <span style="font-weight:400;">졸업·퇴원·다른 반으로 옮긴 학생</span></div>
+      <div class="cls-tiles" style="grid-template-columns:repeat(2,1fr);">${지난.map(s => {
+        const log = logOf(s.studentId), last = log[0];
+        return `<div class="tile" style="cursor:pointer;" onclick="chubOpenConsult('${s.studentId}')">
+          <div class="who"><b>${escHtml(s.name)}</b>${rosterLeftTagHTML(s, classId)}
+            <span>${!state.consultLogs[s.studentId] ? '불러오는 중…' : last ? `마지막 <span class="mono">${escHtml(last.date)}</span> · ${escHtml(last.kind||'')}` : '상담 기록이 없습니다'}</span></div>
+          <span class="sub" style="font-size:12px;white-space:nowrap;flex-shrink:0;"><span class="mono">${log.length}</span>건</span>
+        </div>`;
+      }).join('')}</div>`}`;
 }
 /* 한 번에 다 읽고 한 번만 그린다 — 학생마다 `loadConsultLogIfNeeded`를 부르면
    스무 명이면 render()가 스무 번 돈다. */
-async function loadConsultLogsForClass(classId){
-  const need = classRoster(classId)
+async function loadConsultLogsForClass(classId){ return loadConsultLogsFor(classRoster(classId).map(s => s.studentId)); }
+async function loadConsultLogsFor(sids){
+  const need = DATA.students.filter(s => sids.includes(s.studentId))
     .filter(s=>!state.consultLogs[s.studentId] && !state.consultLogLoading[s.studentId]);
   if(!need.length) return;
   need.forEach(s=>{ state.consultLogLoading[s.studentId] = true; });
@@ -24967,8 +25062,8 @@ function chubScoresHTML(classId){
   /* 🔵 한 달치만 (2026-08-31 · C-8) — 열이 학기 내내 늘어나면 «이번 달 이 반»을 못 읽는다. */
   const ym = chubYm();
   const exams = classExams(classId, ym);
-  /* ⚠ 여기도 `classRoster`를 안 쓴다 — 시험은 «이미 있었던 일»이라 퇴원생 점수도 남아야 한다. */
-  const roster = classRosterAll(classId);
+  /* ⚠ 여기도 `classRoster`를 안 쓴다 — 시험은 «이미 있었던 일»이라 퇴원생 점수도 남아야 한다. (10-18 · examRoster) */
+  const roster = examRoster(classId, exams);
   const adding = state.scoreAddFor === classId;
 
   const addBar = scoreKindSegHTML() + chubMonthBarHTML(`시험 <b>${exams.length}</b>개`)
@@ -25053,8 +25148,7 @@ function chubScoresHTML(classId){
         const vals = exams.map(ex=>pctOf(s.studentId, ex)).filter(x=>x!==null);
         const avg = vals.length ? Math.round(vals.reduce((a,b)=>a+b,0)/vals.length) : null;
         return `<tr>
-          <td class="who"><span class="nm">${escHtml(s.name)}</span>${
-            isWithdrawn(s) ? ` <span class="badge gone">${goneLabel(s)}</span>` : ''}</td>
+          <td class="who"><span class="nm">${escHtml(s.name)}</span>${rosterLeftTagHTML(s, classId)}</td>
           ${exams.map(ex=>{
             const sc = examScoreOf(state.allRecords[s.studentId], ex.id);
             const tot = examTotalOf(ex);
@@ -25222,8 +25316,7 @@ function chubSchoolHTML(classId){
   const inp = (id, val, w, attrs, cls = 'mono') => `<input class="sg-in ${cls}" id="${id}" style="width:${w}px;" value="${val == null ? '' : escHtml(String(val))}" ${attrs}>`;
   const rows = roster.map(s=>{
     const rec = state.allRecords[s.studentId] || {};
-    const who = `<td class="who"><span class="nm">${escHtml(s.name)}</span>${
-      isWithdrawn(s) ? ` <span class="badge gone">${goneLabel(s)}</span>` : ''}</td>`;
+    const who = `<td class="who"><span class="nm">${escHtml(s.name)}</span>${rosterLeftTagHTML(s, classId)}</td>`;
     if(mock){
       const list = (rec.mockExams || []).slice().sort((a,b)=>String(b.ym).localeCompare(String(a.ym)));
       const got = list.find(x=>x.ym===ym);
@@ -25532,8 +25625,6 @@ function chubAttendanceHTML(classId){
       반 일정(요일)이 없어 수업 날짜를 만들 수 없습니다.<br>${isAssistantNow() ? '강사가 반 일정을 넣어야 합니다.' : '설정 &gt; 반 추가에서 「월,수,금 7시~9시」처럼 넣어 주세요.'}</div>`;
   }
   if(!state.allRecordsLoaded) return `<div class="fm-empty">학생 기록을 불러오는 중입니다…</div>`;
-  const roster = classRoster(classId);
-  if(roster.length===0) return `<div class="fm-empty">이 반에 배정된 학생이 없습니다.</div>`;
 
   const today = todayStr();
   const ym = chubYm();
@@ -25541,12 +25632,18 @@ function chubAttendanceHTML(classId){
      달을 잘라 놓으면 «1일에서 말일로» 읽는 것이 자연스럽다(격자가 곧 그 달의 달력이다).
      ⚠ 앞으로 올 수업은 세우지 않는다 — 아직 있지도 않은 날이다. */
   const cols = classSessionDatesInMonth(c.schedule, ym).filter(d=>d<=today);
+  /* 🔴 **그 달에 이 반에 있던 학생** (10-18) — 지금 명단이면 졸업·퇴원·반 이동한 학생이 지난 달 표에서도 사라진다 */
+  const roster = cols.length ? classRosterDuring(classId, cols) : classRoster(classId);
+  /* 누적(전 기간)은 이 반을 거쳐 간 모두 — 이 반 출결이 한 줄이라도 있으면 */
+  const 누적명단 = classRosterAll(classId).filter(s => roster.includes(s)
+    || attOfClass(state.allRecords[s.studentId], classId, studentMainClassId(s)).length);
+  if(roster.length===0 && 누적명단.length===0) return `<div class="fm-empty">이 반에 배정된 학생이 없습니다.</div>`;
   const open = state.attOpenDate && cols.includes(state.attOpenDate) ? state.attOpenDate : '';
 
   /* 🔴 **이 표는 «이 반» 것만 말한다** (2026-09-01 · E-1). 학생이 특강도 들으면 그 줄이
      여기 섞여서는 안 된다 — 「고2 미적분Ⅰ 출결표」에 토요일 특강 결석이 뜨면 거짓이다. */
   const mainOf = {};
-  roster.forEach(st=>{ mainOf[st.studentId] = studentMainClassId(st); });
+  roster.concat(누적명단).forEach(st=>{ mainOf[st.studentId] = studentMainClassId(st); });
   const attOf = (sid, date) =>
     attOn(state.allRecords[sid], date, classId, mainOf[sid]);
   /* 출석률 = 「퇴원」을 뺀 기록 중 «결석이 아닌» 비율. 명단·신호가 쓰는 셈과 같은 것이다. */
@@ -25607,7 +25704,7 @@ function chubAttendanceHTML(classId){
       ${roster.map(s=>{
         const r = rateOf(s.studentId);
         return `<tr>
-          <td class="who"><span class="nm">${escHtml(s.name)}</span></td>
+          <td class="who"><span class="nm">${escHtml(s.name)}</span>${rosterLeftTagHTML(s, classId)}</td>
           ${cols.map(d=>{
             const a = attOf(s.studentId, d);
             const extra = a && (a.reason || a.videoUrl || a.note);
@@ -25615,7 +25712,7 @@ function chubAttendanceHTML(classId){
               ? `<span class="ag-m ${attStatusClass(a.status)}" title="${escHtml(
                   a.status + (a.reason?' · '+a.reason:'') + (a.note?' · '+a.note:'') + (a.videoUrl?' · 보충 영상 있음':''))}"
                   >${MARK[a.status]||a.status.slice(0,1)}${extra?'<i class="dotmark"></i>':''}</span>`
-              : beforeJoin(s, d) ? '' : '<span class="ag-m none" title="미입력">·</span>'}</td>`;
+              : !inClassOn(s, classId, d) ? '' : '<span class="ag-m none" title="미입력">·</span>'}</td>`;
           }).join('')}
           <td class="ag-rate"><span class="mono ${r!==null && r<80 ? 'down':''}">${r===null?'—':r+'%'}</span></td>
         </tr>`;
@@ -25637,10 +25734,10 @@ function chubAttendanceHTML(classId){
   <div style="overflow-x:auto;"><table class="es-tb" style="max-width:520px;">
     <thead><tr><th>학생</th>${ATT_STATUSES.map(st=>`<th style="text-align:right;">${st}</th>`).join('')}
       <th style="text-align:right;">출석률</th></tr></thead>
-    <tbody>${roster.map(s=>{
+    <tbody>${누적명단.map(s=>{
       const list = attOfClass(state.allRecords[s.studentId], classId, mainOf[s.studentId]);
       const r = rateOf(s.studentId);
-      return `<tr><td class="fm-nm">${escHtml(s.name)}</td>${
+      return `<tr><td class="fm-nm">${escHtml(s.name)}${rosterLeftTagHTML(s, classId)}</td>${
         ATT_STATUSES.map(st=>`<td style="text-align:right;"><span class="mono">${list.filter(a=>a.status===st).length}</span></td>`).join('')}
         <td style="text-align:right;"><span class="mono ${r!==null && r<80?'down':''}">${r===null?'—':r+'%'}</span></td></tr>`;
     }).join('')}</tbody>
@@ -25743,7 +25840,7 @@ function chubDayHTML(classId, date){
   const exams = DATA.exams.filter(e=>e.classId===classId && e.date===date);
   const hws = DATA.assignments.filter(a=>a.classId===classId && (a.createdAt===date || a.dueDate===date));
   const memo = sessionMemoHTML(classId, date);
-  const roster = classRoster(classId);
+  const roster = classRosterOn(classId, date);   // 그 날 명단 — 지금 학생이면 졸업생의 그 날 결석이 사라진다 (10-18)
   const att = roster.map(s=>({
     s, a: attOn(state.allRecords[s.studentId], date, classId, studentMainClassId(s))
   }));
@@ -26164,7 +26261,8 @@ function studentTimeline(s, rec){
       pct!==null ? `<span class="badge score">${pct}%</span>` : '',
       `<button class="btn q sm" onclick="deleteScore('${sid}',${i})">삭제</button>`, 'k-score');
   });
-  DATA.assignments.filter(a=>(!a.classId || studentClassIds(s).includes(a.classId)) && !beforeJoin(s, a)).forEach(a=>{
+  /* 낼 때 그 반에 있었던 과제 — 옛 반 과제도 남는다 (10-18 · 반 이력) */
+  DATA.assignments.filter(a=>a.classId ? itemTakers(a.classId, [s], a).length : !beforeJoin(s, a)).forEach(a=>{
     /* 연대기는 «무슨 일이 있었나»라 상태를 넷 그대로 보여 준다 —
        완료/미완료로 뭉개면 «냈는데 아직 확인 안 됨»이 미완료로 보인다. */
     const stt = hwState(rec, a.id);
@@ -26405,7 +26503,9 @@ function monthlyReportData(s, rec, ym, ctx){
   /* 과제 — «그 달에 내야 했던 것»이 학부모가 궁금한 것이라 마감일로 자른다 (없으면 등록일). */
   /* ⚠ «대표 반»의 과제다 — 주 반이 없는 학생(특강만)은 그 특강이 곧 대표 반이라
      여기서 세어야 한다. 그 학생은 `extras`가 비어 있으므로 두 번 세어지지 않는다 (E-4). */
-  const asgs = (ctx.assignments||[]).filter(a=>a.classId===(ctx.primaryClassId||s.classId)
+  /* 🔵 옛 정규 반 과제도 — 그 과제를 낼 때 그 반에 있었으면 (10-18 · 반 이력) */
+  const 대표들 = studentMainClassId(s) ? mainClassesOf(s) : [ctx.primaryClassId || s.classId];
+  const asgs = (ctx.assignments||[]).filter(a=>대표들.includes(a.classId) && itemTakers(a.classId, [s], a).length
       && inMonth(a.dueDate||a.createdAt));
   const hwDone = ctx.isDone ? asgs.filter(a=>ctx.isDone(rec, a.id)).length : 0;
   /* 🔵 **「보완 필요」를 따로 센다** (2026-09-01 · C-21 · 사용자가 시켰다).
@@ -28077,15 +28177,20 @@ function setAttStatus(studentId, status){
   state.attDraft[studentId] = {status, reason: status==='출석' ? '' : cur.reason, videoUrl: status==='출석' ? '' : cur.videoUrl, note: cur.note||''};
   render();
 }
+/* 일괄 단추는 «펴 둔 날»의 명단으로 (10-18) — 지난 날짜를 고칠 때 그 날 없던 학생에게 줄을 만들지 않고, 그 날 있던 졸업생은 담는다 */
+function attDraftRoster(classId){
+  const k = state.attDraftKey || '';
+  return k.indexOf(classId + '|') === 0 ? classRosterOn(classId, k.slice(classId.length + 1)) : classRoster(classId);
+}
 function setAllPresent(classId){
-  classRoster(classId).forEach(s=>{
+  attDraftRoster(classId).forEach(s=>{
     const cur = state.attDraft[s.studentId] || {note:''};
     state.attDraft[s.studentId] = {status:'출석', reason:'', videoUrl:'', note: cur.note||''};
   });
   render();
 }
 function setAllStatus(classId, status){
-  classRoster(classId).forEach(s=>{
+  attDraftRoster(classId).forEach(s=>{
     const cur = state.attDraft[s.studentId] || {reason:'', videoUrl:'', note:''};
     state.attDraft[s.studentId] = {status, reason: status==='출석' ? '' : cur.reason, videoUrl: status==='출석' ? '' : cur.videoUrl, note: cur.note||''};
   });
@@ -28177,7 +28282,7 @@ async function attSaveDate(classId, date){
   render();
 }
 async function saveClassAttendance(classId, date){
-  const roster = classRoster(classId);
+  const roster = classRosterOn(classId, date);   // 초안(ensureAttDraft)과 같은 명단 — 지난 날짜의 졸업생 칸도 저장된다 (10-18)
   const newVideos = [];
   await Promise.all(roster.map(async s => {
     const d = state.attDraft[s.studentId];
@@ -28302,7 +28407,9 @@ function teacherClassDailyHomeworkHTML(classId, date){
   const visible = standalone ? all.filter(inMonth)
                 : state.classHubHomeworkShowAll ? all
                 : all.filter(a=>a.createdAt===date || a.dueDate===date);
-  const roster = classRoster(classId);
+  /* 🔴 **보이는 과제를 «받은» 학생까지 줄로 세운다** (10-18) — 지금 명단만 세우면 졸업·퇴원·반 이동한 학생의 지난 과제가 사라진다 */
+  const 거친명단 = classRosterEver(classId);
+  const roster = [...new Set(classRoster(classId).concat(visible.flatMap(a => itemTakers(classId, 거친명단, a))))].sort(byKoName);
   const open = state.settingsForm==='dhw';
   /* 고치는 중인 과제 (2026-09-13 · K-6). **이 반 것만** 본다(`all`) — 다른 반으로 옮겨 가거나
      지워졌으면 스스로 푼다. 안 풀면 엉뚱한 반 화면에 「고치기 취소」가 서 있게 된다. */
@@ -28372,7 +28479,7 @@ function teacherClassDailyHomeworkHTML(classId, date){
      visible.length===0 ? '<div class="st-empty">해당하는 과제가 없습니다.</div>' :
      visible.map(a=>{
       const recOf = s => state.allRecords[s.studentId];
-      const 받은 = joinedRoster(roster, a);
+      const 받은 = itemTakers(classId, 거친명단, a);
       const doneCount = state.allRecordsLoaded
         ? 받은.filter(s=>recOf(s) && hwIsDone(recOf(s), a.id)).length : null;
       /* 「몇 명이 냈고 아직 안 봤는가」가 이 줄에서 제일 급한 숫자다. */
@@ -29554,12 +29661,13 @@ function chubMaterialHTML(classId){
      (`videoDrawerHTML`)가 같은 것을 본다. 둘로 베끼면 다음에 한쪽만 고쳐진다. */
 function chubVideoModel(classId){
   const roster = classRoster(classId);
+  const 거친명단 = classRosterEver(classId);   // 지난 영상의 «받은 학생»은 올린 날 이 반에 있던 학생 (10-18)
   /* 반 영상 + 전체 배포 영상. */
   const vids = DATA.videos.filter(v=>!v.studentId && (!v.classId || v.classId===classId));
   /* 🔵 **개인 배정도 여기서 본다** (2026-09-13 · K-4 · 사용자 — 「결석영상 보내준것도 시청했는지 알고싶고」).
      예전엔 «반 화면의 대상이 아니다»라며 걸렀다 — 그러면 보낸 사람이 봤는지 알 길이 없었다.
      ⚠ 반은 **학생으로** 정한다(`classId` 가 아니라 명단) — 옛 결석 영상은 classId 가 비어 있다. */
-  const rosterIds = new Set(roster.map(s=>s.studentId));
+  const rosterIds = new Set(거친명단.map(s=>s.studentId));   // 떠난 학생에게 보냈던 개인 영상도 남긴다 (10-18)
   const personal = DATA.videos.filter(v=>v.studentId && rosterIds.has(v.studentId));
   const nameOf = sid => (DATA.students.find(x=>x.studentId===sid)||{}).name || sid;
 
@@ -29573,7 +29681,7 @@ function chubVideoModel(classId){
     return { pct: videoPct(p), done: videoDone(p), seen: videoSeen(p), manual: !!p.manualDone };
   };
   /* 등록 전에 올린 영상은 그 뒤에 온 학생을 안 센다 (10-12 · beforeJoin) */
-  const 받은 = v => videoTakers(roster, v);   /* 뺀 학생은 안 센다 (10-17) */
+  const 받은 = v => videoTakers(itemTakers(classId, 거친명단, v), v);   /* 뺀 학생은 안 센다 (10-17) · 올린 날 이 반에 있던 학생 (10-18) */
   const doneOf = v => 받은(v).filter(s=>progOf(v, s.studentId).done).length;
   const avgOf = v => 받은(v).length
     ? Math.round(받은(v).reduce((sum,s)=>{
@@ -29678,7 +29786,7 @@ async function videoCopyTo(vid){
 
 function chubVideoHTML(classId){
   loadAllRecordsIfNeeded();
-  const { roster, vids, personal, progOf, doneOf, avgOf, 묶음들, 이름들 } = chubVideoModel(classId);
+  const { roster, 받은, vids, personal, progOf, doneOf, avgOf, 묶음들, 이름들 } = chubVideoModel(classId);
 
   /* 배포는 가끔, 보는 일은 매번이다. 상시 펼쳐 두면 이 화면의 본문이 한 화면 아래로 내려간다.
      🔵 머리 줄 (2026-09-23) — 왼쪽에 «영상 n · 개인 배정 m», 오른쪽에 「영상 등록」. */
@@ -29769,7 +29877,7 @@ function chubVideoHTML(classId){
        무슨의미인지도 모르겠어」). 그것은 재원 전체의 평균 시청률이었다. 완주 n/m 을 적고 막대도 그 비율로.
        평균은 사라지지 않는다 — 이 줄의 tooltip 과 드로어의 숫자 띠에 있다. */
   const classRow = v => {
-    const a = avgOf(v), d = doneOf(v), n = videoTakers(roster, v).length;
+    const a = avgOf(v), d = doneOf(v), n = 받은(v).length;
     const w = n ? Math.round(d / n * 100) : 0;
     return `<div class="vd-row ${v.id===열린것?'on':''}" onclick="videoOpen('${v.id}')"
       title="재원 ${n}명 중 ${d}명이 완주했습니다 (완주 = ${videoGoalLabel()}).&#10;반 평균 시청률 ${a}% — 안 본 학생은 0%로 함께 셉니다.">
@@ -29824,7 +29932,7 @@ function videoDrawerHTML(){
   const id = state.videoOpenId;
   if(!id) return '';
   const classId = state.classHubId;
-  const { roster, nameOf, progOf, avgOf, 묶음of, 이름들, 차례, 찾기 } = chubVideoModel(classId);
+  const { roster, 받은, nameOf, progOf, avgOf, 묶음of, 이름들, 차례, 찾기 } = chubVideoModel(classId);
   const sel = 찾기(id);
   if(!sel){ return ''; }
 
@@ -29832,7 +29940,7 @@ function videoDrawerHTML(){
      🔵 **완주선에서 끊는다** (2026-09-13 · K-7). 그 위는 전부 완주라 빈 칸이 거짓 여백이 된다.
      ⚠ 칸을 «완주»로 넣는 잣대는 `p.done` 이다. `p.pct>=100` 이 아니다 —
        완주선만 넘고 멈춘 학생은 100이 아니지만 완주다. */
-  const rows = videoTakers(roster, sel).map(s=>({ s, p: progOf(sel, s.studentId) }));
+  const rows = 받은(sel).map(s=>({ s, p: progOf(sel, s.studentId) }));
   const DROP_BINS = Math.floor(VIDEO_GOAL_PCT / 10);
   const bins = new Array(DROP_BINS + 1).fill(0);
   rows.forEach(({p})=>{ bins[p.done ? DROP_BINS : Math.min(DROP_BINS-1, Math.floor(p.pct/10))]++; });
@@ -30019,7 +30127,7 @@ function examScoreOf(rec, examId){
 }
 function examScoreStats(ex){
   /* ⚠ 여기도 classRoster를 안 쓴다 — 시험은 «이미 있었던 일»이다 (W-1과 같은 이유). */
-  const roster = classRosterAll(ex.classId);
+  const roster = examRoster(ex.classId, [ex]);
   const pts = [];
   roster.forEach(s=>{
     const sc = examScoreOf(state.allRecords[s.studentId], ex.id);
@@ -30298,7 +30406,7 @@ function examSubmissionsHTML(ex){
   /* ⚠ **여기는 일부러 `classRoster`를 안 쓴다** (W-1 · 2026-08-26) — 시험은 «이미 있었던 일»이다.
      퇴원생을 빼면 **그때 20명이 봤던 시험이 나중에 18명으로 보인다.** 과거를 고쳐 쓰는 셈이다.
      사용자가 「앞으로의 일에서만 뺀다」로 정했다. */
-  const roster = classRosterAll(ex.classId);
+  const roster = examRoster(ex.classId, [ex]);
   const banks = examBanks(ex);
 
   const rows = roster.map(s=>{

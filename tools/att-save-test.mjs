@@ -68,7 +68,7 @@ function 판(opts){
   const DATA_records = {};
   const F = new Function('DATA','state','서버','DATA_records','classRoster','studentMainClassId',
     'loadRecord','saveRecord','logAudit','showToast','render','extractYouTubeId','dbSetDoc','장부','말',
-    ['itemDay','beforeJoin','joinedRoster','classRosterOn'].map(lift).join(NL) + NL + 이름들.map(lift).join(NL) + NL + 'return {' + 이름들.join(',') + '};')(
+    "function isJikboSession(){ return false; }" + NL + ['itemDay','beforeJoin','joinedRoster','studentClassIds','isWithdrawnRecord','goneDateOf','inClassOn','byKoName','classRosterOn','itemTakers','classRosterAll','classRosterEver'].map(lift).join(NL) + NL + 이름들.map(lift).join(NL) + NL + 'return {' + 이름들.join(',') + '};')(
     DATA, state, 서버, DATA_records,
     () => DATA.students,
     (s) => s.classId,
@@ -126,8 +126,8 @@ console.log(NL + '── 🔴 그리고 «화면»으로도 돌아와야 한다 
        고침을 의심한다.** 이 줄이 재려던 것은 «둘 다 입력됨으로 세는가» 그 하나다. */
   {
     const sm = F.sessionSavedSummary(CID, DATE);
-    봄('② 요약이 둘 다 «입력됨»으로 센다', { total:sm.total, filled:sm.filled, cnt:sm.cnt },
-       { total:2, filled:2, cnt:{ 출석:1, 지각:1 } });
+    봄('② 요약이 둘 다 «입력됨»으로 센다', { total:sm.total, filled:sm.filled, cnt:Object.fromEntries(Object.entries(sm.cnt).sort()) },   /* 키 차례는 안 본다 — 10-18 명단이 이름순이 됐다 */
+       { total:2, filled:2, cnt:Object.fromEntries(Object.entries({ 출석:1, 지각:1 }).sort()) });
     /* 그 김에 «누가» 도 들고 오는지 재 둔다 — 지난 수업 확인이 이름을 이것으로 적는다. */
     봄('② 요약이 «누가» 까지 들고 온다', (sm.who && sm.who['지각'] || []).map(p=>p.name), ['새내기']);
   }

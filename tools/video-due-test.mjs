@@ -181,7 +181,7 @@ const 곁3 = {
   loadAllRecordsIfNeeded: () => {}, classRoster: () => [{ studentId: 'st01', name: '가나' }, { studentId: 'st02', name: '다라' }],
   state: { allRecords: { st01: { videoProgress: { p1: { percent: 100, completed: true } } }, st02: { videoProgress: { p2: { percent: 30, completed: false } } } },
            allRecordsLoaded: true, allRecordsLoading: false, videoAdding: true, videoSelectedId: 'p2', videoOpenId: 'p2', classHubId: 'c1' },
-  DATA: { students: [{ studentId: 'st01', name: '가나' }, { studentId: 'st02', name: '다라' }], classes: [{ id: 'c1', name: '1반' }],
+  DATA: { students: [{ studentId: 'st01', name: '가나', classId: 'c1' }, { studentId: 'st02', name: '다라', classId: 'c1' }], classes: [{ id: 'c1', name: '1반' }],   // 10-18 — 받은 학생은 올린 날 반에 있던 학생
           videos: [
             { id: 'a1', title: '반 영상', unit: '', url: 'u', classId: 'c1', dueDate: '2026-09-20' },
             { id: 'p1', title: '09-01 결석 보충 영상', url: 'u', classId: '', studentId: 'st01', dueDate: '2026-09-08' },
@@ -197,7 +197,7 @@ const 곁3 = {
 };
 const api3 = new Function(...Object.keys(곁3),
   /* ⚠ `chubVideoHTML` 이 마감 딱지를 `stuDday` 로 찍는다 — 위 ①의 것과 같은 함수다. */
-  ['itemDay','beforeJoin','joinedRoster','classRosterOn','videoExcluded','videoTakers'].map(lift).join(NL) + NL + 잣대 + NL + lift('stuDday') + NL + lift('videoGoalMarkHTML') + NL + lift('videoHeroHTML')
+  "function isJikboSession(){ return false; }" + NL + ['itemDay','beforeJoin','joinedRoster','studentClassIds','isWithdrawnRecord','goneDateOf','inClassOn','byKoName','classRosterOn','itemTakers','classRosterAll','classRosterEver','videoExcluded','videoTakers'].map(lift).join(NL) + NL + 잣대 + NL + lift('stuDday') + NL + lift('videoGoalMarkHTML') + NL + lift('videoHeroHTML')
     + NL + lift('chubVideoModel') + NL + lift('chubVideoHTML') + NL + lift('videoDrawerHTML') + NL + lift('videoCopyPanelHTML') + NL + 'return { 그림: c => chubVideoHTML(c) + videoDrawerHTML() };')(...Object.values(곁3));
 const out = api3.그림('c1');
 봄('그려진다 — 반 전체 구역과 개인 배정 2 (남의 반 것은 안 든다)', [out.includes('>반 전체</div>'), out.includes('개인 배정 <span class="mono">2</span>'), out.includes('남의 반')], [true, true, false]);

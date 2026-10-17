@@ -45,6 +45,8 @@ console.log(NL + '① 결석 보충 영상 — 저장마다 늘지 않는가' + 
   const 저장 = [];
   const F = new Function('DATA', 'state', 'classRoster', 'studentMainClassId', 'loadRecord', 'saveRecord', 'logAudit', 'showToast', 'render',
     'extractYouTubeId', 'dbSetDoc', 'attClassOf', 'MAKEUP_VIDEO_DAYS',
+    /* 10-18 — saveClassAttendance 는 «그 날 명단»(classRosterOn)으로 돈다 */
+    "function isJikboSession(){ return false; }" + NL + ['itemDay','beforeJoin','studentClassIds','isWithdrawnRecord','goneDateOf','inClassOn','byKoName','attOn','classRosterOn'].map(lift).join(NL) + NL +
     lift('ymdPlusDays') + NL + lift('saveClassAttendance') + NL + 'return { saveClassAttendance };')(
     DATA, state, () => roster, s => s.classId,
     async sid => (recs[sid] = recs[sid] || { attendance: [], scores: [], wrongHomework: [] }),
@@ -279,7 +281,7 @@ console.log(NL + '⑤ 실제로 그려 본다 — 과제 격자의 차례 · 수
   const HW_NONE = 'none', HW_SUBMITTED = 'wait';
   const G = new Function('state', 'hwState', 'hwIsDone', 'HWG_CELL', 'HW_NONE', 'HW_SUBMITTED',
     'todayStr', 'escHtml', 'chubYm', 'WEEKDAY_LABEL',
-    ['itemDay','beforeJoin','joinedRoster','classRosterOn'].map(lift).join(NL) + NL + lift('hwOrderKey') + NL + lift('hwOrderDesc') + NL + lift('hwOrderAsc') + NL
+    "function isJikboSession(){ return false; } var DATA = { students: [], records: {} };" + NL + ['itemDay','beforeJoin','joinedRoster','studentClassIds','isWithdrawnRecord','goneDateOf','inClassOn','byKoName','classRosterOn','itemTakers','classRosterAll','classRosterEver','isWithdrawn','isEnded','goneLabel','rosterLeftTagHTML'].map(lift).join(NL) + NL + lift('hwOrderKey') + NL + lift('hwOrderDesc') + NL + lift('hwOrderAsc') + NL
       + lift('hwGridHTML') + NL + 'return hwGridHTML;')(
     { allRecordsLoaded: true, hwCell: null, hwNoticeId: null, allRecords: { s1: { attendance: [], homework: {} } } },
     () => ({ status: HW_NONE, photos: [] }), () => false,
@@ -292,7 +294,7 @@ console.log(NL + '⑤ 실제로 그려 본다 — 과제 격자의 차례 · 수
     { id: 'h2', classId: 'c1', title: '나중에 냈지만 마감이 늦다', createdAt: '2026-09-03', dueDate: '2026-09-26' },
     { id: 'h3', classId: 'c1', title: '가운데', createdAt: '2026-09-01', dueDate: '2026-09-12' },
   ];
-  const 그림 = G('c1', 과제들, [{ studentId: 's1', name: '가나다' }]);
+  const 그림 = G('c1', 과제들, [{ studentId: 's1', name: '가나다', classId: 'c1' }]);
   const 열마감 = [...그림.matchAll(/마감 <span class="mono">(\d\d-\d\d)<\/span>/g)].map(m => m[1]);
   /* 🔵 **왼쪽이 이른 마감이다** (2026-09-16 · `5bba443` · 사용자 —「과제 표 마감일 빠른순으로 정렬」).
      표는 한 달을 훑는 것이라 왼→오른쪽으로 시간이 흘러야 출결·성적 격자와 같은 방향으로 읽힌다.
