@@ -71,6 +71,33 @@ try{
   봄('영상은 강의 템플릿 변수 그대로', 문안[0].키, ['#{학생명}', '#{강의명}', '#{마감일}', '#{남은기간}']);
   봄('공지는 학생명·공지제목 · id 는 글자로', [문안[1].kind, 문안[1].id, 문안[1].키], ['notice', '77', ['#{학생명}', '#{공지제목}']]);
   봄('문안 둘째 줄(이름 뒤)', 문안.map(x => x.첫줄.replace(/^.*? 학생, /, '')), ['아직 보지 않은 강의가 있습니다.', '새 공지가 올라왔습니다.']);
+
+  /* 🔵 오늘 탭 — 결석 보충 영상도 같은 알림 (2026-10-18 · 사용자 — 「보충영상 넣어줬을 때 그것도 영상 주면 알림 가는 거랑 똑같이」) */
+  console.log('\n결석 보충 영상 (오늘 탭 출결 저장)');
+  const 보충 = await page.evaluate(async () => {
+    state.workerVersion = '2026-10-17b'; state.notifyTpl = { vid: true };
+    const cid = DATA.classes[0].id, D = todayStr();
+    const 둘 = classRosterOn(cid, D).slice(0, 2);
+    const 기록 = {};
+    window.loadRecord = async sid => (기록[sid] = 기록[sid] || { attendance: [], scores: [], wrongHomework: [] });
+    window.saveRecord = async () => true;
+    let 물음 = 0; window.confirm = () => (물음++, true);
+    const 그리기 = () => {
+      state.attDraftKey = cid + '|' + D; state.attDraft = {};
+      둘.forEach((s, i) => { state.attDraft[s.studentId] = { status: '결석', reason: '', note: '', videoUrl: 'https://youtu.be/abcdefgh' + i }; });
+    };
+    __보냄.length = 0; 그리기();
+    await saveClassAttendance(cid, D);
+    const 처음 = { 물음, 보냄: __보냄.map(x => x.id), 이름: __보냄.map(x => x.v['#{학생명}']) };
+    const 영상 = DATA.videos.filter(v => 둘.some(s => s.studentId === v.studentId) && /보충 영상$/.test(v.title)).map(v => v.id);
+    __보냄.length = 0; 물음 = 0; 그리기();
+    await saveClassAttendance(cid, D);                   // 단계를 옮기며 다시 저장해도
+    return { 처음, 영상, 다시: { 물음, 보냄: __보냄.length }, 이름들: 둘.map(s => s.name) };
+  });
+  봄('🔴 두 학생 → 묻는 것은 한 번', 보충.처음.물음, 1);
+  봄('🔴 학생마다 «제» 보충 영상 id 로 보낸다', 보충.처음.보냄.slice().sort(), 보충.영상.slice().sort());
+  봄('   받는 이름이 그 학생', 보충.처음.이름.slice().sort(), 보충.이름들.slice().sort());
+  봄('🔴 다시 저장해도 또 묻거나 보내지 않는다 (새로 만든 영상만)', 보충.다시, { 물음: 0, 보냄: 0 });
 } finally {
   await 브라우저.close();
   서버.kill();

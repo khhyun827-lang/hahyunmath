@@ -19203,18 +19203,23 @@ function uploadAudience(classIds){
   if(!classIds || !classIds.length) return 재원;
   return 재원.filter(s => studentClassIds(s).some(c => classIds.includes(c)));
 }
-async function notifyUpload(kind, item, students, 말){
+async function notifyUpload(kind, item, students, 말){ return notifySend(kind, (students || []).map(s => ({ item, s })), 말); }
+/* 학생마다 «제 것»이 다른 알림 — 결석 보충 영상은 학생마다 영상이 따로다 (10-18). 묻는 것은 한 번, 보내는 것은 영상(item)마다. */
+async function notifySend(kind, pairs, 말){
   const 쓸것 = UPLOAD_NOTICE[kind];
-  const items = (students || []).map(s => ({ name: s.name, key: studentKeyOfSid(s.studentId),
+  const items = (pairs || []).map(({ item, s }) => ({ id: String(item.id), name: s.name, key: studentKeyOfSid(s.studentId),
     vars: 쓸것.vars(s.name, item), message: fillNotice(쓸것.tpl(), 쓸것.vars(s.name, item)) }));
   if(!items.length) return;
   if(!confirm(`${말} — ${items.length}명에게 카카오톡 알림을 보낼까요?\n알림톡이 안 가면 문자로 대체 발송되어 건당 요금이 나갑니다.`)) return;
   try{
     let 보냄 = 0; const 못 = {};
-    for(let i = 0; i < items.length; i += 50){      /* 워커는 한 번에 50명까지 */
-      const j = await notifyPost(kind, String(item.id), items.slice(i, i + 50));
-      보냄 += j.sent || 0;
-      (j.results || []).filter(r => !r.ok).forEach(r => { const w = notifyWhy(r.why); 못[w] = (못[w] || 0) + 1; });
+    for(const id of [...new Set(items.map(x => x.id))]){
+      const 몫 = items.filter(x => x.id === id);
+      for(let i = 0; i < 몫.length; i += 50){      /* 워커는 한 번에 50명까지 */
+        const j = await notifyPost(kind, id, 몫.slice(i, i + 50));
+        보냄 += j.sent || 0;
+        (j.results || []).filter(r => !r.ok).forEach(r => { const w = notifyWhy(r.why); 못[w] = (못[w] || 0) + 1; });
+      }
     }
     const 말들 = Object.keys(못).map(k => k + ' ' + 못[k]);
     showToast(`알림톡 ${보냄}/${items.length}명 보냄` + (말들.length ? ' · ' + 말들.join(' · ') : ''));
@@ -28353,6 +28358,12 @@ async function saveClassAttendance(classId, date){
   }
   showToast('출석이 저장되었습니다.' + (newVideos.length>0 ? ` 보충 영상 ${newVideos.length}건도 배정했어요 (마감 ${ymdPlusDays(date, MAKEUP_VIDEO_DAYS)}).` : ''));
   render();
+  /* 🔵 **보충 영상도 영상 탭에서 줄 때와 같은 알림톡** (2026-10-18 · 사용자 — 「결석한 학생 보충영상 넣어줬을 때 그것도 지금 영상 주면 알림 가는 거랑 똑같이」).
+     새로 만든 것만 — 같은 날 링크만 고친 것은 다시 안 보낸다(K-5 의 «하나만»과 같은 결). 보내기 전에 한 번 묻는다(notifySend). */
+  /* ⚠ 워커 판을 먼저 받는다 — notifyKindReady 는 아직 모르면 «아니오»라 해서, 앱을 열고 처음 저장할 때 알림이 빠졌다 */
+  if(newVideos.length && !isAssistantNow() && (await workerVersion(), notifyKindReady('vid')))
+    await notifySend('vid', newVideos.map(v => ({ item: v, s: DATA.students.find(x => x.studentId === v.studentId) })).filter(x => x.s),
+      '보충 영상');
 }
 
 /* =================== 수업 기록 (design-v1/14-log) ===================
