@@ -67,7 +67,9 @@ function 자료판(opt) {
     uploadFileToDrive: async f => { 올린파일.push(f.name); return { url: 'https://u/' + f.name, fileId: 'F-NEW' }; },
     deleteFromDrive: id => 지운파일.push(id),
     document: {
-      getElementById: id => id === 'mt-title' ? { value: opt.제목 || '' } : null,
+      getElementById: id => id === 'mt-title' ? { value: opt.제목 || '' }
+        : id === 'mt-edit-title' ? { value: opt.수정제목 || '' }
+        : id === 'mt-edit-file' ? { files: opt.수정파일 ? [opt.수정파일] : [] } : null,
       querySelectorAll: sel => /mt-cls/.test(sel) ? 체크.map(c => ({ value: c })) : [],
     },
     /* 진짜 dbGet/dbSet 의 «실패를 숨기지 않는» 성질만 그대로 흉내 낸다 */
@@ -85,8 +87,8 @@ function 자료판(opt) {
   };
   const 못쓰는키 = new Set(opt.못쓰는키 || []);
   const api = new Function(...Object.keys(곁),
-    [lift('loadMaterialsIfNeeded'), lift('materialListOf'), lift('uploadMaterial'), lift('deleteMaterial')].join(NL)
-    + NL + 'return { loadMaterialsIfNeeded, materialListOf, uploadMaterial, deleteMaterial };'
+    [lift('loadMaterialsIfNeeded'), lift('materialListOf'), lift('uploadMaterial'), lift('deleteMaterial'), lift('saveMaterialEdit')].join(NL)
+    + NL + 'return { loadMaterialsIfNeeded, materialListOf, uploadMaterial, deleteMaterial, saveMaterialEdit };'
   )(...Object.values(곁));
   return { api, 저장소, 올린파일, 지운파일, 말, 곁 };
 }
@@ -190,6 +192,57 @@ console.log(NL + '② 자료 지우기 — 다른 반이 쓰는 파일은 드라
   const T = 자료판({ 메모리: { c1: [{ id: 'old1', title: '지난 프린트', fileId: 'F-OLD' }] }, 확인: false });
   await T.api.deleteMaterial('c1', 'old1');
   봄('안 물으면 아무 일도 없다', [T.지운파일.length, T.저장소['material:c1'].length], [0, 1]);
+}
+
+console.log(NL + '②-2 자료 고치기 — 나눠 쓰는 반 전부에서 같이 · 옛 파일은 다 옮겨 갔을 때만 지운다 (10-17)' + NL);
+{
+  const 공유 = () => ({ 'material:c1': [{ id: 'sh1', title: '공유 프린트', name: 's.pdf', size: 5, fileId: 'F-SH', sharedWith: ['c1', 'c2'] }],
+                         'material:c2': [{ id: 'old2', title: 'c2 의 것', fileId: 'F-C2' }, { id: 'sh1', title: '공유 프린트', name: 's.pdf', size: 5, fileId: 'F-SH', sharedWith: ['c1', 'c2'] }] });
+  {
+    const T = 자료판({ 저장소: 공유(), 수정제목: '고친 이름' });
+    await T.api.loadMaterialsIfNeeded('c1');
+    await T.api.saveMaterialEdit('c1', 'sh1');
+    봄('🔴 이름은 나눠 쓰는 두 반에서 같이 바뀐다', [T.저장소['material:c1'][0].title, T.저장소['material:c2'][1].title], ['고친 이름', '고친 이름']);
+    봄('   다른 자료는 그대로', T.저장소['material:c2'][0].title, 'c2 의 것');
+    봄('   이름만 바꾸면 드라이브는 안 건드린다', [T.올린파일, T.지운파일], [[], []]);
+  }
+  {
+    const T = 자료판({ 저장소: 공유(), 수정파일: { name: '새판.pdf', size: 7, type: 'application/pdf' } });
+    await T.api.loadMaterialsIfNeeded('c1');
+    await T.api.saveMaterialEdit('c1', 'sh1');
+    봄('파일 바꾸기 — 한 번만 올린다', T.올린파일, ['새판.pdf']);
+    봄('🔴 두 반 모두 새 파일을 가리킨다', [T.저장소['material:c1'][0].fileId, T.저장소['material:c2'][1].fileId], ['F-NEW', 'F-NEW']);
+    봄('   제목·나눔 표는 그대로', [T.저장소['material:c1'][0].title, T.저장소['material:c1'][0].sharedWith], ['공유 프린트', ['c1', 'c2']]);
+    봄('🔴 모두 옮겨 갔으니 옛 파일을 지운다', T.지운파일, ['F-SH']);
+  }
+  {
+    const T = 자료판({ 저장소: 공유(), 수정파일: { name: '새판.pdf', size: 7 }, 못읽는키: ['material:c2'] });
+    await T.api.loadMaterialsIfNeeded('c1');
+    await T.api.saveMaterialEdit('c1', 'sh1');
+    봄('🔴 못 읽은 반은 건드리지 않는다', T.저장소['material:c2'][1].fileId, 'F-SH');
+    봄('   읽은 반은 바뀐다', T.저장소['material:c1'][0].fileId, 'F-NEW');
+    봄('🔴 옛 파일은 남긴다 (그 반이 아직 연다)', T.지운파일, []);
+    봄('   어느 반이 실패했는지 말한다', /고1 B/.test(T.말.join(' ')), true);
+  }
+  {
+    const T = 자료판({ 저장소: 공유(), 수정파일: { name: '새판.pdf', size: 7 }, 못쓰는키: ['material:c1', 'material:c2'] });
+    await T.api.loadMaterialsIfNeeded('c1');
+    await T.api.saveMaterialEdit('c1', 'sh1');
+    봄('🔴 아무 반에도 못 붙었으면 새 파일을 치우고 옛 파일은 둔다', T.지운파일, ['F-NEW']);
+    봄('   목록은 그대로', T.저장소['material:c1'][0].fileId, 'F-SH');
+  }
+  {
+    const T = 자료판({ 저장소: 공유(), 수정제목: '공유 프린트' });
+    await T.api.loadMaterialsIfNeeded('c1');
+    await T.api.saveMaterialEdit('c1', 'sh1');
+    봄('바꾼 것이 없으면 아무 일도 없다', [T.올린파일, T.지운파일, T.말], [[], [], []]);
+  }
+  {
+    const T = 자료판({ 저장소: 공유(), 수정파일: { name: '큰.pdf', size: 20 * 1024 * 1024 } });
+    await T.api.loadMaterialsIfNeeded('c1');
+    await T.api.saveMaterialEdit('c1', 'sh1');
+    봄('너무 큰 파일은 안 올린다', [T.올린파일.length, T.저장소['material:c1'][0].fileId], [0, 'F-SH']);
+  }
 }
 
 /* ══════════ 영상 — 여러 명에게 한 번에 ══════════ */

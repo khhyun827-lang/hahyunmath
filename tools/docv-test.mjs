@@ -119,7 +119,7 @@ console.log('\n④ 올리기 — 강의자료·학교 파일은 잠가서\n');
 {
   const at = html.indexOf('async function uploadFileToDrive(');
   봄('🔴 uploadFileToDrive 가 private=1 을 보낸다', /fd\.append\('private', '1'\)/.test(html.slice(at, at + 900)), true);
-  봄('   그 문을 쓰는 것은 강의자료·학교 파일 둘뿐', (html.match(/await uploadFileToDrive\(/g) || []).length, 2);
+  봄('   그 문을 쓰는 것은 강의자료(올리기·고치기 10-17)·학교 파일 셋뿐', (html.match(/await uploadFileToDrive\(/g) || []).length, 3);
   봄('   드라이브 주소로 여는 곳이 안 남았다(자료·학교 파일)', [/function materialLink\(/.test(html), /function schoolFileDownload\(/.test(html)], [false, false]);
 }
 console.log(`\n${pass} 통과 · ${fail} 실패`);

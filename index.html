@@ -8129,6 +8129,7 @@ let state = {
   materialLoading: {},
   materialUploading: {},
   materialAdding: false,   // 「자료 올리기」 폼이 열려 있나
+  materialEditId: null,    // 「수정」을 연 자료 줄 (10-17)
   clinicAssignSid: '',    // 학생 상세에서 「클리닉 배정」으로 들어올 때 미리 고를 학생
   /* 수업(02-class) — 날짜 하나 · 반 하나 · 단계 하나. 출결 초안은 attDraft를 그대로 쓴다 */
   sessionDate: '',
@@ -14359,6 +14360,59 @@ async function deleteMaterial(classId, id){
   if(지워도된다) deleteFromDrive(m.fileId);   // 드라이브에서도 지운다 (결과를 기다리지 않는다)
   await logAudit('강의자료 삭제', '', '', `${classNameOf(classId)} · ${m.title}`);
   showToast(지워도된다 ? '자료를 지웠습니다.' : `${classNameOf(classId)} 목록에서 뺐습니다 — 다른 반이 쓰는 파일이라 파일은 남깁니다.`);
+  render();
+}
+/* 자료 고치기 — 이름 바꾸기 · 파일 바꾸기 (2026-10-17 · 사용자 — 「열기 삭제 말고 이름을 바꾸던가 파일을 바꾸는 수정하는 버튼」).
+   🔵 **여러 반에 올린 자료는 나눠 쓰는 반 전부에서 같이 바뀐다** — 파일 한 벌을 가리키는 «같은 줄»이라서다(sharedWith).
+     한 반만 바꾸면 같은 자료가 반마다 이름이 갈린다.
+   🔴 새 파일은 «먼저» 올리고 목록을 바꾼다. 옛 파일은 **모든 반이 새것으로 옮겨 갔을 때만** 지운다 —
+     한 반이라도 못 바꿨으면 그 반은 아직 옛 파일을 연다(deleteMaterial 과 같은 셈 · 모르면 안 지운다). */
+async function saveMaterialEdit(classId, id){
+  const m = (state.materials[classId] || []).find(x=>x.id===id);
+  if(!m) return;
+  const title = ((document.getElementById('mt-edit-title') || {}).value || '').trim() || m.title;
+  const fEl = document.getElementById('mt-edit-file');
+  const f = fEl && fEl.files && fEl.files[0];
+  if(title === m.title && !f){ state.materialEditId = null; render(); return; }
+  if(f && f.size > MATERIAL_MAX_BYTES){
+    showToast(`파일이 너무 큽니다 (${fileSizeLabel(f.size)}). ${fileSizeLabel(MATERIAL_MAX_BYTES)}까지 올릴 수 있습니다.`);
+    return;
+  }
+  const 반들 = [classId].concat((m.sharedWith || []).filter(c => c !== classId && DATA.classes.some(x => x.id === c)));
+  state.materialUploading[classId] = true; render();
+  try{
+    const 바꿀것 = { title };
+    if(f){
+      const { url, fileId } = await uploadFileToDrive(f);
+      Object.assign(바꿀것, { name:f.name, size:f.size, mime:f.type||'', url, fileId });
+    }
+    const 된반 = [], 안된반 = [];
+    for(const cid of 반들){
+      const list = await materialListOf(cid);
+      if(list === null){ 안된반.push(cid); continue; }              // 못 읽은 반은 건드리지 않는다
+      if(!list.some(x => x.id === id)) continue;                   // 그 반에서는 이미 뺀 자료
+      const next = list.map(x => x.id === id ? Object.assign({}, x, 바꿀것) : x);
+      const ok = await dbSet('material:' + cid, next);
+      if(ok !== true){ 안된반.push(cid); continue; }
+      state.materials[cid] = next;
+      된반.push(cid);
+    }
+    if(!된반.length){
+      if(f) deleteFromDrive(바꿀것.fileId);                         // 아무 데도 안 붙은 새 파일은 치운다
+      showToast('자료를 고치지 못했습니다 — 저장이 막혀 있습니다.');
+    } else {
+      if(f && !안된반.length && m.fileId && m.fileId !== 바꿀것.fileId) deleteFromDrive(m.fileId);
+      await logAudit('강의자료 수정', '', '', `${된반.map(classNameOf).join(' · ')} · ${m.title}`
+        + (title !== m.title ? ' → ' + title : '') + (f ? ' · 파일 바꿈' : ''));
+      state.materialEditId = null;
+      showToast(안된반.length
+        ? `${된반.map(classNameOf).join('·')} 은(는) 고쳤습니다. ${안된반.map(classNameOf).join('·')} 은(는) 실패해 예전 그대로입니다.`
+        : 된반.length > 1 ? `자료를 고쳤습니다 — 나눠 쓰는 ${된반.length}개 반에 함께 바뀝니다.` : '자료를 고쳤습니다.');
+    }
+  }catch(e){
+    showToast('파일을 올리지 못했습니다. 잠시 뒤 다시 시도해 주세요.');
+  }
+  state.materialUploading[classId] = false;
   render();
 }
 
@@ -29358,11 +29412,24 @@ function chubMaterialHTML(classId){
     ? '<div class="st-empty">불러오는 중…</div>'
     : list.length===0
       ? '<div class="st-empty">아직 올린 자료가 없습니다.<br>수업 프린트·해설지·필기를 올려 두면 학생이 앱에서 받아 갑니다.</div>'
-      : list.map(m=>`<div class="st-row">
+      : list.map(m=> state.materialEditId === m.id ? `<div class="st-row">
+          <div class="t" style="flex:1;">
+            <div class="cls-form" style="margin-top:0;">
+              <label style="flex:1;min-width:180px;"><span>제목</span><input id="mt-edit-title" value="${escHtml(m.title)}" ${busy?'disabled':''}></label>
+              <label style="min-width:200px;"><span>파일 바꾸기 (선택 · 지금: ${escHtml(m.name)})</span>
+                <input type="file" id="mt-edit-file" accept="application/pdf,image/*" ${busy?'disabled':''}></label>
+            </div>
+            ${(m.sharedWith || []).length > 1 ? `<span class="muted" style="font-size:11.5px;">여러 반(${m.sharedWith.filter(c=>DATA.classes.some(x=>x.id===c)).map(classNameOf).join('·')})에 함께 올린 자료라 그 반들에도 같이 바뀝니다.</span>` : ''}
+          </div>
+          <div class="v">${busy ? '<span class="muted" style="font-size:11.5px;">저장 중…</span>' : `
+            <button class="btn p sm" onclick="saveMaterialEdit('${classId}','${m.id}')">저장</button>
+            <button class="btn sm" onclick="state.materialEditId=null; render()">취소</button>`}
+          </div></div>` : `<div class="st-row">
           <div class="t"><b>${escHtml(m.title)}</b>
             <span>${escHtml(m.name)}<s>·</s><span class="mono">${fileSizeLabel(m.size)}</span><s>·</s><span class="mono">${escHtml((m.at||'').slice(0,10))}</span></span></div>
           <div class="v">
             <button class="btn sm" onclick="docvOpenMaterial('${classId}','${m.id}')">열기</button>
+            <button class="btn sm" onclick="state.materialEditId='${m.id}'; render()">수정</button>
             <button class="btn q sm" onclick="deleteMaterial('${classId}','${m.id}')">삭제</button>
           </div></div>`).join('')}`;
 }
