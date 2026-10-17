@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>김하현 Dock</title>
+<!-- 김하현 Dock(Windows 앱 HahyunDock.exe) 전용 화면 — Dock 하나와 그 설정, 그리고 로고 배경화면 만들기.
+     🔵 2026-10-18 사용자 — 「웹페이지 프로그램과 독을 분리 · 독은 별개의 프로그램으로 배경화면에 고정 · 가운데에도 · 배경화면을 로고 인트로처럼」.
+     창은 투명하고(앱이 DWM 유리로 연다) 이 페이지가 Dock 만 그린다. 그린 크기는 앱에 알려 창을 딱 맞춘다(frame).
+     실행할 경로는 여기 없다 — 앱이 제 PC 에 적어 두고, 이 페이지는 «id» 만 보낸다. 배경화면은 이 페이지가 PNG 로 그려 보낸다. -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<link rel="stylesheet" href="ds.css">
+<style>
+html,body{height:100%;overflow:hidden;font-family:'Pretendard',-apple-system,sans-serif;color:var(--ink);background:transparent!important;}
+
+/* ---------- Dock ---------- */
+#dock{--dk:48px;position:fixed;z-index:10;display:flex;align-items:flex-end;width:max-content;
+  gap:calc(var(--dk)*.2);padding:calc(var(--dk)*.17);box-sizing:border-box;
+  height:calc(var(--dk)*1.34);
+  /* 바탕화면 위라 뒤를 흐리게 할 수 없다(다른 창이다) — 대신 조금 더 짙은 유리 */
+  background:rgba(255,255,255,.72);
+  border:1px solid rgba(255,255,255,.85);border-radius:calc(var(--dk)*.44);
+  box-shadow:0 10px 26px rgba(34,34,30,.22),0 0 0 .5px rgba(34,34,30,.14);
+  transition:transform .32s cubic-bezier(.4,0,.2,1),opacity .32s;}
+#dock[hidden]{display:none;}
+#dock[data-pos=bottom]{left:50%;bottom:10px;transform:translateX(-50%);}
+#dock[data-pos=center]{left:50%;top:50%;transform:translate(-50%,-50%);}
+#dock[data-pos=left],#dock[data-pos=right]{top:50%;flex-direction:column;height:auto;width:calc(var(--dk)*1.34);}
+#dock[data-pos=left]{left:10px;transform:translateY(-50%);align-items:flex-start;}
+#dock[data-pos=right]{right:10px;transform:translateY(-50%);align-items:flex-end;}
+#dock.autohide:not(.show)[data-pos=bottom]{transform:translate(-50%,calc(100% + 16px));}
+#dock.autohide:not(.show)[data-pos=left]{transform:translate(calc(-100% - 16px),-50%);}
+#dock.autohide:not(.show)[data-pos=right]{transform:translate(calc(100% + 16px),-50%);}
+#dk-list{display:contents;}
+.dk-sep{flex:none;align-self:stretch;width:1px;margin:calc(var(--dk)*.08) 0;background:rgba(34,34,30,.14);}
+#dock[data-pos=left] .dk-sep,#dock[data-pos=right] .dk-sep{width:auto;height:1px;margin:0 calc(var(--dk)*.08);}
+
+.dk-item{--z:1;position:relative;flex:none;container-type:size;
+  width:calc(var(--dk)*var(--z));height:calc(var(--dk)*var(--z));
+  padding:0;border:0;background:none;cursor:pointer;border-radius:22%;
+  transition:width var(--t),height var(--t);}
+.dk-item:focus-visible{outline:none;box-shadow:0 0 0 3px var(--point-ring);}
+.dk-item .ic{width:100%;height:100%;display:block;object-fit:contain;box-sizing:border-box;
+  filter:drop-shadow(0 2px 3px rgba(34,34,30,.2));pointer-events:none;}
+.dk-item .ic.tile{background:#fff;border-radius:22%;padding:17%;filter:none;
+  box-shadow:0 2px 5px rgba(34,34,30,.16),inset 0 0 0 .5px rgba(34,34,30,.08);}
+.dk-item .ic.letter{display:grid;place-items:center;border-radius:22%;filter:none;
+  background:linear-gradient(140deg,var(--point-lt),var(--point-d));color:#fff;font-weight:700;font-size:44cqw;
+  box-shadow:0 2px 5px rgba(138,47,76,.3);}
+.dk-item .ic.tile svg{width:100%;height:100%;color:var(--sub);}
+.dk-tip{position:absolute;left:50%;bottom:calc(100% + 12px);transform:translateX(-50%);
+  background:var(--accent);color:#fff;font-size:12px;font-weight:600;line-height:1;padding:6px 10px;
+  border-radius:var(--r-sm);white-space:nowrap;opacity:0;pointer-events:none;transition:opacity var(--t);}
+#dock[data-pos=left] .dk-tip{left:calc(100% + 12px);bottom:auto;top:50%;transform:translateY(-50%);}
+#dock[data-pos=right] .dk-tip{left:auto;right:calc(100% + 12px);bottom:auto;top:50%;transform:translateY(-50%);}
+.dk-item:hover .dk-tip,.dk-item:focus-visible .dk-tip{opacity:1;}
+/* 눌렀을 때 — 두 번 통통 · 자두 점 하나 */
+.dk-item.go{animation:dk-bounce .9s cubic-bezier(.3,0,.3,1);}
+.dk-item.go::after{content:'';position:absolute;left:50%;bottom:calc(var(--dk)*-.13);width:4px;height:4px;margin-left:-2px;
+  border-radius:50%;background:var(--point);}
+@keyframes dk-bounce{0%,50%,100%{translate:0 0}22%{translate:0 -38%}72%{translate:0 -16%}}
+#dock[data-pos=left] .dk-item.go,#dock[data-pos=right] .dk-item.go{animation:none;}
+#edge{position:fixed;z-index:9;display:none;}
+#edge.on{display:block;}
+#edge[data-pos=bottom]{left:0;right:0;bottom:0;height:4px;}
+#edge[data-pos=left]{top:0;bottom:0;left:0;width:4px;}
+#edge[data-pos=right]{top:0;bottom:0;right:0;width:4px;}
+
+/* ---------- 설정 — 펴는 동안 창이 작업 영역 가득으로 커진다(앱이 맞춘다) ---------- */
+#set{position:fixed;inset:0;z-index:20;display:grid;place-items:center;background:rgba(34,34,30,.28);}
+#set[hidden]{display:none;}
+.set-card{width:min(600px,92vw);max-height:88vh;overflow:auto;box-sizing:border-box;padding:22px 24px 24px;
+  background:var(--card);border-radius:var(--r-xl);box-shadow:0 24px 60px rgba(34,34,30,.25);font-size:13px;}
+.set-card header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+.set-card h2{margin:0;font-size:17px;font-weight:700;letter-spacing:-.02em;}
+.set-card section{padding:14px 0;border-top:1px solid var(--line2);}
+.set-card .t-sec{margin-bottom:8px;}
+#set-items{list-style:none;margin:0;padding:0;}
+#set-items li{display:flex;align-items:center;gap:10px;padding:6px 4px;border-radius:var(--r-md);}
+#set-items li:hover{background:var(--hover);}
+#set-items .ic{width:28px;height:28px;flex:none;}
+#set-items .face{flex:none;padding:2px;border:0;background:none;border-radius:var(--r-sm);cursor:pointer;}
+#set-items .face:hover,#set-items .face:focus-visible{outline:none;box-shadow:0 0 0 2px var(--point);}
+#set-items .ic.tile{padding:4px;}
+#set-items .ic.letter{font-size:13px;}
+#set-items .nm{flex:1;min-width:0;}
+#set-items input{width:100%;box-sizing:border-box;border:1px solid transparent;border-radius:var(--r-sm);
+  background:transparent;font:inherit;font-weight:600;padding:3px 6px;color:var(--ink);}
+#set-items input:hover{border-color:var(--line);}
+#set-items input:focus{outline:none;border-color:var(--point);box-shadow:0 0 0 3px var(--point-ring);background:#fff;}
+#set-items .tg{display:block;padding:0 7px;font-size:11px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.set-card .ic{display:block;object-fit:contain;box-sizing:border-box;}
+.set-card .ic.tile{background:#fff;border-radius:22%;box-shadow:inset 0 0 0 1px var(--line);}
+.set-card .ic.letter{display:grid;place-items:center;border-radius:22%;color:#fff;font-weight:700;
+  background:linear-gradient(140deg,var(--point-lt),var(--point-d));}
+.set-add{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;}
+#url-form{display:flex;gap:6px;margin-top:8px;}
+#url-form[hidden]{display:none;}
+#url-form input{height:30px;box-sizing:border-box;border:1px solid var(--line);border-radius:var(--r-sm);
+  background:var(--sunk);font:inherit;padding:0 9px;min-width:0;}
+#url-form input:focus{outline:none;border-color:var(--point);box-shadow:0 0 0 3px var(--point-ring);}
+#url-form [name=name]{width:110px;} #url-form [name=url]{flex:1;}
+.btn.pt{background:var(--point);border-color:var(--point);color:#fff;font-weight:700;}
+.btn.pt:hover{background:var(--point-d);border-color:var(--point-d);}
+.btn.pt:disabled{opacity:.55;cursor:default;}
+.row{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:6px 0;}
+.row[hidden]{display:none;}
+.row span{display:flex;align-items:center;gap:10px;}
+.row output{width:40px;text-align:right;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--sub);}
+.row input[type=range]{width:180px;}
+.row select{height:30px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--sunk);font:inherit;padding:0 8px;}
+.set-card input[type=range],.set-card input[type=checkbox]{accent-color:var(--point);}
+.set-card input[type=checkbox]{width:16px;height:16px;}
+
+/* 배경화면 — 미리보기 셋 중 하나를 고르고 «배경화면으로» */
+.wp-list{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
+.wp{padding:0;border:0;background:none;cursor:pointer;text-align:left;font:inherit;color:var(--ink);}
+.wp canvas{display:block;width:100%;height:auto;border-radius:var(--r-md);box-shadow:0 0 0 1px var(--line);transition:box-shadow var(--t);}
+.wp:hover canvas{box-shadow:0 0 0 2px var(--point-lt);}
+.wp.on canvas{box-shadow:0 0 0 2.5px var(--point);}
+.wp b{display:block;margin-top:6px;font-size:12px;font-weight:600;}
+.wp s{display:block;text-decoration:none;font-size:11px;color:var(--dim);}
+.wp-go{display:flex;align-items:center;justify-content:flex-end;gap:10px;margin-top:12px;font-size:11.5px;color:var(--dim);}
+
+#toast{position:fixed;left:50%;bottom:96px;z-index:30;transform:translateX(-50%);
+  background:var(--accent);color:#fff;font-size:13px;padding:9px 14px;border-radius:var(--r-md);
+  box-shadow:0 8px 24px rgba(34,34,30,.25);opacity:0;pointer-events:none;transition:opacity .2s;}
+#toast.on{opacity:1;}
+</style>
+</head>
+<body>
+<div id="edge"></div>
+<nav id="dock" hidden aria-label="Dock">
+  <div id="dk-list"></div>
+  <div class="dk-sep"></div>
+  <button class="dk-item" id="dk-gear" aria-label="Dock 설정">
+    <span class="ic tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></span>
+    <span class="dk-tip">Dock 설정</span>
+  </button>
+</nav>
+
+<div id="set" hidden>
+  <div class="set-card" role="dialog" aria-label="Dock 설정">
+    <header><h2>Dock 설정</h2><button class="btn q icon" id="set-x" aria-label="닫기">✕</button></header>
+    <section>
+      <p class="t-sec">항목</p>
+      <ul id="set-items"></ul>
+      <div class="set-add">
+        <button class="btn sm" data-pick="program">+ 프로그램</button>
+        <button class="btn sm" data-pick="folder">+ 폴더</button>
+        <button class="btn sm" data-pick="file">+ 파일</button>
+        <button class="btn sm" id="add-url">+ 웹사이트</button>
+      </div>
+      <form id="url-form" hidden>
+        <input name="name" placeholder="이름" required>
+        <input name="url" placeholder="https://" required>
+        <button class="btn pt sm">추가</button>
+      </form>
+    </section>
+    <section>
+      <p class="t-sec">모양</p>
+      <label class="row">아이콘 크기<span><input type="range" id="s-size" min="32" max="72" step="2"><output id="o-size"></output></span></label>
+      <label class="row">확대 배율<span><input type="range" id="s-mag" min="1" max="2" step="0.1"><output id="o-mag"></output></span></label>
+      <label class="row">위치<select id="s-pos"><option value="bottom">아래</option><option value="center">화면 정가운데</option><option value="left">왼쪽</option><option value="right">오른쪽</option></select></label>
+      <label class="row" id="r-hide">자동 숨김<input type="checkbox" id="s-hide"></label>
+    </section>
+    <section>
+      <p class="t-sec">배경화면</p>
+      <div class="wp-list" id="wp-list"></div>
+      <div class="wp-go"><span>화면 크기 그대로 그려 Windows 배경화면으로 바꿉니다</span>
+        <button class="btn pt sm" id="wp-set">배경화면으로 설정</button></div>
+    </section>
+    <section>
+      <p class="t-sec">WINDOWS</p>
+      <label class="row">Windows 시작 시 Dock 자동 실행<input type="checkbox" id="s-auto"></label>
+      <label class="row" id="r-site">Windows 시작 시 김하현 Desktop 자동 실행<input type="checkbox" id="s-auto-site"></label>
+    </section>
+  </div>
+</div>
+<div id="toast" role="status"></div>
+
+<script>
+/* 앱(C#)과 주고받는 말 — 이 페이지는 «id» 와 값만 보낸다. 경로는 앱이 제 파일 선택 창으로 받는다.
+   받는 것: {cmd:'config', settings, items, autostart:{dock, site}, screen:{w,h}} · {cmd:'error'|'done', text}
+   보내는 것: get · open{id} · pick{kind} · addUrl{name,url} · rename{id,name} · remove{id} · order{ids} · settings{settings}
+             · autostart{which,on} · pickIcon{id} · resetIcon{id}
+             · frame{mode:'dock'|'full', w, h}(물리 픽셀 — 앱이 창을 이 크기로 맞춘다) · wallpaper{png}(data:image/png) */
+const $ = s => document.querySelector(s);
+const bridge = window.chrome && window.chrome.webview;
+const dock = $('#dock'), edge = $('#edge'), setBox = $('#set');
+let cfg = null;
+const send = m => bridge && bridge.postMessage(m);
+
+if(bridge){
+  bridge.addEventListener('message', e => {
+    const m = e.data;
+    if(m.cmd === 'config'){ cfg = m; renderDock(); if(!setBox.hidden) renderSettings(); }
+    else if(m.cmd === 'error' || m.cmd === 'done'){ toast(m.text); if(m.cmd === 'done') wpBusy(false); }
+  });
+  send({cmd:'get'});
+}
+
+/* ---------- 창 크기 — Dock 이 차지하는 자리(확대·말풍선 여유 포함)를 앱에 알린다 ----------
+   🔵 창은 그 크기만큼만 — 투명한 곳도 창이라 바탕화면 클릭을 먹기 때문이다. 설정·알림 동안만 작업 영역 가득(full). */
+let lastFrame = '', toastFull = false;
+function frame(){
+  if(!cfg) return;
+  const full = !setBox.hidden || toastFull;
+  const s = cfg.settings, r = dock.getBoundingClientRect(), k = devicePixelRatio || 1;
+  const up = Math.ceil(s.size * (s.magnify - 1)) + 44;            // 커지는 만큼 + 말풍선
+  let w, h;
+  const vert = s.position === 'left' || s.position === 'right';
+  /* 자동 숨김으로 들어가 있는 동안은 가장자리의 얇은 띠만 — 투명한 창이 바탕화면 클릭을 막지 않게 */
+  const tucked = !full && s.autohide && s.position !== 'center' && !dock.classList.contains('show');
+  if(tucked){ w = vert ? 6 : r.width + 40; h = vert ? r.height + 40 : 6; }
+  else if(vert){ w = r.width + up + 150; h = r.height + 40; }   // 옆 말풍선 자리
+  else if(s.position === 'center'){ w = r.width + 40; h = r.height + up * 2; }                    // 가운데 — 위아래 같게(가운데가 안 흔들린다)
+  else { w = r.width + 40; h = r.height + up + 10; }
+  const m = { cmd:'frame', mode: full ? 'full' : 'dock', w: Math.ceil(w * k), h: Math.ceil(h * k) };
+  const key = JSON.stringify(m);
+  if(key !== lastFrame){ lastFrame = key; send(m); }
+}
+
+/* ---------- 아이콘 — 사용자가 고른 그림 › 프로그램·폴더·파일은 앱이 뽑아 준 그림 › 웹사이트는 그 사이트의 아이콘 › 글자 ---------- */
+function letter(it){
+  const d = document.createElement('span'); d.className = 'ic letter';
+  d.textContent = (it.name || '?').trim().charAt(0).toUpperCase();
+  return d;
+}
+function iconEl(it){
+  const im = document.createElement('img'); im.className = 'ic'; im.alt = '';
+  if(it.icon){ im.src = it.icon; return im; }
+  if(it.kind !== 'url') return letter(it);
+  let u; try{ u = new URL(it.target); }catch(e){ return letter(it); }
+  im.className = 'ic tile';
+  const srcs = [u.origin + '/apple-touch-icon.png', 'https://www.google.com/s2/favicons?sz=128&domain=' + u.hostname];
+  im.onerror = () => srcs.length ? (im.src = srcs.shift()) : im.replaceWith(letter(it));
+  im.src = srcs.shift();
+  return im;
+}
+
+/* ---------- Dock ---------- */
+function renderDock(){
+  const s = cfg.settings;
+  const hide = s.autohide && s.position !== 'center';   // 가운데는 숨길 가장자리가 없다
+  dock.style.setProperty('--dk', s.size + 'px');
+  dock.dataset.pos = edge.dataset.pos = s.position;
+  dock.classList.toggle('autohide', hide);
+  edge.classList.toggle('on', hide);
+  $('#dk-list').replaceChildren(...cfg.items.map(it => {
+    const b = document.createElement('button');
+    b.className = 'dk-item'; b.setAttribute('aria-label', it.name);
+    const tip = document.createElement('span'); tip.className = 'dk-tip'; tip.textContent = it.name;
+    b.append(iconEl(it), tip);
+    b.onclick = () => { send({cmd:'open', id:it.id}); b.classList.remove('go'); void b.offsetWidth; b.classList.add('go');
+      clearTimeout(b._go); b._go = setTimeout(() => b.classList.remove('go'), 1200); };
+    return b;
+  }));
+  dock.hidden = false;
+  requestAnimationFrame(frame);
+}
+$('#dk-gear').onclick = openSettings;
+
+/* 확대 — 마우스에서 가까울수록 크게(코사인으로 부드럽게 줄어든다). 크기는 CSS 의 --z 한 값으로만 움직인다. */
+dock.addEventListener('mousemove', e => {
+  const s = cfg.settings, vert = s.position === 'left' || s.position === 'right';
+  const p = vert ? e.clientY : e.clientX, range = s.size * 2.6;
+  for(const el of dock.querySelectorAll('.dk-item')){
+    const r = el.getBoundingClientRect(), c = vert ? r.top + r.height / 2 : r.left + r.width / 2;
+    const d = Math.abs(p - c), k = d < range ? Math.cos(d / range * Math.PI / 2) : 0;
+    el.style.setProperty('--z', (1 + (s.magnify - 1) * k).toFixed(3));
+  }
+});
+dock.addEventListener('mouseleave', () => {
+  dock.querySelectorAll('.dk-item').forEach(el => el.style.setProperty('--z', 1));
+  hideSoon();
+});
+
+/* 자동 숨김 — 가장자리 4px 에 닿으면 나오고, 떠나면 0.5초 뒤 들어간다 */
+let hideT;
+const show = () => { clearTimeout(hideT); dock.classList.add('show'); frame(); };
+const hideSoon = () => { clearTimeout(hideT); hideT = setTimeout(() => { dock.classList.remove('show'); setTimeout(frame, 340); }, 500); };   // 미끄러져 들어간 뒤 띠로
+edge.addEventListener('mouseenter', show);
+dock.addEventListener('mouseenter', show);
+
+/* 알림 — 작은 창 밖으로 잘리지 않게 그동안만 작업 영역 가득으로 편다 */
+let toastT;
+function toast(text){
+  const t = $('#toast'); t.textContent = text; t.classList.add('on');
+  toastFull = true; frame();
+  clearTimeout(toastT);
+  toastT = setTimeout(() => { t.classList.remove('on'); toastFull = false; frame(); }, 2600);
+}
+
+/* ---------- 설정 ---------- */
+function openSettings(){ renderSettings(); setBox.hidden = false; frame(); }
+function closeSettings(){ setBox.hidden = true; $('#url-form').hidden = true; frame(); }
+$('#set-x').onclick = closeSettings;
+setBox.addEventListener('mousedown', e => { if(e.target === setBox) closeSettings(); });
+addEventListener('keydown', e => { if(e.key === 'Escape' && !setBox.hidden) closeSettings(); });
+
+function renderSettings(){
+  const s = cfg.settings;
+  $('#s-size').value = s.size; $('#o-size').value = s.size;
+  $('#s-mag').value = s.magnify; $('#o-mag').value = '×' + s.magnify;
+  $('#s-pos').value = s.position; $('#s-hide').checked = s.autohide;
+  $('#r-hide').hidden = s.position === 'center';
+  $('#s-auto').checked = !!cfg.autostart.dock;
+  $('#r-site').hidden = cfg.autostart.site == null;      // 김하현 Desktop 이 같이 깔려 있을 때만
+  $('#s-auto-site').checked = !!cfg.autostart.site;
+  const ids = cfg.items.map(it => it.id);
+  const move = (i, j) => { const o = ids.slice(); [o[i], o[j]] = [o[j], o[i]]; send({cmd:'order', ids:o}); };
+  $('#set-items').replaceChildren(...cfg.items.map((it, i) => {
+    const li = document.createElement('li');
+    const nm = document.createElement('div'); nm.className = 'nm';
+    const inp = document.createElement('input'); inp.value = it.name; inp.setAttribute('aria-label', '이름');
+    inp.onchange = () => inp.value.trim() && send({cmd:'rename', id:it.id, name:inp.value.trim()});
+    const tg = document.createElement('small'); tg.className = 'tg'; tg.textContent = it.target; tg.title = it.target;
+    nm.append(inp, tg);
+    const btn = (label, aria, fn, off) => {
+      const b = document.createElement('button'); b.className = 'btn q icon sm'; b.textContent = label;
+      b.setAttribute('aria-label', aria); b.disabled = !!off; b.onclick = fn; return b;
+    };
+    const face = btn('', '아이콘 바꾸기', () => send({cmd:'pickIcon', id:it.id}));
+    face.className = 'face'; face.title = '아이콘 바꾸기'; face.append(iconEl(it));
+    li.append(face, nm,
+      ...(it.custom ? [btn('↺', '원래 아이콘으로', () => send({cmd:'resetIcon', id:it.id}))] : []),
+      btn('↑', '앞으로', () => move(i, i - 1), i === 0),
+      btn('↓', '뒤로', () => move(i, i + 1), i === ids.length - 1),
+      btn('✕', '빼기', () => send({cmd:'remove', id:it.id})));
+    return li;
+  }));
+  renderWallpapers();
+}
+
+/* 모양 — 끌 때는 바로 보여 주고(input), 놓을 때 저장한다(change) */
+function readSettings(){
+  return { size:+$('#s-size').value, magnify:+$('#s-mag').value, position:$('#s-pos').value, autohide:$('#s-hide').checked };
+}
+['#s-size', '#s-mag', '#s-pos', '#s-hide'].forEach(id => {
+  $(id).addEventListener('input', () => {
+    cfg.settings = readSettings();
+    $('#o-size').value = cfg.settings.size; $('#o-mag').value = '×' + cfg.settings.magnify;
+    $('#r-hide').hidden = cfg.settings.position === 'center';
+    renderDock();
+  });
+  $(id).addEventListener('change', () => send({cmd:'settings', settings:readSettings()}));
+});
+$('#s-auto').onchange = e => send({cmd:'autostart', which:'dock', on:e.target.checked});
+$('#s-auto-site').onchange = e => send({cmd:'autostart', which:'site', on:e.target.checked});
+
+document.querySelectorAll('[data-pick]').forEach(b => b.onclick = () => send({cmd:'pick', kind:b.dataset.pick}));
+$('#add-url').onclick = () => { const f = $('#url-form'); f.hidden = !f.hidden; if(!f.hidden) f.elements['name'].focus(); };
+$('#url-form').onsubmit = e => {
+  e.preventDefault();
+  const f = e.target, el = f.elements; let url = el['url'].value.trim();
+  if(!/^https?:\/\//i.test(url)) url = 'https://' + url;
+  send({cmd:'addUrl', name:el['name'].value.trim(), url});
+  f.reset(); f.hidden = true;
+};
+
+/* ==================== 배경화면 — 로고 인트로의 «작도»로 (10-18) ====================
+   인트로(index.html #intro)가 그리는 것 그대로를 정지 화면으로 — 두 원 · 접선 · 큰 획(흰 선) · 갈래(자두 선) · 점 고리 · 격자, 그리고 로고.
+   좌표는 인트로의 것(로고 그림 708×431 위, matrix M 으로 옮긴 선)을 그대로 쓴다. 그림은 화면 크기(물리 픽셀)로 그린다. */
+const LOGO = new Image();
+LOGO.src = 'brand-logo.png';
+const LOGO_W = 708, LOGO_H = 431;
+const WIRE_M = [0.95639, 0, 0, 0.95639, 103.244, -0.320];
+const S1 = 'M13.72 29.25L51.20 29.25A105.32 105.32 0 0 1 155.40 119.30A79.95 79.95 0 0 0 300.66 152.60L361.54 62.91A79.97 79.97 0 1 1 373.05 166.20L346.57 204.47';
+const S2 = 'M155.40 119.30A79.95 79.95 0 0 1 290.16 50.30L315.98 12.74';
+const C1 = [234.51, 107.70, 79.95], C2 = [427.70, 107.82, 79.97], DOT = [153.63, 203.15, 17.61], TAN = [261.3, 210.5, 400.9, 5.0];
+
+/* 로고를 밤 화면용으로 다시 칠한다 — 자두색은 연분홍, 짙은 글자·획은 흰색, 회색 영문은 흐린 흰색 */
+let nightLogo = null;
+function logoForNight(){
+  if(nightLogo) return nightLogo;
+  const c = document.createElement('canvas'); c.width = LOGO_W; c.height = LOGO_H;
+  const g = c.getContext('2d'); g.drawImage(LOGO, 0, 0);
+  const d = g.getImageData(0, 0, LOGO_W, LOGO_H), p = d.data;
+  for(let i = 0; i < p.length; i += 4){
+    if(!p[i + 3]) continue;
+    const r = p[i], gg = p[i + 1], b = p[i + 2], lum = .3 * r + .59 * gg + .11 * b;
+    if(lum > 140 && r - b < 30){ p[i] = p[i + 1] = p[i + 2] = 255; p[i + 3] = Math.round(p[i + 3] * .55); continue; }  // 회색 영문 → 흐린 흰색
+    // 마크는 짙은 색 → 자두로 번지는 그라데이션이다 — 붉은 정도만큼 흰색에서 연분홍으로 «부드럽게»(뚝 끊기지 않게)
+    const t = Math.max(0, Math.min(1, (r - b - 15) / 90));
+    p[i] = 255 + (236 - 255) * t; p[i + 1] = 255 + (172 - 255) * t; p[i + 2] = 255 + (186 - 255) * t;
+  }
+  g.putImageData(d, 0, 0);
+  return nightLogo = c;
+}
+
+/* 로고 자리(화면 좌표)로 옮기는 틀을 깔고, 그 안에서 인트로의 선을 긋는다 */
+function wire(g, x, y, s, st){
+  g.save();
+  g.translate(x, y); g.scale(s, s);
+  g.transform(...WIRE_M);
+  g.lineCap = 'round'; g.lineJoin = 'round';
+  const lw = px => px / s / WIRE_M[0];            // 화면에서 px 두께가 되게
+  // 두 원 · 접선 — 가는 보조선
+  g.strokeStyle = st.guide; g.lineWidth = lw(st.thin);
+  for(const [cx, cy, r] of [C1, C2]){ g.beginPath(); g.arc(cx, cy, r, 0, Math.PI * 2); g.stroke(); }
+  // 접선은 화면 끝까지 길게 — «작도»의 느낌
+  const [x1, y1, x2, y2] = TAN, dx = x2 - x1, dy = y2 - y1;
+  g.strokeStyle = st.guideFar; g.beginPath(); g.moveTo(x1 - dx * 6, y1 - dy * 6); g.lineTo(x2 + dx * 6, y2 + dy * 6); g.stroke();
+  // 큰 원 둘을 한 번 더, 크게 — 바깥 고리
+  g.strokeStyle = st.guideFar;
+  for(const [cx, cy, r] of [C1, C2]){ g.beginPath(); g.arc(cx, cy, r * 2.15, 0, Math.PI * 2); g.stroke(); }
+  // 큰 획(흰 선) · 갈래(자두 선) · 점 고리
+  if(st.s1){ g.strokeStyle = st.s1; g.lineWidth = lw(st.thick); g.stroke(new Path2D(S1)); }
+  if(st.s2){ g.strokeStyle = st.s2; g.lineWidth = lw(st.thick); g.stroke(new Path2D(S2)); }
+  if(st.dot){ g.strokeStyle = st.dot; g.lineWidth = lw(st.thin); g.beginPath(); g.arc(DOT[0], DOT[1], DOT[2], 0, Math.PI * 2); g.stroke(); }
+  g.restore();
+}
+
+/* 격자 — 가운데에서 멀어질수록 사라진다(인트로의 it-grid) */
+function grid(g, W, H, step, color, cx, cy){
+  const c = document.createElement('canvas'); c.width = W; c.height = H;
+  const q = c.getContext('2d');
+  q.strokeStyle = color; q.lineWidth = Math.max(1, step / 44);
+  q.beginPath();
+  for(let x = cx % step; x < W; x += step){ q.moveTo(Math.round(x) + .5, 0); q.lineTo(Math.round(x) + .5, H); }
+  for(let y = cy % step; y < H; y += step){ q.moveTo(0, Math.round(y) + .5); q.lineTo(W, Math.round(y) + .5); }
+  q.stroke();
+  q.globalCompositeOperation = 'destination-in';
+  const R = Math.hypot(W, H) / 2, m = q.createRadialGradient(cx, cy, R * .12, cx, cy, R * .78);
+  m.addColorStop(0, '#000'); m.addColorStop(1, 'rgba(0,0,0,0)');
+  q.fillStyle = m; q.fillRect(0, 0, W, H);
+  g.drawImage(c, 0, 0);
+}
+
+const WALLPAPERS = [
+  { id:'night', name:'인트로 · 밤', note:'어두운 바탕 · 흰 작도 선', draw(g, W, H){
+      const cx = W / 2, cy = H * .46;
+      const bg = g.createRadialGradient(cx, cy, 0, cx, cy, Math.hypot(W, H) * .62);
+      bg.addColorStop(0, '#2a2024'); bg.addColorStop(.55, '#171214'); bg.addColorStop(1, '#110d0f');
+      g.fillStyle = bg; g.fillRect(0, 0, W, H);
+      grid(g, W, H, Math.round(W / 44), 'rgba(255,255,255,.05)', cx, cy);
+      const s = Math.min(W * .34, H * .5) / LOGO_W, x = cx - LOGO_W * s / 2, y = cy - LOGO_H * s / 2;
+      wire(g, x, y, s, { guide:'rgba(255,255,255,.2)', guideFar:'rgba(255,255,255,.07)', thin:Math.max(1, W / 1100),
+        thick:Math.max(1.5, W / 640), s1:null, s2:null, dot:'rgba(234,169,182,.55)' });
+      g.save(); g.shadowColor = 'rgba(234,169,182,.35)'; g.shadowBlur = W / 40;
+      g.drawImage(logoForNight(), x, y, LOGO_W * s, LOGO_H * s); g.restore();
+  }},
+  { id:'day', name:'작도 · 낮', note:'종이 바탕 · 자두 작도 선', draw(g, W, H){
+      const cx = W / 2, cy = H * .46;
+      g.fillStyle = '#F8F4F5'; g.fillRect(0, 0, W, H);
+      const blush = g.createRadialGradient(cx, cy, 0, cx, cy, Math.hypot(W, H) * .5);
+      blush.addColorStop(0, 'rgba(234,169,182,.22)'); blush.addColorStop(1, 'rgba(234,169,182,0)');
+      g.fillStyle = blush; g.fillRect(0, 0, W, H);
+      grid(g, W, H, Math.round(W / 44), 'rgba(138,47,76,.06)', cx, cy);
+      const s = Math.min(W * .34, H * .5) / LOGO_W, x = cx - LOGO_W * s / 2, y = cy - LOGO_H * s / 2;
+      wire(g, x, y, s, { guide:'rgba(138,47,76,.22)', guideFar:'rgba(138,47,76,.08)', thin:Math.max(1, W / 1100),
+        thick:Math.max(1.5, W / 640), s1:null, s2:null, dot:'rgba(176,64,84,.45)' });
+      g.drawImage(LOGO, x, y, LOGO_W * s, LOGO_H * s);
+  }},
+  { id:'line', name:'선 · 여백', note:'큰 획만 크게 · 로고는 작게', draw(g, W, H){
+      const bg = g.createLinearGradient(0, 0, W, H);
+      bg.addColorStop(0, '#FBF8F9'); bg.addColorStop(1, '#F1E6E9');
+      g.fillStyle = bg; g.fillRect(0, 0, W, H);
+      // 마크의 선을 화면을 가로지를 만큼 크게 — 큰 획은 흐린 자두, 갈래는 분홍
+      const big = W * 1.15 / LOGO_W;
+      wire(g, W * .5 - LOGO_W * big * .55, H * .5 - 110 * big, big, { guide:'rgba(138,47,76,.07)', guideFar:'rgba(138,47,76,.04)',
+        thin:Math.max(1, W / 1200), thick:Math.max(3, W / 260), s1:'rgba(138,47,76,.10)', s2:'rgba(234,169,182,.45)', dot:'rgba(138,47,76,.12)' });
+      const s = Math.min(W * .17, H * .26) / LOGO_W;
+      g.drawImage(LOGO, W / 2 - LOGO_W * s / 2, H * .44 - LOGO_H * s / 2, LOGO_W * s, LOGO_H * s);
+  }},
+];
+let wpPick = (() => { try{ return localStorage.getItem('dock.wp') || 'night'; }catch(e){ return 'night'; } })();
+
+function screenSize(){ return (cfg && cfg.screen && cfg.screen.w) ? cfg.screen : { w: screen.width * devicePixelRatio, h: screen.height * devicePixelRatio }; }
+
+function renderWallpapers(){
+  const sc = screenSize(), tw = 360, th = Math.round(tw * sc.h / sc.w);
+  $('#wp-list').replaceChildren(...WALLPAPERS.map(d => {
+    const b = document.createElement('button'); b.className = 'wp' + (d.id === wpPick ? ' on' : '');
+    const c = document.createElement('canvas'); c.width = tw; c.height = th;
+    const nm = document.createElement('b'); nm.textContent = d.name;
+    const nt = document.createElement('s'); nt.textContent = d.note;
+    b.append(c, nm, nt);
+    b.onclick = () => { wpPick = d.id; try{ localStorage.setItem('dock.wp', d.id); }catch(e){} renderWallpapers(); };
+    const go = () => d.draw(c.getContext('2d'), tw, th);
+    LOGO.complete && LOGO.naturalWidth ? go() : LOGO.addEventListener('load', go, { once:true });
+    return b;
+  }));
+}
+
+function wpBusy(on){ const b = $('#wp-set'); b.disabled = on; b.textContent = on ? '만드는 중…' : '배경화면으로 설정'; }
+$('#wp-set').onclick = () => {
+  const d = WALLPAPERS.find(x => x.id === wpPick) || WALLPAPERS[0], sc = screenSize();
+  if(!LOGO.complete || !LOGO.naturalWidth){ toast('로고를 아직 못 불러왔습니다 — 잠시 뒤에 다시 눌러 주세요'); return; }
+  wpBusy(true);
+  setTimeout(() => {      // 「만드는 중…」을 먼저 그리게 한 틈 뒤에
+    const c = document.createElement('canvas'); c.width = sc.w; c.height = sc.h;
+    d.draw(c.getContext('2d'), sc.w, sc.h);
+    send({cmd:'wallpaper', png: c.toDataURL('image/png')});
+    setTimeout(() => wpBusy(false), 8000);   // 앱이 답을 못 하면 단추를 풀어 준다
+  }, 30);
+};
+</script>
+</body>
+</html>
