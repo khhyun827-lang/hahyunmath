@@ -21726,6 +21726,17 @@ async function memoSave(){
   clearTimeout(state.memoTimer); state.memoTimer = null;
   if(state.memo && await dbSet(memoKey(), state.memo) !== true) showToast('메모를 저장하지 못했습니다.');
 }
+/* Dock 의 오른쪽 카드에서도 할 일을 더하고 끝낸다 (2026-10-18) — 창으로 돌아오면 다시 읽어, 열어 둔 이 탭이 옛 목록으로 덮어쓰지 않게.
+   바뀐 게 없으면 render 하지 않는다(다른 칸에 적던 글을 지우지 않게). 메모 글(note)은 Dock 이 안 건드려서 그대로 둔다. */
+addEventListener('focus', async () => {
+  if(!state.memo || state.memoTimer || state.memoLoading || !authUid()) return;
+  const m = await dbGet(memoKey(), null);
+  if(!m || !state.memo || state.memoTimer) return;
+  const pick = x => ({ todos: (Array.isArray(x.todos) ? x.todos : []).filter(t => !t.done), done: Array.isArray(x.done) ? x.done : [], events: Array.isArray(x.events) ? x.events : [] });
+  const now = pick(m);
+  if(JSON.stringify(now) === JSON.stringify(pick(state.memo))) return;
+  Object.assign(state.memo, now); render();
+});
 function memoNoteInput(v){ state.memo.note = v; clearTimeout(state.memoTimer); state.memoTimer = setTimeout(memoSave, 1000); }
 function memoAdd(form){
   const t = form.t.value.trim();

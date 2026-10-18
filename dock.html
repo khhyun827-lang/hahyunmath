@@ -99,6 +99,26 @@ html,body{height:100%;overflow:hidden;font-family:'Pretendard',-apple-system,san
 #board li .x{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 #board li .x s{text-decoration:none;margin-left:6px;font-size:11.5px;color:rgba(255,255,255,.5);}
 #board li .ck{flex:none;width:12px;height:12px;box-sizing:border-box;border:1.5px solid rgba(255,255,255,.45);border-radius:50%;transform:translateY(2px);}
+/* 할 일 — 동그라미를 누르면 끝냄 · 아래 칸에 적고 Enter 면 추가 (10-18 사용자 — 「할 일 바로 추가」). 웹 홈 메모와 같은 문서에 쓴다 */
+#board li .ck.on{cursor:pointer;transition:border-color var(--t),background var(--t);}
+#board li .ck.on:hover{border-color:#fff;background:rgba(255,255,255,.25);}
+#board .bd-add{display:block;width:100%;box-sizing:border-box;margin-top:8px;padding:7px 10px;border:1px solid rgba(255,255,255,.12);border-radius:10px;
+  background:rgba(255,255,255,.06);color:#fff;font:inherit;font-size:12.5px;outline:none;}
+#board .bd-add:focus{border-color:rgba(255,255,255,.35);}
+#board .bd-add::placeholder{color:rgba(255,255,255,.4);}
+#board .bd-add[hidden]{display:none;}
+/* 검색창 — 아래 가운데 · Enter 면 기본 브라우저로 구글 검색 (10-18) */
+#search{position:fixed;left:50%;bottom:6vh;transform:translateX(-50%);z-index:5;width:min(440px,40vw);height:44px;box-sizing:border-box;
+  display:flex;align-items:center;gap:10px;padding:0 18px;background:rgba(22,23,30,.78);border:1px solid rgba(255,255,255,.08);border-radius:22px;
+  box-shadow:0 12px 30px rgba(0,0,0,.3);}
+#search[hidden]{display:none;}
+#dock[data-pos=bottom] ~ #search{bottom:140px;}   /* 아래 Dock 과 겹치지 않게 */
+#search svg{flex:none;width:18px;height:18px;color:rgba(255,255,255,.55);}
+#search input{flex:1;min-width:0;border:0;background:none;color:#fff;font:inherit;font-size:14px;outline:none;}
+#search input::placeholder{color:rgba(255,255,255,.4);}
+/* 폴더 — 이름마다 다른 색 + 머리글자, 폴더가 여럿이어도 한눈에 (10-18 사용자 — 「다른 폴더를 더 넣어도 구분되게」) */
+.dk-item .ic.fold{padding:11%;}
+.dk-item .ic.fold svg{width:100%;height:100%;display:block;}
 #board .bd-none{color:rgba(255,255,255,.4);font-size:12px;padding:2px 0;}
 #board .bd-note{margin:12px 0 0;font-size:11px;color:rgba(255,255,255,.4);line-height:1.5;}
 .acct input{width:110px;height:30px;box-sizing:border-box;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--sunk);padding:0 8px;font:inherit;}
@@ -176,7 +196,8 @@ html,body{height:100%;overflow:hidden;font-family:'Pretendard',-apple-system,san
   <div class="bd-ym"><b></b><span></span></div>
   <div class="bd-grid"></div>
   <div class="bd-sec"><p class="bd-h">다가오는 일정</p><ul id="bd-ev"></ul></div>
-  <div class="bd-sec"><p class="bd-h">할 일</p><ul id="bd-todo"></ul></div>
+  <div class="bd-sec"><p class="bd-h">할 일</p><ul id="bd-todo"></ul>
+    <form id="bd-addf"><input class="bd-add" id="bd-add" name="t" placeholder="할 일 추가 — 적고 Enter" maxlength="200" hidden autocomplete="off"></form></div>
   <p class="bd-note" id="bd-note"></p>
 </aside>
 <div id="edge"></div>
@@ -188,6 +209,8 @@ html,body{height:100%;overflow:hidden;font-family:'Pretendard',-apple-system,san
     <span class="dk-tip">Dock 설정</span>
   </button>
 </nav>
+<form id="search" hidden role="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+  <input name="q" placeholder="구글에서 검색" maxlength="300" autocomplete="off" aria-label="구글에서 검색"></form>
 
 <div id="set" hidden>
   <div class="set-card" role="dialog" aria-label="Dock 설정">
@@ -214,9 +237,10 @@ html,body{height:100%;overflow:hidden;font-family:'Pretendard',-apple-system,san
       <label class="row">위치<select id="s-pos"><option value="bottom">아래</option><option value="center">화면 정가운데</option><option value="left">왼쪽</option><option value="right">오른쪽</option><option value="grid">오른쪽 2열 (카드 옆)</option></select></label>
       <label class="row" id="r-hide">자동 숨김<input type="checkbox" id="s-hide"></label>
       <label class="row">시계·날짜 (왼쪽)<input type="checkbox" id="s-clock"></label>
+      <label class="row">검색창 (아래 가운데)<input type="checkbox" id="s-search"></label>
     </section>
     <section>
-      <p class="t-sec">달력·할 일 카드 (웹과 연동 · 보기만)</p>
+      <p class="t-sec">달력·할 일 카드 (웹 홈 메모와 연동)</p>
       <label class="row">오른쪽 카드 보이기<input type="checkbox" id="s-board"></label>
       <div class="row" id="acct-on" hidden><span id="acct-who"></span><button class="btn sm" id="acct-out">연결 끊기</button></div>
       <form class="row acct" id="acct-form" hidden>
@@ -246,7 +270,7 @@ html,body{height:100%;overflow:hidden;font-family:'Pretendard',-apple-system,san
    받는 것: {cmd:'config', settings, items, autostart:{dock, site}, screen:{w,h}} · {cmd:'error'|'done', text}
    보내는 것: get · open{id} · pick{kind} · addUrl{name,url} · rename{id,name} · remove{id} · order{ids} · settings{settings}
              · autostart{which,on} · pickIcon{id} · resetIcon{id}
-             · frame{mode:'dock'|'full', rects:[[x,y,w,h]…]}(물리 픽셀 — 창은 작업 영역 가득, 이 칸들만 보이고 눌린다) · wallpaper{png}(data:image/png) */
+             · search{q}(앱이 구글 검색 주소를 만든다) · frame{mode:'dock'|'full', rects:[[x,y,w,h]…]}(물리 픽셀 — 창은 작업 영역 가득, 이 칸들만 보이고 눌린다) · wallpaper{png}(data:image/png) */
 const $ = s => document.querySelector(s);
 const bridge = window.chrome && window.chrome.webview;
 const dock = $('#dock'), edge = $('#edge'), setBox = $('#set');
@@ -283,6 +307,7 @@ function frame(){
   else d = tucked ? [r.left - 20, H - 6, r.width + 40, 6] : [r.left - 20, r.top - up, r.width + 40, H - r.top + up];
   const rects = [d];
   if(!board.hidden){ const c = board.getBoundingClientRect(); rects.push([c.left - 30, c.top - 30, c.width + 60, c.height + 60]); }
+  if(!searchBox.hidden){ const c = searchBox.getBoundingClientRect(); rects.push([c.left - 30, c.top - 30, c.width + 60, c.height + 60]); }
   if(!clockBox.hidden){ const c = clockBox.getBoundingClientRect(); rects.push([c.left - 30, c.top - 30, c.width + 60, c.height + 60]); }   // 넉넉히 — 글자 그림자가 잘리지 않게
   const m = { cmd:'frame', mode: full ? 'full' : 'dock', rects: rects.map(q => q.map(v => Math.round(v * k))) };
   const key = JSON.stringify(m);
@@ -292,7 +317,14 @@ addEventListener('resize', () => frame());
 document.fonts.addEventListener('loadingdone', () => frame());   // 글꼴이 늦게 오면 시계 폭이 바뀐다 — 칸을 다시 잰다
 
 /* ---------- 시계·날짜 — 켜고 끄기는 이 PC 에만(localStorage) ---------- */
-const clockBox = $('#clock'), board = $('#board');
+const clockBox = $('#clock'), board = $('#board'), searchBox = $('#search');
+let searchOn = (() => { try{ return localStorage.getItem('dock.search') !== '0'; }catch(e){ return true; } })();
+searchBox.onsubmit = e => {
+  e.preventDefault();
+  const q = searchBox.elements['q'].value.trim();
+  if(q){ send({cmd:'search', q}); searchBox.reset(); searchBox.elements['q'].blur(); }
+};
+$('#s-search').onchange = e => { searchOn = e.target.checked; try{ localStorage.setItem('dock.search', searchOn ? '1' : '0'); }catch(x){} searchBox.hidden = !searchOn; frame(); };
 let clockOn = (() => { try{ return localStorage.getItem('dock.clock') !== '0'; }catch(e){ return true; } })();
 function tick(){
   const n = new Date(), h = n.getHours();
@@ -357,12 +389,51 @@ function renderBoard(){
   }) : [none(memo ? '앞으로 적힌 일정이 없습니다' : '—')]));
   // 할 일 — 끝내지 않은 것 8개
   const todos = (memo && Array.isArray(memo.todos) ? memo.todos : []).filter(t => t && !t.done);
-  $('#bd-todo').replaceChildren(...(todos.length ? todos.slice(0, 8).map(t => li('', [span('ck', ''), span('x', t.t || '')]))
+  const signed = !!fbAuth.currentUser;
+  $('#bd-add').hidden = !signed;
+  $('#bd-todo').replaceChildren(...(todos.length ? todos.slice(0, 8).map(t => {
+      const ck = span('ck' + (signed ? ' on' : ''), '');
+      if(signed){ ck.title = '끝냄'; ck.onclick = () => finishTodo(t.t); }
+      return li('', [ck, span('x', t.t || '')]);
+    })
     .concat(todos.length > 8 ? [none('… 그 밖에 ' + (todos.length - 8) + '개')] : []) : [none(memo ? '할 일이 없습니다' : '—')]));
   $('#bd-note').textContent = memoErr || (fbAuth.currentUser ? '웹 홈에서 고친 대로 보입니다 (5분마다 새로)'
     : 'Dock 설정 › 달력·할 일에서 강사 아이디로 연결하면 웹의 할 일·내 일정이 보입니다');
   frame();
 }
+/* 쓰기 — 늘 최신 문서를 읽고 고친 뒤, «그 사이 아무도 안 고쳤을 때만» 쓴다(updateTime 조건). 모양은 웹 홈 메모와 같다:
+   todos [{t, done:false}] · 끝낸 일은 todos 에서 빼서 done 맨 앞에 {t, at:'YYYY-MM-DD'} (index.html memoAdd·memoToggle). */
+async function editMemo(fn){
+  const u = fbAuth.currentUser;
+  if(!u) return;
+  const url = MEMO_URL + encodeURIComponent('memo:' + u.uid), auth = 'Bearer ' + await u.getIdToken();
+  try{
+    const r = await fetch(url, { headers:{ Authorization:auth } });
+    if(!r.ok && r.status !== 404) throw new Error('http ' + r.status);
+    const doc = r.ok ? await r.json() : null, m = doc ? JSON.parse(doc.fields.value.stringValue) || {} : {};
+    fn(m);
+    const w = await fetch(url + (doc ? '?currentDocument.updateTime=' + encodeURIComponent(doc.updateTime) : '?currentDocument.exists=false'), {
+      method:'PATCH', headers:{ Authorization:auth, 'Content-Type':'application/json' },
+      body: JSON.stringify({ fields:{ value:{ stringValue: JSON.stringify(m) } } }) });
+    if(!w.ok) throw new Error('http ' + w.status);
+    memo = m; memoErr = ''; renderBoard();
+  }catch(e){ toast('웹에 저장하지 못했습니다 — 잠시 뒤 다시 해 주세요'); loadMemo(); }
+}
+function finishTodo(t){
+  editMemo(m => {
+    const a = Array.isArray(m.todos) ? m.todos : (m.todos = []), i = a.findIndex(x => x && !x.done && x.t === t);
+    if(i < 0) return;
+    a.splice(i, 1);
+    (m.done = Array.isArray(m.done) ? m.done : []).unshift({ t, at: ymdOf(new Date()) });
+  });
+}
+$('#bd-addf').onsubmit = e => {                      // form 의 Enter 는 한글 조합이 끝난 뒤에 온다
+  e.preventDefault();
+  const t = $('#bd-add').value.trim();
+  if(!t) return;
+  $('#bd-add').value = '';
+  editMemo(m => { (m.todos = Array.isArray(m.todos) ? m.todos : []).push({ t, done:false }); });
+};
 function renderAcct(){
   const u = fbAuth.currentUser;
   $('#acct-on').hidden = !u; $('#acct-form').hidden = !!u;
@@ -384,7 +455,18 @@ function letter(it){
   d.textContent = (it.name || '?').trim().charAt(0).toUpperCase();
   return d;
 }
+function folder(it){
+  const nm = (it.name || '?').trim(), words = nm.split(/[\s_\-]+/).filter(Boolean);
+  const hue = [...nm].reduce((a, c) => (a * 31 + c.charCodeAt(0)) % 360, 7);
+  const d = document.createElement('span'); d.className = 'ic fold';
+  d.innerHTML = '<svg viewBox="0 0 40 32"><path d="M2 6a3 3 0 0 1 3-3h9l3 3h18a3 3 0 0 1 3 3v2H2z" fill="hsl(' + hue + ' 50% 40%)"/>'
+    + '<rect x="2" y="9" width="36" height="21" rx="3" fill="hsl(' + hue + ' 65% 57%)"/>'
+    + '<text x="20" y="24.2" text-anchor="middle" font-size="11" font-weight="800" fill="#fff" font-family="Pretendard,sans-serif"></text></svg>';
+  d.querySelector('text').textContent = (words.length > 1 ? words.slice(0, 2).map(w => w[0]).join('') : [...nm].slice(0, 2).join('')).toUpperCase();
+  return d;
+}
 function iconEl(it){
+  if(it.kind === 'folder' && !it.custom) return folder(it);   // 폴더는 다 같은 노란 그림이라 — 이름으로 색·글자
   const im = document.createElement('img'); im.className = 'ic'; im.alt = '';
   if(it.icon){ im.src = it.icon; return im; }
   if(it.kind !== 'url') return letter(it);
@@ -413,7 +495,7 @@ function renderDock(){
       clearTimeout(b._go); b._go = setTimeout(() => b.classList.remove('go'), 1200); };
     return b;
   }));
-  dock.hidden = false; clockBox.hidden = !clockOn; renderBoard();
+  dock.hidden = false; clockBox.hidden = !clockOn; searchBox.hidden = !searchOn; renderBoard();
   requestAnimationFrame(frame);
 }
 $('#dk-gear').onclick = openSettings;
@@ -461,7 +543,7 @@ function renderSettings(){
   const s = cfg.settings;
   $('#s-size').value = s.size; $('#o-size').value = s.size;
   $('#s-mag').value = s.magnify; $('#o-mag').value = '×' + s.magnify;
-  $('#s-pos').value = s.position; $('#s-hide').checked = s.autohide; $('#s-clock').checked = clockOn; $('#s-board').checked = boardOn; renderAcct();
+  $('#s-pos').value = s.position; $('#s-hide').checked = s.autohide; $('#s-clock').checked = clockOn; $('#s-search').checked = searchOn; $('#s-board').checked = boardOn; renderAcct();
   $('#r-hide').hidden = noEdge(s.position);
   $('#s-auto').checked = !!cfg.autostart.dock;
   $('#r-site').hidden = cfg.autostart.site == null;      // 김하현 Desktop 이 같이 깔려 있을 때만
