@@ -223,7 +223,7 @@ function frame(){
   else if(s.position === 'center') d = [r.left - 20, r.top - up, r.width + 40, r.height + up * 2];
   else d = tucked ? [r.left - 20, H - 6, r.width + 40, 6] : [r.left - 20, r.top - up, r.width + 40, H - r.top + up];
   const rects = [d];
-  if(!clockBox.hidden){ const c = clockBox.getBoundingClientRect(); rects.push([c.left - 10, c.top - 10, c.width + 20, c.height + 20]); }
+  if(!clockBox.hidden){ const c = clockBox.getBoundingClientRect(); rects.push([c.left - 30, c.top - 30, c.width + 60, c.height + 60]);   // 넉넉히 — 글자 그림자·«오후» 아래가 잘리지 않게 }
   const m = { cmd:'frame', mode: full ? 'full' : 'dock', rects: rects.map(q => q.map(v => Math.round(v * k))) };
   const key = JSON.stringify(m);
   if(key !== lastFrame){ lastFrame = key; send(m); }
