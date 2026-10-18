@@ -18,10 +18,8 @@ html,body{height:100%;overflow:hidden;font-family:'Pretendard',-apple-system,san
 #dock{--dk:48px;position:fixed;z-index:10;display:flex;align-items:flex-end;width:max-content;
   gap:calc(var(--dk)*.2);padding:calc(var(--dk)*.17);box-sizing:border-box;
   height:calc(var(--dk)*1.34);
-  /* 바탕화면 위라 뒤를 흐리게 할 수 없다(다른 창이다) — 대신 조금 더 짙은 유리 */
-  background:rgba(255,255,255,.72);
-  border:1px solid rgba(255,255,255,.85);border-radius:calc(var(--dk)*.44);
-  box-shadow:0 10px 26px rgba(34,34,30,.22),0 0 0 .5px rgba(34,34,30,.14);
+  /* 🔵 10-19 사용자 — 「독 뒤 하얀 판 지워 줘 · 어두운 맥 스타일」 → 판 없이 아이콘마다 어두운 타일만 */
+  background:none;border-radius:calc(var(--dk)*.44);
   transition:transform .32s cubic-bezier(.4,0,.2,1),opacity .32s;}
 #dock[hidden]{display:none;}
 #dock[data-pos=bottom]{left:50%;bottom:10px;transform:translateX(-50%);}
@@ -33,7 +31,7 @@ html,body{height:100%;overflow:hidden;font-family:'Pretendard',-apple-system,san
 #dock.autohide:not(.show)[data-pos=left]{transform:translate(calc(-100% - 16px),-50%);}
 #dock.autohide:not(.show)[data-pos=right]{transform:translate(calc(100% + 16px),-50%);}
 #dk-list{display:contents;}
-.dk-sep{flex:none;align-self:stretch;width:1px;margin:calc(var(--dk)*.08) 0;background:rgba(34,34,30,.14);}
+.dk-sep{flex:none;align-self:stretch;width:1px;margin:calc(var(--dk)*.12) 0;background:rgba(255,255,255,.18);}
 #dock[data-pos=left] .dk-sep,#dock[data-pos=right] .dk-sep{width:auto;height:1px;margin:0 calc(var(--dk)*.08);}
 
 .dk-item{--z:1;position:relative;flex:none;container-type:size;
@@ -41,16 +39,16 @@ html,body{height:100%;overflow:hidden;font-family:'Pretendard',-apple-system,san
   padding:0;border:0;background:none;cursor:pointer;border-radius:22%;
   transition:width var(--t),height var(--t);}
 .dk-item:focus-visible{outline:none;box-shadow:0 0 0 3px var(--point-ring);}
-.dk-item .ic{width:100%;height:100%;display:block;object-fit:contain;box-sizing:border-box;
-  filter:drop-shadow(0 2px 3px rgba(34,34,30,.2));pointer-events:none;}
-.dk-item .ic.tile{background:#fff;border-radius:22%;padding:17%;filter:none;
-  box-shadow:0 2px 5px rgba(34,34,30,.16),inset 0 0 0 .5px rgba(34,34,30,.08);}
+.dk-item .ic{width:100%;height:100%;display:block;object-fit:contain;box-sizing:border-box;pointer-events:none;
+  background:rgba(30,31,36,.92);border-radius:22%;padding:16%;
+  box-shadow:0 4px 12px rgba(0,0,0,.35),inset 0 0 0 .5px rgba(255,255,255,.08);}
+.dk-item .ic.tile{padding:22%;}
 .dk-item .ic.letter{display:grid;place-items:center;border-radius:22%;filter:none;
   background:linear-gradient(140deg,var(--point-lt),var(--point-d));color:#fff;font-weight:700;font-size:44cqw;
   box-shadow:0 2px 5px rgba(138,47,76,.3);}
-.dk-item .ic.tile svg{width:100%;height:100%;color:var(--sub);}
+.dk-item .ic.tile svg{width:100%;height:100%;color:rgba(255,255,255,.75);}
 .dk-tip{position:absolute;left:50%;bottom:calc(100% + 12px);transform:translateX(-50%);
-  background:var(--accent);color:#fff;font-size:12px;font-weight:600;line-height:1;padding:6px 10px;
+  background:rgba(30,31,36,.92);color:#fff;font-size:12px;font-weight:600;line-height:1;padding:6px 10px;
   border-radius:var(--r-sm);white-space:nowrap;opacity:0;pointer-events:none;transition:opacity var(--t);}
 #dock[data-pos=left] .dk-tip{left:calc(100% + 12px);bottom:auto;top:50%;transform:translateY(-50%);}
 #dock[data-pos=right] .dk-tip{left:auto;right:calc(100% + 12px);bottom:auto;top:50%;transform:translateY(-50%);}
@@ -58,7 +56,7 @@ html,body{height:100%;overflow:hidden;font-family:'Pretendard',-apple-system,san
 /* 눌렀을 때 — 두 번 통통 · 자두 점 하나 */
 .dk-item.go{animation:dk-bounce .9s cubic-bezier(.3,0,.3,1);}
 .dk-item.go::after{content:'';position:absolute;left:50%;bottom:calc(var(--dk)*-.13);width:4px;height:4px;margin-left:-2px;
-  border-radius:50%;background:var(--point);}
+  border-radius:50%;background:rgba(255,255,255,.8);}
 @keyframes dk-bounce{0%,50%,100%{translate:0 0}22%{translate:0 -38%}72%{translate:0 -16%}}
 #dock[data-pos=left] .dk-item.go,#dock[data-pos=right] .dk-item.go{animation:none;}
 #edge{position:fixed;z-index:9;display:none;}
@@ -430,6 +428,47 @@ function grid(g, W, H, step, color, cx, cy){
 }
 
 const WALLPAPERS = [
+  { id:'mac', name:'맥 · 어둠', note:'숯빛 바탕 · 남색 물결 (10-19)', draw(g, W, H){
+      // 바탕 — 위는 숯빛, 아래로 갈수록 짙은 남색
+      const bg = g.createLinearGradient(0, 0, 0, H);
+      bg.addColorStop(0, '#26272c'); bg.addColorStop(1, '#14161f');
+      g.fillStyle = bg; g.fillRect(0, 0, W, H);
+      // 꽃잎 — 아래 가운데에서 오른쪽 위로 솟는 밝은 청회색 면
+      g.save();
+      g.beginPath();
+      g.moveTo(W * .30, H * 1.05);
+      g.bezierCurveTo(W * .42, H * .55, W * .55, H * .02, W * .76, H * .05);
+      g.bezierCurveTo(W * .90, H * .07, W * 1.02, H * .35, W * 1.05, H * .62);
+      g.lineTo(W * 1.05, H * 1.05); g.closePath();
+      const pt = g.createLinearGradient(W * .38, H * .35, W * .95, H * .75);
+      pt.addColorStop(0, '#9aa3cf'); pt.addColorStop(.28, '#5b6596'); pt.addColorStop(.7, '#2c3463'); pt.addColorStop(1, '#1b2147');
+      g.shadowColor = 'rgba(150,160,220,.35)'; g.shadowBlur = W / 60;
+      g.fillStyle = pt; g.fill();
+      g.restore();
+      // 꽃잎 위 결 — 가는 빛줄기
+      g.save(); g.globalCompositeOperation = 'screen';
+      const sh = g.createRadialGradient(W * .5, H * .55, 0, W * .5, H * .55, W * .32);
+      sh.addColorStop(0, 'rgba(200,205,240,.35)'); sh.addColorStop(1, 'rgba(200,205,240,0)');
+      g.fillStyle = sh; g.fillRect(0, 0, W, H); g.restore();
+      // 왼쪽 언덕 — 아래 왼쪽을 덮는 짙은 남색, 꽃잎과 만나는 곳이 접힌 골
+      g.save();
+      g.beginPath();
+      g.moveTo(-W * .02, H * .27);
+      g.bezierCurveTo(W * .22, H * .20, W * .38, H * .40, W * .53, H * .72);
+      g.quadraticCurveTo(W * .56, H * .79, W * .59, H * .72);              // 접힌 골 — 둥근 V
+      g.bezierCurveTo(W * .66, H * .52, W * .74, H * .28, W * .86, H * .12);  // 꽃잎 오른쪽 그늘 — 위로 올라간다
+      g.bezierCurveTo(W * .93, H * .04, W * 1.0, H * .02, W * 1.05, H * .02);
+      g.lineTo(W * 1.05, H * 1.05); g.lineTo(-W * .02, H * 1.05); g.closePath();
+      const hl = g.createLinearGradient(0, H * .25, W * .5, H);
+      hl.addColorStop(0, '#1a2250'); hl.addColorStop(.6, '#111739'); hl.addColorStop(1, '#0b0f26');
+      g.shadowColor = 'rgba(0,0,0,.55)'; g.shadowBlur = W / 40;
+      g.fillStyle = hl; g.fill();
+      g.restore();
+      // 가장자리 비네트
+      const v = g.createRadialGradient(W / 2, H / 2, H * .4, W / 2, H / 2, Math.hypot(W, H) * .6);
+      v.addColorStop(0, 'rgba(0,0,0,0)'); v.addColorStop(1, 'rgba(0,0,0,.35)');
+      g.fillStyle = v; g.fillRect(0, 0, W, H);
+  }},
   { id:'night', name:'인트로 · 밤', note:'어두운 바탕 · 흰 작도 선', draw(g, W, H){
       const cx = W / 2, cy = H * .46;
       const bg = g.createRadialGradient(cx, cy, 0, cx, cy, Math.hypot(W, H) * .62);
@@ -466,7 +505,7 @@ const WALLPAPERS = [
       g.drawImage(LOGO, W / 2 - LOGO_W * s / 2, H * .44 - LOGO_H * s / 2, LOGO_W * s, LOGO_H * s);
   }},
 ];
-let wpPick = (() => { try{ return localStorage.getItem('dock.wp') || 'night'; }catch(e){ return 'night'; } })();
+let wpPick = (() => { try{ return localStorage.getItem('dock.wp') || 'mac'; }catch(e){ return 'mac'; } })();
 
 function screenSize(){ return (cfg && cfg.screen && cfg.screen.w) ? cfg.screen : { w: screen.width * devicePixelRatio, h: screen.height * devicePixelRatio }; }
 
