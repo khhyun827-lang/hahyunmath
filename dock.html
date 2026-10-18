@@ -229,6 +229,7 @@ function frame(){
   if(key !== lastFrame){ lastFrame = key; send(m); }
 }
 addEventListener('resize', () => frame());
+document.fonts.addEventListener('loadingdone', () => frame());   // 글꼴이 늦게 오면 시계 폭이 바뀐다 — 칸을 다시 잰다
 
 /* ---------- 시계·날짜 — 켜고 끄기는 이 PC 에만(localStorage) ---------- */
 const clockBox = $('#clock');
