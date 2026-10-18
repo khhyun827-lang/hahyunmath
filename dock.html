@@ -52,11 +52,11 @@ html,body{height:100%;overflow:hidden;font-family:'Pretendard',-apple-system,san
 .dk-item .ic{width:100%;height:100%;display:block;object-fit:contain;box-sizing:border-box;pointer-events:none;
   background:rgba(30,31,36,.92);border-radius:22%;padding:16%;
   box-shadow:0 4px 12px rgba(0,0,0,.35),inset 0 0 0 .5px rgba(255,255,255,.08);}
-.dk-item .ic.tile{padding:22%;}
+.dk-item .ic.dk-tile{padding:22%;}   /* ⚠ ds.css 의 .tile(테두리)과 겹쳐 몇 아이콘에만 테두리가 생겼다 — dk- 를 붙였다 (10-18) */
 .dk-item .ic.letter{display:grid;place-items:center;border-radius:22%;filter:none;
   background:linear-gradient(140deg,var(--point-lt),var(--point-d));color:#fff;font-weight:700;font-size:44cqw;
   box-shadow:0 2px 5px rgba(138,47,76,.3);}
-.dk-item .ic.tile svg{width:100%;height:100%;color:rgba(255,255,255,.75);}
+.dk-item .ic.dk-tile svg{width:100%;height:100%;color:rgba(255,255,255,.75);}
 .dk-tip{position:absolute;left:50%;bottom:calc(100% + 12px);transform:translateX(-50%);
   background:rgba(30,31,36,.92);color:#fff;font-size:12px;font-weight:600;line-height:1;padding:6px 10px;
   border-radius:var(--r-sm);white-space:nowrap;opacity:0;pointer-events:none;transition:opacity var(--t);}
@@ -143,7 +143,7 @@ html,body{height:100%;overflow:hidden;font-family:'Pretendard',-apple-system,san
 #set-items .ic{width:28px;height:28px;flex:none;}
 #set-items .face{flex:none;padding:2px;border:0;background:none;border-radius:var(--r-sm);cursor:pointer;}
 #set-items .face:hover,#set-items .face:focus-visible{outline:none;box-shadow:0 0 0 2px var(--point);}
-#set-items .ic.tile{padding:4px;}
+#set-items .ic.dk-tile{padding:4px;}
 #set-items .ic.letter{font-size:13px;}
 #set-items .nm{flex:1;min-width:0;}
 #set-items input{width:100%;box-sizing:border-box;border:1px solid transparent;border-radius:var(--r-sm);
@@ -152,7 +152,7 @@ html,body{height:100%;overflow:hidden;font-family:'Pretendard',-apple-system,san
 #set-items input:focus{outline:none;border-color:var(--point);box-shadow:0 0 0 3px var(--point-ring);background:#fff;}
 #set-items .tg{display:block;padding:0 7px;font-size:11px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .set-card .ic{display:block;object-fit:contain;box-sizing:border-box;}
-.set-card .ic.tile{background:#fff;border-radius:22%;box-shadow:inset 0 0 0 1px var(--line);}
+.set-card .ic.dk-tile{background:#fff;border-radius:22%;box-shadow:inset 0 0 0 1px var(--line);}
 .set-card .ic.letter{display:grid;place-items:center;border-radius:22%;color:#fff;font-weight:700;
   background:linear-gradient(140deg,var(--point-lt),var(--point-d));}
 .set-add{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;}
@@ -205,7 +205,7 @@ html,body{height:100%;overflow:hidden;font-family:'Pretendard',-apple-system,san
   <div id="dk-list"></div>
   <div class="dk-sep"></div>
   <button class="dk-item" id="dk-gear" aria-label="Dock 설정">
-    <span class="ic tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></span>
+    <span class="ic dk-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></span>
     <span class="dk-tip">Dock 설정</span>
   </button>
 </nav>
@@ -471,7 +471,7 @@ function iconEl(it){
   if(it.icon){ im.src = it.icon; return im; }
   if(it.kind !== 'url') return letter(it);
   let u; try{ u = new URL(it.target); }catch(e){ return letter(it); }
-  im.className = 'ic tile';
+  im.className = 'ic dk-tile';
   const srcs = [u.origin + '/apple-touch-icon.png', 'https://www.google.com/s2/favicons?sz=128&domain=' + u.hostname];
   im.onerror = () => srcs.length ? (im.src = srcs.shift()) : im.replaceWith(letter(it));
   im.src = srcs.shift();
