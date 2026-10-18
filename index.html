@@ -33156,7 +33156,7 @@ function openFigureEditorFromSaved(bankId){
 }
 
 /* =================== 매쓰드로로 편집 (2026-10-16 · 사용자 — 「검토탭에서 그림 편집할때 매쓰드로로 바로 연결」) ===================
-   매쓰드로 앱(Desktop\mathdraw · git 밖)이 켜져 있으면 localhost:47615 로 듣는다. 이 사이트(Origin)만 받는다.
+   매쓰드로 앱(Desktop\claude work\mathdraw · git 밖)이 켜져 있으면 localhost:47615 로 듣는다. 이 사이트(Origin)만 받는다.
    POST /edit {id, title, svg?, mdraw?} → 매쓰드로가 연다 → 사용자가 «웹으로 보내기» → 여기서 GET /result?id= 로 받아 저장.
    🔴 돌아온 것에서 쓰는 것은 «PNG 데이터 URI 하나»뿐이다 — 꼴을 검사하고, 감싸는 SVG 는 여기서 짓는다.
      바깥에서 온 SVG 를 innerHTML 로 넣지 않는다는 불변식(figSvgOf 위 주석)은 그대로다.
