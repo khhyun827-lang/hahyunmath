@@ -244,9 +244,8 @@ html,body{height:100%;overflow:hidden;font-family:'Pretendard',-apple-system,san
       <label class="row">오른쪽 카드 보이기<input type="checkbox" id="s-board"></label>
       <div class="row" id="acct-on" hidden><span id="acct-who"></span><button class="btn sm" id="acct-out">연결 끊기</button></div>
       <form class="row acct" id="acct-form" hidden>
-        <span>강사 아이디로 연결</span>
-        <span><input name="id" placeholder="아이디" required autocomplete="username">
-        <input name="pw" type="password" placeholder="비밀번호" required autocomplete="current-password">
+        <span>관리자 비밀번호로 연결</span>
+        <span><input name="pw" type="password" placeholder="웹 관리자 비밀번호" required autocomplete="current-password">
         <button class="btn pt sm">연결</button></span>
       </form>
     </section>
@@ -398,7 +397,7 @@ function renderBoard(){
     })
     .concat(todos.length > 8 ? [none('… 그 밖에 ' + (todos.length - 8) + '개')] : []) : [none(memo ? '할 일이 없습니다' : '—')]));
   $('#bd-note').textContent = memoErr || (fbAuth.currentUser ? '웹 홈에서 고친 대로 보입니다 (5분마다 새로)'
-    : 'Dock 설정 › 달력·할 일에서 강사 아이디로 연결하면 웹의 할 일·내 일정이 보입니다');
+    : 'Dock 설정 › 달력·할 일에서 관리자 비밀번호로 연결하면 웹의 할 일·내 일정이 보입니다');
   frame();
 }
 /* 쓰기 — 늘 최신 문서를 읽고 고친 뒤, «그 사이 아무도 안 고쳤을 때만» 쓴다(updateTime 조건). 모양은 웹 홈 메모와 같다:
@@ -437,15 +436,15 @@ $('#bd-addf').onsubmit = e => {                      // form 의 Enter 는 한�
 function renderAcct(){
   const u = fbAuth.currentUser;
   $('#acct-on').hidden = !u; $('#acct-form').hidden = !!u;
-  if(u) $('#acct-who').textContent = '연결됨 — ' + String(u.email || '').split('@')[0];
+  if(u) $('#acct-who').textContent = '연결됨 — 관리자';
 }
 $('#s-board').onchange = e => { boardOn = e.target.checked; try{ localStorage.setItem('dock.board', boardOn ? '1' : '0'); }catch(x){} renderBoard(); };
 $('#acct-out').onclick = () => fbAuth.signOut();
 $('#acct-form').onsubmit = async e => {
   e.preventDefault();
-  const f = e.target, id = f.elements['id'].value.trim().toLowerCase();
-  try{ await fbAuth.signInWithEmailAndPassword(id + '@teacher.hahyunmath.invalid', f.elements['pw'].value); f.reset(); toast('연결했습니다'); }
-  catch(x){ toast('연결하지 못했습니다 — 아이디·비밀번호를 확인해 주세요'); }
+  const f = e.target;   // 웹 관리자 로그인과 같다 — 아이디는 늘 admin (index.html TEACHER_ID)
+  try{ await fbAuth.signInWithEmailAndPassword('admin@teacher.hahyunmath.invalid', f.elements['pw'].value); f.reset(); toast('연결했습니다'); }
+  catch(x){ toast('연결하지 못했습니다 — 비밀번호를 확인해 주세요'); }
 };
 $('#s-clock').onchange = e => { clockOn = e.target.checked; try{ localStorage.setItem('dock.clock', clockOn ? '1' : '0'); }catch(x){} showClock(); };
 
