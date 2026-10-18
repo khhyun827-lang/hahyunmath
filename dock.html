@@ -11,6 +11,8 @@
      실행할 경로는 여기 없다 — 앱이 제 PC 에 적어 두고, 이 페이지는 «id» 만 보낸다. 배경화면은 이 페이지가 PNG 로 그려 보낸다. -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
 <link rel="stylesheet" href="ds.css">
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <style>
 html,body{height:100%;overflow:hidden;font-family:'Pretendard',-apple-system,sans-serif;color:var(--ink);background:transparent!important;}
 
@@ -66,6 +68,32 @@ html,body{height:100%;overflow:hidden;font-family:'Pretendard',-apple-system,san
 #clock .tm{font-size:clamp(72px,7.5vw,150px);font-weight:200;line-height:1;letter-spacing:-.02em;font-variant-numeric:tabular-nums;}
 #clock .tm small{font-size:.24em;font-weight:400;letter-spacing:0;margin-left:.35em;opacity:.8;}
 #clock .dt{margin-top:.5em;font-size:clamp(20px,1.7vw,32px);font-weight:500;opacity:.88;}
+/* 오른쪽 카드 — 달력 · 다가오는 내 일정 · 할 일 (10-18 사용자 — 「보기만 · 오른쪽 카드」). 웹 홈의 memo:<uid> 문서를 읽기만 한다 */
+#board{position:fixed;right:3vw;top:50%;transform:translateY(-50%);z-index:5;width:300px;box-sizing:border-box;padding:18px 18px 14px;
+  color:#fff;background:rgba(22,23,30,.78);border:1px solid rgba(255,255,255,.08);border-radius:22px;
+  box-shadow:0 18px 40px rgba(0,0,0,.35);font-size:13px;user-select:none;}
+#board[hidden]{display:none;}
+#board .bd-ym{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px;}
+#board .bd-ym b{font-size:15px;font-weight:700;}
+#board .bd-ym span{font-size:12px;color:rgba(255,255,255,.55);}
+#board .bd-grid{display:grid;grid-template-columns:repeat(7,1fr);row-gap:2px;text-align:center;font-size:11.5px;font-variant-numeric:tabular-nums;}
+#board .bd-grid > *{position:relative;height:26px;line-height:24px;}
+#board .bd-grid .w{height:20px;line-height:20px;font-size:10.5px;color:rgba(255,255,255,.45);font-weight:600;}
+#board .bd-grid .bd-su{color:#ff8a8a;} #board .bd-grid .bd-sa{color:#8ab4ff;}
+#board .bd-grid .bd-t span{display:inline-block;width:24px;height:24px;border-radius:50%;background:#ff5f6d;color:#fff;font-weight:700;}
+#board .bd-grid .bd-e::after{content:'';position:absolute;left:50%;bottom:0;width:4px;height:4px;margin-left:-2px;border-radius:50%;background:rgba(255,255,255,.7);}
+#board .bd-sec{margin-top:14px;padding-top:12px;border-top:1px solid rgba(255,255,255,.1);}
+#board .bd-h{margin:0 0 8px;font-size:11px;font-weight:700;letter-spacing:.04em;color:rgba(255,255,255,.5);}
+#board ul{list-style:none;margin:0;padding:0;}
+#board li{display:flex;gap:8px;align-items:baseline;padding:4px 0;line-height:1.4;}
+#board li .d{flex:none;width:58px;font-size:11.5px;color:rgba(255,255,255,.55);font-variant-numeric:tabular-nums;}
+#board li .d.on{color:#ff8a95;font-weight:700;}
+#board li .x{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+#board li .x s{text-decoration:none;margin-left:6px;font-size:11.5px;color:rgba(255,255,255,.5);}
+#board li .ck{flex:none;width:12px;height:12px;box-sizing:border-box;border:1.5px solid rgba(255,255,255,.45);border-radius:50%;transform:translateY(2px);}
+#board .bd-none{color:rgba(255,255,255,.4);font-size:12px;padding:2px 0;}
+#board .bd-note{margin:12px 0 0;font-size:11px;color:rgba(255,255,255,.4);line-height:1.5;}
+.acct input{width:110px;height:30px;box-sizing:border-box;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--sunk);padding:0 8px;font:inherit;}
 #edge{position:fixed;z-index:9;display:none;}
 #edge.on{display:block;}
 #edge[data-pos=bottom]{left:0;right:0;bottom:0;height:4px;}
@@ -136,6 +164,13 @@ html,body{height:100%;overflow:hidden;font-family:'Pretendard',-apple-system,san
 </head>
 <body>
 <div id="clock" hidden><div class="tm"></div><div class="dt"></div></div>
+<aside id="board" hidden aria-label="달력·할 일">
+  <div class="bd-ym"><b></b><span></span></div>
+  <div class="bd-grid"></div>
+  <div class="bd-sec"><p class="bd-h">다가오는 일정</p><ul id="bd-ev"></ul></div>
+  <div class="bd-sec"><p class="bd-h">할 일</p><ul id="bd-todo"></ul></div>
+  <p class="bd-note" id="bd-note"></p>
+</aside>
 <div id="edge"></div>
 <nav id="dock" hidden aria-label="Dock">
   <div id="dk-list"></div>
@@ -171,6 +206,17 @@ html,body{height:100%;overflow:hidden;font-family:'Pretendard',-apple-system,san
       <label class="row">위치<select id="s-pos"><option value="bottom">아래</option><option value="center">화면 정가운데</option><option value="left">왼쪽</option><option value="right">오른쪽</option></select></label>
       <label class="row" id="r-hide">자동 숨김<input type="checkbox" id="s-hide"></label>
       <label class="row">시계·날짜 (왼쪽)<input type="checkbox" id="s-clock"></label>
+    </section>
+    <section>
+      <p class="t-sec">달력·할 일 카드 (웹과 연동 · 보기만)</p>
+      <label class="row">오른쪽 카드 보이기<input type="checkbox" id="s-board"></label>
+      <div class="row" id="acct-on" hidden><span id="acct-who"></span><button class="btn sm" id="acct-out">연결 끊기</button></div>
+      <form class="row acct" id="acct-form" hidden>
+        <span>강사 아이디로 연결</span>
+        <span><input name="id" placeholder="아이디" required autocomplete="username">
+        <input name="pw" type="password" placeholder="비밀번호" required autocomplete="current-password">
+        <button class="btn pt sm">연결</button></span>
+      </form>
     </section>
     <section>
       <p class="t-sec">배경화면</p>
@@ -223,6 +269,7 @@ function frame(){
   else if(s.position === 'center') d = [r.left - 20, r.top - up, r.width + 40, r.height + up * 2];
   else d = tucked ? [r.left - 20, H - 6, r.width + 40, 6] : [r.left - 20, r.top - up, r.width + 40, H - r.top + up];
   const rects = [d];
+  if(!board.hidden){ const c = board.getBoundingClientRect(); rects.push([c.left - 30, c.top - 30, c.width + 60, c.height + 60]); }
   if(!clockBox.hidden){ const c = clockBox.getBoundingClientRect(); rects.push([c.left - 30, c.top - 30, c.width + 60, c.height + 60]); }   // 넉넉히 — 글자 그림자가 잘리지 않게
   const m = { cmd:'frame', mode: full ? 'full' : 'dock', rects: rects.map(q => q.map(v => Math.round(v * k))) };
   const key = JSON.stringify(m);
@@ -232,17 +279,90 @@ addEventListener('resize', () => frame());
 document.fonts.addEventListener('loadingdone', () => frame());   // 글꼴이 늦게 오면 시계 폭이 바뀐다 — 칸을 다시 잰다
 
 /* ---------- 시계·날짜 — 켜고 끄기는 이 PC 에만(localStorage) ---------- */
-const clockBox = $('#clock');
+const clockBox = $('#clock'), board = $('#board');
 let clockOn = (() => { try{ return localStorage.getItem('dock.clock') !== '0'; }catch(e){ return true; } })();
 function tick(){
   const n = new Date(), h = n.getHours();
   clockBox.querySelector('.tm').innerHTML = (h % 12 || 12) + ':' + String(n.getMinutes()).padStart(2, '0') + '<small>' + (h < 12 ? '오전' : '오후') + '</small>';
   clockBox.querySelector('.dt').textContent = n.toLocaleDateString('ko-KR', { month:'long', day:'numeric', weekday:'long' });
+  if(cfg) renderBoard();                               // 날이 바뀌면 달력·«오늘»도
   frame();                                     // 글자 폭이 바뀌면(12:59 → 1:00) 칸도 다시
   setTimeout(tick, 60000 - n.getSeconds() * 1000 - n.getMilliseconds() + 20);   // 분이 바뀌는 때에 맞춰
 }
 function showClock(){ clockBox.hidden = !clockOn; frame(); }
 tick();
+/* ---------- 오른쪽 카드 — 웹 홈의 강사 메모 문서(kv/memo:<uid> {todos, events})를 «읽기만» ----------
+   🔵 Dock 은 제 브라우저 폴더(WebView2-Dock)를 쓰므로 로그인을 한 번 따로 한다(설정 › 달력·할 일). 쓰기는 하지 않는다.
+   5분마다 다시 읽는다 — 문서 하나라 읽기 할당량은 하루 300번 남짓. */
+firebase.initializeApp({ apiKey:'AIzaSyC7dsvcLVjuFUUtnQRtPLurzBN06kZ9MZQ', authDomain:'hahyunmath.firebaseapp.com', projectId:'hahyunmath' });
+const fbAuth = firebase.auth();
+const MEMO_URL = 'https://firestore.googleapis.com/v1/projects/hahyunmath/databases/(default)/documents/kv/';
+let boardOn = (() => { try{ return localStorage.getItem('dock.board') !== '0'; }catch(e){ return true; } })();
+let memo = null, memoErr = '';
+async function loadMemo(){
+  const u = fbAuth.currentUser;
+  if(!u){ memo = null; memoErr = ''; renderBoard(); return; }
+  try{
+    const r = await fetch(MEMO_URL + encodeURIComponent('memo:' + u.uid), { headers:{ Authorization:'Bearer ' + await u.getIdToken() } });
+    if(r.status === 404) memo = {};
+    else if(!r.ok) throw new Error('http ' + r.status);
+    else memo = JSON.parse((await r.json()).fields.value.stringValue) || {};
+    memoErr = '';
+  }catch(e){ memoErr = '웹에서 불러오지 못했습니다 — 5분 뒤 다시 해 봅니다'; }
+  renderBoard();
+}
+fbAuth.onAuthStateChanged(() => { loadMemo(); if(!setBox.hidden) renderAcct(); });
+setInterval(loadMemo, 5 * 60 * 1000);
+
+const ymdOf = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+function li(cls, kids){ const l = document.createElement('li'); if(cls) l.className = cls; l.append(...kids); return l; }
+function span(cls, text){ const e = document.createElement('span'); e.className = cls; e.textContent = text; return e; }
+function renderBoard(){
+  board.hidden = !boardOn || !cfg;
+  if(board.hidden) return frame();
+  const now = new Date(), y = now.getFullYear(), m = now.getMonth(), today = ymdOf(now);
+  const events = (memo && Array.isArray(memo.events) ? memo.events : []).filter(e => e && e.date);
+  const evDays = new Set(events.map(e => e.date));
+  board.querySelector('.bd-ym b').textContent = y + '년 ' + (m + 1) + '월';
+  board.querySelector('.bd-ym span').textContent = fbAuth.currentUser ? '' : '웹 연결 전';
+  const cells = [];
+  '일월화수목금토'.split('').forEach((w, i) => cells.push(Object.assign(document.createElement('div'), { className: 'w' + (i === 0 ? ' bd-su' : i === 6 ? ' bd-sa' : ''), textContent: w })));
+  for(let i = 0; i < new Date(y, m, 1).getDay(); i++) cells.push(document.createElement('div'));
+  for(let d = 1, n = new Date(y, m + 1, 0).getDate(); d <= n; d++){
+    const ds = ymdOf(new Date(y, m, d)), dow = new Date(y, m, d).getDay(), c = document.createElement('div');
+    c.className = [ds === today ? 'bd-t' : '', evDays.has(ds) ? 'bd-e' : '', dow === 0 ? 'bd-su' : dow === 6 ? 'bd-sa' : ''].join(' ');   // ⚠ ds.css 와 이름이 겹치지 않게 bd- 를 붙였다
+    c.append(span('', d)); cells.push(c);
+  }
+  board.querySelector('.bd-grid').replaceChildren(...cells);
+  // 다가오는 일정 — 오늘부터 6개
+  const 요일 = '일월화수목금토', none = t => li('bd-none', [t]);
+  const up = events.filter(e => e.date >= today).sort((a, b) => (a.date + (a.time || '')).localeCompare(b.date + (b.time || ''))).slice(0, 6);
+  $('#bd-ev').replaceChildren(...(up.length ? up.map(e => {
+    const d = new Date(e.date + 'T00:00'), x = span('x', e.t || '내 일정');
+    if(e.time){ const t = document.createElement('s'); t.textContent = e.time; x.append(t); }
+    return li('', [span('d' + (e.date === today ? ' on' : ''), e.date === today ? '오늘' : (d.getMonth() + 1) + '/' + d.getDate() + ' (' + 요일[d.getDay()] + ')'), x]);
+  }) : [none(memo ? '앞으로 적힌 일정이 없습니다' : '—')]));
+  // 할 일 — 끝내지 않은 것 8개
+  const todos = (memo && Array.isArray(memo.todos) ? memo.todos : []).filter(t => t && !t.done);
+  $('#bd-todo').replaceChildren(...(todos.length ? todos.slice(0, 8).map(t => li('', [span('ck', ''), span('x', t.t || '')]))
+    .concat(todos.length > 8 ? [none('… 그 밖에 ' + (todos.length - 8) + '개')] : []) : [none(memo ? '할 일이 없습니다' : '—')]));
+  $('#bd-note').textContent = memoErr || (fbAuth.currentUser ? '웹 홈에서 고친 대로 보입니다 (5분마다 새로)'
+    : 'Dock 설정 › 달력·할 일에서 강사 아이디로 연결하면 웹의 할 일·내 일정이 보입니다');
+  frame();
+}
+function renderAcct(){
+  const u = fbAuth.currentUser;
+  $('#acct-on').hidden = !u; $('#acct-form').hidden = !!u;
+  if(u) $('#acct-who').textContent = '연결됨 — ' + String(u.email || '').split('@')[0];
+}
+$('#s-board').onchange = e => { boardOn = e.target.checked; try{ localStorage.setItem('dock.board', boardOn ? '1' : '0'); }catch(x){} renderBoard(); };
+$('#acct-out').onclick = () => fbAuth.signOut();
+$('#acct-form').onsubmit = async e => {
+  e.preventDefault();
+  const f = e.target, id = f.elements['id'].value.trim().toLowerCase();
+  try{ await fbAuth.signInWithEmailAndPassword(id + '@teacher.hahyunmath.invalid', f.elements['pw'].value); f.reset(); toast('연결했습니다'); }
+  catch(x){ toast('연결하지 못했습니다 — 아이디·비밀번호를 확인해 주세요'); }
+};
 $('#s-clock').onchange = e => { clockOn = e.target.checked; try{ localStorage.setItem('dock.clock', clockOn ? '1' : '0'); }catch(x){} showClock(); };
 
 /* ---------- 아이콘 — 사용자가 고른 그림 › 프로그램·폴더·파일은 앱이 뽑아 준 그림 › 웹사이트는 그 사이트의 아이콘 › 글자 ---------- */
@@ -280,7 +400,7 @@ function renderDock(){
       clearTimeout(b._go); b._go = setTimeout(() => b.classList.remove('go'), 1200); };
     return b;
   }));
-  dock.hidden = false; clockBox.hidden = !clockOn;
+  dock.hidden = false; clockBox.hidden = !clockOn; renderBoard();
   requestAnimationFrame(frame);
 }
 $('#dk-gear').onclick = openSettings;
@@ -327,7 +447,7 @@ function renderSettings(){
   const s = cfg.settings;
   $('#s-size').value = s.size; $('#o-size').value = s.size;
   $('#s-mag').value = s.magnify; $('#o-mag').value = '×' + s.magnify;
-  $('#s-pos').value = s.position; $('#s-hide').checked = s.autohide; $('#s-clock').checked = clockOn;
+  $('#s-pos').value = s.position; $('#s-hide').checked = s.autohide; $('#s-clock').checked = clockOn; $('#s-board').checked = boardOn; renderAcct();
   $('#r-hide').hidden = s.position === 'center';
   $('#s-auto').checked = !!cfg.autostart.dock;
   $('#r-site').hidden = cfg.autostart.site == null;      // 김하현 Desktop 이 같이 깔려 있을 때만
