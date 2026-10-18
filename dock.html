@@ -32,6 +32,14 @@ html,body{height:100%;overflow:hidden;font-family:'Pretendard',-apple-system,san
 #dock.autohide:not(.show)[data-pos=bottom]{transform:translate(-50%,calc(100% + 16px));}
 #dock.autohide:not(.show)[data-pos=left]{transform:translate(calc(-100% - 16px),-50%);}
 #dock.autohide:not(.show)[data-pos=right]{transform:translate(calc(100% + 16px),-50%);}
+/* 2열 — 오른쪽 카드 바로 왼쪽에 아이콘 타일 두 줄 (10-18 사용자 — 「달력·할 일과 어우러지게 2열로」). 위쪽은 카드 위와 맞춘다(frame) */
+#dock[data-pos=grid]{display:grid;grid-template-columns:repeat(2,var(--dk));gap:calc(var(--dk)*.4);height:auto;
+  right:calc(3vw + 300px + 18px);top:50%;transform:translateY(-50%);}
+#board[hidden] ~ #dock[data-pos=grid]{right:3vw;}
+#dock[data-pos=grid] .dk-sep{display:none;}
+#dock[data-pos=grid] .dk-tip{left:auto;right:calc(100% + 12px);bottom:auto;top:50%;transform:translateY(-50%);}
+#dock[data-pos=grid] .dk-item .ic{transition:transform var(--t);}
+#dock[data-pos=grid] .dk-item:hover .ic{transform:scale(1.08);}
 #dk-list{display:contents;}
 .dk-sep{flex:none;align-self:stretch;width:1px;margin:calc(var(--dk)*.12) 0;background:rgba(255,255,255,.18);}
 #dock[data-pos=left] .dk-sep,#dock[data-pos=right] .dk-sep{width:auto;height:1px;margin:0 calc(var(--dk)*.08);}
@@ -203,7 +211,7 @@ html,body{height:100%;overflow:hidden;font-family:'Pretendard',-apple-system,san
       <p class="t-sec">모양</p>
       <label class="row">아이콘 크기<span><input type="range" id="s-size" min="32" max="72" step="2"><output id="o-size"></output></span></label>
       <label class="row">확대 배율<span><input type="range" id="s-mag" min="1" max="2" step="0.1"><output id="o-mag"></output></span></label>
-      <label class="row">위치<select id="s-pos"><option value="bottom">아래</option><option value="center">화면 정가운데</option><option value="left">왼쪽</option><option value="right">오른쪽</option></select></label>
+      <label class="row">위치<select id="s-pos"><option value="bottom">아래</option><option value="center">화면 정가운데</option><option value="left">왼쪽</option><option value="right">오른쪽</option><option value="grid">오른쪽 2열 (카드 옆)</option></select></label>
       <label class="row" id="r-hide">자동 숨김<input type="checkbox" id="s-hide"></label>
       <label class="row">시계·날짜 (왼쪽)<input type="checkbox" id="s-clock"></label>
     </section>
@@ -257,14 +265,19 @@ if(bridge){
 /* ---------- 창 — 작업 영역 가득이지만, 앱이 «여기 적은 칸들»만 창으로 남긴다(나머지는 바탕화면 클릭이 그대로 지나간다) ----------
    🔵 10-18 시계 넣으며 바꿈 — 전엔 창을 Dock 크기로 줄였다. 칸은 물리 픽셀 [x,y,w,h] · 설정·알림 동안은 full(전체가 창). */
 let lastFrame = '', toastFull = false;
+const noEdge = p => p === 'center' || p === 'grid';   // 숨을 가장자리가 없는 자리
 function frame(){
   if(!cfg) return;
   const full = !setBox.hidden || toastFull;
-  const s = cfg.settings, r = dock.getBoundingClientRect(), k = devicePixelRatio || 1, W = innerWidth, H = innerHeight;
+  const s = cfg.settings, grid = s.position === 'grid';
+  dock.style.top = grid && !board.hidden ? board.getBoundingClientRect().top - parseFloat(getComputedStyle(dock).paddingTop) + 'px' : '';   // 2열은 카드와 위를 맞춘다
+  dock.style.transform = dock.style.top ? 'none' : '';
+  const r = dock.getBoundingClientRect(), k = devicePixelRatio || 1, W = innerWidth, H = innerHeight;
   const up = Math.ceil(s.size * (s.magnify - 1)) + 44;            // 커지는 만큼 + 말풍선
-  const tucked = s.autohide && s.position !== 'center' && !dock.classList.contains('show');
+  const tucked = s.autohide && !noEdge(s.position) && !dock.classList.contains('show');
   let d;   // Dock 칸
-  if(s.position === 'left')       d = tucked ? [0, r.top - 20, 6, r.height + 40] : [0, r.top - 20, r.right + up + 150, r.height + 40];
+  if(grid) d = [r.left - 160, r.top - 20, r.width + 180, r.height + 40];   // 말풍선이 왼쪽으로 나온다
+  else if(s.position === 'left')      d = tucked ? [0, r.top - 20, 6, r.height + 40] : [0, r.top - 20, r.right + up + 150, r.height + 40];
   else if(s.position === 'right') d = tucked ? [W - 6, r.top - 20, 6, r.height + 40] : [r.left - up - 150, r.top - 20, W - r.left + up + 150, r.height + 40];
   else if(s.position === 'center') d = [r.left - 20, r.top - up, r.width + 40, r.height + up * 2];
   else d = tucked ? [r.left - 20, H - 6, r.width + 40, 6] : [r.left - 20, r.top - up, r.width + 40, H - r.top + up];
@@ -386,7 +399,7 @@ function iconEl(it){
 /* ---------- Dock ---------- */
 function renderDock(){
   const s = cfg.settings;
-  const hide = s.autohide && s.position !== 'center';   // 가운데는 숨길 가장자리가 없다
+  const hide = s.autohide && !noEdge(s.position);
   dock.style.setProperty('--dk', s.size + 'px');
   dock.dataset.pos = edge.dataset.pos = s.position;
   dock.classList.toggle('autohide', hide);
@@ -408,6 +421,7 @@ $('#dk-gear').onclick = openSettings;
 /* 확대 — 마우스에서 가까울수록 크게(코사인으로 부드럽게 줄어든다). 크기는 CSS 의 --z 한 값으로만 움직인다. */
 dock.addEventListener('mousemove', e => {
   const s = cfg.settings, vert = s.position === 'left' || s.position === 'right';
+  if(s.position === 'grid') return;          // 2열은 확대 대신 살짝 커지기(CSS)
   const p = vert ? e.clientY : e.clientX, range = s.size * 2.6;
   for(const el of dock.querySelectorAll('.dk-item')){
     const r = el.getBoundingClientRect(), c = vert ? r.top + r.height / 2 : r.left + r.width / 2;
@@ -448,7 +462,7 @@ function renderSettings(){
   $('#s-size').value = s.size; $('#o-size').value = s.size;
   $('#s-mag').value = s.magnify; $('#o-mag').value = '×' + s.magnify;
   $('#s-pos').value = s.position; $('#s-hide').checked = s.autohide; $('#s-clock').checked = clockOn; $('#s-board').checked = boardOn; renderAcct();
-  $('#r-hide').hidden = s.position === 'center';
+  $('#r-hide').hidden = noEdge(s.position);
   $('#s-auto').checked = !!cfg.autostart.dock;
   $('#r-site').hidden = cfg.autostart.site == null;      // 김하현 Desktop 이 같이 깔려 있을 때만
   $('#s-auto-site').checked = !!cfg.autostart.site;
@@ -485,7 +499,7 @@ function readSettings(){
   $(id).addEventListener('input', () => {
     cfg.settings = readSettings();
     $('#o-size').value = cfg.settings.size; $('#o-mag').value = '×' + cfg.settings.magnify;
-    $('#r-hide').hidden = cfg.settings.position === 'center';
+    $('#r-hide').hidden = noEdge(cfg.settings.position);
     renderDock();
   });
   $(id).addEventListener('change', () => send({cmd:'settings', settings:readSettings()}));
