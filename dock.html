@@ -59,6 +59,13 @@ html,body{height:100%;overflow:hidden;font-family:'Pretendard',-apple-system,san
   border-radius:50%;background:rgba(255,255,255,.8);}
 @keyframes dk-bounce{0%,50%,100%{translate:0 0}22%{translate:0 -38%}72%{translate:0 -16%}}
 #dock[data-pos=left] .dk-item.go,#dock[data-pos=right] .dk-item.go{animation:none;}
+/* 시계·날짜 (10-18 사용자 — 「시계 날짜 넣어 줘」) — 왼쪽 가운데, 맥 잠금 화면처럼 가늘고 크게 */
+#clock{position:fixed;left:6vw;top:50%;transform:translateY(-50%);z-index:5;color:#fff;pointer-events:none;
+  text-shadow:0 2px 18px rgba(0,0,0,.35);user-select:none;}
+#clock[hidden]{display:none;}
+#clock .tm{font-size:clamp(72px,7.5vw,150px);font-weight:200;line-height:1;letter-spacing:-.02em;font-variant-numeric:tabular-nums;}
+#clock .tm small{font-size:.24em;font-weight:400;letter-spacing:0;margin-left:.35em;opacity:.8;}
+#clock .dt{margin-top:.5em;font-size:clamp(20px,1.7vw,32px);font-weight:500;opacity:.88;}
 #edge{position:fixed;z-index:9;display:none;}
 #edge.on{display:block;}
 #edge[data-pos=bottom]{left:0;right:0;bottom:0;height:4px;}
@@ -128,6 +135,7 @@ html,body{height:100%;overflow:hidden;font-family:'Pretendard',-apple-system,san
 </style>
 </head>
 <body>
+<div id="clock" hidden><div class="tm"></div><div class="dt"></div></div>
 <div id="edge"></div>
 <nav id="dock" hidden aria-label="Dock">
   <div id="dk-list"></div>
@@ -162,6 +170,7 @@ html,body{height:100%;overflow:hidden;font-family:'Pretendard',-apple-system,san
       <label class="row">확대 배율<span><input type="range" id="s-mag" min="1" max="2" step="0.1"><output id="o-mag"></output></span></label>
       <label class="row">위치<select id="s-pos"><option value="bottom">아래</option><option value="center">화면 정가운데</option><option value="left">왼쪽</option><option value="right">오른쪽</option></select></label>
       <label class="row" id="r-hide">자동 숨김<input type="checkbox" id="s-hide"></label>
+      <label class="row">시계·날짜 (왼쪽)<input type="checkbox" id="s-clock"></label>
     </section>
     <section>
       <p class="t-sec">배경화면</p>
@@ -183,7 +192,7 @@ html,body{height:100%;overflow:hidden;font-family:'Pretendard',-apple-system,san
    받는 것: {cmd:'config', settings, items, autostart:{dock, site}, screen:{w,h}} · {cmd:'error'|'done', text}
    보내는 것: get · open{id} · pick{kind} · addUrl{name,url} · rename{id,name} · remove{id} · order{ids} · settings{settings}
              · autostart{which,on} · pickIcon{id} · resetIcon{id}
-             · frame{mode:'dock'|'full', w, h}(물리 픽셀 — 앱이 창을 이 크기로 맞춘다) · wallpaper{png}(data:image/png) */
+             · frame{mode:'dock'|'full', rects:[[x,y,w,h]…]}(물리 픽셀 — 창은 작업 영역 가득, 이 칸들만 보이고 눌린다) · wallpaper{png}(data:image/png) */
 const $ = s => document.querySelector(s);
 const bridge = window.chrome && window.chrome.webview;
 const dock = $('#dock'), edge = $('#edge'), setBox = $('#set');
@@ -199,26 +208,41 @@ if(bridge){
   send({cmd:'get'});
 }
 
-/* ---------- 창 크기 — Dock 이 차지하는 자리(확대·말풍선 여유 포함)를 앱에 알린다 ----------
-   🔵 창은 그 크기만큼만 — 투명한 곳도 창이라 바탕화면 클릭을 먹기 때문이다. 설정·알림 동안만 작업 영역 가득(full). */
+/* ---------- 창 — 작업 영역 가득이지만, 앱이 «여기 적은 칸들»만 창으로 남긴다(나머지는 바탕화면 클릭이 그대로 지나간다) ----------
+   🔵 10-18 시계 넣으며 바꿈 — 전엔 창을 Dock 크기로 줄였다. 칸은 물리 픽셀 [x,y,w,h] · 설정·알림 동안은 full(전체가 창). */
 let lastFrame = '', toastFull = false;
 function frame(){
   if(!cfg) return;
   const full = !setBox.hidden || toastFull;
-  const s = cfg.settings, r = dock.getBoundingClientRect(), k = devicePixelRatio || 1;
+  const s = cfg.settings, r = dock.getBoundingClientRect(), k = devicePixelRatio || 1, W = innerWidth, H = innerHeight;
   const up = Math.ceil(s.size * (s.magnify - 1)) + 44;            // 커지는 만큼 + 말풍선
-  let w, h;
-  const vert = s.position === 'left' || s.position === 'right';
-  /* 자동 숨김으로 들어가 있는 동안은 가장자리의 얇은 띠만 — 투명한 창이 바탕화면 클릭을 막지 않게 */
-  const tucked = !full && s.autohide && s.position !== 'center' && !dock.classList.contains('show');
-  if(tucked){ w = vert ? 6 : r.width + 40; h = vert ? r.height + 40 : 6; }
-  else if(vert){ w = r.width + up + 150; h = r.height + 40; }   // 옆 말풍선 자리
-  else if(s.position === 'center'){ w = r.width + 40; h = r.height + up * 2; }                    // 가운데 — 위아래 같게(가운데가 안 흔들린다)
-  else { w = r.width + 40; h = r.height + up + 10; }
-  const m = { cmd:'frame', mode: full ? 'full' : 'dock', w: Math.ceil(w * k), h: Math.ceil(h * k) };
+  const tucked = s.autohide && s.position !== 'center' && !dock.classList.contains('show');
+  let d;   // Dock 칸
+  if(s.position === 'left')       d = tucked ? [0, r.top - 20, 6, r.height + 40] : [0, r.top - 20, r.right + up + 150, r.height + 40];
+  else if(s.position === 'right') d = tucked ? [W - 6, r.top - 20, 6, r.height + 40] : [r.left - up - 150, r.top - 20, W - r.left + up + 150, r.height + 40];
+  else if(s.position === 'center') d = [r.left - 20, r.top - up, r.width + 40, r.height + up * 2];
+  else d = tucked ? [r.left - 20, H - 6, r.width + 40, 6] : [r.left - 20, r.top - up, r.width + 40, H - r.top + up];
+  const rects = [d];
+  if(!clockBox.hidden){ const c = clockBox.getBoundingClientRect(); rects.push([c.left - 10, c.top - 10, c.width + 20, c.height + 20]); }
+  const m = { cmd:'frame', mode: full ? 'full' : 'dock', rects: rects.map(q => q.map(v => Math.round(v * k))) };
   const key = JSON.stringify(m);
   if(key !== lastFrame){ lastFrame = key; send(m); }
 }
+addEventListener('resize', () => frame());
+
+/* ---------- 시계·날짜 — 켜고 끄기는 이 PC 에만(localStorage) ---------- */
+const clockBox = $('#clock');
+let clockOn = (() => { try{ return localStorage.getItem('dock.clock') !== '0'; }catch(e){ return true; } })();
+function tick(){
+  const n = new Date(), h = n.getHours();
+  clockBox.querySelector('.tm').innerHTML = (h % 12 || 12) + ':' + String(n.getMinutes()).padStart(2, '0') + '<small>' + (h < 12 ? '오전' : '오후') + '</small>';
+  clockBox.querySelector('.dt').textContent = n.toLocaleDateString('ko-KR', { month:'long', day:'numeric', weekday:'long' });
+  frame();                                     // 글자 폭이 바뀌면(12:59 → 1:00) 칸도 다시
+  setTimeout(tick, 60000 - n.getSeconds() * 1000 - n.getMilliseconds() + 20);   // 분이 바뀌는 때에 맞춰
+}
+function showClock(){ clockBox.hidden = !clockOn; frame(); }
+tick();
+$('#s-clock').onchange = e => { clockOn = e.target.checked; try{ localStorage.setItem('dock.clock', clockOn ? '1' : '0'); }catch(x){} showClock(); };
 
 /* ---------- 아이콘 — 사용자가 고른 그림 › 프로그램·폴더·파일은 앱이 뽑아 준 그림 › 웹사이트는 그 사이트의 아이콘 › 글자 ---------- */
 function letter(it){
@@ -255,7 +279,7 @@ function renderDock(){
       clearTimeout(b._go); b._go = setTimeout(() => b.classList.remove('go'), 1200); };
     return b;
   }));
-  dock.hidden = false;
+  dock.hidden = false; clockBox.hidden = !clockOn;
   requestAnimationFrame(frame);
 }
 $('#dk-gear').onclick = openSettings;
@@ -302,7 +326,7 @@ function renderSettings(){
   const s = cfg.settings;
   $('#s-size').value = s.size; $('#o-size').value = s.size;
   $('#s-mag').value = s.magnify; $('#o-mag').value = '×' + s.magnify;
-  $('#s-pos').value = s.position; $('#s-hide').checked = s.autohide;
+  $('#s-pos').value = s.position; $('#s-hide').checked = s.autohide; $('#s-clock').checked = clockOn;
   $('#r-hide').hidden = s.position === 'center';
   $('#s-auto').checked = !!cfg.autostart.dock;
   $('#r-site').hidden = cfg.autostart.site == null;      // 김하현 Desktop 이 같이 깔려 있을 때만
