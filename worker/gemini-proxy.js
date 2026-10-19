@@ -44,7 +44,7 @@ const TWIN_GROQ_MAX_TOKENS = 7000;   // 추론 + JSON. 검토(6000)보다 답이
 /* 🔴 «올렸는지 짐작하지 않는다» — 이 워커는 대시보드에 붙여넣어 올리므로 밖에서는 어느 판이 도는지
    알 길이 없었다(2026-09-11에 사용자가 올리고 「도는지 확인은 못 해봤어」). /quota 가 이 값을 같이
    돌려주고 tools/worker-check.mjs 가 저장소의 값과 견준다. **프롬프트나 규칙을 바꾸면 이 날짜를 올릴 것.** */
-const WORKER_VERSION = '2026-10-17b';
+const WORKER_VERSION = '2026-10-19a';
 // 이미지 업로드는 학생도 쓴다(질의응답 사진). 비용이 드는 쪽은 Gemini라 여기는 넉넉하게,
 // 다만 «한 명이 무한히»는 막는다. 전체 상한은 걸지 않는다 — 걸면 바쁜 날 학생이 막힌다.
 const UPLOAD_PER_USER_DAILY = 200;
@@ -317,9 +317,10 @@ async function adminGate(request, env, corsHeaders, uid, who) {
 const NOTIFY_DAILY_LIMIT = 200;      // 하루 전체 발송 상한(건). 학생 50명 × 넉 번이면 충분하다
 const NOTIFY_PER_CALL = 50;          // 한 번에 보낼 수 있는 사람 수
 /* 10-17 — 공지(notice)·자료(mat) 올릴 때 알림. 심사 뒤 비밀 SOLAPI_TPL_NOTICE · SOLAPI_TPL_MAT 를 넣으면 켜진다(화면은 /quota 의 notifyTpl 로 안다). */
-const NOTIFY_KINDS = ['hw', 'vid', 'qna', 'wrong', 'notice', 'mat'];
+/* 10-19 — 새 강의 등록(vidnew). 비밀 SOLAPI_TPL_VIDNEW 가 있으면 화면이 올릴 때 영상 알림을 vid(재촉용) 대신 이것으로 보낸다. */
+const NOTIFY_KINDS = ['hw', 'vid', 'qna', 'wrong', 'notice', 'mat', 'vidnew'];
 const NOTIFY_TPL = { hw: 'SOLAPI_TPL_HW', vid: 'SOLAPI_TPL_VID', qna: 'SOLAPI_TPL_QNA', wrong: 'SOLAPI_TPL_WRONG',
-                     notice: 'SOLAPI_TPL_NOTICE', mat: 'SOLAPI_TPL_MAT' };
+                     notice: 'SOLAPI_TPL_NOTICE', mat: 'SOLAPI_TPL_MAT', vidnew: 'SOLAPI_TPL_VIDNEW' };
 const SOLAPI = 'https://api.solapi.com';
 
 /* HMAC-SHA256 서명 — `HMAC-SHA256 apiKey=…, date=…, salt=…, signature=hex(hmac(date+salt, secret))`. 솔라피 공식 SDK 와 같은 식. */
