@@ -155,7 +155,8 @@ try{
 
   /* ⑦ 숨긴 학생(테스트 계정 · 2026-10-11) — 강사 화면 어디에도 없고 로그인은 그대로 · 되돌릴 수 있다 */
   봄('🔴 불러올 때 한 문에서 가른다(강사·조교 쪽) · 학생 로그인은 제 문서만 읽어 영향 없음',
-     [/DATA\.hiddenStudents = \(DATA\.students \|\| \[\]\)\.filter\(s => s && s\.hidden\);\s*DATA\.students = \(DATA\.students \|\| \[\]\)\.filter\(s => !\(s && s\.hidden\)\);/.test(html),
+     /* 10-20 — 테스트 모드(이 기기만)면 안 가른다: `if(!testModeOn())` 가 문 앞에 선다 · 그 사이 주석은 건너뛴다 */
+     [/DATA\.hiddenStudents = \(DATA\.students \|\| \[\]\)\.filter\(s => s && s\.hidden\);[\s\S]{0,700}?if\(!testModeOn\(\)\) DATA\.students = \(DATA\.students \|\| \[\]\)\.filter\(s => !\(s && s\.hidden\)\);/.test(html),
       /DATA\.students = me \? \[me\] : \[\];/.test(html)], [true, true]);
   const 숨김 = 학생[6] || 학생[2];
   await page.evaluate(sid => { state.teacherTab = 'settings'; state.settingsSubTab = 'students'; state.settingsForm = ''; state.stuEditId = null; stuEdit(sid); }, 숨김);

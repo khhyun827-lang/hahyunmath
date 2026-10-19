@@ -9267,7 +9267,10 @@ async function loadAllData(){
      강사·조교 화면은 전부 DATA.students 를 보므로 **여기 한 문에서** 갈라 둔다 — 명단·출석부·신호·현황·숫자 어디에도 안 나온다.
      되돌리는 길은 설정 › 학생 맨 아래 «숨긴 계정». 학생 로그인은 제 문서만 읽어서(loadStudentData) 영향이 없다. */
   DATA.hiddenStudents = (DATA.students || []).filter(s => s && s.hidden);
-  DATA.students = (DATA.students || []).filter(s => !(s && s.hidden));
+  /* 🔵 **테스트 모드** (2026-10-20 · 사용자 — 「숨긴 계정으로 바꾼 뒤로 테스트할 수 없는 기능이 많아졌어」) —
+       숨기면 명단에서 통째로 빠져 영상 개인 배정·출결·과제·오답·알림톡 어디서도 고를 수 없었다.
+       켜면 **이 기기의 강사 화면에서만** 숨긴 계정이 다시 선다(설정 › 학생 › 숨긴 계정). 문서도 순위도 그대로다. */
+  if(!testModeOn()) DATA.students = (DATA.students || []).filter(s => !(s && s.hidden));
   DATA.videos = videosNewestFirst(DATA.videos);
   splitQnaFollowups();
   normStudentGrades();     /* 「1」과 「고1」을 한 벌로 — 시험 일정의 열쇠다 */
@@ -10746,6 +10749,11 @@ async function endStudentFromForm(sid){
   showToast(s.name + ' 학생을 ' + s.endType + '(' + s.endedAt + ')로 처리했습니다.');
   render();
 }
+function testModeOn(){ try{ return localStorage.getItem('hm-test-mode') === '1'; }catch(e){ return false; } }
+function setTestMode(on){
+  try{ on ? localStorage.setItem('hm-test-mode', '1') : localStorage.removeItem('hm-test-mode'); }catch(e){ showToast('이 브라우저는 설정을 기억하지 못합니다.'); return; }
+  location.reload();   /* 명단을 처음부터 다시 갈라야 한다 — 화면 곳곳이 DATA.students 를 이미 쥐고 있다 */
+}
 /* 숨기기 · 풀기 (테스트 계정 · 2026-10-11) — 문서에 hidden:true 만 단다. 로그인·기록은 그대로 */
 async function setStudentHidden(sid, hide){
   const s = (hide ? DATA.students : (DATA.hiddenStudents || [])).find(x => x.studentId === sid);
@@ -10762,7 +10770,7 @@ async function setStudentHidden(sid, hide){
   } else {
     delete s.hidden;
     DATA.hiddenStudents = DATA.hiddenStudents.filter(x => x !== s);
-    DATA.students.push(s);
+    if(!DATA.students.includes(s)) DATA.students.push(s);   /* 테스트 모드면 이미 들어 있다 */
   }
   await logAudit(hide ? '학생 숨김(테스트 계정)' : '숨김 풀기', sid, s.name, '');
   showToast(hide ? `${s.name}(${sid}) 계정을 숨겼습니다 — 로그인은 그대로 됩니다.` : `${s.name}(${sid}) 계정을 다시 보이게 했습니다.`);
@@ -37093,7 +37101,10 @@ function teacherSettingsStudentsHTML(){
   })}
   ${(DATA.hiddenStudents || []).length ? stSec({
     title:'숨긴 계정', desc:'테스트용 — 로그인은 되고 강사 화면 어디에도 안 나옵니다',
-    body: (DATA.hiddenStudents || []).map(s => `<div class="st-row" style="align-items:center;">
+    action: testModeOn()
+      ? `<button class="btn p sm" onclick="setTestMode(false)" title="이 기기에서 숨긴 계정을 다시 감춥니다">테스트 모드 끄기</button>`
+      : `<button class="btn sm" onclick="setTestMode(true)" title="이 기기의 강사 화면에서만 숨긴 계정이 명단에 다시 나옵니다 — 영상 배정·출결·과제·알림 시험용">테스트 모드 켜기</button>`,
+    body: (testModeOn() ? `<div class="st-note" style="padding:4px 0 8px;"><b>테스트 모드 켜짐</b> — 이 기기에서는 숨긴 계정이 명단·출결·영상·과제 등에 다시 나옵니다. 다른 기기와 학생 화면은 그대로입니다.</div>` : '') + (DATA.hiddenStudents || []).map(s => `<div class="st-row" style="align-items:center;">
       <div class="t"><b>${escHtml(s.name || '')}</b> <span class="mono">${escHtml(s.studentId)}</span> <span class="st-note">${escHtml(studentClassTitle(s) || '')}</span></div>
       <div class="v"><button class="btn sm" onclick="setStudentHidden('${s.studentId}', false)">다시 보이기</button></div></div>`).join('')
   }) : ''}
