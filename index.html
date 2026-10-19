@@ -20131,7 +20131,8 @@ function stuNoticeHTML(){
      여느 영상처럼 쌓이고, 강사 질문 카드가 그것을 읽는다.
    ⚠ «어렵게 하는 것»이지 막는 것이 아니다 — 영상 id 는 페이지에 있다(videoEmbedHTML 머리 주석과 같은 말). */
 function pvSame(a, b){
-  const 판 = x => String(x || '').replace(/\s+/g, '').toLowerCase();
+  /* 띄어쓰기·대괄호·대소문자를 무시한다 — 반마다 «[2026][1-2기말][엔딩크레딧]» · «[2026][1-2기말]엔딩크레딧»처럼 조금씩 다르게 적혀 있다(10-20 실측) */
+  const 판 = x => String(x || '').replace(/[\s\[\]]+/g, '').toLowerCase();
   return 판(a) === 판(b);
 }
 /* 편집기 목차 → [{n, from, to}] — 「0:00 수업 시작」·머리 줄처럼 번호가 없는 줄은 건너뛴다 */

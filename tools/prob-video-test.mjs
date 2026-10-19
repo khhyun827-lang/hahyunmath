@@ -53,7 +53,8 @@ try{
       { id: 'e1', url: 'https://youtu.be/AAAAAAAAAAA', book: '주기나 1-1', items: [{ n: 61, from: 384, to: 530 }, { n: 65, from: 530, to: 1181 }] },
       { id: 'e2', url: 'https://youtu.be/BBBBBBBBBBB', book: '주기나1-1', items: [{ n: 65, from: 100, to: 200 }] },
     ] };
-    return { items, 최근: pvFind(pv, '주기나 1-1', 65), 앞것: pvFind(pv, '주기나 1-1', 61), 없음: pvFind(pv, '엔크', 61) };
+    return { items, 최근: pvFind(pv, '주기나 1-1', 65), 앞것: pvFind(pv, '주기나 1-1', 61), 없음: pvFind(pv, '엔크', 61),
+      괄호: pvSame('[2026][1-2기말][엔딩크레딧]', '[2026][1-2기말]엔딩크레딧'), 다른책: pvSame('[2026][1-2기말][엔딩크레딧]', '[2026][1-2중간][엔딩크레딧]') };
   });
   봄('목차 → 번호·시작·끝(다음 문항 시작) · 번호 없는 줄은 건너뜀', 읽기.items,
     [{ n: 61, from: 384, to: 530 }, { n: 65, from: 530, to: 4410 }, { n: 97, from: 4410, to: 0 }]);
@@ -61,6 +62,8 @@ try{
     { url: 'https://youtu.be/BBBBBBBBBBB', from: 100, to: 200, entryId: 'e2' });
   봄('다른 수업(e1)의 문항도 찾는다', 읽기.앞것 && 읽기.앞것.entryId, 'e1');
   봄('없는 교재는 null', 읽기.없음, null);
+  봄('🔴 대괄호가 하나 빠진 이름도 같은 교재 (고1GB2 실제 이름)', 읽기.괄호, true);
+  봄('중간·기말은 다른 교재', 읽기.다른책, false);
 
   console.log('\n질문 → 구간이 박히고 재생기가 선다');
   const 질문 = await page.evaluate(async () => {
