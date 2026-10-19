@@ -70,7 +70,7 @@ const 잣대 = ['VIDEO_DONE_RATIO', 'VIDEO_GOAL_PCT', 'VIDEO_DONE_SLACK_SEC', 'V
 }).join(NL) + NL + ['videoGoalOfItem', 'videoItemById', 'videoGoalOfProgress',
   'coverLen', 'coverSec', 'videoDurationSec', 'videoWatchedSec', 'videoWatchRatio', 'videoDone',
   'videoPct', 'videoSeen', 'secToClock', 'videoGoalLabel', 'videoGoalLabelOf', 'videoScore',
-  'videoCounted'].map(lift).join(NL);
+  'videoCounted', 'videoLocked'].map(lift).join(NL);
 const api = new Function(...Object.keys(곁),
   잣대 + NL + lift('stuDday') + NL + lift('stuTodo') + NL + lift('setVideoDue') + NL + 'return { stuDday, stuTodo, setVideoDue };'
 )(...Object.values(곁));
@@ -82,14 +82,15 @@ const c = {
   videos: 곁.DATA.videos,
 };
 const todo = api.stuTodo(c);
-봄('차례 — 마감 순으로 과제와 같은 줄 (지난 5강 → 과제 15일 → 4강 20일 → 마감 없는 6강)',
-   todo.map(t => t.title), ['5강', '과제 A', '4강', '6강']);
-봄('영상에 due 가 붙는다', todo.map(t => t.due), ['2026-09-10', '2026-09-15', '2026-09-20', '']);
-봄('D-day — 지난 것은 「지남」, 20일은 D-7', [todo[0].dday, todo[2].dday],
-   [{ label: '지남', tone: 'no' }, { label: 'D-7', tone: 'late' }]);
-봄('마감 없는 영상에는 dday 가 없다', todo[3].dday, null);
-봄('곁말에 「…까지」가 붙는다', todo[2].sub, '강의 · 아직 안 봄 · 2026-09-20까지');
-봄('40% 본 것은 그 사실도 곁말에', todo[0].sub, '강의 · 40%까지 봄 · 2026-09-10까지');
+/* 🔴 10-20 — 마감이 지난 영상은 잠긴다(사용자 — 「마감일을 둔 이유는 그 이후로 못 보는 거」).
+     볼 수 없는 것은 할 일이 아니다 → 지난 5강(09-10)은 할 일에서 빠진다. 예전엔 맨 위에 「지남」으로 섰다. */
+봄('차례 — 마감 순으로 과제와 같은 줄 (과제 15일 → 4강 20일 → 마감 없는 6강)',
+   todo.map(t => t.title), ['과제 A', '4강', '6강']);
+봄('🔴 마감 지난 5강(40% 봄)은 잠겨서 할 일에 없다', todo.some(t => t.title === '5강'), false);
+봄('영상에 due 가 붙는다', todo.map(t => t.due), ['2026-09-15', '2026-09-20', '']);
+봄('D-day — 20일은 D-7', todo[1].dday, { label: 'D-7', tone: 'late' });
+봄('마감 없는 영상에는 dday 가 없다', todo[2].dday, null);
+봄('곁말에 「…까지」가 붙는다', todo[1].sub, '강의 · 아직 안 봄 · 2026-09-20까지');
 봄('② 다 본 영상은 할 일에 없다', todo.some(t => t.title === '다 본 것'), false);
 
 /* ③ 마감 바꾸기 */

@@ -44,7 +44,7 @@ const 봄 = (무엇, 나온것, 나와야) => {
 /* ═══ ① 임베드 주소 — 유튜브 조작줄이 아예 안 뜬다 ═══ */
 console.log(NL + '① 임베드 주소 — 유튜브 UI 를 안 띄운다' + NL);
 {
-  const embed = lift('stuVideoHTML');
+  const embed = lift('videoEmbedHTML');   /* 10-20 — 질문 화면도 쓰려고 stuVideoHTML 밖으로 나왔다 */
   /* 🔴 **매개변수는 «주소 문자열»에서만 찾는다.**
      함수 몸통 전체에 걸었더니 바로 위에 적어 둔 **까닭 주석**이 걸렸다 —
      `&controls=0` 을 지워도 검사가 멀쩡히 통과했다. 오늘 네 번째로 밟은 같은 함정이다.
@@ -62,7 +62,7 @@ console.log(NL + '① 임베드 주소 — 유튜브 UI 를 안 띄운다' + NL)
   봄('판을 누르면 재생/멈춤', /class="vc-veil"[^>]*onclick="vcVeilTap/.test(embed), true);
   봄('조작줄이 상자 안에 붙는다', embed.includes('videoControlsHTML(v.id)'), true);
   봄('전체화면이 잡을 상자에 id 가 있다', embed.includes('id="vshell-${v.id}"'), true);
-  봄('진도 칸은 그대로 남는다', embed.includes('videoProgressBlockHTML(c.sid, v.id)'), true);
+  봄('진도 칸은 그대로 남는다', embed.includes('videoProgressBlockHTML(sid, v.id)'), true);
   /* 확대 · 자막 (2026-09-13 · K-10) */
   봄('🔴 자막을 안 켠다 — cc_load_policy=0', src.includes('cc_load_policy=0'), true);
   봄('🔴 주소만 믿지 않는다 — 준비되면 unloadModule 로 한 번 더 끈다',
@@ -104,8 +104,8 @@ console.log(NL + '③ 시간과 배속' + NL);
   /* 10초 건너뛰기 (2026-09-22) — 가짜 플레이어로 seekTo 가 어디로 가는지 본다. 끝을 넘기지 않고(끝-1) 0 아래로 안 간다. */
   const 간곳 = [];
   const 가짜 = (cur, dur) => ({ getCurrentTime: () => cur, getDuration: () => dur, seekTo: (t) => 간곳.push(Math.round(t * 10) / 10) });
-  const S = new Function('state', 'vcPaint', lift('vcPlayer') + NL + lift('vcSkip') + NL + 'return vcSkip;')(
-    { ytPlayers: { V: { player: 가짜(30, 100) }, E: { player: 가짜(95, 100) }, Z: { player: 가짜(4, 100) } } }, () => {});
+  const S = new Function('state', 'vcPaint', 'vcRange', lift('vcPlayer') + NL + lift('vcSkip') + NL + 'return vcSkip;')(   /* vcRange — 문항 구간은 prob-video-test 가 잰다 */
+    { ytPlayers: { V: { player: 가짜(30, 100) }, E: { player: 가짜(95, 100) }, Z: { player: 가짜(4, 100) } } }, () => {}, () => null);
   S('V', 10); S('V', -10); S('E', 10); S('Z', -10);
   봄('🔴 ±10초 — 앞으로·뒤로 · 끝을 넘기면 끝-1 · 0 아래는 0', 간곳, [40, 20, 99, 0]);
   봄('   조작줄에 −10·+10 단추가 재생 양옆에 있다', /vc-b skip" onclick="vcSkip\('\$\{vid\}', -10\)[\s\S]{0,300}vc-b play[\s\S]{0,200}vcSkip\('\$\{vid\}', 10\)/.test(html), true);

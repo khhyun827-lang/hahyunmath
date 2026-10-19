@@ -12852,14 +12852,20 @@ async function submitQuestion(){
   if(!question){ showToast('질문 내용을 입력해주세요.'); return; }
   if(qnaPhotosBusy('q')){ showToast('사진 올리기가 끝난 뒤에 보내 주세요.'); return; }
   const 사진들 = qnaPhotoDocs('q');
+  /* 교재·번호 (10-20) — 둘 다 있을 때만. 풀이 영상이 있으면 그 구간을 질문에 박아 둔다(학생은 질문을 고칠 수 없다). */
+  const book = ((document.getElementById('qna-book') || {}).value || '').trim();
+  const num = parseInt((document.getElementById('qna-num') || {}).value, 10) || 0;
+  const pv = book && num ? pvFind(await pvLoad(), book, num) : null;
   const qna = {id:'qn'+Date.now(), uid: authUid(), studentId:sid, studentName:state.currentUser.name, question,
-    image:사진들[0]||null, images:사진들, date:todayStr(), answer:null, answerImage:null, answeredAt:null};
+    image:사진들[0]||null, images:사진들, date:todayStr(), answer:null, answerImage:null, answeredAt:null,
+    book: (book && num) ? book : null, num: (book && num) ? num : null, pv};
   DATA.qnas.unshift(qna);
   const 저장됨 = await dbSetDoc('qnas', qna.id, qna);
   if(저장됨 === true) pushPing('qna', question);   // 선생님 폰 알림 (N-4)
   document.getElementById('qna-question').value='';
   clearQnaPhotos('q');
-  showToast('질문이 등록되었습니다.');
+  if(pv) state.stuPvOpen = qna.id;
+  showToast(pv ? '질문이 등록되었습니다 — 이 문항의 수업 풀이 영상이 있어요. 아래에서 보세요.' : '질문이 등록되었습니다.');
   render();
 }
 /* =================== 질의응답 — 추가 질문 (2026-09-15 · 사용자 요청) ===================
@@ -13206,8 +13212,14 @@ function videoGoalOfItem(v, durationSec){
 function videoItemById(videoId){
   if(!videoId || typeof DATA === 'undefined' || !DATA.videos) return null;
   for(const v of DATA.videos) if(v && v.id === videoId) return v;
-  return null;
+  return (state.pvItems && state.pvItems[videoId]) || null;   /* 문항 풀이 영상 (10-20) — pvItemOfQna */
 }
+/* 🔴 **마감이 지나면 못 본다** (2026-10-20 · 사용자 — 「우리가 마감일을 둔 이유는 영상을 그 이후로 못보는거 아니었어?」).
+     09-13(K-3)에는 마감을 «보이게»만 했다 — 막는 것인지 묻지 않았다. 이제 막는다.
+   · 마감 «당일»까지는 본다. 다음 날부터 잠긴다.
+   · **다 본 학생도 · 복습용도** 잠긴다 (사용자가 골랐다). 늦게 봐야 하면 강사가 「마감 바꾸기」로 늘린다.
+   ⚠ 문항 풀이 영상(질문에 붙는 구간)은 마감이 없다 — 이 잣대와 상관없다. */
+function videoLocked(v){ return !!(v && v.dueDate && v.dueDate < todayStr()); }
 function videoGoalOfProgress(p){
   if(!p || !p.videoId) return null;
   /* 길이는 기록이 안다 — 「끝까지」인 배정도 여기서는 제대로 셈이 선다 */
@@ -13459,6 +13471,11 @@ function videoControlsHTML(vid){
     <button class="vc-b full" onclick="vcFull('${vid}')" title="전체 화면" aria-label="전체 화면">${iconSvg('expand',16)}</button>
   </div>`;
 }
+/* 문항 풀이 영상의 구간 — 막대·건너뛰기·자리를 이 안에 가둔다 (10-20). 여느 영상은 null(예전 그대로). */
+function vcRange(vid, dur){
+  const v = videoItemById(vid);
+  return v && v.strict ? videoGoalOfItem(v, dur) : null;
+}
 function vcToggle(vid){
   const p = vcPlayer(vid); if(!p) return;
   try{ (p.getPlayerState() === 1 ? p.pauseVideo() : p.playVideo()); }catch(err){}
@@ -13467,8 +13484,9 @@ function vcToggle(vid){
 function vcSkip(vid, delta){
   const p = vcPlayer(vid); if(!p) return;
   try{
-    const d = p.getDuration() || 0, cur = p.getCurrentTime() || 0;
-    p.seekTo(Math.max(0, Math.min(d > 0 ? d - 1 : cur + delta, cur + delta)), true);
+    const d = p.getDuration() || 0, cur = p.getCurrentTime() || 0, r = vcRange(vid, d);
+    if(r) p.seekTo(Math.max(r.from, Math.min(r.to - 1, cur + delta)), true);
+    else p.seekTo(Math.max(0, Math.min(d > 0 ? d - 1 : cur + delta, cur + delta)), true);
   }catch(err){}
   vcPaint(vid);
 }
@@ -13661,7 +13679,11 @@ function vcBindBar(vid){
     const r = bar.getBoundingClientRect(); if(!r.width) return;
     const 비율 = Math.max(0, Math.min(1, (ev.clientX - r.left) / r.width));
     const p = vcPlayer(vid); if(!p) return;
-    try{ const d = p.getDuration() || 0; if(d > 0) p.seekTo(d * 비율, true); }catch(err){}
+    try{
+      const d = p.getDuration() || 0, r = vcRange(vid, d);
+      if(r) p.seekTo(r.from + (r.to - r.from) * 비율, true);      /* 문항 구간이면 막대 = 그 구간 */
+      else if(d > 0) p.seekTo(d * 비율, true);
+    }catch(err){}
     vcPaint(vid);
   };
   bar.addEventListener('pointerdown', ev => { try{ bar.setPointerCapture(ev.pointerId); }catch(err){} 가기(ev); });
@@ -13678,9 +13700,18 @@ function vcPaint(vid){
     return;
   }
   if(!vcPlayer(vid)) return;
-  const cur = vcAsk(vid, x=>x.getCurrentTime(), 0);
-  const dur = vcAsk(vid, x=>x.getDuration(), 0);
+  let cur = vcAsk(vid, x=>x.getCurrentTime(), 0);
+  let dur = vcAsk(vid, x=>x.getDuration(), 0);
+  /* 🔴 문항 풀이 영상은 구간 밖으로 못 나간다 (10-20) — 끝을 넘으면 멈추고 처음으로, 앞으로 벗어나면 처음으로.
+       0.25초마다 보므로 다음 문항이 비칠 틈이 거의 없다. 시계·막대도 구간 기준(0:00 ~ 구간 길이)으로 그린다. */
+  const 구간 = vcRange(vid, dur);
+  if(구간){
+    const p = vcPlayer(vid);
+    if(cur > 구간.to){ try{ p.pauseVideo(); p.seekTo(구간.from, true); }catch(err){} cur = 구간.from; }
+    else if(cur < 구간.from - 1){ try{ p.seekTo(구간.from, true); }catch(err){} cur = 구간.from; }
+  }
   if(cur > 0) vcPref(vid).pos = cur;      /* 다시 설 때 여기로 돌아온다 (V-3) */
+  if(구간){ cur = Math.max(0, cur - 구간.from); dur = 구간.len; }
   const 아이콘 = (el, name) => { if(el && el.dataset.ic !== name){ el.dataset.ic = name; el.innerHTML = iconSvg(name, 16); } };
   const 글자 = (el, t) => { if(el && el.textContent !== t) el.textContent = t; };
   글자(document.getElementById('vc-cur-' + vid), vcTime(cur));
@@ -16641,7 +16672,7 @@ function render(){
       });
     }catch(e){ console.error('수식 렌더링 실패', e); }
   }
-  if(state.view==='student' && state.studentTab==='video' && state.currentUser){
+  if(state.view==='student' && (state.studentTab==='video' || state.studentTab==='qna') && state.currentUser){   /* qna — 문항 풀이 영상 (10-20) */
     mountVideoTrackers(state.currentUser.studentId);
   }
   /* 출석 도장의 순위는 «읽어 온 뒤»에 그 자리만 갈아 끼운다.
@@ -17481,7 +17512,7 @@ function stuTodo(c){
   /* 🔵 **영상도 마감이 있다** (2026-09-13 · K-3 · 사용자 — 「영상 제공해주는거에 대해서도 마감기한이 있었으면 좋겠어」).
      칸은 09-08부터 있었는데 달력에만 섰다. 이제 과제와 같은 자리에 D-day 를 달고 같은 줄로 선다. */
   /* ⚠ 복습용은 «할 일»이 아니다 — 필요하면 보라고 준 것이라 안 봐도 밀린 것이 없다 (2026-09-20). */
-  c.videos.filter(v=>videoCounted(v) && !videoDone(c.rec.videoProgress[v.id])).forEach(v=>{
+  c.videos.filter(v=>videoCounted(v) && !videoLocked(v) && !videoDone(c.rec.videoProgress[v.id])).forEach(v=>{   /* 잠긴 것은 할 수 없는 일이다 (10-20) */
     const p = c.rec.videoProgress[v.id];
     items.push({
       icon:'video', bg:'var(--accent-bg)', fg:'var(--accent)',
@@ -19528,6 +19559,7 @@ function wrongNoticeText(name, 출처, n){ return fillNotice(WRONG_NOTICE_TEMPLA
    그래서 시킨 구간을 다 본 학생에게는 **이 알림이 안 간다**(K-11 이 고친 바로 그 억울함이다). */
 function vidNotWatched(v, roster){
   if(!videoCounted(v)) return [];      /* 복습용은 재촉하지 않는다 (2026-09-20) */
+  if(videoLocked(v)) return [];        /* 마감이 지나 잠겼다 — «보라»고 할 수 없다 (10-20) */
   return videoTakers(roster, v).filter(s => {
     const rec = state.allRecords[s.studentId];
     const p = rec && rec.videoProgress && rec.videoProgress[v.id];
@@ -19778,59 +19810,62 @@ function stuMaterialHTML(c){
     </div>`).join('');
 }
 
+/* 🔴 **유튜브 조작줄을 안 띄운다 — 조작줄은 우리가 짓는다** (2026-09-13 · K-8 · 사용자 —
+     「영상 링크 복사하는 좌측하단 버튼 막아줄 수 있어?」).
+   iframe 안은 **구글 도메인**이라 우리 JS 로 그 안의 단추를 지우거나 우클릭을 막을 수 없다
+   (2026-08-01에 한 번 확인하고 보류했던 것이 이 이야기다). 길은 둘뿐이었다 —
+   ① 단추 자리를 투명하게 «덮거나» ② 아예 **안 띄우거나**. 사용자가 ②를 골랐다.
+   · `controls=0` 이면 제목 띠·공유·나중에 보기·YouTube 로고·전체화면이 **통째로 안 나온다.**
+   · `disablekb=1` 로 iframe 안 단축키를, `fs=0` 으로 유튜브 전체화면을 끈다(전체화면은 우리가 준다).
+   · `playsinline=1` — 없으면 iOS 가 **네이티브 전체화면 플레이어**로 띄워 유튜브 UI 가 도로 나온다. 학생 화면은 모바일이 기준이다.
+   · 그 위에 투명한 판(`.vc-veil`)을 덮어 **우클릭(동영상 URL 복사)과 끝 화면의 관련 영상 클릭**을 막는다.
+     판을 누르면 재생/멈춤이다 — 유튜브에서 화면을 누르던 버릇이 그대로 산다.
+   ⚠ **이것은 «막는 것»이 아니라 «어렵게 하는 것»이다.** 영상 id 는 이 페이지의 HTML 안에 있고,
+     개발자 도구를 열 줄 아는 학생은 언제든 꺼낸다. 그 말을 코드에 적어 둔다 — 나중에 «막았다»고 믿지 않도록. */
+function videoEmbedHTML(v, sid){
+  const vid = extractYouTubeId(v.url);
+  if(!vid) return `<div class="note" style="margin-top:11px;">유튜브 링크 형식을 인식하지 못했습니다.
+    선생님께 알려 주세요.</div>`;
+  /* 🔵 **`cc_load_policy=0` — 자막을 안 켠다** (2026-09-13 · K-10 · 사용자 — 「자막이 강제로 뜨고있는데 자막을 껐으면 좋겠어」).
+     🔴 **K-8 이 만든 흠이다.** `controls=0` 으로 조작줄을 없애면서 **자막을 끌 단추도 같이 사라졌다** —
+       계정이나 기기에 자막 켜기가 걸려 있으면 학생은 끌 길이 없이 강제로 보게 된다.
+     ⚠ 주소만으로는 모자란다 — 계정 설정이 이기는 경우가 있어 **플레이어가 준비되면 `unloadModule` 로 한 번 더 끈다**(mountVideoTrackers). */
+  const src = 'https://www.youtube-nocookie.com/embed/' + vid +
+    '?enablejsapi=1&controls=0&disablekb=1&fs=0&playsinline=1&cc_load_policy=0&modestbranding=1&rel=0&iv_load_policy=3&origin='
+    + encodeURIComponent(location.origin);
+  /* 🔵 **확대** (2026-09-13 · K-10 · 사용자 — 「전체화면 하고나서도 더 확대해서 자주보는데 확대가 되지않아」).
+     🔴 **이것도 K-8 이 만든 흠이다.** 영상 위에 덮은 투명한 판이 **손가락을 먼저 받아** 브라우저의
+       핀치 확대가 안 닿는다. 판을 걷을 수는 없다(그것이 링크를 막는 장치다) — 그래서 **확대를 우리가 진다.**
+     · 화면을 감싸는 `.vc-zoom` 을 `transform` 으로 키우고 옮긴다(유튜브는 손 안 댄다).
+     · 판에서 **두 손가락 핀치 · 두 번 톡 · 끌어서 옮기기 · Ctrl+휠**을 받는다.
+     · 조작줄에도 **확대 단추**를 둔다 — 핀치가 안 되는 기기·데스크톱에서도 확대할 길이 있어야 한다. */
+  return `<div class="vc-shell" id="vshell-${v.id}">
+    <div class="sap-vwrap">
+      <div class="vc-zoom" id="vzoom-${v.id}"><iframe id="yt-frame-${v.id}" class="yt-tracked-frame"
+        data-bank-vid="${v.id}" src="${src}" title="${escHtml(v.title)}"
+        sandbox="allow-scripts allow-same-origin allow-presentation allow-forms"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+        referrerpolicy="strict-origin-when-cross-origin"></iframe></div>
+      ${/* 투명한 판 — 우클릭·길게 누르기·끝 화면 클릭이 유튜브에 안 닿는다. 손짓(확대·옮기기·재생)도 여기서 받는다. */''}
+      <div class="vc-veil" id="vveil-${v.id}" oncontextmenu="return false;" onclick="vcVeilTap('${v.id}', event)"></div>
+    </div>
+    ${videoControlsHTML(v.id)}
+  </div>
+    <div id="vprog-${v.id}">${videoProgressBlockHTML(sid, v.id)}</div>`;
+}
 function stuVideoHTML(c){
   markSeen('video', (c.videosAll || c.videos).length);
   if(c.videos.length===0) return `<div class="sap-empty">${(c.videosAll || []).length ? '이번 시즌에 올라온 강의가 아직 없습니다.' : '등록된 강의가 없습니다.'}</div>`;
   const pg = id => c.rec.videoProgress[id] || null;
   /* 이어보기 = 조금이라도 보다 만 «의무» 영상만 (10-17 — 0% 나 복습용이 맨 위에 떴다) */
-  const resume = c.videos.find(v=>{ const p = pg(v.id); return videoCounted(v) && videoSeen(p) && !videoDone(p); });
+  const resume = c.videos.find(v=>{ const p = pg(v.id); return videoCounted(v) && videoSeen(p) && !videoDone(p) && !videoLocked(v); });
   /* 안 본 것이 위, 완주가 아래 — 그 안에서는 stuCtx 의 «새것이 위» 차례 그대로(정렬은 안정적이다) (10-17) */
-  const 차례 = c.videos.slice().sort((a,b)=> (videoDone(pg(a.id)) ? 1 : 0) - (videoDone(pg(b.id)) ? 1 : 0));
+  /* 잠긴 것(마감 지남)은 맨 아래 (10-20) — 볼 수 없는 것이 볼 것 사이에 끼면 찾기만 어렵다 */
+  const 무게 = v => videoLocked(v) ? 2 : videoDone(pg(v.id)) ? 1 : 0;
+  const 차례 = c.videos.slice().sort((a,b)=> 무게(a) - 무게(b));
   const open = c.videos.find(v=>v.id===state.stuVideoId);
 
-  /* 🔴 **유튜브 조작줄을 안 띄운다 — 조작줄은 우리가 짓는다** (2026-09-13 · K-8 · 사용자 —
-       「영상 링크 복사하는 좌측하단 버튼 막아줄 수 있어?」).
-     iframe 안은 **구글 도메인**이라 우리 JS 로 그 안의 단추를 지우거나 우클릭을 막을 수 없다
-     (2026-08-01에 한 번 확인하고 보류했던 것이 이 이야기다). 길은 둘뿐이었다 —
-     ① 단추 자리를 투명하게 «덮거나» ② 아예 **안 띄우거나**. 사용자가 ②를 골랐다.
-     · `controls=0` 이면 제목 띠·공유·나중에 보기·YouTube 로고·전체화면이 **통째로 안 나온다.**
-     · `disablekb=1` 로 iframe 안 단축키를, `fs=0` 으로 유튜브 전체화면을 끈다(전체화면은 우리가 준다).
-     · `playsinline=1` — 없으면 iOS 가 **네이티브 전체화면 플레이어**로 띄워 유튜브 UI 가 도로 나온다. 학생 화면은 모바일이 기준이다.
-     · 그 위에 투명한 판(`.vc-veil`)을 덮어 **우클릭(동영상 URL 복사)과 끝 화면의 관련 영상 클릭**을 막는다.
-       판을 누르면 재생/멈춤이다 — 유튜브에서 화면을 누르던 버릇이 그대로 산다.
-     ⚠ **이것은 «막는 것»이 아니라 «어렵게 하는 것»이다.** 영상 id 는 이 페이지의 HTML 안에 있고,
-       개발자 도구를 열 줄 아는 학생은 언제든 꺼낸다. 그 말을 코드에 적어 둔다 — 나중에 «막았다»고 믿지 않도록. */
-  const embed = v => {
-    const vid = extractYouTubeId(v.url);
-    if(!vid) return `<div class="note" style="margin-top:11px;">유튜브 링크 형식을 인식하지 못했습니다.
-      선생님께 알려 주세요.</div>`;
-    /* 🔵 **`cc_load_policy=0` — 자막을 안 켠다** (2026-09-13 · K-10 · 사용자 — 「자막이 강제로 뜨고있는데 자막을 껐으면 좋겠어」).
-       🔴 **K-8 이 만든 흠이다.** `controls=0` 으로 조작줄을 없애면서 **자막을 끌 단추도 같이 사라졌다** —
-         계정이나 기기에 자막 켜기가 걸려 있으면 학생은 끌 길이 없이 강제로 보게 된다.
-       ⚠ 주소만으로는 모자란다 — 계정 설정이 이기는 경우가 있어 **플레이어가 준비되면 `unloadModule` 로 한 번 더 끈다**(mountVideoTrackers). */
-    const src = 'https://www.youtube-nocookie.com/embed/' + vid +
-      '?enablejsapi=1&controls=0&disablekb=1&fs=0&playsinline=1&cc_load_policy=0&modestbranding=1&rel=0&iv_load_policy=3&origin='
-      + encodeURIComponent(location.origin);
-    /* 🔵 **확대** (2026-09-13 · K-10 · 사용자 — 「전체화면 하고나서도 더 확대해서 자주보는데 확대가 되지않아」).
-       🔴 **이것도 K-8 이 만든 흠이다.** 영상 위에 덮은 투명한 판이 **손가락을 먼저 받아** 브라우저의
-         핀치 확대가 안 닿는다. 판을 걷을 수는 없다(그것이 링크를 막는 장치다) — 그래서 **확대를 우리가 진다.**
-       · 화면을 감싸는 `.vc-zoom` 을 `transform` 으로 키우고 옮긴다(유튜브는 손 안 댄다).
-       · 판에서 **두 손가락 핀치 · 두 번 톡 · 끌어서 옮기기 · Ctrl+휠**을 받는다.
-       · 조작줄에도 **확대 단추**를 둔다 — 핀치가 안 되는 기기·데스크톱에서도 확대할 길이 있어야 한다. */
-    return `<div class="vc-shell" id="vshell-${v.id}">
-      <div class="sap-vwrap">
-        <div class="vc-zoom" id="vzoom-${v.id}"><iframe id="yt-frame-${v.id}" class="yt-tracked-frame"
-          data-bank-vid="${v.id}" src="${src}" title="${escHtml(v.title)}"
-          sandbox="allow-scripts allow-same-origin allow-presentation allow-forms"
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-          referrerpolicy="strict-origin-when-cross-origin"></iframe></div>
-        ${/* 투명한 판 — 우클릭·길게 누르기·끝 화면 클릭이 유튜브에 안 닿는다. 손짓(확대·옮기기·재생)도 여기서 받는다. */''}
-        <div class="vc-veil" id="vveil-${v.id}" oncontextmenu="return false;" onclick="vcVeilTap('${v.id}', event)"></div>
-      </div>
-      ${videoControlsHTML(v.id)}
-    </div>
-      <div id="vprog-${v.id}">${videoProgressBlockHTML(c.sid, v.id)}</div>`;
-  };
+  const embed = v => videoEmbedHTML(v, c.sid);
 
   return `
   ${resume && (!open || open.id!==resume.id) ? `
@@ -19866,14 +19901,16 @@ function stuVideoHTML(c){
             <span style="color:var(--dim);margin-left:4px;">시청률에 안 들어갑니다 — 필요할 때 보세요</span></div>`}
         ${/* 마감 (K-3). 다 본 영상에는 D-day 를 안 단다 — 끝난 일에 「지남」이 붙으면 꾸중처럼 읽힌다. */
           v.dueDate ? `<div style="font-size:11.5px;color:var(--dim);margin-top:5px;">마감 <span class="mono">${escHtml(v.dueDate)}</span>${
-            done ? '' : (d => d ? ` <span class="badge ${d.tone}">${d.label}</span>` : '')(stuDday(v.dueDate))}</div>` : ''}
+            videoLocked(v) ? ' <span class="badge no">잠김</span>'
+            : done ? '' : (d => d ? ` <span class="badge ${d.tone}">${d.label}</span>` : '')(stuDday(v.dueDate))}</div>` : ''}
         ${/* 열려 있으면 진도 표시는 영상 아래 것 하나만 둔다 — 그쪽이 재생 중에 살아 움직인다 */
           isOpen ? '' : `<div class="sap-prog">
           <span class="bar vgoal"><i style="width:${pct}%"></i>${videoGoalMarkHTML()}</span>
           <b style="color:${done ? 'var(--ok)' : 'var(--dim)'};">${done ? '완주' : pct+'%'}</b>
         </div>`}
       </div>
-      ${isOpen ? embed(v) : ''}
+      ${!isOpen ? '' : videoLocked(v) ? `<div class="note" style="margin-top:11px;">마감(<span class="mono">${escHtml(v.dueDate)}</span>)이 지나 더는 볼 수 없습니다.
+        꼭 봐야 하면 선생님께 말씀드리세요.</div>` : embed(v)}
     </div>`;
   }).join('')}`;
 }
@@ -20081,6 +20118,136 @@ function stuNoticeHTML(){
 /* ---------- 질의응답 ---------- */
 /* 답변이 왔는지 안 왔는지가 목록에서 바로 보여야 한다. 학생이 여러 번 들어와 확인하는 화면이다.
    질문 폼은 접어 둔다 — 이 화면에 오는 이유는 «답이 왔나» 쪽이 더 잦다. */
+/* =============== 문항 풀이 영상 (2026-10-20 · 사용자 — 「교재를 코드화하고 있으니 교재와 번호를 고르면
+     유튜브에 올라간 그 문항이 있으면 자동으로 영상 제공」 · 「다른반 수업 영상도 보여주자 · 질문을 보내고 영상을 보내주자 —
+     그래야 학생이 몇번 문항을 추가학습했다는 정보도 기록하고 내가 알 수 있을 것 같아」) ===============
+   🔵 **문항마다 따로 올리지 않는다** — 결석 보충으로 어차피 올리는 수업 영상 «통째»에서 구간만 쓴다.
+     수업영상 편집기의 «목차 복사»(「6:24 61번」 줄들)를 반 › 영상 › «문항 목차»에 그 영상 주소와 함께 붙인다.
+   저장은 kv/prob-videos 하나 — { entries: [{ id, url, book, at, items: [{ n, from, to }] }] } · to 0 = 영상 끝까지(마지막 문항).
+     kv 는 읽기 = 진짜 계정 · 쓰기 = 강사 — «학생이 읽고 강사가 쓰는» 이 값에 규칙을 안 건드리고 맞는다.
+   학생이 질문에 교재·번호를 달면 저장할 때 찾아 질문 문서에 구간(pv)을 박는다(학생은 qnas 를 «만들기»만 한다).
+     같은 문항이 여러 수업에 있으면 가장 최근 것 · 교재 이름은 띄어쓰기·대소문자를 무시하고 견준다.
+   재생은 강의 탭과 같은 재생기 — 다만 strict 라 구간 «안»에서만 돈다(vcRange). 본 시간은 rec.videoProgress['pv-질문id'] 에
+     여느 영상처럼 쌓이고, 강사 질문 카드가 그것을 읽는다.
+   ⚠ «어렵게 하는 것»이지 막는 것이 아니다 — 영상 id 는 페이지에 있다(videoEmbedHTML 머리 주석과 같은 말). */
+function pvSame(a, b){
+  const 판 = x => String(x || '').replace(/\s+/g, '').toLowerCase();
+  return 판(a) === 판(b);
+}
+/* 편집기 목차 → [{n, from, to}] — 「0:00 수업 시작」·머리 줄처럼 번호가 없는 줄은 건너뛴다 */
+function pvParseToc(text){
+  const out = [];
+  String(text || '').split(/\r?\n/).forEach(줄 => {
+    const m = 줄.trim().match(/^(\d{1,2}(?::\d{1,2}){1,2})\s+(\d+)\s*번/);
+    const from = m ? clockToSec(m[1]) : null;
+    if(from != null) out.push({ n: +m[2], from, to: 0 });
+  });
+  out.forEach((x, i) => { if(out[i + 1]) x.to = out[i + 1].from; });
+  return out;
+}
+async function pvLoad(force){
+  if(force || !state.probVideos) state.probVideos = (await dbGet('prob-videos', null)) || { entries: [] };
+  return state.probVideos;
+}
+function pvFind(pv, book, n){
+  const es = (pv && pv.entries) || [];
+  for(let i = es.length - 1; i >= 0; i--){
+    const e = es[i], it = pvSame(e.book, book) && (e.items || []).find(x => x.n === n);
+    if(it) return { url: e.url, from: it.from, to: it.to, entryId: e.id };
+  }
+  return null;
+}
+/* 반의 교재(지금 + 지난 시즌) — 등록하는 쪽과 묻는 쪽이 같은 이름을 고르게 */
+function pvBookTitles(classId){
+  const c = DATA.classes.find(x => x.id === classId);
+  const subject = c && c.progress ? c.progress.subject : '';
+  return [...new Set([...(getClassProgress(classId).books || []), ...pastBookTitles(c, subject)])];
+}
+/* 질문에 박힌 구간 → 재생기가 읽는 «배정» 하나 (DATA.videos 에는 안 넣는다 — 시청률·목록에 안 섞이게) */
+function pvItemOfQna(q){
+  if(!q || !q.pv) return null;
+  if(!state.pvItems) state.pvItems = {};
+  const id = 'pv-' + q.id;
+  return state.pvItems[id] = state.pvItems[id] || { id, url: q.pv.url, title: (q.book || '') + ' ' + q.num + '번 풀이',
+    fromSec: q.pv.from, toSec: q.pv.to, strict: true };
+}
+function pvLenLabel(pv){
+  const 초 = pv.to ? pv.to - pv.from : 0;
+  return 초 ? Math.max(1, Math.round(초 / 60)) + '분' : '';
+}
+function pvStuBoxHTML(q, sid){
+  if(!q.book || !q.num) return '';
+  const 머리 = `<span class="badge">${escHtml(q.book)} ${q.num}번</span>`;
+  if(!q.pv) return `<div style="margin-top:9px;font-size:11.5px;color:var(--dim);">${머리} 아직 이 문항의 수업 풀이 영상은 없어요</div>`;
+  const 열림 = state.stuPvOpen === q.id;
+  return `<div style="margin-top:11px;">
+    <div style="font-size:11.5px;color:var(--dim);margin-bottom:6px;">${머리} 수업 풀이 영상</div>
+    <button class="mbtn${열림 ? ' q' : ''}" onclick="state.stuPvOpen=${열림 ? 'null' : `'${q.id}'`}; render()">${iconSvg('video',15)}
+      ${열림 ? '풀이 영상 닫기' : `수업 풀이 영상 보기 <span style="font-weight:400;opacity:.75;">${pvLenLabel(q.pv)}</span>`}</button>
+    ${열림 ? videoEmbedHTML(pvItemOfQna(q), sid) : ''}
+  </div>`;
+}
+function pvTeacherLineHTML(q){
+  if(!q.book || !q.num) return '';
+  const 머리 = `${escHtml(q.book)} ${q.num}번`;
+  if(!q.pv) return `<div style="margin-top:8px;font-size:12px;color:var(--dim);">${머리} · 수업 풀이 영상 없음</div>`;
+  const rec = state.allRecords && state.allRecords[q.studentId];
+  const p = rec && rec.videoProgress && rec.videoProgress['pv-' + q.id];
+  const 길이 = q.pv.to ? q.pv.to - q.pv.from : 0;
+  const 시청 = !p ? '아직 안 봄' : '시청 ' + secToClock(+p.watchedSeconds || 0) + (길이 ? ' / ' + secToClock(길이) : '');
+  return `<div style="margin-top:8px;font-size:12px;color:var(--sub);">${iconSvg('video',13)} ${머리} 수업 풀이 영상 보냄 · <b>${시청}</b>
+    · <a href="https://youtu.be/${escHtml(extractYouTubeId(q.pv.url) || '')}?t=${Math.floor(q.pv.from)}" target="_blank" rel="noopener">구간 열기</a></div>`;
+}
+/* 반 › 영상 › «문항 목차» */
+function pvToggle(){
+  state.pvAdding = !state.pvAdding;
+  if(state.pvAdding) pvLoad(true).then(() => render());
+  render();
+}
+function pvPanelHTML(classId){
+  const books = pvBookTitles(classId);
+  const 목록 = state.probVideos ? state.probVideos.entries.filter(e => books.some(b => pvSame(b, e.book))).slice().reverse() : null;
+  return `<div class="st-form" style="margin-bottom:16px;">
+    <div style="font-size:12px;color:var(--sub);line-height:1.6;margin-bottom:10px;">수업영상 편집기의 <b>목차 복사</b>를 수업 영상 주소와 함께 붙여 넣으세요.
+      학생이 질문에 교재·번호를 달면 그 문항 구간만 보여 줍니다 — 다른 반 학생에게도.</div>
+    <div class="cls-form"><label style="flex:1;"><span>교재</span>
+      <select id="pv-book">${books.length ? books.map(b => `<option>${escHtml(b)}</option>`).join('')
+        : '<option value="">진도 탭에 교재를 먼저 적어 주세요</option>'}</select></label>
+      <label style="flex:2;"><span>유튜브 주소 (수업 영상 통째)</span><input id="pv-url" placeholder="https://youtu.be/..."></label></div>
+    <div class="cls-form"><label style="flex:1;"><span>목차</span>
+      <textarea id="pv-toc" rows="6" placeholder="61번 ~ 97번 풀이&#10;&#10;0:00 수업 시작&#10;6:24 61번&#10;8:50 65번"></textarea></label></div>
+    <button class="btn p sm" style="margin-top:8px;" onclick="pvSave()">등록</button>
+    <div style="margin-top:12px;">${!목록 ? '<span class="muted" style="font-size:12px;">불러오는 중…</span>'
+      : !목록.length ? '<span class="muted" style="font-size:12px;">이 반 교재로 등록한 목차가 아직 없습니다.</span>'
+      : 목록.map(e => `<div class="row" style="gap:8px;padding:6px 0;border-top:1px solid var(--line);font-size:12.5px;">
+          <b>${escHtml(e.book)}</b><span>${e.items[0].n}~${e.items[e.items.length - 1].n}번 · <span class="mono">${e.items.length}</span>문항</span>
+          <span class="mono" style="color:var(--dim);">${escHtml(e.at || '')}</span><span class="spacer"></span>
+          <a href="${escHtml(e.url)}" target="_blank" rel="noopener">유튜브</a>
+          <button class="btn q sm" onclick="pvDelete('${e.id}')">삭제</button></div>`).join('')}</div>
+  </div>`;
+}
+async function pvSave(){
+  const 값 = id => ((document.getElementById(id) || {}).value || '').trim();
+  const book = 값('pv-book'), url = 값('pv-url'), items = pvParseToc(값('pv-toc'));
+  if(!book){ showToast('교재를 골라 주세요.'); return; }
+  if(!extractYouTubeId(url)){ showToast('유튜브 주소를 확인해 주세요.'); return; }
+  if(!items.length){ showToast('목차에서 «6:24 61번» 같은 줄을 찾지 못했습니다.'); return; }
+  /* 🔴 늘 새로 읽고 더한다 — 다른 기기에서 더한 것을 덮지 않게. 못 읽으면 dbSet 이 막는다. */
+  const pv = (await dbGet('prob-videos', null)) || { entries: [] };
+  pv.entries = (pv.entries || []).concat({ id: 'pv' + Date.now(), url, book, at: todayStr(), items });
+  if(await dbSet('prob-videos', pv) !== true){ showToast('저장하지 못했습니다 — 다시 눌러 주세요.'); return; }
+  state.probVideos = pv;
+  showToast(`${book} ${items.length}문항을 등록했습니다.`);
+  render();
+}
+async function pvDelete(id){
+  if(!confirm('이 목차를 지울까요? (유튜브 영상은 그대로입니다 · 이미 보낸 질문의 영상도 그대로 나옵니다)')) return;
+  const pv = (await dbGet('prob-videos', null)) || { entries: [] };
+  pv.entries = (pv.entries || []).filter(e => e.id !== id);
+  if(await dbSet('prob-videos', pv) !== true){ showToast('지우지 못했습니다.'); return; }
+  state.probVideos = pv;
+  render();
+}
 function stuQnaHTML(c){
   return `
   ${state.stuQnaWriting ? `
@@ -20088,6 +20255,12 @@ function stuQnaHTML(c){
     <div class="sap-lab">질문 내용</div>
     <textarea id="qna-question" class="sap-in" rows="4"
       placeholder="문제 질문은 물론, 학습 상담 등 무엇이든 편하게 남겨주세요."></textarea>
+    <div class="sap-lab" style="margin-top:13px;">교재 · 번호 (문제 질문이면)</div>
+    <div style="display:flex;gap:6px;">
+      <select id="qna-book" class="sap-in" style="flex:1;min-width:0;"><option value="">교재 고르기</option>${
+        pvBookTitles(c.classId).map(t => `<option>${escHtml(t)}</option>`).join('')}</select>
+      <input id="qna-num" class="sap-in" type="number" inputmode="numeric" min="1" placeholder="번호" style="width:92px;flex:none;">
+    </div>
     <div class="sap-lab" style="margin-top:13px;">사진 (선택)</div>
     ${qnaImageFieldHTML('q', 'qna-q-stu')}
     <button class="mbtn p" style="margin-top:14px;" onclick="submitQuestion()">질문 보내기</button>
@@ -20106,6 +20279,7 @@ function stuQnaHTML(c){
         </div>
         <div style="font-size:13.5px;line-height:1.7;margin-top:9px;white-space:pre-wrap;">${escHtml(q.question)}</div>
         ${qnaImgsHTML(qnaImgList(q), 'sap-img')}
+        ${pvStuBoxHTML(q, c.sid)}
         ${/* ds.css의 .note .d는 mono다. 「답변」 같은 낱말을 넣으면 글자가 벌어진다.
              답이 여럿일 수 있다(2026-09-16) — 첫 답 아래로 «답변 추가»가 쌓인다. */''}
         ${qnaAnswerNotesHTML(q)}
@@ -29425,6 +29599,7 @@ function teacherNoticesHTML(){
    답이 그 아래 붙는 글이지, 주고받는 말이 아니다. 형태를 맞추는 것은 일관성이 아니라 게으름이다.
    미답변을 위로 올린다 — 이 화면에 오는 이유가 그것이다. */
 function teacherQnaHTML(){
+  loadAllRecordsIfNeeded();   /* 문항 풀이 영상을 봤나 — 학생 기록에 있다 (10-20) */
   markSeen('qna', DATA.qnas.length + (DATA.qnaFollowups||[]).length);
   /* «대기»는 첫 답이 없는 것 + 추가 질문에 답이 없는 것 (2026-09-15) */
   const open = DATA.qnas.filter(qnaHasOpen);
@@ -29489,6 +29664,7 @@ function teacherQnaHTML(){
             <div class="h"><b class="qn-kind">질문</b><span class="t">${escHtml(cur.date||'')}</span></div>
             <div class="x">${escHtml(cur.question)}</div>
             ${qnaImgsHTML(qnaImgList(cur), 'qn-img')}
+            ${pvTeacherLineHTML(cur)}
           </div>
           ${qnaAnswerBubblesHTML(cur)}
           ${/* 추가 질문 — 학생이 답을 보고 또 물은 것. 꼴이 같아 같은 말풍선을 쓴다. 답이 없는 것에는 답 칸이 바로 붙는다. */''}
@@ -29831,7 +30007,9 @@ function chubVideoHTML(classId){
     <button class="btn ${state.videoAdding?'':'p'} sm"
       onclick="state.videoAdding=!state.videoAdding; render()">
       ${state.videoAdding ? '닫기' : iconSvg('plus',13)+' 영상 등록'}</button>
+    <button class="btn q sm" onclick="pvToggle()" title="편집기 «목차 복사» → 질문한 문항만 보여 주기">${state.pvAdding ? '목차 닫기' : '문항 목차'}</button>
   </div>
+  ${state.pvAdding ? pvPanelHTML(classId) : ''}
   ${!state.videoAdding ? '' : `
   <div class="st-form" style="margin-bottom:16px;">
     ${/* 대상 (K-4) — 기본은 반 전체. 고른 학생이 있으면 그 학생들에게만 보이고 목록의 «개인 배정»에 선다.

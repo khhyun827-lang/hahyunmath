@@ -276,7 +276,7 @@ console.log(NL + '⑥ 손가락 말고 키로도 — 누르는 자리마다' + N
     손잡이.indexOf('e.preventDefault()') > 손잡이.indexOf('if(!el) return'), true);
 
   /* 🔴 **이 덫이 핵심이다** — 학생 화면에 누르는 자리를 새로 만들 때마다 여기서 걸린다. */
-  const 학생화면 = ['stuHomeHTML', 'stuQuizHTML', 'stuWrongHTML', 'stuVideoHTML', 'stuCalendarHTML',
+  const 학생화면 = ['stuHomeHTML', 'stuQuizHTML', 'stuWrongHTML', 'stuVideoHTML', 'videoEmbedHTML', 'pvStuBoxHTML', 'stuCalendarHTML',
     'stuMyPlanHTML', 'stuClinicHTML', 'ckCardHTML', 'studentHTML', 'stuProgressHTML',
     'stuNoticeHTML', 'stuQnaHTML', 'stuMaterialHTML', 'stuChatHTML', 'stuAttendanceHTML'];
   const 안붙은것 = [];
@@ -289,7 +289,7 @@ console.log(NL + '⑥ 손가락 말고 키로도 — 누르는 자리마다' + N
   /* ⚠ 영상 위의 «가림막» 하나만 일부러 뺐다 — 초점이 투명한 판에 내려앉을 뿐이고,
      재생·멈춤은 아래 조작 바에 진짜 단추로 이미 있다. */
   봄('🔴 학생 화면의 누르는 자리에 표시가 다 붙었다 (가림막 하나만 뺀다)',
-    안붙은것, ['stuVideoHTML:vc-veil']);
+    안붙은것, ['videoEmbedHTML:vc-veil']);   /* 10-20 — 재생기가 stuVideoHTML 밖(videoEmbedHTML)으로 나왔다 */
   봄('⚠ 왜 가림막만 뺐는지 적어 두었다', html.includes('가림막»(`.vc-veil`)에는 안 붙인다'), true);
 
   봄('🔴 초점 테가 표시를 따라간다', html.includes('.app.sap [data-tap]:focus-visible'), true);
