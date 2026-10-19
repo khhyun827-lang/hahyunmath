@@ -85,9 +85,45 @@ try{
   봄('보낸 뒤 그 자리에 재생기가 열린다', 질문.틀, true);
   if(SHOT) await page.screenshot({ path: path.join(SHOT, 'qna-student.png'), fullPage: true });
 
+  console.log('\n교재·번호만으로 보내기 · 대기 판정 (10-20 둘째)');
+  const 흐름 = await page.evaluate(async () => {
+    let 울림 = 0; window.pushPing = () => { 울림++; };
+    const 보내기 = async (글, 책, 번) => {
+      state.studentTab = 'qna'; state.stuQnaWriting = true; render();
+      document.getElementById('qna-question').value = 글;
+      document.getElementById('qna-book').value = 책;
+      document.getElementById('qna-num').value = 번;
+      const 전 = DATA.qnas.length; await submitQuestion(); return DATA.qnas.length > 전 ? DATA.qnas[0] : null;
+    };
+    const 빈것 = await 보내기('', '', '');
+    const 빈말 = __말;
+    const 번호만 = await 보내기('', '주기나 1-1', '65');
+    const 영상울림 = 울림;
+    const 없는번호 = await 보내기('', '주기나 1-1', '3');       // 영상이 없는 번호 — 강사가 답해야 한다
+    const 없는울림 = 울림;
+    state.stuQnaWriting = false; render();
+    const 카드 = [...document.querySelectorAll('#app .mc')].find(x => x.innerHTML.includes('yt-frame-pv-' + 번호만.id) || x.textContent.includes('이해 안 되는 부분 적기'));
+    const 열림 = { 대기: qnaHasOpen(번호만) };
+    DATA.qnaFollowups.push({ id: 'qf1', kind: 'followup', parentId: 번호만.id, question: '여기 모르겠어요', answer: null });
+    const 추가뒤 = qnaHasOpen(번호만);
+    DATA.qnaFollowups.find(f => f.id === 'qf1').answer = '이렇게 보면 돼요';
+    return { 빈것: 빈것 === null, 빈말, 글: 번호만.question, 영상: !!번호만.pv, 영상울림, 없는울림, 없는대기: qnaHasOpen(없는번호),
+      ...열림, 추가뒤, 답한뒤: qnaHasOpen(번호만),
+      딱지: 카드 ? (카드.querySelector('.badge') || {}).textContent : null,
+      이끔: !!카드 && 카드.textContent.includes('이해되지 않는 부분이 있으면') };
+  });
+  봄('교재·번호도 내용도 없으면 안 보낸다', [흐름.빈것, /교재·번호/.test(흐름.빈말)], [true, true]);
+  봄('🔴 교재·번호만 고르면 내용 없이 보낸다 — 글은 «교재 N번»', [흐름.글, 흐름.영상], ['주기나 1-1 65번', true]);
+  봄('풀이 영상이 간 질문은 선생님 폰을 안 울린다 · 영상이 없으면 울린다', [흐름.영상울림, 흐름.없는울림], [0, 1]);
+  봄('영상이 없는 번호는 대기', 흐름.없는대기, true);
+  봄('🔴 영상이 간 질문은 바로 «완료» (대기 아님)', 흐름.대기, false);
+  봄('🔴 학생이 추가 코멘트를 남기면 다시 대기 → 답하면 완료', [흐름.추가뒤, 흐름.답한뒤], [true, false]);
+  봄('학생 카드 딱지 «풀이 영상» · 보고 막히면 적으라고 이끈다', [흐름.딱지, 흐름.이끔], ['풀이 영상', true]);
+
   console.log('\n🔴 재생기는 구간 밖으로 못 나간다');
   const 가둠 = await page.evaluate(async id => {
     const vid = 'pv-' + id;
+    state.studentTab = 'qna'; state.stuPvOpen = id; render();   // 바로 위 검사가 다른 질문의 영상을 열어 두었다
     await new Promise(r => setTimeout(r, 300));      // mountVideoTrackers 가 가짜 YT 로 플레이어를 세운다
     const 있나 = !!vcPlayer(vid);
     const 글 = () => [document.getElementById('vc-cur-' + vid).textContent, document.getElementById('vc-dur-' + vid).textContent];

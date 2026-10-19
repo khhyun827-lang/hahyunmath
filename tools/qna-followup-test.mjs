@@ -44,7 +44,7 @@ function 판(o) {
   const F = new Function('DATA', 'state', 'document', 'authUid', 'todayStr', 'dbSetDoc', 'dbDeleteDoc', 'showToast', 'render', 'deleteFromDrive', 'imgFileIdOf', 'confirm', 'notifyAuto', 'qnaNoticeText', 'qnaNoticeVars', 'pushPing',
     /* ⚠ `deleteQna` 가 «답에 붙은 사진»까지 걷느라 `qnaMoreAnswersOf` 를 부른다 —
        목록에 없어 이 검사가 ReferenceError 로 터져 있었다. 옮겨 적지 않고 그대로 뜬다. */
-    [lift('splitQnaFollowups'), lift('qnaFollowupsOf'), lift('qnaMoreAnswersOf'), lift('qnaHasOpen'),
+    [lift('splitQnaFollowups'), lift('qnaFollowupsOf'), lift('qnaMoreAnswersOf'), lift('qnaAnswered'), lift('qnaHasOpen'),
      lift('qnaFind'), lift('qnaImgList'), lift('qnaPhotos'), lift('qnaPhotosBusy'), lift('qnaPhotoDocs'),
      lift('clearQnaPhotos'), lift('qnaDraftOf'), lift('qnaDraftSet'), lift('submitFollowup'), lift('submitAnswer'), lift('deleteQna')].join(NL)
     + NL + 'return { splitQnaFollowups, qnaFollowupsOf, qnaHasOpen, qnaFind, submitFollowup, submitAnswer, deleteQna };')(
@@ -135,8 +135,10 @@ console.log(NL + '④ 화면과 규칙의 닻' + NL);
     [강사.includes('qnaFollowupsOf(cur.id).map'),
      강사.includes('qnaAnswerFormHTML(f,'),
      답칸.includes("submitAnswer('${q.id}')")], [true, true, true]);
-  봄('학생 화면에 「추가 질문」 단추와 폼이 있다', 학생.includes("submitFollowup('${q.id}')") && 학생.includes('추가 질문</button>'), true);
-  봄('답이 없는 질문에는 추가 질문 단추가 안 뜬다', 학생.includes("${!q.answer ? '' : state.stuQnaFollowFor === q.id"), true);
+  /* 10-20 — 풀이 영상만 간 질문은 단추 이름이 «이해 안 되는 부분 적기»다(같은 단추 · 같은 폼) */
+  봄('학생 화면에 「추가 질문」 단추와 폼이 있다', 학생.includes("submitFollowup('${q.id}')") && 학생.includes("'추가 질문' : '이해 안 되는 부분 적기'}</button>"), true);
+  /* 10-20 — «답» = 글 답 또는 풀이 영상(qnaAnswered). 둘 다 없으면 단추가 안 뜬다 */
+  봄('답이 없는 질문에는 추가 질문 단추가 안 뜬다', 학생.includes("${!qnaAnswered(q) ? '' : state.stuQnaFollowFor === q.id"), true);
   const 규칙블록 = rules.slice(rules.indexOf('match /qnas/'), rules.indexOf('}', rules.indexOf('match /qnas/') + 20));
   봄('🔴 규칙은 안 건드렸다 — 학생은 여전히 만들기만', [규칙블록.includes('allow create: if realAccount() && request.resource.data.uid == request.auth.uid;'), 규칙블록.includes('allow update, delete: if isTeacher();')], [true, true]);
   봄('읽은 뒤 두 곳에서 가른다', (html.match(/splitQnaFollowups\(\);/g) || []).length, 2);
