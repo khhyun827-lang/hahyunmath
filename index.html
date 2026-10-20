@@ -6832,6 +6832,7 @@ async function loadItemStoreIfNeeded(){
       const byCode = {};
       for(const r of rows) if(r && r.code) byCode[r.code] = r;
       state.itemBody = byCode;
+      bookEditionsSync().catch(e => console.warn('[판 표] 못 맞췄다 —', e && e.message));   // 10-21 · 학생 «교재 문제 요청»이 읽는다
     }
     if(!state.variants) await loadVariantsIfNeeded();
   } finally { itemStoreLoading = null; }
@@ -6881,19 +6882,92 @@ async function loadItemLedgerIfNeeded(){
      · 없으면 내용이 빈 채로 `pending` 으로 쌓여 **강사 검토 화면의 「내용 없음」 줄**에 선다.
        거기서 만들고 검토해서 공개하면 그때 학생에게 뜬다. */
 function bookReqKey(code){ return 'bookreq:' + code; }
-/* 장부에 있는 책만 고르게 한다 — 없는 책을 고르면 무슨 번호를 쳐도 «없다»만 나온다. */
+/* =============== 교재 «판» 표 · 시즌 꼬리표 (2026-10-21 · 사용자 — 「시즌별로 1-2중간인지 1-2기말인지는 다 아니까
+     엔딩크레딧만 입력하면 년도와 1-2기말은 알아서 · 그 시즌일 때 엔딩크레딧 35번이라 하면 지금에 맞는 것으로」) ===============
+   🔴 **책 번호 ≠ 코드 일련번호다** — 1-2중간은 1~564 = 0001~0564 였지만 1-2기말 61번은 K2-06-E-0625(564+n).
+     예전 «교재 문제 요청»은 같다고 보고 1-2기말 번호를 1-2중간 문항으로 찾고 있었다.
+   ⇒ kv/book-editions = { editions: [{ name, part, year, nos: { "61": "K2-06-E-0625", … } }] } — 창고 본문 books 에서
+     강사 화면이 짓는다(창고를 실을 때 · 달라졌을 때만 씀). 학생은 이 한 건만 읽는다(창고 본문은 학생에게 비싸다).
+   시즌 꼬리표 = «[해][학년-학기중간|기말]» — 학교·학년의 지금 시험(방학이면 다음 시험) · 반은 가장 많은 학년.
+   ponytail: 1~2월 방학엔 학년이 아직 안 올라가 «다음 시험»의 학년이 하나 낮게 붙는다 — 그땐 대괄호로 직접 적을 것. */
+function bookEditionsBuild(){
+  const by = {};
+  for(const code in (state.itemBody || {})) for(const b of ((state.itemBody[code] || {}).books || [])){
+    if(!b || !b.no || !b.name) continue;
+    const k = b.year + '|' + b.part + '|' + b.name;
+    (by[k] = by[k] || { name: b.name, part: b.part, year: b.year, nos: {} }).nos[b.no] = code;
+  }
+  return Object.keys(by).sort().map(k => by[k]);
+}
+async function bookEditionsSync(){
+  const 새 = bookEditionsBuild();
+  if(!새.length) return;
+  state.bookEditions = 새;
+  const 옛 = await dbGet('book-editions', null);
+  if(dbReadFailed.has('book-editions')) return;            // 못 읽었으면 안 쓴다(덮을지 모른다)
+  if(JSON.stringify((옛 || {}).editions || null) !== JSON.stringify(새)) await dbSet('book-editions', { editions: 새 });
+}
+function bookEditionsEnsure(){
+  if(state.bookEditions || state.bookEditionsLoading) return;
+  state.bookEditionsLoading = dbGet('book-editions', null)
+    .then(v => { state.bookEditions = (v && v.editions) || []; render(); }, () => {})
+    .finally(() => { state.bookEditionsLoading = null; });
+}
+function bookEditionOfCode(code){
+  for(const e of (state.bookEditions || [])) for(const n in e.nos) if(e.nos[n] === code) return Object.assign({}, e, { no: +n });
+  return null;
+}
+function seasonTagOf(school, grade, ymd){
+  const g = String(grade || '').replace(/[^0-9]/g, '');
+  if(!/^[1-3]$/.test(g)) return null;
+  const t = examSeasonOf(school || '', grade || '', ymd), at = t.slot ? t : t.next;
+  return { year: Number(at.year), part: g + '-' + at.slot[0] + (/mid$/.test(at.slot) ? '중간' : '기말') };
+}
+function classSeasonTag(classId){
+  const r = classRoster(classId), 수 = {};
+  r.forEach(s => { const g = String(s.grade || ''); 수[g] = (수[g] || 0) + 1; });
+  const g = Object.keys(수).sort((a, b) => 수[b] - 수[a])[0];
+  const s = r.find(x => String(x.grade || '') === g) || {};
+  return seasonTagOf(s.school, s.grade);
+}
+/* 「엔딩크레딧」 → 「[2026][1-2기말][엔딩크레딧]」 · 이미 [해]를 적은 이름은 그대로 */
+function bookWithSeason(title, tag){
+  if(!tag || /\[\s*20\d\d\s*\]/.test(title)) return title;
+  return `[${tag.year}][${tag.part}][${title}]`;
+}
+/* 「[2026][1-2기말]엔딩크레딧」 → { year:2026, part:'1-2기말', name:'엔딩크레딧' } · 꼬리표 없는 이름은 name 만 */
+function bookTitleParts(title){
+  const s = String(title || ''), 칸 = [...s.matchAll(/\[([^\]]+)\]/g)].map(m => m[1].trim());
+  const year = 칸.find(x => /^20\d\d$/.test(x)), part = 칸.find(x => /^\d-\d(중간|기말)$/.test(x));
+  const name = [...칸.filter(x => x !== year && x !== part), s.replace(/\[[^\]]*\]/g, '').trim()].filter(Boolean).join(' ');
+  return { year: year ? +year : null, part: part || '', name };
+}
+function bookShortLabel(title){ const p = bookTitleParts(title); return p.year && p.part ? `${p.name} (${p.part})` : title; }
+
+/* 학생이 고를 책 — 판 표가 있는 책은 «내 지금 시즌» 판만(번호를 그 판으로 찾는다). 판 표에 아예 없는 책만 옛 길(번호 = 일련번호). */
 function bookReqBooks(){
+  const 판표 = state.bookEditions || [];
+  const me = (state.currentUser && DATA.students.find(s => s.studentId === state.currentUser.studentId)) || {};
+  const tag = seasonTagOf(me.school, me.grade);
+  const out = 판표.filter(e => tag && e.year === tag.year && e.part === tag.part)
+    .map(e => ({ code: 'ed:' + e.year + '|' + e.part + '|' + e.name, name: e.name + ' (' + e.part + ')' }));
+  const 판있는책 = new Set(판표.map(e => e.name));
   const 있는것 = new Set();
   for(const c in (state.itemByCode || {})){
     const m = String(c).match(ITEM_CODE_RE);
     if(m && !m[5]) 있는것.add(m[3]);          /* 변형 코드는 세지 않는다 — 학생이 고를 것은 «원본 책»이다 */
   }
-  return [...있는것].sort().map(b => ({ code: b, name: BOOK_OF_CODE[b] || b }));
+  return out.concat([...있는것].sort().filter(b => !판있는책.has(BOOK_OF_CODE[b] || b)).map(b => ({ code: b, name: BOOK_OF_CODE[b] || b })));
 }
-/* 책 + 번호 → 코드. 단원은 모르므로 장부를 훑어 찾는다(564개짜리라 값이 싸다). */
+/* 책 + 번호 → 코드. 판(ed:)이면 판 표로 · 아니면 장부를 훑는다(번호 = 일련번호). */
 function bookReqFind(bookCode, no){
   const n = String(no || '').replace(/[^0-9]/g, '');
   if(!bookCode || !n) return null;
+  if(bookCode.startsWith('ed:')){
+    const e = (state.bookEditions || []).find(x => 'ed:' + x.year + '|' + x.part + '|' + x.name === bookCode);
+    const code = e && e.nos[+n];
+    return code ? { code, item: (state.itemByCode || {})[code] || {} } : null;
+  }
   const seq = String(+n).padStart(4, '0');
   for(const c in (state.itemByCode || {})){
     const m = String(c).match(ITEM_CODE_RE);
@@ -18434,6 +18508,7 @@ function stuQuizHTML(c){
 function stuWrongHTML(c){
   loadItemLedgerIfNeeded();      /* 교재 요청이 번호를 확인할 장부 — 정적 파일이라 읽기 0 (K-17) */
   pvEnsure();                    /* 원본 문제 수업 풀이 — 목차 kv 한 건 (10-21) */
+  bookEditionsEnsure();          /* 교재 문제 요청 — 책 번호 → 코드 판 표 kv 한 건 (10-21) */
   /* 없는 문항을 가리키는 숙제는 «묶기 전에» 뺀다. 카드만 안 그리면
      「삭제된 시험지 0/15」짜리 빈 구획이 남는다 (아래 byExam이 그걸로 만들어진다). */
   const hws = liveWrongHomework(c.rec);
@@ -18582,7 +18657,7 @@ function stuWrongHTML(c){
                   const 단원 = chapterNameOf(m[1], m[2]);
                   return `<a class="pill on" ${TAP} onclick="bookReqDrop('${code}')"
                     title="${escHtml((단원||'') + (it.scene ? ' · ' + it.scene : ''))} — 누르면 뺍니다">${
-                    escHtml(BOOK_OF_CODE[m[3]] || m[3])} ${+m[4] || 0} ✕</a>`;
+                    escHtml(bookReqLabelOf(code))} ✕</a>`;
                 }).join('')}
               </div></div>`}
             <button class="mbtn p" style="margin-top:14px;" onclick="submitBookRequests()">요청하기</button>
@@ -20394,7 +20469,7 @@ function stuQnaHTML(c){
     <div class="sap-lab" style="margin-top:13px;">교재 · 번호 (문제 질문이면)</div>
     <div style="display:flex;gap:6px;">
       <select id="qna-book" class="sap-in" style="flex:1;min-width:0;"><option value="">교재 고르기</option>${
-        pvBookTitles(c.classId).map(t => `<option>${escHtml(t)}</option>`).join('')}</select>
+        pvBookTitles(c.classId).map(t => `<option value="${escHtml(t)}">${escHtml(bookShortLabel(t))}</option>`).join('')}</select>
       <input id="qna-num" class="sap-in" type="number" inputmode="numeric" min="1" placeholder="번호" style="width:92px;flex:none;">
     </div>
     <div class="sap-lab" style="margin-top:13px;">사진 (선택)</div>
@@ -23722,7 +23797,7 @@ function progBookPickerHTML(classId, date, books, inputId){
      그대로 등록을 쏘면, 이어 치려던 글자가 갈 곳을 잃는다(T-1에서 실제로 걸렸다). */
 async function addProgBook(classId, date, inputId){
   const el = document.getElementById(inputId);
-  const title = (el ? el.value : '').trim();
+  const title = bookWithSeason((el ? el.value : '').trim(), classSeasonTag(classId));   // 10-21 — 이름만 쳐도 시즌 꼬리표
   if(!title){ showToast('교재 이름을 적어 주세요.'); return; }
   const c = DATA.classes.find(x => x.id === classId);
   if(!c || !c.progress || !c.progress.subject){ showToast('과목을 먼저 고르세요.'); return; }
@@ -25051,7 +25126,8 @@ function sharedBooksFor(classId, subject){
 }
 async function addClassBook(classId, picked){
   const el = document.getElementById('cb-new');
-  const title = (picked != null ? String(picked) : (el ? el.value : '')).trim();
+  /* 고른 칩(다른 반·지난 시즌)은 이름 그대로 · 쳐 넣은 이름만 지금 시즌 꼬리표를 붙인다 (10-21) */
+  const title = picked != null ? String(picked).trim() : bookWithSeason((el ? el.value : '').trim(), classSeasonTag(classId));
   if(!title){ showToast('교재 이름을 적어 주세요.'); return; }
   const c = DATA.classes.find(x=>x.id===classId);
   if(!c || !c.progress || !c.progress.subject){ showToast('과목을 먼저 고르세요.'); return; }
@@ -25071,7 +25147,7 @@ async function addClassBook(classId, picked){
   }
   await dbSetDoc('classes', c.id, c);
   await logAudit('교재 등록', '', '', c.name + ' · ' + subject + ' · ' + title);
-  showToast('교재를 더했습니다.');
+  showToast('교재를 더했습니다 — ' + title);
   render();
 }
 /* 🔴 **인덱스가 아니라 «그 이름»으로 뺀다** (08-27에 글귀에서 실제로 걸렸던 덫).
@@ -26341,7 +26417,7 @@ function chubProgressHTML(classId){
          책이 들어가 버리고, 이어 치려던 글자는 갈 곳을 잃는다. 영문만 쳐 보면 절대 안 걸린다. */''}
     <div class="cls-form" style="margin-top:10px;">
       <label style="flex:1;min-width:230px;"><span>교재 이름</span>
-        <input id="cb-new" placeholder="예: [2026] 개념서 미적분Ⅰ"
+        <input id="cb-new" placeholder="${escHtml((t => t ? `예: 엔딩크레딧 ([${t.year}][${t.part}] 자동)` : '예: [2026][1-2기말][엔딩크레딧]')(classSeasonTag(classId)))}"
           onkeydown="if(event.key==='Enter' && !event.isComposing){ event.preventDefault(); addClassBook('${classId}'); }"></label>
       <button class="btn p sm" onclick="addClassBook('${classId}')">추가</button>
     </div>
@@ -31036,6 +31112,9 @@ function bookReqPending(){
   return Object.values(모음).sort((a, b) => String(a.at).localeCompare(String(b.at)));
 }
 function bookReqLabelOf(code){
+  bookEditionsEnsure();
+  const e = bookEditionOfCode(code);
+  if(e) return e.name + ' ' + e.part + ' ' + e.no + '번';
   const m = String(code).match(ITEM_CODE_RE) || [];
   return (BOOK_OF_CODE[m[3]] || m[3] || '교재') + ' ' + (+m[4] || 0);
 }
@@ -31049,17 +31128,19 @@ async function bookReqAccept(code){
   if(!요청){ showToast('그 요청이 이제 없습니다.'); render(); return; }
   const m = String(code).match(ITEM_CODE_RE) || [];
   let bank = DATA.problemBank.find(b => b.source === 'bookreq' && b.itemCode === code);
+  if(!state.bookEditions || !state.bookEditions.length) state.bookEditions = bookEditionsBuild();   // 이름표·번호를 책 번호로
+  const 판 = bookEditionOfCode(code);
   if(!bank){
     const v = codeVariantFor(code);
     const it = (state.itemByCode || {})[code] || {};
     bank = {
       id: 'pb' + Date.now() + '_' + code.replace(/-/g, ''),
       examId: '',                 /* 시험지에서 온 것이 아니다 — 「교재에서 요청한 문제」 묶음으로 선다 */
-      questionNo: +m[4] || 0, qkey: bookReqKey(code), qtype: '0', qlabel: bookReqLabelOf(code),
+      questionNo: 판 ? 판.no : (+m[4] || 0), qkey: bookReqKey(code), qtype: '0', qlabel: bookReqLabelOf(code),
       originalContent: '', originalAnswer: '',    /* 본문은 창고가 진실이다 — bankOriginal 이 뜬다 */
       variantContent: v ? v.content : '', variantAnswer: v ? v.answer : '',
       status: v ? 'approved' : 'pending',
-      source: 'bookreq', bookCode: m[3] || '', bookNo: +m[4] || 0,
+      source: 'bookreq', bookCode: m[3] || '', bookNo: 판 ? 판.no : (+m[4] || 0),
       scene: it.scene || '', variantCode: v ? v.code : '', requestedAt: 요청.at || todayStr(),
       subject: SUBJECT_OF_CODE[m[1]] || '', chapter: m[2] || '', itemCode: code
     };

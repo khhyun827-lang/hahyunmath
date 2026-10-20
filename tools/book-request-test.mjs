@@ -59,7 +59,8 @@ const 장부 = {
      그리고 D 는 원본이 하나도 없는 책이다 — 변형을 세면 고르개에 D 가 끼어든다. */
 };
 const 잣대 = [liftConst('ITEM_CODE_RE'), liftConst('BOOK_OF_CODE'), liftConst('SUBJECT_OF_CODE')].join(NL) + NL +
-  [lift('bookReqKey'), lift('bookReqBooks'), lift('bookReqFind')].join(NL);
+  [lift('bookReqKey'), lift('bookReqBooks'), lift('bookReqFind'), lift('bookEditionOfCode'),
+   'function seasonTagOf(){ return null; }', 'function bookEditionsEnsure(){}', lift('bookEditionsBuild')].join(NL);   // 판 표 없음 = 옛 길 (판 길은 book-edition-test)
 /* ═══ ① 번호 → 코드 ═══ */
 console.log(NL + '① 책에 적힌 번호로 문항을 찾는다' + NL);
 {

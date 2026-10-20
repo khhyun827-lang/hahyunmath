@@ -57,7 +57,7 @@ function 판(opts){
     classProgBookAdd: false,
   };
   const F = new Function('DATA','state','document','dbSet','dbSetDoc','logAudit','showToast','render','getClassProgress','classNameOf',
-    "function todayStr(){ return '2026-10-18'; }" + NL + 이름들.map(lift).join(NL) + NL + 'return {' + 이름들.join(',') + '};')(
+    "function todayStr(){ return '2026-10-18'; }" + NL + 'function classSeasonTag(){ return null; }' + NL + lift('bookWithSeason') + NL + 이름들.map(lift).join(NL) + NL + 'return {' + 이름들.join(',') + '};')(
     DATA, state,
     { getElementById: (id) => (id in 칸) ? { value: 칸[id] } : null },
     async (k, v) => 쓴것.push({ 문서:k, 값: JSON.parse(JSON.stringify(v)) }),

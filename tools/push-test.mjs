@@ -147,7 +147,7 @@ const TOK = 'fcmTokenAAAAAAAAAAAAAAAAAAAAAA';
   봄('🔴 pushPing 은 학생만 부른다', /u\.type !== 'student'\) return;/.test(핑), true);
   봄('   기다리지 않고 실패는 삼킨다', /\.catch\(/.test(핑) && !/await/.test(핑), true);
   const 질문 = 몸떠내기(html, 'async function submitQuestion(');
-  봄('🔴 질문 — 저장이 된 뒤에만', /if\(저장됨 === true\) pushPing\('qna'/.test(질문), true);
+  봄('🔴 질문 — 저장이 된 뒤에만 (풀이 영상이 간 질문은 안 울린다 · 10-20)', /if\(저장됨 === true(?: && !pv)?\) pushPing\('qna'/.test(질문), true);
   const 클리닉 = 몸떠내기(html, 'async function submitClinicRequest(');
   봄('🔴 클리닉 — «직접 제안»만 · 저장된 뒤', /if\(freeform && 저장됨 === true\) pushPing\('clinic'/.test(클리닉), true);
   const 채팅 = 몸떠내기(html, 'async function sendChatMessage(');
