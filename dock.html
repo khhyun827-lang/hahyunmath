@@ -34,7 +34,7 @@ html,body{height:100%;overflow:hidden;font-family:'Pretendard',-apple-system,san
 #dock.autohide:not(.show)[data-pos=right]{transform:translate(calc(100% + 16px),-50%);}
 /* 2열 — 오른쪽 카드 바로 왼쪽에 아이콘 타일 두 줄 (10-18 사용자 — 「달력·할 일과 어우러지게 2열로」). 위쪽은 카드 위와 맞춘다(frame) */
 #dock[data-pos=grid]{display:grid;grid-template-columns:repeat(2,var(--dk));gap:calc(var(--dk)*.4);height:auto;
-  right:calc(3vw + 300px + 18px);top:50%;transform:translateY(-50%);}
+  right:calc(3vw + 616px + 18px);top:50%;transform:translateY(-50%);}
 #board[hidden] ~ #dock[data-pos=grid]{right:3vw;}
 #dock[data-pos=grid] .dk-sep{display:none;}
 #dock[data-pos=grid] .dk-tip{left:auto;right:calc(100% + 12px);bottom:auto;top:50%;transform:translateY(-50%);}
@@ -73,13 +73,22 @@ html,body{height:100%;overflow:hidden;font-family:'Pretendard',-apple-system,san
 #clock{position:fixed;left:6vw;top:50%;transform:translateY(-50%);z-index:5;color:#fff;pointer-events:none;
   text-shadow:0 2px 18px rgba(0,0,0,.35);user-select:none;}
 #clock[hidden]{display:none;}
+#clock .lg{display:block;width:clamp(110px,9vw,180px);margin:0 0 .9em .2em;opacity:.9;filter:drop-shadow(0 2px 14px rgba(234,169,182,.3));}
+#clock .lg[hidden]{display:none;}
+#clock .lg.go{pointer-events:auto;cursor:pointer;}
 #clock .tm{font-size:clamp(72px,7.5vw,150px);font-weight:200;line-height:1;letter-spacing:-.02em;font-variant-numeric:tabular-nums;}
 #clock .tm small{font-size:.24em;font-weight:400;letter-spacing:0;margin-left:.35em;opacity:.8;}
 #clock .dt{margin-top:.5em;font-size:clamp(20px,1.7vw,32px);font-weight:500;opacity:.88;}
-/* 오른쪽 카드 — 달력 · 다가오는 내 일정 · 할 일 (10-18 사용자 — 「보기만 · 오른쪽 카드」). 웹 홈의 memo:<uid> 문서를 읽기만 한다 */
-#board{position:fixed;right:3vw;top:50%;transform:translateY(-50%);z-index:5;width:300px;box-sizing:border-box;padding:18px 18px 14px;
-  color:#fff;background:rgba(22,23,30,.78);border:1px solid rgba(255,255,255,.08);border-radius:22px;
-  box-shadow:0 18px 40px rgba(0,0,0,.35);font-size:13px;user-select:none;}
+/* 오른쪽 위젯 — 달력 · 다가오는 내 일정 · 할 일 · AI 한도 (10-18 사용자 — 「보기만 · 오른쪽 카드」). 웹 홈의 memo:<uid> 문서를 읽기만 한다
+   🔵 10-20 사용자 — 「추가할 때마다 달력 밑으로 쌓여 간다 · 분리」 → 한 판을 카드 넷으로, 두 열(오른쪽 달력·일정 / 왼쪽 할 일·AI) */
+#board{position:fixed;right:3vw;top:50%;transform:translateY(-50%);z-index:5;display:flex;gap:16px;align-items:flex-start;
+  color:#fff;font-size:13px;user-select:none;}
+#board .bd-col{display:flex;flex-direction:column;gap:16px;}
+#board .bd-card{width:300px;box-sizing:border-box;padding:16px 18px 14px;border-radius:22px;}
+#board .bd-card[hidden]{display:none;}
+/* 유리 — 위가 살짝 밝고 가장자리에 빛 테 (10-20 사용자 — 「조금 더 예쁘게」). ⚠ 진짜 흐림(backdrop-filter)은 안 된다 — 창 뒤 바탕화면은 페이지 밖이라 */
+#board .bd-card,#search{background:linear-gradient(165deg,rgba(255,255,255,.14),rgba(255,255,255,.03) 42%),rgba(18,20,28,.6);
+  border:1px solid rgba(255,255,255,.15);box-shadow:inset 0 1px 0 rgba(255,255,255,.14),0 18px 40px rgba(0,0,0,.35);}
 #board[hidden]{display:none;}
 #board .bd-ym{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px;}
 #board .bd-ym b{font-size:15px;font-weight:700;}
@@ -90,7 +99,6 @@ html,body{height:100%;overflow:hidden;font-family:'Pretendard',-apple-system,san
 #board .bd-grid .bd-su{color:#ff8a8a;} #board .bd-grid .bd-sa{color:#8ab4ff;}
 #board .bd-grid .bd-t span{display:inline-block;width:24px;height:24px;border-radius:50%;background:#ff5f6d;color:#fff;font-weight:700;}
 #board .bd-grid .bd-e::after{content:'';position:absolute;left:50%;bottom:0;width:4px;height:4px;margin-left:-2px;border-radius:50%;background:rgba(255,255,255,.7);}
-#board .bd-sec{margin-top:14px;padding-top:12px;border-top:1px solid rgba(255,255,255,.1);}
 #board .bd-h{margin:0 0 8px;font-size:11px;font-weight:700;letter-spacing:.04em;color:rgba(255,255,255,.5);}
 #board ul{list-style:none;margin:0;padding:0;}
 #board li{display:flex;gap:8px;align-items:baseline;padding:4px 0;line-height:1.4;}
@@ -109,8 +117,7 @@ html,body{height:100%;overflow:hidden;font-family:'Pretendard',-apple-system,san
 #board .bd-add[hidden]{display:none;}
 /* 검색창 — 아래 가운데 · Enter 면 기본 브라우저로 구글 검색 (10-18) */
 #search{position:fixed;left:50%;bottom:6vh;transform:translateX(-50%);z-index:5;width:min(440px,40vw);height:44px;box-sizing:border-box;
-  display:flex;align-items:center;gap:10px;padding:0 18px;background:rgba(22,23,30,.78);border:1px solid rgba(255,255,255,.08);border-radius:22px;
-  box-shadow:0 12px 30px rgba(0,0,0,.3);}
+  display:flex;align-items:center;gap:10px;padding:0 18px;border-radius:22px;}
 #search[hidden]{display:none;}
 #dock[data-pos=bottom] ~ #search{bottom:140px;}   /* 아래 Dock 과 겹치지 않게 */
 #search svg{flex:none;width:18px;height:18px;color:rgba(255,255,255,.55);}
@@ -119,6 +126,14 @@ html,body{height:100%;overflow:hidden;font-family:'Pretendard',-apple-system,san
 /* 폴더 — 이름마다 다른 색 + 머리글자, 폴더가 여럿이어도 한눈에 (10-18 사용자 — 「다른 폴더를 더 넣어도 구분되게」) */
 .dk-item .ic.fold{padding:11%;}
 .dk-item .ic.fold svg{width:100%;height:100%;display:block;}
+/* 오늘 AI 한도 — 남은 것 (10-20) */
+#board .bd-h small{float:right;font-weight:500;letter-spacing:0;}
+#board .bd-q{display:grid;grid-template-columns:auto 1fr auto;gap:7px 10px;align-items:center;font-size:12px;}
+#board .bd-q i{height:4px;border-radius:2px;background:rgba(255,255,255,.12);overflow:hidden;}
+#board .bd-q i b{display:block;height:100%;border-radius:2px;background:#7fd1a8;}
+#board .bd-q i b.hi{background:#f2c46d;} #board .bd-q i b.full{background:#ff6b78;}
+#board .bd-q .n{font-size:11.5px;color:rgba(255,255,255,.6);font-variant-numeric:tabular-nums;text-align:right;}
+#board .bd-q .n.full{color:#ff8a95;}
 #board .bd-none{color:rgba(255,255,255,.4);font-size:12px;padding:2px 0;}
 #board .bd-note{margin:12px 0 0;font-size:11px;color:rgba(255,255,255,.4);line-height:1.5;}
 .acct input{width:110px;height:30px;box-sizing:border-box;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--sunk);padding:0 8px;font:inherit;}
@@ -191,14 +206,18 @@ html,body{height:100%;overflow:hidden;font-family:'Pretendard',-apple-system,san
 </style>
 </head>
 <body>
-<div id="clock" hidden><div class="tm"></div><div class="dt"></div></div>
+<div id="clock" hidden><img class="lg" alt="김하현수학연구소" hidden><div class="tm"></div><div class="dt"></div></div>
 <aside id="board" hidden aria-label="달력·할 일">
-  <div class="bd-ym"><b></b><span></span></div>
-  <div class="bd-grid"></div>
-  <div class="bd-sec"><p class="bd-h">다가오는 일정</p><ul id="bd-ev"></ul></div>
-  <div class="bd-sec"><p class="bd-h">할 일</p><ul id="bd-todo"></ul>
-    <form id="bd-addf"><input class="bd-add" id="bd-add" name="t" placeholder="할 일 추가 — 적고 Enter" maxlength="200" hidden autocomplete="off"></form></div>
-  <p class="bd-note" id="bd-note"></p>
+  <div class="bd-col">
+    <section class="bd-card"><p class="bd-h">할 일</p><ul id="bd-todo"></ul>
+      <form id="bd-addf"><input class="bd-add" id="bd-add" name="t" placeholder="할 일 추가 — 적고 Enter" maxlength="200" hidden autocomplete="off"></form>
+      <p class="bd-note" id="bd-note"></p></section>
+    <section class="bd-card" id="bd-qs" hidden><p class="bd-h">오늘 AI 한도 <small>오전 9시에 새로</small></p><div class="bd-q" id="bd-q"></div></section>
+  </div>
+  <div class="bd-col">
+    <section class="bd-card"><div class="bd-ym"><b></b><span></span></div><div class="bd-grid"></div></section>
+    <section class="bd-card"><p class="bd-h">다가오는 일정</p><ul id="bd-ev"></ul></section>
+  </div>
 </aside>
 <div id="edge"></div>
 <nav id="dock" hidden aria-label="Dock">
@@ -238,6 +257,7 @@ html,body{height:100%;overflow:hidden;font-family:'Pretendard',-apple-system,san
       <label class="row">위치<select id="s-pos"><option value="bottom">아래</option><option value="center">화면 정가운데</option><option value="left">왼쪽</option><option value="right">오른쪽</option><option value="grid">오른쪽 2열 (카드 옆)</option></select></label>
       <label class="row" id="r-hide">자동 숨김<input type="checkbox" id="s-hide"></label>
       <label class="row">시계·날짜 (왼쪽)<input type="checkbox" id="s-clock"></label>
+      <label class="row">로고 (시계 위 · 누르면 김하현 Desktop)<input type="checkbox" id="s-logo"></label>
       <label class="row">검색창 (아래 가운데)<input type="checkbox" id="s-search"></label>
     </section>
     <section>
@@ -306,7 +326,7 @@ function frame(){
   else if(s.position === 'center') d = [r.left - 20, r.top - up, r.width + 40, r.height + up * 2];
   else d = tucked ? [r.left - 20, H - 6, r.width + 40, 6] : [r.left - 20, r.top - up, r.width + 40, H - r.top + up];
   const rects = [d];
-  if(!board.hidden){ const c = board.getBoundingClientRect(); rects.push([c.left - 30, c.top - 30, c.width + 60, c.height + 60]); }
+  if(!board.hidden) board.querySelectorAll('.bd-card:not([hidden])').forEach(el => { const c = el.getBoundingClientRect(); rects.push([c.left - 30, c.top - 30, c.width + 60, c.height + 60]); });   // 카드마다 — 사이 틈은 바탕화면이 눌린다
   if(!searchBox.hidden){ const c = searchBox.getBoundingClientRect(); rects.push([c.left - 30, c.top - 30, c.width + 60, c.height + 60]); }
   if(!clockBox.hidden){ const c = clockBox.getBoundingClientRect(); rects.push([c.left - 30, c.top - 30, c.width + 60, c.height + 60]); }   // 넉넉히 — 글자 그림자가 잘리지 않게
   const m = { cmd:'frame', mode: full ? 'full' : 'dock', rects: rects.map(q => q.map(v => Math.round(v * k))) };
@@ -335,6 +355,17 @@ function tick(){
   setTimeout(tick, 60000 - n.getSeconds() * 1000 - n.getMilliseconds() + 20);   // 분이 바뀌는 때에 맞춰
 }
 function showClock(){ clockBox.hidden = !clockOn; frame(); }
+/* 로고 — 마크만 밤 색으로(배경화면 «밤»과 같은 칠 · logoForNight) · 누르면 Dock 의 «김하현 Desktop» 항목을 연다 (10-20) */
+let logoOn = (() => { try{ return localStorage.getItem('dock.logo') !== '0'; }catch(e){ return true; } })();
+function showLogo(){
+  const im = clockBox.querySelector('.lg'), site = cfg && cfg.items.find(it => /HahyunDesktop\.exe$/i.test(it.target || ''));
+  im.hidden = !logoOn || !im.src;
+  im.classList.toggle('go', !!site);
+  im.onclick = site ? () => send({cmd:'open', id:site.id}) : null;
+  im.title = site ? '김하현 Desktop 열기' : '';
+  frame();
+}
+$('#s-logo').onchange = e => { logoOn = e.target.checked; try{ localStorage.setItem('dock.logo', logoOn ? '1' : '0'); }catch(x){} showLogo(); };
 tick();
 /* ---------- 오른쪽 카드 — 웹 홈의 강사 메모 문서(kv/memo:<uid> {todos, events})를 «읽기만» ----------
    🔵 Dock 은 제 브라우저 폴더(WebView2-Dock)를 쓰므로 로그인을 한 번 따로 한다(설정 › 달력·할 일). 쓰기는 하지 않는다.
@@ -356,8 +387,37 @@ async function loadMemo(){
   }catch(e){ memoErr = '웹에서 불러오지 못했습니다 — 5분 뒤 다시 해 봅니다'; }
   renderBoard();
 }
-fbAuth.onAuthStateChanged(() => { loadMemo(); if(!setBox.hidden) renderAcct(); });
-setInterval(loadMemo, 5 * 60 * 1000);
+/* 오늘 AI 한도 — 워커 /quota 를 «보기만»(세지 않는다). Cloudflare KV 읽기라 Firestore 한도와 상관없다 (5분마다 12건 · 하루 10만 중 3.5천).
+   🔵 10-20 사용자 — 「AI 한도 잊고 지나가는 날이 많아서」 → 남은 것을 늘 보인다. 워커의 하루는 UTC 라 한국 오전 9시에 새로 찬다. */
+const AI_WORKER = 'https://hahyunmath-gemini-proxy.khhyun827.workers.dev';
+const QUOTAS = [['', 'AI 변형 · Gemini'], ['twin-groq', 'AI 변형 · Groq'], ['review', 'AI 검토']];
+let quota = null;
+async function loadQuota(){
+  const u = fbAuth.currentUser;
+  try{
+    if(!u) throw 0;
+    const H = { Authorization:'Bearer ' + await u.getIdToken() };
+    quota = await Promise.all(QUOTAS.map(async ([b]) => {
+      const r = await fetch(AI_WORKER + '/quota' + (b ? '?bucket=' + b : ''), { method:'POST', headers:H });
+      if(!r.ok) throw new Error('http ' + r.status);
+      return r.json();
+    }));
+  }catch(e){ quota = null; }
+  renderQuota();
+}
+function renderQuota(){
+  $('#bd-qs').hidden = !quota;
+  if(quota) $('#bd-q').replaceChildren(...quota.flatMap((q, i) => {
+    const bar = document.createElement('i'), fill = document.createElement('b'), p = q.limit ? q.used / q.limit : 0;
+    const cls = q.remaining > 0 ? (p >= .8 ? 'hi' : '') : 'full';
+    fill.style.width = Math.min(100, p * 100) + '%'; fill.className = cls; bar.append(fill);
+    return [span('', QUOTAS[i][1]), bar, span('n ' + cls, q.remaining > 0 ? q.remaining + '/' + q.limit + ' 남음' : '다 씀')];
+  }));
+  frame();
+}
+const refresh = () => { loadMemo(); loadQuota(); };
+fbAuth.onAuthStateChanged(() => { refresh(); if(!setBox.hidden) renderAcct(); });
+setInterval(refresh, 5 * 60 * 1000);
 
 const ymdOf = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
 function li(cls, kids){ const l = document.createElement('li'); if(cls) l.className = cls; l.append(...kids); return l; }
@@ -495,7 +555,7 @@ function renderDock(){
       clearTimeout(b._go); b._go = setTimeout(() => b.classList.remove('go'), 1200); };
     return b;
   }));
-  dock.hidden = false; clockBox.hidden = !clockOn; searchBox.hidden = !searchOn; renderBoard();
+  dock.hidden = false; clockBox.hidden = !clockOn; searchBox.hidden = !searchOn; renderBoard(); showLogo();
   requestAnimationFrame(frame);
 }
 $('#dk-gear').onclick = openSettings;
@@ -543,7 +603,7 @@ function renderSettings(){
   const s = cfg.settings;
   $('#s-size').value = s.size; $('#o-size').value = s.size;
   $('#s-mag').value = s.magnify; $('#o-mag').value = '×' + s.magnify;
-  $('#s-pos').value = s.position; $('#s-hide').checked = s.autohide; $('#s-clock').checked = clockOn; $('#s-search').checked = searchOn; $('#s-board').checked = boardOn; renderAcct();
+  $('#s-pos').value = s.position; $('#s-hide').checked = s.autohide; $('#s-clock').checked = clockOn; $('#s-logo').checked = logoOn; $('#s-search').checked = searchOn; $('#s-board').checked = boardOn; renderAcct();
   $('#r-hide').hidden = noEdge(s.position);
   $('#s-auto').checked = !!cfg.autostart.dock;
   $('#r-site').hidden = cfg.autostart.site == null;      // 김하현 Desktop 이 같이 깔려 있을 때만
@@ -605,6 +665,13 @@ $('#url-form').onsubmit = e => {
 const LOGO = new Image();
 LOGO.src = 'brand-logo.png';
 const LOGO_W = 708, LOGO_H = 431;
+const MARK = [95, 0, 520, 215];   // 로고 그림 안 «마크»(글자 위) 자리
+LOGO.addEventListener('load', () => {
+  const c = document.createElement('canvas'); c.width = MARK[2]; c.height = MARK[3];
+  c.getContext('2d').drawImage(logoForNight(), ...MARK, 0, 0, MARK[2], MARK[3]);
+  clockBox.querySelector('.lg').src = c.toDataURL();
+  showLogo();
+}, { once:true });
 const WIRE_M = [0.95639, 0, 0, 0.95639, 103.244, -0.320];
 const S1 = 'M13.72 29.25L51.20 29.25A105.32 105.32 0 0 1 155.40 119.30A79.95 79.95 0 0 0 300.66 152.60L361.54 62.91A79.97 79.97 0 1 1 373.05 166.20L346.57 204.47';
 const S2 = 'M155.40 119.30A79.95 79.95 0 0 1 290.16 50.30L315.98 12.74';
