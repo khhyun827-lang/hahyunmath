@@ -69,7 +69,7 @@ html,body{height:100%;overflow:hidden;font-family:'Pretendard',-apple-system,san
 @keyframes dk-bounce{0%,50%,100%{translate:0 0}22%{translate:0 -38%}72%{translate:0 -16%}}
 #dock[data-pos=left] .dk-item.go,#dock[data-pos=right] .dk-item.go{animation:none;}
 /* 시계·날짜 (10-18 사용자 — 「시계 날짜 넣어 줘」) — 왼쪽 가운데, 맥 잠금 화면처럼 가늘고 크게 */
-#clock{position:fixed;left:6vw;top:42%;transform:translateY(-50%);z-index:5;color:#fff;pointer-events:none;
+#clock{position:fixed;left:6vw;top:47%;transform:translateY(-50%);z-index:5;color:#fff;pointer-events:none;
   text-shadow:0 2px 18px rgba(0,0,0,.35);user-select:none;}
 #clock[hidden]{display:none;}
 #clock .lg{display:block;width:clamp(110px,9vw,180px);margin:0 0 .9em .2em;opacity:.9;filter:drop-shadow(0 2px 14px rgba(234,169,182,.3));}
@@ -80,7 +80,7 @@ html,body{height:100%;overflow:hidden;font-family:'Pretendard',-apple-system,san
 #clock .dt{margin-top:.5em;font-size:clamp(20px,1.7vw,32px);font-weight:500;opacity:.88;}
 /* 오른쪽 위젯 — 달력 · 다가오는 내 일정 · 할 일 · AI 한도 (10-18 사용자 — 「보기만 · 오른쪽 카드」). 웹 홈의 memo:<uid> 문서를 읽기만 한다
    🔵 10-20 사용자 — 「추가할 때마다 달력 밑으로 쌓여 간다 · 분리」 → 한 판을 카드 넷으로, 두 열(오른쪽 달력·일정 / 왼쪽 할 일·AI) */
-#board{position:fixed;right:3vw;top:max(40px,9vh);z-index:5;display:flex;gap:16px;align-items:flex-start;
+#board{position:fixed;right:3vw;top:max(40px,14vh);z-index:5;display:flex;gap:16px;align-items:flex-start;
   color:#fff;font-size:13px;user-select:none;}
 #board .bd-col{display:flex;flex-direction:column;gap:16px;}
 #board .bd-card{width:300px;box-sizing:border-box;padding:16px 18px 14px;border-radius:22px;}
