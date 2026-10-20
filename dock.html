@@ -133,6 +133,35 @@ html,body{height:100%;overflow:hidden;font-family:'Pretendard',-apple-system,san
 #board .bd-q i b.hi{background:#f2c46d;} #board .bd-q i b.full{background:#ff6b78;}
 #board .bd-q .n{font-size:11.5px;color:rgba(255,255,255,.6);font-variant-numeric:tabular-nums;text-align:right;}
 #board .bd-q .n.full{color:#ff8a95;}
+/* 묶음 아이콘 — 안의 것 넷을 작게 (아이폰 폴더처럼) */
+.ic.grp{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:7%;padding:15%;}
+.set-card .ic.grp{padding:3px;gap:2px;background:#2a2b31;border-radius:22%;}
+.set-card .ic.grp > .ic.letter{font-size:7px;}
+#set-items .ic.grp{display:grid;}   /* .set-card .ic(block)보다 세게 */
+#set-items .ic.grp > .ic{width:100%;height:100%;padding:1px;}
+.ic.grp > .ic{width:100%;height:100%;min-width:0;min-height:0;padding:0;box-shadow:none;border-radius:24%;}
+.ic.grp > .ic.dk-tile{padding:8%;background:rgba(255,255,255,.1);}
+.ic.grp > .ic.letter{font-size:16cqw;}
+.ic.grp > .ic.fold{padding:0;background:none;}
+/* 펼친 창 — 폴더 안 · 묶음 안 (10-20 사용자 — 「독 안에 독」) */
+#pop{position:fixed;z-index:15;box-sizing:border-box;padding:12px 14px 14px;border-radius:22px;color:#fff;max-height:70vh;overflow:auto;
+  background:linear-gradient(165deg,rgba(255,255,255,.14),rgba(255,255,255,.03) 42%),rgba(22,24,32,.97);
+  border:1px solid rgba(255,255,255,.15);box-shadow:inset 0 1px 0 rgba(255,255,255,.14),0 18px 40px rgba(0,0,0,.4);}
+#pop[hidden]{display:none;}
+#pop .pp-h{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 2px 10px;font-size:13px;}
+#pop .pp-open{border:0;border-radius:8px;padding:4px 9px;background:rgba(255,255,255,.1);color:rgba(255,255,255,.8);font:inherit;font-size:11.5px;cursor:pointer;}
+#pop .pp-open:hover{background:rgba(255,255,255,.2);}
+#pop .pp-open[hidden]{display:none;}
+#pop .pp-grid{display:grid;grid-template-columns:repeat(var(--pc,4),78px);gap:10px 6px;}
+#pop .pp-t{display:flex;flex-direction:column;align-items:center;gap:6px;padding:6px 2px;border:0;border-radius:12px;background:none;color:#fff;cursor:pointer;container-type:inline-size;}
+#pop .pp-t:hover{background:rgba(255,255,255,.1);}
+#pop .pp-t .ic{width:48px;height:48px;display:block;object-fit:contain;box-sizing:border-box;border-radius:22%;}
+#pop .pp-t .ic.fold{padding:2px;}
+#pop .pp-t .ic.fold svg{width:100%;height:100%;display:block;}
+#pop .pp-t .ic.dk-tile{padding:10px;background:rgba(30,31,36,.92);}
+#pop .pp-t .ic.letter{display:grid;place-items:center;background:linear-gradient(140deg,var(--point-lt),var(--point-d));font-weight:700;font-size:20px;}
+#pop .pp-n{width:100%;font-size:11.5px;line-height:1.3;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+#pop .pp-none{margin:4px 2px;font-size:12px;color:rgba(255,255,255,.5);}
 #board .bd-none{color:rgba(255,255,255,.4);font-size:12px;padding:2px 0;}
 #board .bd-note{margin:12px 0 0;font-size:11px;color:rgba(255,255,255,.4);line-height:1.5;}
 .acct input{width:110px;height:30px;box-sizing:border-box;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--sunk);padding:0 8px;font:inherit;}
@@ -170,8 +199,10 @@ html,body{height:100%;overflow:hidden;font-family:'Pretendard',-apple-system,san
 .set-card .ic.letter{display:grid;place-items:center;border-radius:22%;color:#fff;font-weight:700;
   background:linear-gradient(140deg,var(--point-lt),var(--point-d));}
 .set-add{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;}
-#url-form{display:flex;gap:6px;margin-top:8px;}
-#url-form[hidden]{display:none;}
+#url-form,#grp-form{display:flex;gap:6px;margin-top:8px;}
+#url-form[hidden],#grp-form[hidden]{display:none;}
+#grp-form input{height:30px;box-sizing:border-box;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--sunk);font:inherit;padding:0 9px;flex:1;}
+#set-items .gsel{flex:none;max-width:110px;height:26px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--sunk);font:inherit;font-size:12px;padding:0 4px;}
 #url-form input{height:30px;box-sizing:border-box;border:1px solid var(--line);border-radius:var(--r-sm);
   background:var(--sunk);font:inherit;padding:0 9px;min-width:0;}
 #url-form input:focus{outline:none;border-color:var(--point);box-shadow:0 0 0 3px var(--point-ring);}
@@ -227,6 +258,7 @@ html,body{height:100%;overflow:hidden;font-family:'Pretendard',-apple-system,san
     <span class="dk-tip">Dock 설정</span>
   </button>
 </nav>
+<div id="pop" hidden><div class="pp-h"><b></b><button class="pp-open">탐색기에서 열기</button></div><div class="pp-grid"></div></div>
 <form id="search" hidden role="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
   <input name="q" placeholder="구글에서 검색" maxlength="300" autocomplete="off" aria-label="구글에서 검색"></form>
 
@@ -242,7 +274,12 @@ html,body{height:100%;overflow:hidden;font-family:'Pretendard',-apple-system,san
         <button class="btn sm" data-pick="folder">+ 폴더</button>
         <button class="btn sm" data-pick="file">+ 파일</button>
         <button class="btn sm" id="add-url">+ 웹사이트</button>
+        <button class="btn sm" id="add-grp" title="여러 항목을 한 아이콘에 — 누르면 펼쳐진다">+ 묶음</button>
       </div>
+      <form id="grp-form" hidden>
+        <input name="name" placeholder="묶음 이름 (예: AI)" required maxlength="40">
+        <button class="btn pt sm">만들기</button>
+      </form>
       <form id="url-form" hidden>
         <input name="name" placeholder="이름" required>
         <input name="url" placeholder="https://" required>
@@ -292,7 +329,7 @@ html,body{height:100%;overflow:hidden;font-family:'Pretendard',-apple-system,san
              · search{q}(앱이 구글 검색 주소를 만든다) · frame{mode:'dock'|'full', rects:[[x,y,w,h]…]}(물리 픽셀 — 창은 작업 영역 가득, 이 칸들만 보이고 눌린다) · wallpaper{png}(data:image/png) */
 const $ = s => document.querySelector(s);
 const bridge = window.chrome && window.chrome.webview;
-const dock = $('#dock'), edge = $('#edge'), setBox = $('#set');
+const dock = $('#dock'), edge = $('#edge'), setBox = $('#set'), pop = $('#pop');
 let cfg = null;
 const send = m => bridge && bridge.postMessage(m);
 
@@ -300,6 +337,7 @@ if(bridge){
   bridge.addEventListener('message', e => {
     const m = e.data;
     if(m.cmd === 'config'){ cfg = m; renderDock(); if(!setBox.hidden) renderSettings(); }
+    else if(m.cmd === 'list' && m.id === popFor) fillPop(m.entries.map(e => ({ el: entryIcon(e), name: e.name, go: () => send({cmd:'openIn', id:m.id, name:e.name}) })));
     else if(m.cmd === 'error' || m.cmd === 'done'){ toast(m.text); if(m.cmd === 'done') wpBusy(false); }
   });
   send({cmd:'get'});
@@ -330,6 +368,7 @@ function frame(){
   const rects = [d];
   if(!board.hidden) board.querySelectorAll('.bd-card:not([hidden])').forEach(el => { const c = el.getBoundingClientRect(); rects.push([c.left - 30, c.top - 30, c.width + 60, c.height + 60]); });   // 카드마다 — 사이 틈은 바탕화면이 눌린다
   if(!searchBox.hidden){ const c = searchBox.getBoundingClientRect(); rects.push([c.left - 30, c.top - 30, c.width + 60, c.height + 60]); }
+  if(!pop.hidden){ const c = pop.getBoundingClientRect(); rects.push([c.left - 20, c.top - 20, c.width + 40, c.height + 40]); }
   if(!clockBox.hidden){ const c = clockBox.getBoundingClientRect(); rects.push([c.left - 30, c.top - 30, c.width + 60, c.height + 60]); }   // 넉넉히 — 글자 그림자가 잘리지 않게
   const m = { cmd:'frame', mode: full ? 'full' : 'dock', rects: rects.map(q => q.map(v => Math.round(v * k))) };
   const key = JSON.stringify(m);
@@ -528,6 +567,7 @@ function folder(it){
   return d;
 }
 function iconEl(it){
+  if(it.kind === 'group' && !it.custom) return groupIcon(it);
   if(it.kind === 'folder' && !it.custom) return folder(it);   // 폴더는 다 같은 노란 그림이라 — 이름으로 색·글자
   const im = document.createElement('img'); im.className = 'ic'; im.alt = '';
   if(it.icon){ im.src = it.icon; return im; }
@@ -540,21 +580,75 @@ function iconEl(it){
   return im;
 }
 
+/* ---------- 독 안의 독 (10-20 사용자 — 「폴더를 누르면 여러 폴더가 독처럼」) ----------
+   묶음(kind group) = 고른 항목들(item.group = 묶음 id) · 폴더 = 그 바로 안(앱이 list 로 이름·그림만 준다 · 열 때는 이름만 돌려보낸다).
+   Dock 에서 누르면 그 위에 작은 창으로 펼친다. 밖을 누르거나(창이 포커스를 잃음) Esc 면 닫힌다. */
+const inGroup = g => cfg.items.filter(x => x.group === g.id);
+function groupIcon(g){
+  const d = document.createElement('span'); d.className = 'ic grp';
+  inGroup(g).slice(0, 4).forEach(x => d.append(iconEl(x)));
+  return d;
+}
+function entryIcon(e){
+  if(e.dir) return folder({ name: e.name });
+  if(!e.icon) return letter({ name: e.name });
+  const im = document.createElement('img'); im.className = 'ic'; im.alt = ''; im.src = e.icon; return im;
+}
+let popFor = null, popBtn = null;
+function closePop(){ if(pop.hidden) return; pop.hidden = true; popFor = popBtn = null; frame(); }
+function togglePop(it, btn){
+  if(popFor === it.id) return closePop();
+  popFor = it.id; popBtn = btn;
+  pop.querySelector('.pp-h b').textContent = it.name;
+  const op = pop.querySelector('.pp-open');
+  op.hidden = it.kind !== 'folder';
+  op.onclick = () => { send({cmd:'open', id:it.id}); closePop(); };
+  pop.hidden = false;
+  if(it.kind === 'group') fillPop(inGroup(it).map(x => ({ el: iconEl(x), name: x.name, go: () => send({cmd:'open', id:x.id}) })));
+  else { fillPop(null); send({cmd:'list', id:it.id}); }
+}
+function fillPop(tiles){
+  const g = pop.querySelector('.pp-grid'), note = t => Object.assign(document.createElement('p'), { className:'pp-none', textContent:t });
+  g.style.setProperty('--pc', tiles && tiles.length ? Math.min(5, Math.max(3, Math.ceil(Math.sqrt(tiles.length)))) : 3);
+  g.replaceChildren(...(!tiles ? [note('불러오는 중…')] : !tiles.length ? [note('비어 있습니다')] : tiles.map(t => {
+    const b = document.createElement('button'); b.className = 'pp-t'; b.title = t.name;
+    b.append(t.el, span('pp-n', t.name));
+    b.onclick = () => { t.go(); closePop(); };
+    return b;
+  })));
+  placePop();
+}
+function placePop(){                          // 누른 아이콘 위 가운데 — 자리가 없으면 아래로
+  if(pop.hidden || !popBtn) return;
+  const r = popBtn.getBoundingClientRect(), w = pop.offsetWidth, h = pop.offsetHeight;
+  let x = r.left + r.width / 2 - w / 2, y = r.top - h - 14;
+  if(y < 10) y = r.bottom + 14;
+  pop.style.left = Math.max(10, Math.min(innerWidth - w - 10, x)) + 'px';
+  pop.style.top = Math.max(10, Math.min(innerHeight - h - 10, y)) + 'px';
+  frame();
+}
+addEventListener('blur', closePop);
+addEventListener('mousedown', e => { if(!pop.contains(e.target) && !e.target.closest('.dk-item')) closePop(); });
+addEventListener('keydown', e => { if(e.key === 'Escape') closePop(); });
+
 /* ---------- Dock ---------- */
 function renderDock(){
   const s = cfg.settings;
   const hide = s.autohide && !noEdge(s.position);
   dock.style.setProperty('--dk', s.size + 'px');
-  dock.style.setProperty('--cols', Math.ceil((cfg.items.length + 1) / 2));   // 두 줄 — 설정 단추까지
+  const top = cfg.items.filter(it => !it.group);   // 묶음 안의 것은 Dock 에 안 선다
+  dock.style.setProperty('--cols', Math.ceil((top.length + 1) / 2));   // 두 줄 — 설정 단추까지
+  closePop();
   dock.dataset.pos = edge.dataset.pos = s.position;
   dock.classList.toggle('autohide', hide);
   edge.classList.toggle('on', hide);
-  $('#dk-list').replaceChildren(...cfg.items.map(it => {
+  $('#dk-list').replaceChildren(...top.map(it => {
     const b = document.createElement('button');
     b.className = 'dk-item'; b.setAttribute('aria-label', it.name);
     const tip = document.createElement('span'); tip.className = 'dk-tip'; tip.textContent = it.name;
     b.append(iconEl(it), tip);
-    b.onclick = () => { send({cmd:'open', id:it.id}); b.classList.remove('go'); void b.offsetWidth; b.classList.add('go');
+    b.onclick = () => { if(it.kind === 'group' || it.kind === 'folder') return togglePop(it, b);
+      closePop(); send({cmd:'open', id:it.id}); b.classList.remove('go'); void b.offsetWidth; b.classList.add('go');
       clearTimeout(b._go); b._go = setTimeout(() => b.classList.remove('go'), 1200); };
     return b;
   }));
@@ -618,7 +712,8 @@ function renderSettings(){
     const nm = document.createElement('div'); nm.className = 'nm';
     const inp = document.createElement('input'); inp.value = it.name; inp.setAttribute('aria-label', '이름');
     inp.onchange = () => inp.value.trim() && send({cmd:'rename', id:it.id, name:inp.value.trim()});
-    const tg = document.createElement('small'); tg.className = 'tg'; tg.textContent = it.target; tg.title = it.target;
+    const tg = document.createElement('small'); tg.className = 'tg';
+    tg.textContent = tg.title = it.kind === 'group' ? '묶음 · ' + inGroup(it).length + '개' : it.target;
     nm.append(inp, tg);
     const btn = (label, aria, fn, off) => {
       const b = document.createElement('button'); b.className = 'btn q icon sm'; b.textContent = label;
@@ -626,7 +721,14 @@ function renderSettings(){
     };
     const face = btn('', '아이콘 바꾸기', () => send({cmd:'pickIcon', id:it.id}));
     face.className = 'face'; face.title = '아이콘 바꾸기'; face.append(iconEl(it));
-    li.append(face, nm,
+    const groups = cfg.items.filter(x => x.kind === 'group'), sel = document.createElement('select');
+    if(groups.length && it.kind !== 'group'){   // 어느 묶음에 넣을까
+      sel.className = 'gsel'; sel.setAttribute('aria-label', '묶음');
+      sel.append(new Option('Dock 에 바로', ''), ...groups.map(g => new Option('▸ ' + g.name, g.id)));
+      sel.value = it.group || '';
+      sel.onchange = () => send({cmd:'setGroup', id:it.id, group:sel.value});
+    }
+    li.append(face, nm, ...(sel.options.length ? [sel] : []),
       ...(it.custom ? [btn('↺', '원래 아이콘으로', () => send({cmd:'resetIcon', id:it.id}))] : []),
       btn('↑', '앞으로', () => move(i, i - 1), i === 0),
       btn('↓', '뒤로', () => move(i, i + 1), i === ids.length - 1),
@@ -653,6 +755,8 @@ $('#s-auto').onchange = e => send({cmd:'autostart', which:'dock', on:e.target.ch
 $('#s-auto-site').onchange = e => send({cmd:'autostart', which:'site', on:e.target.checked});
 
 document.querySelectorAll('[data-pick]').forEach(b => b.onclick = () => send({cmd:'pick', kind:b.dataset.pick}));
+$('#add-grp').onclick = () => { const f = $('#grp-form'); f.hidden = !f.hidden; if(!f.hidden) f.elements['name'].focus(); };
+$('#grp-form').onsubmit = e => { e.preventDefault(); const n = e.target.elements['name'].value.trim(); if(n) send({cmd:'addGroup', name:n}); e.target.reset(); e.target.hidden = true; };
 $('#add-url').onclick = () => { const f = $('#url-form'); f.hidden = !f.hidden; if(!f.hidden) f.elements['name'].focus(); };
 $('#url-form').onsubmit = e => {
   e.preventDefault();
