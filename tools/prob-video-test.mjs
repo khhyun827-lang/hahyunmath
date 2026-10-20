@@ -59,7 +59,7 @@ try{
   봄('목차 → 번호·시작·끝(다음 문항 시작) · 번호 없는 줄은 건너뜀', 읽기.items,
     [{ n: 61, from: 384, to: 530 }, { n: 65, from: 530, to: 4410 }, { n: 97, from: 4410, to: 0 }]);
   봄('🔴 같은 문항이 둘이면 가장 최근 것 · 교재 이름 띄어쓰기 무시', 읽기.최근,
-    { url: 'https://youtu.be/BBBBBBBBBBB', from: 100, to: 200, entryId: 'e2' });
+    { url: 'https://youtu.be/BBBBBBBBBBB', from: 100, to: 200, entryId: 'e2', code: '' });
   봄('다른 수업(e1)의 문항도 찾는다', 읽기.앞것 && 읽기.앞것.entryId, 'e1');
   봄('없는 교재는 null', 읽기.없음, null);
   봄('🔴 대괄호가 하나 빠진 이름도 같은 교재 (고1GB2 실제 이름)', 읽기.괄호, true);
@@ -80,7 +80,7 @@ try{
   });
   봄('교재 고르개 = 반 교재', 질문.고르개, ['', '주기나 1-1']);
   봄('🔴 질문 문서에 교재·번호·구간이 박힌다', [질문.book, 질문.num, 질문.pv],
-    ['주기나 1-1', 65, { url: 'https://youtu.be/BBBBBBBBBBB', from: 100, to: 200, entryId: 'e2' }]);
+    ['주기나 1-1', 65, { url: 'https://youtu.be/BBBBBBBBBBB', from: 100, to: 200, entryId: 'e2', code: '' }]);
   봄('보낸 뒤 «영상이 있어요»라고 말한다', /수업 풀이 영상이 있어요/.test(질문.말), true);
   봄('보낸 뒤 그 자리에 재생기가 열린다', 질문.틀, true);
   if(SHOT) await page.screenshot({ path: path.join(SHOT, 'qna-student.png'), fullPage: true });
@@ -165,17 +165,92 @@ try{
     const 읽음 = [], 씀 = [];
     window.dbGet = async (k, d) => { 읽음.push(k); return { entries: [{ id: 'old', url: 'u', book: '주기나 1-1', items: [{ n: 1, from: 0, to: 10 }] }] }; };
     window.dbSet = async (k, v) => { 씀.push([k, JSON.parse(JSON.stringify(v))]); return true; };
+    window.loadItemStoreIfNeeded = async () => {};
+    state.itemBody = { 'K2-06-E-0625': { code: 'K2-06-E-0625', books: [{ name: '주기나', part: '1-1', year: 2026, no: 61 }] },
+                       'K2-01-E-0061': { code: 'K2-01-E-0061', books: [{ name: '주기나', part: '1-2', year: 2026, no: 61 }] } };
+    const 코드 = [pvCodeOf('[2026][1-1]주기나', 61), pvCodeOf('[2026][1-1][주기나]', 61), pvCodeOf('[2026][1-1]주기나', 65)];
     const box = document.createElement('div'); box.innerHTML = pvPanelHTML('c1'); document.body.appendChild(box);
     document.getElementById('pv-url').value = 'https://youtu.be/CCCCCCCCCCC';
     document.getElementById('pv-toc').value = '0:00 수업 시작\n6:24 61번\n8:50 65번';
     await pvSave();
     box.remove();
     const e = 씀[0] && 씀[0][1].entries;
-    return { 읽음, 열쇠: 씀[0] && 씀[0][0], 개수: e && e.length, 옛것: e && e[0].id, 새것: e && [e[1].book, e[1].items] };
+    return { 읽음, 코드, 열쇠: 씀[0] && 씀[0][0], 개수: e && e.length, 옛것: e && e[0].id, 새것: e && [e[1].book, e[1].items] };
   });
   봄('저장 전에 kv/prob-videos 를 새로 읽는다', 등록.읽음, ['prob-videos']);
   봄('🔴 옛 목차를 지우지 않고 뒤에 더한다', [등록.열쇠, 등록.개수, 등록.옛것], ['prob-videos', 2, 'old']);
-  봄('새 목차 = 고른 교재 + 문항', 등록.새것, ['주기나 1-1', [{ n: 61, from: 384, to: 530 }, { n: 65, from: 530, to: 0 }]]);
+  봄('🔴 교재 이름+번호 → 창고에 적힌 원본 코드 (책 번호 ≠ 일련번호 · 판이 다르면 다른 문항 · 없으면 빈칸)', 등록.코드, ['K2-06-E-0625', 'K2-06-E-0625', '']);
+  봄('새 목차 = 고른 교재 + 문항 (창고에서 찾은 것만 코드)', 등록.새것, ['주기나 1-1', [{ n: 61, from: 384, to: 530 }, { n: 65, from: 530, to: 0 }]]);
+
+  console.log('\n오답숙제에도 원본 풀이 · 영상 본 뒤 쌍둥이 한 문제 (10-21)');
+  const 쌍 = await page.evaluate(async () => {
+    window.dbGet = async () => null;
+    const CODE = 'K2-06-E-0625';
+    state.probVideos = { entries: [{ id: 'e7', url: 'https://youtu.be/FFFFFFFFFFF', book: '[2026][1-2기말][엔딩크레딧]',
+      items: [{ n: 61, from: 383, to: 530, code: CODE }] }] };
+    state.view = 'student'; state.currentUser = { type: 'student', studentId: 's0', name: '김민아' };
+    /* 오답숙제 — 원본 코드가 목차에 있는 것 하나, 없는 것 하나 */
+    DATA.problemBank.push({ id: 'pbV1', examId: '', questionNo: 625, qkey: 'bookreq:' + CODE, qlabel: '엔딩크레딧 625', status: 'approved',
+      itemCode: CODE, variantContent: '$x$ 의 값은?', variantAnswer: '7', source: 'bookreq' },
+      { id: 'pbV2', examId: '', questionNo: 3, qkey: 'bookreq:K2-01-E-0003', qlabel: '엔딩크레딧 3', status: 'approved',
+      itemCode: 'K2-01-E-0003', variantContent: '$y$ 의 값은?', variantAnswer: '2', source: 'bookreq' });
+    const rec = DATA.records.s0;
+    rec.wrongHomework = [{ bankId: 'pbV1', examId: '', qkey: 'bookreq:' + CODE, qlabel: '엔딩크레딧 625', assignedAt: todayStr(), done: false, studentAnswer: '' },
+                         { bankId: 'pbV2', examId: '', qkey: 'bookreq:K2-01-E-0003', qlabel: '엔딩크레딧 3', assignedAt: todayStr(), done: false, studentAnswer: '' }];
+    state.studentTab = 'wronghw'; state.stuPvOpen = null; render();
+    const 단추들 = [...document.querySelectorAll('#app button')].filter(b => b.textContent.includes('원본 문제 수업 풀이 보기')).length;
+    state.stuPvOpen = 'pv-hw-pbV1'; render();
+    const 숙제틀 = !!document.getElementById('yt-frame-pv-hw-pbV1');
+    const 숙제구간 = [state.pvItems['pv-hw-pbV1'].fromSec, state.pvItems['pv-hw-pbV1'].toSec, state.pvItems['pv-hw-pbV1'].strict];
+
+    /* 질문 — 10-20 처럼 pv 에 code 가 없어도 목차에서 찾는다 */
+    const q = { id: 'qT', uid: 'u', studentId: 's0', question: '61번', book: '[2026][1-2기말][엔딩크레딧]', num: 61, date: todayStr(),
+      pv: { url: 'https://youtu.be/FFFFFFFFFFF', from: 383, to: 530, entryId: 'e7' }, answer: null };
+    DATA.qnas.unshift(q);
+    state.studentTab = 'qna'; state.stuPvOpen = null; state.stuQnaWriting = false; render();
+    const 단추 = () => [...document.querySelectorAll('#app button')].some(b => b.textContent.includes('쌍둥이 한 문제 풀기'));
+    const 안봄 = 단추();
+    state.stuPvOpen = 'qT'; render();
+    const 연뒤 = 단추();
+    const 물은것 = [];
+    window.dbGetVariantsOfRoots = async roots => { 물은것.push(roots); return [
+      { code: CODE + '-U01', originCode: CODE, variantKind: 'U', content: '어려운 것', answer: '9' },
+      { code: CODE + '-N01', originCode: CODE, variantKind: 'N', content: '대기 중', answer: '4', pending: true },
+      { code: CODE + '-N02', originCode: CODE, variantKind: 'N', content: '$2x=6$ 일 때 $x$ 는?', answer: '$3$' } ]; };
+    await pvTwinOpen('qT');
+    const 문제 = !!document.getElementById('pvt-qT') && document.getElementById('app').textContent.includes('2x=6');
+    let 보냄 = []; window.dbSetDoc = async (col, id, doc) => { 보냄.push([col, doc.kind, doc.parentId, doc.question]); return true; };
+    document.getElementById('pvt-qT').value = '5';
+    await pvTwinSubmit('qT');
+    const 결과 = rec.pvTwin && rec.pvTwin.qT;
+    const 결과글 = document.getElementById('app').textContent.includes('선생님께 추가 질문으로 보냈어요');
+    const 대기 = qnaHasOpen(q);
+    state.allRecords = { s0: rec };
+    const 강사 = pvTeacherLineHTML(q);
+    /* 맞히면 — 추가 질문 없음 */
+    delete rec.pvTwin.qT; DATA.qnaFollowups = []; 보냄 = []; state.pvTwinFor = 'qT'; render();
+    document.getElementById('pvt-qT').value = '3';
+    await pvTwinSubmit('qT');
+    return { 단추들, 숙제틀, 숙제구간, 안봄, 연뒤, 물은것, 문제, 결과, 결과글, 대기,
+      보냄첫: 보냄.length, 강사: /쌍둥이 K2-06-E-0625-N02 .*틀림 \(5\)/.test(강사), 맞힘: rec.pvTwin.qT.ok, 코드: pvQnaCode(q) };
+  });
+  봄('🔴 오답숙제 — 원본 코드가 목차에 있는 숙제에만 «원본 문제 수업 풀이 보기»', 쌍.단추들, 1);
+  봄('누르면 그 구간만 도는 재생기', [쌍.숙제틀, 쌍.숙제구간], [true, [383, 530, true]]);
+  봄('10-20 질문(pv 에 code 없음)도 목차에서 코드를 찾는다', 쌍.코드, 'K2-06-E-0625');
+  봄('🔴 영상을 열기 전엔 쌍둥이 단추가 없다 · 연 뒤엔 있다', [쌍.안봄, 쌍.연뒤], [false, true]);
+  봄('누를 때 그 원본 변형만 읽는다', 쌍.물은것, [['K2-06-E-0625']]);
+  봄('🔴 검토 대기는 안 낸다 · N 이 먼저 (U 보다)', 쌍.문제, true);
+  봄('틀리면 제 기록에 남는다 (정답은 $ 벗겨서)', 쌍.결과 && [쌍.결과.code, 쌍.결과.ans, 쌍.결과.answer, 쌍.결과.ok], ['K2-06-E-0625-N02', '5', '3', false]);
+  봄('🔴 틀리면 추가 질문이 저절로 → 선생님 대기로', [쌍.결과글, 쌍.대기], [true, true]);
+  봄('강사 질문 카드에 쌍둥이 결과', 쌍.강사, true);
+  봄('맞히면 추가 질문 없음', [쌍.맞힘, 쌍.보냄첫], [true, 0]);
+  if(SHOT){ await page.evaluate(() => { state.pvTwinFor = null; render(); }); await page.screenshot({ path: path.join(SHOT, 'pv-twin.png'), fullPage: true }); }
+  if(SHOT){
+    await page.evaluate(() => { delete DATA.records.s0.pvTwin.qT; state.pvTwinFor = 'qT'; state.stuPvOpen = 'qT'; render(); window.scrollTo(0, 0); });
+    await page.screenshot({ path: path.join(SHOT, 'pv-twin-open.png'), fullPage: true });
+    await page.evaluate(() => { state.studentTab = 'wronghw'; state.stuPvOpen = null; render(); });
+    await page.screenshot({ path: path.join(SHOT, 'pv-hw.png'), fullPage: true });
+  }
 
   console.log('\n🔴 마감이 지나면 못 본다 (다 본 학생도 · 복습용도)');
   const 잠금 = await page.evaluate(() => {
