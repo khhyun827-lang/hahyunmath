@@ -32,12 +32,11 @@ html,body{height:100%;overflow:hidden;font-family:'Pretendard',-apple-system,san
 #dock.autohide:not(.show)[data-pos=bottom]{transform:translate(-50%,calc(100% + 16px));}
 #dock.autohide:not(.show)[data-pos=left]{transform:translate(calc(-100% - 16px),-50%);}
 #dock.autohide:not(.show)[data-pos=right]{transform:translate(calc(100% + 16px),-50%);}
-/* 2열 — 오른쪽 카드 바로 왼쪽에 아이콘 타일 두 줄 (10-18 사용자 — 「달력·할 일과 어우러지게 2열로」). 위쪽은 카드 위와 맞춘다(frame) */
-#dock[data-pos=grid]{display:grid;grid-template-columns:repeat(2,var(--dk));gap:calc(var(--dk)*.4);height:auto;
-  right:calc(3vw + 616px + 18px);top:50%;transform:translateY(-50%);}
-#board[hidden] ~ #dock[data-pos=grid]{right:3vw;}
+/* 위젯 밑 두 줄 — 위젯 카드 묶음 바로 아래 가운데에 아이콘 타일 두 줄 (값은 옛 이름 grid 그대로 · 자리는 frame 이 카드 아래로 맞춘다)
+   🔵 10-18 「카드 옆 2열」 → 10-20 사용자 — 「위젯이 두 열이 되니 2열 독이 안 어우러진다 · 2행으로 위젯 밑에」 */
+#dock[data-pos=grid]{display:grid;grid-template-columns:repeat(var(--cols,7),var(--dk));gap:calc(var(--dk)*.4);height:auto;
+  right:3vw;top:50%;transform:translateY(-50%);}
 #dock[data-pos=grid] .dk-sep{display:none;}
-#dock[data-pos=grid] .dk-tip{left:auto;right:calc(100% + 12px);bottom:auto;top:50%;transform:translateY(-50%);}
 #dock[data-pos=grid] .dk-item .ic{transition:transform var(--t);}
 #dock[data-pos=grid] .dk-item:hover .ic{transform:scale(1.08);}
 #dk-list{display:contents;}
@@ -70,7 +69,7 @@ html,body{height:100%;overflow:hidden;font-family:'Pretendard',-apple-system,san
 @keyframes dk-bounce{0%,50%,100%{translate:0 0}22%{translate:0 -38%}72%{translate:0 -16%}}
 #dock[data-pos=left] .dk-item.go,#dock[data-pos=right] .dk-item.go{animation:none;}
 /* 시계·날짜 (10-18 사용자 — 「시계 날짜 넣어 줘」) — 왼쪽 가운데, 맥 잠금 화면처럼 가늘고 크게 */
-#clock{position:fixed;left:6vw;top:50%;transform:translateY(-50%);z-index:5;color:#fff;pointer-events:none;
+#clock{position:fixed;left:6vw;top:42%;transform:translateY(-50%);z-index:5;color:#fff;pointer-events:none;
   text-shadow:0 2px 18px rgba(0,0,0,.35);user-select:none;}
 #clock[hidden]{display:none;}
 #clock .lg{display:block;width:clamp(110px,9vw,180px);margin:0 0 .9em .2em;opacity:.9;filter:drop-shadow(0 2px 14px rgba(234,169,182,.3));}
@@ -81,7 +80,7 @@ html,body{height:100%;overflow:hidden;font-family:'Pretendard',-apple-system,san
 #clock .dt{margin-top:.5em;font-size:clamp(20px,1.7vw,32px);font-weight:500;opacity:.88;}
 /* 오른쪽 위젯 — 달력 · 다가오는 내 일정 · 할 일 · AI 한도 (10-18 사용자 — 「보기만 · 오른쪽 카드」). 웹 홈의 memo:<uid> 문서를 읽기만 한다
    🔵 10-20 사용자 — 「추가할 때마다 달력 밑으로 쌓여 간다 · 분리」 → 한 판을 카드 넷으로, 두 열(오른쪽 달력·일정 / 왼쪽 할 일·AI) */
-#board{position:fixed;right:3vw;top:50%;transform:translateY(-50%);z-index:5;display:flex;gap:16px;align-items:flex-start;
+#board{position:fixed;right:3vw;top:max(40px,9vh);z-index:5;display:flex;gap:16px;align-items:flex-start;
   color:#fff;font-size:13px;user-select:none;}
 #board .bd-col{display:flex;flex-direction:column;gap:16px;}
 #board .bd-card{width:300px;box-sizing:border-box;padding:16px 18px 14px;border-radius:22px;}
@@ -254,7 +253,7 @@ html,body{height:100%;overflow:hidden;font-family:'Pretendard',-apple-system,san
       <p class="t-sec">모양</p>
       <label class="row">아이콘 크기<span><input type="range" id="s-size" min="32" max="72" step="2"><output id="o-size"></output></span></label>
       <label class="row">확대 배율<span><input type="range" id="s-mag" min="1" max="2" step="0.1"><output id="o-mag"></output></span></label>
-      <label class="row">위치<select id="s-pos"><option value="bottom">아래</option><option value="center">화면 정가운데</option><option value="left">왼쪽</option><option value="right">오른쪽</option><option value="grid">오른쪽 2열 (카드 옆)</option></select></label>
+      <label class="row">위치<select id="s-pos"><option value="bottom">아래</option><option value="center">화면 정가운데</option><option value="left">왼쪽</option><option value="right">오른쪽</option><option value="grid">위젯 밑 두 줄</option></select></label>
       <label class="row" id="r-hide">자동 숨김<input type="checkbox" id="s-hide"></label>
       <label class="row">시계·날짜 (왼쪽)<input type="checkbox" id="s-clock"></label>
       <label class="row">로고 (시계 위 · 누르면 김하현 Desktop)<input type="checkbox" id="s-logo"></label>
@@ -314,13 +313,16 @@ function frame(){
   if(!cfg) return;
   const full = !setBox.hidden || toastFull;
   const s = cfg.settings, grid = s.position === 'grid';
-  dock.style.top = grid && !board.hidden ? board.getBoundingClientRect().top - parseFloat(getComputedStyle(dock).paddingTop) + 'px' : '';   // 2열은 카드와 위를 맞춘다
-  dock.style.transform = dock.style.top ? 'none' : '';
+  const under = grid && !board.hidden, b = under && board.getBoundingClientRect();   // 위젯 밑 두 줄 — 카드 묶음 아래 가운데
+  dock.style.top = under ? b.bottom + 6 + 'px' : '';
+  dock.style.left = under ? b.left + (b.width - dock.offsetWidth) / 2 + 'px' : '';
+  dock.style.right = under ? 'auto' : '';
+  dock.style.transform = under ? 'none' : '';
   const r = dock.getBoundingClientRect(), k = devicePixelRatio || 1, W = innerWidth, H = innerHeight;
   const up = Math.ceil(s.size * (s.magnify - 1)) + 44;            // 커지는 만큼 + 말풍선
   const tucked = s.autohide && !noEdge(s.position) && !dock.classList.contains('show');
   let d;   // Dock 칸
-  if(grid) d = [r.left - 160, r.top - 20, r.width + 180, r.height + 40];   // 말풍선이 왼쪽으로 나온다
+  if(grid) d = [r.left - 60, r.top - 50, r.width + 120, r.height + 70];   // 말풍선이 위로 나온다
   else if(s.position === 'left')      d = tucked ? [0, r.top - 20, 6, r.height + 40] : [0, r.top - 20, r.right + up + 150, r.height + 40];
   else if(s.position === 'right') d = tucked ? [W - 6, r.top - 20, 6, r.height + 40] : [r.left - up - 150, r.top - 20, W - r.left + up + 150, r.height + 40];
   else if(s.position === 'center') d = [r.left - 20, r.top - up, r.width + 40, r.height + up * 2];
@@ -543,6 +545,7 @@ function renderDock(){
   const s = cfg.settings;
   const hide = s.autohide && !noEdge(s.position);
   dock.style.setProperty('--dk', s.size + 'px');
+  dock.style.setProperty('--cols', Math.ceil((cfg.items.length + 1) / 2));   // 두 줄 — 설정 단추까지
   dock.dataset.pos = edge.dataset.pos = s.position;
   dock.classList.toggle('autohide', hide);
   edge.classList.toggle('on', hide);
