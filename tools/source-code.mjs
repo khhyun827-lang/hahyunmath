@@ -147,7 +147,7 @@ if (!r.ok) {
     for (const t of 토큰) {
       if (t.type === 'endnote') { 지금 = { n: 덩이.length + 1, 출처: [], 딱지: [], 글: '' }; 덩이.push(지금); continue; }
       if (!지금) continue;
-      if (t.type === 'srctag') { const v = R.hwpxParseSourceTag(t.v); 지금.출처.push(v ? v.년 + '-' + v.월 + '-' + v.번 : '?' + String(t.v).trim()); continue; }
+      if (t.type === 'srctag') { const v = R.hwpxParseSourceTag(t.v); 지금.출처.push(v ? '고' + v.학년 + '-' + v.년 + '-' + v.월 + '-' + v.번 + (v.형 || '') : '?' + String(t.v).trim()); continue; }
       if (t.type === 'pic') { const b = { '264bb508409ed2736d541bc9f3d3e4e6':'OR', '22c12a6ee18385db377145fca66266b1':'NC',
         'df0ac81572f0612dd9dee9aa0101679f':'UP', 'ba6e591c3e08ac6725ef1b7e6d9e33b5':'DW' }[해시of(t.v)]; if (b) 지금.딱지.push(b); continue; }
       if (t.type === 'text' && 지금.글.length < 60) 지금.글 += t.v;

@@ -1,0 +1,5463 @@
+{
+  "subject": "K2",
+  "book": "J",
+  "kind": "source",
+  "sourceFile": "[2026][주기나][1-2기말][6.명제와 절대부등식].hwpx · [2026][주기나][1-2기말][7.함수].hwpx · [2026][주기나][1-2기말][8.합성함수와 역함수].hwpx · [2026][주기나][1-2기말][9.유리함수와 무리함수].hwpx",
+  "updatedAt": "2026-10-21",
+  "count": 419,
+  "chapters": [
+    "06",
+    "07",
+    "08",
+    "09"
+  ],
+  "items": [
+    {
+      "code": "1141117",
+      "chapter": "06",
+      "chapterName": "명제와 절대부등식",
+      "subject": "K2",
+      "seq": 1,
+      "badge": "OR",
+      "origin": "1141117",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2014년 11월 17번"
+      }
+    },
+    {
+      "code": "1141117-N01",
+      "chapter": "06",
+      "chapterName": "명제와 절대부등식",
+      "subject": "K2",
+      "seq": 2,
+      "badge": "NC",
+      "origin": "1141117",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2014년 11월 17번"
+      }
+    },
+    {
+      "code": "1151117",
+      "chapter": "06",
+      "chapterName": "명제와 절대부등식",
+      "subject": "K2",
+      "seq": 3,
+      "badge": "OR",
+      "origin": "1151117",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2015년 11월 17번"
+      }
+    },
+    {
+      "code": "1151117-N01",
+      "chapter": "06",
+      "chapterName": "명제와 절대부등식",
+      "subject": "K2",
+      "seq": 4,
+      "badge": "NC",
+      "origin": "1151117",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2015년 11월 17번"
+      }
+    },
+    {
+      "code": "1151117-U01",
+      "chapter": "06",
+      "chapterName": "명제와 절대부등식",
+      "subject": "K2",
+      "seq": 5,
+      "badge": "UP",
+      "origin": "1151117",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2015년 11월 17번"
+      }
+    },
+    {
+      "code": "1151117-U02",
+      "chapter": "06",
+      "chapterName": "명제와 절대부등식",
+      "subject": "K2",
+      "seq": 6,
+      "badge": "UP",
+      "origin": "1151117",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2015년 11월 17번"
+      }
+    },
+    {
+      "code": "1090910",
+      "chapter": "06",
+      "chapterName": "명제와 절대부등식",
+      "subject": "K2",
+      "seq": 7,
+      "badge": "OR",
+      "origin": "1090910",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2009년 09월 10번"
+      }
+    },
+    {
+      "code": "1090910-N01",
+      "chapter": "06",
+      "chapterName": "명제와 절대부등식",
+      "subject": "K2",
+      "seq": 8,
+      "badge": "NC",
+      "origin": "1090910",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2009년 09월 10번"
+      }
+    },
+    {
+      "code": "1241016",
+      "chapter": "06",
+      "chapterName": "명제와 절대부등식",
+      "subject": "K2",
+      "seq": 9,
+      "badge": "OR",
+      "origin": "1241016",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2024년 10월 16번"
+      }
+    },
+    {
+      "code": "1241016-N01",
+      "chapter": "06",
+      "chapterName": "명제와 절대부등식",
+      "subject": "K2",
+      "seq": 10,
+      "badge": "NC",
+      "origin": "1241016",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2024년 10월 16번"
+      }
+    },
+    {
+      "code": "1241016-N02",
+      "chapter": "06",
+      "chapterName": "명제와 절대부등식",
+      "subject": "K2",
+      "seq": 11,
+      "badge": "NC",
+      "origin": "1241016",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2024년 10월 16번"
+      }
+    },
+    {
+      "code": "2240326",
+      "chapter": "06",
+      "chapterName": "명제와 절대부등식",
+      "subject": "K2",
+      "seq": 12,
+      "badge": "OR",
+      "origin": "2240326",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2024년 03월 26번"
+      }
+    },
+    {
+      "code": "2240326-N01",
+      "chapter": "06",
+      "chapterName": "명제와 절대부등식",
+      "subject": "K2",
+      "seq": 13,
+      "badge": "NC",
+      "origin": "2240326",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2024년 03월 26번"
+      }
+    },
+    {
+      "code": "2230318",
+      "chapter": "06",
+      "chapterName": "명제와 절대부등식",
+      "subject": "K2",
+      "seq": 14,
+      "badge": "OR",
+      "origin": "2230318",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2023년 03월 18번"
+      }
+    },
+    {
+      "code": "2230318-N01",
+      "chapter": "06",
+      "chapterName": "명제와 절대부등식",
+      "subject": "K2",
+      "seq": 15,
+      "badge": "NC",
+      "origin": "2230318",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2023년 03월 18번"
+      }
+    },
+    {
+      "code": "1070513",
+      "chapter": "06",
+      "chapterName": "명제와 절대부등식",
+      "subject": "K2",
+      "seq": 16,
+      "badge": "OR",
+      "origin": "1070513",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2007년 05월 13번"
+      }
+    },
+    {
+      "code": "1070513-N01",
+      "chapter": "06",
+      "chapterName": "명제와 절대부등식",
+      "subject": "K2",
+      "seq": 17,
+      "badge": "NC",
+      "origin": "1070513",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2007년 05월 13번"
+      }
+    },
+    {
+      "code": "1070513-U01",
+      "chapter": "06",
+      "chapterName": "명제와 절대부등식",
+      "subject": "K2",
+      "seq": 18,
+      "badge": "UP",
+      "origin": "1070513",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2007년 05월 13번"
+      }
+    },
+    {
+      "code": "2150616",
+      "chapter": "06",
+      "chapterName": "명제와 절대부등식",
+      "subject": "K2",
+      "seq": 19,
+      "badge": "OR",
+      "origin": "2150616",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2015년 06월 16번"
+      }
+    },
+    {
+      "code": "2150616-N01",
+      "chapter": "06",
+      "chapterName": "명제와 절대부등식",
+      "subject": "K2",
+      "seq": 20,
+      "badge": "NC",
+      "origin": "2150616",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2015년 06월 16번"
+      }
+    },
+    {
+      "code": "2230319",
+      "chapter": "06",
+      "chapterName": "명제와 절대부등식",
+      "subject": "K2",
+      "seq": 21,
+      "badge": "OR",
+      "origin": "2230319",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2023년 03월 19번"
+      }
+    },
+    {
+      "code": "2230319-N01",
+      "chapter": "06",
+      "chapterName": "명제와 절대부등식",
+      "subject": "K2",
+      "seq": 22,
+      "badge": "NC",
+      "origin": "2230319",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2023년 03월 19번"
+      }
+    },
+    {
+      "code": "1231125",
+      "chapter": "06",
+      "chapterName": "명제와 절대부등식",
+      "subject": "K2",
+      "seq": 23,
+      "badge": "OR",
+      "origin": "1231125",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2023년 11월 25번"
+      }
+    },
+    {
+      "code": "1231125-N01",
+      "chapter": "06",
+      "chapterName": "명제와 절대부등식",
+      "subject": "K2",
+      "seq": 24,
+      "badge": "NC",
+      "origin": "1231125",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2023년 11월 25번"
+      }
+    },
+    {
+      "code": "2200327",
+      "chapter": "06",
+      "chapterName": "명제와 절대부등식",
+      "subject": "K2",
+      "seq": 25,
+      "badge": "OR",
+      "origin": "2200327",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2020년 03월 27번"
+      }
+    },
+    {
+      "code": "2200327-N01",
+      "chapter": "06",
+      "chapterName": "명제와 절대부등식",
+      "subject": "K2",
+      "seq": 26,
+      "badge": "NC",
+      "origin": "2200327",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2020년 03월 27번"
+      }
+    },
+    {
+      "code": "2200327-U01",
+      "chapter": "06",
+      "chapterName": "명제와 절대부등식",
+      "subject": "K2",
+      "seq": 27,
+      "badge": "UP",
+      "origin": "2200327",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2020년 03월 27번"
+      }
+    },
+    {
+      "code": "2210319",
+      "chapter": "06",
+      "chapterName": "명제와 절대부등식",
+      "subject": "K2",
+      "seq": 28,
+      "badge": "OR",
+      "origin": "2210319",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2021년 03월 19번"
+      }
+    },
+    {
+      "code": "2210319-N01",
+      "chapter": "06",
+      "chapterName": "명제와 절대부등식",
+      "subject": "K2",
+      "seq": 29,
+      "badge": "NC",
+      "origin": "2210319",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2021년 03월 19번"
+      }
+    },
+    {
+      "code": "2210319-N02",
+      "chapter": "06",
+      "chapterName": "명제와 절대부등식",
+      "subject": "K2",
+      "seq": 30,
+      "badge": "NC",
+      "origin": "2210319",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2021년 03월 19번"
+      }
+    },
+    {
+      "code": "1120616",
+      "chapter": "06",
+      "chapterName": "명제와 절대부등식",
+      "subject": "K2",
+      "seq": 31,
+      "badge": "OR",
+      "origin": "1120616",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2012년 06월 16번"
+      }
+    },
+    {
+      "code": "1120616-N01",
+      "chapter": "06",
+      "chapterName": "명제와 절대부등식",
+      "subject": "K2",
+      "seq": 32,
+      "badge": "NC",
+      "origin": "1120616",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2012년 06월 16번"
+      }
+    },
+    {
+      "code": "1111117",
+      "chapter": "06",
+      "chapterName": "명제와 절대부등식",
+      "subject": "K2",
+      "seq": 33,
+      "badge": "OR",
+      "origin": "1111117",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2011년 11월 17번"
+      }
+    },
+    {
+      "code": "1111117-N01",
+      "chapter": "06",
+      "chapterName": "명제와 절대부등식",
+      "subject": "K2",
+      "seq": 34,
+      "badge": "NC",
+      "origin": "1111117",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2011년 11월 17번"
+      }
+    },
+    {
+      "code": "1110910",
+      "chapter": "06",
+      "chapterName": "명제와 절대부등식",
+      "subject": "K2",
+      "seq": 35,
+      "badge": "OR",
+      "origin": "1110910",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2011년 09월 10번"
+      }
+    },
+    {
+      "code": "1110910-N01",
+      "chapter": "06",
+      "chapterName": "명제와 절대부등식",
+      "subject": "K2",
+      "seq": 36,
+      "badge": "NC",
+      "origin": "1110910",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2011년 09월 10번"
+      }
+    },
+    {
+      "code": "1130913",
+      "chapter": "06",
+      "chapterName": "명제와 절대부등식",
+      "subject": "K2",
+      "seq": 37,
+      "badge": "OR",
+      "origin": "1130913",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2013년 09월 13번"
+      }
+    },
+    {
+      "code": "1130913-N01",
+      "chapter": "06",
+      "chapterName": "명제와 절대부등식",
+      "subject": "K2",
+      "seq": 38,
+      "badge": "NC",
+      "origin": "1130913",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2013년 09월 13번"
+      }
+    },
+    {
+      "code": "1130913-U01",
+      "chapter": "06",
+      "chapterName": "명제와 절대부등식",
+      "subject": "K2",
+      "seq": 39,
+      "badge": "UP",
+      "origin": "1130913",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2013년 09월 13번"
+      }
+    },
+    {
+      "code": "1130913-U02",
+      "chapter": "06",
+      "chapterName": "명제와 절대부등식",
+      "subject": "K2",
+      "seq": 40,
+      "badge": "UP",
+      "origin": "1130913",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2013년 09월 13번"
+      }
+    },
+    {
+      "code": "2250315",
+      "chapter": "06",
+      "chapterName": "명제와 절대부등식",
+      "subject": "K2",
+      "seq": 41,
+      "badge": "OR",
+      "origin": "2250315",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2025년 03월 15번"
+      }
+    },
+    {
+      "code": "2250315-D01",
+      "chapter": "06",
+      "chapterName": "명제와 절대부등식",
+      "subject": "K2",
+      "seq": 42,
+      "badge": "DW",
+      "origin": "2250315",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2025년 03월 15번"
+      }
+    },
+    {
+      "code": "2250315-N01",
+      "chapter": "06",
+      "chapterName": "명제와 절대부등식",
+      "subject": "K2",
+      "seq": 43,
+      "badge": "NC",
+      "origin": "2250315",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2025년 03월 15번"
+      }
+    },
+    {
+      "code": "2250315-U01",
+      "chapter": "06",
+      "chapterName": "명제와 절대부등식",
+      "subject": "K2",
+      "seq": 44,
+      "badge": "UP",
+      "origin": "2250315",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2025년 03월 15번"
+      }
+    },
+    {
+      "code": "2250315-U02",
+      "chapter": "06",
+      "chapterName": "명제와 절대부등식",
+      "subject": "K2",
+      "seq": 45,
+      "badge": "UP",
+      "origin": "2250315",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2025년 03월 15번"
+      }
+    },
+    {
+      "code": "2100324",
+      "chapter": "06",
+      "chapterName": "명제와 절대부등식",
+      "subject": "K2",
+      "seq": 46,
+      "badge": "OR",
+      "origin": "2100324",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2010년 03월 24번"
+      }
+    },
+    {
+      "code": "2100324-N01",
+      "chapter": "06",
+      "chapterName": "명제와 절대부등식",
+      "subject": "K2",
+      "seq": 47,
+      "badge": "NC",
+      "origin": "2100324",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2010년 03월 24번"
+      }
+    },
+    {
+      "code": "2100324-U01",
+      "chapter": "06",
+      "chapterName": "명제와 절대부등식",
+      "subject": "K2",
+      "seq": 48,
+      "badge": "UP",
+      "origin": "2100324",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2010년 03월 24번"
+      }
+    },
+    {
+      "code": "2220317",
+      "chapter": "06",
+      "chapterName": "명제와 절대부등식",
+      "subject": "K2",
+      "seq": 49,
+      "badge": "OR",
+      "origin": "2220317",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2022년 03월 17번"
+      }
+    },
+    {
+      "code": "2220317-N01",
+      "chapter": "06",
+      "chapterName": "명제와 절대부등식",
+      "subject": "K2",
+      "seq": 50,
+      "badge": "NC",
+      "origin": "2220317",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2022년 03월 17번"
+      }
+    },
+    {
+      "code": "2220317-U01",
+      "chapter": "06",
+      "chapterName": "명제와 절대부등식",
+      "subject": "K2",
+      "seq": 51,
+      "badge": "UP",
+      "origin": "2220317",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2022년 03월 17번"
+      }
+    },
+    {
+      "code": "2220317-U02",
+      "chapter": "06",
+      "chapterName": "명제와 절대부등식",
+      "subject": "K2",
+      "seq": 52,
+      "badge": "UP",
+      "origin": "2220317",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2022년 03월 17번"
+      }
+    },
+    {
+      "code": "1110613",
+      "chapter": "06",
+      "chapterName": "명제와 절대부등식",
+      "subject": "K2",
+      "seq": 53,
+      "badge": "OR",
+      "origin": "1110613",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2011년 06월 13번"
+      }
+    },
+    {
+      "code": "1110613-N01",
+      "chapter": "06",
+      "chapterName": "명제와 절대부등식",
+      "subject": "K2",
+      "seq": 54,
+      "badge": "NC",
+      "origin": "1110613",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2011년 06월 13번"
+      }
+    },
+    {
+      "code": "1110613-U01",
+      "chapter": "06",
+      "chapterName": "명제와 절대부등식",
+      "subject": "K2",
+      "seq": 55,
+      "badge": "UP",
+      "origin": "1110613",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2011년 06월 13번"
+      }
+    },
+    {
+      "code": "2250320",
+      "chapter": "06",
+      "chapterName": "명제와 절대부등식",
+      "subject": "K2",
+      "seq": 56,
+      "badge": "OR",
+      "origin": "2250320",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2025년 03월 20번"
+      }
+    },
+    {
+      "code": "2250320-N01",
+      "chapter": "06",
+      "chapterName": "명제와 절대부등식",
+      "subject": "K2",
+      "seq": 57,
+      "badge": "NC",
+      "origin": "2250320",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2025년 03월 20번"
+      }
+    },
+    {
+      "code": "1130619",
+      "chapter": "06",
+      "chapterName": "명제와 절대부등식",
+      "subject": "K2",
+      "seq": 58,
+      "badge": "OR",
+      "origin": "1130619",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2013년 06월 19번"
+      }
+    },
+    {
+      "code": "1130619-N01",
+      "chapter": "06",
+      "chapterName": "명제와 절대부등식",
+      "subject": "K2",
+      "seq": 59,
+      "badge": "NC",
+      "origin": "1130619",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2013년 06월 19번"
+      }
+    },
+    {
+      "code": "1101117",
+      "chapter": "06",
+      "chapterName": "명제와 절대부등식",
+      "subject": "K2",
+      "seq": 60,
+      "badge": "OR",
+      "origin": "1101117",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2010년 11월 17번"
+      }
+    },
+    {
+      "code": "1101117-D01",
+      "chapter": "06",
+      "chapterName": "명제와 절대부등식",
+      "subject": "K2",
+      "seq": 61,
+      "badge": "DW",
+      "origin": "1101117",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2010년 11월 17번"
+      }
+    },
+    {
+      "code": "1101117-N01",
+      "chapter": "06",
+      "chapterName": "명제와 절대부등식",
+      "subject": "K2",
+      "seq": 62,
+      "badge": "NC",
+      "origin": "1101117",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2010년 11월 17번"
+      }
+    },
+    {
+      "code": "1100907",
+      "chapter": "06",
+      "chapterName": "명제와 절대부등식",
+      "subject": "K2",
+      "seq": 63,
+      "badge": "OR",
+      "origin": "1100907",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2010년 09월 7번"
+      }
+    },
+    {
+      "code": "1100907-N01",
+      "chapter": "06",
+      "chapterName": "명제와 절대부등식",
+      "subject": "K2",
+      "seq": 64,
+      "badge": "NC",
+      "origin": "1100907",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2010년 09월 7번"
+      }
+    },
+    {
+      "code": "1100907-U01",
+      "chapter": "06",
+      "chapterName": "명제와 절대부등식",
+      "subject": "K2",
+      "seq": 65,
+      "badge": "UP",
+      "origin": "1100907",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2010년 09월 7번"
+      }
+    },
+    {
+      "code": "1100907-U02",
+      "chapter": "06",
+      "chapterName": "명제와 절대부등식",
+      "subject": "K2",
+      "seq": 66,
+      "badge": "UP",
+      "origin": "1100907",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2010년 09월 7번"
+      }
+    },
+    {
+      "code": "1100910",
+      "chapter": "06",
+      "chapterName": "명제와 절대부등식",
+      "subject": "K2",
+      "seq": 67,
+      "badge": "OR",
+      "origin": "1100910",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2010년 09월 10번"
+      }
+    },
+    {
+      "code": "1100910-N01",
+      "chapter": "06",
+      "chapterName": "명제와 절대부등식",
+      "subject": "K2",
+      "seq": 68,
+      "badge": "NC",
+      "origin": "1100910",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2010년 09월 10번"
+      }
+    },
+    {
+      "code": "1121128",
+      "chapter": "06",
+      "chapterName": "명제와 절대부등식",
+      "subject": "K2",
+      "seq": 69,
+      "badge": "OR",
+      "origin": "1121128",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2012년 11월 28번"
+      }
+    },
+    {
+      "code": "1121128-N01",
+      "chapter": "06",
+      "chapterName": "명제와 절대부등식",
+      "subject": "K2",
+      "seq": 70,
+      "badge": "NC",
+      "origin": "1121128",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2012년 11월 28번"
+      }
+    },
+    {
+      "code": "1110929",
+      "chapter": "06",
+      "chapterName": "명제와 절대부등식",
+      "subject": "K2",
+      "seq": 71,
+      "badge": "OR",
+      "origin": "1110929",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2011년 09월 29번"
+      }
+    },
+    {
+      "code": "1110929-N01",
+      "chapter": "06",
+      "chapterName": "명제와 절대부등식",
+      "subject": "K2",
+      "seq": 72,
+      "badge": "NC",
+      "origin": "1110929",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2011년 09월 29번"
+      }
+    },
+    {
+      "code": "2060330",
+      "chapter": "06",
+      "chapterName": "명제와 절대부등식",
+      "subject": "K2",
+      "seq": 73,
+      "badge": "OR",
+      "origin": "2060330",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2006년 03월 30번"
+      }
+    },
+    {
+      "code": "2060330-N01",
+      "chapter": "06",
+      "chapterName": "명제와 절대부등식",
+      "subject": "K2",
+      "seq": 74,
+      "badge": "NC",
+      "origin": "2060330",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2006년 03월 30번"
+      }
+    },
+    {
+      "code": "2060330-N02",
+      "chapter": "06",
+      "chapterName": "명제와 절대부등식",
+      "subject": "K2",
+      "seq": 75,
+      "badge": "NC",
+      "origin": "2060330",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2006년 03월 30번"
+      }
+    },
+    {
+      "code": "2140330",
+      "chapter": "06",
+      "chapterName": "명제와 절대부등식",
+      "subject": "K2",
+      "seq": 76,
+      "badge": "OR",
+      "origin": "2140330",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2014년 03월 30번"
+      }
+    },
+    {
+      "code": "2140330-N01",
+      "chapter": "06",
+      "chapterName": "명제와 절대부등식",
+      "subject": "K2",
+      "seq": 77,
+      "badge": "NC",
+      "origin": "2140330",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2014년 03월 30번"
+      }
+    },
+    {
+      "code": "2070319",
+      "chapter": "06",
+      "chapterName": "명제와 절대부등식",
+      "subject": "K2",
+      "seq": 78,
+      "badge": "OR",
+      "origin": "2070319",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2007년 03월 19번"
+      }
+    },
+    {
+      "code": "2070319-N01",
+      "chapter": "06",
+      "chapterName": "명제와 절대부등식",
+      "subject": "K2",
+      "seq": 79,
+      "badge": "NC",
+      "origin": "2070319",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2007년 03월 19번"
+      }
+    },
+    {
+      "code": "2070319-U01",
+      "chapter": "06",
+      "chapterName": "명제와 절대부등식",
+      "subject": "K2",
+      "seq": 80,
+      "badge": "UP",
+      "origin": "2070319",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2007년 03월 19번"
+      }
+    },
+    {
+      "code": "2180617",
+      "chapter": "06",
+      "chapterName": "명제와 절대부등식",
+      "subject": "K2",
+      "seq": 81,
+      "badge": "OR",
+      "origin": "2180617",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2018년 06월 17번"
+      }
+    },
+    {
+      "code": "2180617-N01",
+      "chapter": "06",
+      "chapterName": "명제와 절대부등식",
+      "subject": "K2",
+      "seq": 82,
+      "badge": "NC",
+      "origin": "2180617",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2018년 06월 17번"
+      }
+    },
+    {
+      "code": "2180617-U01",
+      "chapter": "06",
+      "chapterName": "명제와 절대부등식",
+      "subject": "K2",
+      "seq": 83,
+      "badge": "UP",
+      "origin": "2180617",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2018년 06월 17번"
+      }
+    },
+    {
+      "code": "1050929",
+      "chapter": "06",
+      "chapterName": "명제와 절대부등식",
+      "subject": "K2",
+      "seq": 84,
+      "badge": "OR",
+      "origin": "1050929",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2005년 09월 29번"
+      }
+    },
+    {
+      "code": "1050929-N01",
+      "chapter": "06",
+      "chapterName": "명제와 절대부등식",
+      "subject": "K2",
+      "seq": 85,
+      "badge": "NC",
+      "origin": "1050929",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2005년 09월 29번"
+      }
+    },
+    {
+      "code": "1171128",
+      "chapter": "06",
+      "chapterName": "명제와 절대부등식",
+      "subject": "K2",
+      "seq": 86,
+      "badge": "OR",
+      "origin": "1171128",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2017년 11월 28번"
+      }
+    },
+    {
+      "code": "1171128-N01",
+      "chapter": "06",
+      "chapterName": "명제와 절대부등식",
+      "subject": "K2",
+      "seq": 87,
+      "badge": "NC",
+      "origin": "1171128",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2017년 11월 28번"
+      }
+    },
+    {
+      "code": "1201116",
+      "chapter": "06",
+      "chapterName": "명제와 절대부등식",
+      "subject": "K2",
+      "seq": 88,
+      "badge": "OR",
+      "origin": "1201116",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2020년 11월 16번"
+      }
+    },
+    {
+      "code": "1201116-N01",
+      "chapter": "06",
+      "chapterName": "명제와 절대부등식",
+      "subject": "K2",
+      "seq": 89,
+      "badge": "NC",
+      "origin": "1201116",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2020년 11월 16번"
+      }
+    },
+    {
+      "code": "1201116-U01",
+      "chapter": "06",
+      "chapterName": "명제와 절대부등식",
+      "subject": "K2",
+      "seq": 90,
+      "badge": "UP",
+      "origin": "1201116",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2020년 11월 16번"
+      }
+    },
+    {
+      "code": "1151114",
+      "chapter": "06",
+      "chapterName": "명제와 절대부등식",
+      "subject": "K2",
+      "seq": 91,
+      "badge": "OR",
+      "origin": "1151114",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2015년 11월 14번"
+      }
+    },
+    {
+      "code": "1151114-D01",
+      "chapter": "06",
+      "chapterName": "명제와 절대부등식",
+      "subject": "K2",
+      "seq": 92,
+      "badge": "DW",
+      "origin": "1151114",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2015년 11월 14번"
+      }
+    },
+    {
+      "code": "1151114-N01",
+      "chapter": "06",
+      "chapterName": "명제와 절대부등식",
+      "subject": "K2",
+      "seq": 93,
+      "badge": "NC",
+      "origin": "1151114",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2015년 11월 14번"
+      }
+    },
+    {
+      "code": "1151114-U01",
+      "chapter": "06",
+      "chapterName": "명제와 절대부등식",
+      "subject": "K2",
+      "seq": 94,
+      "badge": "UP",
+      "origin": "1151114",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2015년 11월 14번"
+      }
+    },
+    {
+      "code": "1080930",
+      "chapter": "06",
+      "chapterName": "명제와 절대부등식",
+      "subject": "K2",
+      "seq": 95,
+      "badge": "OR",
+      "origin": "1080930",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2008년 09월 30번"
+      }
+    },
+    {
+      "code": "1080930-N01",
+      "chapter": "06",
+      "chapterName": "명제와 절대부등식",
+      "subject": "K2",
+      "seq": 96,
+      "badge": "NC",
+      "origin": "1080930",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2008년 09월 30번"
+      }
+    },
+    {
+      "code": "1080930-U01",
+      "chapter": "06",
+      "chapterName": "명제와 절대부등식",
+      "subject": "K2",
+      "seq": 97,
+      "badge": "UP",
+      "origin": "1080930",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2008년 09월 30번"
+      }
+    },
+    {
+      "code": "3981117",
+      "chapter": "06",
+      "chapterName": "명제와 절대부등식",
+      "subject": "K2",
+      "seq": 98,
+      "badge": "OR",
+      "origin": "3981117",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "1998년 11월 17번"
+      }
+    },
+    {
+      "code": "3981117-N01",
+      "chapter": "06",
+      "chapterName": "명제와 절대부등식",
+      "subject": "K2",
+      "seq": 99,
+      "badge": "NC",
+      "origin": "3981117",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "1998년 11월 17번"
+      }
+    },
+    {
+      "code": "3981117-U01",
+      "chapter": "06",
+      "chapterName": "명제와 절대부등식",
+      "subject": "K2",
+      "seq": 100,
+      "badge": "UP",
+      "origin": "3981117",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "1998년 11월 17번"
+      }
+    },
+    {
+      "code": "2190330B",
+      "chapter": "06",
+      "chapterName": "명제와 절대부등식",
+      "subject": "K2",
+      "seq": 101,
+      "badge": "OR",
+      "origin": "2190330B",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2019년 03월 30번"
+      }
+    },
+    {
+      "code": "2190330B-N01",
+      "chapter": "06",
+      "chapterName": "명제와 절대부등식",
+      "subject": "K2",
+      "seq": 102,
+      "badge": "NC",
+      "origin": "2190330B",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2019년 03월 30번"
+      }
+    },
+    {
+      "code": "2190330B-U01",
+      "chapter": "06",
+      "chapterName": "명제와 절대부등식",
+      "subject": "K2",
+      "seq": 103,
+      "badge": "UP",
+      "origin": "2190330B",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2019년 03월 30번"
+      }
+    },
+    {
+      "code": "1181128",
+      "chapter": "07",
+      "chapterName": "함수",
+      "subject": "K2",
+      "seq": 1,
+      "badge": "OR",
+      "origin": "1181128",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2018년 11월 28번"
+      }
+    },
+    {
+      "code": "1181128-N01",
+      "chapter": "07",
+      "chapterName": "함수",
+      "subject": "K2",
+      "seq": 2,
+      "badge": "NC",
+      "origin": "1181128",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2018년 11월 28번"
+      }
+    },
+    {
+      "code": "1181128-U01",
+      "chapter": "07",
+      "chapterName": "함수",
+      "subject": "K2",
+      "seq": 3,
+      "badge": "UP",
+      "origin": "1181128",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2018년 11월 28번"
+      }
+    },
+    {
+      "code": "1131110",
+      "chapter": "07",
+      "chapterName": "함수",
+      "subject": "K2",
+      "seq": 4,
+      "badge": "OR",
+      "origin": "1131110",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2013년 11월 10번"
+      }
+    },
+    {
+      "code": "1131110-N01",
+      "chapter": "07",
+      "chapterName": "함수",
+      "subject": "K2",
+      "seq": 5,
+      "badge": "NC",
+      "origin": "1131110",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2013년 11월 10번"
+      }
+    },
+    {
+      "code": "1131110-U01",
+      "chapter": "07",
+      "chapterName": "함수",
+      "subject": "K2",
+      "seq": 6,
+      "badge": "UP",
+      "origin": "1131110",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2013년 11월 10번"
+      }
+    },
+    {
+      "code": "1131110-U02",
+      "chapter": "07",
+      "chapterName": "함수",
+      "subject": "K2",
+      "seq": 7,
+      "badge": "UP",
+      "origin": "1131110",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2013년 11월 10번"
+      }
+    },
+    {
+      "code": "2180327",
+      "chapter": "07",
+      "chapterName": "함수",
+      "subject": "K2",
+      "seq": 8,
+      "badge": "OR",
+      "origin": "2180327",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2018년 03월 27번"
+      }
+    },
+    {
+      "code": "2180327-N01",
+      "chapter": "07",
+      "chapterName": "함수",
+      "subject": "K2",
+      "seq": 9,
+      "badge": "NC",
+      "origin": "2180327",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2018년 03월 27번"
+      }
+    },
+    {
+      "code": "1141128",
+      "chapter": "07",
+      "chapterName": "함수",
+      "subject": "K2",
+      "seq": 10,
+      "badge": "OR",
+      "origin": "1141128",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2014년 11월 28번"
+      }
+    },
+    {
+      "code": "1141128-N01",
+      "chapter": "07",
+      "chapterName": "함수",
+      "subject": "K2",
+      "seq": 11,
+      "badge": "NC",
+      "origin": "1141128",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2014년 11월 28번"
+      }
+    },
+    {
+      "code": "1151128",
+      "chapter": "07",
+      "chapterName": "함수",
+      "subject": "K2",
+      "seq": 12,
+      "badge": "OR",
+      "origin": "1151128",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2015년 11월 28번"
+      }
+    },
+    {
+      "code": "1151128-N01",
+      "chapter": "07",
+      "chapterName": "함수",
+      "subject": "K2",
+      "seq": 13,
+      "badge": "NC",
+      "origin": "1151128",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2015년 11월 28번"
+      }
+    },
+    {
+      "code": "1151128-N02",
+      "chapter": "07",
+      "chapterName": "함수",
+      "subject": "K2",
+      "seq": 14,
+      "badge": "NC",
+      "origin": "1151128",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2015년 11월 28번"
+      }
+    },
+    {
+      "code": "1151128-U01",
+      "chapter": "07",
+      "chapterName": "함수",
+      "subject": "K2",
+      "seq": 15,
+      "badge": "UP",
+      "origin": "1151128",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2015년 11월 28번"
+      }
+    },
+    {
+      "code": "2220326",
+      "chapter": "07",
+      "chapterName": "함수",
+      "subject": "K2",
+      "seq": 16,
+      "badge": "OR",
+      "origin": "2220326",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2022년 03월 26번"
+      }
+    },
+    {
+      "code": "2220326-N01",
+      "chapter": "07",
+      "chapterName": "함수",
+      "subject": "K2",
+      "seq": 17,
+      "badge": "NC",
+      "origin": "2220326",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2022년 03월 26번"
+      }
+    },
+    {
+      "code": "2220326-U01",
+      "chapter": "07",
+      "chapterName": "함수",
+      "subject": "K2",
+      "seq": 18,
+      "badge": "UP",
+      "origin": "2220326",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2022년 03월 26번"
+      }
+    },
+    {
+      "code": "2230316",
+      "chapter": "07",
+      "chapterName": "함수",
+      "subject": "K2",
+      "seq": 19,
+      "badge": "OR",
+      "origin": "2230316",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2023년 03월 16번"
+      }
+    },
+    {
+      "code": "2230316-N01",
+      "chapter": "07",
+      "chapterName": "함수",
+      "subject": "K2",
+      "seq": 20,
+      "badge": "NC",
+      "origin": "2230316",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2023년 03월 16번"
+      }
+    },
+    {
+      "code": "2230316-N02",
+      "chapter": "07",
+      "chapterName": "함수",
+      "subject": "K2",
+      "seq": 21,
+      "badge": "NC",
+      "origin": "2230316",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2023년 03월 16번"
+      }
+    },
+    {
+      "code": "2170611",
+      "chapter": "07",
+      "chapterName": "함수",
+      "subject": "K2",
+      "seq": 22,
+      "badge": "OR",
+      "origin": "2170611",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2017년 06월 11번"
+      }
+    },
+    {
+      "code": "2170611-N01",
+      "chapter": "07",
+      "chapterName": "함수",
+      "subject": "K2",
+      "seq": 23,
+      "badge": "NC",
+      "origin": "2170611",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2017년 06월 11번"
+      }
+    },
+    {
+      "code": "2170611-U01",
+      "chapter": "07",
+      "chapterName": "함수",
+      "subject": "K2",
+      "seq": 24,
+      "badge": "UP",
+      "origin": "2170611",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2017년 06월 11번"
+      }
+    },
+    {
+      "code": "1091107",
+      "chapter": "07",
+      "chapterName": "함수",
+      "subject": "K2",
+      "seq": 25,
+      "badge": "OR",
+      "origin": "1091107",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2009년 11월 7번"
+      }
+    },
+    {
+      "code": "1091107-N01",
+      "chapter": "07",
+      "chapterName": "함수",
+      "subject": "K2",
+      "seq": 26,
+      "badge": "NC",
+      "origin": "1091107",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2009년 11월 7번"
+      }
+    },
+    {
+      "code": "1091107-U01",
+      "chapter": "07",
+      "chapterName": "함수",
+      "subject": "K2",
+      "seq": 27,
+      "badge": "UP",
+      "origin": "1091107",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2009년 11월 7번"
+      }
+    },
+    {
+      "code": "2230313",
+      "chapter": "07",
+      "chapterName": "함수",
+      "subject": "K2",
+      "seq": 28,
+      "badge": "OR",
+      "origin": "2230313",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2023년 03월 13번"
+      }
+    },
+    {
+      "code": "2230313-N01",
+      "chapter": "07",
+      "chapterName": "함수",
+      "subject": "K2",
+      "seq": 29,
+      "badge": "NC",
+      "origin": "2230313",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2023년 03월 13번"
+      }
+    },
+    {
+      "code": "2230313-U01",
+      "chapter": "07",
+      "chapterName": "함수",
+      "subject": "K2",
+      "seq": 30,
+      "badge": "UP",
+      "origin": "2230313",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2023년 03월 13번"
+      }
+    },
+    {
+      "code": "2110326",
+      "chapter": "07",
+      "chapterName": "함수",
+      "subject": "K2",
+      "seq": 31,
+      "badge": "OR",
+      "origin": "2110326",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2011년 03월 26번"
+      }
+    },
+    {
+      "code": "2110326-N01",
+      "chapter": "07",
+      "chapterName": "함수",
+      "subject": "K2",
+      "seq": 32,
+      "badge": "NC",
+      "origin": "2110326",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2011년 03월 26번"
+      }
+    },
+    {
+      "code": "2110326-U01",
+      "chapter": "07",
+      "chapterName": "함수",
+      "subject": "K2",
+      "seq": 33,
+      "badge": "UP",
+      "origin": "2110326",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2011년 03월 26번"
+      }
+    },
+    {
+      "code": "2110326-U02",
+      "chapter": "07",
+      "chapterName": "함수",
+      "subject": "K2",
+      "seq": 34,
+      "badge": "UP",
+      "origin": "2110326",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2011년 03월 26번"
+      }
+    },
+    {
+      "code": "3160329",
+      "chapter": "07",
+      "chapterName": "함수",
+      "subject": "K2",
+      "seq": 35,
+      "badge": "OR",
+      "origin": "3160329",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2016년 03월 29번"
+      }
+    },
+    {
+      "code": "3160329-N01",
+      "chapter": "07",
+      "chapterName": "함수",
+      "subject": "K2",
+      "seq": 36,
+      "badge": "NC",
+      "origin": "3160329",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2016년 03월 29번"
+      }
+    },
+    {
+      "code": "3080530",
+      "chapter": "07",
+      "chapterName": "함수",
+      "subject": "K2",
+      "seq": 37,
+      "badge": "OR",
+      "origin": "3080530",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2008년 05월 30번"
+      }
+    },
+    {
+      "code": "3080530-N01",
+      "chapter": "07",
+      "chapterName": "함수",
+      "subject": "K2",
+      "seq": 38,
+      "badge": "NC",
+      "origin": "3080530",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2008년 05월 30번"
+      }
+    },
+    {
+      "code": "3190625A",
+      "chapter": "07",
+      "chapterName": "함수",
+      "subject": "K2",
+      "seq": 39,
+      "badge": "OR",
+      "origin": "3190625A",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2019년 06월 25번"
+      }
+    },
+    {
+      "code": "3190625A-N01",
+      "chapter": "07",
+      "chapterName": "함수",
+      "subject": "K2",
+      "seq": 40,
+      "badge": "NC",
+      "origin": "3190625A",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2019년 06월 25번"
+      }
+    },
+    {
+      "code": "3190728",
+      "chapter": "07",
+      "chapterName": "함수",
+      "subject": "K2",
+      "seq": 41,
+      "badge": "OR",
+      "origin": "3190728",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2019년 07월 28번"
+      }
+    },
+    {
+      "code": "3190728-N01",
+      "chapter": "07",
+      "chapterName": "함수",
+      "subject": "K2",
+      "seq": 42,
+      "badge": "NC",
+      "origin": "3190728",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2019년 07월 28번"
+      }
+    },
+    {
+      "code": "3050622",
+      "chapter": "07",
+      "chapterName": "함수",
+      "subject": "K2",
+      "seq": 43,
+      "badge": "OR",
+      "origin": "3050622",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2005년 06월 22번"
+      }
+    },
+    {
+      "code": "3050622-N01",
+      "chapter": "07",
+      "chapterName": "함수",
+      "subject": "K2",
+      "seq": 44,
+      "badge": "NC",
+      "origin": "3050622",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2005년 06월 22번"
+      }
+    },
+    {
+      "code": "3040925",
+      "chapter": "07",
+      "chapterName": "함수",
+      "subject": "K2",
+      "seq": 45,
+      "badge": "OR",
+      "origin": "3040925",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2004년 09월 25번"
+      }
+    },
+    {
+      "code": "3040925-N01",
+      "chapter": "07",
+      "chapterName": "함수",
+      "subject": "K2",
+      "seq": 46,
+      "badge": "NC",
+      "origin": "3040925",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2004년 09월 25번"
+      }
+    },
+    {
+      "code": "2081106",
+      "chapter": "07",
+      "chapterName": "함수",
+      "subject": "K2",
+      "seq": 47,
+      "badge": "OR",
+      "origin": "2081106",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2008년 11월 6번"
+      }
+    },
+    {
+      "code": "2081106-N01",
+      "chapter": "07",
+      "chapterName": "함수",
+      "subject": "K2",
+      "seq": 48,
+      "badge": "NC",
+      "origin": "2081106",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2008년 11월 6번"
+      }
+    },
+    {
+      "code": "2081106-U01",
+      "chapter": "07",
+      "chapterName": "함수",
+      "subject": "K2",
+      "seq": 49,
+      "badge": "UP",
+      "origin": "2081106",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2008년 11월 6번"
+      }
+    },
+    {
+      "code": "1231129",
+      "chapter": "07",
+      "chapterName": "함수",
+      "subject": "K2",
+      "seq": 50,
+      "badge": "OR",
+      "origin": "1231129",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2023년 11월 29번"
+      }
+    },
+    {
+      "code": "1231129-N01",
+      "chapter": "07",
+      "chapterName": "함수",
+      "subject": "K2",
+      "seq": 51,
+      "badge": "NC",
+      "origin": "1231129",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2023년 11월 29번"
+      }
+    },
+    {
+      "code": "1231129-N02",
+      "chapter": "07",
+      "chapterName": "함수",
+      "subject": "K2",
+      "seq": 52,
+      "badge": "NC",
+      "origin": "1231129",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2023년 11월 29번"
+      }
+    },
+    {
+      "code": "3090428",
+      "chapter": "07",
+      "chapterName": "함수",
+      "subject": "K2",
+      "seq": 53,
+      "badge": "OR",
+      "origin": "3090428",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2009년 04월 28번"
+      }
+    },
+    {
+      "code": "3090428-D01",
+      "chapter": "07",
+      "chapterName": "함수",
+      "subject": "K2",
+      "seq": 54,
+      "badge": "DW",
+      "origin": "3090428",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2009년 04월 28번"
+      }
+    },
+    {
+      "code": "3090428-U01",
+      "chapter": "07",
+      "chapterName": "함수",
+      "subject": "K2",
+      "seq": 55,
+      "badge": "UP",
+      "origin": "3090428",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2009년 04월 28번"
+      }
+    },
+    {
+      "code": "3090428-U02",
+      "chapter": "07",
+      "chapterName": "함수",
+      "subject": "K2",
+      "seq": 56,
+      "badge": "UP",
+      "origin": "3090428",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2009년 04월 28번"
+      }
+    },
+    {
+      "code": "2130330A",
+      "chapter": "07",
+      "chapterName": "함수",
+      "subject": "K2",
+      "seq": 57,
+      "badge": "OR",
+      "origin": "2130330A",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2013년 03월 30번"
+      }
+    },
+    {
+      "code": "2130330A-N01",
+      "chapter": "07",
+      "chapterName": "함수",
+      "subject": "K2",
+      "seq": 58,
+      "badge": "NC",
+      "origin": "2130330A",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2013년 03월 30번"
+      }
+    },
+    {
+      "code": "2130330A-U01",
+      "chapter": "07",
+      "chapterName": "함수",
+      "subject": "K2",
+      "seq": 59,
+      "badge": "UP",
+      "origin": "2130330A",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2013년 03월 30번"
+      }
+    },
+    {
+      "code": "2130330",
+      "chapter": "07",
+      "chapterName": "함수",
+      "subject": "K2",
+      "seq": 60,
+      "badge": "OR",
+      "origin": "2130330",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2013년 03월 30번"
+      }
+    },
+    {
+      "code": "2130330-N01",
+      "chapter": "07",
+      "chapterName": "함수",
+      "subject": "K2",
+      "seq": 61,
+      "badge": "NC",
+      "origin": "2130330",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2013년 03월 30번"
+      }
+    },
+    {
+      "code": "2130330-U01",
+      "chapter": "07",
+      "chapterName": "함수",
+      "subject": "K2",
+      "seq": 62,
+      "badge": "UP",
+      "origin": "2130330",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2013년 03월 30번"
+      }
+    },
+    {
+      "code": "1221121",
+      "chapter": "07",
+      "chapterName": "함수",
+      "subject": "K2",
+      "seq": 63,
+      "badge": "OR",
+      "origin": "1221121",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2022년 11월 21번"
+      }
+    },
+    {
+      "code": "1221121-D01",
+      "chapter": "07",
+      "chapterName": "함수",
+      "subject": "K2",
+      "seq": 64,
+      "badge": "DW",
+      "origin": "1221121",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2022년 11월 21번"
+      }
+    },
+    {
+      "code": "1221121-N01",
+      "chapter": "07",
+      "chapterName": "함수",
+      "subject": "K2",
+      "seq": 65,
+      "badge": "NC",
+      "origin": "1221121",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2022년 11월 21번"
+      }
+    },
+    {
+      "code": "1221121-N02",
+      "chapter": "07",
+      "chapterName": "함수",
+      "subject": "K2",
+      "seq": 66,
+      "badge": "NC",
+      "origin": "1221121",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2022년 11월 21번"
+      }
+    },
+    {
+      "code": "1231130",
+      "chapter": "07",
+      "chapterName": "함수",
+      "subject": "K2",
+      "seq": 67,
+      "badge": "OR",
+      "origin": "1231130",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2023년 11월 30번"
+      }
+    },
+    {
+      "code": "1231130-N01",
+      "chapter": "07",
+      "chapterName": "함수",
+      "subject": "K2",
+      "seq": 68,
+      "badge": "NC",
+      "origin": "1231130",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2023년 11월 30번"
+      }
+    },
+    {
+      "code": "1231130-U01",
+      "chapter": "07",
+      "chapterName": "함수",
+      "subject": "K2",
+      "seq": 69,
+      "badge": "UP",
+      "origin": "1231130",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2023년 11월 30번"
+      }
+    },
+    {
+      "code": "1211127",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 1,
+      "badge": "OR",
+      "origin": "1211127",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2021년 11월 27번"
+      }
+    },
+    {
+      "code": "1211127-N01",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 2,
+      "badge": "NC",
+      "origin": "1211127",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2021년 11월 27번"
+      }
+    },
+    {
+      "code": "1211127-U01",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 3,
+      "badge": "UP",
+      "origin": "1211127",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2021년 11월 27번"
+      }
+    },
+    {
+      "code": "2090311",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 4,
+      "badge": "OR",
+      "origin": "2090311",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2009년 03월 11번"
+      }
+    },
+    {
+      "code": "2090311-N01",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 5,
+      "badge": "NC",
+      "origin": "2090311",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2009년 03월 11번"
+      }
+    },
+    {
+      "code": "2090311-N02",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 6,
+      "badge": "NC",
+      "origin": "2090311",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2009년 03월 11번"
+      }
+    },
+    {
+      "code": "1171126",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 7,
+      "badge": "OR",
+      "origin": "1171126",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2017년 11월 26번"
+      }
+    },
+    {
+      "code": "1171126-N01",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 8,
+      "badge": "NC",
+      "origin": "1171126",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2017년 11월 26번"
+      }
+    },
+    {
+      "code": "3030428",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 9,
+      "badge": "OR",
+      "origin": "3030428",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2003년 04월 28번"
+      }
+    },
+    {
+      "code": "3030428-N01",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 10,
+      "badge": "NC",
+      "origin": "3030428",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2003년 04월 28번"
+      }
+    },
+    {
+      "code": "3030428-U01",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 11,
+      "badge": "UP",
+      "origin": "3030428",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2003년 04월 28번"
+      }
+    },
+    {
+      "code": "2170615A",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 12,
+      "badge": "OR",
+      "origin": "2170615A",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2017년 06월 15번"
+      }
+    },
+    {
+      "code": "2170615A-N01",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 13,
+      "badge": "NC",
+      "origin": "2170615A",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2017년 06월 15번"
+      }
+    },
+    {
+      "code": "2140318",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 14,
+      "badge": "OR",
+      "origin": "2140318",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2014년 03월 18번"
+      }
+    },
+    {
+      "code": "2140318-N01",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 15,
+      "badge": "NC",
+      "origin": "2140318",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2014년 03월 18번"
+      }
+    },
+    {
+      "code": "2100604",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 16,
+      "badge": "OR",
+      "origin": "2100604",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2010년 06월 4번"
+      }
+    },
+    {
+      "code": "2100604-N01",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 17,
+      "badge": "NC",
+      "origin": "2100604",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2010년 06월 4번"
+      }
+    },
+    {
+      "code": "2151119",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 18,
+      "badge": "OR",
+      "origin": "2151119",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2015년 11월 19번"
+      }
+    },
+    {
+      "code": "2151119-D01",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 19,
+      "badge": "DW",
+      "origin": "2151119",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2015년 11월 19번"
+      }
+    },
+    {
+      "code": "2151119-N01",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 20,
+      "badge": "NC",
+      "origin": "2151119",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2015년 11월 19번"
+      }
+    },
+    {
+      "code": "2151119-U01",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 21,
+      "badge": "UP",
+      "origin": "2151119",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2015년 11월 19번"
+      }
+    },
+    {
+      "code": "2080314",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 22,
+      "badge": "OR",
+      "origin": "2080314",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2008년 03월 14번"
+      }
+    },
+    {
+      "code": "2080314-N01",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 23,
+      "badge": "NC",
+      "origin": "2080314",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2008년 03월 14번"
+      }
+    },
+    {
+      "code": "2080314-U01",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 24,
+      "badge": "UP",
+      "origin": "2080314",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2008년 03월 14번"
+      }
+    },
+    {
+      "code": "2170320",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 25,
+      "badge": "OR",
+      "origin": "2170320",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2017년 03월 20번"
+      }
+    },
+    {
+      "code": "2170320-N01",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 26,
+      "badge": "NC",
+      "origin": "2170320",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2017년 03월 20번"
+      }
+    },
+    {
+      "code": "2170320-N02",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 27,
+      "badge": "NC",
+      "origin": "2170320",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2017년 03월 20번"
+      }
+    },
+    {
+      "code": "2170320-U01",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 28,
+      "badge": "UP",
+      "origin": "2170320",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2017년 03월 20번"
+      }
+    },
+    {
+      "code": "2160320",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 29,
+      "badge": "OR",
+      "origin": "2160320",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2016년 03월 20번"
+      }
+    },
+    {
+      "code": "2160320-N01",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 30,
+      "badge": "NC",
+      "origin": "2160320",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2016년 03월 20번"
+      }
+    },
+    {
+      "code": "2160320-U01",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 31,
+      "badge": "UP",
+      "origin": "2160320",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2016년 03월 20번"
+      }
+    },
+    {
+      "code": "2021116",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 32,
+      "badge": "OR",
+      "origin": "2021116",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2002년 11월 16번"
+      }
+    },
+    {
+      "code": "2021116-N01",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 33,
+      "badge": "NC",
+      "origin": "2021116",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2002년 11월 16번"
+      }
+    },
+    {
+      "code": "2021116-N02",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 34,
+      "badge": "NC",
+      "origin": "2021116",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2002년 11월 16번"
+      }
+    },
+    {
+      "code": "1191128",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 35,
+      "badge": "OR",
+      "origin": "1191128",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2019년 11월 28번"
+      }
+    },
+    {
+      "code": "1191128-N01",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 36,
+      "badge": "NC",
+      "origin": "1191128",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2019년 11월 28번"
+      }
+    },
+    {
+      "code": "2080326",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 37,
+      "badge": "OR",
+      "origin": "2080326",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2008년 03월 26번"
+      }
+    },
+    {
+      "code": "2080326-N01",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 38,
+      "badge": "NC",
+      "origin": "2080326",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2008년 03월 26번"
+      }
+    },
+    {
+      "code": "2200314",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 39,
+      "badge": "OR",
+      "origin": "2200314",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2020년 03월 14번"
+      }
+    },
+    {
+      "code": "2200314-N01",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 40,
+      "badge": "NC",
+      "origin": "2200314",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2020년 03월 14번"
+      }
+    },
+    {
+      "code": "3011121",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 41,
+      "badge": "OR",
+      "origin": "3011121",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2001년 11월 21번"
+      }
+    },
+    {
+      "code": "3011121-N01",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 42,
+      "badge": "NC",
+      "origin": "3011121",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2001년 11월 21번"
+      }
+    },
+    {
+      "code": "3011121-U01",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 43,
+      "badge": "UP",
+      "origin": "3011121",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2001년 11월 21번"
+      }
+    },
+    {
+      "code": "2190321A",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 44,
+      "badge": "OR",
+      "origin": "2190321A",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2019년 03월 21번"
+      }
+    },
+    {
+      "code": "2190321A-N01",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 45,
+      "badge": "NC",
+      "origin": "2190321A",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2019년 03월 21번"
+      }
+    },
+    {
+      "code": "2190321A-U01",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 46,
+      "badge": "UP",
+      "origin": "2190321A",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2019년 03월 21번"
+      }
+    },
+    {
+      "code": "2190321A-U02",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 47,
+      "badge": "UP",
+      "origin": "2190321A",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2019년 03월 21번"
+      }
+    },
+    {
+      "code": "1211128",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 48,
+      "badge": "OR",
+      "origin": "1211128",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2021년 11월 28번"
+      }
+    },
+    {
+      "code": "1211128-N01",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 49,
+      "badge": "NC",
+      "origin": "1211128",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2021년 11월 28번"
+      }
+    },
+    {
+      "code": "1211128-U01",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 50,
+      "badge": "UP",
+      "origin": "1211128",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2021년 11월 28번"
+      }
+    },
+    {
+      "code": "3930807",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 51,
+      "badge": "OR",
+      "origin": "3930807",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "1993년 08월 7번"
+      }
+    },
+    {
+      "code": "3930807-N01",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 52,
+      "badge": "NC",
+      "origin": "3930807",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "1993년 08월 7번"
+      }
+    },
+    {
+      "code": "3930807-N02",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 53,
+      "badge": "NC",
+      "origin": "3930807",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "1993년 08월 7번"
+      }
+    },
+    {
+      "code": "3930807-U01",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 54,
+      "badge": "UP",
+      "origin": "3930807",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "1993년 08월 7번"
+      }
+    },
+    {
+      "code": "3001106",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 55,
+      "badge": "OR",
+      "origin": "3001106",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2000년 11월 6번"
+      }
+    },
+    {
+      "code": "3001106-N01",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 56,
+      "badge": "NC",
+      "origin": "3001106",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2000년 11월 6번"
+      }
+    },
+    {
+      "code": "1131121",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 57,
+      "badge": "OR",
+      "origin": "1131121",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2013년 11월 21번"
+      }
+    },
+    {
+      "code": "1131121-N01",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 58,
+      "badge": "NC",
+      "origin": "1131121",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2013년 11월 21번"
+      }
+    },
+    {
+      "code": "1161119",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 59,
+      "badge": "OR",
+      "origin": "1161119",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2016년 11월 19번"
+      }
+    },
+    {
+      "code": "1161119-N01",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 60,
+      "badge": "NC",
+      "origin": "1161119",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2016년 11월 19번"
+      }
+    },
+    {
+      "code": "2170620",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 61,
+      "badge": "OR",
+      "origin": "2170620",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2017년 06월 20번"
+      }
+    },
+    {
+      "code": "2170620-N01",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 62,
+      "badge": "NC",
+      "origin": "2170620",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2017년 06월 20번"
+      }
+    },
+    {
+      "code": "2170620-U01",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 63,
+      "badge": "UP",
+      "origin": "2170620",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2017년 06월 20번"
+      }
+    },
+    {
+      "code": "2170620-U02",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 64,
+      "badge": "UP",
+      "origin": "2170620",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2017년 06월 20번"
+      }
+    },
+    {
+      "code": "2140320",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 65,
+      "badge": "OR",
+      "origin": "2140320",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2014년 03월 20번"
+      }
+    },
+    {
+      "code": "2140320-N01",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 66,
+      "badge": "NC",
+      "origin": "2140320",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2014년 03월 20번"
+      }
+    },
+    {
+      "code": "2140320-U01",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 67,
+      "badge": "UP",
+      "origin": "2140320",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2014년 03월 20번"
+      }
+    },
+    {
+      "code": "2140320-U02",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 68,
+      "badge": "UP",
+      "origin": "2140320",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2014년 03월 20번"
+      }
+    },
+    {
+      "code": "2150319",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 69,
+      "badge": "OR",
+      "origin": "2150319",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2015년 03월 19번"
+      }
+    },
+    {
+      "code": "2150319-N01",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 70,
+      "badge": "NC",
+      "origin": "2150319",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2015년 03월 19번"
+      }
+    },
+    {
+      "code": "2180614",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 71,
+      "badge": "OR",
+      "origin": "2180614",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2018년 06월 14번"
+      }
+    },
+    {
+      "code": "2180614-N01",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 72,
+      "badge": "NC",
+      "origin": "2180614",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2018년 06월 14번"
+      }
+    },
+    {
+      "code": "2160917",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 73,
+      "badge": "OR",
+      "origin": "2160917",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2016년 09월 17번"
+      }
+    },
+    {
+      "code": "2160917-N01",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 74,
+      "badge": "NC",
+      "origin": "2160917",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2016년 09월 17번"
+      }
+    },
+    {
+      "code": "2150609A",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 75,
+      "badge": "OR",
+      "origin": "2150609A",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2015년 06월 9번"
+      }
+    },
+    {
+      "code": "2150609A-N01",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 76,
+      "badge": "NC",
+      "origin": "2150609A",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2015년 06월 9번"
+      }
+    },
+    {
+      "code": "2150609A-U01",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 77,
+      "badge": "UP",
+      "origin": "2150609A",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2015년 06월 9번"
+      }
+    },
+    {
+      "code": "1231115",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 78,
+      "badge": "OR",
+      "origin": "1231115",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2023년 11월 15번"
+      }
+    },
+    {
+      "code": "1231115-N01",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 79,
+      "badge": "NC",
+      "origin": "1231115",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2023년 11월 15번"
+      }
+    },
+    {
+      "code": "2220314",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 80,
+      "badge": "OR",
+      "origin": "2220314",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2022년 03월 14번"
+      }
+    },
+    {
+      "code": "2220314-N01",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 81,
+      "badge": "NC",
+      "origin": "2220314",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2022년 03월 14번"
+      }
+    },
+    {
+      "code": "2220314-U01",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 82,
+      "badge": "UP",
+      "origin": "2220314",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2022년 03월 14번"
+      }
+    },
+    {
+      "code": "1221127",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 83,
+      "badge": "OR",
+      "origin": "1221127",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2022년 11월 27번"
+      }
+    },
+    {
+      "code": "1221127-N01",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 84,
+      "badge": "NC",
+      "origin": "1221127",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2022년 11월 27번"
+      }
+    },
+    {
+      "code": "1181130",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 85,
+      "badge": "OR",
+      "origin": "1181130",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2018년 11월 30번"
+      }
+    },
+    {
+      "code": "1181130-N01",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 86,
+      "badge": "NC",
+      "origin": "1181130",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2018년 11월 30번"
+      }
+    },
+    {
+      "code": "1181130-N02",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 87,
+      "badge": "NC",
+      "origin": "1181130",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2018년 11월 30번"
+      }
+    },
+    {
+      "code": "2170328",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 88,
+      "badge": "OR",
+      "origin": "2170328",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2017년 03월 28번"
+      }
+    },
+    {
+      "code": "2170328-N01",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 89,
+      "badge": "NC",
+      "origin": "2170328",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2017년 03월 28번"
+      }
+    },
+    {
+      "code": "2170328-U01",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 90,
+      "badge": "UP",
+      "origin": "2170328",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2017년 03월 28번"
+      }
+    },
+    {
+      "code": "2060310",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 91,
+      "badge": "OR",
+      "origin": "2060310",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2006년 03월 10번"
+      }
+    },
+    {
+      "code": "2060310-N01",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 92,
+      "badge": "NC",
+      "origin": "2060310",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2006년 03월 10번"
+      }
+    },
+    {
+      "code": "3101011",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 93,
+      "badge": "OR",
+      "origin": "3101011",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2010년 10월 11번"
+      }
+    },
+    {
+      "code": "3101011-N01",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 94,
+      "badge": "NC",
+      "origin": "3101011",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2010년 10월 11번"
+      }
+    },
+    {
+      "code": "1161129",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 95,
+      "badge": "OR",
+      "origin": "1161129",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2016년 11월 29번"
+      }
+    },
+    {
+      "code": "1161129-N01",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 96,
+      "badge": "NC",
+      "origin": "1161129",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2016년 11월 29번"
+      }
+    },
+    {
+      "code": "1161129-U01",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 97,
+      "badge": "UP",
+      "origin": "1161129",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2016년 11월 29번"
+      }
+    },
+    {
+      "code": "2240327",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 98,
+      "badge": "OR",
+      "origin": "2240327",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2024년 03월 27번"
+      }
+    },
+    {
+      "code": "2240327-N01",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 99,
+      "badge": "NC",
+      "origin": "2240327",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2024년 03월 27번"
+      }
+    },
+    {
+      "code": "3100929",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 100,
+      "badge": "OR",
+      "origin": "3100929",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2010년 09월 29번"
+      }
+    },
+    {
+      "code": "3100929-N01",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 101,
+      "badge": "NC",
+      "origin": "3100929",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2010년 09월 29번"
+      }
+    },
+    {
+      "code": "3181117A",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 102,
+      "badge": "OR",
+      "origin": "3181117A",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2018년 11월 17번"
+      }
+    },
+    {
+      "code": "3181117A-N01",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 103,
+      "badge": "NC",
+      "origin": "3181117A",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2018년 11월 17번"
+      }
+    },
+    {
+      "code": "2260328",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 104,
+      "badge": "OR",
+      "origin": "2260328",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2026년 03월 28번"
+      }
+    },
+    {
+      "code": "2260328-N01",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 105,
+      "badge": "NC",
+      "origin": "2260328",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2026년 03월 28번"
+      }
+    },
+    {
+      "code": "2210320",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 106,
+      "badge": "OR",
+      "origin": "2210320",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2021년 03월 20번"
+      }
+    },
+    {
+      "code": "2210320-N01",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 107,
+      "badge": "NC",
+      "origin": "2210320",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2021년 03월 20번"
+      }
+    },
+    {
+      "code": "1121120",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 108,
+      "badge": "OR",
+      "origin": "1121120",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2012년 11월 20번"
+      }
+    },
+    {
+      "code": "1121120-N01",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 109,
+      "badge": "NC",
+      "origin": "1121120",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2012년 11월 20번"
+      }
+    },
+    {
+      "code": "1121120-U01",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 110,
+      "badge": "UP",
+      "origin": "1121120",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2012년 11월 20번"
+      }
+    },
+    {
+      "code": "2240320",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 111,
+      "badge": "OR",
+      "origin": "2240320",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2024년 03월 20번"
+      }
+    },
+    {
+      "code": "2240320-N01",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 112,
+      "badge": "NC",
+      "origin": "2240320",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2024년 03월 20번"
+      }
+    },
+    {
+      "code": "2190321B",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 113,
+      "badge": "OR",
+      "origin": "2190321B",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2019년 03월 21번"
+      }
+    },
+    {
+      "code": "2190321B-N01",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 114,
+      "badge": "NC",
+      "origin": "2190321B",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2019년 03월 21번"
+      }
+    },
+    {
+      "code": "2190321B-U01",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 115,
+      "badge": "UP",
+      "origin": "2190321B",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2019년 03월 21번"
+      }
+    },
+    {
+      "code": "2260321",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 116,
+      "badge": "OR",
+      "origin": "2260321",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2026년 03월 21번"
+      }
+    },
+    {
+      "code": "2260321-D01",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 117,
+      "badge": "DW",
+      "origin": "2260321",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2026년 03월 21번"
+      }
+    },
+    {
+      "code": "2260321-N01",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 118,
+      "badge": "NC",
+      "origin": "2260321",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2026년 03월 21번"
+      }
+    },
+    {
+      "code": "2220321",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 119,
+      "badge": "OR",
+      "origin": "2220321",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2022년 03월 21번"
+      }
+    },
+    {
+      "code": "2220321-N01",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 120,
+      "badge": "NC",
+      "origin": "2220321",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2022년 03월 21번"
+      }
+    },
+    {
+      "code": "2220321-U01",
+      "chapter": "08",
+      "chapterName": "합성함수와 역함수",
+      "subject": "K2",
+      "seq": 121,
+      "badge": "UP",
+      "origin": "2220321",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2022년 03월 21번"
+      }
+    },
+    {
+      "code": "2170615B",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 1,
+      "badge": "OR",
+      "origin": "2170615B",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2017년 06월 15번"
+      }
+    },
+    {
+      "code": "2170615B-N01",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 2,
+      "badge": "NC",
+      "origin": "2170615B",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2017년 06월 15번"
+      }
+    },
+    {
+      "code": "2200319",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 3,
+      "badge": "OR",
+      "origin": "2200319",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2020년 03월 19번"
+      }
+    },
+    {
+      "code": "2200319-N01",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 4,
+      "badge": "NC",
+      "origin": "2200319",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2020년 03월 19번"
+      }
+    },
+    {
+      "code": "2220318",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 5,
+      "badge": "OR",
+      "origin": "2220318",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2022년 03월 18번"
+      }
+    },
+    {
+      "code": "2220318-N01",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 6,
+      "badge": "NC",
+      "origin": "2220318",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2022년 03월 18번"
+      }
+    },
+    {
+      "code": "2170319",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 7,
+      "badge": "OR",
+      "origin": "2170319",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2017년 03월 19번"
+      }
+    },
+    {
+      "code": "2170319-N01",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 8,
+      "badge": "NC",
+      "origin": "2170319",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2017년 03월 19번"
+      }
+    },
+    {
+      "code": "2170319-N02",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 9,
+      "badge": "NC",
+      "origin": "2170319",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2017년 03월 19번"
+      }
+    },
+    {
+      "code": "3001114",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 10,
+      "badge": "OR",
+      "origin": "3001114",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2000년 11월 14번"
+      }
+    },
+    {
+      "code": "3001114-N01",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 11,
+      "badge": "NC",
+      "origin": "3001114",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2000년 11월 14번"
+      }
+    },
+    {
+      "code": "3001114-N02",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 12,
+      "badge": "NC",
+      "origin": "3001114",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2000년 11월 14번"
+      }
+    },
+    {
+      "code": "2060627",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 13,
+      "badge": "OR",
+      "origin": "2060627",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2006년 06월 27번"
+      }
+    },
+    {
+      "code": "2060627-N01",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 14,
+      "badge": "NC",
+      "origin": "2060627",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2006년 06월 27번"
+      }
+    },
+    {
+      "code": "2100329",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 15,
+      "badge": "OR",
+      "origin": "2100329",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2010년 03월 29번"
+      }
+    },
+    {
+      "code": "2100329-N01",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 16,
+      "badge": "NC",
+      "origin": "2100329",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2010년 03월 29번"
+      }
+    },
+    {
+      "code": "2170928",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 17,
+      "badge": "OR",
+      "origin": "2170928",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2017년 09월 28번"
+      }
+    },
+    {
+      "code": "2170928-N01",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 18,
+      "badge": "NC",
+      "origin": "2170928",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2017년 09월 28번"
+      }
+    },
+    {
+      "code": "2080615B",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 19,
+      "badge": "OR",
+      "origin": "2080615B",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2008년 06월 15번"
+      }
+    },
+    {
+      "code": "2080615B-N01",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 20,
+      "badge": "NC",
+      "origin": "2080615B",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2008년 06월 15번"
+      }
+    },
+    {
+      "code": "2080615B-U01",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 21,
+      "badge": "UP",
+      "origin": "2080615B",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2008년 06월 15번"
+      }
+    },
+    {
+      "code": "2160318",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 22,
+      "badge": "OR",
+      "origin": "2160318",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2016년 03월 18번"
+      }
+    },
+    {
+      "code": "2160318-N01",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 23,
+      "badge": "NC",
+      "origin": "2160318",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2016년 03월 18번"
+      }
+    },
+    {
+      "code": "2160318-U01",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 24,
+      "badge": "UP",
+      "origin": "2160318",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2016년 03월 18번"
+      }
+    },
+    {
+      "code": "2160318-U02",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 25,
+      "badge": "UP",
+      "origin": "2160318",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2016년 03월 18번"
+      }
+    },
+    {
+      "code": "2150321",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 26,
+      "badge": "OR",
+      "origin": "2150321",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2015년 03월 21번"
+      }
+    },
+    {
+      "code": "2150321-N01",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 27,
+      "badge": "NC",
+      "origin": "2150321",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2015년 03월 21번"
+      }
+    },
+    {
+      "code": "1231116",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 28,
+      "badge": "OR",
+      "origin": "1231116",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2023년 11월 16번"
+      }
+    },
+    {
+      "code": "1231116-N01",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 29,
+      "badge": "NC",
+      "origin": "1231116",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2023년 11월 16번"
+      }
+    },
+    {
+      "code": "1171113",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 30,
+      "badge": "OR",
+      "origin": "1171113",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2017년 11월 13번"
+      }
+    },
+    {
+      "code": "1171113-N01",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 31,
+      "badge": "NC",
+      "origin": "1171113",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2017년 11월 13번"
+      }
+    },
+    {
+      "code": "2170927",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 32,
+      "badge": "OR",
+      "origin": "2170927",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2017년 09월 27번"
+      }
+    },
+    {
+      "code": "2170927-N01",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 33,
+      "badge": "NC",
+      "origin": "2170927",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2017년 09월 27번"
+      }
+    },
+    {
+      "code": "2240317",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 34,
+      "badge": "OR",
+      "origin": "2240317",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2024년 03월 17번"
+      }
+    },
+    {
+      "code": "2240317-N01",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 35,
+      "badge": "NC",
+      "origin": "2240317",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2024년 03월 17번"
+      }
+    },
+    {
+      "code": "2150614",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 36,
+      "badge": "OR",
+      "origin": "2150614",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2015년 06월 14번"
+      }
+    },
+    {
+      "code": "2150614-N01",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 37,
+      "badge": "NC",
+      "origin": "2150614",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2015년 06월 14번"
+      }
+    },
+    {
+      "code": "2150614-U01",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 38,
+      "badge": "UP",
+      "origin": "2150614",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2015년 06월 14번"
+      }
+    },
+    {
+      "code": "1141118",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 39,
+      "badge": "OR",
+      "origin": "1141118",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2014년 11월 18번"
+      }
+    },
+    {
+      "code": "1141118-N01",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 40,
+      "badge": "NC",
+      "origin": "1141118",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2014년 11월 18번"
+      }
+    },
+    {
+      "code": "2180616",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 41,
+      "badge": "OR",
+      "origin": "2180616",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2018년 06월 16번"
+      }
+    },
+    {
+      "code": "2180616-N01",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 42,
+      "badge": "NC",
+      "origin": "2180616",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2018년 06월 16번"
+      }
+    },
+    {
+      "code": "1131116",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 43,
+      "badge": "OR",
+      "origin": "1131116",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2013년 11월 16번"
+      }
+    },
+    {
+      "code": "1131116-N01",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 44,
+      "badge": "NC",
+      "origin": "1131116",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2013년 11월 16번"
+      }
+    },
+    {
+      "code": "1131116-N02",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 45,
+      "badge": "NC",
+      "origin": "1131116",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2013년 11월 16번"
+      }
+    },
+    {
+      "code": "1111121",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 46,
+      "badge": "OR",
+      "origin": "1111121",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2011년 11월 21번"
+      }
+    },
+    {
+      "code": "1111121-N01",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 47,
+      "badge": "NC",
+      "origin": "1111121",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2011년 11월 21번"
+      }
+    },
+    {
+      "code": "1111121-U01",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 48,
+      "badge": "UP",
+      "origin": "1111121",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2011년 11월 21번"
+      }
+    },
+    {
+      "code": "2160617",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 49,
+      "badge": "OR",
+      "origin": "2160617",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2016년 06월 17번"
+      }
+    },
+    {
+      "code": "2160617-N01",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 50,
+      "badge": "NC",
+      "origin": "2160617",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2016년 06월 17번"
+      }
+    },
+    {
+      "code": "2100629",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 51,
+      "badge": "OR",
+      "origin": "2100629",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2010년 06월 29번"
+      }
+    },
+    {
+      "code": "2100629-N01",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 52,
+      "badge": "NC",
+      "origin": "2100629",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2010년 06월 29번"
+      }
+    },
+    {
+      "code": "2100629-N02",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 53,
+      "badge": "NC",
+      "origin": "2100629",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2010년 06월 29번"
+      }
+    },
+    {
+      "code": "2140321",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 54,
+      "badge": "OR",
+      "origin": "2140321",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2014년 03월 21번"
+      }
+    },
+    {
+      "code": "2140321-N01",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 55,
+      "badge": "NC",
+      "origin": "2140321",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2014년 03월 21번"
+      }
+    },
+    {
+      "code": "2160930",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 56,
+      "badge": "OR",
+      "origin": "2160930",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2016년 09월 30번"
+      }
+    },
+    {
+      "code": "2160930-N01",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 57,
+      "badge": "NC",
+      "origin": "2160930",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2016년 09월 30번"
+      }
+    },
+    {
+      "code": "2160930-N02",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 58,
+      "badge": "NC",
+      "origin": "2160930",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2016년 09월 30번"
+      }
+    },
+    {
+      "code": "2190320B",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 59,
+      "badge": "OR",
+      "origin": "2190320B",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2019년 03월 20번"
+      }
+    },
+    {
+      "code": "2190320B-N01",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 60,
+      "badge": "NC",
+      "origin": "2190320B",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2019년 03월 20번"
+      }
+    },
+    {
+      "code": "1090927",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 61,
+      "badge": "OR",
+      "origin": "1090927",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2009년 09월 27번"
+      }
+    },
+    {
+      "code": "1090927-N01",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 62,
+      "badge": "NC",
+      "origin": "1090927",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2009년 09월 27번"
+      }
+    },
+    {
+      "code": "2230330",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 63,
+      "badge": "OR",
+      "origin": "2230330",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2023년 03월 30번"
+      }
+    },
+    {
+      "code": "2230330-N01",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 64,
+      "badge": "NC",
+      "origin": "2230330",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2023년 03월 30번"
+      }
+    },
+    {
+      "code": "2260330",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 65,
+      "badge": "OR",
+      "origin": "2260330",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2026년 03월 30번"
+      }
+    },
+    {
+      "code": "2260330-N01",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 66,
+      "badge": "NC",
+      "origin": "2260330",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2026년 03월 30번"
+      }
+    },
+    {
+      "code": "2210330",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 67,
+      "badge": "OR",
+      "origin": "2210330",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2021년 03월 30번"
+      }
+    },
+    {
+      "code": "2210330-D01",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 68,
+      "badge": "DW",
+      "origin": "2210330",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2021년 03월 30번"
+      }
+    },
+    {
+      "code": "2210330-N01",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 69,
+      "badge": "NC",
+      "origin": "2210330",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2021년 03월 30번"
+      }
+    },
+    {
+      "code": "2190330A",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 70,
+      "badge": "OR",
+      "origin": "2190330A",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2019년 03월 30번"
+      }
+    },
+    {
+      "code": "2190330A-N01",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 71,
+      "badge": "NC",
+      "origin": "2190330A",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2019년 03월 30번"
+      }
+    },
+    {
+      "code": "2190330A-U01",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 72,
+      "badge": "UP",
+      "origin": "2190330A",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2019년 03월 30번"
+      }
+    },
+    {
+      "code": "1100923",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 73,
+      "badge": "OR",
+      "origin": "1100923",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2010년 09월 23번"
+      }
+    },
+    {
+      "code": "1100923-N01",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 74,
+      "badge": "NC",
+      "origin": "1100923",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2010년 09월 23번"
+      }
+    },
+    {
+      "code": "2200316",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 75,
+      "badge": "OR",
+      "origin": "2200316",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2020년 03월 16번"
+      }
+    },
+    {
+      "code": "2200316-N01",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 76,
+      "badge": "NC",
+      "origin": "2200316",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2020년 03월 16번"
+      }
+    },
+    {
+      "code": "2170311",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 77,
+      "badge": "OR",
+      "origin": "2170311",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2017년 03월 11번"
+      }
+    },
+    {
+      "code": "2170311-N01",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 78,
+      "badge": "NC",
+      "origin": "2170311",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2017년 03월 11번"
+      }
+    },
+    {
+      "code": "2180320",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 79,
+      "badge": "OR",
+      "origin": "2180320",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2018년 03월 20번"
+      }
+    },
+    {
+      "code": "2180320-N01",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 80,
+      "badge": "NC",
+      "origin": "2180320",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2018년 03월 20번"
+      }
+    },
+    {
+      "code": "2180320-U01",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 81,
+      "badge": "UP",
+      "origin": "2180320",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2018년 03월 20번"
+      }
+    },
+    {
+      "code": "1131127",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 82,
+      "badge": "OR",
+      "origin": "1131127",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2013년 11월 27번"
+      }
+    },
+    {
+      "code": "1131127-N01",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 83,
+      "badge": "NC",
+      "origin": "1131127",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2013년 11월 27번"
+      }
+    },
+    {
+      "code": "2190315",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 84,
+      "badge": "OR",
+      "origin": "2190315",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2019년 03월 15번"
+      }
+    },
+    {
+      "code": "2190315-N01",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 85,
+      "badge": "NC",
+      "origin": "2190315",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2019년 03월 15번"
+      }
+    },
+    {
+      "code": "2190315-U01",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 86,
+      "badge": "UP",
+      "origin": "2190315",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2019년 03월 15번"
+      }
+    },
+    {
+      "code": "2190315-U02",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 87,
+      "badge": "UP",
+      "origin": "2190315",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2019년 03월 15번"
+      }
+    },
+    {
+      "code": "2100318",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 88,
+      "badge": "OR",
+      "origin": "2100318",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2010년 03월 18번"
+      }
+    },
+    {
+      "code": "2100318-N01",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 89,
+      "badge": "NC",
+      "origin": "2100318",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2010년 03월 18번"
+      }
+    },
+    {
+      "code": "2180317",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 90,
+      "badge": "OR",
+      "origin": "2180317",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2018년 03월 17번"
+      }
+    },
+    {
+      "code": "2180317-N01",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 91,
+      "badge": "NC",
+      "origin": "2180317",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2018년 03월 17번"
+      }
+    },
+    {
+      "code": "2240314",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 92,
+      "badge": "OR",
+      "origin": "2240314",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2024년 03월 14번"
+      }
+    },
+    {
+      "code": "2240314-N01",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 93,
+      "badge": "NC",
+      "origin": "2240314",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2024년 03월 14번"
+      }
+    },
+    {
+      "code": "2161127",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 94,
+      "badge": "OR",
+      "origin": "2161127",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2016년 11월 27번"
+      }
+    },
+    {
+      "code": "2161127-N01",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 95,
+      "badge": "NC",
+      "origin": "2161127",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2016년 11월 27번"
+      }
+    },
+    {
+      "code": "1111112",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 96,
+      "badge": "OR",
+      "origin": "1111112",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2011년 11월 12번"
+      }
+    },
+    {
+      "code": "1111112-N01",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 97,
+      "badge": "NC",
+      "origin": "1111112",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2011년 11월 12번"
+      }
+    },
+    {
+      "code": "2150919",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 98,
+      "badge": "OR",
+      "origin": "2150919",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2015년 09월 19번"
+      }
+    },
+    {
+      "code": "2150919-N01",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 99,
+      "badge": "NC",
+      "origin": "2150919",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2015년 09월 19번"
+      }
+    },
+    {
+      "code": "1141120",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 100,
+      "badge": "OR",
+      "origin": "1141120",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2014년 11월 20번"
+      }
+    },
+    {
+      "code": "1141120-N01",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 101,
+      "badge": "NC",
+      "origin": "1141120",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2014년 11월 20번"
+      }
+    },
+    {
+      "code": "1231119",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 102,
+      "badge": "OR",
+      "origin": "1231119",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2023년 11월 19번"
+      }
+    },
+    {
+      "code": "1231119-N01",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 103,
+      "badge": "NC",
+      "origin": "1231119",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2023년 11월 19번"
+      }
+    },
+    {
+      "code": "1231119-U01",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 104,
+      "badge": "UP",
+      "origin": "1231119",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2023년 11월 19번"
+      }
+    },
+    {
+      "code": "2090329",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 105,
+      "badge": "OR",
+      "origin": "2090329",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2009년 03월 29번"
+      }
+    },
+    {
+      "code": "2090329-N01",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 106,
+      "badge": "NC",
+      "origin": "2090329",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2009년 03월 29번"
+      }
+    },
+    {
+      "code": "2090329-U01",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 107,
+      "badge": "UP",
+      "origin": "2090329",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2009년 03월 29번"
+      }
+    },
+    {
+      "code": "2150626",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 108,
+      "badge": "OR",
+      "origin": "2150626",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2015년 06월 26번"
+      }
+    },
+    {
+      "code": "2150626-N01",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 109,
+      "badge": "NC",
+      "origin": "2150626",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2015년 06월 26번"
+      }
+    },
+    {
+      "code": "2150626-N02",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 110,
+      "badge": "NC",
+      "origin": "2150626",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2015년 06월 26번"
+      }
+    },
+    {
+      "code": "1121118",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 111,
+      "badge": "OR",
+      "origin": "1121118",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2012년 11월 18번"
+      }
+    },
+    {
+      "code": "1121118-N01",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 112,
+      "badge": "NC",
+      "origin": "1121118",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2012년 11월 18번"
+      }
+    },
+    {
+      "code": "1121118-U01",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 113,
+      "badge": "UP",
+      "origin": "1121118",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2012년 11월 18번"
+      }
+    },
+    {
+      "code": "2230320",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 114,
+      "badge": "OR",
+      "origin": "2230320",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2023년 03월 20번"
+      }
+    },
+    {
+      "code": "2230320-N01",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 115,
+      "badge": "NC",
+      "origin": "2230320",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2023년 03월 20번"
+      }
+    },
+    {
+      "code": "2240330",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 116,
+      "badge": "OR",
+      "origin": "2240330",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2024년 03월 30번"
+      }
+    },
+    {
+      "code": "2240330-N01",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 117,
+      "badge": "NC",
+      "origin": "2240330",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2024년 03월 30번"
+      }
+    },
+    {
+      "code": "2200330",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 118,
+      "badge": "OR",
+      "origin": "2200330",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2020년 03월 30번"
+      }
+    },
+    {
+      "code": "2200330-N01",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 119,
+      "badge": "NC",
+      "origin": "2200330",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2020년 03월 30번"
+      }
+    },
+    {
+      "code": "2250330",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 120,
+      "badge": "OR",
+      "origin": "2250330",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2025년 03월 30번"
+      }
+    },
+    {
+      "code": "2250330-N01",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 121,
+      "badge": "NC",
+      "origin": "2250330",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2025년 03월 30번"
+      }
+    },
+    {
+      "code": "2250330-N02",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 122,
+      "badge": "NC",
+      "origin": "2250330",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2025년 03월 30번"
+      }
+    },
+    {
+      "code": "2180929",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 123,
+      "badge": "OR",
+      "origin": "2180929",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2018년 09월 29번"
+      }
+    },
+    {
+      "code": "2180929-D01",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 124,
+      "badge": "DW",
+      "origin": "2180929",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2018년 09월 29번"
+      }
+    },
+    {
+      "code": "2180929-N01",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 125,
+      "badge": "NC",
+      "origin": "2180929",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2018년 09월 29번"
+      }
+    },
+    {
+      "code": "2180929-U01",
+      "chapter": "09",
+      "chapterName": "유리함수와 무리함수",
+      "subject": "K2",
+      "seq": 126,
+      "badge": "UP",
+      "origin": "2180929",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2018년 09월 29번"
+      }
+    }
+  ]
+}
