@@ -665,6 +665,8 @@
     axR = clamp(hi(Math.max(ox, PX(ct.x1)), cx1) + 46, axL, axR);
     axT = clamp(lo(Math.min(oy, PY(ct.y1)), cy0) - 36, axT, axB);
     axB = clamp(hi(Math.max(oy, PY(ct.y0)), cy1) + 26, axT, axB);
+    /* scene.noAxes — 좌표가 없는 그림(벤다이어그램 등)은 축을 안 긋는다 (2026-10-22) */
+    if (!scene.noAxes) {
     out.push('<path d="M' + n(axL) + ' ' + n(oy) + 'H' + n(axR) + '"/>');
     out.push('<path d="M' + n(axR) + ' ' + n(oy) + 'l-9 -5v10z" fill="currentColor" stroke="none"/>');
     out.push('<path d="M' + n(ox) + ' ' + n(axB) + 'V' + n(axT) + '"/>');
@@ -672,6 +674,7 @@
     if (axis.xLabel !== null) lab('axis:x', axR - 4, oy - 12, axis.xLabel || 'x', 'start', null, true);
     if (axis.yLabel !== null) lab('axis:y', ox + 10, axT - 2, axis.yLabel || 'y', 'start', null, true);
     if (axis.origin !== null) lab('axis:origin', ox - 8, oy + 20, axis.origin || 'O', 'end', null, true);
+    }
 
     /* 눈금 — 숫자는 «값»이라 글자를 못 고친다 (editable:false)
        🔵 **축을 가로지르는 «작대기»는 안 긋는다** (2026-09-18 · 사용자 — 「축에 좌표를 표현할 때

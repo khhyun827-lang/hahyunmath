@@ -118,6 +118,16 @@ console.log(NL + '③ 곡선이 있어도 «그려진 곡선»까지만' + NL);
   }
 }
 
+/* 벤다이어그램처럼 좌표가 없는 그림 — scene.noAxes 면 축·화살촉·x·y·O 를 안 긋는다 (2026-10-22) */
+{
+  const 벤 = { noAxes: true, polygons: [{ pts: [[-6, -3.6], [6, -3.6], [6, 3.6], [-6, 3.6]], fill: false }],
+    circles: [{ c: [-1.5, 0], r: 2.6 }, { c: [1.5, 0], r: 2.6 }], labels: [{ x: -5.4, y: 3, text: 'U', anchor: 'middle' }] };
+  const 없음 = F.renderScene(벤), 있음 = F.renderScene({ ...벤, noAxes: false });
+  const 화살촉 = s => (s.match(/l-9 -5v10z|l-5 9h10z/g) || []).length;
+  봄('noAxes — 화살촉이 없다 (끄지 않으면 둘)', [화살촉(없음), 화살촉(있음)], [0, 2]);
+  봄('   원·틀·이름표는 그대로', [(없음.match(/<circle/g) || []).length, />U</.test(없음), /<text[^>]*>O</.test(없음)], [2, true, false]);
+}
+
 const out = path.join(os.tmpdir(), 'figure-axis-sample.svg');   // 저장소 밖에 떨군다
 try { fs.writeFileSync(out, svg); console.log(NL + '보기 → ' + out); } catch (e) {}
 console.log(NL + (fail ? `🔴 ${fail}개 실패 · ${pass + fail}개` : `✓ 전부 통과 · ${pass}개`));
