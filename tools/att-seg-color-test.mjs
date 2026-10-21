@@ -64,7 +64,11 @@ try{
 
       /* 반 › 출결 표 — 열이 하나뿐인 달에도 판 폭으로 안 늘어난다(이름 열 고정 · 열이 쌓이는 만큼) */
       await page.evaluate(무대들.반여럿.세우기);
-      봄('1440 — 반 › 출결 표가 내용만큼만(열 하나 → 400 안)', await page.$eval('.hwg-wrap', e => e.getBoundingClientRect().width < 400), true);
+      /* ⚠ 무대는 «오늘 요일»에 수업이 있다 — 그 달 열 수가 날짜 따라 는다(10-22 목요일이면 다섯 열 · 458px).
+           그래서 «400 안»이 아니라 «내용 폭 그대로 · 판(1054)보다 한참 좁다»로 잰다 (10-22) */
+      봄('1440 — 반 › 출결 표가 내용만큼만(판 폭으로 안 늘어난다)', await page.$eval('.hwg-wrap', e => {
+        const w = e.getBoundingClientRect().width;
+        return w <= e.scrollWidth + 2 && w < e.parentElement.getBoundingClientRect().width - 200; }), true);
       봄('   이름 열은 108 고정', await page.$eval('.hwg th.who', e => Math.round(e.getBoundingClientRect().width)), 108);
     }
 

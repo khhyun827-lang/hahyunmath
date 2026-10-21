@@ -68,7 +68,6 @@ console.log(NL + '② 번호가 보이는 자리가 다 그 함수를 거치는�
     lift('sdScreenHTML').includes('phoneLabel(s.parentPhone)') && lift('sdScreenHTML').includes('phoneLabel(s.phone)'), true);
   봄('고치는 칸', lift('studentAccountFormHTML').includes('phoneLabel(s.parentPhone)'), true);
   봄('명단 엑셀', lift('exportRosterExcel').includes('phoneLabel(s.parentPhone), phoneLabel(s.phone)'), true);
-  봄('반 엑셀', lift('exportClassExcel').includes('phoneLabel(s.parentPhone), phoneLabel(s.phone)'), true);
   봄('미제출 알림이 보내는 번호', html.includes('const HW_NOTICE_TO = s => phoneLabel(s.phone);'), true);
   /* 저장할 때도 같은 꼴로 — 다음에 읽을 때 또 셀 일이 없다 */
   봄('🔴 새로 만들 때 그 꼴로 저장한다', lift('addStudent').includes("phoneLabel(document.getElementById('new-sparentphone').value)"), true);

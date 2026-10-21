@@ -1087,7 +1087,7 @@
 .app .vd-top .n{font-size:12px;color:var(--sub);}
 .app .vd-top .n b{font-family:'JetBrains Mono',monospace;color:var(--ink);}
 .app .vd-top .n s{text-decoration:none;color:var(--line);margin:0 6px;}
-.app .vd-top > .btn{margin-left:auto;}
+.app .vd-top > .n + .btn{margin-left:auto;}   /* 첫 단추만 민다 — 둘 다 밀면 «영상 등록»이 가운데 뜬다 (10-22 · 사용자) */
 
 /* 목록 — 썸네일 줄. 높이를 묶고 안에서만 민다. */
 /* 🔵 목록이 화면의 전부다 (V-2b) — 높이를 안 묶는다. 상세는 드로어라 목록이 길어져도 상세가 밀리지 않는다. */
@@ -4461,10 +4461,9 @@
   #app:has(.tnav) .app:not(.sap) .hm .tcal .scal-dow{margin-top:8px;}
 }
 @media (min-width:1200px){
-  /* ── 반 (시안 «D 차분 · 반 › 출결») — 제목 줄 오른쪽 = 달 고르개(흰 알약) + 「내보내기」(남색) ──
-     ⚠ 달 고르개는 출결·성적·과제·영상이 같이 쓴다(chubMonthBarHTML). 내보내기 폭을 200 으로 박아 그 왼쪽에 세운다. */
-  #app:has(.tnav) .app:not(.sap):has(.pg-h) .chub-mh .r .btn{width:200px;background:#1E2433;border-color:#1E2433;color:#fff;}
-  #app:has(.tnav) .app:not(.sap):has(.pg-h) .chub-mbar{position:absolute;top:22px;right:214px;z-index:2;height:42px;box-sizing:border-box;gap:2px;padding:0 4px;
+  /* ── 반 (시안 «D 차분 · 반 › 출결») — 제목 줄 오른쪽 = 달 고르개(흰 알약) ──
+     ⚠ 달 고르개는 출결·성적·과제·영상이 같이 쓴다(chubMonthBarHTML). 「성적·출결 내보내기」는 10-22 에 뺐다(리포트가 대신) — 그 자리(오른쪽 끝)로 붙인다. */
+  #app:has(.tnav) .app:not(.sap):has(.pg-h) .chub-mbar{position:absolute;top:22px;right:6px;z-index:2;height:42px;box-sizing:border-box;gap:2px;padding:0 4px;
     margin:0;border:1px solid #E3E6EE;border-radius:14px;background:#fff;}
   #app:has(.tnav) .app:not(.sap):has(.pg-h) .chub-mbar b{font-size:14px;font-weight:800;min-width:0;padding:0 6px;}
   #app:has(.tnav) .app:not(.sap):has(.pg-h) .chub-mbar > .btn.q.sm{min-width:32px;min-height:32px;padding:0;border-radius:10px;}
@@ -23141,7 +23140,7 @@ async function rosterBulkMoveClass(){
 }
 
 /* 명단 엑셀 — «지금 보고 있는 명단»을 화면과 같은 열 구성으로 내보낸다.
-   exportClassExcel(반 단위 성적·출결)과는 다른 일을 하므로 따로 둔다. */
+   (옛 exportClassExcel — 반 단위 성적·출결 — 은 10-22 에 뺐다.) */
 async function exportRosterExcel(onlySelected){
   try{
     await ensureXLSXLoaded();
@@ -24750,12 +24749,12 @@ function sessionMemoHTML(classId, date){
 /* ---------- 반 관리 ---------- */
 /* 반 목록 표(teacherClassesHTML)는 지웠다 — 좌측 상시 목록(chubClassListHTML)이 대신한다.
    「종료/재개」와 「삭제」는 한때 반 관리 머리말에 있었으나 **둘 다 설정 › 반으로 돌아갔다**
-   (삭제 2026-09-08 · 종료/재개 2026-09-09). 머리말에 남은 것은 내보내기뿐이다.
+   (삭제 2026-09-08 · 종료/재개 2026-09-09). 남았던 「성적·출결 내보내기」도 2026-10-22 에 뺐다(리포트가 대신).
    표에 있던 수강생 수·시간·기간은
    좌측 항목과 머리말에 그대로 들어 있다. */
 
 /* 「반 > 학생 명단」은 명단(01-roster)의 반 뷰가 대신한다 — classRosterHTML은 지웠다.
-   엑셀 양식·일괄 등록은 설정 > 학생으로, 성적·출결 내보내기는 반 관리 머리말로 옮겼다. */
+   엑셀 양식·일괄 등록은 설정 > 학생으로 옮겼다. */
 async function downloadStudentExcelTemplate(){
   try{
     await ensureXLSXLoaded();
@@ -24766,41 +24765,6 @@ async function downloadStudentExcelTemplate(){
   }catch(e){
     console.error('엑셀 양식 생성 실패', e);
     showToast('엑셀 양식을 만들지 못했습니다.');
-  }
-}
-async function exportClassExcel(classId){
-  try{
-    await ensureXLSXLoaded();
-    await loadAllRecordsIfNeeded();
-    await loadContactsIfNeeded();   /* ⚠ 안 기다리면 전화번호 두 열이 통째로 빈 채로 나간다 (K-11) */
-    /* 지금 학생 + 이 반 출결이 남은 지난 학생(졸업·퇴원·반 이동) — 맨 끝 «상태» 열로 가른다 (10-18) */
-    const 지금 = classRoster(classId);
-    const roster = classRosterAll(classId).filter(s => 지금.includes(s) || attOfClass(state.allRecords[s.studentId], classId, studentMainClassId(s)).length);
-    const header = ['아이디','이름','학년','학교','학부모전화번호','학생전화번호','출석','지각','조퇴','결석','시험 응시 횟수','평균 점수(%)','최근 시험명','최근 점수','상태'];
-    const rows = roster.map(s=>{
-      const rec = state.allRecords[s.studentId] || {scores:[],attendance:[]};
-      const att = {출석:0, 지각:0, 조퇴:0, 결석:0};
-      /* 엑셀도 «이 반» 것만 센다 — 화면의 표와 숫자가 달라지면 둘 다 못 믿게 된다 (E-1). */
-      attOfClass(rec, classId, studentMainClassId(s)).forEach(a=>{ if(att[a.status]!==undefined) att[a.status]++; });
-      const scores = rec.scores||[];
-      const avg = scores.length ? Math.round(scores.reduce((sum,sc)=>sum+(sc.score/sc.total*100),0)/scores.length) : '';
-      const last = scores[scores.length-1];
-      return [
-        s.studentId, s.name, s.grade||'', s.school||'', phoneLabel(s.parentPhone), phoneLabel(s.phone),
-        att.출석, att.지각, att.조퇴, att.결석,
-        scores.length, avg,
-        last?last.name:'', last?`${last.score}/${last.total}`:'',
-        지금.includes(s) ? '재원' : isWithdrawn(s) ? goneLabel(s) : '반 이동'
-      ];
-    });
-    const ws = XLSX.utils.aoa_to_sheet([header, ...rows]);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, '성적출결');
-    const className = classNameOf(classId).replace(/[\\/:*?"<>|]/g,'');
-    XLSX.writeFile(wb, `${className}_성적출결_${todayStr()}.xlsx`);
-  }catch(e){
-    console.error('엑셀 내보내기 실패', e);
-    showToast('엑셀 파일을 만들지 못했습니다.');
   }
 }
 async function handleStudentExcelFile(classId, fileList){
@@ -25327,8 +25291,7 @@ function teacherClassHubHTML(){
         <div class="r">
           ${/* ⚠ 「학생 명단 →」 버튼은 뺐다 (2026-08-30 · C-3) — 서브탭 「학생」이 같은 일을 하고,
                이 버튼은 «반 밖으로» 나가는 세 번째 문이었다. 문을 하나로 모으는 것이 이 판의 뜻이다. */''}
-          ${/* 소통 › 상담 기록에서는 안 세운다 (2026-10-03 · 사용자 — 「성적출결 내보내기 빼주고」) */''}
-          ${tab === 'consult' ? '' : `<button class="btn sm" onclick="exportClassExcel('${c.id}')">${iconSvg('download',13)} 성적·출결 내보내기</button>`}
+          ${/* 「성적·출결 내보내기」는 뺐다 (2026-10-22 · 사용자 — 「안 쓰는 것 같다 · 리포트가 있다」) */''}
         </div>
       </div>
       <div class="chub-body">${sub}</div>

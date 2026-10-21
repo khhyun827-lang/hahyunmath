@@ -64,9 +64,8 @@ console.log(NL + '② 전화번호 — 저장은 됐는데 아무도 안 읽고 
   봄('두 번 안 읽는다', load.includes('state.contactsLoaded || state.contactsLoading'), true);
   봄('🔴 명단·상세가 부른다 (상세로 빠지기 «전»에)',
     /loadContactsIfNeeded\(\);\s*\n\s*if\(state\.studentDetailId\)/.test(lift('teacherRosterHTML')), true);
-  봄('내보내기 둘도 기다린다',
-    [lift('exportRosterExcel').includes('await loadContactsIfNeeded()'),
-     lift('exportClassExcel').includes('await loadContactsIfNeeded()')], [true, true]);
+  봄('명단 내보내기도 기다린다 (반 내보내기는 10-22 에 뺐다)',
+    lift('exportRosterExcel').includes('await loadContactsIfNeeded()'), true);
 
   /* 실제로 합쳐지는가 — 문서 이름이 uid 든 학번이든 «안»의 studentId 로 맞춘다 */
   const DATA = { students: [
