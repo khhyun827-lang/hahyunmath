@@ -100,6 +100,37 @@ try{
   봄('🔴 학생마다 «제» 보충 영상 id 로 보낸다', 보충.처음.보냄.slice().sort(), 보충.영상.slice().sort());
   봄('   받는 이름이 그 학생', 보충.처음.이름.slice().sort(), 보충.이름들.slice().sort());
   봄('🔴 다시 저장해도 또 묻거나 보내지 않는다 (새로 만든 영상만)', 보충.다시, { 물음: 0, 보냄: 0 });
+
+  /* 🔵 다른 반에도 보내기 — 예전엔 알림이 아예 안 갔다 (2026-10-22 · 사용자) */
+  console.log('\n다른 반에도 보내기 (영상 드로어)');
+  const 옮김 = await page.evaluate(async () => {
+    state.workerVersion = '2026-10-17b'; state.notifyTpl = { vid: true, vidnew: true };
+    const cid = DATA.classes[0].id;
+    const sel = { id: 'vsrc1', title: '수학(상) 6강', url: 'https://youtu.be/abcdefghijk', classId: 'other', dueDate: '' };
+    DATA.videos.push(sel);
+    const 한판 = async (켬, 고른 = []) => {
+      __보냄.length = 0; state.videoCopy = { classId: cid };
+      document.getElementById('옮김판')?.remove();
+      document.body.insertAdjacentHTML('beforeend', '<div id="옮김판">' + videoCopyPanelHTML(sel, 'other') + '</div>');
+      const 칸 = document.getElementById('vc-notify');
+      if(칸) 칸.checked = 켬;
+      document.querySelectorAll('#옮김판 .vc-who').forEach(x => { x.checked = 고른.includes(x.value); });
+      await videoCopyTo(sel.id);
+      return { 칸있음: !!칸, 보냄: __보냄.reduce((n, x) => n + x.n, 0), 종류: __보냄.map(x => x.kind) };
+    };
+    const 반전체 = await 한판(true);
+    const 기대 = joinedRoster(uploadAudience([cid]), DATA.videos.find(v => v.classId === cid && !v.studentId && v.title === sel.title)).length;
+    const 하나 = classRoster(cid)[0].studentId;
+    const 한명 = await 한판(true, [하나]);
+    const 끔 = await 한판(false);
+    document.getElementById('옮김판')?.remove();
+    return { 반전체, 기대, 한명, 끔 };
+  });
+  봄('보내기 칸에 알림 체크가 있다', 옮김.반전체.칸있음, true);
+  봄('🔴 반 전체로 옮기면 그 반 재원에게 «새 강의» 알림', [옮김.반전체.보냄, 옮김.반전체.종류[0]], [옮김.기대, 'vidnew']);
+  봄('   반 학생이 있다(빈 판이 아니다)', 옮김.기대 > 0, true);
+  봄('학생 하나만 고르면 하나에게만', 옮김.한명.보냄, 1);
+  봄('끄면 안 보낸다', 옮김.끔.보냄, 0);
 } finally {
   await 브라우저.close();
   서버.kill();

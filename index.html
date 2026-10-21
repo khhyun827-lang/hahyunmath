@@ -30232,7 +30232,8 @@ function videoCopyPanelHTML(sel, fromClassId){
       || '<span style="font-size:12px;color:var(--dim);">이 반에 학생이 없습니다 — 반 전체로 보냅니다.</span>'}</div>
     <div class="row" style="gap:8px;align-items:flex-end;margin-top:10px;">
       <label style="font-size:11px;color:var(--dim);">마감일<input id="vc-due" type="date" class="fm-in" value="${escHtml(sel.dueDate || '')}"></label>
-      <button class="btn p sm" onclick="videoCopyTo('${sel.id}')">보내기</button></div>`}
+      <button class="btn p sm" onclick="videoCopyTo('${sel.id}')">보내기</button></div>
+    ${notifyBoxHTML('vid', 'vc-notify')}`}
   </div>`;
 }
 async function videoCopyTo(vid){
@@ -30241,6 +30242,8 @@ async function videoCopyTo(vid){
   if(!sel || !cid) return;
   const 받는이들 = [...new Set([...document.querySelectorAll('.vc-who:checked')].map(x => x.value))];
   const dueEl = document.getElementById('vc-due');
+  /* 알림톡 (10-22 · 사용자 — 「다른 반으로 보내기 했을 때 영상 등록 문자가 가는지」 → 안 갔다). addVideo 와 같은 길 */
+  const 알림 = !!(document.getElementById('vc-notify') || {}).checked;
   const 기본 = { unit: sel.unit || '', title: sel.title, url: sel.url, classId: cid, dueDate: (dueEl && dueEl.value) || '' };
   ['fromSec', 'toSec', 'noTrack'].forEach(k => { if(sel[k] !== undefined) 기본[k] = sel[k]; });
   const 도장 = Date.now();
@@ -30260,6 +30263,13 @@ async function videoCopyTo(vid){
   state.videoCopy = null;
   showToast(`${반이름}${받는이들.length ? ' ' + 된것.length + '명' : ' 전체'}에게 「${sel.title}」을 보냈습니다.${흠 ? ` (${흠}명은 실패 — 다시 보내 주세요)` : ''}`);
   render();
+  /* 반 전체면 그 반 재원(올린 날 뒤에 온 학생 빼고) · 학생을 골랐으면 저장된 학생만 */
+  if(알림){
+    const 첫 = 된것[0];
+    const 받은 = 첫.studentId ? 된것.map(v => DATA.students.find(x => x.studentId === v.studentId)).filter(Boolean)
+      : joinedRoster(uploadAudience([cid]), 첫);
+    await notifyUpload(notifyKindReady('vidnew') ? 'vidnew' : 'vid', 첫, 받은, '새 영상 「' + 첫.title + '」');
+  }
 }
 
 function chubVideoHTML(classId){

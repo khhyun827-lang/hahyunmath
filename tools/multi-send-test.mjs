@@ -375,7 +375,8 @@ function 영상판(opt) {
   const 곁 = { state: { videoCopy: { classId: 'c2' } }, DATA: { videos: [원본], classes: [{ id: 'c1', name: 'A반' }, { id: 'c2', name: 'B반' }] },
     document: { querySelectorAll: () => [{ value: 'st07' }, { value: 'st08' }, { value: 'st07' }], getElementById: () => ({ value: '2026-10-25' }) },
     dbSetDoc: async (c, id, v) => { 저장.push(v); return true; }, showToast: m => 말.push(m), render: () => {},
-    classRoster: () => [{ studentId: 'st07', name: '사아' }], escHtml: x => x };
+    classRoster: () => [{ studentId: 'st07', name: '사아' }], escHtml: x => x,
+    notifyBoxHTML: () => '' };   /* 알림 칸(10-22) — 여기 getElementById 는 checked 가 없어 알림은 꺼진 채다 · 알림은 upload-notify-test 가 본다 */
   const F = new Function(...Object.keys(곁), lift('videoCopyTo') + NL + lift('videoCopyPanelHTML') + NL + 'return { videoCopyTo, videoCopyPanelHTML };')(...Object.values(곁));
   봄('여는 단추는 머리 카드 단추 줄에 — «유튜브에서 열기» 자리(10-13) · 판이 닫혀 있으면 판은 비었다',
     [/유튜브에서 열기<\/a>/.test(lift('videoHeroHTML')), /다른 반에도 보내기/.test(lift('videoHeroHTML')), (() => { 곁.state.videoCopy = null; const r = F.videoCopyPanelHTML(원본, 'c1'); 곁.state.videoCopy = { classId: 'c2' }; return r; })()],
