@@ -118,7 +118,8 @@ console.log(NL + '② 재생바를 끝으로 끌어도 완주가 아니다' + NL
     ['studentId', 'videoId', 'addSeconds', 'duration', '앞자리', '뒷자리']);
   봄('🔴 몸 어디에도 ended 를 안 읽는다', /\bended\b/.test(lift('noteVideoWatchTime')), false);
   봄('🔴 flushWatchTick 도 ended 를 안 넘긴다', lift('flushWatchTick').includes('ended'), false);
-  봄('🔴 어디에서도 ENDED 를 완주의 근거로 안 쓴다', /PlayerState\.ENDED/.test(html), false);
+  봄('🔴 어디에서도 ENDED 를 완주의 근거로 안 쓴다', /PlayerState\.ENDED/.test(html.split('\n').filter(줄 => !줄.includes('vcChainNext(videoId)')).join('\n')), false);
+  /* ↑ 이어 보기(10-22)는 ENDED 에 «다음 구간으로»만 넘긴다 — 완주는 여전히 시간으로만 찬다 */
   /* 5초 틱으로 끝까지 재생하면 완주 — 실제 화면이 쌓는 모양 그대로다 */
   const b = 만들기();
   for (let i = 0; i < 120; i++) await b.F.noteVideoWatchTime('s1', 'v1', 5, 600);   // 5초 × 120 = 600초

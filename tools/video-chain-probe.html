@@ -1,0 +1,48 @@
+<!doctype html><meta charset="utf-8"><title>video-chain-probe</title>
+<!-- 이어 보기(10-22) — 학생 강의 탭을 «실 DB 없이» 그려 본다. 묶음 하나(링크 둘 · 첫 구간 0:05~0:08) + 따로 영상 하나.
+       node tools/serve.js
+       http://127.0.0.1:8777/tools/video-chain-probe.html?w=390      (폰)
+       …?w=864                                                        (사용자 판 · 125% 확대)
+     첫 구간을 열고 재생하면 3초 뒤 둘째 구간(1:00~)으로 넘어가야 한다.
+     🔴 실 DB 0줄 — dbSet/dbGet/dbSetDoc/logAudit 를 프레임 안에서 갈아 끼운다. -->
+<style>html,body{margin:0;background:#fff}iframe{border:0;display:block}
+pre{font:12px monospace;color:#333;margin:0;padding:4px;white-space:pre-wrap;}</style>
+<pre id="o">…</pre>
+<script>
+const fr = document.createElement('iframe');
+const Q = location.search;
+const W = Number((Q.match(/[?&]w=([0-9]+)/) || [])[1]) || 390;
+fr.width = W; fr.height = 900; fr.style.width = W + 'px'; fr.src = '/index.html';
+document.body.appendChild(fr);
+const o = document.getElementById('o');
+let n = 0;
+const t = setInterval(async () => {
+  n++;
+  let ready = false;
+  try { ready = fr.contentWindow.eval('typeof stuVideoHTML==="function" && typeof render==="function"'); } catch (_) {}
+  if (!ready) { if (n > 200) { clearInterval(t); o.textContent = 'RESULT timeout'; } return; }
+  clearInterval(t);
+  const w = fr.contentWindow;
+  try {
+    await w.eval(`(async function(){
+      window.dbSet = async () => true; window.dbGet = async (k,d) => d; window.dbSetDoc = async () => true;
+      window.dbDelete = async () => true; window.logAudit = async () => {};
+      DATA.classes = [{id:'c1', name:'고1 프로브반', schedule:'화·목 17:00~19:30', rooms:{}}];
+      DATA.students = [{studentId:'s1', name:'김민아', school:'광남고', grade:'1', classId:'c1'}];
+      const rec = emptyRecord(); DATA.records = {s1: rec}; state.allRecords = {s1: rec};
+      DATA.assignments = []; DATA.exams = []; DATA.qnas = []; DATA.clinics = [];
+      const 도장 = Date.now();
+      DATA.videos = [
+        { id:'v'+(도장+1)+'_s1', studentId:'s1', classId:'c1', title:'함수의 뜻 (1)', chainTitle:'함수의 뜻', chain:'c'+도장, part:0,
+          url:'https://youtu.be/dQw4w9WgXcQ', fromSec:5, toSec:8, dueDate:shiftYmd(todayStr(), 7) },
+        { id:'v'+도장+'_s1', studentId:'s1', classId:'c1', title:'함수의 뜻 (2)', chainTitle:'함수의 뜻', chain:'c'+도장, part:1,
+          url:'https://youtu.be/9bZkp7q19f0', fromSec:60, toSec:90, dueDate:shiftYmd(todayStr(), 7) },
+        { id:'v1', classId:'c1', title:'수학(상) 4강', url:'https://youtu.be/kJQP7kiw5Fk', dueDate:shiftYmd(todayStr(), 3) },
+      ];
+      state.currentUser = {type:'student', studentId:'s1', name:'김민아'}; state.view='student'; state.studentTab='video';
+      render();
+    })()`);
+    o.textContent = 'RESULT ok';
+  } catch (e) { o.textContent = 'RESULT ERROR ' + (e && e.stack || e); }
+}, 100);
+</script>

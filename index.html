@@ -13570,6 +13570,35 @@ function vcRange(vid, dur){
   const v = videoItemById(vid);
   return v && v.strict ? videoGoalOfItem(v, dur) : null;
 }
+/* 이어 보기 (10-22) — 한 번에 보낸 링크 묶음(chain)을 차례대로. 같은 받는 이(개인 배정이면 그 학생 · 반이면 반) 것만 */
+function videoChainParts(v){
+  if(!v || !v.chain) return v ? [v] : [];
+  return DATA.videos.filter(x => x && x.chain === v.chain && x.studentId === v.studentId)
+    .sort((a, b) => (a.part || 0) - (b.part || 0));
+}
+/* 다음 구간으로 넘긴다 — 넘겼으면 true. 학생 강의 탭에서 열린 그 영상일 때만(질문 카드·강사 화면은 손대지 않는다).
+   ⚠ 옛 플레이어를 여기서 거둔다 — 남은 시청 틱을 먼저 적고(flushWatchTick), 타이머를 끄고 부순다.
+     안 거두면 죽은 iframe 을 붙든 타이머가 계속 돈다. 배속은 다음 구간에 물려준다(학생이 정한 것). */
+function vcChainNext(vid){
+  const v = videoItemById(vid);
+  if(!v || !v.chain || state.stuVideoId !== vid) return false;
+  const 다음 = videoChainParts(v).find(x => (x.part || 0) > (v.part || 0) && !videoLocked(x));
+  if(!다음) return false;
+  const e = state.ytPlayers && state.ytPlayers[vid];
+  if(e){
+    if(e.timer) clearInterval(e.timer);
+    if(e.ui) clearInterval(e.ui);
+    flushWatchTick(e, state.currentUser.studentId, vid, e.player);
+    try{ e.player.destroy(); }catch(err){}
+    delete state.ytPlayers[vid];
+  }
+  if(vcPref(vid).rate && !vcPref(다음.id).rate) vcPref(다음.id).rate = vcPref(vid).rate;
+  state.stuVideoId = 다음.id;
+  state.vcAutoplay = 다음.id;
+  render();
+  showToast('이어서 ' + ((다음.part || 0) + 1) + '번째 구간입니다' + (videoGoalLabelOf(다음) ? ' — ' + videoGoalLabelOf(다음) : ''));
+  return true;
+}
 function vcToggle(vid){
   const p = vcPlayer(vid); if(!p) return;
   try{ (p.getPlayerState() === 1 ? p.pauseVideo() : p.playVideo()); }catch(err){}
@@ -13804,6 +13833,11 @@ function vcPaint(vid){
     if(cur > 구간.to){ try{ p.pauseVideo(); p.seekTo(구간.from, true); }catch(err){} cur = 구간.from; }
     else if(cur < 구간.from - 1){ try{ p.seekTo(구간.from, true); }catch(err){} cur = 구간.from; }
   }
+  /* 이어 보기 (10-22) — 재생 중에 구간 끝에 닿으면 바로 다음 구간으로. 5초 틱을 기다리면 다른 내용이 몇 초 비친다. */
+  else if(cur > 0 && vcAsk(vid, x=>x.getPlayerState(), -1) === 1){
+    const v = videoItemById(vid), g = v && v.chain ? videoGoalOfItem(v, dur) : null;
+    if(g && !g.끝까지 && cur >= g.to && vcChainNext(vid)) return;
+  }
   if(cur > 0) vcPref(vid).pos = cur;      /* 다시 설 때 여기로 돌아온다 (V-3) */
   if(구간){ cur = Math.max(0, cur - 구간.from); dur = 구간.len; }
   const 아이콘 = (el, name) => { if(el && el.dataset.ic !== name){ el.dataset.ic = name; el.innerHTML = iconSvg(name, 16); } };
@@ -13899,9 +13933,12 @@ function mountVideoTrackers(studentId){
                  ⚠ 끝자락(끝에서 2초 안)은 안 되돌린다 — 다 본 영상이 열리자마자 끝으로 가면 이상하다. */
               const 기억 = vcPref(videoId);
               const 안쪽 = 기억.pos > 1 && (!길이 || 기억.pos < 길이 - 2)
-                && (!구간 || (기억.pos >= 구간.from && (구간.끝까지 || 기억.pos <= 구간.to)));
+                && (!구간 || (기억.pos >= 구간.from && (구간.끝까지 || 기억.pos < 구간.to - 2)));
+              /* ↑ 구간 끝자락(2초 안)도 안 되돌린다 — 이어 보기에선 열자마자 다음 구간으로 넘어가 버린다 (10-22) */
               if(안쪽){ try{ player.seekTo(기억.pos, true); }catch(err){} }
               if(기억.rate){ try{ player.setPlaybackRate(기억.rate); }catch(err){} }
+              /* 이어 보기로 넘어온 구간은 바로 튼다 (10-22) — 기기가 자동 재생을 막으면 멈춘 채로 서고, 학생이 누르면 된다 */
+              if(state.vcAutoplay === videoId){ state.vcAutoplay = null; try{ player.playVideo(); }catch(err){} }
               /* 🔴 **자막을 끈다** (2026-09-13 · K-10) — 주소의 `cc_load_policy=0` 만으로는
                  계정 설정이 이기는 경우가 있다. 조작줄을 없앤 뒤로는 학생이 끌 길이 없으므로 여기서 한 번 더 끈다.
                  ⚠ 모듈 이름이 판에 따라 다르다(옛 판은 'cc') — 둘 다 부른다. 없는 것을 부르면 조용히 넘어간다. */
@@ -13940,7 +13977,7 @@ function mountVideoTrackers(studentId){
                     /* ⚠ 끝을 안 적은 배정(「…부터 끝까지」)은 여기서 멈출 자리가 없다 —
                          영상이 제풀에 끝난다. 그래서 `끝까지` 면 손대지 않는다. */
                     const 구간 = videoGoalOfItem(videoItemById(videoId), dur);
-                    if(구간 && !구간.끝까지 && 자리 && 자리.뒤 >= 구간.to){
+                    if(구간 && !구간.끝까지 && 자리 && 자리.뒤 >= 구간.to && !vcChainNext(videoId)){
                       try{ player.pauseVideo(); }catch(err){}
                       showToast('여기까지 보면 됩니다 — ' + secToClock(구간.from) + ' ~ ' + secToClock(구간.to));
                     }
@@ -13949,6 +13986,8 @@ function mountVideoTrackers(studentId){
               } else {
                 if(entry.timer){ clearInterval(entry.timer); entry.timer = null; }
                 flushWatchTick(entry, studentId, videoId, player);
+                /* 「…부터 끝까지」 구간은 영상이 끝날 때 다음으로 (이어 보기 · 10-22) */
+                if(e.data === YT.PlayerState.ENDED && vcChainNext(videoId)) return;
               }
               vcPaint(videoId);   /* 재생/멈춤 표시가 0.25초를 기다리지 않게 (K-8) */
             }
@@ -14035,12 +14074,17 @@ async function addVideo(){
   const notrackEl = document.getElementById('video-notrack');
   const 알림 = !!(document.getElementById('video-notify') || {}).checked;
   const 도장 = Date.now();
+  /* 🔵 **이어 보기** (2026-10-22 · 사용자 — 「한 개념을 한 번에 수업한 영상이 없을 때 두 영상에서 필요한 부분만 이어서 한 카드로」).
+     문서는 지금처럼 링크마다 하나(시청 기록·시청률은 그대로) — `chain` 이 같은 것을 학생 화면이 카드 하나로 묶고
+     앞 구간이 끝나면 다음으로 넘긴다(`stuVideoHTML` · `vcChainNext`). 끄면 10-13 처럼 따로 선다. */
+  const 잇기 = 줄들.length > 1 && !!(document.getElementById('video-chain') || {}).checked;
   /* 링크마다 시각을 1ms 씩 — id 가 겹치지 않고, 목록에서도 «적은 차례»대로 선다 */
   const 만들것 = 줄들.flatMap((r, i) => {
     const 기본 = {unit, title: 제목들[i], url: r.url, classId, dueDate};
     const { fromSec, toSec } = 구간들[i];
     if(toSec !== null){ 기본.fromSec = fromSec; if(toSec > 0) 기본.toSec = toSec; }
     if(notrackEl && notrackEl.checked) 기본.noTrack = true;
+    if(잇기) Object.assign(기본, { chain: 'c' + 도장, part: i, chainTitle: title });
     const t = 도장 + (줄들.length - 1 - i);      // 첫 링크가 가장 늦은 시각 → 최신 순 목록에서 맨 위
     return 받는이들.length
       ? 받는이들.map(sid => Object.assign({}, 기본, { id:'v'+t+'_'+sid, studentId:sid }))
@@ -19958,17 +20002,20 @@ function stuVideoHTML(c){
   const resume = c.videos.find(v=>{ const p = pg(v.id); return videoCounted(v) && videoSeen(p) && !videoDone(p) && !videoLocked(v); });
   /* 안 본 것이 위, 완주가 아래 — 그 안에서는 stuCtx 의 «새것이 위» 차례 그대로(정렬은 안정적이다) (10-17) */
   /* 잠긴 것(마감 지남)은 맨 아래 (10-20) — 볼 수 없는 것이 볼 것 사이에 끼면 찾기만 어렵다 */
-  const 무게 = v => videoLocked(v) ? 2 : videoDone(pg(v.id)) ? 1 : 0;
-  const 차례 = c.videos.slice().sort((a,b)=> 무게(a) - 무게(b));
+  /* 이어 보기 (10-22) — 한 묶음(chain)은 카드 하나. 묶음은 다 봐야 «완주», 진도는 구간들의 평균 */
+  const 묶음 = v => v.chain ? c.videos.filter(x => x.chain === v.chain).sort((a,b) => (a.part||0) - (b.part||0)) : [v];
+  const 다봄 = g => g.every(x => videoDone(pg(x.id)));
+  const 무게 = v => videoLocked(v) ? 2 : 다봄(묶음(v)) ? 1 : 0;
+  const 차례 = c.videos.filter(v => 묶음(v)[0] === v).sort((a,b)=> 무게(a) - 무게(b));
   const open = c.videos.find(v=>v.id===state.stuVideoId);
 
   const embed = v => videoEmbedHTML(v, c.sid);
 
   return `
-  ${resume && (!open || open.id!==resume.id) ? `
+  ${resume && (!open || !묶음(resume).includes(open)) ? `
   <div class="mc go" ${TAP} onclick="state.stuVideoId='${resume.id}'; render()" style="cursor:pointer;">
     <div style="font-size:11.5px;font-weight:700;color:var(--accent);">이어보기</div>
-    <div style="font-size:14.5px;font-weight:700;margin-top:7px;">${escHtml(resume.title)}</div>
+    <div style="font-size:14.5px;font-weight:700;margin-top:7px;">${escHtml(resume.chainTitle || resume.title)}</div>
     <div class="sap-prog">
       <span class="bar vgoal"><i style="width:${videoPct(pg(resume.id))}%"></i>${videoGoalMarkHTML()}</span>
       <b>${videoPct(pg(resume.id))}%</b>
@@ -19976,21 +20023,24 @@ function stuVideoHTML(c){
     <button class="mbtn p" style="margin-top:12px;">${iconSvg('play',17)} 이어서 보기</button>
   </div>` : ''}
 
-  <div class="msec">전체 강의 <span class="mono">${c.videos.length}</span></div>
+  <div class="msec">전체 강의 <span class="mono">${차례.length}</span></div>
   ${차례.map(v=>{
-    const p = pg(v.id);
-    const pct = videoPct(p), done = videoDone(p);
-    const isOpen = open && open.id===v.id;
+    const g = 묶음(v), 여럿 = g.length > 1;
+    const pct = Math.round(g.reduce((n, x) => n + videoPct(pg(x.id)), 0) / g.length), done = 다봄(g);
+    const isOpen = !!open && g.some(x => x.id === open.id);
+    /* 닫힌 카드를 누르면 아직 안 끝난 첫 구간부터 */
+    const 열것 = isOpen ? open : (g.find(x => !videoDone(pg(x.id))) || g[0]);
     return `<div class="mc ${isOpen?'go':''}">
-      <div ${TAP} onclick="state.stuVideoId=${isOpen?'null':`'${v.id}'`}; render()" style="cursor:pointer;">
+      <div ${TAP} onclick="state.stuVideoId=${isOpen?'null':`'${열것.id}'`}; render()" style="cursor:pointer;">
         <div class="row" style="gap:8px;">
-          <span style="flex:1;min-width:0;font-size:13.5px;font-weight:600;">${escHtml(v.title)}</span>
+          <span style="flex:1;min-width:0;font-size:13.5px;font-weight:600;">${escHtml(여럿 ? (v.chainTitle || v.title) : v.title)}</span>
           ${v.studentId ? '<span class="badge late">개인 배정</span>' : ''}
         </div>
         ${v.unit ? `<div style="font-size:11.5px;color:var(--dim);margin-top:5px;">${escHtml(v.unit)}</div>` : ''}
         ${/* 구간 (2026-09-16) — **눈에 띄어야 한다.** 학생이 이걸 못 보면 영상 전체를 보고
              「다 봤는데 왜 안 끝나지」가 된다(반대 방향의 같은 억울함이다). */
-          videoGoalLabelOf(v) ? `<div style="font-size:11.5px;margin-top:5px;"><span class="badge ok">${escHtml(videoGoalLabelOf(v))}</span>
+          여럿 ? `<div style="font-size:11.5px;margin-top:5px;color:var(--dim);">영상 ${g.length}개의 필요한 부분을 <b>이어서</b> 봅니다</div>`
+          : videoGoalLabelOf(v) ? `<div style="font-size:11.5px;margin-top:5px;"><span class="badge ok">${escHtml(videoGoalLabelOf(v))}</span>
             <span style="color:var(--dim);margin-left:4px;">이 부분만 보면 됩니다</span></div>` : ''}
         ${/* 복습용 (2026-09-20) — **말해 줘야 한다.** 안 적으면 학생은 다른 영상과 똑같이 보고
              「안 보면 깎이나」로 읽는다. 이 줄이 그 걱정을 덜어 주는 자리다. */
@@ -20007,7 +20057,10 @@ function stuVideoHTML(c){
         </div>`}
       </div>
       ${!isOpen ? '' : videoLocked(v) ? `<div class="note" style="margin-top:11px;">마감(<span class="mono">${escHtml(v.dueDate)}</span>)이 지나 더는 볼 수 없습니다.
-        꼭 봐야 하면 선생님께 말씀드리세요.</div>` : embed(v)}
+        꼭 봐야 하면 선생님께 말씀드리세요.</div>`
+        : (여럿 ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:11px;">${g.map((x, i) => `<button class="btn sm ${x.id === 열것.id ? 'p' : 'q'}"
+            onclick="state.stuVideoId='${x.id}'; render()">${i + 1}${videoGoalLabelOf(x) ? ' · <span class="mono">' + escHtml(videoGoalLabelOf(x).replace(/ 구간$/, '')) + '</span>' : ''}
+            ${videoDone(pg(x.id)) ? '✓' : videoPct(pg(x.id)) + '%'}</button>`).join('')}</div>` : '') + embed(열것)}
     </div>`;
   }).join('')}`;
 }
@@ -30272,6 +30325,9 @@ function chubVideoHTML(classId){
     </div>
     </div>
     <button type="button" class="btn q sm" style="margin-top:9px;" onclick="videoLinkAdd()">${iconSvg('plus',13)} 링크 더 추가</button>
+    <label style="display:flex;align-items:center;gap:6px;margin-top:9px;font-size:12px;">
+      <input type="checkbox" id="video-chain" checked>
+      <span><b>이어 보기</b> — 링크가 여럿이면 학생 화면에 <b>카드 하나</b>로, 앞 구간이 끝나면 다음 링크로 넘어갑니다 (끄면 따로따로)</span></label>
     ${/* 🔵 **복습용 — 시청률에서 뺀다** (2026-09-20 · 사용자 요청). 까닭은 `videoCounted` 주석에. */''}
     <label style="display:flex;align-items:center;gap:6px;margin-top:11px;font-size:12px;">
       <input type="checkbox" id="video-notrack">
