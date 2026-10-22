@@ -15,6 +15,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { 강사로로그인 } from './fb-login.mjs';
+import { 창고칸 } from './ix.mjs';   // 색인 칸·_t — 웹 dbSetDoc 과 같은 칸 (10-22)
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const 값 = (이름) => { const i = process.argv.indexOf(이름); return i >= 0 ? process.argv[i + 1] : ''; };
@@ -55,7 +56,7 @@ console.log('검토할 것 ' + 대상.length + '개' + (쓸까 ? '' : ' (재보�
 
 const put = async (col, id, data) => (await fetch(BASE + '/' + col + '/' + encodeURIComponent(id), {
   method: 'PATCH', headers: { ...H, 'Content-Type': 'application/json' },
-  body: JSON.stringify({ fields: { value: { stringValue: JSON.stringify(data) } } }) })).status;   // items-push 의 putDoc 과 같은 꼴
+  body: JSON.stringify({ fields: 창고칸(col, id, data) }) })).status;   // items-push 의 putDoc 과 같은 꼴
 const NOW = () => { const d = new Date(); const p = (n) => String(n).padStart(2, '0');
   return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes()); };
 

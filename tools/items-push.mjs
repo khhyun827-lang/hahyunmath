@@ -24,6 +24,7 @@ import fs from 'fs';
 import path from 'path';
 import { loadHwpxRules } from './hwpx-node.mjs';
 import { 창고읽기, 창고읽기_손에있는것, 교재읽기, 달라진자리, 교재폴더 } from './store-diff.mjs';
+import { 창고칸 } from './ix.mjs';   // 색인 칸·_t — 웹 dbSetDoc 과 같은 칸 (10-22)
 
 const argv = process.argv.slice(2);
 /* 🔵 `--local` — 창고 대신 «손에 있는 본문»(*-bodies.json)으로 판정만 미리 본다.
@@ -163,7 +164,7 @@ if (!쓸까) { console.log('\n  ⓘ 재보기만 했습니다. 실제로 올리�
 async function putDoc(collection, id, data) {
   const r = await fetch(BASE + '/' + collection + '/' + encodeURIComponent(id), {
     method: 'PATCH', headers: { ...H, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ fields: { value: { stringValue: JSON.stringify(data) } } }),
+    body: JSON.stringify({ fields: 창고칸(collection, id, data) }),
   });
   return r.ok ? null : r.status;
 }

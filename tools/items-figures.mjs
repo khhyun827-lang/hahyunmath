@@ -17,6 +17,7 @@ import path from 'path';
 import crypto from 'crypto';
 import { fileURLToPath } from 'url';
 import { problemsFromHwpx, contentsDir } from './hwpx-node.mjs';
+import { 창고칸 } from './ix.mjs';   // 색인 칸·_t — 웹 dbSetDoc 과 같은 칸 (10-22)
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const 교재폴더 = path.join(ROOT, '교재 코드파일');
@@ -97,7 +98,7 @@ async function 올리기(파일) {
 async function putDoc(id, data) {
   const r = await fetch(BASE + '/items/' + encodeURIComponent(id), {
     method: 'PATCH', headers: { ...H, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ fields: { value: { stringValue: JSON.stringify(data) } } }),
+    body: JSON.stringify({ fields: 창고칸('items', id, data) }),
   });
   return r.ok ? null : r.status;
 }

@@ -19,6 +19,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { loadHwpxRules } from './hwpx-node.mjs';
+import { 창고칸 } from './ix.mjs';   // 색인 칸·_t — 웹 dbSetDoc 과 같은 칸 (10-22)
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const 쓸까 = process.argv.includes('--push');
@@ -80,7 +81,7 @@ if (!쓸까) { console.log('\n  ⓘ 재보기만 했습니다. 실제로 고치�
 async function putDoc(collection, id, data) {
   const r = await fetch(BASE + '/' + collection + '/' + encodeURIComponent(id), {
     method: 'PATCH', headers: { ...H, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ fields: { value: { stringValue: JSON.stringify(data) } } }),
+    body: JSON.stringify({ fields: 창고칸(collection, id, data) }),
   });
   return r.ok ? null : r.status;
 }

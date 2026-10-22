@@ -20,6 +20,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { loadHwpxRules, problemsFromHwpx } from './hwpx-node.mjs';
+import { 창고칸 } from './ix.mjs';   // 색인 칸·_t — 웹 dbSetDoc 과 같은 칸 (10-22)
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..');
@@ -52,7 +53,7 @@ async function putDoc(projectId, token, collection, id, data) {
   const res = await fetch(url, {
     method: 'PATCH',
     headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ fields: { value: { stringValue: JSON.stringify(data) } } }),
+    body: JSON.stringify({ fields: 창고칸(collection, id, data) }),
   });
   return res.ok ? null : res.status;
 }
