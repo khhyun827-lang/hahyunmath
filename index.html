@@ -32778,6 +32778,7 @@ function teacherReviewHTML(){
         + (!칸수 ? '' : REVIEW_SUBS.map(([k, 이름]) =>
           `<a class="rv-qn rv-sub ${state.reviewSub===k?'on':''}" onclick="goReviewSub('${k}')">${이름}<b>${칸수[k]}</b></a>`).join(''));
     }).join('')}
+    ${nightLogHTML()}
     <div class="t-sec" style="margin-top:22px;">보기</div>
     ${/* ⚠ `go` 는 «여기서 나가는 문»이라는 표시다 — 폰에서 큐가 칩 줄로 접힐 때 이 둘만 빠진다
          (M-2e). 시험지로 가는 길은 서브탭에 이미 있어서, 좁은 줄에 두 번 둘 자리가 없다. */''}
@@ -34504,6 +34505,19 @@ async function reviewAllPending(셋째, 밤){   // 밤 — 새벽 돌리기(nigh
 }
 function cancelReviewBatch(){ state.reviewCancel = true; render(); }
 
+/* 지난밤 새벽 돌리기 결과 한 줄 — 검토 탭을 처음 열 때 kv 한 건만 읽는다. */
+function nightLogHTML(){
+  if(state.nightLog === undefined){
+    state.nightLog = null;
+    dbGet('night-log', null).then(v => { state.nightLog = v; if(v) render(); });
+  }
+  const L = state.nightLog;
+  if(!L) return '';
+  const d = new Date(L.at);
+  return `<div class="note" style="margin-top:14px;font-size:11.5px;">새벽 자동 <span class="mono">${d.getMonth()+1}-${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}</span> 마침<br>
+    변형 <b class="mono">${L.made}</b>건${L.skipped ? ` · 건너뜀 ${L.skipped}` : ''}${L.failed ? ` · 실패 ${L.failed}` : ''} <s>·</s> 검토 <b class="mono">${L.reviewed}</b>건 <s>·</s> 셋째 AI <b class="mono">${L.third}</b>건</div>`;
+}
+
 /* =========== 새벽에 남은 한도 쓰기 (2026-10-21 · 사용자 — 「변형이랑 검토 한도를 안 쓰고 넘어갈 때가 많은데,
      초기화되기 전 새벽 다섯 시에도 남은 게 있으면 자동으로 돌리게」) ===========
    🔵 GitHub Actions(.github/workflows/nightrun.yml → tools/nightrun.mjs)가 05시쯤 화면 없는 브라우저로 이 사이트를 열어 부른다.
@@ -34534,6 +34548,8 @@ async function nightRun(pw, aside){
     clearTimeout(t);
   }
   const n = i => (검토[i] && 검토[i].done) || 0;
+  /* 지난밤 결과 — 검토 탭 왼쪽에 한 줄로 보인다(nightLogHTML · 10-22 사용자). kv 라 공개 기록에 안 남는다. */
+  await dbSet('night-log', { at: new Date().toISOString(), made: st.done, skipped: st.skipped, failed: st.failed, reviewed: n(0), third: n(1) });
   return { ok:true, aside: localStorage.getItem(AUTOFILL_ASIDE_KEY) || '{}',
     summary: `변형 ${st.done}건 (건너뜀 ${st.skipped} · 실패 ${st.failed}) · 검토 ${n(0)}건 · 셋째 AI ${n(1)}건`
       + ` · 한도 Gemini ${await getAIQuotaUsed()}/${AI_DAILY_LIMIT} · 검토 ${await getReviewQuotaUsed()}/${REVIEW_DAILY_LIMIT}` };

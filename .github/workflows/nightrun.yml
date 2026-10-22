@@ -3,7 +3,7 @@
 name: nightrun
 on:
   schedule:
-    - cron: '7 20 * * *'   # UTC — 한국 05:07 (GitHub 가 붐비면 몇십 분 늦게 온다 · 정각을 피했다)
+    - cron: '7 18 * * *'   # UTC — 한국 03:07 (10-22 첫 밤에 3시간 늦게 왔다 → 05:07 에서 당김 · 정각을 피했다)
   workflow_dispatch:
 permissions:
   contents: read

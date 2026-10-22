@@ -1,4 +1,4 @@
-// 새벽에 남은 AI 한도를 쓴다 (2026-10-21) — .github/workflows/nightrun.yml 이 05시쯤 부른다.
+// 새벽에 남은 AI 한도를 쓴다 (2026-10-21) — .github/workflows/nightrun.yml 이 03시쯤 부른다.
 // 일은 전부 index.html 의 nightRun() 이 한다(자동 채우기 → 검토 → 셋째 AI). 여기는 열고·로그인시키고·건수만 찍는다.
 // 🔴 저장소가 공개라 실행 기록도 공개다 — 찍는 것은 nightRun 이 돌려준 건수 한 줄뿐.
 //   ADMIN_PW=... node tools/nightrun.mjs        (SITE=... 로 다른 주소)
@@ -17,7 +17,10 @@ const 브라우저 = await chromium.launch();
 const page = await 브라우저.newPage();
 page.on('dialog', d => d.dismiss());
 await page.goto(SITE);
-await page.waitForFunction(() => typeof nightRun === 'function', null, { timeout: 120000 });
+/* 🔴 시작 절차의 익명 로그인이 끝난 «뒤»에 부른다 (10-22 · 첫 밤에 0건으로 끝난 까닭).
+   nightRun 은 0.9초에 서는데 익명 로그인은 2.2초에 끝난다 — 그 사이 강사로 들어가면 익명이 덮어써
+   읽기가 다 막히고(variants strict 실패) 자동 채우기가 마감까지 창고 싣기만 되풀이했다. */
+await page.waitForFunction(() => typeof nightRun === 'function' && fbAuth.currentUser, null, { timeout: 120000 });
 const r = await page.evaluate(([pw, aside]) => nightRun(pw, aside), [PW, aside]);
 await 브라우저.close();
 
