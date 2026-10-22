@@ -381,8 +381,19 @@ function 영상판(opt) {
   봄('여는 단추는 머리 카드 단추 줄에 — «유튜브에서 열기» 자리(10-13) · 판이 닫혀 있으면 판은 비었다',
     [/유튜브에서 열기<\/a>/.test(lift('videoHeroHTML')), /다른 반에도 보내기/.test(lift('videoHeroHTML')), (() => { 곁.state.videoCopy = null; const r = F.videoCopyPanelHTML(원본, 'c1'); 곁.state.videoCopy = { classId: 'c2' }; return r; })()],
     [false, true, '']);
-  봄('다른 반 고르면 그 반 학생 상자가 서고 마감은 이 영상 것이 기본', [/class="vc-who" value="st07"/.test(F.videoCopyPanelHTML(원본, 'c1')), /value="2026-10-20"/.test(F.videoCopyPanelHTML(원본, 'c1')),
-    /value="c1"/.test(F.videoCopyPanelHTML(원본, 'c1'))], [true, true, false]);
+  봄('다른 반 고르면 그 반 학생 상자가 서고 마감은 이 영상 것이 기본 · 이 반도 «(이 반)»으로 고를 수 있다 (10-23)', [/class="vc-who" value="st07"/.test(F.videoCopyPanelHTML(원본, 'c1')), /value="2026-10-20"/.test(F.videoCopyPanelHTML(원본, 'c1')),
+    /value="c1"[^>]*>A반 \(이 반\)/.test(F.videoCopyPanelHTML(원본, 'c1'))], [true, true, true]);
+  {
+    /* 같은 반 — 반 영상이면 그 반 학생은 이미 받았다(막힘) · 아무도 안 고르면 안 보낸다(같은 영상이 둘이 된다) */
+    곁.state.videoCopy = { classId: 'c1' }; 곁.state.classHubId = 'c1';
+    const 판 = F.videoCopyPanelHTML(원본, 'c1');
+    const 앞 = 저장.length, 고른것 = 곁.document.querySelectorAll;
+    곁.document.querySelectorAll = () => [];
+    await F.videoCopyTo('v1');
+    곁.document.querySelectorAll = 고른것;
+    봄('🔴 같은 반 — 이미 받은 학생은 못 고르고, 아무도 안 고르면 안 보낸다', [/value="st07" disabled/.test(판), 저장.length - 앞, /같은 반은/.test(말.pop())], [true, 0, true]);
+    곁.state.videoCopy = { classId: 'c2' }; 곁.state.classHubId = undefined;
+  }
   await F.videoCopyTo('v1');
   봄('🔴 고른 학생마다 새 문서 — 그 반 · 고른 마감 · 링크·제목·구간·복습용 그대로', 저장.map(v => [v.studentId, v.classId, v.dueDate, v.url, v.title, v.fromSec, v.toSec, v.noTrack]),
     [['st07', 'c2', '2026-10-25', 'https://youtu.be/aaaa', '4강', 60, 120, true], ['st08', 'c2', '2026-10-25', 'https://youtu.be/aaaa', '4강', 60, 120, true]]);

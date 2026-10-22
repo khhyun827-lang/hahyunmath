@@ -48,7 +48,7 @@ console.log(NL + '① 결석 보충 영상 — 저장마다 늘지 않는가' + 
     /* 10-18 — saveClassAttendance 는 «그 날 명단»(classRosterOn)으로 돈다 */
     /* 보충 영상 알림톡(10-18)은 upload-notify-test 가 크롬으로 본다 — 여기서는 조교로 세워 건너뛴다 */
     "function isJikboSession(){ return false; } function isAssistantNow(){ return true; }" + NL + ['itemDay','beforeJoin','studentClassIds','isWithdrawnRecord','goneDateOf','inClassOn','byKoName','attOn','classRosterOn'].map(lift).join(NL) + NL +
-    lift('ymdPlusDays') + NL + lift('saveClassAttendance') + NL + 'return { saveClassAttendance };')(
+    lift('ymdPlusDays') + NL + lift('makeupVideoOf') + NL + lift('saveClassAttendance') + NL + 'return { saveClassAttendance };')(
     DATA, state, () => roster, s => s.classId,
     async sid => (recs[sid] = recs[sid] || { attendance: [], scores: [], wrongHomework: [] }),
     async () => true, async () => {}, () => {}, () => {},

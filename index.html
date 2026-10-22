@@ -973,6 +973,11 @@
 /* 사유·메모·보충영상이 달린 칸은 «점»으로 알린다 — 열어 보기 전에는 알 길이 없었다. */
 .app .ag-m .dotmark{position:absolute;right:2px;bottom:2px;width:4px;height:4px;border-radius:50%;
   background:currentColor;opacity:.65;}
+/* 보충 영상 (10-23) — 준 칸은 오른쪽 위 초록 ▶ · 결석인데 안 준 칸은 붉은 점선 테 */
+.app .ag-m .mvmark{position:absolute;right:-5px;top:-5px;width:13px;height:13px;border-radius:50%;
+  background:#1F9D55;color:#fff;font-size:6.5px;font-style:normal;line-height:13px;text-align:center;
+  box-shadow:0 0 0 1.5px #fff;padding-left:1px;box-sizing:border-box;}
+.app .ag-m.nomv{outline:2px dashed #D93A45;outline-offset:2px;}
 .app .ag th.ag-rate,.app .ag td.ag-rate{width:66px;text-align:right;padding-right:12px;
   border-left:1px solid var(--line);background:var(--sunk);}
 .app .ag th.ag-rate{vertical-align:bottom;}
@@ -19457,7 +19462,7 @@ function videoHeroHTML(v, 받는이, 묶음ids, 덧단추){
     ${/* 단추 줄은 썸네일 아래 한 줄 통째로 — 드로어 폭에서 썸네일 옆에 셋을 세우면 줄이 접힌다 */''}
     <div class="act">
       ${/* «유튜브에서 열기»는 뺐다 (2026-10-13 · 사용자 — 「영상 화면 체크하면 되어서 필요 없을 것 같아」). 그 자리에 «다른 반에도 보내기». 썸네일은 여전히 유튜브로 연다 */''}
-      ${state.videoCopy ? '' : `<button class="btn sm" onclick="state.videoCopy={classId:''}; render()">다른 반에도 보내기</button>`}
+      ${state.videoCopy ? '' : `<button class="btn sm" onclick="state.videoCopy={classId:''}; render()">다른 학생·반에도 보내기</button>`}
       ${고치는중 ? '' : `<button class="btn q sm" onclick="state.videoDueEdit='${v.id}'; render()">마감 바꾸기</button>`}
       ${덧단추 || ''}
     </div>
@@ -26451,6 +26456,7 @@ function chubAttendanceHTML(classId){
     <span class="spacer"></span>
     <span style="font-size:11.5px;color:var(--dim);line-height:1.7;text-align:right;">
       <b>날짜를 누르면</b> 그날 출결을 아래에서 고칠 수 있습니다.
+      <b style="color:#1F9D55;">▶</b> 보충 영상 줌 · <b style="color:#D93A45;">점선</b> 결석인데 보충 영상 안 줌.
       오늘 수업의 출결은 <b>「수업」 탭</b>에서 넣습니다.</span>
   </div>
 
@@ -26489,11 +26495,14 @@ function chubAttendanceHTML(classId){
           <td class="who"><span class="nm">${escHtml(s.name)}</span>${rosterLeftTagHTML(s, classId)}</td>
           ${cols.map(d=>{
             const a = attOf(s.studentId, d);
-            const extra = a && (a.reason || a.videoUrl || a.note);
+            const extra = a && (a.reason || a.note);
+            /* 보충 영상 (10-23 · 사용자 — 「결석인 학생에 대해 그날 보충영상을 등록했는지 한눈에」) — 준 것은 초록 ▶, 결석인데 안 준 것은 점선 테 */
+            const mv = a && a.status !== '출석' ? makeupVideoOf(s.studentId, d) : null;
+            const 안줌 = a && a.status === '결석' && !mv;
             return `<td class="${d===open?'on':''}">${a
-              ? `<span class="ag-m ${attStatusClass(a.status)}" title="${escHtml(
-                  a.status + (a.reason?' · '+a.reason:'') + (a.note?' · '+a.note:'') + (a.videoUrl?' · 보충 영상 있음':''))}"
-                  >${MARK[a.status]||a.status.slice(0,1)}${extra?'<i class="dotmark"></i>':''}</span>`
+              ? `<span class="ag-m ${attStatusClass(a.status)}${안줌 ? ' nomv' : ''}" title="${escHtml(
+                  a.status + (a.reason?' · '+a.reason:'') + (a.note?' · '+a.note:'') + (mv ? ' · 보충 영상 줌' : 안줌 ? ' · 보충 영상 안 줌' : ''))}"
+                  >${MARK[a.status]||a.status.slice(0,1)}${extra?'<i class="dotmark"></i>':''}${mv ? '<i class="mvmark">▶</i>' : ''}</span>`
               : !inClassOn(s, classId, d) ? '' : '<span class="ag-m none" title="미입력">·</span>'}</td>`;
           }).join('')}
           <td class="ag-rate"><span class="mono ${r!==null && r<80 ? 'down':''}">${r===null?'—':r+'%'}</span></td>
@@ -28944,8 +28953,15 @@ function ensureAttDraft(classId, date){
   classRosterOn(classId, date).forEach(s=>{
     const rec = state.allRecords[s.studentId];
     const existing = attOn(rec, date, classId, studentMainClassId(s));
-    state.attDraft[s.studentId] = existing ? {status:existing.status, reason:existing.reason||'', videoUrl:'', note:existing.note||''} : {status:null, reason:'', videoUrl:'', note:''};
+    /* 보충 영상 칸은 이미 준 링크로 채운다 (10-23 · 사용자 — 「눌러봐도 이미 링크가 초기화되었는지 안보임」).
+       같은 링크로 다시 저장하면 saveClassAttendance 가 아무것도 안 한다(K-5 · 같은 날 하나). */
+    const mv = existing ? makeupVideoOf(s.studentId, date) : null;
+    state.attDraft[s.studentId] = existing ? {status:existing.status, reason:existing.reason||'', videoUrl:(mv && mv.url)||'', note:existing.note||''} : {status:null, reason:'', videoUrl:'', note:''};
   });
+}
+/* 그날 그 학생에게 준 보충 영상 — 출결 저장이 만드는 «날짜 … 보충 영상» 문서 (saveClassAttendance 와 같은 잣대) */
+function makeupVideoOf(sid, date){
+  return DATA.videos.find(v => v.studentId === sid && String(v.title || '').startsWith(date + ' ') && /보충 영상$/.test(v.title || '')) || null;
 }
 /* 🔵 **고른 칸을 한 번 더 누르면 지운다** (2026-10-02 · 사용자 — 「출결 버튼을 눌렀다가 다시 뺄 방법이 없어」).
      지운 칸은 «미입력»이 되고, 저장할 때 그날 이 반의 줄을 기록에서 뺀다(saveClassAttendance).
@@ -29116,7 +29132,7 @@ async function saveClassAttendance(classId, date){
              이제 그 날짜의 것이 있으면 새로 만들지 않는다 — 링크가 바뀌었으면 그것만 고친다. */
         const 제목 = date+' '+d.status+' 보충 영상';
         /* 같은 날 것은 제목 앞뒤(날짜 · «보충 영상»)로 찾는다 — 결석을 지각으로 고쳐도 둘이 되지 않는다. 옛 「결석 보충 영상」도 같은 꼴이다. */
-        const 있던것 = DATA.videos.find(v=>v.studentId===s.studentId && String(v.title||'').startsWith(date+' ') && /보충 영상$/.test(v.title||''));
+        const 있던것 = makeupVideoOf(s.studentId, date);
         if(있던것){
           if(있던것.url !== url || 있던것.title !== 제목){ 있던것.url = url; 있던것.title = 제목; await dbSetDoc('videos', 있던것.id, 있던것); }
         } else {
@@ -30501,10 +30517,14 @@ function chubVideoModel(classId){
   /* 이름은 셋까지 적고 나머지는 센다 — 열 명이면 줄이 이름으로만 가득 찬다. */
   const 이름들 = g => g.length <= 3 ? g.map(v=>nameOf(v.studentId)).join('·')
     : g.slice(0,3).map(v=>nameOf(v.studentId)).join('·') + ` 외 ${g.length-3}명`;
-  /* 목록의 차례 — 반 전체, 그 다음 개인 배정 묶음(대표 하나씩). 드로어의 «이전·다음»이 이 차례를 탄다. */
-  const 차례 = vids.map(v=>v.id).concat(묶음들.map(g=>g[0].id));
+  /* 목록의 차례 — 반 전체·개인 배정을 가르지 않고 «마감일 늦은 것이 위» (10-23 · 사용자 — 「반전체, 개인배정 이런거
+     분리하지않고 마감일순으로」). 마감 없는 것은 아래 · 같은 마감이면 최근 올린 것이 위. 드로어의 «이전·다음»도 이 차례를 탄다. */
+  const 올린때 = v => +((/^v(\d+)/.exec(v.id) || [])[1] || 0);
+  const 목록 = vids.map(v => ({ v })).concat(묶음들.map(g => ({ v: g[0], g })))
+    .sort((a, b) => (b.v.dueDate || '').localeCompare(a.v.dueDate || '') || 올린때(b.v) - 올린때(a.v));
+  const 차례 = 목록.map(x => x.v.id);
   const 찾기 = id => vids.find(v=>v.id===id) || personal.find(v=>v.id===id) || null;
-  return { roster, 받은, vids, personal, nameOf, progOf, doneOf, avgOf, 묶음들, 묶음of, 이름들, 차례, 찾기 };
+  return { roster, 받은, vids, personal, nameOf, progOf, doneOf, avgOf, 묶음들, 묶음of, 이름들, 차례, 찾기, 목록 };
 }
 
 /* 등록 폼 «＋ 링크 더 추가» (2026-10-13) — render() 없이 줄만 붙인다. render 하면 이미 적은 칸(제목·링크)이 지워진다. */
@@ -30530,17 +30550,23 @@ function videoClose(){ 드로어닫기(() => { state.videoOpenId = null; state.v
 function videoCopyPanelHTML(sel, fromClassId){
   if(!state.videoCopy) return '';      // 여는 단추는 머리 카드 단추 줄에 (videoHeroHTML)
   const cid = state.videoCopy.classId;
-  const 반들 = DATA.classes.filter(c => c.id !== fromClassId);
+  /* 같은 반도 고른다 (10-23 · 사용자 — 「같은반 학생을 더 추가할 때도 쓸 수 있도록」). 이미 받은 학생은 막아 둔다 —
+     반 영상이면 그 반 전체가 이미 받았고, 개인 배정이면 묶음의 학생들. */
+  const 반들 = DATA.classes.slice().sort((a, b) => (b.id === fromClassId) - (a.id === fromClassId));
   const 명단 = cid ? classRoster(cid) : [];
+  const 받은이 = new Set(sel.studentId ? chubVideoModel(fromClassId).묶음of(sel).map(v => v.studentId)
+    : cid === fromClassId ? 명단.map(s => s.studentId) : []);
+  const 같은반 = cid && cid === fromClassId;
   return `<div class="vd-copy">
-    <div class="row" style="align-items:center;gap:8px;"><b>다른 반에도 보내기</b><span class="spacer"></span>
+    <div class="row" style="align-items:center;gap:8px;"><b>다른 학생·반에도 보내기</b><span class="spacer"></span>
       <button class="btn q sm" onclick="state.videoCopy=null; render()">닫기</button></div>
     <select class="fm-in" style="margin-top:8px;width:100%;" onchange="state.videoCopy={classId:this.value}; render()">
-      <option value="">반 고르기</option>${반들.map(c => `<option value="${c.id}" ${c.id === cid ? 'selected' : ''}>${escHtml(c.name)}</option>`).join('')}</select>
+      <option value="">반 고르기</option>${반들.map(c => `<option value="${c.id}" ${c.id === cid ? 'selected' : ''}>${escHtml(c.name)}${c.id === fromClassId ? ' (이 반)' : ''}</option>`).join('')}</select>
     ${!cid ? '' : `
-    <div style="font-size:11px;color:var(--dim);margin:10px 0 6px;">보낼 학생 — 아무도 안 고르면 <b>그 반 전체</b>에게 갑니다</div>
-    <div style="display:flex;gap:10px;flex-wrap:wrap;">${명단.map(s => `<label style="display:flex;align-items:center;gap:5px;font-size:12px;">
-        <input type="checkbox" class="vc-who" value="${s.studentId}">${escHtml(s.name)}</label>`).join('')
+    <div style="font-size:11px;color:var(--dim);margin:10px 0 6px;">${같은반 ? '더 보낼 학생을 고르세요 — 흐린 이름은 이미 받았습니다'
+      : '보낼 학생 — 아무도 안 고르면 <b>그 반 전체</b>에게 갑니다'}</div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;">${명단.map(s => `<label style="display:flex;align-items:center;gap:5px;font-size:12px;${받은이.has(s.studentId) ? 'opacity:.45;' : ''}">
+        <input type="checkbox" class="vc-who" value="${s.studentId}" ${받은이.has(s.studentId) ? 'disabled' : ''}>${escHtml(s.name)}</label>`).join('')
       || '<span style="font-size:12px;color:var(--dim);">이 반에 학생이 없습니다 — 반 전체로 보냅니다.</span>'}</div>
     <div class="row" style="gap:8px;align-items:flex-end;margin-top:10px;">
       <label style="font-size:11px;color:var(--dim);">마감일<input id="vc-due" type="date" class="fm-in" value="${escHtml(sel.dueDate || '')}"></label>
@@ -30553,6 +30579,8 @@ async function videoCopyTo(vid){
   const cid = state.videoCopy && state.videoCopy.classId;
   if(!sel || !cid) return;
   const 받는이들 = [...new Set([...document.querySelectorAll('.vc-who:checked')].map(x => x.value))];
+  /* 같은 반에 «반 전체»로 또 보내면 같은 영상이 둘이 된다 — 같은 반은 학생을 골라야 한다 (10-23) */
+  if(cid === state.classHubId && !받는이들.length){ showToast('같은 반은 더 보낼 학생을 골라 주세요.'); return; }
   const dueEl = document.getElementById('vc-due');
   /* 알림톡 (10-22 · 사용자 — 「다른 반으로 보내기 했을 때 영상 등록 문자가 가는지」 → 안 갔다). addVideo 와 같은 길 */
   const 알림 = !!(document.getElementById('vc-notify') || {}).checked;
@@ -30586,7 +30614,7 @@ async function videoCopyTo(vid){
 
 function chubVideoHTML(classId){
   loadAllRecordsIfNeeded();
-  const { roster, 받은, vids, personal, progOf, doneOf, avgOf, 묶음들, 이름들 } = chubVideoModel(classId);
+  const { roster, 받은, vids, personal, progOf, doneOf, avgOf, 묶음들, 이름들, 목록 } = chubVideoModel(classId);
 
   /* 배포는 가끔, 보는 일은 매번이다. 상시 펼쳐 두면 이 화면의 본문이 한 화면 아래로 내려간다.
      🔵 머리 줄 (2026-09-23) — 왼쪽에 «영상 n · 개인 배정 m», 오른쪽에 「영상 등록」. */
@@ -30708,7 +30736,7 @@ function chubVideoHTML(classId){
     return `<div class="vd-row ${g.some(x=>x.id===열린것)?'on':''}" onclick="videoOpen('${v.id}')">
       ${썸네일(v)}
       <div class="b">
-        <div class="t">${escHtml(v.title)}${딱지들(v)}${여럿 ? ` <span class="badge late" style="font-weight:600;">${g.length}명</span>` : ''}</div>
+        <div class="t">${escHtml(v.title)}${딱지들(v)} <span class="badge late" style="font-weight:600;">개인${여럿 ? ' ' + g.length + '명' : ''}</span></div>
         <div class="m"><b style="color:var(--sub);">${escHtml(이름들(g))}</b>${
           v.dueDate ? ' · 마감 <span class="mono">'+escHtml(v.dueDate.slice(5))+'</span>' : ' · 마감 없음'} ${디데이(v)}</div>
       </div>
@@ -30719,11 +30747,9 @@ function chubVideoHTML(classId){
   };
   /* 🔵 **목록이 이 화면의 전부다** (2026-09-23 · V-2b · 사용자 — 「영상이 쌓일수록 아래로만 길게 스크롤」).
        상세는 줄을 누르면 오른쪽 드로어(`videoDrawerHTML`)로 나온다 — 과제 칸·출결 날짜와 같은 어법. */
+  /* 한 목록 (10-23) — 개인 배정 줄은 받은 이름·«개인» 딱지로 가른다 */
   return form + `<div class="vd-list">
-    ${vids.length && personal.length ? '<div class="t-sec">반 전체</div>' : ''}
-    ${vids.map(classRow).join('')}
-    ${묶음들.length ? `<div class="t-sec">개인 배정 <span class="mono">${묶음들.length}</span>
-      <span style="font-weight:400;color:var(--dim);letter-spacing:0;">결석 보충 · 고른 학생에게 보낸 것</span></div>${묶음들.map(personalRow).join('')}` : ''}
+    ${목록.map(x => x.g ? personalRow(x.g) : classRow(x.v)).join('')}
   </div>`;
 }
 

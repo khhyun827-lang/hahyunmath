@@ -1,0 +1,75 @@
+<!doctype html><meta charset="utf-8"><title>att-makeup-probe</title>
+<!-- 반 › 출결 격자 — 결석·지각에 보충 영상을 줬는지 한눈에 (2026-10-23).
+     사용자 —「출결탭에서 결석인 학생에 대해 그날 보충영상을 거기에 등록했는지 한눈에 볼 수 있으면 좋겠어
+              (눌러봐도 이미 링크가 초기화되었는지 안보임)」.
+
+       node tools/serve.js
+       http://127.0.0.1:8777/tools/att-makeup-probe.html?w=864        (사용자 판 · 125% 확대)
+       …&open=1   결석한 날짜의 고치는 판을 연 채로 — 보충 영상 칸에 준 링크가 차 있어야 한다
+
+     🔴 실 DB 0줄 · 읽기 0건 — dbSet/dbGet/dbSetDoc/logAudit 를 프레임 안에서 갈아 끼운다. -->
+<style>html,body{margin:0;background:#fff}iframe{border:0;display:block}
+pre{font:12px monospace;color:#333;margin:0;padding:4px;white-space:pre-wrap;}</style>
+<pre id="o">…</pre>
+<script>
+const fr = document.createElement('iframe');
+const Q = parent.location.search;
+const W = Number((Q.match(/[?&]w=([0-9]+)/) || [])[1]) || 1280;
+fr.width = W; fr.height = 900; fr.style.width = W + 'px'; fr.src = '/index.html';
+document.body.appendChild(fr);
+const o = document.getElementById('o');
+let n = 0;
+const t = setInterval(async () => {
+  n++;
+  let ready = false;
+  try { ready = fr.contentWindow.eval('typeof chubAttendanceHTML==="function" && typeof render==="function" && typeof state!=="undefined"'); } catch (_) {}
+  if (!ready) { if (n > 200) { clearInterval(t); o.textContent = 'RESULT timeout'; } return; }
+  clearInterval(t);
+  const w = fr.contentWindow;
+  let out;
+  try {
+    out = await w.eval(`(async function(){
+  const R = {}; const 쓴것 = [];
+  window.dbSet = async (k,v) => { 쓴것.push(k); return true; };
+  window.dbGet = async (k,d) => d;
+  window.dbSetDoc = async (c,i,d) => { 쓴것.push(c+'/'+i); return true; };
+  window.dbDelete = async () => true;
+  window.logAudit = async () => {};
+  window.showToast = () => {};
+  window.loadAllRecordsIfNeeded = () => {};
+
+  const CID = 'probe1';
+  DATA.classes = [{ id:CID, name:'고1 프로브반', schedule:'월,화,수,목,금,토,일 19시~21시', period:'26.03~26.12', status:'진행중', kind:'정규' }];
+  const 이름 = ['김민아','박서준','이도윤','최지우','정하은','강현우'];
+  DATA.students = 이름.map((nm,i)=>({ studentId:'s'+i, name:nm, classId:CID, status:'재원', school:'프로브고', grade:'1학년' }));
+  DATA.assignments = []; DATA.exams = []; DATA.notices = [];
+  const today = todayStr(), d = k => shiftYmd(today, k);
+  const D1 = d(-1), D2 = d(-2), D3 = d(-3);
+  /* 결석 셋 — 영상 준 것(s1 D3) · 안 준 것(s2 D2 · s3 D1) / 지각 하나 영상 줌(s4 D1) */
+  DATA.videos = [
+    { id:'v1_s1', studentId:'s1', classId:CID, title:D3+' 결석 보충 영상', url:'https://youtu.be/dQw4w9WgXcQ', dueDate:d(4) },
+    { id:'v1_s4', studentId:'s4', classId:CID, title:D1+' 지각 보충 영상', url:'https://youtu.be/9bZkp7q19f0', dueDate:d(6) },
+  ];
+  state.allRecords = {};
+  DATA.students.forEach(s => {
+    const att = [D3, D2, D1].map(dt => ({ date:dt, classId:CID, status:'출석', reason:'' }));
+    state.allRecords[s.studentId] = { attendance: att, videoProgress:{} };
+  });
+  const 바꿈 = (sid, dt, st) => { state.allRecords[sid].attendance.find(a => a.date === dt).status = st; };
+  바꿈('s1', D3, '결석'); 바꿈('s2', D2, '결석'); 바꿈('s3', D1, '결석'); 바꿈('s4', D1, '지각');
+  state.allRecordsLoaded = true; state.allRecordsLoading = false;
+  state.currentUser = { type:'teacher' }; state.view = 'teacher';
+  state.teacherTab = 'classhub'; state.classHubTab = 'sessions'; state.classHubId = CID;
+  if(${JSON.stringify(Q)}.includes('open=1')) state.attOpenDate = D3;
+  render(); await new Promise(r=>setTimeout(r,200));
+  R.초록 = document.querySelectorAll('.ag-m .mvmark').length;          // 2 — s1 결석 · s4 지각
+  R.점선 = document.querySelectorAll('.ag-m.nomv').length;             // 2 — s2 · s3
+  R.판링크 = [...document.querySelectorAll('.att-d input')].map(x => x.value).filter(v => /youtu/.test(v));   // open=1 → s1 링크
+  R.가로넘침 = document.documentElement.scrollWidth > window.innerWidth + 1;
+  R.실DB로_나간것 = 쓴것;
+  return R;
+})()`);
+  } catch (e) { out = { error: String(e && e.stack || e) }; }
+  o.textContent = 'RESULT ' + JSON.stringify(out);
+}, 100);
+</script>

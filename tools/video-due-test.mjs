@@ -171,7 +171,7 @@ await api2.addVideo();
 /* 강사 영상 탭 — 글자로 */
 봄('등록 폼에 «보낼 사람» 상자 줄', chubVideo.includes('class="vd-who"') && chubVideo.includes('반 전체'), true);
 봄('개인 배정은 명단(학생)으로 모은다 — classId 가 빈 옛 결석 영상도 든다', chubVideo.includes('rosterIds.has(v.studentId)'), true);
-봄('목록에 «개인 배정» 구역', chubVideo.includes('개인 배정 <span class="mono">'), true);
+봄('목록은 한 줄 — 반 전체·개인 배정을 가르지 않고 마감일 순 (10-23)', [chubVideo.includes('개인 배정 <span class="mono">'), chubVideo.includes("목록.map(x => x.g ? personalRow(x.g) : classRow(x.v))")], [false, true]);
 봄('개인 배정 줄에 완주/％/미시청과 마감 지남', chubVideo.includes("p.done ? '완주' : p.seen ? p.pct+'%' : '미시청'") && chubVideo.includes('personalRow'), true);
 봄('개인 배정 상세는 히스토그램 대신 그 한 명', chubVideo.includes("sel.studentId ? one : drop + students"), true);
 봄('둘 다 비어야 «없습니다»', chubVideo.includes('vids.length===0 && personal.length===0'), true);
@@ -201,7 +201,7 @@ const api3 = new Function(...Object.keys(곁3),
   "function isJikboSession(){ return false; }" + NL + ['itemDay','beforeJoin','joinedRoster','studentClassIds','isWithdrawnRecord','goneDateOf','inClassOn','byKoName','classRosterOn','itemTakers','classRosterAll','classRosterEver','videoExcluded','videoTakers'].map(lift).join(NL) + NL + 잣대 + NL + lift('stuDday') + NL + lift('videoGoalMarkHTML') + NL + lift('videoHeroHTML')
     + NL + lift('chubVideoModel') + NL + lift('chubVideoHTML') + NL + lift('videoDrawerHTML') + NL + lift('videoCopyPanelHTML') + NL + 'return { 그림: c => chubVideoHTML(c) + videoDrawerHTML() };')(...Object.values(곁3));
 const out = api3.그림('c1');
-봄('그려진다 — 반 전체 구역과 개인 배정 2 (남의 반 것은 안 든다)', [out.includes('>반 전체</div>'), out.includes('개인 배정 <span class="mono">2</span>'), out.includes('남의 반')], [true, true, false]);
+봄('그려진다 — 구역 없이 한 목록 · 개인 배정 2 (남의 반 것은 안 든다)', [out.includes('>반 전체</div>'), out.includes('개인 배정 <b>2</b>'), out.includes('남의 반')], [false, true, false]);
 /* 🔵 **제목이 앞, 이름은 둘째 줄이다** (2026-09-16) — 예전에는 「가나 · 09-01 결석 보충 영상」처럼
    이름이 굵게 앞서고 제목이 부제처럼 보였다. 영상 목록인데 학생이 주인공이 돼 있었다.
    ⚠ 이름이 «사라진» 것이 아니다 — 같은 제목을 여러 학생에게 보내는 일이 많아 둘째 줄에 굵게 둔다.

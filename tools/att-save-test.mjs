@@ -43,7 +43,7 @@ const 봄 = (무엇, 나온것, 나와야) => {
   else { fail++; console.log(`  ✗ ${무엇}${NL}      나온 것: ${JSON.stringify(나온것)}${NL}      나와야:  ${JSON.stringify(나와야)}`); }
 };
 
-const 이름들 = ['attClassOf','attOn','ensureAttDraft','setAttStatus',
+const 이름들 = ['attClassOf','attOn','ensureAttDraft','makeupVideoOf','setAttStatus',
   'sessionUnsavedCount','sessionSavedSummary','saveClassAttendance'];
 
 const CID = 'c1', DATE = '2026-09-14';
