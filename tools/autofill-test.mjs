@@ -37,7 +37,7 @@ function liftFn(name) {
   }
   throw new Error(name + ' 의 끝을 못 찾았습니다');
 }
-const BLOCK = liftFn('itemFigureOf') + '\n' + liftBlock();
+const BLOCK = liftFn('itemFigureOf') + '\n' + liftFn('autoFillHasFig') + '\n' + liftBlock();
 
 let pass = 0, fail = 0;
 const 봄 = (무엇, 나온것, 나와야할것) => {

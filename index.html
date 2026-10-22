@@ -6721,7 +6721,7 @@ function collectionTouched(collection){
     collDelPending[collection] = [];
     const ok = await verBump(cfg.ver, dels);
     if(!ok) console.warn('[재우기] ' + collection + ' 버전을 못 올렸다 — 다른 기기는 최대 3일 뒤에 맞는다.');
-    if(collection === 'variants') nightPlanSave().catch(()=>{});
+    if(collection === 'variants') fillQueueSave().catch(()=>{});
   }, 1500);
 }
 
@@ -6948,9 +6948,9 @@ function partOverlay(col, rows){
   for(const id in w) w[id] === null ? by.delete(id) : by.set(id, w[id]);
   return [...by.values()];
 }
-/* 창고가 «전부» 실렸나 — 검토 탭이 대기만 실어 둔 것(storePartial)은 전부가 아니다. 새벽(storeNight)은 차례가 곧 전부다. */
+/* 창고가 «전부» 실렸나 — 검토 탭·문항관리·자동 채우기가 받은 것만 실어 둔 것(storePartial)은 전부가 아니다. */
 function storeAll(){
-  return !!(state.itemByCode && state.itemBody && state.variants && (!state.storePartial || state.storeNight));
+  return !!(state.itemByCode && state.itemBody && state.variants && !state.storePartial);
 }
 function variantsByRoot(rows){
   const by = {};
@@ -6982,8 +6982,9 @@ function loadReviewStoreIfNeeded(){
 }
 /* 받아 둔 것(검토 대기 · 문항관리 카드)을 화면이 보는 자리에 — «전부»가 아니라는 표시(storePartial)와 함께. */
 function partToState(){
-  if(storeAll() || itemStoreLoading || !partMem.items || !partMem.variants) return;
-  Object.assign(state, { itemBody: partMem.items.docs, variants: variantsByRoot(Object.values(partMem.variants.docs)), storePartial: true });
+  if(storeAll() || itemStoreLoading || !(partMem.items || partMem.variants)) return;
+  Object.assign(state, { itemBody: partMem.items ? partMem.items.docs : {},
+    variants: variantsByRoot(partMem.variants ? Object.values(partMem.variants.docs) : []), storePartial: true });
 }
 /* =================== 문항관리는 «보이는 카드»만 받는다 (2026-10-22 · 검색 구조 3단계) ===================
    과목·단원·출처 나무는 장부(배포 파일 · 읽기 0)에서, 판은 판 표(kv/book-editions · 1건)에서 센다.
@@ -7135,7 +7136,7 @@ async function migrateBlobToCollection(oldKey, collection, idField){
      화면은 render() 마다 부르므로 이 겹침은 «가끔»이 아니라 «자주» 일어난다. */
 let itemStoreLoading = null;
 async function loadItemStoreIfNeeded(){
-  if(state.storeNight || storeAll()) return;   // storeNight — 새벽 돌리기가 «차례만» 싣는 중 (nightStoreLoad)
+  if(state.storeNight || storeAll()) return;   // storeNight — 새벽 돌리기는 «차례만» 받는다 (fillQueue · 10-23)
   if(itemStoreLoading) return itemStoreLoading;
   itemStoreLoading = (async () => {
   try{
@@ -7170,7 +7171,7 @@ async function loadItemStoreIfNeeded(){
       bookEditionsSync().catch(e => console.warn('[판 표] 못 맞췄다 —', e && e.message));   // 10-21 · 학생 «교재 문제 요청»이 읽는다
     }
     if(!state.variants) await loadVariantsIfNeeded();
-    nightPlanSave().catch(e => console.warn('[새벽 차례] 못 적었다 —', e && e.message));
+    fillQueueSave().catch(e => console.warn('[채울 차례] 못 적었다 —', e && e.message));
   } finally { itemStoreLoading = null; }
   })();
   return itemStoreLoading;
@@ -32831,7 +32832,8 @@ function icDetailHTML(root){
 function icToolsHTML(앞){
   const af = autoFillState();
   loadAIQuotaIfNeeded();
-  const 남은 = storeAll() ? autoFillCandidates().length : null;
+  if(!storeAll() && state.fillQueue === undefined) fillQueueEnsure().then(render);   // 채울 차례 1건 (10-23)
+  const 남은 = storeAll() || state.fillQueue ? autoFillCandidates().length : null;
   const rp = state.icRepair || {};
   const 말 = [state.icFill && state.icFill.msg, state.icAns && state.icAns.msg, rp.msg, af.msg].filter(Boolean);
   return `<div class="ist-bar">${앞 || ''}
@@ -34332,7 +34334,11 @@ function autoFillScopeOk(code, sc){
   const it = itemOfCode(code);
   if(!it || !storeMatches(it, sc.subj, sc.ch)) return false;
   if(sc.book && ((it.source && it.source.book) || '출처없음') !== sc.book) return false;
-  if(sc.ed && !((((state.itemBody || {})[code] || {}).books) || []).some(b => bookLabel(b) === sc.ed)) return false;
+  if(sc.ed){
+    const b = (state.itemBody || {})[code];   // 본문을 아직 안 받았으면 판 표로 (10-23 · 4단계)
+    if(!(b ? (b.books || []).some(x => bookLabel(x) === sc.ed)
+           : (state.bookEditions || []).some(e => bookLabel(e) === sc.ed && Object.values(e.nos).includes(code)))) return false;
+  }
   return true;
 }
 function autoFillScopeLabel(sc){
@@ -34369,13 +34375,15 @@ function autoFillToggle(){
   if(st.on) autoFillKick();
 }
 
-/* 🔵 **Firestore 를 한 건도 안 읽는다** — 장부(codes/*.json)와 이미 실어 둔 창고를 본다. */
+/* 🔵 **Firestore 를 한 건도 안 읽는다** — 장부(codes/*.json)와 이미 실어 둔 창고를 본다.
+   창고가 다 안 실렸으면 «채울 차례»(kv/fill-queue · 10-23 · 4단계)에서 — 본문은 뽑힌 문항만 그때 받아 다시 본다(autoFillTick). */
 /* 범위 — 돌고 있으면 켤 때 붙든 것, 꺼져 있으면 지금 창고에서 고른 것(「채울 것」 수가 그 범위를 센다). */
-function autoFillCandidates(밤){   // 밤 — 새벽 차례 적기(nightPlanOf): 범위·넘김·건너뜀을 안 본다
-  if(!storeAll()) return [];
-  const out = [];
+function autoFillCandidates(밤){   // 밤 — 채울 차례 적기(fillQueueOf): 범위·넘김·건너뜀을 안 본다
   const 넘김 = 밤 ? {} : autoFillAsideMap();         // 넘겨 둔 것은 사람이 되돌릴 때까지 안 뽑는다 (A-4)
   const st = autoFillState(), 범위 = 밤 ? null : st.on ? st.scope : autoFillScopeNow();
+  if(!storeAll()) return ((state.fillQueue || {}).codes || []).filter(code => autoFillScopeOk(code, 범위)
+    && !autoFillSkipped.has(code) && !넘김[code] && !variantsOfCodeAll(code).some(v => v.variantKind === 'N'));
+  const out = [];
   for(const code in state.itemByCode){
     const sp = splitItemCode(code);
     if(sp && sp.isVariant) continue;                  // 변형의 변형은 만들지 않는다
@@ -34400,7 +34408,7 @@ function autoFillCandidates(밤){   // 밤 — 새벽 차례 적기(nightPlanOf)
    🔵 이 화면에서 사람이 할 일이 세 가지로 갈리는데(교재 올리기 · 정답 채우기 · 없음)
      한 문장으로 뭉뚱그리면 **무엇을 해야 할지 알 수 없다.** */
 function autoFillWhyEmpty(){
-  if(!storeAll()) return '창고를 아직 안 읽었습니다.';
+  if(!storeAll()) return '채울 차례가 비었습니다 — 다 찼거나 본문·정답이 없는 문항뿐입니다. (까닭을 갈라 보려면 «교재 올리기» 등으로 창고를 다 실은 뒤 다시 켜 보세요)';
   let 본문없음 = 0, 정답없음 = 0, 이미있음 = 0, 건너뜀 = 0, 넘겨둠 = 0, 전체 = 0;
   const 넘김 = autoFillAsideMap();
   for(const code in state.itemByCode){
@@ -34448,10 +34456,10 @@ async function autoFillTick(){
   if(!state.currentUser || state.currentUser.type !== 'teacher') return;
   /* ⚠ 다른 AI 작업(하나 다시 생성·일괄 생성)과 겹치면 안 된다 — 비켜서서 기다린다. */
   if(state.aiProcessing) return autoFillLater();
-  /* 창고가 아직 안 실렸으면 싣고 다음 바퀴에 한다 (읽기가 나가는 유일한 자리다). */
+  /* 창고가 다 안 실렸으면 «채울 차례»(1건)로 돈다 — 차례가 아예 없을 때만 통째로 싣는다(그 자리에서 차례가 적힌다). */
   if(!storeAll()){
-    await loadItemStoreIfNeeded();
-    return autoFillLater(2000);
+    await fillQueueEnsure();
+    if(!state.fillQueue){ await loadItemStoreIfNeeded(); return autoFillLater(2000); }
   }
   const list = autoFillCandidates();
   if(!list.length){
@@ -34467,7 +34475,7 @@ async function autoFillTick(){
   let engine = '';
   let code = list[0];
   if(used >= AI_DAILY_LIMIT){
-    const 글만 = list.filter(c => !itemFigureOf(state.itemBody[c]));
+    const 글만 = list.filter(c => !autoFillHasFig(c));
     const gUsed = await getAIQuotaUsed('twin-groq');
     state.groqTwinUsed = gUsed;
     if(!글만.length || gUsed >= GROQ_TWIN_DAILY_LIMIT){
@@ -34478,6 +34486,15 @@ async function autoFillTick(){
       render(); return;
     }
     engine = 'groq'; code = 글만[0];
+  }
+  /* 차례에서 뽑은 것 — 그 문항 본문과 그 원본의 변형만 받아 다시 본다(차례는 낡을 수 있다). */
+  if(!storeAll()){
+    try{ await Promise.all([partEnsure('items', ['id:' + code]), partEnsure('variants', ['root:' + code])]); partToState(); }
+    catch(e){ st.msg = `${code} 를 받지 못했습니다 — 1분 뒤 다시 해 봅니다.`; render(); return autoFillLater(60000); }
+    const b = state.itemBody[code];
+    if(!b || !b.content || !b.answer || variantsOfCodeAll(code).some(v => v.variantKind === 'N')){
+      fillQueueDrop(code); return autoFillLater(500);
+    }
   }
   const body = state.itemBody[code];
   state.aiProcessing = true; st.busy = code; st.last = code;
@@ -34852,46 +34869,52 @@ function nightLogHTML(){
     변형 <b class="mono">${L.made}</b>건${L.skipped ? ` · 건너뜀 ${L.skipped}` : ''}${L.failed ? ` · 실패 ${L.failed}` : ''} <s>·</s> 검토 <b class="mono">${L.reviewed}</b>건 <s>·</s> 셋째 AI <b class="mono">${L.third}</b>건</div>`;
 }
 
-/* =========== 새벽엔 «차례만» 싣기 (2026-10-22 · 사용자 — 「변형할 때도 변형할 차례만 읽어오도록」) ===========
-   🔴 새벽 돌리기는 매번 빈 브라우저라 창고를 통째로 읽었다(본문 2,069 + 변형 ≈900 — 밤마다 한도의 6%, 교재가 늘면 그만큼 는다).
-   🔵 강사 화면이 창고를 다 실었을 때·변형을 쓸 때 «오늘 밤 할 차례»를 kv/night-plan 에 적고(바뀌었을 때만 쓰기 1건),
-     밤에는 그 원본들의 본문과 변형만 읽는다. 차례가 낡아도 괜찮다 — 원본마다 변형을 «다» 읽으니 이미 찬 것은 저절로 빠지고,
-     통과·검토된 것도 읽은 문서를 보고 빠진다.
-   ⚠ 원본 하나의 변형은 늘 통째로 싣는다 — 반쪽이면 nextVariantCode 가 이미 있는 번호를 또 낸다.
-   ponytail: 도구(tools/*.mjs)로 넣은 새 문항은 강사가 창고를 한 번 열어야 차례에 든다. */
-const NIGHT_PLAN_KEY = 'khm-night-plan';
-function nightPlanOf(){
-  const 채울 = autoFillCandidates(true);
-  const 글 = 채울.filter(c => !itemFigureOf(state.itemBody[c]));   // Gemini 몫이 다 차면 Groq 는 글 문항만 — 그 몫도 따로 챙긴다
-  const 대기 = pendingVariants();
-  const 검토 = [...대기.filter(v => !v.aiReview && dqAnswerable(v.content, v.answer)).slice(0, REVIEW_DAILY_LIMIT),
-               ...대기.filter(reviewNeedsThird).slice(0, REVIEW_DAILY_LIMIT)];
-  return { fill: [...new Set([...채울.slice(0, 60), ...글.slice(0, 40)])].sort(),
-           roots: [...new Set(검토.map(v => v.originCode))].sort() };
+/* =========== 채울 차례 — kv/fill-queue (2026-10-23 · 검색 구조 4단계 · 10-22 night-plan 을 갈음) ===========
+   🔴 자동 채우기는 «N 변형이 없는 원본»을 찾으려고 창고를 통째로 실었다(본문 2,069 + 변형 ≈900). 새벽은 매번 빈 브라우저라 밤마다 그만큼.
+     단원을 앞에서부터 훑는 것도 안 된다 — 채울 것 312개가 뒤 단원(K2-07~10)에 몰려 있다(10-23 실측).
+   🔵 그래서 «채울 차례»(원본 코드 목록 + 그림 문항 표시)를 kv 한 건에 둔다. 자동 채우기는 차례에서 뽑고, 뽑은 문항의
+     본문·변형만 받아 다시 본다 — 이미 찼거나 본문이 없으면 차례에서 뺀다. 변형 한 건에 읽기 서너 건이다.
+   · 창고를 다 실은 화면이 차례를 «새로» 짓는다(fillQueueOf) — 다 실린 창고만이 «없는 것»을 안다.
+   · 반쪽 창고에서는 «뺄 것»만 뺀다 — 쓰기 직전에 kv 를 다시 읽어 남이 지은 새 차례를 덮지 않는다.
+   ponytail: 도구(tools/*.mjs)로 넣은 새 문항은 누군가 창고를 다 실어야 차례에 든다(교재 올리기·정리 화면 등) — ⑤에서.
+   ponytail: 문항이 2만 개쯤 되면 kv 문서(1MB)가 찬다 — 그때는 단원별 문서로. */
+const FILL_QUEUE_KEY = 'khm-fill-queue';
+function fillQueueOf(){
+  const codes = autoFillCandidates(true);
+  return { codes, fig: codes.filter(c => itemFigureOf(state.itemBody[c])) };
 }
-async function nightPlanSave(){
-  if(state.storePartial || !state.itemByCode || !state.itemBody || !state.variants) return;
+async function fillQueueEnsure(){
+  if(state.fillQueue !== undefined) return state.fillQueue;
+  state.fillQueue = null;
+  const v = await dbGet('fill-queue', null);
+  if(v && Array.isArray(v.codes)) state.fillQueue = { codes: v.codes, fig: v.fig || [] };   // 없거나 못 읽었으면 null — 자동 채우기가 통째로 싣고 짓는다
+  bookEditionsEnsure();                                                      // 판으로 고른 범위를 본문 없이 가른다
+  return state.fillQueue;
+}
+function autoFillHasFig(c){
+  const b = (state.itemBody || {})[c];
+  return b ? !!itemFigureOf(b) : ((state.fillQueue || {}).fig || []).includes(c);
+}
+async function fillQueueSave(뺄){
   if(!state.currentUser || state.currentUser.type !== 'teacher') return;
-  const p = JSON.stringify(nightPlanOf());
+  let q;
+  if(storeAll()) q = fillQueueOf();
+  else {
+    const 지금 = await dbGet('fill-queue', null);
+    if(!지금 || !Array.isArray(지금.codes)) return;
+    const codes = 지금.codes.filter(c => c !== 뺄 && !variantsOfCodeAll(c).some(v => v.variantKind === 'N'));
+    q = { codes, fig: (지금.fig || []).filter(c => codes.includes(c)) };
+  }
+  state.fillQueue = q;
+  const p = JSON.stringify(q);
   let 전 = '';
-  try{ 전 = localStorage.getItem(NIGHT_PLAN_KEY) || ''; }catch(e){}
+  try{ 전 = localStorage.getItem(FILL_QUEUE_KEY) || ''; }catch(e){}
   if(p === 전) return;
-  if(await dbSet('night-plan', JSON.parse(p))) try{ localStorage.setItem(NIGHT_PLAN_KEY, p); }catch(e){}
+  if(await dbSet('fill-queue', q)) try{ localStorage.setItem(FILL_QUEUE_KEY, p); }catch(e){}
 }
-/* 밤 — 차례의 원본만 싣는다. 못 읽으면 false (부르는 쪽이 예전처럼 통째로). */
-async function nightStoreLoad(p){
-  try{
-    await loadItemLedgerIfNeeded();                   // 장부는 배포 파일 — 읽기 0
-    const vs = await dbGetVariantsOfRoots([...new Set([...p.fill, ...p.roots])]);
-    const by = {};
-    for(const v of vs) (by[v.originCode] = by[v.originCode] || []).push(v);
-    for(const k in by) by[k].sort((a,b)=> a.code < b.code ? -1 : 1);
-    const body = {};
-    for(let i = 0; i < p.fill.length; i += 10)
-      await Promise.all(p.fill.slice(i, i + 10).map(async c => { const b = await dbGetDoc('items', c, null); if(b) body[c] = b; }));
-    Object.assign(state, { itemBody: body, variants: by, storePartial: true });
-    return true;
-  }catch(e){ console.warn('[새벽 차례] 못 실었다 —', e && e.message); return false; }
+function fillQueueDrop(code){
+  if(state.fillQueue) state.fillQueue = { codes: state.fillQueue.codes.filter(c => c !== code), fig: state.fillQueue.fig.filter(c => c !== code) };
+  fillQueueSave(code).catch(e => console.warn('[채울 차례] 못 뺐다 —', e && e.message));
 }
 
 /* =========== 새벽에 남은 한도 쓰기 (2026-10-21 · 사용자 — 「변형이랑 검토 한도를 안 쓰고 넘어갈 때가 많은데,
@@ -34909,18 +34932,22 @@ async function nightRun(pw, aside){
   const 남음 = () => 끝 - Date.now();
   const 쉼 = ms => new Promise(r => setTimeout(r, ms));
   try{ localStorage.setItem(AUTOFILL_ASIDE_KEY, aside || '{}'); }catch(e){}
-  state.storeNight = true;                            // 로그인하며 그린 화면이 창고를 통째로 싣지 않게 — 차례를 읽기 전까지 막아 둔다
+  state.storeNight = true;                            // 로그인하며 그린 화면이 창고를 통째로 싣지 않게 — 차례만 받는다 (10-23)
   await doTeacherLogin(pw);
   if(!state.currentUser || state.currentUser.type !== 'teacher') return { ok:false, summary:'로그인 실패' };
-  /* 차례가 없거나·못 읽었거나·적힌 것이 다 찼으면(낡음) 예전처럼 통째로 — 그러면 다 실은 자리에서 새 차례가 적힌다. */
-  const 계획 = await dbGet('night-plan', null);
-  if(!(계획 && await nightStoreLoad(계획)) || (계획.fill.length && !autoFillCandidates().length))
-    Object.assign(state, { storeNight: false, storePartial: false, itemBody: null, variants: null });
+  await loadItemLedgerIfNeeded();                     // 장부는 배포 파일 — 읽기 0
+  /* 채울 차례가 없거나 못 읽었으면 예전처럼 통째로 — 그러면 다 실은 자리에서 차례가 적힌다. */
+  if(!(await fillQueueEnsure())) state.storeNight = false;
   const st = autoFillState();
   st.on = true; st.scope = null; autoFillKick();
   while(st.on && 남음() > 0) await 쉼(10000);
   if(st.on) autoFillStop('마감');
   while(state.aiProcessing) await 쉼(2000);          // 오가던 한 건은 마저 받는다
+  /* 검토는 «검토 대기» 변형만 — 검토는 변형 글만 본다(원본 본문·형제 변형은 안 받는다). */
+  if(!storeAll()){
+    try{ await partEnsure('variants', ['pending']); partToState(); }
+    catch(e){ state.storeNight = false; await loadItemStoreIfNeeded(); }
+  }
   const 검토 = [];
   for(const 셋째 of [false, true]){
     if(남음() <= 0) break;
