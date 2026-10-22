@@ -13277,7 +13277,9 @@ async function submitQuestion(){
   if(!question){ showToast('질문 내용을 입력하거나 교재·번호를 골라 주세요.'); return; }
   if(qnaPhotosBusy('q')){ showToast('사진 올리기가 끝난 뒤에 보내 주세요.'); return; }
   const 사진들 = qnaPhotoDocs('q');
-  const pv = 번호있음 ? pvFind(await pvLoad(), book, num) : null;
+  /* 코드로 먼저 찾는다 — 내년 판에서 번호가 바뀌어도 같은 원본이면 올해 풀이 영상이 간다 (10-23) · 판 표에 없으면 옛 길(교재 이름+번호) */
+  const pvs = 번호있음 ? await pvLoad() : null;
+  const pv = 번호있음 ? (pvFindCode(pvs, await pvCodeByEdition(book, num)) || pvFind(pvs, book, num)) : null;
   const qna = {id:'qn'+Date.now(), uid: authUid(), studentId:sid, studentName:state.currentUser.name, question,
     image:사진들[0]||null, images:사진들, date:todayStr(), answer:null, answerImage:null, answeredAt:null,
     book: (book && num) ? book : null, num: (book && num) ? num : null, pv};
@@ -20661,6 +20663,18 @@ function pvCodeOf(book, n){
     if(((state.itemBody[code] || {}).books || []).some(b => b.no === n && 판(b.year + b.part + b.name) === 이름)) return code;
   return '';
 }
+/* 교재 이름 + 번호 → 원본 코드, 판 표(kv/book-editions · 학생도 읽는 한 건)로 (10-23 · 사용자 — 「내년에 엔크를 고쳐
+   번호가 바뀌어도 코드가 달려 있으니 2027판 질문에 해설 영상이 딸려가는 구조」). 학생 화면은 창고 본문이 없어 pvCodeOf 를 못 쓴다. */
+async function pvCodeByEdition(book, n){
+  if(!state.bookEditions){
+    const v = await dbGet('book-editions', null);
+    if(dbReadFailed.has('book-editions')) return '';
+    state.bookEditions = (v && v.editions) || [];
+  }
+  const p = bookTitleParts(book), 판 = x => String(x || '').replace(/\s+/g, '').toLowerCase();
+  const e = state.bookEditions.find(x => x.year === p.year && x.part === p.part && 판(x.name) === 판(p.name));
+  return (e && e.nos[n]) || '';
+}
 /* 학생 화면이 목차를 한 번 싣는다(kv 한 건 · 세션에 한 번) */
 function pvEnsure(){
   if(state.probVideos || state.pvLoading) return;
@@ -20828,7 +20842,7 @@ async function pvSave(){
   if(!items.length){ showToast('목차에서 «6:24 61번» 같은 줄을 찾지 못했습니다.'); return; }
   /* 문항마다 원본 코드를 박는다 — 오답숙제·쌍둥이 한 문제가 이것으로 찾는다 (10-21). 창고에 없는 번호는 코드 없이(질문에서만) 쓰인다. */
   await loadItemStoreIfNeeded();
-  items.forEach(x => { const c = pvCodeOf(book, x.n); if(c) x.code = c; });
+  for(const x of items){ const c = pvCodeOf(book, x.n) || await pvCodeByEdition(book, x.n); if(c) x.code = c; }
   const 코드없음 = items.filter(x => !x.code).length;
   /* 🔴 늘 새로 읽고 더한다 — 다른 기기에서 더한 것을 덮지 않게. 못 읽으면 dbSet 이 막는다. */
   const pv = (await dbGet('prob-videos', null)) || { entries: [] };
