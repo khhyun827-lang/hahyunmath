@@ -41,16 +41,18 @@ function 판(o) {
   const collectionReadFailed = new Set(o.failedColls || []);
   const state = { currentUser: o.user === undefined ? { type: 'teacher' } : o.user };
   const timers = [];
-  const F = new Function('localStorage', 'dbGet', 'dbGetCollection', 'dbSet', 'dbReadFailed', 'collectionReadFailed', 'markCollectionRead', 'state', 'setTimeout', 'clearTimeout', 'console',
-    liftConst('COLL_CACHE') + NL + liftConst('COLL_CACHE_TTL') + NL + lift('collCacheRead') + NL + lift('collCacheWrite') + NL + lift('collCacheClear') + NL
-    + lift('loadCollectionCached') + NL + 'const collBumpTimer = {};' + NL + lift('collectionTouched') + NL
-    + 'return { loadCollectionCached, collectionTouched, COLL_CACHE };')(
+  const F = new Function('localStorage', 'dbGet', 'dbGetCollection', 'dbSet', 'dbReadFailed', 'collectionReadFailed', 'markCollectionRead', 'state', 'setTimeout', 'clearTimeout', 'console', 'dbGetChangedSince',
+    liftConst('COLL_CACHE') + NL + liftConst('COLL_CACHE_TTL') + NL + liftConst('DELTA_SKEW') + NL + lift('collCacheRead') + NL + lift('collCacheWrite') + NL + lift('collCacheClear') + NL
+    + lift('verSame') + NL + lift('verBump') + NL + lift('deltaMerge') + NL
+    + lift('loadCollectionCached') + NL + 'const collBumpTimer = {}; const collDelPending = {};' + NL + lift('collectionTouched') + NL
+    + 'return { loadCollectionCached, collectionTouched, COLL_CACHE, collDelPending };')(
     localStorage,
     async (key, fb) => { 읽음.push('kv/' + key); return key in kv ? kv[key] : fb; },
-    async (col, opts) => { 읽음.push(col); if (o.collRows === null) { if (opts && opts.strict) throw new Error('firestore http 429'); return []; } return (o.collRows || [{ code: 'A' }, { code: 'B' }, { code: 'C' }]); },
+    async (col, opts) => { 읽음.push(col); if (o.collRows === null) { if (opts && opts.strict) throw new Error('firestore http 429'); return []; } const rows = (o.collRows || [{ code: 'A' }, { code: 'B' }, { code: 'C' }]); if (opts && opts.names) opts.names.push(...rows.map(r => r.code)); return rows; },
     async (key, v) => { 쓴것.push({ key, v }); return true; },
     dbReadFailed, collectionReadFailed, () => {}, state,
-    (fn, ms) => { timers.push(fn); return timers.length; }, () => {}, { warn() {}, error() {}, log() {} });
+    (fn, ms) => { timers.push(fn); return timers.length; }, () => {}, { warn() {}, error() {}, log() {} },
+    async (col, since) => { 읽음.push('바뀐것:' + col); return o.changed === null ? null : (o.changed || []); });
   return { F, store, 읽음, 쓴것, timers, kv, state };
 }
 
@@ -92,10 +94,11 @@ console.log(NL + '③ 쓰면 버전이 오른다 — 문 안에서, 모아서, �
   const t = 판({ kv: { variantsVer: '1' } });
   await t.F.loadCollectionCached('variants', { strict: true });
   t.F.collectionTouched('variants'); t.F.collectionTouched('variants'); t.F.collectionTouched('variants');
-  봄('내 브라우저의 재운 것은 바로 지운다', 'khm-variants-cache-v1' in t.store, false);
+  봄('🔵 내 브라우저의 재운 것은 안 지운다 (10-22 — 다음에 바뀐 것만 받는다)', 'khm-variants-cache-v1' in t.store, true);
   봄('잇달아 셋 → 타이머는 하나씩 (마지막 것만 산다)', t.timers.length, 3);
   await t.timers[t.timers.length - 1]();
   봄('🔴 kv 의 버전 문서를 올린다', [t.쓴것.length, t.쓴것[0].key], [1, 'variantsVer']);
+  봄('글자 버전 위에 올리면 full 이 붙는다 (도구가 바꾼 것을 «바뀐 것만»으로 못 건진다)', typeof t.쓴것[0].v.full, 'number');
   const s = 판({ user: { type: 'student' } });
   s.F.collectionTouched('problembank');
   봄('학생은 버전을 안 올린다 (kv 를 못 쓴다)', s.timers.length, 0);
@@ -104,10 +107,51 @@ console.log(NL + '③ 쓰면 버전이 오른다 — 문 안에서, 모아서, �
   봄('재우지 않는 컬렉션은 아무 일도 없다', x.timers.length, 0);
 }
 
+console.log(NL + '③-2 바뀐 것만 받기 (10-22 · 한도 #4)' + NL);
+{
+  const 지금 = Date.now();
+  const t = 판({ kv: { variantsVer: { t: 1, del: [] } }, changed: [{ id: 'A', t: 지금, row: { code: 'A', 고침: 1 } }, { id: 'D', t: 지금, row: { code: 'D' } }] });
+  await t.F.loadCollectionCached('variants', { strict: true });
+  봄('처음엔 통째 + 문서 이름도 재운다', JSON.parse(t.store['khm-variants-cache-v1']).ids, ['A', 'B', 'C']);
+  t.읽음.length = 0;
+  t.kv.variantsVer = { t: 2, del: [['B', 지금]] };
+  const r = await t.F.loadCollectionCached('variants', { strict: true });
+  봄('🔴 버전이 바뀌면 «바뀐 것만» — 통째로 안 읽는다', t.읽음, ['kv/variantsVer', '바뀐것:variants']);
+  봄('고친 것은 갈아 끼우고 · 새것은 붙이고 · 지운 것은 뺀다', r.map(v => v.code + (v.고침 ? '*' : '')), ['A*', 'C', 'D']);
+  봄('합친 것을 새 버전으로 재운다', [JSON.parse(t.store['khm-variants-cache-v1']).ids, JSON.parse(t.store['khm-variants-cache-v1']).ver.t], [['A', 'C', 'D'], 2]);
+  t.읽음.length = 0;
+  t.kv.variantsVer = { t: 3, del: [], full: 지금 + 3600000 };
+  await t.F.loadCollectionCached('variants', { strict: true });
+  봄('full 보다 먼저 재운 것은 통째로', t.읽음, ['kv/variantsVer', 'variants']);
+  t.읽음.length = 0;
+  t.kv.variantsVer = '999';
+  await t.F.loadCollectionCached('variants', { strict: true });
+  봄('글자 버전(도구)이면 통째로', t.읽음, ['kv/variantsVer', 'variants']);
+  const u = 판({ kv: { variantsVer: { t: 1 } }, changed: null });
+  await u.F.loadCollectionCached('variants', { strict: true });
+  u.읽음.length = 0; u.kv.variantsVer = { t: 2 };
+  await u.F.loadCollectionCached('variants', { strict: true });
+  봄('바뀐 것을 못 받으면 예전처럼 통째로', u.읽음, ['kv/variantsVer', '바뀐것:variants', 'variants']);
+  const w = 판({ kv: { variantsVer: { t: 1 } }, changed: [{ id: 'B', t: 지금 + 5, row: { code: 'B' } }] });
+  await w.F.loadCollectionCached('variants', { strict: true });
+  w.kv.variantsVer = { t: 2, del: [['B', 지금]] };
+  봄('지운 뒤 다시 쓴 것은 산다', (await w.F.loadCollectionCached('variants', { strict: true })).map(v => v.code), ['A', 'B', 'C']);
+  const x = 판({ kv: { variantsVer: { t: 1, del: [['옛것', 1]] } } });
+  await x.F.loadCollectionCached('variants', { strict: true });
+  x.F.collDelPending.variants = [['Z', 지금]];
+  x.F.collectionTouched('variants');
+  await x.timers[0]();
+  봄('지운 것을 버전에 싣고 · 오래된 것은 털고 · full 은 안 붙인다', [x.쓴것[0].v.del, x.쓴것[0].v.full], [[['Z', 지금]], undefined]);
+}
+
 console.log(NL + '④ 닻 — 문 둘에 걸렸고, 읽는 자리 셋이 바뀌었다' + NL);
 {
   봄('dbSetDoc 이 부른다', 알맹이(lift('dbSetDoc')).includes('collectionTouched(collection);'), true);
   봄('dbDeleteDoc 이 부른다', 알맹이(lift('dbDeleteDoc')).includes('collectionTouched(collection);'), true);
+  봄('dbSetDoc 이 _t 를 적는다', 알맹이(lift('dbSetDoc')).includes('deltaStamp(collection, docFields(data))'), true);
+  봄('dbDeleteDoc 이 지운 것을 싣는다', 알맹이(lift('dbDeleteDoc')).includes('collDelPending[collection]'), true);
+  봄('창고 본문(items)도 바뀐 것만', 알맹이(lift('loadItemsRows')).includes("deltaMerge('items', cached, ver)"), true);
+  봄('학생 «내 변형» 버전은 글자로 묶는다 (객체 + 글자 = 늘 같음 함정)', 알맹이(lift('loadVariantsOfRoots')).includes("JSON.stringify(await dbGet('variantsVer'"), true);
   봄('변형 창고가 재운 것을 읽는다', 알맹이(lift('loadVariantsIfNeeded')).includes("loadCollectionCached('variants', {strict:true})"), true);
   봄('학생 로그인이 problembank 를 재운 것으로 읽는다', 알맹이(lift('loadStudentData')).includes("loadCollectionCached('problembank')"), true);
   봄('강사 로그인도', 알맹이(lift('loadAllData')).includes("loadCollectionCached('problembank')"), true);
