@@ -6987,7 +6987,8 @@ function partToState(){
 }
 /* =================== 문항관리는 «보이는 카드»만 받는다 (2026-10-22 · 검색 구조 3단계) ===================
    과목·단원·출처 나무는 장부(배포 파일 · 읽기 0)에서, 판은 판 표(kv/book-editions · 1건)에서 센다.
-   본문·변형은 지금 펼친 카드(한 쪽 30개)의 것만 — 원본 본문 + 장부에 있는 그 변형들 본문(id:) + 변형 창고(root:).
+   본문·변형은 지금 펼친 카드(한 쪽 30개)의 것만 — 원본 본문(id:) + 변형 창고(root:). 장부에 있는 변형(-N01 …)의 본문은
+   «코드 화면»을 열 때만(카드의 변형 수는 장부만으로 센다 · 10-22 실측 단원 하나 76건 → 30건대).
    한 번 받은 카드는 재워 두고 바뀐 것만 받는다(partSync). 이미 «전부» 실렸으면(다른 화면이 통째로) 그것을 쓴다.
    ⚠ 못 받으면 1분 쉬고 다시 — 그새 카드는 «못 불러옴». 통째로 물러나지 않는다(한도를 지키려고 바꾼 것이라).
    ponytail: 장부에 없는 문항(브라우저로 올린 기출)은 이 기기에서 받은 것만 보인다 — 지금 0건(10-22 · 창고 2,069 = 장부 2,069). */
@@ -6998,9 +6999,9 @@ function storeLedgerKids(){
   return by;
 }
 function storeGot(code){ return storeAll() || !!(partMem.items && partMem.items.scopes.includes('id:' + code)); }
-function storeShownEnsure(codes){
+function storeShownEnsure(codes, 장부변형도){
   if(storeAll() || storeShownLoading || !state.itemByCode || Date.now() - storeShownFailAt < 60000) return;
-  const 장부변형 = storeLedgerKids();
+  const 장부변형 = 장부변형도 ? storeLedgerKids() : {};
   const ids = codes.flatMap(c => [c, ...(장부변형[c] || [])]).map(c => 'id:' + c), roots = codes.map(c => 'root:' + c);
   const 있다 = (col, ss) => partMem[col] && ss.every(x => partMem[col].scopes.includes(x));
   if(있다('items', ids) && 있다('variants', roots)){ if(!state.itemBody) partToState(); return; }
@@ -32920,6 +32921,7 @@ function icCloseDrawer(){ 드로어닫기(() => { state.icOpen = ''; render(); }
 function icDrawerHTML(){
   const root = state.icOpen;
   if(!root) return '';
+  storeShownEnsure([root], true);                     // 반쪽 창고면 장부 변형들 본문을 이제 받는다 (10-22 · 3단계)
   const vs = variantsOfCode(root);
   const 대기 = vs.filter(variantIsPending).length;
   return `<div class="hwd-back ic-back" onclick="icCloseDrawer()"></div>
