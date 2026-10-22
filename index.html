@@ -6466,29 +6466,29 @@ function ixFieldsOf(collection, id, d, 장부){
 }
 /* 옛 문서에 색인 칸을 한 번 채운다 — 강사 화면 콘솔에서 `await ixBackfill()` (2026-10-22).
    🔵 내용(value)·`_t` 는 안 건드린다(updateMask) — 다른 기기가 «바뀌었다»고 다시 받지 않게.
-   읽기는 창고 싣기(바뀐 것만)뿐 · 쓰기는 문서 수만큼(≈3천 · 하루 2만) · 그새 없어진 문서는 건너뛴다(exists). 여러 번 돌려도 같다. */
+   읽기는 창고 싣기(바뀐 것만)뿐 · 쓰기는 문서 수만큼(≈3천 · 하루 2만) · 그새 없어진 문서는 건너뛴다(exists). 여러 번 돌려도 같다.
+   ⚠ 한 번에 묶는 batchWrite 는 보안 규칙이 막는다(403 · 10-22 실측) — 문서마다 PATCH, 열 개씩 나란히. */
 async function ixBackfill(){
   if(!state.currentUser || state.currentUser.type !== 'teacher') return '강사로 로그인하세요';
   await loadItemStoreIfNeeded();
   if(!state.itemBody || !state.variants || itemsCacheHit === 'stale') return '창고를 못 실었습니다 — 낡은 것으로 채우지 않습니다';
   const 쓸 = [];
-  const 넣 = (col, id, d) => {
-    const f = ixFieldsOf(col, id, d, state.itemByCode);
-    쓸.push({ update: { name: FIRESTORE_PATH + '/' + col + '/' + id, fields: f },
-              updateMask: { fieldPaths: Object.keys(f) }, currentDocument: { exists: true } });
-  };
-  for(const c in state.itemBody) 넣('items', c, state.itemBody[c]);
-  for(const r in state.variants) for(const v of state.variants[r]) 넣('variants', v.code, v);
+  for(const c in state.itemBody) 쓸.push(['items', c, state.itemBody[c]]);
+  for(const r in state.variants) for(const v of state.variants[r]) 쓸.push(['variants', v.code, v]);
   let 됨 = 0, 안됨 = 0;
-  for(let i = 0; i < 쓸.length; i += 500){
+  for(let i = 0; i < 쓸.length; i += 10){
     const token = await getAuthToken();
-    const res = await fetch(FIRESTORE_ROOT + ':batchWrite', { method: 'POST',
-      headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ writes: 쓸.slice(i, i + 500) }) });
-    if(!res.ok) return `멈춤 — http ${res.status} (${됨}건 채움)`;
-    for(const st of ((await res.json()).status || [])) (st && st.code) ? 안됨++ : 됨++;
+    const 답 = await Promise.all(쓸.slice(i, i + 10).map(([col, id, d]) => {
+      const f = ixFieldsOf(col, id, d, state.itemByCode);
+      const q = new URLSearchParams([...Object.keys(f).map(k => ['updateMask.fieldPaths', k]), ['currentDocument.exists', 'true']]);
+      return fetch(FIRESTORE_ROOT + '/' + col + '/' + encodeURIComponent(id) + '?' + q, { method: 'PATCH',
+        headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fields: f }) }).then(r => r.status, () => 0);
+    }));
+    if(답.includes(403) || 답.includes(429)) return `멈춤 — http ${답.find(s => s === 403 || s === 429)} (${됨}건 채움)`;
+    for(const s of 답) s === 200 ? 됨++ : 안됨++;
   }
-  return `색인 칸 ${됨}건 채움` + (안됨 ? ` · 못 채운 것 ${안됨}(그새 지워진 문서)` : '');
+  return `색인 칸 ${됨}건 채움` + (안됨 ? ` · 못 채운 것 ${안됨}(그새 지워진 문서 등)` : '');
 }
 async function dbSetDoc(collection, id, data){
   if(collectionWriteBlocked(collection)) return false;

@@ -49,7 +49,7 @@ const 쓰기 = liftFn('dbSetDoc');
 봄('웹 쓰는 문이 칸을 붙인다', /ixFieldsOf\(collection, id, data, state\.itemByCode\)/.test(쓰기) && /items' \|\| collection === 'variants'/.test(쓰기), true);
 봄('장부가 없으면 먼저 싣는다', /if\(!state\.itemByCode\) await loadItemLedgerIfNeeded\(\)/.test(쓰기), true);
 const 채움 = liftFn('ixBackfill');
-봄('채우기는 칸만 고친다(updateMask · 있는 문서만)', /updateMask: \{ fieldPaths: Object\.keys\(f\) \}/.test(채움) && /exists: true/.test(채움) && !/_t|value:/.test(채움), true);
+봄('채우기는 칸만 고친다(updateMask · 있는 문서만)', /'updateMask\.fieldPaths'/.test(채움) && /currentDocument\.exists/.test(채움) && !/_t|value:/.test(채움), true);
 봄('낡은 창고로 안 채운다', /itemsCacheHit === 'stale'/.test(채움), true);
 for (const t of ['item-bodies', 'items-figures', 'items-push', 'items-repair', 'review-local', 'hwpx-push'])
   봄(`도구 ${t} 가 같은 칸을 쓴다`, /창고칸\(/.test(fs.readFileSync(path.join(ROOT, 'tools', t + '.mjs'), 'utf8')), true);
