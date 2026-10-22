@@ -117,9 +117,9 @@ console.log('③ 싣기');
 console.log('④ 이어진 자리 (글자로)');
 {
   const nr = liftFn('nightRun');
-  봄('로그인 «전»에 막는다', nr.indexOf('state.storePartial = true') > 0 && nr.indexOf('state.storePartial = true') < nr.indexOf('doTeacherLogin'), true);
-  봄('차례가 낡으면 통째로', /계획\.fill\.length && !autoFillCandidates\(\)\.length/.test(nr) && /storePartial: false, itemBody: null, variants: null/.test(nr), true);
-  봄('창고 싣기가 막힌다', /if\(state\.storePartial \|\|/.test(liftFn('loadItemStoreIfNeeded')), true);
+  봄('로그인 «전»에 막는다', nr.indexOf('state.storeNight = true') > 0 && nr.indexOf('state.storeNight = true') < nr.indexOf('doTeacherLogin'), true);
+  봄('차례가 낡으면 통째로', /계획\.fill\.length && !autoFillCandidates\(\)\.length/.test(nr) && /storeNight: false, storePartial: false, itemBody: null, variants: null/.test(nr), true);
+  봄('창고 싣기가 막힌다', /if\(state\.storeNight \|\| storeAll\(\)\) return/.test(liftFn('loadItemStoreIfNeeded')), true);
   봄('다 실으면 차례를 적는다', /nightPlanSave\(\)/.test(liftFn('loadItemStoreIfNeeded')), true);
   봄('변형을 쓰면 차례를 적는다', /collection === 'variants'\) nightPlanSave/.test(liftFn('collectionTouched')), true);
 }

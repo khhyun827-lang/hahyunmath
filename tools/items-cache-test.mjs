@@ -59,11 +59,11 @@ function makeWorld({ ver = 'v1', rows = null, verFails = false, collFails = fals
     return out;
   }
   const api = new Function(
-    'localStorage', 'dbGet', 'dbGetCollection', 'dbReadFailed', 'collectionReadFailed', 'console',
+    'localStorage', 'dbGet', 'dbGetCollection', 'dbReadFailed', 'collectionReadFailed', 'console', 'state',
     BLOCK + '\nreturn { loadItemsRows, itemsCacheWrite, itemsCacheRead, itemsCacheClear,'
           + ' hit: () => itemsCacheHit, KEY: ITEMS_CACHE_KEY, TTL: ITEMS_CACHE_TTL };'
   )(localStorage, dbGet, dbGetCollection, dbReadFailed, collectionReadFailed,
-    { warn(){}, error(){}, log(){} });
+    { warn(){}, error(){}, log(){} }, {});   // state — 검토 탭의 «대기만»(storePartial)이 아닌 보통 화면 (10-22)
   return Object.assign(w, api, { localStorage });
 }
 

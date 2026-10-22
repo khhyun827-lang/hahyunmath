@@ -6471,7 +6471,7 @@ function ixFieldsOf(collection, id, d, 장부){
 async function ixBackfill(){
   if(!state.currentUser || state.currentUser.type !== 'teacher') return '강사로 로그인하세요';
   await loadItemStoreIfNeeded();
-  if(!state.itemBody || !state.variants || itemsCacheHit === 'stale') return '창고를 못 실었습니다 — 낡은 것으로 채우지 않습니다';
+  if(!storeAll() || itemsCacheHit === 'stale') return '창고를 못 실었습니다 — 낡은 것으로 채우지 않습니다';
   const 쓸 = [];
   for(const c in state.itemBody) 쓸.push(['items', c, state.itemBody[c]]);
   for(const r in state.variants) for(const v of state.variants[r]) 쓸.push(['variants', v.code, v]);
@@ -6506,6 +6506,7 @@ async function dbSetDoc(collection, id, data){
     }), 8000);
     if(!res.ok) throw new Error('firestore http ' + res.status);
     collectionTouched(collection);          // 재워 둔 것이 있으면 버전을 올린다 (2026-09-15)
+    partPut(collection, id, data);          // 부분 재우기·통째 싣기가 이 탭에서 쓴 것을 놓치지 않게 (10-22 · 검색 구조)
     return true;
   }catch(e){
     console.error('저장 실패', collection, id, e);
@@ -6562,6 +6563,7 @@ async function dbDeleteDoc(collection, id){
       headers: { Authorization: 'Bearer ' + token }
     }), 8000);
     collectionTouched(collection);
+    partPut(collection, id, null);
   }catch(e){ console.error('삭제 실패', collection, id, e); }
 }
 /* ⚠ **기본은 «실패해도 빈 배열»이다** — 화면 하나가 못 읽었다고 앱 전체가 서면 안 된다.
@@ -6629,6 +6631,7 @@ function itemsCacheRead(){
 function itemsCacheWrite(ver, rows){
   /* ⚠ 빈 것은 안 재운다 — 위 머리말의 그 까닭이다. */
   if(!rows || !rows.length) return false;
+  if(state.storePartial) return false;   // 🔴 검토 탭의 «대기만» 실린 본문으로 통째 재운 것을 덮으면 창고가 반쪽으로 굳는다 (10-22)
   try{
     localStorage.setItem(ITEMS_CACHE_KEY, JSON.stringify({ ver: ver, at: Date.now(), rows: rows, ids: rows.map(r => r.code) }));
     return true;
@@ -6809,6 +6812,135 @@ async function loadItemsRows(){
   itemsCacheHit = 'fresh';
   return rows;
 }
+
+/* =================== 창고 «부분» 재우기 (2026-10-22 · 검색 구조 2단계) ===================
+   🔴 통째 재우기(위 loadItemsRows · loadCollectionCached)는 «가진 양»만큼 읽는다 — 새 기기 첫 열기가 문서 수 그대로라,
+     교재·변형이 2~4만 건이 되면 하루 한도를 넘는다. 사용자가 «검색 구조»를 골랐다(장기 · 10-22).
+   🔵 그래서 «받은 문서들 + 다 받은 범위(scope)»를 재운다. 범위는 'pending'(검토 대기) · 'root:원본'(그 원본의 변형 전부)
+     · 'id:코드'(문서 하나). 버전이 바뀌면 `_t` 로 «바뀐 것만» 받아 합친다 — 새로 대기가 된 것·대기에서 빠진 것도
+     `_t` 가 새로워 딸려 오므로 **범위는 계속 «다 받은» 채로 남는다.** 화면은 필요한 범위를 partEnsure 하고 로컬에서 거른다.
+   ⚠ 범위 받기는 strict — 못 받으면 범위를 안 적는다(«빈 것»이 «다 받은 것»으로 굳지 않게).
+   ⚠ 통째 재우기와 따로 산다(⑤단계에서 하나로 · IndexedDB). 이 탭에서 쓴 것은 partWrites 로 통째 싣기에도 덮는다. */
+const PART_STORE = {
+  items:    { ver: ITEMS_VER_KEY, key: 'khm-part-items-v1' },
+  variants: { ver: 'variantsVer', key: 'khm-part-variants-v1' },
+};
+const partMem = {}, partQ = {}, partWrites = { items: {}, variants: {} };
+function partRead(cfg){
+  try{
+    const c = JSON.parse(localStorage.getItem(cfg.key) || 'null');
+    return c && c.docs && Array.isArray(c.scopes) && c.at && Date.now() - c.at <= COLL_CACHE_TTL ? c : null;
+  }catch(e){ return null; }
+}
+function partSave(cfg, m){
+  try{ localStorage.setItem(cfg.key, JSON.stringify({ ver: m.ver, at: m.at, docs: m.docs, scopes: m.scopes })); }
+  catch(e){ console.warn('[부분 재우기] ' + cfg.key + ' 를 재우지 못했다 —', e.message); }
+}
+/* 탭마다 한 번 — 버전을 묻고(읽기 1건), 같으면 그대로 · 바뀌었으면 바뀐 것만 · 못 하면 빈 채로 새로 시작. */
+async function partSync(col){
+  if(partMem[col]) return partMem[col];
+  const cfg = PART_STORE[col], c = partRead(cfg);
+  const ver = await dbGet(cfg.ver, '');
+  const 못읽음 = dbReadFailed.has(cfg.ver);
+  let m = null;
+  if(c && (못읽음 || verSame(c.ver, ver))) m = c;          // 버전을 못 읽었으면 낡았을 수 있는 채로 쓴다(통째 재우기와 같은 결)
+  else if(c && ver && typeof ver === 'object' && !(ver.full && c.at - DELTA_SKEW < ver.full)){
+    const t0 = Date.now(), since = c.at - DELTA_SKEW;
+    const 바뀜 = await dbGetChangedSince(col, since);
+    if(바뀜){
+      const 쓴때 = {};
+      for(const x of 바뀜){ 쓴때[x.id] = x.t; c.docs[x.id] = x.row; }
+      for(const [id, t] of (ver.del || [])) if(t > since && !(쓴때[id] > t)) delete c.docs[id];   // 지운 뒤 다시 쓴 것은 산다
+      m = Object.assign(c, { ver, at: t0 });
+      partSave(cfg, m);
+    }
+  }
+  return (partMem[col] = m || { ver, at: Date.now(), docs: {}, scopes: [] });
+}
+async function dbQueryWhere(collection, field, op, value){
+  const token = await withTimeout(getAuthToken(), 8000);
+  const res = await withTimeout(fetch(FIRESTORE_ROOT + ':runQuery', {
+    method: 'POST',
+    headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ structuredQuery: { from: [{ collectionId: collection }],
+      where: { fieldFilter: { field: { fieldPath: field }, op, value } } } })
+  }), 20000);
+  if(!res.ok) throw new Error('firestore http ' + res.status);
+  const out = [];
+  for(const r of (await res.json()))
+    if(r && r.document) out.push({ id: r.document.name.split('/').pop(), row: JSON.parse(r.document.fields.value.stringValue) });
+  return out;
+}
+/* 범위를 받아 둔다(이미 있으면 읽기 0). 컬렉션마다 한 줄로 세운다 — 겹쳐 부르면 같은 것을 두 번 받는다. */
+function partEnsure(col, scopes){
+  const run = async () => {
+    const m = await partSync(col);
+    const 없는 = [...new Set(scopes)].filter(s => !m.scopes.includes(s));
+    if(!없는.length) return m;
+    const got = [];
+    const roots = 없는.filter(s => s.startsWith('root:')).map(s => s.slice(5));
+    if(roots.length) for(const r of await dbGetVariantsOfRoots(roots)) got.push([r.code, r]);
+    const ids = 없는.filter(s => s.startsWith('id:')).map(s => s.slice(3));
+    for(let i = 0; i < ids.length; i += 10)
+      await Promise.all(ids.slice(i, i + 10).map(async id => {
+        const r = await dbGetDoc(col, id, null);
+        if(dbReadFailed.has(col + '/' + id)) throw new Error('읽기 실패 ' + col + '/' + id);
+        if(r) got.push([id, r]);
+      }));
+    if(없는.includes('pending')) for(const x of await dbQueryWhere(col, 'pending', 'EQUAL', { booleanValue: true })) got.push([x.id, x.row]);
+    for(const [id, r] of got) if(!(id in partWrites[col])) m.docs[id] = r;   // 이 탭에서 쓴 것이 더 새것이다
+    m.scopes.push(...없는);
+    partSave(PART_STORE[col], m);
+    return m;
+  };
+  return (partQ[col] = (partQ[col] || Promise.resolve()).then(run, run));
+}
+/* 쓰는 문(dbSetDoc · dbDeleteDoc)이 부른다 — 받아 둔 것과 «통째 싣기»가 이 탭에서 쓴 것을 놓치지 않게. null = 지움. */
+function partPut(col, id, data){
+  if(!PART_STORE[col]) return;
+  partWrites[col][id] = data;
+  const m = partMem[col];
+  if(m){ if(data === null) delete m.docs[id]; else m.docs[id] = data; }
+}
+function partOverlay(col, rows){
+  const w = partWrites[col];
+  if(!w || !Object.keys(w).length) return rows;
+  const by = new Map(rows.map(r => [r.code, r]));
+  for(const id in w) w[id] === null ? by.delete(id) : by.set(id, w[id]);
+  return [...by.values()];
+}
+/* 창고가 «전부» 실렸나 — 검토 탭이 대기만 실어 둔 것(storePartial)은 전부가 아니다. 새벽(storeNight)은 차례가 곧 전부다. */
+function storeAll(){
+  return !!(state.itemByCode && state.itemBody && state.variants && (!state.storePartial || state.storeNight));
+}
+function variantsByRoot(rows){
+  const by = {};
+  for(const v of rows) (by[v.originCode] = by[v.originCode] || []).push(v);
+  for(const k in by) by[k].sort((a,b)=> a.code < b.code ? -1 : 1);
+  return by;
+}
+/* 검토 탭은 «검토 대기»만 싣는다 — 대기 변형 · 그 원본들의 변형 전부(번호 매기기) · 원본 본문(교재 요청·시험지 문항 것도).
+   이미 다 실렸으면 그것을 쓴다. 못 하면 예전처럼 통째로. */
+let reviewStoreLoading = null;
+function loadReviewStoreIfNeeded(){
+  if(state.variants && state.itemBody) return Promise.resolve();
+  if(itemStoreLoading) return itemStoreLoading;
+  return reviewStoreLoading = reviewStoreLoading || (async () => {
+    try{
+      await loadItemLedgerIfNeeded();
+      const 대기 = Object.values((await partEnsure('variants', ['pending'])).docs).filter(variantIsPending);
+      const roots = [...new Set(대기.map(v => v.originCode))];
+      const vs = await partEnsure('variants', roots.map(r => 'root:' + r));
+      const 본문 = [...roots, ...DATA.problemBank.filter(b => b.itemCode && !b.originalContent && !b.originalAnswer).map(b => b.itemCode)];
+      const its = await partEnsure('items', 본문.map(c => 'id:' + c));
+      if(itemStoreLoading || (state.variants && state.itemBody)) return;   // 그새 통째로 실리는 중이거나 실렸다
+      Object.assign(state, { itemBody: its.docs, variants: variantsByRoot(Object.values(vs.docs)), storePartial: 'review' });
+    }catch(e){
+      console.warn('[검토] 대기만 싣지 못했다 — 통째로 싣는다', e && e.message);
+      await loadItemStoreIfNeeded();
+    }finally{ reviewStoreLoading = null; }
+  })();
+}
 /* 🔴 **끝없이 자라는 것은 «통째로» 읽으면 안 된다** (2026-09-06 · 읽기량 줄이기 #2).
    `auditlog` 는 지우는 일이 없어서 영영 자라는데 **로그인마다 전부** 읽고 있었다.
    화면은 300줄만 보여 준다 — 나머지는 받자마자 버리는 것이었다.
@@ -6934,10 +7066,12 @@ async function migrateBlobToCollection(oldKey, collection, idField){
      화면은 render() 마다 부르므로 이 겹침은 «가끔»이 아니라 «자주» 일어난다. */
 let itemStoreLoading = null;
 async function loadItemStoreIfNeeded(){
-  if(state.storePartial || (state.itemByCode && state.variants && state.itemBody)) return;   // storePartial — 새벽 돌리기가 «차례만» 싣는 중 (nightStoreLoad)
+  if(state.storeNight || storeAll()) return;   // storeNight — 새벽 돌리기가 «차례만» 싣는 중 (nightStoreLoad)
   if(itemStoreLoading) return itemStoreLoading;
   itemStoreLoading = (async () => {
   try{
+    /* 검토 탭이 «대기만» 실어 뒀다(loadReviewStoreIfNeeded) — 통째로 갈아 끼운다. */
+    if(state.storePartial) Object.assign(state, { itemBody: null, variants: null, storePartial: false });
     if(!state.itemByCode){
       /* ⚠ file:// 로 열면 fetch 가 막힌다. 그때는 창고가 «빈 채»로 남고 화면은 그대로 돈다 —
          터지지 않는 것이 중요하다. 서버로 열면(node tools/serve.js) 정상이다. */
@@ -6960,7 +7094,7 @@ async function loadItemStoreIfNeeded(){
     if(!state.itemBody){
       /* 🔵 **여기는 «버전 한 건»만 물어본다** (2026-09-06 · #1) — `loadItemsRows` 머리말을 볼 것.
          화면을 열 때마다 564건을 읽던 자리다. 창고가 안 바뀌었으면 재워 둔 것을 그대로 쓴다. */
-      const rows = await loadItemsRows();
+      const rows = partOverlay('items', await loadItemsRows());
       const byCode = {};
       for(const r of rows) if(r && r.code) byCode[r.code] = r;
       state.itemBody = byCode;
@@ -7172,7 +7306,7 @@ async function loadVariantsIfNeeded(roots){
          실제로 겪었다: 429(할당량)로 읽기가 다 엎어진 상태에서 `state.variants = {}` 가
          박혀, 그 세션 내내 변형이 하나도 안 나가고 다시 읽지도 않았다. */
       const rows = roots ? await loadVariantsOfRoots(roots)
-                         : await loadCollectionCached('variants', {strict:true});   // 버전 1건 + (바뀌었을 때만) 전부
+                         : partOverlay('variants', await loadCollectionCached('variants', {strict:true}));   // 버전 1건 + (바뀌었을 때만) 전부
       const by = {};
       for(const v of rows) (by[v.originCode] = by[v.originCode] || []).push(v);
       for(const k in by) by[k].sort((a,b)=> a.code < b.code ? -1 : 1);
@@ -32631,7 +32765,7 @@ function icDetailHTML(root){
 function icToolsHTML(앞){
   const af = autoFillState();
   loadAIQuotaIfNeeded();
-  const 남은 = (state.itemBody && state.variants) ? autoFillCandidates().length : null;
+  const 남은 = storeAll() ? autoFillCandidates().length : null;
   const rp = state.icRepair || {};
   const 말 = [state.icFill && state.icFill.msg, state.icAns && state.icAns.msg, rp.msg, af.msg].filter(Boolean);
   return `<div class="ist-bar">${앞 || ''}
@@ -32892,7 +33026,7 @@ function teacherReviewHTML(){
   loadAllRecordsIfNeeded();
   if(state.reviewQueue === 'pending') loadReviewQuotaIfNeeded();
   /* 검토 탭으로 곧장 열면(새로고침 · #teacher/review) 변형을 싣는 곳이 없어 칸이 전부 0 이었다 (2026-10-06) */
-  if(!state.variants) loadItemStoreIfNeeded().then(()=>{ if(state.variants) render(); });
+  if(!state.variants) loadReviewStoreIfNeeded().then(()=>{ if(state.variants) render(); });   // 대기만 (10-22 · 검색 구조 2단계)
   const qkey = state.reviewQueue || 'pending';
   /* 🔵 **「검토 대기」에는 두 갈래가 같이 산다** (2026-09-06 · 사용자 요청).
      시험지 문항(problembank)과 AI 가 만든 창고 변형이다. 생김새는 다르지만 **기다리는 일은 같다.**
@@ -34171,7 +34305,7 @@ function autoFillToggle(){
 /* 🔵 **Firestore 를 한 건도 안 읽는다** — 장부(codes/*.json)와 이미 실어 둔 창고를 본다. */
 /* 범위 — 돌고 있으면 켤 때 붙든 것, 꺼져 있으면 지금 창고에서 고른 것(「채울 것」 수가 그 범위를 센다). */
 function autoFillCandidates(밤){   // 밤 — 새벽 차례 적기(nightPlanOf): 범위·넘김·건너뜀을 안 본다
-  if(!state.itemByCode || !state.itemBody || !state.variants) return [];
+  if(!storeAll()) return [];
   const out = [];
   const 넘김 = 밤 ? {} : autoFillAsideMap();         // 넘겨 둔 것은 사람이 되돌릴 때까지 안 뽑는다 (A-4)
   const st = autoFillState(), 범위 = 밤 ? null : st.on ? st.scope : autoFillScopeNow();
@@ -34199,7 +34333,7 @@ function autoFillCandidates(밤){   // 밤 — 새벽 차례 적기(nightPlanOf)
    🔵 이 화면에서 사람이 할 일이 세 가지로 갈리는데(교재 올리기 · 정답 채우기 · 없음)
      한 문장으로 뭉뚱그리면 **무엇을 해야 할지 알 수 없다.** */
 function autoFillWhyEmpty(){
-  if(!state.itemByCode || !state.itemBody || !state.variants) return '창고를 아직 안 읽었습니다.';
+  if(!storeAll()) return '창고를 아직 안 읽었습니다.';
   let 본문없음 = 0, 정답없음 = 0, 이미있음 = 0, 건너뜀 = 0, 넘겨둠 = 0, 전체 = 0;
   const 넘김 = autoFillAsideMap();
   for(const code in state.itemByCode){
@@ -34248,7 +34382,7 @@ async function autoFillTick(){
   /* ⚠ 다른 AI 작업(하나 다시 생성·일괄 생성)과 겹치면 안 된다 — 비켜서서 기다린다. */
   if(state.aiProcessing) return autoFillLater();
   /* 창고가 아직 안 실렸으면 싣고 다음 바퀴에 한다 (읽기가 나가는 유일한 자리다). */
-  if(!state.itemByCode || !state.itemBody || !state.variants){
+  if(!storeAll()){
     await loadItemStoreIfNeeded();
     return autoFillLater(2000);
   }
@@ -34708,13 +34842,13 @@ async function nightRun(pw, aside){
   const 남음 = () => 끝 - Date.now();
   const 쉼 = ms => new Promise(r => setTimeout(r, ms));
   try{ localStorage.setItem(AUTOFILL_ASIDE_KEY, aside || '{}'); }catch(e){}
-  state.storePartial = true;                          // 로그인하며 그린 화면이 창고를 통째로 싣지 않게 — 차례를 읽기 전까지 막아 둔다
+  state.storeNight = true;                            // 로그인하며 그린 화면이 창고를 통째로 싣지 않게 — 차례를 읽기 전까지 막아 둔다
   await doTeacherLogin(pw);
   if(!state.currentUser || state.currentUser.type !== 'teacher') return { ok:false, summary:'로그인 실패' };
   /* 차례가 없거나·못 읽었거나·적힌 것이 다 찼으면(낡음) 예전처럼 통째로 — 그러면 다 실은 자리에서 새 차례가 적힌다. */
   const 계획 = await dbGet('night-plan', null);
   if(!(계획 && await nightStoreLoad(계획)) || (계획.fill.length && !autoFillCandidates().length))
-    Object.assign(state, { storePartial: false, itemBody: null, variants: null });
+    Object.assign(state, { storeNight: false, storePartial: false, itemBody: null, variants: null });
   const st = autoFillState();
   st.on = true; st.scope = null; autoFillKick();
   while(st.on && 남음() > 0) await 쉼(10000);
@@ -35131,7 +35265,7 @@ function reviewWorkHTML(b, list){
    🔴 **자리가 곧 뜻이다.** 만들기 단추보다 «위»에 있어야 「먼저 찾는다」가 읽힌다.
      아래에 두면 이미 만들고 난 뒤에 보게 되고, 그러면 있으나 마나다. */
 function itemCodeStripHTML(b){
-  const loaded = !!state.itemByCode;
+  const loaded = storeAll();
   if(!loaded){
     /* 창고를 아직 안 받았다 — 이 화면을 연 김에 받아 두고 다시 그린다.
        ⚠ render() 안에서 부르므로 await 하지 않는다. 끝나면 스스로 다시 그린다. */
@@ -35467,7 +35601,7 @@ function storeSideTreeHTML(){
 function teacherItemStoreHTML(){
   /* ⚠ 다 실리면 «다시 그려야» 한다 — 안 그리면 처음 연 사람은 빈 창고를 본다
      (문항 코드 화면이 쓰는 것과 같은 장치다). */
-  if(!state.itemByCode) loadItemStoreIfNeeded().then(()=>{ if(state.itemByCode) render(); });
+  if(!storeAll()) loadItemStoreIfNeeded().then(()=>{ if(state.itemByCode) render(); });
   if(state.hwpCodes === undefined){
     state.hwpCodes = null;
     dbGet('hwpclip-codes', []).then(a => { state.hwpCodes = new Set(a); render(); });
@@ -36551,7 +36685,7 @@ async function cleanupApply(key){
   render();
 }
 function teacherCleanupHTML(){
-  if(!state.variants){
+  if(!storeAll()){
     loadItemStoreIfNeeded().then(()=>{ if(state.variants) render(); });
     return `<div class="st-sec"><div class="st-h">데이터 정리</div>
       <div class="rst-empty">창고를 여는 중…</div></div>`;

@@ -66,7 +66,7 @@ function makeWorld({ itemBody = {}, variants = {}, twin = null, used = 0, groqUs
     'escHtml', '마지막AI오류', 'console',
     /* 🔵 «변형 세기»가 두 곳(variants 컬렉션 + 교재가 준 items 변형)을 합쳐 본다 (2026-09-06).
        여기서는 그 합침을 스텁으로 흉내 낸다 — 이 검사가 재는 것은 «고리»지 합침 규칙이 아니다. */
-    'variantsOfCodeAll',
+    'variantsOfCodeAll', 'storeAll',
     BLOCK + '\nreturn { autoFillTick, autoFillCandidates, autoFillState, autoFillToggle, autoFillWhyEmpty, skipped: autoFillSkipped, autoFillAsideNow, autoFillAsideBack, autoFillKick };'
   )(
     state,
@@ -90,6 +90,7 @@ function makeWorld({ itemBody = {}, variants = {}, twin = null, used = 0, groqUs
     { warn(){}, error(){}, log(){} },
     (code) => [ ...(variants[code] || []),
       ...Object.keys(itemBody).filter(c => c.startsWith(code + '-')).map(c => ({ code: c, variantKind: (c.match(/-([NUD])/) || [])[1] })) ],
+    () => !!(state.itemByCode && state.itemBody && state.variants),   // 창고가 «전부» 실렸나 (10-22 · 검색 구조)
   );
   api.autoFillState().on = true;
   return Object.assign(w, api, { state, 넘김: () => JSON.parse(store.get('khm-autofill-aside') || '{}') });
