@@ -96,17 +96,19 @@ const 봄 = (무엇, 잰것, 바란것) => {
       else if (html[j] === '}') { 깊이--; if (!깊이) { 끝 = j + 1; break; } }
     }
     const 몸 = html.slice(at, 끝);
-    const w = { 나갔나: false, 지웠나: false, 세션지웠나: false };
+    const w = { 나갔나: false, 지웠나: false, 세션지웠나: false, 재운것지웠나: false };
     const state = { currentUser: { type: 'teacher' } };
     const DATA = { students: [{ name: '앞사람' }], records: { a: 1 }, chats: { a: 1 } };
-    const fn = new Function('clearSession', 'state', 'DATA', 'dbReadClear', 'authSignOut', 'goto',
+    const fn = new Function('clearSession', 'state', 'DATA', 'dbReadClear', 'authSignOut', 'goto', 'idbClear',
       몸 + '; return logout;')(
       () => { w.세션지웠나 = true; }, state, DATA,
       () => { w.지웠나 = true; },
       async () => { w.나갔나 = true; },
       () => {},
+      () => { w.재운것지웠나 = true; },
     );
     await fn();
+    봄('   재워 둔 학생 기록·채팅도 지운다 (10-22)', w.재운것지웠나, true);
     봄('🔴 Firebase 세션에서 «실제로» 나간다', w.나갔나, true);
     봄('   저장된 세션도 지운다', w.세션지웠나, true);
     봄('   «못 읽었다» 표시도 지운다', w.지웠나, true);

@@ -6736,7 +6736,7 @@ function collectionTouched(collection){
    ponytail: 버전 문서를 읽고 고쳐 쓰는 사이에 다른 기기가 지우면 그 [id] 하나를 놓칠 수 있다 — TTL(3일)이 그물. */
 const DELTA_SKEW = 10 * 60 * 1000;
 function deltaStamp(collection, fields){
-  if(COLL_CACHE[collection] || collection === 'items') fields._t = { integerValue: String(Date.now()) };
+  if(COLL_CACHE[collection] || collection === 'items' || PER_STUDENT[collection]) fields._t = { integerValue: String(Date.now()) };
   return fields;
 }
 function verSame(a, b){ return JSON.stringify(a) === JSON.stringify(b); }
@@ -6769,6 +6769,48 @@ async function dbGetChangedSince(collection, since){
     return out;
   }catch(e){ console.warn('[바뀐 것만] ' + collection + ' 못 받았다 — 통째로 읽는다', e && e.message); return null; }
 }
+/* =================== 학생 기록·채팅도 «바뀐 것만» (2026-10-22) ===================
+   🔴 강사 화면을 열 때마다 학생 수만큼 한 건씩 읽었다 — 기록 51 + 채팅 51 ≈ 100건/열기 (하루 단건 1.5만의 정체).
+   🔵 학생도 쓰는 문서라 버전(kv)을 못 올린다 — 그래서 버전 없이 열 때마다 «_t > 재운 시각» 질의 한 번(빈 결과도 1건)만 한다.
+   🔵 기록은 커서 localStorage 를 창고와 다투게 두지 않고 IndexedDB 에 재운다. 나가기(logout)에서 지운다.
+   ponytail: `_t` 를 안 적는 길(옛 판을 열어 둔 학생 폰 · tools/*-repair)과 한 시간 넘게 늦은 폰 시계는 못 건진다 —
+     12시간마다 통째로 다시 읽는 것이 그물. 더 촘촘해야 하면 서버 시각(commit + REQUEST_TIME)으로. */
+const PER_STUDENT = { records: 1, chats: 1 };
+const PER_STUDENT_TTL = 12 * 60 * 60 * 1000;
+let idbP = null;
+function idbStore(mode){
+  idbP = idbP || new Promise((ok, no) => {
+    const r = indexedDB.open('khm-cache', 1);
+    r.onupgradeneeded = () => r.result.createObjectStore('kv');
+    r.onsuccess = () => ok(r.result); r.onerror = () => no(r.error);
+  });
+  return idbP.then(db => db.transaction('kv', mode).objectStore('kv'));
+}
+const idbReq = q => new Promise((ok, no) => { q.onsuccess = () => ok(q.result); q.onerror = () => no(q.error); });
+async function idbGet(k){ try{ return await idbReq((await idbStore('readonly')).get(k)); }catch(e){ return null; } }
+async function idbSet(k, v){ try{ await idbReq((await idbStore('readwrite')).put(v, k)); }catch(e){} }
+async function idbClear(){ try{ await idbReq((await idbStore('readwrite')).clear()); }catch(e){} }
+/* 문서 id(uid·옛 학번) → 문서. 재운 것 + 바뀐 것 + «아직 한 번도 안 받은 학생»(새 학생 · 명단이 비었던 때)만 낱건으로.
+   못 읽은 학생은 ids 에 안 적혀 다음에 다시 받는다 — «못 읽음»을 «없음»으로 굳히지 않는다. */
+async function loadPerStudent(col){
+  const t0 = Date.now(), k = 'per:' + col;
+  let c = await idbGet(k);
+  if(c && t0 - c.at < PER_STUDENT_TTL){
+    const 바뀜 = await dbGetChangedSince(col, c.at - 6 * DELTA_SKEW);   // 학생 폰 시계는 더 어긋난다 — 한 시간 앞에서부터
+    if(바뀜) 바뀜.forEach(x => { c.docs[x.id] = x.row; }); else c = null;
+  } else c = null;
+  c = c || { docs: {}, ids: [] };
+  const 받은 = new Set(c.ids);
+  await Promise.all(DATA.students.map(s => s.uid || s.studentId).filter(id => !받은.has(id)).map(async id => {
+    const d = await dbGetDoc(col, id, null);
+    if(dbReadFailed.has(col + '/' + id)) return;
+    받은.add(id);
+    if(d) c.docs[id] = d; else delete c.docs[id];
+  }));
+  idbSet(k, { at: t0, docs: c.docs, ids: [...받은] });
+  return c.docs;
+}
+
 /* 못 하면 null — 부르는 쪽이 예전처럼 통째로 읽는다. */
 async function deltaMerge(collection, cached, ver){
   if(!ver || typeof ver !== 'object' || !Array.isArray(cached.ids) || cached.ids.length !== cached.rows.length) return null;
@@ -10435,6 +10477,7 @@ async function logout(){
   clearSession();
   state.currentUser = null;
   DATA.students = []; DATA.records = {}; DATA.chats = {};   // 앞사람 것을 화면에 남기지 않는다
+  idbClear();                                               // 재워 둔 학생 기록·채팅도 (10-22)
   dbReadClear();
   await authSignOut();
   goto('home');
@@ -11661,9 +11704,8 @@ function markChatSeen(sid){
 async function loadAllChatsIfNeeded(){
   if(state.allChatsLoaded || state.allChatsLoading) return;
   state.allChatsLoading = true;
-  const entries = await Promise.all(DATA.students.map(async s =>
-    [s.studentId, DATA.chats[s.studentId] || await dbGetDoc('chats', s.uid || s.studentId, [])]));
-  entries.forEach(([sid, chat]) => { DATA.chats[sid] = chat; });
+  const docs = await loadPerStudent('chats');                 // 바뀐 것만 (10-22)
+  DATA.students.forEach(s => { DATA.chats[s.studentId] = DATA.chats[s.studentId] || docs[s.uid || s.studentId] || []; });
   state.allChatsLoading = false;
   state.allChatsLoaded = true;
   render();
@@ -16046,13 +16088,10 @@ async function loadAllRecordsIfNeeded(){
   if(state.allRecordsLoaded || state.allRecordsLoading) return;
   state.allRecordsLoading = true;
   render();
-  const [entries, savedRules] = await Promise.all([
-    Promise.all(DATA.students.map(async s => [s.studentId, await dbGetDoc('records', s.uid || s.studentId, null)])),
-    dbGet('signal-rules', {})
-  ]);
+  const [docs, savedRules] = await Promise.all([loadPerStudent('records'), dbGet('signal-rules', {})]);   // 바뀐 것만 (10-22)
   state.signalRules = (savedRules && typeof savedRules === 'object') ? savedRules : {};
   state.allRecords = {};
-  entries.forEach(([sid, rec]) => { if(rec) state.allRecords[sid] = rec; });
+  DATA.students.forEach(s => { const rec = docs[s.uid || s.studentId]; if(rec) state.allRecords[s.studentId] = rec; });
   state.allRecordsLoading = false;
   state.allRecordsLoaded = true;
   render();
