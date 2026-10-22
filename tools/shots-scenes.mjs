@@ -231,7 +231,7 @@ export const 무대들 = {
       await loadItemLedgerIfNeeded();
       const codes = Object.keys(state.itemByCode).filter(c => /^1\d{6}$/.test(c)).slice(0, 4);
       const 판 = (no, 더) => [{ name:'주기나', part:'1-1중간', year:2026, ch:'01', no }].concat(더 || []);
-      state.itemBody = {};
+      state.itemBody = {}; state.variants = {};   // «다 실린» 창고 — 판은 본문에서 짓는다 (10-22 · 반쪽이면 판 표를 기다린다)
       codes.forEach((code, i) => { state.itemBody[code] = { code, answer:'③',
         books: 판([34, 2, 81, 5][i], i === 0 ? [{ name:'주기나', part:'1-1중간', year:2027, ch:'01', no:36 }] : null),
         content:'다항식 A = x² + 2x − 1, B = 2x² − x + 3 에 대하여 A + B 를 계산하시오.' }; });

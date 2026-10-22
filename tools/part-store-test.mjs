@@ -21,8 +21,9 @@ function liftFn(name) {
   }
 }
 const liftConst = name => { const at = html.indexOf('const ' + name + ' = '); return html.slice(at, html.indexOf(';\n', at) + 1); };
-const BLOCK = [liftConst('PART_STORE'), 'const partMem = {}, partQ = {}, partWrites = { items: {}, variants: {} };', 'let reviewStoreLoading = null;',
-  ...['partRead', 'partSave', 'partSync', 'partEnsure', 'partPut', 'partOverlay', 'storeAll', 'variantsByRoot', 'loadReviewStoreIfNeeded'].map(liftFn)].join('\n');
+const BLOCK = [liftConst('PART_STORE'), 'const partMem = {}, partQ = {}, partWrites = { items: {}, variants: {} };', 'let reviewStoreLoading = null, reviewScoped = false, storeShownLoading = null, storeShownFailAt = 0;',
+  ...['partRead', 'partSave', 'partSync', 'partEnsure', 'partPut', 'partOverlay', 'storeAll', 'variantsByRoot', 'loadReviewStoreIfNeeded',
+      'partToState', 'storeLedgerKids', 'storeGot', 'storeShownEnsure'].map(liftFn)].join('\n');
 
 let pass = 0, fail = 0;
 const 봄 = (무엇, 나온것, 나와야) => {
@@ -53,10 +54,10 @@ function makeTab(S, ls, { 실패 = '' } = {}) {
   const f = new Function(
     'localStorage', 'console', 'state', 'DATA', 'ITEMS_VER_KEY', 'COLL_CACHE_TTL', 'DELTA_SKEW', 'verSame', 'dbReadFailed',
     'dbGet', 'dbGetChangedSince', 'dbGetVariantsOfRoots', 'dbGetDoc', 'dbQueryWhere', 'loadItemLedgerIfNeeded', 'variantIsPending',
-    'itemStoreLoading', 'loadItemStoreIfNeeded', 'Date',
-    BLOCK + '\nreturn { partEnsure, partPut, partOverlay, storeAll, loadReviewStoreIfNeeded, partMem };'
+    'itemStoreLoading', 'loadItemStoreIfNeeded', 'Date', 'idbGet', 'idbSet', 'render',
+    BLOCK + '\nreturn { partEnsure, partPut, partOverlay, storeAll, loadReviewStoreIfNeeded, partMem, storeShownEnsure, storeGot, 받는중: () => storeShownLoading };'
   )(
-    ls, { warn() {} }, state, { problemBank: [{ itemCode: 'P' }, { itemCode: 'A', originalContent: '있음' }] },
+    { removeItem() {} },{ warn() {} }, state, { problemBank: [{ itemCode: 'P' }, { itemCode: 'A', originalContent: '있음' }] },
     'itemsVer', 3 * 864e5, 600000, (a, b) => JSON.stringify(a) === JSON.stringify(b), dbReadFailed,
     async key => { 읽음.push('ver:' + key); return S.ver[key]; },
     async col => { 읽음.push('바뀐것:' + col); return S.바뀜[col]; },
@@ -69,6 +70,8 @@ function makeTab(S, ls, { 실패 = '' } = {}) {
     null,
     async () => { 통째.n++; },
     { now: () => S.지금 || 1e7 },
+    async k => (ls.has(k) ? structuredClone(ls.get(k)) : null), async (k, v) => { ls.set(k, structuredClone(v)); },
+    () => {},
   );
   return { ...f, state, 읽음, 통째 };
 }
@@ -76,15 +79,14 @@ const 묶음 = st => Object.fromEntries(Object.entries(st.variants || {}).map(([
 
 console.log('① 처음 — 대기와 그 원본만');
 const S = makeServer();
-const ls = new Map();
-const LS = { getItem: k => (ls.has(k) ? ls.get(k) : null), setItem: (k, v) => ls.set(k, v) };
+const LS = new Map();
 {
   const T = makeTab(S, LS);
   await T.loadReviewStoreIfNeeded();
   봄('대기 → 그 원본들의 변형 → 본문 순', T.읽음, ['ver:variantsVer', '대기:variants', '원본:A,B', 'ver:itemsVer', 'items/A', 'items/B', 'items/P']);
   봄('대기 아닌 원본(C)은 안 받는다', 묶음(T.state), { A: ['A-N01', 'A-N02'], B: ['B-N01'] });
   봄('본문 — 원본 + 원본 없는 시험지 문항', Object.keys(T.state.itemBody).sort(), ['A', 'B', 'P']);
-  봄('«전부»가 아니다', [T.state.storePartial, T.storeAll()], ['review', false]);
+  봄('«전부»가 아니다', [T.state.storePartial, T.storeAll()], [true, false]);
 }
 
 console.log('② 다음 탭 — 안 바뀌었으면 버전만');
@@ -120,13 +122,12 @@ console.log('④ 글자 버전(도구) — 새로 받는다');
 
 console.log('⑤ 못 받으면 — 범위를 안 적고 통째로');
 {
-  const S2 = makeServer(), ls2 = new Map();
-  const LS2 = { getItem: k => (ls2.has(k) ? ls2.get(k) : null), setItem: (k, v) => ls2.set(k, v) };
+  const S2 = makeServer(), LS2 = new Map();
   const T = makeTab(S2, LS2, { 실패: 'root' });
   await T.loadReviewStoreIfNeeded();
   봄('통째 싣기로 물러난다', T.통째.n, 1);
   봄('반쪽을 안 싣는다', T.state.storePartial, undefined);
-  봄('못 받은 범위는 안 적혔다', JSON.parse(ls2.get('khm-part-variants-v1')).scopes, ['pending']);
+  봄('못 받은 범위는 안 적혔다', LS2.get('khm-part-variants-v1').scopes, ['pending']);
 }
 
 console.log('⑥ 이 탭에서 쓴 것');
@@ -139,10 +140,30 @@ console.log('⑥ 이 탭에서 쓴 것');
   봄('통째 싣기에도 덮인다', T.partOverlay('variants', [{ code: 'A-N01' }, { code: 'C-N01' }, { code: 'Z' }]).map(r => r.code + (r.고침 || '')), ['A-N011', 'Z']);
 }
 
-console.log('⑦ 이어진 자리 (글자로)');
+console.log('⑦ 문항관리 — 보이는 카드만 (3단계)');
+{
+  const S3 = makeServer(), LS3 = new Map();
+  S3.items['A-N01'] = { code: 'A-N01', content: '장부 변형' };
+  const T = makeTab(S3, LS3);
+  T.state.itemByCode = { A: {}, 'A-N01': {}, B: {}, C: {} };
+  T.storeShownEnsure(['A', 'B']);
+  await T.받는중();
+  봄('카드 원본 + 장부 변형 본문 · 그 원본들의 변형만 (둘은 나란히)', T.읽음.slice().sort(), ['items/A', 'items/A-N01', 'items/B', 'ver:itemsVer', 'ver:variantsVer', '원본:A,B']);
+  봄('카드는 «받았다» · 안 보인 C 는 아니다', [T.storeGot('A'), T.storeGot('C')], [true, false]);
+  봄('변형이 원본별로 실린다', 묶음(T.state), { A: ['A-N01', 'A-N02'], B: ['B-N01'] });
+  const n = T.읽음.length;
+  T.storeShownEnsure(['A', 'B']);
+  봄('같은 카드를 다시 그리면 읽기 0', [T.받는중(), T.읽음.length], [null, n]);
+  await T.loadReviewStoreIfNeeded();
+  봄('카드가 먼저 실렸어도 검토 대기는 따로 받는다 (원본 A·B 는 이미 있다)', T.읽음.slice(n), ['대기:variants', 'items/P']);
+}
+
+console.log('⑧ 이어진 자리 (글자로)');
 {
   봄('쓰는 문이 알린다', /partPut\(collection, id, data\)/.test(liftFn('dbSetDoc')) && /partPut\(collection, id, null\)/.test(liftFn('dbDeleteDoc')), true);
   봄('검토 탭은 대기만 싣는다', /loadReviewStoreIfNeeded\(\)/.test(liftFn('teacherReviewHTML')), true);
+  const 창 = liftFn('teacherItemStoreHTML');
+  봄('문항관리는 통째로 안 싣고 보이는 카드만', !/loadItemStoreIfNeeded/.test(창) && /storeShownEnsure\(shown\.map/.test(창), true);
   const 통 = liftFn('loadItemStoreIfNeeded');
   봄('통째 싣기는 반쪽을 갈아 끼운다', /if\(state\.storePartial\) Object\.assign\(state, \{ itemBody: null, variants: null, storePartial: false \}\)/.test(통) && /storeAll\(\)\) return/.test(통), true);
   봄('통째 싣기에 이 탭에서 쓴 것을 덮는다', /partOverlay\('items'/.test(통) && /partOverlay\('variants'/.test(liftFn('loadVariantsIfNeeded')), true);

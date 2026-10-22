@@ -6862,26 +6862,23 @@ async function loadItemsRows(){
      · 'id:코드'(문서 하나). 버전이 바뀌면 `_t` 로 «바뀐 것만» 받아 합친다 — 새로 대기가 된 것·대기에서 빠진 것도
      `_t` 가 새로워 딸려 오므로 **범위는 계속 «다 받은» 채로 남는다.** 화면은 필요한 범위를 partEnsure 하고 로컬에서 거른다.
    ⚠ 범위 받기는 strict — 못 받으면 범위를 안 적는다(«빈 것»이 «다 받은 것»으로 굳지 않게).
-   ⚠ 통째 재우기와 따로 산다(⑤단계에서 하나로 · IndexedDB). 이 탭에서 쓴 것은 partWrites 로 통째 싣기에도 덮는다. */
+   ⚠ 통째 재우기와 따로 산다(⑤단계에서 하나로). 이 탭에서 쓴 것은 partWrites 로 통째 싣기에도 덮는다.
+   🔵 IndexedDB 에 재운다(10-22 · 3단계) — localStorage 는 통째 재운 것 둘(≈200만 자)로 이미 찼다. */
 const PART_STORE = {
   items:    { ver: ITEMS_VER_KEY, key: 'khm-part-items-v1' },
   variants: { ver: 'variantsVer', key: 'khm-part-variants-v1' },
 };
 const partMem = {}, partQ = {}, partWrites = { items: {}, variants: {} };
-function partRead(cfg){
-  try{
-    const c = JSON.parse(localStorage.getItem(cfg.key) || 'null');
-    return c && c.docs && Array.isArray(c.scopes) && c.at && Date.now() - c.at <= COLL_CACHE_TTL ? c : null;
-  }catch(e){ return null; }
+async function partRead(cfg){
+  try{ localStorage.removeItem(cfg.key); }catch(e){}      // 2단계 때 재운 옛 자리를 비운다
+  const c = await idbGet(cfg.key);
+  return c && c.docs && Array.isArray(c.scopes) && c.at && Date.now() - c.at <= COLL_CACHE_TTL ? c : null;
 }
-function partSave(cfg, m){
-  try{ localStorage.setItem(cfg.key, JSON.stringify({ ver: m.ver, at: m.at, docs: m.docs, scopes: m.scopes })); }
-  catch(e){ console.warn('[부분 재우기] ' + cfg.key + ' 를 재우지 못했다 —', e.message); }
-}
+function partSave(cfg, m){ idbSet(cfg.key, { ver: m.ver, at: m.at, docs: m.docs, scopes: m.scopes }); }
 /* 탭마다 한 번 — 버전을 묻고(읽기 1건), 같으면 그대로 · 바뀌었으면 바뀐 것만 · 못 하면 빈 채로 새로 시작. */
 async function partSync(col){
   if(partMem[col]) return partMem[col];
-  const cfg = PART_STORE[col], c = partRead(cfg);
+  const cfg = PART_STORE[col], c = await partRead(cfg);
   const ver = await dbGet(cfg.ver, '');
   const 못읽음 = dbReadFailed.has(cfg.ver);
   let m = null;
@@ -6963,9 +6960,9 @@ function variantsByRoot(rows){
 }
 /* 검토 탭은 «검토 대기»만 싣는다 — 대기 변형 · 그 원본들의 변형 전부(번호 매기기) · 원본 본문(교재 요청·시험지 문항 것도).
    이미 다 실렸으면 그것을 쓴다. 못 하면 예전처럼 통째로. */
-let reviewStoreLoading = null;
+let reviewStoreLoading = null, reviewScoped = false;
 function loadReviewStoreIfNeeded(){
-  if(state.variants && state.itemBody) return Promise.resolve();
+  if(storeAll() || reviewScoped) return Promise.resolve();   // 문항관리가 먼저 «보이는 카드만» 실어 뒀어도 대기는 따로 받는다
   if(itemStoreLoading) return itemStoreLoading;
   return reviewStoreLoading = reviewStoreLoading || (async () => {
     try{
@@ -6974,14 +6971,43 @@ function loadReviewStoreIfNeeded(){
       const roots = [...new Set(대기.map(v => v.originCode))];
       const vs = await partEnsure('variants', roots.map(r => 'root:' + r));
       const 본문 = [...roots, ...DATA.problemBank.filter(b => b.itemCode && !b.originalContent && !b.originalAnswer).map(b => b.itemCode)];
-      const its = await partEnsure('items', 본문.map(c => 'id:' + c));
-      if(itemStoreLoading || (state.variants && state.itemBody)) return;   // 그새 통째로 실리는 중이거나 실렸다
-      Object.assign(state, { itemBody: its.docs, variants: variantsByRoot(Object.values(vs.docs)), storePartial: 'review' });
+      await partEnsure('items', 본문.map(c => 'id:' + c));
+      reviewScoped = true;
+      partToState();
     }catch(e){
       console.warn('[검토] 대기만 싣지 못했다 — 통째로 싣는다', e && e.message);
       await loadItemStoreIfNeeded();
     }finally{ reviewStoreLoading = null; }
   })();
+}
+/* 받아 둔 것(검토 대기 · 문항관리 카드)을 화면이 보는 자리에 — «전부»가 아니라는 표시(storePartial)와 함께. */
+function partToState(){
+  if(storeAll() || itemStoreLoading || !partMem.items || !partMem.variants) return;
+  Object.assign(state, { itemBody: partMem.items.docs, variants: variantsByRoot(Object.values(partMem.variants.docs)), storePartial: true });
+}
+/* =================== 문항관리는 «보이는 카드»만 받는다 (2026-10-22 · 검색 구조 3단계) ===================
+   과목·단원·출처 나무는 장부(배포 파일 · 읽기 0)에서, 판은 판 표(kv/book-editions · 1건)에서 센다.
+   본문·변형은 지금 펼친 카드(한 쪽 30개)의 것만 — 원본 본문 + 장부에 있는 그 변형들 본문(id:) + 변형 창고(root:).
+   한 번 받은 카드는 재워 두고 바뀐 것만 받는다(partSync). 이미 «전부» 실렸으면(다른 화면이 통째로) 그것을 쓴다.
+   ⚠ 못 받으면 1분 쉬고 다시 — 그새 카드는 «못 불러옴». 통째로 물러나지 않는다(한도를 지키려고 바꾼 것이라).
+   ponytail: 장부에 없는 문항(브라우저로 올린 기출)은 이 기기에서 받은 것만 보인다 — 지금 0건(10-22 · 창고 2,069 = 장부 2,069). */
+let storeShownLoading = null, storeShownFailAt = 0;
+function storeLedgerKids(){
+  const by = {};
+  for(const c in (state.itemByCode || {})){ const r = c.replace(/-[NUD]\d{2}$/, ''); if(r !== c) (by[r] = by[r] || []).push(c); }
+  return by;
+}
+function storeGot(code){ return storeAll() || !!(partMem.items && partMem.items.scopes.includes('id:' + code)); }
+function storeShownEnsure(codes){
+  if(storeAll() || storeShownLoading || !state.itemByCode || Date.now() - storeShownFailAt < 60000) return;
+  const 장부변형 = storeLedgerKids();
+  const ids = codes.flatMap(c => [c, ...(장부변형[c] || [])]).map(c => 'id:' + c), roots = codes.map(c => 'root:' + c);
+  const 있다 = (col, ss) => partMem[col] && ss.every(x => partMem[col].scopes.includes(x));
+  if(있다('items', ids) && 있다('variants', roots)){ if(!state.itemBody) partToState(); return; }
+  storeShownLoading = Promise.all([partEnsure('items', ids), partEnsure('variants', roots)])
+    .then(() => { storeShownFailAt = 0; partToState(); },
+          e => { storeShownFailAt = Date.now(); console.warn('[문항관리] 카드 본문을 못 받았다 —', e && e.message); })
+    .finally(() => { storeShownLoading = null; render(); });
 }
 /* 🔴 **끝없이 자라는 것은 «통째로» 읽으면 안 된다** (2026-09-06 · 읽기량 줄이기 #2).
    `auditlog` 는 지우는 일이 없어서 영영 자라는데 **로그인마다 전부** 읽고 있었다.
@@ -33065,7 +33091,7 @@ function teacherReviewHTML(){
   loadAllRecordsIfNeeded();
   if(state.reviewQueue === 'pending') loadReviewQuotaIfNeeded();
   /* 검토 탭으로 곧장 열면(새로고침 · #teacher/review) 변형을 싣는 곳이 없어 칸이 전부 0 이었다 (2026-10-06) */
-  if(!state.variants) loadReviewStoreIfNeeded().then(()=>{ if(state.variants) render(); });   // 대기만 (10-22 · 검색 구조 2단계)
+  if(!storeAll() && !reviewScoped) loadReviewStoreIfNeeded().then(()=>{ if(state.variants) render(); });   // 대기만 (10-22 · 검색 구조 2단계)
   const qkey = state.reviewQueue || 'pending';
   /* 🔵 **「검토 대기」에는 두 갈래가 같이 산다** (2026-09-06 · 사용자 요청).
      시험지 문항(problembank)과 AI 가 만든 창고 변형이다. 생김새는 다르지만 **기다리는 일은 같다.**
@@ -35640,7 +35666,8 @@ function storeSideTreeHTML(){
 function teacherItemStoreHTML(){
   /* ⚠ 다 실리면 «다시 그려야» 한다 — 안 그리면 처음 연 사람은 빈 창고를 본다
      (문항 코드 화면이 쓰는 것과 같은 장치다). */
-  if(!storeAll()) loadItemStoreIfNeeded().then(()=>{ if(state.itemByCode) render(); });
+  /* 장부(읽기 0)와 판 표(1건)만 — 본문·변형은 아래에서 «보이는 카드»만 (10-22 · 검색 구조 3단계) */
+  if(!storeAll()){ loadItemLedgerIfNeeded(); bookEditionsEnsure(); }
   if(state.hwpCodes === undefined){
     state.hwpCodes = null;
     dbGet('hwpclip-codes', []).then(a => { state.hwpCodes = new Set(a); render(); });
@@ -35657,25 +35684,28 @@ function teacherItemStoreHTML(){
     (byBook[(it.source && it.source.book) || '출처없음'] || 0) + 1;
   const books = Object.keys(byBook).sort((a,b)=> byBook[b] - byBook[a]);
   if(state.storeBook) list = list.filter(x => ((x.source && x.source.book) || '출처없음') === state.storeBook);
-  /* 📖 실린 교재·판(`books`)으로 거른다 (2026-10-05). 판을 고르면 숫자 검색 = 교재 번호, 차례도 교재 번호. */
-  const 판의 = (code, 판) => (((state.itemBody || {})[code] || {}).books || []).find(b => bookLabel(b) === 판);
-  const byEd = {};
-  for(const it of list) for(const b of (((state.itemBody || {})[it.code] || {}).books || [])) byEd[bookLabel(b)] = (byEd[bookLabel(b)] || 0) + 1;
+  /* 📖 실린 교재·판(`books`)으로 거른다 (2026-10-05). 판을 고르면 숫자 검색 = 교재 번호, 차례도 교재 번호.
+     판은 판 표에서 센다(10-22) — 다 실렸으면 본문에서 바로 짓고, 아니면 kv/book-editions 한 건. */
+  const 판표 = storeAll() ? bookEditionsBuild() : (state.bookEditions || []);
+  const 고른것 = new Set(list.map(x => x.code)), byEd = {};
+  for(const e of 판표){ const n = Object.values(e.nos).filter(c => 고른것.has(c)).length; if(n) byEd[bookLabel(e)] = n; }
   const eds = Object.keys(byEd).sort();
   const 판 = eds.includes(state.storeEdition) ? state.storeEdition : '';
-  if(판) list = list.filter(x => 판의(x.code, 판));
+  const 번호of = {};
+  if(판){ const e = 판표.find(x => bookLabel(x) === 판); for(const n in e.nos) 번호of[e.nos[n]] = +n; }
+  if(판) list = list.filter(x => 번호of[x.code]);
   const 번호로 = 판 && /^\d{1,4}$/.test((state.storeQuery || '').trim());
   /* 🔵 **코드 검색을 창고로 올렸다** (2026-09-04 · 화면 둘을 합치면서).
      줄표 없이 `K201E0010` 도, `E0010` 처럼 일부만도 찾는다 — 옛 화면이 하던 그대로다.
      ⚠ 딱 하나로 좁혀지면 «찾기»가 아니라 **바로 그 문항을 여는 것**이 손에 맞는다. */
   const 찾는말 = (state.storeQuery || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
-  if(번호로) list = list.filter(x => 판의(x.code, 판).no === +찾는말);
+  if(번호로) list = list.filter(x => 번호of[x.code] === +찾는말);
   else if(찾는말) list = list.filter(x => x.code.toUpperCase().replace(/[^A-Z0-9]/g, '').includes(찾는말));
-  list = list.slice().sort(판 ? (a,b)=> (판의(a.code, 판).no || 1e9) - (판의(b.code, 판).no || 1e9) || (a.code < b.code ? -1 : 1)
+  list = list.slice().sort(판 ? (a,b)=> 번호of[a.code] - 번호of[b.code] || (a.code < b.code ? -1 : 1)
                              : (a,b)=> a.code < b.code ? -1 : 1);
 
   const shown = list.slice(0, (state.storePage || 1) * STORE_PER_PAGE);
-  const bodyLoaded = !!state.itemBody;
+  storeShownEnsure(shown.map(x => x.code));
 
   const card = it => {
     const body = (state.itemBody || {})[it.code] || null;
@@ -35719,9 +35749,9 @@ function teacherItemStoreHTML(){
         ? `<div class="ist-body has-fig">${withFigure(problemHTML(icKeepLines(body.content)), 한장)}</div>`
         : body && body.content
         ? `<div class="ist-body">${problemHTML(icKeepLines(body.content))}</div>`
-        : `<div class="ist-body none">${bodyLoaded
+        : `<div class="ist-body none">${state.itemBody && storeGot(it.code)
             ? '본문이 아직 없습니다 — 「문항 코드 › 교재에서 본문 채우기」로 hwpx 를 올리면 채워집니다.'
-            : '본문을 불러오지 못했습니다.'}</div>`}
+            : storeShownFailAt ? '본문을 불러오지 못했습니다 — 잠시 뒤 다시 받습니다.' : '본문을 불러오는 중…'}</div>`}
       ${/* 🔴 **선지가 통째로 그림인 문항이 있다** (2026-09-04 · 사용자가 K2-02-E-0083 에서 짚었다 —
            「선지의 다섯개가 모두 그림이어야 했는데 원본그림 하나만 가져오고 나머지는 사라져있음」).
            예전에는 `image` 한 칸뿐이라 **첫 장을 «문항 그림»으로 보여 주고 나머지를 버렸다.**
