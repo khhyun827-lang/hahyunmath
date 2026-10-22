@@ -6659,6 +6659,7 @@ function collectionTouched(collection){
     collDelPending[collection] = [];
     const ok = await verBump(cfg.ver, dels);
     if(!ok) console.warn('[재우기] ' + collection + ' 버전을 못 올렸다 — 다른 기기는 최대 3일 뒤에 맞는다.');
+    if(collection === 'variants') nightPlanSave().catch(()=>{});
   }, 1500);
 }
 
@@ -6874,7 +6875,7 @@ async function migrateBlobToCollection(oldKey, collection, idField){
      화면은 render() 마다 부르므로 이 겹침은 «가끔»이 아니라 «자주» 일어난다. */
 let itemStoreLoading = null;
 async function loadItemStoreIfNeeded(){
-  if(state.itemByCode && state.variants && state.itemBody) return;
+  if(state.storePartial || (state.itemByCode && state.variants && state.itemBody)) return;   // storePartial — 새벽 돌리기가 «차례만» 싣는 중 (nightStoreLoad)
   if(itemStoreLoading) return itemStoreLoading;
   itemStoreLoading = (async () => {
   try{
@@ -6907,6 +6908,7 @@ async function loadItemStoreIfNeeded(){
       bookEditionsSync().catch(e => console.warn('[판 표] 못 맞췄다 —', e && e.message));   // 10-21 · 학생 «교재 문제 요청»이 읽는다
     }
     if(!state.variants) await loadVariantsIfNeeded();
+    nightPlanSave().catch(e => console.warn('[새벽 차례] 못 적었다 —', e && e.message));
   } finally { itemStoreLoading = null; }
   })();
   return itemStoreLoading;
@@ -34109,16 +34111,16 @@ function autoFillToggle(){
 
 /* 🔵 **Firestore 를 한 건도 안 읽는다** — 장부(codes/*.json)와 이미 실어 둔 창고를 본다. */
 /* 범위 — 돌고 있으면 켤 때 붙든 것, 꺼져 있으면 지금 창고에서 고른 것(「채울 것」 수가 그 범위를 센다). */
-function autoFillCandidates(){
+function autoFillCandidates(밤){   // 밤 — 새벽 차례 적기(nightPlanOf): 범위·넘김·건너뜀을 안 본다
   if(!state.itemByCode || !state.itemBody || !state.variants) return [];
   const out = [];
-  const 넘김 = autoFillAsideMap();                    // 넘겨 둔 것은 사람이 되돌릴 때까지 안 뽑는다 (A-4)
-  const st = autoFillState(), 범위 = st.on ? st.scope : autoFillScopeNow();
+  const 넘김 = 밤 ? {} : autoFillAsideMap();         // 넘겨 둔 것은 사람이 되돌릴 때까지 안 뽑는다 (A-4)
+  const st = autoFillState(), 범위 = 밤 ? null : st.on ? st.scope : autoFillScopeNow();
   for(const code in state.itemByCode){
     const sp = splitItemCode(code);
     if(sp && sp.isVariant) continue;                  // 변형의 변형은 만들지 않는다
     if(!autoFillScopeOk(code, 범위)) continue;
-    if(autoFillSkipped.has(code) || 넘김[code]) continue;
+    if((!밤 && autoFillSkipped.has(code)) || 넘김[code]) continue;
     const body = state.itemBody[code];
     if(!body || !body.content || !body.answer) continue;   // 워커가 둘 다 없으면 거절한다
     /* 🔴 **`state.variants` 를 직접 보면 «교재가 준 변형»을 못 본다** (2026-09-06에 고쳤다).
@@ -34590,6 +34592,48 @@ function nightLogHTML(){
     변형 <b class="mono">${L.made}</b>건${L.skipped ? ` · 건너뜀 ${L.skipped}` : ''}${L.failed ? ` · 실패 ${L.failed}` : ''} <s>·</s> 검토 <b class="mono">${L.reviewed}</b>건 <s>·</s> 셋째 AI <b class="mono">${L.third}</b>건</div>`;
 }
 
+/* =========== 새벽엔 «차례만» 싣기 (2026-10-22 · 사용자 — 「변형할 때도 변형할 차례만 읽어오도록」) ===========
+   🔴 새벽 돌리기는 매번 빈 브라우저라 창고를 통째로 읽었다(본문 2,069 + 변형 ≈900 — 밤마다 한도의 6%, 교재가 늘면 그만큼 는다).
+   🔵 강사 화면이 창고를 다 실었을 때·변형을 쓸 때 «오늘 밤 할 차례»를 kv/night-plan 에 적고(바뀌었을 때만 쓰기 1건),
+     밤에는 그 원본들의 본문과 변형만 읽는다. 차례가 낡아도 괜찮다 — 원본마다 변형을 «다» 읽으니 이미 찬 것은 저절로 빠지고,
+     통과·검토된 것도 읽은 문서를 보고 빠진다.
+   ⚠ 원본 하나의 변형은 늘 통째로 싣는다 — 반쪽이면 nextVariantCode 가 이미 있는 번호를 또 낸다.
+   ponytail: 도구(tools/*.mjs)로 넣은 새 문항은 강사가 창고를 한 번 열어야 차례에 든다. */
+const NIGHT_PLAN_KEY = 'khm-night-plan';
+function nightPlanOf(){
+  const 채울 = autoFillCandidates(true);
+  const 글 = 채울.filter(c => !itemFigureOf(state.itemBody[c]));   // Gemini 몫이 다 차면 Groq 는 글 문항만 — 그 몫도 따로 챙긴다
+  const 대기 = pendingVariants();
+  const 검토 = [...대기.filter(v => !v.aiReview && dqAnswerable(v.content, v.answer)).slice(0, REVIEW_DAILY_LIMIT),
+               ...대기.filter(reviewNeedsThird).slice(0, REVIEW_DAILY_LIMIT)];
+  return { fill: [...new Set([...채울.slice(0, 60), ...글.slice(0, 40)])].sort(),
+           roots: [...new Set(검토.map(v => v.originCode))].sort() };
+}
+async function nightPlanSave(){
+  if(state.storePartial || !state.itemByCode || !state.itemBody || !state.variants) return;
+  if(!state.currentUser || state.currentUser.type !== 'teacher') return;
+  const p = JSON.stringify(nightPlanOf());
+  let 전 = '';
+  try{ 전 = localStorage.getItem(NIGHT_PLAN_KEY) || ''; }catch(e){}
+  if(p === 전) return;
+  if(await dbSet('night-plan', JSON.parse(p))) try{ localStorage.setItem(NIGHT_PLAN_KEY, p); }catch(e){}
+}
+/* 밤 — 차례의 원본만 싣는다. 못 읽으면 false (부르는 쪽이 예전처럼 통째로). */
+async function nightStoreLoad(p){
+  try{
+    await loadItemLedgerIfNeeded();                   // 장부는 배포 파일 — 읽기 0
+    const vs = await dbGetVariantsOfRoots([...new Set([...p.fill, ...p.roots])]);
+    const by = {};
+    for(const v of vs) (by[v.originCode] = by[v.originCode] || []).push(v);
+    for(const k in by) by[k].sort((a,b)=> a.code < b.code ? -1 : 1);
+    const body = {};
+    for(let i = 0; i < p.fill.length; i += 10)
+      await Promise.all(p.fill.slice(i, i + 10).map(async c => { const b = await dbGetDoc('items', c, null); if(b) body[c] = b; }));
+    Object.assign(state, { itemBody: body, variants: by, storePartial: true });
+    return true;
+  }catch(e){ console.warn('[새벽 차례] 못 실었다 —', e && e.message); return false; }
+}
+
 /* =========== 새벽에 남은 한도 쓰기 (2026-10-21 · 사용자 — 「변형이랑 검토 한도를 안 쓰고 넘어갈 때가 많은데,
      초기화되기 전 새벽 다섯 시에도 남은 게 있으면 자동으로 돌리게」) ===========
    🔵 GitHub Actions(.github/workflows/nightrun.yml → tools/nightrun.mjs)가 05시쯤 화면 없는 브라우저로 이 사이트를 열어 부른다.
@@ -34605,8 +34649,13 @@ async function nightRun(pw, aside){
   const 남음 = () => 끝 - Date.now();
   const 쉼 = ms => new Promise(r => setTimeout(r, ms));
   try{ localStorage.setItem(AUTOFILL_ASIDE_KEY, aside || '{}'); }catch(e){}
+  state.storePartial = true;                          // 로그인하며 그린 화면이 창고를 통째로 싣지 않게 — 차례를 읽기 전까지 막아 둔다
   await doTeacherLogin(pw);
   if(!state.currentUser || state.currentUser.type !== 'teacher') return { ok:false, summary:'로그인 실패' };
+  /* 차례가 없거나·못 읽었거나·적힌 것이 다 찼으면(낡음) 예전처럼 통째로 — 그러면 다 실은 자리에서 새 차례가 적힌다. */
+  const 계획 = await dbGet('night-plan', null);
+  if(!(계획 && await nightStoreLoad(계획)) || (계획.fill.length && !autoFillCandidates().length))
+    Object.assign(state, { storePartial: false, itemBody: null, variants: null });
   const st = autoFillState();
   st.on = true; st.scope = null; autoFillKick();
   while(st.on && 남음() > 0) await 쉼(10000);

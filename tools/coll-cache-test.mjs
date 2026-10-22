@@ -44,7 +44,7 @@ function 판(o) {
   const F = new Function('localStorage', 'dbGet', 'dbGetCollection', 'dbSet', 'dbReadFailed', 'collectionReadFailed', 'markCollectionRead', 'state', 'setTimeout', 'clearTimeout', 'console', 'dbGetChangedSince',
     liftConst('COLL_CACHE') + NL + liftConst('COLL_CACHE_TTL') + NL + liftConst('DELTA_SKEW') + NL + lift('collCacheRead') + NL + lift('collCacheWrite') + NL + lift('collCacheClear') + NL
     + lift('verSame') + NL + lift('verBump') + NL + lift('deltaMerge') + NL
-    + lift('loadCollectionCached') + NL + 'const collBumpTimer = {}; const collDelPending = {};' + NL + lift('collectionTouched') + NL
+    + lift('loadCollectionCached') + NL + 'const collBumpTimer = {}; const collDelPending = {}; const nightPlanSave = async () => {};' + NL + lift('collectionTouched') + NL
     + 'return { loadCollectionCached, collectionTouched, COLL_CACHE, collDelPending };')(
     localStorage,
     async (key, fb) => { 읽음.push('kv/' + key); return key in kv ? kv[key] : fb; },

@@ -272,7 +272,7 @@ console.log(NL + '⑤ 강사 화면 — 세우는 자리와 채우는 자리' + 
 {
   const 검토 = lift('teacherReviewHTML');
   봄('🔴 「세워 주세요」 띠가 검토 화면에 선다', 검토.includes('const askBar = !부름들.length'), true);
-  봄('🔴 그 띠를 실제로 그린다', 검토.includes('${reqBar}${askBar}${aiBar}'), true);
+  봄('🔴 그 띠를 실제로 그린다', 검토.includes('${reqBar}${nightLogHTML()}${askBar}${aiBar}'), true);
   봄('누르면 세운다', 검토.includes('bankAskAccept('), true);
   봄('누가 냈는지 이름으로 적는다', 검토.includes('g.who.map(studentNameOf)'), true);
   봄('부름이 없으면 띠를 아예 안 그린다', 검토.includes("!부름들.length ? '' :"), true);
