@@ -34911,7 +34911,8 @@ function nightLogHTML(){
   const L = state.nightLog;
   if(!L) return '';
   const d = new Date(L.at);
-  return `<div class="note" style="margin:0 0 10px;font-size:12px;">새벽 자동 <span class="mono">${d.getMonth()+1}-${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}</span> 마침 <s>·</s>
+  const 시 = x => { const t = new Date(x); return `${t.getHours()}:${String(t.getMinutes()).padStart(2,'0')}`; };
+  return `<div class="note" style="margin:0 0 10px;font-size:12px;">자동 돌리기 <span class="mono">${d.getMonth()+1}-${d.getDate()} ${L.from ? 시(L.from) + '~' : ''}${시(L.at)}</span> 마침 <s>·</s>
     변형 <b class="mono">${L.made}</b>건${L.skipped ? ` · 건너뜀 ${L.skipped}` : ''}${L.failed ? ` · 실패 ${L.failed}` : ''} <s>·</s> 검토 <b class="mono">${L.reviewed}</b>건 <s>·</s> 셋째 AI <b class="mono">${L.third}</b>건</div>`;
 }
 
@@ -34974,8 +34975,11 @@ function fillQueueDrop(code){
    🔴 공개 저장소의 실행 기록에 찍힌다 — 돌려주는 말에는 건수만(문항 코드·본문·오류 글 안 넣음).
    aside — «넘겨 둔 문항»(localStorage) 을 실행 사이에 이어 준다. 안 이으면 무거운 문항에 밤마다 한도를 쏟는다. */
 async function nightRun(pw, aside){
-  const 끝 = new Date(); 끝.setUTCHours(23, 50, 0, 0);
-  const 남음 = () => 끝 - Date.now();
+  /* 🔵 **아침에 돈다** (10-23 · 사용자 — 「아예 매일 아침에 … 초기화되자마자 자동으로」). 한도(우리 셈)는 UTC 0시 = 한국 09:00 에 새로 찬다.
+     GitHub 예약은 이틀 다 3시간 넘게 늦게 왔다 — 그래서 «몇 시까지»가 아니라 «시작에서 4시간 40분»으로 끊는다(워크플로 timeout 300분 안).
+     🔴 차례: 검토(시간의 절반까지) → 자동 채우기(끝 20분 전까지) → 남은 검토 → 셋째 AI.
+       10-23 새벽에는 채우기가 끝날 때까지 검토가 못 돌아 2시간 20분 중 검토 4건이었다. */
+  const 시작 = Date.now(), 끝 = 시작 + 280 * 60000, 반 = 시작 + 140 * 60000;
   const 쉼 = ms => new Promise(r => setTimeout(r, ms));
   try{ localStorage.setItem(AUTOFILL_ASIDE_KEY, aside || '{}'); }catch(e){}
   state.storeNight = true;                            // 로그인하며 그린 화면이 창고를 통째로 싣지 않게 — 차례만 받는다 (10-23)
@@ -34984,28 +34988,33 @@ async function nightRun(pw, aside){
   await loadItemLedgerIfNeeded();                     // 장부는 배포 파일 — 읽기 0
   /* 채울 차례가 없거나 못 읽었으면 예전처럼 통째로 — 그러면 다 실은 자리에서 차례가 적힌다. */
   if(!(await fillQueueEnsure())) state.storeNight = false;
-  const st = autoFillState();
-  st.on = true; st.scope = null; autoFillKick();
-  while(st.on && 남음() > 0) await 쉼(10000);
-  if(st.on) autoFillStop('마감');
-  while(state.aiProcessing) await 쉼(2000);          // 오가던 한 건은 마저 받는다
   /* 검토는 «검토 대기» 변형만 — 검토는 변형 글만 본다(원본 본문·형제 변형은 안 받는다). */
-  if(!storeAll()){
+  const 대기싣기 = async () => {
+    if(storeAll()) return;
     try{ await partEnsure('variants', ['pending']); partToState(); }
     catch(e){ state.storeNight = false; await loadItemStoreIfNeeded(); }
-  }
-  const 검토 = [];
-  for(const 셋째 of [false, true]){
-    if(남음() <= 0) break;
-    const t = setTimeout(() => { state.reviewCancel = true; }, 남음());
-    검토.push(await reviewAllPending(셋째, true));
+  };
+  const 검토하기 = async (셋째, 까지) => {
+    if(Date.now() >= 까지) return 0;
+    const t = setTimeout(() => { state.reviewCancel = true; }, 까지 - Date.now());
+    const r = await reviewAllPending(셋째, true);
     clearTimeout(t);
-  }
-  const n = i => (검토[i] && 검토[i].done) || 0;
-  /* 지난밤 결과 — 검토 탭 왼쪽에 한 줄로 보인다(nightLogHTML · 10-22 사용자). kv 라 공개 기록에 안 남는다. */
-  await dbSet('night-log', { at: new Date().toISOString(), made: st.done, skipped: st.skipped, failed: st.failed, reviewed: n(0), third: n(1) });
+    return (r && r.done) || 0;
+  };
+  await 대기싣기();
+  let 검토수 = await 검토하기(false, 반);
+  const st = autoFillState();
+  st.on = true; st.scope = null; autoFillKick();
+  while(st.on && Date.now() < 끝 - 20 * 60000) await 쉼(10000);
+  if(st.on) autoFillStop('마감');
+  while(state.aiProcessing) await 쉼(2000);          // 오가던 한 건은 마저 받는다
+  await 대기싣기();                                    // 방금 만든 변형도 검토 대기에 선다
+  검토수 += await 검토하기(false, 끝);
+  const 셋째수 = await 검토하기(true, 끝);
+  /* 지난 결과 — 검토 탭 맨 위에 한 줄로 보인다(nightLogHTML · 10-22 사용자). kv 라 공개 기록에 안 남는다. */
+  await dbSet('night-log', { at: new Date().toISOString(), from: new Date(시작).toISOString(), made: st.done, skipped: st.skipped, failed: st.failed, reviewed: 검토수, third: 셋째수 });
   return { ok:true, aside: localStorage.getItem(AUTOFILL_ASIDE_KEY) || '{}',
-    summary: `변형 ${st.done}건 (건너뜀 ${st.skipped} · 실패 ${st.failed}) · 검토 ${n(0)}건 · 셋째 AI ${n(1)}건`
+    summary: `변형 ${st.done}건 (건너뜀 ${st.skipped} · 실패 ${st.failed}) · 검토 ${검토수}건 · 셋째 AI ${셋째수}건`
       + ` · 한도 Gemini ${await getAIQuotaUsed()}/${AI_DAILY_LIMIT} · 검토 ${await getReviewQuotaUsed()}/${REVIEW_DAILY_LIMIT}` };
 }
 

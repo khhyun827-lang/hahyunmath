@@ -1,9 +1,9 @@
-# 새벽에 남은 AI 한도 쓰기 (2026-10-21) — tools/nightrun.mjs · index.html nightRun()
+# 날마다 AI 한도 쓰기 — 10-21 새벽으로 시작 · 10-23 부터 아침(한도 초기화 직후) — tools/nightrun.mjs · index.html nightRun()
 # PC 가 꺼져 있어도 돈다. 비밀값 ADMIN_PW(관리자 비밀번호)가 있어야 한다.
 name: nightrun
 on:
   schedule:
-    - cron: '7 18 * * *'   # UTC — 한국 03:07 (10-22 첫 밤에 3시간 늦게 왔다 → 05:07 에서 당김 · 정각을 피했다)
+    - cron: '5 0 * * *'    # UTC 00:05 = 한국 09:05 — 한도(우리 셈)가 새로 찬 직후 (10-23 사용자 — 「매일 아침, 초기화되자마자」 · 예약은 몇 시간 늦게 올 수 있다)
   workflow_dispatch:
 permissions:
   contents: read
@@ -11,7 +11,7 @@ concurrency: nightrun
 jobs:
   run:
     runs-on: ubuntu-latest
-    timeout-minutes: 240   # nightRun 이 08:50 에 스스로 멈춘다 — 이건 그물
+    timeout-minutes: 300   # nightRun 이 시작 4시간 40분 뒤 스스로 멈춘다 — 이건 그물
     steps:
       - uses: actions/checkout@v4
         with:
