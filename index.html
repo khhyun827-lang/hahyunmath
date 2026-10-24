@@ -30555,7 +30555,9 @@ function videoOpen(id){ state.videoSelectedId = id; state.videoOpenId = id; stat
 function videoClose(){ 드로어닫기(() => { state.videoOpenId = null; state.vidNoticeFor = null; state.videoDueEdit = null; state.videoCopy = null; render(); }); }
 /* =================== 다른 반에도 보내기 (2026-10-13 · 사용자 — 「특정반에 올려놓은 영상을 다른반에도 학생선택에서 넣어줄 수 있도록」) ===
    영상 상세(드로어)에서 반을 고르고 → 그 반 학생을 고르면(안 고르면 반 전체) 같은 영상(링크·제목·단원·구간·복습용)을 새 문서로 만든다.
-   🔵 새 문서다 — 시청 기록은 영상 id 마다라, 옮겨 가는 학생이 이 반 학생의 기록을 물려받지 않는다. 마감은 고를 수 있다(기본 = 이 영상 마감). */
+   🔵 새 문서다 — 시청 기록은 영상 id 마다라, 옮겨 가는 학생이 이 반 학생의 기록을 물려받지 않는다. 마감은 고를 수 있다.
+   🔵 기본 마감 = **보내는 날 + 7일** (10-24 · 사용자 — 「보내려고 하는 날로부터 +7일이 기본」). 예전엔 원래 영상의 마감을 물려받아
+     지난주 영상을 보내면 마감이 이미 지나 있었다. 영상 등록 칸과 같은 잣대(shiftYmd(todayStr(), 7)). */
 function videoCopyPanelHTML(sel, fromClassId){
   if(!state.videoCopy) return '';      // 여는 단추는 머리 카드 단추 줄에 (videoHeroHTML)
   const cid = state.videoCopy.classId;
@@ -30578,7 +30580,7 @@ function videoCopyPanelHTML(sel, fromClassId){
         <input type="checkbox" class="vc-who" value="${s.studentId}" ${받은이.has(s.studentId) ? 'disabled' : ''}>${escHtml(s.name)}</label>`).join('')
       || '<span style="font-size:12px;color:var(--dim);">이 반에 학생이 없습니다 — 반 전체로 보냅니다.</span>'}</div>
     <div class="row" style="gap:8px;align-items:flex-end;margin-top:10px;">
-      <label style="font-size:11px;color:var(--dim);">마감일<input id="vc-due" type="date" class="fm-in" value="${escHtml(sel.dueDate || '')}"></label>
+      <label style="font-size:11px;color:var(--dim);">마감일<input id="vc-due" type="date" class="fm-in" value="${shiftYmd(todayStr(), 7)}"></label>
       <button class="btn p sm" onclick="videoCopyTo('${sel.id}')">보내기</button></div>
     ${notifyBoxHTML('vid', 'vc-notify')}`}
   </div>`;

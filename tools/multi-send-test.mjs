@@ -376,13 +376,14 @@ function 영상판(opt) {
     document: { querySelectorAll: () => [{ value: 'st07' }, { value: 'st08' }, { value: 'st07' }], getElementById: () => ({ value: '2026-10-25' }) },
     dbSetDoc: async (c, id, v) => { 저장.push(v); return true; }, showToast: m => 말.push(m), render: () => {},
     classRoster: () => [{ studentId: 'st07', name: '사아' }], escHtml: x => x,
-    notifyBoxHTML: () => '' };   /* 알림 칸(10-22) — 여기 getElementById 는 checked 가 없어 알림은 꺼진 채다 · 알림은 upload-notify-test 가 본다 */
+    notifyBoxHTML: () => '',   /* 알림 칸(10-22) — 여기 getElementById 는 checked 가 없어 알림은 꺼진 채다 · 알림은 upload-notify-test 가 본다 */
+    todayStr: () => '2026-10-24', shiftYmd: new Function(lift('shiftYmd') + NL + 'return shiftYmd;')() };   /* 기본 마감 = 보내는 날 + 7 (10-24) */
   const F = new Function(...Object.keys(곁), lift('videoCopyTo') + NL + lift('videoCopyPanelHTML') + NL + 'return { videoCopyTo, videoCopyPanelHTML };')(...Object.values(곁));
   봄('여는 단추는 머리 카드 단추 줄에 — «유튜브에서 열기» 자리(10-13) · 판이 닫혀 있으면 판은 비었다',
     [/유튜브에서 열기<\/a>/.test(lift('videoHeroHTML')), /다른 반에도 보내기/.test(lift('videoHeroHTML')), (() => { 곁.state.videoCopy = null; const r = F.videoCopyPanelHTML(원본, 'c1'); 곁.state.videoCopy = { classId: 'c2' }; return r; })()],
     [false, true, '']);
-  봄('다른 반 고르면 그 반 학생 상자가 서고 마감은 이 영상 것이 기본 · 이 반도 «(이 반)»으로 고를 수 있다 (10-23)', [/class="vc-who" value="st07"/.test(F.videoCopyPanelHTML(원본, 'c1')), /value="2026-10-20"/.test(F.videoCopyPanelHTML(원본, 'c1')),
-    /value="c1"[^>]*>A반 \(이 반\)/.test(F.videoCopyPanelHTML(원본, 'c1'))], [true, true, true]);
+  봄('다른 반 고르면 그 반 학생 상자가 서고 마감 기본은 «보내는 날 + 7일»(10-24 · 원래 영상 마감 아님) · 이 반도 «(이 반)»으로 고를 수 있다 (10-23)', [/class="vc-who" value="st07"/.test(F.videoCopyPanelHTML(원본, 'c1')), /id="vc-due"[^>]*value="2026-10-31"/.test(F.videoCopyPanelHTML(원본, 'c1')),
+    /value="2026-10-20"/.test(F.videoCopyPanelHTML(원본, 'c1')), /value="c1"[^>]*>A반 \(이 반\)/.test(F.videoCopyPanelHTML(원본, 'c1'))], [true, true, false, true]);
   {
     /* 같은 반 — 반 영상이면 그 반 학생은 이미 받았다(막힘) · 아무도 안 고르면 안 보낸다(같은 영상이 둘이 된다) */
     곁.state.videoCopy = { classId: 'c1' }; 곁.state.classHubId = 'c1';
