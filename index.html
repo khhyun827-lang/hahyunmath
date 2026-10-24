@@ -15171,8 +15171,10 @@ function problemHTML(text){
       const u = one.trim();
       if(new RegExp('^[' + CHOICE_MARKS + ']').test(u)){ 선지모음.push(u); continue; }
       선지비우기();
-      /* 글 줄 안 그림 표지는 글자처럼 작게 (2026-10-06 · 1170629 「둘러싸인 ◠ 모양 도형」 — 손으로 넣은 것뿐, 파서는 안 만든다) */
-      const 조각글 = escHtml(one).replace(/⟦그림:(https?:[^⟧]*)⟧/g, '<img class="pb-ifig" src="$1" alt="그림">') + '\n';
+      /* 글 줄 안 그림 표지는 글자처럼 작게 (2026-10-06 · 1170629 「둘러싸인 ◠ 모양 도형」 — 손으로 넣은 것뿐, 파서는 안 만든다)
+         🔵 **그림만 있는 줄은 큰 그림** (2026-10-25 · 1110929·1121128 — 맨 끝 표에 몰려 있던 [그림 1]·[그림 2] 를 제자리 줄로 옮겼다). 표 칸 그림과 같은 꼴. */
+      const 조각글 = (/^⟦그림:https?:[^⟧]*⟧$/.test(u) ? 칸그림세우기(escHtml(u))
+        : escHtml(one).replace(/⟦그림:(https?:[^⟧]*)⟧/g, '<img class="pb-ifig" src="$1" alt="그림">')) + '\n';
       앞줄 = one; 앞줄길이 = 조각글.length;
       out += 조각글;
     }

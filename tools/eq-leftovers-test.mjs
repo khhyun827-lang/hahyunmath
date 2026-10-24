@@ -33,6 +33,14 @@ const 멀쩡 = '\\sim p \\rightarrow \\circ \\left( \\sqrt{x} \\right) \\overlin
   '| (가) $g(0)=1$ |\n| (나) $g(n) = \\begin{cases} n & \\text{(}n\\text{이 홀수)} \\\\ 2n & \\text{(}n\\text{이 짝수)} \\end{cases}$ |');
 봄('세 선분 $\\OA$, $\\OB$ → 둘 다 윗줄', fixText('세 선분 $\\OA$, $\\OB$는'), '세 선분 $\\overline{OA}$, $\\overline{OB}$는');
 봄('그냥 점 $\\A$ → A', fixText('점 $\\A$를'), '점 $A$를');
+/* 배치 (2026-10-25) — p·q 붙음 · 두 칸 보기 표 · 그림 자리 */
+const 넓 = String.fromCharCode(0x2003).repeat(2), L = String.fromCharCode(10);
+봄('상자 줄의 붙은 p·q → 넓은 빈칸', fixText('| ㄱ. $p : a>0$$q : b>0$ |'), '| ㄱ. $p : a>0$' + 넓 + '$q : b>0$ |');
+봄('문장 속 붙은 p·q → 쉼표', fixText('두 조건 $p : a>0$$q : b>0$에'), '두 조건 $p : a>0$, $q : b>0$에');
+봄('두 칸 보기 표 → ㄱ·ㄴ 줄마다 p·q', fixText('| | [보기] | |' + L + '| ㄱ. $p : a$ ㄴ. $p : b$ | $q : c$ $q : d$ |'),
+  '| [보기] |' + L + '| ㄱ. $p : a$' + 넓 + '$q : c$ |' + L + '| ㄴ. $p : b$' + 넓 + '$q : d$ |');
+봄('끝 그림 표 → [그림 n] 줄 위로', fixText('[그림 $1$]과 같이' + L + '[그림 $1$]' + L + '글' + L + '[그림 $2$]' + L + '| ⟦그림:https://x/a⟧ | ⟦그림:https://x/b⟧ |'),
+  '[그림 $1$]과 같이' + L + '⟦그림:https://x/a⟧' + L + '[그림 $1$]' + L + '글' + L + '⟦그림:https://x/b⟧' + L + '[그림 $2$]');
 봄('두 번 고쳐도 같다', fixText(fixText('$simp -> q$')), fixText('$simp -> q$'));
 console.log(`\n  ${fail ? '🔴' : '✅'} ${pass} 통과 · ${fail} 실패\n`);
 process.exit(fail ? 1 : 0);

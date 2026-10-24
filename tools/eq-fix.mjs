@@ -100,12 +100,48 @@ function 수식마다(text) {
   return 조각.join('$');
 }
 
+/* ── ④ 배치 (2026-10-25 · 사용자 — 1110910 · 1110929 · 1111117 · 1121128 «이상하게 나온다») ───────────── */
+const 넓은칸 = String.fromCharCode(0x2003).repeat(2);   // em 빈칸 둘 — HTML 이 줄이지 않는다
+/* p·q 가 붙음(`$p : ab>0$$q : …`) — 상자 줄·선지는 넓은 빈칸, 문장 안은 «, » */
+function pq붙음(s) {
+  return s.split('\n').map(줄 => 줄.replace(/\$\$(?=\s*q\s*:)/g, 표줄(줄) || /^\s*[①-⑤]/.test(줄) ? '$' + 넓은칸 + '$' : '$, $')).join('\n');
+}
+/* 두 칸 보기 표: `| | [보기] | |` + `| ㄱ. p… ㄴ. p… | q… q… |` → 상자 `| [보기] |` + 줄마다 «ㄱ. p…  q…» (1110910)
+   그림 보기(`| ㄱ.⟦그림⟧ㄴ.⟦그림⟧ |` 한 칸)는 머리줄만 한 칸으로 (K2-07-E-0697 등) */
+function 두칸보기(s) {
+  const 줄 = s.split('\n');
+  for (let i = 0; i + 1 < 줄.length; i++) {
+    if (!/^\s*\|\s*\|\s*\[보기\]\s*\|\s*\|\s*$/.test(줄[i])) continue;
+    줄[i] = '| [보기] |';
+    const 칸 = 표줄(줄[i + 1]) ? 칸들(줄[i + 1]) : [];
+    if (칸.length !== 2) continue;
+    const 왼 = 칸[0].trim().split(/\s+(?=[ㄱ-ㅎ]\.\s)/), 오른 = 칸[1].trim().split(/\s+(?=\$\s*q\s*:)/);
+    if (왼.length < 2 || 왼.length !== 오른.length) continue;   // 짝이 안 맞으면 손대지 않는다
+    줄.splice(i + 1, 1, ...왼.map((x, j) => '| ' + x.trim() + 넓은칸 + 오른[j].trim() + ' |'));
+  }
+  return 줄.join('\n');
+}
+/* 그림 자리: 맨 끝 그림 표(`| ⟦그림:…⟧ | ⟦그림:…⟧ |`)의 그림을 «[그림 n]» 줄 바로 위로 (1110929 · 1121128) */
+function 그림자리(s) {
+  const 줄 = s.split('\n');
+  const ti = 줄.findIndex(l => 표줄(l) && 칸들(l).every(c => /^\s*⟦그림:[^⟧]*⟧\s*$/.test(c)));
+  if (ti < 0) return s;
+  const 그림들 = 칸들(줄[ti]).map(c => c.trim());
+  const 이름줄 = 줄.map((l, i) => /^\s*\[그림\s*\$?\d+\$?\]\s*$/.test(l) ? i : -1).filter(i => i >= 0 && i !== ti);
+  if (이름줄.length !== 그림들.length) return s;
+  이름줄.forEach((li, j) => { 줄[li] = 그림들[j] + '\n' + 줄[li].trim(); });
+  줄.splice(ti, 1);
+  return 줄.join('\n').replace(/\n{3,}$/, '\n');
+}
+
 export function fixText(t) {
   if (typeof t !== 'string' || !t) return t;
   let s = t;
   for (const [re, 새] of 손고침) s = s.replace(re, 새);
   s = 수식마다(s);          // 먼저 — 빈 행렬이 걷혀야 빈 중괄호 표시가 한 꼴이 된다
   s = 구간함수(s);
+  s = 두칸보기(pq붙음(s));
+  s = 그림자리(s);
   return s;
 }
 const 칸이름 = col => col === 'items' ? ['content'] : ['content', 'solution'];
