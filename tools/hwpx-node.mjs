@@ -29,7 +29,7 @@ const ROOT = path.resolve(HERE, '..');
 // node 는 이렇게 읽는다 — 빌드 단계 없이 한 파일을 둘이 같이 쓰는 값이다.
 const RULE_NAMES = [
   'HP_NS', 'HWP_CORE_NS', 'HWP_CODE_RE', 'HWP_FP_RE', 'HWP_SHAPE_CODE_RE', 'HWP_WATERMARK_PATTERNS',
-  'convertHwpEq', 'cleanHwpPlainText', 'hwpWalkParagraphs',
+  'convertHwpEq', 'hwpEqLeftovers', 'cleanHwpPlainText', 'hwpWalkParagraphs',
   'stripScoreMarks', 'fixBareSqrt', 'stripTrailingTypeTitle',
   'hwpEndnoteParts', 'hwpEndnoteText', 'hwpCellToBlock', 'hwpParseBlocks', 'hwpItemFpText', 'hwpItemVerdicts', 'hwpVerdictBlockers',
   'hwpxMarkDecorPics', 'hwpxProblemsFromDocs', 'hwpxAnswerKeyFromDocs', '수식낱말펴기', 'hwpxExamKeyFromText', 'hwpxLooksExamKey', 'hwpxSourceBadges', 'hwpxMakeSourceCodes', 'hwpxParseSourceTag', 'hwpxGradeOfMonth', 'hwpxRepairEqText', 'hwpxBalanceBraces', 'hwpxBalanceLeftRight',

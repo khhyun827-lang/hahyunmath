@@ -410,7 +410,40 @@ function convertHwpEq(script){
   s = replaceBalancedKeyword(s, 'bar', inner => '\\overline{' + inner + '}');
   s = replaceBalancedKeyword(s, 'angle', inner => '\\angle ' + inner);
   s = hwpxBalanceLeftRight(s);
+  s = hwpEqLeftovers(s);
   return s ? '$' + s + '$' : '';
+}
+/* 🔵 **변환표에서 빠졌던 한글 수식 낱말** (2026-10-24 · 사용자 — 「sim 인식이 안 된 것 같다 · CIRC 합성함수 기호 ·
+     같은 증상이 굉장히 많을 테니 일괄적으로」). 창고 3,064문서를 KaTeX 로 그려 보고 남은 낱말을 세어 찾았다 —
+     sim ≈120 · CIRC/circ ≈270 · -> 57 · le 7 · 역슬래시 없는 sqrt·overline·pi·alpha·beta · sup·sub·over·bar · 빈 행렬.
+   변환이 끝난 LaTeX 위에서 한 번 더 훑는다. 창고에 이미 들어간 글도 같은 함수로 고친다(다음 차례 — 아직 안 씀).
+   ⚠ 앞이 역슬래시·영문자면 비켜선다(이미 명령이거나 남의 낱말). lookbehind 대신 앞 글자를 잡아 되돌린다(옛 사파리). */
+function hwpEqLeftovers(s){
+  /* ⚠ `\text{similar}` 같은 글자 칸 안은 건드리지 않는다 — AI 변형은 제대로 된 LaTeX 라 글자 칸이 있다(홀수 조각이 글자 칸). */
+  return String(s || '').split(/(\\(?:text|mathrm|operatorname|textbf|mbox)\s*\{[^{}]*\})/)
+    .map((조각, i) => i % 2 ? 조각 : hwpEqLeftoversBare(조각)).join('');
+}
+function hwpEqLeftoversBare(s){
+  const 묶음벗기기 = x => x.replace(/^\{([^{}]*)\}$/, '$1');
+  const 그리스 = /^(alpha|beta|gamma|delta|theta|omega|pi)$/;
+  return String(s || '')
+    .replace(/(^|[^A-Za-z])\s*To\s*\d{5}(?!\d)\s*/g, '$1 ')   /* 숫자 뒤에 붙어 온다(`9To03033`) — \b 로는 못 잡는다 */
+    .replace(/\\begin\{matrix\}(?:\s|\\\\|\{\}|[_^]\{\})*\\end\{matrix\}/g, '').replace(/pile\s*\{(?:\s|\\\\)*\}/g, '')   /* 빈 행렬 — `{}_{} \\_{}` 처럼 빈 첨자만 든 것도 */
+    .replace(/->/g, '\\to ')
+    .replace(/(^|[^\\A-Za-z])(?:sim|SIM|Sim)/g, '$1\\sim ')
+    .replace(/(^|[^\\A-Za-z])(?:circ|CIRC|Circ)(?!le)/g, '$1\\circ ')
+    .replace(/(^|[^\\A-Za-z])le(?![A-Za-z])/g, '$1\\le ')
+    .replace(/\\(leq|geq)(?!slant)(?=[A-Za-z])/g, '\\$1 ').replace(/\\neq(?=[A-Za-z])/g, '\\neq ')
+    .replace(/(^|[^\\A-Za-z])bar\s*\\?([A-Za-z]+)/g, (m, p, w) => p + (그리스.test(w) ? '\\bar{\\' + w + '}' : '\\overline{' + w + '}'))
+    .replace(/(^|[^\\A-Za-z])(alpha|beta|gamma|delta|theta|omega|pi)(?![a-z])/g, '$1\\$2 ')
+    .replace(/(^|[^\\A-Za-z])overline/g, '$1\\overline')
+    .replace(/(^|[^\\A-Za-z])sqrt\s*\{/g, '$1\\sqrt{')
+    .replace(/(^|[^\\A-Za-z])sqrt\s*(-?)\s*([0-9A-Za-z]+)/g, '$1\\sqrt{$2$3}')
+    .replace(/(^|[^\\A-Za-z])sup\s*(\{[^{}]*\}|[A-Za-z0-9]+)/g, (m, p, a) => p + '^{' + 묶음벗기기(a) + '}')
+    .replace(/(^|[^\\A-Za-z])sub(?!set)\s*(\{[^{}]*\}|[A-Za-z0-9]+)/g, (m, p, a) => p + '_{' + 묶음벗기기(a) + '}')
+    /* 분수 `A over B` — 묶음은 한 겹 안의 묶음까지(`{y^{2}} over 9`) */
+    .replace(/(\{(?:[^{}]|\{[^{}]*\})*\}|\\[A-Za-z]+|[A-Za-z0-9]+)\s*over(?![a-z])\s*(\{(?:[^{}]|\{[^{}]*\})*\}|\\[A-Za-z]+|[A-Za-z0-9]+)/g,
+      (m, a, b) => '\\frac{' + 묶음벗기기(a) + '}{' + 묶음벗기기(b) + '}');
 }
 // 수식 개체가 아니라 그냥 평문(<hp:t>)으로 "barAD", "angleBAD"처럼 붙여 쓴 경우를 정리한다.
 function cleanHwpPlainText(t){

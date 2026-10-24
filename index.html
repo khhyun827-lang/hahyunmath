@@ -2432,6 +2432,8 @@
 .pb-tbl.box{width:100%;table-layout:fixed;border:1px solid var(--line);border-radius:var(--r-sm);}
 .pb-tbl.box td{border:0;}
 .pb-tbl.box tr + tr td{padding-top:0;}
+/* 한 줄에 «ㄱ. … ㄴ. …» 둘 — 교재는 탭으로 칸을 맞춘다. 항목마다 반 폭(좁으면 줄바꿈) (2026-10-24 · K2-07-E-0711) */
+.pb-bi{display:inline-block;min-width:48%;padding-right:1em;box-sizing:border-box;vertical-align:top;}
 /* 열이 둘 이상인 진짜 격자만 칸을 그린다 */
 .pb-tbl.grid td{border:1px solid var(--line);}
 
@@ -6243,7 +6245,7 @@ html.it-fly .lp .l-hero .l-logo{opacity:1 !important;transform:none !important;
      **캐시에 있는 옛 파서를 꺼내 쓴다.** 그러면 교재를 다시 올려도 옛 글이 그대로 담기고,
      화면만 보고서는 «고쳤는데 왜 안 되지»가 된다 — 파서가 바뀐 것을 아무 데서도 못 본다. -->
 <!-- 2026-09-10에 올렸다 — 창고 대조 판정과 «개체 설명문에서 코드 읽기»가 들어갔다. -->
-<script src="hwpx.js?v=2026-10-21a"></script>
+<script src="hwpx.js?v=2026-10-25a"></script>
 <script src="hwpclip.js?v=2026-10-15c"></script>
 <!-- 출석 도장 게임(셸·똥피하기·달리기·점프). 연습 페이지 game.html 도 같은 파일을 쓴다 -->
 <!-- ⚠ ?v= 를 붙이는 까닭 — 브라우저가 game-core.js 를 캐시해서, 올려도 학생 화면에는
@@ -15065,6 +15067,16 @@ function 칸나누기(s){
   }
   return out;
 }
+/* 🔵 **상자 한 칸에 «ㄱ. … ㄴ. …» 가 둘 이상이면 항목마다 칸을 준다** (2026-10-24 · 사용자 — K2-07-E-0711
+     「표 안에서 ㄱ 과 ㄴ 이 떨어져 있어야 하는데 너무 붙어 있고」). 교재는 탭으로 띄웠는데 창고 글에는 빈칸 하나만 남았다
+     (창고 19줄 · 11문항). 반 폭씩 세우면 ㄱ·ㄷ 과 ㄴ·ㄹ 이 세로로 맞는다.
+   ⚠ 수식 안을 가르지 않는다 — 가르는 자리는 «빈칸 + ㄱ~ㅎ + 마침표 + 빈칸»뿐(수식 안엔 한글 자모가 안 온다).
+   ⚠ lookbehind 금지(옛 사파리) — lookahead 로만 가른다. */
+function 보기항목(c){
+  const 쪽 = String(c).split(/\s+(?=[ㄱ-ㅎ]\.\s)/);
+  if(쪽.length < 2 || !/^\s*[ㄱ-ㅎ]\.\s/.test(쪽[0])) return 빈칸세우기(escHtml(c));
+  return 쪽.map(x => '<span class="pb-bi">' + 빈칸세우기(escHtml(x)) + '</span>').join('');
+}
 function problemHTML(text){
   const src = String(text == null ? '' : text);
   const lines = src.split('\n');
@@ -15090,7 +15102,7 @@ function problemHTML(text){
          「조건박스 안에 (가), (나)에 해당하는 부분이 글들이랑 붙어있어서 보기 어려움」).
          원본 교재는 네모를 쳐서 보인다. 글에 묻히면 «무엇을 묻는지»가 안 보인다.
          ⚠ 상자(box) 안에서만 한다 — 진짜 표의 칸에는 다른 뜻으로 들어 있을 수 있다. */
-      '<tr>' + cells.map(c => '<td>' + (kind === 'box' ? 빈칸세우기(escHtml(c)) : 칸그림세우기(escHtml(c))) + '</td>').join('') + '</tr>').join('') + '</tbody></table>';
+      '<tr>' + cells.map(c => '<td>' + (kind === 'box' ? 보기항목(c) : 칸그림세우기(escHtml(c))) + '</td>').join('') + '</tr>').join('') + '</tbody></table>';
     row = [];
   };
   /* 🔵 **선지는 «줄글»이 아니라 «격자»다** (2026-09-04 · 사용자 요청 —

@@ -22,7 +22,7 @@ const lift = (n) => { const at = html.indexOf('function ' + n + '('); let d = 0;
   for (let j = html.indexOf('{', at); j < html.length; j++) {
     if (html[j] === '{') d++; else if (html[j] === '}') { d--; if (!d) return html.slice(at, j + 1); } } };
 const { problemHTML } = new Function('escHtml', 'CHOICE_MARKS',
-  lift('spaceChoices') + String.fromCharCode(10) + lift('칸나누기') + String.fromCharCode(10) + lift('빈칸세우기') + String.fromCharCode(10) + lift('problemHTML') + String.fromCharCode(10) + 'return { problemHTML };')(
+  lift('spaceChoices') + String.fromCharCode(10) + lift('칸나누기') + String.fromCharCode(10) + lift('빈칸세우기') + String.fromCharCode(10) + lift('보기항목') + String.fromCharCode(10) + lift('problemHTML') + String.fromCharCode(10) + 'return { problemHTML };')(
   (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'), '①②③④⑤');
 const B = String.fromCharCode(92);
 let pass = 0, fail = 0;
@@ -288,6 +288,11 @@ console.log('');
   봄('🔴 prime 이 겹치면 한 덩이 — 위첨자 둘은 KaTeX 가 거절한다', convertHwpEq('rmP`primeprimeprime'), '$P^{' + B + 'prime' + B + 'prime' + B + 'prime}$');
   봄('prime 하나는 그대로', convertHwpEq('OprimeAprimeBprime'), '$O^{' + B + 'prime}A^{' + B + 'prime}B^{' + B + 'prime}$');
 }
+
+/* [보기] 한 칸에 «ㄱ. … ㄴ. …» 둘 → 항목마다 반 폭 (2026-10-24 · K2-07-E-0711) — 한 개면 그대로 */
+{ const h = problemHTML('| [보기] |'+String.fromCharCode(10)+'| ㄱ. $y=2x$ ㄴ. $y=x+1$ |'+String.fromCharCode(10)+'| ㄷ. $y=3$ |');
+  봄('보기 한 줄에 둘이면 항목마다 칸', (h.match(/class="pb-bi"/g) || []).length, 2);
+  든가('  ㄱ 항목에 그 수식이 통째로', h, '<span class="pb-bi">ㄱ. $y=2x$</span>'); }
 
 console.log('');
 console.log('  ' + (fail ? '🔴' : '✅') + ' ' + pass + ' 통과 · ' + fail + ' 실패');
