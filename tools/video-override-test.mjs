@@ -74,6 +74,33 @@ try{
   봄('🔴 학생 화면에도 · 강사 요약에도 없다', [빼기.학생에게, 빼기.요약], [false, false]);
   const 복귀 = await page.evaluate(async () => { await videoExclude('v1', 's9', true); return DATA.videos.find(x => x.id === 'v1').excludeIds; });
   봄('되돌리면 다시 받는다', 복귀, []);
+
+  /* 10-24 사용자 — 「1번 빼기 붙여줘」: 학생을 골라 보낸 영상(개인 배정)에도 «빼기». 학생마다 문서라 그 문서의 excludeIds 에 자기 id. */
+  console.log('\n«빼기» — 개인 배정 묶음(s4·s9 에게 같은 영상)');
+  const 개인 = await page.evaluate(async () => {
+    const 꼴 = { title: '결석 보충', url: 'https://youtu.be/pppp', classId: 'c1', dueDate: '2026-11-01' };
+    DATA.videos.unshift(Object.assign({ id: 'vp_s4', studentId: 's4' }, 꼴), Object.assign({ id: 'vp_s9', studentId: 's9' }, 꼴));
+    videoOpen('vp_s4');
+    const 줄 = () => [...document.querySelectorAll('.vd-row')].find(e => /결석 보충/.test(e.textContent));
+    const 빼기단추 = [...document.querySelectorAll('.vd-sv')].filter(e => /onclick="videoExclude\('vp_s/.test(e.innerHTML) && /빼기/.test(e.textContent)).length;
+    const 전줄 = 줄().querySelector('.badge.late').textContent;
+    await videoExclude('vp_s9', 's9');
+    const 후줄 = 줄().querySelector('.badge.late').textContent;
+    const 뺀칸 = [...document.querySelectorAll('.vd-grp')].some(e => /이 영상에서 뺀 학생/.test(e.textContent) && /videoExclude\('vp_s9','s9',true\)/.test(e.innerHTML));
+    const 받은수 = [...document.querySelectorAll('.vd-kpis .kpi')].find(e => /받은 학생/.test(e.textContent)).querySelector('.v').textContent;
+    const 지우기묶음 = /vp_s4,vp_s9|vp_s9,vp_s4/.test(document.querySelector('.vd-hwd').innerHTML);   /* 마감·지우기는 뺀 것까지 묶음 전체 */
+    state.currentUser = { type: 'student', studentId: 's9', name: '학생' }; state.view = 'student';
+    const 학생에게 = stuCtx().videos.some(x => x.id === 'vp_s9');
+    state.currentUser = { type: 'teacher', name: '김하현T' }; state.view = 'teacher';
+    await videoExclude('vp_s9', 's9', true);
+    return { 빼기단추, 전줄, 후줄, 뺀칸, 받은수, 지우기묶음, 학생에게, 복귀: DATA.videos.find(x => x.id === 'vp_s9').excludeIds, 다시줄: 줄().querySelector('.badge.late').textContent };
+  });
+  봄('개인 배정 줄마다 «빼기» 단추(둘 다 0%)', 개인.빼기단추, 2);
+  봄('목록 줄 «개인 2명» → 빼면 «개인»(한 명)', [개인.전줄, 개인.후줄], ['개인 2명', '개인']);
+  봄('드로어에 «이 영상에서 뺀 학생» + 되돌리기 · 받은 학생 1', [개인.뺀칸, 개인.받은수], [true, '1']);
+  봄('마감 바꾸기·지우기는 뺀 학생 것까지 묶음 전체', 개인.지우기묶음, true);
+  봄('🔴 뺀 학생 화면에는 없다', 개인.학생에게, false);
+  봄('되돌리면 다시 «개인 2명»', [개인.복귀, 개인.다시줄], [[], '개인 2명']);
 } finally {
   await 브라우저.close();
   서버.kill();

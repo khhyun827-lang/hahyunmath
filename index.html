@@ -30738,22 +30738,24 @@ function chubVideoHTML(classId){
      여럿이면 «몇 명이 끝냈나»가 그 줄의 수다 — 평균 하나로는 셋 중 둘이 안 본 것을 못 본다. */
   const personalRow = g => {
     const v = g[0];
-    const ps = g.map(x => progOf(x, x.studentId));
+    /* 뺀 학생(10-24 · 개인 배정에도 «빼기»)은 안 센다 — 줄은 남긴다(드로어에서 되돌리기). 모두 뺐으면 «모두 뺌». */
+    const 남은 = g.filter(x => !videoExcluded(x, x.studentId));
+    const ps = 남은.map(x => progOf(x, x.studentId));
     const 완주 = ps.filter(p=>p.done).length;
-    const p = { pct: Math.round(ps.reduce((a,x)=>a+x.pct,0) / ps.length),
-                done: 완주 === g.length, seen: ps.some(x=>x.seen) };
-    const over = v.dueDate && v.dueDate < todayStr() && !p.done;
-    const 여럿 = g.length > 1;
+    const p = { pct: ps.length ? Math.round(ps.reduce((a,x)=>a+x.pct,0) / ps.length) : 0,
+                done: ps.length > 0 && 완주 === 남은.length, seen: ps.some(x=>x.seen) };
+    const over = v.dueDate && v.dueDate < todayStr() && !p.done && ps.length > 0;
+    const 여럿 = 남은.length > 1;
     return `<div class="vd-row ${g.some(x=>x.id===열린것)?'on':''}" onclick="videoOpen('${v.id}')">
       ${썸네일(v)}
       <div class="b">
-        <div class="t">${escHtml(v.title)}${딱지들(v)} <span class="badge late" style="font-weight:600;">개인${여럿 ? ' ' + g.length + '명' : ''}</span></div>
-        <div class="m"><b style="color:var(--sub);">${escHtml(이름들(g))}</b>${
+        <div class="t">${escHtml(v.title)}${딱지들(v)} <span class="badge late" style="font-weight:600;">개인${여럿 ? ' ' + 남은.length + '명' : ''}</span></div>
+        <div class="m"><b style="color:var(--sub);">${escHtml(남은.length ? 이름들(남은) : '모두 뺌')}</b>${
           v.dueDate ? ' · 마감 <span class="mono">'+escHtml(v.dueDate.slice(5))+'</span>' : ' · 마감 없음'} ${디데이(v)}</div>
       </div>
       <div class="p"><b style="color:${p.done?'var(--ok)':over?'var(--no)':'inherit'}">${
-        여럿 ? `완주 ${완주}/${g.length}` : p.done ? '완주' : p.seen ? p.pct+'%' : '미시청'}</b><span class="bar"><i style="width:${
-        여럿 ? Math.round(완주 / g.length * 100) : p.pct}%"></i></span></div>
+        !남은.length ? '—' : 여럿 ? `완주 ${완주}/${남은.length}` : p.done ? '완주' : p.seen ? p.pct+'%' : '미시청'}</b><span class="bar"><i style="width:${
+        여럿 ? Math.round(완주 / 남은.length * 100) : p.pct}%"></i></span></div>
     </div>`;
   };
   /* 🔵 **목록이 이 화면의 전부다** (2026-09-23 · V-2b · 사용자 — 「영상이 쌓일수록 아래로만 길게 스크롤」).
@@ -30820,7 +30822,7 @@ function videoDrawerHTML(){
        줄마다 상태 딱지가 필요 없고, 좁은 드로어에서 막대가 제 폭을 갖는다. 마감이 지났으면 안 끝낸 묶음
        머리에 «마감 지남»이 붙는다(예전의 「미시청 · 마감 지남」 딱지가 여기로 왔다).
      ⚠ 줄은 «이름 · 막대(완주선) · %»뿐이다. 이름 앞 아바타는 두지 않는다 (2026-09-16 · 형제 탭과 같다). */
-  /* 줄 끝 단추 (10-17) — 안 끝낸 학생: «본 걸로»·«빼기»(반 영상만) · 선생님이 처리한 학생: «되돌리기» */
+  /* 줄 끝 단추 (10-17) — 안 끝낸 학생: «본 걸로»·«빼기»(10-24 부터 개인 배정도) · 선생님이 처리한 학생: «되돌리기» */
   const 줄단추 = (vid, sid, p, 뺄수) => !sid ? '' : p.manual
     ? ` <span class="badge">선생님 처리</span> <button class="btn q sm" onclick="videoMarkDone('${vid}','${sid}',true)">되돌리기</button>`
     : p.done ? '' : ` <button class="btn q sm" onclick="videoMarkDone('${vid}','${sid}')" title="안 봐도 되는 학생 — 본 걸로 칩니다">본 걸로</button>`
@@ -30861,11 +30863,19 @@ function videoDrawerHTML(){
 
   /* 개인 배정 상세 — 이탈 분포는 몇 사람에겐 뜻이 없다. 받은 학생들을 한 줄씩.
      🔵 **묶음이면 그 줄이 전부 선다** (2026-09-19) — 목록이 한 줄로 묶였으니 상세도 그 묶음을 본다. */
-  const 받은묶음 = sel.studentId ? 묶음of(sel) : [];
+  /* 🔵 **개인 배정에도 «빼기»** (10-24 · 사용자) — 반 영상과 같은 잣대: 그 학생 문서의 `excludeIds` 에 자기 id.
+       학생 화면·벨·시청률·리포트는 이미 videoExcluded 로 거른다. 문서는 안 지운다 — 되돌릴 수 있게.
+     ⚠ 묶음은 «뺀 것까지» 그대로(온묶음) — 마감 바꾸기·지우기는 묶음 전체에 가야 한다. 세는 것만 받은묶음. */
+  const 온묶음 = sel.studentId ? 묶음of(sel) : [];
+  const 받은묶음 = 온묶음.filter(v => !videoExcluded(v, v.studentId));
+  const 뺀묶음 = 온묶음.filter(v => videoExcluded(v, v.studentId));
   const 받은줄들 = 받은묶음.map(v => ({ v, p: progOf(v, v.studentId), st: DATA.students.find(x=>x.studentId===v.studentId) }));
   const one = sel.studentId ? `<div class="t-sec" style="margin-top:4px;">받은 학생</div>
-    ${묶음판(받은줄들.map(({v,p,st}) => ({ name: nameOf(v.studentId), p, vid: v.id, sid: v.studentId,
-        extra: !st ? ' <span class="badge gone">명단에 없음</span>' : '' })), 지남)}` : '';
+    ${받은줄들.length ? 묶음판(받은줄들.map(({v,p,st}) => ({ name: nameOf(v.studentId), p, vid: v.id, sid: v.studentId, 뺄수: true,
+        extra: !st ? ' <span class="badge gone">명단에 없음</span>' : '' })), 지남) : '<div style="font-size:12.5px;color:var(--dim);">모두 뺐습니다.</div>'}
+    ${뺀묶음.length ? `<div class="vd-grp"><div class="t-sec">이 영상에서 뺀 학생 <span class="mono">${뺀묶음.length}</span></div>
+        ${뺀묶음.map(v => `<div class="vd-sv"><div class="who"><b>${escHtml(nameOf(v.studentId))}</b></div><span class="track"></span>
+          <span class="act"><button class="btn q sm" onclick="videoExclude('${v.id}','${v.studentId}',true)">되돌리기</button></span></div>`).join('')}</div>` : ''}` : '';
 
   /* 숫자 띠 — 반 전체면 완주·시청 중·미시청·평균(재원은 머리에), 개인 배정이면 받은·완주·미시청. */
   const 받은완주 = 받은줄들.filter(r=>r.p.done).length, 받은미시청 = 받은줄들.filter(r=>!r.p.seen).length;
@@ -30877,19 +30887,19 @@ function videoDrawerHTML(){
 
   /* ⚠ 머리말의 «마감 바꾸기·지우기»는 **묶음 전체**에 간다 — 한 줄로 보이던 것이라서다.
      그래서 id 를 쉼표로 이어 넘긴다(`setVideoDue`·`deleteVideo` 가 그 꼴을 받는다). */
-  const 묶음ids = 받은묶음.length > 1 ? 받은묶음.map(v=>v.id).join(',') : '';
+  const 묶음ids = 온묶음.length > 1 ? 온묶음.map(v=>v.id).join(',') : '';
   const 손댈것 = 묶음ids || sel.id;
   /* 미시청 알림 (N-2) — 단추는 머리 카드의 단추 줄, 판은 머리 카드 바로 아래. */
   const 알림대상 = sel.studentId ? roster.filter(s => 받은묶음.some(v => v.studentId === s.studentId)) : roster;
   /* 이전·다음 — 목록 차례를 탄다. 드로어가 목록을 덮고 있으니 닫지 않고도 옆 영상으로 간다. */
-  const at = 차례.indexOf(받은묶음.length ? 받은묶음[0].id : sel.id);
+  const at = 차례.indexOf(온묶음.length ? 온묶음[0].id : sel.id);
   const 앞 = at > 0 ? 차례[at-1] : null, 뒤 = at >= 0 && at < 차례.length-1 ? 차례[at+1] : null;
   const d = stuDday(sel.dueDate);
   return `<div class="hwd-back" onclick="videoClose()"></div>
     <aside class="hwd wide vd-hwd">
       <div class="hwd-h" style="position:relative;">
         <div class="t">${escHtml(sel.title)}</div>
-        <div class="m">${sel.studentId ? '개인 배정 · ' + escHtml(이름들(받은묶음)) : escHtml(sel.unit || '단원 미지정') + ' · 재원 ' + roster.length + '명'}
+        <div class="m">${sel.studentId ? '개인 배정 · ' + escHtml(받은묶음.length ? 이름들(받은묶음) : '모두 뺌') : escHtml(sel.unit || '단원 미지정') + ' · 재원 ' + roster.length + '명'}
           <s>·</s>${sel.dueDate ? '마감 <span class="mono">' + escHtml(sel.dueDate) + '</span>' : '마감 없음'}${
           d ? ` <span class="badge ${d.tone}">${d.label}</span>` : ''}</div>
         <button class="x" onclick="videoClose()" title="닫기 (Esc)">×</button>
