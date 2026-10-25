@@ -673,7 +673,13 @@
     out.push('<path d="M' + n(ox) + ' ' + n(axT) + 'l-5 9h10z" fill="currentColor" stroke="none"/>');
     if (axis.xLabel !== null) lab('axis:x', axR - 4, oy - 12, axis.xLabel || 'x', 'start', null, true);
     if (axis.yLabel !== null) lab('axis:y', ox + 10, axT - 2, axis.yLabel || 'y', 'start', null, true);
-    if (axis.origin !== null) lab('axis:origin', ox - 8, oy + 20, axis.origin || 'O', 'end', null, true);
+    /* 🔵 원점에 «O» 라는 점이 따로 있으면 축의 O 는 안 찍는다 (2026-10-25 · 변형 그림 재검토 — 의심 16개 중 9개가 «O 두 번 겹침») */
+    /* ⚠ 그 점의 이름표를 숨겼으면(lbl:point:i · point:i) 축의 O 를 남긴다 — 안 그러면 O 가 하나도 없다(K2-01-E-0069-N01) */
+    var 원점점 = (scene.points || []).some(function (p, i) {
+      return p && Math.abs(+p.x) < 1e-9 && Math.abs(+p.y) < 1e-9 && String(p.label || '').trim() === String(axis.origin || 'O')
+        && !hidden('lbl:point:' + i) && !hidden('point:' + i);
+    });
+    if (axis.origin !== null && !원점점) lab('axis:origin', ox - 8, oy + 20, axis.origin || 'O', 'end', null, true);
     }
 
     /* 눈금 — 숫자는 «값»이라 글자를 못 고친다 (editable:false)

@@ -128,6 +128,15 @@ console.log(NL + '③ 곡선이 있어도 «그려진 곡선»까지만' + NL);
   봄('   원·틀·이름표는 그대로', [(없음.match(/<circle/g) || []).length, />U</.test(없음), /<text[^>]*>O</.test(없음)], [2, true, false]);
 }
 
+/* 원점 O 는 한 번만 (2026-10-25 · 변형 그림 재검토 — «O 두 번 겹침» 9개) — 원점에 O 점이 있으면 축의 O 는 안 찍고, 그 점 이름표를 숨겼으면 축의 O 를 남긴다 */
+{
+  const O수 = sc => (F.renderScene(sc).match(/>O<\/tspan>/g) || []).length;
+  const 바탕 = { xTicks: [2], yTicks: [2], axis: { xLabel: 'x', yLabel: 'y', origin: 'O' } };
+  봄('원점에 O 점이 없으면 축의 O 하나', O수({ ...바탕, points: [{ x: 2, y: 2, label: 'A' }] }), 1);
+  봄('원점에 O 점이 있어도 O 는 하나', O수({ ...바탕, points: [{ x: 0, y: 0, label: 'O' }, { x: 2, y: 2, label: 'A' }] }), 1);
+  봄('그 점 이름표를 숨겼으면 축의 O 가 남는다', O수({ ...바탕, points: [{ x: 0, y: 0, label: 'O' }], hidden: { 'lbl:point:0': true } }), 1);
+}
+
 const out = path.join(os.tmpdir(), 'figure-axis-sample.svg');   // 저장소 밖에 떨군다
 try { fs.writeFileSync(out, svg); console.log(NL + '보기 → ' + out); } catch (e) {}
 console.log(NL + (fail ? `🔴 ${fail}개 실패 · ${pass + fail}개` : `✓ 전부 통과 · ${pass}개`));
