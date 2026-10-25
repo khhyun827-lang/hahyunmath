@@ -40,6 +40,21 @@ else {
 const 데코 = rules.hwpxMarkDecorPics([{ content: '| ⟦그림:x⟧ |\n본문 | ⟦그림:y⟧ |', pics: ['y'] }])[0].content;
 봄('제 그림이 아닌 표지는 지운다(딱지만 든 줄은 줄째)', 데코 === '\n본문 | ⟦그림:y⟧ |', JSON.stringify(데코));
 
+/* 2026-10-25 — 드문 출처 딱지(DW · 단원에 1~4번)가 «다섯 번» 잣대를 못 넘어 문제 그림으로 붙던 것 (3090428-D01 외 14) */
+{
+  const 하나뿐 = () => [{ content: '본문', pics: ['dw', 'fig'] }, { content: '본문2', pics: [] }];
+  const SHA = { dw: 'ba6e591c3e08ac6725ef1b7e6d9e33b5', fig: '0000' };
+  const 딱지로 = rules.hwpxMarkDecorPics(하나뿐(), (r) => r, (r) => SHA[r])[0];
+  봄('🔴 DW 딱지는 한 번만 나와도 장식 — 진짜 그림은 남는다', JSON.stringify([딱지로.pics, 딱지로.decorPics]) === '[["fig"],["dw"]]', JSON.stringify(딱지로));
+  const 옛 = rules.hwpxMarkDecorPics(하나뿐(), (r) => r)[0];
+  봄('딱지 열쇠를 안 주면 예전처럼 횟수로만', JSON.stringify(옛.pics) === '["dw","fig"]', JSON.stringify(옛.pics));
+  const 칠 = 파일(['주기나', 'hwpx2', '코드'], '[5.이차방정식]');
+  if (칠) {
+    const q = problemsFromHwpx(칠, rules).problems.find((x) => x.itemCode === '1200608-D01');
+    봄('실물 — 1200608-D01 에 그림이 안 남는다(딱지뿐이던 문항)', q && q.pics.length === 0 && q.decorPics.length >= 1, JSON.stringify(q && [q.pics, q.decorPics]));
+  }
+}
+
 /* 2026-10-06 — 그림 든 표(한 줄 한 칸 「[그림 1]/[그림 2]」 · 글 없는 두 칸)를 상자로 펴서 첫 장만 붙던 것 */
 const 다항 = 파일(['주기나', 'hwpx2', '코드'], '[1.다항식의연산]');
 if (다항) {

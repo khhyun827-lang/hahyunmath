@@ -1052,9 +1052,13 @@ function hwpParseBlocks(topParas, tablesAsProblems){
 
    `keyOf(ref)` 는 «그 그림의 내용 열쇠»를 돌려준다 — node 는 md5, 브라우저는 길이+표본 해시.
    안 주면 참조 이름으로 센다(옛 동작).
-   ⚠ 지우지 않고 `decorPics` 로 남긴다 — 「딱지가 왜 없냐」를 나중에 되짚을 수 있어야 한다. */
-function hwpxMarkDecorPics(problems, keyOf){
+   ⚠ 지우지 않고 `decorPics` 로 남긴다 — 「딱지가 왜 없냐」를 나중에 되짚을 수 있어야 한다.
+   🔴 **출처 딱지(OR·NC·UP·DW)는 몇 번 나오든 장식이다** (2026-10-25 · 사용자 — 3090428-D01 에 「주기나 양식그림」).
+     DW 는 단원마다 1~4번뿐이라 «다섯 번» 잣대를 못 넘어, 주기나 하향 문항 15개에 DW 딱지가 «문제 그림»으로 붙어 학생에게 나갔다.
+     `딱지of(ref)` = 그 그림의 SHA-256 앞 32자 — `딱지해시` 와 같은 열쇠(브라우저 parseHwpxToProblems · node hwpx-node 가 준다). */
+function hwpxMarkDecorPics(problems, keyOf, 딱지of){
   const key = typeof keyOf === 'function' ? keyOf : (ref => ref);
+  const 딱지 = ref => typeof 딱지of === 'function' && !!딱지해시[딱지of(ref)];
   const use = {};
   for(const p of problems){
     const seen = new Set();
@@ -1063,8 +1067,9 @@ function hwpxMarkDecorPics(problems, keyOf){
   const DECOR_MIN = 5;   // 같은 그림이 다섯 문항 넘게 나오면 장식이다
   for(const p of problems){
     const pics = p.pics || [];
-    p.decorPics = pics.filter(ref => use[key(ref)] >= DECOR_MIN);
-    p.pics      = pics.filter(ref => use[key(ref)] <  DECOR_MIN);
+    const 장식 = ref => use[key(ref)] >= DECOR_MIN || 딱지(ref);
+    p.decorPics = pics.filter(장식);
+    p.pics      = pics.filter(ref => !장식(ref));
     /* 제 그림이 아닌 표지는 지운다 — 딱지만 든 표는 줄째(2026-10-06 · 그림 든 표를 격자로 두면서 `| ⟦그림:image10⟧ |` 가 생겼다).
        ⚠ «장식»만 보면 모자란다 — 번호 딱지 표는 미주보다 그림이 먼저라 그림은 앞 문항에, 표지는 이 문항에 붙는다. */
     if(typeof p.content === 'string' && p.content.includes('⟦그림:')){

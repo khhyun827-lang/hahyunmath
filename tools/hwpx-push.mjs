@@ -14,6 +14,7 @@
 //   그림이 필요한 문항이 몇 개인지 «말해 주고», 그건 웹의 「교재 올리기」로 하라고 알린다.
 
 import fs from 'fs';
+import crypto from 'crypto';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import os from 'os';
@@ -39,7 +40,7 @@ const { problems, watermarkedCount, watermarked } = R.hwpxProblemsFromDocs(secti
   execFileSync('unzip', ['-qo', SRC, '-d', tmp]);
   const hpf = fs.existsSync(path.join(tmp, 'Contents', 'content.hpf'))
     ? fs.readFileSync(path.join(tmp, 'Contents', 'content.hpf'), 'utf8') : '';
-  const 열쇠 = {};
+  const 열쇠 = {}, 딱지열쇠 = {};
   for (const m of hpf.matchAll(/id="([^"]+)"[^>]*href="([^"]+)"/g)) {
     if (/^Contents\//.test(m[2])) continue;
     const f = path.join(tmp, decodeURIComponent(m[2]));
@@ -49,8 +50,9 @@ const { problems, watermarkedCount, watermarked } = R.hwpxProblemsFromDocs(secti
     const n = Math.min(u8.length, 4096);
     for (let i = 0; i < n; i++) { h ^= u8[i]; h = Math.imul(h, 0x01000193) >>> 0; }
     열쇠[m[1]] = u8.length + ':' + h.toString(16);
+    딱지열쇠[m[1]] = crypto.createHash('sha256').update(u8).digest('hex').slice(0, 32);
   }
-  R.hwpxMarkDecorPics(problems, (ref) => 열쇠[ref] || ref);
+  R.hwpxMarkDecorPics(problems, (ref) => 열쇠[ref] || ref, (ref) => 딱지열쇠[ref]);   // 출처 딱지는 몇 번 나오든 장식 (10-25)
 }
 
 const 있는것 = problems.filter((p) => p.itemCode && (p.content || '').trim());

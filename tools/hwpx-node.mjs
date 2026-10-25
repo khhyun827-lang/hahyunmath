@@ -197,7 +197,7 @@ export function sectionDocsFrom(cdir) {
 
 /* 그림 참조 → «내용 열쇠». 한글은 같은 딱지를 여러 벌로 저장하므로 **이름으로는 못 묶는다** —
    md5 로 묶어야 `image10`·`image23`·`image18` 이 한 그림으로 보인다 (hwpx.js 의 hwpxMarkDecorPics 참고). */
-function picKeyMap(cdir) {
+function picKeyMap(cdir, 셈 = (b) => crypto.createHash('md5').update(b).digest('hex')) {
   const key = {};
   const hpfPath = path.join(cdir, 'content.hpf');
   if (!fs.existsSync(hpfPath)) return key;
@@ -207,7 +207,7 @@ function picKeyMap(cdir) {
     const f = path.join(cdir, m[2]);
     const g = fs.existsSync(f) ? f : path.join(root, m[2]);
     if (!fs.existsSync(g)) continue;
-    try { key[m[1]] = crypto.createHash('md5').update(fs.readFileSync(g)).digest('hex'); } catch (e) {}
+    try { key[m[1]] = 셈(fs.readFileSync(g)); } catch (e) {}
   }
   return key;
 }
@@ -219,6 +219,7 @@ export function problemsFromHwpx(fileOrDir, rules = loadHwpxRules()) {
   const cdir = contentsDir(fileOrDir);
   const r = rules.hwpxProblemsFromDocs(sectionDocsFrom(cdir));
   const key = picKeyMap(cdir);
-  rules.hwpxMarkDecorPics(r.problems, ref => key[ref] || ref);
+  const sha = picKeyMap(cdir, (b) => crypto.createHash('sha256').update(b).digest('hex').slice(0, 32));   // 출처 딱지 (10-25)
+  rules.hwpxMarkDecorPics(r.problems, ref => key[ref] || ref, ref => sha[ref]);
   return r;
 }
