@@ -24,7 +24,7 @@ import fs from 'fs';
 import path from 'path';
 import { loadHwpxRules } from './hwpx-node.mjs';
 import { 창고읽기, 창고읽기_손에있는것, 교재읽기, 달라진자리, 교재폴더 } from './store-diff.mjs';
-import { 창고칸 } from './ix.mjs';   // 색인 칸·_t — 웹 dbSetDoc 과 같은 칸 (10-22)
+import { 창고칸, 버전올림 } from './ix.mjs';   // 색인 칸·_t — 웹 dbSetDoc 과 같은 칸 (10-22)
 
 const argv = process.argv.slice(2);
 /* 🔵 `--local` — 창고 대신 «손에 있는 본문»(*-bodies.json)으로 판정만 미리 본다.
@@ -178,7 +178,7 @@ for (let i = 0; i < 쓸것.length; i++) {
 process.stdout.write('\r' + ' '.repeat(40) + '\r');
 /* 🔴 창고를 바꿨으면 «바뀌었다»고 적어 둔다 — 브라우저들이 이 값 하나를 보고 다시 읽는다. */
 if (됨) {
-  const bad = await putDoc('kv', 'itemsVer', String(Date.now()));
+  const bad = await 버전올림(BASE, H, 'itemsVer');
   console.log(bad === null ? '  버전 표시를 올렸습니다 — 브라우저가 다음에 열 때 새로 읽습니다.'
                            : '  ⚠ 버전 표시를 못 올렸습니다 (http ' + bad + ') — 최대 12시간 뒤에 맞습니다.');
 }

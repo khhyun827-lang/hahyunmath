@@ -13,6 +13,7 @@
 // ⚠ 드라이브 그림 파일은 안 지운다 — 지우는 것이 더 위험하고, 다시 올리면 새로 붙는다.
 
 import fs from 'fs';
+import { 버전올림 } from './ix.mjs';
 const 인자 = process.argv.slice(2).filter((a) => !a.startsWith('--'));
 const 쓸까 = process.argv.includes('--push');
 const 무엇 = 인자[0];
@@ -65,12 +66,12 @@ if (가리킴.length) {
 if (!쓸까) { console.log('\n  ⓘ 세기만 했습니다. 실제로 지우려면 --push 를 붙이세요.\n'); process.exit(0); }
 
 let 됨 = 0, 막 = 0;
-for (const [col, ids] of [['items', 지울문항], ['variants', 지울변형]]) {
+for (const [col, ids, ver] of [['items', 지울문항, 'itemsVer'], ['variants', 지울변형, 'variantsVer']]) {
+  const 지운 = [];
   for (const id of ids) {
     const r = await fetch(BASE + '/' + col + '/' + encodeURIComponent(id), { method: 'DELETE', headers: H });
-    if (r.ok) 됨++; else { 막++; if (막 <= 3) console.log('  🔴 ' + col + '/' + id + ' — http ' + r.status); }
+    if (r.ok) { 됨++; 지운.push(id); } else { 막++; if (막 <= 3) console.log('  🔴 ' + col + '/' + id + ' — http ' + r.status); }
   }
+  if (지운.length) await 버전올림(BASE, H, ver, 지운);   // 지운 id 를 실어야 브라우저가 재운 것에서 뺀다
 }
-if (됨) await fetch(BASE + '/kv/itemsVer', { method: 'PATCH', headers: { ...H, 'Content-Type': 'application/json' },
-  body: JSON.stringify({ fields: { value: { stringValue: String(Date.now()) } } }) });
 console.log('\n  ' + (막 ? '🔴' : '✅') + ' 지운 것 ' + 됨 + '개' + (막 ? ' · 막힌 것 ' + 막 : '') + '\n');

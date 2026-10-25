@@ -82,9 +82,10 @@ console.log('③ 판 범위 — 본문 없이 판 표로');
 console.log('④ 이어진 자리 (글자로)');
 {
   const 틱 = liftFn('autoFillTick'), 밤 = liftFn('nightRun');
-  봄('틱은 반쪽이면 차례로 — 없을 때만 통째로', /await fillQueueEnsure\(\);\s*if\(!state\.fillQueue\)\{ await loadItemStoreIfNeeded\(\)/.test(틱), true);
+  봄('틱은 반쪽이면 차례로 — 없으면 멈추고 말한다 (10-25 · 통째로 안 싣는다)', /await fillQueueEnsure\(\);\s*if\(!state\.fillQueue\)\{[\s\S]{0,120}autoFillStop\(/.test(틱) && !틱.includes('loadItemStoreIfNeeded'), true);
   봄('뽑은 문항만 받아 다시 보고, 낡았으면 뺀다', /partEnsure\('items', \['id:' \+ code\]\)/.test(틱) && /fillQueueDrop\(code\)/.test(틱), true);
-  봄('새벽 — 차례가 없으면 통째로', /if\(!\(await fillQueueEnsure\(\)\)\) state\.storeNight = false/.test(밤), true);
+  봄('새벽 — 어떤 길로도 통째로 안 싣는다 (10-25)', 밤.includes('loadItemStoreIfNeeded'), false);
+  봄('교재 올리기·정답 채우기는 담은 뒤 차례·판 표를 다시 적는다', ['icFillCommit', 'icFillAnswers'].every(f => liftFn(f).includes('storeRewriteLists()')) && /fillQueueSave\(\)/.test(liftFn('storeRewriteLists')), true);
   봄('새벽 검토는 대기만', /partEnsure\('variants', \['pending'\]\)/.test(밤), true);
   봄('다 실으면·변형을 쓰면 차례를 적는다', /fillQueueSave\(\)/.test(liftFn('loadItemStoreIfNeeded')) && /fillQueueSave\(\)/.test(liftFn('collectionTouched')), true);
   봄('옛 night-plan 은 안 쓴다', /nightPlan|nightStoreLoad|'night-plan'/.test(html), false);

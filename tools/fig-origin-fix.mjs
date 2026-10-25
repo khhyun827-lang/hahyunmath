@@ -7,7 +7,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { 강사로로그인 } from './fb-login.mjs';
-import { 창고칸 } from './ix.mjs';
+import { 창고칸, 버전올림 } from './ix.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 new Function(fs.readFileSync(path.join(HERE, '..', 'figure.js'), 'utf8'))();
@@ -41,5 +41,5 @@ for (const { id, v, 새 } of 바꿀) {
     body: JSON.stringify({ fields: 창고칸('variants', id, nv) }) });
   if (w.ok) 됨++; else console.log('🔴', id, w.status);
 }
-await fetch(`${BASE}/kv/variantsVer`, { method: 'PATCH', headers: { ...H, 'Content-Type': 'application/json' }, body: JSON.stringify({ fields: 창고칸('kv', 'variantsVer', String(Date.now())) }) });
+await 버전올림(BASE, H, 'variantsVer');
 console.log('바꿔 썼습니다', 됨);

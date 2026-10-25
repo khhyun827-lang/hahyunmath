@@ -54,7 +54,7 @@ function makeWorld(itemBody) {
   const state = { itemBody, icAns: null };
   const api = new Function(
     'state', 'render', 'loadItemStoreIfNeeded', 'dbSetDoc', 'nowStamp',
-    'itemsBumpVersion', 'itemsCacheWrite', 'console',
+    'itemsBumpVersion', 'itemsCacheWrite', 'console', 'storeRewriteLists',
     lift('icFillAnswers', 'async function') + '\nreturn { icFillAnswers };'
   )(state,
     () => { w.msg = state.icAns ? state.icAns.msg : ''; },
@@ -63,7 +63,7 @@ function makeWorld(itemBody) {
     () => '2026-09-06 12:00',
     async () => { w.ver++; return 'v' + w.ver; },
     (ver, rows) => { w.재운것 = { ver, n: rows.length }; },
-    { warn(){}, error(){}, log(){} });
+    { warn(){}, error(){}, log(){} }, () => { w.다시적음 = (w.다시적음 || 0) + 1; });
   return Object.assign(w, api, { state });
 }
 const 파일 = (items) => ({ text: async () => JSON.stringify({ items }) });

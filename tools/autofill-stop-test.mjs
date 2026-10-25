@@ -53,7 +53,7 @@ const 날것키 = (html.match(/localStorage\.setItem\(AUTOFILL_KEY, '0'\)/g) || 
 
 // ④ 멈추는 길이 모두 문을 지나는가 — 개수로 못 박는다
 const 문쓰임 = (고리.match(/autoFillStop\(/g) || []).length;
-봄('고리 안의 멈추는 길이 여섯이다', 문쓰임, 6);
+봄('고리 안의 멈추는 길이 일곱이다 (10-25 · 채울 차례가 없을 때)', 문쓰임, 7);
 
 // ⑤ 켜져 있을 때만 다음 바퀴를 돈다
 봄('꺼졌으면 다음 바퀴를 안 건다', 고리.includes('if(st.on) autoFillLater();'), true);

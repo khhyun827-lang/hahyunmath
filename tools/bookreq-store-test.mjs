@@ -56,6 +56,7 @@ const stubs = `
   const notifyWrongReady = ids => __notified.push(...ids);
   const logAudit = async () => {};
   const loadItemStoreIfNeeded = async () => {};
+  const storeEnsure = async () => true;   // 10-25 · 단추는 그 원본만 싣는다
   const reviewPickNext = () => null;
   const reviewSelectWalk = () => {};
   const requestVariantForCode = async (code) => { __asked.push(code); };

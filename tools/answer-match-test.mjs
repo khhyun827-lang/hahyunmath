@@ -53,7 +53,7 @@ function makeWorld({ 책 = 'E', byNo = {} } = {}) {
   };
   const api = new Function(
     'state', 'render', 'loadItemStoreIfNeeded', 'parseHwpxAnswerKey', 'dbSetDoc',
-    'nowStamp', 'itemsBumpVersion', 'itemsCacheWrite', 'BOOK_OF_CODE', 'console',
+    'nowStamp', 'itemsBumpVersion', 'itemsCacheWrite', 'BOOK_OF_CODE', 'console', 'storeRewriteLists',
     lift('icFillAnswers', 'async function') + '\nreturn { icFillAnswers };'
   )(state,
     () => { w.msg = state.icAns ? state.icAns.msg : ''; },
@@ -61,7 +61,7 @@ function makeWorld({ 책 = 'E', byNo = {} } = {}) {
     async () => byNo,
     async (coll, id, doc) => { w.쓴것.push(id); return true; },
     () => '2026-09-04 12:00', async () => 'v1', () => {},
-    { E: '엔딩크레딧', R: '유형반복R' }, { warn(){}, error(){}, log(){} });
+    { E: '엔딩크레딧', R: '유형반복R' }, { warn(){}, error(){}, log(){} }, () => {});
   return Object.assign(w, api, { state });
 }
 const 파일 = (items) => ({ files: [{ name: '빠른정답표.hwpx', text: async () => JSON.stringify({ items }) }], value: '' });

@@ -19,7 +19,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { loadHwpxRules } from './hwpx-node.mjs';
-import { 창고칸 } from './ix.mjs';   // 색인 칸·_t — 웹 dbSetDoc 과 같은 칸 (10-22)
+import { 창고칸, 버전올림 } from './ix.mjs';   // 색인 칸·_t — 웹 dbSetDoc 과 같은 칸 (10-22)
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const 쓸까 = process.argv.includes('--push');
@@ -92,6 +92,6 @@ for (const x of 쓸것) {
   else { 막++; if (막 <= 3) console.log('  🔴 ' + x.code + ' — http ' + bad); if (bad === 403) break; }
 }
 /* 🔴 창고를 바꿨으면 «바뀌었다»고 적어 둔다 — 브라우저들이 이 값 하나를 보고 다시 읽는다. */
-if (됨) await putDoc('kv', 'itemsVer', String(Date.now()));
+if (됨) await 버전올림(BASE, H, 'itemsVer');
 console.log('\n  ' + (막 ? '🔴' : '✅') + ' 고친 것 ' + 됨 + '건' + (막 ? ' · 막힌 것 ' + 막 + '건' : '')
   + (됨 ? ' · 버전 표시를 올렸습니다(브라우저가 다음에 열 때 새로 읽습니다)' : '') + '\n');

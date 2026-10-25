@@ -15,7 +15,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { 강사로로그인 } from './fb-login.mjs';
-import { 창고칸 } from './ix.mjs';   // 색인 칸·_t — 웹 dbSetDoc 과 같은 칸 (10-22)
+import { 창고칸, 버전올림 } from './ix.mjs';   // 색인 칸·_t — 웹 dbSetDoc 과 같은 칸 (10-22)
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const 값 = (이름) => { const i = process.argv.indexOf(이름); return i >= 0 ? process.argv[i + 1] : ''; };
@@ -76,5 +76,5 @@ for (const v of 대상) {
   const st = await put('variants', v.code, { ...지금, aiReview: 판정 });
   if (st === 200) 씀++; else console.log('  🔴 저장 실패 http ' + st);
 }
-if (씀) console.log('variantsVer', await put('kv', 'variantsVer', String(Date.now())));
+if (씀) console.log('variantsVer', await 버전올림(BASE, H, 'variantsVer') ?? 'ok');
 console.log('끝 — ' + JSON.stringify(셈) + (쓸까 ? ' · 쓴 것 ' + 씀 : ''));

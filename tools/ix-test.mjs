@@ -7,7 +7,7 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { 창고칸 } from './ix.mjs';
+import { 창고칸, 버전올림 } from './ix.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
@@ -53,6 +53,29 @@ const 채움 = liftFn('ixBackfill');
 봄('낡은 창고로 안 채운다', /itemsCacheHit === 'stale'/.test(채움), true);
 for (const t of ['item-bodies', 'items-figures', 'items-push', 'items-repair', 'review-local', 'hwpx-push'])
   봄(`도구 ${t} 가 같은 칸을 쓴다`, /창고칸\(/.test(fs.readFileSync(path.join(ROOT, 'tools', t + '.mjs'), 'utf8')), true);
+
+console.log('④ 도구의 버전 올림 — 웹 verBump 와 같은 꼴 (10-25 · 검색 구조 5단계)');
+{
+  const 버전 = async (지금, 상태 = 200, dels) => {
+    let 쓴 = null;
+    globalThis.fetch = async (url, o = {}) => {
+      if (o.method === 'PATCH') { 쓴 = JSON.parse(JSON.parse(o.body).fields.value.stringValue); return { ok: true }; }
+      return { ok: 상태 === 200, status: 상태, json: async () => ({ fields: { value: { stringValue: JSON.stringify(지금) } } }) };
+    };
+    await 버전올림('B', {}, 'itemsVer', dels);
+    return 쓴;
+  };
+  const 옛 = Date.now() - 4 * 864e5, 새 = Date.now() - 1000;
+  const a = await 버전({ t: 1, full: 5, del: [['X', 옛], ['Y', 새]] }, 200, ['Z']);
+  봄('객체면 이어 간다 — full 그대로 · 3일 지난 del 은 버린다 · 지운 것을 싣는다', [a.full, a.del.map(d => d[0]), a.t > 새], [5, ['Y', 'Z'], true]);
+  const b = await 버전('1729000000000');
+  봄('글자(옛 도구)였으면 full 을 박는다 — 그 앞에 재운 것은 통째로', [typeof b, b.full === b.t], ['object', true]);
+  봄('없는 문서(404)도 새로 시작', typeof (await 버전(null, 404)), 'object');
+  봄('🔴 못 읽으면 글자로 — 남의 del 을 덮지 않는다', typeof (await 버전(null, 500)), 'string');
+}
+for (const t of ['item-bodies', 'items-figures', 'items-push', 'items-repair', 'review-local', 'hwpx-push', 'items-wipe', 'eq-fix', 'fig-origin-fix'])
+  봄(`도구 ${t} 가 버전을 같은 꼴로 올린다`, /버전올림\(/.test(fs.readFileSync(path.join(ROOT, 'tools', t + '.mjs'), 'utf8'))
+    && !/'(items|variants)Ver', String\(Date\.now\(\)\)/.test(fs.readFileSync(path.join(ROOT, 'tools', t + '.mjs'), 'utf8')), true);
 
 console.log(`\n${fail ? '🔴' : '🟢'} ${pass} 통과 · ${fail} 실패`);
 process.exit(fail ? 1 : 0);

@@ -4,7 +4,7 @@
 //
 // 🔴 DB 를 안 건드린다 — index.html 에서 partSync·partEnsure·loadReviewStoreIfNeeded 등을 떼어 와 스텁으로 돌린다.
 //    붙드는 것: 처음엔 대기·그 원본·본문만 받는다 · 다음 탭은 버전 1건뿐 · 버전이 바뀌면 바뀐 것만 받고 범위가 «완전»하게 남는다
-//    · 지운 것은 빠진다 · 글자 버전이면 새로 · 못 받은 범위는 안 적고 통째로 물러난다 · 이 탭에서 쓴 것이 이긴다.
+//    · 지운 것은 빠진다 · 글자 버전이면 새로 · 못 받은 범위는 안 적고 1분 쉰다(10-25) · 단추 하나는 그 원본만(storeEnsure) · 이 탭에서 쓴 것이 이긴다.
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -21,9 +21,9 @@ function liftFn(name) {
   }
 }
 const liftConst = name => { const at = html.indexOf('const ' + name + ' = '); return html.slice(at, html.indexOf(';\n', at) + 1); };
-const BLOCK = [liftConst('PART_STORE'), 'const partMem = {}, partQ = {}, partWrites = { items: {}, variants: {} };', 'let reviewStoreLoading = null, reviewScoped = false, storeShownLoading = null, storeShownFailAt = 0;',
+const BLOCK = [liftConst('PART_STORE'), 'const partMem = {}, partQ = {}, partWrites = { items: {}, variants: {} };', 'let reviewStoreLoading = null, reviewScoped = false, reviewFailAt = 0, storeShownLoading = null, storeShownFailAt = 0;',
   ...['partRead', 'partSave', 'partSync', 'partEnsure', 'partPut', 'partOverlay', 'storeAll', 'variantsByRoot', 'loadReviewStoreIfNeeded',
-      'partToState', 'storeLedgerKids', 'storeGot', 'storeShownEnsure'].map(liftFn)].join('\n');
+      'partToState', 'storeLedgerKids', 'storeGot', 'storeShownEnsure', 'storeEnsure'].map(liftFn)].join('\n');
 
 let pass = 0, fail = 0;
 const 봄 = (무엇, 나온것, 나와야) => {
@@ -50,12 +50,12 @@ function makeTab(S, ls, { 실패 = '' } = {}) {
   const 읽음 = [];
   const dbReadFailed = new Set();
   const state = { currentUser: { type: 'teacher' } };
-  const 통째 = { n: 0 };
+  const 통째 = { n: 0 }, 알림 = [];
   const f = new Function(
     'localStorage', 'console', 'state', 'DATA', 'ITEMS_VER_KEY', 'COLL_CACHE_TTL', 'DELTA_SKEW', 'verSame', 'dbReadFailed',
     'dbGet', 'dbGetChangedSince', 'dbGetVariantsOfRoots', 'dbGetDoc', 'dbQueryWhere', 'loadItemLedgerIfNeeded', 'variantIsPending',
-    'itemStoreLoading', 'loadItemStoreIfNeeded', 'Date', 'idbGet', 'idbSet', 'render',
-    BLOCK + '\nreturn { partEnsure, partPut, partOverlay, storeAll, loadReviewStoreIfNeeded, partMem, storeShownEnsure, storeGot, 받는중: () => storeShownLoading };'
+    'itemStoreLoading', 'loadItemStoreIfNeeded', 'Date', 'idbGet', 'idbSet', 'render', 'showToast',
+    BLOCK + '\nreturn { partEnsure, partPut, partOverlay, storeAll, loadReviewStoreIfNeeded, partMem, storeShownEnsure, storeGot, storeEnsure, 받는중: () => storeShownLoading };'
   )(
     { removeItem() {} },{ warn() {} }, state, { problemBank: [{ itemCode: 'P' }, { itemCode: 'A', originalContent: '있음' }] },
     'itemsVer', 3 * 864e5, 600000, (a, b) => JSON.stringify(a) === JSON.stringify(b), dbReadFailed,
@@ -65,15 +65,15 @@ function makeTab(S, ls, { 실패 = '' } = {}) {
       return Object.values(S.variants).filter(v => roots.includes(v.originCode)); },
     async (col, id) => { 읽음.push(col + '/' + id); return S[col][id] || null; },
     async (col, field) => { 읽음.push('대기:' + col); return Object.values(S[col]).filter(v => v.pending).map(v => ({ id: v.code, row: v })); },
-    async () => { state.itemByCode = {}; },
+    async () => { state.itemByCode = state.itemByCode || {}; },   // 진짜처럼 — 이미 실렸으면 그대로
     v => !!(v && v.pending && !v.deleted),
     null,
     async () => { 통째.n++; },
     { now: () => S.지금 || 1e7 },
     async k => (ls.has(k) ? structuredClone(ls.get(k)) : null), async (k, v) => { ls.set(k, structuredClone(v)); },
-    () => {},
+    () => {}, m => 알림.push(m),
   );
-  return { ...f, state, 읽음, 통째 };
+  return { ...f, state, 읽음, 통째, 알림 };
 }
 const 묶음 = st => Object.fromEntries(Object.entries(st.variants || {}).map(([k, v]) => [k, v.map(x => x.code)]));
 
@@ -120,14 +120,17 @@ console.log('④ 글자 버전(도구) — 새로 받는다');
   봄('대기부터 다시', T.읽음.slice(0, 3), ['ver:variantsVer', '대기:variants', '원본:A,C']);
 }
 
-console.log('⑤ 못 받으면 — 범위를 안 적고 통째로');
+console.log('⑤ 못 받으면 — 범위를 안 적고 1분 쉰다 (10-25 · 통째로 안 물러난다)');
 {
   const S2 = makeServer(), LS2 = new Map();
   const T = makeTab(S2, LS2, { 실패: 'root' });
   await T.loadReviewStoreIfNeeded();
-  봄('통째 싣기로 물러난다', T.통째.n, 1);
+  봄('🔴 통째 싣기로 안 물러난다', T.통째.n, 0);
   봄('반쪽을 안 싣는다', T.state.storePartial, undefined);
   봄('못 받은 범위는 안 적혔다', LS2.get('khm-part-variants-v1').scopes, ['pending']);
+  const n = T.읽음.length;
+  await T.loadReviewStoreIfNeeded();
+  봄('그 1분 안에 다시 그려도 안 두드린다', T.읽음.length, n);
 }
 
 console.log('⑥ 이 탭에서 쓴 것');
@@ -162,8 +165,35 @@ console.log('⑦ 문항관리 — 보이는 카드만 (3단계)');
   봄('카드가 먼저 실렸어도 검토 대기는 따로 받는다 (원본 A·B 는 이미 있다)', T.읽음.slice(n), ['대기:variants', 'items/P']);
 }
 
+console.log('⑨ 단추 하나는 그 원본만 (5단계 · storeEnsure)');
+{
+  const S4 = makeServer(), LS4 = new Map();
+  S4.items['A-N01'] = { code: 'A-N01', content: '장부 변형' };
+  const T = makeTab(S4, LS4);
+  T.state.itemByCode = { A: {}, 'A-N01': {}, B: {} };
+  봄('받으면 true', await T.storeEnsure(['A', 'A', ''], ['P']), true);
+  봄('원본 본문·장부 변형 본문·더 받을 본문 + 그 원본의 변형만', T.읽음.slice().sort(), ['items/A', 'items/A-N01', 'items/P', 'ver:itemsVer', 'ver:variantsVer', '원본:A']);
+  봄('화면 자리에 «반쪽»으로 실린다 (번호 매기기가 A 의 형제를 다 본다)', [T.state.storePartial, 묶음(T.state).A], [true, ['A-N01', 'A-N02']]);
+  const n = T.읽음.length;
+  await T.storeEnsure(['A']);
+  봄('같은 원본을 또 누르면 읽기 0', T.읽음.length, n);
+  const T2 = makeTab(makeServer(), new Map(), { 실패: 'root' });
+  T2.state.itemByCode = {};
+  봄('🔴 못 받으면 false — 부르는 쪽이 멈춘다', [await T2.storeEnsure(['B']), T2.알림.length, T2.통째.n], [false, 1, 0]);
+}
+
 console.log('⑧ 이어진 자리 (글자로)');
 {
+  /* 5단계 (10-25) — 통째 싣기는 «관리 단추»만. 화면·단추 하나·자동 길에 다시 들어오면 문다. */
+  const 단추하나 = ['setBankItemCode', 'saveVariantToStore', 'registerVariantFromBank', 'regenerateOneWithAI', 'saveExam', 'deleteExam',
+    'pvSave', 'bookReqAccept', 'bankAskAccept', 'fillEmptyFromStore', 'addVariantByHand', 'itemCodeStripHTML', 'teacherCleanupHTML',
+    'autoFillTick', 'nightRun', 'loadReviewStoreIfNeeded'];
+  봄('🔴 화면·단추 하나·자동 길은 통째로 안 싣는다', 단추하나.filter(f => liftFn(f).includes('loadItemStoreIfNeeded')), []);
+  봄('그 길들은 고른 것만 받는다(storeEnsure·storeHas)', 단추하나.filter(f => !/teacherCleanupHTML|autoFillTick|nightRun|loadReviewStoreIfNeeded|pvSave/.test(f))
+    .filter(f => !/storeEnsure\(|storeHas\(/.test(liftFn(f))), []);
+  const 관리 = ['ixBackfill', 'storeLoadAll', 'icFillBodies', 'icRepairEq', 'icFillAnswers', 'cleanupScan'];
+  const 부름 = (html.match(/^[^/\n]*await loadItemStoreIfNeeded\(\)/gm) || []).length;
+  봄('통째 싣기를 부르는 곳 = 관리 단추 여섯', [부름, 관리.every(f => liftFn(f).includes('loadItemStoreIfNeeded()'))], [관리.length, true]);
   봄('쓰는 문이 알린다', /partPut\(collection, id, data\)/.test(liftFn('dbSetDoc')) && /partPut\(collection, id, null\)/.test(liftFn('dbDeleteDoc')), true);
   봄('검토 탭은 대기만 싣는다', /loadReviewStoreIfNeeded\(\)/.test(liftFn('teacherReviewHTML')), true);
   const 창 = liftFn('teacherItemStoreHTML');

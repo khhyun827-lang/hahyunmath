@@ -31,3 +31,21 @@ export function 창고칸(collection, id, data) {
   if (collection !== 'items' && collection !== 'variants') return f;
   return { ...f, _t: { integerValue: String(Date.now()) }, ...ixFieldsOf(collection, id, data, 장부) };
 }
+
+// 버전 문서(kv/itemsVer · kv/variantsVer)를 웹 verBump 와 같은 꼴 {t, del, full} 로 올린다 (2026-10-25 · 검색 구조 5단계).
+// 🔵 도구도 `_t` 를 적으니(창고칸) 웹은 «바뀐 것만» 받으면 된다 — 글자 버전을 올리면 기기마다 통째로 다시 읽었다.
+//    dels = 지운 문서 id — 웹이 재운 것에서 뺀다. 버전을 못 읽으면 예전처럼 글자로 올린다(통째로 다시 읽게 — 남의 del 을 덮지 않게).
+export async function 버전올림(BASE, H, key, dels = []) {
+  const now = Date.now(), 칸 = (v) => JSON.stringify({ fields: { value: { stringValue: JSON.stringify(v) } } });
+  const r = await fetch(BASE + '/kv/' + key, { headers: H });
+  let cur = null;
+  if (r.ok) { try { cur = JSON.parse((await r.json()).fields.value.stringValue); } catch (e) {} }
+  else if (r.status !== 404) cur = undefined;
+  const v = cur === undefined ? String(now) : (cur && typeof cur === 'object') ? cur : { full: now };
+  if (typeof v === 'object') {
+    v.t = now;
+    v.del = (v.del || []).filter((d) => now - d[1] < 3 * 864e5).concat(dels.map((id) => [id, now]));
+  }
+  const w = await fetch(BASE + '/kv/' + key, { method: 'PATCH', headers: { ...H, 'Content-Type': 'application/json' }, body: 칸(v) });
+  return w.ok ? null : w.status;
+}

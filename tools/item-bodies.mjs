@@ -20,7 +20,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { loadHwpxRules, problemsFromHwpx } from './hwpx-node.mjs';
-import { 창고칸 } from './ix.mjs';   // 색인 칸·_t — 웹 dbSetDoc 과 같은 칸 (10-22)
+import { 창고칸, 버전올림 } from './ix.mjs';   // 색인 칸·_t — 웹 dbSetDoc 과 같은 칸 (10-22)
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..');
@@ -100,7 +100,8 @@ export async function pushBodies(items, { quiet = false } = {}) {
      이미 열어 둔 브라우저들이 옛 본문을 최대 12시간(TTL) 동안 그대로 본다.
      ⚠ 모양은 웹의 `dbSet` 과 같아야 한다 — kv 문서도 `value` 안에 JSON 글자 하나다. */
   if (saved) {
-    const bad = await putDoc(projectId, token, 'kv', 'itemsVer', String(Date.now()));
+    const bad = await 버전올림('https://firestore.googleapis.com/v1/projects/' + projectId + '/databases/(default)/documents',
+      { Authorization: 'Bearer ' + token }, 'itemsVer');
     if (bad !== null && !quiet) console.log(`  ⚠ 버전 표시를 못 올렸다 (http ${bad}) — 다른 기기는 최대 12시간 뒤에 맞는다.`);
   }
   return { saved, blocked, failed };

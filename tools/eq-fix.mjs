@@ -180,7 +180,7 @@ if (import.meta.url === 'file:///' + process.argv[1].replace(/\\/g, '/').replace
   console.log(`고칠 문서: 원본 ${고칠것.filter(x => x.col === 'items').length} · 변형 ${고칠것.filter(x => x.col === 'variants').length}`);
   if (값('--out')) fs.writeFileSync(값('--out'), JSON.stringify(고칠것.map(({ col, id, v, nv }) => ({ col, id, 전: 칸이름(col).map(f => v[f]), 후: 칸이름(col).map(f => nv[f]) }))));
   if (!쓸까) { console.log('재보기만 했습니다 — 쓰려면 --go'); process.exit(0); }
-  const { 창고칸 } = await import('./ix.mjs');
+  const { 창고칸, 버전올림 } = await import('./ix.mjs');
   let 됨 = 0, 막 = 0, 그새 = 0;
   for (const { col, id } of 고칠것) {
     const r = await fetch(`${BASE}/${col}/${encodeURIComponent(id)}`, { headers: H });   // 쓰기 직전에 다시 읽는다
@@ -194,8 +194,7 @@ if (import.meta.url === 'file:///' + process.argv[1].replace(/\\/g, '/').replace
     if ((됨 + 막) % 25 === 0) process.stdout.write(`\r  쓰는 중… ${됨 + 막} / ${고칠것.length}`);
   }
   /* 브라우저들이 이 값을 보고 창고를 다시 읽는다 — 원본·변형 둘 다 */
-  for (const k of ['itemsVer', 'variantsVer'])
-    await fetch(`${BASE}/kv/${k}`, { method: 'PATCH', headers: { ...H, 'Content-Type': 'application/json' }, body: JSON.stringify({ fields: 창고칸('kv', k, String(Date.now())) }) });
+  for (const k of ['itemsVer', 'variantsVer']) await 버전올림(BASE, H, k);
   console.log(`\n  고쳐 썼습니다 ${됨} · 그사이 이미 고쳐진 것 ${그새} · 막힌 것 ${막}`);
   process.exit(막 ? 1 : 0);
 }

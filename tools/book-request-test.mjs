@@ -162,9 +162,9 @@ console.log(NL + '②-b 강사가 받아 문항을 세운다' + NL);
     /* ⚠ 2026-09-13(K-19)부터 «강사가 학생 기록에 쓰는 문»이 따로다(`saveRecordAsTeacher`) —
        쓰고 나서 `state.allRecords` 까지 같이 갈아 끼운다. 여기서도 그 문을 준다. */
     const 알림 = [];
-    const 곁 = ['DATA', 'state', 'loadItemStoreIfNeeded', 'codeVariantFor', 'loadRecord', 'saveRecordAsTeacher',
+    const 곁 = ['DATA', 'state', 'storeEnsure', 'bookEditionsEnsure', 'codeVariantFor', 'loadRecord', 'saveRecordAsTeacher',
       'dbSetDoc', 'logAudit', 'showToast', 'render', 'todayStr', 'studentNameOf', 'notifyWrongReady'];
-    const 값 = [DATA, state, async () => {},
+    const 값 = [DATA, state, async () => true, async () => {},
       code => 변형있나 ? { code: code + '-N01', content: '쌍둥이 본문', answer: '3' } : null,
       async sid => recs[sid], async () => true,
       async (col, id, v) => { 쓴것.push(v); return true; },
@@ -210,12 +210,12 @@ console.log(NL + '②-b 강사가 받아 문항을 세운다' + NL);
 
   /* 문항을 못 세우면 요청을 안 지운다 */
   const c = 만들기(false);
-  const 곁2 = ['DATA', 'state', 'loadItemStoreIfNeeded', 'codeVariantFor', 'loadRecord', 'saveRecordAsTeacher',
+  const 곁2 = ['DATA', 'state', 'storeEnsure', 'bookEditionsEnsure', 'codeVariantFor', 'loadRecord', 'saveRecordAsTeacher',
     'dbSetDoc', 'logAudit', 'showToast', 'render', 'todayStr', 'studentNameOf', 'notifyWrongReady'];
   const G = new Function(...곁2,
     잣대 + NL + lift('bookReqsOf') + NL + lift('bookReqPending') + NL + lift('bookReqLabelOf') + NL +
     lift('bookReqAccept') + NL + 'return bookReqAccept;')(
-    c.DATA, { allRecords: c.recs, itemByCode: 장부 }, async () => {}, () => null,
+    c.DATA, { allRecords: c.recs, itemByCode: 장부 }, async () => true, async () => {}, () => null,
     async sid => c.recs[sid], async () => true, async () => null,
     async () => {}, m => c.말.push(m), () => {}, () => '2026-09-13', sid => sid, () => {});
   await G('K2-03-E-0431');

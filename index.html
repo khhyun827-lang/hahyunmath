@@ -6969,10 +6969,10 @@ function variantsByRoot(rows){
   return by;
 }
 /* 검토 탭은 «검토 대기»만 싣는다 — 대기 변형 · 그 원본들의 변형 전부(번호 매기기) · 원본 본문(교재 요청·시험지 문항 것도).
-   이미 다 실렸으면 그것을 쓴다. 못 하면 예전처럼 통째로. */
-let reviewStoreLoading = null, reviewScoped = false;
+   이미 다 실렸으면 그것을 쓴다. 못 하면 1분 쉬고 다시(10-25 까지는 통째로 물러났다). */
+let reviewStoreLoading = null, reviewScoped = false, reviewFailAt = 0;
 function loadReviewStoreIfNeeded(){
-  if(storeAll() || reviewScoped) return Promise.resolve();   // 문항관리가 먼저 «보이는 카드만» 실어 뒀어도 대기는 따로 받는다
+  if(storeAll() || reviewScoped || Date.now() - reviewFailAt < 60000) return Promise.resolve();   // 문항관리가 먼저 «보이는 카드만» 실어 뒀어도 대기는 따로 받는다
   if(itemStoreLoading) return itemStoreLoading;
   return reviewStoreLoading = reviewStoreLoading || (async () => {
     try{
@@ -6985,8 +6985,8 @@ function loadReviewStoreIfNeeded(){
       reviewScoped = true;
       partToState();
     }catch(e){
-      console.warn('[검토] 대기만 싣지 못했다 — 통째로 싣는다', e && e.message);
-      await loadItemStoreIfNeeded();
+      console.warn('[검토] 대기를 받지 못했다 — 1분 뒤 다시', e && e.message);   // 통째로 물러나지 않는다 (10-25 · 5단계)
+      reviewFailAt = Date.now();
     }finally{ reviewStoreLoading = null; }
   })();
 }
@@ -7020,6 +7020,44 @@ function storeShownEnsure(codes, 장부변형도){
     .then(() => { storeShownFailAt = 0; partToState(); },
           e => { storeShownFailAt = Date.now(); console.warn('[문항관리] 카드 본문을 못 받았다 —', e && e.message); })
     .finally(() => { storeShownLoading = null; render(); });
+}
+/* =================== 단추 하나는 «그 원본»만 싣는다 (2026-10-25 · 검색 구조 5단계) ===================
+   변형 저장·코드 잇기·교재 요청 받기·창고에서 채우기 … 단추마다 창고를 통째로 싣던 자리(17곳)를 이것으로 바꿨다.
+   장부 + 원본 본문(id:) + 그 원본의 변형 전부(root:) + 장부에 있는 교재 변형(-N01 …)의 본문 · ids 는 본문만 더 받을 코드.
+   번호 매기기(nextVariantCode)·같은 것 두 번 막기·«검토된 변형이 있나»는 원본 하나의 변형만 보면 된다.
+   🔴 못 받으면 false — 부르는 쪽은 멈춘다(빈 채로 이어 가면 «변형 없음»으로 보고 번호를 겹쳐 매긴다). */
+async function storeEnsure(roots, ids){
+  await loadItemLedgerIfNeeded();
+  if(itemStoreLoading) await itemStoreLoading;
+  if(storeAll()) return true;
+  roots = [...new Set((roots || []).filter(Boolean))];
+  const 장부변형 = storeLedgerKids();
+  const 본문 = [...new Set([...roots.flatMap(c => [c, ...(장부변형[c] || [])]), ...(ids || [])].filter(Boolean))];
+  try{
+    await Promise.all([partEnsure('items', 본문.map(c => 'id:' + c)), partEnsure('variants', roots.map(c => 'root:' + c))]);
+  }catch(e){
+    console.warn('[창고] 고른 것을 못 받았다 —', e && e.message);
+    showToast('문항 창고를 읽지 못했습니다 — 잠시 뒤 다시 눌러 주세요.');
+    return false;
+  }
+  partToState();
+  return true;
+}
+/* 화면(render) 쪽 — 그 원본이 실렸나. 안 실렸으면 storeShownEnsure 로 받게 하고 false. */
+function storeHas(root){
+  if(storeAll()) return true;
+  if(!state.itemByCode){ loadItemLedgerIfNeeded(); return false; }
+  if(!root || (storeGot(root) && partMem.variants && partMem.variants.scopes.includes('root:' + root) && state.itemBody)) return true;
+  storeShownEnsure([root], true);
+  return false;
+}
+/* 창고를 통째로 싣는 것은 이제 «관리 단추»뿐이다 — 교재 올리기·정답 채우기·수식 다시 훑기·데이터 정리·이것.
+   «창고 다시 세기» — 도구(tools/*.mjs)로 문항을 넣은 뒤 누른다. 다 실으면 판 표·채울 차례를 새로 적는다(loadItemStoreIfNeeded). */
+async function storeLoadAll(){
+  showToast('창고 전체를 싣는 중…');
+  await loadItemStoreIfNeeded();
+  showToast(storeAll() ? '창고를 다 실었습니다 — 채울 차례·교재 판 표를 새로 적습니다.' : '창고를 다 싣지 못했습니다 — 잠시 뒤 다시 눌러 주세요.');
+  render();
 }
 /* 🔴 **끝없이 자라는 것은 «통째로» 읽으면 안 된다** (2026-09-06 · 읽기량 줄이기 #2).
    `auditlog` 는 지우는 일이 없어서 영영 자라는데 **로그인마다 전부** 읽고 있었다.
@@ -7144,6 +7182,8 @@ async function migrateBlobToCollection(oldKey, collection, idField){
      기다린 쪽이 **빈손으로 이어가서** `state.variants` 가 null 인 채로 쓰인다
      (2026-09-03에 실제로 터졌다 — 화면이 먼저 부르고 내가 이어서 부른 자리에서).
      화면은 render() 마다 부르므로 이 겹침은 «가끔»이 아니라 «자주» 일어난다. */
+/* 🔴 **이제 «관리 단추»만 부른다** (2026-10-25 · 검색 구조 5단계) — 교재 올리기·정답 채우기·수식 다시 훑기·데이터 정리·
+     창고 다시 세기(storeLoadAll)·콘솔 ixBackfill. 화면을 열거나 단추 하나를 누르는 길은 storeEnsure·storeHas(고른 것만)로 간다. */
 let itemStoreLoading = null;
 async function loadItemStoreIfNeeded(){
   if(state.storeNight || storeAll()) return;   // storeNight — 새벽 돌리기는 «차례만» 받는다 (fillQueue · 10-23)
@@ -7255,8 +7295,9 @@ async function bookEditionsSync(){
   if(JSON.stringify((옛 || {}).editions || null) !== JSON.stringify(새)) await dbSet('book-editions', { editions: 새 });
 }
 function bookEditionsEnsure(){
-  if(state.bookEditions || state.bookEditionsLoading) return;
-  state.bookEditionsLoading = dbGet('book-editions', null)
+  if(state.bookEditions) return Promise.resolve();
+  if(state.bookEditionsLoading) return state.bookEditionsLoading;
+  return state.bookEditionsLoading = dbGet('book-editions', null)
     .then(v => { state.bookEditions = (v && v.editions) || []; render(); }, () => {})
     .finally(() => { state.bookEditionsLoading = null; });
 }
@@ -7620,7 +7661,7 @@ async function setBankItemCode(bankId){
   }
   const code = normItemCode(raw);
   if(!code){ showToast('코드 모양이 아닙니다 — 「K2-05-E-0431」처럼 적어주세요.'); return; }
-  await loadItemStoreIfNeeded();
+  if(!(await storeEnsure([splitItemCode(code).origin]))) return;
   /* 🔴 **변형 코드(`…-N01`)면 «원본»이 창고에 있는지 본다.**
      변형은 장부에 없다(장부는 원본만 담는다). 코드 그대로 찾으면 언제나 «없다»가 되어
      **손으로 변형 코드를 잇는 길이 통째로 막힌다** — 복습테스트가 바로 그 길이다. */
@@ -7642,7 +7683,7 @@ async function saveVariantToStore(bankId, kind){
   const b = DATA.problemBank.find(x=>x.id===bankId);
   if(!b || !b.itemCode){ showToast('먼저 이 문항에 코드를 이어주세요.'); return; }
   if(!b.variantContent && !b.variantAnswer){ showToast('저장할 변형 내용이 없습니다.'); return; }
-  await loadItemStoreIfNeeded();
+  if(!(await storeEnsure([bankRootOf(b)]))) return;
   /* 🔴 **같은 것을 두 번 넣지 않는다** (2026-09-05 · 사용자가 겪었다).
      화면의 띠가 안 사라져서 계속 누른 결과 **N04·N05·N06 이 글자까지 같은 채로 쌓였다.**
      띠는 고쳤지만 **막는 자리는 여기여야 한다** — 화면이 또 실수해도 데이터는 안 더러워진다.
@@ -7686,7 +7727,7 @@ async function registerVariantFromBank(bankId){
   if(!b || !b.itemCode) return;
   const sp = splitItemCode(b.itemCode);
   if(!sp || !sp.isVariant){ showToast('변형 코드가 아닙니다.'); return; }
-  await loadItemStoreIfNeeded();
+  if(!(await storeEnsure([sp.origin]))) return;
   if(variantsOfCode(sp.origin).some(v=>v.code===b.itemCode)){ showToast('이미 창고에 있습니다.'); render(); return; }
   const v = {
     code: b.itemCode, originCode: sp.origin, variantKind: sp.variantKind,
@@ -7985,7 +8026,7 @@ async function regenerateOneWithAI(bankId){
      한 번에 한 건씩 태우고 아무것도 안 남는다.
      🔵 창고에서 고를 때는 이미 막고 있었다(`requestVariantForCode`) — 이 문만 열려 있었다.
      ⚠ 창고를 아직 안 읽었으면 «없다»가 거짓이 된다 — 그래서 먼저 싣는다(이미 실렸으면 곧장 돌아온다). */
-  if(!b.originalContent && !b.originalAnswer) await loadItemStoreIfNeeded();
+  if(!b.originalContent && !b.originalAnswer && !(await storeEnsure([bankRootOf(b)], [b.itemCode]))) return;
   const 원본먼저 = bankOriginal(b);
   if(!원본먼저.content || !원본먼저.answer){
     showToast(`원본 ${!원본먼저.content ? '본문' : '정답'}이 창고에 없습니다${b.itemCode ? ` (${b.itemCode})` : ''} — ＋교재 올리기 · ＋빠른정답표로 채운 뒤 다시 눌러주세요.`);
@@ -15501,6 +15542,9 @@ async function saveExam(){
       '개를 넘는 점수는 저장되지 않습니다.\n' +
       '문항을 ' + bad[0] + '개로 맞춰 붙이는 것이 맞습니다.\n\n그래도 이대로 붙일까요?')) return;
   }
+  /* 창고 — 문항 코드의 본문(있던 것 위에 얹는다) + 시험지 교재(D)에 이미 매긴 번호. 못 읽으면 저장 «전»에 멈춘다 (10-25 · 5단계). */
+  const 시험지교재 = await storeExamBookCodes();
+  if(!시험지교재 || !(await storeEnsure([], questions.map(q => q.itemCode)))) return;
   const examId = editing ? editing.id : 'ex'+Date.now();
   let newExam;
   if(editing){
@@ -15518,9 +15562,8 @@ async function saveExam(){
   /* 🔵 **시험지 문항도 창고에 넣는다** (2026-09-05 · 사용자 요청 —
      「코드붙이는거랑 hwpx파일 올려서 창고에 저장하고 정답까지 불러 들여오는거」).
      시험지는 «푸는 것»이고 창고는 «다시 쓰는 것»이다. 코드가 붙어야 둘이 이어진다.
-     ⚠ 창고를 아직 안 읽었으면 다음 번호를 셀 수 없다 — 먼저 싣는다. */
-  await loadItemStoreIfNeeded();
-  let 다음번호 = nextBookSerial(EXAM_BOOK_CODE);
+     ⚠ 창고를 아직 안 읽었으면 다음 번호를 셀 수 없다 — 위에서 D 코드를 받아 뒀다(storeExamBookCodes). */
+  let 다음번호 = nextBookSerial(EXAM_BOOK_CODE, 시험지교재);
   const 창고에담을것 = [];
   for(let i=0;i<questions.length;i++){
     const q = questions[i];
@@ -15569,6 +15612,7 @@ async function saveExam(){
     if(옛.content === it.content && (!it.answer || 옛.answer === it.answer)) continue;
     const doc = Object.assign({}, 옛, { code:it.code, content:it.content, updatedAt: nowStamp() });
     if(it.answer) doc.answer = it.answer;
+    if(!doc.source && String(it.code).split('-')[2] === EXAM_BOOK_CODE) doc.source = { book: BOOK_OF_CODE[EXAM_BOOK_CODE] };   // 색인 book 칸 — 다음 번호를 이것으로 센다
     if(await dbSetDoc('items', it.code, doc)){ state.itemBody[it.code] = doc; 창고담김++; }
   }
   if(창고담김){
@@ -15621,9 +15665,9 @@ async function deleteExam(examId){
      코드만 이으면 그대로 찾아진다 — 그게 창고를 만든 까닭이다.
      ⚠ 다만 **안내가 그 말을 안 하고 있었다.** 「함께 지워지는 것」만 세어 주니
        «다 지워졌겠지»로 읽힌다. 남는 것도 세어서 말한다. */
-  await loadItemStoreIfNeeded();
   const keptCodes = [...new Set(banks.map(b => b.itemCode).filter(Boolean)
     .map(c => (splitItemCode(c) || {}).origin || c))];
+  await storeEnsure(keptCodes);
   const keptVariants = keptCodes.reduce((n, c) => n + variantsOfCode(c).length, 0);
   const keepLine = keptVariants
     ? `\n남는 것 —\n· 창고에 넣어 둔 변형 ${keptVariants}개는 «그대로 남습니다» (문항에 딸린 것이라서)\n`
@@ -15878,7 +15922,14 @@ function codeOfSubjectName(name){
   for(const k in CODE_SUBJECTS) if(CODE_SUBJECTS[k] === name) return k;
   return 'K2';                 // 지금 다루는 것이 공통수학2 하나다 (2026-09-05 사용자 확인)
 }
-function nextBookSerial(bookCode){
+/* 시험지에서 태어난 문항(D)의 코드 — 창고 색인 book 칸으로 고른다(그 문서만 읽는다 · 10-25 · 5단계). 못 읽으면 null.
+   ponytail: book 칸은 source.book 에서 온다 — source 없이 담긴 D 문항은 못 센다(10-25 덤프에 D 문항 0개 · 그날부터 saveExam 이 source 를 적는다). */
+async function storeExamBookCodes(){
+  if(storeAll()) return Object.keys(state.itemBody);
+  try{ return (await dbQueryWhere('items', 'book', 'EQUAL', { stringValue: BOOK_OF_CODE[EXAM_BOOK_CODE] })).map(x => x.id); }
+  catch(e){ showToast('문항 창고를 읽지 못했습니다 — 잠시 뒤 다시 눌러 주세요.'); return null; }
+}
+function nextBookSerial(bookCode, 더){
   let 최대 = 0;
   const 보기 = (code) => {
     const m = String(code || '').match(/^[A-Z0-9]+-[0-9]+-([A-Z])-([0-9]+)/);
@@ -15886,6 +15937,7 @@ function nextBookSerial(bookCode){
   };
   for(const c in (state.itemByCode || {})) 보기(c);
   for(const c in (state.itemBody || {})) 보기(c);
+  for(const c of (더 || [])) 보기(c);
   return 최대 + 1;
 }
 /* 시험지 문항 하나에 코드를 만든다. 단원을 못 고르면 **안 만든다** — 짐작한 코드는
@@ -20682,17 +20734,8 @@ function pvFindCode(pv, code){
   }
   return null;
 }
-/* 교재 이름 + 번호 → 원본 코드. 창고 본문의 books({year, part, name, no})를 본다 — 창고를 싣는 강사 화면만.
-   🔴 책 번호 ≠ 코드 일련번호다 — 1-2기말 61번은 K2-06-E-0625(564+n). 그래서 계산하지 않고 창고에 적힌 번호로 찾는다.
-   ponytail: 반 교재 이름이 «[해][판][책]» 차례라고 본다 — 차례가 다른 이름이 생기면 못 찾는다(코드 없이 등록될 뿐). */
-function pvCodeOf(book, n){
-  const 판 = x => String(x || '').replace(/[\s\[\]]+/g, '').toLowerCase(), 이름 = 판(book);
-  for(const code in (state.itemBody || {}))
-    if(((state.itemBody[code] || {}).books || []).some(b => b.no === n && 판(b.year + b.part + b.name) === 이름)) return code;
-  return '';
-}
 /* 교재 이름 + 번호 → 원본 코드, 판 표(kv/book-editions · 학생도 읽는 한 건)로 (10-23 · 사용자 — 「내년에 엔크를 고쳐
-   번호가 바뀌어도 코드가 달려 있으니 2027판 질문에 해설 영상이 딸려가는 구조」). 학생 화면은 창고 본문이 없어 pvCodeOf 를 못 쓴다. */
+   번호가 바뀌어도 코드가 달려 있으니 2027판 질문에 해설 영상이 딸려가는 구조」). 강사 등록(pvSave)도 이것 하나로 찾는다(10-25 · 창고 본문 books 를 훑던 pvCodeOf 를 뗐다 — 판 표가 그 books 로 지어진다). */
 async function pvCodeByEdition(book, n){
   if(!state.bookEditions){
     const v = await dbGet('book-editions', null);
@@ -20869,8 +20912,7 @@ async function pvSave(){
   if(!extractYouTubeId(url)){ showToast('유튜브 주소를 확인해 주세요.'); return; }
   if(!items.length){ showToast('목차에서 «6:24 61번» 같은 줄을 찾지 못했습니다.'); return; }
   /* 문항마다 원본 코드를 박는다 — 오답숙제·쌍둥이 한 문제가 이것으로 찾는다 (10-21). 창고에 없는 번호는 코드 없이(질문에서만) 쓰인다. */
-  await loadItemStoreIfNeeded();
-  for(const x of items){ const c = pvCodeOf(book, x.n) || await pvCodeByEdition(book, x.n); if(c) x.code = c; }
+  for(const x of items){ const c = await pvCodeByEdition(book, x.n); if(c) x.code = c; }   // 판 표 한 건 (10-25 · 창고를 통째로 안 싣는다)
   const 코드없음 = items.filter(x => !x.code).length;
   /* 🔴 늘 새로 읽고 더한다 — 다른 기기에서 더한 것을 덮지 않게. 못 읽으면 dbSet 이 막는다. */
   const pv = (await dbGet('prob-videos', null)) || { entries: [] };
@@ -31562,12 +31604,12 @@ function bookReqLabelOf(code){
    🔵 창고에 **이미 검토된 변형**이 있으면 채워서 바로 낸다 — 그것은 이미 통과시킨 것이다.
      없으면 빈 채로 `pending` — 검토 화면의 「내용 없음」 줄에 서고, 거기서 만들어 검토해 공개한다. */
 async function bookReqAccept(code){
-  await loadItemStoreIfNeeded();
+  if(!(await storeEnsure([code]))) return;
+  await bookEditionsEnsure();
   const 요청 = bookReqPending().find(x => x.code === code);
   if(!요청){ showToast('그 요청이 이제 없습니다.'); render(); return; }
   const m = String(code).match(ITEM_CODE_RE) || [];
   let bank = DATA.problemBank.find(b => b.source === 'bookreq' && b.itemCode === code);
-  if(!state.bookEditions || !state.bookEditions.length) state.bookEditions = bookEditionsBuild();   // 이름표·번호를 책 번호로
   const 판 = bookEditionOfCode(code);
   if(!bank){
     const v = codeVariantFor(code);
@@ -31641,12 +31683,12 @@ function bankAskLabelOf(g){
    ⚠ 줄을 못 세우면 부름은 **안 지운다**. 지워 놓고 못 세우면 그 부름은 어디에도 안 남는다.
    🔵 창고에 **이미 검토된 변형**이 있으면 채워서 바로 낸다 — 그것은 이미 통과시킨 것이다. */
 async function bankAskAccept(examId, qkey){
-  await loadItemStoreIfNeeded();
   const 부름 = bankAskPending().find(g => g.examId === examId && g.qkey === qkey);
   if(!부름){ showToast('그 요청이 이제 없습니다.'); render(); return; }
   const exam = DATA.exams.find(e => e.id === examRootId(examId));
   const q = exam && (exam.questions || []).find(x => (x.qkey || ('0-' + x.no)) === qkey || String(x.no) === qkey);
   if(!q){ showToast('시험지에서 그 번호를 못 찾았습니다.'); return; }
+  if(!(await storeEnsure([(splitItemCode(q.itemCode) || {}).origin || q.itemCode]))) return;
   let bank = findBankEntry(examId, qkey);
   if(!bank){
     const v = codeVariantFor(q.itemCode);
@@ -31696,11 +31738,11 @@ async function bankAskAccept(examId, qkey){
    ⚠ 무엇이 비었나는 큐와 **같은 잣대**를 쓴다(`reviewQueueList('empty')`) — 두 벌로 두면 갈린다.
    ⚠ 채울 것이 하나도 없으면 그렇게 말한다. 아무 말 없이 끝나면 «눌렀는데 아무 일도 안 났다»가 된다. */
 async function fillEmptyFromStore(onlyRoot){
-  await loadItemStoreIfNeeded();
+  const 줄 = reviewQueueList('empty').filter(b => !onlyRoot || bankRootOf(b) === onlyRoot);   /* 통과 직후에는 그 코드만 (2026-09-21) */
+  if(!(await storeEnsure(줄.map(bankRootOf)))) return { 채움: 0, 못함: 0 };
   let 채움 = 0, 못함 = 0;
   const 채운것 = [];
-  for(const b of reviewQueueList('empty')){
-    if(onlyRoot && bankRootOf(b) !== onlyRoot) continue;   /* 통과 직후에는 그 코드만 (2026-09-21) */
+  for(const b of 줄){
     const v = codeVariantFor(b.itemCode);
     if(!v) continue;
     const 되돌림 = { variantContent: b.variantContent, variantAnswer: b.variantAnswer,
@@ -32301,6 +32343,7 @@ async function icFillCommit(){
     if(saved){
       const ver = await itemsBumpVersion();
       itemsCacheWrite(ver, Object.values(state.itemBody));
+      storeRewriteLists();
     }
     const figMsg = figures ? ` 그림 ${figures}개도 함께 담았습니다.` : '';
     const figBad = figFailed ? ` (그림 ${figFailed}개는 못 올렸습니다)` : '';
@@ -32505,6 +32548,7 @@ async function icFillAnswers(input){
     if(saved){
       const ver = await itemsBumpVersion();
       itemsCacheWrite(ver, Object.values(state.itemBody));
+      storeRewriteLists();
     }
     const 곁 = (그대로 ? ` 이미 같은 것 ${그대로}개는 그대로 뒀습니다.` : '')
              + (본문없음 ? ` 본문이 없는 ${본문없음}개는 건너뛰었습니다 — 교재를 먼저 올려주세요.` : '');
@@ -32944,6 +32988,8 @@ function icToolsHTML(앞){
       title="창고에 이미 담긴 본문의 수식만 지금 규칙으로 다시 훑습니다 — 교재를 다시 올릴 필요가 없습니다"
       onclick="icRepairEq()">
       ${rp.running ? '훑는 중…' : rp.ready ? `✓ ${rp.n}건 고치기` : '수식 다시 훑기'}</button>
+    <button class="btn q sm" onclick="storeLoadAll()"
+      title="도구로 문항을 넣은 뒤 누릅니다 — 창고를 통째로 실어 채울 차례·교재 판 표를 다시 적습니다(바뀐 것만 받지만, 이 기기에서 처음이면 문항 수만큼 읽습니다)">창고 다시 세기</button>
     <span class="ist-bnum">
       ${남은 !== null ? `채울 것 <b class="mono">${남은}</b>` : ''}
       ${state.aiQuotaUsed !== null ? `<s>·</s> 오늘 <b class="mono">${state.aiQuotaUsed}/${AI_DAILY_LIMIT}</b>` : ''}
@@ -34531,10 +34577,14 @@ async function autoFillTick(){
   if(!state.currentUser || state.currentUser.type !== 'teacher') return;
   /* ⚠ 다른 AI 작업(하나 다시 생성·일괄 생성)과 겹치면 안 된다 — 비켜서서 기다린다. */
   if(state.aiProcessing) return autoFillLater();
-  /* 창고가 다 안 실렸으면 «채울 차례»(1건)로 돈다 — 차례가 아예 없을 때만 통째로 싣는다(그 자리에서 차례가 적힌다). */
+  /* 창고가 다 안 실렸으면 «채울 차례»(1건)로 돈다 — 차례가 없으면 멈춘다(10-25 까지는 통째로 싣고 지었다). */
   if(!storeAll()){
     await fillQueueEnsure();
-    if(!state.fillQueue){ await loadItemStoreIfNeeded(); return autoFillLater(2000); }
+    if(!state.fillQueue){
+      state.fillQueue = undefined;                       // 다음에 켜면 다시 읽는다
+      autoFillStop('채울 차례를 못 읽었습니다 — 문항 창고의 「창고 다시 세기」로 지은 뒤 다시 켜 주세요.');
+      render(); return;
+    }
   }
   const list = autoFillCandidates();
   if(!list.length){
@@ -34952,7 +35002,7 @@ function nightLogHTML(){
      본문·변형만 받아 다시 본다 — 이미 찼거나 본문이 없으면 차례에서 뺀다. 변형 한 건에 읽기 서너 건이다.
    · 창고를 다 실은 화면이 차례를 «새로» 짓는다(fillQueueOf) — 다 실린 창고만이 «없는 것»을 안다.
    · 반쪽 창고에서는 «뺄 것»만 뺀다 — 쓰기 직전에 kv 를 다시 읽어 남이 지은 새 차례를 덮지 않는다.
-   ponytail: 도구(tools/*.mjs)로 넣은 새 문항은 누군가 창고를 다 실어야 차례에 든다(교재 올리기·정리 화면 등) — ⑤에서.
+   ponytail: 도구(tools/*.mjs)로 넣은 새 문항은 «창고 다시 세기»(storeLoadAll)를 눌러야 차례에 든다 — 웹 교재 올리기는 담고 나서 스스로 적는다.
    ponytail: 문항이 2만 개쯤 되면 kv 문서(1MB)가 찬다 — 그때는 단원별 문서로. */
 const FILL_QUEUE_KEY = 'khm-fill-queue';
 function fillQueueOf(){
@@ -34988,6 +35038,12 @@ async function fillQueueSave(뺄){
   if(p === 전) return;
   if(await dbSet('fill-queue', q)) try{ localStorage.setItem(FILL_QUEUE_KEY, p); }catch(e){}
 }
+/* 담은 뒤 판 표·채울 차례를 그 자리에서 다시 적는다 — 창고를 다 실은 화면(교재 올리기·정답 채우기)에서만 뜻이 있다. */
+function storeRewriteLists(){
+  if(!storeAll()) return;
+  bookEditionsSync().catch(e => console.warn('[판 표] 못 맞췄다 —', e && e.message));
+  fillQueueSave().catch(e => console.warn('[채울 차례] 못 적었다 —', e && e.message));
+}
 function fillQueueDrop(code){
   if(state.fillQueue) state.fillQueue = { codes: state.fillQueue.codes.filter(c => c !== code), fig: state.fillQueue.fig.filter(c => c !== code) };
   fillQueueSave(code).catch(e => console.warn('[채울 차례] 못 뺐다 —', e && e.message));
@@ -35015,13 +35071,11 @@ async function nightRun(pw, aside){
   await doTeacherLogin(pw);
   if(!state.currentUser || state.currentUser.type !== 'teacher') return { ok:false, summary:'로그인 실패' };
   await loadItemLedgerIfNeeded();                     // 장부는 배포 파일 — 읽기 0
-  /* 채울 차례가 없거나 못 읽었으면 예전처럼 통째로 — 그러면 다 실은 자리에서 차례가 적힌다. */
-  if(!(await fillQueueEnsure())) state.storeNight = false;
   /* 검토는 «검토 대기» 변형만 — 검토는 변형 글만 본다(원본 본문·형제 변형은 안 받는다). */
   const 대기싣기 = async () => {
     if(storeAll()) return;
     try{ await partEnsure('variants', ['pending']); partToState(); }
-    catch(e){ state.storeNight = false; await loadItemStoreIfNeeded(); }
+    catch(e){ console.warn('[새벽] 검토 대기를 못 받았다 —', e && e.message); }   // 통째로 물러나지 않는다 (10-25)
   };
   const 검토하기 = async (셋째, 까지) => {
     if(Date.now() >= 까지) return 0;
@@ -35309,8 +35363,8 @@ async function addVariantByHand(bankId){
     if(!confirm('이 정답은 학생이 칠 수 없는 형태라 데일리퀴즈에 안 나갑니다.\n'
       + '(①~⑤ 또는 정수만 됩니다)\n\n그래도 창고에는 넣을까요?')) return;
   }
-  await loadItemStoreIfNeeded();
   const root = (splitItemCode(b.itemCode) || {}).origin || b.itemCode;
+  if(!(await storeEnsure([root]))) return;
   const code = nextVariantCode(root, kind);
   const v = { code, originCode: root, variantKind: kind,
               content: content.trim(), answer: answer.trim(), solution: '',
@@ -35443,18 +35497,13 @@ function reviewWorkHTML(b, list){
    🔴 **자리가 곧 뜻이다.** 만들기 단추보다 «위»에 있어야 「먼저 찾는다」가 읽힌다.
      아래에 두면 이미 만들고 난 뒤에 보게 되고, 그러면 있으나 마나다. */
 function itemCodeStripHTML(b){
-  const loaded = storeAll();
-  if(!loaded){
-    /* 창고를 아직 안 받았다 — 이 화면을 연 김에 받아 두고 다시 그린다.
-       ⚠ render() 안에서 부르므로 await 하지 않는다. 끝나면 스스로 다시 그린다. */
-    loadItemStoreIfNeeded().then(()=>{ if(state.itemByCode) render(); });
-    return `<div class="ic-strip"><span class="ic-load">문항 창고를 여는 중…</span></div>`;
-  }
   const code = b.itemCode || '';
   /* 🔴 **이 문항이 «변형»일 수 있다.** 복습테스트 시험지가 그렇다 — 문항 자체가 N01 이다.
      그때 «이 코드의 변형»을 찾으면 언제나 0개다. 찾아야 할 것은 **원본의 형제들**이다. */
   const sp   = code ? splitItemCode(code) : null;
   const root = sp ? sp.origin : code;
+  /* 창고는 이 원본 하나만 받는다 (10-25 · 5단계 — 예전엔 통째로). ⚠ render() 안이라 기다리지 않는다 — 받으면 스스로 다시 그린다. */
+  if(!storeHas(root)) return `<div class="ic-strip"><span class="ic-load">문항 창고를 여는 중…</span></div>`;
   const it   = root ? itemOfCode(root) : null;
   const all  = root ? variantsOfCode(root) : [];
   const mine = sp && sp.isVariant ? all.find(v=>v.code===code) : null;
@@ -36844,7 +36893,7 @@ const CLEANUP_JOBS = {
      그래서 render() 마다 불려도 값이 안 든다.
    ⚠ 아직 안 실렸으면 `null` 을 돌려준다 — «0건»과 «못 셌다»는 다르다. */
 function cleanupTotal(){
-  if(!DATA || !DATA.problemBank || !state.variants) return null;
+  if(!DATA || !DATA.problemBank || !storeAll()) return null;   // 반쪽 창고로 센 수는 «0건»처럼 읽힌다
   try{
     let n = 0;
     for(const k in CLEANUP_JOBS) n += CLEANUP_JOBS[k].scan().length;
@@ -36867,10 +36916,10 @@ async function cleanupApply(key){
   render();
 }
 function teacherCleanupHTML(){
-  if(!storeAll()){
-    loadItemStoreIfNeeded().then(()=>{ if(state.variants) render(); });
+  if(!storeAll()){   /* 창고 전체를 훑는 화면이라 통째로 싣는다 — 열기만 해서는 안 싣고 단추로 (10-25 · 5단계) */
     return `<div class="st-sec"><div class="st-h">데이터 정리</div>
-      <div class="rst-empty">창고를 여는 중…</div></div>`;
+      <div class="rst-empty">창고 전체를 실어야 셉니다 — 바뀐 것만 받지만, 이 기기에서 처음이면 문항 수만큼 읽습니다.
+        <button class="btn sm" onclick="storeLoadAll()">창고 전체 싣기</button></div></div>`;
   }
   const c = state.cleanup;
   const card = (key) => {

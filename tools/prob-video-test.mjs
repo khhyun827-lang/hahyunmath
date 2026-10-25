@@ -165,10 +165,9 @@ try{
     const 읽음 = [], 씀 = [];
     window.dbGet = async (k, d) => { 읽음.push(k); return { entries: [{ id: 'old', url: 'u', book: '주기나 1-1', items: [{ n: 1, from: 0, to: 10 }] }] }; };
     window.dbSet = async (k, v) => { 씀.push([k, JSON.parse(JSON.stringify(v))]); return true; };
-    window.loadItemStoreIfNeeded = async () => {};
-    state.itemBody = { 'K2-06-E-0625': { code: 'K2-06-E-0625', books: [{ name: '주기나', part: '1-1', year: 2026, no: 61 }] },
-                       'K2-01-E-0061': { code: 'K2-01-E-0061', books: [{ name: '주기나', part: '1-2', year: 2026, no: 61 }] } };
-    const 코드 = [pvCodeOf('[2026][1-1]주기나', 61), pvCodeOf('[2026][1-1][주기나]', 61), pvCodeOf('[2026][1-1]주기나', 65)];
+    state.bookEditions = [{ name: '주기나', part: '1-1중간', year: 2026, nos: { 61: 'K2-06-E-0625' } },
+                          { name: '주기나', part: '1-2중간', year: 2026, nos: { 61: 'K2-01-E-0061' } }];   // 판 표 (10-25 · 창고를 안 싣는다)
+    const 코드 = [await pvCodeByEdition('[2026][1-1중간]주기나', 61), await pvCodeByEdition('[2026][1-1중간][주기나]', 61), await pvCodeByEdition('[2026][1-1중간]주기나', 65)];
     const box = document.createElement('div'); box.innerHTML = pvPanelHTML('c1'); document.body.appendChild(box);
     document.getElementById('pv-url').value = 'https://youtu.be/CCCCCCCCCCC';
     document.getElementById('pv-toc').value = '0:00 수업 시작\n6:24 61번\n8:50 65번';
@@ -179,7 +178,7 @@ try{
   });
   봄('저장 전에 kv/prob-videos 를 새로 읽는다', 등록.읽음, ['prob-videos']);
   봄('🔴 옛 목차를 지우지 않고 뒤에 더한다', [등록.열쇠, 등록.개수, 등록.옛것], ['prob-videos', 2, 'old']);
-  봄('🔴 교재 이름+번호 → 창고에 적힌 원본 코드 (책 번호 ≠ 일련번호 · 판이 다르면 다른 문항 · 없으면 빈칸)', 등록.코드, ['K2-06-E-0625', 'K2-06-E-0625', '']);
+  봄('🔴 교재 이름+번호 → 판 표의 원본 코드 (책 번호 ≠ 일련번호 · 판이 다르면 다른 문항 · 없으면 빈칸)', 등록.코드, ['K2-06-E-0625', 'K2-06-E-0625', '']);
   봄('새 목차 = 고른 교재 + 문항 (창고에서 찾은 것만 코드)', 등록.새것, ['주기나 1-1', [{ n: 61, from: 384, to: 530 }, { n: 65, from: 530, to: 0 }]]);
 
   console.log('\n오답숙제에도 원본 풀이 · 영상 본 뒤 쌍둥이 한 문제 (10-21)');

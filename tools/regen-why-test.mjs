@@ -54,6 +54,7 @@ function 돌린다(원본, opts = {}){
     showToast: m => 말.push(String(m)),
     render: () => {},
     loadItemStoreIfNeeded: async () => {},
+    storeEnsure: async () => true,
     bankOriginalSrc: null,
     getAIQuotaUsed: async () => { 본.한도++; return opts.used || 0; },
     AI_DAILY_LIMIT: 20,
