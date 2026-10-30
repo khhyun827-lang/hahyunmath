@@ -2,16 +2,20 @@
   "subject": "K1",
   "book": "J",
   "kind": "source",
-  "sourceFile": "[2026][주기나][1-1중간][1.다항식의연산].hwpx · [2026][주기나][1-1중간][2.항등식과나머지정리].hwpx · [2026][주기나][1-1중간][3.인수분해].hwpx · [2026][주기나][1-1중간][4.복소수].hwpx · [2026][주기나][1-1중간][5.이차방정식].hwpx · [2026][주기나][1-1중간][6.이차함수].hwpx",
-  "updatedAt": "2026-10-05",
-  "count": 608,
+  "sourceFile": "[2026][주기나][1-1중간][1.다항식의연산].hwpx · [2026][주기나][1-1중간][2.항등식과나머지정리].hwpx · [2026][주기나][1-1중간][3.인수분해].hwpx · [2026][주기나][1-1중간][4.복소수].hwpx · [2026][주기나][1-1중간][5.이차방정식].hwpx · [2026][주기나][1-1중간][6.이차함수].hwpx · [2026][주기나][1-1기말][7.여러가지방정식].hwpx · [2026][주기나][1-1기말][8.여러가지부등식].hwpx · [2026][주기나][1-1기말][9.경우의수].hwpx · [2026][주기나][1-1기말][10.행렬].hwpx",
+  "updatedAt": "2026-10-30",
+  "count": 1039,
   "chapters": [
     "01",
     "02",
     "03",
     "04",
     "05",
-    "06"
+    "06",
+    "07",
+    "08",
+    "09",
+    "10"
   ],
   "items": [
     {
@@ -236,55 +240,55 @@
       }
     },
     {
-      "code": "1190619",
+      "code": "1140924",
       "chapter": "01",
       "chapterName": "다항식의연산",
       "subject": "K1",
       "seq": 18,
       "badge": "OR",
-      "origin": "1190619",
+      "origin": "1140924",
       "source": {
         "book": "모의고사 기출",
-        "label": "2019년 06월 19번"
+        "label": "2014년 09월 24번"
       }
     },
     {
-      "code": "1190619-D01",
+      "code": "1140924-D01",
       "chapter": "01",
       "chapterName": "다항식의연산",
       "subject": "K1",
       "seq": 19,
       "badge": "DW",
-      "origin": "1190619",
+      "origin": "1140924",
       "source": {
         "book": "모의고사 기출",
-        "label": "2019년 06월 19번"
+        "label": "2014년 09월 24번"
       }
     },
     {
-      "code": "1190619-N01",
+      "code": "1140924-N01",
       "chapter": "01",
       "chapterName": "다항식의연산",
       "subject": "K1",
       "seq": 20,
       "badge": "NC",
-      "origin": "1190619",
+      "origin": "1140924",
       "source": {
         "book": "모의고사 기출",
-        "label": "2019년 06월 19번"
+        "label": "2014년 09월 24번"
       }
     },
     {
-      "code": "1190619-U01",
+      "code": "1140924-U01",
       "chapter": "01",
       "chapterName": "다항식의연산",
       "subject": "K1",
       "seq": 21,
       "badge": "UP",
-      "origin": "1190619",
+      "origin": "1140924",
       "source": {
         "book": "모의고사 기출",
-        "label": "2019년 06월 19번"
+        "label": "2014년 09월 24번"
       }
     },
     {
@@ -7916,6 +7920,5609 @@
       "source": {
         "book": "모의고사 기출",
         "label": "2021년 09월 30번"
+      }
+    },
+    {
+      "code": "2190314B",
+      "chapter": "07",
+      "chapterName": "여러가지방정식",
+      "subject": "K1",
+      "seq": 1,
+      "badge": "OR",
+      "origin": "2190314B",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2019년 03월 14번"
+      }
+    },
+    {
+      "code": "2190314B-N01",
+      "chapter": "07",
+      "chapterName": "여러가지방정식",
+      "subject": "K1",
+      "seq": 2,
+      "badge": "NC",
+      "origin": "2190314B",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2019년 03월 14번"
+      }
+    },
+    {
+      "code": "1150915",
+      "chapter": "07",
+      "chapterName": "여러가지방정식",
+      "subject": "K1",
+      "seq": 3,
+      "badge": "OR",
+      "origin": "1150915",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2015년 09월 15번"
+      }
+    },
+    {
+      "code": "1150915-N01",
+      "chapter": "07",
+      "chapterName": "여러가지방정식",
+      "subject": "K1",
+      "seq": 4,
+      "badge": "NC",
+      "origin": "1150915",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2015년 09월 15번"
+      }
+    },
+    {
+      "code": "1111129",
+      "chapter": "07",
+      "chapterName": "여러가지방정식",
+      "subject": "K1",
+      "seq": 5,
+      "badge": "OR",
+      "origin": "1111129",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2011년 11월 29번"
+      }
+    },
+    {
+      "code": "1111129-N01",
+      "chapter": "07",
+      "chapterName": "여러가지방정식",
+      "subject": "K1",
+      "seq": 6,
+      "badge": "NC",
+      "origin": "1111129",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2011년 11월 29번"
+      }
+    },
+    {
+      "code": "1111129-U01",
+      "chapter": "07",
+      "chapterName": "여러가지방정식",
+      "subject": "K1",
+      "seq": 7,
+      "badge": "UP",
+      "origin": "1111129",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2011년 11월 29번"
+      }
+    },
+    {
+      "code": "1230918",
+      "chapter": "07",
+      "chapterName": "여러가지방정식",
+      "subject": "K1",
+      "seq": 8,
+      "badge": "OR",
+      "origin": "1230918",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2023년 09월 18번"
+      }
+    },
+    {
+      "code": "1230918-N01",
+      "chapter": "07",
+      "chapterName": "여러가지방정식",
+      "subject": "K1",
+      "seq": 9,
+      "badge": "NC",
+      "origin": "1230918",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2023년 09월 18번"
+      }
+    },
+    {
+      "code": "1230918-U01",
+      "chapter": "07",
+      "chapterName": "여러가지방정식",
+      "subject": "K1",
+      "seq": 10,
+      "badge": "UP",
+      "origin": "1230918",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2023년 09월 18번"
+      }
+    },
+    {
+      "code": "1230612",
+      "chapter": "07",
+      "chapterName": "여러가지방정식",
+      "subject": "K1",
+      "seq": 11,
+      "badge": "OR",
+      "origin": "1230612",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2023년 06월 12번"
+      }
+    },
+    {
+      "code": "1230612-N01",
+      "chapter": "07",
+      "chapterName": "여러가지방정식",
+      "subject": "K1",
+      "seq": 12,
+      "badge": "NC",
+      "origin": "1230612",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2023년 06월 12번"
+      }
+    },
+    {
+      "code": "1230612-U01",
+      "chapter": "07",
+      "chapterName": "여러가지방정식",
+      "subject": "K1",
+      "seq": 13,
+      "badge": "UP",
+      "origin": "1230612",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2023년 06월 12번"
+      }
+    },
+    {
+      "code": "1250918",
+      "chapter": "07",
+      "chapterName": "여러가지방정식",
+      "subject": "K1",
+      "seq": 14,
+      "badge": "OR",
+      "origin": "1250918",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2025년 09월 18번"
+      }
+    },
+    {
+      "code": "1250918-N01",
+      "chapter": "07",
+      "chapterName": "여러가지방정식",
+      "subject": "K1",
+      "seq": 15,
+      "badge": "NC",
+      "origin": "1250918",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2025년 09월 18번"
+      }
+    },
+    {
+      "code": "1250918-U01",
+      "chapter": "07",
+      "chapterName": "여러가지방정식",
+      "subject": "K1",
+      "seq": 16,
+      "badge": "UP",
+      "origin": "1250918",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2025년 09월 18번"
+      }
+    },
+    {
+      "code": "1250629",
+      "chapter": "07",
+      "chapterName": "여러가지방정식",
+      "subject": "K1",
+      "seq": 17,
+      "badge": "OR",
+      "origin": "1250629",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2025년 06월 29번"
+      }
+    },
+    {
+      "code": "1250629-N01",
+      "chapter": "07",
+      "chapterName": "여러가지방정식",
+      "subject": "K1",
+      "seq": 18,
+      "badge": "NC",
+      "origin": "1250629",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2025년 06월 29번"
+      }
+    },
+    {
+      "code": "1250629-N02",
+      "chapter": "07",
+      "chapterName": "여러가지방정식",
+      "subject": "K1",
+      "seq": 19,
+      "badge": "NC",
+      "origin": "1250629",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2025년 06월 29번"
+      }
+    },
+    {
+      "code": "2220316",
+      "chapter": "07",
+      "chapterName": "여러가지방정식",
+      "subject": "K1",
+      "seq": 20,
+      "badge": "OR",
+      "origin": "2220316",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2022년 03월 16번"
+      }
+    },
+    {
+      "code": "2220316-N01",
+      "chapter": "07",
+      "chapterName": "여러가지방정식",
+      "subject": "K1",
+      "seq": 21,
+      "badge": "NC",
+      "origin": "2220316",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2022년 03월 16번"
+      }
+    },
+    {
+      "code": "1240620",
+      "chapter": "07",
+      "chapterName": "여러가지방정식",
+      "subject": "K1",
+      "seq": 22,
+      "badge": "OR",
+      "origin": "1240620",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2024년 06월 20번"
+      }
+    },
+    {
+      "code": "1240620-N01",
+      "chapter": "07",
+      "chapterName": "여러가지방정식",
+      "subject": "K1",
+      "seq": 23,
+      "badge": "NC",
+      "origin": "1240620",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2024년 06월 20번"
+      }
+    },
+    {
+      "code": "2110319",
+      "chapter": "07",
+      "chapterName": "여러가지방정식",
+      "subject": "K1",
+      "seq": 24,
+      "badge": "OR",
+      "origin": "2110319",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2011년 03월 19번"
+      }
+    },
+    {
+      "code": "2110319-N01",
+      "chapter": "07",
+      "chapterName": "여러가지방정식",
+      "subject": "K1",
+      "seq": 25,
+      "badge": "NC",
+      "origin": "2110319",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2011년 03월 19번"
+      }
+    },
+    {
+      "code": "2110319-U01",
+      "chapter": "07",
+      "chapterName": "여러가지방정식",
+      "subject": "K1",
+      "seq": 26,
+      "badge": "UP",
+      "origin": "2110319",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2011년 03월 19번"
+      }
+    },
+    {
+      "code": "1240915",
+      "chapter": "07",
+      "chapterName": "여러가지방정식",
+      "subject": "K1",
+      "seq": 27,
+      "badge": "OR",
+      "origin": "1240915",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2024년 09월 15번"
+      }
+    },
+    {
+      "code": "1240915-N01",
+      "chapter": "07",
+      "chapterName": "여러가지방정식",
+      "subject": "K1",
+      "seq": 28,
+      "badge": "NC",
+      "origin": "1240915",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2024년 09월 15번"
+      }
+    },
+    {
+      "code": "1120917",
+      "chapter": "07",
+      "chapterName": "여러가지방정식",
+      "subject": "K1",
+      "seq": 29,
+      "badge": "OR",
+      "origin": "1120917",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2012년 09월 17번"
+      }
+    },
+    {
+      "code": "1120917-N01",
+      "chapter": "07",
+      "chapterName": "여러가지방정식",
+      "subject": "K1",
+      "seq": 30,
+      "badge": "NC",
+      "origin": "1120917",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2012년 09월 17번"
+      }
+    },
+    {
+      "code": "1140915",
+      "chapter": "07",
+      "chapterName": "여러가지방정식",
+      "subject": "K1",
+      "seq": 31,
+      "badge": "OR",
+      "origin": "1140915",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2014년 09월 15번"
+      }
+    },
+    {
+      "code": "1140915-N01",
+      "chapter": "07",
+      "chapterName": "여러가지방정식",
+      "subject": "K1",
+      "seq": 32,
+      "badge": "NC",
+      "origin": "1140915",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2014년 09월 15번"
+      }
+    },
+    {
+      "code": "1140915-U01",
+      "chapter": "07",
+      "chapterName": "여러가지방정식",
+      "subject": "K1",
+      "seq": 33,
+      "badge": "UP",
+      "origin": "1140915",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2014년 09월 15번"
+      }
+    },
+    {
+      "code": "1251026",
+      "chapter": "07",
+      "chapterName": "여러가지방정식",
+      "subject": "K1",
+      "seq": 34,
+      "badge": "OR",
+      "origin": "1251026",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2025년 10월 26번"
+      }
+    },
+    {
+      "code": "1251026-N01",
+      "chapter": "07",
+      "chapterName": "여러가지방정식",
+      "subject": "K1",
+      "seq": 35,
+      "badge": "NC",
+      "origin": "1251026",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2025년 10월 26번"
+      }
+    },
+    {
+      "code": "1221126",
+      "chapter": "07",
+      "chapterName": "여러가지방정식",
+      "subject": "K1",
+      "seq": 36,
+      "badge": "OR",
+      "origin": "1221126",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2022년 11월 26번"
+      }
+    },
+    {
+      "code": "1221126-N01",
+      "chapter": "07",
+      "chapterName": "여러가지방정식",
+      "subject": "K1",
+      "seq": 37,
+      "badge": "NC",
+      "origin": "1221126",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2022년 11월 26번"
+      }
+    },
+    {
+      "code": "1221126-U01",
+      "chapter": "07",
+      "chapterName": "여러가지방정식",
+      "subject": "K1",
+      "seq": 38,
+      "badge": "UP",
+      "origin": "1221126",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2022년 11월 26번"
+      }
+    },
+    {
+      "code": "1220927",
+      "chapter": "07",
+      "chapterName": "여러가지방정식",
+      "subject": "K1",
+      "seq": 39,
+      "badge": "OR",
+      "origin": "1220927",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2022년 09월 27번"
+      }
+    },
+    {
+      "code": "1220927-N01",
+      "chapter": "07",
+      "chapterName": "여러가지방정식",
+      "subject": "K1",
+      "seq": 40,
+      "badge": "NC",
+      "origin": "1220927",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2022년 09월 27번"
+      }
+    },
+    {
+      "code": "1220927-U01",
+      "chapter": "07",
+      "chapterName": "여러가지방정식",
+      "subject": "K1",
+      "seq": 41,
+      "badge": "UP",
+      "origin": "1220927",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2022년 09월 27번"
+      }
+    },
+    {
+      "code": "1190619",
+      "chapter": "07",
+      "chapterName": "여러가지방정식",
+      "subject": "K1",
+      "seq": 42,
+      "badge": "OR",
+      "origin": "1190619",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2019년 06월 19번"
+      }
+    },
+    {
+      "code": "1190619-N01",
+      "chapter": "07",
+      "chapterName": "여러가지방정식",
+      "subject": "K1",
+      "seq": 43,
+      "badge": "NC",
+      "origin": "1190619",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2019년 06월 19번"
+      }
+    },
+    {
+      "code": "1190619-U01",
+      "chapter": "07",
+      "chapterName": "여러가지방정식",
+      "subject": "K1",
+      "seq": 44,
+      "badge": "UP",
+      "origin": "1190619",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2019년 06월 19번"
+      }
+    },
+    {
+      "code": "2190320A",
+      "chapter": "07",
+      "chapterName": "여러가지방정식",
+      "subject": "K1",
+      "seq": 45,
+      "badge": "OR",
+      "origin": "2190320A",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2019년 03월 20번"
+      }
+    },
+    {
+      "code": "2190320A-N01",
+      "chapter": "07",
+      "chapterName": "여러가지방정식",
+      "subject": "K1",
+      "seq": 46,
+      "badge": "NC",
+      "origin": "2190320A",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2019년 03월 20번"
+      }
+    },
+    {
+      "code": "2190320A-U01",
+      "chapter": "07",
+      "chapterName": "여러가지방정식",
+      "subject": "K1",
+      "seq": 47,
+      "badge": "UP",
+      "origin": "2190320A",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2019년 03월 20번"
+      }
+    },
+    {
+      "code": "2250327",
+      "chapter": "07",
+      "chapterName": "여러가지방정식",
+      "subject": "K1",
+      "seq": 48,
+      "badge": "OR",
+      "origin": "2250327",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2025년 03월 27번"
+      }
+    },
+    {
+      "code": "2250327-N01",
+      "chapter": "07",
+      "chapterName": "여러가지방정식",
+      "subject": "K1",
+      "seq": 49,
+      "badge": "NC",
+      "origin": "2250327",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2025년 03월 27번"
+      }
+    },
+    {
+      "code": "2160330",
+      "chapter": "07",
+      "chapterName": "여러가지방정식",
+      "subject": "K1",
+      "seq": 50,
+      "badge": "OR",
+      "origin": "2160330",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2016년 03월 30번"
+      }
+    },
+    {
+      "code": "2160330-D01",
+      "chapter": "07",
+      "chapterName": "여러가지방정식",
+      "subject": "K1",
+      "seq": 51,
+      "badge": "DW",
+      "origin": "2160330",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2016년 03월 30번"
+      }
+    },
+    {
+      "code": "2160330-N01",
+      "chapter": "07",
+      "chapterName": "여러가지방정식",
+      "subject": "K1",
+      "seq": 52,
+      "badge": "NC",
+      "origin": "2160330",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2016년 03월 30번"
+      }
+    },
+    {
+      "code": "1220626",
+      "chapter": "07",
+      "chapterName": "여러가지방정식",
+      "subject": "K1",
+      "seq": 53,
+      "badge": "OR",
+      "origin": "1220626",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2022년 06월 26번"
+      }
+    },
+    {
+      "code": "1220626-N01",
+      "chapter": "07",
+      "chapterName": "여러가지방정식",
+      "subject": "K1",
+      "seq": 54,
+      "badge": "NC",
+      "origin": "1220626",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2022년 06월 26번"
+      }
+    },
+    {
+      "code": "1220626-U01",
+      "chapter": "07",
+      "chapterName": "여러가지방정식",
+      "subject": "K1",
+      "seq": 55,
+      "badge": "UP",
+      "origin": "1220626",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2022년 06월 26번"
+      }
+    },
+    {
+      "code": "1190920",
+      "chapter": "07",
+      "chapterName": "여러가지방정식",
+      "subject": "K1",
+      "seq": 56,
+      "badge": "OR",
+      "origin": "1190920",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2019년 09월 20번"
+      }
+    },
+    {
+      "code": "1190920-N01",
+      "chapter": "07",
+      "chapterName": "여러가지방정식",
+      "subject": "K1",
+      "seq": 57,
+      "badge": "NC",
+      "origin": "1190920",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2019년 09월 20번"
+      }
+    },
+    {
+      "code": "2200320",
+      "chapter": "07",
+      "chapterName": "여러가지방정식",
+      "subject": "K1",
+      "seq": 58,
+      "badge": "OR",
+      "origin": "2200320",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2020년 03월 20번"
+      }
+    },
+    {
+      "code": "2200320-N01",
+      "chapter": "07",
+      "chapterName": "여러가지방정식",
+      "subject": "K1",
+      "seq": 59,
+      "badge": "NC",
+      "origin": "2200320",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2020년 03월 20번"
+      }
+    },
+    {
+      "code": "2200320-U01",
+      "chapter": "07",
+      "chapterName": "여러가지방정식",
+      "subject": "K1",
+      "seq": 60,
+      "badge": "UP",
+      "origin": "2200320",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2020년 03월 20번"
+      }
+    },
+    {
+      "code": "2200320-U02",
+      "chapter": "07",
+      "chapterName": "여러가지방정식",
+      "subject": "K1",
+      "seq": 61,
+      "badge": "UP",
+      "origin": "2200320",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2020년 03월 20번"
+      }
+    },
+    {
+      "code": "2200320-U03",
+      "chapter": "07",
+      "chapterName": "여러가지방정식",
+      "subject": "K1",
+      "seq": 62,
+      "badge": "UP",
+      "origin": "2200320",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2020년 03월 20번"
+      }
+    },
+    {
+      "code": "1230618",
+      "chapter": "07",
+      "chapterName": "여러가지방정식",
+      "subject": "K1",
+      "seq": 63,
+      "badge": "OR",
+      "origin": "1230618",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2023년 06월 18번"
+      }
+    },
+    {
+      "code": "1230618-N01",
+      "chapter": "07",
+      "chapterName": "여러가지방정식",
+      "subject": "K1",
+      "seq": 64,
+      "badge": "NC",
+      "origin": "1230618",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2023년 06월 18번"
+      }
+    },
+    {
+      "code": "1101115",
+      "chapter": "07",
+      "chapterName": "여러가지방정식",
+      "subject": "K1",
+      "seq": 65,
+      "badge": "OR",
+      "origin": "1101115",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2010년 11월 15번"
+      }
+    },
+    {
+      "code": "1101115-N01",
+      "chapter": "07",
+      "chapterName": "여러가지방정식",
+      "subject": "K1",
+      "seq": 66,
+      "badge": "NC",
+      "origin": "1101115",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2010년 11월 15번"
+      }
+    },
+    {
+      "code": "1101115-U01",
+      "chapter": "07",
+      "chapterName": "여러가지방정식",
+      "subject": "K1",
+      "seq": 67,
+      "badge": "UP",
+      "origin": "1101115",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2010년 11월 15번"
+      }
+    },
+    {
+      "code": "1171118",
+      "chapter": "07",
+      "chapterName": "여러가지방정식",
+      "subject": "K1",
+      "seq": 68,
+      "badge": "OR",
+      "origin": "1171118",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2017년 11월 18번"
+      }
+    },
+    {
+      "code": "1171118-N01",
+      "chapter": "07",
+      "chapterName": "여러가지방정식",
+      "subject": "K1",
+      "seq": 69,
+      "badge": "NC",
+      "origin": "1171118",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2017년 11월 18번"
+      }
+    },
+    {
+      "code": "1171118-U01",
+      "chapter": "07",
+      "chapterName": "여러가지방정식",
+      "subject": "K1",
+      "seq": 70,
+      "badge": "UP",
+      "origin": "1171118",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2017년 11월 18번"
+      }
+    },
+    {
+      "code": "2060314",
+      "chapter": "07",
+      "chapterName": "여러가지방정식",
+      "subject": "K1",
+      "seq": 71,
+      "badge": "OR",
+      "origin": "2060314",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2006년 03월 14번"
+      }
+    },
+    {
+      "code": "2060314-N01",
+      "chapter": "07",
+      "chapterName": "여러가지방정식",
+      "subject": "K1",
+      "seq": 72,
+      "badge": "NC",
+      "origin": "2060314",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2006년 03월 14번"
+      }
+    },
+    {
+      "code": "2060314-U01",
+      "chapter": "07",
+      "chapterName": "여러가지방정식",
+      "subject": "K1",
+      "seq": 73,
+      "badge": "UP",
+      "origin": "2060314",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2006년 03월 14번"
+      }
+    },
+    {
+      "code": "1210630",
+      "chapter": "07",
+      "chapterName": "여러가지방정식",
+      "subject": "K1",
+      "seq": 74,
+      "badge": "OR",
+      "origin": "1210630",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2021년 06월 30번"
+      }
+    },
+    {
+      "code": "1210630-N01",
+      "chapter": "07",
+      "chapterName": "여러가지방정식",
+      "subject": "K1",
+      "seq": 75,
+      "badge": "NC",
+      "origin": "1210630",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2021년 06월 30번"
+      }
+    },
+    {
+      "code": "1210630-U01",
+      "chapter": "07",
+      "chapterName": "여러가지방정식",
+      "subject": "K1",
+      "seq": 76,
+      "badge": "UP",
+      "origin": "1210630",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2021년 06월 30번"
+      }
+    },
+    {
+      "code": "1210630-U02",
+      "chapter": "07",
+      "chapterName": "여러가지방정식",
+      "subject": "K1",
+      "seq": 77,
+      "badge": "UP",
+      "origin": "1210630",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2021년 06월 30번"
+      }
+    },
+    {
+      "code": "1231127",
+      "chapter": "07",
+      "chapterName": "여러가지방정식",
+      "subject": "K1",
+      "seq": 78,
+      "badge": "OR",
+      "origin": "1231127",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2023년 11월 27번"
+      }
+    },
+    {
+      "code": "1231127-N01",
+      "chapter": "07",
+      "chapterName": "여러가지방정식",
+      "subject": "K1",
+      "seq": 79,
+      "badge": "NC",
+      "origin": "1231127",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2023년 11월 27번"
+      }
+    },
+    {
+      "code": "1231127-U01",
+      "chapter": "07",
+      "chapterName": "여러가지방정식",
+      "subject": "K1",
+      "seq": 80,
+      "badge": "UP",
+      "origin": "1231127",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2023년 11월 27번"
+      }
+    },
+    {
+      "code": "1220612",
+      "chapter": "07",
+      "chapterName": "여러가지방정식",
+      "subject": "K1",
+      "seq": 81,
+      "badge": "OR",
+      "origin": "1220612",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2022년 06월 12번"
+      }
+    },
+    {
+      "code": "1220612-N01",
+      "chapter": "07",
+      "chapterName": "여러가지방정식",
+      "subject": "K1",
+      "seq": 82,
+      "badge": "NC",
+      "origin": "1220612",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2022년 06월 12번"
+      }
+    },
+    {
+      "code": "1220612-U01",
+      "chapter": "07",
+      "chapterName": "여러가지방정식",
+      "subject": "K1",
+      "seq": 83,
+      "badge": "UP",
+      "origin": "1220612",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2022년 06월 12번"
+      }
+    },
+    {
+      "code": "1240613",
+      "chapter": "07",
+      "chapterName": "여러가지방정식",
+      "subject": "K1",
+      "seq": 84,
+      "badge": "OR",
+      "origin": "1240613",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2024년 06월 13번"
+      }
+    },
+    {
+      "code": "1240613-N01",
+      "chapter": "07",
+      "chapterName": "여러가지방정식",
+      "subject": "K1",
+      "seq": 85,
+      "badge": "NC",
+      "origin": "1240613",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2024년 06월 13번"
+      }
+    },
+    {
+      "code": "1141127",
+      "chapter": "07",
+      "chapterName": "여러가지방정식",
+      "subject": "K1",
+      "seq": 86,
+      "badge": "OR",
+      "origin": "1141127",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2014년 11월 27번"
+      }
+    },
+    {
+      "code": "1141127-N01",
+      "chapter": "07",
+      "chapterName": "여러가지방정식",
+      "subject": "K1",
+      "seq": 87,
+      "badge": "NC",
+      "origin": "1141127",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2014년 11월 27번"
+      }
+    },
+    {
+      "code": "1241020",
+      "chapter": "07",
+      "chapterName": "여러가지방정식",
+      "subject": "K1",
+      "seq": 88,
+      "badge": "OR",
+      "origin": "1241020",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2024년 10월 20번"
+      }
+    },
+    {
+      "code": "1241020-N01",
+      "chapter": "07",
+      "chapterName": "여러가지방정식",
+      "subject": "K1",
+      "seq": 89,
+      "badge": "NC",
+      "origin": "1241020",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2024년 10월 20번"
+      }
+    },
+    {
+      "code": "1211129",
+      "chapter": "07",
+      "chapterName": "여러가지방정식",
+      "subject": "K1",
+      "seq": 90,
+      "badge": "OR",
+      "origin": "1211129",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2021년 11월 29번"
+      }
+    },
+    {
+      "code": "1211129-N01",
+      "chapter": "07",
+      "chapterName": "여러가지방정식",
+      "subject": "K1",
+      "seq": 91,
+      "badge": "NC",
+      "origin": "1211129",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2021년 11월 29번"
+      }
+    },
+    {
+      "code": "1190618",
+      "chapter": "07",
+      "chapterName": "여러가지방정식",
+      "subject": "K1",
+      "seq": 92,
+      "badge": "OR",
+      "origin": "1190618",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2019년 06월 18번"
+      }
+    },
+    {
+      "code": "1190618-N01",
+      "chapter": "07",
+      "chapterName": "여러가지방정식",
+      "subject": "K1",
+      "seq": 93,
+      "badge": "NC",
+      "origin": "1190618",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2019년 06월 18번"
+      }
+    },
+    {
+      "code": "1180610",
+      "chapter": "07",
+      "chapterName": "여러가지방정식",
+      "subject": "K1",
+      "seq": 94,
+      "badge": "OR",
+      "origin": "1180610",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2018년 06월 10번"
+      }
+    },
+    {
+      "code": "1180610-N01",
+      "chapter": "07",
+      "chapterName": "여러가지방정식",
+      "subject": "K1",
+      "seq": 95,
+      "badge": "NC",
+      "origin": "1180610",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2018년 06월 10번"
+      }
+    },
+    {
+      "code": "1171127",
+      "chapter": "07",
+      "chapterName": "여러가지방정식",
+      "subject": "K1",
+      "seq": 96,
+      "badge": "OR",
+      "origin": "1171127",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2017년 11월 27번"
+      }
+    },
+    {
+      "code": "1171127-N01",
+      "chapter": "07",
+      "chapterName": "여러가지방정식",
+      "subject": "K1",
+      "seq": 97,
+      "badge": "NC",
+      "origin": "1171127",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2017년 11월 27번"
+      }
+    },
+    {
+      "code": "1150621",
+      "chapter": "07",
+      "chapterName": "여러가지방정식",
+      "subject": "K1",
+      "seq": 98,
+      "badge": "OR",
+      "origin": "1150621",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2015년 06월 21번"
+      }
+    },
+    {
+      "code": "1150621-N01",
+      "chapter": "07",
+      "chapterName": "여러가지방정식",
+      "subject": "K1",
+      "seq": 99,
+      "badge": "NC",
+      "origin": "1150621",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2015년 06월 21번"
+      }
+    },
+    {
+      "code": "1160630",
+      "chapter": "07",
+      "chapterName": "여러가지방정식",
+      "subject": "K1",
+      "seq": 100,
+      "badge": "OR",
+      "origin": "1160630",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2016년 06월 30번"
+      }
+    },
+    {
+      "code": "1160630-N01",
+      "chapter": "07",
+      "chapterName": "여러가지방정식",
+      "subject": "K1",
+      "seq": 101,
+      "badge": "NC",
+      "origin": "1160630",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2016년 06월 30번"
+      }
+    },
+    {
+      "code": "1180619",
+      "chapter": "07",
+      "chapterName": "여러가지방정식",
+      "subject": "K1",
+      "seq": 102,
+      "badge": "OR",
+      "origin": "1180619",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2018년 06월 19번"
+      }
+    },
+    {
+      "code": "1180619-N01",
+      "chapter": "07",
+      "chapterName": "여러가지방정식",
+      "subject": "K1",
+      "seq": 103,
+      "badge": "NC",
+      "origin": "1180619",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2018년 06월 19번"
+      }
+    },
+    {
+      "code": "1201130",
+      "chapter": "07",
+      "chapterName": "여러가지방정식",
+      "subject": "K1",
+      "seq": 104,
+      "badge": "OR",
+      "origin": "1201130",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2020년 11월 30번"
+      }
+    },
+    {
+      "code": "1201130-N01",
+      "chapter": "07",
+      "chapterName": "여러가지방정식",
+      "subject": "K1",
+      "seq": 105,
+      "badge": "NC",
+      "origin": "1201130",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2020년 11월 30번"
+      }
+    },
+    {
+      "code": "1111123",
+      "chapter": "08",
+      "chapterName": "여러가지부등식",
+      "subject": "K1",
+      "seq": 1,
+      "badge": "OR",
+      "origin": "1111123",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2011년 11월 23번"
+      }
+    },
+    {
+      "code": "1111123-N01",
+      "chapter": "08",
+      "chapterName": "여러가지부등식",
+      "subject": "K1",
+      "seq": 2,
+      "badge": "NC",
+      "origin": "1111123",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2011년 11월 23번"
+      }
+    },
+    {
+      "code": "1111123-U01",
+      "chapter": "08",
+      "chapterName": "여러가지부등식",
+      "subject": "K1",
+      "seq": 3,
+      "badge": "UP",
+      "origin": "1111123",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2011년 11월 23번"
+      }
+    },
+    {
+      "code": "1111123-U02",
+      "chapter": "08",
+      "chapterName": "여러가지부등식",
+      "subject": "K1",
+      "seq": 4,
+      "badge": "UP",
+      "origin": "1111123",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2011년 11월 23번"
+      }
+    },
+    {
+      "code": "1111123-U03",
+      "chapter": "08",
+      "chapterName": "여러가지부등식",
+      "subject": "K1",
+      "seq": 5,
+      "badge": "UP",
+      "origin": "1111123",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2011년 11월 23번"
+      }
+    },
+    {
+      "code": "1140613",
+      "chapter": "08",
+      "chapterName": "여러가지부등식",
+      "subject": "K1",
+      "seq": 6,
+      "badge": "OR",
+      "origin": "1140613",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2014년 06월 13번"
+      }
+    },
+    {
+      "code": "1140613-N01",
+      "chapter": "08",
+      "chapterName": "여러가지부등식",
+      "subject": "K1",
+      "seq": 7,
+      "badge": "NC",
+      "origin": "1140613",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2014년 06월 13번"
+      }
+    },
+    {
+      "code": "1140613-U01",
+      "chapter": "08",
+      "chapterName": "여러가지부등식",
+      "subject": "K1",
+      "seq": 8,
+      "badge": "UP",
+      "origin": "1140613",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2014년 06월 13번"
+      }
+    },
+    {
+      "code": "2130318A",
+      "chapter": "08",
+      "chapterName": "여러가지부등식",
+      "subject": "K1",
+      "seq": 9,
+      "badge": "OR",
+      "origin": "2130318A",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2013년 03월 18번"
+      }
+    },
+    {
+      "code": "2130318A-N01",
+      "chapter": "08",
+      "chapterName": "여러가지부등식",
+      "subject": "K1",
+      "seq": 10,
+      "badge": "NC",
+      "origin": "2130318A",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2013년 03월 18번"
+      }
+    },
+    {
+      "code": "2130318A-U01",
+      "chapter": "08",
+      "chapterName": "여러가지부등식",
+      "subject": "K1",
+      "seq": 11,
+      "badge": "UP",
+      "origin": "2130318A",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2013년 03월 18번"
+      }
+    },
+    {
+      "code": "1070907",
+      "chapter": "08",
+      "chapterName": "여러가지부등식",
+      "subject": "K1",
+      "seq": 12,
+      "badge": "OR",
+      "origin": "1070907",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2007년 09월 7번"
+      }
+    },
+    {
+      "code": "1070907-N01",
+      "chapter": "08",
+      "chapterName": "여러가지부등식",
+      "subject": "K1",
+      "seq": 13,
+      "badge": "NC",
+      "origin": "1070907",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2007년 09월 7번"
+      }
+    },
+    {
+      "code": "1070907-U01",
+      "chapter": "08",
+      "chapterName": "여러가지부등식",
+      "subject": "K1",
+      "seq": 14,
+      "badge": "UP",
+      "origin": "1070907",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2007년 09월 7번"
+      }
+    },
+    {
+      "code": "2150311",
+      "chapter": "08",
+      "chapterName": "여러가지부등식",
+      "subject": "K1",
+      "seq": 15,
+      "badge": "OR",
+      "origin": "2150311",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2015년 03월 11번"
+      }
+    },
+    {
+      "code": "2150311-N01",
+      "chapter": "08",
+      "chapterName": "여러가지부등식",
+      "subject": "K1",
+      "seq": 16,
+      "badge": "NC",
+      "origin": "2150311",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2015년 03월 11번"
+      }
+    },
+    {
+      "code": "2150311-U01",
+      "chapter": "08",
+      "chapterName": "여러가지부등식",
+      "subject": "K1",
+      "seq": 17,
+      "badge": "UP",
+      "origin": "2150311",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2015년 03월 11번"
+      }
+    },
+    {
+      "code": "1140609",
+      "chapter": "08",
+      "chapterName": "여러가지부등식",
+      "subject": "K1",
+      "seq": 18,
+      "badge": "OR",
+      "origin": "1140609",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2014년 06월 9번"
+      }
+    },
+    {
+      "code": "1140609-N01",
+      "chapter": "08",
+      "chapterName": "여러가지부등식",
+      "subject": "K1",
+      "seq": 19,
+      "badge": "NC",
+      "origin": "1140609",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2014년 06월 9번"
+      }
+    },
+    {
+      "code": "1140609-U01",
+      "chapter": "08",
+      "chapterName": "여러가지부등식",
+      "subject": "K1",
+      "seq": 20,
+      "badge": "UP",
+      "origin": "1140609",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2014년 06월 9번"
+      }
+    },
+    {
+      "code": "1140609-U02",
+      "chapter": "08",
+      "chapterName": "여러가지부등식",
+      "subject": "K1",
+      "seq": 21,
+      "badge": "UP",
+      "origin": "1140609",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2014년 06월 9번"
+      }
+    },
+    {
+      "code": "1140609-U03",
+      "chapter": "08",
+      "chapterName": "여러가지부등식",
+      "subject": "K1",
+      "seq": 22,
+      "badge": "UP",
+      "origin": "1140609",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2014년 06월 9번"
+      }
+    },
+    {
+      "code": "1150612",
+      "chapter": "08",
+      "chapterName": "여러가지부등식",
+      "subject": "K1",
+      "seq": 23,
+      "badge": "OR",
+      "origin": "1150612",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2015년 06월 12번"
+      }
+    },
+    {
+      "code": "1150612-N01",
+      "chapter": "08",
+      "chapterName": "여러가지부등식",
+      "subject": "K1",
+      "seq": 24,
+      "badge": "NC",
+      "origin": "1150612",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2015년 06월 12번"
+      }
+    },
+    {
+      "code": "1150612-U01",
+      "chapter": "08",
+      "chapterName": "여러가지부등식",
+      "subject": "K1",
+      "seq": 25,
+      "badge": "UP",
+      "origin": "1150612",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2015년 06월 12번"
+      }
+    },
+    {
+      "code": "1070928",
+      "chapter": "08",
+      "chapterName": "여러가지부등식",
+      "subject": "K1",
+      "seq": 26,
+      "badge": "OR",
+      "origin": "1070928",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2007년 09월 28번"
+      }
+    },
+    {
+      "code": "1070928-N01",
+      "chapter": "08",
+      "chapterName": "여러가지부등식",
+      "subject": "K1",
+      "seq": 27,
+      "badge": "NC",
+      "origin": "1070928",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2007년 09월 28번"
+      }
+    },
+    {
+      "code": "1220615",
+      "chapter": "08",
+      "chapterName": "여러가지부등식",
+      "subject": "K1",
+      "seq": 28,
+      "badge": "OR",
+      "origin": "1220615",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2022년 06월 15번"
+      }
+    },
+    {
+      "code": "1220615-N01",
+      "chapter": "08",
+      "chapterName": "여러가지부등식",
+      "subject": "K1",
+      "seq": 29,
+      "badge": "NC",
+      "origin": "1220615",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2022년 06월 15번"
+      }
+    },
+    {
+      "code": "1220615-U01",
+      "chapter": "08",
+      "chapterName": "여러가지부등식",
+      "subject": "K1",
+      "seq": 30,
+      "badge": "UP",
+      "origin": "1220615",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2022년 06월 15번"
+      }
+    },
+    {
+      "code": "2180321",
+      "chapter": "08",
+      "chapterName": "여러가지부등식",
+      "subject": "K1",
+      "seq": 31,
+      "badge": "OR",
+      "origin": "2180321",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2018년 03월 21번"
+      }
+    },
+    {
+      "code": "2180321-N01",
+      "chapter": "08",
+      "chapterName": "여러가지부등식",
+      "subject": "K1",
+      "seq": 32,
+      "badge": "NC",
+      "origin": "2180321",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2018년 03월 21번"
+      }
+    },
+    {
+      "code": "2180321-U01",
+      "chapter": "08",
+      "chapterName": "여러가지부등식",
+      "subject": "K1",
+      "seq": 33,
+      "badge": "UP",
+      "origin": "2180321",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2018년 03월 21번"
+      }
+    },
+    {
+      "code": "1150914",
+      "chapter": "08",
+      "chapterName": "여러가지부등식",
+      "subject": "K1",
+      "seq": 34,
+      "badge": "OR",
+      "origin": "1150914",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2015년 09월 14번"
+      }
+    },
+    {
+      "code": "1150914-N01",
+      "chapter": "08",
+      "chapterName": "여러가지부등식",
+      "subject": "K1",
+      "seq": 35,
+      "badge": "NC",
+      "origin": "1150914",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2015년 09월 14번"
+      }
+    },
+    {
+      "code": "1150914-U01",
+      "chapter": "08",
+      "chapterName": "여러가지부등식",
+      "subject": "K1",
+      "seq": 36,
+      "badge": "UP",
+      "origin": "1150914",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2015년 09월 14번"
+      }
+    },
+    {
+      "code": "1141129",
+      "chapter": "08",
+      "chapterName": "여러가지부등식",
+      "subject": "K1",
+      "seq": 37,
+      "badge": "OR",
+      "origin": "1141129",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2014년 11월 29번"
+      }
+    },
+    {
+      "code": "1141129-N01",
+      "chapter": "08",
+      "chapterName": "여러가지부등식",
+      "subject": "K1",
+      "seq": 38,
+      "badge": "NC",
+      "origin": "1141129",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2014년 11월 29번"
+      }
+    },
+    {
+      "code": "2180329",
+      "chapter": "08",
+      "chapterName": "여러가지부등식",
+      "subject": "K1",
+      "seq": 39,
+      "badge": "OR",
+      "origin": "2180329",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2018년 03월 29번"
+      }
+    },
+    {
+      "code": "2180329-N01",
+      "chapter": "08",
+      "chapterName": "여러가지부등식",
+      "subject": "K1",
+      "seq": 40,
+      "badge": "NC",
+      "origin": "2180329",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2018년 03월 29번"
+      }
+    },
+    {
+      "code": "2180329-U01",
+      "chapter": "08",
+      "chapterName": "여러가지부등식",
+      "subject": "K1",
+      "seq": 41,
+      "badge": "UP",
+      "origin": "2180329",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2018년 03월 29번"
+      }
+    },
+    {
+      "code": "2180320B",
+      "chapter": "08",
+      "chapterName": "여러가지부등식",
+      "subject": "K1",
+      "seq": 42,
+      "badge": "OR",
+      "origin": "2180320B",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2018년 03월 20번"
+      }
+    },
+    {
+      "code": "2180320B-N01",
+      "chapter": "08",
+      "chapterName": "여러가지부등식",
+      "subject": "K1",
+      "seq": 43,
+      "badge": "NC",
+      "origin": "2180320B",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2018년 03월 20번"
+      }
+    },
+    {
+      "code": "2180320B-U01",
+      "chapter": "08",
+      "chapterName": "여러가지부등식",
+      "subject": "K1",
+      "seq": 44,
+      "badge": "UP",
+      "origin": "2180320B",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2018년 03월 20번"
+      }
+    },
+    {
+      "code": "1240621",
+      "chapter": "08",
+      "chapterName": "여러가지부등식",
+      "subject": "K1",
+      "seq": 45,
+      "badge": "OR",
+      "origin": "1240621",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2024년 06월 21번"
+      }
+    },
+    {
+      "code": "1240621-N01",
+      "chapter": "08",
+      "chapterName": "여러가지부등식",
+      "subject": "K1",
+      "seq": 46,
+      "badge": "NC",
+      "origin": "1240621",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2024년 06월 21번"
+      }
+    },
+    {
+      "code": "1250630",
+      "chapter": "08",
+      "chapterName": "여러가지부등식",
+      "subject": "K1",
+      "seq": 47,
+      "badge": "OR",
+      "origin": "1250630",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2025년 06월 30번"
+      }
+    },
+    {
+      "code": "1250630-N01",
+      "chapter": "08",
+      "chapterName": "여러가지부등식",
+      "subject": "K1",
+      "seq": 48,
+      "badge": "NC",
+      "origin": "1250630",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2025년 06월 30번"
+      }
+    },
+    {
+      "code": "1250630-U01",
+      "chapter": "08",
+      "chapterName": "여러가지부등식",
+      "subject": "K1",
+      "seq": 49,
+      "badge": "UP",
+      "origin": "1250630",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2025년 06월 30번"
+      }
+    },
+    {
+      "code": "1230630",
+      "chapter": "08",
+      "chapterName": "여러가지부등식",
+      "subject": "K1",
+      "seq": 50,
+      "badge": "OR",
+      "origin": "1230630",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2023년 06월 30번"
+      }
+    },
+    {
+      "code": "1230630-N01",
+      "chapter": "08",
+      "chapterName": "여러가지부등식",
+      "subject": "K1",
+      "seq": 51,
+      "badge": "NC",
+      "origin": "1230630",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2023년 06월 30번"
+      }
+    },
+    {
+      "code": "1190630",
+      "chapter": "08",
+      "chapterName": "여러가지부등식",
+      "subject": "K1",
+      "seq": 52,
+      "badge": "OR",
+      "origin": "1190630",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2019년 06월 30번"
+      }
+    },
+    {
+      "code": "1190630-D01",
+      "chapter": "08",
+      "chapterName": "여러가지부등식",
+      "subject": "K1",
+      "seq": 53,
+      "badge": "DW",
+      "origin": "1190630",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2019년 06월 30번"
+      }
+    },
+    {
+      "code": "1190630-N01",
+      "chapter": "08",
+      "chapterName": "여러가지부등식",
+      "subject": "K1",
+      "seq": 54,
+      "badge": "NC",
+      "origin": "1190630",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2019년 06월 30번"
+      }
+    },
+    {
+      "code": "1231111",
+      "chapter": "08",
+      "chapterName": "여러가지부등식",
+      "subject": "K1",
+      "seq": 55,
+      "badge": "OR",
+      "origin": "1231111",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2023년 11월 11번"
+      }
+    },
+    {
+      "code": "1231111-N01",
+      "chapter": "08",
+      "chapterName": "여러가지부등식",
+      "subject": "K1",
+      "seq": 56,
+      "badge": "NC",
+      "origin": "1231111",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2023년 11월 11번"
+      }
+    },
+    {
+      "code": "1231111-U01",
+      "chapter": "08",
+      "chapterName": "여러가지부등식",
+      "subject": "K1",
+      "seq": 57,
+      "badge": "UP",
+      "origin": "1231111",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2023년 11월 11번"
+      }
+    },
+    {
+      "code": "1250914",
+      "chapter": "08",
+      "chapterName": "여러가지부등식",
+      "subject": "K1",
+      "seq": 58,
+      "badge": "OR",
+      "origin": "1250914",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2025년 09월 14번"
+      }
+    },
+    {
+      "code": "1250914-N01",
+      "chapter": "08",
+      "chapterName": "여러가지부등식",
+      "subject": "K1",
+      "seq": 59,
+      "badge": "NC",
+      "origin": "1250914",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2025년 09월 14번"
+      }
+    },
+    {
+      "code": "1250914-U01",
+      "chapter": "08",
+      "chapterName": "여러가지부등식",
+      "subject": "K1",
+      "seq": 60,
+      "badge": "UP",
+      "origin": "1250914",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2025년 09월 14번"
+      }
+    },
+    {
+      "code": "2260315",
+      "chapter": "08",
+      "chapterName": "여러가지부등식",
+      "subject": "K1",
+      "seq": 61,
+      "badge": "OR",
+      "origin": "2260315",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2026년 03월 15번"
+      }
+    },
+    {
+      "code": "2260315-N01",
+      "chapter": "08",
+      "chapterName": "여러가지부등식",
+      "subject": "K1",
+      "seq": 62,
+      "badge": "NC",
+      "origin": "2260315",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2026년 03월 15번"
+      }
+    },
+    {
+      "code": "1211115",
+      "chapter": "08",
+      "chapterName": "여러가지부등식",
+      "subject": "K1",
+      "seq": 63,
+      "badge": "OR",
+      "origin": "1211115",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2021년 11월 15번"
+      }
+    },
+    {
+      "code": "1211115-N01",
+      "chapter": "08",
+      "chapterName": "여러가지부등식",
+      "subject": "K1",
+      "seq": 64,
+      "badge": "NC",
+      "origin": "1211115",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2021년 11월 15번"
+      }
+    },
+    {
+      "code": "1211115-N02",
+      "chapter": "08",
+      "chapterName": "여러가지부등식",
+      "subject": "K1",
+      "seq": 65,
+      "badge": "NC",
+      "origin": "1211115",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2021년 11월 15번"
+      }
+    },
+    {
+      "code": "1211115-U01",
+      "chapter": "08",
+      "chapterName": "여러가지부등식",
+      "subject": "K1",
+      "seq": 66,
+      "badge": "UP",
+      "origin": "1211115",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2021년 11월 15번"
+      }
+    },
+    {
+      "code": "1210927",
+      "chapter": "08",
+      "chapterName": "여러가지부등식",
+      "subject": "K1",
+      "seq": 67,
+      "badge": "OR",
+      "origin": "1210927",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2021년 09월 27번"
+      }
+    },
+    {
+      "code": "1210927-N01",
+      "chapter": "08",
+      "chapterName": "여러가지부등식",
+      "subject": "K1",
+      "seq": 68,
+      "badge": "NC",
+      "origin": "1210927",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2021년 09월 27번"
+      }
+    },
+    {
+      "code": "1210927-U01",
+      "chapter": "08",
+      "chapterName": "여러가지부등식",
+      "subject": "K1",
+      "seq": 69,
+      "badge": "UP",
+      "origin": "1210927",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2021년 09월 27번"
+      }
+    },
+    {
+      "code": "2230314",
+      "chapter": "08",
+      "chapterName": "여러가지부등식",
+      "subject": "K1",
+      "seq": 70,
+      "badge": "OR",
+      "origin": "2230314",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2023년 03월 14번"
+      }
+    },
+    {
+      "code": "2230314-N01",
+      "chapter": "08",
+      "chapterName": "여러가지부등식",
+      "subject": "K1",
+      "seq": 71,
+      "badge": "NC",
+      "origin": "2230314",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2023년 03월 14번"
+      }
+    },
+    {
+      "code": "2230314-U01",
+      "chapter": "08",
+      "chapterName": "여러가지부등식",
+      "subject": "K1",
+      "seq": 72,
+      "badge": "UP",
+      "origin": "2230314",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2023년 03월 14번"
+      }
+    },
+    {
+      "code": "1250618",
+      "chapter": "08",
+      "chapterName": "여러가지부등식",
+      "subject": "K1",
+      "seq": 73,
+      "badge": "OR",
+      "origin": "1250618",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2025년 06월 18번"
+      }
+    },
+    {
+      "code": "1250618-N01",
+      "chapter": "08",
+      "chapterName": "여러가지부등식",
+      "subject": "K1",
+      "seq": 74,
+      "badge": "NC",
+      "origin": "1250618",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2025년 06월 18번"
+      }
+    },
+    {
+      "code": "1250618-U01",
+      "chapter": "08",
+      "chapterName": "여러가지부등식",
+      "subject": "K1",
+      "seq": 75,
+      "badge": "UP",
+      "origin": "1250618",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2025년 06월 18번"
+      }
+    },
+    {
+      "code": "2210317",
+      "chapter": "08",
+      "chapterName": "여러가지부등식",
+      "subject": "K1",
+      "seq": 76,
+      "badge": "OR",
+      "origin": "2210317",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2021년 03월 17번"
+      }
+    },
+    {
+      "code": "2210317-N01",
+      "chapter": "08",
+      "chapterName": "여러가지부등식",
+      "subject": "K1",
+      "seq": 77,
+      "badge": "NC",
+      "origin": "2210317",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2021년 03월 17번"
+      }
+    },
+    {
+      "code": "1140611",
+      "chapter": "08",
+      "chapterName": "여러가지부등식",
+      "subject": "K1",
+      "seq": 78,
+      "badge": "OR",
+      "origin": "1140611",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2014년 06월 11번"
+      }
+    },
+    {
+      "code": "1140611-N01",
+      "chapter": "08",
+      "chapterName": "여러가지부등식",
+      "subject": "K1",
+      "seq": 79,
+      "badge": "NC",
+      "origin": "1140611",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2014년 06월 11번"
+      }
+    },
+    {
+      "code": "1140611-U01",
+      "chapter": "08",
+      "chapterName": "여러가지부등식",
+      "subject": "K1",
+      "seq": 80,
+      "badge": "UP",
+      "origin": "1140611",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2014년 06월 11번"
+      }
+    },
+    {
+      "code": "1241014",
+      "chapter": "08",
+      "chapterName": "여러가지부등식",
+      "subject": "K1",
+      "seq": 81,
+      "badge": "OR",
+      "origin": "1241014",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2024년 10월 14번"
+      }
+    },
+    {
+      "code": "1241014-N01",
+      "chapter": "08",
+      "chapterName": "여러가지부등식",
+      "subject": "K1",
+      "seq": 82,
+      "badge": "NC",
+      "origin": "1241014",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2024년 10월 14번"
+      }
+    },
+    {
+      "code": "1240627",
+      "chapter": "08",
+      "chapterName": "여러가지부등식",
+      "subject": "K1",
+      "seq": 83,
+      "badge": "OR",
+      "origin": "1240627",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2024년 06월 27번"
+      }
+    },
+    {
+      "code": "1240627-N01",
+      "chapter": "08",
+      "chapterName": "여러가지부등식",
+      "subject": "K1",
+      "seq": 84,
+      "badge": "NC",
+      "origin": "1240627",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2024년 06월 27번"
+      }
+    },
+    {
+      "code": "1220628",
+      "chapter": "08",
+      "chapterName": "여러가지부등식",
+      "subject": "K1",
+      "seq": 85,
+      "badge": "OR",
+      "origin": "1220628",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2022년 06월 28번"
+      }
+    },
+    {
+      "code": "1220628-N01",
+      "chapter": "08",
+      "chapterName": "여러가지부등식",
+      "subject": "K1",
+      "seq": 86,
+      "badge": "NC",
+      "origin": "1220628",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2022년 06월 28번"
+      }
+    },
+    {
+      "code": "1250620",
+      "chapter": "08",
+      "chapterName": "여러가지부등식",
+      "subject": "K1",
+      "seq": 87,
+      "badge": "OR",
+      "origin": "1250620",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2025년 06월 20번"
+      }
+    },
+    {
+      "code": "1250620-D01",
+      "chapter": "08",
+      "chapterName": "여러가지부등식",
+      "subject": "K1",
+      "seq": 88,
+      "badge": "DW",
+      "origin": "1250620",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2025년 06월 20번"
+      }
+    },
+    {
+      "code": "1250620-N01",
+      "chapter": "08",
+      "chapterName": "여러가지부등식",
+      "subject": "K1",
+      "seq": 89,
+      "badge": "NC",
+      "origin": "1250620",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2025년 06월 20번"
+      }
+    },
+    {
+      "code": "1250626",
+      "chapter": "08",
+      "chapterName": "여러가지부등식",
+      "subject": "K1",
+      "seq": 90,
+      "badge": "OR",
+      "origin": "1250626",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2025년 06월 26번"
+      }
+    },
+    {
+      "code": "1250626-N01",
+      "chapter": "08",
+      "chapterName": "여러가지부등식",
+      "subject": "K1",
+      "seq": 91,
+      "badge": "NC",
+      "origin": "1250626",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2025년 06월 26번"
+      }
+    },
+    {
+      "code": "1160621",
+      "chapter": "08",
+      "chapterName": "여러가지부등식",
+      "subject": "K1",
+      "seq": 92,
+      "badge": "OR",
+      "origin": "1160621",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2016년 06월 21번"
+      }
+    },
+    {
+      "code": "1160621-N01",
+      "chapter": "08",
+      "chapterName": "여러가지부등식",
+      "subject": "K1",
+      "seq": 93,
+      "badge": "NC",
+      "origin": "1160621",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2016년 06월 21번"
+      }
+    },
+    {
+      "code": "1160621-N02",
+      "chapter": "08",
+      "chapterName": "여러가지부등식",
+      "subject": "K1",
+      "seq": 94,
+      "badge": "NC",
+      "origin": "1160621",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2016년 06월 21번"
+      }
+    },
+    {
+      "code": "1160621-U01",
+      "chapter": "08",
+      "chapterName": "여러가지부등식",
+      "subject": "K1",
+      "seq": 95,
+      "badge": "UP",
+      "origin": "1160621",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2016년 06월 21번"
+      }
+    },
+    {
+      "code": "1170621",
+      "chapter": "08",
+      "chapterName": "여러가지부등식",
+      "subject": "K1",
+      "seq": 96,
+      "badge": "OR",
+      "origin": "1170621",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2017년 06월 21번"
+      }
+    },
+    {
+      "code": "1170621-N01",
+      "chapter": "08",
+      "chapterName": "여러가지부등식",
+      "subject": "K1",
+      "seq": 97,
+      "badge": "NC",
+      "origin": "1170621",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2017년 06월 21번"
+      }
+    },
+    {
+      "code": "1170621-N02",
+      "chapter": "08",
+      "chapterName": "여러가지부등식",
+      "subject": "K1",
+      "seq": 98,
+      "badge": "NC",
+      "origin": "1170621",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2017년 06월 21번"
+      }
+    },
+    {
+      "code": "1140618",
+      "chapter": "08",
+      "chapterName": "여러가지부등식",
+      "subject": "K1",
+      "seq": 99,
+      "badge": "OR",
+      "origin": "1140618",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2014년 06월 18번"
+      }
+    },
+    {
+      "code": "1140618-N01",
+      "chapter": "08",
+      "chapterName": "여러가지부등식",
+      "subject": "K1",
+      "seq": 100,
+      "badge": "NC",
+      "origin": "1140618",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2014년 06월 18번"
+      }
+    },
+    {
+      "code": "1200928",
+      "chapter": "08",
+      "chapterName": "여러가지부등식",
+      "subject": "K1",
+      "seq": 101,
+      "badge": "OR",
+      "origin": "1200928",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2020년 09월 28번"
+      }
+    },
+    {
+      "code": "1200928-N01",
+      "chapter": "08",
+      "chapterName": "여러가지부등식",
+      "subject": "K1",
+      "seq": 102,
+      "badge": "NC",
+      "origin": "1200928",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2020년 09월 28번"
+      }
+    },
+    {
+      "code": "1241018",
+      "chapter": "08",
+      "chapterName": "여러가지부등식",
+      "subject": "K1",
+      "seq": 103,
+      "badge": "OR",
+      "origin": "1241018",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2024년 10월 18번"
+      }
+    },
+    {
+      "code": "1241018-N01",
+      "chapter": "08",
+      "chapterName": "여러가지부등식",
+      "subject": "K1",
+      "seq": 104,
+      "badge": "NC",
+      "origin": "1241018",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2024년 10월 18번"
+      }
+    },
+    {
+      "code": "1180918",
+      "chapter": "08",
+      "chapterName": "여러가지부등식",
+      "subject": "K1",
+      "seq": 105,
+      "badge": "OR",
+      "origin": "1180918",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2018년 09월 18번"
+      }
+    },
+    {
+      "code": "1180918-N01",
+      "chapter": "08",
+      "chapterName": "여러가지부등식",
+      "subject": "K1",
+      "seq": 106,
+      "badge": "NC",
+      "origin": "1180918",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2018년 09월 18번"
+      }
+    },
+    {
+      "code": "1111126",
+      "chapter": "08",
+      "chapterName": "여러가지부등식",
+      "subject": "K1",
+      "seq": 107,
+      "badge": "OR",
+      "origin": "1111126",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2011년 11월 26번"
+      }
+    },
+    {
+      "code": "1111126-N01",
+      "chapter": "08",
+      "chapterName": "여러가지부등식",
+      "subject": "K1",
+      "seq": 108,
+      "badge": "NC",
+      "origin": "1111126",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2011년 11월 26번"
+      }
+    },
+    {
+      "code": "1080921",
+      "chapter": "08",
+      "chapterName": "여러가지부등식",
+      "subject": "K1",
+      "seq": 109,
+      "badge": "OR",
+      "origin": "1080921",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2008년 09월 21번"
+      }
+    },
+    {
+      "code": "1080921-N01",
+      "chapter": "08",
+      "chapterName": "여러가지부등식",
+      "subject": "K1",
+      "seq": 110,
+      "badge": "NC",
+      "origin": "1080921",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2008년 09월 21번"
+      }
+    },
+    {
+      "code": "3161026",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 1,
+      "badge": "OR",
+      "origin": "3161026",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2016년 10월 26번"
+      }
+    },
+    {
+      "code": "3161026-N01",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 2,
+      "badge": "NC",
+      "origin": "3161026",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2016년 10월 26번"
+      }
+    },
+    {
+      "code": "3161026-U01",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 3,
+      "badge": "UP",
+      "origin": "3161026",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2016년 10월 26번"
+      }
+    },
+    {
+      "code": "3061030",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 4,
+      "badge": "OR",
+      "origin": "3061030",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2006년 10월 30번"
+      }
+    },
+    {
+      "code": "3061030-N01",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 5,
+      "badge": "NC",
+      "origin": "3061030",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2006년 10월 30번"
+      }
+    },
+    {
+      "code": "2091125",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 6,
+      "badge": "OR",
+      "origin": "2091125",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2009년 11월 25번"
+      }
+    },
+    {
+      "code": "2091125-N01",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 7,
+      "badge": "NC",
+      "origin": "2091125",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2009년 11월 25번"
+      }
+    },
+    {
+      "code": "2091125-N02",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 8,
+      "badge": "NC",
+      "origin": "2091125",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2009년 11월 25번"
+      }
+    },
+    {
+      "code": "2091125-U01",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 9,
+      "badge": "UP",
+      "origin": "2091125",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2009년 11월 25번"
+      }
+    },
+    {
+      "code": "3080628",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 10,
+      "badge": "OR",
+      "origin": "3080628",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2008년 06월 28번"
+      }
+    },
+    {
+      "code": "3080628-N01",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 11,
+      "badge": "NC",
+      "origin": "3080628",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2008년 06월 28번"
+      }
+    },
+    {
+      "code": "3080628-U01",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 12,
+      "badge": "UP",
+      "origin": "3080628",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2008년 06월 28번"
+      }
+    },
+    {
+      "code": "3060423",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 13,
+      "badge": "OR",
+      "origin": "3060423",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2006년 04월 23번"
+      }
+    },
+    {
+      "code": "3060423-N01",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 14,
+      "badge": "NC",
+      "origin": "3060423",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2006년 04월 23번"
+      }
+    },
+    {
+      "code": "3081028",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 15,
+      "badge": "OR",
+      "origin": "3081028",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2008년 10월 28번"
+      }
+    },
+    {
+      "code": "3081028-N01",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 16,
+      "badge": "NC",
+      "origin": "3081028",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2008년 10월 28번"
+      }
+    },
+    {
+      "code": "3081028-U01",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 17,
+      "badge": "UP",
+      "origin": "3081028",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2008년 10월 28번"
+      }
+    },
+    {
+      "code": "3070429",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 18,
+      "badge": "OR",
+      "origin": "3070429",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2007년 04월 29번"
+      }
+    },
+    {
+      "code": "3070429-N01",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 19,
+      "badge": "NC",
+      "origin": "3070429",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2007년 04월 29번"
+      }
+    },
+    {
+      "code": "3070429-U01",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 20,
+      "badge": "UP",
+      "origin": "3070429",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2007년 04월 29번"
+      }
+    },
+    {
+      "code": "3050926",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 21,
+      "badge": "OR",
+      "origin": "3050926",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2005년 09월 26번"
+      }
+    },
+    {
+      "code": "3050926-N01",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 22,
+      "badge": "NC",
+      "origin": "3050926",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2005년 09월 26번"
+      }
+    },
+    {
+      "code": "3071024",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 23,
+      "badge": "OR",
+      "origin": "3071024",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2007년 10월 24번"
+      }
+    },
+    {
+      "code": "3071024-D01",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 24,
+      "badge": "DW",
+      "origin": "3071024",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2007년 10월 24번"
+      }
+    },
+    {
+      "code": "3071024-N01",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 25,
+      "badge": "NC",
+      "origin": "3071024",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2007년 10월 24번"
+      }
+    },
+    {
+      "code": "3071024-N02",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 26,
+      "badge": "NC",
+      "origin": "3071024",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2007년 10월 24번"
+      }
+    },
+    {
+      "code": "3071024-U01",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 27,
+      "badge": "UP",
+      "origin": "3071024",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2007년 10월 24번"
+      }
+    },
+    {
+      "code": "3071024-U02",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 28,
+      "badge": "UP",
+      "origin": "3071024",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2007년 10월 24번"
+      }
+    },
+    {
+      "code": "2200317",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 29,
+      "badge": "OR",
+      "origin": "2200317",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2020년 03월 17번"
+      }
+    },
+    {
+      "code": "2200317-N01",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 30,
+      "badge": "NC",
+      "origin": "2200317",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2020년 03월 17번"
+      }
+    },
+    {
+      "code": "2200317-N02",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 31,
+      "badge": "NC",
+      "origin": "2200317",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2020년 03월 17번"
+      }
+    },
+    {
+      "code": "2200317-U01",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 32,
+      "badge": "UP",
+      "origin": "2200317",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2020년 03월 17번"
+      }
+    },
+    {
+      "code": "3080625",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 33,
+      "badge": "OR",
+      "origin": "3080625",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2008년 06월 25번"
+      }
+    },
+    {
+      "code": "3080625-N01",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 34,
+      "badge": "NC",
+      "origin": "3080625",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2008년 06월 25번"
+      }
+    },
+    {
+      "code": "3080625-U01",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 35,
+      "badge": "UP",
+      "origin": "3080625",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2008년 06월 25번"
+      }
+    },
+    {
+      "code": "3041030",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 36,
+      "badge": "OR",
+      "origin": "3041030",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2004년 10월 30번"
+      }
+    },
+    {
+      "code": "3041030-N01",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 37,
+      "badge": "NC",
+      "origin": "3041030",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2004년 10월 30번"
+      }
+    },
+    {
+      "code": "3090629",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 38,
+      "badge": "OR",
+      "origin": "3090629",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2009년 06월 29번"
+      }
+    },
+    {
+      "code": "3090629-D01",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 39,
+      "badge": "DW",
+      "origin": "3090629",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2009년 06월 29번"
+      }
+    },
+    {
+      "code": "3090629-N01",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 40,
+      "badge": "NC",
+      "origin": "3090629",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2009년 06월 29번"
+      }
+    },
+    {
+      "code": "3161030",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 41,
+      "badge": "OR",
+      "origin": "3161030",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2016년 10월 30번"
+      }
+    },
+    {
+      "code": "3161030-D01",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 42,
+      "badge": "DW",
+      "origin": "3161030",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2016년 10월 30번"
+      }
+    },
+    {
+      "code": "3161030-N01",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 43,
+      "badge": "NC",
+      "origin": "3161030",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2016년 10월 30번"
+      }
+    },
+    {
+      "code": "3161030-N02",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 44,
+      "badge": "NC",
+      "origin": "3161030",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2016년 10월 30번"
+      }
+    },
+    {
+      "code": "3100429",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 45,
+      "badge": "OR",
+      "origin": "3100429",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2010년 04월 29번"
+      }
+    },
+    {
+      "code": "3100429-N01",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 46,
+      "badge": "NC",
+      "origin": "3100429",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2010년 04월 29번"
+      }
+    },
+    {
+      "code": "3091114",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 47,
+      "badge": "OR",
+      "origin": "3091114",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2009년 11월 14번"
+      }
+    },
+    {
+      "code": "3091114-N01",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 48,
+      "badge": "NC",
+      "origin": "3091114",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2009년 11월 14번"
+      }
+    },
+    {
+      "code": "3041006",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 49,
+      "badge": "OR",
+      "origin": "3041006",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2004년 10월 6번"
+      }
+    },
+    {
+      "code": "3041006-N01",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 50,
+      "badge": "NC",
+      "origin": "3041006",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2004년 10월 6번"
+      }
+    },
+    {
+      "code": "3051007",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 51,
+      "badge": "OR",
+      "origin": "3051007",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2005년 10월 7번"
+      }
+    },
+    {
+      "code": "3051007-U01",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 52,
+      "badge": "UP",
+      "origin": "3051007",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2005년 10월 7번"
+      }
+    },
+    {
+      "code": "2190310",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 53,
+      "badge": "OR",
+      "origin": "2190310",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2019년 03월 10번"
+      }
+    },
+    {
+      "code": "2190310-N01",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 54,
+      "badge": "NC",
+      "origin": "2190310",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2019년 03월 10번"
+      }
+    },
+    {
+      "code": "2190310-U01",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 55,
+      "badge": "UP",
+      "origin": "2190310",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2019년 03월 10번"
+      }
+    },
+    {
+      "code": "2230312",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 56,
+      "badge": "OR",
+      "origin": "2230312",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2023년 03월 12번"
+      }
+    },
+    {
+      "code": "2230312-N01",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 57,
+      "badge": "NC",
+      "origin": "2230312",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2023년 03월 12번"
+      }
+    },
+    {
+      "code": "2230312-U01",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 58,
+      "badge": "UP",
+      "origin": "2230312",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2023년 03월 12번"
+      }
+    },
+    {
+      "code": "3070708",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 59,
+      "badge": "OR",
+      "origin": "3070708",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2007년 07월 8번"
+      }
+    },
+    {
+      "code": "3070708-D01",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 60,
+      "badge": "DW",
+      "origin": "3070708",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2007년 07월 8번"
+      }
+    },
+    {
+      "code": "3070708-U01",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 61,
+      "badge": "UP",
+      "origin": "3070708",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2007년 07월 8번"
+      }
+    },
+    {
+      "code": "3080923",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 62,
+      "badge": "OR",
+      "origin": "3080923",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2008년 09월 23번"
+      }
+    },
+    {
+      "code": "3080923-N01",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 63,
+      "badge": "NC",
+      "origin": "3080923",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2008년 09월 23번"
+      }
+    },
+    {
+      "code": "3090928",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 64,
+      "badge": "OR",
+      "origin": "3090928",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2009년 09월 28번"
+      }
+    },
+    {
+      "code": "3090928-N01",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 65,
+      "badge": "NC",
+      "origin": "3090928",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2009년 09월 28번"
+      }
+    },
+    {
+      "code": "3090928-U01",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 66,
+      "badge": "UP",
+      "origin": "3090928",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2009년 09월 28번"
+      }
+    },
+    {
+      "code": "2190328",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 67,
+      "badge": "OR",
+      "origin": "2190328",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2019년 03월 28번"
+      }
+    },
+    {
+      "code": "2190328-N01",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 68,
+      "badge": "NC",
+      "origin": "2190328",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2019년 03월 28번"
+      }
+    },
+    {
+      "code": "2190328-N02",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 69,
+      "badge": "NC",
+      "origin": "2190328",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2019년 03월 28번"
+      }
+    },
+    {
+      "code": "2190328-U01",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 70,
+      "badge": "UP",
+      "origin": "2190328",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2019년 03월 28번"
+      }
+    },
+    {
+      "code": "3050508",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 71,
+      "badge": "OR",
+      "origin": "3050508",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2005년 05월 8번"
+      }
+    },
+    {
+      "code": "3050508-N01",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 72,
+      "badge": "NC",
+      "origin": "3050508",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2005년 05월 8번"
+      }
+    },
+    {
+      "code": "3050508-N02",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 73,
+      "badge": "NC",
+      "origin": "3050508",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2005년 05월 8번"
+      }
+    },
+    {
+      "code": "3190428",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 74,
+      "badge": "OR",
+      "origin": "3190428",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2019년 04월 28번"
+      }
+    },
+    {
+      "code": "3190428-N01",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 75,
+      "badge": "NC",
+      "origin": "3190428",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2019년 04월 28번"
+      }
+    },
+    {
+      "code": "3040625",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 76,
+      "badge": "OR",
+      "origin": "3040625",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2004년 06월 25번"
+      }
+    },
+    {
+      "code": "3040625-N01",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 77,
+      "badge": "NC",
+      "origin": "3040625",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2004년 06월 25번"
+      }
+    },
+    {
+      "code": "3100907",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 78,
+      "badge": "OR",
+      "origin": "3100907",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2010년 09월 7번"
+      }
+    },
+    {
+      "code": "3100907-N01",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 79,
+      "badge": "NC",
+      "origin": "3100907",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2010년 09월 7번"
+      }
+    },
+    {
+      "code": "3100907-U01",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 80,
+      "badge": "UP",
+      "origin": "3100907",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2010년 09월 7번"
+      }
+    },
+    {
+      "code": "3081129",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 81,
+      "badge": "OR",
+      "origin": "3081129",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2008년 11월 29번"
+      }
+    },
+    {
+      "code": "3081129-D01",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 82,
+      "badge": "DW",
+      "origin": "3081129",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2008년 11월 29번"
+      }
+    },
+    {
+      "code": "3081129-N01",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 83,
+      "badge": "NC",
+      "origin": "3081129",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2008년 11월 29번"
+      }
+    },
+    {
+      "code": "2240318",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 84,
+      "badge": "OR",
+      "origin": "2240318",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2024년 03월 18번"
+      }
+    },
+    {
+      "code": "2240318-N01",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 85,
+      "badge": "NC",
+      "origin": "2240318",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2024년 03월 18번"
+      }
+    },
+    {
+      "code": "2250318",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 86,
+      "badge": "OR",
+      "origin": "2250318",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2025년 03월 18번"
+      }
+    },
+    {
+      "code": "2250318-N01",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 87,
+      "badge": "NC",
+      "origin": "2250318",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2025년 03월 18번"
+      }
+    },
+    {
+      "code": "3170329",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 88,
+      "badge": "OR",
+      "origin": "3170329",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2017년 03월 29번"
+      }
+    },
+    {
+      "code": "3170329-N01",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 89,
+      "badge": "NC",
+      "origin": "3170329",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2017년 03월 29번"
+      }
+    },
+    {
+      "code": "3170329-U01",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 90,
+      "badge": "UP",
+      "origin": "3170329",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2017년 03월 29번"
+      }
+    },
+    {
+      "code": "2230327",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 91,
+      "badge": "OR",
+      "origin": "2230327",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2023년 03월 27번"
+      }
+    },
+    {
+      "code": "2230327-N01",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 92,
+      "badge": "NC",
+      "origin": "2230327",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2023년 03월 27번"
+      }
+    },
+    {
+      "code": "2230327-U01",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 93,
+      "badge": "UP",
+      "origin": "2230327",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2023년 03월 27번"
+      }
+    },
+    {
+      "code": "3181027",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 94,
+      "badge": "OR",
+      "origin": "3181027",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2018년 10월 27번"
+      }
+    },
+    {
+      "code": "3181027-D01",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 95,
+      "badge": "DW",
+      "origin": "3181027",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2018년 10월 27번"
+      }
+    },
+    {
+      "code": "3181027-N01",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 96,
+      "badge": "NC",
+      "origin": "3181027",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2018년 10월 27번"
+      }
+    },
+    {
+      "code": "3060630",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 97,
+      "badge": "OR",
+      "origin": "3060630",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2006년 06월 30번"
+      }
+    },
+    {
+      "code": "3060630-N01",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 98,
+      "badge": "NC",
+      "origin": "3060630",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2006년 06월 30번"
+      }
+    },
+    {
+      "code": "3060630-U01",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 99,
+      "badge": "UP",
+      "origin": "3060630",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2006년 06월 30번"
+      }
+    },
+    {
+      "code": "3071109",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 100,
+      "badge": "OR",
+      "origin": "3071109",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2007년 11월 9번"
+      }
+    },
+    {
+      "code": "3071109-N01",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 101,
+      "badge": "NC",
+      "origin": "3071109",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2007년 11월 9번"
+      }
+    },
+    {
+      "code": "3070629",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 102,
+      "badge": "OR",
+      "origin": "3070629",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2007년 06월 29번"
+      }
+    },
+    {
+      "code": "3070629-N01",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 103,
+      "badge": "NC",
+      "origin": "3070629",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2007년 06월 29번"
+      }
+    },
+    {
+      "code": "3070629-N02",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 104,
+      "badge": "NC",
+      "origin": "3070629",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2007년 06월 29번"
+      }
+    },
+    {
+      "code": "3101025",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 105,
+      "badge": "OR",
+      "origin": "3101025",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2010년 10월 25번"
+      }
+    },
+    {
+      "code": "3101025-N01",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 106,
+      "badge": "NC",
+      "origin": "3101025",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2010년 10월 25번"
+      }
+    },
+    {
+      "code": "3101025-U01",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 107,
+      "badge": "UP",
+      "origin": "3101025",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2010년 10월 25번"
+      }
+    },
+    {
+      "code": "3050630",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 108,
+      "badge": "OR",
+      "origin": "3050630",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2005년 06월 30번"
+      }
+    },
+    {
+      "code": "3050630-N01",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 109,
+      "badge": "NC",
+      "origin": "3050630",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2005년 06월 30번"
+      }
+    },
+    {
+      "code": "3050630-U01",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 110,
+      "badge": "UP",
+      "origin": "3050630",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2005년 06월 30번"
+      }
+    },
+    {
+      "code": "3060624",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 111,
+      "badge": "OR",
+      "origin": "3060624",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2006년 06월 24번"
+      }
+    },
+    {
+      "code": "3060624-N01",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 112,
+      "badge": "NC",
+      "origin": "3060624",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2006년 06월 24번"
+      }
+    },
+    {
+      "code": "3191026",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 113,
+      "badge": "OR",
+      "origin": "3191026",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2019년 10월 26번"
+      }
+    },
+    {
+      "code": "3191026-N01",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 114,
+      "badge": "NC",
+      "origin": "3191026",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2019년 10월 26번"
+      }
+    },
+    {
+      "code": "3191026-U01",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 115,
+      "badge": "UP",
+      "origin": "3191026",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2019년 10월 26번"
+      }
+    },
+    {
+      "code": "1161028",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 116,
+      "badge": "OR",
+      "origin": "1161028",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2016년 10월 28번"
+      }
+    },
+    {
+      "code": "1161028-D01",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 117,
+      "badge": "DW",
+      "origin": "1161028",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2016년 10월 28번"
+      }
+    },
+    {
+      "code": "1161028-N01",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 118,
+      "badge": "NC",
+      "origin": "1161028",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2016년 10월 28번"
+      }
+    },
+    {
+      "code": "1161028-U01",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 119,
+      "badge": "UP",
+      "origin": "1161028",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2016년 10월 28번"
+      }
+    },
+    {
+      "code": "3180419",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 120,
+      "badge": "OR",
+      "origin": "3180419",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2018년 04월 19번"
+      }
+    },
+    {
+      "code": "3180419-D01",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 121,
+      "badge": "DW",
+      "origin": "3180419",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2018년 04월 19번"
+      }
+    },
+    {
+      "code": "3180419-N01",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 122,
+      "badge": "NC",
+      "origin": "3180419",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2018년 04월 19번"
+      }
+    },
+    {
+      "code": "2250316",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 123,
+      "badge": "OR",
+      "origin": "2250316",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2025년 03월 16번"
+      }
+    },
+    {
+      "code": "2250316-N01",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 124,
+      "badge": "NC",
+      "origin": "2250316",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2025년 03월 16번"
+      }
+    },
+    {
+      "code": "3100927",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 125,
+      "badge": "OR",
+      "origin": "3100927",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2010년 09월 27번"
+      }
+    },
+    {
+      "code": "3100927-N01",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 126,
+      "badge": "NC",
+      "origin": "3100927",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2010년 09월 27번"
+      }
+    },
+    {
+      "code": "3100927-N02",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 127,
+      "badge": "NC",
+      "origin": "3100927",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2010년 09월 27번"
+      }
+    },
+    {
+      "code": "2210318",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 128,
+      "badge": "OR",
+      "origin": "2210318",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2021년 03월 18번"
+      }
+    },
+    {
+      "code": "2210318-N01",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 129,
+      "badge": "NC",
+      "origin": "2210318",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2021년 03월 18번"
+      }
+    },
+    {
+      "code": "2210318-U01",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 130,
+      "badge": "UP",
+      "origin": "2210318",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2021년 03월 18번"
+      }
+    },
+    {
+      "code": "2200329",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 131,
+      "badge": "OR",
+      "origin": "2200329",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2020년 03월 29번"
+      }
+    },
+    {
+      "code": "2200329-N01",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 132,
+      "badge": "NC",
+      "origin": "2200329",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2020년 03월 29번"
+      }
+    },
+    {
+      "code": "2200329-U01",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 133,
+      "badge": "UP",
+      "origin": "2200329",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2020년 03월 29번"
+      }
+    },
+    {
+      "code": "2210321",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 134,
+      "badge": "OR",
+      "origin": "2210321",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2021년 03월 21번"
+      }
+    },
+    {
+      "code": "2210321-D01",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 135,
+      "badge": "DW",
+      "origin": "2210321",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2021년 03월 21번"
+      }
+    },
+    {
+      "code": "2210321-N01",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 136,
+      "badge": "NC",
+      "origin": "2210321",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2021년 03월 21번"
+      }
+    },
+    {
+      "code": "2210321-U01",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 137,
+      "badge": "UP",
+      "origin": "2210321",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2021년 03월 21번"
+      }
+    },
+    {
+      "code": "3100426",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 138,
+      "badge": "OR",
+      "origin": "3100426",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2010년 04월 26번"
+      }
+    },
+    {
+      "code": "3100426-N01",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 139,
+      "badge": "NC",
+      "origin": "3100426",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2010년 04월 26번"
+      }
+    },
+    {
+      "code": "3100426-U01",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 140,
+      "badge": "UP",
+      "origin": "3100426",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2010년 04월 26번"
+      }
+    },
+    {
+      "code": "2200315",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 141,
+      "badge": "OR",
+      "origin": "2200315",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2020년 03월 15번"
+      }
+    },
+    {
+      "code": "2200315-N01",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 142,
+      "badge": "NC",
+      "origin": "2200315",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2020년 03월 15번"
+      }
+    },
+    {
+      "code": "2200315-U01",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 143,
+      "badge": "UP",
+      "origin": "2200315",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2020년 03월 15번"
+      }
+    },
+    {
+      "code": "3100617",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 144,
+      "badge": "OR",
+      "origin": "3100617",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2010년 06월 17번"
+      }
+    },
+    {
+      "code": "3100617-N01",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 145,
+      "badge": "NC",
+      "origin": "3100617",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2010년 06월 17번"
+      }
+    },
+    {
+      "code": "3100617-U01",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 146,
+      "badge": "UP",
+      "origin": "3100617",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2010년 06월 17번"
+      }
+    },
+    {
+      "code": "2220328",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 147,
+      "badge": "OR",
+      "origin": "2220328",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2022년 03월 28번"
+      }
+    },
+    {
+      "code": "2220328-N01",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 148,
+      "badge": "NC",
+      "origin": "2220328",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2022년 03월 28번"
+      }
+    },
+    {
+      "code": "2220328-U01",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 149,
+      "badge": "UP",
+      "origin": "2220328",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2022년 03월 28번"
+      }
+    },
+    {
+      "code": "2190314A",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 150,
+      "badge": "OR",
+      "origin": "2190314A",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2019년 03월 14번"
+      }
+    },
+    {
+      "code": "2190314A-N01",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 151,
+      "badge": "NC",
+      "origin": "2190314A",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2019년 03월 14번"
+      }
+    },
+    {
+      "code": "2190314A-U01",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 152,
+      "badge": "UP",
+      "origin": "2190314A",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2019년 03월 14번"
+      }
+    },
+    {
+      "code": "3191028",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 153,
+      "badge": "OR",
+      "origin": "3191028",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2019년 10월 28번"
+      }
+    },
+    {
+      "code": "3191028-D01",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 154,
+      "badge": "DW",
+      "origin": "3191028",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2019년 10월 28번"
+      }
+    },
+    {
+      "code": "3191028-N01",
+      "chapter": "09",
+      "chapterName": "경우의수",
+      "subject": "K1",
+      "seq": 155,
+      "badge": "NC",
+      "origin": "3191028",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2019년 10월 28번"
+      }
+    },
+    {
+      "code": "2041119",
+      "chapter": "10",
+      "chapterName": "행렬",
+      "subject": "K1",
+      "seq": 1,
+      "badge": "OR",
+      "origin": "2041119",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2004년 11월 19번"
+      }
+    },
+    {
+      "code": "2041119-N01",
+      "chapter": "10",
+      "chapterName": "행렬",
+      "subject": "K1",
+      "seq": 2,
+      "badge": "NC",
+      "origin": "2041119",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2004년 11월 19번"
+      }
+    },
+    {
+      "code": "2100626",
+      "chapter": "10",
+      "chapterName": "행렬",
+      "subject": "K1",
+      "seq": 3,
+      "badge": "OR",
+      "origin": "2100626",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2010년 06월 26번"
+      }
+    },
+    {
+      "code": "2100626-N01",
+      "chapter": "10",
+      "chapterName": "행렬",
+      "subject": "K1",
+      "seq": 4,
+      "badge": "NC",
+      "origin": "2100626",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2010년 06월 26번"
+      }
+    },
+    {
+      "code": "2100926",
+      "chapter": "10",
+      "chapterName": "행렬",
+      "subject": "K1",
+      "seq": 5,
+      "badge": "OR",
+      "origin": "2100926",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2010년 09월 26번"
+      }
+    },
+    {
+      "code": "2100926-N01",
+      "chapter": "10",
+      "chapterName": "행렬",
+      "subject": "K1",
+      "seq": 6,
+      "badge": "NC",
+      "origin": "2100926",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2010년 09월 26번"
+      }
+    },
+    {
+      "code": "2130609",
+      "chapter": "10",
+      "chapterName": "행렬",
+      "subject": "K1",
+      "seq": 7,
+      "badge": "OR",
+      "origin": "2130609",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2013년 06월 9번"
+      }
+    },
+    {
+      "code": "2130609-N01",
+      "chapter": "10",
+      "chapterName": "행렬",
+      "subject": "K1",
+      "seq": 8,
+      "badge": "NC",
+      "origin": "2130609",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2013년 06월 9번"
+      }
+    },
+    {
+      "code": "3040926",
+      "chapter": "10",
+      "chapterName": "행렬",
+      "subject": "K1",
+      "seq": 9,
+      "badge": "OR",
+      "origin": "3040926",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2004년 09월 26번"
+      }
+    },
+    {
+      "code": "3040926-N01",
+      "chapter": "10",
+      "chapterName": "행렬",
+      "subject": "K1",
+      "seq": 10,
+      "badge": "NC",
+      "origin": "3040926",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2004년 09월 26번"
+      }
+    },
+    {
+      "code": "2080929",
+      "chapter": "10",
+      "chapterName": "행렬",
+      "subject": "K1",
+      "seq": 11,
+      "badge": "OR",
+      "origin": "2080929",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2008년 09월 29번"
+      }
+    },
+    {
+      "code": "2080929-N01",
+      "chapter": "10",
+      "chapterName": "행렬",
+      "subject": "K1",
+      "seq": 12,
+      "badge": "NC",
+      "origin": "2080929",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2008년 09월 29번"
+      }
+    },
+    {
+      "code": "3061130",
+      "chapter": "10",
+      "chapterName": "행렬",
+      "subject": "K1",
+      "seq": 13,
+      "badge": "OR",
+      "origin": "3061130",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2006년 11월 30번"
+      }
+    },
+    {
+      "code": "3061130-N01",
+      "chapter": "10",
+      "chapterName": "행렬",
+      "subject": "K1",
+      "seq": 14,
+      "badge": "NC",
+      "origin": "3061130",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2006년 11월 30번"
+      }
+    },
+    {
+      "code": "2060925",
+      "chapter": "10",
+      "chapterName": "행렬",
+      "subject": "K1",
+      "seq": 15,
+      "badge": "OR",
+      "origin": "2060925",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2006년 09월 25번"
+      }
+    },
+    {
+      "code": "2060925-N01",
+      "chapter": "10",
+      "chapterName": "행렬",
+      "subject": "K1",
+      "seq": 16,
+      "badge": "NC",
+      "origin": "2060925",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2006년 09월 25번"
+      }
+    },
+    {
+      "code": "2080927",
+      "chapter": "10",
+      "chapterName": "행렬",
+      "subject": "K1",
+      "seq": 17,
+      "badge": "OR",
+      "origin": "2080927",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2008년 09월 27번"
+      }
+    },
+    {
+      "code": "2080927-N01",
+      "chapter": "10",
+      "chapterName": "행렬",
+      "subject": "K1",
+      "seq": 18,
+      "badge": "NC",
+      "origin": "2080927",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2008년 09월 27번"
+      }
+    },
+    {
+      "code": "3051102",
+      "chapter": "10",
+      "chapterName": "행렬",
+      "subject": "K1",
+      "seq": 19,
+      "badge": "OR",
+      "origin": "3051102",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2005년 11월 2번"
+      }
+    },
+    {
+      "code": "3051102-N01",
+      "chapter": "10",
+      "chapterName": "행렬",
+      "subject": "K1",
+      "seq": 20,
+      "badge": "NC",
+      "origin": "3051102",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2005년 11월 2번"
+      }
+    },
+    {
+      "code": "3051102-U01",
+      "chapter": "10",
+      "chapterName": "행렬",
+      "subject": "K1",
+      "seq": 21,
+      "badge": "UP",
+      "origin": "3051102",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2005년 11월 2번"
+      }
+    },
+    {
+      "code": "2121113",
+      "chapter": "10",
+      "chapterName": "행렬",
+      "subject": "K1",
+      "seq": 22,
+      "badge": "OR",
+      "origin": "2121113",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2012년 11월 13번"
+      }
+    },
+    {
+      "code": "2121113-N01",
+      "chapter": "10",
+      "chapterName": "행렬",
+      "subject": "K1",
+      "seq": 23,
+      "badge": "NC",
+      "origin": "2121113",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2012년 11월 13번"
+      }
+    },
+    {
+      "code": "2131110",
+      "chapter": "10",
+      "chapterName": "행렬",
+      "subject": "K1",
+      "seq": 24,
+      "badge": "OR",
+      "origin": "2131110",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2013년 11월 10번"
+      }
+    },
+    {
+      "code": "2131110-N01",
+      "chapter": "10",
+      "chapterName": "행렬",
+      "subject": "K1",
+      "seq": 25,
+      "badge": "NC",
+      "origin": "2131110",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2013년 11월 10번"
+      }
+    },
+    {
+      "code": "2140627",
+      "chapter": "10",
+      "chapterName": "행렬",
+      "subject": "K1",
+      "seq": 26,
+      "badge": "OR",
+      "origin": "2140627",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2014년 06월 27번"
+      }
+    },
+    {
+      "code": "2140627-N01",
+      "chapter": "10",
+      "chapterName": "행렬",
+      "subject": "K1",
+      "seq": 27,
+      "badge": "NC",
+      "origin": "2140627",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2014년 06월 27번"
+      }
+    },
+    {
+      "code": "3100930",
+      "chapter": "10",
+      "chapterName": "행렬",
+      "subject": "K1",
+      "seq": 28,
+      "badge": "OR",
+      "origin": "3100930",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2010년 09월 30번"
+      }
+    },
+    {
+      "code": "3100930-N01",
+      "chapter": "10",
+      "chapterName": "행렬",
+      "subject": "K1",
+      "seq": 29,
+      "badge": "NC",
+      "origin": "3100930",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2010년 09월 30번"
+      }
+    },
+    {
+      "code": "3090925",
+      "chapter": "10",
+      "chapterName": "행렬",
+      "subject": "K1",
+      "seq": 30,
+      "badge": "OR",
+      "origin": "3090925",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2009년 09월 25번"
+      }
+    },
+    {
+      "code": "3090925-N01",
+      "chapter": "10",
+      "chapterName": "행렬",
+      "subject": "K1",
+      "seq": 31,
+      "badge": "NC",
+      "origin": "3090925",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2009년 09월 25번"
+      }
+    },
+    {
+      "code": "3090925-U01",
+      "chapter": "10",
+      "chapterName": "행렬",
+      "subject": "K1",
+      "seq": 32,
+      "badge": "UP",
+      "origin": "3090925",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2009년 09월 25번"
+      }
+    },
+    {
+      "code": "2061128",
+      "chapter": "10",
+      "chapterName": "행렬",
+      "subject": "K1",
+      "seq": 33,
+      "badge": "OR",
+      "origin": "2061128",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2006년 11월 28번"
+      }
+    },
+    {
+      "code": "2061128-N01",
+      "chapter": "10",
+      "chapterName": "행렬",
+      "subject": "K1",
+      "seq": 34,
+      "badge": "NC",
+      "origin": "2061128",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2006년 11월 28번"
+      }
+    },
+    {
+      "code": "2061128-N02",
+      "chapter": "10",
+      "chapterName": "행렬",
+      "subject": "K1",
+      "seq": 35,
+      "badge": "NC",
+      "origin": "2061128",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2006년 11월 28번"
+      }
+    },
+    {
+      "code": "2100911",
+      "chapter": "10",
+      "chapterName": "행렬",
+      "subject": "K1",
+      "seq": 36,
+      "badge": "OR",
+      "origin": "2100911",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2010년 09월 11번"
+      }
+    },
+    {
+      "code": "2100911-N01",
+      "chapter": "10",
+      "chapterName": "행렬",
+      "subject": "K1",
+      "seq": 37,
+      "badge": "NC",
+      "origin": "2100911",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2010년 09월 11번"
+      }
+    },
+    {
+      "code": "2100628",
+      "chapter": "10",
+      "chapterName": "행렬",
+      "subject": "K1",
+      "seq": 38,
+      "badge": "OR",
+      "origin": "2100628",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2010년 06월 28번"
+      }
+    },
+    {
+      "code": "2100628-N01",
+      "chapter": "10",
+      "chapterName": "행렬",
+      "subject": "K1",
+      "seq": 39,
+      "badge": "NC",
+      "origin": "2100628",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2010년 06월 28번"
+      }
+    },
+    {
+      "code": "2110616",
+      "chapter": "10",
+      "chapterName": "행렬",
+      "subject": "K1",
+      "seq": 40,
+      "badge": "OR",
+      "origin": "2110616",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2011년 06월 16번"
+      }
+    },
+    {
+      "code": "2110616-N01",
+      "chapter": "10",
+      "chapterName": "행렬",
+      "subject": "K1",
+      "seq": 41,
+      "badge": "NC",
+      "origin": "2110616",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2011년 06월 16번"
+      }
+    },
+    {
+      "code": "2110616-U01",
+      "chapter": "10",
+      "chapterName": "행렬",
+      "subject": "K1",
+      "seq": 42,
+      "badge": "UP",
+      "origin": "2110616",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2011년 06월 16번"
+      }
+    },
+    {
+      "code": "2091110",
+      "chapter": "10",
+      "chapterName": "행렬",
+      "subject": "K1",
+      "seq": 43,
+      "badge": "OR",
+      "origin": "2091110",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2009년 11월 10번"
+      }
+    },
+    {
+      "code": "2091110-N01",
+      "chapter": "10",
+      "chapterName": "행렬",
+      "subject": "K1",
+      "seq": 44,
+      "badge": "NC",
+      "origin": "2091110",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2009년 11월 10번"
+      }
+    },
+    {
+      "code": "2091110-U01",
+      "chapter": "10",
+      "chapterName": "행렬",
+      "subject": "K1",
+      "seq": 45,
+      "badge": "UP",
+      "origin": "2091110",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2009년 11월 10번"
+      }
+    },
+    {
+      "code": "3040613",
+      "chapter": "10",
+      "chapterName": "행렬",
+      "subject": "K1",
+      "seq": 46,
+      "badge": "OR",
+      "origin": "3040613",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2004년 06월 13번"
+      }
+    },
+    {
+      "code": "3040613-N01",
+      "chapter": "10",
+      "chapterName": "행렬",
+      "subject": "K1",
+      "seq": 47,
+      "badge": "NC",
+      "origin": "3040613",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2004년 06월 13번"
+      }
+    },
+    {
+      "code": "3051106",
+      "chapter": "10",
+      "chapterName": "행렬",
+      "subject": "K1",
+      "seq": 48,
+      "badge": "OR",
+      "origin": "3051106",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2005년 11월 6번"
+      }
+    },
+    {
+      "code": "3051106-N01",
+      "chapter": "10",
+      "chapterName": "행렬",
+      "subject": "K1",
+      "seq": 49,
+      "badge": "NC",
+      "origin": "3051106",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2005년 11월 6번"
+      }
+    },
+    {
+      "code": "2121119",
+      "chapter": "10",
+      "chapterName": "행렬",
+      "subject": "K1",
+      "seq": 50,
+      "badge": "OR",
+      "origin": "2121119",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2012년 11월 19번"
+      }
+    },
+    {
+      "code": "3101128",
+      "chapter": "10",
+      "chapterName": "행렬",
+      "subject": "K1",
+      "seq": 51,
+      "badge": "OR",
+      "origin": "3101128",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2010년 11월 28번"
+      }
+    },
+    {
+      "code": "2050908",
+      "chapter": "10",
+      "chapterName": "행렬",
+      "subject": "K1",
+      "seq": 52,
+      "badge": "OR",
+      "origin": "2050908",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2005년 09월 8번"
+      }
+    },
+    {
+      "code": "2131120",
+      "chapter": "10",
+      "chapterName": "행렬",
+      "subject": "K1",
+      "seq": 53,
+      "badge": "OR",
+      "origin": "2131120",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2013년 11월 20번"
+      }
+    },
+    {
+      "code": "2131120-N01",
+      "chapter": "10",
+      "chapterName": "행렬",
+      "subject": "K1",
+      "seq": 54,
+      "badge": "NC",
+      "origin": "2131120",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2013년 11월 20번"
+      }
+    },
+    {
+      "code": "2131120-N02",
+      "chapter": "10",
+      "chapterName": "행렬",
+      "subject": "K1",
+      "seq": 55,
+      "badge": "NC",
+      "origin": "2131120",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2013년 11월 20번"
+      }
+    },
+    {
+      "code": "2131120-N03",
+      "chapter": "10",
+      "chapterName": "행렬",
+      "subject": "K1",
+      "seq": 56,
+      "badge": "NC",
+      "origin": "2131120",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2013년 11월 20번"
+      }
+    },
+    {
+      "code": "2131120-N04",
+      "chapter": "10",
+      "chapterName": "행렬",
+      "subject": "K1",
+      "seq": 57,
+      "badge": "NC",
+      "origin": "2131120",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2013년 11월 20번"
+      }
+    },
+    {
+      "code": "1251015",
+      "chapter": "10",
+      "chapterName": "행렬",
+      "subject": "K1",
+      "seq": 58,
+      "badge": "OR",
+      "origin": "1251015",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2025년 10월 15번"
+      }
+    },
+    {
+      "code": "1251015-N01",
+      "chapter": "10",
+      "chapterName": "행렬",
+      "subject": "K1",
+      "seq": 59,
+      "badge": "NC",
+      "origin": "1251015",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2025년 10월 15번"
+      }
+    },
+    {
+      "code": "2260329",
+      "chapter": "10",
+      "chapterName": "행렬",
+      "subject": "K1",
+      "seq": 60,
+      "badge": "OR",
+      "origin": "2260329",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2026년 03월 29번"
+      }
+    },
+    {
+      "code": "2260329-N01",
+      "chapter": "10",
+      "chapterName": "행렬",
+      "subject": "K1",
+      "seq": 61,
+      "badge": "NC",
+      "origin": "2260329",
+      "source": {
+        "book": "모의고사 기출",
+        "label": "2026년 03월 29번"
       }
     }
   ]
