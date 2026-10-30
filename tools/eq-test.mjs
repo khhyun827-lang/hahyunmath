@@ -297,6 +297,11 @@ console.log('');
 { const h = problemHTML('글'+String.fromCharCode(10)+'⟦그림:https://x.test/a.png⟧'+String.fromCharCode(10)+'[그림 1] 과 ⟦그림:https://x.test/b.png⟧ 모양');
   든가('그림만 있는 줄 → 큰 그림', h, '<img class="pb-cfig" src="https://x.test/a.png"');
   든가('글 속 그림 → 작게', h, '<img class="pb-ifig" src="https://x.test/b.png"'); }
+/* 줄바꿈(#) 바로 뒤 LEFT — `\\LEFT` 로 남아 맨 앞에 `\left.` 가 붙던 것 (2026-10-30 · 1250620) */
+{ const r = convertHwpEq('{cases{ax+1<0&#LEFT ( a+b RIGHT ) x<0&}}');
+  봄('#LEFT ( → 줄바꿈 뒤 \\left(', r.includes(B + B + B + 'left('), true);
+  봄('  날 LEFT 가 안 남는다', /LEFT/.test(r), false);
+  봄('  맨 앞에 \\left. 가 안 붙는다', r.includes(B + 'left.'), false); }
 
 console.log('');
 console.log('  ' + (fail ? '🔴' : '✅') + ' ' + pass + ' 통과 · ' + fail + ' 실패');
