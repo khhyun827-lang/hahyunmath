@@ -196,7 +196,8 @@ function convertHwpEq(script){
   s = s.replace(/(?<![A-Za-z\\])rm\s*/gi, '');
   // "it"(이탤릭 지정)은 rm과 같은 서체 지정 명령이라 내용만 남기고 지운다.
   // "it2r+3"(공백 없음), "it r ^{2}"(공백 있음) 둘 다 나오므로 뒤 공백까지 함께 지운다.
-  s = s.replace(/\bit\s*(?=[0-9a-zA-Z(])/g, '');
+  // 🔵 대문자 «IT» 도 같은 명령이다(2026-10-31 · 1241020 `= IT 3a ^{2}` — 사용자가 한글에서 친 꼴). «It»·«iT» 는 안 건드린다.
+  s = s.replace(/\b(?:it|IT)\s*(?=[0-9a-zA-Z(])/g, '');
   s = replaceBalancedKeyword(s, 'pmatrix', inner => '\\begin{pmatrix}' + inner.replace(/#/g,'\\\\') + '\\end{pmatrix}');
   s = replaceBalancedKeyword(s, 'cases', inner => '\\begin{cases}' + inner.replace(/#/g,'\\\\') + '\\end{cases}');
   const greek = {alpha:'\\alpha',beta:'\\beta',gamma:'\\gamma',delta:'\\delta',theta:'\\theta',pi:'\\pi',lambda:'\\lambda',mu:'\\mu',sigma:'\\sigma',phi:'\\phi',omega:'\\omega'};

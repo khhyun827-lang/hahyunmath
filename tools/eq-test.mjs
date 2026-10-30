@@ -302,6 +302,10 @@ console.log('');
   봄('#LEFT ( → 줄바꿈 뒤 \\left(', r.includes(B + B + B + 'left('), true);
   봄('  날 LEFT 가 안 남는다', /LEFT/.test(r), false);
   봄('  맨 앞에 \\left. 가 안 붙는다', r.includes(B + 'left.'), false); }
+/* 대문자 IT(기울임) — 날글자 «IT» 로 남던 것 (2026-10-31 · 1241020) */
+{ const r = convertHwpEq('{bar{rm AB}} = IT 3a ^{2} +10a+7');
+  봄('IT 3a → 3a', /IT/.test(r), false);
+  봄('  3a 는 남는다', r.includes('3a'), true); }
 
 console.log('');
 console.log('  ' + (fail ? '🔴' : '✅') + ' ' + pass + ' 통과 · ' + fail + ' 실패');
