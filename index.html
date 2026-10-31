@@ -8,6 +8,16 @@
 <meta property="og:title" content="김하현수학연구소">
 <meta property="og:description" content="기록하는 수학 학원. 출결·진도·오답·질문이 모두 남습니다.">
 <meta property="og:type" content="website">
+<!-- 홈 화면에 추가하면 앱처럼(주소창 없이) 열린다 — PWA (2026-11-01).
+     서비스 워커로 화면을 캐시하지 않는다: 배포가 잦아 «옛 판이 남는» 사고가 더 비싸다.
+     push-sw.js 는 알림만 받는다. 아이폰은 홈 화면에 추가해야 알림이 온다(iOS 16.4+). -->
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="theme-color" content="#FAF9F6">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="김하현수학">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <!-- 구버전(Noto Sans KR·Serif 900)과 ds.css(Serif 600·Mono 500)가 쓰는 굵기를 한 요청에 합쳤다.
@@ -19841,7 +19851,7 @@ async function notifyWorkerReady(){
    🔵 학생: 질문·추가 질문·클리닉 직접 제안·채팅을 «저장한 뒤» pushPing — 기다리지 않고 실패도 삼킨다(본 흐름이 아니다).
    ⚠ 이 기능은 SDK 를 늘 싣지 않는다 — 강사가 알림을 켤 때만 messaging-compat 를 부른다(학생 화면은 fetch 한 번뿐).
    ⚠ VAPID 키를 따로 안 준다 — SDK 의 기본 키로 받는다(콘솔에서 만들 것이 없다).
-   ⚠ 아이폰은 «홈 화면에 추가»해야만 온다 — 사용자 폰이 안드로이드라 manifest 는 안 만들었다. */
+   ⚠ 아이폰은 «홈 화면에 추가»해야만 온다 — 11-01 PWA manifest 를 붙여 이제 아이폰도 그 길로 된다. */
 const PUSH_WORKER_MIN = '2026-09-24a';
 const PUSH_SUPPORTED = 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
 const PUSH_LS = 'hm.pushToken';
