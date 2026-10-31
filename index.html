@@ -17945,7 +17945,7 @@ function stuCtx(){
     homework: 내과제.filter(a => !stuPastSeason(a, 시즌끝)).sort(새것먼저),
     videos:   내영상.filter(v => !stuPastSeason(v, 시즌끝)).sort(새것먼저),
     exams:    DATA.exams.filter(e=>myClassIds.includes(e.classId)),
-    qnas:     DATA.qnas.filter(q=>q.studentId===sid),
+    qnas:     DATA.qnas.filter(q=>q.studentId===sid).sort(새것먼저),   /* 최신 질문이 위 (11-01 · 사용자) */
     clinics:  DATA.clinics.filter(c=>c.studentId===sid)
   };
 }
@@ -19055,7 +19055,7 @@ function stuWrongHTML(c){
 
   return `
   ${state.stuWrongMode ? `
-  <div class="mc hi">
+  <div class="mc">
     <div style="font-size:13px;font-weight:700;">시험지 오답</div>
     <div style="font-size:12px;color:var(--sub);margin-top:6px;line-height:1.7;">
       시험지를 고르고 틀린 번호를 모두 누르세요. 같은 단원의 쌍둥이 문제가 숙제로 나갑니다.</div>
@@ -19110,7 +19110,7 @@ function stuWrongHTML(c){
   ${!state.bookReqMode ? '' : (() => {
     const 책들 = bookReqBooks();
     const 담긴 = state.bookReqPicked || [];
-    return `<div class="mc hi">
+    return `<div class="mc">
       <div style="font-size:13px;font-weight:700;">교재 문제 요청</div>
       <div style="font-size:12px;color:var(--sub);margin-top:6px;line-height:1.7;">
         교재에 적힌 <b>문제 번호</b>를 그대로 쓰세요. 선생님이 그 문제의 쌍둥이를 만들어 숙제로 내 줍니다.</div>
@@ -20996,7 +20996,7 @@ async function pvDelete(id){
 function stuQnaHTML(c){
   return `
   ${state.stuQnaWriting ? `
-  <div class="mc hi">
+  <div class="mc">
     <div class="sap-lab">질문 내용</div>
     <textarea id="qna-question" class="sap-in" rows="4"
       placeholder="문제 질문은 물론, 학습 상담 등 무엇이든 편하게 남겨주세요. (교재·번호만 골라도 보낼 수 있어요)"></textarea>
