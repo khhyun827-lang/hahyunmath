@@ -59,10 +59,10 @@ function 차리기(o = {}) {
   const kv = new Map(o.kv || []);
   const 보낸것 = [];
   const env = { FIREBASE_SA: JSON.stringify({ project_id: 'hahyunmath' }),
-    QUOTA: { get: async (k) => kv.get(k) || null, put: async (k, v, opt) => { kv.set(k, v); if (opt) kv.set('ttl:' + k, opt.expirationTtl); } } };
+    QUOTA: { get: async (k) => kv.get(k) || null, put: async (k, v, opt) => { kv.set(k, v); if (opt) kv.set('ttl:' + k, opt.expirationTtl); }, delete: async (k) => { kv.delete(k); } } };
   const 강사 = o.강사 !== false;
   const F = new Function('env', 'fetch', 'adminGate', 'adminJson', 'bumpQuota', 'getServiceAccountToken', 'JSON',
-    몸 + '; return { handlePushRegister, handlePushTest, handlePushPing, pushSend };')(
+    몸 + '; return { handlePushRegister, handlePushTest, handlePushPing, pushSend, handlePushMe, studentPush };')(
     env,
     async (url, opt) => {
       const m = JSON.parse(opt.body).message;
@@ -141,6 +141,62 @@ const TOK = 'fcmTokenAAAAAAAAAAAAAAAAAAAAAA';
   봄('🔴 강사가 아니면 기기를 못 맡긴다(남의 폰으로 알림을 돌릴 수 없다)', [막.status, 학생.kv.has('push:tokens')], [403, false]);
 }
 
+/* ── ②-학생 (2026-11-01) — 학생은 제 칸에만 맡기고, /notify 가 알림톡과 같이 쏜다 ── */
+{
+  const { F, env, kv } = 차리기({ 강사: false });
+  const 나 = { uid: 'S1', provider: 'password' };
+  const r = await F.handlePushMe(요청({ token: TOK }), env, {}, 나);
+  봄('🔴 /push-me 는 «부른 사람 uid» 칸에만 쓴다 (몸에 남의 key 를 실어도 못 바꾼다)', [r.몸통.devices, JSON.parse(kv.get('push:s:S1')).map((d) => d.token), kv.has('push:s:S2')], [1, [TOK], false]);
+  await F.handlePushMe(요청({ token: TOK, key: 'S2' }), env, {}, 나);
+  봄('   같은 토큰은 한 줄 · key 를 실어도 S2 칸은 안 생긴다', [JSON.parse(kv.get('push:s:S1')).length, kv.has('push:s:S2')], [1, false]);
+  for (const t of ['a1AAAAAAAAAAAAAAAAAAAAAAAA', 'a2AAAAAAAAAAAAAAAAAAAAAAAA', 'a3AAAAAAAAAAAAAAAAAAAAAAAA']) await F.handlePushMe(요청({ token: t }), env, {}, 나);
+  봄('   학생 기기는 세 대까지 (새 것이 앞)', JSON.parse(kv.get('push:s:S1')).map((d) => d.token.slice(0, 2)), ['a3', 'a2', 'a1']);
+  for (const t of ['a1AAAAAAAAAAAAAAAAAAAAAAAA', 'a2AAAAAAAAAAAAAAAAAAAAAAAA', 'a3AAAAAAAAAAAAAAAAAAAAAAAA']) await F.handlePushMe(요청({ token: t, off: true }), env, {}, 나);
+  봄('   다 끄면 칸을 지운다', kv.has('push:s:S1'), false);
+  const 익명 = await F.handlePushMe(요청({ token: TOK }), env, {}, { uid: 'A1', provider: 'anonymous' });
+  봄('🔴 익명(랜딩)은 403', [익명.status, kv.has('push:s:A1')], [403, false]);
+}
+{
+  const { F, env, 보낸것 } = 차리기({ kv: [['push:s:S1', JSON.stringify([{ token: 'd1' }])]] });
+  const n = await F.studentPush(env, 'qna', 'q7', 'S1', '[김하현수학연구소]\n민아 학생, 남긴 질문에\n답변이 달렸습니다.');
+  봄('🔵 studentPush — 그 학생 기기에 · 머리 줄 걷고 한 줄로 · 누르면 학생 탭', [n, 보낸것[0].token, 보낸것[0].data],
+    [1, 'd1', { title: '질문에 답변이 달렸어요', body: '민아 학생, 남긴 질문에 답변이 달렸습니다.', go: 'student/qna', tag: 'qna:q7' }]);
+  봄('   기기 없는 학생은 0 · FCM 을 안 부른다', [await F.studentPush(env, 'qna', 'q7', 'S9', 'x'), 보낸것.length], [0, 1]);
+  봄('   모르는 종류는 0', await F.studentPush(env, 'sms', 'x', 'S1', 'x'), 0);
+}
+{
+  /* handleNotify 를 통째로 돌린다 — 솔라피·번호·한도는 가짜 */
+  const notify = 몸떠내기(worker, 'async function handleNotify(');
+  const 학생푸시 = 몸떠내기(worker, 'async function studentPush(');
+  const 상수 = ['NOTIFY_DAILY_LIMIT', 'NOTIFY_PER_CALL', 'NOTIFY_KINDS', 'NOTIFY_TPL'].map((k) => { const at = worker.indexOf('const ' + k + ' ='); return worker.slice(at, worker.indexOf(';', at) + 1); }).join('\n');
+  function 돌리기(번호들, kvInit) {
+    const kv = new Map(kvInit), 알림톡 = [], 푸시 = [];
+    const env = { SOLAPI_API_KEY: 1, SOLAPI_API_SECRET: 1, SOLAPI_SENDER: 1, SOLAPI_PFID: 1, SOLAPI_TPL_QNA: 'tpl', FIREBASE_SA: 1,
+      QUOTA: { get: async (k) => kv.get(k) || null, put: async (k, v) => { kv.set(k, v); } } };
+    const G = new Function('adminGate', 'isTeacherOrStaff', 'adminJson', 'quotaDay', 'readContactPhone', 'bumpQuota', 'refundQuota', 'solapiSendOne', 'solapiVars', 'pushTokens', 'pushSend', 'STUDENT_PUSH',
+      상수 + '\n' + 학생푸시 + '\n' + notify + '; return handleNotify;')(
+      async (request) => ({ body: await request.json() }), null, (obj) => ({ 몸통: obj }), () => 'D',
+      async (env, key) => 번호들[key] || '', async () => ({ ok: true }), async () => {},
+      async (env, m) => { 알림톡.push(m.to); return { ok: true }; }, (v) => v,
+      async (env, listKey) => JSON.parse(kv.get(listKey) || '[]'),
+      async (env, msg, listKey) => { 푸시.push(listKey); return { sent: 1 }; },
+      { qna: { title: 't', go: 'student/qna' } });
+    return { G, env, kv, 알림톡, 푸시 };
+  }
+  const 몸통 = { kind: 'qna', id: 'q1', items: [{ key: 'S1', vars: {}, message: 'm' }, { key: 'S2', vars: {}, message: 'm' }, { key: 'S3', vars: {}, message: 'm' }] };
+  const 기기있음 = [['push:s:S1', '[{"token":"t"}]'], ['push:s:S2', '[{"token":"t"}]']];
+  const a = 돌리기({ S1: '01012345678', S3: '01099998888' }, 기기있음);
+  const r = (await a.G(요청(몸통), a.env, {}, 'T1')).몸통;
+  봄('🔴 알림톡은 예전 그대로 · 기기 있는 학생은 푸시도 (S2 는 번호 없어도 푸시)',
+    [a.알림톡, a.푸시, r.results.map((x) => [x.key, x.ok, x.why, x.push])],
+    [['01012345678', '01099998888'], ['push:s:S1', 'push:s:S2'], [['S1', true, '', 1], ['S2', false, 'no_phone', 1], ['S3', true, '', 0]]]);
+  const r2 = (await a.G(요청(몸통), a.env, {}, 'T1')).몸통;
+  봄('🔴 같은 날 다시 불러도 두 번 안 간다 — 번호 없이 푸시만 간 학생도', [r2.results.map((x) => x.why), a.알림톡.length, a.푸시.length], [['already', 'already', 'already'], 2, 2]);
+  const b = 돌리기({}, []);
+  await b.G(요청(몸통), b.env, {}, 'T1');
+  봄('   번호도 기기도 없으면 아무것도 안 적는다 (나중에 번호 넣으면 그날 보낼 수 있게)', [...b.kv.keys()].filter((k) => k.startsWith('sent:')), []);
+}
+
 /* ── ③ 화면 — 저장된 «뒤»에만 · 학생만 ───────────────────────── */
 {
   const 핑 = 몸떠내기(html, 'function pushPing(');
@@ -153,11 +209,11 @@ const TOK = 'fcmTokenAAAAAAAAAAAAAAAAAAAAAA';
   const 채팅 = 몸떠내기(html, 'async function sendChatMessage(');
   봄('🔴 채팅 — 학생이 보낸 것만 · 저장된 뒤', /if\(from === 'student' && 저장됨 === true\) pushPing\('chat'/.test(채팅), true);
   봄('   saveChat 이 저장 결과를 돌려준다', /return dbSetDoc\('chats'/.test(몸떠내기(html, 'async function saveChat(')), true);
-  봄('🔴 옛 워커면 /push-* 를 안 부른다 (catch-all 이 AI 한도를 태운다)', /if\(\(await workerVersion\(\)\) < PUSH_WORKER_MIN\)/.test(몸떠내기(html, 'async function pushPost(')), true);
+  봄('🔴 옛 워커면 /push-* 를 안 부른다 (catch-all 이 AI 한도를 태운다)', /min = PUSH_WORKER_MIN\)\{\n  if\(\(await workerVersion\(\)\) < min\)/.test(몸떠내기(html, 'async function pushPost(')), true);
   봄('   받는 파일이 index.html 옆에 있고 그 이름으로 붙인다', fs.existsSync(path.join(ROOT, 'push-sw.js')) && /register\('push-sw\.js'\)/.test(html), true);
   const sw = fs.readFileSync(path.join(ROOT, 'push-sw.js'), 'utf8');
-  봄('   받는 파일은 워커가 보낸 칸(title·body·go·tag)을 읽고 누르면 #teacher/<go> 로 간다',
-    ['d.title', 'd.body', 'd.tag', "'#teacher/' + go"].every((k) => sw.includes(k)), true);
+  봄('   받는 파일은 워커가 보낸 칸(title·body·go·tag)을 읽고 누르면 #teacher/<go>(학생은 #student/…) 로 간다',
+    ['d.title', 'd.body', 'd.tag', "'teacher/' + go", "go.includes('/')"].every((k) => sw.includes(k)), true);
 }
 
 console.log('\n' + (틀림 ? '✗ ' + 틀림 + '개 틀림 · ' : '✓ 전부 통과 · ') + (통과 + 틀림) + '개');

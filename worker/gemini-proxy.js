@@ -44,7 +44,7 @@ const TWIN_GROQ_MAX_TOKENS = 7000;   // 추론 + JSON. 검토(6000)보다 답이
 /* 🔴 «올렸는지 짐작하지 않는다» — 이 워커는 대시보드에 붙여넣어 올리므로 밖에서는 어느 판이 도는지
    알 길이 없었다(2026-09-11에 사용자가 올리고 「도는지 확인은 못 해봤어」). /quota 가 이 값을 같이
    돌려주고 tools/worker-check.mjs 가 저장소의 값과 견준다. **프롬프트나 규칙을 바꾸면 이 날짜를 올릴 것.** */
-const WORKER_VERSION = '2026-10-23a';
+const WORKER_VERSION = '2026-11-01a';
 // 이미지 업로드는 학생도 쓴다(질의응답 사진). 비용이 드는 쪽은 Gemini라 여기는 넉넉하게,
 // 다만 «한 명이 무한히»는 막는다. 전체 상한은 걸지 않는다 — 걸면 바쁜 날 학생이 막힌다.
 const UPLOAD_PER_USER_DAILY = 200;
@@ -169,6 +169,7 @@ export default {
     if (url.pathname === '/push-unregister') return handlePushRegister(request, env, corsHeaders, who.uid, true);
     if (url.pathname === '/push-test') return handlePushTest(request, env, corsHeaders, who.uid);
     if (url.pathname === '/push-ping') return handlePushPing(request, env, corsHeaders, who);
+    if (url.pathname === '/push-me') return handlePushMe(request, env, corsHeaders, who);
     /* 🔴 **터져도 한도는 돌려주고, 까닭은 CORS 머리를 달고 나간다** (2026-09-12).
        Cloudflare 의 1101 페이지에는 CORS 머리가 없어 브라우저에는 「Failed to fetch」 다섯 글자만 남는다 —
        고칠 실마리가 하나도 없고, 한도는 부르기 «전»에 세니 누를 때마다 한 건씩 나갔다(실제로 그랬다).
@@ -421,8 +422,14 @@ async function handleNotify(request, env, corsHeaders, callerUid) {
     if (!key || !vars) { out.why = 'bad_item'; continue; }
     const sentKey = `sent:${kind}:${id}:${key}:${day}`;
     if (env.QUOTA && await env.QUOTA.get(sentKey)) { out.why = 'already'; continue; }
+    /* 학생 폰 알림(11-01) — 알림을 켠 기기가 있으면 알림톡과 «같이». 번호가 없어도 푸시는 간다. */
+    out.push = await studentPush(env, kind, id, key, it.message);
     const phone = await readContactPhone(env, key);
-    if (!/^01[0-9]{8,9}$/.test(phone)) { out.why = 'no_phone'; continue; }
+    if (!/^01[0-9]{8,9}$/.test(phone)) {
+      out.why = 'no_phone';
+      if (out.push && env.QUOTA) await env.QUOTA.put(sentKey, '1', ttl);   // 푸시는 갔다 — 다시 불러도 두 번 안 가게
+      continue;
+    }
     const q = await bumpQuota(env, 'notify', callerUid, NOTIFY_DAILY_LIMIT, NOTIFY_DAILY_LIMIT);
     if (!q.ok) { out.why = 'quota'; continue; }
 
@@ -547,7 +554,7 @@ async function handleAdminDeleteUser(request, env, corsHeaders, callerUid) {
      ponytail: 이름은 화면이 준 것을 믿는다(다른 학생 이름을 적을 수는 있다). 문제가 되면 contacts 로 uid→이름을 읽는다.
    ⚠ 죽은 토큰(앱 데이터 지움·권한 끔)은 FCM 이 404 UNREGISTERED 로 알려 준다 — 그때 KV 에서 걷는다.
    ⚠ data 만 보낸다(notification 칸 없음) — 알림은 push-sw.js 가 직접 띄운다(누르면 그 탭으로 간다). */
-const PUSH_PATHS = ['/push-register', '/push-unregister', '/push-test', '/push-ping'];
+const PUSH_PATHS = ['/push-register', '/push-unregister', '/push-test', '/push-ping', '/push-me'];
 const PUSH_KINDS = {
   qna:    { title: '새 질문',          go: 'qna',    gap: 60 },
   clinic: { title: '클리닉 시간 제안', go: 'clinic', gap: 60 },
@@ -557,14 +564,15 @@ const PUSH_PER_USER_DAILY = 40;
 const PUSH_DAILY_LIMIT = 500;
 const PUSH_MAX_DEVICES = 5;
 
-async function pushTokens(env) {
+/* listKey — 'push:tokens'(강사) · 'push:s:<학생 key>'(학생 · 11-01) */
+async function pushTokens(env, listKey = 'push:tokens') {
   if (!env.QUOTA) return [];
-  try { return JSON.parse((await env.QUOTA.get('push:tokens')) || '[]') || []; } catch (_) { return []; }
+  try { return JSON.parse((await env.QUOTA.get(listKey)) || '[]') || []; } catch (_) { return []; }
 }
 
 /* 맡겨 둔 기기 전부에 한 통씩. → { sent, devices, dropped, why } */
-async function pushSend(env, msg) {
-  const list = await pushTokens(env);
+async function pushSend(env, msg, listKey = 'push:tokens') {
+  const list = await pushTokens(env, listKey);
   if (!list.length) return { sent: 0, devices: 0, dropped: 0, why: 'no_device' };
   const sa = JSON.parse(env.FIREBASE_SA);
   const tok = await getServiceAccountToken(env);
@@ -581,7 +589,7 @@ async function pushSend(env, msg) {
     if (r.status === 404 || /UNREGISTERED/.test(t)) dead.push(d.token);
     else why = 'fcm ' + r.status + ' ' + t.slice(0, 160);
   }
-  if (dead.length) await env.QUOTA.put('push:tokens', JSON.stringify(list.filter((d) => !dead.includes(d.token))));
+  if (dead.length) await env.QUOTA.put(listKey, JSON.stringify(list.filter((d) => !dead.includes(d.token))));
   return { sent, devices: list.length, dropped: dead.length, why };
 }
 
@@ -624,6 +632,50 @@ async function handlePushPing(request, env, corsHeaders, who) {
   const 글 = String(body.text || '').replace(/\s+/g, ' ').trim().slice(0, 80);
   try { return adminJson({ ok: true, ...(await pushSend(env, { title: k.title + ' — ' + 이름, body: 글, go: k.go, tag: body.kind + ':' + who.uid })) }, corsHeaders); }
   catch (e) { return adminJson({ ok: false, sent: 0, why: String((e && e.message) || e).slice(0, 200) }, corsHeaders); }
+}
+
+/* =================== 학생 폰 알림 (2026-11-01 · 사용자 — 「알림 가던 것, 설치한 사람들은 푸시도」) ===================
+   🔵 학생이 「알림 받기」로 FCM 토큰을 /push-me 에 맡긴다 → KV `push:s:<uid>`. 열쇠는 **부른 사람의 uid** — 남의 칸엔 못 쓴다.
+     uid 는 화면의 studentKeyOfSid 와 같은 값이라(학생 문서 이름 = uid · 09-07) /notify 의 item.key 로 바로 찾는다.
+   🔵 따로 보내는 길이 없다 — /notify 가 알림톡을 보낼 때 그 학생의 기기에도 같이 쏜다(studentPush). 무료라 한도를 안 센다.
+   ponytail: 한 기기에서 다른 학생이 로그인해 다시 켜면 옛 학생 칸에도 토큰이 남는다 — 문제가 되면 로그아웃 때 /push-me off. */
+const STUDENT_PUSH_MAX_DEVICES = 3;
+const STUDENT_PUSH = {
+  hw:     { title: '과제 안내',          go: 'student/progress' },
+  vid:    { title: '아직 보지 않은 강의', go: 'student/video' },
+  vidnew: { title: '새 강의',            go: 'student/video' },
+  qna:    { title: '질문에 답변이 달렸어요', go: 'student/qna' },
+  wrong:  { title: '오답숙제',            go: 'student/wronghw' },
+  notice: { title: '수업 일정 안내',      go: 'student/notice' },
+  mat:    { title: '새 학습 자료',        go: 'student/material' },
+};
+
+/* POST /push-me  { token, off? } — 학생(로그인한 누구든 제 칸만). */
+async function handlePushMe(request, env, corsHeaders, who) {
+  if (who.provider === 'anonymous') return adminJson({ error: 'forbidden' }, corsHeaders, 403);
+  if (!env.QUOTA) return adminJson({ error: 'not_configured', detail: '워커에 QUOTA KV 가 없습니다.' }, corsHeaders, 503);
+  let body = {};
+  try { body = await request.json(); } catch (_) {}
+  const token = String(body.token || '');
+  if (!/^[\w:-]{20,4096}$/.test(token)) return adminJson({ error: 'bad_request', detail: 'token 이 필요합니다.' }, corsHeaders, 400);
+  const listKey = 'push:s:' + who.uid;
+  let list = (await pushTokens(env, listKey)).filter((d) => d.token !== token);
+  if (!body.off) list = [{ token, at: new Date().toISOString() }, ...list].slice(0, STUDENT_PUSH_MAX_DEVICES);
+  if (list.length) await env.QUOTA.put(listKey, JSON.stringify(list));
+  else await env.QUOTA.delete(listKey);
+  return adminJson({ ok: true, devices: list.length }, corsHeaders);
+}
+
+/* /notify 안에서 한 학생에게 — 기기가 없으면 0. 실패해도 알림톡은 그대로 간다(던지지 않는다). */
+async function studentPush(env, kind, id, key, message) {
+  const k = STUDENT_PUSH[kind];
+  if (!k || !env.FIREBASE_SA || !env.QUOTA) return 0;
+  try {
+    if (!(await pushTokens(env, 'push:s:' + key)).length) return 0;
+    const 글 = String(message || '').split('\n').filter((l) => !/^\[김하현수학연구소\]/.test(l.trim())).join(' ')
+      .replace(/\s+/g, ' ').trim().slice(0, 140);
+    return (await pushSend(env, { title: k.title, body: 글, go: k.go, tag: kind + ':' + id }, 'push:s:' + key)).sent;
+  } catch (_) { return 0; }
 }
 
 /* =================== 인증 =================== */

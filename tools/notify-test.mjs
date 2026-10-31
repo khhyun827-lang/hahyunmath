@@ -67,7 +67,7 @@ console.log('워커 알림톡 길 — 막이가 제자리에 있는가\n');
   const 번호들 = { U1: '010-1111-2222', U2: '', U3: '010-3333-4444' };
   const 헤더들 = [];
   const 만들기 = () => new Function(
-    'env', 'fetch', 'adminGate', 'adminJson', 'quotaDay', 'bumpQuota', 'refundQuota', 'getServiceAccountToken', 'JSON', 'crypto',
+    'env', 'fetch', 'adminGate', 'adminJson', 'quotaDay', 'bumpQuota', 'refundQuota', 'getServiceAccountToken', 'JSON', 'crypto', 'studentPush',
     몸 + '; return handleNotify;')(
     env,
     async (url, opt) => {
@@ -87,6 +87,7 @@ console.log('워커 알림톡 길 — 막이가 제자리에 있는가\n');
     async () => {},
     async () => 'tok',
     JSON, globalThis.crypto,
+    async () => 0,      // 학생 폰 알림(11-01)은 push-test 가 본다 — 여기는 알림톡만
   );
   const 부르기 = (body) => 만들기()({ json: async () => body }, env, {}, 'T1');
   const 변수 = { '#{학생명}': '철수', '#{과제명}': '3단원', '#{마감일}': '2026-09-20' };

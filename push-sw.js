@@ -19,7 +19,8 @@ self.addEventListener('push', (e) => {
 self.addEventListener('notificationclick', (e) => {
   e.notification.close();
   const go = (e.notification.data || {}).go || '';
-  const url = new URL('index.html' + (go ? '#teacher/' + go : ''), self.registration.scope).href;
+  /* 학생 알림(11-01)은 go 가 'student/qna' 처럼 갈래를 들고 온다 — 강사 것은 예전처럼 탭 이름만. */
+  const url = new URL('index.html' + (go ? '#' + (go.includes('/') ? go : 'teacher/' + go) : ''), self.registration.scope).href;
   e.waitUntil((async () => {
     const wins = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
     const w = wins.find((c) => c.url.startsWith(self.registration.scope));

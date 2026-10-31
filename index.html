@@ -4637,6 +4637,11 @@
 /* 「테스트 학생」 — 이름이 주인공이고 «학생»은 그것을 받쳐 주는 말이다(2026-09-14 · 사용자 요청). */
 .sap-hi b em{font-style:normal;font-size:15px;font-weight:500;color:var(--sub);letter-spacing:-.01em;}
 .sap-hi span{display:block;font-size:12.5px;color:var(--dim);margin-top:5px;}
+/* 폰 알림 켜기 한 줄 (2026-11-01) — 켜거나 «나중에» 하면 사라진다 */
+.sap-push{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 14px;padding:12px 14px;
+  background:var(--card);border:1px solid var(--line);border-radius:var(--r-md);font-size:13px;color:var(--sub);line-height:1.6;}
+.sap-push > span{flex:1 1 200px;}
+.sap-push-b{display:flex;gap:6px;}
 
 /* 화면 안내문 — 「여기서 무엇을 하는가」 한 줄 */
 .sap-lede{font-size:12px;color:var(--sub);line-height:1.7;margin:0 0 14px;}
@@ -10267,6 +10272,7 @@ async function doStudentLogin(){
   saveSession();
   state.studentTab = 'home';
   goto('student');
+  pushRefreshQuiet();   // 학생 폰 알림 (11-01) — 켜 둔 기기면 토큰을 다시 맡긴다
 }
 
 async function doAssistantLogin(){
@@ -10538,6 +10544,7 @@ async function restoreSession(){
     if(isWithdrawn(found, rec)){ clearSession(); return; } // 로그인해 있던 중 퇴원 처리되면 다음 방문 때 자동 로그아웃
     state.currentUser = {type:'student', studentId:found.studentId, name:found.name};
     state.view = 'student';
+    pushRefreshQuiet();   // 학생 폰 알림 (11-01) — 기다리지 않는다
   } else if(saved.type==='assistant'){
     const found = DATA.assistants.find(a=>a.id===saved.id);
     if(!found){ clearSession(); return; }
@@ -18670,6 +18677,7 @@ function stuHomeHTML(c){
     <b>${escHtml(c.me.name || state.currentUser.name)} <em>학생</em></b>
     <span>${[subjectOfStudent(c.sid), classNameOf(c.classId)].filter(Boolean).map(escHtml).join(' · ')}</span>
   </div>
+  ${stuPushHTML()}
 
   ${/* 🔴 **시험이 맨 위다** (2026-09-14 · S-4). 학생이 앱을 켜는 까닭이 대개 그것인데
        여태 오늘 할 일 아래 셋째에 묻혀 있었다. 날짜가 없거나 끝난 시험이면 통째로 안 그린다 —
@@ -19823,17 +19831,18 @@ async function notifySend(kind, pairs, 말){
   if(!items.length) return;
   if(!confirm(`${말} — ${items.length}명에게 카카오톡 알림을 보낼까요?\n알림톡이 안 가면 문자로 대체 발송되어 건당 요금이 나갑니다.`)) return;
   try{
-    let 보냄 = 0; const 못 = {};
+    let 보냄 = 0, 푸시 = 0; const 못 = {};
     for(const id of [...new Set(items.map(x => x.id))]){
       const 몫 = items.filter(x => x.id === id);
       for(let i = 0; i < 몫.length; i += 50){      /* 워커는 한 번에 50명까지 */
         const j = await notifyPost(kind, id, 몫.slice(i, i + 50));
         보냄 += j.sent || 0;
+        푸시 += pushCount(j);
         (j.results || []).filter(r => !r.ok).forEach(r => { const w = notifyWhy(r.why); 못[w] = (못[w] || 0) + 1; });
       }
     }
     const 말들 = Object.keys(못).map(k => k + ' ' + 못[k]);
-    showToast(`알림톡 ${보냄}/${items.length}명 보냄` + (말들.length ? ' · ' + 말들.join(' · ') : ''));
+    showToast(`알림톡 ${보냄}/${items.length}명 보냄` + (푸시 ? ` · 폰 알림 ${푸시}명` : '') + (말들.length ? ' · ' + 말들.join(' · ') : ''));
   }catch(e){
     showToast(e.code === 'not_configured' ? '알림톡 — 이 템플릿은 아직 심사 전입니다(워커 비밀 없음).' : '알림톡을 보내지 못했습니다 — ' + (e.message || e));
   }
@@ -19855,8 +19864,9 @@ async function notifyWorkerReady(){
 const PUSH_WORKER_MIN = '2026-09-24a';
 const PUSH_SUPPORTED = 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
 const PUSH_LS = 'hm.pushToken';
-async function pushPost(path, body){
-  if((await workerVersion()) < PUSH_WORKER_MIN){ const e = new Error('워커가 아직 옛 판입니다 — 워커를 먼저 올려 주세요.'); e.code = 'old_worker'; throw e; }
+const PUSH_STUDENT_MIN = '2026-11-01a';   // 학생 폰 알림(/push-me) — 그 전 판은 catch-all 이라 AI 한도를 태운다
+async function pushPost(path, body, min = PUSH_WORKER_MIN){
+  if((await workerVersion()) < min){ const e = new Error('워커가 아직 옛 판입니다 — 워커를 먼저 올려 주세요.'); e.code = 'old_worker'; throw e; }
   const token = await withTimeout(getAuthToken(), 8000);
   const res = await withTimeout(fetch(AI_WORKER_URL + path, {
     method:'POST', headers:{ 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
@@ -19890,16 +19900,24 @@ function pushDeviceLabel(){
 }
 function pushSaved(){ try{ return localStorage.getItem(PUSH_LS) || ''; }catch(e){ return ''; } }
 function pushSave(t){ try{ t ? localStorage.setItem(PUSH_LS, t) : localStorage.removeItem(PUSH_LS); }catch(e){} }
+/* 강사는 강사 기기 목록(/push-register) · 학생은 제 칸(/push-me · 11-01). */
+function pushIsStudent(){ return !!(state.currentUser && state.currentUser.type === 'student'); }
+function pushRegister(t, off){
+  if(pushIsStudent()) return pushPost('/push-me', { token: t, off: !!off }, PUSH_STUDENT_MIN);
+  return off ? pushPost('/push-unregister', { token: t }) : pushPost('/push-register', { token: t, label: pushDeviceLabel() });
+}
 async function pushEnable(){
-  if(!PUSH_SUPPORTED){ showToast('이 브라우저는 알림을 받을 수 없습니다 — 안드로이드 크롬에서 열어 주세요.'); return; }
+  if(!PUSH_SUPPORTED){ showToast(/iPhone|iPad/.test(navigator.userAgent)
+    ? '아이폰은 사파리 공유 › «홈 화면에 추가» 한 뒤 그 아이콘으로 열어야 알림을 받을 수 있습니다.'
+    : '이 브라우저는 알림을 받을 수 없습니다 — 크롬에서 열어 주세요.'); return; }
   state.pushBusy = true; render();
   try{
     const p = await Notification.requestPermission();
-    if(p !== 'granted') throw new Error(p === 'denied' ? '알림이 차단돼 있습니다 — 크롬 › 사이트 설정 › 알림에서 허용해 주세요.' : '알림 허용을 누르지 않았습니다.');
+    if(p !== 'granted') throw new Error(p === 'denied' ? '알림이 차단돼 있습니다 — 브라우저 › 사이트 설정 › 알림에서 허용해 주세요.' : '알림 허용을 누르지 않았습니다.');
     const t = await pushDeviceToken();
-    await pushPost('/push-register', { token: t, label: pushDeviceLabel() });
+    await pushRegister(t);
     pushSave(t);
-    showToast('이 기기로 알림을 받습니다. 「시험 알림」으로 확인해 보세요.');
+    showToast(pushIsStudent() ? '이 기기로 알림을 받습니다.' : '이 기기로 알림을 받습니다. 「시험 알림」으로 확인해 보세요.');
   }catch(e){ showToast('알림을 켜지 못했습니다 — ' + (e.message || e)); }
   state.pushBusy = false; render();
 }
@@ -19907,7 +19925,7 @@ async function pushDisable(){
   const t = pushSaved();
   state.pushBusy = true; render();
   try{
-    if(t) await pushPost('/push-unregister', { token: t });
+    if(t) await pushRegister(t, true);
     if(firebase.messaging) await firebase.messaging().deleteToken().catch(() => {});
     pushSave('');
     showToast('이 기기의 알림을 껐습니다.');
@@ -19929,14 +19947,40 @@ async function pushRefreshQuiet(){
   if(!old || !PUSH_SUPPORTED || Notification.permission !== 'granted') return;
   try{
     const t = await pushDeviceToken();
-    if(t && t !== old){ await pushPost('/push-register', { token: t, label: pushDeviceLabel() }); pushSave(t); }
+    if(t && t !== old){ await pushRegister(t); pushSave(t); }
   }catch(e){ console.warn('폰 알림 — 토큰 확인 실패', e.message); }
 }
 /* 알림을 눌렀는데 창이 이미 열려 있으면 push-sw.js 가 탭 이름만 보낸다. */
 if(PUSH_SUPPORTED) navigator.serviceWorker.addEventListener('message', e => {
   const go = e.data && e.data.pushGo;
-  if(go && state.currentUser && state.currentUser.type === 'teacher'){ state.view = 'teacher'; state.teacherTab = go; render(); }
+  if(!go || !state.currentUser) return;
+  if(state.currentUser.type === 'teacher' && !go.includes('/')){ state.view = 'teacher'; state.teacherTab = go; render(); }
+  if(pushIsStudent() && go.startsWith('student/')){ state.view = 'student'; goStudentTab(go.slice(8)); }   // 11-01 학생 알림
 });
+/* 학생 홈 맨 위 한 줄 — 폰 알림 켜기 (2026-11-01). 켰거나 «나중에» 했거나 차단해 뒀으면 안 그린다.
+   아이폰 사파리 탭에서는 알림 자체가 안 되므로 «홈 화면에 추가»부터 알려 준다. */
+const PUSH_LATER_LS = 'hm.pushLater';
+function pushLater(){ try{ return !!localStorage.getItem(PUSH_LATER_LS); }catch(e){ return false; } }
+function pushLaterSet(){ try{ localStorage.setItem(PUSH_LATER_LS, '1'); }catch(e){} render(); }
+function stuPushHTML(){
+  if(pushSaved() || pushLater()) return '';
+  const 아이폰탭 = /iPhone|iPad/.test(navigator.userAgent) && !navigator.standalone;
+  if(!PUSH_SUPPORTED && !아이폰탭) return '';
+  if(PUSH_SUPPORTED && Notification.permission === 'denied') return '';
+  /* 워커가 /push-me 를 아는 판일 때만 — 웹이 먼저 올라가도 학생이 «옛 판» 오류를 안 본다 */
+  if(state.workerVersion === undefined){ workerVersion().then(v => { if(v >= PUSH_STUDENT_MIN) render(); }); return ''; }
+  if(state.workerVersion < PUSH_STUDENT_MIN) return '';
+  const busy = state.pushBusy ? ' disabled' : '';
+  return `<div class="sap-push">
+    <span>${아이폰탭
+      ? '사파리 <b>공유 › 홈 화면에 추가</b> 한 뒤 그 아이콘으로 열면 새 과제·강의·답변을 <b>폰 알림</b>으로 받을 수 있어요.'
+      : '새 과제·강의·답변을 <b>폰 알림</b>으로 받아 보세요.'}</span>
+    <div class="sap-push-b">
+      ${아이폰탭 ? '' : `<button class="btn p sm"${busy} onclick="pushEnable()">알림 받기</button>`}
+      <button class="btn q sm" onclick="pushLaterSet()">${아이폰탭 ? '닫기' : '나중에'}</button>
+    </div>
+  </div>`;
+}
 function teacherPushHTML(){
   const 켬 = !!pushSaved() && PUSH_SUPPORTED && Notification.permission === 'granted';
   const 막힘 = PUSH_SUPPORTED && Notification.permission === 'denied';
@@ -19954,6 +19998,8 @@ function teacherPushHTML(){
       </div>
       <p class="st-note" style="margin-top:12px;">기기마다 따로 켭니다(폰 · PC). 크롬의 사이트 데이터를 지우면 꺼지니 그때 다시 눌러 주세요.</p>` });
 }
+/* /notify 결과 중 학생 폰 알림이 간 사람 수 (11-01 · 워커가 사람마다 push 기기 수를 붙인다) */
+function pushCount(j){ return (j.results || []).filter(r => r.push).length; }
 /* 워커 /notify 를 부르는 하나. items = [{ key, message }]. 안 되면 던진다(까닭이 message 에). */
 async function notifyPost(kind, id, items){
   if(!(await notifyWorkerReady())){ const e = new Error('워커가 아직 옛 판입니다 — 워커를 먼저 올려 주세요.'); e.code = 'old_worker'; throw e; }
@@ -19979,7 +20025,9 @@ async function notifyAuto(kind, id, targets){
   try{
     const j = await notifyPost(kind, id, items);
     const 못감 = (j.results || []).filter(r => !r.ok && r.why !== 'already');
-    if(j.sent) showToast(`알림톡 ${j.sent}명에게 보냈습니다.` + (못감.length ? ` ${못감.length}명은 못 갔습니다(${notifyWhy(못감[0].why)}).` : ''));
+    const 푸시 = pushCount(j) ? ` 폰 알림 ${pushCount(j)}명.` : '';
+    if(j.sent) showToast(`알림톡 ${j.sent}명에게 보냈습니다.` + 푸시 + (못감.length ? ` ${못감.length}명은 못 갔습니다(${notifyWhy(못감[0].why)}).` : ''));
+    else if(푸시) showToast('알림톡은 못 갔습니다 —' + 푸시);
     else if(못감.length) showToast(`알림톡이 못 갔습니다 — ${notifyWhy(못감[0].why)}`);
   }catch(e){
     if(e.code === 'not_configured' || e.code === 'old_worker') console.warn('알림톡 — 아직 못 보낸다 (' + kind + ')', e.message);
