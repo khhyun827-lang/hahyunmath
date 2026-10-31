@@ -10271,6 +10271,7 @@ async function doStudentLogin(){
   state.currentUser = {type:'student', studentId:found.studentId, name:found.name};
   saveSession();
   state.studentTab = 'home';
+  state.workerVersion = undefined;   // 워커 판은 다시 묻는다 — 강사로 쓰던 창이면 붙이기 전 판을 들고 있다(11-01)
   goto('student');
   pushRefreshQuiet();   // 학생 폰 알림 (11-01) — 켜 둔 기기면 토큰을 다시 맡긴다
 }
@@ -19898,8 +19899,11 @@ function pushDeviceLabel(){
   const ua = navigator.userAgent;
   return (/Android/.test(ua) ? '안드로이드' : /iPhone|iPad/.test(ua) ? '아이폰' : 'PC') + ' · ' + todayStr();
 }
-function pushSaved(){ try{ return localStorage.getItem(PUSH_LS) || ''; }catch(e){ return ''; } }
-function pushSave(t){ try{ t ? localStorage.setItem(PUSH_LS, t) : localStorage.removeItem(PUSH_LS); }catch(e){} }
+/* 🔴 «켰음» 기록은 사람마다 따로 (11-01 · 사용자 — 강사로 알림 켠 폰에서 학생 줄이 안 떴다).
+   한 칸을 같이 쓰면 학생 화면이 강사의 토큰을 보고 «이미 켰다»로 읽는다. 강사는 옛 열쇠 그대로. */
+function pushLsKey(){ return pushIsStudent() ? PUSH_LS + ':s:' + state.currentUser.studentId : PUSH_LS; }
+function pushSaved(){ try{ return localStorage.getItem(pushLsKey()) || ''; }catch(e){ return ''; } }
+function pushSave(t){ try{ t ? localStorage.setItem(pushLsKey(), t) : localStorage.removeItem(pushLsKey()); }catch(e){} }
 /* 강사는 강사 기기 목록(/push-register) · 학생은 제 칸(/push-me · 11-01). */
 function pushIsStudent(){ return !!(state.currentUser && state.currentUser.type === 'student'); }
 function pushRegister(t, off){
@@ -19926,7 +19930,8 @@ async function pushDisable(){
   state.pushBusy = true; render();
   try{
     if(t) await pushRegister(t, true);
-    if(firebase.messaging) await firebase.messaging().deleteToken().catch(() => {});
+    /* 학생이 끌 때는 토큰을 안 지운다 — 같은 폰의 강사 알림이 그 토큰을 같이 쓸 수 있다(서버 칸에서만 뺀다) */
+    if(firebase.messaging && !pushIsStudent()) await firebase.messaging().deleteToken().catch(() => {});
     pushSave('');
     showToast('이 기기의 알림을 껐습니다.');
   }catch(e){ showToast('알림을 끄지 못했습니다 — ' + (e.message || e)); }

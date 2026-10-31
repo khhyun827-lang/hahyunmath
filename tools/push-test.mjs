@@ -199,6 +199,13 @@ const TOK = 'fcmTokenAAAAAAAAAAAAAAAAAAAAAA';
 
 /* ── ③ 화면 — 저장된 «뒤»에만 · 학생만 ───────────────────────── */
 {
+  {
+    const 칸 = (who) => new Function('state', 'PUSH_LS', 몸떠내기(html, 'function pushIsStudent(') + 몸떠내기(html, 'function pushLsKey(') + '; return pushLsKey();')({ currentUser: who }, 'hm.pushToken');
+    봄('🔴 «켰음» 기록은 강사·학생 따로 — 강사가 켠 폰에서 학생 줄이 숨던 것 (11-01)',
+      [칸({ type: 'teacher' }), 칸({ type: 'student', studentId: 'test' }), 칸({ type: 'student', studentId: 'kim' })],
+      ['hm.pushToken', 'hm.pushToken:s:test', 'hm.pushToken:s:kim']);
+    봄('   학생 로그인 때 워커 판을 다시 묻는다(붙이기 전 판을 들고 있지 않게)', /state\.workerVersion = undefined;[^\n]*\n  goto\('student'\);/.test(html), true);
+  }
   const 핑 = 몸떠내기(html, 'function pushPing(');
   봄('🔴 pushPing 은 학생만 부른다', /u\.type !== 'student'\) return;/.test(핑), true);
   봄('   기다리지 않고 실패는 삼킨다', /\.catch\(/.test(핑) && !/await/.test(핑), true);
