@@ -10,6 +10,9 @@ const fs = require('fs');
 const path = require('path');
 
 const ROOT = path.resolve(__dirname, '..');
+/* tools/fake-today.mjs 의 FAKE_CLOCK 과 같은 글 — 여기는 CommonJS 라 import 를 못 해 글자로 떠 온다 */
+const fakeClock = T => new Function('T', fs.readFileSync(path.join(__dirname, 'fake-today.mjs'), 'utf8')
+  .match(/export const FAKE_CLOCK = T => ([\s\S]*?);\r?\n/)[1].replace(/^/, 'return '))(T);
 const PORT = Number(process.argv[2]) || 8777;
 
 const MIME = {
@@ -47,6 +50,12 @@ http
         'Content-Type': MIME[path.extname(file).toLowerCase()] || 'application/octet-stream',
         'Cache-Control': 'no-store',
       });
+      /* KHM_TODAY 가 있으면 페이지 시계를 그 날로 (check-all --today · tools/fake-today.mjs) */
+      if (process.env.KHM_TODAY && path.extname(file).toLowerCase() === '.html') {
+        const 시계 = '<script>' + fakeClock(process.env.KHM_TODAY) + '</script>';
+        const s = buf.toString('utf8'), at = s.search(/<head[^>]*>/i);
+        return res.end(at < 0 ? 시계 + s : s.replace(/<head[^>]*>/i, m => m + 시계));
+      }
       res.end(buf);
     });
   })

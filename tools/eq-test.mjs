@@ -10,7 +10,7 @@
 
 import { loadHwpxRules } from './hwpx-node.mjs';
 
-const { convertHwpEq, hwpxBalanceLeftRight, hwpxRepairEqText } = loadHwpxRules();
+const { convertHwpEq, hwpxBalanceLeftRight, hwpxRepairEqText, hwpEqLeftovers } = loadHwpxRules();
 
 /* 화면 쪽 규칙(problemHTML)도 여기서 같이 본다 — 수식과 «같은 글»을 다루는 짝이라서다. */
 import fs from 'fs';
@@ -109,7 +109,7 @@ console.log('');
   든가('0inemptyset 처럼 양쪽이 붙어도', convertHwpEq('0inemptyset'), B + 'in ');
   든가('notsubset 은 긴 것부터', convertHwpEq('A notsubset B'), B + 'not' + B + 'subset ');
   // 🔴 여기가 요점 — 고치려다 멀쩡한 낱말을 망가뜨리면 안 된다
-  봄('sin·min 은 안 건드린다', convertHwpEq('sin x + min y'), '$sin x + min y$');
+  봄('sin·min 은 안 건드린다(s\\in 이 안 된다 · sin 은 11-02 부터 \\sin)', convertHwpEq('sin x + min y'), '$' + B + 'sin  x + min y$');
   없나('escape 의 cap 은 안 걸린다', convertHwpEq('escape'), B + 'cap');
 }
 
@@ -314,6 +314,40 @@ console.log('');
   봄('  TIMESBAR{…} → \\times \\overline 둘', JSON.stringify([t.split(OL).length - 1, t.split(B + 'times').length - 1, /BAR/.test(t)]), JSON.stringify([2, 2, false]));
   봄('  angle BAR(점 이름)는 그대로', convertHwpEq('angle BAR = 30').includes('BAR'), true);
   봄('  고쳐 둔 창고 길(hwpxRepairEqText)도 같게', hwpxRepairEqText('$BAR{CH}=3$').includes(OL + 'CH}'), true); }
+/* 11-02 — G: 교재 2만 3천 식을 KaTeX 로 그려 보고 남은 날글자·깨짐을 한꺼번에 (옛 판과 견줘 새로 깨진 것 0 · 살린 것 37) */
+{ const 표 = [
+    ['THEREFORE ~x=2 LEFT ( BECAUSE ~x>0 RIGHT )', [B + 'therefore', B + 'because'], ['THEREFORE', 'BECAUSE']],
+    ['{ LEFT | 3a RIGHT |} over sqrt {3^2 + LEFT ( -2 RIGHT )^2}', ['{' + B + 'sqrt{3^{2} + ' + B + 'left( -2 ' + B + 'right)^{2}}}'], ['{sqrt}']],
+    ['{1} over sqrt 2', [B + 'frac{1}{' + B + 'sqrt{2}}'], []],
+    ['6-2ROOT3', [B + 'sqrt{3}'], ['ROOT']],
+    ['a CDOT 10 + b cdot10', [B + 'cdot 10 + b ' + B + 'cdot 10'], ['CDOT', ' cdot']],
+    ['-7lex LEQ 4', ['-7' + B + 'leq x ' + B + 'leq 4'], ['lex']],
+    ['x geit-1', [B + 'geq -1'], ['geit']],
+    ['0LEQn', ['0' + B + 'leq n'], ['LEQ']],
+    ['f LEFT ( x RIGHT ) lef LEFT ( 2 RIGHT )', [B + 'leq f'], ['lef ']],
+    ['n=box{3k-2', [B + 'boxed{3k-2}'], ['box{']],
+    ['90DEG', ['90^{' + B + 'circ}'], ['DEG']],
+    ['f(x)= cases{x+1&~(x le4)#1&~(x=5)', [B + 'begin{cases}', B + B + '1&'], ['cases{']],
+    ['LEFT { {matrix{ a # b}} RIGHT .', [B + 'begin{matrix}'], ['matrix{']],
+    ['=4itx-3 · rmrmQ', ['=4x-3', ' Q'], ['itx', 'rm']],
+    ['2angleDOC', ['2' + B + 'angle DOC'], ['angleDOC']],
+    ['p ``NOTRARROW ``q · RARROWsim p', [B + 'nrightarrow', B + 'rightarrow ' + B + 'sim'], ['NOT', 'RARROW']],
+    ['OA bot PA · vdots · div', [B + 'perp', B + 'vdots', B + 'div'], [' bot', ' vdots']],
+    ['x' + String.fromCharCode(96) + B + 'm · ' + B + 'OA · root{x} ' + B + '+6', ['x m', 'OA', '} +6'], [B + 'm', B + 'OA', B + '+']],
+    ['10% · △ rm ABC', ['10' + B + '%', B + 'triangle'], ['△']],
+    ['h = {cases{it#it}}', [B + 'begin{cases}' + B + B + B + 'end{cases}'], ['it']],
+  ];
+  for(const [원, 있어야, 없어야] of 표){
+    const r = convertHwpEq(원);
+    봄(원.slice(0, 40), JSON.stringify([있어야.every(x => r.includes(x)), 없어야.some(x => r.includes(x))]), JSON.stringify([true, false]));
+    if(!있어야.every(x => r.includes(x)) || 없어야.some(x => r.includes(x))) console.log('      나온 것: ' + r);
+  }
+  봄('  P= LEFT { x left| -2le{x<5 RIGHT } — 안 닫힌 { 는 \\right 앞에서 닫는다', convertHwpEq('P= LEFT { x left| -2le{x<5 RIGHT }').includes('5 }' + B + 'right'), true);
+  봄('  angle BAR · triangle ABC · left( 는 그대로', JSON.stringify([convertHwpEq('angle BAR').includes('BAR'), convertHwpEq('triangle ABC').includes(B + 'triangle ABC'), convertHwpEq('left( x right)').includes(B + 'left( x ' + B + 'right)')]), JSON.stringify([true, true, true]));
+  { const aiLiteralNewlines = new Function(lift('aiLiteralNewlines') + '; return aiLiteralNewlines;')();
+    const N = B + 'n';
+    봄('  AI 해설의 글자 «\\n» → 줄바꿈 · 수식 안 \\neq 는 그대로', aiLiteralNewlines('1. $a' + N + 'eq b$.' + N + '2. 끝' + N + ' 3.'), '1. $a' + N + 'eq b$.' + String.fromCharCode(10) + '2. 끝' + String.fromCharCode(10) + ' 3.'); }
+  봄('  창고 길(hwpEqLeftovers)도 THEREFORE·CDOT·LEQ', hwpEqLeftovers('THEREFORE a CDOT b 2LEQ c'), B + 'therefore  a ' + B + 'cdot  b 2' + B + 'leq  c'); }
 
 console.log('');
 console.log('  ' + (fail ? '🔴' : '✅') + ' ' + pass + ' 통과 · ' + fail + ' 실패');

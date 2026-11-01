@@ -15,12 +15,19 @@
 
 import { readdirSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { dirname, join, basename } from 'node:path';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, '..');
-const 거르개 = process.argv[2] || '';
+/* --today 2027-01-05 — 검사들을 «그 날»에 돌린다(tools/fake-today.mjs). 시즌이 넘어가는 날 무엇이 빨개질지 미리 본다 (2026-11-02). */
+const 인자 = process.argv.slice(2), 날i = 인자.indexOf('--today');
+const 그날 = 날i >= 0 ? 인자.splice(날i, 2)[1] : '';
+if (날i >= 0 && !/^\d{4}-\d{2}-\d{2}$/.test(그날 || '')) { console.log('--today 2027-01-05 꼴로'); process.exit(2); }
+const 거르개 = 인자[0] || '';
+const 환경 = 그날 ? { ...process.env, KHM_TODAY: 그날,
+  NODE_OPTIONS: ((process.env.NODE_OPTIONS || '') + ' --import=' + pathToFileURL(join(HERE, 'fake-today.mjs')).href).trim() } : process.env;
+if (그날) console.log('\n⏰ 오늘을 ' + 그날 + ' 로 두고 돌린다');
 
 /* 🔴 **오래된 사파리 — «미뤄 두기로 한 것»이 있다.** `hwpx.js` 41개는 2026-09-16에
    일부러 남겼다(CLAUDE.md) — 학생 화면은 그 파일을 안 부르고, 강사가 오래된 사파리로 열면
@@ -34,7 +41,7 @@ const 검사들 = readdirSync(join(ROOT, 'tools'))
 const 점검들 = ['rules-check.mjs', 'old-safari-check.mjs'];
 
 const 돌리기 = (f) => {
-  const r = spawnSync(process.execPath, [join('tools', f)], { cwd: ROOT, encoding: 'utf8' });
+  const r = spawnSync(process.execPath, [join('tools', f)], { cwd: ROOT, encoding: 'utf8', env: 환경 });
   return { code: r.status, out: (r.stdout || '') + (r.stderr || '') };
 };
 const 이름 = f => basename(f, '.mjs');

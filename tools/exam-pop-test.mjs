@@ -24,6 +24,8 @@ const 봄 = (무엇, 나온것, 나와야) => {
 const 브라우저 = await chromium.launch();
 try{
   const page = await 브라우저.newPage({ viewport: { width: 1440, height: 900 } });
+  /* 「지금 시험」 칸이 펼쳐져 있어야 하는 검사다 — 방학(12월 말~2월)에는 펼친 칸이 없어 빨개진다 → 시험 철 하루로 박는다 (11-02 · check-all --today 로 찾음) */
+  await page.clock.setFixedTime(new Date('2026-10-03T15:00:00'));
   for(let i = 0; i < 40; i++){ try{ await page.goto(`http://127.0.0.1:${PORT}/index.html`); break; }catch{ await page.waitForTimeout(250); } }
   await page.waitForFunction(() => typeof render === 'function' && typeof DATA !== 'undefined');
   await page.evaluate(씨앗);

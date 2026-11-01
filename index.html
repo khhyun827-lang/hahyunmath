@@ -6260,7 +6260,7 @@ html.it-fly .lp .l-hero .l-logo{opacity:1 !important;transform:none !important;
      **캐시에 있는 옛 파서를 꺼내 쓴다.** 그러면 교재를 다시 올려도 옛 글이 그대로 담기고,
      화면만 보고서는 «고쳤는데 왜 안 되지»가 된다 — 파서가 바뀐 것을 아무 데서도 못 본다. -->
 <!-- 2026-09-10에 올렸다 — 창고 대조 판정과 «개체 설명문에서 코드 읽기»가 들어갔다. -->
-<script src="hwpx.js?v=2026-11-02a"></script>
+<script src="hwpx.js?v=2026-11-02b"></script>
 <script src="hwpclip.js?v=2026-10-15c"></script>
 <!-- 출석 도장 게임(셸·똥피하기·달리기·점프). 연습 페이지 game.html 도 같은 파일을 쓴다 -->
 <!-- ⚠ ?v= 를 붙이는 까닭 — 브라우저가 game-core.js 를 캐시해서, 올려도 학생 화면에는
@@ -8222,6 +8222,12 @@ function sanitizeAiMathText(s){
     .replace(/(^|[^\\])\bLEQ\b/gi, '$1\\leq')
     .replace(/(^|[^\\])\bGEQ\b/gi, '$1\\geq');
 }
+/* AI(주로 Groq)가 줄바꿈을 «\n» 두 글자로 보내기도 한다 — 학생 해설에 \n 이 그대로 떴다 (2026-11-02 · 변형 6건 고침).
+   수식($…$) 밖에서만, 뒤가 영문이 아닐 때만 줄바꿈으로 — 수식 안의 \neq·\nabla 는 건드리지 않는다. */
+function aiLiteralNewlines(s){
+  if(!s) return s;
+  return String(s).split('$').map((x, i) => i % 2 ? x : x.replace(/\\n(?![A-Za-z])/g, '\n')).join('$');
+}
 /* 마지막으로 AI 를 부르다 난 흠. 고리가 «왜 멈췄는지»를 말할 때 쓴다. */
 let 마지막AI오류 = '';
 async function generateTwinViaAI(content, answer, image, engine){
@@ -8281,9 +8287,9 @@ async function generateTwinViaAI(content, answer, image, engine){
     if(!data.content || !data.answer) throw new Error('incomplete AI result');
     마지막AI오류 = '';
     return {
-      content: normalizeTwinBlanks(sanitizeAiMathText(data.content)),
+      content: normalizeTwinBlanks(sanitizeAiMathText(aiLiteralNewlines(data.content))),
       answer: normalizeTwinAnswer(sanitizeAiMathText(data.answer)),
-      solution: data.solution || '',
+      solution: aiLiteralNewlines(data.solution || ''),
       /* 그림 문항이 어느 길로 갔는가 (worker/gemini-proxy.js의 (A)/(B)/(C)).
          figureFree  — 그림 없이 푸는 문제로 새로 썼다. 변형에 원본 그림을 붙이지 않는다.
          needsFigure — 그림이 있어야 푸는 변형이다. figureSpec을 보고 강사가 직접 그려 붙인다.

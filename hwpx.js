@@ -150,8 +150,15 @@ function hwpOverGroupArgs(s){
       if(r < s.length && !끊.test(s[r])){ r++; continue; }
       break;
     }
+    /* 분모가 `sqrt {…}`·`root{…}` 면 그 묶음까지 한 덩이다 (11-02 · G: 31식 — `{|…|} over sqrt {3^2+…}` 가 \frac{…}{sqrt} 로 갈렸다) */
+    let 근호 = false;
+    if(r > 0 && /^(?:sqrt|root)$/i.test(s.slice(b, r))){
+      let q = r; while(s[q] === ' ') q++;
+      if(s[q] === '{'){ const c = findMatchingBrace(s, q); if(c > 0){ r = c + 1; 근호 = true; } }
+      else { const 맨 = s.slice(q).match(/^(?:[0-9]+|[A-Za-z])/); if(맨){ r = q + 맨[0].length; 근호 = true; } }   // `over sqrt 2`
+    }
     if(r < 0) r = b;
-    else { const 뒤 = s.slice(b, r).search(/right\s*[)\]|]/i); if(뒤 >= 0) r = b + 뒤; }
+    else if(!근호){ const 뒤 =s.slice(b, r).search(/right\s*[)\]|]/i); if(뒤 >= 0) r = b + 뒤; }
     const L = l < a ? '{' + s.slice(l, a) + '}' : '';
     const R = b < r ? '{' + s.slice(b, r) + '}' : '';
     s = s.slice(0, l) + L + s.slice(a, b).replace(/over/i, 'over') + R + s.slice(r);   // `17OVER18` — 한글 낱말은 대소문자를 안 가린다
@@ -171,6 +178,10 @@ function convertHwpEq(script){
      `RIGHT` 의 낱말 경계를 못 찾아 **RIGHT 가 날글자로 남는다.** 그 수식은 안 그려진다.
      (사용자가 K2-01-E-0009 에서 `4RIGHT )` 로 겪었다 — 원본은 `4`right|` 꼴이었다.) */
   s = s.replace(/`/g, ' ');
+  /* 🔵 **한글 수식의 `\` 는 «뒤 글자를 바로 선 글씨로»다** (2026-11-02 · 한글로 PDF 를 뽑아 확인 — `\OA` 는 바로 선 OA, `\` 는 안 보인다).
+     주기나 1-1중간 1·6단원 · 1-2기말 6단원에 `\OA` · `\m^2`(단위) · `\+6`. 그대로 두면 KaTeX 가 «없는 명령»으로 통째로 거절한다.
+     ⚠ `\{` `\}` `\#` 처럼 «그 글자 그대로»인 것은 남긴다(뒤가 영문·숫자·연산 기호일 때만 걷는다). */
+  s = s.replace(/\\(?=[A-Za-z0-9+\-=<>().,])/g, '');
   /* 🔴 **한글의 첨자는 «띄어쓰기까지»다** (2026-10-04 · 한글로 그려 보고 확인했다).
      `A_k+1` 을 한글은 A_(k+1) 로 그린다 — `{ }` 로 안 묶으면 `^`·`_` 뒤가 **띄어쓰기·`{`·`}` 까지** 한 덩이다
      (`2^5-3` 은 2^(5-3), `a_k,b` 는 쉼표까지 첨자, `{}_6{rmC}_2` 는 ₆C₂).
@@ -201,13 +212,24 @@ function convertHwpEq(script){
        숫자 앞에서는 서체 지정이 맞다(변수 이름이 숫자로 시작할 수 없다).
      🔴 **대문자 `RM` 도 온다** — 창고 660건 중 36건에 `RMO(0,0)` 꼴로 남아 있었다(실측).
        한글 수식 명령은 대소문자를 안 가린다 — 이 파일의 DEG·TIMES·LEFT 도 이미 그렇게 받는다. */
-  s = s.replace(/(?<![A-Za-z\\])rm\s*/gi, '');
+  /* `rmrmQ` 처럼 겹쳐 오기도 한다 — 한 번에 다 걷는다(뒤돌아보기는 바꾸기 전 글자를 봐서 둘째가 남았다 · 11-02) */
+  s = s.replace(/(?<![A-Za-z\\])(?:rm\s*)+/gi, '');
   // "it"(이탤릭 지정)은 rm과 같은 서체 지정 명령이라 내용만 남기고 지운다.
   // "it2r+3"(공백 없음), "it r ^{2}"(공백 있음) 둘 다 나오므로 뒤 공백까지 함께 지운다.
   // 🔵 대문자 «IT» 도 같은 명령이다(2026-10-31 · 1241020 `= IT 3a ^{2}` — 사용자가 한글에서 친 꼴). «It»·«iT» 는 안 건드린다.
-  s = s.replace(/\b(?:it|IT)\s*(?=[0-9a-zA-Z(])/g, '');
+  // 🔵 숫자 뒤에 붙어도 같다 — `2itp` · `6ita` · `=4itx-3` (11-02 · \b 는 숫자와 글자 사이를 경계로 안 본다).
+  s = s.replace(/(?<![A-Za-z\\])(?:it|IT)\s*(?=[0-9a-zA-Z(])/g, '');
+  /* 🔵 **안 닫힌 `cases{…` 는 끝까지가 그 묶음이다** (11-02 · G: 4식 — `f(x)= cases{x+1&~(x le4)#1&~(x=5)`).
+     못 알아보면 `#` 가 아래에서 공백이 되어 줄이 사라지고 KaTeX 도 거절한다. 줄 묶음 낱말만 끝에서 닫는다. */
+  for(const 낱말 of ['cases', 'pmatrix', 'matrix', 'pile', 'eqalign']){
+    const m = new RegExp('(?<![\\\\A-Za-z])' + 낱말 + '\\s*\\{', 'g').exec(s);
+    if(m && findMatchingBrace(s, m.index + m[0].length - 1) === -1) s += '}';
+  }
   s = replaceBalancedKeyword(s, 'pmatrix', inner => '\\begin{pmatrix}' + inner.replace(/#/g,'\\\\') + '\\end{pmatrix}');
   s = replaceBalancedKeyword(s, 'cases', inner => '\\begin{cases}' + inner.replace(/#/g,'\\\\') + '\\end{cases}');
+  /* `matrix{…}`(괄호 없는 행렬) · `eqalign{…}`(여러 줄 맞춤) — 날글자로 떴다(11-02 · G: 3식·8식) */
+  s = replaceBalancedKeyword(s, 'matrix', inner => '\\begin{matrix}' + inner.replace(/#/g,'\\\\') + '\\end{matrix}');
+  s = replaceBalancedKeyword(s, 'eqalign', inner => '\\begin{aligned}' + inner.replace(/#/g,'\\\\') + '\\end{aligned}');
   const greek = {alpha:'\\alpha',beta:'\\beta',gamma:'\\gamma',delta:'\\delta',theta:'\\theta',pi:'\\pi',lambda:'\\lambda',mu:'\\mu',sigma:'\\sigma',phi:'\\phi',omega:'\\omega'};
   /* 🔴 **붙여 쓴 그리스 문자는 낱말 경계가 없어 통째로 남는다** (2026-09-06 · 「수식 남은 넷」).
      실측 K2-03-E-0278 의 `alphabeta+gammadelta`. 같은 문항 안의 `alpha<m<beta` 는 멀쩡히
@@ -232,24 +254,28 @@ function convertHwpEq(script){
   // le/ge/LEQ 등은 it과 마찬가지로 뒤에 공백 없이 숫자가 바로 붙는 경우(le5)가 있어
   // 뒤쪽 \b는 안 쓰고 시작 위치만 단어 경계로 확인한다. 방금 만든 "\leq"의 "le"를
   // 다시 건드리지 않도록(무한 중복 방지) 바로 앞이 백슬래시가 아닐 때만 매치한다.
-  s = s.replace(/(?<!\\)\bLEQ/gi, '\\leq').replace(/(?<!\\)\bGEQ/gi, '\\geq').replace(/(?<!\\)\bNEQ/gi, '\\neq');
+  /* 🔵 **붙어 오는 꼴** (11-02 · G: ≈30식) — `2LEQ k` · `0LEQn` · `alphaLEQk` · `-3leq{x}` · `-7lex` · `geit-4` · `gebar{…}` · `a^2+b^2 geab`.
+     대문자 LEQ·GEQ 는 또렷해서 앞이 무엇이든 받는다. 소문자는 앞이 글자가 아닐 때만(angle·triangle 의 꼬리) ·
+     `le`·`ge` 는 뒤에 글자가 붙어도 받되 `left` 만 비켜선다. 뒤에 공백을 붙인다 — `\leqx` 는 없는 명령이다. */
+  s = s.replace(/(?<!\\)(?:LEQ|GEQ|NEQ)|(?<![A-Za-z])(?<!(?<!\\)\\)(?:leq|geq|neq)/g, m => '\\' + m.toLowerCase() + ' ');
   /* 🔴 **`le` 가 `left` 를 물어뜯고 있었다** (2026-09-05 · 교재 564제 중 315개가 깨져 있었다).
      뒤쪽 낱말 경계를 안 본 탓에 `left(` 가 **`\leqft(`** 이 되고, 그러면 아래 LEFT/RIGHT 규칙도
      못 알아봐 **수식이 통째로 안 그려진다.** 학교 시험지는 대문자 `LEFT` 를 써서 여태 안 드러났다.
      ⚠ 그렇다고 뒤에 `\b` 를 붙이면 안 된다 — `le5` 처럼 숫자가 바로 붙는 꼴을 놓친다(옛 주석의 그 까닭).
      🔵 그래서 **«뒤가 글자일 때만» 비켜선다.** 숫자·공백·괄호 앞에서는 그대로 뜻이 산다. */
-  s = s.replace(/(?<!\\)\ble(?![a-zA-Z])/g, '\\leq').replace(/(?<!\\)\bge(?![a-zA-Z])/g, '\\geq');
+  s = s.replace(/(?<![A-Za-z])(?<!(?<!\\)\\)(le|ge)(?!ft)/g, '\\$1q ');
   s = s.replace(/\bTIMES\b/gi, '\\times');
   /* 🔵 **교재에서 새로 나온 셋** (2026-09-05 · 564제를 훑어보고 찾았다).
      학교 시험지에는 없던 표기라 여태 안 드러났다 — `90 DEG` 는 「DEG」 라는 글자로,
      `l prime` 은 「prime」 이라는 글자로 그대로 화면에 떴다. */
-  s = s.replace(/\bDEG\b/gi, '^{\\circ}');
+  s = s.replace(/(?<![A-Za-z])(?<!(?<!\\)\\)DEG(?![A-Za-z])/gi, '^{\\circ}');   // `90DEG` 처럼 숫자에 붙어도(11-02)
   /* 🔵 교재에서 더 나온 셋 (2026-09-05 · 564제를 훑어 세어 보고 더했다).
      ⚠ **맨몸 `over`** — `convertOverToFrac` 은 `{분자} over {분모}` 만 다루는데 교재는
        `11 over 2` 처럼 중괄호 없이도 쓴다(13건). 양쪽이 «숫자 하나 또는 낱글자»일 때만 받는다 —
        그보다 넓히면 어디까지가 분자인지 기계가 알 수 없다. */
-  s = s.replace(/\s*(?<!\\)\btherefore\b/g, '\\therefore ');
-  s = s.replace(/\s*(?<!\\)\bbecause\b/g, '\\because ');
+  /* 🔴 대문자 `THEREFORE`·`BECAUSE` 가 G: 교재에 300식 가까이 날글자로 남았다(11-02) — 한글 낱말은 대소문자를 안 가린다 */
+  s = s.replace(/\s*(?<![A-Za-z])(?<!(?<!\\)\\)therefore/gi, '\\therefore ');
+  s = s.replace(/\s*(?<![A-Za-z])(?<!(?<!\\)\\)because/gi, '\\because ');
   /* 🔴 **아래첨자를 달고 오면 «반 토막»을 집는다** (2026-09-06 · KaTeX 로 그려 보고 찾았다).
      실측 원문 'S_2 over S_1' — 「숫자 하나 또는 낱글자」만 받으니 2 over S 를 집어
      **S_\frac{2}{S}_{1}** 이 됐다. 아래첨자가 둘이라 KaTeX 가 통째로 거절한다(빨간 글씨).
@@ -272,16 +298,17 @@ function convertHwpEq(script){
   s = s.replace(/(?:\^\{\\prime\}){2,}/g, m => '^{' + '\\prime'.repeat(m.length / 9) + '}');
   /* ⚠ **`it` 이 «맨 끝»에도 온다** — 위쪽 규칙은 뒤에 글자·숫자·괄호가 올 때만 걷어서
      `{{ABC}}it$` 처럼 끝에 붙은 것 54개가 그대로 남았다. 서체 지정이라 뜻이 없으니 걷는다. */
-  s = s.replace(/\bit\b\s*/g, '');
+  s = s.replace(/(?<![A-Za-z])(?<!(?<!\\)\\)it(?![A-Za-z])\s*/g, '');
   // angle/bar는 "angle{BAD}"(중괄호), "angle BAD"(공백), "angleBAD"(붙여쓰기) 세 가지 형태가
   // 모두 나오므로 각각 처리한다. 방금 만든 "\angle"/"\overline"을 다시 건드리지 않도록
   // (무한 중복 방지) 바로 앞이 백슬래시가 아닐 때만 매치한다.
   /* ⚠ 교재는 `ANGLE` 을 대문자로도 쓴다 — 아래 규칙들이 전부 소문자만 보므로 먼저 낮춘다. */
   s = s.replace(/\bANGLE\b/g, 'angle');
   s = replaceBalancedKeyword(s, 'angle', inner => '\\angle ' + inner);
-  s = s.replace(/(?<!\\)\bangle\s+([A-Za-z]+)\b/g, '\\angle $1');
-  s = s.replace(/(?<!\\)\bangle([A-Z]{1,3})\b/g, '\\angle $1');
-  s = s.replace(/(?<!\\)\bangle\b/g, '\\angle');
+  /* 숫자 뒤에 붙어도(`2angleDOC` · 11-02) — 앞이 글자일 때만 비켜선다(triangle) */
+  s = s.replace(/(?<![A-Za-z])(?<!(?<!\\)\\)angle\s+([A-Za-z]+)\b/g, '\\angle $1');
+  s = s.replace(/(?<![A-Za-z])(?<!(?<!\\)\\)angle([A-Z]{1,3})(?![A-Za-z])/g, '\\angle $1');
+  s = s.replace(/(?<![A-Za-z])(?<!(?<!\\)\\)angle(?![A-Za-z])/g, '\\angle');
   s = hwpBarLower(s);
   s = replaceBalancedKeyword(s, 'bar',inner => '\\overline{' + inner + '}');
   s = s.replace(/(?<!\\)\bbar\s+([A-Za-z]+)\b/g, '\\overline{$1}');
@@ -328,6 +355,8 @@ function convertHwpEq(script){
        `A capB` 의 `B` 를 «소문자»로 보고 비켜선다 — 그래서 안 바뀌었다(실제로 겪었다).
        낱말만 대소문자를 펴서 [cC][aA][pP] 꼴로 만들고, 뒤 조건은 소문자만 막는다. */
   const 대소문자펴기 = w => w.split('').map(c => '[' + c + c.toUpperCase() + ']').join('');
+  /* 대문자 `RARROW` 는 뒤에 소문자가 붙어도(`RARROWsim p`) 그 명령이다 — 아래 고리는 뒤 소문자에서 비켜선다(11-02) */
+  s = s.replace(/(?<!\\)RARROW/g, '\\rightarrow ');
   for(const [낱말, 기호] of [
     ['notsubset', 'not\\subset'], ['smallinter', 'cap'], ['smallunion', 'cup'],
     ['setminus', 'setminus'], ['emptyset', 'emptyset'], ['notin', 'notin'], ['nin', 'notin'],
@@ -343,6 +372,8 @@ function convertHwpEq(script){
      그래도 `0inemptyset` 은 잡힌다 — 위에서 emptyset 이 먼저 `\\emptyset` 이 되므로
      `in` 뒤가 역슬래시가 되어 조건을 지나간다. **그래서 이 줄은 반드시 위 고리 «다음»이다.** */
   s = s.replace(/(?<![A-Za-z\\\\])[iI][nN](?![a-z])/g, '\\in ');
+  /* `NOTRARROW`·`not rarrow` — 화살표에 빗금(⇏ 꼴) (11-02 · 명제 단원) */
+  s = s.replace(/(?<![A-Za-z])(?<!(?<!\\)\\)[nN][oO][tT]\s*\\rightarrow\s*/g, '\\nrightarrow ');
   /* `times` 는 뒤에 변수가 바로 붙는다 — `x timesy` (실측 5문항). 그 하나만 뒤 조건을 푼다.
      낱말이 또렷해서 «남의 낱말 꼬리»로 걸릴 일이 거의 없다. */
   s = s.replace(/(?<![\\\\A-Za-z])[tT][iI][mM][eE][sS]/g, '\\times ');
@@ -353,7 +384,9 @@ function convertHwpEq(script){
   s = s.replace(/(?<![\\A-Za-z])(?:[cC][dD][oO][tT][sS])+/g,
                 m => '\\cdots '.repeat(m.length / 5))
        .replace(/(?<![\\A-Za-z])(?:[lL][dD][oO][tT][sS])+/g,
-                m => '\\ldots '.repeat(m.length / 5));
+                m => '\\ldots '.repeat(m.length / 5))
+       /* 홑 `cdot`·`CDOT` — 곱하기 점이 «cdot» 글자로 떴다(11-02 · G: 14식 · `a cdot 10^4` · `2cdot{…}`) */
+       .replace(/(?<![A-Za-z])(?<!(?<!\\)\\)[cC][dD][oO][tT](?![sS])/g, '\\cdot ');
   /* ⚠ cdots·ldots 는 위 낱말표가 이미 바꿨다 — 여기서 또 바꾸면  가 된다(실제로 그랬다).
      남은 것은 «다른 이름»들뿐이고, 앞이 역슬래시면 비켜선다. */
   s = s.replace(/(?<!\\)\bDOTSAXIS\b/gi, '\\cdots')
@@ -384,7 +417,7 @@ function convertHwpEq(script){
   /* 🔵 **`root` 는 `sqrt` 의 다른 이름이다** (2026-09-04 · 실측 25문항이 날글자로 떴다 — `4root2`).
      여기서 이름만 바꿔 두면 아래의 sqrt 규칙 둘이 그대로 받는다 — 규칙을 또 만들지 않는다.
      ⚠ 앞이 역슬래시나 글자면 비켜선다. 숫자 뒤(`4root2`)는 받아야 하므로 숫자는 막지 않는다. */
-  s = s.replace(/(?<![\\A-Za-z])root/g, 'sqrt ');
+  s = s.replace(/(?<![A-Za-z])(?<!(?<!\\)\\)[rR][oO][oO][tT]/g, 'sqrt ');   // `6-2ROOT3` · `Root3` 도(11-02)
   s = replaceBalancedKeyword(s, 'sqrt', inner => '\\sqrt{' + inner + '}');
   /* 중괄호를 안 쓴 `sqrt 17` 꼴도 받는다 — 위 함수는 `sqrt{` 만 본다 (2026-09-04). */
   s = fixBareSqrt(s);
@@ -422,7 +455,10 @@ function convertHwpEq(script){
      ⚠ 제자리 고치기(hwpxRepairEqText)도 «닫고 나서 bar» 차례라야 결과가 같다. */
   s = replaceBalancedKeyword(s, 'bar', inner => '\\overline{' + inner + '}');
   s = replaceBalancedKeyword(s, 'angle', inner => '\\angle ' + inner);
+  s = replaceBalancedKeyword(s, 'box', inner => '\\boxed{' + inner + '}');   // `n=box{3k-2` 도 닫고 나서야 보인다(11-02)
   s = hwpxBalanceLeftRight(s);
+  /* `%` 는 LaTeX 에서 «여기부터 주석»이다 — 그 뒤 식이 소리 없이 사라졌다(11-02 · G: 2식). `△` 는 KaTeX 글꼴에 없다. */
+  s = s.replace(/(?<!\\)%/g, '\\%').replace(/△/g, '\\triangle ');
   s = hwpEqLeftovers(s);
   return s ? '$' + s + '$' : '';
 }
@@ -443,6 +479,14 @@ function hwpEqLeftoversBare(s){
     .replace(/(^|[^A-Za-z])\s*To\s*\d{5}(?!\d)\s*/g, '$1 ')   /* 숫자 뒤에 붙어 온다(`9To03033`) — \b 로는 못 잡는다 */
     .replace(/\\begin\{matrix\}(?:\s|\\\\|\{\}|[_^]\{\})*\\end\{matrix\}/g, '').replace(/pile\s*\{(?:\s|\\\\)*\}/g, '')   /* 빈 행렬 — `{}_{} \\_{}` 처럼 빈 첨자만 든 것도 */
     .replace(/->/g, '\\to ')
+    /* 11-02 — G: 교재 2만 3천 식을 그려 보고 찾은 날글자(대문자 THEREFORE·BECAUSE ≈300 · CDOT · LEQ · bot · vdots · div · tan) */
+    .replace(/(^|[^\\A-Za-z])(?:THEREFORE|therefore)/g, '$1\\therefore ')
+    .replace(/(^|[^\\A-Za-z])(?:BECAUSE|because)/g, '$1\\because ')
+    .replace(/(^|[^\\A-Za-z])(?:CDOT|cdot)(?![A-Za-z])/g, '$1\\cdot ')
+    .replace(/(^|[^\\A-Za-z])(LEQ|GEQ)/g, (m, p, w) => p + '\\' + w.toLowerCase() + ' ')
+    .replace(/(^|[^\\A-Za-z])bot(?![a-z])/g, '$1\\perp ')
+    .replace(/(^|[^\\A-Za-z])(vdots|div|sin|cos|tan|log)(?![a-z])/g, '$1\\$2 ')
+    .replace(/(^|[^\\A-Za-z])(?:ROOT|Root)/g, '$1sqrt ')
     .replace(/(^|[^\\A-Za-z])(?:sim|SIM|Sim)/g, '$1\\sim ')
     .replace(/(^|[^\\A-Za-z])(?:circ|CIRC|Circ)(?!le)/g, '$1\\circ ')
     .replace(/(^|[^\\A-Za-z])le(?![A-Za-z])/g, '$1\\le ')
@@ -1318,8 +1362,15 @@ function hwpxMakeSourceCodes(뽑은것){
      `tools/katex-scan.mjs` 가 남은 것을 언제든 다시 센다. */
 function hwpxBalanceBraces(s){
   let out = '', 깊이 = 0;
+  /* 🔵 안 닫힌 `{` 는 «그 \left…\right 안에서» 닫는다 (11-02 · G: 6식 — `LEFT { x left| -2le{x<5 RIGHT }`).
+     맨 끝에서 닫으면 `}` 가 \right 를 넘어가 KaTeX 가 통째로 거절했다. \left 때의 깊이를 쌓아 두고 \right 앞에서 그만큼 닫는다. */
+  const 왼쪽깊이 = [];
   for(let i = 0; i < s.length; i++){
     const ch = s[i];
+    if(ch === '\\' && /^(left|right)(?![a-zA-Z])/.test(s.slice(i + 1, i + 7))){
+      if(s[i + 1] === 'l') 왼쪽깊이.push(깊이);
+      else if(왼쪽깊이.length){ const d = 왼쪽깊이.pop(); while(깊이 > d){ out += '}'; 깊이--; } }
+    }
     if(ch === '\\'){ out += ch + (s[i + 1] || ''); i++; continue; }   // \{ \} 는 글자다
     if(ch === '{'){ 깊이++; out += ch; continue; }
     if(ch === '}'){ if(깊이 === 0) continue; 깊이--; out += ch; continue; }  // 남는 } 는 버린다
