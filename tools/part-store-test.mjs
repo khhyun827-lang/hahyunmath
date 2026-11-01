@@ -20,7 +20,7 @@ function liftFn(name) {
     else if (html[j] === '}' && !--d) return html.slice(from, j + 1);
   }
 }
-const liftConst = name => { const at = html.indexOf('const ' + name + ' = '); return html.slice(at, html.indexOf(';\n', at) + 1); };
+const liftConst = name => { const at = html.indexOf('const ' + name + ' = '); return html.slice(at, at + html.slice(at).search(/;\r?\n/) + 1); };   // 작업 사본이 CRLF 여도
 const BLOCK = [liftConst('PART_STORE'), 'const partMem = {}, partQ = {}, partWrites = { items: {}, variants: {} };', 'let reviewStoreLoading = null, reviewScoped = false, reviewFailAt = 0, storeShownLoading = null, storeShownFailAt = 0;',
   ...['partRead', 'partSave', 'partSync', 'partEnsure', 'partPut', 'partOverlay', 'storeAll', 'variantsByRoot', 'loadReviewStoreIfNeeded',
       'partToState', 'storeLedgerKids', 'storeGot', 'storeShownEnsure', 'storeEnsure'].map(liftFn)].join('\n');

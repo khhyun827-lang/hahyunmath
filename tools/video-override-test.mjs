@@ -81,7 +81,7 @@ try{
     const 꼴 = { title: '결석 보충', url: 'https://youtu.be/pppp', classId: 'c1', dueDate: '2026-11-01' };
     DATA.videos.unshift(Object.assign({ id: 'vp_s4', studentId: 's4' }, 꼴), Object.assign({ id: 'vp_s9', studentId: 's9' }, 꼴));
     videoOpen('vp_s4');
-    const 줄 = () => [...document.querySelectorAll('.vd-row')].find(e => /결석 보충/.test(e.textContent));
+    const 줄 = () => [...document.querySelectorAll('.vd-row')].find(e => /videoOpen\('vp_s/.test(e.getAttribute('onclick')));   /* 제목으로 찾으면 씨앗의 «9/15 결석 보충»과 마감 차례에 따라 뒤바뀐다(11-02) */
     const 빼기단추 = [...document.querySelectorAll('.vd-sv')].filter(e => /onclick="videoExclude\('vp_s/.test(e.innerHTML) && /빼기/.test(e.textContent)).length;
     const 전줄 = 줄().querySelector('.badge.late').textContent;
     await videoExclude('vp_s9', 's9');

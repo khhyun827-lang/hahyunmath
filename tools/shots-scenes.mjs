@@ -142,10 +142,12 @@ export const 무대들 = {
       state.examRanges = { dates: { '대원고등학교': { '1': { start: 날(8), end: 날(12), math: 날(9) } },
                                     '광남고': { '1': { start: 날(15), end: 날(19), math: 날(17) }, '2': { start: 날(15), end: 날(19), math: 날(18) } } } };
       state.schoolBooks = { '대원고등학교': { '1': '미래엔 / 학교프린트' } };
+      /* 프린트는 «지금 표가 보여 주는 시험»에 — 글자로 박으면 시즌이 넘어가는 날 표에서 사라진다(11-02 · 2학기 기말로 넘어감) */
+      const 시즌 = (t => nsTermOf(t.next.year, SLOT_NAME[t.next.slot]))(examSeasonOf('대원고등학교', '1'));
       state.schoolFiles = { '대원고등학교': { '1': [
-          { name: '2학기 중간 대비 프린트 1회.pdf', fileId: 'f1', mime: 'application/pdf', size: 820000, at: 날(-3), season: '2026 · 2학기 중간' },
-          { name: '서술형 모음.pdf', fileId: 'f2', mime: 'application/pdf', size: 310000, at: 날(-1), season: '2026 · 2학기 중간' } ] },
-        '광남고': { '2': [ { name: '광남 2학년 기출.pdf', fileId: 'f3', mime: 'application/pdf', size: 1500000, at: 날(-2), season: '2026 · 2학기 중간' } ] } };
+          { name: '2학기 중간 대비 프린트 1회.pdf', fileId: 'f1', mime: 'application/pdf', size: 820000, at: 날(-3), season: 시즌 },
+          { name: '서술형 모음.pdf', fileId: 'f2', mime: 'application/pdf', size: 310000, at: 날(-1), season: 시즌 } ] },
+        '광남고': { '2': [ { name: '광남 2학년 기출.pdf', fileId: 'f3', mime: 'application/pdf', size: 1500000, at: 날(-2), season: 시즌 } ] } };
       render(); } },
   /* 등급컷 갈래 (2026-10-02) — 시험 일정 표에서 떼어 냈다. 한 줄은 거꾸로 적어 경고 배지를 본다. */
   등급컷: { 말: '설정 › 시험 일정 › 등급컷',
@@ -426,7 +428,7 @@ export const 무대들 = {
       DATA.classes[0].progress = { subject:'공통수학1' };
       state.season = { name:'2학기 중간', startedAt:'2026-09-01' };
       state.examHistory = { items: [] };
-      state.gradeCuts = { byKey: { [curSeasonKey()]: { '대원고': { '1': { '공통수학1': { c1:90, c2:80, c3:70, c4:60 } } } } } };
+      state.gradeCuts = { byKey: { ['2026|2학기 중간']: { '대원고': { '1': { '공통수학1': { c1:90, c2:80, c3:70, c4:60 } } } } } };
       const r = state.allRecords;
       r.s0.schoolExams = [{ term:'2026 · 1학기 기말', subject:'공통수학1', score:88, grade:2 },
                           { term:'2026 · 2학기 중간', subject:'공통수학1', score:84 }];
@@ -468,7 +470,7 @@ export const 무대들 = {
   학생상세성적: { 말: '학생 상세 › 연대기 › 성적 (학교 시험 · 모의고사 판)', 폭: '864,1536',
     세우기: () => { state.currentUser = { type:'teacher', name:'김하현T' }; state.view = 'teacher';
       state.season = { name:'2학기 중간', startedAt:'2026-09-01' }; state.examHistory = { items: [] };
-      state.gradeCuts = { byKey: { [curSeasonKey()]: { '대원고': { '1': { '공통수학1': { c1:90, c2:80, c3:70, c4:60 } } } } } };
+      state.gradeCuts = { byKey: { ['2026|2학기 중간']: { '대원고': { '1': { '공통수학1': { c1:90, c2:80, c3:70, c4:60 } } } } } };
       for(const r of [state.allRecords.s0, DATA.records.s0].filter(Boolean)){
         r.schoolExams = [{ term:'2026 · 1학기 기말', subject:'공통수학1', score:88, grade:2 },
                          { term:'2026 · 2학기 중간', subject:'공통수학1', score:84 }];

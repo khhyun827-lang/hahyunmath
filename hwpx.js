@@ -46,6 +46,14 @@ function replaceBalancedKeyword(s, keyword, wrap){
   result += s.slice(lastIndex);
   return result;
 }
+/* 🔵 **대문자 `BAR`·`Bar` 도 같은 명령이다** (2026-11-02 · G: 교재 68권에 ≈30식 — `BAR{RMCH}` · `{Bar{rmPB}}` ·
+   `rm{BarAC}` · `BAROQ` · `TIMESBAR{RMDE}`). 아래 bar 규칙이 전부 소문자만 봐서 날글자로 남았다.
+   ⚠ 뒤가 `{` 이거나 대문자(점 이름)일 때만 — `angle BAR`(∠BAR) 같은 «점 이름 BAR» 는 안 건드린다.
+   ⚠ `TIMESBAR` 처럼 TIMES 에 붙어 오면 앞에 빈칸을 둬 — 그래야 times 규칙과 bar 규칙이 둘 다 알아본다.
+   convertHwpEq · hwpxRepairEqText 둘이 같이 부른다(한쪽만 고치면 새로 올린 교재와 창고가 갈린다). */
+function hwpBarLower(s){
+  return s.replace(/(?:(?<![A-Za-z\\])|(?<=TIMES))(?:BAR|Bar)(?=\s*\{|[A-Z])/g, ' bar');
+}
 // "{분자} over {분모}"를 \frac{}{}로 바꾼다. 분자/분모 안에 또 중괄호(예: 지수)가 있어도
 // 괄호 짝을 직접 세어가며 찾기 때문에 중첩된 경우도 정확히 처리되고, 재귀적으로 안쪽도 변환한다.
 function convertOverToFrac(s){
@@ -274,7 +282,8 @@ function convertHwpEq(script){
   s = s.replace(/(?<!\\)\bangle\s+([A-Za-z]+)\b/g, '\\angle $1');
   s = s.replace(/(?<!\\)\bangle([A-Z]{1,3})\b/g, '\\angle $1');
   s = s.replace(/(?<!\\)\bangle\b/g, '\\angle');
-  s = replaceBalancedKeyword(s, 'bar', inner => '\\overline{' + inner + '}');
+  s = hwpBarLower(s);
+  s = replaceBalancedKeyword(s, 'bar',inner => '\\overline{' + inner + '}');
   s = s.replace(/(?<!\\)\bbar\s+([A-Za-z]+)\b/g, '\\overline{$1}');
   s = s.replace(/(?<!\\)\bbar([A-Z]{1,3}(?:\s*_\s*(?:\{[^{}]*\}|[0-9A-Za-z]))?)(?![A-Za-z])/g, '\\overline{$1}');
   /* 🔴 **아래첨자가 붙으면 못 알아본다** (2026-09-06 · 브라우저에서 실제로 올려 보다 눈에 걸렸다).
@@ -1377,7 +1386,8 @@ function hwpxRepairEqText(s0){
     /* ① 서체 지정 rm·RM — 앞이 글자면 비켜선다(form·term·norm). */
     s = s.replace(/(?<![A-Za-z\\])rm\s*/gi, '');
     /* ② rm 을 걷고 나면 그 뒤의 bar 가 드러난다 — 2rmbar{AC} → 2bar{AC} → \overline{AC} */
-    s = replaceBalancedKeyword(s, 'bar', inner => '\\overline{' + inner + '}');
+    s = hwpBarLower(s);
+    s = replaceBalancedKeyword(s, 'bar',inner => '\\overline{' + inner + '}');
     s = s.replace(/(?<!\\)\bbar\s+([A-Za-z]+)\b/g, '\\overline{$1}');
     s = s.replace(/(?<!\\)\bbar([A-Z]{1,3}(?:\s*_\s*(?:\{[^{}]*\}|[0-9A-Za-z]))?)(?![A-Za-z])/g, '\\overline{$1}');
     /* ③ 붙여 쓴 그리스 문자 — 통째로 그리스 낱말일 때만 편다(한 낱말만 붙은 것은 변수 이름일 수 있다). */

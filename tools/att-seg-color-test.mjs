@@ -68,7 +68,8 @@ try{
            그래서 «400 안»이 아니라 «내용 폭 그대로 · 판(1054)보다 한참 좁다»로 잰다 (10-22) */
       봄('1440 — 반 › 출결 표가 내용만큼만(판 폭으로 안 늘어난다)', await page.$eval('.hwg-wrap', e => {
         const w = e.getBoundingClientRect().width;
-        return w <= e.scrollWidth + 2 && w < e.parentElement.getBoundingClientRect().width - 200; }), true);
+        /* +3 = 테두리 둘 + scrollWidth 는 정수로 깎인다(11-02 · 표 264.45 → 264 라 0.45px 넘쳐 빨갰다) */
+        return w <= e.scrollWidth + 3 && w <e.parentElement.getBoundingClientRect().width - 200; }), true);
       봄('   이름 열은 108 고정', await page.$eval('.hwg th.who', e => Math.round(e.getBoundingClientRect().width)), 108);
     }
 

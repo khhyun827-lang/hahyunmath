@@ -86,7 +86,9 @@ try{
   /* 2026-10-13 — 시험지 원본·분석자료: 같은 창, 프린트는 안 섞이고 «누른 칸의 시험»으로 올라간다 */
   const [고르기2] = await Promise.all([page.waitForEvent('filechooser', { timeout: 3000 }).catch(() => null), 칸(1, '시험지 원본 올리기').click()]);
   봄('시험지 칸 → 프린트는 안 보이고 바로 파일 고르기', [!!고르기2, await 창(), await page.evaluate(() => document.querySelectorAll('.xp .pill').length)], [true, ['시험지 원본'], 0]);
-  봄('   올리기는 그 시험·종류를 들고 간다 · 한글도 받는다', await page.$eval('.xp input[type=file]', i => [/'paper','20[0-9]{2} · 2학기 중간'\)$/.test(i.getAttribute('onchange')), i.multiple, /\.hwp/.test(i.accept)]), [true, true, true]);
+  /* 지금 표가 보여 주는 시험 — 글자로 박으면 시즌이 넘어가는 날 빨개진다(11-02) */
+  const 시즌 = await page.evaluate(() => (t => nsTermOf(t.next.year, SLOT_NAME[t.next.slot]))(examSeasonOf('대원고등학교', '1')));
+  봄('   올리기는 그 시험·종류를 들고 간다 · 한글도 받는다', await page.$eval('.xp input[type=file]', (i, 시즌) => [i.getAttribute('onchange').endsWith(`'paper','${시즌}')`), i.multiple, /\.hwp/.test(i.accept)], 시즌), [true, true, true]);
   await page.evaluate(() => closeExamPop());
   /* 2026-10-13 — 파일이 잠겨 드라이브 내려받기 주소는 안 열린다 → 화면 안 보기(docvOpenSchool). 칸 창은 안 열린다 */
   봄('파일 이름을 누르면 칸 창 대신 화면 안 보기', await page.$eval(`${줄(1)} .xr-print`, a => [/event\.stopPropagation\(\)/.test(a.getAttribute('onclick')), /docvOpenSchool\('/.test(a.getAttribute('onclick')), /drive\.google/.test(a.outerHTML)]), [true, true, false]);

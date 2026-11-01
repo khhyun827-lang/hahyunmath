@@ -10,7 +10,7 @@
 
 import { loadHwpxRules } from './hwpx-node.mjs';
 
-const { convertHwpEq, hwpxBalanceLeftRight } = loadHwpxRules();
+const { convertHwpEq, hwpxBalanceLeftRight, hwpxRepairEqText } = loadHwpxRules();
 
 /* 화면 쪽 규칙(problemHTML)도 여기서 같이 본다 — 수식과 «같은 글»을 다루는 짝이라서다. */
 import fs from 'fs';
@@ -306,6 +306,14 @@ console.log('');
 { const r = convertHwpEq('{bar{rm AB}} = IT 3a ^{2} +10a+7');
   봄('IT 3a → 3a', /IT/.test(r), false);
   봄('  3a 는 남는다', r.includes('3a'), true); }
+/* 대문자 BAR·Bar — 날글자로 남던 것 (2026-11-02 · G: 교재 25식) · ∠BAR 의 점 이름은 그대로 */
+{ const OL = B + 'overline{';
+  const 넷 = ['BAR{RMCH}=IT3-b', '{Bar{rmPB}}^2', 'rm{BarAC}+2', 'rm bar OP : BAROQ = 4:1'].map(convertHwpEq);
+  봄('BAR{…}·Bar{…}·BarAC·BAROQ → \\overline', JSON.stringify(넷.map(r => [/BAR|Bar/.test(r), r.includes(OL)])), JSON.stringify([[false, true], [false, true], [false, true], [false, true]]));
+  const t = convertHwpEq('{ 1} over { 2} TIMESBAR{RMDE} TIMESBAR{RMAE}');
+  봄('  TIMESBAR{…} → \\times \\overline 둘', JSON.stringify([t.split(OL).length - 1, t.split(B + 'times').length - 1, /BAR/.test(t)]), JSON.stringify([2, 2, false]));
+  봄('  angle BAR(점 이름)는 그대로', convertHwpEq('angle BAR = 30').includes('BAR'), true);
+  봄('  고쳐 둔 창고 길(hwpxRepairEqText)도 같게', hwpxRepairEqText('$BAR{CH}=3$').includes(OL + 'CH}'), true); }
 
 console.log('');
 console.log('  ' + (fail ? '🔴' : '✅') + ' ' + pass + ' 통과 · ' + fail + ' 실패');
