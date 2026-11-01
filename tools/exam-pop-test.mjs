@@ -105,6 +105,17 @@ try{
      이제는 «누른 칸의 시험»이다 — 지난 시험 칸에서 올려도 그 칸 */
   await page.locator('.xs-sec').first().locator('td.xr-ed[aria-label$="프린트 올리기"]').first().click({ position: { x: 74, y: 10 } });
   봄('🔴 지난 시험(1학기 중간) 칸의 프린트 올리기는 그 시험을 들고 간다', await page.$eval('.xp input[type=file]', i => /'print','20[0-9]{2} · 1학기 중간'\)$/.test(i.getAttribute('onchange'))), true);
+  await page.evaluate(() => closeExamPop());
+
+  /* 2026-11-02 사용자 「새 학년도로 열기」 — 겨울방학엔 다음 학년도가 열리고 그 1학기 중간이 «지금»으로 펼쳐진다(줄은 명단에서) */
+  await page.clock.setFixedTime(new Date('2027-01-05T10:00:00'));
+  const 방학 = await page.evaluate(() => { state.examYear = ''; state.examOpen = null; render();
+    const 펼친 = [...document.querySelectorAll('.xs-sec.open .xs-sh b')].map(b => b.textContent);
+    return [document.querySelector('.xs-yn').textContent, 펼친, !!document.querySelector('.xs-sec.open .badge.consult'),
+      document.querySelectorAll('.xs-sec.open .rst-wrap tbody tr').length > 0, !!document.querySelector('.xs-yr button[onclick*="state.examYear=\'\'"]')]; });
+  봄('🔴 방학(2027-01-05) — 2027학년도 · 1학기 중간이 «지금»으로 펼쳐지고 명단 줄이 선다 · «지금 학년도로» 단추는 없다', 방학, ['2027학년도', ['1학기 중간'], true, true, false]);
+  await page.evaluate(() => { examYearGo(-1); });
+  봄('   ‹ 를 누르면 지난(2026) 학년도 · «지금 학년도로» 단추', await page.evaluate(() => [document.querySelector('.xs-yn').textContent, /지금 학년도로/.test(document.querySelector('.xs-yr').textContent)]), ['2026학년도', true]);
 } finally {
   await 브라우저.close(); 서버.kill();
 }

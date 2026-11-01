@@ -8543,7 +8543,7 @@ let state = {
   schoolFiles: null,             // kv/school-files {학교:{학년:[{name,fileId,mime,size,at,season}]}} — 학교 프린트(PDF) · 시즌을 넘겨도 남는다 · 강사 화면에서만 lazy 로 읽는다
   gradeCuts: null,               // kv/grade-cuts {byKey:{시즌판:{학교:{학년:{과목:{c1..c4}}}}}} — G-1
   examHistory: null,             // kv/exam-history {items:[…]} — 지난 시즌 보관본. 화면을 열 때 늦게 받는다
-  examYear: '',                  // 학교 › 시험 일정이 보는 학년도. '' = 올해 (2026-10-03)
+  examYear: '',                  // 학교 › 시험 일정이 보는 학년도. '' = 지금 학년도(examDefaultYear · 방학엔 다음 학년도) (2026-10-03 · 11-02)
   examOpen: null,                // 펼친 시험 칸 {'2026|2-mid': true} — 없으면 «지금 시험»만 펼친다
   examViewMode: 'table',         // 'table' | 'cal'
   examCalMonth: '',              // 달력이 보고 있는 달 'YYYY-MM'. 빈 값이면 시험이 있는 첫 달
@@ -36238,10 +36238,25 @@ function unitBankAddLegacyHTML(){
    «지금 시험»(어느 학교라도 지금 그 시험을 준비 중)인 칸이 처음에 펼쳐져 있다. 고른 펼침은 state.examOpen 이 기억한다.
    🔵 지난 해도 고칠 수 있다 — 지우지 않고 쌓는 기록이라 «읽기 전용»을 둘 까닭이 없다.
    view === 'cut' 이면 같은 네 칸 안에 등급컷 표를 그린다(열쇠 = 「학년도|시험」). */
+/* 시험 일정·등급컷 화면이 처음 여는 학년도 (2026-11-02 · 사용자 「새 학년도로 열기」).
+   보통은 올해. 재원생 누구의 «다음 시험»도 올해 것이 아니면(겨울방학 — 다음은 새 학년도 1학기 중간) 다음 학년도다.
+   예전에는 방학 내내 펼친 칸 없이 지난 학년도가 열렸다. 그 판의 줄은 지금 명단으로 세운다 — 시즌 마감에서 학년을 올렸으면 새 학년 그대로다. */
+function examDefaultYear(today){
+  today = today || todayStr();
+  const 올해 = schoolYearOf(today);
+  let 있음 = false, 올해것 = false;
+  (DATA.students || []).forEach(s => {
+    if(isWithdrawn(s) || (!s.school && !s.grade)) return;
+    있음 = true;
+    if(examSeasonOf(s.school || '', s.grade || '', today).next.year === 올해) 올해것 = true;
+  });
+  return (있음 && !올해것) ? String(Number(올해) + 1) : 올해;
+}
 function teacherExamRangeHTML(view){
   loadExamHistoryIfNeeded();      // 옛 «지난 기록»을 새 꼴로 옮겨 볼 때만 쓴다 — 옮긴 뒤에는 안 읽는다
   loadSchoolFilesIfNeeded();      // 학교 프린트 — 이 화면에서만 읽는다 (2026-09-22)
-  const 올해 = schoolYearOf(todayStr());
+  /* ⚠ 여기서 «올해»는 «명단으로 줄을 세우는 해» = examDefaultYear() 다(방학엔 다음 학년도). 달력의 해가 아니다. */
+  const 올해 = examDefaultYear();
   const year = String(state.examYear || 올해);
   const yd = examYearsOf(state.examRanges)[year] || {};
 
@@ -36306,7 +36321,7 @@ function teacherExamRangeHTML(view){
     <button class="btn q sm" onclick="examYearGo(-1)" aria-label="앞 학년도">‹</button>
     <b class="xs-yn">${escHtml(year)}학년도</b>
     <button class="btn q sm" onclick="examYearGo(1)" aria-label="다음 학년도" ${Number(year) > Number(올해) ? 'disabled' : ''}>›</button>
-    ${year !== 올해 ? `<button class="btn q sm" onclick="state.examYear=''; state.examPop=null; render()">올해로</button>` : ''}
+    ${year !== 올해 ? `<button class="btn q sm" onclick="state.examYear=''; state.examPop=null; render()">지금 학년도로</button>` : ''}
     <span class="xs-yr-m">시즌은 <b>학교·학년마다</b> 저절로 넘어갑니다 — 그 시험의 <b>수학 시험일이 지나면</b> 다음 시험으로${
       해들.length > 1 ? ` · 적어 둔 해 ${해들.map(escHtml).join(' · ')}` : ''}</span>
     <span class="spacer"></span>
@@ -36391,7 +36406,7 @@ function teacherExamRangeHTML(view){
   return yearBar + help + 칸들 + examPopHTML();
 }
 function examYearGo(d){
-  const 올해 = Number(schoolYearOf(todayStr()));
+  const 올해 = Number(examDefaultYear());      // 화면이 처음 여는 해와 같은 바탕에서 센다(방학엔 다음 학년도)
   const y = Number(state.examYear || 올해) + d;
   state.examYear = y === 올해 ? '' : String(Math.min(y, 올해 + 1));
   state.examPop = null;
