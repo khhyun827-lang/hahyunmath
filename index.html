@@ -5003,6 +5003,8 @@
      🔴 **확대한 뒤에는 `none`** — 그때는 끌기가 «그림 옮기기»라 브라우저가 가져가면 안 된다. */
   touch-action:pan-y;}
 .vc-veil.zoomed{touch-action:none;cursor:grab;}
+/* 재생이 안 걸렸을 때만 비켜선다 — 영상을 직접 눌러 시작하게 (11-02 · vcToggle) */
+.vc-veil.pass{pointer-events:none;}
 /* 전체 화면에서는 내릴 화면이 없다 — 손짓을 전부 우리가 받는다. */
 .vc-shell:fullscreen .vc-veil{touch-action:none;}
 .vc-shell:-webkit-full-screen .vc-veil{touch-action:none;}
@@ -5047,8 +5049,10 @@
   .vc{gap:6px;padding:7px 8px;}
   .vc-t.dur{display:none;}
 }
-/* 좁은 화면에선 −10/+10 단추를 감춘다 — 두 번 톡이 대신한다. 단추까지 두면 막대가 손가락 폭도 안 남는다(프로브가 400px 에서 잡았다). */
-@media (max-width:560px){ .vc-b.skip{display:none;} }
+/* 좁은 화면에선 +10 만 감춘다 — 두 번 톡이 대신한다. 둘 다 두면 막대가 손가락 폭도 안 남는다(프로브가 400px 에서 잡았다).
+   🔴 −10 은 남긴다 (2026-11-02 · 사용자 신고 — 아이폰 학생 「뒤로 되돌리는 게 안 된다」). 두 번 톡은 학생이 모른다 —
+     되돌리기는 눈에 보이는 단추가 있어야 한다. */
+@media (max-width:560px){ .vc-b.skip.fwd{display:none;} }
 
 /* ============================================================
    출석 도장 — 접두사 gm-  (2026-08-21 · 시안 design-v1/21-checkin.html)
@@ -13971,7 +13975,7 @@ function videoControlsHTML(vid){
          시청 시간은 벽시계로 재므로(K-7) 건너뛰어도 «본 시간»이 늘지 않는다 — 막대 끌기와 같은 성질이다. 자판 ←/→ 도 같다. */''}
     <button class="vc-b skip" onclick="vcSkip('${vid}', -10)" title="10초 뒤로 (←)" aria-label="10초 뒤로">−10</button>
     <button class="vc-b play" onclick="vcToggle('${vid}')" title="재생 / 멈춤" aria-label="재생">${iconSvg('playBare',16)}</button>
-    <button class="vc-b skip" onclick="vcSkip('${vid}', 10)" title="10초 앞으로 (→)" aria-label="10초 앞으로">+10</button>
+    <button class="vc-b skip fwd" onclick="vcSkip('${vid}', 10)" title="10초 앞으로 (→)" aria-label="10초 앞으로">+10</button>
     <span class="vc-t cur" id="vc-cur-${vid}">0:00</span>
     <span class="vc-bar" id="vc-bar-${vid}" title="누르면 그 자리로 갑니다"><i></i></span>
     <span class="vc-t dur" id="vc-dur-${vid}">0:00</span>
@@ -14019,9 +14023,26 @@ function vcChainNext(vid){
   showToast('이어서 ' + ((다음.part || 0) + 1) + '번째 구간입니다' + (videoGoalLabelOf(다음) ? ' — ' + videoGoalLabelOf(다음) : ''));
   return true;
 }
+/* 🔴 **아이폰에서 재생이 안 걸릴 때** (2026-11-02 · 사용자 신고 — 「재생버튼이 안 눌린다 · 시작이 안 된다」).
+     우리 단추는 iframe «밖»에서 playVideo 를 부른다. 아이폰 사파리(저전력 모드·홈 화면 앱 등)는
+     영상 «안»을 손가락으로 누른 게 아니면 첫 재생을 막을 수 있다 — 그런데 투명한 판이 영상을 덮고 있어
+     학생은 영상을 직접 누를 길이 없었다. 플레이어가 아직 안 섰을 때(vcPlayer 없음)도 같다.
+   🔵 그래서 1.5초 뒤에도 재생·불러오는 중이 아니면 **판을 잠깐 비켜 세우고**(.pass) 영상을 직접 누르라고 알린다.
+     재생이 시작되면(onStateChange PLAYING) 판은 제자리로 돌아온다.
+   ⚠ 멈춤으로 누르면 기다리던 확인을 거둔다 — 안 거두면 두 번 톡(건너뛰기)마다 판이 비켜선다. */
 function vcToggle(vid){
-  const p = vcPlayer(vid); if(!p) return;
-  try{ (p.getPlayerState() === 1 ? p.pauseVideo() : p.playVideo()); }catch(err){}
+  if(!state.vcPlayWait) state.vcPlayWait = {};
+  clearTimeout(state.vcPlayWait[vid]);
+  const p = vcPlayer(vid);
+  try{ if(p && p.getPlayerState() === 1){ p.pauseVideo(); return; } }catch(err){}
+  try{ p && p.playVideo(); }catch(err){}
+  state.vcPlayWait[vid] = setTimeout(() => {
+    const s = vcAsk(vid, x=>x.getPlayerState(), -1);
+    const veil = document.getElementById('vveil-' + vid);
+    if(s === 1 || s === 3 || !veil || veil.classList.contains('pass')) return;
+    veil.classList.add('pass');
+    showToast('영상 화면을 한 번 직접 눌러 재생해 주세요');
+  }, 1500);
 }
 /* ±초 — 0 과 끝 사이에서 자른다. 끝을 넘겨 seek 하면 유튜브가 «끝남»을 쏘아 완주 판정이 흔들릴 수 있어 1초 앞에서 멈춘다. */
 function vcSkip(vid, delta){
@@ -14374,6 +14395,8 @@ function mountVideoTrackers(studentId){
               const entry = state.ytPlayers[videoId];
               if(!entry) return;
               if(e.data === YT.PlayerState.PLAYING){
+                const 판 = document.getElementById('vveil-' + videoId);
+                if(판) 판.classList.remove('pass');   /* 영상을 직접 눌러 시작했으면 판을 도로 덮는다 (11-02 · vcToggle) */
                 /* 🔵 **기기가 배속을 되돌리는 판이 있다** (2026-09-23 · V-3) — 멈췄다 켜면 1x 로
                      돌아가는 기기가 있다고 학생들이 말했다. 재생이 시작될 때마다 «정해 둔 것»과
                      견줘서 다르면 다시 건다. 정해 둔 적이 없으면(기억 없음) 손대지 않는다. */

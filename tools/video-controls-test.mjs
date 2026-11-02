@@ -110,7 +110,20 @@ console.log(NL + '③ 시간과 배속' + NL);
   봄('🔴 ±10초 — 앞으로·뒤로 · 끝을 넘기면 끝-1 · 0 아래는 0', 간곳, [40, 20, 99, 0]);
   봄('   조작줄에 −10·+10 단추가 재생 양옆에 있다', /vc-b skip" onclick="vcSkip\('\$\{vid\}', -10\)[\s\S]{0,300}vc-b play[\s\S]{0,200}vcSkip\('\$\{vid\}', 10\)/.test(html), true);
   봄('   판을 두 번 톡하면 건너뛴다 (왼쪽 뒤로·오른쪽 앞으로) · 좁은 화면에선 단추를 감춘다',
-    /z\.tapAt && now - z\.tapAt < 320/.test(html) && /ev\.clientX < r\.left \+ r\.width \/ 2 \? -10 : 10/.test(html) && /@media \(max-width:560px\)\{ \.vc-b\.skip\{display:none;\} \}/.test(html), true);
+    /z\.tapAt && now - z\.tapAt < 320/.test(html) && /ev\.clientX < r\.left \+ r\.width \/ 2 \? -10 : 10/.test(html) && /@media \(max-width:560px\)\{ \.vc-b\.skip\.fwd\{display:none;\} \}/.test(html), true);
+  봄('🔴 폰에서도 −10 은 보인다 — 감추는 것은 +10(fwd) 뿐 (11-02 아이폰 신고)',
+    /vc-b skip" onclick="vcSkip\('\$\{vid\}', -10\)/.test(html) && /vc-b skip fwd" onclick="vcSkip\('\$\{vid\}', 10\)/.test(html), true);
+  /* 재생이 안 걸리면 판이 비켜선다 (11-02) — 가짜 플레이어가 playVideo 를 받아도 상태가 그대로인 아이폰을 흉내 낸다 */
+  const 판 = { classList: { s: new Set(), add(c){ this.s.add(c); }, contains(c){ return this.s.has(c); } } };
+  let 토스트 = 0, 기다림 = null;
+  const T = new Function('state', 'document', 'showToast', 'setTimeout', 'clearTimeout',
+    lift('vcPlayer') + NL + lift('vcAsk') + NL + lift('vcToggle') + NL + 'return vcToggle;')(
+    { ytPlayers: { V: { player: { getPlayerState: () => 5, playVideo(){} } } } },
+    { getElementById: () => 판 }, () => 토스트++, (f) => { 기다림 = f; return 1; }, () => { 기다림 = null; });
+  T('V'); 기다림 && 기다림();
+  봄('🔴 재생을 눌러도 안 걸리면 판이 비켜서고(.pass) 알린다', [판.classList.contains('pass'), 토스트], [true, 1]);
+  봄('   재생이 시작되면 판을 도로 덮는다', /if\(판\) 판\.classList\.remove\('pass'\)/.test(lift('mountVideoTrackers')), true);
+  봄('   .pass 는 손가락을 영상에 넘긴다', /\.vc-veil\.pass\{pointer-events:none;\}/.test(html), true);
 }
 
 /* ═══ ④ 진짜 크롬으로 굴린다 ═══ */
