@@ -180,5 +180,20 @@ console.log('워커 알림톡 길 — 막이가 제자리에 있는가\n');
   봄('   공개하는 네 길이 다 부른다', (html.match(/notifyWrongReady\(/g) || []).length, 5);   // 정의 1 + advanceBankStatus · fillEmptyFromStore · bookReqAccept · bankAskAccept
 }
 
+/* ── 수강 등록 안내(join · 11-03) — 비밀번호가 실린 알림 ── */
+console.log('\n수강 등록 안내(join) — 비밀번호가 문자·푸시로 새지 않는가\n');
+{
+  봄('워커가 join 을 안다 · 비밀 SOLAPI_TPL_JOIN', [/'join'/.test(상수('NOTIFY_KINDS') || ''), /join: 'SOLAPI_TPL_JOIN'/.test(상수('NOTIFY_TPL') || '')], [true, true]);
+  const 몸 = 몸떠내기(worker, 'handleNotify');
+  봄('🔴 join 만 대체 문자를 끈다(disableSms)', /kind === 'join' \? \{ disableSms: true \}/.test(몸), true);
+  const 푸시 = (worker.match(/const STUDENT_PUSH = \{[\s\S]*?\n\};/) || [''])[0];
+  봄('🔴 학생 폰 푸시에 join 이 없다(푸시 글에 비밀번호가 실린다)', !!푸시 && !/\bjoin:/.test(푸시), true);
+  const 화면 = 몸떠내기(html, 'notifyJoin');
+  봄('🔴 화면은 비밀번호를 message 로 안 싣는다', /message: ''/.test(화면), true);
+  봄('   승인된 문안 그대로', (html.match(/const JOIN_NOTICE_TEMPLATE =\n`([\s\S]*?)`;/) || [])[1],
+    '[김하현수학연구소]\n#{학생명} 학생, 수강 등록이 완료되었습니다.\n\n아래 정보로 홈페이지에 로그인해 주세요.\n■ 홈페이지: https://khhyun827-lang.github.io/hahyunmath/\n■ 아이디: #{아이디}\n■ 초기 비밀번호: #{비밀번호}\n\n첫 로그인 후 [비밀번호 변경]에서 비밀번호를 꼭 바꿔 주세요.');
+  봄('   한 명 추가·명단 등록 둘 다 부른다', (html.match(/await notifyJoin\(/g) || []).length, 2);
+}
+
 console.log('\n  ' + (틀림 ? '🔴 ' : '✅ ') + 통과 + ' 통과 · ' + 틀림 + ' 실패');
 process.exit(틀림 ? 1 : 0);

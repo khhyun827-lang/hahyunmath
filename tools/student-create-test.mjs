@@ -65,7 +65,7 @@ function 세상({ 칸 = {}, 계정흠 = null, 저장흠 = false, 이미있나 = 
   const fn = new Function(
     'document', 'DATA', 'showToast', 'authIdOk', 'authIdWhyBad', 'authCreateAccount',
     'authWhyFailed', 'dbSetDoc', 'adoptRecord', 'emptyRecord', 'saveRecord', 'logAudit', 'render',
-    "const todayStr = () => '2026-10-11';" + 조각 + '; return addStudent;'
+    "const todayStr = () => '2026-10-11'; const notifyJoin = async () => {};" + 조각 + '; return addStudent;'
   )(
     { getElementById: (id) => ({ value: 값[id] != null ? 값[id] : '' }) },
     DATA,
@@ -151,7 +151,7 @@ console.log('\n학생 추가 — 무엇이 어디로 가는가\n');
 /* ── ⑤ 소스에 «되돌아간 자리»가 없는가 ───────────────────────── */
 {
   const 조각 = stripComments(떠내기('addStudent'));
-  봄('🔴 학생 문서를 짓는 자리에 pw 가 없다', /pw\s*[,:}]/.test(조각.split('newStudent =')[1] || ''), false);
+  봄('🔴 학생 문서를 짓는 자리에 pw 가 없다', /pw\s*[,:}]/.test((조각.split('newStudent =')[1] || '').split(';')[0]), false);
   봄('🔴 학번으로 문서를 쓰지 않는다', /dbSetDoc\('students',\s*sid/.test(조각), false);
 }
 
