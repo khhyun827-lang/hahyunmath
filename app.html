@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>앱 설치 · 알림 켜기 | 김하현수학연구소</title>
+<meta name="description" content="김하현수학연구소 홈페이지를 폰에 앱처럼 설치하고 새 과제·강의·답변 알림을 받는 방법">
+<meta property="og:title" content="김하현수학연구소 — 앱 설치 · 알림 켜기">
+<meta property="og:description" content="폰 홈 화면에 앱으로 두고, 새 과제·강의·답변을 알림으로 받아 보세요.">
+<!-- 11-03 · 사용자 — 카카오 채널 채팅방 메뉴 «앱 설치·알림 켜기» 단추가 여기로 온다.
+     manifest 범위(./)가 이 페이지도 덮어서, 안드로이드 크롬은 여기서 바로 «앱 설치»가 된다(시작은 index). -->
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="theme-color" content="#FAF9F6">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="김하현수학">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<style>
+  :root{ --paper:#FAF9F6; --card:#FFFFFF; --ink:#22221E; --muted:#6B6862; --line:#E7E5DE;
+         --brand:#BA5054; --brand-bg:#F8EBEC; --accent:#3F3537; --ok:#3F7A4D; --okbg:#E9F2EC; }
+  *{ box-sizing:border-box; }
+  body{ margin:0; background:var(--paper); color:var(--ink); line-height:1.6;
+        font-family:Pretendard,-apple-system,"Apple SD Gothic Neo","Noto Sans KR",sans-serif; -webkit-text-size-adjust:100%; }
+  main{ max-width:560px; margin:0 auto; padding:24px 16px 48px; }
+  header{ display:flex; align-items:center; gap:12px; margin-bottom:20px; }
+  header img{ width:52px; height:52px; border-radius:12px; border:1px solid var(--line); }
+  h1{ font-size:22px; margin:0; line-height:1.3; }
+  header p{ margin:2px 0 0; color:var(--muted); font-size:14px; }
+  .card{ background:var(--card); border:1px solid var(--line); border-radius:14px; padding:18px 16px; margin-bottom:14px; }
+  .warn{ background:var(--brand-bg); border-color:#EBC9CB; }
+  .done{ background:var(--okbg); border-color:#BFDCC9; }
+  .card h2{ font-size:17px; margin:0 0 10px; }
+  .hide{ display:none; }
+  ol{ margin:0; padding:0; list-style:none; counter-reset:s; }
+  ol li{ counter-increment:s; position:relative; padding:0 0 14px 38px; }
+  ol li:last-child{ padding-bottom:0; }
+  ol li::before{ content:counter(s); position:absolute; left:0; top:0; width:26px; height:26px; border-radius:50%;
+                 background:var(--accent); color:#fff; font-size:14px; font-weight:700; display:flex; align-items:center; justify-content:center; }
+  b.k{ display:inline-block; padding:0 7px; border:1px solid var(--line); border-radius:6px; background:var(--paper); font-weight:600; white-space:nowrap; }
+  .btn{ display:block; width:100%; margin-top:12px; padding:13px 16px; border:0; border-radius:10px; font:inherit; font-size:16px;
+        font-weight:700; text-align:center; text-decoration:none; cursor:pointer; background:var(--brand); color:#fff; }
+  .btn.q{ background:var(--card); color:var(--ink); border:1px solid var(--line); }
+  .tabs{ display:flex; gap:8px; margin:6px 0 14px; }
+  .tabs button{ flex:1; padding:10px; border:1px solid var(--line); border-radius:10px; background:var(--card); font:inherit; font-size:15px; font-weight:600; color:var(--muted); cursor:pointer; }
+  .tabs button.on{ background:var(--accent); border-color:var(--accent); color:#fff; }
+  .note{ font-size:14px; color:var(--muted); margin:10px 0 0; }
+  footer{ text-align:center; font-size:13px; color:var(--muted); margin-top:24px; }
+  footer a{ color:var(--muted); }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <img src="icon-192.png" alt="">
+    <div>
+      <h1>앱 설치 · 알림 켜기</h1>
+      <p>김하현수학연구소를 폰 홈 화면에 두고, 새 과제·강의·답변을 알림으로 받아요.</p>
+    </div>
+  </header>
+
+  <!-- 카카오톡 안에서 열면 설치·알림이 안 된다 — 밖의 브라우저로 내보낸다 -->
+  <section id="kakao" class="card warn hide">
+    <h2>지금은 카카오톡 안에서 열려 있어요</h2>
+    <p style="margin:0;">카카오톡 안에서는 앱 설치가 안 돼요. 아래 단추로 <span id="kakao-to">다른 브라우저</span>에서 다시 열어 주세요.</p>
+    <a class="btn" id="kakao-out" href="#">다른 브라우저로 열기</a>
+    <p class="note" id="kakao-ios">안 열리면 화면 오른쪽 아래 <b class="k">⋯</b> › <b class="k">Safari로 열기</b>를 눌러 주세요.</p>
+  </section>
+
+  <!-- 이미 앱(홈 화면 아이콘)으로 열었으면 남은 것은 알림뿐 -->
+  <section id="standalone" class="card done hide">
+    <h2>앱으로 잘 열었어요 ✓</h2>
+    <p style="margin:0;">이제 <b>로그인</b> 뒤 학생 홈 맨 위의 «폰 알림으로 받아 보세요» 줄에서 <b class="k">알림 받기</b> › <b class="k">허용</b>만 누르면 끝이에요.</p>
+    <a class="btn" href="./">홈페이지 열기</a>
+  </section>
+
+  <div class="tabs" role="tablist">
+    <button id="t-and" onclick="pick('and')">안드로이드</button>
+    <button id="t-ios" onclick="pick('ios')">아이폰</button>
+  </div>
+
+  <section id="and" class="card">
+    <h2>안드로이드 (갤럭시 등)</h2>
+    <ol>
+      <li><b>크롬</b>에서 이 페이지를 열어요.</li>
+      <li><span id="and-btn-line">아래 <b class="k">앱 설치</b> 단추를 누르거나, </span>크롬 오른쪽 위 <b class="k">⋮</b> › <b class="k">홈 화면에 추가</b>(또는 <b class="k">앱 설치</b>) › <b class="k">설치</b>.</li>
+      <li>홈 화면에 생긴 <b>김하현수학</b> 아이콘으로 열고 로그인해요.</li>
+      <li>학생 홈 맨 위 «폰 알림으로 받아 보세요» 줄의 <b class="k">알림 받기</b> › <b class="k">허용</b>.</li>
+    </ol>
+    <button class="btn hide" id="install">앱 설치</button>
+  </section>
+
+  <section id="ios" class="card">
+    <h2>아이폰</h2>
+    <ol>
+      <li><b>사파리</b>에서 이 페이지를 열어요. (iOS 16.4 이상)</li>
+      <li>아래쪽 <b class="k">공유 ⬆︎</b> 단추 › <b class="k">홈 화면에 추가</b> › <b class="k">추가</b>.</li>
+      <li>홈 화면에 생긴 <b>김하현수학</b> 아이콘으로 열고 로그인해요.</li>
+      <li>학생 홈 맨 위 «폰 알림으로 받아 보세요» 줄의 <b class="k">알림 받기</b> › <b class="k">허용</b>.</li>
+    </ol>
+    <p class="note">아이폰은 사파리 탭에서는 알림이 안 와요. 꼭 홈 화면 아이콘으로 열어서 켜 주세요.</p>
+  </section>
+
+  <section class="card">
+    <h2>알림이 안 와요</h2>
+    <p style="margin:0;">폰 <b class="k">설정</b> › <b class="k">알림</b>에서 <b>김하현수학</b>(안드로이드는 <b>크롬</b>)이 켜져 있는지 봐 주세요. 실수로 «차단»을 눌렀다면 선생님께 말해 주세요.</p>
+  </section>
+
+  <a class="btn q" href="./">홈페이지 바로가기</a>
+  <footer>김하현수학연구소 · <a href="./">khhyun827-lang.github.io/hahyunmath</a></footer>
+</main>
+<script>
+  var ua = navigator.userAgent;
+  var isIOS = /iPhone|iPad|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  function pick(k){
+    document.getElementById('and').className = 'card' + (k === 'and' ? '' : ' hide');
+    document.getElementById('ios').className = 'card' + (k === 'ios' ? '' : ' hide');
+    document.getElementById('t-and').className = k === 'and' ? 'on' : '';
+    document.getElementById('t-ios').className = k === 'ios' ? 'on' : '';
+  }
+  pick(isIOS ? 'ios' : 'and');
+
+  /* 카카오톡 인앱 브라우저 → 밖의 브라우저(안드로이드는 기본 브라우저, 아이폰은 사파리)로 */
+  if(/KAKAOTALK/i.test(ua)){
+    document.getElementById('kakao').className = 'card warn';
+    document.getElementById('kakao-to').textContent = isIOS ? '사파리' : '크롬';
+    document.getElementById('kakao-ios').className = isIOS ? 'note' : 'note hide';
+    document.getElementById('kakao-out').href = 'kakaotalk://web/openExternal?url=' + encodeURIComponent(location.href);
+  }
+
+  /* 이미 홈 화면 아이콘으로 열었다 */
+  if(navigator.standalone || (window.matchMedia && matchMedia('(display-mode: standalone)').matches)){
+    document.getElementById('standalone').className = 'card done';
+  }
+
+  /* 안드로이드 크롬 — 설치 창을 단추로 */
+  var 설치창 = null;
+  window.addEventListener('beforeinstallprompt', function(e){
+    e.preventDefault(); 설치창 = e;
+    document.getElementById('install').className = 'btn';
+  });
+  document.getElementById('install').onclick = function(){
+    if(!설치창) return;
+    설치창.prompt();
+    설치창.userChoice.then(function(){ 설치창 = null; document.getElementById('install').className = 'btn hide'; });
+  };
+  window.addEventListener('appinstalled', function(){ document.getElementById('install').className = 'btn hide'; });
+</script>
+</body>
+</html>
