@@ -44,7 +44,7 @@ const TWIN_GROQ_MAX_TOKENS = 7000;   // 추론 + JSON. 검토(6000)보다 답이
 /* 🔴 «올렸는지 짐작하지 않는다» — 이 워커는 대시보드에 붙여넣어 올리므로 밖에서는 어느 판이 도는지
    알 길이 없었다(2026-09-11에 사용자가 올리고 「도는지 확인은 못 해봤어」). /quota 가 이 값을 같이
    돌려주고 tools/worker-check.mjs 가 저장소의 값과 견준다. **프롬프트나 규칙을 바꾸면 이 날짜를 올릴 것.** */
-const WORKER_VERSION = '2026-11-03a';
+const WORKER_VERSION = '2026-11-03b';   // 11-03b 숫자변형 두 개(count:2)·이미 있는 변형 피하기(avoid)
 // 이미지 업로드는 학생도 쓴다(질의응답 사진). 비용이 드는 쪽은 Gemini라 여기는 넉넉하게,
 // 다만 «한 명이 무한히»는 막는다. 전체 상한은 걸지 않는다 — 걸면 바쁜 날 학생이 막힌다.
 const UPLOAD_PER_USER_DAILY = 200;
@@ -1115,7 +1115,13 @@ function parseModelJson(text) {
 
 /* 쌍둥이 프롬프트 — «한 벌»이다. Gemini(그림 됨)와 Groq(글만)가 같은 글을 본다 (2026-09-12).
    ⚠ hasImage 가 false 면 갈래 규칙·장면 형식이 안 들어간다 — Groq 길은 언제나 false 다. */
-function twinPrompt(content, answer, hasImage, light) {
+/* 🔵 **한 번에 두 개 · 이미 있는 변형 피하기** (2026-11-03 · 사용자 — 「한 개씩 만들고 나중에 하나 더 만들 때 원본과 N01 을 확인해
+     겹치지 않게 하려면 더 어렵다 · 한 번에 N 두 개를 채우자」).
+     more.count === 2 — 글 문항(그림 없음)·보통 길에서만 두 개를 받는다. 그림 문항은 장면 JSON 이 길어 둘이면 잘릴 수 있다.
+     more.avoid — 이 원본으로 이미 있는 변형([{content, answer}]). 수·정답이 겹치지 않게 보여 준다(N02 를 채울 때). */
+function twinPrompt(content, answer, hasImage, light, more) {
+  const 둘 = !!(more && more.count === 2 && !hasImage && !light);
+  const 피할것 = (more && Array.isArray(more.avoid)) ? more.avoid : [];
   const persona = `당신은 대한민국 고등학교 수학 교육과정에 완벽하게 통달한 수석 출제 위원입니다.`;
 
   /* 학생 답안 입력칸이 받을 수 있는 것은 딱 둘이다 — «숫자 입력» 아니면 «①~⑤ 보기 버튼»
@@ -1259,6 +1265,21 @@ ${SCENE_FORMAT}` : '';
        거꾸로 짜 맞추기»다. 어려운 문항일수록 그 탐색이 길다. 가벼운 길은 **정답의 꼴을 원본대로** 두고
        수 한두 개만 바꾼 뒤 «나오는 대로» 답을 적게 한다. 원본이 입력할 수 있는 꼴이면 변형도 그 꼴이라
        학생 입력칸 규칙(자연수 · ①~⑤)은 그대로 지켜진다. 풀이도 세 단계로 줄인다. */
+  /* 두 개일 때 — 둘이 서로도, 원본과도 달라야 한다. 꼴은 {"twins":[문제, 문제]}. */
+  const pairRule = 둘 ? `이번에는 쌍둥이 문제를 **2개** 만듭니다. 두 문제에 대한 규칙입니다.
+1. 두 문제는 각각 위의 모든 규칙을 따로따로 지켜야 합니다.
+2. 두 문제의 수(계수·상수·조건 값·좌표)는 서로 겹치지 않게, 원본과도 겹치지 않게 고르세요. 한 문제의 수를 조금만 바꿔 다른 문제를 만들지 마세요.
+3. 두 문제의 정답은 서로 다르고, 원본 정답과도 달라야 합니다. 객관식이면 정답 «값»이 달라야 합니다.` : '';
+  const schema = 둘
+    ? jsonSchemaRule.replace('반드시 아래 JSON 형식으로만 답하세요.', '반드시 {"twins": [문제1, 문제2]} 형식의 JSON 으로만 답하세요. 문제1·문제2는 각각 아래 객체 꼴입니다.')
+    : jsonSchemaRule;
+  const task = 둘 ? taskRule.replace('"쌍둥이 문제" 1개', '"쌍둥이 문제" 2개') : taskRule;
+  /* 이미 있는 변형 — 원본 아래에 붙인다. 이것과 겹치면 «새 변형»이 아니다. */
+  const avoidBlock = 피할것.length ? `
+
+[이미 있는 변형 — 새 문제는 이것들과도 수와 정답이 겹치지 않아야 합니다]
+${피할것.map((a, i) => `(${i + 1}) ${a.content}\n정답: ${a.answer}`).join('\n\n')}` : '';
+
   if (light) {
     const lightAnswerRule = `정답의 형태 규칙입니다 — 원본을 따르세요.
 - 원본 정답이 ①~⑤ 기호이면: 새 문제도 보기 다섯 개(①~⑤, 각각 새 줄)를 둔 객관식으로 만들고 "answer"에는 기호 하나만 쓰세요.
@@ -1281,24 +1302,30 @@ ${sceneRule}
 ${content}
 
 [원본 정답]
-${answer}`;
+${answer}${avoidBlock}`;
   }
 
   return `${persona}
-${taskRule}
+${task}
 ${numberRule}
 ${answerFormRule}
 ${safetyRule}
 ${formatRule}
 ${layoutRule}
-${jsonSchemaRule}
+${pairRule}
+${schema}
 ${sceneRule}
 
 [원본 문제]
 ${content}
 
 [원본 정답]
-${answer}`;
+${answer}${avoidBlock}`;
+}
+/* 화면이 보낸 «이미 있는 변형»을 프롬프트에 실을 만큼만 — 셋까지 · 한 문제 2천 자 */
+function twinAvoidOf(body) {
+  return (Array.isArray(body && body.avoid) ? body.avoid : []).filter(a => a && a.content).slice(0, 3)
+    .map(a => ({ content: String(a.content).slice(0, 2000), answer: String(a.answer || '').slice(0, 60) }));
 }
 
 /* ======== Gemini 부르기 — 막히면 «같은 모델을 다시» 가 아니라 «다음 모델로» (2026-09-24c) ========
@@ -1397,7 +1424,9 @@ async function handleGeminiTwin(request, env, corsHeaders, uid) {
        생각에 상한을 두고, 정답 꼴을 원본대로 두게 해 «역산» 탐색을 없앤다. 처음부터 쓰지 않는 까닭 —
        잘 되던 문항의 품질까지 낮출 까닭이 없다(사용자가 정했다). */
   const light = body.mode === 'light';
-  const prompt = twinPrompt(content, answer, hasImage, light);
+  /* 두 개 (11-03b) — 글 문항·보통 길에서만. 한도는 그대로 한 건이다(요청 한 번). */
+  const 둘 = body.count === 2 && !hasImage && !light;
+  const prompt = twinPrompt(content, answer, hasImage, light, { count: 둘 ? 2 : 1, avoid: twinAvoidOf(body) });
 
   const parts = [{ text: prompt }];
   if (hasImage) {
@@ -1453,12 +1482,15 @@ async function handleGeminiTwin(request, env, corsHeaders, uid) {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
-  if (!parsed.problem || !parsed.answer) {
+  /* 두 개를 시켰으면 {"twins":[…]} — 온전한 것만 추린다. 하나만 와도 그것을 쓴다(둘째는 다음 바퀴가 채운다). */
+  const 받은것 = (Array.isArray(parsed && parsed.twins) ? parsed.twins : [parsed]).filter(t => t && t.problem && t.answer);
+  if (!받은것.length) {
     return new Response(JSON.stringify({ error: 'incomplete result', raw: parsed }), {
       status: 502,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
+  parsed = 받은것[0];
 
   /* 그림 문항이 어느 길로 갔는지를 클라이언트가 알아야 한다. 셋이 서로 배타적이다.
        needsFigure  — (B). 그림이 있어야 풀리고 그림도 달라져야 한다. figureSpec을 보고 **사람이 그린다.**
@@ -1481,6 +1513,8 @@ async function handleGeminiTwin(request, env, corsHeaders, uid) {
     figureSpec: needsFigure ? String(parsed.figureSpec || '') : '',
     /* (B)면 함께 온 장면. 검산은 화면이 한다 — 여기서는 «꼴»만 본다(객체이고 kind 가 graph). */
     scene: (needsFigure && parsed.scene && typeof parsed.scene === 'object' && parsed.scene.kind === 'graph') ? parsed.scene : null,
+    /* 둘째 문제 (11-03b) — 글 문항만이라 그림 칸은 없다. 옛 화면은 이 칸을 몰라 첫째만 쓴다. */
+    more: 둘 ? 받은것.slice(1, 2).map(t => ({ content: t.problem, answer: t.answer, solution: t.solution || '' })) : [],
     quotaUsed: q.used, quotaLimit: q.limit,
     /* 진단 — 몇 번 만에 들어갔나 · 가벼운 길이었나 · 생각 상한을 어떤 이름으로 받았나 · 토큰 (2026-09-24b) */
     attempts: 시도, light, thinking: 생각, usage, model: 모델, tried: 거절,
@@ -1502,7 +1536,8 @@ async function handleGroqTwin(request, env, corsHeaders, uid) {
   if (!content || !answer) { await refundQuota(env, 'twin-groq', uid); return send({ error: 'missing content/answer' }, 400); }
   if (image || imageFileId) { await refundQuota(env, 'twin-groq', uid); return send({ error: 'groq cannot see images', detail: 'Groq 길은 글만 있는 문항용입니다' }, 400); }
 
-  const prompt = twinPrompt(content, answer, false);
+  /* Groq 는 언제나 하나 — 둘이면 출력이 분당 토큰 한도(TPM)를 넘는다. 이미 있는 변형 피하기만 같이 본다. */
+  const prompt = twinPrompt(content, answer, false, false, { count: 1, avoid: twinAvoidOf(body) });
   let res;
   try {
     res = await fetch('https://api.groq.com/openai/v1/chat/completions', {

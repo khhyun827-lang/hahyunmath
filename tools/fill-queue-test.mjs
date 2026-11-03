@@ -28,6 +28,7 @@ const 봄 = (무엇, 나온것, 나와야) => {
 };
 
 const BLOCK = ["const FILL_QUEUE_KEY = 'k';", 'const autoFillSkipped = new Set();',
+  html.slice(html.indexOf('const AUTOFILL_N_TARGET'), html.indexOf('function autoFillCandidates(')),   // 둘까지 세기 (11-03b)
   ...['fillQueueOf', 'fillQueueEnsure', 'autoFillHasFig', 'fillQueueSave', 'fillQueueDrop', 'autoFillCandidates', 'autoFillScopeOk'].map(liftFn)].join('\n');
 
 function 세상({ 전부 = false, kv = null, 본문 = {}, 변형 = {}, 판표 = [] } = {}) {
@@ -52,7 +53,7 @@ function 세상({ 전부 = false, kv = null, 본문 = {}, 변형 = {}, 판표 = 
 console.log('① 다 실린 창고가 차례를 짓는다');
 {
   const W = 세상({ 전부: true, 본문: { A: { content: 'a', answer: '1', 그림: 1 }, B: { content: 'b', answer: '2' }, C: { content: 'c', answer: '3' }, D: { content: 'd' } },
-                   변형: { B: [{ variantKind: 'N' }] } });
+                   변형: { B: [{ variantKind: 'N' }, { variantKind: 'N' }] } });
   봄('정답 없는 D · 이미 찬 B 는 빠진다 · 넘긴 것은 «밤»이라 안 본다', W.fillQueueOf(), { codes: ['A', 'C'], fig: ['A'] });
   await W.fillQueueSave();
   await W.fillQueueSave();
@@ -61,7 +62,7 @@ console.log('① 다 실린 창고가 차례를 짓는다');
 
 console.log('② 반쪽 창고 — kv 를 다시 읽고 «뺄 것»만');
 {
-  const W = 세상({ kv: { codes: ['A', 'B', 'C', 'D'], fig: ['A', 'D'] }, 변형: { B: [{ variantKind: 'N' }] } });
+  const W = 세상({ kv: { codes: ['A', 'B', 'C', 'D'], fig: ['A', 'D'] }, 변형: { B: [{ variantKind: 'N' }, { variantKind: 'N' }] } });
   await W.fillQueueEnsure();
   봄('차례를 한 건 읽는다', [W.읽음, W.state.fillQueue.codes], [1, ['A', 'B', 'C', 'D']]);
   봄('후보 — 넘긴 C · 이미 찬 B 빼고', W.autoFillCandidates(), ['A', 'D']);

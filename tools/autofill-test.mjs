@@ -80,7 +80,7 @@ function makeWorld({ itemBody = {}, variants = {}, twin = null, used = 0, groqUs
     20, 25,
     (twin) => ({ doc: null, why: '' }),
     /* groqTwin — Groq 로 물었을 때의 답(A-4). 안 정하면 twin 과 같다. */
-    async (content, answer, image, engine) => { w.부른AI.push({ content, answer, engine: engine || '' });
+    async (content, answer, image, engine, 더) => { w.부른AI.push({ content, answer, engine: engine || '', 더 });
       return engine === 'groq' && 'groqTwin' in w ? w.groqTwin : engine === 'light' && 'lightTwin' in w ? w.lightTwin : w.twin; },
     (content, answer) => (/^[①②③④⑤]$/.test(answer) || /^-?\d+$/.test(answer)) ? answer : null,
     (root, kind) => root + '-' + kind + '01',
@@ -135,8 +135,32 @@ console.log('\n남는 한도로 창고 채우기\n');
   봄('다음 것을 예약한다', w.예약.length >= 1, true);
   봄('메모리 창고에도 얹는다 — 다음 바퀴에 또 안 뽑히게',
      w.state.variants['K2-01-E-0001'].map(v => v.code), ['K2-01-E-0001-N01']);
-  봄('🔴 검토를 기다리는 것도 «있는 것»으로 세서 N02 를 또 안 만든다',
+  /* 11-03b — 숫자변형은 둘(N01·N02)까지. 하나(검토 대기)만 있으면 한 번 더 뽑혀 «피해서» N02 를 채운다. */
+  봄('🔴 검토 대기 하나는 «하나»로 센다 — 둘이 찰 때까지 한 번 더 뽑힌다 (11-03b)',
+     w.autoFillCandidates().includes('K2-01-E-0001'), true);
+  w.state.variants['K2-01-E-0001'].push({ code: 'K2-01-E-0001-N02', originCode: 'K2-01-E-0001', variantKind: 'N', pending: true });
+  봄('🔴 둘이 차면(검토 대기라도) 더 안 만든다',
      w.autoFillCandidates().includes('K2-01-E-0001'), false);
+}
+
+// ── ②-2 한 번에 둘 (11-03b) ──
+{
+  const w = makeWorld({ itemBody: 본문(1), twin: { content: '새 문제 12 34 56 78', answer: '7', more: [{ content: '또 다른 91 82 73 64', answer: '9' }] } });
+  await w.autoFillTick();
+  봄('N 없는 글 문항은 둘을 시킨다', w.부른AI[0].더.count, 2);
+  봄('둘을 받으면 둘 다 담는다', w.쓴것.length, 2);
+  봄('만든 수도 둘', w.autoFillState().done, 2);
+}
+{
+  const w = makeWorld({ itemBody: 본문(1), twin: { content: '새 문제 12 34 56 78', answer: '7', more: [{ content: '새 문제 12 34 56 78', answer: '8' }] } });
+  await w.autoFillTick();
+  봄('🔴 둘째가 첫째와 수가 거의 같으면 안 담는다', w.쓴것.length, 1);
+}
+{
+  const w = makeWorld({ itemBody: 본문(1), variants: { 'K2-01-E-0001': [{ code: 'K2-01-E-0001-N01', variantKind: 'N', content: '있던 것', answer: '5' }] },
+                        twin: { content: '다른 1', answer: '6' } });
+  await w.autoFillTick();
+  봄('N 하나가 있으면 하나만 · 있던 것을 «피할 것»으로 보낸다', [w.부른AI[0].더.count, w.부른AI[0].더.avoid.length], [1, 1]);
 }
 
 // ── ③ 🔴 여기가 이 검사의 요점 — 못 담는 문항에 한도를 되풀이 쏟지 않는가 ──
