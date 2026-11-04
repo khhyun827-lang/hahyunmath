@@ -5791,7 +5791,7 @@
      html2canvas가 빈 그림을 그린다. 그래서 왼쪽으로 멀리 밀어낸다.
    ⚠ 폭 703px은 **A4 본문 폭(210−12−12=186mm)을 96dpi로 옮긴 값**이다. 이 폭으로 그려야
      PDF에 넣을 때 늘리거나 줄이지 않아 글자가 안 뭉갠다. */
-   🔴 **여백을 다시 넣었다** (2026-09-14 · 사용자 — 「이미지 파일 왼쪽에 여백이 너무 없어」). PDF 시절엔
+   /* 🔴 **여백을 다시 넣었다** (2026-09-14 · 사용자 — 「이미지 파일 왼쪽에 여백이 너무 없어」). PDF 시절엔
      종이 여백이 따로 있어 padding 을 0 으로 뺐는데, 그림으로 바뀐 뒤(R-4)에도 그대로라 글이 가장자리에
      붙어 나왔다. 본문 폭 703 은 지키고 **여백 28px 을 바깥으로** 더한다(759px). */
 .rpb-stage{position:fixed;left:-20000px;top:0;width:759px;background:#fff;z-index:-1;pointer-events:none;}
@@ -23574,7 +23574,7 @@ function teacherRosterHTML(){
   const selCount = (state.rosterSelected||[]).length;
   const bar = selCount===0 ? '' : `
   <div class="actbar">
-    <span class="sum"><b class="mono">${selCount}</b>명 선택됨</span>
+    <span class="sum"><b class="mono">${selCount}</b>명 선택됨${selCount>selVisible ? ` · 숨김 ${selCount-selVisible}명` : ''}</span>
     <span class="field rst-selwrap"><select class="rst-sel" id="rst-move">${classOptionsHTML(classId)}</select></span>
     <button class="btn sm" onclick="rosterBulkMoveClass()">반 이동</button>
     <button class="btn sm" onclick="exportRosterExcel(true)">${iconSvg('download',13)} 선택 학생 내보내기</button>
@@ -23710,7 +23710,9 @@ async function exportRosterExcel(onlySelected){
     await loadContactsIfNeeded();   /* ⚠ 안 기다리면 전화번호 두 열이 통째로 빈 채로 나간다 (K-11) */
     const m = rosterModel();
     const picked = new Set(state.rosterSelected || []);
-    const list = onlySelected ? m.rows.filter(s=>picked.has(s.studentId)) : m.rows;
+    const shown = new Set(m.rows.map(s=>s.studentId));
+    const list = onlySelected ? m.rows.filter(s=>picked.has(s.studentId))
+      .concat(DATA.students.filter(s=>picked.has(s.studentId) && !shown.has(s.studentId))) : m.rows;
     if(list.length===0){ showToast('내보낼 학생이 없습니다.'); return; }
     const header = ['아이디','이름','학교','학년','반','신호','근거','출석률(%)','과제 제출','오답 미제출','시청률(%)','최근 점수(%)','학부모 전화번호','학생 전화번호'];
     const body = list.map(s=>{
@@ -25165,7 +25167,7 @@ function sessionExamHTML(classId, date){
   <div class="t-sec" style="margin-top:${adding?'24px':'0'};">${escHtml(cur.title)} 점수
     <span style="font-weight:400;"><span class="mono">${escHtml(cur.date||'')}</span> ·
       ${qn ? `문항 <span class="mono">${qn}</span>개 (시험지에 붙어 있습니다)`
-           : `문항수 <input class="sg-tot mono" type="number" min="1" step="1" id="cst-${cur.id}"
+           : `문항수 <input class="sg-tot mono" type="number" min="1" step="1" id="cst-${cur.id}" oninput="sessionTotalEcho('${cur.id}')"
                 value="${tot}" title="이 시험의 총 문항수">개`}</span></div>
   <div class="cls-tiles">${roster.map(s=>{
     const sc = examScoreOf(state.allRecords[s.studentId], cur.id);
@@ -25205,10 +25207,14 @@ function sessionScoreEcho(examId, sid){
   const out = document.getElementById('se-'+examId+'-'+sid);
   if(!el || !out) return;
   const ex = DATA.exams.find(x=>x.id===examId);
-  const tot = ex ? examTotalOf(ex) : 0;
+  const ce = document.getElementById('cst-'+examId);        /* 고치는 중인 문항수가 있으면 그 값으로 */
+  const tot = (ce && parseFloat(ce.value)>0) ? parseFloat(ce.value) : (ex ? examTotalOf(ex) : 0);
   const v = parseFloat(el.value);
   out.textContent = (isNaN(v) || !tot) ? '/ ' + (tot||'—') : '/ ' + tot + ' · ' + Math.round(v/tot*100) + '점';
   out.className = (!isNaN(v) && tot && v>tot) ? 'over' : '';
+}
+function sessionTotalEcho(examId){
+  document.querySelectorAll('[id^="cs-'+examId+'-"]').forEach(el=>sessionScoreEcho(examId, el.id.slice(('cs-'+examId+'-').length)));
 }
 /* 저장은 반 › 성적과 «같은 함수»다 — 어느 시험인지만 넘긴다. */
 async function saveSessionScores(classId, examId){
@@ -26775,6 +26781,10 @@ function chubLogHTML(classId){
   const pill = (key, label, n) =>
     `<a class="pill ${filter===key?'on':''}" onclick="state.classHubLogFilter='${key}'; render()">${label} <b>${n}</b></a>`;
   const open = state.classHubDate;
+  /* 목록 밖에서 고른 날짜도 따로 편다. */
+  if(open && !facts.find(x=>x.date===open)){
+    shown.unshift({ date:open, f:chubSessionFacts(classId, open) });
+  }
 
   return `
   ${chubMonthBarHTML(`수업 <b>${dates.length}</b>회`)}
@@ -28229,7 +28239,7 @@ function sdReportHTML(s, rec){
   const isThisMonth = ym === ymNow();
   const d = reportDataOf(s, rec, ym);
   const doc = state.reportDocs[reportKey(sid,ym)] || {};
-  const comment = reportCommentText(sid, ym);
+  const comment = doc.comment || '';
 
   const R = signalRules();
   let anyWarn = false;
@@ -28390,7 +28400,7 @@ function sdReportHTML(s, rec){
       <div class="t-sec" style="margin:0 0 7px;">선생님 한마디
         <span style="font-weight:400;color:var(--dim);">비워 두면 리포트에 나가지 않습니다</span></div>
       <textarea id="rp-comment" class="sd-note" placeholder="이 달 이 학생을 보며 느끼신 것을 그대로 적어 주세요.&#10;아래 글귀를 눌러 가져다 쓰신 뒤 고쳐 쓰셔도 됩니다."
-        oninput="reportCommentInput(&#39;${sid}&#39;,&#39;${ym}&#39;, this.value)">${escHtml(comment)}</textarea>
+        oninput="reportCommentInput(&#39;${sid}&#39;,&#39;${ym}&#39;, this.value)">${escHtml(reportCommentText(sid, ym))}</textarea>
       <div class="sd-note-foot">
         <span>${doc.at ? `마지막 저장 <span class="sd-note-at">${escHtml(doc.at)}</span>` : '아직 쓰지 않았습니다'}</span>
         <button class="btn p sm" onclick="saveReportComment(&#39;${sid}&#39;,&#39;${ym}&#39;)">저장</button>
@@ -28708,10 +28718,17 @@ function sdConsultDeskHTML(s, rec, st, sg){
   /* 과제 — 아직 안 끝난 것 · 오답 · 퀴즈 */
   const 반들 = studentClassIds(s), 오늘 = todayStr();
   const 남은 = DATA.assignments.filter(a => (!a.classId || 반들.includes(a.classId)) && !beforeJoin(s, a) && !hwIsDone(rec, a.id))
-    .sort((a,b)=>String(b.dueDate||'').localeCompare(String(a.dueDate||''))).slice(0, 5);
+    .sort((a,b)=>{
+      const x = String(a.dueDate||''), y = String(b.dueDate||'');
+      const ax = !!x && x < 오늘, by = !!y && y < 오늘;
+      return ax !== by ? (ax ? -1 : 1) : ax ? x.localeCompare(y) : y.localeCompare(x);
+    });
   const 퀴즈 = ((rec.dailyQuiz && rec.dailyQuiz.log) || []).slice(-30);
-  const 과제 = (남은.length ? 남은.map(a => { const 지남 = a.dueDate && a.dueDate < 오늘;
-      return `<div class="sd-crow"><span>${escHtml(a.title)}</span><b>${a.dueDate ? escHtml(a.dueDate.slice(5)) + ' ' : ''}<span class="badge ${지남 ? 'no' : 'late'}">${지남 ? '미제출' : '마감 전'}</span></b></div>`; }).join('')
+  const 과제줄 = a => { const 지남 = a.dueDate && a.dueDate < 오늘;
+    return `<div class="sd-crow"><span>${escHtml(a.title)}</span><b>${a.dueDate ? escHtml(a.dueDate.slice(5)) + ' ' : ''}<span class="badge ${지남 ? 'no' : 'late'}">${지남 ? '미제출' : '마감 전'}</span></b></div>`; };
+  const 과제 = `<div class="cd-cap">미완료 전체 <b>${남은.length}</b>건</div>`
+    + (남은.length ? 남은.slice(0, 5).map(과제줄).join('')
+      + (남은.length > 5 ? `<details><summary>더 보기 (${남은.length - 5}건)</summary>${남은.slice(5).map(과제줄).join('')}</details>` : '')
       : '<div class="cd-none">밀린 과제가 없습니다.</div>')
     + `<div class="cd-cap">오답 숙제 미제출 <b>${st.wrongLeft || 0}</b>${퀴즈.length ? ` · 데일리퀴즈 최근 ${퀴즈.length}문항 정답 <b>${Math.round(퀴즈.filter(e => e.ok).length / 퀴즈.length * 100)}%</b>` : ''}</div>`;
 
@@ -32545,17 +32562,17 @@ function icRepairEqSample(x){
 }
 async function icRepairEq(){
   if(state.icRepair && state.icRepair.running) return;
-  state.icRepair = { running:true, msg:'창고를 훑는 중…' }; render();
+  state.icRepair = Object.assign({}, state.icRepair, { running:true, msg:'창고를 훑는 중…' }); render();
   try{
     await loadItemStoreIfNeeded();
-    const 고칠것 = icRepairEqScan();
+    const 고칠것 = state.icRepair.ready ? state.icRepair.list : icRepairEqScan();
     if(!고칠것.length){
       state.icRepair = { running:false, ready:false, msg:'고칠 수식이 없습니다 — 창고가 지금 규칙과 같습니다.' };
       render(); return;
     }
     /* 첫 번째 누름 — 보여 주기만 한다. */
     if(!(state.icRepair && state.icRepair.ready)){
-      state.icRepair = { running:false, ready:true, n:고칠것.length,
+      state.icRepair = { running:false, ready:true, n:고칠것.length, list:고칠것,
         msg: `수식이 고쳐질 문항이 ${고칠것.length}개입니다 — ` + 고칠것.slice(0, 2).map(icRepairEqSample).join(' · ')
            + (고칠것.length > 2 ? ` … 외 ${고칠것.length - 2}개.` : '')
            + ' 다시 누르면 고칩니다.' };
@@ -35788,9 +35805,9 @@ function reviewActbarHTML(b, list){
    (문항을 고치다가 J를 치면 다음 문항으로 튀어 버린다). */
 document.addEventListener('keydown', e=>{
   if(state.teacherTab!=='review' || state.studentDetailId) return;
-  if(e.ctrlKey || e.metaKey || e.altKey) return;
+  if(e.isComposing || e.keyCode===229 || e.ctrlKey || e.metaKey || e.altKey) return;
   const t = e.target;
-  if(t && (t.tagName==='INPUT' || t.tagName==='TEXTAREA' || t.isContentEditable)) return;
+  if(t && (t.tagName==='INPUT' || t.tagName==='TEXTAREA' || t.tagName==='SELECT' || t.isContentEditable)) return;
   const k = e.key.toLowerCase();
   /* J=이전 · K=다음. 처음엔 vi식(J=아래)이었는데 쓰는 사람 손에 안 맞아 뒤집었다 (2026-08-10). */
   if(k==='j'){ e.preventDefault(); reviewMove(-1); }
