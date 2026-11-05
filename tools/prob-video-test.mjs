@@ -251,6 +251,51 @@ try{
     await page.screenshot({ path: path.join(SHOT, 'pv-hw.png'), fullPage: true });
   }
 
+  console.log('\n풀이 영상 신고 (11-06) — 추가 질문 길로 강사 대기에 선다');
+  const 신고 = await page.evaluate(async () => {
+    let 쓴것 = null, 울림 = '', 그림 = 0;
+    window.dbSetDoc = async (c, id, d) => { if(id.startsWith('qf')) 쓴것 = JSON.parse(JSON.stringify(d)); return true; };
+    window.pushPing = (k, m) => { 울림 = m; };
+    const q = { id: 'qnR', studentId: 's0', studentName: '김민아', question: '문제 3번', book: '주기나 1-1', num: 3, date: todayStr(), answer: null,
+      pv: { url: 'https://youtu.be/BBBBBBBBBBB', from: 100, to: 200, entryId: 'e2', code: '' } };
+    DATA.qnas.unshift(q); state.view = 'student'; state.studentTab = 'qna'; state.stuPvOpen = null; state.stuQnaWriting = false; render();
+    const 닫힘 = !!document.querySelector('.pvr');
+    state.stuPvOpen = q.id; render();
+    const 칸 = document.querySelector('.pvr');
+    await pvReportSend(q.id);
+    const 빈말 = __말, 안보냄 = 쓴것 === null;
+    state.ytPlayers = { ['pv-' + q.id]: { player: { getCurrentTime: () => 150.7 } } };
+    const 라디오 = 칸.querySelector('input[value="extra"]');
+    const 원래 = window.render; window.render = (...a) => { 그림++; return 원래(...a); };
+    라디오.checked = true; 라디오.dispatchEvent(new Event('change', { bubbles: true }));
+    const 고를때그림 = 그림;
+    window.render = 원래;
+    document.getElementById('pvr-note-' + q.id).value = '끝에 5번 얘기';
+    await pvReportSend(q.id);
+    const 보낸뒤 = { 단추: !!document.querySelector('.pvr'), 상태: /영상 신고를 보냈어요/.test(document.getElementById('app').innerHTML), 말: __말 };
+    const 강사대기 = [qnaHasOpen(q), qnaOpenWord(q)];
+    state.ytPlayers = null;
+    state.view = 'teacher'; state.currentUser = { type: 'teacher' }; state.teacherTab = 'qna'; state.qnaFilter = 'open'; state.qnaSelectedId = q.id; render();
+    const 강사 = document.getElementById('app').innerHTML;
+    const 강사화면 = { 말풍선: 강사.includes('[영상 신고]'), 자리: 강사.includes('youtu.be/BBBBBBBBBBB?t=150'), 머리: /영상 신고에 답할 차례/.test(강사) };
+    DATA.qnaFollowups.find(f => f.parentId === q.id).answer = '확인했어요';
+    const 답뒤 = [qnaHasOpen(q), qnaOpenWord(q)];
+    state.view = 'student'; state.currentUser = { type: 'student', studentId: 's0', name: '김민아' }; state.studentTab = 'qna'; render();
+    return { 닫힘, 빈말, 안보냄, 고를때그림, 쓴것: { kind: 쓴것.kind, parentId: 쓴것.parentId, question: 쓴것.question, pvReport: 쓴것.pvReport },
+      울림, 보낸뒤, 강사대기, 강사화면, 답뒤, 다시단추: !!document.querySelector('.pvr') };
+  });
+  봄('영상을 안 열면 신고 칸도 없다', 신고.닫힘, false);
+  봄('고르지도 적지도 않으면 안 보내고 까닭을 말한다', [신고.안보냄, /고르거나/.test(신고.빈말)], [true, true]);
+  봄('🔴 고를 때 render 안 부른다 — 재생기가 안 멈춘다', 신고.고를때그림, 0);
+  봄('🔴 추가 질문 문서로 남는다 · 까닭·재생 자리·메모', 신고.쓴것, { kind: 'followup', parentId: 'qnR',
+    question: '[영상 신고] 앞이나 뒤에 다른 문제 이야기가 붙어 있어요 · 2:30 쯤 · 끝에 5번 얘기', pvReport: { why: 'extra', at: 150 } });
+  봄('선생님 폰이 울린다', /\[영상 신고\]/.test(신고.울림), true);
+  봄('🔴 보낸 뒤 단추 대신 «보냈어요» — 두 번 안 쌓인다', [신고.보낸뒤.단추, 신고.보낸뒤.상태], [false, true]);
+  봄('🔴 풀이 영상으로 끝난 질문이 강사 대기로 돌아온다 · 까닭이 보인다', 신고.강사대기, [true, '영상 신고']);
+  봄('강사 화면 — 신고 글 · 신고한 자리 링크 · 머리 말', 신고.강사화면, { 말풍선: true, 자리: true, 머리: true });
+  봄('강사가 답하면 닫힌다', 신고.답뒤[0], false);
+  봄('닫히면 다시 신고할 수 있다(영상이 열려 있을 때)', 신고.다시단추, true);
+
   console.log('\n🔴 마감이 지나면 못 본다 (다 본 학생도 · 복습용도)');
   const 잠금 = await page.evaluate(() => {
     const v2 = DATA.videos.find(v => v.id === 'v2');            // 씨앗: 마감 이틀 전
