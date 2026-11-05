@@ -296,6 +296,62 @@ try{
   봄('강사가 답하면 닫힌다', 신고.답뒤[0], false);
   봄('닫히면 다시 신고할 수 있다(영상이 열려 있을 때)', 신고.다시단추, true);
 
+  console.log('\n풀이 영상 구간 고치기 (11-06) — 목차와 이미 보낸 질문을 같이');
+  const 고침 = await page.evaluate(async () => {
+    const 영상 = 'https://youtu.be/CCCCCCCCCCC', 쓴문서 = [];
+    let 목차 = { entries: [
+      { id: 'a1', url: 영상, book: '주기나 1-1', items: [{ n: 10, from: 300, to: 400, code: 'K-1' }, { n: 11, from: 400, to: 500 }] },
+      { id: 'a2', url: 'https://youtu.be/DDDDDDDDDDD', book: '주기나 1-1', items: [{ n: 10, from: 300, to: 400 }] },
+    ] };
+    let 저장함 = 0, 실패할문서 = '';
+    window.dbGet = async () => JSON.parse(JSON.stringify(목차));
+    window.dbSet = async (k, v) => { 저장함++; 목차 = v; return true; };
+    window.dbSetDoc = async (c, id, d) => { if(id === 실패할문서) return false; 쓴문서.push(id); return true; };
+    window.logAudit = async () => {};
+    const 질문 = (id, url, from, to) => ({ id, studentId: 's0', studentName: '김민아', question: id, book: '주기나 1-1', num: 10, date: todayStr(), answer: null,
+      pv: { url, from, to, entryId: 'a1', code: 'K-1' } });
+    const q1 = 질문('fx1', 영상, 300, 400), q2 = 질문('fx2', 영상, 300, 400), 다른영상 = 질문('fx3', 'https://youtu.be/DDDDDDDDDDD', 300, 400), 다른구간 = 질문('fx4', 영상, 400, 500);
+    DATA.qnas.unshift(q1, q2, 다른영상, 다른구간);
+    state.view = 'teacher'; state.currentUser = { type: 'teacher' }; state.teacherTab = 'qna'; state.qnaFilter = 'all'; state.qnaSelectedId = 'fx1'; render();
+    const 칸있음 = [document.getElementById('pvf-from-fx1').value, document.getElementById('pvf-to-fx1').value];
+    const 넣기 = (a, b) => { document.getElementById('pvf-from-fx1').value = a; document.getElementById('pvf-to-fx1').value = b; };
+    넣기('엉터리', ''); await pvFixRange('fx1'); const 꼴말 = __말;
+    넣기('6:00', '5:00'); await pvFixRange('fx1'); const 앞뒤말 = __말;
+    const 안씀 = 저장함 === 0 && 쓴문서.length === 0;
+    넣기('5:10', '6:20'); await pvFixRange('fx1');
+    const 결과 = { q1: [q1.pv.from, q1.pv.to], q2: [q2.pv.from, q2.pv.to], 코드: q1.pv.code, 다른영상: [다른영상.pv.from, 다른영상.pv.to], 다른구간: [다른구간.pv.from, 다른구간.pv.to],
+      목차: 목차.entries[0].items.map(x => [x.from, x.to, x.code || '']), 다른목차: 목차.entries[1].items[0].from, 쓴문서: 쓴문서.slice().sort(), 말: __말,
+      새찾기: pvFindCode(state.probVideos, 'K-1').from };
+    state.qnaSelectedId = 'fx1'; render();
+    const 끝값 = document.getElementById('pvf-from-fx1').value;
+    /* 끝을 비우면 영상 끝까지 */
+    document.getElementById('pvf-to-fx1').value = ''; await pvFixRange('fx1');
+    const 끝까지 = q1.pv.to;
+    /* 한 건 저장 실패 — 그 질문은 옛 구간으로 돌아오고 말해 준다 */
+    q1.pv = { ...q1.pv, from: 310, to: 380 }; q2.pv = { ...q2.pv, from: 310, to: 380 }; 목차.entries[0].items[0] = { n: 10, from: 310, to: 380 };
+    state.qnaSelectedId = 'fx1'; render();
+    실패할문서 = 'fx2'; 넣기('5:20', '6:00'); await pvFixRange('fx1');
+    /* 목차를 못 읽으면 아무것도 안 쓴다 */
+    const 전 = 쓴문서.length; dbReadFailed.add('prob-videos');
+    const q2실패뒤 = q2.pv.from, 실패말 = __말;
+    await pvFixRange('fx1'); const 못읽음 = { 말: __말, 안씀: 쓴문서.length === 전 }; dbReadFailed.delete('prob-videos');
+    state.view = 'student'; state.currentUser = { type: 'student', studentId: 's0', name: '김민아' }; state.studentTab = 'qna'; render();
+    return { 칸있음, 꼴말, 앞뒤말, 안씀, 결과, 끝값, 끝까지, q2실패뒤, 실패말, 못읽음 };
+  });
+  봄('고치기 칸에 지금 구간이 들어 있다', 고침.칸있음, ['5:00', '6:40']);
+  봄('🔴 틀린 시간은 안 쓰고 까닭을 말한다', [/6:24/.test(고침.꼴말), /뒤여야/.test(고침.앞뒤말), 고침.안씀], [true, true, true]);
+  봄('🔴 이미 보낸 질문 둘 다 고쳐진다 · 코드는 그대로', [고침.결과.q1, 고침.결과.q2, 고침.결과.코드], [[310, 380], [310, 380], 'K-1']);
+  봄('🔴 다른 영상의 같은 시각 · 같은 영상의 다른 구간은 안 건드린다', [고침.결과.다른영상, 고침.결과.다른구간], [[300, 400], [400, 500]]);
+  봄('🔴 목차 그 문항만 고친다 — 앞으로 나갈 구간', 고침.결과.목차, [[310, 380, 'K-1'], [400, 500, '']]);
+  봄('다른 영상 목차는 그대로', 고침.결과.다른목차, 300);
+  봄('바뀐 문서만 쓴다', 고침.결과.쓴문서, ['fx1', 'fx2']);
+  봄('이 기기의 목차도 새것 — 오답숙제가 새 구간을 찾는다', 고침.결과.새찾기, 310);
+  봄('말이 건수를 알려 준다', /질문 2건 · 앞으로 나갈 목차까지/.test(고침.결과.말), true);
+  봄('다시 그리면 칸이 새 값', 고침.끝값, '5:10');
+  봄('끝을 비우면 영상 끝까지(to 0)', 고침.끝까지, 0);
+  봄('🔴 질문 저장이 실패하면 그 질문은 옛 구간으로 돌아오고 말해 준다', [고침.q2실패뒤, /1건을 저장하지 못했습니다/.test(고침.실패말)], [310, true]);
+  봄('🔴 목차를 못 읽으면 아무것도 안 쓴다', 고침.못읽음, { 말: '목차를 읽지 못했습니다 — 다시 눌러 주세요.', 안씀: true });
+
   console.log('\n🔴 마감이 지나면 못 본다 (다 본 학생도 · 복습용도)');
   const 잠금 = await page.evaluate(() => {
     const v2 = DATA.videos.find(v => v.id === 'v2');            // 씨앗: 마감 이틀 전
