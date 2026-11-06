@@ -1508,8 +1508,9 @@
   .app:not(.sap) .rv-qn.go{display:none;}
   .app:not(.sap) .rv-qn{flex:none;white-space:nowrap;padding:7px 12px;border-radius:var(--r-pill);
     border:1px solid var(--line);background:var(--card);}
-  .app:not(.sap) .rv-qn.on{border-color:var(--accent-line);}
   .app:not(.sap) .rv-qn.rv-sub{font-size:12px;padding:6px 10px;background:var(--sunk);}
+  /* 위 두 줄이 배경을 덮으므로 선택 칩은 그 뒤에서 되살린다 (11-07) */
+  .app:not(.sap) .rv-qn.on{border-color:var(--accent-line);background:var(--accent-bg);}
   /* 칩 안에서는 개수가 «왼쪽 끝으로 밀 여백»을 못 쓴다 — 이름 바로 뒤에 붙인다. */
   .app:not(.sap) .rv-qn b{margin-left:0;}
 }
@@ -8032,6 +8033,16 @@ async function applyTwinToBank(b, twin){
 }
 /* 변형 그림 하나를 치운다 — 드라이브 파일 · kv 문서 · 캐시 · 플래그.
    problembank 저장은 여기서 하지 않는다. 부르는 쪽이 다른 변경과 함께 한 번에 저장한다. */
+/* 새 그림을 저장한 «뒤에» 옛 파일을 지운다 (11-07) — 먼저 지우면 실패할 때 그림이 아예 없어진다. */
+async function putVariantFigure(b, img){
+  const 옛것 = b.hasVariantImage ? await dbGet('pbvimg:'+b.id, null) : null;
+  if(await dbSet('pbvimg:'+b.id, img) !== true) throw new Error('그림 저장 실패');
+  const 있었나 = !!b.hasVariantImage;
+  b.hasVariantImage = true;
+  if(await dbSetDoc('problembank', b.id, b) !== true){ b.hasVariantImage = 있었나; throw new Error('문항 저장 실패'); }
+  state.pbImageCache[pbImgCacheKey(b.id, 'var')] = img;
+  deleteFromDrive(imgFileIdOf(옛것));            // 결과를 기다리지 않는다
+}
 async function dropVariantFigure(b){
   const img = await dbGet('pbvimg:'+b.id, null);
   deleteFromDrive(imgFileIdOf(img));            // 결과를 기다리지 않는다
@@ -24431,11 +24442,18 @@ async function saveClassProg(classId, date, quiet){
     /* 과목도 함께 적어 둔다 — 나중에 과목을 바꿔도 «그때 무슨 과목이었나»가 남는다. */
     map[date] = { book: book, detail: detail, subject: getClassProgress(classId).subject || '', at: new Date().toISOString() };
   } else delete map[date];
+  /* 저장이 된 뒤에만 초안을 지운다 (11-07) — 실패해도 적은 글이 남아야 다시 누를 수 있다. false 면 단계 이동도 멈춘다. */
+  if(await dbSet('classprog:' + classId, map) !== true){
+    showToast('진도를 저장하지 못했습니다 — 적은 내용은 남아 있습니다. 다시 저장해 주세요.');
+    return false;
+  }
   state.classProgLogs[classId] = map;
-  state.classProgDraft = null;
-  await dbSet('classprog:' + classId, map);
+  const d = state.classProgDraft;   // 저장하는 사이에 더 적었으면 그 초안은 둔다
+  if(d && d.key === classProgKey(classId, date) && String(d.book || '').trim() === book && String(d.detail || '').trim() === detail)
+    state.classProgDraft = null;
   if(!quiet) showToast(book || detail ? '진도를 저장했습니다.' : '그날 진도를 비웠습니다.');
   render();
+  return true;
 }
 /* 🔴 **단계를 옮기거나 반·날짜를 바꿀 때 «저절로» 저장한다.**
    진도 단계가 하는 약속은 「체크하면 바로 저장됩니다」인데, 글칸만 단추를 기다리면
@@ -24451,16 +24469,16 @@ async function sessionAutoSaveProg(){
   const saved = classProgSaved(classId, date) || { book:'', detail:'' };
   if(String(saved.book || '') === String(d.book || '').trim()
   && String(saved.detail || '') === String(d.detail || '').trim()){ state.classProgDraft = null; return; }
-  await saveClassProg(classId, date, true);
+  return saveClassProg(classId, date, true);
 }
 async function removeClassProgEntry(classId, date){
   const map = Object.assign({}, state.classProgLogs[classId] || {});
   if(!map[date]) return;
   delete map[date];
+  if(await dbSet('classprog:' + classId, map) !== true){ showToast('진도를 빼지 못했습니다. 다시 시도해 주세요.'); return; }
   state.classProgLogs[classId] = map;
   if(state.classProgDraft && state.classProgDraft.key === classProgKey(classId, date)) state.classProgDraft = null;
   if(state.classProgEditDate === date) state.classProgEditDate = '';
-  await dbSet('classprog:' + classId, map);
   await logAudit('진도 삭제', '', '', classNameOf(classId) + ' · ' + date);
   showToast('그날 진도를 뺐습니다.');
   render();
@@ -24621,9 +24639,10 @@ async function sessionAutoSave(){
   await sessionAutoSaveAtt();
   await sessionAutoSaveScores();
   /* 진도 글칸도 함께 (P-1) — 적고 「시험으로」를 눌렀을 때 조용히 사라지면 안 된다. */
-  await sessionAutoSaveProg();
+  const 진도 = await sessionAutoSaveProg();
   await sessionAutoSaveMemo();
-  return await sessionAutoSaveHw();
+  const 과제 = await sessionAutoSaveHw();
+  return 진도 !== false && 과제;
 }
 async function goSessionDate(delta){
   if(!(await sessionAutoSave())) return;
@@ -31910,11 +31929,14 @@ async function bookReqAccept(code){
 }
 /* =============== 학생이 «세워 달라»고 부른 시험지 문항 (2026-09-13 · K-19) ===============
    `submitWrongAnswers` 가 제 기록(`rec.bankAsks`)에 적어 둔 것을 모은다. 모양은 교재 요청과 같다.
-   🔵 **이미 줄이 선 것은 저절로 빠진다** — 다른 길로 세워졌으면 더 물을 것이 없다. */
+   🔵 **숙제를 받은 학생의 부름은 저절로 빠진다** (11-07) — 줄만 보면 일부 저장이 실패한 학생이 목록에서 사라져 다시 세울 수 없었다. */
 function bankAskPending(){
   const 모음 = {};
   for(const sid in (state.allRecords || {})){
-    for(const a of bankAsksOf(state.allRecords[sid])){
+    const rec = state.allRecords[sid];
+    for(const a of bankAsksOf(rec)){
+      const 줄 = findBankEntry(a.examId, a.qkey);
+      if(줄 && (rec.wrongHomework || []).some(h => h.bankId === 줄.id)) continue;
       const k = a.examId + '|' + a.qkey;
       const g = 모음[k] || (모음[k] = { examId: a.examId, qkey: a.qkey, who: [], at: a.at });
       g.who.push(sid);
@@ -31922,7 +31944,6 @@ function bankAskPending(){
     }
   }
   return Object.values(모음)
-    .filter(g => !findBankEntry(g.examId, g.qkey))
     .sort((a, b) => String(a.at).localeCompare(String(b.at)));
 }
 function bankAskLabelOf(g){
@@ -31966,13 +31987,17 @@ async function bankAskAccept(examId, qkey){
     const rec = await loadRecord(sid);
     if(!rec){ 못한이++; continue; }
     if(!rec.wrongHomework) rec.wrongHomework = [];
+    const 옛숙제 = rec.wrongHomework.slice(), 옛부름 = rec.bankAsks;
     if(!rec.wrongHomework.some(h => h.bankId === bank.id)){
       rec.wrongHomework.push({ bankId: bank.id, examId: bank.examId, questionNo: bank.questionNo,
         qkey: bank.qkey, qlabel: bank.qlabel, qtype: bank.qtype,
         assignedAt: todayStr(), done: false, studentAnswer: '' });
     }
     rec.bankAsks = bankAsksOf(rec).filter(a => !(a.examId === examId && a.qkey === qkey));
-    if(await saveRecordAsTeacher(sid) !== true){ 못한이++; continue; }
+    if(await saveRecordAsTeacher(sid) !== true){
+      rec.wrongHomework = 옛숙제; rec.bankAsks = 옛부름;   // 메모리도 되돌린다 — 안 그러면 다시 세울 부름이 없어진다
+      못한이++; continue;
+    }
     붙임++;
   }
   await logAudit('오답 문항 세우기', '', '', bankAskLabelOf(부름) + ' · ' + 붙임 + '명');
@@ -33772,14 +33797,10 @@ async function acceptFigureDraft(bankId){
   state.figureUploading = bankId;
   render();
   try{
-    if(b.hasVariantImage) await dropVariantFigure(b);
     /* 🔴 저장 직전에 장면에서 «새로» 그린다 — 편집기가 보여 주던 것은 잡기 상자가 든 편집용이다.
        핀은 장면 안(scene.pins)에 있으니 같은 그림이 나온다. */
     const doc = { kind:'svg', svg:Figure.renderScene(d.scene), scene:d.scene, at:new Date().toISOString() };
-    await dbSet('pbvimg:'+bankId, doc);
-    state.pbImageCache[pbImgCacheKey(bankId, 'var')] = doc;
-    b.hasVariantImage = true;
-    await dbSetDoc('problembank', b.id, b);
+    await putVariantFigure(b, doc);
     /* 손으로 올릴 때와 같은 이유로 큐를 문항 따라 옮긴다 — 붙인 사람이 빈 큐를 마주하면 안 된다. */
     followBankToQueue(b);
     state.figureDraft = null; state.figureSel = null; state.figureElSel = null;
@@ -34386,12 +34407,9 @@ async function uploadVariantFigure(bankId, fileList){
   state.figureUploading = bankId;
   render();
   try{
-    if(b.hasVariantImage) await dropVariantFigure(b);   // 갈아끼우는 것이면 옛것을 먼저 치운다
     const img = await uploadImageToDrive(file);
-    await dbSet('pbvimg:'+bankId, img);
-    state.pbImageCache[pbImgCacheKey(bankId, 'var')] = img;
-    b.hasVariantImage = true;
-    await dbSetDoc('problembank', b.id, b);
+    try{ await putVariantFigure(b, img); }
+    catch(e){ deleteFromDrive(imgFileIdOf(img)); throw e; }   // 못 붙인 새 파일은 남기지 않는다
     /* 그림이 붙는 순간 이 문항은 「그림 필요」 큐에서 빠진다. 그대로 두면 방금 올린 사람이
        빈 큐를 마주한다 — 올린 그림을 보고 공개까지 이어서 해야 하므로 문항을 따라 큐를 옮긴다. */
     followBankToQueue(b);
@@ -35233,8 +35251,9 @@ function reviewSubCounts(){
 /* 검토 대기에 쌓인 것을 한꺼번에 본다. 이미 판정이 있는 것은 건너뛴다 —
    한도가 하루 60건이라 같은 문항을 두 번 태우면 안 된다. */
 async function reviewAllPending(셋째, 밤){   // 밤 — 새벽 돌리기(nightRun): 묻지 않고, 센 것을 돌려준다
-  const 할것 = 셋째 ? pendingVariants().filter(reviewNeedsThird)
-                    : pendingVariants().filter(v => !v.aiReview && dqAnswerable(v.content, v.answer));
+  const 후보 = 밤 ? pendingVariants() : reviewAutos();   // 단추의 숫자와 같은 칸만 — 새벽 돌리기만 전체
+  const 할것 = 셋째 ? 후보.filter(reviewNeedsThird)
+                    : 후보.filter(v => !v.aiReview && dqAnswerable(v.content, v.answer));
   if(!할것.length){ showToast('새로 검토할 것이 없습니다.'); return; }
   const used = await getReviewQuotaUsed();
   state.reviewQuotaUsed = used;
@@ -35537,7 +35556,7 @@ function agreedAll(autos){
 function agreedPassable(autos){ return agreedAll(autos).filter(v => !variantHasFigure(v)); }
 function agreedWithFigure(autos){ return agreedAll(autos).filter(v => variantHasFigure(v)); }
 async function approveAgreedVariants(){
-  const 대상 = agreedPassable(pendingVariants());
+  const 대상 = agreedPassable(reviewAutos());   // 단추의 숫자와 같은 칸만
   if(!대상.length || state.bulkPassing) return;
   const NL = String.fromCharCode(10);
   if(!confirm('AI 일치 ' + 대상.length + '개를 통과시켜 창고에 넣습니다 — 바로 학생에게 나갑니다.' + NL

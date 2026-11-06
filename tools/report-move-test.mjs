@@ -206,7 +206,7 @@ console.log(NL + '③ 문항 줄이 없는 오답 — 학생은 «부르고», �
 
   /* 강사 쪽 — 모으기 */
   const DATA = { exams: [{ id: 'e1', title: '9월 모의고사' }],
-                 problemBank: [{ examId: 'e1', qkey: 'B-3' }] };
+                 problemBank: [{ id: 'pb3', examId: 'e1', qkey: 'B-3' }, { id: 'pb9', examId: 'e1', qkey: 'B-9' }] };
   /* 🔴 **두 잣대가 «갈리는» 본보기라야 한다** (이 판에서 여러 번 물렸다).
      오래 기다린 줄(0-7)은 **사람이 하나**, 늦게 부른 줄(0-3)은 **둘**이다 —
      사람 수로 세우면 순서가 뒤집힌다. 그리고 0-3 은 **나중 날을 나중에** 만난다(s1=11일, s2=12일)
@@ -214,7 +214,8 @@ console.log(NL + '③ 문항 줄이 없는 오답 — 학생은 «부르고», �
      ⚠ 반대로 두면(s1=12일, s2=11일) 덮어쓰는 판도 11일이 나와 **덫이 안 문다**(실제로 안 물었다). */
   const state = { allRecords: {
     s1: { bankAsks: [{ examId: 'e1', qkey: '0-3', at: '2026-09-11' },
-                     { examId: 'e1', qkey: 'B-3', at: '2026-09-12' }] },
+                     { examId: 'e1', qkey: 'B-3', at: '2026-09-12' }],
+          wrongHomework: [{ bankId: 'pb3' }] },
     s2: { bankAsks: [{ examId: 'e1', qkey: '0-3', at: '2026-09-12' }] },
     s3: { bankAsks: [{ examId: 'e1', qkey: '0-7', at: '2026-09-10' }] } } };
   const P = new Function('state', 'DATA',
@@ -225,7 +226,10 @@ console.log(NL + '③ 문항 줄이 없는 오답 — 학생은 «부르고», �
   봄('🔴 같은 번호를 부른 사람을 한 줄로 모은다',
     부름.map(g => [g.qkey, g.who.length]), [['0-7', 1], ['0-3', 2]]);
   봄('🔴 오래 기다린 것이 위로 (사람 수가 아니라 «언제»다)', 부름.map(g => g.qkey), ['0-7', '0-3']);
-  봄('🔴 이미 줄이 선 것은 저절로 빠진다 (B-3)', 부름.some(g => g.qkey === 'B-3'), false);
+  봄('🔴 숙제를 받은 학생의 부름은 저절로 빠진다 (B-3)', 부름.some(g => g.qkey === 'B-3'), false);
+  state.allRecords.s4 = { bankAsks: [{ examId: 'e1', qkey: 'B-9', at: '2026-09-13' }] };
+  봄('🔴 줄이 있어도 숙제가 안 붙었으면 남는다 (11-07)', P.bankAskPending().map(g => g.qkey), ['0-7', '0-3', 'B-9']);
+  delete state.allRecords.s4;
   봄('🔴 제일 먼저 부른 날을 남긴다 (나중 날을 먼저 만나도)', 부름.map(g => g.at), ['2026-09-10', '2026-09-11']);
   봄('🔴 형이 있으면 이름에 형을 적는다', P.bankAskLabelOf({ examId: 'e1', qkey: 'B-15' }), '9월 모의고사 · TYPE B 15번');
   봄('형이 하나뿐이면 번호만', P.bankAskLabelOf({ examId: 'e1', qkey: '0-15' }), '9월 모의고사 · 15번');

@@ -60,7 +60,7 @@ function 판(opts){
     "function todayStr(){ return '2026-10-18'; }" + NL + 'function classSeasonTag(){ return null; }' + NL + lift('bookWithSeason') + NL + 이름들.map(lift).join(NL) + NL + 'return {' + 이름들.join(',') + '};')(
     DATA, state,
     { getElementById: (id) => (id in 칸) ? { value: 칸[id] } : null },
-    async (k, v) => 쓴것.push({ 문서:k, 값: JSON.parse(JSON.stringify(v)) }),
+    async (k, v) => { if(o.저장실패) return null; 쓴것.push({ 문서:k, 값: JSON.parse(JSON.stringify(v)) }); return true; },
     async (col, id, doc) => 쓴것.push({ 컬렉션:col, id, doc: JSON.parse(JSON.stringify(doc)) }),
     async (a,b,c,d) => 기록.push(a + ' · ' + d),
     (m) => 말.push(m),
@@ -74,6 +74,22 @@ function 판(opts){
   return { F, DATA, state, 쓴것, 기록, 말 };
 }
 
+console.log(NL + '── 저장 실패 (11-07) ──');
+{
+  const { F, state, 말 } = 판({ 저장실패:true, 칸:{ 'prog-detail':'p.45' } });
+  F.classProgInput('c1','2026-09-12','book','쎈');
+  봄('실패하면 false', await F.saveClassProg('c1','2026-09-12'), false);
+  봄('초안이 남는다', state.classProgDraft && state.classProgDraft.detail, 'p.45');
+  봄('일지에 안 얹는다', Object.keys(state.classProgLogs.c1), []);
+  봄('성공이라 말하지 않는다', 말.some(m => m.includes('저장했습니다')), false);
+  state.classProgDraft = { key:F.classProgKey('c1','2026-09-12'), book:'쎈', detail:'p.45' };
+  봄('자동 저장도 false 를 돌려준다 (단계 이동이 멈춘다)', await F.sessionAutoSaveProg(), false);
+}
+{
+  const { F, state } = 판({ 저장실패:true, logs:{ c1:{ '2026-09-10':{ book:'쎈', detail:'p.1' } } } });
+  await F.removeClassProgEntry('c1','2026-09-10');
+  봄('빼기가 실패하면 그대로 있다', Object.keys(state.classProgLogs.c1), ['2026-09-10']);
+}
 console.log(NL + '── 저장과 지우기 ──');
 {
   const { F, state, 쓴것, 말 } = 판({ 칸:{ 'prog-detail':'쎈 p.45~62 · 3단원 예제 전부' } });
