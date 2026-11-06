@@ -80,7 +80,10 @@ function 판(opts){
       if(!DATA_records[sid].attendance) DATA_records[sid].attendance = [];
       return DATA_records[sid];
     },
-    async (sid) => { 서버[sid] = JSON.parse(JSON.stringify(DATA_records[sid])); return true; },
+    async (sid) => {
+      if((o.막힘 || []).includes(sid)) return null;   // dbSet 실패와 같은 값
+      서버[sid] = JSON.parse(JSON.stringify(DATA_records[sid])); return true;
+    },
     async (a,b,c,d) => 장부.push(a + '|' + b + '|' + d),
     (m) => 말.push(m),
     () => {},
@@ -173,6 +176,34 @@ console.log(NL + '── 고친 뒤에도 지켜야 할 것 ──');
   봄('같은 날 두 반이 나란히 산다', 그날.length, 2);
   봄('특강 줄은 안 건드린다', 그날.find(a=>a.classId==='특강').status, '출석');
   봄('정규 줄만 바뀐다', 그날.find(a=>a.classId===CID).status, '지각');
+}
+
+console.log(NL + '── 🔴 저장이 실패하면 입력을 잃지 않는다 (11-07) ──');
+{
+  const { F, state, 서버, DATA_records } = 판({ 막힘:['new1'] });
+  F.ensureAttDraft(CID, DATE);
+  F.setAttStatus('old1','출석');
+  F.setAttStatus('new1','지각');
+  const 결과 = await F.saveClassAttendance(CID, DATE);
+  봄('한 명이라도 못 쓰면 false 다 (단계를 안 옮긴다)', 결과, false);
+  봄('된 학생은 서버에 남는다', !!서버.old1.attendance.find(a=>a.date===DATE), true);
+  봄('못 쓴 학생 초안은 그대로다', (state.attDraft.new1||{}).status, '지각');
+  봄('못 쓴 학생 메모리는 되돌린다', DATA_records.new1.attendance.length, 0);
+  봄('못 쓴 학생은 안 넣은 변경으로 남는다', F.sessionUnsavedCount(CID, DATE), 1);
+}
+console.log(NL + '── 바뀐 학생만 쓴다 (11-07) ──');
+{
+  const { F, 장부 } = 판();
+  F.ensureAttDraft(CID, DATE);
+  F.setAttStatus('old1','출석');
+  F.setAttStatus('new1','지각');
+  await F.saveClassAttendance(CID, DATE);
+  const 처음 = 장부.length;
+  await F.saveClassAttendance(CID, DATE);
+  봄('그대로 다시 저장하면 이력이 안 는다', 장부.length, 처음);
+  F.setAttStatus('new1','결석');
+  await F.saveClassAttendance(CID, DATE);
+  봄('바뀐 한 명만 이력이 는다', 장부.length, 처음 + 1);
 }
 
 console.log(NL + '── 「과제 검사로」가 «저절로» 저장하는가 (진짜로 불러 본다) ──');

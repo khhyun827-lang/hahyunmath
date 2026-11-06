@@ -70,4 +70,56 @@ const noop = () => {};
   const bad = await run(null, true);
   assert.deepEqual(bad.차례, ['set']); assert.ok(bad.던짐); assert.ok(bad.b.hasVariantImage);
 }
+/* ④ 잠금 — 같은 대상은 한 번만, 다른 대상은 따로, 끝나면 풀린다 */
+{
+  const 잠금 = new Function('return ' + lift('잠금'))();
+  let 돈 = 0, 풀기;
+  const f = 잠금(async () => { 돈++; await new Promise(r => { 풀기 = r; }); return 'ok'; }, a => a);
+  const 첫 = f('x'); await f('x');
+  assert.equal(돈, 1, '두 번째는 버린다');
+  const 딴 = f('y'); assert.equal(돈, 2, '다른 대상은 돈다');
+  풀기(); await 딴; await new Promise(r => setTimeout(r));
+  const g = 잠금(async () => { throw new Error('x'); });
+  await g().catch(() => {}); await g().catch(e => assert.equal(e.message, 'x', '실패해도 풀린다'));
+  void 첫;
+}
+/* ⑤ N01·N02 묶어 검토 — 같은 원본 둘만 한 번에 · retry 는 한 건으로 · 헛묶음이면 그날은 안 묶는다 · 옛 워커는 안 묶는다 */
+{
+  const run = async (vs, 답, 워커판, 남은 = 60) => {
+    const 보낸 = [], 저장 = {};
+    const state = { reviewQueue:'pending' };
+    const pend = () => vs;
+    const F = box(['reviewPairsOf','reviewPairOne','reviewVariantOne','reviewAllPending'],
+      ['state','pendingVariants','reviewAutos','reviewNeedsThird','dqAnswerable','getReviewQuotaUsed','REVIEW_DAILY_LIMIT','showToast','render',
+       'workerVersion','REVIEW_PAIR_WORKER_MIN','askReview','dbSetDoc','nowStamp','splitItemCode','reviewThirdOne'],
+      [state, pend, pend, ()=>false, ()=>true, async()=>60-남은, 60, noop, noop, async()=>워커판, '2026-11-07a',
+       async (c, a, 더) => { 보낸.push(더 ? 더.pair.map(p=>p.content) : c); return 답(더, c); },
+       async (col, id, d) => { 저장[id] = d.aiReview; return true; }, ()=>'n',
+       c => ({ origin:c.slice(0,1) }), async()=>null]);
+    const p = await F.reviewAllPending(false, true);
+    return { 보낸, 저장, p, state };
+  };
+  const V = () => [{code:'A1',content:'a1',answer:'1'},{code:'A2',content:'a2',answer:'1'},{code:'B1',content:'b1',answer:'1'}];
+  const 일치 = { verdict:'agree', answer:'1', models:['m'] };
+  let r = await run(V(), 더 => 더 ? { results:[일치, 일치] } : 일치, '2026-11-07a');
+  assert.deepEqual(r.보낸, [['a1','a2'],'b1'], '같은 원본 둘만 묶는다');
+  assert.equal(r.p.done, 3); assert.equal(r.저장.A2.verdict, 'agree');
+  assert.equal(r.state.reviewQuotaUsed, 2, '셋을 한도 둘로');
+  r = await run(V(), 더 => 더 ? { results:[일치, { retry:true }] } : { verdict:'suspect', answer:'2', models:['m','n'] }, '2026-11-07a');
+  assert.deepEqual(r.보낸, [['a1','a2'],'a2','b1'], 'retry 만 한 건으로');
+  assert.equal(r.저장.A1.verdict, 'agree'); assert.equal(r.저장.A2.verdict, 'suspect'); assert.equal(r.p.갈림, 2);
+  const 넷 = () => V().concat([{code:'B2',content:'b2',answer:'1'}]);
+  r = await run(넷(), 더 => 더 ? { results:[{retry:true},{retry:true}] } : 일치, '2026-11-07a');
+  assert.deepEqual(r.보낸, [['a1','a2'],'a1','a2','b1','b2'], '헛묶음 뒤에는 안 묶는다');
+  r = await run(V(), () => 일치, '2026-11-03b');
+  assert.deepEqual(r.보낸, ['a1','a2','b1'], '옛 워커는 안 묶는다');
+  r = await run(넷(), 더 => 더 ? { error:'quota', 말:'끝' } : 일치, '2026-11-07a');
+  assert.deepEqual(r.보낸, [['a1','a2']], '한도가 끝나면 멈춘다');
+  r = await run(넷(), 더 => 더 ? { results:[일치, 일치] } : 일치, '2026-11-07a', 1);
+  assert.equal(r.보낸.length, 1); assert.equal(r.p.done, 2, '남은 한도는 묶음 수로 센다');
+  /* 도는 사이 글이 바뀌면 묶음 판정도 버린다 */
+  const vs = V();
+  r = await run(vs, 더 => { vs[0].content = '고침'; return 더 ? { results:[일치, 일치] } : 일치; }, '2026-11-07a');
+  assert.equal(r.저장.A1, undefined); assert.equal(r.저장.A2.verdict, 'agree');
+}
 console.log('✓ admin-fix-1107');

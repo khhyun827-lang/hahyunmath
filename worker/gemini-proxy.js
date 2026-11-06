@@ -44,7 +44,7 @@ const TWIN_GROQ_MAX_TOKENS = 7000;   // 추론 + JSON. 검토(6000)보다 답이
 /* 🔴 «올렸는지 짐작하지 않는다» — 이 워커는 대시보드에 붙여넣어 올리므로 밖에서는 어느 판이 도는지
    알 길이 없었다(2026-09-11에 사용자가 올리고 「도는지 확인은 못 해봤어」). /quota 가 이 값을 같이
    돌려주고 tools/worker-check.mjs 가 저장소의 값과 견준다. **프롬프트나 규칙을 바꾸면 이 날짜를 올릴 것.** */
-const WORKER_VERSION = '2026-11-03b';   // 11-03b 숫자변형 두 개(count:2)·이미 있는 변형 피하기(avoid)
+const WORKER_VERSION = '2026-11-07a';   // 11-07a 같은 원본의 변형 둘을 검토 한 건으로(pair) · 11-03b 숫자변형 두 개(count:2)·이미 있는 변형 피하기(avoid)
 // 이미지 업로드는 학생도 쓴다(질의응답 사진). 비용이 드는 쪽은 Gemini라 여기는 넉넉하게,
 // 다만 «한 명이 무한히»는 막는다. 전체 상한은 걸지 않는다 — 걸면 바쁜 날 학생이 막힌다.
 const UPLOAD_PER_USER_DAILY = 200;
@@ -1811,6 +1811,15 @@ const REVIEW_PROMPT = [
   '객관식(①~⑤)이면 기호 하나만, 아니면 숫자만 적어라. 다른 말을 덧붙이지 마라.',
 ].join(String.fromCharCode(10));
 
+/* 🔵 **둘을 한 번에** (2026-11-07 · 사용자 — N01·N02 를 묶어 달라). 수가 다른 형제 문항이다 — 따로 풀라고 못 박는다. */
+const REVIEW_PAIR_PROMPT = [
+  '너는 고등학교 수학 문제를 푸는 사람이다. 아래 [문제 1]·[문제 2]는 서로 다른 문제다. 각각 처음부터 따로 풀어라.',
+  '풀이를 간단히 적은 뒤, 마지막 두 줄에 반드시 다음 꼴로만 답을 적어라:',
+  '정답1: <문제 1의 답>',
+  '정답2: <문제 2의 답>',
+  '객관식(①~⑤)이면 기호 하나만, 아니면 숫자만 적어라. 다른 말을 덧붙이지 마라.',
+].join(String.fromCharCode(10));
+
 const REVIEW_CIRCLES = ['①', '②', '③', '④', '⑤'];
 const RV_BS = String.fromCharCode(92);
 
@@ -1845,10 +1854,10 @@ function reviewAnswerKind(a) {
 }
 
 /* 모델이 낸 마지막 「정답:」 줄을 읽는다. */
-function reviewPickAnswer(text) {
+function reviewPickAnswer(text, 꼴) {
   const lines = String(text || '').split(String.fromCharCode(10)).map((s) => s.trim()).filter(Boolean);
   for (let i = lines.length - 1; i >= 0; i--) {
-    const m = lines[i].match(/정답\s*[:：]\s*(.+)$/);
+    const m = lines[i].match(꼴 || /정답\s*[:：]\s*(.+)$/);
     if (!m) continue;
     const s = m[1].replace(/[*`]/g, '').trim();
     const c = s.match(/[①②③④⑤]/); if (c) return c[0];
@@ -1904,7 +1913,7 @@ async function reviewReadStream(res) {
   }
   return { choices: [{ message: { content }, finish_reason: finish }], usage };
 }
-async function reviewSolve(m, content, env) {
+async function reviewSolve(m, content, env, 둘) {
   const api = REVIEW_API[m.via];
   let res;
   try {
@@ -1913,9 +1922,9 @@ async function reviewSolve(m, content, env) {
       headers: { Authorization: 'Bearer ' + env[api.key], 'Content-Type': 'application/json' },
       body: JSON.stringify({
         model: m.id,
-        max_tokens: api.max,
+        max_tokens: 둘 ? api.max * 2 : api.max,
         messages: [
-          { role: 'system', content: REVIEW_PROMPT },
+          { role: 'system', content: 둘 ? REVIEW_PAIR_PROMPT : REVIEW_PROMPT },
           { role: 'user', content },
         ],
         ...(m.via === 'nvidia' ? { stream: true, stream_options: { include_usage: true } } : {}),
@@ -1938,6 +1947,7 @@ async function reviewSolve(m, content, env) {
   }
   const ch = j.choices && j.choices[0];
   const body = (ch && ch.message && ch.message.content) || '';
+  if (둘) return { answers: [reviewPickAnswer(body, /정답\s*1\s*[:：]\s*(.+)$/), reviewPickAnswer(body, /정답\s*2\s*[:：]\s*(.+)$/)] };
   const answer = reviewPickAnswer(body);
   /* ⚠ 답이 없는데 finish_reason 이 length 면 «못 푼 것»이 아니라 «적기 전에 잘린 것»이다.
      그걸 틀림으로 세면 모델을 억울하게 깎고, 없는 불일치를 만든다. */
@@ -1981,6 +1991,26 @@ async function reviewTry(list, content, env, uid) {
   return { i: REVIEW_CHAIN.length, truncated, answered, trail };
 }
 
+/* 🔵 **둘을 한 번에 — 일치 확인만** (2026-11-07). 사슬 첫 모델에게 두 문항을 함께 풀려, 우리 답과 맞은 것만 agree 로 돌려준다.
+   맞지 않은 것·못 읽은 것은 `retry` — 화면이 그 문항만 평소 길(/review 한 건)로 다시 묻는다. 갈림 판정은 그 길 하나만 쓴다.
+   ⚠ Groq 는 4000 토큰이라 둘을 못 푼다 — 그래서 NVIDIA 만 쓴다. 쓸모없이 끝났으면(둘 다 retry) 하루치를 돌려준다.
+   ponytail: 일치율을 아직 안 쟀다 — 형제끼리 답이 끌려가면 review-local 로 재 보고 묶음을 끈다(REVIEW_PAIR_WORKER_MIN). */
+async function handleReviewPair(pair, env, uid, send) {
+  const 문 = pair.map((p) => ({ content: String((p && p.content) || '').trim(), stored: reviewAnswerKind(p && p.answer) }));
+  if (문.length !== 2 || 문.some((x) => !x.content || !x.stored)) {
+    await refundQuota(env, 'review', uid);
+    return send({ error: 'bad request', detail: '문항 둘과 «①~⑤ 또는 숫자» 정답이 있어야 검토합니다' }, 400);
+  }
+  const m = REVIEW_CHAIN[0], NL = String.fromCharCode(10);
+  const r = env[REVIEW_API[m.via].key]
+    ? await reviewSolve(m, '[문제 1]' + NL + 문[0].content + NL + NL + '[문제 2]' + NL + 문[1].content, env, true) : {};
+  const answers = r.answers || ['', ''];
+  const results = 문.map((x, i) => (reviewSameAnswer(answers[i], x.stored.v, x.stored.kind, x.content)
+    ? { verdict: 'agree', answer: answers[i], models: [m.id] } : { retry: true }));
+  if (results.every((x) => x.retry)) await refundQuota(env, 'review', uid);
+  return send({ results });
+}
+
 async function handleReview(request, env, corsHeaders, uid) {
   const send = (body, status) => new Response(JSON.stringify(body), {
     status: status || 200,
@@ -1994,6 +2024,7 @@ async function handleReview(request, env, corsHeaders, uid) {
 
   let body;
   try { body = await request.json(); } catch (e) { body = null; }
+  if (body && Array.isArray(body.pair)) return handleReviewPair(body.pair, env, uid, send);
   const content = body && String(body.content || '').trim();
   const stored = body && reviewAnswerKind(body.answer);
   if (!content || !stored) {

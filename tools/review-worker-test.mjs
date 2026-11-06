@@ -190,5 +190,29 @@ await 봄('셋째가 거절하면 upstream + 되돌림', [{ status: 429 }], 앞�
 await 봄('첫째만 풀었으면(skip 하나) 다음 칸부터', [{ 글: '정답: ②' }], { ...문항, skip: ['deepseek-ai/deepseek-v4.1-flash'], prior: ['④'] }, 'agree',
   () => 부른것[0] && 부른것[0].model !== 'openai/gpt-oss-120b' ? '다음 칸이 아니다: ' + 부른것[0].model : '', 둘다);
 
-console.log(흠 ? '🔴 ' + 흠 + '개 어긋남' : '통과 28개');
+// ⑭ 둘을 한 번에 (11-07) — 일치만 확정 · 나머지는 retry · 쓸모없었으면 되돌림 · 정답은 안 보낸다
+{
+  const 엔 = { NVIDIA_KEY: 'x', GROQ_KEY: 'x', QUOTA: null };
+  const 쌍 = { pair: [문항, 주관식] };
+  const 봄쌍 = async (이름, 답들, 바람, 되돌려야) => {
+    const { 판정 } = await 재기(답들, 쌍, 엔);
+    const 났다 = (판정.results || []).map((x) => x.verdict || 'retry').join(',');
+    if (났다 !== 바람) { 흠++; console.log('🔴 ' + 이름 + ' — 바란 것 ' + 바람 + ' · 나온 것 ' + 났다); }
+    if (되돌림 !== 되돌려야) { 흠++; console.log('🔴 ' + 이름 + ' — 되돌림 ' + 되돌림); }
+    if (부른것.length > 1) { 흠++; console.log('🔴 ' + 이름 + ' — 둘째 모델을 불렀다'); }
+  };
+  const NL = String.fromCharCode(10);
+  await 봄쌍('둘 다 맞음', [{ 글: '풀이' + NL + '정답1: ②' + NL + '정답2: 62' }], 'agree,agree', 0);
+  await 봄쌍('번호 꼴 「정답 1:」도 읽는다', [{ 글: '정답 1: 13' + NL + '정답 2 : 62' }], 'agree,agree', 0);
+  await 봄쌍('하나만 맞음 → 그것만 다시', [{ 글: '정답1: ④' + NL + '정답2: 62' }], 'retry,agree', 0);
+  await 봄쌍('둘 다 다름 → 되돌림', [{ 글: '정답1: ④' + NL + '정답2: 1' }], 'retry,retry', 1);
+  await 봄쌍('줄이 없으면 → 되돌림', [{ 글: '정답: ②' }], 'retry,retry', 1);
+  await 봄쌍('위쪽이 거절 → 되돌림 · Groq 안 부름', [{ status: 429 }], 'retry,retry', 1);
+  await 재기([{ 글: '정답1: ②' + NL + '정답2: 62' }], { pair: [{ content: '문제가', answer: '②' }, { content: '문제나', answer: '6217' }] }, 엔);
+  if (!부른것[0].보낸글.includes('문제가') || 부른것[0].보낸글.includes('6217')) { 흠++; console.log('🔴 묶음에 정답이 실렸다'); }
+  const 나쁨 = await 재기([], { pair: [문항] }, 엔);
+  if (나쁨.status !== 400 || 되돌림 !== 1) { 흠++; console.log('🔴 하나짜리 묶음을 안 막았다'); }
+}
+
+console.log(흠 ? '🔴 ' + 흠 + '개 어긋남' : '통과 36개');
 process.exit(흠 ? 1 : 0);
