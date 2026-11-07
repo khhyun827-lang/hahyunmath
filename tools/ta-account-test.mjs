@@ -44,7 +44,7 @@ function 판(opt) {
   const 곁 = {
     DATA: { assistants: (opt.조교들 || []).map(a => Object.assign({}, a)), classes: [{ id: 'c1', name: '고1 A' }] },
     state: {},
-    document: { getElementById: id => id in 폼 ? { get value(){ return 폼[id]; }, set value(v){ 폼[id] = v; } } : null },
+    document: { querySelectorAll: () => [], getElementById: id => id in 폼 ? { get value(){ return 폼[id]; }, set value(v){ 폼[id] = v; } } : null },
     readCheckedClassIds: () => opt.반 || ['c1'],
     AUTH_아이디꼴: /^[A-Za-z0-9][A-Za-z0-9._-]{0,62}$/,
     authCreateAccount: async (role, id, pw) => {

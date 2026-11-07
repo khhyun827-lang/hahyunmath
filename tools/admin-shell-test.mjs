@@ -154,7 +154,7 @@ console.log('\n⑤ 자두판\n');
   const 블록 = at < 0 ? '' : html.slice(at, html.indexOf('}', at));
   봄('관리자 셸이 --accent 를 자두로 덮는다', 블록.includes('--accent:var(--point)') && 블록.includes('--accent-bg:var(--point-bg)'), true);
   봄('🔴 상태색은 안 덮는다', ['--ok:', '--late:', '--leave:', '--no:', '--gone:'].some(t => 블록.includes(t)), false);
-  봄('폰 하단 탭바는 고정 단추 줄(.actbar) 위에 선다', /:has\(\.tnav\) \.actbar\{bottom:calc\(58px/.test(html), true);
+  봄('폰 하단 탭바는 고정 단추 줄(.actbar) 위에 선다', /tnav-on[^{]* \.actbar\{bottom:calc\(58px/.test(html), true);
 }
 
 /* ═══ ⑥ A-2 — 대시보드 세 칸 · 질의응답 머리 · 남은 차콜 ═══ */
