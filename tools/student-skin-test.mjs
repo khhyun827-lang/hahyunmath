@@ -144,7 +144,7 @@ console.log(NL + '③ 부품 — ds.css 원본은 안 고친다' + NL);
   봄('🔴 ds.css 의 카드 반경은 그대로다 (관리자가 쓴다)',
     rule(ds, '.mc').includes('border-radius:var(--r-lg)'), true);
   봄('🔴 ds.css 의 구획머리도 그대로다',
-    rule(ds, '.msec').includes('font-size:11.5px'), true);
+    rule(ds, '.msec').includes('font-size:12px'), true);
 
   /* 🔴 상태 배지는 뜻이 있는 색이다 — 손대지 않는다 */
   봄('🔴 배지는 학생 앱에서도 안 덮는다', html.includes('.app.sap .badge{'), false);
