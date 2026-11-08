@@ -4653,6 +4653,8 @@
 #app.tnav-on .app:not(.sap) .ist-ih{gap:6px;flex-wrap:nowrap;}
 #app.tnav-on .app:not(.sap) .ist-ih > *{flex-shrink:0;}
 #app.tnav-on .app:not(.sap) .ist-ih > .ist-src, #app.tnav-on .app:not(.sap) .ist-ih > .ist-scene{flex-shrink:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+/* 폰에서는 꺾는다 — 한 줄로 두면 카드가 화면보다 30px 넓어져 오른쪽이 잘렸다(11-09 사용자 캡처). */
+@media (max-width:600px){ #app.tnav-on .app:not(.sap) .ist-ih{flex-wrap:wrap;} }
 .app .has-fig{display:grid;grid-template-columns:minmax(0,1fr);row-gap:12px;}
 .app .has-fig > .rv-ifw{justify-self:center;width:min(100%,300px);}
 .app .rv-ifig .pb-fig{margin:0;border:0;border-radius:8px;padding:0;background:none;max-width:100%;max-height:230px;}
@@ -32350,6 +32352,8 @@ function chapterNameOf(subjectCode, chapNo){
    창고와 실제 수업을 잇는 유일한 줄이다. */
 function icUsedIn(code){
   return DATA.problemBank.filter(b => b.itemCode === code).map(b => {
+    /* 학생이 교재에서 요청한 문제는 시험지가 없다(examId '') — «(지운 시험지)»로 보였다(11-09 사용자). */
+    if(b.source === 'bookreq') return { no: b.questionNo, title: '학생 교재 요청', date: b.requestedAt || '', cls: '' };
     const ex = DATA.exams.find(e => e.id === b.examId);
     return { no: b.questionNo, title: ex ? ex.title : '(지운 시험지)',
              date: ex ? ex.date : '', cls: ex ? classNameOf(ex.classId) : '' };

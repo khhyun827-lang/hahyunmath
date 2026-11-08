@@ -256,6 +256,14 @@ console.log(NL + '③ 원본 본문 — 두 벌로 두지 않는다' + NL);
   봄('🔴 AI 쌍둥이 만들기 두 자리',
     (html.match(/generateTwinViaAI\(원본\.content, 원본\.answer, image\)/g) || []).length, 2);
   봄('🔴 옛 자리가 안 남았다', /generateTwinViaAI\(b\.originalContent/.test(html), false);
+  /* 🔴 출제 이력 — 교재 요청은 시험지가 없다(examId ''). «(지운 시험지)»로 보이면 안 된다 (11-09 사용자) */
+  const 출제 = new Function('DATA', 'classNameOf', lift('icUsedIn') + NL + 'return icUsedIn;')(
+    { exams: [{ id: 'e1', title: '1학기 중간', date: '2026-04-20', classId: 'c1' }],
+      problemBank: [{ itemCode: 'K2-08-E-0830', source: 'bookreq', examId: '', questionNo: 266, requestedAt: '2026-11-08' },
+                    { itemCode: 'K2-08-E-0830', examId: 'e1', questionNo: 3 },
+                    { itemCode: 'K2-08-E-0830', examId: 'gone', questionNo: 7 }] }, () => '고2A');
+  봄('출제 이력 — 교재 요청 · 시험지 · 정말 지운 시험지', 출제('K2-08-E-0830').map(u => u.title + ' ' + u.no),
+    ['학생 교재 요청 266', '1학기 중간 3', '(지운 시험지) 7']);
 }
 
 /* ═══ ④ 화면 ═══ */
