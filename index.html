@@ -1314,6 +1314,42 @@
   overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;}
 
 .app .rv-work{flex:1;min-width:0;min-height:0;padding-left:22px;display:flex;flex-direction:column;}
+/* 판정 칸 띠 · 판정 줄 · 바뀐 수 (2026-11-08 · 새 디자인 2차 시안에서 옮김) */
+.app .rv-subbar{display:flex;flex-wrap:wrap;gap:6px;flex-shrink:0;margin-bottom:12px;}
+.app .rv-sb{display:inline-flex;align-items:center;gap:7px;min-height:36px;padding:0 12px;border:1px solid var(--line);border-radius:var(--r-md);
+  background:var(--card);color:var(--sub);font:inherit;font-size:13px;font-weight:700;cursor:pointer;}
+.app .rv-sb:hover{border-color:var(--accent-line);}
+.app .rv-sb i{font-style:normal;width:14px;text-align:center;}
+.app .rv-sb b{font-weight:700;color:var(--ink);}
+.app .rv-sb.z b{color:var(--dim);}
+.app .rv-sb.diff:not(.z) b{color:var(--no);}
+.app .rv-sb.on{background:var(--ink);border-color:var(--ink);color:#fff;}
+.app .rv-sb.on b{color:#fff;}
+.app .rv-judge{display:flex;flex-wrap:wrap;align-items:center;gap:8px 20px;margin:0 0 12px;padding:10px 14px;
+  border:1px solid var(--line);border-radius:var(--r-lg);background:var(--card);font-size:13px;}
+.app .rv-jv{display:flex;align-items:center;flex-wrap:wrap;gap:4px 10px;}
+.app .rv-jv .ic{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:8px;font-size:15px;}
+.app .rv-jv .t{font-size:15px;}
+.app .rv-jv span{color:var(--sub);}
+.app .rv-jv span b{font-size:15px;color:var(--ink);}
+.app .rv-jv s{text-decoration:none;color:var(--sub);font-size:12px;}
+.app .rv-jv.k-suspect .ic{background:var(--nobg);color:var(--no);} .app .rv-jv.k-suspect .t{color:var(--no);}
+.app .rv-jv.k-agree .ic{background:var(--okbg);color:var(--ok);}
+.app .rv-jv.k-unsure .ic{background:var(--latebg);color:var(--late);}
+.app .rv-jv.k-todo .ic{background:var(--sunk);color:var(--sub);box-shadow:inset 0 0 0 1px var(--line);}
+.app .rv-nd{display:flex;align-items:center;flex-wrap:wrap;gap:4px 14px;color:var(--sub);}
+.app .rv-jo{margin-left:auto;color:var(--dim);font-size:12px;}
+.app .rv-jo b{color:var(--sub);font-weight:600;}
+.app .rv-jv + .rv-nd{padding-left:20px;border-left:1px solid var(--line2);}
+.app .rv-nd .h{font-size:12px;font-weight:700;color:var(--dim);}
+.app .rv-nd .nd-p s{text-decoration:none;}
+.app .rv-nd .nd-p b{color:var(--ink);font-weight:700;font-size:14px;}
+.app .rv-nd .nd-off{color:var(--late);font-weight:700;}
+.app .rv-nd .nd-same{color:var(--no);font-weight:700;}
+/* 원본·변형 위아래 쌓기는 해 보고 거뒀다(11-08) — 864 에서 원본만으로 한 화면이 차 변형을 보려면 매번 굴려야 했다.
+   견주기는 «둘이 한 화면에» 있어야 빠르다. 줄 꺾임은 바뀐 수 띠가 대신 짚어 준다. */
+.app .rv-nav{display:flex;flex-wrap:wrap;align-items:center;gap:0 12px;flex-shrink:0;}
+.app .rv-nav .rv-strip{flex:1 1 240px;min-width:0;}
 .app .rv-wh{flex-shrink:0;}
 .app .rv-body{flex:1;min-height:0;overflow:auto;margin-top:16px;}
 /* 편집칸은 비교 상자 «안»에 둔다 — 원본을 보면서 고쳐야 하므로 자리를 옮기지 않는다. */
@@ -4410,8 +4446,12 @@
     flex-wrap:wrap;justify-content:flex-end;min-width:0;row-gap:6px;
     padding:6px 8px 6px 14px;background:#fff;border:1px solid #E3E6EE;border-radius:16px;font-size:13px;color:#4A5168;}
   #app.tnav-on .app:not(.sap) .rv-work > .rv-aibar b{color:#1E2433;}
-  #app.tnav-on .app:not(.sap) .rv-work > .rv-strip{order:2;margin:14px 0 0;}
+  #app.tnav-on .app:not(.sap) .rv-work > .rv-nav{order:2;margin:14px 0 0;flex-wrap:nowrap;}
+  #app.tnav-on .app:not(.sap) .rv-nav > .rv-subbar{margin:0;flex:none;}
+  #app.tnav-on .app:not(.sap) .rv-nav > .rv-strip{margin:0;}
   #app.tnav-on .app:not(.sap) .rv-work > .rv-wh > .t-meta{order:3;grid-column:1 / -1;margin:12px 0 0 !important;font-size:13px;color:#6A7186;}
+  #app.tnav-on .app:not(.sap) .rv-work > .rv-wh > .rv-judge{order:3;grid-column:1 / -1;margin:12px 0 0 !important;padding:0;border:0;background:none;}
+  #app.tnav-on .app:not(.sap) .rv-wh > .rv-judge .rv-jv .ic{width:22px;height:22px;font-size:13px;border-radius:6px;}
   #app.tnav-on .app:not(.sap) .rv-work > .rv-body{order:4;margin-top:14px;}
   /* 보기 — 회색 칸 다섯(시안) · 정답·우리 답·AI 답을 칠한다 */
   #app.tnav-on .app:not(.sap) .rv-work .pb-ch:not(.mid):not(.long){grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;}
@@ -22450,13 +22490,11 @@ function teacherSideCount(s, 벨){
 function reviewSideQueuesHTML(){
   const qkey = state.reviewQueue || 'pending';
   const autosN = pendingVariants().length;
-  const 칸수 = reviewSubCounts(), sub = state.reviewSub || '';
+  /* 네 칸(REVIEW_SUBS)은 2026-11-08 작업 칸 위 가로 띠(reviewSubBarHTML)로 옮겼다 — 여기는 큰 갈래만. */
   return REVIEW_QUEUES.map(q => {
     const n = DATA.problemBank.filter(q[3]).length + (q[0] === 'pending' ? autosN : 0);
-    return `<a class="sb-x sn-q ${qkey === q[0] && !(q[0] === 'pending' && sub) ? 'on' : ''}" onclick="goReviewQueue('${q[0]}')">
-      <i class="d ${q[2]}"></i><span>${q[1]}</span><b class="${n ? '' : 'z'}">${n}</b></a>`
-      + (q[0] !== 'pending' || qkey !== 'pending' ? '' : REVIEW_SUBS.map(([k, 이름]) =>
-        `<a class="sb-x sn-q sn-ch ${sub === k ? 'on' : ''}" onclick="goReviewSub('${k}')"><span>${이름}</span><b class="${칸수[k] ? '' : 'z'}">${칸수[k]}</b></a>`).join(''));
+    return `<a class="sb-x sn-q ${qkey === q[0] ? 'on' : ''}" onclick="goReviewQueue('${q[0]}')">
+      <i class="d ${q[2]}"></i><span>${q[1]}</span><b class="${n ? '' : 'z'}">${n}</b></a>`;
   }).join('');
 }
 /* 다가오는 시험 — 재원생의 학교·학년마다 한 줄, 가까운 순. 홈과 학교 사이드가 같이 쓴다(이미 읽은 시험 일정만 본다). */
@@ -33563,13 +33601,8 @@ function autoVariantWorkHTML(v){
   <div class="rv-wh">
     <h1 class="t-title"><span class="mono">${escHtml(v.code)}</span>${(() => { const 줄 = reviewWalkList(); const i = 줄.findIndex(x => x.auto && x.key === v.code);
       return i >= 0 ? `<span class="rv-wpos">${i + 1}/${줄.length}</span>` : ''; })()}<span class="rv-wk"> · ${v.engine === 'groq' ? 'Groq 가' : 'AI가'} 만든 변형</span></h1>
-    <div class="t-meta" style="margin-top:7px;">
-      <span class="badge late">검토 대기</span>
-      ${reviewMiniHTML(v)}
-      <s>·</s>원본 <b class="mono">${escHtml(v.originCode)}</b>
-      <s>·</s>${escHtml(v.createdAt||'')}
-      <s>·</s>통과시키기 전에는 학생에게 안 나갑니다
-    </div>
+    <div class="rv-judge" style="margin-top:7px;">${reviewVerdictLineHTML(v)}${numDiffHTML(원본.content, v.content, 원본.answer, v.answer)}
+      <span class="rv-jo" title="통과시키기 전에는 학생에게 안 나갑니다">원본 <b class="mono">${escHtml(v.originCode)}</b> · ${escHtml(v.createdAt||'')}</span></div>
   </div>
   <div class="rv-body">
     ${/* ⚠ 학생이 못 치는 답은 고리가 이미 걸러 낸다. 그래도 여기서 한 번 더 말한다 —
@@ -33599,10 +33632,7 @@ function autoVariantWorkHTML(v){
           <span><b>원본 그림을 그대로</b> 씁니다 — <b>그림의 수치가 본문과 어긋나지 않는지</b>만 확인해 주세요.</span></div>` : ''}
         <div class="q-body${변형그림 ? ' has-fig' : ''}">${withFigure(problemHTML(v.content||'(내용 없음)'), 변형그림)}</div>
         <div class="q-ans"><span class="rv-ours">우리 </span>정답 <b>${escHtml(v.answer||'—')}</b>
-          ${/* 넓은 화면 — AI 판정 칩 · 「풀이 보기 ›」를 카드 바닥줄에(시안). 줄 모드는 아래 접는 칸 그대로. */''}
-          ${v.aiReview && REVIEW_VERDICT[v.aiReview.verdict] ? `<span class="hm-chip ${({agree:'ok',suspect:'no',unsure:'late'})[v.aiReview.verdict]} rv-vchip"><i></i>${
-            v.aiReview.verdict === 'suspect' ? 'AI는 ' + escHtml(v.aiReview.answer || '—') + ' — 우리와 다른 답'
-            : v.aiReview.verdict === 'agree' ? 'AI도 ' + escHtml(v.answer || '—') + ' — 같은 답' : escHtml(REVIEW_VERDICT[v.aiReview.verdict].말)}</span>` : ''}
+          ${/* 「풀이 보기 ›」를 카드 바닥줄에(시안). AI 판정 칩은 대조 위 판정 줄(reviewVerdictLineHTML)로 옮겼다(11-08). */''}
           ${v.solution ? `<a class="rv-solgo" onclick="state.solutionOpen['${escHtml(v.code)}']=!state.solutionOpen['${escHtml(v.code)}']; render()">${
             open ? '풀이 접기 ‹' : '풀이 보기 ›'}</a>` : ''}
           ${/* 🔵 **여기서 바로 고친다** (2026-09-15 · 사용자 — 「정답이 잘못된 것들이 있어서 버리지 않고 직접 수정하고
@@ -33648,11 +33678,8 @@ function teacherReviewHTML(){
     <div class="t-sec">검토 대기</div>
     ${REVIEW_QUEUES.map(q=>{
       const n = DATA.problemBank.filter(q[3]).length + (q[0]==='pending' ? pendingVariants().length : 0);
-      const 칸수 = q[0]==='pending' && qkey==='pending' ? reviewSubCounts() : null;
-      return `<a class="rv-qn ${qkey===q[0] && !(q[0]==='pending' && state.reviewSub)?'on':''}" onclick="goReviewQueue('${q[0]}')">
-        <span class="rk ${q[2]}"></span>${q[1]}<b>${n}</b></a>`
-        + (!칸수 ? '' : REVIEW_SUBS.map(([k, 이름]) =>
-          `<a class="rv-qn rv-sub ${state.reviewSub===k?'on':''}" onclick="goReviewSub('${k}')">${이름}<b>${칸수[k]}</b></a>`).join(''));
+      return `<a class="rv-qn ${qkey===q[0]?'on':''}" onclick="goReviewQueue('${q[0]}')">
+        <span class="rk ${q[2]}"></span>${q[1]}<b>${n}</b></a>`;
     }).join('')}
     <div class="t-sec" style="margin-top:22px;">보기</div>
     ${/* ⚠ `go` 는 «여기서 나가는 문»이라는 표시다 — 폰에서 큐가 칩 줄로 접힐 때 이 둘만 빠진다
@@ -33765,7 +33792,7 @@ function teacherReviewHTML(){
         title="${escHtml(examTitleOf(b.examId))}"><i class="d"></i><span>${escHtml(qLabelOf(b))}</span>${b.hasImage ? iconSvg('camera', 12) : ''}</a>`).join('')}
   </div>` : '';
   return `<div class="rv-screen">${queues}${items}
-    <main class="rv-work">${reqBar}${nightLogHTML()}${askBar}${aiBar}${strip}${rvBar}${selAuto ? autoVariantWorkHTML(selAuto) : sel ? reviewWorkHTML(sel, list) : `
+    <main class="rv-work">${reqBar}${nightLogHTML()}${askBar}${aiBar}${qkey==='pending' || strip ? `<div class="rv-nav">${qkey==='pending' ? reviewSubBarHTML() : ''}${strip}</div>` : ''}${rvBar}${selAuto ? autoVariantWorkHTML(selAuto) : sel ? reviewWorkHTML(sel, list) : `
       <div style="padding:64px 0;text-align:center;color:var(--dim);font-size:13px;line-height:1.8;">
         ${list.length===0 ? '이 큐는 비어 있습니다.' : '왼쪽 목록에서 문항을 고르세요.'}</div>`}
     </main>
@@ -35608,6 +35635,67 @@ const REVIEW_VERDICT = {
   suspect: { 색:'r', 말:'답이 다릅니다',      풀이:'계보가 다른 두 AI가 «둘 다» 우리 정답과 다른 같은 답을 냈습니다. 문항이나 정답을 확인해 주세요.' },
   unsure:  { 색:'y', 말:'검토 못 함',        풀이:'AI들이 서로 다른 답을 내서 판단을 못 했습니다. 문항이 잘못됐다는 뜻은 아닙니다 — 사람이 봐야 합니다.' },
 };
+/* 🔵 **바뀐 수 띠** (2026-11-08 · 새 디자인 2차 시안 넷이 모두 닿은 결론 · 사용자 승인)
+   숫자변형은 «풀이 같게, 수는 전부» 바꾼다 → 원본과 변형에서 수를 차례로 뽑아 짝지으면 무엇이 무엇으로 바뀌었는지 나온다.
+   좌우 두 칸을 눈으로 오가며 찾던 일을 한 줄로 줄인다 — «4가 6이 됐는데 답이 그대로네?»를 바로 잡게.
+   ⚠ 수 개수가 다르면 짝짓지 않는다(엉뚱한 짝을 보여 주느니) — «식 모양이 바뀌었다»고만 말한다.
+   ⚠ 보기(① 뒤)는 본문과 따로 센다 — 본문 수가 하나 늘어도 보기 짝은 살린다. 붙은 빼기(−1)는 수에 붙여 센다. */
+function numsOf(s){
+  return (String(s || '').match(/[−-]?\d+(?:\.\d+)?/g) || []).map(x => x.replace('-', '−'));
+}
+function numDiff(a, b){
+  const 자르기 = s => { s = String(s || ''); const i = s.indexOf('①'); return i < 0 ? [s, ''] : [s.slice(0, i), s.slice(i)]; };
+  const [as, ac] = 자르기(a), [bs, bc] = 자르기(b);
+  const A = numsOf(as), B = numsOf(bs);
+  const r = { n: A.length, stem: [], same: 0, stemOff: null, choices: null, choiceOff: null };
+  if(A.length !== B.length) r.stemOff = [A.length, B.length];
+  else A.forEach((x, i) => { if(x === B[i]) r.same++; else r.stem.push([x, B[i]]); });
+  if(ac || bc){
+    const CA = numsOf(ac), CB = numsOf(bc);
+    if(CA.length !== CB.length) r.choiceOff = [CA.length, CB.length];
+    else if(CA.some((x, i) => x !== CB[i])) r.choices = [CA, CB];
+  }
+  return r;
+}
+function numDiffHTML(a, b, aAns, bAns){
+  if(!a || !b) return '';
+  const d = numDiff(a, b), 칸 = [];
+  const 짝 = (x, y) => `<span class="nd-p"><s>${escHtml(x)}</s> → <b>${escHtml(y)}</b></span>`;
+  if(d.stemOff) 칸.push(`<span class="nd-off">본문 수 개수가 다름(${d.stemOff[0]} → ${d.stemOff[1]}) — 식 모양이 바뀌었나 확인</span>`);
+  else if(d.stem.length){
+    d.stem.slice(0, 8).forEach(([x, y]) => 칸.push(짝(x, y)));
+    if(d.stem.length > 8) 칸.push(`<span class="nd-more">외 ${d.stem.length - 8}곳</span>`);
+  } else if(d.n) 칸.push('<span class="nd-same">본문에서 바뀐 수가 없습니다</span>');
+  if(d.choiceOff) 칸.push(`<span class="nd-off">보기 수 개수가 다름(${d.choiceOff[0]} → ${d.choiceOff[1]})</span>`);
+  else if(d.choices) 칸.push(`<span class="nd-p">보기 <s>${escHtml(d.choices[0].join('·'))}</s> → <b>${escHtml(d.choices[1].join('·'))}</b></span>`);
+  if(aAns && bAns) 칸.push(aAns === bAns ? `<span class="nd-p">정답 <b>${escHtml(bAns)}</b> 그대로</span>` : `<span class="nd-p">정답 <s>${escHtml(aAns)}</s> → <b>${escHtml(bAns)}</b></span>`);
+  return 칸.length ? `<div class="rv-nd"><span class="h">바뀐 수</span>${칸.join('')}</div>` : '';
+}
+/* 🔵 **판정 줄** (2026-11-08) — 머리줄의 작은 딱지 + 정답 줄 칩을 하나로 모아 «대조 바로 위»에 한 줄로.
+   09-07 사용자 「카드는 불필요하게 큰 것 같아」 → 카드로 키우지 않고 글자만 키운다. 모양(○ = ≠ ?)이 색과 같이 말한다. */
+function reviewVerdictLineHTML(v){
+  const r = v && v.aiReview, 답 = x => escHtml(x || '—');
+  if(!r || !REVIEW_VERDICT[r.verdict])
+    return '<div class="rv-jv k-todo"><b class="ic">○</b><b class="t">AI 검토 전</b><span>A 키로 검토를 부릅니다</span></div>';
+  const 갈래 = [['첫째', r.first], ['둘째', r.second], ['셋째', r.third]].filter(x => x[1]).map(([k, x]) => k + ' ' + 답(x)).join(' · ');
+  const 곁 = 갈래 ? `<s>${갈래}</s>` : '';
+  const 말 = { agree: ['=', 'AI도 같은 답'], suspect: ['≠', '답이 갈렸습니다'], unsure: ['?', '검토 못 함'] }[r.verdict];
+  const ai = r.verdict === 'agree' ? 답(r.answer || v.answer) : r.verdict === 'suspect' ? 답(r.answer) : '';
+  return `<div class="rv-jv k-${r.verdict}" title="${escHtml(REVIEW_VERDICT[r.verdict].풀이)}"><b class="ic">${말[0]}</b><b class="t">${말[1]}</b>
+    <span>우리 <b>${답(v.answer)}</b>${ai ? ` · AI <b>${ai}</b>` : ''}</span>${곁}</div>`;
+}
+/* 🔵 **판정 칸 띠** (2026-11-08) — 검토 대기의 네 칸을 사이드 들여쓰기에서 «작업 칸 위 가로 띠»로 옮겼다.
+   문항을 보는 눈높이에서 «어느 칸에 몇 건 남았나»가 늘 보인다. 고르는 길은 그대로 goReviewSub. */
+function reviewSubBarHTML(){
+  const n = reviewSubCounts(), sub = state.reviewSub || '';
+  const 대기 = REVIEW_QUEUES.find(q => q[0] === 'pending');
+  const 전체 = DATA.problemBank.filter(대기[3]).length + pendingVariants().length;
+  const 모양 = { todo: '○', agree: '=', fig: '◇', diff: '≠' };
+  return `<div class="rv-subbar" role="group" aria-label="검토 대기 칸">
+    <button type="button" class="rv-sb ${sub ? '' : 'on'}" onclick="goReviewSub('')">전체 <b>${전체}</b></button>
+    ${REVIEW_SUBS.map(([k, 이름]) => `<button type="button" class="rv-sb ${k}${sub === k ? ' on' : ''}${n[k] ? '' : ' z'}" onclick="goReviewSub('${k}')"><i>${모양[k]}</i>${이름} <b>${n[k]}</b></button>`).join('')}
+  </div>`;
+}
 /* 목록 줄에 붙는 작은 판정표. 목록에서 «어느 것을 먼저 볼지»가 한눈에 보여야 한다 —
    답이 다른 것이 맨 아래 있으면 아무 소용이 없다. */
 function reviewTagHTML(v){
@@ -35929,6 +36017,8 @@ function reviewWorkHTML(b, list){
         </div>`}`;
     })()}
 
+    ${(() => { const 띠 = numDiffHTML(bankOriginal(b).content, b.variantContent, bankOriginal(b).answer, b.variantAnswer);
+      return 띠 ? '<div class="rv-judge">' + 띠 + '</div>' : ''; })()}
     <div class="cmp" style="margin-top:${why?'14px':'0'};">
       <div class="side">
         ${/* 🔵 **코드를 여기에도 적는다** (2026-09-04 · 사용자 요청) — 위 띠에도 있지만,

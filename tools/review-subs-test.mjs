@@ -32,13 +32,16 @@ try{
     window.workerVersion = async () => window.워커판 || '2026-10-05b';
   });
 
-  const 칸 = () => page.$$eval('.subnav a.sn-ch', els => els.map(e => e.textContent.replace(/\s+/g, ' ').trim()));
-  봄('사이드에 네 칸과 수', await 칸(), ['AI 검토 전1', '정답 일치1', '그림 확인1', '답 다름2']);
-  await page.locator('.subnav a.sn-ch', { hasText: '정답 일치' }).click();
+  /* 2026-11-08 — 네 칸은 사이드 들여쓰기에서 작업 칸 위 가로 띠(.rv-subbar)로 옮겼다 */
+  const 칸 = () => page.$$eval('.rv-subbar .rv-sb', els => els.map(e => e.textContent.replace(/\s+/g, ' ').trim()));
+  봄('작업 칸 위 띠에 전체와 네 칸 · 수', await 칸(), ['전체 5', '○AI 검토 전 1', '=정답 일치 1', '◇그림 확인 1', '≠답 다름 2']);
+  봄('사이드에는 네 칸이 없다', await page.locator('.subnav a.sn-ch').count(), 0);
+  await page.locator('.rv-subbar .rv-sb', { hasText: '정답 일치' }).click();
   봄('정답 일치 — 그림 없는 일치만', await page.evaluate(() => reviewWalkList().map(x => x.key)), ['K2-03-M-0211']);
-  await page.locator('.subnav a.sn-ch', { hasText: '그림 확인' }).click();
+  봄('칸을 골라도 사이드의 «검토 대기»는 켜져 있다', await page.locator('.subnav a.sn-q.on', { hasText: '검토 대기' }).count(), 1);
+  await page.locator('.rv-subbar .rv-sb', { hasText: '그림 확인' }).click();
   봄('그림 확인 — 그림 있는 일치', await page.evaluate(() => reviewWalkList().map(x => x.key)), ['K2-04-M-0318']);
-  await page.locator('.subnav a.sn-ch', { hasText: '답 다름' }).click();
+  await page.locator('.rv-subbar .rv-sb', { hasText: '답 다름' }).click();
   봄('답 다름 — 둘이 같은 다른 답 + 서로 갈림', await page.evaluate(() => reviewWalkList().map(x => x.key).sort()), ['K2-03-M-0212', 'K2-05-E-0560']);
   봄('띠에 「1개 다른 AI로 한 번 더」', await page.locator('.rv-aibar button', { hasText: '다른 AI로 한 번 더' }).count(), 1);
 
