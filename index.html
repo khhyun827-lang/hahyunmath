@@ -1405,6 +1405,13 @@
 .app .ic-txt.full .katex{font-size:1.06em;}
 .app .ic-row{align-items:flex-start;}
 .app .ic-row > b, .app .ic-row .ic-kind, .app .ic-row .ic-a, .app .ic-row .btn{flex-shrink:0;margin-top:1px;}
+/* 좁은 화면에서는 문제 글이 제 줄을 갖는다 — 코드·딱지·단추가 한 줄을 먹어 폰은 글 칸이 40px 남짓, 한 글자씩 세로로 쌓였다(11-08 사용자 캡처).
+   864 도 목록 칸을 끼고 있어 184px 뿐이었다 → 검토 화면이 좁은 판으로 바뀌는 1199 에 맞춘다. */
+@media (max-width:1199px){
+  .app .ic-row{flex-wrap:wrap;}
+  .app .ic-row .ic-txt.full{order:9;flex:1 1 100%;}
+  .app .ic-row .ic-a{margin-left:auto;}
+}
 /* 정답 칸에 해설이 통째로 든 옛 기록 — 답만 굵게, 해설은 뒤에 흐리게 */
 .app .q-sol{display:block;margin-top:4px;font-size:12px;line-height:1.65;
   color:var(--dim);text-decoration:none;}
