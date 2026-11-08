@@ -251,7 +251,7 @@ console.log(NL + '③ 원본 본문 — 두 벌로 두지 않는다' + NL);
     B({ source: 'bookreq', itemCode: 'K2-99-E-9999' }), { content: '', answer: '' });
   봄('없는 것을 줘도 안 터진다', B(null), { content: '', answer: '' });
   /* 🔴 원본을 «보여 주는» 자리와 «AI 에게 넘기는» 자리가 다 이것을 거치는가 */
-  봄('🔴 검토 화면의 원본 칸', html.includes('problemHTML(bankOriginal(b).content'), true);
+  봄('🔴 검토 화면의 원본 칸', html.includes('problemHTML(diffMarks(bankOriginal(b).content'), true);
   봄('🔴 검토 화면의 정답 칸', html.includes('splitAnswerSolution(bankOriginal(b).answer)'), true);
   봄('🔴 AI 쌍둥이 만들기 두 자리',
     (html.match(/generateTwinViaAI\(원본\.content, 원본\.answer, image\)/g) || []).length, 2);

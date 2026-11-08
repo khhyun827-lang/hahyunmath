@@ -1337,19 +1337,14 @@
 .app .rv-jv.k-agree .ic{background:var(--okbg);color:var(--ok);}
 .app .rv-jv.k-unsure .ic{background:var(--latebg);color:var(--late);}
 .app .rv-jv.k-todo .ic{background:var(--sunk);color:var(--sub);box-shadow:inset 0 0 0 1px var(--line);}
-.app .rv-nd{display:flex;align-items:center;flex-wrap:wrap;gap:4px 14px;color:var(--sub);}
+.app mark.rv-hl,.app .rv-hl{background:var(--late-line);color:inherit;border-radius:3px;box-shadow:0 0 0 1px var(--late-line);}
 .app .rv-jo{margin-left:auto;color:var(--dim);font-size:12px;}
 .app .rv-jo b{color:var(--sub);font-weight:600;}
-.app .rv-jv + .rv-nd{padding-left:20px;border-left:1px solid var(--line2);}
-.app .rv-nd .h{font-size:12px;font-weight:700;color:var(--dim);}
-.app .rv-nd .nd-p s{text-decoration:none;}
-.app .rv-nd .nd-p b{color:var(--ink);font-weight:700;font-size:14px;}
-.app .rv-nd .nd-off{color:var(--late);font-weight:700;}
-.app .rv-nd .nd-same{color:var(--no);font-weight:700;}
 /* 원본·변형 위아래 쌓기는 해 보고 거뒀다(11-08) — 864 에서 원본만으로 한 화면이 차 변형을 보려면 매번 굴려야 했다.
    견주기는 «둘이 한 화면에» 있어야 빠르다. 줄 꺾임은 바뀐 수 띠가 대신 짚어 준다. */
 .app .rv-nav{display:flex;flex-wrap:wrap;align-items:center;gap:0 12px;flex-shrink:0;}
 .app .rv-nav .rv-strip{flex:1 1 240px;min-width:0;}
+.app .rv-nav > .rv-subbar{flex-shrink:1;min-width:0;max-width:100%;}   /* 폰에서 접히게 — 11-08 화면이 543px 로 넓어졌다 */
 .app .rv-wh{flex-shrink:0;}
 .app .rv-body{flex:1;min-height:0;overflow:auto;margin-top:16px;}
 /* 편집칸은 비교 상자 «안»에 둔다 — 원본을 보면서 고쳐야 하므로 자리를 옮기지 않는다. */
@@ -17447,7 +17442,8 @@ function render(){
     try{
       renderMathInElement(app, {
         delimiters: [{left:'$', right:'$', display:false}],
-        throwOnError: false
+        throwOnError: false,
+        trust: c => c.command === '\\htmlClass'   // 검토 형광펜(diffMarks · 11-08)만
       });
     }catch(e){ console.error('수식 렌더링 실패', e); }
   }
@@ -33597,11 +33593,12 @@ function autoVariantWorkHTML(v){
     : v.reuseFigure && v.image && v.image.url ? `<figure class="rv-ifig" title="누르면 크게 봅니다"
         onclick="openFigZoom('', '${escHtml(v.image.url)}')"><img src="${escHtml(v.image.url)}" alt="원본 그림 그대로">${크게}</figure>`
     : v.reuseFigure ? 원본그림 : '';
+  const 대조 = diffMarks(원본.content, v.content);   // 형광펜 (11-08)
   return `
   <div class="rv-wh">
     <h1 class="t-title"><span class="mono">${escHtml(v.code)}</span>${(() => { const 줄 = reviewWalkList(); const i = 줄.findIndex(x => x.auto && x.key === v.code);
       return i >= 0 ? `<span class="rv-wpos">${i + 1}/${줄.length}</span>` : ''; })()}<span class="rv-wk"> · ${v.engine === 'groq' ? 'Groq 가' : 'AI가'} 만든 변형</span></h1>
-    <div class="rv-judge" style="margin-top:7px;">${reviewVerdictLineHTML(v)}${numDiffHTML(원본.content, v.content, 원본.answer, v.answer)}
+    <div class="rv-judge" style="margin-top:7px;">${reviewVerdictLineHTML(v)}
       <span class="rv-jo" title="통과시키기 전에는 학생에게 안 나갑니다">원본 <b class="mono">${escHtml(v.originCode)}</b> · ${escHtml(v.createdAt||'')}</span></div>
   </div>
   <div class="rv-body">
@@ -33621,7 +33618,7 @@ function autoVariantWorkHTML(v){
       ${/* data-ok·ours·ai — 넓은 화면이 보기 칸을 칠한다(정답 초록 테 · 우리 답 남색 · AI 가 고른 다른 답 빨강 테 · 시안) */''}
       <div class="side" data-ok="${choiceNo(원본.answer)}">
         <div class="lab">원본 <b class="mono lab-code">${escHtml(v.originCode)}</b></div>
-        <div class="q-body${원본그림 ? ' has-fig' : ''}">${원본.content ? withFigure(problemHTML(원본.content), 원본그림)
+        <div class="q-body${원본그림 ? ' has-fig' : ''}">${원본.content ? withFigure(hlHTML(problemHTML(대조[0])), 원본그림)
           : '(본문이 없습니다 — 문항 코드 › 교재에서 본문 채우기)' + 원본그림}</div>
         ${원본.answer ? `<div class="q-ans">정답 <b>${escHtml(원본.answer)}</b></div>` : ''}
       </div>
@@ -33630,7 +33627,7 @@ function autoVariantWorkHTML(v){
         ${/* 갈래 (2026-09-11) — 강사가 창고에서 시킨 변형은 (B)·(C)로도 온다. 고리가 만든 것은 (A)뿐이다. */''}
         ${v.reuseFigure ? `<div class="rv-fignote rv-reuse">${iconSvg('camera', 13)}
           <span><b>원본 그림을 그대로</b> 씁니다 — <b>그림의 수치가 본문과 어긋나지 않는지</b>만 확인해 주세요.</span></div>` : ''}
-        <div class="q-body${변형그림 ? ' has-fig' : ''}">${withFigure(problemHTML(v.content||'(내용 없음)'), 변형그림)}</div>
+        <div class="q-body${변형그림 ? ' has-fig' : ''}">${withFigure(hlHTML(problemHTML(대조[1]||'(내용 없음)')), 변형그림)}</div>
         <div class="q-ans"><span class="rv-ours">우리 </span>정답 <b>${escHtml(v.answer||'—')}</b>
           ${/* 「풀이 보기 ›」를 카드 바닥줄에(시안). AI 판정 칩은 대조 위 판정 줄(reviewVerdictLineHTML)로 옮겼다(11-08). */''}
           ${v.solution ? `<a class="rv-solgo" onclick="state.solutionOpen['${escHtml(v.code)}']=!state.solutionOpen['${escHtml(v.code)}']; render()">${
@@ -35635,41 +35632,55 @@ const REVIEW_VERDICT = {
   suspect: { 색:'r', 말:'답이 다릅니다',      풀이:'계보가 다른 두 AI가 «둘 다» 우리 정답과 다른 같은 답을 냈습니다. 문항이나 정답을 확인해 주세요.' },
   unsure:  { 색:'y', 말:'검토 못 함',        풀이:'AI들이 서로 다른 답을 내서 판단을 못 했습니다. 문항이 잘못됐다는 뜻은 아닙니다 — 사람이 봐야 합니다.' },
 };
-/* 🔵 **바뀐 수 띠** (2026-11-08 · 새 디자인 2차 시안 넷이 모두 닿은 결론 · 사용자 승인)
-   숫자변형은 «풀이 같게, 수는 전부» 바꾼다 → 원본과 변형에서 수를 차례로 뽑아 짝지으면 무엇이 무엇으로 바뀌었는지 나온다.
-   좌우 두 칸을 눈으로 오가며 찾던 일을 한 줄로 줄인다 — «4가 6이 됐는데 답이 그대로네?»를 바로 잡게.
-   ⚠ 수 개수가 다르면 짝짓지 않는다(엉뚱한 짝을 보여 주느니) — «식 모양이 바뀌었다»고만 말한다.
-   ⚠ 보기(① 뒤)는 본문과 따로 센다 — 본문 수가 하나 늘어도 보기 짝은 살린다. 붙은 빼기(−1)는 수에 붙여 센다. */
-function numsOf(s){
-  return (String(s || '').match(/[−-]?\d+(?:\.\d+)?/g) || []).map(x => x.replace('-', '−'));
-}
-function numDiff(a, b){
-  const 자르기 = s => { s = String(s || ''); const i = s.indexOf('①'); return i < 0 ? [s, ''] : [s.slice(0, i), s.slice(i)]; };
-  const [as, ac] = 자르기(a), [bs, bc] = 자르기(b);
-  const A = numsOf(as), B = numsOf(bs);
-  const r = { n: A.length, stem: [], same: 0, stemOff: null, choices: null, choiceOff: null };
-  if(A.length !== B.length) r.stemOff = [A.length, B.length];
-  else A.forEach((x, i) => { if(x === B[i]) r.same++; else r.stem.push([x, B[i]]); });
-  if(ac || bc){
-    const CA = numsOf(ac), CB = numsOf(bc);
-    if(CA.length !== CB.length) r.choiceOff = [CA.length, CB.length];
-    else if(CA.some((x, i) => x !== CB[i])) r.choices = [CA, CB];
+/* 바뀐 수 띠(numDiffHTML · 11-08)는 배포 당일 거뒀다 — 사용자: «수만 늘어놓으면 어디가 바뀐 건지 결국 본문을 맞대 봐야 해 의미가 없다»,
+   «본문 수 개수가 다름»은 무슨 말인지 모르겠고, 보기 구성이 달라진 건 말해 줄 필요 없다. 다시 한다면 «본문 안에서 바뀐 자리를 칠하기»로. */
+/* 🔵 **형광펜** (2026-11-08 · 사용자 — «본문이랑 변형문항이랑 달라진 부분 형광펜 칠해서 보여주는 건 어떨까?»)
+   원본·변형의 «발문»(첫 선지 기호 앞)을 낱말·수·글자 조각으로 잘라 LCS 로 맞대고, 짝이 없는 조각만 양쪽에 칠한다.
+   - 수식 밖: 표지 글자(U+E000·U+E001)로 감쌌다가 problemHTML 뒤 hlHTML 이 <mark> 로 바꾼다(escHtml 이 안 건드린다).
+   - 수식 안: 표지를 KaTeX 가 못 읽는다 → 수·글자 하나만 {\htmlClass{rv-hl}{5}} 로(render 의 trust 가 htmlClass 만 연다).
+     명령 바로 뒤 맨 수(\frac12 · \sqrt 3)는 감싸면 뜻이 바뀌어 건너뛴다. 연산자는 수식 안에선 안 칠한다(간격이 바뀐다).
+   ⚠ 보기는 칠하지 않는다 — 숫자변형은 보기가 다 바뀌어 온통 노래진다(사용자: 보기 구성은 말 안 해도 된다).
+   ⚠ 그림 표지 ⟦그림:…⟧·표 칸 |·ㄱㄴㄷ·마침표는 칠하지 않는다 — problemHTML 이 그 글자로 꼴(표·보기 항목)을 읽는다. */
+const HL_ON = String.fromCharCode(0xE000), HL_OFF = String.fromCharCode(0xE001);
+function diffMarks(a, b){
+  a = String(a || ''); b = String(b || '');
+  if(!a || !b || a === b) return [a, b];
+  const 자르기 = s => { const i = s.search(/[①②③④⑤]/), 발 = i < 0 ? s : s.slice(0, i);
+    return { 꼬리: i < 0 ? '' : s.slice(i), t: 발.match(/⟦[^⟧]*⟧|\\[a-zA-Z]+|\d+(?:\.\d+)?|[가-힣]+|[A-Za-z]|\s+|[\s\S]/g) || [] }; };
+  const A = 자르기(a), B = 자르기(b);
+  const 뜻 = t => t.map((x, i) => [x, i]).filter(([x]) => !/^\s+$/.test(x));
+  const P = 뜻(A.t), Q = 뜻(B.t), n = P.length, m = Q.length;
+  // ponytail: O(n·m) LCS — 발문은 수백 조각이라 충분하다. 천 단위 글이 오면 앞뒤 같은 곳을 먼저 떼어 낼 것.
+  const L = Array.from({ length: n + 1 }, () => new Uint16Array(m + 1));
+  for(let i = n - 1; i >= 0; i--) for(let j = m - 1; j >= 0; j--)
+    L[i][j] = P[i][0] === Q[j][0] ? L[i + 1][j + 1] + 1 : Math.max(L[i + 1][j], L[i][j + 1]);
+  const 다름A = new Set(), 다름B = new Set();
+  let i = 0, j = 0;
+  while(i < n && j < m){
+    if(P[i][0] === Q[j][0]){ i++; j++; }
+    else if(L[i + 1][j] >= L[i][j + 1]) 다름A.add(P[i++][1]);
+    else 다름B.add(Q[j++][1]);
   }
-  return r;
+  while(i < n) 다름A.add(P[i++][1]);
+  while(j < m) 다름B.add(Q[j++][1]);
+  const 칠 = (t, 다름) => {
+    let 수식 = false, 앞 = '', out = '';
+    t.forEach((x, k) => {
+      let y = x;
+      if(x === '$') 수식 = !수식;
+      else if(다름.has(k)){
+        if(수식){ if(/^(\d+(\.\d+)?|[A-Za-z])$/.test(x) && !/^\\/.test(앞)) y = '{\\htmlClass{rv-hl}{' + x + '}}'; }
+        else if(/^([0-9가-힣A-Za-z]|[+\-−×÷=<>≤≥√π])/.test(x)) y = HL_ON + x + HL_OFF;
+      }
+      out += y;
+      if(!/^\s+$/.test(x)) 앞 = x;
+    });
+    return out.replace(new RegExp(HL_OFF + '([ \\t]*)' + HL_ON, 'g'), '$1');
+  };
+  return [칠(A.t, 다름A) + A.꼬리, 칠(B.t, 다름B) + B.꼬리];
 }
-function numDiffHTML(a, b, aAns, bAns){
-  if(!a || !b) return '';
-  const d = numDiff(a, b), 칸 = [];
-  const 짝 = (x, y) => `<span class="nd-p"><s>${escHtml(x)}</s> → <b>${escHtml(y)}</b></span>`;
-  if(d.stemOff) 칸.push(`<span class="nd-off">본문 수 개수가 다름(${d.stemOff[0]} → ${d.stemOff[1]}) — 식 모양이 바뀌었나 확인</span>`);
-  else if(d.stem.length){
-    d.stem.slice(0, 8).forEach(([x, y]) => 칸.push(짝(x, y)));
-    if(d.stem.length > 8) 칸.push(`<span class="nd-more">외 ${d.stem.length - 8}곳</span>`);
-  } else if(d.n) 칸.push('<span class="nd-same">본문에서 바뀐 수가 없습니다</span>');
-  if(d.choiceOff) 칸.push(`<span class="nd-off">보기 수 개수가 다름(${d.choiceOff[0]} → ${d.choiceOff[1]})</span>`);
-  else if(d.choices) 칸.push(`<span class="nd-p">보기 <s>${escHtml(d.choices[0].join('·'))}</s> → <b>${escHtml(d.choices[1].join('·'))}</b></span>`);
-  if(aAns && bAns) 칸.push(aAns === bAns ? `<span class="nd-p">정답 <b>${escHtml(bAns)}</b> 그대로</span>` : `<span class="nd-p">정답 <s>${escHtml(aAns)}</s> → <b>${escHtml(bAns)}</b></span>`);
-  return 칸.length ? `<div class="rv-nd"><span class="h">바뀐 수</span>${칸.join('')}</div>` : '';
+function hlHTML(html){
+  return String(html).split(HL_ON).join('<mark class="rv-hl">').split(HL_OFF).join('</mark>');
 }
 /* 🔵 **판정 줄** (2026-11-08) — 머리줄의 작은 딱지 + 정답 줄 칩을 하나로 모아 «대조 바로 위»에 한 줄로.
    09-07 사용자 「카드는 불필요하게 큰 것 같아」 → 카드로 키우지 않고 글자만 키운다. 모양(○ = ≠ ?)이 색과 같이 말한다. */
@@ -36017,8 +36028,6 @@ function reviewWorkHTML(b, list){
         </div>`}`;
     })()}
 
-    ${(() => { const 띠 = numDiffHTML(bankOriginal(b).content, b.variantContent, bankOriginal(b).answer, b.variantAnswer);
-      return 띠 ? '<div class="rv-judge">' + 띠 + '</div>' : ''; })()}
     <div class="cmp" style="margin-top:${why?'14px':'0'};">
       <div class="side">
         ${/* 🔵 **코드를 여기에도 적는다** (2026-09-04 · 사용자 요청) — 위 띠에도 있지만,
@@ -36026,7 +36035,7 @@ function reviewWorkHTML(b, list){
         <div class="lab">원본 문항 <s>${qLabelOf(b)}</s>
           ${b.itemCode ? `<b class="mono lab-code">${escHtml(b.itemCode)}</b>` : ''}</div>
         ${/* ⚠ 교재 요청은 본문을 안 싣는다 — 창고에서 떠 온다 (K-17). */''}
-        <div class="q-body${원본칸 ? ' has-fig' : ''}">${withFigure(problemHTML(bankOriginal(b).content||'(내용 없음)'), 원본칸)}</div>
+        <div class="q-body${원본칸 ? ' has-fig' : ''}">${withFigure(hlHTML(problemHTML(diffMarks(bankOriginal(b).content, b.variantContent)[0]||'(내용 없음)')), 원본칸)}</div>
         ${/* 정답 칸에 해설이 통째로 든 옛 기록이 있다 — 답만 굵게, 해설은 뒤에 흐리게. */''}
         ${(()=>{ const as = splitAnswerSolution(bankOriginal(b).answer);
           return `<div class="q-ans">정답 <b>${escHtml(as.answer||'—')}</b>${
@@ -36041,7 +36050,7 @@ function reviewWorkHTML(b, list){
           return `<div class="lab">${inStore ? '가져온 변형' : 'AI 생성 쌍둥이'}
           <s>${inStore ? '창고' : (b.aiSolution?'Gemini':'직접 입력')}</s>
           ${inStore ? `<b class="mono lab-code">${escHtml(inStore.code)}</b>` : ''}</div>`; })()}
-        <div class="q-body${b.variantContent && 변형칸 ? ' has-fig' : ''}">${b.variantContent ? withFigure(problemHTML(b.variantContent), 변형칸)
+        <div class="q-body${b.variantContent && 변형칸 ? ' has-fig' : ''}">${b.variantContent ? withFigure(hlHTML(problemHTML(diffMarks(bankOriginal(b).content, b.variantContent)[1])), 변형칸)
           : '<span style="color:var(--dim);">아직 내용이 없습니다 — AI로 채우거나 아래에 직접 입력하세요.</span>'}</div>
         <div class="q-ans">정답 <b>${escHtml(b.variantAnswer||'—')}</b></div>
         ${/* 예전엔 여기에 원본 그림을 그대로 얹고 「같은 그림을 씁니다」라고 적었다.
