@@ -1131,7 +1131,8 @@ function hwpxMarkDecorPics(problems, keyOf, 딱지of){
        ⚠ «장식»만 보면 모자란다 — 번호 딱지 표는 미주보다 그림이 먼저라 그림은 앞 문항에, 표지는 이 문항에 붙는다. */
     if(typeof p.content === 'string' && p.content.includes('⟦그림:')){
       const 제것 = new Set(p.pics);
-      p.content = p.content.replace(/⟦그림:([^⟧]*)⟧/g, (m, r) => 제것.has(r) ? m : '').replace(/^[| \t]*\|[| \t]*$/gm, '');
+      /* 지운 줄의 빈 줄이 맨 위에 남는다 — 주기나는 문항 머리에 번호 딱지 표가 있어 7~11줄 비었다(2026-11-09 · 2050908) → trim */
+      p.content = p.content.replace(/⟦그림:([^⟧]*)⟧/g, (m, r) => 제것.has(r) ? m : '').replace(/^[| \t]*\|[| \t]*$/gm, '').trim();
     }
   }
   return problems;
