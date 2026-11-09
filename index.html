@@ -1119,6 +1119,12 @@
 .app .vd-top .n b{font-family:'JetBrains Mono',monospace;color:var(--ink);}
 .app .vd-top .n s{text-decoration:none;color:var(--line);margin:0 6px;}
 .app .vd-top > .n + .btn{margin-left:auto;}   /* 첫 단추만 민다 — 둘 다 밀면 «영상 등록»이 가운데 뜬다 (10-22 · 사용자) */
+/* 학생별 보기에서 편 학생 아래 영상 줄 (11-09) — 드로어의 .vd-sv 를 빌리되 이름 칸 대신 제목이라 넓힌다 */
+.app .vd-stu{padding:4px 14px 8px 24px;border-bottom:1px solid var(--line2);}
+.app .vd-stu .vd-sv{cursor:pointer;}
+.app .vd-stu .vd-sv .who{width:auto;flex:0 1 48%;}
+.app .vd-stu .vd-sv .who > :not(b){white-space:nowrap;flex-shrink:0;}
+@media (max-width:600px){ .app .vd-stu{padding-left:14px;} .app .vd-stu .vd-sv .who{flex-basis:58%;} }
 
 /* 목록 — 썸네일 줄. 높이를 묶고 안에서만 민다. */
 /* 🔵 목록이 화면의 전부다 (V-2b) — 높이를 안 묶는다. 상세는 드로어라 목록이 길어져도 상세가 밀리지 않는다. */
@@ -31143,6 +31149,7 @@ function chubVideoHTML(classId){
       onclick="state.videoAdding=!state.videoAdding; render()">
       ${state.videoAdding ? '닫기' : iconSvg('plus',13)+' 영상 등록'}</button>
     <button class="btn q sm" onclick="pvToggle()" title="편집기 «목차 복사» → 질문한 문항만 보여 주기">${state.pvAdding ? '목차 닫기' : '문항 목차'}</button>
+    <button class="btn q sm" onclick="state.videoBy=state.videoBy==='student'?'':'student'; render()">${state.videoBy==='student' ? '영상별 보기' : '학생별 보기'}</button>
   </div>
   ${state.pvAdding ? pvPanelHTML(classId) : ''}
   ${!state.videoAdding ? '' : `
@@ -31214,6 +31221,34 @@ function chubVideoHTML(classId){
 
   if(vids.length===0 && personal.length===0){
     return form + `<div class="st-empty">이 반에 배포된 영상이 없습니다.<br>「영상 등록」으로 유튜브 링크를 보내면 여기서 «누가 어디까지 봤는지»가 쌓입니다.</div>`;
+  }
+
+  /* 🔵 **학생별 보기** (2026-11-09 · 사용자 — 「영상탭에서 학생 개개인별로 보기도 하고싶어」) — 같은 셈(chubVideoModel)을
+       학생 쪽에서 읽는다. 한 학생이 받은 영상 = 반 영상 중 받은(v)에 든 것 + 그 학생 개인 배정(뺀 것 빼고).
+       완주 n/m 은 복습용(videoCounted)을 뺀 수다. 줄을 펴면 영상마다 막대 · 영상을 누르면 그 영상 드로어. */
+  if(state.videoBy === 'student'){
+    const 오늘 = todayStr();
+    const 받은영상 = sid => 목록.flatMap(x => x.g ? x.g.filter(v => v.studentId === sid && !videoExcluded(v, sid))
+      : 받은(x.v).some(s => s.studentId === sid) ? [x.v] : []);
+    const 학생줄 = s => {
+      const vs = 받은영상(s.studentId), 센것 = vs.filter(videoCounted);
+      const 완주 = 센것.filter(v => progOf(v, s.studentId).done).length;
+      const 밀린 = 센것.filter(v => v.dueDate && v.dueDate < 오늘 && !progOf(v, s.studentId).done).length;
+      const 열림 = state.videoStuOpen === s.studentId;
+      const 영상줄 = v => { const p = progOf(v, s.studentId), 지남 = v.dueDate && v.dueDate < 오늘 && !p.done;
+        return `<div class="vd-sv ${p.done?'done':''} ${!p.done&&p.pct<50?'low':''}" onclick="videoOpen('${v.id}')">
+          <div class="who"><b>${escHtml(v.title)}</b>${videoCounted(v) ? '' : ' <span class="badge">복습용</span>'}${
+            v.dueDate ? ` <span class="mono" style="font-size:12px;color:var(--${지남 ? 'no' : 'dim'});">${escHtml(v.dueDate.slice(5))}</span>` : ''}</div>
+          <span class="track vgoal"><i style="width:${p.pct}%"></i>${videoGoalMarkHTML()}</span>
+          <span class="pct">${p.pct}%</span></div>`; };
+      return `<div class="vd-row ${열림?'on':''}" onclick="state.videoStuOpen=${열림 ? 'null' : `'${s.studentId}'`}; render()">
+        <div class="b"><div class="t">${escHtml(s.name)}</div>
+          <div class="m">받은 영상 <span class="mono">${vs.length}</span>${밀린 ? ` <span class="badge no">마감 지남 ${밀린}</span>` : ''}</div></div>
+        <div class="p"><b>완주 ${완주}/${센것.length}</b><span class="bar"><i style="width:${센것.length ? Math.round(완주 / 센것.length * 100) : 0}%"></i></span></div>
+      </div>${!열림 ? '' : `<div class="vd-stu">${vs.map(영상줄).join('') || '<div style="font-size:13px;color:var(--dim);">받은 영상이 없습니다.</div>'}</div>`}`;
+    };
+    return form + (!state.allRecordsLoaded ? '<div style="font-size:13px;color:var(--dim);margin-bottom:8px;">기록 불러오는 중…</div>' : '')
+      + `<div class="vd-list">${roster.map(학생줄).join('') || '<div class="st-empty">이 반에 학생이 없습니다.</div>'}</div>`;
   }
 
   const 열린것 = state.videoOpenId;
