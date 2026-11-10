@@ -12654,7 +12654,7 @@ function dqPool(rec){
       for(const f of faces) if(!prev.faces.some(x=>x.face===f.face)) prev.faces.push(f);
       return;
     }
-    byId.set(id, { id, code: dqRootCode(b), bankId:b.id, no:h.questionNo, examId:h.examId,
+    byId.set(id, { id, code: dqRootCode(b), bankId:b.id, no:h.questionNo, qtype:b.qtype, qlabel:b.qlabel, examId:h.examId,
                    chapter:b.chapter||'', subject:b.subject||'', faces });
   });
   return [...byId.values()];
@@ -15512,7 +15512,7 @@ function examDetailHTML(examId){
       const needFig = bank && bank.variantNeedsFigure && !bank.hasVariantImage;
       return `<div class="exq">
         <div class="exq-h">
-          <span class="no">${q.no}번</span>
+          <span class="no">${qLabelOf(q)}</span>
           <span class="ch">${escHtml(q.chapter || q.unit || '단원 미지정')}</span>
           <span class="spacer"></span>
           ${needFig ? '<span class="badge no">그림 필요</span>' : ''}
@@ -15740,11 +15740,11 @@ async function saveExam(){
       const sc = r && examScoreOf(r, editing.id);
       if(sc && sc.total) totals.add(sc.total);
     }
-    const bad = [...totals].filter(t => t !== questions.length);
+    const bad = [...totals].filter(t => t !== examQCountOf(questions));
     if(bad.length && !confirm(
       '이 시험에는 이미 «' + bad.join('·') + '문항 기준» 성적이 들어 있습니다.\n' +
-      '지금 붙이는 문항은 ' + questions.length + '개입니다.\n\n' +
-      '그대로 붙이면 넣어 둔 점수는 남지만, 다음에 그 칸을 고칠 때 ' + questions.length +
+      '지금 붙이는 문항은 ' + examQCountOf(questions) + '개입니다.\n\n' +
+      '그대로 붙이면 넣어 둔 점수는 남지만, 다음에 그 칸을 고칠 때 ' + examQCountOf(questions) +
       '개를 넘는 점수는 저장되지 않습니다.\n' +
       '문항을 ' + bad[0] + '개로 맞춰 붙이는 것이 맞습니다.\n\n그래도 이대로 붙일까요?')) return;
   }
@@ -16108,7 +16108,8 @@ function qLabelOf(x){
   if(!x) return '';
   const 이름 = x.qlabel || x.label || x.questionNo || x.no || '';
   const 형 = x.qtype || x.type || '0';
-  return (형 && 형 !== '0' ? 'TYPE ' + 형 + ' ' : '') + 이름 + '번';
+  /* 단답형1·서술형2 에는 «번»을 안 붙인다 (2026-11-10 사용자) — 교재 요청 「엔딩크레딧 431번」은 그대로 */
+  return (형 && 형 !== '0' ? 'TYPE ' + 형 + ' ' : '') + 이름 + (/(단답|서술)형/.test(String(이름)) ? '' : '번');
 }
 
 /* =================== 시험지 문항에 코드를 붙인다 (2026-09-05) ===================
@@ -19143,14 +19144,14 @@ function stuQuizHTML(c){
   <div class="mc ${curDone ? '' : 'go'}">
     <div class="row" style="gap:7px;">
       ${faceBadge(face)}
-      <span class="badge">${cur.no}번</span>
+      <span class="badge">${qLabelOf(cur)}</span>
       ${curDone ? `<span class="badge ${curDone.correct?'ok':'no'}">${curDone.correct?'정답':'오답'}</span>` : ''}
       <span class="spacer"></span>
       <span class="mono" style="font-size:12px;color:var(--dim);">${idx+1} / ${cards.length}</span>
       ${reportBtnHTML(face.bankId, face.face)}
     </div>
     <div style="font-size:12px;color:var(--dim);margin-top:9px;">
-      ${escHtml(examTitleOf(cur.examId))} ${cur.no}번
+      ${escHtml(examTitleOf(cur.examId))} ${qLabelOf(cur)}
       ${faceWord(face)}
       ${st && st.streak ? ` · 연속 ${st.streak}회 정답` : ''}
     </div>
@@ -19191,7 +19192,7 @@ function stuQuizHTML(c){
           <b style="display:block;position:relative;font-size:13px;font-weight:600;overflow:hidden;
             text-overflow:ellipsis;white-space:nowrap;">${escHtml(xf.content)}</b>
           <span style="display:block;font-size:12px;color:var(--dim);margin-top:3px;">
-            ${xf.kind==='orig'?'원본':(xf.kind==='U'?'한 단계 위':'변형')} ${x.no}번</span>
+            ${xf.kind==='orig'?'원본':(xf.kind==='U'?'한 단계 위':'변형')} ${qLabelOf(x)}</span>
         </span>
         ${d ? `<span class="badge ${d.correct?'ok':'no'}">${d.correct?'정답':'오답'}</span>`
             : `<span class="badge late">대기</span>`}
@@ -25432,7 +25433,7 @@ function sessionExamHTML(classId, date){
 
   /* 점수 타일 — 출결과 같은 결이다. 맞은 개수를 치면 옆에서 100점 환산이 따라 움직인다. */
   const tot = cur ? examTotalOf(cur) : 0;
-  const qn = cur ? (cur.questions||[]).length : 0;
+  const qn = cur ? examQCountOf(cur.questions) : 0;
   const scoreBoard = !cur ? '' : `
   <div class="t-sec" style="margin-top:${adding?'24px':'0'};">${escHtml(cur.title)} 점수
     <span style="font-weight:400;"><span class="mono">${escHtml(cur.date||'')}</span> ·
@@ -26311,8 +26312,16 @@ function classExams(classId, ym){
    ⚠ **저장되는 값은 그대로 `{score, total}`이다** — 셈이 같기 때문이다(정답수/문항수 = 점수/만점).
      바뀐 것은 «무엇을 넣는가»와 «무엇을 보여 주는가»다. 옛 기록을 건드리지 않아도 된다.
    문항이 있는 시험지는 문항수를 **알고 있으므로** 그것을 쓴다 — 손으로 고칠 일이 아니다. */
+/* 🔴 형이 나뉜 시험지(TYPE 0 공통 + A/B 선택)는 학생이 «공통 + 한 형»만 푼다 (2026-11-10).
+   28문항을 다 세면 만점이 22가 아니라 28이 된다. */
+function examQCountOf(qs){
+  const 형별 = {};
+  (qs||[]).forEach(q => { const t = q.type || '0'; 형별[t] = (형별[t]||0) + 1; });
+  const 선택 = Object.keys(형별).filter(t => t !== '0').map(t => 형별[t]);
+  return (형별['0']||0) + (선택.length ? Math.max(...선택) : 0);
+}
 function examTotalOf(ex){
-  const qn = (ex.questions||[]).length;
+  const qn = examQCountOf(ex.questions);
   if(qn) return qn;
   if(ex.scoreTotal) return ex.scoreTotal;
   for(const s of DATA.students){
@@ -26387,7 +26396,7 @@ function chubScoresHTML(classId){
     <thead><tr>
       <th class="who">이름</th>
       ${exams.map(ex=>{
-        const qn = (ex.questions||[]).length;
+        const qn = examQCountOf(ex.questions);
         const avg = colAvg(ex);
         return `<th class="hwg-col sg-col">
           <b title="${escHtml(ex.title)}">${escHtml(ex.title)}</b>
@@ -26718,7 +26727,7 @@ function sgQDrawerHTML(){
         ${(ex.questions||[]).length===0
           ? '<div class="fm-empty">문항이 없습니다.</div>'
           : (ex.questions||[]).map((qq,i)=>`<div class="sgq-q">
-              <div class="h"><span class="no">${i+1}번</span>
+              <div class="h"><span class="no">${qLabelOf(qq)}</span>
                 <span class="ch">${escHtml(qq.chapter || qq.unit || '단원 미지정')}</span></div>
               <div class="tx">${problemHTML(qq.content)}</div>
               <div class="ans">정답<b>${escHtml(qq.answer||'—')}</b></div>
@@ -26783,7 +26792,7 @@ async function saveClassScores(classId, examList){
   const totals = {};
   for(const ex of exams){
     /* 문항이 있는 시험지는 칸이 없다 — 문항수를 알고 있으므로 그것을 쓴다. */
-    const qn = (ex.questions||[]).length;
+    const qn = examQCountOf(ex.questions);
     if(qn){ totals[ex.id] = qn; continue; }
     const el = document.getElementById('cst-'+ex.id);
     /* 🔵 **칸이 없으면 적혀 있는 만점으로 센다** (2026-09-19) — 조교 화면은 만점을 글자로만 보인다
@@ -27576,7 +27585,7 @@ function studentTimeline(s, rec){
     const bank = DATA.problemBank.find(b=>b.id===h.bankId);
     const exam = DATA.exams.find(e=>e.id===h.examId);
     const correct = h.done && bank && (h.studentAnswer||'').trim()===(bank.variantAnswer||'').trim();
-    push(h.assignedAt, 'hw', '오답', escHtml(examTitleOf(h.examId)) + ' ' + h.questionNo + '번',
+    push(h.assignedAt, 'hw', '오답', escHtml(examTitleOf(h.examId)) + ' ' + qLabelOf(h),
       h.done ? `제출 <b>${escHtml(h.studentAnswer||'')}</b>` : '아직 제출하지 않았습니다',
       h.done ? `<span class="badge ${correct?'ok':'no'}">${correct?'정답':'오답'}</span>` : '<span class="badge">미제출</span>');
   });
@@ -30108,7 +30117,7 @@ function chubQuizHTML(classId){
       return `<div class="qz-sr" style="display:block;padding:10px 0;">
         <div class="row" style="gap:6px;">
           <span class="badge ${cf.kind==='orig'?'no':(cf.kind==='U'?'late':'score')}">${cf.kind==='orig'?'원본':(cf.kind==='U'?'한 단계 위':'변형')}</span>
-          <span style="font-size:12px;color:var(--dim);">${escHtml(examTitleOf(card.examId))} ${card.no}번</span>
+          <span style="font-size:12px;color:var(--dim);">${escHtml(examTitleOf(card.examId))} ${qLabelOf(card)}</span>
           <span class="spacer"></span>
           ${done ? `<span class="badge ${st.correct?'ok':'no'}">${st.correct?'정답':'오답'}</span>`
                  : `<span class="badge late">미제출</span>`}
@@ -31616,7 +31625,7 @@ function examQRowsHTML(ex, counts, total){
   const html = rows.length===0
     ? '<div style="padding:36px 0;text-align:center;color:var(--dim);font-size:13px;">문항이 없습니다.</div>'
     : rows.map(r=>`<div class="ex-q ${r.pct>=50?'hi':(r.pct>=25?'mid':'')}">
-        <span class="no">${r.no}번</span>
+        <span class="no">${qLabelOf(r.q.label ? r.q : r)}</span>
         ${/* 단원이 있으면 단원을, 없으면 과목을. 범위 판정이 쓰는 값과 같은 것을 보여 준다. */''}
         <span class="unit" title="${escHtml(r.q.chapter || r.q.unit || '')}">${escHtml(r.q.chapter || r.q.unit || '단원 미지정')}</span>
         <span class="track"><i style="width:${r.pct}%"></i></span>
@@ -31886,7 +31895,7 @@ function examNewLegacyHTML(){
     const editing = state.examEditQ === i;
     return `<div class="exn-q${editing?' editing':''}">
       <div class="exn-qh">
-        <b class="mono">${i+1}번</b>
+        <b class="mono">${q.label ? qLabelOf(q) : (i+1) + '번'}</b>
         ${/* 🔵 **단원은 펴지 않고 바로 고른다** (2026-09-04 · 사용자 요청 —
              「단원 정도는 "고치기"를 펼쳐서가 아니라 가볍게 수정할 수 있도록」).
              단원은 이 화면에서 제일 자주 손대는 값인데(데일리퀴즈 범위가 여기서 갈린다)
@@ -32393,7 +32402,7 @@ function icUsedIn(code){
     /* 학생이 교재에서 요청한 문제는 시험지가 없다(examId '') — «(지운 시험지)»로 보였다(11-09 사용자). */
     if(b.source === 'bookreq') return { no: b.questionNo, title: '학생 교재 요청', date: b.requestedAt || '', cls: '' };
     const ex = DATA.exams.find(e => e.id === b.examId);
-    return { no: b.questionNo, title: ex ? ex.title : '(지운 시험지)',
+    return { no: b.questionNo, qtype: b.qtype, qlabel: b.qlabel, title: ex ? ex.title : '(지운 시험지)',
              date: ex ? ex.date : '', cls: ex ? classNameOf(ex.classId) : '' };
   });
 }
@@ -33207,7 +33216,7 @@ function icItemCardHTML(root, it, vs){
         </div>`; })()}
       <div class="ic-crow"><span class="ic-cl">쓰인 곳</span>
         <span>${used.length
-          ? used.map(u=>`${escHtml(u.title)} <b>${u.no}번</b>
+          ? used.map(u=>`${escHtml(u.title)} <b>${qLabelOf(u)}</b>
               <s class="ic-cs">${escHtml(u.cls||'')}${u.date?' · '+escHtml(u.date):''}</s>`).join('<br>')
           : '<s class="ic-cs">아직 시험지에 안 나갔습니다</s>'}</span></div>
     </div>
@@ -36245,7 +36254,7 @@ function reviewActbarHTML(b, list){
     <button class="btn q" onclick="deleteBankEntry('${b.id}')">삭제</button>
     <span class="spacer"></span>
     <span class="hint" style="margin-left:0;">
-      ${next ? `다음 · ${next.questionNo}번` : '이 큐의 마지막'}
+      ${next ? `다음 · ${qLabelOf(next)}` : '이 큐의 마지막'}
       ${/* ⚠ 자판 안내는 **한 덩이로 싸 둔다** — 폰에서는 통째로 빠져야 한다(M-2e).
            딱지(`.kbd`)만 감추면 「이전 다음」이라는 말만 남아 뜻이 없는 줄이 된다. */''}
       <span class="kb-hint"><span class="kbd">J</span> 이전 <span class="kbd">K</span> 다음</span></span>
@@ -36592,7 +36601,7 @@ function teacherItemStoreHTML(){
             `<a class="${state.hwpPick.includes(c) ? 'on' : ''}" onclick="hwpPickToggle('${escHtml(c)}')">${c === it.code ? '원본' : escHtml(c.split('-').pop())}</a>`).join('')}</span>` : '';
         })()}
         ${used.length ? `<span class="ist-used">출제 ${used.length}회<s>${
-            escHtml(used.slice(0,2).map(u=>`${u.title} ${u.no}번`).join(' · '))}${used.length>2?' 외':''}</s></span>` : ''}
+            escHtml(used.slice(0,2).map(u=>`${u.title} ${qLabelOf(u)}`).join(' · '))}${used.length>2?' 외':''}</s></span>` : ''}
       </div>
     </div>`;
   };

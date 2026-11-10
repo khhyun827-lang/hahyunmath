@@ -75,7 +75,8 @@ const { qLabelOf } = new Function(lift('qLabelOf') + '\nreturn { qLabelOf };')()
 봄('형이 나뉘면 형까지 말한다', qLabelOf({ qtype: 'B', qlabel: '15' }), 'TYPE B 15번');
 봄('공통은 번호만', qLabelOf({ qtype: '0', qlabel: '3' }), '3번');
 봄('🔵 옛 기록(형이 없다)도 그대로 읽힌다', qLabelOf({ questionNo: 7 }), '7번');
-봄('단답형도 그대로', qLabelOf({ qtype: 'A', qlabel: '단답형2' }), 'TYPE A 단답형2번');
+봄('단답형도 그대로', qLabelOf({ qtype: 'A', qlabel: '단답형2' }), 'TYPE A 단답형2');
+봄('공통 서술형도 «번» 없이', qLabelOf({ qtype: '0', qlabel: '서술형1' }), '서술형1');
 
 // ── 열쇠로 찾는가 (옛것 호환) ────────────────────────────────────────
 console.log('\n문항 찾기 — 새 열쇠와 옛 번호가 같이 산다\n');
@@ -216,6 +217,18 @@ const { srcCodeInfo, splitItemCode } = (() => {
   봄('⚠ -N01 의 N 은 «갈래»이지 형이 아니다', srcCodeInfo('1230928-N01').kind, 'N');
   봄('⚠ 그때 형은 비어 있다', srcCodeInfo('1230928-N01').form, '');
   봄('⚠ 없는 형 글자는 코드로 안 받는다', srcCodeInfo('2160321Z'), null);
+}
+
+// ⑱ 만점 — 형이 나뉘면 «공통 + 한 형»만 푼다 (2026-11-10 · 동그랑땡 1-2기말 1회(하) 28문항 = 학생당 22)
+{
+  const { examQCountOf } = new Function(lift('examQCountOf') + NLL + 'return { examQCountOf };')();
+  const 판 = (n0, nA, nB) => [...Array(n0)].map(() => ({ type: '0' }))
+    .concat([...Array(nA)].map(() => ({ type: 'A' })), [...Array(nB)].map(() => ({ type: 'B' })));
+  봄('🔴 공통 16 + A 6 + B 6 → 22', examQCountOf(판(16, 6, 6)), 22);
+  봄('선택형 길이가 다르면 긴 쪽', examQCountOf(판(13, 4, 6)), 19);
+  봄('🔵 형이 없는 옛 시험지는 그대로', examQCountOf([{}, {}, {}]), 3);
+  봄('빈 시험지는 0', examQCountOf(undefined), 0);
+  봄('데일리퀴즈 카드도 형까지', qLabelOf({ no: 23, qtype: 'B', qlabel: '14' }), 'TYPE B 14번');
 }
 
 console.log(`\n  ${fail ? '🔴' : '✅'} ${pass} 통과 · ${fail} 실패\n`);
