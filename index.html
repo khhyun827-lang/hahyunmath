@@ -2324,7 +2324,8 @@
 .app .ex-q{display:flex;align-items:center;gap:12px;padding:9px 2px;
   border-bottom:1px solid var(--line2);transition:background var(--t);}
 .app .ex-q:hover{background:var(--hover);}
-.app .ex-q .no{width:34px;flex-shrink:0;font-family:'JetBrains Mono',monospace;font-size:12px;
+/* .no 112px — «TYPE A 서술형3» 이 한 줄에 들도록 (2026-11-11 · 34px 이면 세 줄로 접혔다). 막대가 그만큼 줄어든다. */
+.app .ex-q .no{width:112px;flex-shrink:0;white-space:nowrap;font-family:'JetBrains Mono',monospace;font-size:12px;
   font-weight:600;color:var(--sub);}
 .app .ex-q .unit{width:150px;flex-shrink:0;font-size:12px;color:var(--sub);
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
