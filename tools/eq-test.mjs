@@ -238,6 +238,10 @@ console.log('');
   /* ① 실측 원문 `A CUPB!=U` — 뒤에 공백이 없어 `\neqU` 라는 «없는 명령»이 됐다. */
   든가('🔴 != 뒤에 공백을 붙인다', convertHwpEq('A CUPB!=U'), B + 'neq U');
   없나('그래야 없는 명령이 안 생긴다', convertHwpEq('x!=y'), B + 'neqy');
+  /* 실측 원문 `(a  ne0)` (2026-11-10 · 동그랑땡 1-2기말 13번) — ne 뒤에 숫자가 붙어 «ane0» 으로 보였다. */
+  든가('🔴 ne 뒤에 숫자가 바로 붙어도 \\neq', convertHwpEq('a  ne0'), B + 'neq 0');
+  든가('ne 띄어 쓴 것은 그대로', convertHwpEq('a ne 0'), B + 'neq');
+  없나('🔵 낱말 속 ne 는 안 건드린다', convertHwpEq('none'), B + 'neq');
 
   /* ② 실측 원문 `S_2 over S_1` — 「낱글자」만 받으니 «2 over S» 를 집어 아래첨자가 둘이 됐다. */
   봄('🔴 over 가 아래첨자까지 «한 덩이»로 본다', convertHwpEq('S_2 over S_1'),

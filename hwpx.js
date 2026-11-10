@@ -395,8 +395,10 @@ function convertHwpEq(script){
   /* 🔴 **뒤에 공백이 없어 «없는 명령»이 되고 있었다** (2026-09-06 · KaTeX 로 그려 보고 찾았다).
      실측 원문 'A CUPB!=U' → \neqU 라는 명령은 없다. 그 수식이 통째로 빨갛게 뜬다.
      ⚠ 이 파일의 집합 기호들이 이미 «뒤에 공백을 붙여야 한다»고 적어 둔 그 까닭인데,
-       != 와 ne 만 빠져 있었다. */
-  s = s.replace(/!=/g, '\\neq ').replace(/(?<!\\)\bne\b/g, '\\neq ');
+       != 와 ne 만 빠져 있었다.
+     🔴 `a  ne0` 처럼 ne 뒤에 숫자가 바로 붙으면 `\b` 가 안 걸려 «ane0» 으로 보였다 (2026-11-10 · 동그랑땡 1-2기말 13번).
+       그래서 뒤는 «글자가 아니면» 된다. */
+  s = s.replace(/!=/g, '\\neq ').replace(/(?<!\\)\bne(?![A-Za-z])/g, '\\neq ');
   /* pile{a#b}는 «세로로 쌓기»다. 열이 하나인 행렬로 옮긴다 (행 구분은 cases·pmatrix와 같은 #). */
   /* 🔵 `box{…}` 는 네모를 친 자리다 — 교재가 «(가)» 를 이렇게 적기도 한다. KaTeX 의 \\boxed 로 옮긴다. */
   s = replaceBalancedKeyword(s, 'box', inner => '\\boxed{' + inner + '}');
@@ -527,7 +529,12 @@ function hwpWalkParagraphs(paras, tokens){
         if(child.nodeType !== 1) continue;
         const local = child.localName;
         if(local === 't'){
-          tokens.push({type:'text', v: cleanHwpPlainText(child.textContent||'')});
+          /* 🔴 **탭은 글 «속»의 원소다** (2026-11-10 · 사용자가 동그랑땡 1-2기말 TYPE B 14·16번에서 짚었다).
+             `<hp:t>ㄱ. …<hp:tab/><hp:tab/>ㄴ. …</hp:t>` — textContent 는 원소를 건너뛰어 ㄱ·ㄴ, p·q 가 붙었다.
+             탭 하나를 전각 빈칸(U+2003) 하나로 둔다 — `\s` 로 잡혀 보기항목이 ㄱ·ㄴ 을 가르고, 화면에서도 벌어진다. */
+          const 글 = Array.from(child.childNodes).map(n =>
+            n.nodeType === 3 ? n.data : (n.localName === 'tab' ? String.fromCharCode(0x2003) : '')).join('');
+          tokens.push({type:'text', v: cleanHwpPlainText(글)});
         } else if(local === 'equation'){
           const scriptEl = child.getElementsByTagNameNS(HP_NS,'script')[0];
           tokens.push({type:'eq', v: convertHwpEq(scriptEl?scriptEl.textContent:'')});

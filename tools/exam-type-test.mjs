@@ -14,7 +14,7 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { loadHwpxRules } from './hwpx-node.mjs';
+import { loadHwpxRules, parseXml } from './hwpx-node.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
@@ -229,6 +229,18 @@ const { srcCodeInfo, splitItemCode } = (() => {
   봄('🔵 형이 없는 옛 시험지는 그대로', examQCountOf([{}, {}, {}]), 3);
   봄('빈 시험지는 0', examQCountOf(undefined), 0);
   봄('데일리퀴즈 카드도 형까지', qLabelOf({ no: 23, qtype: 'B', qlabel: '14' }), 'TYPE B 14번');
+}
+
+// ⑲ 글 «속»의 탭 — ㄱ·ㄴ, p·q 가 붙던 것 (2026-11-10 · TYPE B 14·16번 실측 꼴)
+{
+  const { hwpWalkParagraphs, HP_NS } = loadHwpxRules();
+  const xml = '<hp:p xmlns:hp="' + HP_NS + '"><hp:run><hp:t>ㄱ. A<hp:tab width="1617"/><hp:tab width="4000"/>ㄴ. B</hp:t></hp:run></hp:p>';
+  const doc = parseXml(xml);
+  const toks = []; hwpWalkParagraphs([doc.documentElement], toks);
+  const 글 = toks.filter(t => t.type === 'text').map(t => t.v).join('');
+  const EM = String.fromCharCode(0x2003);
+  봄('🔴 탭 둘은 전각 빈칸 둘로 남는다', 글, 'ㄱ. A' + EM + EM + 'ㄴ. B');
+  봄('🔵 그래서 보기항목의 «빈칸 + ㄴ.» 잣대에 걸린다', /\s+(?=[ㄱ-ㅎ]\.\s)/.test(글), true);
 }
 
 console.log(`\n  ${fail ? '🔴' : '✅'} ${pass} 통과 · ${fail} 실패\n`);
