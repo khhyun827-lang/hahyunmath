@@ -44,6 +44,33 @@ try{
     DATA.problemBank.pop(); state.reviewSub = ''; render();
     return [줄[0], 줄[1], 있음];
   }), ['전체 6', '○AI 검토 전 2', true]);
+  /* 11-12 둘째 — 시험지 쌍둥이도 AI 검토를 받는다: 단추·A 단추 · 판정이 문서에 붙어 칸을 옮긴다 · 고치면 지워진다 */
+  봄('🔴 시험지 쌍둥이 — 한꺼번에 검토 단추 · A 단추 · 판정 따라 칸 이동 · 고치면 다시 검토 전', await page.evaluate(async () => {
+    const 옛판 = window.askReview;
+    window.askReview = async () => ({ verdict: 'agree', answer: '3', models: ['m1'] });
+    window.getReviewQuotaUsed = async () => 0;
+    const b = { id: 'pb-twin-ai', examId: 'ex-x', questionNo: 2, status: 'pending', variantContent: '쌍둥이 둘', variantAnswer: '3' };
+    DATA.problemBank.push(b);
+    /* 변형들의 «검토 전»은 다 판정이 있게 — 시험지 것만 남는 칸에서도 단추가 떠야 한다 */
+    const 덧댐 = pendingVariants().filter(v => !v.aiReview);
+    for(const v of 덧댐) v.aiReview = { verdict: 'agree', answer: v.answer };
+    state.reviewSub = 'todo'; state.reviewSelectedId = 'pb-twin-ai'; state.reviewQuotaUsed = 0; render();
+    const 단추 = [...document.querySelectorAll('.rv-aibar button')].some(x => x.textContent.includes('한꺼번에 검토'));
+    const A단추 = [...document.querySelectorAll('.actbar button')].some(x => x.textContent.includes('AI 검토'));
+    const 판정줄 = !!document.querySelector('.rv-judge .k-todo');
+    window.confirm = () => true;
+    await reviewAllPending();
+    const 칸후 = [reviewBankSubOf(b), b.aiReview && b.aiReview.verdict, 저장 && 저장.id];
+    state.reviewSub = 'agree'; render();
+    const 일치칸 = reviewWalkList().some(x => x.key === 'pb-twin-ai');
+    document.body.insertAdjacentHTML('beforeend', '<textarea id="bank-content-pb-twin-ai">고친 글</textarea>');
+    await saveBankEdit('pb-twin-ai');
+    document.getElementById('bank-content-pb-twin-ai').remove();
+    const 고친뒤 = reviewBankSubOf(b);
+    for(const v of 덧댐) delete v.aiReview;
+    DATA.problemBank.pop(); state.reviewSub = ''; state.reviewSelectedId = null; window.askReview = 옛판; render();
+    return [단추, A단추, 판정줄, ...칸후, 일치칸, 고친뒤];
+  }), [true, true, true, 'agree', 'agree', 'pb-twin-ai', true, 'todo']);
   /* 11-12 — 쌍둥이 일괄 생성: Gemini 가 차면 글 문항은 Groq 로 · 그림 문항이 Gemini 를 먼저 */
   봄('🔴 일괄 생성 차례 — Gemini 1 남음 · 그림 문항 먼저 · 글은 Groq', await page.evaluate(async () => {
     const 옛 = window.getAIQuotaUsed;
