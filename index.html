@@ -37228,9 +37228,9 @@ function gradeCutTableHTML(list, { cutKey, cutSeasonLabel, cutN }){
       <td title="${escHtml(school)}"><b>${escHtml(school || '(학교 미입력)')}</b></td>
       <td class="sub">${escHtml(grade || '—')}</td>
       <td class="sub">${escHtml(subject || '—')}</td>
-      ${CUT_GRADES.map(g => `<td><input type="number" class="fm-in mono gc-in" inputmode="numeric" min="0" max="100" step="1"
+      ${CUT_GRADES.map(g => `<td><input type="number" class="fm-in mono gc-in" inputmode="decimal" min="0" max="100" step="any"
           aria-label="${escHtml((school || '') + ' ' + (grade || '') + ' ' + (subject || ''))} ${g}등급컷"
-          style="width:100%;max-width:76px;box-sizing:border-box;text-align:right;padding:5px 8px;" placeholder="—"
+          style="width:100%;max-width:92px;box-sizing:border-box;text-align:right;padding:5px 8px;" placeholder="—"
           value="${cut && cut['c' + g] != null ? cut['c' + g] : ''}"
           onchange="setGradeCut('${ck}','${sc}','${gr}','${sj}',${g},this.value)"></td>`).join('')}
       <td>${warn ? `<span class="badge late">${escHtml(warn)}</span>` : ''}</td>
@@ -37243,7 +37243,7 @@ function gradeCutTableHTML(list, { cutKey, cutSeasonLabel, cutN }){
         <th style="width:118px;">학교</th>
         <th style="width:44px;">학년</th>
         <th style="width:80px;">과목</th>
-        ${CUT_GRADES.map(g => `<th style="width:80px;">${g}등급컷</th>`).join('')}
+        ${/* 11-12 사용자 — 소수점(87.35)도 들어가게 열 80→112 · 칸 76→92 */''}${CUT_GRADES.map(g => `<th style="width:112px;">${g}등급컷</th>`).join('')}
         <th></th>
       </tr></thead>
       <tbody>${body}</tbody>
