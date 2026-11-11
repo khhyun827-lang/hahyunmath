@@ -254,7 +254,7 @@ console.log(NL + '③ 원본 본문 — 두 벌로 두지 않는다' + NL);
   봄('🔴 검토 화면의 원본 칸', html.includes('problemHTML(diffMarks(bankOriginal(b).content'), true);
   봄('🔴 검토 화면의 정답 칸', html.includes('splitAnswerSolution(bankOriginal(b).answer)'), true);
   봄('🔴 AI 쌍둥이 만들기 두 자리',
-    (html.match(/generateTwinViaAI\(원본\.content, 원본\.answer, image\)/g) || []).length, 2);
+    (html.match(/generateTwinViaAI\(원본\.content, 원본\.answer, image(, engine)?\)/g) || []).length, 2);   // 11-12 일괄 생성은 엔진을 넘긴다(Groq 이어 가기)
   봄('🔴 옛 자리가 안 남았다', /generateTwinViaAI\(b\.originalContent/.test(html), false);
   /* 🔴 출제 이력 — 교재 요청은 시험지가 없다(examId ''). «(지운 시험지)»로 보이면 안 된다 (11-09 사용자) */
   const 출제 = new Function('DATA', 'classNameOf', lift('icUsedIn') + NL + 'return icUsedIn;')(

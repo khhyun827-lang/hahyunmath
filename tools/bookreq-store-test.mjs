@@ -63,7 +63,7 @@ const stubs = `
   const applyTwinToBank = async (b, twin) => { b.variantContent = twin.content; b.variantAnswer = twin.answer; };
   const generateTwinViaAI = async () => ({ content: '쌍둥이', answer: '3' });
   const getAIQuotaUsed = async () => 0;
-  const AI_DAILY_LIMIT = 20;
+  const AI_DAILY_LIMIT = 20, GROQ_TWIN_DAILY_LIMIT = 20;
   const aiSleep = async () => {};
   const dbGet = async () => null;
   const twinFigureDoc = () => ({});
@@ -78,7 +78,7 @@ const src = stubs + NL + [
   liftConst('REVIEW_QUEUES'), lift('reviewQueueList'),
   lift('fillEmptyFromStore', 'async function'), lift('approveAutoVariant', 'async function'),
   lift('storeTwinAsPending', 'async function'),
-  lift('regenerateOneWithAI', 'async function'), lift('runTwinBatch', 'async function'),
+  lift('regenerateOneWithAI', 'async function'), lift('bankHasFig'), lift('twinBatchPlan', 'async function'), lift('runTwinBatch', 'async function'),
 ].join(NL) + NL + 'return { bankIsBookReq, bankRootOf, approveAutoVariant, regenerateOneWithAI, runTwinBatch, fillEmptyFromStore, state, DATA };';
 
 const make = () => {

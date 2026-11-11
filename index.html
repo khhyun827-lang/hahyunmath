@@ -8226,35 +8226,51 @@ function aiSleep(ms){
    한도를 넘는 것은 손대지 않고 남겨 둔다 — 내용이 빈 채로 남으므로 다음날 다시 부르면 이어진다.
    생성된 것은 status를 건드리지 않는다: 등록 때 'pending'이었으므로 내용이 채워지는 순간
    저절로 「1차 검토 대기」 큐로 옮겨 간다 (그 큐의 조건이 status==='pending' && 내용 있음이다). */
+/* 일괄 생성 차례 — Gemini 몫 뒤에 글 문항은 Groq 로 이어 간다 (11-12 · 사용자 「쌍둥이 전부 생성이 한 문제 만들고 끊긴다」).
+   그날 아침 자동 돌리기가 Gemini 를 19/20 써 두면 남은 1건만 돌고 멈췄다 — Groq 통(따로 20)은 놀고 있었다.
+   그림 문항이 Gemini 를 먼저 갖는다(Groq 는 그림을 못 본다). 차례는 원래 문항 순서대로. */
+function bankHasFig(b){ return !!b.hasImage || /⟦그림/.test(String(bankOriginal(b).content || '')); }
+async function twinBatchPlan(needsAI){
+  const [used, gUsed] = await Promise.all([getAIQuotaUsed(), getAIQuotaUsed('twin-groq')]);
+  let gem = Math.max(0, AI_DAILY_LIMIT - used), gq = Math.max(0, GROQ_TWIN_DAILY_LIMIT - gUsed);
+  const 엔진 = new Map();
+  for(const b of needsAI) if(gem > 0 && bankHasFig(b)){ 엔진.set(b, ''); gem--; }
+  for(const b of needsAI) if(!bankHasFig(b)){
+    if(gem > 0){ 엔진.set(b, ''); gem--; } else if(gq > 0){ 엔진.set(b, 'groq'); gq--; }
+  }
+  return { batch: needsAI.filter(b => 엔진.has(b)).map(b => ({ b, engine: 엔진.get(b) })),
+           gem: Math.max(0, AI_DAILY_LIMIT - used), gq: Math.max(0, GROQ_TWIN_DAILY_LIMIT - gUsed) };
+}
 async function runTwinBatch(needsAI, label){
   if(state.aiProcessing){ showToast('다른 AI 작업이 진행 중입니다. 끝난 뒤 다시 시도해주세요.'); return null; }
   if(needsAI.length===0){ showToast('생성할 문항이 없습니다.'); return null; }
-  const used = await getAIQuotaUsed();
-  const remaining = AI_DAILY_LIMIT - used;
-  if(remaining<=0){ showToast('오늘 AI 생성 한도(' + AI_DAILY_LIMIT + '건)를 모두 사용했습니다. 내일 다시 시도해주세요.'); return null; }
-  const batch = needsAI.slice(0, remaining);
+  const { batch } = await twinBatchPlan(needsAI);
+  if(!batch.length){ showToast(`오늘 AI 생성 한도(Gemini ${AI_DAILY_LIMIT}건 · 글 문항 Groq ${GROQ_TWIN_DAILY_LIMIT}건)를 모두 사용했습니다. 내일 다시 시도해주세요.`); return null; }
   state.aiProcessing = true;
   state.aiCancel = false;
   state.aiProgress = { done:0, total: batch.length };
   render();
-  let ok = 0, needFig = 0, stoppedByQuota = false, stoppedByUser = false, doneCount = 0;
+  let ok = 0, needFig = 0, stoppedByQuota = false, stoppedByUser = false, doneCount = 0, tried = 0, groqN = 0;
+  const 막힌 = new Set();
   for(let i=0;i<batch.length;i++){
     /* 「멈춤」은 «다음 한 건으로 넘어가기 직전»에 듣는다. 돌던 것은 끝까지 붙인다. */
     if(state.aiCancel){ stoppedByUser = true; break; }
-    const b = batch[i];
-    const image = b.hasImage ? await dbGet('pbimg:'+b.id, null) : null;
+    const { b, engine } = batch[i];
+    /* 한도에 걸린 엔진은 더 두드리지 않는다 — 계속 두드려도 전부 429인데 13초씩 헛돈다. 남은 것은 그대로 둔다. */
+    if(막힌.has(engine)) continue;
+    const image = (b.hasImage && engine !== 'groq') ? await dbGet('pbimg:'+b.id, null) : null;
     const 원본 = bankOriginal(b);   /* 교재 요청은 본문이 창고에 있다 (K-17) */
-    const twin = await generateTwinViaAI(원본.content, 원본.answer, image);
-    /* 한도에 걸리면 그 자리에서 멈춘다 — 계속 두드려도 전부 429인데
-       13초씩 쉬며 헛돌기만 한다. 남은 것은 손대지 않고 그대로 둔다. */
-    if(twin && twin.quotaExceeded){ stoppedByQuota = true; break; }
+    const twin = await generateTwinViaAI(원본.content, 원본.answer, image, engine);
+    if(twin && twin.quotaExceeded){ 막힌.add(engine); stoppedByQuota = true; continue; }
+    tried++;
     if(twin){
       /* 교재 요청은 문항에 안 채운다 — 창고의 검토 대기 변형으로 (2026-09-21 · `bankIsBookReq` 주석) */
       if(bankIsBookReq(b)) await storeTwinAsPending(bankRootOf(b), twin, (state.itemBody || {})[bankRootOf(b)]);
       else await applyTwinToBank(b, twin);
       if(twin.needsFigure) needFig++;
-      if(typeof twin.quotaUsed === 'number') state.aiQuotaUsed = twin.quotaUsed;
+      if(typeof twin.quotaUsed === 'number' && engine !== 'groq') state.aiQuotaUsed = twin.quotaUsed;
       ok++;
+      if(engine === 'groq') groqN++;
     }
     doneCount = i + 1;
     state.aiProgress = { done:doneCount, total: batch.length };
@@ -8265,14 +8281,14 @@ async function runTwinBatch(needsAI, label){
   state.aiCancel = false;
   state.aiProgress = null;
   state.aiQuotaUsed = null;
-  const leftover = needsAI.length - ((stoppedByQuota || stoppedByUser) ? doneCount : batch.length);
+  const leftover = needsAI.length - tried;
   showToast(ok===0 && stoppedByQuota
     ? `오늘 AI 생성 한도(${AI_DAILY_LIMIT}건)를 모두 사용했습니다. 내일 다시 시도해주세요.`
     : stoppedByUser
     ? `${label}${ok}개까지 만들고 멈췄습니다. 「1차 검토 대기」에 있습니다.`
       + (needFig>0 ? ` 그중 ${needFig}개는 그림을 직접 그려서 올려야 합니다 (「그림 필요」).` : '')
       + (leftover>0 ? ` 남은 ${leftover}개는 다시 「AI로 채우기」로 이어서 만들 수 있습니다.` : '')
-    : `${label}${ok}개를 생성했습니다. 「1차 검토 대기」에 있습니다.`
+    : `${label}${ok}개를 생성했습니다${groqN ? ` (그중 ${groqN}개는 Gemini 한도가 차서 Groq 로)` : ''}. 「1차 검토 대기」에 있습니다.`
       + (needFig>0 ? ` 그중 ${needFig}개는 그림을 직접 그려서 올려야 합니다 (「그림 필요」).` : '')
       + (leftover>0 ? ` 남은 ${leftover}개는 오늘 한도를 넘어 내일 이어서 만들 수 있습니다.` : ''));
   render();
@@ -8292,16 +8308,17 @@ async function generateTwinsForExam(examId){
     .filter(b=>b.examId===examRootId(examId) && !b.variantContent && !b.variantAnswer)
     .sort((a,b)=>(a.questionNo||0)-(b.questionNo||0));
   if(needsAI.length===0){ showToast('이 시험지에는 새로 만들 문항이 없습니다.'); return; }
-  const used = await getAIQuotaUsed();
-  const remaining = Math.max(0, AI_DAILY_LIMIT - used);
-  const willDo = Math.min(needsAI.length, remaining);
-  if(willDo===0){ showToast('오늘 AI 생성 한도(' + AI_DAILY_LIMIT + '건)를 모두 사용했습니다. 내일 다시 시도해주세요.'); return; }
+  const plan = await twinBatchPlan(needsAI);
+  const willDo = plan.batch.length;
+  if(willDo===0){ showToast(`오늘 AI 생성 한도(Gemini ${AI_DAILY_LIMIT}건 · 글 문항 Groq ${GROQ_TWIN_DAILY_LIMIT}건)를 모두 사용했습니다. 내일 다시 시도해주세요.`); return; }
+  const groqN = plan.batch.filter(x => x.engine === 'groq').length;
   /* 한 건에 13초씩 쉬어 가므로 20건이면 4분이 넘는다. 얼마나 걸리는지 미리 말해 준다. */
   const mins = Math.ceil(willDo * 13 / 60);
   if(!confirm(`${escHtmlPlain(e.title)}의 문항 ${willDo}개로 쌍둥이를 만듭니다.\n`
     + `약 ${mins}분 걸립니다. 그동안 이 화면을 닫지 마세요.\n\n`
+    + (groqN ? `Gemini 남은 한도가 ${plan.gem}건이라 글 문항 ${groqN}개는 Groq 로 만듭니다.\n\n` : '')
     + (needsAI.length > willDo
-        ? `오늘 남은 한도가 ${remaining}건이라 ${needsAI.length - willDo}개는 내일 이어서 만듭니다.\n\n` : '')
+        ? `${needsAI.length - willDo}개는 오늘 한도를 넘어(그림 문항은 Gemini 만 됩니다) 내일 이어서 만듭니다.\n\n` : '')
     + '시작할까요?')) return;
   const res = await runTwinBatch(needsAI, `${e.title} — `);
   if(res && res.ok > 0){
@@ -35486,7 +35503,8 @@ async function reviewThirdOne(code){
 /* =========== 검토 대기 안의 네 칸 (2026-10-05 · 사용자 개편) ===========
    AI 검토 전 → (한꺼번에 검토) → 정답 일치(그림 없음 · 모두 통과) / 그림 확인(그림은 사람이) / 답 다름(셋째 AI · 사람).
    🔴 답이 다르면 그림이 있어도 «답 다름»이 먼저다 — 답이 틀린 문항의 그림을 먼저 손볼 까닭이 없다.
-   ⚠ 칸은 AI 변형만 가른다. 시험지 문항(problembank)은 «전체»에서만 보인다(AI 검토가 안 걸린다). */
+   ⚠ 칸은 AI 변형을 가른다. 시험지 문항(problembank)은 AI 검토가 안 걸리니 «AI 검토 전»에 같이 선다
+     (11-12 · 사용자 — 「전체 87 인데 네 칸을 더해도 안 맞는다, 동그랑땡 쌍둥이가 검토 전에 안 뜬다」). */
 const REVIEW_SUBS = [['todo', 'AI 검토 전'], ['agree', '정답 일치'], ['fig', '그림 확인'], ['diff', '답 다름']];
 function reviewSubOf(v){
   const r = v && v.aiReview;
@@ -35499,14 +35517,14 @@ function reviewAutos(){
   const sub = state.reviewSub || '';
   return sub ? pendingVariants().filter(v => reviewSubOf(v) === sub) : pendingVariants();
 }
-function reviewBankList(qkey){ return qkey === 'pending' && state.reviewSub ? [] : reviewQueueList(qkey); }
+function reviewBankList(qkey){ return qkey === 'pending' && state.reviewSub && state.reviewSub !== 'todo' ? [] : reviewQueueList(qkey); }
 function goReviewSub(sub){
   state.reviewQueue = 'pending'; state.reviewSub = sub;
   state.reviewSelectedId = null; state.reviewVariantCode = '';
   render();
 }
 function reviewSubCounts(){
-  const n = { todo:0, agree:0, fig:0, diff:0 };
+  const n = { todo: reviewQueueList('pending').length, agree:0, fig:0, diff:0 };   // 시험지 문항은 «AI 검토 전»에
   for(const v of pendingVariants()) n[reviewSubOf(v)]++;
   return n;
 }

@@ -35,6 +35,25 @@ try{
   /* 2026-11-08 — 네 칸은 사이드 들여쓰기에서 작업 칸 위 가로 띠(.rv-subbar)로 옮겼다 */
   const 칸 = () => page.$$eval('.rv-subbar .rv-sb', els => els.map(e => e.textContent.replace(/\s+/g, ' ').trim()));
   봄('작업 칸 위 띠에 전체와 네 칸 · 수', await 칸(), ['전체 5', '○AI 검토 전 1', '=정답 일치 1', '◇그림 확인 1', '≠답 다름 2']);
+  /* 11-12 — 시험지 쌍둥이(problembank 검토 대기)는 «AI 검토 전»에 같이 선다 · 네 칸을 더하면 전체 */
+  봄('🔴 시험지 문항은 AI 검토 전에 — 네 칸 합 = 전체', await page.evaluate(() => {
+    DATA.problemBank.push({ id: 'pb-twin-test', examId: 'ex-x', questionNo: 1, status: 'pending', variantContent: '쌍둥이', variantAnswer: '3' });
+    state.reviewSub = 'todo'; render();
+    const 줄 = [...document.querySelectorAll('.rv-subbar .rv-sb')].map(e => e.textContent.replace(/\s+/g, ' ').trim());
+    const 있음 = reviewWalkList().some(x => x.key === 'pb-twin-test');
+    DATA.problemBank.pop(); state.reviewSub = ''; render();
+    return [줄[0], 줄[1], 있음];
+  }), ['전체 6', '○AI 검토 전 2', true]);
+  /* 11-12 — 쌍둥이 일괄 생성: Gemini 가 차면 글 문항은 Groq 로 · 그림 문항이 Gemini 를 먼저 */
+  봄('🔴 일괄 생성 차례 — Gemini 1 남음 · 그림 문항 먼저 · 글은 Groq', await page.evaluate(async () => {
+    const 옛 = window.getAIQuotaUsed;
+    window.getAIQuotaUsed = async (b) => b === 'twin-groq' ? 18 : 19;
+    const L = [{ id: 'a', variantContent: '', content: '글1', answer: '1' }, { id: 'b', hasImage: true, content: '그림', answer: '2' },
+               { id: 'c', content: '글2', answer: '3' }, { id: 'd', content: '글3', answer: '4' }];
+    const p = await twinBatchPlan(L);
+    window.getAIQuotaUsed = 옛;
+    return p.batch.map(x => x.b.id + ':' + (x.engine || 'gemini'));
+  }), ['a:groq', 'b:gemini', 'c:groq']);
   봄('사이드에는 네 칸이 없다', await page.locator('.subnav a.sn-ch').count(), 0);
   await page.locator('.rv-subbar .rv-sb', { hasText: '정답 일치' }).click();
   봄('정답 일치 — 그림 없는 일치만', await page.evaluate(() => reviewWalkList().map(x => x.key)), ['K2-03-M-0211']);
