@@ -22,10 +22,12 @@ try{
   await page.evaluate(무대들.내신모의.세우기);
   await page.evaluate(() => DATA.students.forEach(s => recordLoaded.set(s.studentId, state.allRecords[s.studentId])));
   // 학교 시험: s2 점수 고치고 등급 적기 · s3 새로 · s0 비워서 지우기 · s4 잘못 친 값
-  await page.fill('#ns-s-s2', '71'); await page.fill('#ns-g-s2', '3');
-  await page.fill('#ns-s-s3', '66');
-  await page.fill('#ns-s-s0', '');
-  await page.fill('#ns-s-s4', '140');
+  //   학교 시험은 학년도 네 시험 한 표 — 칸 id 가운데 2 = 2학기 중간 (11-13)
+  await page.fill('#ns-s-2-s2', '71'); await page.fill('#ns-g-2-s2', '3');
+  await page.fill('#ns-s-2-s3', '66');
+  await page.fill('#ns-s-2-s0', '');
+  await page.fill('#ns-s-2-s4', '140');
+  봄('한 표에 네 시험 — 1학기 기말 칸에 지난 점수', await page.inputValue('#ns-s-1-s0'), '88');
   await page.evaluate(() => saveSchoolScores('c1'));
   const r = await page.evaluate(() => ({
     s0: DATA.records.s0.schoolExams, s2: DATA.records.s2.schoolExams,

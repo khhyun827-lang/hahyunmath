@@ -38,7 +38,7 @@ try{
     render();
     return classRoster(c.id)[0].studentId;
   });
-  const 칸 = '#ns-s-' + sid;
+  const 칸 = '#ns-s-2-' + sid;   // 학교 시험은 학년도 네 시험 한 표 — 2 = 2학기 중간 (11-13)
   await page.fill(칸, '91');
   await page.evaluate(() => render());
   봄('같은 화면을 다시 그려도 남는다', await page.inputValue(칸), '91');
@@ -55,7 +55,7 @@ try{
   await page.evaluate(([id]) => {
     const e = document.getElementById(id); e.defaultValue = '91';   // 저장 뒤 다시 그린 칸과 같은 상태
     render();
-  }, ['ns-s-' + sid]);
+  }, ['ns-s-2-' + sid]);
   봄('값이 같아진 칸은 지운다', await page.evaluate(() => Object.keys(state.scoreDraft).length), 0);
 
   /* 손칸 — 값은 지키되, 저장값이 바뀌면 새 값 */

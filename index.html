@@ -26605,11 +26605,9 @@ function chubSchoolHTML(classId){
     ${mock
       ? `<span class="field" style="width:auto;">시행 달
           <input class="rst-sel" type="month" value="${ym}" onchange="state.nsYm=this.value || ''; render()"></span>`
-      : `<span class="field" style="width:auto;">학기
+      : `<span class="field" style="width:auto;">학년도
           <select class="rst-sel" onchange="state.nsTerm=nsTermOf(this.value,'${season}'); render()">
-            ${years.map(y=>`<option ${String(y)===year?'selected':''}>${y}</option>`).join('')}</select>
-          <select class="rst-sel" onchange="state.nsTerm=nsTermOf('${year}',this.value); render()">
-            ${EXAM_SEASONS.map(s=>`<option ${s===season?'selected':''}>${s}</option>`).join('')}</select></span>`}
+            ${years.map(y=>`<option ${String(y)===year?'selected':''}>${y}</option>`).join('')}</select></span>`}
     ${roster.length ? `<button class="btn p sm" onclick="saveSchoolScores('${classId}')">전체 저장</button>` : ''}
     <span style="font-size:12px;color:var(--dim);line-height:1.7;flex:1;min-width:220px;">
       <b>원점수</b>를 비우면 «안 봤다»이고, 있던 기록은 지워집니다.
@@ -26619,8 +26617,8 @@ function chubSchoolHTML(classId){
   if(!roster.length) return bar + `<div class="fm-empty">이 반에 배정된 학생이 없습니다.</div>`;
 
   /* ⚠ 과목 칸은 `mono` 를 빼고 부른다 — 한글이 「공 통 수 학」으로 벌어진다. */
-  const 판열쇠 = escHtml(classId + '|' + (mock ? 'mock|' + ym : term));   // 같은 학생 id 칸이 학기마다 선다 — 값이 다른 학기로 번지지 않게 (11-07)
-  const inp = (id, val, w, attrs, cls = 'mono') => `<input class="sg-in ${cls}" id="${id}" data-k="${판열쇠}" style="width:${w}px;" value="${val == null ? '' : escHtml(String(val))}" ${attrs}>`;
+  const 판열쇠 = escHtml(classId + '|' + (mock ? 'mock|' + ym : 'school|' + year));   // 같은 학생 id 칸이 학기마다 선다 — 값이 다른 학기로 번지지 않게 (11-07)
+  const inp = (id, val, w, attrs, cls = 'mono', st = '') => `<input class="sg-in ${cls}" id="${id}" data-k="${판열쇠}" style="width:${w}px;${st}" value="${val == null ? '' : escHtml(String(val))}" ${attrs}>`;
   const rows = roster.map(s=>{
     const rec = state.allRecords[s.studentId] || {};
     const who = `<td class="who"><span class="nm">${escHtml(s.name)}</span>${rosterLeftTagHTML(s, classId)}</td>`;
@@ -26635,67 +26633,84 @@ function chubSchoolHTML(classId){
         <td>${inp('ns-g-'+s.studentId, got && got.grade, 48, 'type="number" min="1" max="9" step="1" placeholder="—"')}</td>
         <td style="font-size:12px;color:var(--sub);">${past.join(' · ') || '—'}</td></tr>`;
     }
-    const list = (rec.schoolExams || []).slice().sort((a,b)=>nsTermRank(b.term)-nsTermRank(a.term));
-    const got = list.find(x=>x.term===term);
-    const auto = got ? nsSchoolGrade(s, got) : {g:''};
-    const past = list.filter(x=>x!==got).slice(0,4).map(x=>{
-      const g = nsSchoolGrade(s, x);
-      return `${escHtml(x.term)} <b class="mono">${x.score}</b>${g.g ? `<span class="mono">(${g.g})</span>` : ''}`;
-    });
-    return `<tr>${who}
-      <td style="color:var(--dim);white-space:nowrap;">${escHtml([s.school, s.grade].filter(Boolean).join(' ') || '—')}</td>
-      <td>${inp('ns-j-'+s.studentId, got ? got.subject : subjectOfStudent(s.studentId), 96, 'type="text" placeholder="과목"', '')}</td>
-      <td>${inp('ns-s-'+s.studentId, got && got.score, 64, 'type="number" min="0" max="100" step="0.1" placeholder="—"')}</td>
-      <td>${inp('ns-g-'+s.studentId, got && got.grade, 48, `type="number" min="1" max="9" step="1" placeholder="${auto.cut && auto.g ? escHtml(auto.g) : '—'}"`)}${
-        auto.cut && auto.g ? `<span class="sg-sub">컷 기준 <b>${escHtml(auto.g)}</b></span>` : ''}</td>
-      <td style="font-size:12px;color:var(--sub);">${past.join(' · ') || '—'}</td></tr>`;
+    /* 🔵 학교 시험은 «학년도 네 시험»을 한 표로 (11-13 · 사용자 — 「학기 고르지 말고 1학기 중간·기말 2학기 중간·기말 한 표에」).
+       칸 하나 = 원점수·등급 + 그 시험의 과목(1학기·2학기 과목이 다를 수 있어 칸마다). 칸 id 는 ns-s-<시험 차례>-<학생>. */
+    const list = rec.schoolExams || [];
+    const cells = EXAM_SEASONS.map((sn, i) => {
+      const t = nsTermOf(year, sn);
+      const got = list.find(x=>x.term===t);
+      const auto = got ? nsSchoolGrade(s, got) : {g:''};
+      const 짝 = list.find(x => x.subject && x.term.startsWith(year + ' · ' + sn.slice(0, 3)));   // 같은 학기 다른 시험의 과목
+      const sid = s.studentId;
+      return `<td style="white-space:nowrap;">${inp(`ns-s-${i}-${sid}`, got && got.score, 54, 'type="number" min="0" max="100" step="0.1" title="원점수" placeholder="점수"')}${
+        inp(`ns-g-${i}-${sid}`, got && got.grade, 40, `type="number" min="1" max="9" step="1" title="등급 — 비우면 등급컷으로" placeholder="${auto.cut && auto.g ? escHtml(auto.g) : '—'}"`, 'mono', 'margin-left:4px;')}
+        <div style="margin-top:4px;">${inp(`ns-j-${i}-${sid}`, got ? got.subject : 짝 ? 짝.subject : subjectOfStudent(sid), 98, 'type="text" placeholder="과목" title="과목"', '',
+          'font-size:12px;font-weight:400;color:var(--sub);text-align:left;')}</div>${
+        auto.cut && auto.g ? `<span class="sg-sub">컷 기준 <b>${escHtml(auto.g)}</b></span>` : ''}</td>`;
+    }).join('');
+    /* 학교·학년은 이름 아래 작게 — 864 에서 네 시험이 한눈에 들어오게 칸 하나를 아낀다 */
+    return `<tr><td class="who"><span class="nm">${escHtml(s.name)}</span>${rosterLeftTagHTML(s, classId)}
+      <div style="font-size:12px;color:var(--dim);white-space:nowrap;">${escHtml([s.school, s.grade].filter(Boolean).join(' '))}</div></td>
+      ${cells}</tr>`;
   }).join('');
   return bar + `<div class="hwg-wrap"><table class="hwg sg">
     <thead><tr><th class="who">이름</th>${mock
-      ? '<th>학년</th><th>원점수</th><th>등급</th>'
-      : '<th>학교·학년</th><th>과목</th><th>원점수</th><th>등급</th>'}<th style="text-align:left;">지난 기록</th></tr></thead>
+      ? '<th>학년</th><th>원점수</th><th>등급</th><th style="text-align:left;">지난 기록</th>'
+      : EXAM_SEASONS.map(sn => `<th style="text-align:left;">${sn}<div style="font-size:12px;font-weight:400;color:var(--dim);">점수 · 등급</div></th>`).join('')}</tr></thead>
     <tbody>${rows}</tbody></table></div>`;
 }
 /* 한 판을 통째로 저장한다 — 성적 탭(`saveClassScores`)과 같은 까닭으로 칸마다 저장하지 않는다. */
 async function saveSchoolScores(classId){
   const mock = state.nsMode === 'mock';
-  const term = state.nsTerm || nsDefaultTerm();
+  const year = (state.nsTerm || nsDefaultTerm()).split(' · ')[0];
   const ym = state.nsYm || ymNow();
   const key = mock ? 'mockExams' : 'schoolExams';
+  /* 한 판의 시험들 — 모의고사는 그 달 하나, 학교 시험은 그 학년도 넷(11-13 한 표로). 학생 한 명 = 저장 한 번. */
+  const slots = mock ? [{sfx: '', match: x => x.ym === ym, make: score => ({ym, score})}]
+    : EXAM_SEASONS.map((sn, i) => { const term = nsTermOf(year, sn);
+        return {sfx: i + '-', match: x => x.term === term,
+          make: (score, sid) => ({term, subject: document.getElementById(`ns-j-${i}-${sid}`).value.trim(), score})}; });
   const roster = classRosterAll(classId);
   let saved = 0, cleared = 0; const bad = [], 못쓴이 = [];
   for(const st of roster){
-    const el = document.getElementById('ns-s-'+st.studentId);
-    if(!el) continue;
-    const raw = el.value.trim();
-    const gRaw = document.getElementById('ns-g-'+st.studentId).value.trim();
-    let entry = null;
-    if(raw !== ''){
-      const score = Number(raw), grade = gRaw === '' ? null : Number(gRaw);
-      /* 🔴 잘못 친 값은 «건너뛴다» — 저장하면 그대로 기록이 된다. */
-      if(!Number.isFinite(score) || score < 0 || score > 100
-         || (grade !== null && !(Number.isInteger(grade) && grade >= 1 && grade <= 9))){ bad.push(st.name); continue; }
-      entry = mock ? {ym, score}
-        : {term, subject: document.getElementById('ns-j-'+st.studentId).value.trim(), score};
-      if(grade !== null) entry.grade = grade;
+    const sid = st.studentId, 바꿈 = [];
+    for(const sl of slots){
+      const el = document.getElementById('ns-s-' + sl.sfx + sid);
+      if(!el) continue;
+      const raw = el.value.trim();
+      const gRaw = document.getElementById('ns-g-' + sl.sfx + sid).value.trim();
+      let entry = null;
+      if(raw !== ''){
+        const score = Number(raw), grade = gRaw === '' ? null : Number(gRaw);
+        /* 🔴 잘못 친 값은 «건너뛴다» — 저장하면 그대로 기록이 된다. */
+        if(!Number.isFinite(score) || score < 0 || score > 100
+           || (grade !== null && !(Number.isInteger(grade) && grade >= 1 && grade <= 9))){ if(!bad.includes(st.name)) bad.push(st.name); continue; }
+        entry = sl.make(score, sid);
+        if(grade !== null) entry.grade = grade;
+      }
+      바꿈.push({sl, entry});
     }
-    const rec = await loadRecord(st.studentId);
-    if(!rec[key]) rec[key] = [];
-    const list = rec[key];
-    const idx = list.findIndex(x => mock ? x.ym === ym : x.term === term);
-    if(!entry && idx < 0) continue;                       // 원래 없던 칸은 건드리지 않는다
-    if(entry && idx >= 0 && JSON.stringify(list[idx]) === JSON.stringify(entry)) continue;
-    const 옛 = list.slice();
-    if(entry){ if(idx >= 0) list[idx] = entry; else list.push(entry); saved++; }
-    else { list.splice(idx, 1); cleared++; }
-    if(await saveRecordAsTeacher(st.studentId) !== true){
-      rec[key] = 옛; if(entry) saved--; else cleared--; 못쓴이.push(st.name);
+    if(!바꿈.length) continue;
+    const rec = await loadRecord(sid);
+    const 옛 = (rec[key] || []).slice(), list = 옛.slice();
+    let s1 = 0, c1 = 0;
+    for(const {sl, entry} of 바꿈){
+      const idx = list.findIndex(sl.match);
+      if(!entry && idx < 0) continue;                       // 원래 없던 칸은 건드리지 않는다
+      if(entry && idx >= 0 && JSON.stringify(list[idx]) === JSON.stringify(entry)) continue;
+      if(entry){ if(idx >= 0) list[idx] = entry; else list.push(entry); s1++; }
+      else { list.splice(idx, 1); c1++; }
     }
+    if(!s1 && !c1) continue;
+    rec[key] = list;
+    if(await saveRecordAsTeacher(sid) !== true){ rec[key] = 옛; 못쓴이.push(st.name); continue; }
+    saved += s1; cleared += c1;
   }
-  const what = mock ? ym + ' 모의고사' : term;
-  if(못쓴이.length){ showToast(`${saved}명 저장 · ${못쓴이.join(', ')} 점수는 저장하지 못했습니다. 다시 눌러 주세요.`); return; }
-  showToast(bad.length ? `저장하지 않은 줄이 있습니다 — 원점수 0~100, 등급 1~9 (${bad.join(', ')}).`
-    : (saved || cleared) ? `${what} — ${saved}명 저장${cleared ? ` · ${cleared}명 지움` : ''}.`
+  const what = mock ? ym + ' 모의고사' : year + '학년도 학교 시험';
+  const 단위 = mock ? '명' : '칸';
+  if(못쓴이.length){ showToast(`${saved}${단위} 저장 · ${못쓴이.join(', ')} 점수는 저장하지 못했습니다. 다시 눌러 주세요.`); return; }
+  showToast(bad.length ? `저장하지 않은 칸이 있습니다 — 원점수 0~100, 등급 1~9 (${bad.join(', ')}).`
+    : (saved || cleared) ? `${what} — ${saved}${단위} 저장${cleared ? ` · ${cleared}${단위} 지움` : ''}.`
     : '바뀐 것이 없습니다.');
   render();
 }
