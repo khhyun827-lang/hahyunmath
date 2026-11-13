@@ -15521,7 +15521,7 @@ function examDetailHTML(examId){
   return `
     ${e.hasFiles ? `<button class="btn sm" style="margin-bottom:12px;" onclick="toggleExamImages('${examId}')">${state.examImagesCache[examId]?'스캔 이미지 접기':'스캔 이미지 보기'}</button>${examImagesHTML(examId)}` : ''}
     ${e.questions.map(q=>{
-      const bank = findBankEntry(examId, q.no);
+      const bank = findBankEntry(examId, q.qkey || q.no);   // 형이 나뉜 시험지는 «형-번호»가 열쇠 (11-13 · 동그랑땡 쌍둥이가 «없음»으로 보였다)
       const st = bank ? STATUS[bank.status] : null;
       const hasTwin = bank && (bank.variantContent || bank.variantAnswer);
       /* ⚠ 문항 그림은 문항 «안»에 없다 — pbimg:{bankId} 문서에 따로 있고, 있다는 사실만
